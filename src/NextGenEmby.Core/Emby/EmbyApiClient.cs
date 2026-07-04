@@ -1,6 +1,5 @@
 using System;
 using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -26,7 +25,7 @@ namespace NextGenEmby.Core.Emby
         public async Task<EmbySession> AuthenticateAsync(string username, string password)
         {
             using var request = new HttpRequestMessage(HttpMethod.Post, "Users/AuthenticateByName");
-            ApplyAuthorizationHeader(request, null);
+            EmbyAuthorization.Apply(request, _options);
             var json = JsonSerializer.Serialize(new { Username = username, Pw = password });
             request.Content = new StringContent(json, Encoding.UTF8, "application/json");
 
@@ -43,22 +42,6 @@ namespace NextGenEmby.Core.Emby
                 UserName = dto.User.Name,
                 AccessToken = dto.AccessToken
             };
-        }
-
-        private void ApplyAuthorizationHeader(HttpRequestMessage request, string? token)
-        {
-            var value =
-                $"Client=\"{_options.ClientName}\", " +
-                $"Device=\"{_options.DeviceName}\", " +
-                $"DeviceId=\"{_options.DeviceId}\", " +
-                $"Version=\"{_options.ClientVersion}\"";
-
-            if (!string.IsNullOrWhiteSpace(token))
-            {
-                value += $", Token=\"{token}\"";
-            }
-
-            request.Headers.Authorization = new AuthenticationHeaderValue("Emby", value);
         }
 
         private sealed class AuthResponseDto

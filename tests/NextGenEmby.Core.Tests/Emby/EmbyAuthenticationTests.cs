@@ -39,16 +39,18 @@ public sealed class EmbyAuthenticationTests
         Assert.Equal("user-1", session.UserId);
         Assert.Equal("Alice", session.UserName);
         Assert.Equal("token-123", session.AccessToken);
-        Assert.Equal(HttpMethod.Post, handler.LastRequest!.Method);
-        Assert.Equal("/Users/AuthenticateByName", handler.LastRequest.RequestUri!.AbsolutePath);
-        Assert.Equal("Emby", handler.LastRequest.Headers.Authorization!.Scheme);
+        var request = handler.LastRequest!;
+        Assert.Equal(HttpMethod.Post, request.Method);
+        Assert.Equal("/Users/AuthenticateByName", request.RequestUri!.AbsolutePath);
+        Assert.Equal("Emby", request.AuthorizationScheme);
         Assert.Equal(
             "Client=\"Next Gen Xbox Emby\", Device=\"Next Gen Xbox Emby\", DeviceId=\"test-device\", Version=\"0.1.0\"",
-            handler.LastRequest.Headers.Authorization.Parameter);
-        Assert.Equal("application/json", handler.LastRequest.Content!.Headers.ContentType!.MediaType);
-        Assert.Equal("utf-8", handler.LastRequest.Content.Headers.ContentType.CharSet);
+            request.AuthorizationParameter);
+        Assert.Null(request.EmbyToken);
+        Assert.Equal("application/json", request.ContentTypeMediaType);
+        Assert.Equal("utf-8", request.ContentTypeCharSet);
 
-        using var document = JsonDocument.Parse(handler.LastRequestBody!);
+        using var document = JsonDocument.Parse(request.Body!);
         Assert.Equal("alice", document.RootElement.GetProperty("Username").GetString());
         Assert.Equal("secret", document.RootElement.GetProperty("Pw").GetString());
     }
