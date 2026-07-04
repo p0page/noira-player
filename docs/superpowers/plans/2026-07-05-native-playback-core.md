@@ -1759,7 +1759,7 @@ Expected: commit succeeds.
 - Modify: `src/NextGenEmby.Native/Media/PlaybackGraph.h`
 - Modify: `src/NextGenEmby.Native/Media/PlaybackGraph.cpp`
 
-- [ ] **Step 1: Add renderer interface**
+- [x] **Step 1: Add renderer interface**
 
 Create `src/NextGenEmby.Native/Media/VideoRenderer.h`:
 
@@ -1786,7 +1786,7 @@ namespace winrt::NextGenEmby::Native::implementation
 }
 ```
 
-- [ ] **Step 2: Implement HDR metadata behavior**
+- [x] **Step 2: Implement HDR metadata behavior**
 
 Create `src/NextGenEmby.Native/Media/VideoRenderer.cpp`:
 
@@ -1833,6 +1833,8 @@ namespace winrt::NextGenEmby::Native::implementation
 
 Use D3D11 video processing or shaders to draw NV12/P010 decoded textures to the swapchain back buffer. Present with `IDXGISwapChain::Present(1, 0)`. Keep P010 as 10-bit for HDR10.
 
+Deferred note: current implementation can clear/present the swapchain and copy a decoded texture only when it already matches the back buffer size and format. Real NV12/P010 presentation through a D3D11 video processor or shader path remains pending until FFmpeg/D3D11VA produces real decoded frames.
+
 - [ ] **Step 4: Build and smoke on Local Machine**
 
 Run:
@@ -1845,7 +1847,9 @@ Expected: `Build succeeded.`
 
 Manual smoke: launch Playback page and confirm the native surface clears to black without crashing.
 
-- [ ] **Step 5: Commit**
+Build verification completed; manual Local Machine visual smoke was not run in this session.
+
+- [x] **Step 5: Commit**
 
 ```powershell
 git add src\NextGenEmby.Native
@@ -1853,6 +1857,14 @@ git commit -m "feat: render native video frames through DXGI"
 ```
 
 Expected: commit succeeds.
+
+执行记录（2026-07-05）：
+
+- 已新增 `VideoRenderer`，把 `DecodedVideoFrame` 的 HDR10 metadata、HDR/SDR color space 切换和渲染提交边界集中在 native renderer 内。
+- 已扩展 `DxDeviceResources`，支持清黑、`Present(1, 0)`，以及同尺寸同格式 texture 到 swapchain back buffer 的直接 copy；NV12/P010 视频帧仍需后续 D3D11 video processor 或 shader 路径。
+- `PlaybackGraph` 现在持有 `VideoDecoder` 与 `VideoRenderer`，在 open/seek 后尝试读取下一帧并提交到 renderer；当前 decoder 仍为 stub，因此运行效果是 surface 清黑，不会实际解码画面。
+- Step 3 暂缓：本机还没有 FFmpeg/D3D11VA 解码输出，无法完成真实 HEVC Main10/P010 到 swapchain 的视频处理链。
+- 验证已通过：原生组件单独 MSBuild 成功，0 warning / 0 error；完整 `NextGenXboxEmby.sln` MSBuild 成功，0 warning / 0 error；`dotnet test tests\NextGenEmby.Core.Tests\NextGenEmby.Core.Tests.csproj -v minimal` 成功，52/52 通过。手动 Local Machine 视觉 smoke 未执行。
 
 ---
 

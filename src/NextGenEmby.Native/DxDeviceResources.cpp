@@ -121,4 +121,68 @@ namespace winrt::NextGenEmby::Native::implementation
             sizeof(metadata),
             const_cast<DXGI_HDR_METADATA_HDR10*>(&metadata)));
     }
+
+    bool DxDeviceResources::TryCopyToBackBuffer(ID3D11Texture2D* texture)
+    {
+        if (!m_swapChain || !m_context || texture == nullptr)
+        {
+            return false;
+        }
+
+        Microsoft::WRL::ComPtr<ID3D11Texture2D> backBuffer;
+        if (FAILED(m_swapChain->GetBuffer(0, IID_PPV_ARGS(&backBuffer))))
+        {
+            return false;
+        }
+
+        D3D11_TEXTURE2D_DESC sourceDescription{};
+        D3D11_TEXTURE2D_DESC targetDescription{};
+        texture->GetDesc(&sourceDescription);
+        backBuffer->GetDesc(&targetDescription);
+
+        if (sourceDescription.Width != targetDescription.Width ||
+            sourceDescription.Height != targetDescription.Height ||
+            sourceDescription.Format != targetDescription.Format)
+        {
+            // NV12/P010 video frames need a video processor or shader path before copy.
+            return false;
+        }
+
+        m_context->CopyResource(backBuffer.Get(), texture);
+        return Present();
+    }
+
+    bool DxDeviceResources::ClearToBlack()
+    {
+        if (!m_swapChain || !m_context)
+        {
+            return false;
+        }
+
+        Microsoft::WRL::ComPtr<ID3D11Texture2D> backBuffer;
+        if (FAILED(m_swapChain->GetBuffer(0, IID_PPV_ARGS(&backBuffer))))
+        {
+            return false;
+        }
+
+        Microsoft::WRL::ComPtr<ID3D11RenderTargetView> renderTargetView;
+        if (FAILED(m_device->CreateRenderTargetView(backBuffer.Get(), nullptr, renderTargetView.ReleaseAndGetAddressOf())))
+        {
+            return false;
+        }
+
+        float clearColor[] = {0.0f, 0.0f, 0.0f, 1.0f};
+        m_context->ClearRenderTargetView(renderTargetView.Get(), clearColor);
+        return Present();
+    }
+
+    bool DxDeviceResources::Present()
+    {
+        if (!m_swapChain)
+        {
+            return false;
+        }
+
+        return SUCCEEDED(m_swapChain->Present(1, 0));
+    }
 }

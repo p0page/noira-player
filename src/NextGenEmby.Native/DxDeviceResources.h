@@ -17,6 +17,9 @@ namespace winrt::NextGenEmby::Native::implementation
         bool SetHdr10ColorSpace();
         bool SetSdrColorSpace();
         bool SetHdr10Metadata(DXGI_HDR_METADATA_HDR10 const& metadata);
+        bool TryCopyToBackBuffer(ID3D11Texture2D* texture);
+        bool ClearToBlack();
+        bool Present();
 
     private:
         Microsoft::WRL::ComPtr<ID3D11Device> m_device;

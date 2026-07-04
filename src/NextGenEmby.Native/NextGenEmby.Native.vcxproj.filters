@@ -11,6 +11,7 @@
     <ClCompile Include="Media\HttpMediaInput.cpp" />
     <ClCompile Include="Media\PlaybackGraph.cpp" />
     <ClCompile Include="Media\VideoDecoder.cpp" />
+    <ClCompile Include="Media\VideoRenderer.cpp" />
     <ClCompile Include="pch.cpp" />
     <ClCompile Include="NativePlaybackEngine.cpp" />
     <ClCompile Include="NativePlaybackOpenRequest.cpp" />
@@ -25,6 +26,7 @@
     <ClInclude Include="Media\HttpMediaInput.h" />
     <ClInclude Include="Media\PlaybackGraph.h" />
     <ClInclude Include="Media\VideoDecoder.h" />
+    <ClInclude Include="Media\VideoRenderer.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="NativePlaybackEngine.h" />
     <ClInclude Include="NativePlaybackOpenRequest.h" />

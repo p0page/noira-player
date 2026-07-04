@@ -8,7 +8,7 @@
 namespace winrt::NextGenEmby::Native::implementation
 {
     NativePlaybackEngine::NativePlaybackEngine()
-        : m_graph(std::make_unique<PlaybackGraph>())
+        : m_graph(std::make_unique<PlaybackGraph>(m_dx))
     {
         UpdateDisplayStatus(m_hdr.Probe());
     }
