@@ -47,6 +47,7 @@ namespace winrt::NextGenEmby::Native::implementation
         uint32_t m_width{0};
         uint32_t m_height{0};
         int64_t m_positionTicks{0};
+        bool m_decoderDraining{false};
         bool m_open{false};
     };
 }

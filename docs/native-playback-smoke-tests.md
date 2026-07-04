@@ -39,7 +39,7 @@
 
 ## 当前实现限制
 
-- 当前 native 解码器已能打开 FFmpeg format/codec context，但还不会读取 packet、解码视频帧或输出 D3D11 texture。
+- 当前 native 解码器已能打开 FFmpeg format/codec context，并能读 packet / 接收 `AVFrame` 元数据，但还不会输出 D3D11 texture。
 - 当前 renderer 能清黑、present，并能复制同尺寸同格式 texture；真实 NV12/P010 视频处理路径尚未完成。
 - 当前 audio/subtitle renderer 是控制边界，不会提交 XAudio2 音频 buffer，也不会绘制 DirectWrite 字幕。
 - 当前 Playback 页仍是手动 URL demo，真实 Emby 条目驱动和 HTTP 进度上报尚未完成。

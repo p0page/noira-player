@@ -45,6 +45,7 @@ MSBuild 接入方式：
 当前状态：
 
 - `VideoDecoder` 已能调用 `avformat_open_input`、`avformat_find_stream_info`、`av_find_best_stream`、`avcodec_alloc_context3`、`avcodec_parameters_to_context` 和 `avcodec_open2`，建立 FFmpeg `AVFormatContext` / `AVCodecContext` 生命周期。
+- `VideoDecoder::TryReadFrame()` 已接入 `av_read_frame` / `avcodec_send_packet` / `avcodec_receive_frame`，能读取视频 packet 并生成包含宽高、DXGI 像素格式、HDR transfer 类型和 position ticks 的 `DecodedVideoFrame` 元数据。
 - `VideoDecoder` 会在失败路径和 `Close()` 中释放 FFmpeg context；`PlaybackGraph.Open` 失败时会回滚已打开的边界状态。
-- 当前还没有 `av_read_frame` / `avcodec_send_packet` / `avcodec_receive_frame`，因此不会实际 demux packet、decode frame 或输出 D3D11 texture。
+- 当前返回的 `DecodedVideoFrame.Texture` 仍为空，因此不会输出 D3D11 texture，也不会在画面上呈现真实视频帧。
 - 下一步继续接 D3D11VA、P010/NV12 渲染、音频样本和字幕 cue。

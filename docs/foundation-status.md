@@ -121,7 +121,7 @@ error MSB3644: Could not find the reference assemblies for .NETCore,Version=v5.0
 
 - 还没有在 Visual Studio 中启动 Local Machine 做手工冒烟测试。
 - 还没有部署到 Xbox 硬件。
-- FFmpeg UWP 产物已接入 native build，`VideoDecoder` 已能初始化 `AVFormatContext` / `AVCodecContext`；真实 packet 读取、D3D11VA decode 和 frame 输出还没有实现。
+- FFmpeg UWP 产物已接入 native build，`VideoDecoder` 已能初始化 `AVFormatContext` / `AVCodecContext`，并能读取视频 packet / 接收 `AVFrame` 元数据；D3D11VA texture 输出和真实画面呈现还没有实现。
 - HDR/HEVC 真实视频播放还没有完成；当前已具备 HDR display/DXGI/renderer 边界，但没有真实 HEVC Main10/P010 解码帧。
 - XAudio2 音频输出和 DirectWrite 字幕绘制还没有完成；当前只有音轨/字幕控制边界。
 - 真实 Emby 条目驱动的播放进度 HTTP 上报还没有接入；当前已能构造 progress request，并能透传 backend position event。
@@ -144,4 +144,4 @@ error MSB3644: Could not find the reference assemblies for .NETCore,Version=v5.0
 - Playback 页显示黑色视频区域和底部控制层
 - 键盘或手柄导航时焦点可见
 
-如果 Local Machine 冒烟通过，再继续 `docs/superpowers/plans/2026-07-05-native-playback-core.md` 的后续任务：实现 FFmpeg `av_read_frame` / `avcodec_send_packet` / `avcodec_receive_frame`、接入 D3D11VA 解码、补齐 NV12/P010 渲染、实现 XAudio2/DirectWrite，并在 Xbox 硬件上执行 `docs/native-playback-smoke-tests.md`。
+如果 Local Machine 冒烟通过，再继续 `docs/superpowers/plans/2026-07-05-native-playback-core.md` 的后续任务：接入 D3D11VA texture 输出、补齐 NV12/P010 渲染、实现 XAudio2/DirectWrite，并在 Xbox 硬件上执行 `docs/native-playback-smoke-tests.md`。

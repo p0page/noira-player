@@ -9,13 +9,31 @@ extern "C"
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
 #include <libavutil/error.h>
+#include <libavutil/frame.h>
 #include <libavutil/mathematics.h>
+#include <libavutil/pixfmt.h>
 }
 #pragma warning(pop)
 
 namespace
 {
     constexpr AVRational HundredNanosecondTimeBase{1, 10000000};
+
+    struct AvFrameDeleter
+    {
+        void operator()(AVFrame* frame) const noexcept
+        {
+            av_frame_free(&frame);
+        }
+    };
+
+    struct AvPacketDeleter
+    {
+        void operator()(AVPacket* packet) const noexcept
+        {
+            av_packet_free(&packet);
+        }
+    };
 
     std::string GetFfmpegErrorMessage(int errorCode)
     {
@@ -54,6 +72,86 @@ namespace
         }
 
         return bestStream;
+    }
+
+    DXGI_FORMAT MapPixelFormat(AVPixelFormat pixelFormat)
+    {
+        switch (pixelFormat)
+        {
+        case AV_PIX_FMT_NV12:
+            return DXGI_FORMAT_NV12;
+        case AV_PIX_FMT_P010LE:
+            return DXGI_FORMAT_P010;
+        case AV_PIX_FMT_BGRA:
+            return DXGI_FORMAT_B8G8R8A8_UNORM;
+        case AV_PIX_FMT_RGBA:
+            return DXGI_FORMAT_R8G8B8A8_UNORM;
+        default:
+            return DXGI_FORMAT_UNKNOWN;
+        }
+    }
+
+    winrt::NextGenEmby::Native::implementation::VideoHdrKind MapHdrKind(AVColorTransferCharacteristic transfer)
+    {
+        switch (transfer)
+        {
+        case AVCOL_TRC_SMPTE2084:
+            return winrt::NextGenEmby::Native::implementation::VideoHdrKind::Hdr10;
+        case AVCOL_TRC_ARIB_STD_B67:
+            return winrt::NextGenEmby::Native::implementation::VideoHdrKind::Hlg;
+        default:
+            return winrt::NextGenEmby::Native::implementation::VideoHdrKind::None;
+        }
+    }
+
+    int64_t GetFramePositionTicks(AVFrame const* frame, AVStream const* stream)
+    {
+        auto timestamp = frame->best_effort_timestamp;
+        if (timestamp == AV_NOPTS_VALUE)
+        {
+            timestamp = frame->pts;
+        }
+
+        if (timestamp == AV_NOPTS_VALUE)
+        {
+            return 0;
+        }
+
+        return av_rescale_q(timestamp, stream->time_base, HundredNanosecondTimeBase);
+    }
+
+    winrt::NextGenEmby::Native::implementation::DecodedVideoFrame CreateDecodedVideoFrame(
+        AVFrame const* frame,
+        AVStream const* stream)
+    {
+        winrt::NextGenEmby::Native::implementation::DecodedVideoFrame decodedFrame;
+        decodedFrame.Width = frame->width > 0 ? static_cast<uint32_t>(frame->width) : 0;
+        decodedFrame.Height = frame->height > 0 ? static_cast<uint32_t>(frame->height) : 0;
+        decodedFrame.Format = MapPixelFormat(static_cast<AVPixelFormat>(frame->format));
+        decodedFrame.HdrKind = MapHdrKind(frame->color_trc);
+        decodedFrame.PositionTicks = GetFramePositionTicks(frame, stream);
+        return decodedFrame;
+    }
+
+    std::optional<winrt::NextGenEmby::Native::implementation::DecodedVideoFrame> TryReceiveFrame(
+        AVCodecContext* codecContext,
+        AVFrame* frame,
+        AVStream const* stream)
+    {
+        auto receiveResult = avcodec_receive_frame(codecContext, frame);
+        if (receiveResult == 0)
+        {
+            auto decodedFrame = CreateDecodedVideoFrame(frame, stream);
+            av_frame_unref(frame);
+            return decodedFrame;
+        }
+
+        if (receiveResult == AVERROR(EAGAIN) || receiveResult == AVERROR_EOF)
+        {
+            return std::nullopt;
+        }
+
+        throw CreateFfmpegError("avcodec_receive_frame", receiveResult);
     }
 }
 
@@ -143,17 +241,108 @@ namespace winrt::NextGenEmby::Native::implementation
         m_url = url;
         m_avformatVersion = static_cast<uint32_t>(avformat_version());
         m_positionTicks = 0;
+        m_decoderDraining = false;
         m_open = true;
     }
 
     std::optional<DecodedVideoFrame> VideoDecoder::TryReadFrame()
     {
-        if (!m_open)
+        if (!m_open || m_formatContext == nullptr || m_codecContext == nullptr || m_videoStreamIndex < 0)
         {
             return std::nullopt;
         }
 
-        return std::nullopt;
+        std::unique_ptr<AVPacket, AvPacketDeleter> packet(av_packet_alloc());
+        std::unique_ptr<AVFrame, AvFrameDeleter> frame(av_frame_alloc());
+        if (!packet || !frame)
+        {
+            throw winrt::hresult_error(E_OUTOFMEMORY, L"Could not allocate FFmpeg decode packet or frame.");
+        }
+
+        auto videoStream = m_formatContext->streams[m_videoStreamIndex];
+        auto publishFrame = [this](std::optional<DecodedVideoFrame> decodedFrame)
+            -> std::optional<DecodedVideoFrame>
+        {
+            if (decodedFrame)
+            {
+                m_positionTicks = decodedFrame->PositionTicks;
+            }
+
+            return decodedFrame;
+        };
+
+        if (m_decoderDraining)
+        {
+            return publishFrame(TryReceiveFrame(m_codecContext, frame.get(), videoStream));
+        }
+
+        int readResult = 0;
+        while ((readResult = av_read_frame(m_formatContext, packet.get())) >= 0)
+        {
+            if (packet->stream_index != m_videoStreamIndex)
+            {
+                av_packet_unref(packet.get());
+                continue;
+            }
+
+            std::optional<DecodedVideoFrame> pendingFrame;
+            while (true)
+            {
+                auto sendResult = avcodec_send_packet(m_codecContext, packet.get());
+                if (sendResult == 0)
+                {
+                    av_packet_unref(packet.get());
+                    break;
+                }
+
+                if (sendResult == AVERROR(EAGAIN))
+                {
+                    auto drainedFrame = TryReceiveFrame(m_codecContext, frame.get(), videoStream);
+                    if (!drainedFrame)
+                    {
+                        av_packet_unref(packet.get());
+                        throw winrt::hresult_error(
+                            E_FAIL,
+                            L"FFmpeg decoder could not accept a packet and produced no frame while draining.");
+                    }
+
+                    if (!pendingFrame)
+                    {
+                        pendingFrame = drainedFrame;
+                    }
+
+                    continue;
+                }
+
+                av_packet_unref(packet.get());
+                throw CreateFfmpegError("avcodec_send_packet", sendResult);
+            }
+
+            if (pendingFrame)
+            {
+                return publishFrame(pendingFrame);
+            }
+
+            auto decodedFrame = TryReceiveFrame(m_codecContext, frame.get(), videoStream);
+            if (decodedFrame)
+            {
+                return publishFrame(decodedFrame);
+            }
+        }
+
+        if (readResult == AVERROR_EOF)
+        {
+            auto flushResult = avcodec_send_packet(m_codecContext, nullptr);
+            if (flushResult < 0 && flushResult != AVERROR_EOF)
+            {
+                throw CreateFfmpegError("avcodec_send_packet", flushResult);
+            }
+
+            m_decoderDraining = true;
+            return publishFrame(TryReceiveFrame(m_codecContext, frame.get(), videoStream));
+        }
+
+        throw CreateFfmpegError("av_read_frame", readResult);
     }
 
     void VideoDecoder::Seek(int64_t positionTicks)
@@ -175,6 +364,7 @@ namespace winrt::NextGenEmby::Native::implementation
             }
 
             avcodec_flush_buffers(m_codecContext);
+            m_decoderDraining = false;
         }
     }
 
@@ -196,6 +386,7 @@ namespace winrt::NextGenEmby::Native::implementation
         m_height = 0;
         m_avformatVersion = 0;
         m_positionTicks = 0;
+        m_decoderDraining = false;
         m_open = false;
     }
 }
