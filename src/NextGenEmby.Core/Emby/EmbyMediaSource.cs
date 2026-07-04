@@ -13,6 +13,7 @@ namespace NextGenEmby.Core.Emby
         public int Height { get; set; }
         public bool IsHdr { get; set; }
         public string DirectStreamUrl { get; set; } = "";
+        public string PlaySessionId { get; set; } = "";
         public List<EmbyMediaStream> Streams { get; } = new List<EmbyMediaStream>();
 
         public IEnumerable<EmbyMediaStream> VideoStreams => Streams.Where(s => s.Kind == EmbyStreamKind.Video);

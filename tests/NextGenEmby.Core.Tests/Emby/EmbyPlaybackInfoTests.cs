@@ -366,6 +366,7 @@ public sealed class EmbyPlaybackInfoTests
         var sources = await client.GetPlaybackInfoAsync(Session(), "movie-1");
 
         var source = Assert.Single(sources);
+        Assert.Equal("play session/1", source.PlaySessionId);
         Assert.Equal(
             "http://emby.local:8096/Videos/movie-1/stream?static=true&mediaSourceId=source-1&api_key=token-123&PlaySessionId=play%20session%2F1",
             source.DirectStreamUrl);
@@ -394,6 +395,7 @@ public sealed class EmbyPlaybackInfoTests
         var sources = await client.GetPlaybackInfoAsync(Session(), "movie-1");
 
         var source = Assert.Single(sources);
+        Assert.Equal("source session/1", source.PlaySessionId);
         Assert.Equal(
             "http://emby.local:8096/Videos/movie-1/stream?static=true&mediaSourceId=source-1&api_key=token-123&PlaySessionId=source%20session%2F1",
             source.DirectStreamUrl);

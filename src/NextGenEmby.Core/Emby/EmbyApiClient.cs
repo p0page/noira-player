@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace NextGenEmby.Core.Emby
@@ -16,12 +17,17 @@ namespace NextGenEmby.Core.Emby
         {
             PropertyNameCaseInsensitive = true
         };
+        private readonly JsonSerializerOptions _writeJsonOptions = new JsonSerializerOptions
+        {
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+        };
 
         public EmbyApiClient(HttpClient http, EmbyClientOptions options)
         {
             _http = http;
             _options = options;
             _http.BaseAddress = new Uri(options.ServerUrl.TrimEnd('/') + "/");
+            _writeJsonOptions.Converters.Add(new JsonStringEnumConverter());
         }
 
         public async Task<EmbySession> AuthenticateAsync(string username, string password)
@@ -75,6 +81,42 @@ namespace NextGenEmby.Core.Emby
             return mediaSources.Select(source => MapMediaSource(session, itemId, dto.PlaySessionId, source)).ToList();
         }
 
+        public async Task ReportProgressAsync(EmbySession session, PlaybackProgressRequest progress)
+        {
+            if (progress == null)
+            {
+                throw new ArgumentNullException(nameof(progress));
+            }
+
+            if (string.IsNullOrWhiteSpace(progress.ItemId))
+            {
+                throw new ArgumentException("Playback progress requires an item id.", nameof(progress));
+            }
+
+            if (string.IsNullOrWhiteSpace(progress.MediaSourceId))
+            {
+                throw new ArgumentException("Playback progress requires a media source id.", nameof(progress));
+            }
+
+            if (!Enum.IsDefined(typeof(PlaybackProgressEvent), progress.EventName))
+            {
+                throw new ArgumentOutOfRangeException(nameof(progress), "Playback progress event is not supported.");
+            }
+
+            if (!Enum.IsDefined(typeof(PlaybackPlayMethod), progress.PlayMethod))
+            {
+                throw new ArgumentOutOfRangeException(nameof(progress), "Playback play method is not supported.");
+            }
+
+            using var request = new HttpRequestMessage(HttpMethod.Post, "Sessions/Playing/Progress");
+            EmbyAuthorization.Apply(request, _options, session);
+            var json = JsonSerializer.Serialize(progress, _writeJsonOptions);
+            request.Content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            using var response = await _http.SendAsync(request).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+        }
+
         public string GetImageUrl(EmbySession session, string itemId, string imageType, int maxWidth)
         {
             return
@@ -116,6 +158,7 @@ namespace NextGenEmby.Core.Emby
                 Name = string.IsNullOrWhiteSpace(source.Name) ? id : source.Name,
                 Container = source.Container ?? "",
                 Bitrate = source.Bitrate,
+                PlaySessionId = playSessionId,
                 DirectStreamUrl = BuildDirectStreamUrl(session, itemId, playSessionId, source)
             };
 
