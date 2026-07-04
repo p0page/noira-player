@@ -1,40 +1,40 @@
-# ADR 0001: Kodi Xbox HDR Path for Native Playback Core
+# ADR 0001：Kodi Xbox HDR 路径与原生播放核心
 
-Date: 2026-07-05
+日期：2026-07-05
 
-## Status
+## 状态
 
-Accepted for native-core research.
+已接受，作为原生播放核心阶段的研究依据。
 
-## Context
+## 背景
 
-The app targets Xbox-only Emby playback. The first foundation slice uses a system-player backend only to verify UI, Emby API, and playback orchestration boundaries. The approved product direction requires a Kodi-grade native backend for direct-play 4K HEVC HDR10 playback, with no server transcoding assumed for the first playable Xbox target.
+这个应用只面向 Xbox 上的 Emby 播放。基础阶段先用系统播放器后端验证 UI、Emby API 和播放编排边界。最终产品方向需要一个接近 Kodi 级别的原生后端，用于直连播放 4K HEVC HDR10；第一阶段不假设服务器一定能转码。
 
-The local research checkout is Kodi `xbmc/xbmc` at `f0232910490189b97717bc5d309aec2e5751d6d3` under `.research/kodi-xbox`. That checkout is ignored by git; this ADR records the durable findings.
+本地研究用的 Kodi checkout 是 `xbmc/xbmc` 的 `f0232910490189b97717bc5d309aec2e5751d6d3`，路径是 `.research/kodi-xbox`。该目录被 git 忽略；这份 ADR 记录可长期保留的结论。
 
-## Decision
+## 决策
 
-The native playback core plan will use Kodi's Win10/UWP/Xbox DirectX path as the primary reference for HDR output behavior.
+原生播放核心计划将以 Kodi 的 Win10/UWP/Xbox DirectX 路径作为 HDR 输出行为的主要参考。
 
-The foundation app keeps `IPlaybackBackend` stable so `SystemMediaPlaybackBackend` can be replaced by a native `NativeDirectXPlaybackBackend` without changing Emby API parsing, login/session storage, Xbox shell navigation, or playback orchestration.
+基础 app 保持 `IPlaybackBackend` 稳定。这样 `SystemMediaPlaybackBackend` 后续可以被原生 `NativeDirectXPlaybackBackend` 替换，而不需要改 Emby API 解析、登录/session 存储、Xbox Shell 导航或播放编排。
 
-The next playback backend should be a C++/WinRT UWP component with a C# adapter. It should own decode/render/display state and expose a small status surface back to C#:
+下一阶段的播放后端应是一个 C++/WinRT UWP component，并通过 C# adapter 接入。它需要拥有解码、渲染、显示状态，并向 C# 暴露一个小型状态面：
 
-- display HDR capability and current HDR output state
-- selected media source, audio stream, and subtitle stream
-- playback position, duration, pause/seek/buffering/end/error events
-- HDR mode transitions and failures
-- display-state restoration results
+- HDR 显示能力与当前 HDR 输出状态
+- 当前媒体版本、音轨、字幕轨
+- 播放位置、时长、暂停、seek、缓冲、结束、错误事件
+- HDR 模式切换与失败原因
+- 显示状态恢复结果
 
-## Kodi Source Findings
+## Kodi 源码发现
 
-Kodi separates HDR work into four responsibilities that we should mirror.
+Kodi 将 HDR 工作拆成几个职责，我们应该照这个思路拆。
 
-### 1. Xbox display mode and HDR toggle
+### 1. Xbox 显示模式与 HDR 切换
 
-Kodi uses `Windows.Graphics.Display.Core.HdmiDisplayInformation` on UWP/Xbox and requests HDR mode with `HdmiDisplayHdrOption::Eotf2084`.
+Kodi 在 UWP/Xbox 上使用 `Windows.Graphics.Display.Core.HdmiDisplayInformation`，并通过 `HdmiDisplayHdrOption::Eotf2084` 请求 HDR 模式。
 
-Relevant local source:
+相关本地源码：
 
 - `.research/kodi-xbox/xbmc/windowing/win10/WinSystemWin10.cpp:317`
 - `.research/kodi-xbox/xbmc/windowing/win10/WinSystemWin10.cpp:320`
@@ -43,13 +43,13 @@ Relevant local source:
 - `.research/kodi-xbox/xbmc/platform/win32/WIN32Util.cpp:1235`
 - `.research/kodi-xbox/xbmc/platform/win32/WIN32Util.cpp:1241`
 
-Implication: the native backend should not treat HDR as just a media-player flag. It needs an Xbox display-mode service that can request the active HDMI mode with SDR or HDR10 EOTF.
+结论：原生后端不能把 HDR 当成一个普通播放器开关。它需要一个 Xbox 显示模式服务，能够请求当前 HDMI 模式进入 SDR 或 HDR10 EOTF。
 
-### 2. HDR support and settings gate
+### 2. HDR 能力与设置开关
 
-Kodi routes HDR capability through the windowing abstraction and returns `HDR_STATUS` values for unsupported/off/on/toggle-failed states. It also gates auto switching behind an HDR-display setting.
+Kodi 通过 windowing 抽象上报 HDR 能力，并用 `HDR_STATUS` 表示 unsupported、off、on、toggle failed。自动切换 HDR 还会被一个 HDR display setting 控制。
 
-Relevant local source:
+相关本地源码：
 
 - `.research/kodi-xbox/xbmc/HDRStatus.h:11`
 - `.research/kodi-xbox/xbmc/windowing/WinSystem.h:242`
@@ -58,13 +58,13 @@ Relevant local source:
 - `.research/kodi-xbox/xbmc/windowing/win10/WinSystemWin10DX.cpp:175`
 - `.research/kodi-xbox/xbmc/windowing/win10/WinSystemWin10DX.cpp:179`
 
-Implication: our native backend should have explicit `Unsupported`, `Off`, `On`, and `Failed` states instead of boolean-only HDR reporting. C# should be able to show or log why HDR was not entered.
+结论：我们的原生后端应该暴露明确的 `Unsupported`、`Off`、`On`、`Failed` 状态，不要只用 bool。C# 层应能展示或记录为什么没有进入 HDR。
 
-### 3. Swapchain and DXGI HDR output
+### 3. Swapchain 与 DXGI HDR 输出
 
-Kodi uses a 10-bit swapchain when HDR or 10-bit surfaces are needed. It sets HDR10 metadata through `IDXGISwapChain4::SetHDRMetaData` and switches transfer/color space with `IDXGISwapChain3::SetColorSpace1`.
+Kodi 在需要 HDR 或 10-bit surface 时使用 10-bit swapchain。它通过 `IDXGISwapChain4::SetHDRMetaData` 设置 HDR10 metadata，并通过 `IDXGISwapChain3::SetColorSpace1` 切换传递函数和色彩空间。
 
-Relevant local source:
+相关本地源码：
 
 - `.research/kodi-xbox/xbmc/rendering/dx/DeviceResources.cpp:636`
 - `.research/kodi-xbox/xbmc/rendering/dx/DeviceResources.cpp:685`
@@ -73,26 +73,26 @@ Relevant local source:
 - `.research/kodi-xbox/xbmc/rendering/dx/DeviceResources.cpp:1339`
 - `.research/kodi-xbox/xbmc/rendering/dx/DeviceResources.cpp:1451`
 
-Implication: the native backend must own the DXGI swapchain and must verify supported color spaces before entering playback. For HDR10 it should set `DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020`; for SDR restoration it should use `DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709`.
+结论：原生后端必须拥有 DXGI swapchain，并在进入播放前验证支持的 color space。HDR10 使用 `DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020`；恢复 SDR 使用 `DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709`。
 
-### 4. Xbox-specific swapchain preservation
+### 4. Xbox 专用的 swapchain 保留规则
 
-Kodi has an important Xbox-only branch: when toggling HDR on Xbox, it changes the existing swapchain color space instead of destroying and recreating the swapchain. The source comment says recreating the swapchain on Xbox can lose native 4K quality.
+Kodi 有一个非常关键的 Xbox 专用分支：在 Xbox 上切换 HDR 时，它不会销毁并重建 swapchain，而是在现有 swapchain 上切 color space。源码注释说明，在 Xbox 上重建 swapchain 可能丢失原生 4K 输出质量。
 
-Relevant local source:
+相关本地源码：
 
 - `.research/kodi-xbox/xbmc/rendering/dx/DeviceResources.cpp:1357`
 - `.research/kodi-xbox/xbmc/rendering/dx/DeviceResources.cpp:1368`
 - `.research/kodi-xbox/xbmc/rendering/dx/DeviceResources.cpp:1392`
 - `.research/kodi-xbox/xbmc/rendering/dx/DeviceResources.cpp:1397`
 
-Implication: the Xbox implementation should avoid swapchain recreation during HDR/SDR toggles unless later hardware testing proves it is safe. This is one of the main reasons to reference Kodi instead of using a generic desktop DirectX HDR sample.
+结论：Xbox 实现应避免在 HDR/SDR 切换时重建 swapchain，除非后续硬件测试证明这样做安全。这也是我们要参考 Kodi，而不是只看普通桌面 DirectX HDR sample 的主要原因之一。
 
-### 5. Video metadata and HDR state machine
+### 5. 视频 metadata 与 HDR 状态机
 
-Kodi determines HDR type from FFmpeg stream metadata and frame side data, then the renderer updates HDR state per rendered buffer.
+Kodi 先从 FFmpeg stream metadata 和 frame side data 判断 HDR 类型，然后渲染器按每个 render buffer 更新 HDR 状态。
 
-Relevant local source:
+相关本地源码：
 
 - `.research/kodi-xbox/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.cpp:2546`
 - `.research/kodi-xbox/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxFFmpeg.cpp:2554`
@@ -107,13 +107,13 @@ Relevant local source:
 - `.research/kodi-xbox/xbmc/cores/VideoPlayer/VideoRenderers/windows/RendererBase.cpp:623`
 - `.research/kodi-xbox/xbmc/cores/VideoPlayer/VideoRenderers/windows/RendererBase.cpp:669`
 
-Implication: Emby `MediaSource` metadata is useful for choosing a stream, but the native backend must still validate actual stream/frame metadata before entering HDR. The renderer should be able to switch between HDR10, HLG-as-PQ fallback, and SDR output based on decoded frames.
+结论：Emby `MediaSource` metadata 可以辅助选流，但原生后端仍必须基于实际 stream/frame metadata 再验证是否进入 HDR。渲染器要能根据解码帧在 HDR10、HLG-as-PQ fallback 和 SDR 输出之间切换。
 
-### 6. Display state restoration
+### 6. 显示状态恢复
 
-Kodi stores the initial HDR state when configuring the renderer and restores it when playback stops. If auto-switching is disabled, it restores the appropriate DXGI color space directly.
+Kodi 在配置 renderer 时保存初始 HDR 状态，并在播放停止时恢复。如果没有启用 auto-switch，则直接恢复正确的 DXGI color space。
 
-Relevant local source:
+相关本地源码：
 
 - `.research/kodi-xbox/xbmc/cores/VideoPlayer/VideoRenderers/windows/RendererBase.cpp:144`
 - `.research/kodi-xbox/xbmc/cores/VideoPlayer/VideoRenderers/windows/RendererBase.cpp:146`
@@ -123,39 +123,39 @@ Relevant local source:
 - `.research/kodi-xbox/xbmc/cores/VideoPlayer/VideoRenderers/windows/RendererBase.cpp:204`
 - `.research/kodi-xbox/xbmc/cores/VideoPlayer/VideoRenderers/windows/RendererBase.cpp:212`
 
-Implication: our native backend needs restoration paths for normal stop, playback error, backend disposal, app suspend, and app resume. `PlaybackOrchestrator.StopAsync` should remain the managed cleanup entry point, but native cleanup must also be defensive.
+结论：我们的原生后端需要在正常停止、播放错误、后端 dispose、app suspend、app resume 时都尝试恢复显示状态。`PlaybackOrchestrator.StopAsync` 仍然是托管侧清理入口，但 native 清理必须自己防御性兜底。
 
-## Consequences
+## 影响
 
-Native playback will be heavier than iPlayX-style system playback because it must own the HEVC decode/render/display loop. That weight is intentional: the missing core path is exactly HDR/HEVC/audio/subtitle control on Xbox.
+原生播放会比 iPlayX 这种系统播放器方案重很多，因为它必须拥有 HEVC 解码、渲染、显示输出循环。这个重量是有意接受的：缺失的核心能力正是 Xbox 上的 HDR、HEVC、音轨和字幕控制。
 
-The first native-core plan should avoid broad Kodi feature parity. It should implement a narrow vertical slice:
+第一轮 native-core 不追求 Kodi 全功能对齐，只做窄而完整的垂直切片：
 
-- direct-play HTTP input from Emby
-- one selected media source
-- audio and subtitle track switching
-- HEVC Main/Main10 decode path
-- HDR10 output and SDR restoration
-- playback progress callbacks to existing Emby progress reporting
-- diagnostic logging for HDR mode, DXGI color space, metadata, and failures
+- 从 Emby direct-play HTTP 输入
+- 一个选中的媒体版本
+- 音轨和字幕轨切换
+- HEVC Main/Main10 解码路径
+- HDR10 输出与 SDR 恢复
+- 回调现有 Emby progress 上报
+- 记录 HDR mode、DXGI color space、metadata、失败原因的诊断日志
 
-Transcoding remains out of scope for this phase.
+转码仍然不在这个阶段范围内。
 
-## Native-Core Acceptance Checklist
+## 原生核心验收清单
 
-The next plan must create:
+下一阶段计划必须创建：
 
-- a C++/WinRT UWP component project
-- a C# adapter named `NativeDirectXPlaybackBackend`
-- a `PlaybackDescriptor` bridge into native input/open options
-- HDR capability detection with explicit status codes
-- HDR entry and exit methods
-- 10-bit swapchain and DXGI color-space management
-- HDR10 metadata propagation
-- display state restoration on stop, failure, suspend, and resume
-- fixture-based tests or hardware smoke scripts for 1080p H.264 SDR, 4K HEVC SDR, and 4K HEVC HDR10
+- C++/WinRT UWP component project
+- 名为 `NativeDirectXPlaybackBackend` 的 C# adapter
+- 从 `PlaybackDescriptor` 到 native open options 的桥
+- 带明确状态码的 HDR 能力检测
+- HDR 进入和退出方法
+- 10-bit swapchain 与 DXGI color-space 管理
+- HDR10 metadata 传递
+- 在 stop、failure、suspend、resume 时恢复显示状态
+- 覆盖 1080p H.264 SDR、4K HEVC SDR、4K HEVC HDR10 的 fixture 测试或硬件冒烟脚本
 
-## References
+## 参考
 
 - Kodi repository: https://github.com/xbmc/xbmc
 - Kodi Xbox HDR10 passthrough PR: https://github.com/xbmc/xbmc/pull/24083
