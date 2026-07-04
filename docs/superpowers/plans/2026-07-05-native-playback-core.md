@@ -1462,14 +1462,14 @@ Expected: commit succeeds.
 - Modify: `src/NextGenEmby.Native/NativePlaybackEngine.h`
 - Modify: `src/NextGenEmby.Native/NativePlaybackEngine.cpp`
 
-- [ ] **Step 1: Add playback graph lifecycle**
+- [x] **Step 1: Add playback graph lifecycle**
 
 Create `src/NextGenEmby.Native/Media/PlaybackGraph.h`:
 
 ```cpp
 #pragma once
 
-#include "../NativePlaybackEngine.g.h"
+#include "NativePlaybackEngine.g.h"
 
 namespace winrt::NextGenEmby::Native::implementation
 {
@@ -1492,7 +1492,7 @@ namespace winrt::NextGenEmby::Native::implementation
 }
 ```
 
-- [ ] **Step 2: Implement lifecycle and validation**
+- [x] **Step 2: Implement lifecycle and validation**
 
 Create `src/NextGenEmby.Native/Media/PlaybackGraph.cpp`:
 
@@ -1556,15 +1556,15 @@ namespace winrt::NextGenEmby::Native::implementation
 }
 ```
 
-- [ ] **Step 3: Wire graph into `NativePlaybackEngine`**
+- [x] **Step 3: Wire graph into `NativePlaybackEngine`**
 
 Add `std::unique_ptr<PlaybackGraph> m_graph;` to the engine and route `OpenAsync`, `PauseAsync`, `ResumeAsync`, `SeekAsync`, and `StopAsync` through it. On exceptions, raise `NativePlaybackState_Failed` with the exception message.
 
-- [ ] **Step 4: Add HTTP input class**
+- [x] **Step 4: Add HTTP input class**
 
 Create `HttpMediaInput.h/.cpp` as the direct-stream reader boundary for FFmpeg integration. It should accept an absolute `http` or `https` URL and expose `Open`, `Read`, and `Close` methods. Use FFmpeg AVIO after Task 8 adds FFmpeg libraries; before FFmpeg is linked, keep the class as a validating shell that opens no network connection.
 
-- [ ] **Step 5: Build native component**
+- [x] **Step 5: Build native component**
 
 Run:
 
@@ -1574,7 +1574,7 @@ Run:
 
 Expected: `Build succeeded.`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```powershell
 git add src\NextGenEmby.Native
@@ -1582,6 +1582,13 @@ git commit -m "feat: add native playback graph skeleton"
 ```
 
 Expected: commit succeeds.
+
+执行记录（2026-07-05）：
+
+- 已新增 `PlaybackGraph`，集中承接 open/pause/resume/seek/stop 生命周期；`NativePlaybackEngine` 现在通过 graph 更新当前位置，并把 native 异常统一转成 `NativePlaybackState_Failed` 事件。
+- 已新增 `HttpMediaInput` 验证壳，当前只验证 `http` / `https` 绝对 URL、host 和读缓冲参数，不发起网络连接；Task 8 接入 FFmpeg 后会把这里替换成 AVIO/网络读取边界。
+- 计划片段中的 `../NativePlaybackEngine.g.h` 在当前 C++/WinRT 项目 include path 下不可解析，已按实际可编译写法改为 `NativePlaybackEngine.g.h`。
+- 验证已通过：原生组件单独 MSBuild 成功，0 warning / 0 error；完整 `NextGenXboxEmby.sln` MSBuild 成功，0 warning / 0 error；`dotnet test tests\NextGenEmby.Core.Tests\NextGenEmby.Core.Tests.csproj -v minimal` 成功，52/52 通过。
 
 ---
 

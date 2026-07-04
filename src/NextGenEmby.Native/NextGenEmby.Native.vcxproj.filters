@@ -8,6 +8,8 @@
   <ItemGroup>
     <ClCompile Include="DxDeviceResources.cpp" />
     <ClCompile Include="HdrDisplayController.cpp" />
+    <ClCompile Include="Media\HttpMediaInput.cpp" />
+    <ClCompile Include="Media\PlaybackGraph.cpp" />
     <ClCompile Include="pch.cpp" />
     <ClCompile Include="NativePlaybackEngine.cpp" />
     <ClCompile Include="NativePlaybackOpenRequest.cpp" />
@@ -19,6 +21,8 @@
   <ItemGroup>
     <ClInclude Include="DxDeviceResources.h" />
     <ClInclude Include="HdrDisplayController.h" />
+    <ClInclude Include="Media\HttpMediaInput.h" />
+    <ClInclude Include="Media\PlaybackGraph.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="NativePlaybackEngine.h" />
     <ClInclude Include="NativePlaybackOpenRequest.h" />

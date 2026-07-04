@@ -2,7 +2,11 @@
 
 #include "DxDeviceResources.h"
 #include "HdrDisplayController.h"
+#include "Media/PlaybackGraph.h"
 #include "NativePlaybackEngine.g.h"
+
+#include <exception>
+#include <memory>
 
 namespace winrt::NextGenEmby::Native::implementation
 {
@@ -14,7 +18,7 @@ namespace winrt::NextGenEmby::Native::implementation
         void StateChanged(winrt::event_token const& token) noexcept;
 
         void AttachSurface(winrt::Windows::UI::Xaml::Controls::SwapChainPanel const& panel);
-        int64_t CurrentPositionTicks() const noexcept;
+        int64_t CurrentPositionTicks() const;
         NextGenEmby::Native::NativePlaybackStatus DisplayStatus() const;
 
         winrt::Windows::Foundation::IAsyncAction OpenAsync(NextGenEmby::Native::NativePlaybackOpenRequest request);
@@ -25,11 +29,14 @@ namespace winrt::NextGenEmby::Native::implementation
 
     private:
         void ApplySwapChainColorSpace(HdrDisplaySnapshot const& snapshot);
+        void RaiseFailed(std::exception const& error);
+        void RaiseFailed(winrt::hresult_error const& error);
         void Raise(NextGenEmby::Native::NativePlaybackState state, winrt::hstring const& message = L"");
         void UpdateDisplayStatus(HdrDisplaySnapshot const& snapshot);
 
         winrt::event<NextGenEmby::Native::NativePlaybackStateChangedHandler> m_stateChanged;
         DxDeviceResources m_dx;
+        std::unique_ptr<PlaybackGraph> m_graph;
         HdrDisplayController m_hdr;
         int64_t m_positionTicks{0};
         NextGenEmby::Native::NativePlaybackStatus m_displayStatus{nullptr};

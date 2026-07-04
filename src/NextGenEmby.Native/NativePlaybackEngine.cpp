@@ -3,9 +3,12 @@
 #include "NativePlaybackStatus.h"
 #include "NativePlaybackEngine.g.cpp"
 
+#include <exception>
+
 namespace winrt::NextGenEmby::Native::implementation
 {
     NativePlaybackEngine::NativePlaybackEngine()
+        : m_graph(std::make_unique<PlaybackGraph>())
     {
         UpdateDisplayStatus(m_hdr.Probe());
     }
@@ -26,9 +29,9 @@ namespace winrt::NextGenEmby::Native::implementation
         m_dx.AttachSurface(panel);
     }
 
-    int64_t NativePlaybackEngine::CurrentPositionTicks() const noexcept
+    int64_t NativePlaybackEngine::CurrentPositionTicks() const
     {
-        return m_positionTicks;
+        return m_graph ? m_graph->CurrentPositionTicks() : m_positionTicks;
     }
 
     NextGenEmby::Native::NativePlaybackStatus NativePlaybackEngine::DisplayStatus() const
@@ -49,52 +52,107 @@ namespace winrt::NextGenEmby::Native::implementation
     winrt::Windows::Foundation::IAsyncAction NativePlaybackEngine::OpenAsync(
         NextGenEmby::Native::NativePlaybackOpenRequest request)
     {
-        if (request == nullptr || request.DirectStreamUrl().empty())
+        try
         {
-            Raise(NextGenEmby::Native::NativePlaybackState::NativePlaybackState_Failed, L"Direct stream URL is required.");
-            co_return;
+            m_graph->Open(request);
+            m_positionTicks = m_graph->CurrentPositionTicks();
+
+            auto display = m_hdr.EnterHdr10();
+            UpdateDisplayStatus(display);
+            ApplySwapChainColorSpace(display);
+            Raise(NextGenEmby::Native::NativePlaybackState::NativePlaybackState_Opening);
+            Raise(NextGenEmby::Native::NativePlaybackState::NativePlaybackState_Playing);
+        }
+        catch (winrt::hresult_error const& error)
+        {
+            RaiseFailed(error);
+        }
+        catch (std::exception const& error)
+        {
+            RaiseFailed(error);
         }
 
-        m_positionTicks = request.StartPositionTicks();
-        auto display = m_hdr.EnterHdr10();
-        UpdateDisplayStatus(display);
-        ApplySwapChainColorSpace(display);
-        Raise(NextGenEmby::Native::NativePlaybackState::NativePlaybackState_Opening);
-        Raise(NextGenEmby::Native::NativePlaybackState::NativePlaybackState_Playing);
         co_return;
     }
 
     winrt::Windows::Foundation::IAsyncAction NativePlaybackEngine::PauseAsync()
     {
-        Raise(NextGenEmby::Native::NativePlaybackState::NativePlaybackState_Paused);
+        try
+        {
+            m_graph->Pause();
+            Raise(NextGenEmby::Native::NativePlaybackState::NativePlaybackState_Paused);
+        }
+        catch (winrt::hresult_error const& error)
+        {
+            RaiseFailed(error);
+        }
+        catch (std::exception const& error)
+        {
+            RaiseFailed(error);
+        }
+
         co_return;
     }
 
     winrt::Windows::Foundation::IAsyncAction NativePlaybackEngine::ResumeAsync()
     {
-        Raise(NextGenEmby::Native::NativePlaybackState::NativePlaybackState_Playing);
+        try
+        {
+            m_graph->Resume();
+            Raise(NextGenEmby::Native::NativePlaybackState::NativePlaybackState_Playing);
+        }
+        catch (winrt::hresult_error const& error)
+        {
+            RaiseFailed(error);
+        }
+        catch (std::exception const& error)
+        {
+            RaiseFailed(error);
+        }
+
         co_return;
     }
 
     winrt::Windows::Foundation::IAsyncAction NativePlaybackEngine::SeekAsync(int64_t positionTicks)
     {
-        if (positionTicks < 0)
+        try
         {
-            Raise(NextGenEmby::Native::NativePlaybackState::NativePlaybackState_Failed, L"Seek position cannot be negative.");
-            co_return;
+            m_graph->Seek(positionTicks);
+            m_positionTicks = m_graph->CurrentPositionTicks();
+        }
+        catch (winrt::hresult_error const& error)
+        {
+            RaiseFailed(error);
+        }
+        catch (std::exception const& error)
+        {
+            RaiseFailed(error);
         }
 
-        m_positionTicks = positionTicks;
         co_return;
     }
 
     winrt::Windows::Foundation::IAsyncAction NativePlaybackEngine::StopAsync()
     {
-        m_positionTicks = 0;
-        auto display = m_hdr.RestoreInitialState();
-        UpdateDisplayStatus(display);
-        ApplySwapChainColorSpace(display);
-        Raise(NextGenEmby::Native::NativePlaybackState::NativePlaybackState_Stopped);
+        try
+        {
+            m_graph->Stop();
+            m_positionTicks = m_graph->CurrentPositionTicks();
+
+            auto display = m_hdr.RestoreInitialState();
+            UpdateDisplayStatus(display);
+            ApplySwapChainColorSpace(display);
+            Raise(NextGenEmby::Native::NativePlaybackState::NativePlaybackState_Stopped);
+        }
+        catch (winrt::hresult_error const& error)
+        {
+            RaiseFailed(error);
+        }
+        catch (std::exception const& error)
+        {
+            RaiseFailed(error);
+        }
+
         co_return;
     }
 
@@ -107,6 +165,16 @@ namespace winrt::NextGenEmby::Native::implementation
         }
 
         m_dx.SetSdrColorSpace();
+    }
+
+    void NativePlaybackEngine::RaiseFailed(std::exception const& error)
+    {
+        Raise(NextGenEmby::Native::NativePlaybackState::NativePlaybackState_Failed, winrt::to_hstring(error.what()));
+    }
+
+    void NativePlaybackEngine::RaiseFailed(winrt::hresult_error const& error)
+    {
+        Raise(NextGenEmby::Native::NativePlaybackState::NativePlaybackState_Failed, error.message());
     }
 
     void NativePlaybackEngine::Raise(NextGenEmby::Native::NativePlaybackState state, winrt::hstring const& message)
