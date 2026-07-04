@@ -203,6 +203,58 @@ public sealed class EmbyPlaybackInfoTests
     }
 
     [Fact]
+    public async Task GetPlaybackInfoAsync_Does_Not_Append_Api_Key_When_DirectStreamUrl_Does_Not_Request_It()
+    {
+        var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
+            HttpStatusCode.OK,
+            """
+            {
+              "MediaSources": [
+                {
+                  "Id": "source-1",
+                  "DirectStreamUrl": "/emby/videos/no-key?existing=1",
+                  "AddApiKeyToDirectStreamUrl": false,
+                  "MediaStreams": []
+                }
+              ]
+            }
+            """));
+        using var http = new HttpClient(handler);
+        var client = CreateClient(http);
+
+        var sources = await client.GetPlaybackInfoAsync(Session(), "movie-1");
+
+        var source = Assert.Single(sources);
+        Assert.Equal("http://emby.local:8096/emby/videos/no-key?existing=1", source.DirectStreamUrl);
+    }
+
+    [Fact]
+    public async Task GetPlaybackInfoAsync_Does_Not_Append_Duplicate_Api_Key_When_DirectStreamUrl_Already_Has_One()
+    {
+        var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
+            HttpStatusCode.OK,
+            """
+            {
+              "MediaSources": [
+                {
+                  "Id": "source-1",
+                  "DirectStreamUrl": "/emby/videos/existing-key?api_key=server-key&existing=1",
+                  "AddApiKeyToDirectStreamUrl": true,
+                  "MediaStreams": []
+                }
+              ]
+            }
+            """));
+        using var http = new HttpClient(handler);
+        var client = CreateClient(http);
+
+        var sources = await client.GetPlaybackInfoAsync(Session(), "movie-1");
+
+        var source = Assert.Single(sources);
+        Assert.Equal("http://emby.local:8096/emby/videos/existing-key?api_key=server-key&existing=1", source.DirectStreamUrl);
+    }
+
+    [Fact]
     public async Task GetPlaybackInfoAsync_Null_Top_Level_MediaSources_Returns_Empty_List()
     {
         var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
