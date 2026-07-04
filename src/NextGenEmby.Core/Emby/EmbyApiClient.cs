@@ -50,7 +50,7 @@ namespace NextGenEmby.Core.Emby
         {
             using var request = new HttpRequestMessage(
                 HttpMethod.Get,
-                $"Users/{session.UserId}/Items/Latest?IncludeItemTypes=Movie,Series,Episode&Fields=Overview,ProductionYear,RunTimeTicks,PrimaryImageAspectRatio&Limit=50");
+                $"Users/{EscapeUriComponent(session.UserId)}/Items/Latest?IncludeItemTypes=Movie,Series,Episode&Fields=Overview,ProductionYear,RunTimeTicks,PrimaryImageAspectRatio&Limit=50");
             EmbyAuthorization.Apply(request, _options, session);
 
             using var response = await _http.SendAsync(request).ConfigureAwait(false);
@@ -62,11 +62,16 @@ namespace NextGenEmby.Core.Emby
 
         public string GetImageUrl(EmbySession session, string itemId, string imageType, int maxWidth)
         {
-            return $"{session.ServerUrl.TrimEnd('/')}/Items/{itemId}/Images/{imageType}?maxWidth={maxWidth}&quality=90&api_key={session.AccessToken}";
+            return
+                $"{session.ServerUrl.TrimEnd('/')}/Items/{EscapeUriComponent(itemId)}/Images/{EscapeUriComponent(imageType)}" +
+                $"?maxWidth={maxWidth}&quality=90&api_key={EscapeUriComponent(session.AccessToken)}";
         }
 
         private static EmbyMediaItem MapItem(ItemDto item)
         {
+            var imageTags = item.ImageTags;
+            var backdropImageTags = item.BackdropImageTags;
+
             return new EmbyMediaItem
             {
                 Id = item.Id,
@@ -75,9 +80,14 @@ namespace NextGenEmby.Core.Emby
                 Overview = item.Overview,
                 ProductionYear = item.ProductionYear,
                 RunTimeTicks = item.RunTimeTicks,
-                PrimaryImageTag = item.ImageTags.TryGetValue("Primary", out var primary) ? primary : "",
-                BackdropImageTag = item.BackdropImageTags.Count > 0 ? item.BackdropImageTags[0] : ""
+                PrimaryImageTag = imageTags != null && imageTags.TryGetValue("Primary", out var primary) ? primary : "",
+                BackdropImageTag = backdropImageTags != null && backdropImageTags.Count > 0 ? backdropImageTags[0] : ""
             };
+        }
+
+        private static string EscapeUriComponent(string value)
+        {
+            return Uri.EscapeDataString(value);
         }
 
         private sealed class AuthResponseDto

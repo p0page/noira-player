@@ -59,6 +59,63 @@ public sealed class EmbyLibraryTests
         Assert.Equal("http://emby.local:8096/Items/movie-1/Images/Primary?maxWidth=600&quality=90&api_key=token-123", url);
     }
 
+    [Fact]
+    public async Task GetLatestItemsAsync_Maps_Null_Image_Collections_To_Empty_Tags()
+    {
+        var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
+            HttpStatusCode.OK,
+            """
+            [
+              {
+                "Id": "series-1",
+                "Name": "Null Images",
+                "Type": "Series",
+                "ImageTags": null,
+                "BackdropImageTags": null
+              }
+            ]
+            """));
+        using var http = new HttpClient(handler);
+        var client = CreateClient(http);
+
+        var items = await client.GetLatestItemsAsync(Session());
+
+        var item = Assert.Single(items);
+        Assert.Equal("", item.PrimaryImageTag);
+        Assert.Equal("", item.BackdropImageTag);
+    }
+
+    [Fact]
+    public async Task GetLatestItemsAsync_Escapes_User_Id_And_Builds_Expected_Query()
+    {
+        var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(HttpStatusCode.OK, "[]"));
+        using var http = new HttpClient(handler);
+        var client = CreateClient(http);
+
+        await client.GetLatestItemsAsync(Session(userId: "user 1/slash"));
+
+        var request = handler.LastRequest!;
+        Assert.Equal("/Users/user%201%2Fslash/Items/Latest", request.RequestUri!.AbsolutePath);
+        Assert.Equal(
+            "?IncludeItemTypes=Movie,Series,Episode&Fields=Overview,ProductionYear,RunTimeTicks,PrimaryImageAspectRatio&Limit=50",
+            request.RequestUri.Query);
+    }
+
+    [Fact]
+    public void GetImageUrl_Handles_Trailing_Slash_And_Escapes_Components()
+    {
+        using var http = new HttpClient(new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(HttpStatusCode.OK, "{}")));
+        var client = CreateClient(http);
+
+        var url = client.GetImageUrl(
+            Session(serverUrl: "http://emby.local:8096/", accessToken: "token+123/abc"),
+            "movie 1",
+            "Primary Image",
+            600);
+
+        Assert.Equal("http://emby.local:8096/Items/movie%201/Images/Primary%20Image?maxWidth=600&quality=90&api_key=token%2B123%2Fabc", url);
+    }
+
     private static EmbyApiClient CreateClient(HttpClient http) => new EmbyApiClient(http, new EmbyClientOptions
     {
         ServerUrl = "http://emby.local:8096",
@@ -68,11 +125,14 @@ public sealed class EmbyLibraryTests
         ClientVersion = "0.1.0"
     });
 
-    private static EmbySession Session() => new EmbySession
+    private static EmbySession Session(
+        string serverUrl = "http://emby.local:8096",
+        string userId = "user-1",
+        string accessToken = "token-123") => new EmbySession
     {
-        ServerUrl = "http://emby.local:8096",
-        UserId = "user-1",
+        ServerUrl = serverUrl,
+        UserId = userId,
         UserName = "Alice",
-        AccessToken = "token-123"
+        AccessToken = accessToken
     };
 }
