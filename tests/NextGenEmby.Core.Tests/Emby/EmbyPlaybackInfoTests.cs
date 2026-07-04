@@ -203,6 +203,36 @@ public sealed class EmbyPlaybackInfoTests
     }
 
     [Fact]
+    public async Task GetPlaybackInfoAsync_Preserves_Absolute_DirectStreamUrl_And_Appends_Api_Key_When_Requested()
+    {
+        var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
+            HttpStatusCode.OK,
+            """
+            {
+              "MediaSources": [
+                {
+                  "Id": "source-1",
+                  "DirectStreamUrl": "https://cdn.emby.example/streams/movie-1?existing=1",
+                  "AddApiKeyToDirectStreamUrl": true,
+                  "MediaStreams": []
+                }
+              ]
+            }
+            """));
+        using var http = new HttpClient(handler);
+        var client = CreateClient(http);
+
+        var sources = await client.GetPlaybackInfoAsync(
+            Session(accessToken: "token+123/abc"),
+            "movie-1");
+
+        var source = Assert.Single(sources);
+        Assert.Equal(
+            "https://cdn.emby.example/streams/movie-1?existing=1&api_key=token%2B123%2Fabc",
+            source.DirectStreamUrl);
+    }
+
+    [Fact]
     public async Task GetPlaybackInfoAsync_Does_Not_Append_Api_Key_When_DirectStreamUrl_Does_Not_Request_It()
     {
         var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
@@ -278,6 +308,34 @@ public sealed class EmbyPlaybackInfoTests
         var source = Assert.Single(sources);
         Assert.Equal(
             "http://emby.local:8096/Videos/movie-1/stream?static=true&mediaSourceId=source-1&api_key=token-123&PlaySessionId=play%20session%2F1",
+            source.DirectStreamUrl);
+    }
+
+    [Fact]
+    public async Task GetPlaybackInfoAsync_Prefers_MediaSource_PlaySessionId_Over_Top_Level_For_Fallback_DirectStreamUrl()
+    {
+        var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
+            HttpStatusCode.OK,
+            """
+            {
+              "PlaySessionId": "top-level",
+              "MediaSources": [
+                {
+                  "Id": "source-1",
+                  "PlaySessionId": "source session/1",
+                  "MediaStreams": []
+                }
+              ]
+            }
+            """));
+        using var http = new HttpClient(handler);
+        var client = CreateClient(http);
+
+        var sources = await client.GetPlaybackInfoAsync(Session(), "movie-1");
+
+        var source = Assert.Single(sources);
+        Assert.Equal(
+            "http://emby.local:8096/Videos/movie-1/stream?static=true&mediaSourceId=source-1&api_key=token-123&PlaySessionId=source%20session%2F1",
             source.DirectStreamUrl);
     }
 
