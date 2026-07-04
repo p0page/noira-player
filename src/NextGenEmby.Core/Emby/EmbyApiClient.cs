@@ -64,7 +64,7 @@ namespace NextGenEmby.Core.Emby
         {
             using var request = new HttpRequestMessage(
                 HttpMethod.Get,
-                $"Items/{EscapeUriComponent(itemId)}/PlaybackInfo");
+                $"Items/{EscapeUriComponent(itemId)}/PlaybackInfo?UserId={EscapeUriComponent(session.UserId)}");
             EmbyAuthorization.Apply(request, _options, session);
 
             using var response = await _http.SendAsync(request).ConfigureAwait(false);
@@ -109,15 +109,18 @@ namespace NextGenEmby.Core.Emby
                 Name = string.IsNullOrWhiteSpace(source.Name) ? id : source.Name,
                 Container = source.Container ?? "",
                 Bitrate = source.Bitrate,
-                DirectStreamUrl =
-                    $"{session.ServerUrl.TrimEnd('/')}/Videos/{EscapeUriComponent(itemId)}/stream" +
-                    $"?static=true&mediaSourceId={EscapeUriComponent(id)}&api_key={EscapeUriComponent(session.AccessToken)}"
+                DirectStreamUrl = BuildDirectStreamUrl(session, itemId, source)
             };
 
             var streams = source.MediaStreams ?? new List<MediaStreamDto>();
             foreach (var stream in streams)
             {
-                var kind = ParseStreamKind(stream.Type);
+                EmbyStreamKind kind;
+                if (!TryParseStreamKind(stream.Type, out kind))
+                {
+                    continue;
+                }
+
                 result.Streams.Add(new EmbyMediaStream
                 {
                     Index = stream.Index,
@@ -141,19 +144,103 @@ namespace NextGenEmby.Core.Emby
             return result;
         }
 
-        private static EmbyStreamKind ParseStreamKind(string type)
+        private static bool TryParseStreamKind(string type, out EmbyStreamKind kind)
         {
             if (string.Equals(type, "Video", StringComparison.OrdinalIgnoreCase))
             {
-                return EmbyStreamKind.Video;
+                kind = EmbyStreamKind.Video;
+                return true;
             }
 
             if (string.Equals(type, "Audio", StringComparison.OrdinalIgnoreCase))
             {
-                return EmbyStreamKind.Audio;
+                kind = EmbyStreamKind.Audio;
+                return true;
             }
 
-            return EmbyStreamKind.Subtitle;
+            if (string.Equals(type, "Subtitle", StringComparison.OrdinalIgnoreCase))
+            {
+                kind = EmbyStreamKind.Subtitle;
+                return true;
+            }
+
+            kind = default(EmbyStreamKind);
+            return false;
+        }
+
+        private static string BuildDirectStreamUrl(EmbySession session, string itemId, MediaSourceDto source)
+        {
+            if (!string.IsNullOrWhiteSpace(source.DirectStreamUrl))
+            {
+                var directStreamUrl = ResolveDirectStreamUrl(session, source.DirectStreamUrl);
+                if (source.AddApiKeyToDirectStreamUrl && !HasQueryParameter(directStreamUrl, "api_key"))
+                {
+                    directStreamUrl = AppendQueryParameter(
+                        directStreamUrl,
+                        "api_key",
+                        EscapeUriComponent(session.AccessToken));
+                }
+
+                return directStreamUrl;
+            }
+
+            var url =
+                $"{session.ServerUrl.TrimEnd('/')}/Videos/{EscapeUriComponent(itemId)}/stream" +
+                $"?static=true&mediaSourceId={EscapeUriComponent(source.Id ?? "")}&api_key={EscapeUriComponent(session.AccessToken)}";
+
+            if (!string.IsNullOrWhiteSpace(source.Container))
+            {
+                url = AppendQueryParameter(url, "container", EscapeUriComponent(source.Container));
+            }
+
+            return url;
+        }
+
+        private static string ResolveDirectStreamUrl(EmbySession session, string directStreamUrl)
+        {
+            Uri uri;
+            if (Uri.TryCreate(directStreamUrl, UriKind.Absolute, out uri))
+            {
+                return uri.ToString();
+            }
+
+            var baseUri = new Uri(session.ServerUrl.TrimEnd('/') + "/");
+            return new Uri(baseUri, directStreamUrl).ToString();
+        }
+
+        private static bool HasQueryParameter(string url, string name)
+        {
+            var queryStart = url.IndexOf('?');
+            if (queryStart < 0)
+            {
+                return false;
+            }
+
+            var fragmentStart = url.IndexOf('#', queryStart);
+            var query = fragmentStart < 0
+                ? url.Substring(queryStart + 1)
+                : url.Substring(queryStart + 1, fragmentStart - queryStart - 1);
+            var parameters = query.Split('&');
+            foreach (var parameter in parameters)
+            {
+                var equalsIndex = parameter.IndexOf('=');
+                var parameterName = equalsIndex < 0 ? parameter : parameter.Substring(0, equalsIndex);
+                if (string.Equals(parameterName, name, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static string AppendQueryParameter(string url, string name, string escapedValue)
+        {
+            var fragmentStart = url.IndexOf('#');
+            var urlWithoutFragment = fragmentStart < 0 ? url : url.Substring(0, fragmentStart);
+            var fragment = fragmentStart < 0 ? "" : url.Substring(fragmentStart);
+            var separator = urlWithoutFragment.IndexOf('?') < 0 ? "?" : "&";
+            return $"{urlWithoutFragment}{separator}{name}={escapedValue}{fragment}";
         }
 
         private static string EscapeUriComponent(string value)
@@ -196,6 +283,8 @@ namespace NextGenEmby.Core.Emby
             public string Name { get; set; } = "";
             public string Container { get; set; } = "";
             public long Bitrate { get; set; }
+            public string DirectStreamUrl { get; set; } = "";
+            public bool AddApiKeyToDirectStreamUrl { get; set; }
             public List<MediaStreamDto> MediaStreams { get; set; } = new List<MediaStreamDto>();
         }
 

@@ -64,7 +64,7 @@ public sealed class EmbyPlaybackInfoTests
         Assert.True(source.IsHdr);
         Assert.Equal(3840, source.Width);
         Assert.Equal(2160, source.Height);
-        Assert.Equal("http://emby.local:8096/Videos/movie-1/stream?static=true&mediaSourceId=source-4k&api_key=token-123", source.DirectStreamUrl);
+        Assert.Equal("http://emby.local:8096/Videos/movie-1/stream?static=true&mediaSourceId=source-4k&api_key=token-123&container=mkv", source.DirectStreamUrl);
         Assert.Equal("hevc", source.VideoStreams.Single().Codec);
         Assert.Equal("truehd", source.AudioStreams.Single().Codec);
         Assert.True(source.SubtitleStreams.Single().IsExternal);
@@ -72,6 +72,7 @@ public sealed class EmbyPlaybackInfoTests
         var request = handler.LastRequest!;
         Assert.Equal(HttpMethod.Get, request.Method);
         Assert.Equal("/Items/movie-1/PlaybackInfo", request.RequestUri!.AbsolutePath);
+        Assert.Equal("?UserId=user-1", request.RequestUri.Query);
         Assert.Equal("Emby", request.AuthorizationScheme);
         Assert.Equal(
             "UserId=\"user-1\", Client=\"Next Gen Xbox Emby\", Device=\"Next Gen Xbox Emby\", DeviceId=\"test-device\", Version=\"0.1.0\"",
@@ -99,11 +100,12 @@ public sealed class EmbyPlaybackInfoTests
         var client = CreateClient(http);
 
         var sources = await client.GetPlaybackInfoAsync(
-            Session(serverUrl: "http://emby.local:8096/", accessToken: "token+123/abc"),
+            Session(serverUrl: "http://emby.local:8096/", userId: "user 1/slash", accessToken: "token+123/abc"),
             "movie 1/slash");
 
         var source = Assert.Single(sources);
         Assert.Equal("/Items/movie%201%2Fslash/PlaybackInfo", handler.LastRequest!.RequestUri!.AbsolutePath);
+        Assert.Equal("?UserId=user%201%2Fslash", handler.LastRequest.RequestUri.Query);
         Assert.Equal(
             "http://emby.local:8096/Videos/movie%201%2Fslash/stream?static=true&mediaSourceId=source%204k%2Fatmos&api_key=token%2B123%2Fabc",
             source.DirectStreamUrl);
@@ -134,6 +136,88 @@ public sealed class EmbyPlaybackInfoTests
         Assert.Equal("source-minimal", source.Name);
         Assert.Empty(source.Streams);
         Assert.False(source.IsHdr);
+    }
+
+    [Fact]
+    public async Task GetPlaybackInfoAsync_Skips_Unsupported_Stream_Types()
+    {
+        var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
+            HttpStatusCode.OK,
+            """
+            {
+              "MediaSources": [
+                {
+                  "Id": "source-1",
+                  "MediaStreams": [
+                    { "Index": 0, "Type": "Subtitle", "Codec": "srt" },
+                    { "Index": 1, "Type": "Data", "Codec": "bin" },
+                    { "Index": 2, "Type": "Attachment", "Codec": "ttf" },
+                    { "Index": 3, "Type": "EmbeddedImage", "Codec": "mjpeg" },
+                    { "Index": 4, "Type": "Unknown", "Codec": "mystery" },
+                    { "Index": 5, "Type": "", "Codec": "empty" },
+                    { "Index": 6, "Codec": "missing" }
+                  ]
+                }
+              ]
+            }
+            """));
+        using var http = new HttpClient(handler);
+        var client = CreateClient(http);
+
+        var sources = await client.GetPlaybackInfoAsync(Session(), "movie-1");
+
+        var source = Assert.Single(sources);
+        var subtitle = Assert.Single(source.SubtitleStreams);
+        Assert.Equal(0, subtitle.Index);
+        Assert.Single(source.Streams);
+    }
+
+    [Fact]
+    public async Task GetPlaybackInfoAsync_Resolves_Relative_DirectStreamUrl_And_Appends_Api_Key_When_Requested()
+    {
+        var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
+            HttpStatusCode.OK,
+            """
+            {
+              "MediaSources": [
+                {
+                  "Id": "source-1",
+                  "DirectStreamUrl": "/emby/videos/custom-stream?existing=1",
+                  "AddApiKeyToDirectStreamUrl": true,
+                  "MediaStreams": []
+                }
+              ]
+            }
+            """));
+        using var http = new HttpClient(handler);
+        var client = CreateClient(http);
+
+        var sources = await client.GetPlaybackInfoAsync(
+            Session(serverUrl: "http://emby.local:8096/", accessToken: "token+123/abc"),
+            "movie-1");
+
+        var source = Assert.Single(sources);
+        Assert.Equal(
+            "http://emby.local:8096/emby/videos/custom-stream?existing=1&api_key=token%2B123%2Fabc",
+            source.DirectStreamUrl);
+    }
+
+    [Fact]
+    public async Task GetPlaybackInfoAsync_Null_Top_Level_MediaSources_Returns_Empty_List()
+    {
+        var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
+            HttpStatusCode.OK,
+            """
+            {
+              "MediaSources": null
+            }
+            """));
+        using var http = new HttpClient(handler);
+        var client = CreateClient(http);
+
+        var sources = await client.GetPlaybackInfoAsync(Session(), "movie-1");
+
+        Assert.Empty(sources);
     }
 
     private static EmbyApiClient CreateClient(HttpClient http) => new EmbyApiClient(http, new EmbyClientOptions
