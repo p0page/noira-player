@@ -78,6 +78,7 @@
     <Compile Include="MainPage.xaml.cs">
       <DependentUpon>MainPage.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Playback\SystemMediaPlaybackBackend.cs" />
     <Compile Include="Storage\ApplicationDataDeviceIdProvider.cs" />
     <Compile Include="Storage\ApplicationDataSessionStore.cs" />
     <Compile Include="ViewModels\LoginViewModel.cs" />
@@ -86,6 +87,9 @@
     </Compile>
     <Compile Include="Views\HomePage.xaml.cs">
       <DependentUpon>HomePage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\PlaybackPage.xaml.cs">
+      <DependentUpon>PlaybackPage.xaml</DependentUpon>
     </Compile>
   </ItemGroup>
 
@@ -103,6 +107,10 @@
       <SubType>Designer</SubType>
     </Page>
     <Page Include="Views\HomePage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\PlaybackPage.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>

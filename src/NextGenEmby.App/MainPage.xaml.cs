@@ -23,7 +23,18 @@ namespace NextGenEmby.App
             }
 
             var tag = item.Tag as string;
-            NavigateTo(tag == "home" ? typeof(HomePage) : typeof(LoginPage));
+            if (tag == "home")
+            {
+                NavigateTo(typeof(HomePage));
+            }
+            else if (tag == "playback")
+            {
+                NavigateTo(typeof(PlaybackPage));
+            }
+            else
+            {
+                NavigateTo(typeof(LoginPage));
+            }
         }
 
         private void NavigateTo(Type pageType)
