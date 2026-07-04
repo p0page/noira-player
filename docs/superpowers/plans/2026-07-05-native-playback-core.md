@@ -622,18 +622,27 @@ Expected: commit succeeds.
 
 ---
 
-### Task 3: Create the C++/WinRT Component Shell
+### Task 3: 创建 C++/WinRT 组件外壳
 
 **Files:**
 - Create: `src/NextGenEmby.Native/NextGenEmby.Native.vcxproj`
+- Create: `src/NextGenEmby.Native/NextGenEmby.Native.vcxproj.filters`
+- Create: `src/NextGenEmby.Native/NextGenEmby.Native.def`
+- Create: `src/NextGenEmby.Native/PropertySheet.props`
+- Create: `src/NextGenEmby.Native/packages.config`
 - Create: `src/NextGenEmby.Native/NativePlaybackEngine.idl`
 - Create: `src/NextGenEmby.Native/pch.h`
 - Create: `src/NextGenEmby.Native/pch.cpp`
+- Create: `src/NextGenEmby.Native/NativePlaybackOpenRequest.h`
+- Create: `src/NextGenEmby.Native/NativePlaybackOpenRequest.cpp`
+- Create: `src/NextGenEmby.Native/NativePlaybackStatus.h`
+- Create: `src/NextGenEmby.Native/NativePlaybackStatus.cpp`
 - Create: `src/NextGenEmby.Native/NativePlaybackEngine.h`
 - Create: `src/NextGenEmby.Native/NativePlaybackEngine.cpp`
+- Modify: `.gitignore`
 - Modify: `NextGenXboxEmby.sln`
 
-- [ ] **Step 1: Create the C++/WinRT UWP component project**
+- [x] **Step 1: 创建 C++/WinRT UWP 组件项目**
 
 Use Visual Studio after Task 0 succeeds:
 
@@ -655,7 +664,7 @@ NextGenXboxEmby.sln includes NextGenEmby.Native.
 
 After project creation, set the native project GUID to `{6F1A9D90-7A7D-4E91-8468-80D12D91A7D5}` in both `NextGenEmby.Native.vcxproj` and `NextGenXboxEmby.sln`. Using a fixed GUID keeps the next C# project-reference step deterministic.
 
-- [ ] **Step 2: Replace IDL with the first stable API surface**
+- [x] **Step 2: 替换为第一版稳定 IDL API 面**
 
 Edit `src/NextGenEmby.Native/NativePlaybackEngine.idl`:
 
@@ -720,7 +729,7 @@ namespace NextGenEmby.Native
 }
 ```
 
-- [ ] **Step 3: Implement a buildable native stub**
+- [x] **Step 3: 实现可构建的 native stub**
 
 Edit `src/NextGenEmby.Native/NativePlaybackEngine.h`:
 
@@ -857,7 +866,7 @@ namespace winrt::NextGenEmby::Native::implementation
 }
 ```
 
-- [ ] **Step 4: Build native component**
+- [x] **Step 4: 构建 native 组件**
 
 Run:
 
@@ -867,7 +876,17 @@ Run:
 
 Expected: `Build succeeded.`
 
-- [ ] **Step 5: Commit**
+执行记录（2026-07-05）:
+
+- C++/WinRT NuGet 包使用 `Microsoft.Windows.CppWinRT.2.0.220531.1`，通过 `packages.config` 还原；本地 `packages/` 已加入忽略规则。
+- `NativePlaybackEngine.idl` 不手写 `import "Windows.Foundation.idl";`。CppWinRT/MSBuild 已通过 winmd references 和 `winrtbase.idl` 提供基础 WinRT 类型，手写导入会导致 MIDL 重复定义 `IUnknown`、`IInspectable`、`IAsyncInfo`。
+- 多个 runtimeclass 会生成独立的 `.g.h` 文件，因此 `NativePlaybackOpenRequest.h` 包含 `NativePlaybackOpenRequest.g.h`，`NativePlaybackStatus.h` 包含 `NativePlaybackStatus.g.h`，`NativePlaybackEngine.h` 包含 `NativePlaybackEngine.g.h`。
+- 项目保留 `.def + module.g.cpp` 导出路径，并移除 `_WINRT_DLL` 宏，避免 `DllGetActivationFactory` 和 `DllCanUnloadNow` 重复导出警告。
+- Native 单项目验证通过：`NextGenEmby.Native.vcxproj /restore /p:Configuration=Debug /p:Platform=x64`，0 警告、0 错误。
+- 完整解决方案验证通过：`NextGenXboxEmby.sln /restore /p:Configuration=Debug /p:Platform=x64`，0 警告、0 错误。
+- Managed 测试验证通过：`dotnet test tests\NextGenEmby.Core.Tests\NextGenEmby.Core.Tests.csproj -v minimal`，52 passed、0 failed、0 skipped。
+
+- [x] **Step 5: 提交**
 
 ```powershell
 git add NextGenXboxEmby.sln src\NextGenEmby.Native

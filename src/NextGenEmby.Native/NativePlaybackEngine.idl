@@ -1,0 +1,58 @@
+namespace NextGenEmby.Native
+{
+    enum NativePlaybackState
+    {
+        NativePlaybackState_Stopped = 0,
+        NativePlaybackState_Opening = 1,
+        NativePlaybackState_Buffering = 2,
+        NativePlaybackState_Playing = 3,
+        NativePlaybackState_Paused = 4,
+        NativePlaybackState_Failed = 5
+    };
+
+    enum NativeHdrStatus
+    {
+        NativeHdrStatus_Unknown = 0,
+        NativeHdrStatus_Unsupported = 1,
+        NativeHdrStatus_Off = 2,
+        NativeHdrStatus_On = 3,
+        NativeHdrStatus_Failed = 4
+    };
+
+    runtimeclass NativePlaybackOpenRequest
+    {
+        NativePlaybackOpenRequest();
+        String ItemId;
+        String MediaSourceId;
+        String DirectStreamUrl;
+        Int64 StartPositionTicks;
+        Int32 AudioStreamIndex;
+        Boolean HasAudioStreamIndex;
+        Int32 SubtitleStreamIndex;
+        Boolean HasSubtitleStreamIndex;
+    }
+
+    runtimeclass NativePlaybackStatus
+    {
+        NativePlaybackStatus();
+        NativeHdrStatus HdrStatus;
+        Boolean IsHdrDisplayAvailable;
+        Boolean IsHdrOutputActive;
+        String Message;
+    }
+
+    delegate void NativePlaybackStateChangedHandler(NativePlaybackState state, String message);
+
+    runtimeclass NativePlaybackEngine
+    {
+        NativePlaybackEngine();
+        event NativePlaybackStateChangedHandler StateChanged;
+        Int64 CurrentPositionTicks();
+        NativePlaybackStatus DisplayStatus();
+        Windows.Foundation.IAsyncAction OpenAsync(NativePlaybackOpenRequest request);
+        Windows.Foundation.IAsyncAction PauseAsync();
+        Windows.Foundation.IAsyncAction ResumeAsync();
+        Windows.Foundation.IAsyncAction SeekAsync(Int64 positionTicks);
+        Windows.Foundation.IAsyncAction StopAsync();
+    }
+}

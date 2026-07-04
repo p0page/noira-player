@@ -3,6 +3,7 @@
 .vs/
 bin/
 obj/
+packages/
 TestResults/
 *.user
 *.suo
@@ -11,5 +12,16 @@ TestResults/
 AppPackages/
 BundleArtifacts/
 Package.StoreAssociation.xml
+Generated Files/
+NextGenE.*/
+Win32/
+x64/
+ARM/
+ARM64/
+*_h.h
+*_h_p.h
+*_i.c
+*_p.c
+dlldata.c
 .research/
 .superpowers/
