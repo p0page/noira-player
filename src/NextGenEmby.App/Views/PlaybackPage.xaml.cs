@@ -20,6 +20,7 @@ namespace NextGenEmby.App.Views
         private readonly IPlaybackBackend _backend;
         private readonly IDisposable? _disposableBackend;
         private readonly PlaybackOrchestrator _orchestrator;
+        private long _lastPositionTicks;
         private bool _hasPlaybackContext;
         private bool _infoVisible;
 
@@ -101,6 +102,11 @@ namespace NextGenEmby.App.Views
         {
             await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
             {
+                if (args.PositionTicks.HasValue)
+                {
+                    _lastPositionTicks = Math.Max(0, args.PositionTicks.Value);
+                }
+
                 _hasPlaybackContext = args.State != CorePlaybackState.Failed &&
                     args.State != CorePlaybackState.Stopped &&
                     (_hasPlaybackContext || args.State == CorePlaybackState.Opening);
@@ -131,6 +137,7 @@ namespace NextGenEmby.App.Views
         {
             var source = CreateManualSource();
             await _orchestrator.StartAsync(DemoItemId, new[] { source }, 0);
+            _lastPositionTicks = 0;
             _hasPlaybackContext = _orchestrator.CurrentDescriptor != null;
             UpdateStatus(_orchestrator.State);
             UpdateControlStates();
@@ -143,6 +150,7 @@ namespace NextGenEmby.App.Views
         private async Task StopPlaybackAsync()
         {
             await _orchestrator.StopAsync();
+            _lastPositionTicks = 0;
             _hasPlaybackContext = false;
             UpdateStatus(CorePlaybackState.Stopped);
             UpdateControlStates();
@@ -162,6 +170,7 @@ namespace NextGenEmby.App.Views
             }
 
             await _orchestrator.SeekAsync(target.Ticks);
+            _lastPositionTicks = target.Ticks;
             UpdateStatus(_orchestrator.State, "Position " + FormatPosition(target));
             if (_infoVisible)
             {
@@ -232,7 +241,7 @@ namespace NextGenEmby.App.Views
         {
             var descriptor = _orchestrator.CurrentDescriptor;
             var source = descriptor?.MediaSource;
-            var position = TimeSpan.FromTicks(Math.Max(0, _backend.CurrentPositionTicks));
+            var position = TimeSpan.FromTicks(GetCurrentPositionTicks());
 
             if (descriptor == null || source == null)
             {
@@ -263,6 +272,11 @@ namespace NextGenEmby.App.Views
             }
 
             return uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps;
+        }
+
+        private long GetCurrentPositionTicks()
+        {
+            return Math.Max(0, Math.Max(_lastPositionTicks, _backend.CurrentPositionTicks));
         }
 
         private static string FormatPosition(TimeSpan position)

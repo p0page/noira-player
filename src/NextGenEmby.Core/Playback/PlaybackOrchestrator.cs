@@ -140,6 +140,26 @@ namespace NextGenEmby.Core.Playback
             return _backend.SeekAsync(positionTicks);
         }
 
+        public PlaybackProgressRequest CreateProgressRequest(PlaybackProgressEvent eventName)
+        {
+            EnsureStarted();
+            var descriptor = CurrentDescriptor!;
+            var source = descriptor.MediaSource;
+
+            return new PlaybackProgressRequest
+            {
+                ItemId = descriptor.ItemId,
+                MediaSourceId = source.Id,
+                PlaySessionId = string.IsNullOrWhiteSpace(source.PlaySessionId) ? null : source.PlaySessionId,
+                PositionTicks = Math.Max(0, _backend.CurrentPositionTicks),
+                IsPaused = State == PlaybackState.Paused,
+                EventName = eventName,
+                PlayMethod = PlaybackPlayMethod.DirectPlay,
+                AudioStreamIndex = descriptor.AudioStreamIndex,
+                SubtitleStreamIndex = descriptor.SubtitleStreamIndex
+            };
+        }
+
         public async Task StopAsync()
         {
             await _backend.StopAsync().ConfigureAwait(false);
@@ -249,13 +269,13 @@ namespace NextGenEmby.Core.Playback
                 ClearPlaybackContext();
             }
 
-            SetState(args.State, args.Message);
+            SetState(args.State, args.Message, args.PositionTicks);
         }
 
-        private void SetState(PlaybackState state, string message = "")
+        private void SetState(PlaybackState state, string message = "", long? positionTicks = null)
         {
             State = state;
-            StateChanged?.Invoke(this, new PlaybackStateChangedEventArgs(state, message));
+            StateChanged?.Invoke(this, new PlaybackStateChangedEventArgs(state, message, positionTicks));
         }
 
         private void ClearPlaybackContext()

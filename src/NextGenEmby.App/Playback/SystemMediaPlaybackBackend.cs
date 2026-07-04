@@ -188,7 +188,7 @@ namespace NextGenEmby.App.Playback
 
         private void RaiseState(CorePlaybackState state, string message = "")
         {
-            StateChanged?.Invoke(this, new PlaybackStateChangedEventArgs(state, message));
+            StateChanged?.Invoke(this, new PlaybackStateChangedEventArgs(state, message, CurrentPositionTicks));
         }
 
         private void ThrowIfDisposed()

@@ -211,6 +211,50 @@ public sealed class PlaybackOrchestratorTests
         Assert.Equal("buffering", received.Message);
     }
 
+    [Fact]
+    public async Task Backend_StateChanged_Reemits_PositionTicks()
+    {
+        var backend = new RecordingPlaybackBackend();
+        var orchestrator = new PlaybackOrchestrator(backend);
+        PlaybackStateChangedEventArgs? received = null;
+        orchestrator.StateChanged += (_, args) => received = args;
+        await orchestrator.StartAsync("item-1", new[] { Source("source-1") }, 0);
+
+        backend.RaiseStateChanged(PlaybackState.Playing, "position", 123_456);
+
+        Assert.NotNull(received);
+        Assert.Equal(PlaybackState.Playing, received!.State);
+        Assert.Equal(123_456, received.PositionTicks);
+    }
+
+    [Fact]
+    public async Task CreateProgressRequest_Maps_Current_Playback_Context()
+    {
+        var backend = new RecordingPlaybackBackend();
+        var source = Source(
+            "source-1",
+            Stream(1, EmbyStreamKind.Audio),
+            Stream(7, EmbyStreamKind.Subtitle));
+        source.PlaySessionId = "play-session-1";
+        var orchestrator = new PlaybackOrchestrator(backend);
+        await orchestrator.StartAsync("item-1", new[] { source }, 0);
+        await orchestrator.SwitchAudioStreamAsync(1);
+        await orchestrator.SwitchSubtitleStreamAsync(7);
+        backend.CurrentPositionTicks = 456_789;
+
+        var progress = orchestrator.CreateProgressRequest(PlaybackProgressEvent.TimeUpdate);
+
+        Assert.Equal("item-1", progress.ItemId);
+        Assert.Equal("source-1", progress.MediaSourceId);
+        Assert.Equal("play-session-1", progress.PlaySessionId);
+        Assert.Equal(456_789, progress.PositionTicks);
+        Assert.False(progress.IsPaused);
+        Assert.Equal(PlaybackProgressEvent.TimeUpdate, progress.EventName);
+        Assert.Equal(PlaybackPlayMethod.DirectPlay, progress.PlayMethod);
+        Assert.Equal(1, progress.AudioStreamIndex);
+        Assert.Equal(7, progress.SubtitleStreamIndex);
+    }
+
     [Theory]
     [InlineData(PlaybackState.Failed)]
     [InlineData(PlaybackState.Stopped)]
@@ -368,9 +412,9 @@ public sealed class PlaybackOrchestratorTests
 
         public Task StopAsync() => Task.CompletedTask;
 
-        public void RaiseStateChanged(PlaybackState state, string message = "")
+        public void RaiseStateChanged(PlaybackState state, string message = "", long? positionTicks = null)
         {
-            StateChanged?.Invoke(this, new PlaybackStateChangedEventArgs(state, message));
+            StateChanged?.Invoke(this, new PlaybackStateChangedEventArgs(state, message, positionTicks));
         }
     }
 }

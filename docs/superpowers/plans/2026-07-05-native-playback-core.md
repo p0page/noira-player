@@ -1969,7 +1969,7 @@ Expected: commit succeeds.
 - Modify: `tests/NextGenEmby.Core.Tests/Playback/PlaybackOrchestratorTests.cs`
 - Modify: `src/NextGenEmby.App/Views/PlaybackPage.xaml.cs`
 
-- [ ] **Step 1: Add position-aware playback events**
+- [x] **Step 1: Add position-aware playback events**
 
 Extend `PlaybackStateChangedEventArgs` with `PositionTicks`:
 
@@ -1984,7 +1984,7 @@ public PlaybackStateChangedEventArgs(PlaybackState state, string message = "", l
 public long? PositionTicks { get; }
 ```
 
-- [ ] **Step 2: Add orchestrator tests**
+- [x] **Step 2: Add orchestrator tests**
 
 Add a test that backend state changes with `PositionTicks` are re-emitted and can be used by the UWP page for progress reporting.
 
@@ -1992,7 +1992,9 @@ Add a test that backend state changes with `PositionTicks` are re-emitted and ca
 
 Extend the WinRT event or add a polling timer so `PlaybackPage.xaml.cs` can report progress through the existing `EmbyApiClient.ReportPlaybackProgressAsync` path.
 
-- [ ] **Step 4: Run managed tests**
+Partial note: native and system backends now emit position-aware state events, and `PlaybackPage.xaml.cs` tracks the latest position for UI/progress request creation. Real HTTP progress reporting is still deferred until PlaybackPage is driven by a real Emby item/session instead of the current manual URL demo.
+
+- [x] **Step 4: Run managed tests**
 
 Run:
 
@@ -2002,7 +2004,7 @@ dotnet test tests\NextGenEmby.Core.Tests\NextGenEmby.Core.Tests.csproj -v minima
 
 Expected: all tests pass.
 
-- [ ] **Step 5: Build solution**
+- [x] **Step 5: Build solution**
 
 Run:
 
@@ -2012,14 +2014,22 @@ Run:
 
 Expected: `Build succeeded.`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```powershell
 git add src tests
-git commit -m "feat: report native playback progress"
+git commit -m "feat: add position-aware playback progress"
 ```
 
 Expected: commit succeeds.
+
+执行记录（2026-07-05）：
+
+- `PlaybackStateChangedEventArgs` 已新增 `PositionTicks`，`PlaybackOrchestrator` 会透传 backend event 中的位置。
+- 已新增测试覆盖 backend position event 重新发出，以及 `PlaybackOrchestrator.CreateProgressRequest(...)` 如何从当前 item、media source、play session、position、audio/subtitle selection 构造 Emby progress request。
+- `WinRtNativePlaybackEngine` 与 `SystemMediaPlaybackBackend` 发状态事件时会带当前 position；`PlaybackPage.xaml.cs` 会保存事件中的 position，并在信息面板/seek 后使用最新位置。
+- Step 3 暂缓真实 HTTP 上报：当前 `PlaybackPage` 仍是手动 URL demo，没有真实 Emby item/session 驱动。等页面切到真实媒体详情/PlaybackInfo 后，再调用 `EmbyApiClient.ReportProgressAsync(session, orchestrator.CreateProgressRequest(...))`。
+- 验证已通过：`dotnet test tests\NextGenEmby.Core.Tests\NextGenEmby.Core.Tests.csproj -v minimal` 成功，53/53 通过；完整 `NextGenXboxEmby.sln` MSBuild 成功，0 warning / 0 error。
 
 ---
 

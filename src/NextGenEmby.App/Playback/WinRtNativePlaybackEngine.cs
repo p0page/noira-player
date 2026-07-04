@@ -95,7 +95,9 @@ namespace NextGenEmby.App.Playback
 
         private void Engine_OnStateChanged(NativePlaybackState state, string message)
         {
-            StateChanged?.Invoke(this, new PlaybackStateChangedEventArgs(MapState(state), message ?? ""));
+            StateChanged?.Invoke(
+                this,
+                new PlaybackStateChangedEventArgs(MapState(state), message ?? "", _engine.CurrentPositionTicks()));
         }
 
         private static PlaybackState MapState(NativePlaybackState state)
