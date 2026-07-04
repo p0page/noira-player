@@ -1,12 +1,13 @@
 #pragma once
 
+#include "HdrDisplayController.h"
 #include "NativePlaybackEngine.g.h"
 
 namespace winrt::NextGenEmby::Native::implementation
 {
     struct NativePlaybackEngine : NativePlaybackEngineT<NativePlaybackEngine>
     {
-        NativePlaybackEngine() = default;
+        NativePlaybackEngine();
 
         winrt::event_token StateChanged(NextGenEmby::Native::NativePlaybackStateChangedHandler const& handler);
         void StateChanged(winrt::event_token const& token) noexcept;
@@ -22,8 +23,10 @@ namespace winrt::NextGenEmby::Native::implementation
 
     private:
         void Raise(NextGenEmby::Native::NativePlaybackState state, winrt::hstring const& message = L"");
+        void UpdateDisplayStatus(HdrDisplaySnapshot const& snapshot);
 
         winrt::event<NextGenEmby::Native::NativePlaybackStateChangedHandler> m_stateChanged;
+        HdrDisplayController m_hdr;
         int64_t m_positionTicks{0};
         NextGenEmby::Native::NativePlaybackStatus m_displayStatus{nullptr};
     };

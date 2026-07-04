@@ -95,6 +95,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="HdrDisplayController.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="NativePlaybackEngine.h">
       <DependentUpon>NativePlaybackEngine.idl</DependentUpon>
@@ -107,6 +108,7 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="HdrDisplayController.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>

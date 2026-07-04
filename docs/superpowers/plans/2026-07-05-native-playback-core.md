@@ -1105,7 +1105,7 @@ Expected: commit succeeds.
 - Modify: `src/NextGenEmby.Native/NativePlaybackEngine.h`
 - Modify: `src/NextGenEmby.Native/NativePlaybackEngine.cpp`
 
-- [ ] **Step 1: Add the HDR controller interface**
+- [x] **Step 1: Add the HDR controller interface**
 
 Create `src/NextGenEmby.Native/HdrDisplayController.h`:
 
@@ -1140,7 +1140,7 @@ namespace winrt::NextGenEmby::Native::implementation
 }
 ```
 
-- [ ] **Step 2: Implement probe and mode switching**
+- [x] **Step 2: Implement probe and mode switching**
 
 Create `src/NextGenEmby.Native/HdrDisplayController.cpp`:
 
@@ -1275,11 +1275,11 @@ namespace winrt::NextGenEmby::Native::implementation
 }
 ```
 
-- [ ] **Step 3: Expose display status from `NativePlaybackEngine`**
+- [x] **Step 3: Expose display status from `NativePlaybackEngine`**
 
 Add a `HdrDisplayController m_hdr;` field to `NativePlaybackEngine.h`, call `m_hdr.Probe()` in the constructor, call `m_hdr.EnterHdr10()` before HDR playback starts, and call `m_hdr.RestoreInitialState()` from `StopAsync()`.
 
-- [ ] **Step 4: Build native component**
+- [x] **Step 4: Build native component**
 
 Run:
 
@@ -1289,7 +1289,7 @@ Run:
 
 Expected: `Build succeeded.`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```powershell
 git add src\NextGenEmby.Native
@@ -1297,6 +1297,13 @@ git commit -m "feat: add native HDR display controller"
 ```
 
 Expected: commit succeeds.
+
+执行记录（2026-07-05）：
+
+- 已新增 `HdrDisplayController`，通过 `DisplayInformation` 和 `HdmiDisplayInformation` 探测当前 HDR 状态、HDMI HDR10 能力，并用 `RequestSetCurrentDisplayModeAsync` 请求进入/恢复 HDR10/SDR。
+- `NativePlaybackEngine` 构造时会探测显示状态，打开直连流时会更新 HDR 状态，停止播放时会尝试恢复进入播放前的初始状态。
+- 当前 HDR 触发仍是控制器接入层：因为解码器和视频流元数据尚未接入，现阶段打开直连流会先尝试 HDR10。后续 Task 8/9 接入解码器、HDR10 metadata 和 DXGI color space 后，再按真实视频 HDR/SDR 决策。
+- 验证已通过：`MSBuild NextGenXboxEmby.sln /restore /p:Configuration=Debug /p:Platform=x64` 成功，0 warning / 0 error；`dotnet test tests\NextGenEmby.Core.Tests\NextGenEmby.Core.Tests.csproj -v minimal` 成功，52/52 通过。
 
 ---
 
