@@ -75,6 +75,7 @@
       <AdditionalUsingDirectories>$(WindowsSDK_WindowsMetadata);$(AdditionalUsingDirectories)</AdditionalUsingDirectories>
     </ClCompile>
     <Link>
+      <AdditionalDependencies>d3d11.lib;dxgi.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <SubSystem>Console</SubSystem>
       <GenerateWindowsMetadata>false</GenerateWindowsMetadata>
       <ModuleDefinitionFile>NextGenEmby.Native.def</ModuleDefinitionFile>
@@ -95,6 +96,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="DxDeviceResources.h" />
     <ClInclude Include="HdrDisplayController.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="NativePlaybackEngine.h">
@@ -108,6 +110,7 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="DxDeviceResources.cpp" />
     <ClCompile Include="HdrDisplayController.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>

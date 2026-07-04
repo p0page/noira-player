@@ -21,6 +21,11 @@ namespace winrt::NextGenEmby::Native::implementation
         m_stateChanged.remove(token);
     }
 
+    void NativePlaybackEngine::AttachSurface(winrt::Windows::UI::Xaml::Controls::SwapChainPanel const& panel)
+    {
+        m_dx.AttachSurface(panel);
+    }
+
     int64_t NativePlaybackEngine::CurrentPositionTicks() const noexcept
     {
         return m_positionTicks;
@@ -51,7 +56,9 @@ namespace winrt::NextGenEmby::Native::implementation
         }
 
         m_positionTicks = request.StartPositionTicks();
-        UpdateDisplayStatus(m_hdr.EnterHdr10());
+        auto display = m_hdr.EnterHdr10();
+        UpdateDisplayStatus(display);
+        ApplySwapChainColorSpace(display);
         Raise(NextGenEmby::Native::NativePlaybackState::NativePlaybackState_Opening);
         Raise(NextGenEmby::Native::NativePlaybackState::NativePlaybackState_Playing);
         co_return;
@@ -84,9 +91,22 @@ namespace winrt::NextGenEmby::Native::implementation
     winrt::Windows::Foundation::IAsyncAction NativePlaybackEngine::StopAsync()
     {
         m_positionTicks = 0;
-        UpdateDisplayStatus(m_hdr.RestoreInitialState());
+        auto display = m_hdr.RestoreInitialState();
+        UpdateDisplayStatus(display);
+        ApplySwapChainColorSpace(display);
         Raise(NextGenEmby::Native::NativePlaybackState::NativePlaybackState_Stopped);
         co_return;
+    }
+
+    void NativePlaybackEngine::ApplySwapChainColorSpace(HdrDisplaySnapshot const& snapshot)
+    {
+        if (snapshot.IsHdrOutputActive)
+        {
+            m_dx.SetHdr10ColorSpace();
+            return;
+        }
+
+        m_dx.SetSdrColorSpace();
     }
 
     void NativePlaybackEngine::Raise(NextGenEmby::Native::NativePlaybackState state, winrt::hstring const& message)

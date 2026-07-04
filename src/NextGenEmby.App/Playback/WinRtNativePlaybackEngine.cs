@@ -46,6 +46,11 @@ namespace NextGenEmby.App.Playback
             }
         }
 
+        public void AttachSurface(Windows.UI.Xaml.Controls.SwapChainPanel panel)
+        {
+            _engine.AttachSurface(panel);
+        }
+
         public Task OpenAsync(CoreNativePlaybackOpenRequest request)
         {
             if (request == null)

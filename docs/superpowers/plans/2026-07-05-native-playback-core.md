@@ -1317,7 +1317,7 @@ Expected: commit succeeds.
 - Modify: `src/NextGenEmby.Native/NativePlaybackEngine.cpp`
 - Modify: `src/NextGenEmby.App/Playback/WinRtNativePlaybackEngine.cs`
 
-- [ ] **Step 1: Extend IDL to accept a `SwapChainPanel`**
+- [x] **Step 1: Extend IDL to accept a `SwapChainPanel`**
 
 Add this method to `NativePlaybackEngine` in `NativePlaybackEngine.idl`:
 
@@ -1325,7 +1325,7 @@ Add this method to `NativePlaybackEngine` in `NativePlaybackEngine.idl`:
 void AttachSurface(Windows.UI.Xaml.Controls.SwapChainPanel panel);
 ```
 
-- [ ] **Step 2: Add C# wrapper method**
+- [x] **Step 2: Add C# wrapper method**
 
 Add this method to `WinRtNativePlaybackEngine`:
 
@@ -1336,7 +1336,7 @@ public void AttachSurface(Windows.UI.Xaml.Controls.SwapChainPanel panel)
 }
 ```
 
-- [ ] **Step 3: Add DXGI resource manager skeleton**
+- [x] **Step 3: Add DXGI resource manager skeleton**
 
 Create `src/NextGenEmby.Native/DxDeviceResources.h`:
 
@@ -1369,7 +1369,7 @@ namespace winrt::NextGenEmby::Native::implementation
 }
 ```
 
-- [ ] **Step 4: Implement color-space methods**
+- [x] **Step 4: Implement color-space methods**
 
 Create `src/NextGenEmby.Native/DxDeviceResources.cpp` with these methods first:
 
@@ -1419,11 +1419,11 @@ namespace winrt::NextGenEmby::Native::implementation
 
 Complete `CreateDevice`, `AttachSurface`, and `CreateSwapChain` in the same file using `D3D11CreateDevice`, `IDXGIFactory2::CreateSwapChainForComposition`, and `ISwapChainPanelNative::SetSwapChain`.
 
-- [ ] **Step 5: Preserve Kodi's Xbox swapchain rule**
+- [x] **Step 5: Preserve Kodi's Xbox swapchain rule**
 
 In HDR/SDR transitions, call `SetHdr10ColorSpace()` and `SetSdrColorSpace()` on the existing swapchain. Do not destroy and recreate the swapchain during HDR toggles on Xbox. This mirrors ADR 0001's Kodi finding.
 
-- [ ] **Step 6: Build solution**
+- [x] **Step 6: Build solution**
 
 Run:
 
@@ -1433,7 +1433,7 @@ Run:
 
 Expected: `Build succeeded.`
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```powershell
 git add src\NextGenEmby.Native src\NextGenEmby.App
@@ -1441,6 +1441,14 @@ git commit -m "feat: add native DXGI swapchain resources"
 ```
 
 Expected: commit succeeds.
+
+执行记录（2026-07-05）：
+
+- 已在 WinRT IDL 中暴露 `AttachSurface(SwapChainPanel)`，C# wrapper 会把播放页的 `NativeSurface` 传给原生引擎。
+- 已新增 `DxDeviceResources`，创建 D3D11 device、DXGI composition swapchain，并通过 `ISwapChainPanelNative::SetSwapChain` 绑定到 XAML surface。
+- HDR/SDR 切换现在只调用现有 swapchain 的 `SetColorSpace1`，不在 HDR 切换时销毁重建 swapchain，保留 Kodi Xbox 路线里的关键约束。
+- 现阶段 swapchain 默认按 SDR 8-bit 创建；Task 8/9 接入真实 HEVC Main10 帧、HDR10 metadata 和 renderer 后，再把 10-bit/HDR metadata 路径接到视频帧。
+- 验证已通过：原生组件单独 MSBuild 成功，0 warning / 0 error；完整 `NextGenXboxEmby.sln` MSBuild 成功，0 warning / 0 error；`dotnet test tests\NextGenEmby.Core.Tests\NextGenEmby.Core.Tests.csproj -v minimal` 成功，52/52 通过。
 
 ---
 

@@ -47,6 +47,7 @@ namespace NextGenEmby.Native
     {
         NativePlaybackEngine();
         event NativePlaybackStateChangedHandler StateChanged;
+        void AttachSurface(Windows.UI.Xaml.Controls.SwapChainPanel panel);
         Int64 CurrentPositionTicks();
         NativePlaybackStatus DisplayStatus();
         Windows.Foundation.IAsyncAction OpenAsync(NativePlaybackOpenRequest request);

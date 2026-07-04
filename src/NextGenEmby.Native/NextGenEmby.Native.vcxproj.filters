@@ -6,6 +6,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="DxDeviceResources.cpp" />
     <ClCompile Include="HdrDisplayController.cpp" />
     <ClCompile Include="pch.cpp" />
     <ClCompile Include="NativePlaybackEngine.cpp" />
@@ -16,6 +17,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="DxDeviceResources.h" />
     <ClInclude Include="HdrDisplayController.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="NativePlaybackEngine.h" />

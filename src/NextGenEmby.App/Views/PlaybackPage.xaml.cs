@@ -30,6 +30,7 @@ namespace NextGenEmby.App.Views
             if (UseNativePlaybackBackend)
             {
                 var nativeEngine = new WinRtNativePlaybackEngine(new NextGenEmby.Native.NativePlaybackEngine());
+                nativeEngine.AttachSurface(NativeSurface);
                 _backend = new NativeDirectXPlaybackBackend(nativeEngine);
                 NativeSurface.Visibility = Visibility.Visible;
                 PlayerElement.Visibility = Visibility.Collapsed;
