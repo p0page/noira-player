@@ -8,6 +8,9 @@
             x:Name="PlayerElement"
             AreTransportControlsEnabled="False"
             Stretch="Uniform" />
+        <SwapChainPanel
+            x:Name="NativeSurface"
+            Visibility="Collapsed" />
 
         <Border
             VerticalAlignment="Bottom"

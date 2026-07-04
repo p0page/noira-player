@@ -13,10 +13,12 @@ namespace NextGenEmby.App.Views
     public sealed partial class PlaybackPage : Page
     {
         private const string DemoItemId = "manual-direct-stream";
+        private static readonly bool UseNativePlaybackBackend = true;
         private static readonly TimeSpan SeekBackStep = TimeSpan.FromSeconds(10);
         private static readonly TimeSpan SeekForwardStep = TimeSpan.FromSeconds(30);
 
-        private readonly SystemMediaPlaybackBackend _backend;
+        private readonly IPlaybackBackend _backend;
+        private readonly IDisposable? _disposableBackend;
         private readonly PlaybackOrchestrator _orchestrator;
         private bool _hasPlaybackContext;
         private bool _infoVisible;
@@ -25,7 +27,22 @@ namespace NextGenEmby.App.Views
         {
             InitializeComponent();
 
-            _backend = new SystemMediaPlaybackBackend(PlayerElement);
+            if (UseNativePlaybackBackend)
+            {
+                var nativeEngine = new WinRtNativePlaybackEngine(new NextGenEmby.Native.NativePlaybackEngine());
+                _backend = new NativeDirectXPlaybackBackend(nativeEngine);
+                NativeSurface.Visibility = Visibility.Visible;
+                PlayerElement.Visibility = Visibility.Collapsed;
+            }
+            else
+            {
+                var systemBackend = new SystemMediaPlaybackBackend(PlayerElement);
+                _backend = systemBackend;
+                _disposableBackend = systemBackend;
+                NativeSurface.Visibility = Visibility.Collapsed;
+                PlayerElement.Visibility = Visibility.Visible;
+            }
+
             _orchestrator = new PlaybackOrchestrator(_backend);
             _orchestrator.StateChanged += Orchestrator_OnStateChanged;
             Unloaded += PlaybackPage_OnUnloaded;
@@ -105,7 +122,7 @@ namespace NextGenEmby.App.Views
             }
             finally
             {
-                _backend.Dispose();
+                _disposableBackend?.Dispose();
             }
         }
 
@@ -181,7 +198,7 @@ namespace NextGenEmby.App.Views
             {
                 Index = 0,
                 Kind = EmbyStreamKind.Video,
-                DisplayTitle = "System player stream"
+                DisplayTitle = UseNativePlaybackBackend ? "Native direct stream" : "System player stream"
             });
 
             return source;

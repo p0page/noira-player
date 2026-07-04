@@ -897,7 +897,7 @@ Expected: commit succeeds.
 
 ---
 
-### Task 4: Bridge the Native Runtime Class Into the UWP App
+### Task 4: 将 Native Runtime Class 接入 UWP App
 
 **Files:**
 - Create: `src/NextGenEmby.App/Playback/WinRtNativePlaybackEngine.cs`
@@ -905,7 +905,7 @@ Expected: commit succeeds.
 - Modify: `src/NextGenEmby.App/Views/PlaybackPage.xaml`
 - Modify: `src/NextGenEmby.App/Views/PlaybackPage.xaml.cs`
 
-- [ ] **Step 1: Add a native project reference to the UWP app**
+- [x] **Step 1: 给 UWP app 添加 native 项目引用**
 
 Modify `src/NextGenEmby.App/NextGenEmby.App.csproj`:
 
@@ -922,7 +922,7 @@ Modify `src/NextGenEmby.App/NextGenEmby.App.csproj`:
 </ItemGroup>
 ```
 
-- [ ] **Step 2: Add the C# WinRT wrapper**
+- [x] **Step 2: 添加 C# WinRT wrapper**
 
 Create `src/NextGenEmby.App/Playback/WinRtNativePlaybackEngine.cs`:
 
@@ -1040,7 +1040,7 @@ namespace NextGenEmby.App.Playback
 }
 ```
 
-- [ ] **Step 3: Add a native rendering surface**
+- [x] **Step 3: 添加 native 渲染 surface**
 
 Modify `src/NextGenEmby.App/Views/PlaybackPage.xaml` so the media area contains both fallback and native surfaces:
 
@@ -1054,7 +1054,7 @@ Modify `src/NextGenEmby.App/Views/PlaybackPage.xaml` so the media area contains 
 </Grid>
 ```
 
-- [ ] **Step 4: Wire the native backend in `PlaybackPage.xaml.cs`**
+- [x] **Step 4: 在 `PlaybackPage.xaml.cs` 接入 native backend**
 
 In `PlaybackPage.xaml.cs`, construct the backend like this after `InitializeComponent()`:
 
@@ -1067,7 +1067,7 @@ PlayerElement.Visibility = Visibility.Collapsed;
 
 Keep `SystemMediaPlaybackBackend` behind a local fallback switch until the native renderer displays frames.
 
-- [ ] **Step 5: Build solution**
+- [x] **Step 5: 构建 solution**
 
 Run:
 
@@ -1077,7 +1077,16 @@ Run:
 
 Expected: `Build succeeded.`
 
-- [ ] **Step 6: Commit**
+执行记录（2026-07-05）:
+
+- `NextGenEmby.App.csproj` 已引用 `NextGenEmby.Native.vcxproj`，并编译 `Playback\WinRtNativePlaybackEngine.cs`。
+- `WinRtNativePlaybackEngine` 实现 `INativePlaybackEngine`，把 Core 侧 `NativePlaybackOpenRequest` 映射到 WinRT 侧 `NextGenEmby.Native.NativePlaybackOpenRequest`，并把 native playback/HDR 状态映射回 Core contracts。
+- Core 和 WinRT 两侧都有 `NativePlaybackOpenRequest` 类型；wrapper 使用显式别名，避免 C# 编译时同名歧义。
+- `PlaybackPage.xaml` 添加 `SwapChainPanel` named `NativeSurface`，当前默认启用 native backend，并保留 `UseNativePlaybackBackend` 本地开关切回 `SystemMediaPlaybackBackend`。
+- 完整解决方案验证通过：`NextGenXboxEmby.sln /restore /p:Configuration=Debug /p:Platform=x64`，0 警告、0 错误。
+- Managed 测试验证通过：`dotnet test tests\NextGenEmby.Core.Tests\NextGenEmby.Core.Tests.csproj -v minimal`，52 passed、0 failed、0 skipped。
+
+- [x] **Step 6: 提交**
 
 ```powershell
 git add src\NextGenEmby.App NextGenXboxEmby.sln

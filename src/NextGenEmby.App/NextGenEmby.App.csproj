@@ -79,6 +79,7 @@
       <DependentUpon>MainPage.xaml</DependentUpon>
     </Compile>
     <Compile Include="Playback\SystemMediaPlaybackBackend.cs" />
+    <Compile Include="Playback\WinRtNativePlaybackEngine.cs" />
     <Compile Include="Storage\ApplicationDataDeviceIdProvider.cs" />
     <Compile Include="Storage\ApplicationDataSessionStore.cs" />
     <Compile Include="ViewModels\LoginViewModel.cs" />
@@ -131,6 +132,10 @@
     <ProjectReference Include="..\NextGenEmby.Core\NextGenEmby.Core.csproj">
       <Project>{3E3D8F22-1FD8-4A53-81D4-11998454C03B}</Project>
       <Name>NextGenEmby.Core</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\NextGenEmby.Native\NextGenEmby.Native.vcxproj">
+      <Project>{6F1A9D90-7A7D-4E91-8468-80D12D91A7D5}</Project>
+      <Name>NextGenEmby.Native</Name>
     </ProjectReference>
   </ItemGroup>
 
