@@ -17,12 +17,18 @@ namespace winrt::NextGenEmby::Native::implementation
 
         m_input.Open(request.DirectStreamUrl());
         m_videoDecoder.Open(request.DirectStreamUrl(), 0);
+        m_audioRenderer.Open(request.AudioStreamIndex(), request.HasAudioStreamIndex());
+        m_subtitleRenderer.Open(request.HasSubtitleStreamIndex()
+            ? std::optional<int32_t>{request.SubtitleStreamIndex()}
+            : std::nullopt);
         m_videoRenderer.ClearToBlack();
-        RenderNextFrame();
         m_url = request.DirectStreamUrl();
         m_positionTicks = request.StartPositionTicks();
         m_open = true;
         m_paused = false;
+        RenderNextFrame();
+        m_audioRenderer.Start();
+        m_subtitleRenderer.RenderAt(m_positionTicks);
     }
 
     void PlaybackGraph::Pause()
@@ -30,6 +36,7 @@ namespace winrt::NextGenEmby::Native::implementation
         if (m_open)
         {
             m_paused = true;
+            m_audioRenderer.Pause();
         }
     }
 
@@ -38,6 +45,7 @@ namespace winrt::NextGenEmby::Native::implementation
         if (m_open)
         {
             m_paused = false;
+            m_audioRenderer.Resume();
         }
     }
 
@@ -51,10 +59,13 @@ namespace winrt::NextGenEmby::Native::implementation
         m_positionTicks = positionTicks;
         m_videoDecoder.Seek(positionTicks);
         RenderNextFrame();
+        m_subtitleRenderer.RenderAt(m_positionTicks);
     }
 
     void PlaybackGraph::Stop() noexcept
     {
+        m_audioRenderer.Stop();
+        m_subtitleRenderer.Disable();
         m_videoDecoder.Close();
         m_videoRenderer.ClearToBlack();
         m_input.Close();
@@ -75,6 +86,7 @@ namespace winrt::NextGenEmby::Native::implementation
         {
             m_videoRenderer.Render(*frame);
             m_positionTicks = frame->PositionTicks;
+            m_subtitleRenderer.RenderAt(m_positionTicks);
         }
     }
 }

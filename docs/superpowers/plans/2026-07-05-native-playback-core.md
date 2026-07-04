@@ -1878,7 +1878,7 @@ Expected: commit succeeds.
 - Modify: `src/NextGenEmby.Native/Media/PlaybackGraph.h`
 - Modify: `src/NextGenEmby.Native/Media/PlaybackGraph.cpp`
 
-- [ ] **Step 1: Add audio renderer boundary**
+- [x] **Step 1: Add audio renderer boundary**
 
 Create `src/NextGenEmby.Native/Media/AudioRenderer.h`:
 
@@ -1900,7 +1900,7 @@ namespace winrt::NextGenEmby::Native::implementation
 }
 ```
 
-- [ ] **Step 2: Add subtitle renderer boundary**
+- [x] **Step 2: Add subtitle renderer boundary**
 
 Create `src/NextGenEmby.Native/Media/SubtitleRenderer.h`:
 
@@ -1926,11 +1926,13 @@ namespace winrt::NextGenEmby::Native::implementation
 
 Implement `AudioRenderer` with XAudio2 for UWP. Implement `SubtitleRenderer` first for text subtitles by drawing with DirectWrite over the video back buffer. Preserve the public boundaries above so ASS/PGS support can be added without changing C#.
 
-- [ ] **Step 4: Route selected indexes from `NativePlaybackOpenRequest`**
+Deferred note: current implementation is a validating state/control boundary only. Real XAudio2 sample submission and DirectWrite subtitle drawing still require demuxed audio/subtitle packets from the FFmpeg pipeline.
+
+- [x] **Step 4: Route selected indexes from `NativePlaybackOpenRequest`**
 
 In `PlaybackGraph::Open`, pass `request.AudioStreamIndex()` only when `request.HasAudioStreamIndex()` is true, and pass `request.SubtitleStreamIndex()` only when `request.HasSubtitleStreamIndex()` is true.
 
-- [ ] **Step 5: Build solution**
+- [x] **Step 5: Build solution**
 
 Run:
 
@@ -1940,7 +1942,7 @@ Run:
 
 Expected: `Build succeeded.`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```powershell
 git add src\NextGenEmby.Native
@@ -1948,6 +1950,14 @@ git commit -m "feat: add native audio and subtitle controls"
 ```
 
 Expected: commit succeeds.
+
+执行记录（2026-07-05）：
+
+- 已新增 `AudioRenderer`，承接音轨选择、播放/暂停/恢复/停止和后续切换入口；当前只维护 native 控制状态，不提交 XAudio2 buffer。
+- 已新增 `SubtitleRenderer`，承接字幕选择、禁用、切换和按 position 渲染入口；当前只维护选择状态和最后渲染时间点，不做 DirectWrite 叠字。
+- `PlaybackGraph::Open` 已根据 `HasAudioStreamIndex` / `HasSubtitleStreamIndex` 路由用户选择，pause/resume/seek/stop 会同步调用音频和字幕边界。
+- Step 3 暂缓：本机还没有 FFmpeg demux/decode 后的音频样本和字幕 cue，因此没有实现真实 XAudio2 输出与 DirectWrite subtitle overlay。
+- 验证已通过：原生组件单独 MSBuild 成功，0 warning / 0 error；完整 `NextGenXboxEmby.sln` MSBuild 成功，0 warning / 0 error；`dotnet test tests\NextGenEmby.Core.Tests\NextGenEmby.Core.Tests.csproj -v minimal` 成功，52/52 通过。
 
 ---
 
