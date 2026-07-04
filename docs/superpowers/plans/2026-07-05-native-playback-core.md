@@ -1600,7 +1600,7 @@ Expected: commit succeeds.
 - Create: `src/NextGenEmby.Native/Media/VideoDecoder.cpp`
 - Modify: `src/NextGenEmby.Native/NextGenEmby.Native.vcxproj`
 
-- [ ] **Step 1: Record dependency decision**
+- [x] **Step 1: Record dependency decision**
 
 Create `docs/native-dependencies.md`:
 
@@ -1637,7 +1637,7 @@ Binary policy:
 - Store local binaries under ignored `native-deps/ffmpeg/` and keep app packaging scripts responsible for copying runtime binaries into the UWP package.
 ```
 
-- [ ] **Step 2: Add decoder interface**
+- [x] **Step 2: Add decoder interface**
 
 Create `src/NextGenEmby.Native/Media/VideoDecoder.h`:
 
@@ -1680,7 +1680,7 @@ namespace winrt::NextGenEmby::Native::implementation
 }
 ```
 
-- [ ] **Step 3: Add a compile-time stub**
+- [x] **Step 3: Add a compile-time stub**
 
 Create `src/NextGenEmby.Native/Media/VideoDecoder.cpp`:
 
@@ -1721,7 +1721,7 @@ namespace winrt::NextGenEmby::Native::implementation
 
 Modify `NextGenEmby.Native.vcxproj` with include/lib paths from `docs/native-dependencies.md`. Add `avformat.lib`, `avcodec.lib`, `avutil.lib`, `swresample.lib`, and `swscale.lib` to linker inputs. Replace the stub internals with FFmpeg open/demux/decode code while preserving the public `VideoDecoder` interface.
 
-- [ ] **Step 5: Build native component**
+- [x] **Step 5: Build native component**
 
 Run:
 
@@ -1731,7 +1731,7 @@ Run:
 
 Expected: `Build succeeded.`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```powershell
 git add docs\native-dependencies.md src\NextGenEmby.Native
@@ -1739,6 +1739,13 @@ git commit -m "feat: add native video decoder boundary"
 ```
 
 Expected: commit succeeds.
+
+执行记录（2026-07-05）：
+
+- 已新增中文 `docs/native-dependencies.md`，记录 FFmpeg 用途、所需库、UWP/x64/D3D11VA 构建要求、本地目录约定和“不提交大型第三方二进制”的策略。
+- 已新增 `VideoDecoder` 边界，定义 `DecodedVideoFrame`、HDR 类型、D3D11 texture 输出和 HDR10 metadata 字段；当前实现只复用 `HttpMediaInput` 做 URL 验证，不实际读取或解码。
+- Step 4 暂缓：本机仓库内没有 `native-deps/ffmpeg/`，因此这一步没有链接 `avformat.lib` / `avcodec.lib` / `avutil.lib` / `swresample.lib` / `swscale.lib`。后续拿到 UWP/x64 FFmpeg 产物后再补 include/lib 路径和真实 demux/decode。
+- 验证已通过：原生组件单独 MSBuild 成功，0 warning / 0 error；完整 `NextGenXboxEmby.sln` MSBuild 成功，0 warning / 0 error；`dotnet test tests\NextGenEmby.Core.Tests\NextGenEmby.Core.Tests.csproj -v minimal` 成功，52/52 通过。
 
 ---
 
