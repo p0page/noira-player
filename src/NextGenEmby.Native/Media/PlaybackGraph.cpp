@@ -15,20 +15,28 @@ namespace winrt::NextGenEmby::Native::implementation
             throw winrt::hresult_invalid_argument(L"Playback request is required.");
         }
 
-        m_input.Open(request.DirectStreamUrl());
-        m_videoDecoder.Open(request.DirectStreamUrl(), 0);
-        m_audioRenderer.Open(request.AudioStreamIndex(), request.HasAudioStreamIndex());
-        m_subtitleRenderer.Open(request.HasSubtitleStreamIndex()
-            ? std::optional<int32_t>{request.SubtitleStreamIndex()}
-            : std::nullopt);
-        m_videoRenderer.ClearToBlack();
-        m_url = request.DirectStreamUrl();
-        m_positionTicks = request.StartPositionTicks();
-        m_open = true;
-        m_paused = false;
-        RenderNextFrame();
-        m_audioRenderer.Start();
-        m_subtitleRenderer.RenderAt(m_positionTicks);
+        try
+        {
+            m_input.Open(request.DirectStreamUrl());
+            m_videoDecoder.Open(request.DirectStreamUrl(), 0);
+            m_audioRenderer.Open(request.AudioStreamIndex(), request.HasAudioStreamIndex());
+            m_subtitleRenderer.Open(request.HasSubtitleStreamIndex()
+                ? std::optional<int32_t>{request.SubtitleStreamIndex()}
+                : std::nullopt);
+            m_videoRenderer.ClearToBlack();
+            m_url = request.DirectStreamUrl();
+            m_positionTicks = request.StartPositionTicks();
+            m_open = true;
+            m_paused = false;
+            RenderNextFrame();
+            m_audioRenderer.Start();
+            m_subtitleRenderer.RenderAt(m_positionTicks);
+        }
+        catch (...)
+        {
+            Stop();
+            throw;
+        }
     }
 
     void PlaybackGraph::Pause()

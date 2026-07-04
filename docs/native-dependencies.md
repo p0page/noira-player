@@ -39,11 +39,12 @@ MSBuild 接入方式：
 仓库策略：
 
 - 不提交 `src/NextGenEmby.Native/packages/` 下还原出来的 NuGet 二进制。
-- 只提交 `packages.config`、`.vcxproj` 接入点、源码里的最小链接哨兵和依赖说明。
+- 只提交 `packages.config`、`.vcxproj` 接入点、源码里的 FFmpeg probe 边界和依赖说明。
 - 如果后续需要修改 FFmpeg 构建参数，再改为自建 UWP FFmpeg，并把构建脚本、校验和、源码版本和 configure 命令放进仓库。
 
 当前状态：
 
-- `VideoDecoder` 当前只调用 `avformat_version()` 作为链接哨兵，证明头文件和 `avformat.lib` 已进入 native build。
-- `HttpMediaInput` 和 `VideoDecoder` 仍是验证壳，不会实际发起网络读取、demux 或 decode。
-- 下一步才会把 `VideoDecoder` 改成真正的 FFmpeg `AVFormatContext` / `AVCodecContext` 生命周期，并继续接 D3D11VA、P010/NV12 渲染、音频样本和字幕 cue。
+- `VideoDecoder` 已能调用 `avformat_open_input`、`avformat_find_stream_info`、`av_find_best_stream`、`avcodec_alloc_context3`、`avcodec_parameters_to_context` 和 `avcodec_open2`，建立 FFmpeg `AVFormatContext` / `AVCodecContext` 生命周期。
+- `VideoDecoder` 会在失败路径和 `Close()` 中释放 FFmpeg context；`PlaybackGraph.Open` 失败时会回滚已打开的边界状态。
+- 当前还没有 `av_read_frame` / `avcodec_send_packet` / `avcodec_receive_frame`，因此不会实际 demux packet、decode frame 或输出 D3D11 texture。
+- 下一步继续接 D3D11VA、P010/NV12 渲染、音频样本和字幕 cue。

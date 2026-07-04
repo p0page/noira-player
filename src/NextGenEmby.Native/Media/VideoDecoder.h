@@ -7,6 +7,9 @@
 #include <optional>
 #include <wrl/client.h>
 
+struct AVCodecContext;
+struct AVFormatContext;
+
 namespace winrt::NextGenEmby::Native::implementation
 {
     enum class VideoHdrKind
@@ -37,7 +40,12 @@ namespace winrt::NextGenEmby::Native::implementation
 
     private:
         winrt::hstring m_url;
+        AVFormatContext* m_formatContext{nullptr};
+        AVCodecContext* m_codecContext{nullptr};
         uint32_t m_avformatVersion{0};
+        int32_t m_videoStreamIndex{-1};
+        uint32_t m_width{0};
+        uint32_t m_height{0};
         int64_t m_positionTicks{0};
         bool m_open{false};
     };
