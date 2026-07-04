@@ -10,11 +10,13 @@ Date: 2026-07-05
 
 - Visual Studio 2022 Community is installed and launchable at `C:\Program Files\Microsoft Visual Studio\2022\Community`.
 - MSBuild is available at `C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe`.
-- Core unit tests pass: 45 passed, 0 failed, 0 skipped.
+- Core unit tests pass: 52 passed, 0 failed, 0 skipped.
 - `NextGenEmby.Core` restores and builds as part of both `dotnet test` and solution MSBuild.
 - `NextGenEmby.Core.Tests` restores and builds as part of solution MSBuild.
 - Emby authentication, authenticated request headers, library query URL construction, PlaybackInfo parsing, direct stream URL construction, and progress reporting are covered by unit tests.
 - Playback orchestration has a stable managed backend interface: `IPlaybackBackend`, `PlaybackDescriptor`, `PlaybackState`, and `PlaybackOrchestrator`.
+- Native playback diagnostics contracts are implemented: `PlaybackBackendCapabilities`, `PlaybackDisplayStatus`, and `IPlaybackBackendDiagnostics`.
+- The managed native adapter is implemented: `INativePlaybackEngine`, `NativePlaybackOpenRequest`, and `NativeDirectXPlaybackBackend`.
 - The UWP app source contains the Xbox-first shell, Login, Home, and Playback pages.
 - The UWP login flow is wired to `EmbyApiClient`, `ApplicationDataSessionStore`, and `ApplicationDataDeviceIdProvider`.
 - The UWP playback page is wired to `SystemMediaPlaybackBackend` for the temporary system-player slice.
@@ -29,7 +31,7 @@ dotnet test tests\NextGenEmby.Core.Tests\NextGenEmby.Core.Tests.csproj -v minima
 Result:
 
 ```text
-Passed: 45
+Passed: 52
 Failed: 0
 Skipped: 0
 ```
@@ -78,7 +80,8 @@ C:\Users\yqzzx\AppData\Local\Temp\dd_installer_20260705003612.log
 - XAML type checking has not run because the UWP app build stops before compile.
 - Visual Studio local-machine launch and manual smoke test were not run.
 - Xbox hardware deployment was not attempted.
-- HDR/HEVC native playback is not implemented in this foundation slice.
+- The C++/WinRT native component has not been created because Task 0 of the native plan is blocked by missing UWP tooling.
+- HDR/HEVC native playback is not implemented yet; the managed adapter boundary is ready for the native component.
 
 ## Recommended Next Local Action
 
@@ -100,4 +103,4 @@ Then open `NextGenXboxEmby.sln` in Visual Studio and run the manual smoke test:
 
 ## Next Plan
 
-Create the native playback core plan for C++/WinRT, DirectX rendering, HEVC/HDR10 playback, subtitle rendering, audio track switching, Emby stream switching, and Kodi-derived HDR state management.
+Continue `docs/superpowers/plans/2026-07-05-native-playback-core.md` from Task 0 after repairing the UWP/.NET Native toolchain. Tasks 1 and 2 of that plan are already complete and committed.

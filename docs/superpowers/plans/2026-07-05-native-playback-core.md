@@ -159,7 +159,7 @@ Expected: commit succeeds.
 - Create: `src/NextGenEmby.Core/Playback/IPlaybackBackendDiagnostics.cs`
 - Test: `tests/NextGenEmby.Core.Tests/Playback/PlaybackBackendDiagnosticsTests.cs`
 
-- [ ] **Step 1: Write tests for capabilities and display status**
+- [x] **Step 1: Write tests for capabilities and display status**
 
 Create `tests/NextGenEmby.Core.Tests/Playback/PlaybackBackendDiagnosticsTests.cs`:
 
@@ -204,7 +204,7 @@ public sealed class PlaybackBackendDiagnosticsTests
 }
 ```
 
-- [ ] **Step 2: Run tests and verify failure**
+- [x] **Step 2: Run tests and verify failure**
 
 Run:
 
@@ -214,7 +214,7 @@ dotnet test tests\NextGenEmby.Core.Tests\NextGenEmby.Core.Tests.csproj -v minima
 
 Expected: compile fails because `PlaybackBackendCapabilities` does not exist.
 
-- [ ] **Step 3: Add capability flags**
+- [x] **Step 3: Add capability flags**
 
 Create `src/NextGenEmby.Core/Playback/PlaybackBackendCapabilities.cs`:
 
@@ -254,7 +254,7 @@ namespace NextGenEmby.Core.Playback
 }
 ```
 
-- [ ] **Step 4: Add display status and diagnostics interface**
+- [x] **Step 4: Add display status and diagnostics interface**
 
 Create `src/NextGenEmby.Core/Playback/PlaybackDisplayStatus.cs`:
 
@@ -312,7 +312,7 @@ namespace NextGenEmby.Core.Playback
 }
 ```
 
-- [ ] **Step 5: Run tests and verify pass**
+- [x] **Step 5: Run tests and verify pass**
 
 Run:
 
@@ -322,7 +322,7 @@ dotnet test tests\NextGenEmby.Core.Tests\NextGenEmby.Core.Tests.csproj -v minima
 
 Expected: all tests pass.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```powershell
 git add src\NextGenEmby.Core\Playback tests\NextGenEmby.Core.Tests\Playback
@@ -341,7 +341,7 @@ Expected: commit succeeds.
 - Create: `src/NextGenEmby.Core/Playback/NativeDirectXPlaybackBackend.cs`
 - Test: `tests/NextGenEmby.Core.Tests/Playback/NativeDirectXPlaybackBackendTests.cs`
 
-- [ ] **Step 1: Write adapter tests**
+- [x] **Step 1: Write adapter tests**
 
 Create `tests/NextGenEmby.Core.Tests/Playback/NativeDirectXPlaybackBackendTests.cs`:
 
@@ -443,7 +443,7 @@ public sealed class NativeDirectXPlaybackBackendTests
 }
 ```
 
-- [ ] **Step 2: Run tests and verify failure**
+- [x] **Step 2: Run tests and verify failure**
 
 Run:
 
@@ -453,7 +453,7 @@ dotnet test tests\NextGenEmby.Core.Tests\NextGenEmby.Core.Tests.csproj -v minima
 
 Expected: compile fails because native adapter types do not exist.
 
-- [ ] **Step 3: Add engine abstraction and open request**
+- [x] **Step 3: Add engine abstraction and open request**
 
 Create `src/NextGenEmby.Core/Playback/INativePlaybackEngine.cs`:
 
@@ -538,7 +538,7 @@ namespace NextGenEmby.Core.Playback
 }
 ```
 
-- [ ] **Step 4: Add managed adapter**
+- [x] **Step 4: Add managed adapter**
 
 Create `src/NextGenEmby.Core/Playback/NativeDirectXPlaybackBackend.cs`:
 
@@ -601,7 +601,7 @@ namespace NextGenEmby.Core.Playback
 }
 ```
 
-- [ ] **Step 5: Run tests and verify pass**
+- [x] **Step 5: Run tests and verify pass**
 
 Run:
 
@@ -611,7 +611,7 @@ dotnet test tests\NextGenEmby.Core.Tests\NextGenEmby.Core.Tests.csproj -v minima
 
 Expected: all tests pass.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```powershell
 git add src\NextGenEmby.Core\Playback tests\NextGenEmby.Core.Tests\Playback
