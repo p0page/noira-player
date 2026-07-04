@@ -16,10 +16,12 @@ public sealed class TestHttpMessageHandler : HttpMessageHandler
     }
 
     public HttpRequestMessage? LastRequest { get; private set; }
+    public string? LastRequestBody { get; private set; }
 
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         LastRequest = request;
+        LastRequestBody = request.Content?.ReadAsStringAsync().GetAwaiter().GetResult();
         return Task.FromResult(_handler(request));
     }
 
