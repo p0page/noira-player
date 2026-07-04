@@ -1,2 +1,15 @@
 .worktrees
 .worktrees/
+.vs/
+bin/
+obj/
+TestResults/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+AppPackages/
+BundleArtifacts/
+Package.StoreAssociation.xml
+.research/
+.superpowers/
