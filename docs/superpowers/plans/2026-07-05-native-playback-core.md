@@ -2039,7 +2039,7 @@ Expected: commit succeeds.
 - Create: `docs/native-playback-smoke-tests.md`
 - Modify: `docs/foundation-status.md`
 
-- [ ] **Step 1: Create smoke matrix**
+- [x] **Step 1: Create smoke matrix**
 
 Create `docs/native-playback-smoke-tests.md`:
 
@@ -2090,7 +2090,7 @@ Date: 2026-07-05
 | HDR10 subtitles | | | | | | | |
 ```
 
-- [ ] **Step 2: Build app package for Xbox Dev Mode**
+- [x] **Step 2: Build app package for Xbox Dev Mode**
 
 Run:
 
@@ -2104,11 +2104,11 @@ Expected: app package artifacts are produced under `src\NextGenEmby.App\AppPacka
 
 Deploy through Visual Studio or Xbox Device Portal in Dev Mode. Fill in `docs/native-playback-smoke-tests.md` with actual results.
 
-- [ ] **Step 4: Update foundation status**
+- [x] **Step 4: Update foundation status**
 
 Add a `Native Playback Hardware Verification` section to `docs/foundation-status.md` summarizing which files passed and which failed.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```powershell
 git add docs\native-playback-smoke-tests.md docs\foundation-status.md
@@ -2116,6 +2116,14 @@ git commit -m "docs: record native playback smoke results"
 ```
 
 Expected: commit succeeds.
+
+执行记录（2026-07-05）：
+
+- 已创建中文硬件冒烟矩阵 `docs/native-playback-smoke-tests.md`，包含 Xbox/显示设备信息、测试文件、通用检查项、当前实现限制、结果表和 Debug x64 侧载包位置。
+- 已生成 Debug x64 UWP 侧载包：`src\NextGenEmby.App\AppPackages\NextGenEmby.App_0.1.0.0_x64_Debug_Test`。
+- 已更新 `docs/foundation-status.md`，记录当前 native component 状态、53/53 单元测试、以及尚未完成的 FFmpeg/D3D11VA、NV12/P010、XAudio2、DirectWrite、真实 HTTP progress 上报和 Xbox 硬件验证。
+- Step 3 暂缓：需要用户的 Xbox Dev Mode 设备、HDR 显示设备和真实媒体文件执行，不能在本机会话内代替。
+- 验证已通过：`MSBuild src\NextGenEmby.App\NextGenEmby.App.csproj /restore /p:Configuration=Debug /p:Platform=x64 /p:AppxBundle=Never` 成功，0 warning / 0 error。
 
 ---
 
