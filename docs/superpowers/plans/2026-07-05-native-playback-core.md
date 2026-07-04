@@ -12,7 +12,7 @@
 
 ## Scope Check
 
-This plan starts after the foundation branch. Current blocker from `docs/foundation-status.md`: the local machine is missing UWP `.NETCore,Version=v5.0` reference assemblies, so `NextGenEmby.App` cannot compile yet. Task 0 is a hard gate before native project work.
+This plan starts after the foundation branch. The original local blocker from `docs/foundation-status.md` was missing UWP `.NETCore,Version=v5.0` reference assemblies. That blocker was repaired on 2026-07-05; `NextGenXboxEmby.sln` now builds with `Debug|x64`.
 
 Included:
 
@@ -72,7 +72,7 @@ Create or modify these files:
 **Files:**
 - Modify: `docs/foundation-status.md`
 
-- [ ] **Step 1: Verify the current blocker**
+- [x] **Step 1: Verify the current blocker**
 
 Run:
 
@@ -89,7 +89,7 @@ False
 
 The second command currently prints no path.
 
-- [ ] **Step 2: Install the missing UWP/.NET Native components**
+- [x] **Step 2: Install the missing UWP/.NET Native components**
 
 Run from an elevated PowerShell or Visual Studio Installer UI:
 
@@ -110,7 +110,7 @@ $installPath = 'C:\Program Files\Microsoft Visual Studio\2022\Community'
 
 Expected: installer exits with code 0.
 
-- [ ] **Step 3: Verify UWP references now exist**
+- [x] **Step 3: Verify UWP references now exist**
 
 Run:
 
@@ -126,7 +126,7 @@ True
 C:\Program Files\Microsoft Visual Studio\2022\Community
 ```
 
-- [ ] **Step 4: Rebuild the foundation solution**
+- [x] **Step 4: Rebuild the foundation solution**
 
 Run:
 
@@ -136,11 +136,11 @@ Run:
 
 Expected: `Build succeeded.`
 
-- [ ] **Step 5: Update foundation status**
+- [x] **Step 5: Update foundation status**
 
 In `docs/foundation-status.md`, move the UWP app build from `Current Blocker` to `Verified` and add the successful MSBuild timestamp.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```powershell
 git add docs\foundation-status.md
