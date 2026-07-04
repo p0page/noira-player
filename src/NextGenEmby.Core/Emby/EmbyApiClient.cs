@@ -48,7 +48,7 @@ namespace NextGenEmby.Core.Emby
         private void ApplyAuthorizationHeader(HttpRequestMessage request, string? token)
         {
             var value =
-                $"MediaBrowser Client=\"{_options.ClientName}\", " +
+                $"Client=\"{_options.ClientName}\", " +
                 $"Device=\"{_options.DeviceName}\", " +
                 $"DeviceId=\"{_options.DeviceId}\", " +
                 $"Version=\"{_options.ClientVersion}\"";

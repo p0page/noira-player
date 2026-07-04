@@ -42,10 +42,9 @@ public sealed class EmbyAuthenticationTests
         Assert.Equal(HttpMethod.Post, handler.LastRequest!.Method);
         Assert.Equal("/Users/AuthenticateByName", handler.LastRequest.RequestUri!.AbsolutePath);
         Assert.Equal("Emby", handler.LastRequest.Headers.Authorization!.Scheme);
-        Assert.Contains("MediaBrowser Client=\"Next Gen Xbox Emby\"", handler.LastRequest.Headers.Authorization.Parameter);
-        Assert.Contains("Device=\"Next Gen Xbox Emby\"", handler.LastRequest.Headers.Authorization.Parameter);
-        Assert.Contains("DeviceId=\"test-device\"", handler.LastRequest.Headers.Authorization.Parameter);
-        Assert.Contains("Version=\"0.1.0\"", handler.LastRequest.Headers.Authorization.Parameter);
+        Assert.Equal(
+            "Client=\"Next Gen Xbox Emby\", Device=\"Next Gen Xbox Emby\", DeviceId=\"test-device\", Version=\"0.1.0\"",
+            handler.LastRequest.Headers.Authorization.Parameter);
         Assert.Equal("application/json", handler.LastRequest.Content!.Headers.ContentType!.MediaType);
         Assert.Equal("utf-8", handler.LastRequest.Content.Headers.ContentType.CharSet);
 

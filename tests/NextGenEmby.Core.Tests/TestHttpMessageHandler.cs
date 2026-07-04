@@ -18,11 +18,13 @@ public sealed class TestHttpMessageHandler : HttpMessageHandler
     public HttpRequestMessage? LastRequest { get; private set; }
     public string? LastRequestBody { get; private set; }
 
-    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         LastRequest = request;
-        LastRequestBody = request.Content?.ReadAsStringAsync().GetAwaiter().GetResult();
-        return Task.FromResult(_handler(request));
+        LastRequestBody = request.Content is null
+            ? null
+            : await request.Content.ReadAsStringAsync().ConfigureAwait(false);
+        return _handler(request);
     }
 
     public static HttpResponseMessage Json(HttpStatusCode statusCode, string json)
