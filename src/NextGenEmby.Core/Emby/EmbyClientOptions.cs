@@ -1,0 +1,11 @@
+namespace NextGenEmby.Core.Emby
+{
+    public sealed class EmbyClientOptions
+    {
+        public string ServerUrl { get; set; } = "";
+        public string ClientName { get; set; } = "Next Gen Xbox Emby";
+        public string ClientVersion { get; set; } = "0.1.0";
+        public string DeviceName { get; set; } = "Xbox";
+        public string DeviceId { get; set; } = "";
+    }
+}
