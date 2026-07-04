@@ -72,7 +72,7 @@ namespace NextGenEmby.Core.Emby
             var body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
             var dto = JsonSerializer.Deserialize<PlaybackInfoDto>(body, _jsonOptions) ?? new PlaybackInfoDto();
             var mediaSources = dto.MediaSources ?? new List<MediaSourceDto>();
-            return mediaSources.Select(source => MapMediaSource(session, itemId, source)).ToList();
+            return mediaSources.Select(source => MapMediaSource(session, itemId, dto.PlaySessionId, source)).ToList();
         }
 
         public string GetImageUrl(EmbySession session, string itemId, string imageType, int maxWidth)
@@ -100,16 +100,23 @@ namespace NextGenEmby.Core.Emby
             };
         }
 
-        private static EmbyMediaSource MapMediaSource(EmbySession session, string itemId, MediaSourceDto source)
+        private static EmbyMediaSource MapMediaSource(
+            EmbySession session,
+            string itemId,
+            string playbackInfoPlaySessionId,
+            MediaSourceDto source)
         {
             var id = source.Id ?? "";
+            var playSessionId = string.IsNullOrWhiteSpace(source.PlaySessionId)
+                ? playbackInfoPlaySessionId
+                : source.PlaySessionId;
             var result = new EmbyMediaSource
             {
                 Id = id,
                 Name = string.IsNullOrWhiteSpace(source.Name) ? id : source.Name,
                 Container = source.Container ?? "",
                 Bitrate = source.Bitrate,
-                DirectStreamUrl = BuildDirectStreamUrl(session, itemId, source)
+                DirectStreamUrl = BuildDirectStreamUrl(session, itemId, playSessionId, source)
             };
 
             var streams = source.MediaStreams ?? new List<MediaStreamDto>();
@@ -168,7 +175,11 @@ namespace NextGenEmby.Core.Emby
             return false;
         }
 
-        private static string BuildDirectStreamUrl(EmbySession session, string itemId, MediaSourceDto source)
+        private static string BuildDirectStreamUrl(
+            EmbySession session,
+            string itemId,
+            string playSessionId,
+            MediaSourceDto source)
         {
             if (!string.IsNullOrWhiteSpace(source.DirectStreamUrl))
             {
@@ -191,6 +202,11 @@ namespace NextGenEmby.Core.Emby
             if (!string.IsNullOrWhiteSpace(source.Container))
             {
                 url = AppendQueryParameter(url, "container", EscapeUriComponent(source.Container));
+            }
+
+            if (!string.IsNullOrWhiteSpace(playSessionId))
+            {
+                url = AppendQueryParameter(url, "PlaySessionId", EscapeUriComponent(playSessionId));
             }
 
             return url;
@@ -274,6 +290,7 @@ namespace NextGenEmby.Core.Emby
 
         private sealed class PlaybackInfoDto
         {
+            public string PlaySessionId { get; set; } = "";
             public List<MediaSourceDto> MediaSources { get; set; } = new List<MediaSourceDto>();
         }
 
@@ -285,6 +302,7 @@ namespace NextGenEmby.Core.Emby
             public long Bitrate { get; set; }
             public string DirectStreamUrl { get; set; } = "";
             public bool AddApiKeyToDirectStreamUrl { get; set; }
+            public string PlaySessionId { get; set; } = "";
             public List<MediaStreamDto> MediaStreams { get; set; } = new List<MediaStreamDto>();
         }
 

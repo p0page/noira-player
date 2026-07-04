@@ -255,6 +255,33 @@ public sealed class EmbyPlaybackInfoTests
     }
 
     [Fact]
+    public async Task GetPlaybackInfoAsync_Adds_Top_Level_PlaySessionId_To_Fallback_DirectStreamUrl()
+    {
+        var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
+            HttpStatusCode.OK,
+            """
+            {
+              "PlaySessionId": "play session/1",
+              "MediaSources": [
+                {
+                  "Id": "source-1",
+                  "MediaStreams": []
+                }
+              ]
+            }
+            """));
+        using var http = new HttpClient(handler);
+        var client = CreateClient(http);
+
+        var sources = await client.GetPlaybackInfoAsync(Session(), "movie-1");
+
+        var source = Assert.Single(sources);
+        Assert.Equal(
+            "http://emby.local:8096/Videos/movie-1/stream?static=true&mediaSourceId=source-1&api_key=token-123&PlaySessionId=play%20session%2F1",
+            source.DirectStreamUrl);
+    }
+
+    [Fact]
     public async Task GetPlaybackInfoAsync_Null_Top_Level_MediaSources_Returns_Empty_List()
     {
         var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
