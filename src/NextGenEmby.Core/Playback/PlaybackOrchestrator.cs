@@ -1,0 +1,271 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using NextGenEmby.Core.Emby;
+
+namespace NextGenEmby.Core.Playback
+{
+    public sealed class PlaybackOrchestrator
+    {
+        private readonly IPlaybackBackend _backend;
+        private IReadOnlyList<EmbyMediaSource> _availableSources = Array.Empty<EmbyMediaSource>();
+        private string _currentItemId = "";
+        private int? _audioStreamIndex;
+        private int? _subtitleStreamIndex;
+        private bool _backendStartInProgress;
+        private bool _terminalStateDuringBackendStart;
+
+        public PlaybackOrchestrator(IPlaybackBackend backend)
+        {
+            _backend = backend ?? throw new ArgumentNullException(nameof(backend));
+            _backend.StateChanged += Backend_OnStateChanged;
+        }
+
+        public PlaybackState State { get; private set; } = PlaybackState.Stopped;
+
+        public EmbyMediaSource? CurrentMediaSource { get; private set; }
+
+        public PlaybackDescriptor? CurrentDescriptor { get; private set; }
+
+        public event EventHandler<PlaybackStateChangedEventArgs>? StateChanged;
+
+        public async Task StartAsync(
+            string itemId,
+            IReadOnlyList<EmbyMediaSource> sources,
+            long resumeTicks)
+        {
+            if (itemId == null)
+            {
+                throw new ArgumentNullException(nameof(itemId));
+            }
+
+            if (string.IsNullOrWhiteSpace(itemId))
+            {
+                throw new ArgumentException("Playback requires an item id.", nameof(itemId));
+            }
+
+            if (sources == null)
+            {
+                throw new ArgumentNullException(nameof(sources));
+            }
+
+            if (sources.Count == 0)
+            {
+                throw new InvalidOperationException("Playback requires at least one media source.");
+            }
+
+            await StartBackendAsync(
+                sources[0],
+                resumeTicks,
+                itemId,
+                sources,
+                null,
+                null,
+                restoreOnFailure: false).ConfigureAwait(false);
+        }
+
+        public async Task SwitchMediaSourceAsync(string mediaSourceId)
+        {
+            if (mediaSourceId == null)
+            {
+                throw new ArgumentNullException(nameof(mediaSourceId));
+            }
+
+            EnsureStarted();
+
+            var source = _availableSources.FirstOrDefault(candidate =>
+                string.Equals(candidate.Id, mediaSourceId, StringComparison.Ordinal));
+
+            if (source == null)
+            {
+                throw new InvalidOperationException("The requested media source is not available.");
+            }
+
+            await StartBackendAsync(
+                source,
+                _backend.CurrentPositionTicks,
+                _currentItemId,
+                _availableSources,
+                null,
+                null,
+                restoreOnFailure: true).ConfigureAwait(false);
+        }
+
+        public async Task SwitchAudioStreamAsync(int? audioStreamIndex)
+        {
+            EnsureStarted();
+            ValidateStreamIndex(audioStreamIndex, EmbyStreamKind.Audio, nameof(audioStreamIndex));
+            await StartBackendAsync(
+                CurrentMediaSource!,
+                _backend.CurrentPositionTicks,
+                _currentItemId,
+                _availableSources,
+                audioStreamIndex,
+                _subtitleStreamIndex,
+                restoreOnFailure: true).ConfigureAwait(false);
+        }
+
+        public async Task SwitchSubtitleStreamAsync(int? subtitleStreamIndex)
+        {
+            EnsureStarted();
+            ValidateStreamIndex(subtitleStreamIndex, EmbyStreamKind.Subtitle, nameof(subtitleStreamIndex));
+            await StartBackendAsync(
+                CurrentMediaSource!,
+                _backend.CurrentPositionTicks,
+                _currentItemId,
+                _availableSources,
+                _audioStreamIndex,
+                subtitleStreamIndex,
+                restoreOnFailure: true).ConfigureAwait(false);
+        }
+
+        public async Task PauseAsync()
+        {
+            EnsureStarted();
+            await _backend.PauseAsync().ConfigureAwait(false);
+            SetState(PlaybackState.Paused);
+        }
+
+        public async Task ResumeAsync()
+        {
+            EnsureStarted();
+            await _backend.ResumeAsync().ConfigureAwait(false);
+            SetState(PlaybackState.Playing);
+        }
+
+        public Task SeekAsync(long positionTicks)
+        {
+            EnsureStarted();
+            return _backend.SeekAsync(positionTicks);
+        }
+
+        public async Task StopAsync()
+        {
+            await _backend.StopAsync().ConfigureAwait(false);
+            SetState(PlaybackState.Stopped);
+            ClearPlaybackContext();
+        }
+
+        private async Task StartBackendAsync(
+            EmbyMediaSource source,
+            long startPositionTicks,
+            string itemId,
+            IReadOnlyList<EmbyMediaSource> availableSources,
+            int? audioStreamIndex,
+            int? subtitleStreamIndex,
+            bool restoreOnFailure)
+        {
+            var descriptor = new PlaybackDescriptor(
+                itemId,
+                source,
+                availableSources,
+                startPositionTicks,
+                audioStreamIndex,
+                subtitleStreamIndex);
+            var previousState = State;
+
+            SetState(PlaybackState.Opening);
+
+            try
+            {
+                _backendStartInProgress = true;
+                _terminalStateDuringBackendStart = false;
+                await _backend.StartAsync(descriptor).ConfigureAwait(false);
+            }
+            catch
+            {
+                if (_terminalStateDuringBackendStart)
+                {
+                    _terminalStateDuringBackendStart = false;
+                    throw;
+                }
+
+                if (!restoreOnFailure)
+                {
+                    ClearPlaybackContext();
+                }
+
+                SetState(restoreOnFailure ? previousState : PlaybackState.Failed);
+                throw;
+            }
+            finally
+            {
+                _backendStartInProgress = false;
+            }
+
+            if (_terminalStateDuringBackendStart)
+            {
+                _terminalStateDuringBackendStart = false;
+                return;
+            }
+
+            _currentItemId = itemId;
+            _availableSources = availableSources;
+            _audioStreamIndex = audioStreamIndex;
+            _subtitleStreamIndex = subtitleStreamIndex;
+            CurrentMediaSource = source;
+            CurrentDescriptor = descriptor;
+            SetState(PlaybackState.Playing);
+        }
+
+        private void EnsureStarted()
+        {
+            if (_availableSources.Count == 0 || string.IsNullOrEmpty(_currentItemId) || CurrentMediaSource == null)
+            {
+                throw new InvalidOperationException("Playback has not been started.");
+            }
+        }
+
+        private void ValidateStreamIndex(int? streamIndex, EmbyStreamKind expectedKind, string parameterName)
+        {
+            if (!streamIndex.HasValue)
+            {
+                return;
+            }
+
+            if (streamIndex.Value < 0)
+            {
+                throw new ArgumentOutOfRangeException(parameterName, "Stream index cannot be negative.");
+            }
+
+            var found = CurrentMediaSource!.Streams.Any(stream =>
+                stream.Index == streamIndex.Value && stream.Kind == expectedKind);
+            if (!found)
+            {
+                throw new ArgumentOutOfRangeException(parameterName, "Stream index is not available on the current media source.");
+            }
+        }
+
+        private void Backend_OnStateChanged(object? sender, PlaybackStateChangedEventArgs args)
+        {
+            if (args.State == PlaybackState.Failed || args.State == PlaybackState.Stopped)
+            {
+                if (_backendStartInProgress)
+                {
+                    _terminalStateDuringBackendStart = true;
+                }
+
+                ClearPlaybackContext();
+            }
+
+            SetState(args.State, args.Message);
+        }
+
+        private void SetState(PlaybackState state, string message = "")
+        {
+            State = state;
+            StateChanged?.Invoke(this, new PlaybackStateChangedEventArgs(state, message));
+        }
+
+        private void ClearPlaybackContext()
+        {
+            CurrentMediaSource = null;
+            CurrentDescriptor = null;
+            _currentItemId = "";
+            _availableSources = Array.Empty<EmbyMediaSource>();
+            _audioStreamIndex = null;
+            _subtitleStreamIndex = null;
+        }
+    }
+}
