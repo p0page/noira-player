@@ -217,11 +217,11 @@ namespace NextGenEmby.Core.Emby
             Uri uri;
             if (Uri.TryCreate(directStreamUrl, UriKind.Absolute, out uri))
             {
-                return uri.ToString();
+                return directStreamUrl;
             }
 
             var baseUri = new Uri(session.ServerUrl.TrimEnd('/') + "/");
-            return new Uri(baseUri, directStreamUrl).ToString();
+            return new Uri(baseUri, directStreamUrl).AbsoluteUri;
         }
 
         private static bool HasQueryParameter(string url, string name)

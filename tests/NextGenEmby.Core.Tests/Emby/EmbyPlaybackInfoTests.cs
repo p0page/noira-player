@@ -233,6 +233,66 @@ public sealed class EmbyPlaybackInfoTests
     }
 
     [Fact]
+    public async Task GetPlaybackInfoAsync_Preserves_Encoded_DirectStreamUrl_When_Appending_Api_Key()
+    {
+        var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
+            HttpStatusCode.OK,
+            """
+            {
+              "MediaSources": [
+                {
+                  "Id": "source-1",
+                  "DirectStreamUrl": "https://cdn.emby.example/streams/movie%2Fpart.mkv?signature=a%2Fb%2Bc&name=space%20value",
+                  "AddApiKeyToDirectStreamUrl": true,
+                  "MediaStreams": []
+                }
+              ]
+            }
+            """));
+        using var http = new HttpClient(handler);
+        var client = CreateClient(http);
+
+        var sources = await client.GetPlaybackInfoAsync(
+            Session(accessToken: "token+123/abc"),
+            "movie-1");
+
+        var source = Assert.Single(sources);
+        Assert.Equal(
+            "https://cdn.emby.example/streams/movie%2Fpart.mkv?signature=a%2Fb%2Bc&name=space%20value&api_key=token%2B123%2Fabc",
+            source.DirectStreamUrl);
+    }
+
+    [Fact]
+    public async Task GetPlaybackInfoAsync_Preserves_Encoded_Relative_DirectStreamUrl_When_Appending_Api_Key()
+    {
+        var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
+            HttpStatusCode.OK,
+            """
+            {
+              "MediaSources": [
+                {
+                  "Id": "source-1",
+                  "DirectStreamUrl": "/emby/videos/movie%2Fpart.mkv?signature=a%2Fb%2Bc&name=space%20value",
+                  "AddApiKeyToDirectStreamUrl": true,
+                  "MediaStreams": []
+                }
+              ]
+            }
+            """));
+        using var http = new HttpClient(handler);
+        var client = CreateClient(http);
+
+        var sources = await client.GetPlaybackInfoAsync(
+            Session(accessToken: "token+123/abc"),
+            "movie-1");
+
+        var source = Assert.Single(sources);
+        Assert.Equal(
+            "http://emby.local:8096/emby/videos/movie%2Fpart.mkv?signature=a%2Fb%2Bc&name=space%20value&api_key=token%2B123%2Fabc",
+            source.DirectStreamUrl);
+    }
+
+    [Fact]
     public async Task GetPlaybackInfoAsync_Does_Not_Append_Api_Key_When_DirectStreamUrl_Does_Not_Request_It()
     {
         var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
