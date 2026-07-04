@@ -37,6 +37,7 @@ namespace winrt::NextGenEmby::Native::implementation
 
     private:
         winrt::hstring m_url;
+        uint32_t m_avformatVersion{0};
         int64_t m_positionTicks{0};
         bool m_open{false};
     };

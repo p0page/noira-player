@@ -2,6 +2,14 @@
 #include "VideoDecoder.h"
 #include "HttpMediaInput.h"
 
+#pragma warning(push)
+#pragma warning(disable : 4244 4819)
+extern "C"
+{
+#include <libavformat/avformat.h>
+}
+#pragma warning(pop)
+
 namespace winrt::NextGenEmby::Native::implementation
 {
     void VideoDecoder::Open(winrt::hstring const& url, int32_t)
@@ -10,6 +18,7 @@ namespace winrt::NextGenEmby::Native::implementation
         input.Open(url);
 
         m_url = url;
+        m_avformatVersion = static_cast<uint32_t>(avformat_version());
         m_positionTicks = 0;
         m_open = true;
     }
@@ -37,6 +46,7 @@ namespace winrt::NextGenEmby::Native::implementation
     void VideoDecoder::Close() noexcept
     {
         m_url.clear();
+        m_avformatVersion = 0;
         m_positionTicks = 0;
         m_open = false;
     }
