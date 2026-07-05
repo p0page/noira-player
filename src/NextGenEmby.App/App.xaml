@@ -10,15 +10,17 @@
                 <muxc:XamlControlsResources />
             </ResourceDictionary.MergedDictionaries>
 
-            <Color x:Key="AppBackgroundColor">#0B0F14</Color>
-            <Color x:Key="AppSurfaceColor">#111821</Color>
+            <Color x:Key="AppBackgroundColor">#070A0E</Color>
+            <Color x:Key="AppSurfaceColor">#111923</Color>
             <Color x:Key="AppRaisedSurfaceColor">#172231</Color>
             <Color x:Key="AppAccentColor">#00A6D6</Color>
-            <Color x:Key="AppMutedTextColor">#B7C6D8</Color>
+            <Color x:Key="AppActionColor">#66D17A</Color>
+            <Color x:Key="AppMutedTextColor">#A9B8C8</Color>
             <SolidColorBrush x:Key="AppBackgroundBrush" Color="{StaticResource AppBackgroundColor}" />
             <SolidColorBrush x:Key="AppSurfaceBrush" Color="{StaticResource AppSurfaceColor}" />
             <SolidColorBrush x:Key="AppRaisedSurfaceBrush" Color="{StaticResource AppRaisedSurfaceColor}" />
             <SolidColorBrush x:Key="AppAccentBrush" Color="{StaticResource AppAccentColor}" />
+            <SolidColorBrush x:Key="AppActionBrush" Color="{StaticResource AppActionColor}" />
             <SolidColorBrush x:Key="AppMutedTextBrush" Color="{StaticResource AppMutedTextColor}" />
             <SolidColorBrush x:Key="SystemControlFocusVisualPrimaryBrush" Color="#FFFFFFFF" />
             <SolidColorBrush x:Key="SystemControlFocusVisualSecondaryBrush" Color="{StaticResource AppAccentColor}" />

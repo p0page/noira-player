@@ -1,9 +1,11 @@
 using System;
+using NextGenEmby.App.Navigation;
 using NextGenEmby.App.Storage;
 using NextGenEmby.App.Views;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
-using muxc = Microsoft.UI.Xaml.Controls;
+using Windows.UI.Xaml.Input;
+using Windows.System;
 
 namespace NextGenEmby.App
 {
@@ -34,60 +36,80 @@ namespace NextGenEmby.App
             }
         }
 
-        private void ShellNav_OnSelectionChanged(muxc.NavigationView sender, muxc.NavigationViewSelectionChangedEventArgs args)
+        private void Page_OnKeyDown(object sender, KeyRoutedEventArgs e)
         {
-            var item = args.SelectedItem as muxc.NavigationViewItem;
-            if (item == null)
+            if (e.Key == VirtualKey.GamepadY)
             {
+                NavigateSearch();
+                e.Handled = true;
                 return;
             }
 
-            var tag = item.Tag as string;
-            if (tag == "home")
+            if (e.Key == VirtualKey.GamepadB && ContentFrame.CanGoBack)
             {
-                NavigateTo(typeof(HomePage));
-            }
-            else if (tag == "playback")
-            {
-                NavigateTo(typeof(PlaybackPage));
-            }
-            else
-            {
-                NavigateTo(typeof(LoginPage));
+                ContentFrame.GoBack();
+                e.Handled = true;
             }
         }
 
         public void NavigateHome()
         {
-            SelectNavigationItem("home");
             NavigateTo(typeof(HomePage));
         }
 
         private void NavigateLogin()
         {
-            SelectNavigationItem("login");
             NavigateTo(typeof(LoginPage));
         }
 
-        private void NavigateTo(Type pageType)
+        private void NavigateLibrary(LibraryNavigationRequest request)
         {
-            if (ContentFrame.CurrentSourcePageType != pageType)
-            {
-                ContentFrame.Navigate(pageType);
-            }
+            NavigateTo(typeof(LibraryPage), request);
         }
 
-        private void SelectNavigationItem(string tag)
+        private void NavigateSearch()
         {
-            foreach (var menuItem in ShellNav.MenuItems)
+            NavigateTo(typeof(SearchPage));
+        }
+
+        private void NavigateSettings()
+        {
+            NavigateTo(typeof(SettingsPage));
+        }
+
+        private void NavigateTo(Type pageType, object? parameter = null)
+        {
+            if (parameter == null && ContentFrame.CurrentSourcePageType == pageType)
             {
-                var item = menuItem as muxc.NavigationViewItem;
-                if (item != null && string.Equals(item.Tag as string, tag, StringComparison.Ordinal))
-                {
-                    ShellNav.SelectedItem = item;
-                    return;
-                }
+                return;
             }
+
+            ContentFrame.Navigate(pageType, parameter);
+        }
+
+        private void Home_OnClick(object sender, RoutedEventArgs e)
+        {
+            NavigateHome();
+        }
+
+        private void Movies_OnClick(object sender, RoutedEventArgs e)
+        {
+            NavigateLibrary(new LibraryNavigationRequest("Movies", "movies", "Movie"));
+        }
+
+        private void Tv_OnClick(object sender, RoutedEventArgs e)
+        {
+            NavigateLibrary(new LibraryNavigationRequest("TV Shows", "tvshows", "Series"));
+        }
+
+        private void Search_OnClick(object sender, RoutedEventArgs e)
+        {
+            NavigateSearch();
+        }
+
+        private void Settings_OnClick(object sender, RoutedEventArgs e)
+        {
+            NavigateSettings();
         }
     }
 }
