@@ -66,6 +66,80 @@ namespace NextGenEmby.Core.Emby
             return dto.Select(MapItem).ToList();
         }
 
+        public async Task<IReadOnlyList<EmbyLibraryView>> GetUserViewsAsync(EmbySession session)
+        {
+            using var request = new HttpRequestMessage(
+                HttpMethod.Get,
+                $"Users/{EscapeUriComponent(session.UserId)}/Views");
+            EmbyAuthorization.Apply(request, _options, session);
+
+            using var response = await _http.SendAsync(request).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+            var body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var dto = JsonSerializer.Deserialize<ItemListDto<ViewDto>>(body, _jsonOptions) ?? new ItemListDto<ViewDto>();
+            return (dto.Items ?? new List<ViewDto>()).Select(MapView).ToList();
+        }
+
+        public Task<IReadOnlyList<EmbyMediaItem>> GetChildrenAsync(
+            EmbySession session,
+            string parentId,
+            string includeItemTypes)
+        {
+            return GetItemsAsync(session, new EmbyItemsQuery
+            {
+                ParentId = parentId,
+                IncludeItemTypes = includeItemTypes,
+                SortBy = "SortName",
+                SortOrder = "Ascending",
+                Recursive = false
+            });
+        }
+
+        public async Task<IReadOnlyList<EmbyMediaItem>> GetItemsAsync(EmbySession session, EmbyItemsQuery query)
+        {
+            if (query == null)
+            {
+                throw new ArgumentNullException(nameof(query));
+            }
+
+            using var request = new HttpRequestMessage(HttpMethod.Get, BuildItemsPath(session, query));
+            EmbyAuthorization.Apply(request, _options, session);
+
+            using var response = await _http.SendAsync(request).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+            var body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var dto = JsonSerializer.Deserialize<ItemListDto<ItemDto>>(body, _jsonOptions) ?? new ItemListDto<ItemDto>();
+            return (dto.Items ?? new List<ItemDto>()).Select(MapItem).ToList();
+        }
+
+        public Task<IReadOnlyList<EmbyMediaItem>> SearchItemsAsync(
+            EmbySession session,
+            string searchTerm,
+            int limit = 50)
+        {
+            return GetItemsAsync(session, new EmbyItemsQuery
+            {
+                SearchTerm = searchTerm,
+                IncludeItemTypes = "Movie,Series,Episode",
+                Limit = limit
+            });
+        }
+
+        public async Task<EmbyMediaItem> GetItemAsync(EmbySession session, string itemId)
+        {
+            using var request = new HttpRequestMessage(
+                HttpMethod.Get,
+                $"Users/{EscapeUriComponent(session.UserId)}/Items/{EscapeUriComponent(itemId)}");
+            EmbyAuthorization.Apply(request, _options, session);
+
+            using var response = await _http.SendAsync(request).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+            var body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var dto = JsonSerializer.Deserialize<ItemDto>(body, _jsonOptions)
+                ?? throw new InvalidOperationException("Emby item response was empty.");
+            return MapItem(dto);
+        }
+
         public async Task<IReadOnlyList<EmbyMediaSource>> GetPlaybackInfoAsync(EmbySession session, string itemId)
         {
             using var request = new HttpRequestMessage(
@@ -159,10 +233,48 @@ namespace NextGenEmby.Core.Emby
             response.EnsureSuccessStatusCode();
         }
 
+        private static string BuildItemsPath(EmbySession session, EmbyItemsQuery query)
+        {
+            var parameters = new List<string>();
+            AddQueryParameter(parameters, "ParentId", query.ParentId);
+            AddQueryParameter(parameters, "IncludeItemTypes", query.IncludeItemTypes);
+            AddQueryParameter(parameters, "SearchTerm", query.SearchTerm);
+            AddQueryParameter(parameters, "SortBy", query.SortBy);
+            AddQueryParameter(parameters, "SortOrder", query.SortOrder);
+            AddQueryParameter(parameters, "Filters", query.Filters);
+            AddQueryParameter(parameters, "StartIndex", query.StartIndex.ToString());
+            AddQueryParameter(parameters, "Limit", query.Limit.ToString());
+            AddQueryParameter(parameters, "Recursive", query.Recursive ? "true" : "false");
+            AddQueryParameter(parameters, "Fields", "Overview,ProductionYear,RunTimeTicks,PrimaryImageAspectRatio,ChildCount,UserData");
+
+            return $"Users/{EscapeUriComponent(session.UserId)}/Items?{string.Join("&", parameters)}";
+        }
+
+        private static void AddQueryParameter(List<string> parameters, string name, string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return;
+            }
+
+            parameters.Add($"{name}={EscapeUriComponent(value)}");
+        }
+
+        private static EmbyLibraryView MapView(ViewDto view)
+        {
+            return new EmbyLibraryView
+            {
+                Id = view.Id,
+                Name = view.Name,
+                CollectionType = view.CollectionType
+            };
+        }
+
         private static EmbyMediaItem MapItem(ItemDto item)
         {
             var imageTags = item.ImageTags;
             var backdropImageTags = item.BackdropImageTags;
+            var userData = item.UserData ?? new UserDataDto();
 
             return new EmbyMediaItem
             {
@@ -173,7 +285,18 @@ namespace NextGenEmby.Core.Emby
                 ProductionYear = item.ProductionYear,
                 RunTimeTicks = item.RunTimeTicks,
                 PrimaryImageTag = imageTags != null && imageTags.TryGetValue("Primary", out var primary) ? primary : "",
-                BackdropImageTag = backdropImageTags != null && backdropImageTags.Count > 0 ? backdropImageTags[0] : ""
+                BackdropImageTag = backdropImageTags != null && backdropImageTags.Count > 0 ? backdropImageTags[0] : "",
+                ParentId = item.ParentId,
+                SeriesId = item.SeriesId,
+                IndexNumber = item.IndexNumber,
+                ParentIndexNumber = item.ParentIndexNumber,
+                ChildCount = item.ChildCount,
+                UserData = new EmbyUserData
+                {
+                    Played = userData.Played,
+                    PlaybackPositionTicks = userData.PlaybackPositionTicks,
+                    PlayedPercentage = userData.PlayedPercentage
+                }
             };
         }
 
@@ -354,6 +477,26 @@ namespace NextGenEmby.Core.Emby
             public string Name { get; set; } = "";
         }
 
+        private sealed class ItemListDto<T>
+        {
+            public List<T> Items { get; set; } = new List<T>();
+            public int TotalRecordCount { get; set; }
+        }
+
+        private sealed class ViewDto
+        {
+            public string Id { get; set; } = "";
+            public string Name { get; set; } = "";
+            public string CollectionType { get; set; } = "";
+        }
+
+        private sealed class UserDataDto
+        {
+            public bool Played { get; set; }
+            public long PlaybackPositionTicks { get; set; }
+            public double? PlayedPercentage { get; set; }
+        }
+
         private sealed class ItemDto
         {
             public string Id { get; set; } = "";
@@ -362,6 +505,12 @@ namespace NextGenEmby.Core.Emby
             public string Overview { get; set; } = "";
             public int? ProductionYear { get; set; }
             public long? RunTimeTicks { get; set; }
+            public string ParentId { get; set; } = "";
+            public string SeriesId { get; set; } = "";
+            public int? IndexNumber { get; set; }
+            public int? ParentIndexNumber { get; set; }
+            public int? ChildCount { get; set; }
+            public UserDataDto UserData { get; set; } = new UserDataDto();
             public Dictionary<string, string> ImageTags { get; set; } = new Dictionary<string, string>();
             public List<string> BackdropImageTags { get; set; } = new List<string>();
         }

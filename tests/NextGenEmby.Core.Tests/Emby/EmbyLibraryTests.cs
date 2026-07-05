@@ -102,6 +102,146 @@ public sealed class EmbyLibraryTests
     }
 
     [Fact]
+    public async Task GetUserViewsAsync_Parses_Movie_And_Tv_Libraries()
+    {
+        var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
+            HttpStatusCode.OK,
+            """
+            {
+              "Items": [
+                { "Id": "movies", "Name": "Movies", "CollectionType": "movies" },
+                { "Id": "tv", "Name": "TV Shows", "CollectionType": "tvshows" }
+              ],
+              "TotalRecordCount": 2
+            }
+            """));
+        using var http = new HttpClient(handler);
+        var client = CreateClient(http);
+
+        var views = await client.GetUserViewsAsync(Session());
+
+        Assert.Collection(
+            views,
+            view =>
+            {
+                Assert.Equal("movies", view.Id);
+                Assert.Equal("Movies", view.Name);
+                Assert.Equal("movies", view.CollectionType);
+            },
+            view =>
+            {
+                Assert.Equal("tv", view.Id);
+                Assert.Equal("TV Shows", view.Name);
+                Assert.Equal("tvshows", view.CollectionType);
+            });
+        Assert.Equal("/Users/user-1/Views", handler.LastRequest!.RequestUri!.AbsolutePath);
+    }
+
+    [Fact]
+    public async Task GetItemsAsync_Builds_Library_Query_And_Parses_UserData()
+    {
+        var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
+            HttpStatusCode.OK,
+            """
+            {
+              "Items": [
+                {
+                  "Id": "movie-1",
+                  "Name": "Movie One",
+                  "Type": "Movie",
+                  "ProductionYear": 2024,
+                  "RunTimeTicks": 72000000000,
+                  "UserData": {
+                    "Played": false,
+                    "PlaybackPositionTicks": 1230000000,
+                    "PlayedPercentage": 17.5
+                  }
+                }
+              ],
+              "TotalRecordCount": 1
+            }
+            """));
+        using var http = new HttpClient(handler);
+        var client = CreateClient(http);
+
+        var items = await client.GetItemsAsync(Session(), new EmbyItemsQuery
+        {
+            ParentId = "movies",
+            IncludeItemTypes = "Movie",
+            SortBy = "SortName",
+            SortOrder = "Ascending",
+            StartIndex = 20,
+            Limit = 40,
+            Recursive = true,
+            Filters = "IsNotFolder"
+        });
+
+        var item = Assert.Single(items);
+        Assert.Equal("movie-1", item.Id);
+        Assert.False(item.UserData.Played);
+        Assert.Equal(1230000000, item.UserData.PlaybackPositionTicks);
+        Assert.Equal(17.5, item.UserData.PlayedPercentage);
+        Assert.Equal("/Users/user-1/Items", handler.LastRequest!.RequestUri!.AbsolutePath);
+        Assert.Contains("ParentId=movies", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("IncludeItemTypes=Movie", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("StartIndex=20", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("Limit=40", handler.LastRequest.RequestUri.Query);
+    }
+
+    [Fact]
+    public async Task GetItemAsync_And_GetChildrenAsync_Parse_Detail_And_Episodes()
+    {
+        var calls = 0;
+        var handler = new TestHttpMessageHandler(request =>
+        {
+            calls++;
+            if (request.RequestUri!.AbsolutePath == "/Users/user-1/Items/series-1")
+            {
+                return TestHttpMessageHandler.Json(
+                    HttpStatusCode.OK,
+                    """
+                    {
+                      "Id": "series-1",
+                      "Name": "Series One",
+                      "Type": "Series",
+                      "Overview": "A show.",
+                      "ChildCount": 1
+                    }
+                    """);
+            }
+
+            return TestHttpMessageHandler.Json(
+                HttpStatusCode.OK,
+                """
+                {
+                  "Items": [
+                    {
+                      "Id": "episode-1",
+                      "Name": "Pilot",
+                      "Type": "Episode",
+                      "IndexNumber": 1,
+                      "ParentIndexNumber": 1
+                    }
+                  ],
+                  "TotalRecordCount": 1
+                }
+                """);
+        });
+        using var http = new HttpClient(handler);
+        var client = CreateClient(http);
+
+        var detail = await client.GetItemAsync(Session(), "series-1");
+        var episodes = await client.GetChildrenAsync(Session(), "season-1", "Episode");
+
+        Assert.Equal("Series One", detail.Name);
+        Assert.Equal(1, detail.ChildCount);
+        var episode = Assert.Single(episodes);
+        Assert.Equal(1, episode.ParentIndexNumber);
+        Assert.Equal(1, episode.IndexNumber);
+        Assert.Equal(2, calls);
+    }
+
+    [Fact]
     public void GetImageUrl_Handles_Trailing_Slash_And_Escapes_Components()
     {
         using var http = new HttpClient(new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(HttpStatusCode.OK, "{}")));

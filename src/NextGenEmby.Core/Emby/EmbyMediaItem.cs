@@ -10,5 +10,11 @@ namespace NextGenEmby.Core.Emby
         public long? RunTimeTicks { get; set; }
         public string PrimaryImageTag { get; set; } = "";
         public string BackdropImageTag { get; set; } = "";
+        public string ParentId { get; set; } = "";
+        public string SeriesId { get; set; } = "";
+        public int? IndexNumber { get; set; }
+        public int? ParentIndexNumber { get; set; }
+        public int? ChildCount { get; set; }
+        public EmbyUserData UserData { get; set; } = new EmbyUserData();
     }
 }
