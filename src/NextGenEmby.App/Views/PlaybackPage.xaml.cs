@@ -28,7 +28,9 @@ namespace NextGenEmby.App.Views
         private readonly IDisposable? _disposableBackend;
         private readonly PlaybackOrchestrator _orchestrator;
         private readonly ApplicationDataSessionStore _sessionStore = new ApplicationDataSessionStore();
+        private readonly TaskCompletionSource<bool> _nativeSurfaceReadySource = new TaskCompletionSource<bool>();
         private readonly DispatcherTimer _progressTimer;
+        private WinRtNativePlaybackEngine? _nativeEngine;
         private HttpClient? _httpClient;
         private EmbyApiClient? _embyClient;
         private EmbySession? _session;
@@ -50,7 +52,7 @@ namespace NextGenEmby.App.Views
             if (UseNativePlaybackBackend)
             {
                 var nativeEngine = new WinRtNativePlaybackEngine(new NextGenEmby.Native.NativePlaybackEngine());
-                nativeEngine.AttachSurface(NativeSurface);
+                _nativeEngine = nativeEngine;
                 _backend = new NativeDirectXPlaybackBackend(nativeEngine);
                 NativeSurface.Visibility = Visibility.Visible;
                 PlayerElement.Visibility = Visibility.Collapsed;
@@ -71,11 +73,43 @@ namespace NextGenEmby.App.Views
                 Interval = ProgressInterval
             };
             _progressTimer.Tick += ProgressTimer_OnTick;
+            Loaded += PlaybackPage_OnLoaded;
             Unloaded += PlaybackPage_OnUnloaded;
 
             UpdateStatus(CorePlaybackState.Stopped);
             UpdateControlStates();
             UpdateStreamControlStates();
+        }
+
+        private void PlaybackPage_OnLoaded(object sender, RoutedEventArgs e)
+        {
+            AttachNativeSurface();
+            _nativeSurfaceReadySource.TrySetResult(true);
+        }
+
+        private async Task EnsureNativeSurfaceReadyAsync()
+        {
+            if (_nativeEngine == null)
+            {
+                return;
+            }
+
+            if (NativeSurface.ActualWidth <= 0 || NativeSurface.ActualHeight <= 0)
+            {
+                await _nativeSurfaceReadySource.Task;
+            }
+
+            AttachNativeSurface();
+        }
+
+        private void AttachNativeSurface()
+        {
+            if (_nativeEngine == null)
+            {
+                return;
+            }
+
+            _nativeEngine.AttachSurface(NativeSurface);
         }
 
         protected override void OnNavigatedTo(NavigationEventArgs e)
@@ -267,6 +301,7 @@ namespace NextGenEmby.App.Views
 
         private async Task StartManualPlaybackAsync()
         {
+            await EnsureNativeSurfaceReadyAsync();
             var source = CreateManualSource();
             await _orchestrator.StartAsync(DemoItemId, new[] { source }, 0);
             _lastPositionTicks = 0;
@@ -299,6 +334,7 @@ namespace NextGenEmby.App.Views
                 throw new InvalidOperationException("No playable media source was returned by Emby.");
             }
 
+            await EnsureNativeSurfaceReadyAsync();
             await _orchestrator.StartAsync(request.ItemId, sources, request.StartPositionTicks);
             _lastPositionTicks = request.StartPositionTicks;
             _hasPlaybackContext = _orchestrator.CurrentDescriptor != null;

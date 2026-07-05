@@ -8,6 +8,12 @@
 
 namespace winrt::NextGenEmby::Native::implementation
 {
+    namespace
+    {
+        constexpr uint32_t DefaultSwapChainWidth = 1280;
+        constexpr uint32_t DefaultSwapChainHeight = 720;
+    }
+
     void DxDeviceResources::AttachSurface(winrt::Windows::UI::Xaml::Controls::SwapChainPanel const& panel)
     {
         if (panel == nullptr)
@@ -17,9 +23,13 @@ namespace winrt::NextGenEmby::Native::implementation
 
         m_panel = panel;
 
-        auto width = static_cast<uint32_t>(panel.ActualWidth());
-        auto height = static_cast<uint32_t>(panel.ActualHeight());
-        CreateSwapChain(width == 0 ? 1 : width, height == 0 ? 1 : height, false);
+        auto width = panel.ActualWidth() > 0.0
+            ? static_cast<uint32_t>(panel.ActualWidth())
+            : DefaultSwapChainWidth;
+        auto height = panel.ActualHeight() > 0.0
+            ? static_cast<uint32_t>(panel.ActualHeight())
+            : DefaultSwapChainHeight;
+        CreateSwapChain(width, height, false);
 
         Microsoft::WRL::ComPtr<ISwapChainPanelNative> panelNative;
         winrt::check_hresult(winrt::get_unknown(m_panel)->QueryInterface(IID_PPV_ARGS(&panelNative)));
@@ -245,6 +255,72 @@ namespace winrt::NextGenEmby::Native::implementation
         }
 
         return true;
+    }
+
+    bool DxDeviceResources::DrawBgraFrameToBackBuffer(
+        uint8_t const* pixels,
+        uint32_t width,
+        uint32_t height,
+        uint32_t stride)
+    {
+        if (pixels == nullptr || width == 0 || height == 0 || stride == 0 || !m_swapChain)
+        {
+            return false;
+        }
+
+        Microsoft::WRL::ComPtr<IDXGISurface> surface;
+        if (FAILED(m_swapChain->GetBuffer(0, IID_PPV_ARGS(&surface))))
+        {
+            return false;
+        }
+
+        D2D1_FACTORY_OPTIONS factoryOptions{};
+        Microsoft::WRL::ComPtr<ID2D1Factory> d2dFactory;
+        if (FAILED(D2D1CreateFactory(
+            D2D1_FACTORY_TYPE_SINGLE_THREADED,
+            __uuidof(ID2D1Factory),
+            &factoryOptions,
+            reinterpret_cast<void**>(d2dFactory.ReleaseAndGetAddressOf()))))
+        {
+            return false;
+        }
+
+        D2D1_RENDER_TARGET_PROPERTIES renderTargetProperties = D2D1::RenderTargetProperties(
+            D2D1_RENDER_TARGET_TYPE_DEFAULT,
+            D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE));
+
+        Microsoft::WRL::ComPtr<ID2D1RenderTarget> renderTarget;
+        if (FAILED(d2dFactory->CreateDxgiSurfaceRenderTarget(
+            surface.Get(),
+            &renderTargetProperties,
+            renderTarget.ReleaseAndGetAddressOf())))
+        {
+            return false;
+        }
+
+        D2D1_BITMAP_PROPERTIES bitmapProperties = D2D1::BitmapProperties(
+            D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE));
+
+        Microsoft::WRL::ComPtr<ID2D1Bitmap> bitmap;
+        if (FAILED(renderTarget->CreateBitmap(
+            D2D1::SizeU(width, height),
+            pixels,
+            stride,
+            &bitmapProperties,
+            bitmap.ReleaseAndGetAddressOf())))
+        {
+            return false;
+        }
+
+        auto targetSize = renderTarget->GetSize();
+        renderTarget->BeginDraw();
+        renderTarget->DrawBitmap(
+            bitmap.Get(),
+            D2D1::RectF(0.0f, 0.0f, targetSize.width, targetSize.height),
+            1.0f,
+            D2D1_BITMAP_INTERPOLATION_MODE_LINEAR);
+
+        return SUCCEEDED(renderTarget->EndDraw());
     }
 
     bool DxDeviceResources::DrawTextOverlay(std::wstring const& text)

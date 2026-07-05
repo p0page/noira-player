@@ -21,6 +21,7 @@ extern "C"
 #include <libavutil/mastering_display_metadata.h>
 #include <libavutil/mathematics.h>
 #include <libavutil/pixfmt.h>
+#include <libswscale/swscale.h>
 }
 #pragma warning(pop)
 
@@ -49,6 +50,14 @@ namespace
         void operator()(AVBufferRef* buffer) const noexcept
         {
             av_buffer_unref(&buffer);
+        }
+    };
+
+    struct SwsContextDeleter
+    {
+        void operator()(SwsContext* context) const noexcept
+        {
+            sws_freeContext(context);
         }
     };
 
@@ -168,6 +177,67 @@ namespace
         texture->AddRef();
         decodedFrame.Texture.Attach(texture);
         decodedFrame.TextureArrayIndex = static_cast<uint32_t>(reinterpret_cast<intptr_t>(frame->data[1]));
+    }
+
+    bool ConvertSoftwareFrameToBgra(
+        winrt::NextGenEmby::Native::implementation::DecodedVideoFrame& decodedFrame,
+        AVFrame const* frame,
+        AVPixelFormat sourceFormat)
+    {
+        if (frame == nullptr || frame->width <= 0 || frame->height <= 0 || sourceFormat == AV_PIX_FMT_NONE)
+        {
+            return false;
+        }
+
+        std::unique_ptr<SwsContext, SwsContextDeleter> scaler(sws_getContext(
+            frame->width,
+            frame->height,
+            sourceFormat,
+            frame->width,
+            frame->height,
+            AV_PIX_FMT_BGRA,
+            SWS_BILINEAR,
+            nullptr,
+            nullptr,
+            nullptr));
+        if (!scaler)
+        {
+            return false;
+        }
+
+        auto stride = frame->width * 4;
+        std::vector<uint8_t> pixels(static_cast<size_t>(stride) * static_cast<size_t>(frame->height));
+        uint8_t* destinationData[] = { pixels.data(), nullptr, nullptr, nullptr };
+        int destinationLinesize[] = { stride, 0, 0, 0 };
+        auto scaledRows = sws_scale(
+            scaler.get(),
+            frame->data,
+            frame->linesize,
+            0,
+            frame->height,
+            destinationData,
+            destinationLinesize);
+        if (scaledRows <= 0)
+        {
+            return false;
+        }
+
+        decodedFrame.BgraPixels = std::move(pixels);
+        decodedFrame.BgraStride = static_cast<uint32_t>(stride);
+        return true;
+    }
+
+    bool AttachBgraFallback(
+        winrt::NextGenEmby::Native::implementation::DecodedVideoFrame& decodedFrame,
+        AVFrame const* frame)
+    {
+        auto frameFormat = static_cast<AVPixelFormat>(frame->format);
+        if (frameFormat == AV_PIX_FMT_D3D11)
+        {
+            return false;
+        }
+
+        return ConvertSoftwareFrameToBgra(decodedFrame, frame, frameFormat);
     }
 
     uint32_t ScaleRational(AVRational value, double scale, uint32_t maximum)
@@ -316,6 +386,7 @@ namespace
         }
 
         AttachD3D11Texture(decodedFrame, frame);
+        AttachBgraFallback(decodedFrame, frame);
         return decodedFrame;
     }
 

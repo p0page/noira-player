@@ -24,6 +24,11 @@ namespace winrt::NextGenEmby::Native::implementation
             uint32_t arraySlice,
             uint32_t width,
             uint32_t height);
+        bool DrawBgraFrameToBackBuffer(
+            uint8_t const* pixels,
+            uint32_t width,
+            uint32_t height,
+            uint32_t stride);
         bool DrawTextOverlay(std::wstring const& text);
         bool ClearToBlack();
         bool Present();

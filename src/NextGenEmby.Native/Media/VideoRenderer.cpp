@@ -26,16 +26,27 @@ namespace winrt::NextGenEmby::Native::implementation
 
         m_currentHdrKind = frame.HdrKind;
 
+        auto rendered = false;
         if (frame.Texture)
         {
-            if (!m_deviceResources.TryCopyToBackBuffer(frame.Texture.Get()))
+            rendered = m_deviceResources.TryCopyToBackBuffer(frame.Texture.Get());
+            if (!rendered)
             {
-                m_deviceResources.TryProcessVideoFrameToBackBuffer(
+                rendered = m_deviceResources.TryProcessVideoFrameToBackBuffer(
                     frame.Texture.Get(),
                     frame.TextureArrayIndex,
                     frame.Width,
                     frame.Height);
             }
+        }
+
+        if (!rendered && !frame.BgraPixels.empty())
+        {
+            m_deviceResources.DrawBgraFrameToBackBuffer(
+                frame.BgraPixels.data(),
+                frame.Width,
+                frame.Height,
+                frame.BgraStride);
         }
     }
 

@@ -38,9 +38,13 @@
 - Native 音轨切换已能关闭旧 audio decoder/source voice、释放旧音轨 packet queue，并在当前位置重开目标音轨的 FFmpeg decoder 和 XAudio2 source voice。
 - `AudioRenderer` 已接入 XAudio2 engine / mastering voice 生命周期，播放打开时会创建音频设备并在 start/pause/resume/stop 时控制 engine；seek 时会清空旧 source buffer 并重置音频时钟基准。
 - `SubtitleDecoder` 已接入 FFmpeg subtitle stream 的文本 cue 解码边界，能从共享 demux 中取已排队字幕 packet，并把 `SUBTITLE_TEXT` / `SUBTITLE_ASS` 文本 cue 喂给 DirectWrite overlay；PGS/bitmap 字幕、完整 ASS 样式和外置字幕 URL 尚未接入。
-- Debug x64 MSIX 测试包已生成：`src\NextGenEmby.App\AppPackages\NextGenEmby.App_0.1.0.0_x64_Debug_Test\NextGenEmby.App_0.1.0.0_x64_Debug.msix`，包内已确认包含 FFmpeg 运行时 DLL。
+- Debug x64 MSIX 测试包已生成：`src\NextGenEmby.App\AppPackages\NextGenEmby.App_<version>_x64_Debug_Test\NextGenEmby.App_<version>_x64_Debug.msix`，包内已确认包含 FFmpeg 运行时 DLL。
 - Windows 本机已完成 Debug x64 MSIX 侧载验证：使用 `CN=NextGenEmby` 临时开发证书签名，导入本机级 `LocalMachine\Root` / `LocalMachine\TrustedPeople`，开启 `AllowDevelopmentWithoutDevLicense` 和 `AllowAllTrustedApps`，并通过 `Add-AppDevPackage.ps1` 安装成功。
 - Windows 本机已能启动应用：`shell:AppsFolder\NextGenEmby.App_h8qjz0sr1sg4m!App` 可打开窗口，`ApplicationFrameHost` 窗口标题为 `Next Gen Xbox Emby`，`NextGenEmby.App` 进程存在。
+- Windows 本机已使用真实 Emby 服务器完成 Login -> Home -> 媒体详情 -> Playback 冒烟；首页最新条目、PlaybackInfo、媒体源选择器、播放状态、停止状态均正常。
+- Windows 本机已确认真实条目 `第 40 集` 的 4K HEVC/AAC 直连源可以出画面并播放；同一条目的 1080p AVC/AAC 源切换后仍可见画面；暂停和恢复状态正常。
+- 已修复本机“有声音没画面”的直接原因：native surface 之前可能在 `SwapChainPanel` 尚未布局时附着，导致创建 `1x1` swapchain；现在播放前等待 surface 加载，并在原生层使用 1280x720 作为零尺寸兜底。
+- `VideoDecoder` 已加入 BGRA 软件帧回退，`VideoRenderer` 会在 D3D11 texture/video processor 路径没有成功呈现时尝试把软件帧绘制到 backbuffer。
 - Kodi HDR 研究路径已记录在 ADR 0001。
 
 ## 验证命令
@@ -106,7 +110,7 @@ Build succeeded.
 ```
 
 ```powershell
-tar -tf 'src\NextGenEmby.App\AppPackages\NextGenEmby.App_0.1.0.0_x64_Debug_Test\NextGenEmby.App_0.1.0.0_x64_Debug.msix' | Select-String -Pattern 'avcodec|avdevice|avfilter|avformat|avutil|swresample|swscale'
+tar -tf 'src\NextGenEmby.App\AppPackages\NextGenEmby.App_<version>_x64_Debug_Test\NextGenEmby.App_<version>_x64_Debug.msix' | Select-String -Pattern 'avcodec|avdevice|avfilter|avformat|avutil|swresample|swscale'
 ```
 
 结果：
@@ -122,7 +126,7 @@ swscale-6.dll
 ```
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File 'src\NextGenEmby.App\AppPackages\NextGenEmby.App_0.1.0.0_x64_Debug_Test\Add-AppDevPackage.ps1' -Force -SkipLoggingTelemetry
+powershell -NoProfile -ExecutionPolicy Bypass -File 'src\NextGenEmby.App\AppPackages\NextGenEmby.App_<version>_x64_Debug_Test\Add-AppDevPackage.ps1' -Force -SkipLoggingTelemetry
 ```
 
 结果：
@@ -148,12 +152,11 @@ MSIX 本机侧载还额外需要签名和开发人员模式。当前本机已用
 
 ## 尚未验证
 
-- 还没有在本机完成真实 Emby 登录后的 Home -> 媒体详情 -> Playback 真实媒体播放手工验证；应用已能启动，但仍需要在 UI 中输入服务器和账号。
 - 还没有部署到 Xbox 硬件。
-- FFmpeg UWP 产物已接入 native build，`FfmpegMediaSource` 已能初始化 `AVFormatContext`，`VideoDecoder` 已能初始化视频 `AVCodecContext`、读取视频 packet / 接收 `AVFrame`，并把 D3D11VA texture slice 交给 renderer；真实画面呈现还没有经过 Local Machine 或 Xbox 实机确认。
-- HDR/HEVC 真实视频播放还没有完成；当前已具备 HDR display/DXGI/renderer 边界、HDR10 metadata 映射、临时 render loop 和 P010/NV12 video processor 尝试路径，但色彩空间细节、A/V sync 和真实 HEVC Main10/P010 播放效果尚未验证。
-- XAudio2 source voice、PCM buffer queue、FFmpeg `swresample`、初步音频时钟和第一版视频等待/丢帧策略已接入，但 A/V sync 阈值、真实听音和画面效果还没有经过 Local Machine 或 Xbox 实机验证；DirectWrite 字幕叠加和 FFmpeg 文本字幕 cue 解码已接入，但图形字幕、完整 ASS 样式和实机字幕显示还没有验证。
-- 真实 Emby 条目驱动的播放入口、媒体详情页、媒体源/音轨/字幕选择 UI、start/progress/stop HTTP 上报 glue 已接入；服务器端播放记录效果还没有经过 Local Machine 或 Xbox 实机确认。
+- HDR10 输出、电视 HDR 模式切换、HDR 停止后的 SDR 恢复、Xbox 上 HEVC Main10/D3D11VA/P010/NV12 性能仍需 Xbox 实机验证。
+- A/V sync 阈值还需要更长样本校准；当前只做了 Windows 本机短时播放、切源、暂停、恢复、停止冒烟。
+- 多音轨真实样本、真实字幕样本、PGS/bitmap 字幕、完整 ASS 样式和外置字幕 URL 尚未验证。
+- start/progress/stop HTTP 上报已发送，但当前测试服务器的 session 回读接口未完成确认；服务端播放记录效果仍需在 Emby 管理端或可用 session API 中复核。
 
 ## 原生播放硬件验证
 

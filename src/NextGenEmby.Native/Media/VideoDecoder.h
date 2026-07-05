@@ -5,6 +5,7 @@
 #include <dxgi1_6.h>
 #include <memory>
 #include <optional>
+#include <vector>
 #include <wrl/client.h>
 
 struct AVCodecContext;
@@ -31,6 +32,8 @@ namespace winrt::NextGenEmby::Native::implementation
         VideoHdrKind HdrKind{VideoHdrKind::None};
         std::optional<DXGI_HDR_METADATA_HDR10> Hdr10Metadata;
         int64_t PositionTicks{0};
+        std::vector<uint8_t> BgraPixels;
+        uint32_t BgraStride{0};
     };
 
     class VideoDecoder
