@@ -19,10 +19,10 @@
 - 播放编排层已有稳定的托管后端接口：`IPlaybackBackend`、`PlaybackDescriptor`、`PlaybackState`、`PlaybackOrchestrator`。
 - 原生播放诊断契约已实现：`PlaybackBackendCapabilities`、`PlaybackDisplayStatus`、`IPlaybackBackendDiagnostics`。
 - 托管侧原生播放适配器已实现：`INativePlaybackEngine`、`NativePlaybackOpenRequest`、`NativeDirectXPlaybackBackend`。
-- UWP app 源码已经包含 Xbox 优先的 Shell、Login、Home、Playback 页面。
+- UWP app 源码已经包含 Xbox 优先的 Shell、Login、Home、MediaDetails、Playback 页面。
 - UWP 登录流程已经接入 `EmbyApiClient`、`ApplicationDataSessionStore`、`ApplicationDataDeviceIdProvider`。
 - UWP 播放页已经接入 `NativeDirectXPlaybackBackend` 和 native `SwapChainPanel`，并保留 `SystemMediaPlaybackBackend` 作为临时回退路径。
-- Home 页已能用已保存 session 拉取 Emby 最新条目，并把 itemId 带入 Playback 页；Playback 页收到真实条目后会拉 PlaybackInfo、选择第一个 media source 启动播放，开播调用 `/Sessions/Playing`，暂停/恢复/seek/切流/定时调用 progress API，停止按钮、页面卸载和原生 EOF 调用 `/Sessions/Playing/Stopped`。
+- Home 页已能用已保存 session 拉取 Emby 最新条目，条目点击会先进入媒体详情页，再把 itemId 带入 Playback 页；Playback 页收到真实条目后会拉 PlaybackInfo、选择第一个 media source 启动播放，开播调用 `/Sessions/Playing`，暂停/恢复/seek/切流/定时调用 progress API，停止按钮、页面卸载和原生 EOF 调用 `/Sessions/Playing/Stopped`。
 - Playback 页已提供媒体源、音轨、字幕三个 Xbox 可聚焦选择器，分别调用 `SwitchMediaSourceAsync`、`SwitchAudioStreamAsync`、`SwitchSubtitleStreamAsync`，并发送对应 progress event。
 - C++/WinRT 原生组件已经创建并接入 solution；当前包含 HDR display controller、DXGI swapchain、native playback graph、HTTP input 边界、FFmpeg format/codec probe 边界、video renderer 边界、audio/subtitle renderer 控制边界。
 - `FFmpegInteropX.FFmpegUWP` `5.1.100` 已作为 NuGet native 依赖接入，Debug x64 native 构建会链接 FFmpeg lib 并复制对应运行时 DLL。
@@ -138,7 +138,7 @@ error MSB3644: Could not find the reference assemblies for .NETCore,Version=v5.0
 - FFmpeg UWP 产物已接入 native build，`FfmpegMediaSource` 已能初始化 `AVFormatContext`，`VideoDecoder` 已能初始化视频 `AVCodecContext`、读取视频 packet / 接收 `AVFrame`，并把 D3D11VA texture slice 交给 renderer；真实画面呈现还没有经过 Local Machine 或 Xbox 实机确认。
 - HDR/HEVC 真实视频播放还没有完成；当前已具备 HDR display/DXGI/renderer 边界、HDR10 metadata 映射、临时 render loop 和 P010/NV12 video processor 尝试路径，但色彩空间细节、A/V sync 和真实 HEVC Main10/P010 播放效果尚未验证。
 - XAudio2 source voice、PCM buffer queue、FFmpeg `swresample`、初步音频时钟和第一版视频等待/丢帧策略已接入，但 A/V sync 阈值、真实听音和画面效果还没有经过 Local Machine 或 Xbox 实机验证；DirectWrite 字幕叠加和 FFmpeg 文本字幕 cue 解码已接入，但图形字幕、完整 ASS 样式和实机字幕显示还没有验证。
-- 真实 Emby 条目驱动的播放入口、媒体源/音轨/字幕选择 UI、start/progress/stop HTTP 上报 glue 已接入；仍缺少媒体详情页，并且服务器端播放记录效果还没有经过 Local Machine 或 Xbox 实机确认。
+- 真实 Emby 条目驱动的播放入口、媒体详情页、媒体源/音轨/字幕选择 UI、start/progress/stop HTTP 上报 glue 已接入；服务器端播放记录效果还没有经过 Local Machine 或 Xbox 实机确认。
 
 ## 原生播放硬件验证
 
