@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using NextGenEmby.App.Navigation;
@@ -37,6 +38,7 @@ namespace NextGenEmby.App.Views
         private bool _hasPlaybackContext;
         private bool _infoVisible;
         private bool _reportInProgress;
+        private bool _updatingStreamControls;
 
         public PlaybackPage()
         {
@@ -70,6 +72,7 @@ namespace NextGenEmby.App.Views
 
             UpdateStatus(CorePlaybackState.Stopped);
             UpdateControlStates();
+            UpdateStreamControlStates();
         }
 
         protected override void OnNavigatedTo(NavigationEventArgs e)
@@ -154,6 +157,7 @@ namespace NextGenEmby.App.Views
 
                 UpdateStatus(args.State, args.Message);
                 UpdateControlStates();
+                UpdateStreamControlStates();
                 if (_infoVisible)
                 {
                     UpdateInfo();
@@ -178,6 +182,69 @@ namespace NextGenEmby.App.Views
             }
         }
 
+        private async void SourceBox_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_updatingStreamControls)
+            {
+                return;
+            }
+
+            var option = SourceBox.SelectedItem as SourceOption;
+            if (option == null)
+            {
+                return;
+            }
+
+            await RunPlaybackCommandAsync(async () =>
+            {
+                await _orchestrator.SwitchMediaSourceAsync(option.Id);
+                await ReportProgressAsync(PlaybackProgressEvent.QualityChange);
+                UpdateStreamControls();
+            });
+        }
+
+        private async void AudioStreamBox_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_updatingStreamControls)
+            {
+                return;
+            }
+
+            var option = AudioStreamBox.SelectedItem as StreamOption;
+            if (option == null)
+            {
+                return;
+            }
+
+            await RunPlaybackCommandAsync(async () =>
+            {
+                await _orchestrator.SwitchAudioStreamAsync(option.StreamIndex);
+                await ReportProgressAsync(PlaybackProgressEvent.AudioTrackChange);
+                UpdateStreamControls();
+            });
+        }
+
+        private async void SubtitleStreamBox_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_updatingStreamControls)
+            {
+                return;
+            }
+
+            var option = SubtitleStreamBox.SelectedItem as StreamOption;
+            if (option == null)
+            {
+                return;
+            }
+
+            await RunPlaybackCommandAsync(async () =>
+            {
+                await _orchestrator.SwitchSubtitleStreamAsync(option.StreamIndex);
+                await ReportProgressAsync(PlaybackProgressEvent.SubtitleTrackChange);
+                UpdateStreamControls();
+            });
+        }
+
         private async Task StartPlaybackAsync()
         {
             if (_launchRequest != null)
@@ -199,6 +266,7 @@ namespace NextGenEmby.App.Views
             _currentItemName = "";
             UpdateStatus(_orchestrator.State);
             UpdateControlStates();
+            UpdateStreamControls();
             if (_infoVisible)
             {
                 UpdateInfo();
@@ -231,6 +299,7 @@ namespace NextGenEmby.App.Views
             await ReportProgressAsync(PlaybackProgressEvent.StateChange);
             UpdateStatus(_orchestrator.State);
             UpdateControlStates();
+            UpdateStreamControls();
             if (_infoVisible)
             {
                 UpdateInfo();
@@ -246,6 +315,7 @@ namespace NextGenEmby.App.Views
             _hasPlaybackContext = false;
             UpdateStatus(CorePlaybackState.Stopped);
             UpdateControlStates();
+            UpdateStreamControls();
             if (_infoVisible)
             {
                 UpdateInfo();
@@ -294,6 +364,7 @@ namespace NextGenEmby.App.Views
                 _hasPlaybackContext = _orchestrator.CurrentDescriptor != null;
                 UpdateStatus(CorePlaybackState.Failed, ex.Message);
                 UpdateControlStates();
+                UpdateStreamControlStates();
                 if (_infoVisible)
                 {
                     UpdateInfo();
@@ -317,6 +388,88 @@ namespace NextGenEmby.App.Views
             });
 
             return source;
+        }
+
+        private void UpdateStreamControls()
+        {
+            _updatingStreamControls = true;
+            try
+            {
+                SourceBox.Items.Clear();
+                AudioStreamBox.Items.Clear();
+                SubtitleStreamBox.Items.Clear();
+
+                var descriptor = _orchestrator.CurrentDescriptor;
+                if (descriptor == null)
+                {
+                    UpdateStreamControlStates();
+                    return;
+                }
+
+                foreach (var source in descriptor.AvailableSources)
+                {
+                    var option = new SourceOption(source.Id, CreateSourceLabel(source));
+                    SourceBox.Items.Add(option);
+                    if (string.Equals(source.Id, descriptor.MediaSource.Id, StringComparison.Ordinal))
+                    {
+                        SourceBox.SelectedItem = option;
+                    }
+                }
+
+                AddAudioOptions(descriptor);
+                AddSubtitleOptions(descriptor);
+                UpdateStreamControlStates();
+            }
+            finally
+            {
+                _updatingStreamControls = false;
+            }
+        }
+
+        private void AddAudioOptions(PlaybackDescriptor descriptor)
+        {
+            var defaultOption = new StreamOption(null, "Default");
+            AudioStreamBox.Items.Add(defaultOption);
+            AudioStreamBox.SelectedItem = defaultOption;
+
+            foreach (var stream in descriptor.MediaSource.AudioStreams)
+            {
+                var option = new StreamOption(stream.Index, CreateStreamLabel(stream));
+                AudioStreamBox.Items.Add(option);
+                if (descriptor.AudioStreamIndex == stream.Index)
+                {
+                    AudioStreamBox.SelectedItem = option;
+                }
+            }
+        }
+
+        private void AddSubtitleOptions(PlaybackDescriptor descriptor)
+        {
+            var offOption = new StreamOption(null, "Off");
+            SubtitleStreamBox.Items.Add(offOption);
+            SubtitleStreamBox.SelectedItem = offOption;
+
+            foreach (var stream in descriptor.MediaSource.SubtitleStreams)
+            {
+                var option = new StreamOption(stream.Index, CreateStreamLabel(stream));
+                SubtitleStreamBox.Items.Add(option);
+                if (descriptor.SubtitleStreamIndex == stream.Index)
+                {
+                    SubtitleStreamBox.SelectedItem = option;
+                }
+            }
+        }
+
+        private void UpdateStreamControlStates()
+        {
+            var state = _orchestrator.State;
+            var hasActivePlayback = _hasPlaybackContext &&
+                state != CorePlaybackState.Failed &&
+                state != CorePlaybackState.Stopped;
+
+            SourceBox.IsEnabled = hasActivePlayback && SourceBox.Items.Count > 1;
+            AudioStreamBox.IsEnabled = hasActivePlayback && AudioStreamBox.Items.Count > 1;
+            SubtitleStreamBox.IsEnabled = hasActivePlayback && SubtitleStreamBox.Items.Count > 1;
         }
 
         private async Task EnsureEmbyClientAsync()
@@ -408,8 +561,68 @@ namespace NextGenEmby.App.Views
                 "State: " + _orchestrator.State + Environment.NewLine +
                 "Item: " + (string.IsNullOrWhiteSpace(_currentItemName) ? descriptor.ItemId : _currentItemName) + Environment.NewLine +
                 "Source: " + source.Name + Environment.NewLine +
+                "Audio: " + CreateSelectedStreamLabel(source, descriptor.AudioStreamIndex, EmbyStreamKind.Audio, "Default") + Environment.NewLine +
+                "Subtitles: " + CreateSelectedStreamLabel(source, descriptor.SubtitleStreamIndex, EmbyStreamKind.Subtitle, "Off") + Environment.NewLine +
                 "Position: " + FormatPosition(position) + Environment.NewLine +
                 "URL: " + source.DirectStreamUrl;
+        }
+
+        private static string CreateSourceLabel(EmbyMediaSource source)
+        {
+            var label = string.IsNullOrWhiteSpace(source.Name) ? source.Id : source.Name;
+            if (source.Width > 0 && source.Height > 0)
+            {
+                label += " · " + source.Width + "x" + source.Height;
+            }
+
+            if (source.IsHdr)
+            {
+                label += " · HDR";
+            }
+
+            return label;
+        }
+
+        private static string CreateStreamLabel(EmbyMediaStream stream)
+        {
+            if (!string.IsNullOrWhiteSpace(stream.DisplayTitle))
+            {
+                return stream.DisplayTitle;
+            }
+
+            var label = string.IsNullOrWhiteSpace(stream.Language) ? "Track " + stream.Index : stream.Language;
+            if (!string.IsNullOrWhiteSpace(stream.Codec))
+            {
+                label += " · " + stream.Codec;
+            }
+
+            if (!string.IsNullOrWhiteSpace(stream.ChannelLayout))
+            {
+                label += " · " + stream.ChannelLayout;
+            }
+
+            if (stream.IsExternal)
+            {
+                label += " · External";
+            }
+
+            return label;
+        }
+
+        private static string CreateSelectedStreamLabel(
+            EmbyMediaSource source,
+            int? streamIndex,
+            EmbyStreamKind streamKind,
+            string fallback)
+        {
+            if (!streamIndex.HasValue)
+            {
+                return fallback;
+            }
+
+            var stream = source.Streams.FirstOrDefault(candidate =>
+                candidate.Kind == streamKind && candidate.Index == streamIndex.Value);
+            return stream == null ? fallback : CreateStreamLabel(stream);
         }
 
         private static bool IsSupportedDirectStreamUrl(string value)
@@ -439,6 +652,42 @@ namespace NextGenEmby.App.Views
                 (int)position.TotalHours,
                 position.Minutes,
                 position.Seconds);
+        }
+
+        private sealed class SourceOption
+        {
+            public SourceOption(string id, string label)
+            {
+                Id = id ?? "";
+                Label = label ?? "";
+            }
+
+            public string Id { get; }
+
+            public string Label { get; }
+
+            public override string ToString()
+            {
+                return Label;
+            }
+        }
+
+        private sealed class StreamOption
+        {
+            public StreamOption(int? streamIndex, string label)
+            {
+                StreamIndex = streamIndex;
+                Label = label ?? "";
+            }
+
+            public int? StreamIndex { get; }
+
+            public string Label { get; }
+
+            public override string ToString()
+            {
+                return Label;
+            }
         }
     }
 }

@@ -46,7 +46,7 @@
 - HDR10 metadata side-data 已能映射到 DXGI HDR10 metadata；BT.2020/PQ video processor 色彩空间设置和 tone mapping 策略尚未补齐。
 - 当前已有后台 render loop，并会根据 XAudio2 音频时钟暂存早到的视频帧、丢弃明显落后的视频帧；阈值和观感仍需实机校准。
 - 当前 `CurrentPositionTicks()` 已优先使用 XAudio2 `SamplesPlayed` 推导的初步音频时钟，seek 会清空旧音频 buffer；subtitle decoder 已能把 FFmpeg 文本/ASS 字幕 cue 接到 DirectWrite 文本叠加出口，但还没有真实字幕样本、PGS 图形字幕或完整 ASS 样式验证。
-- 当前 Playback 页既保留手动 URL 测试入口，也能从 Home 页真实 Emby itemId 自动拉 PlaybackInfo 并开播；progress timer 会调用现有 Emby progress API，但还没有实机确认服务器端播放记录效果。
+- 当前 Playback 页既保留手动 URL 测试入口，也能从 Home 页真实 Emby itemId 自动拉 PlaybackInfo 并开播；媒体源、音轨、字幕选择器已接到 orchestrator；progress timer 会调用现有 Emby progress API，但还没有实机确认服务器端播放记录效果。
 
 ## 测试结果
 

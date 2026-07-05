@@ -21,6 +21,7 @@
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
                 <Grid Grid.Row="0" ColumnSpacing="24">
@@ -136,9 +137,34 @@
                     </StackPanel>
                 </ScrollViewer>
 
+                <ScrollViewer
+                    Grid.Row="2"
+                    HorizontalScrollBarVisibility="Auto"
+                    HorizontalScrollMode="Enabled"
+                    VerticalScrollBarVisibility="Disabled"
+                    VerticalScrollMode="Disabled">
+                    <StackPanel Orientation="Horizontal" Spacing="16">
+                        <ComboBox
+                            x:Name="SourceBox"
+                            Width="280"
+                            Header="Source"
+                            SelectionChanged="SourceBox_OnSelectionChanged" />
+                        <ComboBox
+                            x:Name="AudioStreamBox"
+                            Width="280"
+                            Header="Audio"
+                            SelectionChanged="AudioStreamBox_OnSelectionChanged" />
+                        <ComboBox
+                            x:Name="SubtitleStreamBox"
+                            Width="280"
+                            Header="Subtitles"
+                            SelectionChanged="SubtitleStreamBox_OnSelectionChanged" />
+                    </StackPanel>
+                </ScrollViewer>
+
                 <Border
                     x:Name="InfoPanel"
-                    Grid.Row="2"
+                    Grid.Row="3"
                     Background="{StaticResource AppSurfaceBrush}"
                     Padding="18"
                     Visibility="Collapsed">

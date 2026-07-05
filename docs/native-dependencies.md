@@ -55,6 +55,7 @@ MSBuild 接入方式：
 - `PlaybackGraph` 已有后台 render loop，会优先用 XAudio2 音频时钟决定视频帧节奏：视频帧早于音频超过容差时暂存等待，落后音频超过容差时丢弃有限数量的视频帧追赶。
 - `PlaybackGraph` 的后台 loop 会在 EOF 时上报 `Stopped`，在 native 解码/渲染异常时上报 `Failed`；通知在 graph mutex 外触发，避免托管 wrapper 查询当前位置时形成死锁。
 - UWP `HomePage` 已能加载 Emby 最新条目并导航到 `PlaybackPage`；`PlaybackPage` 会根据导航 itemId 拉取 PlaybackInfo、启动 `PlaybackOrchestrator`，并在开始、暂停、恢复、seek、停止和定时 tick 时调用 `EmbyApiClient.ReportProgressAsync`。
+- `PlaybackPage` 的媒体源、音轨、字幕选择器会从 `PlaybackDescriptor` / `EmbyMediaSource.Streams` 填充，并把用户选择映射到 orchestrator 的切流/切音轨/切字幕方法。
 - `NativePlaybackEngine` 已暴露原地音轨切换、字幕切换和禁用字幕方法；音轨切换会在当前位置重开 `AudioDecoder` / XAudio2 source voice，并通过 `FfmpegMediaSource::UnregisterStream` 释放旧音轨 packet queue；字幕切换会关闭旧 `SubtitleDecoder`、清掉旧 cue，并在目标流上重开文本字幕解码。
 - `AudioRenderer` 已能创建 XAudio2 engine、mastering voice 和 source voice，并维护小型 PCM buffer queue；XAudio2 buffer-end callback 会释放已提交 buffer 的生命周期引用。
 - `AudioRenderer` 会用首个提交 PCM buffer 的 `PositionTicks` 作为时钟基准，并通过 `IXAudio2SourceVoice::GetState().SamplesPlayed` 换算当前播放位置；`PlaybackGraph.CurrentPositionTicks()` 会优先返回该音频时钟，seek 时会 flush source buffers 并重置基准。
