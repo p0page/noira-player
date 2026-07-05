@@ -8,6 +8,9 @@ namespace winrt::NextGenEmby::Native::implementation
 {
     using namespace std::chrono_literals;
     constexpr size_t MinimumQueuedAudioBuffers = 4;
+    constexpr int64_t VideoAheadToleranceTicks = 400000;
+    constexpr int64_t VideoDropToleranceTicks = 1000000;
+    constexpr uint32_t MaxDroppedVideoFramesPerPass = 4;
 
     PlaybackGraph::PlaybackGraph(
         DxDeviceResources& deviceResources,
@@ -98,6 +101,7 @@ namespace winrt::NextGenEmby::Native::implementation
 
         std::lock_guard lock(m_graphMutex);
         m_positionTicks = positionTicks;
+        m_pendingVideoFrame.reset();
         m_audioRenderer.Flush();
         m_videoDecoder.Seek(positionTicks);
         m_audioDecoder.Flush(positionTicks);
@@ -117,6 +121,7 @@ namespace winrt::NextGenEmby::Native::implementation
         m_videoDecoder.Close();
         m_videoRenderer.ClearToBlack();
         m_mediaSource.Close();
+        m_pendingVideoFrame.reset();
         m_url.clear();
         m_positionTicks = 0;
         m_open = false;
@@ -135,6 +140,7 @@ namespace winrt::NextGenEmby::Native::implementation
         auto shouldResumeAudio = !m_paused;
         m_audioRenderer.Stop();
         m_audioDecoder.Close();
+        m_pendingVideoFrame.reset();
         m_videoDecoder.Seek(m_positionTicks);
         m_audioDecoder.Open(m_mediaSource, audioStreamIndex, true);
         m_audioDecoder.Flush(m_positionTicks);
@@ -287,16 +293,47 @@ namespace winrt::NextGenEmby::Native::implementation
 
     bool PlaybackGraph::RenderNextFrame()
     {
-        if (auto frame = m_videoDecoder.TryReadFrame())
+        DecodeNextAudioFrame();
+
+        auto droppedFrames = uint32_t{0};
+        while (droppedFrames <= MaxDroppedVideoFramesPerPass)
         {
-            DecodeNextAudioFrame();
-            m_videoRenderer.Render(*frame);
-            m_positionTicks = frame->PositionTicks;
+            if (!m_pendingVideoFrame)
+            {
+                auto frame = m_videoDecoder.TryReadFrame();
+                if (!frame)
+                {
+                    return m_audioRenderer.QueuedBufferCount() > 0;
+                }
+
+                m_pendingVideoFrame = std::move(*frame);
+            }
+
+            auto const& frame = *m_pendingVideoFrame;
+            if (auto audioPosition = m_audioRenderer.CurrentPositionTicks())
+            {
+                auto hasQueuedAudio = m_audioRenderer.QueuedBufferCount() > 0;
+                if (hasQueuedAudio && frame.PositionTicks > *audioPosition + VideoAheadToleranceTicks)
+                {
+                    return true;
+                }
+
+                if (hasQueuedAudio && *audioPosition > frame.PositionTicks + VideoDropToleranceTicks)
+                {
+                    m_pendingVideoFrame.reset();
+                    ++droppedFrames;
+                    continue;
+                }
+            }
+
+            m_videoRenderer.Render(frame);
+            m_positionTicks = frame.PositionTicks;
             m_subtitleRenderer.RenderAt(m_positionTicks);
+            m_pendingVideoFrame.reset();
             return true;
         }
 
-        return false;
+        return true;
     }
 
     void PlaybackGraph::DecodeNextAudioFrame()

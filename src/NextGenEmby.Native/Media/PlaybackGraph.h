@@ -58,6 +58,7 @@ namespace winrt::NextGenEmby::Native::implementation
         VideoRenderer m_videoRenderer;
         AudioRenderer m_audioRenderer;
         SubtitleRenderer m_subtitleRenderer;
+        std::optional<DecodedVideoFrame> m_pendingVideoFrame;
         winrt::hstring m_url;
         int64_t m_positionTicks{0};
         bool m_open{false};
