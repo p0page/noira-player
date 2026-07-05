@@ -42,7 +42,7 @@ public sealed class SeekPreviewSession
             throw new ArgumentOutOfRangeException(nameof(tinyDriftThreshold));
         }
 
-        if (thumbstickDeadZone < 0 || thumbstickDeadZone > 1)
+        if (double.IsNaN(thumbstickDeadZone) || thumbstickDeadZone < 0 || thumbstickDeadZone > 1)
         {
             throw new ArgumentOutOfRangeException(nameof(thumbstickDeadZone));
         }
@@ -70,7 +70,7 @@ public sealed class SeekPreviewSession
 
     public bool BeginFromThumbstick(long currentTicks, double thumbstickX, TimeSpan now)
     {
-        if (Math.Abs(thumbstickX) < _thumbstickDeadZone)
+        if (double.IsNaN(thumbstickX) || Math.Abs(thumbstickX) < _thumbstickDeadZone)
         {
             return false;
         }
