@@ -53,6 +53,7 @@ namespace NextGenEmby.App.Views
         private bool _overlayVisible;
         private bool _moreVisible;
         private bool _keyHandlerAttached;
+        private bool _playbackCommandInFlight;
         private PlaybackSessionRequest? _lastPlaybackSessionRequest;
 
         public PlaybackPage()
@@ -283,24 +284,40 @@ namespace NextGenEmby.App.Views
 
                 case VirtualKey.GamepadDPadLeft:
                     e.Handled = true;
-                    ClearSeekPreview();
-                    await RunPlaybackCommandAsync(() => SeekRelativeAsync(-SeekBackStep));
+                    if (CanAcceptSeekInput())
+                    {
+                        ClearSeekPreview();
+                        await RunPlaybackCommandAsync(() => SeekRelativeAsync(-SeekBackStep));
+                    }
+
                     return;
 
                 case VirtualKey.GamepadDPadRight:
                     e.Handled = true;
-                    ClearSeekPreview();
-                    await RunPlaybackCommandAsync(() => SeekRelativeAsync(SeekForwardStep));
+                    if (CanAcceptSeekInput())
+                    {
+                        ClearSeekPreview();
+                        await RunPlaybackCommandAsync(() => SeekRelativeAsync(SeekForwardStep));
+                    }
+
                     return;
 
                 case VirtualKey.GamepadLeftThumbstickLeft:
                     e.Handled = true;
-                    BeginOrMoveSeekPreview(TimeSpan.FromSeconds(-5));
+                    if (CanAcceptSeekInput())
+                    {
+                        BeginOrMoveSeekPreview(TimeSpan.FromSeconds(-5));
+                    }
+
                     return;
 
                 case VirtualKey.GamepadLeftThumbstickRight:
                     e.Handled = true;
-                    BeginOrMoveSeekPreview(TimeSpan.FromSeconds(5));
+                    if (CanAcceptSeekInput())
+                    {
+                        BeginOrMoveSeekPreview(TimeSpan.FromSeconds(5));
+                    }
+
                     return;
             }
         }
@@ -541,6 +558,12 @@ namespace NextGenEmby.App.Views
 
         private async Task SeekRelativeAsync(TimeSpan delta)
         {
+            if (!IsPlaybackSeekable())
+            {
+                ShowPlaybackNotReady();
+                return;
+            }
+
             var current = TimeSpan.FromTicks(Math.Max(0, _backend.CurrentPositionTicks));
             var target = current + delta;
             if (target < TimeSpan.Zero)
@@ -562,6 +585,12 @@ namespace NextGenEmby.App.Views
 
         private async Task RunPlaybackCommandAsync(Func<Task> command)
         {
+            if (_playbackCommandInFlight)
+            {
+                return;
+            }
+
+            _playbackCommandInFlight = true;
             try
             {
                 await command();
@@ -577,6 +606,10 @@ namespace NextGenEmby.App.Views
                 {
                     UpdateInfo();
                 }
+            }
+            finally
+            {
+                _playbackCommandInFlight = false;
             }
         }
 
@@ -913,6 +946,12 @@ namespace NextGenEmby.App.Views
 
             if (decision.Kind == SeekPreviewDecisionKind.Commit)
             {
+                if (!IsPlaybackSeekable())
+                {
+                    ShowPlaybackNotReady();
+                    return;
+                }
+
                 await _orchestrator.SeekAsync(decision.PositionTicks);
                 _lastPositionTicks = Math.Max(0, decision.PositionTicks);
                 await ReportProgressAsync(PlaybackProgressEvent.TimeUpdate);
@@ -951,6 +990,39 @@ namespace NextGenEmby.App.Views
 
             _seekPreviewTimer.Stop();
             SeekPreviewBlock.Visibility = Visibility.Collapsed;
+        }
+
+        private bool CanAcceptSeekInput()
+        {
+            if (!IsPlaybackSeekable())
+            {
+                ShowPlaybackNotReady();
+                return false;
+            }
+
+            if (_playbackCommandInFlight)
+            {
+                ShowOverlay();
+                return false;
+            }
+
+            return true;
+        }
+
+        private bool IsPlaybackSeekable()
+        {
+            var state = _orchestrator.State;
+            return _orchestrator.CurrentDescriptor != null &&
+                state != CorePlaybackState.Stopped &&
+                state != CorePlaybackState.Failed &&
+                state != CorePlaybackState.Opening;
+        }
+
+        private void ShowPlaybackNotReady()
+        {
+            ClearSeekPreview();
+            ShowOverlay();
+            UpdateStatus(_orchestrator.State, "Playback is not ready");
         }
 
         private void UpdateProgressSlider()
