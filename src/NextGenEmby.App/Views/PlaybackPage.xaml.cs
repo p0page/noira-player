@@ -11,6 +11,7 @@ using NextGenEmby.Core.Playback;
 using Windows.UI.Core;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
+using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Navigation;
 using CorePlaybackState = NextGenEmby.Core.Playback.PlaybackState;
 
@@ -30,6 +31,7 @@ namespace NextGenEmby.App.Views
         private readonly ApplicationDataSessionStore _sessionStore = new ApplicationDataSessionStore();
         private readonly TaskCompletionSource<bool> _nativeSurfaceReadySource = new TaskCompletionSource<bool>();
         private readonly DispatcherTimer _progressTimer;
+        private readonly DispatcherTimer _overlayTimer;
         private WinRtNativePlaybackEngine? _nativeEngine;
         private HttpClient? _httpClient;
         private EmbyApiClient? _embyClient;
@@ -43,6 +45,8 @@ namespace NextGenEmby.App.Views
         private bool _stopReportInProgress;
         private bool _playbackStoppedReported;
         private bool _updatingStreamControls;
+        private bool _overlayVisible;
+        private bool _moreVisible;
         private PlaybackSessionRequest? _lastPlaybackSessionRequest;
 
         public PlaybackPage()
@@ -73,9 +77,15 @@ namespace NextGenEmby.App.Views
                 Interval = ProgressInterval
             };
             _progressTimer.Tick += ProgressTimer_OnTick;
+            _overlayTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(5)
+            };
+            _overlayTimer.Tick += OverlayTimer_OnTick;
             Loaded += PlaybackPage_OnLoaded;
             Unloaded += PlaybackPage_OnUnloaded;
 
+            NowPlayingBlock.Text = "Ready";
             UpdateStatus(CorePlaybackState.Stopped);
             UpdateControlStates();
             UpdateStreamControlStates();
@@ -118,13 +128,18 @@ namespace NextGenEmby.App.Views
             _launchRequest = e.Parameter as PlaybackLaunchRequest;
             if (_launchRequest == null)
             {
+                NowPlayingBlock.Text = "Manual Direct Stream";
+                ManualDebugPanel.Visibility = Visibility.Visible;
+                StreamUrlBox.IsEnabled = true;
+                ShowOverlay();
                 return;
             }
 
             _currentItemName = _launchRequest.ItemName;
-            StreamUrlBox.Text = string.IsNullOrWhiteSpace(_currentItemName)
+            NowPlayingBlock.Text = string.IsNullOrWhiteSpace(_currentItemName)
                 ? _launchRequest.ItemId
                 : _currentItemName;
+            StreamUrlBox.Text = "";
             StreamUrlBox.IsEnabled = false;
             _ = RunPlaybackCommandAsync(() => StartItemPlaybackAsync(_launchRequest));
         }
@@ -161,6 +176,7 @@ namespace NextGenEmby.App.Views
 
         private void Info_OnClick(object sender, RoutedEventArgs e)
         {
+            ShowOverlay(true);
             _infoVisible = !_infoVisible;
             InfoPanel.Visibility = _infoVisible ? Visibility.Visible : Visibility.Collapsed;
             if (_infoVisible)
@@ -172,6 +188,16 @@ namespace NextGenEmby.App.Views
         private void StreamUrlBox_OnTextChanged(object sender, TextChangedEventArgs e)
         {
             UpdateControlStates();
+        }
+
+        private void More_OnClick(object sender, RoutedEventArgs e)
+        {
+            ShowOverlay(!_moreVisible);
+        }
+
+        private void Page_OnKeyDown(object sender, KeyRoutedEventArgs e)
+        {
+            ShowOverlay();
         }
 
         private async void Orchestrator_OnStateChanged(object? sender, PlaybackStateChangedEventArgs args)
@@ -194,6 +220,7 @@ namespace NextGenEmby.App.Views
                     (_hasPlaybackContext || args.State == CorePlaybackState.Opening);
 
                 UpdateStatus(args.State, args.Message);
+                UpdateProgressSlider();
                 UpdateControlStates();
                 UpdateStreamControlStates();
                 if (_infoVisible)
@@ -213,6 +240,8 @@ namespace NextGenEmby.App.Views
             _orchestrator.StateChanged -= Orchestrator_OnStateChanged;
             _progressTimer.Stop();
             _progressTimer.Tick -= ProgressTimer_OnTick;
+            _overlayTimer.Stop();
+            _overlayTimer.Tick -= OverlayTimer_OnTick;
             try
             {
                 await ReportPlaybackStoppedAsync();
@@ -301,6 +330,8 @@ namespace NextGenEmby.App.Views
 
         private async Task StartManualPlaybackAsync()
         {
+            ManualDebugPanel.Visibility = Visibility.Visible;
+            ShowOverlay();
             await EnsureNativeSurfaceReadyAsync();
             var source = CreateManualSource();
             await _orchestrator.StartAsync(DemoItemId, new[] { source }, 0);
@@ -310,7 +341,9 @@ namespace NextGenEmby.App.Views
             _playbackStoppedReported = false;
             _progressTimer.Stop();
             _currentItemName = "";
+            NowPlayingBlock.Text = "Manual Direct Stream";
             UpdateStatus(_orchestrator.State);
+            UpdateProgressSlider();
             UpdateControlStates();
             UpdateStreamControls();
             if (_infoVisible)
@@ -352,12 +385,14 @@ namespace NextGenEmby.App.Views
             _hasPlaybackContext = _orchestrator.CurrentDescriptor != null;
             _playbackStoppedReported = false;
             _currentItemName = request.ItemName;
-            StreamUrlBox.Text = string.IsNullOrWhiteSpace(_currentItemName)
+            NowPlayingBlock.Text = string.IsNullOrWhiteSpace(_currentItemName)
                 ? request.ItemId
                 : _currentItemName;
+            ShowOverlay();
             _progressTimer.Start();
             await ReportPlaybackStartedAsync();
             UpdateStatus(_orchestrator.State);
+            UpdateProgressSlider();
             UpdateControlStates();
             UpdateStreamControls();
             if (_infoVisible)
@@ -375,6 +410,7 @@ namespace NextGenEmby.App.Views
             _hasPlaybackContext = false;
             _lastPlaybackSessionRequest = null;
             UpdateStatus(CorePlaybackState.Stopped);
+            UpdateProgressSlider();
             UpdateControlStates();
             UpdateStreamControls();
             if (_infoVisible)
@@ -408,6 +444,8 @@ namespace NextGenEmby.App.Views
             _lastPositionTicks = target.Ticks;
             await ReportProgressAsync(PlaybackProgressEvent.TimeUpdate);
             UpdateStatus(_orchestrator.State, "Position " + FormatPosition(target));
+            UpdateProgressSlider();
+            ShowOverlay();
             if (_infoVisible)
             {
                 UpdateInfo();
@@ -424,6 +462,7 @@ namespace NextGenEmby.App.Views
             {
                 _hasPlaybackContext = _orchestrator.CurrentDescriptor != null;
                 UpdateStatus(CorePlaybackState.Failed, ex.Message);
+                ShowOverlay();
                 UpdateControlStates();
                 UpdateStreamControlStates();
                 if (_infoVisible)
@@ -553,6 +592,18 @@ namespace NextGenEmby.App.Views
         private async void ProgressTimer_OnTick(object sender, object e)
         {
             await ReportProgressAsync(PlaybackProgressEvent.TimeUpdate);
+            UpdateProgressSlider();
+        }
+
+        private void OverlayTimer_OnTick(object sender, object e)
+        {
+            if (_moreVisible)
+            {
+                _overlayTimer.Stop();
+                return;
+            }
+
+            HideOverlay();
         }
 
         private async Task ReportProgressAsync(PlaybackProgressEvent eventName)
@@ -679,6 +730,44 @@ namespace NextGenEmby.App.Views
                 : state + " - " + message;
         }
 
+        private void ShowOverlay(bool showMore = false)
+        {
+            if (!_overlayVisible)
+            {
+                _overlayVisible = true;
+                OverlayRoot.Visibility = Visibility.Visible;
+            }
+
+            _moreVisible = showMore;
+            MoreDrawer.Visibility = _moreVisible ? Visibility.Visible : Visibility.Collapsed;
+
+            _overlayTimer.Stop();
+            if (!_moreVisible)
+            {
+                _overlayTimer.Start();
+            }
+        }
+
+        private void HideOverlay()
+        {
+            if (!_overlayVisible || _moreVisible)
+            {
+                return;
+            }
+
+            _overlayTimer.Stop();
+            _overlayVisible = false;
+            OverlayRoot.Visibility = Visibility.Collapsed;
+            MoreDrawer.Visibility = Visibility.Collapsed;
+            SeekPreviewBlock.Visibility = Visibility.Collapsed;
+        }
+
+        private void UpdateProgressSlider()
+        {
+            var positionSeconds = Math.Max(0, TimeSpan.FromTicks(GetCurrentPositionTicks()).TotalSeconds);
+            ProgressSlider.Value = positionSeconds % ProgressSlider.Maximum;
+        }
+
         private void UpdateControlStates()
         {
             var state = _orchestrator.State;
@@ -686,12 +775,13 @@ namespace NextGenEmby.App.Views
                 state != CorePlaybackState.Failed &&
                 state != CorePlaybackState.Stopped;
 
-            StartButton.IsEnabled = _launchRequest != null || IsSupportedDirectStreamUrl(StreamUrlBox.Text);
+            ManualStartButton.IsEnabled = _launchRequest == null && IsSupportedDirectStreamUrl(StreamUrlBox.Text);
             PauseButton.IsEnabled = hasActivePlayback && state != CorePlaybackState.Paused;
             ResumeButton.IsEnabled = hasActivePlayback && state == CorePlaybackState.Paused;
             StopButton.IsEnabled = hasActivePlayback;
             SeekBackButton.IsEnabled = hasActivePlayback;
             SeekForwardButton.IsEnabled = hasActivePlayback;
+            MoreButton.IsEnabled = true;
             InfoButton.IsEnabled = true;
         }
 
