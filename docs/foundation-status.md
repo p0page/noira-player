@@ -196,3 +196,67 @@ Start-Process 'shell:AppsFolder\NextGenEmby.App_h8qjz0sr1sg4m!App'
 - 键盘或手柄导航时焦点可见
 
 如果 Local Machine 冒烟通过，再继续 `docs/superpowers/plans/2026-07-05-native-playback-core.md` 的后续任务：补齐 HDR/PQ 色彩空间、PTS/音频时钟同步、实现 XAudio2/DirectWrite，并在 Xbox 硬件上执行 `docs/native-playback-smoke-tests.md`。
+
+## Xbox Fluent UI 页面交互改造状态
+
+日期：2026-07-05
+
+本轮已完成并通过代码审查的页面交互改造：
+
+- Shell 已从桌面式 `NavigationView` 改为 Xbox/TV 优先的顶部导航，包含 Home、Movies、TV、Search、Settings 入口。
+- Home 已接入真实 Emby 数据，支持继续观看、最近添加、电影/剧集库入口、详情入口和播放入口。
+- Movies / TV Library 已改为真实媒体网格，支持刷新、排序、过滤、手柄可聚焦卡片和详情跳转。
+- Media Details 已加载完整条目、播放源版本、音轨摘要、字幕摘要和剧集数据，并把选中的 `MediaSourceId` 传入播放页。
+- Playback 已改为默认全屏视频，控制层改为隐藏式 OSD；版本、音轨、字幕和信息面板移动到 More 抽屉。
+- 播放页已接入 Xbox 手柄路径：A 显示 OSD/确认 seek preview，B 取消 seek preview/关闭 More/关闭 OSD/返回，Menu 打开 More，D-pad 左右即时 seek，左摇杆左右进入可取消 seek preview。
+- 左摇杆 seek preview 已实现误触保护：目标位置先预览，A 应用，B 取消，短暂无操作后自动提交；播放未 ready 或命令忙碌时不会把页面打成 Failed。
+- Search 已接入 Emby 搜索，支持 Movie / Series / Episode 结果、空输入/未登录/无结果状态和详情跳转。
+
+本轮自动验证：
+
+```powershell
+dotnet test tests\NextGenEmby.Core.Tests\NextGenEmby.Core.Tests.csproj -v minimal
+```
+
+结果：
+
+```text
+Passed: 78
+Failed: 0
+Skipped: 0
+```
+
+```powershell
+& 'C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe' NextGenXboxEmby.sln /restore /p:Configuration=Debug /p:Platform=x64
+```
+
+结果：
+
+```text
+Build succeeded.
+0 warnings
+0 errors
+```
+
+最新 Debug x64 MSIX 已重新签名：
+
+```powershell
+& 'C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64\signtool.exe' sign /fd SHA256 /sha1 6CB453A2FEC300C6E5034152C6C1A68DE31A7BD0 'src\NextGenEmby.App\AppPackages\NextGenEmby.App_0.1.0.3_x64_Debug_Test\NextGenEmby.App_0.1.0.3_x64_Debug.msix'
+```
+
+结果：
+
+```text
+Successfully signed.
+```
+
+本轮未完成的本机交互 smoke：
+
+- 最新包安装被 Windows 阻止，错误为 `0x80073CFB`：本机已经安装同 identity、同版本 `0.1.0.3` 的包，但内容不同；Windows 要求提高包版本，或卸载旧包后再安装。
+- 为避免卸载旧包导致本机 app 数据或已保存 session 丢失，本轮没有强制卸载重装。
+- 因此本轮仅确认了最新源码的 Core 测试、完整 UWP/native solution 构建、MSIX 生成与签名；最新 UI 的 Windows 手工点击 smoke 仍待在提高包版本或明确允许卸载旧包后执行。
+
+仍需 Xbox / 本机后续验证：
+
+- Windows 本机：安装最新包后手工验证 Home 真实行、Movies/TV 库、详情版本/音轨/字幕摘要、Search、全屏 OSD、More 抽屉、A/B/Menu/D-pad/左摇杆 seek preview。
+- Xbox 实机：4K 安全区、手柄焦点路径、HDR10 输出、HEVC Main10、P010/NV12 渲染性能、HDR 停止后的 SDR 恢复、Dev Mode 部署体验。
