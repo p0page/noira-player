@@ -6,6 +6,8 @@
 namespace
 {
     constexpr size_t MaxSubmittedAudioBuffers = 8;
+    constexpr uint32_t OutputSampleRate = 48000;
+    constexpr int64_t TicksPerSecond = 10000000;
 
     void CheckXAudioResult(HRESULT result, wchar_t const* message)
     {
@@ -138,6 +140,18 @@ namespace winrt::NextGenEmby::Native::implementation
         m_hasSelection = true;
     }
 
+    void AudioRenderer::Flush() noexcept
+    {
+        if (m_sourceVoice != nullptr)
+        {
+            m_sourceVoice->FlushSourceBuffers();
+        }
+
+        std::lock_guard lock(m_bufferMutex);
+        m_submittedBuffers.clear();
+        ResetClock();
+    }
+
     bool AudioRenderer::SubmitFrame(DecodedAudioFrame const& frame)
     {
         if (!m_open || m_sourceVoice == nullptr || frame.PcmData.empty())
@@ -146,11 +160,20 @@ namespace winrt::NextGenEmby::Native::implementation
         }
 
         auto pcmBuffer = std::make_shared<std::vector<uint8_t>>(frame.PcmData);
+        auto establishedClockBase = false;
         {
             std::lock_guard lock(m_bufferMutex);
             if (m_submittedBuffers.size() >= MaxSubmittedAudioBuffers)
             {
                 return false;
+            }
+
+            if (!m_hasClockBase && frame.SampleCount > 0)
+            {
+                m_clockBasePositionTicks = frame.PositionTicks;
+                m_clockBaseSamplesPlayed = CurrentSamplesPlayed();
+                m_hasClockBase = true;
+                establishedClockBase = true;
             }
 
             m_submittedBuffers.push_back(pcmBuffer);
@@ -165,6 +188,12 @@ namespace winrt::NextGenEmby::Native::implementation
         if (FAILED(result))
         {
             OnBufferEnd(pcmBuffer.get());
+            if (establishedClockBase)
+            {
+                std::lock_guard lock(m_bufferMutex);
+                ResetClock();
+            }
+
             throw winrt::hresult_error(result, L"Could not submit XAudio2 source buffer.");
         }
 
@@ -175,6 +204,32 @@ namespace winrt::NextGenEmby::Native::implementation
     {
         std::lock_guard lock(m_bufferMutex);
         return m_submittedBuffers.size();
+    }
+
+    std::optional<int64_t> AudioRenderer::CurrentPositionTicks() const noexcept
+    {
+        if (!m_open || m_sourceVoice == nullptr)
+        {
+            return std::nullopt;
+        }
+
+        auto samplesPlayed = CurrentSamplesPlayed();
+
+        std::lock_guard lock(m_bufferMutex);
+        if (!m_hasClockBase)
+        {
+            return std::nullopt;
+        }
+
+        if (samplesPlayed <= m_clockBaseSamplesPlayed)
+        {
+            return m_clockBasePositionTicks;
+        }
+
+        auto elapsedSamples = samplesPlayed - m_clockBaseSamplesPlayed;
+        auto elapsedTicks = static_cast<int64_t>(
+            elapsedSamples * TicksPerSecond / OutputSampleRate);
+        return m_clockBasePositionTicks + elapsedTicks;
     }
 
     void AudioRenderer::CloseAudioDevice() noexcept
@@ -203,6 +258,7 @@ namespace winrt::NextGenEmby::Native::implementation
         {
             std::lock_guard lock(m_bufferMutex);
             m_submittedBuffers.clear();
+            ResetClock();
         }
     }
 
@@ -222,12 +278,31 @@ namespace winrt::NextGenEmby::Native::implementation
         }
     }
 
+    void AudioRenderer::ResetClock() noexcept
+    {
+        m_clockBasePositionTicks = 0;
+        m_clockBaseSamplesPlayed = 0;
+        m_hasClockBase = false;
+    }
+
+    uint64_t AudioRenderer::CurrentSamplesPlayed() const noexcept
+    {
+        if (m_sourceVoice == nullptr)
+        {
+            return 0;
+        }
+
+        XAUDIO2_VOICE_STATE state{};
+        m_sourceVoice->GetState(&state);
+        return state.SamplesPlayed;
+    }
+
     WAVEFORMATEX AudioRenderer::CreateSourceVoiceFormat() noexcept
     {
         WAVEFORMATEX format{};
         format.wFormatTag = WAVE_FORMAT_IEEE_FLOAT;
         format.nChannels = 2;
-        format.nSamplesPerSec = 48000;
+        format.nSamplesPerSec = OutputSampleRate;
         format.wBitsPerSample = 32;
         format.nBlockAlign = format.nChannels * format.wBitsPerSample / 8;
         format.nAvgBytesPerSec = format.nSamplesPerSec * format.nBlockAlign;

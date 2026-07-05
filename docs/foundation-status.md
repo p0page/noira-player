@@ -29,12 +29,12 @@
 - `VideoDecoder` 已能把 FFmpeg HDR10 mastering display / content light side-data 映射为 `DXGI_HDR_METADATA_HDR10` 并交给 renderer 设置到 swapchain。
 - `FfmpegMediaSource` 已成为共享 demux 边界，负责打开 direct-play URL、查找流、按已注册流缓存 packet；`VideoDecoder` 已改为从共享 source 读取 packet，为音视频同步做准备。
 - `AudioDecoder` 已能选择音频流、打开 FFmpeg audio decoder，并解出包含采样率、声道数、样本数、sample format 和 position ticks 的音频 frame 元数据。
-- `AudioDecoder` 会把音频 frame 通过 `swresample` 转成 48 kHz stereo float PCM；`AudioRenderer` 已建立 XAudio2 source voice、小型 PCM buffer queue 和 buffer-end 回收。
-- `PlaybackGraph` 已有临时后台 render loop，可持续拉取视频帧；当前 cadence 固定，尚未实现基于 PTS 或音频时钟的同步。
+- `AudioDecoder` 会把音频 frame 通过 `swresample` 转成 48 kHz stereo float PCM；`AudioRenderer` 已建立 XAudio2 source voice、小型 PCM buffer queue、buffer-end 回收和基于 `SamplesPlayed` 的初步音频时钟。
+- `PlaybackGraph` 已有临时后台 render loop，可持续拉取视频帧；`CurrentPositionTicks()` 会优先读取 XAudio2 音频时钟，但视频 render cadence 仍固定，尚未实现完整的 PTS 驱动 A/V sync。
 - `PlaybackGraph` 后台 loop 已能把 EOF/异常转换为 native `Stopped`/`Failed` 事件，由 `NativePlaybackEngine` 继续透传给托管播放编排层。
 - 托管 `PlaybackOrchestrator` 已能在 backend 支持时原地切换音轨/字幕；`NativeDirectXPlaybackBackend`、UWP wrapper 和 C++/WinRT runtime 已接通音轨切换、字幕切换和禁用字幕的控制面。
 - Native 音轨切换已能关闭旧 audio decoder/source voice、释放旧音轨 packet queue，并在当前位置重开目标音轨的 FFmpeg decoder 和 XAudio2 source voice。
-- `AudioRenderer` 已接入 XAudio2 engine / mastering voice 生命周期，播放打开时会创建音频设备并在 start/pause/resume/stop 时控制 engine。
+- `AudioRenderer` 已接入 XAudio2 engine / mastering voice 生命周期，播放打开时会创建音频设备并在 start/pause/resume/stop 时控制 engine；seek 时会清空旧 source buffer 并重置音频时钟基准。
 - Debug x64 MSIX 测试包已生成：`src\NextGenEmby.App\AppPackages\NextGenEmby.App_0.1.0.0_x64_Debug_Test\NextGenEmby.App_0.1.0.0_x64_Debug.msix`，包内已确认包含 FFmpeg 运行时 DLL。
 - Kodi HDR 研究路径已记录在 ADR 0001。
 
@@ -134,7 +134,7 @@ error MSB3644: Could not find the reference assemblies for .NETCore,Version=v5.0
 - 还没有部署到 Xbox 硬件。
 - FFmpeg UWP 产物已接入 native build，`FfmpegMediaSource` 已能初始化 `AVFormatContext`，`VideoDecoder` 已能初始化视频 `AVCodecContext`、读取视频 packet / 接收 `AVFrame`，并把 D3D11VA texture slice 交给 renderer；真实画面呈现还没有经过 Local Machine 或 Xbox 实机确认。
 - HDR/HEVC 真实视频播放还没有完成；当前已具备 HDR display/DXGI/renderer 边界、HDR10 metadata 映射、临时 render loop 和 P010/NV12 video processor 尝试路径，但色彩空间细节、A/V sync 和真实 HEVC Main10/P010 播放效果尚未验证。
-- XAudio2 source voice、PCM buffer queue 和 FFmpeg `swresample` 已接入，但还没有基于音频时钟的 A/V sync，也还没有经过 Local Machine 或 Xbox 实机听音验证；DirectWrite 字幕绘制也还没有完成。
+- XAudio2 source voice、PCM buffer queue、FFmpeg `swresample` 和初步音频时钟已接入，但还没有用音频时钟驱动视频丢帧/等帧策略，也还没有经过 Local Machine 或 Xbox 实机听音验证；DirectWrite 字幕绘制也还没有完成。
 - 真实 Emby 条目驱动的播放进度 HTTP 上报还没有接入；当前已能构造 progress request，并能透传 backend position event。
 
 ## 原生播放硬件验证

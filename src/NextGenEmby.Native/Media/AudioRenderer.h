@@ -5,6 +5,7 @@
 #include <deque>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <wrl/client.h>
 #include <xaudio2.h>
 
@@ -21,8 +22,10 @@ namespace winrt::NextGenEmby::Native::implementation
         void Resume() noexcept;
         void Stop() noexcept;
         void SwitchStream(int32_t audioStreamIndex);
+        void Flush() noexcept;
         bool SubmitFrame(DecodedAudioFrame const& frame);
         size_t QueuedBufferCount() const;
+        std::optional<int64_t> CurrentPositionTicks() const noexcept;
 
     private:
         class VoiceCallback final : public IXAudio2VoiceCallback
@@ -44,6 +47,8 @@ namespace winrt::NextGenEmby::Native::implementation
 
         void CloseAudioDevice() noexcept;
         void OnBufferEnd(void* context) noexcept;
+        void ResetClock() noexcept;
+        uint64_t CurrentSamplesPlayed() const noexcept;
         static WAVEFORMATEX CreateSourceVoiceFormat() noexcept;
 
         VoiceCallback m_voiceCallback;
@@ -52,8 +57,11 @@ namespace winrt::NextGenEmby::Native::implementation
         IXAudio2SourceVoice* m_sourceVoice{nullptr};
         mutable std::mutex m_bufferMutex;
         std::deque<std::shared_ptr<std::vector<uint8_t>>> m_submittedBuffers;
+        int64_t m_clockBasePositionTicks{0};
+        uint64_t m_clockBaseSamplesPlayed{0};
         int32_t m_selectedAudioStreamIndex{0};
         bool m_hasSelection{false};
+        bool m_hasClockBase{false};
         bool m_open{false};
         bool m_started{false};
         bool m_paused{false};

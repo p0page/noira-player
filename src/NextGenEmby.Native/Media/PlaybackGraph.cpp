@@ -98,6 +98,7 @@ namespace winrt::NextGenEmby::Native::implementation
 
         std::lock_guard lock(m_graphMutex);
         m_positionTicks = positionTicks;
+        m_audioRenderer.Flush();
         m_videoDecoder.Seek(positionTicks);
         m_audioDecoder.Flush(positionTicks);
         RenderNextFrame();
@@ -167,6 +168,11 @@ namespace winrt::NextGenEmby::Native::implementation
     int64_t PlaybackGraph::CurrentPositionTicks() const noexcept
     {
         std::lock_guard lock(m_graphMutex);
+        if (auto audioPosition = m_audioRenderer.CurrentPositionTicks())
+        {
+            return *audioPosition;
+        }
+
         return m_positionTicks;
     }
 
