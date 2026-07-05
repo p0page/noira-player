@@ -2,13 +2,17 @@
 #include "PlaybackGraph.h"
 
 #include <chrono>
+#include <utility>
 
 namespace winrt::NextGenEmby::Native::implementation
 {
     using namespace std::chrono_literals;
 
-    PlaybackGraph::PlaybackGraph(DxDeviceResources& deviceResources)
+    PlaybackGraph::PlaybackGraph(
+        DxDeviceResources& deviceResources,
+        PlaybackGraphStateChangedHandler stateChanged)
         : m_deviceResources(deviceResources),
+          m_graphStateChanged(std::move(stateChanged)),
           m_videoRenderer(deviceResources)
     {
     }
@@ -162,6 +166,7 @@ namespace winrt::NextGenEmby::Native::implementation
 
             try
             {
+                bool reachedEnd = false;
                 {
                     std::lock_guard lock(m_graphMutex);
                     if (m_stopRenderLoop)
@@ -178,15 +183,47 @@ namespace winrt::NextGenEmby::Native::implementation
                     {
                         m_open = false;
                         m_stopRenderLoop = true;
-                        return;
+                        reachedEnd = true;
                     }
                 }
+
+                if (reachedEnd)
+                {
+                    NotifyStateChanged(PlaybackGraphState::Stopped, L"Playback ended.");
+                    return;
+                }
+            }
+            catch (winrt::hresult_error const& error)
+            {
+                {
+                    std::lock_guard lock(m_graphMutex);
+                    m_open = false;
+                    m_stopRenderLoop = true;
+                }
+
+                NotifyStateChanged(PlaybackGraphState::Failed, error.message());
+                return;
+            }
+            catch (std::exception const& error)
+            {
+                {
+                    std::lock_guard lock(m_graphMutex);
+                    m_open = false;
+                    m_stopRenderLoop = true;
+                }
+
+                NotifyStateChanged(PlaybackGraphState::Failed, winrt::to_hstring(error.what()));
+                return;
             }
             catch (...)
             {
-                std::lock_guard lock(m_graphMutex);
-                m_open = false;
-                m_stopRenderLoop = true;
+                {
+                    std::lock_guard lock(m_graphMutex);
+                    m_open = false;
+                    m_stopRenderLoop = true;
+                }
+
+                NotifyStateChanged(PlaybackGraphState::Failed, L"Native render loop failed.");
                 return;
             }
 
@@ -205,5 +242,23 @@ namespace winrt::NextGenEmby::Native::implementation
         }
 
         return false;
+    }
+
+    void PlaybackGraph::NotifyStateChanged(
+        PlaybackGraphState state,
+        winrt::hstring const& message) const noexcept
+    {
+        if (!m_graphStateChanged)
+        {
+            return;
+        }
+
+        try
+        {
+            m_graphStateChanged(state, message);
+        }
+        catch (...)
+        {
+        }
     }
 }

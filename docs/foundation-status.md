@@ -28,6 +28,7 @@
 - `VideoDecoder` 已能把 FFmpeg D3D11 frame 的 texture 和 array slice index 带给 renderer；`DxDeviceResources` 已有 D3D11 video processor blit 路径用于尝试呈现 NV12/P010 frame。
 - `VideoDecoder` 已能把 FFmpeg HDR10 mastering display / content light side-data 映射为 `DXGI_HDR_METADATA_HDR10` 并交给 renderer 设置到 swapchain。
 - `PlaybackGraph` 已有临时后台 render loop，可持续拉取视频帧；当前 cadence 固定，尚未实现基于 PTS 或音频时钟的同步。
+- `PlaybackGraph` 后台 loop 已能把 EOF/异常转换为 native `Stopped`/`Failed` 事件，由 `NativePlaybackEngine` 继续透传给托管播放编排层。
 - Debug x64 MSIX 测试包已生成：`src\NextGenEmby.App\AppPackages\NextGenEmby.App_0.1.0.0_x64_Debug_Test\NextGenEmby.App_0.1.0.0_x64_Debug.msix`，包内已确认包含 FFmpeg 运行时 DLL。
 - Kodi HDR 研究路径已记录在 ADR 0001。
 

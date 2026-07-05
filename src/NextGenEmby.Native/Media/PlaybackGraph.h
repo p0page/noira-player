@@ -9,15 +9,26 @@
 #include "VideoRenderer.h"
 
 #include <condition_variable>
+#include <functional>
 #include <mutex>
 #include <thread>
 
 namespace winrt::NextGenEmby::Native::implementation
 {
+    enum class PlaybackGraphState
+    {
+        Stopped,
+        Failed
+    };
+
+    using PlaybackGraphStateChangedHandler = std::function<void(PlaybackGraphState state, winrt::hstring const& message)>;
+
     class PlaybackGraph
     {
     public:
-        explicit PlaybackGraph(DxDeviceResources& deviceResources);
+        explicit PlaybackGraph(
+            DxDeviceResources& deviceResources,
+            PlaybackGraphStateChangedHandler stateChanged = nullptr);
         ~PlaybackGraph();
 
         void Open(NextGenEmby::Native::NativePlaybackOpenRequest const& request);
@@ -32,8 +43,10 @@ namespace winrt::NextGenEmby::Native::implementation
         void StopRenderLoop() noexcept;
         void RenderLoop() noexcept;
         bool RenderNextFrame();
+        void NotifyStateChanged(PlaybackGraphState state, winrt::hstring const& message) const noexcept;
 
         DxDeviceResources& m_deviceResources;
+        PlaybackGraphStateChangedHandler m_graphStateChanged;
         HttpMediaInput m_input;
         VideoDecoder m_videoDecoder;
         VideoRenderer m_videoRenderer;

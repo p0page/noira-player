@@ -29,6 +29,7 @@ namespace winrt::NextGenEmby::Native::implementation
 
     private:
         void ApplySwapChainColorSpace(HdrDisplaySnapshot const& snapshot);
+        void OnGraphStateChanged(PlaybackGraphState state, winrt::hstring const& message);
         void RaiseFailed(std::exception const& error);
         void RaiseFailed(winrt::hresult_error const& error);
         void Raise(NextGenEmby::Native::NativePlaybackState state, winrt::hstring const& message = L"");

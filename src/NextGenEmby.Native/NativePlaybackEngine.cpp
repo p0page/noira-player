@@ -8,7 +8,12 @@
 namespace winrt::NextGenEmby::Native::implementation
 {
     NativePlaybackEngine::NativePlaybackEngine()
-        : m_graph(std::make_unique<PlaybackGraph>(m_dx))
+        : m_graph(std::make_unique<PlaybackGraph>(
+              m_dx,
+              [this](PlaybackGraphState state, winrt::hstring const& message)
+              {
+                  OnGraphStateChanged(state, message);
+              }))
     {
         UpdateDisplayStatus(m_hdr.Probe());
     }
@@ -165,6 +170,21 @@ namespace winrt::NextGenEmby::Native::implementation
         }
 
         m_dx.SetSdrColorSpace();
+    }
+
+    void NativePlaybackEngine::OnGraphStateChanged(
+        PlaybackGraphState state,
+        winrt::hstring const& message)
+    {
+        switch (state)
+        {
+        case PlaybackGraphState::Stopped:
+            Raise(NextGenEmby::Native::NativePlaybackState::NativePlaybackState_Stopped, message);
+            break;
+        case PlaybackGraphState::Failed:
+            Raise(NextGenEmby::Native::NativePlaybackState::NativePlaybackState_Failed, message);
+            break;
+        }
     }
 
     void NativePlaybackEngine::RaiseFailed(std::exception const& error)
