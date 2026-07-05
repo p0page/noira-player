@@ -4,7 +4,8 @@
 namespace winrt::NextGenEmby::Native::implementation
 {
     PlaybackGraph::PlaybackGraph(DxDeviceResources& deviceResources)
-        : m_videoRenderer(deviceResources)
+        : m_deviceResources(deviceResources),
+          m_videoRenderer(deviceResources)
     {
     }
 
@@ -17,8 +18,13 @@ namespace winrt::NextGenEmby::Native::implementation
 
         try
         {
+            m_deviceResources.CreateDevice();
             m_input.Open(request.DirectStreamUrl());
-            m_videoDecoder.Open(request.DirectStreamUrl(), 0);
+            m_videoDecoder.Open(
+                request.DirectStreamUrl(),
+                0,
+                m_deviceResources.Device(),
+                m_deviceResources.Context());
             m_audioRenderer.Open(request.AudioStreamIndex(), request.HasAudioStreamIndex());
             m_subtitleRenderer.Open(request.HasSubtitleStreamIndex()
                 ? std::optional<int32_t>{request.SubtitleStreamIndex()}

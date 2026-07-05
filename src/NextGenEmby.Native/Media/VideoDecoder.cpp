@@ -7,9 +7,13 @@
 extern "C"
 {
 #include <libavcodec/avcodec.h>
+#include <libavcodec/codec.h>
 #include <libavformat/avformat.h>
+#include <libavutil/buffer.h>
 #include <libavutil/error.h>
 #include <libavutil/frame.h>
+#include <libavutil/hwcontext.h>
+#include <libavutil/hwcontext_d3d11va.h>
 #include <libavutil/mathematics.h>
 #include <libavutil/pixfmt.h>
 }
@@ -32,6 +36,14 @@ namespace
         void operator()(AVPacket* packet) const noexcept
         {
             av_packet_free(&packet);
+        }
+    };
+
+    struct AvBufferRefDeleter
+    {
+        void operator()(AVBufferRef* buffer) const noexcept
+        {
+            av_buffer_unref(&buffer);
         }
     };
 
@@ -72,6 +84,92 @@ namespace
         }
 
         return bestStream;
+    }
+
+    AVPixelFormat FindD3D11HardwarePixelFormat(AVCodec const* decoder)
+    {
+        for (auto index = 0;; ++index)
+        {
+            auto config = avcodec_get_hw_config(decoder, index);
+            if (config == nullptr)
+            {
+                return AV_PIX_FMT_NONE;
+            }
+
+            if ((config->methods & AV_CODEC_HW_CONFIG_METHOD_HW_DEVICE_CTX) != 0 &&
+                config->device_type == AV_HWDEVICE_TYPE_D3D11VA)
+            {
+                return config->pix_fmt;
+            }
+        }
+    }
+
+    AVBufferRef* TryCreateD3D11HardwareDevice(ID3D11Device* device, ID3D11DeviceContext* context)
+    {
+        if (device == nullptr)
+        {
+            return nullptr;
+        }
+
+        std::unique_ptr<AVBufferRef, AvBufferRefDeleter> hardwareDevice(
+            av_hwdevice_ctx_alloc(AV_HWDEVICE_TYPE_D3D11VA));
+        if (!hardwareDevice)
+        {
+            return nullptr;
+        }
+
+        auto hardwareContext = reinterpret_cast<AVHWDeviceContext*>(hardwareDevice->data);
+        auto d3d11Context = static_cast<AVD3D11VADeviceContext*>(hardwareContext->hwctx);
+        d3d11Context->device = device;
+        d3d11Context->device->AddRef();
+
+        if (context != nullptr)
+        {
+            d3d11Context->device_context = context;
+            d3d11Context->device_context->AddRef();
+        }
+
+        auto result = av_hwdevice_ctx_init(hardwareDevice.get());
+        if (result < 0)
+        {
+            return nullptr;
+        }
+
+        return hardwareDevice.release();
+    }
+
+    AVPixelFormat SelectHardwarePixelFormat(AVCodecContext* context, AVPixelFormat const* formats)
+    {
+        auto requestedFormat = AV_PIX_FMT_NONE;
+        if (context != nullptr && context->opaque != nullptr)
+        {
+            requestedFormat = static_cast<AVPixelFormat>(*static_cast<int*>(context->opaque));
+        }
+
+        for (auto candidate = formats; candidate != nullptr && *candidate != AV_PIX_FMT_NONE; ++candidate)
+        {
+            if (*candidate == requestedFormat)
+            {
+                return *candidate;
+            }
+        }
+
+        return formats != nullptr ? formats[0] : AV_PIX_FMT_NONE;
+    }
+
+    AVPixelFormat GetFrameSoftwarePixelFormat(AVFrame const* frame)
+    {
+        auto frameFormat = static_cast<AVPixelFormat>(frame->format);
+        if (frameFormat == AV_PIX_FMT_D3D11 && frame->hw_frames_ctx != nullptr)
+        {
+            auto framesContext = reinterpret_cast<AVHWFramesContext*>(frame->hw_frames_ctx->data);
+            if (framesContext != nullptr)
+            {
+                return static_cast<AVPixelFormat>(framesContext->sw_format);
+            }
+        }
+
+        return frameFormat;
     }
 
     DXGI_FORMAT MapPixelFormat(AVPixelFormat pixelFormat)
@@ -127,7 +225,7 @@ namespace
         winrt::NextGenEmby::Native::implementation::DecodedVideoFrame decodedFrame;
         decodedFrame.Width = frame->width > 0 ? static_cast<uint32_t>(frame->width) : 0;
         decodedFrame.Height = frame->height > 0 ? static_cast<uint32_t>(frame->height) : 0;
-        decodedFrame.Format = MapPixelFormat(static_cast<AVPixelFormat>(frame->format));
+        decodedFrame.Format = MapPixelFormat(GetFrameSoftwarePixelFormat(frame));
         decodedFrame.HdrKind = MapHdrKind(frame->color_trc);
         decodedFrame.PositionTicks = GetFramePositionTicks(frame, stream);
         return decodedFrame;
@@ -157,7 +255,11 @@ namespace
 
 namespace winrt::NextGenEmby::Native::implementation
 {
-    void VideoDecoder::Open(winrt::hstring const& url, int32_t selectedVideoStreamIndex)
+    void VideoDecoder::Open(
+        winrt::hstring const& url,
+        int32_t selectedVideoStreamIndex,
+        ID3D11Device* d3dDevice,
+        ID3D11DeviceContext* d3dContext)
     {
         HttpMediaInput input;
         input.Open(url);
@@ -172,6 +274,7 @@ namespace winrt::NextGenEmby::Native::implementation
 
         AVFormatContext* formatContext = nullptr;
         AVCodecContext* codecContext = nullptr;
+        AVBufferRef* hardwareDeviceContext = nullptr;
 
         try
         {
@@ -202,6 +305,23 @@ namespace winrt::NextGenEmby::Native::implementation
                 throw winrt::hresult_error(E_OUTOFMEMORY, L"Could not allocate FFmpeg video decoder context.");
             }
 
+            auto hardwarePixelFormat = FindD3D11HardwarePixelFormat(decoder);
+            if (hardwarePixelFormat != AV_PIX_FMT_NONE)
+            {
+                hardwareDeviceContext = TryCreateD3D11HardwareDevice(d3dDevice, d3dContext);
+                if (hardwareDeviceContext != nullptr)
+                {
+                    m_hardwarePixelFormat = hardwarePixelFormat;
+                    codecContext->opaque = &m_hardwarePixelFormat;
+                    codecContext->get_format = SelectHardwarePixelFormat;
+                    codecContext->hw_device_ctx = av_buffer_ref(hardwareDeviceContext);
+                    if (codecContext->hw_device_ctx == nullptr)
+                    {
+                        throw winrt::hresult_error(E_OUTOFMEMORY, L"Could not reference FFmpeg D3D11VA device context.");
+                    }
+                }
+            }
+
             result = avcodec_parameters_to_context(codecContext, videoStream->codecpar);
             if (result < 0)
             {
@@ -216,11 +336,13 @@ namespace winrt::NextGenEmby::Native::implementation
 
             m_formatContext = formatContext;
             m_codecContext = codecContext;
+            m_hardwareDeviceContext = hardwareDeviceContext;
             m_videoStreamIndex = videoStreamIndex;
             m_width = codecContext->width > 0 ? static_cast<uint32_t>(codecContext->width) : 0;
             m_height = codecContext->height > 0 ? static_cast<uint32_t>(codecContext->height) : 0;
             formatContext = nullptr;
             codecContext = nullptr;
+            hardwareDeviceContext = nullptr;
         }
         catch (...)
         {
@@ -232,6 +354,11 @@ namespace winrt::NextGenEmby::Native::implementation
             if (formatContext != nullptr)
             {
                 avformat_close_input(&formatContext);
+            }
+
+            if (hardwareDeviceContext != nullptr)
+            {
+                av_buffer_unref(&hardwareDeviceContext);
             }
 
             Close();
@@ -380,7 +507,13 @@ namespace winrt::NextGenEmby::Native::implementation
             avformat_close_input(&m_formatContext);
         }
 
+        if (m_hardwareDeviceContext != nullptr)
+        {
+            av_buffer_unref(&m_hardwareDeviceContext);
+        }
+
         m_url.clear();
+        m_hardwarePixelFormat = -1;
         m_videoStreamIndex = -1;
         m_width = 0;
         m_height = 0;

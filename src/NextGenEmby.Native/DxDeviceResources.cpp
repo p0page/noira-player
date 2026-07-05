@@ -185,4 +185,14 @@ namespace winrt::NextGenEmby::Native::implementation
 
         return SUCCEEDED(m_swapChain->Present(1, 0));
     }
+
+    ID3D11Device* DxDeviceResources::Device() const noexcept
+    {
+        return m_device.Get();
+    }
+
+    ID3D11DeviceContext* DxDeviceResources::Context() const noexcept
+    {
+        return m_context.Get();
+    }
 }

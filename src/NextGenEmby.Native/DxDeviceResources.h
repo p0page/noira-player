@@ -20,6 +20,8 @@ namespace winrt::NextGenEmby::Native::implementation
         bool TryCopyToBackBuffer(ID3D11Texture2D* texture);
         bool ClearToBlack();
         bool Present();
+        ID3D11Device* Device() const noexcept;
+        ID3D11DeviceContext* Context() const noexcept;
 
     private:
         Microsoft::WRL::ComPtr<ID3D11Device> m_device;

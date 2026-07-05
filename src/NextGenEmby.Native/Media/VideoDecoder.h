@@ -9,6 +9,7 @@
 
 struct AVCodecContext;
 struct AVFormatContext;
+struct AVBufferRef;
 
 namespace winrt::NextGenEmby::Native::implementation
 {
@@ -33,7 +34,11 @@ namespace winrt::NextGenEmby::Native::implementation
     class VideoDecoder
     {
     public:
-        void Open(winrt::hstring const& url, int32_t selectedVideoStreamIndex);
+        void Open(
+            winrt::hstring const& url,
+            int32_t selectedVideoStreamIndex,
+            ID3D11Device* d3dDevice,
+            ID3D11DeviceContext* d3dContext);
         std::optional<DecodedVideoFrame> TryReadFrame();
         void Seek(int64_t positionTicks);
         void Close() noexcept;
@@ -42,6 +47,8 @@ namespace winrt::NextGenEmby::Native::implementation
         winrt::hstring m_url;
         AVFormatContext* m_formatContext{nullptr};
         AVCodecContext* m_codecContext{nullptr};
+        AVBufferRef* m_hardwareDeviceContext{nullptr};
+        int m_hardwarePixelFormat{-1};
         uint32_t m_avformatVersion{0};
         int32_t m_videoStreamIndex{-1};
         uint32_t m_width{0};

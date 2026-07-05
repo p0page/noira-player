@@ -25,6 +25,7 @@ namespace winrt::NextGenEmby::Native::implementation
     private:
         void RenderNextFrame();
 
+        DxDeviceResources& m_deviceResources;
         HttpMediaInput m_input;
         VideoDecoder m_videoDecoder;
         VideoRenderer m_videoRenderer;
