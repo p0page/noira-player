@@ -115,13 +115,12 @@ namespace NextGenEmby.Core.Emby
         public Task<IReadOnlyList<EmbyMediaItem>> SearchItemsAsync(
             EmbySession session,
             string searchTerm,
-            int limit = 50)
+            string includeItemTypes)
         {
             return GetItemsAsync(session, new EmbyItemsQuery
             {
                 SearchTerm = searchTerm,
-                IncludeItemTypes = "Movie,Series,Episode",
-                Limit = limit
+                IncludeItemTypes = includeItemTypes
             });
         }
 

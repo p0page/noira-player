@@ -189,6 +189,27 @@ public sealed class EmbyLibraryTests
     }
 
     [Fact]
+    public async Task SearchItemsAsync_Uses_Caller_Provided_Item_Types()
+    {
+        var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
+            HttpStatusCode.OK,
+            """
+            {
+              "Items": [],
+              "TotalRecordCount": 0
+            }
+            """));
+        using var http = new HttpClient(handler);
+        var client = CreateClient(http);
+
+        await client.SearchItemsAsync(Session(), "pilot", "Episode");
+
+        Assert.Equal("/Users/user-1/Items", handler.LastRequest!.RequestUri!.AbsolutePath);
+        Assert.Contains("IncludeItemTypes=Episode", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("SearchTerm=pilot", handler.LastRequest.RequestUri.Query);
+    }
+
+    [Fact]
     public async Task GetItemAsync_And_GetChildrenAsync_Parse_Detail_And_Episodes()
     {
         var calls = 0;
