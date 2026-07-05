@@ -7,9 +7,24 @@
         <ScrollViewer VerticalScrollBarVisibility="Auto">
             <Grid Margin="72,60">
                 <StackPanel Spacing="34">
-                    <StackPanel Spacing="10">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
                         <TextBlock Text="Home" FontSize="46" FontWeight="SemiBold" />
-                    </StackPanel>
+                        <Button
+                            x:Name="RefreshButton"
+                            Grid.Column="1"
+                            Width="64"
+                            Height="64"
+                            HorizontalAlignment="Right"
+                            Click="Refresh_OnClick"
+                            ToolTipService.ToolTip="Refresh"
+                            UseSystemFocusVisuals="True">
+                            <SymbolIcon Symbol="Refresh" />
+                        </Button>
+                    </Grid>
 
                     <StackPanel Spacing="18">
                         <TextBlock Text="Libraries" FontSize="28" FontWeight="SemiBold" />

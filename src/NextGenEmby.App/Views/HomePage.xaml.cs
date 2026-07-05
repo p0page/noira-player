@@ -18,6 +18,7 @@ namespace NextGenEmby.App.Views
     {
         private readonly ApplicationDataSessionStore _sessionStore = new ApplicationDataSessionStore();
         private EmbySession? _session;
+        private bool _isLoadingLatestItems;
 
         public HomePage()
         {
@@ -31,20 +32,32 @@ namespace NextGenEmby.App.Views
             await LoadLatestItemsAsync();
         }
 
+        private async void Refresh_OnClick(object sender, RoutedEventArgs e)
+        {
+            await LoadLatestItemsAsync();
+        }
+
         private async Task LoadLatestItemsAsync()
         {
-            StatusBlock.Text = "Loading...";
-            LatestItemsPanel.Children.Clear();
-
-            _session = await _sessionStore.LoadAsync();
-            if (_session == null)
+            if (_isLoadingLatestItems)
             {
-                StatusBlock.Text = "Sign in first.";
                 return;
             }
 
+            _isLoadingLatestItems = true;
+            RefreshButton.IsEnabled = false;
+            StatusBlock.Text = "Loading...";
+            LatestItemsPanel.Children.Clear();
+
             try
             {
+                _session = await _sessionStore.LoadAsync();
+                if (_session == null)
+                {
+                    StatusBlock.Text = "Sign in first.";
+                    return;
+                }
+
                 using (var http = new HttpClient())
                 {
                     var client = EmbyClientFactory.Create(http, _session);
@@ -55,6 +68,11 @@ namespace NextGenEmby.App.Views
             catch
             {
                 StatusBlock.Text = "Unable to load library.";
+            }
+            finally
+            {
+                _isLoadingLatestItems = false;
+                RefreshButton.IsEnabled = true;
             }
         }
 
