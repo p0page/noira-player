@@ -18,36 +18,73 @@ namespace NextGenEmby.App.Views
     {
         private readonly ApplicationDataSessionStore _sessionStore = new ApplicationDataSessionStore();
         private EmbySession? _session;
-        private bool _isLoadingLatestItems;
+        private EmbyApiClient? _client;
+        private HttpClient? _httpClient;
+        private EmbyMediaItem? _heroItem;
+        private bool _isLoadingHome;
 
         public HomePage()
         {
             InitializeComponent();
             Loaded += HomePage_OnLoaded;
+            Unloaded += HomePage_OnUnloaded;
         }
 
         private async void HomePage_OnLoaded(object sender, RoutedEventArgs e)
         {
             Loaded -= HomePage_OnLoaded;
-            await LoadLatestItemsAsync();
+            await LoadHomeAsync();
+        }
+
+        private void HomePage_OnUnloaded(object sender, RoutedEventArgs e)
+        {
+            DisposeHttpClient();
         }
 
         private async void Refresh_OnClick(object sender, RoutedEventArgs e)
         {
-            await LoadLatestItemsAsync();
+            await LoadHomeAsync();
         }
 
-        private async Task LoadLatestItemsAsync()
+        private void MoviesLibrary_OnClick(object sender, RoutedEventArgs e)
         {
-            if (_isLoadingLatestItems)
+            Frame.Navigate(typeof(LibraryPage), new LibraryNavigationRequest("Movies", "movies", "Movie"));
+        }
+
+        private void TvLibrary_OnClick(object sender, RoutedEventArgs e)
+        {
+            Frame.Navigate(typeof(LibraryPage), new LibraryNavigationRequest("TV", "tvshows", "Series"));
+        }
+
+        private void HeroPlay_OnClick(object sender, RoutedEventArgs e)
+        {
+            if (_heroItem == null || string.IsNullOrWhiteSpace(_heroItem.Id))
             {
                 return;
             }
 
-            _isLoadingLatestItems = true;
+            var itemName = string.IsNullOrWhiteSpace(_heroItem.Name) ? _heroItem.Id : _heroItem.Name;
+            var startTicks = _heroItem.UserData == null ? 0 : _heroItem.UserData.PlaybackPositionTicks;
+            Frame.Navigate(typeof(PlaybackPage), new PlaybackLaunchRequest(_heroItem.Id, itemName, startTicks));
+        }
+
+        private void HeroDetails_OnClick(object sender, RoutedEventArgs e)
+        {
+            NavigateToDetails(_heroItem);
+        }
+
+        private async Task LoadHomeAsync()
+        {
+            if (_isLoadingHome)
+            {
+                return;
+            }
+
+            _isLoadingHome = true;
             RefreshButton.IsEnabled = false;
             StatusBlock.Text = "Loading...";
-            LatestItemsPanel.Children.Clear();
+            RowsPanel.Children.Clear();
+            ClearHero();
 
             try
             {
@@ -58,49 +95,140 @@ namespace NextGenEmby.App.Views
                     return;
                 }
 
-                using (var http = new HttpClient())
+                DisposeHttpClient();
+                _httpClient = new HttpClient();
+                _client = EmbyClientFactory.Create(_httpClient, _session);
+
+                var continueItems = await _client.GetItemsAsync(_session, new EmbyItemsQuery
                 {
-                    var client = EmbyClientFactory.Create(http, _session);
-                    var items = await client.GetLatestItemsAsync(_session);
-                    RenderLatestItems(client, _session, items);
-                }
+                    IncludeItemTypes = "Movie,Episode",
+                    Filters = "IsResumable",
+                    SortBy = "DatePlayed",
+                    SortOrder = "Descending",
+                    Limit = 20
+                });
+                var latestItems = await _client.GetLatestItemsAsync(_session);
+
+                RenderHome(continueItems, latestItems);
             }
             catch
             {
-                StatusBlock.Text = "Unable to load library.";
+                ClearHero();
+                RowsPanel.Children.Clear();
+                StatusBlock.Text = "Unable to load home.";
             }
             finally
             {
-                _isLoadingLatestItems = false;
+                _isLoadingHome = false;
                 RefreshButton.IsEnabled = true;
             }
         }
 
-        private void RenderLatestItems(
-            EmbyApiClient client,
-            EmbySession session,
-            IReadOnlyList<EmbyMediaItem> items)
+        private void RenderHome(IReadOnlyList<EmbyMediaItem> continueItems, IReadOnlyList<EmbyMediaItem> latestItems)
         {
-            LatestItemsPanel.Children.Clear();
-            if (items.Count == 0)
+            RowsPanel.Children.Clear();
+
+            EmbyMediaItem? heroItem = null;
+            if (continueItems != null && continueItems.Count > 0)
             {
+                heroItem = continueItems[0];
+            }
+            else if (latestItems != null && latestItems.Count > 0)
+            {
+                heroItem = latestItems[0];
+            }
+
+            if (heroItem == null)
+            {
+                ClearHero();
                 StatusBlock.Text = "No playable items found.";
                 return;
             }
 
+            RenderHero(heroItem);
             StatusBlock.Text = "";
-            foreach (var item in items)
+
+            AddRow("Continue watching", continueItems);
+            AddRow("Latest", latestItems);
+        }
+
+        private void RenderHero(EmbyMediaItem item)
+        {
+            _heroItem = item;
+            HeroTitleBlock.Text = string.IsNullOrWhiteSpace(item.Name) ? item.Id : item.Name;
+            HeroMetaBlock.Text = CreateMeta(item);
+            HeroPlayButton.IsEnabled = true;
+            HeroDetailsButton.IsEnabled = true;
+            HeroPosterImage.Source = null;
+            HeroPosterFallbackBlock.Visibility = Visibility.Visible;
+
+            if (_client != null && _session != null && !string.IsNullOrWhiteSpace(item.PrimaryImageTag))
             {
-                LatestItemsPanel.Children.Add(CreateItemButton(client, session, item));
+                HeroPosterImage.Source = new BitmapImage(new Uri(_client.GetImageUrl(_session, item.Id, "Primary", 520)));
+                HeroPosterFallbackBlock.Visibility = Visibility.Collapsed;
             }
         }
 
-        private Button CreateItemButton(EmbyApiClient client, EmbySession session, EmbyMediaItem item)
+        private void ClearHero()
+        {
+            _heroItem = null;
+            HeroTitleBlock.Text = "Nothing queued yet";
+            HeroMetaBlock.Text = "Refresh after signing in to load your Emby home screen.";
+            HeroPosterImage.Source = null;
+            HeroPosterFallbackBlock.Visibility = Visibility.Visible;
+            HeroPlayButton.IsEnabled = false;
+            HeroDetailsButton.IsEnabled = false;
+        }
+
+        private void AddRow(string title, IReadOnlyList<EmbyMediaItem>? items)
+        {
+            if (items == null || items.Count == 0)
+            {
+                return;
+            }
+
+            var section = new StackPanel
+            {
+                Spacing = 14
+            };
+
+            section.Children.Add(new TextBlock
+            {
+                Text = title,
+                FontSize = 28,
+                FontWeight = Windows.UI.Text.FontWeights.SemiBold
+            });
+
+            var scroller = new ScrollViewer
+            {
+                HorizontalScrollBarVisibility = ScrollBarVisibility.Hidden,
+                HorizontalScrollMode = ScrollMode.Enabled,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Disabled,
+                VerticalScrollMode = ScrollMode.Disabled
+            };
+
+            var panel = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                Spacing = 18
+            };
+
+            foreach (var item in items)
+            {
+                panel.Children.Add(CreateItemButton(item));
+            }
+
+            scroller.Content = panel;
+            section.Children.Add(scroller);
+            RowsPanel.Children.Add(section);
+        }
+
+        private Button CreateItemButton(EmbyMediaItem item)
         {
             var button = new Button
             {
-                Width = 280,
-                Height = 190,
+                Width = 220,
+                Height = 310,
                 Padding = new Thickness(0),
                 Tag = item,
                 HorizontalContentAlignment = HorizontalAlignment.Stretch,
@@ -114,11 +242,11 @@ namespace NextGenEmby.App.Views
                 Background = new SolidColorBrush(Color.FromArgb(255, 23, 34, 49))
             };
 
-            if (!string.IsNullOrWhiteSpace(item.PrimaryImageTag))
+            if (_client != null && _session != null && !string.IsNullOrWhiteSpace(item.PrimaryImageTag))
             {
                 root.Background = new ImageBrush
                 {
-                    ImageSource = new BitmapImage(new Uri(client.GetImageUrl(session, item.Id, "Primary", 420))),
+                    ImageSource = new BitmapImage(new Uri(_client.GetImageUrl(_session, item.Id, "Primary", 420))),
                     Stretch = Stretch.UniformToFill
                 };
             }
@@ -126,32 +254,34 @@ namespace NextGenEmby.App.Views
             var overlay = new Border
             {
                 VerticalAlignment = VerticalAlignment.Bottom,
-                Background = new SolidColorBrush(Color.FromArgb(220, 0, 0, 0)),
-                Padding = new Thickness(18, 14, 18, 14)
+                Background = new SolidColorBrush(Color.FromArgb(225, 0, 0, 0)),
+                Padding = new Thickness(16, 14, 16, 14)
             };
 
-            var textStack = new StackPanel
+            overlay.Child = new StackPanel
             {
-                Spacing = 4
+                Spacing = 4,
+                Children =
+                {
+                    new TextBlock
+                    {
+                        Text = string.IsNullOrWhiteSpace(item.Name) ? item.Id : item.Name,
+                        FontSize = 20,
+                        FontWeight = Windows.UI.Text.FontWeights.SemiBold,
+                        TextTrimming = TextTrimming.CharacterEllipsis,
+                        MaxLines = 2
+                    },
+                    new TextBlock
+                    {
+                        Text = CreateMeta(item),
+                        FontSize = 15,
+                        Foreground = new SolidColorBrush(Color.FromArgb(255, 183, 198, 216)),
+                        TextTrimming = TextTrimming.CharacterEllipsis,
+                        MaxLines = 1
+                    }
+                }
             };
-            textStack.Children.Add(new TextBlock
-            {
-                Text = string.IsNullOrWhiteSpace(item.Name) ? item.Id : item.Name,
-                FontSize = 21,
-                FontWeight = Windows.UI.Text.FontWeights.SemiBold,
-                TextTrimming = TextTrimming.CharacterEllipsis,
-                MaxLines = 1
-            });
-            textStack.Children.Add(new TextBlock
-            {
-                Text = CreateSubtitle(item),
-                FontSize = 16,
-                Foreground = new SolidColorBrush(Color.FromArgb(255, 183, 198, 216)),
-                TextTrimming = TextTrimming.CharacterEllipsis,
-                MaxLines = 1
-            });
 
-            overlay.Child = textStack;
             root.Children.Add(overlay);
             button.Content = root;
             return button;
@@ -160,23 +290,59 @@ namespace NextGenEmby.App.Views
         private void ItemButton_OnClick(object sender, RoutedEventArgs e)
         {
             var button = sender as Button;
-            var item = button?.Tag as EmbyMediaItem;
+            var item = button == null ? null : button.Tag as EmbyMediaItem;
+            NavigateToDetails(item);
+        }
+
+        private void NavigateToDetails(EmbyMediaItem? item)
+        {
             if (item == null || string.IsNullOrWhiteSpace(item.Id))
             {
                 return;
             }
 
-            Frame.Navigate(typeof(MediaDetailsPage), item);
+            var itemName = string.IsNullOrWhiteSpace(item.Name) ? item.Id : item.Name;
+            Frame.Navigate(typeof(MediaDetailsPage), new MediaDetailsNavigationRequest(item.Id, itemName));
         }
 
-        private static string CreateSubtitle(EmbyMediaItem item)
+        private void DisposeHttpClient()
         {
-            if (item.ProductionYear.HasValue && !string.IsNullOrWhiteSpace(item.Type))
+            if (_httpClient != null)
             {
-                return item.Type + " · " + item.ProductionYear.Value;
+                _httpClient.Dispose();
+                _httpClient = null;
             }
 
-            return string.IsNullOrWhiteSpace(item.Type) ? "Item" : item.Type;
+            _client = null;
+        }
+
+        private static string CreateMeta(EmbyMediaItem item)
+        {
+            var meta = string.IsNullOrWhiteSpace(item.Type) ? "Item" : item.Type;
+            if (item.ProductionYear.HasValue)
+            {
+                meta += " / " + item.ProductionYear.Value;
+            }
+
+            if (item.RunTimeTicks.HasValue && item.RunTimeTicks.Value > 0)
+            {
+                var runtime = TimeSpan.FromTicks(item.RunTimeTicks.Value);
+                if (runtime.TotalHours >= 1)
+                {
+                    meta += " / " + (int)runtime.TotalHours + "h " + runtime.Minutes + "m";
+                }
+                else
+                {
+                    meta += " / " + Math.Max(1, runtime.Minutes) + "m";
+                }
+            }
+
+            if (item.UserData != null && item.UserData.PlaybackPositionTicks > 0)
+            {
+                meta += " / Resume";
+            }
+
+            return meta;
         }
     }
 }
