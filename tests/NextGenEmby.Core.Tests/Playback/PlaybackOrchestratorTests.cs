@@ -289,6 +289,33 @@ public sealed class PlaybackOrchestratorTests
         Assert.Equal(7, progress.SubtitleStreamIndex);
     }
 
+    [Fact]
+    public async Task CreateSessionRequest_Maps_Current_Playback_Context()
+    {
+        var backend = new RecordingPlaybackBackend();
+        var source = Source(
+            "source-1",
+            Stream(1, EmbyStreamKind.Audio),
+            Stream(7, EmbyStreamKind.Subtitle));
+        source.PlaySessionId = "play-session-1";
+        var orchestrator = new PlaybackOrchestrator(backend);
+        await orchestrator.StartAsync("item-1", new[] { source }, 0);
+        await orchestrator.SwitchAudioStreamAsync(1);
+        await orchestrator.SwitchSubtitleStreamAsync(7);
+        backend.CurrentPositionTicks = 456_789;
+
+        var session = orchestrator.CreateSessionRequest();
+
+        Assert.Equal("item-1", session.ItemId);
+        Assert.Equal("source-1", session.MediaSourceId);
+        Assert.Equal("play-session-1", session.PlaySessionId);
+        Assert.Equal(456_789, session.PositionTicks);
+        Assert.False(session.IsPaused);
+        Assert.Equal(PlaybackPlayMethod.DirectPlay, session.PlayMethod);
+        Assert.Equal(1, session.AudioStreamIndex);
+        Assert.Equal(7, session.SubtitleStreamIndex);
+    }
+
     [Theory]
     [InlineData(PlaybackState.Failed)]
     [InlineData(PlaybackState.Stopped)]

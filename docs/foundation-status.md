@@ -13,16 +13,16 @@
 - 已通过 Visual Studio Installer 补齐 UWP/WinUI 工具链，包括 `Microsoft.VisualStudio.Workload.Universal`、`.NET Native 和 .NET Standard`、`通用 Windows 平台工具`、`C++ (v143) 通用 Windows 平台工具`、Windows 11 SDK `10.0.22621.0`。
 - `C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETCore\v5.0` 已存在，之前阻塞 UWP C# 项目的 `.NETCore,Version=v5.0` 引用程序集缺失问题已解除。
 - Solution MSBuild 已通过：`NextGenXboxEmby.sln /restore /p:Configuration=Debug /p:Platform=x64` 结果为 0 个警告、0 个错误。
-- Core 单元测试通过：57 个通过，0 个失败，0 个跳过。
+- Core 单元测试通过：60 个通过，0 个失败，0 个跳过。
 - `NextGenEmby.Core`、`NextGenEmby.Core.Tests`、`NextGenEmby.App` 均已能进入完整 solution 构建链路。
-- Emby 认证、认证请求头、媒体库查询 URL、PlaybackInfo 解析、直连播放 URL、播放进度上报都已有单元测试覆盖。
+- Emby 认证、认证请求头、媒体库查询 URL、PlaybackInfo 解析、直连播放 URL、播放 session start/progress/stop 上报都已有单元测试覆盖。
 - 播放编排层已有稳定的托管后端接口：`IPlaybackBackend`、`PlaybackDescriptor`、`PlaybackState`、`PlaybackOrchestrator`。
 - 原生播放诊断契约已实现：`PlaybackBackendCapabilities`、`PlaybackDisplayStatus`、`IPlaybackBackendDiagnostics`。
 - 托管侧原生播放适配器已实现：`INativePlaybackEngine`、`NativePlaybackOpenRequest`、`NativeDirectXPlaybackBackend`。
 - UWP app 源码已经包含 Xbox 优先的 Shell、Login、Home、Playback 页面。
 - UWP 登录流程已经接入 `EmbyApiClient`、`ApplicationDataSessionStore`、`ApplicationDataDeviceIdProvider`。
 - UWP 播放页已经接入 `NativeDirectXPlaybackBackend` 和 native `SwapChainPanel`，并保留 `SystemMediaPlaybackBackend` 作为临时回退路径。
-- Home 页已能用已保存 session 拉取 Emby 最新条目，并把 itemId 带入 Playback 页；Playback 页收到真实条目后会拉 PlaybackInfo、选择第一个 media source 启动播放，并按状态/定时器调用 Emby progress API。
+- Home 页已能用已保存 session 拉取 Emby 最新条目，并把 itemId 带入 Playback 页；Playback 页收到真实条目后会拉 PlaybackInfo、选择第一个 media source 启动播放，开播调用 `/Sessions/Playing`，暂停/恢复/seek/切流/定时调用 progress API，停止按钮、页面卸载和原生 EOF 调用 `/Sessions/Playing/Stopped`。
 - Playback 页已提供媒体源、音轨、字幕三个 Xbox 可聚焦选择器，分别调用 `SwitchMediaSourceAsync`、`SwitchAudioStreamAsync`、`SwitchSubtitleStreamAsync`，并发送对应 progress event。
 - C++/WinRT 原生组件已经创建并接入 solution；当前包含 HDR display controller、DXGI swapchain、native playback graph、HTTP input 边界、FFmpeg format/codec probe 边界、video renderer 边界、audio/subtitle renderer 控制边界。
 - `FFmpegInteropX.FFmpegUWP` `5.1.100` 已作为 NuGet native 依赖接入，Debug x64 native 构建会链接 FFmpeg lib 并复制对应运行时 DLL。
@@ -86,7 +86,7 @@ dotnet test tests\NextGenEmby.Core.Tests\NextGenEmby.Core.Tests.csproj -v minima
 结果：
 
 ```text
-Passed: 57
+Passed: 60
 Failed: 0
 Skipped: 0
 ```
@@ -138,7 +138,7 @@ error MSB3644: Could not find the reference assemblies for .NETCore,Version=v5.0
 - FFmpeg UWP 产物已接入 native build，`FfmpegMediaSource` 已能初始化 `AVFormatContext`，`VideoDecoder` 已能初始化视频 `AVCodecContext`、读取视频 packet / 接收 `AVFrame`，并把 D3D11VA texture slice 交给 renderer；真实画面呈现还没有经过 Local Machine 或 Xbox 实机确认。
 - HDR/HEVC 真实视频播放还没有完成；当前已具备 HDR display/DXGI/renderer 边界、HDR10 metadata 映射、临时 render loop 和 P010/NV12 video processor 尝试路径，但色彩空间细节、A/V sync 和真实 HEVC Main10/P010 播放效果尚未验证。
 - XAudio2 source voice、PCM buffer queue、FFmpeg `swresample`、初步音频时钟和第一版视频等待/丢帧策略已接入，但 A/V sync 阈值、真实听音和画面效果还没有经过 Local Machine 或 Xbox 实机验证；DirectWrite 字幕叠加和 FFmpeg 文本字幕 cue 解码已接入，但图形字幕、完整 ASS 样式和实机字幕显示还没有验证。
-- 真实 Emby 条目驱动的播放入口、媒体源/音轨/字幕选择 UI 和 progress HTTP 上报 glue 已接入；仍缺少媒体详情页、播放结束时的完整 scrobble 语义和实机确认。
+- 真实 Emby 条目驱动的播放入口、媒体源/音轨/字幕选择 UI、start/progress/stop HTTP 上报 glue 已接入；仍缺少媒体详情页，并且服务器端播放记录效果还没有经过 Local Machine 或 Xbox 实机确认。
 
 ## 原生播放硬件验证
 

@@ -88,33 +88,24 @@ namespace NextGenEmby.Core.Emby
                 throw new ArgumentNullException(nameof(progress));
             }
 
-            if (string.IsNullOrWhiteSpace(progress.ItemId))
-            {
-                throw new ArgumentException("Playback progress requires an item id.", nameof(progress));
-            }
-
-            if (string.IsNullOrWhiteSpace(progress.MediaSourceId))
-            {
-                throw new ArgumentException("Playback progress requires a media source id.", nameof(progress));
-            }
+            ValidatePlaybackSessionRequest(progress, nameof(progress));
 
             if (!Enum.IsDefined(typeof(PlaybackProgressEvent), progress.EventName))
             {
                 throw new ArgumentOutOfRangeException(nameof(progress), "Playback progress event is not supported.");
             }
 
-            if (!Enum.IsDefined(typeof(PlaybackPlayMethod), progress.PlayMethod))
-            {
-                throw new ArgumentOutOfRangeException(nameof(progress), "Playback play method is not supported.");
-            }
+            await PostJsonAsync(session, "Sessions/Playing/Progress", progress).ConfigureAwait(false);
+        }
 
-            using var request = new HttpRequestMessage(HttpMethod.Post, "Sessions/Playing/Progress");
-            EmbyAuthorization.Apply(request, _options, session);
-            var json = JsonSerializer.Serialize(progress, _writeJsonOptions);
-            request.Content = new StringContent(json, Encoding.UTF8, "application/json");
+        public Task ReportPlaybackStartAsync(EmbySession session, PlaybackSessionRequest playback)
+        {
+            return ReportPlaybackSessionAsync(session, playback, "Sessions/Playing", nameof(playback));
+        }
 
-            using var response = await _http.SendAsync(request).ConfigureAwait(false);
-            response.EnsureSuccessStatusCode();
+        public Task ReportPlaybackStoppedAsync(EmbySession session, PlaybackSessionRequest playback)
+        {
+            return ReportPlaybackSessionAsync(session, playback, "Sessions/Playing/Stopped", nameof(playback));
         }
 
         public string GetImageUrl(EmbySession session, string itemId, string imageType, int maxWidth)
@@ -122,6 +113,50 @@ namespace NextGenEmby.Core.Emby
             return
                 $"{session.ServerUrl.TrimEnd('/')}/Items/{EscapeUriComponent(itemId)}/Images/{EscapeUriComponent(imageType)}" +
                 $"?maxWidth={maxWidth}&quality=90&api_key={EscapeUriComponent(session.AccessToken)}";
+        }
+
+        private async Task ReportPlaybackSessionAsync(
+            EmbySession session,
+            PlaybackSessionRequest playback,
+            string path,
+            string parameterName)
+        {
+            if (playback == null)
+            {
+                throw new ArgumentNullException(parameterName);
+            }
+
+            ValidatePlaybackSessionRequest(playback, parameterName);
+            await PostJsonAsync(session, path, playback).ConfigureAwait(false);
+        }
+
+        private void ValidatePlaybackSessionRequest(PlaybackSessionRequest playback, string parameterName)
+        {
+            if (string.IsNullOrWhiteSpace(playback.ItemId))
+            {
+                throw new ArgumentException("Playback session reporting requires an item id.", parameterName);
+            }
+
+            if (string.IsNullOrWhiteSpace(playback.MediaSourceId))
+            {
+                throw new ArgumentException("Playback session reporting requires a media source id.", parameterName);
+            }
+
+            if (!Enum.IsDefined(typeof(PlaybackPlayMethod), playback.PlayMethod))
+            {
+                throw new ArgumentOutOfRangeException(parameterName, "Playback play method is not supported.");
+            }
+        }
+
+        private async Task PostJsonAsync(EmbySession session, string path, object body)
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, path);
+            EmbyAuthorization.Apply(request, _options, session);
+            var json = JsonSerializer.Serialize(body, _writeJsonOptions);
+            request.Content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            using var response = await _http.SendAsync(request).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
         }
 
         private static EmbyMediaItem MapItem(ItemDto item)

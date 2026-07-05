@@ -54,7 +54,7 @@ MSBuild 接入方式：
 - 当 FFmpeg frame 带有 `AV_FRAME_DATA_MASTERING_DISPLAY_METADATA` / `AV_FRAME_DATA_CONTENT_LIGHT_LEVEL` side-data 且 transfer 为 PQ 时，`VideoDecoder` 会映射为 `DXGI_HDR_METADATA_HDR10`。映射单位遵循 Microsoft 文档：色度坐标乘 50000，最大母版亮度为整 nits，最小母版亮度为 1/10000 nit，MaxCLL/MaxFALL 为 nits。
 - `PlaybackGraph` 已有后台 render loop，会优先用 XAudio2 音频时钟决定视频帧节奏：视频帧早于音频超过容差时暂存等待，落后音频超过容差时丢弃有限数量的视频帧追赶。
 - `PlaybackGraph` 的后台 loop 会在 EOF 时上报 `Stopped`，在 native 解码/渲染异常时上报 `Failed`；通知在 graph mutex 外触发，避免托管 wrapper 查询当前位置时形成死锁。
-- UWP `HomePage` 已能加载 Emby 最新条目并导航到 `PlaybackPage`；`PlaybackPage` 会根据导航 itemId 拉取 PlaybackInfo、启动 `PlaybackOrchestrator`，并在开始、暂停、恢复、seek、停止和定时 tick 时调用 `EmbyApiClient.ReportProgressAsync`。
+- UWP `HomePage` 已能加载 Emby 最新条目并导航到 `PlaybackPage`；`PlaybackPage` 会根据导航 itemId 拉取 PlaybackInfo、启动 `PlaybackOrchestrator`，并在开播时调用 `EmbyApiClient.ReportPlaybackStartAsync`，在暂停、恢复、seek、切流和定时 tick 时调用 `ReportProgressAsync`，在停止按钮、页面卸载和原生 EOF 时调用 `ReportPlaybackStoppedAsync`。
 - `PlaybackPage` 的媒体源、音轨、字幕选择器会从 `PlaybackDescriptor` / `EmbyMediaSource.Streams` 填充，并把用户选择映射到 orchestrator 的切流/切音轨/切字幕方法。
 - `NativePlaybackEngine` 已暴露原地音轨切换、字幕切换和禁用字幕方法；音轨切换会在当前位置重开 `AudioDecoder` / XAudio2 source voice，并通过 `FfmpegMediaSource::UnregisterStream` 释放旧音轨 packet queue；字幕切换会关闭旧 `SubtitleDecoder`、清掉旧 cue，并在目标流上重开文本字幕解码。
 - `AudioRenderer` 已能创建 XAudio2 engine、mastering voice 和 source voice，并维护小型 PCM buffer queue；XAudio2 buffer-end callback 会释放已提交 buffer 的生命周期引用。

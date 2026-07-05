@@ -38,7 +38,10 @@ namespace NextGenEmby.App.Views
         private bool _hasPlaybackContext;
         private bool _infoVisible;
         private bool _reportInProgress;
+        private bool _stopReportInProgress;
+        private bool _playbackStoppedReported;
         private bool _updatingStreamControls;
+        private PlaybackSessionRequest? _lastPlaybackSessionRequest;
 
         public PlaybackPage()
         {
@@ -151,6 +154,7 @@ namespace NextGenEmby.App.Views
                     _progressTimer.Stop();
                 }
 
+                var shouldReportStopped = args.State == CorePlaybackState.Stopped;
                 _hasPlaybackContext = args.State != CorePlaybackState.Failed &&
                     args.State != CorePlaybackState.Stopped &&
                     (_hasPlaybackContext || args.State == CorePlaybackState.Opening);
@@ -162,6 +166,11 @@ namespace NextGenEmby.App.Views
                 {
                     UpdateInfo();
                 }
+
+                if (shouldReportStopped)
+                {
+                    _ = ReportPlaybackStoppedAsync();
+                }
             });
         }
 
@@ -172,7 +181,7 @@ namespace NextGenEmby.App.Views
             _progressTimer.Tick -= ProgressTimer_OnTick;
             try
             {
-                await ReportProgressAsync(PlaybackProgressEvent.StateChange);
+                await ReportPlaybackStoppedAsync();
                 await _orchestrator.StopAsync();
             }
             finally
@@ -262,6 +271,8 @@ namespace NextGenEmby.App.Views
             await _orchestrator.StartAsync(DemoItemId, new[] { source }, 0);
             _lastPositionTicks = 0;
             _hasPlaybackContext = _orchestrator.CurrentDescriptor != null;
+            _lastPlaybackSessionRequest = null;
+            _playbackStoppedReported = false;
             _progressTimer.Stop();
             _currentItemName = "";
             UpdateStatus(_orchestrator.State);
@@ -291,12 +302,13 @@ namespace NextGenEmby.App.Views
             await _orchestrator.StartAsync(request.ItemId, sources, request.StartPositionTicks);
             _lastPositionTicks = request.StartPositionTicks;
             _hasPlaybackContext = _orchestrator.CurrentDescriptor != null;
+            _playbackStoppedReported = false;
             _currentItemName = request.ItemName;
             StreamUrlBox.Text = string.IsNullOrWhiteSpace(_currentItemName)
                 ? request.ItemId
                 : _currentItemName;
             _progressTimer.Start();
-            await ReportProgressAsync(PlaybackProgressEvent.StateChange);
+            await ReportPlaybackStartedAsync();
             UpdateStatus(_orchestrator.State);
             UpdateControlStates();
             UpdateStreamControls();
@@ -308,11 +320,12 @@ namespace NextGenEmby.App.Views
 
         private async Task StopPlaybackAsync()
         {
-            await ReportProgressAsync(PlaybackProgressEvent.StateChange);
+            await ReportPlaybackStoppedAsync();
             await _orchestrator.StopAsync();
             _progressTimer.Stop();
             _lastPositionTicks = 0;
             _hasPlaybackContext = false;
+            _lastPlaybackSessionRequest = null;
             UpdateStatus(CorePlaybackState.Stopped);
             UpdateControlStates();
             UpdateStreamControls();
@@ -507,9 +520,11 @@ namespace NextGenEmby.App.Views
             try
             {
                 _reportInProgress = true;
+                var progress = _orchestrator.CreateProgressRequest(eventName);
+                _lastPlaybackSessionRequest = CloneSessionRequest(progress);
                 await _embyClient.ReportProgressAsync(
                     _session,
-                    _orchestrator.CreateProgressRequest(eventName));
+                    progress);
             }
             catch
             {
@@ -518,6 +533,95 @@ namespace NextGenEmby.App.Views
             {
                 _reportInProgress = false;
             }
+        }
+
+        private async Task ReportPlaybackStartedAsync()
+        {
+            if (_embyClient == null ||
+                _session == null ||
+                _orchestrator.CurrentDescriptor == null)
+            {
+                return;
+            }
+
+            try
+            {
+                var request = _orchestrator.CreateSessionRequest();
+                _lastPlaybackSessionRequest = CloneSessionRequest(request);
+                await _embyClient.ReportPlaybackStartAsync(_session, request);
+            }
+            catch
+            {
+            }
+        }
+
+        private async Task ReportPlaybackStoppedAsync()
+        {
+            if (_stopReportInProgress ||
+                _playbackStoppedReported ||
+                _embyClient == null ||
+                _session == null)
+            {
+                return;
+            }
+
+            var request = CreateStoppedSessionRequest();
+            if (request == null)
+            {
+                return;
+            }
+
+            try
+            {
+                _stopReportInProgress = true;
+                _playbackStoppedReported = true;
+                await _embyClient.ReportPlaybackStoppedAsync(_session, request);
+            }
+            catch
+            {
+            }
+            finally
+            {
+                _stopReportInProgress = false;
+            }
+        }
+
+        private PlaybackSessionRequest? CreateStoppedSessionRequest()
+        {
+            PlaybackSessionRequest? request = null;
+            if (_orchestrator.CurrentDescriptor != null)
+            {
+                request = _orchestrator.CreateSessionRequest();
+            }
+            else if (_lastPlaybackSessionRequest != null)
+            {
+                request = CloneSessionRequest(_lastPlaybackSessionRequest);
+            }
+
+            if (request == null)
+            {
+                return null;
+            }
+
+            request.PositionTicks = GetCurrentPositionTicks();
+            request.IsPaused = false;
+            _lastPlaybackSessionRequest = CloneSessionRequest(request);
+            return request;
+        }
+
+        private static PlaybackSessionRequest CloneSessionRequest(PlaybackSessionRequest request)
+        {
+            return new PlaybackSessionRequest
+            {
+                ItemId = request.ItemId,
+                MediaSourceId = request.MediaSourceId,
+                PlaySessionId = request.PlaySessionId,
+                PositionTicks = request.PositionTicks,
+                IsPaused = request.IsPaused,
+                PlayMethod = request.PlayMethod,
+                AudioStreamIndex = request.AudioStreamIndex,
+                SubtitleStreamIndex = request.SubtitleStreamIndex
+            };
         }
 
         private void UpdateStatus(CorePlaybackState state, string message = "")

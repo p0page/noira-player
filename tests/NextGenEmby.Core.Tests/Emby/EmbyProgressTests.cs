@@ -11,6 +11,76 @@ namespace NextGenEmby.Core.Tests.Emby;
 public sealed class EmbyProgressTests
 {
     [Fact]
+    public async Task ReportPlaybackStartAsync_Posts_PlaybackStart_To_Emby()
+    {
+        var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(HttpStatusCode.NoContent, ""));
+        using var http = new HttpClient(handler);
+        var client = CreateClient(http);
+
+        await client.ReportPlaybackStartAsync(Session(), new PlaybackSessionRequest
+        {
+            ItemId = "movie-1",
+            MediaSourceId = "source-4k",
+            PlaySessionId = "play-session-1",
+            PositionTicks = 10_000_000,
+            IsPaused = false,
+            PlayMethod = PlaybackPlayMethod.DirectPlay,
+            AudioStreamIndex = 1,
+            SubtitleStreamIndex = 2
+        });
+
+        var request = handler.LastRequest!;
+        Assert.Equal(HttpMethod.Post, request.Method);
+        Assert.Equal("/Sessions/Playing", request.RequestUri!.AbsolutePath);
+        Assert.Equal("application/json", request.ContentTypeMediaType);
+
+        using var body = JsonDocument.Parse(request.Body!);
+        var root = body.RootElement;
+        Assert.Equal("movie-1", root.GetProperty("ItemId").GetString());
+        Assert.Equal("source-4k", root.GetProperty("MediaSourceId").GetString());
+        Assert.Equal("play-session-1", root.GetProperty("PlaySessionId").GetString());
+        Assert.Equal(10_000_000, root.GetProperty("PositionTicks").GetInt64());
+        Assert.False(root.GetProperty("IsPaused").GetBoolean());
+        Assert.Equal("DirectPlay", root.GetProperty("PlayMethod").GetString());
+        Assert.Equal(1, root.GetProperty("AudioStreamIndex").GetInt32());
+        Assert.Equal(2, root.GetProperty("SubtitleStreamIndex").GetInt32());
+        Assert.False(root.TryGetProperty("EventName", out _));
+    }
+
+    [Fact]
+    public async Task ReportPlaybackStoppedAsync_Posts_PlaybackStop_To_Emby()
+    {
+        var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(HttpStatusCode.NoContent, ""));
+        using var http = new HttpClient(handler);
+        var client = CreateClient(http);
+
+        await client.ReportPlaybackStoppedAsync(Session(), new PlaybackSessionRequest
+        {
+            ItemId = "movie-1",
+            MediaSourceId = "source-4k",
+            PlaySessionId = "play-session-1",
+            PositionTicks = 65_000_000,
+            PlayMethod = PlaybackPlayMethod.DirectPlay,
+            AudioStreamIndex = 1
+        });
+
+        var request = handler.LastRequest!;
+        Assert.Equal(HttpMethod.Post, request.Method);
+        Assert.Equal("/Sessions/Playing/Stopped", request.RequestUri!.AbsolutePath);
+
+        using var body = JsonDocument.Parse(request.Body!);
+        var root = body.RootElement;
+        Assert.Equal("movie-1", root.GetProperty("ItemId").GetString());
+        Assert.Equal("source-4k", root.GetProperty("MediaSourceId").GetString());
+        Assert.Equal("play-session-1", root.GetProperty("PlaySessionId").GetString());
+        Assert.Equal(65_000_000, root.GetProperty("PositionTicks").GetInt64());
+        Assert.Equal("DirectPlay", root.GetProperty("PlayMethod").GetString());
+        Assert.Equal(1, root.GetProperty("AudioStreamIndex").GetInt32());
+        Assert.False(root.TryGetProperty("SubtitleStreamIndex", out _));
+        Assert.False(root.TryGetProperty("EventName", out _));
+    }
+
+    [Fact]
     public async Task ReportProgressAsync_Posts_PlaybackProgress_To_Emby()
     {
         var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(HttpStatusCode.OK, ""));

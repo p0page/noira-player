@@ -156,18 +156,35 @@ namespace NextGenEmby.Core.Playback
 
         public PlaybackProgressRequest CreateProgressRequest(PlaybackProgressEvent eventName)
         {
+            var session = CreateSessionRequest();
+
+            return new PlaybackProgressRequest
+            {
+                ItemId = session.ItemId,
+                MediaSourceId = session.MediaSourceId,
+                PlaySessionId = session.PlaySessionId,
+                PositionTicks = session.PositionTicks,
+                IsPaused = session.IsPaused,
+                PlayMethod = session.PlayMethod,
+                AudioStreamIndex = session.AudioStreamIndex,
+                SubtitleStreamIndex = session.SubtitleStreamIndex,
+                EventName = eventName,
+            };
+        }
+
+        public PlaybackSessionRequest CreateSessionRequest()
+        {
             EnsureStarted();
             var descriptor = CurrentDescriptor!;
             var source = descriptor.MediaSource;
 
-            return new PlaybackProgressRequest
+            return new PlaybackSessionRequest
             {
                 ItemId = descriptor.ItemId,
                 MediaSourceId = source.Id,
                 PlaySessionId = string.IsNullOrWhiteSpace(source.PlaySessionId) ? null : source.PlaySessionId,
                 PositionTicks = Math.Max(0, _backend.CurrentPositionTicks),
                 IsPaused = State == PlaybackState.Paused,
-                EventName = eventName,
                 PlayMethod = PlaybackPlayMethod.DirectPlay,
                 AudioStreamIndex = descriptor.AudioStreamIndex,
                 SubtitleStreamIndex = descriptor.SubtitleStreamIndex
