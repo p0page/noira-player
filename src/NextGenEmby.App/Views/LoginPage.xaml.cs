@@ -31,8 +31,12 @@ namespace NextGenEmby.App.Views
                 _viewModel.UserName = UserNameBox.Text;
                 _viewModel.Password = PasswordBox.Password;
 
-                await _viewModel.ConnectAsync();
+                var connected = await _viewModel.ConnectAsync();
                 StatusBlock.Text = _viewModel.Status;
+                if (connected)
+                {
+                    NavigateHome();
+                }
             }
             catch
             {
@@ -42,6 +46,19 @@ namespace NextGenEmby.App.Views
             {
                 ConnectButton.IsEnabled = true;
             }
+        }
+
+        private void NavigateHome()
+        {
+            var rootFrame = Window.Current.Content as Frame;
+            var mainPage = rootFrame?.Content as global::NextGenEmby.App.MainPage;
+            if (mainPage != null)
+            {
+                mainPage.NavigateHome();
+                return;
+            }
+
+            Frame.Navigate(typeof(HomePage));
         }
     }
 }

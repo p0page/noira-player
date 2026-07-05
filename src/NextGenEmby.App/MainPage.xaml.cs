@@ -37,11 +37,30 @@ namespace NextGenEmby.App
             }
         }
 
+        public void NavigateHome()
+        {
+            SelectNavigationItem("home");
+            NavigateTo(typeof(HomePage));
+        }
+
         private void NavigateTo(Type pageType)
         {
             if (ContentFrame.CurrentSourcePageType != pageType)
             {
                 ContentFrame.Navigate(pageType);
+            }
+        }
+
+        private void SelectNavigationItem(string tag)
+        {
+            foreach (var menuItem in ShellNav.MenuItems)
+            {
+                var item = menuItem as muxc.NavigationViewItem;
+                if (item != null && string.Equals(item.Tag as string, tag, StringComparison.Ordinal))
+                {
+                    ShellNav.SelectedItem = item;
+                    return;
+                }
             }
         }
     }
