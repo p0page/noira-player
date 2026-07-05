@@ -16,12 +16,16 @@ extern "C"
 #include <libavutil/frame.h>
 #include <libavutil/mathematics.h>
 #include <libavutil/samplefmt.h>
+#include <libswresample/swresample.h>
 }
 #pragma warning(pop)
 
 namespace
 {
     constexpr AVRational HundredNanosecondTimeBase{1, 10000000};
+    constexpr int OutputSampleRate = 48000;
+    constexpr int OutputChannelCount = 2;
+    constexpr AVSampleFormat OutputSampleFormat = AV_SAMPLE_FMT_FLT;
 
     struct AvFrameDeleter
     {
@@ -56,6 +60,74 @@ namespace
         return winrt::hresult_error(E_FAIL, winrt::to_hstring(message));
     }
 
+    SwrContext* CreateResampler(AVCodecContext const* codecContext)
+    {
+        if (codecContext == nullptr ||
+            codecContext->sample_rate <= 0 ||
+            codecContext->sample_fmt == AV_SAMPLE_FMT_NONE)
+        {
+            throw winrt::hresult_error(E_FAIL, L"FFmpeg audio stream does not have a usable sample format.");
+        }
+
+        AVChannelLayout inputLayout{};
+        AVChannelLayout outputLayout{};
+        SwrContext* resampler = nullptr;
+
+        try
+        {
+            if (codecContext->ch_layout.nb_channels > 0)
+            {
+                auto result = av_channel_layout_copy(&inputLayout, &codecContext->ch_layout);
+                if (result < 0)
+                {
+                    throw CreateFfmpegError("av_channel_layout_copy", result);
+                }
+            }
+            else
+            {
+                av_channel_layout_default(&inputLayout, OutputChannelCount);
+            }
+
+            av_channel_layout_default(&outputLayout, OutputChannelCount);
+
+            auto result = swr_alloc_set_opts2(
+                &resampler,
+                &outputLayout,
+                OutputSampleFormat,
+                OutputSampleRate,
+                &inputLayout,
+                codecContext->sample_fmt,
+                codecContext->sample_rate,
+                0,
+                nullptr);
+            if (result < 0)
+            {
+                throw CreateFfmpegError("swr_alloc_set_opts2", result);
+            }
+
+            result = swr_init(resampler);
+            if (result < 0)
+            {
+                throw CreateFfmpegError("swr_init", result);
+            }
+
+            av_channel_layout_uninit(&inputLayout);
+            av_channel_layout_uninit(&outputLayout);
+            return resampler;
+        }
+        catch (...)
+        {
+            av_channel_layout_uninit(&inputLayout);
+            av_channel_layout_uninit(&outputLayout);
+            if (resampler != nullptr)
+            {
+                swr_free(&resampler);
+            }
+
+            throw;
+        }
+    }
+
     winrt::NextGenEmby::Native::implementation::AudioSampleFormat MapSampleFormat(AVSampleFormat sampleFormat)
     {
         switch (av_get_packed_sample_fmt(sampleFormat))
@@ -75,16 +147,6 @@ namespace
         }
     }
 
-    uint32_t GetChannelCount(AVFrame const* frame)
-    {
-        if (frame->ch_layout.nb_channels > 0)
-        {
-            return static_cast<uint32_t>(frame->ch_layout.nb_channels);
-        }
-
-        return 0;
-    }
-
     int64_t GetFramePositionTicks(AVFrame const* frame, AVStream const* stream)
     {
         auto timestamp = frame->best_effort_timestamp;
@@ -101,15 +163,61 @@ namespace
         return av_rescale_q(timestamp, stream->time_base, HundredNanosecondTimeBase);
     }
 
+    std::vector<uint8_t> ConvertFrameToPcm(AVFrame const* frame, SwrContext* resampler)
+    {
+        if (frame == nullptr || resampler == nullptr || frame->nb_samples <= 0)
+        {
+            return {};
+        }
+
+        auto inputSampleRate = frame->sample_rate > 0 ? frame->sample_rate : OutputSampleRate;
+        auto delayedSamples = swr_get_delay(resampler, inputSampleRate);
+        auto outputSampleCount = av_rescale_rnd(
+            delayedSamples + frame->nb_samples,
+            OutputSampleRate,
+            inputSampleRate,
+            AV_ROUND_UP);
+        if (outputSampleCount <= 0)
+        {
+            return {};
+        }
+
+        auto bytesPerSample = av_get_bytes_per_sample(OutputSampleFormat);
+        auto outputBytes = outputSampleCount * OutputChannelCount * bytesPerSample;
+        std::vector<uint8_t> pcmData(static_cast<size_t>(outputBytes));
+        uint8_t* outputPlanes[] = { pcmData.data() };
+        auto inputPlanes = const_cast<uint8_t const**>(frame->extended_data);
+
+        auto convertedSamples = swr_convert(
+            resampler,
+            outputPlanes,
+            static_cast<int>(outputSampleCount),
+            inputPlanes,
+            frame->nb_samples);
+        if (convertedSamples < 0)
+        {
+            throw CreateFfmpegError("swr_convert", convertedSamples);
+        }
+
+        pcmData.resize(static_cast<size_t>(convertedSamples) * OutputChannelCount * bytesPerSample);
+        return pcmData;
+    }
+
     winrt::NextGenEmby::Native::implementation::DecodedAudioFrame CreateDecodedAudioFrame(
         AVFrame const* frame,
-        AVStream const* stream)
+        AVStream const* stream,
+        SwrContext* resampler)
     {
         winrt::NextGenEmby::Native::implementation::DecodedAudioFrame decodedFrame;
-        decodedFrame.SampleRate = frame->sample_rate > 0 ? static_cast<uint32_t>(frame->sample_rate) : 0;
-        decodedFrame.ChannelCount = GetChannelCount(frame);
-        decodedFrame.SampleCount = frame->nb_samples > 0 ? static_cast<uint32_t>(frame->nb_samples) : 0;
-        decodedFrame.Format = MapSampleFormat(static_cast<AVSampleFormat>(frame->format));
+        decodedFrame.PcmData = ConvertFrameToPcm(frame, resampler);
+        decodedFrame.SampleRate = OutputSampleRate;
+        decodedFrame.ChannelCount = OutputChannelCount;
+        decodedFrame.SampleCount = decodedFrame.PcmData.empty()
+            ? 0
+            : static_cast<uint32_t>(
+                decodedFrame.PcmData.size() /
+                (OutputChannelCount * av_get_bytes_per_sample(OutputSampleFormat)));
+        decodedFrame.Format = MapSampleFormat(OutputSampleFormat);
         decodedFrame.PositionTicks = GetFramePositionTicks(frame, stream);
         return decodedFrame;
     }
@@ -117,12 +225,13 @@ namespace
     std::optional<winrt::NextGenEmby::Native::implementation::DecodedAudioFrame> TryReceiveFrame(
         AVCodecContext* codecContext,
         AVFrame* frame,
-        AVStream const* stream)
+        AVStream const* stream,
+        SwrContext* resampler)
     {
         auto receiveResult = avcodec_receive_frame(codecContext, frame);
         if (receiveResult == 0)
         {
-            auto decodedFrame = CreateDecodedAudioFrame(frame, stream);
+            auto decodedFrame = CreateDecodedAudioFrame(frame, stream, resampler);
             av_frame_unref(frame);
             return decodedFrame;
         }
@@ -159,6 +268,7 @@ namespace winrt::NextGenEmby::Native::implementation
         }
 
         AVCodecContext* codecContext = nullptr;
+        SwrContext* resampler = nullptr;
         try
         {
             auto audioStream = mediaSource.Stream(audioStreamIndex.value());
@@ -186,17 +296,25 @@ namespace winrt::NextGenEmby::Native::implementation
                 throw CreateFfmpegError("avcodec_open2", result);
             }
 
+            resampler = CreateResampler(codecContext);
             mediaSource.RegisterStream(audioStreamIndex.value());
             m_mediaSource = &mediaSource;
             m_codecContext = codecContext;
+            m_resampler = resampler;
             m_audioStreamIndex = audioStreamIndex.value();
             codecContext = nullptr;
+            resampler = nullptr;
         }
         catch (...)
         {
             if (codecContext != nullptr)
             {
                 avcodec_free_context(&codecContext);
+            }
+
+            if (resampler != nullptr)
+            {
+                swr_free(&resampler);
             }
 
             Close();
@@ -210,7 +328,11 @@ namespace winrt::NextGenEmby::Native::implementation
 
     std::optional<DecodedAudioFrame> AudioDecoder::TryReadFrame()
     {
-        if (!m_open || m_mediaSource == nullptr || m_codecContext == nullptr || m_audioStreamIndex < 0)
+        if (!m_open ||
+            m_mediaSource == nullptr ||
+            m_codecContext == nullptr ||
+            m_resampler == nullptr ||
+            m_audioStreamIndex < 0)
         {
             return std::nullopt;
         }
@@ -236,7 +358,7 @@ namespace winrt::NextGenEmby::Native::implementation
 
         if (m_decoderDraining)
         {
-            return publishFrame(TryReceiveFrame(m_codecContext, frame.get(), audioStream));
+            return publishFrame(TryReceiveFrame(m_codecContext, frame.get(), audioStream, m_resampler));
         }
 
         while (m_mediaSource->TryReadPacket(m_audioStreamIndex, packet.get()))
@@ -253,7 +375,7 @@ namespace winrt::NextGenEmby::Native::implementation
 
                 if (sendResult == AVERROR(EAGAIN))
                 {
-                    auto drainedFrame = TryReceiveFrame(m_codecContext, frame.get(), audioStream);
+                    auto drainedFrame = TryReceiveFrame(m_codecContext, frame.get(), audioStream, m_resampler);
                     if (!drainedFrame)
                     {
                         av_packet_unref(packet.get());
@@ -279,7 +401,7 @@ namespace winrt::NextGenEmby::Native::implementation
                 return publishFrame(pendingFrame);
             }
 
-            auto decodedFrame = TryReceiveFrame(m_codecContext, frame.get(), audioStream);
+            auto decodedFrame = TryReceiveFrame(m_codecContext, frame.get(), audioStream, m_resampler);
             if (decodedFrame)
             {
                 return publishFrame(decodedFrame);
@@ -293,7 +415,7 @@ namespace winrt::NextGenEmby::Native::implementation
         }
 
         m_decoderDraining = true;
-        return publishFrame(TryReceiveFrame(m_codecContext, frame.get(), audioStream));
+        return publishFrame(TryReceiveFrame(m_codecContext, frame.get(), audioStream, m_resampler));
     }
 
     void AudioDecoder::Flush(int64_t positionTicks)
@@ -309,6 +431,16 @@ namespace winrt::NextGenEmby::Native::implementation
             avcodec_flush_buffers(m_codecContext);
         }
 
+        if (m_resampler != nullptr)
+        {
+            swr_close(m_resampler);
+            auto result = swr_init(m_resampler);
+            if (result < 0)
+            {
+                throw CreateFfmpegError("swr_init", result);
+            }
+        }
+
         m_decoderDraining = false;
     }
 
@@ -317,6 +449,11 @@ namespace winrt::NextGenEmby::Native::implementation
         if (m_codecContext != nullptr)
         {
             avcodec_free_context(&m_codecContext);
+        }
+
+        if (m_resampler != nullptr)
+        {
+            swr_free(&m_resampler);
         }
 
         m_mediaSource = nullptr;

@@ -4,8 +4,10 @@
 
 #include <cstdint>
 #include <optional>
+#include <vector>
 
 struct AVCodecContext;
+struct SwrContext;
 
 namespace winrt::NextGenEmby::Native::implementation
 {
@@ -26,6 +28,7 @@ namespace winrt::NextGenEmby::Native::implementation
         uint32_t SampleCount{0};
         AudioSampleFormat Format{AudioSampleFormat::Unknown};
         int64_t PositionTicks{0};
+        std::vector<uint8_t> PcmData;
     };
 
     class AudioDecoder
@@ -43,6 +46,7 @@ namespace winrt::NextGenEmby::Native::implementation
     private:
         FfmpegMediaSource* m_mediaSource{nullptr};
         AVCodecContext* m_codecContext{nullptr};
+        SwrContext* m_resampler{nullptr};
         int32_t m_audioStreamIndex{-1};
         int64_t m_positionTicks{0};
         bool m_decoderDraining{false};

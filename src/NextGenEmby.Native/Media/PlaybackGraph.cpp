@@ -7,6 +7,7 @@
 namespace winrt::NextGenEmby::Native::implementation
 {
     using namespace std::chrono_literals;
+    constexpr size_t MinimumQueuedAudioBuffers = 4;
 
     PlaybackGraph::PlaybackGraph(
         DxDeviceResources& deviceResources,
@@ -282,9 +283,19 @@ namespace winrt::NextGenEmby::Native::implementation
 
     void PlaybackGraph::DecodeNextAudioFrame()
     {
-        if (m_audioDecoder.IsOpen())
+        while (m_audioDecoder.IsOpen() &&
+            m_audioRenderer.QueuedBufferCount() < MinimumQueuedAudioBuffers)
         {
-            (void)m_audioDecoder.TryReadFrame();
+            auto frame = m_audioDecoder.TryReadFrame();
+            if (!frame)
+            {
+                return;
+            }
+
+            if (!m_audioRenderer.SubmitFrame(*frame))
+            {
+                return;
+            }
         }
     }
 

@@ -40,11 +40,11 @@
 ## 当前实现限制
 
 - 当前 native 解码器已通过共享 `FfmpegMediaSource` 打开 FFmpeg format context，能读视频/音频 packet 并接收 `AVFrame` 元数据；视频路径会在 codec 支持时尝试使用 D3D11VA hardware device context。
-- 当前 `AudioDecoder` 已能解出音频 frame 元数据，但还没有 resample、XAudio2 source voice、PCM buffer queue 或音频时钟，因此实机冒烟时仍不应期待可听见的音频。
+- 当前 `AudioDecoder` 已能通过 `swresample` 产出 48 kHz stereo float PCM，`AudioRenderer` 已能把 PCM 提交给 XAudio2 source voice；该链路尚未经过 Local Machine 或 Xbox 实机听音验证。
 - 当前 renderer 能清黑、present、复制同尺寸同格式 texture，并能尝试用 D3D11 video processor 呈现 FFmpeg D3D11VA texture slice；该路径尚未经过 Local Machine 或 Xbox 实机验证。
 - HDR10 metadata side-data 已能映射到 DXGI HDR10 metadata；BT.2020/PQ video processor 色彩空间设置和 tone mapping 策略尚未补齐。
 - 当前已有临时后台 render loop，但 cadence 固定，不代表最终 A/V sync 行为。
-- 当前 audio/subtitle renderer 仍是控制边界，不会提交 XAudio2 音频 buffer，也不会绘制 DirectWrite 字幕。
+- 当前音频输出还没有基于音频时钟驱动 A/V sync；subtitle renderer 仍是控制边界，不会绘制 DirectWrite 字幕。
 - 当前 Playback 页仍是手动 URL demo，真实 Emby 条目驱动和 HTTP 进度上报尚未完成。
 
 ## 测试结果
