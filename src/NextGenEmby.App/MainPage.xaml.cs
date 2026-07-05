@@ -42,6 +42,11 @@ namespace NextGenEmby.App
 
         private void Page_OnKeyDown(object sender, KeyRoutedEventArgs e)
         {
+            if (IsPlaybackPageActive())
+            {
+                return;
+            }
+
             if (e.Key == VirtualKey.GamepadY)
             {
                 NavigateSearch();
@@ -149,6 +154,11 @@ namespace NextGenEmby.App
                 string.Equals(current.Title, next.Title, StringComparison.Ordinal) &&
                 string.Equals(current.CollectionType, next.CollectionType, StringComparison.Ordinal) &&
                 string.Equals(current.IncludeItemTypes, next.IncludeItemTypes, StringComparison.Ordinal);
+        }
+
+        private bool IsPlaybackPageActive()
+        {
+            return ContentFrame.CurrentSourcePageType == typeof(PlaybackPage);
         }
     }
 }

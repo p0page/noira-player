@@ -32,6 +32,7 @@ namespace NextGenEmby.App.Views
         private readonly TaskCompletionSource<bool> _nativeSurfaceReadySource = new TaskCompletionSource<bool>();
         private readonly DispatcherTimer _progressTimer;
         private readonly DispatcherTimer _overlayTimer;
+        private readonly KeyEventHandler _handledKeyDownHandler;
         private WinRtNativePlaybackEngine? _nativeEngine;
         private HttpClient? _httpClient;
         private EmbyApiClient? _embyClient;
@@ -47,6 +48,7 @@ namespace NextGenEmby.App.Views
         private bool _updatingStreamControls;
         private bool _overlayVisible;
         private bool _moreVisible;
+        private bool _keyHandlerAttached;
         private PlaybackSessionRequest? _lastPlaybackSessionRequest;
 
         public PlaybackPage()
@@ -82,6 +84,7 @@ namespace NextGenEmby.App.Views
                 Interval = TimeSpan.FromSeconds(5)
             };
             _overlayTimer.Tick += OverlayTimer_OnTick;
+            _handledKeyDownHandler = PlaybackPage_OnHandledKeyDown;
             Loaded += PlaybackPage_OnLoaded;
             Unloaded += PlaybackPage_OnUnloaded;
 
@@ -93,8 +96,31 @@ namespace NextGenEmby.App.Views
 
         private void PlaybackPage_OnLoaded(object sender, RoutedEventArgs e)
         {
+            AttachPlaybackKeyHandler();
             AttachNativeSurface();
             _nativeSurfaceReadySource.TrySetResult(true);
+        }
+
+        private void AttachPlaybackKeyHandler()
+        {
+            if (_keyHandlerAttached)
+            {
+                return;
+            }
+
+            AddHandler(UIElement.KeyDownEvent, _handledKeyDownHandler, true);
+            _keyHandlerAttached = true;
+        }
+
+        private void DetachPlaybackKeyHandler()
+        {
+            if (!_keyHandlerAttached)
+            {
+                return;
+            }
+
+            RemoveHandler(UIElement.KeyDownEvent, _handledKeyDownHandler);
+            _keyHandlerAttached = false;
         }
 
         private async Task EnsureNativeSurfaceReadyAsync()
@@ -197,6 +223,10 @@ namespace NextGenEmby.App.Views
 
         private void Page_OnKeyDown(object sender, KeyRoutedEventArgs e)
         {
+        }
+
+        private void PlaybackPage_OnHandledKeyDown(object sender, KeyRoutedEventArgs e)
+        {
             ShowOverlay();
         }
 
@@ -242,6 +272,7 @@ namespace NextGenEmby.App.Views
             _progressTimer.Tick -= ProgressTimer_OnTick;
             _overlayTimer.Stop();
             _overlayTimer.Tick -= OverlayTimer_OnTick;
+            DetachPlaybackKeyHandler();
             try
             {
                 await ReportPlaybackStoppedAsync();
@@ -597,7 +628,7 @@ namespace NextGenEmby.App.Views
 
         private void OverlayTimer_OnTick(object sender, object e)
         {
-            if (_moreVisible)
+            if (ShouldKeepOverlayPinned())
             {
                 _overlayTimer.Stop();
                 return;
@@ -730,7 +761,12 @@ namespace NextGenEmby.App.Views
                 : state + " - " + message;
         }
 
-        private void ShowOverlay(bool showMore = false)
+        private void ShowOverlay()
+        {
+            ShowOverlay(_moreVisible);
+        }
+
+        private void ShowOverlay(bool showMore)
         {
             if (!_overlayVisible)
             {
@@ -742,7 +778,7 @@ namespace NextGenEmby.App.Views
             MoreDrawer.Visibility = _moreVisible ? Visibility.Visible : Visibility.Collapsed;
 
             _overlayTimer.Stop();
-            if (!_moreVisible)
+            if (!ShouldKeepOverlayPinned())
             {
                 _overlayTimer.Start();
             }
@@ -765,7 +801,13 @@ namespace NextGenEmby.App.Views
         private void UpdateProgressSlider()
         {
             var positionSeconds = Math.Max(0, TimeSpan.FromTicks(GetCurrentPositionTicks()).TotalSeconds);
-            ProgressSlider.Value = positionSeconds % ProgressSlider.Maximum;
+            ProgressSlider.Maximum = Math.Max(1, Math.Max(ProgressSlider.Maximum, positionSeconds));
+            ProgressSlider.Value = Math.Min(ProgressSlider.Maximum, positionSeconds);
+        }
+
+        private bool ShouldKeepOverlayPinned()
+        {
+            return _moreVisible || (_launchRequest == null && ManualDebugPanel.Visibility == Visibility.Visible);
         }
 
         private void UpdateControlStates()

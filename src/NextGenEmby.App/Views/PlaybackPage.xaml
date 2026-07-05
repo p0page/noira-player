@@ -45,7 +45,7 @@
                             <Slider
                                 x:Name="ProgressSlider"
                                 IsEnabled="False"
-                                Maximum="100"
+                                Maximum="1"
                                 Minimum="0"
                                 Value="0" />
                             <TextBlock
