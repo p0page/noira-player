@@ -5,6 +5,7 @@
 #include "DxDeviceResources.h"
 #include "FfmpegMediaSource.h"
 #include "NativePlaybackEngine.g.h"
+#include "SubtitleDecoder.h"
 #include "SubtitleRenderer.h"
 #include "VideoDecoder.h"
 #include "VideoRenderer.h"
@@ -48,6 +49,7 @@ namespace winrt::NextGenEmby::Native::implementation
         void RenderLoop() noexcept;
         bool RenderNextFrame();
         void DecodeNextAudioFrame();
+        void UpdateSubtitleCue();
         void NotifyStateChanged(PlaybackGraphState state, winrt::hstring const& message) const noexcept;
 
         DxDeviceResources& m_deviceResources;
@@ -57,6 +59,7 @@ namespace winrt::NextGenEmby::Native::implementation
         AudioDecoder m_audioDecoder;
         VideoRenderer m_videoRenderer;
         AudioRenderer m_audioRenderer;
+        SubtitleDecoder m_subtitleDecoder;
         SubtitleRenderer m_subtitleRenderer;
         std::optional<DecodedVideoFrame> m_pendingVideoFrame;
         winrt::hstring m_url;

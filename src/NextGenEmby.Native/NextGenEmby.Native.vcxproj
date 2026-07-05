@@ -103,6 +103,7 @@
     <ClInclude Include="Media\FfmpegMediaSource.h" />
     <ClInclude Include="Media\HttpMediaInput.h" />
     <ClInclude Include="Media\PlaybackGraph.h" />
+    <ClInclude Include="Media\SubtitleDecoder.h" />
     <ClInclude Include="Media\SubtitleRenderer.h" />
     <ClInclude Include="Media\VideoDecoder.h" />
     <ClInclude Include="Media\VideoRenderer.h" />
@@ -125,6 +126,7 @@
     <ClCompile Include="Media\FfmpegMediaSource.cpp" />
     <ClCompile Include="Media\HttpMediaInput.cpp" />
     <ClCompile Include="Media\PlaybackGraph.cpp" />
+    <ClCompile Include="Media\SubtitleDecoder.cpp" />
     <ClCompile Include="Media\SubtitleRenderer.cpp" />
     <ClCompile Include="Media\VideoDecoder.cpp" />
     <ClCompile Include="Media\VideoRenderer.cpp" />

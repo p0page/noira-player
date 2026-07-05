@@ -16,6 +16,7 @@ namespace winrt::NextGenEmby::Native::implementation
         void Disable() noexcept;
         void SwitchStream(int32_t subtitleStreamIndex);
         void SetTextCue(std::wstring text, int64_t startTicks, int64_t endTicks);
+        void ClearCue() noexcept;
         void RenderAt(int64_t positionTicks);
 
     private:

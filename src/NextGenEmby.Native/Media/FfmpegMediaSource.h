@@ -25,6 +25,7 @@ namespace winrt::NextGenEmby::Native::implementation
         void RegisterStream(int32_t streamIndex);
         void UnregisterStream(int32_t streamIndex) noexcept;
         bool TryReadPacket(int32_t streamIndex, AVPacket* packet);
+        bool TryReadQueuedPacket(int32_t streamIndex, AVPacket* packet);
         void Seek(int32_t streamIndex, int64_t timestamp);
 
     private:

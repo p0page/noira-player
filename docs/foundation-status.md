@@ -35,7 +35,7 @@
 - 托管 `PlaybackOrchestrator` 已能在 backend 支持时原地切换音轨/字幕；`NativeDirectXPlaybackBackend`、UWP wrapper 和 C++/WinRT runtime 已接通音轨切换、字幕切换和禁用字幕的控制面。
 - Native 音轨切换已能关闭旧 audio decoder/source voice、释放旧音轨 packet queue，并在当前位置重开目标音轨的 FFmpeg decoder 和 XAudio2 source voice。
 - `AudioRenderer` 已接入 XAudio2 engine / mastering voice 生命周期，播放打开时会创建音频设备并在 start/pause/resume/stop 时控制 engine；seek 时会清空旧 source buffer 并重置音频时钟基准。
-- `SubtitleRenderer` 已接入 Direct2D/DirectWrite 文本叠加边界，可在视频 backbuffer present 前绘制文本 cue；真实 FFmpeg 字幕解码和 cue 调度尚未接入。
+- `SubtitleDecoder` 已接入 FFmpeg subtitle stream 的文本 cue 解码边界，能从共享 demux 中取已排队字幕 packet，并把 `SUBTITLE_TEXT` / `SUBTITLE_ASS` 文本 cue 喂给 DirectWrite overlay；PGS/bitmap 字幕、完整 ASS 样式和外置字幕 URL 尚未接入。
 - Debug x64 MSIX 测试包已生成：`src\NextGenEmby.App\AppPackages\NextGenEmby.App_0.1.0.0_x64_Debug_Test\NextGenEmby.App_0.1.0.0_x64_Debug.msix`，包内已确认包含 FFmpeg 运行时 DLL。
 - Kodi HDR 研究路径已记录在 ADR 0001。
 
@@ -135,7 +135,7 @@ error MSB3644: Could not find the reference assemblies for .NETCore,Version=v5.0
 - 还没有部署到 Xbox 硬件。
 - FFmpeg UWP 产物已接入 native build，`FfmpegMediaSource` 已能初始化 `AVFormatContext`，`VideoDecoder` 已能初始化视频 `AVCodecContext`、读取视频 packet / 接收 `AVFrame`，并把 D3D11VA texture slice 交给 renderer；真实画面呈现还没有经过 Local Machine 或 Xbox 实机确认。
 - HDR/HEVC 真实视频播放还没有完成；当前已具备 HDR display/DXGI/renderer 边界、HDR10 metadata 映射、临时 render loop 和 P010/NV12 video processor 尝试路径，但色彩空间细节、A/V sync 和真实 HEVC Main10/P010 播放效果尚未验证。
-- XAudio2 source voice、PCM buffer queue、FFmpeg `swresample`、初步音频时钟和第一版视频等待/丢帧策略已接入，但 A/V sync 阈值、真实听音和画面效果还没有经过 Local Machine 或 Xbox 实机验证；DirectWrite 字幕叠加边界已接入，但真实字幕解码和 cue 调度还没有完成。
+- XAudio2 source voice、PCM buffer queue、FFmpeg `swresample`、初步音频时钟和第一版视频等待/丢帧策略已接入，但 A/V sync 阈值、真实听音和画面效果还没有经过 Local Machine 或 Xbox 实机验证；DirectWrite 字幕叠加和 FFmpeg 文本字幕 cue 解码已接入，但图形字幕、完整 ASS 样式和实机字幕显示还没有验证。
 - 真实 Emby 条目驱动的播放进度 HTTP 上报还没有接入；当前已能构造 progress request，并能透传 backend position event。
 
 ## 原生播放硬件验证

@@ -58,6 +58,13 @@ namespace winrt::NextGenEmby::Native::implementation
         m_textCueEndTicks = endTicks;
     }
 
+    void SubtitleRenderer::ClearCue() noexcept
+    {
+        m_textCue.clear();
+        m_textCueStartTicks = 0;
+        m_textCueEndTicks = 0;
+    }
+
     void SubtitleRenderer::RenderAt(int64_t positionTicks)
     {
         if (positionTicks < 0)

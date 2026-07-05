@@ -51,9 +51,15 @@ namespace winrt::NextGenEmby::Native::implementation
                 request.AudioStreamIndex(),
                 request.HasAudioStreamIndex());
             m_audioRenderer.Open(request.AudioStreamIndex(), request.HasAudioStreamIndex());
-            m_subtitleRenderer.Open(request.HasSubtitleStreamIndex()
+            auto subtitleStreamIndex = request.HasSubtitleStreamIndex()
                 ? std::optional<int32_t>{request.SubtitleStreamIndex()}
-                : std::nullopt);
+                : std::nullopt;
+            if (subtitleStreamIndex)
+            {
+                m_subtitleDecoder.Open(m_mediaSource, *subtitleStreamIndex);
+            }
+
+            m_subtitleRenderer.Open(subtitleStreamIndex);
             m_videoRenderer.ClearToBlack();
             m_url = request.DirectStreamUrl();
             m_positionTicks = request.StartPositionTicks();
@@ -62,7 +68,6 @@ namespace winrt::NextGenEmby::Native::implementation
             RenderNextFrame();
             StartRenderLoop();
             m_audioRenderer.Start();
-            m_subtitleRenderer.RenderAt(m_positionTicks);
         }
         catch (...)
         {
@@ -106,8 +111,9 @@ namespace winrt::NextGenEmby::Native::implementation
         m_audioRenderer.Flush();
         m_videoDecoder.Seek(positionTicks);
         m_audioDecoder.Flush(positionTicks);
+        m_subtitleDecoder.Flush();
+        m_subtitleRenderer.ClearCue();
         RenderNextFrame();
-        m_subtitleRenderer.RenderAt(m_positionTicks);
         m_stateChanged.notify_all();
     }
 
@@ -118,6 +124,7 @@ namespace winrt::NextGenEmby::Native::implementation
         std::lock_guard lock(m_graphMutex);
         m_audioRenderer.Stop();
         m_subtitleRenderer.Disable();
+        m_subtitleDecoder.Close();
         m_audioDecoder.Close();
         m_videoDecoder.Close();
         m_videoRenderer.ClearToBlack();
@@ -164,10 +171,14 @@ namespace winrt::NextGenEmby::Native::implementation
 
         if (subtitleStreamIndex.has_value())
         {
+            m_subtitleDecoder.Close();
+            m_subtitleRenderer.Disable();
+            m_subtitleDecoder.Open(m_mediaSource, subtitleStreamIndex.value());
             m_subtitleRenderer.SwitchStream(subtitleStreamIndex.value());
         }
         else
         {
+            m_subtitleDecoder.Close();
             m_subtitleRenderer.Disable();
         }
     }
@@ -329,7 +340,7 @@ namespace winrt::NextGenEmby::Native::implementation
 
             m_videoRenderer.Render(frame);
             m_positionTicks = frame.PositionTicks;
-            m_subtitleRenderer.RenderAt(m_positionTicks);
+            UpdateSubtitleCue();
             m_deviceResources.Present();
             m_pendingVideoFrame.reset();
             return true;
@@ -354,6 +365,21 @@ namespace winrt::NextGenEmby::Native::implementation
                 return;
             }
         }
+    }
+
+    void PlaybackGraph::UpdateSubtitleCue()
+    {
+        m_subtitleDecoder.PumpQueuedPackets();
+        if (auto cue = m_subtitleDecoder.TryGetCueAt(m_positionTicks))
+        {
+            m_subtitleRenderer.SetTextCue(cue->Text, cue->StartTicks, cue->EndTicks);
+        }
+        else
+        {
+            m_subtitleRenderer.ClearCue();
+        }
+
+        m_subtitleRenderer.RenderAt(m_positionTicks);
     }
 
     void PlaybackGraph::NotifyStateChanged(

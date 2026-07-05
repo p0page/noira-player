@@ -246,6 +246,16 @@ namespace winrt::NextGenEmby::Native::implementation
         }
     }
 
+    bool FfmpegMediaSource::TryReadQueuedPacket(int32_t streamIndex, AVPacket* packet)
+    {
+        if (!m_open || m_formatContext == nullptr || packet == nullptr)
+        {
+            return false;
+        }
+
+        return TryTakeQueuedPacket(streamIndex, packet);
+    }
+
     void FfmpegMediaSource::Seek(int32_t streamIndex, int64_t timestamp)
     {
         if (!m_open || m_formatContext == nullptr)
