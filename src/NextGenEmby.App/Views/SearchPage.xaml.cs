@@ -187,8 +187,7 @@ namespace NextGenEmby.App.Views
             }
 
             _isNavigatingToDetails = true;
-            var itemName = string.IsNullOrWhiteSpace(item.Name) ? item.Id : item.Name;
-            Frame.Navigate(typeof(MediaDetailsPage), new MediaDetailsNavigationRequest(item.Id, itemName));
+            Frame.Navigate(typeof(MediaDetailsPage), new MediaDetailsNavigationRequest(item.Id, item.Name));
         }
 
         private bool CanApplySearch(int searchGeneration)
