@@ -91,6 +91,9 @@
     <Compile Include="Views\HomePage.xaml.cs">
       <DependentUpon>HomePage.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Views\MediaDetailsPage.xaml.cs">
+      <DependentUpon>MediaDetailsPage.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Views\PlaybackPage.xaml.cs">
       <DependentUpon>PlaybackPage.xaml</DependentUpon>
     </Compile>
@@ -110,6 +113,10 @@
       <SubType>Designer</SubType>
     </Page>
     <Page Include="Views\HomePage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\MediaDetailsPage.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>

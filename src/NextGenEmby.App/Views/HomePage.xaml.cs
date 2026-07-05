@@ -166,7 +166,7 @@ namespace NextGenEmby.App.Views
                 return;
             }
 
-            Frame.Navigate(typeof(PlaybackPage), new PlaybackLaunchRequest(item.Id, item.Name));
+            Frame.Navigate(typeof(MediaDetailsPage), item);
         }
 
         private static string CreateSubtitle(EmbyMediaItem item)
