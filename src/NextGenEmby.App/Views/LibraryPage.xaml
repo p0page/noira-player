@@ -82,6 +82,48 @@
                     Margin="0,8,0,0"
                     HorizontalAlignment="Stretch"
                     VerticalAlignment="Stretch">
+                    <GridView.ItemContainerStyle>
+                        <Style TargetType="GridViewItem">
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                            <Setter Property="VerticalContentAlignment" Value="Stretch" />
+                            <Setter Property="UseSystemFocusVisuals" Value="True" />
+                            <Setter Property="Padding" Value="0" />
+                            <Setter Property="Margin" Value="0,0,18,18" />
+                        </Style>
+                    </GridView.ItemContainerStyle>
+                    <GridView.ItemTemplate>
+                        <DataTemplate>
+                            <Grid
+                                Width="210"
+                                Height="320"
+                                Background="{StaticResource AppRaisedSurfaceBrush}">
+                                <Image
+                                    Source="{Binding ImageSource}"
+                                    Stretch="UniformToFill" />
+                                <Border Background="#30000000" />
+                                <Border
+                                    VerticalAlignment="Bottom"
+                                    Background="#E0000000"
+                                    Padding="14,12">
+                                    <StackPanel Spacing="4">
+                                        <TextBlock
+                                            Text="{Binding Title}"
+                                            FontSize="19"
+                                            FontWeight="SemiBold"
+                                            TextTrimming="CharacterEllipsis"
+                                            MaxLines="2"
+                                            TextWrapping="WrapWholeWords" />
+                                        <TextBlock
+                                            Text="{Binding Meta}"
+                                            FontSize="14"
+                                            Foreground="{StaticResource AppMutedTextBrush}"
+                                            TextTrimming="CharacterEllipsis"
+                                            MaxLines="1" />
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+                        </DataTemplate>
+                    </GridView.ItemTemplate>
                     <GridView.ItemsPanel>
                         <ItemsPanelTemplate>
                             <ItemsWrapGrid

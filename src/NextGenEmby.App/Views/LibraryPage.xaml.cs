@@ -6,10 +6,9 @@ using NextGenEmby.App.Navigation;
 using NextGenEmby.App.Services;
 using NextGenEmby.App.Storage;
 using NextGenEmby.Core.Emby;
-using Windows.UI;
+using Windows.UI.Core;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
-using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Media.Imaging;
 using Windows.UI.Xaml.Navigation;
 
@@ -19,8 +18,6 @@ namespace NextGenEmby.App.Views
     {
         private readonly ApplicationDataSessionStore _sessionStore = new ApplicationDataSessionStore();
         private LibraryNavigationRequest? _request;
-        private EmbySession? _session;
-        private EmbyApiClient? _client;
         private bool _isUnloaded;
         private bool _isNavigatingToDetails;
         private int _loadGeneration;
@@ -84,6 +81,8 @@ namespace NextGenEmby.App.Views
             SortBox.IsEnabled = false;
             FilterBox.IsEnabled = false;
             StatusBlock.Text = "Loading...";
+            var focusFirstItem = false;
+            var focusFallback = false;
 
             try
             {
@@ -93,20 +92,19 @@ namespace NextGenEmby.App.Views
                     return;
                 }
 
-                _session = session;
                 if (session == null)
                 {
                     ItemsGrid.Items.Clear();
                     StatusBlock.Text = "Sign in first.";
+                    focusFallback = true;
                     return;
                 }
 
-                IReadOnlyList<EmbyMediaItem> items;
-                EmbyApiClient client;
+                IReadOnlyList<LibraryGridItem> gridItems;
                 using (var httpClient = new HttpClient())
                 {
-                    client = EmbyClientFactory.Create(httpClient, session);
-                    items = await client.GetItemsAsync(session, new EmbyItemsQuery
+                    var client = EmbyClientFactory.Create(httpClient, session);
+                    var items = await client.GetItemsAsync(session, new EmbyItemsQuery
                     {
                         IncludeItemTypes = request.IncludeItemTypes,
                         Recursive = true,
@@ -115,6 +113,7 @@ namespace NextGenEmby.App.Views
                         Filters = GetSelectedTag(FilterBox, ""),
                         Limit = 100
                     });
+                    gridItems = CreateGridItems(session, client, items);
                 }
 
                 if (!CanApplyLoad(loadGeneration))
@@ -122,8 +121,8 @@ namespace NextGenEmby.App.Views
                     return;
                 }
 
-                _client = client;
-                RenderItems(items);
+                focusFirstItem = RenderItems(gridItems, loadGeneration);
+                focusFallback = !focusFirstItem;
             }
             catch
             {
@@ -134,6 +133,7 @@ namespace NextGenEmby.App.Views
 
                 ItemsGrid.Items.Clear();
                 StatusBlock.Text = "Unable to load library.";
+                focusFallback = true;
             }
             finally
             {
@@ -142,113 +142,72 @@ namespace NextGenEmby.App.Views
                     RefreshButton.IsEnabled = true;
                     SortBox.IsEnabled = true;
                     FilterBox.IsEnabled = true;
+
+                    if (focusFirstItem)
+                    {
+                        await FocusFirstItemAsync(loadGeneration);
+                    }
+                    else if (focusFallback)
+                    {
+                        await FocusFallbackControlAsync(loadGeneration);
+                    }
                 }
             }
         }
 
-        private void RenderItems(IReadOnlyList<EmbyMediaItem> items)
+        private bool RenderItems(IReadOnlyList<LibraryGridItem> items, int loadGeneration)
         {
+            if (!CanApplyLoad(loadGeneration))
+            {
+                return false;
+            }
+
             ItemsGrid.Items.Clear();
 
             if (items == null || items.Count == 0)
             {
                 StatusBlock.Text = "No items found.";
-                return;
+                return false;
             }
 
             foreach (var item in items)
             {
-                ItemsGrid.Items.Add(CreatePosterButton(item));
+                ItemsGrid.Items.Add(item);
             }
 
             StatusBlock.Text = items.Count + " items";
+            return true;
         }
 
-        private Button CreatePosterButton(EmbyMediaItem item)
+        private static IReadOnlyList<LibraryGridItem> CreateGridItems(
+            EmbySession session,
+            EmbyApiClient client,
+            IReadOnlyList<EmbyMediaItem> items)
         {
-            var button = new Button
+            var gridItems = new List<LibraryGridItem>();
+            if (items == null)
             {
-                Width = 210,
-                Height = 320,
-                MinWidth = 210,
-                MinHeight = 320,
-                Margin = new Thickness(0, 0, 18, 18),
-                Padding = new Thickness(0),
-                Tag = item,
-                HorizontalContentAlignment = HorizontalAlignment.Stretch,
-                VerticalContentAlignment = VerticalAlignment.Stretch,
-                UseSystemFocusVisuals = true
-            };
-            button.Click += ItemButton_OnClick;
-
-            var root = new Grid
-            {
-                Background = new SolidColorBrush(Color.FromArgb(255, 23, 34, 49))
-            };
-
-            if (_client != null && _session != null && !string.IsNullOrWhiteSpace(item.PrimaryImageTag))
-            {
-                root.Background = new ImageBrush
-                {
-                    ImageSource = new BitmapImage(new Uri(_client.GetImageUrl(_session, item.Id, "Primary", 420))),
-                    Stretch = Stretch.UniformToFill
-                };
+                return gridItems;
             }
 
-            root.Children.Add(new Border
+            foreach (var item in items)
             {
-                Background = new SolidColorBrush(Color.FromArgb(48, 0, 0, 0))
-            });
-
-            var overlay = new Border
-            {
-                VerticalAlignment = VerticalAlignment.Bottom,
-                Background = new SolidColorBrush(Color.FromArgb(224, 0, 0, 0)),
-                Padding = new Thickness(14, 12, 14, 12)
-            };
-
-            overlay.Child = new StackPanel
-            {
-                Spacing = 4,
-                Children =
+                BitmapImage? imageSource = null;
+                if (!string.IsNullOrWhiteSpace(item.PrimaryImageTag))
                 {
-                    new TextBlock
-                    {
-                        Text = string.IsNullOrWhiteSpace(item.Name) ? item.Id : item.Name,
-                        FontSize = 19,
-                        FontWeight = Windows.UI.Text.FontWeights.SemiBold,
-                        TextTrimming = TextTrimming.CharacterEllipsis,
-                        MaxLines = 2,
-                        TextWrapping = TextWrapping.WrapWholeWords
-                    },
-                    new TextBlock
-                    {
-                        Text = CreateMeta(item),
-                        FontSize = 14,
-                        Foreground = new SolidColorBrush(Color.FromArgb(255, 183, 198, 216)),
-                        TextTrimming = TextTrimming.CharacterEllipsis,
-                        MaxLines = 1
-                    }
+                    imageSource = new BitmapImage(new Uri(client.GetImageUrl(session, item.Id, "Primary", 420)));
                 }
-            };
 
-            root.Children.Add(overlay);
-            button.Content = root;
-            return button;
+                gridItems.Add(new LibraryGridItem(item, imageSource));
+            }
+
+            return gridItems;
         }
 
         private void ItemsGrid_OnItemClick(object sender, ItemClickEventArgs e)
         {
-            var button = e.ClickedItem as Button;
-            var item = button == null ? null : button.Tag as EmbyMediaItem;
-            NavigateToDetails(item);
-        }
-
-        private void ItemButton_OnClick(object sender, RoutedEventArgs e)
-        {
-            var button = sender as Button;
-            var item = button == null ? null : button.Tag as EmbyMediaItem;
-            NavigateToDetails(item);
+            var gridItem = e.ClickedItem as LibraryGridItem;
+            NavigateToDetails(gridItem == null ? null : gridItem.Item);
         }
 
         private void NavigateToDetails(EmbyMediaItem? item)
@@ -266,6 +225,42 @@ namespace NextGenEmby.App.Views
             _isNavigatingToDetails = true;
             var itemName = string.IsNullOrWhiteSpace(item.Name) ? item.Id : item.Name;
             Frame.Navigate(typeof(MediaDetailsPage), new MediaDetailsNavigationRequest(item.Id, itemName));
+        }
+
+        private async Task FocusFirstItemAsync(int loadGeneration)
+        {
+            await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
+            {
+                if (!CanApplyLoad(loadGeneration))
+                {
+                    return;
+                }
+
+                var firstItem = ItemsGrid.ContainerFromIndex(0) as Control;
+                if (firstItem != null)
+                {
+                    firstItem.Focus(FocusState.Programmatic);
+                    return;
+                }
+
+                ItemsGrid.Focus(FocusState.Programmatic);
+            });
+        }
+
+        private async Task FocusFallbackControlAsync(int loadGeneration)
+        {
+            await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
+            {
+                if (!CanApplyLoad(loadGeneration))
+                {
+                    return;
+                }
+
+                if (!RefreshButton.Focus(FocusState.Programmatic))
+                {
+                    SortBox.Focus(FocusState.Programmatic);
+                }
+            });
         }
 
         private bool CanApplyLoad(int loadGeneration)
@@ -294,6 +289,25 @@ namespace NextGenEmby.App.Views
             }
 
             return meta;
+        }
+
+        public sealed class LibraryGridItem
+        {
+            public LibraryGridItem(EmbyMediaItem item, BitmapImage? imageSource)
+            {
+                Item = item;
+                ImageSource = imageSource;
+                Title = string.IsNullOrWhiteSpace(item.Name) ? item.Id : item.Name;
+                Meta = CreateMeta(item);
+            }
+
+            public EmbyMediaItem Item { get; }
+
+            public string Title { get; }
+
+            public string Meta { get; }
+
+            public BitmapImage? ImageSource { get; }
         }
     }
 }
