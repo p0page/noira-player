@@ -26,7 +26,8 @@ namespace NextGenEmby.Core.Playback
             PlaybackOverlayShortcut shortcut,
             bool seekPreviewActive,
             bool moreVisible,
-            bool overlayVisible)
+            bool overlayVisible,
+            bool preferBackWhenOverlayVisible = false)
         {
             switch (shortcut)
             {
@@ -46,9 +47,12 @@ namespace NextGenEmby.Core.Playback
                         return PlaybackOverlayInputAction.CloseMore;
                     }
 
-                    return overlayVisible
-                        ? PlaybackOverlayInputAction.HideOverlay
-                        : PlaybackOverlayInputAction.GoBack;
+                    if (!overlayVisible || preferBackWhenOverlayVisible)
+                    {
+                        return PlaybackOverlayInputAction.GoBack;
+                    }
+
+                    return PlaybackOverlayInputAction.HideOverlay;
 
                 case PlaybackOverlayShortcut.More:
                     return PlaybackOverlayInputAction.ShowMore;

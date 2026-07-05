@@ -71,7 +71,7 @@ namespace NextGenEmby.App.Views
 
         private void Page_OnKeyDown(object sender, KeyRoutedEventArgs e)
         {
-            if (e.Key != VirtualKey.GamepadB && e.Key != VirtualKey.Escape)
+            if (!IsBackKey(e.Key))
             {
                 return;
             }
@@ -81,6 +81,13 @@ namespace NextGenEmby.App.Views
                 Frame.GoBack();
                 e.Handled = true;
             }
+        }
+
+        private static bool IsBackKey(VirtualKey key)
+        {
+            return key == VirtualKey.GamepadB ||
+                key == VirtualKey.Escape ||
+                key == VirtualKey.GoBack;
         }
 
         private void RenderItem()

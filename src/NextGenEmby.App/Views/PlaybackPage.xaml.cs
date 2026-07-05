@@ -36,7 +36,6 @@ namespace NextGenEmby.App.Views
         private readonly DispatcherTimer _progressTimer;
         private readonly DispatcherTimer _overlayTimer;
         private readonly DispatcherTimer _seekPreviewTimer;
-        private readonly KeyEventHandler _handledKeyDownHandler;
         private WinRtNativePlaybackEngine? _nativeEngine;
         private HttpClient? _httpClient;
         private EmbyApiClient? _embyClient;
@@ -96,7 +95,6 @@ namespace NextGenEmby.App.Views
                 Interval = TimeSpan.FromMilliseconds(100)
             };
             _seekPreviewTimer.Tick += SeekPreviewTimer_OnTick;
-            _handledKeyDownHandler = PlaybackPage_OnHandledKeyDown;
             NativeSurface.SizeChanged += NativeSurface_OnSizeChanged;
             Loaded += PlaybackPage_OnLoaded;
             Unloaded += PlaybackPage_OnUnloaded;
@@ -127,7 +125,7 @@ namespace NextGenEmby.App.Views
                 return;
             }
 
-            AddHandler(UIElement.KeyDownEvent, _handledKeyDownHandler, true);
+            Window.Current.CoreWindow.KeyDown += PlaybackPage_OnCoreWindowKeyDown;
             _keyHandlerAttached = true;
         }
 
@@ -138,7 +136,7 @@ namespace NextGenEmby.App.Views
                 return;
             }
 
-            RemoveHandler(UIElement.KeyDownEvent, _handledKeyDownHandler);
+            Window.Current.CoreWindow.KeyDown -= PlaybackPage_OnCoreWindowKeyDown;
             _keyHandlerAttached = false;
         }
 
@@ -265,88 +263,102 @@ namespace NextGenEmby.App.Views
         {
         }
 
+        private async void PlaybackPage_OnCoreWindowKeyDown(CoreWindow sender, Windows.UI.Core.KeyEventArgs args)
+        {
+            if (args.Handled)
+            {
+                return;
+            }
+
+            args.Handled = await HandlePlaybackKeyAsync(args.VirtualKey);
+        }
+
         private async void PlaybackPage_OnHandledKeyDown(object sender, KeyRoutedEventArgs e)
         {
-            var shortcut = TryMapDesktopShortcut(e.Key);
+            if (e.Handled)
+            {
+                return;
+            }
+
+            e.Handled = await HandlePlaybackKeyAsync(e.Key);
+        }
+
+        private async Task<bool> HandlePlaybackKeyAsync(VirtualKey key)
+        {
+            var shortcut = TryMapDesktopShortcut(key);
             if (shortcut.HasValue)
             {
                 if (shortcut.Value == PlaybackOverlayShortcut.Accept &&
                     _overlayVisible &&
                     !_seekPreview.IsActive)
                 {
-                    return;
+                    return false;
                 }
 
-                e.Handled = true;
                 await ApplyOverlayInputActionAsync(
-                    PlaybackOverlayInputPolicy.Decide(shortcut.Value, _seekPreview.IsActive, _moreVisible, _overlayVisible));
-                return;
+                    PlaybackOverlayInputPolicy.Decide(shortcut.Value, _seekPreview.IsActive, _moreVisible, _overlayVisible, ShouldBackExitPlaybackPage()));
+                return true;
             }
 
-            switch (e.Key)
+            switch (key)
             {
                 case VirtualKey.GamepadA:
-                    e.Handled = true;
                     await ApplyOverlayInputActionAsync(
-                        PlaybackOverlayInputPolicy.Decide(PlaybackOverlayShortcut.Accept, _seekPreview.IsActive, _moreVisible, _overlayVisible));
-                    return;
+                        PlaybackOverlayInputPolicy.Decide(PlaybackOverlayShortcut.Accept, _seekPreview.IsActive, _moreVisible, _overlayVisible, ShouldBackExitPlaybackPage()));
+                    return true;
 
                 case VirtualKey.GamepadB:
-                    e.Handled = true;
                     await ApplyOverlayInputActionAsync(
-                        PlaybackOverlayInputPolicy.Decide(PlaybackOverlayShortcut.Cancel, _seekPreview.IsActive, _moreVisible, _overlayVisible));
-                    return;
+                        PlaybackOverlayInputPolicy.Decide(PlaybackOverlayShortcut.Cancel, _seekPreview.IsActive, _moreVisible, _overlayVisible, ShouldBackExitPlaybackPage()));
+                    return true;
 
                 case VirtualKey.GamepadMenu:
-                    e.Handled = true;
                     await ApplyOverlayInputActionAsync(
-                        PlaybackOverlayInputPolicy.Decide(PlaybackOverlayShortcut.More, _seekPreview.IsActive, _moreVisible, _overlayVisible));
-                    return;
+                        PlaybackOverlayInputPolicy.Decide(PlaybackOverlayShortcut.More, _seekPreview.IsActive, _moreVisible, _overlayVisible, ShouldBackExitPlaybackPage()));
+                    return true;
 
                 case VirtualKey.GamepadDPadLeft:
-                    e.Handled = true;
                     if (CanAcceptSeekInput())
                     {
                         ClearSeekPreview();
                         await RunPlaybackCommandAsync(() => SeekRelativeAsync(-SeekBackStep));
                     }
 
-                    return;
+                    return true;
 
                 case VirtualKey.GamepadDPadRight:
-                    e.Handled = true;
                     if (CanAcceptSeekInput())
                     {
                         ClearSeekPreview();
                         await RunPlaybackCommandAsync(() => SeekRelativeAsync(SeekForwardStep));
                     }
 
-                    return;
+                    return true;
 
                 case VirtualKey.GamepadLeftThumbstickLeft:
-                    e.Handled = true;
                     if (CanAcceptSeekInput())
                     {
                         BeginOrMoveSeekPreview(TimeSpan.FromSeconds(-5));
                     }
 
-                    return;
+                    return true;
 
                 case VirtualKey.GamepadLeftThumbstickRight:
-                    e.Handled = true;
                     if (CanAcceptSeekInput())
                     {
                         BeginOrMoveSeekPreview(TimeSpan.FromSeconds(5));
                     }
 
-                    return;
+                    return true;
             }
+
+            return false;
         }
 
         private async void Page_OnPointerPressed(object sender, PointerRoutedEventArgs e)
         {
             await ApplyOverlayInputActionAsync(
-                PlaybackOverlayInputPolicy.Decide(PlaybackOverlayShortcut.Pointer, _seekPreview.IsActive, _moreVisible, _overlayVisible));
+                PlaybackOverlayInputPolicy.Decide(PlaybackOverlayShortcut.Pointer, _seekPreview.IsActive, _moreVisible, _overlayVisible, ShouldBackExitPlaybackPage()));
         }
 
         private static PlaybackOverlayShortcut? TryMapDesktopShortcut(VirtualKey key)
@@ -358,6 +370,7 @@ namespace NextGenEmby.App.Views
                     return PlaybackOverlayShortcut.Accept;
 
                 case VirtualKey.Escape:
+                case VirtualKey.GoBack:
                     return PlaybackOverlayShortcut.Cancel;
 
                 case VirtualKey.M:
@@ -366,6 +379,12 @@ namespace NextGenEmby.App.Views
                 default:
                     return null;
             }
+        }
+
+        private bool ShouldBackExitPlaybackPage()
+        {
+            return _orchestrator.State == CorePlaybackState.Stopped ||
+                _orchestrator.State == CorePlaybackState.Failed;
         }
 
         private async Task ApplyOverlayInputActionAsync(PlaybackOverlayInputAction action)

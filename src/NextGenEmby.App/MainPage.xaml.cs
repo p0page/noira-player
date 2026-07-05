@@ -1,4 +1,5 @@
 using System;
+using NextGenEmby.Core.Input;
 using NextGenEmby.App.Navigation;
 using NextGenEmby.App.Storage;
 using NextGenEmby.App.Views;
@@ -54,11 +55,22 @@ namespace NextGenEmby.App
                 return;
             }
 
-            if (e.Key == VirtualKey.GamepadB && ContentFrame.CanGoBack)
+            if (GlobalBackInputPolicy.ShouldGoBack(
+                e.Handled,
+                IsPlaybackPageActive(),
+                ContentFrame.CanGoBack,
+                IsBackKey(e.Key)))
             {
                 ContentFrame.GoBack();
                 e.Handled = true;
             }
+        }
+
+        private static bool IsBackKey(VirtualKey key)
+        {
+            return key == VirtualKey.GamepadB ||
+                key == VirtualKey.Escape ||
+                key == VirtualKey.GoBack;
         }
 
         public void NavigateHome()

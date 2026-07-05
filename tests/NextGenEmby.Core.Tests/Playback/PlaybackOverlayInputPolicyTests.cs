@@ -54,6 +54,32 @@ public sealed class PlaybackOverlayInputPolicyTests
     }
 
     [Fact]
+    public void Cancel_Goes_Back_When_Back_Should_Exit_Playback_Page()
+    {
+        var action = PlaybackOverlayInputPolicy.Decide(
+            PlaybackOverlayShortcut.Cancel,
+            seekPreviewActive: false,
+            moreVisible: false,
+            overlayVisible: true,
+            preferBackWhenOverlayVisible: true);
+
+        Assert.Equal(PlaybackOverlayInputAction.GoBack, action);
+    }
+
+    [Fact]
+    public void Cancel_Closes_More_Before_Exiting_Playback_Page()
+    {
+        var action = PlaybackOverlayInputPolicy.Decide(
+            PlaybackOverlayShortcut.Cancel,
+            seekPreviewActive: false,
+            moreVisible: true,
+            overlayVisible: true,
+            preferBackWhenOverlayVisible: true);
+
+        Assert.Equal(PlaybackOverlayInputAction.CloseMore, action);
+    }
+
+    [Fact]
     public void Cancel_Goes_Back_When_Overlay_Is_Hidden()
     {
         var action = PlaybackOverlayInputPolicy.Decide(PlaybackOverlayShortcut.Cancel, seekPreviewActive: false, moreVisible: false, overlayVisible: false);

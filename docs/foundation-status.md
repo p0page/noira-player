@@ -302,3 +302,58 @@ NextGenEmby.App 0.1.0.9 NextGenEmby.App_h8qjz0sr1sg4m
 
 - Windows 本机：补更多真实多音轨/字幕样本、长时间播放、seek preview 的真实手柄实操。
 - Xbox 实机：4K 安全区、手柄焦点路径、HDR10 输出、HEVC Main10、P010/NV12 渲染性能、HDR 停止后的 SDR 恢复、Dev Mode 部署体验。
+
+## 返回键与手柄输入自动化状态（0.1.0.15）
+
+日期：2026-07-05
+
+本轮针对“详情页和播放页不能稳定按 B 返回”的问题做了拆分修复：
+
+- 详情页现在把 `GamepadB`、`Escape`、`GoBack` 视为同一个返回动作；进入影片详情后按 B / Escape 只返回上一页，不再卡在详情页。
+- Shell 全局返回逻辑新增 `GlobalBackInputPolicy`：如果子页面已经处理过返回键，Shell 不再二次 `GoBack`。这修复了详情页处理 Escape 后又被 Shell 再退一级的问题。
+- 播放页按键处理从 XAML `AddHandler(..., handledEventsToo: true)` 改为 `Window.Current.CoreWindow.KeyDown`，避免焦点落在原生 `SwapChainPanel` 或播放停止状态时吃掉返回键。
+- 播放页停止或失败后，B / Escape / GoBack 会退出播放页；播放中仍保持原有 OSD 语义：先取消 seek preview，再关闭 More，再隐藏 OSD，OSD 已隐藏时才返回。
+- 桌面自动化侧用 `Escape` / `GoBack` 覆盖同一套策略；真实 `GamepadB` 仍走同一套代码路径。当前 Windows 自动化环境没有虚拟 XInput 驱动，不能直接注入真正的手柄 B 键事件，但可以用同语义的键盘返回事件做稳定回归测试。
+
+新增自动测试：
+
+- `PlaybackOverlayInputPolicyTests.Cancel_Goes_Back_When_Back_Should_Exit_Playback_Page`
+- `PlaybackOverlayInputPolicyTests.Cancel_Closes_More_Before_Exiting_Playback_Page`
+- `GlobalBackInputPolicyTests.Does_Not_Go_Back_When_Event_Was_Already_Handled`
+- `GlobalBackInputPolicyTests.Goes_Back_For_Unhandled_Back_Key_When_Frame_Can_Go_Back`
+
+本轮验证结果：
+
+```powershell
+dotnet test tests\NextGenEmby.Core.Tests\NextGenEmby.Core.Tests.csproj --no-restore
+```
+
+结果：
+
+```text
+Passed: 91
+Failed: 0
+Skipped: 0
+```
+
+```powershell
+& 'C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe' src\NextGenEmby.App\NextGenEmby.App.csproj /restore /p:Configuration=Debug /p:Platform=x64 /p:AppxBundle=Never /p:UseSharedCompilation=false
+```
+
+结果：
+
+```text
+Build succeeded.
+0 warnings
+0 errors
+```
+
+最新 Debug x64 MSIX 已提升到 `0.1.0.15`，重新签名并安装到本机。
+
+computer-use 本机交互复验：
+
+- Home -> Movies -> 第一张影片卡 -> Details 后，按 Escape 返回 Movies；没有再发生 Shell 二次返回到 Home。
+- Movies -> `"Friends"` 详情 -> Resume/Play -> 播放页后，按 Escape 返回 `"Friends"` 详情页；播放页返回没有被 Shell chrome 或原生视频 surface 吃掉。
+- Stop 按钮在 Windows 自动化里仍容易只触发 tooltip 而不是按钮 invoke；停止态返回由单元策略覆盖，且 0.1.0.14 的本机复验曾覆盖 Stop -> `Stopped` -> Escape 返回详情。0.1.0.15 相比 0.1.0.14 仅升级调试包版本以绕开同版本 MSIX 覆盖限制，返回逻辑代码未变。
+
+后续如果要更接近真实手柄自动化，需要安装虚拟手柄驱动或引入专门的 XInput 注入工具；目前代码层面已经把真实 `GamepadB` 和可自动化的 `Escape` / `GoBack` 收敛到同一条返回策略。
