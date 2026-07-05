@@ -2,6 +2,10 @@
 #include "VideoDecoder.h"
 #include "HttpMediaInput.h"
 
+#include <algorithm>
+#include <cmath>
+#include <limits>
+
 #pragma warning(push)
 #pragma warning(disable : 4244 4819)
 extern "C"
@@ -14,6 +18,7 @@ extern "C"
 #include <libavutil/frame.h>
 #include <libavutil/hwcontext.h>
 #include <libavutil/hwcontext_d3d11va.h>
+#include <libavutil/mastering_display_metadata.h>
 #include <libavutil/mathematics.h>
 #include <libavutil/pixfmt.h>
 }
@@ -187,6 +192,90 @@ namespace
         decodedFrame.TextureArrayIndex = static_cast<uint32_t>(reinterpret_cast<intptr_t>(frame->data[1]));
     }
 
+    uint32_t ScaleRational(AVRational value, double scale, uint32_t maximum)
+    {
+        if (value.den <= 0 || value.num < 0)
+        {
+            return 0;
+        }
+
+        auto scaled = std::llround((static_cast<double>(value.num) / value.den) * scale);
+        if (scaled <= 0)
+        {
+            return 0;
+        }
+
+        auto clamped = std::min<int64_t>(scaled, maximum);
+        return static_cast<uint32_t>(clamped);
+    }
+
+    uint16_t ScaleChromaticity(AVRational value)
+    {
+        return static_cast<uint16_t>(ScaleRational(value, 50000.0, 50000));
+    }
+
+    uint16_t ClampToUInt16(unsigned value)
+    {
+        return static_cast<uint16_t>(std::min<unsigned>(
+            value,
+            (std::numeric_limits<uint16_t>::max)()));
+    }
+
+    void SetChromaticity(uint16_t target[2], AVRational const source[2])
+    {
+        target[0] = ScaleChromaticity(source[0]);
+        target[1] = ScaleChromaticity(source[1]);
+    }
+
+    std::optional<DXGI_HDR_METADATA_HDR10> TryCreateHdr10Metadata(AVFrame const* frame)
+    {
+        DXGI_HDR_METADATA_HDR10 metadata{};
+        auto hasMetadata = false;
+
+        auto masteringSideData = av_frame_get_side_data(frame, AV_FRAME_DATA_MASTERING_DISPLAY_METADATA);
+        if (masteringSideData != nullptr && masteringSideData->data != nullptr)
+        {
+            auto mastering = reinterpret_cast<AVMasteringDisplayMetadata*>(masteringSideData->data);
+            if (mastering->has_primaries)
+            {
+                SetChromaticity(metadata.RedPrimary, mastering->display_primaries[0]);
+                SetChromaticity(metadata.GreenPrimary, mastering->display_primaries[1]);
+                SetChromaticity(metadata.BluePrimary, mastering->display_primaries[2]);
+                SetChromaticity(metadata.WhitePoint, mastering->white_point);
+                hasMetadata = true;
+            }
+
+            if (mastering->has_luminance)
+            {
+                metadata.MaxMasteringLuminance = ScaleRational(
+                    mastering->max_luminance,
+                    1.0,
+                    (std::numeric_limits<uint32_t>::max)());
+                metadata.MinMasteringLuminance = ScaleRational(
+                    mastering->min_luminance,
+                    10000.0,
+                    (std::numeric_limits<uint32_t>::max)());
+                hasMetadata = true;
+            }
+        }
+
+        auto lightSideData = av_frame_get_side_data(frame, AV_FRAME_DATA_CONTENT_LIGHT_LEVEL);
+        if (lightSideData != nullptr && lightSideData->data != nullptr)
+        {
+            auto light = reinterpret_cast<AVContentLightMetadata*>(lightSideData->data);
+            metadata.MaxContentLightLevel = ClampToUInt16(light->MaxCLL);
+            metadata.MaxFrameAverageLightLevel = ClampToUInt16(light->MaxFALL);
+            hasMetadata = true;
+        }
+
+        if (!hasMetadata)
+        {
+            return std::nullopt;
+        }
+
+        return metadata;
+    }
+
     DXGI_FORMAT MapPixelFormat(AVPixelFormat pixelFormat)
     {
         switch (pixelFormat)
@@ -243,6 +332,11 @@ namespace
         decodedFrame.Format = MapPixelFormat(GetFrameSoftwarePixelFormat(frame));
         decodedFrame.HdrKind = MapHdrKind(frame->color_trc);
         decodedFrame.PositionTicks = GetFramePositionTicks(frame, stream);
+        if (decodedFrame.HdrKind == winrt::NextGenEmby::Native::implementation::VideoHdrKind::Hdr10)
+        {
+            decodedFrame.Hdr10Metadata = TryCreateHdr10Metadata(frame);
+        }
+
         AttachD3D11Texture(decodedFrame, frame);
         return decodedFrame;
     }

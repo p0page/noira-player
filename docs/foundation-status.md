@@ -26,6 +26,7 @@
 - `FFmpegInteropX.FFmpegUWP` `5.1.100` 已作为 NuGet native 依赖接入，Debug x64 native 构建会链接 FFmpeg lib 并复制对应运行时 DLL。
 - `VideoDecoder` 已能从 native D3D11 device/context 创建 FFmpeg D3D11VA hardware device context，并在 codec 支持时选择硬件像素格式。
 - `VideoDecoder` 已能把 FFmpeg D3D11 frame 的 texture 和 array slice index 带给 renderer；`DxDeviceResources` 已有 D3D11 video processor blit 路径用于尝试呈现 NV12/P010 frame。
+- `VideoDecoder` 已能把 FFmpeg HDR10 mastering display / content light side-data 映射为 `DXGI_HDR_METADATA_HDR10` 并交给 renderer 设置到 swapchain。
 - Debug x64 MSIX 测试包已生成：`src\NextGenEmby.App\AppPackages\NextGenEmby.App_0.1.0.0_x64_Debug_Test\NextGenEmby.App_0.1.0.0_x64_Debug.msix`，包内已确认包含 FFmpeg 运行时 DLL。
 - Kodi HDR 研究路径已记录在 ADR 0001。
 
@@ -124,7 +125,7 @@ error MSB3644: Could not find the reference assemblies for .NETCore,Version=v5.0
 - 还没有在 Visual Studio 中启动 Local Machine 做手工冒烟测试。
 - 还没有部署到 Xbox 硬件。
 - FFmpeg UWP 产物已接入 native build，`VideoDecoder` 已能初始化 `AVFormatContext` / `AVCodecContext`，读取视频 packet / 接收 `AVFrame`，并把 D3D11VA texture slice 交给 renderer；真实画面呈现还没有经过 Local Machine 或 Xbox 实机确认。
-- HDR/HEVC 真实视频播放还没有完成；当前已具备 HDR display/DXGI/renderer 边界和 P010/NV12 video processor 尝试路径，但 HDR10 metadata、色彩空间细节和真实 HEVC Main10/P010 播放效果尚未验证。
+- HDR/HEVC 真实视频播放还没有完成；当前已具备 HDR display/DXGI/renderer 边界、HDR10 metadata 映射和 P010/NV12 video processor 尝试路径，但色彩空间细节和真实 HEVC Main10/P010 播放效果尚未验证。
 - XAudio2 音频输出和 DirectWrite 字幕绘制还没有完成；当前只有音轨/字幕控制边界。
 - 真实 Emby 条目驱动的播放进度 HTTP 上报还没有接入；当前已能构造 progress request，并能透传 backend position event。
 
@@ -146,4 +147,4 @@ error MSB3644: Could not find the reference assemblies for .NETCore,Version=v5.0
 - Playback 页显示黑色视频区域和底部控制层
 - 键盘或手柄导航时焦点可见
 
-如果 Local Machine 冒烟通过，再继续 `docs/superpowers/plans/2026-07-05-native-playback-core.md` 的后续任务：补齐 HDR10 metadata/色彩空间、实现 XAudio2/DirectWrite，并在 Xbox 硬件上执行 `docs/native-playback-smoke-tests.md`。
+如果 Local Machine 冒烟通过，再继续 `docs/superpowers/plans/2026-07-05-native-playback-core.md` 的后续任务：补齐 HDR/PQ 色彩空间、实现 XAudio2/DirectWrite，并在 Xbox 硬件上执行 `docs/native-playback-smoke-tests.md`。

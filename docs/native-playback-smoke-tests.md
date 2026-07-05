@@ -41,7 +41,7 @@
 
 - 当前 native 解码器已能打开 FFmpeg format/codec context，能读 packet / 接收 `AVFrame` 元数据，并会在 codec 支持时尝试使用 D3D11VA hardware device context。
 - 当前 renderer 能清黑、present、复制同尺寸同格式 texture，并能尝试用 D3D11 video processor 呈现 FFmpeg D3D11VA texture slice；该路径尚未经过 Local Machine 或 Xbox 实机验证。
-- HDR10 metadata 提取、BT.2020/PQ 色彩空间设置和 tone mapping 策略尚未补齐。
+- HDR10 metadata side-data 已能映射到 DXGI HDR10 metadata；BT.2020/PQ video processor 色彩空间设置和 tone mapping 策略尚未补齐。
 - 当前 audio/subtitle renderer 是控制边界，不会提交 XAudio2 音频 buffer，也不会绘制 DirectWrite 字幕。
 - 当前 Playback 页仍是手动 URL demo，真实 Emby 条目驱动和 HTTP 进度上报尚未完成。
 
