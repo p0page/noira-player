@@ -243,7 +243,7 @@ namespace NextGenEmby.App.Views
                     e.Handled = true;
                     if (_seekPreview.IsActive)
                     {
-                        await RunPlaybackCommandAsync(() => ApplySeekDecisionAsync(_seekPreview.Confirm()));
+                        await CompleteSeekPreviewDecisionAsync(_seekPreview.Confirm());
                         return;
                     }
 
@@ -254,7 +254,7 @@ namespace NextGenEmby.App.Views
                     e.Handled = true;
                     if (_seekPreview.IsActive)
                     {
-                        await RunPlaybackCommandAsync(() => ApplySeekDecisionAsync(_seekPreview.Cancel()));
+                        await CompleteSeekPreviewDecisionAsync(_seekPreview.Cancel());
                         return;
                     }
 
@@ -755,7 +755,7 @@ namespace NextGenEmby.App.Views
                 return;
             }
 
-            await RunPlaybackCommandAsync(() => ApplySeekDecisionAsync(decision));
+            await CompleteSeekPreviewDecisionAsync(decision);
         }
 
         private async Task ReportProgressAsync(PlaybackProgressEvent eventName)
@@ -934,7 +934,7 @@ namespace NextGenEmby.App.Views
             _seekPreviewTimer.Start();
         }
 
-        private async Task ApplySeekDecisionAsync(SeekPreviewDecision decision)
+        private async Task CompleteSeekPreviewDecisionAsync(SeekPreviewDecision decision)
         {
             if (decision.Kind == SeekPreviewDecisionKind.None)
             {
@@ -952,20 +952,37 @@ namespace NextGenEmby.App.Views
                     return;
                 }
 
-                await _orchestrator.SeekAsync(decision.PositionTicks);
-                _lastPositionTicks = Math.Max(0, decision.PositionTicks);
-                await ReportProgressAsync(PlaybackProgressEvent.TimeUpdate);
-                UpdateStatus(_orchestrator.State, "Position " + FormatPosition(TimeSpan.FromTicks(_lastPositionTicks)));
-                UpdateProgressSlider();
-                if (_infoVisible)
+                if (_playbackCommandInFlight)
                 {
-                    UpdateInfo();
+                    ShowOverlay();
+                    UpdateStatus(_orchestrator.State, "Playback busy");
+                    UpdateProgressSlider();
+                    if (_infoVisible)
+                    {
+                        UpdateInfo();
+                    }
+
+                    return;
                 }
 
+                await RunPlaybackCommandAsync(() => CommitSeekPreviewAsync(decision.PositionTicks));
                 return;
             }
 
             UpdateStatus(_orchestrator.State, "Seek canceled");
+            UpdateProgressSlider();
+            if (_infoVisible)
+            {
+                UpdateInfo();
+            }
+        }
+
+        private async Task CommitSeekPreviewAsync(long positionTicks)
+        {
+            await _orchestrator.SeekAsync(positionTicks);
+            _lastPositionTicks = Math.Max(0, positionTicks);
+            await ReportProgressAsync(PlaybackProgressEvent.TimeUpdate);
+            UpdateStatus(_orchestrator.State, "Position " + FormatPosition(TimeSpan.FromTicks(_lastPositionTicks)));
             UpdateProgressSlider();
             if (_infoVisible)
             {
