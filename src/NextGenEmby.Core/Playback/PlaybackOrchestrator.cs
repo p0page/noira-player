@@ -15,6 +15,8 @@ namespace NextGenEmby.Core.Playback
         private int? _subtitleStreamIndex;
         private bool _backendStartInProgress;
         private bool _terminalStateDuringBackendStart;
+        private bool _backendCommandInProgress;
+        private bool _terminalStateDuringBackendCommand;
 
         public PlaybackOrchestrator(IPlaybackBackend backend)
         {
@@ -96,6 +98,12 @@ namespace NextGenEmby.Core.Playback
         {
             EnsureStarted();
             ValidateStreamIndex(audioStreamIndex, EmbyStreamKind.Audio, nameof(audioStreamIndex));
+            if (audioStreamIndex.HasValue && _backend is IPlaybackStreamSwitchingBackend streamSwitchingBackend)
+            {
+                await SwitchAudioStreamInPlaceAsync(streamSwitchingBackend, audioStreamIndex.Value).ConfigureAwait(false);
+                return;
+            }
+
             await StartBackendAsync(
                 CurrentMediaSource!,
                 _backend.CurrentPositionTicks,
@@ -110,6 +118,12 @@ namespace NextGenEmby.Core.Playback
         {
             EnsureStarted();
             ValidateStreamIndex(subtitleStreamIndex, EmbyStreamKind.Subtitle, nameof(subtitleStreamIndex));
+            if (_backend is IPlaybackStreamSwitchingBackend streamSwitchingBackend)
+            {
+                await SwitchSubtitleStreamInPlaceAsync(streamSwitchingBackend, subtitleStreamIndex).ConfigureAwait(false);
+                return;
+            }
+
             await StartBackendAsync(
                 CurrentMediaSource!,
                 _backend.CurrentPositionTicks,
@@ -165,6 +179,54 @@ namespace NextGenEmby.Core.Playback
             await _backend.StopAsync().ConfigureAwait(false);
             SetState(PlaybackState.Stopped);
             ClearPlaybackContext();
+        }
+
+        private async Task SwitchAudioStreamInPlaceAsync(
+            IPlaybackStreamSwitchingBackend streamSwitchingBackend,
+            int audioStreamIndex)
+        {
+            _backendCommandInProgress = true;
+            _terminalStateDuringBackendCommand = false;
+            try
+            {
+                await streamSwitchingBackend.SwitchAudioStreamAsync(audioStreamIndex).ConfigureAwait(false);
+            }
+            finally
+            {
+                _backendCommandInProgress = false;
+            }
+
+            if (_terminalStateDuringBackendCommand)
+            {
+                _terminalStateDuringBackendCommand = false;
+                return;
+            }
+
+            UpdateCurrentDescriptor(audioStreamIndex, _subtitleStreamIndex);
+        }
+
+        private async Task SwitchSubtitleStreamInPlaceAsync(
+            IPlaybackStreamSwitchingBackend streamSwitchingBackend,
+            int? subtitleStreamIndex)
+        {
+            _backendCommandInProgress = true;
+            _terminalStateDuringBackendCommand = false;
+            try
+            {
+                await streamSwitchingBackend.SwitchSubtitleStreamAsync(subtitleStreamIndex).ConfigureAwait(false);
+            }
+            finally
+            {
+                _backendCommandInProgress = false;
+            }
+
+            if (_terminalStateDuringBackendCommand)
+            {
+                _terminalStateDuringBackendCommand = false;
+                return;
+            }
+
+            UpdateCurrentDescriptor(_audioStreamIndex, subtitleStreamIndex);
         }
 
         private async Task StartBackendAsync(
@@ -229,6 +291,19 @@ namespace NextGenEmby.Core.Playback
             SetState(PlaybackState.Playing);
         }
 
+        private void UpdateCurrentDescriptor(int? audioStreamIndex, int? subtitleStreamIndex)
+        {
+            _audioStreamIndex = audioStreamIndex;
+            _subtitleStreamIndex = subtitleStreamIndex;
+            CurrentDescriptor = new PlaybackDescriptor(
+                _currentItemId,
+                CurrentMediaSource!,
+                _availableSources,
+                CurrentDescriptor?.StartPositionTicks ?? 0,
+                audioStreamIndex,
+                subtitleStreamIndex);
+        }
+
         private void EnsureStarted()
         {
             if (_availableSources.Count == 0 || string.IsNullOrEmpty(_currentItemId) || CurrentMediaSource == null)
@@ -264,6 +339,11 @@ namespace NextGenEmby.Core.Playback
                 if (_backendStartInProgress)
                 {
                     _terminalStateDuringBackendStart = true;
+                }
+
+                if (_backendCommandInProgress)
+                {
+                    _terminalStateDuringBackendCommand = true;
                 }
 
                 ClearPlaybackContext();

@@ -93,6 +93,18 @@ namespace NextGenEmby.App.Playback
             return _engine.StopAsync().AsTask();
         }
 
+        public Task SwitchAudioStreamAsync(int audioStreamIndex)
+        {
+            return _engine.SwitchAudioStreamAsync(audioStreamIndex).AsTask();
+        }
+
+        public Task SwitchSubtitleStreamAsync(int? subtitleStreamIndex)
+        {
+            return subtitleStreamIndex.HasValue
+                ? _engine.SwitchSubtitleStreamAsync(subtitleStreamIndex.Value).AsTask()
+                : _engine.DisableSubtitlesAsync().AsTask();
+        }
+
         private void Engine_OnStateChanged(NativePlaybackState state, string message)
         {
             StateChanged?.Invoke(

@@ -26,6 +26,9 @@ namespace winrt::NextGenEmby::Native::implementation
         winrt::Windows::Foundation::IAsyncAction ResumeAsync();
         winrt::Windows::Foundation::IAsyncAction SeekAsync(int64_t positionTicks);
         winrt::Windows::Foundation::IAsyncAction StopAsync();
+        winrt::Windows::Foundation::IAsyncAction SwitchAudioStreamAsync(int32_t audioStreamIndex);
+        winrt::Windows::Foundation::IAsyncAction SwitchSubtitleStreamAsync(int32_t subtitleStreamIndex);
+        winrt::Windows::Foundation::IAsyncAction DisableSubtitlesAsync();
 
     private:
         void ApplySwapChainColorSpace(HdrDisplaySnapshot const& snapshot);

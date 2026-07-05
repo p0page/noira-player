@@ -62,6 +62,21 @@ public sealed class NativeDirectXPlaybackBackendTests
     }
 
     [Fact]
+    public async Task StreamSwitching_Is_Forwarded_To_Native_Engine()
+    {
+        var engine = new RecordingNativePlaybackEngine();
+        var backend = new NativeDirectXPlaybackBackend(engine);
+        var streamBackend = Assert.IsAssignableFrom<IPlaybackStreamSwitchingBackend>(backend);
+
+        await streamBackend.SwitchAudioStreamAsync(4);
+        await streamBackend.SwitchSubtitleStreamAsync(null);
+
+        Assert.Equal(4, engine.LastSwitchedAudioStreamIndex);
+        Assert.Null(engine.LastSwitchedSubtitleStreamIndex);
+        Assert.Equal(1, engine.SubtitleSwitchCount);
+    }
+
+    [Fact]
     public void Diagnostics_Are_Exposed_From_Native_Engine()
     {
         var engine = new RecordingNativePlaybackEngine();
@@ -76,6 +91,9 @@ public sealed class NativeDirectXPlaybackBackendTests
     {
         public NativePlaybackOpenRequest? LastRequest { get; private set; }
         public long CurrentPositionTicks { get; set; }
+        public int? LastSwitchedAudioStreamIndex { get; private set; }
+        public int? LastSwitchedSubtitleStreamIndex { get; private set; }
+        public int SubtitleSwitchCount { get; private set; }
         public PlaybackBackendCapabilities Capabilities { get; } =
             new PlaybackBackendCapabilities(PlaybackBackendFeature.DirectPlayHttp);
         public PlaybackDisplayStatus DisplayStatus { get; } =
@@ -107,6 +125,19 @@ public sealed class NativeDirectXPlaybackBackendTests
 
         public Task StopAsync()
         {
+            return Task.CompletedTask;
+        }
+
+        public Task SwitchAudioStreamAsync(int audioStreamIndex)
+        {
+            LastSwitchedAudioStreamIndex = audioStreamIndex;
+            return Task.CompletedTask;
+        }
+
+        public Task SwitchSubtitleStreamAsync(int? subtitleStreamIndex)
+        {
+            SubtitleSwitchCount++;
+            LastSwitchedSubtitleStreamIndex = subtitleStreamIndex;
             return Task.CompletedTask;
         }
 

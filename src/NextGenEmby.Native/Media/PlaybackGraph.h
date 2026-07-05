@@ -11,6 +11,7 @@
 #include <condition_variable>
 #include <functional>
 #include <mutex>
+#include <optional>
 #include <thread>
 
 namespace winrt::NextGenEmby::Native::implementation
@@ -36,6 +37,8 @@ namespace winrt::NextGenEmby::Native::implementation
         void Resume();
         void Seek(int64_t positionTicks);
         void Stop() noexcept;
+        void SwitchAudioStream(int32_t audioStreamIndex);
+        void SwitchSubtitleStream(std::optional<int32_t> subtitleStreamIndex);
         int64_t CurrentPositionTicks() const noexcept;
 
     private:

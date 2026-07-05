@@ -55,5 +55,8 @@ namespace NextGenEmby.Native
         Windows.Foundation.IAsyncAction ResumeAsync();
         Windows.Foundation.IAsyncAction SeekAsync(Int64 positionTicks);
         Windows.Foundation.IAsyncAction StopAsync();
+        Windows.Foundation.IAsyncAction SwitchAudioStreamAsync(Int32 audioStreamIndex);
+        Windows.Foundation.IAsyncAction SwitchSubtitleStreamAsync(Int32 subtitleStreamIndex);
+        Windows.Foundation.IAsyncAction DisableSubtitlesAsync();
     }
 }

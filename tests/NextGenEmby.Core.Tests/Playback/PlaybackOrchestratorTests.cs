@@ -93,6 +93,22 @@ public sealed class PlaybackOrchestratorTests
     }
 
     [Fact]
+    public async Task SwitchAudioStreamAsync_Uses_In_Place_Backend_When_Available()
+    {
+        var backend = new RecordingStreamSwitchingPlaybackBackend();
+        var source = Source("source-1", Stream(4, EmbyStreamKind.Audio));
+        var orchestrator = new PlaybackOrchestrator(backend);
+        await orchestrator.StartAsync("item-1", new[] { source }, 1_000);
+
+        await orchestrator.SwitchAudioStreamAsync(4);
+
+        Assert.Equal(1, backend.StartCount);
+        Assert.Equal(4, backend.LastSwitchedAudioStreamIndex);
+        Assert.Equal(4, orchestrator.CurrentDescriptor!.AudioStreamIndex);
+        Assert.Equal(PlaybackState.Playing, orchestrator.State);
+    }
+
+    [Fact]
     public async Task SwitchSubtitleStreamAsync_Preserves_Selected_Audio_Index()
     {
         var backend = new RecordingPlaybackBackend();
@@ -111,6 +127,24 @@ public sealed class PlaybackOrchestratorTests
         Assert.Equal(88_000, backend.LastDescriptor.StartPositionTicks);
         Assert.Equal(1, backend.LastDescriptor.AudioStreamIndex);
         Assert.Equal(7, backend.LastDescriptor.SubtitleStreamIndex);
+    }
+
+    [Fact]
+    public async Task SwitchSubtitleStreamAsync_Uses_In_Place_Backend_To_Disable_Subtitles()
+    {
+        var backend = new RecordingStreamSwitchingPlaybackBackend();
+        var source = Source("source-1", Stream(7, EmbyStreamKind.Subtitle));
+        var orchestrator = new PlaybackOrchestrator(backend);
+        await orchestrator.StartAsync("item-1", new[] { source }, 0);
+        await orchestrator.SwitchSubtitleStreamAsync(7);
+
+        await orchestrator.SwitchSubtitleStreamAsync(null);
+
+        Assert.Equal(1, backend.StartCount);
+        Assert.Equal(2, backend.SubtitleSwitchCount);
+        Assert.Null(backend.LastSwitchedSubtitleStreamIndex);
+        Assert.Null(orchestrator.CurrentDescriptor!.SubtitleStreamIndex);
+        Assert.Equal(PlaybackState.Playing, orchestrator.State);
     }
 
     [Fact]
@@ -377,6 +411,7 @@ public sealed class PlaybackOrchestratorTests
     {
         public PlaybackDescriptor? LastDescriptor { get; private set; }
         public long CurrentPositionTicks { get; set; }
+        public int StartCount { get; private set; }
         public bool FailNextStart { get; set; }
         public PlaybackState? StateToRaiseDuringStart { get; set; }
 
@@ -384,6 +419,7 @@ public sealed class PlaybackOrchestratorTests
 
         public Task StartAsync(PlaybackDescriptor descriptor)
         {
+            StartCount++;
             LastDescriptor = descriptor;
             if (StateToRaiseDuringStart.HasValue)
             {
@@ -411,6 +447,55 @@ public sealed class PlaybackOrchestratorTests
         }
 
         public Task StopAsync() => Task.CompletedTask;
+
+        public void RaiseStateChanged(PlaybackState state, string message = "", long? positionTicks = null)
+        {
+            StateChanged?.Invoke(this, new PlaybackStateChangedEventArgs(state, message, positionTicks));
+        }
+    }
+
+    private sealed class RecordingStreamSwitchingPlaybackBackend : IPlaybackBackend, IPlaybackStreamSwitchingBackend
+    {
+        public PlaybackDescriptor? LastDescriptor { get; private set; }
+        public long CurrentPositionTicks { get; set; }
+        public int StartCount { get; private set; }
+        public int? LastSwitchedAudioStreamIndex { get; private set; }
+        public int? LastSwitchedSubtitleStreamIndex { get; private set; }
+        public int SubtitleSwitchCount { get; private set; }
+
+        public event EventHandler<PlaybackStateChangedEventArgs>? StateChanged;
+
+        public Task StartAsync(PlaybackDescriptor descriptor)
+        {
+            StartCount++;
+            LastDescriptor = descriptor;
+            return Task.CompletedTask;
+        }
+
+        public Task PauseAsync() => Task.CompletedTask;
+
+        public Task ResumeAsync() => Task.CompletedTask;
+
+        public Task SeekAsync(long positionTicks)
+        {
+            CurrentPositionTicks = positionTicks;
+            return Task.CompletedTask;
+        }
+
+        public Task StopAsync() => Task.CompletedTask;
+
+        public Task SwitchAudioStreamAsync(int audioStreamIndex)
+        {
+            LastSwitchedAudioStreamIndex = audioStreamIndex;
+            return Task.CompletedTask;
+        }
+
+        public Task SwitchSubtitleStreamAsync(int? subtitleStreamIndex)
+        {
+            SubtitleSwitchCount++;
+            LastSwitchedSubtitleStreamIndex = subtitleStreamIndex;
+            return Task.CompletedTask;
+        }
 
         public void RaiseStateChanged(PlaybackState state, string message = "", long? positionTicks = null)
         {

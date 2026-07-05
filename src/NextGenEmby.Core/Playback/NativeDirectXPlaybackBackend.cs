@@ -3,7 +3,10 @@ using System.Threading.Tasks;
 
 namespace NextGenEmby.Core.Playback
 {
-    public sealed class NativeDirectXPlaybackBackend : IPlaybackBackend, IPlaybackBackendDiagnostics
+    public sealed class NativeDirectXPlaybackBackend :
+        IPlaybackBackend,
+        IPlaybackBackendDiagnostics,
+        IPlaybackStreamSwitchingBackend
     {
         private readonly INativePlaybackEngine _engine;
 
@@ -58,6 +61,16 @@ namespace NextGenEmby.Core.Playback
         public Task StopAsync()
         {
             return _engine.StopAsync();
+        }
+
+        public Task SwitchAudioStreamAsync(int audioStreamIndex)
+        {
+            return _engine.SwitchAudioStreamAsync(audioStreamIndex);
+        }
+
+        public Task SwitchSubtitleStreamAsync(int? subtitleStreamIndex)
+        {
+            return _engine.SwitchSubtitleStreamAsync(subtitleStreamIndex);
         }
 
         private void Engine_OnStateChanged(object? sender, PlaybackStateChangedEventArgs args)

@@ -18,5 +18,9 @@ namespace NextGenEmby.Core.Playback
         Task SeekAsync(long positionTicks);
 
         Task StopAsync();
+
+        Task SwitchAudioStreamAsync(int audioStreamIndex);
+
+        Task SwitchSubtitleStreamAsync(int? subtitleStreamIndex);
     }
 }

@@ -4,6 +4,7 @@
 #include "NativePlaybackEngine.g.cpp"
 
 #include <exception>
+#include <optional>
 
 namespace winrt::NextGenEmby::Native::implementation
 {
@@ -148,6 +149,60 @@ namespace winrt::NextGenEmby::Native::implementation
             UpdateDisplayStatus(display);
             ApplySwapChainColorSpace(display);
             Raise(NextGenEmby::Native::NativePlaybackState::NativePlaybackState_Stopped);
+        }
+        catch (winrt::hresult_error const& error)
+        {
+            RaiseFailed(error);
+        }
+        catch (std::exception const& error)
+        {
+            RaiseFailed(error);
+        }
+
+        co_return;
+    }
+
+    winrt::Windows::Foundation::IAsyncAction NativePlaybackEngine::SwitchAudioStreamAsync(int32_t audioStreamIndex)
+    {
+        try
+        {
+            m_graph->SwitchAudioStream(audioStreamIndex);
+        }
+        catch (winrt::hresult_error const& error)
+        {
+            RaiseFailed(error);
+        }
+        catch (std::exception const& error)
+        {
+            RaiseFailed(error);
+        }
+
+        co_return;
+    }
+
+    winrt::Windows::Foundation::IAsyncAction NativePlaybackEngine::SwitchSubtitleStreamAsync(int32_t subtitleStreamIndex)
+    {
+        try
+        {
+            m_graph->SwitchSubtitleStream(subtitleStreamIndex);
+        }
+        catch (winrt::hresult_error const& error)
+        {
+            RaiseFailed(error);
+        }
+        catch (std::exception const& error)
+        {
+            RaiseFailed(error);
+        }
+
+        co_return;
+    }
+
+    winrt::Windows::Foundation::IAsyncAction NativePlaybackEngine::DisableSubtitlesAsync()
+    {
+        try
+        {
+            m_graph->SwitchSubtitleStream(std::nullopt);
         }
         catch (winrt::hresult_error const& error)
         {

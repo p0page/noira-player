@@ -29,6 +29,7 @@
 - `VideoDecoder` 已能把 FFmpeg HDR10 mastering display / content light side-data 映射为 `DXGI_HDR_METADATA_HDR10` 并交给 renderer 设置到 swapchain。
 - `PlaybackGraph` 已有临时后台 render loop，可持续拉取视频帧；当前 cadence 固定，尚未实现基于 PTS 或音频时钟的同步。
 - `PlaybackGraph` 后台 loop 已能把 EOF/异常转换为 native `Stopped`/`Failed` 事件，由 `NativePlaybackEngine` 继续透传给托管播放编排层。
+- 托管 `PlaybackOrchestrator` 已能在 backend 支持时原地切换音轨/字幕；`NativeDirectXPlaybackBackend`、UWP wrapper 和 C++/WinRT runtime 已接通音轨切换、字幕切换和禁用字幕的控制面。
 - Debug x64 MSIX 测试包已生成：`src\NextGenEmby.App\AppPackages\NextGenEmby.App_0.1.0.0_x64_Debug_Test\NextGenEmby.App_0.1.0.0_x64_Debug.msix`，包内已确认包含 FFmpeg 运行时 DLL。
 - Kodi HDR 研究路径已记录在 ADR 0001。
 
@@ -128,7 +129,7 @@ error MSB3644: Could not find the reference assemblies for .NETCore,Version=v5.0
 - 还没有部署到 Xbox 硬件。
 - FFmpeg UWP 产物已接入 native build，`VideoDecoder` 已能初始化 `AVFormatContext` / `AVCodecContext`，读取视频 packet / 接收 `AVFrame`，并把 D3D11VA texture slice 交给 renderer；真实画面呈现还没有经过 Local Machine 或 Xbox 实机确认。
 - HDR/HEVC 真实视频播放还没有完成；当前已具备 HDR display/DXGI/renderer 边界、HDR10 metadata 映射、临时 render loop 和 P010/NV12 video processor 尝试路径，但色彩空间细节、A/V sync 和真实 HEVC Main10/P010 播放效果尚未验证。
-- XAudio2 音频输出和 DirectWrite 字幕绘制还没有完成；当前只有音轨/字幕控制边界。
+- XAudio2 音频输出和 DirectWrite 字幕绘制还没有完成；当前已有原地切换控制面，但不会提交音频 buffer 或绘制字幕。
 - 真实 Emby 条目驱动的播放进度 HTTP 上报还没有接入；当前已能构造 progress request，并能透传 backend position event。
 
 ## 原生播放硬件验证

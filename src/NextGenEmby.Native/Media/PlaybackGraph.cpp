@@ -116,6 +116,35 @@ namespace winrt::NextGenEmby::Native::implementation
         m_stopRenderLoop = false;
     }
 
+    void PlaybackGraph::SwitchAudioStream(int32_t audioStreamIndex)
+    {
+        std::lock_guard lock(m_graphMutex);
+        if (!m_open)
+        {
+            throw winrt::hresult_error(E_FAIL, L"Playback is not open.");
+        }
+
+        m_audioRenderer.SwitchStream(audioStreamIndex);
+    }
+
+    void PlaybackGraph::SwitchSubtitleStream(std::optional<int32_t> subtitleStreamIndex)
+    {
+        std::lock_guard lock(m_graphMutex);
+        if (!m_open)
+        {
+            throw winrt::hresult_error(E_FAIL, L"Playback is not open.");
+        }
+
+        if (subtitleStreamIndex.has_value())
+        {
+            m_subtitleRenderer.SwitchStream(subtitleStreamIndex.value());
+        }
+        else
+        {
+            m_subtitleRenderer.Disable();
+        }
+    }
+
     int64_t PlaybackGraph::CurrentPositionTicks() const noexcept
     {
         std::lock_guard lock(m_graphMutex);
