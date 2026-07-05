@@ -39,6 +39,8 @@
 - `AudioRenderer` 已接入 XAudio2 engine / mastering voice 生命周期，播放打开时会创建音频设备并在 start/pause/resume/stop 时控制 engine；seek 时会清空旧 source buffer 并重置音频时钟基准。
 - `SubtitleDecoder` 已接入 FFmpeg subtitle stream 的文本 cue 解码边界，能从共享 demux 中取已排队字幕 packet，并把 `SUBTITLE_TEXT` / `SUBTITLE_ASS` 文本 cue 喂给 DirectWrite overlay；PGS/bitmap 字幕、完整 ASS 样式和外置字幕 URL 尚未接入。
 - Debug x64 MSIX 测试包已生成：`src\NextGenEmby.App\AppPackages\NextGenEmby.App_0.1.0.0_x64_Debug_Test\NextGenEmby.App_0.1.0.0_x64_Debug.msix`，包内已确认包含 FFmpeg 运行时 DLL。
+- Windows 本机已完成 Debug x64 MSIX 侧载验证：使用 `CN=NextGenEmby` 临时开发证书签名，导入本机级 `LocalMachine\Root` / `LocalMachine\TrustedPeople`，开启 `AllowDevelopmentWithoutDevLicense` 和 `AllowAllTrustedApps`，并通过 `Add-AppDevPackage.ps1` 安装成功。
+- Windows 本机已能启动应用：`shell:AppsFolder\NextGenEmby.App_h8qjz0sr1sg4m!App` 可打开窗口，`ApplicationFrameHost` 窗口标题为 `Next Gen Xbox Emby`，`NextGenEmby.App` 进程存在。
 - Kodi HDR 研究路径已记录在 ADR 0001。
 
 ## 验证命令
@@ -119,6 +121,17 @@ swresample-4.dll
 swscale-6.dll
 ```
 
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File 'src\NextGenEmby.App\AppPackages\NextGenEmby.App_0.1.0.0_x64_Debug_Test\Add-AppDevPackage.ps1' -Force -SkipLoggingTelemetry
+```
+
+结果：
+
+```text
+Success: Your app was successfully installed.
+PackageFamilyName: NextGenEmby.App_h8qjz0sr1sg4m
+```
+
 ## 已解除的阻塞
 
 之前完整 UWP app 构建被本机 Visual Studio/UWP 组件安装状态卡住，不是源码编译错误。
@@ -131,9 +144,11 @@ error MSB3644: Could not find the reference assemblies for .NETCore,Version=v5.0
 
 已通过安装 Visual Studio 的 UWP/WinUI/.NET Native 工具链修复。本机现在存在 `.NETCore\v5.0` 引用程序集，solution build 已越过该阶段并成功完成。
 
+MSIX 本机侧载还额外需要签名和开发人员模式。当前本机已用临时 `CN=NextGenEmby` 开发证书签名测试包，并启用 `HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock` 下的 `AllowDevelopmentWithoutDevLicense=1` 与 `AllowAllTrustedApps=1`。
+
 ## 尚未验证
 
-- 还没有在 Visual Studio 中启动 Local Machine 做手工冒烟测试。
+- 还没有在本机完成真实 Emby 登录后的 Home -> 媒体详情 -> Playback 真实媒体播放手工验证；应用已能启动，但仍需要在 UI 中输入服务器和账号。
 - 还没有部署到 Xbox 硬件。
 - FFmpeg UWP 产物已接入 native build，`FfmpegMediaSource` 已能初始化 `AVFormatContext`，`VideoDecoder` 已能初始化视频 `AVCodecContext`、读取视频 packet / 接收 `AVFrame`，并把 D3D11VA texture slice 交给 renderer；真实画面呈现还没有经过 Local Machine 或 Xbox 实机确认。
 - HDR/HEVC 真实视频播放还没有完成；当前已具备 HDR display/DXGI/renderer 边界、HDR10 metadata 映射、临时 render loop 和 P010/NV12 video processor 尝试路径，但色彩空间细节、A/V sync 和真实 HEVC Main10/P010 播放效果尚未验证。
@@ -146,15 +161,34 @@ error MSB3644: Could not find the reference assemblies for .NETCore,Version=v5.0
 
 当前状态：未在 Xbox 硬件上执行。需要在 Xbox Dev Mode 部署 Debug x64 包后填写实际结果。
 
+## 验证边界
+
+Windows 本机可以继续验证：
+
+- UWP app 构建、签名、安装、启动。
+- Login -> Home -> 媒体详情 -> Playback 导航与焦点。
+- Emby 登录、latest items、PlaybackInfo、直连 URL、start/progress/stop 上报。
+- 普通 SDR/HEVC 播放、音轨切换、字幕切换、seek/pause/resume/stop、基础 A/V sync。
+
+必须上 Xbox 实机验证：
+
+- 真实 HDR10 输出、电视 HDR 模式切换、HDR 停止后的 SDR 恢复。
+- Xbox 上 HEVC Main10/D3D11VA/P010/NV12 渲染性能和稳定性。
+- 手柄十英尺交互、TV 安全区、Dev Mode 部署体验。
+- Xbox 正常模式或小范围分发路线。
+
 ## 建议的下一步本机操作
 
-用 Visual Studio 打开 `NextGenXboxEmby.sln` 做手工冒烟测试：
+应用已经安装到本机，可以直接从开始菜单启动 `Next Gen Xbox Emby`，或用下面命令启动：
 
-- 启动项目：`NextGenEmby.App`
-- 平台：`x64`
-- 目标：Local Machine
+```powershell
+Start-Process 'shell:AppsFolder\NextGenEmby.App_h8qjz0sr1sg4m!App'
+```
+
+接下来做手工冒烟测试：
+
 - 登录页能以深色模式渲染
-- 能在 Login、Home、Playback 之间导航
+- 能在 Login、Home、媒体详情、Playback 之间导航
 - Playback 页显示黑色视频区域和底部控制层
 - 键盘或手柄导航时焦点可见
 
