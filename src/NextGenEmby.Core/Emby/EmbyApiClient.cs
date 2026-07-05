@@ -91,6 +91,7 @@ namespace NextGenEmby.Core.Emby
                 IncludeItemTypes = includeItemTypes,
                 SortBy = "SortName",
                 SortOrder = "Ascending",
+                Limit = 100,
                 Recursive = false
             });
         }
@@ -128,7 +129,8 @@ namespace NextGenEmby.Core.Emby
         {
             using var request = new HttpRequestMessage(
                 HttpMethod.Get,
-                $"Users/{EscapeUriComponent(session.UserId)}/Items/{EscapeUriComponent(itemId)}");
+                $"Users/{EscapeUriComponent(session.UserId)}/Items/{EscapeUriComponent(itemId)}" +
+                "?Fields=Overview%2CProductionYear%2CRunTimeTicks%2CChildCount%2CMediaSources%2CUserData");
             EmbyAuthorization.Apply(request, _options, session);
 
             using var response = await _http.SendAsync(request).ConfigureAwait(false);
@@ -241,8 +243,8 @@ namespace NextGenEmby.Core.Emby
             AddQueryParameter(parameters, "SortBy", query.SortBy);
             AddQueryParameter(parameters, "SortOrder", query.SortOrder);
             AddQueryParameter(parameters, "Filters", query.Filters);
-            AddQueryParameter(parameters, "StartIndex", query.StartIndex.ToString());
-            AddQueryParameter(parameters, "Limit", query.Limit.ToString());
+            AddQueryParameter(parameters, "StartIndex", Math.Max(0, query.StartIndex).ToString());
+            AddQueryParameter(parameters, "Limit", Math.Max(1, query.Limit).ToString());
             AddQueryParameter(parameters, "Recursive", query.Recursive ? "true" : "false");
             AddQueryParameter(parameters, "Fields", "Overview,ProductionYear,RunTimeTicks,PrimaryImageAspectRatio,ChildCount,UserData");
 
@@ -263,9 +265,9 @@ namespace NextGenEmby.Core.Emby
         {
             return new EmbyLibraryView
             {
-                Id = view.Id,
-                Name = view.Name,
-                CollectionType = view.CollectionType
+                Id = view.Id ?? "",
+                Name = view.Name ?? "",
+                CollectionType = view.CollectionType ?? ""
             };
         }
 
@@ -277,16 +279,16 @@ namespace NextGenEmby.Core.Emby
 
             return new EmbyMediaItem
             {
-                Id = item.Id,
-                Name = item.Name,
-                Type = item.Type,
-                Overview = item.Overview,
+                Id = item.Id ?? "",
+                Name = item.Name ?? "",
+                Type = item.Type ?? "",
+                Overview = item.Overview ?? "",
                 ProductionYear = item.ProductionYear,
                 RunTimeTicks = item.RunTimeTicks,
-                PrimaryImageTag = imageTags != null && imageTags.TryGetValue("Primary", out var primary) ? primary : "",
-                BackdropImageTag = backdropImageTags != null && backdropImageTags.Count > 0 ? backdropImageTags[0] : "",
-                ParentId = item.ParentId,
-                SeriesId = item.SeriesId,
+                PrimaryImageTag = imageTags != null && imageTags.TryGetValue("Primary", out var primary) ? primary ?? "" : "",
+                BackdropImageTag = backdropImageTags != null && backdropImageTags.Count > 0 ? backdropImageTags[0] ?? "" : "",
+                ParentId = item.ParentId ?? "",
+                SeriesId = item.SeriesId ?? "",
                 IndexNumber = item.IndexNumber,
                 ParentIndexNumber = item.ParentIndexNumber,
                 ChildCount = item.ChildCount,

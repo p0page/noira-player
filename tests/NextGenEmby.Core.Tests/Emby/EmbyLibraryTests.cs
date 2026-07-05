@@ -210,14 +210,89 @@ public sealed class EmbyLibraryTests
     }
 
     [Fact]
+    public async Task GetItemsAsync_Escapes_Clamps_And_Normalizes_Null_Strings()
+    {
+        var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
+            HttpStatusCode.OK,
+            """
+            {
+              "Items": [
+                {
+                  "Id": null,
+                  "Name": null,
+                  "Type": null,
+                  "Overview": null,
+                  "ParentId": null,
+                  "SeriesId": null,
+                  "ImageTags": null,
+                  "BackdropImageTags": null
+                }
+              ],
+              "TotalRecordCount": 1
+            }
+            """));
+        using var http = new HttpClient(handler);
+        var client = CreateClient(http);
+
+        var items = await client.GetItemsAsync(Session(), new EmbyItemsQuery
+        {
+            ParentId = "parent 1/slash",
+            SearchTerm = "pilot + finale",
+            IncludeItemTypes = "Movie,Episode",
+            StartIndex = -5,
+            Limit = 0
+        });
+
+        var item = Assert.Single(items);
+        Assert.Equal("", item.Id);
+        Assert.Equal("", item.Name);
+        Assert.Equal("", item.Type);
+        Assert.Equal("", item.Overview);
+        Assert.Equal("", item.ParentId);
+        Assert.Equal("", item.SeriesId);
+        Assert.Equal("", item.PrimaryImageTag);
+        Assert.Equal("", item.BackdropImageTag);
+        Assert.Contains("ParentId=parent%201%2Fslash", handler.LastRequest!.RequestUri!.Query);
+        Assert.Contains("SearchTerm=pilot%20%2B%20finale", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("IncludeItemTypes=Movie%2CEpisode", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("StartIndex=0", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("Limit=1", handler.LastRequest.RequestUri.Query);
+    }
+
+    [Fact]
+    public async Task GetUserViewsAsync_Normalizes_Null_Strings()
+    {
+        var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
+            HttpStatusCode.OK,
+            """
+            {
+              "Items": [
+                { "Id": null, "Name": null, "CollectionType": null }
+              ],
+              "TotalRecordCount": 1
+            }
+            """));
+        using var http = new HttpClient(handler);
+        var client = CreateClient(http);
+
+        var view = Assert.Single(await client.GetUserViewsAsync(Session()));
+
+        Assert.Equal("", view.Id);
+        Assert.Equal("", view.Name);
+        Assert.Equal("", view.CollectionType);
+    }
+
+    [Fact]
     public async Task GetItemAsync_And_GetChildrenAsync_Parse_Detail_And_Episodes()
     {
         var calls = 0;
+        TestHttpRequestSnapshot? detailRequest = null;
         var handler = new TestHttpMessageHandler(request =>
         {
             calls++;
             if (request.RequestUri!.AbsolutePath == "/Users/user-1/Items/series-1")
             {
+                detailRequest = TestHttpRequestSnapshot.From(request, null);
                 return TestHttpMessageHandler.Json(
                     HttpStatusCode.OK,
                     """
@@ -260,6 +335,15 @@ public sealed class EmbyLibraryTests
         Assert.Equal(1, episode.ParentIndexNumber);
         Assert.Equal(1, episode.IndexNumber);
         Assert.Equal(2, calls);
+        Assert.Contains(
+            "Fields=Overview%2CProductionYear%2CRunTimeTicks%2CChildCount%2CMediaSources%2CUserData",
+            detailRequest!.RequestUri!.Query);
+        Assert.Contains("ParentId=season-1", handler.LastRequest!.RequestUri!.Query);
+        Assert.Contains("IncludeItemTypes=Episode", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("Recursive=false", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("SortBy=SortName", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("SortOrder=Ascending", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("Limit=100", handler.LastRequest.RequestUri.Query);
     }
 
     [Fact]
