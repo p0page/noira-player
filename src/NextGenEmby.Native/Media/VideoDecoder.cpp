@@ -172,6 +172,21 @@ namespace
         return frameFormat;
     }
 
+    void AttachD3D11Texture(
+        winrt::NextGenEmby::Native::implementation::DecodedVideoFrame& decodedFrame,
+        AVFrame const* frame)
+    {
+        if (static_cast<AVPixelFormat>(frame->format) != AV_PIX_FMT_D3D11 || frame->data[0] == nullptr)
+        {
+            return;
+        }
+
+        auto texture = reinterpret_cast<ID3D11Texture2D*>(frame->data[0]);
+        texture->AddRef();
+        decodedFrame.Texture.Attach(texture);
+        decodedFrame.TextureArrayIndex = static_cast<uint32_t>(reinterpret_cast<intptr_t>(frame->data[1]));
+    }
+
     DXGI_FORMAT MapPixelFormat(AVPixelFormat pixelFormat)
     {
         switch (pixelFormat)
@@ -228,6 +243,7 @@ namespace
         decodedFrame.Format = MapPixelFormat(GetFrameSoftwarePixelFormat(frame));
         decodedFrame.HdrKind = MapHdrKind(frame->color_trc);
         decodedFrame.PositionTicks = GetFramePositionTicks(frame, stream);
+        AttachD3D11Texture(decodedFrame, frame);
         return decodedFrame;
     }
 

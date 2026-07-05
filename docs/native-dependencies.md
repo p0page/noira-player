@@ -47,6 +47,7 @@ MSBuild 接入方式：
 - `VideoDecoder` 已能调用 `avformat_open_input`、`avformat_find_stream_info`、`av_find_best_stream`、`avcodec_alloc_context3`、`avcodec_parameters_to_context` 和 `avcodec_open2`，建立 FFmpeg `AVFormatContext` / `AVCodecContext` 生命周期。
 - `PlaybackGraph` 会把 native D3D11 device/context 传入 `VideoDecoder`；当 codec 声明支持 `AV_HWDEVICE_TYPE_D3D11VA` 时，`VideoDecoder` 会尝试创建 FFmpeg D3D11VA `AVHWDeviceContext` 并通过 `get_format` 选择硬件像素格式。
 - `VideoDecoder::TryReadFrame()` 已接入 `av_read_frame` / `avcodec_send_packet` / `avcodec_receive_frame`，能读取视频 packet 并生成包含宽高、DXGI 像素格式、HDR transfer 类型和 position ticks 的 `DecodedVideoFrame` 元数据。
+- 当 FFmpeg 返回 `AV_PIX_FMT_D3D11` frame 时，`DecodedVideoFrame` 会携带 `ID3D11Texture2D` 和 texture array slice index；`VideoRenderer` 会在同格式 copy 失败后尝试用 D3D11 video processor blit 到 swapchain backbuffer。
 - `VideoDecoder` 会在失败路径和 `Close()` 中释放 FFmpeg context；`PlaybackGraph.Open` 失败时会回滚已打开的边界状态。
-- 当前返回的 `DecodedVideoFrame.Texture` 仍为空；即使 FFmpeg 产出 D3D11VA frame，也还没有把 texture array slice 交给 renderer，因此不会在画面上呈现真实视频帧。
-- 下一步继续接 D3D11VA texture/slice 输出、P010/NV12 渲染、音频样本和字幕 cue。
+- 当前还没有实机验证 video processor 对 FFmpeg D3D11VA frame 的呈现效果，也还没有补齐 HDR10 metadata 提取、BT.2020/PQ 色彩空间设置和 tone mapping 策略。
+- 下一步继续做 Local Machine / Xbox 冒烟、HDR metadata、P010/NV12 颜色链路、音频样本和字幕 cue。

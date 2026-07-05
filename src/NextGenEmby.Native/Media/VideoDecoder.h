@@ -23,6 +23,7 @@ namespace winrt::NextGenEmby::Native::implementation
     struct DecodedVideoFrame
     {
         Microsoft::WRL::ComPtr<ID3D11Texture2D> Texture;
+        uint32_t TextureArrayIndex{0};
         uint32_t Width{0};
         uint32_t Height{0};
         DXGI_FORMAT Format{DXGI_FORMAT_UNKNOWN};

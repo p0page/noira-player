@@ -152,6 +152,98 @@ namespace winrt::NextGenEmby::Native::implementation
         return Present();
     }
 
+    bool DxDeviceResources::TryProcessVideoFrameToBackBuffer(
+        ID3D11Texture2D* texture,
+        uint32_t arraySlice,
+        uint32_t width,
+        uint32_t height)
+    {
+        if (!m_swapChain || !m_device || !m_context || texture == nullptr)
+        {
+            return false;
+        }
+
+        Microsoft::WRL::ComPtr<ID3D11Texture2D> backBuffer;
+        if (FAILED(m_swapChain->GetBuffer(0, IID_PPV_ARGS(&backBuffer))))
+        {
+            return false;
+        }
+
+        D3D11_TEXTURE2D_DESC sourceDescription{};
+        D3D11_TEXTURE2D_DESC targetDescription{};
+        texture->GetDesc(&sourceDescription);
+        backBuffer->GetDesc(&targetDescription);
+
+        Microsoft::WRL::ComPtr<ID3D11VideoDevice> videoDevice;
+        Microsoft::WRL::ComPtr<ID3D11VideoContext> videoContext;
+        if (FAILED(m_device.As(&videoDevice)) || FAILED(m_context.As(&videoContext)))
+        {
+            return false;
+        }
+
+        D3D11_VIDEO_PROCESSOR_CONTENT_DESC contentDescription{};
+        contentDescription.InputFrameFormat = D3D11_VIDEO_FRAME_FORMAT_PROGRESSIVE;
+        contentDescription.InputWidth = width == 0 ? sourceDescription.Width : width;
+        contentDescription.InputHeight = height == 0 ? sourceDescription.Height : height;
+        contentDescription.OutputWidth = targetDescription.Width;
+        contentDescription.OutputHeight = targetDescription.Height;
+        contentDescription.Usage = D3D11_VIDEO_USAGE_PLAYBACK_NORMAL;
+
+        Microsoft::WRL::ComPtr<ID3D11VideoProcessorEnumerator> enumerator;
+        if (FAILED(videoDevice->CreateVideoProcessorEnumerator(
+            &contentDescription,
+            enumerator.ReleaseAndGetAddressOf())))
+        {
+            return false;
+        }
+
+        Microsoft::WRL::ComPtr<ID3D11VideoProcessor> processor;
+        if (FAILED(videoDevice->CreateVideoProcessor(enumerator.Get(), 0, processor.ReleaseAndGetAddressOf())))
+        {
+            return false;
+        }
+
+        D3D11_VIDEO_PROCESSOR_INPUT_VIEW_DESC inputDescription{};
+        inputDescription.ViewDimension = D3D11_VPIV_DIMENSION_TEXTURE2D;
+        inputDescription.Texture2D.MipSlice = 0;
+        inputDescription.Texture2D.ArraySlice = arraySlice;
+
+        Microsoft::WRL::ComPtr<ID3D11VideoProcessorInputView> inputView;
+        if (FAILED(videoDevice->CreateVideoProcessorInputView(
+            texture,
+            enumerator.Get(),
+            &inputDescription,
+            inputView.ReleaseAndGetAddressOf())))
+        {
+            return false;
+        }
+
+        D3D11_VIDEO_PROCESSOR_OUTPUT_VIEW_DESC outputDescription{};
+        outputDescription.ViewDimension = D3D11_VPOV_DIMENSION_TEXTURE2D;
+        outputDescription.Texture2D.MipSlice = 0;
+
+        Microsoft::WRL::ComPtr<ID3D11VideoProcessorOutputView> outputView;
+        if (FAILED(videoDevice->CreateVideoProcessorOutputView(
+            backBuffer.Get(),
+            enumerator.Get(),
+            &outputDescription,
+            outputView.ReleaseAndGetAddressOf())))
+        {
+            return false;
+        }
+
+        D3D11_VIDEO_PROCESSOR_STREAM stream{};
+        stream.Enable = TRUE;
+        stream.pInputSurface = inputView.Get();
+
+        if (FAILED(videoContext->VideoProcessorBlt(processor.Get(), outputView.Get(), 0, 1, &stream)))
+        {
+            return false;
+        }
+
+        return Present();
+    }
+
     bool DxDeviceResources::ClearToBlack()
     {
         if (!m_swapChain || !m_context)

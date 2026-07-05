@@ -28,7 +28,14 @@ namespace winrt::NextGenEmby::Native::implementation
 
         if (frame.Texture)
         {
-            m_deviceResources.TryCopyToBackBuffer(frame.Texture.Get());
+            if (!m_deviceResources.TryCopyToBackBuffer(frame.Texture.Get()))
+            {
+                m_deviceResources.TryProcessVideoFrameToBackBuffer(
+                    frame.Texture.Get(),
+                    frame.TextureArrayIndex,
+                    frame.Width,
+                    frame.Height);
+            }
         }
     }
 
