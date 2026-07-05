@@ -17,7 +17,8 @@ namespace winrt::NextGenEmby::Native::implementation
         PlaybackGraphStateChangedHandler stateChanged)
         : m_deviceResources(deviceResources),
           m_graphStateChanged(std::move(stateChanged)),
-          m_videoRenderer(deviceResources)
+          m_videoRenderer(deviceResources),
+          m_subtitleRenderer(deviceResources)
     {
     }
 
@@ -329,6 +330,7 @@ namespace winrt::NextGenEmby::Native::implementation
             m_videoRenderer.Render(frame);
             m_positionTicks = frame.PositionTicks;
             m_subtitleRenderer.RenderAt(m_positionTicks);
+            m_deviceResources.Present();
             m_pendingVideoFrame.reset();
             return true;
         }

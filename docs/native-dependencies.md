@@ -54,10 +54,12 @@ MSBuild 接入方式：
 - 当 FFmpeg frame 带有 `AV_FRAME_DATA_MASTERING_DISPLAY_METADATA` / `AV_FRAME_DATA_CONTENT_LIGHT_LEVEL` side-data 且 transfer 为 PQ 时，`VideoDecoder` 会映射为 `DXGI_HDR_METADATA_HDR10`。映射单位遵循 Microsoft 文档：色度坐标乘 50000，最大母版亮度为整 nits，最小母版亮度为 1/10000 nit，MaxCLL/MaxFALL 为 nits。
 - `PlaybackGraph` 已有后台 render loop，会优先用 XAudio2 音频时钟决定视频帧节奏：视频帧早于音频超过容差时暂存等待，落后音频超过容差时丢弃有限数量的视频帧追赶。
 - `PlaybackGraph` 的后台 loop 会在 EOF 时上报 `Stopped`，在 native 解码/渲染异常时上报 `Failed`；通知在 graph mutex 外触发，避免托管 wrapper 查询当前位置时形成死锁。
-- `NativePlaybackEngine` 已暴露原地音轨切换、字幕切换和禁用字幕方法；音轨切换会在当前位置重开 `AudioDecoder` / XAudio2 source voice，并通过 `FfmpegMediaSource::UnregisterStream` 释放旧音轨 packet queue；字幕切换当前仍只进入 `SubtitleRenderer` 控制边界，真实 DirectWrite overlay 仍待实现。
+- `NativePlaybackEngine` 已暴露原地音轨切换、字幕切换和禁用字幕方法；音轨切换会在当前位置重开 `AudioDecoder` / XAudio2 source voice，并通过 `FfmpegMediaSource::UnregisterStream` 释放旧音轨 packet queue；字幕切换当前已进入 `SubtitleRenderer` 控制边界，DirectWrite overlay 出口已接入，真实 FFmpeg subtitle cue 解码仍待实现。
 - `AudioRenderer` 已能创建 XAudio2 engine、mastering voice 和 source voice，并维护小型 PCM buffer queue；XAudio2 buffer-end callback 会释放已提交 buffer 的生命周期引用。
 - `AudioRenderer` 会用首个提交 PCM buffer 的 `PositionTicks` 作为时钟基准，并通过 `IXAudio2SourceVoice::GetState().SamplesPlayed` 换算当前播放位置；`PlaybackGraph.CurrentPositionTicks()` 会优先返回该音频时钟，seek 时会 flush source buffers 并重置基准。
 - 当前音频路径已经能把 FFmpeg audio frame 转成 PCM 并提交给 XAudio2；视频 render cadence 已有第一版音频时钟等待/丢帧策略，但阈值、画面观感和听音效果还没有实机验证。
+- `SubtitleRenderer` 已持有 `DxDeviceResources` 并能把文本 cue 绘制到 swapchain backbuffer；`DxDeviceResources` 通过 Direct2D/DirectWrite 画白字和阴影，播放图会在视频帧和字幕都写入 backbuffer 后统一 `Present()`。
+- 当前字幕路径还没有 FFmpeg subtitle stream 解码、cue queue、ASS 样式解析或 PGS 图形字幕支持；现阶段只是后续字幕解码器可调用的 DirectWrite overlay 出口。
 - `VideoDecoder` 会在失败路径和 `Close()` 中释放 FFmpeg context；`PlaybackGraph.Open` 失败时会回滚已打开的边界状态。
 - 当前还没有实机验证 video processor 对 FFmpeg D3D11VA frame 的呈现效果，也还没有补齐 BT.2020/PQ video processor 色彩空间设置和 tone mapping 策略。
-- 下一步继续做 Local Machine / Xbox 冒烟、A/V sync 阈值校准、P010/NV12 颜色链路、音频样本和字幕 cue。
+- 下一步继续做 Local Machine / Xbox 冒烟、A/V sync 阈值校准、P010/NV12 颜色链路、音频样本和 FFmpeg 字幕 cue 解码。

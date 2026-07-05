@@ -45,7 +45,7 @@
 - 当前 renderer 能清黑、present、复制同尺寸同格式 texture，并能尝试用 D3D11 video processor 呈现 FFmpeg D3D11VA texture slice；该路径尚未经过 Local Machine 或 Xbox 实机验证。
 - HDR10 metadata side-data 已能映射到 DXGI HDR10 metadata；BT.2020/PQ video processor 色彩空间设置和 tone mapping 策略尚未补齐。
 - 当前已有后台 render loop，并会根据 XAudio2 音频时钟暂存早到的视频帧、丢弃明显落后的视频帧；阈值和观感仍需实机校准。
-- 当前 `CurrentPositionTicks()` 已优先使用 XAudio2 `SamplesPlayed` 推导的初步音频时钟，seek 会清空旧音频 buffer；subtitle renderer 仍是控制边界，不会绘制 DirectWrite 字幕。
+- 当前 `CurrentPositionTicks()` 已优先使用 XAudio2 `SamplesPlayed` 推导的初步音频时钟，seek 会清空旧音频 buffer；subtitle renderer 已有 DirectWrite 文本叠加出口，但还没有 FFmpeg 字幕解码和 cue 调度。
 - 当前 Playback 页仍是手动 URL demo，真实 Emby 条目驱动和 HTTP 进度上报尚未完成。
 
 ## 测试结果

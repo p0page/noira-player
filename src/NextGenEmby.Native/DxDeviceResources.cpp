@@ -1,6 +1,9 @@
 #include "pch.h"
 #include "DxDeviceResources.h"
 
+#include <algorithm>
+#include <d2d1_1.h>
+#include <dwrite.h>
 #include <windows.ui.xaml.media.dxinterop.h>
 
 namespace winrt::NextGenEmby::Native::implementation
@@ -149,7 +152,7 @@ namespace winrt::NextGenEmby::Native::implementation
         }
 
         m_context->CopyResource(backBuffer.Get(), texture);
-        return Present();
+        return true;
     }
 
     bool DxDeviceResources::TryProcessVideoFrameToBackBuffer(
@@ -241,7 +244,148 @@ namespace winrt::NextGenEmby::Native::implementation
             return false;
         }
 
-        return Present();
+        return true;
+    }
+
+    bool DxDeviceResources::DrawTextOverlay(std::wstring const& text)
+    {
+        if (text.empty() || !m_swapChain || !m_device)
+        {
+            return false;
+        }
+
+        DXGI_SWAP_CHAIN_DESC1 swapChainDescription{};
+        if (FAILED(m_swapChain->GetDesc1(&swapChainDescription)))
+        {
+            return false;
+        }
+
+        Microsoft::WRL::ComPtr<IDXGISurface> surface;
+        if (FAILED(m_swapChain->GetBuffer(0, IID_PPV_ARGS(&surface))))
+        {
+            return false;
+        }
+
+        D2D1_FACTORY_OPTIONS factoryOptions{};
+        Microsoft::WRL::ComPtr<ID2D1Factory1> d2dFactory;
+        if (FAILED(D2D1CreateFactory(
+            D2D1_FACTORY_TYPE_SINGLE_THREADED,
+            factoryOptions,
+            d2dFactory.ReleaseAndGetAddressOf())))
+        {
+            return false;
+        }
+
+        Microsoft::WRL::ComPtr<IDXGIDevice> dxgiDevice;
+        if (FAILED(m_device.As(&dxgiDevice)))
+        {
+            return false;
+        }
+
+        Microsoft::WRL::ComPtr<ID2D1Device> d2dDevice;
+        if (FAILED(d2dFactory->CreateDevice(dxgiDevice.Get(), d2dDevice.ReleaseAndGetAddressOf())))
+        {
+            return false;
+        }
+
+        Microsoft::WRL::ComPtr<ID2D1DeviceContext> d2dContext;
+        if (FAILED(d2dDevice->CreateDeviceContext(
+            D2D1_DEVICE_CONTEXT_OPTIONS_NONE,
+            d2dContext.ReleaseAndGetAddressOf())))
+        {
+            return false;
+        }
+
+        D2D1_BITMAP_PROPERTIES1 bitmapProperties{};
+        bitmapProperties.pixelFormat = D2D1::PixelFormat(
+            swapChainDescription.Format,
+            D2D1_ALPHA_MODE_IGNORE);
+        bitmapProperties.dpiX = 96.0f;
+        bitmapProperties.dpiY = 96.0f;
+        bitmapProperties.bitmapOptions =
+            D2D1_BITMAP_OPTIONS_TARGET |
+            D2D1_BITMAP_OPTIONS_CANNOT_DRAW;
+
+        Microsoft::WRL::ComPtr<ID2D1Bitmap1> targetBitmap;
+        if (FAILED(d2dContext->CreateBitmapFromDxgiSurface(
+            surface.Get(),
+            &bitmapProperties,
+            targetBitmap.ReleaseAndGetAddressOf())))
+        {
+            return false;
+        }
+
+        Microsoft::WRL::ComPtr<IDWriteFactory> writeFactory;
+        if (FAILED(DWriteCreateFactory(
+            DWRITE_FACTORY_TYPE_SHARED,
+            __uuidof(IDWriteFactory),
+            reinterpret_cast<IUnknown**>(writeFactory.ReleaseAndGetAddressOf()))))
+        {
+            return false;
+        }
+
+        auto width = static_cast<float>(swapChainDescription.Width);
+        auto height = static_cast<float>(swapChainDescription.Height);
+        auto fontSize = std::clamp(height / 18.0f, 28.0f, 56.0f);
+
+        Microsoft::WRL::ComPtr<IDWriteTextFormat> textFormat;
+        if (FAILED(writeFactory->CreateTextFormat(
+            L"Segoe UI",
+            nullptr,
+            DWRITE_FONT_WEIGHT_SEMI_BOLD,
+            DWRITE_FONT_STYLE_NORMAL,
+            DWRITE_FONT_STRETCH_NORMAL,
+            fontSize,
+            L"zh-CN",
+            textFormat.ReleaseAndGetAddressOf())))
+        {
+            return false;
+        }
+
+        (void)textFormat->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
+        (void)textFormat->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_FAR);
+
+        Microsoft::WRL::ComPtr<ID2D1SolidColorBrush> shadowBrush;
+        Microsoft::WRL::ComPtr<ID2D1SolidColorBrush> textBrush;
+        if (FAILED(d2dContext->CreateSolidColorBrush(
+                D2D1::ColorF(D2D1::ColorF::Black, 0.85f),
+                shadowBrush.ReleaseAndGetAddressOf())) ||
+            FAILED(d2dContext->CreateSolidColorBrush(
+                D2D1::ColorF(D2D1::ColorF::White, 1.0f),
+                textBrush.ReleaseAndGetAddressOf())))
+        {
+            return false;
+        }
+
+        auto horizontalPadding = width * 0.08f;
+        auto bottomPadding = height * 0.08f;
+        auto layout = D2D1::RectF(
+            horizontalPadding,
+            height * 0.62f,
+            width - horizontalPadding,
+            height - bottomPadding);
+        auto shadowLayout = layout;
+        shadowLayout.left += 2.0f;
+        shadowLayout.right += 2.0f;
+        shadowLayout.top += 2.0f;
+        shadowLayout.bottom += 2.0f;
+
+        d2dContext->SetTarget(targetBitmap.Get());
+        d2dContext->BeginDraw();
+        d2dContext->DrawText(
+            text.c_str(),
+            static_cast<UINT32>(text.size()),
+            textFormat.Get(),
+            shadowLayout,
+            shadowBrush.Get());
+        d2dContext->DrawText(
+            text.c_str(),
+            static_cast<UINT32>(text.size()),
+            textFormat.Get(),
+            layout,
+            textBrush.Get());
+
+        return SUCCEEDED(d2dContext->EndDraw());
     }
 
     bool DxDeviceResources::ClearToBlack()

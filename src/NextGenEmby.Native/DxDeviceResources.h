@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <d3d11_4.h>
 #include <dxgi1_6.h>
+#include <string>
 #include <winrt/Windows.UI.Xaml.Controls.h>
 #include <wrl/client.h>
 
@@ -23,6 +24,7 @@ namespace winrt::NextGenEmby::Native::implementation
             uint32_t arraySlice,
             uint32_t width,
             uint32_t height);
+        bool DrawTextOverlay(std::wstring const& text);
         bool ClearToBlack();
         bool Present();
         ID3D11Device* Device() const noexcept;
