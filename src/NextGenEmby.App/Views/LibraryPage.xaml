@@ -34,12 +34,11 @@
                 <Button
                     x:Name="RefreshButton"
                     Grid.Column="1"
-                    Width="64"
-                    Height="64"
-                    MinWidth="64"
+                    AutomationProperties.Name="Refresh"
                     HorizontalAlignment="Right"
                     VerticalAlignment="Center"
                     Click="Refresh_OnClick"
+                    Style="{StaticResource IconButtonStyle}"
                     ToolTipService.ToolTip="Refresh"
                     UseSystemFocusVisuals="True">
                     <SymbolIcon Symbol="Refresh" />

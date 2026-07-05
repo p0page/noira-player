@@ -70,10 +70,9 @@
                         </Button>
                         <Button
                             x:Name="RefreshButton"
-                            Width="68"
-                            Height="68"
-                            MinWidth="68"
+                            AutomationProperties.Name="Refresh"
                             Click="Refresh_OnClick"
+                            Style="{StaticResource IconButtonStyle}"
                             ToolTipService.ToolTip="Refresh"
                             UseSystemFocusVisuals="True">
                             <SymbolIcon Symbol="Refresh" />

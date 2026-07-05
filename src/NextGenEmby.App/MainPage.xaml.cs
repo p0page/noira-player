@@ -119,6 +119,14 @@ namespace NextGenEmby.App
             _currentLibraryRequest = e.SourcePageType == typeof(LibraryPage)
                 ? e.Parameter as LibraryNavigationRequest
                 : null;
+            ApplyShellChrome(e.SourcePageType == typeof(PlaybackPage));
+        }
+
+        private void ApplyShellChrome(bool isPlayback)
+        {
+            ShellHeader.Visibility = isPlayback ? Visibility.Collapsed : Visibility.Visible;
+            Grid.SetRow(ContentFrame, isPlayback ? 0 : 1);
+            Grid.SetRowSpan(ContentFrame, isPlayback ? 2 : 1);
         }
 
         private void Home_OnClick(object sender, RoutedEventArgs e)

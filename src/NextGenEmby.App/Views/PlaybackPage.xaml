@@ -78,6 +78,7 @@
                         <StackPanel Orientation="Horizontal" Spacing="16">
                             <Button
                                 x:Name="PauseButton"
+                                AutomationProperties.Name="Pause"
                                 MinWidth="160"
                                 Click="Pause_OnClick"
                                 ToolTipService.ToolTip="Pause playback">
@@ -89,6 +90,7 @@
 
                             <Button
                                 x:Name="ResumeButton"
+                                AutomationProperties.Name="Resume"
                                 MinWidth="170"
                                 Click="Resume_OnClick"
                                 ToolTipService.ToolTip="Resume playback">
@@ -100,6 +102,7 @@
 
                             <Button
                                 x:Name="SeekBackButton"
+                                AutomationProperties.Name="Seek back 10 seconds"
                                 MinWidth="140"
                                 Click="SeekBack_OnClick"
                                 ToolTipService.ToolTip="Seek backward ten seconds">
@@ -111,6 +114,7 @@
 
                             <Button
                                 x:Name="SeekForwardButton"
+                                AutomationProperties.Name="Seek forward 30 seconds"
                                 MinWidth="140"
                                 Click="SeekForward_OnClick"
                                 ToolTipService.ToolTip="Seek forward thirty seconds">
@@ -122,6 +126,7 @@
 
                             <Button
                                 x:Name="MoreButton"
+                                AutomationProperties.Name="More"
                                 MinWidth="140"
                                 Click="More_OnClick"
                                 ToolTipService.ToolTip="More playback controls">
@@ -133,6 +138,7 @@
 
                             <Button
                                 x:Name="StopButton"
+                                AutomationProperties.Name="Stop"
                                 MinWidth="150"
                                 Click="Stop_OnClick"
                                 ToolTipService.ToolTip="Stop playback">
@@ -163,6 +169,7 @@
                             <Button
                                 x:Name="ManualStartButton"
                                 Grid.Column="1"
+                                AutomationProperties.Name="Play direct stream"
                                 MinWidth="140"
                                 VerticalAlignment="Bottom"
                                 Click="Start_OnClick"
@@ -208,6 +215,7 @@
                             SelectionChanged="SubtitleStreamBox_OnSelectionChanged" />
                         <Button
                             x:Name="InfoButton"
+                            AutomationProperties.Name="Info"
                             HorizontalAlignment="Stretch"
                             Click="Info_OnClick"
                             ToolTipService.ToolTip="Show playback information">
