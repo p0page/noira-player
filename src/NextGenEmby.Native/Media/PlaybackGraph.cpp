@@ -1,12 +1,21 @@
 #include "pch.h"
 #include "PlaybackGraph.h"
 
+#include <chrono>
+
 namespace winrt::NextGenEmby::Native::implementation
 {
+    using namespace std::chrono_literals;
+
     PlaybackGraph::PlaybackGraph(DxDeviceResources& deviceResources)
         : m_deviceResources(deviceResources),
           m_videoRenderer(deviceResources)
     {
+    }
+
+    PlaybackGraph::~PlaybackGraph()
+    {
+        Stop();
     }
 
     void PlaybackGraph::Open(NextGenEmby::Native::NativePlaybackOpenRequest const& request)
@@ -16,8 +25,11 @@ namespace winrt::NextGenEmby::Native::implementation
             throw winrt::hresult_invalid_argument(L"Playback request is required.");
         }
 
+        Stop();
+
         try
         {
+            std::lock_guard lock(m_graphMutex);
             m_deviceResources.CreateDevice();
             m_input.Open(request.DirectStreamUrl());
             m_videoDecoder.Open(
@@ -35,6 +47,7 @@ namespace winrt::NextGenEmby::Native::implementation
             m_open = true;
             m_paused = false;
             RenderNextFrame();
+            StartRenderLoop();
             m_audioRenderer.Start();
             m_subtitleRenderer.RenderAt(m_positionTicks);
         }
@@ -47,19 +60,23 @@ namespace winrt::NextGenEmby::Native::implementation
 
     void PlaybackGraph::Pause()
     {
+        std::lock_guard lock(m_graphMutex);
         if (m_open)
         {
             m_paused = true;
             m_audioRenderer.Pause();
+            m_stateChanged.notify_all();
         }
     }
 
     void PlaybackGraph::Resume()
     {
+        std::lock_guard lock(m_graphMutex);
         if (m_open)
         {
             m_paused = false;
             m_audioRenderer.Resume();
+            m_stateChanged.notify_all();
         }
     }
 
@@ -70,14 +87,19 @@ namespace winrt::NextGenEmby::Native::implementation
             throw winrt::hresult_invalid_argument(L"Seek position cannot be negative.");
         }
 
+        std::lock_guard lock(m_graphMutex);
         m_positionTicks = positionTicks;
         m_videoDecoder.Seek(positionTicks);
         RenderNextFrame();
         m_subtitleRenderer.RenderAt(m_positionTicks);
+        m_stateChanged.notify_all();
     }
 
     void PlaybackGraph::Stop() noexcept
     {
+        StopRenderLoop();
+
+        std::lock_guard lock(m_graphMutex);
         m_audioRenderer.Stop();
         m_subtitleRenderer.Disable();
         m_videoDecoder.Close();
@@ -87,20 +109,101 @@ namespace winrt::NextGenEmby::Native::implementation
         m_positionTicks = 0;
         m_open = false;
         m_paused = false;
+        m_stopRenderLoop = false;
     }
 
     int64_t PlaybackGraph::CurrentPositionTicks() const noexcept
     {
+        std::lock_guard lock(m_graphMutex);
         return m_positionTicks;
     }
 
-    void PlaybackGraph::RenderNextFrame()
+    void PlaybackGraph::StartRenderLoop()
+    {
+        m_stopRenderLoop = false;
+        m_renderThread = std::thread([this]()
+        {
+            RenderLoop();
+        });
+        m_stateChanged.notify_all();
+    }
+
+    void PlaybackGraph::StopRenderLoop() noexcept
+    {
+        {
+            std::lock_guard lock(m_graphMutex);
+            m_stopRenderLoop = true;
+        }
+
+        m_stateChanged.notify_all();
+
+        if (m_renderThread.joinable())
+        {
+            m_renderThread.join();
+        }
+    }
+
+    void PlaybackGraph::RenderLoop() noexcept
+    {
+        while (true)
+        {
+            {
+                std::unique_lock lock(m_graphMutex);
+                m_stateChanged.wait(lock, [this]()
+                {
+                    return m_stopRenderLoop || (m_open && !m_paused);
+                });
+
+                if (m_stopRenderLoop)
+                {
+                    return;
+                }
+            }
+
+            try
+            {
+                {
+                    std::lock_guard lock(m_graphMutex);
+                    if (m_stopRenderLoop)
+                    {
+                        return;
+                    }
+
+                    if (!m_open || m_paused)
+                    {
+                        continue;
+                    }
+
+                    if (!RenderNextFrame())
+                    {
+                        m_open = false;
+                        m_stopRenderLoop = true;
+                        return;
+                    }
+                }
+            }
+            catch (...)
+            {
+                std::lock_guard lock(m_graphMutex);
+                m_open = false;
+                m_stopRenderLoop = true;
+                return;
+            }
+
+            std::this_thread::sleep_for(33ms);
+        }
+    }
+
+    bool PlaybackGraph::RenderNextFrame()
     {
         if (auto frame = m_videoDecoder.TryReadFrame())
         {
             m_videoRenderer.Render(*frame);
             m_positionTicks = frame->PositionTicks;
             m_subtitleRenderer.RenderAt(m_positionTicks);
+            return true;
         }
+
+        return false;
     }
 }

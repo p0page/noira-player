@@ -8,12 +8,17 @@
 #include "VideoDecoder.h"
 #include "VideoRenderer.h"
 
+#include <condition_variable>
+#include <mutex>
+#include <thread>
+
 namespace winrt::NextGenEmby::Native::implementation
 {
     class PlaybackGraph
     {
     public:
         explicit PlaybackGraph(DxDeviceResources& deviceResources);
+        ~PlaybackGraph();
 
         void Open(NextGenEmby::Native::NativePlaybackOpenRequest const& request);
         void Pause();
@@ -23,7 +28,10 @@ namespace winrt::NextGenEmby::Native::implementation
         int64_t CurrentPositionTicks() const noexcept;
 
     private:
-        void RenderNextFrame();
+        void StartRenderLoop();
+        void StopRenderLoop() noexcept;
+        void RenderLoop() noexcept;
+        bool RenderNextFrame();
 
         DxDeviceResources& m_deviceResources;
         HttpMediaInput m_input;
@@ -35,5 +43,9 @@ namespace winrt::NextGenEmby::Native::implementation
         int64_t m_positionTicks{0};
         bool m_open{false};
         bool m_paused{false};
+        bool m_stopRenderLoop{false};
+        std::thread m_renderThread;
+        mutable std::mutex m_graphMutex;
+        std::condition_variable m_stateChanged;
     };
 }

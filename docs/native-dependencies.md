@@ -49,6 +49,7 @@ MSBuild 接入方式：
 - `VideoDecoder::TryReadFrame()` 已接入 `av_read_frame` / `avcodec_send_packet` / `avcodec_receive_frame`，能读取视频 packet 并生成包含宽高、DXGI 像素格式、HDR transfer 类型和 position ticks 的 `DecodedVideoFrame` 元数据。
 - 当 FFmpeg 返回 `AV_PIX_FMT_D3D11` frame 时，`DecodedVideoFrame` 会携带 `ID3D11Texture2D` 和 texture array slice index；`VideoRenderer` 会在同格式 copy 失败后尝试用 D3D11 video processor blit 到 swapchain backbuffer。
 - 当 FFmpeg frame 带有 `AV_FRAME_DATA_MASTERING_DISPLAY_METADATA` / `AV_FRAME_DATA_CONTENT_LIGHT_LEVEL` side-data 且 transfer 为 PQ 时，`VideoDecoder` 会映射为 `DXGI_HDR_METADATA_HDR10`。映射单位遵循 Microsoft 文档：色度坐标乘 50000，最大母版亮度为整 nits，最小母版亮度为 1/10000 nit，MaxCLL/MaxFALL 为 nits。
+- `PlaybackGraph` 已有临时 render loop，会在后台线程以固定 cadence 拉取并呈现视频帧；这只是 video smoke path，还不是基于音频时钟或 PTS 的 A/V sync。
 - `VideoDecoder` 会在失败路径和 `Close()` 中释放 FFmpeg context；`PlaybackGraph.Open` 失败时会回滚已打开的边界状态。
 - 当前还没有实机验证 video processor 对 FFmpeg D3D11VA frame 的呈现效果，也还没有补齐 BT.2020/PQ video processor 色彩空间设置和 tone mapping 策略。
-- 下一步继续做 Local Machine / Xbox 冒烟、P010/NV12 颜色链路、音频样本和字幕 cue。
+- 下一步继续做 Local Machine / Xbox 冒烟、PTS/音频时钟同步、P010/NV12 颜色链路、音频样本和字幕 cue。
