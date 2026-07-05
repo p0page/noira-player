@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -8,6 +9,7 @@ using NextGenEmby.App.Services;
 using NextGenEmby.App.Storage;
 using NextGenEmby.Core.Emby;
 using NextGenEmby.Core.Playback;
+using Windows.System;
 using Windows.UI.Core;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
@@ -30,8 +32,10 @@ namespace NextGenEmby.App.Views
         private readonly PlaybackOrchestrator _orchestrator;
         private readonly ApplicationDataSessionStore _sessionStore = new ApplicationDataSessionStore();
         private readonly TaskCompletionSource<bool> _nativeSurfaceReadySource = new TaskCompletionSource<bool>();
+        private readonly SeekPreviewSession _seekPreview = new SeekPreviewSession(TimeSpan.FromSeconds(1.8), TimeSpan.FromSeconds(5), 0.55);
         private readonly DispatcherTimer _progressTimer;
         private readonly DispatcherTimer _overlayTimer;
+        private readonly DispatcherTimer _seekPreviewTimer;
         private readonly KeyEventHandler _handledKeyDownHandler;
         private WinRtNativePlaybackEngine? _nativeEngine;
         private HttpClient? _httpClient;
@@ -84,6 +88,11 @@ namespace NextGenEmby.App.Views
                 Interval = TimeSpan.FromSeconds(5)
             };
             _overlayTimer.Tick += OverlayTimer_OnTick;
+            _seekPreviewTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(100)
+            };
+            _seekPreviewTimer.Tick += SeekPreviewTimer_OnTick;
             _handledKeyDownHandler = PlaybackPage_OnHandledKeyDown;
             Loaded += PlaybackPage_OnLoaded;
             Unloaded += PlaybackPage_OnUnloaded;
@@ -225,9 +234,75 @@ namespace NextGenEmby.App.Views
         {
         }
 
-        private void PlaybackPage_OnHandledKeyDown(object sender, KeyRoutedEventArgs e)
+        private async void PlaybackPage_OnHandledKeyDown(object sender, KeyRoutedEventArgs e)
         {
-            ShowOverlay();
+            switch (e.Key)
+            {
+                case VirtualKey.GamepadA:
+                    e.Handled = true;
+                    if (_seekPreview.IsActive)
+                    {
+                        await RunPlaybackCommandAsync(() => ApplySeekDecisionAsync(_seekPreview.Confirm()));
+                        return;
+                    }
+
+                    ShowOverlay();
+                    return;
+
+                case VirtualKey.GamepadB:
+                    e.Handled = true;
+                    if (_seekPreview.IsActive)
+                    {
+                        await RunPlaybackCommandAsync(() => ApplySeekDecisionAsync(_seekPreview.Cancel()));
+                        return;
+                    }
+
+                    if (_moreVisible)
+                    {
+                        ShowOverlay(false);
+                        return;
+                    }
+
+                    if (_overlayVisible)
+                    {
+                        HideOverlay();
+                        return;
+                    }
+
+                    if (Frame != null && Frame.CanGoBack)
+                    {
+                        Frame.GoBack();
+                    }
+
+                    return;
+
+                case VirtualKey.GamepadMenu:
+                    e.Handled = true;
+                    ShowOverlay(true);
+                    return;
+
+                case VirtualKey.GamepadDPadLeft:
+                    e.Handled = true;
+                    ClearSeekPreview();
+                    await RunPlaybackCommandAsync(() => SeekRelativeAsync(-SeekBackStep));
+                    return;
+
+                case VirtualKey.GamepadDPadRight:
+                    e.Handled = true;
+                    ClearSeekPreview();
+                    await RunPlaybackCommandAsync(() => SeekRelativeAsync(SeekForwardStep));
+                    return;
+
+                case VirtualKey.GamepadLeftThumbstickLeft:
+                    e.Handled = true;
+                    BeginOrMoveSeekPreview(TimeSpan.FromSeconds(-5));
+                    return;
+
+                case VirtualKey.GamepadLeftThumbstickRight:
+                    e.Handled = true;
+                    BeginOrMoveSeekPreview(TimeSpan.FromSeconds(5));
+                    return;
+            }
         }
 
         private async void Orchestrator_OnStateChanged(object? sender, PlaybackStateChangedEventArgs args)
@@ -272,6 +347,8 @@ namespace NextGenEmby.App.Views
             _progressTimer.Tick -= ProgressTimer_OnTick;
             _overlayTimer.Stop();
             _overlayTimer.Tick -= OverlayTimer_OnTick;
+            _seekPreviewTimer.Stop();
+            _seekPreviewTimer.Tick -= SeekPreviewTimer_OnTick;
             DetachPlaybackKeyHandler();
             try
             {
@@ -637,6 +714,17 @@ namespace NextGenEmby.App.Views
             HideOverlay();
         }
 
+        private async void SeekPreviewTimer_OnTick(object sender, object e)
+        {
+            var decision = _seekPreview.DecideTimeout(GetSeekPreviewNow());
+            if (decision.Kind == SeekPreviewDecisionKind.None)
+            {
+                return;
+            }
+
+            await RunPlaybackCommandAsync(() => ApplySeekDecisionAsync(decision));
+        }
+
         private async Task ReportProgressAsync(PlaybackProgressEvent eventName)
         {
             if (_reportInProgress ||
@@ -798,6 +886,73 @@ namespace NextGenEmby.App.Views
             SeekPreviewBlock.Visibility = Visibility.Collapsed;
         }
 
+        private void BeginOrMoveSeekPreview(TimeSpan delta)
+        {
+            var now = GetSeekPreviewNow();
+            if (!_seekPreview.IsActive)
+            {
+                _seekPreview.Begin(GetCurrentPositionTicks(), now);
+            }
+
+            _seekPreview.MoveBy(delta, now);
+            ShowOverlay();
+            UpdateSeekPreviewBlock();
+            _seekPreviewTimer.Stop();
+            _seekPreviewTimer.Start();
+        }
+
+        private async Task ApplySeekDecisionAsync(SeekPreviewDecision decision)
+        {
+            if (decision.Kind == SeekPreviewDecisionKind.None)
+            {
+                return;
+            }
+
+            _seekPreviewTimer.Stop();
+            SeekPreviewBlock.Visibility = Visibility.Collapsed;
+
+            if (decision.Kind == SeekPreviewDecisionKind.Commit)
+            {
+                await _orchestrator.SeekAsync(decision.PositionTicks);
+                _lastPositionTicks = Math.Max(0, decision.PositionTicks);
+                await ReportProgressAsync(PlaybackProgressEvent.TimeUpdate);
+                UpdateStatus(_orchestrator.State, "Position " + FormatPosition(TimeSpan.FromTicks(_lastPositionTicks)));
+                UpdateProgressSlider();
+                if (_infoVisible)
+                {
+                    UpdateInfo();
+                }
+
+                return;
+            }
+
+            UpdateStatus(_orchestrator.State, "Seek canceled");
+            UpdateProgressSlider();
+            if (_infoVisible)
+            {
+                UpdateInfo();
+            }
+        }
+
+        private void UpdateSeekPreviewBlock()
+        {
+            SeekPreviewBlock.Text = "Seek preview " +
+                FormatPosition(TimeSpan.FromTicks(Math.Max(0, _seekPreview.TargetTicks))) +
+                " - A Confirm / B Cancel";
+            SeekPreviewBlock.Visibility = Visibility.Visible;
+        }
+
+        private void ClearSeekPreview()
+        {
+            if (_seekPreview.IsActive)
+            {
+                _seekPreview.Cancel();
+            }
+
+            _seekPreviewTimer.Stop();
+            SeekPreviewBlock.Visibility = Visibility.Collapsed;
+        }
+
         private void UpdateProgressSlider()
         {
             var positionSeconds = Math.Max(0, TimeSpan.FromTicks(GetCurrentPositionTicks()).TotalSeconds);
@@ -927,6 +1082,11 @@ namespace NextGenEmby.App.Views
         private long GetCurrentPositionTicks()
         {
             return Math.Max(0, Math.Max(_lastPositionTicks, _backend.CurrentPositionTicks));
+        }
+
+        private static TimeSpan GetSeekPreviewNow()
+        {
+            return TimeSpan.FromSeconds((double)Stopwatch.GetTimestamp() / Stopwatch.Frequency);
         }
 
         private static string FormatPosition(TimeSpan position)
