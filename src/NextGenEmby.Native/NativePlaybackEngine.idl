@@ -30,7 +30,7 @@ namespace NextGenEmby.Native
         Boolean HasAudioStreamIndex;
         Int32 SubtitleStreamIndex;
         Boolean HasSubtitleStreamIndex;
-        Boolean IsHdr;
+        Double VideoFrameRate;
     }
 
     runtimeclass NativePlaybackStatus
@@ -40,6 +40,13 @@ namespace NextGenEmby.Native
         Boolean IsHdrDisplayAvailable;
         Boolean IsHdrOutputActive;
         String Message;
+        String SwapChainFormat;
+        String SwapChainColorSpace;
+        Boolean IsTenBitSwapChain;
+        Boolean IsVideoProcessorColorSpaceValidated;
+        String VideoProcessorInputColorSpace;
+        String VideoProcessorOutputColorSpace;
+        String VideoProcessorConversionStatus;
     }
 
     delegate void NativePlaybackStateChangedHandler(NativePlaybackState state, String message);

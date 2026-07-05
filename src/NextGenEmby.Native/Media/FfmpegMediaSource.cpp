@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "FfmpegMediaSource.h"
 #include "HttpMediaInput.h"
+#include "../NativePlaybackDiagnostics.h"
 
 #include <string>
 
@@ -64,6 +65,33 @@ namespace winrt::NextGenEmby::Native::implementation
             if (result < 0)
             {
                 throw CreateFfmpegError("avformat_find_stream_info", result);
+            }
+
+            auto formatName = formatContext->iformat != nullptr && formatContext->iformat->name != nullptr
+                ? winrt::to_hstring(formatContext->iformat->name)
+                : winrt::hstring{};
+            AppendNativePlaybackDiagnostic(
+                L"FfmpegMediaSource.Open streamCount=" +
+                std::to_wstring(formatContext->nb_streams) +
+                L" format=" +
+                std::wstring(formatName));
+            for (auto streamIndex = uint32_t{0}; streamIndex < formatContext->nb_streams; ++streamIndex)
+            {
+                auto stream = formatContext->streams[streamIndex];
+                auto codecpar = stream == nullptr ? nullptr : stream->codecpar;
+                if (codecpar == nullptr)
+                {
+                    continue;
+                }
+
+                AppendNativePlaybackDiagnostic(
+                    L"FfmpegMediaSource.Stream index=" + std::to_wstring(streamIndex) +
+                    L" type=" + std::to_wstring(static_cast<int>(codecpar->codec_type)) +
+                    L" codec=" + std::to_wstring(static_cast<int>(codecpar->codec_id)) +
+                    L" width=" + std::to_wstring(codecpar->width) +
+                    L" height=" + std::to_wstring(codecpar->height) +
+                    L" format=" + std::to_wstring(codecpar->format) +
+                    L" bitrate=" + std::to_wstring(codecpar->bit_rate));
             }
 
             m_formatContext = formatContext;

@@ -1,19 +1,103 @@
 #include "pch.h"
 #include "NativePlaybackEngine.h"
+#include "NativePlaybackDiagnostics.h"
 #include "NativePlaybackStatus.h"
 #include "NativePlaybackEngine.g.cpp"
 
 #include <exception>
 #include <optional>
+#include <string>
 
 namespace winrt::NextGenEmby::Native::implementation
 {
+    namespace
+    {
+        winrt::hstring FormatDxgiFormat(DXGI_FORMAT format)
+        {
+            switch (format)
+            {
+            case DXGI_FORMAT_R10G10B10A2_UNORM:
+                return L"R10G10B10A2_UNORM";
+            case DXGI_FORMAT_B8G8R8A8_UNORM:
+                return L"B8G8R8A8_UNORM";
+            case DXGI_FORMAT_UNKNOWN:
+                return L"UNKNOWN";
+            default:
+                return winrt::to_hstring(static_cast<int32_t>(format));
+            }
+        }
+
+        winrt::hstring FormatDxgiColorSpace(DXGI_COLOR_SPACE_TYPE colorSpace)
+        {
+            switch (colorSpace)
+            {
+            case DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709:
+                return L"RGB_FULL_G22_NONE_P709";
+            case DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020:
+                return L"RGB_FULL_G2084_NONE_P2020";
+            case DXGI_COLOR_SPACE_RGB_STUDIO_G2084_NONE_P2020:
+                return L"RGB_STUDIO_G2084_NONE_P2020";
+            case DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P2020:
+                return L"RGB_FULL_G22_NONE_P2020";
+            case DXGI_COLOR_SPACE_RGB_STUDIO_G22_NONE_P2020:
+                return L"RGB_STUDIO_G22_NONE_P2020";
+            case DXGI_COLOR_SPACE_RGB_STUDIO_G22_NONE_P709:
+                return L"RGB_STUDIO_G22_NONE_P709";
+            case DXGI_COLOR_SPACE_YCBCR_STUDIO_G2084_LEFT_P2020:
+                return L"YCBCR_STUDIO_G2084_LEFT_P2020";
+            case DXGI_COLOR_SPACE_YCBCR_STUDIO_G2084_TOPLEFT_P2020:
+                return L"YCBCR_STUDIO_G2084_TOPLEFT_P2020";
+            case DXGI_COLOR_SPACE_YCBCR_STUDIO_GHLG_TOPLEFT_P2020:
+                return L"YCBCR_STUDIO_GHLG_TOPLEFT_P2020";
+            case DXGI_COLOR_SPACE_YCBCR_FULL_GHLG_TOPLEFT_P2020:
+                return L"YCBCR_FULL_GHLG_TOPLEFT_P2020";
+            case DXGI_COLOR_SPACE_YCBCR_STUDIO_G22_LEFT_P2020:
+                return L"YCBCR_STUDIO_G22_LEFT_P2020";
+            case DXGI_COLOR_SPACE_YCBCR_FULL_G22_LEFT_P2020:
+                return L"YCBCR_FULL_G22_LEFT_P2020";
+            case DXGI_COLOR_SPACE_YCBCR_STUDIO_G22_TOPLEFT_P2020:
+                return L"YCBCR_STUDIO_G22_TOPLEFT_P2020";
+            case DXGI_COLOR_SPACE_YCBCR_STUDIO_G22_LEFT_P601:
+                return L"YCBCR_STUDIO_G22_LEFT_P601";
+            case DXGI_COLOR_SPACE_YCBCR_FULL_G22_LEFT_P601:
+                return L"YCBCR_FULL_G22_LEFT_P601";
+            case DXGI_COLOR_SPACE_YCBCR_FULL_G22_NONE_P709_X601:
+                return L"YCBCR_FULL_G22_NONE_P709_X601";
+            case DXGI_COLOR_SPACE_YCBCR_STUDIO_G22_LEFT_P709:
+                return L"YCBCR_STUDIO_G22_LEFT_P709";
+            case DXGI_COLOR_SPACE_YCBCR_FULL_G22_LEFT_P709:
+                return L"YCBCR_FULL_G22_LEFT_P709";
+            case DXGI_COLOR_SPACE_CUSTOM:
+                return L"CUSTOM";
+            default:
+                return winrt::to_hstring(static_cast<int32_t>(colorSpace));
+            }
+        }
+
+        std::wstring FormatBool(bool value)
+        {
+            return value ? L"true" : L"false";
+        }
+
+        std::wstring FormatHdrSnapshot(HdrDisplaySnapshot const& snapshot)
+        {
+            return L"status=" + std::to_wstring(static_cast<int32_t>(snapshot.Status)) +
+                L" display=" + FormatBool(snapshot.IsHdrDisplayAvailable) +
+                L" active=" + FormatBool(snapshot.IsHdrOutputActive) +
+                L" message=" + std::wstring(snapshot.Message.c_str());
+        }
+    }
+
     NativePlaybackEngine::NativePlaybackEngine()
         : m_graph(std::make_unique<PlaybackGraph>(
               m_dx,
               [this](PlaybackGraphState state, winrt::hstring const& message)
               {
                   OnGraphStateChanged(state, message);
+              },
+              [this](bool desiredHdrOutput, double preferredRefreshRate)
+              {
+                  return OnGraphHdrOutputChanged(desiredHdrOutput, preferredRefreshRate);
               }))
     {
         UpdateDisplayStatus(m_hdr.Probe());
@@ -42,17 +126,30 @@ namespace winrt::NextGenEmby::Native::implementation
 
     NextGenEmby::Native::NativePlaybackStatus NativePlaybackEngine::DisplayStatus() const
     {
+        auto status = winrt::make<NativePlaybackStatus>();
         if (m_displayStatus == nullptr)
         {
-            auto status = winrt::make<NativePlaybackStatus>();
             status.HdrStatus(NextGenEmby::Native::NativeHdrStatus::NativeHdrStatus_Unknown);
             status.IsHdrDisplayAvailable(false);
             status.IsHdrOutputActive(false);
             status.Message(L"Native engine has not probed the display yet.");
-            return status;
+        }
+        else
+        {
+            status.HdrStatus(m_displayStatus.HdrStatus());
+            status.IsHdrDisplayAvailable(m_displayStatus.IsHdrDisplayAvailable());
+            status.IsHdrOutputActive(m_displayStatus.IsHdrOutputActive());
+            status.Message(m_displayStatus.Message());
         }
 
-        return m_displayStatus;
+        status.SwapChainFormat(FormatDxgiFormat(m_dx.SwapChainFormat()));
+        status.SwapChainColorSpace(FormatDxgiColorSpace(m_dx.SwapChainColorSpace()));
+        status.IsTenBitSwapChain(m_dx.IsTenBitSwapChain());
+        status.IsVideoProcessorColorSpaceValidated(m_dx.LastVideoProcessorConversionWasValidated());
+        status.VideoProcessorInputColorSpace(FormatDxgiColorSpace(m_dx.LastVideoProcessorInputColorSpace()));
+        status.VideoProcessorOutputColorSpace(FormatDxgiColorSpace(m_dx.LastVideoProcessorOutputColorSpace()));
+        status.VideoProcessorConversionStatus(winrt::hstring(m_dx.LastVideoProcessorConversionStatus()));
+        return status;
     }
 
     winrt::Windows::Foundation::IAsyncAction NativePlaybackEngine::OpenAsync(
@@ -60,29 +157,32 @@ namespace winrt::NextGenEmby::Native::implementation
     {
         try
         {
-            m_graph->Open(request);
-            m_positionTicks = m_graph->CurrentPositionTicks();
+            AppendNativePlaybackDiagnostic(L"NativePlaybackEngine.OpenAsync enter");
+            auto videoFrameRate = request.VideoFrameRate();
+            AppendNativePlaybackDiagnostic(L"NativePlaybackEngine.OpenAsync request videoFrameRate=" + std::to_wstring(videoFrameRate));
+            UpdateDisplayStatus(m_hdr.Probe());
 
-            auto isHdrPlayback = request.IsHdr();
-            auto display = isHdrPlayback ? m_hdr.EnterHdr10() : m_hdr.RestoreInitialState();
-            UpdateDisplayStatus(display);
-            if (isHdrPlayback && display.IsHdrOutputActive)
-            {
-                ApplySwapChainColorSpace(display);
-            }
-            else
-            {
-                m_dx.SetSdrColorSpace();
-            }
+            AppendNativePlaybackDiagnostic(L"NativePlaybackEngine.OpenAsync graph Open begin");
+            m_graph->Open(request);
+            AppendNativePlaybackDiagnostic(L"NativePlaybackEngine.OpenAsync graph Open end");
+            m_positionTicks = m_graph->CurrentPositionTicks();
+            AppendNativePlaybackDiagnostic(L"NativePlaybackEngine.OpenAsync CurrentPositionTicks read");
+            AppendNativePlaybackDiagnostic(L"NativePlaybackEngine.OpenAsync Raise Opening begin");
             Raise(NextGenEmby::Native::NativePlaybackState::NativePlaybackState_Opening);
+            AppendNativePlaybackDiagnostic(L"NativePlaybackEngine.OpenAsync Raise Playing begin");
             Raise(NextGenEmby::Native::NativePlaybackState::NativePlaybackState_Playing);
+            AppendNativePlaybackDiagnostic(L"NativePlaybackEngine.OpenAsync success end");
         }
         catch (winrt::hresult_error const& error)
         {
+            AppendNativePlaybackDiagnostic(L"NativePlaybackEngine.OpenAsync hresult exception " + std::wstring(error.message().c_str()));
             RaiseFailed(error);
         }
         catch (std::exception const& error)
         {
+            AppendNativePlaybackDiagnostic(
+                L"NativePlaybackEngine.OpenAsync std exception " +
+                std::wstring(winrt::to_hstring(error.what()).c_str()));
             RaiseFailed(error);
         }
 
@@ -235,6 +335,28 @@ namespace winrt::NextGenEmby::Native::implementation
         m_dx.SetSdrColorSpace();
     }
 
+    bool NativePlaybackEngine::OnGraphHdrOutputChanged(
+        bool desiredHdrOutput,
+        double preferredRefreshRate)
+    {
+        AppendNativePlaybackDiagnostic(desiredHdrOutput
+            ? L"NativePlaybackEngine.OnGraphHdrOutputChanged EnterHdr10 begin"
+            : L"NativePlaybackEngine.OnGraphHdrOutputChanged LeaveHdr10 begin");
+        auto display = desiredHdrOutput
+            ? m_hdr.EnterHdr10(preferredRefreshRate)
+            : m_hdr.LeaveHdr10();
+        AppendNativePlaybackDiagnostic(
+            L"NativePlaybackEngine.OnGraphHdrOutputChanged display end " + FormatHdrSnapshot(display));
+        UpdateDisplayStatus(display);
+
+        if (!display.IsHdrOutputActive)
+        {
+            m_dx.SetSdrColorSpace();
+        }
+
+        return desiredHdrOutput && display.IsHdrOutputActive;
+    }
+
     void NativePlaybackEngine::OnGraphStateChanged(
         PlaybackGraphState state,
         winrt::hstring const& message)
@@ -272,6 +394,13 @@ namespace winrt::NextGenEmby::Native::implementation
         status.IsHdrDisplayAvailable(snapshot.IsHdrDisplayAvailable);
         status.IsHdrOutputActive(snapshot.IsHdrOutputActive);
         status.Message(snapshot.Message);
+        status.SwapChainFormat(FormatDxgiFormat(m_dx.SwapChainFormat()));
+        status.SwapChainColorSpace(FormatDxgiColorSpace(m_dx.SwapChainColorSpace()));
+        status.IsTenBitSwapChain(m_dx.IsTenBitSwapChain());
+        status.IsVideoProcessorColorSpaceValidated(m_dx.LastVideoProcessorConversionWasValidated());
+        status.VideoProcessorInputColorSpace(FormatDxgiColorSpace(m_dx.LastVideoProcessorInputColorSpace()));
+        status.VideoProcessorOutputColorSpace(FormatDxgiColorSpace(m_dx.LastVideoProcessorOutputColorSpace()));
+        status.VideoProcessorConversionStatus(winrt::hstring(m_dx.LastVideoProcessorConversionStatus()));
         m_displayStatus = status;
     }
 }

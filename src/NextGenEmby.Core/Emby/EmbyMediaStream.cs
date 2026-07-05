@@ -9,5 +9,7 @@ namespace NextGenEmby.Core.Emby
         public string ChannelLayout { get; set; } = "";
         public string DisplayTitle { get; set; } = "";
         public bool IsExternal { get; set; }
+        public double RealFrameRate { get; set; }
+        public double AverageFrameRate { get; set; }
     }
 }

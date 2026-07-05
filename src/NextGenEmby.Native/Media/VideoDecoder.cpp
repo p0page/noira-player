@@ -1,6 +1,8 @@
 #include "pch.h"
 #include "VideoDecoder.h"
+#include "DolbyVisionConfiguration.h"
 #include "FfmpegMediaSource.h"
+#include "../NativePlaybackDiagnostics.h"
 
 #include <algorithm>
 #include <cmath>
@@ -13,6 +15,7 @@ extern "C"
 {
 #include <libavcodec/avcodec.h>
 #include <libavcodec/codec.h>
+#include <libavcodec/packet.h>
 #include <libavformat/avformat.h>
 #include <libavutil/buffer.h>
 #include <libavutil/error.h>
@@ -21,6 +24,7 @@ extern "C"
 #include <libavutil/hwcontext_d3d11va.h>
 #include <libavutil/mastering_display_metadata.h>
 #include <libavutil/mathematics.h>
+#include <libavutil/pixdesc.h>
 #include <libavutil/pixfmt.h>
 #include <libswscale/swscale.h>
 }
@@ -77,6 +81,30 @@ namespace
     {
         auto message = std::string(operation) + " failed: " + GetFfmpegErrorMessage(errorCode);
         return winrt::hresult_error(E_FAIL, winrt::to_hstring(message));
+    }
+
+    bool SameDolbyVisionConfiguration(
+        winrt::NextGenEmby::Native::implementation::DolbyVisionConfiguration const& left,
+        winrt::NextGenEmby::Native::implementation::DolbyVisionConfiguration const& right) noexcept
+    {
+        return left.IsPresent == right.IsPresent &&
+            left.Profile == right.Profile &&
+            left.Level == right.Level &&
+            left.RpuPresent == right.RpuPresent &&
+            left.EnhancementLayerPresent == right.EnhancementLayerPresent &&
+            left.BaseLayerPresent == right.BaseLayerPresent &&
+            left.BaseLayerSignalCompatibilityId == right.BaseLayerSignalCompatibilityId;
+    }
+
+    std::wstring FormatDolbyVisionConfiguration(
+        winrt::NextGenEmby::Native::implementation::DolbyVisionConfiguration const& configuration)
+    {
+        return L"profile=" + std::to_wstring(configuration.Profile) +
+            L" level=" + std::to_wstring(configuration.Level) +
+            L" rpu=" + std::to_wstring(configuration.RpuPresent ? 1 : 0) +
+            L" el=" + std::to_wstring(configuration.EnhancementLayerPresent ? 1 : 0) +
+            L" bl=" + std::to_wstring(configuration.BaseLayerPresent ? 1 : 0) +
+            L" compat=" + std::to_wstring(configuration.BaseLayerSignalCompatibilityId);
     }
 
     AVPixelFormat FindD3D11HardwarePixelFormat(AVCodec const* decoder)
@@ -435,6 +463,54 @@ namespace
         }
     }
 
+    uint32_t GetBitsPerChannel(AVPixelFormat pixelFormat)
+    {
+        auto descriptor = av_pix_fmt_desc_get(pixelFormat);
+        if (descriptor == nullptr || descriptor->nb_components <= 0)
+        {
+            return 8;
+        }
+
+        auto bits = uint32_t{0};
+        for (auto index = 0; index < descriptor->nb_components; ++index)
+        {
+            bits = (std::max)(bits, static_cast<uint32_t>(descriptor->comp[index].depth));
+        }
+
+        return bits == 0 ? 8 : bits;
+    }
+
+    winrt::NextGenEmby::Native::implementation::VideoColorMetadata CreateVideoColorMetadata(
+        AVFrame const* frame,
+        AVPixelFormat sourceFormat,
+        std::optional<winrt::NextGenEmby::Native::implementation::DolbyVisionConfiguration> const& doviConfiguration)
+    {
+        winrt::NextGenEmby::Native::implementation::VideoColorMetadata metadata{};
+        metadata.ColorPrimaries = frame->color_primaries;
+        metadata.ColorTransfer = frame->color_trc;
+        metadata.ColorSpace = frame->colorspace;
+        metadata.ColorRange = frame->color_range;
+        metadata.ChromaLocation = frame->chroma_location;
+        metadata.BitsPerChannel = GetBitsPerChannel(sourceFormat);
+#ifdef AV_FRAME_DATA_DOVI_METADATA
+        auto doviSideData = av_frame_get_side_data(frame, AV_FRAME_DATA_DOVI_METADATA);
+        metadata.HasDolbyVisionMetadata = doviSideData != nullptr && doviSideData->data != nullptr;
+#endif
+        if (doviConfiguration)
+        {
+            metadata.HasDolbyVisionMetadata = true;
+            metadata.DolbyVisionProfile = doviConfiguration->Profile;
+            metadata.DolbyVisionLevel = doviConfiguration->Level;
+            metadata.DolbyVisionRpuPresent = doviConfiguration->RpuPresent;
+            metadata.DolbyVisionEnhancementLayerPresent = doviConfiguration->EnhancementLayerPresent;
+            metadata.DolbyVisionBaseLayerPresent = doviConfiguration->BaseLayerPresent;
+            metadata.DolbyVisionBaseLayerSignalCompatibilityId =
+                doviConfiguration->BaseLayerSignalCompatibilityId;
+        }
+
+        return metadata;
+    }
+
     int64_t GetFramePositionTicks(AVFrame const* frame, AVStream const* stream)
     {
         auto timestamp = frame->best_effort_timestamp;
@@ -453,7 +529,8 @@ namespace
 
     winrt::NextGenEmby::Native::implementation::DecodedVideoFrame CreateDecodedVideoFrame(
         AVFrame const* frame,
-        AVStream const* stream)
+        AVStream const* stream,
+        std::optional<winrt::NextGenEmby::Native::implementation::DolbyVisionConfiguration> const& doviConfiguration)
     {
         winrt::NextGenEmby::Native::implementation::DecodedVideoFrame decodedFrame;
         decodedFrame.Width = frame->width > 0 ? static_cast<uint32_t>(frame->width) : 0;
@@ -461,7 +538,9 @@ namespace
         auto displaySize = CalculateDisplaySize(frame, stream, decodedFrame.Width, decodedFrame.Height);
         decodedFrame.DisplayWidth = displaySize.first;
         decodedFrame.DisplayHeight = displaySize.second;
-        decodedFrame.Format = MapPixelFormat(GetFrameSoftwarePixelFormat(frame));
+        auto sourceFormat = GetFrameSoftwarePixelFormat(frame);
+        decodedFrame.Format = MapPixelFormat(sourceFormat);
+        decodedFrame.ColorMetadata = CreateVideoColorMetadata(frame, sourceFormat, doviConfiguration);
         decodedFrame.HdrKind = MapHdrKind(frame->color_trc);
         decodedFrame.UsesBt709Matrix = ShouldUseBt709Matrix(frame->colorspace, decodedFrame.Width, decodedFrame.Height);
         decodedFrame.IsFullRange = frame->color_range == AVCOL_RANGE_JPEG;
@@ -479,12 +558,13 @@ namespace
     std::optional<winrt::NextGenEmby::Native::implementation::DecodedVideoFrame> TryReceiveFrame(
         AVCodecContext* codecContext,
         AVFrame* frame,
-        AVStream const* stream)
+        AVStream const* stream,
+        std::optional<winrt::NextGenEmby::Native::implementation::DolbyVisionConfiguration> const& doviConfiguration)
     {
         auto receiveResult = avcodec_receive_frame(codecContext, frame);
         if (receiveResult == 0)
         {
-            auto decodedFrame = CreateDecodedVideoFrame(frame, stream);
+            auto decodedFrame = CreateDecodedVideoFrame(frame, stream, doviConfiguration);
             av_frame_unref(frame);
             return decodedFrame;
         }
@@ -495,6 +575,26 @@ namespace
         }
 
         throw CreateFfmpegError("avcodec_receive_frame", receiveResult);
+    }
+
+    std::wstring CreatePacketDiagnostic(
+        wchar_t const* prefix,
+        int result,
+        AVPacket const* packet,
+        int32_t expectedStreamIndex,
+        AVCodecContext const* codecContext)
+    {
+        return std::wstring(prefix) +
+            L" result=" + std::to_wstring(result) +
+            L" stream=" + std::to_wstring(packet == nullptr ? -1 : packet->stream_index) +
+            L" expected=" + std::to_wstring(expectedStreamIndex) +
+            L" size=" + std::to_wstring(packet == nullptr ? 0 : packet->size) +
+            L" pts=" + std::to_wstring(packet == nullptr ? AV_NOPTS_VALUE : packet->pts) +
+            L" dts=" + std::to_wstring(packet == nullptr ? AV_NOPTS_VALUE : packet->dts) +
+            L" flags=" + std::to_wstring(packet == nullptr ? 0 : packet->flags) +
+            L" codec=" + std::to_wstring(codecContext == nullptr ? -1 : static_cast<int>(codecContext->codec_id)) +
+            L" pixFmt=" + std::to_wstring(codecContext == nullptr ? -1 : static_cast<int>(codecContext->pix_fmt)) +
+            L" hw=" + std::to_wstring(codecContext != nullptr && codecContext->hw_device_ctx != nullptr ? 1 : 0);
     }
 }
 
@@ -515,6 +615,7 @@ namespace winrt::NextGenEmby::Native::implementation
         {
             auto videoStreamIndex = mediaSource.FindRequiredStream(AVMEDIA_TYPE_VIDEO, selectedVideoStreamIndex);
             auto videoStream = mediaSource.Stream(videoStreamIndex);
+            InspectDolbyVisionStreamSideData(videoStream);
             auto decoder = avcodec_find_decoder(videoStream->codecpar->codec_id);
             if (decoder == nullptr)
             {
@@ -556,6 +657,15 @@ namespace winrt::NextGenEmby::Native::implementation
                 throw CreateFfmpegError("avcodec_open2", result);
             }
 
+            AppendNativePlaybackDiagnostic(
+                L"VideoDecoder.Open stream=" + std::to_wstring(videoStreamIndex) +
+                L" codec=" + std::to_wstring(static_cast<int>(videoStream->codecpar->codec_id)) +
+                L" width=" + std::to_wstring(codecContext->width) +
+                L" height=" + std::to_wstring(codecContext->height) +
+                L" pixFmt=" + std::to_wstring(static_cast<int>(codecContext->pix_fmt)) +
+                L" hwPixFmt=" + std::to_wstring(m_hardwarePixelFormat) +
+                L" hwDevice=" + std::to_wstring(codecContext->hw_device_ctx != nullptr ? 1 : 0));
+
             mediaSource.RegisterStream(videoStreamIndex);
             m_mediaSource = &mediaSource;
             m_codecContext = codecContext;
@@ -583,6 +693,7 @@ namespace winrt::NextGenEmby::Native::implementation
         }
 
         m_positionTicks = 0;
+        m_dolbyVisionConfiguration.reset();
         m_decoderDraining = false;
         m_open = true;
     }
@@ -615,11 +726,17 @@ namespace winrt::NextGenEmby::Native::implementation
 
         if (m_decoderDraining)
         {
-            return publishFrame(TryReceiveFrame(m_codecContext, frame.get(), videoStream));
+            return publishFrame(TryReceiveFrame(
+                m_codecContext,
+                frame.get(),
+                videoStream,
+                m_dolbyVisionConfiguration));
         }
 
         while (m_mediaSource->TryReadPacket(m_videoStreamIndex, packet.get()))
         {
+            InspectDolbyVisionPacketSideData(packet.get());
+
             std::optional<DecodedVideoFrame> pendingFrame;
             while (true)
             {
@@ -632,7 +749,11 @@ namespace winrt::NextGenEmby::Native::implementation
 
                 if (sendResult == AVERROR(EAGAIN))
                 {
-                    auto drainedFrame = TryReceiveFrame(m_codecContext, frame.get(), videoStream);
+                    auto drainedFrame = TryReceiveFrame(
+                        m_codecContext,
+                        frame.get(),
+                        videoStream,
+                        m_dolbyVisionConfiguration);
                     if (!drainedFrame)
                     {
                         av_packet_unref(packet.get());
@@ -648,7 +769,12 @@ namespace winrt::NextGenEmby::Native::implementation
 
                     continue;
                 }
-
+                AppendNativePlaybackDiagnostic(CreatePacketDiagnostic(
+                    L"VideoDecoder.SendPacket failed",
+                    sendResult,
+                    packet.get(),
+                    m_videoStreamIndex,
+                    m_codecContext));
                 av_packet_unref(packet.get());
                 throw CreateFfmpegError("avcodec_send_packet", sendResult);
             }
@@ -658,7 +784,11 @@ namespace winrt::NextGenEmby::Native::implementation
                 return publishFrame(pendingFrame);
             }
 
-            auto decodedFrame = TryReceiveFrame(m_codecContext, frame.get(), videoStream);
+            auto decodedFrame = TryReceiveFrame(
+                m_codecContext,
+                frame.get(),
+                videoStream,
+                m_dolbyVisionConfiguration);
             if (decodedFrame)
             {
                 return publishFrame(decodedFrame);
@@ -672,7 +802,75 @@ namespace winrt::NextGenEmby::Native::implementation
         }
 
         m_decoderDraining = true;
-        return publishFrame(TryReceiveFrame(m_codecContext, frame.get(), videoStream));
+        return publishFrame(TryReceiveFrame(
+            m_codecContext,
+            frame.get(),
+            videoStream,
+            m_dolbyVisionConfiguration));
+    }
+
+    void VideoDecoder::ApplyDolbyVisionConfigurationSideData(
+        uint8_t const* sideData,
+        size_t sideDataSize,
+        wchar_t const* source)
+    {
+        if (sideData == nullptr || sideDataSize == 0)
+        {
+            return;
+        }
+
+        auto configuration = TryParseDolbyVisionConfigurationRecord(sideData, sideDataSize);
+        if (!configuration)
+        {
+            AppendNativePlaybackDiagnostic(
+                L"VideoDecoder.DolbyVisionConfig invalid source=" +
+                std::wstring(source == nullptr ? L"unknown" : source) +
+                L" sideDataSize=" +
+                std::to_wstring(sideDataSize));
+            return;
+        }
+
+        if (!m_dolbyVisionConfiguration ||
+            !SameDolbyVisionConfiguration(*m_dolbyVisionConfiguration, *configuration))
+        {
+            AppendNativePlaybackDiagnostic(
+                L"VideoDecoder.DolbyVisionConfig " +
+                std::wstring(source == nullptr ? L"unknown" : source) +
+                L" " +
+                FormatDolbyVisionConfiguration(*configuration));
+        }
+
+        m_dolbyVisionConfiguration = configuration;
+        if (IsUnsupportedPureDolbyVision(*configuration))
+        {
+            throw winrt::hresult_error(
+                E_FAIL,
+                L"Dolby Vision Profile 5 without HDR10 or HLG fallback is not supported by the native renderer.");
+        }
+    }
+
+    void VideoDecoder::InspectDolbyVisionStreamSideData(::AVStream const* stream)
+    {
+        if (stream == nullptr)
+        {
+            return;
+        }
+
+        size_t sideDataSize = 0;
+        auto sideData = av_stream_get_side_data(stream, AV_PKT_DATA_DOVI_CONF, &sideDataSize);
+        ApplyDolbyVisionConfigurationSideData(sideData, sideDataSize, L"stream");
+    }
+
+    void VideoDecoder::InspectDolbyVisionPacketSideData(AVPacket const* packet)
+    {
+        if (packet == nullptr)
+        {
+            return;
+        }
+
+        size_t sideDataSize = 0;
+        auto sideData = av_packet_get_side_data(packet, AV_PKT_DATA_DOVI_CONF, &sideDataSize);
+        ApplyDolbyVisionConfigurationSideData(sideData, sideDataSize, L"packet");
     }
 
     void VideoDecoder::Seek(int64_t positionTicks)
@@ -689,6 +887,7 @@ namespace winrt::NextGenEmby::Native::implementation
             auto timestamp = av_rescale_q(positionTicks, HundredNanosecondTimeBase, videoStream->time_base);
             m_mediaSource->Seek(m_videoStreamIndex, timestamp);
             avcodec_flush_buffers(m_codecContext);
+            m_dolbyVisionConfiguration.reset();
             m_decoderDraining = false;
         }
     }
@@ -716,6 +915,7 @@ namespace winrt::NextGenEmby::Native::implementation
         m_width = 0;
         m_height = 0;
         m_positionTicks = 0;
+        m_dolbyVisionConfiguration.reset();
         m_decoderDraining = false;
         m_open = false;
     }

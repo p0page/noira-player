@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using NextGenEmby.Core.Emby;
+using NextGenEmby.Core.Playback;
 using Xunit;
 
 namespace NextGenEmby.Core.Tests.Emby;
@@ -30,6 +31,8 @@ public sealed class EmbyPlaybackInfoTests
                       "Codec": "hevc",
                       "Width": 3840,
                       "Height": 2160,
+                      "RealFrameRate": 23.976,
+                      "AverageFrameRate": 24.0,
                       "VideoRange": "HDR10",
                       "DisplayTitle": "4K HEVC Main10 HDR10"
                     },
@@ -62,10 +65,16 @@ public sealed class EmbyPlaybackInfoTests
         var source = Assert.Single(sources);
         Assert.Equal("source-4k", source.Id);
         Assert.True(source.IsHdr);
+        Assert.Equal(HdrPlaybackKind.Hdr10, source.HdrProfile.Kind);
+        Assert.Equal("HDR10", source.HdrProfile.PlaybackStrategy);
         Assert.Equal(3840, source.Width);
         Assert.Equal(2160, source.Height);
+        Assert.Equal(23.976, source.VideoFrameRate);
         Assert.Equal("http://emby.local:8096/Videos/movie-1/stream?static=true&mediaSourceId=source-4k&api_key=token-123&container=mkv", source.DirectStreamUrl);
-        Assert.Equal("hevc", source.VideoStreams.Single().Codec);
+        var video = source.VideoStreams.Single();
+        Assert.Equal("hevc", video.Codec);
+        Assert.Equal(23.976, video.RealFrameRate);
+        Assert.Equal(24.0, video.AverageFrameRate);
         Assert.Equal("truehd", source.AudioStreams.Single().Codec);
         Assert.True(source.SubtitleStreams.Single().IsExternal);
 
@@ -78,6 +87,196 @@ public sealed class EmbyPlaybackInfoTests
             "UserId=\"user-1\", Client=\"Next Gen Xbox Emby\", Device=\"Next Gen Xbox Emby\", DeviceId=\"test-device\", Version=\"0.1.0\"",
             request.AuthorizationParameter);
         Assert.Equal("token-123", request.EmbyToken);
+    }
+
+    [Fact]
+    public async Task GetPlaybackInfoAsync_Treats_Pq_Bt2020_Video_As_Hdr_Even_When_VideoRange_Is_Sdr()
+    {
+        var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
+            HttpStatusCode.OK,
+            """
+            {
+              "MediaSources": [
+                {
+                  "Id": "source-pq",
+                  "Name": "4K / 28 Mbps",
+                  "MediaStreams": [
+                    {
+                      "Index": 0,
+                      "Type": "Video",
+                      "Codec": "hevc",
+                      "Width": 3840,
+                      "Height": 1608,
+                      "VideoRange": "SDR",
+                      "ColorPrimaries": "bt2020",
+                      "ColorTransfer": "smpte2084",
+                      "ColorSpace": "bt2020nc"
+                    }
+                  ]
+                }
+              ]
+            }
+            """));
+        using var http = new HttpClient(handler);
+        var client = CreateClient(http);
+
+        var source = Assert.Single(await client.GetPlaybackInfoAsync(Session(), "movie-1"));
+
+        Assert.True(source.IsHdr);
+        Assert.Equal(HdrPlaybackKind.Hdr10, source.HdrProfile.Kind);
+    }
+
+    [Fact]
+    public async Task GetPlaybackInfoAsync_Maps_DolbyVision_Profile_8_1_To_Hdr10_Fallback()
+    {
+        var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
+            HttpStatusCode.OK,
+            """
+            {
+              "MediaSources": [
+                {
+                  "Id": "source-dv81",
+                  "Name": "4K DoVi HDR10",
+                  "MediaStreams": [
+                    {
+                      "Index": 0,
+                      "Type": "Video",
+                      "Codec": "hevc",
+                      "Width": 3840,
+                      "Height": 2160,
+                      "VideoRange": "HDR10 Dolby Vision",
+                      "ColorPrimaries": "bt2020",
+                      "ColorTransfer": "smpte2084",
+                      "ColorSpace": "bt2020nc",
+                      "DisplayTitle": "4K HEVC DoVi Profile 8.1 HDR10"
+                    }
+                  ]
+                }
+              ]
+            }
+            """));
+        using var http = new HttpClient(handler);
+        var client = CreateClient(http);
+
+        var source = Assert.Single(await client.GetPlaybackInfoAsync(Session(), "movie-1"));
+
+        Assert.True(source.IsHdr);
+        Assert.Equal(HdrPlaybackKind.DolbyVisionWithHdr10Fallback, source.HdrProfile.Kind);
+        Assert.True(source.HdrProfile.IsDolbyVision);
+        Assert.True(source.HdrProfile.HasHdr10BaseLayer);
+        Assert.Null(source.HdrProfile.DolbyVisionProfile);
+        Assert.Null(source.HdrProfile.DolbyVisionCompatibilityId);
+        Assert.True(source.HdrProfile.IsDirectPlayable);
+        Assert.Equal("HDR10 fallback from Dolby Vision", source.HdrProfile.PlaybackStrategy);
+    }
+
+    [Fact]
+    public async Task GetPlaybackInfoAsync_Maps_DolbyVision_Profile_5_To_Unsupported()
+    {
+        var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
+            HttpStatusCode.OK,
+            """
+            {
+              "MediaSources": [
+                {
+                  "Id": "source-dv5",
+                  "Name": "4K DoVi Profile 5",
+                  "MediaStreams": [
+                    {
+                      "Index": 0,
+                      "Type": "Video",
+                      "Codec": "dvhe.05",
+                      "Width": 3840,
+                      "Height": 2160,
+                      "VideoRange": "Dolby Vision",
+                      "DisplayTitle": "DoVi Profile 5"
+                    }
+                  ]
+                }
+              ]
+            }
+            """));
+        using var http = new HttpClient(handler);
+        var client = CreateClient(http);
+
+        var source = Assert.Single(await client.GetPlaybackInfoAsync(Session(), "movie-1"));
+
+        Assert.True(source.IsHdr);
+        Assert.Equal(HdrPlaybackKind.DolbyVisionUnsupported, source.HdrProfile.Kind);
+        Assert.True(source.HdrProfile.IsDolbyVision);
+        Assert.False(source.HdrProfile.IsDirectPlayable);
+    }
+
+    [Fact]
+    public async Task GetPlaybackInfoAsync_Does_Not_Trust_MediaSource_Name_For_DolbyVision_When_Stream_Metadata_Is_Minimal()
+    {
+        var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
+            HttpStatusCode.OK,
+            """
+            {
+              "MediaSources": [
+                {
+                  "Id": "source-dv-name-only",
+                  "Name": "4K / 12 Mbps, HEVC - DV • DDP5.1",
+                  "MediaStreams": [
+                    {
+                      "Index": 0,
+                      "Type": "Video",
+                      "Codec": "hevc",
+                      "Width": 3840,
+                      "Height": 1608,
+                      "VideoRange": "PC",
+                      "DisplayTitle": "4K HEVC"
+                    }
+                  ]
+                }
+              ]
+            }
+            """));
+        using var http = new HttpClient(handler);
+        var client = CreateClient(http);
+
+        var source = Assert.Single(await client.GetPlaybackInfoAsync(Session(), "movie-1"));
+
+        Assert.Equal(HdrPlaybackKind.Sdr, source.HdrProfile.Kind);
+        Assert.False(source.HdrProfile.IsDolbyVision);
+        Assert.True(source.HdrProfile.IsDirectPlayable);
+    }
+
+    [Fact]
+    public async Task GetPlaybackInfoAsync_Does_Not_Trust_Stream_DisplayTitle_For_DolbyVision_When_Stream_Metadata_Is_Minimal()
+    {
+        var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
+            HttpStatusCode.OK,
+            """
+            {
+              "MediaSources": [
+                {
+                  "Id": "source-dv-title-only",
+                  "Name": "4K / 12 Mbps",
+                  "MediaStreams": [
+                    {
+                      "Index": 0,
+                      "Type": "Video",
+                      "Codec": "hevc",
+                      "Width": 3840,
+                      "Height": 1608,
+                      "VideoRange": "PC",
+                      "DisplayTitle": "4K HEVC DoVi Profile 5 HDR10"
+                    }
+                  ]
+                }
+              ]
+            }
+            """));
+        using var http = new HttpClient(handler);
+        var client = CreateClient(http);
+
+        var source = Assert.Single(await client.GetPlaybackInfoAsync(Session(), "movie-1"));
+
+        Assert.Equal(HdrPlaybackKind.Sdr, source.HdrProfile.Kind);
+        Assert.False(source.HdrProfile.IsDolbyVision);
+        Assert.True(source.HdrProfile.IsDirectPlayable);
     }
 
     [Fact]

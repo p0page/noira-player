@@ -17,7 +17,8 @@ namespace NextGenEmby.Core.Playback
         HideOverlay,
         GoBack,
         ConfirmSeekPreview,
-        CancelSeekPreview
+        CancelSeekPreview,
+        ActivateFocusedControl
     }
 
     public static class PlaybackOverlayInputPolicy
@@ -32,8 +33,13 @@ namespace NextGenEmby.Core.Playback
             switch (shortcut)
             {
                 case PlaybackOverlayShortcut.Accept:
-                    return seekPreviewActive
-                        ? PlaybackOverlayInputAction.ConfirmSeekPreview
+                    if (seekPreviewActive)
+                    {
+                        return PlaybackOverlayInputAction.ConfirmSeekPreview;
+                    }
+
+                    return moreVisible
+                        ? PlaybackOverlayInputAction.ActivateFocusedControl
                         : PlaybackOverlayInputAction.ShowOverlay;
 
                 case PlaybackOverlayShortcut.Cancel:
@@ -63,6 +69,13 @@ namespace NextGenEmby.Core.Playback
                 default:
                     return PlaybackOverlayInputAction.None;
             }
+        }
+
+        public static bool ShouldRouteFocusedControlInput(
+            bool moreVisible,
+            bool seekPreviewActive)
+        {
+            return moreVisible && !seekPreviewActive;
         }
     }
 }

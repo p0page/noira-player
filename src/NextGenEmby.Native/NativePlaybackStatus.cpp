@@ -43,4 +43,74 @@ namespace winrt::NextGenEmby::Native::implementation
     {
         m_message = value;
     }
+
+    winrt::hstring NativePlaybackStatus::SwapChainFormat() const
+    {
+        return m_swapChainFormat;
+    }
+
+    void NativePlaybackStatus::SwapChainFormat(winrt::hstring const& value)
+    {
+        m_swapChainFormat = value;
+    }
+
+    winrt::hstring NativePlaybackStatus::SwapChainColorSpace() const
+    {
+        return m_swapChainColorSpace;
+    }
+
+    void NativePlaybackStatus::SwapChainColorSpace(winrt::hstring const& value)
+    {
+        m_swapChainColorSpace = value;
+    }
+
+    bool NativePlaybackStatus::IsTenBitSwapChain() const noexcept
+    {
+        return m_isTenBitSwapChain;
+    }
+
+    void NativePlaybackStatus::IsTenBitSwapChain(bool value) noexcept
+    {
+        m_isTenBitSwapChain = value;
+    }
+
+    bool NativePlaybackStatus::IsVideoProcessorColorSpaceValidated() const noexcept
+    {
+        return m_isVideoProcessorColorSpaceValidated;
+    }
+
+    void NativePlaybackStatus::IsVideoProcessorColorSpaceValidated(bool value) noexcept
+    {
+        m_isVideoProcessorColorSpaceValidated = value;
+    }
+
+    winrt::hstring NativePlaybackStatus::VideoProcessorInputColorSpace() const
+    {
+        return m_videoProcessorInputColorSpace;
+    }
+
+    void NativePlaybackStatus::VideoProcessorInputColorSpace(winrt::hstring const& value)
+    {
+        m_videoProcessorInputColorSpace = value;
+    }
+
+    winrt::hstring NativePlaybackStatus::VideoProcessorOutputColorSpace() const
+    {
+        return m_videoProcessorOutputColorSpace;
+    }
+
+    void NativePlaybackStatus::VideoProcessorOutputColorSpace(winrt::hstring const& value)
+    {
+        m_videoProcessorOutputColorSpace = value;
+    }
+
+    winrt::hstring NativePlaybackStatus::VideoProcessorConversionStatus() const
+    {
+        return m_videoProcessorConversionStatus;
+    }
+
+    void NativePlaybackStatus::VideoProcessorConversionStatus(winrt::hstring const& value)
+    {
+        m_videoProcessorConversionStatus = value;
+    }
 }

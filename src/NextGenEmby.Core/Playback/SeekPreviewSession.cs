@@ -90,6 +90,17 @@ public sealed class SeekPreviewSession
         MoveByTicks(offset.Ticks, now);
     }
 
+    public void MoveTo(long targetTicks, TimeSpan now)
+    {
+        if (!IsActive)
+        {
+            return;
+        }
+
+        TargetTicks = Math.Max(0, targetTicks);
+        AutoCommitAt = now + _autoCommitDelay;
+    }
+
     public SeekPreviewDecision Confirm()
     {
         if (!IsActive)

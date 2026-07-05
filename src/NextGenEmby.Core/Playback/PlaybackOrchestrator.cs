@@ -35,7 +35,8 @@ namespace NextGenEmby.Core.Playback
         public async Task StartAsync(
             string itemId,
             IReadOnlyList<EmbyMediaSource> sources,
-            long resumeTicks)
+            long resumeTicks,
+            string preferredMediaSourceId = "")
         {
             if (itemId == null)
             {
@@ -58,13 +59,30 @@ namespace NextGenEmby.Core.Playback
             }
 
             await StartBackendAsync(
-                sources[0],
+                SelectInitialMediaSource(sources, preferredMediaSourceId),
                 resumeTicks,
                 itemId,
                 sources,
                 null,
                 null,
                 restoreOnFailure: false).ConfigureAwait(false);
+        }
+
+        private static EmbyMediaSource SelectInitialMediaSource(
+            IReadOnlyList<EmbyMediaSource> sources,
+            string preferredMediaSourceId)
+        {
+            if (!string.IsNullOrWhiteSpace(preferredMediaSourceId))
+            {
+                var preferredSource = sources.FirstOrDefault(candidate =>
+                    string.Equals(candidate.Id, preferredMediaSourceId, StringComparison.Ordinal));
+                if (preferredSource != null)
+                {
+                    return preferredSource;
+                }
+            }
+
+            return sources[0];
         }
 
         public async Task SwitchMediaSourceAsync(string mediaSourceId)

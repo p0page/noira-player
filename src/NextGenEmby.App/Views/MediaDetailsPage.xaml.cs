@@ -7,6 +7,7 @@ using NextGenEmby.App.Navigation;
 using NextGenEmby.App.Services;
 using NextGenEmby.App.Storage;
 using NextGenEmby.Core.Emby;
+using NextGenEmby.Core.Playback;
 using Windows.System;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
@@ -240,11 +241,8 @@ namespace NextGenEmby.App.Views
                 return;
             }
 
-            var startPositionTicks = _item.UserData == null ? 0 : _item.UserData.PlaybackPositionTicks;
             var mediaSourceId = _mediaSources.FirstOrDefault()?.Id ?? "";
-            Frame.Navigate(
-                typeof(PlaybackPage),
-                new PlaybackLaunchRequest(_item.Id, _item.Name, startPositionTicks, mediaSourceId));
+            NavigateToPlayback(mediaSourceId);
         }
 
         private async void Refresh_OnClick(object sender, RoutedEventArgs e)
@@ -382,7 +380,7 @@ namespace NextGenEmby.App.Views
 
             foreach (var source in _mediaSources)
             {
-                VersionsPanel.Children.Add(CreateMutedText(CreateSourceSummary(source)));
+                VersionsPanel.Children.Add(CreateSourceButton(source));
             }
 
             AudioSummaryBlock.Text = "Audio: " + CreateAudioSummary(_mediaSources);
@@ -455,11 +453,45 @@ namespace NextGenEmby.App.Views
                 var startPositionTicks = episode.UserData == null ? 0 : episode.UserData.PlaybackPositionTicks;
                 Frame.Navigate(
                     typeof(PlaybackPage),
-                    new PlaybackLaunchRequest(episode.Id, episode.Name, startPositionTicks));
+                    new PlaybackLaunchRequest(
+                        episode.Id,
+                        episode.Name,
+                        startPositionTicks,
+                        runtimeTicks: episode.RunTimeTicks.GetValueOrDefault()));
                 return;
             }
 
             Frame.Navigate(typeof(MediaDetailsPage), new MediaDetailsNavigationRequest(episode.Id, episode.Name));
+        }
+
+        private void SourceVersion_OnClick(object sender, RoutedEventArgs e)
+        {
+            var button = sender as Button;
+            var source = button?.Tag as EmbyMediaSource;
+            if (source == null || string.IsNullOrWhiteSpace(source.Id))
+            {
+                return;
+            }
+
+            NavigateToPlayback(source.Id);
+        }
+
+        private void NavigateToPlayback(string mediaSourceId)
+        {
+            if (_item == null || string.IsNullOrWhiteSpace(_item.Id) || !CanPlay(_item))
+            {
+                return;
+            }
+
+            var startPositionTicks = _item.UserData == null ? 0 : _item.UserData.PlaybackPositionTicks;
+            Frame.Navigate(
+                typeof(PlaybackPage),
+                new PlaybackLaunchRequest(
+                    _item.Id,
+                    _item.Name,
+                    startPositionTicks,
+                    mediaSourceId ?? "",
+                    _item.RunTimeTicks.GetValueOrDefault()));
         }
 
         private void ResetPlaybackSections()
@@ -509,6 +541,46 @@ namespace NextGenEmby.App.Views
             };
         }
 
+        private Button CreateSourceButton(EmbyMediaSource source)
+        {
+            var button = new Button
+            {
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                HorizontalContentAlignment = HorizontalAlignment.Stretch,
+                Padding = new Thickness(18, 14, 18, 14),
+                Tag = source,
+                UseSystemFocusVisuals = true
+            };
+
+            var panel = new StackPanel
+            {
+                Spacing = 4
+            };
+
+            panel.Children.Add(new TextBlock
+            {
+                Text = CreateSourceSummary(source),
+                FontSize = 21,
+                TextWrapping = TextWrapping.WrapWholeWords
+            });
+
+            var details = CreateSourceDetails(source);
+            if (!string.IsNullOrWhiteSpace(details))
+            {
+                panel.Children.Add(new TextBlock
+                {
+                    Text = details,
+                    FontSize = 16,
+                    Foreground = (Windows.UI.Xaml.Media.Brush)Application.Current.Resources["AppMutedTextBrush"],
+                    TextWrapping = TextWrapping.Wrap
+                });
+            }
+
+            button.Content = panel;
+            button.Click += SourceVersion_OnClick;
+            return button;
+        }
+
         private static string CreatePlayButtonText(EmbyMediaItem item)
         {
             var startPositionTicks = item.UserData == null ? 0 : item.UserData.PlaybackPositionTicks;
@@ -529,9 +601,9 @@ namespace NextGenEmby.App.Views
                 parts.Add(source.Width + "x" + source.Height);
             }
 
-            if (source.IsHdr)
+            if (source.HdrProfile.Kind != HdrPlaybackKind.Sdr)
             {
-                parts.Add("HDR");
+                parts.Add(source.HdrProfile.PlaybackStrategy);
             }
 
             if (!string.IsNullOrWhiteSpace(source.Container))
@@ -545,6 +617,35 @@ namespace NextGenEmby.App.Views
             }
 
             return parts.Count == 0 ? "Unknown version" : string.Join(" / ", parts);
+        }
+
+        private static string CreateSourceDetails(EmbyMediaSource source)
+        {
+            var details = new List<string>();
+            var video = source.VideoStreams.FirstOrDefault();
+            if (video != null && !string.IsNullOrWhiteSpace(video.Codec))
+            {
+                details.Add(video.Codec.ToUpperInvariant());
+            }
+
+            if (source.HdrProfile.Kind == HdrPlaybackKind.DolbyVisionUnsupported)
+            {
+                details.Add("Dolby Vision unsupported");
+            }
+
+            var audioCount = source.AudioStreams.Count();
+            if (audioCount > 0)
+            {
+                details.Add("Audio " + audioCount);
+            }
+
+            var subtitleCount = source.SubtitleStreams.Count();
+            if (subtitleCount > 0)
+            {
+                details.Add("Subtitles " + subtitleCount);
+            }
+
+            return string.Join(" / ", details);
         }
 
         private static string CreateAudioSummary(IReadOnlyList<EmbyMediaSource> sources)

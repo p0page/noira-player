@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using NextGenEmby.Core.Playback;
 
 namespace NextGenEmby.Core.Emby
 {
@@ -351,7 +352,7 @@ namespace NextGenEmby.Core.Emby
                     continue;
                 }
 
-                result.Streams.Add(new EmbyMediaStream
+                var mediaStream = new EmbyMediaStream
                 {
                     Index = stream.Index,
                     Kind = kind,
@@ -359,19 +360,39 @@ namespace NextGenEmby.Core.Emby
                     Language = stream.Language ?? "",
                     ChannelLayout = stream.ChannelLayout ?? "",
                     DisplayTitle = stream.DisplayTitle ?? "",
-                    IsExternal = stream.IsExternal
-                });
+                    IsExternal = stream.IsExternal,
+                    RealFrameRate = stream.RealFrameRate,
+                    AverageFrameRate = stream.AverageFrameRate
+                };
+                result.Streams.Add(mediaStream);
 
                 if (kind == EmbyStreamKind.Video)
                 {
                     result.Width = stream.Width;
                     result.Height = stream.Height;
-                    var videoRange = stream.VideoRange ?? "";
-                    result.IsHdr = videoRange.IndexOf("HDR", StringComparison.OrdinalIgnoreCase) >= 0;
+                    result.VideoFrameRate = SelectVideoFrameRate(mediaStream);
+                    result.HdrProfile = HdrPlaybackProfileClassifier.Classify(
+                        stream.VideoRange ?? "",
+                        stream.ColorPrimaries ?? "",
+                        stream.ColorTransfer ?? "",
+                        stream.ColorSpace ?? "",
+                        stream.Codec ?? "",
+                        stream.DisplayTitle ?? "",
+                        source.Name ?? "");
                 }
             }
 
             return result;
+        }
+
+        private static double SelectVideoFrameRate(EmbyMediaStream stream)
+        {
+            if (stream.RealFrameRate > 0)
+            {
+                return stream.RealFrameRate;
+            }
+
+            return stream.AverageFrameRate > 0 ? stream.AverageFrameRate : 0;
         }
 
         private static bool TryParseStreamKind(string type, out EmbyStreamKind kind)
@@ -566,7 +587,12 @@ namespace NextGenEmby.Core.Emby
             public bool IsExternal { get; set; }
             public int Width { get; set; }
             public int Height { get; set; }
+            public double RealFrameRate { get; set; }
+            public double AverageFrameRate { get; set; }
             public string VideoRange { get; set; } = "";
+            public string ColorPrimaries { get; set; } = "";
+            public string ColorTransfer { get; set; } = "";
+            public string ColorSpace { get; set; } = "";
         }
     }
 }

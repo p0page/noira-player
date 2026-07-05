@@ -38,6 +38,26 @@ public sealed class PlaybackOverlayInputPolicyTests
     }
 
     [Fact]
+    public void Accept_Activates_Focused_Control_When_More_Drawer_Is_Open()
+    {
+        var action = PlaybackOverlayInputPolicy.Decide(PlaybackOverlayShortcut.Accept, seekPreviewActive: false, moreVisible: true, overlayVisible: true);
+
+        Assert.Equal(PlaybackOverlayInputAction.ActivateFocusedControl, action);
+    }
+
+    [Fact]
+    public void Focused_Controls_Handle_Navigation_When_More_Drawer_Is_Open()
+    {
+        Assert.True(PlaybackOverlayInputPolicy.ShouldRouteFocusedControlInput(moreVisible: true, seekPreviewActive: false));
+    }
+
+    [Fact]
+    public void Seek_Preview_Keeps_Global_Input_When_More_Drawer_Is_Open()
+    {
+        Assert.False(PlaybackOverlayInputPolicy.ShouldRouteFocusedControlInput(moreVisible: true, seekPreviewActive: true));
+    }
+
+    [Fact]
     public void Cancel_Closes_More_Before_Hiding_Overlay()
     {
         var action = PlaybackOverlayInputPolicy.Decide(PlaybackOverlayShortcut.Cancel, seekPreviewActive: false, moreVisible: true, overlayVisible: true);

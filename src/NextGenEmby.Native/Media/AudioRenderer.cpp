@@ -5,7 +5,7 @@
 
 namespace
 {
-    constexpr size_t MaxSubmittedAudioBuffers = 8;
+    constexpr size_t MaxSubmittedAudioBuffers = 24;
     constexpr uint32_t OutputSampleRate = 48000;
     constexpr int64_t TicksPerSecond = 10000000;
 

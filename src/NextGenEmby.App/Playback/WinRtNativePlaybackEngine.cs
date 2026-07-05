@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using NextGenEmby.Core.Playback;
+using NextGenEmby.App.Services;
 using CoreNativePlaybackOpenRequest = NextGenEmby.Core.Playback.NativePlaybackOpenRequest;
 using NativeHdrStatus = NextGenEmby.Native.NativeHdrStatus;
 using NativePlaybackEngine = NextGenEmby.Native.NativePlaybackEngine;
@@ -43,36 +44,90 @@ namespace NextGenEmby.App.Playback
                     MapHdrStatus(status.HdrStatus),
                     status.IsHdrDisplayAvailable,
                     status.IsHdrOutputActive,
-                    status.Message ?? "");
+                    status.Message ?? "",
+                    status.SwapChainFormat ?? "",
+                    status.SwapChainColorSpace ?? "",
+                    status.IsTenBitSwapChain,
+                    status.IsVideoProcessorColorSpaceValidated,
+                    status.VideoProcessorInputColorSpace ?? "",
+                    status.VideoProcessorOutputColorSpace ?? "",
+                    status.VideoProcessorConversionStatus ?? "");
             }
         }
 
         public void AttachSurface(Windows.UI.Xaml.Controls.SwapChainPanel panel)
         {
+            PlaybackDiagnosticsLog.WriteLine("Native attach surface begin");
             _engine.AttachSurface(panel);
+            PlaybackDiagnosticsLog.WriteLine("Native attach surface end " + FormatDisplayStatus(DisplayStatus));
         }
 
-        public Task OpenAsync(CoreNativePlaybackOpenRequest request)
+        public async Task OpenAsync(CoreNativePlaybackOpenRequest request)
         {
             if (request == null)
             {
                 throw new ArgumentNullException(nameof(request));
             }
 
-            var nativeRequest = new NativePlaybackOpenRequest
-            {
-                ItemId = request.ItemId,
-                MediaSourceId = request.MediaSourceId,
-                DirectStreamUrl = request.DirectStreamUrl,
-                StartPositionTicks = request.StartPositionTicks,
-                HasAudioStreamIndex = request.AudioStreamIndex.HasValue,
-                AudioStreamIndex = request.AudioStreamIndex.GetValueOrDefault(),
-                HasSubtitleStreamIndex = request.SubtitleStreamIndex.HasValue,
-                SubtitleStreamIndex = request.SubtitleStreamIndex.GetValueOrDefault(),
-                IsHdr = request.IsHdr
-            };
+            await PlaybackDiagnosticsLog.WriteLineAsync(
+                "Native open enter item=" + request.ItemId +
+                " source=" + request.MediaSourceId +
+                " fps=" + request.VideoFrameRate +
+                " urlLength=" + (request.DirectStreamUrl?.Length ?? 0));
 
-            return _engine.OpenAsync(nativeRequest).AsTask();
+            await PlaybackDiagnosticsLog.WriteLineAsync("Native request create begin");
+            var nativeRequest = new NativePlaybackOpenRequest();
+            await PlaybackDiagnosticsLog.WriteLineAsync("Native request create end");
+
+            await PlaybackDiagnosticsLog.WriteLineAsync("Native request set ItemId begin");
+            nativeRequest.ItemId = request.ItemId;
+            await PlaybackDiagnosticsLog.WriteLineAsync("Native request set ItemId end");
+
+            await PlaybackDiagnosticsLog.WriteLineAsync("Native request set MediaSourceId begin");
+            nativeRequest.MediaSourceId = request.MediaSourceId;
+            await PlaybackDiagnosticsLog.WriteLineAsync("Native request set MediaSourceId end");
+
+            await PlaybackDiagnosticsLog.WriteLineAsync(
+                "Native request set DirectStreamUrl begin length=" + (request.DirectStreamUrl?.Length ?? 0));
+            nativeRequest.DirectStreamUrl = request.DirectStreamUrl;
+            await PlaybackDiagnosticsLog.WriteLineAsync("Native request set DirectStreamUrl end");
+
+            await PlaybackDiagnosticsLog.WriteLineAsync("Native request set StartPositionTicks begin");
+            nativeRequest.StartPositionTicks = request.StartPositionTicks;
+            await PlaybackDiagnosticsLog.WriteLineAsync("Native request set StartPositionTicks end");
+
+            await PlaybackDiagnosticsLog.WriteLineAsync("Native request set audio fields begin");
+            nativeRequest.HasAudioStreamIndex = request.AudioStreamIndex.HasValue;
+            nativeRequest.AudioStreamIndex = request.AudioStreamIndex.GetValueOrDefault();
+            await PlaybackDiagnosticsLog.WriteLineAsync("Native request set audio fields end");
+
+            await PlaybackDiagnosticsLog.WriteLineAsync("Native request set subtitle fields begin");
+            nativeRequest.HasSubtitleStreamIndex = request.SubtitleStreamIndex.HasValue;
+            nativeRequest.SubtitleStreamIndex = request.SubtitleStreamIndex.GetValueOrDefault();
+            await PlaybackDiagnosticsLog.WriteLineAsync("Native request set subtitle fields end");
+
+            await PlaybackDiagnosticsLog.WriteLineAsync("Native request set VideoFrameRate begin");
+            nativeRequest.VideoFrameRate = request.VideoFrameRate;
+            await PlaybackDiagnosticsLog.WriteLineAsync("Native request set VideoFrameRate end");
+
+            await PlaybackDiagnosticsLog.WriteLineAsync(
+                "Native open begin item=" + request.ItemId +
+                " source=" + request.MediaSourceId +
+                " startTicks=" + request.StartPositionTicks +
+                " fps=" + request.VideoFrameRate +
+                " audio=" + (request.AudioStreamIndex.HasValue ? request.AudioStreamIndex.Value.ToString() : "default") +
+                " subtitle=" + (request.SubtitleStreamIndex.HasValue ? request.SubtitleStreamIndex.Value.ToString() : "off"));
+            await PlaybackDiagnosticsLog.WriteLineAsync("Native open status before " + FormatDisplayStatus(DisplayStatus));
+            try
+            {
+                await _engine.OpenAsync(nativeRequest).AsTask();
+                PlaybackDiagnosticsLog.WriteLine("Native open end " + FormatDisplayStatus(DisplayStatus));
+            }
+            catch (Exception ex)
+            {
+                PlaybackDiagnosticsLog.WriteLine("Native open exception " + ex.GetType().FullName + " " + ex.Message);
+                throw;
+            }
         }
 
         public Task PauseAsync()
@@ -109,9 +164,30 @@ namespace NextGenEmby.App.Playback
 
         private void Engine_OnStateChanged(NativePlaybackState state, string message)
         {
+            PlaybackDiagnosticsLog.WriteLine(
+                "Native state " + MapState(state) +
+                " position=" + _engine.CurrentPositionTicks() +
+                " message=" + (message ?? "") +
+                " " + FormatDisplayStatus(DisplayStatus));
             StateChanged?.Invoke(
                 this,
                 new PlaybackStateChangedEventArgs(MapState(state), message ?? "", _engine.CurrentPositionTicks()));
+        }
+
+        private static string FormatDisplayStatus(PlaybackDisplayStatus status)
+        {
+            return
+                "hdr=" + status.HdrStatus +
+                " active=" + status.IsHdrOutputActive +
+                " display=" + status.IsHdrDisplayAvailable +
+                " swap=" + status.SwapChainFormat +
+                " color=" + status.SwapChainColorSpace +
+                " tenBit=" + status.IsTenBitSwapChain +
+                " vp=" + status.IsVideoProcessorColorSpaceValidated +
+                " vpIn=" + status.VideoProcessorInputColorSpace +
+                " vpOut=" + status.VideoProcessorOutputColorSpace +
+                " vpStatus=" + status.VideoProcessorConversionStatus +
+                " msg=" + status.Message;
         }
 
         private static PlaybackState MapState(NativePlaybackState state)

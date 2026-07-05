@@ -2,6 +2,8 @@
 
 #include "NativePlaybackEngine.g.h"
 
+#include <winrt/Windows.Graphics.Display.Core.h>
+
 namespace winrt::NextGenEmby::Native::implementation
 {
     struct HdrDisplaySnapshot
@@ -16,13 +18,15 @@ namespace winrt::NextGenEmby::Native::implementation
     {
     public:
         HdrDisplaySnapshot Probe();
-        HdrDisplaySnapshot EnterHdr10();
+        HdrDisplaySnapshot EnterHdr10(double videoFrameRate);
+        HdrDisplaySnapshot LeaveHdr10();
         HdrDisplaySnapshot RestoreInitialState();
 
     private:
-        HdrDisplaySnapshot Apply(bool enableHdr);
+        HdrDisplaySnapshot Apply(bool enableHdr, double preferredRefreshRate);
 
         bool m_hasInitialState{false};
         bool m_initialHdrActive{false};
+        double m_initialRefreshRate{0.0};
     };
 }

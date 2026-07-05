@@ -78,6 +78,18 @@ public sealed class SeekPreviewSessionTests
     }
 
     [Fact]
+    public void MoveTo_Updates_Target_To_Absolute_Position_And_Reset_Deadline()
+    {
+        var session = new SeekPreviewSession(TimeSpan.FromSeconds(1.8), TimeSpan.FromSeconds(5), 0.55);
+        session.Begin(TimeSpan.FromSeconds(10).Ticks, TimeSpan.Zero);
+
+        session.MoveTo(TimeSpan.FromMinutes(42).Ticks, TimeSpan.FromSeconds(2));
+
+        Assert.Equal(TimeSpan.FromMinutes(42).Ticks, session.TargetTicks);
+        Assert.Equal(TimeSpan.FromSeconds(3.8), session.AutoCommitAt);
+    }
+
+    [Fact]
     public void Timeout_Before_Deadline_Returns_None_And_Keeps_Pending()
     {
         var session = new SeekPreviewSession(TimeSpan.FromSeconds(1.8), TimeSpan.FromSeconds(5), 0.55);

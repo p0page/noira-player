@@ -48,7 +48,8 @@
                                 IsEnabled="False"
                                 Maximum="1"
                                 Minimum="0"
-                                Value="0" />
+                                Value="0"
+                                ValueChanged="ProgressSlider_OnValueChanged" />
                             <TextBlock
                                 x:Name="SeekPreviewBlock"
                                 Foreground="{StaticResource AppMutedTextBrush}"

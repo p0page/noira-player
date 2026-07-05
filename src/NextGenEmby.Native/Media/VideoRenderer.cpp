@@ -8,23 +8,30 @@ namespace winrt::NextGenEmby::Native::implementation
     {
     }
 
-    void VideoRenderer::Render(DecodedVideoFrame const& frame)
+    void VideoRenderer::Render(DecodedVideoFrame const& frame, bool hdrDisplayActive)
     {
-        if (frame.HdrKind == VideoHdrKind::Hdr10)
+        auto outputHdr10 = hdrDisplayActive &&
+            ShouldOutputHdr10ForFrame(frame.HdrKind, m_deviceResources.IsTenBitSwapChain());
+        if (outputHdr10)
         {
             if (frame.Hdr10Metadata.has_value())
             {
                 m_deviceResources.SetHdr10Metadata(frame.Hdr10Metadata.value());
             }
+            else if (frame.HdrKind == VideoHdrKind::Hlg)
+            {
+                m_deviceResources.SetHdr10Metadata(CreateHlgReferenceHdr10Metadata());
+            }
 
-            m_deviceResources.SetHdr10ColorSpace();
+            outputHdr10 = m_deviceResources.SetHdr10ColorSpace();
         }
-        else if (m_currentHdrKind != VideoHdrKind::None)
+
+        if (!outputHdr10 && m_currentHdrKind != VideoHdrKind::None)
         {
             m_deviceResources.SetSdrColorSpace();
         }
 
-        m_currentHdrKind = frame.HdrKind;
+        m_currentHdrKind = outputHdr10 ? VideoHdrKind::Hdr10 : VideoHdrKind::None;
 
         auto rendered = false;
         if (frame.Texture)
@@ -39,8 +46,9 @@ namespace winrt::NextGenEmby::Native::implementation
                     frame.Height,
                     frame.DisplayWidth,
                     frame.DisplayHeight,
-                    frame.UsesBt709Matrix,
-                    frame.IsFullRange);
+                    frame.ColorMetadata,
+                    outputHdr10,
+                    frame.Hdr10Metadata.has_value() ? &frame.Hdr10Metadata.value() : nullptr);
             }
         }
 

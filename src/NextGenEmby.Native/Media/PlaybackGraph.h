@@ -10,6 +10,7 @@
 #include "VideoDecoder.h"
 #include "VideoRenderer.h"
 
+#include <chrono>
 #include <condition_variable>
 #include <functional>
 #include <mutex>
@@ -25,13 +26,33 @@ namespace winrt::NextGenEmby::Native::implementation
     };
 
     using PlaybackGraphStateChangedHandler = std::function<void(PlaybackGraphState state, winrt::hstring const& message)>;
+    using PlaybackGraphHdrOutputChangedHandler = std::function<bool(bool desiredHdrOutput, double preferredRefreshRate)>;
+
+    struct HdrOutputDecision
+    {
+        bool ShouldRequestDisplayChange{false};
+        bool DesiredHdrOutput{false};
+    };
+
+    inline HdrOutputDecision ResolveHdrOutputDecisionForFrame(
+        bool hasSeenVideoFrameColor,
+        bool previousDesiredHdrOutput,
+        VideoHdrKind hdrKind,
+        bool isTenBitSwapChain) noexcept
+    {
+        auto desiredHdrOutput = ShouldOutputHdr10ForFrame(hdrKind, isTenBitSwapChain);
+        return HdrOutputDecision{
+            !hasSeenVideoFrameColor || desiredHdrOutput != previousDesiredHdrOutput,
+            desiredHdrOutput};
+    }
 
     class PlaybackGraph
     {
     public:
         explicit PlaybackGraph(
             DxDeviceResources& deviceResources,
-            PlaybackGraphStateChangedHandler stateChanged = nullptr);
+            PlaybackGraphStateChangedHandler stateChanged = nullptr,
+            PlaybackGraphHdrOutputChangedHandler hdrOutputChanged = nullptr);
         ~PlaybackGraph();
 
         void Open(NextGenEmby::Native::NativePlaybackOpenRequest const& request);
@@ -48,12 +69,17 @@ namespace winrt::NextGenEmby::Native::implementation
         void StopRenderLoop() noexcept;
         void RenderLoop() noexcept;
         bool RenderNextFrame();
-        void DecodeNextAudioFrame();
+        uint32_t DecodeNextAudioFrame();
         void UpdateSubtitleCue();
+        void ResetRuntimeStats() noexcept;
+        void SetVideoPrerollTarget(int64_t targetTicks) noexcept;
+        void EnsureHdrOutputForFrame(DecodedVideoFrame const& frame);
+        void LogRuntimeStatsIfDue();
         void NotifyStateChanged(PlaybackGraphState state, winrt::hstring const& message) const noexcept;
 
         DxDeviceResources& m_deviceResources;
         PlaybackGraphStateChangedHandler m_graphStateChanged;
+        PlaybackGraphHdrOutputChangedHandler m_hdrOutputChanged;
         FfmpegMediaSource m_mediaSource;
         VideoDecoder m_videoDecoder;
         AudioDecoder m_audioDecoder;
@@ -64,9 +90,24 @@ namespace winrt::NextGenEmby::Native::implementation
         std::optional<DecodedVideoFrame> m_pendingVideoFrame;
         winrt::hstring m_url;
         int64_t m_positionTicks{0};
+        double m_preferredVideoFrameRate{0.0};
+        bool m_hasSeenVideoFrameColor{false};
+        bool m_requestedHdrOutput{false};
+        bool m_hdrOutputActive{false};
         bool m_open{false};
         bool m_paused{false};
         bool m_stopRenderLoop{false};
+        uint64_t m_renderPassCount{0};
+        uint64_t m_renderedVideoFrameCount{0};
+        uint64_t m_decodedVideoFrameCount{0};
+        uint64_t m_submittedAudioFrameCount{0};
+        uint64_t m_droppedVideoFrameCount{0};
+        uint64_t m_seekPrerollDroppedVideoFrameCount{0};
+        uint64_t m_videoAheadWaitCount{0};
+        uint64_t m_videoStarvedPassCount{0};
+        uint64_t m_audioStarvedPassCount{0};
+        std::optional<int64_t> m_videoPrerollTargetTicks;
+        std::chrono::steady_clock::time_point m_lastRuntimeStatsLog{};
         std::thread m_renderThread;
         mutable std::mutex m_graphMutex;
         std::condition_variable m_stateChanged;

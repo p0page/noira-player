@@ -11,7 +11,7 @@ namespace NextGenEmby.Core.Playback
             long startPositionTicks,
             int? audioStreamIndex,
             int? subtitleStreamIndex,
-            bool isHdr = false)
+            double videoFrameRate = 0)
         {
             if (string.IsNullOrWhiteSpace(itemId))
             {
@@ -40,7 +40,7 @@ namespace NextGenEmby.Core.Playback
             StartPositionTicks = startPositionTicks;
             AudioStreamIndex = audioStreamIndex;
             SubtitleStreamIndex = subtitleStreamIndex;
-            IsHdr = isHdr;
+            VideoFrameRate = videoFrameRate > 0 ? videoFrameRate : 0;
         }
 
         public string ItemId { get; }
@@ -55,6 +55,6 @@ namespace NextGenEmby.Core.Playback
 
         public int? SubtitleStreamIndex { get; }
 
-        public bool IsHdr { get; }
+        public double VideoFrameRate { get; }
     }
 }

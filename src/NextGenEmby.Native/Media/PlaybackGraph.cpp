@@ -1,22 +1,28 @@
 #include "pch.h"
 #include "PlaybackGraph.h"
+#include "FramePacing.h"
+#include "../NativePlaybackDiagnostics.h"
 
+#include <algorithm>
 #include <chrono>
+#include <string>
 #include <utility>
 
 namespace winrt::NextGenEmby::Native::implementation
 {
     using namespace std::chrono_literals;
-    constexpr size_t MinimumQueuedAudioBuffers = 4;
-    constexpr int64_t VideoAheadToleranceTicks = 400000;
-    constexpr int64_t VideoDropToleranceTicks = 1000000;
+    constexpr size_t MinimumQueuedAudioBuffers = 12;
+    constexpr int64_t SeekPrerollToleranceTicks = 500000;
     constexpr uint32_t MaxDroppedVideoFramesPerPass = 4;
+    constexpr uint32_t MaxSeekPrerollDroppedVideoFramesPerPass = 300;
 
     PlaybackGraph::PlaybackGraph(
         DxDeviceResources& deviceResources,
-        PlaybackGraphStateChangedHandler stateChanged)
+        PlaybackGraphStateChangedHandler stateChanged,
+        PlaybackGraphHdrOutputChangedHandler hdrOutputChanged)
         : m_deviceResources(deviceResources),
           m_graphStateChanged(std::move(stateChanged)),
+          m_hdrOutputChanged(std::move(hdrOutputChanged)),
           m_videoRenderer(deviceResources),
           m_subtitleRenderer(deviceResources)
     {
@@ -29,51 +35,101 @@ namespace winrt::NextGenEmby::Native::implementation
 
     void PlaybackGraph::Open(NextGenEmby::Native::NativePlaybackOpenRequest const& request)
     {
+        AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open enter");
         if (request == nullptr)
         {
             throw winrt::hresult_invalid_argument(L"Playback request is required.");
         }
 
+        AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open Stop begin");
         Stop();
+        AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open Stop end");
 
         try
         {
             std::lock_guard lock(m_graphMutex);
+            AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open lock acquired");
+            AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open CreateDevice begin");
             m_deviceResources.CreateDevice();
+            AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open CreateDevice end");
+            AppendNativePlaybackDiagnostic(
+                L"PlaybackGraph.Open MediaSource.Open begin urlLength=" +
+                std::to_wstring(request.DirectStreamUrl().size()));
             m_mediaSource.Open(request.DirectStreamUrl());
+            AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open MediaSource.Open end");
+            AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open VideoDecoder.Open begin");
             m_videoDecoder.Open(
                 m_mediaSource,
                 0,
                 m_deviceResources.Device(),
                 m_deviceResources.Context());
+            AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open VideoDecoder.Open end");
+            AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open AudioDecoder.Open begin");
             m_audioDecoder.Open(
                 m_mediaSource,
                 request.AudioStreamIndex(),
                 request.HasAudioStreamIndex());
+            AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open AudioDecoder.Open end");
+            AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open AudioRenderer.Open begin");
             m_audioRenderer.Open(request.AudioStreamIndex(), request.HasAudioStreamIndex());
+            AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open AudioRenderer.Open end");
             auto subtitleStreamIndex = request.HasSubtitleStreamIndex()
                 ? std::optional<int32_t>{request.SubtitleStreamIndex()}
                 : std::nullopt;
             if (subtitleStreamIndex)
             {
+                AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open SubtitleDecoder.Open begin");
                 m_subtitleDecoder.Open(m_mediaSource, *subtitleStreamIndex);
+                AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open SubtitleDecoder.Open end");
             }
 
+            AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open SubtitleRenderer.Open begin");
             m_subtitleRenderer.Open(subtitleStreamIndex);
+            AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open SubtitleRenderer.Open end");
+            AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open ClearToBlack begin");
             m_videoRenderer.ClearToBlack();
+            AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open ClearToBlack end");
+            auto startPositionTicks = (std::max<int64_t>)(0, request.StartPositionTicks());
+            if (startPositionTicks > 0)
+            {
+                AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open Seek startup begin");
+                m_videoDecoder.Seek(startPositionTicks);
+                m_audioDecoder.Flush(startPositionTicks);
+                m_subtitleDecoder.Flush();
+                SetVideoPrerollTarget(startPositionTicks);
+                AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open Seek startup end");
+            }
+
             m_url = request.DirectStreamUrl();
-            m_positionTicks = request.StartPositionTicks();
+            m_positionTicks = startPositionTicks;
+            m_preferredVideoFrameRate = request.VideoFrameRate();
+            m_hasSeenVideoFrameColor = false;
+            m_requestedHdrOutput = false;
+            m_hdrOutputActive = false;
             m_open = true;
             m_paused = false;
-            RenderNextFrame();
+            ResetRuntimeStats();
+            AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open RenderNextFrame begin");
+            auto renderedFirstFrame = RenderNextFrame();
+            AppendNativePlaybackDiagnostic(renderedFirstFrame
+                ? L"PlaybackGraph.Open RenderNextFrame end true"
+                : L"PlaybackGraph.Open RenderNextFrame end false");
+            AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open StartRenderLoop begin");
             StartRenderLoop();
+            AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open StartRenderLoop end");
+            AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open AudioRenderer.Start begin");
             m_audioRenderer.Start();
+            AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open AudioRenderer.Start end");
         }
         catch (...)
         {
+            AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open exception begin Stop");
             Stop();
+            AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open exception end Stop");
             throw;
         }
+
+        AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open success end");
     }
 
     void PlaybackGraph::Pause()
@@ -108,11 +164,13 @@ namespace winrt::NextGenEmby::Native::implementation
         std::lock_guard lock(m_graphMutex);
         m_positionTicks = positionTicks;
         m_pendingVideoFrame.reset();
+        ResetRuntimeStats();
         m_audioRenderer.Flush();
         m_videoDecoder.Seek(positionTicks);
         m_audioDecoder.Flush(positionTicks);
         m_subtitleDecoder.Flush();
         m_subtitleRenderer.ClearCue();
+        SetVideoPrerollTarget(positionTicks);
         RenderNextFrame();
         m_stateChanged.notify_all();
     }
@@ -135,6 +193,8 @@ namespace winrt::NextGenEmby::Native::implementation
         m_open = false;
         m_paused = false;
         m_stopRenderLoop = false;
+        m_videoPrerollTargetTicks.reset();
+        ResetRuntimeStats();
     }
 
     void PlaybackGraph::SwitchAudioStream(int32_t audioStreamIndex)
@@ -150,6 +210,7 @@ namespace winrt::NextGenEmby::Native::implementation
         m_audioDecoder.Close();
         m_pendingVideoFrame.reset();
         m_videoDecoder.Seek(m_positionTicks);
+        SetVideoPrerollTarget(m_positionTicks);
         m_audioDecoder.Open(m_mediaSource, audioStreamIndex, true);
         m_audioDecoder.Flush(m_positionTicks);
         m_audioRenderer.Open(audioStreamIndex, true);
@@ -299,72 +360,159 @@ namespace winrt::NextGenEmby::Native::implementation
                 return;
             }
 
-            std::this_thread::sleep_for(33ms);
+            std::this_thread::sleep_for(PlaybackFramePacing::RenderLoopWait());
         }
     }
 
     bool PlaybackGraph::RenderNextFrame()
     {
+        ++m_renderPassCount;
         DecodeNextAudioFrame();
 
         auto droppedFrames = uint32_t{0};
-        while (droppedFrames <= MaxDroppedVideoFramesPerPass)
+        auto maxDroppedFramesThisPass = m_videoPrerollTargetTicks
+            ? MaxSeekPrerollDroppedVideoFramesPerPass
+            : MaxDroppedVideoFramesPerPass;
+        while (droppedFrames <= maxDroppedFramesThisPass)
         {
             if (!m_pendingVideoFrame)
             {
                 auto frame = m_videoDecoder.TryReadFrame();
                 if (!frame)
                 {
-                    return m_audioRenderer.QueuedBufferCount() > 0;
+                    auto hasQueuedAudio = m_audioRenderer.QueuedBufferCount() > 0;
+                    if (hasQueuedAudio)
+                    {
+                        ++m_videoStarvedPassCount;
+                    }
+                    else
+                    {
+                        ++m_audioStarvedPassCount;
+                    }
+
+                    LogRuntimeStatsIfDue();
+                    return hasQueuedAudio;
                 }
 
                 m_pendingVideoFrame = std::move(*frame);
+                ++m_decodedVideoFrameCount;
             }
 
             auto const& frame = *m_pendingVideoFrame;
+            if (m_videoPrerollTargetTicks &&
+                frame.PositionTicks + SeekPrerollToleranceTicks < *m_videoPrerollTargetTicks)
+            {
+                m_pendingVideoFrame.reset();
+                ++droppedFrames;
+                ++m_droppedVideoFrameCount;
+                ++m_seekPrerollDroppedVideoFrameCount;
+                continue;
+            }
+
+            if (m_videoPrerollTargetTicks)
+            {
+                AppendNativePlaybackDiagnostic(
+                    L"PlaybackGraph.SeekPreroll reached target=" + std::to_wstring(*m_videoPrerollTargetTicks) +
+                    L" frame=" + std::to_wstring(frame.PositionTicks) +
+                    L" dropped=" + std::to_wstring(m_seekPrerollDroppedVideoFrameCount));
+                m_videoPrerollTargetTicks.reset();
+            }
+
             if (auto audioPosition = m_audioRenderer.CurrentPositionTicks())
             {
                 auto hasQueuedAudio = m_audioRenderer.QueuedBufferCount() > 0;
-                if (hasQueuedAudio && frame.PositionTicks > *audioPosition + VideoAheadToleranceTicks)
+                if (PlaybackFramePacing::ShouldWaitForAudio(
+                    frame.PositionTicks,
+                    *audioPosition,
+                    hasQueuedAudio))
                 {
+                    ++m_videoAheadWaitCount;
+                    LogRuntimeStatsIfDue();
                     return true;
                 }
 
-                if (hasQueuedAudio && *audioPosition > frame.PositionTicks + VideoDropToleranceTicks)
+                if (PlaybackFramePacing::ShouldDropLateFrame(
+                    frame.PositionTicks,
+                    *audioPosition,
+                    hasQueuedAudio))
                 {
                     m_pendingVideoFrame.reset();
                     ++droppedFrames;
+                    ++m_droppedVideoFrameCount;
                     continue;
                 }
             }
 
-            m_videoRenderer.Render(frame);
+            EnsureHdrOutputForFrame(frame);
+            m_videoRenderer.Render(frame, m_hdrOutputActive);
             m_positionTicks = frame.PositionTicks;
             UpdateSubtitleCue();
             m_deviceResources.Present();
             m_pendingVideoFrame.reset();
+            ++m_renderedVideoFrameCount;
+            LogRuntimeStatsIfDue();
             return true;
         }
 
+        LogRuntimeStatsIfDue();
         return true;
     }
 
-    void PlaybackGraph::DecodeNextAudioFrame()
+    void PlaybackGraph::EnsureHdrOutputForFrame(DecodedVideoFrame const& frame)
     {
+        auto decision = ResolveHdrOutputDecisionForFrame(
+            m_hasSeenVideoFrameColor,
+            m_requestedHdrOutput,
+            frame.HdrKind,
+            m_deviceResources.IsTenBitSwapChain());
+        m_hasSeenVideoFrameColor = true;
+
+        if (!decision.ShouldRequestDisplayChange)
+        {
+            return;
+        }
+
+        m_requestedHdrOutput = decision.DesiredHdrOutput;
+        if (m_hdrOutputChanged)
+        {
+            AppendNativePlaybackDiagnostic(decision.DesiredHdrOutput
+                ? L"PlaybackGraph.EnsureHdrOutputForFrame request HDR begin"
+                : L"PlaybackGraph.EnsureHdrOutputForFrame request SDR begin");
+            m_hdrOutputActive = m_hdrOutputChanged(
+                decision.DesiredHdrOutput,
+                m_preferredVideoFrameRate);
+            AppendNativePlaybackDiagnostic(m_hdrOutputActive
+                ? L"PlaybackGraph.EnsureHdrOutputForFrame request end active"
+                : L"PlaybackGraph.EnsureHdrOutputForFrame request end inactive");
+        }
+        else
+        {
+            m_hdrOutputActive = false;
+        }
+    }
+
+    uint32_t PlaybackGraph::DecodeNextAudioFrame()
+    {
+        auto submittedFrames = uint32_t{0};
         while (m_audioDecoder.IsOpen() &&
             m_audioRenderer.QueuedBufferCount() < MinimumQueuedAudioBuffers)
         {
             auto frame = m_audioDecoder.TryReadFrame();
             if (!frame)
             {
-                return;
+                break;
             }
 
             if (!m_audioRenderer.SubmitFrame(*frame))
             {
-                return;
+                break;
             }
+
+            ++submittedFrames;
         }
+
+        m_submittedAudioFrameCount += submittedFrames;
+        return submittedFrames;
     }
 
     void PlaybackGraph::UpdateSubtitleCue()
@@ -380,6 +528,61 @@ namespace winrt::NextGenEmby::Native::implementation
         }
 
         m_subtitleRenderer.RenderAt(m_positionTicks);
+    }
+
+    void PlaybackGraph::ResetRuntimeStats() noexcept
+    {
+        m_renderPassCount = 0;
+        m_renderedVideoFrameCount = 0;
+        m_decodedVideoFrameCount = 0;
+        m_submittedAudioFrameCount = 0;
+        m_droppedVideoFrameCount = 0;
+        m_videoAheadWaitCount = 0;
+        m_videoStarvedPassCount = 0;
+        m_audioStarvedPassCount = 0;
+        m_seekPrerollDroppedVideoFrameCount = 0;
+        m_lastRuntimeStatsLog = {};
+    }
+
+    void PlaybackGraph::SetVideoPrerollTarget(int64_t targetTicks) noexcept
+    {
+        if (targetTicks > 0)
+        {
+            m_videoPrerollTargetTicks = targetTicks;
+        }
+        else
+        {
+            m_videoPrerollTargetTicks.reset();
+        }
+    }
+
+    void PlaybackGraph::LogRuntimeStatsIfDue()
+    {
+        auto now = std::chrono::steady_clock::now();
+        if (m_lastRuntimeStatsLog.time_since_epoch().count() != 0 &&
+            now - m_lastRuntimeStatsLog < 1s)
+        {
+            return;
+        }
+
+        m_lastRuntimeStatsLog = now;
+        auto audioPosition = m_audioRenderer.CurrentPositionTicks();
+        auto queuedAudio = m_audioRenderer.QueuedBufferCount();
+        AppendNativePlaybackDiagnostic(
+            L"PlaybackGraph.Stats position=" + std::to_wstring(m_positionTicks) +
+            L" audioPosition=" + (audioPosition ? std::to_wstring(*audioPosition) : std::wstring(L"none")) +
+            L" queuedAudio=" + std::to_wstring(queuedAudio) +
+            L" pendingVideo=" + std::to_wstring(m_pendingVideoFrame ? 1 : 0) +
+            L" passes=" + std::to_wstring(m_renderPassCount) +
+            L" decodedVideo=" + std::to_wstring(m_decodedVideoFrameCount) +
+            L" renderedVideo=" + std::to_wstring(m_renderedVideoFrameCount) +
+            L" submittedAudio=" + std::to_wstring(m_submittedAudioFrameCount) +
+            L" droppedVideo=" + std::to_wstring(m_droppedVideoFrameCount) +
+            L" seekPrerollDropped=" + std::to_wstring(m_seekPrerollDroppedVideoFrameCount) +
+            L" seekPrerollTarget=" + (m_videoPrerollTargetTicks ? std::to_wstring(*m_videoPrerollTargetTicks) : std::wstring(L"none")) +
+            L" videoAheadWait=" + std::to_wstring(m_videoAheadWaitCount) +
+            L" videoStarved=" + std::to_wstring(m_videoStarvedPassCount) +
+            L" audioStarved=" + std::to_wstring(m_audioStarvedPassCount));
     }
 
     void PlaybackGraph::NotifyStateChanged(

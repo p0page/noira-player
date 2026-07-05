@@ -17,7 +17,8 @@ public sealed class NativeDirectXPlaybackBackendTests
         {
             Id = "source-1",
             DirectStreamUrl = "https://emby.local/videos/1/stream.mkv?api_key=token",
-            IsHdr = true
+            HdrProfile = new HdrPlaybackProfile { Kind = HdrPlaybackKind.Hdr10 },
+            VideoFrameRate = 23.976
         };
 
         await backend.StartAsync(new PlaybackDescriptor(
@@ -32,9 +33,50 @@ public sealed class NativeDirectXPlaybackBackendTests
         Assert.Equal("source-1", engine.LastRequest.MediaSourceId);
         Assert.Equal(source.DirectStreamUrl, engine.LastRequest.DirectStreamUrl);
         Assert.Equal(1234, engine.LastRequest.StartPositionTicks);
-        Assert.True(engine.LastRequest.IsHdr);
+        Assert.Equal(23.976, engine.LastRequest.VideoFrameRate);
         Assert.Equal(2, engine.LastRequest.AudioStreamIndex);
         Assert.Equal(7, engine.LastRequest.SubtitleStreamIndex);
+    }
+
+    [Fact]
+    public async Task StartAsync_Does_Not_Need_Profile_Metadata_To_Open_Native_Source()
+    {
+        var engine = new RecordingNativePlaybackEngine();
+        var backend = new NativeDirectXPlaybackBackend(engine);
+        var source = new EmbyMediaSource
+        {
+            Id = "source-1",
+            DirectStreamUrl = "https://emby.local/videos/1/stream.mkv?api_key=token",
+            HdrProfile = new HdrPlaybackProfile
+            {
+                Kind = HdrPlaybackKind.DolbyVisionWithHdr10Fallback,
+                IsDolbyVision = true,
+                HasHdr10BaseLayer = true
+            }
+        };
+
+        await backend.StartAsync(new PlaybackDescriptor("item-1", source, new[] { source }, 0));
+
+        Assert.Equal("source-1", engine.LastRequest!.MediaSourceId);
+        Assert.Equal(source.DirectStreamUrl, engine.LastRequest.DirectStreamUrl);
+    }
+
+    [Fact]
+    public async Task StartAsync_Does_Not_Need_Unknown_Hdr_Metadata_To_Open_Native_Source()
+    {
+        var engine = new RecordingNativePlaybackEngine();
+        var backend = new NativeDirectXPlaybackBackend(engine);
+        var source = new EmbyMediaSource
+        {
+            Id = "source-1",
+            DirectStreamUrl = "https://emby.local/videos/1/stream.mkv?api_key=token",
+            IsHdr = true
+        };
+
+        await backend.StartAsync(new PlaybackDescriptor("item-1", source, new[] { source }, 0));
+
+        Assert.Equal("source-1", engine.LastRequest!.MediaSourceId);
+        Assert.Equal(source.DirectStreamUrl, engine.LastRequest.DirectStreamUrl);
     }
 
     [Fact]

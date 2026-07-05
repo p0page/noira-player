@@ -8,8 +8,13 @@
 #include <vector>
 #include <wrl/client.h>
 
+#include "DolbyVisionConfiguration.h"
+#include "DxgiColorSpaceMapper.h"
+
 struct AVCodecContext;
 struct AVBufferRef;
+struct AVPacket;
+struct AVStream;
 
 namespace winrt::NextGenEmby::Native::implementation
 {
@@ -32,6 +37,7 @@ namespace winrt::NextGenEmby::Native::implementation
         uint32_t DisplayHeight{0};
         DXGI_FORMAT Format{DXGI_FORMAT_UNKNOWN};
         VideoHdrKind HdrKind{VideoHdrKind::None};
+        VideoColorMetadata ColorMetadata{};
         bool UsesBt709Matrix{true};
         bool IsFullRange{false};
         std::optional<DXGI_HDR_METADATA_HDR10> Hdr10Metadata;
@@ -61,7 +67,15 @@ namespace winrt::NextGenEmby::Native::implementation
         uint32_t m_width{0};
         uint32_t m_height{0};
         int64_t m_positionTicks{0};
+        std::optional<DolbyVisionConfiguration> m_dolbyVisionConfiguration;
         bool m_decoderDraining{false};
         bool m_open{false};
+
+        void ApplyDolbyVisionConfigurationSideData(
+            uint8_t const* sideData,
+            size_t sideDataSize,
+            wchar_t const* source);
+        void InspectDolbyVisionStreamSideData(::AVStream const* stream);
+        void InspectDolbyVisionPacketSideData(AVPacket const* packet);
     };
 }

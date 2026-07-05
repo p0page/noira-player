@@ -30,6 +30,96 @@ public sealed class PlaybackOrchestratorTests
     }
 
     [Fact]
+    public async Task StartAsync_Does_Not_Auto_Switch_Away_From_First_Hdr_Source()
+    {
+        var backend = new RecordingPlaybackBackend();
+        var hdrSource = Source("source-hdr");
+        hdrSource.IsHdr = true;
+        var sdrSource = Source("source-sdr");
+        var sources = new[] { hdrSource, sdrSource };
+        var orchestrator = new PlaybackOrchestrator(backend);
+
+        await orchestrator.StartAsync("item-1", sources, 12_345);
+
+        Assert.Same(hdrSource, orchestrator.CurrentMediaSource);
+        Assert.Same(hdrSource, backend.LastDescriptor!.MediaSource);
+        Assert.Same(sources, backend.LastDescriptor.AvailableSources);
+    }
+
+    [Fact]
+    public async Task StartAsync_Uses_Preferred_MediaSource_Even_When_It_Is_Preclassified_Unsupported()
+    {
+        var backend = new RecordingPlaybackBackend();
+        var sdrSource = Source("source-sdr");
+        var dvSource = Source("source-dv");
+        dvSource.HdrProfile = new HdrPlaybackProfile
+        {
+            Kind = HdrPlaybackKind.DolbyVisionUnsupported,
+            IsDolbyVision = true,
+            DolbyVisionProfile = 5
+        };
+        var sources = new[] { sdrSource, dvSource };
+        var orchestrator = new PlaybackOrchestrator(backend);
+
+        await orchestrator.StartAsync("item-1", sources, 12_345, "source-dv");
+
+        Assert.Same(dvSource, orchestrator.CurrentMediaSource);
+        Assert.Same(dvSource, backend.LastDescriptor!.MediaSource);
+        Assert.Same(sources, backend.LastDescriptor.AvailableSources);
+    }
+
+    [Fact]
+    public async Task StartAsync_Does_Not_Reorder_By_Hdr_Profile()
+    {
+        var backend = new RecordingPlaybackBackend();
+        var dvFallbackSource = Source("source-dv-fallback");
+        dvFallbackSource.HdrProfile = new HdrPlaybackProfile
+        {
+            Kind = HdrPlaybackKind.DolbyVisionWithHdr10Fallback,
+            IsDolbyVision = true,
+            HasHdr10BaseLayer = true
+        };
+        var hlgSource = Source("source-hlg");
+        hlgSource.HdrProfile = new HdrPlaybackProfile { Kind = HdrPlaybackKind.Hlg };
+        var hdr10Source = Source("source-hdr10");
+        hdr10Source.HdrProfile = new HdrPlaybackProfile { Kind = HdrPlaybackKind.Hdr10 };
+        var unsupportedDvSource = Source("source-dv5");
+        unsupportedDvSource.HdrProfile = new HdrPlaybackProfile
+        {
+            Kind = HdrPlaybackKind.DolbyVisionUnsupported,
+            IsDolbyVision = true,
+            DolbyVisionProfile = 5
+        };
+        var sources = new[] { unsupportedDvSource, dvFallbackSource, hlgSource, hdr10Source };
+        var orchestrator = new PlaybackOrchestrator(backend);
+
+        await orchestrator.StartAsync("item-1", sources, 12_345);
+
+        Assert.Same(unsupportedDvSource, orchestrator.CurrentMediaSource);
+        Assert.Same(unsupportedDvSource, backend.LastDescriptor!.MediaSource);
+    }
+
+    [Fact]
+    public async Task StartAsync_Does_Not_Reject_Preclassified_Unsupported_DolbyVision()
+    {
+        var backend = new RecordingPlaybackBackend();
+        var unsupportedDvSource = Source("source-dv5");
+        unsupportedDvSource.HdrProfile = new HdrPlaybackProfile
+        {
+            Kind = HdrPlaybackKind.DolbyVisionUnsupported,
+            IsDolbyVision = true,
+            DolbyVisionProfile = 5
+        };
+        var orchestrator = new PlaybackOrchestrator(backend);
+
+        await orchestrator.StartAsync("item-1", new[] { unsupportedDvSource }, 0);
+
+        Assert.Equal(PlaybackState.Playing, orchestrator.State);
+        Assert.Same(unsupportedDvSource, orchestrator.CurrentMediaSource);
+        Assert.Same(unsupportedDvSource, backend.LastDescriptor!.MediaSource);
+    }
+
+    [Fact]
     public async Task SwitchMediaSourceAsync_Starts_Selected_Source_At_Current_Position()
     {
         var backend = new RecordingPlaybackBackend();

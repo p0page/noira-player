@@ -39,7 +39,7 @@ namespace NextGenEmby.Core.Playback
                 descriptor.StartPositionTicks,
                 descriptor.AudioStreamIndex,
                 descriptor.SubtitleStreamIndex,
-                source.IsHdr);
+                source.VideoFrameRate);
 
             return _engine.OpenAsync(request);
         }

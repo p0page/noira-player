@@ -1,8 +1,12 @@
 using System;
+using System.Threading.Tasks;
+using NextGenEmby.Core.Diagnostics;
 using NextGenEmby.Core.Input;
 using NextGenEmby.App.Navigation;
+using NextGenEmby.App.Services;
 using NextGenEmby.App.Storage;
 using NextGenEmby.App.Views;
+using Windows.Storage;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Input;
@@ -13,6 +17,9 @@ namespace NextGenEmby.App
 {
     public sealed partial class MainPage : Page
     {
+#if DEBUG
+        private const string DevelopmentCommandFileName = "dev-command.json";
+#endif
         private readonly ApplicationDataSessionStore _sessionStore = new ApplicationDataSessionStore();
         private LibraryNavigationRequest? _currentLibraryRequest;
 
@@ -33,7 +40,14 @@ namespace NextGenEmby.App
                 var session = await _sessionStore.LoadAsync();
                 if (session != null)
                 {
-                    NavigateHome(replaceHistory: true);
+                    if (ContentFrame.CurrentSourcePageType == typeof(LoginPage))
+                    {
+                        NavigateHome(replaceHistory: true);
+                    }
+
+#if DEBUG
+                    await TryRunDevelopmentCommandAsync();
+#endif
                 }
             }
             catch
@@ -61,6 +75,7 @@ namespace NextGenEmby.App
                 ContentFrame.CanGoBack,
                 IsBackKey(e.Key)))
             {
+                PlaybackDiagnosticsLog.WriteLine("MainPage.GoBack key=" + e.Key);
                 ContentFrame.GoBack();
                 e.Handled = true;
             }
@@ -76,6 +91,9 @@ namespace NextGenEmby.App
         public void NavigateHome()
         {
             NavigateHome(replaceHistory: true);
+#if DEBUG
+            _ = TryRunDevelopmentCommandAsync();
+#endif
         }
 
         private void NavigateHome(bool replaceHistory)
@@ -120,6 +138,9 @@ namespace NextGenEmby.App
                 return;
             }
 
+            PlaybackDiagnosticsLog.WriteLine(
+                "MainPage.NavigateTo page=" + pageType.Name +
+                " parameter=" + (parameter == null ? "null" : parameter.GetType().Name));
             ContentFrame.Navigate(pageType, parameter);
             _currentLibraryRequest = pageType == typeof(LibraryPage)
                 ? parameter as LibraryNavigationRequest
@@ -131,7 +152,12 @@ namespace NextGenEmby.App
             _currentLibraryRequest = e.SourcePageType == typeof(LibraryPage)
                 ? e.Parameter as LibraryNavigationRequest
                 : null;
+            PlaybackDiagnosticsLog.WriteLine(
+                "MainPage.Navigated page=" + e.SourcePageType.Name +
+                " parameter=" + (e.Parameter == null ? "null" : e.Parameter.GetType().Name) +
+                " canGoBack=" + ContentFrame.CanGoBack);
             ApplyShellChrome(e.SourcePageType == typeof(PlaybackPage));
+            FocusShellButton(e.SourcePageType, _currentLibraryRequest);
         }
 
         private void ApplyShellChrome(bool isPlayback)
@@ -139,6 +165,43 @@ namespace NextGenEmby.App
             ShellHeader.Visibility = isPlayback ? Visibility.Collapsed : Visibility.Visible;
             Grid.SetRow(ContentFrame, isPlayback ? 0 : 1);
             Grid.SetRowSpan(ContentFrame, isPlayback ? 2 : 1);
+        }
+
+        private void FocusShellButton(Type pageType, LibraryNavigationRequest? libraryRequest)
+        {
+            if (pageType == typeof(PlaybackPage))
+            {
+                return;
+            }
+
+            if (pageType == typeof(LibraryPage) && libraryRequest != null)
+            {
+                if (libraryRequest.IsMovies)
+                {
+                    MoviesButton.Focus(FocusState.Programmatic);
+                    return;
+                }
+
+                if (libraryRequest.IsTv)
+                {
+                    TvButton.Focus(FocusState.Programmatic);
+                    return;
+                }
+            }
+
+            if (pageType == typeof(SearchPage))
+            {
+                SearchButton.Focus(FocusState.Programmatic);
+                return;
+            }
+
+            if (pageType == typeof(SettingsPage))
+            {
+                SettingsButton.Focus(FocusState.Programmatic);
+                return;
+            }
+
+            HomeButton.Focus(FocusState.Programmatic);
         }
 
         private void Home_OnClick(object sender, RoutedEventArgs e)
@@ -165,6 +228,99 @@ namespace NextGenEmby.App
         {
             NavigateSettings();
         }
+
+#if DEBUG
+        private async Task TryRunDevelopmentCommandAsync()
+        {
+            try
+            {
+                await Task.Delay(1000);
+                var item = await ApplicationData.Current.LocalFolder.TryGetItemAsync(DevelopmentCommandFileName);
+                var file = item as StorageFile;
+                if (file == null)
+                {
+                    await WriteDevelopmentCommandResultAsync("missing", DevelopmentCommandFileName);
+                    return;
+                }
+
+                var json = await FileIO.ReadTextAsync(file);
+                DevelopmentNavigationCommand? command;
+                string error;
+                if (!DevelopmentNavigationCommand.TryParseJson(json, out command, out error) ||
+                    command == null)
+                {
+                    await WriteDevelopmentCommandResultAsync("parse-failed", error);
+                    return;
+                }
+
+                await WriteDevelopmentCommandResultAsync("running", command.Route);
+                await PlaybackDiagnosticsLog.WriteLineAsync("DevelopmentCommand running route=" + command.Route);
+                RunDevelopmentCommand(command);
+                await file.DeleteAsync(StorageDeleteOption.PermanentDelete);
+                await PlaybackDiagnosticsLog.WriteLineAsync("DevelopmentCommand completed route=" + command.Route);
+                await WriteDevelopmentCommandResultAsync("completed", command.Route);
+            }
+            catch (Exception ex)
+            {
+                await WriteDevelopmentCommandResultAsync("exception", ex.GetType().FullName ?? ex.Message);
+            }
+        }
+
+        private static async Task WriteDevelopmentCommandResultAsync(string status, string detail)
+        {
+            try
+            {
+                var file = await ApplicationData.Current.LocalFolder.CreateFileAsync(
+                    "dev-command-result.txt",
+                    CreationCollisionOption.ReplaceExisting);
+                await FileIO.WriteTextAsync(file, status + Environment.NewLine + (detail ?? ""));
+            }
+            catch
+            {
+            }
+        }
+
+        private void RunDevelopmentCommand(DevelopmentNavigationCommand command)
+        {
+            switch (command.Route)
+            {
+                case "home":
+                    NavigateHome(replaceHistory: false);
+                    return;
+
+                case "movies":
+                    NavigateLibrary(new LibraryNavigationRequest("Movies", "movies", "Movie"));
+                    return;
+
+                case "tv":
+                    NavigateLibrary(new LibraryNavigationRequest("TV Shows", "tvshows", "Series"));
+                    return;
+
+                case "search":
+                    NavigateSearch();
+                    return;
+
+                case "settings":
+                    NavigateSettings();
+                    return;
+
+                case "details":
+                    NavigateTo(typeof(MediaDetailsPage), new MediaDetailsNavigationRequest(command.ItemId, command.ItemName));
+                    return;
+
+                case "playback":
+                    NavigateTo(
+                        typeof(PlaybackPage),
+                        new PlaybackLaunchRequest(
+                            command.ItemId,
+                            command.ItemName,
+                            command.StartPositionTicks,
+                            command.MediaSourceId,
+                            forceSdrOutput: command.ForceSdrOutput));
+                    return;
+            }
+        }
+#endif
 
         private static bool IsSameLibraryRequest(
             LibraryNavigationRequest? current,

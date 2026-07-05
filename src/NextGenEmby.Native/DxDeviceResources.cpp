@@ -5,6 +5,7 @@
 #include <cmath>
 #include <d2d1_1.h>
 #include <dwrite.h>
+#include <utility>
 #include <windows.ui.xaml.media.dxinterop.h>
 
 namespace winrt::NextGenEmby::Native::implementation
@@ -59,31 +60,28 @@ namespace winrt::NextGenEmby::Native::implementation
                 static_cast<float>(rectangle.bottom));
         }
 
-        D3D11_VIDEO_PROCESSOR_COLOR_SPACE CreateInputColorSpace(
-            bool usesBt709Matrix,
-            bool isFullRange)
+        float EstimateToneMapLuminance(DXGI_HDR_METADATA_HDR10 const* metadata) noexcept
         {
-            D3D11_VIDEO_PROCESSOR_COLOR_SPACE colorSpace{};
-            colorSpace.Usage = 0;
-            colorSpace.RGB_Range = 0;
-            colorSpace.YCbCr_Matrix = usesBt709Matrix ? 1 : 0;
-            colorSpace.YCbCr_xvYCC = 0;
-            colorSpace.Nominal_Range = isFullRange
-                ? D3D11_VIDEO_PROCESSOR_NOMINAL_RANGE_0_255
-                : D3D11_VIDEO_PROCESSOR_NOMINAL_RANGE_16_235;
-            return colorSpace;
+            constexpr auto defaultLuminance = 400.0f;
+            if (metadata == nullptr)
+            {
+                return defaultLuminance;
+            }
+
+            auto masteringLuminance = metadata->MaxMasteringLuminance > 0
+                ? static_cast<float>(metadata->MaxMasteringLuminance)
+                : defaultLuminance;
+            if (metadata->MaxContentLightLevel > 0)
+            {
+                auto lower = (std::min)(masteringLuminance, static_cast<float>(metadata->MaxContentLightLevel));
+                auto upper = (std::max)(masteringLuminance, static_cast<float>(metadata->MaxContentLightLevel));
+                auto fall = static_cast<float>(metadata->MaxFrameAverageLightLevel);
+                return (lower * 0.5f) + (upper * 0.2f) + (fall * 0.3f);
+            }
+
+            return masteringLuminance;
         }
 
-        D3D11_VIDEO_PROCESSOR_COLOR_SPACE CreateOutputColorSpace()
-        {
-            D3D11_VIDEO_PROCESSOR_COLOR_SPACE colorSpace{};
-            colorSpace.Usage = 0;
-            colorSpace.RGB_Range = 0;
-            colorSpace.YCbCr_Matrix = 1;
-            colorSpace.YCbCr_xvYCC = 0;
-            colorSpace.Nominal_Range = D3D11_VIDEO_PROCESSOR_NOMINAL_RANGE_0_255;
-            return colorSpace;
-        }
     }
 
     void DxDeviceResources::AttachSurface(winrt::Windows::UI::Xaml::Controls::SwapChainPanel const& panel)
@@ -103,7 +101,7 @@ namespace winrt::NextGenEmby::Native::implementation
         auto height = panel.ActualHeight() > 0.0
             ? static_cast<uint32_t>((std::max)(1.0, std::ceil(panel.ActualHeight() * scaleY)))
             : DefaultSwapChainHeight;
-        CreateSwapChain(width, height, false);
+        CreateSwapChain(width, height, true);
         DXGI_MATRIX_3X2_F inverseScale{};
         inverseScale._11 = 1.0f / scaleX;
         inverseScale._22 = 1.0f / scaleY;
@@ -154,39 +152,68 @@ namespace winrt::NextGenEmby::Native::implementation
         Microsoft::WRL::ComPtr<IDXGIFactory2> factory;
         winrt::check_hresult(adapter->GetParent(IID_PPV_ARGS(&factory)));
 
-        DXGI_SWAP_CHAIN_DESC1 description{};
-        description.Width = width == 0 ? 1 : width;
-        description.Height = height == 0 ? 1 : height;
-        description.Format = useTenBit ? DXGI_FORMAT_R10G10B10A2_UNORM : DXGI_FORMAT_B8G8R8A8_UNORM;
-        description.Stereo = false;
-        description.SampleDesc.Count = 1;
-        description.SampleDesc.Quality = 0;
-        description.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-        description.BufferCount = 2;
-        description.Scaling = DXGI_SCALING_STRETCH;
-        description.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
-        description.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
-        description.Flags = 0;
+        auto createSwapChainWithFormat = [&](DXGI_FORMAT format, Microsoft::WRL::ComPtr<IDXGISwapChain3>& result)
+        {
+            DXGI_SWAP_CHAIN_DESC1 description{};
+            description.Width = width == 0 ? 1 : width;
+            description.Height = height == 0 ? 1 : height;
+            description.Format = format;
+            description.Stereo = false;
+            description.SampleDesc.Count = 1;
+            description.SampleDesc.Quality = 0;
+            description.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+            description.BufferCount = 3;
+            description.Scaling = DXGI_SCALING_STRETCH;
+            description.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
+            description.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
+            description.Flags = 0;
 
-        Microsoft::WRL::ComPtr<IDXGISwapChain1> swapChain;
-        winrt::check_hresult(factory->CreateSwapChainForComposition(
-            m_device.Get(),
-            &description,
-            nullptr,
-            swapChain.ReleaseAndGetAddressOf()));
+            Microsoft::WRL::ComPtr<IDXGISwapChain1> swapChain;
+            auto hr = factory->CreateSwapChainForComposition(
+                m_device.Get(),
+                &description,
+                nullptr,
+                swapChain.ReleaseAndGetAddressOf());
+            if (FAILED(hr))
+            {
+                return hr;
+            }
 
-        winrt::check_hresult(swapChain.As(&m_swapChain));
+            return swapChain.As(&result);
+        };
+
+        auto requestedFormat = useTenBit ? DXGI_FORMAT_R10G10B10A2_UNORM : DXGI_FORMAT_B8G8R8A8_UNORM;
+        Microsoft::WRL::ComPtr<IDXGISwapChain3> swapChain;
+        auto hr = createSwapChainWithFormat(requestedFormat, swapChain);
+        auto actualFormat = requestedFormat;
+        if (FAILED(hr) && useTenBit)
+        {
+            actualFormat = DXGI_FORMAT_B8G8R8A8_UNORM;
+            hr = createSwapChainWithFormat(actualFormat, swapChain);
+        }
+
+        winrt::check_hresult(hr);
+        m_swapChain = swapChain;
+        m_swapChainFormat = actualFormat;
+        m_isTenBitSwapChain = actualFormat == DXGI_FORMAT_R10G10B10A2_UNORM;
         SetSdrColorSpace();
     }
 
     bool DxDeviceResources::SetHdr10ColorSpace()
     {
-        if (!m_swapChain)
+        if (!m_swapChain || !m_isTenBitSwapChain)
         {
             return false;
         }
 
-        return SUCCEEDED(m_swapChain->SetColorSpace1(DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020));
+        auto colorSpace = DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020;
+        auto hr = m_swapChain->SetColorSpace1(colorSpace);
+        if (SUCCEEDED(hr))
+        {
+            m_swapChainColorSpace = colorSpace;
+        }
+
+        return SUCCEEDED(hr);
     }
 
     bool DxDeviceResources::SetSdrColorSpace()
@@ -196,7 +223,14 @@ namespace winrt::NextGenEmby::Native::implementation
             return false;
         }
 
-        return SUCCEEDED(m_swapChain->SetColorSpace1(DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709));
+        auto colorSpace = DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709;
+        auto hr = m_swapChain->SetColorSpace1(colorSpace);
+        if (SUCCEEDED(hr))
+        {
+            m_swapChainColorSpace = colorSpace;
+        }
+
+        return SUCCEEDED(hr);
     }
 
     bool DxDeviceResources::SetHdr10Metadata(DXGI_HDR_METADATA_HDR10 const& metadata)
@@ -246,17 +280,24 @@ namespace winrt::NextGenEmby::Native::implementation
     bool DxDeviceResources::TryProcessVideoFrameToBackBuffer(
         ID3D11Texture2D* texture,
         uint32_t arraySlice,
-        uint32_t width,
-        uint32_t height,
-        uint32_t displayWidth,
-        uint32_t displayHeight,
-        bool usesBt709Matrix,
-        bool isFullRange)
+            uint32_t width,
+            uint32_t height,
+            uint32_t displayWidth,
+            uint32_t displayHeight,
+            VideoColorMetadata const& colorMetadata,
+            bool outputHdr10,
+            DXGI_HDR_METADATA_HDR10 const* hdr10Metadata)
     {
         if (!m_swapChain || !m_device || !m_context || texture == nullptr)
         {
             return false;
         }
+
+        m_lastVideoProcessorConversionValidated = false;
+        SetVideoProcessorConversionStatus(
+            DXGI_COLOR_SPACE_CUSTOM,
+            DXGI_COLOR_SPACE_CUSTOM,
+            L"pending");
 
         Microsoft::WRL::ComPtr<ID3D11Texture2D> backBuffer;
         if (FAILED(m_swapChain->GetBuffer(0, IID_PPV_ARGS(&backBuffer))))
@@ -298,6 +339,92 @@ namespace winrt::NextGenEmby::Native::implementation
             return false;
         }
 
+        auto mapping = MapVideoColorSpace(colorMetadata, outputHdr10 && m_isTenBitSwapChain);
+        if (!mapping.IsSupported)
+        {
+            SetVideoProcessorConversionStatus(
+                mapping.InputColorSpace,
+                mapping.OutputColorSpace,
+                L"unsupported: " + mapping.Reason);
+            return false;
+        }
+
+        auto selectedInputColorSpace = mapping.InputColorSpace;
+        auto postProcessKind = mapping.PostProcessKind;
+        auto requiresPostProcess = postProcessKind != DxgiPostProcessKind::None;
+        Microsoft::WRL::ComPtr<ID3D11VideoContext1> videoContext1;
+        Microsoft::WRL::ComPtr<ID3D11VideoProcessorEnumerator1> enumerator1;
+        auto useDxgiColorSpace = false;
+        if (SUCCEEDED(m_context.As(&videoContext1)) && SUCCEEDED(enumerator.As(&enumerator1)))
+        {
+            BOOL isSupported = FALSE;
+            auto conversionResult = enumerator1->CheckVideoProcessorFormatConversion(
+                sourceDescription.Format,
+                mapping.InputColorSpace,
+                targetDescription.Format,
+                mapping.OutputColorSpace,
+                &isSupported);
+            if (FAILED(conversionResult) || !isSupported)
+            {
+                if (mapping.HasAlternativeInputColorSpace)
+                {
+                    isSupported = FALSE;
+                    conversionResult = enumerator1->CheckVideoProcessorFormatConversion(
+                        sourceDescription.Format,
+                        mapping.AlternativeInputColorSpace,
+                        targetDescription.Format,
+                        mapping.OutputColorSpace,
+                        &isSupported);
+                    if (SUCCEEDED(conversionResult) && isSupported)
+                    {
+                        selectedInputColorSpace = mapping.AlternativeInputColorSpace;
+                    }
+                }
+
+                if (FAILED(conversionResult) || !isSupported)
+                {
+                    SetVideoProcessorConversionStatus(
+                        mapping.InputColorSpace,
+                        mapping.OutputColorSpace,
+                        L"unsupported-conversion");
+                    return false;
+                }
+            }
+
+            useDxgiColorSpace = true;
+            m_lastVideoProcessorConversionValidated = true;
+            auto validatedStatus = L"validated";
+            if (mapping.RequiresToneMapping)
+            {
+                validatedStatus = L"validated;requires-tone-mapping";
+            }
+            else if (postProcessKind == DxgiPostProcessKind::HlgToPq)
+            {
+                validatedStatus = L"validated;requires-hlg-to-pq";
+            }
+
+            SetVideoProcessorConversionStatus(
+                selectedInputColorSpace,
+                mapping.OutputColorSpace,
+                validatedStatus);
+        }
+        else
+        {
+            if (mapping.NeedsTenBitOutput || outputHdr10 || mapping.IsHdr10 || mapping.IsHlg)
+            {
+                SetVideoProcessorConversionStatus(
+                    mapping.InputColorSpace,
+                    mapping.OutputColorSpace,
+                    L"unvalidated-hdr-rejected");
+                return false;
+            }
+
+            SetVideoProcessorConversionStatus(
+                mapping.InputColorSpace,
+                mapping.OutputColorSpace,
+                L"legacy-unvalidated");
+        }
+
         auto sourceRect = RECT{
             0,
             0,
@@ -313,14 +440,19 @@ namespace winrt::NextGenEmby::Native::implementation
             targetDescription.Height,
             displayWidth == 0 ? contentDescription.InputWidth : displayWidth,
             displayHeight == 0 ? contentDescription.InputHeight : displayHeight);
-        auto inputColorSpace = CreateInputColorSpace(usesBt709Matrix, isFullRange);
-        auto outputColorSpace = CreateOutputColorSpace();
-
         videoContext->VideoProcessorSetStreamSourceRect(processor.Get(), 0, TRUE, &sourceRect);
         videoContext->VideoProcessorSetStreamDestRect(processor.Get(), 0, TRUE, &destinationRect);
-        videoContext->VideoProcessorSetStreamColorSpace(processor.Get(), 0, &inputColorSpace);
         videoContext->VideoProcessorSetOutputTargetRect(processor.Get(), TRUE, &outputRect);
-        videoContext->VideoProcessorSetOutputColorSpace(processor.Get(), &outputColorSpace);
+        if (useDxgiColorSpace)
+        {
+            videoContext1->VideoProcessorSetStreamColorSpace1(processor.Get(), 0, selectedInputColorSpace);
+            videoContext1->VideoProcessorSetOutputColorSpace1(processor.Get(), mapping.OutputColorSpace);
+        }
+        else
+        {
+            videoContext->VideoProcessorSetStreamColorSpace(processor.Get(), 0, &mapping.LegacyInputColorSpace);
+            videoContext->VideoProcessorSetOutputColorSpace(processor.Get(), &mapping.LegacyOutputColorSpace);
+        }
 
         D3D11_VIDEO_PROCESSOR_INPUT_VIEW_DESC inputDescription{};
         inputDescription.ViewDimension = D3D11_VPIV_DIMENSION_TEXTURE2D;
@@ -341,9 +473,34 @@ namespace winrt::NextGenEmby::Native::implementation
         outputDescription.ViewDimension = D3D11_VPOV_DIMENSION_TEXTURE2D;
         outputDescription.Texture2D.MipSlice = 0;
 
+        Microsoft::WRL::ComPtr<ID3D11Texture2D> videoProcessorTarget = backBuffer;
+        if (requiresPostProcess)
+        {
+            D3D11_TEXTURE2D_DESC intermediateDescription = targetDescription;
+            intermediateDescription.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+            intermediateDescription.CPUAccessFlags = 0;
+            intermediateDescription.MiscFlags = 0;
+            intermediateDescription.Usage = D3D11_USAGE_DEFAULT;
+            intermediateDescription.MipLevels = 1;
+            intermediateDescription.ArraySize = 1;
+            if (FAILED(m_device->CreateTexture2D(
+                    &intermediateDescription,
+                    nullptr,
+                    videoProcessorTarget.ReleaseAndGetAddressOf())))
+            {
+                SetVideoProcessorConversionStatus(
+                    selectedInputColorSpace,
+                    mapping.OutputColorSpace,
+                    postProcessKind == DxgiPostProcessKind::HlgToPq
+                        ? L"validated;requires-hlg-to-pq;shader-target-failed"
+                        : L"validated;requires-tone-mapping;shader-target-failed");
+                return false;
+            }
+        }
+
         Microsoft::WRL::ComPtr<ID3D11VideoProcessorOutputView> outputView;
         if (FAILED(videoDevice->CreateVideoProcessorOutputView(
-            backBuffer.Get(),
+            videoProcessorTarget.Get(),
             enumerator.Get(),
             &outputDescription,
             outputView.ReleaseAndGetAddressOf())))
@@ -355,7 +512,7 @@ namespace winrt::NextGenEmby::Native::implementation
         stream.Enable = TRUE;
         stream.pInputSurface = inputView.Get();
 
-        if (!ClearBackBufferToBlack(false))
+        if (!ClearTextureToBlack(videoProcessorTarget.Get()))
         {
             return false;
         }
@@ -363,6 +520,37 @@ namespace winrt::NextGenEmby::Native::implementation
         if (FAILED(videoContext->VideoProcessorBlt(processor.Get(), outputView.Get(), 0, 1, &stream)))
         {
             return false;
+        }
+
+        if (requiresPostProcess)
+        {
+            auto luminance = EstimateToneMapLuminance(hdr10Metadata);
+            auto mode = postProcessKind == DxgiPostProcessKind::HlgToPq
+                ? HdrToneMappingMode::HlgToPq
+                : HdrToneMappingMode::PqToSdrHable;
+            if (!m_hdrToneMappingPass.Render(
+                    m_device.Get(),
+                    m_context.Get(),
+                    videoProcessorTarget.Get(),
+                    backBuffer.Get(),
+                    luminance,
+                    mode))
+            {
+                SetVideoProcessorConversionStatus(
+                    selectedInputColorSpace,
+                    mapping.OutputColorSpace,
+                    postProcessKind == DxgiPostProcessKind::HlgToPq
+                        ? L"validated;requires-hlg-to-pq;shader-failed"
+                        : L"validated;requires-tone-mapping;shader-failed");
+                return false;
+            }
+
+            SetVideoProcessorConversionStatus(
+                selectedInputColorSpace,
+                mapping.OutputColorSpace,
+                postProcessKind == DxgiPostProcessKind::HlgToPq
+                    ? L"validated;hlg-to-pq"
+                    : L"validated;tone-mapped-hable");
         }
 
         return true;
@@ -400,7 +588,7 @@ namespace winrt::NextGenEmby::Native::implementation
 
         D2D1_RENDER_TARGET_PROPERTIES renderTargetProperties = D2D1::RenderTargetProperties(
             D2D1_RENDER_TARGET_TYPE_DEFAULT,
-            D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE));
+            D2D1::PixelFormat(DXGI_FORMAT_UNKNOWN, D2D1_ALPHA_MODE_IGNORE));
 
         Microsoft::WRL::ComPtr<ID2D1RenderTarget> renderTarget;
         if (FAILED(d2dFactory->CreateDxgiSurfaceRenderTarget(
@@ -615,6 +803,24 @@ namespace winrt::NextGenEmby::Native::implementation
         return present ? Present() : true;
     }
 
+    bool DxDeviceResources::ClearTextureToBlack(ID3D11Texture2D* texture)
+    {
+        if (!m_device || !m_context || texture == nullptr)
+        {
+            return false;
+        }
+
+        Microsoft::WRL::ComPtr<ID3D11RenderTargetView> renderTargetView;
+        if (FAILED(m_device->CreateRenderTargetView(texture, nullptr, renderTargetView.ReleaseAndGetAddressOf())))
+        {
+            return false;
+        }
+
+        float clearColor[] = {0.0f, 0.0f, 0.0f, 1.0f};
+        m_context->ClearRenderTargetView(renderTargetView.Get(), clearColor);
+        return true;
+    }
+
     bool DxDeviceResources::Present()
     {
         if (!m_swapChain)
@@ -633,5 +839,50 @@ namespace winrt::NextGenEmby::Native::implementation
     ID3D11DeviceContext* DxDeviceResources::Context() const noexcept
     {
         return m_context.Get();
+    }
+
+    DXGI_FORMAT DxDeviceResources::SwapChainFormat() const noexcept
+    {
+        return m_swapChainFormat;
+    }
+
+    DXGI_COLOR_SPACE_TYPE DxDeviceResources::SwapChainColorSpace() const noexcept
+    {
+        return m_swapChainColorSpace;
+    }
+
+    bool DxDeviceResources::IsTenBitSwapChain() const noexcept
+    {
+        return m_isTenBitSwapChain;
+    }
+
+    bool DxDeviceResources::LastVideoProcessorConversionWasValidated() const noexcept
+    {
+        return m_lastVideoProcessorConversionValidated;
+    }
+
+    DXGI_COLOR_SPACE_TYPE DxDeviceResources::LastVideoProcessorInputColorSpace() const noexcept
+    {
+        return m_lastVideoProcessorInputColorSpace;
+    }
+
+    DXGI_COLOR_SPACE_TYPE DxDeviceResources::LastVideoProcessorOutputColorSpace() const noexcept
+    {
+        return m_lastVideoProcessorOutputColorSpace;
+    }
+
+    std::wstring DxDeviceResources::LastVideoProcessorConversionStatus() const
+    {
+        return m_lastVideoProcessorConversionStatus;
+    }
+
+    void DxDeviceResources::SetVideoProcessorConversionStatus(
+        DXGI_COLOR_SPACE_TYPE inputColorSpace,
+        DXGI_COLOR_SPACE_TYPE outputColorSpace,
+        std::wstring status)
+    {
+        m_lastVideoProcessorInputColorSpace = inputColorSpace;
+        m_lastVideoProcessorOutputColorSpace = outputColorSpace;
+        m_lastVideoProcessorConversionStatus = std::move(status);
     }
 }

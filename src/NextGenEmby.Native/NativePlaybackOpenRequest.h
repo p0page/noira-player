@@ -24,8 +24,8 @@ namespace winrt::NextGenEmby::Native::implementation
         void SubtitleStreamIndex(int32_t value) noexcept;
         bool HasSubtitleStreamIndex() const noexcept;
         void HasSubtitleStreamIndex(bool value) noexcept;
-        bool IsHdr() const noexcept;
-        void IsHdr(bool value) noexcept;
+        double VideoFrameRate() const noexcept;
+        void VideoFrameRate(double value) noexcept;
 
     private:
         winrt::hstring m_itemId;
@@ -36,7 +36,7 @@ namespace winrt::NextGenEmby::Native::implementation
         bool m_hasAudioStreamIndex{false};
         int32_t m_subtitleStreamIndex{0};
         bool m_hasSubtitleStreamIndex{false};
-        bool m_isHdr{false};
+        double m_videoFrameRate{0.0};
     };
 }
 

@@ -7,6 +7,9 @@
 #include <winrt/Windows.UI.Xaml.Controls.h>
 #include <wrl/client.h>
 
+#include "Media/DxgiColorSpaceMapper.h"
+#include "Media/HdrToneMappingPass.h"
+
 namespace winrt::NextGenEmby::Native::implementation
 {
     class DxDeviceResources
@@ -26,8 +29,9 @@ namespace winrt::NextGenEmby::Native::implementation
             uint32_t height,
             uint32_t displayWidth,
             uint32_t displayHeight,
-            bool usesBt709Matrix,
-            bool isFullRange);
+            VideoColorMetadata const& colorMetadata,
+            bool outputHdr10,
+            DXGI_HDR_METADATA_HDR10 const* hdr10Metadata);
         bool DrawBgraFrameToBackBuffer(
             uint8_t const* pixels,
             uint32_t width,
@@ -40,13 +44,33 @@ namespace winrt::NextGenEmby::Native::implementation
         bool Present();
         ID3D11Device* Device() const noexcept;
         ID3D11DeviceContext* Context() const noexcept;
+        DXGI_FORMAT SwapChainFormat() const noexcept;
+        DXGI_COLOR_SPACE_TYPE SwapChainColorSpace() const noexcept;
+        bool IsTenBitSwapChain() const noexcept;
+        bool LastVideoProcessorConversionWasValidated() const noexcept;
+        DXGI_COLOR_SPACE_TYPE LastVideoProcessorInputColorSpace() const noexcept;
+        DXGI_COLOR_SPACE_TYPE LastVideoProcessorOutputColorSpace() const noexcept;
+        std::wstring LastVideoProcessorConversionStatus() const;
 
     private:
         bool ClearBackBufferToBlack(bool present);
+        bool ClearTextureToBlack(ID3D11Texture2D* texture);
+        void SetVideoProcessorConversionStatus(
+            DXGI_COLOR_SPACE_TYPE inputColorSpace,
+            DXGI_COLOR_SPACE_TYPE outputColorSpace,
+            std::wstring status);
 
         Microsoft::WRL::ComPtr<ID3D11Device> m_device;
         Microsoft::WRL::ComPtr<ID3D11DeviceContext> m_context;
         Microsoft::WRL::ComPtr<IDXGISwapChain3> m_swapChain;
         winrt::Windows::UI::Xaml::Controls::SwapChainPanel m_panel{nullptr};
+        DXGI_FORMAT m_swapChainFormat{DXGI_FORMAT_UNKNOWN};
+        DXGI_COLOR_SPACE_TYPE m_swapChainColorSpace{DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709};
+        bool m_isTenBitSwapChain{false};
+        bool m_lastVideoProcessorConversionValidated{false};
+        DXGI_COLOR_SPACE_TYPE m_lastVideoProcessorInputColorSpace{DXGI_COLOR_SPACE_CUSTOM};
+        DXGI_COLOR_SPACE_TYPE m_lastVideoProcessorOutputColorSpace{DXGI_COLOR_SPACE_CUSTOM};
+        std::wstring m_lastVideoProcessorConversionStatus{L"not-run"};
+        HdrToneMappingPass m_hdrToneMappingPass;
     };
 }

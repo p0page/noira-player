@@ -84,6 +84,7 @@
     <Compile Include="Playback\SystemMediaPlaybackBackend.cs" />
     <Compile Include="Playback\WinRtNativePlaybackEngine.cs" />
     <Compile Include="Services\EmbyClientFactory.cs" />
+    <Compile Include="Services\PlaybackDiagnosticsLog.cs" />
     <Compile Include="Storage\ApplicationDataDeviceIdProvider.cs" />
     <Compile Include="Storage\ApplicationDataSessionStore.cs" />
     <Compile Include="ViewModels\LoginViewModel.cs" />

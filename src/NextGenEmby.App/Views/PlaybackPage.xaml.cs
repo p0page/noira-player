@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
@@ -9,10 +10,12 @@ using NextGenEmby.App.Services;
 using NextGenEmby.App.Storage;
 using NextGenEmby.Core.Emby;
 using NextGenEmby.Core.Playback;
+using Windows.Media.Protection;
 using Windows.System;
 using Windows.UI.Core;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
+using Windows.UI.Xaml.Controls.Primitives;
 using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Navigation;
 using CorePlaybackState = NextGenEmby.Core.Playback.PlaybackState;
@@ -43,12 +46,14 @@ namespace NextGenEmby.App.Views
         private PlaybackLaunchRequest? _launchRequest;
         private string _currentItemName = "";
         private long _lastPositionTicks;
+        private long _durationTicks;
         private bool _hasPlaybackContext;
         private bool _infoVisible;
         private bool _reportInProgress;
         private bool _stopReportInProgress;
         private bool _playbackStoppedReported;
         private bool _updatingStreamControls;
+        private bool _updatingProgressSlider;
         private bool _overlayVisible;
         private bool _moreVisible;
         private bool _keyHandlerAttached;
@@ -107,6 +112,8 @@ namespace NextGenEmby.App.Views
 
         private void PlaybackPage_OnLoaded(object sender, RoutedEventArgs e)
         {
+            PlaybackDiagnosticsLog.WriteLine(
+                "Playback page loaded surface=" + NativeSurface.ActualWidth + "x" + NativeSurface.ActualHeight);
             AttachPlaybackKeyHandler();
             TrySignalNativeSurfaceReady();
             AttachNativeSurface();
@@ -190,6 +197,10 @@ namespace NextGenEmby.App.Views
         {
             base.OnNavigatedTo(e);
             _launchRequest = e.Parameter as PlaybackLaunchRequest;
+            PlaybackDiagnosticsLog.WriteLine(
+                "Playback navigated launch=" + (_launchRequest != null) +
+                " item=" + (_launchRequest == null ? "" : _launchRequest.ItemId) +
+                " source=" + (_launchRequest == null ? "" : _launchRequest.MediaSourceId));
             if (_launchRequest == null)
             {
                 NowPlayingBlock.Text = "Manual Direct Stream";
@@ -240,6 +251,11 @@ namespace NextGenEmby.App.Views
 
         private void Info_OnClick(object sender, RoutedEventArgs e)
         {
+            ToggleInfoPanel();
+        }
+
+        private void ToggleInfoPanel()
+        {
             ShowOverlay(true);
             _infoVisible = !_infoVisible;
             InfoPanel.Visibility = _infoVisible ? Visibility.Visible : Visibility.Collapsed;
@@ -252,6 +268,18 @@ namespace NextGenEmby.App.Views
         private void StreamUrlBox_OnTextChanged(object sender, TextChangedEventArgs e)
         {
             UpdateControlStates();
+        }
+
+        private void ProgressSlider_OnValueChanged(object sender, RangeBaseValueChangedEventArgs e)
+        {
+            if (_updatingProgressSlider ||
+                !ProgressSlider.IsEnabled ||
+                !IsPlaybackSeekable())
+            {
+                return;
+            }
+
+            BeginOrMoveSeekPreviewTo(TimeSpan.FromSeconds(Math.Max(0, e.NewValue)).Ticks);
         }
 
         private void More_OnClick(object sender, RoutedEventArgs e)
@@ -285,26 +313,52 @@ namespace NextGenEmby.App.Views
 
         private async Task<bool> HandlePlaybackKeyAsync(VirtualKey key)
         {
+            if (ShouldLetFocusedControlHandleKey(key))
+            {
+                return false;
+            }
+
             var shortcut = TryMapDesktopShortcut(key);
             if (shortcut.HasValue)
             {
                 if (shortcut.Value == PlaybackOverlayShortcut.Accept &&
                     _overlayVisible &&
+                    !_moreVisible &&
                     !_seekPreview.IsActive)
                 {
                     return false;
                 }
 
-                await ApplyOverlayInputActionAsync(
-                    PlaybackOverlayInputPolicy.Decide(shortcut.Value, _seekPreview.IsActive, _moreVisible, _overlayVisible, ShouldBackExitPlaybackPage()));
+                var action = PlaybackOverlayInputPolicy.Decide(
+                    shortcut.Value,
+                    _seekPreview.IsActive,
+                    _moreVisible,
+                    _overlayVisible,
+                    ShouldBackExitPlaybackPage());
+                if (action == PlaybackOverlayInputAction.None)
+                {
+                    return false;
+                }
+
+                await ApplyOverlayInputActionAsync(action);
                 return true;
             }
 
             switch (key)
             {
                 case VirtualKey.GamepadA:
-                    await ApplyOverlayInputActionAsync(
-                        PlaybackOverlayInputPolicy.Decide(PlaybackOverlayShortcut.Accept, _seekPreview.IsActive, _moreVisible, _overlayVisible, ShouldBackExitPlaybackPage()));
+                    var action = PlaybackOverlayInputPolicy.Decide(
+                        PlaybackOverlayShortcut.Accept,
+                        _seekPreview.IsActive,
+                        _moreVisible,
+                        _overlayVisible,
+                        ShouldBackExitPlaybackPage());
+                    if (action == PlaybackOverlayInputAction.None)
+                    {
+                        return false;
+                    }
+
+                    await ApplyOverlayInputActionAsync(action);
                     return true;
 
                 case VirtualKey.GamepadB:
@@ -355,6 +409,30 @@ namespace NextGenEmby.App.Views
             return false;
         }
 
+        private bool ShouldLetFocusedControlHandleKey(VirtualKey key)
+        {
+            if (!PlaybackOverlayInputPolicy.ShouldRouteFocusedControlInput(_moreVisible, _seekPreview.IsActive))
+            {
+                return false;
+            }
+
+            switch (key)
+            {
+                case VirtualKey.GamepadDPadLeft:
+                case VirtualKey.GamepadDPadRight:
+                case VirtualKey.GamepadDPadUp:
+                case VirtualKey.GamepadDPadDown:
+                case VirtualKey.GamepadLeftThumbstickLeft:
+                case VirtualKey.GamepadLeftThumbstickRight:
+                case VirtualKey.GamepadLeftThumbstickUp:
+                case VirtualKey.GamepadLeftThumbstickDown:
+                    return true;
+
+                default:
+                    return false;
+            }
+        }
+
         private async void Page_OnPointerPressed(object sender, PointerRoutedEventArgs e)
         {
             await ApplyOverlayInputActionAsync(
@@ -383,8 +461,7 @@ namespace NextGenEmby.App.Views
 
         private bool ShouldBackExitPlaybackPage()
         {
-            return _orchestrator.State == CorePlaybackState.Stopped ||
-                _orchestrator.State == CorePlaybackState.Failed;
+            return PlaybackPageExitPolicy.ShouldBackExit(_orchestrator.State);
         }
 
         private async Task ApplyOverlayInputActionAsync(PlaybackOverlayInputAction action)
@@ -422,7 +499,46 @@ namespace NextGenEmby.App.Views
                 case PlaybackOverlayInputAction.CancelSeekPreview:
                     await CompleteSeekPreviewDecisionAsync(_seekPreview.Cancel());
                     return;
+
+                case PlaybackOverlayInputAction.ActivateFocusedControl:
+                    TryActivateFocusedMoreControl();
+                    return;
             }
+        }
+
+        private bool TryActivateFocusedMoreControl()
+        {
+            if (!_moreVisible)
+            {
+                return false;
+            }
+
+            var focusedElement = FocusManager.GetFocusedElement();
+            if (focusedElement == SourceBox)
+            {
+                SourceBox.IsDropDownOpen = true;
+                return true;
+            }
+
+            if (focusedElement == AudioStreamBox)
+            {
+                AudioStreamBox.IsDropDownOpen = true;
+                return true;
+            }
+
+            if (focusedElement == SubtitleStreamBox)
+            {
+                SubtitleStreamBox.IsDropDownOpen = true;
+                return true;
+            }
+
+            if (focusedElement == InfoButton)
+            {
+                ToggleInfoPanel();
+                return true;
+            }
+
+            return false;
         }
 
         private async void Orchestrator_OnStateChanged(object? sender, PlaybackStateChangedEventArgs args)
@@ -462,6 +578,7 @@ namespace NextGenEmby.App.Views
 
         private async void PlaybackPage_OnUnloaded(object sender, RoutedEventArgs e)
         {
+            await PlaybackDiagnosticsLog.WriteLineAsync("Playback page unloaded begin");
             _orchestrator.StateChanged -= Orchestrator_OnStateChanged;
             _progressTimer.Stop();
             _progressTimer.Tick -= ProgressTimer_OnTick;
@@ -470,15 +587,24 @@ namespace NextGenEmby.App.Views
             _seekPreviewTimer.Stop();
             _seekPreviewTimer.Tick -= SeekPreviewTimer_OnTick;
             DetachPlaybackKeyHandler();
+            var stoppedRequest = CreateStoppedSessionRequest();
             try
             {
-                await ReportPlaybackStoppedAsync();
+                await PlaybackDiagnosticsLog.WriteLineAsync("Playback page unloaded stop begin");
                 await _orchestrator.StopAsync();
+                await PlaybackDiagnosticsLog.WriteLineAsync("Playback page unloaded stop end");
+                await ReportPlaybackStoppedAsync(stoppedRequest);
+            }
+            catch (Exception ex)
+            {
+                await PlaybackDiagnosticsLog.WriteLineAsync(
+                    "Playback page unloaded exception " + ex.GetType().FullName + " " + ex.Message);
             }
             finally
             {
                 _httpClient?.Dispose();
                 _disposableBackend?.Dispose();
+                await PlaybackDiagnosticsLog.WriteLineAsync("Playback page unloaded end");
             }
         }
 
@@ -547,6 +673,8 @@ namespace NextGenEmby.App.Views
 
         private async Task StartPlaybackAsync()
         {
+            await PlaybackDiagnosticsLog.ClearAsync();
+            PlaybackDiagnosticsLog.WriteLine("Playback page start requested launch=" + (_launchRequest != null));
             if (_launchRequest != null)
             {
                 await StartItemPlaybackAsync(_launchRequest);
@@ -564,6 +692,7 @@ namespace NextGenEmby.App.Views
             var source = CreateManualSource();
             await _orchestrator.StartAsync(DemoItemId, new[] { source }, 0);
             _lastPositionTicks = 0;
+            _durationTicks = 0;
             _hasPlaybackContext = _orchestrator.CurrentDescriptor != null;
             _lastPlaybackSessionRequest = null;
             _playbackStoppedReported = false;
@@ -582,14 +711,25 @@ namespace NextGenEmby.App.Views
 
         private async Task StartItemPlaybackAsync(PlaybackLaunchRequest request)
         {
+            await PlaybackDiagnosticsLog.WriteLineAsync(
+                "Item playback begin item=" + request.ItemId +
+                " requestedSource=" + request.MediaSourceId +
+                " startTicks=" + request.StartPositionTicks +
+                " runtimeTicks=" + request.RuntimeTicks +
+                " forceSdr=" + request.ForceSdrOutput);
+            await LogXboxVideoCapabilitiesAsync();
+            await PlaybackDiagnosticsLog.WriteLineAsync("Ensure Emby client begin");
             await EnsureEmbyClientAsync();
+            await PlaybackDiagnosticsLog.WriteLineAsync("Ensure Emby client end session=" + (_session != null) + " client=" + (_embyClient != null));
             if (_embyClient == null || _session == null)
             {
                 throw new InvalidOperationException("Sign in before playback.");
             }
 
             UpdateStatus(CorePlaybackState.Opening, "Loading media sources");
+            await PlaybackDiagnosticsLog.WriteLineAsync("PlaybackInfo begin item=" + request.ItemId);
             var sources = await _embyClient.GetPlaybackInfoAsync(_session, request.ItemId);
+            await PlaybackDiagnosticsLog.WriteLineAsync("PlaybackInfo source count=" + sources.Count);
             if (sources.Count == 0)
             {
                 throw new InvalidOperationException("No playable media source was returned by Emby.");
@@ -601,15 +741,38 @@ namespace NextGenEmby.App.Views
                     string.Equals(source.Id, request.MediaSourceId, StringComparison.Ordinal));
                 if (requestedSource != null)
                 {
+                    await PlaybackDiagnosticsLog.WriteLineAsync(
+                        "Requested source found name=" + requestedSource.Name +
+                        " hdr=" + requestedSource.HdrProfile.Kind +
+                        " strategy=" + requestedSource.HdrProfile.PlaybackStrategy +
+                        " direct=" + requestedSource.HdrProfile.IsDirectPlayable);
                     sources = new[] { requestedSource }
                         .Concat(sources.Where(source => !string.Equals(source.Id, request.MediaSourceId, StringComparison.Ordinal)))
                         .ToList();
                 }
+                else
+                {
+                    await PlaybackDiagnosticsLog.WriteLineAsync("Requested source not found");
+                }
             }
 
+#if DEBUG
+            if (request.ForceSdrOutput)
+            {
+                await PlaybackDiagnosticsLog.WriteLineAsync("Force SDR output for diagnostics");
+                sources = ApplyForcedSdrOutputForDiagnostics(sources);
+            }
+#endif
+
+            await PlaybackDiagnosticsLog.WriteLineAsync("Ensure native surface begin");
             await EnsureNativeSurfaceReadyAsync();
-            await _orchestrator.StartAsync(request.ItemId, sources, request.StartPositionTicks);
+            await PlaybackDiagnosticsLog.WriteLineAsync("Ensure native surface end");
+            await _orchestrator.StartAsync(request.ItemId, sources, request.StartPositionTicks, request.MediaSourceId);
+            await PlaybackDiagnosticsLog.WriteLineAsync(
+                "Orchestrator start completed state=" + _orchestrator.State +
+                " currentSource=" + (_orchestrator.CurrentMediaSource == null ? "" : _orchestrator.CurrentMediaSource.Id));
             _lastPositionTicks = request.StartPositionTicks;
+            _durationTicks = request.RuntimeTicks;
             _hasPlaybackContext = _orchestrator.CurrentDescriptor != null;
             _playbackStoppedReported = false;
             _currentItemName = request.ItemName;
@@ -629,12 +792,84 @@ namespace NextGenEmby.App.Views
             }
         }
 
+#if DEBUG
+        private static IReadOnlyList<EmbyMediaSource> ApplyForcedSdrOutputForDiagnostics(IReadOnlyList<EmbyMediaSource> sources)
+        {
+            return sources.Select(CloneForSdrOutputDiagnostics).ToList();
+        }
+
+        private static EmbyMediaSource CloneForSdrOutputDiagnostics(EmbyMediaSource source)
+        {
+            var clone = new EmbyMediaSource
+            {
+                Id = source.Id,
+                Name = source.Name,
+                Container = source.Container,
+                Bitrate = source.Bitrate,
+                Width = source.Width,
+                Height = source.Height,
+                HdrProfile = HdrPlaybackProfile.Sdr(),
+                DirectStreamUrl = source.DirectStreamUrl,
+                PlaySessionId = source.PlaySessionId
+            };
+
+            foreach (var stream in source.Streams)
+            {
+                clone.Streams.Add(stream);
+            }
+
+            return clone;
+        }
+#endif
+
+        private static async Task LogXboxVideoCapabilitiesAsync()
+        {
+            try
+            {
+                var capabilities = new ProtectionCapabilities();
+                await PlaybackDiagnosticsLog.WriteLineAsync(
+                    "Xbox video capability hevcDecode=" +
+                    QueryProtectionCapability(
+                        capabilities,
+                        "video/mp4;codecs=\"hvc1,mp4a\";features=\"decode-res-x=3840,decode-res-y=2160,decode-bitrate=20000,decode-fps=30,decode-bpc=10\""));
+                await PlaybackDiagnosticsLog.WriteLineAsync(
+                    "Xbox video capability hevc4kDisplay=" +
+                    QueryProtectionCapability(
+                        capabilities,
+                        "video/mp4;codecs=\"hvc1,mp4a\";features=\"decode-res-x=3840,decode-res-y=2160,decode-bitrate=20000,decode-fps=30,decode-bpc=10,display-res-x=3840,display-res-y=2160,display-bpc=8\""));
+                await PlaybackDiagnosticsLog.WriteLineAsync(
+                    "Xbox video capability hevc4kHdr=" +
+                    QueryProtectionCapability(
+                        capabilities,
+                        "video/mp4;codecs=\"hvc1,mp4a\";features=\"decode-res-x=3840,decode-res-y=2160,decode-bitrate=20000,decode-fps=30,decode-bpc=10,display-res-x=3840,display-res-y=2160,display-bpc=10,hdr=1\""));
+                await PlaybackDiagnosticsLog.WriteLineAsync(
+                    "Xbox video capability hdcp2=" +
+                    QueryProtectionCapability(
+                        capabilities,
+                        "video/mp4;codecs=\"hvc1,mp4a\";features=\"hdcp=2\""));
+            }
+            catch (Exception ex)
+            {
+                await PlaybackDiagnosticsLog.WriteLineAsync(
+                    "Xbox video capability exception " + ex.GetType().FullName + " " + ex.Message);
+            }
+        }
+
+        private static ProtectionCapabilityResult QueryProtectionCapability(
+            ProtectionCapabilities capabilities,
+            string type)
+        {
+            return capabilities.IsTypeSupported(type, "com.microsoft.playready.hardware");
+        }
+
         private async Task StopPlaybackAsync()
         {
-            await ReportPlaybackStoppedAsync();
+            var stoppedRequest = CreateStoppedSessionRequest();
             await _orchestrator.StopAsync();
+            await ReportPlaybackStoppedAsync(stoppedRequest);
             _progressTimer.Stop();
             _lastPositionTicks = 0;
+            _durationTicks = 0;
             _hasPlaybackContext = false;
             _lastPlaybackSessionRequest = null;
             UpdateStatus(CorePlaybackState.Stopped);
@@ -667,17 +902,18 @@ namespace NextGenEmby.App.Views
                 return;
             }
 
-            var current = TimeSpan.FromTicks(Math.Max(0, _backend.CurrentPositionTicks));
+            var current = TimeSpan.FromTicks(GetCurrentPositionTicks());
             var target = current + delta;
             if (target < TimeSpan.Zero)
             {
                 target = TimeSpan.Zero;
             }
 
-            await _orchestrator.SeekAsync(target.Ticks);
-            _lastPositionTicks = target.Ticks;
+            var targetTicks = ClampToDuration(target.Ticks);
+            await _orchestrator.SeekAsync(targetTicks);
+            _lastPositionTicks = targetTicks;
             await ReportProgressAsync(PlaybackProgressEvent.TimeUpdate);
-            UpdateStatus(_orchestrator.State, "Position " + FormatPosition(target));
+            UpdateStatus(_orchestrator.State, "Position " + FormatPosition(TimeSpan.FromTicks(targetTicks)));
             UpdateProgressSlider();
             ShowOverlay();
             if (_infoVisible)
@@ -696,10 +932,13 @@ namespace NextGenEmby.App.Views
             _playbackCommandInFlight = true;
             try
             {
+                await PlaybackDiagnosticsLog.WriteLineAsync("Playback command begin");
                 await command();
+                await PlaybackDiagnosticsLog.WriteLineAsync("Playback command end");
             }
             catch (Exception ex)
             {
+                await PlaybackDiagnosticsLog.WriteLineAsync("Playback command exception " + ex.GetType().FullName + " " + ex.Message);
                 _hasPlaybackContext = _orchestrator.CurrentDescriptor != null;
                 UpdateStatus(CorePlaybackState.Failed, ex.Message);
                 ShowOverlay();
@@ -713,6 +952,7 @@ namespace NextGenEmby.App.Views
             finally
             {
                 _playbackCommandInFlight = false;
+                await PlaybackDiagnosticsLog.WriteLineAsync("Playback command finally");
             }
         }
 
@@ -909,7 +1149,7 @@ namespace NextGenEmby.App.Views
             }
         }
 
-        private async Task ReportPlaybackStoppedAsync()
+        private async Task ReportPlaybackStoppedAsync(PlaybackSessionRequest? stoppedRequest = null)
         {
             if (_stopReportInProgress ||
                 _playbackStoppedReported ||
@@ -919,7 +1159,7 @@ namespace NextGenEmby.App.Views
                 return;
             }
 
-            var request = CreateStoppedSessionRequest();
+            var request = stoppedRequest ?? CreateStoppedSessionRequest();
             if (request == null)
             {
                 return;
@@ -1000,12 +1240,36 @@ namespace NextGenEmby.App.Views
 
             _moreVisible = showMore;
             MoreDrawer.Visibility = _moreVisible ? Visibility.Visible : Visibility.Collapsed;
+            if (_moreVisible)
+            {
+                FocusMoreDrawer();
+            }
 
             _overlayTimer.Stop();
             if (!ShouldKeepOverlayPinned())
             {
                 _overlayTimer.Start();
             }
+        }
+
+        private void FocusMoreDrawer()
+        {
+            if (SourceBox.IsEnabled && SourceBox.Focus(FocusState.Programmatic))
+            {
+                return;
+            }
+
+            if (AudioStreamBox.IsEnabled && AudioStreamBox.Focus(FocusState.Programmatic))
+            {
+                return;
+            }
+
+            if (SubtitleStreamBox.IsEnabled && SubtitleStreamBox.Focus(FocusState.Programmatic))
+            {
+                return;
+            }
+
+            InfoButton.Focus(FocusState.Programmatic);
         }
 
         private void HideOverlay()
@@ -1033,6 +1297,23 @@ namespace NextGenEmby.App.Views
             _seekPreview.MoveBy(delta, now);
             ShowOverlay();
             UpdateSeekPreviewBlock();
+            UpdateProgressSlider();
+            _seekPreviewTimer.Stop();
+            _seekPreviewTimer.Start();
+        }
+
+        private void BeginOrMoveSeekPreviewTo(long positionTicks)
+        {
+            var now = GetSeekPreviewNow();
+            if (!_seekPreview.IsActive)
+            {
+                _seekPreview.Begin(GetCurrentPositionTicks(), now);
+            }
+
+            _seekPreview.MoveTo(ClampToDuration(positionTicks), now);
+            ShowOverlay();
+            UpdateSeekPreviewBlock();
+            UpdateProgressSlider();
             _seekPreviewTimer.Stop();
             _seekPreviewTimer.Start();
         }
@@ -1147,9 +1428,24 @@ namespace NextGenEmby.App.Views
 
         private void UpdateProgressSlider()
         {
-            var positionSeconds = Math.Max(0, TimeSpan.FromTicks(GetCurrentPositionTicks()).TotalSeconds);
-            ProgressSlider.Maximum = Math.Max(1, Math.Max(ProgressSlider.Maximum, positionSeconds));
-            ProgressSlider.Value = Math.Min(ProgressSlider.Maximum, positionSeconds);
+            var positionTicks = _seekPreview.IsActive
+                ? _seekPreview.TargetTicks
+                : GetCurrentPositionTicks();
+            var positionSeconds = Math.Max(0, TimeSpan.FromTicks(positionTicks).TotalSeconds);
+            var durationSeconds = _durationTicks > 0
+                ? TimeSpan.FromTicks(_durationTicks).TotalSeconds
+                : Math.Max(ProgressSlider.Maximum, positionSeconds);
+
+            _updatingProgressSlider = true;
+            try
+            {
+                ProgressSlider.Maximum = Math.Max(1, durationSeconds);
+                ProgressSlider.Value = Math.Min(ProgressSlider.Maximum, positionSeconds);
+            }
+            finally
+            {
+                _updatingProgressSlider = false;
+            }
         }
 
         private bool ShouldKeepOverlayPinned()
@@ -1170,6 +1466,7 @@ namespace NextGenEmby.App.Views
             StopButton.IsEnabled = hasActivePlayback;
             SeekBackButton.IsEnabled = hasActivePlayback;
             SeekForwardButton.IsEnabled = hasActivePlayback;
+            ProgressSlider.IsEnabled = hasActivePlayback && IsPlaybackSeekable();
             MoreButton.IsEnabled = true;
             InfoButton.IsEnabled = true;
         }
@@ -1184,7 +1481,8 @@ namespace NextGenEmby.App.Views
             {
                 InfoBlock.Text =
                     "State: " + _orchestrator.State + Environment.NewLine +
-                    "Position: " + FormatPosition(position);
+                    "Position: " + FormatPosition(position) + Environment.NewLine +
+                    CreateDisplayDiagnosticLines();
                 return;
             }
 
@@ -1192,10 +1490,49 @@ namespace NextGenEmby.App.Views
                 "State: " + _orchestrator.State + Environment.NewLine +
                 "Item: " + (string.IsNullOrWhiteSpace(_currentItemName) ? descriptor.ItemId : _currentItemName) + Environment.NewLine +
                 "Source: " + source.Name + Environment.NewLine +
+                "HDR strategy: " + source.HdrProfile.PlaybackStrategy + Environment.NewLine +
                 "Audio: " + CreateSelectedStreamLabel(source, descriptor.AudioStreamIndex, EmbyStreamKind.Audio, "Default") + Environment.NewLine +
                 "Subtitles: " + CreateSelectedStreamLabel(source, descriptor.SubtitleStreamIndex, EmbyStreamKind.Subtitle, "Off") + Environment.NewLine +
                 "Position: " + FormatPosition(position) + Environment.NewLine +
+                CreateDisplayDiagnosticLines() +
                 "URL: " + source.DirectStreamUrl;
+        }
+
+        private string CreateDisplayDiagnosticLines()
+        {
+            if (!(_backend is IPlaybackBackendDiagnostics diagnostics))
+            {
+                return "";
+            }
+
+            var status = diagnostics.DisplayStatus;
+            var swapChainFormat = string.IsNullOrWhiteSpace(status.SwapChainFormat)
+                ? "Unknown"
+                : status.SwapChainFormat;
+            var colorSpace = string.IsNullOrWhiteSpace(status.SwapChainColorSpace)
+                ? "Unknown"
+                : status.SwapChainColorSpace;
+            var inputColorSpace = string.IsNullOrWhiteSpace(status.VideoProcessorInputColorSpace)
+                ? "Unknown"
+                : status.VideoProcessorInputColorSpace;
+            var outputColorSpace = string.IsNullOrWhiteSpace(status.VideoProcessorOutputColorSpace)
+                ? "Unknown"
+                : status.VideoProcessorOutputColorSpace;
+            var conversionStatus = string.IsNullOrWhiteSpace(status.VideoProcessorConversionStatus)
+                ? "not-run"
+                : status.VideoProcessorConversionStatus;
+
+            var toneMappingLine = status.HasMissingToneMappingImplementation
+                ? "Tone mapping: missing / not color-equivalent" + Environment.NewLine
+                : status.RequiresExplicitToneMapping
+                    ? "Tone mapping: required / not color-equivalent" + Environment.NewLine
+                    : "";
+
+            return
+                "HDR output: " + status.HdrStatus + (status.IsHdrOutputActive ? " active" : "") + Environment.NewLine +
+                "Swapchain: " + swapChainFormat + " / " + colorSpace + (status.IsTenBitSwapChain ? " / 10-bit" : " / 8-bit") + Environment.NewLine +
+                "Video processor: " + conversionStatus + " / " + inputColorSpace + " -> " + outputColorSpace + Environment.NewLine +
+                toneMappingLine;
         }
 
         private static string CreateSourceLabel(EmbyMediaSource source)
@@ -1206,9 +1543,9 @@ namespace NextGenEmby.App.Views
                 label += " · " + source.Width + "x" + source.Height;
             }
 
-            if (source.IsHdr)
+            if (source.HdrProfile.Kind != HdrPlaybackKind.Sdr)
             {
-                label += " · HDR";
+                label += " · " + source.HdrProfile.PlaybackStrategy;
             }
 
             return label;
@@ -1273,7 +1610,20 @@ namespace NextGenEmby.App.Views
 
         private long GetCurrentPositionTicks()
         {
-            return Math.Max(0, Math.Max(_lastPositionTicks, _backend.CurrentPositionTicks));
+            var backendPositionTicks = Math.Max(0, _backend.CurrentPositionTicks);
+            if (_orchestrator.CurrentDescriptor != null && backendPositionTicks > 0)
+            {
+                _lastPositionTicks = backendPositionTicks;
+                return backendPositionTicks;
+            }
+
+            return Math.Max(0, _lastPositionTicks);
+        }
+
+        private long ClampToDuration(long positionTicks)
+        {
+            var clamped = Math.Max(0, positionTicks);
+            return _durationTicks > 0 ? Math.Min(_durationTicks, clamped) : clamped;
         }
 
         private static TimeSpan GetSeekPreviewNow()

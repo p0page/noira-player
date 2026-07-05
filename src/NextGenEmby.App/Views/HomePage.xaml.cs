@@ -67,7 +67,13 @@ namespace NextGenEmby.App.Views
 
             var itemName = string.IsNullOrWhiteSpace(item.Name) ? item.Id : item.Name;
             var startTicks = item.UserData == null ? 0 : item.UserData.PlaybackPositionTicks;
-            Frame.Navigate(typeof(PlaybackPage), new PlaybackLaunchRequest(item.Id, itemName, startTicks));
+            Frame.Navigate(
+                typeof(PlaybackPage),
+                new PlaybackLaunchRequest(
+                    item.Id,
+                    itemName,
+                    startTicks,
+                    runtimeTicks: item.RunTimeTicks.GetValueOrDefault()));
         }
 
         private void HeroDetails_OnClick(object sender, RoutedEventArgs e)
