@@ -19,21 +19,27 @@ namespace NextGenEmby.App.Views
         private readonly ApplicationDataSessionStore _sessionStore = new ApplicationDataSessionStore();
         private EmbyMediaItem? _item;
         private IReadOnlyList<EmbyMediaSource> _mediaSources = Array.Empty<EmbyMediaSource>();
+        private bool _isUnloaded;
+        private int _loadGeneration;
 
         public MediaDetailsPage()
         {
             InitializeComponent();
+            Unloaded += MediaDetailsPage_OnUnloaded;
         }
 
         protected override async void OnNavigatedTo(NavigationEventArgs e)
         {
             base.OnNavigatedTo(e);
+            _isUnloaded = false;
+            var loadGeneration = BeginLoad();
+
             var item = e.Parameter as EmbyMediaItem;
             if (item != null)
             {
                 _item = item;
                 RenderItem();
-                await LoadDetailsAsync(item.Id, item.Name);
+                await LoadDetailsAsync(item.Id, item.Name, loadGeneration);
                 return;
             }
 
@@ -46,7 +52,7 @@ namespace NextGenEmby.App.Views
                     Name = request.ItemName
                 };
                 RenderItem();
-                await LoadDetailsAsync(request.ItemId, request.ItemName);
+                await LoadDetailsAsync(request.ItemId, request.ItemName, loadGeneration);
                 return;
             }
 
@@ -54,9 +60,16 @@ namespace NextGenEmby.App.Views
             RenderItem();
         }
 
+        private void MediaDetailsPage_OnUnloaded(object sender, RoutedEventArgs e)
+        {
+            _isUnloaded = true;
+            _loadGeneration++;
+        }
+
         private void RenderItem()
         {
             ResetPlaybackSections();
+            ResetArtwork();
 
             if (_item == null || string.IsNullOrWhiteSpace(_item.Id))
             {
@@ -83,8 +96,13 @@ namespace NextGenEmby.App.Views
             }
         }
 
-        private async Task LoadDetailsAsync(string itemId, string fallbackName)
+        private async Task LoadDetailsAsync(string itemId, string fallbackName, int loadGeneration)
         {
+            if (!CanApplyLoad(loadGeneration))
+            {
+                return;
+            }
+
             if (string.IsNullOrWhiteSpace(itemId))
             {
                 _item = null;
@@ -107,6 +125,11 @@ namespace NextGenEmby.App.Views
             try
             {
                 var session = await _sessionStore.LoadAsync();
+                if (!CanApplyLoad(loadGeneration))
+                {
+                    return;
+                }
+
                 if (session == null)
                 {
                     StatusBlock.Text = "Sign in first.";
@@ -116,56 +139,69 @@ namespace NextGenEmby.App.Views
                 using (var http = new HttpClient())
                 {
                     var client = EmbyClientFactory.Create(http, session);
-                    _item = await client.GetItemAsync(session, itemId);
+                    var loadedItem = await client.GetItemAsync(session, itemId);
+                    if (!CanApplyLoad(loadGeneration))
+                    {
+                        return;
+                    }
+
+                    _item = loadedItem;
                     RenderItem();
-                    await LoadImagesAsync();
-                    await LoadPlaybackInfoAsync(client, session, itemId);
-                    await LoadSeriesEpisodesAsync(client, session);
+                    await LoadImagesAsync(client, session, loadGeneration);
+                    await LoadPlaybackInfoAsync(client, session, itemId, loadGeneration);
+                    await LoadSeriesEpisodesAsync(client, session, loadGeneration);
                 }
+                if (!CanApplyLoad(loadGeneration))
+                {
+                    return;
+                }
+
                 StatusBlock.Text = "";
             }
             catch
             {
+                if (!CanApplyLoad(loadGeneration))
+                {
+                    return;
+                }
+
                 RenderItem();
                 StatusBlock.Text = "Unable to load details.";
             }
         }
 
-        private async Task LoadImagesAsync()
+        private Task LoadImagesAsync(EmbyApiClient client, EmbySession session, int loadGeneration)
         {
-            if (_item == null || string.IsNullOrWhiteSpace(_item.Id))
+            var item = _item;
+            if (!CanApplyLoad(loadGeneration) || item == null || string.IsNullOrWhiteSpace(item.Id))
             {
-                return;
+                return Task.CompletedTask;
             }
 
             try
             {
-                var session = await _sessionStore.LoadAsync();
-                if (session == null)
+                ResetArtwork();
+
+                if (!string.IsNullOrWhiteSpace(item.PrimaryImageTag))
                 {
-                    StatusBlock.Text = "Sign in first.";
-                    return;
+                    PosterImage.Source = new BitmapImage(new Uri(client.GetImageUrl(session, item.Id, "Primary", 720)));
+                    PosterFallbackBlock.Visibility = Visibility.Collapsed;
                 }
 
-                using (var http = new HttpClient())
+                if (!string.IsNullOrWhiteSpace(item.BackdropImageTag))
                 {
-                    var client = EmbyClientFactory.Create(http, session);
-                    if (!string.IsNullOrWhiteSpace(_item.PrimaryImageTag))
-                    {
-                        PosterImage.Source = new BitmapImage(new Uri(client.GetImageUrl(session, _item.Id, "Primary", 720)));
-                        PosterFallbackBlock.Visibility = Visibility.Collapsed;
-                    }
-
-                    if (!string.IsNullOrWhiteSpace(_item.BackdropImageTag))
-                    {
-                        BackdropImage.Source = new BitmapImage(new Uri(client.GetImageUrl(session, _item.Id, "Backdrop", 1920)));
-                    }
+                    BackdropImage.Source = new BitmapImage(new Uri(client.GetImageUrl(session, item.Id, "Backdrop", 1920)));
                 }
             }
             catch
             {
-                StatusBlock.Text = "Unable to load artwork.";
+                if (CanApplyLoad(loadGeneration))
+                {
+                    StatusBlock.Text = "Unable to load artwork.";
+                }
             }
+
+            return Task.CompletedTask;
         }
 
         private void Play_OnClick(object sender, RoutedEventArgs e)
@@ -191,27 +227,51 @@ namespace NextGenEmby.App.Views
         {
             var itemId = _item == null ? "" : _item.Id;
             var itemName = _item == null ? "" : _item.Name;
-            await LoadDetailsAsync(itemId, itemName);
+            await LoadDetailsAsync(itemId, itemName, BeginLoad());
         }
 
-        private async Task LoadPlaybackInfoAsync(EmbyApiClient client, EmbySession session, string itemId)
+        private async Task LoadPlaybackInfoAsync(
+            EmbyApiClient client,
+            EmbySession session,
+            string itemId,
+            int loadGeneration)
         {
-            _mediaSources = Array.Empty<EmbyMediaSource>();
+            if (!CanApplyLoad(loadGeneration))
+            {
+                return;
+            }
+
             try
             {
-                _mediaSources = await client.GetPlaybackInfoAsync(session, itemId);
+                var mediaSources = await client.GetPlaybackInfoAsync(session, itemId);
+                if (!CanApplyLoad(loadGeneration))
+                {
+                    return;
+                }
+
+                _mediaSources = mediaSources;
                 RenderPlaybackInfo();
             }
             catch
             {
+                if (!CanApplyLoad(loadGeneration))
+                {
+                    return;
+                }
+
                 VersionsPanel.Children.Clear();
                 AudioSummaryBlock.Text = CanPlay(_item) ? "Audio: unavailable" : "";
                 SubtitleSummaryBlock.Text = CanPlay(_item) ? "Subtitles: unavailable" : "";
             }
         }
 
-        private async Task LoadSeriesEpisodesAsync(EmbyApiClient client, EmbySession session)
+        private async Task LoadSeriesEpisodesAsync(EmbyApiClient client, EmbySession session, int loadGeneration)
         {
+            if (!CanApplyLoad(loadGeneration))
+            {
+                return;
+            }
+
             EpisodesPanel.Children.Clear();
             EpisodesSection.Visibility = Visibility.Collapsed;
             var item = _item;
@@ -229,28 +289,41 @@ namespace NextGenEmby.App.Views
             try
             {
                 var seasons = await client.GetChildrenAsync(session, item.Id, "Season");
-                var firstSeason = seasons.FirstOrDefault(season => !string.IsNullOrWhiteSpace(season.Id));
-                EpisodesPanel.Children.Clear();
-                if (firstSeason == null)
+                if (!CanApplyLoad(loadGeneration))
                 {
-                    AddEpisodeMessage("No seasons found.");
                     return;
                 }
 
-                var episodes = await client.GetChildrenAsync(session, firstSeason.Id, "Episode");
-                if (episodes.Count == 0)
+                var loadedAnyEpisodes = false;
+                EpisodesPanel.Children.Clear();
+                foreach (var season in seasons.Where(season => !string.IsNullOrWhiteSpace(season.Id)).Take(12))
+                {
+                    AddSeasonHeader(season);
+                    var episodes = await client.GetChildrenAsync(session, season.Id, "Episode");
+                    if (!CanApplyLoad(loadGeneration))
+                    {
+                        return;
+                    }
+
+                    foreach (var episode in episodes.Take(40))
+                    {
+                        loadedAnyEpisodes = true;
+                        AddEpisodeButton(episode);
+                    }
+                }
+
+                if (!loadedAnyEpisodes)
                 {
                     AddEpisodeMessage("No episodes found.");
-                    return;
-                }
-
-                foreach (var episode in episodes)
-                {
-                    AddEpisodeButton(episode);
                 }
             }
             catch
             {
+                if (!CanApplyLoad(loadGeneration))
+                {
+                    return;
+                }
+
                 EpisodesPanel.Children.Clear();
                 AddEpisodeMessage("Unable to load episodes.");
             }
@@ -327,6 +400,18 @@ namespace NextGenEmby.App.Views
             EpisodesPanel.Children.Add(button);
         }
 
+        private void AddSeasonHeader(EmbyMediaItem season)
+        {
+            EpisodesPanel.Children.Add(new TextBlock
+            {
+                Text = string.IsNullOrWhiteSpace(season.Name) ? "Season" : season.Name,
+                FontSize = 22,
+                FontWeight = Windows.UI.Text.FontWeights.SemiBold,
+                Margin = new Thickness(0, 10, 0, 0),
+                TextWrapping = TextWrapping.WrapWholeWords
+            });
+        }
+
         private void AddEpisodeMessage(string message)
         {
             EpisodesPanel.Children.Add(CreateMutedText(message));
@@ -361,6 +446,24 @@ namespace NextGenEmby.App.Views
             SubtitleSummaryBlock.Text = "";
             EpisodesPanel.Children.Clear();
             EpisodesSection.Visibility = Visibility.Collapsed;
+        }
+
+        private void ResetArtwork()
+        {
+            PosterImage.Source = null;
+            BackdropImage.Source = null;
+            PosterFallbackBlock.Visibility = Visibility.Visible;
+        }
+
+        private int BeginLoad()
+        {
+            _loadGeneration++;
+            return _loadGeneration;
+        }
+
+        private bool CanApplyLoad(int loadGeneration)
+        {
+            return !_isUnloaded && loadGeneration == _loadGeneration;
         }
 
         private static bool CanPlay(EmbyMediaItem? item)

@@ -334,6 +334,18 @@ namespace NextGenEmby.App.Views
                 throw new InvalidOperationException("No playable media source was returned by Emby.");
             }
 
+            if (!string.IsNullOrWhiteSpace(request.MediaSourceId))
+            {
+                var requestedSource = sources.FirstOrDefault(source =>
+                    string.Equals(source.Id, request.MediaSourceId, StringComparison.Ordinal));
+                if (requestedSource != null)
+                {
+                    sources = new[] { requestedSource }
+                        .Concat(sources.Where(source => !string.Equals(source.Id, request.MediaSourceId, StringComparison.Ordinal)))
+                        .ToList();
+                }
+            }
+
             await EnsureNativeSurfaceReadyAsync();
             await _orchestrator.StartAsync(request.ItemId, sources, request.StartPositionTicks);
             _lastPositionTicks = request.StartPositionTicks;
