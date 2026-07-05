@@ -446,6 +446,11 @@ namespace winrt::NextGenEmby::Native::implementation
 
     void AudioDecoder::Close() noexcept
     {
+        if (m_mediaSource != nullptr && m_audioStreamIndex >= 0)
+        {
+            m_mediaSource->UnregisterStream(m_audioStreamIndex);
+        }
+
         if (m_codecContext != nullptr)
         {
             avcodec_free_context(&m_codecContext);

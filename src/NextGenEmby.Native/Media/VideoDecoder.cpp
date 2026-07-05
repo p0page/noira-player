@@ -538,6 +538,11 @@ namespace winrt::NextGenEmby::Native::implementation
 
     void VideoDecoder::Close() noexcept
     {
+        if (m_mediaSource != nullptr && m_videoStreamIndex >= 0)
+        {
+            m_mediaSource->UnregisterStream(m_videoStreamIndex);
+        }
+
         if (m_codecContext != nullptr)
         {
             avcodec_free_context(&m_codecContext);

@@ -174,6 +174,24 @@ namespace winrt::NextGenEmby::Native::implementation
         m_activeStreams.insert(streamIndex);
     }
 
+    void FfmpegMediaSource::UnregisterStream(int32_t streamIndex) noexcept
+    {
+        m_activeStreams.erase(streamIndex);
+
+        auto packetQueue = m_packetQueues.find(streamIndex);
+        if (packetQueue == m_packetQueues.end())
+        {
+            return;
+        }
+
+        for (auto packet : packetQueue->second)
+        {
+            av_packet_free(&packet);
+        }
+
+        m_packetQueues.erase(packetQueue);
+    }
+
     bool FfmpegMediaSource::TryReadPacket(int32_t streamIndex, AVPacket* packet)
     {
         if (!m_open || m_formatContext == nullptr || packet == nullptr)

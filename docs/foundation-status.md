@@ -33,6 +33,7 @@
 - `PlaybackGraph` 已有临时后台 render loop，可持续拉取视频帧；当前 cadence 固定，尚未实现基于 PTS 或音频时钟的同步。
 - `PlaybackGraph` 后台 loop 已能把 EOF/异常转换为 native `Stopped`/`Failed` 事件，由 `NativePlaybackEngine` 继续透传给托管播放编排层。
 - 托管 `PlaybackOrchestrator` 已能在 backend 支持时原地切换音轨/字幕；`NativeDirectXPlaybackBackend`、UWP wrapper 和 C++/WinRT runtime 已接通音轨切换、字幕切换和禁用字幕的控制面。
+- Native 音轨切换已能关闭旧 audio decoder/source voice、释放旧音轨 packet queue，并在当前位置重开目标音轨的 FFmpeg decoder 和 XAudio2 source voice。
 - `AudioRenderer` 已接入 XAudio2 engine / mastering voice 生命周期，播放打开时会创建音频设备并在 start/pause/resume/stop 时控制 engine。
 - Debug x64 MSIX 测试包已生成：`src\NextGenEmby.App\AppPackages\NextGenEmby.App_0.1.0.0_x64_Debug_Test\NextGenEmby.App_0.1.0.0_x64_Debug.msix`，包内已确认包含 FFmpeg 运行时 DLL。
 - Kodi HDR 研究路径已记录在 ADR 0001。

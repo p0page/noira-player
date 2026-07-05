@@ -131,7 +131,19 @@ namespace winrt::NextGenEmby::Native::implementation
             throw winrt::hresult_error(E_FAIL, L"Playback is not open.");
         }
 
-        m_audioRenderer.SwitchStream(audioStreamIndex);
+        auto shouldResumeAudio = !m_paused;
+        m_audioRenderer.Stop();
+        m_audioDecoder.Close();
+        m_videoDecoder.Seek(m_positionTicks);
+        m_audioDecoder.Open(m_mediaSource, audioStreamIndex, true);
+        m_audioDecoder.Flush(m_positionTicks);
+        m_audioRenderer.Open(audioStreamIndex, true);
+        if (shouldResumeAudio)
+        {
+            m_audioRenderer.Start();
+        }
+
+        m_stateChanged.notify_all();
     }
 
     void PlaybackGraph::SwitchSubtitleStream(std::optional<int32_t> subtitleStreamIndex)

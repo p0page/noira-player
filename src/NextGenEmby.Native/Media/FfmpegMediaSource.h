@@ -23,6 +23,7 @@ namespace winrt::NextGenEmby::Native::implementation
         int32_t FindRequiredStream(int mediaType, int32_t selectedStreamIndex) const;
         AVStream* Stream(int32_t streamIndex) const;
         void RegisterStream(int32_t streamIndex);
+        void UnregisterStream(int32_t streamIndex) noexcept;
         bool TryReadPacket(int32_t streamIndex, AVPacket* packet);
         void Seek(int32_t streamIndex, int64_t timestamp);
 

@@ -41,6 +41,7 @@
 
 - 当前 native 解码器已通过共享 `FfmpegMediaSource` 打开 FFmpeg format context，能读视频/音频 packet 并接收 `AVFrame` 元数据；视频路径会在 codec 支持时尝试使用 D3D11VA hardware device context。
 - 当前 `AudioDecoder` 已能通过 `swresample` 产出 48 kHz stereo float PCM，`AudioRenderer` 已能把 PCM 提交给 XAudio2 source voice；该链路尚未经过 Local Machine 或 Xbox 实机听音验证。
+- 当前原地音轨切换会在当前位置重开目标音轨的 audio decoder/source voice；该链路也尚未经过实机验证。
 - 当前 renderer 能清黑、present、复制同尺寸同格式 texture，并能尝试用 D3D11 video processor 呈现 FFmpeg D3D11VA texture slice；该路径尚未经过 Local Machine 或 Xbox 实机验证。
 - HDR10 metadata side-data 已能映射到 DXGI HDR10 metadata；BT.2020/PQ video processor 色彩空间设置和 tone mapping 策略尚未补齐。
 - 当前已有临时后台 render loop，但 cadence 固定，不代表最终 A/V sync 行为。
