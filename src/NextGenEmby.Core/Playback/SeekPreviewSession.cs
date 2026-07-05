@@ -24,21 +24,22 @@ public readonly struct SeekPreviewDecision
 
 public sealed class SeekPreviewSession
 {
-    private readonly TimeSpan _autoCommitDelay;
-    private readonly long _commitThresholdTicks;
-    private readonly double _thumbstickDeadZone;
-    private readonly long _thumbstickStepTicks;
+    private static readonly long ThumbstickStepTicks = TimeSpan.FromSeconds(5).Ticks;
 
-    public SeekPreviewSession(TimeSpan autoCommitDelay, TimeSpan thumbstickStep, double thumbstickDeadZone)
+    private readonly TimeSpan _autoCommitDelay;
+    private readonly long _tinyDriftThresholdTicks;
+    private readonly double _thumbstickDeadZone;
+
+    public SeekPreviewSession(TimeSpan autoCommitDelay, TimeSpan tinyDriftThreshold, double thumbstickDeadZone)
     {
         if (autoCommitDelay < TimeSpan.Zero)
         {
             throw new ArgumentOutOfRangeException(nameof(autoCommitDelay));
         }
 
-        if (thumbstickStep < TimeSpan.Zero)
+        if (tinyDriftThreshold < TimeSpan.Zero)
         {
-            throw new ArgumentOutOfRangeException(nameof(thumbstickStep));
+            throw new ArgumentOutOfRangeException(nameof(tinyDriftThreshold));
         }
 
         if (thumbstickDeadZone < 0 || thumbstickDeadZone > 1)
@@ -47,9 +48,8 @@ public sealed class SeekPreviewSession
         }
 
         _autoCommitDelay = autoCommitDelay;
-        _commitThresholdTicks = ToPositionTicks(thumbstickStep);
+        _tinyDriftThresholdTicks = tinyDriftThreshold.Ticks;
         _thumbstickDeadZone = thumbstickDeadZone;
-        _thumbstickStepTicks = ToPositionTicks(thumbstickStep);
     }
 
     public bool IsActive { get; private set; }
@@ -76,7 +76,7 @@ public sealed class SeekPreviewSession
         }
 
         Begin(currentTicks, now);
-        MoveByTicks(thumbstickX < 0 ? -_thumbstickStepTicks : _thumbstickStepTicks, now);
+        MoveByTicks(thumbstickX < 0 ? -ThumbstickStepTicks : ThumbstickStepTicks, now);
         return true;
     }
 
@@ -87,7 +87,7 @@ public sealed class SeekPreviewSession
             return;
         }
 
-        MoveByTicks(ToPositionTicks(offset), now);
+        MoveByTicks(offset.Ticks, now);
     }
 
     public SeekPreviewDecision Confirm()
@@ -122,17 +122,12 @@ public sealed class SeekPreviewSession
         }
 
         var driftTicks = Math.Abs(TargetTicks - OriginalTicks);
-        return driftTicks < _commitThresholdTicks ? Cancel() : Confirm();
+        return driftTicks < _tinyDriftThresholdTicks ? Cancel() : Confirm();
     }
 
     private void MoveByTicks(long offsetTicks, TimeSpan now)
     {
         TargetTicks = Math.Max(0, TargetTicks + offsetTicks);
         AutoCommitAt = now + _autoCommitDelay;
-    }
-
-    private static long ToPositionTicks(TimeSpan value)
-    {
-        return Convert.ToInt64(value.TotalMilliseconds);
     }
 }
