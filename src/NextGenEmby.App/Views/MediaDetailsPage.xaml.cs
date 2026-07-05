@@ -25,9 +25,24 @@ namespace NextGenEmby.App.Views
         protected override async void OnNavigatedTo(NavigationEventArgs e)
         {
             base.OnNavigatedTo(e);
-            _item = e.Parameter as EmbyMediaItem;
+            var item = e.Parameter as EmbyMediaItem;
+            if (item != null)
+            {
+                _item = item;
+                RenderItem();
+                await LoadImagesAsync();
+                return;
+            }
+
+            var request = e.Parameter as MediaDetailsNavigationRequest;
+            if (request != null)
+            {
+                await LoadRequestedItemAsync(request);
+                return;
+            }
+
+            _item = null;
             RenderItem();
-            await LoadImagesAsync();
         }
 
         private void RenderItem()
@@ -48,8 +63,53 @@ namespace NextGenEmby.App.Views
                 ? "No overview available."
                 : _item.Overview;
             StatusBlock.Text = "";
-            PlayButton.IsEnabled = true;
-            PlayButton.Focus(FocusState.Programmatic);
+            PlayButton.IsEnabled = CanPlay(_item);
+            if (PlayButton.IsEnabled)
+            {
+                PlayButton.Focus(FocusState.Programmatic);
+            }
+        }
+
+        private async Task LoadRequestedItemAsync(MediaDetailsNavigationRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.ItemId))
+            {
+                _item = null;
+                RenderItem();
+                return;
+            }
+
+            _item = new EmbyMediaItem
+            {
+                Id = request.ItemId,
+                Name = request.ItemName
+            };
+            RenderItem();
+            StatusBlock.Text = "Loading...";
+
+            try
+            {
+                var session = await _sessionStore.LoadAsync();
+                if (session == null)
+                {
+                    StatusBlock.Text = "Sign in first.";
+                    return;
+                }
+
+                using (var http = new HttpClient())
+                {
+                    var client = EmbyClientFactory.Create(http, session);
+                    _item = await client.GetItemAsync(session, request.ItemId);
+                }
+
+                RenderItem();
+                await LoadImagesAsync();
+            }
+            catch
+            {
+                RenderItem();
+                StatusBlock.Text = "Unable to load details.";
+            }
         }
 
         private async Task LoadImagesAsync()
@@ -96,7 +156,20 @@ namespace NextGenEmby.App.Views
                 return;
             }
 
+            if (!CanPlay(_item))
+            {
+                return;
+            }
+
             Frame.Navigate(typeof(PlaybackPage), new PlaybackLaunchRequest(_item.Id, _item.Name));
+        }
+
+        private static bool CanPlay(EmbyMediaItem? item)
+        {
+            return item != null
+                && !string.IsNullOrWhiteSpace(item.Id)
+                && (string.Equals(item.Type, "Movie", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(item.Type, "Episode", StringComparison.OrdinalIgnoreCase));
         }
 
         private static string CreateMeta(EmbyMediaItem item)

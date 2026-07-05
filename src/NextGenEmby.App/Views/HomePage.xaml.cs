@@ -19,9 +19,9 @@ namespace NextGenEmby.App.Views
         private readonly ApplicationDataSessionStore _sessionStore = new ApplicationDataSessionStore();
         private EmbySession? _session;
         private EmbyApiClient? _client;
-        private HttpClient? _httpClient;
         private EmbyMediaItem? _heroItem;
-        private bool _isLoadingHome;
+        private bool _isUnloaded;
+        private int _loadGeneration;
 
         public HomePage()
         {
@@ -38,7 +38,8 @@ namespace NextGenEmby.App.Views
 
         private void HomePage_OnUnloaded(object sender, RoutedEventArgs e)
         {
-            DisposeHttpClient();
+            _isUnloaded = true;
+            _loadGeneration++;
         }
 
         private async void Refresh_OnClick(object sender, RoutedEventArgs e)
@@ -58,14 +59,15 @@ namespace NextGenEmby.App.Views
 
         private void HeroPlay_OnClick(object sender, RoutedEventArgs e)
         {
-            if (_heroItem == null || string.IsNullOrWhiteSpace(_heroItem.Id))
+            var item = _heroItem;
+            if (item == null || !CanPlay(item))
             {
                 return;
             }
 
-            var itemName = string.IsNullOrWhiteSpace(_heroItem.Name) ? _heroItem.Id : _heroItem.Name;
-            var startTicks = _heroItem.UserData == null ? 0 : _heroItem.UserData.PlaybackPositionTicks;
-            Frame.Navigate(typeof(PlaybackPage), new PlaybackLaunchRequest(_heroItem.Id, itemName, startTicks));
+            var itemName = string.IsNullOrWhiteSpace(item.Name) ? item.Id : item.Name;
+            var startTicks = item.UserData == null ? 0 : item.UserData.PlaybackPositionTicks;
+            Frame.Navigate(typeof(PlaybackPage), new PlaybackLaunchRequest(item.Id, itemName, startTicks));
         }
 
         private void HeroDetails_OnClick(object sender, RoutedEventArgs e)
@@ -75,12 +77,8 @@ namespace NextGenEmby.App.Views
 
         private async Task LoadHomeAsync()
         {
-            if (_isLoadingHome)
-            {
-                return;
-            }
+            var loadGeneration = ++_loadGeneration;
 
-            _isLoadingHome = true;
             RefreshButton.IsEnabled = false;
             StatusBlock.Text = "Loading...";
             RowsPanel.Children.Clear();
@@ -88,39 +86,58 @@ namespace NextGenEmby.App.Views
 
             try
             {
-                _session = await _sessionStore.LoadAsync();
-                if (_session == null)
+                var session = await _sessionStore.LoadAsync();
+                if (!CanApplyLoad(loadGeneration))
+                {
+                    return;
+                }
+
+                _session = session;
+                if (session == null)
                 {
                     StatusBlock.Text = "Sign in first.";
                     return;
                 }
 
-                DisposeHttpClient();
-                _httpClient = new HttpClient();
-                _client = EmbyClientFactory.Create(_httpClient, _session);
-
-                var continueItems = await _client.GetItemsAsync(_session, new EmbyItemsQuery
+                using (var httpClient = new HttpClient())
                 {
-                    IncludeItemTypes = "Movie,Episode",
-                    Filters = "IsResumable",
-                    SortBy = "DatePlayed",
-                    SortOrder = "Descending",
-                    Limit = 20
-                });
-                var latestItems = await _client.GetLatestItemsAsync(_session);
+                    var client = EmbyClientFactory.Create(httpClient, session);
+                    var continueItems = await client.GetItemsAsync(session, new EmbyItemsQuery
+                    {
+                        IncludeItemTypes = "Movie,Episode",
+                        Filters = "IsResumable",
+                        SortBy = "DatePlayed",
+                        SortOrder = "Descending",
+                        Limit = 20
+                    });
+                    var latestItems = await client.GetLatestItemsAsync(session);
 
-                RenderHome(continueItems, latestItems);
+                    if (!CanApplyLoad(loadGeneration))
+                    {
+                        return;
+                    }
+
+                    _client = client;
+                    RenderHome(continueItems, latestItems);
+                }
             }
             catch
             {
+                if (!CanApplyLoad(loadGeneration))
+                {
+                    return;
+                }
+
                 ClearHero();
                 RowsPanel.Children.Clear();
                 StatusBlock.Text = "Unable to load home.";
             }
             finally
             {
-                _isLoadingHome = false;
-                RefreshButton.IsEnabled = true;
+                if (CanApplyLoad(loadGeneration))
+                {
+                    RefreshButton.IsEnabled = true;
+                }
             }
         }
 
@@ -133,9 +150,13 @@ namespace NextGenEmby.App.Views
             {
                 heroItem = continueItems[0];
             }
-            else if (latestItems != null && latestItems.Count > 0)
+            else
             {
-                heroItem = latestItems[0];
+                heroItem = FindFirstPlayableItem(latestItems);
+                if (heroItem == null && latestItems != null && latestItems.Count > 0)
+                {
+                    heroItem = latestItems[0];
+                }
             }
 
             if (heroItem == null)
@@ -157,7 +178,7 @@ namespace NextGenEmby.App.Views
             _heroItem = item;
             HeroTitleBlock.Text = string.IsNullOrWhiteSpace(item.Name) ? item.Id : item.Name;
             HeroMetaBlock.Text = CreateMeta(item);
-            HeroPlayButton.IsEnabled = true;
+            HeroPlayButton.IsEnabled = CanPlay(item);
             HeroDetailsButton.IsEnabled = true;
             HeroPosterImage.Source = null;
             HeroPosterFallbackBlock.Visibility = Visibility.Visible;
@@ -305,15 +326,35 @@ namespace NextGenEmby.App.Views
             Frame.Navigate(typeof(MediaDetailsPage), new MediaDetailsNavigationRequest(item.Id, itemName));
         }
 
-        private void DisposeHttpClient()
+        private bool CanApplyLoad(int loadGeneration)
         {
-            if (_httpClient != null)
+            return !_isUnloaded && loadGeneration == _loadGeneration;
+        }
+
+        private static EmbyMediaItem? FindFirstPlayableItem(IReadOnlyList<EmbyMediaItem>? items)
+        {
+            if (items == null)
             {
-                _httpClient.Dispose();
-                _httpClient = null;
+                return null;
             }
 
-            _client = null;
+            foreach (var item in items)
+            {
+                if (CanPlay(item))
+                {
+                    return item;
+                }
+            }
+
+            return null;
+        }
+
+        private static bool CanPlay(EmbyMediaItem? item)
+        {
+            return item != null
+                && !string.IsNullOrWhiteSpace(item.Id)
+                && (string.Equals(item.Type, "Movie", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(item.Type, "Episode", StringComparison.OrdinalIgnoreCase));
         }
 
         private static string CreateMeta(EmbyMediaItem item)
