@@ -53,17 +53,61 @@
                             TextWrapping="Wrap" />
                     </StackPanel>
 
-                    <Button
-                        x:Name="PlayButton"
-                        Width="220"
-                        Height="68"
-                        Click="Play_OnClick"
-                        UseSystemFocusVisuals="True">
-                        <StackPanel Orientation="Horizontal" Spacing="12">
-                            <SymbolIcon Symbol="Play" />
-                            <TextBlock Text="Play" FontSize="24" />
-                        </StackPanel>
-                    </Button>
+                    <StackPanel Orientation="Horizontal" Spacing="16">
+                        <Button
+                            x:Name="PlayButton"
+                            MinWidth="220"
+                            Height="68"
+                            Click="Play_OnClick"
+                            UseSystemFocusVisuals="True">
+                            <StackPanel Orientation="Horizontal" Spacing="12">
+                                <SymbolIcon Symbol="Play" />
+                                <TextBlock
+                                    x:Name="PlayButtonText"
+                                    Text="Play"
+                                    FontSize="24" />
+                            </StackPanel>
+                        </Button>
+                        <Button
+                            x:Name="RefreshButton"
+                            Width="68"
+                            Height="68"
+                            MinWidth="68"
+                            Click="Refresh_OnClick"
+                            ToolTipService.ToolTip="Refresh"
+                            UseSystemFocusVisuals="True">
+                            <SymbolIcon Symbol="Refresh" />
+                        </Button>
+                    </StackPanel>
+
+                    <StackPanel
+                        x:Name="VersionsPanel"
+                        Spacing="10" />
+
+                    <TextBlock
+                        x:Name="AudioSummaryBlock"
+                        FontSize="20"
+                        Foreground="{StaticResource AppMutedTextBrush}"
+                        TextWrapping="Wrap" />
+
+                    <TextBlock
+                        x:Name="SubtitleSummaryBlock"
+                        FontSize="20"
+                        Foreground="{StaticResource AppMutedTextBrush}"
+                        TextWrapping="Wrap" />
+
+                    <StackPanel
+                        x:Name="EpisodesSection"
+                        Spacing="14"
+                        Visibility="Collapsed">
+                        <TextBlock
+                            Text="Episodes"
+                            FontSize="26"
+                            FontWeight="SemiBold" />
+                        <StackPanel
+                            x:Name="EpisodesPanel"
+                            Spacing="10" />
+                    </StackPanel>
 
                     <TextBlock
                         x:Name="OverviewBlock"
