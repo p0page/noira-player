@@ -102,14 +102,7 @@ namespace NextGenEmby.App.Views
                 using (var httpClient = new HttpClient())
                 {
                     var client = EmbyClientFactory.Create(httpClient, session);
-                    var continueItems = await client.GetItemsAsync(session, new EmbyItemsQuery
-                    {
-                        IncludeItemTypes = "Movie,Episode",
-                        Filters = "IsResumable",
-                        SortBy = "DatePlayed",
-                        SortOrder = "Descending",
-                        Limit = 20
-                    });
+                    var continueItems = await client.GetResumeItemsAsync(session, 20);
                     var latestItems = await client.GetLatestItemsAsync(session);
 
                     if (!CanApplyLoad(loadGeneration))

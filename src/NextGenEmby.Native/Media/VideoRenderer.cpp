@@ -36,7 +36,11 @@ namespace winrt::NextGenEmby::Native::implementation
                     frame.Texture.Get(),
                     frame.TextureArrayIndex,
                     frame.Width,
-                    frame.Height);
+                    frame.Height,
+                    frame.DisplayWidth,
+                    frame.DisplayHeight,
+                    frame.UsesBt709Matrix,
+                    frame.IsFullRange);
             }
         }
 
@@ -46,6 +50,8 @@ namespace winrt::NextGenEmby::Native::implementation
                 frame.BgraPixels.data(),
                 frame.Width,
                 frame.Height,
+                frame.DisplayWidth,
+                frame.DisplayHeight,
                 frame.BgraStride);
         }
     }

@@ -68,7 +68,8 @@ namespace NextGenEmby.App.Playback
                 HasAudioStreamIndex = request.AudioStreamIndex.HasValue,
                 AudioStreamIndex = request.AudioStreamIndex.GetValueOrDefault(),
                 HasSubtitleStreamIndex = request.SubtitleStreamIndex.HasValue,
-                SubtitleStreamIndex = request.SubtitleStreamIndex.GetValueOrDefault()
+                SubtitleStreamIndex = request.SubtitleStreamIndex.GetValueOrDefault(),
+                IsHdr = request.IsHdr
             };
 
             return _engine.OpenAsync(nativeRequest).AsTask();

@@ -38,7 +38,8 @@ namespace NextGenEmby.Core.Playback
                 source.DirectStreamUrl,
                 descriptor.StartPositionTicks,
                 descriptor.AudioStreamIndex,
-                descriptor.SubtitleStreamIndex);
+                descriptor.SubtitleStreamIndex,
+                source.IsHdr);
 
             return _engine.OpenAsync(request);
         }

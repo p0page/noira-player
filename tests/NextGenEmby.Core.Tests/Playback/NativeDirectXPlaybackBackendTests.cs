@@ -16,7 +16,8 @@ public sealed class NativeDirectXPlaybackBackendTests
         var source = new EmbyMediaSource
         {
             Id = "source-1",
-            DirectStreamUrl = "https://emby.local/videos/1/stream.mkv?api_key=token"
+            DirectStreamUrl = "https://emby.local/videos/1/stream.mkv?api_key=token",
+            IsHdr = true
         };
 
         await backend.StartAsync(new PlaybackDescriptor(
@@ -31,6 +32,7 @@ public sealed class NativeDirectXPlaybackBackendTests
         Assert.Equal("source-1", engine.LastRequest.MediaSourceId);
         Assert.Equal(source.DirectStreamUrl, engine.LastRequest.DirectStreamUrl);
         Assert.Equal(1234, engine.LastRequest.StartPositionTicks);
+        Assert.True(engine.LastRequest.IsHdr);
         Assert.Equal(2, engine.LastRequest.AudioStreamIndex);
         Assert.Equal(7, engine.LastRequest.SubtitleStreamIndex);
     }

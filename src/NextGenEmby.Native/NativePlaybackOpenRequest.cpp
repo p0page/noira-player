@@ -83,4 +83,14 @@ namespace winrt::NextGenEmby::Native::implementation
     {
         m_hasSubtitleStreamIndex = value;
     }
+
+    bool NativePlaybackOpenRequest::IsHdr() const noexcept
+    {
+        return m_isHdr;
+    }
+
+    void NativePlaybackOpenRequest::IsHdr(bool value) noexcept
+    {
+        m_isHdr = value;
+    }
 }

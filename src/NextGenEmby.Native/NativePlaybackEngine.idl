@@ -30,6 +30,7 @@ namespace NextGenEmby.Native
         Boolean HasAudioStreamIndex;
         Int32 SubtitleStreamIndex;
         Boolean HasSubtitleStreamIndex;
+        Boolean IsHdr;
     }
 
     runtimeclass NativePlaybackStatus

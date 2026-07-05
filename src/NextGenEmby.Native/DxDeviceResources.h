@@ -23,11 +23,17 @@ namespace winrt::NextGenEmby::Native::implementation
             ID3D11Texture2D* texture,
             uint32_t arraySlice,
             uint32_t width,
-            uint32_t height);
+            uint32_t height,
+            uint32_t displayWidth,
+            uint32_t displayHeight,
+            bool usesBt709Matrix,
+            bool isFullRange);
         bool DrawBgraFrameToBackBuffer(
             uint8_t const* pixels,
             uint32_t width,
             uint32_t height,
+            uint32_t displayWidth,
+            uint32_t displayHeight,
             uint32_t stride);
         bool DrawTextOverlay(std::wstring const& text);
         bool ClearToBlack();
@@ -36,6 +42,8 @@ namespace winrt::NextGenEmby::Native::implementation
         ID3D11DeviceContext* Context() const noexcept;
 
     private:
+        bool ClearBackBufferToBlack(bool present);
+
         Microsoft::WRL::ComPtr<ID3D11Device> m_device;
         Microsoft::WRL::ComPtr<ID3D11DeviceContext> m_context;
         Microsoft::WRL::ComPtr<IDXGISwapChain3> m_swapChain;

@@ -282,6 +282,22 @@ NextGenEmby.App 0.1.0.9 NextGenEmby.App_h8qjz0sr1sg4m
 - 已用 computer-use 重新执行 Home -> Movies -> Details -> Playback -> More：截图确认真实播放画面、Shell 隐藏、OSD 显示、More 抽屉、Source/Audio/Subtitles/Info 均可见；最后通过 computer-use 点击 Stop，状态回到 `Stopped`。
 - 已检测到真实 XInput 手柄连接：`XInputGetState(0)` 返回成功，PnP 中存在 `Xbox One Elite Controller` 和 `XINPUT compatible HID device`。当前自动化工具不能直接注入 XInput 按键，真实 GamepadA/Menu/D-pad 操作仍需人手按键或 Xbox 实机验证。
 
+本轮追加修复（0.1.0.11）：
+
+- Home 页的 Continue watching 数据源已改为 Emby Resume 端点：`/Users/{UserId}/Items/Resume`；新增 `GetResumeItemsAsync` 单元测试，覆盖 URL、query 和 `UserData.PlaybackPositionTicks` 映射。
+- 已用真实 Emby 服务器直接验证 Resume 端点：返回 17 条 resume 项，第一条带有播放进度 ticks 和百分比；验证输出未记录 token。
+- 详情页补充本页级 `GamepadB` / `Escape` 返回处理，避免焦点或 Frame 边界吃掉 B 键后无法退出详情。
+- 播放页 native surface 不再在 `ActualWidth/ActualHeight == 0` 时假就绪；现在会等真实尺寸，并在 `SwapChainPanel.SizeChanged` 后按新尺寸重新 attach。
+- DXGI swapchain 创建时已按 `SwapChainPanel.CompositionScaleX/Y` 创建物理像素缓冲，并设置 inverse matrix transform，减少高 DPI / 4K 屏下的软缩放。
+- D3D11 video processor 和 BGRA fallback 都改为等比 contain 绘制，先清黑底，再把视频居中 letterbox，不再把源画面强行拉伸到整个 backbuffer。
+- D3D11 video processor 明确设置 SDR 输入/输出色彩空间：输入按 full/limited range 与 BT.709/BT.601 矩阵，输出为 full-range RGB；BGRA software fallback 也通过 `sws_setColorspaceDetails` 显式设置 range 和 colorspace。
+- `NativePlaybackOpenRequest` 新增 `IsHdr`，托管侧从 `EmbyMediaSource.IsHdr` 传入 native；native engine 不再对所有片源无条件 `EnterHdr10()`，SDR 片源会恢复初始 HDR 状态并保持 SDR swapchain color space。这是当前“非 HDR 片源高光溢出”的主要修复点。
+- 自动验证已通过：`dotnet test tests\NextGenEmby.Core.Tests\NextGenEmby.Core.Tests.csproj` 通过 87/87；`MSBuild NextGenXboxEmby.sln /p:Configuration=Debug /p:Platform=x64` 通过；0.1.0.11 Debug x64 MSIX 已签名并本机安装成功。
+- computer-use 启动 0.1.0.10 时命中一个 Windows UAC 提示：`Omega-x64.exe` 请求提权。该提示属于系统安全确认，不能由自动化代点；用户手动处理后已继续完成本机 UI 复验。最终已安装包版本为 0.1.0.11。
+- UAC 处理后的 computer-use 复验已完成：Home 的 `Continue watching` hero 和横向行均显示 Resume 返回的 `"Friends"`；Movies 库显示 `100 items`；从 Movies 第一张卡进入详情后，`Escape` 成功返回 Movies，验证详情页本页级返回处理有效。
+- 播放复验已完成：从 `"Friends"` 详情页 Resume 进入播放，播放页无 Home/Movies/TV/Search/Settings shell chrome，状态为 `Playing`；OSD 隐藏后画面按 16:9 居中显示，上下黑边正常，没有再被强制拉伸到窗口；可见高光不再呈现此前那种 SDR 被推到 HDR 的整体溢出。当前样本自身含快速运动与平台水印，清晰度仍需更多片源继续复核。
+- Stop 复验已完成：Stop 按钮在主窗口目标正确绑定后可点击，状态回到 `Stopped`。此前 click/Enter/Space 未触发是因为 UI Automation 目标被 tooltip 的 `PopupHost` 临时抢走，不是应用 Stop 按钮失效。
+
 仍需 Xbox / 本机后续验证：
 
 - Windows 本机：补更多真实多音轨/字幕样本、长时间播放、seek preview 的真实手柄实操。

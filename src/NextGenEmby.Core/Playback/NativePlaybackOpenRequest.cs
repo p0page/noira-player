@@ -10,7 +10,8 @@ namespace NextGenEmby.Core.Playback
             string directStreamUrl,
             long startPositionTicks,
             int? audioStreamIndex,
-            int? subtitleStreamIndex)
+            int? subtitleStreamIndex,
+            bool isHdr = false)
         {
             if (string.IsNullOrWhiteSpace(itemId))
             {
@@ -39,6 +40,7 @@ namespace NextGenEmby.Core.Playback
             StartPositionTicks = startPositionTicks;
             AudioStreamIndex = audioStreamIndex;
             SubtitleStreamIndex = subtitleStreamIndex;
+            IsHdr = isHdr;
         }
 
         public string ItemId { get; }
@@ -52,5 +54,7 @@ namespace NextGenEmby.Core.Playback
         public int? AudioStreamIndex { get; }
 
         public int? SubtitleStreamIndex { get; }
+
+        public bool IsHdr { get; }
     }
 }

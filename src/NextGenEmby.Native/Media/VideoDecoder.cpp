@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <utility>
 
 #pragma warning(push)
 #pragma warning(disable : 4244 4819)
@@ -164,6 +165,74 @@ namespace
         return frameFormat;
     }
 
+    bool IsValidRational(AVRational value)
+    {
+        return value.num > 0 && value.den > 0;
+    }
+
+    std::pair<uint32_t, uint32_t> CalculateDisplaySize(
+        AVFrame const* frame,
+        AVStream const* stream,
+        uint32_t width,
+        uint32_t height)
+    {
+        if (width == 0 || height == 0)
+        {
+            return {width, height};
+        }
+
+        auto sampleAspectRatio = frame->sample_aspect_ratio;
+        if (!IsValidRational(sampleAspectRatio) && stream != nullptr)
+        {
+            sampleAspectRatio = stream->sample_aspect_ratio;
+        }
+
+        if (!IsValidRational(sampleAspectRatio) || sampleAspectRatio.num == sampleAspectRatio.den)
+        {
+            return {width, height};
+        }
+
+        auto displayWidth = static_cast<double>(width) * sampleAspectRatio.num / sampleAspectRatio.den;
+        auto roundedDisplayWidth = static_cast<uint32_t>((std::max)(1.0, std::round(displayWidth)));
+        return {roundedDisplayWidth, height};
+    }
+
+    bool ShouldUseBt709Matrix(AVColorSpace colorSpace, uint32_t width, uint32_t height)
+    {
+        switch (colorSpace)
+        {
+        case AVCOL_SPC_BT709:
+        case AVCOL_SPC_BT2020_NCL:
+        case AVCOL_SPC_BT2020_CL:
+            return true;
+        case AVCOL_SPC_BT470BG:
+        case AVCOL_SPC_SMPTE170M:
+        case AVCOL_SPC_SMPTE240M:
+            return false;
+        default:
+            return width >= 1280 || height > 576;
+        }
+    }
+
+    int MapSwsColorSpace(AVColorSpace colorSpace, uint32_t width, uint32_t height)
+    {
+        switch (colorSpace)
+        {
+        case AVCOL_SPC_BT709:
+            return SWS_CS_ITU709;
+        case AVCOL_SPC_BT2020_NCL:
+        case AVCOL_SPC_BT2020_CL:
+            return SWS_CS_BT2020;
+        case AVCOL_SPC_SMPTE240M:
+            return SWS_CS_SMPTE240M;
+        case AVCOL_SPC_BT470BG:
+        case AVCOL_SPC_SMPTE170M:
+            return SWS_CS_SMPTE170M;
+        default:
+            return ShouldUseBt709Matrix(colorSpace, width, height) ? SWS_CS_ITU709 : SWS_CS_SMPTE170M;
+        }
+    }
+
     void AttachD3D11Texture(
         winrt::NextGenEmby::Native::implementation::DecodedVideoFrame& decodedFrame,
         AVFrame const* frame)
@@ -204,6 +273,18 @@ namespace
         {
             return false;
         }
+
+        auto sourceRange = frame->color_range == AVCOL_RANGE_JPEG ? 1 : 0;
+        auto sourceColorSpace = MapSwsColorSpace(frame->colorspace, decodedFrame.Width, decodedFrame.Height);
+        (void)sws_setColorspaceDetails(
+            scaler.get(),
+            sws_getCoefficients(sourceColorSpace),
+            sourceRange,
+            sws_getCoefficients(SWS_CS_ITU709),
+            1,
+            0,
+            1 << 16,
+            1 << 16);
 
         auto stride = frame->width * 4;
         std::vector<uint8_t> pixels(static_cast<size_t>(stride) * static_cast<size_t>(frame->height));
@@ -377,8 +458,13 @@ namespace
         winrt::NextGenEmby::Native::implementation::DecodedVideoFrame decodedFrame;
         decodedFrame.Width = frame->width > 0 ? static_cast<uint32_t>(frame->width) : 0;
         decodedFrame.Height = frame->height > 0 ? static_cast<uint32_t>(frame->height) : 0;
+        auto displaySize = CalculateDisplaySize(frame, stream, decodedFrame.Width, decodedFrame.Height);
+        decodedFrame.DisplayWidth = displaySize.first;
+        decodedFrame.DisplayHeight = displaySize.second;
         decodedFrame.Format = MapPixelFormat(GetFrameSoftwarePixelFormat(frame));
         decodedFrame.HdrKind = MapHdrKind(frame->color_trc);
+        decodedFrame.UsesBt709Matrix = ShouldUseBt709Matrix(frame->colorspace, decodedFrame.Width, decodedFrame.Height);
+        decodedFrame.IsFullRange = frame->color_range == AVCOL_RANGE_JPEG;
         decodedFrame.PositionTicks = GetFramePositionTicks(frame, stream);
         if (decodedFrame.HdrKind == winrt::NextGenEmby::Native::implementation::VideoHdrKind::Hdr10)
         {

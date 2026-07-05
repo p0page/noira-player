@@ -7,8 +7,10 @@ using NextGenEmby.App.Navigation;
 using NextGenEmby.App.Services;
 using NextGenEmby.App.Storage;
 using NextGenEmby.Core.Emby;
+using Windows.System;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
+using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Media.Imaging;
 using Windows.UI.Xaml.Navigation;
 
@@ -25,6 +27,7 @@ namespace NextGenEmby.App.Views
         public MediaDetailsPage()
         {
             InitializeComponent();
+            AddHandler(KeyDownEvent, new KeyEventHandler(Page_OnKeyDown), true);
             Unloaded += MediaDetailsPage_OnUnloaded;
         }
 
@@ -64,6 +67,20 @@ namespace NextGenEmby.App.Views
         {
             _isUnloaded = true;
             _loadGeneration++;
+        }
+
+        private void Page_OnKeyDown(object sender, KeyRoutedEventArgs e)
+        {
+            if (e.Key != VirtualKey.GamepadB && e.Key != VirtualKey.Escape)
+            {
+                return;
+            }
+
+            if (Frame != null && Frame.CanGoBack)
+            {
+                Frame.GoBack();
+                e.Handled = true;
+            }
         }
 
         private void RenderItem()

@@ -54,6 +54,8 @@ namespace NextGenEmby.App.Views
         private bool _moreVisible;
         private bool _keyHandlerAttached;
         private bool _playbackCommandInFlight;
+        private double _nativeSurfaceAttachedWidth;
+        private double _nativeSurfaceAttachedHeight;
         private PlaybackSessionRequest? _lastPlaybackSessionRequest;
 
         public PlaybackPage()
@@ -95,6 +97,7 @@ namespace NextGenEmby.App.Views
             };
             _seekPreviewTimer.Tick += SeekPreviewTimer_OnTick;
             _handledKeyDownHandler = PlaybackPage_OnHandledKeyDown;
+            NativeSurface.SizeChanged += NativeSurface_OnSizeChanged;
             Loaded += PlaybackPage_OnLoaded;
             Unloaded += PlaybackPage_OnUnloaded;
 
@@ -107,8 +110,14 @@ namespace NextGenEmby.App.Views
         private void PlaybackPage_OnLoaded(object sender, RoutedEventArgs e)
         {
             AttachPlaybackKeyHandler();
+            TrySignalNativeSurfaceReady();
             AttachNativeSurface();
-            _nativeSurfaceReadySource.TrySetResult(true);
+        }
+
+        private void NativeSurface_OnSizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            TrySignalNativeSurfaceReady();
+            AttachNativeSurface();
         }
 
         private void AttachPlaybackKeyHandler()
@@ -140,7 +149,7 @@ namespace NextGenEmby.App.Views
                 return;
             }
 
-            if (NativeSurface.ActualWidth <= 0 || NativeSurface.ActualHeight <= 0)
+            if (!IsNativeSurfaceReady())
             {
                 await _nativeSurfaceReadySource.Task;
             }
@@ -150,12 +159,33 @@ namespace NextGenEmby.App.Views
 
         private void AttachNativeSurface()
         {
-            if (_nativeEngine == null)
+            if (_nativeEngine == null || !IsNativeSurfaceReady())
+            {
+                return;
+            }
+
+            if (Math.Abs(NativeSurface.ActualWidth - _nativeSurfaceAttachedWidth) < 0.5 &&
+                Math.Abs(NativeSurface.ActualHeight - _nativeSurfaceAttachedHeight) < 0.5)
             {
                 return;
             }
 
             _nativeEngine.AttachSurface(NativeSurface);
+            _nativeSurfaceAttachedWidth = NativeSurface.ActualWidth;
+            _nativeSurfaceAttachedHeight = NativeSurface.ActualHeight;
+        }
+
+        private bool IsNativeSurfaceReady()
+        {
+            return NativeSurface.ActualWidth > 0 && NativeSurface.ActualHeight > 0;
+        }
+
+        private void TrySignalNativeSurfaceReady()
+        {
+            if (IsNativeSurfaceReady())
+            {
+                _nativeSurfaceReadySource.TrySetResult(true);
+            }
         }
 
         protected override void OnNavigatedTo(NavigationEventArgs e)

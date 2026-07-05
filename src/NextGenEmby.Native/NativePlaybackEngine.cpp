@@ -63,9 +63,17 @@ namespace winrt::NextGenEmby::Native::implementation
             m_graph->Open(request);
             m_positionTicks = m_graph->CurrentPositionTicks();
 
-            auto display = m_hdr.EnterHdr10();
+            auto isHdrPlayback = request.IsHdr();
+            auto display = isHdrPlayback ? m_hdr.EnterHdr10() : m_hdr.RestoreInitialState();
             UpdateDisplayStatus(display);
-            ApplySwapChainColorSpace(display);
+            if (isHdrPlayback && display.IsHdrOutputActive)
+            {
+                ApplySwapChainColorSpace(display);
+            }
+            else
+            {
+                m_dx.SetSdrColorSpace();
+            }
             Raise(NextGenEmby::Native::NativePlaybackState::NativePlaybackState_Opening);
             Raise(NextGenEmby::Native::NativePlaybackState::NativePlaybackState_Playing);
         }

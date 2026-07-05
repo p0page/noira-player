@@ -28,8 +28,12 @@ namespace winrt::NextGenEmby::Native::implementation
         uint32_t TextureArrayIndex{0};
         uint32_t Width{0};
         uint32_t Height{0};
+        uint32_t DisplayWidth{0};
+        uint32_t DisplayHeight{0};
         DXGI_FORMAT Format{DXGI_FORMAT_UNKNOWN};
         VideoHdrKind HdrKind{VideoHdrKind::None};
+        bool UsesBt709Matrix{true};
+        bool IsFullRange{false};
         std::optional<DXGI_HDR_METADATA_HDR10> Hdr10Metadata;
         int64_t PositionTicks{0};
         std::vector<uint8_t> BgraPixels;

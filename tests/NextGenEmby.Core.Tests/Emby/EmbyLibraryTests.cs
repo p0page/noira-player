@@ -102,6 +102,44 @@ public sealed class EmbyLibraryTests
     }
 
     [Fact]
+    public async Task GetResumeItemsAsync_Uses_Resume_Endpoint_And_Parses_UserData()
+    {
+        var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
+            HttpStatusCode.OK,
+            """
+            {
+              "Items": [
+                {
+                  "Id": "resume-1",
+                  "Name": "Half Watched",
+                  "Type": "Movie",
+                  "RunTimeTicks": 60000000000,
+                  "UserData": {
+                    "Played": false,
+                    "PlaybackPositionTicks": 15000000000,
+                    "PlayedPercentage": 25
+                  }
+                }
+              ],
+              "TotalRecordCount": 1
+            }
+            """));
+        using var http = new HttpClient(handler);
+        var client = CreateClient(http);
+
+        var items = await client.GetResumeItemsAsync(Session(userId: "user 1/slash"), 24);
+
+        var item = Assert.Single(items);
+        Assert.Equal("resume-1", item.Id);
+        Assert.Equal(15000000000, item.UserData.PlaybackPositionTicks);
+        Assert.Equal(25, item.UserData.PlayedPercentage);
+        Assert.Equal("/Users/user%201%2Fslash/Items/Resume", handler.LastRequest!.RequestUri!.AbsolutePath);
+        Assert.Contains("IncludeItemTypes=Movie%2CEpisode", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("Limit=24", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("Fields=Overview%2CProductionYear%2CRunTimeTicks%2CPrimaryImageAspectRatio%2CChildCount%2CUserData", handler.LastRequest.RequestUri.Query);
+    }
+
+    [Fact]
     public async Task GetUserViewsAsync_Parses_Movie_And_Tv_Libraries()
     {
         var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(

@@ -11,6 +11,8 @@ namespace NextGenEmby.Core.Emby
 {
     public sealed class EmbyApiClient
     {
+        private const string ItemListFields = "Overview,ProductionYear,RunTimeTicks,PrimaryImageAspectRatio,ChildCount,UserData";
+
         private readonly HttpClient _http;
         private readonly EmbyClientOptions _options;
         private readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions
@@ -64,6 +66,25 @@ namespace NextGenEmby.Core.Emby
             var body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
             var dto = JsonSerializer.Deserialize<List<ItemDto>>(body, _jsonOptions) ?? new List<ItemDto>();
             return dto.Select(MapItem).ToList();
+        }
+
+        public async Task<IReadOnlyList<EmbyMediaItem>> GetResumeItemsAsync(EmbySession session, int limit = 20)
+        {
+            var parameters = new List<string>();
+            AddQueryParameter(parameters, "IncludeItemTypes", "Movie,Episode");
+            AddQueryParameter(parameters, "Fields", ItemListFields);
+            AddQueryParameter(parameters, "Limit", Math.Max(1, limit).ToString());
+
+            using var request = new HttpRequestMessage(
+                HttpMethod.Get,
+                $"Users/{EscapeUriComponent(session.UserId)}/Items/Resume?{string.Join("&", parameters)}");
+            EmbyAuthorization.Apply(request, _options, session);
+
+            using var response = await _http.SendAsync(request).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+            var body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var dto = JsonSerializer.Deserialize<ItemListDto<ItemDto>>(body, _jsonOptions) ?? new ItemListDto<ItemDto>();
+            return (dto.Items ?? new List<ItemDto>()).Select(MapItem).ToList();
         }
 
         public async Task<IReadOnlyList<EmbyLibraryView>> GetUserViewsAsync(EmbySession session)
@@ -246,7 +267,7 @@ namespace NextGenEmby.Core.Emby
             AddQueryParameter(parameters, "StartIndex", Math.Max(0, query.StartIndex).ToString());
             AddQueryParameter(parameters, "Limit", Math.Max(1, query.Limit).ToString());
             AddQueryParameter(parameters, "Recursive", query.Recursive ? "true" : "false");
-            AddQueryParameter(parameters, "Fields", "Overview,ProductionYear,RunTimeTicks,PrimaryImageAspectRatio,ChildCount,UserData");
+            AddQueryParameter(parameters, "Fields", ItemListFields);
 
             return $"Users/{EscapeUriComponent(session.UserId)}/Items?{string.Join("&", parameters)}";
         }

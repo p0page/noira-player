@@ -2,6 +2,7 @@
 #include "DxDeviceResources.h"
 
 #include <algorithm>
+#include <cmath>
 #include <d2d1_1.h>
 #include <dwrite.h>
 #include <windows.ui.xaml.media.dxinterop.h>
@@ -12,6 +13,77 @@ namespace winrt::NextGenEmby::Native::implementation
     {
         constexpr uint32_t DefaultSwapChainWidth = 1280;
         constexpr uint32_t DefaultSwapChainHeight = 720;
+
+        RECT CalculateContainRect(
+            uint32_t targetWidth,
+            uint32_t targetHeight,
+            uint32_t displayWidth,
+            uint32_t displayHeight)
+        {
+            if (targetWidth == 0 || targetHeight == 0 || displayWidth == 0 || displayHeight == 0)
+            {
+                return RECT{0, 0, static_cast<LONG>(targetWidth), static_cast<LONG>(targetHeight)};
+            }
+
+            auto targetAspect = static_cast<double>(targetWidth) / targetHeight;
+            auto sourceAspect = static_cast<double>(displayWidth) / displayHeight;
+            auto destinationWidth = targetWidth;
+            auto destinationHeight = targetHeight;
+
+            if (sourceAspect > targetAspect)
+            {
+                destinationHeight = static_cast<uint32_t>(
+                    (std::max)(1.0, std::round(static_cast<double>(targetWidth) / sourceAspect)));
+            }
+            else if (sourceAspect < targetAspect)
+            {
+                destinationWidth = static_cast<uint32_t>(
+                    (std::max)(1.0, std::round(static_cast<double>(targetHeight) * sourceAspect)));
+            }
+
+            auto left = static_cast<LONG>((targetWidth - destinationWidth) / 2);
+            auto top = static_cast<LONG>((targetHeight - destinationHeight) / 2);
+            return RECT{
+                left,
+                top,
+                left + static_cast<LONG>(destinationWidth),
+                top + static_cast<LONG>(destinationHeight)};
+        }
+
+        D2D1_RECT_F ToD2DRect(RECT const& rectangle)
+        {
+            return D2D1::RectF(
+                static_cast<float>(rectangle.left),
+                static_cast<float>(rectangle.top),
+                static_cast<float>(rectangle.right),
+                static_cast<float>(rectangle.bottom));
+        }
+
+        D3D11_VIDEO_PROCESSOR_COLOR_SPACE CreateInputColorSpace(
+            bool usesBt709Matrix,
+            bool isFullRange)
+        {
+            D3D11_VIDEO_PROCESSOR_COLOR_SPACE colorSpace{};
+            colorSpace.Usage = 0;
+            colorSpace.RGB_Range = 0;
+            colorSpace.YCbCr_Matrix = usesBt709Matrix ? 1 : 0;
+            colorSpace.YCbCr_xvYCC = 0;
+            colorSpace.Nominal_Range = isFullRange
+                ? D3D11_VIDEO_PROCESSOR_NOMINAL_RANGE_0_255
+                : D3D11_VIDEO_PROCESSOR_NOMINAL_RANGE_16_235;
+            return colorSpace;
+        }
+
+        D3D11_VIDEO_PROCESSOR_COLOR_SPACE CreateOutputColorSpace()
+        {
+            D3D11_VIDEO_PROCESSOR_COLOR_SPACE colorSpace{};
+            colorSpace.Usage = 0;
+            colorSpace.RGB_Range = 0;
+            colorSpace.YCbCr_Matrix = 1;
+            colorSpace.YCbCr_xvYCC = 0;
+            colorSpace.Nominal_Range = D3D11_VIDEO_PROCESSOR_NOMINAL_RANGE_0_255;
+            return colorSpace;
+        }
     }
 
     void DxDeviceResources::AttachSurface(winrt::Windows::UI::Xaml::Controls::SwapChainPanel const& panel)
@@ -23,13 +95,19 @@ namespace winrt::NextGenEmby::Native::implementation
 
         m_panel = panel;
 
+        auto scaleX = panel.CompositionScaleX() > 0.0f ? panel.CompositionScaleX() : 1.0f;
+        auto scaleY = panel.CompositionScaleY() > 0.0f ? panel.CompositionScaleY() : 1.0f;
         auto width = panel.ActualWidth() > 0.0
-            ? static_cast<uint32_t>(panel.ActualWidth())
+            ? static_cast<uint32_t>((std::max)(1.0, std::ceil(panel.ActualWidth() * scaleX)))
             : DefaultSwapChainWidth;
         auto height = panel.ActualHeight() > 0.0
-            ? static_cast<uint32_t>(panel.ActualHeight())
+            ? static_cast<uint32_t>((std::max)(1.0, std::ceil(panel.ActualHeight() * scaleY)))
             : DefaultSwapChainHeight;
         CreateSwapChain(width, height, false);
+        DXGI_MATRIX_3X2_F inverseScale{};
+        inverseScale._11 = 1.0f / scaleX;
+        inverseScale._22 = 1.0f / scaleY;
+        winrt::check_hresult(m_swapChain->SetMatrixTransform(&inverseScale));
 
         Microsoft::WRL::ComPtr<ISwapChainPanelNative> panelNative;
         winrt::check_hresult(winrt::get_unknown(m_panel)->QueryInterface(IID_PPV_ARGS(&panelNative)));
@@ -169,7 +247,11 @@ namespace winrt::NextGenEmby::Native::implementation
         ID3D11Texture2D* texture,
         uint32_t arraySlice,
         uint32_t width,
-        uint32_t height)
+        uint32_t height,
+        uint32_t displayWidth,
+        uint32_t displayHeight,
+        bool usesBt709Matrix,
+        bool isFullRange)
     {
         if (!m_swapChain || !m_device || !m_context || texture == nullptr)
         {
@@ -216,6 +298,30 @@ namespace winrt::NextGenEmby::Native::implementation
             return false;
         }
 
+        auto sourceRect = RECT{
+            0,
+            0,
+            static_cast<LONG>(contentDescription.InputWidth),
+            static_cast<LONG>(contentDescription.InputHeight)};
+        auto outputRect = RECT{
+            0,
+            0,
+            static_cast<LONG>(targetDescription.Width),
+            static_cast<LONG>(targetDescription.Height)};
+        auto destinationRect = CalculateContainRect(
+            targetDescription.Width,
+            targetDescription.Height,
+            displayWidth == 0 ? contentDescription.InputWidth : displayWidth,
+            displayHeight == 0 ? contentDescription.InputHeight : displayHeight);
+        auto inputColorSpace = CreateInputColorSpace(usesBt709Matrix, isFullRange);
+        auto outputColorSpace = CreateOutputColorSpace();
+
+        videoContext->VideoProcessorSetStreamSourceRect(processor.Get(), 0, TRUE, &sourceRect);
+        videoContext->VideoProcessorSetStreamDestRect(processor.Get(), 0, TRUE, &destinationRect);
+        videoContext->VideoProcessorSetStreamColorSpace(processor.Get(), 0, &inputColorSpace);
+        videoContext->VideoProcessorSetOutputTargetRect(processor.Get(), TRUE, &outputRect);
+        videoContext->VideoProcessorSetOutputColorSpace(processor.Get(), &outputColorSpace);
+
         D3D11_VIDEO_PROCESSOR_INPUT_VIEW_DESC inputDescription{};
         inputDescription.ViewDimension = D3D11_VPIV_DIMENSION_TEXTURE2D;
         inputDescription.Texture2D.MipSlice = 0;
@@ -249,6 +355,11 @@ namespace winrt::NextGenEmby::Native::implementation
         stream.Enable = TRUE;
         stream.pInputSurface = inputView.Get();
 
+        if (!ClearBackBufferToBlack(false))
+        {
+            return false;
+        }
+
         if (FAILED(videoContext->VideoProcessorBlt(processor.Get(), outputView.Get(), 0, 1, &stream)))
         {
             return false;
@@ -261,6 +372,8 @@ namespace winrt::NextGenEmby::Native::implementation
         uint8_t const* pixels,
         uint32_t width,
         uint32_t height,
+        uint32_t displayWidth,
+        uint32_t displayHeight,
         uint32_t stride)
     {
         if (pixels == nullptr || width == 0 || height == 0 || stride == 0 || !m_swapChain)
@@ -313,10 +426,19 @@ namespace winrt::NextGenEmby::Native::implementation
         }
 
         auto targetSize = renderTarget->GetSize();
+        auto targetWidth = static_cast<uint32_t>((std::max)(1.0f, std::round(targetSize.width)));
+        auto targetHeight = static_cast<uint32_t>((std::max)(1.0f, std::round(targetSize.height)));
+        auto destinationRect = CalculateContainRect(
+            targetWidth,
+            targetHeight,
+            displayWidth == 0 ? width : displayWidth,
+            displayHeight == 0 ? height : displayHeight);
+
         renderTarget->BeginDraw();
+        renderTarget->Clear(D2D1::ColorF(D2D1::ColorF::Black));
         renderTarget->DrawBitmap(
             bitmap.Get(),
-            D2D1::RectF(0.0f, 0.0f, targetSize.width, targetSize.height),
+            ToD2DRect(destinationRect),
             1.0f,
             D2D1_BITMAP_INTERPOLATION_MODE_LINEAR);
 
@@ -466,6 +588,11 @@ namespace winrt::NextGenEmby::Native::implementation
 
     bool DxDeviceResources::ClearToBlack()
     {
+        return ClearBackBufferToBlack(true);
+    }
+
+    bool DxDeviceResources::ClearBackBufferToBlack(bool present)
+    {
         if (!m_swapChain || !m_context)
         {
             return false;
@@ -485,7 +612,7 @@ namespace winrt::NextGenEmby::Native::implementation
 
         float clearColor[] = {0.0f, 0.0f, 0.0f, 1.0f};
         m_context->ClearRenderTargetView(renderTargetView.Get(), clearColor);
-        return Present();
+        return present ? Present() : true;
     }
 
     bool DxDeviceResources::Present()
