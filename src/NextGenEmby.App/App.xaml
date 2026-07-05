@@ -47,12 +47,6 @@
                 <Setter Property="Padding" Value="18,10" />
                 <Setter Property="UseSystemFocusVisuals" Value="True" />
             </Style>
-
-            <Style TargetType="muxc:NavigationViewItem">
-                <Setter Property="MinHeight" Value="68" />
-                <Setter Property="FontSize" Value="20" />
-                <Setter Property="UseSystemFocusVisuals" Value="True" />
-            </Style>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

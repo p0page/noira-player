@@ -5,6 +5,7 @@ using NextGenEmby.App.Views;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Input;
+using Windows.UI.Xaml.Navigation;
 using Windows.System;
 
 namespace NextGenEmby.App
@@ -12,10 +13,13 @@ namespace NextGenEmby.App
     public sealed partial class MainPage : Page
     {
         private readonly ApplicationDataSessionStore _sessionStore = new ApplicationDataSessionStore();
+        private LibraryNavigationRequest? _currentLibraryRequest;
 
         public MainPage()
         {
             InitializeComponent();
+            AddHandler(KeyDownEvent, new KeyEventHandler(Page_OnKeyDown), true);
+            ContentFrame.Navigated += ContentFrame_OnNavigated;
             NavigateLogin();
             Loaded += MainPage_OnLoaded;
         }
@@ -28,7 +32,7 @@ namespace NextGenEmby.App
                 var session = await _sessionStore.LoadAsync();
                 if (session != null)
                 {
-                    NavigateHome();
+                    NavigateHome(replaceHistory: true);
                 }
             }
             catch
@@ -54,7 +58,16 @@ namespace NextGenEmby.App
 
         public void NavigateHome()
         {
+            NavigateHome(replaceHistory: true);
+        }
+
+        private void NavigateHome(bool replaceHistory)
+        {
             NavigateTo(typeof(HomePage));
+            if (replaceHistory)
+            {
+                ContentFrame.BackStack.Clear();
+            }
         }
 
         private void NavigateLogin()
@@ -64,6 +77,12 @@ namespace NextGenEmby.App
 
         private void NavigateLibrary(LibraryNavigationRequest request)
         {
+            if (ContentFrame.CurrentSourcePageType == typeof(LibraryPage) &&
+                IsSameLibraryRequest(_currentLibraryRequest, request))
+            {
+                return;
+            }
+
             NavigateTo(typeof(LibraryPage), request);
         }
 
@@ -85,11 +104,21 @@ namespace NextGenEmby.App
             }
 
             ContentFrame.Navigate(pageType, parameter);
+            _currentLibraryRequest = pageType == typeof(LibraryPage)
+                ? parameter as LibraryNavigationRequest
+                : null;
+        }
+
+        private void ContentFrame_OnNavigated(object sender, NavigationEventArgs e)
+        {
+            _currentLibraryRequest = e.SourcePageType == typeof(LibraryPage)
+                ? e.Parameter as LibraryNavigationRequest
+                : null;
         }
 
         private void Home_OnClick(object sender, RoutedEventArgs e)
         {
-            NavigateHome();
+            NavigateHome(replaceHistory: false);
         }
 
         private void Movies_OnClick(object sender, RoutedEventArgs e)
@@ -110,6 +139,16 @@ namespace NextGenEmby.App
         private void Settings_OnClick(object sender, RoutedEventArgs e)
         {
             NavigateSettings();
+        }
+
+        private static bool IsSameLibraryRequest(
+            LibraryNavigationRequest? current,
+            LibraryNavigationRequest next)
+        {
+            return current != null &&
+                string.Equals(current.Title, next.Title, StringComparison.Ordinal) &&
+                string.Equals(current.CollectionType, next.CollectionType, StringComparison.Ordinal) &&
+                string.Equals(current.IncludeItemTypes, next.IncludeItemTypes, StringComparison.Ordinal);
         }
     }
 }

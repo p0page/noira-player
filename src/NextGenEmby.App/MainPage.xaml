@@ -2,8 +2,7 @@
     x:Class="NextGenEmby.App.MainPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    Background="{StaticResource AppBackgroundBrush}"
-    KeyDown="Page_OnKeyDown">
+    Background="{StaticResource AppBackgroundBrush}">
     <Grid Background="{StaticResource AppBackgroundBrush}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
