@@ -31,7 +31,8 @@ namespace NextGenEmby.App.Playback
                 PlaybackBackendFeature.Hdr10 |
                 PlaybackBackendFeature.AudioStreamSwitching |
                 PlaybackBackendFeature.SubtitleStreamSwitching |
-                PlaybackBackendFeature.MediaSourceSwitching);
+                PlaybackBackendFeature.MediaSourceSwitching |
+                PlaybackBackendFeature.NativeAudioOutput);
 
         public PlaybackDisplayStatus DisplayStatus
         {

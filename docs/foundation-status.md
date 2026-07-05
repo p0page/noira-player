@@ -13,7 +13,7 @@
 - 已通过 Visual Studio Installer 补齐 UWP/WinUI 工具链，包括 `Microsoft.VisualStudio.Workload.Universal`、`.NET Native 和 .NET Standard`、`通用 Windows 平台工具`、`C++ (v143) 通用 Windows 平台工具`、Windows 11 SDK `10.0.22621.0`。
 - `C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETCore\v5.0` 已存在，之前阻塞 UWP C# 项目的 `.NETCore,Version=v5.0` 引用程序集缺失问题已解除。
 - Solution MSBuild 已通过：`NextGenXboxEmby.sln /restore /p:Configuration=Debug /p:Platform=x64` 结果为 0 个警告、0 个错误。
-- Core 单元测试通过：54 个通过，0 个失败，0 个跳过。
+- Core 单元测试通过：57 个通过，0 个失败，0 个跳过。
 - `NextGenEmby.Core`、`NextGenEmby.Core.Tests`、`NextGenEmby.App` 均已能进入完整 solution 构建链路。
 - Emby 认证、认证请求头、媒体库查询 URL、PlaybackInfo 解析、直连播放 URL、播放进度上报都已有单元测试覆盖。
 - 播放编排层已有稳定的托管后端接口：`IPlaybackBackend`、`PlaybackDescriptor`、`PlaybackState`、`PlaybackOrchestrator`。
@@ -27,6 +27,8 @@
 - `VideoDecoder` 已能从 native D3D11 device/context 创建 FFmpeg D3D11VA hardware device context，并在 codec 支持时选择硬件像素格式。
 - `VideoDecoder` 已能把 FFmpeg D3D11 frame 的 texture 和 array slice index 带给 renderer；`DxDeviceResources` 已有 D3D11 video processor blit 路径用于尝试呈现 NV12/P010 frame。
 - `VideoDecoder` 已能把 FFmpeg HDR10 mastering display / content light side-data 映射为 `DXGI_HDR_METADATA_HDR10` 并交给 renderer 设置到 swapchain。
+- `FfmpegMediaSource` 已成为共享 demux 边界，负责打开 direct-play URL、查找流、按已注册流缓存 packet；`VideoDecoder` 已改为从共享 source 读取 packet，为音视频同步做准备。
+- `AudioDecoder` 已能选择音频流、打开 FFmpeg audio decoder，并解出包含采样率、声道数、样本数、sample format 和 position ticks 的音频 frame 元数据。
 - `PlaybackGraph` 已有临时后台 render loop，可持续拉取视频帧；当前 cadence 固定，尚未实现基于 PTS 或音频时钟的同步。
 - `PlaybackGraph` 后台 loop 已能把 EOF/异常转换为 native `Stopped`/`Failed` 事件，由 `NativePlaybackEngine` 继续透传给托管播放编排层。
 - 托管 `PlaybackOrchestrator` 已能在 backend 支持时原地切换音轨/字幕；`NativeDirectXPlaybackBackend`、UWP wrapper 和 C++/WinRT runtime 已接通音轨切换、字幕切换和禁用字幕的控制面。
@@ -79,7 +81,7 @@ dotnet test tests\NextGenEmby.Core.Tests\NextGenEmby.Core.Tests.csproj -v minima
 结果：
 
 ```text
-Passed: 54
+Passed: 57
 Failed: 0
 Skipped: 0
 ```
@@ -130,7 +132,7 @@ error MSB3644: Could not find the reference assemblies for .NETCore,Version=v5.0
 - 还没有部署到 Xbox 硬件。
 - FFmpeg UWP 产物已接入 native build，`VideoDecoder` 已能初始化 `AVFormatContext` / `AVCodecContext`，读取视频 packet / 接收 `AVFrame`，并把 D3D11VA texture slice 交给 renderer；真实画面呈现还没有经过 Local Machine 或 Xbox 实机确认。
 - HDR/HEVC 真实视频播放还没有完成；当前已具备 HDR display/DXGI/renderer 边界、HDR10 metadata 映射、临时 render loop 和 P010/NV12 video processor 尝试路径，但色彩空间细节、A/V sync 和真实 HEVC Main10/P010 播放效果尚未验证。
-- XAudio2 音频设备生命周期已接入，但 FFmpeg audio decode、resample、source voice、buffer queue 和 A/V sync 还没有完成；DirectWrite 字幕绘制也还没有完成。
+- XAudio2 音频设备生命周期和 FFmpeg audio frame decode 边界已接入，但 resample、source voice、PCM buffer queue、音频时钟和 A/V sync 还没有完成；DirectWrite 字幕绘制也还没有完成。
 - 真实 Emby 条目驱动的播放进度 HTTP 上报还没有接入；当前已能构造 progress request，并能透传 backend position event。
 
 ## 原生播放硬件验证

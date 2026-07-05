@@ -1,6 +1,6 @@
 #include "pch.h"
 #include "VideoDecoder.h"
-#include "HttpMediaInput.h"
+#include "FfmpegMediaSource.h"
 
 #include <algorithm>
 #include <cmath>
@@ -67,28 +67,6 @@ namespace
     {
         auto message = std::string(operation) + " failed: " + GetFfmpegErrorMessage(errorCode);
         return winrt::hresult_error(E_FAIL, winrt::to_hstring(message));
-    }
-
-    int32_t FindVideoStreamIndex(AVFormatContext* formatContext, int32_t selectedVideoStreamIndex)
-    {
-        if (selectedVideoStreamIndex >= 0 &&
-            static_cast<uint32_t>(selectedVideoStreamIndex) < formatContext->nb_streams)
-        {
-            auto stream = formatContext->streams[selectedVideoStreamIndex];
-            if (stream != nullptr && stream->codecpar != nullptr &&
-                stream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO)
-            {
-                return selectedVideoStreamIndex;
-            }
-        }
-
-        auto bestStream = av_find_best_stream(formatContext, AVMEDIA_TYPE_VIDEO, -1, -1, nullptr, 0);
-        if (bestStream < 0)
-        {
-            throw CreateFfmpegError("av_find_best_stream", bestStream);
-        }
-
-        return bestStream;
     }
 
     AVPixelFormat FindD3D11HardwarePixelFormat(AVCodec const* decoder)
@@ -366,43 +344,20 @@ namespace
 namespace winrt::NextGenEmby::Native::implementation
 {
     void VideoDecoder::Open(
-        winrt::hstring const& url,
+        FfmpegMediaSource& mediaSource,
         int32_t selectedVideoStreamIndex,
         ID3D11Device* d3dDevice,
         ID3D11DeviceContext* d3dContext)
     {
-        HttpMediaInput input;
-        input.Open(url);
-
         Close();
 
-        auto networkResult = avformat_network_init();
-        if (networkResult < 0)
-        {
-            throw CreateFfmpegError("avformat_network_init", networkResult);
-        }
-
-        AVFormatContext* formatContext = nullptr;
         AVCodecContext* codecContext = nullptr;
         AVBufferRef* hardwareDeviceContext = nullptr;
 
         try
         {
-            auto source = winrt::to_string(url);
-            auto result = avformat_open_input(&formatContext, source.c_str(), nullptr, nullptr);
-            if (result < 0)
-            {
-                throw CreateFfmpegError("avformat_open_input", result);
-            }
-
-            result = avformat_find_stream_info(formatContext, nullptr);
-            if (result < 0)
-            {
-                throw CreateFfmpegError("avformat_find_stream_info", result);
-            }
-
-            auto videoStreamIndex = FindVideoStreamIndex(formatContext, selectedVideoStreamIndex);
-            auto videoStream = formatContext->streams[videoStreamIndex];
+            auto videoStreamIndex = mediaSource.FindRequiredStream(AVMEDIA_TYPE_VIDEO, selectedVideoStreamIndex);
+            auto videoStream = mediaSource.Stream(videoStreamIndex);
             auto decoder = avcodec_find_decoder(videoStream->codecpar->codec_id);
             if (decoder == nullptr)
             {
@@ -432,7 +387,7 @@ namespace winrt::NextGenEmby::Native::implementation
                 }
             }
 
-            result = avcodec_parameters_to_context(codecContext, videoStream->codecpar);
+            auto result = avcodec_parameters_to_context(codecContext, videoStream->codecpar);
             if (result < 0)
             {
                 throw CreateFfmpegError("avcodec_parameters_to_context", result);
@@ -444,13 +399,13 @@ namespace winrt::NextGenEmby::Native::implementation
                 throw CreateFfmpegError("avcodec_open2", result);
             }
 
-            m_formatContext = formatContext;
+            mediaSource.RegisterStream(videoStreamIndex);
+            m_mediaSource = &mediaSource;
             m_codecContext = codecContext;
             m_hardwareDeviceContext = hardwareDeviceContext;
             m_videoStreamIndex = videoStreamIndex;
             m_width = codecContext->width > 0 ? static_cast<uint32_t>(codecContext->width) : 0;
             m_height = codecContext->height > 0 ? static_cast<uint32_t>(codecContext->height) : 0;
-            formatContext = nullptr;
             codecContext = nullptr;
             hardwareDeviceContext = nullptr;
         }
@@ -459,11 +414,6 @@ namespace winrt::NextGenEmby::Native::implementation
             if (codecContext != nullptr)
             {
                 avcodec_free_context(&codecContext);
-            }
-
-            if (formatContext != nullptr)
-            {
-                avformat_close_input(&formatContext);
             }
 
             if (hardwareDeviceContext != nullptr)
@@ -475,8 +425,6 @@ namespace winrt::NextGenEmby::Native::implementation
             throw;
         }
 
-        m_url = url;
-        m_avformatVersion = static_cast<uint32_t>(avformat_version());
         m_positionTicks = 0;
         m_decoderDraining = false;
         m_open = true;
@@ -484,7 +432,7 @@ namespace winrt::NextGenEmby::Native::implementation
 
     std::optional<DecodedVideoFrame> VideoDecoder::TryReadFrame()
     {
-        if (!m_open || m_formatContext == nullptr || m_codecContext == nullptr || m_videoStreamIndex < 0)
+        if (!m_open || m_mediaSource == nullptr || m_codecContext == nullptr || m_videoStreamIndex < 0)
         {
             return std::nullopt;
         }
@@ -496,7 +444,7 @@ namespace winrt::NextGenEmby::Native::implementation
             throw winrt::hresult_error(E_OUTOFMEMORY, L"Could not allocate FFmpeg decode packet or frame.");
         }
 
-        auto videoStream = m_formatContext->streams[m_videoStreamIndex];
+        auto videoStream = m_mediaSource->Stream(m_videoStreamIndex);
         auto publishFrame = [this](std::optional<DecodedVideoFrame> decodedFrame)
             -> std::optional<DecodedVideoFrame>
         {
@@ -513,15 +461,8 @@ namespace winrt::NextGenEmby::Native::implementation
             return publishFrame(TryReceiveFrame(m_codecContext, frame.get(), videoStream));
         }
 
-        int readResult = 0;
-        while ((readResult = av_read_frame(m_formatContext, packet.get())) >= 0)
+        while (m_mediaSource->TryReadPacket(m_videoStreamIndex, packet.get()))
         {
-            if (packet->stream_index != m_videoStreamIndex)
-            {
-                av_packet_unref(packet.get());
-                continue;
-            }
-
             std::optional<DecodedVideoFrame> pendingFrame;
             while (true)
             {
@@ -567,19 +508,14 @@ namespace winrt::NextGenEmby::Native::implementation
             }
         }
 
-        if (readResult == AVERROR_EOF)
+        auto flushResult = avcodec_send_packet(m_codecContext, nullptr);
+        if (flushResult < 0 && flushResult != AVERROR_EOF)
         {
-            auto flushResult = avcodec_send_packet(m_codecContext, nullptr);
-            if (flushResult < 0 && flushResult != AVERROR_EOF)
-            {
-                throw CreateFfmpegError("avcodec_send_packet", flushResult);
-            }
-
-            m_decoderDraining = true;
-            return publishFrame(TryReceiveFrame(m_codecContext, frame.get(), videoStream));
+            throw CreateFfmpegError("avcodec_send_packet", flushResult);
         }
 
-        throw CreateFfmpegError("av_read_frame", readResult);
+        m_decoderDraining = true;
+        return publishFrame(TryReceiveFrame(m_codecContext, frame.get(), videoStream));
     }
 
     void VideoDecoder::Seek(int64_t positionTicks)
@@ -590,16 +526,11 @@ namespace winrt::NextGenEmby::Native::implementation
         }
 
         m_positionTicks = positionTicks;
-        if (m_formatContext != nullptr && m_codecContext != nullptr && m_videoStreamIndex >= 0)
+        if (m_mediaSource != nullptr && m_codecContext != nullptr && m_videoStreamIndex >= 0)
         {
-            auto videoStream = m_formatContext->streams[m_videoStreamIndex];
+            auto videoStream = m_mediaSource->Stream(m_videoStreamIndex);
             auto timestamp = av_rescale_q(positionTicks, HundredNanosecondTimeBase, videoStream->time_base);
-            auto result = av_seek_frame(m_formatContext, m_videoStreamIndex, timestamp, AVSEEK_FLAG_BACKWARD);
-            if (result < 0)
-            {
-                throw CreateFfmpegError("av_seek_frame", result);
-            }
-
+            m_mediaSource->Seek(m_videoStreamIndex, timestamp);
             avcodec_flush_buffers(m_codecContext);
             m_decoderDraining = false;
         }
@@ -612,22 +543,16 @@ namespace winrt::NextGenEmby::Native::implementation
             avcodec_free_context(&m_codecContext);
         }
 
-        if (m_formatContext != nullptr)
-        {
-            avformat_close_input(&m_formatContext);
-        }
-
         if (m_hardwareDeviceContext != nullptr)
         {
             av_buffer_unref(&m_hardwareDeviceContext);
         }
 
-        m_url.clear();
+        m_mediaSource = nullptr;
         m_hardwarePixelFormat = -1;
         m_videoStreamIndex = -1;
         m_width = 0;
         m_height = 0;
-        m_avformatVersion = 0;
         m_positionTicks = 0;
         m_decoderDraining = false;
         m_open = false;

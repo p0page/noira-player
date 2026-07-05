@@ -1,8 +1,9 @@
 #pragma once
 
+#include "AudioDecoder.h"
 #include "AudioRenderer.h"
 #include "DxDeviceResources.h"
-#include "HttpMediaInput.h"
+#include "FfmpegMediaSource.h"
 #include "NativePlaybackEngine.g.h"
 #include "SubtitleRenderer.h"
 #include "VideoDecoder.h"
@@ -46,12 +47,14 @@ namespace winrt::NextGenEmby::Native::implementation
         void StopRenderLoop() noexcept;
         void RenderLoop() noexcept;
         bool RenderNextFrame();
+        void DecodeNextAudioFrame();
         void NotifyStateChanged(PlaybackGraphState state, winrt::hstring const& message) const noexcept;
 
         DxDeviceResources& m_deviceResources;
         PlaybackGraphStateChangedHandler m_graphStateChanged;
-        HttpMediaInput m_input;
+        FfmpegMediaSource m_mediaSource;
         VideoDecoder m_videoDecoder;
+        AudioDecoder m_audioDecoder;
         VideoRenderer m_videoRenderer;
         AudioRenderer m_audioRenderer;
         SubtitleRenderer m_subtitleRenderer;

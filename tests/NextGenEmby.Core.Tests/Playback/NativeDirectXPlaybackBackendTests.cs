@@ -84,6 +84,7 @@ public sealed class NativeDirectXPlaybackBackendTests
         var diagnostics = Assert.IsAssignableFrom<IPlaybackBackendDiagnostics>(backend);
 
         Assert.True(diagnostics.Capabilities.Supports(PlaybackBackendFeature.DirectPlayHttp));
+        Assert.True(diagnostics.Capabilities.Supports(PlaybackBackendFeature.NativeAudioOutput));
         Assert.Equal(HdrOutputStatus.Unknown, diagnostics.DisplayStatus.HdrStatus);
     }
 
@@ -95,7 +96,9 @@ public sealed class NativeDirectXPlaybackBackendTests
         public int? LastSwitchedSubtitleStreamIndex { get; private set; }
         public int SubtitleSwitchCount { get; private set; }
         public PlaybackBackendCapabilities Capabilities { get; } =
-            new PlaybackBackendCapabilities(PlaybackBackendFeature.DirectPlayHttp);
+            new PlaybackBackendCapabilities(
+                PlaybackBackendFeature.DirectPlayHttp |
+                PlaybackBackendFeature.NativeAudioOutput);
         public PlaybackDisplayStatus DisplayStatus { get; } =
             new PlaybackDisplayStatus(HdrOutputStatus.Unknown, false, false);
 

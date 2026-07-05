@@ -35,12 +35,16 @@ namespace winrt::NextGenEmby::Native::implementation
         {
             std::lock_guard lock(m_graphMutex);
             m_deviceResources.CreateDevice();
-            m_input.Open(request.DirectStreamUrl());
+            m_mediaSource.Open(request.DirectStreamUrl());
             m_videoDecoder.Open(
-                request.DirectStreamUrl(),
+                m_mediaSource,
                 0,
                 m_deviceResources.Device(),
                 m_deviceResources.Context());
+            m_audioDecoder.Open(
+                m_mediaSource,
+                request.AudioStreamIndex(),
+                request.HasAudioStreamIndex());
             m_audioRenderer.Open(request.AudioStreamIndex(), request.HasAudioStreamIndex());
             m_subtitleRenderer.Open(request.HasSubtitleStreamIndex()
                 ? std::optional<int32_t>{request.SubtitleStreamIndex()}
@@ -94,6 +98,7 @@ namespace winrt::NextGenEmby::Native::implementation
         std::lock_guard lock(m_graphMutex);
         m_positionTicks = positionTicks;
         m_videoDecoder.Seek(positionTicks);
+        m_audioDecoder.Flush(positionTicks);
         RenderNextFrame();
         m_subtitleRenderer.RenderAt(m_positionTicks);
         m_stateChanged.notify_all();
@@ -106,9 +111,10 @@ namespace winrt::NextGenEmby::Native::implementation
         std::lock_guard lock(m_graphMutex);
         m_audioRenderer.Stop();
         m_subtitleRenderer.Disable();
+        m_audioDecoder.Close();
         m_videoDecoder.Close();
         m_videoRenderer.ClearToBlack();
-        m_input.Close();
+        m_mediaSource.Close();
         m_url.clear();
         m_positionTicks = 0;
         m_open = false;
@@ -264,6 +270,7 @@ namespace winrt::NextGenEmby::Native::implementation
     {
         if (auto frame = m_videoDecoder.TryReadFrame())
         {
+            DecodeNextAudioFrame();
             m_videoRenderer.Render(*frame);
             m_positionTicks = frame->PositionTicks;
             m_subtitleRenderer.RenderAt(m_positionTicks);
@@ -271,6 +278,14 @@ namespace winrt::NextGenEmby::Native::implementation
         }
 
         return false;
+    }
+
+    void PlaybackGraph::DecodeNextAudioFrame()
+    {
+        if (m_audioDecoder.IsOpen())
+        {
+            (void)m_audioDecoder.TryReadFrame();
+        }
     }
 
     void PlaybackGraph::NotifyStateChanged(

@@ -8,7 +8,9 @@
   <ItemGroup>
     <ClCompile Include="DxDeviceResources.cpp" />
     <ClCompile Include="HdrDisplayController.cpp" />
+    <ClCompile Include="Media\AudioDecoder.cpp" />
     <ClCompile Include="Media\AudioRenderer.cpp" />
+    <ClCompile Include="Media\FfmpegMediaSource.cpp" />
     <ClCompile Include="Media\HttpMediaInput.cpp" />
     <ClCompile Include="Media\PlaybackGraph.cpp" />
     <ClCompile Include="Media\SubtitleRenderer.cpp" />
@@ -25,7 +27,9 @@
   <ItemGroup>
     <ClInclude Include="DxDeviceResources.h" />
     <ClInclude Include="HdrDisplayController.h" />
+    <ClInclude Include="Media\AudioDecoder.h" />
     <ClInclude Include="Media\AudioRenderer.h" />
+    <ClInclude Include="Media\FfmpegMediaSource.h" />
     <ClInclude Include="Media\HttpMediaInput.h" />
     <ClInclude Include="Media\PlaybackGraph.h" />
     <ClInclude Include="Media\SubtitleRenderer.h" />

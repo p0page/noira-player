@@ -8,11 +8,12 @@
 #include <wrl/client.h>
 
 struct AVCodecContext;
-struct AVFormatContext;
 struct AVBufferRef;
 
 namespace winrt::NextGenEmby::Native::implementation
 {
+    class FfmpegMediaSource;
+
     enum class VideoHdrKind
     {
         None,
@@ -36,7 +37,7 @@ namespace winrt::NextGenEmby::Native::implementation
     {
     public:
         void Open(
-            winrt::hstring const& url,
+            FfmpegMediaSource& mediaSource,
             int32_t selectedVideoStreamIndex,
             ID3D11Device* d3dDevice,
             ID3D11DeviceContext* d3dContext);
@@ -45,12 +46,10 @@ namespace winrt::NextGenEmby::Native::implementation
         void Close() noexcept;
 
     private:
-        winrt::hstring m_url;
-        AVFormatContext* m_formatContext{nullptr};
+        FfmpegMediaSource* m_mediaSource{nullptr};
         AVCodecContext* m_codecContext{nullptr};
         AVBufferRef* m_hardwareDeviceContext{nullptr};
         int m_hardwarePixelFormat{-1};
-        uint32_t m_avformatVersion{0};
         int32_t m_videoStreamIndex{-1};
         uint32_t m_width{0};
         uint32_t m_height{0};

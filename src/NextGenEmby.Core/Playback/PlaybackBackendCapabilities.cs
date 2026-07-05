@@ -13,7 +13,8 @@ namespace NextGenEmby.Core.Playback
         AudioStreamSwitching = 16,
         SubtitleStreamSwitching = 32,
         MediaSourceSwitching = 64,
-        Transcoding = 128
+        Transcoding = 128,
+        NativeAudioOutput = 256
     }
 
     public sealed class PlaybackBackendCapabilities
