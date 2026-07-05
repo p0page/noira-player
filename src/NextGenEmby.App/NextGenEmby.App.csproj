@@ -78,8 +78,10 @@
     <Compile Include="MainPage.xaml.cs">
       <DependentUpon>MainPage.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Navigation\PlaybackLaunchRequest.cs" />
     <Compile Include="Playback\SystemMediaPlaybackBackend.cs" />
     <Compile Include="Playback\WinRtNativePlaybackEngine.cs" />
+    <Compile Include="Services\EmbyClientFactory.cs" />
     <Compile Include="Storage\ApplicationDataDeviceIdProvider.cs" />
     <Compile Include="Storage\ApplicationDataSessionStore.cs" />
     <Compile Include="ViewModels\LoginViewModel.cs" />

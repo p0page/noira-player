@@ -41,25 +41,22 @@
                     </StackPanel>
 
                     <StackPanel Spacing="18">
-                        <TextBlock Text="Continue Watching" FontSize="28" FontWeight="SemiBold" />
-                        <Grid ColumnSpacing="24">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="280" />
-                                <ColumnDefinition Width="280" />
-                            </Grid.ColumnDefinitions>
-                            <Border Grid.Column="0" Width="280" Height="190" Background="{StaticResource AppRaisedSurfaceBrush}" CornerRadius="8" Padding="24">
-                                <StackPanel VerticalAlignment="Bottom" Spacing="6">
-                                    <TextBlock Text="Feature Film" FontSize="26" FontWeight="SemiBold" />
-                                    <TextBlock Text="Paused at 42 min" FontSize="18" Foreground="{StaticResource AppMutedTextBrush}" />
-                                </StackPanel>
-                            </Border>
-                            <Border Grid.Column="1" Width="280" Height="190" Background="{StaticResource AppRaisedSurfaceBrush}" CornerRadius="8" Padding="24">
-                                <StackPanel VerticalAlignment="Bottom" Spacing="6">
-                                    <TextBlock Text="Episode" FontSize="26" FontWeight="SemiBold" />
-                                    <TextBlock Text="Season progress" FontSize="18" Foreground="{StaticResource AppMutedTextBrush}" />
-                                </StackPanel>
-                            </Border>
-                        </Grid>
+                        <TextBlock Text="Latest" FontSize="28" FontWeight="SemiBold" />
+                        <TextBlock
+                            x:Name="StatusBlock"
+                            FontSize="20"
+                            Foreground="{StaticResource AppMutedTextBrush}"
+                            TextWrapping="Wrap" />
+                        <ScrollViewer
+                            HorizontalScrollBarVisibility="Auto"
+                            HorizontalScrollMode="Enabled"
+                            VerticalScrollBarVisibility="Disabled"
+                            VerticalScrollMode="Disabled">
+                            <StackPanel
+                                x:Name="LatestItemsPanel"
+                                Orientation="Horizontal"
+                                Spacing="18" />
+                        </ScrollViewer>
                     </StackPanel>
                 </StackPanel>
             </Grid>

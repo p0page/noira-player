@@ -1,11 +1,16 @@
 using System;
+using System.Net.Http;
 using System.Threading.Tasks;
+using NextGenEmby.App.Navigation;
 using NextGenEmby.App.Playback;
+using NextGenEmby.App.Services;
+using NextGenEmby.App.Storage;
 using NextGenEmby.Core.Emby;
 using NextGenEmby.Core.Playback;
 using Windows.UI.Core;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
+using Windows.UI.Xaml.Navigation;
 using CorePlaybackState = NextGenEmby.Core.Playback.PlaybackState;
 
 namespace NextGenEmby.App.Views
@@ -16,13 +21,22 @@ namespace NextGenEmby.App.Views
         private static readonly bool UseNativePlaybackBackend = true;
         private static readonly TimeSpan SeekBackStep = TimeSpan.FromSeconds(10);
         private static readonly TimeSpan SeekForwardStep = TimeSpan.FromSeconds(30);
+        private static readonly TimeSpan ProgressInterval = TimeSpan.FromSeconds(10);
 
         private readonly IPlaybackBackend _backend;
         private readonly IDisposable? _disposableBackend;
         private readonly PlaybackOrchestrator _orchestrator;
+        private readonly ApplicationDataSessionStore _sessionStore = new ApplicationDataSessionStore();
+        private readonly DispatcherTimer _progressTimer;
+        private HttpClient? _httpClient;
+        private EmbyApiClient? _embyClient;
+        private EmbySession? _session;
+        private PlaybackLaunchRequest? _launchRequest;
+        private string _currentItemName = "";
         private long _lastPositionTicks;
         private bool _hasPlaybackContext;
         private bool _infoVisible;
+        private bool _reportInProgress;
 
         public PlaybackPage()
         {
@@ -47,10 +61,32 @@ namespace NextGenEmby.App.Views
 
             _orchestrator = new PlaybackOrchestrator(_backend);
             _orchestrator.StateChanged += Orchestrator_OnStateChanged;
+            _progressTimer = new DispatcherTimer
+            {
+                Interval = ProgressInterval
+            };
+            _progressTimer.Tick += ProgressTimer_OnTick;
             Unloaded += PlaybackPage_OnUnloaded;
 
             UpdateStatus(CorePlaybackState.Stopped);
             UpdateControlStates();
+        }
+
+        protected override void OnNavigatedTo(NavigationEventArgs e)
+        {
+            base.OnNavigatedTo(e);
+            _launchRequest = e.Parameter as PlaybackLaunchRequest;
+            if (_launchRequest == null)
+            {
+                return;
+            }
+
+            _currentItemName = _launchRequest.ItemName;
+            StreamUrlBox.Text = string.IsNullOrWhiteSpace(_currentItemName)
+                ? _launchRequest.ItemId
+                : _currentItemName;
+            StreamUrlBox.IsEnabled = false;
+            _ = RunPlaybackCommandAsync(() => StartItemPlaybackAsync(_launchRequest));
         }
 
         private async void Start_OnClick(object sender, RoutedEventArgs e)
@@ -60,12 +96,12 @@ namespace NextGenEmby.App.Views
 
         private async void Pause_OnClick(object sender, RoutedEventArgs e)
         {
-            await RunPlaybackCommandAsync(() => _orchestrator.PauseAsync());
+            await RunPlaybackCommandAsync(PausePlaybackAsync);
         }
 
         private async void Resume_OnClick(object sender, RoutedEventArgs e)
         {
-            await RunPlaybackCommandAsync(() => _orchestrator.ResumeAsync());
+            await RunPlaybackCommandAsync(ResumePlaybackAsync);
         }
 
         private async void Stop_OnClick(object sender, RoutedEventArgs e)
@@ -107,6 +143,11 @@ namespace NextGenEmby.App.Views
                     _lastPositionTicks = Math.Max(0, args.PositionTicks.Value);
                 }
 
+                if (args.State == CorePlaybackState.Failed || args.State == CorePlaybackState.Stopped)
+                {
+                    _progressTimer.Stop();
+                }
+
                 _hasPlaybackContext = args.State != CorePlaybackState.Failed &&
                     args.State != CorePlaybackState.Stopped &&
                     (_hasPlaybackContext || args.State == CorePlaybackState.Opening);
@@ -123,22 +164,71 @@ namespace NextGenEmby.App.Views
         private async void PlaybackPage_OnUnloaded(object sender, RoutedEventArgs e)
         {
             _orchestrator.StateChanged -= Orchestrator_OnStateChanged;
+            _progressTimer.Stop();
+            _progressTimer.Tick -= ProgressTimer_OnTick;
             try
             {
+                await ReportProgressAsync(PlaybackProgressEvent.StateChange);
                 await _orchestrator.StopAsync();
             }
             finally
             {
+                _httpClient?.Dispose();
                 _disposableBackend?.Dispose();
             }
         }
 
         private async Task StartPlaybackAsync()
         {
+            if (_launchRequest != null)
+            {
+                await StartItemPlaybackAsync(_launchRequest);
+                return;
+            }
+
+            await StartManualPlaybackAsync();
+        }
+
+        private async Task StartManualPlaybackAsync()
+        {
             var source = CreateManualSource();
             await _orchestrator.StartAsync(DemoItemId, new[] { source }, 0);
             _lastPositionTicks = 0;
             _hasPlaybackContext = _orchestrator.CurrentDescriptor != null;
+            _progressTimer.Stop();
+            _currentItemName = "";
+            UpdateStatus(_orchestrator.State);
+            UpdateControlStates();
+            if (_infoVisible)
+            {
+                UpdateInfo();
+            }
+        }
+
+        private async Task StartItemPlaybackAsync(PlaybackLaunchRequest request)
+        {
+            await EnsureEmbyClientAsync();
+            if (_embyClient == null || _session == null)
+            {
+                throw new InvalidOperationException("Sign in before playback.");
+            }
+
+            UpdateStatus(CorePlaybackState.Opening, "Loading media sources");
+            var sources = await _embyClient.GetPlaybackInfoAsync(_session, request.ItemId);
+            if (sources.Count == 0)
+            {
+                throw new InvalidOperationException("No playable media source was returned by Emby.");
+            }
+
+            await _orchestrator.StartAsync(request.ItemId, sources, request.StartPositionTicks);
+            _lastPositionTicks = request.StartPositionTicks;
+            _hasPlaybackContext = _orchestrator.CurrentDescriptor != null;
+            _currentItemName = request.ItemName;
+            StreamUrlBox.Text = string.IsNullOrWhiteSpace(_currentItemName)
+                ? request.ItemId
+                : _currentItemName;
+            _progressTimer.Start();
+            await ReportProgressAsync(PlaybackProgressEvent.StateChange);
             UpdateStatus(_orchestrator.State);
             UpdateControlStates();
             if (_infoVisible)
@@ -149,7 +239,9 @@ namespace NextGenEmby.App.Views
 
         private async Task StopPlaybackAsync()
         {
+            await ReportProgressAsync(PlaybackProgressEvent.StateChange);
             await _orchestrator.StopAsync();
+            _progressTimer.Stop();
             _lastPositionTicks = 0;
             _hasPlaybackContext = false;
             UpdateStatus(CorePlaybackState.Stopped);
@@ -158,6 +250,18 @@ namespace NextGenEmby.App.Views
             {
                 UpdateInfo();
             }
+        }
+
+        private async Task PausePlaybackAsync()
+        {
+            await _orchestrator.PauseAsync();
+            await ReportProgressAsync(PlaybackProgressEvent.Pause);
+        }
+
+        private async Task ResumePlaybackAsync()
+        {
+            await _orchestrator.ResumeAsync();
+            await ReportProgressAsync(PlaybackProgressEvent.Unpause);
         }
 
         private async Task SeekRelativeAsync(TimeSpan delta)
@@ -171,6 +275,7 @@ namespace NextGenEmby.App.Views
 
             await _orchestrator.SeekAsync(target.Ticks);
             _lastPositionTicks = target.Ticks;
+            await ReportProgressAsync(PlaybackProgressEvent.TimeUpdate);
             UpdateStatus(_orchestrator.State, "Position " + FormatPosition(target));
             if (_infoVisible)
             {
@@ -214,6 +319,54 @@ namespace NextGenEmby.App.Views
             return source;
         }
 
+        private async Task EnsureEmbyClientAsync()
+        {
+            if (_embyClient != null && _session != null)
+            {
+                return;
+            }
+
+            _session = await _sessionStore.LoadAsync();
+            if (_session == null)
+            {
+                return;
+            }
+
+            _httpClient = new HttpClient();
+            _embyClient = EmbyClientFactory.Create(_httpClient, _session);
+        }
+
+        private async void ProgressTimer_OnTick(object sender, object e)
+        {
+            await ReportProgressAsync(PlaybackProgressEvent.TimeUpdate);
+        }
+
+        private async Task ReportProgressAsync(PlaybackProgressEvent eventName)
+        {
+            if (_reportInProgress ||
+                _embyClient == null ||
+                _session == null ||
+                _orchestrator.CurrentDescriptor == null)
+            {
+                return;
+            }
+
+            try
+            {
+                _reportInProgress = true;
+                await _embyClient.ReportProgressAsync(
+                    _session,
+                    _orchestrator.CreateProgressRequest(eventName));
+            }
+            catch
+            {
+            }
+            finally
+            {
+                _reportInProgress = false;
+            }
+        }
+
         private void UpdateStatus(CorePlaybackState state, string message = "")
         {
             StatusBlock.Text = string.IsNullOrWhiteSpace(message)
@@ -228,7 +381,7 @@ namespace NextGenEmby.App.Views
                 state != CorePlaybackState.Failed &&
                 state != CorePlaybackState.Stopped;
 
-            StartButton.IsEnabled = IsSupportedDirectStreamUrl(StreamUrlBox.Text);
+            StartButton.IsEnabled = _launchRequest != null || IsSupportedDirectStreamUrl(StreamUrlBox.Text);
             PauseButton.IsEnabled = hasActivePlayback && state != CorePlaybackState.Paused;
             ResumeButton.IsEnabled = hasActivePlayback && state == CorePlaybackState.Paused;
             StopButton.IsEnabled = hasActivePlayback;
@@ -253,7 +406,7 @@ namespace NextGenEmby.App.Views
 
             InfoBlock.Text =
                 "State: " + _orchestrator.State + Environment.NewLine +
-                "Item: " + descriptor.ItemId + Environment.NewLine +
+                "Item: " + (string.IsNullOrWhiteSpace(_currentItemName) ? descriptor.ItemId : _currentItemName) + Environment.NewLine +
                 "Source: " + source.Name + Environment.NewLine +
                 "Position: " + FormatPosition(position) + Environment.NewLine +
                 "URL: " + source.DirectStreamUrl;
