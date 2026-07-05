@@ -5,7 +5,8 @@
     Background="Black">
     <Grid
         Background="Black"
-        KeyDown="Page_OnKeyDown">
+        KeyDown="Page_OnKeyDown"
+        PointerPressed="Page_OnPointerPressed">
         <MediaPlayerElement
             x:Name="PlayerElement"
             AreTransportControlsEnabled="False"

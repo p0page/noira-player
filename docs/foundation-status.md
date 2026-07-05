@@ -221,7 +221,7 @@ dotnet test tests\NextGenEmby.Core.Tests\NextGenEmby.Core.Tests.csproj -v minima
 结果：
 
 ```text
-Passed: 78
+Passed: 86
 Failed: 0
 Skipped: 0
 ```
@@ -241,7 +241,7 @@ Build succeeded.
 最新 Debug x64 MSIX 已提升包版本、重新签名并安装到本机：
 
 ```powershell
-& 'C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64\signtool.exe' sign /fd SHA256 /sha1 6CB453A2FEC300C6E5034152C6C1A68DE31A7BD0 'src\NextGenEmby.App\AppPackages\NextGenEmby.App_0.1.0.8_x64_Debug_Test\NextGenEmby.App_0.1.0.8_x64_Debug.msix'
+& 'C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64\signtool.exe' sign /fd SHA256 /sha1 6CB453A2FEC300C6E5034152C6C1A68DE31A7BD0 'src\NextGenEmby.App\AppPackages\NextGenEmby.App_0.1.0.9_x64_Debug_Test\NextGenEmby.App_0.1.0.9_x64_Debug.msix'
 ```
 
 结果：
@@ -251,7 +251,7 @@ Successfully signed.
 ```
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File 'src\NextGenEmby.App\AppPackages\NextGenEmby.App_0.1.0.8_x64_Debug_Test\Add-AppDevPackage.ps1' -Force -SkipLoggingTelemetry
+powershell -NoProfile -ExecutionPolicy Bypass -File 'src\NextGenEmby.App\AppPackages\NextGenEmby.App_0.1.0.9_x64_Debug_Test\Add-AppDevPackage.ps1' -Force -SkipLoggingTelemetry
 Get-AppxPackage NextGenEmby.App | Select-Object Name,Version,PackageFamilyName
 ```
 
@@ -259,7 +259,7 @@ Get-AppxPackage NextGenEmby.App | Select-Object Name,Version,PackageFamilyName
 
 ```text
 Success: Your app was successfully installed.
-NextGenEmby.App 0.1.0.8 NextGenEmby.App_h8qjz0sr1sg4m
+NextGenEmby.App 0.1.0.9 NextGenEmby.App_h8qjz0sr1sg4m
 ```
 
 本轮追加修复：
@@ -268,18 +268,21 @@ NextGenEmby.App 0.1.0.8 NextGenEmby.App_h8qjz0sr1sg4m
 - 新增 `IconButtonStyle`，用于 Settings、Refresh 等纯图标按钮，显式设置深色底、边框、白色图标和焦点框；同时补充 `AutomationProperties.Name`，避免 UIA/无障碍树里出现空名称按钮。
 - 修复 Playback 仍嵌在普通页面 chrome 下的问题：进入 `PlaybackPage` 时隐藏 Shell header，并让 `ContentFrame` 跨满根布局两行；离开播放页时恢复 Shell。
 - 播放页底部控制按钮补充 UIA 名称：Pause、Resume、Seek back 10 seconds、Seek forward 30 seconds、More、Stop、Info。
+- 抽出 `PlaybackOverlayInputPolicy` 并补单元测试，统一 Gamepad A/B/Menu 与桌面 fallback 的 OSD 决策：Space/Enter/鼠标点击显示 OSD，M 打开 More，Escape 按状态取消 seek preview、关闭 More、隐藏 OSD 或返回。
 
 本轮 Windows 本机交互 smoke：
 
-- 使用真实 Emby session 启动 0.1.0.8，窗口标题为 `Next Gen Xbox Emby`，`ApplicationFrameHost` 和 `NextGenEmby.App` 均响应。
+- 使用真实 Emby session 启动 0.1.0.9，窗口标题为 `Next Gen Xbox Emby`，`ApplicationFrameHost` 和 `NextGenEmby.App` 均响应。
 - 通过 UI Automation 依次打开 Home、Movies、TV、Search、Settings：Movies 和 TV 均返回 `100 items`，Search 和 Settings 能正常进入。
 - 通过 UI Automation 从 Movies 网格打开第一部影片详情页；详情页显示标题、播放按钮、版本列表、音轨摘要和字幕摘要。
 - 通过详情页 Play 进入播放页；播放状态为 `Playing`，且播放页控件树中不再出现 Home/Movies/TV/Search/Settings，确认播放页已脱离 Shell chrome。
 - 使用 DPI 修正后的窗口截图验证：Home header、Settings/Refresh 图标按钮、Movies 网格、详情页、播放页全屏画面和 More 抽屉均可见且没有明显重叠。
 - Playback More 抽屉可打开，`SourceBox`、`AudioStreamBox`、`SubtitleStreamBox`、`InfoButton` 均存在；当前测试片源无字幕，`SubtitleStreamBox` 正常禁用并显示 Off。
 - Windows 本机短时播放能看到真实画面；本轮结束时已通过 UI Automation 调用 Stop。
+- 已用 computer-use 重新执行 Home -> Movies -> Details -> Playback -> More：截图确认真实播放画面、Shell 隐藏、OSD 显示、More 抽屉、Source/Audio/Subtitles/Info 均可见；最后通过 computer-use 点击 Stop，状态回到 `Stopped`。
+- 已检测到真实 XInput 手柄连接：`XInputGetState(0)` 返回成功，PnP 中存在 `Xbox One Elite Controller` 和 `XINPUT compatible HID device`。当前自动化工具不能直接注入 XInput 按键，真实 GamepadA/Menu/D-pad 操作仍需人手按键或 Xbox 实机验证。
 
 仍需 Xbox / 本机后续验证：
 
-- Windows 本机：补更多真实多音轨/字幕样本、长时间播放、seek preview 的手柄实操。
+- Windows 本机：补更多真实多音轨/字幕样本、长时间播放、seek preview 的真实手柄实操。
 - Xbox 实机：4K 安全区、手柄焦点路径、HDR10 输出、HEVC Main10、P010/NV12 渲染性能、HDR 停止后的 SDR 恢复、Dev Mode 部署体验。
