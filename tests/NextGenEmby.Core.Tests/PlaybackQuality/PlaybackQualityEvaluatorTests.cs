@@ -375,6 +375,57 @@ public sealed class PlaybackQualityEvaluatorTests
     }
 
     [Fact]
+    public void Evaluate_Fails_With_Missing_Color_Pipeline_Reasons_When_Color_Evidence_Is_Required()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "missing-color-pipeline",
+            Expected = new PlaybackQualityExpected
+            {
+                HdrOutput = "Hdr10",
+                DxgiInput = "YCBCR_STUDIO_G2084_TOPLEFT_P2020",
+                DxgiOutput = "RGB_FULL_G2084_NONE_P2020",
+                RequireValidatedConversion = true
+            }
+        };
+
+        PlaybackQualityEvaluator.Evaluate(report);
+
+        Assert.Equal("fail", report.Result);
+        Assert.Contains(
+            "ActualHdrOutput is missing for color-pipeline validation.",
+            report.FailureReasons);
+        Assert.Contains(
+            "DxgiInput is missing for color-pipeline validation.",
+            report.FailureReasons);
+        Assert.Contains(
+            "DxgiOutput is missing for color-pipeline validation.",
+            report.FailureReasons);
+        Assert.Contains(
+            "ConversionStatus is missing for color-pipeline validation.",
+            report.FailureReasons);
+        Assert.Equal("color-pipeline", report.Analysis.PrimaryFailureArea);
+        Assert.Contains("colorPipeline.actualHdrOutput", report.Analysis.RelevantSignals);
+        Assert.Contains("colorPipeline.dxgiInput", report.Analysis.RelevantSignals);
+        Assert.Contains("colorPipeline.dxgiOutput", report.Analysis.RelevantSignals);
+        Assert.Contains("colorPipeline.conversionStatus", report.Analysis.RelevantSignals);
+        Assert.Contains(report.Checks, check =>
+            check.Name == "ActualHdrOutput" &&
+            check.Signal == "colorPipeline.actualHdrOutput" &&
+            check.Expected == "Hdr10" &&
+            check.Actual == "" &&
+            check.Status == "fail" &&
+            check.FailureArea == "color-pipeline");
+        Assert.Contains(report.Checks, check =>
+            check.Name == "ConversionStatus" &&
+            check.Signal == "colorPipeline.conversionStatus" &&
+            check.Expected == "validated" &&
+            check.Actual == "" &&
+            check.Status == "fail" &&
+            check.FailureArea == "color-pipeline");
+    }
+
+    [Fact]
     public void Evaluate_Fails_With_Actionable_Reasons_When_Thresholds_Are_Exceeded()
     {
         var report = new PlaybackQualityReport

@@ -88,21 +88,21 @@ namespace NextGenEmby.Core.PlaybackQuality
                 "MaxAudioStarvedPasses",
                 "buffers.audioStarvedPasses",
                 "buffering");
-            CheckEquals(
+            CheckRequiredEquals(
                 report,
                 "ActualHdrOutput",
                 report.ColorPipeline.ActualHdrOutput,
                 expected.HdrOutput,
                 "colorPipeline.actualHdrOutput",
                 "color-pipeline");
-            CheckEquals(
+            CheckRequiredEquals(
                 report,
                 "DxgiInput",
                 report.ColorPipeline.DxgiInput,
                 expected.DxgiInput,
                 "colorPipeline.dxgiInput",
                 "color-pipeline");
-            CheckEquals(
+            CheckRequiredEquals(
                 report,
                 "DxgiOutput",
                 report.ColorPipeline.DxgiOutput,
@@ -112,6 +112,23 @@ namespace NextGenEmby.Core.PlaybackQuality
             CheckMatchedRefreshRate(report, expected);
 
             if (expected.RequireValidatedConversion &&
+                string.IsNullOrWhiteSpace(report.ColorPipeline.ConversionStatus))
+            {
+                var message = "ConversionStatus is missing for color-pipeline validation.";
+                report.FailureReasons.Add(message);
+                report.Checks.Add(new PlaybackQualityCheck
+                {
+                    Name = "ConversionStatus",
+                    Signal = "colorPipeline.conversionStatus",
+                    Status = "fail",
+                    FailureArea = "color-pipeline",
+                    Expected = "validated",
+                    Actual = "",
+                    Message = message
+                });
+                AddRelevantSignal(report, "colorPipeline.conversionStatus");
+            }
+            else if (expected.RequireValidatedConversion &&
                 report.ColorPipeline.ConversionStatus != "validated" &&
                 report.ColorPipeline.ConversionStatus != "validated;tone-mapped-hable")
             {
@@ -441,6 +458,40 @@ namespace NextGenEmby.Core.PlaybackQuality
                 report.FailureReasons.Add(message);
                 AddRelevantSignal(report, signal);
             }
+        }
+
+        private static void CheckRequiredEquals(
+            PlaybackQualityReport report,
+            string name,
+            string actual,
+            string expected,
+            string signal,
+            string failureArea)
+        {
+            if (string.IsNullOrWhiteSpace(expected))
+            {
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(actual))
+            {
+                var message = name + " is missing for " + failureArea + " validation.";
+                report.FailureReasons.Add(message);
+                report.Checks.Add(new PlaybackQualityCheck
+                {
+                    Name = name,
+                    Signal = signal,
+                    Status = "fail",
+                    FailureArea = failureArea,
+                    Expected = expected,
+                    Actual = "",
+                    Message = message
+                });
+                AddRelevantSignal(report, signal);
+                return;
+            }
+
+            CheckEquals(report, name, actual, expected, signal, failureArea);
         }
 
         private static void CheckEquals(

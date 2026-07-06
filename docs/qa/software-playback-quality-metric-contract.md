@@ -99,7 +99,7 @@ Every report must include these phase-1 limitations:
 
 `actualHdrOutput` is derived from native display status and swapchain state. It is not a direct HDMI analyzer reading.
 
-When color expectations are supplied, the matching color-pipeline observations must be present. `expected.hdrOutput` requires `colorPipeline.actualHdrOutput`; `expected.dxgiOutput` requires `colorPipeline.dxgiOutput`; `expected.requireValidatedConversion` requires `colorPipeline.conversionStatus`. Missing fields are reported as missing evidence so the model can distinguish absent telemetry from a real mismatch.
+When color expectations are supplied, the matching color-pipeline observations must be present. `expected.hdrOutput` requires `colorPipeline.actualHdrOutput`; `expected.dxgiInput` requires `colorPipeline.dxgiInput`; `expected.dxgiOutput` requires `colorPipeline.dxgiOutput`; `expected.requireValidatedConversion` requires `colorPipeline.conversionStatus`. Missing fields must fail with explicit missing-telemetry reasons and be reported as missing evidence so the model can distinguish absent telemetry from a real mismatch.
 
 `display.refreshRateHz` is the software-observed display mode refresh rate, sourced from native HDMI display status when available. `PlaybackRefreshRatePolicy` treats 1x, 2x, and 2.5x cadence as acceptable with a 0.15Hz tolerance, matching the native Xbox display-mode selection policy. For example, 23.976fps can match 23.976Hz, 24Hz, 47.952Hz, or 59.94Hz/60Hz, while 25fps should prefer a 50Hz-compatible mode.
 
