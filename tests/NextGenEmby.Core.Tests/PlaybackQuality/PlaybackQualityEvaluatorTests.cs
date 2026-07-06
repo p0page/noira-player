@@ -129,6 +129,18 @@ public sealed class PlaybackQualityEvaluatorTests
         Assert.Contains("timing.maxFrameGapMs", report.Analysis.RelevantSignals);
         Assert.Contains("sync.audioVideoDriftMsP95", report.Analysis.RelevantSignals);
         Assert.Contains("buffers.videoStarvedPasses", report.Analysis.RelevantSignals);
+        Assert.Contains(report.Checks, check =>
+            check.Name == "ActualHdrOutput" &&
+            check.Signal == "colorPipeline.actualHdrOutput" &&
+            check.Status == "fail" &&
+            check.FailureArea == "color-pipeline");
+        Assert.Contains(report.Checks, check =>
+            check.Name == "MaxFrameGapMs" &&
+            check.Signal == "timing.maxFrameGapMs" &&
+            check.Expected == "105.000" &&
+            check.Actual == "180.000" &&
+            check.Status == "fail" &&
+            check.FailureArea == "frame-pacing");
     }
 
     [Fact]
@@ -148,6 +160,7 @@ public sealed class PlaybackQualityEvaluatorTests
         Assert.Contains("\"metricVersion\"", json);
         Assert.Contains("\"runId\"", json);
         Assert.Contains("\"analysis\"", json);
+        Assert.Contains("\"checks\"", json);
         Assert.Contains("\"limitations\"", json);
         Assert.Equal("roundtrip", parsed.RunId);
         Assert.Equal("source-1", parsed.Source.MediaSourceId);

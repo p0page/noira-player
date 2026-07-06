@@ -7,6 +7,7 @@ namespace NextGenEmby.Core.PlaybackQuality
         public static void Evaluate(PlaybackQualityReport report)
         {
             report.FailureReasons.Clear();
+            report.Checks.Clear();
             report.Analysis = new PlaybackQualityAnalysis();
 
             if (report.Expected == null)
@@ -25,61 +26,92 @@ namespace NextGenEmby.Core.PlaybackQuality
                 (long)report.Timing.DroppedVideoFrames,
                 expected.MaxDroppedFrames,
                 "MaxDroppedFrames",
-                "timing.droppedVideoFrames");
+                "timing.droppedVideoFrames",
+                "frame-pacing");
             CheckMax(
                 report,
                 "MaxFrameGapMs",
                 report.Timing.MaxFrameGapMs,
                 expected.MaxFrameGapMs,
                 "MaxFrameGapMs",
-                "timing.maxFrameGapMs");
+                "timing.maxFrameGapMs",
+                "frame-pacing");
             CheckMax(
                 report,
                 "AudioVideoDriftMsP95",
                 report.Sync.AudioVideoDriftMsP95,
                 expected.MaxAudioVideoDriftMsP95,
                 "MaxAudioVideoDriftMsP95",
-                "sync.audioVideoDriftMsP95");
+                "sync.audioVideoDriftMsP95",
+                "av-sync");
             CheckMax(
                 report,
                 "VideoStarvedPasses",
                 (long)report.Buffers.VideoStarvedPasses,
                 expected.MaxVideoStarvedPasses,
                 "MaxVideoStarvedPasses",
-                "buffers.videoStarvedPasses");
+                "buffers.videoStarvedPasses",
+                "buffering");
             CheckMax(
                 report,
                 "AudioStarvedPasses",
                 (long)report.Buffers.AudioStarvedPasses,
                 expected.MaxAudioStarvedPasses,
                 "MaxAudioStarvedPasses",
-                "buffers.audioStarvedPasses");
+                "buffers.audioStarvedPasses",
+                "buffering");
             CheckEquals(
                 report,
                 "ActualHdrOutput",
                 report.ColorPipeline.ActualHdrOutput,
                 expected.HdrOutput,
-                "colorPipeline.actualHdrOutput");
+                "colorPipeline.actualHdrOutput",
+                "color-pipeline");
             CheckEquals(
                 report,
                 "DxgiInput",
                 report.ColorPipeline.DxgiInput,
                 expected.DxgiInput,
-                "colorPipeline.dxgiInput");
+                "colorPipeline.dxgiInput",
+                "color-pipeline");
             CheckEquals(
                 report,
                 "DxgiOutput",
                 report.ColorPipeline.DxgiOutput,
                 expected.DxgiOutput,
-                "colorPipeline.dxgiOutput");
+                "colorPipeline.dxgiOutput",
+                "color-pipeline");
 
             if (expected.RequireValidatedConversion &&
                 report.ColorPipeline.ConversionStatus != "validated" &&
                 report.ColorPipeline.ConversionStatus != "validated;tone-mapped-hable")
             {
-                report.FailureReasons.Add(
-                    "ConversionStatus " + report.ColorPipeline.ConversionStatus + " is not validated.");
+                var message = "ConversionStatus " + report.ColorPipeline.ConversionStatus + " is not validated.";
+                report.FailureReasons.Add(message);
+                report.Checks.Add(new PlaybackQualityCheck
+                {
+                    Name = "ConversionStatus",
+                    Signal = "colorPipeline.conversionStatus",
+                    Status = "fail",
+                    FailureArea = "color-pipeline",
+                    Expected = "validated",
+                    Actual = report.ColorPipeline.ConversionStatus,
+                    Message = message
+                });
                 AddRelevantSignal(report, "colorPipeline.conversionStatus");
+            }
+            else if (expected.RequireValidatedConversion)
+            {
+                report.Checks.Add(new PlaybackQualityCheck
+                {
+                    Name = "ConversionStatus",
+                    Signal = "colorPipeline.conversionStatus",
+                    Status = "pass",
+                    FailureArea = "color-pipeline",
+                    Expected = "validated",
+                    Actual = report.ColorPipeline.ConversionStatus,
+                    Message = "ConversionStatus is validated."
+                });
             }
 
             report.Result = report.FailureReasons.Count == 0 ? "pass" : "fail";
@@ -99,12 +131,30 @@ namespace NextGenEmby.Core.PlaybackQuality
             long actual,
             long? max,
             string thresholdName,
-            string signal)
+            string signal,
+            string failureArea)
         {
-            if (max.HasValue && actual > max.Value)
+            if (!max.HasValue)
             {
-                report.FailureReasons.Add(
-                    metricName + " " + actual + " exceeded " + thresholdName + " " + max.Value + ".");
+                return;
+            }
+
+            var message = metricName + " " + actual + " exceeded " + thresholdName + " " + max.Value + ".";
+            var failed = actual > max.Value;
+            report.Checks.Add(new PlaybackQualityCheck
+            {
+                Name = metricName,
+                Signal = signal,
+                Status = failed ? "fail" : "pass",
+                FailureArea = failureArea,
+                Expected = max.Value.ToString(CultureInfo.InvariantCulture),
+                Actual = actual.ToString(CultureInfo.InvariantCulture),
+                Message = failed ? message : metricName + " is within " + thresholdName + "."
+            });
+
+            if (failed)
+            {
+                report.FailureReasons.Add(message);
                 AddRelevantSignal(report, signal);
             }
         }
@@ -115,12 +165,32 @@ namespace NextGenEmby.Core.PlaybackQuality
             double actual,
             double? max,
             string thresholdName,
-            string signal)
+            string signal,
+            string failureArea)
         {
-            if (max.HasValue && actual > max.Value)
+            if (!max.HasValue)
             {
-                report.FailureReasons.Add(
-                    metricName + " " + Format(actual) + " exceeded " + thresholdName + " " + Format(max.Value) + ".");
+                return;
+            }
+
+            var formattedActual = Format(actual);
+            var formattedMax = Format(max.Value);
+            var message = metricName + " " + formattedActual + " exceeded " + thresholdName + " " + formattedMax + ".";
+            var failed = actual > max.Value;
+            report.Checks.Add(new PlaybackQualityCheck
+            {
+                Name = metricName,
+                Signal = signal,
+                Status = failed ? "fail" : "pass",
+                FailureArea = failureArea,
+                Expected = formattedMax,
+                Actual = formattedActual,
+                Message = failed ? message : metricName + " is within " + thresholdName + "."
+            });
+
+            if (failed)
+            {
+                report.FailureReasons.Add(message);
                 AddRelevantSignal(report, signal);
             }
         }
@@ -130,12 +200,30 @@ namespace NextGenEmby.Core.PlaybackQuality
             string name,
             string actual,
             string expected,
-            string signal)
+            string signal,
+            string failureArea)
         {
-            if (!string.IsNullOrWhiteSpace(expected) &&
-                !string.Equals(actual, expected, System.StringComparison.Ordinal))
+            if (string.IsNullOrWhiteSpace(expected))
             {
-                report.FailureReasons.Add(name + " " + actual + " did not match expected " + expected + ".");
+                return;
+            }
+
+            var failed = !string.Equals(actual, expected, System.StringComparison.Ordinal);
+            var message = name + " " + actual + " did not match expected " + expected + ".";
+            report.Checks.Add(new PlaybackQualityCheck
+            {
+                Name = name,
+                Signal = signal,
+                Status = failed ? "fail" : "pass",
+                FailureArea = failureArea,
+                Expected = expected,
+                Actual = actual,
+                Message = failed ? message : name + " matched expected " + expected + "."
+            });
+
+            if (failed)
+            {
+                report.FailureReasons.Add(message);
                 AddRelevantSignal(report, signal);
             }
         }
