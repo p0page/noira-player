@@ -1280,3 +1280,32 @@ Then continue design and implementation until the route passes.
   - Screenshots were captured from the UWP `ApplicationFrameHost` window under `C:\Users\yqzzx\AppData\Local\Temp\nextgenemby-home-fixture-156-shots`.
   - The media library rail now shows the fixture wide artwork on library/section cards instead of mostly empty matte surfaces.
   - No app-content mouse clicks were used.
+
+### 2026-07-06 - Search Error Recovery Fixture
+
+- App version: 0.1.0.159.
+- Scope: turn Search server-failure recovery into a deterministic keyboard regression route while the Xbox and saved Emby session are unavailable.
+- Interaction changes:
+  - `dev-command.json` accepts route `search-error`.
+  - The DEBUG route navigates to Search, fills `Aurora Protocol`, and renders the existing `Unable to search` recovery panel with `Edit search` and `Search again`.
+  - SearchBox now handles `Down` itself so TextBox editing behavior cannot trap D-pad navigation before the selected scope.
+  - The Search error-state actions now handle `Left`/`Right` between `Edit search` and `Search again`.
+- Automated verification:
+  - TDD red path confirmed `search-error` was not accepted before route support.
+  - TDD red path confirmed the Search error route did not render a deterministic keyboard recovery state before implementation.
+  - Computer Use found two real focus bugs during validation; TDD red paths then covered query `Down` routing and error-action left/right routing before fixes.
+  - Core tests passed: 340 total.
+  - App Debug x64 build passed, producing `NextGenEmby.App_0.1.0.159_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.159`.
+- Keyboard-only validation with Computer Use:
+  - Wrote `dev-command.json` with route `search-error` and launched the installed app.
+  - `dev-command-result.txt` reported `completed / search-error`.
+  - Initial Search state showed `Aurora Protocol`, `Unable to search`, recovery copy, `Edit search`, and `Search again`, with focus on the query box.
+  - Pressed `Down`; visual focus moved from the query box to the selected `All` scope.
+  - Pressed `Down`; visual focus moved to `Edit search`.
+  - Pressed `Right`; visual focus moved to `Search again`.
+  - Pressed `Return`; the deterministic retry re-rendered the error state and returned focus to the query box.
+  - Repeated `Down`, `Down`, `Right`, `Left`; visual focus returned from `Search again` to `Edit search`.
+  - No app-content mouse clicks were used.
+- Tooling note:
+  - UI Automation `focused_element` intermittently continued to report `SearchBox` after D-pad moves, while screenshots and actual button activation showed the visible TV focus correctly moved. This run therefore used Computer Use screenshots as the authority for focus position.

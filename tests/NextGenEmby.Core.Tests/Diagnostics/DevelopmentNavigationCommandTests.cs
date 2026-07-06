@@ -34,6 +34,7 @@ public sealed class DevelopmentNavigationCommandTests
     [InlineData("LiveTv-Unsupported", "livetv-unsupported")]
     [InlineData("Music-Unsupported", "music-unsupported")]
     [InlineData("Home-Fixture", "home-fixture")]
+    [InlineData("Search-Error", "search-error")]
     public void TryParseJson_Accepts_Guide_Routes(string route, string normalizedRoute)
     {
         var parsed = DevelopmentNavigationCommand.TryParseJson(

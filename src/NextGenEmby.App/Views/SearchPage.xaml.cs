@@ -13,6 +13,7 @@ using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Media.Imaging;
+using Windows.UI.Xaml.Navigation;
 
 namespace NextGenEmby.App.Views
 {
@@ -28,6 +29,9 @@ namespace NextGenEmby.App.Views
         private bool _isNavigatingToDetails;
         private int _searchGeneration;
         private string _selectedScopeKey = "all";
+#if DEBUG
+        private SearchDevelopmentNavigationRequest? _developmentRequest;
+#endif
 
         public SearchPage()
         {
@@ -38,12 +42,28 @@ namespace NextGenEmby.App.Views
             Unloaded += SearchPage_OnUnloaded;
         }
 
+        protected override void OnNavigatedTo(NavigationEventArgs e)
+        {
+            base.OnNavigatedTo(e);
+#if DEBUG
+            _developmentRequest = e.Parameter as SearchDevelopmentNavigationRequest;
+#endif
+        }
+
         private void SearchPage_OnLoaded(object sender, RoutedEventArgs e)
         {
             _isUnloaded = false;
             _isNavigatingToDetails = false;
             EnsureScopeButtons();
             ApplyScopeButtonState();
+#if DEBUG
+            if (_developmentRequest != null && _developmentRequest.SimulateError)
+            {
+                SearchBox.Text = _developmentRequest.Term;
+                RenderDevelopmentSearchError();
+                return;
+            }
+#endif
             SearchBox.Focus(FocusState.Programmatic);
         }
 
@@ -88,10 +108,22 @@ namespace NextGenEmby.App.Views
                 return;
             }
 
+            if (IsDownKey(e.Key))
+            {
+                e.Handled = true;
+                FocusSelectedScope(FocusState.Keyboard);
+                return;
+            }
         }
 
         private void Page_OnKeyDown(object sender, KeyRoutedEventArgs e)
         {
+            if (TryMoveBetweenEmptyStateActions(e.Key))
+            {
+                e.Handled = true;
+                return;
+            }
+
             if (TryRouteSearchDirectionalKey(e.Key, e.OriginalSource, e.Handled))
             {
                 e.Handled = true;
@@ -199,6 +231,14 @@ namespace NextGenEmby.App.Views
                 return;
             }
 
+#if DEBUG
+            if (_developmentRequest != null && _developmentRequest.SimulateError)
+            {
+                RenderDevelopmentSearchError();
+                return;
+            }
+#endif
+
             StatusBlock.Text = "Searching " + scope.Label + "...";
 
             try
@@ -282,6 +322,20 @@ namespace NextGenEmby.App.Views
             StatusBlock.Text = cards.Count + " results / " + scope.Label;
             FocusAfterSearch(completionFocusTarget);
         }
+
+#if DEBUG
+        private void RenderDevelopmentSearchError()
+        {
+            ResultsGrid.Items.Clear();
+            _isNavigatingToDetails = false;
+            StatusBlock.Text = "Unable to search.";
+            ShowEmptyState(
+                "Unable to search",
+                "Check the server connection, then try again.",
+                showRetry: true);
+            SearchBox.Focus(FocusState.Programmatic);
+        }
+#endif
 
         private void FocusAfterSearch(SearchCompletionFocusTarget completionFocusTarget)
         {
@@ -473,6 +527,22 @@ namespace NextGenEmby.App.Views
 
             return EmptyEditButton.Focus(focusState) ||
                 EmptyRetryButton.Focus(focusState);
+        }
+
+        private bool TryMoveBetweenEmptyStateActions(VirtualKey key)
+        {
+            var focusedElement = FocusManager.GetFocusedElement();
+            if (IsRightKey(key) && IsFocusWithin(focusedElement, EmptyEditButton))
+            {
+                return EmptyRetryButton.Focus(FocusState.Keyboard);
+            }
+
+            if (IsLeftKey(key) && IsFocusWithin(focusedElement, EmptyRetryButton))
+            {
+                return EmptyEditButton.Focus(FocusState.Keyboard);
+            }
+
+            return false;
         }
 
         private bool IsEmptyStateVisible()

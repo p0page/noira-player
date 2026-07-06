@@ -787,6 +787,10 @@ namespace NextGenEmby.App
                     NavigateSearch();
                     return;
 
+                case "search-error":
+                    NavigateTo(typeof(SearchPage), new SearchDevelopmentNavigationRequest());
+                    return;
+
                 case "settings":
                     NavigateSettings();
                     return;
