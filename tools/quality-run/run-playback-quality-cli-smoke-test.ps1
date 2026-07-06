@@ -16,6 +16,11 @@ try {
     $candidateDir = Join-Path $tempRoot 'candidate-suite'
     $comparisonsDir = Join-Path $tempRoot 'suite-comparisons'
     $suiteFromReportsPath = Join-Path $tempRoot 'suite-from-reports.json'
+    $stallBaselineDir = Join-Path $tempRoot 'stall-baseline-suite'
+    $stallCandidateDir = Join-Path $tempRoot 'stall-candidate-suite'
+    $previousComparisonsDir = Join-Path $tempRoot 'previous-comparisons'
+    $stallComparisonsDir = Join-Path $tempRoot 'stall-suite-comparisons'
+    $stallSuitePath = Join-Path $tempRoot 'stall-suite.json'
 
     @'
 {
@@ -217,6 +222,63 @@ try {
     $comparisonFromSuite = Get-Content -Raw -LiteralPath $comparisonFromSuitePath | ConvertFrom-Json
     if ($comparisonFromSuite.result -ne 'improved') {
         throw 'Expected playback quality CLI compare-suite comparison result to be improved.'
+    }
+
+    New-Item -ItemType Directory -Path $stallBaselineDir | Out-Null
+    New-Item -ItemType Directory -Path $stallCandidateDir | Out-Null
+    New-Item -ItemType Directory -Path $previousComparisonsDir | Out-Null
+    Copy-Item -LiteralPath $baselineEnvelopePath -Destination (Join-Path $stallBaselineDir 'case-stall.json')
+    Copy-Item -LiteralPath $baselineEnvelopePath -Destination (Join-Path $stallCandidateDir 'case-stall.json')
+
+    Push-Location $repoRoot
+    try {
+        dotnet run `
+            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
+            --no-build `
+            -- compare `
+            --baseline $baselineEnvelopePath `
+            --candidate $baselineEnvelopePath `
+            --output (Join-Path $previousComparisonsDir 'case-stall.json')
+        if ($LASTEXITCODE -ne 0) {
+            throw 'playback quality CLI previous comparison generation returned a non-zero exit code.'
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    Push-Location $repoRoot
+    try {
+        dotnet run `
+            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
+            --no-build `
+            -- compare-suite `
+            --baseline-dir $stallBaselineDir `
+            --candidate-dir $stallCandidateDir `
+            --previous-comparisons-dir $previousComparisonsDir `
+            --comparisons-dir $stallComparisonsDir `
+            --stall-threshold 2 `
+            --output $stallSuitePath
+        if ($LASTEXITCODE -ne 0) {
+            throw 'playback quality CLI compare-suite with previous comparisons returned a non-zero exit code.'
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    $stallSuite = Get-Content -Raw -LiteralPath $stallSuitePath | ConvertFrom-Json
+    if ($stallSuite.action -ne 'change-optimization-strategy') {
+        throw 'Expected playback quality CLI compare-suite stall action to change optimization strategy.'
+    }
+
+    $stallComparison = Get-Content -Raw -LiteralPath (Join-Path $stallComparisonsDir 'case-stall.json') | ConvertFrom-Json
+    if ($stallComparison.optimization.action -ne 'change-optimization-strategy') {
+        throw 'Expected playback quality CLI compare-suite stall comparison action to change optimization strategy.'
+    }
+
+    if (-not ($stallComparison.optimization.blockers | Where-Object { $_ -eq 'iteration.stalled' })) {
+        throw 'Expected playback quality CLI compare-suite stall comparison to include iteration.stalled blocker.'
     }
 
     Write-Output 'playback-quality-cli smoke ok'

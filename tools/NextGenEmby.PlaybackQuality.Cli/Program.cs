@@ -95,6 +95,7 @@ internal static class Program
             {
                 StallComparisonCountThreshold = options.StallComparisonCountThreshold
             };
+            AddPreviousComparisonIfPresent(options, pair, context);
 
             var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate, context);
             comparisons.Add(comparison);
@@ -206,6 +207,9 @@ internal static class Program
                 case "--comparisons-dir":
                     options.ComparisonsDirectory = ReadValue(args, ref index, arg);
                     break;
+                case "--previous-comparisons-dir":
+                    options.PreviousComparisonsDirectory = ReadValue(args, ref index, arg);
+                    break;
                 case "--stall-threshold":
                     options.StallComparisonCountThreshold = int.Parse(
                         ReadValue(args, ref index, arg),
@@ -235,6 +239,33 @@ internal static class Program
         }
 
         return options;
+    }
+
+    private static void AddPreviousComparisonIfPresent(
+        CompareSuiteOptions options,
+        ReportPair pair,
+        PlaybackQualityComparisonContext context)
+    {
+        if (string.IsNullOrWhiteSpace(options.PreviousComparisonsDirectory))
+        {
+            return;
+        }
+
+        if (!Directory.Exists(options.PreviousComparisonsDirectory))
+        {
+            throw new DirectoryNotFoundException(
+                "Previous comparisons directory not found: " +
+                options.PreviousComparisonsDirectory);
+        }
+
+        var previousPath = Path.Combine(
+            options.PreviousComparisonsDirectory,
+            pair.RelativePath);
+        if (File.Exists(previousPath))
+        {
+            context.PreviousComparisons.Add(
+                ReadJson<PlaybackQualityRunComparison>(previousPath));
+        }
     }
 
     private static List<ReportPair> FindReportPairs(
@@ -394,7 +425,7 @@ internal static class Program
         writer.WriteLine("Usage:");
         writer.WriteLine("  playback-quality compare --baseline <report.json> --candidate <report.json> [--previous <comparison.json>...] [--stall-threshold <n>] [--output <comparison.json>]");
         writer.WriteLine("  playback-quality summarize --comparison <comparison.json> [--comparison <comparison.json>...] [--output <suite.json>]");
-        writer.WriteLine("  playback-quality compare-suite --baseline-dir <reports-dir> --candidate-dir <reports-dir> [--comparisons-dir <comparison-dir>] [--stall-threshold <n>] [--output <suite.json>]");
+        writer.WriteLine("  playback-quality compare-suite --baseline-dir <reports-dir> --candidate-dir <reports-dir> [--previous-comparisons-dir <comparison-dir>] [--comparisons-dir <comparison-dir>] [--stall-threshold <n>] [--output <suite.json>]");
     }
 
     private sealed class CompareOptions
@@ -417,6 +448,7 @@ internal static class Program
         public string BaselineDirectory { get; set; } = "";
         public string CandidateDirectory { get; set; } = "";
         public string ComparisonsDirectory { get; set; } = "";
+        public string PreviousComparisonsDirectory { get; set; } = "";
         public string OutputPath { get; set; } = "";
         public int StallComparisonCountThreshold { get; set; } = 2;
     }
