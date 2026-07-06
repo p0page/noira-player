@@ -111,6 +111,24 @@ public sealed class PlaybackQualityReportAnalyzerTests
     }
 
     [Fact]
+    public void Analyze_Reports_Missing_Startup_Duration_When_Startup_Threshold_Is_Expected()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "missing-startup-duration",
+            Result = "observed",
+            Expected = new PlaybackQualityExpected
+            {
+                MaxStartupDurationMs = 2000
+            }
+        };
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Contains("startup.startupDurationMs", analysis.MissingEvidence);
+    }
+
+    [Fact]
     public void Analyze_Adds_Expected_Frame_Duration_As_Frame_Pacing_Evidence()
     {
         var report = new PlaybackQualityReport

@@ -91,6 +91,13 @@ namespace NextGenEmby.Core.PlaybackQuality
                 analysis.MissingEvidence.Add("timing.renderedVideoFrames");
             }
 
+            if (report.Expected != null &&
+                report.Expected.MaxStartupDurationMs.HasValue &&
+                report.Startup.StartupDurationMs <= 0)
+            {
+                analysis.MissingEvidence.Add("startup.startupDurationMs");
+            }
+
             if (report.Source.FrameRate > 0 && report.Timing.ExpectedFrameDurationMs <= 0)
             {
                 analysis.MissingEvidence.Add("timing.expectedFrameDurationMs");
