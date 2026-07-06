@@ -44,5 +44,6 @@ Playback quality reports are optimized for model/agent consumption:
 - `analysis.relevantSignals` names the exact report fields that triggered the conclusion;
 - `PlaybackQualityReportAnalyzer` emits a model-facing analysis JSON with primary and secondary failure areas, failed check expected/actual values, evidence signals, missing evidence, and software-only limitations;
 - `triageSteps` ranks blocker and failure investigation steps so automated model runs can decide whether to collect missing evidence or edit playback Core first;
+- `sample` includes observed/minimum sample duration and additional required rendered frames when frame-rate evidence is available;
 - `display.refreshRateHz` is treated as required evidence for diagnosing 23.976fps/24fps cadence issues and is exposed by native display status when HDMI mode data is available;
 - `limitations` prevents the model from inferring hardware facts that pure software telemetry cannot prove.

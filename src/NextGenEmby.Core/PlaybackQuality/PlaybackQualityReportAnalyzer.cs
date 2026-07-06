@@ -44,6 +44,9 @@ namespace NextGenEmby.Core.PlaybackQuality
         public string Status { get; set; } = "unknown";
         public ulong RenderedVideoFrames { get; set; }
         public long? MinRenderedVideoFrames { get; set; }
+        public long AdditionalRenderedFramesRequired { get; set; }
+        public double ObservedSampleDurationMs { get; set; }
+        public double MinimumSampleDurationMs { get; set; }
         public string Reason { get; set; } = "";
     }
 
@@ -481,6 +484,22 @@ namespace NextGenEmby.Core.PlaybackQuality
                 RenderedVideoFrames = report.Timing.RenderedVideoFrames,
                 MinRenderedVideoFrames = report.Expected?.MinRenderedVideoFrames
             };
+            var sampleFrameRate = GetSampleFrameRate(report);
+            if (sampleFrameRate > 0)
+            {
+                sample.ObservedSampleDurationMs = report.Timing.RenderedVideoFrames * 1000.0 / sampleFrameRate;
+                if (report.Expected != null && report.Expected.MinRenderedVideoFrames.HasValue)
+                {
+                    sample.MinimumSampleDurationMs =
+                        report.Expected.MinRenderedVideoFrames.Value * 1000.0 / sampleFrameRate;
+                }
+            }
+
+            if (report.Expected != null && report.Expected.MinRenderedVideoFrames.HasValue)
+            {
+                var remaining = report.Expected.MinRenderedVideoFrames.Value - (long)report.Timing.RenderedVideoFrames;
+                sample.AdditionalRenderedFramesRequired = remaining > 0 ? remaining : 0;
+            }
 
             if (report.Timing.RenderedVideoFrames == 0)
             {
@@ -503,6 +522,21 @@ namespace NextGenEmby.Core.PlaybackQuality
                 ? "Rendered frame sample met the expected minimum."
                 : "Rendered video frames were captured; no minimum rendered frame expectation was supplied.";
             return sample;
+        }
+
+        private static double GetSampleFrameRate(PlaybackQualityReport report)
+        {
+            if (report.Source.FrameRate > 0)
+            {
+                return report.Source.FrameRate;
+            }
+
+            if (report.Expected != null && report.Expected.FrameRate > 0)
+            {
+                return report.Expected.FrameRate;
+            }
+
+            return 0;
         }
 
         private static void AddInvestigationHints(PlaybackQualityModelAnalysis analysis)

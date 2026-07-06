@@ -223,6 +223,10 @@ public sealed class PlaybackQualityReportAnalyzerTests
             Timing = new PlaybackQualityTiming
             {
                 RenderedVideoFrames = 24
+            },
+            Source = new PlaybackQualitySource
+            {
+                FrameRate = 23.976
             }
         };
         report.Checks.Add(new PlaybackQualityCheck
@@ -240,6 +244,9 @@ public sealed class PlaybackQualityReportAnalyzerTests
         Assert.Equal("insufficient", analysis.Sample.Status);
         Assert.Equal(24UL, analysis.Sample.RenderedVideoFrames);
         Assert.Equal(120, analysis.Sample.MinRenderedVideoFrames);
+        Assert.Equal(96, analysis.Sample.AdditionalRenderedFramesRequired);
+        Assert.Equal(1001.001, analysis.Sample.ObservedSampleDurationMs, 3);
+        Assert.Equal(5005.005, analysis.Sample.MinimumSampleDurationMs, 3);
         Assert.Equal(
             "Rendered frame sample is below the expected minimum; do not tune frame pacing from this run alone.",
             analysis.Sample.Reason);
@@ -267,6 +274,7 @@ public sealed class PlaybackQualityReportAnalyzerTests
         Assert.Equal("sufficient", analysis.Sample.Status);
         Assert.Equal(240UL, analysis.Sample.RenderedVideoFrames);
         Assert.Equal(120, analysis.Sample.MinRenderedVideoFrames);
+        Assert.Equal(0, analysis.Sample.AdditionalRenderedFramesRequired);
     }
 
     [Fact]

@@ -55,7 +55,7 @@ The primary consumer of `quality-run` reports is an automated model or agent, no
 The analyzer output must include:
 
 - `primaryFailureArea` copied from report analysis;
-- `sample` with `status`, rendered frame count, expected minimum rendered frames, and a reason;
+- `sample` with `status`, rendered frame count, expected minimum rendered frames, derived sample durations, additional required frames, and a reason;
 - `optimizationGate` with a machine-readable decision on whether this run is usable for playback Core optimization;
 - `framePacing` with a machine-readable failure pattern and the signals that caused it;
 - `triageSteps` with ranked, machine-readable next investigation steps;
@@ -69,6 +69,7 @@ The analyzer output must include:
 
 This keeps model iteration grounded in evidence. For example, a report can identify `color-pipeline` as primary while still preserving `frame-pacing` as a secondary failure area.
 `sample.status` must be checked before changing playback timing logic. `insufficient` means the run did not render enough frames to support frame-pacing optimization from that run alone.
+`sample.observedSampleDurationMs`, `sample.minimumSampleDurationMs`, and `sample.additionalRenderedFramesRequired` must be derived when frame-rate evidence exists. These fields let an automated model choose the next capture duration instead of guessing from raw frame counts.
 `optimizationGate.canOptimizePlaybackCore` must be `true` only when the report failed, the sample is sufficient, required evidence is present, and at least one failed area is available. If it is `false`, automated optimization must address `optimizationGate.blockers` and `optimizationGate.blockerSignals` first.
 `framePacing.pattern` must classify frame pacing failures before changing native timing logic. Supported phase-1 values are `not-applicable`, `sample-insufficient`, `refresh-mismatch`, `starvation-driven`, `sustained-jitter`, `tail-jitter`, `dropped-frames`, `isolated-gap`, and `unknown`. `sample-insufficient` means the run did not render enough frames to support timing-threshold diagnosis; the model should collect a longer rendered-frame sample or repair startup/render readiness before tuning frame pacing. `starvation-driven` means frame pacing failed while video or audio starvation also failed; the model should inspect demux/decode/network supply before tuning wait/drop thresholds.
 `triageSteps` must be ordered by `rank`. Steps with `kind = blocker` come before playback optimization steps when `optimizationGate.status` is `blocked`; otherwise failure steps follow the failure-area priority order below. Each step must include the failure area, suggested action, signals, and code targets so an automated model can choose the next edit or evidence-collection action without inferring priority from prose.
