@@ -13,6 +13,8 @@ namespace NextGenEmby.Core.PlaybackQuality
 
         public PlaybackQualityMetricsSnapshot? Metrics { get; set; }
 
+        public PlaybackQualityStartup? Startup { get; set; }
+
         public PlaybackQualityExpected? Expected { get; set; }
     }
 
@@ -59,6 +61,11 @@ namespace NextGenEmby.Core.PlaybackQuality
             if (request.Metrics != null)
             {
                 PlaybackQualityReportMapper.ApplyMetrics(report, request.Metrics);
+            }
+
+            if (request.Startup != null)
+            {
+                report.Startup = request.Startup;
             }
 
             PlaybackQualityEvaluator.Evaluate(report);

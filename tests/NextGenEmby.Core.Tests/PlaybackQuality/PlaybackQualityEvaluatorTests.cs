@@ -71,6 +71,41 @@ public sealed class PlaybackQualityEvaluatorTests
     }
 
     [Fact]
+    public void Evaluate_Fails_When_Startup_Duration_Exceeds_Threshold()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "slow-startup",
+            Expected = new PlaybackQualityExpected
+            {
+                MaxStartupDurationMs = 2000,
+                RequireValidatedConversion = false
+            },
+            Startup = new PlaybackQualityStartup
+            {
+                StartupDurationMs = 3500
+            }
+        };
+
+        PlaybackQualityEvaluator.Evaluate(report);
+
+        Assert.Equal("fail", report.Result);
+        Assert.Contains(
+            "StartupDurationMs 3500.000 exceeded MaxStartupDurationMs 2000.000.",
+            report.FailureReasons);
+        Assert.Equal("startup", report.Analysis.PrimaryFailureArea);
+        Assert.Equal(
+            "Inspect Emby request, source open, demux initialization, and first-frame readiness.",
+            report.Analysis.SuggestedNextAction);
+        Assert.Contains("startup.startupDurationMs", report.Analysis.RelevantSignals);
+        Assert.Contains(report.Checks, check =>
+            check.Name == "StartupDurationMs" &&
+            check.Signal == "startup.startupDurationMs" &&
+            check.Status == "fail" &&
+            check.FailureArea == "startup");
+    }
+
+    [Fact]
     public void Evaluate_Fails_With_Actionable_Reasons_When_Thresholds_Are_Exceeded()
     {
         var report = new PlaybackQualityReport

@@ -22,6 +22,14 @@ namespace NextGenEmby.Core.PlaybackQuality
             var expected = report.Expected;
             CheckMax(
                 report,
+                "StartupDurationMs",
+                report.Startup.StartupDurationMs,
+                expected.MaxStartupDurationMs,
+                "MaxStartupDurationMs",
+                "startup.startupDurationMs",
+                "startup");
+            CheckMax(
+                report,
                 "DroppedVideoFrames",
                 (long)report.Timing.DroppedVideoFrames,
                 expected.MaxDroppedFrames,

@@ -96,6 +96,38 @@ public sealed class PlaybackQualityReportComposerTests
         Assert.Contains("\"display.refreshRateHz\"", json);
     }
 
+    [Fact]
+    public void Compose_Copies_Startup_Evidence_And_Evaluates_Startup_Threshold()
+    {
+        var expected = CreateHdrExpected(maxFrameGapMs: 105);
+        expected.MaxStartupDurationMs = 2000;
+
+        var result = PlaybackQualityReportComposer.Compose(new PlaybackQualityReportRequest
+        {
+            RunId = "slow-startup",
+            Descriptor = CreatePlaybackDescriptor(frameRate: 23.976),
+            DisplayStatus = CreateHdrDisplayStatus(refreshRateHz: 59.94006),
+            Metrics = CreateStableMetrics(maxFrameGapMs: 60),
+            Startup = new PlaybackQualityStartup
+            {
+                CommandReceivedAt = "2026-07-07T00:00:00Z",
+                PlaybackStartedAt = "2026-07-07T00:00:03.500Z",
+                StartupDurationMs = 3500
+            },
+            Expected = expected
+        });
+
+        Assert.Equal("2026-07-07T00:00:00Z", result.Report.Startup.CommandReceivedAt);
+        Assert.Equal("2026-07-07T00:00:03.500Z", result.Report.Startup.PlaybackStartedAt);
+        Assert.Equal(3500, result.Report.Startup.StartupDurationMs);
+        Assert.Equal("fail", result.Report.Result);
+        Assert.Equal("startup", result.ModelAnalysis.PrimaryFailureArea);
+        Assert.Contains("startup.startupDurationMs", result.ModelAnalysis.EvidenceSignals);
+        Assert.Contains(result.ModelAnalysis.FailedChecks, check =>
+            check.Name == "StartupDurationMs" &&
+            check.Actual == "3500.000");
+    }
+
     private static PlaybackDescriptor CreatePlaybackDescriptor(double frameRate)
     {
         var source = new EmbyMediaSource
