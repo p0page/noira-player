@@ -17,6 +17,7 @@ The command validates:
 - Core playback quality DTOs, evaluator, command parsing, and playback policy tests;
 - Core refresh-rate cadence policy tests that mirror the native Xbox display-mode selection ratios;
 - standalone native playback quality metrics helper;
+- standalone native display refresh cadence policy helper;
 - native playback component build.
 
 The command deliberately excludes:

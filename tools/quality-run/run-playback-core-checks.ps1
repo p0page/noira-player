@@ -23,6 +23,7 @@ function New-CommandPlan(
 
 $vcvars = 'C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat'
 $nativeHelperCommand = '"' + $vcvars + '" >nul && cl /nologo /std:c++20 /EHsc /I src\NextGenEmby.Native /Fo:C:\tmp\PlaybackQualityMetricsTests.obj tests\NextGenEmby.Native.Tests\PlaybackQualityMetricsTests.cpp /Fe:C:\tmp\PlaybackQualityMetricsTests.exe && C:\tmp\PlaybackQualityMetricsTests.exe'
+$nativeDisplayRefreshCommand = '"' + $vcvars + '" >nul && cl /nologo /std:c++20 /EHsc /I src\NextGenEmby.Native /Fo:C:\tmp\DisplayRefreshRatePolicyTests.obj tests\NextGenEmby.Native.Tests\DisplayRefreshRatePolicyTests.cpp /Fe:C:\tmp\DisplayRefreshRatePolicyTests.exe && C:\tmp\DisplayRefreshRatePolicyTests.exe'
 $nativeRestoreCommand = '"' + $vcvars + '" >nul && msbuild src\NextGenEmby.Native\NextGenEmby.Native.vcxproj /t:Restore /p:RestorePackagesConfig=true /p:Configuration=Debug /p:Platform=x64 /v:minimal'
 $nativeBuildCommand = '"' + $vcvars + '" >nul && msbuild src\NextGenEmby.Native\NextGenEmby.Native.vcxproj /p:Configuration=Debug /p:Platform=x64 /m /v:minimal'
 
@@ -37,6 +38,11 @@ $commands = @(
         -Description 'Compile and run the standalone native playback quality metrics helper test.' `
         -Command 'cmd' `
         -Arguments @('/c', $nativeHelperCommand)
+    New-CommandPlan `
+        -Name 'native-display-refresh-test' `
+        -Description 'Compile and run the standalone native display refresh cadence policy test.' `
+        -Command 'cmd' `
+        -Arguments @('/c', $nativeDisplayRefreshCommand)
     New-CommandPlan `
         -Name 'native-restore' `
         -Description 'Restore native packages.config dependencies required by the native playback project.' `

@@ -21,6 +21,10 @@ if (-not ($plan.commands | Where-Object { $_.name -eq 'native-helper-test' })) {
     throw 'Expected native-helper-test command in playback-core validation plan.'
 }
 
+if (-not ($plan.commands | Where-Object { $_.name -eq 'native-display-refresh-test' })) {
+    throw 'Expected native-display-refresh-test command in playback-core validation plan.'
+}
+
 if (-not ($plan.commands | Where-Object { $_.name -eq 'native-restore' })) {
     throw 'Expected native-restore command before native-build in playback-core validation plan.'
 }
