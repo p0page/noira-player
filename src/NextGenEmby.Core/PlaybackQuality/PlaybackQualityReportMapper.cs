@@ -1,4 +1,6 @@
 using NextGenEmby.Core.Playback;
+using NextGenEmby.Core.Emby;
+using System.Linq;
 
 namespace NextGenEmby.Core.PlaybackQuality
 {
@@ -53,6 +55,27 @@ namespace NextGenEmby.Core.PlaybackQuality
             report.Buffers.AudioStarvedPasses = metrics.AudioStarvedPasses;
         }
 
+        public static void ApplySource(
+            PlaybackQualityReport report,
+            PlaybackDescriptor descriptor)
+        {
+            var source = descriptor.MediaSource;
+            var selectedAudio = descriptor.AudioStreamIndex.HasValue
+                ? source.AudioStreams.FirstOrDefault(s => s.Index == descriptor.AudioStreamIndex.Value)
+                : null;
+            var audio = selectedAudio ?? source.AudioStreams.FirstOrDefault();
+            var video = source.VideoStreams.FirstOrDefault();
+
+            report.Source.ItemId = descriptor.ItemId;
+            report.Source.MediaSourceId = source.Id;
+            report.Source.Codec = FirstNonEmpty(video?.Codec, source.HdrProfile.Codec);
+            report.Source.Width = source.Width;
+            report.Source.Height = source.Height;
+            report.Source.FrameRate = source.VideoFrameRate;
+            report.Source.HdrKind = source.HdrProfile.Kind.ToString();
+            report.Source.AudioCodec = audio?.Codec ?? "";
+        }
+
         private static string MapActualHdrOutput(PlaybackDisplayStatus status)
         {
             switch (status.HdrStatus)
@@ -68,6 +91,11 @@ namespace NextGenEmby.Core.PlaybackQuality
                 default:
                     return "Unknown";
             }
+        }
+
+        private static string FirstNonEmpty(string? first, string second)
+        {
+            return !string.IsNullOrWhiteSpace(first) ? first! : second ?? "";
         }
     }
 }

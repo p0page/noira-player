@@ -1,5 +1,6 @@
 using NextGenEmby.Core.Playback;
 using NextGenEmby.Core.PlaybackQuality;
+using NextGenEmby.Core.Emby;
 using Xunit;
 
 namespace NextGenEmby.Core.Tests.PlaybackQuality;
@@ -106,5 +107,58 @@ public sealed class PlaybackQualityReportMapperTests
         Assert.Equal(12UL, report.Buffers.QueuedAudioBuffers);
         Assert.Equal(4UL, report.Buffers.VideoStarvedPasses);
         Assert.Equal(1UL, report.Buffers.AudioStarvedPasses);
+    }
+
+    [Fact]
+    public void ApplySource_Copies_Playback_Source_Metadata()
+    {
+        var report = new PlaybackQualityReport();
+        var source = new EmbyMediaSource
+        {
+            Id = "source-1",
+            Width = 3840,
+            Height = 2160,
+            VideoFrameRate = 23.976,
+            HdrProfile = new HdrPlaybackProfile
+            {
+                Kind = HdrPlaybackKind.DolbyVisionWithHdr10Fallback,
+                Codec = "hevc"
+            }
+        };
+        source.Streams.Add(new EmbyMediaStream
+        {
+            Kind = EmbyStreamKind.Video,
+            Codec = "hevc",
+            Index = 0
+        });
+        source.Streams.Add(new EmbyMediaStream
+        {
+            Kind = EmbyStreamKind.Audio,
+            Codec = "aac",
+            Index = 1
+        });
+        source.Streams.Add(new EmbyMediaStream
+        {
+            Kind = EmbyStreamKind.Audio,
+            Codec = "truehd",
+            Index = 2
+        });
+        var descriptor = new PlaybackDescriptor(
+            "item-1",
+            source,
+            new[] { source },
+            startPositionTicks: 0,
+            audioStreamIndex: 2);
+
+        PlaybackQualityReportMapper.ApplySource(report, descriptor);
+
+        Assert.Equal("item-1", report.Source.ItemId);
+        Assert.Equal("source-1", report.Source.MediaSourceId);
+        Assert.Equal("hevc", report.Source.Codec);
+        Assert.Equal(3840, report.Source.Width);
+        Assert.Equal(2160, report.Source.Height);
+        Assert.Equal(23.976, report.Source.FrameRate);
+        Assert.Equal("DolbyVisionWithHdr10Fallback", report.Source.HdrKind);
+        Assert.Equal("truehd", report.Source.AudioCodec);
     }
 }
