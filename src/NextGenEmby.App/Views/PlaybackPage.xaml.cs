@@ -17,6 +17,7 @@ using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Controls.Primitives;
 using Windows.UI.Xaml.Input;
+using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Navigation;
 using CorePlaybackState = NextGenEmby.Core.Playback.PlaybackState;
 
@@ -59,6 +60,7 @@ namespace NextGenEmby.App.Views
         private bool _moreVisible;
         private bool _keyHandlerAttached;
         private bool _playbackCommandInFlight;
+        private PlaybackMoreDrawerFocusTarget? _moreDrawerFocusTarget;
         private double _nativeSurfaceAttachedWidth;
         private double _nativeSurfaceAttachedHeight;
         private PlaybackSessionRequest? _lastPlaybackSessionRequest;
@@ -300,12 +302,12 @@ namespace NextGenEmby.App.Views
 
         private async void PlaybackPage_OnCoreWindowKeyDown(CoreWindow sender, Windows.UI.Core.KeyEventArgs args)
         {
-            if (args.Handled)
+            if (args.Handled && !ShouldProcessHandledPlaybackKey(args.VirtualKey))
             {
                 return;
             }
 
-            args.Handled = await HandlePlaybackKeyAsync(args.VirtualKey);
+            args.Handled = await HandlePlaybackKeyAsync(args.VirtualKey) || args.Handled;
         }
 
         private async void PlaybackPage_OnHandledKeyDown(object sender, KeyRoutedEventArgs e)
@@ -320,6 +322,11 @@ namespace NextGenEmby.App.Views
 
         private async Task<bool> HandlePlaybackKeyAsync(VirtualKey key)
         {
+            if (TryHandleMoreDrawerDirectionalKey(key))
+            {
+                return true;
+            }
+
             if (ShouldLetFocusedControlHandleKey(key))
             {
                 return false;
@@ -414,6 +421,67 @@ namespace NextGenEmby.App.Views
             }
 
             return false;
+        }
+
+        private bool TryHandleMoreDrawerDirectionalKey(VirtualKey key)
+        {
+            if (!ShouldProcessMoreDrawerDirectionalKey(key))
+            {
+                return false;
+            }
+
+            var direction = TryMapMoreDrawerFocusDirection(key);
+            if (!direction.HasValue)
+            {
+                return false;
+            }
+
+            var currentTarget = GetFocusedMoreDrawerTarget();
+            var nextTarget = currentTarget.HasValue
+                ? PlaybackMoreDrawerFocusPolicy.Move(
+                    currentTarget.Value,
+                    direction.Value,
+                    SourceBox.IsEnabled,
+                    AudioStreamBox.IsEnabled,
+                    SubtitleStreamBox.IsEnabled)
+                : PlaybackMoreDrawerFocusPolicy.GetDefaultTarget(
+                    SourceBox.IsEnabled,
+                    AudioStreamBox.IsEnabled,
+                    SubtitleStreamBox.IsEnabled);
+
+            FocusMoreDrawerTarget(nextTarget);
+            return true;
+        }
+
+        private bool ShouldProcessHandledPlaybackKey(VirtualKey key)
+        {
+            return ShouldProcessMoreDrawerDirectionalKey(key);
+        }
+
+        private bool ShouldProcessMoreDrawerDirectionalKey(VirtualKey key)
+        {
+            return _moreVisible &&
+                !IsAnyMoreDrawerComboBoxOpen() &&
+                TryMapMoreDrawerFocusDirection(key).HasValue;
+        }
+
+        private static PlaybackMoreDrawerFocusDirection? TryMapMoreDrawerFocusDirection(VirtualKey key)
+        {
+            switch (key)
+            {
+                case VirtualKey.Down:
+                case VirtualKey.GamepadDPadDown:
+                case VirtualKey.GamepadLeftThumbstickDown:
+                    return PlaybackMoreDrawerFocusDirection.Down;
+
+                case VirtualKey.Up:
+                case VirtualKey.GamepadDPadUp:
+                case VirtualKey.GamepadLeftThumbstickUp:
+                    return PlaybackMoreDrawerFocusDirection.Up;
+
+                default:
+                    return null;
+            }
         }
 
         private bool ShouldLetFocusedControlHandleKey(VirtualKey key)
@@ -520,26 +588,26 @@ namespace NextGenEmby.App.Views
                 return false;
             }
 
-            var focusedElement = FocusManager.GetFocusedElement();
-            if (focusedElement == SourceBox)
+            var focusedTarget = GetFocusedMoreDrawerTarget();
+            if (focusedTarget == PlaybackMoreDrawerFocusTarget.Source)
             {
                 SourceBox.IsDropDownOpen = true;
                 return true;
             }
 
-            if (focusedElement == AudioStreamBox)
+            if (focusedTarget == PlaybackMoreDrawerFocusTarget.Audio)
             {
                 AudioStreamBox.IsDropDownOpen = true;
                 return true;
             }
 
-            if (focusedElement == SubtitleStreamBox)
+            if (focusedTarget == PlaybackMoreDrawerFocusTarget.Subtitles)
             {
                 SubtitleStreamBox.IsDropDownOpen = true;
                 return true;
             }
 
-            if (focusedElement == InfoButton)
+            if (focusedTarget == PlaybackMoreDrawerFocusTarget.Info)
             {
                 ToggleInfoPanel();
                 return true;
@@ -1300,6 +1368,8 @@ namespace NextGenEmby.App.Views
         private void CloseMoreDrawer()
         {
             _moreVisible = false;
+            _moreDrawerFocusTarget = null;
+            UpdateMoreDrawerFocusVisuals(null);
             MoreDrawer.Visibility = Visibility.Collapsed;
             InfoPanel.Visibility = Visibility.Collapsed;
             _infoVisible = false;
@@ -1314,22 +1384,126 @@ namespace NextGenEmby.App.Views
 
         private void FocusMoreDrawer()
         {
-            if (SourceBox.IsEnabled && SourceBox.Focus(FocusState.Programmatic))
+            var target = PlaybackMoreDrawerFocusPolicy.GetDefaultTarget(
+                SourceBox.IsEnabled,
+                AudioStreamBox.IsEnabled,
+                SubtitleStreamBox.IsEnabled);
+            _moreDrawerFocusTarget = target;
+            _ = Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
             {
-                return;
+                if (_moreVisible)
+                {
+                    FocusMoreDrawerTarget(target);
+                }
+            });
+        }
+
+        private void FocusMoreDrawerTarget(PlaybackMoreDrawerFocusTarget target)
+        {
+            _moreDrawerFocusTarget = target;
+            UpdateMoreDrawerFocusVisuals(target);
+            switch (target)
+            {
+                case PlaybackMoreDrawerFocusTarget.Source:
+                    if (TryFocusMoreDrawerControl(SourceBox))
+                    {
+                        return;
+                    }
+
+                    break;
+
+                case PlaybackMoreDrawerFocusTarget.Audio:
+                    if (TryFocusMoreDrawerControl(AudioStreamBox))
+                    {
+                        return;
+                    }
+
+                    break;
+
+                case PlaybackMoreDrawerFocusTarget.Subtitles:
+                    if (TryFocusMoreDrawerControl(SubtitleStreamBox))
+                    {
+                        return;
+                    }
+
+                    break;
+
+                case PlaybackMoreDrawerFocusTarget.Info:
+                    if (TryFocusMoreDrawerControl(InfoButton))
+                    {
+                        return;
+                    }
+
+                    break;
             }
 
-            if (AudioStreamBox.IsEnabled && AudioStreamBox.Focus(FocusState.Programmatic))
+            _moreDrawerFocusTarget = PlaybackMoreDrawerFocusTarget.Info;
+            UpdateMoreDrawerFocusVisuals(_moreDrawerFocusTarget);
+            TryFocusMoreDrawerControl(InfoButton);
+        }
+
+        private static bool TryFocusMoreDrawerControl(Control control)
+        {
+            if (!control.IsEnabled)
             {
-                return;
+                return false;
             }
 
-            if (SubtitleStreamBox.IsEnabled && SubtitleStreamBox.Focus(FocusState.Programmatic))
+            return control.Focus(FocusState.Keyboard) ||
+                control.Focus(FocusState.Programmatic);
+        }
+
+        private void UpdateMoreDrawerFocusVisuals(PlaybackMoreDrawerFocusTarget? target)
+        {
+            SetMoreDrawerControlVisual(SourceBox, target == PlaybackMoreDrawerFocusTarget.Source);
+            SetMoreDrawerControlVisual(AudioStreamBox, target == PlaybackMoreDrawerFocusTarget.Audio);
+            SetMoreDrawerControlVisual(SubtitleStreamBox, target == PlaybackMoreDrawerFocusTarget.Subtitles);
+            SetMoreDrawerControlVisual(InfoButton, target == PlaybackMoreDrawerFocusTarget.Info);
+        }
+
+        private static void SetMoreDrawerControlVisual(Control control, bool isFocused)
+        {
+            var resources = Application.Current.Resources;
+            control.BorderBrush = (Brush)resources[isFocused ? "AppAccentBrush" : "AppHairlineBrush"];
+            control.BorderThickness = isFocused ? new Thickness(2) : new Thickness(1);
+            control.Background = (Brush)resources[isFocused ? "AppRaisedSurfaceBrush" : "AppChromeBrush"];
+        }
+
+        private PlaybackMoreDrawerFocusTarget? GetFocusedMoreDrawerTarget()
+        {
+            var focusedElement = FocusManager.GetFocusedElement();
+            if (focusedElement == SourceBox)
             {
-                return;
+                _moreDrawerFocusTarget = PlaybackMoreDrawerFocusTarget.Source;
+                return _moreDrawerFocusTarget;
             }
 
-            InfoButton.Focus(FocusState.Programmatic);
+            if (focusedElement == AudioStreamBox)
+            {
+                _moreDrawerFocusTarget = PlaybackMoreDrawerFocusTarget.Audio;
+                return _moreDrawerFocusTarget;
+            }
+
+            if (focusedElement == SubtitleStreamBox)
+            {
+                _moreDrawerFocusTarget = PlaybackMoreDrawerFocusTarget.Subtitles;
+                return _moreDrawerFocusTarget;
+            }
+
+            if (focusedElement == InfoButton)
+            {
+                _moreDrawerFocusTarget = PlaybackMoreDrawerFocusTarget.Info;
+                return _moreDrawerFocusTarget;
+            }
+
+            return _moreDrawerFocusTarget;
+        }
+
+        private bool IsAnyMoreDrawerComboBoxOpen()
+        {
+            return SourceBox.IsDropDownOpen ||
+                AudioStreamBox.IsDropDownOpen ||
+                SubtitleStreamBox.IsDropDownOpen;
         }
 
         private void HideOverlay()

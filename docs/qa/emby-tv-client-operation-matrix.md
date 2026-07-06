@@ -80,10 +80,10 @@ Status values:
 
 | Operation | Keyboard Path | Status | Evidence | Next Work |
 | --- | --- | --- | --- | --- |
-| Start direct playback | Details, `Return` | Verified | 0.1.0.100 playback started and showed controls | Do not alter native decoding |
+| Start direct playback | Details, `Return` | Verified | 0.1.0.137 keyboard/UIA run started local playback from the Home hero Play route and showed the OSD with `Playing`; 0.1.0.100 playback started and showed controls | Do not alter native decoding |
 | Pause/resume | `Return`/focused transport | Implemented | OSD buttons exist | Fresh keyboard run |
 | Seek preview and cancel | `Right`, `Escape` | Implemented | Core playback overlay policy tests exist | Fresh route on local playback |
-| More drawer | `M`, arrows, `Escape` | Implemented | Playback More drawer XAML exists | Validate no auto-hide while drawer is open |
+| More drawer | `M`, arrows, `Escape` | Verified | 0.1.0.137 keyboard/UIA run opened More during playback, kept Source initially focused, moved Down through Audio, Subtitles, and Info without opening ComboBox dropdowns, activated Info, and returned Home with keyboard input only | Keep as playback OSD regression route |
 | Audio stream switch | More drawer | Implemented | Backend has stream switching interfaces | Fresh multi-audio item route |
 | Subtitle switch/off | More drawer | Implemented | Native disable subtitles path exists | Fresh subtitle item route |
 | Playback progress reporting | Playback lifecycle | Implemented | Emby progress APIs and tests exist | Verify server progress changes after playback |
@@ -111,7 +111,7 @@ Status values:
 ## Current Highest-Value Gaps
 
 1. Details still needs visible similar-items validation plus live add-to success on a disposable collection/playlist target.
-2. Playback More drawer needs a fresh keyboard validation pass with real audio/subtitle streams.
+2. Playback stream switching still needs a fresh keyboard validation pass on real multi-audio and subtitle-rich media; the 0.1.0.137 pass verified the More drawer focus route itself.
 3. Live TV and Music have dedicated browse shells, but both still need positive validation on servers that expose channels or real music items.
 4. Search error recovery now has a tested timeout guard, but still needs a deliberate offline/server-failure keyboard run.
 5. Theme work should keep promoting repeated spacing, typography, focus, and component states into shared resources. The 0.1.0.133 pass confirmed the runtime palette matches `docs/DESIGN.md` and moved Details measurements into shared resources; the 0.1.0.132 pass aligned core runtime colors; the 0.1.0.129 pass centralized Library/Search poster-grid dimensions and common card/empty-state typography. Remaining one-off page measurements should keep moving into skin resources before full theme swapping.

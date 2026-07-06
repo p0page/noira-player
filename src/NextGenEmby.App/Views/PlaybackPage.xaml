@@ -206,18 +206,24 @@
                             TextTrimming="CharacterEllipsis" />
                         <ComboBox
                             x:Name="SourceBox"
+                            AutomationProperties.Name="Source"
                             HorizontalAlignment="Stretch"
                             Header="Source"
+                            Style="{StaticResource TvComboBoxStyle}"
                             SelectionChanged="SourceBox_OnSelectionChanged" />
                         <ComboBox
                             x:Name="AudioStreamBox"
+                            AutomationProperties.Name="Audio"
                             HorizontalAlignment="Stretch"
                             Header="Audio"
+                            Style="{StaticResource TvComboBoxStyle}"
                             SelectionChanged="AudioStreamBox_OnSelectionChanged" />
                         <ComboBox
                             x:Name="SubtitleStreamBox"
+                            AutomationProperties.Name="Subtitles"
                             HorizontalAlignment="Stretch"
                             Header="Subtitles"
+                            Style="{StaticResource TvComboBoxStyle}"
                             SelectionChanged="SubtitleStreamBox_OnSelectionChanged" />
                         <Button
                             x:Name="InfoButton"

@@ -922,3 +922,36 @@ Then continue design and implementation until the route passes.
   - Windows Graphics Capture succeeded at 2560x1392. The captured Details frame showed the poster anchored near the top of the first viewport beside the title/action stack, not centered low in the row.
   - Pressed `Escape`; Home returned and focus landed on the originating first Continue watching card.
   - No app-content mouse clicks were used.
+
+### 2026-07-06 - Playback More Drawer Keyboard Focus
+
+- App version: 0.1.0.137.
+- Scope: stabilize the playback More drawer for keyboard/controller input without touching native decoding, direct playback, or transcoding paths.
+- Interaction changes:
+  - Added a core `PlaybackMoreDrawerFocusPolicy` so Source, Audio, Subtitles, and Info use a deterministic vertical order and disabled stream controls are skipped.
+  - The More drawer now sets an explicit TV-visible focus border/background on the current drawer target, independent of UWP ComboBox focus quirks.
+  - Handled Up/Down key events are still routed to the drawer while it is open, preventing ComboBox controls from opening unexpectedly during directional movement.
+  - Source, Audio, and Subtitles controls use the shared `TvComboBoxStyle` so their size, colors, borders, and focus visuals are tokenized for future skin work.
+- Design/color review:
+  - The drawer focus visuals consume the existing `docs/DESIGN.md` token roles through `AppAccentBrush`, `AppHairlineBrush`, `AppRaisedSurfaceBrush`, and `AppChromeBrush`.
+  - This pass did not introduce a new palette direction; it keeps the Matte Cinema Fluent colors and improves focus hierarchy.
+- Automated verification:
+  - TDD red path confirmed the new focus policy tests failed before the policy existed.
+  - Targeted focus policy tests passed: 5 total.
+  - Core tests passed: 288 total.
+  - App Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.137_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.137`.
+- Keyboard-only validation with Computer Use and local UI Automation:
+  - Launched 0.1.0.137 locally into the saved Emby Home session.
+  - Home rendered real library rows and section artwork including Hot Movies, Hot TV Series, Douban-style high score, Netflix, domestic drama, Chinese animation, Japanese animation, animated movies, and action movies.
+  - From Home, used keyboard input to start playback from the hero Play route.
+  - Playback opened for the selected movie and showed the OSD with `Playing`, Pause, Resume, 10s, 30s, More, and Stop controls.
+  - Pressed `M`; the More drawer opened and stayed visible with Source as the initial cyan-focused target.
+  - Pressed `Down` to Audio, `Down` to Subtitles, and `Down` to Info. Focus moved through the drawer targets and did not open the subtitle dropdown unexpectedly.
+  - Pressed `Return` on Info; the playback diagnostics panel opened with State, Item, Source, HDR, Audio, Subtitles, Position, HDR output, swapchain, video processor, and URL fields.
+  - Pressed `Escape` until Home returned. The app ended outside playback with the saved Home rows visible.
+  - No app-content mouse clicks were used.
+- Tooling note:
+  - The full visual Computer Use route was completed earlier in this batch. After the final 0.1.0.137 package version bump, the resumed session did not expose the Computer Use operation tools, so the final installed package was rechecked with keyboard-only `SendKeys` plus Windows UI Automation text/focus snapshots.
+- Limitation:
+  - This run validated drawer focus, activation, and persistence on the available media item. A fresh multi-audio or subtitle-switching content route is still needed to verify actual stream switching on items with multiple selectable tracks.
