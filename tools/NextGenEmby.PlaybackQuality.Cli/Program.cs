@@ -94,7 +94,7 @@ internal static class Program
     private static int RunCompareSuite(string[] args)
     {
         var options = ParseCompareSuiteOptions(args);
-        var reportPairs = FindReportPairs(options.BaselineDirectory, options.CandidateDirectory);
+        var reportPairs = FindReportPairs(options);
         var comparisons = new List<PlaybackQualityRunComparison>();
 
         foreach (var pair in reportPairs)
@@ -108,14 +108,14 @@ internal static class Program
             AddPreviousComparisonIfPresent(options, pair, context);
 
             var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate, context);
-            comparison.CaseId = pair.RelativePath;
+            comparison.CaseId = pair.CaseId;
             comparisons.Add(comparison);
 
             if (!string.IsNullOrWhiteSpace(options.ComparisonsDirectory))
             {
                 var comparisonOutputPath = Path.Combine(
                     options.ComparisonsDirectory,
-                    pair.RelativePath);
+                    pair.OutputRelativePath);
                 WriteJson(comparison, comparisonOutputPath);
             }
         }
@@ -247,6 +247,9 @@ internal static class Program
                 case "--previous-comparisons-dir":
                     options.PreviousComparisonsDirectory = ReadValue(args, ref index, arg);
                     break;
+                case "--match-by":
+                    options.MatchBy = ReadValue(args, ref index, arg);
+                    break;
                 case "--stall-threshold":
                     options.StallComparisonCountThreshold = int.Parse(
                         ReadValue(args, ref index, arg),
@@ -273,6 +276,11 @@ internal static class Program
         if (options.StallComparisonCountThreshold < 1)
         {
             throw new ArgumentException("--stall-threshold must be at least 1.");
+        }
+
+        if (options.MatchBy != "relative-path" && options.MatchBy != "run-id")
+        {
+            throw new ArgumentException("--match-by must be relative-path or run-id.");
         }
 
         return options;
@@ -365,7 +373,7 @@ internal static class Program
 
         var previousPath = Path.Combine(
             options.PreviousComparisonsDirectory,
-            pair.RelativePath);
+            pair.OutputRelativePath);
         if (File.Exists(previousPath))
         {
             context.PreviousComparisons.Add(
@@ -373,7 +381,17 @@ internal static class Program
         }
     }
 
-    private static List<ReportPair> FindReportPairs(
+    private static List<ReportPair> FindReportPairs(CompareSuiteOptions options)
+    {
+        if (options.MatchBy == "run-id")
+        {
+            return FindReportPairsByRunId(options.BaselineDirectory, options.CandidateDirectory);
+        }
+
+        return FindReportPairsByRelativePath(options.BaselineDirectory, options.CandidateDirectory);
+    }
+
+    private static List<ReportPair> FindReportPairsByRelativePath(
         string baselineDirectory,
         string candidateDirectory)
     {
@@ -401,6 +419,7 @@ internal static class Program
 
             pairs.Add(new ReportPair(
                 baselineFile.Key,
+                baselineFile.Key,
                 baselineFile.Value,
                 candidatePath));
         }
@@ -420,10 +439,99 @@ internal static class Program
         }
 
         pairs.Sort((left, right) => string.Compare(
-            left.RelativePath,
-            right.RelativePath,
+            left.CaseId,
+            right.CaseId,
             StringComparison.OrdinalIgnoreCase));
         return pairs;
+    }
+
+    private static List<ReportPair> FindReportPairsByRunId(
+        string baselineDirectory,
+        string candidateDirectory)
+    {
+        if (!Directory.Exists(baselineDirectory))
+        {
+            throw new DirectoryNotFoundException("Baseline directory not found: " + baselineDirectory);
+        }
+
+        if (!Directory.Exists(candidateDirectory))
+        {
+            throw new DirectoryNotFoundException("Candidate directory not found: " + candidateDirectory);
+        }
+
+        var baselineFiles = EnumerateJsonFilesByRelativePath(baselineDirectory);
+        var candidateFiles = EnumerateJsonFilesByRelativePath(candidateDirectory);
+        var baselineByRunId = CreateRunIdReportFileMap(baselineFiles, "baseline");
+        var candidateByRunId = CreateRunIdReportFileMap(candidateFiles, "candidate");
+        var pairs = new List<ReportPair>();
+
+        foreach (var baselineFile in baselineByRunId)
+        {
+            if (!candidateByRunId.TryGetValue(baselineFile.Key, out var candidatePath))
+            {
+                throw new FileNotFoundException(
+                    "Candidate report not found for runId: " + baselineFile.Key);
+            }
+
+            pairs.Add(new ReportPair(
+                baselineFile.Key,
+                GetRunIdComparisonRelativePath(baselineFile.Key),
+                baselineFile.Value,
+                candidatePath));
+        }
+
+        foreach (var candidateFile in candidateByRunId)
+        {
+            if (!baselineByRunId.ContainsKey(candidateFile.Key))
+            {
+                throw new FileNotFoundException(
+                    "Baseline report not found for runId: " + candidateFile.Key);
+            }
+        }
+
+        if (pairs.Count == 0)
+        {
+            throw new ArgumentException("No JSON reports found in baseline directory.");
+        }
+
+        pairs.Sort((left, right) => string.Compare(
+            left.CaseId,
+            right.CaseId,
+            StringComparison.OrdinalIgnoreCase));
+        return pairs;
+    }
+
+    private static Dictionary<string, string> CreateRunIdReportFileMap(
+        Dictionary<string, string> files,
+        string role)
+    {
+        var byRunId = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var file in files)
+        {
+            var report = ReadPlaybackQualityReport(file.Value);
+            if (string.IsNullOrWhiteSpace(report.RunId))
+            {
+                throw new ArgumentException(
+                    role + " report is missing runId: " + file.Key);
+            }
+
+            if (byRunId.ContainsKey(report.RunId))
+            {
+                throw new ArgumentException(
+                    role + " report runId is duplicated: " + report.RunId);
+            }
+
+            byRunId.Add(report.RunId, file.Value);
+        }
+
+        return byRunId;
+    }
+
+    private static string GetRunIdComparisonRelativePath(string runId)
+    {
+        return runId.EndsWith(".json", StringComparison.OrdinalIgnoreCase)
+            ? runId
+            : runId + ".json";
     }
 
     private static Dictionary<string, string> EnumerateJsonFilesByRelativePath(string directory)
@@ -530,7 +638,7 @@ internal static class Program
         writer.WriteLine("Usage:");
         writer.WriteLine("  playback-quality compare --baseline <report.json> --candidate <report.json> [--previous <comparison.json>...] [--stall-threshold <n>] [--output <comparison.json>]");
         writer.WriteLine("  playback-quality summarize --comparison <comparison.json> [--comparison <comparison.json>...] [--output <suite.json>]");
-        writer.WriteLine("  playback-quality compare-suite --baseline-dir <reports-dir> --candidate-dir <reports-dir> [--previous-comparisons-dir <comparison-dir>] [--comparisons-dir <comparison-dir>] [--stall-threshold <n>] [--output <suite.json>]");
+        writer.WriteLine("  playback-quality compare-suite --baseline-dir <reports-dir> --candidate-dir <reports-dir> [--match-by relative-path|run-id] [--previous-comparisons-dir <comparison-dir>] [--comparisons-dir <comparison-dir>] [--stall-threshold <n>] [--output <suite.json>]");
         writer.WriteLine("  playback-quality validate-manifest --manifest <reference-manifest.json> [--output <validation.json>]");
         writer.WriteLine("  playback-quality validate-report-set --manifest <reference-manifest.json> --reports-dir <reports-dir> [--output <validation.json>]");
     }
@@ -557,6 +665,7 @@ internal static class Program
         public string ComparisonsDirectory { get; set; } = "";
         public string PreviousComparisonsDirectory { get; set; } = "";
         public string OutputPath { get; set; } = "";
+        public string MatchBy { get; set; } = "relative-path";
         public int StallComparisonCountThreshold { get; set; } = 2;
     }
 
@@ -575,14 +684,20 @@ internal static class Program
 
     private sealed class ReportPair
     {
-        public ReportPair(string relativePath, string baselinePath, string candidatePath)
+        public ReportPair(
+            string caseId,
+            string outputRelativePath,
+            string baselinePath,
+            string candidatePath)
         {
-            RelativePath = relativePath;
+            CaseId = caseId;
+            OutputRelativePath = outputRelativePath;
             BaselinePath = baselinePath;
             CandidatePath = candidatePath;
         }
 
-        public string RelativePath { get; }
+        public string CaseId { get; }
+        public string OutputRelativePath { get; }
         public string BaselinePath { get; }
         public string CandidatePath { get; }
     }

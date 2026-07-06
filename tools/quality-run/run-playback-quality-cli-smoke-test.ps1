@@ -16,6 +16,10 @@ try {
     $candidateDir = Join-Path $tempRoot 'candidate-suite'
     $comparisonsDir = Join-Path $tempRoot 'suite-comparisons'
     $suiteFromReportsPath = Join-Path $tempRoot 'suite-from-reports.json'
+    $runIdBaselineDir = Join-Path $tempRoot 'runid-baseline-suite'
+    $runIdCandidateDir = Join-Path $tempRoot 'runid-candidate-suite'
+    $runIdComparisonsDir = Join-Path $tempRoot 'runid-suite-comparisons'
+    $runIdSuitePath = Join-Path $tempRoot 'runid-suite.json'
     $stallBaselineDir = Join-Path $tempRoot 'stall-baseline-suite'
     $stallCandidateDir = Join-Path $tempRoot 'stall-candidate-suite'
     $previousComparisonsDir = Join-Path $tempRoot 'previous-comparisons'
@@ -365,6 +369,81 @@ try {
 
     if ($comparisonFromSuite.caseId -ne 'case-a.json') {
         throw 'Expected playback quality CLI compare-suite comparison to include caseId.'
+    }
+
+    New-Item -ItemType Directory -Path $runIdBaselineDir | Out-Null
+    New-Item -ItemType Directory -Path $runIdCandidateDir | Out-Null
+    @'
+{
+  "runId": "item-1/source-1",
+  "metricVersion": "software-quality-v1",
+  "source": {
+    "itemId": "item-1",
+    "mediaSourceId": "source-1",
+    "frameRate": 23.976,
+    "hdrKind": "Sdr"
+  },
+  "checks": [
+    {
+      "name": "MaxFrameGapMs",
+      "signal": "timing.maxFrameGapMs",
+      "status": "fail",
+      "failureArea": "frame-pacing",
+      "expected": "105.000",
+      "actual": "180.000"
+    }
+  ]
+}
+'@ | Set-Content -LiteralPath (Join-Path $runIdBaselineDir 'baseline-a.json') -Encoding UTF8
+    @'
+{
+  "runId": "item-1/source-1",
+  "metricVersion": "software-quality-v1",
+  "source": {
+    "itemId": "item-1",
+    "mediaSourceId": "source-1",
+    "frameRate": 23.976,
+    "hdrKind": "Sdr"
+  },
+  "checks": [
+    {
+      "name": "MaxFrameGapMs",
+      "signal": "timing.maxFrameGapMs",
+      "status": "fail",
+      "failureArea": "frame-pacing",
+      "expected": "105.000",
+      "actual": "120.000"
+    }
+  ]
+}
+'@ | Set-Content -LiteralPath (Join-Path $runIdCandidateDir 'candidate-renamed.json') -Encoding UTF8
+
+    Push-Location $repoRoot
+    try {
+        dotnet run `
+            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
+            --no-build `
+            -- compare-suite `
+            --baseline-dir $runIdBaselineDir `
+            --candidate-dir $runIdCandidateDir `
+            --match-by run-id `
+            --comparisons-dir $runIdComparisonsDir `
+            --output $runIdSuitePath
+        if ($LASTEXITCODE -ne 0) {
+            throw 'playback quality CLI compare-suite run-id matching returned a non-zero exit code.'
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    $runIdSuite = Get-Content -Raw -LiteralPath $runIdSuitePath | ConvertFrom-Json
+    if ($runIdSuite.action -ne 'accept-candidate') {
+        throw 'Expected playback quality CLI compare-suite run-id matching action to accept candidate.'
+    }
+
+    if (-not ($runIdSuite.cases | Where-Object { $_.caseId -eq 'item-1/source-1' -and $_.action -eq 'accept-candidate' })) {
+        throw 'Expected playback quality CLI compare-suite run-id matching to use run-id case summary.'
     }
 
     New-Item -ItemType Directory -Path $stallBaselineDir | Out-Null

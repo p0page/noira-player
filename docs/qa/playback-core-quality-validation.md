@@ -85,7 +85,13 @@ If an automated run already has baseline and candidate report directories, compa
 dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- compare-suite --baseline-dir baseline-reports --candidate-dir candidate-reports --comparisons-dir comparisons --output suite.json
 ```
 
-`compare-suite` matches reports by relative `*.json` path. Missing or extra files fail the command so the model does not optimize from an incomplete sample set. `--comparisons-dir` is optional and writes each individual comparison using the same relative path as the report. `--previous-comparisons-dir` may point at a previous comparison directory with the same relative paths so repeated-unchanged stall protection works in batch runs; missing previous files for newly added cases are allowed. Generated comparisons include `caseId = <relative report path>`, and the suite emits a compact `cases` list so model loops can locate the exact sample behind a suite-level action.
+`compare-suite` matches reports by relative `*.json` path by default. Manifest-driven runs should prefer `--match-by run-id`, which pairs baseline/candidate reports by `report.runId` and writes `caseId = runId` into generated comparisons:
+
+```powershell
+dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- compare-suite --baseline-dir baseline-reports --candidate-dir candidate-reports --match-by run-id --comparisons-dir comparisons --output suite.json
+```
+
+Missing or extra files fail the command so the model does not optimize from an incomplete sample set. `--comparisons-dir` is optional and writes each individual comparison. `--previous-comparisons-dir` may point at a previous comparison directory with the same matching keys so repeated-unchanged stall protection works in batch runs; missing previous files for newly added cases are allowed. Generated comparisons include `caseId`, and the suite emits a compact `cases` list so model loops can locate the exact sample behind a suite-level action.
 
 The suite summary is conservative: any regression blocks acceptance, weak evidence requires more comparable reports, and partial evidence requires unmatched-signal review.
 
