@@ -1,0 +1,106 @@
+# Public Test Media Catalog
+
+This catalog lists public media sources suitable for building local Emby test cases. Do not commit private Emby item IDs, source IDs, server URLs, credentials, or downloaded media into this repository.
+
+## Recommended Sources
+
+### Netflix Open Content
+
+URL: https://opencontent.netflix.com/
+
+Use for:
+
+- HDR-oriented professional content;
+- Dolby Vision / HDR metadata experiments where assets are available;
+- animation and live-action stress samples.
+
+Notes:
+
+- Netflix states the open source content is available under Creative Commons Attribution 4.0.
+- Prefer short derived local clips for repeatable quality-run cases.
+
+### DVB HDR Test Content
+
+URL: https://dvb.org/specifications/verification-validation/hdr-test-content/
+
+Use for:
+
+- 2160p50 PQ10 transport streams;
+- HDR dynamic metadata signalling;
+- HDR switching stress cases.
+
+Notes:
+
+- Several files are direct downloads from DVB.
+- Some streams include dynamic metadata formats the app may not fully support. That is useful for unsupported-source diagnostics.
+
+### Fraunhofer HHI Berlin Test Sequences
+
+URL: https://www.hhi.fraunhofer.de/en/departments/vca/research-groups/video-coding-systems/8k-sequences.html
+
+Use for:
+
+- BT.2020 SDR and BT.2100 PQ HDR source pairs;
+- UHD/HDR stress material;
+- comparing SDR/HDR pipeline classification.
+
+Notes:
+
+- Source material may need local encoding into Xbox-direct-playable HEVC.
+
+### SVT Open Content
+
+URL: https://svt.github.io/en/content/
+
+Use for:
+
+- 3840x2160p50 professional SDR/high-motion material;
+- 50 Hz cadence and high-motion frame pacing.
+
+Notes:
+
+- SVT says the material may be distributed, modified, and used freely under its Creative Commons terms.
+- Current access is via SVT FTP.
+
+### Ultra Video Group UVG Dataset
+
+URL: https://ultravideo.fi/dataset.html
+
+Use for:
+
+- 4K 50/120 fps motion and compression stress cases;
+- high frame-rate downconversion experiments.
+
+Notes:
+
+- UVG is CC BY-NC, so keep usage non-commercial.
+- Files are research-oriented and may require local encoding before Emby playback.
+
+### Xiph.org Test Media
+
+URL: https://media.xiph.org/
+
+Use for:
+
+- lossless Blender open movie sources;
+- SDR reference clips;
+- generating local short clips with known frame counts.
+
+Notes:
+
+- Many source files are huge. Do not use full sequences for routine Xbox smoke tests.
+- Useful as source material for local encoded snippets.
+
+## First Local Case Set
+
+Start with at most five local cases:
+
+1. SDR 23.976 or 24 fps, short clip.
+2. HDR10 PQ 23.976 or 24 fps, short clip.
+3. HDR10 force-SDR, same clip as case 2.
+4. 2160p50 high-motion SDR or HDR clip.
+5. Unsupported or difficult HDR/DV/dynamic metadata clip.
+
+## Local Encoding Rule
+
+If a public source is raw, EXR, Y4M, or otherwise not directly playable, create a local HEVC MKV/MP4 derivative and add it to Emby manually. The repository stores only the case template and source URL, not the media.
