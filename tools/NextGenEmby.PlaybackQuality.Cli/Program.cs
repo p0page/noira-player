@@ -231,6 +231,14 @@ internal static class Program
             AddUnique(evaluation.Blockers, "manifest.invalid");
         }
 
+        var manifestCoverageGate = CreateManifestCoverageGate(
+            evaluation.ManifestValidation.Coverage);
+        if (manifestCoverageGate.Status == "blocked")
+        {
+            AddUnique(evaluation.Blockers, "manifest-coverage.incomplete");
+            CopyValues(manifestCoverageGate.Blockers, evaluation.Blockers);
+        }
+
         if (!evaluation.BaselineReportSetValidation.IsValid)
         {
             AddUnique(evaluation.Blockers, "baseline-report-set.invalid");
@@ -260,6 +268,7 @@ internal static class Program
         }
 
         evaluation.EvidenceGates.Add(CreateManifestGate(evaluation.ManifestValidation));
+        evaluation.EvidenceGates.Add(manifestCoverageGate);
         evaluation.EvidenceGates.Add(CreateReportSetGate(
             "baseline-report-set",
             "baseline-report-set.invalid",
@@ -1216,6 +1225,40 @@ internal static class Program
                 AddUnique(gate.Signals, error.Signal);
                 AddUnique(gate.CaseIds, error.CaseId);
             }
+        }
+
+        return gate;
+    }
+
+    private static CandidateEvaluationGate CreateManifestCoverageGate(
+        PlaybackQualityReferenceManifestCoverage coverage)
+    {
+        if (coverage == null)
+        {
+            coverage = new PlaybackQualityReferenceManifestCoverage();
+        }
+
+        var isReady = coverage.Status == "ready" && coverage.IsCoreEvaluationReady;
+        var gate = new CandidateEvaluationGate
+        {
+            Name = "manifest-coverage",
+            Status = isReady ? "pass" : "blocked",
+            Action = isReady ? "continue" : "collect-comparable-evidence",
+            Summary = isReady
+                ? "reference corpus covers playback Core evaluation purposes"
+                : "reference corpus is missing playback Core evaluation purposes"
+        };
+
+        if (isReady)
+        {
+            CopyValues(coverage.CoveredPurposes, gate.Signals);
+            return gate;
+        }
+
+        AddUnique(gate.Blockers, "manifest-coverage.incomplete");
+        foreach (var purpose in coverage.MissingPurposes)
+        {
+            AddUnique(gate.Signals, purpose);
         }
 
         return gate;

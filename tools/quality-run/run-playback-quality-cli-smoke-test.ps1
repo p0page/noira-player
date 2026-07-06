@@ -26,6 +26,9 @@ try {
     $runIdComparisonsDir = Join-Path $tempRoot 'runid-suite-comparisons'
     $runIdSuitePath = Join-Path $tempRoot 'runid-suite.json'
     $candidateEvaluationManifestPath = Join-Path $tempRoot 'candidate-evaluation-manifest.json'
+    $candidateEvaluationNarrowManifestPath = Join-Path $tempRoot 'candidate-evaluation-narrow-manifest.json'
+    $candidateEvaluationNarrowCoveragePath = Join-Path $tempRoot 'candidate-evaluation-narrow-coverage.json'
+    $candidateEvaluationNarrowCoverageComparisonsDir = Join-Path $tempRoot 'candidate-evaluation-narrow-coverage-comparisons'
     $candidateEvaluationPath = Join-Path $tempRoot 'candidate-evaluation.json'
     $candidateEvaluationComparisonsDir = Join-Path $tempRoot 'candidate-evaluation-comparisons'
     $candidateEvaluationEmptyAnalysisBaselineDir = Join-Path $tempRoot 'candidate-evaluation-empty-analysis-baseline'
@@ -765,6 +768,14 @@ try {
       "uri": "https://example.invalid/item-1/source-1.mp4",
       "tier": 2,
       "purpose": [
+        "sdr-smoke",
+        "hdr-output",
+        "hdr-force-sdr",
+        "dv-reject",
+        "dv-fallback",
+        "cadence-23.976",
+        "av-sync",
+        "buffering",
         "frame-pacing"
       ],
       "expected": {
@@ -848,12 +859,16 @@ try {
         throw 'Expected evaluate-candidate candidate report-analysis summary to include unavailable raw-report case.'
     }
 
-    if ($null -eq $candidateEvaluation.evidenceGates -or $candidateEvaluation.evidenceGates.Count -ne 6) {
-        throw 'Expected playback quality CLI evaluate-candidate to emit six evidence gates.'
+    if ($null -eq $candidateEvaluation.evidenceGates -or $candidateEvaluation.evidenceGates.Count -ne 7) {
+        throw 'Expected playback quality CLI evaluate-candidate to emit seven evidence gates.'
     }
 
     if (-not ($candidateEvaluation.evidenceGates | Where-Object { $_.name -eq 'manifest' -and $_.status -eq 'pass' })) {
         throw 'Expected evaluate-candidate manifest evidence gate to pass.'
+    }
+
+    if (-not ($candidateEvaluation.evidenceGates | Where-Object { $_.name -eq 'manifest-coverage' -and $_.status -eq 'pass' })) {
+        throw 'Expected evaluate-candidate manifest coverage evidence gate to pass.'
     }
 
     if (-not ($candidateEvaluation.evidenceGates | Where-Object { $_.name -eq 'baseline-report-set' -and $_.status -eq 'pass' })) {
@@ -874,6 +889,76 @@ try {
 
     if (-not ($candidateEvaluation.evidenceGates | Where-Object { $_.name -eq 'suite' -and $_.status -eq 'pass' -and $_.action -eq 'accept-candidate' })) {
         throw 'Expected evaluate-candidate suite evidence gate to pass with accept-candidate action.'
+    }
+
+    @'
+{
+  "schemaVersion": 1,
+  "cases": [
+    {
+      "caseId": "item-1/source-1",
+      "uri": "https://example.invalid/item-1/source-1.mp4",
+      "tier": 2,
+      "purpose": [
+        "frame-pacing"
+      ],
+      "expected": {
+        "codec": "hevc",
+        "width": 3840,
+        "height": 2160,
+        "frameRate": 23.976,
+        "hdrKind": "Sdr"
+      }
+    }
+  ]
+}
+'@ | Set-Content -LiteralPath $candidateEvaluationNarrowManifestPath -Encoding UTF8
+
+    Push-Location $repoRoot
+    try {
+        dotnet run `
+            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
+            --no-build `
+            -- evaluate-candidate `
+            --manifest $candidateEvaluationNarrowManifestPath `
+            --baseline-dir $runIdBaselineDir `
+            --candidate-dir $runIdCandidateDir `
+            --match-by run-id `
+            --comparisons-dir $candidateEvaluationNarrowCoverageComparisonsDir `
+            --output $candidateEvaluationNarrowCoveragePath
+        if ($LASTEXITCODE -eq 0) {
+            throw 'Expected playback quality CLI evaluate-candidate to reject incomplete manifest coverage.'
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    $narrowCoverageEvaluation = Get-Content -Raw -LiteralPath $candidateEvaluationNarrowCoveragePath | ConvertFrom-Json
+    if ($narrowCoverageEvaluation.action -ne 'collect-comparable-evidence') {
+        throw 'Expected incomplete manifest coverage evaluation to collect comparable evidence.'
+    }
+
+    if (-not ($narrowCoverageEvaluation.blockers -contains 'manifest-coverage.incomplete')) {
+        throw 'Expected incomplete manifest coverage evaluation to include manifest coverage blocker.'
+    }
+
+    if ($null -eq $narrowCoverageEvaluation.activeGate -or
+        $narrowCoverageEvaluation.activeGate.name -ne 'manifest-coverage' -or
+        $narrowCoverageEvaluation.activeGate.status -ne 'blocked') {
+        throw 'Expected incomplete manifest coverage active gate to block manifest coverage.'
+    }
+
+    if (-not ($narrowCoverageEvaluation.activeGate.signals -contains 'sdr-smoke')) {
+        throw 'Expected incomplete manifest coverage active gate to include missing purpose signal.'
+    }
+
+    if (-not ($narrowCoverageEvaluation.evidenceGates | Where-Object { $_.name -eq 'suite' -and $_.status -eq 'skipped' })) {
+        throw 'Expected incomplete manifest coverage evidence to skip suite comparison.'
+    }
+
+    if (Test-Path -LiteralPath $candidateEvaluationNarrowCoverageComparisonsDir) {
+        throw 'Expected incomplete manifest coverage evidence to skip comparison output.'
     }
 
     New-Item -ItemType Directory -Path $candidateEvaluationEmptyAnalysisBaselineDir | Out-Null
