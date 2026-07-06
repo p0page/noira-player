@@ -52,6 +52,9 @@ namespace NextGenEmby.Core.PlaybackQuality
             }
 
             var candidateByKey = CreateCheckMap(candidate);
+            var baselineByKey = CreateCheckMap(baseline);
+            var matchedKeys = new List<string>();
+            var matchedChecks = 0;
             foreach (var baselineCheck in baseline.Checks)
             {
                 var key = GetCheckKey(baselineCheck);
@@ -60,9 +63,20 @@ namespace NextGenEmby.Core.PlaybackQuality
                     continue;
                 }
 
+                matchedChecks++;
+                AddUnique(matchedKeys, key);
                 CompareCheck(comparison, baselineCheck, candidateByKey[key]);
                 TrackFailureArea(comparison, baselineCheck, candidateByKey[key]);
             }
+
+            if (matchedChecks == 0)
+            {
+                comparison.Result = "insufficient-evidence";
+                comparison.Limitations.Add("comparison requires at least one matching check signal");
+                return comparison;
+            }
+
+            AddCandidateOnlyFailures(comparison, candidate, baselineByKey, matchedKeys);
 
             if (comparison.Improvements.Count > 0 && comparison.Regressions.Count > 0)
             {
@@ -78,6 +92,28 @@ namespace NextGenEmby.Core.PlaybackQuality
             }
 
             return comparison;
+        }
+
+        private static void AddCandidateOnlyFailures(
+            PlaybackQualityRunComparison comparison,
+            PlaybackQualityReport candidate,
+            Dictionary<string, PlaybackQualityCheck> baselineByKey,
+            List<string> matchedKeys)
+        {
+            foreach (var candidateCheck in candidate.Checks)
+            {
+                var key = GetCheckKey(candidateCheck);
+                if (string.IsNullOrWhiteSpace(key) ||
+                    baselineByKey.ContainsKey(key) ||
+                    matchedKeys.Contains(key) ||
+                    candidateCheck.Status != "fail")
+                {
+                    continue;
+                }
+
+                comparison.Regressions.Add(CreateCandidateOnlyDelta(candidateCheck));
+                AddUnique(comparison.NewFailureAreas, candidateCheck.FailureArea);
+            }
         }
 
         private static Dictionary<string, PlaybackQualityCheck> CreateCheckMap(
@@ -192,6 +228,19 @@ namespace NextGenEmby.Core.PlaybackQuality
                 BaselineActual = baseline.Actual,
                 CandidateActual = candidate.Actual,
                 NumericDelta = numericDelta
+            };
+        }
+
+        private static PlaybackQualitySignalDelta CreateCandidateOnlyDelta(
+            PlaybackQualityCheck candidate)
+        {
+            return new PlaybackQualitySignalDelta
+            {
+                Signal = candidate.Signal,
+                FailureArea = candidate.FailureArea,
+                Direction = "candidate-only-failure",
+                CandidateStatus = candidate.Status,
+                CandidateActual = candidate.Actual
             };
         }
 

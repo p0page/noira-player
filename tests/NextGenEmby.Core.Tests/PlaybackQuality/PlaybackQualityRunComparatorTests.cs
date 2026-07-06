@@ -91,6 +91,28 @@ public sealed class PlaybackQualityRunComparatorTests
     }
 
     [Fact]
+    public void Compare_Reports_Regressed_When_Candidate_Has_Unmatched_New_Failing_Signal()
+    {
+        var baseline = CreateReport(
+            "baseline",
+            Check("MaxFrameGapMs", "pass", "frame-pacing", "timing.maxFrameGapMs", "105.000", "80.000"));
+        var candidate = CreateReport(
+            "candidate",
+            Check("MaxFrameGapMs", "pass", "frame-pacing", "timing.maxFrameGapMs", "105.000", "82.000"),
+            Check("ActualHdrOutput", "fail", "color-pipeline", "colorPipeline.actualHdrOutput", "Hdr10", "Sdr"));
+
+        var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
+
+        Assert.Equal("regressed", comparison.Result);
+        Assert.Contains("color-pipeline", comparison.NewFailureAreas);
+        Assert.Contains(comparison.Regressions, delta =>
+            delta.Signal == "colorPipeline.actualHdrOutput" &&
+            delta.Direction == "candidate-only-failure" &&
+            delta.BaselineStatus == "" &&
+            delta.CandidateStatus == "fail");
+    }
+
+    [Fact]
     public void Compare_Reports_Insufficient_Evidence_When_Checks_Are_Missing()
     {
         var baseline = new PlaybackQualityReport { RunId = "baseline" };
@@ -102,6 +124,22 @@ public sealed class PlaybackQualityRunComparatorTests
 
         Assert.Equal("insufficient-evidence", comparison.Result);
         Assert.Contains("comparison requires baseline and candidate checks", comparison.Limitations);
+    }
+
+    [Fact]
+    public void Compare_Reports_Insufficient_Evidence_When_No_Checks_Can_Be_Matched()
+    {
+        var baseline = CreateReport(
+            "baseline",
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "180.000"));
+        var candidate = CreateReport(
+            "candidate",
+            Check("ActualHdrOutput", "fail", "color-pipeline", "colorPipeline.actualHdrOutput", "Hdr10", "Sdr"));
+
+        var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
+
+        Assert.Equal("insufficient-evidence", comparison.Result);
+        Assert.Contains("comparison requires at least one matching check signal", comparison.Limitations);
     }
 
     private static PlaybackQualityReport CreateReport(
