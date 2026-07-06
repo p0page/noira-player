@@ -1549,3 +1549,33 @@ Then continue design and implementation until the route passes.
   - No app-content mouse clicks were used.
 - Follow-up:
   - Re-run Photos against a real saved Emby session with server-provided photo folders and image URLs, then decide whether Photos needs a dedicated album-first layout instead of the generic Library grid.
+
+### 2026-07-07 - Live TV Positive Browse Fixture Route
+
+- App version: 0.1.0.184.
+- Scope: add and verify a deterministic positive Live TV browse route while the current local validation path does not expose real Live TV channels.
+- Interaction changes:
+  - `dev-command.json` accepts route `livetv-fixture`.
+  - The route opens the normal Live TV page with four fixture channels, current-program metadata, and packaged channel artwork.
+  - Channel activation remains browse-only and opens the existing `Live TV playback unavailable` layer; it does not start live streams and does not touch the native decoding path.
+  - Live TV now tracks channel buttons explicitly and handles Up/Down keys on the page so D-pad style movement remains deterministic.
+  - Closing the unsupported layer restores focus to the channel that opened it.
+- Automated verification:
+  - TDD red path confirmed `DevelopmentLiveTvFixture` and `livetv-fixture` route acceptance did not exist before implementation.
+  - TDD red path confirmed the Live TV page did not render a positive fixture route, consume fixture artwork, or restore invoking-channel focus before implementation.
+  - Computer Use caught the real channel-list movement bug: `Down` initially did not leave the first channel. Source tests then drove the explicit `_channelButtons` movement path through `MusicListFocusPolicy`.
+  - Core tests passed: 414 total.
+  - App Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.184_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.184`.
+- Keyboard-only validation with Computer Use:
+  - Wrote `dev-command.json` with route `livetv-fixture` and launched the installed app.
+  - `dev-command-result.txt` reported `completed / livetv-fixture`.
+  - Initial Live TV state showed `Fixture Live TV guide`, `101 News 24`, `202 Cinema One`, `303 Match Center`, and `404 Kids Studio`, with focus on `101 News 24`.
+  - Pressed `Down`; focus moved to `202 Cinema One`, and the Now preview updated to `Matinee Window`.
+  - Pressed `Down`, `Down`; focus moved through the list to `404 Kids Studio`, and the Now preview updated to `Saturday Workshop - Paper City`.
+  - Pressed `Return`; the `Live TV playback unavailable` layer opened for `Kids Studio` with `Close` focused.
+  - Pressed `Escape`; the layer closed and focus returned to `404 Kids Studio`.
+  - Pressed `Up`; focus moved to `303 Match Center`, and the Now preview updated to `Late Match - Quarter Final`.
+  - No app-content mouse clicks were used.
+- Follow-up:
+  - Re-run Live TV against a real Live TV-enabled Emby server after session restore. Keep live stream playback and Emby transcoding outside this fixture route until they become explicit goals.

@@ -5,6 +5,9 @@ using System.Net.Http;
 using NextGenEmby.App.Navigation;
 using NextGenEmby.App.Services;
 using NextGenEmby.App.Storage;
+#if DEBUG
+using NextGenEmby.Core.Diagnostics;
+#endif
 using NextGenEmby.Core.Emby;
 using NextGenEmby.Core.Input;
 using Windows.System;
@@ -22,8 +25,13 @@ namespace NextGenEmby.App.Views
     {
         private const int ChannelLimit = 80;
         private readonly ApplicationDataSessionStore _sessionStore = new ApplicationDataSessionStore();
+        private readonly List<Button> _channelButtons = new List<Button>();
         private Button? _firstChannelButton;
+        private Button? _unsupportedReturnFocusTarget;
         private LiveTvNavigationRequest? _request;
+#if DEBUG
+        private DevelopmentLiveTvFixtureSnapshot? _developmentLiveTvFixture;
+#endif
 
         public LiveTvPage()
         {
@@ -41,6 +49,14 @@ namespace NextGenEmby.App.Views
         private async void LiveTvPage_OnLoaded(object sender, RoutedEventArgs e)
         {
             Loaded -= LiveTvPage_OnLoaded;
+#if DEBUG
+            if (_request != null && _request.UseDevelopmentFixture)
+            {
+                RenderDevelopmentLiveTvFixture();
+                FocusDefaultContent();
+                return;
+            }
+#endif
             if (_request != null && !string.IsNullOrWhiteSpace(_request.UnsupportedChannelName))
             {
                 StatusBlock.Text = "Browse-only preview";
@@ -73,6 +89,14 @@ namespace NextGenEmby.App.Views
 
         private async void RefreshButton_OnClick(object sender, RoutedEventArgs e)
         {
+#if DEBUG
+            if (_request != null && _request.UseDevelopmentFixture)
+            {
+                RenderDevelopmentLiveTvFixture();
+                FocusDefaultContent();
+                return;
+            }
+#endif
             await LoadLiveTvAsync();
         }
 
@@ -81,7 +105,9 @@ namespace NextGenEmby.App.Views
             FallbackPanel.Visibility = Visibility.Collapsed;
             UnsupportedPanel.Visibility = Visibility.Collapsed;
             ChannelsPanel.Children.Clear();
+            _channelButtons.Clear();
             _firstChannelButton = null;
+            _unsupportedReturnFocusTarget = null;
             StatusBlock.Text = "Loading channels";
             PreviewTitleBlock.Text = "Select a channel";
             PreviewBodyBlock.Text = "Live TV channels and current programs appear here when the server exposes them.";
@@ -139,6 +165,7 @@ namespace NextGenEmby.App.Views
             EmbyApiClient client,
             IReadOnlyList<EmbyLiveTvChannel> channels)
         {
+            _channelButtons.Clear();
             foreach (var channel in channels)
             {
                 var button = CreateChannelButton(session, client, channel);
@@ -149,6 +176,7 @@ namespace NextGenEmby.App.Views
                 }
 
                 ChannelsPanel.Children.Add(button);
+                _channelButtons.Add(button);
             }
         }
 
@@ -161,7 +189,7 @@ namespace NextGenEmby.App.Views
             {
                 Style = (Style)Application.Current.Resources["TvListButtonStyle"],
                 Tag = channel,
-                Content = CreateChannelButtonContent(session, client, channel)
+                Content = CreateChannelButtonContent(CreateChannelLogoFrame(session, client, channel), channel)
             };
             AutomationProperties.SetName(button, "Channel " + CreateChannelTitle(channel));
             button.GotFocus += (sender, args) => UpdatePreview(channel);
@@ -169,18 +197,11 @@ namespace NextGenEmby.App.Views
             return button;
         }
 
-        private UIElement CreateChannelButtonContent(
+        private Border CreateChannelLogoFrame(
             EmbySession session,
             EmbyApiClient client,
             EmbyLiveTvChannel channel)
         {
-            var grid = new Grid
-            {
-                ColumnSpacing = 16
-            };
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(76) });
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-
             var logoFrame = new Border
             {
                 Width = 76,
@@ -210,6 +231,20 @@ namespace NextGenEmby.App.Views
                 };
             }
 
+            return logoFrame;
+        }
+
+        private UIElement CreateChannelButtonContent(
+            FrameworkElement logoFrame,
+            EmbyLiveTvChannel channel)
+        {
+            var grid = new Grid
+            {
+                ColumnSpacing = 16
+            };
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(76) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
             Grid.SetColumn(logoFrame, 0);
             grid.Children.Add(logoFrame);
 
@@ -236,9 +271,95 @@ namespace NextGenEmby.App.Views
             return grid;
         }
 
+#if DEBUG
+        private void RenderDevelopmentLiveTvFixture()
+        {
+            var fixture = DevelopmentLiveTvFixture.Create();
+            _developmentLiveTvFixture = fixture;
+            FallbackPanel.Visibility = Visibility.Collapsed;
+            UnsupportedPanel.Visibility = Visibility.Collapsed;
+            ChannelsPanel.Children.Clear();
+            _channelButtons.Clear();
+            _firstChannelButton = null;
+            _unsupportedReturnFocusTarget = null;
+            StatusBlock.Text = "Fixture Live TV guide";
+            PreviewTitleBlock.Text = "Select a channel";
+            PreviewBodyBlock.Text = "Live TV channels and current programs appear here when the server exposes them.";
+            RenderDevelopmentChannels(fixture.Channels);
+        }
+
+        private void RenderDevelopmentChannels(IReadOnlyList<EmbyLiveTvChannel> channels)
+        {
+            _channelButtons.Clear();
+            foreach (var channel in channels)
+            {
+                var button = CreateDevelopmentChannelButton(channel);
+                if (_firstChannelButton == null)
+                {
+                    _firstChannelButton = button;
+                    UpdatePreview(channel);
+                }
+
+                ChannelsPanel.Children.Add(button);
+                _channelButtons.Add(button);
+            }
+        }
+
+        private Button CreateDevelopmentChannelButton(EmbyLiveTvChannel channel)
+        {
+            var button = new Button
+            {
+                Style = (Style)Application.Current.Resources["TvListButtonStyle"],
+                Tag = channel,
+                Content = CreateChannelButtonContent(CreateDevelopmentChannelLogoFrame(channel), channel)
+            };
+            AutomationProperties.SetName(button, "Channel " + CreateChannelTitle(channel));
+            button.GotFocus += (sender, args) => UpdatePreview(channel);
+            button.Click += ChannelButton_OnClick;
+            return button;
+        }
+
+        private Border CreateDevelopmentChannelLogoFrame(EmbyLiveTvChannel channel)
+        {
+            var logoFrame = new Border
+            {
+                Width = 76,
+                Height = 48,
+                Background = BrushResource("AppRaisedSurfaceBrush"),
+                BorderBrush = BrushResource("AppHairlineBrush"),
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(6)
+            };
+
+            if (_developmentLiveTvFixture != null &&
+                _developmentLiveTvFixture.ArtworkUris.TryGetValue(
+                    DevelopmentLiveTvFixture.ArtworkKey(channel.Id, "Primary"),
+                    out var imageUri) &&
+                !string.IsNullOrWhiteSpace(imageUri))
+            {
+                logoFrame.Child = new Image
+                {
+                    Stretch = Stretch.UniformToFill,
+                    Source = new BitmapImage(new Uri(imageUri))
+                };
+                return logoFrame;
+            }
+
+            logoFrame.Child = new SymbolIcon
+            {
+                Symbol = Symbol.World,
+                Foreground = BrushResource("AppMutedTextBrush"),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            return logoFrame;
+        }
+#endif
+
         private void ChannelButton_OnClick(object sender, RoutedEventArgs e)
         {
             var button = sender as Button;
+            _unsupportedReturnFocusTarget = sender as Button;
             var channel = button == null ? null : button.Tag as EmbyLiveTvChannel;
             var channelName = channel == null || string.IsNullOrWhiteSpace(channel.Name) ? "this channel" : channel.Name;
             ShowUnsupportedPanel(channelName);
@@ -259,21 +380,73 @@ namespace NextGenEmby.App.Views
 
         private void LiveTvPage_OnKeyDown(object sender, KeyRoutedEventArgs e)
         {
-            if (!TransientLayerInputPolicy.ShouldDismiss(
+            if (TransientLayerInputPolicy.ShouldDismiss(
                 UnsupportedPanel.Visibility == Visibility.Visible,
                 IsBackKey(e.Key)))
+            {
+                e.Handled = true;
+                CloseUnsupportedPanel();
+                return;
+            }
+
+            if (UnsupportedPanel.Visibility == Visibility.Visible)
             {
                 return;
             }
 
-            e.Handled = true;
-            CloseUnsupportedPanel();
+            if ((IsDownKey(e.Key) || IsUpKey(e.Key)) &&
+                TryMoveWithinChannelList(e.Key))
+            {
+                e.Handled = true;
+            }
+        }
+
+        private bool TryMoveWithinChannelList(VirtualKey key)
+        {
+            var focusedButton = FocusManager.GetFocusedElement() as Button;
+            if (focusedButton == null)
+            {
+                return false;
+            }
+
+            var currentIndex = IndexOfButton(_channelButtons, focusedButton);
+            var targetIndex = MusicListFocusPolicy.GetVerticalTargetIndex(
+                currentIndex,
+                _channelButtons.Count,
+                IsDownKey(key),
+                IsUpKey(key));
+            return targetIndex.HasValue &&
+                _channelButtons[targetIndex.Value].Focus(FocusState.Keyboard);
+        }
+
+        private static int IndexOfButton(IReadOnlyList<Button> buttons, Button focusedButton)
+        {
+            for (var index = 0; index < buttons.Count; index++)
+            {
+                if (buttons[index] == focusedButton)
+                {
+                    return index;
+                }
+            }
+
+            return -1;
         }
 
         private void CloseUnsupportedPanel()
         {
             UnsupportedPanel.Visibility = Visibility.Collapsed;
+            if (FocusUnsupportedReturnTarget())
+            {
+                return;
+            }
+
             FocusDefaultContent();
+        }
+
+        private bool FocusUnsupportedReturnTarget()
+        {
+            return _unsupportedReturnFocusTarget != null &&
+                _unsupportedReturnFocusTarget.Focus(FocusState.Keyboard);
         }
 
         private void ShowFallback(string title, string body)
@@ -349,6 +522,20 @@ namespace NextGenEmby.App.Views
             return key == VirtualKey.GamepadB ||
                 key == VirtualKey.Escape ||
                 key == VirtualKey.GoBack;
+        }
+
+        private static bool IsDownKey(VirtualKey key)
+        {
+            return key == VirtualKey.Down ||
+                key == VirtualKey.GamepadDPadDown ||
+                key == VirtualKey.GamepadLeftThumbstickDown;
+        }
+
+        private static bool IsUpKey(VirtualKey key)
+        {
+            return key == VirtualKey.Up ||
+                key == VirtualKey.GamepadDPadUp ||
+                key == VirtualKey.GamepadLeftThumbstickUp;
         }
 
         private static Brush BrushResource(string key)

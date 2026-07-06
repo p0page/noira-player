@@ -26,6 +26,7 @@ public sealed class DevelopmentNavigationCommandTests
 
     [Theory]
     [InlineData("LiveTv", "livetv")]
+    [InlineData("LiveTv-Fixture", "livetv-fixture")]
     [InlineData("Music", "music")]
     [InlineData("Photos", "photos")]
     [InlineData("Playlists", "playlists")]

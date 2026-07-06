@@ -92,6 +92,7 @@ namespace NextGenEmby.Core.Diagnostics
                 case "playback-options-fixture":
                 case "settings":
                 case "livetv":
+                case "livetv-fixture":
                 case "livetv-unsupported":
                 case "music":
                 case "music-unsupported":

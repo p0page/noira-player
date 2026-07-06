@@ -779,6 +779,10 @@ namespace NextGenEmby.App
                     NavigateTo(typeof(LiveTvPage));
                     return;
 
+                case "livetv-fixture":
+                    NavigateTo(typeof(LiveTvPage), new LiveTvNavigationRequest(useDevelopmentFixture: true));
+                    return;
+
                 case "livetv-unsupported":
                     NavigateTo(typeof(LiveTvPage), new LiveTvNavigationRequest("Sample Channel"));
                     return;
