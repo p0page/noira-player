@@ -124,9 +124,16 @@ namespace NextGenEmby.Core.PlaybackQuality
                 analysis.MissingEvidence.Add("timing.expectedFrameDurationMs");
             }
 
-            if (report.Sync.AudioVideoDriftMsP95 <= 0 && report.Timing.RenderedVideoFrames == 0)
+            if (report.Expected != null &&
+                report.Expected.MaxAudioVideoDriftMsP95.HasValue &&
+                report.Sync.AudioVideoDriftMsP95 <= 0)
             {
                 analysis.MissingEvidence.Add("sync.audioVideoDriftMsP95");
+            }
+
+            if (report.Sync.AudioVideoDriftMsP95 <= 0 && report.Timing.RenderedVideoFrames == 0)
+            {
+                AddUnique(analysis.MissingEvidence, "sync.audioVideoDriftMsP95");
             }
 
             if (report.Buffers.QueuedAudioBuffers == 0 && report.Timing.RenderedVideoFrames == 0)

@@ -175,6 +175,28 @@ public sealed class PlaybackQualityReportAnalyzerTests
     }
 
     [Fact]
+    public void Analyze_Reports_Missing_Audio_Video_Drift_When_Drift_Threshold_Is_Expected()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "missing-av-drift",
+            Result = "observed",
+            Expected = new PlaybackQualityExpected
+            {
+                MaxAudioVideoDriftMsP95 = 40
+            },
+            Timing = new PlaybackQualityTiming
+            {
+                RenderedVideoFrames = 240
+            }
+        };
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Contains("sync.audioVideoDriftMsP95", analysis.MissingEvidence);
+    }
+
+    [Fact]
     public void Analyze_Adds_Expected_Frame_Duration_As_Frame_Pacing_Evidence()
     {
         var report = new PlaybackQualityReport

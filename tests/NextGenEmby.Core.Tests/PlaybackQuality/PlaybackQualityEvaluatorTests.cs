@@ -337,6 +337,44 @@ public sealed class PlaybackQualityEvaluatorTests
     }
 
     [Fact]
+    public void Evaluate_Fails_When_Audio_Video_Drift_Is_Required_But_Missing()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "missing-av-drift",
+            Expected = new PlaybackQualityExpected
+            {
+                MaxAudioVideoDriftMsP95 = 40,
+                RequireValidatedConversion = false
+            },
+            Timing = new PlaybackQualityTiming
+            {
+                RenderedVideoFrames = 240
+            },
+            Sync = new PlaybackQualitySync
+            {
+                AudioVideoDriftMsP95 = 0
+            }
+        };
+
+        PlaybackQualityEvaluator.Evaluate(report);
+
+        Assert.Equal("fail", report.Result);
+        Assert.Contains(
+            "AudioVideoDriftMsP95 is missing for av-sync validation.",
+            report.FailureReasons);
+        Assert.Equal("av-sync", report.Analysis.PrimaryFailureArea);
+        Assert.Contains("sync.audioVideoDriftMsP95", report.Analysis.RelevantSignals);
+        Assert.Contains(report.Checks, check =>
+            check.Name == "AudioVideoDriftMsP95" &&
+            check.Signal == "sync.audioVideoDriftMsP95" &&
+            check.Expected == "40.000" &&
+            check.Actual == "" &&
+            check.Status == "fail" &&
+            check.FailureArea == "av-sync");
+    }
+
+    [Fact]
     public void Evaluate_Fails_With_Actionable_Reasons_When_Thresholds_Are_Exceeded()
     {
         var report = new PlaybackQualityReport

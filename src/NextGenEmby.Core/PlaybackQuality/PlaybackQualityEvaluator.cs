@@ -64,7 +64,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                 "MaxRenderIntervalMsP99",
                 "timing.renderIntervalMsP99",
                 "frame-pacing");
-            CheckMax(
+            CheckMeasuredMax(
                 report,
                 "AudioVideoDriftMsP95",
                 report.Sync.AudioVideoDriftMsP95,
