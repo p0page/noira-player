@@ -8,6 +8,7 @@ namespace NextGenEmby.Core.PlaybackQuality
         public string Result { get; set; } = "";
         public string PrimaryFailureArea { get; set; } = "none";
         public string SuggestedNextAction { get; set; } = "";
+        public PlaybackQualitySourceAssessment Source { get; set; } = new PlaybackQualitySourceAssessment();
         public PlaybackQualitySampleAssessment Sample { get; set; } = new PlaybackQualitySampleAssessment();
         public PlaybackQualityCadenceAssessment Cadence { get; set; } = new PlaybackQualityCadenceAssessment();
         public PlaybackQualityOptimizationGate OptimizationGate { get; set; } = new PlaybackQualityOptimizationGate();
@@ -20,6 +21,27 @@ namespace NextGenEmby.Core.PlaybackQuality
         public List<string> EvidenceSignals { get; } = new List<string>();
         public List<string> MissingEvidence { get; } = new List<string>();
         public List<string> Limitations { get; } = new List<string>();
+    }
+
+    public sealed class PlaybackQualitySourceAssessment
+    {
+        public string Status { get; set; } = "unknown";
+        public string Reason { get; set; } = "";
+        public string Codec { get; set; } = "";
+        public int Width { get; set; }
+        public int Height { get; set; }
+        public double FrameRate { get; set; }
+        public string HdrKind { get; set; } = "";
+        public string HdrPlaybackStrategy { get; set; } = "";
+        public bool IsHdr { get; set; }
+        public bool IsDirectPlayable { get; set; }
+        public bool IsDolbyVision { get; set; }
+        public int? DolbyVisionProfile { get; set; }
+        public int? DolbyVisionCompatibilityId { get; set; }
+        public bool HasHdr10BaseLayer { get; set; }
+        public bool HasHlgBaseLayer { get; set; }
+        public List<string> Signals { get; } = new List<string>();
+        public List<string> MismatchedSignals { get; } = new List<string>();
     }
 
     public sealed class PlaybackQualityInvestigationHint
@@ -124,6 +146,7 @@ namespace NextGenEmby.Core.PlaybackQuality
             }
 
             analysis.Sample = AssessSample(report);
+            analysis.Source = AssessSource(report);
             analysis.Cadence = AssessCadence(report);
             AddDerivedEvidence(analysis, report);
             AddMissingEvidence(analysis, report);
@@ -140,6 +163,126 @@ namespace NextGenEmby.Core.PlaybackQuality
             }
 
             return analysis;
+        }
+
+        private static PlaybackQualitySourceAssessment AssessSource(PlaybackQualityReport report)
+        {
+            var source = new PlaybackQualitySourceAssessment
+            {
+                Codec = report.Source.Codec,
+                Width = report.Source.Width,
+                Height = report.Source.Height,
+                FrameRate = report.Source.FrameRate,
+                HdrKind = report.Source.HdrKind,
+                HdrPlaybackStrategy = report.Source.HdrPlaybackStrategy,
+                IsHdr = report.Source.IsHdr,
+                IsDirectPlayable = report.Source.IsDirectPlayable,
+                IsDolbyVision = report.Source.IsDolbyVision,
+                DolbyVisionProfile = report.Source.DolbyVisionProfile,
+                DolbyVisionCompatibilityId = report.Source.DolbyVisionCompatibilityId,
+                HasHdr10BaseLayer = report.Source.HasHdr10BaseLayer,
+                HasHlgBaseLayer = report.Source.HasHlgBaseLayer
+            };
+
+            AddSourceSignals(source);
+            foreach (var check in report.Checks)
+            {
+                if (check.Status == "fail" &&
+                    check.FailureArea == "unsupported-source" &&
+                    !string.IsNullOrWhiteSpace(check.Signal))
+                {
+                    AddUnique(source.MismatchedSignals, check.Signal);
+                    AddUnique(source.Signals, check.Signal);
+                }
+            }
+
+            if (source.MismatchedSignals.Count > 0)
+            {
+                source.Status = "mismatch";
+                source.Reason = "Source metadata did not match expected reference metadata.";
+                return source;
+            }
+
+            if (string.IsNullOrWhiteSpace(source.Codec) &&
+                source.FrameRate <= 0 &&
+                string.IsNullOrWhiteSpace(source.HdrKind))
+            {
+                source.Status = "missing-evidence";
+                source.Reason = "Source codec, frame rate, and HDR kind are missing.";
+                return source;
+            }
+
+            if (!source.IsDirectPlayable &&
+                (source.IsDolbyVision || source.HdrKind == "DolbyVisionUnsupported"))
+            {
+                source.Status = "unsupported";
+                source.Reason = "Parsed source is not directly playable by the current Core HDR policy.";
+                return source;
+            }
+
+            source.Status = "matched";
+            source.Reason = "Parsed source metadata is available and has no unsupported-source mismatches.";
+            return source;
+        }
+
+        private static void AddSourceSignals(PlaybackQualitySourceAssessment source)
+        {
+            var hasSourceEvidence =
+                !string.IsNullOrWhiteSpace(source.Codec) ||
+                source.Width > 0 ||
+                source.Height > 0 ||
+                source.FrameRate > 0 ||
+                !string.IsNullOrWhiteSpace(source.HdrKind) ||
+                !string.IsNullOrWhiteSpace(source.HdrPlaybackStrategy);
+
+            if (!string.IsNullOrWhiteSpace(source.Codec))
+            {
+                AddUnique(source.Signals, "source.codec");
+            }
+
+            if (source.Width > 0)
+            {
+                AddUnique(source.Signals, "source.width");
+            }
+
+            if (source.Height > 0)
+            {
+                AddUnique(source.Signals, "source.height");
+            }
+
+            if (source.FrameRate > 0)
+            {
+                AddUnique(source.Signals, "source.frameRate");
+            }
+
+            if (!string.IsNullOrWhiteSpace(source.HdrKind))
+            {
+                AddUnique(source.Signals, "source.hdrKind");
+            }
+
+            if (!string.IsNullOrWhiteSpace(source.HdrPlaybackStrategy))
+            {
+                AddUnique(source.Signals, "source.hdrPlaybackStrategy");
+            }
+
+            if (hasSourceEvidence)
+            {
+                AddUnique(source.Signals, "source.isHdr");
+                AddUnique(source.Signals, "source.isDirectPlayable");
+                AddUnique(source.Signals, "source.isDolbyVision");
+                AddUnique(source.Signals, "source.hasHdr10BaseLayer");
+                AddUnique(source.Signals, "source.hasHlgBaseLayer");
+            }
+
+            if (source.DolbyVisionProfile.HasValue)
+            {
+                AddUnique(source.Signals, "source.dolbyVisionProfile");
+            }
+
+            if (source.DolbyVisionCompatibilityId.HasValue)
+            {
+                AddUnique(source.Signals, "source.dolbyVisionCompatibilityId");
+            }
         }
 
         private static void AddTriageSteps(PlaybackQualityModelAnalysis analysis)

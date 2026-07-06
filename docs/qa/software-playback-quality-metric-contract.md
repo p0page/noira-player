@@ -55,6 +55,7 @@ The primary consumer of `quality-run` reports is an automated model or agent, no
 The analyzer output must include:
 
 - `primaryFailureArea` copied from report analysis;
+- `source` with parsed source status, HDR/Dolby Vision playback strategy, source evidence signals, and source mismatch signals;
 - `sample` with `status`, rendered frame count, expected minimum rendered frames, derived sample durations, additional required frames, and a reason;
 - `cadence` with source frame rate, display refresh rate, nearest supported 1x/2x/2.5x target, delta, tolerance, status, and evidence signals;
 - `optimizationGate` with a machine-readable decision on whether this run is usable for playback Core optimization;
@@ -69,6 +70,7 @@ The analyzer output must include:
 - `limitations` copied from the report.
 
 This keeps model iteration grounded in evidence. For example, a report can identify `color-pipeline` as primary while still preserving `frame-pacing` as a secondary failure area.
+`source.status` must be checked before optimizing playback timing or color conversion. `mismatch` means the report selected or parsed a different source than the reference case expected; `unsupported` means Core classified the source as not directly playable, for example unsupported Dolby Vision; `missing-evidence` means the run did not capture enough source metadata; `matched` means parsed source metadata is available and no `unsupported-source` check failed.
 `sample.status` must be checked before changing playback timing logic. `insufficient` means the run did not render enough frames to support frame-pacing optimization from that run alone.
 `sample.observedSampleDurationMs`, `sample.minimumSampleDurationMs`, and `sample.additionalRenderedFramesRequired` must be derived when frame-rate evidence exists. These fields let an automated model choose the next capture duration instead of guessing from raw frame counts.
 `cadence.status` must be checked for frame-pacing work involving 23.976fps, 24fps, 25fps, 50fps, or 60fps sources. `matched` means the software-observed display refresh is within the same 0.15Hz tolerance used by `PlaybackRefreshRatePolicy`; `mismatch` means the report should inspect refresh selection before timing thresholds. `cadence.bestMultiplier`, `cadence.bestTargetRefreshRateHz`, and `cadence.refreshDeltaHz` let the model see whether the display is nearest to the 1x, 2x, or 2.5x target without parsing human text.

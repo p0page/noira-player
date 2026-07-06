@@ -328,6 +328,96 @@ public sealed class PlaybackQualityReportAnalyzerTests
     }
 
     [Fact]
+    public void Analyze_Summarizes_Hdr_Source_Strategy_For_Model()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "source-summary",
+            Result = "pass",
+            Source = new PlaybackQualitySource
+            {
+                Codec = "hevc",
+                Width = 3840,
+                Height = 2160,
+                FrameRate = 23.976,
+                HdrKind = "DolbyVisionWithHdr10Fallback",
+                HdrPlaybackStrategy = "HDR10 fallback from Dolby Vision",
+                IsHdr = true,
+                IsDirectPlayable = true,
+                IsDolbyVision = true,
+                DolbyVisionProfile = 8,
+                DolbyVisionCompatibilityId = 1,
+                HasHdr10BaseLayer = true,
+                HasHlgBaseLayer = false
+            },
+            Timing = new PlaybackQualityTiming
+            {
+                RenderedVideoFrames = 240
+            },
+            ColorPipeline = new PlaybackQualityColorPipeline
+            {
+                DxgiInput = "YCBCR_STUDIO_G2084_TOPLEFT_P2020"
+            },
+            Display = new PlaybackQualityDisplay
+            {
+                HdrStatus = "On",
+                RefreshRateHz = 59.94006
+            }
+        };
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Equal("matched", analysis.Source.Status);
+        Assert.Equal("DolbyVisionWithHdr10Fallback", analysis.Source.HdrKind);
+        Assert.Equal("HDR10 fallback from Dolby Vision", analysis.Source.HdrPlaybackStrategy);
+        Assert.True(analysis.Source.IsDirectPlayable);
+        Assert.True(analysis.Source.IsDolbyVision);
+        Assert.Equal(8, analysis.Source.DolbyVisionProfile);
+        Assert.Equal(1, analysis.Source.DolbyVisionCompatibilityId);
+        Assert.True(analysis.Source.HasHdr10BaseLayer);
+        Assert.False(analysis.Source.HasHlgBaseLayer);
+        Assert.Contains("source.hdrPlaybackStrategy", analysis.Source.Signals);
+        Assert.Contains("source.dolbyVisionProfile", analysis.Source.Signals);
+    }
+
+    [Fact]
+    public void Analyze_Marks_Source_Mismatch_From_Unsupported_Source_Checks()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "source-mismatch",
+            Result = "fail",
+            Source = new PlaybackQualitySource
+            {
+                Codec = "hevc",
+                FrameRate = 23.976,
+                HdrKind = "DolbyVisionUnsupported",
+                HdrPlaybackStrategy = "Dolby Vision unsupported",
+                IsHdr = true,
+                IsDirectPlayable = false,
+                IsDolbyVision = true,
+                DolbyVisionProfile = 5
+            }
+        };
+        report.Checks.Add(new PlaybackQualityCheck
+        {
+            Name = "ExpectedDolbyVisionProfile",
+            Status = "fail",
+            FailureArea = "unsupported-source",
+            Signal = "source.dolbyVisionProfile",
+            Expected = "8",
+            Actual = "5"
+        });
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Equal("mismatch", analysis.Source.Status);
+        Assert.Contains("source.dolbyVisionProfile", analysis.Source.MismatchedSignals);
+        Assert.Contains("source.dolbyVisionProfile", analysis.Source.Signals);
+        Assert.Contains("Source metadata did not match expected reference metadata.", analysis.Source.Reason);
+    }
+
+    [Fact]
     public void Analyze_Blocks_Playback_Core_Optimization_When_Sample_Is_Insufficient()
     {
         var report = CreateOptimizationReadyFailure();
@@ -759,6 +849,7 @@ public sealed class PlaybackQualityReportAnalyzerTests
 
         Assert.Contains("\"runId\"", json);
         Assert.Contains("\"primaryFailureArea\"", json);
+        Assert.Contains("\"source\"", json);
         Assert.Contains("\"sample\"", json);
         Assert.Contains("\"cadence\"", json);
         Assert.Contains("\"optimizationGate\"", json);
