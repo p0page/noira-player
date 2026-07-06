@@ -207,6 +207,53 @@ public sealed class PlaybackQualityEvaluatorTests
     }
 
     [Fact]
+    public void Evaluate_Fails_When_Render_Interval_Percentiles_Exceed_Thresholds()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "jittery-render-intervals",
+            Expected = new PlaybackQualityExpected
+            {
+                MaxRenderIntervalMsP95 = 50,
+                MaxRenderIntervalMsP99 = 70,
+                RequireValidatedConversion = false
+            },
+            Timing = new PlaybackQualityTiming
+            {
+                RenderIntervalMsP95 = 65,
+                RenderIntervalMsP99 = 90
+            }
+        };
+
+        PlaybackQualityEvaluator.Evaluate(report);
+
+        Assert.Equal("fail", report.Result);
+        Assert.Contains(
+            "RenderIntervalMsP95 65.000 exceeded MaxRenderIntervalMsP95 50.000.",
+            report.FailureReasons);
+        Assert.Contains(
+            "RenderIntervalMsP99 90.000 exceeded MaxRenderIntervalMsP99 70.000.",
+            report.FailureReasons);
+        Assert.Equal("frame-pacing", report.Analysis.PrimaryFailureArea);
+        Assert.Contains("timing.renderIntervalMsP95", report.Analysis.RelevantSignals);
+        Assert.Contains("timing.renderIntervalMsP99", report.Analysis.RelevantSignals);
+        Assert.Contains(report.Checks, check =>
+            check.Name == "RenderIntervalMsP95" &&
+            check.Signal == "timing.renderIntervalMsP95" &&
+            check.Expected == "50.000" &&
+            check.Actual == "65.000" &&
+            check.Status == "fail" &&
+            check.FailureArea == "frame-pacing");
+        Assert.Contains(report.Checks, check =>
+            check.Name == "RenderIntervalMsP99" &&
+            check.Signal == "timing.renderIntervalMsP99" &&
+            check.Expected == "70.000" &&
+            check.Actual == "90.000" &&
+            check.Status == "fail" &&
+            check.FailureArea == "frame-pacing");
+    }
+
+    [Fact]
     public void Evaluate_Fails_With_Actionable_Reasons_When_Thresholds_Are_Exceeded()
     {
         var report = new PlaybackQualityReport

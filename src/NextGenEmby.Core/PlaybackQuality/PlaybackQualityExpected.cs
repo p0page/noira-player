@@ -10,6 +10,8 @@ namespace NextGenEmby.Core.PlaybackQuality
         public long? MinRenderedVideoFrames { get; set; }
         public long? MaxDroppedFrames { get; set; }
         public double? MaxFrameGapMs { get; set; }
+        public double? MaxRenderIntervalMsP95 { get; set; }
+        public double? MaxRenderIntervalMsP99 { get; set; }
         public double? MaxAudioVideoDriftMsP95 { get; set; }
         public long? MaxVideoStarvedPasses { get; set; }
         public long? MaxAudioStarvedPasses { get; set; }

@@ -85,6 +85,8 @@ Every report must include these phase-1 limitations:
 
 `maxFrameGapMs` is the largest interval between player-side rendered/presented frames. It is not a display-device measurement.
 
+`renderIntervalMsP95` and `renderIntervalMsP99` measure player-side render interval percentiles. `expected.maxRenderIntervalMsP95` and `expected.maxRenderIntervalMsP99` are frame-pacing thresholds intended to catch repeated micro-stutter that a single maximum gap may not explain well.
+
 `startup.startupDurationMs` measures time from playback command acceptance to playback-start readiness as observed by the app or harness. When `expected.maxStartupDurationMs` is supplied, exceeding it or omitting the startup duration is a `startup` failure and should be investigated before frame pacing or color changes.
 
 `expected.frameRate` validates that the actual selected media source reports the intended cadence. A mismatch is an `unsupported-source` failure because the model should inspect media source selection or source metadata before tuning render pacing.

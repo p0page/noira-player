@@ -50,6 +50,22 @@ namespace NextGenEmby.Core.PlaybackQuality
                 "frame-pacing");
             CheckMax(
                 report,
+                "RenderIntervalMsP95",
+                report.Timing.RenderIntervalMsP95,
+                expected.MaxRenderIntervalMsP95,
+                "MaxRenderIntervalMsP95",
+                "timing.renderIntervalMsP95",
+                "frame-pacing");
+            CheckMax(
+                report,
+                "RenderIntervalMsP99",
+                report.Timing.RenderIntervalMsP99,
+                expected.MaxRenderIntervalMsP99,
+                "MaxRenderIntervalMsP99",
+                "timing.renderIntervalMsP99",
+                "frame-pacing");
+            CheckMax(
+                report,
                 "AudioVideoDriftMsP95",
                 report.Sync.AudioVideoDriftMsP95,
                 expected.MaxAudioVideoDriftMsP95,
@@ -455,7 +471,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                 return;
             }
 
-            if (HasReason(report, "DroppedVideoFrames", "MaxFrameGapMs", "RenderedVideoFrames", "DisplayRefreshRateHz", "SourceFrameRate"))
+            if (HasReason(report, "DroppedVideoFrames", "MaxFrameGapMs", "RenderIntervalMs", "RenderedVideoFrames", "DisplayRefreshRateHz", "SourceFrameRate"))
             {
                 report.Analysis.PrimaryFailureArea = "frame-pacing";
                 report.Analysis.SuggestedNextAction = "Inspect frame pacing wait/drop thresholds around PlaybackFramePacing.";
