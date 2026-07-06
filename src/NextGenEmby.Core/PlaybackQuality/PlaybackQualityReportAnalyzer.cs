@@ -141,9 +141,30 @@ namespace NextGenEmby.Core.PlaybackQuality
                 analysis.MissingEvidence.Add("buffers.queuedAudioBuffers");
             }
 
+            if (report.Expected != null &&
+                !string.IsNullOrWhiteSpace(report.Expected.HdrOutput) &&
+                string.IsNullOrWhiteSpace(report.ColorPipeline.ActualHdrOutput))
+            {
+                analysis.MissingEvidence.Add("colorPipeline.actualHdrOutput");
+            }
+
             if (string.IsNullOrWhiteSpace(report.ColorPipeline.DxgiInput))
             {
-                analysis.MissingEvidence.Add("colorPipeline.dxgiInput");
+                AddUnique(analysis.MissingEvidence, "colorPipeline.dxgiInput");
+            }
+
+            if (report.Expected != null &&
+                !string.IsNullOrWhiteSpace(report.Expected.DxgiOutput) &&
+                string.IsNullOrWhiteSpace(report.ColorPipeline.DxgiOutput))
+            {
+                analysis.MissingEvidence.Add("colorPipeline.dxgiOutput");
+            }
+
+            if (report.Expected != null &&
+                report.Expected.RequireValidatedConversion &&
+                string.IsNullOrWhiteSpace(report.ColorPipeline.ConversionStatus))
+            {
+                analysis.MissingEvidence.Add("colorPipeline.conversionStatus");
             }
 
             if (string.IsNullOrWhiteSpace(report.Display.HdrStatus))

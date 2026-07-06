@@ -197,6 +197,30 @@ public sealed class PlaybackQualityReportAnalyzerTests
     }
 
     [Fact]
+    public void Analyze_Reports_Missing_Color_Pipeline_Evidence_When_Color_Expectations_Are_Set()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "missing-color-pipeline",
+            Result = "observed",
+            Expected = new PlaybackQualityExpected
+            {
+                HdrOutput = "Hdr10",
+                DxgiInput = "YCBCR_STUDIO_G2084_TOPLEFT_P2020",
+                DxgiOutput = "RGB_FULL_G2084_NONE_P2020",
+                RequireValidatedConversion = true
+            }
+        };
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Contains("colorPipeline.actualHdrOutput", analysis.MissingEvidence);
+        Assert.Contains("colorPipeline.dxgiInput", analysis.MissingEvidence);
+        Assert.Contains("colorPipeline.dxgiOutput", analysis.MissingEvidence);
+        Assert.Contains("colorPipeline.conversionStatus", analysis.MissingEvidence);
+    }
+
+    [Fact]
     public void Analyze_Adds_Expected_Frame_Duration_As_Frame_Pacing_Evidence()
     {
         var report = new PlaybackQualityReport
