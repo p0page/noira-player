@@ -20,6 +20,10 @@ if (-not ($plan.includedRoots -contains 'src/NextGenEmby.Native')) {
     throw 'Expected src/NextGenEmby.Native in playback-core included roots.'
 }
 
+if (-not ($plan.includedRoots -contains 'tools/NextGenEmby.PlaybackQuality.Cli')) {
+    throw 'Expected playback quality CLI in playback-core included roots.'
+}
+
 if (-not ($plan.excludedRoots -contains 'src/NextGenEmby.App')) {
     throw 'Expected src/NextGenEmby.App in playback-core excluded roots.'
 }
@@ -64,6 +68,14 @@ if (-not ($plan.commands | Where-Object { $_.name -eq 'script-plan-test' })) {
 
 if (-not ($plan.commands | Where-Object { $_.name -eq 'native-helper-test' })) {
     throw 'Expected native-helper-test command in playback-core validation plan.'
+}
+
+if (-not ($plan.commands | Where-Object { $_.name -eq 'playback-quality-cli-build' })) {
+    throw 'Expected playback-quality-cli-build command in playback-core validation plan.'
+}
+
+if (-not ($plan.commands | Where-Object { $_.name -eq 'playback-quality-cli-smoke-test' })) {
+    throw 'Expected playback-quality-cli-smoke-test command in playback-core validation plan.'
 }
 
 if (-not ($plan.commands | Where-Object { $_.name -eq 'native-display-refresh-test' })) {

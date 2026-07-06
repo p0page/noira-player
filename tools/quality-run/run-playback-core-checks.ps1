@@ -88,6 +88,16 @@ $commands = @(
         -Command 'dotnet' `
         -Arguments @('test', 'tests\NextGenEmby.Core.Tests\NextGenEmby.Core.Tests.csproj', '--filter', $coreTestFilter, '-v', 'minimal')
     New-CommandPlan `
+        -Name 'playback-quality-cli-build' `
+        -Description 'Build the App-free playback quality comparison CLI used by model optimization loops.' `
+        -Command 'dotnet' `
+        -Arguments @('build', 'tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj', '-v', 'minimal')
+    New-CommandPlan `
+        -Name 'playback-quality-cli-smoke-test' `
+        -Description 'Run an App-free JSON baseline/candidate comparison smoke test through the playback quality CLI.' `
+        -Command 'powershell' `
+        -Arguments @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', 'tools\quality-run\run-playback-quality-cli-smoke-test.ps1')
+    New-CommandPlan `
         -Name 'native-helper-test' `
         -Description 'Compile and run the standalone native playback quality metrics helper test.' `
         -Command 'cmd' `
@@ -124,6 +134,7 @@ $summary = [pscustomobject]@{
         'src/NextGenEmby.Native',
         'tests/NextGenEmby.Core.Tests',
         'tests/NextGenEmby.Native.Tests',
+        'tools/NextGenEmby.PlaybackQuality.Cli',
         'tools/quality-run'
     )
     excludedRoots = @('src/NextGenEmby.App')

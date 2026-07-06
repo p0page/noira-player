@@ -340,6 +340,31 @@ public sealed class PlaybackQualityRunComparatorTests
         Assert.Contains("\"timing.maxFrameGapMs\"", json);
     }
 
+    [Fact]
+    public void Serializer_Deserializes_Report_Checks_For_Cli_Comparison()
+    {
+        var json = """
+        {
+          "runId": "baseline",
+          "checks": [
+            {
+              "name": "MaxFrameGapMs",
+              "signal": "timing.maxFrameGapMs",
+              "status": "fail",
+              "failureArea": "frame-pacing",
+              "expected": "105.000",
+              "actual": "180.000"
+            }
+          ]
+        }
+        """;
+
+        var report = PlaybackQualityReportSerializer.Deserialize(json);
+
+        Assert.Single(report.Checks);
+        Assert.Equal("timing.maxFrameGapMs", report.Checks[0].Signal);
+    }
+
     private static PlaybackQualityReport CreateReport(
         string runId,
         params PlaybackQualityCheck[] checks)

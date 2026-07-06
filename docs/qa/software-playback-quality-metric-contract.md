@@ -135,6 +135,8 @@ The comparator also emits a machine-readable `decision`: `keep-candidate`, `reje
 
 `PlaybackQualityReportSerializer.Serialize(PlaybackQualityRunComparison)` writes the comparison JSON with camelCase field names. Automated runs should prefer the serialized comparison object when handing before/after evidence to a model so the model can trace which two run IDs were compared and whether they were comparable.
 
+`tools/NextGenEmby.PlaybackQuality.Cli` is the App-free command-line entry point for generating the same comparison JSON from serialized report files. The `compare` command requires `--baseline` and `--candidate`, accepts repeated `--previous` comparison files for stall detection, accepts `--stall-threshold`, and writes either to stdout or `--output`. This is the preferred bridge between captured quality-run artifacts and automated model optimization because it avoids temporary custom code and does not build or package the Xbox App.
+
 `PlaybackQualityReportMapper.ApplySource` is the lower-level Core mapping from `PlaybackDescriptor` into `source`. `PlaybackQualityReportMapper.ApplyDisplayStatus` maps `PlaybackDisplayStatus` into `display` and `colorPipeline`. `PlaybackQualityReportMapper.ApplyMetrics` maps playback metrics snapshots into `timing`, `sync`, and `buffers`. App or harness code should prefer the composer and use these mappers only when it needs lower-level control.
 
 ## Failure Area Priority

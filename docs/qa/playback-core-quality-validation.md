@@ -20,6 +20,7 @@ The command validates:
 
 - playback-core validation plan structure, including the invariant that App/MSIX build steps are excluded;
 - playback-specific Core tests selected by `coreTestFilter`, including playback quality DTOs, report composer, evaluator, analyzer, command parsing, playback policies, backend diagnostics, stream-launch decisions, and Emby playback progress/session behavior;
+- App-free playback quality comparison CLI build and JSON smoke test;
 - Core refresh-rate cadence policy tests that mirror the native Xbox display-mode selection ratios;
 - standalone native playback quality metrics helper;
 - standalone native display refresh cadence policy helper;
@@ -35,6 +36,20 @@ The command deliberately excludes:
 - MSIX packaging.
 
 Use an App package build only when validating Xbox integration or a change that directly touches App/XAML behavior.
+
+## Compare Reports
+
+Use the App-free CLI when an automated model run needs to compare two serialized playback quality reports without building the Xbox App:
+
+```powershell
+dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- compare --baseline baseline.json --candidate candidate.json --output comparison.json
+```
+
+For iterative optimization loops, pass previous comparison JSON files to enable repeated-unchanged stall protection:
+
+```powershell
+dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- compare --baseline baseline.json --candidate candidate.json --previous previous-comparison.json --stall-threshold 2 --output comparison.json
+```
 
 ## Model-Facing Output
 

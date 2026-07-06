@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace NextGenEmby.Core.PlaybackQuality
 {
@@ -7,6 +8,7 @@ namespace NextGenEmby.Core.PlaybackQuality
         private static readonly JsonSerializerOptions Options = new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            PreferredObjectCreationHandling = JsonObjectCreationHandling.Populate,
             WriteIndented = true
         };
 
