@@ -1,0 +1,24 @@
+using System.Text.Json;
+
+namespace NextGenEmby.Core.PlaybackQuality
+{
+    public static class PlaybackQualityReportSerializer
+    {
+        private static readonly JsonSerializerOptions Options = new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            WriteIndented = true
+        };
+
+        public static string Serialize(PlaybackQualityReport report)
+        {
+            return JsonSerializer.Serialize(report, Options);
+        }
+
+        public static PlaybackQualityReport Deserialize(string json)
+        {
+            return JsonSerializer.Deserialize<PlaybackQualityReport>(json, Options) ??
+                new PlaybackQualityReport();
+        }
+    }
+}
