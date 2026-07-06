@@ -18,8 +18,10 @@ namespace NextGenEmby.App.Views
 {
     public sealed partial class SearchPage : Page, ITvContentFocusTarget
     {
-        private const double ResultCardWidth = 168d;
-        private const double ResultCardTrailingMargin = 14d;
+        private const string PosterCardWidthResourceKey = "TvPosterCardWidth";
+        private const string PosterGridItemMarginResourceKey = "TvPosterGridItemMargin";
+        private const double FallbackPosterCardWidth = 168d;
+        private const double FallbackPosterCardTrailingMargin = 14d;
         private readonly ApplicationDataSessionStore _sessionStore = new ApplicationDataSessionStore();
         private readonly List<Button> _scopeButtons = new List<Button>();
         private bool _isUnloaded;
@@ -218,7 +220,9 @@ namespace NextGenEmby.App.Views
                 using (var httpClient = new HttpClient())
                 {
                     var client = EmbyClientFactory.Create(httpClient, session);
-                    var items = await client.SearchItemsAsync(session, term, scope.IncludeItemTypes);
+                    var items = await InteractiveRequestGuard.WithTimeoutAsync(
+                        client.SearchItemsAsync(session, term, scope.IncludeItemTypes),
+                        EmbyRequestTimeoutPolicy.InteractiveRequestTimeout);
                     var scopedItems = scope.RequireItemTypeMatch
                         ? EmbyLibraryItemTypePolicy.KeepIncludedItemTypes(items, scope.IncludeItemTypes)
                         : items;
@@ -550,9 +554,38 @@ namespace NextGenEmby.App.Views
 
         private int GetVisibleColumnCount()
         {
-            var stride = ResultCardWidth + ResultCardTrailingMargin;
-            var available = Math.Max(stride, ResultsGrid.ActualWidth + ResultCardTrailingMargin);
+            var trailingMargin = GetPosterGridTrailingMargin();
+            var stride = GetPosterCardWidth() + trailingMargin;
+            var available = Math.Max(stride, ResultsGrid.ActualWidth + trailingMargin);
             return Math.Max(1, (int)Math.Floor(available / stride));
+        }
+
+        private static double GetPosterCardWidth()
+        {
+            return GetDoubleResource(PosterCardWidthResourceKey, FallbackPosterCardWidth);
+        }
+
+        private static double GetPosterGridTrailingMargin()
+        {
+            var resources = Application.Current.Resources;
+            if (resources.ContainsKey(PosterGridItemMarginResourceKey) &&
+                resources[PosterGridItemMarginResourceKey] is Thickness margin)
+            {
+                return margin.Right;
+            }
+
+            return FallbackPosterCardTrailingMargin;
+        }
+
+        private static double GetDoubleResource(string key, double fallback)
+        {
+            var resources = Application.Current.Resources;
+            if (resources.ContainsKey(key) && resources[key] is double value)
+            {
+                return value;
+            }
+
+            return fallback;
         }
 
         private bool CanApplySearch(int searchGeneration)

@@ -112,23 +112,15 @@
                     IsItemClickEnabled="True"
                     ItemClick="ItemsGrid_OnItemClick"
                     SelectionMode="None"
+                    ItemContainerStyle="{StaticResource TvPosterGridItemStyle}"
                     Margin="0,8,0,0"
                     HorizontalAlignment="Stretch"
                     VerticalAlignment="Stretch">
-                    <GridView.ItemContainerStyle>
-                        <Style TargetType="GridViewItem">
-                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                            <Setter Property="VerticalContentAlignment" Value="Stretch" />
-                            <Setter Property="UseSystemFocusVisuals" Value="True" />
-                            <Setter Property="Padding" Value="0" />
-                            <Setter Property="Margin" Value="0,0,14,14" />
-                        </Style>
-                    </GridView.ItemContainerStyle>
                     <GridView.ItemTemplate>
                         <DataTemplate>
                             <Grid
-                                Width="168"
-                                Height="250"
+                                Width="{StaticResource TvPosterCardWidth}"
+                                Height="{StaticResource TvPosterCardHeight}"
                                 Background="{StaticResource AppRaisedSurfaceBrush}">
                                 <Grid.Resources>
                                     <Style TargetType="TextBlock">
@@ -138,7 +130,7 @@
                                 <Border
                                     BorderBrush="{StaticResource AppHairlineBrush}"
                                     BorderThickness="1"
-                                    CornerRadius="6" />
+                                    CornerRadius="{StaticResource TvPosterCardCornerRadius}" />
                                 <Image
                                     Source="{Binding ImageSource}"
                                     Stretch="UniformToFill" />
@@ -146,21 +138,14 @@
                                 <Border
                                     VerticalAlignment="Bottom"
                                     Background="{StaticResource AppCardScrimBrush}"
-                                    Padding="14,12">
+                                    Padding="{StaticResource TvPosterCardScrimPadding}">
                                     <StackPanel Spacing="4">
                                         <TextBlock
                                             Text="{Binding Title}"
-                                            FontSize="16"
-                                            FontWeight="SemiBold"
-                                            TextTrimming="CharacterEllipsis"
-                                            MaxLines="2"
-                                            TextWrapping="WrapWholeWords" />
+                                            Style="{StaticResource TvPosterCardTitleTextStyle}" />
                                         <TextBlock
                                             Text="{Binding Meta}"
-                                            FontSize="13"
-                                            Foreground="{StaticResource AppMutedTextBrush}"
-                                            TextTrimming="CharacterEllipsis"
-                                            MaxLines="1" />
+                                            Style="{StaticResource TvPosterCardMetaTextStyle}" />
                                     </StackPanel>
                                 </Border>
                             </Grid>
@@ -183,19 +168,12 @@
                     Visibility="Collapsed">
                     <TextBlock
                         x:Name="EmptyTitleBlock"
-                        HorizontalAlignment="Center"
-                        FontSize="28"
-                        FontWeight="SemiBold"
-                        Text="No items found"
-                        TextAlignment="Center" />
+                        Style="{StaticResource TvEmptyStateTitleTextStyle}"
+                        Text="No items found" />
                     <TextBlock
                         x:Name="EmptyBodyBlock"
-                        HorizontalAlignment="Center"
-                        FontSize="17"
-                        Foreground="{StaticResource AppMutedTextBrush}"
-                        Text="Try another filter or refresh this library."
-                        TextAlignment="Center"
-                        TextWrapping="Wrap" />
+                        Style="{StaticResource TvEmptyStateBodyTextStyle}"
+                        Text="Try another filter or refresh this library." />
                     <StackPanel
                         HorizontalAlignment="Center"
                         Orientation="Horizontal"

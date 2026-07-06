@@ -46,7 +46,7 @@ Status values:
 
 | Operation | Keyboard Path | Status | Evidence | Next Work |
 | --- | --- | --- | --- | --- |
-| Open movie/series library grid | Guide/Home, `Return` | Verified | 0.1.0.104 `热门剧集`; 0.1.0.102 `日漫` | Validate more collection types |
+| Open movie/series library grid | Guide/Home, `Return` | Verified | 0.1.0.129 Guide opened Movies with `100 items`; 0.1.0.104 `热门剧集`; 0.1.0.102 `日漫` | Validate more collection types |
 | Move across and down grid | Arrows | Implemented | GridView focus and wrap layout exist | Fresh grid stress route needed |
 | Sort through TV sheet | `Up`, `Return`, arrows, `Return` | Verified | 0.1.0.98 sort sheet validation | Extend sort options beyond Title/Recently added/Year |
 | Filter through TV sheet | `Up`, `Right`, `Return`, arrows, `Return` | Verified | 0.1.0.98 filter sheet validation | Add favorite/resumable server-backed validation |
@@ -69,11 +69,11 @@ Status values:
 | Operation | Keyboard Path | Status | Evidence | Next Work |
 | --- | --- | --- | --- | --- |
 | Open Search from guide | `M`, arrows, `Return` | Verified | 0.1.0.77 guide opened Search | Keep as shell regression |
-| Submit query | Type text, `Return` | Verified | 0.1.0.105 searched `Terrifier` and returned 3 results | Add result Details route |
-| Move scopes | `Down`, `Left`/`Right` | Implemented | `SearchFocusNavigationPolicy` tests exist | Validate long scope rail on TV viewport |
-| Open result Details | Results, `Return` | Implemented | Result item click navigates Details | Fresh keyboard run |
+| Submit query | Type text, `Return` | Verified | 0.1.0.129 searched `Terrifier` and returned 3 results without staying in `Searching All`; 0.1.0.105 also returned 3 results | Keep as Search regression route |
+| Move scopes | `Down`, `Left`/`Right` | Verified | 0.1.0.129 `Down`, `Down`, `Return` moved from query toward results and opened the first result; `SearchFocusNavigationPolicy` tests cover directional decisions | Add far-right scope rail run |
+| Open result Details | Results, `Return` | Verified | 0.1.0.129 opened `断魂小丑` Details from Search results | Keep as result navigation regression |
 | Empty search recovery | Nonsense query, `Down`, `Down`, `Return` | Verified | 0.1.0.105 showed central empty panel, focused `Edit search`, and selected the query on return | Keep as Search regression route |
-| Search error recovery | Network/API failure | Implemented | Error state now exposes retry/edit query focus targets | Add offline/server-failure keyboard run |
+| Search error recovery | Stalled network/API request | Implemented | 0.1.0.129 adds `InteractiveRequestGuard` tests and wraps Search requests so the UI can recover instead of waiting forever | Add offline/server-failure keyboard run |
 
 ## Playback
 
@@ -112,5 +112,5 @@ Status values:
 1. Details still needs visible similar-items validation plus live add-to success on a disposable collection/playlist target.
 2. Playback More drawer needs a fresh keyboard validation pass with real audio/subtitle streams.
 3. Live TV and Music have dedicated browse shells, but both still need positive validation on servers that expose channels or real music items.
-4. Search error recovery needs a deliberate offline/server-failure keyboard run.
-5. Theme work should keep promoting repeated spacing, typography, focus, card dimensions, and component states into shared resources. The 0.1.0.127 pass centralized page-level raw hex colors for Home, Library, Search, Details, and Playback, but card sizing and some one-off text sizes still need future extraction before full skin swapping.
+4. Search error recovery now has a tested timeout guard, but still needs a deliberate offline/server-failure keyboard run.
+5. Theme work should keep promoting repeated spacing, typography, focus, and component states into shared resources. The 0.1.0.129 pass centralized Library/Search poster-grid dimensions and common card/empty-state typography; remaining one-off page measurements should keep moving into skin resources before full theme swapping.

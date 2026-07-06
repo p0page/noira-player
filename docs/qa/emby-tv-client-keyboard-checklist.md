@@ -790,3 +790,27 @@ Then continue design and implementation until the route passes.
   - No app-content mouse clicks were used.
 - Visual capture note:
   - Windows Graphics Capture timed out during the final Details screenshot request. The route is validated by build output, launch diagnostics, accessibility text snapshots, and keyboard behavior; a fresh screenshot remains desirable in a later Computer Use session.
+
+### 2026-07-06 - Poster Grid Tokens And Search Recovery
+
+- App version: 0.1.0.129.
+- Scope: Library/Search poster-grid tokenization and Search request recovery after a live keyboard route previously stayed in `Searching All...` for longer than the interactive request budget.
+- Visual tokenization:
+  - Added shared poster-grid resources in `App.xaml` for item margin, card width/height, corner radius, scrim padding, card title/meta typography, fallback initials, and empty-state title/body typography.
+  - Library and Search now consume the shared poster-grid resources instead of owning local card dimensions and repeated text sizes.
+  - Search column-count navigation reads the shared poster card width and grid item margin resources, keeping directional focus math aligned with future skin/card-size changes.
+- Search recovery:
+  - Added `InteractiveRequestGuard.WithTimeoutAsync` in Core.
+  - Search wraps Emby search requests with the interactive timeout so the page can return to the existing retry/edit recovery panel if the request stalls.
+  - Added Core tests covering completed requests and non-completing request timeout.
+- Automated verification:
+  - Core tests passed: 277 total.
+  - App Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.129_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.129`.
+- Keyboard-only validation with Computer Use:
+  - Launched 0.1.0.129 locally; Home rendered the saved Emby session with Media Libraries, Continue watching, Hot Movies, Hot TV Series, and latest rows.
+  - From Details, pressed `M`, `Down`, `Down`, `Return`; Movies opened with `100 items`, Sort, Filter, and a populated poster grid.
+  - From Movies, pressed `M`, `Up`, `Return`; Search opened with focus in `Search title`.
+  - Typed `Terrifier`, pressed `Return`, waited 14 seconds, and Search showed `3 results / All` rather than staying in `Searching All`.
+  - Pressed `Down`, `Down`, `Return` from Search and opened Details for `断魂小丑`.
+  - No app-content mouse clicks were used.
