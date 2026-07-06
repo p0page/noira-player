@@ -35,4 +35,5 @@ Playback quality reports are optimized for model/agent consumption:
 - `checks` contains structured threshold comparisons;
 - `analysis.primaryFailureArea` identifies the first area to investigate;
 - `analysis.relevantSignals` names the exact report fields that triggered the conclusion;
+- `PlaybackQualityReportAnalyzer` emits a model-facing analysis JSON with primary and secondary failure areas, failed check expected/actual values, evidence signals, missing evidence, and software-only limitations;
 - `limitations` prevents the model from inferring hardware facts that pure software telemetry cannot prove.

@@ -47,6 +47,22 @@ The primary consumer of `quality-run` reports is an automated model or agent, no
 
 `analysis.ignoredSignals` lists signals deliberately not used for the conclusion, for example startup duration when only frame pacing is being evaluated.
 
+## Model Analysis Output
+
+`PlaybackQualityReportAnalyzer` turns a full report into a compact model-facing JSON object. It does not replace the raw report; it highlights the fields an automated agent should inspect first.
+
+The analyzer output must include:
+
+- `primaryFailureArea` copied from report analysis;
+- `failureAreas` containing every failed check area, not only the primary area;
+- `failureReasons` copied from the report;
+- `failedChecks` with each failed check's signal, expected value, actual value, and message;
+- `evidenceSignals` listing report fields used as evidence;
+- `missingEvidence` listing critical unset fields that make diagnosis weaker;
+- `limitations` copied from the report.
+
+This keeps model iteration grounded in evidence. For example, a report can identify `color-pipeline` as primary while still preserving `frame-pacing` as a secondary failure area.
+
 ## Limitations
 
 Every report must include these phase-1 limitations:
