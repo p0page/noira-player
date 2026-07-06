@@ -10,6 +10,7 @@ using NextGenEmby.Core.Emby;
 using NextGenEmby.Core.Input;
 using Windows.System;
 using Windows.UI.Xaml;
+using Windows.UI.Xaml.Automation;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Media;
@@ -25,7 +26,9 @@ namespace NextGenEmby.App.Views
         private const double FallbackPosterCardWidth = 168d;
         private const double FallbackPosterCardTrailingMargin = 14d;
         private readonly ApplicationDataSessionStore _sessionStore = new ApplicationDataSessionStore();
+        private readonly RecentSearchTermStore _recentSearchTermStore = new RecentSearchTermStore();
         private readonly List<Button> _scopeButtons = new List<Button>();
+        private readonly List<Button> _recentTermButtons = new List<Button>();
         private bool _isUnloaded;
         private bool _isNavigatingToDetails;
         private int _searchGeneration;
@@ -34,6 +37,7 @@ namespace NextGenEmby.App.Views
         private static readonly IReadOnlyDictionary<string, string> DevelopmentSearchArtworkUris =
             DevelopmentSearchFixture.CreateArtworkUris();
         private SearchDevelopmentNavigationRequest? _developmentRequest;
+        private IReadOnlyList<string>? _developmentRecentTerms;
 #endif
 
         public SearchPage()
@@ -63,6 +67,7 @@ namespace NextGenEmby.App.Views
             _isNavigatingToDetails = false;
             EnsureScopeButtons();
             ApplyScopeButtonState();
+            RenderRecentTerms();
 #if DEBUG
             if (_developmentRequest != null && _developmentRequest.SimulateError)
             {
@@ -110,7 +115,8 @@ namespace NextGenEmby.App.Views
         private enum SearchCompletionFocusTarget
         {
             SearchBox,
-            SelectedScope
+            SelectedScope,
+            FirstResult
         }
 
         private async void SearchBox_OnKeyDown(object sender, KeyRoutedEventArgs e)
@@ -163,7 +169,8 @@ namespace NextGenEmby.App.Views
                 IsLeftKey(key),
                 IsRightKey(key),
                 focusedResultInFirstRow,
-                IsEmptyStateVisible());
+                IsEmptyStateVisible(),
+                IsRecentTermsVisible());
 
             switch (decision.Action)
             {
@@ -172,6 +179,9 @@ namespace NextGenEmby.App.Views
 
                 case SearchFocusNavigationAction.FocusSelectedScope:
                     return FocusSelectedScope(FocusState.Keyboard);
+
+                case SearchFocusNavigationAction.FocusRecentTerms:
+                    return FocusFirstRecentTerm(FocusState.Keyboard);
 
                 case SearchFocusNavigationAction.FocusFirstResult:
                     return FocusFirstResultNow(FocusState.Keyboard);
@@ -184,6 +194,12 @@ namespace NextGenEmby.App.Views
 
                 case SearchFocusNavigationAction.MoveScopeRight:
                     return MoveScopeFocus(1);
+
+                case SearchFocusNavigationAction.MoveRecentLeft:
+                    return MoveRecentTermFocus(-1);
+
+                case SearchFocusNavigationAction.MoveRecentRight:
+                    return MoveRecentTermFocus(1);
 
                 default:
                     return false;
@@ -215,6 +231,11 @@ namespace NextGenEmby.App.Views
                 return SearchFocusArea.ScopeRail;
             }
 
+            if (IsFocusWithin(element, RecentSearchesPanel))
+            {
+                return SearchFocusArea.RecentTerms;
+            }
+
             if (IsFocusWithin(element, ResultsGrid))
             {
                 return SearchFocusArea.ResultGrid;
@@ -244,6 +265,8 @@ namespace NextGenEmby.App.Views
                 FocusAfterSearch(completionFocusTarget);
                 return;
             }
+
+            SaveRecentSearchTerm(term);
 
 #if DEBUG
             if (_developmentRequest != null && _developmentRequest.SimulateError)
@@ -398,6 +421,15 @@ namespace NextGenEmby.App.Views
                 return;
             }
 
+            if (completionFocusTarget == SearchCompletionFocusTarget.FirstResult)
+            {
+                if (FocusFirstResultNow(FocusState.Keyboard) ||
+                    FocusEmptyState(FocusState.Keyboard))
+                {
+                    return;
+                }
+            }
+
             SearchBox.Focus(FocusState.Programmatic);
         }
 
@@ -471,6 +503,98 @@ namespace NextGenEmby.App.Views
                 HorizontalOffset = 0,
                 VerticalAlignmentRatio = 0.0
             });
+        }
+
+        private IReadOnlyList<string> LoadRecentTerms()
+        {
+#if DEBUG
+            if (_developmentRequest != null)
+            {
+                return _developmentRecentTerms ??
+                    (_developmentRecentTerms = SearchRecentTermsPolicy.Add(
+                        _developmentRequest.RecentTerms,
+                        ""));
+            }
+#endif
+            return _recentSearchTermStore.Load();
+        }
+
+        private void SaveRecentSearchTerm(string term)
+        {
+#if DEBUG
+            if (_developmentRequest != null)
+            {
+                _developmentRecentTerms = SearchRecentTermsPolicy.Add(LoadRecentTerms(), term);
+                RenderRecentTerms();
+                return;
+            }
+#endif
+            _recentSearchTermStore.Add(term);
+            RenderRecentTerms();
+        }
+
+        private void RenderRecentTerms()
+        {
+            _recentTermButtons.Clear();
+            RecentSearchTermsPanel.Children.Clear();
+
+            var terms = LoadRecentTerms();
+            if (terms.Count == 0)
+            {
+                RecentSearchesPanel.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            foreach (var term in terms)
+            {
+                var button = new Button
+                {
+                    Content = term,
+                    Tag = term,
+                    MinHeight = 44,
+                    MinWidth = 112,
+                    MaxWidth = 260,
+                    Padding = new Thickness(18, 7, 18, 7),
+                    UseSystemFocusVisuals = true
+                };
+                AutomationProperties.SetName(button, "Recent search " + term);
+                button.Click += RecentTerm_OnClick;
+                button.GotFocus += RecentTerm_OnGotFocus;
+                _recentTermButtons.Add(button);
+                RecentSearchTermsPanel.Children.Add(button);
+            }
+
+            RecentSearchesPanel.Visibility = Visibility.Visible;
+        }
+
+        private static void RecentTerm_OnGotFocus(object sender, RoutedEventArgs e)
+        {
+            var target = sender as Control;
+            if (target == null)
+            {
+                return;
+            }
+
+            target.StartBringIntoView(new BringIntoViewOptions
+            {
+                AnimationDesired = true,
+                HorizontalAlignmentRatio = 0.5,
+                HorizontalOffset = 0,
+                VerticalAlignmentRatio = 0.0
+            });
+        }
+
+        private async void RecentTerm_OnClick(object sender, RoutedEventArgs e)
+        {
+            var button = sender as Button;
+            var term = button == null ? null : button.Tag as string;
+            if (string.IsNullOrWhiteSpace(term))
+            {
+                return;
+            }
+
+            SearchBox.Text = term;
+            await SearchAsync(SearchCompletionFocusTarget.FirstResult);
         }
 
         private async void ScopeButton_OnClick(object sender, RoutedEventArgs e)
@@ -589,6 +713,11 @@ namespace NextGenEmby.App.Views
             return _scopeButtons.Count > 0 && _scopeButtons[0].Focus(focusState);
         }
 
+        private bool FocusFirstRecentTerm(FocusState focusState)
+        {
+            return _recentTermButtons.Count > 0 && _recentTermButtons[0].Focus(focusState);
+        }
+
         private bool FocusEmptyState(FocusState focusState)
         {
             if (!IsEmptyStateVisible())
@@ -619,6 +748,12 @@ namespace NextGenEmby.App.Views
         private bool IsEmptyStateVisible()
         {
             return EmptyStatePanel.Visibility == Visibility.Visible;
+        }
+
+        private bool IsRecentTermsVisible()
+        {
+            return RecentSearchesPanel.Visibility == Visibility.Visible &&
+                _recentTermButtons.Count > 0;
         }
 
         private void ShowEmptyState(string title, string body, bool showRetry)
@@ -656,6 +791,44 @@ namespace NextGenEmby.App.Views
 
             var clampedIndex = Math.Max(0, Math.Min(_scopeButtons.Count - 1, index));
             return _scopeButtons[clampedIndex].Focus(focusState);
+        }
+
+        private bool MoveRecentTermFocus(int delta)
+        {
+            int index;
+            if (!TryGetFocusedRecentTermIndex(out index))
+            {
+                return false;
+            }
+
+            return FocusRecentTerm(index + delta, FocusState.Keyboard);
+        }
+
+        private bool FocusRecentTerm(int index, FocusState focusState)
+        {
+            if (_recentTermButtons.Count == 0)
+            {
+                return false;
+            }
+
+            var clampedIndex = Math.Max(0, Math.Min(_recentTermButtons.Count - 1, index));
+            return _recentTermButtons[clampedIndex].Focus(focusState);
+        }
+
+        private bool TryGetFocusedRecentTermIndex(out int index)
+        {
+            var focusedElement = FocusManager.GetFocusedElement();
+            for (var i = 0; i < _recentTermButtons.Count; i++)
+            {
+                if (IsFocusWithin(focusedElement, _recentTermButtons[i]))
+                {
+                    index = i;
+                    return true;
+                }
+            }
+
+            index = -1;
+            return false;
         }
 
         private bool TryGetFocusedScopeIndex(out int index)

@@ -10,6 +10,7 @@
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
@@ -68,11 +69,31 @@
 
             <TextBlock
                 x:Name="StatusBlock"
-                Grid.Row="3"
+                Grid.Row="4"
                 Style="{StaticResource TvStatusTextStyle}"
                 Text="Enter a search." />
 
-            <Grid Grid.Row="4">
+            <StackPanel
+                x:Name="RecentSearchesPanel"
+                Grid.Row="3"
+                Spacing="8"
+                Visibility="Collapsed">
+                <TextBlock
+                    Text="Recent searches"
+                    Style="{StaticResource TvOptionLabelTextStyle}" />
+                <ScrollViewer
+                    HorizontalScrollBarVisibility="Hidden"
+                    HorizontalScrollMode="Enabled"
+                    VerticalScrollBarVisibility="Disabled"
+                    VerticalScrollMode="Disabled">
+                    <StackPanel
+                        x:Name="RecentSearchTermsPanel"
+                        Orientation="Horizontal"
+                        Spacing="10" />
+                </ScrollViewer>
+            </StackPanel>
+
+            <Grid Grid.Row="5">
                 <GridView
                     x:Name="ResultsGrid"
                     IsItemClickEnabled="True"

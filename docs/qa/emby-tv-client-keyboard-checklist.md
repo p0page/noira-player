@@ -1806,3 +1806,37 @@ Then continue design and implementation until the route passes.
   - No app-content mouse clicks were used. `dev-command.json` and `dev-command-result.txt` were removed from LocalState after validation.
 - Follow-up:
   - Add a fixture row with fewer items than the source row to keyboard-validate the clamp case visually, not only through policy tests.
+
+### 2026-07-07 - Search Recent Terms Rail
+
+- App version: 0.1.0.203.
+- Scope: reduce TV/controller text-entry cost by adding a keyboard-addressable recent-search rail to Search.
+- Interaction/design changes:
+  - Added `SearchRecentTermsPolicy` in Core for trimming, whitespace collapse, case-insensitive de-duplication, latest-first ordering, max-count limiting, and LocalSettings serialization.
+  - Added `RecentSearchTermStore` in the app layer for persistent recent terms.
+  - Search now renders a compact `Recent searches` chip rail between scope filters and results when terms exist.
+  - `SearchFocusNavigationPolicy` now routes Scope -> Recent terms -> Results/Empty state, with Up returning through the same layers and Left/Right moving within recent terms.
+  - DEBUG `search-fixture` seeds deterministic recent terms so the route can be validated without a real saved Emby session.
+  - No playback decoding, media loading, or Emby transcoding behavior changed.
+- Automated verification:
+  - TDD red path confirmed `SearchRecentTermsPolicy` did not exist before implementation.
+  - TDD red path confirmed `SearchFocusNavigationPolicy` lacked `RecentTerms` focus area/actions before implementation.
+  - TDD red path confirmed Search XAML/code-behind did not render recent terms or include `RecentSearchTermStore` before implementation.
+  - Targeted recent-term policy tests passed: 5 total.
+  - Search focus navigation tests passed: 13 total.
+  - Search-related Core tests passed: 44 total.
+  - Full Core test suite passed: 455 total.
+  - `git diff --check` passed with no whitespace errors.
+  - App Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.203_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate thumbprint `6CB453A2FEC300C6E5034152C6C1A68DE31A7BD0`, verified with `signtool verify /pa`, and installed locally as `NextGenEmby.App 0.1.0.203`.
+- Keyboard-only validation with Computer Use:
+  - Wrote `dev-command.json` with route `search-fixture` and launched the installed app through AppUserModelId `NextGenEmby.App_h8qjz0sr1sg4m!App`; the window path resolved to `NextGenEmby.App_0.1.0.203_x64__h8qjz0sr1sg4m`.
+  - Initial Search showed the Search box focused, scope rail visible, `Recent searches` chips (`Friends`, `Aurora Protocol`, `News 24`) visible, and result cards below with no text overlap.
+  - Pressed `Down`, `Down`, `Right`, `Return`; focus moved through All scope into recent terms, activated `Aurora Protocol`, promoted it to the first recent term, refreshed results, and placed the visible focus frame on the first result card.
+  - Pressed `Up`; focus returned from the first result to `Aurora Protocol` in recent terms.
+  - Pressed `Up`; focus returned from recent terms to the All scope.
+  - Pressed `Down`; focus re-entered the first recent term instead of skipping directly to results.
+  - Re-ran DEBUG `search-error`: initial error state showed no `Recent searches` rail, so `Down`, `Down` focused `Edit search`, `Right` focused `Search again`, and `Return` retried to the query box. The retry then added the submitted query as a recent term, which matches the committed-search behavior.
+  - No app-content mouse clicks were used. `dev-command.json` and `dev-command-result.txt` were removed from LocalState after validation, and the app process was stopped.
+- Follow-up:
+  - Re-run Search recent terms against a non-DEBUG saved session across two app launches to prove LocalSettings persistence with real user queries.

@@ -801,7 +801,8 @@ namespace NextGenEmby.App
                         new SearchDevelopmentNavigationRequest(
                             "Aurora Protocol",
                             simulateError: false,
-                            useFixtureResults: true));
+                            useFixtureResults: true,
+                            recentTerms: new[] { "Friends", "Aurora Protocol", "News 24" }));
                     return;
 
                 case "search-error":

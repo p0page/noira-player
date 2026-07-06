@@ -26,6 +26,12 @@ public sealed class SearchAccessibilitySourceTests
             "src",
             "NextGenEmby.App",
             "NextGenEmby.App.csproj"));
+        var requestSource = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NextGenEmby.App",
+            "Navigation",
+            "SearchDevelopmentNavigationRequest.cs"));
 
         Assert.Contains("case \"search-error\"", mainPageSource);
         Assert.Contains("SearchDevelopmentNavigationRequest", mainPageSource);
@@ -35,6 +41,8 @@ public sealed class SearchAccessibilitySourceTests
         Assert.Contains("\"Check the server connection, then try again.\"", searchPageSource);
         Assert.Contains("showRetry: true", searchPageSource);
         Assert.Contains("Navigation\\SearchDevelopmentNavigationRequest.cs", projectSource);
+        Assert.Contains("RecentTerms = recentTerms ?? new string[0]", requestSource);
+        Assert.DoesNotContain("_developmentRequest.RecentTerms.Count > 0", searchPageSource);
     }
 
     [Fact]
@@ -61,6 +69,7 @@ public sealed class SearchAccessibilitySourceTests
         Assert.Contains("CreateDevelopmentArtworkImageSource(item)", searchPageSource);
         Assert.Contains("ScopeButton_OnGotFocus", searchPageSource);
         Assert.Contains("StartBringIntoView(new BringIntoViewOptions", searchPageSource);
+        Assert.Contains("recentTerms: new[]", mainPageSource);
     }
 
     [Fact]
@@ -90,6 +99,39 @@ public sealed class SearchAccessibilitySourceTests
         Assert.Contains("TryMoveBetweenEmptyStateActions(e.Key)", searchPageSource);
         Assert.Contains("EmptyRetryButton.Focus(FocusState.Keyboard)", searchPageSource);
         Assert.Contains("EmptyEditButton.Focus(FocusState.Keyboard)", searchPageSource);
+    }
+
+    [Fact]
+    public void Search_Page_Renders_Recent_Terms_As_Controller_Targets()
+    {
+        var root = FindRepositoryRoot();
+        var searchPageSource = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NextGenEmby.App",
+            "Views",
+            "SearchPage.xaml.cs"));
+        var searchPageXaml = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NextGenEmby.App",
+            "Views",
+            "SearchPage.xaml"));
+        var projectSource = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NextGenEmby.App",
+            "NextGenEmby.App.csproj"));
+
+        Assert.Contains("RecentSearchTermStore", searchPageSource);
+        Assert.Contains("RenderRecentTerms()", searchPageSource);
+        Assert.Contains("RecentTerm_OnClick", searchPageSource);
+        Assert.Contains("FocusFirstRecentTerm", searchPageSource);
+        Assert.Contains("MoveRecentTermFocus", searchPageSource);
+        Assert.Contains("SearchRecentTermsPolicy.Add", searchPageSource);
+        Assert.Contains("RecentSearchesPanel", searchPageXaml);
+        Assert.Contains("RecentSearchTermsPanel", searchPageXaml);
+        Assert.Contains("Storage\\RecentSearchTermStore.cs", projectSource);
     }
 
     private static string FindRepositoryRoot()
