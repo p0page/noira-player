@@ -1666,3 +1666,34 @@ Then continue design and implementation until the route passes.
   - No app-content mouse clicks were used.
 - Follow-up:
   - Re-run against a real saved Emby session to verify server-specific `GenreItems`, `Studios`, `TagItems`, and `Tags` shapes plus live `/Items` facet filtering.
+
+### 2026-07-07 - Login Failure Recovery And Guide Focus Contrast
+
+- App version: 0.1.0.195.
+- Scope: verify failed login recovery with controller-mapped keyboard input while separating passive Guide active-route state from true controller focus.
+- Interaction/design changes:
+  - `dev-command.json` accepts route `login`, allowing deterministic local validation of Login without clearing real saved session state.
+  - `docs/DESIGN.md` now defines `colors.guide_active_border`; `App.xaml` exposes `AppGuideActiveBorderColor` and `AppGuideActiveBorderBrush`.
+  - Guide active route uses `AppGuideActiveBorderBrush` instead of `AppAccentBrush`, keeping cyan reserved for true focus.
+  - `LoginPage` implements `ITvContentFocusTarget`, and `ShellContentMode.Login` makes normal Login navigation prefer content focus over the Guide rail.
+  - Failed login returns focus to the relevant editable field: username/password validation errors target their field, while connection/auth failures return to Server URL.
+  - Login controls register `KeyDownEvent` with `handledEventsToo: true`, so D-pad-style Up/Down moves through Server URL -> Username -> Password -> Connect even when a TextBox would otherwise consume the arrow key.
+- Automated verification:
+  - TDD red path confirmed `login` was not an accepted development route before implementation.
+  - TDD red path confirmed Guide active state reused `AppAccentBrush` and had no dedicated active-route design token before implementation.
+  - Computer Use found the real focus ambiguity where Guide Home looked focused while Server URL had true focus; the active-route brush was split from the focus brush.
+  - Computer Use found the real Login recovery bug where focus could move to Guide Home after a failed retry; `ShellContentMode.Login` and `ITvContentFocusTarget` fixed default Login focus.
+  - Computer Use found the real TextBox directional bug where `Down` stayed inside Server URL; `handledEventsToo` key routing fixed D-pad-style form movement.
+  - Core tests passed: 434 total.
+  - `git diff --check` passed with only LF/CRLF working-copy warnings.
+  - App Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.195_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate thumbprint `6CB453A2FEC300C6E5034152C6C1A68DE31A7BD0`, verified with `signtool verify /pa`, and installed locally as `NextGenEmby.App 0.1.0.195`.
+- Keyboard-only validation with Computer Use:
+  - Wrote `dev-command.json` with route `login` and `dev-login.json` with invalid credentials, then cold-launched the installed app.
+  - Initial state showed Login failure text, Server URL focused, and Guide Home shown only as passive active route without cyan focus.
+  - Pressed `Down`; focus moved from Server URL to Username, proving TextBox arrow-key capture works.
+  - Pressed `Up`, `Ctrl+A`, typed `http://127.0.0.1:8`, then pressed `Down`, `Down`, `Down`, `Return`.
+  - The retry failed as expected and focus returned to Server URL with the edited URL still visible.
+  - No app-content mouse clicks were used. `dev-login.json` and `dev-command.json` were removed from LocalState after validation.
+- Follow-up:
+  - Re-run Login from a deliberately cleared real session before release packaging, then decide whether the Login page should get denser TV-mode copy or a server-discovery affordance.

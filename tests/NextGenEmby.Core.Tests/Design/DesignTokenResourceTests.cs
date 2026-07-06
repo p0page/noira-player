@@ -18,6 +18,7 @@ public sealed class DesignTokenResourceTests
         ("AppRaisedSurfaceColor", "surface_raised"),
         ("AppChromeColor", "surface_overlay"),
         ("AppShellRailColor", "shell_rail"),
+        ("AppGuideActiveBorderColor", "guide_active_border"),
         ("AppImmersiveScrimColor", "immersive_scrim"),
         ("AppImmersiveControlColor", "surface_overlay"),
         ("AppChromeHoverColor", "chrome_hover"),

@@ -20,6 +20,7 @@
             <Color x:Key="AppImmersiveControlColor">#D9101418</Color>
             <Color x:Key="AppChromeHoverColor">#E61A2027</Color>
             <Color x:Key="AppChromePressedColor">#F0212932</Color>
+            <Color x:Key="AppGuideActiveBorderColor">#4A5968</Color>
             <Color x:Key="AppAccentColor">#3BD5FF</Color>
             <Color x:Key="AppFocusSecondaryColor">#F6F1E8</Color>
             <Color x:Key="AppActionColor">#61D47C</Color>
@@ -61,6 +62,7 @@
             <SolidColorBrush x:Key="AppImmersiveControlBrush" Color="{StaticResource AppImmersiveControlColor}" />
             <SolidColorBrush x:Key="AppChromeHoverBrush" Color="{StaticResource AppChromeHoverColor}" />
             <SolidColorBrush x:Key="AppChromePressedBrush" Color="{StaticResource AppChromePressedColor}" />
+            <SolidColorBrush x:Key="AppGuideActiveBorderBrush" Color="{StaticResource AppGuideActiveBorderColor}" />
             <SolidColorBrush x:Key="AppAccentBrush" Color="{StaticResource AppAccentColor}" />
             <SolidColorBrush x:Key="AppActionBrush" Color="{StaticResource AppActionColor}" />
             <SolidColorBrush x:Key="AppMutedTextBrush" Color="{StaticResource AppMutedTextColor}" />

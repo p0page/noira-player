@@ -15,6 +15,7 @@ colors:
   surface_raised: "#1A2027"
   surface_overlay: "#D9101418"
   hairline: "#303842"
+  guide_active_border: "#4A5968"
   focus: "#3BD5FF"
   focus_secondary: "#F6F1E8"
   success: "#61D47C"
@@ -186,7 +187,8 @@ These references inform the document shape, not the final aesthetic.
 - **Muted text `#B9C0C8`:** metadata and secondary labels.
 - **Subtle text `#78838F`:** timestamps, disabled labels, and tertiary metadata.
 - **Primary / play `#61D47C`:** Xbox-compatible green for Play, Resume, confirmation, and positive action states.
-- **Focus `#3BD5FF`:** crisp controller focus frame and active route signal. Use it as an edge, underline, or focus line, never as a glowing background mood.
+- **Guide active border `#4A5968`:** current-route outline for the shell rail. This is intentionally quieter than focus so the active page never looks like the current controller target.
+- **Focus `#3BD5FF`:** crisp controller focus frame only. Use it as an edge, underline, or focus line, never as a glowing background mood or passive selection state.
 - **Secondary / progress `#E0B86A`:** watch progress, resume state, warnings that are not destructive.
 - **Tertiary `#7FA7C7`:** informational state only, such as diagnostics and neutral playback capability badges.
 - **Danger `#FF6B6B`:** destructive or failed state only.

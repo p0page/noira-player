@@ -25,6 +25,7 @@ public sealed class DevelopmentNavigationCommandTests
     }
 
     [Theory]
+    [InlineData("Login", "login")]
     [InlineData("LiveTv", "livetv")]
     [InlineData("LiveTv-Fixture", "livetv-fixture")]
     [InlineData("Music", "music")]

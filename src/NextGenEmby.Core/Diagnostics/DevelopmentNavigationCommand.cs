@@ -83,6 +83,7 @@ namespace NextGenEmby.Core.Diagnostics
             {
                 case "home":
                 case "home-fixture":
+                case "login":
                 case "movies":
                 case "tv":
                 case "search":

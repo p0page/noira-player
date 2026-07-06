@@ -30,7 +30,8 @@ namespace NextGenEmby.Core.Input
                 return ShellNavigationFocusTarget.None;
             }
 
-            if ((isBackNavigation ||
+            if ((contentMode == ShellContentMode.Login ||
+                    isBackNavigation ||
                     contentMode == ShellContentMode.MediaDetails ||
                     contentMode == ShellContentMode.PhotoViewer) &&
                 hasContentFocusTarget)

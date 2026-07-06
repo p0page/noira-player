@@ -325,7 +325,7 @@ namespace NextGenEmby.App
         {
             var resources = Application.Current.Resources;
             button.Background = (Brush)resources[isActive ? "AppRaisedSurfaceBrush" : "AppTransparentBrush"];
-            button.BorderBrush = (Brush)resources[isActive ? "AppAccentBrush" : "AppTransparentBrush"];
+            button.BorderBrush = (Brush)resources[isActive ? "AppGuideActiveBorderBrush" : "AppTransparentBrush"];
             button.Foreground = (Brush)resources[isActive ? "AppTextBrush" : "AppMutedTextBrush"];
         }
 
@@ -767,6 +767,10 @@ namespace NextGenEmby.App
                     NavigateTo(typeof(HomePage), new HomeDevelopmentFixtureNavigationRequest());
                     return;
 
+                case "login":
+                    NavigateLogin();
+                    return;
+
                 case "movies":
                     NavigateLibrary(new LibraryNavigationRequest("Movies", "movies", "Movie"));
                     return;
@@ -1063,6 +1067,11 @@ namespace NextGenEmby.App
 
         private static ShellContentMode GetShellContentMode(Type pageType)
         {
+            if (pageType == typeof(LoginPage))
+            {
+                return ShellContentMode.Login;
+            }
+
             if (pageType == typeof(MediaDetailsPage))
             {
                 return ShellContentMode.MediaDetails;
