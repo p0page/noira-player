@@ -1338,4 +1338,33 @@ Then continue design and implementation until the route passes.
   - Pressed `Left`; focus moved from `Live TV` to `Photos`.
   - No app-content mouse clicks were used.
 - Limitation:
-  - The fixture currently uses initials-only fallback cards. A later visual pass should add packaged QA artwork for Search results so this route can validate poster/thumbnail treatment as well as focus.
+  - The fixture currently uses initials-only fallback cards. A later visual pass should add packaged QA artwork for Search results so this route can validate poster/thumbnail treatment as well as focus. This was addressed in the 0.1.0.162 pass below.
+
+### 2026-07-06 - Search Fixture Artwork Polish
+
+- App version: 0.1.0.162.
+- Scope: remove the initials-only visual fallback from the deterministic Search fixture route by giving every representative result a packaged QA poster image.
+- Visual/data changes:
+  - `DevelopmentSearchFixture` now exposes an artwork URI map using the same packaged `Assets/QaHome` artwork pipeline as the Home fixture.
+  - Each fixture item now carries `PrimaryImageTag` and `PrimaryImageItemId`, so the fixture resembles normal Emby media item image metadata instead of UI-only mock data.
+  - `SearchPage` resolves DEBUG fixture artwork through `CreateDevelopmentArtworkImageSource(item)` and still falls back cleanly if a fixture asset is missing.
+- Automated verification:
+  - TDD red path confirmed `DevelopmentSearchFixture` did not expose `CreateArtworkUris()` or `ArtworkKey()` before the change.
+  - TDD red path confirmed Search UI source did not consume development artwork before implementation.
+  - Targeted Search fixture/source tests passed: 8 total.
+  - Core tests passed: 349 total.
+  - `git diff --check` passed; only line-ending normalization warnings were reported.
+  - App Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.162_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.162`.
+- Keyboard-only validation with Computer Use:
+  - Wrote `dev-command.json` with route `search-fixture` and cold-launched the installed app.
+  - Initial Search fixture state showed `12 results / All` and every visible card rendered packaged QA artwork instead of initials-only fallback.
+  - Pressed `Down`; focus moved from the query box to the selected `All` scope.
+  - Pressed nine `Right` keys; focus moved to far-right `Live TV` and the scope rail scrolled to keep it visible.
+  - Pressed `Return`; the fixture filtered to `1 result / Live TV` and showed `News 24` with packaged QA artwork.
+  - Pressed `Down`; focus moved to the `News 24` card with a clear TV focus rectangle.
+  - Pressed `Up`; focus returned to `Live TV`.
+  - Pressed `Left`; focus moved from `Live TV` to `Photos`.
+  - No app-content mouse clicks were used.
+- Tooling note:
+  - The first launch attempt only activated an already-running login window, so the DEBUG command was not re-read. The validation run killed the existing app process, rewrote `dev-command.json`, and cold-launched 0.1.0.162 before capturing screenshots.

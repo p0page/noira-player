@@ -31,6 +31,8 @@ namespace NextGenEmby.App.Views
         private int _searchGeneration;
         private string _selectedScopeKey = "all";
 #if DEBUG
+        private static readonly IReadOnlyDictionary<string, string> DevelopmentSearchArtworkUris =
+            DevelopmentSearchFixture.CreateArtworkUris();
         private SearchDevelopmentNavigationRequest? _developmentRequest;
 #endif
 
@@ -369,10 +371,22 @@ namespace NextGenEmby.App.Views
             var cards = new List<SearchResultCard>();
             foreach (var item in items)
             {
-                cards.Add(new SearchResultCard(item, imageSource: null));
+                cards.Add(new SearchResultCard(item, CreateDevelopmentArtworkImageSource(item)));
             }
 
             return cards;
+        }
+
+        private static BitmapImage? CreateDevelopmentArtworkImageSource(EmbyMediaItem item)
+        {
+            var key = DevelopmentSearchFixture.ArtworkKey(item.Id, "Primary");
+            if (!DevelopmentSearchArtworkUris.TryGetValue(key, out var uri) ||
+                string.IsNullOrWhiteSpace(uri))
+            {
+                return null;
+            }
+
+            return new BitmapImage(new Uri(uri));
         }
 #endif
 

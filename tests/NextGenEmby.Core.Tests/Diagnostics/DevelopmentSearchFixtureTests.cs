@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Linq;
 using NextGenEmby.Core.Diagnostics;
 using NextGenEmby.Core.Emby;
@@ -39,5 +40,44 @@ public sealed class DevelopmentSearchFixtureTests
         var item = Assert.Single(items);
         Assert.Equal("TvChannel", item.Type);
         Assert.Equal("News 24", item.Name);
+    }
+
+    [Fact]
+    public void CreateItemsForScope_Provides_Packaged_Artwork_For_Result_Cards()
+    {
+        var root = FindRepositoryRoot();
+        var artworkUris = DevelopmentSearchFixture.CreateArtworkUris();
+        var items = DevelopmentSearchFixture.CreateItemsForScope("all");
+
+        Assert.NotEmpty(items);
+        foreach (var item in items)
+        {
+            var key = DevelopmentSearchFixture.ArtworkKey(item.Id, "Primary");
+            Assert.True(artworkUris.TryGetValue(key, out var uri), "Missing search artwork URI for " + key);
+            Assert.StartsWith("ms-appx:///Assets/QaHome/", uri, StringComparison.Ordinal);
+
+            var relativePath = uri.Substring("ms-appx:///".Length).Replace('/', Path.DirectorySeparatorChar);
+            var assetPath = Path.Combine(root, "src", "NextGenEmby.App", relativePath);
+            Assert.True(File.Exists(assetPath), "Missing packaged QA artwork asset " + assetPath);
+
+            Assert.Equal("qa", item.PrimaryImageTag);
+            Assert.Equal(item.Id, item.PrimaryImageItemId);
+        }
+    }
+
+    private static string FindRepositoryRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory != null)
+        {
+            if (File.Exists(Path.Combine(directory.FullName, "tools", "Generate-AppIconAssets.ps1")))
+            {
+                return directory.FullName;
+            }
+
+            directory = directory.Parent;
+        }
+
+        throw new InvalidOperationException("Repository root not found.");
     }
 }

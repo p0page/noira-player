@@ -57,6 +57,8 @@ public sealed class SearchAccessibilitySourceTests
         Assert.Contains("UseFixtureResults", searchPageSource);
         Assert.Contains("RenderDevelopmentSearchFixtureResults(", searchPageSource);
         Assert.Contains("DevelopmentSearchFixture.CreateItemsForScope", searchPageSource);
+        Assert.Contains("DevelopmentSearchFixture.CreateArtworkUris()", searchPageSource);
+        Assert.Contains("CreateDevelopmentArtworkImageSource(item)", searchPageSource);
         Assert.Contains("ScopeButton_OnGotFocus", searchPageSource);
         Assert.Contains("StartBringIntoView(new BringIntoViewOptions", searchPageSource);
     }
