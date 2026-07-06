@@ -668,3 +668,30 @@ Then continue design and implementation until the route passes.
   - Debug route `photos` completed and opened Photos with `No items found` plus a focused `Retry` recovery action.
 - Limitation:
   - The live server returned no Photo items in this run, so positive image loading from a real Photo item remains pending.
+
+### 2026-07-06 - Live TV Browse Shell
+
+- App version: 0.1.0.122.
+- Scope: Live TV now has a dedicated browse shell instead of routing through the generic Library grid.
+- API/data changes:
+  - Added browse-only Emby Live TV models and client methods for `/LiveTv/Info`, `/LiveTv/Channels`, and `/LiveTv/Programs`.
+  - No playback, transcoding, or native decode path was changed.
+- Interaction changes:
+  - Guide Live TV and debug route `livetv` open `LiveTvPage`.
+  - The page checks Live TV availability, renders channels when returned, and shows a centered recovery panel when unavailable or empty.
+  - Channel activation shows a focused `Live TV playback unavailable` layer instead of attempting playback.
+  - B/Escape closes only the unsupported layer and restores focus to the Live TV page.
+- Visual tokenization:
+  - Added shared `TvListButtonStyle` and `TvBadgeTextStyle` in `App.xaml` for channel-list style surfaces.
+- Automated verification:
+  - `EmbyLiveTvTests`, `TransientLayerInputPolicyTests`, and `DevelopmentNavigationCommandTests` passed: 20 targeted tests.
+  - App Debug x64 build passed and produced `NextGenEmby.App_0.1.0.122_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.122`.
+- Local visual and keyboard validation:
+  - Debug route `livetv` completed and showed `Live TV unavailable` with focused `Retry` because this server returned no channels.
+  - UI Automation reported focus as `Retry live TV`.
+  - Escape from the fallback page returned to Home.
+  - Debug route `livetv-unsupported` completed and showed `Live TV playback unavailable` with focused `Close`.
+  - Escape closed only the unsupported layer and left the page on Live TV; UI Automation then reported focus as `Refresh live TV`.
+- Limitation:
+  - The live server did not return channels, so positive channel-row navigation and real channel activation remain pending on a Live TV-enabled server.

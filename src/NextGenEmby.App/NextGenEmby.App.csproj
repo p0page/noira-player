@@ -80,6 +80,7 @@
     </Compile>
     <Compile Include="Navigation\ITvContentFocusTarget.cs" />
     <Compile Include="Navigation\LibraryNavigationRequest.cs" />
+    <Compile Include="Navigation\LiveTvNavigationRequest.cs" />
     <Compile Include="Navigation\MediaDetailsNavigationRequest.cs" />
     <Compile Include="Navigation\PhotoViewerNavigationRequest.cs" />
     <Compile Include="Navigation\PlaybackLaunchRequest.cs" />
@@ -96,6 +97,9 @@
     </Compile>
     <Compile Include="Views\HomePage.xaml.cs">
       <DependentUpon>HomePage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\LiveTvPage.xaml.cs">
+      <DependentUpon>LiveTvPage.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\LibraryPage.xaml.cs">
       <DependentUpon>LibraryPage.xaml</DependentUpon>
@@ -131,6 +135,10 @@
       <SubType>Designer</SubType>
     </Page>
     <Page Include="Views\HomePage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\LiveTvPage.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>

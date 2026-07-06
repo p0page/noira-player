@@ -126,6 +126,31 @@
                 <Setter Property="TextWrapping" Value="Wrap" />
             </Style>
 
+            <Style x:Key="TvBadgeTextStyle" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="14" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Foreground" Value="{StaticResource AppWarmBrush}" />
+                <Setter Property="TextWrapping" Value="NoWrap" />
+            </Style>
+
+            <Style x:Key="TvListButtonStyle" TargetType="Button">
+                <Setter Property="MinHeight" Value="76" />
+                <Setter Property="MinWidth" Value="280" />
+                <Setter Property="Padding" Value="18,12" />
+                <Setter Property="HorizontalAlignment" Value="Stretch" />
+                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                <Setter Property="VerticalContentAlignment" Value="Center" />
+                <Setter Property="Background" Value="{StaticResource AppChromeBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource AppHairlineBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="6" />
+                <Setter Property="Foreground" Value="{StaticResource AppTextBrush}" />
+                <Setter Property="FocusVisualMargin" Value="-3" />
+                <Setter Property="FocusVisualPrimaryThickness" Value="2" />
+                <Setter Property="FocusVisualSecondaryThickness" Value="1" />
+                <Setter Property="UseSystemFocusVisuals" Value="True" />
+            </Style>
+
             <Style x:Key="TvDiagnosticsTextStyle" TargetType="TextBlock">
                 <Setter Property="FontFamily" Value="Cascadia Mono" />
                 <Setter Property="FontSize" Value="13" />

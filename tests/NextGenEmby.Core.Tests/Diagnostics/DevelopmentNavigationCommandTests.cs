@@ -31,6 +31,7 @@ public sealed class DevelopmentNavigationCommandTests
     [InlineData("Playlists", "playlists")]
     [InlineData("Favorites", "favorites")]
     [InlineData("Unwatched", "unwatched")]
+    [InlineData("LiveTv-Unsupported", "livetv-unsupported")]
     public void TryParseJson_Accepts_Guide_Routes(string route, string normalizedRoute)
     {
         var parsed = DevelopmentNavigationCommand.TryParseJson(

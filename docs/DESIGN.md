@@ -229,7 +229,7 @@ The current XAML token migration has started with:
 
 - app shell and Guide rail resources: `AppShellRailBrush`, `TvGuideCollapsedWidth`, and `TvGuideExpandedWidth`;
 - immersive viewer resources: `AppImmersiveScrimBrush`, `AppImmersiveControlBrush`, and `TvImmersivePageMargin`;
-- shared TV text, panel, diagnostics, icon button, nav button, and settings checkbox styles.
+- shared TV text, panel, diagnostics, icon button, nav button, list button, badge text, and settings checkbox styles.
 
 New UI surfaces should follow this migration order:
 

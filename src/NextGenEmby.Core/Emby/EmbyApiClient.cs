@@ -174,6 +174,67 @@ namespace NextGenEmby.Core.Emby
             return (dto.Items ?? new List<ItemDto>()).Select(MapItem).ToList();
         }
 
+        public async Task<EmbyLiveTvInfo> GetLiveTvInfoAsync(EmbySession session)
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, "LiveTv/Info");
+            EmbyAuthorization.Apply(request, _options, session);
+
+            using var response = await _http.SendAsync(request).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+            var body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var dto = JsonSerializer.Deserialize<LiveTvInfoDto>(body, _jsonOptions) ?? new LiveTvInfoDto();
+            return new EmbyLiveTvInfo
+            {
+                IsEnabled = dto.IsEnabled,
+                EnabledUserIds = dto.EnabledUsers ?? new List<string>()
+            };
+        }
+
+        public async Task<IReadOnlyList<EmbyLiveTvChannel>> GetLiveTvChannelsAsync(
+            EmbySession session,
+            int limit)
+        {
+            var parameters = new List<string>();
+            AddQueryParameter(parameters, "UserId", session.UserId);
+            AddQueryParameter(parameters, "Fields", "CurrentProgram,Overview,PrimaryImageAspectRatio");
+            AddQueryParameter(parameters, "Limit", Math.Max(1, limit).ToString());
+            AddImageQueryParameters(parameters);
+
+            using var request = new HttpRequestMessage(
+                HttpMethod.Get,
+                $"LiveTv/Channels?{string.Join("&", parameters)}");
+            EmbyAuthorization.Apply(request, _options, session);
+
+            using var response = await _http.SendAsync(request).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+            var body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var dto = JsonSerializer.Deserialize<ItemListDto<LiveTvChannelDto>>(body, _jsonOptions) ?? new ItemListDto<LiveTvChannelDto>();
+            return (dto.Items ?? new List<LiveTvChannelDto>()).Select(MapLiveTvChannel).ToList();
+        }
+
+        public async Task<IReadOnlyList<EmbyLiveTvProgram>> GetLiveTvProgramsAsync(
+            EmbySession session,
+            string channelIds,
+            int limit)
+        {
+            var parameters = new List<string>();
+            AddQueryParameter(parameters, "UserId", session.UserId);
+            AddQueryParameter(parameters, "ChannelIds", channelIds);
+            AddQueryParameter(parameters, "Limit", Math.Max(1, limit).ToString());
+            AddQueryParameter(parameters, "Fields", "Overview");
+
+            using var request = new HttpRequestMessage(
+                HttpMethod.Get,
+                $"LiveTv/Programs?{string.Join("&", parameters)}");
+            EmbyAuthorization.Apply(request, _options, session);
+
+            using var response = await _http.SendAsync(request).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+            var body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var dto = JsonSerializer.Deserialize<ItemListDto<LiveTvProgramDto>>(body, _jsonOptions) ?? new ItemListDto<LiveTvProgramDto>();
+            return (dto.Items ?? new List<LiveTvProgramDto>()).Select(MapLiveTvProgram).ToList();
+        }
+
         public async Task<IReadOnlyList<EmbyMediaItem>> GetNextUpItemsAsync(EmbySession session, int limit)
         {
             var parameters = new List<string>();
@@ -606,6 +667,46 @@ namespace NextGenEmby.Core.Emby
             };
         }
 
+        private static EmbyLiveTvChannel MapLiveTvChannel(LiveTvChannelDto channel)
+        {
+            var imageTags = channel.ImageTags;
+            var backdropImageTags = channel.BackdropImageTags;
+
+            return new EmbyLiveTvChannel
+            {
+                Id = channel.Id ?? "",
+                Name = channel.Name ?? "",
+                Number = channel.Number ?? "",
+                ChannelType = channel.ChannelType ?? "",
+                PrimaryImageTag = imageTags != null && imageTags.TryGetValue("Primary", out var primary) ? primary ?? "" : "",
+                ThumbImageTag = imageTags != null && imageTags.TryGetValue("Thumb", out var thumb) ? thumb ?? "" : channel.ParentThumbImageTag ?? "",
+                BackdropImageTag = backdropImageTags != null && backdropImageTags.Count > 0 ? backdropImageTags[0] ?? "" : "",
+                BannerImageTag = imageTags != null && imageTags.TryGetValue("Banner", out var banner) ? banner ?? "" : "",
+                CurrentProgram = channel.CurrentProgram == null ? null : MapLiveTvProgram(channel.CurrentProgram)
+            };
+        }
+
+        private static EmbyLiveTvProgram MapLiveTvProgram(LiveTvProgramDto program)
+        {
+            return new EmbyLiveTvProgram
+            {
+                Id = program.Id ?? "",
+                Name = program.Name ?? "",
+                EpisodeTitle = program.EpisodeTitle ?? "",
+                Overview = program.Overview ?? "",
+                OfficialRating = program.OfficialRating ?? "",
+                RunTimeTicks = program.RunTimeTicks,
+                StartDate = program.StartDate.GetValueOrDefault(),
+                EndDate = program.EndDate.GetValueOrDefault(),
+                IsMovie = program.IsMovie,
+                IsSports = program.IsSports,
+                IsNews = program.IsNews,
+                IsKids = program.IsKids,
+                IsSeries = program.IsSeries,
+                ChannelId = program.ChannelId ?? ""
+            };
+        }
+
         private static EmbyMediaItem MapItem(ItemDto item)
         {
             var imageTags = item.ImageTags;
@@ -899,6 +1000,42 @@ namespace NextGenEmby.Core.Emby
             public bool Played { get; set; }
             public long PlaybackPositionTicks { get; set; }
             public double? PlayedPercentage { get; set; }
+        }
+
+        private sealed class LiveTvInfoDto
+        {
+            public bool IsEnabled { get; set; }
+            public List<string> EnabledUsers { get; set; } = new List<string>();
+        }
+
+        private sealed class LiveTvChannelDto
+        {
+            public string Id { get; set; } = "";
+            public string Name { get; set; } = "";
+            public string Number { get; set; } = "";
+            public string ChannelType { get; set; } = "";
+            public Dictionary<string, string> ImageTags { get; set; } = new Dictionary<string, string>();
+            public List<string> BackdropImageTags { get; set; } = new List<string>();
+            public string ParentThumbImageTag { get; set; } = "";
+            public LiveTvProgramDto? CurrentProgram { get; set; }
+        }
+
+        private sealed class LiveTvProgramDto
+        {
+            public string Id { get; set; } = "";
+            public string Name { get; set; } = "";
+            public string EpisodeTitle { get; set; } = "";
+            public string Overview { get; set; } = "";
+            public string OfficialRating { get; set; } = "";
+            public long? RunTimeTicks { get; set; }
+            public DateTimeOffset? StartDate { get; set; }
+            public DateTimeOffset? EndDate { get; set; }
+            public bool IsMovie { get; set; }
+            public bool IsSports { get; set; }
+            public bool IsNews { get; set; }
+            public bool IsKids { get; set; }
+            public bool IsSeries { get; set; }
+            public string ChannelId { get; set; } = "";
         }
 
         private sealed class ItemDto

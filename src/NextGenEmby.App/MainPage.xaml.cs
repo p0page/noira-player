@@ -296,7 +296,7 @@ namespace NextGenEmby.App
             SetShellButtonActive(HomeButton, pageType == typeof(HomePage) || pageType == typeof(LoginPage));
             SetShellButtonActive(MoviesButton, pageType == typeof(LibraryPage) && libraryRequest != null && libraryRequest.IsMovies);
             SetShellButtonActive(TvButton, pageType == typeof(LibraryPage) && libraryRequest != null && libraryRequest.IsTv);
-            SetShellButtonActive(LiveTvButton, IsLibraryCollection(pageType, libraryRequest, "livetv"));
+            SetShellButtonActive(LiveTvButton, pageType == typeof(LiveTvPage) || IsLibraryCollection(pageType, libraryRequest, "livetv"));
             SetShellButtonActive(CollectionsButton, IsLibraryCollection(pageType, libraryRequest, "boxsets"));
             SetShellButtonActive(PlaylistsButton, IsLibraryCollection(pageType, libraryRequest, "playlists"));
             SetShellButtonActive(MusicButton, IsLibraryCollection(pageType, libraryRequest, "music"));
@@ -383,6 +383,12 @@ namespace NextGenEmby.App
             if (pageType == typeof(SettingsPage))
             {
                 SettingsButton.Focus(focusState);
+                return;
+            }
+
+            if (pageType == typeof(LiveTvPage))
+            {
+                LiveTvButton.Focus(focusState);
                 return;
             }
 
@@ -483,7 +489,7 @@ namespace NextGenEmby.App
                     return;
 
                 case GuideNavigationDestination.LiveTv:
-                    NavigateLibrary(new LibraryNavigationRequest("Live TV", "livetv", "TvChannel"));
+                    NavigateTo(typeof(LiveTvPage));
                     return;
 
                 case GuideNavigationDestination.Collections:
@@ -619,6 +625,11 @@ namespace NextGenEmby.App
                 return GuideNavigationDestination.Settings;
             }
 
+            if (pageType == typeof(LiveTvPage))
+            {
+                return GuideNavigationDestination.LiveTv;
+            }
+
             if (pageType == typeof(LibraryPage) && libraryRequest != null)
             {
                 if (libraryRequest.IsMovies)
@@ -723,7 +734,11 @@ namespace NextGenEmby.App
                     return;
 
                 case "livetv":
-                    NavigateLibrary(new LibraryNavigationRequest("Live TV", "livetv", "TvChannel"));
+                    NavigateTo(typeof(LiveTvPage));
+                    return;
+
+                case "livetv-unsupported":
+                    NavigateTo(typeof(LiveTvPage), new LiveTvNavigationRequest("Sample Channel"));
                     return;
 
                 case "search":
