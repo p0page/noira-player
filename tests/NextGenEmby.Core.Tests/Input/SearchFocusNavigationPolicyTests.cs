@@ -36,6 +36,38 @@ public sealed class SearchFocusNavigationPolicyTests
     }
 
     [Fact]
+    public void Down_From_Scope_Focuses_Empty_State_When_Visible()
+    {
+        var decision = SearchFocusNavigationPolicy.GetDecision(
+            eventAlreadyHandled: true,
+            focusArea: SearchFocusArea.ScopeRail,
+            moveUpKeyPressed: false,
+            moveDownKeyPressed: true,
+            moveLeftKeyPressed: false,
+            moveRightKeyPressed: false,
+            focusedResultInFirstRow: false,
+            emptyStateVisible: true);
+
+        Assert.Equal(SearchFocusNavigationAction.FocusEmptyState, decision.Action);
+    }
+
+    [Fact]
+    public void Up_From_Empty_State_Returns_To_Selected_Scope()
+    {
+        var decision = SearchFocusNavigationPolicy.GetDecision(
+            eventAlreadyHandled: true,
+            focusArea: SearchFocusArea.EmptyState,
+            moveUpKeyPressed: true,
+            moveDownKeyPressed: false,
+            moveLeftKeyPressed: false,
+            moveRightKeyPressed: false,
+            focusedResultInFirstRow: false,
+            emptyStateVisible: true);
+
+        Assert.Equal(SearchFocusNavigationAction.FocusSelectedScope, decision.Action);
+    }
+
+    [Fact]
     public void Right_And_Left_Move_Only_Inside_Scope_Rail()
     {
         var right = SearchFocusNavigationPolicy.GetDecision(

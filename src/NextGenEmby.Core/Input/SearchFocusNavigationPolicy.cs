@@ -6,7 +6,8 @@ namespace NextGenEmby.Core.Input
         SearchBox,
         SearchAction,
         ScopeRail,
-        ResultGrid
+        ResultGrid,
+        EmptyState
     }
 
     public enum SearchFocusNavigationAction
@@ -15,6 +16,7 @@ namespace NextGenEmby.Core.Input
         FocusSearchBox,
         FocusSelectedScope,
         FocusFirstResult,
+        FocusEmptyState,
         MoveScopeLeft,
         MoveScopeRight
     }
@@ -38,7 +40,8 @@ namespace NextGenEmby.Core.Input
             bool moveDownKeyPressed,
             bool moveLeftKeyPressed,
             bool moveRightKeyPressed,
-            bool focusedResultInFirstRow)
+            bool focusedResultInFirstRow,
+            bool emptyStateVisible = false)
         {
             if (moveDownKeyPressed)
             {
@@ -50,6 +53,11 @@ namespace NextGenEmby.Core.Input
 
                 if (focusArea == SearchFocusArea.ScopeRail)
                 {
+                    if (emptyStateVisible)
+                    {
+                        return Decision(SearchFocusNavigationAction.FocusEmptyState);
+                    }
+
                     return Decision(SearchFocusNavigationAction.FocusFirstResult);
                 }
             }
@@ -62,6 +70,11 @@ namespace NextGenEmby.Core.Input
                 }
 
                 if (focusArea == SearchFocusArea.ResultGrid && focusedResultInFirstRow)
+                {
+                    return Decision(SearchFocusNavigationAction.FocusSelectedScope);
+                }
+
+                if (focusArea == SearchFocusArea.EmptyState)
                 {
                     return Decision(SearchFocusNavigationAction.FocusSelectedScope);
                 }

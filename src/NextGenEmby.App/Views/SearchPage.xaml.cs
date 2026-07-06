@@ -58,6 +58,11 @@ namespace NextGenEmby.App.Views
                 return true;
             }
 
+            if (IsEmptyStateVisible() && FocusEmptyState(FocusState.Keyboard))
+            {
+                return true;
+            }
+
             return SearchBox.Focus(FocusState.Keyboard);
         }
 
@@ -109,7 +114,8 @@ namespace NextGenEmby.App.Views
                 IsDownKey(key),
                 IsLeftKey(key),
                 IsRightKey(key),
-                focusedResultInFirstRow);
+                focusedResultInFirstRow,
+                IsEmptyStateVisible());
 
             switch (decision.Action)
             {
@@ -121,6 +127,9 @@ namespace NextGenEmby.App.Views
 
                 case SearchFocusNavigationAction.FocusFirstResult:
                     return FocusFirstResultNow(FocusState.Keyboard);
+
+                case SearchFocusNavigationAction.FocusEmptyState:
+                    return FocusEmptyState(FocusState.Keyboard);
 
                 case SearchFocusNavigationAction.MoveScopeLeft:
                     return MoveScopeFocus(-1);
@@ -163,6 +172,11 @@ namespace NextGenEmby.App.Views
                 return SearchFocusArea.ResultGrid;
             }
 
+            if (IsFocusWithin(element, EmptyStatePanel))
+            {
+                return SearchFocusArea.EmptyState;
+            }
+
             return SearchFocusArea.Other;
         }
 
@@ -171,6 +185,7 @@ namespace NextGenEmby.App.Views
         {
             var searchGeneration = ++_searchGeneration;
             ResultsGrid.Items.Clear();
+            HideEmptyState();
             _isNavigatingToDetails = false;
 
             var term = (SearchBox.Text ?? "").Trim();
@@ -226,6 +241,10 @@ namespace NextGenEmby.App.Views
 
                 ResultsGrid.Items.Clear();
                 StatusBlock.Text = "Unable to search.";
+                ShowEmptyState(
+                    "Unable to search",
+                    "Check the server connection, then try again.",
+                    showRetry: true);
                 FocusAfterSearch(completionFocusTarget);
             }
         }
@@ -242,10 +261,15 @@ namespace NextGenEmby.App.Views
                 StatusBlock.Text = scope.Key == "all"
                     ? "No results."
                     : "No results in " + scope.Label + ".";
+                ShowEmptyState(
+                    StatusBlock.Text.TrimEnd('.'),
+                    "Try a different title, person, playlist, or song.",
+                    showRetry: false);
                 FocusAfterSearch(completionFocusTarget);
                 return;
             }
 
+            HideEmptyState();
             foreach (var card in cards)
             {
                 ResultsGrid.Items.Add(card);
@@ -342,6 +366,17 @@ namespace NextGenEmby.App.Views
             await SearchAsync(SearchCompletionFocusTarget.SelectedScope);
         }
 
+        private void EmptyEdit_OnClick(object sender, RoutedEventArgs e)
+        {
+            SearchBox.Focus(FocusState.Keyboard);
+            SearchBox.SelectAll();
+        }
+
+        private async void EmptyRetry_OnClick(object sender, RoutedEventArgs e)
+        {
+            await SearchAsync();
+        }
+
         private void ApplyScopeButtonState()
         {
             var resources = Application.Current.Resources;
@@ -423,6 +458,37 @@ namespace NextGenEmby.App.Views
             }
 
             return _scopeButtons.Count > 0 && _scopeButtons[0].Focus(focusState);
+        }
+
+        private bool FocusEmptyState(FocusState focusState)
+        {
+            if (!IsEmptyStateVisible())
+            {
+                return false;
+            }
+
+            return EmptyEditButton.Focus(focusState) ||
+                EmptyRetryButton.Focus(focusState);
+        }
+
+        private bool IsEmptyStateVisible()
+        {
+            return EmptyStatePanel.Visibility == Visibility.Visible;
+        }
+
+        private void ShowEmptyState(string title, string body, bool showRetry)
+        {
+            ResultsGrid.Visibility = Visibility.Collapsed;
+            EmptyTitleBlock.Text = title ?? "No results";
+            EmptyBodyBlock.Text = body ?? "";
+            EmptyRetryButton.Visibility = showRetry ? Visibility.Visible : Visibility.Collapsed;
+            EmptyStatePanel.Visibility = Visibility.Visible;
+        }
+
+        private void HideEmptyState()
+        {
+            EmptyStatePanel.Visibility = Visibility.Collapsed;
+            ResultsGrid.Visibility = Visibility.Visible;
         }
 
         private bool MoveScopeFocus(int delta)

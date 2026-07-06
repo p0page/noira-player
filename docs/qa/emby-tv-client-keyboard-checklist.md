@@ -526,3 +526,26 @@ Then continue design and implementation until the route passes.
   - `Escape` returned to Home and preserved focus on the `热门剧集` media-library card.
   - Startup diagnostics recorded `App.InitializeComponent completed` and `App.OnLaunched completed`; no 0.1.0.104 crash appeared in the checked Application event sample.
   - No app-content mouse clicks were used.
+
+### 2026-07-06 - Search Empty State Recovery
+
+- App version: 0.1.0.105.
+- Scope: Search now has a TV-focused empty/error recovery panel instead of status text only.
+- Interaction changes:
+  - Empty results show a centered matte panel with a readable title, recovery copy, and `Edit search`.
+  - Search errors show the same recovery surface with `Edit search` and `Search again`.
+  - D-pad/keyboard `Down` from the scope rail can move into the empty-state action.
+  - `Return` on `Edit search` restores focus to the search box and selects the existing query for quick replacement.
+- Automated verification:
+  - Core tests passed: 214 total.
+  - `SearchFocusNavigationPolicyTests` cover `Down` from scope rail into the empty state and `Up` back to the selected scope.
+  - `git diff --check` passed with only line-ending warnings.
+  - App Debug x64 build passed and produced `NextGenEmby.App_0.1.0.105_x64_Debug.msix`.
+  - MSIX signed and installed locally as `NextGenEmby.App 0.1.0.105`.
+- Keyboard-only validation with Computer Use:
+  - From Home, `M`, `Down`, `Return` opened Search with focus in the search box.
+  - Typed `zzzzzznomatch20260706`, pressed `Return`, and got `No results` with a centered `Edit search` action.
+  - Pressing `Down`, `Down` moved focus to `Edit search`; the focus frame was visibly clear.
+  - Pressing `Return` on `Edit search` returned focus to the search box and selected the whole query.
+  - Replacing it with `Terrifier` and pressing `Return` returned 3 media results and removed the empty panel.
+  - No app-content mouse clicks were used.
