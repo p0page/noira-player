@@ -17,6 +17,8 @@ public sealed class PlaybackQualityRunComparatorTests
 
         var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
 
+        Assert.Equal("baseline", comparison.BaselineRunId);
+        Assert.Equal("candidate", comparison.CandidateRunId);
         Assert.Equal("improved", comparison.Result);
         Assert.Equal("keep-candidate", comparison.Decision);
         Assert.Contains("Keep candidate playback Core change", comparison.SuggestedNextAction);
@@ -148,6 +150,27 @@ public sealed class PlaybackQualityRunComparatorTests
 
         Assert.Equal("insufficient-evidence", comparison.Result);
         Assert.Contains("comparison requires at least one matching check signal", comparison.Limitations);
+    }
+
+    [Fact]
+    public void Serializer_Writes_Run_Comparison_With_CamelCase_Field_Names()
+    {
+        var baseline = CreateReport(
+            "baseline",
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "180.000"));
+        var candidate = CreateReport(
+            "candidate",
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "120.000"));
+        var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
+
+        var json = PlaybackQualityReportSerializer.Serialize(comparison);
+
+        Assert.Contains("\"baselineRunId\"", json);
+        Assert.Contains("\"candidateRunId\"", json);
+        Assert.Contains("\"decision\"", json);
+        Assert.Contains("\"suggestedNextAction\"", json);
+        Assert.Contains("\"improvements\"", json);
+        Assert.Contains("\"timing.maxFrameGapMs\"", json);
     }
 
     private static PlaybackQualityReport CreateReport(

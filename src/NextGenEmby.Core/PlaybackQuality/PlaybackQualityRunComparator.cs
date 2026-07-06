@@ -6,6 +6,8 @@ namespace NextGenEmby.Core.PlaybackQuality
 {
     public sealed class PlaybackQualityRunComparison
     {
+        public string BaselineRunId { get; set; } = "";
+        public string CandidateRunId { get; set; } = "";
         public string Result { get; set; } = "unchanged";
         public string Decision { get; set; } = "no-change";
         public string SuggestedNextAction { get; set; } = "";
@@ -45,7 +47,11 @@ namespace NextGenEmby.Core.PlaybackQuality
                 throw new ArgumentNullException(nameof(candidate));
             }
 
-            var comparison = new PlaybackQualityRunComparison();
+            var comparison = new PlaybackQualityRunComparison
+            {
+                BaselineRunId = baseline.RunId,
+                CandidateRunId = candidate.RunId
+            };
             if (baseline.Checks.Count == 0 || candidate.Checks.Count == 0)
             {
                 comparison.Result = "insufficient-evidence";
