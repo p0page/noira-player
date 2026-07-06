@@ -16,6 +16,8 @@ namespace NextGenEmby.Core.PlaybackQuality
         public PlaybackQualityStartup? Startup { get; set; }
 
         public PlaybackQualityExpected? Expected { get; set; }
+
+        public bool UseDefaultExpectedWhenMissing { get; set; }
     }
 
     public sealed class PlaybackQualityRunResult
@@ -42,10 +44,14 @@ namespace NextGenEmby.Core.PlaybackQuality
                 throw new ArgumentNullException(nameof(request));
             }
 
+            var expected = request.Expected ??
+                (request.UseDefaultExpectedWhenMissing && request.Descriptor != null
+                    ? PlaybackQualityExpectedFactory.CreateDefault(request.Descriptor)
+                    : null);
             var report = new PlaybackQualityReport
             {
                 RunId = request.RunId ?? "",
-                Expected = request.Expected
+                Expected = expected
             };
 
             if (request.Descriptor != null)

@@ -103,6 +103,10 @@ Every report must include these phase-1 limitations:
 
 `PlaybackQualityReportComposer.Compose` is the canonical Core entry point for playback quality capture. It accepts a `PlaybackQualityReportRequest` containing optional `PlaybackDescriptor`, `PlaybackDisplayStatus`, `PlaybackQualityMetricsSnapshot`, `PlaybackQualityStartup`, and `PlaybackQualityExpected` evidence, then returns both the evaluated `PlaybackQualityReport` and compact `PlaybackQualityModelAnalysis`.
 
+`PlaybackQualityExpectedFactory.CreateDefault` derives a repeatable default threshold profile from `PlaybackDescriptor`. It sets source frame rate, HDR output expectation, minimum rendered sample size, dropped/starved frame limits, A/V drift p95, display-refresh matching, and cadence thresholds derived from source frame duration. Current defaults use a 5-second sample window, `maxFrameGapMs = frameDuration * 2.5`, `maxRenderIntervalMsP95 = frameDuration * 1.25`, and `maxRenderIntervalMsP99 = frameDuration * 2.0`. If source frame rate is unusable, cadence thresholds and display-refresh matching are left unset.
+
+`PlaybackQualityReportRequest.UseDefaultExpectedWhenMissing` lets App or harness callers ask the composer to use `PlaybackQualityExpectedFactory.CreateDefault` when they supply a descriptor but no explicit expected thresholds. Explicit `Expected` values always win.
+
 `PlaybackQualityReportSerializer.Serialize(PlaybackQualityRunResult)` writes a single JSON envelope with `report` and `modelAnalysis`. Automated runs should prefer this envelope when handing evidence to a model, while still allowing separate report or analysis JSON for debugging.
 
 `PlaybackQualityReportMapper.ApplySource` is the lower-level Core mapping from `PlaybackDescriptor` into `source`. `PlaybackQualityReportMapper.ApplyDisplayStatus` maps `PlaybackDisplayStatus` into `display` and `colorPipeline`. `PlaybackQualityReportMapper.ApplyMetrics` maps playback metrics snapshots into `timing`, `sync`, and `buffers`. App or harness code should prefer the composer and use these mappers only when it needs lower-level control.

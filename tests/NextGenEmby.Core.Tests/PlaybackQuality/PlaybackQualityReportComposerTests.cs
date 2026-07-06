@@ -128,6 +128,29 @@ public sealed class PlaybackQualityReportComposerTests
             check.Actual == "3500.000");
     }
 
+    [Fact]
+    public void Compose_Uses_Default_Expected_Thresholds_When_Requested()
+    {
+        var result = PlaybackQualityReportComposer.Compose(new PlaybackQualityReportRequest
+        {
+            RunId = "default-expected",
+            Descriptor = CreatePlaybackDescriptor(frameRate: 23.976),
+            DisplayStatus = CreateHdrDisplayStatus(refreshRateHz: 59.94006),
+            Metrics = CreateStableMetrics(maxFrameGapMs: 60),
+            UseDefaultExpectedWhenMissing = true
+        });
+
+        Assert.NotNull(result.Report.Expected);
+        Assert.Equal(23.976, result.Report.Expected!.FrameRate);
+        Assert.Equal("Hdr10", result.Report.Expected.HdrOutput);
+        Assert.Equal("pass", result.Report.Result);
+        Assert.Contains(result.Report.Checks, check =>
+            check.Name == "MaxFrameGapMs" &&
+            check.Status == "pass" &&
+            check.Signal == "timing.maxFrameGapMs");
+        Assert.Equal("pass", result.ModelAnalysis.Result);
+    }
+
     private static PlaybackDescriptor CreatePlaybackDescriptor(double frameRate)
     {
         var source = new EmbyMediaSource
