@@ -26,6 +26,8 @@ namespace winrt::NextGenEmby::Native::implementation
         double RenderIntervalMsP95{0.0};
         double RenderIntervalMsP99{0.0};
         double MaxFrameGapMs{0.0};
+        double FramePacingSourceFrameRate{0.0};
+        double LateFrameDropToleranceMs{0.0};
         double AudioVideoDriftMsP50{0.0};
         double AudioVideoDriftMsP95{0.0};
         double AudioVideoDriftMsP99{0.0};
@@ -110,6 +112,8 @@ namespace winrt::NextGenEmby::Native::implementation
         uint64_t QueuedAudioBuffers{0};
         int64_t AudioClockTicks{0};
         int64_t VideoPositionTicks{0};
+        double FramePacingSourceFrameRate{0.0};
+        double LateFrameDropToleranceMs{0.0};
 
         void Reset() noexcept
         {
@@ -145,6 +149,8 @@ namespace winrt::NextGenEmby::Native::implementation
             snapshot.RenderIntervalMsP95 = m_renderIntervals.Percentile(95);
             snapshot.RenderIntervalMsP99 = m_renderIntervals.Percentile(99);
             snapshot.MaxFrameGapMs = m_renderIntervals.Max();
+            snapshot.FramePacingSourceFrameRate = FramePacingSourceFrameRate;
+            snapshot.LateFrameDropToleranceMs = LateFrameDropToleranceMs;
             snapshot.AudioVideoDriftMsP50 = m_audioVideoDriftMs.Percentile(50);
             snapshot.AudioVideoDriftMsP95 = m_audioVideoDriftMs.Percentile(95);
             snapshot.AudioVideoDriftMsP99 = m_audioVideoDriftMs.Percentile(99);

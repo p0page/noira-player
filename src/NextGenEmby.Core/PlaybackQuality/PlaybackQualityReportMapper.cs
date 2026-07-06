@@ -41,6 +41,8 @@ namespace NextGenEmby.Core.PlaybackQuality
             report.Timing.RenderIntervalMsP95 = metrics.RenderIntervalMsP95;
             report.Timing.RenderIntervalMsP99 = metrics.RenderIntervalMsP99;
             report.Timing.MaxFrameGapMs = metrics.MaxFrameGapMs;
+            report.Timing.FramePacingSourceFrameRate = metrics.FramePacingSourceFrameRate;
+            report.Timing.LateFrameDropToleranceMs = metrics.LateFrameDropToleranceMs;
 
             report.Sync.AudioClockTicks = metrics.AudioClockTicks;
             report.Sync.VideoPositionTicks = metrics.VideoPositionTicks;

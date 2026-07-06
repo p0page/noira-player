@@ -22,6 +22,8 @@ int main()
     metrics.AudioStarvedPasses = 1;
     metrics.AudioClockTicks = 2'000'000;
     metrics.VideoPositionTicks = 1'800'000;
+    metrics.FramePacingSourceFrameRate = 60.0;
+    metrics.LateFrameDropToleranceMs = 41.6667;
 
     PlaybackQualityMetricsSnapshot snapshot = metrics.Snapshot();
 
@@ -38,12 +40,16 @@ int main()
     assert(snapshot.AudioVideoDriftMsMax >= 40.0);
     assert(snapshot.AudioClockTicks == 2'000'000);
     assert(snapshot.VideoPositionTicks == 1'800'000);
+    assert(snapshot.FramePacingSourceFrameRate == 60.0);
+    assert(snapshot.LateFrameDropToleranceMs > 41.0);
 
     metrics.Reset();
     snapshot = metrics.Snapshot();
     assert(snapshot.RenderPasses == 0);
     assert(snapshot.MaxFrameGapMs == 0.0);
     assert(snapshot.AudioVideoDriftMsMax == 0.0);
+    assert(snapshot.FramePacingSourceFrameRate == 0.0);
+    assert(snapshot.LateFrameDropToleranceMs == 0.0);
 
     return 0;
 }

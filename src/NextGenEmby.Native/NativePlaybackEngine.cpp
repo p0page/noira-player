@@ -175,6 +175,8 @@ namespace winrt::NextGenEmby::Native::implementation
         metrics.RenderIntervalMsP95(snapshot.RenderIntervalMsP95);
         metrics.RenderIntervalMsP99(snapshot.RenderIntervalMsP99);
         metrics.MaxFrameGapMs(snapshot.MaxFrameGapMs);
+        metrics.FramePacingSourceFrameRate(snapshot.FramePacingSourceFrameRate);
+        metrics.LateFrameDropToleranceMs(snapshot.LateFrameDropToleranceMs);
         metrics.AudioVideoDriftMsP50(snapshot.AudioVideoDriftMsP50);
         metrics.AudioVideoDriftMsP95(snapshot.AudioVideoDriftMsP95);
         metrics.AudioVideoDriftMsP99(snapshot.AudioVideoDriftMsP99);

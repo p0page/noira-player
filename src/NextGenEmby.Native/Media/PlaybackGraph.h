@@ -74,6 +74,7 @@ namespace winrt::NextGenEmby::Native::implementation
         uint32_t DecodeNextAudioFrame();
         void UpdateSubtitleCue();
         void ResetRuntimeStats() noexcept;
+        void ApplyFramePacingPolicyMetrics() noexcept;
         void SetVideoPrerollTarget(int64_t targetTicks) noexcept;
         void EnsureHdrOutputForFrame(DecodedVideoFrame const& frame);
         void LogRuntimeStatsIfDue();

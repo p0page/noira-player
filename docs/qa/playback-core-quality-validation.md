@@ -46,6 +46,8 @@ Use an App package build only when validating Xbox integration or a change that 
 
 `native-frame-pacing-test` 会在不构建、不打包 App 的情况下编译并运行 `tests/NextGenEmby.Native.Tests/FramePacingTests.cpp`。自动化播放优化应把它视为 Core/native 策略门禁，而不是 Xbox 视觉效果验证。
 
+质量报告会把这条策略暴露为 `timing.framePacingSourceFrameRate`、`timing.lateFrameDropToleranceMs`、`modelAnalysis.framePacing.lateFrameDropToleranceMs` 和 `modelAnalysis.framePacing.lateFrameDropToleranceFrameRatio`。这些字段描述 native pacing 实际采用的策略参数，不代表真实 HDMI 输出或肉眼观感。
+
 ## Validate Reference Manifest
 
 Use the App-free CLI to validate a playback reference corpus manifest before using it in automated runs:

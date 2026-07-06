@@ -69,6 +69,8 @@ namespace NextGenEmby.Native
         Double RenderIntervalMsP95;
         Double RenderIntervalMsP99;
         Double MaxFrameGapMs;
+        Double FramePacingSourceFrameRate;
+        Double LateFrameDropToleranceMs;
         Double AudioVideoDriftMsP50;
         Double AudioVideoDriftMsP95;
         Double AudioVideoDriftMsP99;

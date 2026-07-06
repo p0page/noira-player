@@ -793,6 +793,8 @@ public sealed class PlaybackQualityReportAnalyzerTests
         report.Timing.RenderIntervalMsP95 = frameDurationMs * 1.5;
         report.Timing.RenderIntervalMsP99 = frameDurationMs * 2.5;
         report.Timing.MaxFrameGapMs = frameDurationMs * 4.0;
+        report.Timing.FramePacingSourceFrameRate = 23.976;
+        report.Timing.LateFrameDropToleranceMs = frameDurationMs * 2.5;
 
         var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
 
@@ -801,6 +803,10 @@ public sealed class PlaybackQualityReportAnalyzerTests
         Assert.Equal(2.5, analysis.FramePacing.RenderIntervalP99FrameRatio, precision: 3);
         Assert.Equal(4.0, analysis.FramePacing.MaxFrameGapFrameRatio, precision: 3);
         Assert.Equal(2.439, analysis.FramePacing.DroppedVideoFramePercent, precision: 3);
+        Assert.Equal(frameDurationMs * 2.5, analysis.FramePacing.LateFrameDropToleranceMs, precision: 3);
+        Assert.Equal(2.5, analysis.FramePacing.LateFrameDropToleranceFrameRatio, precision: 3);
+        Assert.Contains("timing.framePacingSourceFrameRate", analysis.EvidenceSignals);
+        Assert.Contains("timing.lateFrameDropToleranceMs", analysis.EvidenceSignals);
     }
 
     [Fact]

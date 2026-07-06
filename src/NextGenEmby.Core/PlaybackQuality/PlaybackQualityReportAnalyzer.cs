@@ -164,6 +164,8 @@ namespace NextGenEmby.Core.PlaybackQuality
         public double RenderIntervalP99FrameRatio { get; set; }
         public double MaxFrameGapFrameRatio { get; set; }
         public double DroppedVideoFramePercent { get; set; }
+        public double LateFrameDropToleranceMs { get; set; }
+        public double LateFrameDropToleranceFrameRatio { get; set; }
         public List<string> Reasons { get; } = new List<string>();
         public List<string> Signals { get; } = new List<string>();
     }
@@ -807,6 +809,7 @@ namespace NextGenEmby.Core.PlaybackQuality
             PlaybackQualityReport report)
         {
             classification.ExpectedFrameDurationMs = report.Timing.ExpectedFrameDurationMs;
+            classification.LateFrameDropToleranceMs = report.Timing.LateFrameDropToleranceMs;
             if (report.Timing.ExpectedFrameDurationMs > 0)
             {
                 classification.RenderIntervalP95FrameRatio =
@@ -815,6 +818,8 @@ namespace NextGenEmby.Core.PlaybackQuality
                     report.Timing.RenderIntervalMsP99 / report.Timing.ExpectedFrameDurationMs;
                 classification.MaxFrameGapFrameRatio =
                     report.Timing.MaxFrameGapMs / report.Timing.ExpectedFrameDurationMs;
+                classification.LateFrameDropToleranceFrameRatio =
+                    report.Timing.LateFrameDropToleranceMs / report.Timing.ExpectedFrameDurationMs;
             }
 
             var observedFrames =
@@ -1397,6 +1402,16 @@ namespace NextGenEmby.Core.PlaybackQuality
             PlaybackQualityModelAnalysis analysis,
             PlaybackQualityReport report)
         {
+            if (report.Timing.LateFrameDropToleranceMs > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.lateFrameDropToleranceMs");
+            }
+
+            if (report.Timing.FramePacingSourceFrameRate > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.framePacingSourceFrameRate");
+            }
+
             if (report.Timing.ExpectedFrameDurationMs <= 0)
             {
                 return;

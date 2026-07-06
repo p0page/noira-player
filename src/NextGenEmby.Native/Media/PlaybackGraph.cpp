@@ -109,6 +109,7 @@ namespace winrt::NextGenEmby::Native::implementation
             m_open = true;
             m_paused = false;
             ResetRuntimeStats();
+            ApplyFramePacingPolicyMetrics();
             AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open RenderNextFrame begin");
             auto renderedFirstFrame = RenderNextFrame();
             AppendNativePlaybackDiagnostic(renderedFirstFrame
@@ -165,6 +166,7 @@ namespace winrt::NextGenEmby::Native::implementation
         m_positionTicks = positionTicks;
         m_pendingVideoFrame.reset();
         ResetRuntimeStats();
+        ApplyFramePacingPolicyMetrics();
         m_audioRenderer.Flush();
         m_videoDecoder.Seek(positionTicks);
         m_audioDecoder.Flush(positionTicks);
@@ -583,6 +585,13 @@ namespace winrt::NextGenEmby::Native::implementation
         m_qualityMetrics.Reset();
         m_lastRuntimeStatsLog = {};
         m_lastRenderedFrameAt = {};
+    }
+
+    void PlaybackGraph::ApplyFramePacingPolicyMetrics() noexcept
+    {
+        m_qualityMetrics.FramePacingSourceFrameRate = m_preferredVideoFrameRate;
+        m_qualityMetrics.LateFrameDropToleranceMs =
+            static_cast<double>(PlaybackFramePacing::LateFrameDropToleranceTicks(m_preferredVideoFrameRate)) / 10000.0;
     }
 
     void PlaybackGraph::SetVideoPrerollTarget(int64_t targetTicks) noexcept

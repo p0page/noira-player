@@ -56,6 +56,12 @@ namespace winrt::NextGenEmby::Native::implementation
         double MaxFrameGapMs() const noexcept { return m_maxFrameGapMs; }
         void MaxFrameGapMs(double value) noexcept { m_maxFrameGapMs = value; }
 
+        double FramePacingSourceFrameRate() const noexcept { return m_framePacingSourceFrameRate; }
+        void FramePacingSourceFrameRate(double value) noexcept { m_framePacingSourceFrameRate = value; }
+
+        double LateFrameDropToleranceMs() const noexcept { return m_lateFrameDropToleranceMs; }
+        void LateFrameDropToleranceMs(double value) noexcept { m_lateFrameDropToleranceMs = value; }
+
         double AudioVideoDriftMsP50() const noexcept { return m_audioVideoDriftMsP50; }
         void AudioVideoDriftMsP50(double value) noexcept { m_audioVideoDriftMsP50 = value; }
 
@@ -85,6 +91,8 @@ namespace winrt::NextGenEmby::Native::implementation
         double m_renderIntervalMsP95{0.0};
         double m_renderIntervalMsP99{0.0};
         double m_maxFrameGapMs{0.0};
+        double m_framePacingSourceFrameRate{0.0};
+        double m_lateFrameDropToleranceMs{0.0};
         double m_audioVideoDriftMsP50{0.0};
         double m_audioVideoDriftMsP95{0.0};
         double m_audioVideoDriftMsP99{0.0};
