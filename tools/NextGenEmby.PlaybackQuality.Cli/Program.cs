@@ -1152,7 +1152,13 @@ internal static class Program
                 AddUnique(gate.Signals, signal);
             }
 
+            foreach (var area in item.TargetFailureAreas)
+            {
+                AddUnique(gate.TargetFailureAreas, area);
+            }
+
             AddUnique(gate.CaseIds, item.CaseId);
+            AddUnique(gate.TargetCaseIds, item.CaseId);
         }
 
         if (summary.AnalyzedReportCount == 0)
@@ -1253,6 +1259,9 @@ internal static class Program
 
         CopyValues(suite.Blockers, gate.Blockers);
         CopyValues(suite.Signals, gate.Signals);
+        CopyValues(suite.FailureAreas, gate.FailureAreas);
+        CopyValues(suite.TargetFailureAreas, gate.TargetFailureAreas);
+        CopyValues(suite.TargetCaseIds, gate.TargetCaseIds);
         foreach (var summary in suite.Cases)
         {
             AddUnique(gate.CaseIds, summary.CaseId);
@@ -1470,6 +1479,9 @@ internal static class Program
         public string Summary { get; set; } = "";
         public List<string> Blockers { get; } = new List<string>();
         public List<string> Signals { get; } = new List<string>();
+        public List<string> FailureAreas { get; } = new List<string>();
+        public List<string> TargetFailureAreas { get; } = new List<string>();
+        public List<string> TargetCaseIds { get; } = new List<string>();
         public List<string> CaseIds { get; } = new List<string>();
     }
 

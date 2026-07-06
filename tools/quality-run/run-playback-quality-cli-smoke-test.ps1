@@ -32,6 +32,11 @@ try {
     $baselineEvaluationBlockedAnalysisBaselineDir = Join-Path $tempRoot 'baseline-evaluation-blocked-analysis-baseline'
     $baselineEvaluationBlockedAnalysisPath = Join-Path $tempRoot 'baseline-evaluation-blocked-analysis.json'
     $baselineEvaluationBlockedAnalysisComparisonsDir = Join-Path $tempRoot 'baseline-evaluation-blocked-analysis-comparisons'
+    $candidateEvaluationStallBaselineDir = Join-Path $tempRoot 'candidate-evaluation-stall-baseline'
+    $candidateEvaluationStallCandidateDir = Join-Path $tempRoot 'candidate-evaluation-stall-candidate'
+    $candidateEvaluationStallPreviousComparisonsDir = Join-Path $tempRoot 'candidate-evaluation-stall-previous-comparisons'
+    $candidateEvaluationStallComparisonsDir = Join-Path $tempRoot 'candidate-evaluation-stall-comparisons'
+    $candidateEvaluationStallPath = Join-Path $tempRoot 'candidate-evaluation-stall.json'
     $stallBaselineDir = Join-Path $tempRoot 'stall-baseline-suite'
     $stallCandidateDir = Join-Path $tempRoot 'stall-candidate-suite'
     $previousComparisonsDir = Join-Path $tempRoot 'previous-comparisons'
@@ -1071,6 +1076,72 @@ try {
 
     if (-not ($blockedAnalysisEvaluation.evidenceGates | Where-Object { $_.name -eq 'suite' -and $_.status -eq 'skipped' })) {
         throw 'Expected blocked report-analysis evaluate-candidate suite evidence gate to be skipped.'
+    }
+
+    New-Item -ItemType Directory -Path $candidateEvaluationStallBaselineDir | Out-Null
+    New-Item -ItemType Directory -Path $candidateEvaluationStallCandidateDir | Out-Null
+    New-Item -ItemType Directory -Path $candidateEvaluationStallPreviousComparisonsDir | Out-Null
+    Copy-Item -LiteralPath (Join-Path $runIdBaselineDir 'baseline-a.json') -Destination (Join-Path $candidateEvaluationStallBaselineDir 'baseline-a.json')
+    Copy-Item -LiteralPath (Join-Path $runIdBaselineDir 'baseline-a.json') -Destination (Join-Path $candidateEvaluationStallCandidateDir 'candidate-a.json')
+    $candidateEvaluationStallPreviousComparisonPath = Join-Path $candidateEvaluationStallPreviousComparisonsDir 'item-1\source-1.json'
+    New-Item -ItemType Directory -Path (Split-Path -Parent $candidateEvaluationStallPreviousComparisonPath) | Out-Null
+
+    Push-Location $repoRoot
+    try {
+        dotnet run `
+            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
+            --no-build `
+            -- compare `
+            --baseline (Join-Path $candidateEvaluationStallBaselineDir 'baseline-a.json') `
+            --candidate (Join-Path $candidateEvaluationStallCandidateDir 'candidate-a.json') `
+            --output $candidateEvaluationStallPreviousComparisonPath
+        if ($LASTEXITCODE -ne 0) {
+            throw 'playback quality CLI evaluate-candidate previous stalled comparison generation returned a non-zero exit code.'
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    Push-Location $repoRoot
+    try {
+        dotnet run `
+            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
+            --no-build `
+            -- evaluate-candidate `
+            --manifest $candidateEvaluationManifestPath `
+            --baseline-dir $candidateEvaluationStallBaselineDir `
+            --candidate-dir $candidateEvaluationStallCandidateDir `
+            --match-by run-id `
+            --previous-comparisons-dir $candidateEvaluationStallPreviousComparisonsDir `
+            --comparisons-dir $candidateEvaluationStallComparisonsDir `
+            --stall-threshold 2 `
+            --output $candidateEvaluationStallPath
+        if ($LASTEXITCODE -eq 0) {
+            throw 'Expected playback quality CLI evaluate-candidate to reject stalled suite evidence.'
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    $stalledCandidateEvaluation = Get-Content -Raw -LiteralPath $candidateEvaluationStallPath | ConvertFrom-Json
+    if ($stalledCandidateEvaluation.action -ne 'change-optimization-strategy') {
+        throw 'Expected stalled evaluate-candidate output to change optimization strategy.'
+    }
+
+    if ($null -eq $stalledCandidateEvaluation.activeGate -or
+        $stalledCandidateEvaluation.activeGate.name -ne 'suite' -or
+        $stalledCandidateEvaluation.activeGate.status -ne 'blocked') {
+        throw 'Expected stalled evaluate-candidate active gate to point at blocked suite.'
+    }
+
+    if (-not ($stalledCandidateEvaluation.activeGate.targetFailureAreas -contains 'frame-pacing')) {
+        throw 'Expected stalled evaluate-candidate active suite gate to include target failure area.'
+    }
+
+    if (-not ($stalledCandidateEvaluation.activeGate.targetCaseIds -contains 'item-1/source-1')) {
+        throw 'Expected stalled evaluate-candidate active suite gate to include target case id.'
     }
 
     New-Item -ItemType Directory -Path $stallBaselineDir | Out-Null
