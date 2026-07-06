@@ -20,6 +20,7 @@ namespace NextGenEmby.App.Services
 
         public static EmbyApiClient Create(HttpClient httpClient, EmbySession session)
         {
+            httpClient.Timeout = EmbyRequestTimeoutPolicy.InteractiveRequestTimeout;
             return new EmbyApiClient(httpClient, CreateOptions(session));
         }
     }

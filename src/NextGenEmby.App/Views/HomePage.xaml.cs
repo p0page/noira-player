@@ -543,6 +543,7 @@ namespace NextGenEmby.App.Views
         private void RenderHero(EmbyMediaItem item)
         {
             _heroItem = item;
+            ResetHeroLogo();
             HeroTitleBlock.Text = string.IsNullOrWhiteSpace(item.Name) ? item.Id : item.Name;
             HeroMetaBlock.Text = CreateMeta(item);
             HeroPlayButton.IsEnabled = CanPlay(item);
@@ -562,6 +563,17 @@ namespace NextGenEmby.App.Views
                 HeroPosterFallbackBlock.Visibility = Visibility.Collapsed;
             }
 
+            var logoArtwork = EmbyArtworkPolicy.SelectLogoArtwork(item, 720);
+            if (_client != null && _session != null && logoArtwork != null)
+            {
+                HeroLogoImage.Source = new BitmapImage(new Uri(_client.GetImageUrl(
+                    _session,
+                    logoArtwork.ItemId,
+                    logoArtwork.ImageType,
+                    logoArtwork.MaxWidth)));
+                HeroLogoImage.Visibility = Visibility.Visible;
+            }
+
             var heroArtwork = EmbyArtworkPolicy.SelectHeroArtwork(item, 1280);
             if (_client != null && _session != null && heroArtwork != null)
             {
@@ -576,6 +588,7 @@ namespace NextGenEmby.App.Views
         private void ClearHero()
         {
             _heroItem = null;
+            ResetHeroLogo();
             HeroTitleBlock.Text = "Nothing queued yet";
             HeroMetaBlock.Text = "Refresh after signing in to load your Emby home screen.";
             HeroPosterImage.Source = null;
@@ -583,6 +596,26 @@ namespace NextGenEmby.App.Views
             HeroPosterFallbackBlock.Visibility = Visibility.Visible;
             HeroPlayButton.IsEnabled = false;
             HeroDetailsButton.IsEnabled = false;
+        }
+
+        private void ResetHeroLogo()
+        {
+            HeroLogoImage.Source = null;
+            HeroLogoImage.Visibility = Visibility.Collapsed;
+            HeroTitleBlock.Visibility = Visibility.Visible;
+        }
+
+        private void HeroLogoImage_OnImageOpened(object sender, RoutedEventArgs e)
+        {
+            if (HeroLogoImage.Source != null)
+            {
+                HeroTitleBlock.Visibility = Visibility.Collapsed;
+            }
+        }
+
+        private void HeroLogoImage_OnImageFailed(object sender, ExceptionRoutedEventArgs e)
+        {
+            ResetHeroLogo();
         }
 
         private void ClearHomeContent()

@@ -41,6 +41,15 @@
                     MaxWidth="900"
                     Spacing="18">
                     <StackPanel Spacing="8">
+                        <Image
+                            x:Name="LogoImage"
+                            MaxWidth="600"
+                            MaxHeight="112"
+                            HorizontalAlignment="Left"
+                            Stretch="Uniform"
+                            Visibility="Collapsed"
+                            ImageOpened="LogoImage_OnImageOpened"
+                            ImageFailed="LogoImage_OnImageFailed" />
                         <TextBlock
                             x:Name="TitleBlock"
                             FontSize="40"

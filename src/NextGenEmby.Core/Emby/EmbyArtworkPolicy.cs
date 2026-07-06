@@ -29,6 +29,16 @@ namespace NextGenEmby.Core.Emby
                 CreateCandidate(item.Id, item.BackdropImageItemId, "Backdrop", item.BackdropImageTag, maxWidth);
         }
 
+        public static EmbyImageCandidate? SelectLogoArtwork(EmbyMediaItem? item, int maxWidth)
+        {
+            if (item == null)
+            {
+                return null;
+            }
+
+            return CreateCandidate(item.Id, item.LogoImageItemId, "Logo", item.LogoImageTag, maxWidth);
+        }
+
         public static EmbyImageCandidate? SelectLibraryWideArtwork(EmbyLibraryView? view, int maxWidth)
         {
             if (view == null)
@@ -41,6 +51,16 @@ namespace NextGenEmby.Core.Emby
                 CreateCandidate(view.Id, view.BackdropImageItemId, "Backdrop", view.BackdropImageTag, maxWidth) ??
                 CreateCandidate(view.Id, view.BannerImageItemId, "Banner", view.BannerImageTag, maxWidth) ??
                 CreateCandidate(view.Id, view.PrimaryImageItemId, "Primary", view.PrimaryImageTag, maxWidth);
+        }
+
+        public static EmbyImageCandidate? SelectLibraryLogoArtwork(EmbyLibraryView? view, int maxWidth)
+        {
+            if (view == null)
+            {
+                return null;
+            }
+
+            return CreateCandidate(view.Id, view.LogoImageItemId, "Logo", view.LogoImageTag, maxWidth);
         }
 
         private static EmbyImageCandidate? CreateCandidate(

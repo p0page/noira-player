@@ -3,8 +3,8 @@ version: "alpha"
 name: "Next Gen Xbox Emby - Matte Cinema Fluent"
 description: "A dark Xbox/TV visual system for a personal Emby library, built on quiet Fluent surfaces, real media artwork, and high-contrast controller focus without retro-futurist glow."
 colors:
-  primary: "#72D572"
-  on_primary: "#031105"
+  primary: "#61D47C"
+  on_primary: "#041007"
   secondary: "#E0B86A"
   on_secondary: "#120B02"
   tertiary: "#7FA7C7"
@@ -15,9 +15,9 @@ colors:
   surface_raised: "#1A2027"
   surface_overlay: "#D9101418"
   hairline: "#303842"
-  focus: "#72D572"
+  focus: "#3BD5FF"
   focus_secondary: "#F6F1E8"
-  success: "#72D572"
+  success: "#61D47C"
   warning: "#E0B86A"
   danger: "#FF6B6B"
   text: "#F6F1E8"
@@ -152,16 +152,17 @@ These references inform the document shape, not the final aesthetic.
 - **Text `#F6F1E8`:** warm off-white primary text. This avoids sterile blue-white sci-fi contrast.
 - **Muted text `#B9C0C8`:** metadata and secondary labels.
 - **Subtle text `#78838F`:** timestamps, disabled labels, and tertiary metadata.
-- **Primary / focus `#72D572`:** Xbox-compatible green for focused actions, selected nav, and primary action states.
+- **Primary / play `#61D47C`:** Xbox-compatible green for Play, Resume, confirmation, and positive action states.
+- **Focus `#3BD5FF`:** crisp controller focus frame and active route signal. Use it as an edge, underline, or focus line, never as a glowing background mood.
 - **Secondary / progress `#E0B86A`:** watch progress, resume state, warnings that are not destructive.
 - **Tertiary `#7FA7C7`:** informational state only, such as diagnostics and neutral playback capability badges.
 - **Danger `#FF6B6B`:** destructive or failed state only.
 
 ### Usage Rules
 
-Use neutral surfaces for at least 85 percent of the UI. Let media artwork provide most saturated color. Green and amber must feel like signals, not decoration.
+Use neutral surfaces for at least 85 percent of the UI. Let media artwork provide most saturated color. Cyan, green, and amber must feel like signals, not decoration.
 
-Do not create blue or cyan as the default brand mood. Cyan may appear inside user artwork, but system chrome should not use electric cyan as the identity color.
+Do not create blue or cyan as the default brand mood. Cyan is allowed for the controller focus system because it separates navigation state from Play/Resume. It must stay sharp, flat, and sparse: no electric glow fields, portals, or cyan-tinted page backgrounds.
 
 Never place saturated accents on top of saturated artwork without a dark scrim. A selected item over artwork needs either a solid focus frame or a 70 to 85 percent dark overlay.
 
@@ -170,7 +171,8 @@ Contrast checks from the initial token set:
 - `text` on `canvas`: 18.02:1.
 - `text_muted` on `canvas`: 11.04:1.
 - `text` on `surface`: 16.44:1.
-- `primary` on `canvas`: 11.08:1.
+- `primary` on `canvas`: 10.83:1.
+- `focus` on `canvas`: 11.73:1.
 - `secondary` on `canvas`: 10.85:1.
 
 ## Typography
@@ -253,7 +255,7 @@ Primary buttons use `primary` background with `on_primary` text. Secondary butto
 Visual states:
 
 - Default: matte fill, no glow.
-- Focus-visible: 2px `focus` frame plus a 1px `focus_secondary` inner or outer contrast line where needed.
+- Focus-visible: 2px `focus` frame plus a 1px `focus_secondary` inner or outer contrast line where needed. Do not reuse the green Play/Resume fill as the generic focus color.
 - Pressed: fill darkens or compresses by luminance, not by glow.
 - Disabled: reduce text and border contrast but keep the control shape visible.
 - Loading: preserve button width and label footprint.
@@ -282,7 +284,7 @@ Rules:
 
 ### Navigation Chrome
 
-Navigation chrome is quiet. The active route can use a green marker or focused outline, but inactive nav remains neutral.
+Navigation chrome is quiet. The active route can use a `focus` marker or focused outline, but inactive nav remains neutral.
 
 Rules:
 
@@ -299,7 +301,7 @@ Visual rules:
 
 - OSD panels are dark matte overlays with clear controls.
 - Keep the bottom subtitle region readable. If a panel competes with subtitles, move or shorten the panel before adding stronger decoration.
-- Transport controls may use `primary` for the focused action and `secondary` for progress.
+- Transport controls may use `focus` for the current controller target, `primary` for Play/Resume/confirm, and `secondary` for progress.
 - Diagnostics use `mono` and `tertiary`, never the primary focus color.
 
 ## Artwork
@@ -331,7 +333,7 @@ Future icon work should use this vocabulary instead:
 
 Possible icon concepts aligned with this system:
 
-- **Matte Library Slat:** layered black media rectangles with one green focus edge.
+- **Matte Library Slat:** layered black media rectangles with one crisp focus edge and one green play/confirm surface.
 - **Screen Room Mark:** a dark screen shape with a subtle amber progress base.
 - **Quiet Play Aperture:** a flat negative-space play cutout inside a neutral media tile.
 
@@ -403,7 +405,8 @@ Existing tokens and assets should migrate visually in a later implementation pas
 
 Suggested migration mapping:
 
-- Current cyan `AppAccentColor #4EE7FF` becomes `focus #72D572`.
+- Current cyan `AppAccentColor #4EE7FF` becomes `focus #3BD5FF` or the nearest platform-safe cyan used by XAML resources.
+- Current green `AppActionColor #78E68B` becomes `primary #61D47C`.
 - Current warm `AppWarmColor #E4B84C` becomes `secondary #E0B86A`.
 - Current surfaces stay in the same dark family but should shift toward the matte `canvas`, `surface`, and `surface_raised` roles.
 - Current generated app icon concepts under `docs/icon-concepts` are exploration artifacts only and should not define the final visual identity.

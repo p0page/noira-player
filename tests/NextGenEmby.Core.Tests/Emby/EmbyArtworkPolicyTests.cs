@@ -150,11 +150,43 @@ public sealed class EmbyArtworkPolicyTests
     }
 
     [Fact]
+    public void SelectLogoArtwork_Uses_Item_Logo_When_Available()
+    {
+        AssertCandidate(
+            "logo-owner",
+            "Logo",
+            640,
+            EmbyArtworkPolicy.SelectLogoArtwork(new EmbyMediaItem
+            {
+                Id = "movie-1",
+                LogoImageTag = "logo-tag",
+                LogoImageItemId = "logo-owner"
+            }, 640));
+    }
+
+    [Fact]
+    public void SelectLibraryLogoArtwork_Uses_View_Logo_When_Available()
+    {
+        AssertCandidate(
+            "library-logo-owner",
+            "Logo",
+            640,
+            EmbyArtworkPolicy.SelectLibraryLogoArtwork(new EmbyLibraryView
+            {
+                Id = "library-1",
+                LogoImageTag = "logo-tag",
+                LogoImageItemId = "library-logo-owner"
+            }, 640));
+    }
+
+    [Fact]
     public void SelectArtwork_Returns_Null_When_No_Usable_Image_Exists()
     {
         Assert.Null(EmbyArtworkPolicy.SelectHeroArtwork(new EmbyMediaItem { Id = "movie-1" }, 1600));
         Assert.Null(EmbyArtworkPolicy.SelectLibraryWideArtwork(new EmbyLibraryView { Id = "library-1" }, 900));
         Assert.Null(EmbyArtworkPolicy.SelectPosterArtwork(new EmbyMediaItem { Id = "movie-1" }, 520));
+        Assert.Null(EmbyArtworkPolicy.SelectLogoArtwork(new EmbyMediaItem { Id = "movie-1" }, 640));
+        Assert.Null(EmbyArtworkPolicy.SelectLibraryLogoArtwork(new EmbyLibraryView { Id = "library-1" }, 640));
     }
 
     private static void AssertCandidate(

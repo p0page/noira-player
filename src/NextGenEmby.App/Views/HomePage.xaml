@@ -83,6 +83,15 @@
                                     FontSize="17"
                                     FontWeight="SemiBold"
                                     Foreground="{StaticResource AppWarmBrush}" />
+                                <Image
+                                    x:Name="HeroLogoImage"
+                                    MaxWidth="430"
+                                    MaxHeight="82"
+                                    HorizontalAlignment="Left"
+                                    Stretch="Uniform"
+                                    Visibility="Collapsed"
+                                    ImageOpened="HeroLogoImage_OnImageOpened"
+                                    ImageFailed="HeroLogoImage_OnImageFailed" />
                                 <TextBlock
                                     x:Name="HeroTitleBlock"
                                     FontSize="38"

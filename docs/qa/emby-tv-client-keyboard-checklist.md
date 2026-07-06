@@ -361,3 +361,26 @@ Then continue design and implementation until the route passes.
   - From Playlists, `M`, three `Down`, `Enter` opened Favorites with 100 media items.
   - From Favorites, `M`, `Down`, `Enter` opened Unwatched with 100 media items.
 - Result: pass on local Windows validation. No mouse clicks were used inside app content.
+
+### 2026-07-06 - Matte Cinema Logo And Home Recovery Pass
+
+- App version: 0.1.0.91.
+- Scope: `docs/DESIGN.md` token alignment, Emby `Logo` artwork policy, Home/Details logo fallback, Home/Details backdrop wash validation, and Emby API request timeout policy.
+- Design update:
+  - `docs/DESIGN.md` now separates `focus #3BD5FF` from `primary #61D47C`.
+  - Green is reserved for Play/Resume/confirm actions.
+  - Cyan is reserved for controller focus and active-route edges, without glow, portal, or sci-fi background treatment.
+- Automated verification:
+  - Core tests passed: 197 total.
+  - Package layout gate passed for 0.1.0.91: root app shim, `entrypoint\NextGenEmby.App.exe`, and XAML metadata provider layout all valid.
+  - MSIX signed and installed locally as `NextGenEmby.App_0.1.0.91_x64__h8qjz0sr1sg4m`.
+- Keyboard-only validation with Computer Use:
+  - Launched 0.1.0.91 locally.
+  - Home loaded real Emby data: Hero resume item, dedicated Media Libraries covers, Continue watching, Hot Movies, Hot TV Series, and latest rows.
+  - From Hero Play, `Right`, `Enter` opened Details for `诡怪疑云`.
+  - Details showed backdrop wash, poster artwork, metadata, Resume as initial action, version/audio/subtitle metadata, and overview.
+  - The item did not expose a usable Logo image, so Details correctly fell back to the text title instead of leaving a blank title area.
+  - `Escape` returned one level to Home; Home content remained present and focus returned to the Hero Details action.
+- Result: pass for the Home -> Details -> Home route. No mouse clicks were used inside app content.
+- Follow-up:
+  - Home currently waits too long before full first render when many server rows are requested. Add a progressive Home load pass so Hero, media libraries, Continue watching, and Next up render before lower-priority popular/latest rows finish.

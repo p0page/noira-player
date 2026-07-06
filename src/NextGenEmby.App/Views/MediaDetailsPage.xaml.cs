@@ -207,6 +207,17 @@ namespace NextGenEmby.App.Views
             {
                 ResetArtwork();
 
+                var logoArtwork = EmbyArtworkPolicy.SelectLogoArtwork(item, 900);
+                if (logoArtwork != null)
+                {
+                    LogoImage.Source = new BitmapImage(new Uri(client.GetImageUrl(
+                        session,
+                        logoArtwork.ItemId,
+                        logoArtwork.ImageType,
+                        logoArtwork.MaxWidth)));
+                    LogoImage.Visibility = Visibility.Visible;
+                }
+
                 var posterArtwork = EmbyArtworkPolicy.SelectPosterArtwork(item, 720);
                 if (posterArtwork != null)
                 {
@@ -516,9 +527,27 @@ namespace NextGenEmby.App.Views
 
         private void ResetArtwork()
         {
+            LogoImage.Source = null;
+            LogoImage.Visibility = Visibility.Collapsed;
+            TitleBlock.Visibility = Visibility.Visible;
             PosterImage.Source = null;
             BackdropImage.Source = null;
             PosterFallbackBlock.Visibility = Visibility.Visible;
+        }
+
+        private void LogoImage_OnImageOpened(object sender, RoutedEventArgs e)
+        {
+            if (LogoImage.Source != null)
+            {
+                TitleBlock.Visibility = Visibility.Collapsed;
+            }
+        }
+
+        private void LogoImage_OnImageFailed(object sender, ExceptionRoutedEventArgs e)
+        {
+            LogoImage.Source = null;
+            LogoImage.Visibility = Visibility.Collapsed;
+            TitleBlock.Visibility = Visibility.Visible;
         }
 
         private int BeginLoad()

@@ -9,7 +9,7 @@ Use `contact-sheet.png` for side-by-side comparison.
 Current `docs/DESIGN.md` direction.
 
 - Dark matte Fluent shell.
-- Green controller focus and primary action.
+- Crisp controller focus and green primary action; the current `docs/DESIGN.md` tokens supersede the early preview hue if they differ.
 - Amber resume/progress.
 - Warm off-white text.
 - Strongest Xbox-compatible signal without using platform branding.
