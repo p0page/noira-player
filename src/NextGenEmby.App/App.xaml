@@ -54,6 +54,7 @@
             <Thickness x:Key="TvShellMargin">48,18,48,12</Thickness>
             <Thickness x:Key="TvPageMargin">56,28,56,48</Thickness>
             <Thickness x:Key="TvPanelPadding">22</Thickness>
+            <x:Double x:Key="TvSettingsContentMaxWidth">980</x:Double>
 
             <Style TargetType="Button">
                 <Setter Property="MinHeight" Value="52" />
@@ -66,6 +67,66 @@
                 <Setter Property="BorderBrush" Value="{StaticResource AppHairlineBrush}" />
                 <Setter Property="BorderThickness" Value="1" />
                 <Setter Property="CornerRadius" Value="6" />
+                <Setter Property="FocusVisualMargin" Value="-3" />
+                <Setter Property="FocusVisualPrimaryThickness" Value="2" />
+                <Setter Property="FocusVisualSecondaryThickness" Value="1" />
+                <Setter Property="UseSystemFocusVisuals" Value="True" />
+            </Style>
+
+            <Style x:Key="TvPageTitleTextStyle" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="34" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Foreground" Value="{StaticResource AppTextBrush}" />
+                <Setter Property="TextWrapping" Value="Wrap" />
+            </Style>
+
+            <Style x:Key="TvPageSubtitleTextStyle" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="18" />
+                <Setter Property="Foreground" Value="{StaticResource AppMutedTextBrush}" />
+                <Setter Property="TextWrapping" Value="Wrap" />
+            </Style>
+
+            <Style x:Key="TvPanelStyle" TargetType="Border">
+                <Setter Property="Background" Value="{StaticResource AppSurfaceBrush}" />
+                <Setter Property="CornerRadius" Value="8" />
+                <Setter Property="Padding" Value="{StaticResource TvPanelPadding}" />
+            </Style>
+
+            <Style x:Key="TvPanelTitleTextStyle" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="22" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Foreground" Value="{StaticResource AppTextBrush}" />
+                <Setter Property="TextWrapping" Value="Wrap" />
+            </Style>
+
+            <Style x:Key="TvFieldLabelTextStyle" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="16" />
+                <Setter Property="Foreground" Value="{StaticResource AppMutedTextBrush}" />
+                <Setter Property="TextWrapping" Value="Wrap" />
+            </Style>
+
+            <Style x:Key="TvBodyValueTextStyle" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="18" />
+                <Setter Property="Foreground" Value="{StaticResource AppTextBrush}" />
+                <Setter Property="TextWrapping" Value="Wrap" />
+            </Style>
+
+            <Style x:Key="TvMutedBodyTextStyle" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="16" />
+                <Setter Property="Foreground" Value="{StaticResource AppMutedTextBrush}" />
+                <Setter Property="TextWrapping" Value="Wrap" />
+            </Style>
+
+            <Style x:Key="TvDiagnosticsTextStyle" TargetType="TextBlock">
+                <Setter Property="FontFamily" Value="Cascadia Mono" />
+                <Setter Property="FontSize" Value="13" />
+                <Setter Property="Foreground" Value="{StaticResource AppMutedTextBrush}" />
+                <Setter Property="TextWrapping" Value="Wrap" />
+            </Style>
+
+            <Style x:Key="TvSettingsCheckBoxStyle" TargetType="CheckBox">
+                <Setter Property="FontSize" Value="19" />
+                <Setter Property="Foreground" Value="{StaticResource AppTextBrush}" />
                 <Setter Property="FocusVisualMargin" Value="-3" />
                 <Setter Property="FocusVisualPrimaryThickness" Value="2" />
                 <Setter Property="FocusVisualSecondaryThickness" Value="1" />

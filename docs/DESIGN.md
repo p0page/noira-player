@@ -211,6 +211,19 @@ Layout rules:
 
 Density should be "comfortable TV dense": enough items visible to support browsing, but never so dense that card labels, focus frames, or metadata compete with artwork.
 
+## Theme Tokens And Skinning
+
+The implementation should express repeated visual choices as XAML resources before they spread across pages. Colors, brushes, page margins, panel padding, typography styles, focus thickness, card radii, and common panel shapes belong in `App.xaml` or a future merged theme dictionary. Page XAML can still own one-off layout structure, such as a two-column diagnostics grid, but it should not duplicate raw font sizes, surface colors, or focus styling when a shared token exists.
+
+This keeps Matte Cinema Fluent replaceable. A future skin should be able to swap resource dictionaries for color, typography, spacing, and panel treatment without rewriting Emby data flow, controller navigation, or playback behavior. Skins may change visual language, but they must preserve the TV safety rules in this file: visible focus, stable card dimensions, dark scrims over artwork, and no hover-only affordances.
+
+New UI surfaces should follow this migration order:
+
+- use existing semantic brushes and spacing resources first;
+- promote repeated hard-coded values into named resources or styles;
+- keep interaction state colors semantic, such as focus, play, progress, danger, and muted text;
+- avoid page-local visual constants unless they describe a unique layout constraint.
+
 ## Elevation and Depth
 
 Depth is matte and structural. The design should resemble stacked black materials in a dim room, not transparent glass floating in blue light.

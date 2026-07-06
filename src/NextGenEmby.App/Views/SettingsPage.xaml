@@ -5,34 +5,100 @@
     Background="{StaticResource AppBackgroundBrush}">
     <Grid>
         <ScrollViewer VerticalScrollBarVisibility="Auto">
-            <Grid Margin="{StaticResource TvPageMargin}" MaxWidth="880" HorizontalAlignment="Left">
-                <StackPanel Spacing="20">
-                    <TextBlock Text="Settings" FontSize="34" FontWeight="SemiBold" />
-                    <Border Background="{StaticResource AppSurfaceBrush}" CornerRadius="8" Padding="22">
-                        <StackPanel Spacing="12">
-                            <TextBlock Text="Signed in" FontSize="22" FontWeight="SemiBold" />
-                            <TextBlock
-                                x:Name="AccountBlock"
-                                FontSize="18"
-                                Foreground="{StaticResource AppMutedTextBrush}"
-                                Text="Not signed in"
-                                TextWrapping="Wrap" />
+            <Grid
+                Margin="{StaticResource TvPageMargin}"
+                MaxWidth="{StaticResource TvSettingsContentMaxWidth}"
+                HorizontalAlignment="Left">
+                <StackPanel Spacing="18">
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="Settings" Style="{StaticResource TvPageTitleTextStyle}" />
+                        <TextBlock
+                            Text="Account, input, and diagnostics"
+                            Style="{StaticResource TvPageSubtitleTextStyle}" />
+                    </StackPanel>
+
+                    <Border Style="{StaticResource TvPanelStyle}">
+                        <StackPanel Spacing="14">
+                            <TextBlock Text="Account" Style="{StaticResource TvPanelTitleTextStyle}" />
+                            <Grid ColumnSpacing="18">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="160" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+
+                                <TextBlock Text="Session" Style="{StaticResource TvFieldLabelTextStyle}" />
+                                <TextBlock
+                                    x:Name="AccountBlock"
+                                    Grid.Column="1"
+                                    Style="{StaticResource TvBodyValueTextStyle}"
+                                    Text="Not signed in"
+                                    TextWrapping="Wrap" />
+
+                                <TextBlock
+                                    Grid.Row="1"
+                                    Text="Version"
+                                    Style="{StaticResource TvFieldLabelTextStyle}" />
+                                <TextBlock
+                                    x:Name="VersionBlock"
+                                    Grid.Row="1"
+                                    Grid.Column="1"
+                                    Style="{StaticResource TvBodyValueTextStyle}" />
+                            </Grid>
                         </StackPanel>
                     </Border>
-                    <Border Background="{StaticResource AppSurfaceBrush}" CornerRadius="8" Padding="22">
+
+                    <Border Style="{StaticResource TvPanelStyle}">
                         <StackPanel Spacing="14">
+                            <TextBlock Text="Playback input" Style="{StaticResource TvPanelTitleTextStyle}" />
                             <CheckBox
                                 x:Name="ThumbstickSeekPreviewCheckBox"
                                 Content="Thumbstick seek preview"
-                                FontSize="19"
-                                IsChecked="True"
                                 IsEnabled="True"
-                                UseSystemFocusVisuals="True" />
+                                Checked="ThumbstickSeekPreviewCheckBox_OnChanged"
+                                Unchecked="ThumbstickSeekPreviewCheckBox_OnChanged"
+                                Style="{StaticResource TvSettingsCheckBoxStyle}" />
                             <TextBlock
-                                FontSize="16"
-                                Foreground="{StaticResource AppMutedTextBrush}"
-                                Text="Shows a preview while seeking with the controller thumbstick. The playback task will connect this setting to the player."
-                                TextWrapping="Wrap" />
+                                x:Name="ThumbstickSeekPreviewStatusBlock"
+                                Style="{StaticResource TvMutedBodyTextStyle}" />
+                            <TextBlock
+                                x:Name="InputMapBlock"
+                                Style="{StaticResource TvMutedBodyTextStyle}" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource TvPanelStyle}">
+                        <StackPanel Spacing="14">
+                            <TextBlock Text="Diagnostics" Style="{StaticResource TvPanelTitleTextStyle}" />
+                            <Grid ColumnSpacing="18">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="160" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+
+                                <TextBlock Text="Startup" Style="{StaticResource TvFieldLabelTextStyle}" />
+                                <TextBlock
+                                    x:Name="StartupDiagnosticsBlock"
+                                    Grid.Column="1"
+                                    Style="{StaticResource TvBodyValueTextStyle}" />
+
+                                <TextBlock
+                                    Grid.Row="1"
+                                    Text="Recent log"
+                                    Style="{StaticResource TvFieldLabelTextStyle}" />
+                                <TextBlock
+                                    x:Name="StartupDiagnosticsTailBlock"
+                                    Grid.Row="1"
+                                    Grid.Column="1"
+                                    Style="{StaticResource TvDiagnosticsTextStyle}" />
+                            </Grid>
                         </StackPanel>
                     </Border>
                 </StackPanel>

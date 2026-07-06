@@ -34,6 +34,7 @@ namespace NextGenEmby.App.Views
         private readonly IDisposable? _disposableBackend;
         private readonly PlaybackOrchestrator _orchestrator;
         private readonly ApplicationDataSessionStore _sessionStore = new ApplicationDataSessionStore();
+        private readonly PlaybackPreferenceStore _playbackPreferences = new PlaybackPreferenceStore();
         private readonly TaskCompletionSource<bool> _nativeSurfaceReadySource = new TaskCompletionSource<bool>();
         private readonly SeekPreviewSession _seekPreview = new SeekPreviewSession(TimeSpan.FromSeconds(1.8), TimeSpan.FromSeconds(5), 0.55);
         private readonly DispatcherTimer _progressTimer;
@@ -396,7 +397,7 @@ namespace NextGenEmby.App.Views
                     return true;
 
                 case VirtualKey.GamepadLeftThumbstickLeft:
-                    if (CanAcceptSeekInput())
+                    if (CanAcceptSeekInput() && _playbackPreferences.IsThumbstickSeekPreviewEnabled())
                     {
                         BeginOrMoveSeekPreview(TimeSpan.FromSeconds(-5));
                     }
@@ -404,7 +405,7 @@ namespace NextGenEmby.App.Views
                     return true;
 
                 case VirtualKey.GamepadLeftThumbstickRight:
-                    if (CanAcceptSeekInput())
+                    if (CanAcceptSeekInput() && _playbackPreferences.IsThumbstickSeekPreviewEnabled())
                     {
                         BeginOrMoveSeekPreview(TimeSpan.FromSeconds(5));
                     }

@@ -43,6 +43,8 @@ Self-critique:
 
 ## Tokens
 
+`docs/DESIGN.md` is the visual source of truth. The values below describe the original implementation direction, but production UI should consume semantic resources and styles from `App.xaml` or later merged theme dictionaries rather than repeating page-local constants. This keeps the client ready for future skinning without coupling visual changes to Emby data flow or playback behavior.
+
 Color:
 
 - Canvas black: `#05080D`

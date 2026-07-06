@@ -676,7 +676,9 @@ namespace NextGenEmby.App
             }
             catch (Exception ex)
             {
-                await WriteDevelopmentCommandResultAsync("exception", ex.GetType().FullName ?? ex.Message);
+                var detail = ex.ToString();
+                await PlaybackDiagnosticsLog.WriteLineAsync("DevelopmentCommand exception " + detail);
+                await WriteDevelopmentCommandResultAsync("exception", detail);
             }
         }
 

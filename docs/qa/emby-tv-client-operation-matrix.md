@@ -101,15 +101,15 @@ Status values:
 
 | Operation | Keyboard Path | Status | Evidence | Next Work |
 | --- | --- | --- | --- | --- |
-| Open Settings | Guide Settings | Implemented | Settings page exists | Fresh keyboard route |
-| Inspect signed-in server | Arrows | Implemented | Account block exists | Improve status density and server identity |
-| Toggle input/playback diagnostics | Arrows, `Return` | Partial | Thumbstick seek preview checkbox is placeholder copy | Wire persisted settings or remove placeholder language |
-| App version / startup diagnostics | Settings or logs | Partial | Startup diagnostics log exists | Surface version and diagnostics status in Settings |
+| Open Settings | Guide Settings | Implemented | 0.1.0.117 debug route opened Settings without XAML exception and rendered the TV page | Fresh Guide keyboard route with real keyboard or Computer Use; local `SendInput` did not drive UWP navigation reliably |
+| Inspect signed-in server | Arrows | Implemented | 0.1.0.117 Settings shows `cyber on https://c1.zdz.plus:443` and app/client version | Re-run through Guide keyboard route |
+| Toggle input/playback diagnostics | Arrows, `Return` or `Space` | Implemented | Thumbstick seek preview setting persists through `PlaybackPreferenceStore`; PlaybackPage reads it before thumbstick preview seek | Fresh real-keyboard toggle validation; local key injection kept focus visible but did not toggle the UWP checkbox |
+| App version / startup diagnostics | Settings or logs | Implemented | 0.1.0.117 Settings shows `App 0.1.0.117 / Emby client 0.1.0` and latest-launch diagnostics; formatter ignores older crash blocks | Keep startup diagnostics available and add copy/export only if needed |
 
 ## Current Highest-Value Gaps
 
 1. Details still needs visible similar-items validation plus live add-to success on a disposable collection/playlist target.
 2. Playback More drawer needs a fresh keyboard validation pass with real audio/subtitle streams.
 3. Live TV, Music, and Photos need dedicated non-dead-end surfaces instead of generic library fallback.
-4. Settings should stop reading like a placeholder and expose useful TV/client diagnostics.
+4. Settings Guide route and checkbox toggle need a fresh real-keyboard or Computer Use pass because local synthetic key injection did not change UWP focus/toggle state.
 5. Search error recovery needs a deliberate offline/server-failure keyboard run.

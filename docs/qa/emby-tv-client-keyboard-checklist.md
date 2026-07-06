@@ -624,3 +624,26 @@ Then continue design and implementation until the route passes.
   - `Escape`, `Right`, `Return` opened `Add to playlist`; it also showed the focusable empty row.
   - `Escape` closed the sheet and restored focus to `Add to playlist`, without navigating back from Details.
   - No app-content mouse clicks were used. Live add confirmation was not executed because this validation server exposed no collection/playlist destinations and the run should not mutate the user's real library accidentally.
+
+### 2026-07-06 - Settings Diagnostics And Theme Tokens
+
+- App version: 0.1.0.117.
+- Scope: Settings stopped being a placeholder and now exposes signed-in server, app/client version, thumbstick seek-preview preference, input mapping, startup diagnostics summary, and recent startup log lines.
+- Visual tokenization:
+  - Added shared TV text, panel, diagnostics, and Settings checkbox styles in `App.xaml`.
+  - Settings consumes these resources instead of page-local font, padding, and panel constants, establishing the migration pattern for future skin/theme dictionaries.
+- Bugs found and fixed:
+  - Settings initially failed through the debug route with `XamlParseException: Failed to assign to property 'ToggleButton.IsChecked'`; fixed by removing the XAML `IsChecked` default and loading the persisted value in code.
+  - Startup diagnostics initially reported an old crash as the latest launch state; fixed by evaluating only the latest `App.ctor start` block.
+  - Default Settings focus was not visually obvious enough; fixed by focusing the checkbox with keyboard focus state and shared focus visual settings.
+- Automated verification:
+  - `SettingsDiagnosticsFormatterTests` passed: 8 targeted tests.
+  - App Debug x64 build passed and produced `NextGenEmby.App_0.1.0.117_x64_Debug.msix`.
+  - MSIX signed and installed locally as `NextGenEmby.App 0.1.0.117`.
+- Local visual validation:
+  - Debug route opened Settings with result `completed / settings`.
+  - Screenshot showed account `cyber on https://c1.zdz.plus:443`, `App 0.1.0.117 / Emby client 0.1.0`, visible checkbox focus, input map, and `Last launch completed`.
+  - No app-content mouse clicks were used.
+- Keyboard validation limitation:
+  - Windows `SendInput` kept `Next Gen Xbox Emby` foreground, but synthetic `Down`, `Enter`, and `Space` did not reliably drive UWP focus/toggle state in this desktop session.
+  - Guide-to-Settings and checkbox toggle remain pending for a true hardware keyboard or dedicated Computer Use run; this batch does not mark those routes as Verified.

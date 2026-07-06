@@ -88,6 +88,7 @@
     <Compile Include="Services\PlaybackDiagnosticsLog.cs" />
     <Compile Include="Storage\ApplicationDataDeviceIdProvider.cs" />
     <Compile Include="Storage\ApplicationDataSessionStore.cs" />
+    <Compile Include="Storage\PlaybackPreferenceStore.cs" />
     <Compile Include="ViewModels\LoginViewModel.cs" />
     <Compile Include="Views\LoginPage.xaml.cs">
       <DependentUpon>LoginPage.xaml</DependentUpon>
