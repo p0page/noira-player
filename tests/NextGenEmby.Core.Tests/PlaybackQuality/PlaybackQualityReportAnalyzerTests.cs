@@ -66,6 +66,10 @@ public sealed class PlaybackQualityReportAnalyzerTests
             Analysis = new PlaybackQualityAnalysis
             {
                 PrimaryFailureArea = "color-pipeline"
+            },
+            Timing = new PlaybackQualityTiming
+            {
+                RenderedVideoFrames = 240
             }
         };
         report.Checks.Add(new PlaybackQualityCheck
@@ -337,6 +341,51 @@ public sealed class PlaybackQualityReportAnalyzerTests
             hint.Signals.Contains("buffers.videoStarvedPasses") &&
             hint.Signals.Contains("buffers.audioStarvedPasses") &&
             hint.Signals.Contains("buffers.queuedAudioBuffers"));
+    }
+
+    [Fact]
+    public void Analyze_Classifies_Frame_Pacing_As_Sample_Insufficient_When_Rendered_Frame_Sample_Is_Too_Short()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "short-frame-sample",
+            Result = "fail",
+            Analysis = new PlaybackQualityAnalysis
+            {
+                PrimaryFailureArea = "frame-pacing"
+            },
+            Expected = new PlaybackQualityExpected
+            {
+                MinRenderedVideoFrames = 120
+            },
+            Timing = new PlaybackQualityTiming
+            {
+                RenderedVideoFrames = 24
+            }
+        };
+        report.Checks.Add(new PlaybackQualityCheck
+        {
+            Name = "RenderedVideoFrames",
+            Status = "fail",
+            FailureArea = "frame-pacing",
+            Signal = "timing.renderedVideoFrames",
+            Expected = "120",
+            Actual = "24"
+        });
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Equal("sample-insufficient", analysis.FramePacing.Pattern);
+        Assert.Contains("timing.renderedVideoFrames", analysis.FramePacing.Signals);
+        Assert.Contains("Frame pacing sample is too short to diagnose timing thresholds.", analysis.FramePacing.Reasons);
+        Assert.Contains(analysis.InvestigationHints, hint =>
+            hint.FailureArea == "frame-pacing" &&
+            hint.SuggestedAction.Contains("Collect a longer rendered-frame sample") &&
+            hint.CodeTargets.Contains("src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs") &&
+            hint.CodeTargets.Contains("src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp") &&
+            hint.CodeTargets.Contains("src/NextGenEmby.Native/Media/PlaybackGraph.cpp") &&
+            hint.Signals.Contains("timing.renderedVideoFrames") &&
+            hint.Signals.Contains("sample.status"));
     }
 
     [Fact]

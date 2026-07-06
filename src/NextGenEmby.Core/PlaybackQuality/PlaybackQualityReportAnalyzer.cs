@@ -121,6 +121,16 @@ namespace NextGenEmby.Core.PlaybackQuality
                 return classification;
             }
 
+            if (HasFailedSignal(analysis, "timing.renderedVideoFrames") ||
+                analysis.Sample.Status == "insufficient")
+            {
+                classification.Pattern = "sample-insufficient";
+                AddUnique(classification.Signals, "timing.renderedVideoFrames");
+                AddUnique(classification.Signals, "sample.status");
+                AddUnique(classification.Reasons, "Frame pacing sample is too short to diagnose timing thresholds.");
+                return classification;
+            }
+
             if (HasFailedSignal(analysis, "display.refreshRateHz"))
             {
                 classification.Pattern = "refresh-mismatch";
@@ -526,6 +536,26 @@ namespace NextGenEmby.Core.PlaybackQuality
                             "buffers.queuedAudioBuffers"
                         });
                 case "frame-pacing":
+                    if (analysis.FramePacing.Pattern == "sample-insufficient")
+                    {
+                        return NewHint(
+                            area,
+                            "Collect a longer rendered-frame sample and verify playback startup/render readiness before changing frame pacing thresholds.",
+                            new[]
+                            {
+                                "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+                                "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
+                                "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+                            },
+                            new[]
+                            {
+                                "sample.status",
+                                "sample.renderedVideoFrames",
+                                "timing.renderedVideoFrames",
+                                "startup.startupDurationMs"
+                            });
+                    }
+
                     if (analysis.FramePacing.Pattern == "starvation-driven")
                     {
                         return NewHint(
