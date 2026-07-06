@@ -1947,3 +1947,24 @@ Then continue design and implementation until the route passes.
   - No app-content mouse clicks were used.
 - Follow-up:
   - Re-run against a real Emby server session when hardware or a persistent validation server is available.
+
+### 2026-07-07 - Empty Session Login
+
+- App version: 0.1.0.207.
+- Scope: verify the first-run / no-saved-session login route using keyboard-only input.
+- Validation setup:
+  - Rebuilt the Debug x64 solution and re-signed `NextGenEmby.App_0.1.0.207_x64_Debug.msix` after an earlier stale package registration produced a local `System.BadImageFormatException` during COM activation; the fresh MSBuild/sign/install path launched successfully.
+  - Reinstalled the package with `Add-AppDevPackage.ps1 -Force` to clear the saved session and start from the Login page.
+  - Started a local fake Emby server on `127.0.0.1:5877` with authenticate, views, and empty home row endpoints.
+  - Added the UWP package loopback exemption for `NextGenEmby.App_h8qjz0sr1sg4m` so the installed app could reach the local validation server.
+- Keyboard-only validation with Computer Use:
+  - Launched the installed app through AppUserModelId `NextGenEmby.App_h8qjz0sr1sg4m!App`; the window path resolved to `NextGenEmby.App_0.1.0.207_x64__h8qjz0sr1sg4m`.
+  - The clean launch showed the Login page with focus on Server URL.
+  - Pressed `Ctrl+A`, typed `http://127.0.0.1:5877`, pressed `Tab`, typed the username, pressed `Tab`, typed the password, pressed `Tab`, and pressed `Return`.
+  - The fake server captured `POST /Users/AuthenticateByName` with the keyboard-entered username/password, then the app navigated to Home and requested Resume, NextUp, Latest, Views, HomeSections, and library rows.
+  - Closed and relaunched the app; Home loaded from the saved token without another `/Users/AuthenticateByName` request, confirming credential persistence.
+  - No app-content mouse clicks were used.
+- Cleanup and follow-up:
+  - Stopped the fake login server, removed temporary debug files, removed the loopback exemption, removed local crash-dump registry capture, and reinstalled the package again to leave the app on the Login page with no saved fake session.
+  - A final Computer Use screenshot confirmed the clean Login page and Server URL focus.
+  - Add a TV-accessible sign-out / clear-session action in Settings so this route can be revalidated without reinstalling the package.
