@@ -7,6 +7,7 @@ using NextGenEmby.App.Navigation;
 using NextGenEmby.App.Services;
 using NextGenEmby.App.Storage;
 using NextGenEmby.Core.Emby;
+using NextGenEmby.Core.Input;
 using NextGenEmby.Core.Playback;
 using Windows.System;
 using Windows.UI.Xaml;
@@ -17,7 +18,7 @@ using Windows.UI.Xaml.Navigation;
 
 namespace NextGenEmby.App.Views
 {
-    public sealed partial class MediaDetailsPage : Page
+    public sealed partial class MediaDetailsPage : Page, ITvContentFocusTarget
     {
         private readonly ApplicationDataSessionStore _sessionStore = new ApplicationDataSessionStore();
         private EmbyMediaItem? _item;
@@ -115,10 +116,7 @@ namespace NextGenEmby.App.Views
             StatusBlock.Text = "";
             PlayButton.IsEnabled = CanPlay(_item);
             PlayButtonText.Text = CreatePlayButtonText(_item);
-            if (PlayButton.IsEnabled)
-            {
-                PlayButton.Focus(FocusState.Programmatic);
-            }
+            FocusDefaultContent();
         }
 
         private async Task LoadDetailsAsync(string itemId, string fallbackName, int loadGeneration)
@@ -359,6 +357,11 @@ namespace NextGenEmby.App.Views
                 {
                     AddEpisodeMessage("No episodes found.");
                 }
+
+                if (!CanPlay(item))
+                {
+                    FocusDefaultContent();
+                }
             }
             catch
             {
@@ -369,6 +372,10 @@ namespace NextGenEmby.App.Views
 
                 EpisodesPanel.Children.Clear();
                 AddEpisodeMessage("Unable to load episodes.");
+                if (!CanPlay(item))
+                {
+                    FocusDefaultContent();
+                }
             }
         }
 
@@ -458,6 +465,51 @@ namespace NextGenEmby.App.Views
         private void AddEpisodeMessage(string message)
         {
             EpisodesPanel.Children.Add(CreateMutedText(message));
+        }
+
+        public bool FocusDefaultContent()
+        {
+            var target = MediaDetailsDefaultFocusPolicy.Decide(
+                PlayButton.IsEnabled,
+                CountEpisodeButtons());
+
+            switch (target)
+            {
+                case MediaDetailsDefaultFocusTarget.Play:
+                    return PlayButton.Focus(FocusState.Programmatic);
+                case MediaDetailsDefaultFocusTarget.FirstEpisode:
+                    return FocusFirstEpisodeButton(FocusState.Programmatic);
+                default:
+                    return RefreshButton.Focus(FocusState.Programmatic);
+            }
+        }
+
+        private bool FocusFirstEpisodeButton(FocusState focusState)
+        {
+            foreach (var child in EpisodesPanel.Children)
+            {
+                var button = child as Button;
+                if (button != null && button.Focus(focusState))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private int CountEpisodeButtons()
+        {
+            var count = 0;
+            foreach (var child in EpisodesPanel.Children)
+            {
+                if (child is Button)
+                {
+                    count++;
+                }
+            }
+
+            return count;
         }
 
         private void Episode_OnClick(object sender, RoutedEventArgs e)

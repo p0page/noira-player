@@ -434,3 +434,26 @@ Then continue design and implementation until the route passes.
   - Reopening Filter, `Down`, `Enter` applied `Unwatched`; the Library stayed usable with visible grid items.
 - Visual capture note:
   - Computer Use screenshot capture hit `FrameArrived timed out` twice during this run, so this batch is validated by accessibility text and keyboard behavior rather than a fresh screenshot. No mouse clicks were used inside app content.
+
+### 2026-07-06 - Series Details Default Focus
+
+- App version: 0.1.0.99.
+- Scope: Details now implements the TV content focus contract and uses a central policy for the default focus target.
+- Interaction changes:
+  - Playable movie/episode Details still focus Play or Resume.
+  - Non-playable Details with episode buttons focus the first episode.
+  - Non-playable Details without episodes fall back to Refresh instead of leaving focus ambiguous.
+- Automated verification:
+  - Core tests passed: 209 total.
+  - `MediaDetailsDefaultFocusPolicyTests` passed: playable -> Play, non-playable with episodes -> first episode, non-playable without episodes -> Refresh.
+  - App Debug x64 clean build passed and produced `NextGenEmby.App_0.1.0.99_x64_Debug.msix`.
+  - Package layout gate passed for 0.1.0.99.
+  - MSIX signed and installed locally as `NextGenEmby.App_0.1.0.99_x64__h8qjz0sr1sg4m`.
+- Keyboard-only validation with Computer Use:
+  - Launched 0.1.0.99 locally.
+  - `M`, three `Down`, `Enter` opened Shows / TV Shows.
+  - `Enter` on the first visible Series opened Details.
+  - The sampled Series showed disabled Play and `No episodes found`; pressing `Enter` stayed on Details and exercised the Refresh fallback rather than dead-ending.
+  - Several adjacent Series entries were sampled but also did not expose episodes through the current `/Children` route in this validation run.
+- Follow-up:
+  - Re-run the positive first-episode focus path when a sampled Series exposes episode buttons through the current Details endpoint.
