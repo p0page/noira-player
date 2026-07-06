@@ -58,11 +58,13 @@ The analyzer output must include:
 - `failureAreas` containing every failed check area, not only the primary area;
 - `failureReasons` copied from the report;
 - `failedChecks` with each failed check's signal, expected value, actual value, and message;
+- `investigationHints` with failure-area-specific suggested actions, Core/native code targets, and signals to inspect next;
 - `evidenceSignals` listing report fields used as evidence;
 - `missingEvidence` listing critical unset fields that make diagnosis weaker;
 - `limitations` copied from the report.
 
 This keeps model iteration grounded in evidence. For example, a report can identify `color-pipeline` as primary while still preserving `frame-pacing` as a secondary failure area.
+`investigationHints` must be structured for automated consumers. The values should point to playback Core/native areas such as `PlaybackRefreshRatePolicy`, `FramePacing`, `PlaybackGraph`, `DxgiColorSpaceMapper`, or native quality metrics, rather than App/XAML interaction code.
 When a frame-pacing check fails, analyzer evidence must include `timing.expectedFrameDurationMs` if it is present so the model can compare observed gaps against the source cadence.
 When `expected.maxStartupDurationMs` is set, missing startup timing must be reported as `startup.startupDurationMs` so the model does not optimize frame pacing before startup evidence exists.
 

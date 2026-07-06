@@ -11,9 +11,18 @@ namespace NextGenEmby.Core.PlaybackQuality
         public List<string> FailureReasons { get; } = new List<string>();
         public List<PlaybackQualityCheck> FailedChecks { get; } = new List<PlaybackQualityCheck>();
         public List<string> FailureAreas { get; } = new List<string>();
+        public List<PlaybackQualityInvestigationHint> InvestigationHints { get; } = new List<PlaybackQualityInvestigationHint>();
         public List<string> EvidenceSignals { get; } = new List<string>();
         public List<string> MissingEvidence { get; } = new List<string>();
         public List<string> Limitations { get; } = new List<string>();
+    }
+
+    public sealed class PlaybackQualityInvestigationHint
+    {
+        public string FailureArea { get; set; } = "";
+        public string SuggestedAction { get; set; } = "";
+        public List<string> CodeTargets { get; } = new List<string>();
+        public List<string> Signals { get; } = new List<string>();
     }
 
     public static class PlaybackQualityReportAnalyzer
@@ -61,6 +70,7 @@ namespace NextGenEmby.Core.PlaybackQuality
 
             AddDerivedEvidence(analysis, report);
             AddMissingEvidence(analysis, report);
+            AddInvestigationHints(analysis);
 
             if (string.IsNullOrWhiteSpace(analysis.SuggestedNextAction))
             {
@@ -176,6 +186,214 @@ namespace NextGenEmby.Core.PlaybackQuality
             {
                 analysis.MissingEvidence.Add("display.refreshRateHz");
             }
+        }
+
+        private static void AddInvestigationHints(PlaybackQualityModelAnalysis analysis)
+        {
+            var areas = new List<string>();
+            if (!string.IsNullOrWhiteSpace(analysis.PrimaryFailureArea) &&
+                analysis.PrimaryFailureArea != "none")
+            {
+                AddUnique(areas, analysis.PrimaryFailureArea);
+            }
+
+            foreach (var area in analysis.FailureAreas)
+            {
+                AddUnique(areas, area);
+            }
+
+            if (areas.Count == 0 && analysis.MissingEvidence.Count > 0)
+            {
+                AddUnique(areas, "evidence-collection");
+            }
+
+            foreach (var area in areas)
+            {
+                var hint = CreateInvestigationHint(area);
+                if (hint == null)
+                {
+                    continue;
+                }
+
+                foreach (var check in analysis.FailedChecks)
+                {
+                    if (check.FailureArea == area && !string.IsNullOrWhiteSpace(check.Signal))
+                    {
+                        AddUnique(hint.Signals, check.Signal);
+                    }
+                }
+
+                if (area == "evidence-collection")
+                {
+                    foreach (var signal in analysis.MissingEvidence)
+                    {
+                        AddUnique(hint.Signals, signal);
+                    }
+                }
+
+                analysis.InvestigationHints.Add(hint);
+            }
+        }
+
+        private static PlaybackQualityInvestigationHint? CreateInvestigationHint(string area)
+        {
+            switch (area)
+            {
+                case "unsupported-source":
+                    return NewHint(
+                        area,
+                        "Verify media source selection, codec support, HDR/Dolby Vision classification, and fallback policy before tuning playback timing.",
+                        new[]
+                        {
+                            "src/NextGenEmby.Core/Playback/PlaybackOrchestrator.cs",
+                            "src/NextGenEmby.Core/Playback/HdrPlaybackProfileClassifier.cs",
+                            "src/NextGenEmby.Core/Emby"
+                        },
+                        new[]
+                        {
+                            "source.codec",
+                            "source.frameRate",
+                            "source.hdrKind"
+                        });
+                case "color-pipeline":
+                    return NewHint(
+                        area,
+                        "Compare source HDR kind, display HDR state, swapchain format, DXGI input/output color spaces, and conversion validation.",
+                        new[]
+                        {
+                            "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
+                            "src/NextGenEmby.Native/DxDeviceResources.cpp",
+                            "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
+                        },
+                        new[]
+                        {
+                            "colorPipeline.actualHdrOutput",
+                            "colorPipeline.swapChainFormat",
+                            "colorPipeline.swapChainColorSpace",
+                            "colorPipeline.dxgiInput",
+                            "colorPipeline.dxgiOutput",
+                            "colorPipeline.conversionStatus",
+                            "display.hdrStatus"
+                        });
+                case "startup":
+                    return NewHint(
+                        area,
+                        "Separate Emby request latency, native open/demux initialization, and first-frame readiness before changing render pacing.",
+                        new[]
+                        {
+                            "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+                            "src/NextGenEmby.Native/NativePlaybackEngine.cpp",
+                            "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+                        },
+                        new[]
+                        {
+                            "startup.commandReceivedAt",
+                            "startup.playbackStartedAt",
+                            "startup.startupDurationMs"
+                        });
+                case "buffering":
+                    return NewHint(
+                        area,
+                        "Inspect demux, network, decode starvation, and audio queue depth before changing frame drop thresholds.",
+                        new[]
+                        {
+                            "src/NextGenEmby.Native/Media/PlaybackGraph.cpp",
+                            "src/NextGenEmby.Native/Media/VideoDecoder.cpp",
+                            "src/NextGenEmby.Native/Media/AudioDecoder.cpp"
+                        },
+                        new[]
+                        {
+                            "buffers.videoStarvedPasses",
+                            "buffers.audioStarvedPasses",
+                            "buffers.queuedAudioBuffers"
+                        });
+                case "av-sync":
+                    return NewHint(
+                        area,
+                        "Inspect XAudio clock derivation, queued buffer depth, video PTS comparison, and audio-wait policy.",
+                        new[]
+                        {
+                            "src/NextGenEmby.Native/Media/AudioRenderer.cpp",
+                            "src/NextGenEmby.Native/Media/PlaybackGraph.cpp",
+                            "src/NextGenEmby.Native/Media/FramePacing.h"
+                        },
+                        new[]
+                        {
+                            "sync.audioVideoDriftMsP50",
+                            "sync.audioVideoDriftMsP95",
+                            "sync.audioVideoDriftMsP99",
+                            "sync.audioVideoDriftMsMax",
+                            "buffers.queuedAudioBuffers"
+                        });
+                case "frame-pacing":
+                    return NewHint(
+                        area,
+                        "Inspect render interval percentiles, max frame gap, source/display cadence match, wait/drop thresholds, and starvation counters together.",
+                        new[]
+                        {
+                            "src/NextGenEmby.Native/Media/FramePacing.h",
+                            "src/NextGenEmby.Native/Media/PlaybackGraph.cpp",
+                            "src/NextGenEmby.Native/HdrDisplayController.cpp",
+                            "src/NextGenEmby.Core/PlaybackQuality/PlaybackRefreshRatePolicy.cs"
+                        },
+                        new[]
+                        {
+                            "timing.expectedFrameDurationMs",
+                            "timing.renderIntervalMsP95",
+                            "timing.renderIntervalMsP99",
+                            "timing.maxFrameGapMs",
+                            "timing.droppedVideoFrames",
+                            "display.refreshRateHz",
+                            "source.frameRate"
+                        });
+                case "evidence-collection":
+                    return NewHint(
+                        area,
+                        "Collect missing telemetry before optimizing playback behavior; absent evidence is treated separately from a real playback failure.",
+                        new[]
+                        {
+                            "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+                            "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+                            "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
+                            "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+                        },
+                        new string[0]);
+                default:
+                    return NewHint(
+                        "unknown",
+                        "Inspect raw metrics, failed checks, and missing evidence before changing playback behavior.",
+                        new[]
+                        {
+                            "src/NextGenEmby.Core/PlaybackQuality",
+                            "src/NextGenEmby.Native"
+                        },
+                        new string[0]);
+            }
+        }
+
+        private static PlaybackQualityInvestigationHint NewHint(
+            string area,
+            string suggestedAction,
+            string[] codeTargets,
+            string[] signals)
+        {
+            var hint = new PlaybackQualityInvestigationHint
+            {
+                FailureArea = area,
+                SuggestedAction = suggestedAction
+            };
+
+            foreach (var target in codeTargets)
+            {
+                AddUnique(hint.CodeTargets, target);
+            }
+
+            foreach (var signal in signals)
+            {
+                AddUnique(hint.Signals, signal);
+            }
+
+            return hint;
         }
 
         private static void AddDerivedEvidence(

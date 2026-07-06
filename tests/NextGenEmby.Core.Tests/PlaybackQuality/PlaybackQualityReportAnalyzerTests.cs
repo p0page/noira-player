@@ -57,6 +57,53 @@ public sealed class PlaybackQualityReportAnalyzerTests
     }
 
     [Fact]
+    public void Analyze_Adds_Investigation_Hints_For_Each_Failure_Area()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "model-hints",
+            Result = "fail",
+            Analysis = new PlaybackQualityAnalysis
+            {
+                PrimaryFailureArea = "color-pipeline"
+            }
+        };
+        report.Checks.Add(new PlaybackQualityCheck
+        {
+            Name = "ActualHdrOutput",
+            Status = "fail",
+            FailureArea = "color-pipeline",
+            Signal = "colorPipeline.actualHdrOutput",
+            Expected = "Hdr10",
+            Actual = "Sdr"
+        });
+        report.Checks.Add(new PlaybackQualityCheck
+        {
+            Name = "MaxFrameGapMs",
+            Status = "fail",
+            FailureArea = "frame-pacing",
+            Signal = "timing.maxFrameGapMs",
+            Expected = "105.000",
+            Actual = "180.000"
+        });
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Equal("color-pipeline", analysis.InvestigationHints[0].FailureArea);
+        Assert.Contains(analysis.InvestigationHints, hint =>
+            hint.FailureArea == "color-pipeline" &&
+            hint.CodeTargets.Contains("src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp") &&
+            hint.CodeTargets.Contains("src/NextGenEmby.Native/DxDeviceResources.cpp") &&
+            hint.Signals.Contains("colorPipeline.actualHdrOutput"));
+        Assert.Contains(analysis.InvestigationHints, hint =>
+            hint.FailureArea == "frame-pacing" &&
+            hint.CodeTargets.Contains("src/NextGenEmby.Native/Media/FramePacing.h") &&
+            hint.CodeTargets.Contains("src/NextGenEmby.Native/Media/PlaybackGraph.cpp") &&
+            hint.CodeTargets.Contains("src/NextGenEmby.Core/PlaybackQuality/PlaybackRefreshRatePolicy.cs") &&
+            hint.Signals.Contains("timing.maxFrameGapMs"));
+    }
+
+    [Fact]
     public void Analyze_Reports_Missing_Evidence_For_Unset_Critical_Signals()
     {
         var report = new PlaybackQualityReport
@@ -268,6 +315,7 @@ public sealed class PlaybackQualityReportAnalyzerTests
         Assert.Contains("\"runId\"", json);
         Assert.Contains("\"primaryFailureArea\"", json);
         Assert.Contains("\"failureAreas\"", json);
+        Assert.Contains("\"investigationHints\"", json);
         Assert.Contains("\"evidenceSignals\"", json);
         Assert.Contains("\"missingEvidence\"", json);
         Assert.Contains("\"sync.audioVideoDriftMsP95\"", json);
