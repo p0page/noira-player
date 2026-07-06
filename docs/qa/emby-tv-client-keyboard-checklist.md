@@ -955,3 +955,37 @@ Then continue design and implementation until the route passes.
   - The full visual Computer Use route was completed earlier in this batch. After the final 0.1.0.137 package version bump, the resumed session did not expose the Computer Use operation tools, so the final installed package was rechecked with keyboard-only `SendKeys` plus Windows UI Automation text/focus snapshots.
 - Limitation:
   - This run validated drawer focus, activation, and persistence on the available media item. A fresh multi-audio or subtitle-switching content route is still needed to verify actual stream switching on items with multiple selectable tracks.
+
+### 2026-07-06 - Playback Transport Focus Activation
+
+- App version: 0.1.0.138.
+- Scope: make the visible playback transport focus the source of truth for `Enter`/A activation, so the OSD behaves like a controller surface even when UWP UI Automation reports focus on the window rather than the button.
+- Regression found on 0.1.0.137:
+  - Playback OSD showed a cyan focus frame on `Pause`, but `Return` did not pause playback because the routed focus path still resolved to the window.
+  - This violated the TV rule that the highlighted control must be the action triggered by A/Select.
+- Interaction changes:
+  - Added a core `PlaybackTransportFocusPolicy` with deterministic Pause, Resume, seek back, seek forward, More, and Stop ordering.
+  - Playback now tracks the current transport target explicitly while the OSD is visible.
+  - `Left`/`Right` and gamepad D-pad left/right move through enabled transport controls and skip disabled targets such as `Resume` while playing.
+  - `Return`, `Space`, and gamepad A activate the tracked transport target directly instead of relying on platform focus quirks.
+  - Transport focus visuals use the existing Matte Cinema Fluent token brushes: `AppAccentBrush`, `AppHairlineBrush`, `AppRaisedSurfaceBrush`, and `AppChromeBrush`.
+- Automated verification:
+  - TDD red path confirmed the new transport focus policy tests failed before the policy existed.
+  - Targeted transport focus tests passed: 4 total.
+  - Targeted playback input tests passed: 28 total.
+  - Core tests passed: 292 total.
+  - App Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.138_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.138`.
+- Keyboard-only validation with Computer Use:
+  - Started from active playback and the More drawer, with `Playing`, Pause, disabled Resume, `10s`, `30s`, More, and Stop visible.
+  - Pressed `Escape`; More closed and the OSD returned focus to the More transport target.
+  - Pressed `Left`, `Left`, `Left`; visual focus moved to `Pause`.
+  - Pressed `Return`; playback state changed from `Playing` to `Paused`, and visual focus moved to `Resume`.
+  - Pressed `Return` again; playback state changed back to `Playing`, and visual focus returned to `Pause`.
+  - Pressed `Right`, `Right`; visual focus moved to `30s`.
+  - Pressed `Return`; playback continued and the reported OSD position advanced to `00:07:52`, confirming the focused seek-forward action fired.
+  - Pressed `M`; the More drawer opened from the transport strip with Source focused.
+  - Pressed `Escape`; More closed and visual focus returned to the More transport button.
+  - No app-content mouse clicks were used.
+- Tooling note:
+  - UI Automation continued to report the window as the focused element in several snapshots, but the screenshot and state text showed the tokenized cyan transport focus and the correct playback state transitions. The app now owns the TV focus target instead of depending on UIA focus accuracy.

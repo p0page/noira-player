@@ -61,6 +61,7 @@ namespace NextGenEmby.App.Views
         private bool _keyHandlerAttached;
         private bool _playbackCommandInFlight;
         private PlaybackMoreDrawerFocusTarget? _moreDrawerFocusTarget;
+        private PlaybackTransportFocusTarget? _transportFocusTarget;
         private double _nativeSurfaceAttachedWidth;
         private double _nativeSurfaceAttachedHeight;
         private PlaybackSessionRequest? _lastPlaybackSessionRequest;
@@ -327,6 +328,17 @@ namespace NextGenEmby.App.Views
                 return true;
             }
 
+            if (TryHandleTransportDirectionalKey(key))
+            {
+                return true;
+            }
+
+            if (ShouldActivateTransportControl(key))
+            {
+                await ActivateFocusedTransportControlAsync();
+                return true;
+            }
+
             if (ShouldLetFocusedControlHandleKey(key))
             {
                 return false;
@@ -335,14 +347,6 @@ namespace NextGenEmby.App.Views
             var shortcut = TryMapDesktopShortcut(key);
             if (shortcut.HasValue)
             {
-                if (shortcut.Value == PlaybackOverlayShortcut.Accept &&
-                    _overlayVisible &&
-                    !_moreVisible &&
-                    !_seekPreview.IsActive)
-                {
-                    return false;
-                }
-
                 var action = PlaybackOverlayInputPolicy.Decide(
                     shortcut.Value,
                     _seekPreview.IsActive,
@@ -386,6 +390,7 @@ namespace NextGenEmby.App.Views
                     return true;
 
                 case VirtualKey.GamepadDPadLeft:
+                case VirtualKey.Left:
                     if (CanAcceptSeekInput())
                     {
                         ClearSeekPreview();
@@ -395,6 +400,7 @@ namespace NextGenEmby.App.Views
                     return true;
 
                 case VirtualKey.GamepadDPadRight:
+                case VirtualKey.Right:
                     if (CanAcceptSeekInput())
                     {
                         ClearSeekPreview();
@@ -421,6 +427,83 @@ namespace NextGenEmby.App.Views
             }
 
             return false;
+        }
+
+        private bool TryHandleTransportDirectionalKey(VirtualKey key)
+        {
+            if (!ShouldProcessTransportDirectionalKey(key))
+            {
+                return false;
+            }
+
+            var direction = TryMapTransportFocusDirection(key);
+            if (!direction.HasValue)
+            {
+                return false;
+            }
+
+            var currentTarget = GetFocusedTransportTarget();
+            var nextTarget = currentTarget.HasValue
+                ? PlaybackTransportFocusPolicy.Move(
+                    currentTarget.Value,
+                    direction.Value,
+                    PauseButton.IsEnabled,
+                    ResumeButton.IsEnabled,
+                    SeekBackButton.IsEnabled,
+                    SeekForwardButton.IsEnabled,
+                    MoreButton.IsEnabled,
+                    StopButton.IsEnabled)
+                : GetDefaultTransportFocusTarget();
+
+            FocusTransportTarget(nextTarget);
+            RestartOverlayTimerIfNeeded();
+            return true;
+        }
+
+        private bool ShouldActivateTransportControl(VirtualKey key)
+        {
+            if (!_overlayVisible ||
+                _moreVisible ||
+                _seekPreview.IsActive)
+            {
+                return false;
+            }
+
+            switch (key)
+            {
+                case VirtualKey.Enter:
+                case VirtualKey.Space:
+                case VirtualKey.GamepadA:
+                    return true;
+
+                default:
+                    return false;
+            }
+        }
+
+        private bool ShouldProcessTransportDirectionalKey(VirtualKey key)
+        {
+            return _overlayVisible &&
+                !_moreVisible &&
+                !_seekPreview.IsActive &&
+                TryMapTransportFocusDirection(key).HasValue;
+        }
+
+        private static PlaybackTransportFocusDirection? TryMapTransportFocusDirection(VirtualKey key)
+        {
+            switch (key)
+            {
+                case VirtualKey.Left:
+                case VirtualKey.GamepadDPadLeft:
+                    return PlaybackTransportFocusDirection.Left;
+
+                case VirtualKey.Right:
+                case VirtualKey.GamepadDPadRight:
+                    return PlaybackTransportFocusDirection.Right;
+
+                default:
+                    return null;
+            }
         }
 
         private bool TryHandleMoreDrawerDirectionalKey(VirtualKey key)
@@ -1329,6 +1412,7 @@ namespace NextGenEmby.App.Views
 
         private void ShowOverlay(bool showMore)
         {
+            var wasOverlayVisible = _overlayVisible;
             if (!_overlayVisible)
             {
                 _overlayVisible = true;
@@ -1340,6 +1424,10 @@ namespace NextGenEmby.App.Views
             if (_moreVisible)
             {
                 FocusMoreDrawer();
+            }
+            else
+            {
+                FocusTransportForOverlay(wasOverlayVisible);
             }
 
             _overlayTimer.Stop();
@@ -1373,7 +1461,218 @@ namespace NextGenEmby.App.Views
             MoreDrawer.Visibility = Visibility.Collapsed;
             InfoPanel.Visibility = Visibility.Collapsed;
             _infoVisible = false;
-            MoreButton.Focus(FocusState.Programmatic);
+            FocusTransportTarget(PlaybackTransportFocusTarget.More);
+
+            _overlayTimer.Stop();
+            if (!ShouldKeepOverlayPinned())
+            {
+                _overlayTimer.Start();
+            }
+        }
+
+        private void FocusTransportForOverlay(bool wasOverlayVisible)
+        {
+            if (!wasOverlayVisible ||
+                !_transportFocusTarget.HasValue ||
+                !IsTransportTargetEnabled(_transportFocusTarget.Value))
+            {
+                FocusTransportTarget(GetDefaultTransportFocusTarget());
+                return;
+            }
+
+            FocusTransportTarget(_transportFocusTarget.Value);
+        }
+
+        private PlaybackTransportFocusTarget GetDefaultTransportFocusTarget()
+        {
+            return PlaybackTransportFocusPolicy.GetDefaultTarget(
+                _orchestrator.State,
+                PauseButton.IsEnabled,
+                ResumeButton.IsEnabled,
+                SeekBackButton.IsEnabled,
+                SeekForwardButton.IsEnabled,
+                MoreButton.IsEnabled,
+                StopButton.IsEnabled);
+        }
+
+        private void FocusTransportTarget(PlaybackTransportFocusTarget target)
+        {
+            if (!IsTransportTargetEnabled(target))
+            {
+                target = GetDefaultTransportFocusTarget();
+            }
+
+            _transportFocusTarget = target;
+            UpdateTransportFocusVisuals(target);
+            switch (target)
+            {
+                case PlaybackTransportFocusTarget.Pause:
+                    TryFocusTransportControl(PauseButton);
+                    return;
+
+                case PlaybackTransportFocusTarget.Resume:
+                    TryFocusTransportControl(ResumeButton);
+                    return;
+
+                case PlaybackTransportFocusTarget.SeekBack:
+                    TryFocusTransportControl(SeekBackButton);
+                    return;
+
+                case PlaybackTransportFocusTarget.SeekForward:
+                    TryFocusTransportControl(SeekForwardButton);
+                    return;
+
+                case PlaybackTransportFocusTarget.More:
+                    TryFocusTransportControl(MoreButton);
+                    return;
+
+                case PlaybackTransportFocusTarget.Stop:
+                    TryFocusTransportControl(StopButton);
+                    return;
+            }
+        }
+
+        private static bool TryFocusTransportControl(Control control)
+        {
+            if (!control.IsEnabled)
+            {
+                return false;
+            }
+
+            return control.Focus(FocusState.Keyboard) ||
+                control.Focus(FocusState.Programmatic);
+        }
+
+        private void UpdateTransportFocusVisuals(PlaybackTransportFocusTarget? target)
+        {
+            SetTransportControlVisual(PauseButton, target == PlaybackTransportFocusTarget.Pause);
+            SetTransportControlVisual(ResumeButton, target == PlaybackTransportFocusTarget.Resume);
+            SetTransportControlVisual(SeekBackButton, target == PlaybackTransportFocusTarget.SeekBack);
+            SetTransportControlVisual(SeekForwardButton, target == PlaybackTransportFocusTarget.SeekForward);
+            SetTransportControlVisual(MoreButton, target == PlaybackTransportFocusTarget.More);
+            SetTransportControlVisual(StopButton, target == PlaybackTransportFocusTarget.Stop);
+        }
+
+        private static void SetTransportControlVisual(Control control, bool isFocused)
+        {
+            var resources = Application.Current.Resources;
+            control.BorderBrush = (Brush)resources[isFocused ? "AppAccentBrush" : "AppHairlineBrush"];
+            control.BorderThickness = isFocused ? new Thickness(2) : new Thickness(1);
+            control.Background = (Brush)resources[isFocused ? "AppRaisedSurfaceBrush" : "AppChromeBrush"];
+        }
+
+        private PlaybackTransportFocusTarget? GetFocusedTransportTarget()
+        {
+            var focusedElement = FocusManager.GetFocusedElement();
+            if (focusedElement == PauseButton)
+            {
+                _transportFocusTarget = PlaybackTransportFocusTarget.Pause;
+                return _transportFocusTarget;
+            }
+
+            if (focusedElement == ResumeButton)
+            {
+                _transportFocusTarget = PlaybackTransportFocusTarget.Resume;
+                return _transportFocusTarget;
+            }
+
+            if (focusedElement == SeekBackButton)
+            {
+                _transportFocusTarget = PlaybackTransportFocusTarget.SeekBack;
+                return _transportFocusTarget;
+            }
+
+            if (focusedElement == SeekForwardButton)
+            {
+                _transportFocusTarget = PlaybackTransportFocusTarget.SeekForward;
+                return _transportFocusTarget;
+            }
+
+            if (focusedElement == MoreButton)
+            {
+                _transportFocusTarget = PlaybackTransportFocusTarget.More;
+                return _transportFocusTarget;
+            }
+
+            if (focusedElement == StopButton)
+            {
+                _transportFocusTarget = PlaybackTransportFocusTarget.Stop;
+                return _transportFocusTarget;
+            }
+
+            return _transportFocusTarget;
+        }
+
+        private bool IsTransportTargetEnabled(PlaybackTransportFocusTarget target)
+        {
+            switch (target)
+            {
+                case PlaybackTransportFocusTarget.Pause:
+                    return PauseButton.IsEnabled;
+
+                case PlaybackTransportFocusTarget.Resume:
+                    return ResumeButton.IsEnabled;
+
+                case PlaybackTransportFocusTarget.SeekBack:
+                    return SeekBackButton.IsEnabled;
+
+                case PlaybackTransportFocusTarget.SeekForward:
+                    return SeekForwardButton.IsEnabled;
+
+                case PlaybackTransportFocusTarget.More:
+                    return MoreButton.IsEnabled;
+
+                case PlaybackTransportFocusTarget.Stop:
+                    return StopButton.IsEnabled;
+
+                default:
+                    return false;
+            }
+        }
+
+        private async Task ActivateFocusedTransportControlAsync()
+        {
+            var target = GetFocusedTransportTarget() ?? GetDefaultTransportFocusTarget();
+            if (!IsTransportTargetEnabled(target))
+            {
+                target = GetDefaultTransportFocusTarget();
+                FocusTransportTarget(target);
+            }
+
+            switch (target)
+            {
+                case PlaybackTransportFocusTarget.Pause:
+                    await RunPlaybackCommandAsync(PausePlaybackAsync);
+                    return;
+
+                case PlaybackTransportFocusTarget.Resume:
+                    await RunPlaybackCommandAsync(ResumePlaybackAsync);
+                    return;
+
+                case PlaybackTransportFocusTarget.SeekBack:
+                    await RunPlaybackCommandAsync(() => SeekRelativeAsync(-SeekBackStep));
+                    return;
+
+                case PlaybackTransportFocusTarget.SeekForward:
+                    await RunPlaybackCommandAsync(() => SeekRelativeAsync(SeekForwardStep));
+                    return;
+
+                case PlaybackTransportFocusTarget.More:
+                    ShowOverlay(true);
+                    return;
+
+                case PlaybackTransportFocusTarget.Stop:
+                    await RunPlaybackCommandAsync(StopPlaybackAsync);
+                    return;
+            }
+        }
+
+        private void RestartOverlayTimerIfNeeded()
+        {
+            if (!_overlayVisible)
+            {
+                return;
+            }
 
             _overlayTimer.Stop();
             if (!ShouldKeepOverlayPinned())
@@ -1519,6 +1818,8 @@ namespace NextGenEmby.App.Views
             MoreDrawer.Visibility = Visibility.Collapsed;
             SeekPreviewBlock.Visibility = Visibility.Collapsed;
             _infoVisible = false;
+            _transportFocusTarget = null;
+            UpdateTransportFocusVisuals(null);
             Focus(FocusState.Programmatic);
         }
 
@@ -1720,6 +2021,19 @@ namespace NextGenEmby.App.Views
             ProgressSlider.IsEnabled = hasActivePlayback && IsPlaybackSeekable();
             MoreButton.IsEnabled = true;
             InfoButton.IsEnabled = true;
+
+            if (_overlayVisible && !_moreVisible)
+            {
+                if (!_transportFocusTarget.HasValue ||
+                    !IsTransportTargetEnabled(_transportFocusTarget.Value))
+                {
+                    FocusTransportTarget(GetDefaultTransportFocusTarget());
+                }
+                else
+                {
+                    UpdateTransportFocusVisuals(_transportFocusTarget);
+                }
+            }
         }
 
         private void UpdateInfo()
