@@ -23,14 +23,7 @@ namespace NextGenEmby.Core.PlaybackQuality
 
             var expected = report.Expected;
             CheckExpectedFrameRate(report, expected);
-            CheckMax(
-                report,
-                "StartupDurationMs",
-                report.Startup.StartupDurationMs,
-                expected.MaxStartupDurationMs,
-                "MaxStartupDurationMs",
-                "startup.startupDurationMs",
-                "startup");
+            CheckStartupDuration(report, expected);
             CheckMax(
                 report,
                 "DroppedVideoFrames",
@@ -204,6 +197,43 @@ namespace NextGenEmby.Core.PlaybackQuality
                 report.FailureReasons.Add(mismatchMessage);
                 AddRelevantSignal(report, "display.refreshRateHz");
             }
+        }
+
+        private static void CheckStartupDuration(
+            PlaybackQualityReport report,
+            PlaybackQualityExpected expected)
+        {
+            if (!expected.MaxStartupDurationMs.HasValue)
+            {
+                return;
+            }
+
+            if (report.Startup.StartupDurationMs <= 0)
+            {
+                var message = "StartupDurationMs is missing for startup validation.";
+                report.FailureReasons.Add(message);
+                report.Checks.Add(new PlaybackQualityCheck
+                {
+                    Name = "StartupDurationMs",
+                    Signal = "startup.startupDurationMs",
+                    Status = "fail",
+                    FailureArea = "startup",
+                    Expected = Format(expected.MaxStartupDurationMs.Value),
+                    Actual = "",
+                    Message = message
+                });
+                AddRelevantSignal(report, "startup.startupDurationMs");
+                return;
+            }
+
+            CheckMax(
+                report,
+                "StartupDurationMs",
+                report.Startup.StartupDurationMs,
+                expected.MaxStartupDurationMs,
+                "MaxStartupDurationMs",
+                "startup.startupDurationMs",
+                "startup");
         }
 
         private static void CheckExpectedFrameRate(

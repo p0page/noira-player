@@ -106,6 +106,36 @@ public sealed class PlaybackQualityEvaluatorTests
     }
 
     [Fact]
+    public void Evaluate_Fails_When_Startup_Duration_Is_Required_But_Missing()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "missing-startup",
+            Expected = new PlaybackQualityExpected
+            {
+                MaxStartupDurationMs = 2000,
+                RequireValidatedConversion = false
+            }
+        };
+
+        PlaybackQualityEvaluator.Evaluate(report);
+
+        Assert.Equal("fail", report.Result);
+        Assert.Contains(
+            "StartupDurationMs is missing for startup validation.",
+            report.FailureReasons);
+        Assert.Equal("startup", report.Analysis.PrimaryFailureArea);
+        Assert.Contains("startup.startupDurationMs", report.Analysis.RelevantSignals);
+        Assert.Contains(report.Checks, check =>
+            check.Name == "StartupDurationMs" &&
+            check.Signal == "startup.startupDurationMs" &&
+            check.Expected == "2000.000" &&
+            check.Actual == "" &&
+            check.Status == "fail" &&
+            check.FailureArea == "startup");
+    }
+
+    [Fact]
     public void Evaluate_Fails_When_Source_Frame_Rate_Does_Not_Match_Expected_Frame_Rate()
     {
         var report = new PlaybackQualityReport
