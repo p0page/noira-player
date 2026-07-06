@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using NextGenEmby.Core.Diagnostics;
 using NextGenEmby.Core.Input;
+using NextGenEmby.Core.Playback;
 using NextGenEmby.App.Navigation;
 using NextGenEmby.App.Services;
 using NextGenEmby.App.Storage;
@@ -817,7 +818,9 @@ namespace NextGenEmby.App
                     return;
 
                 case "manual-playback":
-                    NavigateTo(typeof(PlaybackPage));
+                    NavigateTo(
+                        typeof(PlaybackPage),
+                        new ManualDirectStreamLaunchOptions(command.StreamUrl, command.AutoStart));
                     return;
 
                 case "playback":

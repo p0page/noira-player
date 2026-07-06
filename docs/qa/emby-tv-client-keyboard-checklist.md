@@ -1030,3 +1030,28 @@ Then continue design and implementation until the route passes.
   - Local asset inspection opened `Square44x44Logo.png`, `Wide310x150Logo.png`, and `SplashScreen.png`. The 44 px asset preserves focus/play/progress, the wide tile reads as a player tile rather than a banner ad, and the splash remains symbol-only.
   - Computer Use app-control tools were not exposed in this resumed turn. No new keyboard/screenshot runtime icon validation was performed in this pass.
   - The next visual verification pass should inspect the Start tile/package surface after reinstalling the current MSIX and compare the generated icon against the 44 px, wide tile, and splash constraints.
+
+### 2026-07-06 - Manual Playback Dev Command Fixture
+
+- App version: 0.1.0.144.
+- Scope: make local playback QA setup deterministic when the saved Emby session is missing or Computer Use text entry is unreliable.
+- Interaction changes:
+  - DEBUG `dev-command.json` for `manual-playback` now accepts `streamUrl` and `autoStart`.
+  - PlaybackPage opens the Manual Direct Stream panel with the URL prefilled.
+  - `autoStart` is ignored when the URL is empty; with a valid URL, it starts the same existing manual direct-stream path.
+  - This does not change core decoding or Emby item playback logic.
+- Automated verification:
+  - TDD red path confirmed `DevelopmentNavigationCommand` lacked `StreamUrl`/`AutoStart`.
+  - TDD red path confirmed `ManualDirectStreamLaunchOptions` did not exist.
+  - Targeted Core tests passed: 22 total across `DevelopmentNavigationCommandTests`, `ManualDirectStreamLaunchOptionsTests`, and `ManualDirectStreamInputPolicyTests`.
+  - App Debug x64 build passed, producing `NextGenEmby.App_0.1.0.144_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.144`.
+- Keyboard/UIA validation:
+  - Wrote `dev-command.json` with route `manual-playback`, a public MP4 `streamUrl`, and `autoStart:false`.
+  - Launched the installed app. `dev-command-result.txt` reported `completed / manual-playback`.
+  - UI Automation found the Manual Direct Stream page and confirmed the `Direct stream URL` textbox value matched the dev-command URL.
+  - Focused the textbox through UI Automation and sent keyboard `Enter`; playback diagnostics showed FFmpeg opened the MP4 and the native backend reached `Opening` then `Playing`.
+  - Re-ran with `autoStart:true` and no keyboard activation; diagnostics again showed `Native open enter`, `Opening`, and `Playing`.
+  - No app-content mouse clicks were used.
+- Limitation:
+  - The verified public MP4 is a short 10-second sample and naturally ended quickly. It proves the QA fixture can start native direct playback, but a longer seekable URL or restored saved Emby playback route is still needed before marking seek-preview cancel/confirm as runtime `Verified`.

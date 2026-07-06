@@ -201,6 +201,7 @@ namespace NextGenEmby.App.Views
         {
             base.OnNavigatedTo(e);
             _launchRequest = e.Parameter as PlaybackLaunchRequest;
+            var manualLaunchOptions = e.Parameter as ManualDirectStreamLaunchOptions;
             PlaybackDiagnosticsLog.WriteLine(
                 "Playback navigated launch=" + (_launchRequest != null) +
                 " item=" + (_launchRequest == null ? "" : _launchRequest.ItemId) +
@@ -209,8 +210,17 @@ namespace NextGenEmby.App.Views
             {
                 NowPlayingBlock.Text = "Manual Direct Stream";
                 ManualDebugPanel.Visibility = Visibility.Visible;
+                StreamUrlBox.Text = manualLaunchOptions == null ? "" : manualLaunchOptions.StreamUrl;
                 StreamUrlBox.IsEnabled = true;
+                UpdateControlStates();
                 ShowOverlay();
+                if (manualLaunchOptions != null &&
+                    manualLaunchOptions.AutoStart &&
+                    ManualStartButton.IsEnabled)
+                {
+                    _ = RunPlaybackCommandAsync(StartManualPlaybackAsync);
+                }
+
                 return;
             }
 

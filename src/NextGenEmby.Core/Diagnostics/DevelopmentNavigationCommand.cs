@@ -16,6 +16,8 @@ namespace NextGenEmby.Core.Diagnostics
         public long StartPositionTicks { get; set; }
         public string MediaSourceId { get; set; } = "";
         public bool ForceSdrOutput { get; set; }
+        public string StreamUrl { get; set; } = "";
+        public bool AutoStart { get; set; }
 
         public static bool TryParseJson(
             string json,
@@ -46,6 +48,7 @@ namespace NextGenEmby.Core.Diagnostics
             parsed.ItemId = Normalize(parsed.ItemId);
             parsed.ItemName = Normalize(parsed.ItemName);
             parsed.MediaSourceId = Normalize(parsed.MediaSourceId);
+            parsed.StreamUrl = Normalize(parsed.StreamUrl);
             parsed.StartPositionTicks = Math.Max(0, parsed.StartPositionTicks);
 
             if (!IsSupportedRoute(parsed.Route))
