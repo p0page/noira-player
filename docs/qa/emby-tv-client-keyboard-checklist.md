@@ -791,6 +791,39 @@ Then continue design and implementation until the route passes.
 - Visual capture note:
   - Windows Graphics Capture timed out during the final Details screenshot request. The route is validated by build output, launch diagnostics, accessibility text snapshots, and keyboard behavior; a fresh screenshot remains desirable in a later Computer Use session.
 
+### 2026-07-06 - Player Focus App Icon Refresh
+
+- App version: 0.1.0.130.
+- Scope: replace the name/letter/shelf-oriented app identity with a player-attribute mark that survives future product renaming.
+- Design changes:
+  - `docs/DESIGN.md` now defines **Player Focus Mark** as the production icon direction.
+  - The icon is symbol-only: compact playback viewport, cyan controller focus path, green play/confirm core, subtle subtitle/audio status marks, and amber progress base.
+  - No production app icon asset embeds the current product name, product initials, or label text.
+  - The icon generator maps directly to `DESIGN.md` tokens: canvas `#050607`, surface `#101418`, raised surface `#1A2027`, hairline `#303842`, focus `#3BD5FF`, play `#61D47C`, progress `#E0B86A`, text `#F6F1E8`, and muted text `#B9C0C8`.
+- Asset generation:
+  - Reworked `tools/Generate-AppIconAssets.ps1` around player-status primitives instead of media-library UI miniatures.
+  - Removed unused text drawing helpers from the generator so future raster assets do not drift back into wordmark behavior.
+  - Regenerated `StoreLogo.png`, `Square44x44Logo.png`, `Square150x150Logo.png`, `Wide310x150Logo.png`, and `SplashScreen.png`.
+- Asset validation:
+  - Pixel dimensions matched manifest requirements: 50x50, 44x44, 150x150, 310x150, and 620x300.
+  - Exact color-token check found the required `DESIGN.md` core colors in square, wide, and splash assets.
+  - Visual inspection confirmed the 44 px icon keeps focus/play/progress readable, the wide tile remains text-free, and the splash is symbol-only.
+- Automated verification:
+  - Core tests passed: 277 total.
+  - App Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.130_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.130`.
+- Keyboard-only validation with Computer Use:
+  - Launched 0.1.0.130 locally; Windows process and package path both resolved to `NextGenEmby.App_0.1.0.130_x64__h8qjz0sr1sg4m`.
+  - Home exposed Home, Search, Movies, Favorites, Settings, Continue watching, Hot Movies, and library rows from the saved Emby session.
+  - Pressed `M`, `Down`, `Down`, `Return`; Movies opened with Sort, Filter, Refresh, and a populated movie grid.
+  - Pressed `Return` from Movies; Details opened with Resume/Play, audio/subtitle summaries, playlist action, and overview text, without starting playback.
+  - Pressed `Escape`, then `M`, `Up`, `Return`; Search opened with focus in `Search title`.
+  - Typed `friend`, pressed `Return`; Search returned `50 results / All`.
+  - Pressed `Down`, `Down`, `Return`; the first reachable search result opened Details with Play as the default action, without starting playback.
+  - No app-content mouse clicks were used.
+- Visual capture note:
+  - Windows Graphics Capture timed out during two app-window screenshot requests (`FrameArrived timed out`). Accessibility text snapshots, keyboard behavior, app version checks, and asset-level visual inspections were used as evidence for this pass.
+
 ### 2026-07-06 - Poster Grid Tokens And Search Recovery
 
 - App version: 0.1.0.129.

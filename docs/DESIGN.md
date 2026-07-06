@@ -407,10 +407,14 @@ Future icon work should use this vocabulary instead:
 
 Current production icon direction:
 
-- **Cinema Shelf Mark:** a dark TV shelf with a left Guide rail, horizontal content rails, one focused media card, a green play surface, a cyan L-shaped focus edge, and an amber progress base.
+- **Player Focus Mark:** a matte dark tile with a compact playback viewport, one cyan controller-focus path, one green play/confirm core, subtle subtitle/audio status marks, and one flat amber progress base. It must not depend on the current product name, initials, or embedded text, because the brand name can change.
+
+The production icon generator must map colors directly to this document's tokens: `canvas #050607`, `surface #101418`, `surface_raised #1A2027`, `hairline #303842`, `focus #3BD5FF`, `primary/play #61D47C`, `secondary/progress #E0B86A`, `text #F6F1E8`, and `text_muted #B9C0C8`. Raster assets should not introduce a separate palette.
 
 Superseded concepts aligned with the older system:
 
+- **Focus N Mark:** an abstract Next/Navigation `N` built from media-slab forms. It was readable as a brand mark, but depended too much on the current name.
+- **Cinema Shelf Mark:** a dark TV shelf with a left Guide rail, horizontal content rails, one focused media card, a green play surface, a cyan L-shaped focus edge, and an amber progress base. It was more product-specific than the portal concepts, but still read too much like a miniature UI screenshot at app-icon scale.
 - **Matte Library Slat:** layered black media rectangles with one crisp focus edge and one green play/confirm surface.
 - **Screen Room Mark:** a dark screen shape with a subtle amber progress base.
 - **Quiet Play Aperture:** a flat negative-space play cutout inside a neutral media tile.

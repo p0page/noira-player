@@ -52,9 +52,9 @@ Production assets then used the Matte Cinema Fluent `Matte Library Slat` directi
 - one flat amber progress base;
 - no portal ring, prism beam, or official third-party logo.
 
-## Current Production Direction
+## Superseded Production Direction
 
-Production assets now use the Matte Cinema Fluent `Cinema Shelf Mark` direction:
+Production assets then used the Matte Cinema Fluent `Cinema Shelf Mark` direction:
 
 - matte rounded-square tile;
 - a quiet TV shelf with left Guide rail and horizontal content rails;
@@ -67,6 +67,44 @@ Rationale:
 
 - It reads more like the app in use: controller focus moving through a TV media library.
 - It keeps the 44 px silhouette simple while adding more product-specific meaning than a generic play-card stack.
+- It was later replaced because it still read as a tiny UI screenshot rather than a standalone app identity mark.
+
+## Superseded Production Direction
+
+Production assets then used the Matte Cinema Fluent `Focus N Mark` direction:
+
+- matte rounded-square tile;
+- abstract Next/Navigation `N` built from dark media-slab forms;
+- one cyan controller-focus path used as a signal rather than glow;
+- one green play/confirm core;
+- one flat amber progress base;
+- no portal ring, prism beam, film-strip cliche, miniature UI screenshot, or official third-party logo.
+
+Rationale:
+
+- It starts from the app's current visual system instead of the historical concept sheet.
+- It is more brand-like at 44 px than a shelf or card-stack screenshot.
+- It still encodes the daily product loop: controller focus, media library, and direct play.
+- It was later replaced because it depended on the current "Next Gen" name and the brand name can change.
+
+## Current Production Direction
+
+Production assets now use the Matte Cinema Fluent `Player Focus Mark` direction:
+
+- matte rounded-square tile;
+- compact playback viewport instead of a wordmark or initials;
+- one cyan controller-focus path used as a signal rather than glow;
+- one green play/confirm core;
+- subtle subtitle/audio status marks;
+- one flat amber progress base;
+- no embedded brand name, initials, portal ring, prism beam, film-strip cliche, miniature UI screenshot, or official third-party logo.
+
+Rationale:
+
+- It is based on stable player attributes rather than the current product name.
+- It remains readable at 44 px: focus, play, and progress survive the small size.
+- The splash asset is symbol-only, so future renaming does not require rewriting raster text.
+- Colors are mapped directly from `docs/DESIGN.md`, including `#050607`, `#101418`, `#1A2027`, `#303842`, `#3BD5FF`, `#61D47C`, and `#E0B86A`.
 - The icon generator owns color and geometry tokens, so future theme/skin work can regenerate the full asset set from one source.
 
 Generated UWP assets:

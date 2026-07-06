@@ -322,23 +322,24 @@ Behavior:
 
 ## App Icon Direction
 
-Icon name: Cinema Shelf Mark.
+Icon name: Player Focus Mark.
 
 Concept:
 
 - A dark rounded-square tile.
-- A quiet TV media shelf with a left Guide rail and horizontal content rails.
-- One focused media card with a crisp cyan controller-focus edge.
+- A compact playback viewport, not a wordmark or brand initial.
+- One crisp cyan controller-focus edge.
 - One green play/confirm surface.
-- An optional small amber progress base, used flat rather than glowing.
-- No Emby logo, Xbox logo, Microsoft logo, film-strip cliche, or generic play triangle alone.
+- Subtle subtitle/audio status marks.
+- A small amber progress base, used flat rather than glowing.
+- No Emby logo, Xbox logo, Microsoft logo, film-strip cliche, generic play triangle alone, embedded brand name, or product initials.
 - No cyan glow, portal ring, glass prism, or holographic motif.
 
 Rationale:
 
-- The media shelf represents the app in daily TV use, not just playback.
+- Player attributes survive future product renaming better than a wordmark or initial.
 - The focus edge connects the icon to controller navigation without turning focus into decoration.
-- Green maps to Play/Resume and amber maps to progress.
+- Green maps to Play/Resume, muted marks map to subtitle/audio state, and amber maps to progress.
 
 Required assets:
 
@@ -352,7 +353,7 @@ Validation:
 
 - Icon remains legible at 44 px.
 - Wide tile does not look like a banner ad.
-- Splash screen matches the dark Fluent TV shell.
+- Splash screen is symbol-only and matches the dark Fluent TV shell.
 
 ## Non-Goals
 

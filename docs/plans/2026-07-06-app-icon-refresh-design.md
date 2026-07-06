@@ -20,23 +20,33 @@ This would make "media library" more literal, but filmstrip marks are overused a
 
 This shows a quiet TV media shelf: a left Guide rail, horizontal content rails, one focused media card, a green play surface, a crisp cyan focus corner, and a flat amber progress base. It is still readable at 44 px, but it carries more product-specific meaning.
 
+### 4. Focus N Mark
+
+This replaces the miniature-shelf idea with a standalone product mark: an abstract Next/Navigation `N` formed from dark media slabs, a cyan controller-focus path, a green play/confirm core, and an amber progress base. It keeps the Matte Cinema Fluent palette, but reads less like a tiny screenshot.
+
+### 5. Player Focus Mark
+
+This removes dependence on the current product name. The mark is a compact playback viewport with a cyan controller-focus path, green play/confirm core, subtle subtitle/audio state marks, and an amber progress base. It is based on player attributes rather than text, initials, or a brand word that may change.
+
 ## Selected Direction
 
-Use **Cinema Shelf Mark**.
+Use **Player Focus Mark**.
 
-The mark should feel like a tiny snapshot of the app in use: dark room, media rails, controller focus, direct play. The memorable element is the cyan L-shaped focus corner around the selected media card. Everything else stays matte and quiet.
+The mark should feel like a compact identity for a couch-first player rather than a literal screenshot or wordmark. The memorable elements are the focus corner, play core, and progress base. Everything else stays matte and quiet.
 
 ## Token Rules
 
 - `canvas`: near-black tile background.
 - `surface`: raised TV surface and splash body.
-- `shelf`: media rail blocks.
+- `shelf`: player surface and status blocks.
 - `focus`: cyan edge only; no glow or portal.
 - `play`: green play/confirm surface.
 - `progress`: amber progress base.
-- `text`: splash title only; square icons must remain symbol-only.
+- `text`: not used in production raster assets; the splash asset should remain symbol-only so future renaming does not require repainting text.
 
 The generator owns the icon tokens so future theme work can change the asset family in one place.
+
+The production script maps icon colors directly to `docs/DESIGN.md`: `#050607` canvas, `#101418` surface, `#1A2027` raised surfaces, `#303842` hairline, `#3BD5FF` focus, `#61D47C` play, `#E0B86A` progress, `#F6F1E8` text, and `#B9C0C8` muted text.
 
 ## Required Assets
 
@@ -48,7 +58,7 @@ The generator owns the icon tokens so future theme work can change the asset fam
 
 ## Validation
 
-- 44 px icon must preserve the focus-card silhouette.
-- Wide tile must read as a media shelf, not a banner ad.
-- Splash screen must match the app shell and not introduce a separate brand palette.
+- 44 px icon must preserve focus, action, and progress signals.
+- Wide tile must read as a player tile with quiet playback-state signals, not a banner ad.
+- Splash screen must match the app shell, stay symbol-only, and not introduce a separate brand palette.
 - UWP build must package the regenerated PNG assets.
