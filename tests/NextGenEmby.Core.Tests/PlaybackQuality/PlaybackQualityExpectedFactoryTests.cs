@@ -57,12 +57,24 @@ public sealed class PlaybackQualityExpectedFactoryTests
         var descriptor = CreateDescriptor(
             frameRate: 24.0,
             hdrKind: HdrPlaybackKind.DolbyVisionWithHdr10Fallback);
+        descriptor.MediaSource.HdrProfile.IsDolbyVision = true;
+        descriptor.MediaSource.HdrProfile.DolbyVisionProfile = 8;
+        descriptor.MediaSource.HdrProfile.DolbyVisionCompatibilityId = 1;
+        descriptor.MediaSource.HdrProfile.HasHdr10BaseLayer = true;
 
         var expected = PlaybackQualityExpectedFactory.CreateDefault(descriptor);
 
         Assert.Equal("Hdr10", expected.HdrOutput);
         Assert.Equal("YCBCR_STUDIO_G2084_TOPLEFT_P2020", expected.DxgiInput);
         Assert.Equal("RGB_FULL_G2084_NONE_P2020", expected.DxgiOutput);
+        Assert.Equal("HDR10 fallback from Dolby Vision", expected.HdrPlaybackStrategy);
+        Assert.True(expected.IsHdr);
+        Assert.True(expected.IsDirectPlayable);
+        Assert.True(expected.IsDolbyVision);
+        Assert.Equal(8, expected.DolbyVisionProfile);
+        Assert.Equal(1, expected.DolbyVisionCompatibilityId);
+        Assert.True(expected.HasHdr10BaseLayer);
+        Assert.False(expected.HasHlgBaseLayer);
     }
 
     [Fact]

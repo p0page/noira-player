@@ -31,7 +31,14 @@
         "width": 3840,
         "height": 2160,
         "frameRate": 23.976,
-        "hdrKind": "DolbyVisionUnsupported"
+        "hdrKind": "DolbyVisionUnsupported",
+        "hdrPlaybackStrategy": "Dolby Vision unsupported",
+        "isHdr": true,
+        "isDirectPlayable": false,
+        "isDolbyVision": true,
+        "dolbyVisionProfile": 5,
+        "hasHdr10BaseLayer": false,
+        "hasHlgBaseLayer": false
       }
     }
   ]

@@ -202,6 +202,55 @@ namespace NextGenEmby.Core.PlaybackQuality
                 expected.HdrKind,
                 "source.hdrKind",
                 ignoreCase: false);
+            CheckExpectedString(
+                report,
+                "ExpectedHdrPlaybackStrategy",
+                report.Source.HdrPlaybackStrategy,
+                expected.HdrPlaybackStrategy,
+                "source.hdrPlaybackStrategy",
+                ignoreCase: false);
+            CheckExpectedBool(
+                report,
+                "ExpectedIsHdr",
+                report.Source.IsHdr,
+                expected.IsHdr,
+                "source.isHdr");
+            CheckExpectedBool(
+                report,
+                "ExpectedIsDirectPlayable",
+                report.Source.IsDirectPlayable,
+                expected.IsDirectPlayable,
+                "source.isDirectPlayable");
+            CheckExpectedBool(
+                report,
+                "ExpectedIsDolbyVision",
+                report.Source.IsDolbyVision,
+                expected.IsDolbyVision,
+                "source.isDolbyVision");
+            CheckExpectedNullableInt(
+                report,
+                "ExpectedDolbyVisionProfile",
+                report.Source.DolbyVisionProfile,
+                expected.DolbyVisionProfile,
+                "source.dolbyVisionProfile");
+            CheckExpectedNullableInt(
+                report,
+                "ExpectedDolbyVisionCompatibilityId",
+                report.Source.DolbyVisionCompatibilityId,
+                expected.DolbyVisionCompatibilityId,
+                "source.dolbyVisionCompatibilityId");
+            CheckExpectedBool(
+                report,
+                "ExpectedHasHdr10BaseLayer",
+                report.Source.HasHdr10BaseLayer,
+                expected.HasHdr10BaseLayer,
+                "source.hasHdr10BaseLayer");
+            CheckExpectedBool(
+                report,
+                "ExpectedHasHlgBaseLayer",
+                report.Source.HasHlgBaseLayer,
+                expected.HasHlgBaseLayer,
+                "source.hasHlgBaseLayer");
         }
 
         private static void CheckExpectedString(
@@ -264,6 +313,76 @@ namespace NextGenEmby.Core.PlaybackQuality
                 Expected = expected.ToString(CultureInfo.InvariantCulture),
                 Actual = actual.ToString(CultureInfo.InvariantCulture),
                 Message = failed ? message : signal + " matched expected " + expected + "."
+            });
+
+            if (failed)
+            {
+                report.FailureReasons.Add(message);
+                AddRelevantSignal(report, signal);
+            }
+        }
+
+        private static void CheckExpectedNullableInt(
+            PlaybackQualityReport report,
+            string name,
+            int? actual,
+            int? expected,
+            string signal)
+        {
+            if (!expected.HasValue)
+            {
+                return;
+            }
+
+            var actualText = actual.HasValue
+                ? actual.Value.ToString(CultureInfo.InvariantCulture)
+                : "";
+            var expectedText = expected.Value.ToString(CultureInfo.InvariantCulture);
+            var failed = !actual.HasValue || actual.Value != expected.Value;
+            var message = name + " " + expectedText + " did not match " + signal + " " + actualText + ".";
+            report.Checks.Add(new PlaybackQualityCheck
+            {
+                Name = name,
+                Signal = signal,
+                Status = failed ? "fail" : "pass",
+                FailureArea = "unsupported-source",
+                Expected = expectedText,
+                Actual = actualText,
+                Message = failed ? message : signal + " matched expected " + expectedText + "."
+            });
+
+            if (failed)
+            {
+                report.FailureReasons.Add(message);
+                AddRelevantSignal(report, signal);
+            }
+        }
+
+        private static void CheckExpectedBool(
+            PlaybackQualityReport report,
+            string name,
+            bool actual,
+            bool? expected,
+            string signal)
+        {
+            if (!expected.HasValue)
+            {
+                return;
+            }
+
+            var expectedText = expected.Value.ToString();
+            var actualText = actual.ToString();
+            var failed = actual != expected.Value;
+            var message = name + " " + expectedText + " did not match " + signal + " " + actualText + ".";
+            report.Checks.Add(new PlaybackQualityCheck
+            {
+                Name = name,
+                Signal = signal,
+                Status = failed ? "fail" : "pass",
+                FailureArea = "unsupported-source",
+                Expected = expectedText,
+                Actual = actualText,
+                Message = failed ? message : signal + " matched expected " + expectedText + "."
             });
 
             if (failed)
@@ -638,7 +757,15 @@ namespace NextGenEmby.Core.PlaybackQuality
                 "ExpectedCodec",
                 "ExpectedWidth",
                 "ExpectedHeight",
-                "ExpectedHdrKind"))
+                "ExpectedHdrKind",
+                "ExpectedHdrPlaybackStrategy",
+                "ExpectedIsHdr",
+                "ExpectedIsDirectPlayable",
+                "ExpectedIsDolbyVision",
+                "ExpectedDolbyVisionProfile",
+                "ExpectedDolbyVisionCompatibilityId",
+                "ExpectedHasHdr10BaseLayer",
+                "ExpectedHasHlgBaseLayer"))
             {
                 report.Analysis.PrimaryFailureArea = "unsupported-source";
                 report.Analysis.SuggestedNextAction = "Inspect container, codec, Dolby Vision profile, and media source selection.";

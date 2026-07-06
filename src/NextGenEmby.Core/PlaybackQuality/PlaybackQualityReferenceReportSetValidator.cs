@@ -213,6 +213,55 @@ namespace NextGenEmby.Core.PlaybackQuality
                 expected.HdrKind,
                 report.Source.HdrKind,
                 ignoreCase: false);
+            CheckString(
+                validation,
+                status,
+                "source.hdrPlaybackStrategy",
+                expected.HdrPlaybackStrategy,
+                report.Source.HdrPlaybackStrategy,
+                ignoreCase: false);
+            CheckBool(
+                validation,
+                status,
+                "source.isHdr",
+                expected.IsHdr,
+                report.Source.IsHdr);
+            CheckBool(
+                validation,
+                status,
+                "source.isDirectPlayable",
+                expected.IsDirectPlayable,
+                report.Source.IsDirectPlayable);
+            CheckBool(
+                validation,
+                status,
+                "source.isDolbyVision",
+                expected.IsDolbyVision,
+                report.Source.IsDolbyVision);
+            CheckNullableInt(
+                validation,
+                status,
+                "source.dolbyVisionProfile",
+                expected.DolbyVisionProfile,
+                report.Source.DolbyVisionProfile);
+            CheckNullableInt(
+                validation,
+                status,
+                "source.dolbyVisionCompatibilityId",
+                expected.DolbyVisionCompatibilityId,
+                report.Source.DolbyVisionCompatibilityId);
+            CheckBool(
+                validation,
+                status,
+                "source.hasHdr10BaseLayer",
+                expected.HasHdr10BaseLayer,
+                report.Source.HasHdr10BaseLayer);
+            CheckBool(
+                validation,
+                status,
+                "source.hasHlgBaseLayer",
+                expected.HasHlgBaseLayer,
+                report.Source.HasHlgBaseLayer);
         }
 
         private static void CheckString(
@@ -259,6 +308,48 @@ namespace NextGenEmby.Core.PlaybackQuality
                 signal,
                 expected.ToString(System.Globalization.CultureInfo.InvariantCulture),
                 actual.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        }
+
+        private static void CheckNullableInt(
+            PlaybackQualityReferenceReportSetValidation validation,
+            PlaybackQualityReferenceReportCaseStatus status,
+            string signal,
+            int? expected,
+            int? actual)
+        {
+            if (!expected.HasValue || expected == actual)
+            {
+                return;
+            }
+
+            AddUnique(status.Signals, signal);
+            AddMismatch(
+                validation,
+                status,
+                signal,
+                expected.Value.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                actual.HasValue ? actual.Value.ToString(System.Globalization.CultureInfo.InvariantCulture) : "");
+        }
+
+        private static void CheckBool(
+            PlaybackQualityReferenceReportSetValidation validation,
+            PlaybackQualityReferenceReportCaseStatus status,
+            string signal,
+            bool? expected,
+            bool actual)
+        {
+            if (!expected.HasValue || expected.Value == actual)
+            {
+                return;
+            }
+
+            AddUnique(status.Signals, signal);
+            AddMismatch(
+                validation,
+                status,
+                signal,
+                expected.Value.ToString(),
+                actual.ToString());
         }
 
         private static void CheckFrameRate(

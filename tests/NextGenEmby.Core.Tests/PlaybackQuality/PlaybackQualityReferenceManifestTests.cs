@@ -71,6 +71,42 @@ public sealed class PlaybackQualityReferenceManifestTests
     }
 
     [Fact]
+    public void Validate_Preserves_Optional_Hdr_Source_Strategy_Metadata()
+    {
+        var manifest = new PlaybackQualityReferenceManifest
+        {
+            SchemaVersion = 1
+        };
+        var referenceCase = CreateCase(
+            "emby/dv-profile8-hdr10-fallback",
+            tier: 2,
+            purpose: "dv-fallback");
+        referenceCase.Expected.HdrPlaybackStrategy = "HDR10 fallback from Dolby Vision";
+        referenceCase.Expected.IsHdr = true;
+        referenceCase.Expected.IsDirectPlayable = true;
+        referenceCase.Expected.IsDolbyVision = true;
+        referenceCase.Expected.DolbyVisionProfile = 8;
+        referenceCase.Expected.DolbyVisionCompatibilityId = 1;
+        referenceCase.Expected.HasHdr10BaseLayer = true;
+        referenceCase.Expected.HasHlgBaseLayer = false;
+        manifest.Cases.Add(referenceCase);
+
+        var result = PlaybackQualityReferenceManifestValidator.Validate(manifest);
+
+        Assert.True(result.IsValid);
+        Assert.Contains(result.Cases, item =>
+            item.CaseId == "emby/dv-profile8-hdr10-fallback" &&
+            item.Expected.HdrPlaybackStrategy == "HDR10 fallback from Dolby Vision" &&
+            item.Expected.IsHdr == true &&
+            item.Expected.IsDirectPlayable == true &&
+            item.Expected.IsDolbyVision == true &&
+            item.Expected.DolbyVisionProfile == 8 &&
+            item.Expected.DolbyVisionCompatibilityId == 1 &&
+            item.Expected.HasHdr10BaseLayer == true &&
+            item.Expected.HasHlgBaseLayer == false);
+    }
+
+    [Fact]
     public void Validate_Rejects_Duplicate_Cases_And_Incomplete_Expected_Metadata()
     {
         var manifest = new PlaybackQualityReferenceManifest
@@ -287,6 +323,61 @@ public sealed class PlaybackQualityReferenceManifestTests
         Assert.Contains(validation.Cases, item =>
             item.ReportRunId == "unexpected/case" &&
             item.Status == "extra");
+    }
+
+    [Fact]
+    public void ValidateReportSet_Rejects_Hdr_Source_Strategy_Mismatches()
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        var referenceCase = CreateCase(
+            "emby/dv-profile8-hdr10-fallback",
+            tier: 2,
+            purpose: "dv-fallback");
+        referenceCase.Expected.HdrKind = "DolbyVisionWithHdr10Fallback";
+        referenceCase.Expected.HdrPlaybackStrategy = "HDR10 fallback from Dolby Vision";
+        referenceCase.Expected.IsDirectPlayable = true;
+        referenceCase.Expected.IsDolbyVision = true;
+        referenceCase.Expected.DolbyVisionProfile = 8;
+        referenceCase.Expected.DolbyVisionCompatibilityId = 1;
+        referenceCase.Expected.HasHdr10BaseLayer = true;
+        referenceCase.Expected.HasHlgBaseLayer = false;
+        manifest.Cases.Add(referenceCase);
+        var report = CreateReport(
+            "emby/dv-profile8-hdr10-fallback",
+            codec: "hevc",
+            width: 3840,
+            height: 2160,
+            frameRate: 23.976,
+            hdrKind: "DolbyVisionWithHdr10Fallback");
+        report.Source.HdrPlaybackStrategy = "Dolby Vision unsupported";
+        report.Source.IsDirectPlayable = false;
+        report.Source.IsDolbyVision = true;
+        report.Source.DolbyVisionProfile = 5;
+        report.Source.DolbyVisionCompatibilityId = 0;
+        report.Source.HasHdr10BaseLayer = false;
+        report.Source.HasHlgBaseLayer = false;
+
+        var validation = PlaybackQualityReferenceReportSetValidator.Validate(
+            manifest,
+            new[] { report });
+
+        Assert.False(validation.IsValid);
+        Assert.Equal(0, validation.MatchedCaseCount);
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.source.hdrPlaybackStrategy.mismatch" &&
+            error.Signal == "source.hdrPlaybackStrategy");
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.source.isDirectPlayable.mismatch" &&
+            error.Signal == "source.isDirectPlayable");
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.source.dolbyVisionProfile.mismatch" &&
+            error.Signal == "source.dolbyVisionProfile");
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.source.dolbyVisionCompatibilityId.mismatch" &&
+            error.Signal == "source.dolbyVisionCompatibilityId");
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.source.hasHdr10BaseLayer.mismatch" &&
+            error.Signal == "source.hasHdr10BaseLayer");
     }
 
     private static PlaybackQualityReferenceCase CreateCase(

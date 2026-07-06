@@ -234,6 +234,69 @@ public sealed class PlaybackQualityEvaluatorTests
     }
 
     [Fact]
+    public void Evaluate_Fails_When_Hdr_Source_Strategy_Does_Not_Match_Expected_Source()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "wrong-dv-strategy",
+            Expected = new PlaybackQualityExpected
+            {
+                HdrPlaybackStrategy = "HDR10 fallback from Dolby Vision",
+                IsHdr = true,
+                IsDirectPlayable = true,
+                IsDolbyVision = true,
+                DolbyVisionProfile = 8,
+                DolbyVisionCompatibilityId = 1,
+                HasHdr10BaseLayer = true,
+                HasHlgBaseLayer = false,
+                RequireValidatedConversion = false
+            },
+            Source = new PlaybackQualitySource
+            {
+                HdrPlaybackStrategy = "Unsupported Dolby Vision profile",
+                IsHdr = true,
+                IsDirectPlayable = false,
+                IsDolbyVision = true,
+                DolbyVisionProfile = 5,
+                DolbyVisionCompatibilityId = 0,
+                HasHdr10BaseLayer = false,
+                HasHlgBaseLayer = false
+            }
+        };
+
+        PlaybackQualityEvaluator.Evaluate(report);
+
+        Assert.Equal("fail", report.Result);
+        Assert.Equal("unsupported-source", report.Analysis.PrimaryFailureArea);
+        Assert.Contains("source.hdrPlaybackStrategy", report.Analysis.RelevantSignals);
+        Assert.Contains("source.isDirectPlayable", report.Analysis.RelevantSignals);
+        Assert.Contains("source.dolbyVisionProfile", report.Analysis.RelevantSignals);
+        Assert.Contains("source.dolbyVisionCompatibilityId", report.Analysis.RelevantSignals);
+        Assert.Contains("source.hasHdr10BaseLayer", report.Analysis.RelevantSignals);
+        Assert.Contains(report.Checks, check =>
+            check.Name == "ExpectedHdrPlaybackStrategy" &&
+            check.Signal == "source.hdrPlaybackStrategy" &&
+            check.Expected == "HDR10 fallback from Dolby Vision" &&
+            check.Actual == "Unsupported Dolby Vision profile" &&
+            check.Status == "fail" &&
+            check.FailureArea == "unsupported-source");
+        Assert.Contains(report.Checks, check =>
+            check.Name == "ExpectedIsDirectPlayable" &&
+            check.Signal == "source.isDirectPlayable" &&
+            check.Expected == "True" &&
+            check.Actual == "False" &&
+            check.Status == "fail" &&
+            check.FailureArea == "unsupported-source");
+        Assert.Contains(report.Checks, check =>
+            check.Name == "ExpectedDolbyVisionProfile" &&
+            check.Signal == "source.dolbyVisionProfile" &&
+            check.Expected == "8" &&
+            check.Actual == "5" &&
+            check.Status == "fail" &&
+            check.FailureArea == "unsupported-source");
+    }
+
+    [Fact]
     public void Evaluate_Fails_When_Rendered_Frame_Count_Is_Below_Minimum()
     {
         var report = new PlaybackQualityReport
