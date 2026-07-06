@@ -12,6 +12,8 @@ try {
     $analysisPath = Join-Path $tempRoot 'analysis.json'
     $analysisSetDir = Join-Path $tempRoot 'analysis-report-set'
     $analysisSetPath = Join-Path $tempRoot 'analysis-report-set.json'
+    $analysisEnvelopeSetDir = Join-Path $tempRoot 'analysis-envelope-report-set'
+    $analysisEnvelopeSetPath = Join-Path $tempRoot 'analysis-envelope-report-set.json'
     $outputPath = Join-Path $tempRoot 'comparison.json'
     $envelopeOutputPath = Join-Path $tempRoot 'comparison-envelope.json'
     $suitePath = Join-Path $tempRoot 'suite.json'
@@ -195,6 +197,36 @@ try {
         ($_.signals -contains 'timing.maxFrameGapMs')
     })) {
         throw 'Expected analyze-report-set output to expose analyzed candidate blockers and signals.'
+    }
+
+    New-Item -ItemType Directory -Path $analysisEnvelopeSetDir | Out-Null
+    Copy-Item -LiteralPath $baselineEnvelopePath -Destination (Join-Path $analysisEnvelopeSetDir 'baseline-envelope.json')
+    Copy-Item -LiteralPath $candidateEnvelopePath -Destination (Join-Path $analysisEnvelopeSetDir 'candidate-envelope.json')
+
+    Push-Location $repoRoot
+    try {
+        dotnet run `
+            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
+            --no-build `
+            -- analyze-report-set `
+            --reports-dir $analysisEnvelopeSetDir `
+            --output $analysisEnvelopeSetPath
+        if ($LASTEXITCODE -ne 0) {
+            throw 'playback quality CLI analyze-report-set envelope refresh returned a non-zero exit code.'
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    $analysisEnvelopeSet = Get-Content -Raw -LiteralPath $analysisEnvelopeSetPath | ConvertFrom-Json
+    if (-not ($analysisEnvelopeSet.cases | Where-Object {
+        $_.caseId -eq 'candidate' -and
+        $_.hasModelAnalysis -eq $true -and
+        ($_.failureAreas -contains 'frame-pacing') -and
+        ($_.signals -contains 'timing.maxFrameGapMs')
+    })) {
+        throw 'Expected analyze-report-set output to refresh empty envelope modelAnalysis.'
     }
 
     @'

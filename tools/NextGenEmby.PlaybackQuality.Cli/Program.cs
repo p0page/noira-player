@@ -953,13 +953,23 @@ internal static class Program
         var analyzed = new List<PlaybackQualityReportEnvelope>();
         foreach (var envelope in envelopes)
         {
+            var modelAnalysis = HasUsableModelAnalysis(envelope.ModelAnalysis)
+                ? envelope.ModelAnalysis
+                : PlaybackQualityReportAnalyzer.Analyze(envelope.Report);
             analyzed.Add(new PlaybackQualityReportEnvelope(
                 envelope.RelativePath,
                 envelope.Report,
-                envelope.ModelAnalysis ?? PlaybackQualityReportAnalyzer.Analyze(envelope.Report)));
+                modelAnalysis));
         }
 
         return analyzed;
+    }
+
+    private static bool HasUsableModelAnalysis(PlaybackQualityModelAnalysis? modelAnalysis)
+    {
+        return modelAnalysis != null &&
+            !string.IsNullOrWhiteSpace(modelAnalysis.RunId) &&
+            !string.IsNullOrWhiteSpace(modelAnalysis.Result);
     }
 
     private static bool TryGetPropertyIgnoreCase(

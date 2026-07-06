@@ -94,7 +94,7 @@ dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQ
 dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- analyze-report-set --reports-dir captured-reports --output report-analysis-summary.json
 ```
 
-`analyze-report-set` 会读取目录下所有 `*.json`，对 raw report 自动运行当前 Core analyzer，对已有 envelope 则保留其中的 report 并补齐缺失的 analysis。输出复用候选评测中的 report-analysis summary，包含 `totalReportCount`、`analyzedReportCount`、`unavailableReportCount`、`blockedReportCount` 和每个 case 的 `status`、`blockers`、`signals`、`failureAreas`、`targetFailureAreas`。这一步适合在采集完成后立即判断证据是否足够、下一步应补 telemetry 还是修改播放 Core。
+`analyze-report-set` 会读取目录下所有 `*.json`，对 raw report 自动运行当前 Core analyzer；对已有 envelope，如果 `modelAnalysis.runId` 或 `modelAnalysis.result` 缺失，也会把该 analysis 视为不完整并重新生成。输出复用候选评测中的 report-analysis summary，包含 `totalReportCount`、`analyzedReportCount`、`unavailableReportCount`、`blockedReportCount` 和每个 case 的 `status`、`blockers`、`signals`、`failureAreas`、`targetFailureAreas`。这一步适合在采集完成后立即判断证据是否足够、下一步应补 telemetry 还是修改播放 Core。
 
 ## 候选版本门禁评测
 
