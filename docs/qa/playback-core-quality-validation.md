@@ -149,6 +149,8 @@ If an automated run already has baseline and candidate report directories, compa
 dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- compare-suite --baseline-dir baseline-reports --candidate-dir candidate-reports --comparisons-dir comparisons --output suite.json
 ```
 
+The suite output includes ranked `nextActions`. Automated model loops should read rank 1 before expanding the full `comparisons` payload; it carries the suite action, risk, target case IDs, signals, blockers, reasons, and likely Core/native code targets.
+
 `compare-suite` matches reports by relative `*.json` path by default. Manifest-driven runs should prefer `--match-by run-id`, which pairs baseline/candidate reports by `report.runId` and writes `caseId = runId` into generated comparisons:
 
 ```powershell

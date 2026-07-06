@@ -23,10 +23,25 @@ namespace NextGenEmby.Core.PlaybackQuality
         public List<string> TargetFailureAreas { get; } = new List<string>();
         public List<string> TargetCaseIds { get; } = new List<string>();
         public List<string> CodeTargets { get; } = new List<string>();
+        public List<PlaybackQualitySuiteNextAction> NextActions { get; } =
+            new List<PlaybackQualitySuiteNextAction>();
         public List<PlaybackQualityComparisonCaseSummary> Cases { get; } =
             new List<PlaybackQualityComparisonCaseSummary>();
         public List<PlaybackQualityRunComparison> Comparisons { get; } =
             new List<PlaybackQualityRunComparison>();
+    }
+
+    public sealed class PlaybackQualitySuiteNextAction
+    {
+        public int Rank { get; set; }
+        public string Action { get; set; } = "";
+        public string Risk { get; set; } = "";
+        public string FailureArea { get; set; } = "";
+        public List<string> CaseIds { get; } = new List<string>();
+        public List<string> Signals { get; } = new List<string>();
+        public List<string> Reasons { get; } = new List<string>();
+        public List<string> Blockers { get; } = new List<string>();
+        public List<string> CodeTargets { get; } = new List<string>();
     }
 
     public sealed class PlaybackQualityComparisonCaseSummary
@@ -74,6 +89,7 @@ namespace NextGenEmby.Core.PlaybackQuality
             suite.TotalComparisonCount = suite.Comparisons.Count;
             ApplySuiteAction(suite);
             ApplyTargetFailureAreas(suite);
+            AddNextActions(suite);
             return suite;
         }
 
@@ -374,6 +390,47 @@ namespace NextGenEmby.Core.PlaybackQuality
             }
         }
 
+        private static void AddNextActions(PlaybackQualityComparisonSuite suite)
+        {
+            var action = new PlaybackQualitySuiteNextAction
+            {
+                Rank = 1,
+                Action = suite.Action,
+                Risk = suite.Risk,
+                FailureArea = suite.TargetFailureAreas.Count == 0
+                    ? ""
+                    : suite.TargetFailureAreas[0]
+            };
+
+            CopyValues(suite.TargetCaseIds, action.CaseIds);
+            if (action.CaseIds.Count == 0)
+            {
+                AddCaseIdsForSuiteAction(suite, action);
+            }
+
+            CopyValues(suite.Signals, action.Signals);
+            CopyValues(suite.Reasons, action.Reasons);
+            CopyValues(suite.Blockers, action.Blockers);
+            CopyValues(suite.CodeTargets, action.CodeTargets);
+            suite.NextActions.Add(action);
+        }
+
+        private static void AddCaseIdsForSuiteAction(
+            PlaybackQualityComparisonSuite suite,
+            PlaybackQualitySuiteNextAction action)
+        {
+            foreach (var summary in suite.Cases)
+            {
+                if (summary.Action == suite.Action ||
+                    (summary.Result == "improved" && suite.Action == "accept-candidate") ||
+                    (summary.Result == "regressed" && suite.Action == "reject-candidate") ||
+                    (summary.Result == "mixed" && suite.Action == "split-candidate"))
+                {
+                    AddUnique(action.CaseIds, summary.CaseId);
+                }
+            }
+        }
+
         private static void AddEvidenceTargetCaseIds(PlaybackQualityComparisonSuite suite)
         {
             foreach (var summary in suite.Cases)
@@ -532,6 +589,14 @@ namespace NextGenEmby.Core.PlaybackQuality
             foreach (var target in targets)
             {
                 AddUnique(codeTargets, target);
+            }
+        }
+
+        private static void CopyValues(List<string> source, List<string> target)
+        {
+            foreach (var value in source)
+            {
+                AddUnique(target, value);
             }
         }
 

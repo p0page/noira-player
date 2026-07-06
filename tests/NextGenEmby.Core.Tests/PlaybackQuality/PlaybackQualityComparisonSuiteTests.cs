@@ -73,6 +73,45 @@ public sealed class PlaybackQualityComparisonSuiteTests
     }
 
     [Fact]
+    public void Summarize_Emits_NextAction_For_Evidence_Blockers()
+    {
+        var weak = PlaybackQualityRunComparator.Compare(
+            new PlaybackQualityReport { RunId = "baseline-missing" },
+            Report("candidate", Check("RenderedVideoFrames", "fail", "frame-pacing", "timing.renderedVideoFrames", "120", "24")));
+        weak.CaseId = "evidence/missing-baseline";
+
+        var suite = PlaybackQualityComparisonSuiteAggregator.Summarize(new[] { weak });
+
+        var nextAction = Assert.Single(suite.NextActions);
+        Assert.Equal(1, nextAction.Rank);
+        Assert.Equal("collect-comparable-evidence", nextAction.Action);
+        Assert.Equal("high", nextAction.Risk);
+        Assert.Contains("suite.weak-evidence", nextAction.Blockers);
+        Assert.Contains("evidence/missing-baseline", nextAction.CaseIds);
+        Assert.Contains("src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs", nextAction.CodeTargets);
+        Assert.Contains("suite contains weak or insufficient comparison evidence", nextAction.Reasons);
+    }
+
+    [Fact]
+    public void Summarize_Emits_NextAction_For_Candidate_Regressions()
+    {
+        var regressed = Compare(
+            Check("AudioVideoDriftMsP95", "pass", "av-sync", "sync.audioVideoDriftMsP95", "40.000", "25.000"),
+            Check("AudioVideoDriftMsP95", "fail", "av-sync", "sync.audioVideoDriftMsP95", "40.000", "55.000"));
+        regressed.CaseId = "case-av-sync";
+
+        var suite = PlaybackQualityComparisonSuiteAggregator.Summarize(new[] { regressed });
+
+        var nextAction = Assert.Single(suite.NextActions);
+        Assert.Equal(1, nextAction.Rank);
+        Assert.Equal("reject-candidate", nextAction.Action);
+        Assert.Equal("av-sync", nextAction.FailureArea);
+        Assert.Contains("case-av-sync", nextAction.CaseIds);
+        Assert.Contains("sync.audioVideoDriftMsP95", nextAction.Signals);
+        Assert.Contains("src/NextGenEmby.Native/Media/AudioRenderer.cpp", nextAction.CodeTargets);
+    }
+
+    [Fact]
     public void Summarize_Emits_Case_Summaries_For_Model_Localization()
     {
         var improved = Compare(
