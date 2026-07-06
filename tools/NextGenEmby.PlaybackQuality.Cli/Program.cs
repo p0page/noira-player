@@ -98,6 +98,7 @@ internal static class Program
             AddPreviousComparisonIfPresent(options, pair, context);
 
             var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate, context);
+            comparison.CaseId = pair.RelativePath;
             comparisons.Add(comparison);
 
             if (!string.IsNullOrWhiteSpace(options.ComparisonsDirectory))

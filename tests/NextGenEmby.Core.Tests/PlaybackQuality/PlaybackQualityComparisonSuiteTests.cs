@@ -65,6 +65,29 @@ public sealed class PlaybackQualityComparisonSuiteTests
         Assert.Contains("suite.weak-evidence", suite.Blockers);
     }
 
+    [Fact]
+    public void Summarize_Emits_Case_Summaries_For_Model_Localization()
+    {
+        var improved = Compare(
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "180.000"),
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "120.000"));
+        improved.CaseId = "hdr/case-a.json";
+
+        var suite = PlaybackQualityComparisonSuiteAggregator.Summarize(new[] { improved });
+
+        var caseSummary = Assert.Single(suite.Cases);
+        Assert.Equal("hdr/case-a.json", caseSummary.CaseId);
+        Assert.Equal("baseline", caseSummary.BaselineRunId);
+        Assert.Equal("candidate", caseSummary.CandidateRunId);
+        Assert.Equal("improved", caseSummary.Result);
+        Assert.Equal("keep-candidate", caseSummary.Decision);
+        Assert.Equal("accept-candidate", caseSummary.Action);
+        Assert.Equal("low", caseSummary.Risk);
+        Assert.Equal("strong", caseSummary.Confidence);
+        Assert.Contains("timing.maxFrameGapMs", caseSummary.Signals);
+        Assert.Contains("frame-pacing", caseSummary.FailureAreas);
+    }
+
     private static PlaybackQualityRunComparison Compare(
         PlaybackQualityCheck baselineCheck,
         PlaybackQualityCheck candidateCheck)

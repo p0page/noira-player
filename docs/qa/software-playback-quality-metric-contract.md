@@ -138,6 +138,7 @@ The comparator also emits a machine-readable `decision`: `keep-candidate`, `reje
 `tools/NextGenEmby.PlaybackQuality.Cli` is the App-free command-line entry point for generating the same comparison JSON from serialized report files. The `compare` command requires `--baseline` and `--candidate`, accepts repeated `--previous` comparison files for stall detection, accepts `--stall-threshold`, and writes either to stdout or `--output`. Inputs may be either raw `PlaybackQualityReport` JSON files or `PlaybackQualityRunResult` envelopes with a top-level `report` property. This is the preferred bridge between captured quality-run artifacts and automated model optimization because it avoids temporary custom code and does not build or package the Xbox App.
 
 `PlaybackQualityComparisonSuiteAggregator.Summarize` combines multiple comparison JSON objects into a suite-level gate for multi-sample playback optimization. The suite emits comparison counts, confidence counts, `action`, `risk`, `reasons`, `blockers`, `signals`, and `failureAreas`. Regression and mixed results block automatic acceptance across the whole suite. Weak or insufficient evidence blocks acceptance until comparable reports are collected. Partial evidence maps to unmatched-signal review. Only a suite with at least one strong improvement and no blocking comparison can emit `action = accept-candidate`.
+The suite also emits `cases`, a compact per-comparison summary containing `caseId`, run IDs, result, decision, action, risk, confidence, signals, failure areas, and blockers. Automated consumers should use `cases` to localize the sample that needs another capture or Core change before expanding the full `comparisons` payload.
 
 The CLI `summarize` command reads one or more comparison JSON files and writes the same suite summary:
 
@@ -152,6 +153,7 @@ dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQ
 ```
 
 The command fails on missing or extra report files instead of silently dropping cases. Automated consumers should treat that as an evidence-collection blocker, not as a playback Core regression. `--previous-comparisons-dir` can be supplied to load one previous comparison per relative path, enabling the same repeated-unchanged stall protection used by single-report `compare` runs. A missing previous comparison for a current report is allowed and means that case has no history yet.
+For `compare-suite`, each generated comparison receives `caseId = <relative report path>`, and the suite `cases` list repeats that value so model loops can map a failure back to the original sample file.
 
 `PlaybackQualityReportMapper.ApplySource` is the lower-level Core mapping from `PlaybackDescriptor` into `source`. `PlaybackQualityReportMapper.ApplyDisplayStatus` maps `PlaybackDisplayStatus` into `display` and `colorPipeline`. `PlaybackQualityReportMapper.ApplyMetrics` maps playback metrics snapshots into `timing`, `sync`, and `buffers`. App or harness code should prefer the composer and use these mappers only when it needs lower-level control.
 

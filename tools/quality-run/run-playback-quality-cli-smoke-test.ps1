@@ -214,6 +214,10 @@ try {
         throw 'Expected playback quality CLI compare-suite to include one comparison.'
     }
 
+    if (-not ($suiteFromReports.cases | Where-Object { $_.caseId -eq 'case-a.json' -and $_.action -eq 'accept-candidate' })) {
+        throw 'Expected playback quality CLI compare-suite to include case summary for case-a.json.'
+    }
+
     $comparisonFromSuitePath = Join-Path $comparisonsDir 'case-a.json'
     if (-not (Test-Path -LiteralPath $comparisonFromSuitePath)) {
         throw 'Expected playback quality CLI compare-suite to write individual comparison output.'
@@ -222,6 +226,10 @@ try {
     $comparisonFromSuite = Get-Content -Raw -LiteralPath $comparisonFromSuitePath | ConvertFrom-Json
     if ($comparisonFromSuite.result -ne 'improved') {
         throw 'Expected playback quality CLI compare-suite comparison result to be improved.'
+    }
+
+    if ($comparisonFromSuite.caseId -ne 'case-a.json') {
+        throw 'Expected playback quality CLI compare-suite comparison to include caseId.'
     }
 
     New-Item -ItemType Directory -Path $stallBaselineDir | Out-Null

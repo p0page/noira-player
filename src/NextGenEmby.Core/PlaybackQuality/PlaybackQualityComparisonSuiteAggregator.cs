@@ -20,8 +20,25 @@ namespace NextGenEmby.Core.PlaybackQuality
         public List<string> Blockers { get; } = new List<string>();
         public List<string> Signals { get; } = new List<string>();
         public List<string> FailureAreas { get; } = new List<string>();
+        public List<PlaybackQualityComparisonCaseSummary> Cases { get; } =
+            new List<PlaybackQualityComparisonCaseSummary>();
         public List<PlaybackQualityRunComparison> Comparisons { get; } =
             new List<PlaybackQualityRunComparison>();
+    }
+
+    public sealed class PlaybackQualityComparisonCaseSummary
+    {
+        public string CaseId { get; set; } = "";
+        public string BaselineRunId { get; set; } = "";
+        public string CandidateRunId { get; set; } = "";
+        public string Result { get; set; } = "";
+        public string Decision { get; set; } = "";
+        public string Action { get; set; } = "";
+        public string Risk { get; set; } = "";
+        public string Confidence { get; set; } = "";
+        public List<string> Signals { get; } = new List<string>();
+        public List<string> FailureAreas { get; } = new List<string>();
+        public List<string> Blockers { get; } = new List<string>();
     }
 
     public static class PlaybackQualityComparisonSuiteAggregator
@@ -43,6 +60,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                 }
 
                 suite.Comparisons.Add(comparison);
+                suite.Cases.Add(CreateCaseSummary(comparison));
                 CountComparison(suite, comparison);
                 AddComparisonEvidence(suite, comparison);
             }
@@ -50,6 +68,56 @@ namespace NextGenEmby.Core.PlaybackQuality
             suite.TotalComparisonCount = suite.Comparisons.Count;
             ApplySuiteAction(suite);
             return suite;
+        }
+
+        private static PlaybackQualityComparisonCaseSummary CreateCaseSummary(
+            PlaybackQualityRunComparison comparison)
+        {
+            var summary = new PlaybackQualityComparisonCaseSummary
+            {
+                CaseId = comparison.CaseId,
+                BaselineRunId = comparison.BaselineRunId,
+                CandidateRunId = comparison.CandidateRunId,
+                Result = comparison.Result,
+                Decision = comparison.Decision,
+                Action = comparison.Optimization.Action,
+                Risk = comparison.Optimization.Risk,
+                Confidence = comparison.Confidence.Level
+            };
+
+            foreach (var signal in comparison.Optimization.Signals)
+            {
+                AddUnique(summary.Signals, signal);
+            }
+
+            foreach (var signal in comparison.Confidence.Signals)
+            {
+                AddUnique(summary.Signals, signal);
+            }
+
+            foreach (var improvement in comparison.Improvements)
+            {
+                AddUnique(summary.Signals, improvement.Signal);
+                AddUnique(summary.FailureAreas, improvement.FailureArea);
+            }
+
+            foreach (var regression in comparison.Regressions)
+            {
+                AddUnique(summary.Signals, regression.Signal);
+                AddUnique(summary.FailureAreas, regression.FailureArea);
+            }
+
+            foreach (var area in comparison.Optimization.FailureAreas)
+            {
+                AddUnique(summary.FailureAreas, area);
+            }
+
+            foreach (var blocker in comparison.Optimization.Blockers)
+            {
+                AddUnique(summary.Blockers, blocker);
+            }
+
+            return summary;
         }
 
         private static void CountComparison(
