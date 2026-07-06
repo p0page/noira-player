@@ -28,6 +28,10 @@ try {
     $candidateEvaluationManifestPath = Join-Path $tempRoot 'candidate-evaluation-manifest.json'
     $candidateEvaluationPath = Join-Path $tempRoot 'candidate-evaluation.json'
     $candidateEvaluationComparisonsDir = Join-Path $tempRoot 'candidate-evaluation-comparisons'
+    $candidateEvaluationEmptyAnalysisBaselineDir = Join-Path $tempRoot 'candidate-evaluation-empty-analysis-baseline'
+    $candidateEvaluationEmptyAnalysisCandidateDir = Join-Path $tempRoot 'candidate-evaluation-empty-analysis-candidate'
+    $candidateEvaluationEmptyAnalysisPath = Join-Path $tempRoot 'candidate-evaluation-empty-analysis.json'
+    $candidateEvaluationEmptyAnalysisComparisonsDir = Join-Path $tempRoot 'candidate-evaluation-empty-analysis-comparisons'
     $candidateEvaluationInvalidCandidateDir = Join-Path $tempRoot 'candidate-evaluation-invalid-candidate'
     $candidateEvaluationInvalidPath = Join-Path $tempRoot 'candidate-evaluation-invalid.json'
     $candidateEvaluationInvalidComparisonsDir = Join-Path $tempRoot 'candidate-evaluation-invalid-comparisons'
@@ -870,6 +874,112 @@ try {
 
     if (-not ($candidateEvaluation.evidenceGates | Where-Object { $_.name -eq 'suite' -and $_.status -eq 'pass' -and $_.action -eq 'accept-candidate' })) {
         throw 'Expected evaluate-candidate suite evidence gate to pass with accept-candidate action.'
+    }
+
+    New-Item -ItemType Directory -Path $candidateEvaluationEmptyAnalysisBaselineDir | Out-Null
+    New-Item -ItemType Directory -Path $candidateEvaluationEmptyAnalysisCandidateDir | Out-Null
+    @'
+{
+  "report": {
+    "runId": "item-1/source-1",
+    "metricVersion": "software-quality-v1",
+    "result": "fail",
+    "source": {
+      "itemId": "item-1",
+      "mediaSourceId": "source-1",
+      "codec": "hevc",
+      "width": 3840,
+      "height": 2160,
+      "frameRate": 23.976,
+      "hdrKind": "Sdr"
+    },
+    "checks": [
+      {
+        "name": "MaxFrameGapMs",
+        "signal": "timing.maxFrameGapMs",
+        "status": "fail",
+        "failureArea": "frame-pacing",
+        "expected": "105.000",
+        "actual": "180.000"
+      }
+    ]
+  },
+  "modelAnalysis": {}
+}
+'@ | Set-Content -LiteralPath (Join-Path $candidateEvaluationEmptyAnalysisBaselineDir 'baseline-empty-analysis.json') -Encoding UTF8
+    @'
+{
+  "report": {
+    "runId": "item-1/source-1",
+    "metricVersion": "software-quality-v1",
+    "result": "fail",
+    "source": {
+      "itemId": "item-1",
+      "mediaSourceId": "source-1",
+      "codec": "hevc",
+      "width": 3840,
+      "height": 2160,
+      "frameRate": 23.976,
+      "hdrKind": "Sdr"
+    },
+    "checks": [
+      {
+        "name": "MaxFrameGapMs",
+        "signal": "timing.maxFrameGapMs",
+        "status": "fail",
+        "failureArea": "frame-pacing",
+        "expected": "105.000",
+        "actual": "120.000"
+      }
+    ]
+  },
+  "modelAnalysis": {}
+}
+'@ | Set-Content -LiteralPath (Join-Path $candidateEvaluationEmptyAnalysisCandidateDir 'candidate-empty-analysis.json') -Encoding UTF8
+
+    Push-Location $repoRoot
+    try {
+        dotnet run `
+            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
+            --no-build `
+            -- evaluate-candidate `
+            --manifest $candidateEvaluationManifestPath `
+            --baseline-dir $candidateEvaluationEmptyAnalysisBaselineDir `
+            --candidate-dir $candidateEvaluationEmptyAnalysisCandidateDir `
+            --match-by run-id `
+            --comparisons-dir $candidateEvaluationEmptyAnalysisComparisonsDir `
+            --output $candidateEvaluationEmptyAnalysisPath
+        if ($LASTEXITCODE -eq 0) {
+            throw 'Expected playback quality CLI evaluate-candidate to refresh and reject incomplete model analysis.'
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    $emptyAnalysisEvaluation = Get-Content -Raw -LiteralPath $candidateEvaluationEmptyAnalysisPath | ConvertFrom-Json
+    if ($null -eq $emptyAnalysisEvaluation.activeGate -or
+        $emptyAnalysisEvaluation.activeGate.name -ne 'baseline-report-analysis' -or
+        $emptyAnalysisEvaluation.activeGate.status -ne 'blocked') {
+        throw 'Expected incomplete model analysis evaluate-candidate active gate to block baseline report-analysis.'
+    }
+
+    if ($null -eq $emptyAnalysisEvaluation.baselineReportAnalysis -or
+        $emptyAnalysisEvaluation.baselineReportAnalysis.analyzedReportCount -ne 1 -or
+        $emptyAnalysisEvaluation.baselineReportAnalysis.blockedReportCount -ne 1) {
+        throw 'Expected incomplete baseline model analysis to be refreshed and blocked.'
+    }
+
+    if (-not ($emptyAnalysisEvaluation.baselineReportAnalysis.blockers -contains 'missingEvidence')) {
+        throw 'Expected refreshed incomplete baseline analysis to expose missing evidence blocker.'
+    }
+
+    if (-not ($emptyAnalysisEvaluation.baselineReportAnalysis.targetCaseIds -contains 'item-1/source-1')) {
+        throw 'Expected refreshed incomplete baseline analysis to expose target case id.'
+    }
+
+    if (Test-Path -LiteralPath $candidateEvaluationEmptyAnalysisComparisonsDir) {
+        throw 'Expected incomplete model analysis evaluate-candidate to skip comparison output.'
     }
 
     New-Item -ItemType Directory -Path $candidateEvaluationInvalidCandidateDir | Out-Null

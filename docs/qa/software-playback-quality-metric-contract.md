@@ -206,7 +206,7 @@ dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQ
 - 如果 `blockers` 包含 manifest 或 report-set 问题，先修复证据采集、源选择、报告 runId 或 source metadata，不要修改播放核心。
 - 如果 `baseline-report-analysis` 或 `candidate-report-analysis` 被阻断，优先读取该 gate 的 `blockers`、`signals`、`targetFailureAreas` 和 `caseIds`。这些字段来自对应 envelope 的 `modelAnalysis.optimizationGate`，表示报告自身还不能作为播放核心优化依据，例如 source mismatch、缺失证据或样本不足。此时 suite 会被跳过。
 - 如果 `activeGate.name = suite` 且被阻断，优先读取 `activeGate.targetFailureAreas` 和 `activeGate.targetCaseIds`，再按需展开 `suite.cases` 或单 case comparison。
-- 需要定位具体 report 时，读取 `baselineReportAnalysis.cases` 或 `candidateReportAnalysis.cases`。raw `PlaybackQualityReport` 没有 envelope-level `modelAnalysis` 时会显示 `status = unavailable`；自动化采集应优先写入 `PlaybackQualityRunResult` envelope。
+- 需要定位具体 report 时，读取 `baselineReportAnalysis.cases` 或 `candidateReportAnalysis.cases`。raw `PlaybackQualityReport` 没有 envelope-level `modelAnalysis` 时会显示 `status = unavailable`；自动化采集应优先写入 `PlaybackQualityRunResult` envelope。如果 envelope 存在 `modelAnalysis` 但 `modelAnalysis.runId` 或 `modelAnalysis.result` 缺失，`evaluate-candidate` 必须用当前 Core analyzer 重新生成 analysis；空 `{}` 不得被视为有效 report-analysis 证据。
 - 只有当 `action = accept-candidate` 且 `risk = low` 时，候选播放核心改动才可以被自动保留。
 - `review-unmatched-signals`、`collect-comparable-evidence`、`change-optimization-strategy` 等动作都不是通过信号，模型应继续采集或缩小改动范围。
 - `--comparisons-dir` 产出的单 case comparison 是定位问题样本的入口；模型应优先读取对应 case 的 comparison，再决定下一次修改。

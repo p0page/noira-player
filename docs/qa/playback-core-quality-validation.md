@@ -118,6 +118,8 @@ dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQ
 
 `activeGate` 是模型当前应处理的入口：它指向第一个 `status != pass` 的 gate；如果所有前置 gate 都通过，则指向最终 `suite` gate。`evidenceGates` 是完整门禁摘要，按顺序列出 `manifest`、`baseline-report-set`、`candidate-report-set`、`baseline-report-analysis`、`candidate-report-analysis`、`suite`，每一项都有 `status`、`action`、`blockers`、`signals`、`failureAreas`、`targetFailureAreas`、`targetCaseIds` 和 `caseIds`。当 report-set gate 被阻断时，模型应优先根据 `signals` 和 `caseIds` 修复采集或源选择；当 `baseline-report-analysis` 或 `candidate-report-analysis` 被阻断时，模型应先处理对应 `modelAnalysis.optimizationGate` 给出的 blocker，例如 source mismatch、缺失证据或样本不足，并用 `baselineReportAnalysis.cases` 或 `candidateReportAnalysis.cases` 定位具体 report；当 suite gate 被阻断时，模型应先读取 `activeGate.targetFailureAreas` 和 `activeGate.targetCaseIds`，再展开对应 comparison；当 suite gate 为 `skipped` 时，说明还没有进入播放核心 before/after 比较。
 
+`evaluate-candidate` 仍会把 raw `PlaybackQualityReport` 视为没有 envelope-level `modelAnalysis`，并在 report-analysis summary 中显示 `status = unavailable`；这让旧报告可以继续走 suite 比较，但自动化采集应优先写入完整 `PlaybackQualityRunResult` envelope。若 envelope 里存在 `modelAnalysis` 但 `modelAnalysis.runId` 或 `modelAnalysis.result` 缺失，门禁会把它视为不完整并用当前 Core analyzer 重新生成，然后再决定 report-analysis gate 是否阻断。空对象 `{}` 不能绕过 report-analysis gate。
+
 ## Compare Reports
 
 Use the App-free CLI when an automated model run needs to compare two serialized playback quality reports without building the Xbox App:

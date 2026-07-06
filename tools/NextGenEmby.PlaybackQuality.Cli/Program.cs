@@ -205,9 +205,11 @@ internal static class Program
     {
         var options = ParseEvaluateCandidateOptions(args);
         var manifest = ReadJson<PlaybackQualityReferenceManifest>(options.ManifestPath);
-        var baselineEnvelopes = ReadPlaybackQualityReportEnvelopes(options.BaselineDirectory);
+        var baselineEnvelopes = RefreshIncompleteModelAnalysis(
+            ReadPlaybackQualityReportEnvelopes(options.BaselineDirectory));
         var baselineReports = ExtractReports(baselineEnvelopes);
-        var candidateEnvelopes = ReadPlaybackQualityReportEnvelopes(options.CandidateDirectory);
+        var candidateEnvelopes = RefreshIncompleteModelAnalysis(
+            ReadPlaybackQualityReportEnvelopes(options.CandidateDirectory));
         var candidateReports = ExtractReports(candidateEnvelopes);
         var baselineReportAnalysis = CreateReportAnalysisSummary(baselineEnvelopes);
         var candidateReportAnalysis = CreateReportAnalysisSummary(candidateEnvelopes);
@@ -963,6 +965,27 @@ internal static class Program
         }
 
         return analyzed;
+    }
+
+    private static List<PlaybackQualityReportEnvelope> RefreshIncompleteModelAnalysis(
+        List<PlaybackQualityReportEnvelope> envelopes)
+    {
+        var refreshed = new List<PlaybackQualityReportEnvelope>();
+        foreach (var envelope in envelopes)
+        {
+            var modelAnalysis = envelope.ModelAnalysis;
+            if (modelAnalysis != null && !HasUsableModelAnalysis(modelAnalysis))
+            {
+                modelAnalysis = PlaybackQualityReportAnalyzer.Analyze(envelope.Report);
+            }
+
+            refreshed.Add(new PlaybackQualityReportEnvelope(
+                envelope.RelativePath,
+                envelope.Report,
+                modelAnalysis));
+        }
+
+        return refreshed;
     }
 
     private static bool HasUsableModelAnalysis(PlaybackQualityModelAnalysis? modelAnalysis)
