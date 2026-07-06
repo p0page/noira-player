@@ -8,6 +8,7 @@ namespace NextGenEmby.Core.PlaybackQuality
         public string Result { get; set; } = "";
         public string PrimaryFailureArea { get; set; } = "none";
         public string SuggestedNextAction { get; set; } = "";
+        public PlaybackQualitySampleAssessment Sample { get; set; } = new PlaybackQualitySampleAssessment();
         public List<string> FailureReasons { get; } = new List<string>();
         public List<PlaybackQualityCheck> FailedChecks { get; } = new List<PlaybackQualityCheck>();
         public List<string> FailureAreas { get; } = new List<string>();
@@ -23,6 +24,14 @@ namespace NextGenEmby.Core.PlaybackQuality
         public string SuggestedAction { get; set; } = "";
         public List<string> CodeTargets { get; } = new List<string>();
         public List<string> Signals { get; } = new List<string>();
+    }
+
+    public sealed class PlaybackQualitySampleAssessment
+    {
+        public string Status { get; set; } = "unknown";
+        public ulong RenderedVideoFrames { get; set; }
+        public long? MinRenderedVideoFrames { get; set; }
+        public string Reason { get; set; } = "";
     }
 
     public static class PlaybackQualityReportAnalyzer
@@ -68,6 +77,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                 AddUnique(analysis.Limitations, limitation);
             }
 
+            analysis.Sample = AssessSample(report);
             AddDerivedEvidence(analysis, report);
             AddMissingEvidence(analysis, report);
             AddInvestigationHints(analysis);
@@ -186,6 +196,37 @@ namespace NextGenEmby.Core.PlaybackQuality
             {
                 analysis.MissingEvidence.Add("display.refreshRateHz");
             }
+        }
+
+        private static PlaybackQualitySampleAssessment AssessSample(PlaybackQualityReport report)
+        {
+            var sample = new PlaybackQualitySampleAssessment
+            {
+                RenderedVideoFrames = report.Timing.RenderedVideoFrames,
+                MinRenderedVideoFrames = report.Expected?.MinRenderedVideoFrames
+            };
+
+            if (report.Timing.RenderedVideoFrames == 0)
+            {
+                sample.Status = "insufficient";
+                sample.Reason = "No rendered video frames were captured; collect a real playback sample before optimizing playback core.";
+                return sample;
+            }
+
+            if (report.Expected != null &&
+                report.Expected.MinRenderedVideoFrames.HasValue &&
+                report.Timing.RenderedVideoFrames < (ulong)report.Expected.MinRenderedVideoFrames.Value)
+            {
+                sample.Status = "insufficient";
+                sample.Reason = "Rendered frame sample is below the expected minimum; do not tune frame pacing from this run alone.";
+                return sample;
+            }
+
+            sample.Status = "sufficient";
+            sample.Reason = report.Expected != null && report.Expected.MinRenderedVideoFrames.HasValue
+                ? "Rendered frame sample met the expected minimum."
+                : "Rendered video frames were captured; no minimum rendered frame expectation was supplied.";
+            return sample;
         }
 
         private static void AddInvestigationHints(PlaybackQualityModelAnalysis analysis)

@@ -138,6 +138,66 @@ public sealed class PlaybackQualityReportAnalyzerTests
     }
 
     [Fact]
+    public void Analyze_Marks_Sample_Insufficient_When_Rendered_Frames_Are_Below_Minimum()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "short-sample",
+            Result = "fail",
+            Expected = new PlaybackQualityExpected
+            {
+                MinRenderedVideoFrames = 120
+            },
+            Timing = new PlaybackQualityTiming
+            {
+                RenderedVideoFrames = 24
+            }
+        };
+        report.Checks.Add(new PlaybackQualityCheck
+        {
+            Name = "RenderedVideoFrames",
+            Status = "fail",
+            FailureArea = "frame-pacing",
+            Signal = "timing.renderedVideoFrames",
+            Expected = "120",
+            Actual = "24"
+        });
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Equal("insufficient", analysis.Sample.Status);
+        Assert.Equal(24UL, analysis.Sample.RenderedVideoFrames);
+        Assert.Equal(120, analysis.Sample.MinRenderedVideoFrames);
+        Assert.Equal(
+            "Rendered frame sample is below the expected minimum; do not tune frame pacing from this run alone.",
+            analysis.Sample.Reason);
+    }
+
+    [Fact]
+    public void Analyze_Marks_Sample_Sufficient_When_Rendered_Frames_Meet_Minimum()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "long-sample",
+            Result = "pass",
+            Expected = new PlaybackQualityExpected
+            {
+                MinRenderedVideoFrames = 120
+            },
+            Timing = new PlaybackQualityTiming
+            {
+                RenderedVideoFrames = 240
+            }
+        };
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Equal("sufficient", analysis.Sample.Status);
+        Assert.Equal(240UL, analysis.Sample.RenderedVideoFrames);
+        Assert.Equal(120, analysis.Sample.MinRenderedVideoFrames);
+    }
+
+    [Fact]
     public void Analyze_Reports_Missing_Evidence_For_Unset_Critical_Signals()
     {
         var report = new PlaybackQualityReport
@@ -348,6 +408,7 @@ public sealed class PlaybackQualityReportAnalyzerTests
 
         Assert.Contains("\"runId\"", json);
         Assert.Contains("\"primaryFailureArea\"", json);
+        Assert.Contains("\"sample\"", json);
         Assert.Contains("\"failureAreas\"", json);
         Assert.Contains("\"investigationHints\"", json);
         Assert.Contains("\"evidenceSignals\"", json);

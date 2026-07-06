@@ -55,6 +55,7 @@ The primary consumer of `quality-run` reports is an automated model or agent, no
 The analyzer output must include:
 
 - `primaryFailureArea` copied from report analysis;
+- `sample` with `status`, rendered frame count, expected minimum rendered frames, and a reason;
 - `failureAreas` containing every failed check area, not only the primary area;
 - `failureReasons` copied from the report;
 - `failedChecks` with each failed check's signal, expected value, actual value, and message;
@@ -64,6 +65,7 @@ The analyzer output must include:
 - `limitations` copied from the report.
 
 This keeps model iteration grounded in evidence. For example, a report can identify `color-pipeline` as primary while still preserving `frame-pacing` as a secondary failure area.
+`sample.status` must be checked before changing playback timing logic. `insufficient` means the run did not render enough frames to support frame-pacing optimization from that run alone.
 `investigationHints` must be structured for automated consumers. The values should point to playback Core/native areas such as `PlaybackRefreshRatePolicy`, `FramePacing`, `PlaybackGraph`, `DxgiColorSpaceMapper`, or native quality metrics, rather than App/XAML interaction code.
 When `missingEvidence` is non-empty, analyzer output must also include an `evidence-collection` investigation hint, even if primary playback failures are already present.
 When a frame-pacing check fails, analyzer evidence must include `timing.expectedFrameDurationMs` if it is present so the model can compare observed gaps against the source cadence.
