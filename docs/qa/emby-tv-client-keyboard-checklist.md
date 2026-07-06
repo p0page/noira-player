@@ -1929,3 +1929,21 @@ Then continue design and implementation until the route passes.
   - Pressed `Left`, `Left`; focus returned to active artist `Kairos Collective`, not `All music`, confirming the validation-found focus bug was fixed.
   - Pressed `Up`, `Return`; `All music` restored the full 3 album / 6 song list.
   - No app-content mouse clicks were used.
+
+### 2026-07-07 - Playback Progress Reporting
+
+- App version: 0.1.0.207.
+- Scope: verify the real Emby playback lifecycle reporting path without changing native decoding or playback backend code.
+- Validation setup:
+  - Started a local fake Emby server on `127.0.0.1:5876` with authenticate, home data, `PlaybackInfo`, and playback session endpoints.
+  - Added the UWP package loopback exemption for `NextGenEmby.App_h8qjz0sr1sg4m` so the installed app could reach the local validation server.
+  - Seeded `dev-login.json` with the fake server session and `dev-command.json` with `{"route":"playback","itemId":"progress-item","itemName":"Progress Fixture","mediaSourceId":"progress-source-1","startPositionTicks":0}`.
+- Keyboard-only validation with Computer Use:
+  - Launched the installed app through AppUserModelId `NextGenEmby.App_h8qjz0sr1sg4m!App`; the window path resolved to `NextGenEmby.App_0.1.0.207_x64__h8qjz0sr1sg4m`.
+  - The app reached Playback from the saved session, requested `/Items/progress-item/PlaybackInfo?UserId=progress-user`, and started direct playback of the returned media source.
+  - The fake server captured `/Sessions/Playing` with `ItemId` `progress-item`, `MediaSourceId` `progress-source-1`, `PlaySessionId` `progress-session-1`, `PlayMethod` `DirectPlay`, and a non-negative `PositionTicks`.
+  - After the timer ticks, the fake server captured four `/Sessions/Playing/Progress` requests with `EventName` `TimeUpdate` and increasing `PositionTicks`.
+  - Pressed `Escape` from Playback; the app returned to Home and the fake server captured `/Sessions/Playing/Stopped` with the same item, media source, play session, direct-play method, and final `PositionTicks`.
+  - No app-content mouse clicks were used.
+- Follow-up:
+  - Re-run against a real Emby server session when hardware or a persistent validation server is available.
