@@ -123,6 +123,8 @@ When color expectations are supplied, the matching color-pipeline observations m
 
 `PlaybackQualityReportSerializer.Serialize(PlaybackQualityRunResult)` writes a single JSON envelope with `report` and `modelAnalysis`. Automated runs should prefer this envelope when handing evidence to a model, while still allowing separate report or analysis JSON for debugging.
 
+`PlaybackQualityRunComparator.Compare` compares a baseline report and candidate report after a playback Core change. It emits `result = improved`, `regressed`, `mixed`, `unchanged`, or `insufficient-evidence`, plus signal-level `improvements` and `regressions`. The comparator treats failed numeric threshold checks as smaller-is-better by default, except minimum-style signals such as `timing.renderedVideoFrames`, where larger values are improvements. Automated optimization loops should use this comparison after each Core change before deciding whether to keep, revise, or revert the change.
+
 `PlaybackQualityReportMapper.ApplySource` is the lower-level Core mapping from `PlaybackDescriptor` into `source`. `PlaybackQualityReportMapper.ApplyDisplayStatus` maps `PlaybackDisplayStatus` into `display` and `colorPipeline`. `PlaybackQualityReportMapper.ApplyMetrics` maps playback metrics snapshots into `timing`, `sync`, and `buffers`. App or harness code should prefer the composer and use these mappers only when it needs lower-level control.
 
 ## Failure Area Priority
