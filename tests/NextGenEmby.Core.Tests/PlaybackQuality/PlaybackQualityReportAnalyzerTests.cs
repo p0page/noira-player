@@ -142,6 +142,74 @@ public sealed class PlaybackQualityReportAnalyzerTests
     }
 
     [Fact]
+    public void Analyze_Orders_Triage_Steps_By_Failure_Priority_For_Multi_Failure_Report()
+    {
+        var report = CreateOptimizationReadyFailure();
+        report.Analysis.PrimaryFailureArea = "color-pipeline";
+        report.Checks.Add(new PlaybackQualityCheck
+        {
+            Name = "ActualHdrOutput",
+            Status = "fail",
+            FailureArea = "color-pipeline",
+            Signal = "colorPipeline.actualHdrOutput",
+            Expected = "Hdr10",
+            Actual = "Sdr"
+        });
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Equal(2, analysis.TriageSteps.Count);
+        Assert.Equal(1, analysis.TriageSteps[0].Rank);
+        Assert.Equal("failure", analysis.TriageSteps[0].Kind);
+        Assert.Equal("color-pipeline", analysis.TriageSteps[0].FailureArea);
+        Assert.Contains("colorPipeline.actualHdrOutput", analysis.TriageSteps[0].Signals);
+        Assert.Contains("src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp", analysis.TriageSteps[0].CodeTargets);
+        Assert.Equal(2, analysis.TriageSteps[1].Rank);
+        Assert.Equal("frame-pacing", analysis.TriageSteps[1].FailureArea);
+    }
+
+    [Fact]
+    public void Analyze_Puts_Evidence_Collection_First_When_Optimization_Is_Blocked_By_Missing_Evidence()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "blocked-triage",
+            Result = "fail",
+            Analysis = new PlaybackQualityAnalysis
+            {
+                PrimaryFailureArea = "frame-pacing"
+            },
+            Timing = new PlaybackQualityTiming
+            {
+                RenderedVideoFrames = 240,
+                MaxFrameGapMs = 180
+            }
+        };
+        report.Checks.Add(new PlaybackQualityCheck
+        {
+            Name = "MaxFrameGapMs",
+            Status = "fail",
+            FailureArea = "frame-pacing",
+            Signal = "timing.maxFrameGapMs",
+            Expected = "105.000",
+            Actual = "180.000"
+        });
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Equal("blocked", analysis.OptimizationGate.Status);
+        Assert.NotEmpty(analysis.TriageSteps);
+        Assert.Equal(1, analysis.TriageSteps[0].Rank);
+        Assert.Equal("blocker", analysis.TriageSteps[0].Kind);
+        Assert.Equal("evidence-collection", analysis.TriageSteps[0].FailureArea);
+        Assert.Contains("colorPipeline.dxgiInput", analysis.TriageSteps[0].Signals);
+        Assert.Contains("Collect missing telemetry", analysis.TriageSteps[0].SuggestedAction);
+        Assert.Equal(2, analysis.TriageSteps[1].Rank);
+        Assert.Equal("failure", analysis.TriageSteps[1].Kind);
+        Assert.Equal("frame-pacing", analysis.TriageSteps[1].FailureArea);
+    }
+
+    [Fact]
     public void Analyze_Marks_Sample_Insufficient_When_Rendered_Frames_Are_Below_Minimum()
     {
         var report = new PlaybackQualityReport
@@ -603,6 +671,7 @@ public sealed class PlaybackQualityReportAnalyzerTests
         Assert.Contains("\"sample\"", json);
         Assert.Contains("\"optimizationGate\"", json);
         Assert.Contains("\"framePacing\"", json);
+        Assert.Contains("\"triageSteps\"", json);
         Assert.Contains("\"failureAreas\"", json);
         Assert.Contains("\"investigationHints\"", json);
         Assert.Contains("\"evidenceSignals\"", json);

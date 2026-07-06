@@ -11,6 +11,7 @@ namespace NextGenEmby.Core.PlaybackQuality
         public PlaybackQualitySampleAssessment Sample { get; set; } = new PlaybackQualitySampleAssessment();
         public PlaybackQualityOptimizationGate OptimizationGate { get; set; } = new PlaybackQualityOptimizationGate();
         public PlaybackQualityFramePacingClassification FramePacing { get; set; } = new PlaybackQualityFramePacingClassification();
+        public List<PlaybackQualityTriageStep> TriageSteps { get; } = new List<PlaybackQualityTriageStep>();
         public List<string> FailureReasons { get; } = new List<string>();
         public List<PlaybackQualityCheck> FailedChecks { get; } = new List<PlaybackQualityCheck>();
         public List<string> FailureAreas { get; } = new List<string>();
@@ -26,6 +27,16 @@ namespace NextGenEmby.Core.PlaybackQuality
         public string SuggestedAction { get; set; } = "";
         public List<string> CodeTargets { get; } = new List<string>();
         public List<string> Signals { get; } = new List<string>();
+    }
+
+    public sealed class PlaybackQualityTriageStep
+    {
+        public int Rank { get; set; }
+        public string Kind { get; set; } = "";
+        public string FailureArea { get; set; } = "";
+        public string SuggestedAction { get; set; } = "";
+        public List<string> Signals { get; } = new List<string>();
+        public List<string> CodeTargets { get; } = new List<string>();
     }
 
     public sealed class PlaybackQualitySampleAssessment
@@ -101,6 +112,7 @@ namespace NextGenEmby.Core.PlaybackQuality
             analysis.OptimizationGate = AssessOptimizationGate(analysis);
             analysis.FramePacing = ClassifyFramePacing(analysis);
             AddInvestigationHints(analysis);
+            AddTriageSteps(analysis);
 
             if (string.IsNullOrWhiteSpace(analysis.SuggestedNextAction))
             {
@@ -110,6 +122,103 @@ namespace NextGenEmby.Core.PlaybackQuality
             }
 
             return analysis;
+        }
+
+        private static void AddTriageSteps(PlaybackQualityModelAnalysis analysis)
+        {
+            var rank = 1;
+            if (analysis.OptimizationGate.Status == "blocked")
+            {
+                var evidenceHint = FindHint(analysis, "evidence-collection");
+                if (evidenceHint != null)
+                {
+                    AddTriageStep(analysis, evidenceHint, rank++, "blocker");
+                }
+            }
+
+            var priorityAreas = new[]
+            {
+                "unsupported-source",
+                "color-pipeline",
+                "startup",
+                "buffering",
+                "av-sync",
+                "frame-pacing",
+                "unknown"
+            };
+
+            foreach (var area in priorityAreas)
+            {
+                var hint = FindHint(analysis, area);
+                if (hint == null)
+                {
+                    continue;
+                }
+
+                if (HasTriageStep(analysis, area))
+                {
+                    continue;
+                }
+
+                AddTriageStep(analysis, hint, rank++, "failure");
+            }
+        }
+
+        private static PlaybackQualityInvestigationHint? FindHint(
+            PlaybackQualityModelAnalysis analysis,
+            string area)
+        {
+            foreach (var hint in analysis.InvestigationHints)
+            {
+                if (hint.FailureArea == area)
+                {
+                    return hint;
+                }
+            }
+
+            return null;
+        }
+
+        private static bool HasTriageStep(
+            PlaybackQualityModelAnalysis analysis,
+            string area)
+        {
+            foreach (var step in analysis.TriageSteps)
+            {
+                if (step.FailureArea == area)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static void AddTriageStep(
+            PlaybackQualityModelAnalysis analysis,
+            PlaybackQualityInvestigationHint hint,
+            int rank,
+            string kind)
+        {
+            var step = new PlaybackQualityTriageStep
+            {
+                Rank = rank,
+                Kind = kind,
+                FailureArea = hint.FailureArea,
+                SuggestedAction = hint.SuggestedAction
+            };
+
+            foreach (var signal in hint.Signals)
+            {
+                AddUnique(step.Signals, signal);
+            }
+
+            foreach (var target in hint.CodeTargets)
+            {
+                AddUnique(step.CodeTargets, target);
+            }
+
+            analysis.TriageSteps.Add(step);
         }
 
         private static PlaybackQualityFramePacingClassification ClassifyFramePacing(

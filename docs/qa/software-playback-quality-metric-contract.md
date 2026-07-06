@@ -58,6 +58,7 @@ The analyzer output must include:
 - `sample` with `status`, rendered frame count, expected minimum rendered frames, and a reason;
 - `optimizationGate` with a machine-readable decision on whether this run is usable for playback Core optimization;
 - `framePacing` with a machine-readable failure pattern and the signals that caused it;
+- `triageSteps` with ranked, machine-readable next investigation steps;
 - `failureAreas` containing every failed check area, not only the primary area;
 - `failureReasons` copied from the report;
 - `failedChecks` with each failed check's signal, expected value, actual value, and message;
@@ -70,6 +71,7 @@ This keeps model iteration grounded in evidence. For example, a report can ident
 `sample.status` must be checked before changing playback timing logic. `insufficient` means the run did not render enough frames to support frame-pacing optimization from that run alone.
 `optimizationGate.canOptimizePlaybackCore` must be `true` only when the report failed, the sample is sufficient, required evidence is present, and at least one failed area is available. If it is `false`, automated optimization must address `optimizationGate.blockers` and `optimizationGate.blockerSignals` first.
 `framePacing.pattern` must classify frame pacing failures before changing native timing logic. Supported phase-1 values are `not-applicable`, `sample-insufficient`, `refresh-mismatch`, `starvation-driven`, `sustained-jitter`, `tail-jitter`, `dropped-frames`, `isolated-gap`, and `unknown`. `sample-insufficient` means the run did not render enough frames to support timing-threshold diagnosis; the model should collect a longer rendered-frame sample or repair startup/render readiness before tuning frame pacing. `starvation-driven` means frame pacing failed while video or audio starvation also failed; the model should inspect demux/decode/network supply before tuning wait/drop thresholds.
+`triageSteps` must be ordered by `rank`. Steps with `kind = blocker` come before playback optimization steps when `optimizationGate.status` is `blocked`; otherwise failure steps follow the failure-area priority order below. Each step must include the failure area, suggested action, signals, and code targets so an automated model can choose the next edit or evidence-collection action without inferring priority from prose.
 `investigationHints` must be structured for automated consumers. The values should point to playback Core/native areas such as `PlaybackRefreshRatePolicy`, `FramePacing`, `PlaybackGraph`, `DxgiColorSpaceMapper`, or native quality metrics, rather than App/XAML interaction code. For `frame-pacing`, hint targets should follow `framePacing.pattern`; `starvation-driven` must point at demux/decode/network/audio queue depth before timing threshold changes.
 When `missingEvidence` is non-empty, analyzer output must also include an `evidence-collection` investigation hint, even if primary playback failures are already present.
 When a frame-pacing check fails, analyzer evidence must include `timing.expectedFrameDurationMs` if it is present so the model can compare observed gaps against the source cadence.
