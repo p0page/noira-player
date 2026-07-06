@@ -1697,3 +1697,31 @@ Then continue design and implementation until the route passes.
   - No app-content mouse clicks were used. `dev-login.json` and `dev-command.json` were removed from LocalState after validation.
 - Follow-up:
   - Re-run Login from a deliberately cleared real session before release packaging, then decide whether the Login page should get denser TV-mode copy or a server-discovery affordance.
+
+### 2026-07-07 - Player Status Aperture App Icon Refresh
+
+- App version: 0.1.0.196.
+- Scope: refine the app identity away from brand text, initials, and miniature UI screenshots while keeping the Matte Cinema Fluent player vocabulary.
+- Design alignment:
+  - `docs/DESIGN.md`, the complete-client design plan, the app-icon refresh plan, and `docs/icon-concepts/README.md` now define **Player Status Aperture** as the production icon direction.
+  - The generator uses reusable player-property primitives: `Draw-FocusPath`, `Draw-PlaybackCore`, and `Draw-ProgressBase`.
+  - Store, square, wide, and splash assets reuse the same centered aperture symbol: compact playback viewport, cyan controller focus path, green play/confirm core, and flat amber progress base.
+  - Removed the prior tiny subtitle/audio marks and wide-tile pseudo UI stack because they became too small and screenshot-like at 44 px.
+- Automated verification:
+  - TDD red path confirmed the new `Player Status Aperture` contract did not exist before implementation.
+  - Targeted icon contract tests passed: 4 total.
+  - Core tests passed: 435 total.
+  - `git diff --check` passed with only LF/CRLF working-copy warnings.
+  - Regenerated `StoreLogo.png`, `Square44x44Logo.png`, `Square150x150Logo.png`, `Wide310x150Logo.png`, and `SplashScreen.png` from `tools/Generate-AppIconAssets.ps1`.
+  - Opened and inspected the generated 44 px, 150 px, wide, and splash PNGs locally; the 44 px mark preserves focus/play/progress, and the wide tile now reads as the same centered player-property symbol instead of a banner or page layout.
+  - App Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.196_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate thumbprint `6CB453A2FEC300C6E5034152C6C1A68DE31A7BD0`, verified with `signtool verify /pa`, and installed locally as `NextGenEmby.App 0.1.0.196`.
+- Keyboard-only validation with Computer Use:
+  - Wrote `dev-command.json` with route `home-fixture`, launched the installed app through AppUserModelId `NextGenEmby.App_h8qjz0sr1sg4m!App`, and confirmed the Home fixture rendered with Media Libraries, Server sections, and Continue watching.
+  - Pressed `Down`, `Right`, `Right`; focus moved from the hero area into the Media Libraries rail and landed on `Douban Top Rated` without mouse clicks.
+  - Cleared the process and cold-launched the installed app again; Windows process inspection confirmed the running executable path was `NextGenEmby.App_0.1.0.196_x64__h8qjz0sr1sg4m`.
+  - On the Login page, pressed `Down`, `Down`, `Up`; the final screenshot showed focus on Username, proving the D-pad-style TextBox movement still works after the asset/package refresh.
+  - Computer Use `get_window_state` intermittently returned a stale `0.1.0.162` path in its window metadata even while `list_windows` and Windows process inspection both reported `0.1.0.196`; process/package verification is the source of truth for this pass.
+  - No app-content mouse clicks were used. `dev-command.json` and `dev-command-result.txt` were removed from LocalState after validation.
+- Follow-up:
+  - When Xbox hardware is available again, inspect the Start tile and splash surface on-console so the new centered wide tile can be judged in the real shell, not only the generated PNG and local package.

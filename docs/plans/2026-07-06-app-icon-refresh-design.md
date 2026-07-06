@@ -24,15 +24,15 @@ This shows a quiet TV media shelf: a left Guide rail, horizontal content rails, 
 
 This replaces the miniature-shelf idea with a standalone product mark: an abstract Next/Navigation `N` formed from dark media slabs, a cyan controller-focus path, a green play/confirm core, and an amber progress base. It keeps the Matte Cinema Fluent palette, but reads less like a tiny screenshot.
 
-### 5. Player Focus Mark
+### 5. Player Status Aperture
 
-This removes dependence on the current product name. The mark is a compact playback viewport with a cyan controller-focus path, green play/confirm core, subtle subtitle/audio state marks, and an amber progress base. It is based on player attributes rather than text, initials, or a brand word that may change.
+This removes dependence on the current product name and avoids making the icon a miniature home page. The mark is a compact playback viewport with a cyan controller-focus path, green play/confirm core, and an amber progress base. It is based on player attributes rather than text, initials, or a brand word that may change.
 
 ## Selected Direction
 
-Use **Player Focus Mark**.
+Use **Player Status Aperture**.
 
-The mark should feel like a compact identity for a couch-first player rather than a literal screenshot or wordmark. The memorable elements are the focus corner, play core, and progress base. Everything else stays matte and quiet.
+The mark should feel like a compact identity for a couch-first player rather than a literal screenshot or wordmark. The memorable elements are the focus corner, play core, and progress base. Everything else stays matte and quiet. Square, wide, and splash assets should repeat the same centered aperture primitive instead of inventing separate text, initials, or page-layout decorations.
 
 ## Token Rules
 
@@ -59,6 +59,6 @@ The production script maps icon colors directly to `docs/DESIGN.md`: `#050607` c
 ## Validation
 
 - 44 px icon must preserve focus, action, and progress signals.
-- Wide tile must read as a player tile with quiet playback-state signals, not a banner ad.
+- Wide tile must read as the same player-property symbol, not a banner ad or a miniature UI.
 - Splash screen must match the app shell, stay symbol-only, and not introduce a separate brand palette.
 - UWP build must package the regenerated PNG assets.

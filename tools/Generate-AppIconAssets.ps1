@@ -37,10 +37,10 @@ $script:IconGeometry = @{
     TileRadius = 0.135
     InnerMargin = 0.040
     InnerRadius = 0.075
-    MarkInset = 0.060
-    FocusStroke = 0.024
+    MarkInset = 0.045
+    FocusStroke = 0.030
     HairlineStroke = 0.010
-    ProgressStroke = 0.040
+    ProgressStroke = 0.052
 }
 
 function New-RoundedRectPath {
@@ -143,7 +143,39 @@ function Draw-PlayGlyph {
     }
 }
 
-function Draw-PlayerFocusMark {
+function Draw-FocusPath {
+    param(
+        [System.Drawing.Graphics]$Graphics,
+        [System.Drawing.Pen]$Pen,
+        [System.Drawing.RectangleF]$Rect,
+        [float]$Scale
+    )
+
+    $Graphics.DrawLine($Pen, $Rect.Left + ($Scale * 0.060), $Rect.Top + ($Scale * 0.060), $Rect.Left + ($Scale * 0.315), $Rect.Top + ($Scale * 0.060))
+    $Graphics.DrawLine($Pen, $Rect.Left + ($Scale * 0.060), $Rect.Top + ($Scale * 0.065), $Rect.Left + ($Scale * 0.060), $Rect.Top + ($Scale * 0.335))
+}
+
+function Draw-PlaybackCore {
+    param(
+        [System.Drawing.Graphics]$Graphics,
+        [System.Drawing.RectangleF]$Rect
+    )
+
+    Draw-PlayGlyph -Graphics $Graphics -Rect $Rect
+}
+
+function Draw-ProgressBase {
+    param(
+        [System.Drawing.Graphics]$Graphics,
+        [System.Drawing.Pen]$Pen,
+        [System.Drawing.RectangleF]$Rect,
+        [float]$Scale
+    )
+
+    $Graphics.DrawLine($Pen, $Rect.Left + ($Scale * 0.200), $Rect.Bottom - ($Scale * 0.080), $Rect.Right - ($Scale * 0.200), $Rect.Bottom - ($Scale * 0.080))
+}
+
+function Draw-PlayerStatusAperture {
     param(
         [System.Drawing.Graphics]$Graphics,
         [System.Drawing.RectangleF]$Rect
@@ -161,25 +193,22 @@ function Draw-PlayerFocusMark {
     $progressPen = New-TokenPen "Progress" ([Math]::Max(2.0, $s * $script:IconGeometry.ProgressStroke))
 
     try {
-        $screen = [System.Drawing.RectangleF]::new($x + ($s * 0.170), $y + ($s * 0.210), $s * 0.660, $s * 0.455)
-        Fill-RoundedRect -Graphics $Graphics -Brush $surfaceBrush -Rect $screen -Radius ($s * 0.075)
-        Draw-RoundedRect -Graphics $Graphics -Pen $hairlinePen -Rect $screen -Radius ($s * 0.075)
+        $screen = [System.Drawing.RectangleF]::new($x + ($s * 0.135), $y + ($s * 0.170), $s * 0.730, $s * 0.555)
+        Fill-RoundedRect -Graphics $Graphics -Brush $surfaceBrush -Rect $screen -Radius ($s * 0.085)
+        Draw-RoundedRect -Graphics $Graphics -Pen $hairlinePen -Rect $screen -Radius ($s * 0.085)
 
-        $Graphics.DrawLine($focusPen, $screen.Left + ($s * 0.055), $screen.Top + ($s * 0.050), $screen.Left + ($s * 0.250), $screen.Top + ($s * 0.050))
-        $Graphics.DrawLine($focusPen, $screen.Left + ($s * 0.055), $screen.Top + ($s * 0.055), $screen.Left + ($s * 0.055), $screen.Top + ($s * 0.245))
+        $inner = [System.Drawing.RectangleF]::new($screen.Left + ($s * 0.085), $screen.Top + ($s * 0.105), $screen.Width - ($s * 0.170), $screen.Height - ($s * 0.205))
+        Fill-RoundedRect -Graphics $Graphics -Brush $shelfBrush -Rect $inner -Radius ($s * 0.045)
 
-        $sideMeter = [System.Drawing.RectangleF]::new($screen.Right - ($s * 0.135), $screen.Top + ($s * 0.115), $s * 0.045, $s * 0.210)
-        Fill-RoundedRect -Graphics $Graphics -Brush $shelfBrush -Rect $sideMeter -Radius ($s * 0.018)
+        Draw-FocusPath -Graphics $Graphics -Pen $focusPen -Rect $screen -Scale $s
 
-        $playRect = [System.Drawing.RectangleF]::new($x + ($s * 0.425), $y + ($s * 0.345), $s * 0.150, $s * 0.175)
-        Draw-PlayGlyph -Graphics $Graphics -Rect $playRect
+        $playRect = [System.Drawing.RectangleF]::new($x + ($s * 0.395), $y + ($s * 0.335), $s * 0.210, $s * 0.235)
+        Draw-PlaybackCore -Graphics $Graphics -Rect $playRect
 
-        $subtitleLine = [System.Drawing.RectangleF]::new($screen.Left + ($s * 0.225), $screen.Bottom - ($s * 0.092), $s * 0.260, $s * 0.028)
-        $audioLine = [System.Drawing.RectangleF]::new($screen.Left + ($s * 0.525), $screen.Bottom - ($s * 0.092), $s * 0.105, $s * 0.028)
-        Fill-RoundedRect -Graphics $Graphics -Brush $mutedBrush -Rect $subtitleLine -Radius ($s * 0.012)
-        Fill-RoundedRect -Graphics $Graphics -Brush $mutedBrush -Rect $audioLine -Radius ($s * 0.012)
+        $stateBase = [System.Drawing.RectangleF]::new($x + ($s * 0.355), $y + ($s * 0.625), $s * 0.290, $s * 0.030)
+        Fill-RoundedRect -Graphics $Graphics -Brush $mutedBrush -Rect $stateBase -Radius ($s * 0.012)
 
-        $Graphics.DrawLine($progressPen, $x + ($s * 0.250), $y + ($s * 0.790), $x + ($s * 0.750), $y + ($s * 0.790))
+        Draw-ProgressBase -Graphics $Graphics -Pen $progressPen -Rect ([System.Drawing.RectangleF]::new($x, $y, $s, $s)) -Scale $s
     }
     finally {
         $surfaceBrush.Dispose()
@@ -188,47 +217,6 @@ function Draw-PlayerFocusMark {
         $hairlinePen.Dispose()
         $focusPen.Dispose()
         $progressPen.Dispose()
-    }
-}
-
-function Draw-WidePlayerSignals {
-    param(
-        [System.Drawing.Graphics]$Graphics,
-        [System.Drawing.RectangleF]$Rect
-    )
-
-    $mutedBrush = New-TokenBrush "ShelfMuted"
-    $shelfBrush = New-TokenBrush "Shelf"
-    $progressBrush = New-TokenBrush "Progress"
-    $hairlinePen = New-TokenPen "Hairline" ([Math]::Max(1.0, $Rect.Height * 0.010))
-
-    try {
-        $track = [System.Drawing.RectangleF]::new($Rect.Left, $Rect.Top + ($Rect.Height * 0.080), $Rect.Width * 0.760, $Rect.Height * 0.090)
-        $played = [System.Drawing.RectangleF]::new($track.Left, $track.Top, $track.Width * 0.520, $track.Height)
-        Fill-RoundedRect -Graphics $Graphics -Brush $mutedBrush -Rect $track -Radius ($Rect.Height * 0.028)
-        Fill-RoundedRect -Graphics $Graphics -Brush $progressBrush -Rect $played -Radius ($Rect.Height * 0.028)
-
-        $subtitleA = [System.Drawing.RectangleF]::new($Rect.Left, $Rect.Top + ($Rect.Height * 0.360), $Rect.Width * 0.660, $Rect.Height * 0.080)
-        $subtitleB = [System.Drawing.RectangleF]::new($Rect.Left, $Rect.Top + ($Rect.Height * 0.500), $Rect.Width * 0.460, $Rect.Height * 0.080)
-        Fill-RoundedRect -Graphics $Graphics -Brush $shelfBrush -Rect $subtitleA -Radius ($Rect.Height * 0.026)
-        Fill-RoundedRect -Graphics $Graphics -Brush $mutedBrush -Rect $subtitleB -Radius ($Rect.Height * 0.026)
-
-        for ($i = 0; $i -lt 5; $i++) {
-            $barHeight = $Rect.Height * (0.110 + (0.042 * (($i + 1) % 3)))
-            $bar = [System.Drawing.RectangleF]::new(
-                $Rect.Left + ($i * $Rect.Width * 0.120),
-                $Rect.Bottom - $barHeight,
-                $Rect.Width * 0.070,
-                $barHeight)
-            Fill-RoundedRect -Graphics $Graphics -Brush $mutedBrush -Rect $bar -Radius ($Rect.Height * 0.020)
-            Draw-RoundedRect -Graphics $Graphics -Pen $hairlinePen -Rect $bar -Radius ($Rect.Height * 0.020)
-        }
-    }
-    finally {
-        $mutedBrush.Dispose()
-        $shelfBrush.Dispose()
-        $progressBrush.Dispose()
-        $hairlinePen.Dispose()
     }
 }
 
@@ -259,20 +247,19 @@ function New-AppIconBitmap {
         Draw-RoundedRect -Graphics $graphics -Pen $hairline -Rect $inner -Radius ([Math]::Min($Width, $Height) * $script:IconGeometry.InnerRadius)
 
         if ($Kind -eq "Wide") {
-            $mark = [System.Drawing.RectangleF]::new($Width * 0.035, $Height * 0.070, $Height * 0.860, $Height * 0.860)
-            Draw-PlayerFocusMark -Graphics $graphics -Rect $mark
-            $rails = [System.Drawing.RectangleF]::new($Width * 0.455, $Height * 0.270, $Width * 0.455, $Height * 0.470)
-            Draw-WidePlayerSignals -Graphics $graphics -Rect $rails
+            $markSize = $Height * 0.860
+            $mark = [System.Drawing.RectangleF]::new(($Width - $markSize) / 2, ($Height - $markSize) / 2, $markSize, $markSize)
+            Draw-PlayerStatusAperture -Graphics $graphics -Rect $mark
         }
         elseif ($Kind -eq "Splash") {
             $markSize = $Height * 0.760
             $mark = [System.Drawing.RectangleF]::new(($Width - $markSize) / 2, ($Height - $markSize) / 2, $markSize, $markSize)
-            Draw-PlayerFocusMark -Graphics $graphics -Rect $mark
+            Draw-PlayerStatusAperture -Graphics $graphics -Rect $mark
         }
         else {
             $inset = [Math]::Min($Width, $Height) * $script:IconGeometry.MarkInset
             $mark = [System.Drawing.RectangleF]::new($inset, $inset, $Width - ($inset * 2), $Height - ($inset * 2))
-            Draw-PlayerFocusMark -Graphics $graphics -Rect $mark
+            Draw-PlayerStatusAperture -Graphics $graphics -Rect $mark
         }
     }
     finally {
@@ -313,4 +300,4 @@ Save-AppIcon -Name "Square150x150Logo.png" -Width 150 -Height 150 -Kind "Square"
 Save-AppIcon -Name "Wide310x150Logo.png" -Width 310 -Height 150 -Kind "Wide"
 Save-AppIcon -Name "SplashScreen.png" -Width 620 -Height 300 -Kind "Splash"
 
-Write-Host "Generated Player Focus Mark app icon assets in $AssetsPath"
+Write-Host "Generated Player Status Aperture app icon assets in $AssetsPath"

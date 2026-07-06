@@ -68,6 +68,24 @@ public sealed class IconAssetContractTests
         Assert.Equal(designColors["text_muted"], iconColors["MutedText"]);
     }
 
+    [Fact]
+    public void Icon_Generator_Uses_Player_Status_Aperture_Primitives()
+    {
+        var root = FindRepositoryRoot();
+        var design = File.ReadAllText(Path.Combine(root, "docs", "DESIGN.md"));
+        var script = File.ReadAllText(Path.Combine(root, "tools", "Generate-AppIconAssets.ps1"));
+
+        Assert.Contains("Player Status Aperture", design, StringComparison.Ordinal);
+        Assert.Contains("Draw-PlayerStatusAperture", script, StringComparison.Ordinal);
+        Assert.Contains("Draw-FocusPath", script, StringComparison.Ordinal);
+        Assert.Contains("Draw-PlaybackCore", script, StringComparison.Ordinal);
+        Assert.Contains("Draw-ProgressBase", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("Draw-WidePlayerSignals", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("sideMeter", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("subtitleLine", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("audioLine", script, StringComparison.Ordinal);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

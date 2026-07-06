@@ -89,20 +89,21 @@ Rationale:
 
 ## Current Production Direction
 
-Production assets now use the Matte Cinema Fluent `Player Focus Mark` direction:
+Production assets now use the Matte Cinema Fluent `Player Status Aperture` direction:
 
 - matte rounded-square tile;
 - compact playback viewport instead of a wordmark or initials;
 - one cyan controller-focus path used as a signal rather than glow;
 - one green play/confirm core;
-- subtle subtitle/audio status marks;
 - one flat amber progress base;
-- no embedded brand name, initials, portal ring, prism beam, film-strip cliche, miniature UI screenshot, or official third-party logo.
+- same centered aperture primitive across Store, square, wide, and splash assets;
+- no embedded brand name, initials, portal ring, prism beam, film-strip cliche, decorative page chrome, miniature UI screenshot, or official third-party logo.
 
 Rationale:
 
 - It is based on stable player attributes rather than the current product name.
 - It remains readable at 44 px: focus, play, and progress survive the small size.
+- It replaces the earlier `Player Focus Mark` micro-status details because those marks became too small and screenshot-like at 44 px.
 - The splash asset is symbol-only, so future renaming does not require rewriting raster text.
 - Colors are mapped directly from `docs/DESIGN.md`, including `#050607`, `#101418`, `#1A2027`, `#303842`, `#3BD5FF`, `#61D47C`, and `#E0B86A`.
 - The icon generator owns color and geometry tokens, so future theme/skin work can regenerate the full asset set from one source.
