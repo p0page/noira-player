@@ -44,6 +44,11 @@ internal static class Program
                 return RunValidateManifest(args);
             }
 
+            if (string.Equals(args[0], "validate-report-set", StringComparison.OrdinalIgnoreCase))
+            {
+                return RunValidateReportSet(args);
+            }
+
             throw new ArgumentException("Unknown command: " + args[0]);
         }
         catch (Exception ex)
@@ -126,6 +131,23 @@ internal static class Program
         var options = ParseValidateManifestOptions(args);
         var manifest = ReadJson<PlaybackQualityReferenceManifest>(options.ManifestPath);
         var validation = PlaybackQualityReferenceManifestValidator.Validate(manifest);
+        WriteJson(validation, options.OutputPath);
+        return validation.IsValid ? 0 : 2;
+    }
+
+    private static int RunValidateReportSet(string[] args)
+    {
+        var options = ParseValidateReportSetOptions(args);
+        var manifest = ReadJson<PlaybackQualityReferenceManifest>(options.ManifestPath);
+        var reports = new List<PlaybackQualityReport>();
+        foreach (var path in EnumerateJsonFilesByRelativePath(options.ReportsDirectory).Values)
+        {
+            reports.Add(ReadPlaybackQualityReport(path));
+        }
+
+        var validation = PlaybackQualityReferenceReportSetValidator.Validate(
+            manifest,
+            reports);
         WriteJson(validation, options.OutputPath);
         return validation.IsValid ? 0 : 2;
     }
@@ -278,6 +300,47 @@ internal static class Program
         if (string.IsNullOrWhiteSpace(options.ManifestPath))
         {
             throw new ArgumentException("Missing required option --manifest.");
+        }
+
+        return options;
+    }
+
+    private static ValidateReportSetOptions ParseValidateReportSetOptions(string[] args)
+    {
+        var options = new ValidateReportSetOptions();
+        for (var index = 1; index < args.Length; index++)
+        {
+            var arg = args[index];
+            switch (arg)
+            {
+                case "--manifest":
+                    options.ManifestPath = ReadValue(args, ref index, arg);
+                    break;
+                case "--reports-dir":
+                    options.ReportsDirectory = ReadValue(args, ref index, arg);
+                    break;
+                case "--output":
+                    options.OutputPath = ReadValue(args, ref index, arg);
+                    break;
+                default:
+                    throw new ArgumentException("Unknown validate-report-set option: " + arg);
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(options.ManifestPath))
+        {
+            throw new ArgumentException("Missing required option --manifest.");
+        }
+
+        if (string.IsNullOrWhiteSpace(options.ReportsDirectory))
+        {
+            throw new ArgumentException("Missing required option --reports-dir.");
+        }
+
+        if (!Directory.Exists(options.ReportsDirectory))
+        {
+            throw new DirectoryNotFoundException(
+                "Reports directory not found: " + options.ReportsDirectory);
         }
 
         return options;
@@ -469,6 +532,7 @@ internal static class Program
         writer.WriteLine("  playback-quality summarize --comparison <comparison.json> [--comparison <comparison.json>...] [--output <suite.json>]");
         writer.WriteLine("  playback-quality compare-suite --baseline-dir <reports-dir> --candidate-dir <reports-dir> [--previous-comparisons-dir <comparison-dir>] [--comparisons-dir <comparison-dir>] [--stall-threshold <n>] [--output <suite.json>]");
         writer.WriteLine("  playback-quality validate-manifest --manifest <reference-manifest.json> [--output <validation.json>]");
+        writer.WriteLine("  playback-quality validate-report-set --manifest <reference-manifest.json> --reports-dir <reports-dir> [--output <validation.json>]");
     }
 
     private sealed class CompareOptions
@@ -499,6 +563,13 @@ internal static class Program
     private sealed class ValidateManifestOptions
     {
         public string ManifestPath { get; set; } = "";
+        public string OutputPath { get; set; } = "";
+    }
+
+    private sealed class ValidateReportSetOptions
+    {
+        public string ManifestPath { get; set; } = "";
+        public string ReportsDirectory { get; set; } = "";
         public string OutputPath { get; set; } = "";
     }
 

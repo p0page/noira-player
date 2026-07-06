@@ -49,6 +49,14 @@ dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQ
 
 The command emits `isValid`, `caseCount`, `tiers`, `purposes`, `cases`, and structured `errors`. `cases` is a schedulable summary of caseId, uri, tier, purpose, and expected source metadata. Invalid manifests return a non-zero exit code so automation can stop before collecting misleading playback evidence.
 
+After reports are captured, validate that the report set covers the manifest before comparing candidates:
+
+```powershell
+dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- validate-report-set --manifest docs\qa\playback-quality-reference-manifest.example.json --reports-dir captured-reports --output report-set-validation.json
+```
+
+The report-set gate matches `report.runId` to manifest `caseId`, rejects missing cases, extra reports, duplicate run IDs, and source metadata mismatches. Run this gate before `compare-suite`; a report set that does not match the manifest is evidence-collection failure, not playback Core optimization evidence.
+
 ## Compare Reports
 
 Use the App-free CLI when an automated model run needs to compare two serialized playback quality reports without building the Xbox App:

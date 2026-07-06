@@ -153,6 +153,114 @@ public sealed class PlaybackQualityReferenceManifestTests
         Assert.Contains("source.hdrKind", result.Report.Analysis.RelevantSignals);
     }
 
+    [Fact]
+    public void ValidateReportSet_Accepts_One_Matching_Report_Per_Reference_Case()
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        manifest.Cases.Add(CreateCase(
+            "netflix/chimera-4k-2398-hdr-pq",
+            tier: 2,
+            purpose: "hdr-output"));
+        var report = CreateReport(
+            "netflix/chimera-4k-2398-hdr-pq",
+            codec: "hevc",
+            width: 3840,
+            height: 2160,
+            frameRate: 23.976,
+            hdrKind: "Hdr10");
+
+        var validation = PlaybackQualityReferenceReportSetValidator.Validate(
+            manifest,
+            new[] { report });
+
+        Assert.True(validation.IsValid);
+        Assert.Equal(1, validation.ExpectedCaseCount);
+        Assert.Equal(1, validation.ReportCount);
+        Assert.Equal(1, validation.MatchedCaseCount);
+        Assert.Empty(validation.Errors);
+        Assert.Contains(validation.Cases, item =>
+            item.CaseId == "netflix/chimera-4k-2398-hdr-pq" &&
+            item.Status == "matched" &&
+            item.ReportRunId == "netflix/chimera-4k-2398-hdr-pq");
+    }
+
+    [Fact]
+    public void ValidateReportSet_Rejects_Missing_Extra_Duplicate_And_Mismatched_Reports()
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        manifest.Cases.Add(CreateCase(
+            "netflix/chimera-4k-2398-hdr-pq",
+            tier: 2,
+            purpose: "hdr-output"));
+        manifest.Cases.Add(CreateCase(
+            "jellyfin/dv-profile5-hevc-4k",
+            tier: 3,
+            purpose: "dv-reject"));
+        var reports = new[]
+        {
+            CreateReport(
+                "netflix/chimera-4k-2398-hdr-pq",
+                codec: "av1",
+                width: 1920,
+                height: 1080,
+                frameRate: 24.0,
+                hdrKind: "Sdr"),
+            CreateReport(
+                "netflix/chimera-4k-2398-hdr-pq",
+                codec: "hevc",
+                width: 3840,
+                height: 2160,
+                frameRate: 23.976,
+                hdrKind: "Hdr10"),
+            CreateReport(
+                "unexpected/case",
+                codec: "hevc",
+                width: 3840,
+                height: 2160,
+                frameRate: 23.976,
+                hdrKind: "Hdr10")
+        };
+
+        var validation = PlaybackQualityReferenceReportSetValidator.Validate(
+            manifest,
+            reports);
+
+        Assert.False(validation.IsValid);
+        Assert.Equal(2, validation.ExpectedCaseCount);
+        Assert.Equal(3, validation.ReportCount);
+        Assert.Equal(0, validation.MatchedCaseCount);
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.duplicate-run-id" &&
+            error.CaseId == "netflix/chimera-4k-2398-hdr-pq");
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.missing" &&
+            error.CaseId == "jellyfin/dv-profile5-hevc-4k");
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.extra" &&
+            error.ReportRunId == "unexpected/case");
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.source.codec.mismatch" &&
+            error.Signal == "source.codec");
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.source.width.mismatch" &&
+            error.Signal == "source.width");
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.source.height.mismatch" &&
+            error.Signal == "source.height");
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.source.frameRate.mismatch" &&
+            error.Signal == "source.frameRate");
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.source.hdrKind.mismatch" &&
+            error.Signal == "source.hdrKind");
+        Assert.Contains(validation.Cases, item =>
+            item.CaseId == "jellyfin/dv-profile5-hevc-4k" &&
+            item.Status == "missing");
+        Assert.Contains(validation.Cases, item =>
+            item.ReportRunId == "unexpected/case" &&
+            item.Status == "extra");
+    }
+
     private static PlaybackQualityReferenceCase CreateCase(
         string caseId,
         int tier,
@@ -212,5 +320,27 @@ public sealed class PlaybackQualityReferenceManifestTests
             source,
             new[] { source },
             startPositionTicks: 0);
+    }
+
+    private static PlaybackQualityReport CreateReport(
+        string runId,
+        string codec,
+        int width,
+        int height,
+        double frameRate,
+        string hdrKind)
+    {
+        return new PlaybackQualityReport
+        {
+            RunId = runId,
+            Source = new PlaybackQualitySource
+            {
+                Codec = codec,
+                Width = width,
+                Height = height,
+                FrameRate = frameRate,
+                HdrKind = hdrKind
+            }
+        };
     }
 }

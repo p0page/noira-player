@@ -110,6 +110,8 @@ Every report must include these phase-1 limitations:
 
 `PlaybackQualityReferenceCaseReportRequestFactory.CreateRequest` converts a validated reference case and actual `PlaybackDescriptor` evidence into a `PlaybackQualityReportRequest`. It sets `runId = caseId`, clones the case `expected` metadata, and disables default expected generation so report evaluation is tied to the manifest case instead of inferred from the selected source. This is the preferred bridge from manifest-driven sample scheduling into `PlaybackQualityReportComposer`.
 
+`PlaybackQualityReferenceReportSetValidator` validates captured report coverage against a reference manifest before baseline/candidate comparison. It matches `report.runId` to manifest `caseId` and emits structured failures for missing reports, extra reports, duplicate run IDs, and source metadata mismatches. Automated loops must treat an invalid report set as evidence collection failure, not as playback Core regression or improvement.
+
 `expected.minRenderedVideoFrames` validates that a run produced enough video frames to be meaningful. A report with too few rendered frames is a `frame-pacing` failure because frame gap, drift, and buffer signals cannot be trusted without a real rendered sample.
 
 `expectedFrameDurationMs` is derived from `source.frameRate` as `1000 / frameRate` when a usable frame rate exists. It lets the model compare frame gaps and render interval percentiles against the source cadence instead of reading them as isolated numbers.

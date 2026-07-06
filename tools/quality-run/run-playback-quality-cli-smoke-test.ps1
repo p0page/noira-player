@@ -23,6 +23,8 @@ try {
     $stallSuitePath = Join-Path $tempRoot 'stall-suite.json'
     $manifestPath = Join-Path $tempRoot 'reference-manifest.json'
     $manifestValidationPath = Join-Path $tempRoot 'reference-manifest-validation.json'
+    $reportSetDir = Join-Path $tempRoot 'reference-report-set'
+    $reportSetValidationPath = Join-Path $tempRoot 'reference-report-set-validation.json'
 
     @'
 {
@@ -162,6 +164,60 @@ try {
         $_.expected.hdrKind -eq 'Hdr10'
     })) {
         throw 'Expected playback quality CLI validate-manifest output to include schedulable case summary.'
+    }
+
+    New-Item -ItemType Directory -Path $reportSetDir | Out-Null
+    @'
+{
+  "runId": "netflix/chimera-4k-2398-hdr-pq",
+  "metricVersion": "software-quality-v1",
+  "source": {
+    "codec": "hevc",
+    "width": 3840,
+    "height": 2160,
+    "frameRate": 23.976,
+    "hdrKind": "Hdr10"
+  }
+}
+'@ | Set-Content -LiteralPath (Join-Path $reportSetDir 'case-a.json') -Encoding UTF8
+    @'
+{
+  "runId": "jellyfin/dv-profile5-hevc-4k",
+  "metricVersion": "software-quality-v1",
+  "source": {
+    "codec": "hevc",
+    "width": 3840,
+    "height": 2160,
+    "frameRate": 23.976,
+    "hdrKind": "DolbyVisionUnsupported"
+  }
+}
+'@ | Set-Content -LiteralPath (Join-Path $reportSetDir 'case-b.json') -Encoding UTF8
+
+    Push-Location $repoRoot
+    try {
+        dotnet run `
+            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
+            --no-build `
+            -- validate-report-set `
+            --manifest $manifestPath `
+            --reports-dir $reportSetDir `
+            --output $reportSetValidationPath
+        if ($LASTEXITCODE -ne 0) {
+            throw 'playback quality CLI validate-report-set returned a non-zero exit code.'
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    $reportSetValidation = Get-Content -Raw -LiteralPath $reportSetValidationPath | ConvertFrom-Json
+    if ($reportSetValidation.isValid -ne $true) {
+        throw 'Expected playback quality CLI validate-report-set output to be valid.'
+    }
+
+    if ($reportSetValidation.matchedCaseCount -ne 2) {
+        throw 'Expected playback quality CLI validate-report-set output to include two matched cases.'
     }
 
     Push-Location $repoRoot
