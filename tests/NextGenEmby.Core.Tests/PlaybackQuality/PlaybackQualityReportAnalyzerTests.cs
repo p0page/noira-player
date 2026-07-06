@@ -104,6 +104,40 @@ public sealed class PlaybackQualityReportAnalyzerTests
     }
 
     [Fact]
+    public void Analyze_Adds_Evidence_Collection_Hint_When_Failed_Report_Has_Missing_Evidence()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "missing-while-failed",
+            Result = "fail",
+            Analysis = new PlaybackQualityAnalysis
+            {
+                PrimaryFailureArea = "frame-pacing"
+            },
+            Timing = new PlaybackQualityTiming
+            {
+                RenderedVideoFrames = 240
+            }
+        };
+        report.Checks.Add(new PlaybackQualityCheck
+        {
+            Name = "MaxFrameGapMs",
+            Status = "fail",
+            FailureArea = "frame-pacing",
+            Signal = "timing.maxFrameGapMs"
+        });
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Contains(analysis.InvestigationHints, hint =>
+            hint.FailureArea == "frame-pacing");
+        Assert.Contains(analysis.InvestigationHints, hint =>
+            hint.FailureArea == "evidence-collection" &&
+            hint.CodeTargets.Contains("src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs") &&
+            hint.Signals.Contains("colorPipeline.dxgiInput"));
+    }
+
+    [Fact]
     public void Analyze_Reports_Missing_Evidence_For_Unset_Critical_Signals()
     {
         var report = new PlaybackQualityReport

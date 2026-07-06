@@ -202,7 +202,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                 AddUnique(areas, area);
             }
 
-            if (areas.Count == 0 && analysis.MissingEvidence.Count > 0)
+            if (analysis.MissingEvidence.Count > 0)
             {
                 AddUnique(areas, "evidence-collection");
             }

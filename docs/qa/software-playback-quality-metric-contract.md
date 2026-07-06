@@ -65,6 +65,7 @@ The analyzer output must include:
 
 This keeps model iteration grounded in evidence. For example, a report can identify `color-pipeline` as primary while still preserving `frame-pacing` as a secondary failure area.
 `investigationHints` must be structured for automated consumers. The values should point to playback Core/native areas such as `PlaybackRefreshRatePolicy`, `FramePacing`, `PlaybackGraph`, `DxgiColorSpaceMapper`, or native quality metrics, rather than App/XAML interaction code.
+When `missingEvidence` is non-empty, analyzer output must also include an `evidence-collection` investigation hint, even if primary playback failures are already present.
 When a frame-pacing check fails, analyzer evidence must include `timing.expectedFrameDurationMs` if it is present so the model can compare observed gaps against the source cadence.
 When `expected.maxStartupDurationMs` is set, missing startup timing must be reported as `startup.startupDurationMs` so the model does not optimize frame pacing before startup evidence exists.
 
