@@ -418,6 +418,87 @@ public sealed class PlaybackQualityReportAnalyzerTests
     }
 
     [Fact]
+    public void Analyze_Summarizes_Color_Pipeline_For_Model()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "color-summary",
+            Result = "pass",
+            Source = new PlaybackQualitySource
+            {
+                Codec = "hevc",
+                FrameRate = 23.976,
+                HdrKind = "Hdr10"
+            },
+            Timing = new PlaybackQualityTiming
+            {
+                RenderedVideoFrames = 240
+            },
+            ColorPipeline = new PlaybackQualityColorPipeline
+            {
+                ActualHdrOutput = "Hdr10",
+                SwapChainFormat = "R10G10B10A2_UNORM",
+                SwapChainColorSpace = "RGB_FULL_G2084_NONE_P2020",
+                IsTenBitSwapChain = true,
+                DxgiInput = "YCBCR_STUDIO_G2084_TOPLEFT_P2020",
+                DxgiOutput = "RGB_FULL_G2084_NONE_P2020",
+                ConversionStatus = "validated",
+                IsVideoProcessorColorSpaceValidated = true
+            },
+            Display = new PlaybackQualityDisplay
+            {
+                HdrStatus = "On",
+                RefreshRateHz = 59.94006
+            }
+        };
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Equal("matched", analysis.ColorPipeline.Status);
+        Assert.Equal("Hdr10", analysis.ColorPipeline.ActualHdrOutput);
+        Assert.Equal("YCBCR_STUDIO_G2084_TOPLEFT_P2020", analysis.ColorPipeline.DxgiInput);
+        Assert.Equal("RGB_FULL_G2084_NONE_P2020", analysis.ColorPipeline.DxgiOutput);
+        Assert.Equal("validated", analysis.ColorPipeline.ConversionStatus);
+        Assert.True(analysis.ColorPipeline.IsTenBitSwapChain);
+        Assert.True(analysis.ColorPipeline.IsVideoProcessorColorSpaceValidated);
+        Assert.Contains("colorPipeline.actualHdrOutput", analysis.ColorPipeline.Signals);
+        Assert.Contains("colorPipeline.dxgiInput", analysis.ColorPipeline.Signals);
+        Assert.Contains("colorPipeline.conversionStatus", analysis.ColorPipeline.Signals);
+    }
+
+    [Fact]
+    public void Analyze_Marks_Color_Mismatch_From_Color_Pipeline_Checks()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "color-mismatch",
+            Result = "fail",
+            ColorPipeline = new PlaybackQualityColorPipeline
+            {
+                ActualHdrOutput = "Sdr",
+                DxgiInput = "YCBCR_STUDIO_G22_LEFT_P709",
+                DxgiOutput = "RGB_FULL_G22_NONE_P709"
+            }
+        };
+        report.Checks.Add(new PlaybackQualityCheck
+        {
+            Name = "ActualHdrOutput",
+            Status = "fail",
+            FailureArea = "color-pipeline",
+            Signal = "colorPipeline.actualHdrOutput",
+            Expected = "Hdr10",
+            Actual = "Sdr"
+        });
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Equal("mismatch", analysis.ColorPipeline.Status);
+        Assert.Contains("colorPipeline.actualHdrOutput", analysis.ColorPipeline.MismatchedSignals);
+        Assert.Contains("colorPipeline.actualHdrOutput", analysis.ColorPipeline.Signals);
+        Assert.Contains("Color pipeline observations did not match expected output.", analysis.ColorPipeline.Reason);
+    }
+
+    [Fact]
     public void Analyze_Blocks_Playback_Core_Optimization_When_Sample_Is_Insufficient()
     {
         var report = CreateOptimizationReadyFailure();
@@ -850,6 +931,7 @@ public sealed class PlaybackQualityReportAnalyzerTests
         Assert.Contains("\"runId\"", json);
         Assert.Contains("\"primaryFailureArea\"", json);
         Assert.Contains("\"source\"", json);
+        Assert.Contains("\"colorPipeline\"", json);
         Assert.Contains("\"sample\"", json);
         Assert.Contains("\"cadence\"", json);
         Assert.Contains("\"optimizationGate\"", json);

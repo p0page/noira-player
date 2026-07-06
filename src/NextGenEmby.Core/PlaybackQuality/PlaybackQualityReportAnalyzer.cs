@@ -9,6 +9,7 @@ namespace NextGenEmby.Core.PlaybackQuality
         public string PrimaryFailureArea { get; set; } = "none";
         public string SuggestedNextAction { get; set; } = "";
         public PlaybackQualitySourceAssessment Source { get; set; } = new PlaybackQualitySourceAssessment();
+        public PlaybackQualityColorPipelineAssessment ColorPipeline { get; set; } = new PlaybackQualityColorPipelineAssessment();
         public PlaybackQualitySampleAssessment Sample { get; set; } = new PlaybackQualitySampleAssessment();
         public PlaybackQualityCadenceAssessment Cadence { get; set; } = new PlaybackQualityCadenceAssessment();
         public PlaybackQualityOptimizationGate OptimizationGate { get; set; } = new PlaybackQualityOptimizationGate();
@@ -40,6 +41,23 @@ namespace NextGenEmby.Core.PlaybackQuality
         public int? DolbyVisionCompatibilityId { get; set; }
         public bool HasHdr10BaseLayer { get; set; }
         public bool HasHlgBaseLayer { get; set; }
+        public List<string> Signals { get; } = new List<string>();
+        public List<string> MismatchedSignals { get; } = new List<string>();
+    }
+
+    public sealed class PlaybackQualityColorPipelineAssessment
+    {
+        public string Status { get; set; } = "unknown";
+        public string Reason { get; set; } = "";
+        public string ActualHdrOutput { get; set; } = "";
+        public string SwapChainFormat { get; set; } = "";
+        public string SwapChainColorSpace { get; set; } = "";
+        public bool IsTenBitSwapChain { get; set; }
+        public string DxgiInput { get; set; } = "";
+        public string DxgiOutput { get; set; } = "";
+        public string ConversionStatus { get; set; } = "";
+        public bool IsVideoProcessorColorSpaceValidated { get; set; }
+        public bool ForceSdrOutput { get; set; }
         public List<string> Signals { get; } = new List<string>();
         public List<string> MismatchedSignals { get; } = new List<string>();
     }
@@ -147,6 +165,7 @@ namespace NextGenEmby.Core.PlaybackQuality
 
             analysis.Sample = AssessSample(report);
             analysis.Source = AssessSource(report);
+            analysis.ColorPipeline = AssessColorPipeline(report);
             analysis.Cadence = AssessCadence(report);
             AddDerivedEvidence(analysis, report);
             AddMissingEvidence(analysis, report);
@@ -163,6 +182,101 @@ namespace NextGenEmby.Core.PlaybackQuality
             }
 
             return analysis;
+        }
+
+        private static PlaybackQualityColorPipelineAssessment AssessColorPipeline(
+            PlaybackQualityReport report)
+        {
+            var color = new PlaybackQualityColorPipelineAssessment
+            {
+                ActualHdrOutput = report.ColorPipeline.ActualHdrOutput,
+                SwapChainFormat = report.ColorPipeline.SwapChainFormat,
+                SwapChainColorSpace = report.ColorPipeline.SwapChainColorSpace,
+                IsTenBitSwapChain = report.ColorPipeline.IsTenBitSwapChain,
+                DxgiInput = report.ColorPipeline.DxgiInput,
+                DxgiOutput = report.ColorPipeline.DxgiOutput,
+                ConversionStatus = report.ColorPipeline.ConversionStatus,
+                IsVideoProcessorColorSpaceValidated = report.ColorPipeline.IsVideoProcessorColorSpaceValidated,
+                ForceSdrOutput = report.ColorPipeline.ForceSdrOutput
+            };
+
+            AddColorPipelineSignals(color);
+            foreach (var check in report.Checks)
+            {
+                if (check.Status == "fail" &&
+                    check.FailureArea == "color-pipeline" &&
+                    !string.IsNullOrWhiteSpace(check.Signal))
+                {
+                    AddUnique(color.MismatchedSignals, check.Signal);
+                    AddUnique(color.Signals, check.Signal);
+                }
+            }
+
+            if (color.MismatchedSignals.Count > 0)
+            {
+                color.Status = "mismatch";
+                color.Reason = "Color pipeline observations did not match expected output.";
+                return color;
+            }
+
+            if (color.Signals.Count == 0)
+            {
+                color.Status = "missing-evidence";
+                color.Reason = "Color pipeline telemetry is missing.";
+                return color;
+            }
+
+            color.Status = "matched";
+            color.Reason = "Color pipeline telemetry is available and has no color-pipeline mismatches.";
+            return color;
+        }
+
+        private static void AddColorPipelineSignals(PlaybackQualityColorPipelineAssessment color)
+        {
+            if (!string.IsNullOrWhiteSpace(color.ActualHdrOutput))
+            {
+                AddUnique(color.Signals, "colorPipeline.actualHdrOutput");
+            }
+
+            if (!string.IsNullOrWhiteSpace(color.SwapChainFormat))
+            {
+                AddUnique(color.Signals, "colorPipeline.swapChainFormat");
+            }
+
+            if (!string.IsNullOrWhiteSpace(color.SwapChainColorSpace))
+            {
+                AddUnique(color.Signals, "colorPipeline.swapChainColorSpace");
+            }
+
+            if (color.IsTenBitSwapChain)
+            {
+                AddUnique(color.Signals, "colorPipeline.isTenBitSwapChain");
+            }
+
+            if (!string.IsNullOrWhiteSpace(color.DxgiInput))
+            {
+                AddUnique(color.Signals, "colorPipeline.dxgiInput");
+            }
+
+            if (!string.IsNullOrWhiteSpace(color.DxgiOutput))
+            {
+                AddUnique(color.Signals, "colorPipeline.dxgiOutput");
+            }
+
+            if (!string.IsNullOrWhiteSpace(color.ConversionStatus))
+            {
+                AddUnique(color.Signals, "colorPipeline.conversionStatus");
+            }
+
+            if (color.IsVideoProcessorColorSpaceValidated)
+            {
+                AddUnique(color.Signals, "colorPipeline.isVideoProcessorColorSpaceValidated");
+            }
+
+            if (color.ForceSdrOutput)
+            {
+                AddUnique(color.Signals, "colorPipeline.forceSdrOutput");
+            }
         }
 
         private static PlaybackQualitySourceAssessment AssessSource(PlaybackQualityReport report)
