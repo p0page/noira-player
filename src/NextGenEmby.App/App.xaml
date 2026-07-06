@@ -64,6 +64,8 @@
             <x:Double x:Key="TvGuideCollapsedWidth">72</x:Double>
             <x:Double x:Key="TvGuideExpandedWidth">248</x:Double>
             <x:Double x:Key="TvSettingsContentMaxWidth">980</x:Double>
+            <x:Double x:Key="TvListArtworkSize">76</x:Double>
+            <x:Double x:Key="TvCompactArtworkSize">64</x:Double>
 
             <Style TargetType="Button">
                 <Setter Property="MinHeight" Value="52" />
@@ -131,6 +133,13 @@
                 <Setter Property="FontWeight" Value="SemiBold" />
                 <Setter Property="Foreground" Value="{StaticResource AppWarmBrush}" />
                 <Setter Property="TextWrapping" Value="NoWrap" />
+            </Style>
+
+            <Style x:Key="TvSectionTitleTextStyle" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="24" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Foreground" Value="{StaticResource AppTextBrush}" />
+                <Setter Property="TextWrapping" Value="Wrap" />
             </Style>
 
             <Style x:Key="TvListButtonStyle" TargetType="Button">

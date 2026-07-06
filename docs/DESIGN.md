@@ -107,6 +107,14 @@ components:
     backgroundColor: "#E603060A"
     collapsedWidth: "72px"
     expandedWidth: "248px"
+  section_title:
+    fontSize: "24px"
+    fontWeight: "600"
+    textColor: "{colors.text}"
+  list_artwork:
+    defaultSize: "76px"
+    compactSize: "64px"
+    rounded: "{rounded.md}"
   immersive_viewer:
     scrim: "#66050607"
     controlBackgroundColor: "{colors.surface_overlay}"
@@ -218,6 +226,17 @@ Layout rules:
 - Empty states and error states must reserve the same layout footprint as loaded content when practical.
 
 Density should be "comfortable TV dense": enough items visible to support browsing, but never so dense that card labels, focus frames, or metadata compete with artwork.
+
+## Theme Tokenization Status
+
+Shared TV resources should continue migrating into `App.xaml` before page-local constants are introduced. As of the Music shell pass, these page families are tokenized:
+
+- Shell: Guide chrome color, collapsed/expanded widths, standard and immersive page margins.
+- Text: page title/subtitle, section title, panel title, body, muted body, badge, and diagnostics text styles.
+- Surfaces: panel surface, list button, icon button, nav button, scrim, and immersive control brush.
+- Media rows: shared `TvListButtonStyle`, `TvListArtworkSize`, and `TvCompactArtworkSize` for browse-only list shells such as Live TV and Music.
+
+Future skins should override these resources first. Page code may read token values, but should not define new color, focus, or repeated artwork-size constants unless the value is truly page-specific.
 
 ## Theme Tokens And Skinning
 

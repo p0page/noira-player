@@ -695,3 +695,38 @@ Then continue design and implementation until the route passes.
   - Escape closed only the unsupported layer and left the page on Live TV; UI Automation then reported focus as `Refresh live TV`.
 - Limitation:
   - The live server did not return channels, so positive channel-row navigation and real channel activation remain pending on a Live TV-enabled server.
+
+### 2026-07-06 - Music Browse Shell
+
+- App version: 0.1.0.125.
+- Scope: Music now has a dedicated TV browse shell instead of the generic Library grid.
+- API/data changes:
+  - Added `MusicBrowseQueryFactory` for album, all-song, and album-song Emby item queries.
+  - Added `MusicBrowseItemPolicy` so incompatible servers cannot cause section cards or collection folders to be mislabeled as songs.
+  - No playback, transcoding, or native decode path was changed.
+- Interaction changes:
+  - Guide Music and debug route `music` open `MusicPage`.
+  - The page renders Albums, Songs, and Preview columns when true `MusicAlbum` or `Audio` items are returned.
+  - Empty music results show a centered `No music found` recovery panel with `Retry`.
+  - Song activation is browse-only for now and shows a focused `Music playback unavailable` layer.
+  - B/Escape closes only the unsupported layer and leaves the page on Music.
+- Visual tokenization:
+  - Added shared `TvSectionTitleTextStyle`, `TvListArtworkSize`, and `TvCompactArtworkSize` in `App.xaml`.
+  - Music consumes shared list, panel, badge, text, and artwork tokens instead of page-local theme colors.
+- Bugs found and fixed:
+  - The live server ignored or broadened `IncludeItemTypes=Audio`, initially causing Home/server section cards such as `热门电影` to appear in Songs. The new type guard now filters those out.
+  - The debug `music-unsupported` path initially left Albums/Songs labels stuck on `Loading` after Escape; browse-only preview now initializes with `Refresh to load`.
+- Automated verification:
+  - `MusicBrowseQueryFactoryTests`, `MusicBrowseItemPolicyTests`, and `DevelopmentNavigationCommandTests.TryParseJson_Accepts_Guide_Routes` passed: 14 targeted tests.
+  - App Debug x64 build passed and produced `NextGenEmby.App_0.1.0.125_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.125`.
+- Local Computer Use validation:
+  - Debug route `music` completed and opened Music.
+  - Final 0.1.0.125 accessibility check reported `0 albums`, `No songs returned.`, `No music found`, and `Retry music`; no server section cards remained in Songs.
+  - Escape from Music fallback returned to Home in the earlier 0.1.0.124 visual pass, and the only later Music change was the browse-only unsupported label initialization.
+  - Debug route `music-unsupported` completed and showed `Music playback unavailable` for `Sample Song`.
+  - Escape removed the unsupported layer; UI Automation then reported no `Music playback unavailable`, no `Sample Song`, and stable `Refresh to load` labels.
+  - No app-content mouse clicks were used.
+- Limitation:
+  - This Emby server did not expose real `MusicAlbum` or `Audio` rows after type filtering, so positive album/song navigation remains pending on a true music library.
+  - Windows Graphics Capture timed out once during final Music screenshot capture; resetting the Computer Use session recovered accessibility verification.

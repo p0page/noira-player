@@ -299,7 +299,7 @@ namespace NextGenEmby.App
             SetShellButtonActive(LiveTvButton, pageType == typeof(LiveTvPage) || IsLibraryCollection(pageType, libraryRequest, "livetv"));
             SetShellButtonActive(CollectionsButton, IsLibraryCollection(pageType, libraryRequest, "boxsets"));
             SetShellButtonActive(PlaylistsButton, IsLibraryCollection(pageType, libraryRequest, "playlists"));
-            SetShellButtonActive(MusicButton, IsLibraryCollection(pageType, libraryRequest, "music"));
+            SetShellButtonActive(MusicButton, pageType == typeof(MusicPage) || IsLibraryCollection(pageType, libraryRequest, "music"));
             SetShellButtonActive(PhotosButton, IsLibraryCollection(pageType, libraryRequest, "photos"));
             SetShellButtonActive(FavoritesButton, IsLibraryCollection(pageType, libraryRequest, "favorites"));
             SetShellButtonActive(UnwatchedButton, IsLibraryCollection(pageType, libraryRequest, "unwatched"));
@@ -389,6 +389,12 @@ namespace NextGenEmby.App
             if (pageType == typeof(LiveTvPage))
             {
                 LiveTvButton.Focus(focusState);
+                return;
+            }
+
+            if (pageType == typeof(MusicPage))
+            {
+                MusicButton.Focus(focusState);
                 return;
             }
 
@@ -513,7 +519,7 @@ namespace NextGenEmby.App
                     return;
 
                 case GuideNavigationDestination.Music:
-                    NavigateLibrary(new LibraryNavigationRequest("Music", "music", "MusicAlbum,Audio"));
+                    NavigateTo(typeof(MusicPage));
                     return;
 
                 case GuideNavigationDestination.Photos:
@@ -628,6 +634,11 @@ namespace NextGenEmby.App
             if (pageType == typeof(LiveTvPage))
             {
                 return GuideNavigationDestination.LiveTv;
+            }
+
+            if (pageType == typeof(MusicPage))
+            {
+                return GuideNavigationDestination.Music;
             }
 
             if (pageType == typeof(LibraryPage) && libraryRequest != null)
@@ -750,7 +761,11 @@ namespace NextGenEmby.App
                     return;
 
                 case "music":
-                    NavigateLibrary(new LibraryNavigationRequest("Music", "music", "MusicAlbum,Audio"));
+                    NavigateTo(typeof(MusicPage));
+                    return;
+
+                case "music-unsupported":
+                    NavigateTo(typeof(MusicPage), new MusicNavigationRequest("Sample Song"));
                     return;
 
                 case "photos":

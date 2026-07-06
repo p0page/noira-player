@@ -86,6 +86,7 @@ namespace NextGenEmby.Core.Diagnostics
                 case "livetv":
                 case "livetv-unsupported":
                 case "music":
+                case "music-unsupported":
                 case "photos":
                 case "playlists":
                 case "favorites":

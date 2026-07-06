@@ -93,8 +93,8 @@ Status values:
 | --- | --- | --- | --- | --- |
 | Live TV channel browsing | Guide Live TV or debug route `livetv` | Partial | 0.1.0.122 opens a dedicated Live TV page; Core API tests cover `/LiveTv/Info`, `/LiveTv/Channels`, and `/LiveTv/Programs`; current server returned no channels and focused Retry | Validate a positive channel list on a Live TV-enabled server |
 | Live TV playback unsupported recovery | Open channel or debug route `livetv-unsupported` | Verified | 0.1.0.122 shows a focused `Live TV playback unavailable` layer; Escape closes only that layer and returns focus to `Refresh live TV` | Re-run from a real channel when server channels exist |
-| Music browsing | Guide Music | Partial | Generic music album/audio query exists | Add album/artist/song hierarchy |
-| Music playback unsupported recovery | Open audio | Partial | Playback can route audio-like items, but UI copy not audited | Validate and add explanation if unsupported |
+| Music browsing | Guide Music or debug route `music` | Implemented | 0.1.0.125 opens a dedicated Music page with Albums/Songs/Preview columns; Core tests cover MusicAlbum/Audio queries and type guards; current server returned no true `MusicAlbum` or `Audio` after filtering out server section cards | Validate positive album/song rows on a server with a real music library; add artist hierarchy when artist metadata is exposed |
+| Music playback unsupported recovery | Open audio or debug route `music-unsupported` | Verified | 0.1.0.125 shows a focused `Music playback unavailable` layer; Escape closes only that layer and returns to the Music page without stale Loading labels | Re-run from a real audio item when the server has songs |
 | Photos browsing | Guide Photos or debug route `photos` | Implemented | 0.1.0.120 opened Photos with `No items found` and focused `Retry` when the server returned no Photo items | Validate a server library that contains Photo items/folders |
 | Photo viewer and B recovery | Open Photo item or debug route `photo` | Verified | 0.1.0.120 `photo` route opened an immersive viewer with hidden Guide rail, focused Back, fallback panel, and Escape returned to Home | Validate positive image load when a real Photo item is available |
 
@@ -111,6 +111,6 @@ Status values:
 
 1. Details still needs visible similar-items validation plus live add-to success on a disposable collection/playlist target.
 2. Playback More drawer needs a fresh keyboard validation pass with real audio/subtitle streams.
-3. Music still needs a dedicated non-dead-end surface; Live TV now has a dedicated browse shell but still needs positive channel validation on a Live TV-enabled server.
+3. Live TV and Music have dedicated browse shells, but both still need positive validation on servers that expose channels or real music items.
 4. Settings Guide route and checkbox toggle need a fresh real-keyboard or Computer Use pass because local synthetic key injection did not change UWP focus/toggle state.
 5. Search error recovery needs a deliberate offline/server-failure keyboard run.
