@@ -62,7 +62,7 @@ Status values:
 | Launch episode playback | Details, `Return` | Verified | 0.1.0.100 launched `铸就传奇` episode playback | Keep direct playback request stable |
 | Version selection before playback | Details versions, arrows | Implemented | Version buttons exist and pass `MediaSourceId` | Fresh keyboard run with multi-version item |
 | Favorite / watched toggles | Details action row | Implemented | 0.1.0.107 shows Add favorite and Mark watched in the first viewport; API mutation tests cover Emby user-data writes | Do a live toggle only on a disposable item or fixture user |
-| Similar items, people, collections | Details below fold | Partial | 0.1.0.109 loaded Cast & crew, moved focus into person cards, and opened a `PersonIds` Library; API tests cover `Items/{Id}/Similar` | Validate visible similar-items rail on a server item that returns results; add collections/playlists/add-to actions |
+| Similar items, people, collections/playlists | Details below fold | Partial | 0.1.0.109 loaded Cast & crew, moved focus into person cards, and opened a `PersonIds` Library; 0.1.0.112 added Organize, ancestors lookup, collection/playlist add sheets, and keyboard-validated sheet cancel/focus restore; API tests cover `Items/{Id}/Similar`, `Items/{Id}/Ancestors`, `POST /Collections/{Id}/Items`, and `POST /Playlists/{Id}/Items` | Validate visible similar-items rail on a server item that returns results; validate live add-to success on a disposable collection/playlist target |
 
 ## Search
 
@@ -108,7 +108,7 @@ Status values:
 
 ## Current Highest-Value Gaps
 
-1. Details still needs visible similar-items validation plus collections, playlists, and add-to actions.
+1. Details still needs visible similar-items validation plus live add-to success on a disposable collection/playlist target.
 2. Playback More drawer needs a fresh keyboard validation pass with real audio/subtitle streams.
 3. Live TV, Music, and Photos need dedicated non-dead-end surfaces instead of generic library fallback.
 4. Settings should stop reading like a placeholder and expose useful TV/client diagnostics.

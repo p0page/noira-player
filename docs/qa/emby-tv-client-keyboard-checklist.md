@@ -599,4 +599,28 @@ Then continue design and implementation until the route passes.
   - No app-content mouse clicks were used.
 - Follow-up:
   - The sampled episode did not render a visible `More like this` rail from the live server response. The API and UI path are implemented, but a future run should validate a sampled item that returns similar items.
-  - Collections, playlists, and add-to actions are still missing from Details secondary capabilities.
+  - Details collection/playlist add-to actions were added in the 0.1.0.112 run below; future validation should use a disposable destination to verify live add success.
+
+### 2026-07-06 - Details Organize Sheets
+
+- App version: 0.1.0.112.
+- Scope: Details now has an `Organize` section with collection/playlist membership summary, `Add to collection`, and `Add to playlist`.
+- Interaction changes:
+  - `Items/{Id}/Ancestors` is loaded for existing collection/playlist links when the server supports it.
+  - `Add to collection` opens a centered matte TV sheet backed by `BoxSet` destinations.
+  - `Add to playlist` opens the same sheet pattern backed by `Playlist` destinations.
+  - Empty destination responses show a focusable empty row rather than a dead end.
+  - B/Escape closes only the sheet and restores focus to the originating organize action.
+- Automated verification:
+  - Core tests passed: 230 total.
+  - New API tests cover `Items/{Id}/Ancestors`, `POST /Collections/{Id}/Items`, and `POST /Playlists/{Id}/Items`.
+  - New artwork policy test covers item wide artwork preference: `Thumb`, `Backdrop`, `Banner`, then `Primary`.
+  - App Debug x64 build passed and produced `NextGenEmby.App_0.1.0.112_x64_Debug.msix`.
+  - MSIX signed and installed locally as `NextGenEmby.App 0.1.0.112`.
+- Keyboard-only validation:
+  - From Home hero, `Right`, `Return` opened Details for `閾稿氨浼犲`.
+  - Details exposed `Organize`, `Library links unavailable.`, `Add to collection`, and `Add to playlist` below version/audio/subtitle selectors.
+  - `Down`, `Down`, `Down`, `Return` opened `Add to collection`; the sheet showed a focusable `No destinations found.` empty row on this server.
+  - `Escape`, `Right`, `Return` opened `Add to playlist`; it also showed the focusable empty row.
+  - `Escape` closed the sheet and restored focus to `Add to playlist`, without navigating back from Details.
+  - No app-content mouse clicks were used. Live add confirmation was not executed because this validation server exposed no collection/playlist destinations and the run should not mutate the user's real library accidentally.

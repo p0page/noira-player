@@ -29,6 +29,20 @@ namespace NextGenEmby.Core.Emby
                 CreateCandidate(item.Id, item.BackdropImageItemId, "Backdrop", item.BackdropImageTag, maxWidth);
         }
 
+        public static EmbyImageCandidate? SelectItemWideArtwork(EmbyMediaItem? item, int maxWidth)
+        {
+            if (item == null)
+            {
+                return null;
+            }
+
+            return
+                CreateCandidate(item.Id, item.ThumbImageItemId, "Thumb", item.ThumbImageTag, maxWidth) ??
+                CreateCandidate(item.Id, item.BackdropImageItemId, "Backdrop", item.BackdropImageTag, maxWidth) ??
+                CreateCandidate(item.Id, item.BannerImageItemId, "Banner", item.BannerImageTag, maxWidth) ??
+                CreateCandidate(item.Id, item.PrimaryImageItemId, "Primary", item.PrimaryImageTag, maxWidth);
+        }
+
         public static EmbyImageCandidate? SelectLogoArtwork(EmbyMediaItem? item, int maxWidth)
         {
             if (item == null)

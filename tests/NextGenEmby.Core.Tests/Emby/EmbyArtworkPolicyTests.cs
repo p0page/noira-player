@@ -218,6 +218,59 @@ public sealed class EmbyArtworkPolicyTests
     }
 
     [Fact]
+    public void SelectItemWideArtwork_Prefers_Thumb_Then_Backdrop_Then_Banner_Then_Primary()
+    {
+        AssertCandidate(
+            "thumb-owner",
+            "Thumb",
+            900,
+            EmbyArtworkPolicy.SelectItemWideArtwork(new EmbyMediaItem
+            {
+                Id = "collection-1",
+                PrimaryImageTag = "primary-tag",
+                BannerImageTag = "banner-tag",
+                BackdropImageTag = "backdrop-tag",
+                ThumbImageTag = "thumb-tag",
+                ThumbImageItemId = "thumb-owner"
+            }, 900));
+
+        AssertCandidate(
+            "backdrop-owner",
+            "Backdrop",
+            900,
+            EmbyArtworkPolicy.SelectItemWideArtwork(new EmbyMediaItem
+            {
+                Id = "collection-1",
+                PrimaryImageTag = "primary-tag",
+                BannerImageTag = "banner-tag",
+                BackdropImageTag = "backdrop-tag",
+                BackdropImageItemId = "backdrop-owner"
+            }, 900));
+
+        AssertCandidate(
+            "collection-1",
+            "Banner",
+            900,
+            EmbyArtworkPolicy.SelectItemWideArtwork(new EmbyMediaItem
+            {
+                Id = "collection-1",
+                PrimaryImageTag = "primary-tag",
+                BannerImageTag = "banner-tag"
+            }, 900));
+
+        AssertCandidate(
+            "primary-owner",
+            "Primary",
+            900,
+            EmbyArtworkPolicy.SelectItemWideArtwork(new EmbyMediaItem
+            {
+                Id = "collection-1",
+                PrimaryImageTag = "primary-tag",
+                PrimaryImageItemId = "primary-owner"
+            }, 900));
+    }
+
+    [Fact]
     public void SelectArtwork_Returns_Null_When_No_Usable_Image_Exists()
     {
         Assert.Null(EmbyArtworkPolicy.SelectHeroArtwork(new EmbyMediaItem { Id = "movie-1" }, 1600));
@@ -226,6 +279,7 @@ public sealed class EmbyArtworkPolicyTests
         Assert.Null(EmbyArtworkPolicy.SelectLogoArtwork(new EmbyMediaItem { Id = "movie-1" }, 640));
         Assert.Null(EmbyArtworkPolicy.SelectLibraryLogoArtwork(new EmbyLibraryView { Id = "library-1" }, 640));
         Assert.Null(EmbyArtworkPolicy.SelectHomeSectionWideArtwork(new EmbyHomeSection { Id = "section-1" }, 900));
+        Assert.Null(EmbyArtworkPolicy.SelectItemWideArtwork(new EmbyMediaItem { Id = "collection-1" }, 900));
     }
 
     private static void AssertCandidate(

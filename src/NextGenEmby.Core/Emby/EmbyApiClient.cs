@@ -296,6 +296,67 @@ namespace NextGenEmby.Core.Emby
             return (dto.Items ?? new List<ItemDto>()).Select(MapItem).ToList();
         }
 
+        public async Task<IReadOnlyList<EmbyMediaItem>> GetItemAncestorsAsync(
+            EmbySession session,
+            string itemId)
+        {
+            var parameters = new List<string>();
+            AddQueryParameter(parameters, "UserId", session.UserId);
+
+            using var request = new HttpRequestMessage(
+                HttpMethod.Get,
+                $"Items/{EscapeUriComponent(itemId)}/Ancestors?{string.Join("&", parameters)}");
+            EmbyAuthorization.Apply(request, _options, session);
+
+            using var response = await _http.SendAsync(request).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+            var body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var dto = JsonSerializer.Deserialize<List<ItemDto>>(body, _jsonOptions) ?? new List<ItemDto>();
+            return dto.Select(MapItem).ToList();
+        }
+
+        public async Task AddItemToCollectionAsync(
+            EmbySession session,
+            string collectionId,
+            string itemId)
+        {
+            var parameters = new List<string>();
+            AddQueryParameter(parameters, "Ids", itemId);
+
+            using var request = new HttpRequestMessage(
+                HttpMethod.Post,
+                $"Collections/{EscapeUriComponent(collectionId)}/Items?{string.Join("&", parameters)}");
+            EmbyAuthorization.Apply(request, _options, session);
+
+            using var response = await _http.SendAsync(request).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+        }
+
+        public async Task<EmbyAddToPlaylistResult> AddItemToPlaylistAsync(
+            EmbySession session,
+            string playlistId,
+            string itemId)
+        {
+            var parameters = new List<string>();
+            AddQueryParameter(parameters, "UserId", session.UserId);
+            AddQueryParameter(parameters, "Ids", itemId);
+
+            using var request = new HttpRequestMessage(
+                HttpMethod.Post,
+                $"Playlists/{EscapeUriComponent(playlistId)}/Items?{string.Join("&", parameters)}");
+            EmbyAuthorization.Apply(request, _options, session);
+
+            using var response = await _http.SendAsync(request).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+            var body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var dto = JsonSerializer.Deserialize<AddToPlaylistResultDto>(body, _jsonOptions) ?? new AddToPlaylistResultDto();
+            return new EmbyAddToPlaylistResult
+            {
+                Id = dto.Id ?? "",
+                ItemAddedCount = dto.ItemAddedCount
+            };
+        }
+
         public Task<IReadOnlyList<EmbyMediaItem>> SearchItemsAsync(
             EmbySession session,
             string searchTerm,
@@ -872,6 +933,12 @@ namespace NextGenEmby.Core.Emby
             public string Role { get; set; } = "";
             public string Type { get; set; } = "";
             public string PrimaryImageTag { get; set; } = "";
+        }
+
+        private sealed class AddToPlaylistResultDto
+        {
+            public string Id { get; set; } = "";
+            public int ItemAddedCount { get; set; }
         }
 
         private sealed class PlaybackInfoDto

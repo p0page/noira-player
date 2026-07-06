@@ -25,6 +25,15 @@ namespace NextGenEmby.App.Views
         private readonly ApplicationDataSessionStore _sessionStore = new ApplicationDataSessionStore();
         private EmbyMediaItem? _item;
         private IReadOnlyList<EmbyMediaSource> _mediaSources = Array.Empty<EmbyMediaSource>();
+        private IReadOnlyList<EmbyMediaItem> _organizeAncestors = Array.Empty<EmbyMediaItem>();
+        private IReadOnlyList<EmbyMediaItem> _collectionTargets = Array.Empty<EmbyMediaItem>();
+        private IReadOnlyList<EmbyMediaItem> _playlistTargets = Array.Empty<EmbyMediaItem>();
+        private DetailsAddToSheetKind _activeAddToSheet = DetailsAddToSheetKind.None;
+        private EmbySession? _addToSheetSession;
+        private int _addToSheetPreviewIndex;
+        private int _addToSheetLoadGeneration;
+        private bool _addToSheetConfirming;
+        private object? _addToSheetReturnFocus;
         private bool _isUnloaded;
         private int _loadGeneration;
 
@@ -75,6 +84,12 @@ namespace NextGenEmby.App.Views
 
         private void Page_OnKeyDown(object sender, KeyRoutedEventArgs e)
         {
+            if (TryRouteAddToSheetKey(e.Key))
+            {
+                e.Handled = true;
+                return;
+            }
+
             if (TryRouteDetailsDirectionalKey(e.Key, e.OriginalSource))
             {
                 e.Handled = true;
@@ -90,6 +105,50 @@ namespace NextGenEmby.App.Views
             {
                 Frame.GoBack();
                 e.Handled = true;
+            }
+        }
+
+        private bool TryRouteAddToSheetKey(VirtualKey key)
+        {
+            if (_activeAddToSheet == DetailsAddToSheetKind.None)
+            {
+                return false;
+            }
+
+            switch (key)
+            {
+                case VirtualKey.Up:
+                case VirtualKey.Left:
+                case VirtualKey.GamepadDPadUp:
+                case VirtualKey.GamepadDPadLeft:
+                case VirtualKey.GamepadLeftThumbstickUp:
+                case VirtualKey.GamepadLeftThumbstickLeft:
+                    MoveAddToSheetSelection(-1);
+                    return true;
+
+                case VirtualKey.Down:
+                case VirtualKey.Right:
+                case VirtualKey.GamepadDPadDown:
+                case VirtualKey.GamepadDPadRight:
+                case VirtualKey.GamepadLeftThumbstickDown:
+                case VirtualKey.GamepadLeftThumbstickRight:
+                    MoveAddToSheetSelection(1);
+                    return true;
+
+                case VirtualKey.Enter:
+                case VirtualKey.Space:
+                case VirtualKey.GamepadA:
+                    _ = ConfirmAddToSheetAsync();
+                    return true;
+
+                case VirtualKey.Escape:
+                case VirtualKey.GoBack:
+                case VirtualKey.GamepadB:
+                    CancelAddToSheet();
+                    return true;
+
+                default:
+                    return false;
             }
         }
 
@@ -117,6 +176,7 @@ namespace NextGenEmby.App.Views
                 if (IsDownKey(key))
                 {
                     return FocusFirstVersionButton(FocusState.Keyboard) ||
+                        FocusFirstOrganizeButton(FocusState.Keyboard) ||
                         FocusFirstBelowVersions(FocusState.Keyboard);
                 }
             }
@@ -159,8 +219,38 @@ namespace NextGenEmby.App.Views
                         EpisodesPanel,
                         focusedElement,
                         FocusState.Keyboard,
-                        () => FocusLastVersionButton(FocusState.Keyboard) ||
+                        () => FocusLastOrganizeButton(FocusState.Keyboard) ||
+                            FocusLastVersionButton(FocusState.Keyboard) ||
                             FocusAction(MediaDetailsActionButton.Play, FocusState.Keyboard));
+                }
+            }
+
+            if (IsFocusWithin(focusedElement, OrganizeActionsPanel))
+            {
+                if (IsLeftKey(key) || IsRightKey(key))
+                {
+                    return IsRightKey(key)
+                        ? FocusNextButtonInPanelOrFallback(
+                            OrganizeActionsPanel,
+                            focusedElement,
+                            FocusState.Keyboard,
+                            () => FocusFirstButton(OrganizeActionsPanel, FocusState.Keyboard))
+                        : FocusPreviousButtonInPanelOrFallback(
+                            OrganizeActionsPanel,
+                            focusedElement,
+                            FocusState.Keyboard,
+                            () => FocusLastButton(OrganizeActionsPanel, FocusState.Keyboard));
+                }
+
+                if (IsDownKey(key))
+                {
+                    return FocusFirstAfterOrganize(FocusState.Keyboard);
+                }
+
+                if (IsUpKey(key))
+                {
+                    return FocusLastVersionButton(FocusState.Keyboard) ||
+                        FocusAction(MediaDetailsActionButton.Play, FocusState.Keyboard);
                 }
             }
 
@@ -174,6 +264,7 @@ namespace NextGenEmby.App.Views
                 if (IsUpKey(key))
                 {
                     return FocusLastButton(EpisodesPanel, FocusState.Keyboard) ||
+                        FocusLastOrganizeButton(FocusState.Keyboard) ||
                         FocusLastVersionButton(FocusState.Keyboard) ||
                         FocusAction(MediaDetailsActionButton.Play, FocusState.Keyboard);
                 }
@@ -183,6 +274,7 @@ namespace NextGenEmby.App.Views
             {
                 return FocusFirstButton(SimilarItemsPanel, FocusState.Keyboard) ||
                     FocusLastButton(EpisodesPanel, FocusState.Keyboard) ||
+                    FocusLastOrganizeButton(FocusState.Keyboard) ||
                     FocusLastVersionButton(FocusState.Keyboard) ||
                     FocusAction(MediaDetailsActionButton.Play, FocusState.Keyboard);
             }
@@ -259,6 +351,22 @@ namespace NextGenEmby.App.Views
         }
 
         private bool FocusFirstBelowVersions(FocusState focusState)
+        {
+            return FocusFirstOrganizeButton(focusState) ||
+                FocusFirstAfterOrganize(focusState);
+        }
+
+        private bool FocusFirstOrganizeButton(FocusState focusState)
+        {
+            return FocusFirstButton(OrganizeActionsPanel, focusState);
+        }
+
+        private bool FocusLastOrganizeButton(FocusState focusState)
+        {
+            return FocusLastButton(OrganizeActionsPanel, focusState);
+        }
+
+        private bool FocusFirstAfterOrganize(FocusState focusState)
         {
             return FocusFirstButton(EpisodesPanel, focusState) ||
                 FocusFirstAfterEpisodes(focusState);
@@ -412,6 +520,7 @@ namespace NextGenEmby.App.Views
                 : _item.Overview;
             StatusBlock.Text = "";
             UpdateActionButtons();
+            RenderOrganizeSection();
             FocusDefaultContent();
         }
 
@@ -468,6 +577,7 @@ namespace NextGenEmby.App.Views
                     RenderItem();
                     await LoadImagesAsync(client, session, loadGeneration);
                     await LoadPlaybackInfoAsync(client, session, itemId, loadGeneration);
+                    await LoadOrganizeAsync(client, session, loadGeneration);
                     await LoadSeriesEpisodesAsync(client, session, loadGeneration);
                     await LoadSecondaryRailsAsync(client, session, loadGeneration);
                 }
@@ -607,6 +717,296 @@ namespace NextGenEmby.App.Views
             var itemId = _item == null ? "" : _item.Id;
             var itemName = _item == null ? "" : _item.Name;
             await LoadDetailsAsync(itemId, itemName, BeginLoad());
+        }
+
+        private async void AddToCollection_OnClick(object sender, RoutedEventArgs e)
+        {
+            await OpenAddToSheetAsync(DetailsAddToSheetKind.Collection);
+        }
+
+        private async void AddToPlaylist_OnClick(object sender, RoutedEventArgs e)
+        {
+            await OpenAddToSheetAsync(DetailsAddToSheetKind.Playlist);
+        }
+
+        private async Task OpenAddToSheetAsync(DetailsAddToSheetKind sheetKind)
+        {
+            if (sheetKind == DetailsAddToSheetKind.None ||
+                _item == null ||
+                string.IsNullOrWhiteSpace(_item.Id))
+            {
+                return;
+            }
+
+            var loadGeneration = ++_addToSheetLoadGeneration;
+            _activeAddToSheet = sheetKind;
+            _addToSheetSession = null;
+            _addToSheetPreviewIndex = 0;
+            _addToSheetConfirming = false;
+            _addToSheetReturnFocus = FocusManager.GetFocusedElement();
+
+            AddToSheetTitleBlock.Text = sheetKind == DetailsAddToSheetKind.Collection
+                ? "Add to collection"
+                : "Add to playlist";
+            AddToSheetSubtitleBlock.Text = "Loading destinations...";
+            AddToSheetRoot.Visibility = Visibility.Visible;
+            RenderAddToSheetLoading();
+
+            try
+            {
+                var session = await _sessionStore.LoadAsync();
+                if (!CanApplyAddToSheetLoad(loadGeneration, sheetKind))
+                {
+                    return;
+                }
+
+                if (session == null)
+                {
+                    RenderAddToSheetMessage("Sign in first.");
+                    return;
+                }
+
+                _addToSheetSession = session;
+                using (var http = new HttpClient())
+                {
+                    var client = EmbyClientFactory.Create(http, session);
+                    var targets = await LoadAddToTargetsAsync(client, session, sheetKind);
+                    if (!CanApplyAddToSheetLoad(loadGeneration, sheetKind))
+                    {
+                        return;
+                    }
+
+                    if (sheetKind == DetailsAddToSheetKind.Collection)
+                    {
+                        _collectionTargets = targets;
+                    }
+                    else
+                    {
+                        _playlistTargets = targets;
+                    }
+                }
+
+                AddToSheetSubtitleBlock.Text = GetActiveAddToTargets().Count == 0
+                    ? "No destinations found."
+                    : "Choose a destination";
+                RenderAddToSheetOptions();
+                FocusAddToSheetOption(_addToSheetPreviewIndex);
+            }
+            catch
+            {
+                if (CanApplyAddToSheetLoad(loadGeneration, sheetKind))
+                {
+                    RenderAddToSheetMessage("Unable to load destinations.");
+                }
+            }
+        }
+
+        private static async Task<IReadOnlyList<EmbyMediaItem>> LoadAddToTargetsAsync(
+            EmbyApiClient client,
+            EmbySession session,
+            DetailsAddToSheetKind sheetKind)
+        {
+            var includeItemTypes = sheetKind == DetailsAddToSheetKind.Collection ? "BoxSet" : "Playlist";
+            var collectionType = sheetKind == DetailsAddToSheetKind.Collection ? "boxsets" : "playlists";
+            var targets = await client.GetItemsAsync(session, new EmbyItemsQuery
+            {
+                IncludeItemTypes = includeItemTypes,
+                CollectionTypes = collectionType,
+                SortBy = "SortName",
+                SortOrder = "Ascending",
+                Limit = 100,
+                Recursive = true
+            });
+
+            if (targets.Count == 0)
+            {
+                targets = await client.GetItemsAsync(session, new EmbyItemsQuery
+                {
+                    IncludeItemTypes = includeItemTypes,
+                    SortBy = "SortName",
+                    SortOrder = "Ascending",
+                    Limit = 100,
+                    Recursive = true
+                });
+            }
+
+            return targets
+                .Where(target => sheetKind == DetailsAddToSheetKind.Collection
+                    ? IsCollectionItem(target)
+                    : IsPlaylistItem(target))
+                .Where(target => !string.IsNullOrWhiteSpace(target.Id))
+                .Take(80)
+                .ToList();
+        }
+
+        private void RenderAddToSheetLoading()
+        {
+            AddToSheetOptionsPanel.Children.Clear();
+            AddToSheetOptionsPanel.Children.Add(CreateAddToSheetMessageButton("Loading..."));
+            FocusAddToSheetOption(0);
+        }
+
+        private void RenderAddToSheetMessage(string message)
+        {
+            AddToSheetSubtitleBlock.Text = message;
+            AddToSheetOptionsPanel.Children.Clear();
+            AddToSheetOptionsPanel.Children.Add(CreateAddToSheetMessageButton(message));
+            FocusAddToSheetOption(0);
+        }
+
+        private void RenderAddToSheetOptions()
+        {
+            AddToSheetOptionsPanel.Children.Clear();
+            var targets = GetActiveAddToTargets();
+            if (targets.Count == 0)
+            {
+                AddToSheetOptionsPanel.Children.Add(CreateAddToSheetMessageButton("No destinations found."));
+                _addToSheetPreviewIndex = 0;
+                return;
+            }
+
+            _addToSheetPreviewIndex = Math.Max(0, Math.Min(_addToSheetPreviewIndex, targets.Count - 1));
+            for (var i = 0; i < targets.Count; i++)
+            {
+                AddToSheetOptionsPanel.Children.Add(CreateAddToTargetButton(i, targets[i]));
+            }
+        }
+
+        private void MoveAddToSheetSelection(int offset)
+        {
+            var targets = GetActiveAddToTargets();
+            if (targets.Count == 0)
+            {
+                FocusAddToSheetOption(0);
+                return;
+            }
+
+            var nextIndex = LibraryOptionSheetPolicy.MovePreviewIndex(
+                _addToSheetPreviewIndex,
+                targets.Count,
+                offset);
+
+            if (nextIndex == _addToSheetPreviewIndex)
+            {
+                FocusAddToSheetOption(_addToSheetPreviewIndex);
+                return;
+            }
+
+            _addToSheetPreviewIndex = nextIndex;
+            RenderAddToSheetOptions();
+            FocusAddToSheetOption(_addToSheetPreviewIndex);
+        }
+
+        private async Task ConfirmAddToSheetAsync()
+        {
+            if (_activeAddToSheet == DetailsAddToSheetKind.None || _addToSheetConfirming)
+            {
+                return;
+            }
+
+            var item = _item;
+            var targets = GetActiveAddToTargets();
+            if (item == null || string.IsNullOrWhiteSpace(item.Id) || targets.Count == 0)
+            {
+                CloseAddToSheet(restoreFocus: true);
+                return;
+            }
+
+            var target = targets[Math.Max(0, Math.Min(_addToSheetPreviewIndex, targets.Count - 1))];
+            if (string.IsNullOrWhiteSpace(target.Id))
+            {
+                CloseAddToSheet(restoreFocus: true);
+                return;
+            }
+
+            _addToSheetConfirming = true;
+            SetAddToSheetOptionsEnabled(false);
+            AddToSheetSubtitleBlock.Text = "Adding...";
+            try
+            {
+                var session = await _sessionStore.LoadAsync();
+                if (session == null)
+                {
+                    AddToSheetSubtitleBlock.Text = "Sign in first.";
+                    return;
+                }
+
+                using (var http = new HttpClient())
+                {
+                    var client = EmbyClientFactory.Create(http, session);
+                    if (_activeAddToSheet == DetailsAddToSheetKind.Collection)
+                    {
+                        await client.AddItemToCollectionAsync(session, target.Id, item.Id);
+                    }
+                    else
+                    {
+                        await client.AddItemToPlaylistAsync(session, target.Id, item.Id);
+                    }
+                }
+
+                AddAncestorIfMissing(target);
+                RenderOrganizeSection();
+                StatusBlock.Text = _activeAddToSheet == DetailsAddToSheetKind.Collection
+                    ? "Added to collection: " + CreateDisplayName(target)
+                    : "Added to playlist: " + CreateDisplayName(target);
+                CloseAddToSheet(restoreFocus: true);
+            }
+            catch
+            {
+                AddToSheetSubtitleBlock.Text = "Unable to add. Try another destination.";
+                SetAddToSheetOptionsEnabled(true);
+                FocusAddToSheetOption(_addToSheetPreviewIndex);
+            }
+            finally
+            {
+                _addToSheetConfirming = false;
+            }
+        }
+
+        private void CancelAddToSheet()
+        {
+            if (_activeAddToSheet == DetailsAddToSheetKind.None)
+            {
+                return;
+            }
+
+            CloseAddToSheet(restoreFocus: true);
+        }
+
+        private void CloseAddToSheet(bool restoreFocus)
+        {
+            if (AddToSheetRoot == null)
+            {
+                return;
+            }
+
+            var returnTarget = _addToSheetReturnFocus as Control;
+            _activeAddToSheet = DetailsAddToSheetKind.None;
+            _addToSheetSession = null;
+            _addToSheetLoadGeneration++;
+            _addToSheetConfirming = false;
+            _addToSheetReturnFocus = null;
+            AddToSheetOptionsPanel.Children.Clear();
+            AddToSheetRoot.Visibility = Visibility.Collapsed;
+
+            if (restoreFocus && returnTarget != null)
+            {
+                returnTarget.Focus(FocusState.Keyboard);
+            }
+        }
+
+        private bool CanApplyAddToSheetLoad(int loadGeneration, DetailsAddToSheetKind sheetKind)
+        {
+            return !_isUnloaded &&
+                loadGeneration == _addToSheetLoadGeneration &&
+                _activeAddToSheet == sheetKind;
+        }
+
+        private IReadOnlyList<EmbyMediaItem> GetActiveAddToTargets()
+        {
+            return _activeAddToSheet == DetailsAddToSheetKind.Collection
+                ? _collectionTargets
+                : _playlistTargets;
         }
 
         private async Task LoadPlaybackInfoAsync(
@@ -756,6 +1156,96 @@ namespace NextGenEmby.App.Views
             }
 
             return await client.GetChildrenAsync(session, seasonId, "Episode");
+        }
+
+        private async Task LoadOrganizeAsync(EmbyApiClient client, EmbySession session, int loadGeneration)
+        {
+            if (!CanApplyLoad(loadGeneration))
+            {
+                return;
+            }
+
+            var item = _item;
+            if (item == null || string.IsNullOrWhiteSpace(item.Id))
+            {
+                _organizeAncestors = Array.Empty<EmbyMediaItem>();
+                RenderOrganizeSection();
+                return;
+            }
+
+            OrganizeSummaryBlock.Text = "Loading library links...";
+            try
+            {
+                var ancestors = await client.GetItemAncestorsAsync(session, item.Id);
+                if (!CanApplyLoad(loadGeneration))
+                {
+                    return;
+                }
+
+                _organizeAncestors = ancestors;
+                RenderOrganizeSection();
+            }
+            catch
+            {
+                if (!CanApplyLoad(loadGeneration))
+                {
+                    return;
+                }
+
+                _organizeAncestors = Array.Empty<EmbyMediaItem>();
+                RenderOrganizeSection("Library links unavailable.");
+            }
+        }
+
+        private void RenderOrganizeSection(string statusPrefix = "")
+        {
+            var item = _item;
+            var hasItem = item != null && !string.IsNullOrWhiteSpace(item.Id);
+            OrganizeSection.Visibility = hasItem ? Visibility.Visible : Visibility.Collapsed;
+            AddToCollectionButton.IsEnabled = hasItem;
+            AddToPlaylistButton.IsEnabled = hasItem;
+
+            if (!hasItem)
+            {
+                OrganizeSummaryBlock.Text = "";
+                return;
+            }
+
+            var collections = _organizeAncestors
+                .Where(IsCollectionItem)
+                .Select(CreateDisplayName)
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .Take(3)
+                .ToList();
+            var playlists = _organizeAncestors
+                .Where(IsPlaylistItem)
+                .Select(CreateDisplayName)
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .Take(3)
+                .ToList();
+
+            var parts = new List<string>();
+            if (!string.IsNullOrWhiteSpace(statusPrefix))
+            {
+                parts.Add(statusPrefix);
+            }
+
+            if (collections.Count > 0)
+            {
+                parts.Add("Collections: " + string.Join(", ", collections));
+            }
+
+            if (playlists.Count > 0)
+            {
+                parts.Add("Playlists: " + string.Join(", ", playlists));
+            }
+
+            if (parts.Count == 0)
+            {
+                parts.Add("Not linked to a collection or playlist yet.");
+            }
+
+            OrganizeSummaryBlock.Text = string.Join("  /  ", parts);
         }
 
         private async Task LoadSecondaryRailsAsync(EmbyApiClient client, EmbySession session, int loadGeneration)
@@ -1041,6 +1531,133 @@ namespace NextGenEmby.App.Views
             return button;
         }
 
+        private Button CreateAddToSheetMessageButton(string message)
+        {
+            var button = new Button
+            {
+                Tag = -1,
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                HorizontalContentAlignment = HorizontalAlignment.Stretch,
+                MinHeight = 58,
+                Background = BrushResource("AppChromeBrush"),
+                BorderBrush = BrushResource("AppHairlineBrush"),
+                UseSystemFocusVisuals = true
+            };
+            button.Click += AddToSheetOption_OnClick;
+
+            button.Content = new TextBlock
+            {
+                Text = message ?? "",
+                FontSize = 18,
+                FontWeight = Windows.UI.Text.FontWeights.SemiBold,
+                Foreground = BrushResource("AppTextBrush"),
+                TextWrapping = TextWrapping.WrapWholeWords
+            };
+
+            return button;
+        }
+
+        private Button CreateAddToTargetButton(int index, EmbyMediaItem target)
+        {
+            var isPreview = index == _addToSheetPreviewIndex;
+            var button = new Button
+            {
+                Tag = index,
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                HorizontalContentAlignment = HorizontalAlignment.Stretch,
+                MinHeight = 84,
+                Padding = new Thickness(10),
+                Background = isPreview ? BrushResource("AppRaisedSurfaceBrush") : BrushResource("AppChromeBrush"),
+                BorderBrush = isPreview ? BrushResource("AppAccentBrush") : BrushResource("AppHairlineBrush"),
+                UseSystemFocusVisuals = true
+            };
+            AutomationProperties.SetName(button, CreateDisplayName(target));
+            button.Click += AddToSheetOption_OnClick;
+            button.GotFocus += AddToSheetOption_OnGotFocus;
+
+            var row = new Grid
+            {
+                ColumnSpacing = 14
+            };
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            var artworkFrame = CreateAddToTargetArtwork(target);
+            Grid.SetColumn(artworkFrame, 0);
+            row.Children.Add(artworkFrame);
+
+            var text = new StackPanel
+            {
+                Spacing = 4,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            text.Children.Add(new TextBlock
+            {
+                Text = CreateDisplayName(target),
+                FontSize = 18,
+                FontWeight = Windows.UI.Text.FontWeights.SemiBold,
+                Foreground = BrushResource("AppTextBrush"),
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                MaxLines = 1
+            });
+            text.Children.Add(new TextBlock
+            {
+                Text = CreateAddToTargetMeta(target),
+                FontSize = 14,
+                Foreground = BrushResource("AppMutedTextBrush"),
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                MaxLines = 1
+            });
+            Grid.SetColumn(text, 1);
+            row.Children.Add(text);
+
+            var selectedIcon = new SymbolIcon(Symbol.Accept)
+            {
+                Foreground = BrushResource("AppAccentBrush"),
+                Visibility = isPreview ? Visibility.Visible : Visibility.Collapsed,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            Grid.SetColumn(selectedIcon, 2);
+            row.Children.Add(selectedIcon);
+
+            button.Content = row;
+            return button;
+        }
+
+        private FrameworkElement CreateAddToTargetArtwork(EmbyMediaItem target)
+        {
+            var frame = new Border
+            {
+                Width = 112,
+                Height = 64,
+                CornerRadius = new CornerRadius(6),
+                Background = BrushResource("AppRaisedSurfaceBrush")
+            };
+
+            var artwork = EmbyArtworkPolicy.SelectItemWideArtwork(target, 360);
+            if (artwork != null && _addToSheetSession != null)
+            {
+                frame.Background = new ImageBrush
+                {
+                    ImageSource = new BitmapImage(new Uri(BuildImageUrl(_addToSheetSession, artwork))),
+                    Stretch = Stretch.UniformToFill
+                };
+                return frame;
+            }
+
+            frame.Child = new TextBlock
+            {
+                Text = CreateFallbackInitial(target),
+                FontSize = 22,
+                FontWeight = Windows.UI.Text.FontWeights.SemiBold,
+                Foreground = BrushResource("AppMutedTextBrush"),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            return frame;
+        }
+
         private static Border CreateRailCardBorder()
         {
             return new Border
@@ -1190,6 +1807,74 @@ namespace NextGenEmby.App.Views
             });
         }
 
+        private static void AddToSheetOption_OnGotFocus(object sender, RoutedEventArgs e)
+        {
+            var target = sender as Control;
+            if (target == null)
+            {
+                return;
+            }
+
+            target.StartBringIntoView(new BringIntoViewOptions
+            {
+                AnimationDesired = true,
+                VerticalAlignmentRatio = 0.5,
+                VerticalOffset = -8
+            });
+        }
+
+        private void AddToSheetOption_OnClick(object sender, RoutedEventArgs e)
+        {
+            if (_activeAddToSheet == DetailsAddToSheetKind.None)
+            {
+                return;
+            }
+
+            var button = sender as Button;
+            if (button != null && button.Tag is int index && index >= 0)
+            {
+                _addToSheetPreviewIndex = index;
+                RenderAddToSheetOptions();
+            }
+
+            _ = ConfirmAddToSheetAsync();
+        }
+
+        private void FocusAddToSheetOption(int index)
+        {
+            if (index < 0 || index >= AddToSheetOptionsPanel.Children.Count)
+            {
+                return;
+            }
+
+            var control = AddToSheetOptionsPanel.Children[index] as Control;
+            if (control != null)
+            {
+                control.Focus(FocusState.Keyboard);
+            }
+        }
+
+        private void SetAddToSheetOptionsEnabled(bool isEnabled)
+        {
+            foreach (var button in AddToSheetOptionsPanel.Children.OfType<Button>())
+            {
+                button.IsEnabled = isEnabled;
+            }
+        }
+
+        private void AddAncestorIfMissing(EmbyMediaItem target)
+        {
+            if (string.IsNullOrWhiteSpace(target.Id) ||
+                _organizeAncestors.Any(ancestor => string.Equals(ancestor.Id, target.Id, StringComparison.OrdinalIgnoreCase)))
+            {
+                return;
+            }
+
+            var ancestors = _organizeAncestors.ToList();
+            ancestors.Add(target);
+            _organizeAncestors = ancestors;
+        }
+
         private void SourceVersion_OnClick(object sender, RoutedEventArgs e)
         {
             var button = sender as Button;
@@ -1290,15 +1975,21 @@ namespace NextGenEmby.App.Views
         private void ResetPlaybackSections()
         {
             _mediaSources = Array.Empty<EmbyMediaSource>();
+            _organizeAncestors = Array.Empty<EmbyMediaItem>();
             VersionsPanel.Children.Clear();
             AudioSummaryBlock.Text = "";
             SubtitleSummaryBlock.Text = "";
+            OrganizeSummaryBlock.Text = "";
+            OrganizeSection.Visibility = Visibility.Collapsed;
+            AddToCollectionButton.IsEnabled = false;
+            AddToPlaylistButton.IsEnabled = false;
             EpisodesPanel.Children.Clear();
             EpisodesSection.Visibility = Visibility.Collapsed;
             SimilarItemsPanel.Children.Clear();
             SimilarSection.Visibility = Visibility.Collapsed;
             PeoplePanel.Children.Clear();
             PeopleSection.Visibility = Visibility.Collapsed;
+            CloseAddToSheet(restoreFocus: false);
         }
 
         private void ResetArtwork()
@@ -1571,6 +2262,62 @@ namespace NextGenEmby.App.Views
                 : person.Name + ", " + role;
         }
 
+        private static bool IsCollectionItem(EmbyMediaItem item)
+        {
+            return item != null && string.Equals(item.Type, "BoxSet", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsPlaylistItem(EmbyMediaItem item)
+        {
+            return item != null && string.Equals(item.Type, "Playlist", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string CreateDisplayName(EmbyMediaItem item)
+        {
+            if (item == null)
+            {
+                return "";
+            }
+
+            return string.IsNullOrWhiteSpace(item.Name) ? item.Id : item.Name;
+        }
+
+        private static string CreateAddToTargetMeta(EmbyMediaItem target)
+        {
+            var parts = new List<string>();
+            parts.Add(IsCollectionItem(target) ? "Collection" : "Playlist");
+
+            if (target.ChildCount.HasValue && target.ChildCount.Value > 0)
+            {
+                parts.Add(target.ChildCount.Value + " items");
+            }
+
+            if (target.ProductionYear.HasValue)
+            {
+                parts.Add(target.ProductionYear.Value.ToString());
+            }
+
+            return string.Join(" / ", parts);
+        }
+
+        private static string CreateFallbackInitial(EmbyMediaItem item)
+        {
+            var name = CreateDisplayName(item);
+            return string.IsNullOrWhiteSpace(name) ? "?" : name.Substring(0, 1).ToUpperInvariant();
+        }
+
+        private static Brush BrushResource(string key)
+        {
+            return (Brush)Application.Current.Resources[key];
+        }
+
+        private static string BuildImageUrl(EmbySession session, EmbyImageCandidate image)
+        {
+            return
+                $"{session.ServerUrl.TrimEnd('/')}/Items/{Uri.EscapeDataString(image.ItemId)}/Images/{Uri.EscapeDataString(image.ImageType)}" +
+                $"?maxWidth={image.MaxWidth}&quality=90&api_key={Uri.EscapeDataString(session.AccessToken)}";
+        }
+
         private static string FormatBitrate(long bitrate)
         {
             if (bitrate >= 1000000)
@@ -1604,5 +2351,12 @@ namespace NextGenEmby.App.Views
 
             return meta;
         }
+    }
+
+    internal enum DetailsAddToSheetKind
+    {
+        None,
+        Collection,
+        Playlist
     }
 }

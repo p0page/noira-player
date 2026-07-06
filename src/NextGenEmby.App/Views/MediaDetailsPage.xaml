@@ -151,6 +151,48 @@
                         TextWrapping="Wrap" />
 
                     <StackPanel
+                        x:Name="OrganizeSection"
+                        Spacing="10"
+                        Visibility="Collapsed">
+                        <TextBlock
+                            Text="Organize"
+                            FontSize="22"
+                            FontWeight="SemiBold" />
+                        <TextBlock
+                            x:Name="OrganizeSummaryBlock"
+                            FontSize="16"
+                            Foreground="{StaticResource AppMutedTextBrush}"
+                            TextWrapping="Wrap" />
+                        <StackPanel
+                            x:Name="OrganizeActionsPanel"
+                            Orientation="Horizontal"
+                            Spacing="12">
+                            <Button
+                                x:Name="AddToCollectionButton"
+                                MinWidth="214"
+                                Height="54"
+                                Click="AddToCollection_OnClick"
+                                UseSystemFocusVisuals="True">
+                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                    <SymbolIcon Symbol="Add" />
+                                    <TextBlock Text="Add to collection" FontSize="18" />
+                                </StackPanel>
+                            </Button>
+                            <Button
+                                x:Name="AddToPlaylistButton"
+                                MinWidth="194"
+                                Height="54"
+                                Click="AddToPlaylist_OnClick"
+                                UseSystemFocusVisuals="True">
+                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                    <SymbolIcon Symbol="Add" />
+                                    <TextBlock Text="Add to playlist" FontSize="18" />
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <StackPanel
                         x:Name="EpisodesSection"
                         Spacing="14"
                         Visibility="Collapsed">
@@ -220,5 +262,47 @@
                 </StackPanel>
             </Grid>
         </ScrollViewer>
+
+        <Grid
+            x:Name="AddToSheetRoot"
+            Canvas.ZIndex="20"
+            Background="#CC050607"
+            Visibility="Collapsed">
+            <Grid Margin="{StaticResource TvPageMargin}">
+                <Border
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Width="820"
+                    MinHeight="236"
+                    Background="{StaticResource AppSurfaceBrush}"
+                    BorderBrush="{StaticResource AppHairlineBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="28">
+                    <StackPanel Spacing="16">
+                        <StackPanel Spacing="4">
+                            <TextBlock
+                                x:Name="AddToSheetTitleBlock"
+                                FontSize="30"
+                                FontWeight="SemiBold"
+                                Text="Add to collection" />
+                            <TextBlock
+                                x:Name="AddToSheetSubtitleBlock"
+                                FontSize="16"
+                                Foreground="{StaticResource AppMutedTextBrush}"
+                                Text="Choose a destination" />
+                        </StackPanel>
+
+                        <ScrollViewer
+                            MaxHeight="392"
+                            VerticalScrollBarVisibility="Auto">
+                            <StackPanel
+                                x:Name="AddToSheetOptionsPanel"
+                                Spacing="10" />
+                        </ScrollViewer>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Grid>
     </Grid>
 </Page>

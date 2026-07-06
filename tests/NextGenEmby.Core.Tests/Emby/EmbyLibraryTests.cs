@@ -714,6 +714,93 @@ public sealed class EmbyLibraryTests
     }
 
     [Fact]
+    public async Task GetItemAncestorsAsync_Uses_Ancestors_Endpoint_And_Parses_Organize_Parents()
+    {
+        var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
+            HttpStatusCode.OK,
+            """
+            [
+              {
+                "Id": "boxset-1",
+                "Name": "A Collection",
+                "Type": "BoxSet",
+                "ImageTags": { "Primary": "collection-primary" }
+              },
+              {
+                "Id": "playlist-1",
+                "Name": "A Playlist",
+                "Type": "Playlist"
+              }
+            ]
+            """));
+        using var http = new HttpClient(handler);
+        var client = CreateClient(http);
+
+        var items = await client.GetItemAncestorsAsync(Session(userId: "user 1/slash"), "movie 1/slash");
+
+        Assert.Collection(
+            items,
+            item =>
+            {
+                Assert.Equal("boxset-1", item.Id);
+                Assert.Equal("A Collection", item.Name);
+                Assert.Equal("BoxSet", item.Type);
+                Assert.Equal("collection-primary", item.PrimaryImageTag);
+            },
+            item =>
+            {
+                Assert.Equal("playlist-1", item.Id);
+                Assert.Equal("A Playlist", item.Name);
+                Assert.Equal("Playlist", item.Type);
+            });
+        Assert.Equal("/Items/movie%201%2Fslash/Ancestors", handler.LastRequest!.RequestUri!.AbsolutePath);
+        Assert.Contains("UserId=user%201%2Fslash", handler.LastRequest.RequestUri.Query);
+    }
+
+    [Fact]
+    public async Task AddItemToCollectionAsync_Posts_Collection_Item_Ids()
+    {
+        var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(HttpStatusCode.OK, ""));
+        using var http = new HttpClient(handler);
+        var client = CreateClient(http);
+
+        await client.AddItemToCollectionAsync(Session(), "collection 1/slash", "movie 1/slash");
+
+        Assert.Equal(HttpMethod.Post, handler.LastRequest!.Method);
+        Assert.Equal("/Collections/collection%201%2Fslash/Items", handler.LastRequest.RequestUri!.AbsolutePath);
+        Assert.Contains("Ids=movie%201%2Fslash", handler.LastRequest.RequestUri.Query);
+        Assert.Null(handler.LastRequest.Body);
+    }
+
+    [Fact]
+    public async Task AddItemToPlaylistAsync_Posts_User_And_Parses_Result()
+    {
+        var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
+            HttpStatusCode.OK,
+            """
+            {
+              "Id": "playlist-1",
+              "ItemAddedCount": 1
+            }
+            """));
+        using var http = new HttpClient(handler);
+        var client = CreateClient(http);
+
+        var result = await client.AddItemToPlaylistAsync(
+            Session(userId: "user 1/slash"),
+            "playlist 1/slash",
+            "movie 1/slash");
+
+        Assert.Equal("playlist-1", result.Id);
+        Assert.Equal(1, result.ItemAddedCount);
+        Assert.Equal(HttpMethod.Post, handler.LastRequest!.Method);
+        Assert.Equal("/Playlists/playlist%201%2Fslash/Items", handler.LastRequest.RequestUri!.AbsolutePath);
+        Assert.Contains("UserId=user%201%2Fslash", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("Ids=movie%201%2Fslash", handler.LastRequest.RequestUri.Query);
+        Assert.Null(handler.LastRequest.Body);
+    }
+
+    [Fact]
     public async Task SearchItemsAsync_Uses_Caller_Provided_Item_Types()
     {
         var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(

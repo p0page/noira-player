@@ -127,6 +127,9 @@ Library data:
 Details data:
 
 - Primary item metadata, overview, genres, people, runtime, production year, community rating, critic rating when available, user rating, played/favorite state, media sources, versions, audio streams, subtitle streams, seasons, episodes, similar items, collections, and playlists.
+- Organize state comes from `/Items/{Id}/Ancestors` when the server exposes it, then falls back to a usable Add flow if ancestor lookup is unavailable.
+- Add to collection uses existing `BoxSet` destinations and `POST /Collections/{Id}/Items`.
+- Add to playlist uses existing `Playlist` destinations and `POST /Playlists/{Id}/Items`.
 
 Playback data:
 
@@ -272,6 +275,8 @@ Behavior:
 - Favorite and watched actions update item user-data in place and restore focus to the changed action.
 - Person cards open a filtered person library rather than a modal dead end.
 - Similar item cards open that item's Details page.
+- Add to collection and Add to playlist open centered matte sheets with one focusable destination per row.
+- Empty collection/playlist destination sheets keep a visible focus target so B/Escape can close the layer and restore the originating action.
 - B returns one level.
 - Stream selection changes the launch request but does not start accidental playback unless the user selects Play.
 
