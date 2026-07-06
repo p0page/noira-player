@@ -50,6 +50,43 @@ public sealed class PlaybackQualityComparisonSuiteTests
     }
 
     [Fact]
+    public void Summarize_Emits_SignalSummaries_For_Cross_Case_Trend_Diagnosis()
+    {
+        var improvedA = Compare(
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "180.000"),
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "120.000"));
+        improvedA.CaseId = "case-frame-a";
+        var improvedB = Compare(
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "160.000"),
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "130.000"));
+        improvedB.CaseId = "case-frame-b";
+        var regressed = Compare(
+            Check("AudioVideoDriftMsP95", "pass", "av-sync", "sync.audioVideoDriftMsP95", "40.000", "25.000"),
+            Check("AudioVideoDriftMsP95", "fail", "av-sync", "sync.audioVideoDriftMsP95", "40.000", "55.000"));
+        regressed.CaseId = "case-av-sync";
+
+        var suite = PlaybackQualityComparisonSuiteAggregator.Summarize(
+            new[] { improvedA, improvedB, regressed });
+
+        Assert.Contains(suite.SignalSummaries, summary =>
+            summary.Signal == "timing.maxFrameGapMs" &&
+            summary.FailureArea == "frame-pacing" &&
+            summary.Outcome == "improved" &&
+            summary.ImprovementCount == 2 &&
+            summary.RegressionCount == 0 &&
+            summary.CaseIds.Contains("case-frame-a") &&
+            summary.CaseIds.Contains("case-frame-b") &&
+            summary.Directions.Contains("decreased"));
+        Assert.Contains(suite.SignalSummaries, summary =>
+            summary.Signal == "sync.audioVideoDriftMsP95" &&
+            summary.FailureArea == "av-sync" &&
+            summary.Outcome == "regressed" &&
+            summary.ImprovementCount == 0 &&
+            summary.RegressionCount == 1 &&
+            summary.CaseIds.Contains("case-av-sync"));
+    }
+
+    [Fact]
     public void Summarize_CollectsEvidence_When_Any_Comparison_Is_Weak_And_None_Regress()
     {
         var improved = Compare(

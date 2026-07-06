@@ -19,6 +19,8 @@ namespace NextGenEmby.Core.PlaybackQuality
         public List<string> Reasons { get; } = new List<string>();
         public List<string> Blockers { get; } = new List<string>();
         public List<string> Signals { get; } = new List<string>();
+        public List<PlaybackQualitySuiteSignalSummary> SignalSummaries { get; } =
+            new List<PlaybackQualitySuiteSignalSummary>();
         public List<string> FailureAreas { get; } = new List<string>();
         public List<string> TargetFailureAreas { get; } = new List<string>();
         public List<string> TargetCaseIds { get; } = new List<string>();
@@ -42,6 +44,17 @@ namespace NextGenEmby.Core.PlaybackQuality
         public List<string> Reasons { get; } = new List<string>();
         public List<string> Blockers { get; } = new List<string>();
         public List<string> CodeTargets { get; } = new List<string>();
+    }
+
+    public sealed class PlaybackQualitySuiteSignalSummary
+    {
+        public string Signal { get; set; } = "";
+        public string FailureArea { get; set; } = "";
+        public string Outcome { get; set; } = "unchanged";
+        public int ImprovementCount { get; set; }
+        public int RegressionCount { get; set; }
+        public List<string> CaseIds { get; } = new List<string>();
+        public List<string> Directions { get; } = new List<string>();
     }
 
     public sealed class PlaybackQualityComparisonCaseSummary
@@ -84,6 +97,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                 suite.Cases.Add(CreateCaseSummary(comparison));
                 CountComparison(suite, comparison);
                 AddComparisonEvidence(suite, comparison);
+                AddSignalSummaries(suite, comparison);
             }
 
             suite.TotalComparisonCount = suite.Comparisons.Count;
@@ -256,6 +270,93 @@ namespace NextGenEmby.Core.PlaybackQuality
                 {
                     AddUnique(suite.Signals, signal);
                 }
+            }
+        }
+
+        private static void AddSignalSummaries(
+            PlaybackQualityComparisonSuite suite,
+            PlaybackQualityRunComparison comparison)
+        {
+            foreach (var improvement in comparison.Improvements)
+            {
+                AddSignalSummaryDelta(suite, comparison, improvement, isImprovement: true);
+            }
+
+            foreach (var regression in comparison.Regressions)
+            {
+                AddSignalSummaryDelta(suite, comparison, regression, isImprovement: false);
+            }
+        }
+
+        private static void AddSignalSummaryDelta(
+            PlaybackQualityComparisonSuite suite,
+            PlaybackQualityRunComparison comparison,
+            PlaybackQualitySignalDelta delta,
+            bool isImprovement)
+        {
+            if (string.IsNullOrWhiteSpace(delta.Signal))
+            {
+                return;
+            }
+
+            var summary = FindSignalSummary(
+                suite.SignalSummaries,
+                delta.Signal,
+                delta.FailureArea);
+            if (summary == null)
+            {
+                summary = new PlaybackQualitySuiteSignalSummary
+                {
+                    Signal = delta.Signal,
+                    FailureArea = delta.FailureArea
+                };
+                suite.SignalSummaries.Add(summary);
+            }
+
+            if (isImprovement)
+            {
+                summary.ImprovementCount++;
+            }
+            else
+            {
+                summary.RegressionCount++;
+            }
+
+            AddUnique(summary.CaseIds, comparison.CaseId);
+            AddUnique(summary.Directions, delta.Direction);
+            UpdateSignalSummaryOutcome(summary);
+        }
+
+        private static PlaybackQualitySuiteSignalSummary? FindSignalSummary(
+            List<PlaybackQualitySuiteSignalSummary> summaries,
+            string signal,
+            string failureArea)
+        {
+            foreach (var summary in summaries)
+            {
+                if (summary.Signal == signal && summary.FailureArea == failureArea)
+                {
+                    return summary;
+                }
+            }
+
+            return null;
+        }
+
+        private static void UpdateSignalSummaryOutcome(
+            PlaybackQualitySuiteSignalSummary summary)
+        {
+            if (summary.ImprovementCount > 0 && summary.RegressionCount > 0)
+            {
+                summary.Outcome = "mixed";
+            }
+            else if (summary.ImprovementCount > 0)
+            {
+                summary.Outcome = "improved";
+            }
+            else if (summary.RegressionCount > 0)
+            {
+                summary.Outcome = "regressed";
             }
         }
 

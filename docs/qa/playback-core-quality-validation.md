@@ -150,6 +150,7 @@ dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQ
 ```
 
 The suite output includes ranked `nextActions`. Automated model loops should read rank 1 before expanding the full `comparisons` payload; it carries the suite action, risk, target case IDs, signals, blockers, reasons, and likely Core/native code targets.
+It also includes `signalSummaries`, which aggregates improvements and regressions by signal and failure area so a model can identify cross-case playback trends before opening each individual comparison.
 
 `compare-suite` matches reports by relative `*.json` path by default. Manifest-driven runs should prefer `--match-by run-id`, which pairs baseline/candidate reports by `report.runId` and writes `caseId = runId` into generated comparisons:
 
