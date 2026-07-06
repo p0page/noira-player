@@ -849,6 +849,15 @@ namespace NextGenEmby.Core.PlaybackQuality
                 AddUnique(gate.Blockers, "failureAreas.missing");
             }
 
+            if (analysis.Source.Status == "mismatch" || analysis.Source.Status == "unsupported")
+            {
+                AddUnique(gate.Blockers, "source." + analysis.Source.Status);
+                foreach (var signal in analysis.Source.MismatchedSignals)
+                {
+                    AddUnique(gate.BlockerSignals, signal);
+                }
+            }
+
             if (gate.Blockers.Count > 0)
             {
                 gate.Status = "blocked";
@@ -857,12 +866,46 @@ namespace NextGenEmby.Core.PlaybackQuality
 
             gate.Status = "ready";
             gate.CanOptimizePlaybackCore = true;
-            foreach (var area in analysis.FailureAreas)
+            var targetArea = GetHighestPriorityFailureArea(analysis);
+            if (!string.IsNullOrWhiteSpace(targetArea))
             {
-                AddUnique(gate.TargetFailureAreas, area);
+                AddUnique(gate.TargetFailureAreas, targetArea);
+                foreach (var check in analysis.FailedChecks)
+                {
+                    if (check.FailureArea == targetArea &&
+                        !string.IsNullOrWhiteSpace(check.Signal))
+                    {
+                        AddUnique(gate.BlockerSignals, check.Signal);
+                    }
+                }
             }
 
             return gate;
+        }
+
+        private static string GetHighestPriorityFailureArea(
+            PlaybackQualityModelAnalysis analysis)
+        {
+            var priorityAreas = new[]
+            {
+                "unsupported-source",
+                "color-pipeline",
+                "startup",
+                "buffering",
+                "av-sync",
+                "frame-pacing",
+                "unknown"
+            };
+
+            foreach (var area in priorityAreas)
+            {
+                if (analysis.FailureAreas.Contains(area))
+                {
+                    return area;
+                }
+            }
+
+            return "";
         }
 
         private static void AddMissingEvidence(

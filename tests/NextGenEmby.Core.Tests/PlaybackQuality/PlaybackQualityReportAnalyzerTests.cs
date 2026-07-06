@@ -722,6 +722,55 @@ public sealed class PlaybackQualityReportAnalyzerTests
     }
 
     [Fact]
+    public void Analyze_Targets_Highest_Priority_Failure_Area_When_Frame_Pacing_Also_Fails()
+    {
+        var report = CreateOptimizationReadyFailure();
+        report.Analysis.PrimaryFailureArea = "color-pipeline";
+        report.ColorPipeline.ActualHdrOutput = "Sdr";
+        report.Checks.Add(new PlaybackQualityCheck
+        {
+            Name = "ActualHdrOutput",
+            Status = "fail",
+            FailureArea = "color-pipeline",
+            Signal = "colorPipeline.actualHdrOutput",
+            Expected = "Hdr10",
+            Actual = "Sdr"
+        });
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.True(analysis.OptimizationGate.CanOptimizePlaybackCore);
+        Assert.Equal("ready", analysis.OptimizationGate.Status);
+        Assert.Contains("color-pipeline", analysis.OptimizationGate.TargetFailureAreas);
+        Assert.DoesNotContain("frame-pacing", analysis.OptimizationGate.TargetFailureAreas);
+        Assert.Contains("colorPipeline.actualHdrOutput", analysis.OptimizationGate.BlockerSignals);
+    }
+
+    [Fact]
+    public void Analyze_Blocks_Core_Optimization_When_Source_Metadata_Mismatches()
+    {
+        var report = CreateOptimizationReadyFailure();
+        report.Analysis.PrimaryFailureArea = "unsupported-source";
+        report.Checks.Add(new PlaybackQualityCheck
+        {
+            Name = "ExpectedHdrKind",
+            Status = "fail",
+            FailureArea = "unsupported-source",
+            Signal = "source.hdrKind",
+            Expected = "Hdr10",
+            Actual = "DolbyVisionUnsupported"
+        });
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.False(analysis.OptimizationGate.CanOptimizePlaybackCore);
+        Assert.Equal("blocked", analysis.OptimizationGate.Status);
+        Assert.Contains("source.mismatch", analysis.OptimizationGate.Blockers);
+        Assert.Contains("source.hdrKind", analysis.OptimizationGate.BlockerSignals);
+        Assert.DoesNotContain("frame-pacing", analysis.OptimizationGate.TargetFailureAreas);
+    }
+
+    [Fact]
     public void Analyze_Classifies_Frame_Pacing_As_Isolated_Gap_When_Only_Max_Frame_Gap_Fails()
     {
         var report = CreateOptimizationReadyFailure();
