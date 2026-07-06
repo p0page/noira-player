@@ -178,6 +178,80 @@
                         </ItemsPanelTemplate>
                     </GridView.ItemsPanel>
                 </GridView>
+
+                <StackPanel
+                    x:Name="EmptyStatePanel"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    MaxWidth="560"
+                    Spacing="18"
+                    Visibility="Collapsed">
+                    <TextBlock
+                        x:Name="EmptyTitleBlock"
+                        HorizontalAlignment="Center"
+                        FontSize="28"
+                        FontWeight="SemiBold"
+                        Text="No items found"
+                        TextAlignment="Center" />
+                    <TextBlock
+                        x:Name="EmptyBodyBlock"
+                        HorizontalAlignment="Center"
+                        FontSize="17"
+                        Foreground="{StaticResource AppMutedTextBrush}"
+                        Text="Try another filter or refresh this library."
+                        TextAlignment="Center"
+                        TextWrapping="Wrap" />
+                    <StackPanel
+                        HorizontalAlignment="Center"
+                        Orientation="Horizontal"
+                        Spacing="14">
+                        <Button
+                            x:Name="ClearFiltersButton"
+                            Click="ClearFilters_OnClick"
+                            Content="Clear filters" />
+                        <Button
+                            x:Name="EmptyRetryButton"
+                            Click="Refresh_OnClick"
+                            Content="Retry" />
+                    </StackPanel>
+                </StackPanel>
+            </Grid>
+        </Grid>
+
+        <Grid
+            x:Name="OptionSheetRoot"
+            Canvas.ZIndex="20"
+            Background="#CC050607"
+            Visibility="Collapsed">
+            <Grid Margin="{StaticResource TvPageMargin}">
+                <Border
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Bottom"
+                    Width="720"
+                    Background="{StaticResource AppSurfaceBrush}"
+                    BorderBrush="{StaticResource AppHairlineBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="28">
+                    <StackPanel Spacing="16">
+                        <StackPanel Spacing="4">
+                            <TextBlock
+                                x:Name="OptionSheetTitleBlock"
+                                FontSize="30"
+                                FontWeight="SemiBold"
+                                Text="Sort" />
+                            <TextBlock
+                                x:Name="OptionSheetSubtitleBlock"
+                                FontSize="16"
+                                Foreground="{StaticResource AppMutedTextBrush}"
+                                Text="Choose an option" />
+                        </StackPanel>
+
+                        <StackPanel
+                            x:Name="OptionSheetOptionsPanel"
+                            Spacing="10" />
+                    </StackPanel>
+                </Border>
             </Grid>
         </Grid>
     </Grid>

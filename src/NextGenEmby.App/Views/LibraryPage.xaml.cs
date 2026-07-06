@@ -6,7 +6,9 @@ using NextGenEmby.App.Navigation;
 using NextGenEmby.App.Services;
 using NextGenEmby.App.Storage;
 using NextGenEmby.Core.Emby;
+using NextGenEmby.Core.Input;
 using Windows.UI.Core;
+using Windows.UI.Text;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Input;
@@ -40,6 +42,10 @@ namespace NextGenEmby.App.Views
         private bool _keyHandlerAttached;
         private int _sortIndex;
         private int _filterIndex;
+        private LibraryOptionSheetKind _activeOptionSheet;
+        private int _optionSheetPreviewIndex;
+        private bool _optionSheetConfirming;
+        private object? _optionSheetReturnFocus;
         private int _loadGeneration;
 
         public LibraryPage()
@@ -57,16 +63,19 @@ namespace NextGenEmby.App.Views
             _isUnloaded = false;
             _isNavigatingToDetails = false;
             _request = e.Parameter as LibraryNavigationRequest;
+            CloseOptionSheet(restoreFocus: false);
             if (_request == null || string.IsNullOrWhiteSpace(_request.Title))
             {
                 TitleBlock.Text = "Library";
                 StatusBlock.Text = "Choose a library from Home.";
                 ItemsGrid.Items.Clear();
+                HideEmptyState();
                 return;
             }
 
             TitleBlock.Text = _request.Title;
             OptionsPanel.Visibility = IsSectionRequest(_request) ? Visibility.Collapsed : Visibility.Visible;
+            ApplyOptionLabels();
             await LoadLibraryAsync();
         }
 
@@ -87,27 +96,35 @@ namespace NextGenEmby.App.Views
             await LoadLibraryAsync();
         }
 
-        private async void SortButton_OnClick(object sender, RoutedEventArgs e)
+        private void SortButton_OnClick(object sender, RoutedEventArgs e)
         {
-            _sortIndex = (_sortIndex + 1) % SortOptions.Length;
-            ApplyOptionLabels();
-            await LoadLibraryAsync();
+            OpenOptionSheet(LibraryOptionSheetKind.Sort);
         }
 
-        private async void FilterButton_OnClick(object sender, RoutedEventArgs e)
+        private void FilterButton_OnClick(object sender, RoutedEventArgs e)
         {
-            _filterIndex = (_filterIndex + 1) % FilterOptions.Length;
+            OpenOptionSheet(LibraryOptionSheetKind.Filter);
+        }
+
+        private async void ClearFilters_OnClick(object sender, RoutedEventArgs e)
+        {
+            _filterIndex = 0;
             ApplyOptionLabels();
             await LoadLibraryAsync();
         }
 
         private void Page_OnKeyDown(object sender, KeyRoutedEventArgs e)
         {
-            e.Handled = TryRouteLibraryDirectionalKey(e.Key) || e.Handled;
+            e.Handled = TryRouteLibraryKey(e.Key) || e.Handled;
         }
 
         private void LibraryPage_OnCoreWindowKeyDown(CoreWindow sender, Windows.UI.Core.KeyEventArgs args)
         {
+            if (IsHorizontalKey(args.VirtualKey))
+            {
+                return;
+            }
+
             args.Handled = TryRouteLibraryDirectionalKey(args.VirtualKey) || args.Handled;
         }
 
@@ -148,10 +165,79 @@ namespace NextGenEmby.App.Views
             return RefreshButton.IsEnabled && RefreshButton.Focus(FocusState.Keyboard);
         }
 
+        private bool TryRouteLibraryKey(VirtualKey key)
+        {
+            return TryRouteOptionSheetKey(key) || TryRouteLibraryDirectionalKey(key);
+        }
+
+        private bool TryRouteOptionSheetKey(VirtualKey key)
+        {
+            if (_activeOptionSheet == LibraryOptionSheetKind.None)
+            {
+                return false;
+            }
+
+            switch (key)
+            {
+                case VirtualKey.Up:
+                case VirtualKey.Left:
+                case VirtualKey.GamepadDPadUp:
+                case VirtualKey.GamepadDPadLeft:
+                case VirtualKey.GamepadLeftThumbstickUp:
+                case VirtualKey.GamepadLeftThumbstickLeft:
+                    MoveOptionSheetSelection(-1);
+                    return true;
+
+                case VirtualKey.Down:
+                case VirtualKey.Right:
+                case VirtualKey.GamepadDPadDown:
+                case VirtualKey.GamepadDPadRight:
+                case VirtualKey.GamepadLeftThumbstickDown:
+                case VirtualKey.GamepadLeftThumbstickRight:
+                    MoveOptionSheetSelection(1);
+                    return true;
+
+                case VirtualKey.Enter:
+                case VirtualKey.Space:
+                case VirtualKey.GamepadA:
+                    _ = ConfirmOptionSheetAsync();
+                    return true;
+
+                case VirtualKey.Escape:
+                case VirtualKey.GoBack:
+                case VirtualKey.GamepadB:
+                    CancelOptionSheet();
+                    return true;
+
+                default:
+                    return false;
+            }
+        }
+
+        private static bool IsHorizontalKey(VirtualKey key)
+        {
+            return key == VirtualKey.Left ||
+                key == VirtualKey.Right ||
+                key == VirtualKey.GamepadDPadLeft ||
+                key == VirtualKey.GamepadDPadRight ||
+                key == VirtualKey.GamepadLeftThumbstickLeft ||
+                key == VirtualKey.GamepadLeftThumbstickRight;
+        }
+
         private bool TryRouteLibraryDirectionalKey(VirtualKey key)
         {
             switch (key)
             {
+                case VirtualKey.Left:
+                case VirtualKey.GamepadDPadLeft:
+                case VirtualKey.GamepadLeftThumbstickLeft:
+                    return TryRouteToolbarHorizontalKey(LibraryToolbarFocusDirection.Left);
+
+                case VirtualKey.Right:
+                case VirtualKey.GamepadDPadRight:
+                case VirtualKey.GamepadLeftThumbstickRight:
+                    return TryRouteToolbarHorizontalKey(LibraryToolbarFocusDirection.Right);
+
                 case VirtualKey.Up:
                 case VirtualKey.GamepadDPadUp:
                 case VirtualKey.GamepadLeftThumbstickUp:
@@ -191,6 +277,51 @@ namespace NextGenEmby.App.Views
             }
         }
 
+        private bool TryRouteToolbarHorizontalKey(LibraryToolbarFocusDirection direction)
+        {
+            var current = GetFocusedToolbarTarget();
+            if (current == LibraryToolbarFocusTarget.None)
+            {
+                return false;
+            }
+
+            var next = LibraryToolbarFocusPolicy.Move(current, direction, IsSectionRequest(_request));
+            return FocusToolbarTarget(next);
+        }
+
+        private LibraryToolbarFocusTarget GetFocusedToolbarTarget()
+        {
+            var focusedElement = FocusManager.GetFocusedElement();
+            if (IsFocusWithin(focusedElement, SortButton))
+            {
+                return LibraryToolbarFocusTarget.Sort;
+            }
+
+            if (IsFocusWithin(focusedElement, FilterButton))
+            {
+                return LibraryToolbarFocusTarget.Filter;
+            }
+
+            return IsFocusWithin(focusedElement, RefreshButton)
+                ? LibraryToolbarFocusTarget.Refresh
+                : LibraryToolbarFocusTarget.None;
+        }
+
+        private bool FocusToolbarTarget(LibraryToolbarFocusTarget target)
+        {
+            switch (target)
+            {
+                case LibraryToolbarFocusTarget.Sort:
+                    return SortButton.IsEnabled && SortButton.Focus(FocusState.Keyboard);
+                case LibraryToolbarFocusTarget.Filter:
+                    return FilterButton.IsEnabled && FilterButton.Focus(FocusState.Keyboard);
+                case LibraryToolbarFocusTarget.Refresh:
+                    return RefreshButton.IsEnabled && RefreshButton.Focus(FocusState.Keyboard);
+                default:
+                    return false;
+            }
+        }
+
         private bool FocusFilterControlForGridIndex(int gridIndex)
         {
             if (IsSectionRequest(_request))
@@ -224,7 +355,10 @@ namespace NextGenEmby.App.Views
             RefreshButton.IsEnabled = false;
             SortButton.IsEnabled = false;
             FilterButton.IsEnabled = false;
+            EmptyRetryButton.IsEnabled = false;
+            ClearFiltersButton.IsEnabled = false;
             StatusBlock.Text = "Loading...";
+            HideEmptyState();
             var focusFirstItem = false;
             var focusFallback = false;
 
@@ -240,6 +374,7 @@ namespace NextGenEmby.App.Views
                 {
                     ItemsGrid.Items.Clear();
                     StatusBlock.Text = "Sign in first.";
+                    HideEmptyState();
                     focusFallback = true;
                     return;
                 }
@@ -281,6 +416,7 @@ namespace NextGenEmby.App.Views
 
                 ItemsGrid.Items.Clear();
                 StatusBlock.Text = "Unable to load library.";
+                ShowEmptyState("Unable to load library.", "Retry this library.");
                 focusFallback = true;
             }
             finally
@@ -290,6 +426,8 @@ namespace NextGenEmby.App.Views
                     RefreshButton.IsEnabled = true;
                     SortButton.IsEnabled = !IsSectionRequest(request);
                     FilterButton.IsEnabled = !IsSectionRequest(request);
+                    EmptyRetryButton.IsEnabled = true;
+                    ClearFiltersButton.IsEnabled = true;
 
                     if (focusFirstItem)
                     {
@@ -315,9 +453,11 @@ namespace NextGenEmby.App.Views
             if (items == null || items.Count == 0)
             {
                 StatusBlock.Text = "No items found.";
+                ShowEmptyState("No items found", "Try another filter or refresh this library.");
                 return false;
             }
 
+            HideEmptyState();
             foreach (var item in items)
             {
                 ItemsGrid.Items.Add(item);
@@ -536,6 +676,20 @@ namespace NextGenEmby.App.Views
                     return;
                 }
 
+                if (ClearFiltersButton.Visibility == Visibility.Visible &&
+                    ClearFiltersButton.IsEnabled &&
+                    ClearFiltersButton.Focus(FocusState.Programmatic))
+                {
+                    return;
+                }
+
+                if (EmptyRetryButton.Visibility == Visibility.Visible &&
+                    EmptyRetryButton.IsEnabled &&
+                    EmptyRetryButton.Focus(FocusState.Programmatic))
+                {
+                    return;
+                }
+
                 if (!RefreshButton.Focus(FocusState.Programmatic))
                 {
                     if (!IsSectionRequest(_request))
@@ -551,10 +705,238 @@ namespace NextGenEmby.App.Views
             return !_isUnloaded && loadGeneration == _loadGeneration;
         }
 
+        private void ShowEmptyState(string title, string body)
+        {
+            EmptyTitleBlock.Text = title;
+            EmptyBodyBlock.Text = body;
+            EmptyStatePanel.Visibility = Visibility.Visible;
+            ClearFiltersButton.Visibility = _filterIndex == 0 ? Visibility.Collapsed : Visibility.Visible;
+        }
+
+        private void HideEmptyState()
+        {
+            EmptyStatePanel.Visibility = Visibility.Collapsed;
+            ClearFiltersButton.Visibility = Visibility.Collapsed;
+        }
+
         private void ApplyOptionLabels()
         {
             SortValueBlock.Text = SortOptions[_sortIndex].Label;
             FilterValueBlock.Text = FilterOptions[_filterIndex].Label;
+        }
+
+        private void OpenOptionSheet(LibraryOptionSheetKind sheetKind)
+        {
+            if (sheetKind == LibraryOptionSheetKind.None)
+            {
+                return;
+            }
+
+            _activeOptionSheet = sheetKind;
+            _optionSheetReturnFocus = FocusManager.GetFocusedElement();
+            var decision = LibraryOptionSheetPolicy.Open(GetActiveOptionCount(), GetActiveCommittedIndex());
+            _optionSheetPreviewIndex = decision.Index;
+
+            OptionSheetTitleBlock.Text = sheetKind == LibraryOptionSheetKind.Sort ? "Sort by" : "Filter";
+            OptionSheetSubtitleBlock.Text = "Current: " + GetActiveOptions()[_optionSheetPreviewIndex].Label;
+            OptionSheetRoot.Visibility = Visibility.Visible;
+            RenderOptionSheetOptions();
+            FocusOptionSheetOption(_optionSheetPreviewIndex);
+        }
+
+        private void MoveOptionSheetSelection(int offset)
+        {
+            var nextIndex = LibraryOptionSheetPolicy.MovePreviewIndex(
+                _optionSheetPreviewIndex,
+                GetActiveOptionCount(),
+                offset);
+
+            if (nextIndex == _optionSheetPreviewIndex)
+            {
+                FocusOptionSheetOption(_optionSheetPreviewIndex);
+                return;
+            }
+
+            _optionSheetPreviewIndex = nextIndex;
+            OptionSheetSubtitleBlock.Text = "Current: " + GetActiveOptions()[_optionSheetPreviewIndex].Label;
+            RenderOptionSheetOptions();
+            FocusOptionSheetOption(_optionSheetPreviewIndex);
+        }
+
+        private async Task ConfirmOptionSheetAsync()
+        {
+            if (_activeOptionSheet == LibraryOptionSheetKind.None || _optionSheetConfirming)
+            {
+                return;
+            }
+
+            _optionSheetConfirming = true;
+            var committedIndex = GetActiveCommittedIndex();
+            var decision = LibraryOptionSheetPolicy.Confirm(
+                committedIndex,
+                _optionSheetPreviewIndex,
+                GetActiveOptionCount());
+
+            SetActiveCommittedIndex(decision.Index);
+            ApplyOptionLabels();
+            CloseOptionSheet(restoreFocus: !decision.ShouldReload);
+
+            if (decision.ShouldReload)
+            {
+                await LoadLibraryAsync();
+            }
+
+            _optionSheetConfirming = false;
+        }
+
+        private void CancelOptionSheet()
+        {
+            if (_activeOptionSheet == LibraryOptionSheetKind.None)
+            {
+                return;
+            }
+
+            var decision = LibraryOptionSheetPolicy.Cancel(GetActiveCommittedIndex(), GetActiveOptionCount());
+            SetActiveCommittedIndex(decision.Index);
+            ApplyOptionLabels();
+            CloseOptionSheet(restoreFocus: true);
+        }
+
+        private void CloseOptionSheet(bool restoreFocus)
+        {
+            if (OptionSheetRoot == null)
+            {
+                return;
+            }
+
+            var returnTarget = _optionSheetReturnFocus as Control;
+            _activeOptionSheet = LibraryOptionSheetKind.None;
+            _optionSheetConfirming = false;
+            _optionSheetReturnFocus = null;
+            OptionSheetOptionsPanel.Children.Clear();
+            OptionSheetRoot.Visibility = Visibility.Collapsed;
+
+            if (restoreFocus && returnTarget != null)
+            {
+                returnTarget.Focus(FocusState.Keyboard);
+            }
+        }
+
+        private void RenderOptionSheetOptions()
+        {
+            OptionSheetOptionsPanel.Children.Clear();
+            var options = GetActiveOptions();
+            for (var i = 0; i < options.Length; i++)
+            {
+                OptionSheetOptionsPanel.Children.Add(CreateOptionSheetButton(i, options[i]));
+            }
+        }
+
+        private Button CreateOptionSheetButton(int index, LibraryQueryOption option)
+        {
+            var isPreview = index == _optionSheetPreviewIndex;
+            var button = new Button
+            {
+                Tag = index,
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                HorizontalContentAlignment = HorizontalAlignment.Stretch,
+                MinHeight = 58,
+                Background = isPreview ? BrushResource("AppRaisedSurfaceBrush") : BrushResource("AppChromeBrush"),
+                BorderBrush = isPreview ? BrushResource("AppAccentBrush") : BrushResource("AppHairlineBrush")
+            };
+
+            button.Click += OptionSheetOption_OnClick;
+
+            var row = new Grid
+            {
+                ColumnSpacing = 12
+            };
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            row.Children.Add(new TextBlock
+            {
+                Text = option.Label,
+                FontSize = 18,
+                FontWeight = FontWeights.SemiBold,
+                Foreground = BrushResource("AppTextBrush"),
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                VerticalAlignment = VerticalAlignment.Center
+            });
+
+            var selectedIcon = new SymbolIcon(Symbol.Accept)
+            {
+                Foreground = BrushResource("AppAccentBrush"),
+                Visibility = isPreview ? Visibility.Visible : Visibility.Collapsed,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            Grid.SetColumn(selectedIcon, 1);
+            row.Children.Add(selectedIcon);
+
+            button.Content = row;
+            return button;
+        }
+
+        private void OptionSheetOption_OnClick(object sender, RoutedEventArgs e)
+        {
+            if (_activeOptionSheet == LibraryOptionSheetKind.None)
+            {
+                return;
+            }
+
+            var button = sender as Button;
+            if (button != null && button.Tag is int index)
+            {
+                _optionSheetPreviewIndex = index;
+            }
+
+            _ = ConfirmOptionSheetAsync();
+        }
+
+        private void FocusOptionSheetOption(int index)
+        {
+            if (index < 0 || index >= OptionSheetOptionsPanel.Children.Count)
+            {
+                return;
+            }
+
+            var control = OptionSheetOptionsPanel.Children[index] as Control;
+            if (control != null)
+            {
+                control.Focus(FocusState.Keyboard);
+            }
+        }
+
+        private int GetActiveOptionCount()
+        {
+            return GetActiveOptions().Length;
+        }
+
+        private int GetActiveCommittedIndex()
+        {
+            return _activeOptionSheet == LibraryOptionSheetKind.Filter ? _filterIndex : _sortIndex;
+        }
+
+        private void SetActiveCommittedIndex(int index)
+        {
+            if (_activeOptionSheet == LibraryOptionSheetKind.Filter)
+            {
+                _filterIndex = index;
+            }
+            else
+            {
+                _sortIndex = index;
+            }
+        }
+
+        private LibraryQueryOption[] GetActiveOptions()
+        {
+            return _activeOptionSheet == LibraryOptionSheetKind.Filter ? FilterOptions : SortOptions;
+        }
+
+        private static Brush BrushResource(string key)
+        {
+            return (Brush)Application.Current.Resources[key];
         }
 
         private static bool IsSectionRequest(LibraryNavigationRequest? request)
@@ -608,6 +990,13 @@ namespace NextGenEmby.App.Views
             public string Label { get; }
 
             public string Tag { get; }
+        }
+
+        private enum LibraryOptionSheetKind
+        {
+            None,
+            Sort,
+            Filter
         }
     }
 }

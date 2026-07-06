@@ -401,3 +401,36 @@ Then continue design and implementation until the route passes.
   - From Home hero, `Down`, `Enter` opened the first media library `热门电影`.
   - Library showed `34 items`, Sort, Filter, and a movie grid without loading dead end.
 - Result: pass. No mouse clicks were used inside app content.
+
+### 2026-07-06 - Library Sort And Filter Sheets
+
+- App version: 0.1.0.98.
+- Scope: Library sort/filter controls now open a matte TV selection sheet instead of cycling values directly from the toolbar button.
+- Interaction changes:
+  - A/Enter on Sort opens a `Sort by` sheet with Title, Recently added, and Year.
+  - A/Enter on Filter opens a `Filter` sheet with All, Unwatched, and Resumable.
+  - Up/Down/Left/Right move one option at a time inside the sheet.
+  - A/Enter confirms and reloads only when the option changed.
+  - B/Escape cancels and restores the originating toolbar focus.
+  - Sort/Filter/Refresh have deterministic D-pad left/right movement.
+  - Empty or failed Library loads show central recovery actions; filtered empty states can clear filters.
+- Bugs found during keyboard-only validation:
+  - A single Down in the Sort sheet initially moved from Title to Year because both Page and CoreWindow handlers processed the same key. Fixed by routing sheet keys only through Page-level input.
+  - Right from Sort initially skipped Filter and reached Refresh for the same double-routing reason. Fixed by preventing CoreWindow fallback from handling horizontal keys.
+- Automated verification:
+  - Core tests passed: 206 total.
+  - Focus policy tests passed: 7 targeted Library sheet/toolbar tests.
+  - App Debug x64 clean build passed and produced `NextGenEmby.App_0.1.0.98_x64_Debug.msix`.
+  - Package layout gate passed for 0.1.0.98.
+  - MSIX signed and installed locally as `NextGenEmby.App_0.1.0.98_x64__h8qjz0sr1sg4m`.
+- Keyboard-only validation with Computer Use:
+  - Launched 0.1.0.98 locally.
+  - From Home, `Down`, `Enter` opened `热门电影` Library with `34 items`.
+  - From the first poster, `Up`, `Enter` opened the Sort sheet.
+  - One `Down` moved the sheet preview to `Recently added`, not Year.
+  - `Enter` confirmed sort, closed the sheet, reloaded the list, and kept Library content visible.
+  - From content, `Up`, `Right`, `Enter` opened the Filter sheet.
+  - `Escape` cancelled the Filter sheet and left Filter as `All`.
+  - Reopening Filter, `Down`, `Enter` applied `Unwatched`; the Library stayed usable with visible grid items.
+- Visual capture note:
+  - Computer Use screenshot capture hit `FrameArrived timed out` twice during this run, so this batch is validated by accessibility text and keyboard behavior rather than a fresh screenshot. No mouse clicks were used inside app content.
