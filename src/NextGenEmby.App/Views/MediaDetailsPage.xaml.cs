@@ -25,6 +25,7 @@ namespace NextGenEmby.App.Views
         private readonly ApplicationDataSessionStore _sessionStore = new ApplicationDataSessionStore();
         private EmbyMediaItem? _item;
         private IReadOnlyList<EmbyMediaSource> _mediaSources = Array.Empty<EmbyMediaSource>();
+        private string _selectedMediaSourceId = "";
         private IReadOnlyList<EmbyMediaItem> _organizeAncestors = Array.Empty<EmbyMediaItem>();
         private IReadOnlyList<EmbyMediaItem> _collectionTargets = Array.Empty<EmbyMediaItem>();
         private IReadOnlyList<EmbyMediaItem> _playlistTargets = Array.Empty<EmbyMediaItem>();
@@ -667,7 +668,7 @@ namespace NextGenEmby.App.Views
                 return;
             }
 
-            var mediaSourceId = _mediaSources.FirstOrDefault()?.Id ?? "";
+            var mediaSourceId = ResolveSelectedPlaybackMediaSourceId();
             NavigateToPlayback(mediaSourceId);
         }
 
@@ -678,7 +679,7 @@ namespace NextGenEmby.App.Views
                 return;
             }
 
-            var mediaSourceId = _mediaSources.FirstOrDefault()?.Id ?? "";
+            var mediaSourceId = ResolveSelectedPlaybackMediaSourceId();
             NavigateToPlayback(mediaSourceId, 0);
         }
 
@@ -1029,6 +1030,7 @@ namespace NextGenEmby.App.Views
                 }
 
                 _mediaSources = mediaSources;
+                _selectedMediaSourceId = ResolveSelectedPlaybackMediaSourceId();
                 RenderPlaybackInfo();
             }
             catch
@@ -1884,7 +1886,14 @@ namespace NextGenEmby.App.Views
                 return;
             }
 
-            NavigateToPlayback(source.Id);
+            var decision = MediaDetailsVersionSelectionPolicy.Select(
+                GetMediaSourceIds(),
+                source.Id,
+                CreateSourceSummary(source),
+                _selectedMediaSourceId);
+            _selectedMediaSourceId = decision.SelectedMediaSourceId;
+            StatusBlock.Text = decision.StatusMessage;
+            UpdateSourceButtonStates();
         }
 
         private void NavigateToPlayback(string mediaSourceId)
@@ -1975,6 +1984,7 @@ namespace NextGenEmby.App.Views
         private void ResetPlaybackSections()
         {
             _mediaSources = Array.Empty<EmbyMediaSource>();
+            _selectedMediaSourceId = "";
             _organizeAncestors = Array.Empty<EmbyMediaItem>();
             VersionsPanel.Children.Clear();
             AudioSummaryBlock.Text = "";
@@ -2058,6 +2068,8 @@ namespace NextGenEmby.App.Views
                 UseSystemFocusVisuals = true
             };
 
+            ApplySourceButtonState(button, source);
+
             var panel = new StackPanel
             {
                 Spacing = 4
@@ -2085,6 +2097,48 @@ namespace NextGenEmby.App.Views
             button.Content = panel;
             button.Click += SourceVersion_OnClick;
             return button;
+        }
+
+        private void UpdateSourceButtonStates()
+        {
+            foreach (var button in VersionsPanel.Children.OfType<Button>())
+            {
+                if (button.Tag is EmbyMediaSource source)
+                {
+                    ApplySourceButtonState(button, source);
+                }
+            }
+        }
+
+        private void ApplySourceButtonState(Button button, EmbyMediaSource source)
+        {
+            var isSelected = string.Equals(
+                source.Id,
+                _selectedMediaSourceId,
+                StringComparison.Ordinal);
+            button.BorderBrush = (Brush)Application.Current.Resources[
+                isSelected ? "AppAccentBrush" : "AppHairlineBrush"];
+            button.BorderThickness = isSelected ? new Thickness(2) : new Thickness(1);
+            button.Background = (Brush)Application.Current.Resources[
+                isSelected ? "AppChromePressedBrush" : "AppChromeBrush"];
+
+            var namePrefix = isSelected ? "Selected version, " : "Version, ";
+            AutomationProperties.SetName(button, namePrefix + CreateSourceSummary(source));
+        }
+
+        private string ResolveSelectedPlaybackMediaSourceId()
+        {
+            _selectedMediaSourceId = MediaDetailsVersionSelectionPolicy.ResolvePlaybackSource(
+                GetMediaSourceIds(),
+                _selectedMediaSourceId);
+            return _selectedMediaSourceId;
+        }
+
+        private IReadOnlyList<string> GetMediaSourceIds()
+        {
+            return _mediaSources
+                .Select(source => source.Id ?? "")
+                .ToList();
         }
 
         private void UpdateActionButtons()

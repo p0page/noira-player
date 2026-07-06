@@ -1137,3 +1137,28 @@ Then continue design and implementation until the route passes.
   - No app-content mouse clicks were used.
 - Limitation:
   - The current source resource changes are proven by tests and the local Debug build. The keyboard smoke used the already installed 0.1.0.144 package because the newly built unsigned MSIX could not be deployed over the installed app in this turn.
+
+### 2026-07-06 - Details Version Selection Policy
+
+- App version: 0.1.0.145.
+- Scope: make Details version/source buttons select a media source before playback instead of immediately navigating to Playback.
+- Regression addressed:
+  - `SourceVersion_OnClick` previously called playback navigation directly. This made a version row behave like Play and violated the TV rule that A/Enter on a selector should change selection without a surprising playback transition.
+- Interaction changes:
+  - Details now tracks `_selectedMediaSourceId`.
+  - Play and Restart resolve the selected media source, falling back to the first available source when the selection is stale.
+  - Selecting a version updates status text and the version button selected state, but does not start playback.
+  - Selected version buttons use existing Matte Cinema Fluent resources: `AppAccentBrush`, `AppChromePressedBrush`, `AppHairlineBrush`, and `AppChromeBrush`.
+- Automated verification:
+  - TDD red path confirmed `MediaDetailsVersionSelectionPolicyTests` failed before the policy existed.
+  - Targeted version-selection tests passed: 4 total.
+  - Targeted input tests passed: 103 total.
+  - App Debug x64 clean build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.145_x64_Debug.msix`.
+- Local deployment and keyboard validation:
+  - Signed and installed the generated 0.1.0.145 MSIX with the trusted `CN=NextGenEmby` certificate.
+  - The installed MSIX crashed before exposing a window. Event Viewer reported `MoAppCrash` for `NextGenEmby.App_0.1.0.145_x64__h8qjz0sr1sg4m`, `KERNELBASE.dll`, exception `0xe0434352`, during activation.
+  - Re-registered the clean Debug loose output and also built/registered the previous `bb0a43c`/0.1.0.144 output as a control. Both failed to expose a targetable app window on this machine after the package reinstall cycle.
+  - Directly running the loose UWP exe printed `System.IO.FileNotFoundException: System.Private.CoreLib, Version=4.0.0.0`, which is expected for direct non-AppContainer launch and suggests the remaining blocker is local UWP activation/runtime state rather than the Details selector policy itself.
+  - No app-content mouse clicks were used. Runtime keyboard validation for this route remains blocked by local UWP startup, so this pass is not marked runtime Verified.
+- Follow-up:
+  - Restore a working local UWP launch path, then run Home -> Movies -> multi-version Details with keyboard only. Expected result: Enter on a version stays on Details and visibly selects the source; Enter on Play starts playback with that selected `MediaSourceId`.
