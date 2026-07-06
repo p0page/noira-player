@@ -13,6 +13,8 @@ namespace NextGenEmby.Core.PlaybackQuality
         public string SuggestedNextAction { get; set; } = "";
         public PlaybackQualityComparabilityAssessment Comparability { get; set; } =
             new PlaybackQualityComparabilityAssessment();
+        public PlaybackQualityComparisonCoverage Coverage { get; set; } =
+            new PlaybackQualityComparisonCoverage();
         public List<PlaybackQualitySignalDelta> Improvements { get; } = new List<PlaybackQualitySignalDelta>();
         public List<PlaybackQualitySignalDelta> Regressions { get; } = new List<PlaybackQualitySignalDelta>();
         public List<string> ResolvedFailureAreas { get; } = new List<string>();
@@ -26,6 +28,16 @@ namespace NextGenEmby.Core.PlaybackQuality
         public string Status { get; set; } = "comparable";
         public List<string> Reasons { get; } = new List<string>();
         public List<string> Signals { get; } = new List<string>();
+    }
+
+    public sealed class PlaybackQualityComparisonCoverage
+    {
+        public int BaselineCheckCount { get; set; }
+        public int CandidateCheckCount { get; set; }
+        public int MatchedCheckCount { get; set; }
+        public List<string> MatchedSignals { get; } = new List<string>();
+        public List<string> UnmatchedBaselineSignals { get; } = new List<string>();
+        public List<string> UnmatchedCandidateSignals { get; } = new List<string>();
     }
 
     public sealed class PlaybackQualitySignalDelta
@@ -61,6 +73,8 @@ namespace NextGenEmby.Core.PlaybackQuality
                 BaselineRunId = baseline.RunId,
                 CandidateRunId = candidate.RunId
             };
+            comparison.Coverage.BaselineCheckCount = baseline.Checks.Count;
+            comparison.Coverage.CandidateCheckCount = candidate.Checks.Count;
             comparison.Comparability = AssessComparability(baseline, candidate);
             if (comparison.Comparability.Status == "incompatible")
             {
@@ -96,9 +110,13 @@ namespace NextGenEmby.Core.PlaybackQuality
 
                 matchedChecks++;
                 AddUnique(matchedKeys, key);
+                comparison.Coverage.MatchedCheckCount++;
+                AddUnique(comparison.Coverage.MatchedSignals, key);
                 CompareCheck(comparison, baselineCheck, candidateByKey[key]);
                 TrackFailureArea(comparison, baselineCheck, candidateByKey[key]);
             }
+
+            AddUnmatchedBaselineSignals(comparison, baseline, matchedKeys);
 
             if (matchedChecks == 0)
             {
@@ -109,6 +127,7 @@ namespace NextGenEmby.Core.PlaybackQuality
             }
 
             AddCandidateOnlyFailures(comparison, candidate, baselineByKey, matchedKeys);
+            AddUnmatchedCandidateSignals(comparison, candidate, matchedKeys);
 
             if (comparison.Improvements.Count > 0 && comparison.Regressions.Count > 0)
             {
@@ -125,6 +144,36 @@ namespace NextGenEmby.Core.PlaybackQuality
 
             ApplyDecision(comparison);
             return comparison;
+        }
+
+        private static void AddUnmatchedBaselineSignals(
+            PlaybackQualityRunComparison comparison,
+            PlaybackQualityReport baseline,
+            List<string> matchedKeys)
+        {
+            foreach (var baselineCheck in baseline.Checks)
+            {
+                var key = GetCheckKey(baselineCheck);
+                if (!string.IsNullOrWhiteSpace(key) && !matchedKeys.Contains(key))
+                {
+                    AddUnique(comparison.Coverage.UnmatchedBaselineSignals, key);
+                }
+            }
+        }
+
+        private static void AddUnmatchedCandidateSignals(
+            PlaybackQualityRunComparison comparison,
+            PlaybackQualityReport candidate,
+            List<string> matchedKeys)
+        {
+            foreach (var candidateCheck in candidate.Checks)
+            {
+                var key = GetCheckKey(candidateCheck);
+                if (!string.IsNullOrWhiteSpace(key) && !matchedKeys.Contains(key))
+                {
+                    AddUnique(comparison.Coverage.UnmatchedCandidateSignals, key);
+                }
+            }
         }
 
         private static PlaybackQualityComparabilityAssessment AssessComparability(

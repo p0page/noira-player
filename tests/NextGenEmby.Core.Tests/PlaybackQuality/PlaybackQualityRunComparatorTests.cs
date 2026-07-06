@@ -99,6 +99,28 @@ public sealed class PlaybackQualityRunComparatorTests
     }
 
     [Fact]
+    public void Compare_Reports_Coverage_For_Matched_And_Unmatched_Checks()
+    {
+        var baseline = CreateReport(
+            "baseline",
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "180.000"),
+            Check("AudioVideoDriftMsP95", "pass", "av-sync", "sync.audioVideoDriftMsP95", "40.000", "25.000"));
+        var candidate = CreateReport(
+            "candidate",
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "120.000"),
+            Check("ActualHdrOutput", "pass", "color-pipeline", "colorPipeline.actualHdrOutput", "Hdr10", "Hdr10"));
+
+        var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
+
+        Assert.Equal(2, comparison.Coverage.BaselineCheckCount);
+        Assert.Equal(2, comparison.Coverage.CandidateCheckCount);
+        Assert.Equal(1, comparison.Coverage.MatchedCheckCount);
+        Assert.Contains("timing.maxFrameGapMs", comparison.Coverage.MatchedSignals);
+        Assert.Contains("sync.audioVideoDriftMsP95", comparison.Coverage.UnmatchedBaselineSignals);
+        Assert.Contains("colorPipeline.actualHdrOutput", comparison.Coverage.UnmatchedCandidateSignals);
+    }
+
+    [Fact]
     public void Compare_Reports_Regressed_When_Candidate_Has_Unmatched_New_Failing_Signal()
     {
         var baseline = CreateReport(
@@ -225,6 +247,7 @@ public sealed class PlaybackQualityRunComparatorTests
         Assert.Contains("\"decision\"", json);
         Assert.Contains("\"suggestedNextAction\"", json);
         Assert.Contains("\"comparability\"", json);
+        Assert.Contains("\"coverage\"", json);
         Assert.Contains("\"improvements\"", json);
         Assert.Contains("\"timing.maxFrameGapMs\"", json);
     }
