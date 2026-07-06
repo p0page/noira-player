@@ -75,6 +75,27 @@ public sealed class PlaybackQualityReportComposerTests
             check.Actual == "180.000");
     }
 
+    [Fact]
+    public void Serializer_Writes_Run_Result_With_Report_And_Model_Analysis()
+    {
+        var result = PlaybackQualityReportComposer.Compose(new PlaybackQualityReportRequest
+        {
+            RunId = "json-run",
+            Descriptor = CreatePlaybackDescriptor(frameRate: 23.976),
+            DisplayStatus = CreateHdrDisplayStatus(refreshRateHz: 59.94006),
+            Metrics = CreateStableMetrics(maxFrameGapMs: 60),
+            Expected = CreateHdrExpected(maxFrameGapMs: 105)
+        });
+
+        var json = PlaybackQualityReportSerializer.Serialize(result);
+
+        Assert.Contains("\"report\"", json);
+        Assert.Contains("\"modelAnalysis\"", json);
+        Assert.Contains("\"runId\": \"json-run\"", json);
+        Assert.Contains("\"result\": \"pass\"", json);
+        Assert.Contains("\"display.refreshRateHz\"", json);
+    }
+
     private static PlaybackDescriptor CreatePlaybackDescriptor(double frameRate)
     {
         var source = new EmbyMediaSource
