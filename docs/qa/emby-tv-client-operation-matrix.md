@@ -16,7 +16,7 @@ Status values:
 
 | Operation | Keyboard Path | Status | Evidence | Next Work |
 | --- | --- | --- | --- | --- |
-| Launch installed app into saved session | App launch, wait | Verified | 0.1.0.132 launched to Home with the saved Emby session; 0.1.0.131 recovered real Media Libraries and rows after guarded interactive loads | Keep startup diagnostics active |
+| Launch installed app into saved session | App launch, wait | Verified | 0.1.0.133 launched to Home with the saved Emby session; 0.1.0.132 launched to Home with aligned Matte Cinema colors; 0.1.0.131 recovered real Media Libraries and rows after guarded interactive loads | Keep startup diagnostics active |
 | Log in from empty session | Tab/Enter through login fields | Implemented | Login page and credential store exist | Re-run with cleared session before completion |
 | Failed login recovery | Enter invalid login, edit fields | Partial | UI has login status handling | Add explicit keyboard-only failure run |
 | Open and close guide from Home | `M`, `Escape` | Verified | 0.1.0.77 guide route fixed | Add visual screenshot pass after major shell changes |
@@ -31,7 +31,7 @@ Status values:
 | Open media library card | `Return` | Verified | 0.1.0.131 `Down`, `Return` opened `热门电影` from Home with `34 items`; 0.1.0.104 opened `热门剧集`; 0.1.0.102 opened `日漫` | Keep as regression route |
 | Return from library to originating Home card | `Escape` | Verified | 0.1.0.104 preserved `热门剧集` focus | Keep as regression route |
 | Open section More action | `Down` to row, `Up`, `Return` | Verified | 0.1.0.132 `Down`, `Down`, `Down`, `Up` focused Hot Movies `More`; `Return` opened `热门电影` with `34 items`; `Escape` returned Home and `Down` from `More` focused the first Hot Movies poster | Add far-right and lower-row `More` stress route |
-| Continue Watching item route | `Down` to row, `Return` | Implemented | Home resume cards and Details/Playback requests exist | Fresh keyboard run needed |
+| Continue Watching item route | `Down` to row, `Return` | Verified | 0.1.0.133 `Down`, `Down`, `Return` from Hero `Play` focused the first Continue Watching card and opened `铸就传奇` Details with `Resume` focused, without starting playback; `Escape` returned Home to the originating card | Keep as Home pre-play regression route |
 | Server-configured home sections | Rail navigation | Verified | 0.1.0.132 validated Home row `More` for Hot Movies; 0.1.0.102 parsed many server categories with section artwork | Add far-end lower-row validation |
 
 ## Guide Rail
@@ -58,7 +58,7 @@ Status values:
 
 | Operation | Keyboard Path | Status | Evidence | Next Work |
 | --- | --- | --- | --- | --- |
-| Movie details default focus | Open item | Verified | 0.1.0.69 first poster Details focused Play | Fresh Matte Cinema visual pass |
+| Movie details default focus | Open item | Verified | 0.1.0.133 Continue Watching Details opened with `Resume` focused, title/metadata/actions in the first viewport, and the poster top-aligned to the decision surface; 0.1.0.69 first poster Details focused Play | Validate lower-fold Details rails and add-to success |
 | Series details episode loading | Open Shows item | Verified | 0.1.0.100 loaded Shows seasons/episodes | Add season selector when multiple seasons exist |
 | Launch episode playback | Details, `Return` | Verified | 0.1.0.100 launched `铸就传奇` episode playback | Keep direct playback request stable |
 | Version selection before playback | Details versions, arrows | Implemented | Version buttons exist and pass `MediaSourceId` | Fresh keyboard run with multi-version item |
@@ -114,4 +114,4 @@ Status values:
 2. Playback More drawer needs a fresh keyboard validation pass with real audio/subtitle streams.
 3. Live TV and Music have dedicated browse shells, but both still need positive validation on servers that expose channels or real music items.
 4. Search error recovery now has a tested timeout guard, but still needs a deliberate offline/server-failure keyboard run.
-5. Theme work should keep promoting repeated spacing, typography, focus, and component states into shared resources. The 0.1.0.132 pass aligned core runtime colors with `docs/DESIGN.md`; the 0.1.0.129 pass centralized Library/Search poster-grid dimensions and common card/empty-state typography. Remaining one-off page measurements should keep moving into skin resources before full theme swapping.
+5. Theme work should keep promoting repeated spacing, typography, focus, and component states into shared resources. The 0.1.0.133 pass confirmed the runtime palette matches `docs/DESIGN.md` and moved Details measurements into shared resources; the 0.1.0.132 pass aligned core runtime colors; the 0.1.0.129 pass centralized Library/Search poster-grid dimensions and common card/empty-state typography. Remaining one-off page measurements should keep moving into skin resources before full theme swapping.

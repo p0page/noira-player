@@ -11,15 +11,19 @@
         <Border Background="{StaticResource AppDetailsBackdropWashBrush}" />
 
         <ScrollViewer VerticalScrollBarVisibility="Auto">
-            <Grid Margin="{StaticResource TvPageMargin}" ColumnSpacing="34">
+            <Grid
+                Margin="{StaticResource TvPageMargin}"
+                ColumnSpacing="{StaticResource TvDetailsColumnSpacing}">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="240" />
+                    <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
                 <Border
-                    Width="240"
-                    Height="360"
+                    Width="{StaticResource TvDetailsPosterWidth}"
+                    Height="{StaticResource TvDetailsPosterHeight}"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Top"
                     Background="{StaticResource AppRaisedSurfaceBrush}"
                     CornerRadius="8">
                     <Grid>
@@ -38,13 +42,13 @@
 
                 <StackPanel
                     Grid.Column="1"
-                    MaxWidth="900"
+                    MaxWidth="{StaticResource TvDetailsContentMaxWidth}"
                     Spacing="18">
                     <StackPanel Spacing="8">
                         <Image
                             x:Name="LogoImage"
-                            MaxWidth="600"
-                            MaxHeight="112"
+                            MaxWidth="{StaticResource TvDetailsLogoMaxWidth}"
+                            MaxHeight="{StaticResource TvDetailsLogoMaxHeight}"
                             HorizontalAlignment="Left"
                             Stretch="Uniform"
                             Visibility="Collapsed"

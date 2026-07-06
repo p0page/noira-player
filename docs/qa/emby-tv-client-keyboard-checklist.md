@@ -898,3 +898,27 @@ Then continue design and implementation until the route passes.
   - Typed `Terrifier`, pressed `Return`, waited 14 seconds, and Search showed `3 results / All` rather than staying in `Searching All`.
   - Pressed `Down`, `Down`, `Return` from Search and opened Details for `断魂小丑`.
   - No app-content mouse clicks were used.
+
+### 2026-07-06 - Details Poster Anchor And Design Color Check
+
+- App version: 0.1.0.133.
+- Scope: keep the current Matte Cinema Fluent palette from `docs/DESIGN.md`, extract Details layout measurements into shared XAML resources, and fix the Details poster being vertically centered too low in the first viewport.
+- Color review:
+  - Runtime `App.xaml` core colors match the active `docs/DESIGN.md` palette: canvas `#050607`, surface `#101418`, raised surface `#1A2027`, hairline `#303842`, focus `#3BD5FF`, play/action `#61D47C`, progress/warm `#E0B86A`, primary text `#F6F1E8`, muted text `#B9C0C8`, and subtle text `#78838F`.
+  - The current visual issue was layout/composition rather than a need to change palette. This pass did not introduce a new color direction.
+  - Remaining alpha variants such as modal/detail scrims are implementation overlays derived from the same dark matte roles and should stay tokenized.
+- Visual tokenization:
+  - Added shared Details measurements in `App.xaml` for poster width/height, column spacing, content max width, and logo max size.
+  - `MediaDetailsPage.xaml` now consumes those resources instead of duplicating hard-coded Details measurements.
+  - The Details poster is explicitly top-aligned so the poster, title, metadata, and action row read as one first-viewport decision surface.
+- Automated verification:
+  - Core tests passed: 283 total.
+  - App Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.133_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.133`.
+- Keyboard-only validation with Computer Use:
+  - Launched 0.1.0.133 locally; Home rendered the saved Emby session with Hero, Media Libraries, Continue watching, Hot Movies, Hot TV Series, and latest rows.
+  - From Hero `Play`, pressed `Down`, `Down`, `Return`; the first Continue watching item opened Details for `铸就传奇` instead of starting playback.
+  - Details showed `铸就传奇`, `Resume` as the default focused action, `Restart`, `Add favorite`, `Mark watched`, Refresh, two version rows, audio/subtitle summaries, Organize, and overview text.
+  - Windows Graphics Capture succeeded at 2560x1392. The captured Details frame showed the poster anchored near the top of the first viewport beside the title/action stack, not centered low in the row.
+  - Pressed `Escape`; Home returned and focus landed on the originating first Continue watching card.
+  - No app-content mouse clicks were used.
