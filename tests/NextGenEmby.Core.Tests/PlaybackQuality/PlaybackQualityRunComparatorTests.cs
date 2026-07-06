@@ -33,6 +33,23 @@ public sealed class PlaybackQualityRunComparatorTests
     }
 
     [Fact]
+    public void Compare_Reports_StrongConfidence_When_All_Checks_Match()
+    {
+        var baseline = CreateReport(
+            "baseline",
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "180.000"));
+        var candidate = CreateReport(
+            "candidate",
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "120.000"));
+
+        var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
+
+        Assert.Equal("strong", comparison.Confidence.Level);
+        Assert.Contains("all comparison checks matched", comparison.Confidence.Reasons);
+        Assert.Empty(comparison.Confidence.Signals);
+    }
+
+    [Fact]
     public void Compare_Reports_Regressed_When_Passing_Signal_Starts_Failing()
     {
         var baseline = CreateReport(
@@ -121,6 +138,26 @@ public sealed class PlaybackQualityRunComparatorTests
     }
 
     [Fact]
+    public void Compare_Reports_PartialConfidence_When_Signals_Are_Unmatched()
+    {
+        var baseline = CreateReport(
+            "baseline",
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "180.000"),
+            Check("AudioVideoDriftMsP95", "pass", "av-sync", "sync.audioVideoDriftMsP95", "40.000", "25.000"));
+        var candidate = CreateReport(
+            "candidate",
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "120.000"),
+            Check("ActualHdrOutput", "pass", "color-pipeline", "colorPipeline.actualHdrOutput", "Hdr10", "Hdr10"));
+
+        var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
+
+        Assert.Equal("partial", comparison.Confidence.Level);
+        Assert.Contains("unmatched comparison signals are present", comparison.Confidence.Reasons);
+        Assert.Contains("sync.audioVideoDriftMsP95", comparison.Confidence.Signals);
+        Assert.Contains("colorPipeline.actualHdrOutput", comparison.Confidence.Signals);
+    }
+
+    [Fact]
     public void Compare_Reports_Regressed_When_Candidate_Has_Unmatched_New_Failing_Signal()
     {
         var baseline = CreateReport(
@@ -201,6 +238,9 @@ public sealed class PlaybackQualityRunComparatorTests
         Assert.Contains("source.mediaSourceId mismatch", comparison.Comparability.Reasons);
         Assert.Contains("source.mediaSourceId", comparison.Comparability.Signals);
         Assert.Contains("comparison requires matching source.mediaSourceId", comparison.Limitations);
+        Assert.Equal("weak", comparison.Confidence.Level);
+        Assert.Contains("comparison inputs are incompatible", comparison.Confidence.Reasons);
+        Assert.Contains("source.mediaSourceId", comparison.Confidence.Signals);
     }
 
     [Fact]
@@ -247,6 +287,7 @@ public sealed class PlaybackQualityRunComparatorTests
         Assert.Contains("\"decision\"", json);
         Assert.Contains("\"suggestedNextAction\"", json);
         Assert.Contains("\"comparability\"", json);
+        Assert.Contains("\"confidence\"", json);
         Assert.Contains("\"coverage\"", json);
         Assert.Contains("\"improvements\"", json);
         Assert.Contains("\"timing.maxFrameGapMs\"", json);

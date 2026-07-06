@@ -13,6 +13,8 @@ namespace NextGenEmby.Core.PlaybackQuality
         public string SuggestedNextAction { get; set; } = "";
         public PlaybackQualityComparabilityAssessment Comparability { get; set; } =
             new PlaybackQualityComparabilityAssessment();
+        public PlaybackQualityComparisonConfidence Confidence { get; set; } =
+            new PlaybackQualityComparisonConfidence();
         public PlaybackQualityComparisonCoverage Coverage { get; set; } =
             new PlaybackQualityComparisonCoverage();
         public List<PlaybackQualitySignalDelta> Improvements { get; } = new List<PlaybackQualitySignalDelta>();
@@ -26,6 +28,13 @@ namespace NextGenEmby.Core.PlaybackQuality
     public sealed class PlaybackQualityComparabilityAssessment
     {
         public string Status { get; set; } = "comparable";
+        public List<string> Reasons { get; } = new List<string>();
+        public List<string> Signals { get; } = new List<string>();
+    }
+
+    public sealed class PlaybackQualityComparisonConfidence
+    {
+        public string Level { get; set; } = "weak";
         public List<string> Reasons { get; } = new List<string>();
         public List<string> Signals { get; } = new List<string>();
     }
@@ -84,16 +93,14 @@ namespace NextGenEmby.Core.PlaybackQuality
                     comparison.Limitations.Add("comparison requires matching " + signal);
                 }
 
-                ApplyDecision(comparison);
-                return comparison;
+                return FinalizeComparison(comparison);
             }
 
             if (baseline.Checks.Count == 0 || candidate.Checks.Count == 0)
             {
                 comparison.Result = "insufficient-evidence";
                 comparison.Limitations.Add("comparison requires baseline and candidate checks");
-                ApplyDecision(comparison);
-                return comparison;
+                return FinalizeComparison(comparison);
             }
 
             var candidateByKey = CreateCheckMap(candidate);
@@ -122,8 +129,7 @@ namespace NextGenEmby.Core.PlaybackQuality
             {
                 comparison.Result = "insufficient-evidence";
                 comparison.Limitations.Add("comparison requires at least one matching check signal");
-                ApplyDecision(comparison);
-                return comparison;
+                return FinalizeComparison(comparison);
             }
 
             AddCandidateOnlyFailures(comparison, candidate, baselineByKey, matchedKeys);
@@ -142,8 +148,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                 comparison.Result = "regressed";
             }
 
-            ApplyDecision(comparison);
-            return comparison;
+            return FinalizeComparison(comparison);
         }
 
         private static void AddUnmatchedBaselineSignals(
@@ -233,6 +238,74 @@ namespace NextGenEmby.Core.PlaybackQuality
             assessment.Status = "incompatible";
             AddUnique(assessment.Reasons, signal + " mismatch");
             AddUnique(assessment.Signals, signal);
+        }
+
+        private static PlaybackQualityRunComparison FinalizeComparison(
+            PlaybackQualityRunComparison comparison)
+        {
+            ApplyConfidence(comparison);
+            ApplyDecision(comparison);
+            return comparison;
+        }
+
+        private static void ApplyConfidence(PlaybackQualityRunComparison comparison)
+        {
+            if (comparison.Result == "insufficient-evidence")
+            {
+                comparison.Confidence.Level = "weak";
+                if (comparison.Comparability.Status == "incompatible")
+                {
+                    AddUnique(comparison.Confidence.Reasons, "comparison inputs are incompatible");
+                    foreach (var signal in comparison.Comparability.Signals)
+                    {
+                        AddUnique(comparison.Confidence.Signals, signal);
+                    }
+
+                    return;
+                }
+
+                if (comparison.Coverage.MatchedCheckCount == 0)
+                {
+                    AddUnique(comparison.Confidence.Reasons, "comparison has no matched check signals");
+                    return;
+                }
+
+                AddUnique(comparison.Confidence.Reasons, "comparison result is insufficient evidence");
+                return;
+            }
+
+            if (HasUnmatchedEvidence(comparison))
+            {
+                comparison.Confidence.Level = "partial";
+                AddUnique(comparison.Confidence.Reasons, "unmatched comparison signals are present");
+                foreach (var signal in comparison.Coverage.UnmatchedBaselineSignals)
+                {
+                    AddUnique(comparison.Confidence.Signals, signal);
+                }
+
+                foreach (var signal in comparison.Coverage.UnmatchedCandidateSignals)
+                {
+                    AddUnique(comparison.Confidence.Signals, signal);
+                }
+
+                if (comparison.Confidence.Signals.Count == 0)
+                {
+                    AddUnique(comparison.Confidence.Reasons, "not all comparison checks had stable signal keys");
+                }
+
+                return;
+            }
+
+            comparison.Confidence.Level = "strong";
+            AddUnique(comparison.Confidence.Reasons, "all comparison checks matched");
+        }
+
+        private static bool HasUnmatchedEvidence(PlaybackQualityRunComparison comparison)
+        {
+            return comparison.Coverage.UnmatchedBaselineSignals.Count > 0 ||
+                comparison.Coverage.UnmatchedCandidateSignals.Count > 0 ||
+                comparison.Coverage.MatchedCheckCount < comparison.Coverage.BaselineCheckCount ||
+                comparison.Coverage.MatchedCheckCount < comparison.Coverage.CandidateCheckCount;
         }
 
         private static void ApplyDecision(PlaybackQualityRunComparison comparison)
