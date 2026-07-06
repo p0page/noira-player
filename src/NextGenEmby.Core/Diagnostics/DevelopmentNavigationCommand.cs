@@ -94,6 +94,7 @@ namespace NextGenEmby.Core.Diagnostics
                 case "details":
                 case "photo":
                 case "playback":
+                case "manual-playback":
                     return true;
 
                 default:

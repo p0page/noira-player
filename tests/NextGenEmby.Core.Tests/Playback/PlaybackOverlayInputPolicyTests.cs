@@ -52,6 +52,42 @@ public sealed class PlaybackOverlayInputPolicyTests
     }
 
     [Fact]
+    public void Handled_Cancel_Still_Routes_When_More_Drawer_Is_Open()
+    {
+        var shouldRoute = PlaybackOverlayInputPolicy.ShouldRouteHandledShortcutInput(
+            PlaybackOverlayShortcut.Cancel,
+            seekPreviewActive: false,
+            moreVisible: true,
+            moreDrawerComboBoxOpen: false);
+
+        Assert.True(shouldRoute);
+    }
+
+    [Fact]
+    public void Handled_Cancel_Stays_With_Open_Combo_Box()
+    {
+        var shouldRoute = PlaybackOverlayInputPolicy.ShouldRouteHandledShortcutInput(
+            PlaybackOverlayShortcut.Cancel,
+            seekPreviewActive: false,
+            moreVisible: true,
+            moreDrawerComboBoxOpen: true);
+
+        Assert.False(shouldRoute);
+    }
+
+    [Fact]
+    public void Handled_Accept_Stays_With_Focused_More_Drawer_Control()
+    {
+        var shouldRoute = PlaybackOverlayInputPolicy.ShouldRouteHandledShortcutInput(
+            PlaybackOverlayShortcut.Accept,
+            seekPreviewActive: false,
+            moreVisible: true,
+            moreDrawerComboBoxOpen: false);
+
+        Assert.False(shouldRoute);
+    }
+
+    [Fact]
     public void Seek_Preview_Keeps_Global_Input_When_More_Drawer_Is_Open()
     {
         Assert.False(PlaybackOverlayInputPolicy.ShouldRouteFocusedControlInput(moreVisible: true, seekPreviewActive: true));

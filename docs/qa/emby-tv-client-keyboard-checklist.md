@@ -989,3 +989,28 @@ Then continue design and implementation until the route passes.
   - No app-content mouse clicks were used.
 - Tooling note:
   - UI Automation continued to report the window as the focused element in several snapshots, but the screenshot and state text showed the tokenized cyan transport focus and the correct playback state transitions. The app now owns the TV focus target instead of depending on UIA focus accuracy.
+
+### 2026-07-06 - Playback Seek Preview Surrogate And Drawer Cancel Recovery
+
+- App version: 0.1.0.143.
+- Scope: add a local keyboard surrogate for left-thumbstick seek preview, make the seek-preview prompt name both controller and keyboard confirm/cancel inputs, fix handled `Escape` not closing the playback More drawer, and add a DEBUG-only manual playback route for QA setup.
+- Interaction changes:
+  - `Shift+Left` and `Shift+Right` are now the local keyboard surrogate for thumbstick seek preview. Plain `Left`/`Right` remain D-pad transport focus/seek behavior.
+  - The seek-preview prompt now reads `A/Enter Confirm / B/Escape Cancel`.
+  - Handled `Escape` is routed through the page when More is open or seek preview is active, while open ComboBox controls keep their own `Escape`.
+  - DEBUG `manual-playback` route opens the existing Manual Direct Stream panel without an Emby session.
+  - The Manual Direct Stream text box now has an explicit Enter policy, so a valid URL can be started from the text field without needing a mouse.
+- Automated verification:
+  - TDD red path confirmed missing `PlaybackSeekPreviewPrompt`, handled-shortcut routing, `manual-playback` route, and manual direct-stream input policy before implementation.
+  - Targeted Core tests passed: 64 total across `ManualDirectStreamInputPolicyTests`, `DevelopmentNavigationCommandTests`, `PlaybackOverlayInputPolicyTests`, `PlaybackSeekPreviewKeyboardPolicyTests`, `SeekPreviewSessionTests`, and `PlaybackTransportFocusPolicyTests`.
+  - App Debug x64 builds passed with 0 warnings and 0 errors through the final `NextGenEmby.App_0.1.0.143_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.143`.
+- Keyboard-only validation with Computer Use:
+  - Launched 0.1.0.143 locally. The saved Emby session was not present; Home stayed at `Refresh after signing in to load your Emby home screen`, so a real Emby playback seek-preview route could not be completed in this run.
+  - Wrote a local DEBUG `dev-command.json` with `{"route":"manual-playback"}` and launched the app into Manual Direct Stream.
+  - Pressed `M`; the More drawer opened from the playback OSD.
+  - Pressed `Escape`; the right-side Playback Options drawer closed and focus returned to the bottom transport strip, validating the handled-Cancel fix with keyboard input only.
+  - Attempted to use Manual Direct Stream as a seekable playback fixture. The first public MP4 URL returned `403 Forbidden`; a second HEAD-verified MP4 could not be reliably entered/started through Computer Use text input before this pass ended, so seek-preview cancel/confirm remains unverified at runtime.
+  - No app-content mouse clicks were used.
+- Limitation:
+  - This pass proves the seek-preview keyboard policy and prompt at the Core level and verifies the More drawer cancel regression in the installed app. It does not yet prove runtime seek preview on a seekable local playback item. The next pass should restore a playable saved session or add a deterministic seekable QA fixture before marking `Seek preview and cancel` as `Verified`.

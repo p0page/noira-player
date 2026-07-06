@@ -79,6 +79,25 @@ public sealed class DevelopmentNavigationCommandTests
     }
 
     [Fact]
+    public void TryParseJson_Accepts_Manual_Playback_Route_Without_ItemId()
+    {
+        var parsed = DevelopmentNavigationCommand.TryParseJson(
+            """
+            {
+              "route": "manual-playback"
+            }
+            """,
+            out var command,
+            out var error);
+
+        Assert.True(parsed);
+        Assert.Equal("", error);
+        Assert.NotNull(command);
+        Assert.Equal("manual-playback", command!.Route);
+        Assert.Equal("", command.ItemId);
+    }
+
+    [Fact]
     public void TryParseJson_Accepts_Photo_Route()
     {
         var parsed = DevelopmentNavigationCommand.TryParseJson(

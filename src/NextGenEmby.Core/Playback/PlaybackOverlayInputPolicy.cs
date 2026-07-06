@@ -78,6 +78,26 @@ namespace NextGenEmby.Core.Playback
             return moreVisible && !seekPreviewActive;
         }
 
+        public static bool ShouldRouteHandledShortcutInput(
+            PlaybackOverlayShortcut shortcut,
+            bool seekPreviewActive,
+            bool moreVisible,
+            bool moreDrawerComboBoxOpen)
+        {
+            if (moreDrawerComboBoxOpen)
+            {
+                return false;
+            }
+
+            if (seekPreviewActive)
+            {
+                return shortcut == PlaybackOverlayShortcut.Accept ||
+                    shortcut == PlaybackOverlayShortcut.Cancel;
+            }
+
+            return moreVisible && shortcut == PlaybackOverlayShortcut.Cancel;
+        }
+
         public static bool ShouldKeepOverlayPinned(
             bool moreVisible,
             bool seekPreviewActive,

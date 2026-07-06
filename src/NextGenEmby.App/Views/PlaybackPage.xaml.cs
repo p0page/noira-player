@@ -274,6 +274,20 @@ namespace NextGenEmby.App.Views
             UpdateControlStates();
         }
 
+        private async void StreamUrlBox_OnKeyDown(object sender, KeyRoutedEventArgs e)
+        {
+            var input = e.Key == VirtualKey.Enter
+                ? ManualDirectStreamInput.Accept
+                : ManualDirectStreamInput.Other;
+            if (!ManualDirectStreamInputPolicy.ShouldStartFromTextBox(input, ManualStartButton.IsEnabled))
+            {
+                return;
+            }
+
+            e.Handled = true;
+            await StartManualPlaybackAsync();
+        }
+
         private void ProgressSlider_OnValueChanged(object sender, RangeBaseValueChangedEventArgs e)
         {
             if (_updatingProgressSlider ||
@@ -308,7 +322,7 @@ namespace NextGenEmby.App.Views
                 return;
             }
 
-            args.Handled = await HandlePlaybackKeyAsync(args.VirtualKey) || args.Handled;
+            args.Handled = await HandlePlaybackKeyAsync(args.VirtualKey, IsPreviewModifierDown(sender)) || args.Handled;
         }
 
         private async void PlaybackPage_OnHandledKeyDown(object sender, KeyRoutedEventArgs e)
@@ -318,12 +332,17 @@ namespace NextGenEmby.App.Views
                 return;
             }
 
-            e.Handled = await HandlePlaybackKeyAsync(e.Key);
+            e.Handled = await HandlePlaybackKeyAsync(e.Key, IsPreviewModifierDown(Window.Current.CoreWindow));
         }
 
-        private async Task<bool> HandlePlaybackKeyAsync(VirtualKey key)
+        private async Task<bool> HandlePlaybackKeyAsync(VirtualKey key, bool previewModifierDown)
         {
             if (TryHandleMoreDrawerDirectionalKey(key))
+            {
+                return true;
+            }
+
+            if (TryHandleKeyboardSeekPreview(key, previewModifierDown))
             {
                 return true;
             }
@@ -427,6 +446,49 @@ namespace NextGenEmby.App.Views
             }
 
             return false;
+        }
+
+        private bool TryHandleKeyboardSeekPreview(VirtualKey key, bool previewModifierDown)
+        {
+            var action = PlaybackSeekPreviewKeyboardPolicy.Decide(
+                MapPlaybackDirectionalInput(key),
+                previewModifierDown,
+                _playbackPreferences.IsThumbstickSeekPreviewEnabled(),
+                _moreVisible);
+            if (action == PlaybackSeekPreviewKeyboardAction.None)
+            {
+                return false;
+            }
+
+            if (CanAcceptSeekInput())
+            {
+                BeginOrMoveSeekPreview(
+                    action == PlaybackSeekPreviewKeyboardAction.PreviewBackward
+                        ? TimeSpan.FromSeconds(-5)
+                        : TimeSpan.FromSeconds(5));
+            }
+
+            return true;
+        }
+
+        private static PlaybackDirectionalInput MapPlaybackDirectionalInput(VirtualKey key)
+        {
+            switch (key)
+            {
+                case VirtualKey.Left:
+                    return PlaybackDirectionalInput.Left;
+
+                case VirtualKey.Right:
+                    return PlaybackDirectionalInput.Right;
+
+                default:
+                    return PlaybackDirectionalInput.Other;
+            }
+        }
+
+        private static bool IsPreviewModifierDown(CoreWindow coreWindow)
+        {
+            return (coreWindow.GetKeyState(VirtualKey.Shift) & CoreVirtualKeyStates.Down) == CoreVirtualKeyStates.Down;
         }
 
         private bool TryHandleTransportDirectionalKey(VirtualKey key)
@@ -538,7 +600,18 @@ namespace NextGenEmby.App.Views
 
         private bool ShouldProcessHandledPlaybackKey(VirtualKey key)
         {
-            return ShouldProcessMoreDrawerDirectionalKey(key);
+            if (ShouldProcessMoreDrawerDirectionalKey(key))
+            {
+                return true;
+            }
+
+            var shortcut = TryMapDesktopShortcut(key);
+            return shortcut.HasValue &&
+                PlaybackOverlayInputPolicy.ShouldRouteHandledShortcutInput(
+                    shortcut.Value,
+                    _seekPreview.IsActive,
+                    _moreVisible,
+                    IsAnyMoreDrawerComboBoxOpen());
         }
 
         private bool ShouldProcessMoreDrawerDirectionalKey(VirtualKey key)
@@ -1913,9 +1986,8 @@ namespace NextGenEmby.App.Views
 
         private void UpdateSeekPreviewBlock()
         {
-            SeekPreviewBlock.Text = "Seek preview " +
-                FormatPosition(TimeSpan.FromTicks(Math.Max(0, _seekPreview.TargetTicks))) +
-                " - A Confirm / B Cancel";
+            SeekPreviewBlock.Text = PlaybackSeekPreviewPrompt.Format(
+                TimeSpan.FromTicks(Math.Max(0, _seekPreview.TargetTicks)));
             SeekPreviewBlock.Visibility = Visibility.Visible;
         }
 

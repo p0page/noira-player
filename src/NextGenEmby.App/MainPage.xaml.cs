@@ -816,6 +816,10 @@ namespace NextGenEmby.App
                     NavigateTo(typeof(PhotoViewerPage), new PhotoViewerNavigationRequest(command.ItemId, command.ItemName));
                     return;
 
+                case "manual-playback":
+                    NavigateTo(typeof(PlaybackPage));
+                    return;
+
                 case "playback":
                     NavigateTo(
                         typeof(PlaybackPage),

@@ -171,6 +171,7 @@
                                 x:Name="StreamUrlBox"
                                 Header="Direct stream URL"
                                 PlaceholderText="http://server:8096/Videos/item/stream"
+                                KeyDown="StreamUrlBox_OnKeyDown"
                                 TextChanged="StreamUrlBox_OnTextChanged" />
                             <Button
                                 x:Name="ManualStartButton"
