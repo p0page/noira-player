@@ -106,6 +106,43 @@ public sealed class PlaybackQualityEvaluatorTests
     }
 
     [Fact]
+    public void Evaluate_Fails_When_Source_Frame_Rate_Does_Not_Match_Expected_Frame_Rate()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "wrong-source-cadence",
+            Expected = new PlaybackQualityExpected
+            {
+                FrameRate = 23.976,
+                RequireValidatedConversion = false
+            },
+            Source = new PlaybackQualitySource
+            {
+                FrameRate = 25.0
+            }
+        };
+
+        PlaybackQualityEvaluator.Evaluate(report);
+
+        Assert.Equal("fail", report.Result);
+        Assert.Contains(
+            "ExpectedFrameRate 23.976 did not match source frame rate 25.000.",
+            report.FailureReasons);
+        Assert.Equal("unsupported-source", report.Analysis.PrimaryFailureArea);
+        Assert.Equal(
+            "Inspect container, codec, Dolby Vision profile, and media source selection.",
+            report.Analysis.SuggestedNextAction);
+        Assert.Contains("source.frameRate", report.Analysis.RelevantSignals);
+        Assert.Contains(report.Checks, check =>
+            check.Name == "ExpectedFrameRate" &&
+            check.Signal == "source.frameRate" &&
+            check.Expected == "23.976" &&
+            check.Actual == "25.000" &&
+            check.Status == "fail" &&
+            check.FailureArea == "unsupported-source");
+    }
+
+    [Fact]
     public void Evaluate_Fails_With_Actionable_Reasons_When_Thresholds_Are_Exceeded()
     {
         var report = new PlaybackQualityReport

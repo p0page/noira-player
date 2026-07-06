@@ -87,6 +87,8 @@ Every report must include these phase-1 limitations:
 
 `startup.startupDurationMs` measures time from playback command acceptance to playback-start readiness as observed by the app or harness. When `expected.maxStartupDurationMs` is supplied, exceeding it is a `startup` failure and should be investigated before frame pacing or color changes.
 
+`expected.frameRate` validates that the actual selected media source reports the intended cadence. A mismatch is an `unsupported-source` failure because the model should inspect media source selection or source metadata before tuning render pacing.
+
 `expectedFrameDurationMs` is derived from `source.frameRate` as `1000 / frameRate` when a usable frame rate exists. It lets the model compare frame gaps and render interval percentiles against the source cadence instead of reading them as isolated numbers.
 
 `audioVideoDriftMsP95` is the p95 absolute difference between video frame PTS and XAudio-derived clock at render decision time.

@@ -4,6 +4,8 @@ namespace NextGenEmby.Core.PlaybackQuality
 {
     public static class PlaybackQualityEvaluator
     {
+        private const double FrameRateTolerance = 0.01;
+
         public static void Evaluate(PlaybackQualityReport report)
         {
             report.FailureReasons.Clear();
@@ -20,6 +22,7 @@ namespace NextGenEmby.Core.PlaybackQuality
             }
 
             var expected = report.Expected;
+            CheckExpectedFrameRate(report, expected);
             CheckMax(
                 report,
                 "StartupDurationMs",
@@ -203,6 +206,43 @@ namespace NextGenEmby.Core.PlaybackQuality
             }
         }
 
+        private static void CheckExpectedFrameRate(
+            PlaybackQualityReport report,
+            PlaybackQualityExpected expected)
+        {
+            if (expected.FrameRate <= 0)
+            {
+                return;
+            }
+
+            var actual = report.Source.FrameRate;
+            var expectedText = Format(expected.FrameRate);
+            var actualText = Format(actual);
+            var failed = actual <= 0 ||
+                System.Math.Abs(actual - expected.FrameRate) > FrameRateTolerance;
+            var message = "ExpectedFrameRate " + expectedText +
+                " did not match source frame rate " + actualText + ".";
+
+            report.Checks.Add(new PlaybackQualityCheck
+            {
+                Name = "ExpectedFrameRate",
+                Signal = "source.frameRate",
+                Status = failed ? "fail" : "pass",
+                FailureArea = "unsupported-source",
+                Expected = expectedText,
+                Actual = actualText,
+                Message = failed
+                    ? message
+                    : "Source frame rate matched expected FrameRate " + expectedText + "."
+            });
+
+            if (failed)
+            {
+                report.FailureReasons.Add(message);
+                AddRelevantSignal(report, "source.frameRate");
+            }
+        }
+
         private static void CheckMax(
             PlaybackQualityReport report,
             string metricName,
@@ -308,7 +348,7 @@ namespace NextGenEmby.Core.PlaybackQuality
 
         private static void AssignFailureAnalysis(PlaybackQualityReport report)
         {
-            if (HasReason(report, "unsupported"))
+            if (HasReason(report, "unsupported", "ExpectedFrameRate"))
             {
                 report.Analysis.PrimaryFailureArea = "unsupported-source";
                 report.Analysis.SuggestedNextAction = "Inspect container, codec, Dolby Vision profile, and media source selection.";
