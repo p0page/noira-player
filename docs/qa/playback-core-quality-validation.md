@@ -4,6 +4,8 @@ This document defines the App-free validation path for playback quality work.
 
 Use this path when another worktree is actively changing Xbox UI or App interaction code. It validates playback-related Core and Native code without building or packaging the UWP App.
 
+Reference media sources and suggested case tiers are tracked in [playback-quality-reference-corpus.md](playback-quality-reference-corpus.md).
+
 ## Command
 
 ```powershell
