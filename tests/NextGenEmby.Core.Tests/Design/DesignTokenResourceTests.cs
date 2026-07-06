@@ -134,6 +134,37 @@ public sealed class DesignTokenResourceTests
         Assert.DoesNotContain("Opacity = 0.68", homeSource);
     }
 
+    [Fact]
+    public void Home_Rail_Card_Metrics_And_Focus_Treatment_Use_Theme_Resources()
+    {
+        var root = FindRepositoryRoot();
+        var appXaml = File.ReadAllText(Path.Combine(root, "src", "NextGenEmby.App", "App.xaml"));
+        var homeXaml = File.ReadAllText(Path.Combine(root, "src", "NextGenEmby.App", "Views", "HomePage.xaml"));
+        var homeSource = File.ReadAllText(Path.Combine(root, "src", "NextGenEmby.App", "Views", "HomePage.xaml.cs"));
+
+        Assert.Contains("<x:Double x:Key=\"TvHomeWideCardWidth\">", appXaml);
+        Assert.Contains("<x:Double x:Key=\"TvHomeWideCardHeight\">", appXaml);
+        Assert.Contains("<x:Double x:Key=\"TvHomeRowPosterCardWidth\">", appXaml);
+        Assert.Contains("<x:Double x:Key=\"TvHomeRowPosterCardHeight\">", appXaml);
+        Assert.Contains("<x:Double x:Key=\"TvHomeWideCardTitleFontSize\">", appXaml);
+        Assert.Contains("<x:Double x:Key=\"TvHomeFocusedCardScale\">", appXaml);
+        Assert.Contains("Spacing=\"{StaticResource TvHomeSectionSpacing}\"", homeXaml);
+        Assert.Contains("Spacing=\"{StaticResource TvHomeRailHeaderSpacing}\"", homeXaml);
+        Assert.Contains("Width = GetDoubleResource(\"TvHomeWideCardWidth\"", homeSource);
+        Assert.Contains("Height = GetDoubleResource(\"TvHomeWideCardHeight\"", homeSource);
+        Assert.Contains("Width = GetDoubleResource(\"TvHomeRowPosterCardWidth\"", homeSource);
+        Assert.Contains("Height = GetDoubleResource(\"TvHomeRowPosterCardHeight\"", homeSource);
+        Assert.Contains("ApplyHomeCardFocusTreatment(button)", homeSource);
+        Assert.Contains("HomeCard_OnLostFocus", homeSource);
+        Assert.Contains("ScaleTransform", homeSource);
+        Assert.DoesNotContain("Width = 250", homeSource);
+        Assert.DoesNotContain("Width = 284", homeSource);
+        Assert.DoesNotContain("Height = 132", homeSource);
+        Assert.DoesNotContain("Width = 172", homeSource);
+        Assert.DoesNotContain("Height = 252", homeSource);
+        Assert.DoesNotContain("FontSize = 23", homeSource);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

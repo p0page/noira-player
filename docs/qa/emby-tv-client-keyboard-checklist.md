@@ -1725,3 +1725,32 @@ Then continue design and implementation until the route passes.
   - No app-content mouse clicks were used. `dev-command.json` and `dev-command-result.txt` were removed from LocalState after validation.
 - Follow-up:
   - When Xbox hardware is available again, inspect the Start tile and splash surface on-console so the new centered wide tile can be judged in the real shell, not only the generated PNG and local package.
+
+### 2026-07-07 - Home Rail Card Token And Focus Polish
+
+- App version: 0.1.0.197.
+- Scope: make the Home rails feel less assembled by hand by promoting repeated card measurements and focus treatment into shared skin resources.
+- Interaction/design changes:
+  - `App.xaml` now owns Home rail spacing, wide-card dimensions, poster-card dimensions, Home card title/meta type sizes, card radii, scrim padding, and `TvHomeFocusedCardScale`.
+  - `HomePage.xaml` consumes Home spacing tokens for page sections, rail headers, rail card gaps, and row gaps.
+  - `HomePage.xaml.cs` consumes Home card metrics through resource helpers instead of hardcoded library-card, section-card, and poster-card sizes.
+  - Home media-library cards and server-section cards now share a unified wide-card footprint, making the two rails scan as one mature TV system.
+  - Home rail cards use a render-transform focus scale so the current controller target lifts without resizing or reflowing the rail.
+- Automated verification:
+  - TDD red path confirmed the new Home rail card metric/focus token contract failed before implementation.
+  - Targeted Home rail token contract passed: 1 test.
+  - Design/source tests passed: 50 total.
+  - Core tests passed: 436 total.
+  - `git diff --check` passed with only LF/CRLF working-copy warnings.
+  - App Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.197_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate thumbprint `6CB453A2FEC300C6E5034152C6C1A68DE31A7BD0`, verified with `signtool verify /pa`, and installed locally as `NextGenEmby.App 0.1.0.197`.
+- Keyboard-only validation with Computer Use:
+  - Wrote `dev-command.json` with route `home-fixture` and launched the installed app through AppUserModelId `NextGenEmby.App_h8qjz0sr1sg4m!App`; the window path resolved to `NextGenEmby.App_0.1.0.197_x64__h8qjz0sr1sg4m`.
+  - Initial Home showed unified-width `Media Libraries` and `Server sections` cards with no label overlap.
+  - Pressed `Down`; focus moved from hero Play to `Hot Movies`, the card scaled visually, and the focus frame remained fully visible.
+  - Pressed `Right`, `Right`; focus moved across Media Libraries to `Douban Top Rated`, old cards returned to normal scale, and the rail kept the focused card visible.
+  - Pressed `Down`, `Right`; focus moved into Server sections and across to `Hot TV Series` without overlapping neighboring cards.
+  - Pressed `Down`; focus moved to the `Continue watching` poster row, with poster title/meta still contained in the card.
+  - No app-content mouse clicks were used. `dev-command.json` and `dev-command-result.txt` were removed from LocalState after validation.
+- Follow-up:
+  - Continue extracting remaining page-local Home hero measurements and evaluate whether real-server artwork needs a slightly lighter Home wash once saved-session screenshots are available again.

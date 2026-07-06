@@ -10,7 +10,7 @@
             VerticalScrollMode="Enabled"
             HorizontalScrollBarVisibility="Disabled"
             HorizontalScrollMode="Disabled">
-            <StackPanel Margin="{StaticResource TvPageMargin}" Spacing="22">
+            <StackPanel Margin="{StaticResource TvPageMargin}" Spacing="{StaticResource TvHomeSectionSpacing}">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
@@ -166,7 +166,7 @@
                     </Grid>
                 </Border>
 
-                <StackPanel Spacing="18">
+                <StackPanel Spacing="{StaticResource TvHomeRailHeaderSpacing}">
                     <TextBlock
                         Text="Media Libraries"
                         Style="{StaticResource TvSectionTitleTextStyle}" />
@@ -178,13 +178,13 @@
                         <StackPanel
                             x:Name="LibrariesPanel"
                             Orientation="Horizontal"
-                            Spacing="18" />
+                            Spacing="{StaticResource TvHomeRailCardSpacing}" />
                     </ScrollViewer>
                 </StackPanel>
 
                 <StackPanel
                     x:Name="HomeSectionsRail"
-                    Spacing="18"
+                    Spacing="{StaticResource TvHomeRailHeaderSpacing}"
                     Visibility="Collapsed">
                     <TextBlock
                         Text="Server sections"
@@ -197,7 +197,7 @@
                         <StackPanel
                             x:Name="HomeSectionsPanel"
                             Orientation="Horizontal"
-                            Spacing="18" />
+                            Spacing="{StaticResource TvHomeRailCardSpacing}" />
                     </ScrollViewer>
                 </StackPanel>
 
@@ -207,7 +207,7 @@
 
                 <StackPanel
                     x:Name="RowsPanel"
-                    Spacing="22" />
+                    Spacing="{StaticResource TvHomeRowSpacing}" />
             </StackPanel>
         </ScrollViewer>
     </Grid>

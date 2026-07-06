@@ -138,6 +138,47 @@ namespace NextGenEmby.App.Views
             KeepFocusedHomeTargetVisible(target);
         }
 
+        private void HomeCard_OnGotFocus(object sender, RoutedEventArgs e)
+        {
+            HomeFocusTarget_OnGotFocus(sender, e);
+            SetHomeCardScale(sender as Control, GetDoubleResource("TvHomeFocusedCardScale", 1.035));
+        }
+
+        private void HomeCard_OnLostFocus(object sender, RoutedEventArgs e)
+        {
+            SetHomeCardScale(sender as Control, 1.0);
+        }
+
+        private void ApplyHomeCardFocusTreatment(Button button)
+        {
+            button.RenderTransformOrigin = new Windows.Foundation.Point(0.5, 0.5);
+            button.RenderTransform = new ScaleTransform
+            {
+                ScaleX = 1,
+                ScaleY = 1
+            };
+            button.GotFocus += HomeCard_OnGotFocus;
+            button.LostFocus += HomeCard_OnLostFocus;
+        }
+
+        private static void SetHomeCardScale(Control? control, double scale)
+        {
+            if (control == null)
+            {
+                return;
+            }
+
+            var scaleTransform = control.RenderTransform as ScaleTransform;
+            if (scaleTransform == null)
+            {
+                scaleTransform = new ScaleTransform();
+                control.RenderTransform = scaleTransform;
+            }
+
+            scaleTransform.ScaleX = scale;
+            scaleTransform.ScaleY = scale;
+        }
+
         private static void KeepFocusedHomeTargetVisible(Control? target)
         {
             if (target == null)
@@ -933,17 +974,18 @@ namespace NextGenEmby.App.Views
         private Button CreateLibraryButton(EmbyLibraryView view, IReadOnlyList<EmbyMediaItem> previewItems)
         {
             var request = CreateLibraryRequest(view);
+            var cardCornerRadius = GetCornerRadiusResource("TvHomeWideCardCornerRadius", 8);
             var button = new Button
             {
-                Width = 250,
-                Height = 132,
+                Width = GetDoubleResource("TvHomeWideCardWidth", 276),
+                Height = GetDoubleResource("TvHomeWideCardHeight", 136),
                 Padding = new Thickness(0),
                 Tag = request,
                 HorizontalContentAlignment = HorizontalAlignment.Stretch,
                 VerticalContentAlignment = VerticalAlignment.Stretch,
                 UseSystemFocusVisuals = true
             };
-            button.GotFocus += HomeFocusTarget_OnGotFocus;
+            ApplyHomeCardFocusTreatment(button);
             button.Click += LibraryButton_OnClick;
             AutomationProperties.SetName(button, string.IsNullOrWhiteSpace(view.Name) ? "Library" : view.Name);
 
@@ -953,7 +995,7 @@ namespace NextGenEmby.App.Views
                 Background = (Brush)Application.Current.Resources["AppChromeBrush"],
                 BorderBrush = (Brush)Application.Current.Resources["AppHairlineBrush"],
                 BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(8)
+                CornerRadius = cardCornerRadius
             };
             root.Children.Add(background);
 
@@ -971,30 +1013,30 @@ namespace NextGenEmby.App.Views
                 root.Children.Add(new Border
                 {
                     Background = previewBrush,
-                    CornerRadius = new CornerRadius(8),
+                    CornerRadius = cardCornerRadius,
                     Opacity = GetDoubleResource("TvHomeLibraryArtworkOpacity", 0.88)
                 });
                 root.Children.Add(new Border
                 {
                     Background = (Brush)Application.Current.Resources["AppLibraryArtworkWashBrush"],
-                    CornerRadius = new CornerRadius(8)
+                    CornerRadius = cardCornerRadius
                 });
             }
 
             root.Children.Add(new Border
             {
-                Height = 3,
+                Height = GetDoubleResource("TvHomeWideCardAccentHeight", 4),
                 VerticalAlignment = VerticalAlignment.Top,
                 Background = view.IsTvLibrary
                     ? (Brush)Application.Current.Resources["AppWarmBrush"]
                     : (Brush)Application.Current.Resources["AppAccentBrush"],
-                CornerRadius = new CornerRadius(8, 8, 0, 0)
+                CornerRadius = new CornerRadius(cardCornerRadius.TopLeft, cardCornerRadius.TopRight, 0, 0)
             });
 
             root.Children.Add(CreateHomeWideCardTextScrim());
             root.Children.Add(new StackPanel
             {
-                Margin = new Thickness(20),
+                Margin = GetThicknessResource("TvHomeWideCardTextMargin", new Thickness(20)),
                 VerticalAlignment = VerticalAlignment.Bottom,
                 Spacing = 6,
                 Children =
@@ -1002,7 +1044,7 @@ namespace NextGenEmby.App.Views
                     new TextBlock
                     {
                         Text = string.IsNullOrWhiteSpace(view.Name) ? "Library" : view.Name,
-                        FontSize = 23,
+                        FontSize = GetDoubleResource("TvHomeWideCardTitleFontSize", 22),
                         FontWeight = Windows.UI.Text.FontWeights.SemiBold,
                         Foreground = (Brush)Application.Current.Resources["AppTextBrush"],
                         TextTrimming = TextTrimming.CharacterEllipsis,
@@ -1011,7 +1053,7 @@ namespace NextGenEmby.App.Views
                     new TextBlock
                     {
                         Text = CreateLibrarySubtitle(view, previewItems),
-                        FontSize = 15,
+                        FontSize = GetDoubleResource("TvHomeWideCardSubtitleFontSize", 15),
                         Foreground = (Brush)Application.Current.Resources["AppMutedTextBrush"],
                         TextTrimming = TextTrimming.CharacterEllipsis,
                         MaxLines = 1
@@ -1032,17 +1074,18 @@ namespace NextGenEmby.App.Views
                 request = request.WithDevelopmentFixture(row.Items, _developmentArtworkUris);
             }
 #endif
+            var cardCornerRadius = GetCornerRadiusResource("TvHomeWideCardCornerRadius", 8);
             var button = new Button
             {
-                Width = 284,
-                Height = 132,
+                Width = GetDoubleResource("TvHomeWideCardWidth", 276),
+                Height = GetDoubleResource("TvHomeWideCardHeight", 136),
                 Padding = new Thickness(0),
                 Tag = request,
                 HorizontalContentAlignment = HorizontalAlignment.Stretch,
                 VerticalContentAlignment = VerticalAlignment.Stretch,
                 UseSystemFocusVisuals = true
             };
-            button.GotFocus += HomeFocusTarget_OnGotFocus;
+            ApplyHomeCardFocusTreatment(button);
             button.Click += LibraryButton_OnClick;
             AutomationProperties.SetName(button, row.Title);
 
@@ -1052,7 +1095,7 @@ namespace NextGenEmby.App.Views
                 Background = (Brush)Application.Current.Resources["AppChromeBrush"],
                 BorderBrush = (Brush)Application.Current.Resources["AppHairlineBrush"],
                 BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(8)
+                CornerRadius = cardCornerRadius
             });
 
             var artworkBrush = CreateHomeSectionArtworkBrush(row, 720);
@@ -1070,19 +1113,19 @@ namespace NextGenEmby.App.Views
                 root.Children.Add(new Border
                 {
                     Background = artworkBrush,
-                    CornerRadius = new CornerRadius(8),
+                    CornerRadius = cardCornerRadius,
                     Opacity = GetDoubleResource("TvHomeSectionArtworkOpacity", 0.9)
                 });
                 root.Children.Add(new Border
                 {
                     Background = (Brush)Application.Current.Resources["AppSectionArtworkWashBrush"],
-                    CornerRadius = new CornerRadius(8)
+                    CornerRadius = cardCornerRadius
                 });
             }
 
             root.Children.Add(new Border
             {
-                Width = 4,
+                Width = GetDoubleResource("TvHomeWideCardSideAccentWidth", 4),
                 Margin = new Thickness(0, 18, 0, 18),
                 HorizontalAlignment = HorizontalAlignment.Left,
                 Background = (Brush)Application.Current.Resources["AppWarmBrush"],
@@ -1092,7 +1135,7 @@ namespace NextGenEmby.App.Views
             root.Children.Add(CreateHomeWideCardTextScrim());
             root.Children.Add(new StackPanel
             {
-                Margin = new Thickness(20),
+                Margin = GetThicknessResource("TvHomeWideCardTextMargin", new Thickness(20)),
                 VerticalAlignment = VerticalAlignment.Bottom,
                 Spacing = 6,
                 Children =
@@ -1100,7 +1143,7 @@ namespace NextGenEmby.App.Views
                     new TextBlock
                     {
                         Text = row.Title,
-                        FontSize = 22,
+                        FontSize = GetDoubleResource("TvHomeWideCardTitleFontSize", 22),
                         FontWeight = Windows.UI.Text.FontWeights.SemiBold,
                         Foreground = (Brush)Application.Current.Resources["AppTextBrush"],
                         TextTrimming = TextTrimming.CharacterEllipsis,
@@ -1109,7 +1152,7 @@ namespace NextGenEmby.App.Views
                     new TextBlock
                     {
                         Text = CreateHomeSectionSubtitle(row),
-                        FontSize = 15,
+                        FontSize = GetDoubleResource("TvHomeWideCardSubtitleFontSize", 15),
                         Foreground = (Brush)Application.Current.Resources["AppMutedTextBrush"],
                         TextTrimming = TextTrimming.CharacterEllipsis,
                         MaxLines = 1
@@ -1123,6 +1166,7 @@ namespace NextGenEmby.App.Views
 
         private static Border CreateHomeWideCardTextScrim()
         {
+            var cardCornerRadius = GetCornerRadiusResource("TvHomeWideCardCornerRadius", 8);
             var scrim = new LinearGradientBrush
             {
                 StartPoint = new Windows.Foundation.Point(0, 0),
@@ -1149,7 +1193,7 @@ namespace NextGenEmby.App.Views
                 Height = GetDoubleResource("TvHomeWideCardTextScrimHeight", 92),
                 VerticalAlignment = VerticalAlignment.Bottom,
                 Background = scrim,
-                CornerRadius = new CornerRadius(0, 0, 8, 8)
+                CornerRadius = new CornerRadius(0, 0, cardCornerRadius.BottomRight, cardCornerRadius.BottomLeft)
             };
         }
 
@@ -1157,6 +1201,28 @@ namespace NextGenEmby.App.Views
         {
             var resources = Application.Current.Resources;
             if (resources.ContainsKey(key) && resources[key] is double value)
+            {
+                return value;
+            }
+
+            return fallback;
+        }
+
+        private static CornerRadius GetCornerRadiusResource(string key, double fallback)
+        {
+            var resources = Application.Current.Resources;
+            if (resources.ContainsKey(key) && resources[key] is CornerRadius value)
+            {
+                return value;
+            }
+
+            return new CornerRadius(fallback);
+        }
+
+        private static Thickness GetThicknessResource(string key, Thickness fallback)
+        {
+            var resources = Application.Current.Resources;
+            if (resources.ContainsKey(key) && resources[key] is Thickness value)
             {
                 return value;
             }
@@ -1197,7 +1263,7 @@ namespace NextGenEmby.App.Views
             var rowIndex = _rowFirstButtons.Count;
             var section = new StackPanel
             {
-                Spacing = 12
+                Spacing = GetDoubleResource("TvHomeRowHeaderSpacing", 12)
             };
 
             var header = new Grid();
@@ -1206,7 +1272,7 @@ namespace NextGenEmby.App.Views
             header.Children.Add(new TextBlock
             {
                 Text = title,
-                FontSize = 24,
+                FontSize = GetDoubleResource("TvHomeRowTitleFontSize", 24),
                 FontWeight = Windows.UI.Text.FontWeights.SemiBold,
                 Foreground = (Brush)Application.Current.Resources["AppTextBrush"]
             });
@@ -1244,7 +1310,7 @@ namespace NextGenEmby.App.Views
             var panel = new StackPanel
             {
                 Orientation = Orientation.Horizontal,
-                Spacing = 14
+                Spacing = GetDoubleResource("TvHomeRowCardSpacing", 14)
             };
 
             Button? firstRowButton = null;
@@ -1282,7 +1348,7 @@ namespace NextGenEmby.App.Views
 
         private void RegisterRowButton(Button button, int rowIndex)
         {
-            button.GotFocus += HomeFocusTarget_OnGotFocus;
+            ApplyHomeCardFocusTreatment(button);
             _rowButtonIndexes[button] = rowIndex;
         }
 
@@ -1308,10 +1374,11 @@ namespace NextGenEmby.App.Views
 
         private Button CreateItemButton(EmbyMediaItem item)
         {
+            var cardCornerRadius = GetCornerRadiusResource("TvHomePosterCardCornerRadius", 6);
             var button = new Button
             {
-                Width = 172,
-                Height = 252,
+                Width = GetDoubleResource("TvHomeRowPosterCardWidth", 172),
+                Height = GetDoubleResource("TvHomeRowPosterCardHeight", 252),
                 Padding = new Thickness(0),
                 Tag = item,
                 HorizontalContentAlignment = HorizontalAlignment.Stretch,
@@ -1341,7 +1408,7 @@ namespace NextGenEmby.App.Views
             {
                 BorderBrush = (Brush)Application.Current.Resources["AppHairlineBrush"],
                 BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(6)
+                CornerRadius = cardCornerRadius
             });
             root.Children.Add(new Border
             {
@@ -1352,7 +1419,7 @@ namespace NextGenEmby.App.Views
             {
                 VerticalAlignment = VerticalAlignment.Bottom,
                 Background = (Brush)Application.Current.Resources["AppCardScrimBrush"],
-                Padding = new Thickness(12, 10, 12, 10)
+                Padding = GetThicknessResource("TvHomePosterCardScrimPadding", new Thickness(12, 10, 12, 10))
             };
 
             overlay.Child = new StackPanel
@@ -1363,7 +1430,7 @@ namespace NextGenEmby.App.Views
                     new TextBlock
                     {
                         Text = string.IsNullOrWhiteSpace(item.Name) ? item.Id : item.Name,
-                        FontSize = 16,
+                        FontSize = GetDoubleResource("TvHomeRowPosterTitleFontSize", 16),
                         FontWeight = Windows.UI.Text.FontWeights.SemiBold,
                         Foreground = (Brush)Application.Current.Resources["AppTextBrush"],
                         TextTrimming = TextTrimming.CharacterEllipsis,
@@ -1372,7 +1439,7 @@ namespace NextGenEmby.App.Views
                     new TextBlock
                     {
                         Text = CreateMeta(item),
-                        FontSize = 13,
+                        FontSize = GetDoubleResource("TvHomeRowPosterMetaFontSize", 13),
                         Foreground = (Brush)Application.Current.Resources["AppMutedTextBrush"],
                         TextTrimming = TextTrimming.CharacterEllipsis,
                         MaxLines = 1
