@@ -1,11 +1,59 @@
 param(
     [switch]$PlanOnly,
-    [switch]$SkipNativeBuild
+    [switch]$SkipNativeBuild,
+    [string]$AppDiffBase = '94adec5'
 )
 
 $ErrorActionPreference = 'Stop'
 
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot '..\..')
+$protectedAppRoots = @('src/NextGenEmby.App')
+$coreTestFilter = 'FullyQualifiedName~PlaybackQuality|FullyQualifiedName~Playback|FullyQualifiedName~EmbyProgress'
+
+function Invoke-GitLines(
+    [string[]]$Arguments
+) {
+    $output = & git @Arguments
+    if ($LASTEXITCODE -ne 0) {
+        throw ('git ' + ($Arguments -join ' ') + ' failed with exit code ' + $LASTEXITCODE)
+    }
+
+    @($output | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+}
+
+function Test-GitCommitExists(
+    [string]$Ref
+) {
+    & git rev-parse --verify ($Ref + '^{commit}') > $null 2>&1
+    $LASTEXITCODE -eq 0
+}
+
+function Assert-NoProtectedRootChanges(
+    [string]$BaseRef,
+    [string[]]$ProtectedRoots
+) {
+    Push-Location $repoRoot
+    try {
+        if (-not (Test-GitCommitExists $BaseRef)) {
+            throw "App diff guard base '$BaseRef' was not found. Pass -AppDiffBase with a local base commit or branch."
+        }
+
+        $changedPaths = @()
+        foreach ($root in $ProtectedRoots) {
+            $changedPaths += Invoke-GitLines @('diff', '--name-only', '--', $root)
+            $changedPaths += Invoke-GitLines @('diff', '--cached', '--name-only', '--', $root)
+            $changedPaths += Invoke-GitLines @('diff', '--name-only', ($BaseRef + '...HEAD'), '--', $root)
+        }
+
+        $uniquePaths = @($changedPaths | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Sort-Object -Unique)
+        if ($uniquePaths.Count -gt 0) {
+            throw ("Playback-core validation is App-free, but App changes were detected:`n" + ($uniquePaths -join "`n"))
+        }
+    }
+    finally {
+        Pop-Location
+    }
+}
 
 function New-CommandPlan(
     [string]$Name,
@@ -35,10 +83,10 @@ $commands = @(
         -Command 'powershell' `
         -Arguments @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', 'tools\quality-run\run-playback-core-checks.tests.ps1')
     New-CommandPlan `
-        -Name 'core-tests' `
-        -Description 'Run Core playback quality and playback policy tests without building the UWP App package.' `
+        -Name 'playback-core-tests' `
+        -Description 'Run playback-related Core tests without building the UWP App package or unrelated interaction policies.' `
         -Command 'dotnet' `
-        -Arguments @('test', 'tests\NextGenEmby.Core.Tests\NextGenEmby.Core.Tests.csproj', '-v', 'minimal')
+        -Arguments @('test', 'tests\NextGenEmby.Core.Tests\NextGenEmby.Core.Tests.csproj', '--filter', $coreTestFilter, '-v', 'minimal')
     New-CommandPlan `
         -Name 'native-helper-test' `
         -Description 'Compile and run the standalone native playback quality metrics helper test.' `
@@ -80,6 +128,13 @@ $summary = [pscustomobject]@{
     )
     excludedRoots = @('src/NextGenEmby.App')
     excludes = @('NextGenEmby.App.csproj', 'AppPackages', 'MSIX packaging')
+    coreTestFilter = $coreTestFilter
+    appDiffGuard = [pscustomobject]@{
+        status = 'active'
+        baseRef = $AppDiffBase
+        protectedRoots = $protectedAppRoots
+        checks = @('working-tree', 'index', 'branch-diff')
+    }
     commands = $commands
 }
 
@@ -91,6 +146,16 @@ if ($PlanOnly) {
 $results = @()
 Push-Location $repoRoot
 try {
+    $guardStartedAt = [DateTimeOffset]::Now
+    Write-Host 'running=app-diff-guard'
+    Assert-NoProtectedRootChanges -BaseRef $AppDiffBase -ProtectedRoots $protectedAppRoots
+    $guardFinishedAt = [DateTimeOffset]::Now
+    $results += [pscustomobject]@{
+        name = 'app-diff-guard'
+        exitCode = 0
+        durationMs = [math]::Round(($guardFinishedAt - $guardStartedAt).TotalMilliseconds, 0)
+    }
+
     foreach ($item in $commands) {
         $startedAt = [DateTimeOffset]::Now
         Write-Host ("running=" + $item.name)
@@ -117,6 +182,8 @@ $report = [pscustomobject]@{
     includedRoots = $summary.includedRoots
     excludedRoots = $summary.excludedRoots
     excludes = $summary.excludes
+    coreTestFilter = $summary.coreTestFilter
+    appDiffGuard = $summary.appDiffGuard
     result = if ($results | Where-Object { $_.exitCode -ne 0 }) { 'fail' } else { 'pass' }
     results = $results
 }

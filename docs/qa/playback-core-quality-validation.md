@@ -14,10 +14,12 @@ tools\quality-run\run-playback-core-checks.ps1
 
 The command emits `scope = playback-core`, plus `includedRoots` and `excludedRoots` fields so automated model runs can verify that the run is isolated from App interaction work.
 
+Before running tests or builds, the command also runs an App diff guard. The guard fails if the current worktree, index, or playback-quality branch diff contains changes under `src/NextGenEmby.App`. This keeps playback Core evaluation independent from parallel Xbox UI/App worktrees.
+
 The command validates:
 
 - playback-core validation plan structure, including the invariant that App/MSIX build steps are excluded;
-- Core playback quality DTOs, report composer, evaluator, analyzer, command parsing, and playback policy tests;
+- playback-specific Core tests selected by `coreTestFilter`, including playback quality DTOs, report composer, evaluator, analyzer, command parsing, playback policies, backend diagnostics, stream-launch decisions, and Emby playback progress/session behavior;
 - Core refresh-rate cadence policy tests that mirror the native Xbox display-mode selection ratios;
 - standalone native playback quality metrics helper;
 - standalone native display refresh cadence policy helper;
@@ -28,6 +30,7 @@ The command deliberately excludes:
 
 - `NextGenEmby.App.csproj`;
 - XAML interaction work;
+- unrelated Core interaction/focus policy tests;
 - App package generation;
 - MSIX packaging.
 

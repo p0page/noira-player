@@ -24,13 +24,38 @@ if (-not ($plan.excludedRoots -contains 'src/NextGenEmby.App')) {
     throw 'Expected src/NextGenEmby.App in playback-core excluded roots.'
 }
 
+if (-not $plan.appDiffGuard -or $plan.appDiffGuard.status -ne 'active') {
+    throw 'Expected active App diff guard in playback-core validation plan.'
+}
+
+if (-not ($plan.appDiffGuard.protectedRoots -contains 'src/NextGenEmby.App')) {
+    throw 'Expected App diff guard to protect src/NextGenEmby.App.'
+}
+
+if (-not $plan.coreTestFilter) {
+    throw 'Expected playback-specific Core test filter in playback-core validation plan.'
+}
+
+if ($plan.coreTestFilter -notmatch 'PlaybackQuality' -or $plan.coreTestFilter -notmatch 'Playback') {
+    throw 'Expected playback-specific Core test filter to include Playback and PlaybackQuality tests.'
+}
+
 $serializedCommands = $plan.commands | ConvertTo-Json -Depth 6
 if ($serializedCommands -match 'NextGenEmby\.App|AppPackages|msix|NextGenEmby\.App\.csproj') {
     throw 'Playback-core validation plan must not build or package the App project.'
 }
 
-if (-not ($plan.commands | Where-Object { $_.name -eq 'core-tests' })) {
-    throw 'Expected core-tests command in playback-core validation plan.'
+if (-not ($plan.commands | Where-Object { $_.name -eq 'playback-core-tests' })) {
+    throw 'Expected playback-core-tests command in playback-core validation plan.'
+}
+
+$playbackCoreTests = $plan.commands | Where-Object { $_.name -eq 'playback-core-tests' } | Select-Object -First 1
+if (-not ($playbackCoreTests.arguments -contains '--filter')) {
+    throw 'Expected playback-core-tests command to use a dotnet test filter.'
+}
+
+if (-not ($playbackCoreTests.arguments -contains $plan.coreTestFilter)) {
+    throw 'Expected playback-core-tests command to use the plan coreTestFilter value.'
 }
 
 if (-not ($plan.commands | Where-Object { $_.name -eq 'script-plan-test' })) {
