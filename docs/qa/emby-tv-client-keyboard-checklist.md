@@ -383,4 +383,21 @@ Then continue design and implementation until the route passes.
   - `Escape` returned one level to Home; Home content remained present and focus returned to the Hero Details action.
 - Result: pass for the Home -> Details -> Home route. No mouse clicks were used inside app content.
 - Follow-up:
-  - Home currently waits too long before full first render when many server rows are requested. Add a progressive Home load pass so Hero, media libraries, Continue watching, and Next up render before lower-priority popular/latest rows finish.
+  - Home first-render latency needed a progressive load pass; addressed in the 0.1.0.93 run below.
+
+### 2026-07-06 - Progressive Home Load
+
+- App version: 0.1.0.94.
+- Scope: Home first-render latency, supplemental row loading, focus preservation policy, and Home -> Library keyboard route after progressive load.
+- Automated verification:
+  - Core tests passed: 199 total.
+  - App Debug x64 Build passed and produced `NextGenEmby.App_0.1.0.94_x64_Debug.msix`.
+  - Package layout gate passed for 0.1.0.94.
+  - MSIX signed and installed locally as `NextGenEmby.App_0.1.0.94_x64__h8qjz0sr1sg4m`.
+- Keyboard-only validation with Computer Use:
+  - Launched 0.1.0.94 locally.
+  - At the 6-second text snapshot, Home had already rendered Hero, Media Libraries, Continue watching, Hot Movies, Hot TV Series, Latest-in-library rows, and Latest.
+  - The same snapshot showed no `Loading...` or `Loading more rows...` state.
+  - From Home hero, `Down`, `Enter` opened the first media library `热门电影`.
+  - Library showed `34 items`, Sort, Filter, and a movie grid without loading dead end.
+- Result: pass. No mouse clicks were used inside app content.

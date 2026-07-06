@@ -49,5 +49,25 @@ namespace NextGenEmby.Core.Tests.Input
             Assert.False(failure.ShouldClearExistingContent);
             Assert.Equal("Unable to refresh home. Showing last loaded content.", failure.StatusText);
         }
+
+        [Fact]
+        public void Initial_Render_Focuses_Daily_Start()
+        {
+            var behavior = HomeLoadPolicy.ForRenderCompleted(
+                hadRenderedContentBeforeRender: false,
+                isSupplementalRender: false);
+
+            Assert.Equal(HomeRenderFocusBehavior.FocusDailyStart, behavior);
+        }
+
+        [Fact]
+        public void Supplemental_Render_Preserves_Existing_Focus()
+        {
+            var behavior = HomeLoadPolicy.ForRenderCompleted(
+                hadRenderedContentBeforeRender: true,
+                isSupplementalRender: true);
+
+            Assert.Equal(HomeRenderFocusBehavior.RestoreExistingFocus, behavior);
+        }
     }
 }

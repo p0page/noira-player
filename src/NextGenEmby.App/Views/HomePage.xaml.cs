@@ -405,20 +405,52 @@ namespace NextGenEmby.App.Views
                 using (var httpClient = new HttpClient())
                 {
                     var client = EmbyClientFactory.Create(httpClient, session);
-                    var continueItems = await TryLoadListAsync(() => client.GetResumeItemsAsync(session, 24));
-                    var nextUpItems = await TryLoadListAsync(() => client.GetNextUpItemsAsync(session, 24));
-                    var latestItems = await TryLoadListAsync(() => client.GetLatestItemsAsync(session));
-                    var libraryViews = await TryLoadListAsync(() => client.GetUserViewsAsync(session));
-                    var libraryPreviews = await LoadLibraryPreviewsAsync(client, session, libraryViews, loadGeneration);
-                    var configuredRows = await LoadConfiguredHomeRowsAsync(client, session, loadGeneration);
-                    var popularRows = await LoadPopularRowsAsync(client, session, libraryViews, loadGeneration);
+                    var continueItemsTask = TryLoadListAsync(() => client.GetResumeItemsAsync(session, 24));
+                    var nextUpItemsTask = TryLoadListAsync(() => client.GetNextUpItemsAsync(session, 24));
+                    var latestItemsTask = TryLoadListAsync(() => client.GetLatestItemsAsync(session));
+                    var libraryViewsTask = TryLoadListAsync(() => client.GetUserViewsAsync(session));
+                    await Task.WhenAll(continueItemsTask, nextUpItemsTask, latestItemsTask, libraryViewsTask);
 
                     if (!CanApplyLoad(loadGeneration))
                     {
                         return;
                     }
 
+                    var continueItems = continueItemsTask.Result;
+                    var nextUpItems = nextUpItemsTask.Result;
+                    var latestItems = latestItemsTask.Result;
+                    var libraryViews = libraryViewsTask.Result;
                     _client = client;
+                    RenderHome(
+                        continueItems,
+                        nextUpItems,
+                        latestItems,
+                        libraryViews,
+                        new Dictionary<string, IReadOnlyList<EmbyMediaItem>>(StringComparer.Ordinal),
+                        Array.Empty<HomeSectionRow>(),
+                        Array.Empty<LibraryContentRow>(),
+                        isSupplementalRender: false);
+
+                    if (!CanApplyLoad(loadGeneration))
+                    {
+                        return;
+                    }
+
+                    StatusBlock.Text = "Loading more rows...";
+                    var libraryPreviewsTask = LoadLibraryPreviewsAsync(client, session, libraryViews, loadGeneration);
+                    var configuredRowsTask = LoadConfiguredHomeRowsAsync(client, session, loadGeneration);
+                    var popularRowsTask = LoadPopularRowsAsync(client, session, libraryViews, loadGeneration);
+                    await Task.WhenAll(libraryPreviewsTask, configuredRowsTask, popularRowsTask);
+
+                    if (!CanApplyLoad(loadGeneration))
+                    {
+                        return;
+                    }
+
+                    var libraryPreviews = libraryPreviewsTask.Result;
+                    var configuredRows = configuredRowsTask.Result;
+                    var popularRows = popularRowsTask.Result;
+
                     RenderHome(
                         continueItems,
                         nextUpItems,
@@ -426,7 +458,8 @@ namespace NextGenEmby.App.Views
                         libraryViews,
                         libraryPreviews,
                         configuredRows,
-                        popularRows);
+                        popularRows,
+                        isSupplementalRender: true);
                 }
             }
             catch
@@ -467,8 +500,14 @@ namespace NextGenEmby.App.Views
             IReadOnlyList<EmbyLibraryView> libraryViews,
             IReadOnlyDictionary<string, IReadOnlyList<EmbyMediaItem>> libraryPreviews,
             IReadOnlyList<HomeSectionRow> configuredRows,
-            IReadOnlyList<LibraryContentRow> popularRows)
+            IReadOnlyList<LibraryContentRow> popularRows,
+            bool isSupplementalRender)
         {
+            var focusBehavior = HomeLoadPolicy.ForRenderCompleted(_hasRenderedHomeContent, isSupplementalRender);
+            var previousFocusTarget = focusBehavior == HomeRenderFocusBehavior.RestoreExistingFocus
+                ? CreateHomeFocusTarget(ResolveHomeFocusTarget(FocusManager.GetFocusedElement()) ?? _lastHomeFocusTarget)
+                : null;
+
             ClearRows();
             RenderLibraries(libraryViews, libraryPreviews);
             _hasRenderedHomeContent = true;
@@ -537,6 +576,19 @@ namespace NextGenEmby.App.Views
             }
 
             AddUniqueRow(renderedRowTitles, "Latest", latestItems, null);
+            CompleteHomeRenderFocus(focusBehavior, previousFocusTarget);
+        }
+
+        private void CompleteHomeRenderFocus(
+            HomeRenderFocusBehavior focusBehavior,
+            HomeFocusTarget? previousFocusTarget)
+        {
+            if (focusBehavior == HomeRenderFocusBehavior.RestoreExistingFocus &&
+                TryMoveFocus(ResolveHomeFocusControl(previousFocusTarget)))
+            {
+                return;
+            }
+
             FocusDailyStart(FocusState.Programmatic);
         }
 
@@ -977,19 +1029,29 @@ namespace NextGenEmby.App.Views
             int loadGeneration)
         {
             var result = new Dictionary<string, IReadOnlyList<EmbyMediaItem>>(StringComparer.Ordinal);
-            foreach (var view in libraryViews.Take(12))
-            {
-                if (!CanApplyLoad(loadGeneration) || string.IsNullOrWhiteSpace(view.Id))
+            var previewTasks = libraryViews
+                .Take(12)
+                .Where(view => !string.IsNullOrWhiteSpace(view.Id))
+                .Select(async view => new
                 {
-                    continue;
-                }
+                    ViewId = view.Id,
+                    Items = await TryLoadListAsync(() => client.GetLatestItemsAsync(
+                        session,
+                        view.Id,
+                        GuessIncludeItemTypes(view.CollectionType),
+                        12))
+                })
+                .ToList();
 
-                var items = await TryLoadListAsync(() => client.GetLatestItemsAsync(
-                    session,
-                    view.Id,
-                    GuessIncludeItemTypes(view.CollectionType),
-                    12));
-                result[view.Id] = items;
+            var previews = await Task.WhenAll(previewTasks);
+            if (!CanApplyLoad(loadGeneration))
+            {
+                return result;
+            }
+
+            foreach (var preview in previews)
+            {
+                result[preview.ViewId] = preview.Items;
             }
 
             return result;
@@ -1003,26 +1065,31 @@ namespace NextGenEmby.App.Views
             var sections = await TryLoadListAsync(() => client.GetHomeSectionsAsync(session));
             var rows = new List<HomeSectionRow>();
 
-            foreach (var section in sections.Take(16))
+            var rowTasks = sections
+                .Take(16)
+                .Where(section =>
+                    !string.IsNullOrWhiteSpace(section.Id) &&
+                    !IsDuplicateSystemSection(section))
+                .Select(async section =>
+                {
+                    var items = await TryLoadListAsync(() => client.GetHomeSectionItemsAsync(session, section.Id, 24));
+                    return items.Count == 0
+                        ? null
+                        : new HomeSectionRow(
+                            CreateSectionTitle(section),
+                            section.Id,
+                            section.CollectionType,
+                            items);
+                })
+                .ToList();
+
+            var loadedRows = await Task.WhenAll(rowTasks);
+            foreach (var row in loadedRows)
             {
-                if (!CanApplyLoad(loadGeneration) ||
-                    string.IsNullOrWhiteSpace(section.Id) ||
-                    IsDuplicateSystemSection(section))
+                if (row != null)
                 {
-                    continue;
+                    rows.Add(row);
                 }
-
-                var items = await TryLoadListAsync(() => client.GetHomeSectionItemsAsync(session, section.Id, 24));
-                if (items.Count == 0)
-                {
-                    continue;
-                }
-
-                rows.Add(new HomeSectionRow(
-                    CreateSectionTitle(section),
-                    section.Id,
-                    section.CollectionType,
-                    items));
             }
 
             return rows;
@@ -1035,37 +1102,42 @@ namespace NextGenEmby.App.Views
             int loadGeneration)
         {
             var rows = new List<LibraryContentRow>();
-            foreach (var view in libraryViews.Take(8))
+            var rowTasks = libraryViews
+                .Take(8)
+                .Where(view => !string.IsNullOrWhiteSpace(view.Id))
+                .Select(async view =>
+                {
+                    var moreRequest = CreateLibraryRequest(view);
+                    var items = await TryLoadListAsync(() => client.GetItemsAsync(session, new EmbyItemsQuery
+                    {
+                        ParentId = moreRequest.ParentId,
+                        IncludeItemTypes = moreRequest.IncludeItemTypes,
+                        CollectionTypes = moreRequest.Query.CollectionTypes,
+                        MediaTypes = moreRequest.Query.MediaTypes,
+                        IsFolder = moreRequest.Query.IsFolder,
+                        SortBy = "PlayCount",
+                        SortOrder = "Descending",
+                        Filters = CombineFilters(moreRequest.Query.Filters, "IsNotFolder"),
+                        Limit = 24,
+                        Recursive = true
+                    }));
+
+                    return items.Count == 0
+                        ? null
+                        : new LibraryContentRow(
+                            CreatePopularTitle(view),
+                            items,
+                            moreRequest);
+                })
+                .ToList();
+
+            var loadedRows = await Task.WhenAll(rowTasks);
+            foreach (var row in loadedRows)
             {
-                if (!CanApplyLoad(loadGeneration) || string.IsNullOrWhiteSpace(view.Id))
+                if (row != null)
                 {
-                    continue;
+                    rows.Add(row);
                 }
-
-                var moreRequest = CreateLibraryRequest(view);
-                var items = await TryLoadListAsync(() => client.GetItemsAsync(session, new EmbyItemsQuery
-                {
-                    ParentId = moreRequest.ParentId,
-                    IncludeItemTypes = moreRequest.IncludeItemTypes,
-                    CollectionTypes = moreRequest.Query.CollectionTypes,
-                    MediaTypes = moreRequest.Query.MediaTypes,
-                    IsFolder = moreRequest.Query.IsFolder,
-                    SortBy = "PlayCount",
-                    SortOrder = "Descending",
-                    Filters = CombineFilters(moreRequest.Query.Filters, "IsNotFolder"),
-                    Limit = 24,
-                    Recursive = true
-                }));
-
-                if (items.Count == 0)
-                {
-                    continue;
-                }
-
-                rows.Add(new LibraryContentRow(
-                    CreatePopularTitle(view),
-                    items,
-                    moreRequest));
             }
 
             return rows;

@@ -1,5 +1,11 @@
 namespace NextGenEmby.Core.Input
 {
+    public enum HomeRenderFocusBehavior
+    {
+        FocusDailyStart,
+        RestoreExistingFocus
+    }
+
     public sealed class HomeLoadDecision
     {
         public HomeLoadDecision(
@@ -47,6 +53,15 @@ namespace NextGenEmby.Core.Input
             return hasRenderedContent
                 ? new HomeLoadDecision(false, false, false, "Unable to refresh home. Showing last loaded content.")
                 : new HomeLoadDecision(false, true, false, "Unable to load home.");
+        }
+
+        public static HomeRenderFocusBehavior ForRenderCompleted(
+            bool hadRenderedContentBeforeRender,
+            bool isSupplementalRender)
+        {
+            return hadRenderedContentBeforeRender && isSupplementalRender
+                ? HomeRenderFocusBehavior.RestoreExistingFocus
+                : HomeRenderFocusBehavior.FocusDailyStart;
         }
     }
 }
