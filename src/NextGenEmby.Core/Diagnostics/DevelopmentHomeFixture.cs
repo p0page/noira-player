@@ -63,6 +63,7 @@ namespace NextGenEmby.Core.Diagnostics
             var configuredRows = new List<DevelopmentHomeMediaRow>
             {
                 Row(artworkUris, "Hot Movies", "movies", "", "qa-section-hot-movies", "qa-section-hot-movies-parent", "qa-wide-01.png", movies),
+                Row(artworkUris, "Tonight Picks", "movies", "", "qa-section-tonight", "qa-section-tonight-parent", "qa-wide-12.png", documentaries.Take(2).ToList()),
                 Row(artworkUris, "Hot TV Series", "tvshows", "", "qa-section-hot-tv", "qa-section-hot-tv-parent", "qa-wide-07.png", shows),
                 Row(artworkUris, "Douban Top Rated", "movies", "", "qa-section-douban", "qa-section-douban-parent", "qa-wide-03.png", movies.Skip(1).Concat(documentaries).Take(7).ToList()),
                 Row(artworkUris, "Netflix", "tvshows", "", "qa-section-netflix", "qa-section-netflix-parent", "qa-wide-08.png", shows.Skip(1).Take(4).ToList())

@@ -1878,3 +1878,25 @@ Then continue design and implementation until the route passes.
   - Targeted icon pixel test passed: `Icon_Assets_Preserve_Focus_Play_And_Progress_Signals_At_All_Sizes`.
 - Visual validation:
   - Inspected `Square44x44Logo.png` at original size; the focus corner, play core, and progress base remain visible at 44 px without relying on text.
+
+### 2026-07-07 - Home Poster Row Clamp Fixture
+
+- App version: 0.1.0.205.
+- Scope: keyboard-validate the Home poster-row clamp case where the source row is wider than the target row.
+- Interaction/design changes:
+  - Added a DEBUG Home fixture row, `Tonight Picks`, directly after the wider `Hot Movies` row.
+  - `Tonight Picks` intentionally contains two items so D-pad movement from a later Hot Movies column must clamp to the last available card instead of losing focus or snapping back to column 1.
+  - No playback decoding, media loading, real Emby loading, or Emby transcoding behavior changed.
+- Automated verification:
+  - TDD red path confirmed the Home fixture did not yet place a short row directly after `Hot Movies`.
+  - Targeted Home fixture and Home focus policy tests passed: 23 total.
+  - Full Core test suite passed: 458 total.
+  - `git diff --check` passed with no whitespace errors.
+  - App Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.205_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate thumbprint `6CB453A2FEC300C6E5034152C6C1A68DE31A7BD0`, verified with `signtool verify /pa`, and installed locally as `NextGenEmby.App 0.1.0.205`.
+- Keyboard-only validation with Computer Use:
+  - Wrote `dev-command.json` with route `home-fixture` and launched the installed app through AppUserModelId `NextGenEmby.App_h8qjz0sr1sg4m!App`; the window path resolved to `NextGenEmby.App_0.1.0.205_x64__h8qjz0sr1sg4m`.
+  - Initial Home showed `Tonight Picks` in Server sections, proving the fixture change was active in the installed app.
+  - Pressed `Down` five times to reach the `Hot Movies` poster row, then `Right`, `Right` to move into a later column. The visible focus reached `Afterimage` in a row with six cards.
+  - Pressed `Down`; focus clamped into the two-item `Tonight Picks` row on `City at Night`, the last available card, with no blank-column focus and no reset to `Ocean Archive`.
+  - No app-content mouse clicks were used. `dev-command.json` and `dev-command-result.txt` were removed from LocalState after validation, and the app process was stopped.

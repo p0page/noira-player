@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using NextGenEmby.Core.Diagnostics;
@@ -18,10 +19,24 @@ public sealed class DevelopmentHomeFixtureTests
         Assert.NotEmpty(fixture.NextUpItems);
         Assert.True(fixture.LibraryViews.Count >= 5);
         Assert.Contains(fixture.ConfiguredRows, row => row.Title == "Hot Movies");
+        Assert.Contains(fixture.ConfiguredRows, row => row.Title == "Tonight Picks");
         Assert.Contains(fixture.ConfiguredRows, row => row.Title == "Hot TV Series");
         Assert.Contains(fixture.ConfiguredRows, row => row.Title == "Douban Top Rated");
         Assert.Contains(fixture.ConfiguredRows, row => row.Title == "Netflix");
         Assert.True(fixture.LatestItems.Count >= 8);
+    }
+
+    [Fact]
+    public void Create_Places_Short_Row_After_Wide_Row_For_Column_Clamp_Validation()
+    {
+        var fixture = DevelopmentHomeFixture.Create();
+        var hotMoviesIndex = FindRowIndex(fixture.ConfiguredRows, "Hot Movies");
+        var tonightPicksIndex = FindRowIndex(fixture.ConfiguredRows, "Tonight Picks");
+
+        Assert.True(hotMoviesIndex >= 0, "Hot Movies fixture row is missing.");
+        Assert.Equal(hotMoviesIndex + 1, tonightPicksIndex);
+        Assert.True(fixture.ConfiguredRows[hotMoviesIndex].Items.Count >= 3);
+        Assert.Equal(2, fixture.ConfiguredRows[tonightPicksIndex].Items.Count);
     }
 
     [Fact]
@@ -92,5 +107,20 @@ public sealed class DevelopmentHomeFixtureTests
         }
 
         throw new InvalidOperationException("Repository root not found.");
+    }
+
+    private static int FindRowIndex(
+        IReadOnlyList<DevelopmentHomeMediaRow> rows,
+        string title)
+    {
+        for (var index = 0; index < rows.Count; index++)
+        {
+            if (string.Equals(rows[index].Title, title, StringComparison.Ordinal))
+            {
+                return index;
+            }
+        }
+
+        return -1;
     }
 }
