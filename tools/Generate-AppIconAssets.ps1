@@ -17,6 +17,32 @@ function New-IconColor {
     return [System.Drawing.Color]::FromArgb($A, $R, $G, $B)
 }
 
+$script:IconTokens = @{
+    Canvas = New-IconColor 3 6 10
+    Surface = New-IconColor 8 13 19
+    Raised = New-IconColor 15 22 31
+    Shelf = New-IconColor 25 33 43
+    ShelfMuted = New-IconColor 18 25 34
+    Inset = New-IconColor 5 9 14
+    Hairline = New-IconColor 48 63 78
+    Focus = New-IconColor 59 213 255
+    Play = New-IconColor 97 212 124
+    PlayCut = New-IconColor 4 16 7
+    Progress = New-IconColor 224 184 106
+    Text = New-IconColor 246 241 232
+    MutedText = New-IconColor 185 192 200
+}
+
+$script:IconGeometry = @{
+    TileRadius = 0.12
+    InnerMargin = 0.045
+    InnerRadius = 0.08
+    MarkInset = 0.07
+    FocusStroke = 0.022
+    HairlineStroke = 0.010
+    ProgressStroke = 0.040
+}
+
 function New-RoundedRectPath {
     param(
         [System.Drawing.RectangleF]$Rect,
@@ -76,7 +102,49 @@ function Set-CanvasQuality {
     $Graphics.TextRenderingHint = [System.Drawing.Text.TextRenderingHint]::ClearTypeGridFit
 }
 
-function Draw-MatteSlatMark {
+function New-TokenBrush {
+    param([string]$Name)
+
+    return [System.Drawing.SolidBrush]::new($script:IconTokens[$Name])
+}
+
+function New-TokenPen {
+    param(
+        [string]$Name,
+        [float]$Width
+    )
+
+    $pen = [System.Drawing.Pen]::new($script:IconTokens[$Name], $Width)
+    $pen.StartCap = [System.Drawing.Drawing2D.LineCap]::Round
+    $pen.EndCap = [System.Drawing.Drawing2D.LineCap]::Round
+    $pen.LineJoin = [System.Drawing.Drawing2D.LineJoin]::Round
+    return $pen
+}
+
+function Draw-PlayGlyph {
+    param(
+        [System.Drawing.Graphics]$Graphics,
+        [System.Drawing.RectangleF]$Rect
+    )
+
+    $playBrush = New-TokenBrush "Play"
+    $cutBrush = New-TokenBrush "PlayCut"
+    try {
+        Fill-RoundedRect -Graphics $Graphics -Brush $playBrush -Rect $Rect -Radius ($Rect.Width * 0.25)
+        $points = [System.Drawing.PointF[]]@(
+            [System.Drawing.PointF]::new($Rect.Left + ($Rect.Width * 0.40), $Rect.Top + ($Rect.Height * 0.27)),
+            [System.Drawing.PointF]::new($Rect.Left + ($Rect.Width * 0.40), $Rect.Bottom - ($Rect.Height * 0.27)),
+            [System.Drawing.PointF]::new($Rect.Right - ($Rect.Width * 0.24), $Rect.Top + ($Rect.Height * 0.50))
+        )
+        $Graphics.FillPolygon($cutBrush, $points)
+    }
+    finally {
+        $playBrush.Dispose()
+        $cutBrush.Dispose()
+    }
+}
+
+function Draw-CinemaShelfMark {
     param(
         [System.Drawing.Graphics]$Graphics,
         [System.Drawing.RectangleF]$Rect
@@ -85,84 +153,103 @@ function Draw-MatteSlatMark {
     $s = [Math]::Min($Rect.Width, $Rect.Height)
     $x = $Rect.X + (($Rect.Width - $s) / 2)
     $y = $Rect.Y + (($Rect.Height - $s) / 2)
-    $radius = $s * 0.065
 
-    $shadow = [System.Drawing.SolidBrush]::new((New-IconColor 0 0 0 72))
-    $cardBack = [System.Drawing.SolidBrush]::new((New-IconColor 13 18 23 250))
-    $cardMid = [System.Drawing.SolidBrush]::new((New-IconColor 20 26 33 252))
-    $cardFront = [System.Drawing.SolidBrush]::new((New-IconColor 26 32 39 255))
-    $cardInset = [System.Drawing.SolidBrush]::new((New-IconColor 16 20 25 255))
-    $softLine = [System.Drawing.Pen]::new((New-IconColor 48 56 66 210), [Math]::Max(1.0, $s * 0.012))
-    $focusPen = [System.Drawing.Pen]::new((New-IconColor 59 213 255 235), [Math]::Max(1.0, $s * 0.018))
-    $green = [System.Drawing.SolidBrush]::new((New-IconColor 97 212 124 255))
-    $greenCut = [System.Drawing.SolidBrush]::new((New-IconColor 4 16 7 255))
-    $amberPen = [System.Drawing.Pen]::new((New-IconColor 224 184 106 245), [Math]::Max(2.0, $s * 0.045))
+    $surfaceBrush = New-TokenBrush "Raised"
+    $insetBrush = New-TokenBrush "Inset"
+    $shelfBrush = New-TokenBrush "Shelf"
+    $mutedBrush = New-TokenBrush "ShelfMuted"
+    $hairlinePen = New-TokenPen "Hairline" ([Math]::Max(1.0, $s * $script:IconGeometry.HairlineStroke))
+    $focusPen = New-TokenPen "Focus" ([Math]::Max(1.0, $s * $script:IconGeometry.FocusStroke))
+    $progressPen = New-TokenPen "Progress" ([Math]::Max(2.0, $s * $script:IconGeometry.ProgressStroke))
 
     try {
-        $amberPen.StartCap = [System.Drawing.Drawing2D.LineCap]::Round
-        $amberPen.EndCap = [System.Drawing.Drawing2D.LineCap]::Round
-        $focusPen.StartCap = [System.Drawing.Drawing2D.LineCap]::Round
-        $focusPen.EndCap = [System.Drawing.Drawing2D.LineCap]::Round
+        $screen = [System.Drawing.RectangleF]::new($x + ($s * 0.105), $y + ($s * 0.145), $s * 0.790, $s * 0.560)
+        Fill-RoundedRect -Graphics $Graphics -Brush $surfaceBrush -Rect $screen -Radius ($s * 0.075)
+        Draw-RoundedRect -Graphics $Graphics -Pen $hairlinePen -Rect $screen -Radius ($s * 0.075)
 
-        $state = $Graphics.Save()
-        $Graphics.TranslateTransform($x + ($s * 0.35), $y + ($s * 0.52))
-        $Graphics.RotateTransform(-7)
-        $backRect = [System.Drawing.RectangleF]::new(-$s * 0.24, -$s * 0.33, $s * 0.50, $s * 0.64)
-        $backShadow = [System.Drawing.RectangleF]::new($backRect.X + ($s * 0.018), $backRect.Y + ($s * 0.026), $backRect.Width, $backRect.Height)
-        Fill-RoundedRect -Graphics $Graphics -Brush $shadow -Rect $backShadow -Radius $radius
-        Fill-RoundedRect -Graphics $Graphics -Brush $cardBack -Rect $backRect -Radius $radius
-        Draw-RoundedRect -Graphics $Graphics -Pen $softLine -Rect $backRect -Radius $radius
-        $Graphics.Restore($state)
+        $guide = [System.Drawing.RectangleF]::new($screen.Left + ($s * 0.055), $screen.Top + ($s * 0.085), $s * 0.045, $screen.Height - ($s * 0.170))
+        Fill-RoundedRect -Graphics $Graphics -Brush $insetBrush -Rect $guide -Radius ($s * 0.018)
+        $activeGuide = [System.Drawing.RectangleF]::new($guide.Left + ($s * 0.010), $guide.Top + ($s * 0.020), $guide.Width - ($s * 0.020), $guide.Height * 0.36)
+        $focusBrush = New-TokenBrush "Focus"
+        try {
+            Fill-RoundedRect -Graphics $Graphics -Brush $focusBrush -Rect $activeGuide -Radius ($s * 0.014)
+        }
+        finally {
+            $focusBrush.Dispose()
+        }
 
-        $state = $Graphics.Save()
-        $Graphics.TranslateTransform($x + ($s * 0.52), $y + ($s * 0.46))
-        $Graphics.RotateTransform(4)
-        $midRect = [System.Drawing.RectangleF]::new(-$s * 0.25, -$s * 0.33, $s * 0.52, $s * 0.64)
-        $midShadow = [System.Drawing.RectangleF]::new($midRect.X + ($s * 0.018), $midRect.Y + ($s * 0.026), $midRect.Width, $midRect.Height)
-        Fill-RoundedRect -Graphics $Graphics -Brush $shadow -Rect $midShadow -Radius $radius
-        Fill-RoundedRect -Graphics $Graphics -Brush $cardMid -Rect $midRect -Radius $radius
-        Draw-RoundedRect -Graphics $Graphics -Pen $softLine -Rect $midRect -Radius $radius
-        $Graphics.Restore($state)
+        $railLeft = $screen.Left + ($s * 0.155)
+        $railTop = $screen.Top + ($s * 0.090)
+        $railWidth = $screen.Width - ($s * 0.220)
+        for ($i = 0; $i -lt 3; $i++) {
+            $rail = [System.Drawing.RectangleF]::new(
+                $railLeft,
+                $railTop + ($i * $s * 0.145),
+                $railWidth - (($i % 2) * $s * 0.080),
+                $s * 0.080)
+            Fill-RoundedRect -Graphics $Graphics -Brush $mutedBrush -Rect $rail -Radius ($s * 0.025)
+        }
 
-        $state = $Graphics.Save()
-        $Graphics.TranslateTransform($x + ($s * 0.61), $y + ($s * 0.53))
-        $Graphics.RotateTransform(-1)
-        $frontRect = [System.Drawing.RectangleF]::new(-$s * 0.29, -$s * 0.32, $s * 0.54, $s * 0.60)
-        $frontShadow = [System.Drawing.RectangleF]::new($frontRect.X + ($s * 0.018), $frontRect.Y + ($s * 0.030), $frontRect.Width, $frontRect.Height)
-        Fill-RoundedRect -Graphics $Graphics -Brush $shadow -Rect $frontShadow -Radius $radius
-        Fill-RoundedRect -Graphics $Graphics -Brush $cardFront -Rect $frontRect -Radius $radius
-        Draw-RoundedRect -Graphics $Graphics -Pen $softLine -Rect $frontRect -Radius $radius
+        $focusCard = [System.Drawing.RectangleF]::new($screen.Left + ($s * 0.405), $screen.Top + ($s * 0.160), $s * 0.255, $s * 0.305)
+        Fill-RoundedRect -Graphics $Graphics -Brush $shelfBrush -Rect $focusCard -Radius ($s * 0.045)
+        Draw-RoundedRect -Graphics $Graphics -Pen $hairlinePen -Rect $focusCard -Radius ($s * 0.045)
 
-        $Graphics.DrawLine($focusPen, $frontRect.Left + ($s * 0.05), $frontRect.Top + ($s * 0.035), $frontRect.Right - ($s * 0.06), $frontRect.Top + ($s * 0.035))
-        $Graphics.DrawLine($focusPen, $frontRect.Left + ($s * 0.04), $frontRect.Top + ($s * 0.07), $frontRect.Left + ($s * 0.04), $frontRect.Bottom - ($s * 0.07))
+        $Graphics.DrawLine($focusPen, $focusCard.Left + ($s * 0.030), $focusCard.Top + ($s * 0.026), $focusCard.Right - ($s * 0.030), $focusCard.Top + ($s * 0.026))
+        $Graphics.DrawLine($focusPen, $focusCard.Left + ($s * 0.028), $focusCard.Top + ($s * 0.030), $focusCard.Left + ($s * 0.028), $focusCard.Bottom - ($s * 0.040))
 
-        $screenRect = [System.Drawing.RectangleF]::new($frontRect.Left + ($s * 0.12), $frontRect.Top + ($s * 0.14), $frontRect.Width * 0.62, $frontRect.Height * 0.66)
-        Fill-RoundedRect -Graphics $Graphics -Brush $cardInset -Rect $screenRect -Radius ($radius * 0.64)
+        $playRect = [System.Drawing.RectangleF]::new($focusCard.Left + ($s * 0.070), $focusCard.Top + ($s * 0.094), $s * 0.095, $s * 0.125)
+        Draw-PlayGlyph -Graphics $Graphics -Rect $playRect
 
-        $playRect = [System.Drawing.RectangleF]::new($frontRect.Left + ($s * 0.20), $frontRect.Top + ($s * 0.25), $s * 0.17, $s * 0.26)
-        Fill-RoundedRect -Graphics $Graphics -Brush $green -Rect $playRect -Radius ($radius * 0.56)
+        $smallPoster = [System.Drawing.RectangleF]::new($screen.Left + ($s * 0.705), $screen.Top + ($s * 0.205), $s * 0.080, $s * 0.185)
+        Fill-RoundedRect -Graphics $Graphics -Brush $mutedBrush -Rect $smallPoster -Radius ($s * 0.020)
+        Draw-RoundedRect -Graphics $Graphics -Pen $hairlinePen -Rect $smallPoster -Radius ($s * 0.020)
 
-        $playCut = [System.Drawing.PointF[]]@(
-            [System.Drawing.PointF]::new($playRect.Left + ($playRect.Width * 0.38), $playRect.Top + ($playRect.Height * 0.25)),
-            [System.Drawing.PointF]::new($playRect.Left + ($playRect.Width * 0.38), $playRect.Bottom - ($playRect.Height * 0.25)),
-            [System.Drawing.PointF]::new($playRect.Right - ($playRect.Width * 0.20), $playRect.Top + ($playRect.Height * 0.50))
-        )
-        $Graphics.FillPolygon($greenCut, $playCut)
-        $Graphics.Restore($state)
-
-        $Graphics.DrawLine($amberPen, $x + ($s * 0.28), $y + ($s * 0.82), $x + ($s * 0.76), $y + ($s * 0.82))
+        $Graphics.DrawLine($progressPen, $x + ($s * 0.255), $y + ($s * 0.810), $x + ($s * 0.745), $y + ($s * 0.810))
     }
     finally {
-        $shadow.Dispose()
-        $cardBack.Dispose()
-        $cardMid.Dispose()
-        $cardFront.Dispose()
-        $cardInset.Dispose()
-        $softLine.Dispose()
+        $surfaceBrush.Dispose()
+        $insetBrush.Dispose()
+        $shelfBrush.Dispose()
+        $mutedBrush.Dispose()
+        $hairlinePen.Dispose()
         $focusPen.Dispose()
-        $green.Dispose()
-        $greenCut.Dispose()
-        $amberPen.Dispose()
+        $progressPen.Dispose()
+    }
+}
+
+function Draw-WideRails {
+    param(
+        [System.Drawing.Graphics]$Graphics,
+        [System.Drawing.RectangleF]$Rect
+    )
+
+    $shelfBrush = New-TokenBrush "ShelfMuted"
+    $activeBrush = New-TokenBrush "Shelf"
+    $hairlinePen = New-TokenPen "Hairline" ([Math]::Max(1.0, $Rect.Height * 0.010))
+    $focusPen = New-TokenPen "Focus" ([Math]::Max(1.0, $Rect.Height * 0.014))
+
+    try {
+        for ($row = 0; $row -lt 3; $row++) {
+            $y = $Rect.Top + ($row * $Rect.Height * 0.285)
+            for ($col = 0; $col -lt 4; $col++) {
+                $card = [System.Drawing.RectangleF]::new(
+                    $Rect.Left + ($col * $Rect.Width * 0.225),
+                    $y,
+                    $Rect.Width * 0.170,
+                    $Rect.Height * 0.170)
+                Fill-RoundedRect -Graphics $Graphics -Brush ($(if ($row -eq 0 -and $col -eq 0) { $activeBrush } else { $shelfBrush })) -Rect $card -Radius ($Rect.Height * 0.030)
+                Draw-RoundedRect -Graphics $Graphics -Pen $hairlinePen -Rect $card -Radius ($Rect.Height * 0.030)
+                if ($row -eq 0 -and $col -eq 0) {
+                    $Graphics.DrawLine($focusPen, $card.Left + ($Rect.Height * 0.018), $card.Top + ($Rect.Height * 0.014), $card.Right - ($Rect.Height * 0.018), $card.Top + ($Rect.Height * 0.014))
+                }
+            }
+        }
+    }
+    finally {
+        $shelfBrush.Dispose()
+        $activeBrush.Dispose()
+        $hairlinePen.Dispose()
+        $focusPen.Dispose()
     }
 }
 
@@ -175,11 +262,35 @@ function Draw-Title {
     )
 
     $font = [System.Drawing.Font]::new("Segoe UI Variable Display", $FontSize, [System.Drawing.FontStyle]::Bold, [System.Drawing.GraphicsUnit]::Pixel)
-    $brush = [System.Drawing.SolidBrush]::new((New-IconColor 244 248 252 255))
+    $brush = New-TokenBrush "Text"
     $format = [System.Drawing.StringFormat]::new()
     try {
         $format.Alignment = [System.Drawing.StringAlignment]::Near
         $format.LineAlignment = [System.Drawing.StringAlignment]::Center
+        $format.Trimming = [System.Drawing.StringTrimming]::EllipsisCharacter
+        $Graphics.DrawString($Text, $font, $brush, $Rect, $format)
+    }
+    finally {
+        $font.Dispose()
+        $brush.Dispose()
+        $format.Dispose()
+    }
+}
+
+function Draw-Caption {
+    param(
+        [System.Drawing.Graphics]$Graphics,
+        [string]$Text,
+        [System.Drawing.RectangleF]$Rect,
+        [float]$FontSize
+    )
+
+    $font = [System.Drawing.Font]::new("Segoe UI Variable Text", $FontSize, [System.Drawing.FontStyle]::Regular, [System.Drawing.GraphicsUnit]::Pixel)
+    $brush = New-TokenBrush "MutedText"
+    $format = [System.Drawing.StringFormat]::new()
+    try {
+        $format.Alignment = [System.Drawing.StringAlignment]::Near
+        $format.LineAlignment = [System.Drawing.StringAlignment]::Near
         $format.Trimming = [System.Drawing.StringTrimming]::EllipsisCharacter
         $Graphics.DrawString($Text, $font, $brush, $Rect, $format)
     }
@@ -201,67 +312,39 @@ function New-AppIconBitmap {
     $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
     Set-CanvasQuality -Graphics $graphics
 
-    $canvas = [System.Drawing.SolidBrush]::new((New-IconColor 5 8 13 255))
-    $surface = [System.Drawing.SolidBrush]::new((New-IconColor 12 18 26 255))
-    $hairline = [System.Drawing.Pen]::new((New-IconColor 42 59 78 255), [Math]::Max(1.0, [Math]::Min($Width, $Height) * 0.01))
+    $canvas = New-TokenBrush "Canvas"
+    $surface = New-TokenBrush "Surface"
+    $hairline = New-TokenPen "Hairline" ([Math]::Max(1.0, [Math]::Min($Width, $Height) * $script:IconGeometry.HairlineStroke))
 
     try {
         $graphics.Clear((New-IconColor 0 0 0 0))
         $tileRect = [System.Drawing.RectangleF]::new(0, 0, $Width, $Height)
-        $corner = [Math]::Min($Width, $Height) * 0.12
+        $corner = [Math]::Min($Width, $Height) * $script:IconGeometry.TileRadius
         Fill-RoundedRect -Graphics $graphics -Brush $canvas -Rect $tileRect -Radius $corner
 
-        $inner = [System.Drawing.RectangleF]::new($Width * 0.035, $Height * 0.04, $Width * 0.93, $Height * 0.90)
-        Fill-RoundedRect -Graphics $graphics -Brush $surface -Rect $inner -Radius ([Math]::Min($Width, $Height) * 0.08)
-        Draw-RoundedRect -Graphics $graphics -Pen $hairline -Rect $inner -Radius ([Math]::Min($Width, $Height) * 0.08)
+        $innerMargin = [Math]::Min($Width, $Height) * $script:IconGeometry.InnerMargin
+        $inner = [System.Drawing.RectangleF]::new($innerMargin, $innerMargin, $Width - ($innerMargin * 2), $Height - ($innerMargin * 2))
+        Fill-RoundedRect -Graphics $graphics -Brush $surface -Rect $inner -Radius ([Math]::Min($Width, $Height) * $script:IconGeometry.InnerRadius)
+        Draw-RoundedRect -Graphics $graphics -Pen $hairline -Rect $inner -Radius ([Math]::Min($Width, $Height) * $script:IconGeometry.InnerRadius)
 
         if ($Kind -eq "Wide") {
-            $mark = [System.Drawing.RectangleF]::new($Width * 0.06, $Height * 0.10, $Height * 0.80, $Height * 0.80)
-            Draw-MatteSlatMark -Graphics $graphics -Rect $mark
-            $lanePen = [System.Drawing.Pen]::new((New-IconColor 48 56 66 210), [Math]::Max(1.0, $Height * 0.012))
-            $focusPen = [System.Drawing.Pen]::new((New-IconColor 59 213 255 220), [Math]::Max(1.0, $Height * 0.015))
-            $cardBrush = [System.Drawing.SolidBrush]::new((New-IconColor 20 26 33 232))
-            try {
-                for ($i = 0; $i -lt 4; $i++) {
-                    $card = [System.Drawing.RectangleF]::new($Width * (0.42 + ($i * 0.105)), $Height * (0.23 + (($i % 2) * 0.07)), $Width * 0.12, $Height * 0.45)
-                    Fill-RoundedRect -Graphics $graphics -Brush $cardBrush -Rect $card -Radius ($Height * 0.035)
-                    Draw-RoundedRect -Graphics $graphics -Pen $lanePen -Rect $card -Radius ($Height * 0.035)
-                    if ($i -eq 0) {
-                        $Graphics.DrawLine($focusPen, $card.Left + ($Height * 0.025), $card.Top + ($Height * 0.025), $card.Right - ($Height * 0.025), $card.Top + ($Height * 0.025))
-                    }
-                }
-            }
-            finally {
-                $lanePen.Dispose()
-                $focusPen.Dispose()
-                $cardBrush.Dispose()
-            }
+            $mark = [System.Drawing.RectangleF]::new($Width * 0.035, $Height * 0.070, $Height * 0.860, $Height * 0.860)
+            Draw-CinemaShelfMark -Graphics $graphics -Rect $mark
+            $rails = [System.Drawing.RectangleF]::new($Width * 0.455, $Height * 0.270, $Width * 0.455, $Height * 0.470)
+            Draw-WideRails -Graphics $graphics -Rect $rails
         }
         elseif ($Kind -eq "Splash") {
-            $mark = [System.Drawing.RectangleF]::new($Width * 0.16, $Height * 0.18, $Height * 0.64, $Height * 0.64)
-            Draw-MatteSlatMark -Graphics $graphics -Rect $mark
-            $title = [System.Drawing.RectangleF]::new($Width * 0.45, $Height * 0.25, $Width * 0.40, $Height * 0.28)
-            Draw-Title -Graphics $graphics -Text "Next Gen Emby" -Rect $title -FontSize ($Height * 0.105)
-
-            $captionFont = [System.Drawing.Font]::new("Segoe UI Variable Text", $Height * 0.05, [System.Drawing.FontStyle]::Regular, [System.Drawing.GraphicsUnit]::Pixel)
-            $captionBrush = [System.Drawing.SolidBrush]::new((New-IconColor 170 193 214 255))
-            $format = [System.Drawing.StringFormat]::new()
-            try {
-                $format.Alignment = [System.Drawing.StringAlignment]::Near
-                $format.LineAlignment = [System.Drawing.StringAlignment]::Near
-                $captionRect = [System.Drawing.RectangleF]::new($Width * 0.45, $Height * 0.54, $Width * 0.34, $Height * 0.12)
-                $graphics.DrawString("Private media library", $captionFont, $captionBrush, $captionRect, $format)
-            }
-            finally {
-                $captionFont.Dispose()
-                $captionBrush.Dispose()
-                $format.Dispose()
-            }
+            $mark = [System.Drawing.RectangleF]::new($Width * 0.130, $Height * 0.150, $Height * 0.700, $Height * 0.700)
+            Draw-CinemaShelfMark -Graphics $graphics -Rect $mark
+            $title = [System.Drawing.RectangleF]::new($Width * 0.440, $Height * 0.270, $Width * 0.390, $Height * 0.190)
+            Draw-Title -Graphics $graphics -Text "Next Gen Emby" -Rect $title -FontSize ($Height * 0.095)
+            $caption = [System.Drawing.RectangleF]::new($Width * 0.445, $Height * 0.520, $Width * 0.350, $Height * 0.120)
+            Draw-Caption -Graphics $graphics -Text "Couch-first media library" -Rect $caption -FontSize ($Height * 0.047)
         }
         else {
-            $inset = [Math]::Min($Width, $Height) * 0.08
+            $inset = [Math]::Min($Width, $Height) * $script:IconGeometry.MarkInset
             $mark = [System.Drawing.RectangleF]::new($inset, $inset, $Width - ($inset * 2), $Height - ($inset * 2))
-            Draw-MatteSlatMark -Graphics $graphics -Rect $mark
+            Draw-CinemaShelfMark -Graphics $graphics -Rect $mark
         }
     }
     finally {
@@ -302,4 +385,4 @@ Save-AppIcon -Name "Square150x150Logo.png" -Width 150 -Height 150 -Kind "Square"
 Save-AppIcon -Name "Wide310x150Logo.png" -Width 310 -Height 150 -Kind "Wide"
 Save-AppIcon -Name "SplashScreen.png" -Width 620 -Height 300 -Kind "Splash"
 
-Write-Host "Generated Matte Library Slat app icon assets in $AssetsPath"
+Write-Host "Generated Cinema Shelf Mark app icon assets in $AssetsPath"

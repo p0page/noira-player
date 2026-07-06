@@ -41,9 +41,9 @@ Rationale:
 
 This direction has since been rejected by `docs/DESIGN.md` because it depends on cyan glow and portal language.
 
-## Current Production Direction
+## Superseded Production Direction
 
-Production assets now use the Matte Cinema Fluent `Matte Library Slat` direction:
+Production assets then used the Matte Cinema Fluent `Matte Library Slat` direction:
 
 - matte rounded-square tile;
 - layered dark media slats;
@@ -51,6 +51,23 @@ Production assets now use the Matte Cinema Fluent `Matte Library Slat` direction
 - one green play/confirm surface;
 - one flat amber progress base;
 - no portal ring, prism beam, or official third-party logo.
+
+## Current Production Direction
+
+Production assets now use the Matte Cinema Fluent `Cinema Shelf Mark` direction:
+
+- matte rounded-square tile;
+- a quiet TV shelf with left Guide rail and horizontal content rails;
+- one selected media card with a cyan L-shaped controller focus edge;
+- one green play/confirm surface;
+- one flat amber progress base;
+- no portal ring, prism beam, film-strip cliche, or official third-party logo.
+
+Rationale:
+
+- It reads more like the app in use: controller focus moving through a TV media library.
+- It keeps the 44 px silhouette simple while adding more product-specific meaning than a generic play-card stack.
+- The icon generator owns color and geometry tokens, so future theme/skin work can regenerate the full asset set from one source.
 
 Generated UWP assets:
 

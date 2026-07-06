@@ -235,6 +235,7 @@ Shared TV resources should continue migrating into `App.xaml` before page-local 
 - Text: page title/subtitle, section title, panel title, body, muted body, badge, and diagnostics text styles.
 - Surfaces: panel surface, list button, icon button, nav button, scrim, and immersive control brush.
 - Media rows: shared `TvListButtonStyle`, `TvListArtworkSize`, and `TvCompactArtworkSize` for browse-only list shells such as Live TV and Music.
+- App identity: `tools/Generate-AppIconAssets.ps1` owns the current icon color and geometry tokens for regenerating the Store, square, wide, and splash PNG assets.
 
 Future skins should override these resources first. Page code may read token values, but should not define new color, focus, or repeated artwork-size constants unless the value is truly page-specific.
 
@@ -384,15 +385,21 @@ The previous glowing "Library Portal" icon direction is rejected for final ident
 Future icon work should use this vocabulary instead:
 
 - matte rounded-square tile;
-- cropped media slats or a quiet library aperture;
-- one high-contrast focus or play affordance;
+- a quiet TV media shelf or library aperture;
+- one high-contrast controller focus affordance;
+- one green play/confirm surface when scale allows;
+- one flat amber progress base when scale allows;
 - no cyan glow;
 - no official Emby, Xbox, Microsoft, or platform logos;
 - no film-strip cliche;
 - no generic play triangle standing alone;
 - legible at 44px with a stable silhouette.
 
-Possible icon concepts aligned with this system:
+Current production icon direction:
+
+- **Cinema Shelf Mark:** a dark TV shelf with a left Guide rail, horizontal content rails, one focused media card, a green play surface, a cyan L-shaped focus edge, and an amber progress base.
+
+Superseded concepts aligned with the older system:
 
 - **Matte Library Slat:** layered black media rectangles with one crisp focus edge and one green play/confirm surface.
 - **Screen Room Mark:** a dark screen shape with a subtle amber progress base.

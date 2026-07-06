@@ -322,20 +322,21 @@ Behavior:
 
 ## App Icon Direction
 
-Icon name: Matte Library Slat.
+Icon name: Cinema Shelf Mark.
 
 Concept:
 
 - A dark rounded-square tile.
-- Layered matte media slats or a quiet screen aperture.
-- One crisp focus edge or green play/confirm surface.
+- A quiet TV media shelf with a left Guide rail and horizontal content rails.
+- One focused media card with a crisp cyan controller-focus edge.
+- One green play/confirm surface.
 - An optional small amber progress base, used flat rather than glowing.
 - No Emby logo, Xbox logo, Microsoft logo, film-strip cliche, or generic play triangle alone.
 - No cyan glow, portal ring, glass prism, or holographic motif.
 
 Rationale:
 
-- The layered cards represent personal libraries.
+- The media shelf represents the app in daily TV use, not just playback.
 - The focus edge connects the icon to controller navigation without turning focus into decoration.
 - Green maps to Play/Resume and amber maps to progress.
 

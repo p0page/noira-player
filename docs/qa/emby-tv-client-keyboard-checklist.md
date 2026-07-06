@@ -730,3 +730,25 @@ Then continue design and implementation until the route passes.
 - Limitation:
   - This Emby server did not expose real `MusicAlbum` or `Audio` rows after type filtering, so positive album/song navigation remains pending on a true music library.
   - Windows Graphics Capture timed out once during final Music screenshot capture; resetting the Computer Use session recovered accessibility verification.
+
+### 2026-07-06 - Cinema Shelf App Icon Refresh
+
+- App version: 0.1.0.126.
+- Scope: app identity assets were refreshed from `Matte Library Slat` to `Cinema Shelf Mark`.
+- Design changes:
+  - Updated the production icon vocabulary to a dark TV media shelf with a left Guide rail, content rails, one focused media card, green play surface, cyan focus edge, and amber progress base.
+  - Added `docs/plans/2026-07-06-app-icon-refresh-design.md` for the selected direction and trade-offs.
+  - Updated `docs/DESIGN.md`, `docs/icon-concepts/README.md`, and the complete-client design doc to name `Cinema Shelf Mark` as the current production direction.
+- Asset generation:
+  - Reworked `tools/Generate-AppIconAssets.ps1` so icon colors and geometry live in generator tokens.
+  - Regenerated `StoreLogo.png`, `Square44x44Logo.png`, `Square150x150Logo.png`, `Wide310x150Logo.png`, and `SplashScreen.png`.
+- Asset validation:
+  - Pixel dimensions matched manifest requirements: 50x50, 44x44, 150x150, 310x150, and 620x300.
+  - Color-pixel check found focus cyan, play green, and progress amber in the square, wide, and splash assets.
+  - Visual inspection confirmed the 44 px icon keeps the TV shelf/focus-card silhouette, while wide and splash assets align with the dark Fluent shell.
+- Local Computer Use validation:
+  - Installed and launched 0.1.0.126 locally.
+  - Normal launch reached Home with saved session and exposed Home, Continue watching, and Media Libraries.
+  - Keyboard-only `Down`, `Return` opened a media Details page with `Play/Resume` controls.
+  - Keyboard-only `Escape` returned to Home.
+  - No app-content mouse clicks were used.
