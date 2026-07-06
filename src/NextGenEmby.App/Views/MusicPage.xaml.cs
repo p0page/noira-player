@@ -25,12 +25,19 @@ namespace NextGenEmby.App.Views
 {
     public sealed partial class MusicPage : Page, ITvContentFocusTarget
     {
+        private const string AllMusicArtistId = "__all_music__";
+        private const string SyntheticArtistIdPrefix = "artist-name:";
         private readonly ApplicationDataSessionStore _sessionStore = new ApplicationDataSessionStore();
+        private readonly List<Button> _artistButtons = new List<Button>();
         private readonly List<Button> _albumButtons = new List<Button>();
         private readonly List<Button> _songButtons = new List<Button>();
+        private Button? _activeArtistButton;
+        private Button? _firstArtistButton;
         private Button? _firstAlbumButton;
         private Button? _firstSongButton;
         private Button? _unsupportedReturnFocusTarget;
+        private IReadOnlyList<EmbyMediaItem> _loadedAlbums = Array.Empty<EmbyMediaItem>();
+        private IReadOnlyList<EmbyMediaItem> _loadedSongs = Array.Empty<EmbyMediaItem>();
         private MusicNavigationRequest? _request;
         private int _loadGeneration;
         private bool _isUnloaded;
@@ -93,6 +100,11 @@ namespace NextGenEmby.App.Views
             if (FallbackPanel.Visibility == Visibility.Visible)
             {
                 return FallbackRetryButton.Focus(FocusState.Keyboard);
+            }
+
+            if (_firstArtistButton != null && _firstArtistButton.Focus(FocusState.Keyboard))
+            {
+                return true;
             }
 
             if (_firstAlbumButton != null && _firstAlbumButton.Focus(FocusState.Keyboard))
@@ -172,6 +184,9 @@ namespace NextGenEmby.App.Views
 
                     var albums = MusicBrowseItemPolicy.KeepAlbums(albumsTask.Result);
                     var songs = MusicBrowseItemPolicy.KeepSongs(songsTask.Result);
+                    _loadedAlbums = albums;
+                    _loadedSongs = songs;
+                    RenderArtists(session, client, CreateArtistItems(albums, songs), albums.Count, songs.Count);
                     RenderAlbums(session, client, albums);
                     RenderSongs(session, client, songs, "Songs", showAllSongsButton: false);
                     StatusBlock.Text = CreateMusicStatus(albums.Count, songs.Count);
@@ -330,13 +345,20 @@ namespace NextGenEmby.App.Views
         {
             FallbackPanel.Visibility = Visibility.Collapsed;
             UnsupportedPanel.Visibility = Visibility.Collapsed;
+            ArtistsPanel.Children.Clear();
             AlbumsPanel.Children.Clear();
             SongsPanel.Children.Clear();
+            _artistButtons.Clear();
             _albumButtons.Clear();
             _songButtons.Clear();
+            _activeArtistButton = null;
+            _firstArtistButton = null;
             _firstAlbumButton = null;
             _firstSongButton = null;
             _unsupportedReturnFocusTarget = null;
+            _loadedAlbums = Array.Empty<EmbyMediaItem>();
+            _loadedSongs = Array.Empty<EmbyMediaItem>();
+            ArtistsCountBlock.Text = "Loading";
             AlbumsCountBlock.Text = "Loading";
             SongsTitleBlock.Text = "Songs";
             SongsCountBlock.Text = "Loading";
@@ -351,13 +373,20 @@ namespace NextGenEmby.App.Views
         {
             FallbackPanel.Visibility = Visibility.Collapsed;
             UnsupportedPanel.Visibility = Visibility.Collapsed;
+            ArtistsPanel.Children.Clear();
             AlbumsPanel.Children.Clear();
             SongsPanel.Children.Clear();
+            _artistButtons.Clear();
             _albumButtons.Clear();
             _songButtons.Clear();
+            _activeArtistButton = null;
+            _firstArtistButton = null;
             _firstAlbumButton = null;
             _firstSongButton = null;
             _unsupportedReturnFocusTarget = null;
+            _loadedAlbums = Array.Empty<EmbyMediaItem>();
+            _loadedSongs = Array.Empty<EmbyMediaItem>();
+            ArtistsCountBlock.Text = "Refresh to load";
             AlbumsCountBlock.Text = "Refresh to load";
             SongsTitleBlock.Text = "Songs";
             SongsCountBlock.Text = "Refresh to load";
@@ -365,6 +394,7 @@ namespace NextGenEmby.App.Views
             PreviewBadgeBlock.Text = "Now";
             PreviewTitleBlock.Text = "Select music";
             PreviewBodyBlock.Text = "Albums and songs appear here when the server exposes a music library.";
+            AddInlineEmpty(ArtistsPanel, "Refresh to load artists.");
             AddInlineEmpty(AlbumsPanel, "Refresh to load albums.");
             AddInlineEmpty(SongsPanel, "Refresh to load songs.");
         }
@@ -374,6 +404,50 @@ namespace NextGenEmby.App.Views
             RefreshButton.IsEnabled = !isLoading;
             FallbackRetryButton.IsEnabled = !isLoading;
             AllSongsButton.IsEnabled = !isLoading;
+        }
+
+        private void RenderArtists(
+            EmbySession session,
+            EmbyApiClient client,
+            IReadOnlyList<EmbyMediaItem> artists,
+            int albumCount,
+            int songCount)
+        {
+            ArtistsPanel.Children.Clear();
+            _artistButtons.Clear();
+            _firstArtistButton = null;
+            ArtistsCountBlock.Text = artists.Count == 1 ? "1 artist" : artists.Count + " artists";
+
+            var browseItems = new List<EmbyMediaItem> { CreateAllMusicItem(albumCount, songCount) };
+            browseItems.AddRange(artists);
+
+            foreach (var artist in browseItems)
+            {
+                var button = CreateMusicButton(
+                    session,
+                    client,
+                    artist,
+                    "Artist " + CreateItemName(artist),
+                    CreateArtistSecondaryLine(artist),
+                    DoubleResource("TvCompactArtworkSize", 56));
+                button.Tag = artist;
+                button.GotFocus += (sender, args) =>
+                {
+                    _activeArtistButton = button;
+                    UpdatePreview(artist, IsAllMusicArtist(artist) ? "Music" : "Artist");
+                };
+                button.Click += ArtistButton_OnClick;
+
+                if (_firstArtistButton == null)
+                {
+                    _firstArtistButton = button;
+                    _activeArtistButton = button;
+                    UpdatePreview(artist, "Music");
+                }
+
+                ArtistsPanel.Children.Add(button);
+                _artistButtons.Add(button);
+            }
         }
 
         private void RenderAlbums(
@@ -481,8 +555,51 @@ namespace NextGenEmby.App.Views
             ResetMusicSurface();
             SetLoadingState(isLoading: false);
             StatusBlock.Text = "Fixture music library";
+            _loadedAlbums = fixture.Albums;
+            _loadedSongs = fixture.Songs;
+            RenderDevelopmentArtists(fixture.Artists, fixture.Albums.Count, fixture.Songs.Count);
             RenderDevelopmentAlbums(fixture.Albums);
             RenderDevelopmentSongs(fixture.Songs, "Songs", showAllSongsButton: false);
+        }
+
+        private void RenderDevelopmentArtists(
+            IReadOnlyList<EmbyMediaItem> artists,
+            int albumCount,
+            int songCount)
+        {
+            ArtistsPanel.Children.Clear();
+            _artistButtons.Clear();
+            _firstArtistButton = null;
+            ArtistsCountBlock.Text = artists.Count == 1 ? "1 artist" : artists.Count + " artists";
+
+            var browseItems = new List<EmbyMediaItem> { CreateAllMusicItem(albumCount, songCount) };
+            browseItems.AddRange(artists);
+
+            foreach (var artist in browseItems)
+            {
+                var button = CreateDevelopmentMusicButton(
+                    artist,
+                    "Artist " + CreateItemName(artist),
+                    CreateArtistSecondaryLine(artist),
+                    DoubleResource("TvCompactArtworkSize", 56));
+                button.Tag = artist;
+                button.GotFocus += (sender, args) =>
+                {
+                    _activeArtistButton = button;
+                    UpdatePreview(artist, IsAllMusicArtist(artist) ? "Music" : "Artist");
+                };
+                button.Click += ArtistButton_OnClick;
+
+                if (_firstArtistButton == null)
+                {
+                    _firstArtistButton = button;
+                    _activeArtistButton = button;
+                    UpdatePreview(artist, "Music");
+                }
+
+                ArtistsPanel.Children.Add(button);
+                _artistButtons.Add(button);
+            }
         }
 
         private void RenderDevelopmentAlbums(IReadOnlyList<EmbyMediaItem> albums)
@@ -797,6 +914,86 @@ namespace NextGenEmby.App.Views
             }
         }
 
+        private async void ArtistButton_OnClick(object sender, RoutedEventArgs e)
+        {
+            var button = sender as Button;
+            var artist = button == null ? null : button.Tag as EmbyMediaItem;
+            if (artist == null)
+            {
+                return;
+            }
+
+            _activeArtistButton = button;
+#if DEBUG
+            if (_request != null && _request.UseDevelopmentFixture)
+            {
+                RenderDevelopmentArtistMusic(artist);
+                return;
+            }
+#endif
+            await RenderArtistMusicAsync(artist);
+        }
+
+        private async Task RenderArtistMusicAsync(EmbyMediaItem artist)
+        {
+            var session = await _sessionStore.LoadAsync();
+            if (session == null)
+            {
+                ShowFallback("Sign in first", "Open Settings or restart the app after signing in.");
+                return;
+            }
+
+            using (var httpClient = new HttpClient())
+            {
+                var client = EmbyClientFactory.Create(httpClient, session);
+                var albums = FilterByArtist(_loadedAlbums, artist);
+                var songs = FilterByArtist(_loadedSongs, artist);
+                var title = IsAllMusicArtist(artist) ? "Songs" : CreateItemName(artist);
+                RenderAlbums(session, client, albums);
+                RenderSongs(session, client, songs, title, showAllSongsButton: !IsAllMusicArtist(artist));
+                StatusBlock.Text = IsAllMusicArtist(artist)
+                    ? CreateMusicStatus(albums.Count, songs.Count)
+                    : CreateArtistStatus(artist, albums.Count, songs.Count);
+                FocusFirstMusicResult();
+            }
+        }
+
+#if DEBUG
+        private void RenderDevelopmentArtistMusic(EmbyMediaItem artist)
+        {
+            var albums = FilterByArtist(_loadedAlbums, artist);
+            var songs = FilterByArtist(_loadedSongs, artist);
+            var title = IsAllMusicArtist(artist) ? "Songs" : CreateItemName(artist);
+            RenderDevelopmentAlbums(albums);
+            RenderDevelopmentSongs(songs, title, showAllSongsButton: !IsAllMusicArtist(artist));
+            StatusBlock.Text = IsAllMusicArtist(artist)
+                ? CreateMusicStatus(albums.Count, songs.Count)
+                : CreateArtistStatus(artist, albums.Count, songs.Count);
+            FocusFirstMusicResult();
+        }
+#endif
+
+        private void FocusFirstMusicResult()
+        {
+            if (_firstAlbumButton != null && _firstAlbumButton.Focus(FocusState.Keyboard))
+            {
+                return;
+            }
+
+            if (_firstSongButton != null && _firstSongButton.Focus(FocusState.Keyboard))
+            {
+                return;
+            }
+
+            if (AllSongsButton.Visibility == Visibility.Visible &&
+                AllSongsButton.Focus(FocusState.Keyboard))
+            {
+                return;
+            }
+
+            FocusDefaultContent();
+        }
+
         private void SongButton_OnClick(object sender, RoutedEventArgs e)
         {
             var button = sender as Button;
@@ -862,7 +1059,23 @@ namespace NextGenEmby.App.Views
                     return _firstAlbumButton.Focus(FocusState.Keyboard);
                 }
 
+                if (IsLeftKey(key))
+                {
+                    return FocusActiveArtistOrFirst();
+                }
+
                 return false;
+            }
+
+            if (IsRightKey(key) && _artistButtons.Contains(focusedButton))
+            {
+                if (_firstAlbumButton != null)
+                {
+                    return _firstAlbumButton.Focus(FocusState.Keyboard);
+                }
+
+                return _firstSongButton != null &&
+                    _firstSongButton.Focus(FocusState.Keyboard);
             }
 
             if (IsRightKey(key) && _albumButtons.Contains(focusedButton) && _firstSongButton != null)
@@ -870,9 +1083,19 @@ namespace NextGenEmby.App.Views
                 return _firstSongButton.Focus(FocusState.Keyboard);
             }
 
-            if (IsLeftKey(key) && _songButtons.Contains(focusedButton) && _firstAlbumButton != null)
+            if (IsLeftKey(key) && _albumButtons.Contains(focusedButton))
             {
-                return _firstAlbumButton.Focus(FocusState.Keyboard);
+                return FocusActiveArtistOrFirst();
+            }
+
+            if (IsLeftKey(key) && _songButtons.Contains(focusedButton))
+            {
+                if (_firstAlbumButton != null)
+                {
+                    return _firstAlbumButton.Focus(FocusState.Keyboard);
+                }
+
+                return FocusActiveArtistOrFirst();
             }
 
             if (IsUpKey(key) && _songButtons.IndexOf(focusedButton) == 0 && AllSongsButton.Visibility == Visibility.Visible)
@@ -880,7 +1103,8 @@ namespace NextGenEmby.App.Views
                 return AllSongsButton.Focus(FocusState.Keyboard);
             }
 
-            return TryMoveWithinButtonList(_albumButtons, focusedButton, key) ||
+            return TryMoveWithinButtonList(_artistButtons, focusedButton, key) ||
+                TryMoveWithinButtonList(_albumButtons, focusedButton, key) ||
                 TryMoveWithinButtonList(_songButtons, focusedButton, key);
         }
 
@@ -910,6 +1134,18 @@ namespace NextGenEmby.App.Views
             }
 
             return -1;
+        }
+
+        private bool FocusActiveArtistOrFirst()
+        {
+            if (_activeArtistButton != null &&
+                _activeArtistButton.Focus(FocusState.Keyboard))
+            {
+                return true;
+            }
+
+            return _firstArtistButton != null &&
+                _firstArtistButton.Focus(FocusState.Keyboard);
         }
 
         private void CloseUnsupportedPanel()
@@ -961,6 +1197,172 @@ namespace NextGenEmby.App.Views
                 (songs == 1 ? "1 song" : songs + " songs");
         }
 
+        private static IReadOnlyList<EmbyMediaItem> CreateArtistItems(
+            IReadOnlyList<EmbyMediaItem> albums,
+            IReadOnlyList<EmbyMediaItem> songs)
+        {
+            var artists = new List<EmbyMediaItem>();
+            var knownKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var item in albums.Concat(songs))
+            {
+                AddArtistReferences(artists, knownKeys, item.AlbumArtists);
+                AddArtistReferences(artists, knownKeys, item.ArtistItems);
+                AddArtistName(artists, knownKeys, "", item.AlbumArtist);
+
+                foreach (var artistName in item.Artists)
+                {
+                    AddArtistName(artists, knownKeys, "", artistName);
+                }
+            }
+
+            return artists
+                .OrderBy(artist => CreateItemName(artist), StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+
+        private static void AddArtistReferences(
+            ICollection<EmbyMediaItem> artists,
+            ISet<string> knownKeys,
+            IReadOnlyList<EmbyItemReference> references)
+        {
+            foreach (var reference in references)
+            {
+                AddArtistName(artists, knownKeys, reference.Id, reference.Name);
+            }
+        }
+
+        private static void AddArtistName(
+            ICollection<EmbyMediaItem> artists,
+            ISet<string> knownKeys,
+            string id,
+            string name)
+        {
+            id = id ?? "";
+            name = name ?? "";
+            if (string.IsNullOrWhiteSpace(id) && string.IsNullOrWhiteSpace(name))
+            {
+                return;
+            }
+
+            var displayName = string.IsNullOrWhiteSpace(name) ? id.Trim() : name.Trim();
+            var key = string.IsNullOrWhiteSpace(id)
+                ? "name:" + displayName
+                : "id:" + id.Trim();
+            if (!knownKeys.Add(key))
+            {
+                return;
+            }
+
+            artists.Add(new EmbyMediaItem
+            {
+                Id = string.IsNullOrWhiteSpace(id) ? SyntheticArtistIdPrefix + displayName : id.Trim(),
+                Name = displayName,
+                Type = "MusicArtist",
+                Overview = "Browse albums and songs by " + displayName + "."
+            });
+        }
+
+        private static EmbyMediaItem CreateAllMusicItem(int albumCount, int songCount)
+        {
+            return new EmbyMediaItem
+            {
+                Id = AllMusicArtistId,
+                Name = "All music",
+                Type = "MusicArtist",
+                Overview = CreateMusicStatus(albumCount, songCount)
+            };
+        }
+
+        private static IReadOnlyList<EmbyMediaItem> FilterByArtist(
+            IReadOnlyList<EmbyMediaItem> items,
+            EmbyMediaItem artist)
+        {
+            if (IsAllMusicArtist(artist))
+            {
+                return items;
+            }
+
+            return items
+                .Where(item => ItemMatchesArtist(item, artist))
+                .ToList();
+        }
+
+        private static bool ItemMatchesArtist(EmbyMediaItem item, EmbyMediaItem artist)
+        {
+            if (item == null || artist == null)
+            {
+                return false;
+            }
+
+            if (IsAllMusicArtist(artist))
+            {
+                return true;
+            }
+
+            foreach (var reference in item.AlbumArtists.Concat(item.ArtistItems))
+            {
+                if (ArtistReferenceMatches(reference, artist))
+                {
+                    return true;
+                }
+            }
+
+            if (ArtistNameMatches(item.AlbumArtist, artist))
+            {
+                return true;
+            }
+
+            return item.Artists.Any(name => ArtistNameMatches(name, artist));
+        }
+
+        private static bool ArtistReferenceMatches(EmbyItemReference reference, EmbyMediaItem artist)
+        {
+            if (!IsSyntheticArtist(artist) &&
+                !string.IsNullOrWhiteSpace(reference.Id) &&
+                string.Equals(reference.Id, artist.Id, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            return ArtistNameMatches(reference.Name, artist);
+        }
+
+        private static bool ArtistNameMatches(string name, EmbyMediaItem artist)
+        {
+            return !string.IsNullOrWhiteSpace(name) &&
+                string.Equals(name.Trim(), CreateItemName(artist), StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsAllMusicArtist(EmbyMediaItem artist)
+        {
+            return artist != null &&
+                string.Equals(artist.Id, AllMusicArtistId, StringComparison.Ordinal);
+        }
+
+        private static bool IsSyntheticArtist(EmbyMediaItem artist)
+        {
+            return artist == null ||
+                string.IsNullOrWhiteSpace(artist.Id) ||
+                artist.Id.StartsWith(SyntheticArtistIdPrefix, StringComparison.Ordinal);
+        }
+
+        private static string CreateArtistStatus(EmbyMediaItem artist, int albums, int songs)
+        {
+            return CreateItemName(artist) + " - " + CreateMusicStatus(albums, songs);
+        }
+
+        private static string CreateArtistSecondaryLine(EmbyMediaItem artist)
+        {
+            if (IsAllMusicArtist(artist))
+            {
+                return string.IsNullOrWhiteSpace(artist.Overview) ? "All albums and songs" : artist.Overview;
+            }
+
+            return artist.ChildCount.HasValue && artist.ChildCount.Value > 0
+                ? (artist.ChildCount.Value == 1 ? "1 release" : artist.ChildCount.Value + " releases")
+                : "Artist";
+        }
+
         private static string CreateAlbumSecondaryLine(EmbyMediaItem album)
         {
             var parts = new List<string>();
@@ -998,11 +1400,16 @@ namespace NextGenEmby.App.Views
         private static string CreatePreviewBody(EmbyMediaItem item, string badge)
         {
             var parts = new List<string>();
-            parts.Add(string.Equals(badge, "Album", StringComparison.Ordinal)
+            var secondaryLine = string.Equals(badge, "Album", StringComparison.Ordinal)
                 ? CreateAlbumSecondaryLine(item)
-                : CreateSongSecondaryLine(item));
+                : string.Equals(badge, "Artist", StringComparison.Ordinal) ||
+                    string.Equals(badge, "Music", StringComparison.Ordinal)
+                        ? CreateArtistSecondaryLine(item)
+                        : CreateSongSecondaryLine(item);
+            parts.Add(secondaryLine);
 
-            if (!string.IsNullOrWhiteSpace(item.Overview))
+            if (!string.IsNullOrWhiteSpace(item.Overview) &&
+                !string.Equals(item.Overview, secondaryLine, StringComparison.Ordinal))
             {
                 parts.Add(item.Overview);
             }

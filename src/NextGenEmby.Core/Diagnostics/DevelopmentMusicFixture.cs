@@ -12,23 +12,29 @@ namespace NextGenEmby.Core.Diagnostics
         public static DevelopmentMusicFixtureSnapshot Create()
         {
             var artworkUris = new Dictionary<string, string>(StringComparer.Ordinal);
+            var artists = new[]
+            {
+                Artist(artworkUris, "qa-artist-kairos", "Kairos Collective", 2026, 10, "qa-poster-11.png"),
+                Artist(artworkUris, "qa-artist-mira", "Mira Vale", 2025, 12, "qa-poster-12.png"),
+                Artist(artworkUris, "qa-artist-signal", "Signal Room", 2024, 8, "qa-poster-13.png")
+            };
             var albums = new[]
             {
-                Album(artworkUris, "qa-album-nocturne", "Nocturne Signals", 2026, 10, "qa-poster-11.png"),
-                Album(artworkUris, "qa-album-city", "City Lights Archive", 2025, 12, "qa-poster-12.png"),
-                Album(artworkUris, "qa-album-lobby", "Neon Lobby Themes", 2024, 8, "qa-poster-13.png")
+                Album(artworkUris, "qa-album-nocturne", "Nocturne Signals", artists[0], 2026, 10, "qa-poster-11.png"),
+                Album(artworkUris, "qa-album-city", "City Lights Archive", artists[1], 2025, 12, "qa-poster-12.png"),
+                Album(artworkUris, "qa-album-lobby", "Neon Lobby Themes", artists[2], 2024, 8, "qa-poster-13.png")
             };
             var songs = new[]
             {
-                Song(artworkUris, "qa-song-opening", "Opening Credits", albums[0], 1, 0, 3, "qa-poster-11.png"),
-                Song(artworkUris, "qa-song-glass", "Glass Elevator", albums[0], 2, 0, 4, "qa-poster-11.png"),
-                Song(artworkUris, "qa-song-static", "Soft Static", albums[0], 3, 0, 2, "qa-poster-11.png"),
-                Song(artworkUris, "qa-song-late", "Late Train Window", albums[1], 1, 0, 5, "qa-poster-12.png"),
-                Song(artworkUris, "qa-song-rooftop", "Rooftop Weather", albums[1], 2, 0, 4, "qa-poster-12.png"),
-                Song(artworkUris, "qa-song-lobby", "Lobby Theme", albums[2], 1, 0, 3, "qa-poster-13.png")
+                Song(artworkUris, "qa-song-opening", "Opening Credits", albums[0], artists[0], 1, 0, 3, "qa-poster-11.png"),
+                Song(artworkUris, "qa-song-glass", "Glass Elevator", albums[0], artists[0], 2, 0, 4, "qa-poster-11.png"),
+                Song(artworkUris, "qa-song-static", "Soft Static", albums[0], artists[0], 3, 0, 2, "qa-poster-11.png"),
+                Song(artworkUris, "qa-song-late", "Late Train Window", albums[1], artists[1], 1, 0, 5, "qa-poster-12.png"),
+                Song(artworkUris, "qa-song-rooftop", "Rooftop Weather", albums[1], artists[1], 2, 0, 4, "qa-poster-12.png"),
+                Song(artworkUris, "qa-song-lobby", "Lobby Theme", albums[2], artists[2], 1, 0, 3, "qa-poster-13.png")
             };
 
-            return new DevelopmentMusicFixtureSnapshot(albums, songs, artworkUris);
+            return new DevelopmentMusicFixtureSnapshot(artists, albums, songs, artworkUris);
         }
 
         public static string ArtworkKey(string itemId, string imageType)
@@ -36,10 +42,35 @@ namespace NextGenEmby.Core.Diagnostics
             return (itemId ?? "") + "|" + (imageType ?? "");
         }
 
+        private static EmbyMediaItem Artist(
+            IDictionary<string, string> artworkUris,
+            string id,
+            string name,
+            int year,
+            int releaseCount,
+            string primaryAsset)
+        {
+            AddArtwork(artworkUris, id, "Primary", primaryAsset);
+
+            return new EmbyMediaItem
+            {
+                Id = id,
+                Name = name,
+                Type = "MusicArtist",
+                Overview = "A browse-only artist fixture used to validate artist, album, and song navigation.",
+                ProductionYear = year,
+                ChildCount = releaseCount,
+                PrimaryImageTag = ArtworkTag,
+                PrimaryImageItemId = id,
+                UserData = new EmbyUserData()
+            };
+        }
+
         private static EmbyMediaItem Album(
             IDictionary<string, string> artworkUris,
             string id,
             string name,
+            EmbyMediaItem artist,
             int year,
             int trackCount,
             string primaryAsset)
@@ -56,6 +87,10 @@ namespace NextGenEmby.Core.Diagnostics
                 ChildCount = trackCount,
                 PrimaryImageTag = ArtworkTag,
                 PrimaryImageItemId = id,
+                AlbumArtist = artist.Name,
+                Artists = new[] { artist.Name },
+                ArtistItems = new[] { Reference(artist) },
+                AlbumArtists = new[] { Reference(artist) },
                 UserData = new EmbyUserData()
             };
         }
@@ -65,6 +100,7 @@ namespace NextGenEmby.Core.Diagnostics
             string id,
             string name,
             EmbyMediaItem album,
+            EmbyMediaItem artist,
             int indexNumber,
             int runtimeHours,
             int runtimeMinutes,
@@ -85,7 +121,20 @@ namespace NextGenEmby.Core.Diagnostics
                 RunTimeTicks = runtimeHours * TimeSpan.TicksPerHour + runtimeMinutes * MinuteTicks + 22 * TimeSpan.TicksPerSecond,
                 PrimaryImageTag = ArtworkTag,
                 PrimaryImageItemId = id,
+                AlbumArtist = artist.Name,
+                Artists = new[] { artist.Name },
+                ArtistItems = new[] { Reference(artist) },
+                AlbumArtists = new[] { Reference(artist) },
                 UserData = new EmbyUserData()
+            };
+        }
+
+        private static EmbyItemReference Reference(EmbyMediaItem item)
+        {
+            return new EmbyItemReference
+            {
+                Id = item.Id,
+                Name = item.Name
             };
         }
 

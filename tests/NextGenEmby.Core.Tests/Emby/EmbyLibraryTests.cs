@@ -97,7 +97,7 @@ public sealed class EmbyLibraryTests
         var request = handler.LastRequest!;
         Assert.Equal("/Users/user%201%2Fslash/Items/Latest", request.RequestUri!.AbsolutePath);
         Assert.Contains("IncludeItemTypes=Movie%2CSeries%2CEpisode", request.RequestUri.Query);
-        Assert.Contains("Fields=Overview%2CProductionYear%2CRunTimeTicks%2CPrimaryImageAspectRatio%2CChildCount%2CUserData", request.RequestUri.Query);
+        Assert.Contains("Fields=Overview%2CProductionYear%2CRunTimeTicks%2CPrimaryImageAspectRatio%2CChildCount%2CUserData%2CArtists%2CAlbumArtists", request.RequestUri.Query);
         Assert.Contains("Limit=50", request.RequestUri.Query);
         Assert.Contains("EnableImages=true", request.RequestUri.Query);
         Assert.Contains("EnableImageTypes=Primary%2CBackdrop%2CThumb%2CBanner%2CLogo", request.RequestUri.Query);
@@ -139,7 +139,7 @@ public sealed class EmbyLibraryTests
         Assert.Equal("/Users/user%201%2Fslash/Items/Resume", handler.LastRequest!.RequestUri!.AbsolutePath);
         Assert.Contains("IncludeItemTypes=Movie%2CEpisode", handler.LastRequest.RequestUri.Query);
         Assert.Contains("Limit=24", handler.LastRequest.RequestUri.Query);
-        Assert.Contains("Fields=Overview%2CProductionYear%2CRunTimeTicks%2CPrimaryImageAspectRatio%2CChildCount%2CUserData", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("Fields=Overview%2CProductionYear%2CRunTimeTicks%2CPrimaryImageAspectRatio%2CChildCount%2CUserData%2CArtists%2CAlbumArtists", handler.LastRequest.RequestUri.Query);
     }
 
     [Fact]
@@ -505,7 +505,7 @@ public sealed class EmbyLibraryTests
         Assert.Equal("backdrop-tag", item.BackdropImageTag);
         Assert.Equal("/Users/user-1/Sections/sec%20hot%2Fmovies/Items", handler.LastRequest!.RequestUri!.AbsolutePath);
         Assert.Contains("Limit=18", handler.LastRequest.RequestUri.Query);
-        Assert.Contains("Fields=Overview%2CProductionYear%2CRunTimeTicks%2CPrimaryImageAspectRatio%2CChildCount%2CUserData", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("Fields=Overview%2CProductionYear%2CRunTimeTicks%2CPrimaryImageAspectRatio%2CChildCount%2CUserData%2CArtists%2CAlbumArtists", handler.LastRequest.RequestUri.Query);
     }
 
     [Fact]
@@ -642,6 +642,64 @@ public sealed class EmbyLibraryTests
         Assert.Contains("EnableImages=true", handler.LastRequest.RequestUri.Query);
         Assert.Contains("EnableImageTypes=Primary%2CBackdrop%2CThumb%2CBanner%2CLogo", handler.LastRequest.RequestUri.Query);
         Assert.Contains("ImageTypeLimit=1", handler.LastRequest.RequestUri.Query);
+    }
+
+    [Fact]
+    public async Task GetItemsAsync_Requests_And_Maps_Music_Artists_For_Hierarchy()
+    {
+        var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
+            HttpStatusCode.OK,
+            """
+            {
+              "Items": [
+                {
+                  "Id": "song-1",
+                  "Name": "Opening Credits",
+                  "Type": "Audio",
+                  "Artists": [ "Kairos Collective", "" ],
+                  "ArtistItems": [
+                    { "Id": "artist-1", "Name": "Kairos Collective" }
+                  ],
+                  "AlbumArtist": "Kairos Collective",
+                  "AlbumArtists": [
+                    { "Id": "artist-1", "Name": "Kairos Collective" }
+                  ]
+                }
+              ],
+              "TotalRecordCount": 1
+            }
+            """));
+        using var http = new HttpClient(handler);
+        var client = CreateClient(http);
+
+        var items = await client.GetItemsAsync(Session(), new EmbyItemsQuery
+        {
+            IncludeItemTypes = "Audio",
+            Limit = 12
+        });
+
+        var item = Assert.Single(items);
+        Assert.Contains("Artists", handler.LastRequest!.RequestUri!.Query);
+        Assert.Contains("AlbumArtists", handler.LastRequest.RequestUri.Query);
+        Assert.Collection(
+            item.Artists,
+            artist => Assert.Equal("Kairos Collective", artist),
+            artist => Assert.Equal("", artist));
+        Assert.Collection(
+            item.ArtistItems,
+            artist =>
+            {
+                Assert.Equal("artist-1", artist.Id);
+                Assert.Equal("Kairos Collective", artist.Name);
+            });
+        Assert.Equal("Kairos Collective", item.AlbumArtist);
+        Assert.Collection(
+            item.AlbumArtists,
+            artist =>
+            {
+                Assert.Equal("artist-1", artist.Id);
+                Assert.Equal("Kairos Collective", artist.Name);
+            });
     }
 
     [Fact]
@@ -873,7 +931,7 @@ public sealed class EmbyLibraryTests
         Assert.Equal("/Items/movie%201%2Fslash/Similar", handler.LastRequest!.RequestUri!.AbsolutePath);
         Assert.Contains("UserId=user%201%2Fslash", handler.LastRequest.RequestUri.Query);
         Assert.Contains("Limit=18", handler.LastRequest.RequestUri.Query);
-        Assert.Contains("Fields=Overview%2CProductionYear%2CRunTimeTicks%2CPrimaryImageAspectRatio%2CChildCount%2CUserData", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("Fields=Overview%2CProductionYear%2CRunTimeTicks%2CPrimaryImageAspectRatio%2CChildCount%2CUserData%2CArtists%2CAlbumArtists", handler.LastRequest.RequestUri.Query);
         Assert.Contains("EnableImages=true", handler.LastRequest.RequestUri.Query);
     }
 
@@ -970,7 +1028,7 @@ public sealed class EmbyLibraryTests
         Assert.Contains("UserId=user%201%2Fslash", handler.LastRequest.RequestUri.Query);
         Assert.Contains("Limit=24", handler.LastRequest.RequestUri.Query);
         Assert.Contains(
-            "Fields=Overview%2CProductionYear%2CRunTimeTicks%2CPrimaryImageAspectRatio%2CChildCount%2CUserData",
+            "Fields=Overview%2CProductionYear%2CRunTimeTicks%2CPrimaryImageAspectRatio%2CChildCount%2CUserData%2CArtists%2CAlbumArtists",
             handler.LastRequest.RequestUri.Query);
         Assert.Contains("EnableImages=true", handler.LastRequest.RequestUri.Query);
         Assert.Contains("EnableImageTypes=Primary%2CBackdrop%2CThumb%2CBanner%2CLogo", handler.LastRequest.RequestUri.Query);

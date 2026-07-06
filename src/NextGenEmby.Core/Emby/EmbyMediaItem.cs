@@ -24,6 +24,13 @@ namespace NextGenEmby.Core.Emby
         public int? ParentIndexNumber { get; set; }
         public int? ChildCount { get; set; }
         public EmbyUserData UserData { get; set; } = new EmbyUserData();
+        public string AlbumArtist { get; set; } = "";
+        public System.Collections.Generic.IReadOnlyList<string> Artists { get; set; } =
+            System.Array.Empty<string>();
+        public System.Collections.Generic.IReadOnlyList<EmbyItemReference> ArtistItems { get; set; } =
+            System.Array.Empty<EmbyItemReference>();
+        public System.Collections.Generic.IReadOnlyList<EmbyItemReference> AlbumArtists { get; set; } =
+            System.Array.Empty<EmbyItemReference>();
         public System.Collections.Generic.IReadOnlyList<EmbyItemReference> GenreItems { get; set; } =
             System.Array.Empty<EmbyItemReference>();
         public System.Collections.Generic.IReadOnlyList<EmbyItemReference> StudioItems { get; set; } =

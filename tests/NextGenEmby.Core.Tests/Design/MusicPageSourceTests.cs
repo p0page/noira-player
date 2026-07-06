@@ -38,6 +38,34 @@ public sealed class MusicPageSourceTests
     }
 
     [Fact]
+    public void Music_Page_Renders_Artist_Hierarchy_For_Tv_Browsing()
+    {
+        var root = FindRepositoryRoot();
+        var musicPageXaml = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NextGenEmby.App",
+            "Views",
+            "MusicPage.xaml"));
+        var musicPageSource = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NextGenEmby.App",
+            "Views",
+            "MusicPage.xaml.cs"));
+
+        Assert.Contains("ArtistsPanel", musicPageXaml);
+        Assert.Contains("ArtistsCountBlock", musicPageXaml);
+        Assert.Contains("_artistButtons", musicPageSource);
+        Assert.Contains("RenderArtists(", musicPageSource);
+        Assert.Contains("CreateArtistItems(", musicPageSource);
+        Assert.Contains("ArtistButton_OnClick", musicPageSource);
+        Assert.Contains("ItemMatchesArtist(", musicPageSource);
+        Assert.Contains("_activeArtistButton", musicPageSource);
+        Assert.Contains("FocusActiveArtistOrFirst()", musicPageSource);
+    }
+
+    [Fact]
     public void Music_Page_Uses_Shared_Tv_List_Sizing_And_Browse_Only_Unsupported_Layer()
     {
         var musicPageSource = File.ReadAllText(Path.Combine(
@@ -82,10 +110,13 @@ public sealed class MusicPageSourceTests
 
         Assert.Contains("_albumButtons", musicPageSource);
         Assert.Contains("_songButtons", musicPageSource);
+        Assert.Contains("_artistButtons", musicPageSource);
         Assert.Contains("TryMoveWithinMusicLists(e.Key)", musicPageSource);
         Assert.Contains("MusicListFocusPolicy.GetVerticalTargetIndex", musicPageSource);
         Assert.Contains("IsRightKey(e.Key)", musicPageSource);
         Assert.Contains("IsLeftKey(e.Key)", musicPageSource);
+        Assert.Contains("_artistButtons.Contains(focusedButton)", musicPageSource);
+        Assert.Contains("_albumButtons.Contains(focusedButton)", musicPageSource);
     }
 
     private static string FindRepositoryRoot()

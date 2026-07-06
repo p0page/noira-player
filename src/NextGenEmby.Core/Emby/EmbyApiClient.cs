@@ -12,7 +12,7 @@ namespace NextGenEmby.Core.Emby
 {
     public sealed class EmbyApiClient
     {
-        private const string ItemListFields = "Overview,ProductionYear,RunTimeTicks,PrimaryImageAspectRatio,ChildCount,UserData";
+        private const string ItemListFields = "Overview,ProductionYear,RunTimeTicks,PrimaryImageAspectRatio,ChildCount,UserData,Artists,AlbumArtists";
         private const string ImageTypeList = "Primary,Backdrop,Thumb,Banner,Logo";
 
         private readonly HttpClient _http;
@@ -783,6 +783,10 @@ namespace NextGenEmby.Core.Emby
                 ParentIndexNumber = item.ParentIndexNumber,
                 ChildCount = item.ChildCount,
                 UserData = MapUserData(userData),
+                AlbumArtist = item.AlbumArtist ?? "",
+                Artists = (item.Artists ?? new List<string>()).Select(artist => artist ?? "").ToList(),
+                ArtistItems = MapNamedReferences(item.ArtistItems),
+                AlbumArtists = MapNamedReferences(item.AlbumArtists),
                 GenreItems = MapNamedReferences(item.GenreItems),
                 StudioItems = MapNamedReferences(item.Studios),
                 TagItems = MapTagReferences(item.TagItems, item.Tags),
@@ -1170,6 +1174,10 @@ namespace NextGenEmby.Core.Emby
             public string ParentBannerItemId { get; set; } = "";
             public string ParentLogoItemId { get; set; } = "";
             public string ParentThumbImageTag { get; set; } = "";
+            public string AlbumArtist { get; set; } = "";
+            public List<string>? Artists { get; set; } = new List<string>();
+            public List<NameIdPairDto>? ArtistItems { get; set; } = new List<NameIdPairDto>();
+            public List<NameIdPairDto>? AlbumArtists { get; set; } = new List<NameIdPairDto>();
             public List<PersonDto> People { get; set; } = new List<PersonDto>();
             public List<NameIdPairDto>? GenreItems { get; set; } = new List<NameIdPairDto>();
             public List<NameIdPairDto>? Studios { get; set; } = new List<NameIdPairDto>();

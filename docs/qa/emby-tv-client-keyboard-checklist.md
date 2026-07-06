@@ -1900,3 +1900,32 @@ Then continue design and implementation until the route passes.
   - Pressed `Down` five times to reach the `Hot Movies` poster row, then `Right`, `Right` to move into a later column. The visible focus reached `Afterimage` in a row with six cards.
   - Pressed `Down`; focus clamped into the two-item `Tonight Picks` row on `City at Night`, the last available card, with no blank-column focus and no reset to `Ocean Archive`.
   - No app-content mouse clicks were used. `dev-command.json` and `dev-command-result.txt` were removed from LocalState after validation, and the app process was stopped.
+
+### 2026-07-07 - Music Artist Hierarchy
+
+- App version: 0.1.0.207.
+- Scope: add artist-aware Music browsing without changing audio playback or native decoding.
+- Interaction/design changes:
+  - Music now renders four TV columns: Artists, Albums, Songs, and Preview.
+  - The Artists column includes `All music` plus derived/fixture `MusicArtist` entries; selecting an artist filters Albums and Songs in place.
+  - Emby item parsing now preserves `Artists`, `ArtistItems`, `AlbumArtist`, and `AlbumArtists`, and list queries request artist fields so real server metadata can feed the hierarchy.
+  - Music fixture data now includes artist items, artist artwork, and explicit artist-album-song references.
+  - Fixed the keyboard focus return path found during validation: after filtering by an artist, `Left` from Songs/Albums returns to the active artist instead of snapping to `All music`.
+  - No playback decoding, music playback, real Emby loading contracts, or Emby transcoding behavior changed.
+- Automated verification:
+  - TDD red path confirmed `EmbyMediaItem`, `MusicBrowseQueryFactory`, `DevelopmentMusicFixtureSnapshot`, and Music page source lacked artist hierarchy support before implementation.
+  - Targeted Music artist tests passed: 14 total.
+  - Full Core test suite passed: 462 total.
+  - `git diff --check` passed with no whitespace errors.
+  - App Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.207_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate thumbprint `6CB453A2FEC300C6E5034152C6C1A68DE31A7BD0`, verified with `signtool verify /pa`, and installed locally as `NextGenEmby.App 0.1.0.207`.
+- Keyboard-only validation with Computer Use:
+  - Wrote `dev-command.json` with route `music-fixture` and launched the installed app through AppUserModelId `NextGenEmby.App_h8qjz0sr1sg4m!App`; the window path resolved to `NextGenEmby.App_0.1.0.207_x64__h8qjz0sr1sg4m`.
+  - Initial Music showed Artists, Albums, Songs, and Preview columns with focus on `All music`, 3 artists, 3 albums, 6 songs, packaged artwork, and no text overlap.
+  - Pressed `Down`; focus moved to `Kairos Collective` and the preview switched to Artist metadata.
+  - Pressed `Return`; Music filtered to `Kairos Collective - 1 album - 3 songs`, Albums focused `Nocturne Signals`, and Songs showed the three matching songs.
+  - Pressed `Right`; focus moved from the album column to `Opening Credits` in Songs. Pressed `Down`; focus moved to `Glass Elevator` and preview updated.
+  - Pressed `Return`; the browse-only `Music playback unavailable` layer opened with `Close` focused. Pressed `Escape`; the layer closed and focus restored to `Glass Elevator`.
+  - Pressed `Left`, `Left`; focus returned to active artist `Kairos Collective`, not `All music`, confirming the validation-found focus bug was fixed.
+  - Pressed `Up`, `Return`; `All music` restored the full 3 album / 6 song list.
+  - No app-content mouse clicks were used.

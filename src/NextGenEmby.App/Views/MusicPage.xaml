@@ -38,12 +38,41 @@
 
             <Grid Grid.Row="1" ColumnSpacing="24">
                 <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="3*" />
                     <ColumnDefinition Width="4*" />
                     <ColumnDefinition Width="5*" />
                     <ColumnDefinition Width="4*" />
                 </Grid.ColumnDefinitions>
 
                 <Grid RowSpacing="12">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Spacing="3">
+                        <TextBlock
+                            Style="{StaticResource TvSectionTitleTextStyle}"
+                            Text="Artists" />
+                        <TextBlock
+                            x:Name="ArtistsCountBlock"
+                            Style="{StaticResource TvMutedBodyTextStyle}"
+                            Text="Loading" />
+                    </StackPanel>
+
+                    <ScrollViewer
+                        Grid.Row="1"
+                        HorizontalScrollBarVisibility="Disabled"
+                        HorizontalScrollMode="Disabled"
+                        VerticalScrollBarVisibility="Hidden"
+                        VerticalScrollMode="Enabled">
+                        <StackPanel
+                            x:Name="ArtistsPanel"
+                            Spacing="10" />
+                    </ScrollViewer>
+                </Grid>
+
+                <Grid Grid.Column="1" RowSpacing="12">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
@@ -71,7 +100,7 @@
                     </ScrollViewer>
                 </Grid>
 
-                <Grid Grid.Column="1" RowSpacing="12">
+                <Grid Grid.Column="2" RowSpacing="12">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
@@ -121,7 +150,7 @@
                 </Grid>
 
                 <Border
-                    Grid.Column="2"
+                    Grid.Column="3"
                     Style="{StaticResource TvPanelStyle}">
                     <StackPanel Spacing="14">
                         <TextBlock
