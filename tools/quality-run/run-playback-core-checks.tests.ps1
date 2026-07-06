@@ -70,6 +70,10 @@ if (-not ($plan.commands | Where-Object { $_.name -eq 'native-helper-test' })) {
     throw 'Expected native-helper-test command in playback-core validation plan.'
 }
 
+if (-not ($plan.commands | Where-Object { $_.name -eq 'native-frame-pacing-test' })) {
+    throw 'Expected native-frame-pacing-test command in playback-core validation plan.'
+}
+
 if (-not ($plan.commands | Where-Object { $_.name -eq 'playback-quality-cli-build' })) {
     throw 'Expected playback-quality-cli-build command in playback-core validation plan.'
 }

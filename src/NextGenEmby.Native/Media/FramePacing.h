@@ -10,6 +10,8 @@ namespace winrt::NextGenEmby::Native::implementation
     public:
         static constexpr int64_t VideoAheadToleranceTicks = 100000;
         static constexpr int64_t VideoDropToleranceTicks = 1000000;
+        static constexpr int64_t MinimumFrameRateAdaptiveDropToleranceTicks = 400000;
+        static constexpr double LateFrameDropFrameTolerance = 2.5;
 
         static constexpr std::chrono::milliseconds RenderLoopWait() noexcept
         {
@@ -32,6 +34,30 @@ namespace winrt::NextGenEmby::Native::implementation
         {
             return hasQueuedAudio &&
                 audioPositionTicks > framePositionTicks + VideoDropToleranceTicks;
+        }
+
+        static constexpr int64_t LateFrameDropToleranceTicks(double videoFrameRate) noexcept
+        {
+            if (videoFrameRate <= 0.0)
+            {
+                return VideoDropToleranceTicks;
+            }
+
+            auto adaptiveTolerance = static_cast<int64_t>(
+                10000000.0 * LateFrameDropFrameTolerance / videoFrameRate);
+            return adaptiveTolerance > MinimumFrameRateAdaptiveDropToleranceTicks
+                ? adaptiveTolerance
+                : MinimumFrameRateAdaptiveDropToleranceTicks;
+        }
+
+        static constexpr bool ShouldDropLateFrame(
+            int64_t framePositionTicks,
+            int64_t audioPositionTicks,
+            bool hasQueuedAudio,
+            double videoFrameRate) noexcept
+        {
+            return hasQueuedAudio &&
+                audioPositionTicks > framePositionTicks + LateFrameDropToleranceTicks(videoFrameRate);
         }
     };
 }

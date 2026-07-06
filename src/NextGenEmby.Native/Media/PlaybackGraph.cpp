@@ -455,7 +455,8 @@ namespace winrt::NextGenEmby::Native::implementation
                 if (PlaybackFramePacing::ShouldDropLateFrame(
                     frame.PositionTicks,
                     *audioPosition,
-                    hasQueuedAudio))
+                    hasQueuedAudio,
+                    m_preferredVideoFrameRate))
                 {
                     m_pendingVideoFrame.reset();
                     ++droppedFrames;

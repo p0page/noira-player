@@ -25,6 +25,7 @@ The command validates:
 - App-free playback quality comparison CLI build and JSON smoke test;
 - Core refresh-rate cadence policy tests that mirror the native Xbox display-mode selection ratios;
 - standalone native playback quality metrics helper;
+- standalone native frame pacing policy helper;
 - standalone native display refresh cadence policy helper;
 - standalone native display refresh snapshot normalization helper;
 - native playback component build.
@@ -38,6 +39,12 @@ The command deliberately excludes:
 - MSIX packaging.
 
 Use an App package build only when validating Xbox integration or a change that directly touches App/XAML behavior.
+
+## Native 帧节奏策略
+
+当源帧率缺失或无效时，`PlaybackFramePacing` 保留旧的 100ms late-frame drop 阈值。当 Core 已经拿到可用源帧率时，`PlaybackGraph` 会把帧率传给 native pacing，late-frame drop 阈值会按帧率自适应：约 2.5 个源帧，并设置 40ms 下限。这样 23.976/24fps 会接近原有容忍度，同时避免 50/60fps 播放在丢帧追赶前容忍过多晚到帧。
+
+`native-frame-pacing-test` 会在不构建、不打包 App 的情况下编译并运行 `tests/NextGenEmby.Native.Tests/FramePacingTests.cpp`。自动化播放优化应把它视为 Core/native 策略门禁，而不是 Xbox 视觉效果验证。
 
 ## Validate Reference Manifest
 
