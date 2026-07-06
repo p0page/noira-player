@@ -88,6 +88,14 @@ dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQ
 
 `--report` 可以是 raw `PlaybackQualityReport`，也可以是包含顶层 `report` 字段的 `PlaybackQualityRunResult` envelope。命令会重新运行当前 Core 的 `PlaybackQualityReportAnalyzer`，输出 `failureAreas`、`failedChecks`、`evidenceSignals`、`missingEvidence`、`optimizationGate`、`framePacing` 和 `triageSteps`。自动化模型应先读取这个分析结果，再决定是补采集证据还是修改播放 Core。
 
+当模型需要快速审计一整个报告目录，但还没有进入 baseline/candidate 比较时，使用目录级分析：
+
+```powershell
+dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- analyze-report-set --reports-dir captured-reports --output report-analysis-summary.json
+```
+
+`analyze-report-set` 会读取目录下所有 `*.json`，对 raw report 自动运行当前 Core analyzer，对已有 envelope 则保留其中的 report 并补齐缺失的 analysis。输出复用候选评测中的 report-analysis summary，包含 `totalReportCount`、`analyzedReportCount`、`unavailableReportCount`、`blockedReportCount` 和每个 case 的 `status`、`blockers`、`signals`、`failureAreas`、`targetFailureAreas`。这一步适合在采集完成后立即判断证据是否足够、下一步应补 telemetry 还是修改播放 Core。
+
 ## 候选版本门禁评测
 
 当另一个 worktree 正在修改 Xbox App 交互时，播放核心候选改动应优先走 App-free 门禁，不打包、不启动 UWP App：

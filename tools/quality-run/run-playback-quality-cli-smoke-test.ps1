@@ -10,6 +10,8 @@ try {
     $baselineEnvelopePath = Join-Path $tempRoot 'baseline-envelope.json'
     $candidateEnvelopePath = Join-Path $tempRoot 'candidate-envelope.json'
     $analysisPath = Join-Path $tempRoot 'analysis.json'
+    $analysisSetDir = Join-Path $tempRoot 'analysis-report-set'
+    $analysisSetPath = Join-Path $tempRoot 'analysis-report-set.json'
     $outputPath = Join-Path $tempRoot 'comparison.json'
     $envelopeOutputPath = Join-Path $tempRoot 'comparison-envelope.json'
     $suitePath = Join-Path $tempRoot 'suite.json'
@@ -56,6 +58,7 @@ try {
 {
   "runId": "baseline",
   "metricVersion": "software-quality-v1",
+  "result": "fail",
   "source": {
     "itemId": "item-1",
     "mediaSourceId": "source-1",
@@ -82,6 +85,7 @@ try {
 {
   "runId": "candidate",
   "metricVersion": "software-quality-v1",
+  "result": "fail",
   "source": {
     "itemId": "item-1",
     "mediaSourceId": "source-1",
@@ -152,6 +156,45 @@ try {
 
     if (-not ($analysis.failedChecks | Where-Object { $_.signal -eq 'timing.maxFrameGapMs' -and $_.actual -eq '120.000' })) {
         throw 'Expected analyze-report output to include failed check details.'
+    }
+
+    New-Item -ItemType Directory -Path $analysisSetDir | Out-Null
+    Copy-Item -LiteralPath $baselinePath -Destination (Join-Path $analysisSetDir 'baseline.json')
+    Copy-Item -LiteralPath $candidatePath -Destination (Join-Path $analysisSetDir 'candidate.json')
+
+    Push-Location $repoRoot
+    try {
+        dotnet run `
+            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
+            --no-build `
+            -- analyze-report-set `
+            --reports-dir $analysisSetDir `
+            --output $analysisSetPath
+        if ($LASTEXITCODE -ne 0) {
+            throw 'playback quality CLI analyze-report-set returned a non-zero exit code.'
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    $analysisSet = Get-Content -Raw -LiteralPath $analysisSetPath | ConvertFrom-Json
+    if ($analysisSet.totalReportCount -ne 2 -or $analysisSet.analyzedReportCount -ne 2) {
+        throw 'Expected analyze-report-set output to analyze both raw reports.'
+    }
+
+    if ($analysisSet.unavailableReportCount -ne 0) {
+        throw 'Expected analyze-report-set output to avoid unavailable analysis for raw reports.'
+    }
+
+    if (-not ($analysisSet.cases | Where-Object {
+        $_.caseId -eq 'candidate' -and
+        $_.hasModelAnalysis -eq $true -and
+        $_.isBlocked -eq $true -and
+        ($_.failureAreas -contains 'frame-pacing') -and
+        ($_.signals -contains 'timing.maxFrameGapMs')
+    })) {
+        throw 'Expected analyze-report-set output to expose analyzed candidate blockers and signals.'
     }
 
     @'

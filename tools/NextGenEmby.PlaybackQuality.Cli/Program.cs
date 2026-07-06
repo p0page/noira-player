@@ -35,6 +35,11 @@ internal static class Program
                 return RunAnalyzeReport(args);
             }
 
+            if (string.Equals(args[0], "analyze-report-set", StringComparison.OrdinalIgnoreCase))
+            {
+                return RunAnalyzeReportSet(args);
+            }
+
             if (string.Equals(args[0], "summarize", StringComparison.OrdinalIgnoreCase))
             {
                 return RunSummarize(args);
@@ -100,6 +105,15 @@ internal static class Program
         var report = ReadPlaybackQualityReport(options.ReportPath);
         var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
         WriteJson(analysis, options.OutputPath);
+        return 0;
+    }
+
+    private static int RunAnalyzeReportSet(string[] args)
+    {
+        var options = ParseAnalyzeReportSetOptions(args);
+        var envelopes = ReadPlaybackQualityReportEnvelopes(options.ReportsDirectory);
+        var analyzedEnvelopes = EnsureModelAnalysis(envelopes);
+        WriteJson(CreateReportAnalysisSummary(analyzedEnvelopes), options.OutputPath);
         return 0;
     }
 
@@ -349,6 +363,33 @@ internal static class Program
         if (string.IsNullOrWhiteSpace(options.ReportPath))
         {
             throw new ArgumentException("Missing required option --report.");
+        }
+
+        return options;
+    }
+
+    private static AnalyzeReportSetOptions ParseAnalyzeReportSetOptions(string[] args)
+    {
+        var options = new AnalyzeReportSetOptions();
+        for (var index = 1; index < args.Length; index++)
+        {
+            var arg = args[index];
+            switch (arg)
+            {
+                case "--reports-dir":
+                    options.ReportsDirectory = ReadValue(args, ref index, arg);
+                    break;
+                case "--output":
+                    options.OutputPath = ReadValue(args, ref index, arg);
+                    break;
+                default:
+                    throw new ArgumentException("Unknown analyze-report-set option: " + arg);
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(options.ReportsDirectory))
+        {
+            throw new ArgumentException("Missing required option --reports-dir.");
         }
 
         return options;
@@ -906,6 +947,21 @@ internal static class Program
         return new PlaybackQualityReportEnvelope(relativePath, rawReport, null);
     }
 
+    private static List<PlaybackQualityReportEnvelope> EnsureModelAnalysis(
+        List<PlaybackQualityReportEnvelope> envelopes)
+    {
+        var analyzed = new List<PlaybackQualityReportEnvelope>();
+        foreach (var envelope in envelopes)
+        {
+            analyzed.Add(new PlaybackQualityReportEnvelope(
+                envelope.RelativePath,
+                envelope.Report,
+                envelope.ModelAnalysis ?? PlaybackQualityReportAnalyzer.Analyze(envelope.Report)));
+        }
+
+        return analyzed;
+    }
+
     private static bool TryGetPropertyIgnoreCase(
         JsonElement element,
         string propertyName,
@@ -1193,6 +1249,11 @@ internal static class Program
                 AddUnique(gate.Signals, signal);
             }
 
+            foreach (var area in item.FailureAreas)
+            {
+                AddUnique(gate.FailureAreas, area);
+            }
+
             foreach (var area in item.TargetFailureAreas)
             {
                 AddUnique(gate.TargetFailureAreas, area);
@@ -1247,6 +1308,8 @@ internal static class Program
                 summary.BlockedReportCount++;
             }
 
+            CopyValues(envelope.ModelAnalysis.FailureAreas, item.FailureAreas);
+            CopyValues(envelope.ModelAnalysis.EvidenceSignals, item.Signals);
             CopyValues(optimizationGate.Blockers, item.Blockers);
             CopyValues(optimizationGate.BlockerSignals, item.Signals);
             CopyValues(optimizationGate.TargetFailureAreas, item.TargetFailureAreas);
@@ -1363,6 +1426,7 @@ internal static class Program
     {
         writer.WriteLine("Usage:");
         writer.WriteLine("  playback-quality analyze-report --report <report.json> [--output <analysis.json>]");
+        writer.WriteLine("  playback-quality analyze-report-set --reports-dir <reports-dir> [--output <analysis-summary.json>]");
         writer.WriteLine("  playback-quality compare --baseline <report.json> --candidate <report.json> [--previous <comparison.json>...] [--stall-threshold <n>] [--output <comparison.json>]");
         writer.WriteLine("  playback-quality summarize --comparison <comparison.json> [--comparison <comparison.json>...] [--output <suite.json>]");
         writer.WriteLine("  playback-quality compare-suite --baseline-dir <reports-dir> --candidate-dir <reports-dir> [--match-by relative-path|run-id] [--previous-comparisons-dir <comparison-dir>] [--comparisons-dir <comparison-dir>] [--stall-threshold <n>] [--output <suite.json>]");
@@ -1384,6 +1448,12 @@ internal static class Program
     private sealed class AnalyzeReportOptions
     {
         public string ReportPath { get; set; } = "";
+        public string OutputPath { get; set; } = "";
+    }
+
+    private sealed class AnalyzeReportSetOptions
+    {
+        public string ReportsDirectory { get; set; } = "";
         public string OutputPath { get; set; } = "";
     }
 
@@ -1516,6 +1586,7 @@ internal static class Program
         public bool IsBlocked { get; set; }
         public List<string> Blockers { get; } = new List<string>();
         public List<string> Signals { get; } = new List<string>();
+        public List<string> FailureAreas { get; } = new List<string>();
         public List<string> TargetFailureAreas { get; } = new List<string>();
     }
 
