@@ -83,6 +83,8 @@ namespace NextGenEmby.Core.PlaybackQuality
 
     public static class PlaybackQualityRunComparator
     {
+        private const double DerivedSignalEpsilon = 0.0001;
+
         public static PlaybackQualityRunComparison Compare(
             PlaybackQualityReport baseline,
             PlaybackQualityReport candidate)
@@ -170,6 +172,7 @@ namespace NextGenEmby.Core.PlaybackQuality
 
             AddCandidateOnlyFailures(comparison, candidate, baselineByKey, matchedKeys);
             AddUnmatchedCandidateSignals(comparison, candidate, matchedKeys);
+            AddFramePacingSeverityDeltas(comparison, baseline, candidate);
 
             if (comparison.Improvements.Count > 0 && comparison.Regressions.Count > 0)
             {
@@ -643,6 +646,117 @@ namespace NextGenEmby.Core.PlaybackQuality
                     numericDelta < 0 ? "decreased" : "increased",
                     numericDelta));
             }
+        }
+
+        private static void AddFramePacingSeverityDeltas(
+            PlaybackQualityRunComparison comparison,
+            PlaybackQualityReport baseline,
+            PlaybackQualityReport candidate)
+        {
+            if (!IsFramePacingComparison(comparison))
+            {
+                return;
+            }
+
+            var baselineAnalysis = PlaybackQualityReportAnalyzer.Analyze(baseline);
+            var candidateAnalysis = PlaybackQualityReportAnalyzer.Analyze(candidate);
+
+            CompareDerivedLowerIsBetter(
+                comparison,
+                "framePacing.renderIntervalP95FrameRatio",
+                baselineAnalysis.FramePacing.RenderIntervalP95FrameRatio,
+                candidateAnalysis.FramePacing.RenderIntervalP95FrameRatio,
+                requirePositive: true);
+            CompareDerivedLowerIsBetter(
+                comparison,
+                "framePacing.renderIntervalP99FrameRatio",
+                baselineAnalysis.FramePacing.RenderIntervalP99FrameRatio,
+                candidateAnalysis.FramePacing.RenderIntervalP99FrameRatio,
+                requirePositive: true);
+            CompareDerivedLowerIsBetter(
+                comparison,
+                "framePacing.maxFrameGapFrameRatio",
+                baselineAnalysis.FramePacing.MaxFrameGapFrameRatio,
+                candidateAnalysis.FramePacing.MaxFrameGapFrameRatio,
+                requirePositive: true);
+            if (HasObservedFrameCount(baseline) && HasObservedFrameCount(candidate))
+            {
+                CompareDerivedLowerIsBetter(
+                    comparison,
+                    "framePacing.droppedVideoFramePercent",
+                    baselineAnalysis.FramePacing.DroppedVideoFramePercent,
+                    candidateAnalysis.FramePacing.DroppedVideoFramePercent,
+                    requirePositive: false);
+            }
+        }
+
+        private static bool IsFramePacingComparison(
+            PlaybackQualityRunComparison comparison)
+        {
+            return comparison.PersistingFailureAreas.Contains("frame-pacing") ||
+                comparison.ResolvedFailureAreas.Contains("frame-pacing") ||
+                comparison.NewFailureAreas.Contains("frame-pacing");
+        }
+
+        private static bool HasObservedFrameCount(PlaybackQualityReport report)
+        {
+            return report.Timing.RenderedVideoFrames > 0 ||
+                report.Timing.DroppedVideoFrames > 0;
+        }
+
+        private static void CompareDerivedLowerIsBetter(
+            PlaybackQualityRunComparison comparison,
+            string signal,
+            double baselineActual,
+            double candidateActual,
+            bool requirePositive)
+        {
+            if (requirePositive &&
+                (baselineActual <= 0 || candidateActual <= 0))
+            {
+                return;
+            }
+
+            AddUnique(comparison.Coverage.MatchedSignals, signal);
+
+            var numericDelta = candidateActual - baselineActual;
+            if (Math.Abs(numericDelta) <= DerivedSignalEpsilon)
+            {
+                return;
+            }
+
+            var baselineCheck = CreateDerivedCheck(signal, baselineActual);
+            var candidateCheck = CreateDerivedCheck(signal, candidateActual);
+            if (numericDelta < 0)
+            {
+                comparison.Improvements.Add(CreateDelta(
+                    baselineCheck,
+                    candidateCheck,
+                    "decreased",
+                    numericDelta));
+            }
+            else
+            {
+                comparison.Regressions.Add(CreateDelta(
+                    baselineCheck,
+                    candidateCheck,
+                    "increased",
+                    numericDelta));
+            }
+        }
+
+        private static PlaybackQualityCheck CreateDerivedCheck(
+            string signal,
+            double actual)
+        {
+            return new PlaybackQualityCheck
+            {
+                Name = signal,
+                Signal = signal,
+                FailureArea = "frame-pacing",
+                Status = "derived",
+                Actual = actual.ToString("0.######", CultureInfo.InvariantCulture)
+            };
         }
 
         private static bool IsHigherBetterSignal(string signal)

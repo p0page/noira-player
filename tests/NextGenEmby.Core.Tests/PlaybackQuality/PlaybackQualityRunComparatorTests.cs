@@ -96,6 +96,57 @@ public sealed class PlaybackQualityRunComparatorTests
     }
 
     [Fact]
+    public void Compare_Reports_Normalized_Frame_Pacing_Severity_Deltas()
+    {
+        var frameDurationMs = 1000.0 / 23.976;
+        var baseline = CreateReport(
+            "baseline",
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "180.000"));
+        baseline.Timing.RenderedVideoFrames = 240;
+        baseline.Timing.DroppedVideoFrames = 6;
+        baseline.Timing.ExpectedFrameDurationMs = frameDurationMs;
+        baseline.Timing.MaxFrameGapMs = frameDurationMs * 4.0;
+
+        var candidate = CreateReport(
+            "candidate",
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "120.000"));
+        candidate.Timing.RenderedVideoFrames = 240;
+        candidate.Timing.DroppedVideoFrames = 2;
+        candidate.Timing.ExpectedFrameDurationMs = frameDurationMs;
+        candidate.Timing.MaxFrameGapMs = frameDurationMs * 2.5;
+
+        var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
+
+        Assert.Contains("framePacing.maxFrameGapFrameRatio", comparison.Coverage.MatchedSignals);
+        Assert.Contains("framePacing.droppedVideoFramePercent", comparison.Coverage.MatchedSignals);
+        Assert.Contains(comparison.Improvements, delta =>
+            delta.Signal == "framePacing.maxFrameGapFrameRatio" &&
+            delta.Direction == "decreased" &&
+            delta.FailureArea == "frame-pacing" &&
+            delta.NumericDelta < -1.49 &&
+            delta.NumericDelta > -1.51);
+        Assert.Contains(comparison.Improvements, delta =>
+            delta.Signal == "framePacing.droppedVideoFramePercent" &&
+            delta.Direction == "decreased" &&
+            delta.FailureArea == "frame-pacing");
+    }
+
+    [Fact]
+    public void Compare_Reports_Does_Not_Treat_Missing_Frame_Counts_As_Dropped_Frame_Percent_Evidence()
+    {
+        var baseline = CreateReport(
+            "baseline",
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "180.000"));
+        var candidate = CreateReport(
+            "candidate",
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "120.000"));
+
+        var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
+
+        Assert.DoesNotContain("framePacing.droppedVideoFramePercent", comparison.Coverage.MatchedSignals);
+    }
+
+    [Fact]
     public void Compare_Reports_Mixed_When_One_Signal_Improves_And_Another_Regresses()
     {
         var baseline = CreateReport(
