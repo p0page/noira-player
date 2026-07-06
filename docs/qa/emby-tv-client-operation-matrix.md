@@ -48,7 +48,7 @@ Status values:
 | Operation | Keyboard Path | Status | Evidence | Next Work |
 | --- | --- | --- | --- | --- |
 | Open movie/series library grid | Guide/Home, `Return` | Verified | 0.1.0.129 Guide opened Movies with `100 items`; 0.1.0.104 `热门剧集`; 0.1.0.102 `日漫` | Validate more collection types |
-| Move across and down grid | Arrows | Implemented | GridView focus and wrap layout exist | Fresh grid stress route needed |
+| Move across and down grid | Arrows | Verified | 0.1.0.144 keyboard/UIA route opened Movies with `100 items`; initial focus was a `GridViewItem` at x=192/y=365, `Down` moved to x=192/y=761, `Right` to x=465/y=761 then x=738/y=761, `Down` to x=738/y=1157, and `Left` to x=465/y=1157 | Keep as grid focus regression route; add far-right/end-of-list stress route later |
 | Sort through TV sheet | `Up`, `Return`, arrows, `Return` | Verified | 0.1.0.98 sort sheet validation | Extend sort options beyond Title/Recently added/Year |
 | Filter through TV sheet | `Up`, `Right`, `Return`, arrows, `Return` | Verified | 0.1.0.98 filter sheet validation | Add favorite/resumable server-backed validation |
 | Empty library recovery | Empty strict query | Verified | 0.1.0.78 Playlists showed `No items found` instead of wrong folders | Add screenshot pass |

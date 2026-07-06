@@ -1096,3 +1096,23 @@ Then continue design and implementation until the route passes.
   - `Navigate Live TV/Music/Photos` is now runtime `Verified` for keyboard Guide navigation.
 - Limitation:
   - The current server still returned no Live TV channels, no true MusicAlbum/Audio rows, and no Photo items in this run. Positive browsing for those libraries remains a server-data gap rather than a Guide navigation gap.
+
+### 2026-07-06 - Movies Grid Directional Focus Runtime Pass
+
+- App version: 0.1.0.144.
+- Scope: validate ordinary library grid browsing with keyboard/controller-equivalent directional input.
+- Keyboard/UIA validation:
+  - Started from Home with the restored saved Emby session.
+  - Pressed `M`, then `Down`, `Down`, `Enter` to open Movies through the Guide.
+  - Movies opened with `100 items`, Sort `Title`, Filter `All`, and a real poster grid including `"Friends"`, `#Guilty`, `#PTGF出租女友`, `#Y`, and more.
+  - Initial focus was a `GridViewItem` at x=192, y=365.
+  - Pressed `Down`; focus moved to another `GridViewItem` at x=192, y=761.
+  - Pressed `Right`; focus moved to x=465, y=761.
+  - Pressed `Right`; focus moved to x=738, y=761.
+  - Pressed `Down`; focus moved to x=738, y=1157.
+  - Pressed `Left`; focus moved to x=465, y=1157.
+  - No app-content mouse clicks were used.
+- Result:
+  - `Move across and down grid` is now runtime `Verified` for normal library-grid browsing.
+- Follow-up:
+  - Add a later far-right/end-of-list stress pass to verify edge wrapping and bring-into-view behavior at the bottom/right edge of very long grids.
