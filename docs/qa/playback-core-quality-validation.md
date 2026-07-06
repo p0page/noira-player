@@ -39,6 +39,16 @@ The command deliberately excludes:
 
 Use an App package build only when validating Xbox integration or a change that directly touches App/XAML behavior.
 
+## Validate Reference Manifest
+
+Use the App-free CLI to validate a playback reference corpus manifest before using it in automated runs:
+
+```powershell
+dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- validate-manifest --manifest docs\qa\playback-quality-reference-manifest.example.json --output manifest-validation.json
+```
+
+The command emits `isValid`, `caseCount`, `tiers`, `purposes`, and structured `errors`. Invalid manifests return a non-zero exit code so automation can stop before collecting misleading playback evidence.
+
 ## Compare Reports
 
 Use the App-free CLI when an automated model run needs to compare two serialized playback quality reports without building the Xbox App:

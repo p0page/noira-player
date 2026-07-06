@@ -39,6 +39,11 @@ internal static class Program
                 return RunCompareSuite(args);
             }
 
+            if (string.Equals(args[0], "validate-manifest", StringComparison.OrdinalIgnoreCase))
+            {
+                return RunValidateManifest(args);
+            }
+
             throw new ArgumentException("Unknown command: " + args[0]);
         }
         catch (Exception ex)
@@ -114,6 +119,15 @@ internal static class Program
             PlaybackQualityComparisonSuiteAggregator.Summarize(comparisons),
             options.OutputPath);
         return 0;
+    }
+
+    private static int RunValidateManifest(string[] args)
+    {
+        var options = ParseValidateManifestOptions(args);
+        var manifest = ReadJson<PlaybackQualityReferenceManifest>(options.ManifestPath);
+        var validation = PlaybackQualityReferenceManifestValidator.Validate(manifest);
+        WriteJson(validation, options.OutputPath);
+        return validation.IsValid ? 0 : 2;
     }
 
     private static CompareOptions ParseCompareOptions(string[] args)
@@ -237,6 +251,33 @@ internal static class Program
         if (options.StallComparisonCountThreshold < 1)
         {
             throw new ArgumentException("--stall-threshold must be at least 1.");
+        }
+
+        return options;
+    }
+
+    private static ValidateManifestOptions ParseValidateManifestOptions(string[] args)
+    {
+        var options = new ValidateManifestOptions();
+        for (var index = 1; index < args.Length; index++)
+        {
+            var arg = args[index];
+            switch (arg)
+            {
+                case "--manifest":
+                    options.ManifestPath = ReadValue(args, ref index, arg);
+                    break;
+                case "--output":
+                    options.OutputPath = ReadValue(args, ref index, arg);
+                    break;
+                default:
+                    throw new ArgumentException("Unknown validate-manifest option: " + arg);
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(options.ManifestPath))
+        {
+            throw new ArgumentException("Missing required option --manifest.");
         }
 
         return options;
@@ -427,6 +468,7 @@ internal static class Program
         writer.WriteLine("  playback-quality compare --baseline <report.json> --candidate <report.json> [--previous <comparison.json>...] [--stall-threshold <n>] [--output <comparison.json>]");
         writer.WriteLine("  playback-quality summarize --comparison <comparison.json> [--comparison <comparison.json>...] [--output <suite.json>]");
         writer.WriteLine("  playback-quality compare-suite --baseline-dir <reports-dir> --candidate-dir <reports-dir> [--previous-comparisons-dir <comparison-dir>] [--comparisons-dir <comparison-dir>] [--stall-threshold <n>] [--output <suite.json>]");
+        writer.WriteLine("  playback-quality validate-manifest --manifest <reference-manifest.json> [--output <validation.json>]");
     }
 
     private sealed class CompareOptions
@@ -452,6 +494,12 @@ internal static class Program
         public string PreviousComparisonsDirectory { get; set; } = "";
         public string OutputPath { get; set; } = "";
         public int StallComparisonCountThreshold { get; set; } = 2;
+    }
+
+    private sealed class ValidateManifestOptions
+    {
+        public string ManifestPath { get; set; } = "";
+        public string OutputPath { get; set; } = "";
     }
 
     private sealed class ReportPair

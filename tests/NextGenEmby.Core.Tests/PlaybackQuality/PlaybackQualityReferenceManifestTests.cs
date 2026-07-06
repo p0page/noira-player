@@ -1,0 +1,116 @@
+using NextGenEmby.Core.PlaybackQuality;
+using Xunit;
+
+namespace NextGenEmby.Core.Tests.PlaybackQuality;
+
+public sealed class PlaybackQualityReferenceManifestTests
+{
+    [Fact]
+    public void Validate_Accepts_Unique_Cases_With_Expected_Source_Metadata()
+    {
+        var manifest = new PlaybackQualityReferenceManifest
+        {
+            SchemaVersion = 1
+        };
+        manifest.Cases.Add(CreateCase(
+            "netflix/chimera-4k-2398-hdr-pq",
+            tier: 2,
+            purpose: "hdr-output"));
+        manifest.Cases.Add(CreateCase(
+            "jellyfin/dv-profile5-hevc-4k",
+            tier: 3,
+            purpose: "dv-reject"));
+
+        var result = PlaybackQualityReferenceManifestValidator.Validate(manifest);
+
+        Assert.True(result.IsValid);
+        Assert.Empty(result.Errors);
+        Assert.Equal(2, result.CaseCount);
+        Assert.Contains(2, result.Tiers);
+        Assert.Contains(3, result.Tiers);
+        Assert.Contains("hdr-output", result.Purposes);
+        Assert.Contains("dv-reject", result.Purposes);
+    }
+
+    [Fact]
+    public void Validate_Rejects_Duplicate_Cases_And_Incomplete_Expected_Metadata()
+    {
+        var manifest = new PlaybackQualityReferenceManifest
+        {
+            SchemaVersion = 1
+        };
+        manifest.Cases.Add(CreateCase(
+            "duplicate",
+            tier: 5,
+            purpose: ""));
+        manifest.Cases[0].Uri = "";
+        manifest.Cases[0].Expected.Codec = "";
+        manifest.Cases[0].Expected.Width = 0;
+        manifest.Cases[0].Expected.Height = 0;
+        manifest.Cases[0].Expected.FrameRate = 0;
+        manifest.Cases[0].Expected.HdrKind = "";
+        manifest.Cases.Add(CreateCase(
+            "duplicate",
+            tier: 1,
+            purpose: "sdr-smoke"));
+
+        var result = PlaybackQualityReferenceManifestValidator.Validate(manifest);
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, error =>
+            error.Code == "case.duplicate-id" &&
+            error.CaseId == "duplicate");
+        Assert.Contains(result.Errors, error =>
+            error.Code == "case.uri.missing" &&
+            error.CaseId == "duplicate");
+        Assert.Contains(result.Errors, error =>
+            error.Code == "case.purpose.missing" &&
+            error.CaseId == "duplicate");
+        Assert.Contains(result.Errors, error =>
+            error.Code == "case.tier.invalid" &&
+            error.CaseId == "duplicate");
+        Assert.Contains(result.Errors, error =>
+            error.Code == "case.expected.codec.missing" &&
+            error.Signal == "expected.codec");
+        Assert.Contains(result.Errors, error =>
+            error.Code == "case.expected.frameRate.missing" &&
+            error.Signal == "expected.frameRate");
+        Assert.Contains(result.Errors, error =>
+            error.Code == "case.expected.hdrKind.missing" &&
+            error.Signal == "expected.hdrKind");
+        Assert.Contains(result.Errors, error =>
+            error.Code == "case.expected.width.missing" &&
+            error.Signal == "expected.width");
+        Assert.Contains(result.Errors, error =>
+            error.Code == "case.expected.height.missing" &&
+            error.Signal == "expected.height");
+    }
+
+    private static PlaybackQualityReferenceCase CreateCase(
+        string caseId,
+        int tier,
+        string purpose)
+    {
+        var referenceCase = new PlaybackQualityReferenceCase
+        {
+            CaseId = caseId,
+            Uri = "https://example.invalid/" + caseId + ".mp4",
+            Tier = tier,
+            Expected = new PlaybackQualityExpected
+            {
+                Codec = "hevc",
+                Width = 3840,
+                Height = 2160,
+                FrameRate = 23.976,
+                HdrKind = "Hdr10"
+            }
+        };
+
+        if (!string.IsNullOrWhiteSpace(purpose))
+        {
+            referenceCase.Purpose.Add(purpose);
+        }
+
+        return referenceCase;
+    }
+}

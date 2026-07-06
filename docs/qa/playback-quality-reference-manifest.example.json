@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "cases": [
+    {
+      "caseId": "netflix/chimera-4k-2398-hdr-pq",
+      "uri": "https://download.opencontent.netflix.com/example/chimera-4k-2398-hdr-pq.mp4",
+      "tier": 2,
+      "purpose": [
+        "hdr-output",
+        "cadence-23.976",
+        "frame-pacing"
+      ],
+      "expected": {
+        "codec": "hevc",
+        "width": 3840,
+        "height": 2160,
+        "frameRate": 23.976,
+        "hdrKind": "Hdr10"
+      }
+    },
+    {
+      "caseId": "jellyfin/dv-profile5-hevc-4k",
+      "uri": "https://syd1.mirror.jellyfin.org/test-videos/example/dv-profile5-hevc-4k.mp4",
+      "tier": 3,
+      "purpose": [
+        "dv-reject",
+        "unsupported-source"
+      ],
+      "expected": {
+        "codec": "hevc",
+        "width": 3840,
+        "height": 2160,
+        "frameRate": 23.976,
+        "hdrKind": "DolbyVisionUnsupported"
+      }
+    }
+  ]
+}

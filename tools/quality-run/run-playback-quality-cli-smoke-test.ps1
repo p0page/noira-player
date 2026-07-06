@@ -21,6 +21,8 @@ try {
     $previousComparisonsDir = Join-Path $tempRoot 'previous-comparisons'
     $stallComparisonsDir = Join-Path $tempRoot 'stall-suite-comparisons'
     $stallSuitePath = Join-Path $tempRoot 'stall-suite.json'
+    $manifestPath = Join-Path $tempRoot 'reference-manifest.json'
+    $manifestValidationPath = Join-Path $tempRoot 'reference-manifest-validation.json'
 
     @'
 {
@@ -84,6 +86,74 @@ try {
   "modelAnalysis": {}
 }
 "@ | Set-Content -LiteralPath $candidateEnvelopePath -Encoding UTF8
+
+    @'
+{
+  "schemaVersion": 1,
+  "cases": [
+    {
+      "caseId": "netflix/chimera-4k-2398-hdr-pq",
+      "uri": "https://example.invalid/netflix/chimera-4k-2398-hdr-pq.mp4",
+      "tier": 2,
+      "purpose": [
+        "hdr-output",
+        "cadence-23.976"
+      ],
+      "expected": {
+        "codec": "hevc",
+        "width": 3840,
+        "height": 2160,
+        "frameRate": 23.976,
+        "hdrKind": "Hdr10"
+      }
+    },
+    {
+      "caseId": "jellyfin/dv-profile5-hevc-4k",
+      "uri": "https://example.invalid/jellyfin/dv-profile5-hevc-4k.mp4",
+      "tier": 3,
+      "purpose": [
+        "dv-reject"
+      ],
+      "expected": {
+        "codec": "hevc",
+        "width": 3840,
+        "height": 2160,
+        "frameRate": 23.976,
+        "hdrKind": "DolbyVisionUnsupported"
+      }
+    }
+  ]
+}
+'@ | Set-Content -LiteralPath $manifestPath -Encoding UTF8
+
+    Push-Location $repoRoot
+    try {
+        dotnet run `
+            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
+            --no-build `
+            -- validate-manifest `
+            --manifest $manifestPath `
+            --output $manifestValidationPath
+        if ($LASTEXITCODE -ne 0) {
+            throw 'playback quality CLI validate-manifest returned a non-zero exit code.'
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    $manifestValidation = Get-Content -Raw -LiteralPath $manifestValidationPath | ConvertFrom-Json
+    if ($manifestValidation.isValid -ne $true) {
+        throw 'Expected playback quality CLI validate-manifest output to be valid.'
+    }
+
+    if ($manifestValidation.caseCount -ne 2) {
+        throw 'Expected playback quality CLI validate-manifest output to include two cases.'
+    }
+
+    if (-not ($manifestValidation.purposes | Where-Object { $_ -eq 'hdr-output' })) {
+        throw 'Expected playback quality CLI validate-manifest output to include hdr-output purpose.'
+    }
 
     Push-Location $repoRoot
     try {

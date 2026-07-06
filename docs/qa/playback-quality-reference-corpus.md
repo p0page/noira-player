@@ -150,6 +150,16 @@
 - Jellyfish HEVC 10-bit 4K 200Mbps。
 - Jellyfin 高码率 HDR10 样本。
 
+## Manifest 校验
+
+参考素材集应使用 `PlaybackQualityReferenceManifest` 描述，并在进入自动化播放前先通过 CLI 校验：
+
+```powershell
+dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- validate-manifest --manifest docs\qa\playback-quality-reference-manifest.example.json --output manifest-validation.json
+```
+
+校验会检查 `caseId` 唯一性、`uri`、`tier`、`purpose`，以及 `expected.codec/width/height/frameRate/hdrKind`。这些字段不完整时，模型不应启动播放优化，因为它无法确认当前样本是不是预期素材。
+
 ## 后续落地
 
 下一步适合新增一个不绑定 App 的 manifest 格式，例如：
