@@ -6,6 +6,31 @@ This checklist is the required local verification path after every meaningful UI
 
 Mouse is allowed only for operating external tooling, window management, or closing system prompts that cannot be reached by app input. Do not use mouse clicks inside the app content to pass a checklist item.
 
+## Run Log
+
+### 2026-07-06 - Artwork Policy And Home Library Cards
+
+App version: `0.1.0.69`
+
+Scope:
+
+- Emby API requests now ask for `Primary`, `Backdrop`, `Thumb`, `Banner`, and `Logo` images with `EnableImages=true`.
+- Library cards prefer wide artwork (`Thumb`, then `Backdrop`, then `Banner`, then `Primary`) so server-provided collection/folder covers are used before falling back to item posters.
+- Home hero and Details artwork now use the same central artwork policy.
+
+Keyboard-only validation with Computer Use:
+
+- Home restored the saved Emby session and showed real media libraries including `热门电影`, `热门剧集`, `豆瓣高分`, `Netflix`, `国产剧`, and `国漫`.
+- `Down` from the Home hero reached the first visible media library card, with a clear focus frame.
+- `Enter` on `热门电影` opened the matching library and focused the first poster.
+- `Enter` on the first poster opened Details; initial focus landed on `Play`.
+- `Escape` from Details returned to the same library card.
+- `Escape` from Library returned Home. Home briefly showed a loading/empty state, then recovered real Emby rows after the async reload completed.
+
+Follow-up:
+
+- The transient Home empty/loading state during back navigation should be improved by retaining the previous Home model while refresh is in flight.
+
 ## Input Map
 
 - D-pad up/down/left/right: Arrow keys.

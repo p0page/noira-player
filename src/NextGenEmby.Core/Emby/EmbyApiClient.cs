@@ -13,6 +13,7 @@ namespace NextGenEmby.Core.Emby
     public sealed class EmbyApiClient
     {
         private const string ItemListFields = "Overview,ProductionYear,RunTimeTicks,PrimaryImageAspectRatio,ChildCount,UserData";
+        private const string ImageTypeList = "Primary,Backdrop,Thumb,Banner,Logo";
 
         private readonly HttpClient _http;
         private readonly EmbyClientOptions _options;
@@ -57,9 +58,15 @@ namespace NextGenEmby.Core.Emby
 
         public async Task<IReadOnlyList<EmbyMediaItem>> GetLatestItemsAsync(EmbySession session)
         {
+            var parameters = new List<string>();
+            AddQueryParameter(parameters, "IncludeItemTypes", "Movie,Series,Episode");
+            AddQueryParameter(parameters, "Fields", ItemListFields);
+            AddQueryParameter(parameters, "Limit", "50");
+            AddImageQueryParameters(parameters);
+
             using var request = new HttpRequestMessage(
                 HttpMethod.Get,
-                $"Users/{EscapeUriComponent(session.UserId)}/Items/Latest?IncludeItemTypes=Movie,Series,Episode&Fields=Overview,ProductionYear,RunTimeTicks,PrimaryImageAspectRatio&Limit=50");
+                $"Users/{EscapeUriComponent(session.UserId)}/Items/Latest?{string.Join("&", parameters)}");
             EmbyAuthorization.Apply(request, _options, session);
 
             using var response = await _http.SendAsync(request).ConfigureAwait(false);
@@ -80,6 +87,7 @@ namespace NextGenEmby.Core.Emby
             AddQueryParameter(parameters, "IncludeItemTypes", includeItemTypes);
             AddQueryParameter(parameters, "Fields", ItemListFields);
             AddQueryParameter(parameters, "Limit", Math.Max(1, limit).ToString());
+            AddImageQueryParameters(parameters);
 
             using var request = new HttpRequestMessage(
                 HttpMethod.Get,
@@ -99,6 +107,7 @@ namespace NextGenEmby.Core.Emby
             AddQueryParameter(parameters, "IncludeItemTypes", "Movie,Episode");
             AddQueryParameter(parameters, "Fields", ItemListFields);
             AddQueryParameter(parameters, "Limit", Math.Max(1, limit).ToString());
+            AddImageQueryParameters(parameters);
 
             using var request = new HttpRequestMessage(
                 HttpMethod.Get,
@@ -114,9 +123,12 @@ namespace NextGenEmby.Core.Emby
 
         public async Task<IReadOnlyList<EmbyLibraryView>> GetUserViewsAsync(EmbySession session)
         {
+            var parameters = new List<string>();
+            AddImageQueryParameters(parameters);
+
             using var request = new HttpRequestMessage(
                 HttpMethod.Get,
-                $"Users/{EscapeUriComponent(session.UserId)}/Views");
+                $"Users/{EscapeUriComponent(session.UserId)}/Views?{string.Join("&", parameters)}");
             EmbyAuthorization.Apply(request, _options, session);
 
             using var response = await _http.SendAsync(request).ConfigureAwait(false);
@@ -148,6 +160,7 @@ namespace NextGenEmby.Core.Emby
             var parameters = new List<string>();
             AddQueryParameter(parameters, "Limit", Math.Max(1, limit).ToString());
             AddQueryParameter(parameters, "Fields", ItemListFields);
+            AddImageQueryParameters(parameters);
 
             using var request = new HttpRequestMessage(
                 HttpMethod.Get,
@@ -167,6 +180,7 @@ namespace NextGenEmby.Core.Emby
             AddQueryParameter(parameters, "UserId", session.UserId);
             AddQueryParameter(parameters, "Fields", ItemListFields);
             AddQueryParameter(parameters, "Limit", Math.Max(1, limit).ToString());
+            AddImageQueryParameters(parameters);
 
             using var request = new HttpRequestMessage(
                 HttpMethod.Get,
@@ -227,10 +241,13 @@ namespace NextGenEmby.Core.Emby
 
         public async Task<EmbyMediaItem> GetItemAsync(EmbySession session, string itemId)
         {
+            var parameters = new List<string>();
+            AddQueryParameter(parameters, "Fields", "Overview,ProductionYear,RunTimeTicks,ChildCount,MediaSources,UserData");
+            AddImageQueryParameters(parameters);
+
             using var request = new HttpRequestMessage(
                 HttpMethod.Get,
-                $"Users/{EscapeUriComponent(session.UserId)}/Items/{EscapeUriComponent(itemId)}" +
-                "?Fields=Overview%2CProductionYear%2CRunTimeTicks%2CChildCount%2CMediaSources%2CUserData");
+                $"Users/{EscapeUriComponent(session.UserId)}/Items/{EscapeUriComponent(itemId)}?{string.Join("&", parameters)}");
             EmbyAuthorization.Apply(request, _options, session);
 
             using var response = await _http.SendAsync(request).ConfigureAwait(false);
@@ -347,8 +364,16 @@ namespace NextGenEmby.Core.Emby
             AddQueryParameter(parameters, "Limit", Math.Max(1, query.Limit).ToString());
             AddQueryParameter(parameters, "Recursive", query.Recursive ? "true" : "false");
             AddQueryParameter(parameters, "Fields", ItemListFields);
+            AddImageQueryParameters(parameters);
 
             return $"Users/{EscapeUriComponent(session.UserId)}/Items?{string.Join("&", parameters)}";
+        }
+
+        private static void AddImageQueryParameters(List<string> parameters)
+        {
+            AddQueryParameter(parameters, "EnableImages", "true");
+            AddQueryParameter(parameters, "EnableImageTypes", ImageTypeList);
+            AddQueryParameter(parameters, "ImageTypeLimit", "1");
         }
 
         private static void AddQueryParameter(List<string> parameters, string name, string value)
@@ -373,9 +398,13 @@ namespace NextGenEmby.Core.Emby
                 ThumbImageTag = imageTags != null && imageTags.TryGetValue("Thumb", out var thumb) ? thumb ?? "" : view.ParentThumbImageTag ?? "",
                 PrimaryImageTag = imageTags != null && imageTags.TryGetValue("Primary", out var primary) ? primary ?? "" : "",
                 BackdropImageTag = backdropImageTags != null && backdropImageTags.Count > 0 ? backdropImageTags[0] ?? "" : "",
+                BannerImageTag = imageTags != null && imageTags.TryGetValue("Banner", out var banner) ? banner ?? "" : "",
+                LogoImageTag = imageTags != null && imageTags.TryGetValue("Logo", out var logo) ? logo ?? "" : "",
                 ThumbImageItemId = view.ParentThumbItemId ?? "",
                 PrimaryImageItemId = view.PrimaryImageItemId ?? "",
-                BackdropImageItemId = view.ParentBackdropItemId ?? ""
+                BackdropImageItemId = view.ParentBackdropItemId ?? "",
+                BannerImageItemId = view.ParentBannerItemId ?? "",
+                LogoImageItemId = view.ParentLogoItemId ?? ""
             };
         }
 
@@ -408,8 +437,16 @@ namespace NextGenEmby.Core.Emby
                 Overview = item.Overview ?? "",
                 ProductionYear = item.ProductionYear,
                 RunTimeTicks = item.RunTimeTicks,
+                ThumbImageTag = imageTags != null && imageTags.TryGetValue("Thumb", out var thumb) ? thumb ?? "" : item.ParentThumbImageTag ?? "",
                 PrimaryImageTag = imageTags != null && imageTags.TryGetValue("Primary", out var primary) ? primary ?? "" : "",
                 BackdropImageTag = backdropImageTags != null && backdropImageTags.Count > 0 ? backdropImageTags[0] ?? "" : "",
+                BannerImageTag = imageTags != null && imageTags.TryGetValue("Banner", out var banner) ? banner ?? "" : "",
+                LogoImageTag = imageTags != null && imageTags.TryGetValue("Logo", out var logo) ? logo ?? "" : "",
+                ThumbImageItemId = item.ParentThumbItemId ?? "",
+                PrimaryImageItemId = item.PrimaryImageItemId ?? "",
+                BackdropImageItemId = item.ParentBackdropItemId ?? "",
+                BannerImageItemId = item.ParentBannerItemId ?? "",
+                LogoImageItemId = item.ParentLogoItemId ?? "",
                 ParentId = item.ParentId ?? "",
                 SeriesId = item.SeriesId ?? "",
                 IndexNumber = item.IndexNumber,
@@ -637,6 +674,8 @@ namespace NextGenEmby.Core.Emby
             public string PrimaryImageItemId { get; set; } = "";
             public string ParentBackdropItemId { get; set; } = "";
             public string ParentThumbItemId { get; set; } = "";
+            public string ParentBannerItemId { get; set; } = "";
+            public string ParentLogoItemId { get; set; } = "";
             public string ParentThumbImageTag { get; set; } = "";
         }
 
@@ -675,6 +714,12 @@ namespace NextGenEmby.Core.Emby
             public UserDataDto UserData { get; set; } = new UserDataDto();
             public Dictionary<string, string> ImageTags { get; set; } = new Dictionary<string, string>();
             public List<string> BackdropImageTags { get; set; } = new List<string>();
+            public string PrimaryImageItemId { get; set; } = "";
+            public string ParentBackdropItemId { get; set; } = "";
+            public string ParentThumbItemId { get; set; } = "";
+            public string ParentBannerItemId { get; set; } = "";
+            public string ParentLogoItemId { get; set; } = "";
+            public string ParentThumbImageTag { get; set; } = "";
         }
 
         private sealed class PlaybackInfoDto

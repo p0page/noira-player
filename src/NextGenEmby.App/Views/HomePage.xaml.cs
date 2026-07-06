@@ -512,22 +512,25 @@ namespace NextGenEmby.App.Views
             HeroBackdropImage.Source = null;
             HeroPosterFallbackBlock.Visibility = Visibility.Visible;
 
-            if (_client != null && _session != null && !string.IsNullOrWhiteSpace(item.PrimaryImageTag))
+            var posterArtwork = EmbyArtworkPolicy.SelectPosterArtwork(item, 520);
+            if (_client != null && _session != null && posterArtwork != null)
             {
-                HeroPosterImage.Source = new BitmapImage(new Uri(_client.GetImageUrl(_session, item.Id, "Primary", 520)));
+                HeroPosterImage.Source = new BitmapImage(new Uri(_client.GetImageUrl(
+                    _session,
+                    posterArtwork.ItemId,
+                    posterArtwork.ImageType,
+                    posterArtwork.MaxWidth)));
                 HeroPosterFallbackBlock.Visibility = Visibility.Collapsed;
             }
 
-            if (_client != null && _session != null)
+            var heroArtwork = EmbyArtworkPolicy.SelectHeroArtwork(item, 1280);
+            if (_client != null && _session != null && heroArtwork != null)
             {
-                if (!string.IsNullOrWhiteSpace(item.BackdropImageTag))
-                {
-                    HeroBackdropImage.Source = new BitmapImage(new Uri(_client.GetImageUrl(_session, item.Id, "Backdrop", 1280)));
-                }
-                else if (!string.IsNullOrWhiteSpace(item.PrimaryImageTag))
-                {
-                    HeroBackdropImage.Source = new BitmapImage(new Uri(_client.GetImageUrl(_session, item.Id, "Primary", 720)));
-                }
+                HeroBackdropImage.Source = new BitmapImage(new Uri(_client.GetImageUrl(
+                    _session,
+                    heroArtwork.ItemId,
+                    heroArtwork.ImageType,
+                    heroArtwork.MaxWidth)));
             }
         }
 
@@ -675,43 +678,7 @@ namespace NextGenEmby.App.Views
                 return null;
             }
 
-            var imageType = "";
-            var imageItemId = view.Id;
-            if (!string.IsNullOrWhiteSpace(view.ThumbImageTag))
-            {
-                imageType = "Thumb";
-                if (!string.IsNullOrWhiteSpace(view.ThumbImageItemId))
-                {
-                    imageItemId = view.ThumbImageItemId;
-                }
-            }
-            else if (!string.IsNullOrWhiteSpace(view.BackdropImageTag))
-            {
-                imageType = "Backdrop";
-                if (!string.IsNullOrWhiteSpace(view.BackdropImageItemId))
-                {
-                    imageItemId = view.BackdropImageItemId;
-                }
-            }
-            else if (!string.IsNullOrWhiteSpace(view.PrimaryImageTag))
-            {
-                imageType = "Primary";
-                if (!string.IsNullOrWhiteSpace(view.PrimaryImageItemId))
-                {
-                    imageItemId = view.PrimaryImageItemId;
-                }
-            }
-
-            if (string.IsNullOrWhiteSpace(imageType) || string.IsNullOrWhiteSpace(imageItemId))
-            {
-                return null;
-            }
-
-            return new ImageBrush
-            {
-                ImageSource = new BitmapImage(new Uri(_client.GetImageUrl(_session, imageItemId, imageType, maxWidth))),
-                Stretch = Stretch.UniformToFill
-            };
+            return CreateArtworkBrush(EmbyArtworkPolicy.SelectLibraryWideArtwork(view, maxWidth));
         }
 
         private void AddRow(
@@ -848,11 +815,16 @@ namespace NextGenEmby.App.Views
                 Background = new SolidColorBrush(Color.FromArgb(255, 18, 29, 42))
             };
 
-            if (_client != null && _session != null && !string.IsNullOrWhiteSpace(item.PrimaryImageTag))
+            var posterArtwork = EmbyArtworkPolicy.SelectPosterArtwork(item, 420);
+            if (_client != null && _session != null && posterArtwork != null)
             {
                 root.Background = new ImageBrush
                 {
-                    ImageSource = new BitmapImage(new Uri(_client.GetImageUrl(_session, item.Id, "Primary", 420))),
+                    ImageSource = new BitmapImage(new Uri(_client.GetImageUrl(
+                        _session,
+                        posterArtwork.ItemId,
+                        posterArtwork.ImageType,
+                        posterArtwork.MaxWidth))),
                     Stretch = Stretch.UniformToFill
                 };
             }
@@ -1022,28 +994,27 @@ namespace NextGenEmby.App.Views
                 return null;
             }
 
-            var imageType = "";
-            if (preferBackdrop && !string.IsNullOrWhiteSpace(item.BackdropImageTag))
-            {
-                imageType = "Backdrop";
-            }
-            else if (!string.IsNullOrWhiteSpace(item.PrimaryImageTag))
-            {
-                imageType = "Primary";
-            }
-            else if (!preferBackdrop && !string.IsNullOrWhiteSpace(item.BackdropImageTag))
-            {
-                imageType = "Backdrop";
-            }
+            var candidate = preferBackdrop
+                ? EmbyArtworkPolicy.SelectHeroArtwork(item, maxWidth)
+                : EmbyArtworkPolicy.SelectPosterArtwork(item, maxWidth);
 
-            if (string.IsNullOrWhiteSpace(imageType))
+            return CreateArtworkBrush(candidate);
+        }
+
+        private ImageBrush? CreateArtworkBrush(EmbyImageCandidate? candidate)
+        {
+            if (_client == null || _session == null || candidate == null)
             {
                 return null;
             }
 
             return new ImageBrush
             {
-                ImageSource = new BitmapImage(new Uri(_client.GetImageUrl(_session, item.Id, imageType, maxWidth))),
+                ImageSource = new BitmapImage(new Uri(_client.GetImageUrl(
+                    _session,
+                    candidate.ItemId,
+                    candidate.ImageType,
+                    candidate.MaxWidth))),
                 Stretch = Stretch.UniformToFill
             };
         }

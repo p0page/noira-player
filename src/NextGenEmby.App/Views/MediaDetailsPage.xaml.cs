@@ -207,15 +207,25 @@ namespace NextGenEmby.App.Views
             {
                 ResetArtwork();
 
-                if (!string.IsNullOrWhiteSpace(item.PrimaryImageTag))
+                var posterArtwork = EmbyArtworkPolicy.SelectPosterArtwork(item, 720);
+                if (posterArtwork != null)
                 {
-                    PosterImage.Source = new BitmapImage(new Uri(client.GetImageUrl(session, item.Id, "Primary", 720)));
+                    PosterImage.Source = new BitmapImage(new Uri(client.GetImageUrl(
+                        session,
+                        posterArtwork.ItemId,
+                        posterArtwork.ImageType,
+                        posterArtwork.MaxWidth)));
                     PosterFallbackBlock.Visibility = Visibility.Collapsed;
                 }
 
-                if (!string.IsNullOrWhiteSpace(item.BackdropImageTag))
+                var backdropArtwork = EmbyArtworkPolicy.SelectHeroArtwork(item, 1920);
+                if (backdropArtwork != null)
                 {
-                    BackdropImage.Source = new BitmapImage(new Uri(client.GetImageUrl(session, item.Id, "Backdrop", 1920)));
+                    BackdropImage.Source = new BitmapImage(new Uri(client.GetImageUrl(
+                        session,
+                        backdropArtwork.ItemId,
+                        backdropArtwork.ImageType,
+                        backdropArtwork.MaxWidth)));
                 }
             }
             catch

@@ -96,9 +96,12 @@ public sealed class EmbyLibraryTests
 
         var request = handler.LastRequest!;
         Assert.Equal("/Users/user%201%2Fslash/Items/Latest", request.RequestUri!.AbsolutePath);
-        Assert.Equal(
-            "?IncludeItemTypes=Movie,Series,Episode&Fields=Overview,ProductionYear,RunTimeTicks,PrimaryImageAspectRatio&Limit=50",
-            request.RequestUri.Query);
+        Assert.Contains("IncludeItemTypes=Movie%2CSeries%2CEpisode", request.RequestUri.Query);
+        Assert.Contains("Fields=Overview%2CProductionYear%2CRunTimeTicks%2CPrimaryImageAspectRatio%2CChildCount%2CUserData", request.RequestUri.Query);
+        Assert.Contains("Limit=50", request.RequestUri.Query);
+        Assert.Contains("EnableImages=true", request.RequestUri.Query);
+        Assert.Contains("EnableImageTypes=Primary%2CBackdrop%2CThumb%2CBanner%2CLogo", request.RequestUri.Query);
+        Assert.Contains("ImageTypeLimit=1", request.RequestUri.Query);
     }
 
     [Fact]
@@ -205,12 +208,16 @@ public sealed class EmbyLibraryTests
                   "CollectionType": "movies",
                   "ImageTags": {
                     "Primary": "primary-tag",
-                    "Thumb": "thumb-tag"
+                    "Thumb": "thumb-tag",
+                    "Banner": "banner-tag",
+                    "Logo": "logo-tag"
                   },
                   "BackdropImageTags": [ "backdrop-tag" ],
                   "PrimaryImageItemId": "primary-owner",
                   "ParentBackdropItemId": "backdrop-owner",
                   "ParentThumbItemId": "thumb-owner",
+                  "ParentBannerItemId": "banner-owner",
+                  "ParentLogoItemId": "logo-owner",
                   "ParentThumbImageTag": "parent-thumb-tag"
                 }
               ],
@@ -225,9 +232,13 @@ public sealed class EmbyLibraryTests
         Assert.Equal("thumb-tag", view.ThumbImageTag);
         Assert.Equal("primary-tag", view.PrimaryImageTag);
         Assert.Equal("backdrop-tag", view.BackdropImageTag);
+        Assert.Equal("banner-tag", view.BannerImageTag);
+        Assert.Equal("logo-tag", view.LogoImageTag);
         Assert.Equal("primary-owner", view.PrimaryImageItemId);
         Assert.Equal("backdrop-owner", view.BackdropImageItemId);
         Assert.Equal("thumb-owner", view.ThumbImageItemId);
+        Assert.Equal("banner-owner", view.BannerImageItemId);
+        Assert.Equal("logo-owner", view.LogoImageItemId);
     }
 
     [Fact]
@@ -404,6 +415,18 @@ public sealed class EmbyLibraryTests
                   "Type": "Movie",
                   "ProductionYear": 2024,
                   "RunTimeTicks": 72000000000,
+                  "ImageTags": {
+                    "Primary": "primary-tag",
+                    "Thumb": "thumb-tag",
+                    "Banner": "banner-tag",
+                    "Logo": "logo-tag"
+                  },
+                  "BackdropImageTags": [ "backdrop-tag" ],
+                  "PrimaryImageItemId": "primary-owner",
+                  "ParentBackdropItemId": "backdrop-owner",
+                  "ParentThumbItemId": "thumb-owner",
+                  "ParentBannerItemId": "banner-owner",
+                  "ParentLogoItemId": "logo-owner",
                   "UserData": {
                     "Played": false,
                     "PlaybackPositionTicks": 1230000000,
@@ -434,11 +457,24 @@ public sealed class EmbyLibraryTests
         Assert.False(item.UserData.Played);
         Assert.Equal(1230000000, item.UserData.PlaybackPositionTicks);
         Assert.Equal(17.5, item.UserData.PlayedPercentage);
+        Assert.Equal("thumb-tag", item.ThumbImageTag);
+        Assert.Equal("primary-tag", item.PrimaryImageTag);
+        Assert.Equal("backdrop-tag", item.BackdropImageTag);
+        Assert.Equal("banner-tag", item.BannerImageTag);
+        Assert.Equal("logo-tag", item.LogoImageTag);
+        Assert.Equal("primary-owner", item.PrimaryImageItemId);
+        Assert.Equal("backdrop-owner", item.BackdropImageItemId);
+        Assert.Equal("thumb-owner", item.ThumbImageItemId);
+        Assert.Equal("banner-owner", item.BannerImageItemId);
+        Assert.Equal("logo-owner", item.LogoImageItemId);
         Assert.Equal("/Users/user-1/Items", handler.LastRequest!.RequestUri!.AbsolutePath);
         Assert.Contains("ParentId=movies", handler.LastRequest.RequestUri.Query);
         Assert.Contains("IncludeItemTypes=Movie", handler.LastRequest.RequestUri.Query);
         Assert.Contains("StartIndex=20", handler.LastRequest.RequestUri.Query);
         Assert.Contains("Limit=40", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("EnableImages=true", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("EnableImageTypes=Primary%2CBackdrop%2CThumb%2CBanner%2CLogo", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("ImageTypeLimit=1", handler.LastRequest.RequestUri.Query);
     }
 
     [Fact]
