@@ -15,6 +15,7 @@ using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Media.Imaging;
+using Windows.UI.Xaml.Navigation;
 using Windows.System;
 
 namespace NextGenEmby.App.Views
@@ -32,10 +33,13 @@ namespace NextGenEmby.App.Views
         private readonly List<Button> _rowFirstButtons = new List<Button>();
         private readonly Dictionary<Button, int> _rowButtonIndexes = new Dictionary<Button, int>();
         private int _loadGeneration;
+        private bool _hasRenderedHomeContent;
+        private bool _isLoadingHome;
 
         public HomePage()
         {
             InitializeComponent();
+            NavigationCacheMode = NavigationCacheMode.Required;
             Loaded += HomePage_OnLoaded;
             Unloaded += HomePage_OnUnloaded;
             HeroPlayButton.GotFocus += HomeFocusTarget_OnGotFocus;
@@ -44,9 +48,14 @@ namespace NextGenEmby.App.Views
 
         private async void HomePage_OnLoaded(object sender, RoutedEventArgs e)
         {
-            Loaded -= HomePage_OnLoaded;
+            _isUnloaded = false;
             AttachHomeKeyHandler();
-            await LoadHomeAsync();
+
+            var decision = HomeLoadPolicy.ForPageLoaded(_hasRenderedHomeContent, _isLoadingHome);
+            if (decision.ShouldLoad)
+            {
+                await LoadHomeAsync(decision);
+            }
         }
 
         private void HomePage_OnUnloaded(object sender, RoutedEventArgs e)
@@ -58,7 +67,7 @@ namespace NextGenEmby.App.Views
 
         private async void Refresh_OnClick(object sender, RoutedEventArgs e)
         {
-            await LoadHomeAsync();
+            await LoadHomeAsync(HomeLoadPolicy.ForRefreshRequested(_hasRenderedHomeContent));
         }
 
         private void MoviesLibrary_OnClick(object sender, RoutedEventArgs e)
@@ -342,14 +351,22 @@ namespace NextGenEmby.App.Views
             return false;
         }
 
-        private async Task LoadHomeAsync()
+        private async Task LoadHomeAsync(HomeLoadDecision decision)
         {
+            if (_isLoadingHome)
+            {
+                return;
+            }
+
+            _isLoadingHome = true;
             var loadGeneration = ++_loadGeneration;
 
             RefreshButton.IsEnabled = false;
-            StatusBlock.Text = "Loading...";
-            ClearRows();
-            ClearHero();
+            StatusBlock.Text = decision.StatusText;
+            if (decision.ShouldClearExistingContent)
+            {
+                ClearHomeContent();
+            }
 
             try
             {
@@ -362,6 +379,7 @@ namespace NextGenEmby.App.Views
                 _session = session;
                 if (session == null)
                 {
+                    ClearHomeContent();
                     StatusBlock.Text = "Sign in first.";
                     return;
                 }
@@ -400,14 +418,17 @@ namespace NextGenEmby.App.Views
                     return;
                 }
 
-                ClearHero();
-                LibrariesPanel.Children.Clear();
-                _libraryButtons.Clear();
-                ClearRows();
-                StatusBlock.Text = "Unable to load home.";
+                var failure = HomeLoadPolicy.ForLoadFailure(_hasRenderedHomeContent);
+                if (failure.ShouldClearExistingContent)
+                {
+                    ClearHomeContent();
+                }
+
+                StatusBlock.Text = failure.StatusText;
             }
             finally
             {
+                _isLoadingHome = false;
                 if (CanApplyLoad(loadGeneration))
                 {
                     RefreshButton.IsEnabled = true;
@@ -432,6 +453,7 @@ namespace NextGenEmby.App.Views
         {
             ClearRows();
             RenderLibraries(libraryViews, libraryPreviews);
+            _hasRenderedHomeContent = true;
 
             EmbyMediaItem? heroItem = null;
             if (continueItems != null && continueItems.Count > 0)
@@ -544,6 +566,15 @@ namespace NextGenEmby.App.Views
             HeroPosterFallbackBlock.Visibility = Visibility.Visible;
             HeroPlayButton.IsEnabled = false;
             HeroDetailsButton.IsEnabled = false;
+        }
+
+        private void ClearHomeContent()
+        {
+            ClearHero();
+            LibrariesPanel.Children.Clear();
+            _libraryButtons.Clear();
+            ClearRows();
+            _hasRenderedHomeContent = false;
         }
 
         private void RenderLibraries(

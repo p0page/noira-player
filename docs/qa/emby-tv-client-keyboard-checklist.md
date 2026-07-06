@@ -31,6 +31,23 @@ Follow-up:
 
 - The transient Home empty/loading state during back navigation should be improved by retaining the previous Home model while refresh is in flight.
 
+### 2026-07-06 - Cached Home Return
+
+App version: `0.1.0.70`
+
+Scope:
+
+- Home now uses page caching plus a small load policy so returning from Library/Details preserves the last rendered Home content.
+- Manual Home refresh keeps the existing rails visible while new data loads.
+- Refresh failure with existing content shows a non-destructive status instead of replacing the screen with an empty state.
+
+Keyboard-only validation with Computer Use:
+
+- Relaunched installed `0.1.0.70` and waited for real Emby data and artwork.
+- `Down` from Home hero, `Enter` on `热门电影`, `Enter` on the first poster, `Escape` back to Library, and `Escape` back to Home all used keyboard events only.
+- Immediate Home snapshot after the second `Escape` retained the hero, media libraries, and Continue Watching rows.
+- Immediate Home snapshot did not contain `Nothing queued yet` or `Loading...`.
+
 ## Input Map
 
 - D-pad up/down/left/right: Arrow keys.
