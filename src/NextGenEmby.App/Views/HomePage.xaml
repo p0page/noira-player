@@ -39,11 +39,11 @@
                 </Grid>
 
                 <Border
-                    Height="246"
+                    Height="{StaticResource TvHomeHeroHeight}"
                     Background="{StaticResource AppSurfaceBrush}"
                     BorderBrush="{StaticResource AppHairlineBrush}"
                     BorderThickness="1"
-                    CornerRadius="8">
+                    CornerRadius="{StaticResource TvHomeHeroCornerRadius}">
                     <Grid>
                         <Image
                             x:Name="HeroBackdropImage"
@@ -60,31 +60,31 @@
                             </Border.Background>
                         </Border>
                         <Border
-                            Width="4"
-                            Margin="0,24,0,24"
+                            Width="{StaticResource TvHomeHeroAccentWidth}"
+                            Margin="{StaticResource TvHomeHeroAccentMargin}"
                             HorizontalAlignment="Left"
                             Background="{StaticResource AppAccentBrush}"
-                            CornerRadius="0,3,3,0" />
+                            CornerRadius="{StaticResource TvHomeHeroAccentCornerRadius}" />
 
-                        <Grid Padding="26,24,26,24" ColumnSpacing="30">
+                        <Grid Padding="{StaticResource TvHomeHeroPadding}" ColumnSpacing="{StaticResource TvHomeHeroColumnSpacing}">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="182" />
+                                <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
 
                             <StackPanel
                                 Grid.Column="0"
                                 VerticalAlignment="Center"
-                                Spacing="12">
+                                Spacing="{StaticResource TvHomeHeroContentSpacing}">
                                 <TextBlock
                                     Text="Continue watching"
-                                    FontSize="17"
+                                    FontSize="{StaticResource TvHomeHeroEyebrowFontSize}"
                                     FontWeight="SemiBold"
                                     Foreground="{StaticResource AppWarmBrush}" />
                                 <Image
                                     x:Name="HeroLogoImage"
-                                    MaxWidth="430"
-                                    MaxHeight="82"
+                                    MaxWidth="{StaticResource TvHomeHeroLogoMaxWidth}"
+                                    MaxHeight="{StaticResource TvHomeHeroLogoMaxHeight}"
                                     HorizontalAlignment="Left"
                                     Stretch="Uniform"
                                     Visibility="Collapsed"
@@ -92,7 +92,7 @@
                                     ImageFailed="HeroLogoImage_OnImageFailed" />
                                 <TextBlock
                                     x:Name="HeroTitleBlock"
-                                    FontSize="38"
+                                    FontSize="{StaticResource TvHomeHeroTitleFontSize}"
                                     FontWeight="SemiBold"
                                     Foreground="{StaticResource AppTextBrush}"
                                     TextWrapping="WrapWholeWords"
@@ -100,7 +100,7 @@
                                     TextTrimming="CharacterEllipsis" />
                                 <TextBlock
                                     x:Name="HeroMetaBlock"
-                                    FontSize="18"
+                                    FontSize="{StaticResource TvHomeHeroMetaFontSize}"
                                     Foreground="{StaticResource AppMutedTextBrush}"
                                     TextWrapping="Wrap"
                                     MaxLines="2"
@@ -140,14 +140,14 @@
 
                             <Border
                                 Grid.Column="1"
-                                Width="182"
-                                Height="232"
+                                Width="{StaticResource TvHomeHeroPosterWidth}"
+                                Height="{StaticResource TvHomeHeroPosterHeight}"
                                 HorizontalAlignment="Right"
                                 VerticalAlignment="Center"
                                 Background="{StaticResource AppRaisedSurfaceBrush}"
                                 BorderBrush="{StaticResource AppHairlineBrush}"
                                 BorderThickness="1"
-                                CornerRadius="7">
+                                CornerRadius="{StaticResource TvHomeHeroPosterCornerRadius}">
                                 <Grid>
                                     <Image
                                         x:Name="HeroPosterImage"
@@ -158,7 +158,7 @@
                                         Text="No artwork"
                                         HorizontalAlignment="Center"
                                         VerticalAlignment="Center"
-                                        FontSize="18"
+                                        FontSize="{StaticResource TvHomeHeroPosterFallbackFontSize}"
                                         Foreground="{StaticResource AppMutedTextBrush}" />
                                 </Grid>
                             </Border>

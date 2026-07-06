@@ -33,8 +33,10 @@ namespace NextGenEmby.App.Views
         private readonly List<Button> _libraryButtons = new List<Button>();
         private readonly List<Button> _sectionButtons = new List<Button>();
         private readonly List<Button> _rowFirstButtons = new List<Button>();
+        private readonly List<List<Button>> _rowButtons = new List<List<Button>>();
         private readonly List<Button?> _rowMoreButtons = new List<Button?>();
         private readonly Dictionary<Button, int> _rowButtonIndexes = new Dictionary<Button, int>();
+        private readonly Dictionary<Button, int> _rowButtonItemIndexes = new Dictionary<Button, int>();
         private readonly Dictionary<Button, int> _rowMoreButtonIndexes = new Dictionary<Button, int>();
         private int _loadGeneration;
         private bool _hasRenderedHomeContent;
@@ -269,7 +271,8 @@ namespace NextGenEmby.App.Views
                 _libraryButtons.Count,
                 _rowFirstButtons.Count,
                 CreateRowMoreAvailability(),
-                sectionCount: _sectionButtons.Count);
+                sectionCount: _sectionButtons.Count,
+                rowItemCounts: CreateRowItemCounts());
 
             return TryMoveFocus(ResolveHomeFocusControl(next));
         }
@@ -398,7 +401,7 @@ namespace NextGenEmby.App.Views
             var rowIndex = GetRowButtonIndex(control);
             if (rowIndex >= 0)
             {
-                return new HomeFocusTarget(HomeFocusZone.Row, rowIndex);
+                return new HomeFocusTarget(HomeFocusZone.Row, rowIndex, GetRowButtonItemIndex(control));
             }
 
             var rowMoreIndex = GetRowMoreButtonIndex(control);
@@ -432,9 +435,7 @@ namespace NextGenEmby.App.Views
                         ? _sectionButtons[target.Index]
                         : null;
                 case HomeFocusZone.Row:
-                    return target.Index >= 0 && target.Index < _rowFirstButtons.Count
-                        ? _rowFirstButtons[target.Index]
-                        : null;
+                    return ResolveRowButton(target.Index, target.ItemIndex);
                 case HomeFocusZone.RowMore:
                     return target.Index >= 0 && target.Index < _rowMoreButtons.Count
                         ? _rowMoreButtons[target.Index]
@@ -502,6 +503,29 @@ namespace NextGenEmby.App.Views
             return _rowButtonIndexes.TryGetValue(button, out rowIndex) ? rowIndex : -1;
         }
 
+        private int GetRowButtonItemIndex(Control? control)
+        {
+            var button = control as Button;
+            if (button == null)
+            {
+                return 0;
+            }
+
+            int itemIndex;
+            return _rowButtonItemIndexes.TryGetValue(button, out itemIndex) ? itemIndex : 0;
+        }
+
+        private Button? ResolveRowButton(int rowIndex, int itemIndex)
+        {
+            if (rowIndex < 0 || rowIndex >= _rowButtons.Count)
+            {
+                return null;
+            }
+
+            var buttons = _rowButtons[rowIndex];
+            return itemIndex >= 0 && itemIndex < buttons.Count ? buttons[itemIndex] : null;
+        }
+
         private int GetRowMoreButtonIndex(Control? control)
         {
             var button = control as Button;
@@ -523,6 +547,17 @@ namespace NextGenEmby.App.Views
             }
 
             return rowHasMore;
+        }
+
+        private int[] CreateRowItemCounts()
+        {
+            var counts = new int[_rowButtons.Count];
+            for (var index = 0; index < counts.Length; index++)
+            {
+                counts[index] = _rowButtons[index].Count;
+            }
+
+            return counts;
         }
 
         private static bool IsFocusWithin(object focusedElement, DependencyObject target)
@@ -1314,21 +1349,25 @@ namespace NextGenEmby.App.Views
             };
 
             Button? firstRowButton = null;
-            foreach (var item in items)
+            var rowButtons = new List<Button>();
+            for (var itemIndex = 0; itemIndex < items.Count; itemIndex++)
             {
+                var item = items[itemIndex];
                 var itemButton = CreateItemButton(item);
-                RegisterRowButton(itemButton, rowIndex);
+                RegisterRowButton(itemButton, rowIndex, itemIndex);
                 if (firstRowButton == null)
                 {
                     firstRowButton = itemButton;
                 }
 
                 panel.Children.Add(itemButton);
+                rowButtons.Add(itemButton);
             }
 
             if (firstRowButton != null)
             {
                 _rowFirstButtons.Add(firstRowButton);
+                _rowButtons.Add(rowButtons);
                 _rowMoreButtons.Add(moreButton);
             }
 
@@ -1341,15 +1380,18 @@ namespace NextGenEmby.App.Views
         {
             RowsPanel.Children.Clear();
             _rowFirstButtons.Clear();
+            _rowButtons.Clear();
             _rowMoreButtons.Clear();
             _rowButtonIndexes.Clear();
+            _rowButtonItemIndexes.Clear();
             _rowMoreButtonIndexes.Clear();
         }
 
-        private void RegisterRowButton(Button button, int rowIndex)
+        private void RegisterRowButton(Button button, int rowIndex, int itemIndex)
         {
             ApplyHomeCardFocusTreatment(button);
             _rowButtonIndexes[button] = rowIndex;
+            _rowButtonItemIndexes[button] = itemIndex;
         }
 
         private void AddUniqueRow(

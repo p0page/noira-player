@@ -1754,3 +1754,31 @@ Then continue design and implementation until the route passes.
   - No app-content mouse clicks were used. `dev-command.json` and `dev-command-result.txt` were removed from LocalState after validation.
 - Follow-up:
   - Continue extracting remaining page-local Home hero measurements and evaluate whether real-server artwork needs a slightly lighter Home wash once saved-session screenshots are available again.
+
+### 2026-07-07 - Home Hero Token And Poster Row Navigation Polish
+
+- App version: 0.1.0.199.
+- Scope: make the Home top decision surface less oversized on TV, promote its repeated visual measurements into skin resources, and fix poster-row horizontal D-pad movement found during keyboard validation.
+- Interaction/design changes:
+  - `App.xaml` now owns Home Hero height, padding, column spacing, logo max size, title/meta type sizes, poster size, poster fallback type size, accent width/margin/radius, and Hero/poster corner radii.
+  - `HomePage.xaml` consumes the new Hero tokens instead of hard-coded `246px` height, `26,24,26,24` padding, `38px` title type, and fixed `182px` poster column.
+  - The Hero is now a compact decision surface: Play remains the first visible action, while Media Libraries and Server sections have more useful first-screen presence.
+  - Home poster-row focus targets now track both row index and item index, so `Left`/`Right` moves inside a content row instead of repeatedly resolving back to the first item.
+- Automated verification:
+  - TDD red path confirmed the Home Hero token contract failed before implementation.
+  - TDD red path confirmed Home row focus targets lacked `itemIndex`/`ItemIndex` before the poster-row navigation fix.
+  - Targeted Home Hero token contract passed: 1 test.
+  - Targeted poster-row left/right focus tests passed: 3 total.
+  - Home focus policy tests passed: 15 total.
+  - Design/source tests passed: 51 total.
+  - Core tests passed: 440 total.
+  - App Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.199_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate thumbprint `6CB453A2FEC300C6E5034152C6C1A68DE31A7BD0`, verified with `signtool verify /pa`, and installed locally as `NextGenEmby.App 0.1.0.199`.
+- Keyboard-only validation with Computer Use:
+  - Wrote `dev-command.json` with route `home-fixture` and launched the installed app through AppUserModelId `NextGenEmby.App_h8qjz0sr1sg4m!App`; the window path resolved to `NextGenEmby.App_0.1.0.199_x64__h8qjz0sr1sg4m`.
+  - Initial Home showed the compact Hero with Play focused, Media Libraries visible immediately below, Server sections visible in the same first-screen scan, and no text overlap.
+  - Pressed `Down`, `Down`, `Down`, `Right`; focus moved from Hero through Media Libraries and Server sections into Continue watching, then landed on the second poster `Northline S1:E4`.
+  - Pressed `Left`; focus returned to the first Continue watching poster `Aurora Protocol`.
+  - No app-content mouse clicks were used. `dev-command.json` was consumed by the app and `dev-command-result.txt` reported `completed` / `home-fixture`.
+- Follow-up:
+  - Continue extracting the remaining one-off Home action button metrics and evaluate row-item focus against real-server rows with more than two visible posters once saved-session screenshots are available again.

@@ -165,6 +165,34 @@ public sealed class DesignTokenResourceTests
         Assert.DoesNotContain("FontSize = 23", homeSource);
     }
 
+    [Fact]
+    public void Home_Hero_Layout_Metrics_Use_Theme_Resources()
+    {
+        var root = FindRepositoryRoot();
+        var appXaml = File.ReadAllText(Path.Combine(root, "src", "NextGenEmby.App", "App.xaml"));
+        var homeXaml = File.ReadAllText(Path.Combine(root, "src", "NextGenEmby.App", "Views", "HomePage.xaml"));
+
+        Assert.Contains("<x:Double x:Key=\"TvHomeHeroHeight\">", appXaml);
+        Assert.Contains("<Thickness x:Key=\"TvHomeHeroPadding\">", appXaml);
+        Assert.Contains("<x:Double x:Key=\"TvHomeHeroColumnSpacing\">", appXaml);
+        Assert.Contains("<x:Double x:Key=\"TvHomeHeroPosterWidth\">", appXaml);
+        Assert.Contains("<x:Double x:Key=\"TvHomeHeroPosterHeight\">", appXaml);
+        Assert.Contains("<x:Double x:Key=\"TvHomeHeroTitleFontSize\">", appXaml);
+        Assert.Contains("<x:Double x:Key=\"TvHomeHeroLogoMaxWidth\">", appXaml);
+        Assert.Contains("<CornerRadius x:Key=\"TvHomeHeroCornerRadius\">", appXaml);
+        Assert.Contains("Height=\"{StaticResource TvHomeHeroHeight}\"", homeXaml);
+        Assert.Contains("Padding=\"{StaticResource TvHomeHeroPadding}\"", homeXaml);
+        Assert.Contains("ColumnSpacing=\"{StaticResource TvHomeHeroColumnSpacing}\"", homeXaml);
+        Assert.Contains("Width=\"{StaticResource TvHomeHeroPosterWidth}\"", homeXaml);
+        Assert.Contains("Height=\"{StaticResource TvHomeHeroPosterHeight}\"", homeXaml);
+        Assert.Contains("FontSize=\"{StaticResource TvHomeHeroTitleFontSize}\"", homeXaml);
+        Assert.Contains("MaxWidth=\"{StaticResource TvHomeHeroLogoMaxWidth}\"", homeXaml);
+        Assert.DoesNotContain("Height=\"246\"", homeXaml);
+        Assert.DoesNotContain("Padding=\"26,24,26,24\"", homeXaml);
+        Assert.DoesNotContain("FontSize=\"38\"", homeXaml);
+        Assert.DoesNotContain("Width=\"182\"", homeXaml);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

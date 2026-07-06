@@ -22,15 +22,18 @@ namespace NextGenEmby.Core.Input
 
     public sealed class HomeFocusTarget
     {
-        public HomeFocusTarget(HomeFocusZone zone, int index)
+        public HomeFocusTarget(HomeFocusZone zone, int index, int itemIndex = 0)
         {
             Zone = zone;
             Index = index < 0 ? 0 : index;
+            ItemIndex = itemIndex < 0 ? 0 : itemIndex;
         }
 
         public HomeFocusZone Zone { get; }
 
         public int Index { get; }
+
+        public int ItemIndex { get; }
     }
 
     public static class HomeFocusInputPolicy
@@ -41,7 +44,8 @@ namespace NextGenEmby.Core.Input
             int libraryCount,
             int rowCount,
             IReadOnlyList<bool>? rowHasMore = null,
-            int sectionCount = 0)
+            int sectionCount = 0,
+            IReadOnlyList<int>? rowItemCounts = null)
         {
             if (current == null)
             {
@@ -55,7 +59,7 @@ namespace NextGenEmby.Core.Input
                 case HomeFocusDirection.Up:
                     return MoveUp(current, libraryCount, sectionCount, rowHasMore);
                 case HomeFocusDirection.Right:
-                    return MoveRight(current, libraryCount, sectionCount);
+                    return MoveRight(current, libraryCount, sectionCount, rowItemCounts);
                 case HomeFocusDirection.Left:
                     return MoveLeft(current);
                 default:
@@ -158,7 +162,11 @@ namespace NextGenEmby.Core.Input
                 : new HomeFocusTarget(HomeFocusZone.HeroPlay, 0);
         }
 
-        private static HomeFocusTarget? MoveRight(HomeFocusTarget current, int libraryCount, int sectionCount)
+        private static HomeFocusTarget? MoveRight(
+            HomeFocusTarget current,
+            int libraryCount,
+            int sectionCount,
+            IReadOnlyList<int>? rowItemCounts)
         {
             if (current.Zone == HomeFocusZone.HeroPlay)
             {
@@ -173,6 +181,11 @@ namespace NextGenEmby.Core.Input
             if (current.Zone == HomeFocusZone.Section && current.Index < sectionCount - 1)
             {
                 return new HomeFocusTarget(HomeFocusZone.Section, current.Index + 1);
+            }
+
+            if (current.Zone == HomeFocusZone.Row && current.ItemIndex < GetRowItemCount(rowItemCounts, current.Index) - 1)
+            {
+                return new HomeFocusTarget(HomeFocusZone.Row, current.Index, current.ItemIndex + 1);
             }
 
             return null;
@@ -195,6 +208,11 @@ namespace NextGenEmby.Core.Input
                 return new HomeFocusTarget(HomeFocusZone.Section, current.Index - 1);
             }
 
+            if (current.Zone == HomeFocusZone.Row && current.ItemIndex > 0)
+            {
+                return new HomeFocusTarget(HomeFocusZone.Row, current.Index, current.ItemIndex - 1);
+            }
+
             return null;
         }
 
@@ -204,6 +222,18 @@ namespace NextGenEmby.Core.Input
                 rowIndex >= 0 &&
                 rowIndex < rowHasMore.Count &&
                 rowHasMore[rowIndex];
+        }
+
+        private static int GetRowItemCount(IReadOnlyList<int>? rowItemCounts, int rowIndex)
+        {
+            if (rowItemCounts == null ||
+                rowIndex < 0 ||
+                rowIndex >= rowItemCounts.Count)
+            {
+                return 1;
+            }
+
+            return rowItemCounts[rowIndex] < 1 ? 1 : rowItemCounts[rowIndex];
         }
     }
 }
