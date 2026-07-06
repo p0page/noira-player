@@ -57,6 +57,11 @@ dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQ
 
 `plan-runs` 不执行播放，也不打包 App。它把每个 manifest case 转成标准 `runId`、`sourceUri`、`durationSeconds`、`expected`、`reportRelativePath` 和 `reportPath`，让模型或脚本按同一套 key 采集 `PlaybackQualityRunResult`。生成的报告应写入 plan 里的 `reportPath`，之后再运行 report-set 校验和候选评估。
 
+采集计划支持两种模式：
+
+- `direct-uri`：manifest 只有 `uri`，适合公开测试视频或本地直链样本。
+- `emby-item`：manifest 额外提供 `itemId`，可选 `mediaSourceId`、`startPositionTicks`、`forceSdrOutput`。计划会输出 `devCommand`，其中 `route = quality-run`，可作为 Xbox/dev-command 采集入口的标准输入。
+
 After reports are captured, validate that the report set covers the manifest before comparing candidates:
 
 ```powershell

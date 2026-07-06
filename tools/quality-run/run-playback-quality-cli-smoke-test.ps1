@@ -34,6 +34,8 @@ try {
     $manifestPath = Join-Path $tempRoot 'reference-manifest.json'
     $manifestValidationPath = Join-Path $tempRoot 'reference-manifest-validation.json'
     $runPlanPath = Join-Path $tempRoot 'reference-run-plan.json'
+    $embyRunPlanManifestPath = Join-Path $tempRoot 'emby-run-plan-manifest.json'
+    $embyRunPlanPath = Join-Path $tempRoot 'emby-run-plan.json'
     $reportSetDir = Join-Path $tempRoot 'reference-report-set'
     $reportSetValidationPath = Join-Path $tempRoot 'reference-report-set-validation.json'
 
@@ -223,6 +225,67 @@ try {
         $_.expected.hdrKind -eq 'Hdr10'
     })) {
         throw 'Expected playback quality CLI plan-runs output to include a runnable HDR case.'
+    }
+
+    @'
+{
+  "schemaVersion": 1,
+  "cases": [
+    {
+      "caseId": "emby/007-hdr10",
+      "uri": "emby://items/item-007",
+      "itemId": "item-007",
+      "mediaSourceId": "source-hdr10",
+      "startPositionTicks": 123,
+      "forceSdrOutput": true,
+      "tier": 1,
+      "purpose": [
+        "hdr-output"
+      ],
+      "expected": {
+        "codec": "hevc",
+        "width": 3840,
+        "height": 2160,
+        "frameRate": 23.976,
+        "hdrKind": "Hdr10"
+      }
+    }
+  ]
+}
+'@ | Set-Content -LiteralPath $embyRunPlanManifestPath -Encoding UTF8
+
+    Push-Location $repoRoot
+    try {
+        dotnet run `
+            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
+            --no-build `
+            -- plan-runs `
+            --manifest $embyRunPlanManifestPath `
+            --reports-dir captured-emby `
+            --duration 45 `
+            --output $embyRunPlanPath
+        if ($LASTEXITCODE -ne 0) {
+            throw 'playback quality CLI plan-runs returned a non-zero exit code for Emby item manifest.'
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    $embyRunPlan = Get-Content -Raw -LiteralPath $embyRunPlanPath | ConvertFrom-Json
+    if (-not ($embyRunPlan.cases | Where-Object {
+        $_.caseId -eq 'emby/007-hdr10' -and
+        $_.captureMode -eq 'emby-item' -and
+        $_.devCommand.route -eq 'quality-run' -and
+        $_.devCommand.itemId -eq 'item-007' -and
+        $_.devCommand.mediaSourceId -eq 'source-hdr10' -and
+        $_.devCommand.runId -eq 'emby/007-hdr10' -and
+        $_.devCommand.durationSeconds -eq 45 -and
+        $_.devCommand.startPositionTicks -eq 123 -and
+        $_.devCommand.forceSdrOutput -eq $true -and
+        $_.devCommand.expected.hdrKind -eq 'Hdr10'
+    })) {
+        throw 'Expected playback quality CLI plan-runs output to include Emby quality-run dev command.'
     }
 
     New-Item -ItemType Directory -Path $reportSetDir | Out-Null

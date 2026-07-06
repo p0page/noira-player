@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using NextGenEmby.Core.Diagnostics;
 using NextGenEmby.Core.PlaybackQuality;
 
 namespace NextGenEmby.PlaybackQuality.Cli;
@@ -850,6 +851,7 @@ internal static class Program
         foreach (var referenceCase in validation.Cases)
         {
             var relativePath = GetRunIdComparisonRelativePath(referenceCase.CaseId);
+            var hasEmbyItem = !string.IsNullOrWhiteSpace(referenceCase.ItemId);
             var planCase = new PlaybackQualityRunPlanCase
             {
                 CaseId = referenceCase.CaseId,
@@ -857,13 +859,20 @@ internal static class Program
                 SourceUri = referenceCase.Uri,
                 Tier = referenceCase.Tier,
                 DurationSeconds = options.DurationSeconds,
-                CaptureMode = "direct-uri",
+                CaptureMode = hasEmbyItem ? "emby-item" : "direct-uri",
                 ReportRelativePath = relativePath,
                 ReportPath = string.IsNullOrWhiteSpace(options.ReportsDirectory)
                     ? relativePath
                     : Path.Combine(options.ReportsDirectory, relativePath),
                 Expected = CloneExpected(referenceCase.Expected)
             };
+
+            if (hasEmbyItem)
+            {
+                planCase.DevCommand = CreateQualityRunCommand(
+                    referenceCase,
+                    options.DurationSeconds);
+            }
 
             foreach (var purpose in referenceCase.Purpose)
             {
@@ -874,6 +883,23 @@ internal static class Program
         }
 
         return plan;
+    }
+
+    private static DevelopmentNavigationCommand CreateQualityRunCommand(
+        PlaybackQualityReferenceCase referenceCase,
+        int durationSeconds)
+    {
+        return new DevelopmentNavigationCommand
+        {
+            Route = "quality-run",
+            ItemId = referenceCase.ItemId,
+            MediaSourceId = referenceCase.MediaSourceId,
+            StartPositionTicks = Math.Max(0, referenceCase.StartPositionTicks),
+            ForceSdrOutput = referenceCase.ForceSdrOutput,
+            RunId = referenceCase.CaseId,
+            DurationSeconds = durationSeconds,
+            Expected = CloneExpected(referenceCase.Expected)
+        };
     }
 
     private static PlaybackQualityExpected CloneExpected(PlaybackQualityExpected source)
@@ -1155,5 +1181,6 @@ internal static class Program
         public string ReportPath { get; set; } = "";
         public PlaybackQualityExpected Expected { get; set; } =
             new PlaybackQualityExpected();
+        public DevelopmentNavigationCommand? DevCommand { get; set; }
     }
 }

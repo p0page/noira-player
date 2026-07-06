@@ -16,6 +16,14 @@ namespace NextGenEmby.Core.PlaybackQuality
 
         public string Uri { get; set; } = "";
 
+        public string ItemId { get; set; } = "";
+
+        public string MediaSourceId { get; set; } = "";
+
+        public long StartPositionTicks { get; set; }
+
+        public bool ForceSdrOutput { get; set; }
+
         public int Tier { get; set; }
 
         public List<string> Purpose { get; } = new List<string>();
@@ -168,6 +176,10 @@ namespace NextGenEmby.Core.PlaybackQuality
             {
                 CaseId = source.CaseId,
                 Uri = source.Uri,
+                ItemId = source.ItemId,
+                MediaSourceId = source.MediaSourceId,
+                StartPositionTicks = source.StartPositionTicks,
+                ForceSdrOutput = source.ForceSdrOutput,
                 Tier = source.Tier,
                 Expected = CloneExpected(source.Expected)
             };

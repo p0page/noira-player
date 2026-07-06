@@ -43,6 +43,34 @@ public sealed class PlaybackQualityReferenceManifestTests
     }
 
     [Fact]
+    public void Validate_Preserves_Optional_Emby_Item_Capture_Metadata()
+    {
+        var manifest = new PlaybackQualityReferenceManifest
+        {
+            SchemaVersion = 1
+        };
+        var referenceCase = CreateCase(
+            "emby/007-hdr10",
+            tier: 1,
+            purpose: "hdr-output");
+        referenceCase.ItemId = "item-007";
+        referenceCase.MediaSourceId = "source-hdr10";
+        referenceCase.StartPositionTicks = 123;
+        referenceCase.ForceSdrOutput = true;
+        manifest.Cases.Add(referenceCase);
+
+        var result = PlaybackQualityReferenceManifestValidator.Validate(manifest);
+
+        Assert.True(result.IsValid);
+        Assert.Contains(result.Cases, item =>
+            item.CaseId == "emby/007-hdr10" &&
+            item.ItemId == "item-007" &&
+            item.MediaSourceId == "source-hdr10" &&
+            item.StartPositionTicks == 123 &&
+            item.ForceSdrOutput);
+    }
+
+    [Fact]
     public void Validate_Rejects_Duplicate_Cases_And_Incomplete_Expected_Metadata()
     {
         var manifest = new PlaybackQualityReferenceManifest
