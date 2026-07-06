@@ -1129,6 +1129,10 @@ try {
         throw 'Expected playback quality CLI compare-suite stall suite to include target failure area.'
     }
 
+    if (-not ($stallSuite.targetCaseIds -contains 'case-stall.json')) {
+        throw 'Expected playback quality CLI compare-suite stall suite to include target case id.'
+    }
+
     if (-not ($stallSuite.signals -contains 'timing.maxFrameGapMs')) {
         throw 'Expected playback quality CLI compare-suite stall suite to include persisting failure signal.'
     }

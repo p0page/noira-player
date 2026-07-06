@@ -35,6 +35,7 @@ public sealed class PlaybackQualityComparisonSuiteTests
         var regressed = Compare(
             Check("AudioVideoDriftMsP95", "pass", "av-sync", "sync.audioVideoDriftMsP95", "40.000", "25.000"),
             Check("AudioVideoDriftMsP95", "fail", "av-sync", "sync.audioVideoDriftMsP95", "40.000", "55.000"));
+        regressed.CaseId = "case-av-sync";
 
         var suite = PlaybackQualityComparisonSuiteAggregator.Summarize(new[] { improved, regressed });
 
@@ -45,6 +46,7 @@ public sealed class PlaybackQualityComparisonSuiteTests
         Assert.Contains("sync.audioVideoDriftMsP95", suite.Signals);
         Assert.Contains("av-sync", suite.FailureAreas);
         Assert.Contains("av-sync", suite.TargetFailureAreas);
+        Assert.Contains("case-av-sync", suite.TargetCaseIds);
     }
 
     [Fact]
@@ -104,6 +106,7 @@ public sealed class PlaybackQualityComparisonSuiteTests
         Assert.Contains("frame-pacing", caseSummary.FailureAreas);
         Assert.Contains("frame-pacing", suite.FailureAreas);
         Assert.Contains("frame-pacing", suite.TargetFailureAreas);
+        Assert.Contains("cadence/frame-pacing.json", suite.TargetCaseIds);
         Assert.Contains("timing.maxFrameGapMs", caseSummary.Signals);
         Assert.Contains("timing.maxFrameGapMs", suite.Signals);
     }
@@ -114,6 +117,7 @@ public sealed class PlaybackQualityComparisonSuiteTests
         var mixed = Compare(
             Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "180.000"),
             Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "120.000"));
+        mixed.CaseId = "case-color";
         mixed.Regressions.Add(new PlaybackQualitySignalDelta
         {
             Signal = "colorPipeline.actualHdrOutput",
@@ -125,11 +129,17 @@ public sealed class PlaybackQualityComparisonSuiteTests
         mixed.Result = "mixed";
         mixed.Optimization.Action = "split-candidate";
         mixed.Optimization.Risk = "high";
+        var unchanged = Compare(
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "180.000"),
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "180.000"));
+        unchanged.CaseId = "case-frame";
 
-        var suite = PlaybackQualityComparisonSuiteAggregator.Summarize(new[] { mixed });
+        var suite = PlaybackQualityComparisonSuiteAggregator.Summarize(new[] { mixed, unchanged });
 
         var target = Assert.Single(suite.TargetFailureAreas);
         Assert.Equal("color-pipeline", target);
+        var targetCase = Assert.Single(suite.TargetCaseIds);
+        Assert.Equal("case-color", targetCase);
     }
 
     private static PlaybackQualityRunComparison Compare(

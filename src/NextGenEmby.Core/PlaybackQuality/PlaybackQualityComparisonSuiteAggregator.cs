@@ -21,6 +21,7 @@ namespace NextGenEmby.Core.PlaybackQuality
         public List<string> Signals { get; } = new List<string>();
         public List<string> FailureAreas { get; } = new List<string>();
         public List<string> TargetFailureAreas { get; } = new List<string>();
+        public List<string> TargetCaseIds { get; } = new List<string>();
         public List<PlaybackQualityComparisonCaseSummary> Cases { get; } =
             new List<PlaybackQualityComparisonCaseSummary>();
         public List<PlaybackQualityRunComparison> Comparisons { get; } =
@@ -326,6 +327,13 @@ namespace NextGenEmby.Core.PlaybackQuality
             if (!string.IsNullOrWhiteSpace(target))
             {
                 AddUnique(suite.TargetFailureAreas, target);
+                foreach (var summary in suite.Cases)
+                {
+                    if (summary.FailureAreas.Contains(target))
+                    {
+                        AddUnique(suite.TargetCaseIds, summary.CaseId);
+                    }
+                }
             }
         }
 
