@@ -1055,3 +1055,25 @@ Then continue design and implementation until the route passes.
   - No app-content mouse clicks were used.
 - Limitation:
   - The verified public MP4 is a short 10-second sample and naturally ended quickly. It proves the QA fixture can start native direct playback, but a longer seekable URL or restored saved Emby playback route is still needed before marking seek-preview cancel/confirm as runtime `Verified`.
+
+### 2026-07-06 - Seek Preview Cancel And Commit Runtime Pass
+
+- App version: 0.1.0.144.
+- Scope: validate the keyboard/controller surrogate route for seek-preview cancel and commit on an installed app, without depending on the missing saved Emby session.
+- Fixture:
+  - Used DEBUG `manual-playback` dev-command with `autoStart:true`.
+  - Stream URL: `https://download.blender.org/peach/bigbuckbunny_movies/BigBuckBunny_320x180.mp4`.
+  - `curl -I -L` returned `HTTP/1.1 200 OK`, `Content-Type: video/mp4`, `Content-Length: 64657027`, and `Accept-Ranges: bytes`.
+- Keyboard/UIA validation:
+  - Launched installed `NextGenEmby.App 0.1.0.144`; `dev-command-result.txt` reported `completed / manual-playback`.
+  - UI Automation text snapshot showed `Manual Direct Stream`, `Playing`, and the transport strip controls.
+  - Focused `Pause` and sent `Shift+Right`; UI showed `Seek preview 00:00:12 - A/Enter Confirm / B/Escape Cancel`.
+  - Sent `Escape`; UI showed `Playing - Seek canceled` and the seek-preview text disappeared.
+  - Sent `Shift+Right` again; UI showed `Seek preview 00:00:14 - A/Enter Confirm / B/Escape Cancel`.
+  - Sent `Enter`; UI showed `Playing - Position 00:00:14`.
+  - Native playback diagnostics logged `PlaybackGraph.SeekPreroll reached target=146613333`, proving the commit path reached the backend seek logic.
+  - No app-content mouse clicks were used.
+- Result:
+  - `Seek preview and cancel` is now runtime `Verified` for the local keyboard surrogate route.
+- Limitation:
+  - This validates the local keyboard surrogate and native direct-stream route. A later pass should still re-run the same behavior on real Emby media after the saved session is restored, and on actual controller thumbstick input when the Xbox is available.
