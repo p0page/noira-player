@@ -808,6 +808,10 @@ namespace NextGenEmby.App
                     NavigateTo(typeof(MusicPage));
                     return;
 
+                case "music-fixture":
+                    NavigateTo(typeof(MusicPage), new MusicNavigationRequest(useDevelopmentFixture: true));
+                    return;
+
                 case "music-unsupported":
                     NavigateTo(typeof(MusicPage), new MusicNavigationRequest("Sample Song"));
                     return;

@@ -1460,3 +1460,35 @@ Then continue design and implementation until the route passes.
   - No app-content mouse clicks were used.
 - Follow-up:
   - Re-run live favorite/watched toggles only on a disposable item or fixture user after the saved Emby session is restored.
+
+### 2026-07-07 - Music Positive Browse Fixture Route
+
+- App version: 0.1.0.177.
+- Scope: add and verify a deterministic positive Music browse route while the current Emby server/session does not expose real `MusicAlbum` or `Audio` rows.
+- Interaction changes:
+  - `dev-command.json` accepts route `music-fixture`.
+  - The route opens Music with packaged QA album/song artwork, 3 fixture albums, 6 fixture songs, and the existing Albums/Songs/Preview three-column layout.
+  - Album activation filters Songs locally and keeps the route browse-only; song activation opens the existing `Music playback unavailable` layer.
+  - Music now tracks album/song buttons explicitly and handles D-pad/arrow Up/Down/Left/Right in the page instead of relying on default UWP XY focus. This fixes the bug where `Down` stayed on the first song and `Return` activated the wrong item.
+  - Closing the unsupported music layer restores focus to the song that opened it.
+- Automated verification:
+  - TDD red path confirmed `music-fixture` was not accepted before route support.
+  - TDD red path confirmed `DevelopmentMusicFixture` did not exist before fixture data was implemented.
+  - TDD red path confirmed Music page source did not render the positive fixture route before implementation.
+  - Computer Use caught the real list-movement bug; TDD then added `MusicListFocusPolicy` before the explicit page focus fix.
+  - Core tests passed: 383 total.
+  - App Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.177_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.177`.
+- Keyboard-only validation with Computer Use:
+  - Wrote `dev-command.json` with route `music-fixture` and launched the installed app.
+  - `dev-command-result.txt` reported `completed / music-fixture`.
+  - Initial Music state showed `Fixture music library`, 3 albums, 6 songs, and focus on `Nocturne Signals`.
+  - Pressed `Down`; focus moved to `City Lights Archive`, and the Preview pane updated to that album.
+  - Pressed `Return`; Songs filtered to `City Lights Archive`, showed 2 songs, showed the `All` action, and focused `Late Train Window`.
+  - Pressed `Down`, `Return`; focus moved to `Rooftop Weather`, and the `Music playback unavailable` layer opened for `Rooftop Weather` with `Close` focused.
+  - Pressed `Escape`; the layer closed and focus returned to `Rooftop Weather`.
+  - Pressed `Up`, `Up`; focus moved to `All`. Pressed `Return`; the full 6-song list returned with `Opening Credits` focused.
+  - Pressed `Left`; focus moved back to `Nocturne Signals`. Pressed `Right`; focus returned to `Opening Credits`.
+  - No app-content mouse clicks were used.
+- Follow-up:
+  - Re-run Music against a real saved Emby session with albums/songs after session restore, then add artist/album-artist hierarchy if the server exposes usable artist metadata.

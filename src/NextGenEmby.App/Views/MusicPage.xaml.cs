@@ -1,13 +1,18 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using NextGenEmby.App.Navigation;
 using NextGenEmby.App.Services;
 using NextGenEmby.App.Storage;
+#if DEBUG
+using NextGenEmby.Core.Diagnostics;
+#endif
 using NextGenEmby.Core.Emby;
 using NextGenEmby.Core.Input;
 using Windows.System;
+using Windows.UI.Core;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Automation;
 using Windows.UI.Xaml.Controls;
@@ -21,11 +26,19 @@ namespace NextGenEmby.App.Views
     public sealed partial class MusicPage : Page, ITvContentFocusTarget
     {
         private readonly ApplicationDataSessionStore _sessionStore = new ApplicationDataSessionStore();
+        private readonly List<Button> _albumButtons = new List<Button>();
+        private readonly List<Button> _songButtons = new List<Button>();
         private Button? _firstAlbumButton;
         private Button? _firstSongButton;
+        private Button? _unsupportedReturnFocusTarget;
         private MusicNavigationRequest? _request;
         private int _loadGeneration;
         private bool _isUnloaded;
+#if DEBUG
+        private const int DevelopmentMusicFocusRetryCount = 6;
+        private DevelopmentMusicFixtureSnapshot? _developmentMusicFixture;
+        private int _developmentMusicFocusGeneration;
+#endif
 
         public MusicPage()
         {
@@ -45,6 +58,14 @@ namespace NextGenEmby.App.Views
         private async void MusicPage_OnLoaded(object sender, RoutedEventArgs e)
         {
             Loaded -= MusicPage_OnLoaded;
+#if DEBUG
+            if (_request != null && _request.UseDevelopmentFixture)
+            {
+                RenderDevelopmentMusicFixture();
+                FocusDevelopmentDefaultContentAsync();
+                return;
+            }
+#endif
             if (_request != null && !string.IsNullOrWhiteSpace(_request.UnsupportedSongName))
             {
                 PrepareBrowseOnlyPreview();
@@ -89,11 +110,31 @@ namespace NextGenEmby.App.Views
 
         private async void RefreshButton_OnClick(object sender, RoutedEventArgs e)
         {
+#if DEBUG
+            if (_request != null && _request.UseDevelopmentFixture)
+            {
+                RenderDevelopmentMusicFixture();
+                FocusDevelopmentDefaultContentAsync();
+                return;
+            }
+#endif
             await LoadMusicAsync();
         }
 
         private async void AllSongsButton_OnClick(object sender, RoutedEventArgs e)
         {
+#if DEBUG
+            if (_request != null && _request.UseDevelopmentFixture && _developmentMusicFixture != null)
+            {
+                RenderDevelopmentSongs(_developmentMusicFixture.Songs, "Songs", showAllSongsButton: false);
+                if (_firstSongButton != null)
+                {
+                    _firstSongButton.Focus(FocusState.Keyboard);
+                }
+
+                return;
+            }
+#endif
             await LoadAllSongsAsync(focusSongs: true);
         }
 
@@ -291,8 +332,11 @@ namespace NextGenEmby.App.Views
             UnsupportedPanel.Visibility = Visibility.Collapsed;
             AlbumsPanel.Children.Clear();
             SongsPanel.Children.Clear();
+            _albumButtons.Clear();
+            _songButtons.Clear();
             _firstAlbumButton = null;
             _firstSongButton = null;
+            _unsupportedReturnFocusTarget = null;
             AlbumsCountBlock.Text = "Loading";
             SongsTitleBlock.Text = "Songs";
             SongsCountBlock.Text = "Loading";
@@ -309,8 +353,11 @@ namespace NextGenEmby.App.Views
             UnsupportedPanel.Visibility = Visibility.Collapsed;
             AlbumsPanel.Children.Clear();
             SongsPanel.Children.Clear();
+            _albumButtons.Clear();
+            _songButtons.Clear();
             _firstAlbumButton = null;
             _firstSongButton = null;
+            _unsupportedReturnFocusTarget = null;
             AlbumsCountBlock.Text = "Refresh to load";
             SongsTitleBlock.Text = "Songs";
             SongsCountBlock.Text = "Refresh to load";
@@ -335,6 +382,7 @@ namespace NextGenEmby.App.Views
             IReadOnlyList<EmbyMediaItem> albums)
         {
             AlbumsPanel.Children.Clear();
+            _albumButtons.Clear();
             _firstAlbumButton = null;
             AlbumsCountBlock.Text = albums.Count == 1 ? "1 album" : albums.Count + " albums";
 
@@ -364,6 +412,7 @@ namespace NextGenEmby.App.Views
                 }
 
                 AlbumsPanel.Children.Add(button);
+                _albumButtons.Add(button);
             }
         }
 
@@ -375,6 +424,7 @@ namespace NextGenEmby.App.Views
             bool showAllSongsButton)
         {
             SongsPanel.Children.Clear();
+            _songButtons.Clear();
             _firstSongButton = null;
             SongsTitleBlock.Text = title;
             SongsCountBlock.Text = songs.Count == 1 ? "1 song" : songs.Count + " songs";
@@ -409,16 +459,206 @@ namespace NextGenEmby.App.Views
                 }
 
                 SongsPanel.Children.Add(button);
+                _songButtons.Add(button);
             }
         }
 
         private void RenderSongsEmpty(string message)
         {
             SongsPanel.Children.Clear();
+            _songButtons.Clear();
             _firstSongButton = null;
             SongsCountBlock.Text = message;
             AddInlineEmpty(SongsPanel, message);
         }
+
+#if DEBUG
+        private void RenderDevelopmentMusicFixture()
+        {
+            _loadGeneration++;
+            var fixture = DevelopmentMusicFixture.Create();
+            _developmentMusicFixture = fixture;
+            ResetMusicSurface();
+            SetLoadingState(isLoading: false);
+            StatusBlock.Text = "Fixture music library";
+            RenderDevelopmentAlbums(fixture.Albums);
+            RenderDevelopmentSongs(fixture.Songs, "Songs", showAllSongsButton: false);
+        }
+
+        private void RenderDevelopmentAlbums(IReadOnlyList<EmbyMediaItem> albums)
+        {
+            AlbumsPanel.Children.Clear();
+            _albumButtons.Clear();
+            _firstAlbumButton = null;
+            AlbumsCountBlock.Text = albums.Count == 1 ? "1 album" : albums.Count + " albums";
+
+            if (albums.Count == 0)
+            {
+                AddInlineEmpty(AlbumsPanel, "No fixture albums.");
+                return;
+            }
+
+            foreach (var album in albums)
+            {
+                var button = CreateDevelopmentMusicButton(
+                    album,
+                    "Album " + CreateItemName(album),
+                    CreateAlbumSecondaryLine(album),
+                    DoubleResource("TvListArtworkSize", 76));
+                button.Tag = album;
+                button.GotFocus += (sender, args) => UpdatePreview(album, "Album");
+                button.Click += AlbumButton_OnClick;
+
+                if (_firstAlbumButton == null)
+                {
+                    _firstAlbumButton = button;
+                    UpdatePreview(album, "Album");
+                }
+
+                AlbumsPanel.Children.Add(button);
+                _albumButtons.Add(button);
+            }
+        }
+
+        private void RenderDevelopmentSongs(
+            IReadOnlyList<EmbyMediaItem> songs,
+            string title,
+            bool showAllSongsButton)
+        {
+            SongsPanel.Children.Clear();
+            _songButtons.Clear();
+            _firstSongButton = null;
+            SongsTitleBlock.Text = title;
+            SongsCountBlock.Text = songs.Count == 1 ? "1 song" : songs.Count + " songs";
+            AllSongsButton.Visibility = showAllSongsButton ? Visibility.Visible : Visibility.Collapsed;
+
+            if (songs.Count == 0)
+            {
+                RenderSongsEmpty("No fixture songs.");
+                return;
+            }
+
+            foreach (var song in songs)
+            {
+                var button = CreateDevelopmentMusicButton(
+                    song,
+                    "Song " + CreateItemName(song),
+                    CreateSongSecondaryLine(song),
+                    DoubleResource("TvCompactArtworkSize", 64));
+                button.Tag = song;
+                button.GotFocus += (sender, args) => UpdatePreview(song, "Song");
+                button.Click += SongButton_OnClick;
+
+                if (_firstSongButton == null)
+                {
+                    _firstSongButton = button;
+                    if (_firstAlbumButton == null)
+                    {
+                        UpdatePreview(song, "Song");
+                    }
+                }
+
+                SongsPanel.Children.Add(button);
+                _songButtons.Add(button);
+            }
+        }
+
+        private void RenderDevelopmentAlbumSongs(EmbyMediaItem album)
+        {
+            if (_developmentMusicFixture == null)
+            {
+                return;
+            }
+
+            var songs = _developmentMusicFixture.Songs
+                .Where(song => string.Equals(song.ParentId, album.Id, StringComparison.Ordinal))
+                .ToList();
+            RenderDevelopmentSongs(songs, CreateItemName(album), showAllSongsButton: true);
+            if (_firstSongButton != null)
+            {
+                _firstSongButton.Focus(FocusState.Keyboard);
+            }
+            else
+            {
+                AllSongsButton.Focus(FocusState.Keyboard);
+            }
+        }
+
+        private Button CreateDevelopmentMusicButton(
+            EmbyMediaItem item,
+            string automationName,
+            string secondaryLine,
+            double artworkSize)
+        {
+            var button = new Button
+            {
+                Style = (Style)Application.Current.Resources["TvListButtonStyle"],
+                Content = CreateMusicButtonContent(
+                    CreateDevelopmentArtworkFrame(item, artworkSize),
+                    item,
+                    secondaryLine,
+                    artworkSize)
+            };
+            AutomationProperties.SetName(button, automationName);
+            return button;
+        }
+
+        private Border CreateDevelopmentArtworkFrame(EmbyMediaItem item, double artworkSize)
+        {
+            var frame = new Border
+            {
+                Width = artworkSize,
+                Height = artworkSize,
+                Background = BrushResource("AppRaisedSurfaceBrush"),
+                BorderBrush = BrushResource("AppHairlineBrush"),
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(6)
+            };
+
+            if (_developmentMusicFixture != null &&
+                _developmentMusicFixture.ArtworkUris.TryGetValue(
+                    DevelopmentMusicFixture.ArtworkKey(item.Id, "Primary"),
+                    out var imageUri) &&
+                !string.IsNullOrWhiteSpace(imageUri))
+            {
+                frame.Child = new Image
+                {
+                    Stretch = Stretch.UniformToFill,
+                    Source = new BitmapImage(new Uri(imageUri))
+                };
+                return frame;
+            }
+
+            frame.Child = new SymbolIcon
+            {
+                Symbol = Symbol.MusicInfo,
+                Foreground = BrushResource("AppMutedTextBrush"),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            return frame;
+        }
+
+        private async void FocusDevelopmentDefaultContentAsync()
+        {
+            var focusGeneration = ++_developmentMusicFocusGeneration;
+            for (var attempt = 0; attempt < DevelopmentMusicFocusRetryCount; attempt++)
+            {
+                await Dispatcher.RunAsync(CoreDispatcherPriority.Low, () =>
+                {
+                    if (!_isUnloaded &&
+                        _request != null &&
+                        _request.UseDevelopmentFixture &&
+                        focusGeneration == _developmentMusicFocusGeneration)
+                    {
+                        FocusDefaultContent();
+                    }
+                });
+
+                await Task.Delay(120);
+            }
+        }
+#endif
 
         private Button CreateMusicButton(
             EmbySession session,
@@ -431,15 +671,18 @@ namespace NextGenEmby.App.Views
             var button = new Button
             {
                 Style = (Style)Application.Current.Resources["TvListButtonStyle"],
-                Content = CreateMusicButtonContent(session, client, item, secondaryLine, artworkSize)
+                Content = CreateMusicButtonContent(
+                    CreateArtworkFrame(session, client, item, artworkSize),
+                    item,
+                    secondaryLine,
+                    artworkSize)
             };
             AutomationProperties.SetName(button, automationName);
             return button;
         }
 
         private UIElement CreateMusicButtonContent(
-            EmbySession session,
-            EmbyApiClient client,
+            FrameworkElement artwork,
             EmbyMediaItem item,
             string secondaryLine,
             double artworkSize)
@@ -451,7 +694,6 @@ namespace NextGenEmby.App.Views
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(artworkSize) });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
-            var artwork = CreateArtworkFrame(session, client, item, artworkSize);
             Grid.SetColumn(artwork, 0);
             grid.Children.Add(artwork);
 
@@ -544,6 +786,13 @@ namespace NextGenEmby.App.Views
             var album = button == null ? null : button.Tag as EmbyMediaItem;
             if (album != null)
             {
+#if DEBUG
+                if (_request != null && _request.UseDevelopmentFixture)
+                {
+                    RenderDevelopmentAlbumSongs(album);
+                    return;
+                }
+#endif
                 await LoadAlbumSongsAsync(album);
             }
         }
@@ -551,6 +800,7 @@ namespace NextGenEmby.App.Views
         private void SongButton_OnClick(object sender, RoutedEventArgs e)
         {
             var button = sender as Button;
+            _unsupportedReturnFocusTarget = sender as Button;
             var song = button == null ? null : button.Tag as EmbyMediaItem;
             var songName = song == null ? "this song" : CreateItemName(song);
             ShowUnsupportedPanel(songName);
@@ -571,21 +821,112 @@ namespace NextGenEmby.App.Views
 
         private void MusicPage_OnKeyDown(object sender, KeyRoutedEventArgs e)
         {
-            if (!TransientLayerInputPolicy.ShouldDismiss(
+            if (TransientLayerInputPolicy.ShouldDismiss(
                 UnsupportedPanel.Visibility == Visibility.Visible,
                 IsBackKey(e.Key)))
+            {
+                e.Handled = true;
+                CloseUnsupportedPanel();
+                return;
+            }
+
+            if (UnsupportedPanel.Visibility == Visibility.Visible)
             {
                 return;
             }
 
-            e.Handled = true;
-            CloseUnsupportedPanel();
+            if ((IsRightKey(e.Key) || IsLeftKey(e.Key) || IsDownKey(e.Key) || IsUpKey(e.Key)) &&
+                TryMoveWithinMusicLists(e.Key))
+            {
+                e.Handled = true;
+            }
+        }
+
+        private bool TryMoveWithinMusicLists(VirtualKey key)
+        {
+            var focusedButton = FocusManager.GetFocusedElement() as Button;
+            if (focusedButton == null)
+            {
+                return false;
+            }
+
+            if (focusedButton == AllSongsButton)
+            {
+                if (IsDownKey(key) && _firstSongButton != null)
+                {
+                    return _firstSongButton.Focus(FocusState.Keyboard);
+                }
+
+                if (IsLeftKey(key) && _firstAlbumButton != null)
+                {
+                    return _firstAlbumButton.Focus(FocusState.Keyboard);
+                }
+
+                return false;
+            }
+
+            if (IsRightKey(key) && _albumButtons.Contains(focusedButton) && _firstSongButton != null)
+            {
+                return _firstSongButton.Focus(FocusState.Keyboard);
+            }
+
+            if (IsLeftKey(key) && _songButtons.Contains(focusedButton) && _firstAlbumButton != null)
+            {
+                return _firstAlbumButton.Focus(FocusState.Keyboard);
+            }
+
+            if (IsUpKey(key) && _songButtons.IndexOf(focusedButton) == 0 && AllSongsButton.Visibility == Visibility.Visible)
+            {
+                return AllSongsButton.Focus(FocusState.Keyboard);
+            }
+
+            return TryMoveWithinButtonList(_albumButtons, focusedButton, key) ||
+                TryMoveWithinButtonList(_songButtons, focusedButton, key);
+        }
+
+        private static bool TryMoveWithinButtonList(
+            IReadOnlyList<Button> buttons,
+            Button focusedButton,
+            VirtualKey key)
+        {
+            var currentIndex = IndexOfButton(buttons, focusedButton);
+            var targetIndex = MusicListFocusPolicy.GetVerticalTargetIndex(
+                currentIndex,
+                buttons.Count,
+                IsDownKey(key),
+                IsUpKey(key));
+            return targetIndex.HasValue &&
+                buttons[targetIndex.Value].Focus(FocusState.Keyboard);
+        }
+
+        private static int IndexOfButton(IReadOnlyList<Button> buttons, Button focusedButton)
+        {
+            for (var index = 0; index < buttons.Count; index++)
+            {
+                if (buttons[index] == focusedButton)
+                {
+                    return index;
+                }
+            }
+
+            return -1;
         }
 
         private void CloseUnsupportedPanel()
         {
             UnsupportedPanel.Visibility = Visibility.Collapsed;
+            if (FocusUnsupportedReturnTarget())
+            {
+                return;
+            }
+
             FocusDefaultContent();
+        }
+
+        private bool FocusUnsupportedReturnTarget()
+        {
+            return _unsupportedReturnFocusTarget != null &&
+                _unsupportedReturnFocusTarget.Focus(FocusState.Keyboard);
         }
 
         private void ShowFallback(string title, string body)
@@ -714,6 +1055,34 @@ namespace NextGenEmby.App.Views
             return key == VirtualKey.GamepadB ||
                 key == VirtualKey.Escape ||
                 key == VirtualKey.GoBack;
+        }
+
+        private static bool IsDownKey(VirtualKey key)
+        {
+            return key == VirtualKey.Down ||
+                key == VirtualKey.GamepadDPadDown ||
+                key == VirtualKey.GamepadLeftThumbstickDown;
+        }
+
+        private static bool IsUpKey(VirtualKey key)
+        {
+            return key == VirtualKey.Up ||
+                key == VirtualKey.GamepadDPadUp ||
+                key == VirtualKey.GamepadLeftThumbstickUp;
+        }
+
+        private static bool IsLeftKey(VirtualKey key)
+        {
+            return key == VirtualKey.Left ||
+                key == VirtualKey.GamepadDPadLeft ||
+                key == VirtualKey.GamepadLeftThumbstickLeft;
+        }
+
+        private static bool IsRightKey(VirtualKey key)
+        {
+            return key == VirtualKey.Right ||
+                key == VirtualKey.GamepadDPadRight ||
+                key == VirtualKey.GamepadLeftThumbstickRight;
         }
 
         private static Brush BrushResource(string key)

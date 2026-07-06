@@ -33,6 +33,7 @@ public sealed class DevelopmentNavigationCommandTests
     [InlineData("Unwatched", "unwatched")]
     [InlineData("LiveTv-Unsupported", "livetv-unsupported")]
     [InlineData("Music-Unsupported", "music-unsupported")]
+    [InlineData("Music-Fixture", "music-fixture")]
     [InlineData("Home-Fixture", "home-fixture")]
     [InlineData("Search-Fixture", "search-fixture")]
     [InlineData("Search-Error", "search-error")]
