@@ -1611,3 +1611,32 @@ Then continue design and implementation until the route passes.
   - No app-content mouse clicks were used.
 - Follow-up:
   - Re-run Collections and Playlists against a real saved Emby session. If real playlist children do not resolve through `ParentId` on the target server, add a dedicated playlist-items API path while keeping this fixture route as a controller regression.
+
+### 2026-07-07 - Playlist Items Endpoint Route
+
+- App version: 0.1.0.186.
+- Scope: replace the remaining real-server playlist child loading risk with Emby's dedicated playlist item endpoint while keeping the existing Playlists fixture route and Library grid interaction intact.
+- Interaction changes:
+  - `EmbyApiClient.GetPlaylistItemsAsync` uses `GET /Playlists/{Id}/Items` with `UserId`, `Limit`, standard item fields, and image metadata.
+  - Nested playlist Library requests now carry `ContainerItemType`, so `Playlist` children use the playlist endpoint instead of a generic `ParentId` query.
+  - Playlist child pages are treated as read-only ordered sequences: Sort/Filter are hidden, and Up from the first row routes to Refresh instead of exposing controls that the endpoint does not support.
+- Automated verification:
+  - TDD red path confirmed `GetPlaylistItemsAsync` did not exist before implementation.
+  - TDD red path confirmed LibraryPage lacked `ContainerItemType`, `IsPlaylistRequest`, and `GetPlaylistItemsAsync` routing before implementation.
+  - TDD red path confirmed read-only sequence requests did not hide Sort/Filter before implementation.
+  - Targeted playlist endpoint, source, fixture, and activation tests passed: 15 total.
+  - Core tests passed: 424 total.
+  - `git diff --check` passed with only LF/CRLF working-copy warnings.
+  - App Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.186_x64_Debug.msix`.
+  - First install attempt failed with `0x800B0100` because the package was not signed. Root-cause check showed `Get-AuthenticodeSignature` was `NotSigned`; signing with trusted `CN=NextGenEmby` thumbprint `6CB453A2FEC300C6E5034152C6C1A68DE31A7BD0` produced `Status: Valid`, then install succeeded as `NextGenEmby.App 0.1.0.186`.
+- Keyboard-only validation with Computer Use:
+  - Wrote `dev-command.json` with route `playlists-fixture` and cold-launched the installed app.
+  - `dev-command-result.txt` reported `completed / playlists-fixture`.
+  - Initial Playlists state showed `Playlists`, `2 items`, `Weekend Queue`, and `Documentary Stack`, with focus on `Weekend Queue`.
+  - Pressed `Return`; `Weekend Queue` opened as a nested playlist page with `5 items`: `Northline S1:E4`, `Room Tone S2:E1`, `Ocean Archive`, `Sound Room`, and `Room Tone`.
+  - Verified the nested playlist page hides Sort/Filter and keeps only the Refresh action in the toolbar, matching the ordered playlist endpoint behavior.
+  - Pressed `Right`, `Right`; visible focus moved to `Ocean Archive` without card resizing or label overlap.
+  - Pressed `Escape`; the app returned to root Playlists and restored focus to `Weekend Queue`.
+  - No app-content mouse clicks were used. Computer Use required window rebinds after two capture/foreground metadata hiccups, but all app interactions were completed through keyboard/controller-mapped input.
+- Follow-up:
+  - Re-run a real saved Emby session where playlist items are not reliably returned by `ParentId`, and verify the live endpoint returns mixed video/audio playlist children with the same focus behavior.

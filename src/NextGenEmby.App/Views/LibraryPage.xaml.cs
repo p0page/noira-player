@@ -76,7 +76,7 @@ namespace NextGenEmby.App.Views
             }
 
             TitleBlock.Text = _request.Title;
-            OptionsPanel.Visibility = IsSectionRequest(_request) ? Visibility.Collapsed : Visibility.Visible;
+            OptionsPanel.Visibility = IsReadOnlySequenceRequest(_request) ? Visibility.Collapsed : Visibility.Visible;
             ApplyOptionLabels();
             await LoadLibraryAsync();
         }
@@ -287,7 +287,7 @@ namespace NextGenEmby.App.Views
                 return false;
             }
 
-            var next = LibraryToolbarFocusPolicy.Move(current, direction, IsSectionRequest(_request));
+            var next = LibraryToolbarFocusPolicy.Move(current, direction, IsReadOnlySequenceRequest(_request));
             return FocusToolbarTarget(next);
         }
 
@@ -326,7 +326,7 @@ namespace NextGenEmby.App.Views
 
         private bool FocusFilterControlForGridIndex(int gridIndex)
         {
-            if (IsSectionRequest(_request))
+            if (IsReadOnlySequenceRequest(_request))
             {
                 return RefreshButton.IsEnabled && RefreshButton.Focus(FocusState.Keyboard);
             }
@@ -405,6 +405,10 @@ namespace NextGenEmby.App.Views
                     {
                         items = await client.GetHomeSectionItemsAsync(session, request.SectionId, 100);
                     }
+                    else if (IsPlaylistRequest(request))
+                    {
+                        items = await client.GetPlaylistItemsAsync(session, request.ParentId, 100);
+                    }
                     else
                     {
                         items = await client.GetItemsAsync(
@@ -441,8 +445,8 @@ namespace NextGenEmby.App.Views
                 if (CanApplyLoad(loadGeneration))
                 {
                     RefreshButton.IsEnabled = true;
-                    SortButton.IsEnabled = !IsSectionRequest(request);
-                    FilterButton.IsEnabled = !IsSectionRequest(request);
+                    SortButton.IsEnabled = !IsReadOnlySequenceRequest(request);
+                    FilterButton.IsEnabled = !IsReadOnlySequenceRequest(request);
                     EmptyRetryButton.IsEnabled = true;
                     ClearFiltersButton.IsEnabled = true;
 
@@ -680,7 +684,11 @@ namespace NextGenEmby.App.Views
                     "",
                     IsOrganizationContainer(item.Type) ? OrganizationChildItemTypes : "",
                     item.Id,
-                    "");
+                    "",
+                    LibraryNavigationQuery.Empty,
+                    null,
+                    null,
+                    item.Type);
             }
 
             return new LibraryNavigationRequest(
@@ -691,7 +699,8 @@ namespace NextGenEmby.App.Views
                 "",
                 IsOrganizationContainer(item.Type) ? LibraryNavigationQuery.Empty : request.Query,
                 request.DevelopmentItems,
-                request.DevelopmentArtworkUris);
+                request.DevelopmentArtworkUris,
+                item.Type);
         }
 
         private static bool IsOrganizationContainer(string itemType)
@@ -1143,6 +1152,17 @@ namespace NextGenEmby.App.Views
         private static bool IsSectionRequest(LibraryNavigationRequest? request)
         {
             return request != null && !string.IsNullOrWhiteSpace(request.SectionId);
+        }
+
+        private static bool IsPlaylistRequest(LibraryNavigationRequest? request)
+        {
+            return request != null &&
+                string.Equals(request.ContainerItemType, "Playlist", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsReadOnlySequenceRequest(LibraryNavigationRequest? request)
+        {
+            return IsSectionRequest(request) || IsPlaylistRequest(request);
         }
 
         private static string CreateMeta(EmbyMediaItem item)

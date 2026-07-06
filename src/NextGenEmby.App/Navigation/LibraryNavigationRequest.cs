@@ -29,13 +29,15 @@ namespace NextGenEmby.App.Navigation
             string sectionId,
             LibraryNavigationQuery query,
             IReadOnlyList<EmbyMediaItem>? developmentItems = null,
-            IReadOnlyDictionary<string, string>? developmentArtworkUris = null)
+            IReadOnlyDictionary<string, string>? developmentArtworkUris = null,
+            string containerItemType = "")
         {
             Title = title ?? "";
             CollectionType = collectionType ?? "";
             IncludeItemTypes = includeItemTypes ?? "";
             ParentId = parentId ?? "";
             SectionId = sectionId ?? "";
+            ContainerItemType = containerItemType ?? "";
             Query = query ?? LibraryNavigationQuery.Empty;
             DevelopmentItems = developmentItems ?? Array.Empty<EmbyMediaItem>();
             DevelopmentArtworkUris = developmentArtworkUris ?? new Dictionary<string, string>();
@@ -50,6 +52,8 @@ namespace NextGenEmby.App.Navigation
         public string ParentId { get; }
 
         public string SectionId { get; }
+
+        public string ContainerItemType { get; }
 
         public LibraryNavigationQuery Query { get; }
 
@@ -75,7 +79,8 @@ namespace NextGenEmby.App.Navigation
                 SectionId,
                 Query,
                 items,
-                artworkUris);
+                artworkUris,
+                ContainerItemType);
         }
     }
 

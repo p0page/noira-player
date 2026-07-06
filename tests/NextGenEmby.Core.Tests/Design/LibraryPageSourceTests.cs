@@ -67,6 +67,29 @@ public sealed class LibraryPageSourceTests
     }
 
     [Fact]
+    public void Library_Page_Loads_Playlist_Children_From_Playlist_Items_Endpoint()
+    {
+        var source = ReadAppSource("Views", "LibraryPage.xaml.cs");
+        var requestSource = ReadAppSource("Navigation", "LibraryNavigationRequest.cs");
+
+        Assert.Contains("ContainerItemType", requestSource);
+        Assert.Contains("item.Type", source);
+        Assert.Contains("IsPlaylistRequest(request)", source);
+        Assert.Contains("client.GetPlaylistItemsAsync(session, request.ParentId, 100)", source);
+    }
+
+    [Fact]
+    public void Library_Page_Hides_Sort_Filter_For_Read_Only_Sequence_Requests()
+    {
+        var source = ReadAppSource("Views", "LibraryPage.xaml.cs");
+
+        Assert.Contains("IsReadOnlySequenceRequest(_request)", source);
+        Assert.Contains("IsReadOnlySequenceRequest(request)", source);
+        Assert.Contains("return IsSectionRequest(request) || IsPlaylistRequest(request);", source);
+        Assert.Contains("LibraryToolbarFocusPolicy.Move(current, direction, IsReadOnlySequenceRequest(_request))", source);
+    }
+
+    [Fact]
     public void Library_Page_Passes_Development_Photo_Uri_To_Photo_Viewer()
     {
         var source = ReadAppSource("Views", "LibraryPage.xaml.cs");

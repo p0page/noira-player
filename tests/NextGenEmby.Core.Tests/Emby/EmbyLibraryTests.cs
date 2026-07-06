@@ -839,6 +839,47 @@ public sealed class EmbyLibraryTests
     }
 
     [Fact]
+    public async Task GetPlaylistItemsAsync_Uses_Playlist_Items_Endpoint_And_Maps_Items()
+    {
+        var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
+            HttpStatusCode.OK,
+            """
+            {
+              "Items": [
+                {
+                  "Id": "episode-1",
+                  "Name": "Queued Episode",
+                  "Type": "Episode",
+                  "ImageTags": { "Primary": "primary-tag" },
+                  "BackdropImageTags": [ "backdrop-tag" ]
+                }
+              ],
+              "TotalRecordCount": 1
+            }
+            """));
+        using var http = new HttpClient(handler);
+        var client = CreateClient(http);
+
+        var items = await client.GetPlaylistItemsAsync(Session(userId: "user 1/slash"), "playlist 1/slash", 24);
+
+        var item = Assert.Single(items);
+        Assert.Equal("episode-1", item.Id);
+        Assert.Equal("Queued Episode", item.Name);
+        Assert.Equal("Episode", item.Type);
+        Assert.Equal("primary-tag", item.PrimaryImageTag);
+        Assert.Equal("backdrop-tag", item.BackdropImageTag);
+        Assert.Equal("/Playlists/playlist%201%2Fslash/Items", handler.LastRequest!.RequestUri!.AbsolutePath);
+        Assert.Contains("UserId=user%201%2Fslash", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("Limit=24", handler.LastRequest.RequestUri.Query);
+        Assert.Contains(
+            "Fields=Overview%2CProductionYear%2CRunTimeTicks%2CPrimaryImageAspectRatio%2CChildCount%2CUserData",
+            handler.LastRequest.RequestUri.Query);
+        Assert.Contains("EnableImages=true", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("EnableImageTypes=Primary%2CBackdrop%2CThumb%2CBanner%2CLogo", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("ImageTypeLimit=1", handler.LastRequest.RequestUri.Query);
+    }
+
+    [Fact]
     public async Task AddItemToPlaylistAsync_Posts_User_And_Parses_Result()
     {
         var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
