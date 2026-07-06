@@ -1782,3 +1782,27 @@ Then continue design and implementation until the route passes.
   - No app-content mouse clicks were used. `dev-command.json` was consumed by the app and `dev-command-result.txt` reported `completed` / `home-fixture`.
 - Follow-up:
   - Continue extracting the remaining one-off Home action button metrics and evaluate row-item focus against real-server rows with more than two visible posters once saved-session screenshots are available again.
+
+### 2026-07-07 - Home Poster Row Column Memory
+
+- App version: 0.1.0.200.
+- Scope: make Home poster-row vertical navigation preserve the viewer's visual column when moving between rows, matching mature TV streaming clients.
+- Interaction/design changes:
+  - `HomeFocusInputPolicy` now passes `rowItemCounts` into `MoveDown`/`MoveUp`.
+  - Row targets carry the current `ItemIndex` across vertical moves and clamp to the target row's last available item.
+  - No playback decoding, media loading, or Emby transcoding behavior changed.
+- Automated verification:
+  - TDD red path confirmed vertical row movement previously reset `ItemIndex` to 0.
+  - Targeted column-preservation tests passed: 3 total.
+  - Home focus policy tests passed: 18 total.
+  - Core tests passed: 443 total.
+  - App Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.200_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate thumbprint `6CB453A2FEC300C6E5034152C6C1A68DE31A7BD0`, verified with `signtool verify /pa`, and installed locally as `NextGenEmby.App 0.1.0.200`.
+- Keyboard-only validation with Computer Use:
+  - Wrote `dev-command.json` with route `home-fixture` and launched the installed app through AppUserModelId `NextGenEmby.App_h8qjz0sr1sg4m!App`; the window path resolved to `NextGenEmby.App_0.1.0.200_x64__h8qjz0sr1sg4m`.
+  - Pressed `Down`, `Down`, `Down`, `Right`, `Down`; focus moved from Continue watching column 2 to Next up column 2 (`Room Tone S2:E1`).
+  - Pressed `Up`; focus returned to Continue watching column 2 (`Northline S1:E4`).
+  - Pressed `Down`, `Down`; focus landed on Hot Movies column 2 (`Midnight Signal`) instead of snapping to `Aurora Protocol`.
+  - No app-content mouse clicks were used. `dev-command.json` and `dev-command-result.txt` were removed from LocalState after validation.
+- Follow-up:
+  - Add a fixture row with fewer items than the source row to keyboard-validate the clamp case visually, not only through policy tests.

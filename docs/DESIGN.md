@@ -283,7 +283,7 @@ The current XAML token migration has started with:
 - shared TV text, panel, diagnostics, icon button, nav button, list button, badge text, and settings checkbox styles;
 - shared overlay/action resources: `AppOnActionBrush`, `AppArtworkDimBrush`, `AppModalScrimBrush`, `AppPlaybackOverlayBrush`, `AppPlaybackDrawerBrush`, and the hero/details/home artwork wash colors.
 - shared poster-grid resources for Library and Search cards, including card size, item margin, corner radius, scrim padding, card title/meta text, fallback initials, and empty-state typography.
-- shared Home decision-surface and rail-card resources for the compact Hero, media-library tiles, server-section tiles, and Home poster rows, including Hero/poster dimensions, spacing, type size, corner radius, artwork wash, stronger bottom text scrim, and focused-card scale. Home row focus targets also preserve row index plus in-row item index so D-pad left/right movement can stay inside a poster row instead of snapping back to the first item.
+- shared Home decision-surface and rail-card resources for the compact Hero, media-library tiles, server-section tiles, and Home poster rows, including Hero/poster dimensions, spacing, type size, corner radius, artwork wash, stronger bottom text scrim, and focused-card scale. Home row focus targets preserve row index plus in-row item index so D-pad left/right movement stays inside a poster row and D-pad up/down keeps the viewer's visual column when crossing between content rows.
 - playback canvas, OSD, and drawer resources reuse the DESIGN.md canvas/surface color families, with only opacity differing by layer.
 
 New UI surfaces should follow this migration order:

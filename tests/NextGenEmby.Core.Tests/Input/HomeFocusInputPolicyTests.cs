@@ -93,6 +93,55 @@ public sealed class HomeFocusInputPolicyTests
     }
 
     [Fact]
+    public void Down_From_Content_Row_Preserves_Item_Column_In_Next_Row()
+    {
+        var next = HomeFocusInputPolicy.Move(
+            new HomeFocusTarget(HomeFocusZone.Row, 0, itemIndex: 1),
+            HomeFocusDirection.Down,
+            libraryCount: 4,
+            rowCount: 3,
+            rowItemCounts: new[] { 3, 3, 2 });
+
+        Assert.NotNull(next);
+        Assert.Equal(HomeFocusZone.Row, next!.Zone);
+        Assert.Equal(1, next.Index);
+        Assert.Equal(1, next.ItemIndex);
+    }
+
+    [Fact]
+    public void Down_From_Content_Row_Clamps_Item_Column_To_Target_Row_End()
+    {
+        var next = HomeFocusInputPolicy.Move(
+            new HomeFocusTarget(HomeFocusZone.Row, 0, itemIndex: 2),
+            HomeFocusDirection.Down,
+            libraryCount: 4,
+            rowCount: 3,
+            rowItemCounts: new[] { 3, 2, 4 });
+
+        Assert.NotNull(next);
+        Assert.Equal(HomeFocusZone.Row, next!.Zone);
+        Assert.Equal(1, next.Index);
+        Assert.Equal(1, next.ItemIndex);
+    }
+
+    [Fact]
+    public void Up_From_Content_Row_Preserves_Item_Column_In_Previous_Row()
+    {
+        var next = HomeFocusInputPolicy.Move(
+            new HomeFocusTarget(HomeFocusZone.Row, 2, itemIndex: 1),
+            HomeFocusDirection.Up,
+            libraryCount: 4,
+            rowCount: 3,
+            rowHasMore: new[] { false, false, false },
+            rowItemCounts: new[] { 3, 3, 2 });
+
+        Assert.NotNull(next);
+        Assert.Equal(HomeFocusZone.Row, next!.Zone);
+        Assert.Equal(1, next.Index);
+        Assert.Equal(1, next.ItemIndex);
+    }
+
+    [Fact]
     public void Right_From_Content_Row_Moves_To_Next_Item_In_Same_Row()
     {
         var next = HomeFocusInputPolicy.Move(
