@@ -7,6 +7,7 @@ using NextGenEmby.App.Services;
 using NextGenEmby.App.Storage;
 using NextGenEmby.App.Views;
 using Windows.Storage;
+using Windows.UI.Core;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Input;
@@ -21,12 +22,18 @@ namespace NextGenEmby.App
 #if DEBUG
         private const string DevelopmentCommandFileName = "dev-command.json";
 #endif
+        private const double GuideCollapsedWidth = 72d;
+        private const double GuideExpandedWidth = 248d;
         private readonly ApplicationDataSessionStore _sessionStore = new ApplicationDataSessionStore();
         private LibraryNavigationRequest? _currentLibraryRequest;
+        private Control? _guideReturnFocusTarget;
+        private bool _guideOpen;
+        private bool _focusContentAfterGuideNavigation;
 
         public MainPage()
         {
             InitializeComponent();
+            ApplyGuideOpenState(isOpen: false);
             AddHandler(KeyDownEvent, new KeyEventHandler(Page_OnKeyDown), true);
             ContentFrame.Navigated += ContentFrame_OnNavigated;
             NavigateLogin();
@@ -63,6 +70,12 @@ namespace NextGenEmby.App
                 return;
             }
 
+            if (TryApplyGuideNavigationKey(e))
+            {
+                e.Handled = true;
+                return;
+            }
+
             if (IsDownKey(e.Key) && TryFocusContentFromShell(e.OriginalSource))
             {
                 e.Handled = true;
@@ -91,8 +104,8 @@ namespace NextGenEmby.App
         private bool TryFocusContentFromShell(object originalSource)
         {
             var focusedElement = FocusManager.GetFocusedElement();
-            if (!IsFocusWithin(focusedElement, ShellHeader) &&
-                !IsFocusWithin(originalSource, ShellHeader))
+            if (!IsFocusWithin(focusedElement, GuideRail) &&
+                !IsFocusWithin(originalSource, GuideRail))
             {
                 return false;
             }
@@ -101,11 +114,66 @@ namespace NextGenEmby.App
             return focusTarget != null && focusTarget.FocusDefaultContent();
         }
 
+        private bool TryApplyGuideNavigationKey(KeyRoutedEventArgs e)
+        {
+            var menuKeyPressed = IsMenuKey(e.Key);
+            var backKeyPressed = IsBackKey(e.Key);
+            var selectKeyPressed = IsSelectKey(e.Key) &&
+                IsFocusWithin(FocusManager.GetFocusedElement(), GuideRail);
+
+            if (!menuKeyPressed && !backKeyPressed && !selectKeyPressed)
+            {
+                return false;
+            }
+
+            var selectedDestination = ResolveFocusedGuideDestination();
+            var decision = GuideNavigationPolicy.GetDecision(
+                e.Handled,
+                IsPlaybackPageActive(),
+                _guideOpen,
+                menuKeyPressed,
+                backKeyPressed,
+                selectKeyPressed,
+                selectedDestination);
+
+            switch (decision.Action)
+            {
+                case GuideNavigationAction.OpenGuide:
+                    OpenGuide();
+                    return true;
+
+                case GuideNavigationAction.CloseGuide:
+                    CloseGuide(decision.ShouldRestorePreviousFocus);
+                    return true;
+
+                case GuideNavigationAction.Navigate:
+                    NavigateGuideDestination(decision.Destination);
+                    return true;
+
+                default:
+                    return false;
+            }
+        }
+
         private static bool IsBackKey(VirtualKey key)
         {
             return key == VirtualKey.GamepadB ||
                 key == VirtualKey.Escape ||
                 key == VirtualKey.GoBack;
+        }
+
+        private static bool IsMenuKey(VirtualKey key)
+        {
+            return key == VirtualKey.M ||
+                key == VirtualKey.GamepadMenu ||
+                key == VirtualKey.Application;
+        }
+
+        private static bool IsSelectKey(VirtualKey key)
+        {
+            return key == VirtualKey.Enter ||
+                key == VirtualKey.Space ||
+                key == VirtualKey.GamepadA;
         }
 
         private static bool IsDownKey(VirtualKey key)
@@ -190,9 +258,9 @@ namespace NextGenEmby.App
 
         private void ApplyShellChrome(bool isPlayback)
         {
-            ShellHeader.Visibility = isPlayback ? Visibility.Collapsed : Visibility.Visible;
-            Grid.SetRow(ContentFrame, isPlayback ? 0 : 1);
-            Grid.SetRowSpan(ContentFrame, isPlayback ? 2 : 1);
+            GuideRail.Visibility = isPlayback ? Visibility.Collapsed : Visibility.Visible;
+            Grid.SetColumn(ContentFrame, isPlayback ? 0 : 1);
+            Grid.SetColumnSpan(ContentFrame, isPlayback ? 2 : 1);
         }
 
         private void ApplyShellButtonState(Type pageType, LibraryNavigationRequest? libraryRequest)
@@ -200,6 +268,10 @@ namespace NextGenEmby.App
             SetShellButtonActive(HomeButton, pageType == typeof(HomePage) || pageType == typeof(LoginPage));
             SetShellButtonActive(MoviesButton, pageType == typeof(LibraryPage) && libraryRequest != null && libraryRequest.IsMovies);
             SetShellButtonActive(TvButton, pageType == typeof(LibraryPage) && libraryRequest != null && libraryRequest.IsTv);
+            SetShellButtonActive(LiveTvButton, IsLibraryCollection(pageType, libraryRequest, "livetv"));
+            SetShellButtonActive(CollectionsButton, IsLibraryCollection(pageType, libraryRequest, "boxsets"));
+            SetShellButtonActive(MusicButton, IsLibraryCollection(pageType, libraryRequest, "music"));
+            SetShellButtonActive(PhotosButton, IsLibraryCollection(pageType, libraryRequest, "photos"));
             SetShellButtonActive(SearchButton, pageType == typeof(SearchPage));
             SetShellButtonActive(SettingsButton, pageType == typeof(SettingsPage));
         }
@@ -218,6 +290,15 @@ namespace NextGenEmby.App
             NavigationMode navigationMode)
         {
             var contentFocusTarget = ContentFrame.Content as ITvContentFocusTarget;
+            if (_focusContentAfterGuideNavigation)
+            {
+                _focusContentAfterGuideNavigation = false;
+                if (contentFocusTarget != null && contentFocusTarget.FocusDefaultContent())
+                {
+                    return;
+                }
+            }
+
             var focusTarget = ShellNavigationFocusPolicy.GetFocusTarget(
                 pageType == typeof(PlaybackPage),
                 navigationMode == NavigationMode.Back,
@@ -239,6 +320,14 @@ namespace NextGenEmby.App
 
         private void FocusShellButton(Type pageType, LibraryNavigationRequest? libraryRequest)
         {
+            FocusShellButton(pageType, libraryRequest, FocusState.Programmatic);
+        }
+
+        private void FocusShellButton(
+            Type pageType,
+            LibraryNavigationRequest? libraryRequest,
+            FocusState focusState)
+        {
             if (pageType == typeof(PlaybackPage))
             {
                 return;
@@ -246,57 +335,217 @@ namespace NextGenEmby.App
 
             if (pageType == typeof(LibraryPage) && libraryRequest != null)
             {
-                if (libraryRequest.IsMovies)
+                var libraryButton = GetGuideButtonForLibrary(libraryRequest);
+                if (libraryButton != null)
                 {
-                    MoviesButton.Focus(FocusState.Programmatic);
-                    return;
-                }
-
-                if (libraryRequest.IsTv)
-                {
-                    TvButton.Focus(FocusState.Programmatic);
+                    libraryButton.Focus(focusState);
                     return;
                 }
             }
 
             if (pageType == typeof(SearchPage))
             {
-                SearchButton.Focus(FocusState.Programmatic);
+                SearchButton.Focus(focusState);
                 return;
             }
 
             if (pageType == typeof(SettingsPage))
             {
-                SettingsButton.Focus(FocusState.Programmatic);
+                SettingsButton.Focus(focusState);
                 return;
             }
 
-            HomeButton.Focus(FocusState.Programmatic);
+            HomeButton.Focus(focusState);
         }
 
         private void Home_OnClick(object sender, RoutedEventArgs e)
         {
-            NavigateHome(replaceHistory: false);
+            NavigateGuideDestination(GuideNavigationDestination.Home);
         }
 
         private void Movies_OnClick(object sender, RoutedEventArgs e)
         {
-            NavigateLibrary(new LibraryNavigationRequest("Movies", "movies", "Movie"));
+            NavigateGuideDestination(GuideNavigationDestination.Movies);
         }
 
         private void Tv_OnClick(object sender, RoutedEventArgs e)
         {
-            NavigateLibrary(new LibraryNavigationRequest("TV Shows", "tvshows", "Series"));
+            NavigateGuideDestination(GuideNavigationDestination.Tv);
         }
 
         private void Search_OnClick(object sender, RoutedEventArgs e)
         {
-            NavigateSearch();
+            NavigateGuideDestination(GuideNavigationDestination.Search);
+        }
+
+        private void LiveTv_OnClick(object sender, RoutedEventArgs e)
+        {
+            NavigateGuideDestination(GuideNavigationDestination.LiveTv);
+        }
+
+        private void Collections_OnClick(object sender, RoutedEventArgs e)
+        {
+            NavigateGuideDestination(GuideNavigationDestination.Collections);
+        }
+
+        private void Music_OnClick(object sender, RoutedEventArgs e)
+        {
+            NavigateGuideDestination(GuideNavigationDestination.Music);
+        }
+
+        private void Photos_OnClick(object sender, RoutedEventArgs e)
+        {
+            NavigateGuideDestination(GuideNavigationDestination.Photos);
         }
 
         private void Settings_OnClick(object sender, RoutedEventArgs e)
         {
-            NavigateSettings();
+            NavigateGuideDestination(GuideNavigationDestination.Settings);
+        }
+
+        private void NavigateGuideDestination(GuideNavigationDestination destination)
+        {
+            _focusContentAfterGuideNavigation = _guideOpen ||
+                IsFocusWithin(FocusManager.GetFocusedElement(), GuideRail);
+            CloseGuide(restorePreviousFocus: false);
+
+            switch (destination)
+            {
+                case GuideNavigationDestination.Home:
+                    NavigateHome(replaceHistory: false);
+                    return;
+
+                case GuideNavigationDestination.Search:
+                    NavigateSearch();
+                    return;
+
+                case GuideNavigationDestination.Movies:
+                    NavigateLibrary(new LibraryNavigationRequest("Movies", "movies", "Movie"));
+                    return;
+
+                case GuideNavigationDestination.Tv:
+                    NavigateLibrary(new LibraryNavigationRequest("TV Shows", "tvshows", "Series"));
+                    return;
+
+                case GuideNavigationDestination.LiveTv:
+                    NavigateLibrary(new LibraryNavigationRequest("Live TV", "livetv", "TvChannel"));
+                    return;
+
+                case GuideNavigationDestination.Collections:
+                    NavigateLibrary(new LibraryNavigationRequest("Collections", "boxsets", "BoxSet"));
+                    return;
+
+                case GuideNavigationDestination.Music:
+                    NavigateLibrary(new LibraryNavigationRequest("Music", "music", "MusicAlbum,Audio"));
+                    return;
+
+                case GuideNavigationDestination.Photos:
+                    NavigateLibrary(new LibraryNavigationRequest("Photos", "photos", "Photo"));
+                    return;
+
+                case GuideNavigationDestination.Settings:
+                    NavigateSettings();
+                    return;
+            }
+        }
+
+        private void OpenGuide()
+        {
+            _guideReturnFocusTarget = FocusManager.GetFocusedElement() as Control;
+            ApplyGuideOpenState(isOpen: true);
+            var pageType = ContentFrame.CurrentSourcePageType;
+            var libraryRequest = _currentLibraryRequest;
+            _ = Dispatcher.RunAsync(
+                CoreDispatcherPriority.Normal,
+                () => FocusShellButton(pageType, libraryRequest, FocusState.Keyboard));
+        }
+
+        private void CloseGuide(bool restorePreviousFocus)
+        {
+            ApplyGuideOpenState(isOpen: false);
+            if (!restorePreviousFocus)
+            {
+                return;
+            }
+
+            if (_guideReturnFocusTarget != null &&
+                _guideReturnFocusTarget.Focus(FocusState.Keyboard))
+            {
+                return;
+            }
+
+            var contentFocusTarget = ContentFrame.Content as ITvContentFocusTarget;
+            if (contentFocusTarget != null)
+            {
+                contentFocusTarget.FocusDefaultContent();
+            }
+        }
+
+        private void ApplyGuideOpenState(bool isOpen)
+        {
+            _guideOpen = isOpen;
+            GuideColumn.Width = new GridLength(isOpen ? GuideExpandedWidth : GuideCollapsedWidth);
+            GuideTitleLabel.Visibility = isOpen ? Visibility.Visible : Visibility.Collapsed;
+            SetGuideLabelVisibility(HomeGuideLabel, isOpen);
+            SetGuideLabelVisibility(SearchGuideLabel, isOpen);
+            SetGuideLabelVisibility(MoviesGuideLabel, isOpen);
+            SetGuideLabelVisibility(TvGuideLabel, isOpen);
+            SetGuideLabelVisibility(LiveTvGuideLabel, isOpen);
+            SetGuideLabelVisibility(CollectionsGuideLabel, isOpen);
+            SetGuideLabelVisibility(MusicGuideLabel, isOpen);
+            SetGuideLabelVisibility(PhotosGuideLabel, isOpen);
+            SetGuideLabelVisibility(SettingsGuideLabel, isOpen);
+        }
+
+        private static void SetGuideLabelVisibility(TextBlock label, bool isOpen)
+        {
+            label.Visibility = isOpen ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        private GuideNavigationDestination ResolveFocusedGuideDestination()
+        {
+            var focusedElement = FocusManager.GetFocusedElement();
+            if (IsFocusWithin(focusedElement, SearchButton))
+            {
+                return GuideNavigationDestination.Search;
+            }
+
+            if (IsFocusWithin(focusedElement, MoviesButton))
+            {
+                return GuideNavigationDestination.Movies;
+            }
+
+            if (IsFocusWithin(focusedElement, TvButton))
+            {
+                return GuideNavigationDestination.Tv;
+            }
+
+            if (IsFocusWithin(focusedElement, LiveTvButton))
+            {
+                return GuideNavigationDestination.LiveTv;
+            }
+
+            if (IsFocusWithin(focusedElement, CollectionsButton))
+            {
+                return GuideNavigationDestination.Collections;
+            }
+
+            if (IsFocusWithin(focusedElement, MusicButton))
+            {
+                return GuideNavigationDestination.Music;
+            }
+
+            if (IsFocusWithin(focusedElement, PhotosButton))
+            {
+                return GuideNavigationDestination.Photos;
+            }
+
+            if (IsFocusWithin(focusedElement, SettingsButton))
+            {
+                return GuideNavigationDestination.Settings;
+            }
+
+            return GuideNavigationDestination.Home;
         }
 
 #if DEBUG
@@ -402,6 +651,43 @@ namespace NextGenEmby.App
                 string.Equals(current.IncludeItemTypes, next.IncludeItemTypes, StringComparison.Ordinal) &&
                 string.Equals(current.ParentId, next.ParentId, StringComparison.Ordinal) &&
                 string.Equals(current.SectionId, next.SectionId, StringComparison.Ordinal);
+        }
+
+        private static bool IsLibraryCollection(
+            Type pageType,
+            LibraryNavigationRequest? libraryRequest,
+            string collectionType)
+        {
+            return pageType == typeof(LibraryPage) &&
+                libraryRequest != null &&
+                string.Equals(libraryRequest.CollectionType, collectionType, StringComparison.Ordinal);
+        }
+
+        private Button? GetGuideButtonForLibrary(LibraryNavigationRequest libraryRequest)
+        {
+            if (libraryRequest.IsMovies)
+            {
+                return MoviesButton;
+            }
+
+            if (libraryRequest.IsTv)
+            {
+                return TvButton;
+            }
+
+            switch (libraryRequest.CollectionType)
+            {
+                case "livetv":
+                    return LiveTvButton;
+                case "boxsets":
+                    return CollectionsButton;
+                case "music":
+                    return MusicButton;
+                case "photos":
+                    return PhotosButton;
+                default:
+                    return null;
+            }
         }
 
         private bool IsPlaybackPageActive()
