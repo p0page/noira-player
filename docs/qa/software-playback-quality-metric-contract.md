@@ -55,6 +55,7 @@ The primary consumer of `quality-run` reports is an automated model or agent, no
 The analyzer output must include:
 
 - `primaryFailureArea` copied from report analysis;
+- `startup` with command/start timestamps, startup duration, evidence signals, and failed startup signals;
 - `source` with parsed source status, HDR/Dolby Vision playback strategy, source evidence signals, and source mismatch signals;
 - `colorPipeline` with actual HDR output, swapchain/DXGI observations, conversion status, evidence signals, and color mismatch signals;
 - `buffering` with submitted/queued audio buffer evidence, video/audio starvation counters, and failed buffering signals;
@@ -73,6 +74,7 @@ The analyzer output must include:
 - `limitations` copied from the report.
 
 This keeps model iteration grounded in evidence. For example, a report can identify `color-pipeline` as primary while still preserving `frame-pacing` as a secondary failure area.
+`startup.status` must be checked before interpreting frame pacing or buffering evidence. `slow` means startup thresholds failed and the model should inspect Emby request latency, source open, demux initialization, and first-frame readiness before tuning render pacing; `missing-evidence` means startup timing telemetry is absent; `ready` means startup telemetry exists and no startup threshold failed.
 `source.status` must be checked before optimizing playback timing or color conversion. `mismatch` means the report selected or parsed a different source than the reference case expected; `unsupported` means Core classified the source as not directly playable, for example unsupported Dolby Vision; `missing-evidence` means the run did not capture enough source metadata; `matched` means parsed source metadata is available and no `unsupported-source` check failed.
 `colorPipeline.status` must be checked before changing HDR conversion code. `mismatch` means one or more `color-pipeline` checks failed, such as HDR output, DXGI input/output, or conversion validation; `missing-evidence` means the run did not capture usable color telemetry; `matched` means color telemetry is available and no color-pipeline check failed.
 `buffering.status` must be checked before tuning frame pacing. `starved` means buffering thresholds failed and the model should inspect demux/decode/network/audio queue supply before changing frame drop or render timing; `observed-starvation` means starvation counters were non-zero but no buffering threshold failed; `missing-evidence` means supply telemetry is absent; `stable` means buffering telemetry exists and no starvation failure was reported.

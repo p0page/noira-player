@@ -624,6 +624,62 @@ public sealed class PlaybackQualityReportAnalyzerTests
     }
 
     [Fact]
+    public void Analyze_Summarizes_Startup_For_Model()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "startup-summary",
+            Result = "pass",
+            Startup = new PlaybackQualityStartup
+            {
+                CommandReceivedAt = "2026-07-07T10:00:00Z",
+                PlaybackStartedAt = "2026-07-07T10:00:01Z",
+                StartupDurationMs = 1000
+            }
+        };
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Equal("ready", analysis.Startup.Status);
+        Assert.Equal("2026-07-07T10:00:00Z", analysis.Startup.CommandReceivedAt);
+        Assert.Equal("2026-07-07T10:00:01Z", analysis.Startup.PlaybackStartedAt);
+        Assert.Equal(1000, analysis.Startup.StartupDurationMs);
+        Assert.Contains("startup.commandReceivedAt", analysis.Startup.Signals);
+        Assert.Contains("startup.playbackStartedAt", analysis.Startup.Signals);
+        Assert.Contains("startup.startupDurationMs", analysis.Startup.Signals);
+    }
+
+    [Fact]
+    public void Analyze_Marks_Startup_Slow_From_Startup_Checks()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "startup-slow",
+            Result = "fail",
+            Startup = new PlaybackQualityStartup
+            {
+                StartupDurationMs = 3500
+            }
+        };
+        report.Checks.Add(new PlaybackQualityCheck
+        {
+            Name = "StartupDurationMs",
+            Status = "fail",
+            FailureArea = "startup",
+            Signal = "startup.startupDurationMs",
+            Expected = "2000.000",
+            Actual = "3500.000"
+        });
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Equal("slow", analysis.Startup.Status);
+        Assert.Contains("startup.startupDurationMs", analysis.Startup.FailedSignals);
+        Assert.Contains("startup.startupDurationMs", analysis.Startup.Signals);
+        Assert.Contains("Startup timing failed expected thresholds.", analysis.Startup.Reason);
+    }
+
+    [Fact]
     public void Analyze_Blocks_Playback_Core_Optimization_When_Sample_Is_Insufficient()
     {
         var report = CreateOptimizationReadyFailure();
@@ -1059,6 +1115,7 @@ public sealed class PlaybackQualityReportAnalyzerTests
         Assert.Contains("\"colorPipeline\"", json);
         Assert.Contains("\"buffering\"", json);
         Assert.Contains("\"avSync\"", json);
+        Assert.Contains("\"startup\"", json);
         Assert.Contains("\"sample\"", json);
         Assert.Contains("\"cadence\"", json);
         Assert.Contains("\"optimizationGate\"", json);

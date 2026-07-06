@@ -8,6 +8,7 @@ namespace NextGenEmby.Core.PlaybackQuality
         public string Result { get; set; } = "";
         public string PrimaryFailureArea { get; set; } = "none";
         public string SuggestedNextAction { get; set; } = "";
+        public PlaybackQualityStartupAssessment Startup { get; set; } = new PlaybackQualityStartupAssessment();
         public PlaybackQualitySourceAssessment Source { get; set; } = new PlaybackQualitySourceAssessment();
         public PlaybackQualityColorPipelineAssessment ColorPipeline { get; set; } = new PlaybackQualityColorPipelineAssessment();
         public PlaybackQualityBufferingAssessment Buffering { get; set; } = new PlaybackQualityBufferingAssessment();
@@ -24,6 +25,17 @@ namespace NextGenEmby.Core.PlaybackQuality
         public List<string> EvidenceSignals { get; } = new List<string>();
         public List<string> MissingEvidence { get; } = new List<string>();
         public List<string> Limitations { get; } = new List<string>();
+    }
+
+    public sealed class PlaybackQualityStartupAssessment
+    {
+        public string Status { get; set; } = "unknown";
+        public string Reason { get; set; } = "";
+        public string CommandReceivedAt { get; set; } = "";
+        public string PlaybackStartedAt { get; set; } = "";
+        public double StartupDurationMs { get; set; }
+        public List<string> Signals { get; } = new List<string>();
+        public List<string> FailedSignals { get; } = new List<string>();
     }
 
     public sealed class PlaybackQualitySourceAssessment
@@ -192,6 +204,7 @@ namespace NextGenEmby.Core.PlaybackQuality
             }
 
             analysis.Sample = AssessSample(report);
+            analysis.Startup = AssessStartup(report);
             analysis.Source = AssessSource(report);
             analysis.ColorPipeline = AssessColorPipeline(report);
             analysis.Buffering = AssessBuffering(report);
@@ -212,6 +225,61 @@ namespace NextGenEmby.Core.PlaybackQuality
             }
 
             return analysis;
+        }
+
+        private static PlaybackQualityStartupAssessment AssessStartup(
+            PlaybackQualityReport report)
+        {
+            var startup = new PlaybackQualityStartupAssessment
+            {
+                CommandReceivedAt = report.Startup.CommandReceivedAt,
+                PlaybackStartedAt = report.Startup.PlaybackStartedAt,
+                StartupDurationMs = report.Startup.StartupDurationMs
+            };
+
+            if (!string.IsNullOrWhiteSpace(startup.CommandReceivedAt))
+            {
+                AddUnique(startup.Signals, "startup.commandReceivedAt");
+            }
+
+            if (!string.IsNullOrWhiteSpace(startup.PlaybackStartedAt))
+            {
+                AddUnique(startup.Signals, "startup.playbackStartedAt");
+            }
+
+            if (startup.StartupDurationMs > 0)
+            {
+                AddUnique(startup.Signals, "startup.startupDurationMs");
+            }
+
+            foreach (var check in report.Checks)
+            {
+                if (check.Status == "fail" &&
+                    check.FailureArea == "startup" &&
+                    !string.IsNullOrWhiteSpace(check.Signal))
+                {
+                    AddUnique(startup.FailedSignals, check.Signal);
+                    AddUnique(startup.Signals, check.Signal);
+                }
+            }
+
+            if (startup.FailedSignals.Count > 0)
+            {
+                startup.Status = "slow";
+                startup.Reason = "Startup timing failed expected thresholds.";
+                return startup;
+            }
+
+            if (startup.Signals.Count == 0)
+            {
+                startup.Status = "missing-evidence";
+                startup.Reason = "Startup timing telemetry is missing.";
+                return startup;
+            }
+
+            startup.Status = "ready";
+            startup.Reason = "Startup telemetry is available and no startup threshold failed.";
+            return startup;
         }
 
         private static PlaybackQualityBufferingAssessment AssessBuffering(
