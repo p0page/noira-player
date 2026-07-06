@@ -44,6 +44,7 @@ public sealed class PlaybackQualityComparisonSuiteTests
         Assert.Contains("suite.regression", suite.Blockers);
         Assert.Contains("sync.audioVideoDriftMsP95", suite.Signals);
         Assert.Contains("av-sync", suite.FailureAreas);
+        Assert.Contains("av-sync", suite.TargetFailureAreas);
     }
 
     [Fact]
@@ -102,8 +103,33 @@ public sealed class PlaybackQualityComparisonSuiteTests
         Assert.Equal("continue-next-triage-step", caseSummary.Action);
         Assert.Contains("frame-pacing", caseSummary.FailureAreas);
         Assert.Contains("frame-pacing", suite.FailureAreas);
+        Assert.Contains("frame-pacing", suite.TargetFailureAreas);
         Assert.Contains("timing.maxFrameGapMs", caseSummary.Signals);
         Assert.Contains("timing.maxFrameGapMs", suite.Signals);
+    }
+
+    [Fact]
+    public void Summarize_TargetFailureAreas_Uses_Playback_Failure_Priority()
+    {
+        var mixed = Compare(
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "180.000"),
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "120.000"));
+        mixed.Regressions.Add(new PlaybackQualitySignalDelta
+        {
+            Signal = "colorPipeline.actualHdrOutput",
+            FailureArea = "color-pipeline",
+            Direction = "candidate-only-failure",
+            CandidateStatus = "fail"
+        });
+        mixed.NewFailureAreas.Add("color-pipeline");
+        mixed.Result = "mixed";
+        mixed.Optimization.Action = "split-candidate";
+        mixed.Optimization.Risk = "high";
+
+        var suite = PlaybackQualityComparisonSuiteAggregator.Summarize(new[] { mixed });
+
+        var target = Assert.Single(suite.TargetFailureAreas);
+        Assert.Equal("color-pipeline", target);
     }
 
     private static PlaybackQualityRunComparison Compare(

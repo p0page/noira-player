@@ -20,6 +20,7 @@ namespace NextGenEmby.Core.PlaybackQuality
         public List<string> Blockers { get; } = new List<string>();
         public List<string> Signals { get; } = new List<string>();
         public List<string> FailureAreas { get; } = new List<string>();
+        public List<string> TargetFailureAreas { get; } = new List<string>();
         public List<PlaybackQualityComparisonCaseSummary> Cases { get; } =
             new List<PlaybackQualityComparisonCaseSummary>();
         public List<PlaybackQualityRunComparison> Comparisons { get; } =
@@ -67,6 +68,7 @@ namespace NextGenEmby.Core.PlaybackQuality
 
             suite.TotalComparisonCount = suite.Comparisons.Count;
             ApplySuiteAction(suite);
+            ApplyTargetFailureAreas(suite);
             return suite;
         }
 
@@ -311,6 +313,44 @@ namespace NextGenEmby.Core.PlaybackQuality
                     AddUnique(suite.FailureAreas, improvement.FailureArea);
                 }
             }
+        }
+
+        private static void ApplyTargetFailureAreas(PlaybackQualityComparisonSuite suite)
+        {
+            if (suite.Action == "accept-candidate")
+            {
+                return;
+            }
+
+            var target = GetHighestPriorityFailureArea(suite.FailureAreas);
+            if (!string.IsNullOrWhiteSpace(target))
+            {
+                AddUnique(suite.TargetFailureAreas, target);
+            }
+        }
+
+        private static string GetHighestPriorityFailureArea(List<string> failureAreas)
+        {
+            var priorityAreas = new[]
+            {
+                "unsupported-source",
+                "color-pipeline",
+                "startup",
+                "buffering",
+                "av-sync",
+                "frame-pacing",
+                "unknown"
+            };
+
+            foreach (var area in priorityAreas)
+            {
+                if (failureAreas.Contains(area))
+                {
+                    return area;
+                }
+            }
+
+            return failureAreas.Count == 0 ? "" : failureAreas[0];
         }
 
         private static void AddUnique(List<string> values, string value)

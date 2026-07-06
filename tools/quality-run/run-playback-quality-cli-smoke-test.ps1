@@ -1125,6 +1125,10 @@ try {
         throw 'Expected playback quality CLI compare-suite stall suite to include persisting failure area.'
     }
 
+    if (-not ($stallSuite.targetFailureAreas -contains 'frame-pacing')) {
+        throw 'Expected playback quality CLI compare-suite stall suite to include target failure area.'
+    }
+
     if (-not ($stallSuite.signals -contains 'timing.maxFrameGapMs')) {
         throw 'Expected playback quality CLI compare-suite stall suite to include persisting failure signal.'
     }
