@@ -83,7 +83,7 @@ Every report must include these phase-1 limitations:
 
 `audioStarvedPasses` means the render loop could not get video and audio had no queued data, which usually points to demux/network/decode starvation rather than pure frame pacing.
 
-`maxFrameGapMs` is the largest interval between player-side rendered/presented frames. It is not a display-device measurement.
+`maxFrameGapMs` is the largest interval between player-side rendered/presented frames. It is not a display-device measurement. When `expected.maxFrameGapMs` is supplied, the metric must be present and positive; a default zero value is treated as missing evidence and a frame-pacing failure.
 
 `renderIntervalMsP95` and `renderIntervalMsP99` measure player-side render interval percentiles. `expected.maxRenderIntervalMsP95` and `expected.maxRenderIntervalMsP99` are frame-pacing thresholds intended to catch repeated micro-stutter that a single maximum gap may not explain well. When either threshold is supplied, the matching interval metric must be present and positive; a default zero value is treated as missing evidence and a frame-pacing failure.
 

@@ -106,6 +106,13 @@ namespace NextGenEmby.Core.PlaybackQuality
             }
 
             if (report.Expected != null &&
+                report.Expected.MaxFrameGapMs.HasValue &&
+                report.Timing.MaxFrameGapMs <= 0)
+            {
+                analysis.MissingEvidence.Add("timing.maxFrameGapMs");
+            }
+
+            if (report.Expected != null &&
                 report.Expected.MaxRenderIntervalMsP99.HasValue &&
                 report.Timing.RenderIntervalMsP99 <= 0)
             {

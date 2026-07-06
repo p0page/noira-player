@@ -302,6 +302,41 @@ public sealed class PlaybackQualityEvaluatorTests
     }
 
     [Fact]
+    public void Evaluate_Fails_When_Max_Frame_Gap_Is_Required_But_Missing()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "missing-max-frame-gap",
+            Expected = new PlaybackQualityExpected
+            {
+                MaxFrameGapMs = 105,
+                RequireValidatedConversion = false
+            },
+            Timing = new PlaybackQualityTiming
+            {
+                RenderedVideoFrames = 240,
+                MaxFrameGapMs = 0
+            }
+        };
+
+        PlaybackQualityEvaluator.Evaluate(report);
+
+        Assert.Equal("fail", report.Result);
+        Assert.Contains(
+            "MaxFrameGapMs is missing for frame-pacing validation.",
+            report.FailureReasons);
+        Assert.Equal("frame-pacing", report.Analysis.PrimaryFailureArea);
+        Assert.Contains("timing.maxFrameGapMs", report.Analysis.RelevantSignals);
+        Assert.Contains(report.Checks, check =>
+            check.Name == "MaxFrameGapMs" &&
+            check.Signal == "timing.maxFrameGapMs" &&
+            check.Expected == "105.000" &&
+            check.Actual == "" &&
+            check.Status == "fail" &&
+            check.FailureArea == "frame-pacing");
+    }
+
+    [Fact]
     public void Evaluate_Fails_With_Actionable_Reasons_When_Thresholds_Are_Exceeded()
     {
         var report = new PlaybackQualityReport

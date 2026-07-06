@@ -153,6 +153,28 @@ public sealed class PlaybackQualityReportAnalyzerTests
     }
 
     [Fact]
+    public void Analyze_Reports_Missing_Max_Frame_Gap_When_Max_Frame_Gap_Threshold_Is_Expected()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "missing-max-frame-gap",
+            Result = "observed",
+            Expected = new PlaybackQualityExpected
+            {
+                MaxFrameGapMs = 105
+            },
+            Timing = new PlaybackQualityTiming
+            {
+                RenderedVideoFrames = 240
+            }
+        };
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Contains("timing.maxFrameGapMs", analysis.MissingEvidence);
+    }
+
+    [Fact]
     public void Analyze_Adds_Expected_Frame_Duration_As_Frame_Pacing_Evidence()
     {
         var report = new PlaybackQualityReport

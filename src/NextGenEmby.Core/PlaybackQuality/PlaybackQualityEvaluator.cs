@@ -40,7 +40,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                 "MaxDroppedFrames",
                 "timing.droppedVideoFrames",
                 "frame-pacing");
-            CheckMax(
+            CheckMeasuredMax(
                 report,
                 "MaxFrameGapMs",
                 report.Timing.MaxFrameGapMs,
