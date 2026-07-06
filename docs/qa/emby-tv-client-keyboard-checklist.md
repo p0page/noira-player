@@ -332,3 +332,19 @@ If any checklist item fails, record:
 - Proposed design or implementation fix.
 
 Then continue design and implementation until the route passes.
+
+## Run Log
+
+### 2026-07-06 - Xbox Guide Rail Keyboard Fix
+
+- App version: 0.1.0.77.
+- Scope: expanded left Guide rail, deterministic keyboard/controller navigation, Home/Search/Movies routing.
+- Regression found on 0.1.0.76: `M`, `Down`, `Enter` from Home opened Movies instead of Search because handled Button key events bypassed the Page-level guide decision.
+- Fix: Guide open state now owns a selected destination; handled Up/Down/Enter events are routed through `GuideNavigationPolicy`, then focused explicitly.
+- Keyboard-only validation:
+  - Launch app, Home visible with collapsed Guide rail and real library data loading.
+  - `M`, `Down`, `Enter` opened Search and collapsed Guide.
+  - `Escape` returned from Search to Home.
+  - `M`, `Escape` closed Guide and stayed on Home.
+  - `M`, `Down`, `Down`, `Enter` opened Movies and collapsed Guide.
+- Result: pass on local Windows validation. No mouse clicks were used inside app content.

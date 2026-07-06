@@ -5,6 +5,7 @@ namespace NextGenEmby.Core.Input
         None,
         OpenGuide,
         CloseGuide,
+        MoveSelection,
         Navigate
     }
 
@@ -42,6 +43,19 @@ namespace NextGenEmby.Core.Input
 
     public static class GuideNavigationPolicy
     {
+        private static readonly GuideNavigationDestination[] DestinationOrder =
+        {
+            GuideNavigationDestination.Home,
+            GuideNavigationDestination.Search,
+            GuideNavigationDestination.Movies,
+            GuideNavigationDestination.Tv,
+            GuideNavigationDestination.LiveTv,
+            GuideNavigationDestination.Collections,
+            GuideNavigationDestination.Music,
+            GuideNavigationDestination.Photos,
+            GuideNavigationDestination.Settings
+        };
+
         public static GuideNavigationDecision GetDecision(
             bool eventAlreadyHandled,
             bool playbackPageActive,
@@ -49,9 +63,11 @@ namespace NextGenEmby.Core.Input
             bool menuKeyPressed,
             bool backKeyPressed,
             bool selectKeyPressed,
+            bool moveUpKeyPressed,
+            bool moveDownKeyPressed,
             GuideNavigationDestination selectedDestination)
         {
-            if (eventAlreadyHandled || playbackPageActive)
+            if (playbackPageActive)
             {
                 return None(selectedDestination);
             }
@@ -66,6 +82,14 @@ namespace NextGenEmby.Core.Input
                         shouldRestorePreviousFocus: true);
                 }
 
+                if (moveUpKeyPressed || moveDownKeyPressed)
+                {
+                    return new GuideNavigationDecision(
+                        GuideNavigationAction.MoveSelection,
+                        MoveSelection(selectedDestination, moveDownKeyPressed ? 1 : -1),
+                        shouldRestorePreviousFocus: false);
+                }
+
                 if (selectKeyPressed)
                 {
                     return new GuideNavigationDecision(
@@ -74,6 +98,11 @@ namespace NextGenEmby.Core.Input
                         shouldRestorePreviousFocus: false);
                 }
 
+                return None(selectedDestination);
+            }
+
+            if (eventAlreadyHandled)
+            {
                 return None(selectedDestination);
             }
 
@@ -86,6 +115,33 @@ namespace NextGenEmby.Core.Input
             }
 
             return None(selectedDestination);
+        }
+
+        private static GuideNavigationDestination MoveSelection(
+            GuideNavigationDestination selectedDestination,
+            int offset)
+        {
+            var currentIndex = 0;
+            for (var i = 0; i < DestinationOrder.Length; i++)
+            {
+                if (DestinationOrder[i] == selectedDestination)
+                {
+                    currentIndex = i;
+                    break;
+                }
+            }
+
+            var nextIndex = currentIndex + offset;
+            if (nextIndex < 0)
+            {
+                nextIndex = 0;
+            }
+            else if (nextIndex >= DestinationOrder.Length)
+            {
+                nextIndex = DestinationOrder.Length - 1;
+            }
+
+            return DestinationOrder[nextIndex];
         }
 
         private static GuideNavigationDecision None(GuideNavigationDestination selectedDestination)

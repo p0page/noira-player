@@ -27,6 +27,7 @@ namespace NextGenEmby.App
         private readonly ApplicationDataSessionStore _sessionStore = new ApplicationDataSessionStore();
         private LibraryNavigationRequest? _currentLibraryRequest;
         private Control? _guideReturnFocusTarget;
+        private GuideNavigationDestination _guideSelectedDestination = GuideNavigationDestination.Home;
         private bool _guideOpen;
         private bool _focusContentAfterGuideNavigation;
 
@@ -118,15 +119,18 @@ namespace NextGenEmby.App
         {
             var menuKeyPressed = IsMenuKey(e.Key);
             var backKeyPressed = IsBackKey(e.Key);
-            var selectKeyPressed = IsSelectKey(e.Key) &&
-                IsFocusWithin(FocusManager.GetFocusedElement(), GuideRail);
+            var selectKeyPressed = _guideOpen && IsSelectKey(e.Key);
+            var moveUpKeyPressed = _guideOpen && IsUpKey(e.Key);
+            var moveDownKeyPressed = _guideOpen && IsDownKey(e.Key);
 
-            if (!menuKeyPressed && !backKeyPressed && !selectKeyPressed)
+            if (!menuKeyPressed && !backKeyPressed && !selectKeyPressed && !moveUpKeyPressed && !moveDownKeyPressed)
             {
                 return false;
             }
 
-            var selectedDestination = ResolveFocusedGuideDestination();
+            var selectedDestination = _guideOpen
+                ? _guideSelectedDestination
+                : ResolveActiveGuideDestination(ContentFrame.CurrentSourcePageType, _currentLibraryRequest);
             var decision = GuideNavigationPolicy.GetDecision(
                 e.Handled,
                 IsPlaybackPageActive(),
@@ -134,6 +138,8 @@ namespace NextGenEmby.App
                 menuKeyPressed,
                 backKeyPressed,
                 selectKeyPressed,
+                moveUpKeyPressed,
+                moveDownKeyPressed,
                 selectedDestination);
 
             switch (decision.Action)
@@ -144,6 +150,11 @@ namespace NextGenEmby.App
 
                 case GuideNavigationAction.CloseGuide:
                     CloseGuide(decision.ShouldRestorePreviousFocus);
+                    return true;
+
+                case GuideNavigationAction.MoveSelection:
+                    _guideSelectedDestination = decision.Destination;
+                    FocusGuideDestination(decision.Destination, FocusState.Keyboard);
                     return true;
 
                 case GuideNavigationAction.Navigate:
@@ -181,6 +192,13 @@ namespace NextGenEmby.App
             return key == VirtualKey.Down ||
                 key == VirtualKey.GamepadDPadDown ||
                 key == VirtualKey.GamepadLeftThumbstickDown;
+        }
+
+        private static bool IsUpKey(VirtualKey key)
+        {
+            return key == VirtualKey.Up ||
+                key == VirtualKey.GamepadDPadUp ||
+                key == VirtualKey.GamepadLeftThumbstickUp;
         }
 
         public void NavigateHome()
@@ -358,6 +376,14 @@ namespace NextGenEmby.App
             HomeButton.Focus(focusState);
         }
 
+        private bool FocusGuideDestination(
+            GuideNavigationDestination destination,
+            FocusState focusState)
+        {
+            var button = GetGuideButtonForDestination(destination);
+            return button != null && button.Focus(focusState);
+        }
+
         private void Home_OnClick(object sender, RoutedEventArgs e)
         {
             NavigateGuideDestination(GuideNavigationDestination.Home);
@@ -405,6 +431,7 @@ namespace NextGenEmby.App
 
         private void NavigateGuideDestination(GuideNavigationDestination destination)
         {
+            _guideSelectedDestination = destination;
             _focusContentAfterGuideNavigation = _guideOpen ||
                 IsFocusWithin(FocusManager.GetFocusedElement(), GuideRail);
             CloseGuide(restorePreviousFocus: false);
@@ -452,12 +479,13 @@ namespace NextGenEmby.App
         private void OpenGuide()
         {
             _guideReturnFocusTarget = FocusManager.GetFocusedElement() as Control;
+            _guideSelectedDestination = ResolveActiveGuideDestination(
+                ContentFrame.CurrentSourcePageType,
+                _currentLibraryRequest);
             ApplyGuideOpenState(isOpen: true);
-            var pageType = ContentFrame.CurrentSourcePageType;
-            var libraryRequest = _currentLibraryRequest;
             _ = Dispatcher.RunAsync(
                 CoreDispatcherPriority.Normal,
-                () => FocusShellButton(pageType, libraryRequest, FocusState.Keyboard));
+                () => FocusGuideDestination(_guideSelectedDestination, FocusState.Keyboard));
         }
 
         private void CloseGuide(bool restorePreviousFocus)
@@ -502,47 +530,43 @@ namespace NextGenEmby.App
             label.Visibility = isOpen ? Visibility.Visible : Visibility.Collapsed;
         }
 
-        private GuideNavigationDestination ResolveFocusedGuideDestination()
+        private GuideNavigationDestination ResolveActiveGuideDestination(
+            Type pageType,
+            LibraryNavigationRequest? libraryRequest)
         {
-            var focusedElement = FocusManager.GetFocusedElement();
-            if (IsFocusWithin(focusedElement, SearchButton))
+            if (pageType == typeof(SearchPage))
             {
                 return GuideNavigationDestination.Search;
             }
 
-            if (IsFocusWithin(focusedElement, MoviesButton))
-            {
-                return GuideNavigationDestination.Movies;
-            }
-
-            if (IsFocusWithin(focusedElement, TvButton))
-            {
-                return GuideNavigationDestination.Tv;
-            }
-
-            if (IsFocusWithin(focusedElement, LiveTvButton))
-            {
-                return GuideNavigationDestination.LiveTv;
-            }
-
-            if (IsFocusWithin(focusedElement, CollectionsButton))
-            {
-                return GuideNavigationDestination.Collections;
-            }
-
-            if (IsFocusWithin(focusedElement, MusicButton))
-            {
-                return GuideNavigationDestination.Music;
-            }
-
-            if (IsFocusWithin(focusedElement, PhotosButton))
-            {
-                return GuideNavigationDestination.Photos;
-            }
-
-            if (IsFocusWithin(focusedElement, SettingsButton))
+            if (pageType == typeof(SettingsPage))
             {
                 return GuideNavigationDestination.Settings;
+            }
+
+            if (pageType == typeof(LibraryPage) && libraryRequest != null)
+            {
+                if (libraryRequest.IsMovies)
+                {
+                    return GuideNavigationDestination.Movies;
+                }
+
+                if (libraryRequest.IsTv)
+                {
+                    return GuideNavigationDestination.Tv;
+                }
+
+                switch (libraryRequest.CollectionType)
+                {
+                    case "livetv":
+                        return GuideNavigationDestination.LiveTv;
+                    case "boxsets":
+                        return GuideNavigationDestination.Collections;
+                    case "music":
+                        return GuideNavigationDestination.Music;
+                    case "photos":
+                        return GuideNavigationDestination.Photos;
+                }
             }
 
             return GuideNavigationDestination.Home;
@@ -685,6 +709,33 @@ namespace NextGenEmby.App
                     return MusicButton;
                 case "photos":
                     return PhotosButton;
+                default:
+                    return null;
+            }
+        }
+
+        private Button? GetGuideButtonForDestination(GuideNavigationDestination destination)
+        {
+            switch (destination)
+            {
+                case GuideNavigationDestination.Home:
+                    return HomeButton;
+                case GuideNavigationDestination.Search:
+                    return SearchButton;
+                case GuideNavigationDestination.Movies:
+                    return MoviesButton;
+                case GuideNavigationDestination.Tv:
+                    return TvButton;
+                case GuideNavigationDestination.LiveTv:
+                    return LiveTvButton;
+                case GuideNavigationDestination.Collections:
+                    return CollectionsButton;
+                case GuideNavigationDestination.Music:
+                    return MusicButton;
+                case GuideNavigationDestination.Photos:
+                    return PhotosButton;
+                case GuideNavigationDestination.Settings:
+                    return SettingsButton;
                 default:
                     return null;
             }
