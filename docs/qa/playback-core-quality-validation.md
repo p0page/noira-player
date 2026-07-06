@@ -47,7 +47,7 @@ Use the App-free CLI to validate a playback reference corpus manifest before usi
 dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- validate-manifest --manifest docs\qa\playback-quality-reference-manifest.example.json --output manifest-validation.json
 ```
 
-The command emits `isValid`, `caseCount`, `tiers`, `purposes`, and structured `errors`. Invalid manifests return a non-zero exit code so automation can stop before collecting misleading playback evidence.
+The command emits `isValid`, `caseCount`, `tiers`, `purposes`, `cases`, and structured `errors`. `cases` is a schedulable summary of caseId, uri, tier, purpose, and expected source metadata. Invalid manifests return a non-zero exit code so automation can stop before collecting misleading playback evidence.
 
 ## Compare Reports
 

@@ -34,6 +34,9 @@ namespace NextGenEmby.Core.PlaybackQuality
 
         public List<string> Purposes { get; } = new List<string>();
 
+        public List<PlaybackQualityReferenceCase> Cases { get; } =
+            new List<PlaybackQualityReferenceCase>();
+
         public List<PlaybackQualityReferenceManifestError> Errors { get; } =
             new List<PlaybackQualityReferenceManifestError>();
     }
@@ -91,6 +94,8 @@ namespace NextGenEmby.Core.PlaybackQuality
                     "Playback quality reference case is missing.");
                 return;
             }
+
+            validation.Cases.Add(CloneCase(referenceCase));
 
             var caseId = referenceCase.CaseId ?? "";
             if (string.IsNullOrWhiteSpace(caseId))
@@ -154,6 +159,56 @@ namespace NextGenEmby.Core.PlaybackQuality
             }
 
             ValidateExpected(validation, caseId, referenceCase.Expected);
+        }
+
+        private static PlaybackQualityReferenceCase CloneCase(
+            PlaybackQualityReferenceCase source)
+        {
+            var clone = new PlaybackQualityReferenceCase
+            {
+                CaseId = source.CaseId,
+                Uri = source.Uri,
+                Tier = source.Tier,
+                Expected = CloneExpected(source.Expected)
+            };
+
+            foreach (var purpose in source.Purpose)
+            {
+                AddUnique(clone.Purpose, purpose);
+            }
+
+            return clone;
+        }
+
+        private static PlaybackQualityExpected CloneExpected(PlaybackQualityExpected source)
+        {
+            if (source == null)
+            {
+                return new PlaybackQualityExpected();
+            }
+
+            return new PlaybackQualityExpected
+            {
+                Codec = source.Codec,
+                Width = source.Width,
+                Height = source.Height,
+                FrameRate = source.FrameRate,
+                HdrKind = source.HdrKind,
+                HdrOutput = source.HdrOutput,
+                DxgiInput = source.DxgiInput,
+                DxgiOutput = source.DxgiOutput,
+                MaxStartupDurationMs = source.MaxStartupDurationMs,
+                MinRenderedVideoFrames = source.MinRenderedVideoFrames,
+                MaxDroppedFrames = source.MaxDroppedFrames,
+                MaxFrameGapMs = source.MaxFrameGapMs,
+                MaxRenderIntervalMsP95 = source.MaxRenderIntervalMsP95,
+                MaxRenderIntervalMsP99 = source.MaxRenderIntervalMsP99,
+                MaxAudioVideoDriftMsP95 = source.MaxAudioVideoDriftMsP95,
+                MaxVideoStarvedPasses = source.MaxVideoStarvedPasses,
+                MaxAudioStarvedPasses = source.MaxAudioStarvedPasses,
+                RequireValidatedConversion = source.RequireValidatedConversion,
+                RequireMatchedDisplayRefreshRate = source.RequireMatchedDisplayRefreshRate
+            };
         }
 
         private static void ValidateExpected(

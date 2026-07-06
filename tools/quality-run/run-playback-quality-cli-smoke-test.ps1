@@ -155,6 +155,15 @@ try {
         throw 'Expected playback quality CLI validate-manifest output to include hdr-output purpose.'
     }
 
+    if (-not ($manifestValidation.cases | Where-Object {
+        $_.caseId -eq 'netflix/chimera-4k-2398-hdr-pq' -and
+        $_.tier -eq 2 -and
+        $_.expected.codec -eq 'hevc' -and
+        $_.expected.hdrKind -eq 'Hdr10'
+    })) {
+        throw 'Expected playback quality CLI validate-manifest output to include schedulable case summary.'
+    }
+
     Push-Location $repoRoot
     try {
         dotnet run `

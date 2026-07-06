@@ -30,6 +30,14 @@ public sealed class PlaybackQualityReferenceManifestTests
         Assert.Contains(3, result.Tiers);
         Assert.Contains("hdr-output", result.Purposes);
         Assert.Contains("dv-reject", result.Purposes);
+        Assert.Contains(result.Cases, referenceCase =>
+            referenceCase.CaseId == "netflix/chimera-4k-2398-hdr-pq" &&
+            referenceCase.Uri == "https://example.invalid/netflix/chimera-4k-2398-hdr-pq.mp4" &&
+            referenceCase.Tier == 2 &&
+            referenceCase.Purpose.Contains("hdr-output") &&
+            referenceCase.Expected.Codec == "hevc" &&
+            referenceCase.Expected.FrameRate == 23.976 &&
+            referenceCase.Expected.HdrKind == "Hdr10");
     }
 
     [Fact]
