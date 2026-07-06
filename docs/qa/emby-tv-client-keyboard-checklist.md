@@ -1400,3 +1400,37 @@ Then continue design and implementation until the route passes.
   - No app-content mouse clicks were used.
 - Follow-up:
   - Re-run against a real saved Emby session when available: multi-version server item, similar-items server response, and live add-to success on disposable collection/playlist targets.
+
+### 2026-07-07 - Playback Options Fixture Route
+
+- App version: 0.1.0.173.
+- Scope: add deterministic playback More drawer Source/Audio/Subtitles/Info validation without touching native decoding or Emby transcode paths.
+- Interaction changes:
+  - `dev-command.json` accepts route `playback-options-fixture`.
+  - The route renders `Aurora Protocol` directly on `PlaybackPage`, opens the More drawer, pins the overlay, and exposes fixture sources, audio tracks, subtitles, and Info.
+  - Source/audio/subtitle fixture changes update local playback status/info only and do not call backend/orchestrator stream switching.
+  - Collapsed Source/Audio/Subtitles combo boxes route Up/Down to drawer focus. Only expanded dropdowns use Up/Down to change values.
+  - Info toggle preserves Info focus; opening More clears transport focus visuals.
+- Automated verification:
+  - TDD red paths confirmed missing route/fixture/source contract, combo directional policy, `ProcessKeyboardAccelerators` binding, replay guard, Info focus preservation, and transport focus clearing before implementation.
+  - Core tests passed: 365 total.
+  - App Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.173_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.173`.
+- Keyboard-only validation with Computer Use:
+  - Killed any running app process, wrote `dev-command.json` with route `playback-options-fixture`, and cold-launched 0.1.0.173.
+  - Initial More drawer focus landed on Source with `4K Direct · 3840x2160`.
+  - Pressed `Down`; focus moved Source -> Audio without changing Source.
+  - Pressed `Enter`, `Down`, `Enter`; Audio changed to `Japanese AAC Stereo`.
+  - Pressed `Down`; focus moved Audio -> Subtitles without changing Audio.
+  - Pressed `Enter`, `Down`, `Enter`; Subtitles changed to `English SDH External`.
+  - Pressed `Down`, `Enter`; Info opened and showed State, Item, Source, Audio, Subtitles, Position, and Fixture fields. Focus stayed on Info.
+  - Pressed `Escape`; More closed and focus returned to the transport More button.
+  - Pressed `M`; More reopened with Source as the only strong focus, with no simultaneous transport More highlight.
+  - No app-content mouse clicks were used.
+- Bugs caught/fixed:
+  - Collapsed ComboBox `Down` changed Source before moving focus.
+  - Early ComboBox handling and CoreWindow handling double-processed one `Down`, skipping Audio.
+  - Info toggle reset focus to Source.
+  - Reopening More showed simultaneous Source and transport More focus.
+- Follow-up:
+  - Fixture validates UI/controller flow without native stream switching. A future saved-session/media pass should verify live multi-audio/subtitle switching against real Emby items.

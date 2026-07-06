@@ -210,6 +210,7 @@
                             AutomationProperties.Name="Source"
                             HorizontalAlignment="Stretch"
                             Header="Source"
+                            ProcessKeyboardAccelerators="MoreDrawerComboBox_OnProcessKeyboardAccelerators"
                             Style="{StaticResource TvComboBoxStyle}"
                             SelectionChanged="SourceBox_OnSelectionChanged" />
                         <ComboBox
@@ -217,6 +218,7 @@
                             AutomationProperties.Name="Audio"
                             HorizontalAlignment="Stretch"
                             Header="Audio"
+                            ProcessKeyboardAccelerators="MoreDrawerComboBox_OnProcessKeyboardAccelerators"
                             Style="{StaticResource TvComboBoxStyle}"
                             SelectionChanged="AudioStreamBox_OnSelectionChanged" />
                         <ComboBox
@@ -224,6 +226,7 @@
                             AutomationProperties.Name="Subtitles"
                             HorizontalAlignment="Stretch"
                             Header="Subtitles"
+                            ProcessKeyboardAccelerators="MoreDrawerComboBox_OnProcessKeyboardAccelerators"
                             Style="{StaticResource TvComboBoxStyle}"
                             SelectionChanged="SubtitleStreamBox_OnSelectionChanged" />
                         <Button

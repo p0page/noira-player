@@ -8,6 +8,7 @@ using NextGenEmby.App.Navigation;
 using NextGenEmby.App.Playback;
 using NextGenEmby.App.Services;
 using NextGenEmby.App.Storage;
+using NextGenEmby.Core.Diagnostics;
 using NextGenEmby.Core.Emby;
 using NextGenEmby.Core.Playback;
 using Windows.Media.Protection;
@@ -62,12 +63,21 @@ namespace NextGenEmby.App.Views
         private bool _playbackCommandInFlight;
         private PlaybackMoreDrawerFocusTarget? _moreDrawerFocusTarget;
         private PlaybackTransportFocusTarget? _transportFocusTarget;
+        private VirtualKey? _handledMoreDrawerComboBoxDirectionalKey;
+        private DateTimeOffset _handledMoreDrawerComboBoxDirectionalKeyAt;
         private double _nativeSurfaceAttachedWidth;
         private double _nativeSurfaceAttachedHeight;
         private PlaybackSessionRequest? _lastPlaybackSessionRequest;
         private ManualDirectStreamInitialFocusTarget? _pendingManualDirectStreamFocusTarget;
         private int _pendingManualDirectStreamFocusAttempts;
         private bool _manualDirectStreamPageLoaded;
+#if DEBUG
+        private bool _usesDevelopmentPlaybackOptionsFixture;
+        private IReadOnlyList<EmbyMediaSource> _developmentPlaybackSources = Array.Empty<EmbyMediaSource>();
+        private string _developmentPlaybackMediaSourceId = "";
+        private int? _developmentPlaybackAudioStreamIndex;
+        private int? _developmentPlaybackSubtitleStreamIndex;
+#endif
 
         public PlaybackPage()
         {
@@ -126,6 +136,12 @@ namespace NextGenEmby.App.Views
             TrySignalNativeSurfaceReady();
             AttachNativeSurface();
             ApplyPendingManualDirectStreamInitialFocus();
+#if DEBUG
+            if (_usesDevelopmentPlaybackOptionsFixture)
+            {
+                FocusDevelopmentPlaybackOptionsDefaultAsync();
+            }
+#endif
         }
 
         private void NativeSurface_OnSizeChanged(object sender, SizeChangedEventArgs e)
@@ -206,6 +222,19 @@ namespace NextGenEmby.App.Views
         {
             base.OnNavigatedTo(e);
             _launchRequest = e.Parameter as PlaybackLaunchRequest;
+#if DEBUG
+            _usesDevelopmentPlaybackOptionsFixture = false;
+            _developmentPlaybackSources = Array.Empty<EmbyMediaSource>();
+            _developmentPlaybackMediaSourceId = "";
+            _developmentPlaybackAudioStreamIndex = null;
+            _developmentPlaybackSubtitleStreamIndex = null;
+
+            if (e.Parameter is PlaybackOptionsFixtureNavigationRequest)
+            {
+                RenderDevelopmentPlaybackOptionsFixture();
+                return;
+            }
+#endif
             var manualLaunchOptions = e.Parameter as ManualDirectStreamLaunchOptions;
             PlaybackDiagnosticsLog.WriteLine(
                 "Playback navigated launch=" + (_launchRequest != null) +
@@ -277,13 +306,15 @@ namespace NextGenEmby.App.Views
 
         private void ToggleInfoPanel()
         {
-            ShowOverlay(true);
+            ShowOverlay(true, _moreVisible);
             _infoVisible = !_infoVisible;
             InfoPanel.Visibility = _infoVisible ? Visibility.Visible : Visibility.Collapsed;
             if (_infoVisible)
             {
                 UpdateInfo();
             }
+
+            FocusMoreDrawerTarget(PlaybackMoreDrawerFocusTarget.Info);
         }
 
         private void StreamUrlBox_OnTextChanged(object sender, TextChangedEventArgs e)
@@ -385,6 +416,12 @@ namespace NextGenEmby.App.Views
 
         private async void PlaybackPage_OnCoreWindowKeyDown(CoreWindow sender, Windows.UI.Core.KeyEventArgs args)
         {
+            if (ShouldIgnoreMoreDrawerComboBoxDirectionalReplay(args.VirtualKey))
+            {
+                args.Handled = true;
+                return;
+            }
+
             if (args.Handled && !ShouldProcessHandledPlaybackKey(args.VirtualKey))
             {
                 return;
@@ -666,6 +703,44 @@ namespace NextGenEmby.App.Views
             return true;
         }
 
+        private void MoreDrawerComboBox_OnProcessKeyboardAccelerators(UIElement sender, ProcessKeyboardAcceleratorEventArgs e)
+        {
+            if (!(sender is ComboBox comboBox))
+            {
+                return;
+            }
+
+            if (!PlaybackOverlayInputPolicy.ShouldRouteMoreDrawerComboBoxDirectionalInput(
+                _moreVisible,
+                _seekPreview.IsActive,
+                comboBox.IsDropDownOpen,
+                TryMapMoreDrawerFocusDirection(e.Key).HasValue))
+            {
+                return;
+            }
+
+            if (TryHandleMoreDrawerDirectionalKey(e.Key))
+            {
+                _handledMoreDrawerComboBoxDirectionalKey = e.Key;
+                _handledMoreDrawerComboBoxDirectionalKeyAt = DateTimeOffset.UtcNow;
+                e.Handled = true;
+            }
+        }
+
+        private bool ShouldIgnoreMoreDrawerComboBoxDirectionalReplay(VirtualKey key)
+        {
+            if (!_handledMoreDrawerComboBoxDirectionalKey.HasValue)
+            {
+                return false;
+            }
+
+            var shouldIgnore =
+                _handledMoreDrawerComboBoxDirectionalKey.Value == key &&
+                DateTimeOffset.UtcNow - _handledMoreDrawerComboBoxDirectionalKeyAt < TimeSpan.FromMilliseconds(500);
+            _handledMoreDrawerComboBoxDirectionalKey = null;
+            return shouldIgnore;
+        }
+
         private bool ShouldProcessHandledPlaybackKey(VirtualKey key)
         {
             if (ShouldProcessMoreDrawerDirectionalKey(key))
@@ -921,6 +996,14 @@ namespace NextGenEmby.App.Views
                 return;
             }
 
+#if DEBUG
+            if (_usesDevelopmentPlaybackOptionsFixture)
+            {
+                SelectDevelopmentMediaSource(option);
+                return;
+            }
+#endif
+
             await RunPlaybackCommandAsync(async () =>
             {
                 await _orchestrator.SwitchMediaSourceAsync(option.Id);
@@ -942,6 +1025,14 @@ namespace NextGenEmby.App.Views
                 return;
             }
 
+#if DEBUG
+            if (_usesDevelopmentPlaybackOptionsFixture)
+            {
+                SelectDevelopmentAudioStream(option);
+                return;
+            }
+#endif
+
             await RunPlaybackCommandAsync(async () =>
             {
                 await _orchestrator.SwitchAudioStreamAsync(option.StreamIndex);
@@ -962,6 +1053,14 @@ namespace NextGenEmby.App.Views
             {
                 return;
             }
+
+#if DEBUG
+            if (_usesDevelopmentPlaybackOptionsFixture)
+            {
+                SelectDevelopmentSubtitleStream(option);
+                return;
+            }
+#endif
 
             await RunPlaybackCommandAsync(async () =>
             {
@@ -1102,6 +1201,159 @@ namespace NextGenEmby.App.Views
                 UpdateInfo();
             }
         }
+
+#if DEBUG
+        private void RenderDevelopmentPlaybackOptionsFixture()
+        {
+            var fixture = DevelopmentPlaybackOptionsFixture.Create();
+            _usesDevelopmentPlaybackOptionsFixture = true;
+            _developmentPlaybackSources = fixture.MediaSources;
+            _developmentPlaybackMediaSourceId = fixture.DefaultMediaSourceId;
+            _developmentPlaybackAudioStreamIndex = fixture.DefaultAudioStreamIndex;
+            _developmentPlaybackSubtitleStreamIndex = fixture.DefaultSubtitleStreamIndex;
+            _currentItemName = fixture.ItemName;
+            _lastPositionTicks = fixture.StartPositionTicks;
+            _durationTicks = fixture.RuntimeTicks;
+            _hasPlaybackContext = true;
+
+            ManualDebugPanel.Visibility = Visibility.Collapsed;
+            StreamUrlBox.Text = "";
+            StreamUrlBox.IsEnabled = false;
+            NowPlayingBlock.Text = fixture.ItemName;
+            RenderDevelopmentPlaybackOptions();
+            UpdateStatus(CorePlaybackState.Playing, "Fixture options ready");
+            UpdateProgressSlider();
+            UpdateControlStates();
+            ShowOverlay(showMore: true);
+            FocusDevelopmentPlaybackOptionsDefaultAsync();
+        }
+
+        private void RenderDevelopmentPlaybackOptions()
+        {
+            _updatingStreamControls = true;
+            try
+            {
+                SourceBox.Items.Clear();
+                AudioStreamBox.Items.Clear();
+                SubtitleStreamBox.Items.Clear();
+
+                foreach (var source in _developmentPlaybackSources)
+                {
+                    var option = new SourceOption(source.Id, CreateSourceLabel(source));
+                    SourceBox.Items.Add(option);
+                    if (string.Equals(source.Id, _developmentPlaybackMediaSourceId, StringComparison.Ordinal))
+                    {
+                        SourceBox.SelectedItem = option;
+                    }
+                }
+
+                var selectedSource = GetDevelopmentPlaybackSource();
+                if (selectedSource != null)
+                {
+                    var defaultAudio = new StreamOption(null, "Default");
+                    AudioStreamBox.Items.Add(defaultAudio);
+                    AudioStreamBox.SelectedItem = defaultAudio;
+                    foreach (var stream in selectedSource.AudioStreams)
+                    {
+                        var option = new StreamOption(stream.Index, CreateStreamLabel(stream));
+                        AudioStreamBox.Items.Add(option);
+                        if (_developmentPlaybackAudioStreamIndex == stream.Index)
+                        {
+                            AudioStreamBox.SelectedItem = option;
+                        }
+                    }
+
+                    var offSubtitle = new StreamOption(null, "Off");
+                    SubtitleStreamBox.Items.Add(offSubtitle);
+                    SubtitleStreamBox.SelectedItem = offSubtitle;
+                    foreach (var stream in selectedSource.SubtitleStreams)
+                    {
+                        var option = new StreamOption(stream.Index, CreateStreamLabel(stream));
+                        SubtitleStreamBox.Items.Add(option);
+                        if (_developmentPlaybackSubtitleStreamIndex == stream.Index)
+                        {
+                            SubtitleStreamBox.SelectedItem = option;
+                        }
+                    }
+                }
+
+                UpdateStreamControlStates();
+            }
+            finally
+            {
+                _updatingStreamControls = false;
+            }
+        }
+
+        private void SelectDevelopmentMediaSource(SourceOption option)
+        {
+            _developmentPlaybackMediaSourceId = option.Id;
+            var selectedSource = GetDevelopmentPlaybackSource();
+            _developmentPlaybackAudioStreamIndex = GetFirstStreamIndex(selectedSource, EmbyStreamKind.Audio);
+            _developmentPlaybackSubtitleStreamIndex = GetFirstStreamIndex(selectedSource, EmbyStreamKind.Subtitle);
+            RenderDevelopmentPlaybackOptions();
+            UpdateStatus(CorePlaybackState.Playing, "Source: " + option.Label);
+            if (_infoVisible)
+            {
+                UpdateInfo();
+            }
+        }
+
+        private void SelectDevelopmentAudioStream(StreamOption option)
+        {
+            _developmentPlaybackAudioStreamIndex = option.StreamIndex;
+            UpdateStatus(CorePlaybackState.Playing, "Audio: " + option.Label);
+            if (_infoVisible)
+            {
+                UpdateInfo();
+            }
+        }
+
+        private void SelectDevelopmentSubtitleStream(StreamOption option)
+        {
+            _developmentPlaybackSubtitleStreamIndex = option.StreamIndex;
+            UpdateStatus(CorePlaybackState.Playing, "Subtitles: " + option.Label);
+            if (_infoVisible)
+            {
+                UpdateInfo();
+            }
+        }
+
+        private EmbyMediaSource? GetDevelopmentPlaybackSource()
+        {
+            return _developmentPlaybackSources.FirstOrDefault(source =>
+                string.Equals(source.Id, _developmentPlaybackMediaSourceId, StringComparison.Ordinal)) ??
+                _developmentPlaybackSources.FirstOrDefault();
+        }
+
+        private static int? GetFirstStreamIndex(EmbyMediaSource? source, EmbyStreamKind kind)
+        {
+            if (source == null)
+            {
+                return null;
+            }
+
+            var stream = source.Streams.FirstOrDefault(candidate => candidate.Kind == kind);
+            return stream == null ? (int?)null : stream.Index;
+        }
+
+        private void FocusDevelopmentPlaybackOptionsDefaultAsync()
+        {
+            _ = Dispatcher.RunAsync(CoreDispatcherPriority.Low, () =>
+            {
+                if (!_usesDevelopmentPlaybackOptionsFixture || !_moreVisible)
+                {
+                    return;
+                }
+
+                var target = PlaybackMoreDrawerFocusPolicy.GetDefaultTarget(
+                    SourceBox.IsEnabled,
+                    AudioStreamBox.IsEnabled,
+                    SubtitleStreamBox.IsEnabled);
+                FocusMoreDrawerTarget(target);
+            });
+        }
+#endif
 
 #if DEBUG
         private static IReadOnlyList<EmbyMediaSource> ApplyForcedSdrOutputForDiagnostics(IReadOnlyList<EmbyMediaSource> sources)
@@ -1367,6 +1619,15 @@ namespace NextGenEmby.App.Views
 
         private void UpdateStreamControlStates()
         {
+#if DEBUG
+            if (_usesDevelopmentPlaybackOptionsFixture)
+            {
+                SourceBox.IsEnabled = SourceBox.Items.Count > 1;
+                AudioStreamBox.IsEnabled = AudioStreamBox.Items.Count > 1;
+                SubtitleStreamBox.IsEnabled = SubtitleStreamBox.Items.Count > 1;
+                return;
+            }
+#endif
             var state = _orchestrator.State;
             var hasActivePlayback = _hasPlaybackContext &&
                 state != CorePlaybackState.Failed &&
@@ -1553,6 +1814,11 @@ namespace NextGenEmby.App.Views
 
         private void ShowOverlay(bool showMore)
         {
+            ShowOverlay(showMore, false);
+        }
+
+        private void ShowOverlay(bool showMore, bool preserveMoreDrawerFocus)
+        {
             var wasOverlayVisible = _overlayVisible;
             if (!_overlayVisible)
             {
@@ -1564,7 +1830,11 @@ namespace NextGenEmby.App.Views
             MoreDrawer.Visibility = _moreVisible ? Visibility.Visible : Visibility.Collapsed;
             if (_moreVisible)
             {
-                FocusMoreDrawer();
+                ClearTransportFocusForMoreDrawer();
+                if (!preserveMoreDrawerFocus)
+                {
+                    FocusMoreDrawer();
+                }
             }
             else
             {
@@ -1576,6 +1846,12 @@ namespace NextGenEmby.App.Views
             {
                 _overlayTimer.Start();
             }
+        }
+
+        private void ClearTransportFocusForMoreDrawer()
+        {
+            _transportFocusTarget = null;
+            UpdateTransportFocusVisuals(null);
         }
 
         private void KeepOverlayVisibleIfPinned()
@@ -2130,6 +2406,9 @@ namespace NextGenEmby.App.Views
             return PlaybackOverlayInputPolicy.ShouldKeepOverlayPinned(
                 _moreVisible,
                 _seekPreview.IsActive,
+#if DEBUG
+                _usesDevelopmentPlaybackOptionsFixture ||
+#endif
                 _launchRequest == null && ManualDebugPanel.Visibility == Visibility.Visible,
                 IsPlaybackOpeningOrBusy(),
                 PlaybackNeedsAttention());
@@ -2147,6 +2426,21 @@ namespace NextGenEmby.App.Views
 
         private void UpdateControlStates()
         {
+#if DEBUG
+            if (_usesDevelopmentPlaybackOptionsFixture)
+            {
+                ManualStartButton.IsEnabled = false;
+                PauseButton.IsEnabled = true;
+                ResumeButton.IsEnabled = false;
+                StopButton.IsEnabled = true;
+                SeekBackButton.IsEnabled = true;
+                SeekForwardButton.IsEnabled = true;
+                ProgressSlider.IsEnabled = true;
+                MoreButton.IsEnabled = true;
+                InfoButton.IsEnabled = true;
+                return;
+            }
+#endif
             var state = _orchestrator.State;
             var hasActivePlayback = _hasPlaybackContext &&
                 state != CorePlaybackState.Failed &&
@@ -2178,6 +2472,22 @@ namespace NextGenEmby.App.Views
 
         private void UpdateInfo()
         {
+#if DEBUG
+            if (_usesDevelopmentPlaybackOptionsFixture)
+            {
+                var fixtureSource = GetDevelopmentPlaybackSource();
+                var fixturePosition = TimeSpan.FromTicks(GetCurrentPositionTicks());
+                InfoBlock.Text =
+                    "State: Playing" + Environment.NewLine +
+                    "Item: " + _currentItemName + Environment.NewLine +
+                    "Source: " + (fixtureSource == null ? "" : fixtureSource.Name) + Environment.NewLine +
+                    "Audio: " + (fixtureSource == null ? "Default" : CreateSelectedStreamLabel(fixtureSource, _developmentPlaybackAudioStreamIndex, EmbyStreamKind.Audio, "Default")) + Environment.NewLine +
+                    "Subtitles: " + (fixtureSource == null ? "Off" : CreateSelectedStreamLabel(fixtureSource, _developmentPlaybackSubtitleStreamIndex, EmbyStreamKind.Subtitle, "Off")) + Environment.NewLine +
+                    "Position: " + FormatPosition(fixturePosition) + Environment.NewLine +
+                    "Fixture: playback options";
+                return;
+            }
+#endif
             var descriptor = _orchestrator.CurrentDescriptor;
             var source = descriptor?.MediaSource;
             var position = TimeSpan.FromTicks(GetCurrentPositionTicks());

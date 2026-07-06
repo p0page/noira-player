@@ -51,6 +51,28 @@ public sealed class PlaybackOverlayInputPolicyTests
         Assert.True(PlaybackOverlayInputPolicy.ShouldRouteFocusedControlInput(moreVisible: true, seekPreviewActive: false));
     }
 
+    [Theory]
+    [InlineData(true, false, false, true, true)]
+    [InlineData(true, false, true, true, false)]
+    [InlineData(true, true, false, true, false)]
+    [InlineData(false, false, false, true, false)]
+    [InlineData(true, false, false, false, false)]
+    public void Collapsed_More_Drawer_ComboBox_Routes_Vertical_Navigation_To_Drawer_Focus(
+        bool moreVisible,
+        bool seekPreviewActive,
+        bool comboBoxOpen,
+        bool verticalNavigation,
+        bool expected)
+    {
+        var shouldRoute = PlaybackOverlayInputPolicy.ShouldRouteMoreDrawerComboBoxDirectionalInput(
+            moreVisible,
+            seekPreviewActive,
+            comboBoxOpen,
+            verticalNavigation);
+
+        Assert.Equal(expected, shouldRoute);
+    }
+
     [Fact]
     public void Handled_Cancel_Still_Routes_When_More_Drawer_Is_Open()
     {

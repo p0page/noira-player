@@ -86,6 +86,7 @@
     <Compile Include="Navigation\MusicNavigationRequest.cs" />
     <Compile Include="Navigation\PhotoViewerNavigationRequest.cs" />
     <Compile Include="Navigation\PlaybackLaunchRequest.cs" />
+    <Compile Include="Navigation\PlaybackOptionsFixtureNavigationRequest.cs" />
     <Compile Include="Navigation\SearchDevelopmentNavigationRequest.cs" />
     <Compile Include="Playback\SystemMediaPlaybackBackend.cs" />
     <Compile Include="Playback\WinRtNativePlaybackEngine.cs" />

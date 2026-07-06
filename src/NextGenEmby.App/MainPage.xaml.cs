@@ -875,6 +875,10 @@ namespace NextGenEmby.App
                         new ManualDirectStreamLaunchOptions(command.StreamUrl, command.AutoStart));
                     return;
 
+                case "playback-options-fixture":
+                    NavigateTo(typeof(PlaybackPage), new PlaybackOptionsFixtureNavigationRequest());
+                    return;
+
                 case "playback":
                     NavigateTo(
                         typeof(PlaybackPage),
