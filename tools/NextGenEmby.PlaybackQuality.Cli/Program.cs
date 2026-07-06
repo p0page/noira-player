@@ -372,6 +372,14 @@ internal static class Program
                         ReadValue(args, ref index, arg),
                         System.Globalization.CultureInfo.InvariantCulture);
                     break;
+                case "--purpose":
+                    options.Purposes.Add(ReadValue(args, ref index, arg));
+                    break;
+                case "--max-tier":
+                    options.MaxTier = int.Parse(
+                        ReadValue(args, ref index, arg),
+                        System.Globalization.CultureInfo.InvariantCulture);
+                    break;
                 case "--output":
                     options.OutputPath = ReadValue(args, ref index, arg);
                     break;
@@ -388,6 +396,12 @@ internal static class Program
         if (options.DurationSeconds < 10 || options.DurationSeconds > 600)
         {
             throw new ArgumentException("--duration must be between 10 and 600 seconds.");
+        }
+
+        if (options.MaxTier.HasValue &&
+            (options.MaxTier.Value < 0 || options.MaxTier.Value > 4))
+        {
+            throw new ArgumentException("--max-tier must be between 0 and 4.");
         }
 
         return options;
@@ -828,10 +842,10 @@ internal static class Program
     {
         var plan = new PlaybackQualityRunPlan
         {
-            CaseCount = validation.IsValid ? validation.CaseCount : 0,
             DurationSeconds = options.DurationSeconds,
             ReportsDirectory = options.ReportsDirectory,
-            ManifestValidation = validation
+            ManifestValidation = validation,
+            Filters = CreateRunPlanFilters(options)
         };
         AddUnique(
             plan.EvidenceRequirements,
@@ -850,6 +864,11 @@ internal static class Program
 
         foreach (var referenceCase in validation.Cases)
         {
+            if (!MatchesRunPlanFilters(referenceCase, options))
+            {
+                continue;
+            }
+
             var relativePath = GetRunIdComparisonRelativePath(referenceCase.CaseId);
             var hasEmbyItem = !string.IsNullOrWhiteSpace(referenceCase.ItemId);
             var planCase = new PlaybackQualityRunPlanCase
@@ -882,7 +901,47 @@ internal static class Program
             plan.Cases.Add(planCase);
         }
 
+        plan.CaseCount = plan.Cases.Count;
         return plan;
+    }
+
+    private static PlaybackQualityRunPlanFilters CreateRunPlanFilters(
+        PlanRunsOptions options)
+    {
+        var filters = new PlaybackQualityRunPlanFilters
+        {
+            MaxTier = options.MaxTier
+        };
+        CopyValues(options.Purposes, filters.Purposes);
+        return filters;
+    }
+
+    private static bool MatchesRunPlanFilters(
+        PlaybackQualityReferenceCase referenceCase,
+        PlanRunsOptions options)
+    {
+        if (options.MaxTier.HasValue && referenceCase.Tier > options.MaxTier.Value)
+        {
+            return false;
+        }
+
+        if (options.Purposes.Count == 0)
+        {
+            return true;
+        }
+
+        foreach (var purpose in referenceCase.Purpose)
+        {
+            foreach (var requestedPurpose in options.Purposes)
+            {
+                if (string.Equals(purpose, requestedPurpose, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     private static DevelopmentNavigationCommand CreateQualityRunCommand(
@@ -1045,7 +1104,7 @@ internal static class Program
         writer.WriteLine("  playback-quality compare-suite --baseline-dir <reports-dir> --candidate-dir <reports-dir> [--match-by relative-path|run-id] [--previous-comparisons-dir <comparison-dir>] [--comparisons-dir <comparison-dir>] [--stall-threshold <n>] [--output <suite.json>]");
         writer.WriteLine("  playback-quality validate-manifest --manifest <reference-manifest.json> [--output <validation.json>]");
         writer.WriteLine("  playback-quality validate-report-set --manifest <reference-manifest.json> --reports-dir <reports-dir> [--output <validation.json>]");
-        writer.WriteLine("  playback-quality plan-runs --manifest <reference-manifest.json> [--reports-dir <reports-dir>] [--duration <seconds>] [--output <run-plan.json>]");
+        writer.WriteLine("  playback-quality plan-runs --manifest <reference-manifest.json> [--reports-dir <reports-dir>] [--duration <seconds>] [--purpose <purpose>...] [--max-tier <0-4>] [--output <run-plan.json>]");
         writer.WriteLine("  playback-quality evaluate-candidate --manifest <reference-manifest.json> --baseline-dir <reports-dir> --candidate-dir <reports-dir> [--match-by relative-path|run-id] [--previous-comparisons-dir <comparison-dir>] [--comparisons-dir <comparison-dir>] [--stall-threshold <n>] [--output <evaluation.json>]");
     }
 
@@ -1091,6 +1150,8 @@ internal static class Program
         public string ReportsDirectory { get; set; } = "";
         public string OutputPath { get; set; } = "";
         public int DurationSeconds { get; set; } = 30;
+        public int? MaxTier { get; set; }
+        public List<string> Purposes { get; } = new List<string>();
     }
 
     private sealed class ValidateManifestOptions
@@ -1161,11 +1222,19 @@ internal static class Program
         public int CaseCount { get; set; }
         public int DurationSeconds { get; set; }
         public string ReportsDirectory { get; set; } = "";
+        public PlaybackQualityRunPlanFilters Filters { get; set; } =
+            new PlaybackQualityRunPlanFilters();
         public List<string> EvidenceRequirements { get; } = new List<string>();
         public List<PlaybackQualityRunPlanCase> Cases { get; } =
             new List<PlaybackQualityRunPlanCase>();
         public PlaybackQualityReferenceManifestValidation ManifestValidation { get; set; } =
             new PlaybackQualityReferenceManifestValidation();
+    }
+
+    private sealed class PlaybackQualityRunPlanFilters
+    {
+        public List<string> Purposes { get; } = new List<string>();
+        public int? MaxTier { get; set; }
     }
 
     private sealed class PlaybackQualityRunPlanCase

@@ -57,6 +57,14 @@ dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQ
 
 `plan-runs` 不执行播放，也不打包 App。它把每个 manifest case 转成标准 `runId`、`sourceUri`、`durationSeconds`、`expected`、`reportRelativePath` 和 `reportPath`，让模型或脚本按同一套 key 采集 `PlaybackQualityRunResult`。生成的报告应写入 plan 里的 `reportPath`，之后再运行 report-set 校验和候选评估。
 
+快速迭代时可以只计划一个子集，例如只跑 tier 2 以内的 HDR case：
+
+```powershell
+dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- plan-runs --manifest docs\qa\playback-quality-reference-manifest.example.json --reports-dir baseline-reports --duration 60 --purpose hdr-output --max-tier 2 --output hdr-smoke-run-plan.json
+```
+
+输出里的 `filters` 会记录实际使用的 `purposes` 和 `maxTier`；`caseCount` 表示过滤后的计划 case 数，完整 manifest 总数仍在 `manifestValidation.caseCount`。
+
 采集计划支持两种模式：
 
 - `direct-uri`：manifest 只有 `uri`，适合公开测试视频或本地直链样本。

@@ -34,6 +34,7 @@ try {
     $manifestPath = Join-Path $tempRoot 'reference-manifest.json'
     $manifestValidationPath = Join-Path $tempRoot 'reference-manifest-validation.json'
     $runPlanPath = Join-Path $tempRoot 'reference-run-plan.json'
+    $filteredRunPlanPath = Join-Path $tempRoot 'reference-run-plan-filtered.json'
     $embyRunPlanManifestPath = Join-Path $tempRoot 'emby-run-plan-manifest.json'
     $embyRunPlanPath = Join-Path $tempRoot 'emby-run-plan.json'
     $reportSetDir = Join-Path $tempRoot 'reference-report-set'
@@ -225,6 +226,47 @@ try {
         $_.expected.hdrKind -eq 'Hdr10'
     })) {
         throw 'Expected playback quality CLI plan-runs output to include a runnable HDR case.'
+    }
+
+    Push-Location $repoRoot
+    try {
+        dotnet run `
+            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
+            --no-build `
+            -- plan-runs `
+            --manifest $manifestPath `
+            --reports-dir captured-hdr-smoke `
+            --duration 60 `
+            --purpose hdr-output `
+            --max-tier 2 `
+            --output $filteredRunPlanPath
+        if ($LASTEXITCODE -ne 0) {
+            throw 'playback quality CLI filtered plan-runs returned a non-zero exit code.'
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    $filteredRunPlan = Get-Content -Raw -LiteralPath $filteredRunPlanPath | ConvertFrom-Json
+    if ($filteredRunPlan.caseCount -ne 1) {
+        throw 'Expected filtered plan-runs output to include one planned case.'
+    }
+
+    if (-not ($filteredRunPlan.filters.purposes -contains 'hdr-output')) {
+        throw 'Expected filtered plan-runs output to record purpose filter.'
+    }
+
+    if ($filteredRunPlan.filters.maxTier -ne 2) {
+        throw 'Expected filtered plan-runs output to record max tier filter.'
+    }
+
+    if (-not ($filteredRunPlan.cases | Where-Object { $_.caseId -eq 'netflix/chimera-4k-2398-hdr-pq' })) {
+        throw 'Expected filtered plan-runs output to include HDR case.'
+    }
+
+    if ($filteredRunPlan.cases | Where-Object { $_.caseId -eq 'jellyfin/dv-profile5-hevc-4k' }) {
+        throw 'Expected filtered plan-runs output to exclude non-matching DV case.'
     }
 
     @'
