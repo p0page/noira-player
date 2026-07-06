@@ -273,6 +273,29 @@ namespace NextGenEmby.Core.Emby
             return (dto.Items ?? new List<ItemDto>()).Select(MapItem).ToList();
         }
 
+        public async Task<IReadOnlyList<EmbyMediaItem>> GetSimilarItemsAsync(
+            EmbySession session,
+            string itemId,
+            int limit)
+        {
+            var parameters = new List<string>();
+            AddQueryParameter(parameters, "UserId", session.UserId);
+            AddQueryParameter(parameters, "Limit", Math.Max(1, limit).ToString());
+            AddQueryParameter(parameters, "Fields", ItemListFields);
+            AddImageQueryParameters(parameters);
+
+            using var request = new HttpRequestMessage(
+                HttpMethod.Get,
+                $"Items/{EscapeUriComponent(itemId)}/Similar?{string.Join("&", parameters)}");
+            EmbyAuthorization.Apply(request, _options, session);
+
+            using var response = await _http.SendAsync(request).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+            var body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var dto = JsonSerializer.Deserialize<ItemListDto<ItemDto>>(body, _jsonOptions) ?? new ItemListDto<ItemDto>();
+            return (dto.Items ?? new List<ItemDto>()).Select(MapItem).ToList();
+        }
+
         public Task<IReadOnlyList<EmbyMediaItem>> SearchItemsAsync(
             EmbySession session,
             string searchTerm,
@@ -288,7 +311,7 @@ namespace NextGenEmby.Core.Emby
         public async Task<EmbyMediaItem> GetItemAsync(EmbySession session, string itemId)
         {
             var parameters = new List<string>();
-            AddQueryParameter(parameters, "Fields", "Overview,ProductionYear,RunTimeTicks,ChildCount,MediaSources,UserData");
+            AddQueryParameter(parameters, "Fields", "Overview,ProductionYear,RunTimeTicks,ChildCount,MediaSources,UserData,People");
             AddImageQueryParameters(parameters);
 
             using var request = new HttpRequestMessage(
@@ -551,7 +574,8 @@ namespace NextGenEmby.Core.Emby
                 IndexNumber = item.IndexNumber,
                 ParentIndexNumber = item.ParentIndexNumber,
                 ChildCount = item.ChildCount,
-                UserData = MapUserData(userData)
+                UserData = MapUserData(userData),
+                People = (item.People ?? new List<PersonDto>()).Select(MapPerson).ToList()
             };
         }
 
@@ -563,6 +587,18 @@ namespace NextGenEmby.Core.Emby
                 Played = userData.Played,
                 PlaybackPositionTicks = userData.PlaybackPositionTicks,
                 PlayedPercentage = userData.PlayedPercentage
+            };
+        }
+
+        private static EmbyPerson MapPerson(PersonDto person)
+        {
+            return new EmbyPerson
+            {
+                Id = person.Id ?? "",
+                Name = person.Name ?? "",
+                Role = person.Role ?? "",
+                Type = person.Type ?? "",
+                PrimaryImageTag = person.PrimaryImageTag ?? ""
             };
         }
 
@@ -826,6 +862,16 @@ namespace NextGenEmby.Core.Emby
             public string ParentBannerItemId { get; set; } = "";
             public string ParentLogoItemId { get; set; } = "";
             public string ParentThumbImageTag { get; set; } = "";
+            public List<PersonDto> People { get; set; } = new List<PersonDto>();
+        }
+
+        private sealed class PersonDto
+        {
+            public string Id { get; set; } = "";
+            public string Name { get; set; } = "";
+            public string Role { get; set; } = "";
+            public string Type { get; set; } = "";
+            public string PrimaryImageTag { get; set; } = "";
         }
 
         private sealed class PlaybackInfoDto

@@ -51,7 +51,7 @@ Status values:
 | Sort through TV sheet | `Up`, `Return`, arrows, `Return` | Verified | 0.1.0.98 sort sheet validation | Extend sort options beyond Title/Recently added/Year |
 | Filter through TV sheet | `Up`, `Right`, `Return`, arrows, `Return` | Verified | 0.1.0.98 filter sheet validation | Add favorite/resumable server-backed validation |
 | Empty library recovery | Empty strict query | Verified | 0.1.0.78 Playlists showed `No items found` instead of wrong folders | Add screenshot pass |
-| Genre/person/studio/tag browsing | Guide or sheet | Missing | API query model has some filters, no UI route | Design focused discovery surface |
+| Genre/person/studio/tag browsing | Guide, sheet, or Details person rail | Partial | 0.1.0.109 person card opened a `PersonIds` Library from Details Cast & crew | Add deliberate genre/studio/tag entrypoints and sheets |
 
 ## Details
 
@@ -62,7 +62,7 @@ Status values:
 | Launch episode playback | Details, `Return` | Verified | 0.1.0.100 launched `铸就传奇` episode playback | Keep direct playback request stable |
 | Version selection before playback | Details versions, arrows | Implemented | Version buttons exist and pass `MediaSourceId` | Fresh keyboard run with multi-version item |
 | Favorite / watched toggles | Details action row | Implemented | 0.1.0.107 shows Add favorite and Mark watched in the first viewport; API mutation tests cover Emby user-data writes | Do a live toggle only on a disposable item or fixture user |
-| Similar items, people, collections | Details below fold | Missing | No UI sections yet | Add details secondary rails |
+| Similar items, people, collections | Details below fold | Partial | 0.1.0.109 loaded Cast & crew, moved focus into person cards, and opened a `PersonIds` Library; API tests cover `Items/{Id}/Similar` | Validate visible similar-items rail on a server item that returns results; add collections/playlists/add-to actions |
 
 ## Search
 
@@ -108,7 +108,7 @@ Status values:
 
 ## Current Highest-Value Gaps
 
-1. Details still needs secondary rails for similar items, people, collections, playlists, and add-to actions.
+1. Details still needs visible similar-items validation plus collections, playlists, and add-to actions.
 2. Playback More drawer needs a fresh keyboard validation pass with real audio/subtitle streams.
 3. Live TV, Music, and Photos need dedicated non-dead-end surfaces instead of generic library fallback.
 4. Settings should stop reading like a placeholder and expose useful TV/client diagnostics.

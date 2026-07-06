@@ -267,9 +267,11 @@ Behavior:
 
 - A on Play starts or resumes.
 - Right/Left moves across visible actions without relying on hover or default desktop focus guessing.
-- Down from Play goes to versions or episodes.
-- Up from the first selector row returns to Play/Resume.
+- Down from Play goes to versions, then episodes, similar items, and people in a predictable TV order.
+- Up from the first selector or secondary content row returns toward versions and then Play/Resume.
 - Favorite and watched actions update item user-data in place and restore focus to the changed action.
+- Person cards open a filtered person library rather than a modal dead end.
+- Similar item cards open that item's Details page.
 - B returns one level.
 - Stream selection changes the launch request but does not start accidental playback unless the user selects Play.
 

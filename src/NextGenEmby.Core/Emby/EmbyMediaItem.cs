@@ -24,5 +24,7 @@ namespace NextGenEmby.Core.Emby
         public int? ParentIndexNumber { get; set; }
         public int? ChildCount { get; set; }
         public EmbyUserData UserData { get; set; } = new EmbyUserData();
+        public System.Collections.Generic.IReadOnlyList<EmbyPerson> People { get; set; } =
+            System.Array.Empty<EmbyPerson>();
     }
 }

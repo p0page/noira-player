@@ -626,6 +626,94 @@ public sealed class EmbyLibraryTests
     }
 
     [Fact]
+    public async Task GetItemAsync_Requests_And_Maps_People_For_Details_Rail()
+    {
+        var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
+            HttpStatusCode.OK,
+            """
+            {
+              "Id": "movie-1",
+              "Name": "Movie One",
+              "Type": "Movie",
+              "People": [
+                {
+                  "Id": "person-1",
+                  "Name": "Actor One",
+                  "Role": "Detective",
+                  "Type": "Actor",
+                  "PrimaryImageTag": "person-primary"
+                },
+                {
+                  "Id": null,
+                  "Name": null,
+                  "Role": null,
+                  "Type": null,
+                  "PrimaryImageTag": null
+                }
+              ]
+            }
+            """));
+        using var http = new HttpClient(handler);
+        var client = CreateClient(http);
+
+        var item = await client.GetItemAsync(Session(), "movie-1");
+
+        Assert.Contains("People", handler.LastRequest!.RequestUri!.Query);
+        Assert.Collection(
+            item.People,
+            person =>
+            {
+                Assert.Equal("person-1", person.Id);
+                Assert.Equal("Actor One", person.Name);
+                Assert.Equal("Detective", person.Role);
+                Assert.Equal("Actor", person.Type);
+                Assert.Equal("person-primary", person.PrimaryImageTag);
+            },
+            person =>
+            {
+                Assert.Equal("", person.Id);
+                Assert.Equal("", person.Name);
+                Assert.Equal("", person.Role);
+                Assert.Equal("", person.Type);
+                Assert.Equal("", person.PrimaryImageTag);
+            });
+    }
+
+    [Fact]
+    public async Task GetSimilarItemsAsync_Uses_Similar_Endpoint_And_Parses_Items()
+    {
+        var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
+            HttpStatusCode.OK,
+            """
+            {
+              "Items": [
+                {
+                  "Id": "movie-2",
+                  "Name": "Movie Two",
+                  "Type": "Movie",
+                  "ImageTags": { "Primary": "primary-tag" }
+                }
+              ],
+              "TotalRecordCount": 1
+            }
+            """));
+        using var http = new HttpClient(handler);
+        var client = CreateClient(http);
+
+        var items = await client.GetSimilarItemsAsync(Session(userId: "user 1/slash"), "movie 1/slash", 18);
+
+        var item = Assert.Single(items);
+        Assert.Equal("movie-2", item.Id);
+        Assert.Equal("Movie Two", item.Name);
+        Assert.Equal("primary-tag", item.PrimaryImageTag);
+        Assert.Equal("/Items/movie%201%2Fslash/Similar", handler.LastRequest!.RequestUri!.AbsolutePath);
+        Assert.Contains("UserId=user%201%2Fslash", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("Limit=18", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("Fields=Overview%2CProductionYear%2CRunTimeTicks%2CPrimaryImageAspectRatio%2CChildCount%2CUserData", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("EnableImages=true", handler.LastRequest.RequestUri.Query);
+    }
+
+    [Fact]
     public async Task SearchItemsAsync_Uses_Caller_Provided_Item_Types()
     {
         var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(

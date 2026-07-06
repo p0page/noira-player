@@ -575,3 +575,28 @@ Then continue design and implementation until the route passes.
   - Favorite and watched were not activated against the live Emby library during this run to avoid mutating the user's real server state; the write endpoints are covered by HTTP-level tests.
 - Visual capture note:
   - Computer Use screenshot capture repeatedly hit `FrameArrived timed out` after installing 0.1.0.107. This run is therefore recorded as text-snapshot and keyboard-behavior validation, not fresh screenshot validation. No app-content mouse clicks were used.
+
+### 2026-07-06 - Details Secondary Rails
+
+- App version: 0.1.0.109.
+- Scope: Details now loads below-fold Emby secondary content with `More like this` and `Cast & crew` rails, using real item/person artwork where available and fixed TV card dimensions.
+- Interaction changes:
+  - `GetItemAsync` requests `People` for Details so person rows can be rendered from Emby metadata.
+  - `GetSimilarItemsAsync` calls `Items/{Id}/Similar` with the same image field policy used by other media rows.
+  - Person cards open Library with a `PersonIds` query and media item types, instead of being inert text.
+  - Details directional focus now explicitly moves through action row, versions, episodes, similar items, and people, so D-pad `Down` no longer gets trapped on the first version button.
+- Automated verification:
+  - Core tests passed: 226 total.
+  - New Emby API tests cover Details `People` mapping and the `Items/{Id}/Similar` request shape.
+  - App Debug x64 build passed and produced `NextGenEmby.App_0.1.0.109_x64_Debug.msix`.
+  - MSIX signed and installed locally as `NextGenEmby.App 0.1.0.109`.
+- Keyboard-only validation with Computer Use:
+  - From Home hero, `Right`, `Return` opened Details for `铸就传奇`.
+  - Details exposed `Resume`, `Restart`, `Add favorite`, `Mark watched`, `Refresh`, two version buttons, audio/subtitle summaries, and `Cast & crew`.
+  - `Down`, `Down`, `Down` moved focus from the action row through versions and onto the first person card `Arian Kashef`, with a visible cyan focus frame.
+  - `Return` on `Arian Kashef` opened the filtered person Library showing `1 items`.
+  - `Escape` returned one level back to the original Details page.
+  - No app-content mouse clicks were used.
+- Follow-up:
+  - The sampled episode did not render a visible `More like this` rail from the live server response. The API and UI path are implemented, but a future run should validate a sampled item that returns similar items.
+  - Collections, playlists, and add-to actions are still missing from Details secondary capabilities.

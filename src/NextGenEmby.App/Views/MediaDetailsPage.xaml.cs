@@ -116,13 +116,75 @@ namespace NextGenEmby.App.Views
 
                 if (IsDownKey(key))
                 {
-                    return FocusFirstVersionButton(FocusState.Keyboard);
+                    return FocusFirstVersionButton(FocusState.Keyboard) ||
+                        FocusFirstBelowVersions(FocusState.Keyboard);
                 }
             }
 
-            if (IsUpKey(key) && IsFocusWithin(focusedElement, VersionsPanel))
+            if (IsFocusWithin(focusedElement, VersionsPanel))
             {
-                return FocusAction(MediaDetailsActionButton.Play, FocusState.Keyboard);
+                if (IsDownKey(key))
+                {
+                    return FocusNextButtonInPanelOrFallback(
+                        VersionsPanel,
+                        focusedElement,
+                        FocusState.Keyboard,
+                        () => FocusFirstBelowVersions(FocusState.Keyboard));
+                }
+
+                if (IsUpKey(key))
+                {
+                    return FocusPreviousButtonInPanelOrFallback(
+                        VersionsPanel,
+                        focusedElement,
+                        FocusState.Keyboard,
+                        () => FocusAction(MediaDetailsActionButton.Play, FocusState.Keyboard));
+                }
+            }
+
+            if (IsFocusWithin(focusedElement, EpisodesPanel))
+            {
+                if (IsDownKey(key))
+                {
+                    return FocusNextButtonInPanelOrFallback(
+                        EpisodesPanel,
+                        focusedElement,
+                        FocusState.Keyboard,
+                        () => FocusFirstAfterEpisodes(FocusState.Keyboard));
+                }
+
+                if (IsUpKey(key))
+                {
+                    return FocusPreviousButtonInPanelOrFallback(
+                        EpisodesPanel,
+                        focusedElement,
+                        FocusState.Keyboard,
+                        () => FocusLastVersionButton(FocusState.Keyboard) ||
+                            FocusAction(MediaDetailsActionButton.Play, FocusState.Keyboard));
+                }
+            }
+
+            if (IsFocusWithin(focusedElement, SimilarItemsPanel))
+            {
+                if (IsDownKey(key))
+                {
+                    return FocusFirstButton(PeoplePanel, FocusState.Keyboard);
+                }
+
+                if (IsUpKey(key))
+                {
+                    return FocusLastButton(EpisodesPanel, FocusState.Keyboard) ||
+                        FocusLastVersionButton(FocusState.Keyboard) ||
+                        FocusAction(MediaDetailsActionButton.Play, FocusState.Keyboard);
+                }
+            }
+
+            if (IsFocusWithin(focusedElement, PeoplePanel) && IsUpKey(key))
+            {
+                return FocusFirstButton(SimilarItemsPanel, FocusState.Keyboard) ||
+                    FocusLastButton(EpisodesPanel, FocusState.Keyboard) ||
+                    FocusLastVersionButton(FocusState.Keyboard) ||
+                    FocusAction(MediaDetailsActionButton.Play, FocusState.Keyboard);
             }
 
             return false;
@@ -188,16 +250,89 @@ namespace NextGenEmby.App.Views
 
         private bool FocusFirstVersionButton(FocusState focusState)
         {
-            foreach (var child in VersionsPanel.Children)
+            return FocusFirstButton(VersionsPanel, focusState);
+        }
+
+        private bool FocusLastVersionButton(FocusState focusState)
+        {
+            return FocusLastButton(VersionsPanel, focusState);
+        }
+
+        private bool FocusFirstBelowVersions(FocusState focusState)
+        {
+            return FocusFirstButton(EpisodesPanel, focusState) ||
+                FocusFirstAfterEpisodes(focusState);
+        }
+
+        private bool FocusFirstAfterEpisodes(FocusState focusState)
+        {
+            return FocusFirstButton(SimilarItemsPanel, focusState) ||
+                FocusFirstButton(PeoplePanel, focusState);
+        }
+
+        private bool FocusNextButtonInPanelOrFallback(
+            Panel panel,
+            DependencyObject focusedElement,
+            FocusState focusState,
+            Func<bool> fallback)
+        {
+            var buttons = GetFocusableButtons(panel);
+            var focusedIndex = FindFocusedButtonIndex(buttons, focusedElement);
+            if (focusedIndex >= 0 && focusedIndex < buttons.Count - 1)
             {
-                var button = child as Button;
-                if (button != null && button.Focus(focusState))
+                return buttons[focusedIndex + 1].Focus(focusState);
+            }
+
+            return fallback();
+        }
+
+        private bool FocusPreviousButtonInPanelOrFallback(
+            Panel panel,
+            DependencyObject focusedElement,
+            FocusState focusState,
+            Func<bool> fallback)
+        {
+            var buttons = GetFocusableButtons(panel);
+            var focusedIndex = FindFocusedButtonIndex(buttons, focusedElement);
+            if (focusedIndex > 0)
+            {
+                return buttons[focusedIndex - 1].Focus(focusState);
+            }
+
+            return fallback();
+        }
+
+        private bool FocusFirstButton(Panel panel, FocusState focusState)
+        {
+            var button = GetFocusableButtons(panel).FirstOrDefault();
+            return button != null && button.Focus(focusState);
+        }
+
+        private bool FocusLastButton(Panel panel, FocusState focusState)
+        {
+            var button = GetFocusableButtons(panel).LastOrDefault();
+            return button != null && button.Focus(focusState);
+        }
+
+        private List<Button> GetFocusableButtons(Panel panel)
+        {
+            return panel.Children
+                .OfType<Button>()
+                .Where(button => button.Visibility == Visibility.Visible && button.IsEnabled)
+                .ToList();
+        }
+
+        private int FindFocusedButtonIndex(IReadOnlyList<Button> buttons, DependencyObject focusedElement)
+        {
+            for (var index = 0; index < buttons.Count; index++)
+            {
+                if (IsFocusWithin(focusedElement, buttons[index]))
                 {
-                    return true;
+                    return index;
                 }
             }
 
-            return false;
+            return -1;
         }
 
         private static bool IsFocusWithin(DependencyObject element, DependencyObject parent)
@@ -334,6 +469,7 @@ namespace NextGenEmby.App.Views
                     await LoadImagesAsync(client, session, loadGeneration);
                     await LoadPlaybackInfoAsync(client, session, itemId, loadGeneration);
                     await LoadSeriesEpisodesAsync(client, session, loadGeneration);
+                    await LoadSecondaryRailsAsync(client, session, loadGeneration);
                 }
                 if (!CanApplyLoad(loadGeneration))
                 {
@@ -622,6 +758,78 @@ namespace NextGenEmby.App.Views
             return await client.GetChildrenAsync(session, seasonId, "Episode");
         }
 
+        private async Task LoadSecondaryRailsAsync(EmbyApiClient client, EmbySession session, int loadGeneration)
+        {
+            if (!CanApplyLoad(loadGeneration))
+            {
+                return;
+            }
+
+            RenderPeopleRail(session, client);
+            await LoadSimilarItemsAsync(client, session, loadGeneration);
+        }
+
+        private async Task LoadSimilarItemsAsync(EmbyApiClient client, EmbySession session, int loadGeneration)
+        {
+            SimilarItemsPanel.Children.Clear();
+            SimilarSection.Visibility = Visibility.Collapsed;
+            var item = _item;
+            if (item == null || string.IsNullOrWhiteSpace(item.Id))
+            {
+                return;
+            }
+
+            try
+            {
+                var similarItems = await client.GetSimilarItemsAsync(session, item.Id, 18);
+                if (!CanApplyLoad(loadGeneration))
+                {
+                    return;
+                }
+
+                foreach (var similarItem in similarItems
+                    .Where(candidate => !string.IsNullOrWhiteSpace(candidate.Id) && candidate.Id != item.Id)
+                    .Take(12))
+                {
+                    SimilarItemsPanel.Children.Add(CreateSimilarItemButton(session, client, similarItem));
+                }
+
+                SimilarSection.Visibility = SimilarItemsPanel.Children.Count == 0
+                    ? Visibility.Collapsed
+                    : Visibility.Visible;
+            }
+            catch
+            {
+                if (CanApplyLoad(loadGeneration))
+                {
+                    SimilarItemsPanel.Children.Clear();
+                    SimilarSection.Visibility = Visibility.Collapsed;
+                }
+            }
+        }
+
+        private void RenderPeopleRail(EmbySession session, EmbyApiClient client)
+        {
+            PeoplePanel.Children.Clear();
+            PeopleSection.Visibility = Visibility.Collapsed;
+            var item = _item;
+            if (item == null || item.People == null || item.People.Count == 0)
+            {
+                return;
+            }
+
+            foreach (var person in item.People
+                .Where(candidate => !string.IsNullOrWhiteSpace(candidate.Name))
+                .Take(18))
+            {
+                PeoplePanel.Children.Add(CreatePersonButton(session, client, person));
+            }
+
+            PeopleSection.Visibility = PeoplePanel.Children.Count == 0
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+        }
+
         private void RenderPlaybackInfo()
         {
             VersionsPanel.Children.Clear();
@@ -691,6 +899,156 @@ namespace NextGenEmby.App.Views
             button.Content = text;
             button.Click += Episode_OnClick;
             EpisodesPanel.Children.Add(button);
+        }
+
+        private Button CreateSimilarItemButton(EmbySession session, EmbyApiClient client, EmbyMediaItem item)
+        {
+            var button = new Button
+            {
+                Width = 148,
+                Height = 220,
+                MinWidth = 148,
+                MinHeight = 220,
+                Padding = new Thickness(0),
+                Tag = item,
+                HorizontalContentAlignment = HorizontalAlignment.Stretch,
+                VerticalContentAlignment = VerticalAlignment.Stretch,
+                UseSystemFocusVisuals = true
+            };
+            AutomationProperties.SetName(button, string.IsNullOrWhiteSpace(item.Name) ? item.Id : item.Name);
+            button.Click += SimilarItem_OnClick;
+            button.GotFocus += SecondaryRailButton_OnGotFocus;
+
+            var root = new Grid
+            {
+                Background = (Brush)Application.Current.Resources["AppRaisedSurfaceBrush"]
+            };
+
+            var posterArtwork = EmbyArtworkPolicy.SelectPosterArtwork(item, 360);
+            if (posterArtwork != null)
+            {
+                root.Background = new ImageBrush
+                {
+                    ImageSource = new BitmapImage(new Uri(client.GetImageUrl(
+                        session,
+                        posterArtwork.ItemId,
+                        posterArtwork.ImageType,
+                        posterArtwork.MaxWidth))),
+                    Stretch = Stretch.UniformToFill
+                };
+            }
+
+            root.Children.Add(CreateRailCardBorder());
+            root.Children.Add(new Border
+            {
+                Background = (Brush)Application.Current.Resources["AppCardScrimBrush"],
+                VerticalAlignment = VerticalAlignment.Bottom,
+                Padding = new Thickness(10, 8, 10, 8),
+                Child = new StackPanel
+                {
+                    Spacing = 3,
+                    Children =
+                    {
+                        new TextBlock
+                        {
+                            Text = string.IsNullOrWhiteSpace(item.Name) ? item.Id : item.Name,
+                            FontSize = 15,
+                            FontWeight = Windows.UI.Text.FontWeights.SemiBold,
+                            TextTrimming = TextTrimming.CharacterEllipsis,
+                            MaxLines = 2
+                        },
+                        new TextBlock
+                        {
+                            Text = CreateMeta(item),
+                            FontSize = 12,
+                            Foreground = (Brush)Application.Current.Resources["AppMutedTextBrush"],
+                            TextTrimming = TextTrimming.CharacterEllipsis,
+                            MaxLines = 1
+                        }
+                    }
+                }
+            });
+
+            button.Content = root;
+            return button;
+        }
+
+        private Button CreatePersonButton(EmbySession session, EmbyApiClient client, EmbyPerson person)
+        {
+            var button = new Button
+            {
+                Width = 154,
+                Height = 154,
+                MinWidth = 154,
+                MinHeight = 154,
+                Padding = new Thickness(0),
+                Tag = person,
+                HorizontalContentAlignment = HorizontalAlignment.Stretch,
+                VerticalContentAlignment = VerticalAlignment.Stretch,
+                UseSystemFocusVisuals = true,
+                IsEnabled = !string.IsNullOrWhiteSpace(person.Id)
+            };
+            AutomationProperties.SetName(button, CreatePersonAutomationName(person));
+            button.Click += Person_OnClick;
+            button.GotFocus += SecondaryRailButton_OnGotFocus;
+
+            var root = new Grid
+            {
+                Background = (Brush)Application.Current.Resources["AppRaisedSurfaceBrush"]
+            };
+
+            if (!string.IsNullOrWhiteSpace(person.Id) && !string.IsNullOrWhiteSpace(person.PrimaryImageTag))
+            {
+                root.Background = new ImageBrush
+                {
+                    ImageSource = new BitmapImage(new Uri(client.GetImageUrl(session, person.Id, "Primary", 280))),
+                    Stretch = Stretch.UniformToFill
+                };
+            }
+
+            root.Children.Add(CreateRailCardBorder());
+            root.Children.Add(new Border
+            {
+                Background = (Brush)Application.Current.Resources["AppCardScrimBrush"],
+                VerticalAlignment = VerticalAlignment.Bottom,
+                Padding = new Thickness(10, 8, 10, 8),
+                Child = new StackPanel
+                {
+                    Spacing = 3,
+                    Children =
+                    {
+                        new TextBlock
+                        {
+                            Text = person.Name,
+                            FontSize = 15,
+                            FontWeight = Windows.UI.Text.FontWeights.SemiBold,
+                            TextTrimming = TextTrimming.CharacterEllipsis,
+                            MaxLines = 2
+                        },
+                        new TextBlock
+                        {
+                            Text = CreatePersonRole(person),
+                            FontSize = 12,
+                            Foreground = (Brush)Application.Current.Resources["AppMutedTextBrush"],
+                            TextTrimming = TextTrimming.CharacterEllipsis,
+                            MaxLines = 1
+                        }
+                    }
+                }
+            });
+
+            button.Content = root;
+            return button;
+        }
+
+        private static Border CreateRailCardBorder()
+        {
+            return new Border
+            {
+                BorderBrush = (Brush)Application.Current.Resources["AppHairlineBrush"],
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(6)
+            };
         }
 
         private void AddSeasonHeader(EmbyMediaItem season)
@@ -778,6 +1136,58 @@ namespace NextGenEmby.App.Views
             }
 
             Frame.Navigate(typeof(MediaDetailsPage), new MediaDetailsNavigationRequest(episode.Id, episode.Name));
+        }
+
+        private void SimilarItem_OnClick(object sender, RoutedEventArgs e)
+        {
+            var button = sender as Button;
+            var item = button == null ? null : button.Tag as EmbyMediaItem;
+            if (item == null || string.IsNullOrWhiteSpace(item.Id))
+            {
+                return;
+            }
+
+            Frame.Navigate(
+                typeof(MediaDetailsPage),
+                new MediaDetailsNavigationRequest(item.Id, string.IsNullOrWhiteSpace(item.Name) ? item.Id : item.Name));
+        }
+
+        private void Person_OnClick(object sender, RoutedEventArgs e)
+        {
+            var button = sender as Button;
+            var person = button == null ? null : button.Tag as EmbyPerson;
+            if (person == null || string.IsNullOrWhiteSpace(person.Id))
+            {
+                return;
+            }
+
+            Frame.Navigate(
+                typeof(LibraryPage),
+                new LibraryNavigationRequest(
+                    person.Name,
+                    "",
+                    "Movie,Series,Episode,Video,MusicVideo",
+                    "",
+                    "",
+                    new LibraryNavigationQuery(personIds: person.Id)));
+        }
+
+        private static void SecondaryRailButton_OnGotFocus(object sender, RoutedEventArgs e)
+        {
+            var target = sender as Control;
+            if (target == null)
+            {
+                return;
+            }
+
+            target.StartBringIntoView(new BringIntoViewOptions
+            {
+                AnimationDesired = true,
+                HorizontalAlignmentRatio = 0.12,
+                HorizontalOffset = -18,
+                VerticalAlignmentRatio = 0.62,
+                VerticalOffset = -12
+            });
         }
 
         private void SourceVersion_OnClick(object sender, RoutedEventArgs e)
@@ -885,6 +1295,10 @@ namespace NextGenEmby.App.Views
             SubtitleSummaryBlock.Text = "";
             EpisodesPanel.Children.Clear();
             EpisodesSection.Visibility = Visibility.Collapsed;
+            SimilarItemsPanel.Children.Clear();
+            SimilarSection.Visibility = Visibility.Collapsed;
+            PeoplePanel.Children.Clear();
+            PeopleSection.Visibility = Visibility.Collapsed;
         }
 
         private void ResetArtwork()
@@ -1137,6 +1551,24 @@ namespace NextGenEmby.App.Views
             }
 
             return title;
+        }
+
+        private static string CreatePersonRole(EmbyPerson person)
+        {
+            if (!string.IsNullOrWhiteSpace(person.Role))
+            {
+                return person.Role;
+            }
+
+            return string.IsNullOrWhiteSpace(person.Type) ? "Person" : person.Type;
+        }
+
+        private static string CreatePersonAutomationName(EmbyPerson person)
+        {
+            var role = CreatePersonRole(person);
+            return string.IsNullOrWhiteSpace(role)
+                ? person.Name
+                : person.Name + ", " + role;
         }
 
         private static string FormatBitrate(long bitrate)

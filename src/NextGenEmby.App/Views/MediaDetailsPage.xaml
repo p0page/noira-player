@@ -163,6 +163,48 @@
                             Spacing="10" />
                     </StackPanel>
 
+                    <StackPanel
+                        x:Name="SimilarSection"
+                        Spacing="12"
+                        Visibility="Collapsed">
+                        <TextBlock
+                            Text="More like this"
+                            FontSize="22"
+                            FontWeight="SemiBold" />
+                        <ScrollViewer
+                            HorizontalScrollBarVisibility="Hidden"
+                            VerticalScrollBarVisibility="Disabled"
+                            HorizontalScrollMode="Enabled"
+                            VerticalScrollMode="Disabled"
+                            ZoomMode="Disabled">
+                            <StackPanel
+                                x:Name="SimilarItemsPanel"
+                                Orientation="Horizontal"
+                                Spacing="14" />
+                        </ScrollViewer>
+                    </StackPanel>
+
+                    <StackPanel
+                        x:Name="PeopleSection"
+                        Spacing="12"
+                        Visibility="Collapsed">
+                        <TextBlock
+                            Text="Cast &amp; crew"
+                            FontSize="22"
+                            FontWeight="SemiBold" />
+                        <ScrollViewer
+                            HorizontalScrollBarVisibility="Hidden"
+                            VerticalScrollBarVisibility="Disabled"
+                            HorizontalScrollMode="Enabled"
+                            VerticalScrollMode="Disabled"
+                            ZoomMode="Disabled">
+                            <StackPanel
+                                x:Name="PeoplePanel"
+                                Orientation="Horizontal"
+                                Spacing="14" />
+                        </ScrollViewer>
+                    </StackPanel>
+
                     <TextBlock
                         x:Name="OverviewBlock"
                         FontSize="20"
