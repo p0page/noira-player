@@ -129,6 +129,16 @@ namespace NextGenEmby.Core.PlaybackQuality
                 return classification;
             }
 
+            if (HasFailedSignal(analysis, "buffers.videoStarvedPasses") ||
+                HasFailedSignal(analysis, "buffers.audioStarvedPasses"))
+            {
+                classification.Pattern = "starvation-driven";
+                AddFailedSignalIfPresent(analysis, classification, "buffers.videoStarvedPasses");
+                AddFailedSignalIfPresent(analysis, classification, "buffers.audioStarvedPasses");
+                AddUnique(classification.Reasons, "Playback starvation coincided with frame pacing failure.");
+                return classification;
+            }
+
             if (HasFailedSignal(analysis, "timing.renderIntervalMsP95"))
             {
                 classification.Pattern = "sustained-jitter";
@@ -179,6 +189,17 @@ namespace NextGenEmby.Core.PlaybackQuality
             }
 
             return false;
+        }
+
+        private static void AddFailedSignalIfPresent(
+            PlaybackQualityModelAnalysis analysis,
+            PlaybackQualityFramePacingClassification classification,
+            string signal)
+        {
+            if (HasFailedSignal(analysis, signal))
+            {
+                AddUnique(classification.Signals, signal);
+            }
         }
 
         private static PlaybackQualityOptimizationGate AssessOptimizationGate(

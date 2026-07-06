@@ -292,6 +292,27 @@ public sealed class PlaybackQualityReportAnalyzerTests
     }
 
     [Fact]
+    public void Analyze_Classifies_Frame_Pacing_As_Starvation_Driven_When_Buffering_Fails_With_Frame_Pacing()
+    {
+        var report = CreateOptimizationReadyFailure();
+        report.Checks.Add(new PlaybackQualityCheck
+        {
+            Name = "VideoStarvedPasses",
+            Status = "fail",
+            FailureArea = "buffering",
+            Signal = "buffers.videoStarvedPasses",
+            Expected = "0",
+            Actual = "3"
+        });
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Equal("starvation-driven", analysis.FramePacing.Pattern);
+        Assert.Contains("buffers.videoStarvedPasses", analysis.FramePacing.Signals);
+        Assert.Contains("Playback starvation coincided with frame pacing failure.", analysis.FramePacing.Reasons);
+    }
+
+    [Fact]
     public void Analyze_Reports_Missing_Evidence_For_Unset_Critical_Signals()
     {
         var report = new PlaybackQualityReport
