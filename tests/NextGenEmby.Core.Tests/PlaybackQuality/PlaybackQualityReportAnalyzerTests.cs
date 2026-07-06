@@ -240,6 +240,58 @@ public sealed class PlaybackQualityReportAnalyzerTests
     }
 
     [Fact]
+    public void Analyze_Classifies_Frame_Pacing_As_Isolated_Gap_When_Only_Max_Frame_Gap_Fails()
+    {
+        var report = CreateOptimizationReadyFailure();
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Equal("isolated-gap", analysis.FramePacing.Pattern);
+        Assert.Contains("timing.maxFrameGapMs", analysis.FramePacing.Signals);
+        Assert.Contains("Single max frame gap failed without sustained render interval failures.", analysis.FramePacing.Reasons);
+    }
+
+    [Fact]
+    public void Analyze_Classifies_Frame_Pacing_As_Sustained_Jitter_When_P95_Render_Interval_Fails()
+    {
+        var report = CreateOptimizationReadyFailure();
+        report.Checks.Add(new PlaybackQualityCheck
+        {
+            Name = "RenderIntervalMsP95",
+            Status = "fail",
+            FailureArea = "frame-pacing",
+            Signal = "timing.renderIntervalMsP95",
+            Expected = "52.000",
+            Actual = "75.000"
+        });
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Equal("sustained-jitter", analysis.FramePacing.Pattern);
+        Assert.Contains("timing.renderIntervalMsP95", analysis.FramePacing.Signals);
+    }
+
+    [Fact]
+    public void Analyze_Classifies_Frame_Pacing_As_Refresh_Mismatch_When_Display_Refresh_Fails()
+    {
+        var report = CreateOptimizationReadyFailure();
+        report.Checks.Add(new PlaybackQualityCheck
+        {
+            Name = "DisplayRefreshRateHz",
+            Status = "fail",
+            FailureArea = "frame-pacing",
+            Signal = "display.refreshRateHz",
+            Expected = "matched to source.frameRate 23.976",
+            Actual = "50.000"
+        });
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Equal("refresh-mismatch", analysis.FramePacing.Pattern);
+        Assert.Contains("display.refreshRateHz", analysis.FramePacing.Signals);
+    }
+
+    [Fact]
     public void Analyze_Reports_Missing_Evidence_For_Unset_Critical_Signals()
     {
         var report = new PlaybackQualityReport
@@ -453,6 +505,7 @@ public sealed class PlaybackQualityReportAnalyzerTests
         Assert.Contains("\"primaryFailureArea\"", json);
         Assert.Contains("\"sample\"", json);
         Assert.Contains("\"optimizationGate\"", json);
+        Assert.Contains("\"framePacing\"", json);
         Assert.Contains("\"failureAreas\"", json);
         Assert.Contains("\"investigationHints\"", json);
         Assert.Contains("\"evidenceSignals\"", json);

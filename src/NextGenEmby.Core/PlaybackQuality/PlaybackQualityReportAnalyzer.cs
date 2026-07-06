@@ -10,6 +10,7 @@ namespace NextGenEmby.Core.PlaybackQuality
         public string SuggestedNextAction { get; set; } = "";
         public PlaybackQualitySampleAssessment Sample { get; set; } = new PlaybackQualitySampleAssessment();
         public PlaybackQualityOptimizationGate OptimizationGate { get; set; } = new PlaybackQualityOptimizationGate();
+        public PlaybackQualityFramePacingClassification FramePacing { get; set; } = new PlaybackQualityFramePacingClassification();
         public List<string> FailureReasons { get; } = new List<string>();
         public List<PlaybackQualityCheck> FailedChecks { get; } = new List<PlaybackQualityCheck>();
         public List<string> FailureAreas { get; } = new List<string>();
@@ -42,6 +43,13 @@ namespace NextGenEmby.Core.PlaybackQuality
         public List<string> Blockers { get; } = new List<string>();
         public List<string> BlockerSignals { get; } = new List<string>();
         public List<string> TargetFailureAreas { get; } = new List<string>();
+    }
+
+    public sealed class PlaybackQualityFramePacingClassification
+    {
+        public string Pattern { get; set; } = "not-applicable";
+        public List<string> Reasons { get; } = new List<string>();
+        public List<string> Signals { get; } = new List<string>();
     }
 
     public static class PlaybackQualityReportAnalyzer
@@ -91,6 +99,7 @@ namespace NextGenEmby.Core.PlaybackQuality
             AddDerivedEvidence(analysis, report);
             AddMissingEvidence(analysis, report);
             analysis.OptimizationGate = AssessOptimizationGate(analysis);
+            analysis.FramePacing = ClassifyFramePacing(analysis);
             AddInvestigationHints(analysis);
 
             if (string.IsNullOrWhiteSpace(analysis.SuggestedNextAction))
@@ -101,6 +110,75 @@ namespace NextGenEmby.Core.PlaybackQuality
             }
 
             return analysis;
+        }
+
+        private static PlaybackQualityFramePacingClassification ClassifyFramePacing(
+            PlaybackQualityModelAnalysis analysis)
+        {
+            var classification = new PlaybackQualityFramePacingClassification();
+            if (!analysis.FailureAreas.Contains("frame-pacing"))
+            {
+                return classification;
+            }
+
+            if (HasFailedSignal(analysis, "display.refreshRateHz"))
+            {
+                classification.Pattern = "refresh-mismatch";
+                AddUnique(classification.Signals, "display.refreshRateHz");
+                AddUnique(classification.Reasons, "Display refresh rate did not match source cadence.");
+                return classification;
+            }
+
+            if (HasFailedSignal(analysis, "timing.renderIntervalMsP95"))
+            {
+                classification.Pattern = "sustained-jitter";
+                AddUnique(classification.Signals, "timing.renderIntervalMsP95");
+                AddUnique(classification.Reasons, "Render interval p95 failed, indicating repeated frame pacing jitter.");
+                return classification;
+            }
+
+            if (HasFailedSignal(analysis, "timing.renderIntervalMsP99"))
+            {
+                classification.Pattern = "tail-jitter";
+                AddUnique(classification.Signals, "timing.renderIntervalMsP99");
+                AddUnique(classification.Reasons, "Render interval p99 failed while p95 did not, indicating tail jitter.");
+                return classification;
+            }
+
+            if (HasFailedSignal(analysis, "timing.droppedVideoFrames"))
+            {
+                classification.Pattern = "dropped-frames";
+                AddUnique(classification.Signals, "timing.droppedVideoFrames");
+                AddUnique(classification.Reasons, "Dropped video frames exceeded threshold.");
+                return classification;
+            }
+
+            if (HasFailedSignal(analysis, "timing.maxFrameGapMs"))
+            {
+                classification.Pattern = "isolated-gap";
+                AddUnique(classification.Signals, "timing.maxFrameGapMs");
+                AddUnique(classification.Reasons, "Single max frame gap failed without sustained render interval failures.");
+                return classification;
+            }
+
+            classification.Pattern = "unknown";
+            AddUnique(classification.Reasons, "Frame pacing failed without a recognized timing signal.");
+            return classification;
+        }
+
+        private static bool HasFailedSignal(
+            PlaybackQualityModelAnalysis analysis,
+            string signal)
+        {
+            foreach (var check in analysis.FailedChecks)
+            {
+                if (check.Signal == signal)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static PlaybackQualityOptimizationGate AssessOptimizationGate(
