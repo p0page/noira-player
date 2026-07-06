@@ -35,9 +35,9 @@
             <Color x:Key="AppHeroPosterDimColor">#18000000</Color>
             <Color x:Key="AppDetailsBackdropWashColor">#D9101418</Color>
             <Color x:Key="AppModalScrimColor">#CC050607</Color>
-            <Color x:Key="AppPlaybackCanvasColor">#000000</Color>
-            <Color x:Key="AppPlaybackOverlayColor">#D9000000</Color>
-            <Color x:Key="AppPlaybackDrawerColor">#F0000000</Color>
+            <Color x:Key="AppPlaybackCanvasColor">#050607</Color>
+            <Color x:Key="AppPlaybackOverlayColor">#D9101418</Color>
+            <Color x:Key="AppPlaybackDrawerColor">#F0101418</Color>
             <SolidColorBrush x:Key="AppBackgroundBrush" Color="{StaticResource AppBackgroundColor}" />
             <SolidColorBrush x:Key="AppSurfaceBrush" Color="{StaticResource AppSurfaceColor}" />
             <SolidColorBrush x:Key="AppRaisedSurfaceBrush" Color="{StaticResource AppRaisedSurfaceColor}" />

@@ -237,6 +237,7 @@ Shared TV resources should continue migrating into `App.xaml` before page-local 
 - Media rows: shared `TvListButtonStyle`, `TvListArtworkSize`, and `TvCompactArtworkSize` for browse-only list shells such as Live TV and Music.
 - Poster grids: shared `TvPosterGridItemStyle`, `TvPosterGridItemMargin`, `TvPosterCardWidth`, `TvPosterCardHeight`, `TvPosterCardCornerRadius`, `TvPosterCardScrimPadding`, poster title/meta text styles, fallback-initial style, and empty-state title/body styles for Library and Search.
 - Shared view usage: Home, Library, Search, Details, and Playback no longer own page-local raw hex colors for artwork dimming, sheet scrims, playback overlays, or green-action foreground text.
+- Playback chrome uses the same canvas and surface RGB families as the rest of the app. The OSD and drawer may vary alpha for subtitle/video readability, but they must not introduce a separate pure-black palette branch.
 - App identity: `tools/Generate-AppIconAssets.ps1` owns the current icon color and geometry tokens for regenerating the Store, square, wide, and splash PNG assets.
 
 Future skins should override these resources first. Page code may read token values for navigation math, as Search now does for poster-grid column counts, but should not define new color, focus, or repeated artwork-size constants unless the value is truly page-specific.
@@ -260,6 +261,7 @@ The current XAML token migration has started with:
 - shared TV text, panel, diagnostics, icon button, nav button, list button, badge text, and settings checkbox styles;
 - shared overlay/action resources: `AppOnActionBrush`, `AppArtworkDimBrush`, `AppModalScrimBrush`, `AppPlaybackOverlayBrush`, `AppPlaybackDrawerBrush`, and the hero/details wash colors.
 - shared poster-grid resources for Library and Search cards, including card size, item margin, corner radius, scrim padding, card title/meta text, fallback initials, and empty-state typography.
+- playback canvas, OSD, and drawer resources reuse the DESIGN.md canvas/surface color families, with only opacity differing by layer.
 
 New UI surfaces should follow this migration order:
 
