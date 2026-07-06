@@ -20,7 +20,11 @@ namespace NextGenEmby.Core.PlaybackQuality
             var source = descriptor.MediaSource;
             var expected = new PlaybackQualityExpected
             {
+                Codec = source.HdrProfile.Codec ?? "",
+                Width = source.Width,
+                Height = source.Height,
                 FrameRate = source.VideoFrameRate > 0 ? source.VideoFrameRate : 0,
+                HdrKind = source.HdrProfile.Kind.ToString(),
                 HdrOutput = MapExpectedHdrOutput(source.HdrProfile.Kind),
                 DxgiInput = MapExpectedDxgiInput(source.HdrProfile.Kind),
                 DxgiOutput = MapExpectedDxgiOutput(source.HdrProfile.Kind),

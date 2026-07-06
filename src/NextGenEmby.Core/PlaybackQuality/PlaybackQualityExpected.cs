@@ -2,7 +2,11 @@ namespace NextGenEmby.Core.PlaybackQuality
 {
     public sealed class PlaybackQualityExpected
     {
+        public string Codec { get; set; } = "";
+        public int Width { get; set; }
+        public int Height { get; set; }
         public double FrameRate { get; set; }
+        public string HdrKind { get; set; } = "";
         public string HdrOutput { get; set; } = "";
         public string DxgiInput { get; set; } = "";
         public string DxgiOutput { get; set; } = "";

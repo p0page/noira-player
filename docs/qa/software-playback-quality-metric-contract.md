@@ -104,6 +104,7 @@ Every report must include these phase-1 limitations:
 `startup.startupDurationMs` measures time from playback command acceptance to playback-start readiness as observed by the app or harness. When `expected.maxStartupDurationMs` is supplied, exceeding it or omitting the startup duration is a `startup` failure and should be investigated before frame pacing or color changes.
 
 `expected.frameRate` validates that the actual selected media source reports the intended cadence. A mismatch is an `unsupported-source` failure because the model should inspect media source selection or source metadata before tuning render pacing.
+`expected.codec`, `expected.width`, `expected.height`, and `expected.hdrKind` validate that the actual parsed media source matches the intended sample. Mismatches are `unsupported-source` failures and must be fixed or recollected before interpreting frame pacing, HDR output, or A/V sync metrics.
 
 `expected.minRenderedVideoFrames` validates that a run produced enough video frames to be meaningful. A report with too few rendered frames is a `frame-pacing` failure because frame gap, drift, and buffer signals cannot be trusted without a real rendered sample.
 

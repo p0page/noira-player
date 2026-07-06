@@ -22,6 +22,7 @@ namespace NextGenEmby.Core.PlaybackQuality
             }
 
             var expected = report.Expected;
+            CheckExpectedSourceMetadata(report, expected);
             CheckExpectedFrameRate(report, expected);
             CheckStartupDuration(report, expected);
             CheckMin(
@@ -169,6 +170,107 @@ namespace NextGenEmby.Core.PlaybackQuality
             }
 
             AssignFailureAnalysis(report);
+        }
+
+        private static void CheckExpectedSourceMetadata(
+            PlaybackQualityReport report,
+            PlaybackQualityExpected expected)
+        {
+            CheckExpectedString(
+                report,
+                "ExpectedCodec",
+                report.Source.Codec,
+                expected.Codec,
+                "source.codec",
+                ignoreCase: true);
+            CheckExpectedInt(
+                report,
+                "ExpectedWidth",
+                report.Source.Width,
+                expected.Width,
+                "source.width");
+            CheckExpectedInt(
+                report,
+                "ExpectedHeight",
+                report.Source.Height,
+                expected.Height,
+                "source.height");
+            CheckExpectedString(
+                report,
+                "ExpectedHdrKind",
+                report.Source.HdrKind,
+                expected.HdrKind,
+                "source.hdrKind",
+                ignoreCase: false);
+        }
+
+        private static void CheckExpectedString(
+            PlaybackQualityReport report,
+            string name,
+            string actual,
+            string expected,
+            string signal,
+            bool ignoreCase)
+        {
+            if (string.IsNullOrWhiteSpace(expected))
+            {
+                return;
+            }
+
+            var comparison = ignoreCase
+                ? System.StringComparison.OrdinalIgnoreCase
+                : System.StringComparison.Ordinal;
+            var failed = string.IsNullOrWhiteSpace(actual) ||
+                !string.Equals(actual, expected, comparison);
+            var message = name + " " + expected + " did not match " + signal + " " + actual + ".";
+            report.Checks.Add(new PlaybackQualityCheck
+            {
+                Name = name,
+                Signal = signal,
+                Status = failed ? "fail" : "pass",
+                FailureArea = "unsupported-source",
+                Expected = expected,
+                Actual = actual,
+                Message = failed ? message : signal + " matched expected " + expected + "."
+            });
+
+            if (failed)
+            {
+                report.FailureReasons.Add(message);
+                AddRelevantSignal(report, signal);
+            }
+        }
+
+        private static void CheckExpectedInt(
+            PlaybackQualityReport report,
+            string name,
+            int actual,
+            int expected,
+            string signal)
+        {
+            if (expected <= 0)
+            {
+                return;
+            }
+
+            var failed = actual != expected;
+            var message = name + " " + expected + " did not match " + signal + " " + actual + ".";
+            report.Checks.Add(new PlaybackQualityCheck
+            {
+                Name = name,
+                Signal = signal,
+                Status = failed ? "fail" : "pass",
+                FailureArea = "unsupported-source",
+                Expected = expected.ToString(CultureInfo.InvariantCulture),
+                Actual = actual.ToString(CultureInfo.InvariantCulture),
+                Message = failed ? message : signal + " matched expected " + expected + "."
+            });
+
+            if (failed)
+            {
+                report.FailureReasons.Add(message);
+                AddRelevantSignal(report, signal);
+            }
         }
 
         private static void CheckMatchedRefreshRate(
@@ -529,7 +631,14 @@ namespace NextGenEmby.Core.PlaybackQuality
 
         private static void AssignFailureAnalysis(PlaybackQualityReport report)
         {
-            if (HasReason(report, "unsupported", "ExpectedFrameRate"))
+            if (HasReason(
+                report,
+                "unsupported",
+                "ExpectedFrameRate",
+                "ExpectedCodec",
+                "ExpectedWidth",
+                "ExpectedHeight",
+                "ExpectedHdrKind"))
             {
                 report.Analysis.PrimaryFailureArea = "unsupported-source";
                 report.Analysis.SuggestedNextAction = "Inspect container, codec, Dolby Vision profile, and media source selection.";

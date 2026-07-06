@@ -173,6 +173,67 @@ public sealed class PlaybackQualityEvaluatorTests
     }
 
     [Fact]
+    public void Evaluate_Fails_When_Parsed_Source_Metadata_Does_Not_Match_Expected_Source()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "wrong-source-metadata",
+            Expected = new PlaybackQualityExpected
+            {
+                Codec = "hevc",
+                Width = 3840,
+                Height = 2160,
+                HdrKind = "Hdr10",
+                RequireValidatedConversion = false
+            },
+            Source = new PlaybackQualitySource
+            {
+                Codec = "av1",
+                Width = 1920,
+                Height = 1080,
+                HdrKind = "Sdr"
+            }
+        };
+
+        PlaybackQualityEvaluator.Evaluate(report);
+
+        Assert.Equal("fail", report.Result);
+        Assert.Equal("unsupported-source", report.Analysis.PrimaryFailureArea);
+        Assert.Contains("source.codec", report.Analysis.RelevantSignals);
+        Assert.Contains("source.width", report.Analysis.RelevantSignals);
+        Assert.Contains("source.height", report.Analysis.RelevantSignals);
+        Assert.Contains("source.hdrKind", report.Analysis.RelevantSignals);
+        Assert.Contains(report.Checks, check =>
+            check.Name == "ExpectedCodec" &&
+            check.Signal == "source.codec" &&
+            check.Expected == "hevc" &&
+            check.Actual == "av1" &&
+            check.Status == "fail" &&
+            check.FailureArea == "unsupported-source");
+        Assert.Contains(report.Checks, check =>
+            check.Name == "ExpectedWidth" &&
+            check.Signal == "source.width" &&
+            check.Expected == "3840" &&
+            check.Actual == "1920" &&
+            check.Status == "fail" &&
+            check.FailureArea == "unsupported-source");
+        Assert.Contains(report.Checks, check =>
+            check.Name == "ExpectedHeight" &&
+            check.Signal == "source.height" &&
+            check.Expected == "2160" &&
+            check.Actual == "1080" &&
+            check.Status == "fail" &&
+            check.FailureArea == "unsupported-source");
+        Assert.Contains(report.Checks, check =>
+            check.Name == "ExpectedHdrKind" &&
+            check.Signal == "source.hdrKind" &&
+            check.Expected == "Hdr10" &&
+            check.Actual == "Sdr" &&
+            check.Status == "fail" &&
+            check.FailureArea == "unsupported-source");
+    }
+
+    [Fact]
     public void Evaluate_Fails_When_Rendered_Frame_Count_Is_Below_Minimum()
     {
         var report = new PlaybackQualityReport

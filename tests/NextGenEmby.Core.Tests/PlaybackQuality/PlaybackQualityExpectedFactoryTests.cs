@@ -17,7 +17,11 @@ public sealed class PlaybackQualityExpectedFactoryTests
         var expected = PlaybackQualityExpectedFactory.CreateDefault(descriptor);
 
         var frameDurationMs = 1000.0 / 23.976;
+        Assert.Equal("hevc", expected.Codec);
+        Assert.Equal(3840, expected.Width);
+        Assert.Equal(2160, expected.Height);
         Assert.Equal(23.976, expected.FrameRate);
+        Assert.Equal("Hdr10", expected.HdrKind);
         Assert.Equal("Hdr10", expected.HdrOutput);
         Assert.Equal("YCBCR_STUDIO_G2084_TOPLEFT_P2020", expected.DxgiInput);
         Assert.Equal("RGB_FULL_G2084_NONE_P2020", expected.DxgiOutput);
