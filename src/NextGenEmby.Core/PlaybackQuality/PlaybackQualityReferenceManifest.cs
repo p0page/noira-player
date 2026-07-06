@@ -38,6 +38,9 @@ namespace NextGenEmby.Core.PlaybackQuality
 
         public int CaseCount { get; set; }
 
+        public PlaybackQualityReferenceManifestCoverage Coverage { get; set; } =
+            new PlaybackQualityReferenceManifestCoverage();
+
         public List<int> Tiers { get; } = new List<int>();
 
         public List<string> Purposes { get; } = new List<string>();
@@ -47,6 +50,23 @@ namespace NextGenEmby.Core.PlaybackQuality
 
         public List<PlaybackQualityReferenceManifestError> Errors { get; } =
             new List<PlaybackQualityReferenceManifestError>();
+    }
+
+    public sealed class PlaybackQualityReferenceManifestCoverage
+    {
+        public string Status { get; set; } = "incomplete";
+
+        public bool IsCoreEvaluationReady => MissingPurposes.Count == 0;
+
+        public string SuggestedNextAction { get; set; } = "";
+
+        public List<string> RequiredPurposes { get; } = new List<string>();
+
+        public List<string> CoveredPurposes { get; } = new List<string>();
+
+        public List<string> MissingPurposes { get; } = new List<string>();
+
+        public List<string> Reasons { get; } = new List<string>();
     }
 
     public sealed class PlaybackQualityReferenceManifestError
@@ -62,6 +82,19 @@ namespace NextGenEmby.Core.PlaybackQuality
 
     public static class PlaybackQualityReferenceManifestValidator
     {
+        private static readonly string[] RequiredCoreEvaluationPurposes =
+        {
+            "sdr-smoke",
+            "hdr-output",
+            "hdr-force-sdr",
+            "dv-reject",
+            "dv-fallback",
+            "cadence-23.976",
+            "frame-pacing",
+            "av-sync",
+            "buffering"
+        };
+
         public static PlaybackQualityReferenceManifestValidation Validate(
             PlaybackQualityReferenceManifest manifest)
         {
@@ -74,6 +107,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                     "",
                     "manifest",
                     "Playback quality reference manifest is missing.");
+                ApplyCoverage(validation);
                 return validation;
             }
 
@@ -84,6 +118,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                 ValidateCase(validation, referenceCase, caseIds);
             }
 
+            ApplyCoverage(validation);
             return validation;
         }
 
@@ -284,6 +319,41 @@ namespace NextGenEmby.Core.PlaybackQuality
                 caseId,
                 "expected." + field,
                 "Playback quality reference expected." + field + " is required.");
+        }
+
+        private static void ApplyCoverage(PlaybackQualityReferenceManifestValidation validation)
+        {
+            validation.Coverage = new PlaybackQualityReferenceManifestCoverage();
+            foreach (var purpose in RequiredCoreEvaluationPurposes)
+            {
+                AddUnique(validation.Coverage.RequiredPurposes, purpose);
+                if (validation.Purposes.Contains(purpose))
+                {
+                    AddUnique(validation.Coverage.CoveredPurposes, purpose);
+                }
+                else
+                {
+                    AddUnique(validation.Coverage.MissingPurposes, purpose);
+                }
+            }
+
+            if (validation.Coverage.MissingPurposes.Count == 0)
+            {
+                validation.Coverage.Status = "ready";
+                validation.Coverage.SuggestedNextAction =
+                    "Use this manifest for baseline/candidate playback Core evaluation.";
+                AddUnique(
+                    validation.Coverage.Reasons,
+                    "reference manifest covers required playback quality purposes");
+                return;
+            }
+
+            validation.Coverage.Status = "incomplete";
+            validation.Coverage.SuggestedNextAction =
+                "Add reference cases for missing playback quality purposes before relying on broad Core candidate evaluation.";
+            AddUnique(
+                validation.Coverage.Reasons,
+                "reference manifest is missing required playback quality purposes");
         }
 
         private static void AddError(

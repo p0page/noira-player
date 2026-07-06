@@ -40,6 +40,67 @@ public sealed class PlaybackQualityReferenceManifestTests
             referenceCase.Expected.Codec == "hevc" &&
             referenceCase.Expected.FrameRate == 23.976 &&
             referenceCase.Expected.HdrKind == "Hdr10");
+        Assert.Equal("incomplete", result.Coverage.Status);
+        Assert.False(result.Coverage.IsCoreEvaluationReady);
+        Assert.Contains("sdr-smoke", result.Coverage.MissingPurposes);
+        Assert.Contains("dv-fallback", result.Coverage.MissingPurposes);
+        Assert.Contains("reference manifest is missing required playback quality purposes", result.Coverage.Reasons);
+        Assert.Contains("Add reference cases", result.Coverage.SuggestedNextAction);
+    }
+
+    [Fact]
+    public void Validate_Reports_Ready_Corpus_Coverage_When_Core_Risk_Purposes_Are_Present()
+    {
+        var manifest = new PlaybackQualityReferenceManifest
+        {
+            SchemaVersion = 1
+        };
+        manifest.Cases.Add(CreateCase(
+            "sdr/1080p-h264-24",
+            tier: 0,
+            purpose: "sdr-smoke"));
+        manifest.Cases.Add(CreateCase(
+            "hdr/hdr10-2398",
+            tier: 1,
+            purpose: "hdr-output"));
+        manifest.Cases.Add(CreateCase(
+            "hdr/hdr10-force-sdr",
+            tier: 1,
+            purpose: "hdr-force-sdr"));
+        manifest.Cases.Add(CreateCase(
+            "dv/profile5",
+            tier: 2,
+            purpose: "dv-reject"));
+        manifest.Cases.Add(CreateCase(
+            "dv/profile8-hdr10",
+            tier: 2,
+            purpose: "dv-fallback"));
+        manifest.Cases.Add(CreateCase(
+            "cadence/23976",
+            tier: 1,
+            purpose: "cadence-23.976"));
+        manifest.Cases.Add(CreateCase(
+            "timing/frame-pacing",
+            tier: 1,
+            purpose: "frame-pacing"));
+        manifest.Cases.Add(CreateCase(
+            "sync/av-sync",
+            tier: 1,
+            purpose: "av-sync"));
+        manifest.Cases.Add(CreateCase(
+            "network/buffering",
+            tier: 1,
+            purpose: "buffering"));
+
+        var result = PlaybackQualityReferenceManifestValidator.Validate(manifest);
+
+        Assert.True(result.IsValid);
+        Assert.Equal("ready", result.Coverage.Status);
+        Assert.True(result.Coverage.IsCoreEvaluationReady);
+        Assert.Empty(result.Coverage.MissingPurposes);
+        Assert.Contains("hdr-output", result.Coverage.CoveredPurposes);
+        Assert.Contains("frame-pacing", result.Coverage.CoveredPurposes);
+        Assert.Contains("reference manifest covers required playback quality purposes", result.Coverage.Reasons);
     }
 
     [Fact]
