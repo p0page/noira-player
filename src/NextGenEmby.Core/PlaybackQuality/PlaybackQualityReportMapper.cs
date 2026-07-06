@@ -72,6 +72,9 @@ namespace NextGenEmby.Core.PlaybackQuality
             report.Source.Width = source.Width;
             report.Source.Height = source.Height;
             report.Source.FrameRate = source.VideoFrameRate;
+            report.Timing.ExpectedFrameDurationMs = source.VideoFrameRate > 0
+                ? 1000.0 / source.VideoFrameRate
+                : 0;
             report.Source.HdrKind = source.HdrProfile.Kind.ToString();
             report.Source.AudioCodec = audio?.Codec ?? "";
         }

@@ -83,6 +83,8 @@ Every report must include these phase-1 limitations:
 
 `maxFrameGapMs` is the largest interval between player-side rendered/presented frames. It is not a display-device measurement.
 
+`expectedFrameDurationMs` is derived from `source.frameRate` as `1000 / frameRate` when a usable frame rate exists. It lets the model compare frame gaps and render interval percentiles against the source cadence instead of reading them as isolated numbers.
+
 `audioVideoDriftMsP95` is the p95 absolute difference between video frame PTS and XAudio-derived clock at render decision time.
 
 `actualHdrOutput` is derived from native display status and swapchain state. It is not a direct HDMI analyzer reading.

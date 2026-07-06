@@ -158,7 +158,34 @@ public sealed class PlaybackQualityReportMapperTests
         Assert.Equal(3840, report.Source.Width);
         Assert.Equal(2160, report.Source.Height);
         Assert.Equal(23.976, report.Source.FrameRate);
+        Assert.Equal(1000.0 / 23.976, report.Timing.ExpectedFrameDurationMs, precision: 6);
         Assert.Equal("DolbyVisionWithHdr10Fallback", report.Source.HdrKind);
         Assert.Equal("truehd", report.Source.AudioCodec);
+    }
+
+    [Fact]
+    public void ApplySource_Leaves_Expected_Frame_Duration_Empty_When_Frame_Rate_Is_Unusable()
+    {
+        var report = new PlaybackQualityReport
+        {
+            Timing = new PlaybackQualityTiming
+            {
+                ExpectedFrameDurationMs = 12.3
+            }
+        };
+        var source = new EmbyMediaSource
+        {
+            Id = "source-1",
+            VideoFrameRate = 0
+        };
+        var descriptor = new PlaybackDescriptor(
+            "item-1",
+            source,
+            new[] { source },
+            startPositionTicks: 0);
+
+        PlaybackQualityReportMapper.ApplySource(report, descriptor);
+
+        Assert.Equal(0, report.Timing.ExpectedFrameDurationMs);
     }
 }
