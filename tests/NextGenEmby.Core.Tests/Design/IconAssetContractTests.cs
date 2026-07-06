@@ -2,6 +2,8 @@ using System;
 using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
+using System.Linq;
 using System.Text.RegularExpressions;
 using Xunit;
 
@@ -84,6 +86,18 @@ public sealed class IconAssetContractTests
         Assert.DoesNotContain("sideMeter", script, StringComparison.Ordinal);
         Assert.DoesNotContain("subtitleLine", script, StringComparison.Ordinal);
         Assert.DoesNotContain("audioLine", script, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Icon_Assets_Preserve_Focus_Play_And_Progress_Signals_At_All_Sizes()
+    {
+        var assetRoot = Path.Combine(FindRepositoryRoot(), "src", "NextGenEmby.App", "Assets");
+
+        AssertIconSignals(Path.Combine(assetRoot, "Square44x44Logo.png"), 12, 28, 22);
+        AssertIconSignals(Path.Combine(assetRoot, "StoreLogo.png"), 14, 34, 26);
+        AssertIconSignals(Path.Combine(assetRoot, "Square150x150Logo.png"), 160, 360, 300);
+        AssertIconSignals(Path.Combine(assetRoot, "Wide310x150Logo.png"), 140, 320, 240);
+        AssertIconSignals(Path.Combine(assetRoot, "SplashScreen.png"), 420, 1000, 760);
     }
 
     private static string FindRepositoryRoot()
@@ -171,4 +185,169 @@ public sealed class IconAssetContractTests
         var value = color.Trim().ToUpperInvariant();
         return value.Length == 9 ? "#" + value.Substring(3) : value;
     }
+
+    private static void AssertIconSignals(
+        string path,
+        int minimumFocusPixels,
+        int minimumPlayPixels,
+        int minimumProgressPixels)
+    {
+        var bitmap = ReadPngRgbaPixels(path);
+
+        var focusPixels = bitmap.Pixels.Count(IsFocusPixel);
+        var playPixels = bitmap.Pixels.Count(IsPlayPixel);
+        var progressPixels = bitmap.Pixels.Count(IsProgressPixel);
+
+        Assert.True(
+            focusPixels >= minimumFocusPixels,
+            $"{Path.GetFileName(path)} should preserve the cyan controller-focus signal; found {focusPixels} pixels.");
+        Assert.True(
+            playPixels >= minimumPlayPixels,
+            $"{Path.GetFileName(path)} should preserve the green play/confirm signal; found {playPixels} pixels.");
+        Assert.True(
+            progressPixels >= minimumProgressPixels,
+            $"{Path.GetFileName(path)} should preserve the amber progress signal; found {progressPixels} pixels.");
+    }
+
+    private static bool IsFocusPixel(RgbaPixel color)
+    {
+        return color.A > 160 &&
+            color.B > 130 &&
+            color.G > 100 &&
+            color.R < 90 &&
+            color.B - color.R > 70 &&
+            color.G - color.R > 45;
+    }
+
+    private static bool IsPlayPixel(RgbaPixel color)
+    {
+        return color.A > 180 &&
+            color.G > 140 &&
+            color.R > 45 &&
+            color.R < 135 &&
+            color.B > 55 &&
+            color.B < 150 &&
+            color.G - color.R > 55 &&
+            color.G - color.B > 35;
+    }
+
+    private static bool IsProgressPixel(RgbaPixel color)
+    {
+        return color.A > 180 &&
+            color.R > 160 &&
+            color.G > 120 &&
+            color.B > 45 &&
+            color.B < 135 &&
+            color.R - color.B > 80 &&
+            color.G - color.B > 45;
+    }
+
+    private static DecodedPng ReadPngRgbaPixels(string path)
+    {
+        var bytes = File.ReadAllBytes(path);
+        var signature = new byte[] { 137, 80, 78, 71, 13, 10, 26, 10 };
+        Assert.Equal(signature, bytes[..8]);
+
+        var width = 0;
+        var height = 0;
+        var bitDepth = 0;
+        var colorType = 0;
+        using var compressed = new MemoryStream();
+        var offset = 8;
+        while (offset < bytes.Length)
+        {
+            var length = BinaryPrimitives.ReadInt32BigEndian(bytes.AsSpan(offset, 4));
+            var type = System.Text.Encoding.ASCII.GetString(bytes, offset + 4, 4);
+            var dataOffset = offset + 8;
+
+            if (type == "IHDR")
+            {
+                width = BinaryPrimitives.ReadInt32BigEndian(bytes.AsSpan(dataOffset, 4));
+                height = BinaryPrimitives.ReadInt32BigEndian(bytes.AsSpan(dataOffset + 4, 4));
+                bitDepth = bytes[dataOffset + 8];
+                colorType = bytes[dataOffset + 9];
+            }
+            else if (type == "IDAT")
+            {
+                compressed.Write(bytes, dataOffset, length);
+            }
+            else if (type == "IEND")
+            {
+                break;
+            }
+
+            offset = dataOffset + length + 4;
+        }
+
+        Assert.Equal(8, bitDepth);
+        Assert.Equal(6, colorType);
+
+        compressed.Position = 0;
+        using var zlib = new ZLibStream(compressed, CompressionMode.Decompress);
+        using var decompressed = new MemoryStream();
+        zlib.CopyTo(decompressed);
+        var scanlines = decompressed.ToArray();
+
+        const int bytesPerPixel = 4;
+        var stride = width * bytesPerPixel;
+        var pixels = new byte[height * stride];
+        var sourceOffset = 0;
+        for (var y = 0; y < height; y++)
+        {
+            var filter = scanlines[sourceOffset++];
+            var rowOffset = y * stride;
+            for (var x = 0; x < stride; x++)
+            {
+                var raw = scanlines[sourceOffset++];
+                var left = x >= bytesPerPixel ? pixels[rowOffset + x - bytesPerPixel] : 0;
+                var up = y > 0 ? pixels[rowOffset + x - stride] : 0;
+                var upLeft = y > 0 && x >= bytesPerPixel ? pixels[rowOffset + x - stride - bytesPerPixel] : 0;
+                pixels[rowOffset + x] = (byte)((raw + Unfilter(filter, left, up, upLeft)) & 0xFF);
+            }
+        }
+
+        var decoded = new List<RgbaPixel>(width * height);
+        for (var index = 0; index < pixels.Length; index += bytesPerPixel)
+        {
+            decoded.Add(new RgbaPixel(
+                pixels[index],
+                pixels[index + 1],
+                pixels[index + 2],
+                pixels[index + 3]));
+        }
+
+        return new DecodedPng(width, height, decoded);
+    }
+
+    private static int Unfilter(int filter, int left, int up, int upLeft)
+    {
+        return filter switch
+        {
+            0 => 0,
+            1 => left,
+            2 => up,
+            3 => (left + up) / 2,
+            4 => Paeth(left, up, upLeft),
+            _ => throw new InvalidDataException("Unsupported PNG filter: " + filter),
+        };
+    }
+
+    private static int Paeth(int left, int up, int upLeft)
+    {
+        var estimate = left + up - upLeft;
+        var leftDistance = Math.Abs(estimate - left);
+        var upDistance = Math.Abs(estimate - up);
+        var upLeftDistance = Math.Abs(estimate - upLeft);
+
+        if (leftDistance <= upDistance && leftDistance <= upLeftDistance)
+        {
+            return left;
+        }
+
+        return upDistance <= upLeftDistance ? up : upLeft;
+    }
+
+    private sealed record DecodedPng(int Width, int Height, IReadOnlyList<RgbaPixel> Pixels);
+
+    private sealed record RgbaPixel(byte R, byte G, byte B, byte A);
 }

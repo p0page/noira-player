@@ -21,6 +21,12 @@ Status values:
 | Failed login recovery | Invalid login, edit URL, `Down` to `Connect`, `Return` | Verified | 0.1.0.195 DEBUG `login` route launched a failed login state, kept true focus in the editable form, separated Guide active-route border from cyan focus, allowed D-pad-style Up/Down movement through Server URL -> Username -> Password -> Connect, and returned focus to Server URL after a failed retry | Re-run with a cleared real session when saved credentials are intentionally removed |
 | Open and close guide from Home | `M`, `Escape` | Verified | 0.1.0.77 guide route fixed | Add visual screenshot pass after major shell changes |
 
+## App Identity
+
+| Operation | Keyboard Path | Status | Evidence | Next Work |
+| --- | --- | --- | --- | --- |
+| Recognize installed app icon | OS launcher / package tile | Verified | 0.1.0.204 added a pixel-level contract for the brand-neutral Player Status Aperture icon family: every required Store, 44px, 150px, wide, and splash PNG preserves the cyan controller-focus signal, green play/confirm signal, and amber progress signal. Temporary regeneration matched production asset hashes byte-for-byte, and the generator remains symbol-only with no text, initials, or brand-name dependence | Re-check icon appearance in the Xbox shell when hardware validation is available |
+
 ## Home
 
 | Operation | Keyboard Path | Status | Evidence | Next Work |

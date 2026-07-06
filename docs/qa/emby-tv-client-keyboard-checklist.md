@@ -1863,3 +1863,18 @@ Then continue design and implementation until the route passes.
   - Pressed `Down`, `Down`, `Right`, `Return`; focus moved through All scope into recent terms, activated `Aurora Protocol`, refreshed results, and placed the visible focus frame on the first result card.
   - Pressed `Up`; focus returned from the first result to `Aurora Protocol` in recent terms.
   - No app-content mouse clicks were used. `dev-command.json` and `dev-command-result.txt` were removed from LocalState after validation, and the app process was stopped.
+
+### 2026-07-07 - App Icon Pixel Contract
+
+- App version: 0.1.0.204.
+- Scope: strengthen the app identity checklist for the brand-neutral `Player Status Aperture` icon without repainting the already-matching production assets.
+- Interaction/design changes:
+  - Confirmed the production icon family is generated from `tools/Generate-AppIconAssets.ps1` and matches the current script byte-for-byte for Store, square, wide, and splash assets.
+  - Added a pixel-level icon contract that decodes the PNG assets without extra graphics packages and verifies that every required asset preserves the cyan controller-focus signal, green play/confirm signal, and amber progress signal.
+  - Kept the icon symbol-only: no brand text, no initials, no official third-party logos, no portal/glow concept.
+  - No playback decoding, media loading, or Emby transcoding behavior changed.
+- Automated verification:
+  - Temporary regeneration check matched all production icon asset hashes.
+  - Targeted icon pixel test passed: `Icon_Assets_Preserve_Focus_Play_And_Progress_Signals_At_All_Sizes`.
+- Visual validation:
+  - Inspected `Square44x44Logo.png` at original size; the focus corner, play core, and progress base remain visible at 44 px without relying on text.
