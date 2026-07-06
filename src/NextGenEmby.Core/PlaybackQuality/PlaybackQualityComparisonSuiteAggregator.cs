@@ -335,6 +335,26 @@ namespace NextGenEmby.Core.PlaybackQuality
                     }
                 }
             }
+
+            if (suite.TargetCaseIds.Count == 0)
+            {
+                AddEvidenceTargetCaseIds(suite);
+            }
+        }
+
+        private static void AddEvidenceTargetCaseIds(PlaybackQualityComparisonSuite suite)
+        {
+            foreach (var summary in suite.Cases)
+            {
+                if (summary.Result == "insufficient-evidence" ||
+                    summary.Confidence == "weak" ||
+                    summary.Action == "collect-comparable-evidence" ||
+                    summary.Action == "review-unmatched-signals" ||
+                    summary.Blockers.Count > 0)
+                {
+                    AddUnique(suite.TargetCaseIds, summary.CaseId);
+                }
+            }
         }
 
         private static string GetHighestPriorityFailureArea(List<string> failureAreas)

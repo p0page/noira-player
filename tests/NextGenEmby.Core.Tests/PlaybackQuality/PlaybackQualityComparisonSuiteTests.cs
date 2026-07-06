@@ -58,6 +58,7 @@ public sealed class PlaybackQualityComparisonSuiteTests
         var weak = PlaybackQualityRunComparator.Compare(
             new PlaybackQualityReport { RunId = "baseline-missing" },
             Report("candidate", Check("RenderedVideoFrames", "fail", "frame-pacing", "timing.renderedVideoFrames", "120", "24")));
+        weak.CaseId = "evidence/missing-baseline";
 
         var suite = PlaybackQualityComparisonSuiteAggregator.Summarize(new[] { improved, weak });
 
@@ -66,6 +67,7 @@ public sealed class PlaybackQualityComparisonSuiteTests
         Assert.Equal(1, suite.InsufficientEvidenceCount);
         Assert.Equal(1, suite.WeakConfidenceCount);
         Assert.Contains("suite.weak-evidence", suite.Blockers);
+        Assert.Contains("evidence/missing-baseline", suite.TargetCaseIds);
     }
 
     [Fact]
