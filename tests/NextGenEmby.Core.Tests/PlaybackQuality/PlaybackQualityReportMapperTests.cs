@@ -55,4 +55,56 @@ public sealed class PlaybackQualityReportMapperTests
         Assert.Equal("Off", report.Display.HdrStatus);
         Assert.Equal("Sdr", report.ColorPipeline.ActualHdrOutput);
     }
+
+    [Fact]
+    public void ApplyMetrics_Copies_Timing_Sync_And_Buffer_Signals()
+    {
+        var report = new PlaybackQualityReport();
+        var metrics = new PlaybackQualityMetricsSnapshot
+        {
+            RenderPasses = 100,
+            DecodedVideoFrames = 95,
+            RenderedVideoFrames = 90,
+            SubmittedAudioFrames = 88,
+            DroppedVideoFrames = 3,
+            SeekPrerollDroppedFrames = 2,
+            VideoAheadWaitCount = 7,
+            VideoStarvedPasses = 4,
+            AudioStarvedPasses = 1,
+            QueuedAudioBuffers = 12,
+            AudioClockTicks = 123456,
+            VideoPositionTicks = 120000,
+            RenderIntervalMsP50 = 41.7,
+            RenderIntervalMsP95 = 45.2,
+            RenderIntervalMsP99 = 80.0,
+            MaxFrameGapMs = 120.0,
+            AudioVideoDriftMsP50 = 12.0,
+            AudioVideoDriftMsP95 = 38.0,
+            AudioVideoDriftMsP99 = 50.0,
+            AudioVideoDriftMsMax = 75.0
+        };
+
+        PlaybackQualityReportMapper.ApplyMetrics(report, metrics);
+
+        Assert.Equal(100UL, report.Timing.RenderPasses);
+        Assert.Equal(95UL, report.Timing.DecodedVideoFrames);
+        Assert.Equal(90UL, report.Timing.RenderedVideoFrames);
+        Assert.Equal(3UL, report.Timing.DroppedVideoFrames);
+        Assert.Equal(2UL, report.Timing.SeekPrerollDroppedFrames);
+        Assert.Equal(7UL, report.Timing.VideoAheadWaitCount);
+        Assert.Equal(41.7, report.Timing.RenderIntervalMsP50);
+        Assert.Equal(45.2, report.Timing.RenderIntervalMsP95);
+        Assert.Equal(80.0, report.Timing.RenderIntervalMsP99);
+        Assert.Equal(120.0, report.Timing.MaxFrameGapMs);
+        Assert.Equal(123456, report.Sync.AudioClockTicks);
+        Assert.Equal(120000, report.Sync.VideoPositionTicks);
+        Assert.Equal(12.0, report.Sync.AudioVideoDriftMsP50);
+        Assert.Equal(38.0, report.Sync.AudioVideoDriftMsP95);
+        Assert.Equal(50.0, report.Sync.AudioVideoDriftMsP99);
+        Assert.Equal(75.0, report.Sync.AudioVideoDriftMsMax);
+        Assert.Equal(88UL, report.Buffers.SubmittedAudioFrames);
+        Assert.Equal(12UL, report.Buffers.QueuedAudioBuffers);
+        Assert.Equal(4UL, report.Buffers.VideoStarvedPasses);
+        Assert.Equal(1UL, report.Buffers.AudioStarvedPasses);
+    }
 }

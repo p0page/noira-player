@@ -25,6 +25,34 @@ namespace NextGenEmby.Core.PlaybackQuality
             report.ColorPipeline.ConversionStatus = status.VideoProcessorConversionStatus;
         }
 
+        public static void ApplyMetrics(
+            PlaybackQualityReport report,
+            PlaybackQualityMetricsSnapshot metrics)
+        {
+            report.Timing.RenderPasses = metrics.RenderPasses;
+            report.Timing.DecodedVideoFrames = metrics.DecodedVideoFrames;
+            report.Timing.RenderedVideoFrames = metrics.RenderedVideoFrames;
+            report.Timing.DroppedVideoFrames = metrics.DroppedVideoFrames;
+            report.Timing.SeekPrerollDroppedFrames = metrics.SeekPrerollDroppedFrames;
+            report.Timing.VideoAheadWaitCount = metrics.VideoAheadWaitCount;
+            report.Timing.RenderIntervalMsP50 = metrics.RenderIntervalMsP50;
+            report.Timing.RenderIntervalMsP95 = metrics.RenderIntervalMsP95;
+            report.Timing.RenderIntervalMsP99 = metrics.RenderIntervalMsP99;
+            report.Timing.MaxFrameGapMs = metrics.MaxFrameGapMs;
+
+            report.Sync.AudioClockTicks = metrics.AudioClockTicks;
+            report.Sync.VideoPositionTicks = metrics.VideoPositionTicks;
+            report.Sync.AudioVideoDriftMsP50 = metrics.AudioVideoDriftMsP50;
+            report.Sync.AudioVideoDriftMsP95 = metrics.AudioVideoDriftMsP95;
+            report.Sync.AudioVideoDriftMsP99 = metrics.AudioVideoDriftMsP99;
+            report.Sync.AudioVideoDriftMsMax = metrics.AudioVideoDriftMsMax;
+
+            report.Buffers.SubmittedAudioFrames = metrics.SubmittedAudioFrames;
+            report.Buffers.QueuedAudioBuffers = metrics.QueuedAudioBuffers;
+            report.Buffers.VideoStarvedPasses = metrics.VideoStarvedPasses;
+            report.Buffers.AudioStarvedPasses = metrics.AudioStarvedPasses;
+        }
+
         private static string MapActualHdrOutput(PlaybackDisplayStatus status)
         {
             switch (status.HdrStatus)
