@@ -9,6 +9,7 @@ namespace NextGenEmby.Core.PlaybackQuality
         public string PrimaryFailureArea { get; set; } = "none";
         public string SuggestedNextAction { get; set; } = "";
         public PlaybackQualitySampleAssessment Sample { get; set; } = new PlaybackQualitySampleAssessment();
+        public PlaybackQualityOptimizationGate OptimizationGate { get; set; } = new PlaybackQualityOptimizationGate();
         public List<string> FailureReasons { get; } = new List<string>();
         public List<PlaybackQualityCheck> FailedChecks { get; } = new List<PlaybackQualityCheck>();
         public List<string> FailureAreas { get; } = new List<string>();
@@ -32,6 +33,15 @@ namespace NextGenEmby.Core.PlaybackQuality
         public ulong RenderedVideoFrames { get; set; }
         public long? MinRenderedVideoFrames { get; set; }
         public string Reason { get; set; } = "";
+    }
+
+    public sealed class PlaybackQualityOptimizationGate
+    {
+        public string Status { get; set; } = "not-needed";
+        public bool CanOptimizePlaybackCore { get; set; }
+        public List<string> Blockers { get; } = new List<string>();
+        public List<string> BlockerSignals { get; } = new List<string>();
+        public List<string> TargetFailureAreas { get; } = new List<string>();
     }
 
     public static class PlaybackQualityReportAnalyzer
@@ -80,6 +90,7 @@ namespace NextGenEmby.Core.PlaybackQuality
             analysis.Sample = AssessSample(report);
             AddDerivedEvidence(analysis, report);
             AddMissingEvidence(analysis, report);
+            analysis.OptimizationGate = AssessOptimizationGate(analysis);
             AddInvestigationHints(analysis);
 
             if (string.IsNullOrWhiteSpace(analysis.SuggestedNextAction))
@@ -90,6 +101,53 @@ namespace NextGenEmby.Core.PlaybackQuality
             }
 
             return analysis;
+        }
+
+        private static PlaybackQualityOptimizationGate AssessOptimizationGate(
+            PlaybackQualityModelAnalysis analysis)
+        {
+            var gate = new PlaybackQualityOptimizationGate();
+            if (analysis.Result != "fail")
+            {
+                gate.Status = "not-needed";
+                AddUnique(gate.Blockers, "result." + analysis.Result);
+                return gate;
+            }
+
+            if (analysis.Sample.Status != "sufficient")
+            {
+                AddUnique(gate.Blockers, "sample.insufficient");
+                AddUnique(gate.BlockerSignals, "sample.status");
+            }
+
+            if (analysis.MissingEvidence.Count > 0)
+            {
+                AddUnique(gate.Blockers, "missingEvidence");
+                foreach (var signal in analysis.MissingEvidence)
+                {
+                    AddUnique(gate.BlockerSignals, signal);
+                }
+            }
+
+            if (analysis.FailureAreas.Count == 0)
+            {
+                AddUnique(gate.Blockers, "failureAreas.missing");
+            }
+
+            if (gate.Blockers.Count > 0)
+            {
+                gate.Status = "blocked";
+                return gate;
+            }
+
+            gate.Status = "ready";
+            gate.CanOptimizePlaybackCore = true;
+            foreach (var area in analysis.FailureAreas)
+            {
+                AddUnique(gate.TargetFailureAreas, area);
+            }
+
+            return gate;
         }
 
         private static void AddMissingEvidence(

@@ -198,6 +198,48 @@ public sealed class PlaybackQualityReportAnalyzerTests
     }
 
     [Fact]
+    public void Analyze_Blocks_Playback_Core_Optimization_When_Sample_Is_Insufficient()
+    {
+        var report = CreateOptimizationReadyFailure();
+        report.Expected!.MinRenderedVideoFrames = 120;
+        report.Timing.RenderedVideoFrames = 24;
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.False(analysis.OptimizationGate.CanOptimizePlaybackCore);
+        Assert.Equal("blocked", analysis.OptimizationGate.Status);
+        Assert.Contains("sample.insufficient", analysis.OptimizationGate.Blockers);
+        Assert.DoesNotContain("frame-pacing", analysis.OptimizationGate.TargetFailureAreas);
+    }
+
+    [Fact]
+    public void Analyze_Blocks_Playback_Core_Optimization_When_Required_Evidence_Is_Missing()
+    {
+        var report = CreateOptimizationReadyFailure();
+        report.ColorPipeline.DxgiInput = "";
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.False(analysis.OptimizationGate.CanOptimizePlaybackCore);
+        Assert.Equal("blocked", analysis.OptimizationGate.Status);
+        Assert.Contains("missingEvidence", analysis.OptimizationGate.Blockers);
+        Assert.Contains("colorPipeline.dxgiInput", analysis.OptimizationGate.BlockerSignals);
+    }
+
+    [Fact]
+    public void Analyze_Allows_Playback_Core_Optimization_When_Failing_Run_Has_Sufficient_Sample_And_Evidence()
+    {
+        var report = CreateOptimizationReadyFailure();
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.True(analysis.OptimizationGate.CanOptimizePlaybackCore);
+        Assert.Equal("ready", analysis.OptimizationGate.Status);
+        Assert.Empty(analysis.OptimizationGate.Blockers);
+        Assert.Contains("frame-pacing", analysis.OptimizationGate.TargetFailureAreas);
+    }
+
+    [Fact]
     public void Analyze_Reports_Missing_Evidence_For_Unset_Critical_Signals()
     {
         var report = new PlaybackQualityReport
@@ -237,7 +279,8 @@ public sealed class PlaybackQualityReportAnalyzerTests
             },
             ColorPipeline = new PlaybackQualityColorPipeline
             {
-                DxgiInput = "YCBCR_STUDIO_G2084_TOPLEFT_P2020"
+                DxgiInput = "YCBCR_STUDIO_G2084_TOPLEFT_P2020",
+                ConversionStatus = "validated"
             },
             Display = new PlaybackQualityDisplay
             {
@@ -409,10 +452,56 @@ public sealed class PlaybackQualityReportAnalyzerTests
         Assert.Contains("\"runId\"", json);
         Assert.Contains("\"primaryFailureArea\"", json);
         Assert.Contains("\"sample\"", json);
+        Assert.Contains("\"optimizationGate\"", json);
         Assert.Contains("\"failureAreas\"", json);
         Assert.Contains("\"investigationHints\"", json);
         Assert.Contains("\"evidenceSignals\"", json);
         Assert.Contains("\"missingEvidence\"", json);
         Assert.Contains("\"sync.audioVideoDriftMsP95\"", json);
+    }
+
+    private static PlaybackQualityReport CreateOptimizationReadyFailure()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "optimization-ready",
+            Result = "fail",
+            Expected = new PlaybackQualityExpected
+            {
+                MinRenderedVideoFrames = 120
+            },
+            Source = new PlaybackQualitySource
+            {
+                Codec = "hevc",
+                FrameRate = 23.976,
+                HdrKind = "Hdr10"
+            },
+            Timing = new PlaybackQualityTiming
+            {
+                RenderedVideoFrames = 240,
+                ExpectedFrameDurationMs = 1000.0 / 23.976
+            },
+            ColorPipeline = new PlaybackQualityColorPipeline
+            {
+                DxgiInput = "YCBCR_STUDIO_G2084_TOPLEFT_P2020",
+                ConversionStatus = "validated"
+            },
+            Display = new PlaybackQualityDisplay
+            {
+                HdrStatus = "On",
+                RefreshRateHz = 59.94006
+            }
+        };
+        report.Checks.Add(new PlaybackQualityCheck
+        {
+            Name = "MaxFrameGapMs",
+            Status = "fail",
+            FailureArea = "frame-pacing",
+            Signal = "timing.maxFrameGapMs",
+            Expected = "105.000",
+            Actual = "180.000"
+        });
+
+        return report;
     }
 }
