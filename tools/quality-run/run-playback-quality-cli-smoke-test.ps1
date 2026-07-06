@@ -29,6 +29,9 @@ try {
     $candidateEvaluationBlockedAnalysisCandidateDir = Join-Path $tempRoot 'candidate-evaluation-blocked-analysis-candidate'
     $candidateEvaluationBlockedAnalysisPath = Join-Path $tempRoot 'candidate-evaluation-blocked-analysis.json'
     $candidateEvaluationBlockedAnalysisComparisonsDir = Join-Path $tempRoot 'candidate-evaluation-blocked-analysis-comparisons'
+    $baselineEvaluationBlockedAnalysisBaselineDir = Join-Path $tempRoot 'baseline-evaluation-blocked-analysis-baseline'
+    $baselineEvaluationBlockedAnalysisPath = Join-Path $tempRoot 'baseline-evaluation-blocked-analysis.json'
+    $baselineEvaluationBlockedAnalysisComparisonsDir = Join-Path $tempRoot 'baseline-evaluation-blocked-analysis-comparisons'
     $stallBaselineDir = Join-Path $tempRoot 'stall-baseline-suite'
     $stallCandidateDir = Join-Path $tempRoot 'stall-candidate-suite'
     $previousComparisonsDir = Join-Path $tempRoot 'previous-comparisons'
@@ -686,6 +689,14 @@ try {
         throw 'Expected evaluate-candidate active gate to point at passing suite decision.'
     }
 
+    if ($null -eq $candidateEvaluation.baselineReportAnalysis -or
+        $candidateEvaluation.baselineReportAnalysis.totalReportCount -ne 1 -or
+        $candidateEvaluation.baselineReportAnalysis.analyzedReportCount -ne 0 -or
+        $candidateEvaluation.baselineReportAnalysis.unavailableReportCount -ne 1 -or
+        $candidateEvaluation.baselineReportAnalysis.blockedReportCount -ne 0) {
+        throw 'Expected evaluate-candidate to summarize unavailable baseline report analysis for raw reports.'
+    }
+
     if ($null -eq $candidateEvaluation.candidateReportAnalysis -or
         $candidateEvaluation.candidateReportAnalysis.totalReportCount -ne 1 -or
         $candidateEvaluation.candidateReportAnalysis.analyzedReportCount -ne 0 -or
@@ -699,8 +710,8 @@ try {
         throw 'Expected evaluate-candidate candidate report-analysis summary to include unavailable raw-report case.'
     }
 
-    if ($null -eq $candidateEvaluation.evidenceGates -or $candidateEvaluation.evidenceGates.Count -ne 5) {
-        throw 'Expected playback quality CLI evaluate-candidate to emit five evidence gates.'
+    if ($null -eq $candidateEvaluation.evidenceGates -or $candidateEvaluation.evidenceGates.Count -ne 6) {
+        throw 'Expected playback quality CLI evaluate-candidate to emit six evidence gates.'
     }
 
     if (-not ($candidateEvaluation.evidenceGates | Where-Object { $_.name -eq 'manifest' -and $_.status -eq 'pass' })) {
@@ -713,6 +724,10 @@ try {
 
     if (-not ($candidateEvaluation.evidenceGates | Where-Object { $_.name -eq 'candidate-report-set' -and $_.status -eq 'pass' })) {
         throw 'Expected evaluate-candidate candidate report-set evidence gate to pass.'
+    }
+
+    if (-not ($candidateEvaluation.evidenceGates | Where-Object { $_.name -eq 'baseline-report-analysis' -and $_.status -eq 'pass' })) {
+        throw 'Expected evaluate-candidate baseline report-analysis evidence gate to pass.'
     }
 
     if (-not ($candidateEvaluation.evidenceGates | Where-Object { $_.name -eq 'candidate-report-analysis' -and $_.status -eq 'pass' })) {
@@ -814,6 +829,111 @@ try {
 
     if (-not ($invalidCandidateEvaluation.evidenceGates | Where-Object { $_.name -eq 'suite' -and $_.status -eq 'skipped' })) {
         throw 'Expected invalid evaluate-candidate suite evidence gate to be skipped.'
+    }
+
+    New-Item -ItemType Directory -Path $baselineEvaluationBlockedAnalysisBaselineDir | Out-Null
+    @'
+{
+  "report": {
+    "runId": "item-1/source-1",
+    "metricVersion": "software-quality-v1",
+    "source": {
+      "itemId": "item-1",
+      "mediaSourceId": "source-1",
+      "codec": "hevc",
+      "width": 3840,
+      "height": 2160,
+      "frameRate": 23.976,
+      "hdrKind": "Sdr"
+    },
+    "checks": [
+      {
+        "name": "RenderedVideoFrames",
+        "signal": "timing.renderedVideoFrames",
+        "status": "fail",
+        "failureArea": "startup",
+        "expected": "1",
+        "actual": "0"
+      }
+    ]
+  },
+  "modelAnalysis": {
+    "runId": "item-1/source-1",
+    "result": "fail",
+    "optimizationGate": {
+      "status": "blocked",
+      "canOptimizePlaybackCore": false,
+      "blockers": [
+        "sample.insufficient"
+      ],
+      "blockerSignals": [
+        "sample.status"
+      ],
+      "targetFailureAreas": []
+    }
+  }
+}
+'@ | Set-Content -LiteralPath (Join-Path $baselineEvaluationBlockedAnalysisBaselineDir 'baseline-blocked-analysis.json') -Encoding UTF8
+
+    Push-Location $repoRoot
+    try {
+        dotnet run `
+            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
+            --no-build `
+            -- evaluate-candidate `
+            --manifest $candidateEvaluationManifestPath `
+            --baseline-dir $baselineEvaluationBlockedAnalysisBaselineDir `
+            --candidate-dir $runIdCandidateDir `
+            --match-by run-id `
+            --comparisons-dir $baselineEvaluationBlockedAnalysisComparisonsDir `
+            --output $baselineEvaluationBlockedAnalysisPath
+        if ($LASTEXITCODE -eq 0) {
+            throw 'Expected playback quality CLI evaluate-candidate to reject blocked baseline report analysis.'
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    $blockedBaselineAnalysisEvaluation = Get-Content -Raw -LiteralPath $baselineEvaluationBlockedAnalysisPath | ConvertFrom-Json
+    if ($blockedBaselineAnalysisEvaluation.action -ne 'collect-comparable-evidence') {
+        throw 'Expected blocked baseline report-analysis output to collect comparable evidence.'
+    }
+
+    if ($null -eq $blockedBaselineAnalysisEvaluation.activeGate -or
+        $blockedBaselineAnalysisEvaluation.activeGate.name -ne 'baseline-report-analysis' -or
+        $blockedBaselineAnalysisEvaluation.activeGate.status -ne 'blocked') {
+        throw 'Expected blocked baseline report-analysis active gate to point at baseline report-analysis gate.'
+    }
+
+    if (-not ($blockedBaselineAnalysisEvaluation.blockers -contains 'baseline-report-analysis.blocked')) {
+        throw 'Expected blocked baseline report-analysis output to include baseline report-analysis blocker.'
+    }
+
+    if ($null -eq $blockedBaselineAnalysisEvaluation.baselineReportAnalysis -or
+        $blockedBaselineAnalysisEvaluation.baselineReportAnalysis.totalReportCount -ne 1 -or
+        $blockedBaselineAnalysisEvaluation.baselineReportAnalysis.analyzedReportCount -ne 1 -or
+        $blockedBaselineAnalysisEvaluation.baselineReportAnalysis.blockedReportCount -ne 1) {
+        throw 'Expected blocked baseline report-analysis output to summarize analyzed blocked baseline report.'
+    }
+
+    $blockedBaselineAnalysisCase = $blockedBaselineAnalysisEvaluation.baselineReportAnalysis.cases |
+        Where-Object { $_.caseId -eq 'item-1/source-1' } |
+        Select-Object -First 1
+    if ($null -eq $blockedBaselineAnalysisCase -or $blockedBaselineAnalysisCase.status -ne 'blocked') {
+        throw 'Expected blocked baseline report-analysis summary to include blocked baseline case.'
+    }
+
+    if (-not ($blockedBaselineAnalysisCase.blockers -contains 'sample.insufficient')) {
+        throw 'Expected blocked baseline report-analysis summary case to include model analysis blocker.'
+    }
+
+    if (-not ($blockedBaselineAnalysisCase.signals -contains 'sample.status')) {
+        throw 'Expected blocked baseline report-analysis summary case to include model analysis blocker signal.'
+    }
+
+    if (Test-Path -LiteralPath $baselineEvaluationBlockedAnalysisComparisonsDir) {
+        throw 'Expected blocked baseline report-analysis evidence to skip comparison output.'
     }
 
     New-Item -ItemType Directory -Path $candidateEvaluationBlockedAnalysisCandidateDir | Out-Null

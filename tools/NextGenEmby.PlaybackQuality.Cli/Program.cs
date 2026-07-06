@@ -177,10 +177,12 @@ internal static class Program
     {
         var options = ParseEvaluateCandidateOptions(args);
         var manifest = ReadJson<PlaybackQualityReferenceManifest>(options.ManifestPath);
-        var baselineReports = ReadPlaybackQualityReports(options.BaselineDirectory);
+        var baselineEnvelopes = ReadPlaybackQualityReportEnvelopes(options.BaselineDirectory);
+        var baselineReports = ExtractReports(baselineEnvelopes);
         var candidateEnvelopes = ReadPlaybackQualityReportEnvelopes(options.CandidateDirectory);
         var candidateReports = ExtractReports(candidateEnvelopes);
-        var candidateReportAnalysis = CreateCandidateReportAnalysisSummary(candidateEnvelopes);
+        var baselineReportAnalysis = CreateReportAnalysisSummary(baselineEnvelopes);
+        var candidateReportAnalysis = CreateReportAnalysisSummary(candidateEnvelopes);
         var evaluation = new CandidateEvaluationOutput
         {
             ManifestValidation = PlaybackQualityReferenceManifestValidator.Validate(manifest),
@@ -190,6 +192,7 @@ internal static class Program
             CandidateReportSetValidation = PlaybackQualityReferenceReportSetValidator.Validate(
                 manifest,
                 candidateReports),
+            BaselineReportAnalysis = baselineReportAnalysis,
             CandidateReportAnalysis = candidateReportAnalysis
         };
 
@@ -208,7 +211,18 @@ internal static class Program
             AddUnique(evaluation.Blockers, "candidate-report-set.invalid");
         }
 
-        var candidateReportAnalysisGate = CreateCandidateReportAnalysisGate(candidateReportAnalysis);
+        var baselineReportAnalysisGate = CreateReportAnalysisGate(
+            "baseline-report-analysis",
+            baselineReportAnalysis);
+        if (baselineReportAnalysisGate.Status == "blocked")
+        {
+            AddUnique(evaluation.Blockers, "baseline-report-analysis.blocked");
+            CopyValues(baselineReportAnalysisGate.Blockers, evaluation.Blockers);
+        }
+
+        var candidateReportAnalysisGate = CreateReportAnalysisGate(
+            "candidate-report-analysis",
+            candidateReportAnalysis);
         if (candidateReportAnalysisGate.Status == "blocked")
         {
             AddUnique(evaluation.Blockers, "candidate-report-analysis.blocked");
@@ -224,6 +238,7 @@ internal static class Program
             "candidate-report-set",
             "candidate-report-set.invalid",
             evaluation.CandidateReportSetValidation));
+        evaluation.EvidenceGates.Add(baselineReportAnalysisGate);
         evaluation.EvidenceGates.Add(candidateReportAnalysisGate);
 
         if (evaluation.Blockers.Count == 0)
@@ -1104,15 +1119,17 @@ internal static class Program
         return gate;
     }
 
-    private static CandidateEvaluationGate CreateCandidateReportAnalysisGate(
-        CandidateReportAnalysisSummary summary)
+    private static CandidateEvaluationGate CreateReportAnalysisGate(
+        string name,
+        ReportAnalysisSummary summary)
     {
+        var label = name.Replace("-", " ", StringComparison.Ordinal);
         var gate = new CandidateEvaluationGate
         {
-            Name = "candidate-report-analysis",
+            Name = name,
             Status = "pass",
             Action = "continue",
-            Summary = "candidate report model analysis has no optimization blockers"
+            Summary = label + " has no optimization blockers"
         };
 
         foreach (var item in summary.Cases)
@@ -1123,8 +1140,8 @@ internal static class Program
             }
 
             gate.Status = "blocked";
-            gate.Action = "fix-candidate-report-analysis";
-            gate.Summary = "candidate report model analysis has optimization blockers";
+            gate.Action = "fix-" + name;
+            gate.Summary = label + " has optimization blockers";
             foreach (var blocker in item.Blockers)
             {
                 AddUnique(gate.Blockers, blocker);
@@ -1141,23 +1158,23 @@ internal static class Program
         if (summary.AnalyzedReportCount == 0)
         {
             gate.Summary =
-                "candidate report model analysis is unavailable; continuing with report-set and suite evidence";
+                label + " is unavailable; continuing with report-set and suite evidence";
         }
 
         return gate;
     }
 
-    private static CandidateReportAnalysisSummary CreateCandidateReportAnalysisSummary(
-        List<PlaybackQualityReportEnvelope> candidateEnvelopes)
+    private static ReportAnalysisSummary CreateReportAnalysisSummary(
+        List<PlaybackQualityReportEnvelope> envelopes)
     {
-        var summary = new CandidateReportAnalysisSummary
+        var summary = new ReportAnalysisSummary
         {
-            TotalReportCount = candidateEnvelopes.Count
+            TotalReportCount = envelopes.Count
         };
 
-        foreach (var envelope in candidateEnvelopes)
+        foreach (var envelope in envelopes)
         {
-            var item = new CandidateReportAnalysisCase
+            var item = new ReportAnalysisCase
             {
                 CaseId = GetReportEnvelopeCaseId(envelope),
                 HasModelAnalysis = envelope.ModelAnalysis != null
@@ -1398,8 +1415,10 @@ internal static class Program
             new PlaybackQualityReferenceReportSetValidation();
         public PlaybackQualityReferenceReportSetValidation CandidateReportSetValidation { get; set; } =
             new PlaybackQualityReferenceReportSetValidation();
-        public CandidateReportAnalysisSummary CandidateReportAnalysis { get; set; } =
-            new CandidateReportAnalysisSummary();
+        public ReportAnalysisSummary BaselineReportAnalysis { get; set; } =
+            new ReportAnalysisSummary();
+        public ReportAnalysisSummary CandidateReportAnalysis { get; set; } =
+            new ReportAnalysisSummary();
         public PlaybackQualityComparisonSuite Suite { get; set; } =
             new PlaybackQualityComparisonSuite();
     }
@@ -1421,17 +1440,17 @@ internal static class Program
         public PlaybackQualityModelAnalysis? ModelAnalysis { get; }
     }
 
-    private sealed class CandidateReportAnalysisSummary
+    private sealed class ReportAnalysisSummary
     {
         public int TotalReportCount { get; set; }
         public int AnalyzedReportCount { get; set; }
         public int UnavailableReportCount { get; set; }
         public int BlockedReportCount { get; set; }
-        public List<CandidateReportAnalysisCase> Cases { get; } =
-            new List<CandidateReportAnalysisCase>();
+        public List<ReportAnalysisCase> Cases { get; } =
+            new List<ReportAnalysisCase>();
     }
 
-    private sealed class CandidateReportAnalysisCase
+    private sealed class ReportAnalysisCase
     {
         public string CaseId { get; set; } = "";
         public bool HasModelAnalysis { get; set; }
