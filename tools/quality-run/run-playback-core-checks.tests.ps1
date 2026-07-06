@@ -8,6 +8,22 @@ if (-not $plan.commands -or $plan.commands.Count -lt 2) {
     throw 'Expected at least two playback-core validation commands.'
 }
 
+if ($plan.scope -ne 'playback-core') {
+    throw 'Expected playback-core validation scope.'
+}
+
+if (-not ($plan.includedRoots -contains 'src/NextGenEmby.Core')) {
+    throw 'Expected src/NextGenEmby.Core in playback-core included roots.'
+}
+
+if (-not ($plan.includedRoots -contains 'src/NextGenEmby.Native')) {
+    throw 'Expected src/NextGenEmby.Native in playback-core included roots.'
+}
+
+if (-not ($plan.excludedRoots -contains 'src/NextGenEmby.App')) {
+    throw 'Expected src/NextGenEmby.App in playback-core excluded roots.'
+}
+
 $serializedCommands = $plan.commands | ConvertTo-Json -Depth 6
 if ($serializedCommands -match 'NextGenEmby\.App|AppPackages|msix|NextGenEmby\.App\.csproj') {
     throw 'Playback-core validation plan must not build or package the App project.'

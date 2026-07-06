@@ -71,6 +71,14 @@ if (-not $SkipNativeBuild) {
 
 $summary = [pscustomobject]@{
     scope = 'playback-core'
+    includedRoots = @(
+        'src/NextGenEmby.Core',
+        'src/NextGenEmby.Native',
+        'tests/NextGenEmby.Core.Tests',
+        'tests/NextGenEmby.Native.Tests',
+        'tools/quality-run'
+    )
+    excludedRoots = @('src/NextGenEmby.App')
     excludes = @('NextGenEmby.App.csproj', 'AppPackages', 'MSIX packaging')
     commands = $commands
 }
@@ -106,6 +114,8 @@ finally {
 
 $report = [pscustomobject]@{
     scope = 'playback-core'
+    includedRoots = $summary.includedRoots
+    excludedRoots = $summary.excludedRoots
     excludes = $summary.excludes
     result = if ($results | Where-Object { $_.exitCode -ne 0 }) { 'fail' } else { 'pass' }
     results = $results

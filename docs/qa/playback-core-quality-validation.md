@@ -12,6 +12,8 @@ tools\quality-run\run-playback-core-checks.ps1
 
 ## Scope
 
+The command emits `scope = playback-core`, plus `includedRoots` and `excludedRoots` fields so automated model runs can verify that the run is isolated from App interaction work.
+
 The command validates:
 
 - playback-core validation plan structure, including the invariant that App/MSIX build steps are excluded;
