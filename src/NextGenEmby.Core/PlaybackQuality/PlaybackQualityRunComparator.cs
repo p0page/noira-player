@@ -48,6 +48,14 @@ namespace NextGenEmby.Core.PlaybackQuality
         public List<string> Reasons { get; } = new List<string>();
         public List<string> Blockers { get; } = new List<string>();
         public List<string> Signals { get; } = new List<string>();
+        public List<string> FailureAreas { get; } = new List<string>();
+    }
+
+    public sealed class PlaybackQualityComparisonContext
+    {
+        public int StallComparisonCountThreshold { get; set; } = 2;
+        public List<PlaybackQualityRunComparison> PreviousComparisons { get; } =
+            new List<PlaybackQualityRunComparison>();
     }
 
     public sealed class PlaybackQualityComparisonCoverage
@@ -78,6 +86,17 @@ namespace NextGenEmby.Core.PlaybackQuality
             PlaybackQualityReport baseline,
             PlaybackQualityReport candidate)
         {
+            return Compare(
+                baseline,
+                candidate,
+                new PlaybackQualityComparisonContext());
+        }
+
+        public static PlaybackQualityRunComparison Compare(
+            PlaybackQualityReport baseline,
+            PlaybackQualityReport candidate,
+            PlaybackQualityComparisonContext context)
+        {
             if (baseline == null)
             {
                 throw new ArgumentNullException(nameof(baseline));
@@ -86,6 +105,11 @@ namespace NextGenEmby.Core.PlaybackQuality
             if (candidate == null)
             {
                 throw new ArgumentNullException(nameof(candidate));
+            }
+
+            if (context == null)
+            {
+                throw new ArgumentNullException(nameof(context));
             }
 
             var comparison = new PlaybackQualityRunComparison
@@ -104,14 +128,14 @@ namespace NextGenEmby.Core.PlaybackQuality
                     comparison.Limitations.Add("comparison requires matching " + signal);
                 }
 
-                return FinalizeComparison(comparison);
+                return FinalizeComparison(comparison, context);
             }
 
             if (baseline.Checks.Count == 0 || candidate.Checks.Count == 0)
             {
                 comparison.Result = "insufficient-evidence";
                 comparison.Limitations.Add("comparison requires baseline and candidate checks");
-                return FinalizeComparison(comparison);
+                return FinalizeComparison(comparison, context);
             }
 
             var candidateByKey = CreateCheckMap(candidate);
@@ -140,7 +164,7 @@ namespace NextGenEmby.Core.PlaybackQuality
             {
                 comparison.Result = "insufficient-evidence";
                 comparison.Limitations.Add("comparison requires at least one matching check signal");
-                return FinalizeComparison(comparison);
+                return FinalizeComparison(comparison, context);
             }
 
             AddCandidateOnlyFailures(comparison, candidate, baselineByKey, matchedKeys);
@@ -159,7 +183,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                 comparison.Result = "regressed";
             }
 
-            return FinalizeComparison(comparison);
+            return FinalizeComparison(comparison, context);
         }
 
         private static void AddUnmatchedBaselineSignals(
@@ -252,11 +276,13 @@ namespace NextGenEmby.Core.PlaybackQuality
         }
 
         private static PlaybackQualityRunComparison FinalizeComparison(
-            PlaybackQualityRunComparison comparison)
+            PlaybackQualityRunComparison comparison,
+            PlaybackQualityComparisonContext context)
         {
             ApplyConfidence(comparison);
             ApplyDecision(comparison);
             ApplyOptimization(comparison);
+            ApplyStallGuard(comparison, context);
             return comparison;
         }
 
@@ -333,6 +359,64 @@ namespace NextGenEmby.Core.PlaybackQuality
             }
 
             ApplyStrongConfidenceOptimization(comparison);
+        }
+
+        private static void ApplyStallGuard(
+            PlaybackQualityRunComparison comparison,
+            PlaybackQualityComparisonContext context)
+        {
+            if (comparison.Result != "unchanged" ||
+                comparison.PersistingFailureAreas.Count == 0 ||
+                context.StallComparisonCountThreshold <= 1)
+            {
+                return;
+            }
+
+            var unchangedCount = 1;
+            for (var index = context.PreviousComparisons.Count - 1; index >= 0; index--)
+            {
+                var previous = context.PreviousComparisons[index];
+                if (previous == null ||
+                    previous.Result != "unchanged" ||
+                    !SharesFailureArea(previous.PersistingFailureAreas, comparison.PersistingFailureAreas))
+                {
+                    break;
+                }
+
+                unchangedCount++;
+                if (unchangedCount >= context.StallComparisonCountThreshold)
+                {
+                    MarkOptimizationStalled(comparison);
+                    return;
+                }
+            }
+        }
+
+        private static bool SharesFailureArea(
+            List<string> previousAreas,
+            List<string> currentAreas)
+        {
+            foreach (var area in currentAreas)
+            {
+                if (previousAreas.Contains(area))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static void MarkOptimizationStalled(PlaybackQualityRunComparison comparison)
+        {
+            comparison.Optimization.Action = "change-optimization-strategy";
+            comparison.Optimization.Risk = "high";
+            AddUnique(
+                comparison.Optimization.Reasons,
+                "repeated unchanged comparisons indicate optimization stall");
+            AddUnique(comparison.Optimization.Blockers, "iteration.stalled");
+            CopyValues(comparison.PersistingFailureAreas, comparison.Optimization.FailureAreas);
+            CopyValues(comparison.Coverage.MatchedSignals, comparison.Optimization.Signals);
         }
 
         private static void ApplyPartialConfidenceOptimization(

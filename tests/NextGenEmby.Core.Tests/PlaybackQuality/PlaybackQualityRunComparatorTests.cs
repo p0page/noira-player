@@ -166,6 +166,39 @@ public sealed class PlaybackQualityRunComparatorTests
     }
 
     [Fact]
+    public void Compare_Reports_ChangesOptimizationStrategy_When_Same_FailureArea_Stalls()
+    {
+        var previousBaseline = CreateReport(
+            "previous-baseline",
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "180.000"));
+        var previousCandidate = CreateReport(
+            "previous-candidate",
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "180.000"));
+        var previousComparison = PlaybackQualityRunComparator.Compare(previousBaseline, previousCandidate);
+        var context = new PlaybackQualityComparisonContext
+        {
+            StallComparisonCountThreshold = 2
+        };
+        context.PreviousComparisons.Add(previousComparison);
+        var baseline = CreateReport(
+            "baseline",
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "180.000"));
+        var candidate = CreateReport(
+            "candidate",
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "180.000"));
+
+        var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate, context);
+
+        Assert.Equal("unchanged", comparison.Result);
+        Assert.Equal("change-optimization-strategy", comparison.Optimization.Action);
+        Assert.Equal("high", comparison.Optimization.Risk);
+        Assert.Contains("repeated unchanged comparisons indicate optimization stall", comparison.Optimization.Reasons);
+        Assert.Contains("iteration.stalled", comparison.Optimization.Blockers);
+        Assert.Contains("frame-pacing", comparison.Optimization.FailureAreas);
+        Assert.Contains("timing.maxFrameGapMs", comparison.Optimization.Signals);
+    }
+
+    [Fact]
     public void Compare_Reports_Regressed_When_Candidate_Has_Unmatched_New_Failing_Signal()
     {
         var baseline = CreateReport(
