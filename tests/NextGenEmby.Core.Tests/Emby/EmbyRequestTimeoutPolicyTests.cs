@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using NextGenEmby.Core.Emby;
 using Xunit;
@@ -35,5 +36,27 @@ public sealed class EmbyRequestTimeoutPolicyTests
             InteractiveRequestGuard.WithTimeoutAsync(
                 pendingRequest.Task,
                 TimeSpan.FromMilliseconds(1)));
+    }
+
+    [Fact]
+    public async Task Interactive_List_Guard_Returns_Empty_List_When_Request_Does_Not_Complete()
+    {
+        var pendingRequest = new TaskCompletionSource<IReadOnlyList<string>>();
+
+        var result = await InteractiveRequestGuard.TryGetListOrEmptyAsync(
+            pendingRequest.Task,
+            TimeSpan.FromMilliseconds(1));
+
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task Interactive_List_Guard_Returns_Completed_List()
+    {
+        var result = await InteractiveRequestGuard.TryGetListOrEmptyAsync(
+            Task.FromResult<IReadOnlyList<string>>(new[] { "ready" }),
+            TimeSpan.FromSeconds(1));
+
+        Assert.Equal(new[] { "ready" }, result);
     }
 }

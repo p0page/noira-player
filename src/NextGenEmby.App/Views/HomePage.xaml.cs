@@ -551,8 +551,11 @@ namespace NextGenEmby.App.Views
 
             if (heroItem == null)
             {
-                ClearHero();
-                StatusBlock.Text = "No playable items found.";
+                RenderBrowseOnlyHero();
+                StatusBlock.Text = _libraryButtons.Count > 0
+                    ? "Choose a library below, or refresh Home."
+                    : "No playable items found.";
+                CompleteHomeRenderFocus(focusBehavior, previousFocusTarget);
                 return;
             }
 
@@ -662,6 +665,21 @@ namespace NextGenEmby.App.Views
             ResetHeroLogo();
             HeroTitleBlock.Text = "Nothing queued yet";
             HeroMetaBlock.Text = "Refresh after signing in to load your Emby home screen.";
+            HeroPosterImage.Source = null;
+            HeroBackdropImage.Source = null;
+            HeroPosterFallbackBlock.Visibility = Visibility.Visible;
+            HeroPlayButton.IsEnabled = false;
+            HeroDetailsButton.IsEnabled = false;
+        }
+
+        private void RenderBrowseOnlyHero()
+        {
+            _heroItem = null;
+            ResetHeroLogo();
+            HeroTitleBlock.Text = _libraryButtons.Count > 0 ? "Browse your libraries" : "Nothing queued yet";
+            HeroMetaBlock.Text = _libraryButtons.Count > 0
+                ? "Pick a library below to start browsing while Home rows refresh."
+                : "Refresh after signing in to load your Emby home screen.";
             HeroPosterImage.Source = null;
             HeroBackdropImage.Source = null;
             HeroPosterFallbackBlock.Visibility = Visibility.Visible;
@@ -1154,7 +1172,9 @@ namespace NextGenEmby.App.Views
         {
             try
             {
-                return await load();
+                return await InteractiveRequestGuard.TryGetListOrEmptyAsync(
+                    load(),
+                    EmbyRequestTimeoutPolicy.InteractiveRequestTimeout);
             }
             catch
             {

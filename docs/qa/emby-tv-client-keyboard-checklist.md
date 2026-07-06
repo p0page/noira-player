@@ -824,6 +824,29 @@ Then continue design and implementation until the route passes.
 - Visual capture note:
   - Windows Graphics Capture timed out during two app-window screenshot requests (`FrameArrived timed out`). Accessibility text snapshots, keyboard behavior, app version checks, and asset-level visual inspections were used as evidence for this pass.
 
+### 2026-07-06 - Home Startup Timeout Recovery
+
+- App version: 0.1.0.131.
+- Scope: prevent saved-session Home startup from staying in the cleared placeholder state when one of the Home Emby requests stalls.
+- Interaction changes:
+  - Home list loads now use the shared interactive request timeout guard and return an empty list on timeout or request failure.
+  - If Home has libraries but no playable hero item, the hero explains `Browse your libraries`, keeps Play/Details disabled, and moves focus to the first available library or recovery target.
+  - No decoding, direct playback, or transcoding path changed.
+- Automated verification:
+  - Added Core tests for completed and timed-out interactive list requests.
+  - Core tests passed: 279 total.
+  - App Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.131_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.131`.
+- Keyboard-only validation with Computer Use:
+  - Launched 0.1.0.131 locally and waited 18 seconds on Home.
+  - Home resolved to real saved-session content instead of `Refresh after signing in`: Media Libraries included `热门电影`, `热门剧集`, `动画电影`, `动作电影`, `儿童电影`, `全部电影`, and `全部剧集`; rows included Continue watching, Hot Movies, Hot TV Series, and multiple Latest rows.
+  - Pressed `Down`, `Return` from Home; the focused `热门电影` library opened with `34 items`, Sort, Filter, Refresh, and a populated movie grid.
+  - Pressed `Escape`; Home returned with the same real rails and did not fall back to the placeholder state.
+  - No app-content mouse clicks were used.
+- Visual capture:
+  - Windows Graphics Capture succeeded at 2560x1392.
+  - The captured Home frame showed the hero, focused Media Libraries card, Continue watching, Hot Movies, and Hot TV Series in a dense but readable TV layout.
+
 ### 2026-07-06 - Poster Grid Tokens And Search Recovery
 
 - App version: 0.1.0.129.
