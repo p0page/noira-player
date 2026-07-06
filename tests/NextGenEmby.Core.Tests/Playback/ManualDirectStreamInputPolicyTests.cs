@@ -28,4 +28,20 @@ public sealed class ManualDirectStreamInputPolicyTests
             ManualDirectStreamInput.Other,
             canStart: true));
     }
+
+    [Fact]
+    public void GetInitialFocusTarget_Focuses_Start_Button_When_Stream_Can_Start()
+    {
+        Assert.Equal(
+            ManualDirectStreamInitialFocusTarget.StartButton,
+            ManualDirectStreamInputPolicy.GetInitialFocusTarget(canStart: true));
+    }
+
+    [Fact]
+    public void GetInitialFocusTarget_Focuses_Stream_Url_Box_When_Stream_Cannot_Start()
+    {
+        Assert.Equal(
+            ManualDirectStreamInitialFocusTarget.StreamUrlBox,
+            ManualDirectStreamInputPolicy.GetInitialFocusTarget(canStart: false));
+    }
 }

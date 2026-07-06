@@ -1162,3 +1162,38 @@ Then continue design and implementation until the route passes.
   - No app-content mouse clicks were used. Runtime keyboard validation for this route remains blocked by local UWP startup, so this pass is not marked runtime Verified.
 - Follow-up:
   - Restore a working local UWP launch path, then run Home -> Movies -> multi-version Details with keyboard only. Expected result: Enter on a version stays on Details and visibly selects the source; Enter on Play starts playback with that selected `MediaSourceId`.
+
+### 2026-07-06 - Debug Startup Recovery And Manual Playback Focus
+
+- App version: 0.1.0.148.
+- Scope: restore a reliable local UWP launch and keyboard validation route after the saved Emby session was lost, without changing native decoding or normal Emby playback logic.
+- Root cause:
+  - The earlier local activation failure came from registering/installing the wrong loose package layout: the XAML metadata provider path was `CLRHost.dll`.
+  - The clean MSIX package layout uses `NextGenEmby.App.exe` as the provider path and launches correctly.
+  - `MainPage_OnLoaded` also gated DEBUG `dev-command.json` execution behind a saved session, so a missing session left the app on Login and blocked local playback/OSD validation.
+- Interaction changes:
+  - Added a DEBUG startup policy so a present `dev-command.json` runs even when no saved Emby session exists.
+  - Manual Direct Stream now chooses initial focus from a policy: valid playable URL focuses `Play direct stream`; invalid or empty URL focuses the URL box.
+  - PlaybackPage applies the manual focus target after Loaded with retry diagnostics, avoiding early focus failure before the page is ready.
+- Automated verification:
+  - TDD red path confirmed `DevelopmentCommandStartupPolicy` was missing before implementation.
+  - TDD red path confirmed the manual direct-stream initial-focus policy was missing before implementation.
+  - Core tests passed: 323 total.
+  - `git diff --check` passed; only line-ending normalization warnings were reported.
+  - App Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.148_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.148`.
+  - Installed package manifest provider paths were correct: `NextGenEmby.Native.dll`, `NextGenEmby.App.exe`, and `Microsoft.Web.WebView2.Core.dll`.
+- Keyboard-only validation with Computer Use:
+  - Wrote a local DEBUG `dev-command.json` using route `manual-playback`, stream URL `https://download.blender.org/peach/bigbuckbunny_movies/BigBuckBunny_320x180.mp4`, and `autoStart:false`.
+  - Launched the installed app through Computer Use. `dev-command-result.txt` reported `completed / manual-playback`.
+  - Playback diagnostics showed `MainPage.Navigated page=PlaybackPage parameter=ManualDirectStreamLaunchOptions`.
+  - Diagnostics showed manual initial focus first failed before layout, then succeeded on Loaded with `target=StartButton applied=True`.
+  - Pressed `Enter`; the native backend opened the MP4 and reached `Opening` then `Playing`. UIA text showed `Playing`, enabled `Pause`, enabled `Stop`, and `More`.
+  - Pressed `M`; the playback More drawer opened and exposed `Playback Options`, current source `Manual Direct Stream`, Audio, Subtitles, and Info.
+  - Pressed `Escape`; More closed and playback remained `Playing`.
+  - No app-content mouse clicks were used.
+- Tooling note:
+  - Computer Use screenshot capture intermittently timed out on this UWP/native-surface window, so this run relied on accessibility text plus app diagnostics. UI Automation continued to report the text box as the focused element even when app logs and keyboard behavior proved the TV action target was active.
+- Follow-up:
+  - Re-run the real Emby Details version-selection route after a saved session or test credentials are restored.
+  - Keep using the manual direct-stream fixture as the deterministic local playback/OSD regression path while the Xbox is unavailable.

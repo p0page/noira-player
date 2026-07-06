@@ -65,6 +65,8 @@ namespace NextGenEmby.App.Views
         private double _nativeSurfaceAttachedWidth;
         private double _nativeSurfaceAttachedHeight;
         private PlaybackSessionRequest? _lastPlaybackSessionRequest;
+        private ManualDirectStreamInitialFocusTarget? _pendingManualDirectStreamFocusTarget;
+        private int _pendingManualDirectStreamFocusAttempts;
 
         public PlaybackPage()
         {
@@ -121,6 +123,7 @@ namespace NextGenEmby.App.Views
             AttachPlaybackKeyHandler();
             TrySignalNativeSurfaceReady();
             AttachNativeSurface();
+            ApplyPendingManualDirectStreamInitialFocus();
         }
 
         private void NativeSurface_OnSizeChanged(object sender, SizeChangedEventArgs e)
@@ -214,6 +217,8 @@ namespace NextGenEmby.App.Views
                 StreamUrlBox.IsEnabled = true;
                 UpdateControlStates();
                 ShowOverlay();
+                QueueManualDirectStreamInitialFocus(
+                    ManualDirectStreamInputPolicy.GetInitialFocusTarget(ManualStartButton.IsEnabled));
                 if (manualLaunchOptions != null &&
                     manualLaunchOptions.AutoStart &&
                     ManualStartButton.IsEnabled)
@@ -296,6 +301,51 @@ namespace NextGenEmby.App.Views
 
             e.Handled = true;
             await StartManualPlaybackAsync();
+        }
+
+        private void QueueManualDirectStreamInitialFocus(ManualDirectStreamInitialFocusTarget target)
+        {
+            _pendingManualDirectStreamFocusTarget = target;
+            _pendingManualDirectStreamFocusAttempts = 0;
+            _ = Dispatcher.RunAsync(CoreDispatcherPriority.Low, ApplyPendingManualDirectStreamInitialFocus);
+        }
+
+        private void ApplyPendingManualDirectStreamInitialFocus()
+        {
+            if (!_pendingManualDirectStreamFocusTarget.HasValue)
+            {
+                return;
+            }
+
+            var target = _pendingManualDirectStreamFocusTarget.Value;
+            var applied = FocusManualDirectStreamTarget(target);
+            PlaybackDiagnosticsLog.WriteLine(
+                "ManualDirectStream initial focus target=" + target +
+                " applied=" + applied +
+                " attempt=" + _pendingManualDirectStreamFocusAttempts);
+            if (applied)
+            {
+                _pendingManualDirectStreamFocusTarget = null;
+                return;
+            }
+
+            if (_pendingManualDirectStreamFocusAttempts >= 5)
+            {
+                _pendingManualDirectStreamFocusTarget = null;
+                return;
+            }
+
+            _pendingManualDirectStreamFocusAttempts++;
+            _ = Dispatcher.RunAsync(CoreDispatcherPriority.Low, ApplyPendingManualDirectStreamInitialFocus);
+        }
+
+        private bool FocusManualDirectStreamTarget(ManualDirectStreamInitialFocusTarget target)
+        {
+            Control control = target == ManualDirectStreamInitialFocusTarget.StartButton
+                ? ManualStartButton
+                : StreamUrlBox;
+            return control.Focus(FocusState.Keyboard) ||
+                control.Focus(FocusState.Programmatic);
         }
 
         private void ProgressSlider_OnValueChanged(object sender, RangeBaseValueChangedEventArgs e)

@@ -50,17 +50,30 @@ namespace NextGenEmby.App
             try
             {
                 var session = await _sessionStore.LoadAsync();
-                if (session != null)
+                var hasSession = session != null;
+#if DEBUG
+                var hasDevelopmentCommand = await HasDevelopmentCommandAsync();
+                var startupDecision = DevelopmentCommandStartupPolicy.Decide(
+                    hasSession,
+                    hasDevelopmentCommand);
+
+                if (startupDecision.ShouldNavigateHome)
+#else
+                if (hasSession)
+#endif
                 {
                     if (ContentFrame.CurrentSourcePageType == typeof(LoginPage))
                     {
                         NavigateHome(replaceHistory: true);
                     }
+                }
 
 #if DEBUG
+                if (startupDecision.ShouldRunCommand)
+                {
                     await TryRunDevelopmentCommandAsync();
-#endif
                 }
+#endif
             }
             catch
             {
@@ -677,6 +690,19 @@ namespace NextGenEmby.App
         }
 
 #if DEBUG
+        private static async Task<bool> HasDevelopmentCommandAsync()
+        {
+            try
+            {
+                var item = await ApplicationData.Current.LocalFolder.TryGetItemAsync(DevelopmentCommandFileName);
+                return item is StorageFile;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         private async Task TryRunDevelopmentCommandAsync()
         {
             try
