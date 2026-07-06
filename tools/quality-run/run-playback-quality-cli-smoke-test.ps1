@@ -679,6 +679,13 @@ try {
         throw 'Expected playback quality CLI evaluate-candidate suite action to accept candidate.'
     }
 
+    if ($null -eq $candidateEvaluation.activeGate -or
+        $candidateEvaluation.activeGate.name -ne 'suite' -or
+        $candidateEvaluation.activeGate.status -ne 'pass' -or
+        $candidateEvaluation.activeGate.action -ne 'accept-candidate') {
+        throw 'Expected evaluate-candidate active gate to point at passing suite decision.'
+    }
+
     if ($null -eq $candidateEvaluation.evidenceGates -or $candidateEvaluation.evidenceGates.Count -ne 5) {
         throw 'Expected playback quality CLI evaluate-candidate to emit five evidence gates.'
     }
@@ -761,6 +768,12 @@ try {
 
     if (-not ($invalidCandidateEvaluation.blockers -contains 'candidate-report-set.invalid')) {
         throw 'Expected invalid evaluate-candidate output to include candidate report set blocker.'
+    }
+
+    if ($null -eq $invalidCandidateEvaluation.activeGate -or
+        $invalidCandidateEvaluation.activeGate.name -ne 'candidate-report-set' -or
+        $invalidCandidateEvaluation.activeGate.status -ne 'blocked') {
+        throw 'Expected invalid evaluate-candidate active gate to point at blocked candidate report-set gate.'
     }
 
     if (Test-Path -LiteralPath $candidateEvaluationInvalidComparisonsDir) {
@@ -869,6 +882,12 @@ try {
 
     if (-not ($blockedAnalysisEvaluation.blockers -contains 'candidate-report-analysis.blocked')) {
         throw 'Expected blocked report-analysis evaluate-candidate output to include candidate report-analysis blocker.'
+    }
+
+    if ($null -eq $blockedAnalysisEvaluation.activeGate -or
+        $blockedAnalysisEvaluation.activeGate.name -ne 'candidate-report-analysis' -or
+        $blockedAnalysisEvaluation.activeGate.status -ne 'blocked') {
+        throw 'Expected blocked report-analysis active gate to point at blocked candidate report-analysis gate.'
     }
 
     if (Test-Path -LiteralPath $candidateEvaluationBlockedAnalysisComparisonsDir) {

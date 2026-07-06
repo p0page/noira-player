@@ -243,6 +243,7 @@ internal static class Program
             evaluation.EvidenceGates.Add(CreateSkippedSuiteGate());
         }
 
+        evaluation.ActiveGate = SelectActiveGate(evaluation.EvidenceGates);
         WriteJson(evaluation, options.OutputPath);
         return evaluation.Blockers.Count == 0 ? 0 : 2;
     }
@@ -1217,6 +1218,25 @@ internal static class Program
         return gate;
     }
 
+    private static CandidateEvaluationGate SelectActiveGate(
+        List<CandidateEvaluationGate> gates)
+    {
+        foreach (var gate in gates)
+        {
+            if (!string.Equals(gate.Status, "pass", StringComparison.OrdinalIgnoreCase))
+            {
+                return gate;
+            }
+        }
+
+        if (gates.Count == 0)
+        {
+            return new CandidateEvaluationGate();
+        }
+
+        return gates[gates.Count - 1];
+    }
+
     private static void CopyValues(List<string> source, List<string> target)
     {
         foreach (var value in source)
@@ -1330,6 +1350,7 @@ internal static class Program
         public string Risk { get; set; } = "high";
         public List<string> Reasons { get; } = new List<string>();
         public List<string> Blockers { get; } = new List<string>();
+        public CandidateEvaluationGate ActiveGate { get; set; } = new CandidateEvaluationGate();
         public List<CandidateEvaluationGate> EvidenceGates { get; } =
             new List<CandidateEvaluationGate>();
         public PlaybackQualityReferenceManifestValidation ManifestValidation { get; set; } =
