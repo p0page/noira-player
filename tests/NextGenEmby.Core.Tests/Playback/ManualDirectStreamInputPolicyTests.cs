@@ -44,4 +44,44 @@ public sealed class ManualDirectStreamInputPolicyTests
             ManualDirectStreamInitialFocusTarget.StreamUrlBox,
             ManualDirectStreamInputPolicy.GetInitialFocusTarget(canStart: false));
     }
+
+    [Fact]
+    public void ShouldKeepInitialFocusPending_Keeps_Pending_When_Page_Is_Not_Loaded()
+    {
+        Assert.True(ManualDirectStreamInputPolicy.ShouldKeepInitialFocusPending(
+            applied: false,
+            pageLoaded: false,
+            attempts: 5,
+            maxAttempts: 5));
+    }
+
+    [Fact]
+    public void ShouldKeepInitialFocusPending_Clears_Pending_When_Focus_Applies()
+    {
+        Assert.False(ManualDirectStreamInputPolicy.ShouldKeepInitialFocusPending(
+            applied: true,
+            pageLoaded: true,
+            attempts: 0,
+            maxAttempts: 5));
+    }
+
+    [Fact]
+    public void ShouldKeepInitialFocusPending_Retries_Loaded_Page_Until_Max_Attempts()
+    {
+        Assert.True(ManualDirectStreamInputPolicy.ShouldKeepInitialFocusPending(
+            applied: false,
+            pageLoaded: true,
+            attempts: 4,
+            maxAttempts: 5));
+    }
+
+    [Fact]
+    public void ShouldKeepInitialFocusPending_Clears_Loaded_Page_After_Max_Attempts()
+    {
+        Assert.False(ManualDirectStreamInputPolicy.ShouldKeepInitialFocusPending(
+            applied: false,
+            pageLoaded: true,
+            attempts: 5,
+            maxAttempts: 5));
+    }
 }

@@ -31,6 +31,8 @@ colors:
   chrome_pressed: "#F0212932"
   hero_gradient_start: "#F2050607"
   hero_gradient_end: "#66050607"
+  library_artwork_wash: "#A603060A"
+  section_artwork_wash: "#9C03060A"
   artwork_dim: "#22000000"
   hero_poster_dim: "#18000000"
   modal_scrim: "#CC050607"
@@ -189,7 +191,7 @@ These references inform the document shape, not the final aesthetic.
 - **Tertiary `#7FA7C7`:** informational state only, such as diagnostics and neutral playback capability badges.
 - **Danger `#FF6B6B`:** destructive or failed state only.
 
-Derived runtime colors such as `shell_rail`, `chrome_hover`, `chrome_pressed`, `modal_scrim`, playback drawer alpha, and disabled button states are also listed in the YAML block. They are not new palette moods; they are named alpha/state variants of the same canvas, surface, text, and hairline roles so skins can replace them deliberately.
+Derived runtime colors such as `shell_rail`, `chrome_hover`, `chrome_pressed`, `library_artwork_wash`, `section_artwork_wash`, `modal_scrim`, playback drawer alpha, and disabled button states are also listed in the YAML block. They are not new palette moods; they are named alpha/state variants of the same canvas, surface, text, and hairline roles so skins can replace them deliberately.
 
 ### Usage Rules
 
@@ -276,7 +278,7 @@ The current XAML token migration has started with:
 - app shell and Guide rail resources: `AppShellRailBrush`, `TvGuideCollapsedWidth`, and `TvGuideExpandedWidth`;
 - immersive viewer resources: `AppImmersiveScrimBrush`, `AppImmersiveControlBrush`, and `TvImmersivePageMargin`;
 - shared TV text, panel, diagnostics, icon button, nav button, list button, badge text, and settings checkbox styles;
-- shared overlay/action resources: `AppOnActionBrush`, `AppArtworkDimBrush`, `AppModalScrimBrush`, `AppPlaybackOverlayBrush`, `AppPlaybackDrawerBrush`, and the hero/details wash colors.
+- shared overlay/action resources: `AppOnActionBrush`, `AppArtworkDimBrush`, `AppModalScrimBrush`, `AppPlaybackOverlayBrush`, `AppPlaybackDrawerBrush`, and the hero/details/home artwork wash colors.
 - shared poster-grid resources for Library and Search cards, including card size, item margin, corner radius, scrim padding, card title/meta text, fallback initials, and empty-state typography.
 - playback canvas, OSD, and drawer resources reuse the DESIGN.md canvas/surface color families, with only opacity differing by layer.
 

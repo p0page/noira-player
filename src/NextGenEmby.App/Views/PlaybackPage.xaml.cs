@@ -67,6 +67,7 @@ namespace NextGenEmby.App.Views
         private PlaybackSessionRequest? _lastPlaybackSessionRequest;
         private ManualDirectStreamInitialFocusTarget? _pendingManualDirectStreamFocusTarget;
         private int _pendingManualDirectStreamFocusAttempts;
+        private bool _manualDirectStreamPageLoaded;
 
         public PlaybackPage()
         {
@@ -118,6 +119,7 @@ namespace NextGenEmby.App.Views
 
         private void PlaybackPage_OnLoaded(object sender, RoutedEventArgs e)
         {
+            _manualDirectStreamPageLoaded = true;
             PlaybackDiagnosticsLog.WriteLine(
                 "Playback page loaded surface=" + NativeSurface.ActualWidth + "x" + NativeSurface.ActualHeight);
             AttachPlaybackKeyHandler();
@@ -318,18 +320,24 @@ namespace NextGenEmby.App.Views
             }
 
             var target = _pendingManualDirectStreamFocusTarget.Value;
+            if (!_manualDirectStreamPageLoaded)
+            {
+                PlaybackDiagnosticsLog.WriteLine(
+                    "ManualDirectStream initial focus target=" + target +
+                    " deferred pageLoaded=False");
+                return;
+            }
+
             var applied = FocusManualDirectStreamTarget(target);
             PlaybackDiagnosticsLog.WriteLine(
                 "ManualDirectStream initial focus target=" + target +
                 " applied=" + applied +
                 " attempt=" + _pendingManualDirectStreamFocusAttempts);
-            if (applied)
-            {
-                _pendingManualDirectStreamFocusTarget = null;
-                return;
-            }
-
-            if (_pendingManualDirectStreamFocusAttempts >= 5)
+            if (!ManualDirectStreamInputPolicy.ShouldKeepInitialFocusPending(
+                applied,
+                _manualDirectStreamPageLoaded,
+                _pendingManualDirectStreamFocusAttempts,
+                maxAttempts: 5))
             {
                 _pendingManualDirectStreamFocusTarget = null;
                 return;

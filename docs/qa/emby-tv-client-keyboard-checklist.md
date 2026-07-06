@@ -1197,3 +1197,31 @@ Then continue design and implementation until the route passes.
 - Follow-up:
   - Re-run the real Emby Details version-selection route after a saved session or test credentials are restored.
   - Keep using the manual direct-stream fixture as the deterministic local playback/OSD regression path while the Xbox is unavailable.
+
+### 2026-07-06 - Home Dynamic Card Theme Tokens
+
+- App version: 0.1.0.150.
+- Scope: continue the Matte Cinema Fluent skinning migration by removing the remaining page-local raw color brushes from Home dynamic card code.
+- Visual tokenization:
+  - Added `library_artwork_wash` and `section_artwork_wash` to `docs/DESIGN.md`.
+  - Added matching `AppLibraryArtworkWashBrush` and `AppSectionArtworkWashBrush` resources to `App.xaml`.
+  - Home media library cards and server section cards now consume those wash brushes.
+  - Home poster fallback now consumes `AppRaisedSurfaceBrush`; poster artwork dimming consumes the existing `AppArtworkDimBrush`.
+- Automated verification:
+  - TDD red path confirmed `View_CodeBehind_Does_Not_Create_Page_Local_Raw_Color_Brushes` failed on four `HomePage.xaml.cs` raw color brushes before migration.
+  - Design token tests passed: 3 total.
+  - Manual direct-stream focus retry policy tests passed after a runtime smoke caught the pre-Loaded retry exhaustion bug.
+  - Core tests passed: 328 total.
+  - `git diff --check` passed; only line-ending normalization warnings were reported.
+  - App Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.150_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.150`.
+- Keyboard-only validation with Computer Use:
+  - Wrote the DEBUG `manual-playback` fixture with the Big Buck Bunny MP4 URL and `autoStart:false`.
+  - Launched installed 0.1.0.150 and waited for the route to enter Manual Direct Stream.
+  - Pressed `Enter`; UIA text showed `Playing`, enabled `Pause`, enabled `Stop`, and visible `More`.
+  - Pressed `M`; the More drawer exposed `Playback Options`, source `Manual Direct Stream`, Audio, Subtitles, and Info.
+  - Pressed `Escape`; More closed while playback continued.
+  - Native diagnostics showed `NativePlaybackEngine.OpenAsync success end`, `Native state Playing`, and increasing render/audio counters.
+  - No app-content mouse clicks were used.
+- Limitation:
+  - The saved Emby session is still absent on this machine, so this pass could not visually inspect real Home library cards after the token migration. The new design test prevents Home code-behind from reintroducing page-local raw color brushes, and a future saved-session run should capture Home screenshots with real server artwork.

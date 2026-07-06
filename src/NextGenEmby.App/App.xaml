@@ -37,6 +37,8 @@
             <Color x:Key="AppHeroGradientStartColor">#F2050607</Color>
             <Color x:Key="AppHeroGradientMidColor">#D9050607</Color>
             <Color x:Key="AppHeroGradientEndColor">#66050607</Color>
+            <Color x:Key="AppLibraryArtworkWashColor">#A603060A</Color>
+            <Color x:Key="AppSectionArtworkWashColor">#9C03060A</Color>
             <Color x:Key="AppArtworkDimColor">#22000000</Color>
             <Color x:Key="AppHeroPosterDimColor">#18000000</Color>
             <Color x:Key="AppDetailsBackdropWashColor">#D9101418</Color>
@@ -72,6 +74,8 @@
             <SolidColorBrush x:Key="AppOnActionBrush" Color="{StaticResource AppOnActionColor}" />
             <SolidColorBrush x:Key="AppOnSecondaryBrush" Color="{StaticResource AppOnSecondaryColor}" />
             <SolidColorBrush x:Key="AppHeroBackdropWashBrush" Color="{StaticResource AppHeroBackdropWashColor}" />
+            <SolidColorBrush x:Key="AppLibraryArtworkWashBrush" Color="{StaticResource AppLibraryArtworkWashColor}" />
+            <SolidColorBrush x:Key="AppSectionArtworkWashBrush" Color="{StaticResource AppSectionArtworkWashColor}" />
             <SolidColorBrush x:Key="AppArtworkDimBrush" Color="{StaticResource AppArtworkDimColor}" />
             <SolidColorBrush x:Key="AppHeroPosterDimBrush" Color="{StaticResource AppHeroPosterDimColor}" />
             <SolidColorBrush x:Key="AppDetailsBackdropWashBrush" Color="{StaticResource AppDetailsBackdropWashColor}" />

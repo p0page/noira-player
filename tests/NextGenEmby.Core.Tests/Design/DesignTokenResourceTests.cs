@@ -39,6 +39,8 @@ public sealed class DesignTokenResourceTests
         ("AppHeroGradientStartColor", "hero_gradient_start"),
         ("AppHeroGradientMidColor", "scrim"),
         ("AppHeroGradientEndColor", "hero_gradient_end"),
+        ("AppLibraryArtworkWashColor", "library_artwork_wash"),
+        ("AppSectionArtworkWashColor", "section_artwork_wash"),
         ("AppArtworkDimColor", "artwork_dim"),
         ("AppHeroPosterDimColor", "hero_poster_dim"),
         ("AppDetailsBackdropWashColor", "surface_overlay"),
@@ -84,6 +86,31 @@ public sealed class DesignTokenResourceTests
                 $"App.xaml is missing {mapping.AppKey} for colors.{mapping.DesignKey}.");
             Assert.Equal(designColors[mapping.DesignKey], NormalizeColor(appColors[mapping.AppKey]));
         }
+    }
+
+    [Fact]
+    public void View_CodeBehind_Does_Not_Create_Page_Local_Raw_Color_Brushes()
+    {
+        var root = FindRepositoryRoot();
+        var viewsPath = Path.Combine(root, "src", "NextGenEmby.App", "Views");
+        var offenders = Directory
+            .EnumerateFiles(viewsPath, "*.xaml.cs", SearchOption.AllDirectories)
+            .SelectMany(path => File.ReadLines(path)
+                .Select((line, index) => new
+                {
+                    Path = path,
+                    LineNumber = index + 1,
+                    Line = line
+                }))
+            .Where(entry => entry.Line.Contains("new SolidColorBrush(Color.FromArgb", StringComparison.Ordinal))
+            .Select(entry => $"{Path.GetRelativePath(root, entry.Path)}:{entry.LineNumber}: {entry.Line.Trim()}")
+            .ToArray();
+
+        Assert.True(
+            offenders.Length == 0,
+            "View code-behind should consume App.xaml brushes instead of page-local raw colors:" +
+            Environment.NewLine +
+            string.Join(Environment.NewLine, offenders));
     }
 
     private static string FindRepositoryRoot()

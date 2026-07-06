@@ -8,7 +8,6 @@ using NextGenEmby.App.Services;
 using NextGenEmby.App.Storage;
 using NextGenEmby.Core.Emby;
 using NextGenEmby.Core.Input;
-using Windows.UI;
 using Windows.UI.Core;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
@@ -854,7 +853,7 @@ namespace NextGenEmby.App.Views
                 });
                 root.Children.Add(new Border
                 {
-                    Background = new SolidColorBrush(Color.FromArgb(166, 3, 6, 10)),
+                    Background = (Brush)Application.Current.Resources["AppLibraryArtworkWashBrush"],
                     CornerRadius = new CornerRadius(8)
                 });
             }
@@ -945,7 +944,7 @@ namespace NextGenEmby.App.Views
                 });
                 root.Children.Add(new Border
                 {
-                    Background = new SolidColorBrush(Color.FromArgb(156, 3, 6, 10)),
+                    Background = (Brush)Application.Current.Resources["AppSectionArtworkWashBrush"],
                     CornerRadius = new CornerRadius(8)
                 });
             }
@@ -1153,7 +1152,7 @@ namespace NextGenEmby.App.Views
 
             var root = new Grid
             {
-                Background = new SolidColorBrush(Color.FromArgb(255, 18, 29, 42))
+                Background = (Brush)Application.Current.Resources["AppRaisedSurfaceBrush"]
             };
 
             var posterArtwork = EmbyArtworkPolicy.SelectPosterArtwork(item, 420);
@@ -1178,7 +1177,7 @@ namespace NextGenEmby.App.Views
             });
             root.Children.Add(new Border
             {
-                Background = new SolidColorBrush(Color.FromArgb(32, 0, 0, 0))
+                Background = (Brush)Application.Current.Resources["AppArtworkDimBrush"]
             });
 
             var overlay = new Border

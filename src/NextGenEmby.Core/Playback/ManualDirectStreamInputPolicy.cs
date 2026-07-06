@@ -25,5 +25,24 @@ namespace NextGenEmby.Core.Playback
                 ? ManualDirectStreamInitialFocusTarget.StartButton
                 : ManualDirectStreamInitialFocusTarget.StreamUrlBox;
         }
+
+        public static bool ShouldKeepInitialFocusPending(
+            bool applied,
+            bool pageLoaded,
+            int attempts,
+            int maxAttempts)
+        {
+            if (applied)
+            {
+                return false;
+            }
+
+            if (!pageLoaded)
+            {
+                return true;
+            }
+
+            return attempts < maxAttempts;
+        }
     }
 }
