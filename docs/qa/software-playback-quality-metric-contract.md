@@ -182,7 +182,7 @@ For `compare-suite`, each generated comparison receives `caseId = <relative repo
 
 ## 候选评测门禁
 
-`evaluate-candidate` 是模型优化播放核心时优先使用的高层 CLI 门禁。它把 manifest 校验、baseline 报告集校验、candidate 报告集校验和 suite 比较合并成一个 JSON 输出，避免模型在证据不完整时误判“候选版本变好或变坏”。
+`evaluate-candidate` 是模型优化播放核心时优先使用的高层 CLI 门禁。它把 manifest 校验、baseline 报告集校验、candidate 报告集校验、candidate report-analysis 校验和 suite 比较合并成一个 JSON 输出，避免模型在证据不完整或候选报告自身不可优化时误判“候选版本变好或变坏”。
 
 ```powershell
 dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- evaluate-candidate --manifest reference-manifest.json --baseline-dir baseline-reports --candidate-dir candidate-reports --match-by run-id --comparisons-dir comparisons --output candidate-evaluation.json
@@ -193,14 +193,15 @@ dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQ
 - `manifestValidation`：reference manifest 是否可调度，包含 case、tier、purpose 和 expected source metadata 校验。
 - `baselineReportSetValidation`：baseline 是否完整覆盖 manifest，并且实际源元数据是否匹配预期。
 - `candidateReportSetValidation`：candidate 是否完整覆盖 manifest，并且实际源元数据是否匹配预期。
-- `suite`：只有三类校验都有效时才产生有效 before/after 比较结果。
-- `evidenceGates`：模型优先读取的门禁摘要，按 `manifest`、`baseline-report-set`、`candidate-report-set`、`suite` 顺序给出 `status`、`action`、`blockers`、`signals` 和 `caseIds`。
+- `suite`：只有 manifest、report-set 和 candidate report-analysis 都有效时才产生有效 before/after 比较结果。
+- `evidenceGates`：模型优先读取的门禁摘要，按 `manifest`、`baseline-report-set`、`candidate-report-set`、`candidate-report-analysis`、`suite` 顺序给出 `status`、`action`、`blockers`、`signals` 和 `caseIds`。
 - `action`、`risk`、`reasons`、`blockers`：给模型直接使用的下一步决策摘要。
 
 自动化模型循环必须按以下规则消费结果：
 
 - 先读取 `evidenceGates`。第一个 `status = blocked` 或 `status = skipped` 的 gate 是当前循环应处理的入口。
 - 如果 `blockers` 包含 manifest 或 report-set 问题，先修复证据采集、源选择、报告 runId 或 source metadata，不要修改播放核心。
+- 如果 `candidate-report-analysis` 被阻断，优先读取该 gate 的 `blockers`、`signals` 和 `caseIds`。这些字段来自 candidate envelope 的 `modelAnalysis.optimizationGate`，表示报告自身还不能作为播放核心优化依据，例如 source mismatch、缺失证据或样本不足。此时 suite 会被跳过。
 - 只有当 `action = accept-candidate` 且 `risk = low` 时，候选播放核心改动才可以被自动保留。
 - `review-unmatched-signals`、`collect-comparable-evidence`、`change-optimization-strategy` 等动作都不是通过信号，模型应继续采集或缩小改动范围。
 - `--comparisons-dir` 产出的单 case comparison 是定位问题样本的入口；模型应优先读取对应 case 的 comparison，再决定下一次修改。

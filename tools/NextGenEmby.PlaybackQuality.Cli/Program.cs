@@ -178,7 +178,8 @@ internal static class Program
         var options = ParseEvaluateCandidateOptions(args);
         var manifest = ReadJson<PlaybackQualityReferenceManifest>(options.ManifestPath);
         var baselineReports = ReadPlaybackQualityReports(options.BaselineDirectory);
-        var candidateReports = ReadPlaybackQualityReports(options.CandidateDirectory);
+        var candidateEnvelopes = ReadPlaybackQualityReportEnvelopes(options.CandidateDirectory);
+        var candidateReports = ExtractReports(candidateEnvelopes);
         var evaluation = new CandidateEvaluationOutput
         {
             ManifestValidation = PlaybackQualityReferenceManifestValidator.Validate(manifest),
@@ -205,6 +206,13 @@ internal static class Program
             AddUnique(evaluation.Blockers, "candidate-report-set.invalid");
         }
 
+        var candidateReportAnalysisGate = CreateCandidateReportAnalysisGate(candidateEnvelopes);
+        if (candidateReportAnalysisGate.Status == "blocked")
+        {
+            AddUnique(evaluation.Blockers, "candidate-report-analysis.blocked");
+            CopyValues(candidateReportAnalysisGate.Blockers, evaluation.Blockers);
+        }
+
         evaluation.EvidenceGates.Add(CreateManifestGate(evaluation.ManifestValidation));
         evaluation.EvidenceGates.Add(CreateReportSetGate(
             "baseline-report-set",
@@ -214,6 +222,7 @@ internal static class Program
             "candidate-report-set",
             "candidate-report-set.invalid",
             evaluation.CandidateReportSetValidation));
+        evaluation.EvidenceGates.Add(candidateReportAnalysisGate);
 
         if (evaluation.Blockers.Count == 0)
         {
@@ -230,7 +239,7 @@ internal static class Program
             evaluation.Risk = "high";
             AddUnique(
                 evaluation.Reasons,
-                "candidate evaluation has invalid manifest or report-set evidence");
+                "candidate evaluation has blocked evidence gates");
             evaluation.EvidenceGates.Add(CreateSkippedSuiteGate());
         }
 
@@ -745,13 +754,31 @@ internal static class Program
 
     private static List<PlaybackQualityReport> ReadPlaybackQualityReports(string directory)
     {
+        return ExtractReports(ReadPlaybackQualityReportEnvelopes(directory));
+    }
+
+    private static List<PlaybackQualityReport> ExtractReports(
+        List<PlaybackQualityReportEnvelope> envelopes)
+    {
         var reports = new List<PlaybackQualityReport>();
-        foreach (var path in EnumerateJsonFilesByRelativePath(directory).Values)
+        foreach (var envelope in envelopes)
         {
-            reports.Add(ReadPlaybackQualityReport(path));
+            reports.Add(envelope.Report);
         }
 
         return reports;
+    }
+
+    private static List<PlaybackQualityReportEnvelope> ReadPlaybackQualityReportEnvelopes(
+        string directory)
+    {
+        var envelopes = new List<PlaybackQualityReportEnvelope>();
+        foreach (var item in EnumerateJsonFilesByRelativePath(directory))
+        {
+            envelopes.Add(ReadPlaybackQualityReportEnvelope(item.Value, item.Key));
+        }
+
+        return envelopes;
     }
 
     private static string ReadValue(string[] args, ref int index, string optionName)
@@ -778,6 +805,13 @@ internal static class Program
 
     private static PlaybackQualityReport ReadPlaybackQualityReport(string path)
     {
+        return ReadPlaybackQualityReportEnvelope(path, Path.GetFileName(path)).Report;
+    }
+
+    private static PlaybackQualityReportEnvelope ReadPlaybackQualityReportEnvelope(
+        string path,
+        string relativePath)
+    {
         if (!File.Exists(path))
         {
             throw new FileNotFoundException("File not found: " + path, path);
@@ -790,14 +824,27 @@ internal static class Program
                 TryGetPropertyIgnoreCase(document.RootElement, "report", out var reportElement) &&
                 reportElement.ValueKind == JsonValueKind.Object)
             {
-                return reportElement.Deserialize<PlaybackQualityReport>(JsonOptions) ??
+                var report = reportElement.Deserialize<PlaybackQualityReport>(JsonOptions) ??
                     throw new InvalidOperationException(
                         "Could not parse report property in JSON file: " + path);
+                PlaybackQualityModelAnalysis? modelAnalysis = null;
+                if (TryGetPropertyIgnoreCase(
+                    document.RootElement,
+                    "modelAnalysis",
+                    out var modelAnalysisElement) &&
+                    modelAnalysisElement.ValueKind == JsonValueKind.Object)
+                {
+                    modelAnalysis =
+                        modelAnalysisElement.Deserialize<PlaybackQualityModelAnalysis>(JsonOptions);
+                }
+
+                return new PlaybackQualityReportEnvelope(relativePath, report, modelAnalysis);
             }
         }
 
-        return JsonSerializer.Deserialize<PlaybackQualityReport>(json, JsonOptions) ??
+        var rawReport = JsonSerializer.Deserialize<PlaybackQualityReport>(json, JsonOptions) ??
             throw new InvalidOperationException("Could not parse JSON file: " + path);
+        return new PlaybackQualityReportEnvelope(relativePath, rawReport, null);
     }
 
     private static bool TryGetPropertyIgnoreCase(
@@ -1054,6 +1101,88 @@ internal static class Program
         return gate;
     }
 
+    private static CandidateEvaluationGate CreateCandidateReportAnalysisGate(
+        List<PlaybackQualityReportEnvelope> candidateEnvelopes)
+    {
+        var gate = new CandidateEvaluationGate
+        {
+            Name = "candidate-report-analysis",
+            Status = "pass",
+            Action = "continue",
+            Summary = "candidate report model analysis has no optimization blockers"
+        };
+
+        var analysisCount = 0;
+        foreach (var envelope in candidateEnvelopes)
+        {
+            if (envelope.ModelAnalysis == null)
+            {
+                continue;
+            }
+
+            analysisCount++;
+            var optimizationGate = envelope.ModelAnalysis.OptimizationGate;
+            if (!IsOptimizationGateBlocked(optimizationGate))
+            {
+                continue;
+            }
+
+            gate.Status = "blocked";
+            gate.Action = "fix-candidate-report-analysis";
+            gate.Summary = "candidate report model analysis has optimization blockers";
+            foreach (var blocker in optimizationGate.Blockers)
+            {
+                AddUnique(gate.Blockers, blocker);
+            }
+
+            foreach (var signal in optimizationGate.BlockerSignals)
+            {
+                AddUnique(gate.Signals, signal);
+            }
+
+            AddUnique(gate.CaseIds, GetReportEnvelopeCaseId(envelope));
+        }
+
+        if (analysisCount == 0)
+        {
+            gate.Summary =
+                "candidate report model analysis is unavailable; continuing with report-set and suite evidence";
+        }
+
+        return gate;
+    }
+
+    private static bool IsOptimizationGateBlocked(
+        PlaybackQualityOptimizationGate optimizationGate)
+    {
+        if (string.Equals(optimizationGate.Status, "blocked", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return !optimizationGate.CanOptimizePlaybackCore &&
+            optimizationGate.Blockers.Count > 0 &&
+            !string.Equals(
+                optimizationGate.Status,
+                "not-needed",
+                StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string GetReportEnvelopeCaseId(PlaybackQualityReportEnvelope envelope)
+    {
+        if (!string.IsNullOrWhiteSpace(envelope.ModelAnalysis?.RunId))
+        {
+            return envelope.ModelAnalysis.RunId;
+        }
+
+        if (!string.IsNullOrWhiteSpace(envelope.Report.RunId))
+        {
+            return envelope.Report.RunId;
+        }
+
+        return envelope.RelativePath;
+    }
+
     private static CandidateEvaluationGate CreateSuiteGate(
         PlaybackQualityComparisonSuite suite)
     {
@@ -1211,6 +1340,23 @@ internal static class Program
             new PlaybackQualityReferenceReportSetValidation();
         public PlaybackQualityComparisonSuite Suite { get; set; } =
             new PlaybackQualityComparisonSuite();
+    }
+
+    private sealed class PlaybackQualityReportEnvelope
+    {
+        public PlaybackQualityReportEnvelope(
+            string relativePath,
+            PlaybackQualityReport report,
+            PlaybackQualityModelAnalysis? modelAnalysis)
+        {
+            RelativePath = relativePath;
+            Report = report;
+            ModelAnalysis = modelAnalysis;
+        }
+
+        public string RelativePath { get; }
+        public PlaybackQualityReport Report { get; }
+        public PlaybackQualityModelAnalysis? ModelAnalysis { get; }
     }
 
     private sealed class CandidateEvaluationGate

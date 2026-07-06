@@ -26,6 +26,9 @@ try {
     $candidateEvaluationInvalidCandidateDir = Join-Path $tempRoot 'candidate-evaluation-invalid-candidate'
     $candidateEvaluationInvalidPath = Join-Path $tempRoot 'candidate-evaluation-invalid.json'
     $candidateEvaluationInvalidComparisonsDir = Join-Path $tempRoot 'candidate-evaluation-invalid-comparisons'
+    $candidateEvaluationBlockedAnalysisCandidateDir = Join-Path $tempRoot 'candidate-evaluation-blocked-analysis-candidate'
+    $candidateEvaluationBlockedAnalysisPath = Join-Path $tempRoot 'candidate-evaluation-blocked-analysis.json'
+    $candidateEvaluationBlockedAnalysisComparisonsDir = Join-Path $tempRoot 'candidate-evaluation-blocked-analysis-comparisons'
     $stallBaselineDir = Join-Path $tempRoot 'stall-baseline-suite'
     $stallCandidateDir = Join-Path $tempRoot 'stall-candidate-suite'
     $previousComparisonsDir = Join-Path $tempRoot 'previous-comparisons'
@@ -676,8 +679,8 @@ try {
         throw 'Expected playback quality CLI evaluate-candidate suite action to accept candidate.'
     }
 
-    if ($null -eq $candidateEvaluation.evidenceGates -or $candidateEvaluation.evidenceGates.Count -ne 4) {
-        throw 'Expected playback quality CLI evaluate-candidate to emit four evidence gates.'
+    if ($null -eq $candidateEvaluation.evidenceGates -or $candidateEvaluation.evidenceGates.Count -ne 5) {
+        throw 'Expected playback quality CLI evaluate-candidate to emit five evidence gates.'
     }
 
     if (-not ($candidateEvaluation.evidenceGates | Where-Object { $_.name -eq 'manifest' -and $_.status -eq 'pass' })) {
@@ -690,6 +693,10 @@ try {
 
     if (-not ($candidateEvaluation.evidenceGates | Where-Object { $_.name -eq 'candidate-report-set' -and $_.status -eq 'pass' })) {
         throw 'Expected evaluate-candidate candidate report-set evidence gate to pass.'
+    }
+
+    if (-not ($candidateEvaluation.evidenceGates | Where-Object { $_.name -eq 'candidate-report-analysis' -and $_.status -eq 'pass' })) {
+        throw 'Expected evaluate-candidate candidate report-analysis evidence gate to pass.'
     }
 
     if (-not ($candidateEvaluation.evidenceGates | Where-Object { $_.name -eq 'suite' -and $_.status -eq 'pass' -and $_.action -eq 'accept-candidate' })) {
@@ -781,6 +788,114 @@ try {
 
     if (-not ($invalidCandidateEvaluation.evidenceGates | Where-Object { $_.name -eq 'suite' -and $_.status -eq 'skipped' })) {
         throw 'Expected invalid evaluate-candidate suite evidence gate to be skipped.'
+    }
+
+    New-Item -ItemType Directory -Path $candidateEvaluationBlockedAnalysisCandidateDir | Out-Null
+    @'
+{
+  "report": {
+    "runId": "item-1/source-1",
+    "metricVersion": "software-quality-v1",
+    "source": {
+      "itemId": "item-1",
+      "mediaSourceId": "source-1",
+      "codec": "hevc",
+      "width": 3840,
+      "height": 2160,
+      "frameRate": 23.976,
+      "hdrKind": "Sdr"
+    },
+    "checks": [
+      {
+        "name": "MaxFrameGapMs",
+        "signal": "timing.maxFrameGapMs",
+        "status": "fail",
+        "failureArea": "frame-pacing",
+        "expected": "105.000",
+        "actual": "120.000"
+      }
+    ]
+  },
+  "modelAnalysis": {
+    "runId": "item-1/source-1",
+    "result": "fail",
+    "optimizationGate": {
+      "status": "blocked",
+      "canOptimizePlaybackCore": false,
+      "blockers": [
+        "source.mismatch"
+      ],
+      "blockerSignals": [
+        "source.hdrKind"
+      ],
+      "targetFailureAreas": []
+    }
+  }
+}
+'@ | Set-Content -LiteralPath (Join-Path $candidateEvaluationBlockedAnalysisCandidateDir 'candidate-blocked-analysis.json') -Encoding UTF8
+
+    Push-Location $repoRoot
+    try {
+        dotnet run `
+            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
+            --no-build `
+            -- evaluate-candidate `
+            --manifest $candidateEvaluationManifestPath `
+            --baseline-dir $runIdBaselineDir `
+            --candidate-dir $candidateEvaluationBlockedAnalysisCandidateDir `
+            --match-by run-id `
+            --comparisons-dir $candidateEvaluationBlockedAnalysisComparisonsDir `
+            --output $candidateEvaluationBlockedAnalysisPath
+        if ($LASTEXITCODE -eq 0) {
+            throw 'Expected playback quality CLI evaluate-candidate to reject blocked candidate report analysis.'
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    $blockedAnalysisEvaluation = Get-Content -Raw -LiteralPath $candidateEvaluationBlockedAnalysisPath | ConvertFrom-Json
+    if ($blockedAnalysisEvaluation.action -ne 'collect-comparable-evidence') {
+        throw 'Expected blocked report-analysis evaluate-candidate output to collect comparable evidence.'
+    }
+
+    if (-not ($blockedAnalysisEvaluation.reasons -contains 'candidate evaluation has blocked evidence gates')) {
+        throw 'Expected blocked report-analysis evaluate-candidate output to explain blocked evidence gates.'
+    }
+
+    if ($blockedAnalysisEvaluation.reasons -contains 'candidate evaluation has invalid manifest or report-set evidence') {
+        throw 'Expected blocked report-analysis evaluate-candidate output not to blame manifest or report-set evidence.'
+    }
+
+    if (-not ($blockedAnalysisEvaluation.blockers -contains 'candidate-report-analysis.blocked')) {
+        throw 'Expected blocked report-analysis evaluate-candidate output to include candidate report-analysis blocker.'
+    }
+
+    if (Test-Path -LiteralPath $candidateEvaluationBlockedAnalysisComparisonsDir) {
+        throw 'Expected blocked report-analysis evidence to skip comparison output.'
+    }
+
+    $blockedAnalysisGate = $blockedAnalysisEvaluation.evidenceGates |
+        Where-Object { $_.name -eq 'candidate-report-analysis' } |
+        Select-Object -First 1
+    if ($null -eq $blockedAnalysisGate -or $blockedAnalysisGate.status -ne 'blocked') {
+        throw 'Expected candidate report-analysis gate to be blocked.'
+    }
+
+    if (-not ($blockedAnalysisGate.blockers -contains 'source.mismatch')) {
+        throw 'Expected candidate report-analysis gate to include model analysis blocker.'
+    }
+
+    if (-not ($blockedAnalysisGate.signals -contains 'source.hdrKind')) {
+        throw 'Expected candidate report-analysis gate to include model analysis blocker signal.'
+    }
+
+    if (-not ($blockedAnalysisGate.caseIds -contains 'item-1/source-1')) {
+        throw 'Expected candidate report-analysis gate to include affected case id.'
+    }
+
+    if (-not ($blockedAnalysisEvaluation.evidenceGates | Where-Object { $_.name -eq 'suite' -and $_.status -eq 'skipped' })) {
+        throw 'Expected blocked report-analysis evaluate-candidate suite evidence gate to be skipped.'
     }
 
     New-Item -ItemType Directory -Path $stallBaselineDir | Out-Null
