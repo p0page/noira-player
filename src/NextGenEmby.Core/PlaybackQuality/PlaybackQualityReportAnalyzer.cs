@@ -10,6 +10,8 @@ namespace NextGenEmby.Core.PlaybackQuality
         public string SuggestedNextAction { get; set; } = "";
         public PlaybackQualitySourceAssessment Source { get; set; } = new PlaybackQualitySourceAssessment();
         public PlaybackQualityColorPipelineAssessment ColorPipeline { get; set; } = new PlaybackQualityColorPipelineAssessment();
+        public PlaybackQualityBufferingAssessment Buffering { get; set; } = new PlaybackQualityBufferingAssessment();
+        public PlaybackQualityAvSyncAssessment AvSync { get; set; } = new PlaybackQualityAvSyncAssessment();
         public PlaybackQualitySampleAssessment Sample { get; set; } = new PlaybackQualitySampleAssessment();
         public PlaybackQualityCadenceAssessment Cadence { get; set; } = new PlaybackQualityCadenceAssessment();
         public PlaybackQualityOptimizationGate OptimizationGate { get; set; } = new PlaybackQualityOptimizationGate();
@@ -60,6 +62,32 @@ namespace NextGenEmby.Core.PlaybackQuality
         public bool ForceSdrOutput { get; set; }
         public List<string> Signals { get; } = new List<string>();
         public List<string> MismatchedSignals { get; } = new List<string>();
+    }
+
+    public sealed class PlaybackQualityBufferingAssessment
+    {
+        public string Status { get; set; } = "unknown";
+        public string Reason { get; set; } = "";
+        public ulong SubmittedAudioFrames { get; set; }
+        public ulong QueuedAudioBuffers { get; set; }
+        public ulong VideoStarvedPasses { get; set; }
+        public ulong AudioStarvedPasses { get; set; }
+        public List<string> Signals { get; } = new List<string>();
+        public List<string> FailedSignals { get; } = new List<string>();
+    }
+
+    public sealed class PlaybackQualityAvSyncAssessment
+    {
+        public string Status { get; set; } = "unknown";
+        public string Reason { get; set; } = "";
+        public long AudioClockTicks { get; set; }
+        public long VideoPositionTicks { get; set; }
+        public double AudioVideoDriftMsP50 { get; set; }
+        public double AudioVideoDriftMsP95 { get; set; }
+        public double AudioVideoDriftMsP99 { get; set; }
+        public double AudioVideoDriftMsMax { get; set; }
+        public List<string> Signals { get; } = new List<string>();
+        public List<string> FailedSignals { get; } = new List<string>();
     }
 
     public sealed class PlaybackQualityInvestigationHint
@@ -166,6 +194,8 @@ namespace NextGenEmby.Core.PlaybackQuality
             analysis.Sample = AssessSample(report);
             analysis.Source = AssessSource(report);
             analysis.ColorPipeline = AssessColorPipeline(report);
+            analysis.Buffering = AssessBuffering(report);
+            analysis.AvSync = AssessAvSync(report);
             analysis.Cadence = AssessCadence(report);
             AddDerivedEvidence(analysis, report);
             AddMissingEvidence(analysis, report);
@@ -182,6 +212,130 @@ namespace NextGenEmby.Core.PlaybackQuality
             }
 
             return analysis;
+        }
+
+        private static PlaybackQualityBufferingAssessment AssessBuffering(
+            PlaybackQualityReport report)
+        {
+            var buffering = new PlaybackQualityBufferingAssessment
+            {
+                SubmittedAudioFrames = report.Buffers.SubmittedAudioFrames,
+                QueuedAudioBuffers = report.Buffers.QueuedAudioBuffers,
+                VideoStarvedPasses = report.Buffers.VideoStarvedPasses,
+                AudioStarvedPasses = report.Buffers.AudioStarvedPasses
+            };
+
+            var hasBufferEvidence =
+                buffering.SubmittedAudioFrames > 0 ||
+                buffering.QueuedAudioBuffers > 0 ||
+                buffering.VideoStarvedPasses > 0 ||
+                buffering.AudioStarvedPasses > 0;
+            if (hasBufferEvidence)
+            {
+                AddUnique(buffering.Signals, "buffers.submittedAudioFrames");
+                AddUnique(buffering.Signals, "buffers.queuedAudioBuffers");
+                AddUnique(buffering.Signals, "buffers.videoStarvedPasses");
+                AddUnique(buffering.Signals, "buffers.audioStarvedPasses");
+            }
+
+            foreach (var check in report.Checks)
+            {
+                if (check.Status == "fail" &&
+                    check.FailureArea == "buffering" &&
+                    !string.IsNullOrWhiteSpace(check.Signal))
+                {
+                    AddUnique(buffering.FailedSignals, check.Signal);
+                    AddUnique(buffering.Signals, check.Signal);
+                }
+            }
+
+            if (buffering.FailedSignals.Count > 0)
+            {
+                buffering.Status = "starved";
+                buffering.Reason = "Playback supply starvation failed expected buffering thresholds.";
+                return buffering;
+            }
+
+            if (!hasBufferEvidence)
+            {
+                buffering.Status = "missing-evidence";
+                buffering.Reason = "Buffering and starvation telemetry is missing.";
+                return buffering;
+            }
+
+            if (buffering.VideoStarvedPasses > 0 || buffering.AudioStarvedPasses > 0)
+            {
+                buffering.Status = "observed-starvation";
+                buffering.Reason = "Playback starvation was observed but no buffering threshold failed.";
+                return buffering;
+            }
+
+            buffering.Status = "stable";
+            buffering.Reason = "Buffering telemetry is available and no starvation failures were reported.";
+            return buffering;
+        }
+
+        private static PlaybackQualityAvSyncAssessment AssessAvSync(
+            PlaybackQualityReport report)
+        {
+            var sync = new PlaybackQualityAvSyncAssessment
+            {
+                AudioClockTicks = report.Sync.AudioClockTicks,
+                VideoPositionTicks = report.Sync.VideoPositionTicks,
+                AudioVideoDriftMsP50 = report.Sync.AudioVideoDriftMsP50,
+                AudioVideoDriftMsP95 = report.Sync.AudioVideoDriftMsP95,
+                AudioVideoDriftMsP99 = report.Sync.AudioVideoDriftMsP99,
+                AudioVideoDriftMsMax = report.Sync.AudioVideoDriftMsMax
+            };
+
+            var hasClockEvidence = sync.AudioClockTicks != 0 || sync.VideoPositionTicks != 0;
+            var hasDriftEvidence =
+                sync.AudioVideoDriftMsP50 > 0 ||
+                sync.AudioVideoDriftMsP95 > 0 ||
+                sync.AudioVideoDriftMsP99 > 0 ||
+                sync.AudioVideoDriftMsMax > 0;
+            if (hasClockEvidence)
+            {
+                AddUnique(sync.Signals, "sync.audioClockTicks");
+                AddUnique(sync.Signals, "sync.videoPositionTicks");
+            }
+
+            if (hasDriftEvidence)
+            {
+                AddUnique(sync.Signals, "sync.audioVideoDriftMsP50");
+                AddUnique(sync.Signals, "sync.audioVideoDriftMsP95");
+                AddUnique(sync.Signals, "sync.audioVideoDriftMsP99");
+                AddUnique(sync.Signals, "sync.audioVideoDriftMsMax");
+            }
+
+            foreach (var check in report.Checks)
+            {
+                if (check.Status == "fail" &&
+                    check.FailureArea == "av-sync" &&
+                    !string.IsNullOrWhiteSpace(check.Signal))
+                {
+                    AddUnique(sync.FailedSignals, check.Signal);
+                    AddUnique(sync.Signals, check.Signal);
+                }
+            }
+
+            if (sync.FailedSignals.Count > 0)
+            {
+                sync.Status = "drift";
+                sync.Reason = "A/V sync drift failed expected thresholds.";
+                return sync;
+            }
+
+            if (!hasClockEvidence && !hasDriftEvidence)
+            {
+                sync.Status = "missing-evidence";
+                sync.Reason = "A/V sync telemetry is missing.";
+                return sync;
+            }
+
+            sync.Status = "synced";
+            sync.Reason = "A/V sync telemetry is available and no sync threshold failed.";
+            return sync;
         }
 
         private static PlaybackQualityColorPipelineAssessment AssessColorPipeline(

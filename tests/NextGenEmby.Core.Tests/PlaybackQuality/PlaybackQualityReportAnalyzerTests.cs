@@ -499,6 +499,131 @@ public sealed class PlaybackQualityReportAnalyzerTests
     }
 
     [Fact]
+    public void Analyze_Summarizes_Buffering_For_Model()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "buffering-summary",
+            Result = "pass",
+            Timing = new PlaybackQualityTiming
+            {
+                RenderedVideoFrames = 240
+            },
+            Buffers = new PlaybackQualityBuffers
+            {
+                SubmittedAudioFrames = 2048,
+                QueuedAudioBuffers = 4,
+                VideoStarvedPasses = 0,
+                AudioStarvedPasses = 0
+            }
+        };
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Equal("stable", analysis.Buffering.Status);
+        Assert.Equal(2048UL, analysis.Buffering.SubmittedAudioFrames);
+        Assert.Equal(4UL, analysis.Buffering.QueuedAudioBuffers);
+        Assert.Equal(0UL, analysis.Buffering.VideoStarvedPasses);
+        Assert.Equal(0UL, analysis.Buffering.AudioStarvedPasses);
+        Assert.Contains("buffers.submittedAudioFrames", analysis.Buffering.Signals);
+        Assert.Contains("buffers.queuedAudioBuffers", analysis.Buffering.Signals);
+        Assert.Contains("buffers.videoStarvedPasses", analysis.Buffering.Signals);
+        Assert.Contains("buffers.audioStarvedPasses", analysis.Buffering.Signals);
+    }
+
+    [Fact]
+    public void Analyze_Marks_Buffering_Starved_From_Buffering_Checks()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "buffering-starved",
+            Result = "fail",
+            Buffers = new PlaybackQualityBuffers
+            {
+                SubmittedAudioFrames = 512,
+                QueuedAudioBuffers = 0,
+                VideoStarvedPasses = 7,
+                AudioStarvedPasses = 3
+            }
+        };
+        report.Checks.Add(new PlaybackQualityCheck
+        {
+            Name = "VideoStarvedPasses",
+            Status = "fail",
+            FailureArea = "buffering",
+            Signal = "buffers.videoStarvedPasses",
+            Expected = "0",
+            Actual = "7"
+        });
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Equal("starved", analysis.Buffering.Status);
+        Assert.Contains("buffers.videoStarvedPasses", analysis.Buffering.FailedSignals);
+        Assert.Contains("buffers.videoStarvedPasses", analysis.Buffering.Signals);
+        Assert.Contains("Playback supply starvation failed expected buffering thresholds.", analysis.Buffering.Reason);
+    }
+
+    [Fact]
+    public void Analyze_Summarizes_AvSync_For_Model()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "av-sync-summary",
+            Result = "pass",
+            Sync = new PlaybackQualitySync
+            {
+                AudioClockTicks = 2_000_000,
+                VideoPositionTicks = 2_010_000,
+                AudioVideoDriftMsP50 = 4,
+                AudioVideoDriftMsP95 = 16,
+                AudioVideoDriftMsP99 = 24,
+                AudioVideoDriftMsMax = 32
+            }
+        };
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Equal("synced", analysis.AvSync.Status);
+        Assert.Equal(16, analysis.AvSync.AudioVideoDriftMsP95);
+        Assert.Equal(32, analysis.AvSync.AudioVideoDriftMsMax);
+        Assert.Contains("sync.audioVideoDriftMsP50", analysis.AvSync.Signals);
+        Assert.Contains("sync.audioVideoDriftMsP95", analysis.AvSync.Signals);
+        Assert.Contains("sync.audioVideoDriftMsMax", analysis.AvSync.Signals);
+    }
+
+    [Fact]
+    public void Analyze_Marks_AvSync_Drift_From_AvSync_Checks()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "av-sync-drift",
+            Result = "fail",
+            Sync = new PlaybackQualitySync
+            {
+                AudioVideoDriftMsP95 = 55,
+                AudioVideoDriftMsMax = 80
+            }
+        };
+        report.Checks.Add(new PlaybackQualityCheck
+        {
+            Name = "AudioVideoDriftMsP95",
+            Status = "fail",
+            FailureArea = "av-sync",
+            Signal = "sync.audioVideoDriftMsP95",
+            Expected = "40.000",
+            Actual = "55.000"
+        });
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Equal("drift", analysis.AvSync.Status);
+        Assert.Contains("sync.audioVideoDriftMsP95", analysis.AvSync.FailedSignals);
+        Assert.Contains("sync.audioVideoDriftMsP95", analysis.AvSync.Signals);
+        Assert.Contains("A/V sync drift failed expected thresholds.", analysis.AvSync.Reason);
+    }
+
+    [Fact]
     public void Analyze_Blocks_Playback_Core_Optimization_When_Sample_Is_Insufficient()
     {
         var report = CreateOptimizationReadyFailure();
@@ -932,6 +1057,8 @@ public sealed class PlaybackQualityReportAnalyzerTests
         Assert.Contains("\"primaryFailureArea\"", json);
         Assert.Contains("\"source\"", json);
         Assert.Contains("\"colorPipeline\"", json);
+        Assert.Contains("\"buffering\"", json);
+        Assert.Contains("\"avSync\"", json);
         Assert.Contains("\"sample\"", json);
         Assert.Contains("\"cadence\"", json);
         Assert.Contains("\"optimizationGate\"", json);
