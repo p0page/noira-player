@@ -228,6 +228,26 @@
                     </StackPanel>
 
                     <StackPanel
+                        x:Name="MetadataSection"
+                        Spacing="12"
+                        Visibility="Collapsed">
+                        <TextBlock
+                            Text="Explore"
+                            Style="{StaticResource TvSubsectionTitleTextStyle}" />
+                        <ScrollViewer
+                            HorizontalScrollBarVisibility="Hidden"
+                            VerticalScrollBarVisibility="Disabled"
+                            HorizontalScrollMode="Enabled"
+                            VerticalScrollMode="Disabled"
+                            ZoomMode="Disabled">
+                            <StackPanel
+                                x:Name="MetadataPanel"
+                                Orientation="Horizontal"
+                                Spacing="12" />
+                        </ScrollViewer>
+                    </StackPanel>
+
+                    <StackPanel
                         x:Name="PeopleSection"
                         Spacing="12"
                         Visibility="Collapsed">

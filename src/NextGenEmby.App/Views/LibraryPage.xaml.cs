@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using NextGenEmby.App.Navigation;
@@ -509,7 +510,11 @@ namespace NextGenEmby.App.Views
                 CollectionTypes = request.Query.CollectionTypes,
                 MediaTypes = request.Query.MediaTypes,
                 GenreIds = request.Query.GenreIds,
+                Genres = request.Query.Genres,
                 PersonIds = request.Query.PersonIds,
+                StudioIds = request.Query.StudioIds,
+                Studios = request.Query.Studios,
+                Tags = request.Query.Tags,
                 ArtistIds = request.Query.ArtistIds,
                 AlbumArtistIds = request.Query.AlbumArtistIds,
                 Ids = request.Query.Ids,
@@ -572,6 +577,13 @@ namespace NextGenEmby.App.Views
                 return request.DevelopmentItems;
             }
 
+            if (HasMetadataFacetQuery(request.Query))
+            {
+                return request.DevelopmentItems
+                    .Where(item => MatchesMetadataFacetQuery(item, request.Query))
+                    .ToList();
+            }
+
             var parentId = request.ParentId ?? "";
             var hasParentMetadata = false;
             foreach (var item in request.DevelopmentItems)
@@ -598,6 +610,59 @@ namespace NextGenEmby.App.Views
             }
 
             return filteredItems;
+        }
+
+        private static bool HasMetadataFacetQuery(LibraryNavigationQuery query)
+        {
+            return query != null &&
+                (!string.IsNullOrWhiteSpace(query.GenreIds) ||
+                    !string.IsNullOrWhiteSpace(query.Genres) ||
+                    !string.IsNullOrWhiteSpace(query.StudioIds) ||
+                    !string.IsNullOrWhiteSpace(query.Studios) ||
+                    !string.IsNullOrWhiteSpace(query.Tags));
+        }
+
+        private static bool MatchesMetadataFacetQuery(EmbyMediaItem item, LibraryNavigationQuery query)
+        {
+            return MatchesReferenceIds(item.GenreItems, query.GenreIds) &&
+                MatchesReferenceNames(item.GenreItems, query.Genres) &&
+                MatchesReferenceIds(item.StudioItems, query.StudioIds) &&
+                MatchesReferenceNames(item.StudioItems, query.Studios) &&
+                MatchesReferenceNames(item.TagItems, query.Tags);
+        }
+
+        private static bool MatchesReferenceIds(IReadOnlyList<EmbyItemReference> references, string query)
+        {
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                return true;
+            }
+
+            var queryIds = SplitFacetQuery(query);
+            return references != null &&
+                references.Any(reference => queryIds.Contains(reference.Id ?? ""));
+        }
+
+        private static bool MatchesReferenceNames(IReadOnlyList<EmbyItemReference> references, string query)
+        {
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                return true;
+            }
+
+            var queryNames = SplitFacetQuery(query);
+            return references != null &&
+                references.Any(reference => queryNames.Contains(reference.Name ?? ""));
+        }
+
+        private static HashSet<string> SplitFacetQuery(string query)
+        {
+            return new HashSet<string>(
+                (query ?? "")
+                    .Split(new[] { ',', '|' }, StringSplitOptions.RemoveEmptyEntries)
+                    .Select(value => value.Trim())
+                    .Where(value => !string.IsNullOrWhiteSpace(value)),
+                StringComparer.OrdinalIgnoreCase);
         }
 
         private static IReadOnlyList<LibraryGridItem> CreateDevelopmentGridItems(

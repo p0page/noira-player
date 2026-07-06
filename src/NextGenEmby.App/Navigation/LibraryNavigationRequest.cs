@@ -93,7 +93,11 @@ namespace NextGenEmby.App.Navigation
             string mediaTypes = "",
             string filters = "",
             string genreIds = "",
+            string genres = "",
             string personIds = "",
+            string studioIds = "",
+            string studios = "",
+            string tags = "",
             string artistIds = "",
             string albumArtistIds = "",
             string ids = "",
@@ -106,7 +110,11 @@ namespace NextGenEmby.App.Navigation
             MediaTypes = mediaTypes ?? "";
             Filters = filters ?? "";
             GenreIds = genreIds ?? "";
+            Genres = genres ?? "";
             PersonIds = personIds ?? "";
+            StudioIds = studioIds ?? "";
+            Studios = studios ?? "";
+            Tags = tags ?? "";
             ArtistIds = artistIds ?? "";
             AlbumArtistIds = albumArtistIds ?? "";
             Ids = ids ?? "";
@@ -124,7 +132,15 @@ namespace NextGenEmby.App.Navigation
 
         public string GenreIds { get; }
 
+        public string Genres { get; }
+
         public string PersonIds { get; }
+
+        public string StudioIds { get; }
+
+        public string Studios { get; }
+
+        public string Tags { get; }
 
         public string ArtistIds { get; }
 

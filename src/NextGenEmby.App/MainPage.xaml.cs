@@ -961,7 +961,11 @@ namespace NextGenEmby.App
                 string.Equals(current.MediaTypes, next.MediaTypes, StringComparison.Ordinal) &&
                 string.Equals(current.Filters, next.Filters, StringComparison.Ordinal) &&
                 string.Equals(current.GenreIds, next.GenreIds, StringComparison.Ordinal) &&
+                string.Equals(current.Genres, next.Genres, StringComparison.Ordinal) &&
                 string.Equals(current.PersonIds, next.PersonIds, StringComparison.Ordinal) &&
+                string.Equals(current.StudioIds, next.StudioIds, StringComparison.Ordinal) &&
+                string.Equals(current.Studios, next.Studios, StringComparison.Ordinal) &&
+                string.Equals(current.Tags, next.Tags, StringComparison.Ordinal) &&
                 string.Equals(current.ArtistIds, next.ArtistIds, StringComparison.Ordinal) &&
                 string.Equals(current.AlbumArtistIds, next.AlbumArtistIds, StringComparison.Ordinal) &&
                 string.Equals(current.Ids, next.Ids, StringComparison.Ordinal) &&

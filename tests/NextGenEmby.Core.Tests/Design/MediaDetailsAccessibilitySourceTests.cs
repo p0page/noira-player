@@ -76,6 +76,47 @@ public sealed class MediaDetailsAccessibilitySourceTests
     }
 
     [Fact]
+    public void Details_Renders_Metadata_Facet_Chips_That_Open_Library_Browse()
+    {
+        var root = FindRepositoryRoot();
+        var detailsXaml = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NextGenEmby.App",
+            "Views",
+            "MediaDetailsPage.xaml"));
+        var detailsPageSource = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NextGenEmby.App",
+            "Views",
+            "MediaDetailsPage.xaml.cs"));
+        var requestSource = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NextGenEmby.App",
+            "Navigation",
+            "LibraryNavigationRequest.cs"));
+
+        Assert.Contains("MetadataSection", detailsXaml);
+        Assert.Contains("MetadataPanel", detailsXaml);
+        Assert.Contains("RenderMetadataFacetRail", detailsPageSource);
+        Assert.Contains("CreateMetadataFacetButton", detailsPageSource);
+        Assert.Contains("MetadataFacet_OnClick", detailsPageSource);
+        Assert.Contains("FocusFirstButton(MetadataPanel, FocusState.Keyboard)", detailsPageSource);
+        Assert.Contains("new LibraryNavigationQuery(genres:", detailsPageSource);
+        Assert.Contains("new LibraryNavigationQuery(studioIds:", detailsPageSource);
+        Assert.Contains("new LibraryNavigationQuery(tags:", detailsPageSource);
+        Assert.Contains("_restoreMetadataFacetKey", detailsPageSource);
+        Assert.Contains("e.NavigationMode == NavigationMode.Back", detailsPageSource);
+        Assert.Contains("FocusMetadataFacetWhenReadyAsync()", detailsPageSource);
+        Assert.Contains("FocusMetadataFacetByKey", detailsPageSource);
+        Assert.Contains("Genres", requestSource);
+        Assert.Contains("StudioIds", requestSource);
+        Assert.Contains("Tags", requestSource);
+    }
+
+    [Fact]
     public void Details_Fixture_Default_Focus_Uses_Low_Priority_Retry()
     {
         var root = FindRepositoryRoot();
@@ -91,6 +132,40 @@ public sealed class MediaDetailsAccessibilitySourceTests
         Assert.Contains("Task.Delay(120)", detailsPageSource);
         Assert.Contains("FocusDefaultContent();", detailsPageSource);
         Assert.DoesNotContain("CoreDispatcherPriority.Normal", detailsPageSource);
+    }
+
+    [Fact]
+    public void Details_Fixture_Default_Focus_Does_Not_Override_Metadata_Restore()
+    {
+        var root = FindRepositoryRoot();
+        var detailsPageSource = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NextGenEmby.App",
+            "Views",
+            "MediaDetailsPage.xaml.cs"));
+
+        Assert.Contains("ShouldApplyDevelopmentDefaultFocus(focusGeneration)", detailsPageSource);
+        Assert.Contains("string.IsNullOrWhiteSpace(_restoreMetadataFacetKey)", detailsPageSource);
+    }
+
+    [Fact]
+    public void Details_Metadata_Facet_Restore_Survives_Backstack_Page_Recreation()
+    {
+        var root = FindRepositoryRoot();
+        var detailsPageSource = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NextGenEmby.App",
+            "Views",
+            "MediaDetailsPage.xaml.cs"));
+
+        Assert.Contains("s_pendingMetadataFacetRestoreKeys", detailsPageSource);
+        Assert.Contains("ResolveMetadataRestoreItemId(e.Parameter)", detailsPageSource);
+        Assert.Contains("ConsumeMetadataFacetRestoreKey(restoreItemId)", detailsPageSource);
+        Assert.Contains("QueueMetadataFacetRestore(facet)", detailsPageSource);
+        Assert.Contains("FocusDefaultContent();", detailsPageSource);
+        Assert.Contains("string.IsNullOrWhiteSpace(_restoreMetadataFacetKey)", detailsPageSource);
     }
 
     private static string FindRepositoryRoot()

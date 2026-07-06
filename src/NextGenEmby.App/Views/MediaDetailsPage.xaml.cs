@@ -24,6 +24,10 @@ namespace NextGenEmby.App.Views
 {
     public sealed partial class MediaDetailsPage : Page, ITvContentFocusTarget
     {
+        private static readonly object s_pendingMetadataFacetRestoreGate = new object();
+        private static readonly Dictionary<string, string> s_pendingMetadataFacetRestoreKeys =
+            new Dictionary<string, string>(StringComparer.Ordinal);
+
         private readonly ApplicationDataSessionStore _sessionStore = new ApplicationDataSessionStore();
         private EmbyMediaItem? _item;
         private IReadOnlyList<EmbyMediaSource> _mediaSources = Array.Empty<EmbyMediaSource>();
@@ -39,6 +43,7 @@ namespace NextGenEmby.App.Views
         private object? _addToSheetReturnFocus;
         private bool _isUnloaded;
         private int _loadGeneration;
+        private string _restoreMetadataFacetKey = "";
 #if DEBUG
         private const int DevelopmentDetailsFocusRetryCount = 6;
         private bool _usesDevelopmentDetailsFixture;
@@ -58,6 +63,25 @@ namespace NextGenEmby.App.Views
         {
             base.OnNavigatedTo(e);
             _isUnloaded = false;
+            if (e.NavigationMode == NavigationMode.Back)
+            {
+                var restoreItemId = ResolveMetadataRestoreItemId(e.Parameter);
+                var restoreKey = ConsumeMetadataFacetRestoreKey(restoreItemId);
+                if (!string.IsNullOrWhiteSpace(restoreKey))
+                {
+                    _restoreMetadataFacetKey = restoreKey;
+                }
+            }
+
+            if (e.NavigationMode == NavigationMode.Back && !string.IsNullOrWhiteSpace(_restoreMetadataFacetKey))
+            {
+                if (_item != null)
+                {
+                    FocusMetadataFacetWhenReadyAsync();
+                    return;
+                }
+            }
+
             var loadGeneration = BeginLoad();
 #if DEBUG
             _usesDevelopmentDetailsFixture = false;
@@ -279,7 +303,8 @@ namespace NextGenEmby.App.Views
             {
                 if (IsDownKey(key))
                 {
-                    return FocusFirstButton(PeoplePanel, FocusState.Keyboard);
+                    return FocusFirstButton(MetadataPanel, FocusState.Keyboard) ||
+                        FocusFirstButton(PeoplePanel, FocusState.Keyboard);
                 }
 
                 if (IsUpKey(key))
@@ -291,9 +316,27 @@ namespace NextGenEmby.App.Views
                 }
             }
 
+            if (IsFocusWithin(focusedElement, MetadataPanel))
+            {
+                if (IsDownKey(key))
+                {
+                    return FocusFirstButton(PeoplePanel, FocusState.Keyboard);
+                }
+
+                if (IsUpKey(key))
+                {
+                    return FocusFirstButton(SimilarItemsPanel, FocusState.Keyboard) ||
+                        FocusLastButton(EpisodesPanel, FocusState.Keyboard) ||
+                        FocusLastOrganizeButton(FocusState.Keyboard) ||
+                        FocusLastVersionButton(FocusState.Keyboard) ||
+                        FocusAction(MediaDetailsActionButton.Play, FocusState.Keyboard);
+                }
+            }
+
             if (IsFocusWithin(focusedElement, PeoplePanel) && IsUpKey(key))
             {
-                return FocusFirstButton(SimilarItemsPanel, FocusState.Keyboard) ||
+                return FocusFirstButton(MetadataPanel, FocusState.Keyboard) ||
+                    FocusFirstButton(SimilarItemsPanel, FocusState.Keyboard) ||
                     FocusLastButton(EpisodesPanel, FocusState.Keyboard) ||
                     FocusLastOrganizeButton(FocusState.Keyboard) ||
                     FocusLastVersionButton(FocusState.Keyboard) ||
@@ -396,6 +439,7 @@ namespace NextGenEmby.App.Views
         private bool FocusFirstAfterEpisodes(FocusState focusState)
         {
             return FocusFirstButton(SimilarItemsPanel, focusState) ||
+                FocusFirstButton(MetadataPanel, focusState) ||
                 FocusFirstButton(PeoplePanel, focusState);
         }
 
@@ -542,7 +586,11 @@ namespace NextGenEmby.App.Views
             StatusBlock.Text = "";
             UpdateActionButtons();
             RenderOrganizeSection();
-            FocusDefaultContent();
+            RenderMetadataFacetRail();
+            if (string.IsNullOrWhiteSpace(_restoreMetadataFacetKey))
+            {
+                FocusDefaultContent();
+            }
         }
 
         private async Task LoadDetailsAsync(string itemId, string fallbackName, int loadGeneration)
@@ -703,7 +751,10 @@ namespace NextGenEmby.App.Views
             RenderDevelopmentSecondaryRails(fixture);
 
             StatusBlock.Text = "Fixture details loaded.";
-            FocusDevelopmentDefaultContentAsync();
+            if (string.IsNullOrWhiteSpace(_restoreMetadataFacetKey))
+            {
+                FocusDevelopmentDefaultContentAsync();
+            }
         }
 
         private async void FocusDevelopmentDefaultContentAsync()
@@ -713,9 +764,7 @@ namespace NextGenEmby.App.Views
             {
                 await Dispatcher.RunAsync(CoreDispatcherPriority.Low, () =>
                 {
-                    if (!_isUnloaded &&
-                        _usesDevelopmentDetailsFixture &&
-                        focusGeneration == _developmentDetailsFocusGeneration)
+                    if (ShouldApplyDevelopmentDefaultFocus(focusGeneration))
                     {
                         FocusDefaultContent();
                     }
@@ -723,6 +772,19 @@ namespace NextGenEmby.App.Views
 
                 await Task.Delay(120);
             }
+        }
+
+        private bool ShouldApplyDevelopmentDefaultFocus(int focusGeneration)
+        {
+            return !_isUnloaded &&
+                _usesDevelopmentDetailsFixture &&
+                focusGeneration == _developmentDetailsFocusGeneration &&
+                string.IsNullOrWhiteSpace(_restoreMetadataFacetKey);
+        }
+
+        private void CancelDevelopmentDefaultFocusRetry()
+        {
+            _developmentDetailsFocusGeneration++;
         }
 
         private void ApplyDevelopmentDetailsArtwork(EmbyMediaItem item)
@@ -1570,6 +1632,179 @@ namespace NextGenEmby.App.Views
             }
         }
 
+        private void RenderMetadataFacetRail()
+        {
+            MetadataPanel.Children.Clear();
+            MetadataSection.Visibility = Visibility.Collapsed;
+
+            var item = _item;
+            if (item == null)
+            {
+                return;
+            }
+
+            foreach (var facet in CreateMetadataFacets(item).Take(18))
+            {
+                MetadataPanel.Children.Add(CreateMetadataFacetButton(facet));
+            }
+
+            MetadataSection.Visibility = MetadataPanel.Children.Count == 0
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+
+            if (MetadataPanel.Children.Count > 0 &&
+                !string.IsNullOrWhiteSpace(_restoreMetadataFacetKey))
+            {
+                FocusMetadataFacetWhenReadyAsync();
+            }
+        }
+
+        private static IReadOnlyList<MetadataFacet> CreateMetadataFacets(EmbyMediaItem item)
+        {
+            var facets = new List<MetadataFacet>();
+            AddMetadataFacets(facets, MetadataFacetKind.Genre, item.GenreItems);
+            AddMetadataFacets(facets, MetadataFacetKind.Studio, item.StudioItems);
+            AddMetadataFacets(facets, MetadataFacetKind.Tag, item.TagItems);
+            return facets;
+        }
+
+        private static void AddMetadataFacets(
+            List<MetadataFacet> facets,
+            MetadataFacetKind kind,
+            IReadOnlyList<EmbyItemReference> references)
+        {
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var reference in references ?? Array.Empty<EmbyItemReference>())
+            {
+                if (string.IsNullOrWhiteSpace(reference.Name))
+                {
+                    continue;
+                }
+
+                var key = string.IsNullOrWhiteSpace(reference.Id) ? reference.Name : reference.Id;
+                if (!seen.Add(key))
+                {
+                    continue;
+                }
+
+                facets.Add(new MetadataFacet(kind, reference.Id, reference.Name));
+            }
+        }
+
+        private Button CreateMetadataFacetButton(MetadataFacet facet)
+        {
+            var button = new Button
+            {
+                MinWidth = 154,
+                Height = 68,
+                Padding = new Thickness(16, 8, 16, 8),
+                Tag = facet,
+                HorizontalContentAlignment = HorizontalAlignment.Stretch,
+                VerticalContentAlignment = VerticalAlignment.Stretch,
+                Background = BrushResource("AppChromeBrush"),
+                BorderBrush = BrushResource("AppHairlineBrush"),
+                UseSystemFocusVisuals = true
+            };
+            AutomationProperties.SetName(button, CreateMetadataFacetAutomationName(facet));
+            button.Click += MetadataFacet_OnClick;
+            button.GotFocus += SecondaryRailButton_OnGotFocus;
+
+            button.Content = new StackPanel
+            {
+                VerticalAlignment = VerticalAlignment.Center,
+                Spacing = 2,
+                Children =
+                {
+                    new TextBlock
+                    {
+                        Text = CreateMetadataFacetKindLabel(facet.Kind),
+                        FontSize = 12,
+                        Foreground = BrushResource("AppMutedTextBrush"),
+                        TextTrimming = TextTrimming.CharacterEllipsis,
+                        MaxLines = 1
+                    },
+                    new TextBlock
+                    {
+                        Text = facet.Name,
+                        FontSize = 18,
+                        FontWeight = Windows.UI.Text.FontWeights.SemiBold,
+                        Foreground = BrushResource("AppTextBrush"),
+                        TextTrimming = TextTrimming.CharacterEllipsis,
+                        MaxLines = 1
+                    }
+                }
+            };
+
+            return button;
+        }
+
+        private async void FocusMetadataFacetWhenReadyAsync()
+        {
+            var restoreKey = _restoreMetadataFacetKey;
+            if (string.IsNullOrWhiteSpace(restoreKey))
+            {
+                return;
+            }
+
+            for (var attempt = 0; attempt < 6; attempt++)
+            {
+                var focused = false;
+                await Dispatcher.RunAsync(CoreDispatcherPriority.Low, () =>
+                {
+                    if (_isUnloaded || string.IsNullOrWhiteSpace(_restoreMetadataFacetKey))
+                    {
+                        return;
+                    }
+
+                    focused = FocusMetadataFacetByKey(restoreKey, FocusState.Keyboard);
+                    if (focused)
+                    {
+                        _restoreMetadataFacetKey = "";
+                    }
+                });
+
+                if (focused || string.IsNullOrWhiteSpace(_restoreMetadataFacetKey))
+                {
+                    return;
+                }
+
+                await Task.Delay(120);
+            }
+
+            await Dispatcher.RunAsync(CoreDispatcherPriority.Low, () =>
+            {
+                if (_isUnloaded || string.IsNullOrWhiteSpace(_restoreMetadataFacetKey))
+                {
+                    return;
+                }
+
+                _restoreMetadataFacetKey = "";
+                FocusDefaultContent();
+            });
+        }
+
+        private bool FocusMetadataFacetByKey(string facetKey, FocusState focusState)
+        {
+            foreach (var button in MetadataPanel.Children.OfType<Button>())
+            {
+                if (button.Tag is MetadataFacet facet &&
+                    string.Equals(CreateMetadataFacetKey(facet), facetKey, StringComparison.Ordinal))
+                {
+                    button.StartBringIntoView(new BringIntoViewOptions
+                    {
+                        AnimationDesired = true,
+                        HorizontalAlignmentRatio = 0.12,
+                        HorizontalOffset = -18,
+                        VerticalAlignmentRatio = 0.62,
+                        VerticalOffset = -12
+                    });
+                    return button.Focus(focusState);
+                }
+            }
+
+            return false;
+        }
+
         private void RenderPeopleRail(EmbySession session, EmbyApiClient client)
         {
             PeoplePanel.Children.Clear();
@@ -2179,6 +2414,135 @@ namespace NextGenEmby.App.Views
                     new LibraryNavigationQuery(personIds: person.Id)));
         }
 
+        private void MetadataFacet_OnClick(object sender, RoutedEventArgs e)
+        {
+            var button = sender as Button;
+            var facet = button == null ? null : button.Tag as MetadataFacet;
+            if (facet == null || string.IsNullOrWhiteSpace(facet.Name))
+            {
+                return;
+            }
+
+            QueueMetadataFacetRestore(facet);
+#if DEBUG
+            CancelDevelopmentDefaultFocusRetry();
+#endif
+            var request = new LibraryNavigationRequest(
+                CreateMetadataFacetLibraryTitle(facet),
+                "",
+                "Movie,Series,Episode,Video,MusicVideo",
+                "",
+                "",
+                CreateMetadataFacetQuery(facet));
+#if DEBUG
+            if (_usesDevelopmentDetailsFixture)
+            {
+                var fixture = DevelopmentLibraryOrganizationFixture.Create();
+                request = request.WithDevelopmentFixture(fixture.Items, fixture.ArtworkUris);
+            }
+#endif
+
+            Frame.Navigate(typeof(LibraryPage), request);
+        }
+
+        private void QueueMetadataFacetRestore(MetadataFacet facet)
+        {
+            var restoreKey = CreateMetadataFacetKey(facet);
+            _restoreMetadataFacetKey = restoreKey;
+
+            var itemId = _item == null ? "" : _item.Id;
+            if (string.IsNullOrWhiteSpace(itemId) || string.IsNullOrWhiteSpace(restoreKey))
+            {
+                return;
+            }
+
+            lock (s_pendingMetadataFacetRestoreGate)
+            {
+                s_pendingMetadataFacetRestoreKeys[itemId] = restoreKey;
+            }
+        }
+
+        private static string ConsumeMetadataFacetRestoreKey(string itemId)
+        {
+            if (string.IsNullOrWhiteSpace(itemId))
+            {
+                return "";
+            }
+
+            lock (s_pendingMetadataFacetRestoreGate)
+            {
+                string restoreKey;
+                if (!s_pendingMetadataFacetRestoreKeys.TryGetValue(itemId, out restoreKey))
+                {
+                    return "";
+                }
+
+                s_pendingMetadataFacetRestoreKeys.Remove(itemId);
+                return restoreKey ?? "";
+            }
+        }
+
+        private static string ResolveMetadataRestoreItemId(object parameter)
+        {
+            var item = parameter as EmbyMediaItem;
+            if (item != null)
+            {
+                return item.Id ?? "";
+            }
+
+            var request = parameter as MediaDetailsNavigationRequest;
+            return request == null ? "" : request.ItemId;
+        }
+
+        private static LibraryNavigationQuery CreateMetadataFacetQuery(MetadataFacet facet)
+        {
+            switch (facet.Kind)
+            {
+                case MetadataFacetKind.Genre:
+                    return string.IsNullOrWhiteSpace(facet.Id)
+                        ? new LibraryNavigationQuery(genres: facet.Name)
+                        : new LibraryNavigationQuery(genreIds: facet.Id);
+                case MetadataFacetKind.Studio:
+                    return string.IsNullOrWhiteSpace(facet.Id)
+                        ? new LibraryNavigationQuery(studios: facet.Name)
+                        : new LibraryNavigationQuery(studioIds: facet.Id);
+                case MetadataFacetKind.Tag:
+                    return new LibraryNavigationQuery(tags: facet.Name);
+                default:
+                    return LibraryNavigationQuery.Empty;
+            }
+        }
+
+        private static string CreateMetadataFacetLibraryTitle(MetadataFacet facet)
+        {
+            return CreateMetadataFacetKindLabel(facet.Kind) + ": " + facet.Name;
+        }
+
+        private static string CreateMetadataFacetAutomationName(MetadataFacet facet)
+        {
+            return "Browse " + CreateMetadataFacetKindLabel(facet.Kind) + " " + facet.Name;
+        }
+
+        private static string CreateMetadataFacetKey(MetadataFacet facet)
+        {
+            return ((int)facet.Kind).ToString() + "|" + (facet.Id ?? "") + "|" + (facet.Name ?? "");
+        }
+
+        private static string CreateMetadataFacetKindLabel(MetadataFacetKind kind)
+        {
+            switch (kind)
+            {
+                case MetadataFacetKind.Genre:
+                    return "Genre";
+                case MetadataFacetKind.Studio:
+                    return "Studio";
+                case MetadataFacetKind.Tag:
+                    return "Tag";
+                default:
+                    return "Browse";
+            }
+        }
+
         private static void SecondaryRailButton_OnGotFocus(object sender, RoutedEventArgs e)
         {
             var target = sender as Control;
@@ -2405,6 +2769,8 @@ namespace NextGenEmby.App.Views
             EpisodesSection.Visibility = Visibility.Collapsed;
             SimilarItemsPanel.Children.Clear();
             SimilarSection.Visibility = Visibility.Collapsed;
+            MetadataPanel.Children.Clear();
+            MetadataSection.Visibility = Visibility.Collapsed;
             PeoplePanel.Children.Clear();
             PeopleSection.Visibility = Visibility.Collapsed;
             CloseAddToSheet(restoreFocus: false);
@@ -2853,6 +3219,29 @@ namespace NextGenEmby.App.Views
             }
 
             return meta;
+        }
+
+        private sealed class MetadataFacet
+        {
+            public MetadataFacet(MetadataFacetKind kind, string id, string name)
+            {
+                Kind = kind;
+                Id = id ?? "";
+                Name = name ?? "";
+            }
+
+            public MetadataFacetKind Kind { get; }
+
+            public string Id { get; }
+
+            public string Name { get; }
+        }
+
+        private enum MetadataFacetKind
+        {
+            Genre,
+            Studio,
+            Tag
         }
     }
 

@@ -459,7 +459,10 @@ namespace NextGenEmby.Core.Emby
         public async Task<EmbyMediaItem> GetItemAsync(EmbySession session, string itemId)
         {
             var parameters = new List<string>();
-            AddQueryParameter(parameters, "Fields", "Overview,ProductionYear,RunTimeTicks,ChildCount,MediaSources,UserData,People");
+            AddQueryParameter(
+                parameters,
+                "Fields",
+                "Overview,ProductionYear,RunTimeTicks,ChildCount,MediaSources,UserData,People,Genres,Studios,Tags");
             AddImageQueryParameters(parameters);
 
             using var request = new HttpRequestMessage(
@@ -613,7 +616,11 @@ namespace NextGenEmby.Core.Emby
             AddQueryParameter(parameters, "SortOrder", query.SortOrder);
             AddQueryParameter(parameters, "Filters", query.Filters);
             AddQueryParameter(parameters, "GenreIds", query.GenreIds);
+            AddQueryParameter(parameters, "Genres", query.Genres);
             AddQueryParameter(parameters, "PersonIds", query.PersonIds);
+            AddQueryParameter(parameters, "StudioIds", query.StudioIds);
+            AddQueryParameter(parameters, "Studios", query.Studios);
+            AddQueryParameter(parameters, "Tags", query.Tags);
             AddQueryParameter(parameters, "ArtistIds", query.ArtistIds);
             AddQueryParameter(parameters, "AlbumArtistIds", query.AlbumArtistIds);
             AddQueryParameter(parameters, "Ids", query.Ids);
@@ -776,8 +783,64 @@ namespace NextGenEmby.Core.Emby
                 ParentIndexNumber = item.ParentIndexNumber,
                 ChildCount = item.ChildCount,
                 UserData = MapUserData(userData),
+                GenreItems = MapNamedReferences(item.GenreItems),
+                StudioItems = MapNamedReferences(item.Studios),
+                TagItems = MapTagReferences(item.TagItems, item.Tags),
                 People = (item.People ?? new List<PersonDto>()).Select(MapPerson).ToList()
             };
+        }
+
+        private static IReadOnlyList<EmbyItemReference> MapNamedReferences(List<NameIdPairDto>? references)
+        {
+            return (references ?? new List<NameIdPairDto>())
+                .Select(reference => new EmbyItemReference
+                {
+                    Id = ReadJsonElementString(reference.Id),
+                    Name = reference.Name ?? ""
+                })
+                .ToList();
+        }
+
+        private static IReadOnlyList<EmbyItemReference> MapTagReferences(
+            List<NameIdPairDto>? tagItems,
+            List<string>? tags)
+        {
+            var mapped = MapNamedReferences(tagItems).ToList();
+            var existingNames = new HashSet<string>(
+                mapped
+                    .Select(tag => tag.Name)
+                    .Where(name => !string.IsNullOrWhiteSpace(name)),
+                StringComparer.OrdinalIgnoreCase);
+
+            foreach (var tag in tags ?? new List<string>())
+            {
+                if (string.IsNullOrWhiteSpace(tag) || existingNames.Contains(tag))
+                {
+                    continue;
+                }
+
+                mapped.Add(new EmbyItemReference
+                {
+                    Id = "",
+                    Name = tag
+                });
+                existingNames.Add(tag);
+            }
+
+            return mapped;
+        }
+
+        private static string ReadJsonElementString(JsonElement element)
+        {
+            switch (element.ValueKind)
+            {
+                case JsonValueKind.String:
+                    return element.GetString() ?? "";
+                case JsonValueKind.Number:
+                    return element.GetRawText();
+                default:
+                    return "";
+            }
         }
 
         private static EmbyUserData MapUserData(UserDataDto userData)
@@ -1108,6 +1171,16 @@ namespace NextGenEmby.Core.Emby
             public string ParentLogoItemId { get; set; } = "";
             public string ParentThumbImageTag { get; set; } = "";
             public List<PersonDto> People { get; set; } = new List<PersonDto>();
+            public List<NameIdPairDto>? GenreItems { get; set; } = new List<NameIdPairDto>();
+            public List<NameIdPairDto>? Studios { get; set; } = new List<NameIdPairDto>();
+            public List<NameIdPairDto>? TagItems { get; set; } = new List<NameIdPairDto>();
+            public List<string>? Tags { get; set; } = new List<string>();
+        }
+
+        private sealed class NameIdPairDto
+        {
+            public JsonElement Id { get; set; }
+            public string Name { get; set; } = "";
         }
 
         private sealed class PersonDto

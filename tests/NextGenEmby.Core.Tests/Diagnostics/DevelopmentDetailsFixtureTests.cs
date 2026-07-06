@@ -22,6 +22,9 @@ public sealed class DevelopmentDetailsFixtureTests
         Assert.NotEmpty(fixture.CollectionTargets);
         Assert.NotEmpty(fixture.PlaylistTargets);
         Assert.True(fixture.SimilarItems.Count >= 4);
+        Assert.NotEmpty(fixture.Item.GenreItems);
+        Assert.NotEmpty(fixture.Item.StudioItems);
+        Assert.NotEmpty(fixture.Item.TagItems);
     }
 
     [Fact]

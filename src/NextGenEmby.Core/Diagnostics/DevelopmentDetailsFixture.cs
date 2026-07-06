@@ -32,6 +32,20 @@ namespace NextGenEmby.Core.Diagnostics
                 Person(artworkUris, "fixture-person-owen", "Owen Vale", "Director", "Director", "qa-poster-10.png"),
                 Person(artworkUris, "fixture-person-iris", "Iris Nakamura", "Composer", "Composer", "qa-poster-11.png")
             };
+            item.GenreItems = new[]
+            {
+                Reference("fixture-genre-sci-fi", "Sci-Fi"),
+                Reference("fixture-genre-mystery", "Mystery")
+            };
+            item.StudioItems = new[]
+            {
+                Reference("fixture-studio-terminus", "Terminus Pictures")
+            };
+            item.TagItems = new[]
+            {
+                Reference("", "Douban Top"),
+                Reference("", "Atmospheric")
+            };
 
             var mediaSources = new[]
             {
@@ -175,6 +189,15 @@ namespace NextGenEmby.Core.Diagnostics
                 Role = role,
                 Type = type,
                 PrimaryImageTag = ArtworkTag
+            };
+        }
+
+        private static EmbyItemReference Reference(string id, string name)
+        {
+            return new EmbyItemReference
+            {
+                Id = id ?? "",
+                Name = name ?? ""
             };
         }
 

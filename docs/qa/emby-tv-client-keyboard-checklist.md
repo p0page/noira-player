@@ -1640,3 +1640,29 @@ Then continue design and implementation until the route passes.
   - No app-content mouse clicks were used. Computer Use required window rebinds after two capture/foreground metadata hiccups, but all app interactions were completed through keyboard/controller-mapped input.
 - Follow-up:
   - Re-run a real saved Emby session where playlist items are not reliably returned by `ParentId`, and verify the live endpoint returns mixed video/audio playlist children with the same focus behavior.
+
+### 2026-07-07 - Details Metadata Facet Browse
+
+- App version: 0.1.0.190.
+- Scope: make Details metadata actionable for couch navigation by rendering Genre, Studio, and Tag chips in an `Explore` rail, then opening Library result pages filtered to the selected facet.
+- Interaction changes:
+  - `EmbyApiClient.GetItemAsync` now requests and maps `GenreItems`, `Studios`, `TagItems`, and string-only `Tags` fallback into typed item references.
+  - `EmbyItemsQuery` and `LibraryNavigationQuery` now carry `Genres`, `GenreIds`, `Studios`, `StudioIds`, and `Tags` so Details chips can open filtered Library pages.
+  - Details renders focusable metadata chips below `More like this`; Genre/Studio chips prefer ids when available and fall back to names for less compatible Emby servers.
+  - Back navigation stores the originating metadata chip by item id, so a rebuilt Details page restores focus to the chip instead of jumping to `Resume`.
+- Automated verification:
+  - TDD red paths confirmed metadata DTO mapping, `/Items` facet query serialization, Details chip rendering/navigation, and backstack focus restoration did not exist before implementation.
+  - Computer Use found a real focus bug where `Escape` from `Genre: Sci-Fi` returned to `Resume`; the fix moved metadata focus restoration into a cross-instance pending map and suppressed default focus while restore is pending.
+  - Core tests passed: 429 total.
+  - `git diff --check` passed with only LF/CRLF working-copy warnings.
+  - App Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.190_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.190`.
+- Keyboard-only validation with Computer Use:
+  - Wrote `dev-command.json` with route `details-fixture` and cold-launched the installed app.
+  - Initial Details state showed `Aurora Protocol` with focus on `Resume`.
+  - Pressed `Down` five times; focus moved to `Explore` and landed on `Genre / Sci-Fi`.
+  - Pressed `Return`; Library opened as `Genre: Sci-Fi` with 15 fixture items and focus on `Aurora Protocol`.
+  - Pressed `Escape`; Details returned to the `Explore` rail with focus restored to the originating `Sci-Fi` chip, not the top `Resume` action.
+  - No app-content mouse clicks were used.
+- Follow-up:
+  - Re-run against a real saved Emby session to verify server-specific `GenreItems`, `Studios`, `TagItems`, and `Tags` shapes plus live `/Items` facet filtering.

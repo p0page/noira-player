@@ -11,7 +11,11 @@ namespace NextGenEmby.Core.Emby
         public string SortOrder { get; set; } = "Ascending";
         public string Filters { get; set; } = "";
         public string GenreIds { get; set; } = "";
+        public string Genres { get; set; } = "";
         public string PersonIds { get; set; } = "";
+        public string StudioIds { get; set; } = "";
+        public string Studios { get; set; } = "";
+        public string Tags { get; set; } = "";
         public string ArtistIds { get; set; } = "";
         public string AlbumArtistIds { get; set; } = "";
         public string Ids { get; set; } = "";

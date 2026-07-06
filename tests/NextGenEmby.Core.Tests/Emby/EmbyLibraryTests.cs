@@ -692,6 +692,37 @@ public sealed class EmbyLibraryTests
     }
 
     [Fact]
+    public async Task GetItemsAsync_Builds_Metadata_Facet_Query_Filters()
+    {
+        var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
+            HttpStatusCode.OK,
+            """
+            {
+              "Items": [],
+              "TotalRecordCount": 0
+            }
+            """));
+        using var http = new HttpClient(handler);
+        var client = CreateClient(http);
+
+        await client.GetItemsAsync(Session(), new EmbyItemsQuery
+        {
+            IncludeItemTypes = "Movie,Series,Episode",
+            Genres = "Sci-Fi|Drama",
+            StudioIds = "studio 1/slash",
+            Studios = "Terminus Pictures",
+            Tags = "Douban Top|HDR",
+            Limit = 12
+        });
+
+        Assert.Equal("/Users/user-1/Items", handler.LastRequest!.RequestUri!.AbsolutePath);
+        Assert.Contains("Genres=Sci-Fi%7CDrama", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("StudioIds=studio%201%2Fslash", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("Studios=Terminus%20Pictures", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("Tags=Douban%20Top%7CHDR", handler.LastRequest.RequestUri.Query);
+    }
+
+    [Fact]
     public async Task GetItemAsync_Requests_And_Maps_People_For_Details_Rail()
     {
         var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
@@ -742,6 +773,73 @@ public sealed class EmbyLibraryTests
                 Assert.Equal("", person.Role);
                 Assert.Equal("", person.Type);
                 Assert.Equal("", person.PrimaryImageTag);
+            });
+    }
+
+    [Fact]
+    public async Task GetItemAsync_Requests_And_Maps_Metadata_Facets_For_Details_Browse()
+    {
+        var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
+            HttpStatusCode.OK,
+            """
+            {
+              "Id": "movie-1",
+              "Name": "Movie One",
+              "Type": "Movie",
+              "GenreItems": [
+                { "Id": "genre-1", "Name": "Sci-Fi" },
+                { "Id": null, "Name": null }
+              ],
+              "Studios": [
+                { "Id": "studio-1", "Name": "Terminus Pictures" }
+              ],
+              "TagItems": [
+                { "Id": "tag-1", "Name": "Douban Top" }
+              ],
+              "Tags": [
+                "Festival Cut",
+                ""
+              ]
+            }
+            """));
+        using var http = new HttpClient(handler);
+        var client = CreateClient(http);
+
+        var item = await client.GetItemAsync(Session(), "movie-1");
+
+        Assert.Contains("Genres", handler.LastRequest!.RequestUri!.Query);
+        Assert.Contains("Studios", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("Tags", handler.LastRequest.RequestUri.Query);
+        Assert.Collection(
+            item.GenreItems,
+            facet =>
+            {
+                Assert.Equal("genre-1", facet.Id);
+                Assert.Equal("Sci-Fi", facet.Name);
+            },
+            facet =>
+            {
+                Assert.Equal("", facet.Id);
+                Assert.Equal("", facet.Name);
+            });
+        Assert.Collection(
+            item.StudioItems,
+            facet =>
+            {
+                Assert.Equal("studio-1", facet.Id);
+                Assert.Equal("Terminus Pictures", facet.Name);
+            });
+        Assert.Collection(
+            item.TagItems,
+            facet =>
+            {
+                Assert.Equal("tag-1", facet.Id);
+                Assert.Equal("Douban Top", facet.Name);
+            },
+            facet =>
+            {
+                Assert.Equal("", facet.Id);
+                Assert.Equal("Festival Cut", facet.Name);
             });
     }
 

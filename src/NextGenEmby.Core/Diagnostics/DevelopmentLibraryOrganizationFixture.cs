@@ -96,6 +96,18 @@ namespace NextGenEmby.Core.Diagnostics
                 BackdropImageItemId = id,
                 ThumbImageTag = ArtworkTag,
                 ThumbImageItemId = id,
+                GenreItems = new[]
+                {
+                    Reference("fixture-genre-sci-fi", "Sci-Fi")
+                },
+                StudioItems = new[]
+                {
+                    Reference("fixture-studio-terminus", "Terminus Pictures")
+                },
+                TagItems = new[]
+                {
+                    Reference("", "Douban Top")
+                },
                 UserData = new EmbyUserData
                 {
                     PlaybackPositionTicks = Math.Max(0, resumeMinutes) * MinuteTicks,
@@ -103,6 +115,15 @@ namespace NextGenEmby.Core.Diagnostics
                         ? null
                         : (double)resumeMinutes / runtimeMinutes * 100d
                 }
+            };
+        }
+
+        private static EmbyItemReference Reference(string id, string name)
+        {
+            return new EmbyItemReference
+            {
+                Id = id ?? "",
+                Name = name ?? ""
             };
         }
 
