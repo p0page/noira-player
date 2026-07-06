@@ -528,6 +528,26 @@ try {
         throw 'Expected playback quality CLI evaluate-candidate suite action to accept candidate.'
     }
 
+    if ($null -eq $candidateEvaluation.evidenceGates -or $candidateEvaluation.evidenceGates.Count -ne 4) {
+        throw 'Expected playback quality CLI evaluate-candidate to emit four evidence gates.'
+    }
+
+    if (-not ($candidateEvaluation.evidenceGates | Where-Object { $_.name -eq 'manifest' -and $_.status -eq 'pass' })) {
+        throw 'Expected evaluate-candidate manifest evidence gate to pass.'
+    }
+
+    if (-not ($candidateEvaluation.evidenceGates | Where-Object { $_.name -eq 'baseline-report-set' -and $_.status -eq 'pass' })) {
+        throw 'Expected evaluate-candidate baseline report-set evidence gate to pass.'
+    }
+
+    if (-not ($candidateEvaluation.evidenceGates | Where-Object { $_.name -eq 'candidate-report-set' -and $_.status -eq 'pass' })) {
+        throw 'Expected evaluate-candidate candidate report-set evidence gate to pass.'
+    }
+
+    if (-not ($candidateEvaluation.evidenceGates | Where-Object { $_.name -eq 'suite' -and $_.status -eq 'pass' -and $_.action -eq 'accept-candidate' })) {
+        throw 'Expected evaluate-candidate suite evidence gate to pass with accept-candidate action.'
+    }
+
     New-Item -ItemType Directory -Path $candidateEvaluationInvalidCandidateDir | Out-Null
     @'
 {
@@ -590,6 +610,29 @@ try {
 
     if (Test-Path -LiteralPath $candidateEvaluationInvalidComparisonsDir) {
         throw 'Expected invalid evaluate-candidate evidence to skip comparison output.'
+    }
+
+    $invalidCandidateGate = $invalidCandidateEvaluation.evidenceGates |
+        Where-Object { $_.name -eq 'candidate-report-set' } |
+        Select-Object -First 1
+    if ($null -eq $invalidCandidateGate -or $invalidCandidateGate.status -ne 'blocked') {
+        throw 'Expected invalid evaluate-candidate candidate report-set gate to be blocked.'
+    }
+
+    if (-not ($invalidCandidateGate.blockers -contains 'candidate-report-set.invalid')) {
+        throw 'Expected invalid evaluate-candidate candidate report-set gate to include blocker.'
+    }
+
+    if (-not ($invalidCandidateGate.signals -contains 'source.hdrKind')) {
+        throw 'Expected invalid evaluate-candidate candidate report-set gate to include mismatched source signal.'
+    }
+
+    if (-not ($invalidCandidateGate.caseIds -contains 'item-1/source-1')) {
+        throw 'Expected invalid evaluate-candidate candidate report-set gate to include affected case id.'
+    }
+
+    if (-not ($invalidCandidateEvaluation.evidenceGates | Where-Object { $_.name -eq 'suite' -and $_.status -eq 'skipped' })) {
+        throw 'Expected invalid evaluate-candidate suite evidence gate to be skipped.'
     }
 
     New-Item -ItemType Directory -Path $stallBaselineDir | Out-Null

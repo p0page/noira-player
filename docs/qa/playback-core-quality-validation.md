@@ -71,9 +71,11 @@ dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQ
 - 验证 baseline 报告集是否完整覆盖 manifest；
 - 验证 candidate 报告集是否完整覆盖 manifest；
 - 只有前三步都有效时，才调用 `compare-suite` 做 before/after 比较；
-- 输出一个模型可直接消费的 JSON，包含 `action`、`risk`、`blockers`、manifest/report-set 校验结果和 suite 结果。
+- 输出一个模型可直接消费的 JSON，包含 `action`、`risk`、`blockers`、`evidenceGates`、manifest/report-set 校验结果和 suite 结果。
 
 这条命令默认使用 `--match-by run-id`，因此 manifest `caseId`、baseline `report.runId`、candidate `report.runId` 应保持一致。任何 missing/extra/duplicate/metadata mismatch 都会被视为证据采集失败，而不是播放核心优化结论。自动化模型循环应先修复采集或源选择问题，再根据 suite 结果决定保留、拆分、回退或继续修改播放核心。
+
+`evidenceGates` 是模型优先读取的门禁摘要。它按顺序列出 `manifest`、`baseline-report-set`、`candidate-report-set`、`suite`，每一项都有 `status`、`action`、`blockers`、`signals` 和 `caseIds`。当 report-set gate 被阻断时，模型应优先根据 `signals` 和 `caseIds` 修复采集或源选择；当 suite gate 为 `skipped` 时，说明还没有进入播放核心 before/after 比较。
 
 ## Compare Reports
 

@@ -178,10 +178,12 @@ dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQ
 - `baselineReportSetValidation`：baseline 是否完整覆盖 manifest，并且实际源元数据是否匹配预期。
 - `candidateReportSetValidation`：candidate 是否完整覆盖 manifest，并且实际源元数据是否匹配预期。
 - `suite`：只有三类校验都有效时才产生有效 before/after 比较结果。
+- `evidenceGates`：模型优先读取的门禁摘要，按 `manifest`、`baseline-report-set`、`candidate-report-set`、`suite` 顺序给出 `status`、`action`、`blockers`、`signals` 和 `caseIds`。
 - `action`、`risk`、`reasons`、`blockers`：给模型直接使用的下一步决策摘要。
 
 自动化模型循环必须按以下规则消费结果：
 
+- 先读取 `evidenceGates`。第一个 `status = blocked` 或 `status = skipped` 的 gate 是当前循环应处理的入口。
 - 如果 `blockers` 包含 manifest 或 report-set 问题，先修复证据采集、源选择、报告 runId 或 source metadata，不要修改播放核心。
 - 只有当 `action = accept-candidate` 且 `risk = low` 时，候选播放核心改动才可以被自动保留。
 - `review-unmatched-signals`、`collect-comparable-evidence`、`change-optimization-strategy` 等动作都不是通过信号，模型应继续采集或缩小改动范围。

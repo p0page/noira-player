@@ -189,6 +189,16 @@ internal static class Program
             AddUnique(evaluation.Blockers, "candidate-report-set.invalid");
         }
 
+        evaluation.EvidenceGates.Add(CreateManifestGate(evaluation.ManifestValidation));
+        evaluation.EvidenceGates.Add(CreateReportSetGate(
+            "baseline-report-set",
+            "baseline-report-set.invalid",
+            evaluation.BaselineReportSetValidation));
+        evaluation.EvidenceGates.Add(CreateReportSetGate(
+            "candidate-report-set",
+            "candidate-report-set.invalid",
+            evaluation.CandidateReportSetValidation));
+
         if (evaluation.Blockers.Count == 0)
         {
             evaluation.Suite = CompareSuite(options);
@@ -196,6 +206,7 @@ internal static class Program
             evaluation.Risk = evaluation.Suite.Risk;
             CopyValues(evaluation.Suite.Reasons, evaluation.Reasons);
             CopyValues(evaluation.Suite.Blockers, evaluation.Blockers);
+            evaluation.EvidenceGates.Add(CreateSuiteGate(evaluation.Suite));
         }
         else
         {
@@ -204,6 +215,7 @@ internal static class Program
             AddUnique(
                 evaluation.Reasons,
                 "candidate evaluation has invalid manifest or report-set evidence");
+            evaluation.EvidenceGates.Add(CreateSkippedSuiteGate());
         }
 
         WriteJson(evaluation, options.OutputPath);
@@ -754,6 +766,94 @@ internal static class Program
         File.WriteAllText(outputPath, json);
     }
 
+    private static CandidateEvaluationGate CreateManifestGate(
+        PlaybackQualityReferenceManifestValidation validation)
+    {
+        var gate = new CandidateEvaluationGate
+        {
+            Name = "manifest",
+            Status = validation.IsValid ? "pass" : "blocked",
+            Action = validation.IsValid ? "continue" : "fix-manifest",
+            Summary = validation.IsValid
+                ? "reference manifest is valid"
+                : "reference manifest is invalid"
+        };
+
+        if (!validation.IsValid)
+        {
+            AddUnique(gate.Blockers, "manifest.invalid");
+            foreach (var error in validation.Errors)
+            {
+                AddUnique(gate.Signals, error.Signal);
+                AddUnique(gate.CaseIds, error.CaseId);
+            }
+        }
+
+        return gate;
+    }
+
+    private static CandidateEvaluationGate CreateReportSetGate(
+        string name,
+        string blocker,
+        PlaybackQualityReferenceReportSetValidation validation)
+    {
+        var gate = new CandidateEvaluationGate
+        {
+            Name = name,
+            Status = validation.IsValid ? "pass" : "blocked",
+            Action = validation.IsValid ? "continue" : "fix-" + name,
+            Summary = validation.IsValid
+                ? name + " matches reference manifest"
+                : name + " does not match reference manifest"
+        };
+
+        if (!validation.IsValid)
+        {
+            AddUnique(gate.Blockers, blocker);
+            foreach (var error in validation.Errors)
+            {
+                AddUnique(gate.Signals, error.Signal);
+                AddUnique(gate.CaseIds, error.CaseId);
+            }
+        }
+
+        return gate;
+    }
+
+    private static CandidateEvaluationGate CreateSuiteGate(
+        PlaybackQualityComparisonSuite suite)
+    {
+        var gate = new CandidateEvaluationGate
+        {
+            Name = "suite",
+            Status = suite.Blockers.Count == 0 ? "pass" : "blocked",
+            Action = suite.Action,
+            Summary = "comparison suite action: " + suite.Action
+        };
+
+        CopyValues(suite.Blockers, gate.Blockers);
+        CopyValues(suite.Signals, gate.Signals);
+        foreach (var summary in suite.Cases)
+        {
+            AddUnique(gate.CaseIds, summary.CaseId);
+        }
+
+        return gate;
+    }
+
+    private static CandidateEvaluationGate CreateSkippedSuiteGate()
+    {
+        var gate = new CandidateEvaluationGate
+        {
+            Name = "suite",
+            Status = "skipped",
+            Action = "collect-comparable-evidence",
+            Summary = "comparison suite skipped because an earlier evidence gate failed"
+        };
+        AddUnique(gate.Blockers, "suite.skipped");
+        return gate;
+    }
+
     private static void CopyValues(List<string> source, List<string> target)
     {
         foreach (var value in source)
@@ -856,6 +956,8 @@ internal static class Program
         public string Risk { get; set; } = "high";
         public List<string> Reasons { get; } = new List<string>();
         public List<string> Blockers { get; } = new List<string>();
+        public List<CandidateEvaluationGate> EvidenceGates { get; } =
+            new List<CandidateEvaluationGate>();
         public PlaybackQualityReferenceManifestValidation ManifestValidation { get; set; } =
             new PlaybackQualityReferenceManifestValidation();
         public PlaybackQualityReferenceReportSetValidation BaselineReportSetValidation { get; set; } =
@@ -864,5 +966,16 @@ internal static class Program
             new PlaybackQualityReferenceReportSetValidation();
         public PlaybackQualityComparisonSuite Suite { get; set; } =
             new PlaybackQualityComparisonSuite();
+    }
+
+    private sealed class CandidateEvaluationGate
+    {
+        public string Name { get; set; } = "";
+        public string Status { get; set; } = "";
+        public string Action { get; set; } = "";
+        public string Summary { get; set; } = "";
+        public List<string> Blockers { get; } = new List<string>();
+        public List<string> Signals { get; } = new List<string>();
+        public List<string> CaseIds { get; } = new List<string>();
     }
 }
