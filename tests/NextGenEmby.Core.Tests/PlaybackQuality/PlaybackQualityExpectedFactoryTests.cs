@@ -19,6 +19,8 @@ public sealed class PlaybackQualityExpectedFactoryTests
         var frameDurationMs = 1000.0 / 23.976;
         Assert.Equal(23.976, expected.FrameRate);
         Assert.Equal("Hdr10", expected.HdrOutput);
+        Assert.Equal("YCBCR_STUDIO_G2084_TOPLEFT_P2020", expected.DxgiInput);
+        Assert.Equal("RGB_FULL_G2084_NONE_P2020", expected.DxgiOutput);
         Assert.Equal(120, expected.MinRenderedVideoFrames);
         Assert.Equal(0, expected.MaxDroppedFrames);
         Assert.Equal(frameDurationMs * 2.5, expected.MaxFrameGapMs!.Value, precision: 6);
@@ -41,6 +43,36 @@ public sealed class PlaybackQualityExpectedFactoryTests
         var expected = PlaybackQualityExpectedFactory.CreateDefault(descriptor);
 
         Assert.Equal("Sdr", expected.HdrOutput);
+        Assert.Equal("YCBCR_STUDIO_G22_LEFT_P709", expected.DxgiInput);
+        Assert.Equal("RGB_FULL_G22_NONE_P709", expected.DxgiOutput);
+    }
+
+    [Fact]
+    public void CreateDefault_Maps_DolbyVision_Hdr10_Fallback_To_Hdr10_Dxgi_Path()
+    {
+        var descriptor = CreateDescriptor(
+            frameRate: 24.0,
+            hdrKind: HdrPlaybackKind.DolbyVisionWithHdr10Fallback);
+
+        var expected = PlaybackQualityExpectedFactory.CreateDefault(descriptor);
+
+        Assert.Equal("Hdr10", expected.HdrOutput);
+        Assert.Equal("YCBCR_STUDIO_G2084_TOPLEFT_P2020", expected.DxgiInput);
+        Assert.Equal("RGB_FULL_G2084_NONE_P2020", expected.DxgiOutput);
+    }
+
+    [Fact]
+    public void CreateDefault_Leaves_Dxgi_Expectations_Unset_For_Hlg()
+    {
+        var descriptor = CreateDescriptor(
+            frameRate: 24.0,
+            hdrKind: HdrPlaybackKind.Hlg);
+
+        var expected = PlaybackQualityExpectedFactory.CreateDefault(descriptor);
+
+        Assert.Equal("", expected.HdrOutput);
+        Assert.Equal("", expected.DxgiInput);
+        Assert.Equal("", expected.DxgiOutput);
     }
 
     [Fact]

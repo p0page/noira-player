@@ -22,6 +22,8 @@ namespace NextGenEmby.Core.PlaybackQuality
             {
                 FrameRate = source.VideoFrameRate > 0 ? source.VideoFrameRate : 0,
                 HdrOutput = MapExpectedHdrOutput(source.HdrProfile.Kind),
+                DxgiInput = MapExpectedDxgiInput(source.HdrProfile.Kind),
+                DxgiOutput = MapExpectedDxgiOutput(source.HdrProfile.Kind),
                 MaxDroppedFrames = 0,
                 MaxAudioVideoDriftMsP95 = 40,
                 MaxVideoStarvedPasses = 0,
@@ -57,6 +59,36 @@ namespace NextGenEmby.Core.PlaybackQuality
                 case HdrPlaybackKind.DolbyVisionWithHdr10Fallback:
                 case HdrPlaybackKind.UnknownHdr:
                     return "Hdr10";
+                default:
+                    return "";
+            }
+        }
+
+        private static string MapExpectedDxgiInput(HdrPlaybackKind kind)
+        {
+            switch (kind)
+            {
+                case HdrPlaybackKind.Sdr:
+                    return "YCBCR_STUDIO_G22_LEFT_P709";
+                case HdrPlaybackKind.Hdr10:
+                case HdrPlaybackKind.DolbyVisionWithHdr10Fallback:
+                case HdrPlaybackKind.UnknownHdr:
+                    return "YCBCR_STUDIO_G2084_TOPLEFT_P2020";
+                default:
+                    return "";
+            }
+        }
+
+        private static string MapExpectedDxgiOutput(HdrPlaybackKind kind)
+        {
+            switch (kind)
+            {
+                case HdrPlaybackKind.Sdr:
+                    return "RGB_FULL_G22_NONE_P709";
+                case HdrPlaybackKind.Hdr10:
+                case HdrPlaybackKind.DolbyVisionWithHdr10Fallback:
+                case HdrPlaybackKind.UnknownHdr:
+                    return "RGB_FULL_G2084_NONE_P2020";
                 default:
                     return "";
             }
