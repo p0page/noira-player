@@ -40,7 +40,7 @@ Status values:
 | Open guide without leaving current page | `M` | Verified | 0.1.0.77 fixed guide overlay behavior | Validate over Search and Playback boundaries |
 | Navigate Home/Search/Movies/Shows | `M`, arrows, `Return` | Verified | 0.1.0.77 and later runs | Keep guide focus restoration tests |
 | Navigate Collections/Playlists/Favorites/Unwatched | `M`, arrows, `Return` | Verified | 0.1.0.78 run opened Playlists, Favorites, Unwatched | Add fresh visual screenshots |
-| Navigate Live TV/Music/Photos | `M`, arrows, `Return` | Implemented | Main guide destinations exist | Need server-supported keyboard run and unsupported-state audit |
+| Navigate Live TV/Music/Photos | `M`, arrows, `Return` | Implemented | Main guide destinations exist; 0.1.0.120 debug route opened Photos with TV empty-state recovery | Need real Guide-keyboard run for Live TV/Music and a positive Photos library |
 
 ## Library Browsing
 
@@ -95,7 +95,8 @@ Status values:
 | Live TV playback unsupported recovery | Open stream | Missing | No deliberate unsupported state | Add visible non-dead-end state before playback support |
 | Music browsing | Guide Music | Partial | Generic music album/audio query exists | Add album/artist/song hierarchy |
 | Music playback unsupported recovery | Open audio | Partial | Playback can route audio-like items, but UI copy not audited | Validate and add explanation if unsupported |
-| Photos browsing | Guide Photos | Partial | Photo query exists | Add photo viewer route and B recovery |
+| Photos browsing | Guide Photos or debug route `photos` | Implemented | 0.1.0.120 opened Photos with `No items found` and focused `Retry` when the server returned no Photo items | Validate a server library that contains Photo items/folders |
+| Photo viewer and B recovery | Open Photo item or debug route `photo` | Verified | 0.1.0.120 `photo` route opened an immersive viewer with hidden Guide rail, focused Back, fallback panel, and Escape returned to Home | Validate positive image load when a real Photo item is available |
 
 ## Settings And Diagnostics
 
@@ -110,6 +111,6 @@ Status values:
 
 1. Details still needs visible similar-items validation plus live add-to success on a disposable collection/playlist target.
 2. Playback More drawer needs a fresh keyboard validation pass with real audio/subtitle streams.
-3. Live TV, Music, and Photos need dedicated non-dead-end surfaces instead of generic library fallback.
+3. Live TV and Music need dedicated non-dead-end surfaces instead of generic library fallback; Photos now has a viewer fallback but still needs positive live-photo validation.
 4. Settings Guide route and checkbox toggle need a fresh real-keyboard or Computer Use pass because local synthetic key injection did not change UWP focus/toggle state.
 5. Search error recovery needs a deliberate offline/server-failure keyboard run.

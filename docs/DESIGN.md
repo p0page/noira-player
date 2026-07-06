@@ -103,6 +103,14 @@ components:
     textColor: "{colors.text}"
     rounded: "{rounded.lg}"
     padding: "{spacing.lg}"
+  navigation_chrome:
+    backgroundColor: "#E603060A"
+    collapsedWidth: "72px"
+    expandedWidth: "248px"
+  immersive_viewer:
+    scrim: "#66050607"
+    controlBackgroundColor: "{colors.surface_overlay}"
+    pageMargin: "56px 28px 56px 40px"
 ---
 
 ## Overview
@@ -216,6 +224,12 @@ Density should be "comfortable TV dense": enough items visible to support browsi
 The implementation should express repeated visual choices as XAML resources before they spread across pages. Colors, brushes, page margins, panel padding, typography styles, focus thickness, card radii, and common panel shapes belong in `App.xaml` or a future merged theme dictionary. Page XAML can still own one-off layout structure, such as a two-column diagnostics grid, but it should not duplicate raw font sizes, surface colors, or focus styling when a shared token exists.
 
 This keeps Matte Cinema Fluent replaceable. A future skin should be able to swap resource dictionaries for color, typography, spacing, and panel treatment without rewriting Emby data flow, controller navigation, or playback behavior. Skins may change visual language, but they must preserve the TV safety rules in this file: visible focus, stable card dimensions, dark scrims over artwork, and no hover-only affordances.
+
+The current XAML token migration has started with:
+
+- app shell and Guide rail resources: `AppShellRailBrush`, `TvGuideCollapsedWidth`, and `TvGuideExpandedWidth`;
+- immersive viewer resources: `AppImmersiveScrimBrush`, `AppImmersiveControlBrush`, and `TvImmersivePageMargin`;
+- shared TV text, panel, diagnostics, icon button, nav button, and settings checkbox styles.
 
 New UI surfaces should follow this migration order:
 

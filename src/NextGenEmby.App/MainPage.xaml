@@ -33,7 +33,7 @@
         <Border
             x:Name="GuideRail"
             Grid.Column="0"
-            Background="#E603060A"
+            Background="{StaticResource AppShellRailBrush}"
             BorderBrush="{StaticResource AppHairlineBrush}"
             BorderThickness="0,0,1,0">
             <Grid Margin="8,18,8,18">

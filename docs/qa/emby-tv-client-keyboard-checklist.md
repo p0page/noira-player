@@ -647,3 +647,24 @@ Then continue design and implementation until the route passes.
 - Keyboard validation limitation:
   - Windows `SendInput` kept `Next Gen Xbox Emby` foreground, but synthetic `Down`, `Enter`, and `Space` did not reliably drive UWP focus/toggle state in this desktop session.
   - Guide-to-Settings and checkbox toggle remain pending for a true hardware keyboard or dedicated Computer Use run; this batch does not mark those routes as Verified.
+
+### 2026-07-06 - Photos Viewer Route And Shell Tokens
+
+- App version: 0.1.0.120.
+- Scope: Photos gained a dedicated activation route and immersive viewer fallback instead of sending Photo items through generic movie/series Details.
+- Visual tokenization:
+  - Added shared shell resources for Guide rail color and collapsed/expanded widths.
+  - Added immersive viewer resources for scrim, control surface, and page safe margin.
+  - Added `ShellChromePolicy` so standard pages, playback, and photo viewer chrome behavior are not hard-coded in `MainPage`.
+- Automated verification:
+  - `PhotoViewerInputPolicyTests`, `ShellChromePolicyTests`, `ShellNavigationFocusPolicyTests`, `LibraryItemActivationPolicyTests`, and `DevelopmentNavigationCommandTests` passed: 31 targeted tests.
+  - App Debug x64 build passed and produced `NextGenEmby.App_0.1.0.120_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.120`.
+- Local visual and keyboard validation:
+  - Debug route `photo` completed and opened `Missing Photo` in an immersive viewer.
+  - Screenshot `nextgen-emby-photo-viewer-120-fallback.png` showed no left Guide rail, a clear Back focus frame, and a visible `Photo unavailable` fallback.
+  - UI Automation reported current focus as `Back`; fallback text bounds were centered in the maximized UWP window.
+  - `Escape` returned from the photo viewer to Home after the page-level handled-events-too B/Escape handler was added.
+  - Debug route `photos` completed and opened Photos with `No items found` plus a focused `Retry` recovery action.
+- Limitation:
+  - The live server returned no Photo items in this run, so positive image loading from a real Photo item remains pending.

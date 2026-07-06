@@ -14,6 +14,9 @@
             <Color x:Key="AppSurfaceColor">#0A1018</Color>
             <Color x:Key="AppRaisedSurfaceColor">#121D2A</Color>
             <Color x:Key="AppChromeColor">#B30A1018</Color>
+            <Color x:Key="AppShellRailColor">#E603060A</Color>
+            <Color x:Key="AppImmersiveScrimColor">#66050607</Color>
+            <Color x:Key="AppImmersiveControlColor">#B30A1018</Color>
             <Color x:Key="AppChromeHoverColor">#D4142030</Color>
             <Color x:Key="AppChromePressedColor">#E41B2C3F</Color>
             <Color x:Key="AppAccentColor">#4EE7FF</Color>
@@ -27,6 +30,9 @@
             <SolidColorBrush x:Key="AppSurfaceBrush" Color="{StaticResource AppSurfaceColor}" />
             <SolidColorBrush x:Key="AppRaisedSurfaceBrush" Color="{StaticResource AppRaisedSurfaceColor}" />
             <SolidColorBrush x:Key="AppChromeBrush" Color="{StaticResource AppChromeColor}" />
+            <SolidColorBrush x:Key="AppShellRailBrush" Color="{StaticResource AppShellRailColor}" />
+            <SolidColorBrush x:Key="AppImmersiveScrimBrush" Color="{StaticResource AppImmersiveScrimColor}" />
+            <SolidColorBrush x:Key="AppImmersiveControlBrush" Color="{StaticResource AppImmersiveControlColor}" />
             <SolidColorBrush x:Key="AppChromeHoverBrush" Color="{StaticResource AppChromeHoverColor}" />
             <SolidColorBrush x:Key="AppChromePressedBrush" Color="{StaticResource AppChromePressedColor}" />
             <SolidColorBrush x:Key="AppAccentBrush" Color="{StaticResource AppAccentColor}" />
@@ -53,7 +59,10 @@
             <SolidColorBrush x:Key="ButtonBorderBrushDisabled" Color="#332A3B4E" />
             <Thickness x:Key="TvShellMargin">48,18,48,12</Thickness>
             <Thickness x:Key="TvPageMargin">56,28,56,48</Thickness>
+            <Thickness x:Key="TvImmersivePageMargin">56,28,56,40</Thickness>
             <Thickness x:Key="TvPanelPadding">22</Thickness>
+            <x:Double x:Key="TvGuideCollapsedWidth">72</x:Double>
+            <x:Double x:Key="TvGuideExpandedWidth">248</x:Double>
             <x:Double x:Key="TvSettingsContentMaxWidth">980</x:Double>
 
             <Style TargetType="Button">

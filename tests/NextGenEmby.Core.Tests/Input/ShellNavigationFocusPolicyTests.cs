@@ -37,5 +37,27 @@ namespace NextGenEmby.Core.Tests.Input
 
             Assert.Equal(ShellNavigationFocusTarget.None, target);
         }
+
+        [Fact]
+        public void Photo_Viewer_Navigation_Prefers_Content_Focus()
+        {
+            var target = ShellNavigationFocusPolicy.GetFocusTarget(
+                ShellContentMode.PhotoViewer,
+                isBackNavigation: false,
+                hasContentFocusTarget: true);
+
+            Assert.Equal(ShellNavigationFocusTarget.Content, target);
+        }
+
+        [Fact]
+        public void Playback_Mode_Navigation_Does_Not_Move_Focus_To_Shell()
+        {
+            var target = ShellNavigationFocusPolicy.GetFocusTarget(
+                ShellContentMode.Playback,
+                isBackNavigation: false,
+                hasContentFocusTarget: true);
+
+            Assert.Equal(ShellNavigationFocusTarget.None, target);
+        }
     }
 }

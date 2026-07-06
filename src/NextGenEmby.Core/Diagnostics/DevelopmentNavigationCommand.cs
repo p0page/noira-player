@@ -83,7 +83,14 @@ namespace NextGenEmby.Core.Diagnostics
                 case "tv":
                 case "search":
                 case "settings":
+                case "livetv":
+                case "music":
+                case "photos":
+                case "playlists":
+                case "favorites":
+                case "unwatched":
                 case "details":
+                case "photo":
                 case "playback":
                     return true;
 
@@ -94,7 +101,7 @@ namespace NextGenEmby.Core.Diagnostics
 
         private static bool RequiresItemId(string route)
         {
-            return route == "details" || route == "playback";
+            return route == "details" || route == "photo" || route == "playback";
         }
     }
 }

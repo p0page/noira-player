@@ -14,12 +14,23 @@ namespace NextGenEmby.Core.Input
             bool isBackNavigation,
             bool hasContentFocusTarget)
         {
-            if (isPlaybackPage)
+            return GetFocusTarget(
+                isPlaybackPage ? ShellContentMode.Playback : ShellContentMode.Standard,
+                isBackNavigation,
+                hasContentFocusTarget);
+        }
+
+        public static ShellNavigationFocusTarget GetFocusTarget(
+            ShellContentMode contentMode,
+            bool isBackNavigation,
+            bool hasContentFocusTarget)
+        {
+            if (contentMode == ShellContentMode.Playback)
             {
                 return ShellNavigationFocusTarget.None;
             }
 
-            if (isBackNavigation && hasContentFocusTarget)
+            if ((isBackNavigation || contentMode == ShellContentMode.PhotoViewer) && hasContentFocusTarget)
             {
                 return ShellNavigationFocusTarget.Content;
             }

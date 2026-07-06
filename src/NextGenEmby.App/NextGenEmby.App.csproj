@@ -81,6 +81,7 @@
     <Compile Include="Navigation\ITvContentFocusTarget.cs" />
     <Compile Include="Navigation\LibraryNavigationRequest.cs" />
     <Compile Include="Navigation\MediaDetailsNavigationRequest.cs" />
+    <Compile Include="Navigation\PhotoViewerNavigationRequest.cs" />
     <Compile Include="Navigation\PlaybackLaunchRequest.cs" />
     <Compile Include="Playback\SystemMediaPlaybackBackend.cs" />
     <Compile Include="Playback\WinRtNativePlaybackEngine.cs" />
@@ -104,6 +105,9 @@
     </Compile>
     <Compile Include="Views\PlaybackPage.xaml.cs">
       <DependentUpon>PlaybackPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\PhotoViewerPage.xaml.cs">
+      <DependentUpon>PhotoViewerPage.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\SearchPage.xaml.cs">
       <DependentUpon>SearchPage.xaml</DependentUpon>
@@ -139,6 +143,10 @@
       <SubType>Designer</SubType>
     </Page>
     <Page Include="Views\PlaybackPage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\PhotoViewerPage.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>

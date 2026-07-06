@@ -24,6 +24,30 @@ public sealed class DevelopmentNavigationCommandTests
         Assert.Equal("", command.ItemId);
     }
 
+    [Theory]
+    [InlineData("LiveTv", "livetv")]
+    [InlineData("Music", "music")]
+    [InlineData("Photos", "photos")]
+    [InlineData("Playlists", "playlists")]
+    [InlineData("Favorites", "favorites")]
+    [InlineData("Unwatched", "unwatched")]
+    public void TryParseJson_Accepts_Guide_Routes(string route, string normalizedRoute)
+    {
+        var parsed = DevelopmentNavigationCommand.TryParseJson(
+            $$"""
+            {
+              "route": "{{route}}"
+            }
+            """,
+            out var command,
+            out var error);
+
+        Assert.True(parsed);
+        Assert.Equal("", error);
+        Assert.NotNull(command);
+        Assert.Equal(normalizedRoute, command!.Route);
+    }
+
     [Fact]
     public void TryParseJson_Accepts_Playback_Route()
     {
@@ -52,8 +76,31 @@ public sealed class DevelopmentNavigationCommandTests
         Assert.True(command.ForceSdrOutput);
     }
 
+    [Fact]
+    public void TryParseJson_Accepts_Photo_Route()
+    {
+        var parsed = DevelopmentNavigationCommand.TryParseJson(
+            """
+            {
+              "route": "photo",
+              "itemId": "photo-123",
+              "itemName": "Vacation"
+            }
+            """,
+            out var command,
+            out var error);
+
+        Assert.True(parsed);
+        Assert.Equal("", error);
+        Assert.NotNull(command);
+        Assert.Equal("photo", command!.Route);
+        Assert.Equal("photo-123", command.ItemId);
+        Assert.Equal("Vacation", command.ItemName);
+    }
+
     [Theory]
     [InlineData("details")]
+    [InlineData("photo")]
     [InlineData("playback")]
     public void TryParseJson_Rejects_Item_Route_Without_ItemId(string route)
     {

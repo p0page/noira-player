@@ -22,8 +22,8 @@ namespace NextGenEmby.App
 #if DEBUG
         private const string DevelopmentCommandFileName = "dev-command.json";
 #endif
-        private const double GuideCollapsedWidth = 72d;
-        private const double GuideExpandedWidth = 248d;
+        private const double FallbackGuideCollapsedWidth = 72d;
+        private const double FallbackGuideExpandedWidth = 248d;
         private const string FavoriteItemTypes = "Movie,Series,Episode,Video,MusicVideo,Audio,MusicAlbum,Photo,BoxSet,Playlist";
         private const string UnwatchedItemTypes = "Movie,Series,Episode,Video,MusicVideo";
         private readonly ApplicationDataSessionStore _sessionStore = new ApplicationDataSessionStore();
@@ -68,7 +68,8 @@ namespace NextGenEmby.App
 
         private void Page_OnKeyDown(object sender, KeyRoutedEventArgs e)
         {
-            if (IsPlaybackPageActive())
+            var shellChrome = GetCurrentShellChromeDecision();
+            if (shellChrome.BlocksGlobalBack)
             {
                 return;
             }
@@ -94,7 +95,7 @@ namespace NextGenEmby.App
 
             if (GlobalBackInputPolicy.ShouldGoBack(
                 e.Handled,
-                IsPlaybackPageActive(),
+                shellChrome.BlocksGlobalBack,
                 ContentFrame.CanGoBack,
                 IsBackKey(e.Key)))
             {
@@ -119,6 +120,7 @@ namespace NextGenEmby.App
 
         private bool TryApplyGuideNavigationKey(KeyRoutedEventArgs e)
         {
+            var shellChrome = GetCurrentShellChromeDecision();
             var menuKeyPressed = IsMenuKey(e.Key);
             var backKeyPressed = IsBackKey(e.Key);
             var selectKeyPressed = _guideOpen && IsSelectKey(e.Key);
@@ -135,7 +137,7 @@ namespace NextGenEmby.App
                 : ResolveActiveGuideDestination(ContentFrame.CurrentSourcePageType, _currentLibraryRequest);
             var decision = GuideNavigationPolicy.GetDecision(
                 e.Handled,
-                IsPlaybackPageActive(),
+                shellChrome.SuppressGuideNavigation,
                 _guideOpen,
                 menuKeyPressed,
                 backKeyPressed,
@@ -271,16 +273,22 @@ namespace NextGenEmby.App
                 "MainPage.Navigated page=" + e.SourcePageType.Name +
                 " parameter=" + (e.Parameter == null ? "null" : e.Parameter.GetType().Name) +
                 " canGoBack=" + ContentFrame.CanGoBack);
-            ApplyShellChrome(e.SourcePageType == typeof(PlaybackPage));
+            ApplyShellChrome(e.SourcePageType);
             ApplyShellButtonState(e.SourcePageType, _currentLibraryRequest);
             ApplyNavigationFocus(e.SourcePageType, _currentLibraryRequest, e.NavigationMode);
         }
 
-        private void ApplyShellChrome(bool isPlayback)
+        private void ApplyShellChrome(Type pageType)
         {
-            GuideRail.Visibility = isPlayback ? Visibility.Collapsed : Visibility.Visible;
-            Grid.SetColumn(ContentFrame, isPlayback ? 0 : 1);
-            Grid.SetColumnSpan(ContentFrame, isPlayback ? 2 : 1);
+            var shellChrome = GetShellChromeDecision(pageType);
+            if (!shellChrome.IsGuideVisible && _guideOpen)
+            {
+                ApplyGuideOpenState(isOpen: false);
+            }
+
+            GuideRail.Visibility = shellChrome.IsGuideVisible ? Visibility.Visible : Visibility.Collapsed;
+            Grid.SetColumn(ContentFrame, shellChrome.IsContentImmersive ? 0 : 1);
+            Grid.SetColumnSpan(ContentFrame, shellChrome.IsContentImmersive ? 2 : 1);
         }
 
         private void ApplyShellButtonState(Type pageType, LibraryNavigationRequest? libraryRequest)
@@ -323,7 +331,7 @@ namespace NextGenEmby.App
             }
 
             var focusTarget = ShellNavigationFocusPolicy.GetFocusTarget(
-                pageType == typeof(PlaybackPage),
+                GetShellContentMode(pageType),
                 navigationMode == NavigationMode.Back,
                 contentFocusTarget != null);
 
@@ -351,7 +359,7 @@ namespace NextGenEmby.App
             LibraryNavigationRequest? libraryRequest,
             FocusState focusState)
         {
-            if (pageType == typeof(PlaybackPage))
+            if (GetShellChromeDecision(pageType).IsContentImmersive)
             {
                 return;
             }
@@ -574,7 +582,9 @@ namespace NextGenEmby.App
         private void ApplyGuideOpenState(bool isOpen)
         {
             _guideOpen = isOpen;
-            GuideColumn.Width = new GridLength(isOpen ? GuideExpandedWidth : GuideCollapsedWidth);
+            GuideColumn.Width = new GridLength(isOpen
+                ? ResourceDouble("TvGuideExpandedWidth", FallbackGuideExpandedWidth)
+                : ResourceDouble("TvGuideCollapsedWidth", FallbackGuideCollapsedWidth));
             GuideTitleLabel.Visibility = isOpen ? Visibility.Visible : Visibility.Collapsed;
             SetGuideLabelVisibility(HomeGuideLabel, isOpen);
             SetGuideLabelVisibility(SearchGuideLabel, isOpen);
@@ -712,12 +722,30 @@ namespace NextGenEmby.App
                     NavigateLibrary(new LibraryNavigationRequest("TV Shows", "tvshows", "Series"));
                     return;
 
+                case "livetv":
+                    NavigateLibrary(new LibraryNavigationRequest("Live TV", "livetv", "TvChannel"));
+                    return;
+
                 case "search":
                     NavigateSearch();
                     return;
 
                 case "settings":
                     NavigateSettings();
+                    return;
+
+                case "music":
+                    NavigateLibrary(new LibraryNavigationRequest("Music", "music", "MusicAlbum,Audio"));
+                    return;
+
+                case "photos":
+                    NavigateLibrary(new LibraryNavigationRequest(
+                        "Photos",
+                        "photos",
+                        "Photo",
+                        "",
+                        "",
+                        new LibraryNavigationQuery(mediaTypes: "Photo", requireItemTypeMatch: true)));
                     return;
 
                 case "playlists":
@@ -752,6 +780,10 @@ namespace NextGenEmby.App
 
                 case "details":
                     NavigateTo(typeof(MediaDetailsPage), new MediaDetailsNavigationRequest(command.ItemId, command.ItemName));
+                    return;
+
+                case "photo":
+                    NavigateTo(typeof(PhotoViewerPage), new PhotoViewerNavigationRequest(command.ItemId, command.ItemName));
                     return;
 
                 case "playback":
@@ -875,9 +907,35 @@ namespace NextGenEmby.App
             }
         }
 
-        private bool IsPlaybackPageActive()
+        private ShellChromeDecision GetCurrentShellChromeDecision()
         {
-            return ContentFrame.CurrentSourcePageType == typeof(PlaybackPage);
+            return GetShellChromeDecision(ContentFrame.CurrentSourcePageType);
+        }
+
+        private static ShellChromeDecision GetShellChromeDecision(Type pageType)
+        {
+            return ShellChromePolicy.GetDecision(GetShellContentMode(pageType));
+        }
+
+        private static ShellContentMode GetShellContentMode(Type pageType)
+        {
+            if (pageType == typeof(PlaybackPage))
+            {
+                return ShellContentMode.Playback;
+            }
+
+            if (pageType == typeof(PhotoViewerPage))
+            {
+                return ShellContentMode.PhotoViewer;
+            }
+
+            return ShellContentMode.Standard;
+        }
+
+        private static double ResourceDouble(string key, double fallback)
+        {
+            var value = Application.Current.Resources[key];
+            return value is double ? (double)value : fallback;
         }
 
         private static bool IsFocusWithin(object focusedElement, DependencyObject target)

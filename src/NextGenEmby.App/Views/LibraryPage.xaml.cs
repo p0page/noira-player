@@ -546,10 +546,10 @@ namespace NextGenEmby.App.Views
         private void ItemsGrid_OnItemClick(object sender, ItemClickEventArgs e)
         {
             var gridItem = e.ClickedItem as LibraryGridItem;
-            NavigateToDetails(gridItem == null ? null : gridItem.Item);
+            ActivateLibraryItem(gridItem == null ? null : gridItem.Item);
         }
 
-        private void NavigateToDetails(EmbyMediaItem? item)
+        private void ActivateLibraryItem(EmbyMediaItem? item)
         {
             if (item == null || string.IsNullOrWhiteSpace(item.Id))
             {
@@ -563,6 +563,13 @@ namespace NextGenEmby.App.Views
 
             _isNavigatingToDetails = true;
             var itemName = string.IsNullOrWhiteSpace(item.Name) ? item.Id : item.Name;
+            var route = LibraryItemActivationPolicy.ChooseRoute(item.Type);
+            if (route == LibraryItemActivationRoute.PhotoViewer)
+            {
+                Frame.Navigate(typeof(PhotoViewerPage), new PhotoViewerNavigationRequest(item.Id, itemName));
+                return;
+            }
+
             Frame.Navigate(typeof(MediaDetailsPage), new MediaDetailsNavigationRequest(item.Id, itemName));
         }
 
