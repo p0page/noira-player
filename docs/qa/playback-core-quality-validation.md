@@ -170,6 +170,7 @@ Playback quality reports are optimized for model/agent consumption:
 - `PlaybackQualityReferenceCaseReportRequestFactory` converts a validated reference case and actual playback evidence into a composer request with `runId = caseId`;
 - `modelAnalysis.startup`, `modelAnalysis.source`, `modelAnalysis.colorPipeline`, `modelAnalysis.buffering`, and `modelAnalysis.avSync` summarize the raw report into status fields, evidence signals, and failed/mismatched signals so automated optimization can choose the right failure area before editing playback Core;
 - `modelAnalysis.cadence` exposes the source/display refresh relationship, nearest 1x/2x/2.5x/3x/4x/5x target, Hz delta, tolerance, and Kodi-style clock-speed adjustment used for frame cadence diagnosis;
+- `modelAnalysis.framePacing` exposes both the machine-readable failure pattern and normalized severity fields such as interval-to-frame ratios and dropped-frame percent, so automated optimization can compare stutter evidence across source frame rates;
 - `analysis.relevantSignals` names the exact report fields that triggered the conclusion;
 - `PlaybackQualityReportAnalyzer` emits a model-facing analysis JSON with primary and secondary failure areas, failed check expected/actual values, evidence signals, missing evidence, and software-only limitations;
 - `triageSteps` ranks blocker and failure investigation steps so automated model runs can decide whether to collect missing evidence or edit playback Core first;

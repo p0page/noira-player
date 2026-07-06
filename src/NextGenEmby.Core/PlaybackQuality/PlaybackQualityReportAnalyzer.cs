@@ -159,6 +159,11 @@ namespace NextGenEmby.Core.PlaybackQuality
     public sealed class PlaybackQualityFramePacingClassification
     {
         public string Pattern { get; set; } = "not-applicable";
+        public double ExpectedFrameDurationMs { get; set; }
+        public double RenderIntervalP95FrameRatio { get; set; }
+        public double RenderIntervalP99FrameRatio { get; set; }
+        public double MaxFrameGapFrameRatio { get; set; }
+        public double DroppedVideoFramePercent { get; set; }
         public List<string> Reasons { get; } = new List<string>();
         public List<string> Signals { get; } = new List<string>();
     }
@@ -216,7 +221,7 @@ namespace NextGenEmby.Core.PlaybackQuality
             AddDerivedEvidence(analysis, report);
             AddMissingEvidence(analysis, report);
             analysis.OptimizationGate = AssessOptimizationGate(analysis);
-            analysis.FramePacing = ClassifyFramePacing(analysis);
+            analysis.FramePacing = ClassifyFramePacing(analysis, report);
             AddInvestigationHints(analysis);
             AddTriageSteps(analysis);
 
@@ -722,9 +727,11 @@ namespace NextGenEmby.Core.PlaybackQuality
         }
 
         private static PlaybackQualityFramePacingClassification ClassifyFramePacing(
-            PlaybackQualityModelAnalysis analysis)
+            PlaybackQualityModelAnalysis analysis,
+            PlaybackQualityReport report)
         {
             var classification = new PlaybackQualityFramePacingClassification();
+            AddFramePacingSeverity(classification, report);
             if (!analysis.FailureAreas.Contains("frame-pacing"))
             {
                 return classification;
@@ -793,6 +800,30 @@ namespace NextGenEmby.Core.PlaybackQuality
             classification.Pattern = "unknown";
             AddUnique(classification.Reasons, "Frame pacing failed without a recognized timing signal.");
             return classification;
+        }
+
+        private static void AddFramePacingSeverity(
+            PlaybackQualityFramePacingClassification classification,
+            PlaybackQualityReport report)
+        {
+            classification.ExpectedFrameDurationMs = report.Timing.ExpectedFrameDurationMs;
+            if (report.Timing.ExpectedFrameDurationMs > 0)
+            {
+                classification.RenderIntervalP95FrameRatio =
+                    report.Timing.RenderIntervalMsP95 / report.Timing.ExpectedFrameDurationMs;
+                classification.RenderIntervalP99FrameRatio =
+                    report.Timing.RenderIntervalMsP99 / report.Timing.ExpectedFrameDurationMs;
+                classification.MaxFrameGapFrameRatio =
+                    report.Timing.MaxFrameGapMs / report.Timing.ExpectedFrameDurationMs;
+            }
+
+            var observedFrames =
+                (double)report.Timing.RenderedVideoFrames + report.Timing.DroppedVideoFrames;
+            if (observedFrames > 0)
+            {
+                classification.DroppedVideoFramePercent =
+                    report.Timing.DroppedVideoFrames * 100.0 / observedFrames;
+            }
         }
 
         private static bool HasFailedSignal(

@@ -783,6 +783,27 @@ public sealed class PlaybackQualityReportAnalyzerTests
     }
 
     [Fact]
+    public void Analyze_Reports_Normalized_Frame_Pacing_Severity_For_Model_Diagnosis()
+    {
+        var report = CreateOptimizationReadyFailure();
+        var frameDurationMs = 1000.0 / 23.976;
+        report.Timing.RenderedVideoFrames = 240;
+        report.Timing.DroppedVideoFrames = 6;
+        report.Timing.ExpectedFrameDurationMs = frameDurationMs;
+        report.Timing.RenderIntervalMsP95 = frameDurationMs * 1.5;
+        report.Timing.RenderIntervalMsP99 = frameDurationMs * 2.5;
+        report.Timing.MaxFrameGapMs = frameDurationMs * 4.0;
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Equal(frameDurationMs, analysis.FramePacing.ExpectedFrameDurationMs, precision: 3);
+        Assert.Equal(1.5, analysis.FramePacing.RenderIntervalP95FrameRatio, precision: 3);
+        Assert.Equal(2.5, analysis.FramePacing.RenderIntervalP99FrameRatio, precision: 3);
+        Assert.Equal(4.0, analysis.FramePacing.MaxFrameGapFrameRatio, precision: 3);
+        Assert.Equal(2.439, analysis.FramePacing.DroppedVideoFramePercent, precision: 3);
+    }
+
+    [Fact]
     public void Analyze_Classifies_Frame_Pacing_As_Sustained_Jitter_When_P95_Render_Interval_Fails()
     {
         var report = CreateOptimizationReadyFailure();
