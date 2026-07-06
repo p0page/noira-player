@@ -14,6 +14,7 @@ tools\quality-run\run-playback-core-checks.ps1
 
 The command validates:
 
+- playback-core validation plan structure, including the invariant that App/MSIX build steps are excluded;
 - Core playback quality DTOs, report composer, evaluator, analyzer, command parsing, and playback policy tests;
 - Core refresh-rate cadence policy tests that mirror the native Xbox display-mode selection ratios;
 - standalone native playback quality metrics helper;

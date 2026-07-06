@@ -17,6 +17,10 @@ if (-not ($plan.commands | Where-Object { $_.name -eq 'core-tests' })) {
     throw 'Expected core-tests command in playback-core validation plan.'
 }
 
+if (-not ($plan.commands | Where-Object { $_.name -eq 'script-plan-test' })) {
+    throw 'Expected script-plan-test command in playback-core validation plan.'
+}
+
 if (-not ($plan.commands | Where-Object { $_.name -eq 'native-helper-test' })) {
     throw 'Expected native-helper-test command in playback-core validation plan.'
 }

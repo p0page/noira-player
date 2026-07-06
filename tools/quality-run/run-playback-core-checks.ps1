@@ -30,6 +30,11 @@ $nativeBuildCommand = '"' + $vcvars + '" >nul && msbuild src\NextGenEmby.Native\
 
 $commands = @(
     New-CommandPlan `
+        -Name 'script-plan-test' `
+        -Description 'Validate that the playback-core check plan stays App-free before running builds or tests.' `
+        -Command 'powershell' `
+        -Arguments @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', 'tools\quality-run\run-playback-core-checks.tests.ps1')
+    New-CommandPlan `
         -Name 'core-tests' `
         -Description 'Run Core playback quality and playback policy tests without building the UWP App package.' `
         -Command 'dotnet' `
