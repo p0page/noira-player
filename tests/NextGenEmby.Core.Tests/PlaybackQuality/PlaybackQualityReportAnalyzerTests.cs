@@ -372,6 +372,39 @@ public sealed class PlaybackQualityReportAnalyzerTests
     }
 
     [Fact]
+    public void Analyze_Reports_Cadence_Match_For_Cinema_Source_On_5994Hz_Display()
+    {
+        var report = CreateOptimizationReadyFailure();
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Equal("matched", analysis.Cadence.Status);
+        Assert.Equal(23.976, analysis.Cadence.SourceFrameRate, precision: 3);
+        Assert.Equal(59.94006, analysis.Cadence.DisplayRefreshRateHz, precision: 5);
+        Assert.Equal(2.5, analysis.Cadence.BestMultiplier, precision: 3);
+        Assert.Equal(59.94, analysis.Cadence.BestTargetRefreshRateHz, precision: 2);
+        Assert.InRange(analysis.Cadence.RefreshDeltaHz, 0, 0.01);
+        Assert.Equal(0.15, analysis.Cadence.ToleranceHz, precision: 3);
+        Assert.Contains("source.frameRate", analysis.Cadence.Signals);
+        Assert.Contains("display.refreshRateHz", analysis.Cadence.Signals);
+    }
+
+    [Fact]
+    public void Analyze_Reports_Cadence_Mismatch_With_Nearest_Target()
+    {
+        var report = CreateOptimizationReadyFailure();
+        report.Display.RefreshRateHz = 50.0;
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Equal("mismatch", analysis.Cadence.Status);
+        Assert.Equal(2.0, analysis.Cadence.BestMultiplier, precision: 3);
+        Assert.Equal(47.952, analysis.Cadence.BestTargetRefreshRateHz, precision: 3);
+        Assert.Equal(2.048, analysis.Cadence.RefreshDeltaHz, precision: 3);
+        Assert.Contains("Display refresh rate is outside cadence tolerance.", analysis.Cadence.Reason);
+    }
+
+    [Fact]
     public void Analyze_Classifies_Frame_Pacing_As_Starvation_Driven_When_Buffering_Fails_With_Frame_Pacing()
     {
         var report = CreateOptimizationReadyFailure();
@@ -677,6 +710,7 @@ public sealed class PlaybackQualityReportAnalyzerTests
         Assert.Contains("\"runId\"", json);
         Assert.Contains("\"primaryFailureArea\"", json);
         Assert.Contains("\"sample\"", json);
+        Assert.Contains("\"cadence\"", json);
         Assert.Contains("\"optimizationGate\"", json);
         Assert.Contains("\"framePacing\"", json);
         Assert.Contains("\"triageSteps\"", json);

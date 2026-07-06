@@ -9,6 +9,7 @@ namespace NextGenEmby.Core.PlaybackQuality
         public string PrimaryFailureArea { get; set; } = "none";
         public string SuggestedNextAction { get; set; } = "";
         public PlaybackQualitySampleAssessment Sample { get; set; } = new PlaybackQualitySampleAssessment();
+        public PlaybackQualityCadenceAssessment Cadence { get; set; } = new PlaybackQualityCadenceAssessment();
         public PlaybackQualityOptimizationGate OptimizationGate { get; set; } = new PlaybackQualityOptimizationGate();
         public PlaybackQualityFramePacingClassification FramePacing { get; set; } = new PlaybackQualityFramePacingClassification();
         public List<PlaybackQualityTriageStep> TriageSteps { get; } = new List<PlaybackQualityTriageStep>();
@@ -48,6 +49,19 @@ namespace NextGenEmby.Core.PlaybackQuality
         public double ObservedSampleDurationMs { get; set; }
         public double MinimumSampleDurationMs { get; set; }
         public string Reason { get; set; } = "";
+    }
+
+    public sealed class PlaybackQualityCadenceAssessment
+    {
+        public string Status { get; set; } = "missing-evidence";
+        public double SourceFrameRate { get; set; }
+        public double DisplayRefreshRateHz { get; set; }
+        public double BestMultiplier { get; set; }
+        public double BestTargetRefreshRateHz { get; set; }
+        public double RefreshDeltaHz { get; set; }
+        public double ToleranceHz { get; set; }
+        public string Reason { get; set; } = "";
+        public List<string> Signals { get; } = new List<string>();
     }
 
     public sealed class PlaybackQualityOptimizationGate
@@ -110,6 +124,7 @@ namespace NextGenEmby.Core.PlaybackQuality
             }
 
             analysis.Sample = AssessSample(report);
+            analysis.Cadence = AssessCadence(report);
             AddDerivedEvidence(analysis, report);
             AddMissingEvidence(analysis, report);
             analysis.OptimizationGate = AssessOptimizationGate(analysis);
@@ -522,6 +537,25 @@ namespace NextGenEmby.Core.PlaybackQuality
                 ? "Rendered frame sample met the expected minimum."
                 : "Rendered video frames were captured; no minimum rendered frame expectation was supplied.";
             return sample;
+        }
+
+        private static PlaybackQualityCadenceAssessment AssessCadence(PlaybackQualityReport report)
+        {
+            var cadence = PlaybackRefreshRatePolicy.AssessCadence(
+                report.Display.RefreshRateHz,
+                report.Source.FrameRate);
+
+            if (report.Source.FrameRate > 0)
+            {
+                AddUnique(cadence.Signals, "source.frameRate");
+            }
+
+            if (report.Display.RefreshRateHz > 0)
+            {
+                AddUnique(cadence.Signals, "display.refreshRateHz");
+            }
+
+            return cadence;
         }
 
         private static double GetSampleFrameRate(PlaybackQualityReport report)

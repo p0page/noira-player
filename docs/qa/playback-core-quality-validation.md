@@ -77,6 +77,7 @@ Playback quality reports are optimized for model/agent consumption:
 - `checks` contains structured threshold comparisons;
 - `analysis.primaryFailureArea` identifies the first area to investigate;
 - `PlaybackQualityReportComposer` is the App-free entry point that combines source, display, metrics, expected thresholds, evaluation, and model analysis in one call;
+- `modelAnalysis.cadence` exposes the source/display refresh relationship, nearest 1x/2x/2.5x target, Hz delta, and tolerance used for frame cadence diagnosis;
 - `analysis.relevantSignals` names the exact report fields that triggered the conclusion;
 - `PlaybackQualityReportAnalyzer` emits a model-facing analysis JSON with primary and secondary failure areas, failed check expected/actual values, evidence signals, missing evidence, and software-only limitations;
 - `triageSteps` ranks blocker and failure investigation steps so automated model runs can decide whether to collect missing evidence or edit playback Core first;

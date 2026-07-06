@@ -21,6 +21,59 @@ namespace NextGenEmby.Core.PlaybackQuality
             return RefreshWeight(displayRefreshRate, videoFrameRate) < NoMatchWeight;
         }
 
+        public static PlaybackQualityCadenceAssessment AssessCadence(
+            double displayRefreshRate,
+            double videoFrameRate)
+        {
+            var assessment = new PlaybackQualityCadenceAssessment
+            {
+                SourceFrameRate = videoFrameRate,
+                DisplayRefreshRateHz = displayRefreshRate,
+                ToleranceHz = MatchTolerance
+            };
+
+            if (!HasUsableVideoFrameRate(videoFrameRate))
+            {
+                assessment.Status = "unsupported-source";
+                assessment.Reason = "Source frame rate is not usable for cadence assessment.";
+                return assessment;
+            }
+
+            if (!IsFinite(displayRefreshRate) || displayRefreshRate <= 0.0)
+            {
+                assessment.Status = "missing-evidence";
+                assessment.Reason = "Display refresh rate is missing for cadence assessment.";
+                return assessment;
+            }
+
+            var bestDelta = double.MaxValue;
+            foreach (var ratio in SupportedRatios)
+            {
+                var targetRefreshRate = videoFrameRate * ratio;
+                var difference = Math.Abs(displayRefreshRate - targetRefreshRate);
+                if (difference < bestDelta)
+                {
+                    bestDelta = difference;
+                    assessment.BestMultiplier = ratio;
+                    assessment.BestTargetRefreshRateHz = targetRefreshRate;
+                    assessment.RefreshDeltaHz = difference;
+                }
+            }
+
+            if (assessment.RefreshDeltaHz <= MatchTolerance)
+            {
+                assessment.Status = "matched";
+                assessment.Reason = "Display refresh rate matches source cadence.";
+            }
+            else
+            {
+                assessment.Status = "mismatch";
+                assessment.Reason = "Display refresh rate is outside cadence tolerance.";
+            }
+
+            return assessment;
+        }
+
         public static bool IsBetterRefreshRateForVideo(
             double candidateRefreshRate,
             double selectedRefreshRate,
