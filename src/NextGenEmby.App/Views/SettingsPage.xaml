@@ -28,6 +28,7 @@
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
 
                                 <TextBlock Text="Session" Style="{StaticResource TvFieldLabelTextStyle}" />
@@ -47,6 +48,17 @@
                                     Grid.Row="1"
                                     Grid.Column="1"
                                     Style="{StaticResource TvBodyValueTextStyle}" />
+
+                                <Button
+                                    x:Name="SignOutButton"
+                                    Grid.Row="2"
+                                    Grid.Column="1"
+                                    Margin="0,14,0,0"
+                                    HorizontalAlignment="Left"
+                                    AutomationProperties.Name="Sign out of Emby"
+                                    Click="SignOutButton_OnClick"
+                                    Content="Sign out"
+                                    Style="{StaticResource TvSettingsAccountActionButtonStyle}" />
                             </Grid>
                         </StackPanel>
                     </Border>
@@ -104,5 +116,40 @@
                 </StackPanel>
             </Grid>
         </ScrollViewer>
+
+        <Border
+            x:Name="SignOutConfirmLayer"
+            Background="{StaticResource AppModalScrimBrush}"
+            Visibility="Collapsed">
+            <Border
+                Width="560"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Style="{StaticResource TvPanelStyle}">
+                <StackPanel Spacing="16">
+                    <TextBlock Text="Sign out?" Style="{StaticResource TvPanelTitleTextStyle}" />
+                    <TextBlock
+                        Text="This device will forget the saved Emby session."
+                        Style="{StaticResource TvMutedBodyTextStyle}" />
+                    <StackPanel
+                        HorizontalAlignment="Right"
+                        Orientation="Horizontal"
+                        Spacing="12">
+                        <Button
+                            x:Name="CancelSignOutButton"
+                            AutomationProperties.Name="Keep signed in"
+                            Click="CancelSignOutButton_OnClick"
+                            Content="Keep signed in"
+                            Style="{StaticResource TvSettingsAccountActionButtonStyle}" />
+                        <Button
+                            x:Name="ConfirmSignOutButton"
+                            AutomationProperties.Name="Confirm sign out"
+                            Click="ConfirmSignOutButton_OnClick"
+                            Content="Sign out"
+                            Style="{StaticResource TvSettingsDangerButtonStyle}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Border>
     </Grid>
 </Page>

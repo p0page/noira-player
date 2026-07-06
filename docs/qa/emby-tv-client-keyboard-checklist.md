@@ -1968,3 +1968,34 @@ Then continue design and implementation until the route passes.
   - Stopped the fake login server, removed temporary debug files, removed the loopback exemption, removed local crash-dump registry capture, and reinstalled the package again to leave the app on the Login page with no saved fake session.
   - A final Computer Use screenshot confirmed the clean Login page and Server URL focus.
   - Add a TV-accessible sign-out / clear-session action in Settings so this route can be revalidated without reinstalling the package.
+
+### 2026-07-07 - Settings Sign Out And Session Clear
+
+- App version: 0.1.0.207.
+- Scope: add and verify a TV/controller-reachable sign-out route so empty-session login can be reset without reinstalling the app.
+- Interaction/design changes:
+  - Added a `Sign out` account action to Settings below the signed-in session summary.
+  - Added a modal confirmation layer with a safe default focus on `Keep signed in`; users must move right to the destructive `Sign out` action before confirming.
+  - Added shared `TvSettingsAccountActionButtonStyle` and `TvSettingsDangerButtonStyle` resources so account actions and destructive confirmations are skin/theme-adjustable from `App.xaml`.
+  - Added directional focus handling so `Up` from the default `Thumbstick seek preview` focus reaches `Sign out`, `Down` returns to the playback input, `Left`/`Right` move within the confirmation layer, and `Escape` cancels the layer.
+  - Confirming sign-out calls `ApplicationDataSessionStore.ClearAsync()`, navigates to `LoginPage`, and clears the frame back stack.
+  - No playback decoding, playback reporting, Emby media loading contracts, or Emby transcoding behavior changed.
+- Automated verification:
+  - TDD red path confirmed Settings did not yet expose shared sign-out styles, controller-reachable sign-out controls, confirmation handlers, session clearing, or Login navigation.
+  - Targeted Settings source contract passed: `Settings_Page_Renders_Controller_Reachable_Sign_Out_Action`.
+  - Full Core test suite passed: 463 total.
+  - `git diff --check` passed with no whitespace errors.
+  - App Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.207_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate thumbprint `6CB453A2FEC300C6E5034152C6C1A68DE31A7BD0`, verified with `signtool verify /pa`, and installed locally as `NextGenEmby.App 0.1.0.207`.
+- Keyboard-only validation with Computer Use:
+  - Started a local fake Emby server on `127.0.0.1:5878`, added a UWP loopback exemption for `NextGenEmby.App_h8qjz0sr1sg4m`, seeded `dev-login.json`, and used DEBUG route `settings` so the installed app logged in and opened Settings.
+  - Initial Settings showed `Settings Tester on http://127.0.0.1:5878`, app/client version, `Sign out`, and default focus on `Thumbstick seek preview`.
+  - Pressed `Up`; focus moved to `Sign out` with a clear cyan focus frame.
+  - Pressed `Return`; the confirmation layer opened, dimmed the Settings page, and focused `Keep signed in`.
+  - Pressed `Escape`; the layer closed and focus returned to `Sign out`.
+  - Removed `dev-login.json` before final confirmation so Login would not auto-authenticate again after sign-out.
+  - Pressed `Return`, `Right`, `Return`; focus moved to the destructive `Sign out`, the app cleared the saved session, navigated to Login, and focused Server URL.
+  - Relaunched the app; it stayed on Login and the fake server request count remained unchanged, proving the saved session was cleared.
+  - No app-content mouse clicks were used.
+- Cleanup:
+  - Stopped the fake sign-out server, removed temporary debug files, removed the loopback exemption, and left the installed app in a logged-out Login state.

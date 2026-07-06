@@ -342,6 +342,40 @@
                 <Setter Property="UseSystemFocusVisuals" Value="True" />
             </Style>
 
+            <Style x:Key="TvSettingsAccountActionButtonStyle" TargetType="Button">
+                <Setter Property="MinHeight" Value="48" />
+                <Setter Property="MinWidth" Value="152" />
+                <Setter Property="Padding" Value="18,8" />
+                <Setter Property="FontSize" Value="17" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Background" Value="{StaticResource AppChromeBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource AppHairlineBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="6" />
+                <Setter Property="Foreground" Value="{StaticResource AppTextBrush}" />
+                <Setter Property="FocusVisualMargin" Value="-3" />
+                <Setter Property="FocusVisualPrimaryThickness" Value="2" />
+                <Setter Property="FocusVisualSecondaryThickness" Value="1" />
+                <Setter Property="UseSystemFocusVisuals" Value="True" />
+            </Style>
+
+            <Style x:Key="TvSettingsDangerButtonStyle" TargetType="Button">
+                <Setter Property="MinHeight" Value="48" />
+                <Setter Property="MinWidth" Value="152" />
+                <Setter Property="Padding" Value="18,8" />
+                <Setter Property="FontSize" Value="17" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Background" Value="{StaticResource AppDangerBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource AppDangerBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="6" />
+                <Setter Property="Foreground" Value="{StaticResource AppBackgroundBrush}" />
+                <Setter Property="FocusVisualMargin" Value="-3" />
+                <Setter Property="FocusVisualPrimaryThickness" Value="2" />
+                <Setter Property="FocusVisualSecondaryThickness" Value="1" />
+                <Setter Property="UseSystemFocusVisuals" Value="True" />
+            </Style>
+
             <Style x:Key="TvComboBoxStyle" TargetType="ComboBox">
                 <Setter Property="MinHeight" Value="52" />
                 <Setter Property="Foreground" Value="{StaticResource AppTextBrush}" />
