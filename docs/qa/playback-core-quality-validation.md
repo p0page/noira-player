@@ -14,7 +14,7 @@ tools\quality-run\run-playback-core-checks.ps1
 
 The command validates:
 
-- Core playback quality DTOs, evaluator, command parsing, and playback policy tests;
+- Core playback quality DTOs, report composer, evaluator, analyzer, command parsing, and playback policy tests;
 - Core refresh-rate cadence policy tests that mirror the native Xbox display-mode selection ratios;
 - standalone native playback quality metrics helper;
 - standalone native display refresh cadence policy helper;
@@ -37,6 +37,7 @@ Playback quality reports are optimized for model/agent consumption:
 - raw metrics remain available in `timing`, `sync`, `buffers`, `colorPipeline`, and `display`;
 - `checks` contains structured threshold comparisons;
 - `analysis.primaryFailureArea` identifies the first area to investigate;
+- `PlaybackQualityReportComposer` is the App-free entry point that combines source, display, metrics, expected thresholds, evaluation, and model analysis in one call;
 - `analysis.relevantSignals` names the exact report fields that triggered the conclusion;
 - `PlaybackQualityReportAnalyzer` emits a model-facing analysis JSON with primary and secondary failure areas, failed check expected/actual values, evidence signals, missing evidence, and software-only limitations;
 - `display.refreshRateHz` is treated as required evidence for diagnosing 23.976fps/24fps cadence issues and is exposed by native display status when HDMI mode data is available;
