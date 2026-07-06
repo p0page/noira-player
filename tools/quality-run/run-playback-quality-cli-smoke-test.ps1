@@ -8,6 +8,7 @@ try {
     $baselinePath = Join-Path $tempRoot 'baseline.json'
     $candidatePath = Join-Path $tempRoot 'candidate.json'
     $outputPath = Join-Path $tempRoot 'comparison.json'
+    $suitePath = Join-Path $tempRoot 'suite.json'
 
     @'
 {
@@ -91,6 +92,35 @@ try {
 
     if (-not ($comparison.improvements | Where-Object { $_.signal -eq 'timing.maxFrameGapMs' })) {
         throw 'Expected playback quality CLI comparison to include timing.maxFrameGapMs improvement.'
+    }
+
+    Push-Location $repoRoot
+    try {
+        dotnet run `
+            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
+            --no-build `
+            -- summarize `
+            --comparison $outputPath `
+            --output $suitePath
+        if ($LASTEXITCODE -ne 0) {
+            throw 'playback quality CLI summarize returned a non-zero exit code.'
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    if (-not (Test-Path -LiteralPath $suitePath)) {
+        throw 'Expected playback quality CLI to write suite output.'
+    }
+
+    $suite = Get-Content -Raw -LiteralPath $suitePath | ConvertFrom-Json
+    if ($suite.action -ne 'accept-candidate') {
+        throw 'Expected playback quality CLI suite action to accept candidate.'
+    }
+
+    if ($suite.totalComparisonCount -ne 1) {
+        throw 'Expected playback quality CLI suite to include one comparison.'
     }
 
     Write-Output 'playback-quality-cli smoke ok'

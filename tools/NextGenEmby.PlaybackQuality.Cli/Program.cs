@@ -24,11 +24,27 @@ internal static class Program
                 return args.Length == 0 ? 1 : 0;
             }
 
-            if (!string.Equals(args[0], "compare", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(args[0], "compare", StringComparison.OrdinalIgnoreCase))
             {
-                throw new ArgumentException("Unknown command: " + args[0]);
+                return RunCompare(args);
             }
 
+            if (string.Equals(args[0], "summarize", StringComparison.OrdinalIgnoreCase))
+            {
+                return RunSummarize(args);
+            }
+
+            throw new ArgumentException("Unknown command: " + args[0]);
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine(ex.Message);
+            return 2;
+        }
+    }
+
+    private static int RunCompare(string[] args)
+    {
             var options = ParseCompareOptions(args);
             var baseline = ReadJson<PlaybackQualityReport>(options.BaselinePath);
             var candidate = ReadJson<PlaybackQualityReport>(options.CandidatePath);
@@ -43,21 +59,21 @@ internal static class Program
             }
 
             var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate, context);
-            var json = JsonSerializer.Serialize(comparison, JsonOptions);
-            if (string.IsNullOrWhiteSpace(options.OutputPath))
-            {
-                Console.Out.WriteLine(json);
-                return 0;
-            }
-
-            File.WriteAllText(options.OutputPath, json);
+            WriteJson(comparison, options.OutputPath);
             return 0;
-        }
-        catch (Exception ex)
+    }
+
+    private static int RunSummarize(string[] args)
+    {
+        var options = ParseSummarizeOptions(args);
+        var comparisons = new List<PlaybackQualityRunComparison>();
+        foreach (var comparisonPath in options.ComparisonPaths)
         {
-            Console.Error.WriteLine(ex.Message);
-            return 2;
+            comparisons.Add(ReadJson<PlaybackQualityRunComparison>(comparisonPath));
         }
+
+        WriteJson(PlaybackQualityComparisonSuiteAggregator.Summarize(comparisons), options.OutputPath);
+        return 0;
     }
 
     private static CompareOptions ParseCompareOptions(string[] args)
@@ -108,6 +124,33 @@ internal static class Program
         return options;
     }
 
+    private static SummarizeOptions ParseSummarizeOptions(string[] args)
+    {
+        var options = new SummarizeOptions();
+        for (var index = 1; index < args.Length; index++)
+        {
+            var arg = args[index];
+            switch (arg)
+            {
+                case "--comparison":
+                    options.ComparisonPaths.Add(ReadValue(args, ref index, arg));
+                    break;
+                case "--output":
+                    options.OutputPath = ReadValue(args, ref index, arg);
+                    break;
+                default:
+                    throw new ArgumentException("Unknown summarize option: " + arg);
+            }
+        }
+
+        if (options.ComparisonPaths.Count == 0)
+        {
+            throw new ArgumentException("Missing required option --comparison.");
+        }
+
+        return options;
+    }
+
     private static string ReadValue(string[] args, ref int index, string optionName)
     {
         if (index + 1 >= args.Length || args[index + 1].StartsWith("--", StringComparison.Ordinal))
@@ -130,10 +173,23 @@ internal static class Program
             throw new InvalidOperationException("Could not parse JSON file: " + path);
     }
 
+    private static void WriteJson<T>(T value, string outputPath)
+    {
+        var json = JsonSerializer.Serialize(value, JsonOptions);
+        if (string.IsNullOrWhiteSpace(outputPath))
+        {
+            Console.Out.WriteLine(json);
+            return;
+        }
+
+        File.WriteAllText(outputPath, json);
+    }
+
     private static void WriteUsage(TextWriter writer)
     {
         writer.WriteLine("Usage:");
         writer.WriteLine("  playback-quality compare --baseline <report.json> --candidate <report.json> [--previous <comparison.json>...] [--stall-threshold <n>] [--output <comparison.json>]");
+        writer.WriteLine("  playback-quality summarize --comparison <comparison.json> [--comparison <comparison.json>...] [--output <suite.json>]");
     }
 
     private sealed class CompareOptions
@@ -143,5 +199,11 @@ internal static class Program
         public string OutputPath { get; set; } = "";
         public int StallComparisonCountThreshold { get; set; } = 2;
         public List<string> PreviousComparisonPaths { get; } = new List<string>();
+    }
+
+    private sealed class SummarizeOptions
+    {
+        public string OutputPath { get; set; } = "";
+        public List<string> ComparisonPaths { get; } = new List<string>();
     }
 }

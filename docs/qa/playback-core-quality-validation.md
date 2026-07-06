@@ -51,6 +51,14 @@ For iterative optimization loops, pass previous comparison JSON files to enable 
 dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- compare --baseline baseline.json --candidate candidate.json --previous previous-comparison.json --stall-threshold 2 --output comparison.json
 ```
 
+When a candidate Core change is validated across multiple samples, summarize all comparison JSON files before deciding whether to keep the change:
+
+```powershell
+dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- summarize --comparison comparison-a.json --comparison comparison-b.json --output suite.json
+```
+
+The suite summary is conservative: any regression blocks acceptance, weak evidence requires more comparable reports, and partial evidence requires unmatched-signal review.
+
 ## Model-Facing Output
 
 Playback quality reports are optimized for model/agent consumption:
