@@ -1840,3 +1840,26 @@ Then continue design and implementation until the route passes.
   - No app-content mouse clicks were used. `dev-command.json` and `dev-command-result.txt` were removed from LocalState after validation, and the app process was stopped.
 - Follow-up:
   - Re-run Search recent terms against a non-DEBUG saved session across two app launches to prove LocalSettings persistence with real user queries.
+
+### 2026-07-07 - Search Recent Term Style Tokens
+
+- App version: 0.1.0.204.
+- Scope: promote the new Search recent-term chip metrics into shared TV resources so future skins can adjust the component without editing code.
+- Interaction/design changes:
+  - Added `TvSearchRecentTermMinHeight`, `TvSearchRecentTermMinWidth`, `TvSearchRecentTermMaxWidth`, and `TvSearchRecentTermPadding` resources.
+  - Added `TvSearchRecentTermButtonStyle` for the chip background, border, text, focus, sizing, and padding.
+  - SearchPage now applies `TvSearchRecentTermButtonStyle` to dynamically created recent-term buttons instead of hard-coding button dimensions in code-behind.
+  - No playback decoding, media loading, or Emby transcoding behavior changed.
+- Automated verification:
+  - TDD red path confirmed the shared Search recent-term resources/style did not exist before implementation.
+  - Targeted source test passed: `Search_Recent_Term_Buttons_Use_Shared_Tv_Style_Tokens`.
+  - Full Core test suite passed: 456 total.
+  - `git diff --check` passed with no whitespace errors.
+  - App Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.204_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate thumbprint `6CB453A2FEC300C6E5034152C6C1A68DE31A7BD0`, verified with `signtool verify /pa`, and installed locally as `NextGenEmby.App 0.1.0.204`.
+- Keyboard-only validation with Computer Use:
+  - Wrote `dev-command.json` with route `search-fixture` and launched the installed app through AppUserModelId `NextGenEmby.App_h8qjz0sr1sg4m!App`; the window path resolved to `NextGenEmby.App_0.1.0.204_x64__h8qjz0sr1sg4m`.
+  - Initial Search showed the styled `Recent searches` chips (`Friends`, `Aurora Protocol`, `News 24`) visible under the scope rail with no text overflow or layout jump.
+  - Pressed `Down`, `Down`, `Right`, `Return`; focus moved through All scope into recent terms, activated `Aurora Protocol`, refreshed results, and placed the visible focus frame on the first result card.
+  - Pressed `Up`; focus returned from the first result to `Aurora Protocol` in recent terms.
+  - No app-content mouse clicks were used. `dev-command.json` and `dev-command-result.txt` were removed from LocalState after validation, and the app process was stopped.

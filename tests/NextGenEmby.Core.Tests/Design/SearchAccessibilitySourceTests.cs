@@ -134,6 +134,32 @@ public sealed class SearchAccessibilitySourceTests
         Assert.Contains("Storage\\RecentSearchTermStore.cs", projectSource);
     }
 
+    [Fact]
+    public void Search_Recent_Term_Buttons_Use_Shared_Tv_Style_Tokens()
+    {
+        var root = FindRepositoryRoot();
+        var appXaml = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NextGenEmby.App",
+            "App.xaml"));
+        var searchPageSource = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NextGenEmby.App",
+            "Views",
+            "SearchPage.xaml.cs"));
+
+        Assert.Contains("TvSearchRecentTermMinHeight", appXaml);
+        Assert.Contains("TvSearchRecentTermMinWidth", appXaml);
+        Assert.Contains("TvSearchRecentTermMaxWidth", appXaml);
+        Assert.Contains("TvSearchRecentTermPadding", appXaml);
+        Assert.Contains("TvSearchRecentTermButtonStyle", appXaml);
+        Assert.Contains("ApplyRecentTermButtonStyle(button)", searchPageSource);
+        Assert.DoesNotContain("MinWidth = 112", searchPageSource);
+        Assert.DoesNotContain("MaxWidth = 260", searchPageSource);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

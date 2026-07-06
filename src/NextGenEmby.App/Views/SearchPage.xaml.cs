@@ -23,6 +23,7 @@ namespace NextGenEmby.App.Views
     {
         private const string PosterCardWidthResourceKey = "TvPosterCardWidth";
         private const string PosterGridItemMarginResourceKey = "TvPosterGridItemMargin";
+        private const string SearchRecentTermButtonStyleResourceKey = "TvSearchRecentTermButtonStyle";
         private const double FallbackPosterCardWidth = 168d;
         private const double FallbackPosterCardTrailingMargin = 14d;
         private readonly ApplicationDataSessionStore _sessionStore = new ApplicationDataSessionStore();
@@ -550,13 +551,9 @@ namespace NextGenEmby.App.Views
                 var button = new Button
                 {
                     Content = term,
-                    Tag = term,
-                    MinHeight = 44,
-                    MinWidth = 112,
-                    MaxWidth = 260,
-                    Padding = new Thickness(18, 7, 18, 7),
-                    UseSystemFocusVisuals = true
+                    Tag = term
                 };
+                ApplyRecentTermButtonStyle(button);
                 AutomationProperties.SetName(button, "Recent search " + term);
                 button.Click += RecentTerm_OnClick;
                 button.GotFocus += RecentTerm_OnGotFocus;
@@ -565,6 +562,16 @@ namespace NextGenEmby.App.Views
             }
 
             RecentSearchesPanel.Visibility = Visibility.Visible;
+        }
+
+        private static void ApplyRecentTermButtonStyle(Button button)
+        {
+            var resources = Application.Current.Resources;
+            if (resources.ContainsKey(SearchRecentTermButtonStyleResourceKey) &&
+                resources[SearchRecentTermButtonStyleResourceKey] is Style style)
+            {
+                button.Style = style;
+            }
         }
 
         private static void RecentTerm_OnGotFocus(object sender, RoutedEventArgs e)
