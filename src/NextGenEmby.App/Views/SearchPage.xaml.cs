@@ -133,9 +133,9 @@ namespace NextGenEmby.App.Views
 
             var button = new Button
             {
-                Height = 86,
-                MinHeight = 86,
-                Padding = new Thickness(20, 12, 20, 12),
+                Height = 70,
+                MinHeight = 70,
+                Padding = new Thickness(16, 10, 16, 10),
                 Tag = item,
                 HorizontalAlignment = HorizontalAlignment.Stretch,
                 HorizontalContentAlignment = HorizontalAlignment.Stretch,
@@ -152,7 +152,7 @@ namespace NextGenEmby.App.Views
                     new TextBlock
                     {
                         Text = title,
-                        FontSize = 24,
+                        FontSize = 20,
                         FontWeight = Windows.UI.Text.FontWeights.SemiBold,
                         TextTrimming = TextTrimming.CharacterEllipsis,
                         MaxLines = 1
@@ -160,8 +160,8 @@ namespace NextGenEmby.App.Views
                     new TextBlock
                     {
                         Text = type,
-                        Margin = new Thickness(0, 34, 0, 0),
-                        FontSize = 17,
+                        Margin = new Thickness(0, 28, 0, 0),
+                        FontSize = 14,
                         Foreground = (Brush)Application.Current.Resources["AppMutedTextBrush"],
                         TextTrimming = TextTrimming.CharacterEllipsis,
                         MaxLines = 1

@@ -284,7 +284,13 @@ namespace NextGenEmby.App.Views
 
         private void More_OnClick(object sender, RoutedEventArgs e)
         {
-            ShowOverlay(!_moreVisible);
+            if (_moreVisible)
+            {
+                CloseMoreDrawer();
+                return;
+            }
+
+            ShowOverlay(true);
         }
 
         private void Page_OnKeyDown(object sender, KeyRoutedEventArgs e)
@@ -477,7 +483,7 @@ namespace NextGenEmby.App.Views
                     return;
 
                 case PlaybackOverlayInputAction.CloseMore:
-                    ShowOverlay(false);
+                    CloseMoreDrawer();
                     return;
 
                 case PlaybackOverlayInputAction.HideOverlay:
@@ -564,6 +570,7 @@ namespace NextGenEmby.App.Views
                 UpdateProgressSlider();
                 UpdateControlStates();
                 UpdateStreamControlStates();
+                KeepOverlayVisibleIfPinned();
                 if (_infoVisible)
                 {
                     UpdateInfo();
@@ -726,7 +733,17 @@ namespace NextGenEmby.App.Views
                 throw new InvalidOperationException("Sign in before playback.");
             }
 
+            _currentItemName = request.ItemName;
+            _durationTicks = request.RuntimeTicks;
+            NowPlayingBlock.Text = string.IsNullOrWhiteSpace(_currentItemName)
+                ? request.ItemId
+                : _currentItemName;
             UpdateStatus(CorePlaybackState.Opening, "Loading media sources");
+            UpdateProgressSlider();
+            UpdateControlStates();
+            ShowOverlay();
+            await Task.Yield();
+
             await PlaybackDiagnosticsLog.WriteLineAsync("PlaybackInfo begin item=" + request.ItemId);
             var sources = await _embyClient.GetPlaybackInfoAsync(_session, request.ItemId);
             await PlaybackDiagnosticsLog.WriteLineAsync("PlaybackInfo source count=" + sources.Count);
@@ -767,18 +784,19 @@ namespace NextGenEmby.App.Views
             await PlaybackDiagnosticsLog.WriteLineAsync("Ensure native surface begin");
             await EnsureNativeSurfaceReadyAsync();
             await PlaybackDiagnosticsLog.WriteLineAsync("Ensure native surface end");
+            UpdateStatus(CorePlaybackState.Opening, "Opening video");
+            UpdateProgressSlider();
+            UpdateControlStates();
+            ShowOverlay();
+            await Task.Yield();
+
             await _orchestrator.StartAsync(request.ItemId, sources, request.StartPositionTicks, request.MediaSourceId);
             await PlaybackDiagnosticsLog.WriteLineAsync(
                 "Orchestrator start completed state=" + _orchestrator.State +
                 " currentSource=" + (_orchestrator.CurrentMediaSource == null ? "" : _orchestrator.CurrentMediaSource.Id));
             _lastPositionTicks = request.StartPositionTicks;
-            _durationTicks = request.RuntimeTicks;
             _hasPlaybackContext = _orchestrator.CurrentDescriptor != null;
             _playbackStoppedReported = false;
-            _currentItemName = request.ItemName;
-            NowPlayingBlock.Text = string.IsNullOrWhiteSpace(_currentItemName)
-                ? request.ItemId
-                : _currentItemName;
             ShowOverlay();
             _progressTimer.Start();
             await ReportPlaybackStartedAsync();
@@ -930,6 +948,7 @@ namespace NextGenEmby.App.Views
             }
 
             _playbackCommandInFlight = true;
+            _overlayTimer.Stop();
             try
             {
                 await PlaybackDiagnosticsLog.WriteLineAsync("Playback command begin");
@@ -952,6 +971,15 @@ namespace NextGenEmby.App.Views
             finally
             {
                 _playbackCommandInFlight = false;
+                if (_overlayVisible)
+                {
+                    _overlayTimer.Stop();
+                    if (!ShouldKeepOverlayPinned())
+                    {
+                        _overlayTimer.Start();
+                    }
+                }
+
                 await PlaybackDiagnosticsLog.WriteLineAsync("Playback command finally");
             }
         }
@@ -1252,6 +1280,37 @@ namespace NextGenEmby.App.Views
             }
         }
 
+        private void KeepOverlayVisibleIfPinned()
+        {
+            if (!ShouldKeepOverlayPinned())
+            {
+                return;
+            }
+
+            if (!_overlayVisible)
+            {
+                _overlayVisible = true;
+                OverlayRoot.Visibility = Visibility.Visible;
+            }
+
+            _overlayTimer.Stop();
+        }
+
+        private void CloseMoreDrawer()
+        {
+            _moreVisible = false;
+            MoreDrawer.Visibility = Visibility.Collapsed;
+            InfoPanel.Visibility = Visibility.Collapsed;
+            _infoVisible = false;
+            MoreButton.Focus(FocusState.Programmatic);
+
+            _overlayTimer.Stop();
+            if (!ShouldKeepOverlayPinned())
+            {
+                _overlayTimer.Start();
+            }
+        }
+
         private void FocusMoreDrawer()
         {
             if (SourceBox.IsEnabled && SourceBox.Focus(FocusState.Programmatic))
@@ -1284,6 +1343,8 @@ namespace NextGenEmby.App.Views
             OverlayRoot.Visibility = Visibility.Collapsed;
             MoreDrawer.Visibility = Visibility.Collapsed;
             SeekPreviewBlock.Visibility = Visibility.Collapsed;
+            _infoVisible = false;
+            Focus(FocusState.Programmatic);
         }
 
         private void BeginOrMoveSeekPreview(TimeSpan delta)
@@ -1450,7 +1511,22 @@ namespace NextGenEmby.App.Views
 
         private bool ShouldKeepOverlayPinned()
         {
-            return _moreVisible || (_launchRequest == null && ManualDebugPanel.Visibility == Visibility.Visible);
+            return PlaybackOverlayInputPolicy.ShouldKeepOverlayPinned(
+                _moreVisible,
+                _seekPreview.IsActive,
+                _launchRequest == null && ManualDebugPanel.Visibility == Visibility.Visible,
+                IsPlaybackOpeningOrBusy(),
+                PlaybackNeedsAttention());
+        }
+
+        private bool IsPlaybackOpeningOrBusy()
+        {
+            return _playbackCommandInFlight || _orchestrator.State == CorePlaybackState.Opening;
+        }
+
+        private bool PlaybackNeedsAttention()
+        {
+            return _orchestrator.State == CorePlaybackState.Failed;
         }
 
         private void UpdateControlStates()

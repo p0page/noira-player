@@ -2,14 +2,15 @@
     x:Class="NextGenEmby.App.Views.HomePage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    Background="{StaticResource AppBackgroundBrush}">
+    Background="{StaticResource AppBackgroundBrush}"
+    KeyDown="Page_OnKeyDown">
     <Grid Background="{StaticResource AppBackgroundBrush}">
         <ScrollViewer
             VerticalScrollBarVisibility="Hidden"
             VerticalScrollMode="Enabled"
             HorizontalScrollBarVisibility="Disabled"
             HorizontalScrollMode="Disabled">
-            <StackPanel Margin="72,42,72,64" Spacing="30">
+            <StackPanel Margin="{StaticResource TvPageMargin}" Spacing="22">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
@@ -18,11 +19,11 @@
                     <StackPanel Spacing="4">
                         <TextBlock
                             Text="Home"
-                            FontSize="42"
+                            FontSize="34"
                             FontWeight="SemiBold" />
                         <TextBlock
                             Text="Ready for the next thing"
-                            FontSize="18"
+                            FontSize="16"
                             Foreground="{StaticResource AppMutedTextBrush}" />
                     </StackPanel>
                     <Button
@@ -40,140 +41,148 @@
                 </Grid>
 
                 <Border
-                    MinHeight="260"
+                    Height="246"
                     Background="{StaticResource AppSurfaceBrush}"
-                    CornerRadius="8"
-                    Padding="28">
-                    <Grid ColumnSpacing="28">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="250" />
-                        </Grid.ColumnDefinitions>
-
-                        <StackPanel
-                            Grid.Column="0"
-                            VerticalAlignment="Center"
-                            Spacing="16">
-                            <TextBlock
-                                Text="Continue watching"
-                                FontSize="20"
-                                FontWeight="SemiBold"
-                                Foreground="{StaticResource AppMutedTextBrush}" />
-                            <TextBlock
-                                x:Name="HeroTitleBlock"
-                                FontSize="40"
-                                FontWeight="SemiBold"
-                                TextWrapping="WrapWholeWords"
-                                MaxLines="2"
-                                TextTrimming="CharacterEllipsis" />
-                            <TextBlock
-                                x:Name="HeroMetaBlock"
-                                FontSize="20"
-                                Foreground="{StaticResource AppMutedTextBrush}"
-                                TextWrapping="Wrap"
-                                MaxLines="2"
-                                TextTrimming="WordEllipsis" />
-                            <StackPanel Orientation="Horizontal" Spacing="16">
-                                <Button
-                                    x:Name="HeroPlayButton"
-                                    MinWidth="160"
-                                    Height="56"
-                                    Background="{StaticResource AppActionBrush}"
-                                    Click="HeroPlay_OnClick"
-                                    UseSystemFocusVisuals="True">
-                                    <StackPanel Orientation="Horizontal" Spacing="10">
-                                        <SymbolIcon Symbol="Play" />
-                                        <TextBlock Text="Play" FontSize="20" />
-                                    </StackPanel>
-                                </Button>
-                                <Button
-                                    x:Name="HeroDetailsButton"
-                                    MinWidth="170"
-                                    Height="56"
-                                    Click="HeroDetails_OnClick"
-                                    UseSystemFocusVisuals="True">
-                                    <StackPanel Orientation="Horizontal" Spacing="10">
-                                        <SymbolIcon Symbol="ContactInfo" />
-                                        <TextBlock Text="Details" FontSize="20" />
-                                    </StackPanel>
-                                </Button>
-                            </StackPanel>
-                        </StackPanel>
-
-                        <Border
-                            Grid.Column="1"
-                            Width="250"
-                            Height="210"
-                            HorizontalAlignment="Right"
-                            VerticalAlignment="Center"
-                            Background="{StaticResource AppRaisedSurfaceBrush}"
-                            CornerRadius="8">
-                            <Grid>
-                                <Image
-                                    x:Name="HeroPosterImage"
-                                    Stretch="UniformToFill" />
-                                <TextBlock
-                                    x:Name="HeroPosterFallbackBlock"
-                                    Text="No artwork"
-                                    HorizontalAlignment="Center"
-                                    VerticalAlignment="Center"
-                                    FontSize="18"
-                                    Foreground="{StaticResource AppMutedTextBrush}" />
-                            </Grid>
+                    BorderBrush="{StaticResource AppHairlineBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8">
+                    <Grid>
+                        <Image
+                            x:Name="HeroBackdropImage"
+                            Stretch="UniformToFill"
+                            Opacity="0.22" />
+                        <Border Background="#D803060A" />
+                        <Border>
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5">
+                                    <GradientStop Color="#F203060A" Offset="0" />
+                                    <GradientStop Color="#D803060A" Offset="0.58" />
+                                    <GradientStop Color="#6603060A" Offset="1" />
+                                </LinearGradientBrush>
+                            </Border.Background>
                         </Border>
+                        <Border
+                            Width="4"
+                            Margin="0,24,0,24"
+                            HorizontalAlignment="Left"
+                            Background="{StaticResource AppAccentBrush}"
+                            CornerRadius="0,3,3,0" />
+
+                        <Grid Padding="26,24,26,24" ColumnSpacing="30">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="182" />
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel
+                                Grid.Column="0"
+                                VerticalAlignment="Center"
+                                Spacing="12">
+                                <TextBlock
+                                    Text="Continue watching"
+                                    FontSize="17"
+                                    FontWeight="SemiBold"
+                                    Foreground="{StaticResource AppWarmBrush}" />
+                                <TextBlock
+                                    x:Name="HeroTitleBlock"
+                                    FontSize="38"
+                                    FontWeight="SemiBold"
+                                    Foreground="{StaticResource AppTextBrush}"
+                                    TextWrapping="WrapWholeWords"
+                                    MaxLines="2"
+                                    TextTrimming="CharacterEllipsis" />
+                                <TextBlock
+                                    x:Name="HeroMetaBlock"
+                                    FontSize="18"
+                                    Foreground="{StaticResource AppMutedTextBrush}"
+                                    TextWrapping="Wrap"
+                                    MaxLines="2"
+                                    TextTrimming="WordEllipsis" />
+                                <StackPanel Orientation="Horizontal" Spacing="14">
+                                    <Button
+                                        x:Name="HeroPlayButton"
+                                        MinWidth="142"
+                                        Height="52"
+                                        Background="{StaticResource AppActionBrush}"
+                                        BorderBrush="{StaticResource AppActionBrush}"
+                                        Foreground="#041007"
+                                        Click="HeroPlay_OnClick"
+                                        UseSystemFocusVisuals="True"
+                                        XYFocusRight="{x:Bind HeroDetailsButton}">
+                                        <StackPanel Orientation="Horizontal" Spacing="10">
+                                            <SymbolIcon Symbol="Play" />
+                                            <TextBlock Text="Play" FontSize="18" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button
+                                        x:Name="HeroDetailsButton"
+                                        MinWidth="148"
+                                        Height="52"
+                                        Click="HeroDetails_OnClick"
+                                        UseSystemFocusVisuals="True"
+                                        XYFocusLeft="{x:Bind HeroPlayButton}">
+                                        <StackPanel Orientation="Horizontal" Spacing="10">
+                                            <SymbolIcon Symbol="ContactInfo" />
+                                            <TextBlock Text="Details" FontSize="18" />
+                                        </StackPanel>
+                                    </Button>
+                                </StackPanel>
+                            </StackPanel>
+
+                            <Border
+                                Grid.Column="1"
+                                Width="182"
+                                Height="232"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Center"
+                                Background="{StaticResource AppRaisedSurfaceBrush}"
+                                BorderBrush="{StaticResource AppHairlineBrush}"
+                                BorderThickness="1"
+                                CornerRadius="7">
+                                <Grid>
+                                    <Image
+                                        x:Name="HeroPosterImage"
+                                        Stretch="UniformToFill" />
+                                    <Border Background="#18000000" />
+                                    <TextBlock
+                                        x:Name="HeroPosterFallbackBlock"
+                                        Text="No artwork"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        FontSize="18"
+                                        Foreground="{StaticResource AppMutedTextBrush}" />
+                                </Grid>
+                            </Border>
+                        </Grid>
                     </Grid>
                 </Border>
 
                 <StackPanel Spacing="18">
                     <TextBlock
-                        Text="Libraries"
-                        FontSize="28"
+                        Text="Media Libraries"
+                        FontSize="24"
                         FontWeight="SemiBold" />
-                    <StackPanel Orientation="Horizontal" Spacing="20">
-                        <Button
-                            Width="260"
-                            Height="150"
-                            Padding="0"
-                            Click="MoviesLibrary_OnClick"
-                            UseSystemFocusVisuals="True">
-                            <Border
-                                Background="{StaticResource AppRaisedSurfaceBrush}"
-                                Padding="22"
-                                CornerRadius="8">
-                                <StackPanel VerticalAlignment="Bottom" Spacing="6">
-                                    <TextBlock Text="Movies" FontSize="28" FontWeight="SemiBold" />
-                                    <TextBlock Text="Film library" FontSize="18" Foreground="{StaticResource AppMutedTextBrush}" />
-                                </StackPanel>
-                            </Border>
-                        </Button>
-                        <Button
-                            Width="260"
-                            Height="150"
-                            Padding="0"
-                            Click="TvLibrary_OnClick"
-                            UseSystemFocusVisuals="True">
-                            <Border
-                                Background="{StaticResource AppRaisedSurfaceBrush}"
-                                Padding="22"
-                                CornerRadius="8">
-                                <StackPanel VerticalAlignment="Bottom" Spacing="6">
-                                    <TextBlock Text="TV" FontSize="28" FontWeight="SemiBold" />
-                                    <TextBlock Text="Series library" FontSize="18" Foreground="{StaticResource AppMutedTextBrush}" />
-                                </StackPanel>
-                            </Border>
-                        </Button>
-                    </StackPanel>
+                    <ScrollViewer
+                        HorizontalScrollBarVisibility="Hidden"
+                        HorizontalScrollMode="Enabled"
+                        VerticalScrollBarVisibility="Disabled"
+                        VerticalScrollMode="Disabled">
+                        <StackPanel
+                            x:Name="LibrariesPanel"
+                            Orientation="Horizontal"
+                            Spacing="18" />
+                    </ScrollViewer>
                 </StackPanel>
 
                 <TextBlock
                     x:Name="StatusBlock"
-                    FontSize="20"
+                    FontSize="18"
                     Foreground="{StaticResource AppMutedTextBrush}"
                     TextWrapping="Wrap" />
 
                 <StackPanel
                     x:Name="RowsPanel"
-                    Spacing="28" />
+                    Spacing="22" />
             </StackPanel>
         </ScrollViewer>
     </Grid>

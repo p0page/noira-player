@@ -1,26 +1,36 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using NextGenEmby.App.Navigation;
 using NextGenEmby.App.Services;
 using NextGenEmby.App.Storage;
 using NextGenEmby.Core.Emby;
+using NextGenEmby.Core.Input;
 using Windows.UI;
+using Windows.UI.Core;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
+using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Media.Imaging;
+using Windows.System;
 
 namespace NextGenEmby.App.Views
 {
-    public sealed partial class HomePage : Page
+    public sealed partial class HomePage : Page, ITvContentFocusTarget
     {
         private readonly ApplicationDataSessionStore _sessionStore = new ApplicationDataSessionStore();
         private EmbySession? _session;
         private EmbyApiClient? _client;
         private EmbyMediaItem? _heroItem;
         private bool _isUnloaded;
+        private bool _keyHandlerAttached;
+        private Control? _lastHomeFocusTarget;
+        private readonly List<Button> _libraryButtons = new List<Button>();
+        private readonly List<Button> _rowFirstButtons = new List<Button>();
+        private readonly Dictionary<Button, int> _rowButtonIndexes = new Dictionary<Button, int>();
         private int _loadGeneration;
 
         public HomePage()
@@ -28,16 +38,20 @@ namespace NextGenEmby.App.Views
             InitializeComponent();
             Loaded += HomePage_OnLoaded;
             Unloaded += HomePage_OnUnloaded;
+            HeroPlayButton.GotFocus += HomeFocusTarget_OnGotFocus;
+            HeroDetailsButton.GotFocus += HomeFocusTarget_OnGotFocus;
         }
 
         private async void HomePage_OnLoaded(object sender, RoutedEventArgs e)
         {
             Loaded -= HomePage_OnLoaded;
+            AttachHomeKeyHandler();
             await LoadHomeAsync();
         }
 
         private void HomePage_OnUnloaded(object sender, RoutedEventArgs e)
         {
+            DetachHomeKeyHandler();
             _isUnloaded = true;
             _loadGeneration++;
         }
@@ -55,6 +69,16 @@ namespace NextGenEmby.App.Views
         private void TvLibrary_OnClick(object sender, RoutedEventArgs e)
         {
             Frame.Navigate(typeof(LibraryPage), new LibraryNavigationRequest("TV", "tvshows", "Series"));
+        }
+
+        public bool FocusDefaultContent()
+        {
+            return FocusDailyStart(FocusState.Keyboard);
+        }
+
+        private void HomeFocusTarget_OnGotFocus(object sender, RoutedEventArgs e)
+        {
+            _lastHomeFocusTarget = sender as Control;
         }
 
         private void HeroPlay_OnClick(object sender, RoutedEventArgs e)
@@ -81,13 +105,250 @@ namespace NextGenEmby.App.Views
             NavigateToDetails(_heroItem);
         }
 
+        private void Page_OnKeyDown(object sender, KeyRoutedEventArgs e)
+        {
+            e.Handled = TryRouteHomeDirectionalKey(e.Key) || e.Handled;
+        }
+
+        private void HomePage_OnCoreWindowKeyDown(CoreWindow sender, Windows.UI.Core.KeyEventArgs args)
+        {
+            args.Handled = TryRouteHomeDirectionalKey(args.VirtualKey) || args.Handled;
+        }
+
+        private void AttachHomeKeyHandler()
+        {
+            if (_keyHandlerAttached)
+            {
+                return;
+            }
+
+            Window.Current.CoreWindow.KeyDown += HomePage_OnCoreWindowKeyDown;
+            _keyHandlerAttached = true;
+        }
+
+        private void DetachHomeKeyHandler()
+        {
+            if (!_keyHandlerAttached)
+            {
+                return;
+            }
+
+            Window.Current.CoreWindow.KeyDown -= HomePage_OnCoreWindowKeyDown;
+            _keyHandlerAttached = false;
+        }
+
+        private bool TryRouteHomeDirectionalKey(VirtualKey key)
+        {
+            var direction = MapHomeFocusDirection(key);
+            if (!direction.HasValue)
+            {
+                return false;
+            }
+
+            var focusedElement = FocusManager.GetFocusedElement();
+            var focusedTarget = ResolveHomeFocusTarget(focusedElement) ?? _lastHomeFocusTarget;
+            var current = CreateHomeFocusTarget(focusedTarget);
+            var next = HomeFocusInputPolicy.Move(
+                current,
+                direction.Value,
+                _libraryButtons.Count,
+                _rowFirstButtons.Count);
+
+            return TryMoveFocus(ResolveHomeFocusControl(next));
+        }
+
+        private static HomeFocusDirection? MapHomeFocusDirection(VirtualKey key)
+        {
+            switch (key)
+            {
+                case VirtualKey.Down:
+                case VirtualKey.GamepadDPadDown:
+                case VirtualKey.GamepadLeftThumbstickDown:
+                    return HomeFocusDirection.Down;
+
+                case VirtualKey.Up:
+                case VirtualKey.GamepadDPadUp:
+                case VirtualKey.GamepadLeftThumbstickUp:
+                    return HomeFocusDirection.Up;
+
+                case VirtualKey.Right:
+                case VirtualKey.GamepadDPadRight:
+                case VirtualKey.GamepadLeftThumbstickRight:
+                    return HomeFocusDirection.Right;
+
+                case VirtualKey.Left:
+                case VirtualKey.GamepadDPadLeft:
+                case VirtualKey.GamepadLeftThumbstickLeft:
+                    return HomeFocusDirection.Left;
+
+                default:
+                    return null;
+            }
+        }
+
+        private bool TryMoveFocus(Control? target)
+        {
+            if (target == null)
+            {
+                return false;
+            }
+
+            if (!target.IsEnabled)
+            {
+                return false;
+            }
+
+            if (!target.Focus(FocusState.Keyboard))
+            {
+                return false;
+            }
+
+            _lastHomeFocusTarget = target;
+            return true;
+        }
+
+        private Control? ResolveHomeFocusTarget(object focusedElement)
+        {
+            if (IsFocusWithin(focusedElement, HeroPlayButton))
+            {
+                return HeroPlayButton;
+            }
+
+            if (IsFocusWithin(focusedElement, HeroDetailsButton))
+            {
+                return HeroDetailsButton;
+            }
+
+            foreach (var libraryButton in _libraryButtons)
+            {
+                if (IsFocusWithin(focusedElement, libraryButton))
+                {
+                    return libraryButton;
+                }
+            }
+
+            foreach (var rowButton in _rowButtonIndexes.Keys)
+            {
+                if (IsFocusWithin(focusedElement, rowButton))
+                {
+                    return rowButton;
+                }
+            }
+
+            return null;
+        }
+
+        private HomeFocusTarget? CreateHomeFocusTarget(Control? control)
+        {
+            if (control == HeroPlayButton)
+            {
+                return new HomeFocusTarget(HomeFocusZone.HeroPlay, 0);
+            }
+
+            if (control == HeroDetailsButton)
+            {
+                return new HomeFocusTarget(HomeFocusZone.HeroDetails, 0);
+            }
+
+            var libraryIndex = GetLibraryButtonIndex(control);
+            if (libraryIndex >= 0)
+            {
+                return new HomeFocusTarget(HomeFocusZone.Library, libraryIndex);
+            }
+
+            var rowIndex = GetRowButtonIndex(control);
+            if (rowIndex >= 0)
+            {
+                return new HomeFocusTarget(HomeFocusZone.Row, rowIndex);
+            }
+
+            return null;
+        }
+
+        private Control? ResolveHomeFocusControl(HomeFocusTarget? target)
+        {
+            if (target == null)
+            {
+                return null;
+            }
+
+            switch (target.Zone)
+            {
+                case HomeFocusZone.HeroPlay:
+                    return HeroPlayButton;
+                case HomeFocusZone.HeroDetails:
+                    return HeroDetailsButton;
+                case HomeFocusZone.Library:
+                    return target.Index >= 0 && target.Index < _libraryButtons.Count
+                        ? _libraryButtons[target.Index]
+                        : null;
+                case HomeFocusZone.Row:
+                    return target.Index >= 0 && target.Index < _rowFirstButtons.Count
+                        ? _rowFirstButtons[target.Index]
+                        : null;
+                default:
+                    return null;
+            }
+        }
+
+        private Button? GetFirstLibraryButton()
+        {
+            return _libraryButtons.Count == 0 ? null : _libraryButtons[0];
+        }
+
+        private int GetLibraryButtonIndex(Control? control)
+        {
+            if (control == null)
+            {
+                return -1;
+            }
+
+            for (var index = 0; index < _libraryButtons.Count; index++)
+            {
+                if (_libraryButtons[index] == control)
+                {
+                    return index;
+                }
+            }
+
+            return -1;
+        }
+
+        private int GetRowButtonIndex(Control? control)
+        {
+            var button = control as Button;
+            if (button == null)
+            {
+                return -1;
+            }
+
+            int rowIndex;
+            return _rowButtonIndexes.TryGetValue(button, out rowIndex) ? rowIndex : -1;
+        }
+
+        private static bool IsFocusWithin(object focusedElement, DependencyObject target)
+        {
+            var current = focusedElement as DependencyObject;
+            while (current != null)
+            {
+                if (current == target)
+                {
+                    return true;
+                }
+
+                current = VisualTreeHelper.GetParent(current);
+            }
+
+            return false;
+        }
+
         private async Task LoadHomeAsync()
         {
             var loadGeneration = ++_loadGeneration;
 
             RefreshButton.IsEnabled = false;
             StatusBlock.Text = "Loading...";
-            RowsPanel.Children.Clear();
+            ClearRows();
             ClearHero();
 
             try
@@ -108,8 +369,13 @@ namespace NextGenEmby.App.Views
                 using (var httpClient = new HttpClient())
                 {
                     var client = EmbyClientFactory.Create(httpClient, session);
-                    var continueItems = await client.GetResumeItemsAsync(session, 20);
-                    var latestItems = await client.GetLatestItemsAsync(session);
+                    var continueItems = await TryLoadListAsync(() => client.GetResumeItemsAsync(session, 24));
+                    var nextUpItems = await TryLoadListAsync(() => client.GetNextUpItemsAsync(session, 24));
+                    var latestItems = await TryLoadListAsync(() => client.GetLatestItemsAsync(session));
+                    var libraryViews = await TryLoadListAsync(() => client.GetUserViewsAsync(session));
+                    var libraryPreviews = await LoadLibraryPreviewsAsync(client, session, libraryViews, loadGeneration);
+                    var configuredRows = await LoadConfiguredHomeRowsAsync(client, session, loadGeneration);
+                    var popularRows = await LoadPopularRowsAsync(client, session, libraryViews, loadGeneration);
 
                     if (!CanApplyLoad(loadGeneration))
                     {
@@ -117,7 +383,14 @@ namespace NextGenEmby.App.Views
                     }
 
                     _client = client;
-                    RenderHome(continueItems, latestItems);
+                    RenderHome(
+                        continueItems,
+                        nextUpItems,
+                        latestItems,
+                        libraryViews,
+                        libraryPreviews,
+                        configuredRows,
+                        popularRows);
                 }
             }
             catch
@@ -128,7 +401,9 @@ namespace NextGenEmby.App.Views
                 }
 
                 ClearHero();
-                RowsPanel.Children.Clear();
+                LibrariesPanel.Children.Clear();
+                _libraryButtons.Clear();
+                ClearRows();
                 StatusBlock.Text = "Unable to load home.";
             }
             finally
@@ -136,18 +411,36 @@ namespace NextGenEmby.App.Views
                 if (CanApplyLoad(loadGeneration))
                 {
                     RefreshButton.IsEnabled = true;
+                    if (!HeroPlayButton.IsEnabled &&
+                        RowsPanel.Children.Count == 0 &&
+                        !string.IsNullOrWhiteSpace(StatusBlock.Text))
+                    {
+                        RefreshButton.Focus(FocusState.Programmatic);
+                    }
                 }
             }
         }
 
-        private void RenderHome(IReadOnlyList<EmbyMediaItem> continueItems, IReadOnlyList<EmbyMediaItem> latestItems)
+        private void RenderHome(
+            IReadOnlyList<EmbyMediaItem> continueItems,
+            IReadOnlyList<EmbyMediaItem> nextUpItems,
+            IReadOnlyList<EmbyMediaItem> latestItems,
+            IReadOnlyList<EmbyLibraryView> libraryViews,
+            IReadOnlyDictionary<string, IReadOnlyList<EmbyMediaItem>> libraryPreviews,
+            IReadOnlyList<HomeSectionRow> configuredRows,
+            IReadOnlyList<LibraryContentRow> popularRows)
         {
-            RowsPanel.Children.Clear();
+            ClearRows();
+            RenderLibraries(libraryViews, libraryPreviews);
 
             EmbyMediaItem? heroItem = null;
             if (continueItems != null && continueItems.Count > 0)
             {
                 heroItem = continueItems[0];
+            }
+            else if (nextUpItems != null && nextUpItems.Count > 0)
+            {
+                heroItem = nextUpItems[0];
             }
             else
             {
@@ -168,8 +461,44 @@ namespace NextGenEmby.App.Views
             RenderHero(heroItem);
             StatusBlock.Text = "";
 
-            AddRow("Continue watching", continueItems);
-            AddRow("Latest", latestItems);
+            var renderedRowTitles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            AddUniqueRow(renderedRowTitles, "Continue watching", continueItems, null);
+            AddUniqueRow(renderedRowTitles, "Next up", nextUpItems, null);
+
+            foreach (var configuredRow in configuredRows)
+            {
+                AddUniqueRow(
+                    renderedRowTitles,
+                    configuredRow.Title,
+                    configuredRow.Items,
+                    new LibraryNavigationRequest(
+                        configuredRow.Title,
+                        configuredRow.CollectionType,
+                        GuessIncludeItemTypes(configuredRow.CollectionType),
+                        "",
+                        configuredRow.SectionId));
+            }
+
+            foreach (var popularRow in popularRows)
+            {
+                AddUniqueRow(renderedRowTitles, popularRow.Title, popularRow.Items, popularRow.MoreRequest);
+            }
+
+            foreach (var view in libraryViews)
+            {
+                IReadOnlyList<EmbyMediaItem> previewItems;
+                if (string.IsNullOrWhiteSpace(view.Id) ||
+                    !libraryPreviews.TryGetValue(view.Id, out previewItems) ||
+                    previewItems.Count == 0)
+                {
+                    continue;
+                }
+
+                AddUniqueRow(renderedRowTitles, "Latest in " + view.Name, previewItems, CreateLibraryRequest(view));
+            }
+
+            AddUniqueRow(renderedRowTitles, "Latest", latestItems, null);
+            FocusDailyStart(FocusState.Programmatic);
         }
 
         private void RenderHero(EmbyMediaItem item)
@@ -180,12 +509,25 @@ namespace NextGenEmby.App.Views
             HeroPlayButton.IsEnabled = CanPlay(item);
             HeroDetailsButton.IsEnabled = true;
             HeroPosterImage.Source = null;
+            HeroBackdropImage.Source = null;
             HeroPosterFallbackBlock.Visibility = Visibility.Visible;
 
             if (_client != null && _session != null && !string.IsNullOrWhiteSpace(item.PrimaryImageTag))
             {
                 HeroPosterImage.Source = new BitmapImage(new Uri(_client.GetImageUrl(_session, item.Id, "Primary", 520)));
                 HeroPosterFallbackBlock.Visibility = Visibility.Collapsed;
+            }
+
+            if (_client != null && _session != null)
+            {
+                if (!string.IsNullOrWhiteSpace(item.BackdropImageTag))
+                {
+                    HeroBackdropImage.Source = new BitmapImage(new Uri(_client.GetImageUrl(_session, item.Id, "Backdrop", 1280)));
+                }
+                else if (!string.IsNullOrWhiteSpace(item.PrimaryImageTag))
+                {
+                    HeroBackdropImage.Source = new BitmapImage(new Uri(_client.GetImageUrl(_session, item.Id, "Primary", 720)));
+                }
             }
         }
 
@@ -195,12 +537,187 @@ namespace NextGenEmby.App.Views
             HeroTitleBlock.Text = "Nothing queued yet";
             HeroMetaBlock.Text = "Refresh after signing in to load your Emby home screen.";
             HeroPosterImage.Source = null;
+            HeroBackdropImage.Source = null;
             HeroPosterFallbackBlock.Visibility = Visibility.Visible;
             HeroPlayButton.IsEnabled = false;
             HeroDetailsButton.IsEnabled = false;
         }
 
-        private void AddRow(string title, IReadOnlyList<EmbyMediaItem>? items)
+        private void RenderLibraries(
+            IReadOnlyList<EmbyLibraryView> libraryViews,
+            IReadOnlyDictionary<string, IReadOnlyList<EmbyMediaItem>> libraryPreviews)
+        {
+            LibrariesPanel.Children.Clear();
+            _libraryButtons.Clear();
+
+            foreach (var view in libraryViews)
+            {
+                if (string.IsNullOrWhiteSpace(view.Id))
+                {
+                    continue;
+                }
+
+                IReadOnlyList<EmbyMediaItem> previewItems;
+                libraryPreviews.TryGetValue(view.Id, out previewItems);
+                var button = CreateLibraryButton(view, previewItems ?? Array.Empty<EmbyMediaItem>());
+                LibrariesPanel.Children.Add(button);
+                _libraryButtons.Add(button);
+            }
+
+            if (_libraryButtons.Count == 0)
+            {
+                var movies = new EmbyLibraryView { Name = "Movies", CollectionType = "movies" };
+                var tv = new EmbyLibraryView { Name = "TV", CollectionType = "tvshows" };
+                var moviesButton = CreateLibraryButton(movies, Array.Empty<EmbyMediaItem>());
+                var tvButton = CreateLibraryButton(tv, Array.Empty<EmbyMediaItem>());
+                LibrariesPanel.Children.Add(moviesButton);
+                LibrariesPanel.Children.Add(tvButton);
+                _libraryButtons.Add(moviesButton);
+                _libraryButtons.Add(tvButton);
+            }
+        }
+
+        private Button CreateLibraryButton(EmbyLibraryView view, IReadOnlyList<EmbyMediaItem> previewItems)
+        {
+            var request = CreateLibraryRequest(view);
+            var button = new Button
+            {
+                Width = 250,
+                Height = 132,
+                Padding = new Thickness(0),
+                Tag = request,
+                HorizontalContentAlignment = HorizontalAlignment.Stretch,
+                VerticalContentAlignment = VerticalAlignment.Stretch,
+                UseSystemFocusVisuals = true
+            };
+            button.GotFocus += HomeFocusTarget_OnGotFocus;
+            button.Click += LibraryButton_OnClick;
+
+            var root = new Grid();
+            var background = new Border
+            {
+                Background = (Brush)Application.Current.Resources["AppChromeBrush"],
+                BorderBrush = (Brush)Application.Current.Resources["AppHairlineBrush"],
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(8)
+            };
+            root.Children.Add(background);
+
+            var previewBrush = CreateLibraryArtworkBrush(view, 640);
+            if (previewBrush == null)
+            {
+                var previewItem = previewItems.FirstOrDefault(item =>
+                    !string.IsNullOrWhiteSpace(item.BackdropImageTag) ||
+                    !string.IsNullOrWhiteSpace(item.PrimaryImageTag));
+                previewBrush = CreateArtworkBrush(previewItem, 520, preferBackdrop: true);
+            }
+
+            if (previewBrush != null)
+            {
+                root.Children.Add(new Border
+                {
+                    Background = previewBrush,
+                    CornerRadius = new CornerRadius(8),
+                    Opacity = 0.62
+                });
+                root.Children.Add(new Border
+                {
+                    Background = new SolidColorBrush(Color.FromArgb(166, 3, 6, 10)),
+                    CornerRadius = new CornerRadius(8)
+                });
+            }
+
+            root.Children.Add(new Border
+            {
+                Height = 3,
+                VerticalAlignment = VerticalAlignment.Top,
+                Background = view.IsTvLibrary
+                    ? (Brush)Application.Current.Resources["AppWarmBrush"]
+                    : (Brush)Application.Current.Resources["AppAccentBrush"],
+                CornerRadius = new CornerRadius(8, 8, 0, 0)
+            });
+
+            root.Children.Add(new StackPanel
+            {
+                Margin = new Thickness(20),
+                VerticalAlignment = VerticalAlignment.Bottom,
+                Spacing = 6,
+                Children =
+                {
+                    new TextBlock
+                    {
+                        Text = string.IsNullOrWhiteSpace(view.Name) ? "Library" : view.Name,
+                        FontSize = 23,
+                        FontWeight = Windows.UI.Text.FontWeights.SemiBold,
+                        Foreground = (Brush)Application.Current.Resources["AppTextBrush"],
+                        TextTrimming = TextTrimming.CharacterEllipsis,
+                        MaxLines = 1
+                    },
+                    new TextBlock
+                    {
+                        Text = CreateLibrarySubtitle(view, previewItems),
+                        FontSize = 15,
+                        Foreground = (Brush)Application.Current.Resources["AppMutedTextBrush"],
+                        TextTrimming = TextTrimming.CharacterEllipsis,
+                        MaxLines = 1
+                    }
+                }
+            });
+
+            button.Content = root;
+            return button;
+        }
+
+        private ImageBrush? CreateLibraryArtworkBrush(EmbyLibraryView view, int maxWidth)
+        {
+            if (_client == null || _session == null || view == null || string.IsNullOrWhiteSpace(view.Id))
+            {
+                return null;
+            }
+
+            var imageType = "";
+            var imageItemId = view.Id;
+            if (!string.IsNullOrWhiteSpace(view.ThumbImageTag))
+            {
+                imageType = "Thumb";
+                if (!string.IsNullOrWhiteSpace(view.ThumbImageItemId))
+                {
+                    imageItemId = view.ThumbImageItemId;
+                }
+            }
+            else if (!string.IsNullOrWhiteSpace(view.BackdropImageTag))
+            {
+                imageType = "Backdrop";
+                if (!string.IsNullOrWhiteSpace(view.BackdropImageItemId))
+                {
+                    imageItemId = view.BackdropImageItemId;
+                }
+            }
+            else if (!string.IsNullOrWhiteSpace(view.PrimaryImageTag))
+            {
+                imageType = "Primary";
+                if (!string.IsNullOrWhiteSpace(view.PrimaryImageItemId))
+                {
+                    imageItemId = view.PrimaryImageItemId;
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(imageType) || string.IsNullOrWhiteSpace(imageItemId))
+            {
+                return null;
+            }
+
+            return new ImageBrush
+            {
+                ImageSource = new BitmapImage(new Uri(_client.GetImageUrl(_session, imageItemId, imageType, maxWidth))),
+                Stretch = Stretch.UniformToFill
+            };
+        }
+
+        private void AddRow(
+            string title,
+            IReadOnlyList<EmbyMediaItem>? items,
+            LibraryNavigationRequest? moreRequest)
         {
             if (items == null || items.Count == 0)
             {
@@ -209,15 +726,37 @@ namespace NextGenEmby.App.Views
 
             var section = new StackPanel
             {
-                Spacing = 14
+                Spacing = 12
             };
 
-            section.Children.Add(new TextBlock
+            var header = new Grid();
+            header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            header.Children.Add(new TextBlock
             {
                 Text = title,
-                FontSize = 28,
-                FontWeight = Windows.UI.Text.FontWeights.SemiBold
+                FontSize = 24,
+                FontWeight = Windows.UI.Text.FontWeights.SemiBold,
+                Foreground = (Brush)Application.Current.Resources["AppTextBrush"]
             });
+            if (moreRequest != null)
+            {
+                var moreButton = new Button
+                {
+                    Content = "More",
+                    MinWidth = 86,
+                    MinHeight = 44,
+                    Height = 44,
+                    Padding = new Thickness(16, 6, 16, 6),
+                    FontSize = 16,
+                    Tag = moreRequest
+                };
+                moreButton.Click += LibraryButton_OnClick;
+                Grid.SetColumn(moreButton, 1);
+                header.Children.Add(moreButton);
+            }
+
+            section.Children.Add(header);
 
             var scroller = new ScrollViewer
             {
@@ -230,12 +769,26 @@ namespace NextGenEmby.App.Views
             var panel = new StackPanel
             {
                 Orientation = Orientation.Horizontal,
-                Spacing = 18
+                Spacing = 14
             };
 
+            var rowIndex = _rowFirstButtons.Count;
+            Button? firstRowButton = null;
             foreach (var item in items)
             {
-                panel.Children.Add(CreateItemButton(item));
+                var itemButton = CreateItemButton(item);
+                RegisterRowButton(itemButton, rowIndex);
+                if (firstRowButton == null)
+                {
+                    firstRowButton = itemButton;
+                }
+
+                panel.Children.Add(itemButton);
+            }
+
+            if (firstRowButton != null)
+            {
+                _rowFirstButtons.Add(firstRowButton);
             }
 
             scroller.Content = panel;
@@ -243,12 +796,45 @@ namespace NextGenEmby.App.Views
             RowsPanel.Children.Add(section);
         }
 
+        private void ClearRows()
+        {
+            RowsPanel.Children.Clear();
+            _rowFirstButtons.Clear();
+            _rowButtonIndexes.Clear();
+        }
+
+        private void RegisterRowButton(Button button, int rowIndex)
+        {
+            button.GotFocus += HomeFocusTarget_OnGotFocus;
+            _rowButtonIndexes[button] = rowIndex;
+        }
+
+        private void AddUniqueRow(
+            HashSet<string> renderedRowTitles,
+            string title,
+            IReadOnlyList<EmbyMediaItem>? items,
+            LibraryNavigationRequest? moreRequest)
+        {
+            if (items == null || items.Count == 0)
+            {
+                return;
+            }
+
+            var key = string.IsNullOrWhiteSpace(title) ? "Home section" : title.Trim();
+            if (!renderedRowTitles.Add(key))
+            {
+                return;
+            }
+
+            AddRow(key, items, moreRequest);
+        }
+
         private Button CreateItemButton(EmbyMediaItem item)
         {
             var button = new Button
             {
-                Width = 220,
-                Height = 310,
+                Width = 172,
+                Height = 252,
                 Padding = new Thickness(0),
                 Tag = item,
                 HorizontalContentAlignment = HorizontalAlignment.Stretch,
@@ -259,7 +845,7 @@ namespace NextGenEmby.App.Views
 
             var root = new Grid
             {
-                Background = new SolidColorBrush(Color.FromArgb(255, 23, 34, 49))
+                Background = new SolidColorBrush(Color.FromArgb(255, 18, 29, 42))
             };
 
             if (_client != null && _session != null && !string.IsNullOrWhiteSpace(item.PrimaryImageTag))
@@ -271,11 +857,22 @@ namespace NextGenEmby.App.Views
                 };
             }
 
+            root.Children.Add(new Border
+            {
+                BorderBrush = (Brush)Application.Current.Resources["AppHairlineBrush"],
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(6)
+            });
+            root.Children.Add(new Border
+            {
+                Background = new SolidColorBrush(Color.FromArgb(32, 0, 0, 0))
+            });
+
             var overlay = new Border
             {
                 VerticalAlignment = VerticalAlignment.Bottom,
-                Background = new SolidColorBrush(Color.FromArgb(225, 0, 0, 0)),
-                Padding = new Thickness(16, 14, 16, 14)
+                Background = (Brush)Application.Current.Resources["AppCardScrimBrush"],
+                Padding = new Thickness(12, 10, 12, 10)
             };
 
             overlay.Child = new StackPanel
@@ -286,16 +883,17 @@ namespace NextGenEmby.App.Views
                     new TextBlock
                     {
                         Text = string.IsNullOrWhiteSpace(item.Name) ? item.Id : item.Name,
-                        FontSize = 20,
+                        FontSize = 16,
                         FontWeight = Windows.UI.Text.FontWeights.SemiBold,
+                        Foreground = (Brush)Application.Current.Resources["AppTextBrush"],
                         TextTrimming = TextTrimming.CharacterEllipsis,
                         MaxLines = 2
                     },
                     new TextBlock
                     {
                         Text = CreateMeta(item),
-                        FontSize = 15,
-                        Foreground = new SolidColorBrush(Color.FromArgb(255, 183, 198, 216)),
+                        FontSize = 13,
+                        Foreground = (Brush)Application.Current.Resources["AppMutedTextBrush"],
                         TextTrimming = TextTrimming.CharacterEllipsis,
                         MaxLines = 1
                     }
@@ -307,11 +905,281 @@ namespace NextGenEmby.App.Views
             return button;
         }
 
+        private async Task<IReadOnlyList<T>> TryLoadListAsync<T>(Func<Task<IReadOnlyList<T>>> load)
+        {
+            try
+            {
+                return await load();
+            }
+            catch
+            {
+                return Array.Empty<T>();
+            }
+        }
+
+        private async Task<IReadOnlyDictionary<string, IReadOnlyList<EmbyMediaItem>>> LoadLibraryPreviewsAsync(
+            EmbyApiClient client,
+            EmbySession session,
+            IReadOnlyList<EmbyLibraryView> libraryViews,
+            int loadGeneration)
+        {
+            var result = new Dictionary<string, IReadOnlyList<EmbyMediaItem>>(StringComparer.Ordinal);
+            foreach (var view in libraryViews.Take(12))
+            {
+                if (!CanApplyLoad(loadGeneration) || string.IsNullOrWhiteSpace(view.Id))
+                {
+                    continue;
+                }
+
+                var items = await TryLoadListAsync(() => client.GetLatestItemsAsync(
+                    session,
+                    view.Id,
+                    GuessIncludeItemTypes(view.CollectionType),
+                    12));
+                result[view.Id] = items;
+            }
+
+            return result;
+        }
+
+        private async Task<IReadOnlyList<HomeSectionRow>> LoadConfiguredHomeRowsAsync(
+            EmbyApiClient client,
+            EmbySession session,
+            int loadGeneration)
+        {
+            var sections = await TryLoadListAsync(() => client.GetHomeSectionsAsync(session));
+            var rows = new List<HomeSectionRow>();
+
+            foreach (var section in sections.Take(16))
+            {
+                if (!CanApplyLoad(loadGeneration) ||
+                    string.IsNullOrWhiteSpace(section.Id) ||
+                    IsDuplicateSystemSection(section))
+                {
+                    continue;
+                }
+
+                var items = await TryLoadListAsync(() => client.GetHomeSectionItemsAsync(session, section.Id, 24));
+                if (items.Count == 0)
+                {
+                    continue;
+                }
+
+                rows.Add(new HomeSectionRow(
+                    CreateSectionTitle(section),
+                    section.Id,
+                    section.CollectionType,
+                    items));
+            }
+
+            return rows;
+        }
+
+        private async Task<IReadOnlyList<LibraryContentRow>> LoadPopularRowsAsync(
+            EmbyApiClient client,
+            EmbySession session,
+            IReadOnlyList<EmbyLibraryView> libraryViews,
+            int loadGeneration)
+        {
+            var rows = new List<LibraryContentRow>();
+            foreach (var view in libraryViews.Take(8))
+            {
+                if (!CanApplyLoad(loadGeneration) || string.IsNullOrWhiteSpace(view.Id))
+                {
+                    continue;
+                }
+
+                var includeItemTypes = GuessIncludeItemTypes(view.CollectionType);
+                var items = await TryLoadListAsync(() => client.GetItemsAsync(session, new EmbyItemsQuery
+                {
+                    ParentId = view.Id,
+                    IncludeItemTypes = includeItemTypes,
+                    SortBy = "PlayCount",
+                    SortOrder = "Descending",
+                    Filters = "IsNotFolder",
+                    Limit = 24,
+                    Recursive = true
+                }));
+
+                if (items.Count == 0)
+                {
+                    continue;
+                }
+
+                rows.Add(new LibraryContentRow(
+                    CreatePopularTitle(view),
+                    items,
+                    CreateLibraryRequest(view)));
+            }
+
+            return rows;
+        }
+
+        private ImageBrush? CreateArtworkBrush(EmbyMediaItem? item, int maxWidth, bool preferBackdrop)
+        {
+            if (_client == null || _session == null || item == null || string.IsNullOrWhiteSpace(item.Id))
+            {
+                return null;
+            }
+
+            var imageType = "";
+            if (preferBackdrop && !string.IsNullOrWhiteSpace(item.BackdropImageTag))
+            {
+                imageType = "Backdrop";
+            }
+            else if (!string.IsNullOrWhiteSpace(item.PrimaryImageTag))
+            {
+                imageType = "Primary";
+            }
+            else if (!preferBackdrop && !string.IsNullOrWhiteSpace(item.BackdropImageTag))
+            {
+                imageType = "Backdrop";
+            }
+
+            if (string.IsNullOrWhiteSpace(imageType))
+            {
+                return null;
+            }
+
+            return new ImageBrush
+            {
+                ImageSource = new BitmapImage(new Uri(_client.GetImageUrl(_session, item.Id, imageType, maxWidth))),
+                Stretch = Stretch.UniformToFill
+            };
+        }
+
+        private static bool IsDuplicateSystemSection(EmbyHomeSection section)
+        {
+            var title = ((section.Name ?? "") + " " + (section.Subtitle ?? "") + " " + (section.SectionType ?? "")).ToLowerInvariant();
+            return title.Contains("continue") ||
+                title.Contains("resume") ||
+                title.Contains("next up") ||
+                title.Contains("nextup") ||
+                title.Contains("继续") ||
+                title.Contains("接着");
+        }
+
+        private static string CreateSectionTitle(EmbyHomeSection section)
+        {
+            if (!string.IsNullOrWhiteSpace(section.Name))
+            {
+                return section.Name;
+            }
+
+            if (!string.IsNullOrWhiteSpace(section.Subtitle))
+            {
+                return section.Subtitle;
+            }
+
+            return "Home section";
+        }
+
+        private static string CreateLibrarySubtitle(EmbyLibraryView view, IReadOnlyList<EmbyMediaItem> previewItems)
+        {
+            if (previewItems.Count > 0)
+            {
+                return previewItems.Count + " recent items";
+            }
+
+            if (view.IsMovieLibrary)
+            {
+                return "Film library";
+            }
+
+            if (view.IsTvLibrary)
+            {
+                return "Series library";
+            }
+
+            return string.IsNullOrWhiteSpace(view.CollectionType) ? "Media library" : view.CollectionType;
+        }
+
+        private static string CreatePopularTitle(EmbyLibraryView view)
+        {
+            if (view.IsMovieLibrary)
+            {
+                return "Hot Movies";
+            }
+
+            if (view.IsTvLibrary)
+            {
+                return "Hot TV Series";
+            }
+
+            return "Popular in " + (string.IsNullOrWhiteSpace(view.Name) ? "Library" : view.Name);
+        }
+
+        private static LibraryNavigationRequest CreateLibraryRequest(EmbyLibraryView view)
+        {
+            return new LibraryNavigationRequest(
+                string.IsNullOrWhiteSpace(view.Name) ? "Library" : view.Name,
+                view.CollectionType,
+                GuessIncludeItemTypes(view.CollectionType),
+                view.Id,
+                "");
+        }
+
+        private static string GuessIncludeItemTypes(string collectionType)
+        {
+            if (string.Equals(collectionType, "movies", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Movie";
+            }
+
+            if (string.Equals(collectionType, "tvshows", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Series";
+            }
+
+            if (string.Equals(collectionType, "boxsets", StringComparison.OrdinalIgnoreCase))
+            {
+                return "BoxSet";
+            }
+
+            return "Movie,Series,Episode,Video,MusicVideo";
+        }
+
+        private bool FocusDailyStart(FocusState focusState)
+        {
+            if (HeroPlayButton.IsEnabled && HeroPlayButton.Focus(focusState))
+            {
+                _lastHomeFocusTarget = HeroPlayButton;
+                return true;
+            }
+
+            var firstLibraryButton = GetFirstLibraryButton();
+            if (firstLibraryButton != null && firstLibraryButton.Focus(focusState))
+            {
+                _lastHomeFocusTarget = firstLibraryButton;
+                return true;
+            }
+
+            if (!RefreshButton.Focus(focusState))
+            {
+                return false;
+            }
+
+            _lastHomeFocusTarget = RefreshButton;
+            return true;
+        }
+
         private void ItemButton_OnClick(object sender, RoutedEventArgs e)
         {
             var button = sender as Button;
             var item = button == null ? null : button.Tag as EmbyMediaItem;
             NavigateToDetails(item);
+        }
+
+        private void LibraryButton_OnClick(object sender, RoutedEventArgs e)
+        {
+            var button = sender as Button;
+            var request = button == null ? null : button.Tag as LibraryNavigationRequest;
+            if (request == null)
+            {
+                return;
+            }
+
+            Frame.Navigate(typeof(LibraryPage), request);
         }
 
         private void NavigateToDetails(EmbyMediaItem? item)
@@ -383,6 +1251,48 @@ namespace NextGenEmby.App.Views
             }
 
             return meta;
+        }
+
+        private sealed class HomeSectionRow
+        {
+            public HomeSectionRow(
+                string title,
+                string sectionId,
+                string collectionType,
+                IReadOnlyList<EmbyMediaItem> items)
+            {
+                Title = string.IsNullOrWhiteSpace(title) ? "Home section" : title;
+                SectionId = sectionId ?? "";
+                CollectionType = collectionType ?? "";
+                Items = items ?? Array.Empty<EmbyMediaItem>();
+            }
+
+            public string Title { get; }
+
+            public string SectionId { get; }
+
+            public string CollectionType { get; }
+
+            public IReadOnlyList<EmbyMediaItem> Items { get; }
+        }
+
+        private sealed class LibraryContentRow
+        {
+            public LibraryContentRow(
+                string title,
+                IReadOnlyList<EmbyMediaItem> items,
+                LibraryNavigationRequest moreRequest)
+            {
+                Title = string.IsNullOrWhiteSpace(title) ? "Library" : title;
+                Items = items ?? Array.Empty<EmbyMediaItem>();
+                MoreRequest = moreRequest;
+            }
+
+            public string Title { get; }
+
+            public IReadOnlyList<EmbyMediaItem> Items { get; }
+
+            public LibraryNavigationRequest MoreRequest { get; }
         }
     }
 }

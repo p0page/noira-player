@@ -10,6 +10,7 @@ using Windows.Storage;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Input;
+using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Navigation;
 using Windows.System;
 
@@ -62,6 +63,12 @@ namespace NextGenEmby.App
                 return;
             }
 
+            if (IsDownKey(e.Key) && TryFocusContentFromShell(e.OriginalSource))
+            {
+                e.Handled = true;
+                return;
+            }
+
             if (e.Key == VirtualKey.GamepadY)
             {
                 NavigateSearch();
@@ -81,11 +88,31 @@ namespace NextGenEmby.App
             }
         }
 
+        private bool TryFocusContentFromShell(object originalSource)
+        {
+            var focusedElement = FocusManager.GetFocusedElement();
+            if (!IsFocusWithin(focusedElement, ShellHeader) &&
+                !IsFocusWithin(originalSource, ShellHeader))
+            {
+                return false;
+            }
+
+            var focusTarget = ContentFrame.Content as ITvContentFocusTarget;
+            return focusTarget != null && focusTarget.FocusDefaultContent();
+        }
+
         private static bool IsBackKey(VirtualKey key)
         {
             return key == VirtualKey.GamepadB ||
                 key == VirtualKey.Escape ||
                 key == VirtualKey.GoBack;
+        }
+
+        private static bool IsDownKey(VirtualKey key)
+        {
+            return key == VirtualKey.Down ||
+                key == VirtualKey.GamepadDPadDown ||
+                key == VirtualKey.GamepadLeftThumbstickDown;
         }
 
         public void NavigateHome()
@@ -157,6 +184,7 @@ namespace NextGenEmby.App
                 " parameter=" + (e.Parameter == null ? "null" : e.Parameter.GetType().Name) +
                 " canGoBack=" + ContentFrame.CanGoBack);
             ApplyShellChrome(e.SourcePageType == typeof(PlaybackPage));
+            ApplyShellButtonState(e.SourcePageType, _currentLibraryRequest);
             FocusShellButton(e.SourcePageType, _currentLibraryRequest);
         }
 
@@ -165,6 +193,23 @@ namespace NextGenEmby.App
             ShellHeader.Visibility = isPlayback ? Visibility.Collapsed : Visibility.Visible;
             Grid.SetRow(ContentFrame, isPlayback ? 0 : 1);
             Grid.SetRowSpan(ContentFrame, isPlayback ? 2 : 1);
+        }
+
+        private void ApplyShellButtonState(Type pageType, LibraryNavigationRequest? libraryRequest)
+        {
+            SetShellButtonActive(HomeButton, pageType == typeof(HomePage) || pageType == typeof(LoginPage));
+            SetShellButtonActive(MoviesButton, pageType == typeof(LibraryPage) && libraryRequest != null && libraryRequest.IsMovies);
+            SetShellButtonActive(TvButton, pageType == typeof(LibraryPage) && libraryRequest != null && libraryRequest.IsTv);
+            SetShellButtonActive(SearchButton, pageType == typeof(SearchPage));
+            SetShellButtonActive(SettingsButton, pageType == typeof(SettingsPage));
+        }
+
+        private static void SetShellButtonActive(Button button, bool isActive)
+        {
+            var resources = Application.Current.Resources;
+            button.Background = (Brush)resources[isActive ? "AppRaisedSurfaceBrush" : "AppTransparentBrush"];
+            button.BorderBrush = (Brush)resources[isActive ? "AppAccentBrush" : "AppTransparentBrush"];
+            button.Foreground = (Brush)resources[isActive ? "AppTextBrush" : "AppMutedTextBrush"];
         }
 
         private void FocusShellButton(Type pageType, LibraryNavigationRequest? libraryRequest)
@@ -329,12 +374,30 @@ namespace NextGenEmby.App
             return current != null &&
                 string.Equals(current.Title, next.Title, StringComparison.Ordinal) &&
                 string.Equals(current.CollectionType, next.CollectionType, StringComparison.Ordinal) &&
-                string.Equals(current.IncludeItemTypes, next.IncludeItemTypes, StringComparison.Ordinal);
+                string.Equals(current.IncludeItemTypes, next.IncludeItemTypes, StringComparison.Ordinal) &&
+                string.Equals(current.ParentId, next.ParentId, StringComparison.Ordinal) &&
+                string.Equals(current.SectionId, next.SectionId, StringComparison.Ordinal);
         }
 
         private bool IsPlaybackPageActive()
         {
             return ContentFrame.CurrentSourcePageType == typeof(PlaybackPage);
+        }
+
+        private static bool IsFocusWithin(object focusedElement, DependencyObject target)
+        {
+            var current = focusedElement as DependencyObject;
+            while (current != null)
+            {
+                if (current == target)
+                {
+                    return true;
+                }
+
+                current = VisualTreeHelper.GetParent(current);
+            }
+
+            return false;
         }
     }
 }

@@ -10,54 +10,119 @@
                 <muxc:XamlControlsResources />
             </ResourceDictionary.MergedDictionaries>
 
-            <Color x:Key="AppBackgroundColor">#070A0E</Color>
-            <Color x:Key="AppSurfaceColor">#111923</Color>
-            <Color x:Key="AppRaisedSurfaceColor">#172231</Color>
-            <Color x:Key="AppAccentColor">#00A6D6</Color>
-            <Color x:Key="AppActionColor">#66D17A</Color>
-            <Color x:Key="AppMutedTextColor">#A9B8C8</Color>
+            <Color x:Key="AppBackgroundColor">#03060A</Color>
+            <Color x:Key="AppSurfaceColor">#0A1018</Color>
+            <Color x:Key="AppRaisedSurfaceColor">#121D2A</Color>
+            <Color x:Key="AppChromeColor">#B30A1018</Color>
+            <Color x:Key="AppChromeHoverColor">#D4142030</Color>
+            <Color x:Key="AppChromePressedColor">#E41B2C3F</Color>
+            <Color x:Key="AppAccentColor">#4EE7FF</Color>
+            <Color x:Key="AppActionColor">#78E68B</Color>
+            <Color x:Key="AppMutedTextColor">#ABC1D6</Color>
+            <Color x:Key="AppTextColor">#F4F8FC</Color>
+            <Color x:Key="AppHairlineColor">#2A3B4E</Color>
+            <Color x:Key="AppWarmColor">#E4B84C</Color>
+            <Color x:Key="AppCardScrimColor">#D9040710</Color>
             <SolidColorBrush x:Key="AppBackgroundBrush" Color="{StaticResource AppBackgroundColor}" />
             <SolidColorBrush x:Key="AppSurfaceBrush" Color="{StaticResource AppSurfaceColor}" />
             <SolidColorBrush x:Key="AppRaisedSurfaceBrush" Color="{StaticResource AppRaisedSurfaceColor}" />
+            <SolidColorBrush x:Key="AppChromeBrush" Color="{StaticResource AppChromeColor}" />
+            <SolidColorBrush x:Key="AppChromeHoverBrush" Color="{StaticResource AppChromeHoverColor}" />
+            <SolidColorBrush x:Key="AppChromePressedBrush" Color="{StaticResource AppChromePressedColor}" />
             <SolidColorBrush x:Key="AppAccentBrush" Color="{StaticResource AppAccentColor}" />
             <SolidColorBrush x:Key="AppActionBrush" Color="{StaticResource AppActionColor}" />
             <SolidColorBrush x:Key="AppMutedTextBrush" Color="{StaticResource AppMutedTextColor}" />
-            <SolidColorBrush x:Key="SystemControlFocusVisualPrimaryBrush" Color="#FFFFFFFF" />
-            <SolidColorBrush x:Key="SystemControlFocusVisualSecondaryBrush" Color="{StaticResource AppAccentColor}" />
+            <SolidColorBrush x:Key="AppTextBrush" Color="{StaticResource AppTextColor}" />
+            <SolidColorBrush x:Key="AppHairlineBrush" Color="{StaticResource AppHairlineColor}" />
+            <SolidColorBrush x:Key="AppWarmBrush" Color="{StaticResource AppWarmColor}" />
+            <SolidColorBrush x:Key="AppCardScrimBrush" Color="{StaticResource AppCardScrimColor}" />
+            <SolidColorBrush x:Key="AppTransparentBrush" Color="#00000000" />
+            <SolidColorBrush x:Key="SystemControlFocusVisualPrimaryBrush" Color="{StaticResource AppAccentColor}" />
+            <SolidColorBrush x:Key="SystemControlFocusVisualSecondaryBrush" Color="#80FFFFFF" />
+            <SolidColorBrush x:Key="ButtonBackground" Color="{StaticResource AppChromeColor}" />
+            <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="{StaticResource AppChromeHoverColor}" />
+            <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="{StaticResource AppChromePressedColor}" />
+            <SolidColorBrush x:Key="ButtonBackgroundDisabled" Color="#4D0A1018" />
+            <SolidColorBrush x:Key="ButtonForeground" Color="{StaticResource AppTextColor}" />
+            <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="{StaticResource AppTextColor}" />
+            <SolidColorBrush x:Key="ButtonForegroundPressed" Color="{StaticResource AppTextColor}" />
+            <SolidColorBrush x:Key="ButtonForegroundDisabled" Color="#7AABC1D6" />
+            <SolidColorBrush x:Key="ButtonBorderBrush" Color="{StaticResource AppHairlineColor}" />
+            <SolidColorBrush x:Key="ButtonBorderBrushPointerOver" Color="#5D7C97" />
+            <SolidColorBrush x:Key="ButtonBorderBrushPressed" Color="{StaticResource AppAccentColor}" />
+            <SolidColorBrush x:Key="ButtonBorderBrushDisabled" Color="#332A3B4E" />
+            <Thickness x:Key="TvShellMargin">48,18,48,12</Thickness>
+            <Thickness x:Key="TvPageMargin">56,28,56,48</Thickness>
+            <Thickness x:Key="TvPanelPadding">22</Thickness>
 
             <Style TargetType="Button">
-                <Setter Property="MinHeight" Value="64" />
-                <Setter Property="MinWidth" Value="220" />
-                <Setter Property="Padding" Value="28,12" />
-                <Setter Property="FontSize" Value="20" />
+                <Setter Property="MinHeight" Value="52" />
+                <Setter Property="MinWidth" Value="132" />
+                <Setter Property="Padding" Value="20,9" />
+                <Setter Property="FontSize" Value="18" />
                 <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Foreground" Value="{StaticResource AppTextBrush}" />
+                <Setter Property="Background" Value="{StaticResource AppChromeBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource AppHairlineBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="6" />
+                <Setter Property="FocusVisualMargin" Value="-3" />
+                <Setter Property="FocusVisualPrimaryThickness" Value="2" />
+                <Setter Property="FocusVisualSecondaryThickness" Value="1" />
                 <Setter Property="UseSystemFocusVisuals" Value="True" />
             </Style>
 
             <Style x:Key="IconButtonStyle" TargetType="Button">
-                <Setter Property="Width" Value="64" />
-                <Setter Property="Height" Value="64" />
-                <Setter Property="MinWidth" Value="64" />
-                <Setter Property="MinHeight" Value="64" />
+                <Setter Property="Width" Value="52" />
+                <Setter Property="Height" Value="52" />
+                <Setter Property="MinWidth" Value="52" />
+                <Setter Property="MinHeight" Value="52" />
                 <Setter Property="Padding" Value="0" />
-                <Setter Property="Background" Value="{StaticResource AppRaisedSurfaceBrush}" />
-                <Setter Property="BorderBrush" Value="#4D6074" />
+                <Setter Property="Background" Value="{StaticResource AppChromeBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource AppHairlineBrush}" />
                 <Setter Property="BorderThickness" Value="1" />
-                <Setter Property="Foreground" Value="White" />
+                <Setter Property="CornerRadius" Value="6" />
+                <Setter Property="Foreground" Value="{StaticResource AppTextBrush}" />
+                <Setter Property="FocusVisualMargin" Value="-3" />
+                <Setter Property="FocusVisualPrimaryThickness" Value="2" />
+                <Setter Property="FocusVisualSecondaryThickness" Value="1" />
+                <Setter Property="UseSystemFocusVisuals" Value="True" />
+            </Style>
+
+            <Style x:Key="TvNavButtonStyle" TargetType="Button">
+                <Setter Property="MinHeight" Value="44" />
+                <Setter Property="MinWidth" Value="96" />
+                <Setter Property="Padding" Value="18,7" />
+                <Setter Property="FontSize" Value="16" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="BorderBrush" Value="Transparent" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="6" />
+                <Setter Property="Foreground" Value="{StaticResource AppMutedTextBrush}" />
+                <Setter Property="FocusVisualMargin" Value="-3" />
+                <Setter Property="FocusVisualPrimaryThickness" Value="2" />
+                <Setter Property="FocusVisualSecondaryThickness" Value="1" />
                 <Setter Property="UseSystemFocusVisuals" Value="True" />
             </Style>
 
             <Style TargetType="TextBox">
-                <Setter Property="MinHeight" Value="64" />
-                <Setter Property="FontSize" Value="20" />
-                <Setter Property="Padding" Value="18,10" />
+                <Setter Property="MinHeight" Value="56" />
+                <Setter Property="FontSize" Value="18" />
+                <Setter Property="Padding" Value="16,8" />
+                <Setter Property="Foreground" Value="{StaticResource AppTextBrush}" />
+                <Setter Property="Background" Value="{StaticResource AppChromeBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource AppHairlineBrush}" />
                 <Setter Property="UseSystemFocusVisuals" Value="True" />
             </Style>
 
             <Style TargetType="PasswordBox">
-                <Setter Property="MinHeight" Value="64" />
-                <Setter Property="FontSize" Value="20" />
-                <Setter Property="Padding" Value="18,10" />
+                <Setter Property="MinHeight" Value="56" />
+                <Setter Property="FontSize" Value="18" />
+                <Setter Property="Padding" Value="16,8" />
+                <Setter Property="Foreground" Value="{StaticResource AppTextBrush}" />
+                <Setter Property="Background" Value="{StaticResource AppChromeBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource AppHairlineBrush}" />
                 <Setter Property="UseSystemFocusVisuals" Value="True" />
             </Style>
         </ResourceDictionary>

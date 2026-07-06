@@ -11,15 +11,15 @@
         <Border Background="#D80E141F" />
 
         <ScrollViewer VerticalScrollBarVisibility="Auto">
-            <Grid Margin="72,60" ColumnSpacing="44">
+            <Grid Margin="{StaticResource TvPageMargin}" ColumnSpacing="34">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="320" />
+                    <ColumnDefinition Width="240" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
                 <Border
-                    Width="320"
-                    Height="480"
+                    Width="240"
+                    Height="360"
                     Background="{StaticResource AppRaisedSurfaceBrush}"
                     CornerRadius="8">
                     <Grid>
@@ -29,7 +29,7 @@
                         <TextBlock
                             x:Name="PosterFallbackBlock"
                             Text="No image"
-                            FontSize="22"
+                            FontSize="18"
                             Foreground="{StaticResource AppMutedTextBrush}"
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center" />
@@ -39,16 +39,16 @@
                 <StackPanel
                     Grid.Column="1"
                     MaxWidth="900"
-                    Spacing="24">
+                    Spacing="18">
                     <StackPanel Spacing="8">
                         <TextBlock
                             x:Name="TitleBlock"
-                            FontSize="52"
+                            FontSize="40"
                             FontWeight="SemiBold"
                             TextWrapping="WrapWholeWords" />
                         <TextBlock
                             x:Name="MetaBlock"
-                            FontSize="22"
+                            FontSize="18"
                             Foreground="{StaticResource AppMutedTextBrush}"
                             TextWrapping="Wrap" />
                     </StackPanel>
@@ -56,8 +56,8 @@
                     <StackPanel Orientation="Horizontal" Spacing="16">
                         <Button
                             x:Name="PlayButton"
-                            MinWidth="220"
-                            Height="68"
+                            MinWidth="162"
+                            Height="54"
                             Click="Play_OnClick"
                             UseSystemFocusVisuals="True">
                             <StackPanel Orientation="Horizontal" Spacing="12">
@@ -65,7 +65,7 @@
                                 <TextBlock
                                     x:Name="PlayButtonText"
                                     Text="Play"
-                                    FontSize="24" />
+                                    FontSize="18" />
                             </StackPanel>
                         </Button>
                         <Button
@@ -81,17 +81,17 @@
 
                     <StackPanel
                         x:Name="VersionsPanel"
-                        Spacing="10" />
+                        Spacing="8" />
 
                     <TextBlock
                         x:Name="AudioSummaryBlock"
-                        FontSize="20"
+                        FontSize="18"
                         Foreground="{StaticResource AppMutedTextBrush}"
                         TextWrapping="Wrap" />
 
                     <TextBlock
                         x:Name="SubtitleSummaryBlock"
-                        FontSize="20"
+                        FontSize="18"
                         Foreground="{StaticResource AppMutedTextBrush}"
                         TextWrapping="Wrap" />
 
@@ -101,7 +101,7 @@
                         Visibility="Collapsed">
                         <TextBlock
                             Text="Episodes"
-                            FontSize="26"
+                            FontSize="22"
                             FontWeight="SemiBold" />
                         <StackPanel
                             x:Name="EpisodesPanel"
@@ -110,14 +110,14 @@
 
                     <TextBlock
                         x:Name="OverviewBlock"
-                        FontSize="24"
-                        LineHeight="34"
+                        FontSize="20"
+                        LineHeight="28"
                         TextWrapping="WrapWholeWords"
                         MaxWidth="860" />
 
                     <TextBlock
                         x:Name="StatusBlock"
-                        FontSize="20"
+                        FontSize="18"
                         Foreground="{StaticResource AppMutedTextBrush}"
                         TextWrapping="Wrap" />
                 </StackPanel>

@@ -365,7 +365,7 @@ namespace NextGenEmby.App.Views
             var header = new TextBlock
             {
                 Text = "Versions",
-                FontSize = 26,
+                FontSize = 22,
                 FontWeight = Windows.UI.Text.FontWeights.SemiBold
             };
             VersionsPanel.Children.Add(header);
@@ -405,14 +405,14 @@ namespace NextGenEmby.App.Views
             text.Children.Add(new TextBlock
             {
                 Text = CreateEpisodeTitle(episode),
-                FontSize = 20,
+                FontSize = 18,
                 FontWeight = Windows.UI.Text.FontWeights.SemiBold,
                 TextWrapping = TextWrapping.WrapWholeWords
             });
             text.Children.Add(new TextBlock
             {
                 Text = CreateMeta(episode),
-                FontSize = 16,
+                FontSize = 14,
                 Foreground = (Windows.UI.Xaml.Media.Brush)Application.Current.Resources["AppMutedTextBrush"],
                 TextWrapping = TextWrapping.Wrap
             });
@@ -427,7 +427,7 @@ namespace NextGenEmby.App.Views
             EpisodesPanel.Children.Add(new TextBlock
             {
                 Text = string.IsNullOrWhiteSpace(season.Name) ? "Season" : season.Name,
-                FontSize = 22,
+                FontSize = 19,
                 FontWeight = Windows.UI.Text.FontWeights.SemiBold,
                 Margin = new Thickness(0, 10, 0, 0),
                 TextWrapping = TextWrapping.WrapWholeWords
@@ -535,7 +535,7 @@ namespace NextGenEmby.App.Views
             return new TextBlock
             {
                 Text = text ?? "",
-                FontSize = 20,
+                FontSize = 18,
                 Foreground = (Windows.UI.Xaml.Media.Brush)Application.Current.Resources["AppMutedTextBrush"],
                 TextWrapping = TextWrapping.Wrap
             };
@@ -560,7 +560,7 @@ namespace NextGenEmby.App.Views
             panel.Children.Add(new TextBlock
             {
                 Text = CreateSourceSummary(source),
-                FontSize = 21,
+                FontSize = 18,
                 TextWrapping = TextWrapping.WrapWholeWords
             });
 
@@ -570,7 +570,7 @@ namespace NextGenEmby.App.Views
                 panel.Children.Add(new TextBlock
                 {
                     Text = details,
-                    FontSize = 16,
+                    FontSize = 14,
                     Foreground = (Windows.UI.Xaml.Media.Brush)Application.Current.Resources["AppMutedTextBrush"],
                     TextWrapping = TextWrapping.Wrap
                 });

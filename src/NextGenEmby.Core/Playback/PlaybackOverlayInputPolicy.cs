@@ -53,7 +53,7 @@ namespace NextGenEmby.Core.Playback
                         return PlaybackOverlayInputAction.CloseMore;
                     }
 
-                    if (!overlayVisible || preferBackWhenOverlayVisible)
+                    if (!overlayVisible)
                     {
                         return PlaybackOverlayInputAction.GoBack;
                     }
@@ -76,6 +76,20 @@ namespace NextGenEmby.Core.Playback
             bool seekPreviewActive)
         {
             return moreVisible && !seekPreviewActive;
+        }
+
+        public static bool ShouldKeepOverlayPinned(
+            bool moreVisible,
+            bool seekPreviewActive,
+            bool manualDebugVisible,
+            bool playbackOpeningOrBusy = false,
+            bool playbackNeedsAttention = false)
+        {
+            return moreVisible ||
+                seekPreviewActive ||
+                manualDebugVisible ||
+                playbackOpeningOrBusy ||
+                playbackNeedsAttention;
         }
     }
 }

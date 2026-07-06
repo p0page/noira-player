@@ -74,7 +74,7 @@ public sealed class PlaybackOverlayInputPolicyTests
     }
 
     [Fact]
-    public void Cancel_Goes_Back_When_Back_Should_Exit_Playback_Page()
+    public void Cancel_Hides_Visible_Overlay_Even_When_Back_Should_Exit_Playback_Page()
     {
         var action = PlaybackOverlayInputPolicy.Decide(
             PlaybackOverlayShortcut.Cancel,
@@ -83,7 +83,7 @@ public sealed class PlaybackOverlayInputPolicyTests
             overlayVisible: true,
             preferBackWhenOverlayVisible: true);
 
-        Assert.Equal(PlaybackOverlayInputAction.GoBack, action);
+        Assert.Equal(PlaybackOverlayInputAction.HideOverlay, action);
     }
 
     [Fact]
@@ -105,5 +105,48 @@ public sealed class PlaybackOverlayInputPolicyTests
         var action = PlaybackOverlayInputPolicy.Decide(PlaybackOverlayShortcut.Cancel, seekPreviewActive: false, moreVisible: false, overlayVisible: false);
 
         Assert.Equal(PlaybackOverlayInputAction.GoBack, action);
+    }
+
+    [Theory]
+    [InlineData(true, false, false, true)]
+    [InlineData(false, true, false, true)]
+    [InlineData(false, false, true, true)]
+    [InlineData(false, false, false, false)]
+    public void Overlay_Should_Pin_When_More_Seek_Or_Manual_Debug_Is_Active(
+        bool moreVisible,
+        bool seekPreviewActive,
+        bool manualDebugVisible,
+        bool expected)
+    {
+        var shouldPin = PlaybackOverlayInputPolicy.ShouldKeepOverlayPinned(
+            moreVisible,
+            seekPreviewActive,
+            manualDebugVisible);
+
+        Assert.Equal(expected, shouldPin);
+    }
+
+    [Fact]
+    public void Overlay_Should_Pin_While_Playback_Is_Opening_Or_Busy()
+    {
+        var shouldPin = PlaybackOverlayInputPolicy.ShouldKeepOverlayPinned(
+            moreVisible: false,
+            seekPreviewActive: false,
+            manualDebugVisible: false,
+            playbackOpeningOrBusy: true);
+
+        Assert.True(shouldPin);
+    }
+
+    [Fact]
+    public void Overlay_Should_Pin_When_Playback_Needs_Attention()
+    {
+        var shouldPin = PlaybackOverlayInputPolicy.ShouldKeepOverlayPinned(
+            moreVisible: false,
+            seekPreviewActive: false,
+            manualDebugVisible: false,
+            playbackNeedsAttention: true);
+
+        Assert.True(shouldPin);
     }
 }

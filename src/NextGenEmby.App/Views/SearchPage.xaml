@@ -5,9 +5,9 @@
     Background="{StaticResource AppBackgroundBrush}">
     <Grid>
         <ScrollViewer VerticalScrollBarVisibility="Auto">
-            <Grid Margin="72,48" MaxWidth="980" HorizontalAlignment="Left">
-                <StackPanel Spacing="24">
-                    <TextBlock Text="Search" FontSize="46" FontWeight="SemiBold" />
+            <Grid Margin="{StaticResource TvPageMargin}" MaxWidth="900" HorizontalAlignment="Left">
+                <StackPanel Spacing="18">
+                    <TextBlock Text="Search" FontSize="34" FontWeight="SemiBold" />
                     <Grid ColumnSpacing="16">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
@@ -27,11 +27,11 @@
                     </Grid>
                     <TextBlock
                         x:Name="StatusBlock"
-                        FontSize="20"
+                        FontSize="18"
                         Foreground="{StaticResource AppMutedTextBrush}"
                         Text="Search results will appear here."
                         TextWrapping="Wrap" />
-                    <StackPanel x:Name="ResultsPanel" Spacing="14" />
+                    <StackPanel x:Name="ResultsPanel" Spacing="10" />
                 </StackPanel>
             </Grid>
         </ScrollViewer>

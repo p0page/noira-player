@@ -147,8 +147,20 @@ public sealed class EmbyLibraryTests
             """
             {
               "Items": [
-                { "Id": "movies", "Name": "Movies", "CollectionType": "movies" },
-                { "Id": "tv", "Name": "TV Shows", "CollectionType": "tvshows" }
+                {
+                  "Id": "movies",
+                  "Name": "Movies",
+                  "CollectionType": "movies",
+                  "ImageTags": { "Primary": "movies-primary" },
+                  "BackdropImageTags": [ "movies-backdrop" ]
+                },
+                {
+                  "Id": "tv",
+                  "Name": "TV Shows",
+                  "CollectionType": "tvshows",
+                  "ImageTags": { "Primary": "tv-primary" },
+                  "BackdropImageTags": []
+                }
               ],
               "TotalRecordCount": 2
             }
@@ -165,14 +177,217 @@ public sealed class EmbyLibraryTests
                 Assert.Equal("movies", view.Id);
                 Assert.Equal("Movies", view.Name);
                 Assert.Equal("movies", view.CollectionType);
+                Assert.Equal("movies-primary", view.PrimaryImageTag);
+                Assert.Equal("movies-backdrop", view.BackdropImageTag);
             },
             view =>
             {
                 Assert.Equal("tv", view.Id);
                 Assert.Equal("TV Shows", view.Name);
                 Assert.Equal("tvshows", view.CollectionType);
+                Assert.Equal("tv-primary", view.PrimaryImageTag);
+                Assert.Equal("", view.BackdropImageTag);
             });
         Assert.Equal("/Users/user-1/Views", handler.LastRequest!.RequestUri!.AbsolutePath);
+    }
+
+    [Fact]
+    public async Task GetUserViewsAsync_Parses_Landscape_And_Inherited_Library_Images()
+    {
+        var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
+            HttpStatusCode.OK,
+            """
+            {
+              "Items": [
+                {
+                  "Id": "douban",
+                  "Name": "Douban Picks",
+                  "CollectionType": "movies",
+                  "ImageTags": {
+                    "Primary": "primary-tag",
+                    "Thumb": "thumb-tag"
+                  },
+                  "BackdropImageTags": [ "backdrop-tag" ],
+                  "PrimaryImageItemId": "primary-owner",
+                  "ParentBackdropItemId": "backdrop-owner",
+                  "ParentThumbItemId": "thumb-owner",
+                  "ParentThumbImageTag": "parent-thumb-tag"
+                }
+              ],
+              "TotalRecordCount": 1
+            }
+            """));
+        using var http = new HttpClient(handler);
+        var client = CreateClient(http);
+
+        var view = Assert.Single(await client.GetUserViewsAsync(Session()));
+
+        Assert.Equal("thumb-tag", view.ThumbImageTag);
+        Assert.Equal("primary-tag", view.PrimaryImageTag);
+        Assert.Equal("backdrop-tag", view.BackdropImageTag);
+        Assert.Equal("primary-owner", view.PrimaryImageItemId);
+        Assert.Equal("backdrop-owner", view.BackdropImageItemId);
+        Assert.Equal("thumb-owner", view.ThumbImageItemId);
+    }
+
+    [Fact]
+    public async Task GetHomeSectionsAsync_Parses_Server_Configured_Home_Sections()
+    {
+        var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
+            HttpStatusCode.OK,
+            """
+            [
+              {
+                "Id": "sec-hot-movies",
+                "Name": "热门电影",
+                "Subtitle": "Hot Movies",
+                "SectionType": "Library",
+                "CollectionType": "movies",
+                "ViewType": "Poster",
+                "ScrollDirection": "Horizontal",
+                "ParentItem": {
+                  "Id": "movies",
+                  "Name": "Hot Movies",
+                  "Type": "CollectionFolder",
+                  "CollectionType": "movies"
+                }
+              },
+              {
+                "Id": null,
+                "Name": null,
+                "Subtitle": null,
+                "SectionType": null,
+                "CollectionType": null,
+                "ViewType": null,
+                "ScrollDirection": null,
+                "ParentItem": null
+              }
+            ]
+            """));
+        using var http = new HttpClient(handler);
+        var client = CreateClient(http);
+
+        var sections = await client.GetHomeSectionsAsync(Session(userId: "user 1/slash"));
+
+        Assert.Collection(
+            sections,
+            section =>
+            {
+                Assert.Equal("sec-hot-movies", section.Id);
+                Assert.Equal("热门电影", section.Name);
+                Assert.Equal("Hot Movies", section.Subtitle);
+                Assert.Equal("Library", section.SectionType);
+                Assert.Equal("movies", section.CollectionType);
+                Assert.Equal("Poster", section.ViewType);
+                Assert.Equal("Horizontal", section.ScrollDirection);
+                Assert.Equal("movies", section.ParentItem.Id);
+                Assert.Equal("Hot Movies", section.ParentItem.Name);
+            },
+            section =>
+            {
+                Assert.Equal("", section.Id);
+                Assert.Equal("", section.Name);
+                Assert.Equal("", section.Subtitle);
+                Assert.Equal("", section.SectionType);
+                Assert.Equal("", section.CollectionType);
+                Assert.Equal("", section.ViewType);
+                Assert.Equal("", section.ScrollDirection);
+                Assert.Equal("", section.ParentItem.Id);
+            });
+        Assert.Equal("/Users/user%201%2Fslash/HomeSections", handler.LastRequest!.RequestUri!.AbsolutePath);
+    }
+
+    [Fact]
+    public async Task GetHomeSectionItemsAsync_Uses_Section_Items_Endpoint()
+    {
+        var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
+            HttpStatusCode.OK,
+            """
+            {
+              "Items": [
+                {
+                  "Id": "movie-1",
+                  "Name": "Section Movie",
+                  "Type": "Movie",
+                  "ImageTags": { "Primary": "primary-tag" },
+                  "BackdropImageTags": [ "backdrop-tag" ]
+                }
+              ],
+              "TotalRecordCount": 1
+            }
+            """));
+        using var http = new HttpClient(handler);
+        var client = CreateClient(http);
+
+        var items = await client.GetHomeSectionItemsAsync(Session(), "sec hot/movies", 18);
+
+        var item = Assert.Single(items);
+        Assert.Equal("movie-1", item.Id);
+        Assert.Equal("primary-tag", item.PrimaryImageTag);
+        Assert.Equal("backdrop-tag", item.BackdropImageTag);
+        Assert.Equal("/Users/user-1/Sections/sec%20hot%2Fmovies/Items", handler.LastRequest!.RequestUri!.AbsolutePath);
+        Assert.Contains("Limit=18", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("Fields=Overview%2CProductionYear%2CRunTimeTicks%2CPrimaryImageAspectRatio%2CChildCount%2CUserData", handler.LastRequest.RequestUri.Query);
+    }
+
+    [Fact]
+    public async Task GetNextUpItemsAsync_Uses_Shows_NextUp_Endpoint()
+    {
+        var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
+            HttpStatusCode.OK,
+            """
+            {
+              "Items": [
+                {
+                  "Id": "episode-1",
+                  "Name": "Next Episode",
+                  "Type": "Episode",
+                  "SeriesId": "series-1",
+                  "IndexNumber": 2,
+                  "ParentIndexNumber": 1
+                }
+              ],
+              "TotalRecordCount": 1
+            }
+            """));
+        using var http = new HttpClient(handler);
+        var client = CreateClient(http);
+
+        var items = await client.GetNextUpItemsAsync(Session(userId: "user 1/slash"), 12);
+
+        var item = Assert.Single(items);
+        Assert.Equal("episode-1", item.Id);
+        Assert.Equal(1, item.ParentIndexNumber);
+        Assert.Equal(2, item.IndexNumber);
+        Assert.Equal("/Shows/NextUp", handler.LastRequest!.RequestUri!.AbsolutePath);
+        Assert.Contains("UserId=user%201%2Fslash", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("Limit=12", handler.LastRequest.RequestUri.Query);
+    }
+
+    [Fact]
+    public async Task GetLatestItemsAsync_With_Parent_Uses_Latest_Endpoint_For_A_Library()
+    {
+        var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
+            HttpStatusCode.OK,
+            """
+            [
+              {
+                "Id": "movie-1",
+                "Name": "Latest Library Movie",
+                "Type": "Movie"
+              }
+            ]
+            """));
+        using var http = new HttpClient(handler);
+        var client = CreateClient(http);
+
+        var items = await client.GetLatestItemsAsync(Session(), "library 1/slash", "Movie", 16);
+
+        Assert.Equal("movie-1", Assert.Single(items).Id);
+        Assert.Equal("/Users/user-1/Items/Latest", handler.LastRequest!.RequestUri!.AbsolutePath);
+        Assert.Contains("ParentId=library%201%2Fslash", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("IncludeItemTypes=Movie", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("Limit=16", handler.LastRequest.RequestUri.Query);
     }
 
     [Fact]

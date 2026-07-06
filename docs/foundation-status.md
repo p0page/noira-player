@@ -357,3 +357,71 @@ computer-use 本机交互复验：
 - Stop 按钮在 Windows 自动化里仍容易只触发 tooltip 而不是按钮 invoke；停止态返回由单元策略覆盖，且 0.1.0.14 的本机复验曾覆盖 Stop -> `Stopped` -> Escape 返回详情。0.1.0.15 相比 0.1.0.14 仅升级调试包版本以绕开同版本 MSIX 覆盖限制，返回逻辑代码未变。
 
 后续如果要更接近真实手柄自动化，需要安装虚拟手柄驱动或引入专门的 XInput 注入工具；目前代码层面已经把真实 `GamepadB` 和可自动化的 `Escape` / `GoBack` 收敛到同一条返回策略。
+
+## TV Fluent 交互与比例修复状态（0.1.0.64）
+
+日期：2026-07-06
+
+本轮依据 Android TV、Fire TV、Roku、Microsoft UWP gamepad/remote、Xbox Accessibility Guideline 113 与 Fluent 2 elevation/motion 指南，完成了一版更接近十英尺电视体验的紧凑 Fluent UI 方案。设计结论已写入 `docs/superpowers/specs/2026-07-06-tv-fluent-interaction-polish-design.md`，执行计划已写入 `docs/superpowers/plans/2026-07-06-tv-fluent-interaction-polish.md`。
+
+实现范围：
+
+- 新增紧凑 TV scale：Shell、Home、Library、Details、Search、Settings、Playback OSD 和 More drawer 的边距、字号、按钮高度、卡片尺寸整体收敛，避免电视上比例过大。
+- Home 增加确定性方向键焦点路由：Hero Play/Details 与 Movies/TV 库入口之间的 Up/Down/Left/Right、D-pad、左摇杆方向都落到可见目标。
+- Library 增加内容焦点入口：从 Shell 进入 Movies/TV 后自动聚焦第一张海报；从 Shell 导航按 Down 会进入当前内容页。
+- Library 的 Sort/Filter 从 ComboBox 改为 TV 按钮：方向键只移动焦点，Return/A 才循环切换选项，避免按 Down 误改排序。
+- Library 网格增加首行 Up 到 Sort/Filter、Sort/Filter Down 回海报的确定性路由。
+- Playback OSD 更紧凑，并修复打开阶段黑屏无提示、异常状态 OSD 自动隐藏、More drawer 关闭后焦点丢失等问题。
+- `PlaybackOverlayInputPolicy` 扩展了 overlay pinning 策略：More、seek preview、manual debug、opening/busy、failed/needs-attention 状态都不会被自动隐藏计时器吞掉。
+
+本轮自动验证：
+
+```powershell
+dotnet test tests\NextGenEmby.Core.Tests\NextGenEmby.Core.Tests.csproj --no-restore -v minimal
+```
+
+结果：
+
+```text
+Passed: 141
+Failed: 0
+Skipped: 0
+```
+
+```powershell
+& 'C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe' src\NextGenEmby.App\NextGenEmby.App.csproj /restore /p:Configuration=Debug /p:Platform=x64 /p:AppxBundle=Never /p:UseSharedCompilation=false
+```
+
+结果：
+
+```text
+Build succeeded.
+0 warnings
+0 errors
+```
+
+最新 Debug x64 MSIX 已升级到 `0.1.0.64`，使用 `CN=NextGenEmby` 证书重新签名，并通过 `Add-AppxPackage -ForceUpdateFromAnyVersion` 安装到本机：
+
+```text
+NextGenEmby.App 0.1.0.64 NextGenEmby.App_0.1.0.64_x64__h8qjz0sr1sg4m
+```
+
+本轮 keyboard-only / computer-use 本机验证：
+
+- Home 首屏比例已收敛，Hero、Libraries 和下方 Continue watching 行可同时进入视野；焦点默认在 Hero Play。
+- Home 按 Down 从 Hero Play 进入 Movies 库卡片，Return 进入 Movies Library，没有误触播放。
+- Movies Library 打开后自动聚焦第一张海报；Right 可移动到下一张海报；Return 可进入详情；详情页焦点落在 Play。
+- 详情页按 Escape 返回 Library 后，焦点仍回到第一张海报。
+- Library 第一张海报按 Up 进入 Sort；Sort 按 Down 回第一张海报；Sort 文本保持 `Title`，不会像 ComboBox 一样误切到 `Recently added`。
+- Sort 获焦时按 Return 会主动切换到 `Recently added` 并刷新列表，刷新后焦点回到第一张海报。
+- Playback 从 Home Play 进入后 1 秒内显示 OSD，状态为 `Opening`，底部控制可见。
+- 播放异常或失败时 OSD 保持可见；本机样本仍可触发 `Windows.Graphics...CoreWindow` 相关失败状态，但不会黑屏沉默。
+- Playback 第一次 Escape 只隐藏 OSD，不返回 Home；第二次 Escape 返回 Home。
+- More drawer 在先前 0.1.0.57 验证中已确认可用：M 打开 More，超过 6 秒不会自动隐藏，Escape 关闭 More 并把焦点还给 More 按钮。本轮未改动该路径，并保留同一策略测试。
+
+验证限制：
+
+- Xbox 机器关机，本轮没有部署到 Xbox 硬件，也没有真实 XInput 注入；所有交互使用键盘事件验证，按键路径已映射到 D-pad、左摇杆方向和 GamepadB/Menu 等代码路径。
+- 本机验证没有使用鼠标点击应用内容。截图中可见鼠标光标和 tooltip，是宿主光标位置造成的；验证动作使用的是 `press_key`。
+- 未改核心解码/播放链路，也未接入 Emby 转码流程。
+- 当前本机播放仍可能暴露原生播放/HDR/CoreWindow 相关错误；本轮只确保失败被 OSD 清楚呈现并可返回，没有改动核心解码或 native 渲染逻辑。

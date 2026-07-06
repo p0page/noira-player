@@ -69,6 +69,30 @@ namespace NextGenEmby.Core.Emby
             return dto.Select(MapItem).ToList();
         }
 
+        public async Task<IReadOnlyList<EmbyMediaItem>> GetLatestItemsAsync(
+            EmbySession session,
+            string parentId,
+            string includeItemTypes,
+            int limit)
+        {
+            var parameters = new List<string>();
+            AddQueryParameter(parameters, "ParentId", parentId);
+            AddQueryParameter(parameters, "IncludeItemTypes", includeItemTypes);
+            AddQueryParameter(parameters, "Fields", ItemListFields);
+            AddQueryParameter(parameters, "Limit", Math.Max(1, limit).ToString());
+
+            using var request = new HttpRequestMessage(
+                HttpMethod.Get,
+                $"Users/{EscapeUriComponent(session.UserId)}/Items/Latest?{string.Join("&", parameters)}");
+            EmbyAuthorization.Apply(request, _options, session);
+
+            using var response = await _http.SendAsync(request).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+            var body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var dto = JsonSerializer.Deserialize<List<ItemDto>>(body, _jsonOptions) ?? new List<ItemDto>();
+            return dto.Select(MapItem).ToList();
+        }
+
         public async Task<IReadOnlyList<EmbyMediaItem>> GetResumeItemsAsync(EmbySession session, int limit = 20)
         {
             var parameters = new List<string>();
@@ -100,6 +124,60 @@ namespace NextGenEmby.Core.Emby
             var body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
             var dto = JsonSerializer.Deserialize<ItemListDto<ViewDto>>(body, _jsonOptions) ?? new ItemListDto<ViewDto>();
             return (dto.Items ?? new List<ViewDto>()).Select(MapView).ToList();
+        }
+
+        public async Task<IReadOnlyList<EmbyHomeSection>> GetHomeSectionsAsync(EmbySession session)
+        {
+            using var request = new HttpRequestMessage(
+                HttpMethod.Get,
+                $"Users/{EscapeUriComponent(session.UserId)}/HomeSections");
+            EmbyAuthorization.Apply(request, _options, session);
+
+            using var response = await _http.SendAsync(request).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+            var body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var dto = JsonSerializer.Deserialize<List<HomeSectionDto>>(body, _jsonOptions) ?? new List<HomeSectionDto>();
+            return dto.Select(MapHomeSection).ToList();
+        }
+
+        public async Task<IReadOnlyList<EmbyMediaItem>> GetHomeSectionItemsAsync(
+            EmbySession session,
+            string sectionId,
+            int limit)
+        {
+            var parameters = new List<string>();
+            AddQueryParameter(parameters, "Limit", Math.Max(1, limit).ToString());
+            AddQueryParameter(parameters, "Fields", ItemListFields);
+
+            using var request = new HttpRequestMessage(
+                HttpMethod.Get,
+                $"Users/{EscapeUriComponent(session.UserId)}/Sections/{EscapeUriComponent(sectionId)}/Items?{string.Join("&", parameters)}");
+            EmbyAuthorization.Apply(request, _options, session);
+
+            using var response = await _http.SendAsync(request).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+            var body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var dto = JsonSerializer.Deserialize<ItemListDto<ItemDto>>(body, _jsonOptions) ?? new ItemListDto<ItemDto>();
+            return (dto.Items ?? new List<ItemDto>()).Select(MapItem).ToList();
+        }
+
+        public async Task<IReadOnlyList<EmbyMediaItem>> GetNextUpItemsAsync(EmbySession session, int limit)
+        {
+            var parameters = new List<string>();
+            AddQueryParameter(parameters, "UserId", session.UserId);
+            AddQueryParameter(parameters, "Fields", ItemListFields);
+            AddQueryParameter(parameters, "Limit", Math.Max(1, limit).ToString());
+
+            using var request = new HttpRequestMessage(
+                HttpMethod.Get,
+                $"Shows/NextUp?{string.Join("&", parameters)}");
+            EmbyAuthorization.Apply(request, _options, session);
+
+            using var response = await _http.SendAsync(request).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+            var body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var dto = JsonSerializer.Deserialize<ItemListDto<ItemDto>>(body, _jsonOptions) ?? new ItemListDto<ItemDto>();
+            return (dto.Items ?? new List<ItemDto>()).Select(MapItem).ToList();
         }
 
         public Task<IReadOnlyList<EmbyMediaItem>> GetChildrenAsync(
@@ -285,11 +363,34 @@ namespace NextGenEmby.Core.Emby
 
         private static EmbyLibraryView MapView(ViewDto view)
         {
+            var imageTags = view.ImageTags;
+            var backdropImageTags = view.BackdropImageTags;
             return new EmbyLibraryView
             {
                 Id = view.Id ?? "",
                 Name = view.Name ?? "",
-                CollectionType = view.CollectionType ?? ""
+                CollectionType = view.CollectionType ?? "",
+                ThumbImageTag = imageTags != null && imageTags.TryGetValue("Thumb", out var thumb) ? thumb ?? "" : view.ParentThumbImageTag ?? "",
+                PrimaryImageTag = imageTags != null && imageTags.TryGetValue("Primary", out var primary) ? primary ?? "" : "",
+                BackdropImageTag = backdropImageTags != null && backdropImageTags.Count > 0 ? backdropImageTags[0] ?? "" : "",
+                ThumbImageItemId = view.ParentThumbItemId ?? "",
+                PrimaryImageItemId = view.PrimaryImageItemId ?? "",
+                BackdropImageItemId = view.ParentBackdropItemId ?? ""
+            };
+        }
+
+        private static EmbyHomeSection MapHomeSection(HomeSectionDto section)
+        {
+            return new EmbyHomeSection
+            {
+                Id = section.Id ?? "",
+                Name = section.Name ?? "",
+                Subtitle = section.Subtitle ?? "",
+                SectionType = section.SectionType ?? "",
+                CollectionType = section.CollectionType ?? "",
+                ViewType = section.ViewType ?? "",
+                ScrollDirection = section.ScrollDirection ?? "",
+                ParentItem = section.ParentItem == null ? new EmbyMediaItem() : MapItem(section.ParentItem)
             };
         }
 
@@ -531,6 +632,24 @@ namespace NextGenEmby.Core.Emby
             public string Id { get; set; } = "";
             public string Name { get; set; } = "";
             public string CollectionType { get; set; } = "";
+            public Dictionary<string, string> ImageTags { get; set; } = new Dictionary<string, string>();
+            public List<string> BackdropImageTags { get; set; } = new List<string>();
+            public string PrimaryImageItemId { get; set; } = "";
+            public string ParentBackdropItemId { get; set; } = "";
+            public string ParentThumbItemId { get; set; } = "";
+            public string ParentThumbImageTag { get; set; } = "";
+        }
+
+        private sealed class HomeSectionDto
+        {
+            public string Id { get; set; } = "";
+            public string Name { get; set; } = "";
+            public string Subtitle { get; set; } = "";
+            public string SectionType { get; set; } = "";
+            public string CollectionType { get; set; } = "";
+            public string ViewType { get; set; } = "";
+            public string ScrollDirection { get; set; } = "";
+            public ItemDto? ParentItem { get; set; }
         }
 
         private sealed class UserDataDto

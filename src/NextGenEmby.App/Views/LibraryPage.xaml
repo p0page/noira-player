@@ -4,7 +4,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     Background="{StaticResource AppBackgroundBrush}">
     <Grid Background="{StaticResource AppBackgroundBrush}">
-        <Grid Margin="72,42,72,64" RowSpacing="18">
+        <Grid Margin="{StaticResource TvPageMargin}" RowSpacing="14">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
@@ -20,13 +20,13 @@
                 <StackPanel Spacing="4">
                     <TextBlock
                         x:Name="TitleBlock"
-                        FontSize="42"
+                        FontSize="34"
                         FontWeight="SemiBold"
                         Text="Library"
                         TextTrimming="CharacterEllipsis" />
                     <TextBlock
                         x:Name="StatusBlock"
-                        FontSize="18"
+                        FontSize="16"
                         Foreground="{StaticResource AppMutedTextBrush}"
                         TextWrapping="Wrap" />
                 </StackPanel>
@@ -46,30 +46,69 @@
             </Grid>
 
             <StackPanel
+                x:Name="OptionsPanel"
                 Grid.Row="1"
                 Orientation="Horizontal"
                 Spacing="18">
-                <ComboBox
-                    x:Name="SortBox"
-                    Width="280"
-                    Header="Sort"
-                    SelectedIndex="0"
-                    SelectionChanged="SortBox_OnSelectionChanged">
-                    <ComboBoxItem Content="Title" Tag="SortName" />
-                    <ComboBoxItem Content="Recently added" Tag="DateCreated" />
-                    <ComboBoxItem Content="Year" Tag="ProductionYear" />
-                </ComboBox>
+                <StackPanel Width="220" Spacing="6">
+                    <TextBlock
+                        FontSize="14"
+                        Foreground="{StaticResource AppMutedTextBrush}"
+                        Text="Sort" />
+                    <Button
+                        x:Name="SortButton"
+                        AutomationProperties.Name="Sort"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Stretch"
+                        Click="SortButton_OnClick">
+                        <Grid ColumnSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock
+                                x:Name="SortValueBlock"
+                                VerticalAlignment="Center"
+                                FontSize="16"
+                                Text="Title"
+                                TextTrimming="CharacterEllipsis" />
+                            <SymbolIcon
+                                Grid.Column="1"
+                                Symbol="Sort"
+                                VerticalAlignment="Center" />
+                        </Grid>
+                    </Button>
+                </StackPanel>
 
-                <ComboBox
-                    x:Name="FilterBox"
-                    Width="280"
-                    Header="Filter"
-                    SelectedIndex="0"
-                    SelectionChanged="FilterBox_OnSelectionChanged">
-                    <ComboBoxItem Content="All" Tag="" />
-                    <ComboBoxItem Content="Unwatched" Tag="IsUnplayed" />
-                    <ComboBoxItem Content="Resumable" Tag="IsResumable" />
-                </ComboBox>
+                <StackPanel Width="220" Spacing="6">
+                    <TextBlock
+                        FontSize="14"
+                        Foreground="{StaticResource AppMutedTextBrush}"
+                        Text="Filter" />
+                    <Button
+                        x:Name="FilterButton"
+                        AutomationProperties.Name="Filter"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Stretch"
+                        Click="FilterButton_OnClick">
+                        <Grid ColumnSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock
+                                x:Name="FilterValueBlock"
+                                VerticalAlignment="Center"
+                                FontSize="16"
+                                Text="All"
+                                TextTrimming="CharacterEllipsis" />
+                            <SymbolIcon
+                                Grid.Column="1"
+                                Symbol="Filter"
+                                VerticalAlignment="Center" />
+                        </Grid>
+                    </Button>
+                </StackPanel>
             </StackPanel>
 
             <Grid Grid.Row="2">
@@ -87,34 +126,43 @@
                             <Setter Property="VerticalContentAlignment" Value="Stretch" />
                             <Setter Property="UseSystemFocusVisuals" Value="True" />
                             <Setter Property="Padding" Value="0" />
-                            <Setter Property="Margin" Value="0,0,18,18" />
+                            <Setter Property="Margin" Value="0,0,14,14" />
                         </Style>
                     </GridView.ItemContainerStyle>
                     <GridView.ItemTemplate>
                         <DataTemplate>
                             <Grid
-                                Width="210"
-                                Height="320"
+                                Width="168"
+                                Height="250"
                                 Background="{StaticResource AppRaisedSurfaceBrush}">
+                                <Grid.Resources>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="{StaticResource AppTextBrush}" />
+                                    </Style>
+                                </Grid.Resources>
+                                <Border
+                                    BorderBrush="{StaticResource AppHairlineBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="6" />
                                 <Image
                                     Source="{Binding ImageSource}"
                                     Stretch="UniformToFill" />
-                                <Border Background="#30000000" />
+                                <Border Background="#22000000" />
                                 <Border
                                     VerticalAlignment="Bottom"
-                                    Background="#E0000000"
+                                    Background="{StaticResource AppCardScrimBrush}"
                                     Padding="14,12">
                                     <StackPanel Spacing="4">
                                         <TextBlock
                                             Text="{Binding Title}"
-                                            FontSize="19"
+                                            FontSize="16"
                                             FontWeight="SemiBold"
                                             TextTrimming="CharacterEllipsis"
                                             MaxLines="2"
                                             TextWrapping="WrapWholeWords" />
                                         <TextBlock
                                             Text="{Binding Meta}"
-                                            FontSize="14"
+                                            FontSize="13"
                                             Foreground="{StaticResource AppMutedTextBrush}"
                                             TextTrimming="CharacterEllipsis"
                                             MaxLines="1" />
@@ -126,8 +174,7 @@
                     <GridView.ItemsPanel>
                         <ItemsPanelTemplate>
                             <ItemsWrapGrid
-                                Orientation="Horizontal"
-                                MaximumRowsOrColumns="5" />
+                                Orientation="Horizontal" />
                         </ItemsPanelTemplate>
                     </GridView.ItemsPanel>
                 </GridView>
