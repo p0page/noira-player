@@ -108,6 +108,8 @@ Every report must include these phase-1 limitations:
 
 `PlaybackQualityReferenceManifest` is the machine-readable contract for reference media cases. Each case must include a stable `caseId`, `uri`, `tier`, at least one `purpose`, and expected source metadata. `PlaybackQualityReferenceManifestValidator` emits `isValid`, case count, tiers, purposes, schedulable case summaries, and structured errors. Automated playback loops should run the CLI `validate-manifest` command before collecting reports so missing sample metadata does not produce misleading optimization data.
 
+`PlaybackQualityReferenceCaseReportRequestFactory.CreateRequest` converts a validated reference case and actual `PlaybackDescriptor` evidence into a `PlaybackQualityReportRequest`. It sets `runId = caseId`, clones the case `expected` metadata, and disables default expected generation so report evaluation is tied to the manifest case instead of inferred from the selected source. This is the preferred bridge from manifest-driven sample scheduling into `PlaybackQualityReportComposer`.
+
 `expected.minRenderedVideoFrames` validates that a run produced enough video frames to be meaningful. A report with too few rendered frames is a `frame-pacing` failure because frame gap, drift, and buffer signals cannot be trusted without a real rendered sample.
 
 `expectedFrameDurationMs` is derived from `source.frameRate` as `1000 / frameRate` when a usable frame rate exists. It lets the model compare frame gaps and render interval percentiles against the source cadence instead of reading them as isolated numbers.

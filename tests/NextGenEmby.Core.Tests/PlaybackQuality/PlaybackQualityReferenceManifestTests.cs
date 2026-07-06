@@ -1,3 +1,5 @@
+using NextGenEmby.Core.Emby;
+using NextGenEmby.Core.Playback;
 using NextGenEmby.Core.PlaybackQuality;
 using Xunit;
 
@@ -94,6 +96,63 @@ public sealed class PlaybackQualityReferenceManifestTests
             error.Signal == "expected.height");
     }
 
+    [Fact]
+    public void CreateReportRequest_Uses_CaseId_And_Expected_Metadata()
+    {
+        var referenceCase = CreateCase(
+            "netflix/chimera-4k-2398-hdr-pq",
+            tier: 2,
+            purpose: "hdr-output");
+        var descriptor = CreateDescriptor(
+            codec: "hevc",
+            width: 3840,
+            height: 2160,
+            frameRate: 23.976,
+            hdrKind: HdrPlaybackKind.Hdr10);
+
+        var request = PlaybackQualityReferenceCaseReportRequestFactory.CreateRequest(
+            referenceCase,
+            descriptor);
+        referenceCase.Expected.Codec = "av1";
+
+        Assert.Equal("netflix/chimera-4k-2398-hdr-pq", request.RunId);
+        Assert.Same(descriptor, request.Descriptor);
+        Assert.NotNull(request.Expected);
+        Assert.Equal("hevc", request.Expected!.Codec);
+        Assert.Equal(3840, request.Expected.Width);
+        Assert.Equal(2160, request.Expected.Height);
+        Assert.Equal(23.976, request.Expected.FrameRate);
+        Assert.Equal("Hdr10", request.Expected.HdrKind);
+        Assert.False(request.UseDefaultExpectedWhenMissing);
+    }
+
+    [Fact]
+    public void ReferenceCase_ReportRequest_Fails_As_Unsupported_Source_When_Descriptor_Does_Not_Match()
+    {
+        var referenceCase = CreateCase(
+            "netflix/chimera-4k-2398-hdr-pq",
+            tier: 2,
+            purpose: "hdr-output");
+        var descriptor = CreateDescriptor(
+            codec: "av1",
+            width: 1920,
+            height: 1080,
+            frameRate: 23.976,
+            hdrKind: HdrPlaybackKind.Sdr);
+
+        var request = PlaybackQualityReferenceCaseReportRequestFactory.CreateRequest(
+            referenceCase,
+            descriptor);
+        var result = PlaybackQualityReportComposer.Compose(request);
+
+        Assert.Equal("fail", result.Report.Result);
+        Assert.Equal("unsupported-source", result.Report.Analysis.PrimaryFailureArea);
+        Assert.Contains("source.codec", result.Report.Analysis.RelevantSignals);
+        Assert.Contains("source.width", result.Report.Analysis.RelevantSignals);
+        Assert.Contains("source.height", result.Report.Analysis.RelevantSignals);
+        Assert.Contains("source.hdrKind", result.Report.Analysis.RelevantSignals);
+    }
+
     private static PlaybackQualityReferenceCase CreateCase(
         string caseId,
         int tier,
@@ -120,5 +179,38 @@ public sealed class PlaybackQualityReferenceManifestTests
         }
 
         return referenceCase;
+    }
+
+    private static PlaybackDescriptor CreateDescriptor(
+        string codec,
+        int width,
+        int height,
+        double frameRate,
+        HdrPlaybackKind hdrKind)
+    {
+        var source = new EmbyMediaSource
+        {
+            Id = "source-1",
+            Width = width,
+            Height = height,
+            VideoFrameRate = frameRate,
+            HdrProfile = new HdrPlaybackProfile
+            {
+                Kind = hdrKind,
+                Codec = codec
+            }
+        };
+        source.Streams.Add(new EmbyMediaStream
+        {
+            Kind = EmbyStreamKind.Video,
+            Codec = codec,
+            Index = 0
+        });
+
+        return new PlaybackDescriptor(
+            "item-1",
+            source,
+            new[] { source },
+            startPositionTicks: 0);
     }
 }
