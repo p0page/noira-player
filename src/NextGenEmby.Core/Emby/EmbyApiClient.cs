@@ -304,6 +304,22 @@ namespace NextGenEmby.Core.Emby
             return MapItem(dto);
         }
 
+        public Task<EmbyUserData> SetFavoriteAsync(EmbySession session, string itemId, bool isFavorite)
+        {
+            var path =
+                $"Users/{EscapeUriComponent(session.UserId)}/FavoriteItems/{EscapeUriComponent(itemId)}" +
+                (isFavorite ? "" : "/Delete");
+            return SendUserDataMutationAsync(session, path);
+        }
+
+        public Task<EmbyUserData> SetPlayedAsync(EmbySession session, string itemId, bool isPlayed)
+        {
+            var path =
+                $"Users/{EscapeUriComponent(session.UserId)}/PlayedItems/{EscapeUriComponent(itemId)}" +
+                (isPlayed ? "" : "/Delete");
+            return SendUserDataMutationAsync(session, path);
+        }
+
         public async Task<IReadOnlyList<EmbyMediaSource>> GetPlaybackInfoAsync(EmbySession session, string itemId)
         {
             using var request = new HttpRequestMessage(
@@ -366,6 +382,23 @@ namespace NextGenEmby.Core.Emby
 
             ValidatePlaybackSessionRequest(playback, parameterName);
             await PostJsonAsync(session, path, playback).ConfigureAwait(false);
+        }
+
+        private async Task<EmbyUserData> SendUserDataMutationAsync(EmbySession session, string path)
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, path);
+            EmbyAuthorization.Apply(request, _options, session);
+
+            using var response = await _http.SendAsync(request).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+            var body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            if (string.IsNullOrWhiteSpace(body))
+            {
+                return new EmbyUserData();
+            }
+
+            var dto = JsonSerializer.Deserialize<UserDataDto>(body, _jsonOptions) ?? new UserDataDto();
+            return MapUserData(dto);
         }
 
         private void ValidatePlaybackSessionRequest(PlaybackSessionRequest playback, string parameterName)
@@ -518,12 +551,18 @@ namespace NextGenEmby.Core.Emby
                 IndexNumber = item.IndexNumber,
                 ParentIndexNumber = item.ParentIndexNumber,
                 ChildCount = item.ChildCount,
-                UserData = new EmbyUserData
-                {
-                    Played = userData.Played,
-                    PlaybackPositionTicks = userData.PlaybackPositionTicks,
-                    PlayedPercentage = userData.PlayedPercentage
-                }
+                UserData = MapUserData(userData)
+            };
+        }
+
+        private static EmbyUserData MapUserData(UserDataDto userData)
+        {
+            return new EmbyUserData
+            {
+                IsFavorite = userData.IsFavorite,
+                Played = userData.Played,
+                PlaybackPositionTicks = userData.PlaybackPositionTicks,
+                PlayedPercentage = userData.PlayedPercentage
             };
         }
 
@@ -759,6 +798,7 @@ namespace NextGenEmby.Core.Emby
 
         private sealed class UserDataDto
         {
+            public bool IsFavorite { get; set; }
             public bool Played { get; set; }
             public long PlaybackPositionTicks { get; set; }
             public double? PlayedPercentage { get; set; }

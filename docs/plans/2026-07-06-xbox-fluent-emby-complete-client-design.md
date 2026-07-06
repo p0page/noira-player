@@ -252,7 +252,8 @@ First viewport:
 - Title or logo.
 - metadata line.
 - Play/Resume as default focus.
-- More actions: favorite, watched, versions, subtitles, audio, add to playlist/collection when available.
+- Primary action row: Play/Resume, Restart when resumable, Favorite, Watched, and Refresh.
+- Secondary selectors directly below the action row: versions, subtitles, audio, and add to playlist/collection when available.
 
 Below:
 
@@ -265,7 +266,10 @@ Below:
 Behavior:
 
 - A on Play starts or resumes.
+- Right/Left moves across visible actions without relying on hover or default desktop focus guessing.
 - Down from Play goes to versions or episodes.
+- Up from the first selector row returns to Play/Resume.
+- Favorite and watched actions update item user-data in place and restore focus to the changed action.
 - B returns one level.
 - Stream selection changes the launch request but does not start accidental playback unless the user selects Play.
 

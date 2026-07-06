@@ -62,11 +62,17 @@
                             TextWrapping="Wrap" />
                     </StackPanel>
 
-                    <StackPanel Orientation="Horizontal" Spacing="16">
+                    <StackPanel
+                        x:Name="DetailsActionPanel"
+                        Orientation="Horizontal"
+                        Spacing="12">
                         <Button
                             x:Name="PlayButton"
                             MinWidth="162"
                             Height="54"
+                            Background="{StaticResource AppActionBrush}"
+                            BorderBrush="{StaticResource AppActionBrush}"
+                            Foreground="#041007"
                             Click="Play_OnClick"
                             UseSystemFocusVisuals="True">
                             <StackPanel Orientation="Horizontal" Spacing="12">
@@ -74,6 +80,46 @@
                                 <TextBlock
                                     x:Name="PlayButtonText"
                                     Text="Play"
+                                    FontSize="18" />
+                            </StackPanel>
+                        </Button>
+                        <Button
+                            x:Name="RestartButton"
+                            MinWidth="144"
+                            Height="54"
+                            Click="Restart_OnClick"
+                            UseSystemFocusVisuals="True"
+                            Visibility="Collapsed">
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <SymbolIcon Symbol="Refresh" />
+                                <TextBlock Text="Restart" FontSize="18" />
+                            </StackPanel>
+                        </Button>
+                        <Button
+                            x:Name="FavoriteButton"
+                            MinWidth="176"
+                            Height="54"
+                            Click="Favorite_OnClick"
+                            UseSystemFocusVisuals="True">
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <SymbolIcon Symbol="Favorite" />
+                                <TextBlock
+                                    x:Name="FavoriteButtonText"
+                                    Text="Add favorite"
+                                    FontSize="18" />
+                            </StackPanel>
+                        </Button>
+                        <Button
+                            x:Name="WatchedButton"
+                            MinWidth="178"
+                            Height="54"
+                            Click="Watched_OnClick"
+                            UseSystemFocusVisuals="True">
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <SymbolIcon Symbol="View" />
+                                <TextBlock
+                                    x:Name="WatchedButtonText"
+                                    Text="Mark watched"
                                     FontSize="18" />
                             </StackPanel>
                         </Button>

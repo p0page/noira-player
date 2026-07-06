@@ -143,6 +143,107 @@ public sealed class EmbyLibraryTests
     }
 
     [Fact]
+    public async Task SetFavoriteAsync_Marks_Item_As_Favorite_And_Parses_UserData()
+    {
+        var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
+            HttpStatusCode.OK,
+            """
+            {
+              "ItemId": "movie-1",
+              "IsFavorite": true,
+              "Played": false,
+              "PlaybackPositionTicks": 1200000000,
+              "PlayedPercentage": 12
+            }
+            """));
+        using var http = new HttpClient(handler);
+        var client = CreateClient(http);
+
+        var userData = await client.SetFavoriteAsync(Session(userId: "user 1/slash"), "movie 1/slash", true);
+
+        Assert.True(userData.IsFavorite);
+        Assert.False(userData.Played);
+        Assert.Equal(1200000000, userData.PlaybackPositionTicks);
+        Assert.Equal(12, userData.PlayedPercentage);
+        Assert.Equal(HttpMethod.Post, handler.LastRequest!.Method);
+        Assert.Equal("/Users/user%201%2Fslash/FavoriteItems/movie%201%2Fslash", handler.LastRequest.RequestUri!.AbsolutePath);
+        Assert.Null(handler.LastRequest.Body);
+    }
+
+    [Fact]
+    public async Task SetFavoriteAsync_Unmarks_Item_With_Compat_Delete_Post()
+    {
+        var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
+            HttpStatusCode.OK,
+            """
+            {
+              "ItemId": "movie-1",
+              "IsFavorite": false,
+              "Played": true
+            }
+            """));
+        using var http = new HttpClient(handler);
+        var client = CreateClient(http);
+
+        var userData = await client.SetFavoriteAsync(Session(), "movie-1", false);
+
+        Assert.False(userData.IsFavorite);
+        Assert.True(userData.Played);
+        Assert.Equal(HttpMethod.Post, handler.LastRequest!.Method);
+        Assert.Equal("/Users/user-1/FavoriteItems/movie-1/Delete", handler.LastRequest.RequestUri!.AbsolutePath);
+    }
+
+    [Fact]
+    public async Task SetPlayedAsync_Marks_Item_Played_And_Parses_UserData()
+    {
+        var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
+            HttpStatusCode.OK,
+            """
+            {
+              "ItemId": "episode-1",
+              "IsFavorite": true,
+              "Played": true,
+              "PlaybackPositionTicks": 0,
+              "PlayedPercentage": 100
+            }
+            """));
+        using var http = new HttpClient(handler);
+        var client = CreateClient(http);
+
+        var userData = await client.SetPlayedAsync(Session(userId: "user 1/slash"), "episode 1/slash", true);
+
+        Assert.True(userData.Played);
+        Assert.True(userData.IsFavorite);
+        Assert.Equal(0, userData.PlaybackPositionTicks);
+        Assert.Equal(100, userData.PlayedPercentage);
+        Assert.Equal(HttpMethod.Post, handler.LastRequest!.Method);
+        Assert.Equal("/Users/user%201%2Fslash/PlayedItems/episode%201%2Fslash", handler.LastRequest.RequestUri!.AbsolutePath);
+    }
+
+    [Fact]
+    public async Task SetPlayedAsync_Marks_Item_Unplayed_With_Compat_Delete_Post()
+    {
+        var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
+            HttpStatusCode.OK,
+            """
+            {
+              "ItemId": "episode-1",
+              "IsFavorite": false,
+              "Played": false
+            }
+            """));
+        using var http = new HttpClient(handler);
+        var client = CreateClient(http);
+
+        var userData = await client.SetPlayedAsync(Session(), "episode-1", false);
+
+        Assert.False(userData.Played);
+        Assert.False(userData.IsFavorite);
+        Assert.Equal(HttpMethod.Post, handler.LastRequest!.Method);
+        Assert.Equal("/Users/user-1/PlayedItems/episode-1/Delete", handler.LastRequest.RequestUri!.AbsolutePath);
+    }
+
+    [Fact]
     public async Task GetUserViewsAsync_Parses_Movie_And_Tv_Libraries()
     {
         var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(

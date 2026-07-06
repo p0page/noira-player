@@ -260,6 +260,19 @@ Visual states:
 - Disabled: reduce text and border contrast but keep the control shape visible.
 - Loading: preserve button width and label footprint.
 
+### Media Action Rows
+
+Details and playback-adjacent pages use a compact media action row rather than hiding primary state inside a menu. The first action is Play or Resume and uses the `primary` green fill. Adjacent actions such as Restart, Favorite, Watched, Refresh, stream selectors, and playlist or collection actions use secondary matte buttons.
+
+Visual rules:
+
+- Keep every action at the standard 52px TV target height.
+- Use icons plus short labels for actions that change item state.
+- Do not use green for Favorite, Watched, Refresh, or neutral selectors.
+- Preserve stable button widths when labels change, such as Add favorite to Remove favorite.
+- The focus frame remains cyan even when the focused action is the green Play or Resume button.
+- If an action is unavailable, keep the rest of the row aligned; do not let hidden controls collapse the primary Play target.
+
 ### Cards
 
 Media cards are artwork-first. The artwork crop, title, progress, and focus frame are the card's identity.

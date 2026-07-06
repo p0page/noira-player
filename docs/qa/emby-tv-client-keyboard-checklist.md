@@ -549,3 +549,29 @@ Then continue design and implementation until the route passes.
   - Pressing `Return` on `Edit search` returned focus to the search box and selected the whole query.
   - Replacing it with `Terrifier` and pressing `Return` returned 3 media results and removed the empty panel.
   - No app-content mouse clicks were used.
+
+### 2026-07-06 - Details Action Row
+
+- App version: 0.1.0.107.
+- Scope: Details now has a TV-first media action row with `Resume`/`Play`, `Restart`, `Add favorite`/`Remove favorite`, `Mark watched`/`Mark unwatched`, and `Refresh`.
+- Interaction changes:
+  - `Resume` remains the default first-viewport action.
+  - `Restart` is visible only when the item has a resume position.
+  - Favorite and watched actions update Emby user-data through the standard user-data endpoints and restore focus to the changed action.
+  - Left/Right across the action row is handled explicitly so D-pad movement does not depend on UWP desktop focus guessing.
+  - Down from an action moves to the first visible version button, and Up from versions returns to `Resume`/`Play`.
+- Automated verification:
+  - Core tests passed: 224 total.
+  - `MediaDetailsActionPolicyTests` passed for resume, favorite/played labels, and non-playable restart hiding.
+  - `MediaDetailsActionNavigationPolicyTests` passed for horizontal movement, hidden Restart skipping, and edge stops.
+  - Emby user-data API tests passed for Favorite add/remove and Played mark/unmark.
+  - `git diff --check` passed with only line-ending warnings.
+  - App Debug x64 build passed and produced `NextGenEmby.App_0.1.0.107_x64_Debug.msix`.
+  - MSIX signed and installed locally as `NextGenEmby.App 0.1.0.107`.
+- Keyboard-only validation with Computer Use:
+  - From Home hero, `Right`, `Return` opened Details without mouse input.
+  - Details exposed `Resume`, `Restart`, `Add favorite`, `Mark watched`, `Refresh`, `Versions`, audio summary, subtitle summary, and overview in the first text snapshot.
+  - `Right`, `Right`, `Right`, `Left`, `Down`, `Up` were sent through Computer Use against the Details page without leaving the page or dead-ending.
+  - Favorite and watched were not activated against the live Emby library during this run to avoid mutating the user's real server state; the write endpoints are covered by HTTP-level tests.
+- Visual capture note:
+  - Computer Use screenshot capture repeatedly hit `FrameArrived timed out` after installing 0.1.0.107. This run is therefore recorded as text-snapshot and keyboard-behavior validation, not fresh screenshot validation. No app-content mouse clicks were used.

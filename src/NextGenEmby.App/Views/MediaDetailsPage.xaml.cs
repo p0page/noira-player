@@ -10,9 +10,11 @@ using NextGenEmby.Core.Emby;
 using NextGenEmby.Core.Input;
 using NextGenEmby.Core.Playback;
 using Windows.System;
+using Windows.UI.Xaml.Automation;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Input;
+using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Media.Imaging;
 using Windows.UI.Xaml.Navigation;
 
@@ -73,6 +75,12 @@ namespace NextGenEmby.App.Views
 
         private void Page_OnKeyDown(object sender, KeyRoutedEventArgs e)
         {
+            if (TryRouteDetailsDirectionalKey(e.Key, e.OriginalSource))
+            {
+                e.Handled = true;
+                return;
+            }
+
             if (!IsBackKey(e.Key))
             {
                 return;
@@ -85,11 +93,162 @@ namespace NextGenEmby.App.Views
             }
         }
 
+        private bool TryRouteDetailsDirectionalKey(VirtualKey key, object originalSource)
+        {
+            var focusedElement = FocusManager.GetFocusedElement() as DependencyObject ??
+                originalSource as DependencyObject;
+            if (focusedElement == null)
+            {
+                return false;
+            }
+
+            var focusedAction = ResolveFocusedActionButton(focusedElement);
+            if (focusedAction.HasValue)
+            {
+                if (IsLeftKey(key) || IsRightKey(key))
+                {
+                    var next = MediaDetailsActionNavigationPolicy.MoveHorizontal(
+                        focusedAction.Value,
+                        IsRightKey(key) ? 1 : -1,
+                        RestartButton.Visibility == Visibility.Visible);
+                    return next.HasValue && FocusAction(next.Value, FocusState.Keyboard);
+                }
+
+                if (IsDownKey(key))
+                {
+                    return FocusFirstVersionButton(FocusState.Keyboard);
+                }
+            }
+
+            if (IsUpKey(key) && IsFocusWithin(focusedElement, VersionsPanel))
+            {
+                return FocusAction(MediaDetailsActionButton.Play, FocusState.Keyboard);
+            }
+
+            return false;
+        }
+
+        private MediaDetailsActionButton? ResolveFocusedActionButton(DependencyObject element)
+        {
+            if (IsFocusWithin(element, PlayButton))
+            {
+                return MediaDetailsActionButton.Play;
+            }
+
+            if (IsFocusWithin(element, RestartButton))
+            {
+                return MediaDetailsActionButton.Restart;
+            }
+
+            if (IsFocusWithin(element, FavoriteButton))
+            {
+                return MediaDetailsActionButton.Favorite;
+            }
+
+            if (IsFocusWithin(element, WatchedButton))
+            {
+                return MediaDetailsActionButton.Watched;
+            }
+
+            if (IsFocusWithin(element, RefreshButton))
+            {
+                return MediaDetailsActionButton.Refresh;
+            }
+
+            return null;
+        }
+
+        private bool FocusAction(MediaDetailsActionButton action, FocusState focusState)
+        {
+            var control = GetActionControl(action);
+            return control != null &&
+                control.Visibility == Visibility.Visible &&
+                control.IsEnabled &&
+                control.Focus(focusState);
+        }
+
+        private Control? GetActionControl(MediaDetailsActionButton action)
+        {
+            switch (action)
+            {
+                case MediaDetailsActionButton.Play:
+                    return PlayButton;
+                case MediaDetailsActionButton.Restart:
+                    return RestartButton;
+                case MediaDetailsActionButton.Favorite:
+                    return FavoriteButton;
+                case MediaDetailsActionButton.Watched:
+                    return WatchedButton;
+                case MediaDetailsActionButton.Refresh:
+                    return RefreshButton;
+                default:
+                    return null;
+            }
+        }
+
+        private bool FocusFirstVersionButton(FocusState focusState)
+        {
+            foreach (var child in VersionsPanel.Children)
+            {
+                var button = child as Button;
+                if (button != null && button.Focus(focusState))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool IsFocusWithin(DependencyObject element, DependencyObject parent)
+        {
+            var current = element;
+            while (current != null)
+            {
+                if (ReferenceEquals(current, parent))
+                {
+                    return true;
+                }
+
+                current = VisualTreeHelper.GetParent(current);
+            }
+
+            return false;
+        }
+
         private static bool IsBackKey(VirtualKey key)
         {
             return key == VirtualKey.GamepadB ||
                 key == VirtualKey.Escape ||
                 key == VirtualKey.GoBack;
+        }
+
+        private static bool IsDownKey(VirtualKey key)
+        {
+            return key == VirtualKey.Down ||
+                key == VirtualKey.GamepadDPadDown ||
+                key == VirtualKey.GamepadLeftThumbstickDown;
+        }
+
+        private static bool IsUpKey(VirtualKey key)
+        {
+            return key == VirtualKey.Up ||
+                key == VirtualKey.GamepadDPadUp ||
+                key == VirtualKey.GamepadLeftThumbstickUp;
+        }
+
+        private static bool IsLeftKey(VirtualKey key)
+        {
+            return key == VirtualKey.Left ||
+                key == VirtualKey.GamepadDPadLeft ||
+                key == VirtualKey.GamepadLeftThumbstickLeft;
+        }
+
+        private static bool IsRightKey(VirtualKey key)
+        {
+            return key == VirtualKey.Right ||
+                key == VirtualKey.GamepadDPadRight ||
+                key == VirtualKey.GamepadLeftThumbstickRight;
         }
 
         private void RenderItem()
@@ -105,6 +264,9 @@ namespace NextGenEmby.App.Views
                 StatusBlock.Text = "Go back and choose another item.";
                 PlayButton.IsEnabled = false;
                 PlayButtonText.Text = "Play";
+                RestartButton.Visibility = Visibility.Collapsed;
+                FavoriteButton.IsEnabled = false;
+                WatchedButton.IsEnabled = false;
                 return;
             }
 
@@ -114,8 +276,7 @@ namespace NextGenEmby.App.Views
                 ? "No overview available."
                 : _item.Overview;
             StatusBlock.Text = "";
-            PlayButton.IsEnabled = CanPlay(_item);
-            PlayButtonText.Text = CreatePlayButtonText(_item);
+            UpdateActionButtons();
             FocusDefaultContent();
         }
 
@@ -262,6 +423,47 @@ namespace NextGenEmby.App.Views
 
             var mediaSourceId = _mediaSources.FirstOrDefault()?.Id ?? "";
             NavigateToPlayback(mediaSourceId);
+        }
+
+        private void Restart_OnClick(object sender, RoutedEventArgs e)
+        {
+            if (_item == null || string.IsNullOrWhiteSpace(_item.Id) || !CanPlay(_item))
+            {
+                return;
+            }
+
+            var mediaSourceId = _mediaSources.FirstOrDefault()?.Id ?? "";
+            NavigateToPlayback(mediaSourceId, 0);
+        }
+
+        private async void Favorite_OnClick(object sender, RoutedEventArgs e)
+        {
+            var item = _item;
+            if (item == null || string.IsNullOrWhiteSpace(item.Id))
+            {
+                return;
+            }
+
+            var current = item.UserData != null && item.UserData.IsFavorite;
+            await UpdateUserDataAsync(
+                async (client, session) => await client.SetFavoriteAsync(session, item.Id, !current),
+                !current ? "Added to favorites." : "Removed from favorites.",
+                FavoriteButton);
+        }
+
+        private async void Watched_OnClick(object sender, RoutedEventArgs e)
+        {
+            var item = _item;
+            if (item == null || string.IsNullOrWhiteSpace(item.Id))
+            {
+                return;
+            }
+
+            var current = item.UserData != null && item.UserData.Played;
+            await UpdateUserDataAsync(
+                async (client, session) => await client.SetPlayedAsync(session, item.Id, !current),
+                !current ? "Marked watched." : "Marked unwatched.",
+                WatchedButton);
         }
 
         private async void Refresh_OnClick(object sender, RoutedEventArgs e)
@@ -592,12 +794,19 @@ namespace NextGenEmby.App.Views
 
         private void NavigateToPlayback(string mediaSourceId)
         {
+            var startPositionTicks = _item == null || _item.UserData == null
+                ? 0
+                : _item.UserData.PlaybackPositionTicks;
+            NavigateToPlayback(mediaSourceId, startPositionTicks);
+        }
+
+        private void NavigateToPlayback(string mediaSourceId, long startPositionTicks)
+        {
             if (_item == null || string.IsNullOrWhiteSpace(_item.Id) || !CanPlay(_item))
             {
                 return;
             }
 
-            var startPositionTicks = _item.UserData == null ? 0 : _item.UserData.PlaybackPositionTicks;
             Frame.Navigate(
                 typeof(PlaybackPage),
                 new PlaybackLaunchRequest(
@@ -606,6 +815,66 @@ namespace NextGenEmby.App.Views
                     startPositionTicks,
                     mediaSourceId ?? "",
                     _item.RunTimeTicks.GetValueOrDefault()));
+        }
+
+        private async Task UpdateUserDataAsync(
+            Func<EmbyApiClient, EmbySession, Task<EmbyUserData>> mutation,
+            string successMessage,
+            Button restoreFocusButton)
+        {
+            var item = _item;
+            if (item == null || string.IsNullOrWhiteSpace(item.Id))
+            {
+                return;
+            }
+
+            SetUserDataButtonsEnabled(false);
+            StatusBlock.Text = "Updating item...";
+            try
+            {
+                var session = await _sessionStore.LoadAsync();
+                if (session == null)
+                {
+                    StatusBlock.Text = "Sign in first.";
+                    return;
+                }
+
+                using (var http = new HttpClient())
+                {
+                    var client = EmbyClientFactory.Create(http, session);
+                    var userData = await mutation(client, session);
+                    ApplyUserData(userData);
+                }
+
+                UpdateActionButtons();
+                StatusBlock.Text = successMessage;
+                restoreFocusButton.Focus(FocusState.Programmatic);
+            }
+            catch
+            {
+                StatusBlock.Text = "Unable to update item status.";
+                restoreFocusButton.Focus(FocusState.Programmatic);
+            }
+            finally
+            {
+                SetUserDataButtonsEnabled(true);
+            }
+        }
+
+        private void ApplyUserData(EmbyUserData userData)
+        {
+            if (_item == null)
+            {
+                return;
+            }
+
+            _item.UserData = userData ?? new EmbyUserData();
+        }
+
+        private void SetUserDataButtonsEnabled(bool isEnabled)
+        {
+            FavoriteButton.IsEnabled = isEnabled && _item != null && !string.IsNullOrWhiteSpace(_item.Id);
+            WatchedButton.IsEnabled = isEnabled && _item != null && !string.IsNullOrWhiteSpace(_item.Id);
         }
 
         private void ResetPlaybackSections()
@@ -713,10 +982,27 @@ namespace NextGenEmby.App.Views
             return button;
         }
 
-        private static string CreatePlayButtonText(EmbyMediaItem item)
+        private void UpdateActionButtons()
         {
-            var startPositionTicks = item.UserData == null ? 0 : item.UserData.PlaybackPositionTicks;
-            return startPositionTicks > 0 ? "Resume" : "Play";
+            var item = _item;
+            var userData = item == null ? new EmbyUserData() : item.UserData ?? new EmbyUserData();
+            var canPlay = CanPlay(item);
+            var actionState = MediaDetailsActionPolicy.Decide(
+                canPlay,
+                userData.IsFavorite,
+                userData.Played,
+                userData.PlaybackPositionTicks);
+
+            PlayButton.IsEnabled = canPlay;
+            PlayButtonText.Text = actionState.PlayLabel;
+            RestartButton.Visibility = actionState.ShowRestart ? Visibility.Visible : Visibility.Collapsed;
+            RestartButton.IsEnabled = actionState.ShowRestart;
+            FavoriteButton.IsEnabled = item != null && !string.IsNullOrWhiteSpace(item.Id);
+            WatchedButton.IsEnabled = item != null && !string.IsNullOrWhiteSpace(item.Id);
+            FavoriteButtonText.Text = actionState.FavoriteLabel;
+            WatchedButtonText.Text = actionState.WatchedLabel;
+            AutomationProperties.SetName(FavoriteButton, actionState.FavoriteLabel);
+            AutomationProperties.SetName(WatchedButton, actionState.WatchedLabel);
         }
 
         private static string CreateSourceSummary(EmbyMediaSource source)

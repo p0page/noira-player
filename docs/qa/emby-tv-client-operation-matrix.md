@@ -61,7 +61,7 @@ Status values:
 | Series details episode loading | Open Shows item | Verified | 0.1.0.100 loaded Shows seasons/episodes | Add season selector when multiple seasons exist |
 | Launch episode playback | Details, `Return` | Verified | 0.1.0.100 launched `铸就传奇` episode playback | Keep direct playback request stable |
 | Version selection before playback | Details versions, arrows | Implemented | Version buttons exist and pass `MediaSourceId` | Fresh keyboard run with multi-version item |
-| Favorite / watched toggles | Details action layer | Missing | No Details actions in XAML | Add controller-friendly action sheet |
+| Favorite / watched toggles | Details action row | Implemented | 0.1.0.107 shows Add favorite and Mark watched in the first viewport; API mutation tests cover Emby user-data writes | Do a live toggle only on a disposable item or fixture user |
 | Similar items, people, collections | Details below fold | Missing | No UI sections yet | Add details secondary rails |
 
 ## Search
@@ -108,7 +108,7 @@ Status values:
 
 ## Current Highest-Value Gaps
 
-1. Details needs a controller-friendly action layer for Favorite, Watched, stream/version, and playlist/collection actions.
+1. Details still needs secondary rails for similar items, people, collections, playlists, and add-to actions.
 2. Playback More drawer needs a fresh keyboard validation pass with real audio/subtitle streams.
 3. Live TV, Music, and Photos need dedicated non-dead-end surfaces instead of generic library fallback.
 4. Settings should stop reading like a placeholder and expose useful TV/client diagnostics.
