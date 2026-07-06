@@ -49,6 +49,31 @@ namespace NextGenEmby.Native
         String VideoProcessorConversionStatus;
     }
 
+    runtimeclass NativePlaybackQualityMetrics
+    {
+        NativePlaybackQualityMetrics();
+        UInt64 RenderPasses;
+        UInt64 DecodedVideoFrames;
+        UInt64 RenderedVideoFrames;
+        UInt64 SubmittedAudioFrames;
+        UInt64 DroppedVideoFrames;
+        UInt64 SeekPrerollDroppedFrames;
+        UInt64 VideoAheadWaitCount;
+        UInt64 VideoStarvedPasses;
+        UInt64 AudioStarvedPasses;
+        UInt64 QueuedAudioBuffers;
+        Int64 AudioClockTicks;
+        Int64 VideoPositionTicks;
+        Double RenderIntervalMsP50;
+        Double RenderIntervalMsP95;
+        Double RenderIntervalMsP99;
+        Double MaxFrameGapMs;
+        Double AudioVideoDriftMsP50;
+        Double AudioVideoDriftMsP95;
+        Double AudioVideoDriftMsP99;
+        Double AudioVideoDriftMsMax;
+    }
+
     delegate void NativePlaybackStateChangedHandler(NativePlaybackState state, String message);
 
     runtimeclass NativePlaybackEngine
@@ -58,6 +83,7 @@ namespace NextGenEmby.Native
         void AttachSurface(Windows.UI.Xaml.Controls.SwapChainPanel panel);
         Int64 CurrentPositionTicks();
         NativePlaybackStatus DisplayStatus();
+        NativePlaybackQualityMetrics QualityMetrics();
         Windows.Foundation.IAsyncAction OpenAsync(NativePlaybackOpenRequest request);
         Windows.Foundation.IAsyncAction PauseAsync();
         Windows.Foundation.IAsyncAction ResumeAsync();

@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "NativePlaybackEngine.h"
 #include "NativePlaybackDiagnostics.h"
+#include "NativePlaybackQualityMetrics.h"
 #include "NativePlaybackStatus.h"
 #include "NativePlaybackEngine.g.cpp"
 
@@ -150,6 +151,33 @@ namespace winrt::NextGenEmby::Native::implementation
         status.VideoProcessorOutputColorSpace(FormatDxgiColorSpace(m_dx.LastVideoProcessorOutputColorSpace()));
         status.VideoProcessorConversionStatus(winrt::hstring(m_dx.LastVideoProcessorConversionStatus()));
         return status;
+    }
+
+    NextGenEmby::Native::NativePlaybackQualityMetrics NativePlaybackEngine::QualityMetrics() const
+    {
+        auto snapshot = m_graph->QualityMetricsSnapshot();
+        auto metrics = winrt::make<NativePlaybackQualityMetrics>();
+        metrics.RenderPasses(snapshot.RenderPasses);
+        metrics.DecodedVideoFrames(snapshot.DecodedVideoFrames);
+        metrics.RenderedVideoFrames(snapshot.RenderedVideoFrames);
+        metrics.SubmittedAudioFrames(snapshot.SubmittedAudioFrames);
+        metrics.DroppedVideoFrames(snapshot.DroppedVideoFrames);
+        metrics.SeekPrerollDroppedFrames(snapshot.SeekPrerollDroppedFrames);
+        metrics.VideoAheadWaitCount(snapshot.VideoAheadWaitCount);
+        metrics.VideoStarvedPasses(snapshot.VideoStarvedPasses);
+        metrics.AudioStarvedPasses(snapshot.AudioStarvedPasses);
+        metrics.QueuedAudioBuffers(snapshot.QueuedAudioBuffers);
+        metrics.AudioClockTicks(snapshot.AudioClockTicks);
+        metrics.VideoPositionTicks(snapshot.VideoPositionTicks);
+        metrics.RenderIntervalMsP50(snapshot.RenderIntervalMsP50);
+        metrics.RenderIntervalMsP95(snapshot.RenderIntervalMsP95);
+        metrics.RenderIntervalMsP99(snapshot.RenderIntervalMsP99);
+        metrics.MaxFrameGapMs(snapshot.MaxFrameGapMs);
+        metrics.AudioVideoDriftMsP50(snapshot.AudioVideoDriftMsP50);
+        metrics.AudioVideoDriftMsP95(snapshot.AudioVideoDriftMsP95);
+        metrics.AudioVideoDriftMsP99(snapshot.AudioVideoDriftMsP99);
+        metrics.AudioVideoDriftMsMax(snapshot.AudioVideoDriftMsMax);
+        return metrics;
     }
 
     winrt::Windows::Foundation::IAsyncAction NativePlaybackEngine::OpenAsync(

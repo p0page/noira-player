@@ -20,6 +20,7 @@ namespace winrt::NextGenEmby::Native::implementation
         void AttachSurface(winrt::Windows::UI::Xaml::Controls::SwapChainPanel const& panel);
         int64_t CurrentPositionTicks() const;
         NextGenEmby::Native::NativePlaybackStatus DisplayStatus() const;
+        NextGenEmby::Native::NativePlaybackQualityMetrics QualityMetrics() const;
 
         winrt::Windows::Foundation::IAsyncAction OpenAsync(NextGenEmby::Native::NativePlaybackOpenRequest request);
         winrt::Windows::Foundation::IAsyncAction PauseAsync();

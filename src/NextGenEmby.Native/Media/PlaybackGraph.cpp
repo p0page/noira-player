@@ -255,6 +255,20 @@ namespace winrt::NextGenEmby::Native::implementation
         return m_positionTicks;
     }
 
+    PlaybackQualityMetricsSnapshot PlaybackGraph::QualityMetricsSnapshot() const noexcept
+    {
+        std::lock_guard lock(m_graphMutex);
+        auto snapshot = m_qualityMetrics.Snapshot();
+        if (auto audioPosition = m_audioRenderer.CurrentPositionTicks())
+        {
+            snapshot.AudioClockTicks = *audioPosition;
+        }
+
+        snapshot.VideoPositionTicks = m_positionTicks;
+        snapshot.QueuedAudioBuffers = m_audioRenderer.QueuedBufferCount();
+        return snapshot;
+    }
+
     void PlaybackGraph::StartRenderLoop()
     {
         m_stopRenderLoop = false;
@@ -367,6 +381,7 @@ namespace winrt::NextGenEmby::Native::implementation
     bool PlaybackGraph::RenderNextFrame()
     {
         ++m_renderPassCount;
+        ++m_qualityMetrics.RenderPasses;
         DecodeNextAudioFrame();
 
         auto droppedFrames = uint32_t{0};
@@ -384,10 +399,12 @@ namespace winrt::NextGenEmby::Native::implementation
                     if (hasQueuedAudio)
                     {
                         ++m_videoStarvedPassCount;
+                        ++m_qualityMetrics.VideoStarvedPasses;
                     }
                     else
                     {
                         ++m_audioStarvedPassCount;
+                        ++m_qualityMetrics.AudioStarvedPasses;
                     }
 
                     LogRuntimeStatsIfDue();
@@ -396,6 +413,7 @@ namespace winrt::NextGenEmby::Native::implementation
 
                 m_pendingVideoFrame = std::move(*frame);
                 ++m_decodedVideoFrameCount;
+                ++m_qualityMetrics.DecodedVideoFrames;
             }
 
             auto const& frame = *m_pendingVideoFrame;
@@ -406,6 +424,8 @@ namespace winrt::NextGenEmby::Native::implementation
                 ++droppedFrames;
                 ++m_droppedVideoFrameCount;
                 ++m_seekPrerollDroppedVideoFrameCount;
+                ++m_qualityMetrics.DroppedVideoFrames;
+                ++m_qualityMetrics.SeekPrerollDroppedFrames;
                 continue;
             }
 
@@ -427,6 +447,7 @@ namespace winrt::NextGenEmby::Native::implementation
                     hasQueuedAudio))
                 {
                     ++m_videoAheadWaitCount;
+                    ++m_qualityMetrics.VideoAheadWaitCount;
                     LogRuntimeStatsIfDue();
                     return true;
                 }
@@ -439,8 +460,13 @@ namespace winrt::NextGenEmby::Native::implementation
                     m_pendingVideoFrame.reset();
                     ++droppedFrames;
                     ++m_droppedVideoFrameCount;
+                    ++m_qualityMetrics.DroppedVideoFrames;
                     continue;
                 }
+
+                m_qualityMetrics.AudioClockTicks = *audioPosition;
+                m_qualityMetrics.VideoPositionTicks = frame.PositionTicks;
+                m_qualityMetrics.RecordAudioVideoDriftTicks(frame.PositionTicks - *audioPosition);
             }
 
             EnsureHdrOutputForFrame(frame);
@@ -448,8 +474,19 @@ namespace winrt::NextGenEmby::Native::implementation
             m_positionTicks = frame.PositionTicks;
             UpdateSubtitleCue();
             m_deviceResources.Present();
+            auto renderedAt = std::chrono::steady_clock::now();
+            if (m_lastRenderedFrameAt.time_since_epoch().count() != 0)
+            {
+                auto elapsed = std::chrono::duration<double, std::milli>(
+                    renderedAt - m_lastRenderedFrameAt).count();
+                m_qualityMetrics.RecordRenderIntervalMs(elapsed);
+            }
+
+            m_lastRenderedFrameAt = renderedAt;
             m_pendingVideoFrame.reset();
             ++m_renderedVideoFrameCount;
+            ++m_qualityMetrics.RenderedVideoFrames;
+            m_qualityMetrics.QueuedAudioBuffers = m_audioRenderer.QueuedBufferCount();
             LogRuntimeStatsIfDue();
             return true;
         }
@@ -512,6 +549,7 @@ namespace winrt::NextGenEmby::Native::implementation
         }
 
         m_submittedAudioFrameCount += submittedFrames;
+        m_qualityMetrics.SubmittedAudioFrames += submittedFrames;
         return submittedFrames;
     }
 
@@ -541,7 +579,9 @@ namespace winrt::NextGenEmby::Native::implementation
         m_videoStarvedPassCount = 0;
         m_audioStarvedPassCount = 0;
         m_seekPrerollDroppedVideoFrameCount = 0;
+        m_qualityMetrics.Reset();
         m_lastRuntimeStatsLog = {};
+        m_lastRenderedFrameAt = {};
     }
 
     void PlaybackGraph::SetVideoPrerollTarget(int64_t targetTicks) noexcept

@@ -23,6 +23,7 @@
     <ClCompile Include="NativePlaybackDiagnostics.cpp" />
     <ClCompile Include="NativePlaybackEngine.cpp" />
     <ClCompile Include="NativePlaybackOpenRequest.cpp" />
+    <ClCompile Include="NativePlaybackQualityMetrics.cpp" />
     <ClCompile Include="NativePlaybackStatus.cpp" />
     <ClCompile Include="Generated Files\module.g.cpp">
       <Filter>Generated Files</Filter>
@@ -41,6 +42,7 @@
     <ClInclude Include="Media\HdrToneMappingPass.h" />
     <ClInclude Include="Media\HttpMediaInput.h" />
     <ClInclude Include="Media\PlaybackGraph.h" />
+    <ClInclude Include="Media\PlaybackQualityMetrics.h" />
     <ClInclude Include="Media\SubtitleDecoder.h" />
     <ClInclude Include="Media\SubtitleRenderer.h" />
     <ClInclude Include="Media\VideoDecoder.h" />
@@ -49,6 +51,7 @@
     <ClInclude Include="NativePlaybackDiagnostics.h" />
     <ClInclude Include="NativePlaybackEngine.h" />
     <ClInclude Include="NativePlaybackOpenRequest.h" />
+    <ClInclude Include="NativePlaybackQualityMetrics.h" />
     <ClInclude Include="NativePlaybackStatus.h" />
   </ItemGroup>
   <ItemGroup>

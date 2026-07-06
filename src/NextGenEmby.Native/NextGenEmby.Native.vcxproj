@@ -108,6 +108,7 @@
     <ClInclude Include="Media\HdrToneMappingPass.h" />
     <ClInclude Include="Media\HttpMediaInput.h" />
     <ClInclude Include="Media\PlaybackGraph.h" />
+    <ClInclude Include="Media\PlaybackQualityMetrics.h" />
     <ClInclude Include="Media\SubtitleDecoder.h" />
     <ClInclude Include="Media\SubtitleRenderer.h" />
     <ClInclude Include="Media\VideoDecoder.h" />
@@ -118,6 +119,9 @@
     </ClInclude>
     <ClInclude Include="NativePlaybackDiagnostics.h" />
     <ClInclude Include="NativePlaybackOpenRequest.h">
+      <DependentUpon>NativePlaybackEngine.idl</DependentUpon>
+    </ClInclude>
+    <ClInclude Include="NativePlaybackQualityMetrics.h">
       <DependentUpon>NativePlaybackEngine.idl</DependentUpon>
     </ClInclude>
     <ClInclude Include="NativePlaybackStatus.h">
@@ -146,6 +150,9 @@
       <DependentUpon>NativePlaybackEngine.idl</DependentUpon>
     </ClCompile>
     <ClCompile Include="NativePlaybackOpenRequest.cpp">
+      <DependentUpon>NativePlaybackEngine.idl</DependentUpon>
+    </ClCompile>
+    <ClCompile Include="NativePlaybackQualityMetrics.cpp">
       <DependentUpon>NativePlaybackEngine.idl</DependentUpon>
     </ClCompile>
     <ClCompile Include="NativePlaybackStatus.cpp">

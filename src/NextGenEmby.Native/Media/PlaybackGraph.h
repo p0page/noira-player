@@ -5,6 +5,7 @@
 #include "DxDeviceResources.h"
 #include "FfmpegMediaSource.h"
 #include "NativePlaybackEngine.g.h"
+#include "PlaybackQualityMetrics.h"
 #include "SubtitleDecoder.h"
 #include "SubtitleRenderer.h"
 #include "VideoDecoder.h"
@@ -63,6 +64,7 @@ namespace winrt::NextGenEmby::Native::implementation
         void SwitchAudioStream(int32_t audioStreamIndex);
         void SwitchSubtitleStream(std::optional<int32_t> subtitleStreamIndex);
         int64_t CurrentPositionTicks() const noexcept;
+        PlaybackQualityMetricsSnapshot QualityMetricsSnapshot() const noexcept;
 
     private:
         void StartRenderLoop();
@@ -106,8 +108,10 @@ namespace winrt::NextGenEmby::Native::implementation
         uint64_t m_videoAheadWaitCount{0};
         uint64_t m_videoStarvedPassCount{0};
         uint64_t m_audioStarvedPassCount{0};
+        PlaybackQualityMetrics m_qualityMetrics;
         std::optional<int64_t> m_videoPrerollTargetTicks;
         std::chrono::steady_clock::time_point m_lastRuntimeStatsLog{};
+        std::chrono::steady_clock::time_point m_lastRenderedFrameAt{};
         std::thread m_renderThread;
         mutable std::mutex m_graphMutex;
         std::condition_variable m_stateChanged;
