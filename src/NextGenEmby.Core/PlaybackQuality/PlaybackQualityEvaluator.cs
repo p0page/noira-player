@@ -24,6 +24,14 @@ namespace NextGenEmby.Core.PlaybackQuality
             var expected = report.Expected;
             CheckExpectedFrameRate(report, expected);
             CheckStartupDuration(report, expected);
+            CheckMin(
+                report,
+                "RenderedVideoFrames",
+                (long)report.Timing.RenderedVideoFrames,
+                expected.MinRenderedVideoFrames,
+                "MinRenderedVideoFrames",
+                "timing.renderedVideoFrames",
+                "frame-pacing");
             CheckMax(
                 report,
                 "DroppedVideoFrames",
@@ -307,6 +315,40 @@ namespace NextGenEmby.Core.PlaybackQuality
             }
         }
 
+        private static void CheckMin(
+            PlaybackQualityReport report,
+            string metricName,
+            long actual,
+            long? min,
+            string thresholdName,
+            string signal,
+            string failureArea)
+        {
+            if (!min.HasValue)
+            {
+                return;
+            }
+
+            var message = metricName + " " + actual + " was below " + thresholdName + " " + min.Value + ".";
+            var failed = actual < min.Value;
+            report.Checks.Add(new PlaybackQualityCheck
+            {
+                Name = metricName,
+                Signal = signal,
+                Status = failed ? "fail" : "pass",
+                FailureArea = failureArea,
+                Expected = min.Value.ToString(CultureInfo.InvariantCulture),
+                Actual = actual.ToString(CultureInfo.InvariantCulture),
+                Message = failed ? message : metricName + " met " + thresholdName + "."
+            });
+
+            if (failed)
+            {
+                report.FailureReasons.Add(message);
+                AddRelevantSignal(report, signal);
+            }
+        }
+
         private static void CheckMax(
             PlaybackQualityReport report,
             string metricName,
@@ -413,7 +455,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                 return;
             }
 
-            if (HasReason(report, "DroppedVideoFrames", "MaxFrameGapMs", "DisplayRefreshRateHz", "SourceFrameRate"))
+            if (HasReason(report, "DroppedVideoFrames", "MaxFrameGapMs", "RenderedVideoFrames", "DisplayRefreshRateHz", "SourceFrameRate"))
             {
                 report.Analysis.PrimaryFailureArea = "frame-pacing";
                 report.Analysis.SuggestedNextAction = "Inspect frame pacing wait/drop thresholds around PlaybackFramePacing.";

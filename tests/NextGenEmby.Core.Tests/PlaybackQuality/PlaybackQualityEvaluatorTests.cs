@@ -173,6 +173,40 @@ public sealed class PlaybackQualityEvaluatorTests
     }
 
     [Fact]
+    public void Evaluate_Fails_When_Rendered_Frame_Count_Is_Below_Minimum()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "no-rendered-frames",
+            Expected = new PlaybackQualityExpected
+            {
+                MinRenderedVideoFrames = 120,
+                RequireValidatedConversion = false
+            },
+            Timing = new PlaybackQualityTiming
+            {
+                RenderedVideoFrames = 0
+            }
+        };
+
+        PlaybackQualityEvaluator.Evaluate(report);
+
+        Assert.Equal("fail", report.Result);
+        Assert.Contains(
+            "RenderedVideoFrames 0 was below MinRenderedVideoFrames 120.",
+            report.FailureReasons);
+        Assert.Equal("frame-pacing", report.Analysis.PrimaryFailureArea);
+        Assert.Contains("timing.renderedVideoFrames", report.Analysis.RelevantSignals);
+        Assert.Contains(report.Checks, check =>
+            check.Name == "RenderedVideoFrames" &&
+            check.Signal == "timing.renderedVideoFrames" &&
+            check.Expected == "120" &&
+            check.Actual == "0" &&
+            check.Status == "fail" &&
+            check.FailureArea == "frame-pacing");
+    }
+
+    [Fact]
     public void Evaluate_Fails_With_Actionable_Reasons_When_Thresholds_Are_Exceeded()
     {
         var report = new PlaybackQualityReport
