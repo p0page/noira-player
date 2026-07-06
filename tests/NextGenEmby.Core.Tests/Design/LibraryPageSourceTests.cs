@@ -57,6 +57,16 @@ public sealed class LibraryPageSourceTests
     }
 
     [Fact]
+    public void Library_Page_Opens_Collections_And_Playlists_With_Media_Child_Query()
+    {
+        var source = ReadAppSource("Views", "LibraryPage.xaml.cs");
+
+        Assert.Contains("IsOrganizationContainer", source);
+        Assert.Contains("OrganizationChildItemTypes", source);
+        Assert.Contains("LibraryNavigationQuery.Empty", source);
+    }
+
+    [Fact]
     public void Library_Page_Passes_Development_Photo_Uri_To_Photo_Viewer()
     {
         var source = ReadAppSource("Views", "LibraryPage.xaml.cs");
@@ -79,6 +89,22 @@ public sealed class LibraryPageSourceTests
         Assert.Contains("FocusPreferredItemAsync(loadGeneration, preferredFocusItemId)", source);
         Assert.Contains("FocusItemByIdNow(preferredFocusItemId, FocusState.Keyboard)", source);
         Assert.Contains("FindGridItemIndexById", source);
+    }
+
+    [Fact]
+    public void MainPage_Provides_Positive_Collections_And_Playlists_Fixture_Routes()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            FindRepositoryRoot(),
+            "src",
+            "NextGenEmby.App",
+            "MainPage.xaml.cs"));
+
+        Assert.Contains("case \"collections-fixture\":", source);
+        Assert.Contains("case \"playlists-fixture\":", source);
+        Assert.Contains("DevelopmentLibraryOrganizationFixture.Create()", source);
+        Assert.Contains("fixture.Items", source);
+        Assert.Contains("fixture.ArtworkUris", source);
     }
 
     private static string ReadAppSource(params string[] segments)

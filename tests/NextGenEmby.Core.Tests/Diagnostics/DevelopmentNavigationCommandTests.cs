@@ -36,6 +36,8 @@ public sealed class DevelopmentNavigationCommandTests
     [InlineData("Music-Unsupported", "music-unsupported")]
     [InlineData("Music-Fixture", "music-fixture")]
     [InlineData("Photos-Fixture", "photos-fixture")]
+    [InlineData("Collections-Fixture", "collections-fixture")]
+    [InlineData("Playlists-Fixture", "playlists-fixture")]
     [InlineData("Home-Fixture", "home-fixture")]
     [InlineData("Search-Fixture", "search-fixture")]
     [InlineData("Search-Error", "search-error")]

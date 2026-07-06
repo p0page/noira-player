@@ -1579,3 +1579,35 @@ Then continue design and implementation until the route passes.
   - No app-content mouse clicks were used.
 - Follow-up:
   - Re-run Live TV against a real Live TV-enabled Emby server after session restore. Keep live stream playback and Emby transcoding outside this fixture route until they become explicit goals.
+
+### 2026-07-07 - Collections And Playlists Positive Fixture Routes
+
+- App version: 0.1.0.185.
+- Scope: add and verify deterministic positive browse routes for organization libraries while keeping the existing Library grid and Matte Cinema Fluent card treatment.
+- Interaction changes:
+  - `dev-command.json` accepts routes `collections-fixture` and `playlists-fixture`.
+  - `BoxSet` and `Playlist` now activate as browseable Library containers instead of opening dead-end Details routes.
+  - Organization child pages use a media-child include set so collection/playlist contents can show Movie, Series, Episode, Video, MusicVideo, Audio, and Photo child items.
+  - Library back navigation keeps the originating root card and restores focus after returning from the nested collection or playlist.
+- Automated verification:
+  - TDD red path confirmed `DevelopmentLibraryOrganizationFixture`, `collections-fixture`, and `playlists-fixture` did not exist before implementation.
+  - TDD red path confirmed `BoxSet` and `Playlist` still routed to Details before the activation policy update.
+  - Targeted fixture/route/source/activation tests passed: 46 total.
+  - Core tests passed: 421 total.
+  - App Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.185_x64_Debug.msix`.
+  - The first signing attempt used an untrusted same-subject certificate and install failed with `0x800B0109`; root-cause check found the trusted `CN=NextGenEmby` certificate thumbprint `6CB453A2FEC300C6E5034152C6C1A68DE31A7BD0`, re-signed the package, and installed `NextGenEmby.App 0.1.0.185`.
+- Keyboard-only validation with Computer Use:
+  - Wrote `dev-command.json` with route `collections-fixture` and cold-launched the installed app.
+  - `dev-command-result.txt` reported `completed / collections-fixture`.
+  - Initial Collections state showed `Collections`, `2 items`, `Signal Archives`, and `City Nights`, with focus on `Signal Archives`.
+  - Pressed `Return`; `Signal Archives` opened as a nested Library with `4 items`: `Aurora Protocol`, `Midnight Signal`, `Afterimage`, and `Quiet Orbit`.
+  - Pressed `Right`; focus moved from `Aurora Protocol` to `Midnight Signal`.
+  - Pressed `Escape`; the app returned to root Collections and restored focus to `Signal Archives`.
+  - Wrote `dev-command.json` with route `playlists-fixture` and cold-launched the installed app.
+  - Initial Playlists state showed `Playlists`, `2 items`, `Weekend Queue`, and `Documentary Stack`, with focus on `Weekend Queue`.
+  - Pressed `Return`; `Weekend Queue` opened as a nested Library with `5 items`: `Northline S1:E4`, `Room Tone S2:E1`, `Ocean Archive`, `Sound Room`, and `Room Tone`.
+  - Pressed `Right`, `Right`; focus moved to `Ocean Archive`, and long episode metadata stayed clipped within its card.
+  - Pressed `Escape`; the app returned to root Playlists and restored focus to `Weekend Queue`.
+  - No app-content mouse clicks were used.
+- Follow-up:
+  - Re-run Collections and Playlists against a real saved Emby session. If real playlist children do not resolve through `ParentId` on the target server, add a dedicated playlist-items API path while keeping this fixture route as a controller regression.

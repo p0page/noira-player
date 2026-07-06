@@ -23,6 +23,7 @@ namespace NextGenEmby.App.Views
     public sealed partial class LibraryPage : Page, ITvContentFocusTarget
     {
         private readonly ApplicationDataSessionStore _sessionStore = new ApplicationDataSessionStore();
+        private const string OrganizationChildItemTypes = "Movie,Series,Episode,Video,MusicVideo,Audio,Photo";
         private const double GridItemWidth = 168d;
         private const double GridItemTrailingMargin = 14d;
         private static readonly LibraryQueryOption[] SortOptions =
@@ -371,7 +372,9 @@ namespace NextGenEmby.App.Views
                 {
                     focusFirstItem = RenderItems(
                         CreateDevelopmentGridItems(
-                            SelectDevelopmentItemsForRequest(request),
+                            ApplyItemTypeGuard(
+                                request,
+                                SelectDevelopmentItemsForRequest(request)),
                             request.DevelopmentArtworkUris),
                         loadGeneration);
                     focusFallback = !focusFirstItem;
@@ -672,18 +675,29 @@ namespace NextGenEmby.App.Views
             var request = _request;
             if (request == null)
             {
-                return new LibraryNavigationRequest(itemName, "", "", item.Id, "");
+                return new LibraryNavigationRequest(
+                    itemName,
+                    "",
+                    IsOrganizationContainer(item.Type) ? OrganizationChildItemTypes : "",
+                    item.Id,
+                    "");
             }
 
             return new LibraryNavigationRequest(
                 itemName,
                 request.CollectionType,
-                request.IncludeItemTypes,
+                IsOrganizationContainer(item.Type) ? OrganizationChildItemTypes : request.IncludeItemTypes,
                 item.Id,
                 "",
-                request.Query,
+                IsOrganizationContainer(item.Type) ? LibraryNavigationQuery.Empty : request.Query,
                 request.DevelopmentItems,
                 request.DevelopmentArtworkUris);
+        }
+
+        private static bool IsOrganizationContainer(string itemType)
+        {
+            return string.Equals(itemType, "BoxSet", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(itemType, "Playlist", StringComparison.OrdinalIgnoreCase);
         }
 
         private string ResolveDevelopmentPhotoUri(EmbyMediaItem item)

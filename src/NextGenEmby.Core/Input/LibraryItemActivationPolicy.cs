@@ -18,9 +18,16 @@ namespace NextGenEmby.Core.Input
                 return LibraryItemActivationRoute.PhotoViewer;
             }
 
-            return string.Equals(itemType, "Folder", StringComparison.OrdinalIgnoreCase)
+            return IsBrowseContainer(itemType)
                 ? LibraryItemActivationRoute.BrowseFolder
                 : LibraryItemActivationRoute.Details;
+        }
+
+        private static bool IsBrowseContainer(string itemType)
+        {
+            return string.Equals(itemType, "Folder", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(itemType, "BoxSet", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(itemType, "Playlist", StringComparison.OrdinalIgnoreCase);
         }
     }
 }

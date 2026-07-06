@@ -99,6 +99,8 @@ namespace NextGenEmby.Core.Diagnostics
                 case "music-fixture":
                 case "photos":
                 case "photos-fixture":
+                case "collections-fixture":
+                case "playlists-fixture":
                 case "playlists":
                 case "favorites":
                 case "unwatched":

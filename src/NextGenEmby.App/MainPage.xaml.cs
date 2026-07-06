@@ -843,6 +843,19 @@ namespace NextGenEmby.App
                         fixture.ArtworkUris));
                     return;
 
+                case "collections-fixture":
+                    var collectionsFixture = DevelopmentLibraryOrganizationFixture.Create();
+                    NavigateLibrary(new LibraryNavigationRequest(
+                        "Collections",
+                        "boxsets",
+                        "BoxSet",
+                        "",
+                        "",
+                        new LibraryNavigationQuery(isFolder: false, requireItemTypeMatch: true),
+                        collectionsFixture.Items,
+                        collectionsFixture.ArtworkUris));
+                    return;
+
                 case "playlists":
                     NavigateLibrary(new LibraryNavigationRequest(
                         "Playlists",
@@ -851,6 +864,19 @@ namespace NextGenEmby.App
                         "",
                         "",
                         new LibraryNavigationQuery(isFolder: false, requireItemTypeMatch: true)));
+                    return;
+
+                case "playlists-fixture":
+                    var playlistsFixture = DevelopmentLibraryOrganizationFixture.Create();
+                    NavigateLibrary(new LibraryNavigationRequest(
+                        "Playlists",
+                        "playlists",
+                        "Playlist",
+                        "",
+                        "",
+                        new LibraryNavigationQuery(isFolder: false, requireItemTypeMatch: true),
+                        playlistsFixture.Items,
+                        playlistsFixture.ArtworkUris));
                     return;
 
                 case "favorites":
