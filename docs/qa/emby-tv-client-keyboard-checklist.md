@@ -348,3 +348,16 @@ Then continue design and implementation until the route passes.
   - `M`, `Escape` closed Guide and stayed on Home.
   - `M`, `Down`, `Down`, `Enter` opened Movies and collapsed Guide.
 - Result: pass on local Windows validation. No mouse clicks were used inside app content.
+
+### 2026-07-06 - Extended Library Query And Guide Entrypoints
+
+- App version: 0.1.0.79.
+- Scope: Emby item query coverage for collection/media/person/genre/favorite/played/folder filters, Guide entries for Playlists, Favorites, and Unwatched, and strict client-side item type guards for strong library views.
+- Regression found on 0.1.0.78: `M`, six `Down`, `Enter` opened Playlists but the server returned root `CollectionFolder` views instead of `Playlist` items.
+- Fix: strong library requests can now require returned item types to match `IncludeItemTypes`; incompatible Emby responses that ignore item type filters no longer masquerade as Playlists or other strict views.
+- Keyboard-only validation:
+  - Installed and launched 0.1.0.79 locally.
+  - `M`, six `Down`, `Enter` opened Playlists; page now shows `No items found` instead of root library folders when the service returns no `Playlist` items.
+  - From Playlists, `M`, three `Down`, `Enter` opened Favorites with 100 media items.
+  - From Favorites, `M`, `Down`, `Enter` opened Unwatched with 100 media items.
+- Result: pass on local Windows validation. No mouse clicks were used inside app content.

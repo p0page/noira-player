@@ -24,6 +24,8 @@ namespace NextGenEmby.App
 #endif
         private const double GuideCollapsedWidth = 72d;
         private const double GuideExpandedWidth = 248d;
+        private const string FavoriteItemTypes = "Movie,Series,Episode,Video,MusicVideo,Audio,MusicAlbum,Photo,BoxSet,Playlist";
+        private const string UnwatchedItemTypes = "Movie,Series,Episode,Video,MusicVideo";
         private readonly ApplicationDataSessionStore _sessionStore = new ApplicationDataSessionStore();
         private LibraryNavigationRequest? _currentLibraryRequest;
         private Control? _guideReturnFocusTarget;
@@ -288,8 +290,11 @@ namespace NextGenEmby.App
             SetShellButtonActive(TvButton, pageType == typeof(LibraryPage) && libraryRequest != null && libraryRequest.IsTv);
             SetShellButtonActive(LiveTvButton, IsLibraryCollection(pageType, libraryRequest, "livetv"));
             SetShellButtonActive(CollectionsButton, IsLibraryCollection(pageType, libraryRequest, "boxsets"));
+            SetShellButtonActive(PlaylistsButton, IsLibraryCollection(pageType, libraryRequest, "playlists"));
             SetShellButtonActive(MusicButton, IsLibraryCollection(pageType, libraryRequest, "music"));
             SetShellButtonActive(PhotosButton, IsLibraryCollection(pageType, libraryRequest, "photos"));
+            SetShellButtonActive(FavoritesButton, IsLibraryCollection(pageType, libraryRequest, "favorites"));
+            SetShellButtonActive(UnwatchedButton, IsLibraryCollection(pageType, libraryRequest, "unwatched"));
             SetShellButtonActive(SearchButton, pageType == typeof(SearchPage));
             SetShellButtonActive(SettingsButton, pageType == typeof(SettingsPage));
         }
@@ -414,6 +419,11 @@ namespace NextGenEmby.App
             NavigateGuideDestination(GuideNavigationDestination.Collections);
         }
 
+        private void Playlists_OnClick(object sender, RoutedEventArgs e)
+        {
+            NavigateGuideDestination(GuideNavigationDestination.Playlists);
+        }
+
         private void Music_OnClick(object sender, RoutedEventArgs e)
         {
             NavigateGuideDestination(GuideNavigationDestination.Music);
@@ -422,6 +432,16 @@ namespace NextGenEmby.App
         private void Photos_OnClick(object sender, RoutedEventArgs e)
         {
             NavigateGuideDestination(GuideNavigationDestination.Photos);
+        }
+
+        private void Favorites_OnClick(object sender, RoutedEventArgs e)
+        {
+            NavigateGuideDestination(GuideNavigationDestination.Favorites);
+        }
+
+        private void Unwatched_OnClick(object sender, RoutedEventArgs e)
+        {
+            NavigateGuideDestination(GuideNavigationDestination.Unwatched);
         }
 
         private void Settings_OnClick(object sender, RoutedEventArgs e)
@@ -459,7 +479,23 @@ namespace NextGenEmby.App
                     return;
 
                 case GuideNavigationDestination.Collections:
-                    NavigateLibrary(new LibraryNavigationRequest("Collections", "boxsets", "BoxSet"));
+                    NavigateLibrary(new LibraryNavigationRequest(
+                        "Collections",
+                        "boxsets",
+                        "BoxSet",
+                        "",
+                        "",
+                        new LibraryNavigationQuery(isFolder: false, requireItemTypeMatch: true)));
+                    return;
+
+                case GuideNavigationDestination.Playlists:
+                    NavigateLibrary(new LibraryNavigationRequest(
+                        "Playlists",
+                        "playlists",
+                        "Playlist",
+                        "",
+                        "",
+                        new LibraryNavigationQuery(isFolder: false, requireItemTypeMatch: true)));
                     return;
 
                 case GuideNavigationDestination.Music:
@@ -467,7 +503,33 @@ namespace NextGenEmby.App
                     return;
 
                 case GuideNavigationDestination.Photos:
-                    NavigateLibrary(new LibraryNavigationRequest("Photos", "photos", "Photo"));
+                    NavigateLibrary(new LibraryNavigationRequest(
+                        "Photos",
+                        "photos",
+                        "Photo",
+                        "",
+                        "",
+                        new LibraryNavigationQuery(mediaTypes: "Photo", requireItemTypeMatch: true)));
+                    return;
+
+                case GuideNavigationDestination.Favorites:
+                    NavigateLibrary(new LibraryNavigationRequest(
+                        "Favorites",
+                        "favorites",
+                        FavoriteItemTypes,
+                        "",
+                        "",
+                        new LibraryNavigationQuery(isFavorite: true)));
+                    return;
+
+                case GuideNavigationDestination.Unwatched:
+                    NavigateLibrary(new LibraryNavigationRequest(
+                        "Unwatched",
+                        "unwatched",
+                        UnwatchedItemTypes,
+                        "",
+                        "",
+                        new LibraryNavigationQuery(isPlayed: false)));
                     return;
 
                 case GuideNavigationDestination.Settings:
@@ -520,8 +582,11 @@ namespace NextGenEmby.App
             SetGuideLabelVisibility(TvGuideLabel, isOpen);
             SetGuideLabelVisibility(LiveTvGuideLabel, isOpen);
             SetGuideLabelVisibility(CollectionsGuideLabel, isOpen);
+            SetGuideLabelVisibility(PlaylistsGuideLabel, isOpen);
             SetGuideLabelVisibility(MusicGuideLabel, isOpen);
             SetGuideLabelVisibility(PhotosGuideLabel, isOpen);
+            SetGuideLabelVisibility(FavoritesGuideLabel, isOpen);
+            SetGuideLabelVisibility(UnwatchedGuideLabel, isOpen);
             SetGuideLabelVisibility(SettingsGuideLabel, isOpen);
         }
 
@@ -562,10 +627,16 @@ namespace NextGenEmby.App
                         return GuideNavigationDestination.LiveTv;
                     case "boxsets":
                         return GuideNavigationDestination.Collections;
+                    case "playlists":
+                        return GuideNavigationDestination.Playlists;
                     case "music":
                         return GuideNavigationDestination.Music;
                     case "photos":
                         return GuideNavigationDestination.Photos;
+                    case "favorites":
+                        return GuideNavigationDestination.Favorites;
+                    case "unwatched":
+                        return GuideNavigationDestination.Unwatched;
                 }
             }
 
@@ -647,6 +718,36 @@ namespace NextGenEmby.App
                     NavigateSettings();
                     return;
 
+                case "playlists":
+                    NavigateLibrary(new LibraryNavigationRequest(
+                        "Playlists",
+                        "playlists",
+                        "Playlist",
+                        "",
+                        "",
+                        new LibraryNavigationQuery(isFolder: false, requireItemTypeMatch: true)));
+                    return;
+
+                case "favorites":
+                    NavigateLibrary(new LibraryNavigationRequest(
+                        "Favorites",
+                        "favorites",
+                        FavoriteItemTypes,
+                        "",
+                        "",
+                        new LibraryNavigationQuery(isFavorite: true)));
+                    return;
+
+                case "unwatched":
+                    NavigateLibrary(new LibraryNavigationRequest(
+                        "Unwatched",
+                        "unwatched",
+                        UnwatchedItemTypes,
+                        "",
+                        "",
+                        new LibraryNavigationQuery(isPlayed: false)));
+                    return;
+
                 case "details":
                     NavigateTo(typeof(MediaDetailsPage), new MediaDetailsNavigationRequest(command.ItemId, command.ItemName));
                     return;
@@ -674,7 +775,26 @@ namespace NextGenEmby.App
                 string.Equals(current.CollectionType, next.CollectionType, StringComparison.Ordinal) &&
                 string.Equals(current.IncludeItemTypes, next.IncludeItemTypes, StringComparison.Ordinal) &&
                 string.Equals(current.ParentId, next.ParentId, StringComparison.Ordinal) &&
-                string.Equals(current.SectionId, next.SectionId, StringComparison.Ordinal);
+                string.Equals(current.SectionId, next.SectionId, StringComparison.Ordinal) &&
+                IsSameLibraryQuery(current.Query, next.Query);
+        }
+
+        private static bool IsSameLibraryQuery(
+            LibraryNavigationQuery current,
+            LibraryNavigationQuery next)
+        {
+            return string.Equals(current.CollectionTypes, next.CollectionTypes, StringComparison.Ordinal) &&
+                string.Equals(current.MediaTypes, next.MediaTypes, StringComparison.Ordinal) &&
+                string.Equals(current.Filters, next.Filters, StringComparison.Ordinal) &&
+                string.Equals(current.GenreIds, next.GenreIds, StringComparison.Ordinal) &&
+                string.Equals(current.PersonIds, next.PersonIds, StringComparison.Ordinal) &&
+                string.Equals(current.ArtistIds, next.ArtistIds, StringComparison.Ordinal) &&
+                string.Equals(current.AlbumArtistIds, next.AlbumArtistIds, StringComparison.Ordinal) &&
+                string.Equals(current.Ids, next.Ids, StringComparison.Ordinal) &&
+                current.IsFavorite == next.IsFavorite &&
+                current.IsPlayed == next.IsPlayed &&
+                current.IsFolder == next.IsFolder &&
+                current.RequireItemTypeMatch == next.RequireItemTypeMatch;
         }
 
         private static bool IsLibraryCollection(
@@ -705,10 +825,16 @@ namespace NextGenEmby.App
                     return LiveTvButton;
                 case "boxsets":
                     return CollectionsButton;
+                case "playlists":
+                    return PlaylistsButton;
                 case "music":
                     return MusicButton;
                 case "photos":
                     return PhotosButton;
+                case "favorites":
+                    return FavoritesButton;
+                case "unwatched":
+                    return UnwatchedButton;
                 default:
                     return null;
             }
@@ -730,10 +856,16 @@ namespace NextGenEmby.App
                     return LiveTvButton;
                 case GuideNavigationDestination.Collections:
                     return CollectionsButton;
+                case GuideNavigationDestination.Playlists:
+                    return PlaylistsButton;
                 case GuideNavigationDestination.Music:
                     return MusicButton;
                 case GuideNavigationDestination.Photos:
                     return PhotosButton;
+                case GuideNavigationDestination.Favorites:
+                    return FavoritesButton;
+                case GuideNavigationDestination.Unwatched:
+                    return UnwatchedButton;
                 case GuideNavigationDestination.Settings:
                     return SettingsButton;
                 default:

@@ -17,8 +17,11 @@ namespace NextGenEmby.Core.Input
         Tv,
         LiveTv,
         Collections,
+        Playlists,
         Music,
         Photos,
+        Favorites,
+        Unwatched,
         Settings
     }
 
@@ -51,8 +54,11 @@ namespace NextGenEmby.Core.Input
             GuideNavigationDestination.Tv,
             GuideNavigationDestination.LiveTv,
             GuideNavigationDestination.Collections,
+            GuideNavigationDestination.Playlists,
             GuideNavigationDestination.Music,
             GuideNavigationDestination.Photos,
+            GuideNavigationDestination.Favorites,
+            GuideNavigationDestination.Unwatched,
             GuideNavigationDestination.Settings
         };
 

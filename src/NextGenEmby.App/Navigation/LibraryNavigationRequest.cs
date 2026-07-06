@@ -13,12 +13,24 @@ namespace NextGenEmby.App.Navigation
             string includeItemTypes,
             string parentId,
             string sectionId)
+            : this(title, collectionType, includeItemTypes, parentId, sectionId, LibraryNavigationQuery.Empty)
+        {
+        }
+
+        public LibraryNavigationRequest(
+            string title,
+            string collectionType,
+            string includeItemTypes,
+            string parentId,
+            string sectionId,
+            LibraryNavigationQuery query)
         {
             Title = title ?? "";
             CollectionType = collectionType ?? "";
             IncludeItemTypes = includeItemTypes ?? "";
             ParentId = parentId ?? "";
             SectionId = sectionId ?? "";
+            Query = query ?? LibraryNavigationQuery.Empty;
         }
 
         public string Title { get; }
@@ -31,8 +43,67 @@ namespace NextGenEmby.App.Navigation
 
         public string SectionId { get; }
 
+        public LibraryNavigationQuery Query { get; }
+
         public bool IsMovies => CollectionType == "movies";
 
         public bool IsTv => CollectionType == "tvshows";
+    }
+
+    public sealed class LibraryNavigationQuery
+    {
+        public static LibraryNavigationQuery Empty { get; } = new LibraryNavigationQuery();
+
+        public LibraryNavigationQuery(
+            string collectionTypes = "",
+            string mediaTypes = "",
+            string filters = "",
+            string genreIds = "",
+            string personIds = "",
+            string artistIds = "",
+            string albumArtistIds = "",
+            string ids = "",
+            bool? isFavorite = null,
+            bool? isPlayed = null,
+            bool? isFolder = null,
+            bool requireItemTypeMatch = false)
+        {
+            CollectionTypes = collectionTypes ?? "";
+            MediaTypes = mediaTypes ?? "";
+            Filters = filters ?? "";
+            GenreIds = genreIds ?? "";
+            PersonIds = personIds ?? "";
+            ArtistIds = artistIds ?? "";
+            AlbumArtistIds = albumArtistIds ?? "";
+            Ids = ids ?? "";
+            IsFavorite = isFavorite;
+            IsPlayed = isPlayed;
+            IsFolder = isFolder;
+            RequireItemTypeMatch = requireItemTypeMatch;
+        }
+
+        public string CollectionTypes { get; }
+
+        public string MediaTypes { get; }
+
+        public string Filters { get; }
+
+        public string GenreIds { get; }
+
+        public string PersonIds { get; }
+
+        public string ArtistIds { get; }
+
+        public string AlbumArtistIds { get; }
+
+        public string Ids { get; }
+
+        public bool? IsFavorite { get; }
+
+        public bool? IsPlayed { get; }
+
+        public bool? IsFolder { get; }
+
+        public bool RequireItemTypeMatch { get; }
     }
 }

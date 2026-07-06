@@ -255,16 +255,10 @@ namespace NextGenEmby.App.Views
                     }
                     else
                     {
-                        items = await client.GetItemsAsync(session, new EmbyItemsQuery
-                        {
-                            ParentId = request.ParentId,
-                            IncludeItemTypes = request.IncludeItemTypes,
-                            Recursive = true,
-                            SortBy = SortOptions[_sortIndex].Tag,
-                            SortOrder = "Ascending",
-                            Filters = FilterOptions[_filterIndex].Tag,
-                            Limit = 100
-                        });
+                        items = await client.GetItemsAsync(
+                            session,
+                            CreateItemsQuery(request, SortOptions[_sortIndex], FilterOptions[_filterIndex]));
+                        items = ApplyItemTypeGuard(request, items);
                     }
 
                     gridItems = CreateGridItems(session, client, items);
@@ -331,6 +325,57 @@ namespace NextGenEmby.App.Views
 
             StatusBlock.Text = items.Count + " items";
             return true;
+        }
+
+        private static IReadOnlyList<EmbyMediaItem> ApplyItemTypeGuard(
+            LibraryNavigationRequest request,
+            IReadOnlyList<EmbyMediaItem> items)
+        {
+            return request.Query.RequireItemTypeMatch
+                ? EmbyLibraryItemTypePolicy.KeepIncludedItemTypes(items, request.IncludeItemTypes)
+                : items;
+        }
+
+        private static EmbyItemsQuery CreateItemsQuery(
+            LibraryNavigationRequest request,
+            LibraryQueryOption sortOption,
+            LibraryQueryOption filterOption)
+        {
+            return new EmbyItemsQuery
+            {
+                ParentId = request.ParentId,
+                IncludeItemTypes = request.IncludeItemTypes,
+                CollectionTypes = request.Query.CollectionTypes,
+                MediaTypes = request.Query.MediaTypes,
+                GenreIds = request.Query.GenreIds,
+                PersonIds = request.Query.PersonIds,
+                ArtistIds = request.Query.ArtistIds,
+                AlbumArtistIds = request.Query.AlbumArtistIds,
+                Ids = request.Query.Ids,
+                IsFavorite = request.Query.IsFavorite,
+                IsPlayed = request.Query.IsPlayed,
+                IsFolder = request.Query.IsFolder,
+                Recursive = true,
+                SortBy = sortOption.Tag,
+                SortOrder = "Ascending",
+                Filters = CombineFilters(request.Query.Filters, filterOption.Tag),
+                Limit = 100
+            };
+        }
+
+        private static string CombineFilters(string first, string second)
+        {
+            if (string.IsNullOrWhiteSpace(first))
+            {
+                return second ?? "";
+            }
+
+            if (string.IsNullOrWhiteSpace(second))
+            {
+                return first ?? "";
+            }
+
+            return first + "," + second;
         }
 
         private static IReadOnlyList<LibraryGridItem> CreateGridItems(

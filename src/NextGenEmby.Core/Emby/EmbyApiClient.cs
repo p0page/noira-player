@@ -356,10 +356,20 @@ namespace NextGenEmby.Core.Emby
             var parameters = new List<string>();
             AddQueryParameter(parameters, "ParentId", query.ParentId);
             AddQueryParameter(parameters, "IncludeItemTypes", query.IncludeItemTypes);
+            AddQueryParameter(parameters, "CollectionType", query.CollectionTypes);
+            AddQueryParameter(parameters, "MediaTypes", query.MediaTypes);
             AddQueryParameter(parameters, "SearchTerm", query.SearchTerm);
             AddQueryParameter(parameters, "SortBy", query.SortBy);
             AddQueryParameter(parameters, "SortOrder", query.SortOrder);
             AddQueryParameter(parameters, "Filters", query.Filters);
+            AddQueryParameter(parameters, "GenreIds", query.GenreIds);
+            AddQueryParameter(parameters, "PersonIds", query.PersonIds);
+            AddQueryParameter(parameters, "ArtistIds", query.ArtistIds);
+            AddQueryParameter(parameters, "AlbumArtistIds", query.AlbumArtistIds);
+            AddQueryParameter(parameters, "Ids", query.Ids);
+            AddQueryParameter(parameters, "IsFavorite", query.IsFavorite);
+            AddQueryParameter(parameters, "IsPlayed", query.IsPlayed);
+            AddQueryParameter(parameters, "IsFolder", query.IsFolder);
             AddQueryParameter(parameters, "StartIndex", Math.Max(0, query.StartIndex).ToString());
             AddQueryParameter(parameters, "Limit", Math.Max(1, query.Limit).ToString());
             AddQueryParameter(parameters, "Recursive", query.Recursive ? "true" : "false");
@@ -384,6 +394,16 @@ namespace NextGenEmby.Core.Emby
             }
 
             parameters.Add($"{name}={EscapeUriComponent(value)}");
+        }
+
+        private static void AddQueryParameter(List<string> parameters, string name, bool? value)
+        {
+            if (!value.HasValue)
+            {
+                return;
+            }
+
+            AddQueryParameter(parameters, name, value.Value ? "true" : "false");
         }
 
         private static EmbyLibraryView MapView(ViewDto view)

@@ -76,12 +76,12 @@ namespace NextGenEmby.App.Views
 
         private void MoviesLibrary_OnClick(object sender, RoutedEventArgs e)
         {
-            Frame.Navigate(typeof(LibraryPage), new LibraryNavigationRequest("Movies", "movies", "Movie"));
+            Frame.Navigate(typeof(LibraryPage), CreateLibraryRequest("Movies", "movies", "", ""));
         }
 
         private void TvLibrary_OnClick(object sender, RoutedEventArgs e)
         {
-            Frame.Navigate(typeof(LibraryPage), new LibraryNavigationRequest("TV", "tvshows", "Series"));
+            Frame.Navigate(typeof(LibraryPage), CreateLibraryRequest("TV", "tvshows", "", ""));
         }
 
         public bool FocusDefaultContent()
@@ -511,10 +511,9 @@ namespace NextGenEmby.App.Views
                     renderedRowTitles,
                     configuredRow.Title,
                     configuredRow.Items,
-                    new LibraryNavigationRequest(
+                    CreateLibraryRequest(
                         configuredRow.Title,
                         configuredRow.CollectionType,
-                        GuessIncludeItemTypes(configuredRow.CollectionType),
                         "",
                         configuredRow.SectionId));
             }
@@ -1010,14 +1009,17 @@ namespace NextGenEmby.App.Views
                     continue;
                 }
 
-                var includeItemTypes = GuessIncludeItemTypes(view.CollectionType);
+                var moreRequest = CreateLibraryRequest(view);
                 var items = await TryLoadListAsync(() => client.GetItemsAsync(session, new EmbyItemsQuery
                 {
-                    ParentId = view.Id,
-                    IncludeItemTypes = includeItemTypes,
+                    ParentId = moreRequest.ParentId,
+                    IncludeItemTypes = moreRequest.IncludeItemTypes,
+                    CollectionTypes = moreRequest.Query.CollectionTypes,
+                    MediaTypes = moreRequest.Query.MediaTypes,
+                    IsFolder = moreRequest.Query.IsFolder,
                     SortBy = "PlayCount",
                     SortOrder = "Descending",
-                    Filters = "IsNotFolder",
+                    Filters = CombineFilters(moreRequest.Query.Filters, "IsNotFolder"),
                     Limit = 24,
                     Recursive = true
                 }));
@@ -1030,7 +1032,7 @@ namespace NextGenEmby.App.Views
                 rows.Add(new LibraryContentRow(
                     CreatePopularTitle(view),
                     items,
-                    CreateLibraryRequest(view)));
+                    moreRequest));
             }
 
             return rows;
@@ -1131,12 +1133,26 @@ namespace NextGenEmby.App.Views
 
         private static LibraryNavigationRequest CreateLibraryRequest(EmbyLibraryView view)
         {
-            return new LibraryNavigationRequest(
+            return CreateLibraryRequest(
                 string.IsNullOrWhiteSpace(view.Name) ? "Library" : view.Name,
                 view.CollectionType,
-                GuessIncludeItemTypes(view.CollectionType),
                 view.Id,
                 "");
+        }
+
+        private static LibraryNavigationRequest CreateLibraryRequest(
+            string title,
+            string collectionType,
+            string parentId,
+            string sectionId)
+        {
+            return new LibraryNavigationRequest(
+                title,
+                collectionType,
+                GuessIncludeItemTypes(collectionType),
+                parentId,
+                sectionId,
+                GuessNavigationQuery(collectionType));
         }
 
         private static string GuessIncludeItemTypes(string collectionType)
@@ -1156,7 +1172,58 @@ namespace NextGenEmby.App.Views
                 return "BoxSet";
             }
 
+            if (string.Equals(collectionType, "playlists", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Playlist";
+            }
+
+            if (string.Equals(collectionType, "music", StringComparison.OrdinalIgnoreCase))
+            {
+                return "MusicAlbum,Audio";
+            }
+
+            if (string.Equals(collectionType, "photos", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Photo";
+            }
+
+            if (string.Equals(collectionType, "homevideos", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Video";
+            }
+
             return "Movie,Series,Episode,Video,MusicVideo";
+        }
+
+        private static LibraryNavigationQuery GuessNavigationQuery(string collectionType)
+        {
+            if (string.Equals(collectionType, "boxsets", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(collectionType, "playlists", StringComparison.OrdinalIgnoreCase))
+            {
+                return new LibraryNavigationQuery(isFolder: false, requireItemTypeMatch: true);
+            }
+
+            if (string.Equals(collectionType, "photos", StringComparison.OrdinalIgnoreCase))
+            {
+                return new LibraryNavigationQuery(mediaTypes: "Photo", requireItemTypeMatch: true);
+            }
+
+            return LibraryNavigationQuery.Empty;
+        }
+
+        private static string CombineFilters(string first, string second)
+        {
+            if (string.IsNullOrWhiteSpace(first))
+            {
+                return second ?? "";
+            }
+
+            if (string.IsNullOrWhiteSpace(second))
+            {
+                return first ?? "";
+            }
+
+            return first + "," + second;
         }
 
         private bool FocusDailyStart(FocusState focusState)

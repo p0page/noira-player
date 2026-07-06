@@ -478,6 +478,53 @@ public sealed class EmbyLibraryTests
     }
 
     [Fact]
+    public async Task GetItemsAsync_Builds_Extended_Library_Query_For_Tv_Media_Collections_And_Filters()
+    {
+        var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
+            HttpStatusCode.OK,
+            """
+            {
+              "Items": [],
+              "TotalRecordCount": 0
+            }
+            """));
+        using var http = new HttpClient(handler);
+        var client = CreateClient(http);
+
+        await client.GetItemsAsync(Session(), new EmbyItemsQuery
+        {
+            ParentId = "library 1/slash",
+            IncludeItemTypes = "Movie,Series,BoxSet,Playlist,MusicAlbum,Audio,Photo,Folder",
+            CollectionTypes = "movies,tvshows,boxsets,playlists,music,photos",
+            MediaTypes = "Video,Audio,Photo",
+            GenreIds = "genre 1/slash",
+            PersonIds = "person 1/slash",
+            ArtistIds = "artist 1/slash",
+            AlbumArtistIds = "album artist/slash",
+            Ids = "item 1,item/2",
+            IsFavorite = true,
+            IsPlayed = false,
+            IsFolder = false,
+            Limit = 25
+        });
+
+        Assert.Equal("/Users/user-1/Items", handler.LastRequest!.RequestUri!.AbsolutePath);
+        Assert.Contains("ParentId=library%201%2Fslash", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("IncludeItemTypes=Movie%2CSeries%2CBoxSet%2CPlaylist%2CMusicAlbum%2CAudio%2CPhoto%2CFolder", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("CollectionType=movies%2Ctvshows%2Cboxsets%2Cplaylists%2Cmusic%2Cphotos", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("MediaTypes=Video%2CAudio%2CPhoto", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("GenreIds=genre%201%2Fslash", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("PersonIds=person%201%2Fslash", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("ArtistIds=artist%201%2Fslash", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("AlbumArtistIds=album%20artist%2Fslash", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("Ids=item%201%2Citem%2F2", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("IsFavorite=true", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("IsPlayed=false", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("IsFolder=false", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("Limit=25", handler.LastRequest.RequestUri.Query);
+    }
+
+    [Fact]
     public async Task SearchItemsAsync_Uses_Caller_Provided_Item_Types()
     {
         var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(

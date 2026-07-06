@@ -132,6 +132,60 @@ public sealed class GuideNavigationPolicyTests
     }
 
     [Fact]
+    public void Down_Moves_From_Photos_To_Favorites()
+    {
+        var decision = GuideNavigationPolicy.GetDecision(
+            eventAlreadyHandled: true,
+            playbackPageActive: false,
+            guideOpen: true,
+            menuKeyPressed: false,
+            backKeyPressed: false,
+            selectKeyPressed: false,
+            moveUpKeyPressed: false,
+            moveDownKeyPressed: true,
+            selectedDestination: GuideNavigationDestination.Photos);
+
+        Assert.Equal(GuideNavigationAction.MoveSelection, decision.Action);
+        Assert.Equal(GuideNavigationDestination.Favorites, decision.Destination);
+    }
+
+    [Fact]
+    public void Down_Moves_From_Collections_To_Playlists()
+    {
+        var decision = GuideNavigationPolicy.GetDecision(
+            eventAlreadyHandled: true,
+            playbackPageActive: false,
+            guideOpen: true,
+            menuKeyPressed: false,
+            backKeyPressed: false,
+            selectKeyPressed: false,
+            moveUpKeyPressed: false,
+            moveDownKeyPressed: true,
+            selectedDestination: GuideNavigationDestination.Collections);
+
+        Assert.Equal(GuideNavigationAction.MoveSelection, decision.Action);
+        Assert.Equal(GuideNavigationDestination.Playlists, decision.Destination);
+    }
+
+    [Fact]
+    public void Down_Moves_From_Unwatched_To_Settings()
+    {
+        var decision = GuideNavigationPolicy.GetDecision(
+            eventAlreadyHandled: true,
+            playbackPageActive: false,
+            guideOpen: true,
+            menuKeyPressed: false,
+            backKeyPressed: false,
+            selectKeyPressed: false,
+            moveUpKeyPressed: false,
+            moveDownKeyPressed: true,
+            selectedDestination: GuideNavigationDestination.Unwatched);
+
+        Assert.Equal(GuideNavigationAction.MoveSelection, decision.Action);
+        Assert.Equal(GuideNavigationDestination.Settings, decision.Destination);
+    }
+
+    [Fact]
     public void Handled_Menu_Does_Not_Open_Guide_When_Guide_Is_Closed()
     {
         var decision = GuideNavigationPolicy.GetDecision(
