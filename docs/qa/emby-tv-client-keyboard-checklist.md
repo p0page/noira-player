@@ -1368,3 +1368,35 @@ Then continue design and implementation until the route passes.
   - No app-content mouse clicks were used.
 - Tooling note:
   - The first launch attempt only activated an already-running login window, so the DEBUG command was not re-read. The validation run killed the existing app process, rewrote `dev-command.json`, and cold-launched 0.1.0.162 before capturing screenshots.
+
+### 2026-07-07 - Details Fixture Below-Fold Route
+
+- App version: 0.1.0.166.
+- Scope: add a deterministic Details route for media versions, organize sheets, similar items, and cast/crew validation while the Xbox and saved Emby session are unavailable.
+- Interaction/data changes:
+  - `dev-command.json` accepts route `details-fixture`.
+  - The route opens `Aurora Protocol` through the normal `MediaDetailsPage` path with fixture playback versions, ancestors, collection targets, playlist targets, similar items, people, and packaged QA artwork.
+  - Details fixture add-to sheets update local fixture ancestors and restore focus without calling live Emby mutation APIs.
+  - Media Details now uses a `MediaDetails` shell content mode: Guide remains visible, but normal navigation prefers the Details content default focus instead of the left Guide rail.
+  - Selected media versions no longer reuse the focus border color. The selected version uses a warm internal status bar; the cyan outer focus rectangle is reserved for the current keyboard/controller focus.
+- Automated verification:
+  - TDD red path confirmed `details-fixture` was not accepted before route support.
+  - TDD red path confirmed `DevelopmentDetailsFixture` was missing before fixture data was implemented.
+  - TDD red path confirmed the Details fixture source contract did not cover below-fold rails, fixture artwork, add-to sheets, or deferred content focus before implementation.
+  - Computer Use caught a real cold-launch focus bug: 0.1.0.163/0.1.0.165 could land on the Guide Home button instead of `Resume`.
+  - TDD red path confirmed `ShellContentMode.MediaDetails` did not exist before the shell focus-policy fix.
+  - TDD red path confirmed selected version styling reused the focus border color before the internal status-bar fix.
+  - Core tests passed: 356 total.
+  - App Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.166_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.166`.
+- Keyboard-only validation with Computer Use:
+  - Killed any running app process, wrote `dev-command.json` with route `details-fixture`, and cold-launched the installed app.
+  - Initial Details state showed `Aurora Protocol`, `Resume`, two Versions, Organize actions, More like this, and Cast & crew. Focus landed on `Resume`, not the Guide rail.
+  - Pressed `Down`; focus moved to the first version. The first version showed both the cyan focus rectangle and the warm selected-version status bar.
+  - Pressed `Down`, `Enter`; the second version `1080p fallback` became selected with the warm status bar and the app stayed on Details instead of launching playback.
+  - Pressed `Down` to `Add to collection`, `Enter` to open the sheet, `Down` to `Signal Archives`, and `Enter` to confirm. The sheet closed, focus restored, and status changed to `Added to fixture collection: Signal Archives`.
+  - Pressed `Right` to `Add to playlist`, `Enter` to open the playlist sheet, and `Escape` to close it. Focus restored to `Add to playlist`.
+  - Pressed `Down` to More like this, then `Down` to Cast & crew. Focus stayed visible and the viewport scrolled predictably.
+  - No app-content mouse clicks were used.
+- Follow-up:
+  - Re-run against a real saved Emby session when available: multi-version server item, similar-items server response, and live add-to success on disposable collection/playlist targets.

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using NextGenEmby.App.Navigation;
 using NextGenEmby.App.Services;
 using NextGenEmby.App.Storage;
+using NextGenEmby.Core.Diagnostics;
 using NextGenEmby.Core.Emby;
 using NextGenEmby.Core.Input;
 using NextGenEmby.Core.Playback;
@@ -37,6 +38,11 @@ namespace NextGenEmby.App.Views
         private object? _addToSheetReturnFocus;
         private bool _isUnloaded;
         private int _loadGeneration;
+#if DEBUG
+        private bool _usesDevelopmentDetailsFixture;
+        private IReadOnlyDictionary<string, string> _developmentDetailsArtworkUris =
+            new Dictionary<string, string>(StringComparer.Ordinal);
+#endif
 
         public MediaDetailsPage()
         {
@@ -50,6 +56,10 @@ namespace NextGenEmby.App.Views
             base.OnNavigatedTo(e);
             _isUnloaded = false;
             var loadGeneration = BeginLoad();
+#if DEBUG
+            _usesDevelopmentDetailsFixture = false;
+            _developmentDetailsArtworkUris = new Dictionary<string, string>(StringComparer.Ordinal);
+#endif
 
             var item = e.Parameter as EmbyMediaItem;
             if (item != null)
@@ -63,6 +73,13 @@ namespace NextGenEmby.App.Views
             var request = e.Parameter as MediaDetailsNavigationRequest;
             if (request != null)
             {
+#if DEBUG
+                if (request.UseDevelopmentFixture)
+                {
+                    RenderDevelopmentDetailsFixture(loadGeneration);
+                    return;
+                }
+#endif
                 _item = new EmbyMediaItem
                 {
                     Id = request.ItemId,
@@ -656,6 +673,158 @@ namespace NextGenEmby.App.Views
             return Task.CompletedTask;
         }
 
+#if DEBUG
+        private void RenderDevelopmentDetailsFixture(int loadGeneration)
+        {
+            if (!CanApplyLoad(loadGeneration))
+            {
+                return;
+            }
+
+            var fixture = DevelopmentDetailsFixture.Create();
+            _usesDevelopmentDetailsFixture = true;
+            _developmentDetailsArtworkUris = fixture.ArtworkUris;
+            _item = fixture.Item;
+
+            RenderItem();
+            ApplyDevelopmentDetailsArtwork(fixture.Item);
+
+            _mediaSources = fixture.MediaSources;
+            _selectedMediaSourceId = ResolveSelectedPlaybackMediaSourceId();
+            RenderPlaybackInfo();
+
+            _organizeAncestors = fixture.OrganizeAncestors;
+            _collectionTargets = fixture.CollectionTargets;
+            _playlistTargets = fixture.PlaylistTargets;
+            RenderOrganizeSection();
+            RenderDevelopmentSecondaryRails(fixture);
+
+            StatusBlock.Text = "Fixture details loaded.";
+            FocusDevelopmentDefaultContentAsync();
+        }
+
+        private void FocusDevelopmentDefaultContentAsync()
+        {
+            _ = Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, () =>
+            {
+                if (!_isUnloaded && _usesDevelopmentDetailsFixture)
+                {
+                    FocusDefaultContent();
+                }
+            });
+        }
+
+        private void ApplyDevelopmentDetailsArtwork(EmbyMediaItem item)
+        {
+            var posterSource = CreateDevelopmentArtworkImageSource(item.PrimaryImageItemId, "Primary");
+            if (posterSource != null)
+            {
+                PosterImage.Source = posterSource;
+                PosterFallbackBlock.Visibility = Visibility.Collapsed;
+            }
+
+            var backdropSource = CreateDevelopmentArtworkImageSource(item.BackdropImageItemId, "Backdrop");
+            if (backdropSource != null)
+            {
+                BackdropImage.Source = backdropSource;
+            }
+        }
+
+        private void RenderDevelopmentSecondaryRails(DevelopmentDetailsFixtureSnapshot fixture)
+        {
+            SimilarItemsPanel.Children.Clear();
+            foreach (var item in fixture.SimilarItems.Take(12))
+            {
+                SimilarItemsPanel.Children.Add(CreateDevelopmentSimilarItemButton(item));
+            }
+
+            SimilarSection.Visibility = SimilarItemsPanel.Children.Count == 0
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+
+            PeoplePanel.Children.Clear();
+            foreach (var person in fixture.Item.People.Take(18))
+            {
+                PeoplePanel.Children.Add(CreateDevelopmentPersonButton(person));
+            }
+
+            PeopleSection.Visibility = PeoplePanel.Children.Count == 0
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+        }
+
+        private BitmapImage? CreateDevelopmentArtworkImageSource(string itemId, string imageType)
+        {
+            var key = DevelopmentDetailsFixture.ArtworkKey(itemId, imageType);
+            if (!_developmentDetailsArtworkUris.TryGetValue(key, out var uri) ||
+                string.IsNullOrWhiteSpace(uri))
+            {
+                return null;
+            }
+
+            return new BitmapImage(new Uri(uri));
+        }
+
+        private ImageBrush? CreateDevelopmentArtworkBrush(EmbyMediaItem item, string imageType)
+        {
+            var itemId = ResolveArtworkItemId(item, imageType);
+            var imageSource = CreateDevelopmentArtworkImageSource(itemId, imageType);
+            if (imageSource == null)
+            {
+                return null;
+            }
+
+            return new ImageBrush
+            {
+                ImageSource = imageSource,
+                Stretch = Stretch.UniformToFill
+            };
+        }
+
+        private ImageBrush? CreateDevelopmentArtworkBrush(EmbyPerson person)
+        {
+            var imageSource = CreateDevelopmentArtworkImageSource(person.Id, "Primary");
+            if (imageSource == null)
+            {
+                return null;
+            }
+
+            return new ImageBrush
+            {
+                ImageSource = imageSource,
+                Stretch = Stretch.UniformToFill
+            };
+        }
+
+        private static string ResolveArtworkItemId(EmbyMediaItem item, string imageType)
+        {
+            if (item == null)
+            {
+                return "";
+            }
+
+            if (string.Equals(imageType, "Thumb", StringComparison.OrdinalIgnoreCase) &&
+                !string.IsNullOrWhiteSpace(item.ThumbImageItemId))
+            {
+                return item.ThumbImageItemId;
+            }
+
+            if (string.Equals(imageType, "Backdrop", StringComparison.OrdinalIgnoreCase) &&
+                !string.IsNullOrWhiteSpace(item.BackdropImageItemId))
+            {
+                return item.BackdropImageItemId;
+            }
+
+            if (string.Equals(imageType, "Primary", StringComparison.OrdinalIgnoreCase) &&
+                !string.IsNullOrWhiteSpace(item.PrimaryImageItemId))
+            {
+                return item.PrimaryImageItemId;
+            }
+
+            return item.Id;
+        }
+#endif
+
         private void Play_OnClick(object sender, RoutedEventArgs e)
         {
             if (_item == null || string.IsNullOrWhiteSpace(_item.Id))
@@ -715,6 +884,13 @@ namespace NextGenEmby.App.Views
 
         private async void Refresh_OnClick(object sender, RoutedEventArgs e)
         {
+#if DEBUG
+            if (_usesDevelopmentDetailsFixture)
+            {
+                RenderDevelopmentDetailsFixture(BeginLoad());
+                return;
+            }
+#endif
             var itemId = _item == null ? "" : _item.Id;
             var itemName = _item == null ? "" : _item.Name;
             await LoadDetailsAsync(itemId, itemName, BeginLoad());
@@ -738,6 +914,14 @@ namespace NextGenEmby.App.Views
             {
                 return;
             }
+
+#if DEBUG
+            if (_usesDevelopmentDetailsFixture)
+            {
+                OpenDevelopmentAddToSheet(sheetKind);
+                return;
+            }
+#endif
 
             var loadGeneration = ++_addToSheetLoadGeneration;
             _activeAddToSheet = sheetKind;
@@ -801,6 +985,53 @@ namespace NextGenEmby.App.Views
                 }
             }
         }
+
+#if DEBUG
+        private void OpenDevelopmentAddToSheet(DetailsAddToSheetKind sheetKind)
+        {
+            _addToSheetLoadGeneration++;
+            _activeAddToSheet = sheetKind;
+            _addToSheetSession = null;
+            _addToSheetPreviewIndex = 0;
+            _addToSheetConfirming = false;
+            _addToSheetReturnFocus = FocusManager.GetFocusedElement();
+
+            AddToSheetTitleBlock.Text = sheetKind == DetailsAddToSheetKind.Collection
+                ? "Add to collection"
+                : "Add to playlist";
+            AddToSheetRoot.Visibility = Visibility.Visible;
+            AddToSheetSubtitleBlock.Text = GetActiveAddToTargets().Count == 0
+                ? "No fixture destinations found."
+                : "Choose a fixture destination";
+            RenderAddToSheetOptions();
+            FocusAddToSheetOption(_addToSheetPreviewIndex);
+        }
+
+        private void ConfirmDevelopmentAddToSheet()
+        {
+            var item = _item;
+            var targets = GetActiveAddToTargets();
+            if (item == null || string.IsNullOrWhiteSpace(item.Id) || targets.Count == 0)
+            {
+                CloseAddToSheet(restoreFocus: true);
+                return;
+            }
+
+            var target = targets[Math.Max(0, Math.Min(_addToSheetPreviewIndex, targets.Count - 1))];
+            if (string.IsNullOrWhiteSpace(target.Id))
+            {
+                CloseAddToSheet(restoreFocus: true);
+                return;
+            }
+
+            AddAncestorIfMissing(target);
+            RenderOrganizeSection();
+            StatusBlock.Text = _activeAddToSheet == DetailsAddToSheetKind.Collection
+                ? "Added to fixture collection: " + CreateDisplayName(target)
+                : "Added to fixture playlist: " + CreateDisplayName(target);
+            CloseAddToSheet(restoreFocus: true);
+        }
+#endif
 
         private static async Task<IReadOnlyList<EmbyMediaItem>> LoadAddToTargetsAsync(
             EmbyApiClient client,
@@ -904,6 +1135,14 @@ namespace NextGenEmby.App.Views
             {
                 return;
             }
+
+#if DEBUG
+            if (_usesDevelopmentDetailsFixture)
+            {
+                ConfirmDevelopmentAddToSheet();
+                return;
+            }
+#endif
 
             var item = _item;
             var targets = GetActiveAddToTargets();
@@ -1393,6 +1632,116 @@ namespace NextGenEmby.App.Views
             EpisodesPanel.Children.Add(button);
         }
 
+#if DEBUG
+        private Button CreateDevelopmentSimilarItemButton(EmbyMediaItem item)
+        {
+            var button = new Button
+            {
+                Width = 148,
+                Height = 220,
+                MinWidth = 148,
+                MinHeight = 220,
+                Padding = new Thickness(0),
+                Tag = item,
+                HorizontalContentAlignment = HorizontalAlignment.Stretch,
+                VerticalContentAlignment = VerticalAlignment.Stretch,
+                UseSystemFocusVisuals = true
+            };
+            AutomationProperties.SetName(button, string.IsNullOrWhiteSpace(item.Name) ? item.Id : item.Name);
+            button.Click += SimilarItem_OnClick;
+            button.GotFocus += SecondaryRailButton_OnGotFocus;
+
+            var root = new Grid
+            {
+                Background = (Brush)Application.Current.Resources["AppRaisedSurfaceBrush"]
+            };
+
+            var artworkBrush = CreateDevelopmentArtworkBrush(item, "Primary");
+            if (artworkBrush != null)
+            {
+                root.Background = artworkBrush;
+            }
+
+            root.Children.Add(CreateRailCardBorder());
+            root.Children.Add(CreateSecondaryRailTextScrim(
+                string.IsNullOrWhiteSpace(item.Name) ? item.Id : item.Name,
+                CreateMeta(item)));
+
+            button.Content = root;
+            return button;
+        }
+
+        private Button CreateDevelopmentPersonButton(EmbyPerson person)
+        {
+            var button = new Button
+            {
+                Width = 154,
+                Height = 154,
+                MinWidth = 154,
+                MinHeight = 154,
+                Padding = new Thickness(0),
+                Tag = person,
+                HorizontalContentAlignment = HorizontalAlignment.Stretch,
+                VerticalContentAlignment = VerticalAlignment.Stretch,
+                UseSystemFocusVisuals = true,
+                IsEnabled = !string.IsNullOrWhiteSpace(person.Id)
+            };
+            AutomationProperties.SetName(button, CreatePersonAutomationName(person));
+            button.Click += Person_OnClick;
+            button.GotFocus += SecondaryRailButton_OnGotFocus;
+
+            var root = new Grid
+            {
+                Background = (Brush)Application.Current.Resources["AppRaisedSurfaceBrush"]
+            };
+
+            var artworkBrush = CreateDevelopmentArtworkBrush(person);
+            if (artworkBrush != null)
+            {
+                root.Background = artworkBrush;
+            }
+
+            root.Children.Add(CreateRailCardBorder());
+            root.Children.Add(CreateSecondaryRailTextScrim(person.Name, CreatePersonRole(person)));
+
+            button.Content = root;
+            return button;
+        }
+
+        private static Border CreateSecondaryRailTextScrim(string title, string meta)
+        {
+            return new Border
+            {
+                Background = (Brush)Application.Current.Resources["AppCardScrimBrush"],
+                VerticalAlignment = VerticalAlignment.Bottom,
+                Padding = new Thickness(10, 8, 10, 8),
+                Child = new StackPanel
+                {
+                    Spacing = 3,
+                    Children =
+                    {
+                        new TextBlock
+                        {
+                            Text = title ?? "",
+                            FontSize = 15,
+                            FontWeight = Windows.UI.Text.FontWeights.SemiBold,
+                            TextTrimming = TextTrimming.CharacterEllipsis,
+                            MaxLines = 2
+                        },
+                        new TextBlock
+                        {
+                            Text = meta ?? "",
+                            FontSize = 12,
+                            Foreground = (Brush)Application.Current.Resources["AppMutedTextBrush"],
+                            TextTrimming = TextTrimming.CharacterEllipsis,
+                            MaxLines = 1
+                        }
+                    }
+                }
+            };
+        }
+#endif
+
         private Button CreateSimilarItemButton(EmbySession session, EmbyApiClient client, EmbyMediaItem item)
         {
             var button = new Button
@@ -1638,6 +1987,14 @@ namespace NextGenEmby.App.Views
             };
 
             var artwork = EmbyArtworkPolicy.SelectItemWideArtwork(target, 360);
+#if DEBUG
+            var developmentArtworkBrush = CreateDevelopmentArtworkBrush(target, "Thumb");
+            if (developmentArtworkBrush != null)
+            {
+                frame.Background = developmentArtworkBrush;
+                return frame;
+            }
+#endif
             if (artwork != null && _addToSheetSession != null)
             {
                 frame.Background = new ImageBrush
@@ -2068,12 +2425,29 @@ namespace NextGenEmby.App.Views
                 UseSystemFocusVisuals = true
             };
 
-            ApplySourceButtonState(button, source);
+            var layout = new Grid
+            {
+                HorizontalAlignment = HorizontalAlignment.Stretch
+            };
+            layout.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            layout.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+            var marker = new Border
+            {
+                Name = "SourceSelectionMarker",
+                Width = 4,
+                Margin = new Thickness(0, 2, 14, 2),
+                Background = (Brush)Application.Current.Resources["AppWarmBrush"],
+                CornerRadius = new CornerRadius(2),
+                Visibility = Visibility.Collapsed
+            };
+            Grid.SetColumn(marker, 0);
 
             var panel = new StackPanel
             {
                 Spacing = 4
             };
+            Grid.SetColumn(panel, 1);
 
             panel.Children.Add(new TextBlock
             {
@@ -2094,7 +2468,11 @@ namespace NextGenEmby.App.Views
                 });
             }
 
-            button.Content = panel;
+            layout.Children.Add(marker);
+            layout.Children.Add(panel);
+
+            button.Content = layout;
+            ApplySourceButtonState(button, source);
             button.Click += SourceVersion_OnClick;
             return button;
         }
@@ -2116,14 +2494,34 @@ namespace NextGenEmby.App.Views
                 source.Id,
                 _selectedMediaSourceId,
                 StringComparison.Ordinal);
-            button.BorderBrush = (Brush)Application.Current.Resources[
-                isSelected ? "AppAccentBrush" : "AppHairlineBrush"];
-            button.BorderThickness = isSelected ? new Thickness(2) : new Thickness(1);
+            button.BorderBrush = (Brush)Application.Current.Resources["AppHairlineBrush"];
+            button.BorderThickness = new Thickness(1);
             button.Background = (Brush)Application.Current.Resources[
                 isSelected ? "AppChromePressedBrush" : "AppChromeBrush"];
 
+            var marker = GetSourceSelectionMarker(button);
+            if (marker != null)
+            {
+                marker.Visibility = isSelected ? Visibility.Visible : Visibility.Collapsed;
+            }
+
             var namePrefix = isSelected ? "Selected version, " : "Version, ";
             AutomationProperties.SetName(button, namePrefix + CreateSourceSummary(source));
+        }
+
+        private static Border? GetSourceSelectionMarker(Button button)
+        {
+            if (button.Content is Grid layout)
+            {
+                return layout.Children
+                    .OfType<Border>()
+                    .FirstOrDefault(candidate => string.Equals(
+                        candidate.Name,
+                        "SourceSelectionMarker",
+                        StringComparison.Ordinal));
+            }
+
+            return null;
         }
 
         private string ResolveSelectedPlaybackMediaSourceId()

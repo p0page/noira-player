@@ -3,6 +3,7 @@ namespace NextGenEmby.Core.Input
     public enum ShellContentMode
     {
         Standard,
+        MediaDetails,
         Playback,
         PhotoViewer
     }

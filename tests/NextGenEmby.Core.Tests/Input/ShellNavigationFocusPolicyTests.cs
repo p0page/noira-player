@@ -28,6 +28,17 @@ namespace NextGenEmby.Core.Tests.Input
         }
 
         [Fact]
+        public void Media_Details_Navigation_Prefers_Content_Focus()
+        {
+            var target = ShellNavigationFocusPolicy.GetFocusTarget(
+                ShellContentMode.MediaDetails,
+                isBackNavigation: false,
+                hasContentFocusTarget: true);
+
+            Assert.Equal(ShellNavigationFocusTarget.Content, target);
+        }
+
+        [Fact]
         public void Playback_Navigation_Does_Not_Move_Focus_To_Shell()
         {
             var target = ShellNavigationFocusPolicy.GetFocusTarget(

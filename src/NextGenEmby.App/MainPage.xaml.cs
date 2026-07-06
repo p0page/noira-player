@@ -856,6 +856,15 @@ namespace NextGenEmby.App
                     NavigateTo(typeof(MediaDetailsPage), new MediaDetailsNavigationRequest(command.ItemId, command.ItemName));
                     return;
 
+                case "details-fixture":
+                    NavigateTo(
+                        typeof(MediaDetailsPage),
+                        new MediaDetailsNavigationRequest(
+                            "fixture-detail-aurora",
+                            "Aurora Protocol",
+                            useDevelopmentFixture: true));
+                    return;
+
                 case "photo":
                     NavigateTo(typeof(PhotoViewerPage), new PhotoViewerNavigationRequest(command.ItemId, command.ItemName));
                     return;
@@ -999,6 +1008,11 @@ namespace NextGenEmby.App
 
         private static ShellContentMode GetShellContentMode(Type pageType)
         {
+            if (pageType == typeof(MediaDetailsPage))
+            {
+                return ShellContentMode.MediaDetails;
+            }
+
             if (pageType == typeof(PlaybackPage))
             {
                 return ShellContentMode.Playback;
