@@ -1,5 +1,7 @@
 using System;
+using System.Globalization;
 using System.Text.Json;
+using NextGenEmby.Core.PlaybackQuality;
 
 namespace NextGenEmby.Core.Diagnostics
 {
@@ -18,6 +20,9 @@ namespace NextGenEmby.Core.Diagnostics
         public bool ForceSdrOutput { get; set; }
         public string StreamUrl { get; set; } = "";
         public bool AutoStart { get; set; }
+        public string RunId { get; set; } = "";
+        public int DurationSeconds { get; set; } = 10;
+        public PlaybackQualityExpected? Expected { get; set; }
 
         public static bool TryParseJson(
             string json,
@@ -49,7 +54,23 @@ namespace NextGenEmby.Core.Diagnostics
             parsed.ItemName = Normalize(parsed.ItemName);
             parsed.MediaSourceId = Normalize(parsed.MediaSourceId);
             parsed.StreamUrl = Normalize(parsed.StreamUrl);
+            parsed.RunId = Normalize(parsed.RunId);
             parsed.StartPositionTicks = Math.Max(0, parsed.StartPositionTicks);
+
+            if (string.IsNullOrWhiteSpace(parsed.RunId))
+            {
+                parsed.RunId = parsed.Route + "-" +
+                    DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture);
+            }
+
+            if (parsed.DurationSeconds < 10)
+            {
+                parsed.DurationSeconds = 10;
+            }
+            else if (parsed.DurationSeconds > 600)
+            {
+                parsed.DurationSeconds = 600;
+            }
 
             if (!IsSupportedRoute(parsed.Route))
             {
@@ -98,6 +119,7 @@ namespace NextGenEmby.Core.Diagnostics
                 case "photo":
                 case "playback":
                 case "manual-playback":
+                case "quality-run":
                     return true;
 
                 default:
@@ -107,7 +129,10 @@ namespace NextGenEmby.Core.Diagnostics
 
         private static bool RequiresItemId(string route)
         {
-            return route == "details" || route == "photo" || route == "playback";
+            return route == "details" ||
+                route == "photo" ||
+                route == "playback" ||
+                route == "quality-run";
         }
     }
 }
