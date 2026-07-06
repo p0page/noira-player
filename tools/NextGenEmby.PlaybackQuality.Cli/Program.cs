@@ -1323,10 +1323,71 @@ internal static class Program
             CopyValues(optimizationGate.Blockers, item.Blockers);
             CopyValues(optimizationGate.BlockerSignals, item.Signals);
             CopyValues(optimizationGate.TargetFailureAreas, item.TargetFailureAreas);
+            AddReportAnalysisSummaryEvidence(summary, item);
             summary.Cases.Add(item);
         }
 
+        AddReportAnalysisTargets(summary);
         return summary;
+    }
+
+    private static void AddReportAnalysisSummaryEvidence(
+        ReportAnalysisSummary summary,
+        ReportAnalysisCase item)
+    {
+        CopyValues(item.Blockers, summary.Blockers);
+        CopyValues(item.Signals, summary.Signals);
+        CopyValues(item.FailureAreas, summary.FailureAreas);
+        CopyValues(item.TargetFailureAreas, summary.TargetFailureAreas);
+    }
+
+    private static void AddReportAnalysisTargets(ReportAnalysisSummary summary)
+    {
+        var targetArea = GetHighestPriorityArea(summary.TargetFailureAreas);
+        if (string.IsNullOrWhiteSpace(targetArea))
+        {
+            targetArea = GetHighestPriorityArea(summary.FailureAreas);
+        }
+
+        if (string.IsNullOrWhiteSpace(targetArea))
+        {
+            return;
+        }
+
+        summary.TargetFailureAreas.Clear();
+        AddUnique(summary.TargetFailureAreas, targetArea);
+        foreach (var item in summary.Cases)
+        {
+            if (item.TargetFailureAreas.Contains(targetArea) ||
+                item.FailureAreas.Contains(targetArea))
+            {
+                AddUnique(summary.TargetCaseIds, item.CaseId);
+            }
+        }
+    }
+
+    private static string GetHighestPriorityArea(List<string> areas)
+    {
+        var priorityAreas = new[]
+        {
+            "unsupported-source",
+            "color-pipeline",
+            "startup",
+            "buffering",
+            "av-sync",
+            "frame-pacing",
+            "unknown"
+        };
+
+        foreach (var area in priorityAreas)
+        {
+            if (areas.Contains(area))
+            {
+                return area;
+            }
+        }
+
+        return "";
     }
 
     private static bool IsOptimizationGateBlocked(
@@ -1583,6 +1644,11 @@ internal static class Program
         public int AnalyzedReportCount { get; set; }
         public int UnavailableReportCount { get; set; }
         public int BlockedReportCount { get; set; }
+        public List<string> Blockers { get; } = new List<string>();
+        public List<string> Signals { get; } = new List<string>();
+        public List<string> FailureAreas { get; } = new List<string>();
+        public List<string> TargetFailureAreas { get; } = new List<string>();
+        public List<string> TargetCaseIds { get; } = new List<string>();
         public List<ReportAnalysisCase> Cases { get; } =
             new List<ReportAnalysisCase>();
     }

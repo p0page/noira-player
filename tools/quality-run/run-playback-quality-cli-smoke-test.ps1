@@ -189,6 +189,26 @@ try {
         throw 'Expected analyze-report-set output to avoid unavailable analysis for raw reports.'
     }
 
+    if (-not ($analysisSet.blockers -contains 'missingEvidence')) {
+        throw 'Expected analyze-report-set output to aggregate blockers.'
+    }
+
+    if (-not ($analysisSet.signals -contains 'timing.maxFrameGapMs')) {
+        throw 'Expected analyze-report-set output to aggregate evidence signals.'
+    }
+
+    if (-not ($analysisSet.failureAreas -contains 'frame-pacing')) {
+        throw 'Expected analyze-report-set output to aggregate failure areas.'
+    }
+
+    if (-not ($analysisSet.targetFailureAreas -contains 'frame-pacing')) {
+        throw 'Expected analyze-report-set output to expose target failure area.'
+    }
+
+    if (-not ($analysisSet.targetCaseIds -contains 'candidate')) {
+        throw 'Expected analyze-report-set output to expose target case id.'
+    }
+
     if (-not ($analysisSet.cases | Where-Object {
         $_.caseId -eq 'candidate' -and
         $_.hasModelAnalysis -eq $true -and
