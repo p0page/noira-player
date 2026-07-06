@@ -38,6 +38,8 @@ namespace NextGenEmby.Core.PlaybackQuality
         public string Action { get; set; } = "";
         public string Risk { get; set; } = "";
         public string Confidence { get; set; } = "";
+        public string SuggestedNextAction { get; set; } = "";
+        public List<string> Reasons { get; } = new List<string>();
         public List<string> Signals { get; } = new List<string>();
         public List<string> FailureAreas { get; } = new List<string>();
         public List<string> Blockers { get; } = new List<string>();
@@ -85,8 +87,24 @@ namespace NextGenEmby.Core.PlaybackQuality
                 Decision = comparison.Decision,
                 Action = comparison.Optimization.Action,
                 Risk = comparison.Optimization.Risk,
-                Confidence = comparison.Confidence.Level
+                Confidence = comparison.Confidence.Level,
+                SuggestedNextAction = comparison.SuggestedNextAction
             };
+
+            foreach (var reason in comparison.Optimization.Reasons)
+            {
+                AddUnique(summary.Reasons, reason);
+            }
+
+            foreach (var reason in comparison.Confidence.Reasons)
+            {
+                AddUnique(summary.Reasons, reason);
+            }
+
+            foreach (var reason in comparison.Comparability.Reasons)
+            {
+                AddUnique(summary.Reasons, reason);
+            }
 
             foreach (var signal in comparison.Optimization.Signals)
             {

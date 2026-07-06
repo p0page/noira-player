@@ -89,6 +89,9 @@ public sealed class PlaybackQualityComparisonSuiteTests
         Assert.Equal("accept-candidate", caseSummary.Action);
         Assert.Equal("low", caseSummary.Risk);
         Assert.Equal("strong", caseSummary.Confidence);
+        Assert.Contains("Keep candidate playback Core change", caseSummary.SuggestedNextAction);
+        Assert.Contains("strong comparison evidence supports candidate", caseSummary.Reasons);
+        Assert.Contains("all comparison checks matched", caseSummary.Reasons);
         Assert.Contains("timing.maxFrameGapMs", caseSummary.Signals);
         Assert.Contains("frame-pacing", caseSummary.FailureAreas);
     }
