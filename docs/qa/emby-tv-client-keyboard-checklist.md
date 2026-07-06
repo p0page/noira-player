@@ -1309,3 +1309,33 @@ Then continue design and implementation until the route passes.
   - No app-content mouse clicks were used.
 - Tooling note:
   - UI Automation `focused_element` intermittently continued to report `SearchBox` after D-pad moves, while screenshots and actual button activation showed the visible TV focus correctly moved. This run therefore used Computer Use screenshots as the authority for focus position.
+
+### 2026-07-06 - Search Results Scope Fixture
+
+- App version: 0.1.0.161.
+- Scope: add a deterministic Search results route that covers every TV search scope and stress-tests the far-right scope rail without a saved Emby session.
+- Interaction changes:
+  - `dev-command.json` accepts route `search-fixture`.
+  - The DEBUG route renders Search with `Aurora Protocol` and representative results for Movie, Series, Episode, Video, MusicVideo, BoxSet, Playlist, Person, MusicAlbum, Audio, Photo, and TvChannel.
+  - Search scope buttons call `StartBringIntoView` on focus so far-right scopes stay visible during D-pad navigation.
+  - Search result status text now uses `1 result` for singular counts and `results` otherwise.
+- Automated verification:
+  - TDD red path confirmed `search-fixture` was not accepted before route support.
+  - TDD red path confirmed `DevelopmentSearchFixture` did not exist before fixture data was implemented.
+  - TDD red path confirmed the Search page did not render fixture results or keep scope focus visible before implementation.
+  - Computer Use visual validation caught `1 results / Live TV`; a TDD red path then added `SearchResultStatusTextPolicy` before the text fix.
+  - Core tests passed: 348 total.
+  - App Debug x64 build passed, producing `NextGenEmby.App_0.1.0.161_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.161`.
+- Keyboard-only validation with Computer Use:
+  - Wrote `dev-command.json` with route `search-fixture` and launched the installed app.
+  - `dev-command-result.txt` reported `completed / search-fixture`.
+  - Initial Search state showed `12 results / All` with fixture cards including `Aurora Protocol`, `Polar Archive`, `Signal Room`, `Night City Collection`, `Weekend Queue`, `Maya Chen`, `Nocturne Signals`, `Opening Credits`, `Neon Lobby Still`, and `News 24`.
+  - Pressed `Down`, then nine `Right` presses; focus moved to far-right `Live TV` and the scope rail scrolled to keep it visible.
+  - Pressed `Return`; the fixture filtered to `1 result / Live TV` and showed `News 24`.
+  - Pressed `Down`; focus moved from `Live TV` to the `News 24` result card.
+  - Pressed `Up`; focus returned to `Live TV`.
+  - Pressed `Left`; focus moved from `Live TV` to `Photos`.
+  - No app-content mouse clicks were used.
+- Limitation:
+  - The fixture currently uses initials-only fallback cards. A later visual pass should add packaged QA artwork for Search results so this route can validate poster/thumbnail treatment as well as focus.

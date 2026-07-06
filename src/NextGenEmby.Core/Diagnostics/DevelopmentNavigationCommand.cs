@@ -86,6 +86,7 @@ namespace NextGenEmby.Core.Diagnostics
                 case "movies":
                 case "tv":
                 case "search":
+                case "search-fixture":
                 case "search-error":
                 case "settings":
                 case "livetv":

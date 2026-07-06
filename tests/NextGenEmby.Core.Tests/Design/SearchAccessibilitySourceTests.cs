@@ -38,6 +38,30 @@ public sealed class SearchAccessibilitySourceTests
     }
 
     [Fact]
+    public void Search_Fixture_Development_Route_Renders_Results_And_Keeps_Scopes_Visible()
+    {
+        var root = FindRepositoryRoot();
+        var mainPageSource = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NextGenEmby.App",
+            "MainPage.xaml.cs"));
+        var searchPageSource = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NextGenEmby.App",
+            "Views",
+            "SearchPage.xaml.cs"));
+
+        Assert.Contains("case \"search-fixture\"", mainPageSource);
+        Assert.Contains("UseFixtureResults", searchPageSource);
+        Assert.Contains("RenderDevelopmentSearchFixtureResults(", searchPageSource);
+        Assert.Contains("DevelopmentSearchFixture.CreateItemsForScope", searchPageSource);
+        Assert.Contains("ScopeButton_OnGotFocus", searchPageSource);
+        Assert.Contains("StartBringIntoView(new BringIntoViewOptions", searchPageSource);
+    }
+
+    [Fact]
     public void Search_Box_Down_Key_Routes_To_Selected_Scope()
     {
         var searchPageSource = File.ReadAllText(Path.Combine(

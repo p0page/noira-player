@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using NextGenEmby.App.Navigation;
 using NextGenEmby.App.Services;
 using NextGenEmby.App.Storage;
+using NextGenEmby.Core.Diagnostics;
 using NextGenEmby.Core.Emby;
 using NextGenEmby.Core.Input;
 using Windows.System;
@@ -47,6 +48,10 @@ namespace NextGenEmby.App.Views
             base.OnNavigatedTo(e);
 #if DEBUG
             _developmentRequest = e.Parameter as SearchDevelopmentNavigationRequest;
+            if (_developmentRequest != null)
+            {
+                _selectedScopeKey = EmbySearchScopePolicy.GetScope(_developmentRequest.InitialScopeKey).Key;
+            }
 #endif
         }
 
@@ -61,6 +66,13 @@ namespace NextGenEmby.App.Views
             {
                 SearchBox.Text = _developmentRequest.Term;
                 RenderDevelopmentSearchError();
+                return;
+            }
+
+            if (_developmentRequest != null && _developmentRequest.UseFixtureResults)
+            {
+                SearchBox.Text = _developmentRequest.Term;
+                RenderDevelopmentSearchFixtureResults(SearchCompletionFocusTarget.SearchBox);
                 return;
             }
 #endif
@@ -237,6 +249,12 @@ namespace NextGenEmby.App.Views
                 RenderDevelopmentSearchError();
                 return;
             }
+
+            if (_developmentRequest != null && _developmentRequest.UseFixtureResults)
+            {
+                RenderDevelopmentSearchFixtureResults(completionFocusTarget);
+                return;
+            }
 #endif
 
             StatusBlock.Text = "Searching " + scope.Label + "...";
@@ -319,7 +337,7 @@ namespace NextGenEmby.App.Views
                 ResultsGrid.Items.Add(card);
             }
 
-            StatusBlock.Text = cards.Count + " results / " + scope.Label;
+            StatusBlock.Text = SearchResultStatusTextPolicy.Create(cards.Count, scope.Label);
             FocusAfterSearch(completionFocusTarget);
         }
 
@@ -334,6 +352,27 @@ namespace NextGenEmby.App.Views
                 "Check the server connection, then try again.",
                 showRetry: true);
             SearchBox.Focus(FocusState.Programmatic);
+        }
+
+        private void RenderDevelopmentSearchFixtureResults(SearchCompletionFocusTarget completionFocusTarget)
+        {
+            _isNavigatingToDetails = false;
+            var scope = EmbySearchScopePolicy.GetScope(_selectedScopeKey);
+            var items = DevelopmentSearchFixture.CreateItemsForScope(scope.Key);
+            var cards = CreateDevelopmentResultCards(items);
+            RenderResults(scope, cards, completionFocusTarget);
+        }
+
+        private static IReadOnlyList<SearchResultCard> CreateDevelopmentResultCards(
+            IReadOnlyList<EmbyMediaItem> items)
+        {
+            var cards = new List<SearchResultCard>();
+            foreach (var item in items)
+            {
+                cards.Add(new SearchResultCard(item, imageSource: null));
+            }
+
+            return cards;
         }
 #endif
 
@@ -397,9 +436,27 @@ namespace NextGenEmby.App.Views
                     UseSystemFocusVisuals = true
                 };
                 button.Click += ScopeButton_OnClick;
+                button.GotFocus += ScopeButton_OnGotFocus;
                 _scopeButtons.Add(button);
                 ScopesPanel.Children.Add(button);
             }
+        }
+
+        private static void ScopeButton_OnGotFocus(object sender, RoutedEventArgs e)
+        {
+            var target = sender as Control;
+            if (target == null)
+            {
+                return;
+            }
+
+            target.StartBringIntoView(new BringIntoViewOptions
+            {
+                AnimationDesired = true,
+                HorizontalAlignmentRatio = 0.5,
+                HorizontalOffset = 0,
+                VerticalAlignmentRatio = 0.0
+            });
         }
 
         private async void ScopeButton_OnClick(object sender, RoutedEventArgs e)

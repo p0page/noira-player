@@ -787,6 +787,15 @@ namespace NextGenEmby.App
                     NavigateSearch();
                     return;
 
+                case "search-fixture":
+                    NavigateTo(
+                        typeof(SearchPage),
+                        new SearchDevelopmentNavigationRequest(
+                            "Aurora Protocol",
+                            simulateError: false,
+                            useFixtureResults: true));
+                    return;
+
                 case "search-error":
                     NavigateTo(typeof(SearchPage), new SearchDevelopmentNavigationRequest());
                     return;
