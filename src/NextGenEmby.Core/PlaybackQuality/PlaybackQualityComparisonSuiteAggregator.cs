@@ -22,6 +22,7 @@ namespace NextGenEmby.Core.PlaybackQuality
         public List<string> FailureAreas { get; } = new List<string>();
         public List<string> TargetFailureAreas { get; } = new List<string>();
         public List<string> TargetCaseIds { get; } = new List<string>();
+        public List<string> CodeTargets { get; } = new List<string>();
         public List<PlaybackQualityComparisonCaseSummary> Cases { get; } =
             new List<PlaybackQualityComparisonCaseSummary>();
         public List<PlaybackQualityRunComparison> Comparisons { get; } =
@@ -43,6 +44,7 @@ namespace NextGenEmby.Core.PlaybackQuality
         public List<string> Signals { get; } = new List<string>();
         public List<string> FailureAreas { get; } = new List<string>();
         public List<string> Blockers { get; } = new List<string>();
+        public List<string> CodeTargets { get; } = new List<string>();
     }
 
     public static class PlaybackQualityComparisonSuiteAggregator
@@ -149,6 +151,12 @@ namespace NextGenEmby.Core.PlaybackQuality
             foreach (var blocker in comparison.Optimization.Blockers)
             {
                 AddUnique(summary.Blockers, blocker);
+            }
+
+            AddCodeTargetsForFailureAreas(summary.CodeTargets, summary.FailureAreas);
+            if (RequiresEvidenceCollection(summary))
+            {
+                AddCodeTargetsForFailureArea(summary.CodeTargets, "evidence-collection");
             }
 
             return summary;
@@ -345,6 +353,7 @@ namespace NextGenEmby.Core.PlaybackQuality
             if (!string.IsNullOrWhiteSpace(target))
             {
                 AddUnique(suite.TargetFailureAreas, target);
+                AddCodeTargetsForFailureArea(suite.CodeTargets, target);
                 foreach (var summary in suite.Cases)
                 {
                     if (summary.FailureAreas.Contains(target))
@@ -357,6 +366,11 @@ namespace NextGenEmby.Core.PlaybackQuality
             if (suite.TargetCaseIds.Count == 0)
             {
                 AddEvidenceTargetCaseIds(suite);
+            }
+
+            if (RequiresEvidenceCollection(suite))
+            {
+                AddCodeTargetsForFailureArea(suite.CodeTargets, "evidence-collection");
             }
         }
 
@@ -397,6 +411,128 @@ namespace NextGenEmby.Core.PlaybackQuality
             }
 
             return failureAreas.Count == 0 ? "" : failureAreas[0];
+        }
+
+        private static bool RequiresEvidenceCollection(PlaybackQualityComparisonSuite suite)
+        {
+            return suite.Action == "collect-comparable-evidence" ||
+                suite.Action == "review-unmatched-signals" ||
+                suite.Blockers.Contains("suite.weak-evidence") ||
+                suite.Blockers.Contains("suite.partial-evidence");
+        }
+
+        private static bool RequiresEvidenceCollection(PlaybackQualityComparisonCaseSummary summary)
+        {
+            return summary.Action == "collect-comparable-evidence" ||
+                summary.Action == "review-unmatched-signals" ||
+                summary.Confidence == "weak" ||
+                summary.Blockers.Count > 0;
+        }
+
+        private static void AddCodeTargetsForFailureAreas(
+            List<string> codeTargets,
+            List<string> failureAreas)
+        {
+            foreach (var area in failureAreas)
+            {
+                AddCodeTargetsForFailureArea(codeTargets, area);
+            }
+        }
+
+        private static void AddCodeTargetsForFailureArea(List<string> codeTargets, string area)
+        {
+            switch (area)
+            {
+                case "unsupported-source":
+                    AddCodeTargets(
+                        codeTargets,
+                        new[]
+                        {
+                            "src/NextGenEmby.Core/Playback/PlaybackOrchestrator.cs",
+                            "src/NextGenEmby.Core/Playback/HdrPlaybackProfileClassifier.cs",
+                            "src/NextGenEmby.Core/Emby"
+                        });
+                    break;
+                case "color-pipeline":
+                    AddCodeTargets(
+                        codeTargets,
+                        new[]
+                        {
+                            "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
+                            "src/NextGenEmby.Native/DxDeviceResources.cpp",
+                            "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
+                        });
+                    break;
+                case "startup":
+                    AddCodeTargets(
+                        codeTargets,
+                        new[]
+                        {
+                            "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+                            "src/NextGenEmby.Native/NativePlaybackEngine.cpp",
+                            "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+                        });
+                    break;
+                case "buffering":
+                    AddCodeTargets(
+                        codeTargets,
+                        new[]
+                        {
+                            "src/NextGenEmby.Native/Media/PlaybackGraph.cpp",
+                            "src/NextGenEmby.Native/Media/VideoDecoder.cpp",
+                            "src/NextGenEmby.Native/Media/AudioDecoder.cpp"
+                        });
+                    break;
+                case "av-sync":
+                    AddCodeTargets(
+                        codeTargets,
+                        new[]
+                        {
+                            "src/NextGenEmby.Native/Media/AudioRenderer.cpp",
+                            "src/NextGenEmby.Native/Media/PlaybackGraph.cpp",
+                            "src/NextGenEmby.Native/Media/FramePacing.h"
+                        });
+                    break;
+                case "frame-pacing":
+                    AddCodeTargets(
+                        codeTargets,
+                        new[]
+                        {
+                            "src/NextGenEmby.Native/Media/FramePacing.h",
+                            "src/NextGenEmby.Native/Media/PlaybackGraph.cpp",
+                            "src/NextGenEmby.Native/HdrDisplayController.cpp",
+                            "src/NextGenEmby.Core/PlaybackQuality/PlaybackRefreshRatePolicy.cs"
+                        });
+                    break;
+                case "evidence-collection":
+                    AddCodeTargets(
+                        codeTargets,
+                        new[]
+                        {
+                            "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+                            "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+                            "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
+                            "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+                        });
+                    break;
+                case "unknown":
+                    AddCodeTargets(
+                        codeTargets,
+                        new[]
+                        {
+                            "src/NextGenEmby.Core/PlaybackQuality",
+                            "src/NextGenEmby.Native"
+                        });
+                    break;
+            }
+        }
+
+        private static void AddCodeTargets(List<string> codeTargets, string[] targets)
+        {
+            foreach (var target in targets)
+            {
+                AddUnique(codeTargets, target);
+            }
         }
 
         private static void AddUnique(List<string> values, string value)

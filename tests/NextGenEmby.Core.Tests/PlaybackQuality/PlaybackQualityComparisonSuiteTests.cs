@@ -68,6 +68,8 @@ public sealed class PlaybackQualityComparisonSuiteTests
         Assert.Equal(1, suite.WeakConfidenceCount);
         Assert.Contains("suite.weak-evidence", suite.Blockers);
         Assert.Contains("evidence/missing-baseline", suite.TargetCaseIds);
+        Assert.Contains("src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs", suite.CodeTargets);
+        Assert.Contains("src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp", suite.CodeTargets);
     }
 
     [Fact]
@@ -94,6 +96,8 @@ public sealed class PlaybackQualityComparisonSuiteTests
         Assert.Contains("all comparison checks matched", caseSummary.Reasons);
         Assert.Contains("timing.maxFrameGapMs", caseSummary.Signals);
         Assert.Contains("frame-pacing", caseSummary.FailureAreas);
+        Assert.Contains("src/NextGenEmby.Native/Media/FramePacing.h", caseSummary.CodeTargets);
+        Assert.Contains("src/NextGenEmby.Native/Media/PlaybackGraph.cpp", caseSummary.CodeTargets);
     }
 
     [Fact]
@@ -145,6 +149,8 @@ public sealed class PlaybackQualityComparisonSuiteTests
         Assert.Equal("color-pipeline", target);
         var targetCase = Assert.Single(suite.TargetCaseIds);
         Assert.Equal("case-color", targetCase);
+        Assert.Contains("src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp", suite.CodeTargets);
+        Assert.Contains("src/NextGenEmby.Native/DxDeviceResources.cpp", suite.CodeTargets);
     }
 
     private static PlaybackQualityRunComparison Compare(
