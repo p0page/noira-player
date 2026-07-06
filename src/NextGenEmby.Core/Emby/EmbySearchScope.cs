@@ -5,11 +5,16 @@ namespace NextGenEmby.Core.Emby
 {
     public sealed class EmbySearchScope
     {
-        public EmbySearchScope(string key, string label, string includeItemTypes)
+        public EmbySearchScope(
+            string key,
+            string label,
+            string includeItemTypes,
+            bool requireItemTypeMatch)
         {
             Key = key ?? "";
             Label = label ?? "";
             IncludeItemTypes = includeItemTypes ?? "";
+            RequireItemTypeMatch = requireItemTypeMatch;
         }
 
         public string Key { get; }
@@ -17,22 +22,24 @@ namespace NextGenEmby.Core.Emby
         public string Label { get; }
 
         public string IncludeItemTypes { get; }
+
+        public bool RequireItemTypeMatch { get; }
     }
 
     public static class EmbySearchScopePolicy
     {
         private static readonly EmbySearchScope[] Scopes =
         {
-            new EmbySearchScope("all", "All", "Movie,Series,Episode,Video,MusicVideo,BoxSet,Playlist,Person,MusicAlbum,Audio,Photo,TvChannel"),
-            new EmbySearchScope("movies", "Movies", "Movie"),
-            new EmbySearchScope("shows", "Shows", "Series"),
-            new EmbySearchScope("episodes", "Episodes", "Episode"),
-            new EmbySearchScope("collections", "Collections", "BoxSet"),
-            new EmbySearchScope("playlists", "Playlists", "Playlist"),
-            new EmbySearchScope("people", "People", "Person"),
-            new EmbySearchScope("music", "Music", "MusicAlbum,Audio"),
-            new EmbySearchScope("photos", "Photos", "Photo"),
-            new EmbySearchScope("livetv", "Live TV", "TvChannel")
+            new EmbySearchScope("all", "All", "Movie,Series,Episode,Video,MusicVideo,BoxSet,Playlist,Person,MusicAlbum,Audio,Photo,TvChannel", false),
+            new EmbySearchScope("movies", "Movies", "Movie", true),
+            new EmbySearchScope("shows", "Shows", "Series", true),
+            new EmbySearchScope("episodes", "Episodes", "Episode", true),
+            new EmbySearchScope("collections", "Collections", "BoxSet", true),
+            new EmbySearchScope("playlists", "Playlists", "Playlist", true),
+            new EmbySearchScope("people", "People", "Person", true),
+            new EmbySearchScope("music", "Music", "MusicAlbum,Audio", true),
+            new EmbySearchScope("photos", "Photos", "Photo", true),
+            new EmbySearchScope("livetv", "Live TV", "TvChannel", true)
         };
 
         public static IReadOnlyList<EmbySearchScope> AllScopes => Scopes;

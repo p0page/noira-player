@@ -6,6 +6,7 @@ using NextGenEmby.App.Navigation;
 using NextGenEmby.App.Services;
 using NextGenEmby.App.Storage;
 using NextGenEmby.Core.Emby;
+using NextGenEmby.Core.Input;
 using Windows.System;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
@@ -65,6 +66,12 @@ namespace NextGenEmby.App.Views
             await SearchAsync();
         }
 
+        private enum SearchCompletionFocusTarget
+        {
+            SearchBox,
+            SelectedScope
+        }
+
         private async void SearchBox_OnKeyDown(object sender, KeyRoutedEventArgs e)
         {
             if (e.Key == VirtualKey.Enter || e.Key == VirtualKey.GamepadA)
@@ -74,73 +81,51 @@ namespace NextGenEmby.App.Views
                 return;
             }
 
-            if (IsDownKey(e.Key))
-            {
-                e.Handled = true;
-                FocusSelectedScope(FocusState.Keyboard);
-            }
         }
 
         private void Page_OnKeyDown(object sender, KeyRoutedEventArgs e)
         {
-            var focusedElement = FocusManager.GetFocusedElement();
-            if (e.Handled && !IsFocusWithin(focusedElement, ScopesPanel))
-            {
-                return;
-            }
-
-            if (TryRouteSearchDirectionalKey(e.Key))
+            if (TryRouteSearchDirectionalKey(e.Key, e.OriginalSource, e.Handled))
             {
                 e.Handled = true;
             }
         }
 
-        private bool TryRouteSearchDirectionalKey(VirtualKey key)
+        private bool TryRouteSearchDirectionalKey(
+            VirtualKey key,
+            object originalSource,
+            bool eventAlreadyHandled)
         {
             var focusedElement = FocusManager.GetFocusedElement();
-            switch (key)
+            var focusArea = GetSearchFocusArea(originalSource, focusedElement);
+            int focusedResultIndex;
+            var focusedResultInFirstRow =
+                TryGetFocusedResultIndex(out focusedResultIndex) &&
+                focusedResultIndex < GetVisibleColumnCount();
+            var decision = SearchFocusNavigationPolicy.GetDecision(
+                eventAlreadyHandled,
+                focusArea,
+                IsUpKey(key),
+                IsDownKey(key),
+                IsLeftKey(key),
+                IsRightKey(key),
+                focusedResultInFirstRow);
+
+            switch (decision.Action)
             {
-                case VirtualKey.Up:
-                case VirtualKey.GamepadDPadUp:
-                case VirtualKey.GamepadLeftThumbstickUp:
-                    int focusedResultIndex;
-                    if (TryGetFocusedResultIndex(out focusedResultIndex) &&
-                        focusedResultIndex < GetVisibleColumnCount())
-                    {
-                        return FocusSelectedScope(FocusState.Keyboard);
-                    }
+                case SearchFocusNavigationAction.FocusSearchBox:
+                    return SearchBox.Focus(FocusState.Keyboard);
 
-                    if (IsFocusWithin(focusedElement, ScopesPanel))
-                    {
-                        return SearchBox.Focus(FocusState.Keyboard);
-                    }
+                case SearchFocusNavigationAction.FocusSelectedScope:
+                    return FocusSelectedScope(FocusState.Keyboard);
 
-                    return false;
+                case SearchFocusNavigationAction.FocusFirstResult:
+                    return FocusFirstResultNow(FocusState.Keyboard);
 
-                case VirtualKey.Down:
-                case VirtualKey.GamepadDPadDown:
-                case VirtualKey.GamepadLeftThumbstickDown:
-                    if (IsFocusWithin(focusedElement, SearchBox) ||
-                        IsFocusWithin(focusedElement, SearchActionButton))
-                    {
-                        return FocusSelectedScope(FocusState.Keyboard);
-                    }
-
-                    if (IsFocusWithin(focusedElement, ScopesPanel))
-                    {
-                        return FocusFirstResultNow(FocusState.Keyboard);
-                    }
-
-                    return false;
-
-                case VirtualKey.Left:
-                case VirtualKey.GamepadDPadLeft:
-                case VirtualKey.GamepadLeftThumbstickLeft:
+                case SearchFocusNavigationAction.MoveScopeLeft:
                     return MoveScopeFocus(-1);
 
-                case VirtualKey.Right:
-                case VirtualKey.GamepadDPadRight:
-                case VirtualKey.GamepadLeftThumbstickRight:
+                case SearchFocusNavigationAction.MoveScopeRight:
                     return MoveScopeFocus(1);
 
                 default:
@@ -148,7 +133,41 @@ namespace NextGenEmby.App.Views
             }
         }
 
-        private async Task SearchAsync()
+        private SearchFocusArea GetSearchFocusArea(object originalSource, object focusedElement)
+        {
+            var originalArea = GetSearchFocusArea(originalSource);
+            return originalArea == SearchFocusArea.Other
+                ? GetSearchFocusArea(focusedElement)
+                : originalArea;
+        }
+
+        private SearchFocusArea GetSearchFocusArea(object element)
+        {
+            if (IsFocusWithin(element, SearchBox))
+            {
+                return SearchFocusArea.SearchBox;
+            }
+
+            if (IsFocusWithin(element, SearchActionButton))
+            {
+                return SearchFocusArea.SearchAction;
+            }
+
+            if (IsFocusWithin(element, ScopesPanel))
+            {
+                return SearchFocusArea.ScopeRail;
+            }
+
+            if (IsFocusWithin(element, ResultsGrid))
+            {
+                return SearchFocusArea.ResultGrid;
+            }
+
+            return SearchFocusArea.Other;
+        }
+
+        private async Task SearchAsync(
+            SearchCompletionFocusTarget completionFocusTarget = SearchCompletionFocusTarget.SearchBox)
         {
             var searchGeneration = ++_searchGeneration;
             ResultsGrid.Items.Clear();
@@ -159,7 +178,7 @@ namespace NextGenEmby.App.Views
             if (string.IsNullOrWhiteSpace(term))
             {
                 StatusBlock.Text = "Enter a search.";
-                SearchBox.Focus(FocusState.Programmatic);
+                FocusAfterSearch(completionFocusTarget);
                 return;
             }
 
@@ -176,7 +195,7 @@ namespace NextGenEmby.App.Views
                 if (session == null)
                 {
                     StatusBlock.Text = "Sign in first.";
-                    SearchBox.Focus(FocusState.Programmatic);
+                    FocusAfterSearch(completionFocusTarget);
                     return;
                 }
 
@@ -185,7 +204,10 @@ namespace NextGenEmby.App.Views
                 {
                     var client = EmbyClientFactory.Create(httpClient, session);
                     var items = await client.SearchItemsAsync(session, term, scope.IncludeItemTypes);
-                    cards = CreateResultCards(session, client, items);
+                    var scopedItems = scope.RequireItemTypeMatch
+                        ? EmbyLibraryItemTypePolicy.KeepIncludedItemTypes(items, scope.IncludeItemTypes)
+                        : items;
+                    cards = CreateResultCards(session, client, scopedItems);
                 }
 
                 if (!CanApplySearch(searchGeneration))
@@ -193,7 +215,7 @@ namespace NextGenEmby.App.Views
                     return;
                 }
 
-                RenderResults(scope, cards);
+                RenderResults(scope, cards, completionFocusTarget);
             }
             catch
             {
@@ -204,13 +226,14 @@ namespace NextGenEmby.App.Views
 
                 ResultsGrid.Items.Clear();
                 StatusBlock.Text = "Unable to search.";
-                SearchBox.Focus(FocusState.Programmatic);
+                FocusAfterSearch(completionFocusTarget);
             }
         }
 
         private void RenderResults(
             EmbySearchScope scope,
-            IReadOnlyList<SearchResultCard> cards)
+            IReadOnlyList<SearchResultCard> cards,
+            SearchCompletionFocusTarget completionFocusTarget)
         {
             ResultsGrid.Items.Clear();
 
@@ -219,7 +242,7 @@ namespace NextGenEmby.App.Views
                 StatusBlock.Text = scope.Key == "all"
                     ? "No results."
                     : "No results in " + scope.Label + ".";
-                SearchBox.Focus(FocusState.Programmatic);
+                FocusAfterSearch(completionFocusTarget);
                 return;
             }
 
@@ -229,6 +252,17 @@ namespace NextGenEmby.App.Views
             }
 
             StatusBlock.Text = cards.Count + " results / " + scope.Label;
+            FocusAfterSearch(completionFocusTarget);
+        }
+
+        private void FocusAfterSearch(SearchCompletionFocusTarget completionFocusTarget)
+        {
+            if (completionFocusTarget == SearchCompletionFocusTarget.SelectedScope &&
+                FocusSelectedScope(FocusState.Keyboard))
+            {
+                return;
+            }
+
             SearchBox.Focus(FocusState.Programmatic);
         }
 
@@ -305,7 +339,7 @@ namespace NextGenEmby.App.Views
                 return;
             }
 
-            await SearchAsync();
+            await SearchAsync(SearchCompletionFocusTarget.SelectedScope);
         }
 
         private void ApplyScopeButtonState()
@@ -481,6 +515,27 @@ namespace NextGenEmby.App.Views
             return key == VirtualKey.Down ||
                 key == VirtualKey.GamepadDPadDown ||
                 key == VirtualKey.GamepadLeftThumbstickDown;
+        }
+
+        private static bool IsUpKey(VirtualKey key)
+        {
+            return key == VirtualKey.Up ||
+                key == VirtualKey.GamepadDPadUp ||
+                key == VirtualKey.GamepadLeftThumbstickUp;
+        }
+
+        private static bool IsLeftKey(VirtualKey key)
+        {
+            return key == VirtualKey.Left ||
+                key == VirtualKey.GamepadDPadLeft ||
+                key == VirtualKey.GamepadLeftThumbstickLeft;
+        }
+
+        private static bool IsRightKey(VirtualKey key)
+        {
+            return key == VirtualKey.Right ||
+                key == VirtualKey.GamepadDPadRight ||
+                key == VirtualKey.GamepadLeftThumbstickRight;
         }
 
         public sealed class SearchResultCard

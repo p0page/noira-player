@@ -53,6 +53,16 @@ public sealed class EmbySearchScopePolicyTests
     }
 
     [Fact]
+    public void Specific_Scopes_Require_Client_Item_Type_Match()
+    {
+        Assert.False(EmbySearchScopePolicy.GetScope("all").RequireItemTypeMatch);
+        Assert.True(EmbySearchScopePolicy.GetScope("movies").RequireItemTypeMatch);
+        Assert.True(EmbySearchScopePolicy.GetScope("shows").RequireItemTypeMatch);
+        Assert.True(EmbySearchScopePolicy.GetScope("playlists").RequireItemTypeMatch);
+        Assert.True(EmbySearchScopePolicy.GetScope("photos").RequireItemTypeMatch);
+    }
+
+    [Fact]
     public void GetScope_Is_Case_Insensitive_And_Falls_Back_To_All()
     {
         Assert.Equal("Movie", EmbySearchScopePolicy.GetScope("MOVIES").IncludeItemTypes);
