@@ -14,6 +14,7 @@ namespace NextGenEmby.Core.Tests.Input
 
             Assert.True(decision.ShouldLoad);
             Assert.True(decision.ShouldClearExistingContent);
+            Assert.False(decision.ShouldRestoreContentFocus);
             Assert.Equal("Loading...", decision.StatusText);
         }
 
@@ -26,6 +27,7 @@ namespace NextGenEmby.Core.Tests.Input
 
             Assert.False(decision.ShouldLoad);
             Assert.False(decision.ShouldClearExistingContent);
+            Assert.True(decision.ShouldRestoreContentFocus);
             Assert.Equal("", decision.StatusText);
         }
 

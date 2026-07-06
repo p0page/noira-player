@@ -56,6 +56,10 @@ namespace NextGenEmby.App.Views
             {
                 await LoadHomeAsync(decision);
             }
+            else if (decision.ShouldRestoreContentFocus)
+            {
+                await RestoreContentFocusAfterLoadedAsync();
+            }
         }
 
         private void HomePage_OnUnloaded(object sender, RoutedEventArgs e)
@@ -82,7 +86,21 @@ namespace NextGenEmby.App.Views
 
         public bool FocusDefaultContent()
         {
+            if (TryMoveFocus(_lastHomeFocusTarget))
+            {
+                return true;
+            }
+
             return FocusDailyStart(FocusState.Keyboard);
+        }
+
+        private async Task RestoreContentFocusAfterLoadedAsync()
+        {
+            await Task.Delay(50);
+            if (!_isUnloaded)
+            {
+                FocusDefaultContent();
+            }
         }
 
         private void HomeFocusTarget_OnGotFocus(object sender, RoutedEventArgs e)

@@ -185,7 +185,7 @@ namespace NextGenEmby.App
                 " canGoBack=" + ContentFrame.CanGoBack);
             ApplyShellChrome(e.SourcePageType == typeof(PlaybackPage));
             ApplyShellButtonState(e.SourcePageType, _currentLibraryRequest);
-            FocusShellButton(e.SourcePageType, _currentLibraryRequest);
+            ApplyNavigationFocus(e.SourcePageType, _currentLibraryRequest, e.NavigationMode);
         }
 
         private void ApplyShellChrome(bool isPlayback)
@@ -210,6 +210,31 @@ namespace NextGenEmby.App
             button.Background = (Brush)resources[isActive ? "AppRaisedSurfaceBrush" : "AppTransparentBrush"];
             button.BorderBrush = (Brush)resources[isActive ? "AppAccentBrush" : "AppTransparentBrush"];
             button.Foreground = (Brush)resources[isActive ? "AppTextBrush" : "AppMutedTextBrush"];
+        }
+
+        private void ApplyNavigationFocus(
+            Type pageType,
+            LibraryNavigationRequest? libraryRequest,
+            NavigationMode navigationMode)
+        {
+            var contentFocusTarget = ContentFrame.Content as ITvContentFocusTarget;
+            var focusTarget = ShellNavigationFocusPolicy.GetFocusTarget(
+                pageType == typeof(PlaybackPage),
+                navigationMode == NavigationMode.Back,
+                contentFocusTarget != null);
+
+            if (focusTarget == ShellNavigationFocusTarget.Content &&
+                contentFocusTarget != null &&
+                contentFocusTarget.FocusDefaultContent())
+            {
+                return;
+            }
+
+            if (focusTarget == ShellNavigationFocusTarget.Shell ||
+                focusTarget == ShellNavigationFocusTarget.Content)
+            {
+                FocusShellButton(pageType, libraryRequest);
+            }
         }
 
         private void FocusShellButton(Type pageType, LibraryNavigationRequest? libraryRequest)
