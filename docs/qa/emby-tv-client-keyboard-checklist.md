@@ -1014,3 +1014,19 @@ Then continue design and implementation until the route passes.
   - No app-content mouse clicks were used.
 - Limitation:
   - This pass proves the seek-preview keyboard policy and prompt at the Core level and verifies the More drawer cancel regression in the installed app. It does not yet prove runtime seek preview on a seekable local playback item. The next pass should restore a playable saved session or add a deterministic seekable QA fixture before marking `Seek preview and cancel` as `Verified`.
+
+### 2026-07-06 - Player Focus Icon Contract Guard
+
+- Scope: turn the current `Player Focus Mark` app-icon direction into a repeatable contract, without creating a new visual concept.
+- Design alignment:
+  - The production direction remains symbol-only: compact playback viewport, cyan controller-focus path, green play/confirm core, subtle playback status marks, and amber progress base.
+  - The generator no longer contains text rendering setup. This keeps the icon independent of the current product name, product initials, or any splash copy.
+  - The generator token contract maps directly back to `docs/DESIGN.md` colors for canvas, surface, raised surface, hairline, focus, play, progress, text, and muted text.
+- Automated verification:
+  - TDD red path confirmed the symbol-only generator test failed while `TextRenderingHint` still existed in `tools/Generate-AppIconAssets.ps1`.
+  - Targeted icon contract tests passed: 3 total.
+  - Contract coverage verifies required PNG dimensions, package manifest references, project asset includes, text-free generator APIs, rejected old icon wording, and icon token alignment with `docs/DESIGN.md`.
+- Runtime validation:
+  - Local asset inspection opened `Square44x44Logo.png`, `Wide310x150Logo.png`, and `SplashScreen.png`. The 44 px asset preserves focus/play/progress, the wide tile reads as a player tile rather than a banner ad, and the splash remains symbol-only.
+  - Computer Use app-control tools were not exposed in this resumed turn. No new keyboard/screenshot runtime icon validation was performed in this pass.
+  - The next visual verification pass should inspect the Start tile/package surface after reinstalling the current MSIX and compare the generated icon against the 44 px, wide tile, and splash constraints.
