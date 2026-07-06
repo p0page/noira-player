@@ -7,7 +7,7 @@ namespace NextGenEmby.Core.PlaybackQuality
         public const double MatchTolerance = 0.15;
         public const double NoMatchWeight = 1000000.0;
 
-        private static readonly double[] SupportedRatios = { 1.0, 2.0, 2.5 };
+        private static readonly double[] SupportedRatios = { 1.0, 2.0, 2.5, 3.0, 4.0, 5.0 };
 
         public static bool HasUsableVideoFrameRate(double videoFrameRate)
         {

@@ -41,7 +41,7 @@ namespace winrt::NextGenEmby::Native::implementation
             }
 
             auto bestWeight = NoMatchWeight;
-            constexpr double SupportedRatios[] = {1.0, 2.0, 2.5};
+            constexpr double SupportedRatios[] = {1.0, 2.0, 2.5, 3.0, 4.0, 5.0};
             for (auto ratio : SupportedRatios)
             {
                 auto targetRefreshRate = videoFrameRate * ratio;
