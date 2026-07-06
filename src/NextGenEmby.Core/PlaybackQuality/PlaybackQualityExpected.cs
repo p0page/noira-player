@@ -12,5 +12,6 @@ namespace NextGenEmby.Core.PlaybackQuality
         public long? MaxVideoStarvedPasses { get; set; }
         public long? MaxAudioStarvedPasses { get; set; }
         public bool RequireValidatedConversion { get; set; } = true;
+        public bool RequireMatchedDisplayRefreshRate { get; set; }
     }
 }

@@ -81,6 +81,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                 expected.DxgiOutput,
                 "colorPipeline.dxgiOutput",
                 "color-pipeline");
+            CheckMatchedRefreshRate(report, expected);
 
             if (expected.RequireValidatedConversion &&
                 report.ColorPipeline.ConversionStatus != "validated" &&
@@ -123,6 +124,75 @@ namespace NextGenEmby.Core.PlaybackQuality
             }
 
             AssignFailureAnalysis(report);
+        }
+
+        private static void CheckMatchedRefreshRate(
+            PlaybackQualityReport report,
+            PlaybackQualityExpected expected)
+        {
+            if (!expected.RequireMatchedDisplayRefreshRate)
+            {
+                return;
+            }
+
+            if (!PlaybackRefreshRatePolicy.HasUsableVideoFrameRate(report.Source.FrameRate))
+            {
+                var sourceFrameRateMessage = "SourceFrameRate " + Format(report.Source.FrameRate) + " is not usable for display refresh validation.";
+                report.FailureReasons.Add(sourceFrameRateMessage);
+                report.Checks.Add(new PlaybackQualityCheck
+                {
+                    Name = "SourceFrameRate",
+                    Signal = "source.frameRate",
+                    Status = "fail",
+                    FailureArea = "frame-pacing",
+                    Expected = "usable source.frameRate",
+                    Actual = Format(report.Source.FrameRate),
+                    Message = sourceFrameRateMessage
+                });
+                AddRelevantSignal(report, "source.frameRate");
+                return;
+            }
+
+            if (report.Display.RefreshRateHz <= 0)
+            {
+                var missingRefreshMessage = "DisplayRefreshRateHz is missing for display refresh validation.";
+                report.FailureReasons.Add(missingRefreshMessage);
+                report.Checks.Add(new PlaybackQualityCheck
+                {
+                    Name = "DisplayRefreshRateHz",
+                    Signal = "display.refreshRateHz",
+                    Status = "fail",
+                    FailureArea = "frame-pacing",
+                    Expected = "matched to source.frameRate " + Format(report.Source.FrameRate),
+                    Actual = "",
+                    Message = missingRefreshMessage
+                });
+                AddRelevantSignal(report, "display.refreshRateHz");
+                return;
+            }
+
+            var failed = !PlaybackRefreshRatePolicy.MatchesVideoFrameRate(
+                report.Display.RefreshRateHz,
+                report.Source.FrameRate);
+            var expectedMessage = "matched to source.frameRate " + Format(report.Source.FrameRate);
+            var actual = Format(report.Display.RefreshRateHz);
+            var mismatchMessage = "DisplayRefreshRateHz " + actual + " does not match source frame rate " + Format(report.Source.FrameRate) + ".";
+            report.Checks.Add(new PlaybackQualityCheck
+            {
+                Name = "DisplayRefreshRateHz",
+                Signal = "display.refreshRateHz",
+                Status = failed ? "fail" : "pass",
+                FailureArea = "frame-pacing",
+                Expected = expectedMessage,
+                Actual = actual,
+                Message = failed ? mismatchMessage : "DisplayRefreshRateHz matches source frame rate."
+            });
+
+            if (failed)
+            {
+                report.FailureReasons.Add(mismatchMessage);
+                AddRelevantSignal(report, "display.refreshRateHz");
+            }
         }
 
         private static void CheckMax(
@@ -265,7 +335,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                 return;
             }
 
-            if (HasReason(report, "DroppedVideoFrames", "MaxFrameGapMs"))
+            if (HasReason(report, "DroppedVideoFrames", "MaxFrameGapMs", "DisplayRefreshRateHz", "SourceFrameRate"))
             {
                 report.Analysis.PrimaryFailureArea = "frame-pacing";
                 report.Analysis.SuggestedNextAction = "Inspect frame pacing wait/drop thresholds around PlaybackFramePacing.";

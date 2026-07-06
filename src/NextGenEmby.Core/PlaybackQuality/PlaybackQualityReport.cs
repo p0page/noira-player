@@ -117,6 +117,7 @@ namespace NextGenEmby.Core.PlaybackQuality
         public string HdrStatus { get; set; } = "";
         public bool IsHdrDisplayAvailable { get; set; }
         public bool IsHdrOutputActive { get; set; }
+        public double RefreshRateHz { get; set; }
         public string Message { get; set; } = "";
     }
 }

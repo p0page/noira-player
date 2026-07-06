@@ -11,6 +11,7 @@ The primary consumer of `quality-run` reports is an automated model or agent, no
 5. Always include metric limitations so the model does not infer unsupported conclusions.
 6. Always separate startup/network, frame pacing, A/V sync, buffering, and color pipeline signals.
 7. Never hide one class of failure behind another. HDR output mismatch remains a failure even if frame pacing is good.
+8. Always record display refresh evidence when diagnosing cadence problems. 23.976fps and 24fps sources can look subtly wrong even when no frames are obviously dropped.
 
 ## Required Top-Level Fields
 
@@ -85,6 +86,8 @@ Every report must include these phase-1 limitations:
 `audioVideoDriftMsP95` is the p95 absolute difference between video frame PTS and XAudio-derived clock at render decision time.
 
 `actualHdrOutput` is derived from native display status and swapchain state. It is not a direct HDMI analyzer reading.
+
+`display.refreshRateHz` is the software-observed display mode refresh rate. `PlaybackRefreshRatePolicy` treats 1x, 2x, and 2.5x cadence as acceptable with a 0.15Hz tolerance, matching the native Xbox display-mode selection policy. For example, 23.976fps can match 23.976Hz, 24Hz, 47.952Hz, or 59.94Hz/60Hz, while 25fps should prefer a 50Hz-compatible mode.
 
 ## Failure Area Priority
 

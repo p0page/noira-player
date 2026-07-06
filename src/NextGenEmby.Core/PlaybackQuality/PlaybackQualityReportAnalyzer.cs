@@ -109,6 +109,11 @@ namespace NextGenEmby.Core.PlaybackQuality
             {
                 analysis.MissingEvidence.Add("display.hdrStatus");
             }
+
+            if (report.Display.RefreshRateHz <= 0)
+            {
+                analysis.MissingEvidence.Add("display.refreshRateHz");
+            }
         }
 
         private static PlaybackQualityCheck CloneCheck(PlaybackQualityCheck check)

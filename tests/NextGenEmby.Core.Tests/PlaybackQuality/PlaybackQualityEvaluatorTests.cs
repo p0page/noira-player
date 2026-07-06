@@ -144,6 +144,44 @@ public sealed class PlaybackQualityEvaluatorTests
     }
 
     [Fact]
+    public void Evaluate_Fails_When_Display_Refresh_Does_Not_Match_Source_Frame_Rate()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "bad-cadence",
+            Expected = new PlaybackQualityExpected
+            {
+                RequireMatchedDisplayRefreshRate = true,
+                RequireValidatedConversion = false
+            },
+            Source = new PlaybackQualitySource
+            {
+                FrameRate = 23.976
+            },
+            Display = new PlaybackQualityDisplay
+            {
+                RefreshRateHz = 50.0
+            }
+        };
+
+        PlaybackQualityEvaluator.Evaluate(report);
+
+        Assert.Equal("fail", report.Result);
+        Assert.Contains(
+            "DisplayRefreshRateHz 50.000 does not match source frame rate 23.976.",
+            report.FailureReasons);
+        Assert.Equal("frame-pacing", report.Analysis.PrimaryFailureArea);
+        Assert.Contains("display.refreshRateHz", report.Analysis.RelevantSignals);
+        Assert.Contains(report.Checks, check =>
+            check.Name == "DisplayRefreshRateHz" &&
+            check.Signal == "display.refreshRateHz" &&
+            check.Expected == "matched to source.frameRate 23.976" &&
+            check.Actual == "50.000" &&
+            check.Status == "fail" &&
+            check.FailureArea == "frame-pacing");
+    }
+
+    [Fact]
     public void Serializer_RoundTrips_Report_With_CamelCase_Names()
     {
         var report = new PlaybackQualityReport

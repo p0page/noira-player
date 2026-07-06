@@ -74,6 +74,7 @@ public sealed class PlaybackQualityReportAnalyzerTests
         Assert.Contains("buffers.queuedAudioBuffers", analysis.MissingEvidence);
         Assert.Contains("colorPipeline.dxgiInput", analysis.MissingEvidence);
         Assert.Contains("display.hdrStatus", analysis.MissingEvidence);
+        Assert.Contains("display.refreshRateHz", analysis.MissingEvidence);
         Assert.Contains("software-only: does not verify actual HDMI InfoFrame output", analysis.Limitations);
     }
 
