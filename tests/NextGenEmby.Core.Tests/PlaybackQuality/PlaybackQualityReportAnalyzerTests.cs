@@ -129,6 +129,30 @@ public sealed class PlaybackQualityReportAnalyzerTests
     }
 
     [Fact]
+    public void Analyze_Reports_Missing_Render_Intervals_When_Interval_Thresholds_Are_Expected()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "missing-render-intervals",
+            Result = "observed",
+            Expected = new PlaybackQualityExpected
+            {
+                MaxRenderIntervalMsP95 = 50,
+                MaxRenderIntervalMsP99 = 70
+            },
+            Timing = new PlaybackQualityTiming
+            {
+                RenderedVideoFrames = 240
+            }
+        };
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Contains("timing.renderIntervalMsP95", analysis.MissingEvidence);
+        Assert.Contains("timing.renderIntervalMsP99", analysis.MissingEvidence);
+    }
+
+    [Fact]
     public void Analyze_Adds_Expected_Frame_Duration_As_Frame_Pacing_Evidence()
     {
         var report = new PlaybackQualityReport

@@ -48,7 +48,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                 "MaxFrameGapMs",
                 "timing.maxFrameGapMs",
                 "frame-pacing");
-            CheckMax(
+            CheckMeasuredMax(
                 report,
                 "RenderIntervalMsP95",
                 report.Timing.RenderIntervalMsP95,
@@ -56,7 +56,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                 "MaxRenderIntervalMsP95",
                 "timing.renderIntervalMsP95",
                 "frame-pacing");
-            CheckMax(
+            CheckMeasuredMax(
                 report,
                 "RenderIntervalMsP99",
                 report.Timing.RenderIntervalMsP99,
@@ -295,6 +295,48 @@ namespace NextGenEmby.Core.PlaybackQuality
                 report.FailureReasons.Add(message);
                 AddRelevantSignal(report, "source.frameRate");
             }
+        }
+
+        private static void CheckMeasuredMax(
+            PlaybackQualityReport report,
+            string metricName,
+            double actual,
+            double? max,
+            string thresholdName,
+            string signal,
+            string failureArea)
+        {
+            if (!max.HasValue)
+            {
+                return;
+            }
+
+            if (actual <= 0)
+            {
+                var message = metricName + " is missing for " + failureArea + " validation.";
+                report.FailureReasons.Add(message);
+                report.Checks.Add(new PlaybackQualityCheck
+                {
+                    Name = metricName,
+                    Signal = signal,
+                    Status = "fail",
+                    FailureArea = failureArea,
+                    Expected = Format(max.Value),
+                    Actual = "",
+                    Message = message
+                });
+                AddRelevantSignal(report, signal);
+                return;
+            }
+
+            CheckMax(
+                report,
+                metricName,
+                actual,
+                max,
+                thresholdName,
+                signal,
+                failureArea);
         }
 
         private static void CheckMax(

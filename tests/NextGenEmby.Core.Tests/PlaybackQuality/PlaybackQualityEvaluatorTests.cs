@@ -254,6 +254,54 @@ public sealed class PlaybackQualityEvaluatorTests
     }
 
     [Fact]
+    public void Evaluate_Fails_When_Render_Interval_Percentile_Is_Required_But_Missing()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "missing-render-intervals",
+            Expected = new PlaybackQualityExpected
+            {
+                MaxRenderIntervalMsP95 = 50,
+                MaxRenderIntervalMsP99 = 70,
+                RequireValidatedConversion = false
+            },
+            Timing = new PlaybackQualityTiming
+            {
+                RenderedVideoFrames = 240,
+                RenderIntervalMsP95 = 0,
+                RenderIntervalMsP99 = 0
+            }
+        };
+
+        PlaybackQualityEvaluator.Evaluate(report);
+
+        Assert.Equal("fail", report.Result);
+        Assert.Contains(
+            "RenderIntervalMsP95 is missing for frame-pacing validation.",
+            report.FailureReasons);
+        Assert.Contains(
+            "RenderIntervalMsP99 is missing for frame-pacing validation.",
+            report.FailureReasons);
+        Assert.Equal("frame-pacing", report.Analysis.PrimaryFailureArea);
+        Assert.Contains("timing.renderIntervalMsP95", report.Analysis.RelevantSignals);
+        Assert.Contains("timing.renderIntervalMsP99", report.Analysis.RelevantSignals);
+        Assert.Contains(report.Checks, check =>
+            check.Name == "RenderIntervalMsP95" &&
+            check.Signal == "timing.renderIntervalMsP95" &&
+            check.Expected == "50.000" &&
+            check.Actual == "" &&
+            check.Status == "fail" &&
+            check.FailureArea == "frame-pacing");
+        Assert.Contains(report.Checks, check =>
+            check.Name == "RenderIntervalMsP99" &&
+            check.Signal == "timing.renderIntervalMsP99" &&
+            check.Expected == "70.000" &&
+            check.Actual == "" &&
+            check.Status == "fail" &&
+            check.FailureArea == "frame-pacing");
+    }
+
+    [Fact]
     public void Evaluate_Fails_With_Actionable_Reasons_When_Thresholds_Are_Exceeded()
     {
         var report = new PlaybackQualityReport

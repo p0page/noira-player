@@ -98,6 +98,20 @@ namespace NextGenEmby.Core.PlaybackQuality
                 analysis.MissingEvidence.Add("startup.startupDurationMs");
             }
 
+            if (report.Expected != null &&
+                report.Expected.MaxRenderIntervalMsP95.HasValue &&
+                report.Timing.RenderIntervalMsP95 <= 0)
+            {
+                analysis.MissingEvidence.Add("timing.renderIntervalMsP95");
+            }
+
+            if (report.Expected != null &&
+                report.Expected.MaxRenderIntervalMsP99.HasValue &&
+                report.Timing.RenderIntervalMsP99 <= 0)
+            {
+                analysis.MissingEvidence.Add("timing.renderIntervalMsP99");
+            }
+
             if (report.Source.FrameRate > 0 && report.Timing.ExpectedFrameDurationMs <= 0)
             {
                 analysis.MissingEvidence.Add("timing.expectedFrameDurationMs");
