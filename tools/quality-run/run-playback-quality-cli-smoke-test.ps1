@@ -1121,6 +1121,23 @@ try {
         throw 'Expected playback quality CLI compare-suite stall action to change optimization strategy.'
     }
 
+    if (-not ($stallSuite.failureAreas -contains 'frame-pacing')) {
+        throw 'Expected playback quality CLI compare-suite stall suite to include persisting failure area.'
+    }
+
+    if (-not ($stallSuite.signals -contains 'timing.maxFrameGapMs')) {
+        throw 'Expected playback quality CLI compare-suite stall suite to include persisting failure signal.'
+    }
+
+    $stallCase = $stallSuite.cases | Select-Object -First 1
+    if ($null -eq $stallCase -or -not ($stallCase.failureAreas -contains 'frame-pacing')) {
+        throw 'Expected playback quality CLI compare-suite stall case to include persisting failure area.'
+    }
+
+    if (-not ($stallCase.signals -contains 'timing.maxFrameGapMs')) {
+        throw 'Expected playback quality CLI compare-suite stall case to include persisting failure signal.'
+    }
+
     $stallComparison = Get-Content -Raw -LiteralPath (Join-Path $stallComparisonsDir 'case-stall.json') | ConvertFrom-Json
     if ($stallComparison.optimization.action -ne 'change-optimization-strategy') {
         throw 'Expected playback quality CLI compare-suite stall comparison action to change optimization strategy.'

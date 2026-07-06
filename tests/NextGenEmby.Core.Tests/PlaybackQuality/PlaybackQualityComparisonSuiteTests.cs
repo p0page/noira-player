@@ -88,6 +88,24 @@ public sealed class PlaybackQualityComparisonSuiteTests
         Assert.Contains("frame-pacing", caseSummary.FailureAreas);
     }
 
+    [Fact]
+    public void Summarize_Emits_Persisting_FailureAreas_For_Unchanged_Cases()
+    {
+        var unchanged = Compare(
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "180.000"),
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "180.000"));
+        unchanged.CaseId = "cadence/frame-pacing.json";
+
+        var suite = PlaybackQualityComparisonSuiteAggregator.Summarize(new[] { unchanged });
+
+        var caseSummary = Assert.Single(suite.Cases);
+        Assert.Equal("continue-next-triage-step", caseSummary.Action);
+        Assert.Contains("frame-pacing", caseSummary.FailureAreas);
+        Assert.Contains("frame-pacing", suite.FailureAreas);
+        Assert.Contains("timing.maxFrameGapMs", caseSummary.Signals);
+        Assert.Contains("timing.maxFrameGapMs", suite.Signals);
+    }
+
     private static PlaybackQualityRunComparison Compare(
         PlaybackQualityCheck baselineCheck,
         PlaybackQualityCheck candidateCheck)

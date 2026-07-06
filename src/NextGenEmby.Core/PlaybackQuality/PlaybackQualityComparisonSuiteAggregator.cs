@@ -112,6 +112,19 @@ namespace NextGenEmby.Core.PlaybackQuality
                 AddUnique(summary.FailureAreas, area);
             }
 
+            foreach (var area in comparison.PersistingFailureAreas)
+            {
+                AddUnique(summary.FailureAreas, area);
+            }
+
+            if (comparison.PersistingFailureAreas.Count > 0)
+            {
+                foreach (var signal in comparison.Coverage.MatchedSignals)
+                {
+                    AddUnique(summary.Signals, signal);
+                }
+            }
+
             foreach (var blocker in comparison.Optimization.Blockers)
             {
                 AddUnique(summary.Blockers, blocker);
@@ -185,6 +198,19 @@ namespace NextGenEmby.Core.PlaybackQuality
             foreach (var area in comparison.Optimization.FailureAreas)
             {
                 AddUnique(suite.FailureAreas, area);
+            }
+
+            foreach (var area in comparison.PersistingFailureAreas)
+            {
+                AddUnique(suite.FailureAreas, area);
+            }
+
+            if (comparison.PersistingFailureAreas.Count > 0)
+            {
+                foreach (var signal in comparison.Coverage.MatchedSignals)
+                {
+                    AddUnique(suite.Signals, signal);
+                }
             }
         }
 
