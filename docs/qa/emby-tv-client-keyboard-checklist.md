@@ -752,3 +752,19 @@ Then continue design and implementation until the route passes.
   - Keyboard-only `Down`, `Return` opened a media Details page with `Play/Resume` controls.
   - Keyboard-only `Escape` returned to Home.
   - No app-content mouse clicks were used.
+
+### 2026-07-06 - Settings Guide Route And Toggle Pass
+
+- App version: 0.1.0.126.
+- Scope: close the Settings keyboard gap left by the earlier local `SendInput` limitation.
+- Keyboard-only validation with Computer Use:
+  - Launched the installed app and reached Home with the saved Emby session.
+  - Pressed `M` to open the expanded Guide rail.
+  - Pressed `Up`; screenshot validation showed the Guide rail stayed open and the Home guide item had a visible cyan focus frame.
+  - Pressed eleven `Down`, then `Return`; Settings opened from the Guide without using an app-content mouse click.
+  - Settings exposed account `cyber on https://c1.zdz.plus:443`, `App 0.1.0.126 / Emby client 0.1.0`, `Playback input`, `Thumbstick seek preview`, the controller input map, and latest startup diagnostics.
+  - Pressed `Space` on the default Settings focus; the status text changed to `Left thumbstick seek preview is off; D-pad seek remains available.`
+  - Pressed `Space` again to restore the setting; the status text returned to `Left thumbstick previews the target position before seek commits.`
+  - No app-content mouse clicks were used.
+- Tooling note:
+  - One Windows Graphics Capture screenshot request timed out after Settings opened. Accessibility text snapshots and keyboard behavior continued to work, so this run records both the screenshot evidence from the expanded Guide and text-snapshot evidence from Settings.

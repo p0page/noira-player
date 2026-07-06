@@ -245,6 +245,12 @@ The implementation should express repeated visual choices as XAML resources befo
 
 This keeps Matte Cinema Fluent replaceable. A future skin should be able to swap resource dictionaries for color, typography, spacing, and panel treatment without rewriting Emby data flow, controller navigation, or playback behavior. Skins may change visual language, but they must preserve the TV safety rules in this file: visible focus, stable card dimensions, dark scrims over artwork, and no hover-only affordances.
 
+### Implementation Contract
+
+Treat the YAML tokens at the top of this file as the design-source map, and treat XAML resources as the runtime skin contract. New UI work should first consume existing semantic resources; if a new visual value appears more than once, promote it into a named resource or style before adding more pages that depend on it. The goal is for a future skin to replace colors, typography, spacing, focus treatment, card shape, and overlay treatment through resource dictionaries rather than code edits.
+
+Page-local XAML may define structure-specific measurements, such as a diagnostics column width or a one-off media layout breakpoint. Page-local XAML should not define raw hex colors, repeated font sizes, repeated safe-area margins, focus border brushes, common card radii, or shared artwork sizes. Generator scripts such as the app-icon asset generator should keep their own visual tokens in one clearly labeled block and document which DESIGN.md roles they correspond to.
+
 The current XAML token migration has started with:
 
 - app shell and Guide rail resources: `AppShellRailBrush`, `TvGuideCollapsedWidth`, and `TvGuideExpandedWidth`;

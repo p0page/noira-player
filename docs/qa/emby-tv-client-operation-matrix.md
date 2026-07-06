@@ -102,15 +102,15 @@ Status values:
 
 | Operation | Keyboard Path | Status | Evidence | Next Work |
 | --- | --- | --- | --- | --- |
-| Open Settings | Guide Settings | Implemented | 0.1.0.117 debug route opened Settings without XAML exception and rendered the TV page | Fresh Guide keyboard route with real keyboard or Computer Use; local `SendInput` did not drive UWP navigation reliably |
-| Inspect signed-in server | Arrows | Implemented | 0.1.0.117 Settings shows `cyber on https://c1.zdz.plus:443` and app/client version | Re-run through Guide keyboard route |
-| Toggle input/playback diagnostics | Arrows, `Return` or `Space` | Implemented | Thumbstick seek preview setting persists through `PlaybackPreferenceStore`; PlaybackPage reads it before thumbstick preview seek | Fresh real-keyboard toggle validation; local key injection kept focus visible but did not toggle the UWP checkbox |
-| App version / startup diagnostics | Settings or logs | Implemented | 0.1.0.117 Settings shows `App 0.1.0.117 / Emby client 0.1.0` and latest-launch diagnostics; formatter ignores older crash blocks | Keep startup diagnostics available and add copy/export only if needed |
+| Open Settings | `M`, eleven `Down`, `Return` | Verified | 0.1.0.126 Computer Use route opened Settings from the expanded Guide with keyboard input only | Keep as shell regression route |
+| Inspect signed-in server | Settings page text snapshot | Verified | 0.1.0.126 Settings showed `cyber on https://c1.zdz.plus:443`, `App 0.1.0.126 / Emby client 0.1.0`, input map, and latest diagnostics | Keep startup diagnostics available and add copy/export only if needed |
+| Toggle input/playback diagnostics | `Space` on default Settings focus | Verified | 0.1.0.126 `Space` toggled thumbstick seek preview off and updated the status text; a second `Space` restored it on. No app-content mouse clicks were used | Add additional TV-mode scale/theme toggles only after shared theme tokens exist |
+| App version / startup diagnostics | Settings page text snapshot | Verified | 0.1.0.126 Settings exposed app/client version and `Last launch completed`; formatter ignores older crash blocks | Keep startup diagnostics available and add copy/export only if needed |
 
 ## Current Highest-Value Gaps
 
 1. Details still needs visible similar-items validation plus live add-to success on a disposable collection/playlist target.
 2. Playback More drawer needs a fresh keyboard validation pass with real audio/subtitle streams.
 3. Live TV and Music have dedicated browse shells, but both still need positive validation on servers that expose channels or real music items.
-4. Settings Guide route and checkbox toggle need a fresh real-keyboard or Computer Use pass because local synthetic key injection did not change UWP focus/toggle state.
-5. Search error recovery needs a deliberate offline/server-failure keyboard run.
+4. Search error recovery needs a deliberate offline/server-failure keyboard run.
+5. Theme work should keep promoting repeated colors, spacing, typography, focus, card, and overlay values into shared resources before adding new page-local constants, so future skins can swap visual dictionaries without touching navigation or playback code.
