@@ -8,7 +8,7 @@
             x:Name="BackdropImage"
             Stretch="UniformToFill"
             Opacity="0.35" />
-        <Border Background="#D80E141F" />
+        <Border Background="{StaticResource AppDetailsBackdropWashBrush}" />
 
         <ScrollViewer VerticalScrollBarVisibility="Auto">
             <Grid Margin="{StaticResource TvPageMargin}" ColumnSpacing="34">
@@ -72,7 +72,7 @@
                             Height="54"
                             Background="{StaticResource AppActionBrush}"
                             BorderBrush="{StaticResource AppActionBrush}"
-                            Foreground="#041007"
+                            Foreground="{StaticResource AppOnActionBrush}"
                             Click="Play_OnClick"
                             UseSystemFocusVisuals="True">
                             <StackPanel Orientation="Horizontal" Spacing="12">
@@ -156,8 +156,7 @@
                         Visibility="Collapsed">
                         <TextBlock
                             Text="Organize"
-                            FontSize="22"
-                            FontWeight="SemiBold" />
+                            Style="{StaticResource TvSubsectionTitleTextStyle}" />
                         <TextBlock
                             x:Name="OrganizeSummaryBlock"
                             FontSize="16"
@@ -198,8 +197,7 @@
                         Visibility="Collapsed">
                         <TextBlock
                             Text="Episodes"
-                            FontSize="22"
-                            FontWeight="SemiBold" />
+                            Style="{StaticResource TvSubsectionTitleTextStyle}" />
                         <StackPanel
                             x:Name="EpisodesPanel"
                             Spacing="10" />
@@ -211,8 +209,7 @@
                         Visibility="Collapsed">
                         <TextBlock
                             Text="More like this"
-                            FontSize="22"
-                            FontWeight="SemiBold" />
+                            Style="{StaticResource TvSubsectionTitleTextStyle}" />
                         <ScrollViewer
                             HorizontalScrollBarVisibility="Hidden"
                             VerticalScrollBarVisibility="Disabled"
@@ -232,8 +229,7 @@
                         Visibility="Collapsed">
                         <TextBlock
                             Text="Cast &amp; crew"
-                            FontSize="22"
-                            FontWeight="SemiBold" />
+                            Style="{StaticResource TvSubsectionTitleTextStyle}" />
                         <ScrollViewer
                             HorizontalScrollBarVisibility="Hidden"
                             VerticalScrollBarVisibility="Disabled"
@@ -266,7 +262,7 @@
         <Grid
             x:Name="AddToSheetRoot"
             Canvas.ZIndex="20"
-            Background="#CC050607"
+            Background="{StaticResource AppModalScrimBrush}"
             Visibility="Collapsed">
             <Grid Margin="{StaticResource TvPageMargin}">
                 <Border

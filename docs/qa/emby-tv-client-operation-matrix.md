@@ -113,4 +113,4 @@ Status values:
 2. Playback More drawer needs a fresh keyboard validation pass with real audio/subtitle streams.
 3. Live TV and Music have dedicated browse shells, but both still need positive validation on servers that expose channels or real music items.
 4. Search error recovery needs a deliberate offline/server-failure keyboard run.
-5. Theme work should keep promoting repeated colors, spacing, typography, focus, card, and overlay values into shared resources before adding new page-local constants, so future skins can swap visual dictionaries without touching navigation or playback code.
+5. Theme work should keep promoting repeated spacing, typography, focus, card dimensions, and component states into shared resources. The 0.1.0.127 pass centralized page-level raw hex colors for Home, Library, Search, Details, and Playback, but card sizing and some one-off text sizes still need future extraction before full skin swapping.

@@ -229,12 +229,13 @@ Density should be "comfortable TV dense": enough items visible to support browsi
 
 ## Theme Tokenization Status
 
-Shared TV resources should continue migrating into `App.xaml` before page-local constants are introduced. As of the Music shell pass, these page families are tokenized:
+Shared TV resources should continue migrating into `App.xaml` before page-local constants are introduced. As of the 0.1.0.127 theme-token pass, these page families are tokenized:
 
 - Shell: Guide chrome color, collapsed/expanded widths, standard and immersive page margins.
-- Text: page title/subtitle, section title, panel title, body, muted body, badge, and diagnostics text styles.
-- Surfaces: panel surface, list button, icon button, nav button, scrim, and immersive control brush.
+- Text: page title/subtitle, section title, subsection title, option label, status, panel title, body, muted body, badge, and diagnostics text styles.
+- Surfaces: panel surface, list button, icon button, nav button, modal scrim, artwork dim, hero wash, details wash, playback canvas, playback overlay, playback drawer, and immersive control brush.
 - Media rows: shared `TvListButtonStyle`, `TvListArtworkSize`, and `TvCompactArtworkSize` for browse-only list shells such as Live TV and Music.
+- Shared view usage: Home, Library, Search, Details, and Playback no longer own page-local raw hex colors for artwork dimming, sheet scrims, playback overlays, or green-action foreground text.
 - App identity: `tools/Generate-AppIconAssets.ps1` owns the current icon color and geometry tokens for regenerating the Store, square, wide, and splash PNG assets.
 
 Future skins should override these resources first. Page code may read token values, but should not define new color, focus, or repeated artwork-size constants unless the value is truly page-specific.
@@ -255,7 +256,8 @@ The current XAML token migration has started with:
 
 - app shell and Guide rail resources: `AppShellRailBrush`, `TvGuideCollapsedWidth`, and `TvGuideExpandedWidth`;
 - immersive viewer resources: `AppImmersiveScrimBrush`, `AppImmersiveControlBrush`, and `TvImmersivePageMargin`;
-- shared TV text, panel, diagnostics, icon button, nav button, list button, badge text, and settings checkbox styles.
+- shared TV text, panel, diagnostics, icon button, nav button, list button, badge text, and settings checkbox styles;
+- shared overlay/action resources: `AppOnActionBrush`, `AppArtworkDimBrush`, `AppModalScrimBrush`, `AppPlaybackOverlayBrush`, `AppPlaybackDrawerBrush`, and the hero/details wash colors.
 
 New UI surfaces should follow this migration order:
 

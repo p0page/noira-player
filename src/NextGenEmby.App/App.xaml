@@ -26,6 +26,18 @@
             <Color x:Key="AppHairlineColor">#2A3B4E</Color>
             <Color x:Key="AppWarmColor">#E4B84C</Color>
             <Color x:Key="AppCardScrimColor">#D9040710</Color>
+            <Color x:Key="AppOnActionColor">#041007</Color>
+            <Color x:Key="AppHeroBackdropWashColor">#D803060A</Color>
+            <Color x:Key="AppHeroGradientStartColor">#F203060A</Color>
+            <Color x:Key="AppHeroGradientMidColor">#D803060A</Color>
+            <Color x:Key="AppHeroGradientEndColor">#6603060A</Color>
+            <Color x:Key="AppArtworkDimColor">#22000000</Color>
+            <Color x:Key="AppHeroPosterDimColor">#18000000</Color>
+            <Color x:Key="AppDetailsBackdropWashColor">#D80E141F</Color>
+            <Color x:Key="AppModalScrimColor">#CC050607</Color>
+            <Color x:Key="AppPlaybackCanvasColor">#000000</Color>
+            <Color x:Key="AppPlaybackOverlayColor">#D9000000</Color>
+            <Color x:Key="AppPlaybackDrawerColor">#F0000000</Color>
             <SolidColorBrush x:Key="AppBackgroundBrush" Color="{StaticResource AppBackgroundColor}" />
             <SolidColorBrush x:Key="AppSurfaceBrush" Color="{StaticResource AppSurfaceColor}" />
             <SolidColorBrush x:Key="AppRaisedSurfaceBrush" Color="{StaticResource AppRaisedSurfaceColor}" />
@@ -42,6 +54,15 @@
             <SolidColorBrush x:Key="AppHairlineBrush" Color="{StaticResource AppHairlineColor}" />
             <SolidColorBrush x:Key="AppWarmBrush" Color="{StaticResource AppWarmColor}" />
             <SolidColorBrush x:Key="AppCardScrimBrush" Color="{StaticResource AppCardScrimColor}" />
+            <SolidColorBrush x:Key="AppOnActionBrush" Color="{StaticResource AppOnActionColor}" />
+            <SolidColorBrush x:Key="AppHeroBackdropWashBrush" Color="{StaticResource AppHeroBackdropWashColor}" />
+            <SolidColorBrush x:Key="AppArtworkDimBrush" Color="{StaticResource AppArtworkDimColor}" />
+            <SolidColorBrush x:Key="AppHeroPosterDimBrush" Color="{StaticResource AppHeroPosterDimColor}" />
+            <SolidColorBrush x:Key="AppDetailsBackdropWashBrush" Color="{StaticResource AppDetailsBackdropWashColor}" />
+            <SolidColorBrush x:Key="AppModalScrimBrush" Color="{StaticResource AppModalScrimColor}" />
+            <SolidColorBrush x:Key="AppPlaybackCanvasBrush" Color="{StaticResource AppPlaybackCanvasColor}" />
+            <SolidColorBrush x:Key="AppPlaybackOverlayBrush" Color="{StaticResource AppPlaybackOverlayColor}" />
+            <SolidColorBrush x:Key="AppPlaybackDrawerBrush" Color="{StaticResource AppPlaybackDrawerColor}" />
             <SolidColorBrush x:Key="AppTransparentBrush" Color="#00000000" />
             <SolidColorBrush x:Key="SystemControlFocusVisualPrimaryBrush" Color="{StaticResource AppAccentColor}" />
             <SolidColorBrush x:Key="SystemControlFocusVisualSecondaryBrush" Color="#80FFFFFF" />
@@ -139,6 +160,25 @@
                 <Setter Property="FontSize" Value="24" />
                 <Setter Property="FontWeight" Value="SemiBold" />
                 <Setter Property="Foreground" Value="{StaticResource AppTextBrush}" />
+                <Setter Property="TextWrapping" Value="Wrap" />
+            </Style>
+
+            <Style x:Key="TvSubsectionTitleTextStyle" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="22" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Foreground" Value="{StaticResource AppTextBrush}" />
+                <Setter Property="TextWrapping" Value="Wrap" />
+            </Style>
+
+            <Style x:Key="TvOptionLabelTextStyle" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="14" />
+                <Setter Property="Foreground" Value="{StaticResource AppMutedTextBrush}" />
+                <Setter Property="TextWrapping" Value="NoWrap" />
+            </Style>
+
+            <Style x:Key="TvStatusTextStyle" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="18" />
+                <Setter Property="Foreground" Value="{StaticResource AppMutedTextBrush}" />
                 <Setter Property="TextWrapping" Value="Wrap" />
             </Style>
 

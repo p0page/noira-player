@@ -16,12 +16,10 @@
             <StackPanel Grid.Row="0" Spacing="4">
                 <TextBlock
                     Text="Search"
-                    FontSize="34"
-                    FontWeight="SemiBold" />
+                    Style="{StaticResource TvPageTitleTextStyle}" />
                 <TextBlock
                     Text="Across libraries"
-                    FontSize="16"
-                    Foreground="{StaticResource AppMutedTextBrush}" />
+                    Style="{StaticResource TvMutedBodyTextStyle}" />
             </StackPanel>
 
             <Border
@@ -113,7 +111,7 @@
                                 <Image
                                     Source="{Binding ImageSource}"
                                     Stretch="UniformToFill" />
-                                <Border Background="#22000000" />
+                                <Border Background="{StaticResource AppArtworkDimBrush}" />
                                 <Border
                                     VerticalAlignment="Bottom"
                                     Background="{StaticResource AppCardScrimBrush}"

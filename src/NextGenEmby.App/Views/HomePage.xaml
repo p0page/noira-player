@@ -19,12 +19,10 @@
                     <StackPanel Spacing="4">
                         <TextBlock
                             Text="Home"
-                            FontSize="34"
-                            FontWeight="SemiBold" />
+                            Style="{StaticResource TvPageTitleTextStyle}" />
                         <TextBlock
                             Text="Ready for the next thing"
-                            FontSize="16"
-                            Foreground="{StaticResource AppMutedTextBrush}" />
+                            Style="{StaticResource TvMutedBodyTextStyle}" />
                     </StackPanel>
                     <Button
                         x:Name="RefreshButton"
@@ -51,13 +49,13 @@
                             x:Name="HeroBackdropImage"
                             Stretch="UniformToFill"
                             Opacity="0.22" />
-                        <Border Background="#D803060A" />
+                        <Border Background="{StaticResource AppHeroBackdropWashBrush}" />
                         <Border>
                             <Border.Background>
                                 <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5">
-                                    <GradientStop Color="#F203060A" Offset="0" />
-                                    <GradientStop Color="#D803060A" Offset="0.58" />
-                                    <GradientStop Color="#6603060A" Offset="1" />
+                                    <GradientStop Color="{StaticResource AppHeroGradientStartColor}" Offset="0" />
+                                    <GradientStop Color="{StaticResource AppHeroGradientMidColor}" Offset="0.58" />
+                                    <GradientStop Color="{StaticResource AppHeroGradientEndColor}" Offset="1" />
                                 </LinearGradientBrush>
                             </Border.Background>
                         </Border>
@@ -114,7 +112,7 @@
                                         Height="52"
                                         Background="{StaticResource AppActionBrush}"
                                         BorderBrush="{StaticResource AppActionBrush}"
-                                        Foreground="#041007"
+                                        Foreground="{StaticResource AppOnActionBrush}"
                                         Click="HeroPlay_OnClick"
                                         UseSystemFocusVisuals="True"
                                         XYFocusRight="{x:Bind HeroDetailsButton}">
@@ -152,7 +150,7 @@
                                     <Image
                                         x:Name="HeroPosterImage"
                                         Stretch="UniformToFill" />
-                                    <Border Background="#18000000" />
+                                    <Border Background="{StaticResource AppHeroPosterDimBrush}" />
                                     <TextBlock
                                         x:Name="HeroPosterFallbackBlock"
                                         Text="No artwork"
@@ -169,8 +167,7 @@
                 <StackPanel Spacing="18">
                     <TextBlock
                         Text="Media Libraries"
-                        FontSize="24"
-                        FontWeight="SemiBold" />
+                        Style="{StaticResource TvSectionTitleTextStyle}" />
                     <ScrollViewer
                         HorizontalScrollBarVisibility="Hidden"
                         HorizontalScrollMode="Enabled"
@@ -185,9 +182,7 @@
 
                 <TextBlock
                     x:Name="StatusBlock"
-                    FontSize="18"
-                    Foreground="{StaticResource AppMutedTextBrush}"
-                    TextWrapping="Wrap" />
+                    Style="{StaticResource TvStatusTextStyle}" />
 
                 <StackPanel
                     x:Name="RowsPanel"

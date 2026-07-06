@@ -768,3 +768,25 @@ Then continue design and implementation until the route passes.
   - No app-content mouse clicks were used.
 - Tooling note:
   - One Windows Graphics Capture screenshot request timed out after Settings opened. Accessibility text snapshots and keyboard behavior continued to work, so this run records both the screenshot evidence from the expanded Guide and text-snapshot evidence from Settings.
+
+### 2026-07-06 - Theme Token Extraction Pass
+
+- App version: 0.1.0.127.
+- Scope: centralize repeated visual values so future skins can swap resource dictionaries rather than editing individual pages.
+- Visual tokenization:
+  - Added shared overlay/action resources in `App.xaml` for action foreground, artwork dimming, hero backdrop wash, details backdrop wash, modal scrim, playback canvas, playback overlay, and playback drawer.
+  - Added shared text styles for subsection titles, option labels, and status text.
+  - Home, Library, Search, Details, and Playback no longer contain page-local raw hex colors for artwork dimming, sheets, playback overlays, or green-action foreground text.
+- Automated verification:
+  - Core tests passed: 275 total.
+  - App Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.127_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.127`.
+- Keyboard-only validation with Computer Use:
+  - Launched 0.1.0.127 locally; Home rendered the saved Emby session with Continue watching, Media Libraries, Hot Movies, Hot TV Series, and latest rows.
+  - Keyboard-only `Down`, `Return` opened the `热门电影` library with `34 items`, Sort, Filter, and a populated movie grid.
+  - Keyboard-only `Return` opened Details for `137号案件`.
+  - Details exposed Play, Add favorite, Mark watched, Refresh, Versions, audio/subtitle summaries, Organize, Cast & crew, and overview text.
+  - Startup diagnostics recorded `App.InitializeComponent completed` and `App.OnLaunched completed` for the 17:49 local run.
+  - No app-content mouse clicks were used.
+- Visual capture note:
+  - Windows Graphics Capture timed out during the final Details screenshot request. The route is validated by build output, launch diagnostics, accessibility text snapshots, and keyboard behavior; a fresh screenshot remains desirable in a later Computer Use session.
