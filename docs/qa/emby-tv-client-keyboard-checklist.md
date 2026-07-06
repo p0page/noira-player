@@ -480,6 +480,34 @@ Then continue design and implementation until the route passes.
   - Pressing `Enter` from Details launched playback for `铸就传奇`; Playback showed `Playing`, Pause, seek controls, More, and Stop.
   - No app-content mouse clicks were used.
 
+### 2026-07-06 - Home Row More Keyboard Route And Matte Token Alignment
+
+- App version: 0.1.0.132.
+- Scope: align the runtime color palette with `docs/DESIGN.md` and make Home row `More` buttons reachable through D-pad style keyboard input.
+- Visual token alignment:
+  - `App.xaml` now maps the core runtime brushes to the `DESIGN.md` Matte Cinema Fluent palette: canvas `#050607`, surface `#101418`, raised surface `#1A2027`, overlay `#D9101418`, focus `#3BD5FF`, play/action `#61D47C`, progress/warm `#E0B86A`, hairline `#303842`, text `#F6F1E8`, muted text `#B9C0C8`, and scrim `#D9050607`.
+  - Package tile and splash background now use `#050607`, matching the app canvas instead of the older blue-black startup color.
+  - Hover/pressed button fills were shifted into the same matte neutral family instead of the older graphite-blue family.
+- Interaction changes:
+  - Added `HomeFocusZone.RowMore` to the core Home focus policy.
+  - `Up` from a Home content row now targets that row's `More` button when present.
+  - `Down` from a row `More` button returns to that row's first content card.
+  - `Up` from the first row `More` returns to the first Media Libraries card, preserving the previous vertical hierarchy.
+  - Home page now registers row `More` buttons as first-class focus targets rather than leaving them to mouse/hover reachability.
+- Automated verification:
+  - Added Core tests for row `More` targeting, rows without `More`, `Down` from row `More`, and first-row `More` upward navigation.
+  - Core tests passed: 283 total.
+  - App Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.132_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.132`.
+- Keyboard-only validation with Computer Use:
+  - Launched 0.1.0.132 locally and waited for saved-session Home rows.
+  - Home rendered Media Libraries, Continue watching, Hot Movies, Hot TV Series, and latest rows with the aligned matte palette.
+  - Pressed `Down`, `Down`, `Down`, `Up`; focus moved to the `Hot Movies` row `More` button with a visible cyan focus frame.
+  - Pressed `Return`; `热门电影` opened with `34 items`, Sort, Filter, Refresh, and a populated movie grid.
+  - Pressed `Escape`; Home returned to the same real rails and kept focus on `Hot Movies` `More`.
+  - Pressed `Down`; focus moved from `Hot Movies` `More` to the first `Hot Movies` poster (`奇幻变身大冒险`) instead of jumping to the next row.
+  - No app-content mouse clicks were used.
+
 ### 2026-07-06 - Home Library And Section Artwork Rail
 
 - App version: 0.1.0.102.

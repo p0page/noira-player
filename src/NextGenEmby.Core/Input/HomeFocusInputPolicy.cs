@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace NextGenEmby.Core.Input
 {
     public enum HomeFocusDirection
@@ -13,7 +15,8 @@ namespace NextGenEmby.Core.Input
         HeroPlay,
         HeroDetails,
         Library,
-        Row
+        Row,
+        RowMore
     }
 
     public sealed class HomeFocusTarget
@@ -35,7 +38,8 @@ namespace NextGenEmby.Core.Input
             HomeFocusTarget? current,
             HomeFocusDirection direction,
             int libraryCount,
-            int rowCount)
+            int rowCount,
+            IReadOnlyList<bool>? rowHasMore = null)
         {
             if (current == null)
             {
@@ -47,7 +51,7 @@ namespace NextGenEmby.Core.Input
                 case HomeFocusDirection.Down:
                     return MoveDown(current, libraryCount, rowCount);
                 case HomeFocusDirection.Up:
-                    return MoveUp(current, libraryCount);
+                    return MoveUp(current, libraryCount, rowHasMore);
                 case HomeFocusDirection.Right:
                     return MoveRight(current, libraryCount);
                 case HomeFocusDirection.Left:
@@ -74,6 +78,11 @@ namespace NextGenEmby.Core.Input
                 return rowCount > 0 ? new HomeFocusTarget(HomeFocusZone.Row, 0) : null;
             }
 
+            if (current.Zone == HomeFocusZone.RowMore)
+            {
+                return new HomeFocusTarget(HomeFocusZone.Row, current.Index);
+            }
+
             if (current.Zone == HomeFocusZone.Row && current.Index < rowCount - 1)
             {
                 return new HomeFocusTarget(HomeFocusZone.Row, current.Index + 1);
@@ -82,11 +91,16 @@ namespace NextGenEmby.Core.Input
             return null;
         }
 
-        private static HomeFocusTarget? MoveUp(HomeFocusTarget current, int libraryCount)
+        private static HomeFocusTarget? MoveUp(HomeFocusTarget current, int libraryCount, IReadOnlyList<bool>? rowHasMore)
         {
             if (current.Zone == HomeFocusZone.Library)
             {
                 return new HomeFocusTarget(HomeFocusZone.HeroPlay, 0);
+            }
+
+            if (current.Zone == HomeFocusZone.RowMore)
+            {
+                return MoveUpFromRowIndex(current.Index, libraryCount);
             }
 
             if (current.Zone != HomeFocusZone.Row)
@@ -94,9 +108,16 @@ namespace NextGenEmby.Core.Input
                 return null;
             }
 
-            if (current.Index > 0)
+            return HasMore(rowHasMore, current.Index)
+                ? new HomeFocusTarget(HomeFocusZone.RowMore, current.Index)
+                : MoveUpFromRowIndex(current.Index, libraryCount);
+        }
+
+        private static HomeFocusTarget MoveUpFromRowIndex(int rowIndex, int libraryCount)
+        {
+            if (rowIndex > 0)
             {
-                return new HomeFocusTarget(HomeFocusZone.Row, current.Index - 1);
+                return new HomeFocusTarget(HomeFocusZone.Row, rowIndex - 1);
             }
 
             return libraryCount > 0
@@ -132,6 +153,14 @@ namespace NextGenEmby.Core.Input
             }
 
             return null;
+        }
+
+        private static bool HasMore(IReadOnlyList<bool>? rowHasMore, int rowIndex)
+        {
+            return rowHasMore != null &&
+                rowIndex >= 0 &&
+                rowIndex < rowHasMore.Count &&
+                rowHasMore[rowIndex];
         }
     }
 }

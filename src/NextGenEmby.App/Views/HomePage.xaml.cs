@@ -31,7 +31,9 @@ namespace NextGenEmby.App.Views
         private Control? _lastHomeFocusTarget;
         private readonly List<Button> _libraryButtons = new List<Button>();
         private readonly List<Button> _rowFirstButtons = new List<Button>();
+        private readonly List<Button?> _rowMoreButtons = new List<Button?>();
         private readonly Dictionary<Button, int> _rowButtonIndexes = new Dictionary<Button, int>();
+        private readonly Dictionary<Button, int> _rowMoreButtonIndexes = new Dictionary<Button, int>();
         private int _loadGeneration;
         private bool _hasRenderedHomeContent;
         private bool _isLoadingHome;
@@ -198,7 +200,8 @@ namespace NextGenEmby.App.Views
                 current,
                 direction.Value,
                 _libraryButtons.Count,
-                _rowFirstButtons.Count);
+                _rowFirstButtons.Count,
+                CreateRowMoreAvailability());
 
             return TryMoveFocus(ResolveHomeFocusControl(next));
         }
@@ -281,6 +284,14 @@ namespace NextGenEmby.App.Views
                 }
             }
 
+            foreach (var moreButton in _rowMoreButtonIndexes.Keys)
+            {
+                if (IsFocusWithin(focusedElement, moreButton))
+                {
+                    return moreButton;
+                }
+            }
+
             return null;
         }
 
@@ -308,6 +319,12 @@ namespace NextGenEmby.App.Views
                 return new HomeFocusTarget(HomeFocusZone.Row, rowIndex);
             }
 
+            var rowMoreIndex = GetRowMoreButtonIndex(control);
+            if (rowMoreIndex >= 0)
+            {
+                return new HomeFocusTarget(HomeFocusZone.RowMore, rowMoreIndex);
+            }
+
             return null;
         }
 
@@ -331,6 +348,10 @@ namespace NextGenEmby.App.Views
                 case HomeFocusZone.Row:
                     return target.Index >= 0 && target.Index < _rowFirstButtons.Count
                         ? _rowFirstButtons[target.Index]
+                        : null;
+                case HomeFocusZone.RowMore:
+                    return target.Index >= 0 && target.Index < _rowMoreButtons.Count
+                        ? _rowMoreButtons[target.Index]
                         : null;
                 default:
                     return null;
@@ -370,6 +391,29 @@ namespace NextGenEmby.App.Views
 
             int rowIndex;
             return _rowButtonIndexes.TryGetValue(button, out rowIndex) ? rowIndex : -1;
+        }
+
+        private int GetRowMoreButtonIndex(Control? control)
+        {
+            var button = control as Button;
+            if (button == null)
+            {
+                return -1;
+            }
+
+            int rowIndex;
+            return _rowMoreButtonIndexes.TryGetValue(button, out rowIndex) ? rowIndex : -1;
+        }
+
+        private bool[] CreateRowMoreAvailability()
+        {
+            var rowHasMore = new bool[_rowFirstButtons.Count];
+            for (var index = 0; index < rowHasMore.Length && index < _rowMoreButtons.Count; index++)
+            {
+                rowHasMore[index] = _rowMoreButtons[index] != null;
+            }
+
+            return rowHasMore;
         }
 
         private static bool IsFocusWithin(object focusedElement, DependencyObject target)
@@ -982,6 +1026,7 @@ namespace NextGenEmby.App.Views
                 return;
             }
 
+            var rowIndex = _rowFirstButtons.Count;
             var section = new StackPanel
             {
                 Spacing = 12
@@ -997,9 +1042,10 @@ namespace NextGenEmby.App.Views
                 FontWeight = Windows.UI.Text.FontWeights.SemiBold,
                 Foreground = (Brush)Application.Current.Resources["AppTextBrush"]
             });
+            Button? moreButton = null;
             if (moreRequest != null)
             {
-                var moreButton = new Button
+                moreButton = new Button
                 {
                     Content = "More",
                     MinWidth = 86,
@@ -1010,6 +1056,8 @@ namespace NextGenEmby.App.Views
                     Tag = moreRequest
                 };
                 moreButton.Click += LibraryButton_OnClick;
+                moreButton.GotFocus += HomeFocusTarget_OnGotFocus;
+                _rowMoreButtonIndexes[moreButton] = rowIndex;
                 Grid.SetColumn(moreButton, 1);
                 header.Children.Add(moreButton);
             }
@@ -1030,7 +1078,6 @@ namespace NextGenEmby.App.Views
                 Spacing = 14
             };
 
-            var rowIndex = _rowFirstButtons.Count;
             Button? firstRowButton = null;
             foreach (var item in items)
             {
@@ -1047,6 +1094,7 @@ namespace NextGenEmby.App.Views
             if (firstRowButton != null)
             {
                 _rowFirstButtons.Add(firstRowButton);
+                _rowMoreButtons.Add(moreButton);
             }
 
             scroller.Content = panel;
@@ -1058,7 +1106,9 @@ namespace NextGenEmby.App.Views
         {
             RowsPanel.Children.Clear();
             _rowFirstButtons.Clear();
+            _rowMoreButtons.Clear();
             _rowButtonIndexes.Clear();
+            _rowMoreButtonIndexes.Clear();
         }
 
         private void RegisterRowButton(Button button, int rowIndex)

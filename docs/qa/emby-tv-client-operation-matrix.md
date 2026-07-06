@@ -16,7 +16,7 @@ Status values:
 
 | Operation | Keyboard Path | Status | Evidence | Next Work |
 | --- | --- | --- | --- | --- |
-| Launch installed app into saved session | App launch, wait | Verified | 0.1.0.131 launched to Home, recovered real saved-session Media Libraries and rows after guarded interactive loads | Keep startup diagnostics active |
+| Launch installed app into saved session | App launch, wait | Verified | 0.1.0.132 launched to Home with the saved Emby session; 0.1.0.131 recovered real Media Libraries and rows after guarded interactive loads | Keep startup diagnostics active |
 | Log in from empty session | Tab/Enter through login fields | Implemented | Login page and credential store exist | Re-run with cleared session before completion |
 | Failed login recovery | Enter invalid login, edit fields | Partial | UI has login status handling | Add explicit keyboard-only failure run |
 | Open and close guide from Home | `M`, `Escape` | Verified | 0.1.0.77 guide route fixed | Add visual screenshot pass after major shell changes |
@@ -28,10 +28,11 @@ Status values:
 | Hero play/resume focus | Launch Home | Verified | 0.1.0.104 Home focused Play on hero | Validate on non-resumable libraries |
 | Move from hero to rails | `Down` | Verified | 0.1.0.104 moved to Media Libraries rail | Keep `StartBringIntoView` behavior |
 | Move horizontally across section cards | `Right`, `Left` | Verified | 0.1.0.104 focused `热门剧集`; 0.1.0.102 kept focused `日漫` visible | Validate at far-right end of very long rails |
-| Open media library card | `Return` | Verified | 0.1.0.131 `Down`, `Return` opened `热门电影` from Home with `34 items`; 0.1.0.104 opened `热门剧集`; 0.1.0.102 opened `日漫` | Add route for section `More` buttons |
+| Open media library card | `Return` | Verified | 0.1.0.131 `Down`, `Return` opened `热门电影` from Home with `34 items`; 0.1.0.104 opened `热门剧集`; 0.1.0.102 opened `日漫` | Keep as regression route |
 | Return from library to originating Home card | `Escape` | Verified | 0.1.0.104 preserved `热门剧集` focus | Keep as regression route |
+| Open section More action | `Down` to row, `Up`, `Return` | Verified | 0.1.0.132 `Down`, `Down`, `Down`, `Up` focused Hot Movies `More`; `Return` opened `热门电影` with `34 items`; `Escape` returned Home and `Down` from `More` focused the first Hot Movies poster | Add far-right and lower-row `More` stress route |
 | Continue Watching item route | `Down` to row, `Return` | Implemented | Home resume cards and Details/Playback requests exist | Fresh keyboard run needed |
-| Server-configured home sections | Rail navigation | Verified | 0.1.0.102 parsed many server categories with section artwork | Add far-end and `More` validation |
+| Server-configured home sections | Rail navigation | Verified | 0.1.0.132 validated Home row `More` for Hot Movies; 0.1.0.102 parsed many server categories with section artwork | Add far-end lower-row validation |
 
 ## Guide Rail
 
@@ -113,4 +114,4 @@ Status values:
 2. Playback More drawer needs a fresh keyboard validation pass with real audio/subtitle streams.
 3. Live TV and Music have dedicated browse shells, but both still need positive validation on servers that expose channels or real music items.
 4. Search error recovery now has a tested timeout guard, but still needs a deliberate offline/server-failure keyboard run.
-5. Theme work should keep promoting repeated spacing, typography, focus, and component states into shared resources. The 0.1.0.129 pass centralized Library/Search poster-grid dimensions and common card/empty-state typography; remaining one-off page measurements should keep moving into skin resources before full theme swapping.
+5. Theme work should keep promoting repeated spacing, typography, focus, and component states into shared resources. The 0.1.0.132 pass aligned core runtime colors with `docs/DESIGN.md`; the 0.1.0.129 pass centralized Library/Search poster-grid dimensions and common card/empty-state typography. Remaining one-off page measurements should keep moving into skin resources before full theme swapping.
