@@ -41,7 +41,7 @@ Status values:
 | Open guide without leaving current page | `M` | Verified | 0.1.0.77 fixed guide overlay behavior | Validate over Search and Playback boundaries |
 | Navigate Home/Search/Movies/Shows | `M`, arrows, `Return` | Verified | 0.1.0.77 and later runs | Keep guide focus restoration tests |
 | Navigate Collections/Playlists/Favorites/Unwatched | `M`, arrows, `Return` | Verified | 0.1.0.78 run opened Playlists, Favorites, Unwatched | Add fresh visual screenshots |
-| Navigate Live TV/Music/Photos | `M`, arrows, `Return` | Implemented | Main guide destinations exist; 0.1.0.120 debug route opened Photos with TV empty-state recovery | Need real Guide-keyboard run for Live TV/Music and a positive Photos library |
+| Navigate Live TV/Music/Photos | `M`, arrows, `Return` | Verified | Main guide destinations exist; 0.1.0.144 keyboard/UIA route opened Guide from Home, navigated to Live TV, reopened Guide to Music, then reopened Guide to Photos; 0.1.0.120 debug route opened Photos with TV empty-state recovery | Keep as Guide regression route; positive Photos library still depends on server data |
 
 ## Library Browsing
 
@@ -93,11 +93,11 @@ Status values:
 
 | Operation | Keyboard Path | Status | Evidence | Next Work |
 | --- | --- | --- | --- | --- |
-| Live TV channel browsing | Guide Live TV or debug route `livetv` | Partial | 0.1.0.122 opens a dedicated Live TV page; Core API tests cover `/LiveTv/Info`, `/LiveTv/Channels`, and `/LiveTv/Programs`; current server returned no channels and focused Retry | Validate a positive channel list on a Live TV-enabled server |
+| Live TV channel browsing | Guide Live TV or debug route `livetv` | Partial | 0.1.0.144 Guide-keyboard run opened Live TV and showed `Live TV unavailable`, `This server did not return Live TV channels`, and focused recovery controls; 0.1.0.122 opens a dedicated Live TV page; Core API tests cover `/LiveTv/Info`, `/LiveTv/Channels`, and `/LiveTv/Programs` | Validate a positive channel list on a Live TV-enabled server |
 | Live TV playback unsupported recovery | Open channel or debug route `livetv-unsupported` | Verified | 0.1.0.122 shows a focused `Live TV playback unavailable` layer; Escape closes only that layer and returns focus to `Refresh live TV` | Re-run from a real channel when server channels exist |
-| Music browsing | Guide Music or debug route `music` | Implemented | 0.1.0.125 opens a dedicated Music page with Albums/Songs/Preview columns; Core tests cover MusicAlbum/Audio queries and type guards; current server returned no true `MusicAlbum` or `Audio` after filtering out server section cards | Validate positive album/song rows on a server with a real music library; add artist hierarchy when artist metadata is exposed |
+| Music browsing | Guide Music or debug route `music` | Implemented | 0.1.0.144 Guide-keyboard run opened Music and showed Albums/Songs/Preview columns with `No music found`; 0.1.0.125 opens a dedicated Music page with Albums/Songs/Preview columns; Core tests cover MusicAlbum/Audio queries and type guards; current server returned no true `MusicAlbum` or `Audio` after filtering out server section cards | Validate positive album/song rows on a server with a real music library; add artist hierarchy when artist metadata is exposed |
 | Music playback unsupported recovery | Open audio or debug route `music-unsupported` | Verified | 0.1.0.125 shows a focused `Music playback unavailable` layer; Escape closes only that layer and returns to the Music page without stale Loading labels | Re-run from a real audio item when the server has songs |
-| Photos browsing | Guide Photos or debug route `photos` | Implemented | 0.1.0.120 opened Photos with `No items found` and focused `Retry` when the server returned no Photo items | Validate a server library that contains Photo items/folders |
+| Photos browsing | Guide Photos or debug route `photos` | Implemented | 0.1.0.144 Guide-keyboard run opened Photos from the Guide and showed `No items found`; 0.1.0.120 opened Photos with `No items found` and focused `Retry` when the server returned no Photo items | Validate a server library that contains Photo items/folders |
 | Photo viewer and B recovery | Open Photo item or debug route `photo` | Verified | 0.1.0.120 `photo` route opened an immersive viewer with hidden Guide rail, focused Back, fallback panel, and Escape returned to Home | Validate positive image load when a real Photo item is available |
 
 ## Settings And Diagnostics
@@ -113,6 +113,6 @@ Status values:
 
 1. Details still needs visible similar-items validation plus live add-to success on a disposable collection/playlist target.
 2. Playback stream switching still needs fresh keyboard validation on real multi-audio/subtitle-rich media; the 0.1.0.138 pass verified transport focus activation, pause/resume, seek-forward button activation, and More open/close, while 0.1.0.144 verified seek-preview cancel/confirm through the deterministic manual direct-stream fixture.
-3. Live TV and Music have dedicated browse shells, but both still need positive validation on servers that expose channels or real music items.
+3. Live TV, Music, and Photos are reachable from the Guide with keyboard input, but still need positive validation on servers that expose channels, real music items, or photo folders.
 4. Search error recovery now has a tested timeout guard, but still needs a deliberate offline/server-failure keyboard run.
 5. Theme work should keep promoting repeated spacing, typography, focus, and component states into shared resources. The 0.1.0.133 pass confirmed the runtime palette matches `docs/DESIGN.md` and moved Details measurements into shared resources; the 0.1.0.132 pass aligned core runtime colors; the 0.1.0.129 pass centralized Library/Search poster-grid dimensions and common card/empty-state typography. Remaining one-off page measurements should keep moving into skin resources before full theme swapping.

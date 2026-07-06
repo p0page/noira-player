@@ -1077,3 +1077,22 @@ Then continue design and implementation until the route passes.
   - `Seek preview and cancel` is now runtime `Verified` for the local keyboard surrogate route.
 - Limitation:
   - This validates the local keyboard surrogate and native direct-stream route. A later pass should still re-run the same behavior on real Emby media after the saved session is restored, and on actual controller thumbstick input when the Xbox is available.
+
+### 2026-07-06 - Guide Live TV Music Photos Keyboard Route
+
+- App version: 0.1.0.144.
+- Scope: validate the main Guide route to Live TV, Music, and Photos on the restored saved Emby session.
+- Keyboard/UIA validation:
+  - Started from Home with real saved-session rows visible.
+  - Pressed `M`; Guide opened with Home focused and visible routes Home, Search, Movies, Shows, Live TV, Collections, Playlists, Music, Photos, Favorites, Unwatched, and Settings.
+  - Pressed `Down` four times and `Enter`; Live TV opened.
+  - Live TV showed `Select a channel`, `Live TV unavailable`, `This server did not return Live TV channels`, and `Retry`.
+  - Pressed `M`, then `Down` three times and `Enter`; Music opened.
+  - Music showed `Albums`, `0 albums`, `Songs`, `No songs returned`, `Select music`, and `No music found`.
+  - Pressed `M`, then `Down` once and `Enter`; Photos opened.
+  - Photos showed `Photos` and `No items found`.
+  - No app-content mouse clicks were used.
+- Result:
+  - `Navigate Live TV/Music/Photos` is now runtime `Verified` for keyboard Guide navigation.
+- Limitation:
+  - The current server still returned no Live TV channels, no true MusicAlbum/Audio rows, and no Photo items in this run. Positive browsing for those libraries remains a server-data gap rather than a Guide navigation gap.
