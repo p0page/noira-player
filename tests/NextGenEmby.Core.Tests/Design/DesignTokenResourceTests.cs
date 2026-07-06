@@ -113,6 +113,26 @@ public sealed class DesignTokenResourceTests
             string.Join(Environment.NewLine, offenders));
     }
 
+    [Fact]
+    public void Home_Wide_Card_Artwork_Treatment_Uses_Theme_Resources()
+    {
+        var root = FindRepositoryRoot();
+        var appXaml = File.ReadAllText(Path.Combine(root, "src", "NextGenEmby.App", "App.xaml"));
+        var homeSource = File.ReadAllText(Path.Combine(root, "src", "NextGenEmby.App", "Views", "HomePage.xaml.cs"));
+
+        Assert.Contains("<x:Double x:Key=\"TvHomeLibraryArtworkOpacity\">", appXaml);
+        Assert.Contains("<x:Double x:Key=\"TvHomeSectionArtworkOpacity\">", appXaml);
+        Assert.Contains("<x:Double x:Key=\"TvHomeWideCardTextScrimHeight\">", appXaml);
+        Assert.Contains("GetDoubleResource(\"TvHomeLibraryArtworkOpacity\"", homeSource);
+        Assert.Contains("GetDoubleResource(\"TvHomeSectionArtworkOpacity\"", homeSource);
+        Assert.Contains("CreateHomeWideCardTextScrim()", homeSource);
+        Assert.Contains("LinearGradientBrush", homeSource);
+        Assert.Contains("AppTransparentColor", homeSource);
+        Assert.Contains("AppCardScrimColor", homeSource);
+        Assert.DoesNotContain("Opacity = 0.62", homeSource);
+        Assert.DoesNotContain("Opacity = 0.68", homeSource);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

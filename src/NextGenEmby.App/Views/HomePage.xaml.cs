@@ -914,7 +914,7 @@ namespace NextGenEmby.App.Views
                 {
                     Background = previewBrush,
                     CornerRadius = new CornerRadius(8),
-                    Opacity = 0.62
+                    Opacity = GetDoubleResource("TvHomeLibraryArtworkOpacity", 0.88)
                 });
                 root.Children.Add(new Border
                 {
@@ -933,6 +933,7 @@ namespace NextGenEmby.App.Views
                 CornerRadius = new CornerRadius(8, 8, 0, 0)
             });
 
+            root.Children.Add(CreateHomeWideCardTextScrim());
             root.Children.Add(new StackPanel
             {
                 Margin = new Thickness(20),
@@ -1006,7 +1007,7 @@ namespace NextGenEmby.App.Views
                 {
                     Background = artworkBrush,
                     CornerRadius = new CornerRadius(8),
-                    Opacity = 0.68
+                    Opacity = GetDoubleResource("TvHomeSectionArtworkOpacity", 0.9)
                 });
                 root.Children.Add(new Border
                 {
@@ -1024,6 +1025,7 @@ namespace NextGenEmby.App.Views
                 CornerRadius = new CornerRadius(0, 3, 3, 0)
             });
 
+            root.Children.Add(CreateHomeWideCardTextScrim());
             root.Children.Add(new StackPanel
             {
                 Margin = new Thickness(20),
@@ -1055,9 +1057,52 @@ namespace NextGenEmby.App.Views
             return button;
         }
 
+        private static Border CreateHomeWideCardTextScrim()
+        {
+            var scrim = new LinearGradientBrush
+            {
+                StartPoint = new Windows.Foundation.Point(0, 0),
+                EndPoint = new Windows.Foundation.Point(0, 1)
+            };
+            scrim.GradientStops.Add(new GradientStop
+            {
+                Color = (Windows.UI.Color)Application.Current.Resources["AppTransparentColor"],
+                Offset = 0
+            });
+            scrim.GradientStops.Add(new GradientStop
+            {
+                Color = (Windows.UI.Color)Application.Current.Resources["AppCardScrimColor"],
+                Offset = 0.72
+            });
+            scrim.GradientStops.Add(new GradientStop
+            {
+                Color = (Windows.UI.Color)Application.Current.Resources["AppCardScrimColor"],
+                Offset = 1
+            });
+
+            return new Border
+            {
+                Height = GetDoubleResource("TvHomeWideCardTextScrimHeight", 92),
+                VerticalAlignment = VerticalAlignment.Bottom,
+                Background = scrim,
+                CornerRadius = new CornerRadius(0, 0, 8, 8)
+            };
+        }
+
+        private static double GetDoubleResource(string key, double fallback)
+        {
+            var resources = Application.Current.Resources;
+            if (resources.ContainsKey(key) && resources[key] is double value)
+            {
+                return value;
+            }
+
+            return fallback;
+        }
+
         private ImageBrush? CreateLibraryArtworkBrush(EmbyLibraryView view, int maxWidth)
         {
-            if (_client == null || _session == null || view == null || string.IsNullOrWhiteSpace(view.Id))
+            if (view == null || string.IsNullOrWhiteSpace(view.Id))
             {
                 return null;
             }
@@ -1067,7 +1112,7 @@ namespace NextGenEmby.App.Views
 
         private ImageBrush? CreateHomeSectionArtworkBrush(HomeSectionRow row, int maxWidth)
         {
-            if (_client == null || _session == null || row == null || string.IsNullOrWhiteSpace(row.SectionId))
+            if (row == null || string.IsNullOrWhiteSpace(row.SectionId))
             {
                 return null;
             }

@@ -36,6 +36,22 @@ public sealed class HomeAccessibilitySourceTests
         Assert.Contains("AutomationProperties.Name=\"Details\"", xaml);
     }
 
+    [Fact]
+    public void Home_Fixture_Artwork_Does_Not_Require_Live_Client_Session()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            FindRepositoryRoot(),
+            "src",
+            "NextGenEmby.App",
+            "Views",
+            "HomePage.xaml.cs"));
+
+        Assert.DoesNotContain("if (_client == null || _session == null || view == null", source);
+        Assert.DoesNotContain("if (_client == null || _session == null || row == null", source);
+        Assert.Contains("CreateArtworkBrush(EmbyArtworkPolicy.SelectLibraryWideArtwork(view, maxWidth))", source);
+        Assert.Contains("CreateArtworkBrush(EmbyArtworkPolicy.SelectHomeSectionWideArtwork(new EmbyHomeSection", source);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

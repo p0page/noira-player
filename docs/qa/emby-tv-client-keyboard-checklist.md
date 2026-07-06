@@ -1252,3 +1252,31 @@ Then continue design and implementation until the route passes.
 - Limitation:
   - The fixture proves Home layout, focus, screenshot capture, and section coverage without a live Emby session. Real server artwork still needs a saved-session pass.
   - The generated QA artwork is intentionally local and repeatable, but it currently reads very dark under the Home card washes. A later visual polish pass should tune artwork visibility while preserving text contrast.
+
+### 2026-07-06 - Home Wide Artwork Visibility Polish
+
+- App version: 0.1.0.156.
+- Scope: make Home media-library and server-section cards consume their own wide artwork in the deterministic fixture route, and move artwork visibility controls into shared Matte Cinema Fluent resources.
+- Root cause:
+  - `CreateLibraryArtworkBrush` and `CreateHomeSectionArtworkBrush` returned `null` when `_client` or `_session` was absent.
+  - That was correct for live Emby URL construction, but wrong for the DEBUG `home-fixture` route because fixture artwork is resolved from the packaged `Assets/QaHome` URI map before a live client is needed.
+  - The earlier dark-card screenshot therefore combined two issues: fixture cards were falling back too often, and the wide-card image treatment was still hard-coded.
+- Visual/token changes:
+  - Added `TvHomeLibraryArtworkOpacity`, `TvHomeSectionArtworkOpacity`, and `TvHomeWideCardTextScrimHeight` resources.
+  - Reduced `library_artwork_wash` and `section_artwork_wash` so artwork carries more of the card surface.
+  - Replaced the Home wide-card bottom text band with a transparent-to-scrim gradient.
+  - Regenerated local QA artwork with a lighter global scrim so screenshots represent visible media artwork instead of nearly black placeholders.
+- Automated verification:
+  - TDD red path confirmed Home wide-card artwork treatment was not tokenized before implementation.
+  - TDD red path confirmed the QA artwork generator still used the old heavy global scrim.
+  - TDD red path confirmed fixture artwork was blocked by live `_client/_session` checks.
+  - Targeted design/fixture/accessibility tests passed: 10 total.
+  - App Debug x64 build passed, producing `NextGenEmby.App_0.1.0.156_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.156`.
+- Keyboard-only validation:
+  - Wrote `dev-command.json` with route `home-fixture` and launched the installed app.
+  - `dev-command-result.txt` reported `completed / home-fixture`.
+  - Using keyboard input only, focus moved from `Play` to `Hot Movies`, then horizontally to `Hot TV Series` and `Douban Top Rated`, then down to `Aurora Protocol`.
+  - Screenshots were captured from the UWP `ApplicationFrameHost` window under `C:\Users\yqzzx\AppData\Local\Temp\nextgenemby-home-fixture-156-shots`.
+  - The media library rail now shows the fixture wide artwork on library/section cards instead of mostly empty matte surfaces.
+  - No app-content mouse clicks were used.

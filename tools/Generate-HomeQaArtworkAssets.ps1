@@ -81,7 +81,7 @@ function New-QaArtwork {
     $graphics.FillRectangle($groundBrush, 0, $horizon, $Width, $Height - $horizon)
     $groundBrush.Dispose()
 
-    $washBrush = New-Brush (Color-WithAlpha $accent 48)
+    $washBrush = New-Brush (Color-WithAlpha $accent 72)
     $graphics.FillEllipse($washBrush, -($Width * 0.22), -($Height * 0.18), $Width * 0.75, $Height * 0.55)
     $graphics.FillEllipse($washBrush, $Width * 0.56, $Height * 0.10, $Width * 0.56, $Height * 0.46)
     $washBrush.Dispose()
@@ -96,7 +96,7 @@ function New-QaArtwork {
     }
     $frameBrush.Dispose()
 
-    $subjectBrush = New-Brush (Color-WithAlpha $accent2 178)
+    $subjectBrush = New-Brush (Color-WithAlpha $accent2 218)
     $subjectX = [float]($Width * (0.45 + (($Seed % 3) * 0.08)))
     $subjectY = [float]($Height * 0.24)
     $subjectW = [float]($Width * 0.20)
@@ -108,7 +108,7 @@ function New-QaArtwork {
     $graphics.DrawLine($linePen, [float]($Width * 0.08), [float]($Height * 0.78), [float]($Width * 0.92), [float]($Height * 0.78))
     $linePen.Dispose()
 
-    $scrimBrush = New-Brush ([System.Drawing.Color]::FromArgb(80, 0, 0, 0))
+    $scrimBrush = New-Brush ([System.Drawing.Color]::FromArgb(24, 0, 0, 0))
     $graphics.FillRectangle($scrimBrush, 0, 0, $Width, $Height)
     $scrimBrush.Dispose()
 

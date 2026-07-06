@@ -37,8 +37,8 @@
             <Color x:Key="AppHeroGradientStartColor">#F2050607</Color>
             <Color x:Key="AppHeroGradientMidColor">#D9050607</Color>
             <Color x:Key="AppHeroGradientEndColor">#66050607</Color>
-            <Color x:Key="AppLibraryArtworkWashColor">#A603060A</Color>
-            <Color x:Key="AppSectionArtworkWashColor">#9C03060A</Color>
+            <Color x:Key="AppLibraryArtworkWashColor">#4403060A</Color>
+            <Color x:Key="AppSectionArtworkWashColor">#3D03060A</Color>
             <Color x:Key="AppArtworkDimColor">#22000000</Color>
             <Color x:Key="AppHeroPosterDimColor">#18000000</Color>
             <Color x:Key="AppDetailsBackdropWashColor">#D9101418</Color>
@@ -112,6 +112,9 @@
             <x:Double x:Key="TvCompactArtworkSize">64</x:Double>
             <x:Double x:Key="TvPosterCardWidth">168</x:Double>
             <x:Double x:Key="TvPosterCardHeight">250</x:Double>
+            <x:Double x:Key="TvHomeLibraryArtworkOpacity">0.88</x:Double>
+            <x:Double x:Key="TvHomeSectionArtworkOpacity">0.9</x:Double>
+            <x:Double x:Key="TvHomeWideCardTextScrimHeight">92</x:Double>
             <x:Double x:Key="TvDetailsPosterWidth">240</x:Double>
             <x:Double x:Key="TvDetailsPosterHeight">360</x:Double>
             <x:Double x:Key="TvDetailsColumnSpacing">34</x:Double>

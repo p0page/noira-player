@@ -31,8 +31,8 @@ colors:
   chrome_pressed: "#F0212932"
   hero_gradient_start: "#F2050607"
   hero_gradient_end: "#66050607"
-  library_artwork_wash: "#A603060A"
-  section_artwork_wash: "#9C03060A"
+  library_artwork_wash: "#4403060A"
+  section_artwork_wash: "#3D03060A"
   artwork_dim: "#22000000"
   hero_poster_dim: "#18000000"
   modal_scrim: "#CC050607"
@@ -255,6 +255,7 @@ Shared TV resources should continue migrating into `App.xaml` before page-local 
 - Surfaces: panel surface, list button, icon button, nav button, modal scrim, artwork dim, hero wash, details wash, playback canvas, playback overlay, playback drawer, and immersive control brush.
 - Media rows: shared `TvListButtonStyle`, `TvListArtworkSize`, and `TvCompactArtworkSize` for browse-only list shells such as Live TV and Music.
 - Poster grids: shared `TvPosterGridItemStyle`, `TvPosterGridItemMargin`, `TvPosterCardWidth`, `TvPosterCardHeight`, `TvPosterCardCornerRadius`, `TvPosterCardScrimPadding`, poster title/meta text styles, fallback-initial style, and empty-state title/body styles for Library and Search.
+- Home wide cards: library and server-section artwork opacity plus the bottom text scrim height are shared resources (`TvHomeLibraryArtworkOpacity`, `TvHomeSectionArtworkOpacity`, and `TvHomeWideCardTextScrimHeight`) so skins can decide how strongly artwork carries the page.
 - Shared view usage: Home, Library, Search, Details, and Playback no longer own page-local raw hex colors for artwork dimming, sheet scrims, playback overlays, or green-action foreground text.
 - Playback chrome uses the same canvas and surface RGB families as the rest of the app. The OSD and drawer may vary alpha for subtitle/video readability, but they must not introduce a separate pure-black palette branch.
 - App identity: `tools/Generate-AppIconAssets.ps1` owns the current icon color and geometry tokens for regenerating the Store, square, wide, and splash PNG assets.
@@ -280,6 +281,7 @@ The current XAML token migration has started with:
 - shared TV text, panel, diagnostics, icon button, nav button, list button, badge text, and settings checkbox styles;
 - shared overlay/action resources: `AppOnActionBrush`, `AppArtworkDimBrush`, `AppModalScrimBrush`, `AppPlaybackOverlayBrush`, `AppPlaybackDrawerBrush`, and the hero/details/home artwork wash colors.
 - shared poster-grid resources for Library and Search cards, including card size, item margin, corner radius, scrim padding, card title/meta text, fallback initials, and empty-state typography.
+- shared Home wide-card artwork resources for media-library and server-section tiles, separating full-image wash from the stronger bottom text scrim.
 - playback canvas, OSD, and drawer resources reuse the DESIGN.md canvas/surface color families, with only opacity differing by layer.
 
 New UI surfaces should follow this migration order:

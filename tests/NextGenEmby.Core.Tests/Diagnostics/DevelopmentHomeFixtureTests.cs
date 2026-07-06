@@ -50,6 +50,18 @@ public sealed class DevelopmentHomeFixtureTests
         }
     }
 
+    [Fact]
+    public void Qa_Artwork_Generator_Uses_Light_Global_Scrim()
+    {
+        var script = File.ReadAllText(Path.Combine(
+            FindRepositoryRoot(),
+            "tools",
+            "Generate-HomeQaArtworkAssets.ps1"));
+
+        Assert.Contains("FromArgb(24, 0, 0, 0)", script);
+        Assert.DoesNotContain("FromArgb(80, 0, 0, 0)", script);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
