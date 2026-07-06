@@ -34,6 +34,11 @@ internal static class Program
                 return RunSummarize(args);
             }
 
+            if (string.Equals(args[0], "compare-suite", StringComparison.OrdinalIgnoreCase))
+            {
+                return RunCompareSuite(args);
+            }
+
             throw new ArgumentException("Unknown command: " + args[0]);
         }
         catch (Exception ex)
@@ -45,22 +50,22 @@ internal static class Program
 
     private static int RunCompare(string[] args)
     {
-            var options = ParseCompareOptions(args);
-            var baseline = ReadJson<PlaybackQualityReport>(options.BaselinePath);
-            var candidate = ReadJson<PlaybackQualityReport>(options.CandidatePath);
-            var context = new PlaybackQualityComparisonContext
-            {
-                StallComparisonCountThreshold = options.StallComparisonCountThreshold
-            };
+        var options = ParseCompareOptions(args);
+        var baseline = ReadJson<PlaybackQualityReport>(options.BaselinePath);
+        var candidate = ReadJson<PlaybackQualityReport>(options.CandidatePath);
+        var context = new PlaybackQualityComparisonContext
+        {
+            StallComparisonCountThreshold = options.StallComparisonCountThreshold
+        };
 
-            foreach (var previousPath in options.PreviousComparisonPaths)
-            {
-                context.PreviousComparisons.Add(ReadJson<PlaybackQualityRunComparison>(previousPath));
-            }
+        foreach (var previousPath in options.PreviousComparisonPaths)
+        {
+            context.PreviousComparisons.Add(ReadJson<PlaybackQualityRunComparison>(previousPath));
+        }
 
-            var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate, context);
-            WriteJson(comparison, options.OutputPath);
-            return 0;
+        var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate, context);
+        WriteJson(comparison, options.OutputPath);
+        return 0;
     }
 
     private static int RunSummarize(string[] args)
@@ -73,6 +78,39 @@ internal static class Program
         }
 
         WriteJson(PlaybackQualityComparisonSuiteAggregator.Summarize(comparisons), options.OutputPath);
+        return 0;
+    }
+
+    private static int RunCompareSuite(string[] args)
+    {
+        var options = ParseCompareSuiteOptions(args);
+        var reportPairs = FindReportPairs(options.BaselineDirectory, options.CandidateDirectory);
+        var comparisons = new List<PlaybackQualityRunComparison>();
+
+        foreach (var pair in reportPairs)
+        {
+            var baseline = ReadJson<PlaybackQualityReport>(pair.BaselinePath);
+            var candidate = ReadJson<PlaybackQualityReport>(pair.CandidatePath);
+            var context = new PlaybackQualityComparisonContext
+            {
+                StallComparisonCountThreshold = options.StallComparisonCountThreshold
+            };
+
+            var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate, context);
+            comparisons.Add(comparison);
+
+            if (!string.IsNullOrWhiteSpace(options.ComparisonsDirectory))
+            {
+                var comparisonOutputPath = Path.Combine(
+                    options.ComparisonsDirectory,
+                    pair.RelativePath);
+                WriteJson(comparison, comparisonOutputPath);
+            }
+        }
+
+        WriteJson(
+            PlaybackQualityComparisonSuiteAggregator.Summarize(comparisons),
+            options.OutputPath);
         return 0;
     }
 
@@ -151,6 +189,124 @@ internal static class Program
         return options;
     }
 
+    private static CompareSuiteOptions ParseCompareSuiteOptions(string[] args)
+    {
+        var options = new CompareSuiteOptions();
+        for (var index = 1; index < args.Length; index++)
+        {
+            var arg = args[index];
+            switch (arg)
+            {
+                case "--baseline-dir":
+                    options.BaselineDirectory = ReadValue(args, ref index, arg);
+                    break;
+                case "--candidate-dir":
+                    options.CandidateDirectory = ReadValue(args, ref index, arg);
+                    break;
+                case "--comparisons-dir":
+                    options.ComparisonsDirectory = ReadValue(args, ref index, arg);
+                    break;
+                case "--stall-threshold":
+                    options.StallComparisonCountThreshold = int.Parse(
+                        ReadValue(args, ref index, arg),
+                        System.Globalization.CultureInfo.InvariantCulture);
+                    break;
+                case "--output":
+                    options.OutputPath = ReadValue(args, ref index, arg);
+                    break;
+                default:
+                    throw new ArgumentException("Unknown compare-suite option: " + arg);
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(options.BaselineDirectory))
+        {
+            throw new ArgumentException("Missing required option --baseline-dir.");
+        }
+
+        if (string.IsNullOrWhiteSpace(options.CandidateDirectory))
+        {
+            throw new ArgumentException("Missing required option --candidate-dir.");
+        }
+
+        if (options.StallComparisonCountThreshold < 1)
+        {
+            throw new ArgumentException("--stall-threshold must be at least 1.");
+        }
+
+        return options;
+    }
+
+    private static List<ReportPair> FindReportPairs(
+        string baselineDirectory,
+        string candidateDirectory)
+    {
+        if (!Directory.Exists(baselineDirectory))
+        {
+            throw new DirectoryNotFoundException("Baseline directory not found: " + baselineDirectory);
+        }
+
+        if (!Directory.Exists(candidateDirectory))
+        {
+            throw new DirectoryNotFoundException("Candidate directory not found: " + candidateDirectory);
+        }
+
+        var baselineFiles = EnumerateJsonFilesByRelativePath(baselineDirectory);
+        var candidateFiles = EnumerateJsonFilesByRelativePath(candidateDirectory);
+        var pairs = new List<ReportPair>();
+
+        foreach (var baselineFile in baselineFiles)
+        {
+            if (!candidateFiles.TryGetValue(baselineFile.Key, out var candidatePath))
+            {
+                throw new FileNotFoundException(
+                    "Candidate report not found for relative path: " + baselineFile.Key);
+            }
+
+            pairs.Add(new ReportPair(
+                baselineFile.Key,
+                baselineFile.Value,
+                candidatePath));
+        }
+
+        foreach (var candidateFile in candidateFiles)
+        {
+            if (!baselineFiles.ContainsKey(candidateFile.Key))
+            {
+                throw new FileNotFoundException(
+                    "Baseline report not found for relative path: " + candidateFile.Key);
+            }
+        }
+
+        if (pairs.Count == 0)
+        {
+            throw new ArgumentException("No JSON reports found in baseline directory.");
+        }
+
+        pairs.Sort((left, right) => string.Compare(
+            left.RelativePath,
+            right.RelativePath,
+            StringComparison.OrdinalIgnoreCase));
+        return pairs;
+    }
+
+    private static Dictionary<string, string> EnumerateJsonFilesByRelativePath(string directory)
+    {
+        var fullRoot = Path.GetFullPath(directory);
+        var files = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var path in Directory.EnumerateFiles(
+            fullRoot,
+            "*.json",
+            SearchOption.AllDirectories))
+        {
+            var relativePath = Path.GetRelativePath(fullRoot, path);
+            files.Add(relativePath, path);
+        }
+
+        return files;
+    }
+
     private static string ReadValue(string[] args, ref int index, string optionName)
     {
         if (index + 1 >= args.Length || args[index + 1].StartsWith("--", StringComparison.Ordinal))
@@ -182,6 +338,12 @@ internal static class Program
             return;
         }
 
+        var directory = Path.GetDirectoryName(outputPath);
+        if (!string.IsNullOrWhiteSpace(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
+
         File.WriteAllText(outputPath, json);
     }
 
@@ -190,6 +352,7 @@ internal static class Program
         writer.WriteLine("Usage:");
         writer.WriteLine("  playback-quality compare --baseline <report.json> --candidate <report.json> [--previous <comparison.json>...] [--stall-threshold <n>] [--output <comparison.json>]");
         writer.WriteLine("  playback-quality summarize --comparison <comparison.json> [--comparison <comparison.json>...] [--output <suite.json>]");
+        writer.WriteLine("  playback-quality compare-suite --baseline-dir <reports-dir> --candidate-dir <reports-dir> [--comparisons-dir <comparison-dir>] [--stall-threshold <n>] [--output <suite.json>]");
     }
 
     private sealed class CompareOptions
@@ -205,5 +368,28 @@ internal static class Program
     {
         public string OutputPath { get; set; } = "";
         public List<string> ComparisonPaths { get; } = new List<string>();
+    }
+
+    private sealed class CompareSuiteOptions
+    {
+        public string BaselineDirectory { get; set; } = "";
+        public string CandidateDirectory { get; set; } = "";
+        public string ComparisonsDirectory { get; set; } = "";
+        public string OutputPath { get; set; } = "";
+        public int StallComparisonCountThreshold { get; set; } = 2;
+    }
+
+    private sealed class ReportPair
+    {
+        public ReportPair(string relativePath, string baselinePath, string candidatePath)
+        {
+            RelativePath = relativePath;
+            BaselinePath = baselinePath;
+            CandidatePath = candidatePath;
+        }
+
+        public string RelativePath { get; }
+        public string BaselinePath { get; }
+        public string CandidatePath { get; }
     }
 }

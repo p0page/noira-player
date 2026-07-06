@@ -9,6 +9,10 @@ try {
     $candidatePath = Join-Path $tempRoot 'candidate.json'
     $outputPath = Join-Path $tempRoot 'comparison.json'
     $suitePath = Join-Path $tempRoot 'suite.json'
+    $baselineDir = Join-Path $tempRoot 'baseline-suite'
+    $candidateDir = Join-Path $tempRoot 'candidate-suite'
+    $comparisonsDir = Join-Path $tempRoot 'suite-comparisons'
+    $suiteFromReportsPath = Join-Path $tempRoot 'suite-from-reports.json'
 
     @'
 {
@@ -121,6 +125,52 @@ try {
 
     if ($suite.totalComparisonCount -ne 1) {
         throw 'Expected playback quality CLI suite to include one comparison.'
+    }
+
+    New-Item -ItemType Directory -Path $baselineDir | Out-Null
+    New-Item -ItemType Directory -Path $candidateDir | Out-Null
+    Copy-Item -LiteralPath $baselinePath -Destination (Join-Path $baselineDir 'case-a.json')
+    Copy-Item -LiteralPath $candidatePath -Destination (Join-Path $candidateDir 'case-a.json')
+
+    Push-Location $repoRoot
+    try {
+        dotnet run `
+            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
+            --no-build `
+            -- compare-suite `
+            --baseline-dir $baselineDir `
+            --candidate-dir $candidateDir `
+            --comparisons-dir $comparisonsDir `
+            --output $suiteFromReportsPath
+        if ($LASTEXITCODE -ne 0) {
+            throw 'playback quality CLI compare-suite returned a non-zero exit code.'
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    if (-not (Test-Path -LiteralPath $suiteFromReportsPath)) {
+        throw 'Expected playback quality CLI compare-suite to write suite output.'
+    }
+
+    $suiteFromReports = Get-Content -Raw -LiteralPath $suiteFromReportsPath | ConvertFrom-Json
+    if ($suiteFromReports.action -ne 'accept-candidate') {
+        throw 'Expected playback quality CLI compare-suite action to accept candidate.'
+    }
+
+    if ($suiteFromReports.totalComparisonCount -ne 1) {
+        throw 'Expected playback quality CLI compare-suite to include one comparison.'
+    }
+
+    $comparisonFromSuitePath = Join-Path $comparisonsDir 'case-a.json'
+    if (-not (Test-Path -LiteralPath $comparisonFromSuitePath)) {
+        throw 'Expected playback quality CLI compare-suite to write individual comparison output.'
+    }
+
+    $comparisonFromSuite = Get-Content -Raw -LiteralPath $comparisonFromSuitePath | ConvertFrom-Json
+    if ($comparisonFromSuite.result -ne 'improved') {
+        throw 'Expected playback quality CLI compare-suite comparison result to be improved.'
     }
 
     Write-Output 'playback-quality-cli smoke ok'
