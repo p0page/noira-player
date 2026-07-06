@@ -763,6 +763,10 @@ namespace NextGenEmby.App
                     NavigateHome(replaceHistory: false);
                     return;
 
+                case "home-fixture":
+                    NavigateTo(typeof(HomePage), new HomeDevelopmentFixtureNavigationRequest());
+                    return;
+
                 case "movies":
                     NavigateLibrary(new LibraryNavigationRequest("Movies", "movies", "Movie"));
                     return;

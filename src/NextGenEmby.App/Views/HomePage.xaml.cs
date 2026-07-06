@@ -6,10 +6,12 @@ using System.Threading.Tasks;
 using NextGenEmby.App.Navigation;
 using NextGenEmby.App.Services;
 using NextGenEmby.App.Storage;
+using NextGenEmby.Core.Diagnostics;
 using NextGenEmby.Core.Emby;
 using NextGenEmby.Core.Input;
 using Windows.UI.Core;
 using Windows.UI.Xaml;
+using Windows.UI.Xaml.Automation;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Media;
@@ -36,6 +38,11 @@ namespace NextGenEmby.App.Views
         private int _loadGeneration;
         private bool _hasRenderedHomeContent;
         private bool _isLoadingHome;
+#if DEBUG
+        private HomeDevelopmentFixtureNavigationRequest? _developmentFixtureRequest;
+        private IReadOnlyDictionary<string, string> _developmentArtworkUris =
+            new Dictionary<string, string>(StringComparer.Ordinal);
+#endif
 
         public HomePage()
         {
@@ -45,6 +52,25 @@ namespace NextGenEmby.App.Views
             Unloaded += HomePage_OnUnloaded;
             HeroPlayButton.GotFocus += HomeFocusTarget_OnGotFocus;
             HeroDetailsButton.GotFocus += HomeFocusTarget_OnGotFocus;
+        }
+
+        protected override void OnNavigatedTo(NavigationEventArgs e)
+        {
+            base.OnNavigatedTo(e);
+#if DEBUG
+            var nextFixtureRequest = e.Parameter as HomeDevelopmentFixtureNavigationRequest;
+            if (_developmentFixtureRequest != nextFixtureRequest)
+            {
+                _hasRenderedHomeContent = false;
+                _lastHomeFocusTarget = null;
+            }
+
+            _developmentFixtureRequest = nextFixtureRequest;
+            if (_developmentFixtureRequest == null)
+            {
+                _developmentArtworkUris = new Dictionary<string, string>(StringComparer.Ordinal);
+            }
+#endif
         }
 
         private async void HomePage_OnLoaded(object sender, RoutedEventArgs e)
@@ -450,6 +476,13 @@ namespace NextGenEmby.App.Views
 
             try
             {
+#if DEBUG
+                if (_developmentFixtureRequest != null)
+                {
+                    RenderDevelopmentFixtureHome();
+                    return;
+                }
+#endif
                 var session = await _sessionStore.LoadAsync();
                 if (!CanApplyLoad(loadGeneration))
                 {
@@ -554,6 +587,46 @@ namespace NextGenEmby.App.Views
                 }
             }
         }
+
+#if DEBUG
+        private void RenderDevelopmentFixtureHome()
+        {
+            var fixture = DevelopmentHomeFixture.Create();
+            _client = null;
+            _session = null;
+            _developmentArtworkUris = fixture.ArtworkUris;
+
+            var configuredRows = fixture.ConfiguredRows
+                .Select(row => new HomeSectionRow(
+                    row.Title,
+                    row.SectionId,
+                    row.CollectionType,
+                    row.ParentItem,
+                    row.Items))
+                .ToList();
+
+            var popularRows = fixture.PopularRows
+                .Select(row => new LibraryContentRow(
+                    row.Title,
+                    row.Items,
+                    CreateLibraryRequest(
+                        row.Title,
+                        row.CollectionType,
+                        row.ParentId,
+                        row.SectionId)))
+                .ToList();
+
+            RenderHome(
+                fixture.ContinueItems,
+                fixture.NextUpItems,
+                fixture.LatestItems,
+                fixture.LibraryViews,
+                fixture.LibraryPreviews,
+                configuredRows,
+                popularRows,
+                isSupplementalRender: false);
+        }
+#endif
 
         private void RenderHome(
             IReadOnlyList<EmbyMediaItem> continueItems,
@@ -670,35 +743,26 @@ namespace NextGenEmby.App.Views
             HeroPosterFallbackBlock.Visibility = Visibility.Visible;
 
             var posterArtwork = EmbyArtworkPolicy.SelectPosterArtwork(item, 520);
-            if (_client != null && _session != null && posterArtwork != null)
+            var posterImage = CreateBitmapImage(posterArtwork);
+            if (posterImage != null)
             {
-                HeroPosterImage.Source = new BitmapImage(new Uri(_client.GetImageUrl(
-                    _session,
-                    posterArtwork.ItemId,
-                    posterArtwork.ImageType,
-                    posterArtwork.MaxWidth)));
+                HeroPosterImage.Source = posterImage;
                 HeroPosterFallbackBlock.Visibility = Visibility.Collapsed;
             }
 
             var logoArtwork = EmbyArtworkPolicy.SelectLogoArtwork(item, 720);
-            if (_client != null && _session != null && logoArtwork != null)
+            var logoImage = CreateBitmapImage(logoArtwork);
+            if (logoImage != null)
             {
-                HeroLogoImage.Source = new BitmapImage(new Uri(_client.GetImageUrl(
-                    _session,
-                    logoArtwork.ItemId,
-                    logoArtwork.ImageType,
-                    logoArtwork.MaxWidth)));
+                HeroLogoImage.Source = logoImage;
                 HeroLogoImage.Visibility = Visibility.Visible;
             }
 
             var heroArtwork = EmbyArtworkPolicy.SelectHeroArtwork(item, 1280);
-            if (_client != null && _session != null && heroArtwork != null)
+            var heroImage = CreateBitmapImage(heroArtwork);
+            if (heroImage != null)
             {
-                HeroBackdropImage.Source = new BitmapImage(new Uri(_client.GetImageUrl(
-                    _session,
-                    heroArtwork.ItemId,
-                    heroArtwork.ImageType,
-                    heroArtwork.MaxWidth)));
+                HeroBackdropImage.Source = heroImage;
             }
         }
 
@@ -823,6 +887,7 @@ namespace NextGenEmby.App.Views
             };
             button.GotFocus += HomeFocusTarget_OnGotFocus;
             button.Click += LibraryButton_OnClick;
+            AutomationProperties.SetName(button, string.IsNullOrWhiteSpace(view.Name) ? "Library" : view.Name);
 
             var root = new Grid();
             var background = new Border
@@ -914,6 +979,7 @@ namespace NextGenEmby.App.Views
             };
             button.GotFocus += HomeFocusTarget_OnGotFocus;
             button.Click += LibraryButton_OnClick;
+            AutomationProperties.SetName(button, row.Title);
 
             var root = new Grid();
             root.Children.Add(new Border
@@ -1056,6 +1122,7 @@ namespace NextGenEmby.App.Views
                 };
                 moreButton.Click += LibraryButton_OnClick;
                 moreButton.GotFocus += HomeFocusTarget_OnGotFocus;
+                AutomationProperties.SetName(moreButton, "More " + title);
                 _rowMoreButtonIndexes[moreButton] = rowIndex;
                 Grid.SetColumn(moreButton, 1);
                 header.Children.Add(moreButton);
@@ -1149,6 +1216,7 @@ namespace NextGenEmby.App.Views
                 UseSystemFocusVisuals = true
             };
             button.Click += ItemButton_OnClick;
+            AutomationProperties.SetName(button, string.IsNullOrWhiteSpace(item.Name) ? item.Id : item.Name);
 
             var root = new Grid
             {
@@ -1156,15 +1224,12 @@ namespace NextGenEmby.App.Views
             };
 
             var posterArtwork = EmbyArtworkPolicy.SelectPosterArtwork(item, 420);
-            if (_client != null && _session != null && posterArtwork != null)
+            var posterImage = CreateBitmapImage(posterArtwork);
+            if (posterImage != null)
             {
                 root.Background = new ImageBrush
                 {
-                    ImageSource = new BitmapImage(new Uri(_client.GetImageUrl(
-                        _session,
-                        posterArtwork.ItemId,
-                        posterArtwork.ImageType,
-                        posterArtwork.MaxWidth))),
+                    ImageSource = posterImage,
                     Stretch = Stretch.UniformToFill
                 };
             }
@@ -1369,20 +1434,52 @@ namespace NextGenEmby.App.Views
 
         private ImageBrush? CreateArtworkBrush(EmbyImageCandidate? candidate)
         {
-            if (_client == null || _session == null || candidate == null)
+            var image = CreateBitmapImage(candidate);
+            if (image == null)
             {
                 return null;
             }
 
             return new ImageBrush
             {
-                ImageSource = new BitmapImage(new Uri(_client.GetImageUrl(
-                    _session,
-                    candidate.ItemId,
-                    candidate.ImageType,
-                    candidate.MaxWidth))),
+                ImageSource = image,
                 Stretch = Stretch.UniformToFill
             };
+        }
+
+        private BitmapImage? CreateBitmapImage(EmbyImageCandidate? candidate)
+        {
+            var uri = CreateArtworkUri(candidate);
+            return string.IsNullOrWhiteSpace(uri) ? null : new BitmapImage(new Uri(uri));
+        }
+
+        private string? CreateArtworkUri(EmbyImageCandidate? candidate)
+        {
+            if (candidate == null)
+            {
+                return null;
+            }
+
+#if DEBUG
+            string developmentUri;
+            if (_developmentArtworkUris.TryGetValue(
+                DevelopmentHomeFixture.ArtworkKey(candidate.ItemId, candidate.ImageType),
+                out developmentUri))
+            {
+                return developmentUri;
+            }
+#endif
+
+            if (_client == null || _session == null)
+            {
+                return null;
+            }
+
+            return _client.GetImageUrl(
+                _session,
+                candidate.ItemId,
+                candidate.ImageType,
+                candidate.MaxWidth);
         }
 
         private static bool IsDuplicateSystemSection(EmbyHomeSection section)

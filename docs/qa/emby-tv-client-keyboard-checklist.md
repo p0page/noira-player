@@ -1225,3 +1225,30 @@ Then continue design and implementation until the route passes.
   - No app-content mouse clicks were used.
 - Limitation:
   - The saved Emby session is still absent on this machine, so this pass could not visually inspect real Home library cards after the token migration. The new design test prevents Home code-behind from reintroducing page-local raw color brushes, and a future saved-session run should capture Home screenshots with real server artwork.
+
+### 2026-07-06 - Home Fixture Screenshot Route
+
+- App version: 0.1.0.153.
+- Scope: add a deterministic DEBUG-only Home QA route so Home visual and keyboard checks can run on this machine even while the saved Emby session is absent.
+- Interaction changes:
+  - `dev-command.json` accepts route `home-fixture`.
+  - The route navigates to Home with representative fixture data: Continue watching, Next up, Media Libraries, server-configured rows such as Hot Movies, Hot TV Series, Douban Top Rated, Netflix, Anime, and Documentaries.
+  - The fixture uses packaged QA artwork under `Assets/QaHome` and the normal Home rendering path, not a separate demo page.
+  - Hero and dynamic Home buttons now expose automation names so keyboard/UIA verification can identify the current controller target.
+- Automated verification:
+  - TDD red path confirmed `home-fixture` was not accepted before route support.
+  - TDD red path confirmed `DevelopmentHomeFixture` was missing before implementation.
+  - TDD red path confirmed Hero action buttons did not expose automation names before the XAML update.
+  - Targeted fixture/accessibility tests passed.
+  - App Debug x64 build passed, producing `NextGenEmby.App_0.1.0.153_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.153`.
+- Keyboard-only validation:
+  - Wrote `dev-command.json` with route `home-fixture` and launched the installed app.
+  - `dev-command-result.txt` reported `completed / home-fixture`.
+  - UIA text confirmed Home, Media Libraries, Hot Movies, Hot TV Series, Douban Top Rated, Netflix, Continue watching, and More Hot Movies were present.
+  - Using keyboard input only, focus moved from `Play` to `Hot Movies`, then horizontally to `Hot TV Series` and `Douban Top Rated`, then down to `Aurora Protocol` in Continue watching.
+  - Screenshots were captured from the UWP `ApplicationFrameHost` window after minimizing unrelated same-title/Codex windows: top Play focus, Media Libraries focus, Douban focus, Continue watching focus, and a lower-row view.
+  - No app-content mouse clicks were used.
+- Limitation:
+  - The fixture proves Home layout, focus, screenshot capture, and section coverage without a live Emby session. Real server artwork still needs a saved-session pass.
+  - The generated QA artwork is intentionally local and repeatable, but it currently reads very dark under the Home card washes. A later visual polish pass should tune artwork visibility while preserving text contrast.

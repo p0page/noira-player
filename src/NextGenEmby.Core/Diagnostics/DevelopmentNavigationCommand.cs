@@ -82,6 +82,7 @@ namespace NextGenEmby.Core.Diagnostics
             switch (route)
             {
                 case "home":
+                case "home-fixture":
                 case "movies":
                 case "tv":
                 case "search":

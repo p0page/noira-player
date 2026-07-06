@@ -108,6 +108,7 @@
                                 <StackPanel Orientation="Horizontal" Spacing="14">
                                     <Button
                                         x:Name="HeroPlayButton"
+                                        AutomationProperties.Name="Play"
                                         MinWidth="142"
                                         Height="52"
                                         Background="{StaticResource AppActionBrush}"
@@ -123,6 +124,7 @@
                                     </Button>
                                     <Button
                                         x:Name="HeroDetailsButton"
+                                        AutomationProperties.Name="Details"
                                         MinWidth="148"
                                         Height="52"
                                         Click="HeroDetails_OnClick"

@@ -78,6 +78,7 @@
     <Compile Include="MainPage.xaml.cs">
       <DependentUpon>MainPage.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Navigation\HomeDevelopmentFixtureNavigationRequest.cs" />
     <Compile Include="Navigation\ITvContentFocusTarget.cs" />
     <Compile Include="Navigation\LibraryNavigationRequest.cs" />
     <Compile Include="Navigation\LiveTvNavigationRequest.cs" />
@@ -204,6 +205,7 @@
     <Content Include="Assets\Square150x150Logo.png" />
     <Content Include="Assets\Wide310x150Logo.png" />
     <Content Include="Assets\SplashScreen.png" />
+    <Content Include="Assets\QaHome\*.png" />
   </ItemGroup>
 
   <Import Project="$(MSBuildExtensionsPath)\Microsoft\WindowsXaml\v17.0\Microsoft.Windows.UI.Xaml.CSharp.targets" />
