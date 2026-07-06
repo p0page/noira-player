@@ -841,6 +841,21 @@ public sealed class PlaybackQualityReportAnalyzerTests
     }
 
     [Fact]
+    public void Analyze_Reports_Cadence_Clock_Speed_Adjustment_When_Display_Is_Whole_Number_Cinema_Mode()
+    {
+        var report = CreateOptimizationReadyFailure();
+        report.Display.RefreshRateHz = 60.0;
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Equal("matched", analysis.Cadence.Status);
+        Assert.True(analysis.Cadence.IsClockSpeedAdjustmentRequired);
+        Assert.Equal(1.001, analysis.Cadence.ClockSpeedMultiplier, precision: 3);
+        Assert.Equal(0.1001, analysis.Cadence.ClockSpeedAdjustmentPercent, precision: 3);
+        Assert.Contains("cadence.clockSpeedAdjustmentPercent", analysis.Cadence.Signals);
+    }
+
+    [Fact]
     public void Analyze_Reports_Cadence_Mismatch_With_Nearest_Target()
     {
         var report = CreateOptimizationReadyFailure();

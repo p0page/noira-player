@@ -6,6 +6,7 @@ namespace NextGenEmby.Core.PlaybackQuality
     {
         public const double MatchTolerance = 0.15;
         public const double NoMatchWeight = 1000000.0;
+        public const double ClockSpeedAdjustmentEpsilonPercent = 0.01;
 
         private static readonly double[] SupportedRatios = { 1.0, 2.0, 2.5, 3.0, 4.0, 5.0 };
 
@@ -62,8 +63,11 @@ namespace NextGenEmby.Core.PlaybackQuality
 
             if (assessment.RefreshDeltaHz <= MatchTolerance)
             {
+                ApplyClockSpeedAdjustment(assessment);
                 assessment.Status = "matched";
-                assessment.Reason = "Display refresh rate matches source cadence.";
+                assessment.Reason = assessment.IsClockSpeedAdjustmentRequired
+                    ? "Display refresh rate matches source cadence with clock speed adjustment."
+                    : "Display refresh rate matches source cadence.";
             }
             else
             {
@@ -72,6 +76,23 @@ namespace NextGenEmby.Core.PlaybackQuality
             }
 
             return assessment;
+        }
+
+        private static void ApplyClockSpeedAdjustment(
+            PlaybackQualityCadenceAssessment assessment)
+        {
+            if (assessment.BestTargetRefreshRateHz <= 0.0)
+            {
+                return;
+            }
+
+            assessment.ClockSpeedMultiplier =
+                assessment.DisplayRefreshRateHz / assessment.BestTargetRefreshRateHz;
+            assessment.ClockSpeedAdjustmentPercent =
+                (assessment.ClockSpeedMultiplier - 1.0) * 100.0;
+            assessment.IsClockSpeedAdjustmentRequired =
+                Math.Abs(assessment.ClockSpeedAdjustmentPercent) >
+                ClockSpeedAdjustmentEpsilonPercent;
         }
 
         public static bool IsBetterRefreshRateForVideo(
