@@ -93,11 +93,11 @@ dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQ
 - 验证 candidate 报告集是否完整覆盖 manifest；
 - 检查 candidate report envelope 里的 `modelAnalysis.optimizationGate` 是否允许继续优化；
 - 只有前四步都有效时，才调用 `compare-suite` 做 before/after 比较；
-- 输出一个模型可直接消费的 JSON，包含 `action`、`risk`、`blockers`、`activeGate`、`evidenceGates`、manifest/report-set 校验结果和 suite 结果。
+- 输出一个模型可直接消费的 JSON，包含 `action`、`risk`、`blockers`、`activeGate`、`evidenceGates`、`candidateReportAnalysis`、manifest/report-set 校验结果和 suite 结果。
 
 这条命令默认使用 `--match-by run-id`，因此 manifest `caseId`、baseline `report.runId`、candidate `report.runId` 应保持一致。任何 missing/extra/duplicate/metadata mismatch 都会被视为证据采集失败，而不是播放核心优化结论。自动化模型循环应先修复采集或源选择问题，再根据 suite 结果决定保留、拆分、回退或继续修改播放核心。
 
-`activeGate` 是模型当前应处理的入口：它指向第一个 `status != pass` 的 gate；如果所有前置 gate 都通过，则指向最终 `suite` gate。`evidenceGates` 是完整门禁摘要，按顺序列出 `manifest`、`baseline-report-set`、`candidate-report-set`、`candidate-report-analysis`、`suite`，每一项都有 `status`、`action`、`blockers`、`signals` 和 `caseIds`。当 report-set gate 被阻断时，模型应优先根据 `signals` 和 `caseIds` 修复采集或源选择；当 `candidate-report-analysis` 被阻断时，模型应先处理 candidate `modelAnalysis.optimizationGate` 给出的 blocker，例如 source mismatch、缺失证据或样本不足；当 suite gate 为 `skipped` 时，说明还没有进入播放核心 before/after 比较。
+`activeGate` 是模型当前应处理的入口：它指向第一个 `status != pass` 的 gate；如果所有前置 gate 都通过，则指向最终 `suite` gate。`evidenceGates` 是完整门禁摘要，按顺序列出 `manifest`、`baseline-report-set`、`candidate-report-set`、`candidate-report-analysis`、`suite`，每一项都有 `status`、`action`、`blockers`、`signals` 和 `caseIds`。当 report-set gate 被阻断时，模型应优先根据 `signals` 和 `caseIds` 修复采集或源选择；当 `candidate-report-analysis` 被阻断时，模型应先处理 candidate `modelAnalysis.optimizationGate` 给出的 blocker，例如 source mismatch、缺失证据或样本不足，并用 `candidateReportAnalysis.cases` 定位具体 report；当 suite gate 为 `skipped` 时，说明还没有进入播放核心 before/after 比较。
 
 ## Compare Reports
 

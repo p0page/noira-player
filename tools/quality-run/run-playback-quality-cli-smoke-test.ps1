@@ -686,6 +686,19 @@ try {
         throw 'Expected evaluate-candidate active gate to point at passing suite decision.'
     }
 
+    if ($null -eq $candidateEvaluation.candidateReportAnalysis -or
+        $candidateEvaluation.candidateReportAnalysis.totalReportCount -ne 1 -or
+        $candidateEvaluation.candidateReportAnalysis.analyzedReportCount -ne 0 -or
+        $candidateEvaluation.candidateReportAnalysis.unavailableReportCount -ne 1 -or
+        $candidateEvaluation.candidateReportAnalysis.blockedReportCount -ne 0) {
+        throw 'Expected evaluate-candidate to summarize unavailable candidate report analysis for raw reports.'
+    }
+
+    if (-not ($candidateEvaluation.candidateReportAnalysis.cases |
+        Where-Object { $_.caseId -eq 'item-1/source-1' -and $_.status -eq 'unavailable' })) {
+        throw 'Expected evaluate-candidate candidate report-analysis summary to include unavailable raw-report case.'
+    }
+
     if ($null -eq $candidateEvaluation.evidenceGates -or $candidateEvaluation.evidenceGates.Count -ne 5) {
         throw 'Expected playback quality CLI evaluate-candidate to emit five evidence gates.'
     }
@@ -888,6 +901,29 @@ try {
         $blockedAnalysisEvaluation.activeGate.name -ne 'candidate-report-analysis' -or
         $blockedAnalysisEvaluation.activeGate.status -ne 'blocked') {
         throw 'Expected blocked report-analysis active gate to point at blocked candidate report-analysis gate.'
+    }
+
+    if ($null -eq $blockedAnalysisEvaluation.candidateReportAnalysis -or
+        $blockedAnalysisEvaluation.candidateReportAnalysis.totalReportCount -ne 1 -or
+        $blockedAnalysisEvaluation.candidateReportAnalysis.analyzedReportCount -ne 1 -or
+        $blockedAnalysisEvaluation.candidateReportAnalysis.unavailableReportCount -ne 0 -or
+        $blockedAnalysisEvaluation.candidateReportAnalysis.blockedReportCount -ne 1) {
+        throw 'Expected blocked report-analysis evaluate-candidate output to summarize analyzed blocked candidate report.'
+    }
+
+    $blockedAnalysisCase = $blockedAnalysisEvaluation.candidateReportAnalysis.cases |
+        Where-Object { $_.caseId -eq 'item-1/source-1' } |
+        Select-Object -First 1
+    if ($null -eq $blockedAnalysisCase -or $blockedAnalysisCase.status -ne 'blocked') {
+        throw 'Expected blocked report-analysis summary to include blocked candidate case.'
+    }
+
+    if (-not ($blockedAnalysisCase.blockers -contains 'source.mismatch')) {
+        throw 'Expected blocked report-analysis summary case to include model analysis blocker.'
+    }
+
+    if (-not ($blockedAnalysisCase.signals -contains 'source.hdrKind')) {
+        throw 'Expected blocked report-analysis summary case to include model analysis blocker signal.'
     }
 
     if (Test-Path -LiteralPath $candidateEvaluationBlockedAnalysisComparisonsDir) {
