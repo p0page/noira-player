@@ -315,6 +315,7 @@ Rules:
 - Use one artwork-driven accent at most per view, and only if it does not conflict with `primary`, `secondary`, or state colors.
 - Never use AI-generated abstract gradients as a fallback for missing media.
 - Missing artwork fallback is a matte surface with text and a small media-type icon.
+- Server-configured home section cards use the section or parent item artwork first, especially `Thumb`, `Backdrop`, `Banner`, and `Primary` in that order for wide cards. Child item artwork is only a fallback when the section itself has no consumable image.
 
 ## Icons and App Identity
 

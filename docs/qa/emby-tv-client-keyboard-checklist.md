@@ -479,3 +479,26 @@ Then continue design and implementation until the route passes.
   - Details loaded the Episodes section with `S1:E1 铸就传奇` through `S1:E6 你叫什么名字来着？`.
   - Pressing `Enter` from Details launched playback for `铸就传奇`; Playback showed `Playing`, Pause, seek controls, More, and Stop.
   - No app-content mouse clicks were used.
+
+### 2026-07-06 - Home Library And Section Artwork Rail
+
+- App version: 0.1.0.102.
+- Scope: Home now treats server libraries and configured sections as a TV-first wide card rail, with section artwork selected from the section/parent item before falling back to child content.
+- Data and visual changes:
+  - Library and Home section wide artwork prefer `Thumb`, `Backdrop`, `Banner`, then `Primary`.
+  - Server-configured section cards use their `ParentItem` image first; child item artwork is only a fallback.
+  - `docs/DESIGN.md` now records this section-artwork rule.
+  - Stale plan wording that still pointed to the rejected `Library Portal` icon direction was updated to the Matte Cinema Fluent icon direction.
+  - Home focus now calls `StartBringIntoView` when a card receives focus so the current TV focus target remains fully visible while moving horizontally.
+- Automated verification:
+  - `EmbyArtworkPolicyTests` passed: 7 targeted tests.
+  - Core tests passed: 212 total.
+  - App Debug x64 build passed and produced `NextGenEmby.App_0.1.0.102_x64_Debug.msix`.
+  - MSIX signed and installed locally as `NextGenEmby.App_0.1.0.102_x64__h8qjz0sr1sg4m`.
+- Keyboard-only validation with Computer Use:
+  - Launched 0.1.0.102 locally.
+  - Home parsed many server categories into `Media Libraries`, including `热门电影`, `热门剧集`, `豆瓣高分`, `Netflix`, `国产剧`, `国漫`, `日漫`, `动画电影`, `动作电影`, `美剧`, `综艺`, and more.
+  - `Down` moved focus from the Home hero to the first visible media-library card.
+  - Repeated `Right` moved across the horizontal rail; the focused `日漫` card stayed fully visible after the bring-into-view fix.
+  - `Enter` opened the selected `日漫` Library, showing `100 items`, Sort, Filter, and a focused first content card.
+  - Computer Use screenshot capture timed out once immediately after installing 0.1.0.102; rehydrating the app window and retrying with a lighter accessibility snapshot recovered. No app-content mouse clicks were used.

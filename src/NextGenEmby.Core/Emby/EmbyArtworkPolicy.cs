@@ -63,6 +63,26 @@ namespace NextGenEmby.Core.Emby
             return CreateCandidate(view.Id, view.LogoImageItemId, "Logo", view.LogoImageTag, maxWidth);
         }
 
+        public static EmbyImageCandidate? SelectHomeSectionWideArtwork(EmbyHomeSection? section, int maxWidth)
+        {
+            if (section == null)
+            {
+                return null;
+            }
+
+            var item = section.ParentItem;
+            if (item == null)
+            {
+                return null;
+            }
+
+            return
+                CreateCandidate(item.Id, item.ThumbImageItemId, "Thumb", item.ThumbImageTag, maxWidth) ??
+                CreateCandidate(item.Id, item.BackdropImageItemId, "Backdrop", item.BackdropImageTag, maxWidth) ??
+                CreateCandidate(item.Id, item.BannerImageItemId, "Banner", item.BannerImageTag, maxWidth) ??
+                CreateCandidate(item.Id, item.PrimaryImageItemId, "Primary", item.PrimaryImageTag, maxWidth);
+        }
+
         private static EmbyImageCandidate? CreateCandidate(
             string ownerItemId,
             string imageItemId,

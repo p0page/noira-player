@@ -180,6 +180,44 @@ public sealed class EmbyArtworkPolicyTests
     }
 
     [Fact]
+    public void SelectHomeSectionWideArtwork_Uses_Section_Parent_Item_Artwork()
+    {
+        AssertCandidate(
+            "section-thumb-owner",
+            "Thumb",
+            900,
+            EmbyArtworkPolicy.SelectHomeSectionWideArtwork(new EmbyHomeSection
+            {
+                Id = "sec-hot-movies",
+                Name = "Hot Movies",
+                ParentItem = new EmbyMediaItem
+                {
+                    Id = "hot-movies",
+                    PrimaryImageTag = "primary-tag",
+                    BannerImageTag = "banner-tag",
+                    ThumbImageTag = "thumb-tag",
+                    BackdropImageTag = "backdrop-tag",
+                    ThumbImageItemId = "section-thumb-owner"
+                }
+            }, 900));
+
+        AssertCandidate(
+            "hot-series",
+            "Banner",
+            900,
+            EmbyArtworkPolicy.SelectHomeSectionWideArtwork(new EmbyHomeSection
+            {
+                Id = "sec-hot-series",
+                ParentItem = new EmbyMediaItem
+                {
+                    Id = "hot-series",
+                    PrimaryImageTag = "primary-tag",
+                    BannerImageTag = "banner-tag"
+                }
+            }, 900));
+    }
+
+    [Fact]
     public void SelectArtwork_Returns_Null_When_No_Usable_Image_Exists()
     {
         Assert.Null(EmbyArtworkPolicy.SelectHeroArtwork(new EmbyMediaItem { Id = "movie-1" }, 1600));
@@ -187,6 +225,7 @@ public sealed class EmbyArtworkPolicyTests
         Assert.Null(EmbyArtworkPolicy.SelectPosterArtwork(new EmbyMediaItem { Id = "movie-1" }, 520));
         Assert.Null(EmbyArtworkPolicy.SelectLogoArtwork(new EmbyMediaItem { Id = "movie-1" }, 640));
         Assert.Null(EmbyArtworkPolicy.SelectLibraryLogoArtwork(new EmbyLibraryView { Id = "library-1" }, 640));
+        Assert.Null(EmbyArtworkPolicy.SelectHomeSectionWideArtwork(new EmbyHomeSection { Id = "section-1" }, 900));
     }
 
     private static void AssertCandidate(

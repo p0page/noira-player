@@ -309,21 +309,22 @@ Behavior:
 
 ## App Icon Direction
 
-Icon name: Library Portal.
+Icon name: Matte Library Slat.
 
 Concept:
 
 - A dark rounded-square tile.
-- A luminous cyan/teal play portal cut through layered media cards.
-- A small warm amber progress arc at the bottom edge.
+- Layered matte media slats or a quiet screen aperture.
+- One crisp focus edge or green play/confirm surface.
+- An optional small amber progress base, used flat rather than glowing.
 - No Emby logo, Xbox logo, Microsoft logo, film-strip cliche, or generic play triangle alone.
+- No cyan glow, portal ring, glass prism, or holographic motif.
 
 Rationale:
 
 - The layered cards represent personal libraries.
-- The play portal represents direct couch playback.
-- Cyan matches the focus rail.
-- Amber hints at resume/progress.
+- The focus edge connects the icon to controller navigation without turning focus into decoration.
+- Green maps to Play/Resume and amber maps to progress.
 
 Required assets:
 

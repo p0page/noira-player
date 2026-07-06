@@ -229,7 +229,7 @@ Add Live TV rail destination. If playback is unsupported for a stream, show a vi
 
 **Step 1: Generate icon concept**
 
-Use the `Library Portal` direction from the design doc: dark tile, layered library cards, cyan play portal, amber progress arc.
+Use the Matte Cinema Fluent icon direction from `docs/DESIGN.md`: a dark matte tile, layered media slats or a quiet screen aperture, one crisp focus/play affordance, and no cyan glow or portal motif.
 
 **Step 2: Produce required sizes**
 
