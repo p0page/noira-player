@@ -1434,3 +1434,29 @@ Then continue design and implementation until the route passes.
   - Reopening More showed simultaneous Source and transport More focus.
 - Follow-up:
   - Fixture validates UI/controller flow without native stream switching. A future saved-session/media pass should verify live multi-audio/subtitle switching against real Emby items.
+
+### 2026-07-07 - Details Favorite And Watched Fixture Toggles
+
+- App version: 0.1.0.175.
+- Scope: verify Details favorite/watched actions with keyboard/controller input using the deterministic `details-fixture` route, without mutating live Emby user data.
+- Interaction changes:
+  - Added a core `MediaDetailsUserDataTogglePolicy` so favorite and watched toggles flip one field while preserving resume position, played percentage, and the other user-data state.
+  - `details-fixture` now handles Favorite/Watched locally and updates button labels/status without calling `SetFavoriteAsync` or `SetPlayedAsync`.
+  - Details fixture default focus now uses a short Low-priority retry loop. Computer Use caught the old single-dispatch focus path landing on the collapsed Guide Home button, so `Right`, `Right`, `Return` navigated Home instead of activating Add favorite.
+- Automated verification:
+  - TDD red path confirmed `MediaDetailsUserDataTogglePolicy` did not exist before implementation.
+  - TDD red path confirmed the Details fixture source did not contain the local user-data toggle path.
+  - TDD red path confirmed Details fixture focus did not use Low-priority retry before the cold-launch focus fix.
+  - Core tests passed: 369 total.
+  - App Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.175_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.175`.
+- Keyboard-only validation with Computer Use:
+  - Killed any running app process, wrote `dev-command.json` with route `details-fixture`, and cold-launched 0.1.0.175.
+  - Initial Details state showed `Aurora Protocol`; the true TV focus landed on `Resume` and the collapsed Guide Home button was not focused.
+  - Pressed `Right`, `Right`, `Return`; `Add favorite` changed to `Remove favorite`, status changed to `Fixture favorite added.`, and focus stayed on the Favorite button.
+  - Pressed `Right`, `Return`; `Mark watched` changed to `Mark unwatched`, status changed to `Fixture marked watched.`, and focus stayed on the Watched button.
+  - Pressed `Return`; Watched toggled back to `Mark watched` with `Fixture marked unwatched.`.
+  - Pressed `Left`, `Return`; Favorite toggled back to `Add favorite` with `Fixture favorite removed.`.
+  - No app-content mouse clicks were used.
+- Follow-up:
+  - Re-run live favorite/watched toggles only on a disposable item or fixture user after the saved Emby session is restored.

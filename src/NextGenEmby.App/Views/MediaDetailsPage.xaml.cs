@@ -11,6 +11,7 @@ using NextGenEmby.Core.Emby;
 using NextGenEmby.Core.Input;
 using NextGenEmby.Core.Playback;
 using Windows.System;
+using Windows.UI.Core;
 using Windows.UI.Xaml.Automation;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
@@ -39,7 +40,9 @@ namespace NextGenEmby.App.Views
         private bool _isUnloaded;
         private int _loadGeneration;
 #if DEBUG
+        private const int DevelopmentDetailsFocusRetryCount = 6;
         private bool _usesDevelopmentDetailsFixture;
+        private int _developmentDetailsFocusGeneration;
         private IReadOnlyDictionary<string, string> _developmentDetailsArtworkUris =
             new Dictionary<string, string>(StringComparer.Ordinal);
 #endif
@@ -703,15 +706,23 @@ namespace NextGenEmby.App.Views
             FocusDevelopmentDefaultContentAsync();
         }
 
-        private void FocusDevelopmentDefaultContentAsync()
+        private async void FocusDevelopmentDefaultContentAsync()
         {
-            _ = Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, () =>
+            var focusGeneration = ++_developmentDetailsFocusGeneration;
+            for (var attempt = 0; attempt < DevelopmentDetailsFocusRetryCount; attempt++)
             {
-                if (!_isUnloaded && _usesDevelopmentDetailsFixture)
+                await Dispatcher.RunAsync(CoreDispatcherPriority.Low, () =>
                 {
-                    FocusDefaultContent();
-                }
-            });
+                    if (!_isUnloaded &&
+                        _usesDevelopmentDetailsFixture &&
+                        focusGeneration == _developmentDetailsFocusGeneration)
+                    {
+                        FocusDefaultContent();
+                    }
+                });
+
+                await Task.Delay(120);
+            }
         }
 
         private void ApplyDevelopmentDetailsArtwork(EmbyMediaItem item)
@@ -861,6 +872,16 @@ namespace NextGenEmby.App.Views
             }
 
             var current = item.UserData != null && item.UserData.IsFavorite;
+#if DEBUG
+            if (_usesDevelopmentDetailsFixture)
+            {
+                ApplyDevelopmentFixtureUserDataToggle(
+                    userData => MediaDetailsUserDataTogglePolicy.ToggleFavorite(userData),
+                    !current ? "Fixture favorite added." : "Fixture favorite removed.",
+                    FavoriteButton);
+                return;
+            }
+#endif
             await UpdateUserDataAsync(
                 async (client, session) => await client.SetFavoriteAsync(session, item.Id, !current),
                 !current ? "Added to favorites." : "Removed from favorites.",
@@ -876,6 +897,16 @@ namespace NextGenEmby.App.Views
             }
 
             var current = item.UserData != null && item.UserData.Played;
+#if DEBUG
+            if (_usesDevelopmentDetailsFixture)
+            {
+                ApplyDevelopmentFixtureUserDataToggle(
+                    userData => MediaDetailsUserDataTogglePolicy.TogglePlayed(userData),
+                    !current ? "Fixture marked watched." : "Fixture marked unwatched.",
+                    WatchedButton);
+                return;
+            }
+#endif
             await UpdateUserDataAsync(
                 async (client, session) => await client.SetPlayedAsync(session, item.Id, !current),
                 !current ? "Marked watched." : "Marked unwatched.",
@@ -2331,6 +2362,26 @@ namespace NextGenEmby.App.Views
 
             _item.UserData = userData ?? new EmbyUserData();
         }
+
+#if DEBUG
+        private void ApplyDevelopmentFixtureUserDataToggle(
+            Func<EmbyUserData, EmbyUserData> mutation,
+            string successMessage,
+            Button restoreFocusButton)
+        {
+            var item = _item;
+            if (item == null || string.IsNullOrWhiteSpace(item.Id))
+            {
+                return;
+            }
+
+            var current = item.UserData ?? new EmbyUserData();
+            ApplyUserData(mutation(current));
+            UpdateActionButtons();
+            StatusBlock.Text = successMessage;
+            restoreFocusButton.Focus(FocusState.Programmatic);
+        }
+#endif
 
         private void SetUserDataButtonsEnabled(bool isEnabled)
         {

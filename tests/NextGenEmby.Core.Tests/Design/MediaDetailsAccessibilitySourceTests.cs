@@ -56,6 +56,43 @@ public sealed class MediaDetailsAccessibilitySourceTests
         Assert.Contains("button.BorderBrush = (Brush)Application.Current.Resources[\"AppHairlineBrush\"];", detailsPageSource);
     }
 
+    [Fact]
+    public void Details_Fixture_User_Data_Toggles_Use_Local_State_Instead_Of_Live_Api()
+    {
+        var root = FindRepositoryRoot();
+        var detailsPageSource = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NextGenEmby.App",
+            "Views",
+            "MediaDetailsPage.xaml.cs"));
+
+        Assert.Contains("ApplyDevelopmentFixtureUserDataToggle(", detailsPageSource);
+        Assert.Contains("MediaDetailsUserDataTogglePolicy.ToggleFavorite", detailsPageSource);
+        Assert.Contains("MediaDetailsUserDataTogglePolicy.TogglePlayed", detailsPageSource);
+        Assert.Contains("if (_usesDevelopmentDetailsFixture)", detailsPageSource);
+        Assert.Contains("Fixture favorite added.", detailsPageSource);
+        Assert.Contains("Fixture marked watched.", detailsPageSource);
+    }
+
+    [Fact]
+    public void Details_Fixture_Default_Focus_Uses_Low_Priority_Retry()
+    {
+        var root = FindRepositoryRoot();
+        var detailsPageSource = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NextGenEmby.App",
+            "Views",
+            "MediaDetailsPage.xaml.cs"));
+
+        Assert.Contains("DevelopmentDetailsFocusRetryCount", detailsPageSource);
+        Assert.Contains("CoreDispatcherPriority.Low", detailsPageSource);
+        Assert.Contains("Task.Delay(120)", detailsPageSource);
+        Assert.Contains("FocusDefaultContent();", detailsPageSource);
+        Assert.DoesNotContain("CoreDispatcherPriority.Normal", detailsPageSource);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
