@@ -31,6 +31,7 @@ namespace NextGenEmby.App.Views
         private bool _keyHandlerAttached;
         private Control? _lastHomeFocusTarget;
         private readonly List<Button> _libraryButtons = new List<Button>();
+        private readonly List<Button> _sectionButtons = new List<Button>();
         private readonly List<Button> _rowFirstButtons = new List<Button>();
         private readonly List<Button?> _rowMoreButtons = new List<Button?>();
         private readonly Dictionary<Button, int> _rowButtonIndexes = new Dictionary<Button, int>();
@@ -226,7 +227,8 @@ namespace NextGenEmby.App.Views
                 direction.Value,
                 _libraryButtons.Count,
                 _rowFirstButtons.Count,
-                CreateRowMoreAvailability());
+                CreateRowMoreAvailability(),
+                sectionCount: _sectionButtons.Count);
 
             return TryMoveFocus(ResolveHomeFocusControl(next));
         }
@@ -301,6 +303,14 @@ namespace NextGenEmby.App.Views
                 }
             }
 
+            foreach (var sectionButton in _sectionButtons)
+            {
+                if (IsFocusWithin(focusedElement, sectionButton))
+                {
+                    return sectionButton;
+                }
+            }
+
             foreach (var rowButton in _rowButtonIndexes.Keys)
             {
                 if (IsFocusWithin(focusedElement, rowButton))
@@ -338,6 +348,12 @@ namespace NextGenEmby.App.Views
                 return new HomeFocusTarget(HomeFocusZone.Library, libraryIndex);
             }
 
+            var sectionIndex = GetSectionButtonIndex(control);
+            if (sectionIndex >= 0)
+            {
+                return new HomeFocusTarget(HomeFocusZone.Section, sectionIndex);
+            }
+
             var rowIndex = GetRowButtonIndex(control);
             if (rowIndex >= 0)
             {
@@ -370,6 +386,10 @@ namespace NextGenEmby.App.Views
                     return target.Index >= 0 && target.Index < _libraryButtons.Count
                         ? _libraryButtons[target.Index]
                         : null;
+                case HomeFocusZone.Section:
+                    return target.Index >= 0 && target.Index < _sectionButtons.Count
+                        ? _sectionButtons[target.Index]
+                        : null;
                 case HomeFocusZone.Row:
                     return target.Index >= 0 && target.Index < _rowFirstButtons.Count
                         ? _rowFirstButtons[target.Index]
@@ -388,6 +408,11 @@ namespace NextGenEmby.App.Views
             return _libraryButtons.Count == 0 ? null : _libraryButtons[0];
         }
 
+        private Button? GetFirstSectionButton()
+        {
+            return _sectionButtons.Count == 0 ? null : _sectionButtons[0];
+        }
+
         private int GetLibraryButtonIndex(Control? control)
         {
             if (control == null)
@@ -398,6 +423,24 @@ namespace NextGenEmby.App.Views
             for (var index = 0; index < _libraryButtons.Count; index++)
             {
                 if (_libraryButtons[index] == control)
+                {
+                    return index;
+                }
+            }
+
+            return -1;
+        }
+
+        private int GetSectionButtonIndex(Control? control)
+        {
+            if (control == null)
+            {
+                return -1;
+            }
+
+            for (var index = 0; index < _sectionButtons.Count; index++)
+            {
+                if (_sectionButtons[index] == control)
                 {
                     return index;
                 }
@@ -597,12 +640,7 @@ namespace NextGenEmby.App.Views
             _developmentArtworkUris = fixture.ArtworkUris;
 
             var configuredRows = fixture.ConfiguredRows
-                .Select(row => new HomeSectionRow(
-                    row.Title,
-                    row.SectionId,
-                    row.CollectionType,
-                    row.ParentItem,
-                    row.Items))
+                .Select(row => new HomeSectionRow(row.Section, row.Items))
                 .ToList();
 
             var popularRows = fixture.PopularRows
@@ -644,7 +682,8 @@ namespace NextGenEmby.App.Views
                 : null;
 
             ClearRows();
-            RenderLibraries(libraryViews, libraryPreviews, configuredRows);
+            RenderLibraries(libraryViews, libraryPreviews);
+            RenderHomeSections(configuredRows);
             _hasRenderedHomeContent = true;
 
             EmbyMediaItem? heroItem = null;
@@ -668,7 +707,7 @@ namespace NextGenEmby.App.Views
             if (heroItem == null)
             {
                 RenderBrowseOnlyHero();
-                StatusBlock.Text = _libraryButtons.Count > 0
+                StatusBlock.Text = _libraryButtons.Count > 0 || _sectionButtons.Count > 0
                     ? "Choose a library below, or refresh Home."
                     : "No playable items found.";
                 CompleteHomeRenderFocus(focusBehavior, previousFocusTarget);
@@ -783,8 +822,9 @@ namespace NextGenEmby.App.Views
         {
             _heroItem = null;
             ResetHeroLogo();
-            HeroTitleBlock.Text = _libraryButtons.Count > 0 ? "Browse your libraries" : "Nothing queued yet";
-            HeroMetaBlock.Text = _libraryButtons.Count > 0
+            var hasBrowseEntrypoints = _libraryButtons.Count > 0 || _sectionButtons.Count > 0;
+            HeroTitleBlock.Text = hasBrowseEntrypoints ? "Browse your libraries" : "Nothing queued yet";
+            HeroMetaBlock.Text = hasBrowseEntrypoints
                 ? "Pick a library below to start browsing while Home rows refresh."
                 : "Refresh after signing in to load your Emby home screen.";
             HeroPosterImage.Source = null;
@@ -819,14 +859,16 @@ namespace NextGenEmby.App.Views
             ClearHero();
             LibrariesPanel.Children.Clear();
             _libraryButtons.Clear();
+            HomeSectionsPanel.Children.Clear();
+            HomeSectionsRail.Visibility = Visibility.Collapsed;
+            _sectionButtons.Clear();
             ClearRows();
             _hasRenderedHomeContent = false;
         }
 
         private void RenderLibraries(
             IReadOnlyList<EmbyLibraryView> libraryViews,
-            IReadOnlyDictionary<string, IReadOnlyList<EmbyMediaItem>> libraryPreviews,
-            IReadOnlyList<HomeSectionRow> configuredRows)
+            IReadOnlyDictionary<string, IReadOnlyList<EmbyMediaItem>> libraryPreviews)
         {
             LibrariesPanel.Children.Clear();
             _libraryButtons.Clear();
@@ -858,6 +900,18 @@ namespace NextGenEmby.App.Views
                 _libraryButtons.Add(moviesButton);
                 _libraryButtons.Add(tvButton);
             }
+        }
+
+        private void RenderHomeSections(IReadOnlyList<HomeSectionRow> configuredRows)
+        {
+            HomeSectionsPanel.Children.Clear();
+            _sectionButtons.Clear();
+            HomeSectionsRail.Visibility = Visibility.Collapsed;
+
+            if (configuredRows == null || configuredRows.Count == 0)
+            {
+                return;
+            }
 
             foreach (var sectionRow in configuredRows)
             {
@@ -867,9 +921,13 @@ namespace NextGenEmby.App.Views
                 }
 
                 var button = CreateHomeSectionButton(sectionRow);
-                LibrariesPanel.Children.Add(button);
-                _libraryButtons.Add(button);
+                HomeSectionsPanel.Children.Add(button);
+                _sectionButtons.Add(button);
             }
+
+            HomeSectionsRail.Visibility = _sectionButtons.Count == 0
+                ? Visibility.Collapsed
+                : Visibility.Visible;
         }
 
         private Button CreateLibraryButton(EmbyLibraryView view, IReadOnlyList<EmbyMediaItem> previewItems)
@@ -968,6 +1026,12 @@ namespace NextGenEmby.App.Views
         private Button CreateHomeSectionButton(HomeSectionRow row)
         {
             var request = CreateLibraryRequest(row.Title, row.CollectionType, "", row.SectionId);
+#if DEBUG
+            if (_developmentFixtureRequest != null)
+            {
+                request = request.WithDevelopmentFixture(row.Items, _developmentArtworkUris);
+            }
+#endif
             var button = new Button
             {
                 Width = 284,
@@ -1117,13 +1181,7 @@ namespace NextGenEmby.App.Views
                 return null;
             }
 
-            return CreateArtworkBrush(EmbyArtworkPolicy.SelectHomeSectionWideArtwork(new EmbyHomeSection
-            {
-                Id = row.SectionId,
-                Name = row.Title,
-                CollectionType = row.CollectionType,
-                ParentItem = row.ParentItem
-            }, maxWidth));
+            return CreateArtworkBrush(EmbyArtworkPolicy.SelectHomeSectionWideArtwork(row.Section, maxWidth));
         }
 
         private void AddRow(
@@ -1394,12 +1452,7 @@ namespace NextGenEmby.App.Views
                     var items = await TryLoadListAsync(() => client.GetHomeSectionItemsAsync(session, section.Id, 24));
                     return items.Count == 0
                         ? null
-                        : new HomeSectionRow(
-                            CreateSectionTitle(section),
-                            section.Id,
-                            section.CollectionType,
-                            section.ParentItem,
-                            items);
+                        : new HomeSectionRow(section, items);
                 })
                 .ToList();
 
@@ -1708,6 +1761,13 @@ namespace NextGenEmby.App.Views
                 return true;
             }
 
+            var firstSectionButton = GetFirstSectionButton();
+            if (firstSectionButton != null && firstSectionButton.Focus(focusState))
+            {
+                _lastHomeFocusTarget = firstSectionButton;
+                return true;
+            }
+
             if (!RefreshButton.Focus(focusState))
             {
                 return false;
@@ -1810,18 +1870,18 @@ namespace NextGenEmby.App.Views
         private sealed class HomeSectionRow
         {
             public HomeSectionRow(
-                string title,
-                string sectionId,
-                string collectionType,
-                EmbyMediaItem parentItem,
+                EmbyHomeSection section,
                 IReadOnlyList<EmbyMediaItem> items)
             {
-                Title = string.IsNullOrWhiteSpace(title) ? "Home section" : title;
-                SectionId = sectionId ?? "";
-                CollectionType = collectionType ?? "";
-                ParentItem = parentItem ?? new EmbyMediaItem();
+                Section = section ?? new EmbyHomeSection();
+                Title = CreateSectionTitle(Section);
+                SectionId = Section.Id ?? "";
+                CollectionType = Section.CollectionType ?? "";
+                ParentItem = Section.ParentItem ?? new EmbyMediaItem();
                 Items = items ?? Array.Empty<EmbyMediaItem>();
             }
+
+            public EmbyHomeSection Section { get; }
 
             public string Title { get; }
 

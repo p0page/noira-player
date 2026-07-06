@@ -158,6 +158,11 @@ namespace NextGenEmby.Core.Diagnostics
             IReadOnlyList<EmbyMediaItem> items)
         {
             AddArtwork(artworkUris, parentItemId, "Thumb", parentThumbAsset);
+            if (!string.IsNullOrWhiteSpace(sectionId))
+            {
+                AddArtwork(artworkUris, sectionId, "Thumb", parentThumbAsset);
+            }
+
             var parentItem = new EmbyMediaItem
             {
                 Id = parentItemId,
@@ -166,13 +171,22 @@ namespace NextGenEmby.Core.Diagnostics
                 ThumbImageTag = ArtworkTag,
                 ThumbImageItemId = parentItemId
             };
+            var section = new EmbyHomeSection
+            {
+                Id = sectionId,
+                Name = title,
+                CollectionType = collectionType,
+                ThumbImageTag = string.IsNullOrWhiteSpace(sectionId) ? "" : ArtworkTag,
+                ThumbImageItemId = string.IsNullOrWhiteSpace(sectionId) ? "" : sectionId,
+                ParentItem = parentItem
+            };
 
             return new DevelopmentHomeMediaRow(
                 title,
                 collectionType,
                 parentId,
                 sectionId,
-                parentItem,
+                section,
                 items);
         }
 

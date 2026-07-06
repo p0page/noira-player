@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using NextGenEmby.Core.Diagnostics;
+using NextGenEmby.Core.Emby;
 using Xunit;
 
 namespace NextGenEmby.Core.Tests.Diagnostics;
@@ -48,6 +49,21 @@ public sealed class DevelopmentHomeFixtureTests
             var assetPath = Path.Combine(root, "src", "NextGenEmby.App", relativePath);
             Assert.True(File.Exists(assetPath), "Missing packaged QA artwork asset " + assetPath);
         }
+    }
+
+    [Fact]
+    public void Create_Configured_Rows_Carry_Section_Owned_Artwork()
+    {
+        var fixture = DevelopmentHomeFixture.Create();
+        var row = fixture.ConfiguredRows.Single(item => item.Title == "Hot Movies");
+        var sectionProperty = row.GetType().GetProperty("Section");
+
+        Assert.NotNull(sectionProperty);
+        var section = Assert.IsType<EmbyHomeSection>(sectionProperty!.GetValue(row));
+        Assert.Equal("qa-section-hot-movies", section.Id);
+        Assert.Equal("qa", section.ThumbImageTag);
+        Assert.Equal("qa-section-hot-movies", section.ThumbImageItemId);
+        Assert.True(fixture.ArtworkUris.ContainsKey(DevelopmentHomeFixture.ArtworkKey(section.Id, "Thumb")));
     }
 
     [Fact]

@@ -410,6 +410,72 @@ public sealed class EmbyLibraryTests
     }
 
     [Fact]
+    public async Task GetHomeSectionsAsync_Requests_Image_Metadata_For_Section_Artwork()
+    {
+        var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(HttpStatusCode.OK, "[]"));
+        using var http = new HttpClient(handler);
+        var client = CreateClient(http);
+
+        await client.GetHomeSectionsAsync(Session(userId: "user 1/slash"));
+
+        Assert.Equal("/Users/user%201%2Fslash/HomeSections", handler.LastRequest!.RequestUri!.AbsolutePath);
+        Assert.Contains("EnableImages=true", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("EnableImageTypes=Primary%2CBackdrop%2CThumb%2CBanner%2CLogo", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("ImageTypeLimit=1", handler.LastRequest.RequestUri.Query);
+    }
+
+    [Fact]
+    public async Task GetHomeSectionsAsync_Maps_Section_Owned_Wide_Artwork()
+    {
+        var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
+            HttpStatusCode.OK,
+            """
+            [
+              {
+                "Id": "sec-hot-movies",
+                "Name": "Hot Movies",
+                "CollectionType": "movies",
+                "ImageTags": {
+                  "Primary": "section-primary",
+                  "Thumb": "section-thumb",
+                  "Banner": "section-banner",
+                  "Logo": "section-logo"
+                },
+                "BackdropImageTags": [ "section-backdrop" ],
+                "PrimaryImageItemId": "section-primary-owner",
+                "ParentThumbItemId": "section-thumb-owner",
+                "ParentBackdropItemId": "section-backdrop-owner",
+                "ParentBannerItemId": "section-banner-owner",
+                "ParentLogoItemId": "section-logo-owner",
+                "ParentItem": {
+                  "Id": "fallback-parent",
+                  "Name": "Fallback Parent",
+                  "Type": "CollectionFolder",
+                  "ImageTags": { "Thumb": "fallback-thumb" },
+                  "ParentThumbItemId": "fallback-thumb-owner"
+                }
+              }
+            ]
+            """));
+        using var http = new HttpClient(handler);
+        var client = CreateClient(http);
+
+        var section = Assert.Single(await client.GetHomeSectionsAsync(Session()));
+
+        AssertSectionString(section, "ThumbImageTag", "section-thumb");
+        AssertSectionString(section, "PrimaryImageTag", "section-primary");
+        AssertSectionString(section, "BackdropImageTag", "section-backdrop");
+        AssertSectionString(section, "BannerImageTag", "section-banner");
+        AssertSectionString(section, "LogoImageTag", "section-logo");
+        AssertSectionString(section, "ThumbImageItemId", "section-thumb-owner");
+        AssertSectionString(section, "PrimaryImageItemId", "section-primary-owner");
+        AssertSectionString(section, "BackdropImageItemId", "section-backdrop-owner");
+        AssertSectionString(section, "BannerImageItemId", "section-banner-owner");
+        AssertSectionString(section, "LogoImageItemId", "section-logo-owner");
+        Assert.Equal("fallback-thumb", section.ParentItem.ThumbImageTag);
+    }
+
+    [Fact]
     public async Task GetHomeSectionItemsAsync_Uses_Section_Items_Endpoint()
     {
         var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
@@ -1039,6 +1105,13 @@ public sealed class EmbyLibraryTests
             600);
 
         Assert.Equal("http://emby.local:8096/Items/movie%201/Images/Primary%20Image?maxWidth=600&quality=90&api_key=token%2B123%2Fabc", url);
+    }
+
+    private static void AssertSectionString(EmbyHomeSection section, string propertyName, string expected)
+    {
+        var property = typeof(EmbyHomeSection).GetProperty(propertyName);
+        Assert.NotNull(property);
+        Assert.Equal(expected, property!.GetValue(section) as string);
     }
 
     private static EmbyApiClient CreateClient(HttpClient http) => new EmbyApiClient(http, new EmbyClientOptions

@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using NextGenEmby.App.Navigation;
 using NextGenEmby.App.Services;
 using NextGenEmby.App.Storage;
+using NextGenEmby.Core.Diagnostics;
 using NextGenEmby.Core.Emby;
 using NextGenEmby.Core.Input;
 using Windows.UI.Core;
@@ -364,6 +365,16 @@ namespace NextGenEmby.App.Views
 
             try
             {
+#if DEBUG
+                if (request.DevelopmentItems.Count > 0)
+                {
+                    focusFirstItem = RenderItems(
+                        CreateDevelopmentGridItems(request.DevelopmentItems, request.DevelopmentArtworkUris),
+                        loadGeneration);
+                    focusFallback = !focusFirstItem;
+                    return;
+                }
+#endif
                 var session = await _sessionStore.LoadAsync();
                 if (!CanApplyLoad(loadGeneration))
                 {
@@ -542,6 +553,38 @@ namespace NextGenEmby.App.Views
 
             return gridItems;
         }
+
+#if DEBUG
+        private static IReadOnlyList<LibraryGridItem> CreateDevelopmentGridItems(
+            IReadOnlyList<EmbyMediaItem> items,
+            IReadOnlyDictionary<string, string> artworkUris)
+        {
+            var gridItems = new List<LibraryGridItem>();
+            if (items == null)
+            {
+                return gridItems;
+            }
+
+            foreach (var item in items)
+            {
+                BitmapImage? imageSource = null;
+                var candidate = EmbyArtworkPolicy.SelectPosterArtwork(item, 420);
+                if (candidate != null &&
+                    artworkUris != null &&
+                    artworkUris.TryGetValue(
+                        DevelopmentHomeFixture.ArtworkKey(candidate.ItemId, candidate.ImageType),
+                        out var uri) &&
+                    !string.IsNullOrWhiteSpace(uri))
+                {
+                    imageSource = new BitmapImage(new Uri(uri));
+                }
+
+                gridItems.Add(new LibraryGridItem(item, imageSource));
+            }
+
+            return gridItems;
+        }
+#endif
 
         private void ItemsGrid_OnItemClick(object sender, ItemClickEventArgs e)
         {

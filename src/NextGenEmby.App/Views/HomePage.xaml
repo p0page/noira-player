@@ -182,6 +182,25 @@
                     </ScrollViewer>
                 </StackPanel>
 
+                <StackPanel
+                    x:Name="HomeSectionsRail"
+                    Spacing="18"
+                    Visibility="Collapsed">
+                    <TextBlock
+                        Text="Server sections"
+                        Style="{StaticResource TvSectionTitleTextStyle}" />
+                    <ScrollViewer
+                        HorizontalScrollBarVisibility="Hidden"
+                        HorizontalScrollMode="Enabled"
+                        VerticalScrollBarVisibility="Disabled"
+                        VerticalScrollMode="Disabled">
+                        <StackPanel
+                            x:Name="HomeSectionsPanel"
+                            Orientation="Horizontal"
+                            Spacing="18" />
+                    </ScrollViewer>
+                </StackPanel>
+
                 <TextBlock
                     x:Name="StatusBlock"
                     Style="{StaticResource TvStatusTextStyle}" />

@@ -1,3 +1,7 @@
+using System;
+using System.Collections.Generic;
+using NextGenEmby.Core.Emby;
+
 namespace NextGenEmby.App.Navigation
 {
     public sealed class LibraryNavigationRequest
@@ -23,7 +27,9 @@ namespace NextGenEmby.App.Navigation
             string includeItemTypes,
             string parentId,
             string sectionId,
-            LibraryNavigationQuery query)
+            LibraryNavigationQuery query,
+            IReadOnlyList<EmbyMediaItem>? developmentItems = null,
+            IReadOnlyDictionary<string, string>? developmentArtworkUris = null)
         {
             Title = title ?? "";
             CollectionType = collectionType ?? "";
@@ -31,6 +37,8 @@ namespace NextGenEmby.App.Navigation
             ParentId = parentId ?? "";
             SectionId = sectionId ?? "";
             Query = query ?? LibraryNavigationQuery.Empty;
+            DevelopmentItems = developmentItems ?? Array.Empty<EmbyMediaItem>();
+            DevelopmentArtworkUris = developmentArtworkUris ?? new Dictionary<string, string>();
         }
 
         public string Title { get; }
@@ -45,9 +53,28 @@ namespace NextGenEmby.App.Navigation
 
         public LibraryNavigationQuery Query { get; }
 
+        public IReadOnlyList<EmbyMediaItem> DevelopmentItems { get; }
+
+        public IReadOnlyDictionary<string, string> DevelopmentArtworkUris { get; }
+
         public bool IsMovies => CollectionType == "movies";
 
         public bool IsTv => CollectionType == "tvshows";
+
+        public LibraryNavigationRequest WithDevelopmentFixture(
+            IReadOnlyList<EmbyMediaItem> items,
+            IReadOnlyDictionary<string, string> artworkUris)
+        {
+            return new LibraryNavigationRequest(
+                Title,
+                CollectionType,
+                IncludeItemTypes,
+                ParentId,
+                SectionId,
+                Query,
+                items,
+                artworkUris);
+        }
     }
 
     public sealed class LibraryNavigationQuery

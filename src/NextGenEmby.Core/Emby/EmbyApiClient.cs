@@ -140,9 +140,12 @@ namespace NextGenEmby.Core.Emby
 
         public async Task<IReadOnlyList<EmbyHomeSection>> GetHomeSectionsAsync(EmbySession session)
         {
+            var parameters = new List<string>();
+            AddImageQueryParameters(parameters);
+
             using var request = new HttpRequestMessage(
                 HttpMethod.Get,
-                $"Users/{EscapeUriComponent(session.UserId)}/HomeSections");
+                $"Users/{EscapeUriComponent(session.UserId)}/HomeSections?{string.Join("&", parameters)}");
             EmbyAuthorization.Apply(request, _options, session);
 
             using var response = await _http.SendAsync(request).ConfigureAwait(false);
@@ -654,6 +657,9 @@ namespace NextGenEmby.Core.Emby
 
         private static EmbyHomeSection MapHomeSection(HomeSectionDto section)
         {
+            var imageTags = section.ImageTags;
+            var backdropImageTags = section.BackdropImageTags;
+
             return new EmbyHomeSection
             {
                 Id = section.Id ?? "",
@@ -663,6 +669,16 @@ namespace NextGenEmby.Core.Emby
                 CollectionType = section.CollectionType ?? "",
                 ViewType = section.ViewType ?? "",
                 ScrollDirection = section.ScrollDirection ?? "",
+                ThumbImageTag = imageTags != null && imageTags.TryGetValue("Thumb", out var thumb) ? thumb ?? "" : section.ParentThumbImageTag ?? "",
+                PrimaryImageTag = imageTags != null && imageTags.TryGetValue("Primary", out var primary) ? primary ?? "" : "",
+                BackdropImageTag = backdropImageTags != null && backdropImageTags.Count > 0 ? backdropImageTags[0] ?? "" : "",
+                BannerImageTag = imageTags != null && imageTags.TryGetValue("Banner", out var banner) ? banner ?? "" : "",
+                LogoImageTag = imageTags != null && imageTags.TryGetValue("Logo", out var logo) ? logo ?? "" : "",
+                ThumbImageItemId = section.ParentThumbItemId ?? "",
+                PrimaryImageItemId = section.PrimaryImageItemId ?? "",
+                BackdropImageItemId = section.ParentBackdropItemId ?? "",
+                BannerImageItemId = section.ParentBannerItemId ?? "",
+                LogoImageItemId = section.ParentLogoItemId ?? "",
                 ParentItem = section.ParentItem == null ? new EmbyMediaItem() : MapItem(section.ParentItem)
             };
         }
@@ -991,6 +1007,14 @@ namespace NextGenEmby.Core.Emby
             public string CollectionType { get; set; } = "";
             public string ViewType { get; set; } = "";
             public string ScrollDirection { get; set; } = "";
+            public Dictionary<string, string> ImageTags { get; set; } = new Dictionary<string, string>();
+            public List<string> BackdropImageTags { get; set; } = new List<string>();
+            public string PrimaryImageItemId { get; set; } = "";
+            public string ParentBackdropItemId { get; set; } = "";
+            public string ParentThumbItemId { get; set; } = "";
+            public string ParentBannerItemId { get; set; } = "";
+            public string ParentLogoItemId { get; set; } = "";
+            public string ParentThumbImageTag { get; set; } = "";
             public ItemDto? ParentItem { get; set; }
         }
 

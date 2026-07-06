@@ -11,14 +11,15 @@ namespace NextGenEmby.Core.Diagnostics
             string collectionType,
             string parentId,
             string sectionId,
-            EmbyMediaItem parentItem,
+            EmbyHomeSection section,
             IReadOnlyList<EmbyMediaItem> items)
         {
             Title = string.IsNullOrWhiteSpace(title) ? "Home section" : title;
             CollectionType = collectionType ?? "";
             ParentId = parentId ?? "";
             SectionId = sectionId ?? "";
-            ParentItem = parentItem ?? new EmbyMediaItem();
+            Section = section ?? new EmbyHomeSection();
+            ParentItem = Section.ParentItem ?? new EmbyMediaItem();
             Items = items ?? Array.Empty<EmbyMediaItem>();
         }
 
@@ -29,6 +30,8 @@ namespace NextGenEmby.Core.Diagnostics
         public string ParentId { get; }
 
         public string SectionId { get; }
+
+        public EmbyHomeSection Section { get; }
 
         public EmbyMediaItem ParentItem { get; }
 

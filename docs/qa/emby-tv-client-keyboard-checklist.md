@@ -1492,3 +1492,31 @@ Then continue design and implementation until the route passes.
   - No app-content mouse clicks were used.
 - Follow-up:
   - Re-run Music against a real saved Emby session with albums/songs after session restore, then add artist/album-artist hierarchy if the server exposes usable artist metadata.
+
+### 2026-07-07 - Home Server Sections Artwork Rail
+
+- App version: 0.1.0.179.
+- Scope: make server-configured Emby home sections first-class TV entrances, separate from media-library cards, with section-owned wide artwork preferred over child poster fallbacks.
+- Interaction/data changes:
+  - `GetHomeSectionsAsync` now requests image metadata and maps section-owned `Thumb`, `Backdrop`, `Banner`, `Primary`, and `Logo` image fields.
+  - Home renders a dedicated `Server sections` rail between `Media Libraries` and content/status rows.
+  - `EmbyArtworkPolicy.SelectHomeSectionWideArtwork` now prefers section-owned wide images before falling back to `ParentItem` artwork.
+  - Home focus policy now treats `Server sections` as its own controller stop: Hero -> Media Libraries -> Server sections -> content rows.
+  - DEBUG `home-fixture` section requests carry fixture items/artwork into Library, so local validation no longer depends on a saved Emby session.
+- Automated verification:
+  - TDD red paths confirmed HomeSections did not request/map image metadata, section-owned artwork was ignored, and Home had no dedicated section focus zone before implementation.
+  - Computer Use caught a real fixture bug where opening `Douban Top Rated` showed `Sign in first`; source tests then drove the fixture handoff fix.
+  - Core tests passed: 395 total.
+  - App Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.179_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.179`.
+- Keyboard-only validation with Computer Use:
+  - Wrote `dev-command.json` with route `home-fixture` and cold-launched the installed app.
+  - Initial Home showed `Play` focused on the hero, a `Media Libraries` rail, and a distinct `Server sections` rail with Hot Movies, Hot TV Series, Douban Top Rated, and Netflix cards using packaged wide artwork.
+  - Pressed `Down`; focus moved from hero `Play` to the first Media Libraries card.
+  - Pressed `Down`; focus moved to the first Server sections card.
+  - Pressed `Right`, `Right`; focus moved across Server sections to `Douban Top Rated` while the rail kept the focused card visible.
+  - Pressed `Return`; Library opened as `Douban Top Rated` with 7 fixture items and artwork-backed cards.
+  - Pressed `Escape`; Home restored focus to the originating `Douban Top Rated` Server sections card.
+  - No app-content mouse clicks were used.
+- Follow-up:
+  - Re-run the same rail against real server-provided section artwork when the saved Emby session is restored.
