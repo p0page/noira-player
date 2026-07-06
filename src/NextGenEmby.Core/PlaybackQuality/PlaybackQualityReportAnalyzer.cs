@@ -640,7 +640,15 @@ namespace NextGenEmby.Core.PlaybackQuality
                         {
                             "source.codec",
                             "source.frameRate",
-                            "source.hdrKind"
+                            "source.hdrKind",
+                            "source.hdrPlaybackStrategy",
+                            "source.isHdr",
+                            "source.isDirectPlayable",
+                            "source.isDolbyVision",
+                            "source.dolbyVisionProfile",
+                            "source.dolbyVisionCompatibilityId",
+                            "source.hasHdr10BaseLayer",
+                            "source.hasHlgBaseLayer"
                         });
                 case "color-pipeline":
                     return NewHint(

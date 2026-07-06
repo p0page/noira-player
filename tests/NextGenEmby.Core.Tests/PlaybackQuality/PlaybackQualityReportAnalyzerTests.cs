@@ -108,6 +108,56 @@ public sealed class PlaybackQualityReportAnalyzerTests
     }
 
     [Fact]
+    public void Analyze_Adds_Hdr_Strategy_Signals_For_Unsupported_Source_Hint()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "unsupported-dv",
+            Result = "fail",
+            Analysis = new PlaybackQualityAnalysis
+            {
+                PrimaryFailureArea = "unsupported-source"
+            },
+            Source = new PlaybackQualitySource
+            {
+                Codec = "hevc",
+                FrameRate = 23.976,
+                HdrKind = "DolbyVisionUnsupported",
+                HdrPlaybackStrategy = "Unsupported Dolby Vision profile",
+                IsHdr = true,
+                IsDirectPlayable = false,
+                IsDolbyVision = true,
+                DolbyVisionProfile = 5,
+                HasHdr10BaseLayer = false,
+                HasHlgBaseLayer = false
+            }
+        };
+        report.Checks.Add(new PlaybackQualityCheck
+        {
+            Name = "HdrKind",
+            Status = "fail",
+            FailureArea = "unsupported-source",
+            Signal = "source.hdrKind",
+            Expected = "Hdr10",
+            Actual = "DolbyVisionUnsupported"
+        });
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Contains(analysis.InvestigationHints, hint =>
+            hint.FailureArea == "unsupported-source" &&
+            hint.Signals.Contains("source.hdrKind") &&
+            hint.Signals.Contains("source.hdrPlaybackStrategy") &&
+            hint.Signals.Contains("source.isHdr") &&
+            hint.Signals.Contains("source.isDirectPlayable") &&
+            hint.Signals.Contains("source.isDolbyVision") &&
+            hint.Signals.Contains("source.dolbyVisionProfile") &&
+            hint.Signals.Contains("source.dolbyVisionCompatibilityId") &&
+            hint.Signals.Contains("source.hasHdr10BaseLayer") &&
+            hint.Signals.Contains("source.hasHlgBaseLayer"));
+    }
+
+    [Fact]
     public void Analyze_Adds_Evidence_Collection_Hint_When_Failed_Report_Has_Missing_Evidence()
     {
         var report = new PlaybackQualityReport

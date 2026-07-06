@@ -76,6 +76,14 @@ namespace NextGenEmby.Core.PlaybackQuality
                 ? 1000.0 / source.VideoFrameRate
                 : 0;
             report.Source.HdrKind = source.HdrProfile.Kind.ToString();
+            report.Source.HdrPlaybackStrategy = source.HdrProfile.PlaybackStrategy;
+            report.Source.IsHdr = source.HdrProfile.IsHdr;
+            report.Source.IsDirectPlayable = source.HdrProfile.IsDirectPlayable;
+            report.Source.IsDolbyVision = source.HdrProfile.IsDolbyVision;
+            report.Source.DolbyVisionProfile = source.HdrProfile.DolbyVisionProfile;
+            report.Source.DolbyVisionCompatibilityId = source.HdrProfile.DolbyVisionCompatibilityId;
+            report.Source.HasHdr10BaseLayer = source.HdrProfile.HasHdr10BaseLayer;
+            report.Source.HasHlgBaseLayer = source.HdrProfile.HasHlgBaseLayer;
             report.Source.AudioCodec = audio?.Codec ?? "";
         }
 

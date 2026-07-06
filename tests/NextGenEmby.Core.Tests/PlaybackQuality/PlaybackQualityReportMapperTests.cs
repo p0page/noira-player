@@ -122,7 +122,12 @@ public sealed class PlaybackQualityReportMapperTests
             HdrProfile = new HdrPlaybackProfile
             {
                 Kind = HdrPlaybackKind.DolbyVisionWithHdr10Fallback,
-                Codec = "hevc"
+                Codec = "hevc",
+                IsDolbyVision = true,
+                DolbyVisionProfile = 8,
+                DolbyVisionCompatibilityId = 1,
+                HasHdr10BaseLayer = true,
+                HasHlgBaseLayer = false
             }
         };
         source.Streams.Add(new EmbyMediaStream
@@ -160,6 +165,14 @@ public sealed class PlaybackQualityReportMapperTests
         Assert.Equal(23.976, report.Source.FrameRate);
         Assert.Equal(1000.0 / 23.976, report.Timing.ExpectedFrameDurationMs, precision: 6);
         Assert.Equal("DolbyVisionWithHdr10Fallback", report.Source.HdrKind);
+        Assert.Equal("HDR10 fallback from Dolby Vision", report.Source.HdrPlaybackStrategy);
+        Assert.True(report.Source.IsHdr);
+        Assert.True(report.Source.IsDirectPlayable);
+        Assert.True(report.Source.IsDolbyVision);
+        Assert.Equal(8, report.Source.DolbyVisionProfile);
+        Assert.Equal(1, report.Source.DolbyVisionCompatibilityId);
+        Assert.True(report.Source.HasHdr10BaseLayer);
+        Assert.False(report.Source.HasHlgBaseLayer);
         Assert.Equal("truehd", report.Source.AudioCodec);
     }
 
