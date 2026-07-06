@@ -9,6 +9,7 @@ try {
     $candidatePath = Join-Path $tempRoot 'candidate.json'
     $baselineEnvelopePath = Join-Path $tempRoot 'baseline-envelope.json'
     $candidateEnvelopePath = Join-Path $tempRoot 'candidate-envelope.json'
+    $analysisPath = Join-Path $tempRoot 'analysis.json'
     $outputPath = Join-Path $tempRoot 'comparison.json'
     $envelopeOutputPath = Join-Path $tempRoot 'comparison-envelope.json'
     $suitePath = Join-Path $tempRoot 'suite.json'
@@ -119,6 +120,39 @@ try {
   "modelAnalysis": {}
 }
 "@ | Set-Content -LiteralPath $candidateEnvelopePath -Encoding UTF8
+
+    Push-Location $repoRoot
+    try {
+        dotnet run `
+            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
+            --no-build `
+            -- analyze-report `
+            --report $candidatePath `
+            --output $analysisPath
+        if ($LASTEXITCODE -ne 0) {
+            throw 'playback quality CLI analyze-report returned a non-zero exit code.'
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    $analysis = Get-Content -Raw -LiteralPath $analysisPath | ConvertFrom-Json
+    if ($analysis.runId -ne 'candidate') {
+        throw 'Expected analyze-report output to preserve report runId.'
+    }
+
+    if (-not ($analysis.failureAreas -contains 'frame-pacing')) {
+        throw 'Expected analyze-report output to include frame-pacing failure area.'
+    }
+
+    if (-not ($analysis.evidenceSignals -contains 'timing.maxFrameGapMs')) {
+        throw 'Expected analyze-report output to include max frame gap evidence signal.'
+    }
+
+    if (-not ($analysis.failedChecks | Where-Object { $_.signal -eq 'timing.maxFrameGapMs' -and $_.actual -eq '120.000' })) {
+        throw 'Expected analyze-report output to include failed check details.'
+    }
 
     @'
 {

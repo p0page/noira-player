@@ -30,6 +30,11 @@ internal static class Program
                 return RunCompare(args);
             }
 
+            if (string.Equals(args[0], "analyze-report", StringComparison.OrdinalIgnoreCase))
+            {
+                return RunAnalyzeReport(args);
+            }
+
             if (string.Equals(args[0], "summarize", StringComparison.OrdinalIgnoreCase))
             {
                 return RunSummarize(args);
@@ -86,6 +91,15 @@ internal static class Program
 
         var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate, context);
         WriteJson(comparison, options.OutputPath);
+        return 0;
+    }
+
+    private static int RunAnalyzeReport(string[] args)
+    {
+        var options = ParseAnalyzeReportOptions(args);
+        var report = ReadPlaybackQualityReport(options.ReportPath);
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+        WriteJson(analysis, options.OutputPath);
         return 0;
     }
 
@@ -308,6 +322,33 @@ internal static class Program
         if (options.StallComparisonCountThreshold < 1)
         {
             throw new ArgumentException("--stall-threshold must be at least 1.");
+        }
+
+        return options;
+    }
+
+    private static AnalyzeReportOptions ParseAnalyzeReportOptions(string[] args)
+    {
+        var options = new AnalyzeReportOptions();
+        for (var index = 1; index < args.Length; index++)
+        {
+            var arg = args[index];
+            switch (arg)
+            {
+                case "--report":
+                    options.ReportPath = ReadValue(args, ref index, arg);
+                    break;
+                case "--output":
+                    options.OutputPath = ReadValue(args, ref index, arg);
+                    break;
+                default:
+                    throw new ArgumentException("Unknown analyze-report option: " + arg);
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(options.ReportPath))
+        {
+            throw new ArgumentException("Missing required option --report.");
         }
 
         return options;
@@ -1321,6 +1362,7 @@ internal static class Program
     private static void WriteUsage(TextWriter writer)
     {
         writer.WriteLine("Usage:");
+        writer.WriteLine("  playback-quality analyze-report --report <report.json> [--output <analysis.json>]");
         writer.WriteLine("  playback-quality compare --baseline <report.json> --candidate <report.json> [--previous <comparison.json>...] [--stall-threshold <n>] [--output <comparison.json>]");
         writer.WriteLine("  playback-quality summarize --comparison <comparison.json> [--comparison <comparison.json>...] [--output <suite.json>]");
         writer.WriteLine("  playback-quality compare-suite --baseline-dir <reports-dir> --candidate-dir <reports-dir> [--match-by relative-path|run-id] [--previous-comparisons-dir <comparison-dir>] [--comparisons-dir <comparison-dir>] [--stall-threshold <n>] [--output <suite.json>]");
@@ -1337,6 +1379,12 @@ internal static class Program
         public string OutputPath { get; set; } = "";
         public int StallComparisonCountThreshold { get; set; } = 2;
         public List<string> PreviousComparisonPaths { get; } = new List<string>();
+    }
+
+    private sealed class AnalyzeReportOptions
+    {
+        public string ReportPath { get; set; } = "";
+        public string OutputPath { get; set; } = "";
     }
 
     private sealed class SummarizeOptions

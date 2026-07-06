@@ -78,6 +78,16 @@ dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQ
 
 The report-set gate matches `report.runId` to manifest `caseId`, rejects missing cases, extra reports, duplicate run IDs, and source metadata mismatches. Run this gate before `compare-suite`; a report set that does not match the manifest is evidence-collection failure, not playback Core optimization evidence.
 
+## 单报告分析
+
+当模型只需要诊断一份已经采集好的播放质量报告，而不是比较 baseline/candidate 时，使用 App-free CLI 直接生成模型分析 JSON：
+
+```powershell
+dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- analyze-report --report captured-report.json --output report-analysis.json
+```
+
+`--report` 可以是 raw `PlaybackQualityReport`，也可以是包含顶层 `report` 字段的 `PlaybackQualityRunResult` envelope。命令会重新运行当前 Core 的 `PlaybackQualityReportAnalyzer`，输出 `failureAreas`、`failedChecks`、`evidenceSignals`、`missingEvidence`、`optimizationGate`、`framePacing` 和 `triageSteps`。自动化模型应先读取这个分析结果，再决定是补采集证据还是修改播放 Core。
+
 ## 候选版本门禁评测
 
 当另一个 worktree 正在修改 Xbox App 交互时，播放核心候选改动应优先走 App-free 门禁，不打包、不启动 UWP App：
