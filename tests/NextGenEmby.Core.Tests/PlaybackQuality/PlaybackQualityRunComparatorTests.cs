@@ -18,6 +18,8 @@ public sealed class PlaybackQualityRunComparatorTests
         var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
 
         Assert.Equal("improved", comparison.Result);
+        Assert.Equal("keep-candidate", comparison.Decision);
+        Assert.Contains("Keep candidate playback Core change", comparison.SuggestedNextAction);
         Assert.Empty(comparison.Regressions);
         Assert.Contains("frame-pacing", comparison.PersistingFailureAreas);
         Assert.Contains(comparison.Improvements, delta =>
@@ -41,6 +43,8 @@ public sealed class PlaybackQualityRunComparatorTests
         var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
 
         Assert.Equal("regressed", comparison.Result);
+        Assert.Equal("reject-candidate", comparison.Decision);
+        Assert.Contains("Reject or revert candidate playback Core change", comparison.SuggestedNextAction);
         Assert.Empty(comparison.Improvements);
         Assert.Contains("av-sync", comparison.NewFailureAreas);
         Assert.Contains(comparison.Regressions, delta =>
@@ -84,6 +88,8 @@ public sealed class PlaybackQualityRunComparatorTests
         var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
 
         Assert.Equal("mixed", comparison.Result);
+        Assert.Equal("split-candidate", comparison.Decision);
+        Assert.Contains("Split candidate change or isolate regressions", comparison.SuggestedNextAction);
         Assert.Contains(comparison.Improvements, delta => delta.Signal == "timing.maxFrameGapMs");
         Assert.Contains(comparison.Regressions, delta => delta.Signal == "colorPipeline.actualHdrOutput");
         Assert.Contains("frame-pacing", comparison.PersistingFailureAreas);
@@ -123,6 +129,8 @@ public sealed class PlaybackQualityRunComparatorTests
         var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
 
         Assert.Equal("insufficient-evidence", comparison.Result);
+        Assert.Equal("collect-comparable-evidence", comparison.Decision);
+        Assert.Contains("Collect comparable baseline and candidate checks", comparison.SuggestedNextAction);
         Assert.Contains("comparison requires baseline and candidate checks", comparison.Limitations);
     }
 

@@ -7,6 +7,8 @@ namespace NextGenEmby.Core.PlaybackQuality
     public sealed class PlaybackQualityRunComparison
     {
         public string Result { get; set; } = "unchanged";
+        public string Decision { get; set; } = "no-change";
+        public string SuggestedNextAction { get; set; } = "";
         public List<PlaybackQualitySignalDelta> Improvements { get; } = new List<PlaybackQualitySignalDelta>();
         public List<PlaybackQualitySignalDelta> Regressions { get; } = new List<PlaybackQualitySignalDelta>();
         public List<string> ResolvedFailureAreas { get; } = new List<string>();
@@ -48,6 +50,7 @@ namespace NextGenEmby.Core.PlaybackQuality
             {
                 comparison.Result = "insufficient-evidence";
                 comparison.Limitations.Add("comparison requires baseline and candidate checks");
+                ApplyDecision(comparison);
                 return comparison;
             }
 
@@ -73,6 +76,7 @@ namespace NextGenEmby.Core.PlaybackQuality
             {
                 comparison.Result = "insufficient-evidence";
                 comparison.Limitations.Add("comparison requires at least one matching check signal");
+                ApplyDecision(comparison);
                 return comparison;
             }
 
@@ -91,7 +95,40 @@ namespace NextGenEmby.Core.PlaybackQuality
                 comparison.Result = "regressed";
             }
 
+            ApplyDecision(comparison);
             return comparison;
+        }
+
+        private static void ApplyDecision(PlaybackQualityRunComparison comparison)
+        {
+            switch (comparison.Result)
+            {
+                case "improved":
+                    comparison.Decision = "keep-candidate";
+                    comparison.SuggestedNextAction =
+                        "Keep candidate playback Core change and continue investigating persisting failure areas.";
+                    break;
+                case "regressed":
+                    comparison.Decision = "reject-candidate";
+                    comparison.SuggestedNextAction =
+                        "Reject or revert candidate playback Core change before further optimization.";
+                    break;
+                case "mixed":
+                    comparison.Decision = "split-candidate";
+                    comparison.SuggestedNextAction =
+                        "Split candidate change or isolate regressions before keeping playback Core changes.";
+                    break;
+                case "insufficient-evidence":
+                    comparison.Decision = "collect-comparable-evidence";
+                    comparison.SuggestedNextAction =
+                        "Collect comparable baseline and candidate checks before deciding on playback Core changes.";
+                    break;
+                default:
+                    comparison.Decision = "no-change";
+                    comparison.SuggestedNextAction =
+                        "No comparable playback quality change was detected; continue with the next triage step.";
+                    break;
+            }
         }
 
         private static void AddCandidateOnlyFailures(
