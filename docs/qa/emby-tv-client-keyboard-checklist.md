@@ -1520,3 +1520,32 @@ Then continue design and implementation until the route passes.
   - No app-content mouse clicks were used.
 - Follow-up:
   - Re-run the same rail against real server-provided section artwork when the saved Emby session is restored.
+
+### 2026-07-07 - Photos Positive Browse Fixture Route
+
+- App version: 0.1.0.182.
+- Scope: add and verify a deterministic positive Photos browse route while the current saved Emby session/server route only exposes the Photos empty state.
+- Interaction changes:
+  - `dev-command.json` accepts route `photos-fixture`.
+  - The route opens the normal Library page as `Photos` with `Photo,Folder` item support, packaged QA artwork, root photos, and a root album.
+  - Folder activation opens a nested Photos Library request with the same fixture item/artwork set and filters by `ParentId`.
+  - Photo activation opens the immersive Photo viewer with a DEBUG-only packaged image URI so local validation does not require a saved Emby session.
+  - Library back navigation stores the originating item on the navigation request and restores focus to that item after returning from the Photo viewer.
+- Automated verification:
+  - TDD red paths confirmed `DevelopmentPhotosFixture`, route support, `BrowseFolder` activation, Photo viewer image handoff, and `photos-fixture` source handling did not exist before implementation.
+  - Computer Use caught a real focus restoration bug: after opening `Blue Crossing` and pressing `Escape`, focus initially reset to the first album item instead of the originating photo. A second TDD red path moved restore state onto `LibraryNavigationRequest`, after which focus returned to `Blue Crossing`.
+  - Core tests passed: 407 total.
+  - App Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.182_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.182`.
+- Keyboard-only validation with Computer Use:
+  - Wrote `dev-command.json` with route `photos-fixture` and launched the installed app.
+  - `dev-command-result.txt` reported `completed / photos-fixture`.
+  - Initial Photos state showed `Photos`, `3 items`, `Night Market`, `Rooftop After Rain`, and `Window Seat`, with focus on `Night Market`.
+  - Pressed `Return`; `Night Market` opened as a nested album with `4 items`.
+  - Pressed `Right`, `Right`; visible focus moved to `Blue Crossing`.
+  - Pressed `Return`; the immersive Photo viewer opened for `Blue Crossing`, showed `Photo`, rendered the packaged image, and did not show `Sign in first` or `Photo unavailable`.
+  - Pressed `Escape`; the app returned to the `Night Market` album and restored focus to `Blue Crossing`.
+  - Pressed `Escape` again; the app returned to the root Photos grid with `Night Market` focused.
+  - No app-content mouse clicks were used.
+- Follow-up:
+  - Re-run Photos against a real saved Emby session with server-provided photo folders and image URLs, then decide whether Photos needs a dedicated album-first layout instead of the generic Library grid.

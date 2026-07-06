@@ -362,6 +362,7 @@ namespace NextGenEmby.App.Views
             HideEmptyState();
             var focusFirstItem = false;
             var focusFallback = false;
+            var preferredFocusItemId = request.RestoreFocusItemId;
 
             try
             {
@@ -369,7 +370,9 @@ namespace NextGenEmby.App.Views
                 if (request.DevelopmentItems.Count > 0)
                 {
                     focusFirstItem = RenderItems(
-                        CreateDevelopmentGridItems(request.DevelopmentItems, request.DevelopmentArtworkUris),
+                        CreateDevelopmentGridItems(
+                            SelectDevelopmentItemsForRequest(request),
+                            request.DevelopmentArtworkUris),
                         loadGeneration);
                     focusFallback = !focusFirstItem;
                     return;
@@ -442,7 +445,7 @@ namespace NextGenEmby.App.Views
 
                     if (focusFirstItem)
                     {
-                        await FocusFirstItemAsync(loadGeneration);
+                        await FocusPreferredItemAsync(loadGeneration, preferredFocusItemId);
                     }
                     else if (focusFallback)
                     {
@@ -555,6 +558,41 @@ namespace NextGenEmby.App.Views
         }
 
 #if DEBUG
+        private static IReadOnlyList<EmbyMediaItem> SelectDevelopmentItemsForRequest(LibraryNavigationRequest request)
+        {
+            if (request.DevelopmentItems.Count == 0)
+            {
+                return request.DevelopmentItems;
+            }
+
+            var parentId = request.ParentId ?? "";
+            var hasParentMetadata = false;
+            foreach (var item in request.DevelopmentItems)
+            {
+                if (!string.IsNullOrWhiteSpace(item.ParentId))
+                {
+                    hasParentMetadata = true;
+                    break;
+                }
+            }
+
+            if (!hasParentMetadata && string.IsNullOrWhiteSpace(parentId))
+            {
+                return request.DevelopmentItems;
+            }
+
+            var filteredItems = new List<EmbyMediaItem>();
+            foreach (var item in request.DevelopmentItems)
+            {
+                if (string.Equals(item.ParentId ?? "", parentId, StringComparison.Ordinal))
+                {
+                    filteredItems.Add(item);
+                }
+            }
+
+            return filteredItems;
+        }
+
         private static IReadOnlyList<LibraryGridItem> CreateDevelopmentGridItems(
             IReadOnlyList<EmbyMediaItem> items,
             IReadOnlyDictionary<string, string> artworkUris)
@@ -605,18 +643,71 @@ namespace NextGenEmby.App.Views
             }
 
             _isNavigatingToDetails = true;
+            var request = _request;
+            if (request != null)
+            {
+                request.RestoreFocusItemId = item.Id;
+            }
+
             var itemName = string.IsNullOrWhiteSpace(item.Name) ? item.Id : item.Name;
             var route = LibraryItemActivationPolicy.ChooseRoute(item.Type);
             if (route == LibraryItemActivationRoute.PhotoViewer)
             {
-                Frame.Navigate(typeof(PhotoViewerPage), new PhotoViewerNavigationRequest(item.Id, itemName));
+                var developmentImageUri = ResolveDevelopmentPhotoUri(item);
+                Frame.Navigate(typeof(PhotoViewerPage), new PhotoViewerNavigationRequest(item.Id, itemName, developmentImageUri));
+                return;
+            }
+
+            if (route == LibraryItemActivationRoute.BrowseFolder)
+            {
+                Frame.Navigate(typeof(LibraryPage), CreateFolderNavigationRequest(item, itemName));
                 return;
             }
 
             Frame.Navigate(typeof(MediaDetailsPage), new MediaDetailsNavigationRequest(item.Id, itemName));
         }
 
-        private async Task FocusFirstItemAsync(int loadGeneration)
+        private LibraryNavigationRequest CreateFolderNavigationRequest(EmbyMediaItem item, string itemName)
+        {
+            var request = _request;
+            if (request == null)
+            {
+                return new LibraryNavigationRequest(itemName, "", "", item.Id, "");
+            }
+
+            return new LibraryNavigationRequest(
+                itemName,
+                request.CollectionType,
+                request.IncludeItemTypes,
+                item.Id,
+                "",
+                request.Query,
+                request.DevelopmentItems,
+                request.DevelopmentArtworkUris);
+        }
+
+        private string ResolveDevelopmentPhotoUri(EmbyMediaItem item)
+        {
+            var request = _request;
+            if (request == null || request.DevelopmentArtworkUris.Count == 0)
+            {
+                return "";
+            }
+
+            var candidate = EmbyArtworkPolicy.SelectPosterArtwork(item, 1920);
+            if (candidate == null)
+            {
+                return "";
+            }
+
+            return request.DevelopmentArtworkUris.TryGetValue(
+                DevelopmentHomeFixture.ArtworkKey(candidate.ItemId, candidate.ImageType),
+                out var uri)
+                ? uri
+                : "";
+        }
+
+        private async Task FocusPreferredItemAsync(int loadGeneration, string preferredFocusItemId)
         {
             var focused = false;
             await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
@@ -626,11 +717,17 @@ namespace NextGenEmby.App.Views
                     return;
                 }
 
-                focused = FocusFirstItemNow(FocusState.Keyboard);
+                focused = FocusItemByIdNow(preferredFocusItemId, FocusState.Keyboard) ||
+                    FocusFirstItemNow(FocusState.Keyboard);
             });
 
             if (focused || !CanApplyLoad(loadGeneration))
             {
+                if (focused)
+                {
+                    ClearRestoreFocusItemId(preferredFocusItemId);
+                }
+
                 return;
             }
 
@@ -639,9 +736,23 @@ namespace NextGenEmby.App.Views
             {
                 if (CanApplyLoad(loadGeneration))
                 {
-                    FocusFirstItemNow(FocusState.Keyboard);
+                    if (FocusItemByIdNow(preferredFocusItemId, FocusState.Keyboard) ||
+                        FocusFirstItemNow(FocusState.Keyboard))
+                    {
+                        ClearRestoreFocusItemId(preferredFocusItemId);
+                    }
                 }
             });
+        }
+
+        private void ClearRestoreFocusItemId(string itemId)
+        {
+            var request = _request;
+            if (request != null &&
+                string.Equals(request.RestoreFocusItemId, itemId ?? "", StringComparison.Ordinal))
+            {
+                request.RestoreFocusItemId = "";
+            }
         }
 
         private bool FocusFirstItemNow(FocusState focusState)
@@ -652,6 +763,32 @@ namespace NextGenEmby.App.Views
             }
 
             return FocusGridItem(0, focusState);
+        }
+
+        private bool FocusItemByIdNow(string itemId, FocusState focusState)
+        {
+            var index = FindGridItemIndexById(itemId);
+            return index >= 0 && FocusGridItem(index, focusState);
+        }
+
+        private int FindGridItemIndexById(string itemId)
+        {
+            if (string.IsNullOrWhiteSpace(itemId))
+            {
+                return -1;
+            }
+
+            for (var i = 0; i < ItemsGrid.Items.Count; i++)
+            {
+                var gridItem = ItemsGrid.Items[i] as LibraryGridItem;
+                if (gridItem != null &&
+                    string.Equals(gridItem.Item.Id, itemId, StringComparison.Ordinal))
+                {
+                    return i;
+                }
+            }
+
+            return -1;
         }
 
         private bool FocusGridItem(int index, FocusState focusState)

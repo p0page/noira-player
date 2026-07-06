@@ -36,6 +36,61 @@ public sealed class LibraryPageSourceTests
         Assert.Contains("DevelopmentHomeFixture.ArtworkKey", source);
     }
 
+    [Fact]
+    public void Library_Page_Filters_Development_Items_By_Parent_For_Nested_Folders()
+    {
+        var source = ReadAppSource("Views", "LibraryPage.xaml.cs");
+
+        Assert.Contains("SelectDevelopmentItemsForRequest", source);
+        Assert.Contains("item.ParentId", source);
+        Assert.Contains("request.ParentId", source);
+    }
+
+    [Fact]
+    public void Library_Page_Opens_Folders_As_Nested_Libraries()
+    {
+        var source = ReadAppSource("Views", "LibraryPage.xaml.cs");
+
+        Assert.Contains("LibraryItemActivationRoute.BrowseFolder", source);
+        Assert.Contains("CreateFolderNavigationRequest", source);
+        Assert.Contains("Frame.Navigate(typeof(LibraryPage)", source);
+    }
+
+    [Fact]
+    public void Library_Page_Passes_Development_Photo_Uri_To_Photo_Viewer()
+    {
+        var source = ReadAppSource("Views", "LibraryPage.xaml.cs");
+        var requestSource = ReadAppSource("Navigation", "PhotoViewerNavigationRequest.cs");
+
+        Assert.Contains("ResolveDevelopmentPhotoUri", source);
+        Assert.Contains("new PhotoViewerNavigationRequest(item.Id, itemName, developmentImageUri)", source);
+        Assert.Contains("DevelopmentImageUri", requestSource);
+    }
+
+    [Fact]
+    public void Library_Page_Restores_Focus_To_Activated_Item_When_Returning_From_Child_Page()
+    {
+        var source = ReadAppSource("Views", "LibraryPage.xaml.cs");
+        var requestSource = ReadAppSource("Navigation", "LibraryNavigationRequest.cs");
+
+        Assert.Contains("RestoreFocusItemId", requestSource);
+        Assert.Contains("request.RestoreFocusItemId = item.Id;", source);
+        Assert.Contains("preferredFocusItemId = request.RestoreFocusItemId", source);
+        Assert.Contains("FocusPreferredItemAsync(loadGeneration, preferredFocusItemId)", source);
+        Assert.Contains("FocusItemByIdNow(preferredFocusItemId, FocusState.Keyboard)", source);
+        Assert.Contains("FindGridItemIndexById", source);
+    }
+
+    private static string ReadAppSource(params string[] segments)
+    {
+        var parts = new string[segments.Length + 3];
+        parts[0] = FindRepositoryRoot();
+        parts[1] = "src";
+        parts[2] = "NextGenEmby.App";
+        Array.Copy(segments, 0, parts, 3, segments.Length);
+        return File.ReadAllText(Path.Combine(parts));
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

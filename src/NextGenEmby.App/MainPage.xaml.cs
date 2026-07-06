@@ -540,7 +540,7 @@ namespace NextGenEmby.App
                     NavigateLibrary(new LibraryNavigationRequest(
                         "Photos",
                         "photos",
-                        "Photo",
+                        "Photo,Folder",
                         "",
                         "",
                         new LibraryNavigationQuery(mediaTypes: "Photo", requireItemTypeMatch: true)));
@@ -820,10 +820,23 @@ namespace NextGenEmby.App
                     NavigateLibrary(new LibraryNavigationRequest(
                         "Photos",
                         "photos",
-                        "Photo",
+                        "Photo,Folder",
                         "",
                         "",
                         new LibraryNavigationQuery(mediaTypes: "Photo", requireItemTypeMatch: true)));
+                    return;
+
+                case "photos-fixture":
+                    var fixture = DevelopmentPhotosFixture.Create();
+                    NavigateLibrary(new LibraryNavigationRequest(
+                        "Photos",
+                        "photos",
+                        "Photo,Folder",
+                        "",
+                        "",
+                        new LibraryNavigationQuery(mediaTypes: "Photo", requireItemTypeMatch: true),
+                        fixture.Items,
+                        fixture.ArtworkUris));
                     return;
 
                 case "playlists":

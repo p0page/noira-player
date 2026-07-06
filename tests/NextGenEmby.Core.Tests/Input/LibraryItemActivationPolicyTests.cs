@@ -27,6 +27,14 @@ public sealed class LibraryItemActivationPolicyTests
     }
 
     [Fact]
+    public void ChooseRoute_Opens_Folder_Browse_For_Folders()
+    {
+        var route = LibraryItemActivationPolicy.ChooseRoute("Folder");
+
+        Assert.Equal(LibraryItemActivationRoute.BrowseFolder, route);
+    }
+
+    [Fact]
     public void ChooseRoute_Defaults_To_Details_For_Unknown_Types()
     {
         var route = LibraryItemActivationPolicy.ChooseRoute("");

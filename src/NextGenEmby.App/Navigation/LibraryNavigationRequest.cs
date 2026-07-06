@@ -57,6 +57,8 @@ namespace NextGenEmby.App.Navigation
 
         public IReadOnlyDictionary<string, string> DevelopmentArtworkUris { get; }
 
+        public string RestoreFocusItemId { get; set; } = "";
+
         public bool IsMovies => CollectionType == "movies";
 
         public bool IsTv => CollectionType == "tvshows";
