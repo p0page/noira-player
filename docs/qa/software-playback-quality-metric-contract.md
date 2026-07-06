@@ -63,6 +63,7 @@ The analyzer output must include:
 - `limitations` copied from the report.
 
 This keeps model iteration grounded in evidence. For example, a report can identify `color-pipeline` as primary while still preserving `frame-pacing` as a secondary failure area.
+When a frame-pacing check fails, analyzer evidence must include `timing.expectedFrameDurationMs` if it is present so the model can compare observed gaps against the source cadence.
 
 ## Limitations
 

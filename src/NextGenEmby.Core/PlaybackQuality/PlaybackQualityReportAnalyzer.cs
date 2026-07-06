@@ -59,6 +59,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                 AddUnique(analysis.Limitations, limitation);
             }
 
+            AddDerivedEvidence(analysis, report);
             AddMissingEvidence(analysis, report);
 
             if (string.IsNullOrWhiteSpace(analysis.SuggestedNextAction))
@@ -90,6 +91,11 @@ namespace NextGenEmby.Core.PlaybackQuality
                 analysis.MissingEvidence.Add("timing.renderedVideoFrames");
             }
 
+            if (report.Source.FrameRate > 0 && report.Timing.ExpectedFrameDurationMs <= 0)
+            {
+                analysis.MissingEvidence.Add("timing.expectedFrameDurationMs");
+            }
+
             if (report.Sync.AudioVideoDriftMsP95 <= 0 && report.Timing.RenderedVideoFrames == 0)
             {
                 analysis.MissingEvidence.Add("sync.audioVideoDriftMsP95");
@@ -113,6 +119,25 @@ namespace NextGenEmby.Core.PlaybackQuality
             if (report.Display.RefreshRateHz <= 0)
             {
                 analysis.MissingEvidence.Add("display.refreshRateHz");
+            }
+        }
+
+        private static void AddDerivedEvidence(
+            PlaybackQualityModelAnalysis analysis,
+            PlaybackQualityReport report)
+        {
+            if (report.Timing.ExpectedFrameDurationMs <= 0)
+            {
+                return;
+            }
+
+            foreach (var check in report.Checks)
+            {
+                if (check.Status == "fail" && check.FailureArea == "frame-pacing")
+                {
+                    AddUnique(analysis.EvidenceSignals, "timing.expectedFrameDurationMs");
+                    return;
+                }
             }
         }
 

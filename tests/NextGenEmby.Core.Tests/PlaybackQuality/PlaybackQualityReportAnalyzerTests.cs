@@ -79,6 +79,65 @@ public sealed class PlaybackQualityReportAnalyzerTests
     }
 
     [Fact]
+    public void Analyze_Reports_Missing_Frame_Duration_When_Source_Frame_Rate_Is_Known()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "missing-frame-duration",
+            Result = "observed",
+            Source = new PlaybackQualitySource
+            {
+                Codec = "hevc",
+                FrameRate = 23.976
+            },
+            Timing = new PlaybackQualityTiming
+            {
+                RenderedVideoFrames = 10
+            },
+            ColorPipeline = new PlaybackQualityColorPipeline
+            {
+                DxgiInput = "YCBCR_STUDIO_G2084_TOPLEFT_P2020"
+            },
+            Display = new PlaybackQualityDisplay
+            {
+                HdrStatus = "On",
+                RefreshRateHz = 59.94006
+            }
+        };
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Contains("timing.expectedFrameDurationMs", analysis.MissingEvidence);
+    }
+
+    [Fact]
+    public void Analyze_Adds_Expected_Frame_Duration_As_Frame_Pacing_Evidence()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "pacing-evidence",
+            Result = "fail",
+            Timing = new PlaybackQualityTiming
+            {
+                ExpectedFrameDurationMs = 41.708,
+                MaxFrameGapMs = 125
+            }
+        };
+        report.Checks.Add(new PlaybackQualityCheck
+        {
+            Name = "MaxFrameGapMs",
+            Status = "fail",
+            FailureArea = "frame-pacing",
+            Signal = "timing.maxFrameGapMs"
+        });
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Contains("timing.maxFrameGapMs", analysis.EvidenceSignals);
+        Assert.Contains("timing.expectedFrameDurationMs", analysis.EvidenceSignals);
+    }
+
+    [Fact]
     public void Serializer_Writes_Model_Analysis_With_CamelCase_Field_Names()
     {
         var report = new PlaybackQualityReport
