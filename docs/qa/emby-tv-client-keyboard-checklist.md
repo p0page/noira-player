@@ -502,3 +502,27 @@ Then continue design and implementation until the route passes.
   - Repeated `Right` moved across the horizontal rail; the focused `日漫` card stayed fully visible after the bring-into-view fix.
   - `Enter` opened the selected `日漫` Library, showing `100 items`, Sort, Filter, and a focused first content card.
   - Computer Use screenshot capture timed out once immediately after installing 0.1.0.102; rehydrating the app window and retrying with a lighter accessibility snapshot recovered. No app-content mouse clicks were used.
+
+### 2026-07-06 - Matte Library Slat App Identity
+
+- App version: 0.1.0.104.
+- Scope: production UWP app identity was refreshed to match `docs/DESIGN.md` Matte Cinema Fluent direction, replacing the rejected cyan portal/glow language with a matte library slat mark.
+- Visual changes:
+  - App icon assets now use a matte rounded-square tile, layered dark media slats, a crisp cyan focus edge, a green play/confirm surface, and a flat amber progress base.
+  - Splash screen copy changed from `Library Portal` to `Private media library`.
+  - `docs/icon-concepts/README.md` now marks the old portal concept as historical and records the current production direction.
+- Stability change:
+  - Added early startup diagnostics around `App.InitializeComponent` and `OnLaunched`, written to LocalState `startup-diagnostics.log`, so launch-time UWP crashes are no longer opaque.
+- Automated verification:
+  - Core tests passed: 212 total.
+  - Icon dimension gate passed: Store 50x50, Square44 44x44, Square150 150x150, Wide 310x150, Splash 620x300.
+  - `git diff --check` passed with only existing line-ending warnings.
+  - App Debug x64 build passed and produced `NextGenEmby.App_0.1.0.104_x64_Debug.msix`.
+  - MSIX signed and installed locally as `NextGenEmby.App_0.1.0.104_x64__h8qjz0sr1sg4m`.
+- Keyboard-only validation with Computer Use:
+  - Launched 0.1.0.104 locally; Home rendered Hero, Media Libraries, Continue watching, Hot Movies, and Hot TV Series.
+  - `Down`, `Right`, `Right`, `Left` moved focus from Hero controls into the Media Libraries rail and left focus visibly on `热门剧集`.
+  - `Return` opened `热门剧集`, showing `45 items`, Sort, Filter, and a focused first series card.
+  - `Escape` returned to Home and preserved focus on the `热门剧集` media-library card.
+  - Startup diagnostics recorded `App.InitializeComponent completed` and `App.OnLaunched completed`; no 0.1.0.104 crash appeared in the checked Application event sample.
+  - No app-content mouse clicks were used.

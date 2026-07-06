@@ -76,7 +76,7 @@ function Set-CanvasQuality {
     $Graphics.TextRenderingHint = [System.Drawing.Text.TextRenderingHint]::ClearTypeGridFit
 }
 
-function Draw-PortalMark {
+function Draw-MatteSlatMark {
     param(
         [System.Drawing.Graphics]$Graphics,
         [System.Drawing.RectangleF]$Rect
@@ -85,79 +85,83 @@ function Draw-PortalMark {
     $s = [Math]::Min($Rect.Width, $Rect.Height)
     $x = $Rect.X + (($Rect.Width - $s) / 2)
     $y = $Rect.Y + (($Rect.Height - $s) / 2)
-    $radius = $s * 0.075
+    $radius = $s * 0.065
 
-    $cardBack = [System.Drawing.SolidBrush]::new((New-IconColor 21 34 48 245))
-    $cardMid = [System.Drawing.SolidBrush]::new((New-IconColor 29 45 63 248))
-    $cardFront = [System.Drawing.SolidBrush]::new((New-IconColor 13 22 34 252))
-    $cardLine = [System.Drawing.Pen]::new((New-IconColor 70 231 255 92), [Math]::Max(1.0, $s * 0.018))
-    $softLine = [System.Drawing.Pen]::new((New-IconColor 170 193 214 55), [Math]::Max(1.0, $s * 0.01))
-    $portalGlow = [System.Drawing.SolidBrush]::new((New-IconColor 59 213 255 54))
-    $portal = [System.Drawing.SolidBrush]::new((New-IconColor 78 231 255 245))
-    $portalCore = [System.Drawing.SolidBrush]::new((New-IconColor 5 8 13 255))
-    $amberPen = [System.Drawing.Pen]::new((New-IconColor 217 164 65 245), [Math]::Max(2.0, $s * 0.055))
+    $shadow = [System.Drawing.SolidBrush]::new((New-IconColor 0 0 0 72))
+    $cardBack = [System.Drawing.SolidBrush]::new((New-IconColor 13 18 23 250))
+    $cardMid = [System.Drawing.SolidBrush]::new((New-IconColor 20 26 33 252))
+    $cardFront = [System.Drawing.SolidBrush]::new((New-IconColor 26 32 39 255))
+    $cardInset = [System.Drawing.SolidBrush]::new((New-IconColor 16 20 25 255))
+    $softLine = [System.Drawing.Pen]::new((New-IconColor 48 56 66 210), [Math]::Max(1.0, $s * 0.012))
+    $focusPen = [System.Drawing.Pen]::new((New-IconColor 59 213 255 235), [Math]::Max(1.0, $s * 0.018))
+    $green = [System.Drawing.SolidBrush]::new((New-IconColor 97 212 124 255))
+    $greenCut = [System.Drawing.SolidBrush]::new((New-IconColor 4 16 7 255))
+    $amberPen = [System.Drawing.Pen]::new((New-IconColor 224 184 106 245), [Math]::Max(2.0, $s * 0.045))
 
     try {
         $amberPen.StartCap = [System.Drawing.Drawing2D.LineCap]::Round
         $amberPen.EndCap = [System.Drawing.Drawing2D.LineCap]::Round
+        $focusPen.StartCap = [System.Drawing.Drawing2D.LineCap]::Round
+        $focusPen.EndCap = [System.Drawing.Drawing2D.LineCap]::Round
 
         $state = $Graphics.Save()
-        $Graphics.TranslateTransform($x + ($s * 0.34), $y + ($s * 0.49))
-        $Graphics.RotateTransform(-9)
-        $backRect = [System.Drawing.RectangleF]::new(-$s * 0.22, -$s * 0.30, $s * 0.50, $s * 0.62)
+        $Graphics.TranslateTransform($x + ($s * 0.35), $y + ($s * 0.52))
+        $Graphics.RotateTransform(-7)
+        $backRect = [System.Drawing.RectangleF]::new(-$s * 0.24, -$s * 0.33, $s * 0.50, $s * 0.64)
+        $backShadow = [System.Drawing.RectangleF]::new($backRect.X + ($s * 0.018), $backRect.Y + ($s * 0.026), $backRect.Width, $backRect.Height)
+        Fill-RoundedRect -Graphics $Graphics -Brush $shadow -Rect $backShadow -Radius $radius
         Fill-RoundedRect -Graphics $Graphics -Brush $cardBack -Rect $backRect -Radius $radius
         Draw-RoundedRect -Graphics $Graphics -Pen $softLine -Rect $backRect -Radius $radius
         $Graphics.Restore($state)
 
         $state = $Graphics.Save()
-        $Graphics.TranslateTransform($x + ($s * 0.50), $y + ($s * 0.45))
-        $Graphics.RotateTransform(7)
-        $midRect = [System.Drawing.RectangleF]::new(-$s * 0.25, -$s * 0.33, $s * 0.52, $s * 0.66)
+        $Graphics.TranslateTransform($x + ($s * 0.52), $y + ($s * 0.46))
+        $Graphics.RotateTransform(4)
+        $midRect = [System.Drawing.RectangleF]::new(-$s * 0.25, -$s * 0.33, $s * 0.52, $s * 0.64)
+        $midShadow = [System.Drawing.RectangleF]::new($midRect.X + ($s * 0.018), $midRect.Y + ($s * 0.026), $midRect.Width, $midRect.Height)
+        Fill-RoundedRect -Graphics $Graphics -Brush $shadow -Rect $midShadow -Radius $radius
         Fill-RoundedRect -Graphics $Graphics -Brush $cardMid -Rect $midRect -Radius $radius
         Draw-RoundedRect -Graphics $Graphics -Pen $softLine -Rect $midRect -Radius $radius
         $Graphics.Restore($state)
 
         $state = $Graphics.Save()
-        $Graphics.TranslateTransform($x + ($s * 0.61), $y + ($s * 0.52))
-        $Graphics.RotateTransform(-2)
-        $frontRect = [System.Drawing.RectangleF]::new(-$s * 0.27, -$s * 0.31, $s * 0.53, $s * 0.60)
+        $Graphics.TranslateTransform($x + ($s * 0.61), $y + ($s * 0.53))
+        $Graphics.RotateTransform(-1)
+        $frontRect = [System.Drawing.RectangleF]::new(-$s * 0.29, -$s * 0.32, $s * 0.54, $s * 0.60)
+        $frontShadow = [System.Drawing.RectangleF]::new($frontRect.X + ($s * 0.018), $frontRect.Y + ($s * 0.030), $frontRect.Width, $frontRect.Height)
+        Fill-RoundedRect -Graphics $Graphics -Brush $shadow -Rect $frontShadow -Radius $radius
         Fill-RoundedRect -Graphics $Graphics -Brush $cardFront -Rect $frontRect -Radius $radius
-        Draw-RoundedRect -Graphics $Graphics -Pen $cardLine -Rect $frontRect -Radius $radius
+        Draw-RoundedRect -Graphics $Graphics -Pen $softLine -Rect $frontRect -Radius $radius
 
-        $stripePen = [System.Drawing.Pen]::new((New-IconColor 78 231 255 120), [Math]::Max(1.0, $s * 0.015))
-        try {
-            $Graphics.DrawLine($stripePen, -$s * 0.20, -$s * 0.14, $s * 0.17, -$s * 0.14)
-            $Graphics.DrawLine($stripePen, -$s * 0.20, $s * 0.16, $s * 0.10, $s * 0.16)
-        }
-        finally {
-            $stripePen.Dispose()
-        }
+        $Graphics.DrawLine($focusPen, $frontRect.Left + ($s * 0.05), $frontRect.Top + ($s * 0.035), $frontRect.Right - ($s * 0.06), $frontRect.Top + ($s * 0.035))
+        $Graphics.DrawLine($focusPen, $frontRect.Left + ($s * 0.04), $frontRect.Top + ($s * 0.07), $frontRect.Left + ($s * 0.04), $frontRect.Bottom - ($s * 0.07))
+
+        $screenRect = [System.Drawing.RectangleF]::new($frontRect.Left + ($s * 0.12), $frontRect.Top + ($s * 0.14), $frontRect.Width * 0.62, $frontRect.Height * 0.66)
+        Fill-RoundedRect -Graphics $Graphics -Brush $cardInset -Rect $screenRect -Radius ($radius * 0.64)
+
+        $playRect = [System.Drawing.RectangleF]::new($frontRect.Left + ($s * 0.20), $frontRect.Top + ($s * 0.25), $s * 0.17, $s * 0.26)
+        Fill-RoundedRect -Graphics $Graphics -Brush $green -Rect $playRect -Radius ($radius * 0.56)
+
+        $playCut = [System.Drawing.PointF[]]@(
+            [System.Drawing.PointF]::new($playRect.Left + ($playRect.Width * 0.38), $playRect.Top + ($playRect.Height * 0.25)),
+            [System.Drawing.PointF]::new($playRect.Left + ($playRect.Width * 0.38), $playRect.Bottom - ($playRect.Height * 0.25)),
+            [System.Drawing.PointF]::new($playRect.Right - ($playRect.Width * 0.20), $playRect.Top + ($playRect.Height * 0.50))
+        )
+        $Graphics.FillPolygon($greenCut, $playCut)
         $Graphics.Restore($state)
 
-        $glowRect = [System.Drawing.RectangleF]::new($x + ($s * 0.27), $y + ($s * 0.27), $s * 0.49, $s * 0.49)
-        $portalRect = [System.Drawing.RectangleF]::new($x + ($s * 0.34), $y + ($s * 0.34), $s * 0.35, $s * 0.35)
-        $Graphics.FillEllipse($portalGlow, $glowRect)
-        $Graphics.FillEllipse($portal, $portalRect)
-
-        $triangle = [System.Drawing.PointF[]]@(
-            [System.Drawing.PointF]::new($x + ($s * 0.47), $y + ($s * 0.425)),
-            [System.Drawing.PointF]::new($x + ($s * 0.47), $y + ($s * 0.605)),
-            [System.Drawing.PointF]::new($x + ($s * 0.615), $y + ($s * 0.515))
-        )
-        $Graphics.FillPolygon($portalCore, $triangle)
-
-        $arcRect = [System.Drawing.RectangleF]::new($x + ($s * 0.20), $y + ($s * 0.77), $s * 0.60, $s * 0.25)
-        $Graphics.DrawArc($amberPen, $arcRect, 197, 146)
+        $Graphics.DrawLine($amberPen, $x + ($s * 0.28), $y + ($s * 0.82), $x + ($s * 0.76), $y + ($s * 0.82))
     }
     finally {
+        $shadow.Dispose()
         $cardBack.Dispose()
         $cardMid.Dispose()
         $cardFront.Dispose()
-        $cardLine.Dispose()
+        $cardInset.Dispose()
         $softLine.Dispose()
-        $portalGlow.Dispose()
-        $portal.Dispose()
-        $portalCore.Dispose()
+        $focusPen.Dispose()
+        $green.Dispose()
+        $greenCut.Dispose()
         $amberPen.Dispose()
     }
 }
@@ -213,24 +217,29 @@ function New-AppIconBitmap {
 
         if ($Kind -eq "Wide") {
             $mark = [System.Drawing.RectangleF]::new($Width * 0.06, $Height * 0.10, $Height * 0.80, $Height * 0.80)
-            Draw-PortalMark -Graphics $graphics -Rect $mark
-            $lanePen = [System.Drawing.Pen]::new((New-IconColor 78 231 255 80), [Math]::Max(1.0, $Height * 0.012))
-            $cardBrush = [System.Drawing.SolidBrush]::new((New-IconColor 23 34 48 220))
+            Draw-MatteSlatMark -Graphics $graphics -Rect $mark
+            $lanePen = [System.Drawing.Pen]::new((New-IconColor 48 56 66 210), [Math]::Max(1.0, $Height * 0.012))
+            $focusPen = [System.Drawing.Pen]::new((New-IconColor 59 213 255 220), [Math]::Max(1.0, $Height * 0.015))
+            $cardBrush = [System.Drawing.SolidBrush]::new((New-IconColor 20 26 33 232))
             try {
                 for ($i = 0; $i -lt 4; $i++) {
                     $card = [System.Drawing.RectangleF]::new($Width * (0.42 + ($i * 0.105)), $Height * (0.23 + (($i % 2) * 0.07)), $Width * 0.12, $Height * 0.45)
                     Fill-RoundedRect -Graphics $graphics -Brush $cardBrush -Rect $card -Radius ($Height * 0.035)
                     Draw-RoundedRect -Graphics $graphics -Pen $lanePen -Rect $card -Radius ($Height * 0.035)
+                    if ($i -eq 0) {
+                        $Graphics.DrawLine($focusPen, $card.Left + ($Height * 0.025), $card.Top + ($Height * 0.025), $card.Right - ($Height * 0.025), $card.Top + ($Height * 0.025))
+                    }
                 }
             }
             finally {
                 $lanePen.Dispose()
+                $focusPen.Dispose()
                 $cardBrush.Dispose()
             }
         }
         elseif ($Kind -eq "Splash") {
             $mark = [System.Drawing.RectangleF]::new($Width * 0.16, $Height * 0.18, $Height * 0.64, $Height * 0.64)
-            Draw-PortalMark -Graphics $graphics -Rect $mark
+            Draw-MatteSlatMark -Graphics $graphics -Rect $mark
             $title = [System.Drawing.RectangleF]::new($Width * 0.45, $Height * 0.25, $Width * 0.40, $Height * 0.28)
             Draw-Title -Graphics $graphics -Text "Next Gen Emby" -Rect $title -FontSize ($Height * 0.105)
 
@@ -241,7 +250,7 @@ function New-AppIconBitmap {
                 $format.Alignment = [System.Drawing.StringAlignment]::Near
                 $format.LineAlignment = [System.Drawing.StringAlignment]::Near
                 $captionRect = [System.Drawing.RectangleF]::new($Width * 0.45, $Height * 0.54, $Width * 0.34, $Height * 0.12)
-                $graphics.DrawString("Library Portal", $captionFont, $captionBrush, $captionRect, $format)
+                $graphics.DrawString("Private media library", $captionFont, $captionBrush, $captionRect, $format)
             }
             finally {
                 $captionFont.Dispose()
@@ -252,7 +261,7 @@ function New-AppIconBitmap {
         else {
             $inset = [Math]::Min($Width, $Height) * 0.08
             $mark = [System.Drawing.RectangleF]::new($inset, $inset, $Width - ($inset * 2), $Height - ($inset * 2))
-            Draw-PortalMark -Graphics $graphics -Rect $mark
+            Draw-MatteSlatMark -Graphics $graphics -Rect $mark
         }
     }
     finally {
@@ -293,4 +302,4 @@ Save-AppIcon -Name "Square150x150Logo.png" -Width 150 -Height 150 -Kind "Square"
 Save-AppIcon -Name "Wide310x150Logo.png" -Width 310 -Height 150 -Kind "Wide"
 Save-AppIcon -Name "SplashScreen.png" -Width 620 -Height 300 -Kind "Splash"
 
-Write-Host "Generated Library Portal app icon assets in $AssetsPath"
+Write-Host "Generated Matte Library Slat app icon assets in $AssetsPath"

@@ -2,7 +2,7 @@
 
 Generated for the Next Gen Xbox Emby worktree on 2026-07-06.
 
-These are concept previews only. They do not replace the production UWP asset files under `src/NextGenEmby.App/Assets`.
+These are historical concept previews only. They do not define the production UWP asset files under `src/NextGenEmby.App/Assets`.
 
 ## Options
 
@@ -29,15 +29,28 @@ These are concept previews only. They do not replace the production UWP asset fi
 Use `contact-sheet.png` for side-by-side comparison.
 Use `small-size-check.png` to compare the 44 px and 150 px downscaled previews.
 
-## Selected Direction
+## Superseded Direction
 
-Production assets use `04-couch-queue-portal.png`.
+The earlier production assets used `04-couch-queue-portal.png`.
 
 Rationale:
 
 - It has the cleanest 44 px silhouette: a cyan direct-play portal, a central playback cutout, stacked library cards, and an amber focus arc.
 - It aligns with the current TV design direction: controller-first, dark Fluent shell, media rails, and direct playback.
 - It avoids poster-specific detail, so the app icon does not look like a single movie thumbnail or a generic video player.
+
+This direction has since been rejected by `docs/DESIGN.md` because it depends on cyan glow and portal language.
+
+## Current Production Direction
+
+Production assets now use the Matte Cinema Fluent `Matte Library Slat` direction:
+
+- matte rounded-square tile;
+- layered dark media slats;
+- one crisp cyan focus edge used as a signal rather than glow;
+- one green play/confirm surface;
+- one flat amber progress base;
+- no portal ring, prism beam, or official third-party logo.
 
 Generated UWP assets:
 
