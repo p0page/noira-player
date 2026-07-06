@@ -329,7 +329,7 @@ namespace NextGenEmby.App.Views
 
             try
             {
-                var seasons = await client.GetChildrenAsync(session, item.Id, "Season");
+                var seasons = await LoadSeriesSeasonsWithFallbackAsync(client, session, item.Id);
                 if (!CanApplyLoad(loadGeneration))
                 {
                     return;
@@ -340,7 +340,7 @@ namespace NextGenEmby.App.Views
                 foreach (var season in seasons.Where(season => !string.IsNullOrWhiteSpace(season.Id)).Take(12))
                 {
                     AddSeasonHeader(season);
-                    var episodes = await client.GetChildrenAsync(session, season.Id, "Episode");
+                    var episodes = await LoadSeriesEpisodesWithFallbackAsync(client, session, item.Id, season.Id);
                     if (!CanApplyLoad(loadGeneration))
                     {
                         return;
@@ -377,6 +377,47 @@ namespace NextGenEmby.App.Views
                     FocusDefaultContent();
                 }
             }
+        }
+
+        private static async Task<IReadOnlyList<EmbyMediaItem>> LoadSeriesSeasonsWithFallbackAsync(
+            EmbyApiClient client,
+            EmbySession session,
+            string seriesId)
+        {
+            try
+            {
+                var seasons = await client.GetSeriesSeasonsAsync(session, seriesId);
+                if (seasons.Count > 0)
+                {
+                    return seasons;
+                }
+            }
+            catch
+            {
+            }
+
+            return await client.GetChildrenAsync(session, seriesId, "Season");
+        }
+
+        private static async Task<IReadOnlyList<EmbyMediaItem>> LoadSeriesEpisodesWithFallbackAsync(
+            EmbyApiClient client,
+            EmbySession session,
+            string seriesId,
+            string seasonId)
+        {
+            try
+            {
+                var episodes = await client.GetSeriesEpisodesAsync(session, seriesId, seasonId, 40);
+                if (episodes.Count > 0)
+                {
+                    return episodes;
+                }
+            }
+            catch
+            {
+            }
+
+            return await client.GetChildrenAsync(session, seasonId, "Episode");
         }
 
         private void RenderPlaybackInfo()

@@ -210,6 +210,52 @@ namespace NextGenEmby.Core.Emby
             });
         }
 
+        public async Task<IReadOnlyList<EmbyMediaItem>> GetSeriesSeasonsAsync(
+            EmbySession session,
+            string seriesId)
+        {
+            var parameters = new List<string>();
+            AddQueryParameter(parameters, "UserId", session.UserId);
+            AddQueryParameter(parameters, "Fields", ItemListFields);
+            AddImageQueryParameters(parameters);
+
+            using var request = new HttpRequestMessage(
+                HttpMethod.Get,
+                $"Shows/{EscapeUriComponent(seriesId)}/Seasons?{string.Join("&", parameters)}");
+            EmbyAuthorization.Apply(request, _options, session);
+
+            using var response = await _http.SendAsync(request).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+            var body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var dto = JsonSerializer.Deserialize<ItemListDto<ItemDto>>(body, _jsonOptions) ?? new ItemListDto<ItemDto>();
+            return (dto.Items ?? new List<ItemDto>()).Select(MapItem).ToList();
+        }
+
+        public async Task<IReadOnlyList<EmbyMediaItem>> GetSeriesEpisodesAsync(
+            EmbySession session,
+            string seriesId,
+            string seasonId,
+            int limit)
+        {
+            var parameters = new List<string>();
+            AddQueryParameter(parameters, "UserId", session.UserId);
+            AddQueryParameter(parameters, "SeasonId", seasonId);
+            AddQueryParameter(parameters, "Fields", ItemListFields);
+            AddQueryParameter(parameters, "Limit", Math.Max(1, limit).ToString());
+            AddImageQueryParameters(parameters);
+
+            using var request = new HttpRequestMessage(
+                HttpMethod.Get,
+                $"Shows/{EscapeUriComponent(seriesId)}/Episodes?{string.Join("&", parameters)}");
+            EmbyAuthorization.Apply(request, _options, session);
+
+            using var response = await _http.SendAsync(request).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+            var body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var dto = JsonSerializer.Deserialize<ItemListDto<ItemDto>>(body, _jsonOptions) ?? new ItemListDto<ItemDto>();
+            return (dto.Items ?? new List<ItemDto>()).Select(MapItem).ToList();
+        }
+
         public async Task<IReadOnlyList<EmbyMediaItem>> GetItemsAsync(EmbySession session, EmbyItemsQuery query)
         {
             if (query == null)

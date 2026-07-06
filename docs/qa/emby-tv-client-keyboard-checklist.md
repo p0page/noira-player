@@ -457,3 +457,25 @@ Then continue design and implementation until the route passes.
   - Several adjacent Series entries were sampled but also did not expose episodes through the current `/Children` route in this validation run.
 - Follow-up:
   - Re-run the positive first-episode focus path when a sampled Series exposes episode buttons through the current Details endpoint.
+
+### 2026-07-06 - Standard Series Seasons And Episodes
+
+- App version: 0.1.0.100.
+- Scope: Series Details now prefer Emby's TV Shows endpoints for seasons and episodes, with the previous generic children query retained as a compatibility fallback.
+- Data path:
+  - `Shows/{Id}/Seasons` loads Series seasons.
+  - `Shows/{Id}/Episodes` loads episodes for a selected season.
+  - Empty or failed dedicated responses fall back to `Users/{UserId}/Items?ParentId=...`.
+- Automated verification:
+  - Core tests passed: 211 total.
+  - New API tests passed for the Shows seasons and episodes endpoints.
+  - App Debug x64 clean build passed and produced `NextGenEmby.App_0.1.0.100_x64_Debug.msix`.
+  - Package layout gate passed for 0.1.0.100.
+  - MSIX signed and installed locally as `NextGenEmby.App_0.1.0.100_x64__h8qjz0sr1sg4m`.
+- Keyboard-only validation with Computer Use:
+  - Launched 0.1.0.100 locally.
+  - `M`, three `Down`, `Enter` opened Shows / TV Shows.
+  - `Enter` on the first visible Series opened Details for `794450`.
+  - Details loaded the Episodes section with `S1:E1 铸就传奇` through `S1:E6 你叫什么名字来着？`.
+  - Pressing `Enter` from Details launched playback for `铸就传奇`; Playback showed `Playing`, Pause, seek controls, More, and Stop.
+  - No app-content mouse clicks were used.

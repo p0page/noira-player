@@ -683,6 +683,74 @@ public sealed class EmbyLibraryTests
     }
 
     [Fact]
+    public async Task GetSeriesSeasonsAsync_Uses_Shows_Seasons_Endpoint()
+    {
+        var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
+            HttpStatusCode.OK,
+            """
+            {
+              "Items": [
+                {
+                  "Id": "season-1",
+                  "Name": "Season 1",
+                  "Type": "Season",
+                  "IndexNumber": 1
+                }
+              ],
+              "TotalRecordCount": 1
+            }
+            """));
+        using var http = new HttpClient(handler);
+        var client = CreateClient(http);
+
+        var season = Assert.Single(await client.GetSeriesSeasonsAsync(Session(), "series 1"));
+
+        Assert.Equal("season-1", season.Id);
+        Assert.Equal("Season", season.Type);
+        Assert.Equal(1, season.IndexNumber);
+        Assert.Equal("/Shows/series%201/Seasons", handler.LastRequest!.RequestUri!.AbsolutePath);
+        Assert.Contains("UserId=user-1", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("Fields=", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("EnableImages=true", handler.LastRequest.RequestUri.Query);
+    }
+
+    [Fact]
+    public async Task GetSeriesEpisodesAsync_Uses_Shows_Episodes_Endpoint()
+    {
+        var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
+            HttpStatusCode.OK,
+            """
+            {
+              "Items": [
+                {
+                  "Id": "episode-1",
+                  "Name": "Pilot",
+                  "Type": "Episode",
+                  "IndexNumber": 1,
+                  "ParentIndexNumber": 1,
+                  "RunTimeTicks": 18000000000
+                }
+              ],
+              "TotalRecordCount": 1
+            }
+            """));
+        using var http = new HttpClient(handler);
+        var client = CreateClient(http);
+
+        var episode = Assert.Single(await client.GetSeriesEpisodesAsync(Session(), "series 1", "season 1", 40));
+
+        Assert.Equal("episode-1", episode.Id);
+        Assert.Equal("Episode", episode.Type);
+        Assert.Equal(1, episode.ParentIndexNumber);
+        Assert.Equal(1, episode.IndexNumber);
+        Assert.Equal("/Shows/series%201/Episodes", handler.LastRequest!.RequestUri!.AbsolutePath);
+        Assert.Contains("UserId=user-1", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("SeasonId=season%201", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("Limit=40", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("Fields=", handler.LastRequest.RequestUri.Query);
+    }
+
+    [Fact]
     public void GetImageUrl_Handles_Trailing_Slash_And_Escapes_Components()
     {
         using var http = new HttpClient(new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(HttpStatusCode.OK, "{}")));
