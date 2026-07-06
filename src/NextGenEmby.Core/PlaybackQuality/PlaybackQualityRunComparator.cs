@@ -11,12 +11,21 @@ namespace NextGenEmby.Core.PlaybackQuality
         public string Result { get; set; } = "unchanged";
         public string Decision { get; set; } = "no-change";
         public string SuggestedNextAction { get; set; } = "";
+        public PlaybackQualityComparabilityAssessment Comparability { get; set; } =
+            new PlaybackQualityComparabilityAssessment();
         public List<PlaybackQualitySignalDelta> Improvements { get; } = new List<PlaybackQualitySignalDelta>();
         public List<PlaybackQualitySignalDelta> Regressions { get; } = new List<PlaybackQualitySignalDelta>();
         public List<string> ResolvedFailureAreas { get; } = new List<string>();
         public List<string> NewFailureAreas { get; } = new List<string>();
         public List<string> PersistingFailureAreas { get; } = new List<string>();
         public List<string> Limitations { get; } = new List<string>();
+    }
+
+    public sealed class PlaybackQualityComparabilityAssessment
+    {
+        public string Status { get; set; } = "comparable";
+        public List<string> Reasons { get; } = new List<string>();
+        public List<string> Signals { get; } = new List<string>();
     }
 
     public sealed class PlaybackQualitySignalDelta
@@ -52,6 +61,19 @@ namespace NextGenEmby.Core.PlaybackQuality
                 BaselineRunId = baseline.RunId,
                 CandidateRunId = candidate.RunId
             };
+            comparison.Comparability = AssessComparability(baseline, candidate);
+            if (comparison.Comparability.Status == "incompatible")
+            {
+                comparison.Result = "insufficient-evidence";
+                foreach (var signal in comparison.Comparability.Signals)
+                {
+                    comparison.Limitations.Add("comparison requires matching " + signal);
+                }
+
+                ApplyDecision(comparison);
+                return comparison;
+            }
+
             if (baseline.Checks.Count == 0 || candidate.Checks.Count == 0)
             {
                 comparison.Result = "insufficient-evidence";
@@ -103,6 +125,65 @@ namespace NextGenEmby.Core.PlaybackQuality
 
             ApplyDecision(comparison);
             return comparison;
+        }
+
+        private static PlaybackQualityComparabilityAssessment AssessComparability(
+            PlaybackQualityReport baseline,
+            PlaybackQualityReport candidate)
+        {
+            var assessment = new PlaybackQualityComparabilityAssessment();
+            AddMismatchIfBothPresent(
+                assessment,
+                "source.itemId",
+                baseline.Source.ItemId,
+                candidate.Source.ItemId);
+            AddMismatchIfBothPresent(
+                assessment,
+                "source.mediaSourceId",
+                baseline.Source.MediaSourceId,
+                candidate.Source.MediaSourceId);
+            AddMismatchIfBothPresent(
+                assessment,
+                "source.hdrKind",
+                baseline.Source.HdrKind,
+                candidate.Source.HdrKind);
+            AddMismatchIfBothPresent(
+                assessment,
+                "metricVersion",
+                baseline.MetricVersion,
+                candidate.MetricVersion);
+
+            if (baseline.Source.FrameRate > 0 &&
+                candidate.Source.FrameRate > 0 &&
+                Math.Abs(baseline.Source.FrameRate - candidate.Source.FrameRate) > 0.01)
+            {
+                AddIncompatibility(assessment, "source.frameRate");
+            }
+
+            return assessment;
+        }
+
+        private static void AddMismatchIfBothPresent(
+            PlaybackQualityComparabilityAssessment assessment,
+            string signal,
+            string baselineValue,
+            string candidateValue)
+        {
+            if (!string.IsNullOrWhiteSpace(baselineValue) &&
+                !string.IsNullOrWhiteSpace(candidateValue) &&
+                !string.Equals(baselineValue, candidateValue, StringComparison.Ordinal))
+            {
+                AddIncompatibility(assessment, signal);
+            }
+        }
+
+        private static void AddIncompatibility(
+            PlaybackQualityComparabilityAssessment assessment,
+            string signal)
+        {
+            assessment.Status = "incompatible";
+            AddUnique(assessment.Reasons, signal + " mismatch");
+            AddUnique(assessment.Signals, signal);
         }
 
         private static void ApplyDecision(PlaybackQualityRunComparison comparison)

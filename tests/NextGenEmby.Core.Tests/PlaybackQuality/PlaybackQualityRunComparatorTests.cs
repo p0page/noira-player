@@ -153,6 +153,61 @@ public sealed class PlaybackQualityRunComparatorTests
     }
 
     [Fact]
+    public void Compare_Reports_Insufficient_Evidence_When_Media_Source_Differs()
+    {
+        var baseline = CreateReport(
+            "baseline",
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "180.000"));
+        baseline.Source.ItemId = "item-1";
+        baseline.Source.MediaSourceId = "source-a";
+        baseline.Source.FrameRate = 23.976;
+        baseline.Source.HdrKind = "Hdr10";
+
+        var candidate = CreateReport(
+            "candidate",
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "120.000"));
+        candidate.Source.ItemId = "item-1";
+        candidate.Source.MediaSourceId = "source-b";
+        candidate.Source.FrameRate = 23.976;
+        candidate.Source.HdrKind = "Hdr10";
+
+        var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
+
+        Assert.Equal("insufficient-evidence", comparison.Result);
+        Assert.Equal("collect-comparable-evidence", comparison.Decision);
+        Assert.Equal("incompatible", comparison.Comparability.Status);
+        Assert.Contains("source.mediaSourceId mismatch", comparison.Comparability.Reasons);
+        Assert.Contains("source.mediaSourceId", comparison.Comparability.Signals);
+        Assert.Contains("comparison requires matching source.mediaSourceId", comparison.Limitations);
+    }
+
+    [Fact]
+    public void Compare_Reports_Comparable_When_Source_Identity_And_Media_Properties_Match()
+    {
+        var baseline = CreateReport(
+            "baseline",
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "180.000"));
+        baseline.Source.ItemId = "item-1";
+        baseline.Source.MediaSourceId = "source-a";
+        baseline.Source.FrameRate = 23.976;
+        baseline.Source.HdrKind = "Hdr10";
+
+        var candidate = CreateReport(
+            "candidate",
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "120.000"));
+        candidate.Source.ItemId = "item-1";
+        candidate.Source.MediaSourceId = "source-a";
+        candidate.Source.FrameRate = 23.976;
+        candidate.Source.HdrKind = "Hdr10";
+
+        var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
+
+        Assert.Equal("improved", comparison.Result);
+        Assert.Equal("comparable", comparison.Comparability.Status);
+        Assert.Empty(comparison.Comparability.Reasons);
+    }
+
+    [Fact]
     public void Serializer_Writes_Run_Comparison_With_CamelCase_Field_Names()
     {
         var baseline = CreateReport(
@@ -169,6 +224,7 @@ public sealed class PlaybackQualityRunComparatorTests
         Assert.Contains("\"candidateRunId\"", json);
         Assert.Contains("\"decision\"", json);
         Assert.Contains("\"suggestedNextAction\"", json);
+        Assert.Contains("\"comparability\"", json);
         Assert.Contains("\"improvements\"", json);
         Assert.Contains("\"timing.maxFrameGapMs\"", json);
     }
