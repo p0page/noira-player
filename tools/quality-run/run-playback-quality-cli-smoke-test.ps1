@@ -33,6 +33,7 @@ try {
     $stallSuitePath = Join-Path $tempRoot 'stall-suite.json'
     $manifestPath = Join-Path $tempRoot 'reference-manifest.json'
     $manifestValidationPath = Join-Path $tempRoot 'reference-manifest-validation.json'
+    $runPlanPath = Join-Path $tempRoot 'reference-run-plan.json'
     $reportSetDir = Join-Path $tempRoot 'reference-report-set'
     $reportSetValidationPath = Join-Path $tempRoot 'reference-report-set-validation.json'
 
@@ -180,6 +181,48 @@ try {
         $_.expected.hdrKind -eq 'Hdr10'
     })) {
         throw 'Expected playback quality CLI validate-manifest output to include schedulable case summary.'
+    }
+
+    Push-Location $repoRoot
+    try {
+        dotnet run `
+            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
+            --no-build `
+            -- plan-runs `
+            --manifest $manifestPath `
+            --reports-dir captured-baseline `
+            --duration 60 `
+            --output $runPlanPath
+        if ($LASTEXITCODE -ne 0) {
+            throw 'playback quality CLI plan-runs returned a non-zero exit code.'
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    $runPlan = Get-Content -Raw -LiteralPath $runPlanPath | ConvertFrom-Json
+    if ($runPlan.schemaVersion -ne 1) {
+        throw 'Expected playback quality CLI plan-runs output schemaVersion 1.'
+    }
+
+    if ($runPlan.caseCount -ne 2) {
+        throw 'Expected playback quality CLI plan-runs output to include two cases.'
+    }
+
+    if ($runPlan.durationSeconds -ne 60) {
+        throw 'Expected playback quality CLI plan-runs output to keep requested duration.'
+    }
+
+    if (-not ($runPlan.cases | Where-Object {
+        $_.caseId -eq 'netflix/chimera-4k-2398-hdr-pq' -and
+        $_.runId -eq 'netflix/chimera-4k-2398-hdr-pq' -and
+        $_.sourceUri -eq 'https://example.invalid/netflix/chimera-4k-2398-hdr-pq.mp4' -and
+        $_.reportRelativePath -eq 'netflix/chimera-4k-2398-hdr-pq.json' -and
+        $_.durationSeconds -eq 60 -and
+        $_.expected.hdrKind -eq 'Hdr10'
+    })) {
+        throw 'Expected playback quality CLI plan-runs output to include a runnable HDR case.'
     }
 
     New-Item -ItemType Directory -Path $reportSetDir | Out-Null

@@ -49,6 +49,11 @@ internal static class Program
                 return RunValidateReportSet(args);
             }
 
+            if (string.Equals(args[0], "plan-runs", StringComparison.OrdinalIgnoreCase))
+            {
+                return RunPlanRuns(args);
+            }
+
             if (string.Equals(args[0], "evaluate-candidate", StringComparison.OrdinalIgnoreCase))
             {
                 return RunEvaluateCandidate(args);
@@ -154,6 +159,16 @@ internal static class Program
             manifest,
             reports);
         WriteJson(validation, options.OutputPath);
+        return validation.IsValid ? 0 : 2;
+    }
+
+    private static int RunPlanRuns(string[] args)
+    {
+        var options = ParsePlanRunsOptions(args);
+        var manifest = ReadJson<PlaybackQualityReferenceManifest>(options.ManifestPath);
+        var validation = PlaybackQualityReferenceManifestValidator.Validate(manifest);
+        var plan = CreateRunPlan(validation, options);
+        WriteJson(plan, options.OutputPath);
         return validation.IsValid ? 0 : 2;
     }
 
@@ -334,6 +349,46 @@ internal static class Program
         }
 
         ValidateCompareSuiteOptions(options);
+        return options;
+    }
+
+    private static PlanRunsOptions ParsePlanRunsOptions(string[] args)
+    {
+        var options = new PlanRunsOptions();
+        for (var index = 1; index < args.Length; index++)
+        {
+            var arg = args[index];
+            switch (arg)
+            {
+                case "--manifest":
+                    options.ManifestPath = ReadValue(args, ref index, arg);
+                    break;
+                case "--reports-dir":
+                    options.ReportsDirectory = ReadValue(args, ref index, arg);
+                    break;
+                case "--duration":
+                    options.DurationSeconds = int.Parse(
+                        ReadValue(args, ref index, arg),
+                        System.Globalization.CultureInfo.InvariantCulture);
+                    break;
+                case "--output":
+                    options.OutputPath = ReadValue(args, ref index, arg);
+                    break;
+                default:
+                    throw new ArgumentException("Unknown plan-runs option: " + arg);
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(options.ManifestPath))
+        {
+            throw new ArgumentException("Missing required option --manifest.");
+        }
+
+        if (options.DurationSeconds < 10 || options.DurationSeconds > 600)
+        {
+            throw new ArgumentException("--duration must be between 10 and 600 seconds.");
+        }
+
         return options;
     }
 
@@ -766,6 +821,92 @@ internal static class Program
         File.WriteAllText(outputPath, json);
     }
 
+    private static PlaybackQualityRunPlan CreateRunPlan(
+        PlaybackQualityReferenceManifestValidation validation,
+        PlanRunsOptions options)
+    {
+        var plan = new PlaybackQualityRunPlan
+        {
+            CaseCount = validation.IsValid ? validation.CaseCount : 0,
+            DurationSeconds = options.DurationSeconds,
+            ReportsDirectory = options.ReportsDirectory,
+            ManifestValidation = validation
+        };
+        AddUnique(
+            plan.EvidenceRequirements,
+            "capture one PlaybackQualityRunResult envelope per planned case");
+        AddUnique(
+            plan.EvidenceRequirements,
+            "write each report to reportPath using runId as the comparison key");
+        AddUnique(
+            plan.EvidenceRequirements,
+            "run validate-report-set before compare-suite or evaluate-candidate");
+
+        if (!validation.IsValid)
+        {
+            return plan;
+        }
+
+        foreach (var referenceCase in validation.Cases)
+        {
+            var relativePath = GetRunIdComparisonRelativePath(referenceCase.CaseId);
+            var planCase = new PlaybackQualityRunPlanCase
+            {
+                CaseId = referenceCase.CaseId,
+                RunId = referenceCase.CaseId,
+                SourceUri = referenceCase.Uri,
+                Tier = referenceCase.Tier,
+                DurationSeconds = options.DurationSeconds,
+                CaptureMode = "direct-uri",
+                ReportRelativePath = relativePath,
+                ReportPath = string.IsNullOrWhiteSpace(options.ReportsDirectory)
+                    ? relativePath
+                    : Path.Combine(options.ReportsDirectory, relativePath),
+                Expected = CloneExpected(referenceCase.Expected)
+            };
+
+            foreach (var purpose in referenceCase.Purpose)
+            {
+                AddUnique(planCase.Purpose, purpose);
+            }
+
+            plan.Cases.Add(planCase);
+        }
+
+        return plan;
+    }
+
+    private static PlaybackQualityExpected CloneExpected(PlaybackQualityExpected source)
+    {
+        if (source == null)
+        {
+            return new PlaybackQualityExpected();
+        }
+
+        return new PlaybackQualityExpected
+        {
+            Codec = source.Codec,
+            Width = source.Width,
+            Height = source.Height,
+            FrameRate = source.FrameRate,
+            HdrKind = source.HdrKind,
+            HdrOutput = source.HdrOutput,
+            DxgiInput = source.DxgiInput,
+            DxgiOutput = source.DxgiOutput,
+            MaxStartupDurationMs = source.MaxStartupDurationMs,
+            MinRenderedVideoFrames = source.MinRenderedVideoFrames,
+            MaxDroppedFrames = source.MaxDroppedFrames,
+            MaxFrameGapMs = source.MaxFrameGapMs,
+            MaxRenderIntervalMsP95 = source.MaxRenderIntervalMsP95,
+            MaxRenderIntervalMsP99 = source.MaxRenderIntervalMsP99,
+            MaxAudioVideoDriftMsP95 = source.MaxAudioVideoDriftMsP95,
+            MaxVideoStarvedPasses = source.MaxVideoStarvedPasses,
+            MaxAudioStarvedPasses = source.MaxAudioStarvedPasses,
+            RequireValidatedConversion = source.RequireValidatedConversion,
+            RequireMatchedDisplayRefreshRate = source.RequireMatchedDisplayRefreshRate
+        };
+    }
+
     private static CandidateEvaluationGate CreateManifestGate(
         PlaybackQualityReferenceManifestValidation validation)
     {
@@ -878,6 +1019,7 @@ internal static class Program
         writer.WriteLine("  playback-quality compare-suite --baseline-dir <reports-dir> --candidate-dir <reports-dir> [--match-by relative-path|run-id] [--previous-comparisons-dir <comparison-dir>] [--comparisons-dir <comparison-dir>] [--stall-threshold <n>] [--output <suite.json>]");
         writer.WriteLine("  playback-quality validate-manifest --manifest <reference-manifest.json> [--output <validation.json>]");
         writer.WriteLine("  playback-quality validate-report-set --manifest <reference-manifest.json> --reports-dir <reports-dir> [--output <validation.json>]");
+        writer.WriteLine("  playback-quality plan-runs --manifest <reference-manifest.json> [--reports-dir <reports-dir>] [--duration <seconds>] [--output <run-plan.json>]");
         writer.WriteLine("  playback-quality evaluate-candidate --manifest <reference-manifest.json> --baseline-dir <reports-dir> --candidate-dir <reports-dir> [--match-by relative-path|run-id] [--previous-comparisons-dir <comparison-dir>] [--comparisons-dir <comparison-dir>] [--stall-threshold <n>] [--output <evaluation.json>]");
     }
 
@@ -915,6 +1057,14 @@ internal static class Program
         {
             MatchBy = "run-id";
         }
+    }
+
+    private sealed class PlanRunsOptions
+    {
+        public string ManifestPath { get; set; } = "";
+        public string ReportsDirectory { get; set; } = "";
+        public string OutputPath { get; set; } = "";
+        public int DurationSeconds { get; set; } = 30;
     }
 
     private sealed class ValidateManifestOptions
@@ -977,5 +1127,33 @@ internal static class Program
         public List<string> Blockers { get; } = new List<string>();
         public List<string> Signals { get; } = new List<string>();
         public List<string> CaseIds { get; } = new List<string>();
+    }
+
+    private sealed class PlaybackQualityRunPlan
+    {
+        public int SchemaVersion { get; set; } = 1;
+        public int CaseCount { get; set; }
+        public int DurationSeconds { get; set; }
+        public string ReportsDirectory { get; set; } = "";
+        public List<string> EvidenceRequirements { get; } = new List<string>();
+        public List<PlaybackQualityRunPlanCase> Cases { get; } =
+            new List<PlaybackQualityRunPlanCase>();
+        public PlaybackQualityReferenceManifestValidation ManifestValidation { get; set; } =
+            new PlaybackQualityReferenceManifestValidation();
+    }
+
+    private sealed class PlaybackQualityRunPlanCase
+    {
+        public string CaseId { get; set; } = "";
+        public string RunId { get; set; } = "";
+        public string SourceUri { get; set; } = "";
+        public int Tier { get; set; }
+        public List<string> Purpose { get; } = new List<string>();
+        public int DurationSeconds { get; set; }
+        public string CaptureMode { get; set; } = "";
+        public string ReportRelativePath { get; set; } = "";
+        public string ReportPath { get; set; } = "";
+        public PlaybackQualityExpected Expected { get; set; } =
+            new PlaybackQualityExpected();
     }
 }
