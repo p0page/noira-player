@@ -15,6 +15,8 @@ namespace NextGenEmby.Core.PlaybackQuality
             new PlaybackQualityComparabilityAssessment();
         public PlaybackQualityComparisonConfidence Confidence { get; set; } =
             new PlaybackQualityComparisonConfidence();
+        public PlaybackQualityComparisonOptimization Optimization { get; set; } =
+            new PlaybackQualityComparisonOptimization();
         public PlaybackQualityComparisonCoverage Coverage { get; set; } =
             new PlaybackQualityComparisonCoverage();
         public List<PlaybackQualitySignalDelta> Improvements { get; } = new List<PlaybackQualitySignalDelta>();
@@ -36,6 +38,15 @@ namespace NextGenEmby.Core.PlaybackQuality
     {
         public string Level { get; set; } = "weak";
         public List<string> Reasons { get; } = new List<string>();
+        public List<string> Signals { get; } = new List<string>();
+    }
+
+    public sealed class PlaybackQualityComparisonOptimization
+    {
+        public string Action { get; set; } = "collect-comparable-evidence";
+        public string Risk { get; set; } = "high";
+        public List<string> Reasons { get; } = new List<string>();
+        public List<string> Blockers { get; } = new List<string>();
         public List<string> Signals { get; } = new List<string>();
     }
 
@@ -245,6 +256,7 @@ namespace NextGenEmby.Core.PlaybackQuality
         {
             ApplyConfidence(comparison);
             ApplyDecision(comparison);
+            ApplyOptimization(comparison);
             return comparison;
         }
 
@@ -298,6 +310,126 @@ namespace NextGenEmby.Core.PlaybackQuality
 
             comparison.Confidence.Level = "strong";
             AddUnique(comparison.Confidence.Reasons, "all comparison checks matched");
+        }
+
+        private static void ApplyOptimization(PlaybackQualityRunComparison comparison)
+        {
+            if (comparison.Confidence.Level == "weak")
+            {
+                comparison.Optimization.Action = "collect-comparable-evidence";
+                comparison.Optimization.Risk = "high";
+                AddUnique(
+                    comparison.Optimization.Reasons,
+                    "weak comparison confidence blocks playback Core optimization");
+                CopyValues(comparison.Confidence.Reasons, comparison.Optimization.Blockers);
+                CopyValues(comparison.Confidence.Signals, comparison.Optimization.Signals);
+                return;
+            }
+
+            if (comparison.Confidence.Level == "partial")
+            {
+                ApplyPartialConfidenceOptimization(comparison);
+                return;
+            }
+
+            ApplyStrongConfidenceOptimization(comparison);
+        }
+
+        private static void ApplyPartialConfidenceOptimization(
+            PlaybackQualityRunComparison comparison)
+        {
+            comparison.Optimization.Risk = "medium";
+            CopyValues(comparison.Confidence.Signals, comparison.Optimization.Signals);
+
+            switch (comparison.Decision)
+            {
+                case "reject-candidate":
+                    comparison.Optimization.Action = "isolate-candidate-regression";
+                    AddUnique(
+                        comparison.Optimization.Reasons,
+                        "partial comparison evidence found candidate regression");
+                    AddRegressionSignals(comparison);
+                    break;
+                case "split-candidate":
+                    comparison.Optimization.Action = "split-candidate";
+                    AddUnique(
+                        comparison.Optimization.Reasons,
+                        "partial comparison evidence found mixed playback quality changes");
+                    AddRegressionSignals(comparison);
+                    break;
+                case "collect-comparable-evidence":
+                    comparison.Optimization.Action = "collect-comparable-evidence";
+                    comparison.Optimization.Risk = "high";
+                    AddUnique(
+                        comparison.Optimization.Reasons,
+                        "partial comparison evidence is insufficient for playback Core optimization");
+                    break;
+                default:
+                    comparison.Optimization.Action = "review-unmatched-signals";
+                    AddUnique(
+                        comparison.Optimization.Reasons,
+                        "partial comparison evidence requires unmatched signal review");
+                    break;
+            }
+        }
+
+        private static void ApplyStrongConfidenceOptimization(
+            PlaybackQualityRunComparison comparison)
+        {
+            comparison.Optimization.Risk = "low";
+            switch (comparison.Decision)
+            {
+                case "keep-candidate":
+                    comparison.Optimization.Action = "accept-candidate";
+                    AddUnique(
+                        comparison.Optimization.Reasons,
+                        "strong comparison evidence supports candidate");
+                    break;
+                case "reject-candidate":
+                    comparison.Optimization.Action = "reject-candidate";
+                    AddUnique(
+                        comparison.Optimization.Reasons,
+                        "strong comparison evidence rejects candidate");
+                    AddRegressionSignals(comparison);
+                    break;
+                case "split-candidate":
+                    comparison.Optimization.Action = "split-candidate";
+                    comparison.Optimization.Risk = "medium";
+                    AddUnique(
+                        comparison.Optimization.Reasons,
+                        "strong comparison evidence found mixed playback quality changes");
+                    AddRegressionSignals(comparison);
+                    break;
+                case "collect-comparable-evidence":
+                    comparison.Optimization.Action = "collect-comparable-evidence";
+                    comparison.Optimization.Risk = "high";
+                    AddUnique(
+                        comparison.Optimization.Reasons,
+                        "comparison still requires comparable playback quality evidence");
+                    break;
+                default:
+                    comparison.Optimization.Action = "continue-next-triage-step";
+                    AddUnique(
+                        comparison.Optimization.Reasons,
+                        "strong comparison evidence found no candidate quality change");
+                    break;
+            }
+        }
+
+        private static void AddRegressionSignals(PlaybackQualityRunComparison comparison)
+        {
+            foreach (var regression in comparison.Regressions)
+            {
+                AddUnique(comparison.Optimization.Signals, regression.Signal);
+            }
+        }
+
+        private static void CopyValues(List<string> source, List<string> target)
+        {
+            foreach (var value in source)
+            {
+                AddUnique(target, value);
+            }
         }
 
         private static bool HasUnmatchedEvidence(PlaybackQualityRunComparison comparison)

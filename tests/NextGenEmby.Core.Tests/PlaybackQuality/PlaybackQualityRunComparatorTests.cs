@@ -22,6 +22,9 @@ public sealed class PlaybackQualityRunComparatorTests
         Assert.Equal("improved", comparison.Result);
         Assert.Equal("keep-candidate", comparison.Decision);
         Assert.Contains("Keep candidate playback Core change", comparison.SuggestedNextAction);
+        Assert.Equal("accept-candidate", comparison.Optimization.Action);
+        Assert.Equal("low", comparison.Optimization.Risk);
+        Assert.Contains("strong comparison evidence supports candidate", comparison.Optimization.Reasons);
         Assert.Empty(comparison.Regressions);
         Assert.Contains("frame-pacing", comparison.PersistingFailureAreas);
         Assert.Contains(comparison.Improvements, delta =>
@@ -155,6 +158,11 @@ public sealed class PlaybackQualityRunComparatorTests
         Assert.Contains("unmatched comparison signals are present", comparison.Confidence.Reasons);
         Assert.Contains("sync.audioVideoDriftMsP95", comparison.Confidence.Signals);
         Assert.Contains("colorPipeline.actualHdrOutput", comparison.Confidence.Signals);
+        Assert.Equal("review-unmatched-signals", comparison.Optimization.Action);
+        Assert.Equal("medium", comparison.Optimization.Risk);
+        Assert.Contains("partial comparison evidence requires unmatched signal review", comparison.Optimization.Reasons);
+        Assert.Contains("sync.audioVideoDriftMsP95", comparison.Optimization.Signals);
+        Assert.Contains("colorPipeline.actualHdrOutput", comparison.Optimization.Signals);
     }
 
     [Fact]
@@ -241,6 +249,11 @@ public sealed class PlaybackQualityRunComparatorTests
         Assert.Equal("weak", comparison.Confidence.Level);
         Assert.Contains("comparison inputs are incompatible", comparison.Confidence.Reasons);
         Assert.Contains("source.mediaSourceId", comparison.Confidence.Signals);
+        Assert.Equal("collect-comparable-evidence", comparison.Optimization.Action);
+        Assert.Equal("high", comparison.Optimization.Risk);
+        Assert.Contains("weak comparison confidence blocks playback Core optimization", comparison.Optimization.Reasons);
+        Assert.Contains("comparison inputs are incompatible", comparison.Optimization.Blockers);
+        Assert.Contains("source.mediaSourceId", comparison.Optimization.Signals);
     }
 
     [Fact]
@@ -288,6 +301,7 @@ public sealed class PlaybackQualityRunComparatorTests
         Assert.Contains("\"suggestedNextAction\"", json);
         Assert.Contains("\"comparability\"", json);
         Assert.Contains("\"confidence\"", json);
+        Assert.Contains("\"optimization\"", json);
         Assert.Contains("\"coverage\"", json);
         Assert.Contains("\"improvements\"", json);
         Assert.Contains("\"timing.maxFrameGapMs\"", json);
