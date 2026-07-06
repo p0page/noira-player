@@ -1116,3 +1116,24 @@ Then continue design and implementation until the route passes.
   - `Move across and down grid` is now runtime `Verified` for normal library-grid browsing.
 - Follow-up:
   - Add a later far-right/end-of-list stress pass to verify edge wrapping and bring-into-view behavior at the bottom/right edge of very long grids.
+
+### 2026-07-06 - Runtime Color Token Contract
+
+- Scope: tighten the Matte Cinema Fluent color system so runtime resource colors, alpha overlays, focus secondary line, and disabled/hover button states are backed by `docs/DESIGN.md` tokens instead of page-local or brush-local hex values.
+- Visual tokenization:
+  - Added DESIGN.md YAML tokens for runtime alpha/state colors: shell rail, immersive scrim, chrome hover/pressed, hero wash variants, artwork dimming, modal scrim, playback drawer, and button disabled/hover borders.
+  - Added matching `App.xaml` color resources and brushes for canvas alternate, text subtle, tertiary, danger, on-secondary, transparent, and the button state colors.
+  - Changed `SystemControlFocusVisualSecondaryBrush` to consume `AppFocusSecondaryColor` from `DESIGN.md` rather than a hard-coded translucent pure white.
+- Automated verification:
+  - TDD red path confirmed `App_Runtime_Colors_Are_Backed_By_Design_Tokens` failed while `AppCanvasAltColor` and other runtime color tokens were missing.
+  - Targeted design tests passed: 5 total across `DesignTokenResourceTests` and icon-token contract coverage.
+  - App Debug x64 build passed with 0 warnings and 0 errors.
+  - `git diff --check` passed; only line-ending normalization warnings were reported.
+- Keyboard/UIA validation:
+  - Computer Use app-control tools were not exposed in this resumed turn, so validation used Windows UI Automation plus `SendKeys`.
+  - Attempted to register the current Debug loose manifest; Windows rejected it because the manifest was not in a package root.
+  - Attempted to install the generated `NextGenEmby.App_0.1.0.144_x64_Debug.msix`; Windows rejected it because the package was unsigned.
+  - Launched the already installed `NextGenEmby.App 0.1.0.144` and performed a keyboard-only shell smoke route: initial focus was a Home action button at rect `233,484,212,75`; `M` opened the Guide with Home focused at rect `12,216,346,78`; `Down` moved to a content button at rect `456,706,375,197`; `Right` moved to rect `663,706,375,197`; `Escape` returned focus to rect `233,484,212,75`.
+  - No app-content mouse clicks were used.
+- Limitation:
+  - The current source resource changes are proven by tests and the local Debug build. The keyboard smoke used the already installed 0.1.0.144 package because the newly built unsigned MSIX could not be deployed over the installed app in this turn.

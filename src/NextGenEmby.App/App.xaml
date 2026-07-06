@@ -11,6 +11,7 @@
             </ResourceDictionary.MergedDictionaries>
 
             <Color x:Key="AppBackgroundColor">#050607</Color>
+            <Color x:Key="AppCanvasAltColor">#090C0F</Color>
             <Color x:Key="AppSurfaceColor">#101418</Color>
             <Color x:Key="AppRaisedSurfaceColor">#1A2027</Color>
             <Color x:Key="AppChromeColor">#D9101418</Color>
@@ -20,13 +21,18 @@
             <Color x:Key="AppChromeHoverColor">#E61A2027</Color>
             <Color x:Key="AppChromePressedColor">#F0212932</Color>
             <Color x:Key="AppAccentColor">#3BD5FF</Color>
+            <Color x:Key="AppFocusSecondaryColor">#F6F1E8</Color>
             <Color x:Key="AppActionColor">#61D47C</Color>
             <Color x:Key="AppMutedTextColor">#B9C0C8</Color>
             <Color x:Key="AppTextColor">#F6F1E8</Color>
+            <Color x:Key="AppTextSubtleColor">#78838F</Color>
             <Color x:Key="AppHairlineColor">#303842</Color>
             <Color x:Key="AppWarmColor">#E0B86A</Color>
+            <Color x:Key="AppTertiaryColor">#7FA7C7</Color>
+            <Color x:Key="AppDangerColor">#FF6B6B</Color>
             <Color x:Key="AppCardScrimColor">#D9050607</Color>
             <Color x:Key="AppOnActionColor">#041007</Color>
+            <Color x:Key="AppOnSecondaryColor">#120B02</Color>
             <Color x:Key="AppHeroBackdropWashColor">#D9050607</Color>
             <Color x:Key="AppHeroGradientStartColor">#F2050607</Color>
             <Color x:Key="AppHeroGradientMidColor">#D9050607</Color>
@@ -38,7 +44,13 @@
             <Color x:Key="AppPlaybackCanvasColor">#050607</Color>
             <Color x:Key="AppPlaybackOverlayColor">#D9101418</Color>
             <Color x:Key="AppPlaybackDrawerColor">#F0101418</Color>
+            <Color x:Key="AppTransparentColor">#00000000</Color>
+            <Color x:Key="ButtonBackgroundDisabledColor">#4D101418</Color>
+            <Color x:Key="ButtonForegroundDisabledColor">#7AB9C0C8</Color>
+            <Color x:Key="ButtonBorderPointerOverColor">#4A5968</Color>
+            <Color x:Key="ButtonBorderDisabledColor">#33303842</Color>
             <SolidColorBrush x:Key="AppBackgroundBrush" Color="{StaticResource AppBackgroundColor}" />
+            <SolidColorBrush x:Key="AppCanvasAltBrush" Color="{StaticResource AppCanvasAltColor}" />
             <SolidColorBrush x:Key="AppSurfaceBrush" Color="{StaticResource AppSurfaceColor}" />
             <SolidColorBrush x:Key="AppRaisedSurfaceBrush" Color="{StaticResource AppRaisedSurfaceColor}" />
             <SolidColorBrush x:Key="AppChromeBrush" Color="{StaticResource AppChromeColor}" />
@@ -51,10 +63,14 @@
             <SolidColorBrush x:Key="AppActionBrush" Color="{StaticResource AppActionColor}" />
             <SolidColorBrush x:Key="AppMutedTextBrush" Color="{StaticResource AppMutedTextColor}" />
             <SolidColorBrush x:Key="AppTextBrush" Color="{StaticResource AppTextColor}" />
+            <SolidColorBrush x:Key="AppTextSubtleBrush" Color="{StaticResource AppTextSubtleColor}" />
             <SolidColorBrush x:Key="AppHairlineBrush" Color="{StaticResource AppHairlineColor}" />
             <SolidColorBrush x:Key="AppWarmBrush" Color="{StaticResource AppWarmColor}" />
+            <SolidColorBrush x:Key="AppTertiaryBrush" Color="{StaticResource AppTertiaryColor}" />
+            <SolidColorBrush x:Key="AppDangerBrush" Color="{StaticResource AppDangerColor}" />
             <SolidColorBrush x:Key="AppCardScrimBrush" Color="{StaticResource AppCardScrimColor}" />
             <SolidColorBrush x:Key="AppOnActionBrush" Color="{StaticResource AppOnActionColor}" />
+            <SolidColorBrush x:Key="AppOnSecondaryBrush" Color="{StaticResource AppOnSecondaryColor}" />
             <SolidColorBrush x:Key="AppHeroBackdropWashBrush" Color="{StaticResource AppHeroBackdropWashColor}" />
             <SolidColorBrush x:Key="AppArtworkDimBrush" Color="{StaticResource AppArtworkDimColor}" />
             <SolidColorBrush x:Key="AppHeroPosterDimBrush" Color="{StaticResource AppHeroPosterDimColor}" />
@@ -63,21 +79,21 @@
             <SolidColorBrush x:Key="AppPlaybackCanvasBrush" Color="{StaticResource AppPlaybackCanvasColor}" />
             <SolidColorBrush x:Key="AppPlaybackOverlayBrush" Color="{StaticResource AppPlaybackOverlayColor}" />
             <SolidColorBrush x:Key="AppPlaybackDrawerBrush" Color="{StaticResource AppPlaybackDrawerColor}" />
-            <SolidColorBrush x:Key="AppTransparentBrush" Color="#00000000" />
+            <SolidColorBrush x:Key="AppTransparentBrush" Color="{StaticResource AppTransparentColor}" />
             <SolidColorBrush x:Key="SystemControlFocusVisualPrimaryBrush" Color="{StaticResource AppAccentColor}" />
-            <SolidColorBrush x:Key="SystemControlFocusVisualSecondaryBrush" Color="#80FFFFFF" />
+            <SolidColorBrush x:Key="SystemControlFocusVisualSecondaryBrush" Color="{StaticResource AppFocusSecondaryColor}" />
             <SolidColorBrush x:Key="ButtonBackground" Color="{StaticResource AppChromeColor}" />
             <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="{StaticResource AppChromeHoverColor}" />
             <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="{StaticResource AppChromePressedColor}" />
-            <SolidColorBrush x:Key="ButtonBackgroundDisabled" Color="#4D101418" />
+            <SolidColorBrush x:Key="ButtonBackgroundDisabled" Color="{StaticResource ButtonBackgroundDisabledColor}" />
             <SolidColorBrush x:Key="ButtonForeground" Color="{StaticResource AppTextColor}" />
             <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="{StaticResource AppTextColor}" />
             <SolidColorBrush x:Key="ButtonForegroundPressed" Color="{StaticResource AppTextColor}" />
-            <SolidColorBrush x:Key="ButtonForegroundDisabled" Color="#7AB9C0C8" />
+            <SolidColorBrush x:Key="ButtonForegroundDisabled" Color="{StaticResource ButtonForegroundDisabledColor}" />
             <SolidColorBrush x:Key="ButtonBorderBrush" Color="{StaticResource AppHairlineColor}" />
-            <SolidColorBrush x:Key="ButtonBorderBrushPointerOver" Color="#4A5968" />
+            <SolidColorBrush x:Key="ButtonBorderBrushPointerOver" Color="{StaticResource ButtonBorderPointerOverColor}" />
             <SolidColorBrush x:Key="ButtonBorderBrushPressed" Color="{StaticResource AppAccentColor}" />
-            <SolidColorBrush x:Key="ButtonBorderBrushDisabled" Color="#33303842" />
+            <SolidColorBrush x:Key="ButtonBorderBrushDisabled" Color="{StaticResource ButtonBorderDisabledColor}" />
             <Thickness x:Key="TvShellMargin">48,18,48,12</Thickness>
             <Thickness x:Key="TvPageMargin">56,28,56,48</Thickness>
             <Thickness x:Key="TvImmersivePageMargin">56,28,56,40</Thickness>

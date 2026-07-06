@@ -24,6 +24,21 @@ colors:
   text_muted: "#B9C0C8"
   text_subtle: "#78838F"
   scrim: "#D9050607"
+  transparent: "#00000000"
+  shell_rail: "#E603060A"
+  immersive_scrim: "#66050607"
+  chrome_hover: "#E61A2027"
+  chrome_pressed: "#F0212932"
+  hero_gradient_start: "#F2050607"
+  hero_gradient_end: "#66050607"
+  artwork_dim: "#22000000"
+  hero_poster_dim: "#18000000"
+  modal_scrim: "#CC050607"
+  playback_drawer: "#F0101418"
+  button_disabled_background: "#4D101418"
+  button_disabled_foreground: "#7AB9C0C8"
+  button_hover_border: "#4A5968"
+  button_disabled_border: "#33303842"
 typography:
   h1:
     fontFamily: "Segoe UI Variable Display"
@@ -104,7 +119,7 @@ components:
     rounded: "{rounded.lg}"
     padding: "{spacing.lg}"
   navigation_chrome:
-    backgroundColor: "#E603060A"
+    backgroundColor: "{colors.shell_rail}"
     collapsedWidth: "72px"
     expandedWidth: "248px"
   section_title:
@@ -116,7 +131,7 @@ components:
     compactSize: "64px"
     rounded: "{rounded.md}"
   immersive_viewer:
-    scrim: "#66050607"
+    scrim: "{colors.immersive_scrim}"
     controlBackgroundColor: "{colors.surface_overlay}"
     pageMargin: "56px 28px 56px 40px"
 ---
@@ -173,6 +188,8 @@ These references inform the document shape, not the final aesthetic.
 - **Secondary / progress `#E0B86A`:** watch progress, resume state, warnings that are not destructive.
 - **Tertiary `#7FA7C7`:** informational state only, such as diagnostics and neutral playback capability badges.
 - **Danger `#FF6B6B`:** destructive or failed state only.
+
+Derived runtime colors such as `shell_rail`, `chrome_hover`, `chrome_pressed`, `modal_scrim`, playback drawer alpha, and disabled button states are also listed in the YAML block. They are not new palette moods; they are named alpha/state variants of the same canvas, surface, text, and hairline roles so skins can replace them deliberately.
 
 ### Usage Rules
 
