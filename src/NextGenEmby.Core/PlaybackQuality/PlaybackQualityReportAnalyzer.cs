@@ -407,7 +407,7 @@ namespace NextGenEmby.Core.PlaybackQuality
 
             foreach (var area in areas)
             {
-                var hint = CreateInvestigationHint(area);
+                var hint = CreateInvestigationHint(area, analysis);
                 if (hint == null)
                 {
                     continue;
@@ -433,7 +433,9 @@ namespace NextGenEmby.Core.PlaybackQuality
             }
         }
 
-        private static PlaybackQualityInvestigationHint? CreateInvestigationHint(string area)
+        private static PlaybackQualityInvestigationHint? CreateInvestigationHint(
+            string area,
+            PlaybackQualityModelAnalysis analysis)
         {
             switch (area)
             {
@@ -524,6 +526,27 @@ namespace NextGenEmby.Core.PlaybackQuality
                             "buffers.queuedAudioBuffers"
                         });
                 case "frame-pacing":
+                    if (analysis.FramePacing.Pattern == "starvation-driven")
+                    {
+                        return NewHint(
+                            area,
+                            "Inspect demux, decode, network supply, and audio queue depth before changing frame pacing wait/drop thresholds.",
+                            new[]
+                            {
+                                "src/NextGenEmby.Native/Media/PlaybackGraph.cpp",
+                                "src/NextGenEmby.Native/Media/VideoDecoder.cpp",
+                                "src/NextGenEmby.Native/Media/AudioDecoder.cpp",
+                                "src/NextGenEmby.Native/Media/AudioRenderer.cpp"
+                            },
+                            new[]
+                            {
+                                "timing.maxFrameGapMs",
+                                "buffers.videoStarvedPasses",
+                                "buffers.audioStarvedPasses",
+                                "buffers.queuedAudioBuffers"
+                            });
+                    }
+
                     return NewHint(
                         area,
                         "Inspect render interval percentiles, max frame gap, source/display cadence match, wait/drop thresholds, and starvation counters together.",

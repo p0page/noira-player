@@ -313,6 +313,33 @@ public sealed class PlaybackQualityReportAnalyzerTests
     }
 
     [Fact]
+    public void Analyze_Uses_Starvation_Driven_Frame_Pacing_Hint_When_Buffering_Fails_With_Frame_Pacing()
+    {
+        var report = CreateOptimizationReadyFailure();
+        report.Checks.Add(new PlaybackQualityCheck
+        {
+            Name = "VideoStarvedPasses",
+            Status = "fail",
+            FailureArea = "buffering",
+            Signal = "buffers.videoStarvedPasses",
+            Expected = "0",
+            Actual = "3"
+        });
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Contains(analysis.InvestigationHints, hint =>
+            hint.FailureArea == "frame-pacing" &&
+            hint.SuggestedAction.Contains("Inspect demux, decode, network supply") &&
+            hint.CodeTargets.Contains("src/NextGenEmby.Native/Media/VideoDecoder.cpp") &&
+            hint.CodeTargets.Contains("src/NextGenEmby.Native/Media/AudioDecoder.cpp") &&
+            hint.CodeTargets.Contains("src/NextGenEmby.Native/Media/AudioRenderer.cpp") &&
+            hint.Signals.Contains("buffers.videoStarvedPasses") &&
+            hint.Signals.Contains("buffers.audioStarvedPasses") &&
+            hint.Signals.Contains("buffers.queuedAudioBuffers"));
+    }
+
+    [Fact]
     public void Analyze_Reports_Missing_Evidence_For_Unset_Critical_Signals()
     {
         var report = new PlaybackQualityReport
