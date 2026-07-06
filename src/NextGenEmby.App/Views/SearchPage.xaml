@@ -3,37 +3,147 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     Background="{StaticResource AppBackgroundBrush}">
-    <Grid>
-        <ScrollViewer VerticalScrollBarVisibility="Auto">
-            <Grid Margin="{StaticResource TvPageMargin}" MaxWidth="900" HorizontalAlignment="Left">
-                <StackPanel Spacing="18">
-                    <TextBlock Text="Search" FontSize="34" FontWeight="SemiBold" />
-                    <Grid ColumnSpacing="16">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <TextBox
-                            x:Name="SearchBox"
-                            Header="Title"
-                            PlaceholderText="Search movies, shows, and episodes"
-                            UseSystemFocusVisuals="True" />
-                        <Button
-                            x:Name="SearchActionButton"
-                            Grid.Column="1"
-                            VerticalAlignment="Bottom"
-                            Content="Search"
-                            Click="Search_OnClick" />
-                    </Grid>
-                    <TextBlock
-                        x:Name="StatusBlock"
-                        FontSize="18"
-                        Foreground="{StaticResource AppMutedTextBrush}"
-                        Text="Search results will appear here."
-                        TextWrapping="Wrap" />
-                    <StackPanel x:Name="ResultsPanel" Spacing="10" />
-                </StackPanel>
-            </Grid>
-        </ScrollViewer>
+    <Grid Background="{StaticResource AppBackgroundBrush}">
+        <Grid Margin="{StaticResource TvPageMargin}" RowSpacing="16">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <StackPanel Grid.Row="0" Spacing="4">
+                <TextBlock
+                    Text="Search"
+                    FontSize="34"
+                    FontWeight="SemiBold" />
+                <TextBlock
+                    Text="Across libraries"
+                    FontSize="16"
+                    Foreground="{StaticResource AppMutedTextBrush}" />
+            </StackPanel>
+
+            <Border
+                Grid.Row="1"
+                Background="{StaticResource AppSurfaceBrush}"
+                BorderBrush="{StaticResource AppHairlineBrush}"
+                BorderThickness="1"
+                CornerRadius="8"
+                Padding="18">
+                <Grid ColumnSpacing="14">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBox
+                        x:Name="SearchBox"
+                        AutomationProperties.Name="Search title"
+                        PlaceholderText="Title, person, playlist, music"
+                        KeyDown="SearchBox_OnKeyDown"
+                        UseSystemFocusVisuals="True" />
+                    <Button
+                        x:Name="SearchActionButton"
+                        Grid.Column="1"
+                        MinWidth="146"
+                        Click="Search_OnClick"
+                        UseSystemFocusVisuals="True">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <SymbolIcon Symbol="Find" />
+                            <TextBlock Text="Search" />
+                        </StackPanel>
+                    </Button>
+                </Grid>
+            </Border>
+
+            <ScrollViewer
+                Grid.Row="2"
+                HorizontalScrollBarVisibility="Hidden"
+                HorizontalScrollMode="Enabled"
+                VerticalScrollBarVisibility="Disabled"
+                VerticalScrollMode="Disabled">
+                <StackPanel
+                    x:Name="ScopesPanel"
+                    Orientation="Horizontal"
+                    Spacing="12" />
+            </ScrollViewer>
+
+            <TextBlock
+                x:Name="StatusBlock"
+                Grid.Row="3"
+                FontSize="18"
+                Foreground="{StaticResource AppMutedTextBrush}"
+                Text="Enter a search."
+                TextWrapping="Wrap" />
+
+            <GridView
+                x:Name="ResultsGrid"
+                Grid.Row="4"
+                IsItemClickEnabled="True"
+                ItemClick="ResultsGrid_OnItemClick"
+                SelectionMode="None"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch">
+                <GridView.ItemContainerStyle>
+                    <Style TargetType="GridViewItem">
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                        <Setter Property="VerticalContentAlignment" Value="Stretch" />
+                        <Setter Property="UseSystemFocusVisuals" Value="True" />
+                        <Setter Property="Padding" Value="0" />
+                        <Setter Property="Margin" Value="0,0,14,14" />
+                    </Style>
+                </GridView.ItemContainerStyle>
+                <GridView.ItemTemplate>
+                    <DataTemplate>
+                        <Grid
+                            Width="168"
+                            Height="250"
+                            Background="{StaticResource AppRaisedSurfaceBrush}">
+                            <Border
+                                BorderBrush="{StaticResource AppHairlineBrush}"
+                                BorderThickness="1"
+                                CornerRadius="6" />
+                            <TextBlock
+                                Text="{Binding Initials}"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                FontSize="34"
+                                FontWeight="SemiBold"
+                                Foreground="{StaticResource AppMutedTextBrush}" />
+                            <Image
+                                Source="{Binding ImageSource}"
+                                Stretch="UniformToFill" />
+                            <Border Background="#22000000" />
+                            <Border
+                                VerticalAlignment="Bottom"
+                                Background="{StaticResource AppCardScrimBrush}"
+                                Padding="14,12">
+                                <StackPanel Spacing="4">
+                                    <TextBlock
+                                        Text="{Binding Title}"
+                                        FontSize="16"
+                                        FontWeight="SemiBold"
+                                        Foreground="{StaticResource AppTextBrush}"
+                                        TextTrimming="CharacterEllipsis"
+                                        TextWrapping="WrapWholeWords"
+                                        MaxLines="2" />
+                                    <TextBlock
+                                        Text="{Binding Meta}"
+                                        FontSize="13"
+                                        Foreground="{StaticResource AppMutedTextBrush}"
+                                        TextTrimming="CharacterEllipsis"
+                                        MaxLines="1" />
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </DataTemplate>
+                </GridView.ItemTemplate>
+                <GridView.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <ItemsWrapGrid Orientation="Horizontal" />
+                    </ItemsPanelTemplate>
+                </GridView.ItemsPanel>
+            </GridView>
+        </Grid>
     </Grid>
 </Page>
