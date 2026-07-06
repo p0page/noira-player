@@ -49,6 +49,11 @@ internal static class Program
                 return RunValidateReportSet(args);
             }
 
+            if (string.Equals(args[0], "evaluate-candidate", StringComparison.OrdinalIgnoreCase))
+            {
+                return RunEvaluateCandidate(args);
+            }
+
             throw new ArgumentException("Unknown command: " + args[0]);
         }
         catch (Exception ex)
@@ -94,6 +99,13 @@ internal static class Program
     private static int RunCompareSuite(string[] args)
     {
         var options = ParseCompareSuiteOptions(args);
+        WriteJson(CompareSuite(options), options.OutputPath);
+        return 0;
+    }
+
+    private static PlaybackQualityComparisonSuite CompareSuite(
+        CompareSuiteOptions options)
+    {
         var reportPairs = FindReportPairs(options);
         var comparisons = new List<PlaybackQualityRunComparison>();
 
@@ -120,10 +132,7 @@ internal static class Program
             }
         }
 
-        WriteJson(
-            PlaybackQualityComparisonSuiteAggregator.Summarize(comparisons),
-            options.OutputPath);
-        return 0;
+        return PlaybackQualityComparisonSuiteAggregator.Summarize(comparisons);
     }
 
     private static int RunValidateManifest(string[] args)
@@ -139,17 +148,66 @@ internal static class Program
     {
         var options = ParseValidateReportSetOptions(args);
         var manifest = ReadJson<PlaybackQualityReferenceManifest>(options.ManifestPath);
-        var reports = new List<PlaybackQualityReport>();
-        foreach (var path in EnumerateJsonFilesByRelativePath(options.ReportsDirectory).Values)
-        {
-            reports.Add(ReadPlaybackQualityReport(path));
-        }
+        var reports = ReadPlaybackQualityReports(options.ReportsDirectory);
 
         var validation = PlaybackQualityReferenceReportSetValidator.Validate(
             manifest,
             reports);
         WriteJson(validation, options.OutputPath);
         return validation.IsValid ? 0 : 2;
+    }
+
+    private static int RunEvaluateCandidate(string[] args)
+    {
+        var options = ParseEvaluateCandidateOptions(args);
+        var manifest = ReadJson<PlaybackQualityReferenceManifest>(options.ManifestPath);
+        var baselineReports = ReadPlaybackQualityReports(options.BaselineDirectory);
+        var candidateReports = ReadPlaybackQualityReports(options.CandidateDirectory);
+        var evaluation = new CandidateEvaluationOutput
+        {
+            ManifestValidation = PlaybackQualityReferenceManifestValidator.Validate(manifest),
+            BaselineReportSetValidation = PlaybackQualityReferenceReportSetValidator.Validate(
+                manifest,
+                baselineReports),
+            CandidateReportSetValidation = PlaybackQualityReferenceReportSetValidator.Validate(
+                manifest,
+                candidateReports)
+        };
+
+        if (!evaluation.ManifestValidation.IsValid)
+        {
+            AddUnique(evaluation.Blockers, "manifest.invalid");
+        }
+
+        if (!evaluation.BaselineReportSetValidation.IsValid)
+        {
+            AddUnique(evaluation.Blockers, "baseline-report-set.invalid");
+        }
+
+        if (!evaluation.CandidateReportSetValidation.IsValid)
+        {
+            AddUnique(evaluation.Blockers, "candidate-report-set.invalid");
+        }
+
+        if (evaluation.Blockers.Count == 0)
+        {
+            evaluation.Suite = CompareSuite(options);
+            evaluation.Action = evaluation.Suite.Action;
+            evaluation.Risk = evaluation.Suite.Risk;
+            CopyValues(evaluation.Suite.Reasons, evaluation.Reasons);
+            CopyValues(evaluation.Suite.Blockers, evaluation.Blockers);
+        }
+        else
+        {
+            evaluation.Action = "collect-comparable-evidence";
+            evaluation.Risk = "high";
+            AddUnique(
+                evaluation.Reasons,
+                "candidate evaluation has invalid manifest or report-set evidence");
+        }
+
+        WriteJson(evaluation, options.OutputPath);
+        return evaluation.Blockers.Count == 0 ? 0 : 2;
     }
 
     private static CompareOptions ParseCompareOptions(string[] args)
@@ -263,6 +321,60 @@ internal static class Program
             }
         }
 
+        ValidateCompareSuiteOptions(options);
+        return options;
+    }
+
+    private static EvaluateCandidateOptions ParseEvaluateCandidateOptions(string[] args)
+    {
+        var options = new EvaluateCandidateOptions();
+        for (var index = 1; index < args.Length; index++)
+        {
+            var arg = args[index];
+            switch (arg)
+            {
+                case "--manifest":
+                    options.ManifestPath = ReadValue(args, ref index, arg);
+                    break;
+                case "--baseline-dir":
+                    options.BaselineDirectory = ReadValue(args, ref index, arg);
+                    break;
+                case "--candidate-dir":
+                    options.CandidateDirectory = ReadValue(args, ref index, arg);
+                    break;
+                case "--comparisons-dir":
+                    options.ComparisonsDirectory = ReadValue(args, ref index, arg);
+                    break;
+                case "--previous-comparisons-dir":
+                    options.PreviousComparisonsDirectory = ReadValue(args, ref index, arg);
+                    break;
+                case "--match-by":
+                    options.MatchBy = ReadValue(args, ref index, arg);
+                    break;
+                case "--stall-threshold":
+                    options.StallComparisonCountThreshold = int.Parse(
+                        ReadValue(args, ref index, arg),
+                        System.Globalization.CultureInfo.InvariantCulture);
+                    break;
+                case "--output":
+                    options.OutputPath = ReadValue(args, ref index, arg);
+                    break;
+                default:
+                    throw new ArgumentException("Unknown evaluate-candidate option: " + arg);
+            }
+        }
+
+        ValidateCompareSuiteOptions(options);
+        if (string.IsNullOrWhiteSpace(options.ManifestPath))
+        {
+            throw new ArgumentException("Missing required option --manifest.");
+        }
+
+        return options;
+    }
+
+    private static void ValidateCompareSuiteOptions(CompareSuiteOptions options)
+    {
         if (string.IsNullOrWhiteSpace(options.BaselineDirectory))
         {
             throw new ArgumentException("Missing required option --baseline-dir.");
@@ -282,8 +394,6 @@ internal static class Program
         {
             throw new ArgumentException("--match-by must be relative-path or run-id.");
         }
-
-        return options;
     }
 
     private static ValidateManifestOptions ParseValidateManifestOptions(string[] args)
@@ -551,6 +661,17 @@ internal static class Program
         return files;
     }
 
+    private static List<PlaybackQualityReport> ReadPlaybackQualityReports(string directory)
+    {
+        var reports = new List<PlaybackQualityReport>();
+        foreach (var path in EnumerateJsonFilesByRelativePath(directory).Values)
+        {
+            reports.Add(ReadPlaybackQualityReport(path));
+        }
+
+        return reports;
+    }
+
     private static string ReadValue(string[] args, ref int index, string optionName)
     {
         if (index + 1 >= args.Length || args[index + 1].StartsWith("--", StringComparison.Ordinal))
@@ -633,6 +754,22 @@ internal static class Program
         File.WriteAllText(outputPath, json);
     }
 
+    private static void CopyValues(List<string> source, List<string> target)
+    {
+        foreach (var value in source)
+        {
+            AddUnique(target, value);
+        }
+    }
+
+    private static void AddUnique(List<string> values, string value)
+    {
+        if (!string.IsNullOrWhiteSpace(value) && !values.Contains(value))
+        {
+            values.Add(value);
+        }
+    }
+
     private static void WriteUsage(TextWriter writer)
     {
         writer.WriteLine("Usage:");
@@ -641,6 +778,7 @@ internal static class Program
         writer.WriteLine("  playback-quality compare-suite --baseline-dir <reports-dir> --candidate-dir <reports-dir> [--match-by relative-path|run-id] [--previous-comparisons-dir <comparison-dir>] [--comparisons-dir <comparison-dir>] [--stall-threshold <n>] [--output <suite.json>]");
         writer.WriteLine("  playback-quality validate-manifest --manifest <reference-manifest.json> [--output <validation.json>]");
         writer.WriteLine("  playback-quality validate-report-set --manifest <reference-manifest.json> --reports-dir <reports-dir> [--output <validation.json>]");
+        writer.WriteLine("  playback-quality evaluate-candidate --manifest <reference-manifest.json> --baseline-dir <reports-dir> --candidate-dir <reports-dir> [--match-by relative-path|run-id] [--previous-comparisons-dir <comparison-dir>] [--comparisons-dir <comparison-dir>] [--stall-threshold <n>] [--output <evaluation.json>]");
     }
 
     private sealed class CompareOptions
@@ -658,7 +796,7 @@ internal static class Program
         public List<string> ComparisonPaths { get; } = new List<string>();
     }
 
-    private sealed class CompareSuiteOptions
+    private class CompareSuiteOptions
     {
         public string BaselineDirectory { get; set; } = "";
         public string CandidateDirectory { get; set; } = "";
@@ -667,6 +805,16 @@ internal static class Program
         public string OutputPath { get; set; } = "";
         public string MatchBy { get; set; } = "relative-path";
         public int StallComparisonCountThreshold { get; set; } = 2;
+    }
+
+    private sealed class EvaluateCandidateOptions : CompareSuiteOptions
+    {
+        public string ManifestPath { get; set; } = "";
+
+        public EvaluateCandidateOptions()
+        {
+            MatchBy = "run-id";
+        }
     }
 
     private sealed class ValidateManifestOptions
@@ -700,5 +848,21 @@ internal static class Program
         public string OutputRelativePath { get; }
         public string BaselinePath { get; }
         public string CandidatePath { get; }
+    }
+
+    private sealed class CandidateEvaluationOutput
+    {
+        public string Action { get; set; } = "collect-comparable-evidence";
+        public string Risk { get; set; } = "high";
+        public List<string> Reasons { get; } = new List<string>();
+        public List<string> Blockers { get; } = new List<string>();
+        public PlaybackQualityReferenceManifestValidation ManifestValidation { get; set; } =
+            new PlaybackQualityReferenceManifestValidation();
+        public PlaybackQualityReferenceReportSetValidation BaselineReportSetValidation { get; set; } =
+            new PlaybackQualityReferenceReportSetValidation();
+        public PlaybackQualityReferenceReportSetValidation CandidateReportSetValidation { get; set; } =
+            new PlaybackQualityReferenceReportSetValidation();
+        public PlaybackQualityComparisonSuite Suite { get; set; } =
+            new PlaybackQualityComparisonSuite();
     }
 }

@@ -57,6 +57,24 @@ dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQ
 
 The report-set gate matches `report.runId` to manifest `caseId`, rejects missing cases, extra reports, duplicate run IDs, and source metadata mismatches. Run this gate before `compare-suite`; a report set that does not match the manifest is evidence-collection failure, not playback Core optimization evidence.
 
+## 候选版本门禁评测
+
+当另一个 worktree 正在修改 Xbox App 交互时，播放核心候选改动应优先走 App-free 门禁，不打包、不启动 UWP App：
+
+```powershell
+dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- evaluate-candidate --manifest docs\qa\playback-quality-reference-manifest.example.json --baseline-dir baseline-reports --candidate-dir candidate-reports --match-by run-id --comparisons-dir comparisons --output candidate-evaluation.json
+```
+
+`evaluate-candidate` 会按固定顺序执行：
+
+- 验证 reference manifest；
+- 验证 baseline 报告集是否完整覆盖 manifest；
+- 验证 candidate 报告集是否完整覆盖 manifest；
+- 只有前三步都有效时，才调用 `compare-suite` 做 before/after 比较；
+- 输出一个模型可直接消费的 JSON，包含 `action`、`risk`、`blockers`、manifest/report-set 校验结果和 suite 结果。
+
+这条命令默认使用 `--match-by run-id`，因此 manifest `caseId`、baseline `report.runId`、candidate `report.runId` 应保持一致。任何 missing/extra/duplicate/metadata mismatch 都会被视为证据采集失败，而不是播放核心优化结论。自动化模型循环应先修复采集或源选择问题，再根据 suite 结果决定保留、拆分、回退或继续修改播放核心。
+
 ## Compare Reports
 
 Use the App-free CLI when an automated model run needs to compare two serialized playback quality reports without building the Xbox App:

@@ -164,6 +164,29 @@ dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQ
 The command fails on missing or extra report files instead of silently dropping cases. Automated consumers should treat that as an evidence-collection blocker, not as a playback Core regression. `--match-by run-id` pairs reports by `report.runId` instead of relative file path and is preferred after manifest/report-set validation. `--previous-comparisons-dir` can be supplied to load one previous comparison per matching key, enabling the same repeated-unchanged stall protection used by single-report `compare` runs. A missing previous comparison for a current report is allowed and means that case has no history yet.
 For `compare-suite`, each generated comparison receives `caseId = <relative report path>` by default or `caseId = <runId>` with `--match-by run-id`, and the suite `cases` list repeats that value so model loops can map a failure back to the original sample file.
 
+## 候选评测门禁
+
+`evaluate-candidate` 是模型优化播放核心时优先使用的高层 CLI 门禁。它把 manifest 校验、baseline 报告集校验、candidate 报告集校验和 suite 比较合并成一个 JSON 输出，避免模型在证据不完整时误判“候选版本变好或变坏”。
+
+```powershell
+dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- evaluate-candidate --manifest reference-manifest.json --baseline-dir baseline-reports --candidate-dir candidate-reports --match-by run-id --comparisons-dir comparisons --output candidate-evaluation.json
+```
+
+输出字段语义：
+
+- `manifestValidation`：reference manifest 是否可调度，包含 case、tier、purpose 和 expected source metadata 校验。
+- `baselineReportSetValidation`：baseline 是否完整覆盖 manifest，并且实际源元数据是否匹配预期。
+- `candidateReportSetValidation`：candidate 是否完整覆盖 manifest，并且实际源元数据是否匹配预期。
+- `suite`：只有三类校验都有效时才产生有效 before/after 比较结果。
+- `action`、`risk`、`reasons`、`blockers`：给模型直接使用的下一步决策摘要。
+
+自动化模型循环必须按以下规则消费结果：
+
+- 如果 `blockers` 包含 manifest 或 report-set 问题，先修复证据采集、源选择、报告 runId 或 source metadata，不要修改播放核心。
+- 只有当 `action = accept-candidate` 且 `risk = low` 时，候选播放核心改动才可以被自动保留。
+- `review-unmatched-signals`、`collect-comparable-evidence`、`change-optimization-strategy` 等动作都不是通过信号，模型应继续采集或缩小改动范围。
+- `--comparisons-dir` 产出的单 case comparison 是定位问题样本的入口；模型应优先读取对应 case 的 comparison，再决定下一次修改。
+
 `PlaybackQualityReportMapper.ApplySource` is the lower-level Core mapping from `PlaybackDescriptor` into `source`. `PlaybackQualityReportMapper.ApplyDisplayStatus` maps `PlaybackDisplayStatus` into `display` and `colorPipeline`. `PlaybackQualityReportMapper.ApplyMetrics` maps playback metrics snapshots into `timing`, `sync`, and `buffers`. App or harness code should prefer the composer and use these mappers only when it needs lower-level control.
 
 ## Failure Area Priority

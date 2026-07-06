@@ -20,6 +20,12 @@ try {
     $runIdCandidateDir = Join-Path $tempRoot 'runid-candidate-suite'
     $runIdComparisonsDir = Join-Path $tempRoot 'runid-suite-comparisons'
     $runIdSuitePath = Join-Path $tempRoot 'runid-suite.json'
+    $candidateEvaluationManifestPath = Join-Path $tempRoot 'candidate-evaluation-manifest.json'
+    $candidateEvaluationPath = Join-Path $tempRoot 'candidate-evaluation.json'
+    $candidateEvaluationComparisonsDir = Join-Path $tempRoot 'candidate-evaluation-comparisons'
+    $candidateEvaluationInvalidCandidateDir = Join-Path $tempRoot 'candidate-evaluation-invalid-candidate'
+    $candidateEvaluationInvalidPath = Join-Path $tempRoot 'candidate-evaluation-invalid.json'
+    $candidateEvaluationInvalidComparisonsDir = Join-Path $tempRoot 'candidate-evaluation-invalid-comparisons'
     $stallBaselineDir = Join-Path $tempRoot 'stall-baseline-suite'
     $stallCandidateDir = Join-Path $tempRoot 'stall-candidate-suite'
     $previousComparisonsDir = Join-Path $tempRoot 'previous-comparisons'
@@ -37,6 +43,9 @@ try {
   "source": {
     "itemId": "item-1",
     "mediaSourceId": "source-1",
+    "codec": "hevc",
+    "width": 3840,
+    "height": 2160,
     "frameRate": 23.976,
     "hdrKind": "Sdr"
   },
@@ -60,6 +69,9 @@ try {
   "source": {
     "itemId": "item-1",
     "mediaSourceId": "source-1",
+    "codec": "hevc",
+    "width": 3840,
+    "height": 2160,
     "frameRate": 23.976,
     "hdrKind": "Sdr"
   },
@@ -380,6 +392,9 @@ try {
   "source": {
     "itemId": "item-1",
     "mediaSourceId": "source-1",
+    "codec": "hevc",
+    "width": 3840,
+    "height": 2160,
     "frameRate": 23.976,
     "hdrKind": "Sdr"
   },
@@ -402,6 +417,9 @@ try {
   "source": {
     "itemId": "item-1",
     "mediaSourceId": "source-1",
+    "codec": "hevc",
+    "width": 3840,
+    "height": 2160,
     "frameRate": 23.976,
     "hdrKind": "Sdr"
   },
@@ -444,6 +462,134 @@ try {
 
     if (-not ($runIdSuite.cases | Where-Object { $_.caseId -eq 'item-1/source-1' -and $_.action -eq 'accept-candidate' })) {
         throw 'Expected playback quality CLI compare-suite run-id matching to use run-id case summary.'
+    }
+
+    @'
+{
+  "schemaVersion": 1,
+  "cases": [
+    {
+      "caseId": "item-1/source-1",
+      "uri": "https://example.invalid/item-1/source-1.mp4",
+      "tier": 2,
+      "purpose": [
+        "frame-pacing"
+      ],
+      "expected": {
+        "codec": "hevc",
+        "width": 3840,
+        "height": 2160,
+        "frameRate": 23.976,
+        "hdrKind": "Sdr"
+      }
+    }
+  ]
+}
+'@ | Set-Content -LiteralPath $candidateEvaluationManifestPath -Encoding UTF8
+
+    Push-Location $repoRoot
+    try {
+        dotnet run `
+            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
+            --no-build `
+            -- evaluate-candidate `
+            --manifest $candidateEvaluationManifestPath `
+            --baseline-dir $runIdBaselineDir `
+            --candidate-dir $runIdCandidateDir `
+            --match-by run-id `
+            --comparisons-dir $candidateEvaluationComparisonsDir `
+            --output $candidateEvaluationPath
+        if ($LASTEXITCODE -ne 0) {
+            throw 'playback quality CLI evaluate-candidate returned a non-zero exit code.'
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    $candidateEvaluation = Get-Content -Raw -LiteralPath $candidateEvaluationPath | ConvertFrom-Json
+    if ($candidateEvaluation.action -ne 'accept-candidate') {
+        throw 'Expected playback quality CLI evaluate-candidate action to accept candidate.'
+    }
+
+    if ($candidateEvaluation.manifestValidation.isValid -ne $true) {
+        throw 'Expected playback quality CLI evaluate-candidate manifest validation to be valid.'
+    }
+
+    if ($candidateEvaluation.baselineReportSetValidation.isValid -ne $true) {
+        throw 'Expected playback quality CLI evaluate-candidate baseline report set validation to be valid.'
+    }
+
+    if ($candidateEvaluation.candidateReportSetValidation.isValid -ne $true) {
+        throw 'Expected playback quality CLI evaluate-candidate candidate report set validation to be valid.'
+    }
+
+    if ($candidateEvaluation.suite.action -ne 'accept-candidate') {
+        throw 'Expected playback quality CLI evaluate-candidate suite action to accept candidate.'
+    }
+
+    New-Item -ItemType Directory -Path $candidateEvaluationInvalidCandidateDir | Out-Null
+    @'
+{
+  "runId": "item-1/source-1",
+  "metricVersion": "software-quality-v1",
+  "source": {
+    "itemId": "item-1",
+    "mediaSourceId": "source-1",
+    "codec": "hevc",
+    "width": 3840,
+    "height": 2160,
+    "frameRate": 23.976,
+    "hdrKind": "Hdr10"
+  },
+  "checks": [
+    {
+      "name": "MaxFrameGapMs",
+      "signal": "timing.maxFrameGapMs",
+      "status": "fail",
+      "failureArea": "frame-pacing",
+      "expected": "105.000",
+      "actual": "120.000"
+    }
+  ]
+}
+'@ | Set-Content -LiteralPath (Join-Path $candidateEvaluationInvalidCandidateDir 'candidate-wrong-source.json') -Encoding UTF8
+
+    Push-Location $repoRoot
+    try {
+        dotnet run `
+            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
+            --no-build `
+            -- evaluate-candidate `
+            --manifest $candidateEvaluationManifestPath `
+            --baseline-dir $runIdBaselineDir `
+            --candidate-dir $candidateEvaluationInvalidCandidateDir `
+            --match-by run-id `
+            --comparisons-dir $candidateEvaluationInvalidComparisonsDir `
+            --output $candidateEvaluationInvalidPath
+        if ($LASTEXITCODE -eq 0) {
+            throw 'Expected playback quality CLI evaluate-candidate to reject invalid candidate evidence.'
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    $invalidCandidateEvaluation = Get-Content -Raw -LiteralPath $candidateEvaluationInvalidPath | ConvertFrom-Json
+    if ($invalidCandidateEvaluation.action -ne 'collect-comparable-evidence') {
+        throw 'Expected invalid evaluate-candidate output to collect comparable evidence.'
+    }
+
+    if ($invalidCandidateEvaluation.candidateReportSetValidation.isValid -ne $false) {
+        throw 'Expected invalid evaluate-candidate candidate report set validation to fail.'
+    }
+
+    if (-not ($invalidCandidateEvaluation.blockers -contains 'candidate-report-set.invalid')) {
+        throw 'Expected invalid evaluate-candidate output to include candidate report set blocker.'
+    }
+
+    if (Test-Path -LiteralPath $candidateEvaluationInvalidComparisonsDir) {
+        throw 'Expected invalid evaluate-candidate evidence to skip comparison output.'
     }
 
     New-Item -ItemType Directory -Path $stallBaselineDir | Out-Null
