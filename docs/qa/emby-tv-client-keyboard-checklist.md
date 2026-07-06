@@ -8,6 +8,29 @@ Mouse is allowed only for operating external tooling, window management, or clos
 
 ## Run Log
 
+### 2026-07-06 - Library Portal App Icon
+
+App version: `0.1.0.72`
+
+Scope:
+
+- Replaced the UWP icon set with the `Library Portal` direction from the complete-client design: dark TV tile, layered media cards, cyan play portal, and amber resume arc.
+- Added `tools/Generate-AppIconAssets.ps1` so the required app assets can be regenerated consistently.
+- Updated `StoreLogo.png`, `Square44x44Logo.png`, `Square150x150Logo.png`, `Wide310x150Logo.png`, and `SplashScreen.png`.
+
+Asset validation:
+
+- Pixel validation passed for all five assets: expected dimensions, dark base, cyan portal pixels, and amber progress pixels.
+- Visual inspection passed for the 44 px icon, wide tile, and splash screen. The 44 px icon remains legible; the wide tile reads as a media-library mark rather than a banner ad.
+
+Keyboard-only validation with Computer Use:
+
+- Installed and launched `0.1.0.72`.
+- Home restored the saved session and exposed real library sections including `热门电影`, `热门剧集`, `豆瓣高分`, `Netflix`, `国产剧`, and `国漫`.
+- `Down` then `Enter` from Home opened `热门电影` with `34 items`, Sort, Filter, and a real movie grid.
+- `Escape` returned Home without `Nothing queued yet` or `Loading...`.
+- Pressing `Enter` immediately after returning Home reopened `热门电影`, proving focus returned to the originating Home library card.
+
 ### 2026-07-06 - Artwork Policy And Home Library Cards
 
 App version: `0.1.0.69`
