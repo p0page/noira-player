@@ -32,6 +32,7 @@
   <ItemGroup>
     <ClInclude Include="DxDeviceResources.h" />
     <ClInclude Include="HdrDisplayController.h" />
+    <ClInclude Include="HdrDisplayRefreshRateSnapshot.h" />
     <ClInclude Include="HdrDisplayRefreshRatePolicy.h" />
     <ClInclude Include="Media\AudioDecoder.h" />
     <ClInclude Include="Media\AudioRenderer.h" />

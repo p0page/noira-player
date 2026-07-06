@@ -14,6 +14,8 @@ namespace winrt::NextGenEmby::Native::implementation
         void IsHdrDisplayAvailable(bool value) noexcept;
         bool IsHdrOutputActive() const noexcept;
         void IsHdrOutputActive(bool value) noexcept;
+        double RefreshRateHz() const noexcept;
+        void RefreshRateHz(double value) noexcept;
         winrt::hstring Message() const;
         void Message(winrt::hstring const& value);
         winrt::hstring SwapChainFormat() const;
@@ -35,6 +37,7 @@ namespace winrt::NextGenEmby::Native::implementation
         NextGenEmby::Native::NativeHdrStatus m_hdrStatus{NextGenEmby::Native::NativeHdrStatus::NativeHdrStatus_Unknown};
         bool m_isHdrDisplayAvailable{false};
         bool m_isHdrOutputActive{false};
+        double m_refreshRateHz{0.0};
         winrt::hstring m_message;
         winrt::hstring m_swapChainFormat;
         winrt::hstring m_swapChainColorSpace;

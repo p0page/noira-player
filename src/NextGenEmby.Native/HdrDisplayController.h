@@ -11,6 +11,7 @@ namespace winrt::NextGenEmby::Native::implementation
         NextGenEmby::Native::NativeHdrStatus Status{NextGenEmby::Native::NativeHdrStatus::NativeHdrStatus_Unknown};
         bool IsHdrDisplayAvailable{false};
         bool IsHdrOutputActive{false};
+        double RefreshRateHz{0.0};
         winrt::hstring Message{};
     };
 

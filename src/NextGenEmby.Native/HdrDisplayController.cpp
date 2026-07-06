@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "HdrDisplayController.h"
+#include "HdrDisplayRefreshRateSnapshot.h"
 #include "HdrDisplayRefreshRatePolicy.h"
 #include "NativePlaybackDiagnostics.h"
 
@@ -253,12 +254,19 @@ namespace winrt::NextGenEmby::Native::implementation
 
             return false;
         }
+
+        void CaptureRefreshRate(HdrDisplaySnapshot& snapshot, HdmiDisplayMode const& mode)
+        {
+            snapshot.RefreshRateHz = HdrDisplayRefreshRateSnapshot::Normalize(
+                mode != nullptr ? mode.RefreshRate() : 0.0);
+        }
     }
 
     HdrDisplaySnapshot HdrDisplayController::Probe()
     {
         AppendNativePlaybackDiagnostic(L"HdrDisplayController.Probe begin");
         HdrDisplaySnapshot snapshot;
+        auto advancedHdrActive = false;
 
         auto info = DisplayInformation::GetForCurrentView();
         AppendNativePlaybackDiagnostic(info != nullptr
@@ -276,15 +284,18 @@ namespace winrt::NextGenEmby::Native::implementation
                 snapshot.Status = NextGenEmby::Native::NativeHdrStatus::NativeHdrStatus_On;
                 snapshot.IsHdrDisplayAvailable = true;
                 snapshot.IsHdrOutputActive = true;
+                advancedHdrActive = true;
                 AppendNativePlaybackDiagnostic(L"HdrDisplayController.Probe current view already HDR");
-                return snapshot;
             }
         }
 
         if (!ApiInformation::IsTypePresent(L"Windows.Graphics.Display.Core.HdmiDisplayInformation"))
         {
-            snapshot.Status = NextGenEmby::Native::NativeHdrStatus::NativeHdrStatus_Unsupported;
-            snapshot.Message = L"HdmiDisplayInformation is unavailable.";
+            if (!advancedHdrActive)
+            {
+                snapshot.Status = NextGenEmby::Native::NativeHdrStatus::NativeHdrStatus_Unsupported;
+                snapshot.Message = L"HdmiDisplayInformation is unavailable.";
+            }
             AppendNativePlaybackDiagnostic(L"HdrDisplayController.Probe HdmiDisplayInformation unavailable");
             return snapshot;
         }
@@ -296,8 +307,11 @@ namespace winrt::NextGenEmby::Native::implementation
             : L"HdrDisplayController.Probe GetForCurrentView end null");
         if (hdmi == nullptr)
         {
-            snapshot.Status = NextGenEmby::Native::NativeHdrStatus::NativeHdrStatus_Unsupported;
-            snapshot.Message = L"No HDMI display information is available.";
+            if (!advancedHdrActive)
+            {
+                snapshot.Status = NextGenEmby::Native::NativeHdrStatus::NativeHdrStatus_Unsupported;
+                snapshot.Message = L"No HDMI display information is available.";
+            }
             return snapshot;
         }
 
@@ -306,6 +320,12 @@ namespace winrt::NextGenEmby::Native::implementation
         AppendNativePlaybackDiagnostic(current != nullptr
             ? L"HdrDisplayController.Probe GetCurrentDisplayMode end available"
             : L"HdrDisplayController.Probe GetCurrentDisplayMode end null");
+        CaptureRefreshRate(snapshot, current);
+        if (advancedHdrActive)
+        {
+            return snapshot;
+        }
+
         snapshot.IsHdrDisplayAvailable =
             current != nullptr &&
             (current.IsSmpte2084Supported() || HasHdrMode(hdmi, current));
@@ -401,6 +421,7 @@ namespace winrt::NextGenEmby::Native::implementation
             return snapshot;
         }
 
+        CaptureRefreshRate(snapshot, mode);
         if (m_hasInitialState && m_initialRefreshRate <= 0.0)
         {
             m_initialRefreshRate = mode.RefreshRate();
@@ -439,11 +460,13 @@ namespace winrt::NextGenEmby::Native::implementation
 
         if (!result)
         {
+            CaptureRefreshRate(snapshot, mode);
             snapshot.Status = NextGenEmby::Native::NativeHdrStatus::NativeHdrStatus_Failed;
             snapshot.Message = enableHdr ? L"Failed to enter HDR10 display mode." : L"Failed to restore SDR display mode.";
             return snapshot;
         }
 
+        CaptureRefreshRate(snapshot, targetMode);
         snapshot.IsHdrDisplayAvailable = true;
         snapshot.IsHdrOutputActive = enableHdr;
         snapshot.Status = enableHdr

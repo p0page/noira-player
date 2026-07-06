@@ -34,6 +34,16 @@ namespace winrt::NextGenEmby::Native::implementation
         m_isHdrOutputActive = value;
     }
 
+    double NativePlaybackStatus::RefreshRateHz() const noexcept
+    {
+        return m_refreshRateHz;
+    }
+
+    void NativePlaybackStatus::RefreshRateHz(double value) noexcept
+    {
+        m_refreshRateHz = value > 0.0 ? value : 0.0;
+    }
+
     winrt::hstring NativePlaybackStatus::Message() const
     {
         return m_message;

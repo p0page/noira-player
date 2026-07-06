@@ -85,6 +85,7 @@ namespace winrt::NextGenEmby::Native::implementation
             return L"status=" + std::to_wstring(static_cast<int32_t>(snapshot.Status)) +
                 L" display=" + FormatBool(snapshot.IsHdrDisplayAvailable) +
                 L" active=" + FormatBool(snapshot.IsHdrOutputActive) +
+                L" refresh=" + std::to_wstring(snapshot.RefreshRateHz) +
                 L" message=" + std::wstring(snapshot.Message.c_str());
         }
     }
@@ -140,6 +141,7 @@ namespace winrt::NextGenEmby::Native::implementation
             status.HdrStatus(m_displayStatus.HdrStatus());
             status.IsHdrDisplayAvailable(m_displayStatus.IsHdrDisplayAvailable());
             status.IsHdrOutputActive(m_displayStatus.IsHdrOutputActive());
+            status.RefreshRateHz(m_displayStatus.RefreshRateHz());
             status.Message(m_displayStatus.Message());
         }
 
@@ -421,6 +423,7 @@ namespace winrt::NextGenEmby::Native::implementation
         status.HdrStatus(snapshot.Status);
         status.IsHdrDisplayAvailable(snapshot.IsHdrDisplayAvailable);
         status.IsHdrOutputActive(snapshot.IsHdrOutputActive);
+        status.RefreshRateHz(snapshot.RefreshRateHz);
         status.Message(snapshot.Message);
         status.SwapChainFormat(FormatDxgiFormat(m_dx.SwapChainFormat()));
         status.SwapChainColorSpace(FormatDxgiColorSpace(m_dx.SwapChainColorSpace()));

@@ -24,7 +24,8 @@ namespace NextGenEmby.Core.Playback
             bool isVideoProcessorColorSpaceValidated = false,
             string videoProcessorInputColorSpace = "",
             string videoProcessorOutputColorSpace = "",
-            string videoProcessorConversionStatus = "")
+            string videoProcessorConversionStatus = "",
+            double refreshRateHz = 0)
         {
             if (hdrStatus == HdrOutputStatus.Failed && string.IsNullOrWhiteSpace(message))
             {
@@ -42,6 +43,7 @@ namespace NextGenEmby.Core.Playback
             VideoProcessorInputColorSpace = videoProcessorInputColorSpace ?? "";
             VideoProcessorOutputColorSpace = videoProcessorOutputColorSpace ?? "";
             VideoProcessorConversionStatus = videoProcessorConversionStatus ?? "";
+            RefreshRateHz = refreshRateHz > 0 ? refreshRateHz : 0;
         }
 
         public HdrOutputStatus HdrStatus { get; }
@@ -65,6 +67,8 @@ namespace NextGenEmby.Core.Playback
         public string VideoProcessorOutputColorSpace { get; }
 
         public string VideoProcessorConversionStatus { get; }
+
+        public double RefreshRateHz { get; }
 
         public bool RequiresExplicitToneMapping
         {

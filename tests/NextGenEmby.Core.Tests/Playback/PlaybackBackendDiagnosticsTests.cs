@@ -60,6 +60,18 @@ public sealed class PlaybackBackendDiagnosticsTests
     }
 
     [Fact]
+    public void DisplayStatus_Carries_Display_Refresh_Rate()
+    {
+        var status = new PlaybackDisplayStatus(
+            HdrOutputStatus.On,
+            isHdrDisplayAvailable: true,
+            isHdrOutputActive: true,
+            refreshRateHz: 59.94006);
+
+        Assert.Equal(59.94006, status.RefreshRateHz);
+    }
+
+    [Fact]
     public void DisplayStatus_Carries_Video_Processor_Color_Conversion_Diagnostics()
     {
         var status = new PlaybackDisplayStatus(

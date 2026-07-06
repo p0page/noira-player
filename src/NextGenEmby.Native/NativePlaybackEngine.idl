@@ -39,6 +39,7 @@ namespace NextGenEmby.Native
         NativeHdrStatus HdrStatus;
         Boolean IsHdrDisplayAvailable;
         Boolean IsHdrOutputActive;
+        Double RefreshRateHz;
         String Message;
         String SwapChainFormat;
         String SwapChainColorSpace;
