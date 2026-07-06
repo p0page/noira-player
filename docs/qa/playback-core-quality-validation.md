@@ -45,6 +45,8 @@ Use the App-free CLI when an automated model run needs to compare two serialized
 dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- compare --baseline baseline.json --candidate candidate.json --output comparison.json
 ```
 
+The `compare` and `compare-suite` commands accept either a raw `PlaybackQualityReport` JSON file or a `PlaybackQualityRunResult` envelope with a top-level `report` property.
+
 For iterative optimization loops, pass previous comparison JSON files to enable repeated-unchanged stall protection:
 
 ```powershell

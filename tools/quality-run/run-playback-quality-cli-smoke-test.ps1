@@ -7,7 +7,10 @@ New-Item -ItemType Directory -Path $tempRoot | Out-Null
 try {
     $baselinePath = Join-Path $tempRoot 'baseline.json'
     $candidatePath = Join-Path $tempRoot 'candidate.json'
+    $baselineEnvelopePath = Join-Path $tempRoot 'baseline-envelope.json'
+    $candidateEnvelopePath = Join-Path $tempRoot 'candidate-envelope.json'
     $outputPath = Join-Path $tempRoot 'comparison.json'
+    $envelopeOutputPath = Join-Path $tempRoot 'comparison-envelope.json'
     $suitePath = Join-Path $tempRoot 'suite.json'
     $baselineDir = Join-Path $tempRoot 'baseline-suite'
     $candidateDir = Join-Path $tempRoot 'candidate-suite'
@@ -60,6 +63,23 @@ try {
 }
 '@ | Set-Content -LiteralPath $candidatePath -Encoding UTF8
 
+    $baselineReportJson = Get-Content -Raw -LiteralPath $baselinePath
+    $candidateReportJson = Get-Content -Raw -LiteralPath $candidatePath
+
+    @"
+{
+  "report": $baselineReportJson,
+  "modelAnalysis": {}
+}
+"@ | Set-Content -LiteralPath $baselineEnvelopePath -Encoding UTF8
+
+    @"
+{
+  "report": $candidateReportJson,
+  "modelAnalysis": {}
+}
+"@ | Set-Content -LiteralPath $candidateEnvelopePath -Encoding UTF8
+
     Push-Location $repoRoot
     try {
         dotnet run `
@@ -103,6 +123,32 @@ try {
         dotnet run `
             --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
             --no-build `
+            -- compare `
+            --baseline $baselineEnvelopePath `
+            --candidate $candidateEnvelopePath `
+            --output $envelopeOutputPath
+        if ($LASTEXITCODE -ne 0) {
+            throw 'playback quality CLI envelope comparison returned a non-zero exit code.'
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    $envelopeComparison = Get-Content -Raw -LiteralPath $envelopeOutputPath | ConvertFrom-Json
+    if ($envelopeComparison.result -ne 'improved') {
+        throw 'Expected playback quality CLI envelope comparison result to be improved.'
+    }
+
+    if (-not ($envelopeComparison.improvements | Where-Object { $_.signal -eq 'timing.maxFrameGapMs' })) {
+        throw 'Expected playback quality CLI envelope comparison to include timing.maxFrameGapMs improvement.'
+    }
+
+    Push-Location $repoRoot
+    try {
+        dotnet run `
+            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
+            --no-build `
             -- summarize `
             --comparison $outputPath `
             --output $suitePath
@@ -129,8 +175,8 @@ try {
 
     New-Item -ItemType Directory -Path $baselineDir | Out-Null
     New-Item -ItemType Directory -Path $candidateDir | Out-Null
-    Copy-Item -LiteralPath $baselinePath -Destination (Join-Path $baselineDir 'case-a.json')
-    Copy-Item -LiteralPath $candidatePath -Destination (Join-Path $candidateDir 'case-a.json')
+    Copy-Item -LiteralPath $baselineEnvelopePath -Destination (Join-Path $baselineDir 'case-a.json')
+    Copy-Item -LiteralPath $candidateEnvelopePath -Destination (Join-Path $candidateDir 'case-a.json')
 
     Push-Location $repoRoot
     try {

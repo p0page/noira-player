@@ -51,8 +51,8 @@ internal static class Program
     private static int RunCompare(string[] args)
     {
         var options = ParseCompareOptions(args);
-        var baseline = ReadJson<PlaybackQualityReport>(options.BaselinePath);
-        var candidate = ReadJson<PlaybackQualityReport>(options.CandidatePath);
+        var baseline = ReadPlaybackQualityReport(options.BaselinePath);
+        var candidate = ReadPlaybackQualityReport(options.CandidatePath);
         var context = new PlaybackQualityComparisonContext
         {
             StallComparisonCountThreshold = options.StallComparisonCountThreshold
@@ -89,8 +89,8 @@ internal static class Program
 
         foreach (var pair in reportPairs)
         {
-            var baseline = ReadJson<PlaybackQualityReport>(pair.BaselinePath);
-            var candidate = ReadJson<PlaybackQualityReport>(pair.CandidatePath);
+            var baseline = ReadPlaybackQualityReport(pair.BaselinePath);
+            var candidate = ReadPlaybackQualityReport(pair.CandidatePath);
             var context = new PlaybackQualityComparisonContext
             {
                 StallComparisonCountThreshold = options.StallComparisonCountThreshold
@@ -327,6 +327,48 @@ internal static class Program
 
         return JsonSerializer.Deserialize<T>(File.ReadAllText(path), JsonOptions) ??
             throw new InvalidOperationException("Could not parse JSON file: " + path);
+    }
+
+    private static PlaybackQualityReport ReadPlaybackQualityReport(string path)
+    {
+        if (!File.Exists(path))
+        {
+            throw new FileNotFoundException("File not found: " + path, path);
+        }
+
+        var json = File.ReadAllText(path);
+        using (var document = JsonDocument.Parse(json))
+        {
+            if (document.RootElement.ValueKind == JsonValueKind.Object &&
+                TryGetPropertyIgnoreCase(document.RootElement, "report", out var reportElement) &&
+                reportElement.ValueKind == JsonValueKind.Object)
+            {
+                return reportElement.Deserialize<PlaybackQualityReport>(JsonOptions) ??
+                    throw new InvalidOperationException(
+                        "Could not parse report property in JSON file: " + path);
+            }
+        }
+
+        return JsonSerializer.Deserialize<PlaybackQualityReport>(json, JsonOptions) ??
+            throw new InvalidOperationException("Could not parse JSON file: " + path);
+    }
+
+    private static bool TryGetPropertyIgnoreCase(
+        JsonElement element,
+        string propertyName,
+        out JsonElement property)
+    {
+        foreach (var item in element.EnumerateObject())
+        {
+            if (string.Equals(item.Name, propertyName, StringComparison.OrdinalIgnoreCase))
+            {
+                property = item.Value;
+                return true;
+            }
+        }
+
+        property = default;
+        return false;
     }
 
     private static void WriteJson<T>(T value, string outputPath)
