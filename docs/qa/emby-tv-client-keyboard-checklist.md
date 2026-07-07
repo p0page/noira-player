@@ -3029,3 +3029,39 @@ Fix rerun findings:
 - Decision:
   - Mark deterministic current-program artwork support as covered for Live TV browsing.
   - Keep real EPG artwork sampling and hardware unsupported-playback activation as live-data/platform validation, not as blockers for this visual-system slice.
+
+### 2026-07-08 - Design Conformance Batch 05 Music Preview Artwork Fix Rerun
+
+- App version: 0.1.0.238.
+- Scope: verify the Music Preview column after adding optional selected-item artwork support without turning the Music page into a poster grid.
+- Data source: DEBUG `music-fixture` and packaged QA artwork only; no private server data, credentials, screenshots, or personal media assets were written to the repository.
+- Evidence root: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch05-music-preview-artwork-238-20260708-071340`.
+- Keyboard-only validation:
+  - Signed and installed `NextGenEmby.App 0.1.0.238`.
+  - Closed the existing app frame, wrote `dev-command.json` with route `music-fixture`, and launched through AppUserModelId `NextGenEmby.App_h8qjz0sr1sg4m!App`.
+  - The route reported `completed / music-fixture`.
+  - Captured the initial Music screen with `All music` focused; the Preview column stayed visible and correctly hid the artwork frame for the aggregate no-art row.
+  - Pressed `Down`; focus moved to `Kairos Collective`, and the Preview column showed a bounded artwork region above the artist title and metadata.
+- Screenshots:
+  - Initial no-art Preview fallback: `01-music-preview-artwork-initial.png`.
+  - Artist Preview artwork: `02-music-preview-artwork-artist-focus.png`.
+  - Route result: `route-result.txt`.
+- Fixture/source contracts added before implementation:
+  - `MusicPageSourceTests.Music_Preview_Uses_Artwork_Context_When_Item_Artwork_Is_Available` requires `PreviewArtworkFrame`, `PreviewArtworkImage`, source/fallback lookup, collapsed no-art state, and fixed column widths that keep Preview visible under the local display scale.
+
+Fix rerun findings:
+
+| ID | Status | Page | Evidence | Result | Residual risk |
+| --- | --- | --- | --- | --- | --- |
+| DC-05.02 | Pass with concern | Music Preview | `01-music-preview-artwork-initial.png`, `02-music-preview-artwork-artist-focus.png`, `route-result.txt`, and `MusicPageSourceTests`. | Music remains a dense list-first surface with Artist, Album, Song, and Preview columns. Preview now uses item artwork only when available and otherwise collapses the artwork frame instead of showing a placeholder. Intermediate 0.1.0.236 and 0.1.0.237 reruns caught that star columns and wider fixed columns pushed Preview offscreen under local display scaling; 0.1.0.238 tightened the columns. | Real music libraries may expose missing, tiny, square, or artist-biased imagery, and artist metadata varies by server. The Preview art treatment should be rechecked against a real music library before considering it fully platform-proven. |
+
+- Verification:
+  - Red path confirmed the targeted Music page source test failed before implementation because no Preview artwork frame existed.
+  - Red path later confirmed the fixed-width layout contract failed before the Music columns were tightened.
+  - Targeted `MusicPageSourceTests` passed: 7 tests.
+  - Visual Studio MSBuild Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.238_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate, verified with `signtool verify /pa`, and installed locally as `NextGenEmby.App 0.1.0.238`.
+  - Intermediate installed-app reruns caught the Preview column being pushed offscreen before the final 0.1.0.238 screenshot pass.
+- Decision:
+  - Keep Music list-first. Artwork is Preview context, not a new browsing model.
+  - Keep the no-art state quiet and text-first; do not add fake placeholders when Emby does not expose usable music imagery.

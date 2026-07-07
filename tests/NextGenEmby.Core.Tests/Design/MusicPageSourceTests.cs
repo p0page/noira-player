@@ -150,6 +150,40 @@ public sealed class MusicPageSourceTests
         Assert.Contains("MatteButtonFocusVisuals.PrepareCommandButton(FallbackRetryButton)", musicPageSource);
     }
 
+    [Fact]
+    public void Music_Preview_Uses_Artwork_Context_When_Item_Artwork_Is_Available()
+    {
+        var root = FindRepositoryRoot();
+        var musicPageXaml = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NextGenEmby.App",
+            "Views",
+            "MusicPage.xaml"));
+        var musicPageSource = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NextGenEmby.App",
+            "Views",
+            "MusicPage.xaml.cs"));
+
+        Assert.Contains("PreviewArtworkFrame", musicPageXaml);
+        Assert.Contains("PreviewArtworkImage", musicPageXaml);
+        Assert.Contains("ColumnDefinition Width=\"380\"", musicPageXaml);
+        Assert.Contains("ColumnDefinition Width=\"400\"", musicPageXaml);
+        Assert.Contains("ColumnDefinition Width=\"440\"", musicPageXaml);
+        Assert.Contains("ColumnDefinition Width=\"260\"", musicPageXaml);
+        Assert.DoesNotContain("ColumnDefinition Width=\"5*\"", musicPageXaml);
+        Assert.Contains("Width=\"220\"", musicPageXaml);
+        Assert.Contains("Height=\"220\"", musicPageXaml);
+        Assert.Contains("UpdatePreviewArtwork(item)", musicPageSource);
+        Assert.Contains("ClearPreviewArtwork()", musicPageSource);
+        Assert.Contains("CreatePreviewArtworkImageSource(item)", musicPageSource);
+        Assert.Contains("DevelopmentMusicFixture.ArtworkKey(item.Id, \"Primary\")", musicPageSource);
+        Assert.Contains("_musicArtworkUris[item.Id] = imageUri.AbsoluteUri", musicPageSource);
+        Assert.Contains("PreviewArtworkFrame.Visibility = Visibility.Collapsed", musicPageSource);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

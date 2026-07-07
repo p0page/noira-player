@@ -38,10 +38,10 @@
 
             <Grid Grid.Row="1" ColumnSpacing="24">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="3*" />
-                    <ColumnDefinition Width="4*" />
-                    <ColumnDefinition Width="5*" />
-                    <ColumnDefinition Width="4*" />
+                    <ColumnDefinition Width="380" />
+                    <ColumnDefinition Width="400" />
+                    <ColumnDefinition Width="440" />
+                    <ColumnDefinition Width="260" />
                 </Grid.ColumnDefinitions>
 
                 <Grid RowSpacing="12">
@@ -159,6 +159,20 @@
                             x:Name="PreviewBadgeBlock"
                             Style="{StaticResource TvBadgeTextStyle}"
                             Text="Now" />
+                        <Border
+                            x:Name="PreviewArtworkFrame"
+                            Width="220"
+                            Height="220"
+                            HorizontalAlignment="Left"
+                            Background="{StaticResource AppRaisedSurfaceBrush}"
+                            BorderBrush="{StaticResource AppTransparentBrush}"
+                            BorderThickness="0"
+                            CornerRadius="{StaticResource TvHomeWideCardCornerRadius}"
+                            Visibility="Collapsed">
+                            <Image
+                                x:Name="PreviewArtworkImage"
+                                Stretch="UniformToFill" />
+                        </Border>
                         <TextBlock
                             x:Name="PreviewTitleBlock"
                             Style="{StaticResource TvPanelTitleTextStyle}"

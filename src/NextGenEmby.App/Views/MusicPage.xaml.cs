@@ -39,6 +39,8 @@ namespace NextGenEmby.App.Views
         private IReadOnlyList<EmbyMediaItem> _loadedAlbums = Array.Empty<EmbyMediaItem>();
         private IReadOnlyList<EmbyMediaItem> _loadedSongs = Array.Empty<EmbyMediaItem>();
         private MusicNavigationRequest? _request;
+        private readonly Dictionary<string, string> _musicArtworkUris =
+            new Dictionary<string, string>(StringComparer.Ordinal);
         private int _loadGeneration;
         private bool _isUnloaded;
 #if DEBUG
@@ -361,11 +363,13 @@ namespace NextGenEmby.App.Views
             _unsupportedReturnFocusTarget = null;
             _loadedAlbums = Array.Empty<EmbyMediaItem>();
             _loadedSongs = Array.Empty<EmbyMediaItem>();
+            _musicArtworkUris.Clear();
             ArtistsCountBlock.Text = "Loading";
             AlbumsCountBlock.Text = "Loading";
             SongsTitleBlock.Text = "Songs";
             SongsCountBlock.Text = "Loading";
             AllSongsButton.Visibility = Visibility.Collapsed;
+            ClearPreviewArtwork();
             PreviewBadgeBlock.Text = "Now";
             PreviewTitleBlock.Text = "Select music";
             PreviewBodyBlock.Text = "Albums and songs appear here when the server exposes a music library.";
@@ -389,11 +393,13 @@ namespace NextGenEmby.App.Views
             _unsupportedReturnFocusTarget = null;
             _loadedAlbums = Array.Empty<EmbyMediaItem>();
             _loadedSongs = Array.Empty<EmbyMediaItem>();
+            _musicArtworkUris.Clear();
             ArtistsCountBlock.Text = "Refresh to load";
             AlbumsCountBlock.Text = "Refresh to load";
             SongsTitleBlock.Text = "Songs";
             SongsCountBlock.Text = "Refresh to load";
             AllSongsButton.Visibility = Visibility.Collapsed;
+            ClearPreviewArtwork();
             PreviewBadgeBlock.Text = "Now";
             PreviewTitleBlock.Text = "Select music";
             PreviewBodyBlock.Text = "Albums and songs appear here when the server exposes a music library.";
@@ -789,6 +795,7 @@ namespace NextGenEmby.App.Views
             string secondaryLine,
             double artworkSize)
         {
+            CacheMusicArtworkUri(session, client, item);
             var button = new Button
             {
                 Style = (Style)Application.Current.Resources["TvListButtonStyle"],
@@ -900,6 +907,23 @@ namespace NextGenEmby.App.Views
             }
 
             return null;
+        }
+
+        private void CacheMusicArtworkUri(
+            EmbySession session,
+            EmbyApiClient client,
+            EmbyMediaItem item)
+        {
+            if (string.IsNullOrWhiteSpace(item.Id))
+            {
+                return;
+            }
+
+            var imageUri = TryCreateImageUri(session, client, item, 440);
+            if (imageUri != null)
+            {
+                _musicArtworkUris[item.Id] = imageUri.AbsoluteUri;
+            }
         }
 
         private async void AlbumButton_OnClick(object sender, RoutedEventArgs e)
@@ -1181,9 +1205,59 @@ namespace NextGenEmby.App.Views
 
         private void UpdatePreview(EmbyMediaItem item, string badge)
         {
+            UpdatePreviewArtwork(item);
             PreviewBadgeBlock.Text = badge;
             PreviewTitleBlock.Text = CreateItemName(item);
             PreviewBodyBlock.Text = CreatePreviewBody(item, badge);
+        }
+
+        private void UpdatePreviewArtwork(EmbyMediaItem item)
+        {
+            var source = CreatePreviewArtworkImageSource(item);
+            if (source == null)
+            {
+                ClearPreviewArtwork();
+                return;
+            }
+
+            PreviewArtworkImage.Source = source;
+            PreviewArtworkFrame.Visibility = Visibility.Visible;
+        }
+
+        private void ClearPreviewArtwork()
+        {
+            PreviewArtworkImage.Source = null;
+            PreviewArtworkFrame.Visibility = Visibility.Collapsed;
+        }
+
+        private BitmapImage? CreatePreviewArtworkImageSource(EmbyMediaItem item)
+        {
+            if (string.IsNullOrWhiteSpace(item.Id))
+            {
+                return null;
+            }
+
+#if DEBUG
+            if (_developmentMusicFixture != null)
+            {
+                string imageUri;
+                if ((_developmentMusicFixture.ArtworkUris.TryGetValue(
+                        DevelopmentMusicFixture.ArtworkKey(item.Id, "Primary"),
+                        out imageUri) ||
+                    _developmentMusicFixture.ArtworkUris.TryGetValue(
+                        DevelopmentMusicFixture.ArtworkKey(item.Id, "Thumb"),
+                        out imageUri)) &&
+                    !string.IsNullOrWhiteSpace(imageUri))
+                {
+                    return new BitmapImage(new Uri(imageUri));
+                }
+            }
+#endif
+
+            return _musicArtworkUris.TryGetValue(item.Id, out var uri) &&
+                !string.IsNullOrWhiteSpace(uri)
+                ? new BitmapImage(new Uri(uri))
+                : null;
         }
 
         private void AddInlineEmpty(StackPanel panel, string text)
