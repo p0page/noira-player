@@ -1201,6 +1201,7 @@ internal static class Program
             var planCase = new PlaybackQualityRunPlanCase
             {
                 CaseId = referenceCase.CaseId,
+                Category = referenceCase.Category,
                 RunId = referenceCase.CaseId,
                 SourceUri = referenceCase.Uri,
                 Tier = referenceCase.Tier,
@@ -2360,6 +2361,7 @@ internal static class Program
     private sealed class PlaybackQualityRunPlanCase
     {
         public string CaseId { get; set; } = "";
+        public string Category { get; set; } = "stable";
         public string RunId { get; set; } = "";
         public string SourceUri { get; set; } = "";
         public int Tier { get; set; }

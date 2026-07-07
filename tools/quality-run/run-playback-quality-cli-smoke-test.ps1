@@ -2860,8 +2860,14 @@ try {
         }
     }
 
+    if (-not ($exampleManifestValidation.categories -contains 'stable') -or
+        -not ($exampleManifestValidation.categories -contains 'challenge')) {
+        throw 'Expected example reference manifest validation to expose stable and challenge case categories.'
+    }
+
     if (-not ($exampleManifestValidation.cases | Where-Object {
         $_.caseId -eq 'jellyfin/hdr10-hevc-main10-4k60-50m' -and
+        $_.category -eq 'challenge' -and
         $_.uri -eq 'https://repo.jellyfin.org/test-videos/HDR/HDR10/HEVC/Test%20Jellyfin%204K%20HEVC%20HDR10%2050M.mp4' -and
         $_.expected.codec -eq 'hevc' -and
         $_.expected.width -eq 3840 -and
@@ -2981,6 +2987,7 @@ try {
 
     if (-not ($exampleRunPlan.cases | Where-Object {
         $_.caseId -eq 'jellyfin/sdr-hevc-main10-1080p60-3m' -and
+        $_.category -eq 'stable' -and
         ($_.requiredSignals -contains 'tracks.videoTrackCount') -and
         ($_.requiredSignals -contains 'tracks.audioTrackCount') -and
         ($_.requiredSignals -contains 'tracks.subtitleTrackCount') -and

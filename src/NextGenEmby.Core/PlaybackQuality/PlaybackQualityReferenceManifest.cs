@@ -14,6 +14,8 @@ namespace NextGenEmby.Core.PlaybackQuality
     {
         public string CaseId { get; set; } = "";
 
+        public string Category { get; set; } = "stable";
+
         public string Uri { get; set; } = "";
 
         public string ItemId { get; set; } = "";
@@ -46,6 +48,8 @@ namespace NextGenEmby.Core.PlaybackQuality
         public List<int> Tiers { get; } = new List<int>();
 
         public List<string> Purposes { get; } = new List<string>();
+
+        public List<string> Categories { get; } = new List<string>();
 
         public List<PlaybackQualityReferenceCase> Cases { get; } =
             new List<PlaybackQualityReferenceCase>();
@@ -146,6 +150,7 @@ namespace NextGenEmby.Core.PlaybackQuality
             validation.Cases.Add(CloneCase(referenceCase));
 
             var caseId = referenceCase.CaseId ?? "";
+            var category = NormalizeCaseCategory(referenceCase.Category);
             if (string.IsNullOrWhiteSpace(caseId))
             {
                 AddError(
@@ -163,6 +168,20 @@ namespace NextGenEmby.Core.PlaybackQuality
                     caseId,
                     "caseId",
                     "Playback quality reference caseId is duplicated.");
+            }
+
+            if (!IsValidCaseCategory(category))
+            {
+                AddError(
+                    validation,
+                    "case.category.invalid",
+                    caseId,
+                    "category",
+                    "Playback quality reference category must be stable, challenge, or quarantine.");
+            }
+            else
+            {
+                AddUnique(validation.Categories, category);
             }
 
             if (string.IsNullOrWhiteSpace(referenceCase.Uri))
@@ -215,6 +234,7 @@ namespace NextGenEmby.Core.PlaybackQuality
             var clone = new PlaybackQualityReferenceCase
             {
                 CaseId = source.CaseId,
+                Category = NormalizeCaseCategory(source.Category),
                 Uri = source.Uri,
                 ItemId = source.ItemId,
                 MediaSourceId = source.MediaSourceId,
@@ -230,6 +250,18 @@ namespace NextGenEmby.Core.PlaybackQuality
             }
 
             return clone;
+        }
+
+        private static string NormalizeCaseCategory(string category)
+        {
+            return string.IsNullOrWhiteSpace(category) ? "stable" : category;
+        }
+
+        private static bool IsValidCaseCategory(string category)
+        {
+            return category == "stable" ||
+                category == "challenge" ||
+                category == "quarantine";
         }
 
         private static PlaybackQualityExpected CloneExpected(PlaybackQualityExpected source)

@@ -152,6 +152,62 @@ public sealed class PlaybackQualityReferenceManifestTests
     }
 
     [Fact]
+    public void Validate_Preserves_And_Validates_Case_Category()
+    {
+        var manifest = new PlaybackQualityReferenceManifest
+        {
+            SchemaVersion = 1
+        };
+        var challengeCase = CreateCase(
+            "jellyfin/hdr10-4k60-50m",
+            tier: 3,
+            purpose: "buffering");
+        challengeCase.Category = "challenge";
+        manifest.Cases.Add(challengeCase);
+        var quarantineCase = CreateCase(
+            "local/flaky-network",
+            tier: 4,
+            purpose: "buffering");
+        quarantineCase.Category = "quarantine";
+        manifest.Cases.Add(quarantineCase);
+
+        var result = PlaybackQualityReferenceManifestValidator.Validate(manifest);
+
+        Assert.True(result.IsValid);
+        Assert.Contains("challenge", result.Categories);
+        Assert.Contains("quarantine", result.Categories);
+        Assert.Contains(result.Cases, item =>
+            item.CaseId == "jellyfin/hdr10-4k60-50m" &&
+            item.Category == "challenge");
+        Assert.Contains(result.Cases, item =>
+            item.CaseId == "local/flaky-network" &&
+            item.Category == "quarantine");
+    }
+
+    [Fact]
+    public void Validate_Rejects_Invalid_Case_Category()
+    {
+        var manifest = new PlaybackQualityReferenceManifest
+        {
+            SchemaVersion = 1
+        };
+        var referenceCase = CreateCase(
+            "jellyfin/unknown-category",
+            tier: 1,
+            purpose: "sdr-smoke");
+        referenceCase.Category = "nightly";
+        manifest.Cases.Add(referenceCase);
+
+        var result = PlaybackQualityReferenceManifestValidator.Validate(manifest);
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, error =>
+            error.Code == "case.category.invalid" &&
+            error.Signal == "category" &&
+            error.CaseId == "jellyfin/unknown-category");
+    }
+
+    [Fact]
     public void Validate_Preserves_Optional_Hdr_Source_Strategy_Metadata()
     {
         var manifest = new PlaybackQualityReferenceManifest
@@ -302,10 +358,12 @@ public sealed class PlaybackQualityReferenceManifestTests
     public void ValidateReportSet_Accepts_One_Matching_Report_Per_Reference_Case()
     {
         var manifest = new PlaybackQualityReferenceManifest();
-        manifest.Cases.Add(CreateCase(
+        var referenceCase = CreateCase(
             "netflix/chimera-4k-2398-hdr-pq",
             tier: 2,
-            purpose: "hdr-output"));
+            purpose: "hdr-output");
+        referenceCase.Category = "challenge";
+        manifest.Cases.Add(referenceCase);
         var report = CreateReport(
             "netflix/chimera-4k-2398-hdr-pq",
             codec: "hevc",
@@ -326,6 +384,7 @@ public sealed class PlaybackQualityReferenceManifestTests
         Assert.Empty(validation.Errors);
         Assert.Contains(validation.Cases, item =>
             item.CaseId == "netflix/chimera-4k-2398-hdr-pq" &&
+            item.Category == "challenge" &&
             item.Status == "matched" &&
             item.ReportRunId == "netflix/chimera-4k-2398-hdr-pq");
     }
