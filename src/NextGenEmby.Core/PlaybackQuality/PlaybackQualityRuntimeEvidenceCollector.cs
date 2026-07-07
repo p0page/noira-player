@@ -35,11 +35,12 @@ namespace NextGenEmby.Core.PlaybackQuality
                 metrics = snapshot;
                 runtimeMetrics = PlaybackQualityRuntimeMetricsFactory.FromSnapshot(
                     snapshot,
-                    "returned-snapshot");
+                    ComposeProviderStatus(provider, "returned-snapshot"));
             }
             else
             {
-                runtimeMetrics = PlaybackQualityRuntimeMetricsFactory.Unavailable("returned-false");
+                runtimeMetrics = PlaybackQualityRuntimeMetricsFactory.Unavailable(
+                    ComposeProviderStatus(provider, "returned-false"));
             }
 
             var request = PlaybackQualityReferenceCaseReportRequestFactory.CreateRequest(
@@ -51,6 +52,19 @@ namespace NextGenEmby.Core.PlaybackQuality
             request.RuntimeMetrics = runtimeMetrics;
             request.Environment = environment;
             return request;
+        }
+
+        private static string ComposeProviderStatus(
+            IPlaybackQualityMetricsProvider provider,
+            string outcome)
+        {
+            if (provider is IPlaybackQualityMetricsProviderIdentity identity &&
+                !string.IsNullOrWhiteSpace(identity.PlaybackQualityMetricsProviderId))
+            {
+                return identity.PlaybackQualityMetricsProviderId + ":" + outcome;
+            }
+
+            return outcome;
         }
 
         public static PlaybackQualityRunResult ComposeRunResult(

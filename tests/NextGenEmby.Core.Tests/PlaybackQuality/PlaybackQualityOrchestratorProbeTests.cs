@@ -82,6 +82,8 @@ public sealed class PlaybackQualityOrchestratorProbeTests
         Assert.Equal(900_000_000, result.Report.Position.ActualPositionTicks);
         Assert.Equal(0, result.Report.Position.SeekPositionErrorMs);
         Assert.True(result.Report.Startup.StartupDurationMs > 0);
+        Assert.Equal("core-probe:returned-snapshot", result.Report.RuntimeMetrics.ProviderStatus);
+        Assert.Equal("core-probe:returned-snapshot", result.ModelAnalysis.RuntimeMetrics.ProviderStatus);
         Assert.True(result.Report.Timing.RenderedVideoFrames >= 120);
         Assert.Equal(1, result.Report.Tracks.VideoTrackCount);
         Assert.Equal(2, result.Report.Tracks.AudioTrackCount);

@@ -13,7 +13,8 @@ namespace NextGenEmby.App.Playback
 {
     public sealed class WinRtNativePlaybackEngine :
         INativePlaybackEngine,
-        IPlaybackQualityMetricsProvider
+        IPlaybackQualityMetricsProvider,
+        IPlaybackQualityMetricsProviderIdentity
     {
         private readonly NativePlaybackEngine _engine;
 
@@ -57,6 +58,8 @@ namespace NextGenEmby.App.Playback
                     status.VideoProcessorConversionStatus ?? "");
             }
         }
+
+        public string PlaybackQualityMetricsProviderId => "native-winrt";
 
         public bool TryGetQualityMetrics(out PlaybackQualityMetricsSnapshot metrics)
         {

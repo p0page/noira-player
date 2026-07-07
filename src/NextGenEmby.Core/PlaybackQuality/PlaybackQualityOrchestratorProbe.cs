@@ -518,6 +518,7 @@ namespace NextGenEmby.Core.PlaybackQuality
             IPlaybackBackend,
             IPlaybackBackendDiagnostics,
             IPlaybackQualityMetricsProvider,
+            IPlaybackQualityMetricsProviderIdentity,
             IPlaybackStreamSwitchingBackend
         {
             private readonly PlaybackQualityReferenceCase _referenceCase;
@@ -545,6 +546,8 @@ namespace NextGenEmby.Core.PlaybackQuality
                     PlaybackBackendFeature.NativeAudioOutput);
 
             public PlaybackDisplayStatus DisplayStatus { get; }
+
+            public string PlaybackQualityMetricsProviderId => "core-probe";
 
             public event EventHandler<PlaybackStateChangedEventArgs>? StateChanged;
 

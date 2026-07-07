@@ -4,4 +4,9 @@ namespace NextGenEmby.Core.PlaybackQuality
     {
         bool TryGetQualityMetrics(out PlaybackQualityMetricsSnapshot metrics);
     }
+
+    public interface IPlaybackQualityMetricsProviderIdentity
+    {
+        string PlaybackQualityMetricsProviderId { get; }
+    }
 }

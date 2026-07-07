@@ -19,6 +19,8 @@ public sealed class NativeQualityMetricsBridgeContractTests
 
         Assert.Contains("using NextGenEmby.Core.PlaybackQuality;", source, StringComparison.Ordinal);
         Assert.Contains("IPlaybackQualityMetricsProvider", source, StringComparison.Ordinal);
+        Assert.Contains("IPlaybackQualityMetricsProviderIdentity", source, StringComparison.Ordinal);
+        Assert.Contains("PlaybackQualityMetricsProviderId => \"native-winrt\"", source, StringComparison.Ordinal);
         Assert.Contains("_engine.QualityMetrics()", source, StringComparison.Ordinal);
 
         foreach (var property in RequiredMetricProperties)

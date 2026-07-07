@@ -241,6 +241,8 @@ public sealed class PlaybackQualityRuntimeEvidenceCollectorTests
         Assert.Equal(0UL, result.Report.Buffers.VideoStarvedPasses);
         Assert.Equal(0UL, result.Report.Buffers.AudioStarvedPasses);
         Assert.Equal("pass", result.ModelAnalysis.Result);
+        Assert.Equal("native-winrt:returned-snapshot", result.Report.RuntimeMetrics.ProviderStatus);
+        Assert.Equal("native-winrt:returned-snapshot", result.ModelAnalysis.RuntimeMetrics.ProviderStatus);
         Assert.Contains("timing.renderedVideoFrames", result.ModelAnalysis.EvidenceSignals);
         Assert.Contains("sync.audioVideoDriftMsP95", result.ModelAnalysis.EvidenceSignals);
         Assert.Contains("buffers.videoStarvedPasses", result.ModelAnalysis.EvidenceSignals);
@@ -323,8 +325,11 @@ public sealed class PlaybackQualityRuntimeEvidenceCollectorTests
 
     private sealed class RuntimeEvidenceBackend :
         IPlaybackBackendDiagnostics,
-        IPlaybackQualityMetricsProvider
+        IPlaybackQualityMetricsProvider,
+        IPlaybackQualityMetricsProviderIdentity
     {
+        public string PlaybackQualityMetricsProviderId => "native-winrt";
+
         public PlaybackBackendCapabilities Capabilities { get; } =
             new PlaybackBackendCapabilities(
                 PlaybackBackendFeature.DirectPlayHttp |

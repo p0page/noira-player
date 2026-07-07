@@ -8,6 +8,7 @@ namespace NextGenEmby.Core.Playback
         IPlaybackBackend,
         IPlaybackBackendDiagnostics,
         IPlaybackQualityMetricsProvider,
+        IPlaybackQualityMetricsProviderIdentity,
         IPlaybackStreamSwitchingBackend
     {
         private readonly INativePlaybackEngine _engine;
@@ -25,6 +26,20 @@ namespace NextGenEmby.Core.Playback
         public PlaybackBackendCapabilities Capabilities => _engine.Capabilities;
 
         public PlaybackDisplayStatus DisplayStatus => _engine.DisplayStatus;
+
+        public string PlaybackQualityMetricsProviderId
+        {
+            get
+            {
+                if (_engine is IPlaybackQualityMetricsProviderIdentity identity &&
+                    !string.IsNullOrWhiteSpace(identity.PlaybackQualityMetricsProviderId))
+                {
+                    return identity.PlaybackQualityMetricsProviderId;
+                }
+
+                return "native-directx";
+            }
+        }
 
         public bool TryGetQualityMetrics(out PlaybackQualityMetricsSnapshot metrics)
         {

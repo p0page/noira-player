@@ -126,3 +126,37 @@ Run:
 git add src\NextGenEmby.App\Playback\WinRtNativePlaybackEngine.cs tests\NextGenEmby.Core.Tests\PlaybackQuality\NativeQualityMetricsBridgeContractTests.cs docs\STATUS.md docs\DECISIONS.md docs\qa\software-playback-quality-metric-contract.md docs\superpowers\plans\2026-07-08-native-quality-metrics-bridge.md
 git commit -m "feat: bridge native playback quality metrics"
 ```
+
+### Task 4: Add Metrics Provider Identity
+
+**Files:**
+- Modify: `src/NextGenEmby.Core/PlaybackQuality/IPlaybackQualityMetricsProvider.cs`
+- Modify: `src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityRuntimeEvidenceCollector.cs`
+- Modify: `src/NextGenEmby.Core/Playback/NativeDirectXPlaybackBackend.cs`
+- Modify: `src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityOrchestratorProbe.cs`
+- Modify: `src/NextGenEmby.App/Playback/WinRtNativePlaybackEngine.cs`
+- Test: `tests/NextGenEmby.Core.Tests/PlaybackQuality/PlaybackQualityRuntimeEvidenceCollectorTests.cs`
+- Test: `tests/NextGenEmby.Core.Tests/PlaybackQuality/PlaybackQualityOrchestratorProbeTests.cs`
+- Test: `tests/NextGenEmby.Core.Tests/PlaybackQuality/NativeQualityMetricsBridgeContractTests.cs`
+
+**Interfaces:**
+- Consumes: runtime metrics providers.
+- Produces: `providerStatus` values that encode evidence source identity plus outcome, for example `native-winrt:returned-snapshot` and `core-probe:returned-snapshot`.
+
+- [x] **Step 1: Write the failing collector test**
+
+Expected RED: `IPlaybackQualityMetricsProviderIdentity` is missing.
+
+- [x] **Step 2: Implement provider identity**
+
+Add `IPlaybackQualityMetricsProviderIdentity`, implement it in native backend, WinRT adapter, and core-probe backend, and compose `identity:outcome` in `PlaybackQualityRuntimeEvidenceCollector`.
+
+- [x] **Step 3: Verify provider identity propagation**
+
+Run:
+
+```powershell
+dotnet test tests\NextGenEmby.Core.Tests\NextGenEmby.Core.Tests.csproj --filter "FullyQualifiedName~PlaybackQualityRuntimeEvidenceCollectorTests|FullyQualifiedName~PlaybackQualityOrchestratorProbeTests|FullyQualifiedName~NativeQualityMetricsBridgeContractTests"
+```
+
+Expected: PASS.
