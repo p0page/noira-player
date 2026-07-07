@@ -96,7 +96,7 @@ $env:NEXTGENEMBY_QA_PASSWORD = '<private-password>'
 powershell -NoProfile -ExecutionPolicy Bypass -File tools\quality-run\New-PrivateEmbyReferenceManifest.ps1 -OutputPath docs\qa\private\emby-reference-manifest.local.json -Limit 1000
 ```
 
-脚本先分页读取 Movie/Episode item，再对没有 `MediaSources` 的 item 补取 `/Items/{ItemId}/PlaybackInfo`。HDR/Dolby Vision 分类只使用实际 stream metadata，例如 codec、`VideoRange`、`ColorPrimaries`、`ColorTransfer` 和 `ColorSpace`；item 名称、source 名称和 display title 不参与 DV 判定。若要定位特定片源，可以加 `-SearchTerm '<title>'` 输出到另一个 ignored manifest。生成后仍应运行 `validate-manifest`，把 `coverage.missingPurposes` 当作样本缺口，而不是播放 Core 结论。
+脚本先分页读取 Movie/Episode item，再对没有 `MediaSources` 的 item 补取 `/Items/{ItemId}/PlaybackInfo`。HDR/Dolby Vision 分类只使用实际 stream metadata，例如 codec、`VideoRange`、`ColorPrimaries`、`ColorTransfer` 和 `ColorSpace`；item 名称、source 名称和 display title 不参与 DV 判定。如果 stream metadata 看起来是 SDR，但名称或标题里出现 DV/DoVi/Dolby Vision 提示，脚本会保守地把该源视为未知 HDR 线索，避免把疑似 DV 源选作 SDR smoke。若要定位特定片源，可以加 `-SearchTerm '<title>'` 输出到另一个 ignored manifest。生成后仍应运行 `validate-manifest`，把 `coverage.missingPurposes` 当作样本缺口，而不是播放 Core 结论。
 
 如果全库扫描慢或会超时，优先生成多个小的 ignored manifest，再合并成一个综合 corpus：
 

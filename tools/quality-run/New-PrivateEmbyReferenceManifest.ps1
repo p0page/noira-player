@@ -124,6 +124,40 @@ function Get-DolbyVisionCompatibilityId([string]$Combined, [Nullable[int]]$Profi
     return $null
 }
 
+function Test-ContainsDolbyVisionHint([string]$Combined) {
+    if ([string]::IsNullOrWhiteSpace($Combined)) {
+        return $false
+    }
+
+    $Combined -match '(?i)dolby\s*vision|\bdovi\b|\bdv\b|\bdvhe\.0?[578]\b|\bdvh1\.0?[578]\b|\bdv\s*(?:p|profile)?\s*[578]\b'
+}
+
+function Test-HasNameOnlyDolbyVisionHint([object]$Item, [object]$MediaSource, [object]$VideoStream) {
+    $combined = @(
+        (Normalize-String $Item.Name),
+        (Normalize-String $MediaSource.Name),
+        (Normalize-String $MediaSource.DisplayTitle),
+        (Normalize-String $VideoStream.Title),
+        (Normalize-String $VideoStream.DisplayTitle)
+    ) -join ' '
+
+    Test-ContainsDolbyVisionHint $combined
+}
+
+function New-UnknownHdrProfileFromNameHint() {
+    [pscustomobject][ordered]@{
+        kind = 'UnknownHdr'
+        strategy = 'Unknown HDR'
+        isHdr = $true
+        isDirectPlayable = $false
+        isDolbyVision = $false
+        dolbyVisionProfile = $null
+        dolbyVisionCompatibilityId = $null
+        hasHdr10BaseLayer = $false
+        hasHlgBaseLayer = $false
+    }
+}
+
 function Get-HdrProfile([object]$VideoStream) {
     $videoRange = Normalize-String $VideoStream.VideoRange
     $colorPrimaries = Normalize-String $VideoStream.ColorPrimaries
@@ -133,7 +167,7 @@ function Get-HdrProfile([object]$VideoStream) {
 
     # Deliberately exclude item names, source names, and stream display titles.
     $combined = @($videoRange, $colorPrimaries, $colorTransfer, $colorSpace, $codec) -join ' '
-    $hasDolbyVision = $combined -match '(?i)dolby\s*vision|\bdovi\b|\bdv\b|\bdvhe\.0?[578]\b|\bdvh1\.0?[578]\b|\bdv\s*(?:p|profile)?\s*[578]\b'
+    $hasDolbyVision = Test-ContainsDolbyVisionHint $combined
     $hasHdr10 = (Test-ContainsAny $combined @('hdr10', 'hdr10+')) -or (
         (Test-ContainsAny $colorTransfer @('smpte2084', 'pq')) -and
         (Test-ContainsAny $colorPrimaries @('bt2020')) -and
@@ -348,6 +382,10 @@ function ConvertTo-Candidates([object[]]$Items) {
             }
 
             $hdrProfile = Get-HdrProfile $video
+            if ($hdrProfile.kind -eq 'Sdr' -and (Test-HasNameOnlyDolbyVisionHint $item $source $video)) {
+                $hdrProfile = New-UnknownHdrProfileFromNameHint
+            }
+
             $candidates += [pscustomobject]@{
                 ItemId = $itemId
                 MediaSourceId = $sourceId

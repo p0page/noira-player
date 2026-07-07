@@ -327,6 +327,10 @@ try {
         throw 'Generated manifest must not classify Dolby Vision from item/source names or display titles alone.'
     }
 
+    if ($manifest.cases | Where-Object { $_.itemId -eq 'name-only-dv' -and $_.expected.hdrKind -eq 'Sdr' }) {
+        throw 'Generated manifest must not select name/title-only Dolby Vision hints as SDR evidence.'
+    }
+
     if (-not ($manifest.cases | Where-Object {
         $_.caseId -eq 'private-emby/cadence-movie/cadence-source/cadence-23976' -and
         $_.expected.frameRate -eq 23.976 -and
