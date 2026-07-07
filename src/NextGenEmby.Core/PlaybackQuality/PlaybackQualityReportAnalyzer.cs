@@ -831,6 +831,15 @@ namespace NextGenEmby.Core.PlaybackQuality
                 return classification;
             }
 
+            if (analysis.Cadence.IsFractionalCadence)
+            {
+                classification.Pattern = "fractional-cadence";
+                AddUnique(classification.Signals, "cadence.isFractionalCadence");
+                AddUnique(classification.Signals, "display.refreshRateHz");
+                AddUnique(classification.Reasons, "Fractional display cadence coincided with frame pacing failure.");
+                return classification;
+            }
+
             if (HasFailedSignal(analysis, "timing.maxFrameGapMs"))
             {
                 classification.Pattern = "isolated-gap";

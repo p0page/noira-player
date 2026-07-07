@@ -808,12 +808,26 @@ public sealed class PlaybackQualityReportAnalyzerTests
     public void Analyze_Classifies_Frame_Pacing_As_Isolated_Gap_When_Only_Max_Frame_Gap_Fails()
     {
         var report = CreateOptimizationReadyFailure();
+        report.Display.RefreshRateHz = 23.976024;
 
         var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
 
         Assert.Equal("isolated-gap", analysis.FramePacing.Pattern);
         Assert.Contains("timing.maxFrameGapMs", analysis.FramePacing.Signals);
         Assert.Contains("Single max frame gap failed without sustained render interval failures.", analysis.FramePacing.Reasons);
+    }
+
+    [Fact]
+    public void Analyze_Classifies_Frame_Pacing_As_Fractional_Cadence_When_Pulldown_Display_Is_Selected()
+    {
+        var report = CreateOptimizationReadyFailure();
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Equal("fractional-cadence", analysis.FramePacing.Pattern);
+        Assert.Contains("cadence.isFractionalCadence", analysis.FramePacing.Signals);
+        Assert.Contains("display.refreshRateHz", analysis.FramePacing.Signals);
+        Assert.Contains("Fractional display cadence coincided with frame pacing failure.", analysis.FramePacing.Reasons);
     }
 
     [Fact]
