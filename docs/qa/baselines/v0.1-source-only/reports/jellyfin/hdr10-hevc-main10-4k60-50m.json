@@ -188,7 +188,7 @@
     "environment": {
       "collectorVersion": "materialize-baseline-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "80ab085",
+      "sourceRevision": "0f53faa",
       "buildConfiguration": "Debug"
     },
     "limitations": [
@@ -233,6 +233,7 @@
       "mediaSourceId": "jellyfin/hdr10-hevc-main10-4k60-50m",
       "container": "",
       "bitrate": 0,
+      "durationTicks": 0,
       "codec": "hevc",
       "width": 3840,
       "height": 2160,
@@ -387,7 +388,7 @@
     "environment": {
       "collectorVersion": "materialize-baseline-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "80ab085",
+      "sourceRevision": "0f53faa",
       "buildConfiguration": "Debug",
       "signals": [
         "environment.collectorVersion",
@@ -401,6 +402,7 @@
       "reason": "Parsed source metadata is available and has no unsupported-source mismatches.",
       "container": "",
       "bitrate": 0,
+      "durationTicks": 0,
       "codec": "hevc",
       "width": 3840,
       "height": 2160,

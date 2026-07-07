@@ -154,7 +154,7 @@
     "environment": {
       "collectorVersion": "materialize-core-probe-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "80ab085",
+      "sourceRevision": "0f53faa",
       "buildConfiguration": "Debug"
     },
     "limitations": [
@@ -201,6 +201,7 @@
       "mediaSourceId": "jellyfin/dv-profile5-hevc-4k60",
       "container": "",
       "bitrate": 0,
+      "durationTicks": 0,
       "codec": "hevc",
       "width": 3840,
       "height": 2160,
@@ -366,7 +367,7 @@
     "environment": {
       "collectorVersion": "materialize-core-probe-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "80ab085",
+      "sourceRevision": "0f53faa",
       "buildConfiguration": "Debug",
       "signals": [
         "environment.collectorVersion",
@@ -380,6 +381,7 @@
       "reason": "Parsed source is not directly playable by the current Core HDR policy.",
       "container": "",
       "bitrate": 0,
+      "durationTicks": 0,
       "codec": "hevc",
       "width": 3840,
       "height": 2160,

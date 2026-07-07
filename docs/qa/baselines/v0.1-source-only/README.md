@@ -5,7 +5,7 @@
 生成命令：
 
 ```powershell
-dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- materialize-baseline-report-set --manifest docs\qa\playback-quality-reference-manifest.example.json --reports-dir docs\qa\baselines\v0.1-source-only\reports --source-revision 80ab085 --player-core-version NextGenEmby.Core --build-configuration Debug --output docs\qa\baselines\v0.1-source-only\materialized-baseline-summary.json
+dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- materialize-baseline-report-set --manifest docs\qa\playback-quality-reference-manifest.example.json --reports-dir docs\qa\baselines\v0.1-source-only\reports --source-revision 0f53faa --player-core-version NextGenEmby.Core --build-configuration Debug --output docs\qa\baselines\v0.1-source-only\materialized-baseline-summary.json
 dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- validate-report-set --manifest docs\qa\playback-quality-reference-manifest.example.json --reports-dir docs\qa\baselines\v0.1-source-only\reports --output docs\qa\baselines\v0.1-source-only\report-set-validation.json
 dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- analyze-report-set --reports-dir docs\qa\baselines\v0.1-source-only\reports --output docs\qa\baselines\v0.1-source-only\report-analysis-summary.json
 ```

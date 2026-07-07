@@ -234,7 +234,7 @@
     "environment": {
       "collectorVersion": "materialize-core-probe-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "80ab085",
+      "sourceRevision": "0f53faa",
       "buildConfiguration": "Debug"
     },
     "limitations": [
@@ -281,6 +281,7 @@
       "mediaSourceId": "jellyfin/dv-profile8-1-hevc-4k60-hdr10-fallback",
       "container": "",
       "bitrate": 0,
+      "durationTicks": 0,
       "codec": "hevc",
       "width": 3840,
       "height": 2160,
@@ -446,7 +447,7 @@
     "environment": {
       "collectorVersion": "materialize-core-probe-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "80ab085",
+      "sourceRevision": "0f53faa",
       "buildConfiguration": "Debug",
       "signals": [
         "environment.collectorVersion",
@@ -460,6 +461,7 @@
       "reason": "Parsed source metadata is available and has no unsupported-source mismatches.",
       "container": "",
       "bitrate": 0,
+      "durationTicks": 0,
       "codec": "hevc",
       "width": 3840,
       "height": 2160,
