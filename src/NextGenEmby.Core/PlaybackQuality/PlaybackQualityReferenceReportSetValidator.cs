@@ -48,6 +48,24 @@ namespace NextGenEmby.Core.PlaybackQuality
         public string Message { get; set; } = "";
     }
 
+    public sealed class PlaybackQualityReferenceReportSetEntry
+    {
+        public PlaybackQualityReferenceReportSetEntry()
+        {
+        }
+
+        public PlaybackQualityReferenceReportSetEntry(PlaybackQualityReport report)
+        {
+            Report = report;
+        }
+
+        public PlaybackQualityReport Report { get; set; } = new PlaybackQualityReport();
+
+        public bool HasSignalPresenceEvidence { get; set; }
+
+        public List<string> PresentSignals { get; } = new List<string>();
+    }
+
     public static class PlaybackQualityReferenceReportSetValidator
     {
         private const double FrameRateTolerance = 0.01;
@@ -55,6 +73,25 @@ namespace NextGenEmby.Core.PlaybackQuality
         public static PlaybackQualityReferenceReportSetValidation Validate(
             PlaybackQualityReferenceManifest manifest,
             IEnumerable<PlaybackQualityReport> reports)
+        {
+            var entries = new List<PlaybackQualityReferenceReportSetEntry>();
+            if (reports != null)
+            {
+                foreach (var report in reports)
+                {
+                    if (report != null)
+                    {
+                        entries.Add(new PlaybackQualityReferenceReportSetEntry(report));
+                    }
+                }
+            }
+
+            return Validate(manifest, entries);
+        }
+
+        public static PlaybackQualityReferenceReportSetValidation Validate(
+            PlaybackQualityReferenceManifest manifest,
+            IEnumerable<PlaybackQualityReferenceReportSetEntry> entries)
         {
             var validation = new PlaybackQualityReferenceReportSetValidation();
             if (manifest == null)
@@ -71,41 +108,42 @@ namespace NextGenEmby.Core.PlaybackQuality
                 return validation;
             }
 
-            var reportList = new List<PlaybackQualityReport>();
-            if (reports != null)
+            var entryList = new List<PlaybackQualityReferenceReportSetEntry>();
+            if (entries != null)
             {
-                foreach (var report in reports)
+                foreach (var entry in entries)
                 {
-                    if (report != null)
+                    if (entry?.Report != null)
                     {
-                        reportList.Add(report);
+                        entryList.Add(entry);
                     }
                 }
             }
 
             validation.ExpectedCaseCount = manifest.Cases.Count;
-            validation.ReportCount = reportList.Count;
-            var reportsByRunId = BuildReportMap(validation, reportList);
+            validation.ReportCount = entryList.Count;
+            var reportsByRunId = BuildReportMap(validation, entryList);
             ValidateManifestCases(validation, manifest, reportsByRunId);
-            AddExtraReports(validation, manifest, reportList);
+            AddExtraReports(validation, manifest, entryList);
             return validation;
         }
 
-        private static Dictionary<string, List<PlaybackQualityReport>> BuildReportMap(
+        private static Dictionary<string, List<PlaybackQualityReferenceReportSetEntry>> BuildReportMap(
             PlaybackQualityReferenceReportSetValidation validation,
-            List<PlaybackQualityReport> reports)
+            List<PlaybackQualityReferenceReportSetEntry> entries)
         {
-            var reportsByRunId = new Dictionary<string, List<PlaybackQualityReport>>(StringComparer.Ordinal);
-            foreach (var report in reports)
+            var reportsByRunId = new Dictionary<string, List<PlaybackQualityReferenceReportSetEntry>>(StringComparer.Ordinal);
+            foreach (var entry in entries)
             {
+                var report = entry.Report;
                 var runId = report.RunId ?? "";
                 if (!reportsByRunId.TryGetValue(runId, out var runReports))
                 {
-                    runReports = new List<PlaybackQualityReport>();
+                    runReports = new List<PlaybackQualityReferenceReportSetEntry>();
                     reportsByRunId.Add(runId, runReports);
                 }
 
-                runReports.Add(report);
+                runReports.Add(entry);
             }
 
             foreach (var item in reportsByRunId)
@@ -130,7 +168,7 @@ namespace NextGenEmby.Core.PlaybackQuality
         private static void ValidateManifestCases(
             PlaybackQualityReferenceReportSetValidation validation,
             PlaybackQualityReferenceManifest manifest,
-            Dictionary<string, List<PlaybackQualityReport>> reportsByRunId)
+            Dictionary<string, List<PlaybackQualityReferenceReportSetEntry>> reportsByRunId)
         {
             foreach (var referenceCase in manifest.Cases)
             {
@@ -154,7 +192,8 @@ namespace NextGenEmby.Core.PlaybackQuality
                     continue;
                 }
 
-                var report = reports[0];
+                var entry = reports[0];
+                var report = entry.Report;
                 var status = new PlaybackQualityReferenceReportCaseStatus
                 {
                     CaseId = caseId,
@@ -162,7 +201,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                     Status = "matched"
                 };
                 ValidateSource(validation, status, referenceCase.Expected, report);
-                ValidateRequiredSignals(validation, status, referenceCase, report);
+                ValidateRequiredSignals(validation, status, referenceCase, entry);
                 if (status.Signals.Count > 0)
                 {
                     status.Status = "mismatch";
@@ -269,12 +308,15 @@ namespace NextGenEmby.Core.PlaybackQuality
             PlaybackQualityReferenceReportSetValidation validation,
             PlaybackQualityReferenceReportCaseStatus status,
             PlaybackQualityReferenceCase referenceCase,
-            PlaybackQualityReport report)
+            PlaybackQualityReferenceReportSetEntry entry)
         {
             foreach (var signal in PlaybackQualityRequiredSignalPolicy.CreateRequiredSignals(referenceCase))
             {
                 if (status.Signals.Contains(signal) ||
-                    PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, signal))
+                    PlaybackQualityRequiredSignalPolicy.HasReportSignal(
+                        entry.Report,
+                        signal,
+                        entry.HasSignalPresenceEvidence ? entry.PresentSignals : null))
                 {
                     continue;
                 }
@@ -421,7 +463,7 @@ namespace NextGenEmby.Core.PlaybackQuality
         private static void AddExtraReports(
             PlaybackQualityReferenceReportSetValidation validation,
             PlaybackQualityReferenceManifest manifest,
-            List<PlaybackQualityReport> reports)
+            List<PlaybackQualityReferenceReportSetEntry> entries)
         {
             var caseIds = new HashSet<string>(StringComparer.Ordinal);
             foreach (var referenceCase in manifest.Cases)
@@ -429,8 +471,9 @@ namespace NextGenEmby.Core.PlaybackQuality
                 caseIds.Add(referenceCase.CaseId ?? "");
             }
 
-            foreach (var report in reports)
+            foreach (var entry in entries)
             {
+                var report = entry.Report;
                 var runId = report.RunId ?? "";
                 if (caseIds.Contains(runId))
                 {

@@ -67,6 +67,9 @@ try {
     $reportSetValidationPath = Join-Path $tempRoot 'reference-report-set-validation.json'
     $missingSignalReportSetDir = Join-Path $tempRoot 'reference-report-set-missing-signals'
     $missingSignalReportSetValidationPath = Join-Path $tempRoot 'reference-report-set-missing-signals-validation.json'
+    $zeroCounterManifestPath = Join-Path $tempRoot 'zero-counter-reference-manifest.json'
+    $zeroCounterReportSetDir = Join-Path $tempRoot 'zero-counter-reference-report-set'
+    $zeroCounterReportSetValidationPath = Join-Path $tempRoot 'zero-counter-reference-report-set-validation.json'
 
     @'
 {
@@ -647,6 +650,75 @@ try {
         $_.signal -eq 'display.refreshRateHz'
     })) {
         throw 'Expected playback quality CLI validate-report-set missing telemetry output to include missing display refresh evidence.'
+    }
+
+    @'
+{
+  "schemaVersion": 1,
+  "cases": [
+    {
+      "caseId": "jellyfin/zero-starvation-buffering",
+      "uri": "https://example.invalid/jellyfin/zero-starvation-buffering.mp4",
+      "tier": 1,
+      "purpose": [
+        "buffering"
+      ],
+      "expected": {
+        "codec": "hevc",
+        "width": 3840,
+        "height": 2160,
+        "frameRate": 23.976,
+        "hdrKind": "Hdr10",
+        "maxVideoStarvedPasses": 0,
+        "maxAudioStarvedPasses": 0
+      }
+    }
+  ]
+}
+'@ | Set-Content -LiteralPath $zeroCounterManifestPath -Encoding UTF8
+    New-Item -ItemType Directory -Path $zeroCounterReportSetDir | Out-Null
+    @'
+{
+  "runId": "jellyfin/zero-starvation-buffering",
+  "metricVersion": "software-quality-v1",
+  "source": {
+    "codec": "hevc",
+    "width": 3840,
+    "height": 2160,
+    "frameRate": 23.976,
+    "hdrKind": "Hdr10"
+  },
+  "buffers": {
+    "videoStarvedPasses": 0,
+    "audioStarvedPasses": 0
+  },
+  "colorPipeline": {
+    "conversionStatus": "validated"
+  }
+}
+'@ | Set-Content -LiteralPath (Join-Path $zeroCounterReportSetDir 'zero-counter.json') -Encoding UTF8
+
+    Push-Location $repoRoot
+    try {
+        dotnet run `
+            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
+            --no-build `
+            -- validate-report-set `
+            --manifest $zeroCounterManifestPath `
+            --reports-dir $zeroCounterReportSetDir `
+            --output $zeroCounterReportSetValidationPath
+        if ($LASTEXITCODE -ne 0) {
+            throw 'Expected playback quality CLI validate-report-set to accept explicit zero required counters when JSON fields are present.'
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    $zeroCounterReportSetValidation = Get-Content -Raw -LiteralPath $zeroCounterReportSetValidationPath | ConvertFrom-Json
+    if ($zeroCounterReportSetValidation.isValid -ne $true -or
+        $zeroCounterReportSetValidation.matchedCaseCount -ne 1) {
+        throw 'Expected playback quality CLI validate-report-set zero-counter output to be valid.'
     }
 
     Push-Location $repoRoot

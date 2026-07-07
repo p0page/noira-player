@@ -130,7 +130,20 @@ namespace NextGenEmby.Core.PlaybackQuality
             PlaybackQualityReport report,
             string signal)
         {
+            return HasReportSignal(report, signal, presentSignals: null);
+        }
+
+        public static bool HasReportSignal(
+            PlaybackQualityReport report,
+            string signal,
+            IReadOnlyCollection<string>? presentSignals)
+        {
             if (report == null || string.IsNullOrWhiteSpace(signal))
+            {
+                return false;
+            }
+
+            if (presentSignals != null && !ContainsSignal(presentSignals, signal))
             {
                 return false;
             }
@@ -164,6 +177,11 @@ namespace NextGenEmby.Core.PlaybackQuality
                 case "timing.renderedVideoFrames":
                     return report.Timing.RenderedVideoFrames > 0;
                 case "timing.droppedVideoFrames":
+                    if (presentSignals != null)
+                    {
+                        return true;
+                    }
+
                     return HasTimingEvidence(report);
                 case "timing.expectedFrameDurationMs":
                     return report.Timing.ExpectedFrameDurationMs > 0;
@@ -178,9 +196,14 @@ namespace NextGenEmby.Core.PlaybackQuality
                 case "timing.renderIntervalMsP99":
                     return report.Timing.RenderIntervalMsP99 > 0;
                 case "sync.audioVideoDriftMsP95":
-                    return report.Sync.AudioVideoDriftMsP95 > 0;
+                    return presentSignals != null || report.Sync.AudioVideoDriftMsP95 > 0;
                 case "buffers.videoStarvedPasses":
                 case "buffers.audioStarvedPasses":
+                    if (presentSignals != null)
+                    {
+                        return true;
+                    }
+
                     return HasBufferEvidence(report);
                 case "colorPipeline.actualHdrOutput":
                     return !string.IsNullOrWhiteSpace(report.ColorPipeline.ActualHdrOutput);
@@ -197,6 +220,21 @@ namespace NextGenEmby.Core.PlaybackQuality
                 default:
                     return false;
             }
+        }
+
+        private static bool ContainsSignal(
+            IReadOnlyCollection<string> presentSignals,
+            string signal)
+        {
+            foreach (var presentSignal in presentSignals)
+            {
+                if (string.Equals(presentSignal, signal, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static void AddNullableSourceSignal<T>(

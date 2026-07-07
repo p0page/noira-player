@@ -495,6 +495,90 @@ public sealed class PlaybackQualityReferenceManifestTests
             item.Signals.Contains("display.refreshRateHz"));
     }
 
+    [Fact]
+    public void ValidateReportSet_Accepts_Explicit_Zero_Required_Counters_When_Signal_Presence_Is_Captured()
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        var referenceCase = CreateCase(
+            "jellyfin/4k-buffering-zero-starvation",
+            tier: 1,
+            purpose: "buffering");
+        referenceCase.Expected.MaxVideoStarvedPasses = 0;
+        referenceCase.Expected.MaxAudioStarvedPasses = 0;
+        manifest.Cases.Add(referenceCase);
+        var report = CreateReport(
+            "jellyfin/4k-buffering-zero-starvation",
+            codec: "hevc",
+            width: 3840,
+            height: 2160,
+            frameRate: 23.976,
+            hdrKind: "Hdr10");
+        report.ColorPipeline.ConversionStatus = "validated";
+        var entry = new PlaybackQualityReferenceReportSetEntry(report)
+        {
+            HasSignalPresenceEvidence = true
+        };
+        entry.PresentSignals.Add("source.codec");
+        entry.PresentSignals.Add("source.width");
+        entry.PresentSignals.Add("source.height");
+        entry.PresentSignals.Add("source.frameRate");
+        entry.PresentSignals.Add("source.hdrKind");
+        entry.PresentSignals.Add("colorPipeline.conversionStatus");
+        entry.PresentSignals.Add("buffers.videoStarvedPasses");
+        entry.PresentSignals.Add("buffers.audioStarvedPasses");
+
+        var validation = PlaybackQualityReferenceReportSetValidator.Validate(
+            manifest,
+            new[] { entry });
+
+        Assert.True(validation.IsValid);
+        Assert.Equal(1, validation.MatchedCaseCount);
+        Assert.Empty(validation.Errors);
+    }
+
+    [Fact]
+    public void ValidateReportSet_Rejects_Missing_Required_Counter_Telemetry_When_Signal_Presence_Is_Captured()
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        var referenceCase = CreateCase(
+            "jellyfin/4k-buffering-missing-starvation",
+            tier: 1,
+            purpose: "buffering");
+        referenceCase.Expected.MaxVideoStarvedPasses = 0;
+        referenceCase.Expected.MaxAudioStarvedPasses = 0;
+        manifest.Cases.Add(referenceCase);
+        var report = CreateReport(
+            "jellyfin/4k-buffering-missing-starvation",
+            codec: "hevc",
+            width: 3840,
+            height: 2160,
+            frameRate: 23.976,
+            hdrKind: "Hdr10");
+        report.ColorPipeline.ConversionStatus = "validated";
+        var entry = new PlaybackQualityReferenceReportSetEntry(report)
+        {
+            HasSignalPresenceEvidence = true
+        };
+        entry.PresentSignals.Add("source.codec");
+        entry.PresentSignals.Add("source.width");
+        entry.PresentSignals.Add("source.height");
+        entry.PresentSignals.Add("source.frameRate");
+        entry.PresentSignals.Add("source.hdrKind");
+        entry.PresentSignals.Add("colorPipeline.conversionStatus");
+
+        var validation = PlaybackQualityReferenceReportSetValidator.Validate(
+            manifest,
+            new[] { entry });
+
+        Assert.False(validation.IsValid);
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.requiredSignal.missing" &&
+            error.Signal == "buffers.videoStarvedPasses");
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.requiredSignal.missing" &&
+            error.Signal == "buffers.audioStarvedPasses");
+    }
+
     private static PlaybackQualityReferenceCase CreateCase(
         string caseId,
         int tier,

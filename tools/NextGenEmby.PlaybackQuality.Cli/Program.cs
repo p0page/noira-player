@@ -182,7 +182,7 @@ internal static class Program
     {
         var options = ParseValidateReportSetOptions(args);
         var manifest = ReadJson<PlaybackQualityReferenceManifest>(options.ManifestPath);
-        var reports = ReadPlaybackQualityReports(options.ReportsDirectory);
+        var reports = ReadPlaybackQualityReportSetEntries(options.ReportsDirectory);
 
         var validation = PlaybackQualityReferenceReportSetValidator.Validate(
             manifest,
@@ -208,9 +208,11 @@ internal static class Program
         var baselineEnvelopes = RefreshIncompleteModelAnalysis(
             ReadPlaybackQualityReportEnvelopes(options.BaselineDirectory));
         var baselineReports = ExtractReports(baselineEnvelopes);
+        var baselineReportEntries = ExtractReportSetEntries(baselineEnvelopes);
         var candidateEnvelopes = RefreshIncompleteModelAnalysis(
             ReadPlaybackQualityReportEnvelopes(options.CandidateDirectory));
         var candidateReports = ExtractReports(candidateEnvelopes);
+        var candidateReportEntries = ExtractReportSetEntries(candidateEnvelopes);
         var baselineReportAnalysis = CreateReportAnalysisSummary(baselineEnvelopes);
         var candidateReportAnalysis = CreateReportAnalysisSummary(candidateEnvelopes);
         var evaluation = new CandidateEvaluationOutput
@@ -218,10 +220,10 @@ internal static class Program
             ManifestValidation = PlaybackQualityReferenceManifestValidator.Validate(manifest),
             BaselineReportSetValidation = PlaybackQualityReferenceReportSetValidator.Validate(
                 manifest,
-                baselineReports),
+                baselineReportEntries),
             CandidateReportSetValidation = PlaybackQualityReferenceReportSetValidator.Validate(
                 manifest,
-                candidateReports),
+                candidateReportEntries),
             BaselineReportAnalysis = baselineReportAnalysis,
             CandidateReportAnalysis = candidateReportAnalysis
         };
@@ -868,6 +870,11 @@ internal static class Program
         return ExtractReports(ReadPlaybackQualityReportEnvelopes(directory));
     }
 
+    private static List<PlaybackQualityReferenceReportSetEntry> ReadPlaybackQualityReportSetEntries(string directory)
+    {
+        return ExtractReportSetEntries(ReadPlaybackQualityReportEnvelopes(directory));
+    }
+
     private static List<PlaybackQualityReport> ExtractReports(
         List<PlaybackQualityReportEnvelope> envelopes)
     {
@@ -878,6 +885,27 @@ internal static class Program
         }
 
         return reports;
+    }
+
+    private static List<PlaybackQualityReferenceReportSetEntry> ExtractReportSetEntries(
+        List<PlaybackQualityReportEnvelope> envelopes)
+    {
+        var entries = new List<PlaybackQualityReferenceReportSetEntry>();
+        foreach (var envelope in envelopes)
+        {
+            var entry = new PlaybackQualityReferenceReportSetEntry(envelope.Report)
+            {
+                HasSignalPresenceEvidence = envelope.HasSignalPresenceEvidence
+            };
+            foreach (var signal in envelope.PresentSignals)
+            {
+                AddUnique(entry.PresentSignals, signal);
+            }
+
+            entries.Add(entry);
+        }
+
+        return entries;
     }
 
     private static List<PlaybackQualityReportEnvelope> ReadPlaybackQualityReportEnvelopes(
@@ -949,13 +977,23 @@ internal static class Program
                         modelAnalysisElement.Deserialize<PlaybackQualityModelAnalysis>(JsonOptions);
                 }
 
-                return new PlaybackQualityReportEnvelope(relativePath, report, modelAnalysis);
+                return new PlaybackQualityReportEnvelope(
+                    relativePath,
+                    report,
+                    modelAnalysis,
+                    CollectPresentReportSignals(reportElement),
+                    hasSignalPresenceEvidence: true);
             }
-        }
 
-        var rawReport = JsonSerializer.Deserialize<PlaybackQualityReport>(json, JsonOptions) ??
-            throw new InvalidOperationException("Could not parse JSON file: " + path);
-        return new PlaybackQualityReportEnvelope(relativePath, rawReport, null);
+            var rawReport = document.RootElement.Deserialize<PlaybackQualityReport>(JsonOptions) ??
+                throw new InvalidOperationException("Could not parse JSON file: " + path);
+            return new PlaybackQualityReportEnvelope(
+                relativePath,
+                rawReport,
+                null,
+                CollectPresentReportSignals(document.RootElement),
+                hasSignalPresenceEvidence: true);
+        }
     }
 
     private static List<PlaybackQualityReportEnvelope> EnsureModelAnalysis(
@@ -970,7 +1008,9 @@ internal static class Program
             analyzed.Add(new PlaybackQualityReportEnvelope(
                 envelope.RelativePath,
                 envelope.Report,
-                modelAnalysis));
+                modelAnalysis,
+                envelope.PresentSignals,
+                envelope.HasSignalPresenceEvidence));
         }
 
         return analyzed;
@@ -991,7 +1031,9 @@ internal static class Program
             refreshed.Add(new PlaybackQualityReportEnvelope(
                 envelope.RelativePath,
                 envelope.Report,
-                modelAnalysis));
+                modelAnalysis,
+                envelope.PresentSignals,
+                envelope.HasSignalPresenceEvidence));
         }
 
         return refreshed;
@@ -1020,6 +1062,61 @@ internal static class Program
 
         property = default;
         return false;
+    }
+
+    private static List<string> CollectPresentReportSignals(JsonElement reportElement)
+    {
+        var signals = new List<string>();
+        AddNestedPresentSignal(signals, reportElement, "source", "codec", "source.codec");
+        AddNestedPresentSignal(signals, reportElement, "source", "width", "source.width");
+        AddNestedPresentSignal(signals, reportElement, "source", "height", "source.height");
+        AddNestedPresentSignal(signals, reportElement, "source", "frameRate", "source.frameRate");
+        AddNestedPresentSignal(signals, reportElement, "source", "hdrKind", "source.hdrKind");
+        AddNestedPresentSignal(signals, reportElement, "source", "hdrPlaybackStrategy", "source.hdrPlaybackStrategy");
+        AddNestedPresentSignal(signals, reportElement, "source", "isHdr", "source.isHdr");
+        AddNestedPresentSignal(signals, reportElement, "source", "isDirectPlayable", "source.isDirectPlayable");
+        AddNestedPresentSignal(signals, reportElement, "source", "isDolbyVision", "source.isDolbyVision");
+        AddNestedPresentSignal(signals, reportElement, "source", "dolbyVisionProfile", "source.dolbyVisionProfile");
+        AddNestedPresentSignal(signals, reportElement, "source", "dolbyVisionCompatibilityId", "source.dolbyVisionCompatibilityId");
+        AddNestedPresentSignal(signals, reportElement, "source", "hasHdr10BaseLayer", "source.hasHdr10BaseLayer");
+        AddNestedPresentSignal(signals, reportElement, "source", "hasHlgBaseLayer", "source.hasHlgBaseLayer");
+        AddNestedPresentSignal(signals, reportElement, "startup", "startupDurationMs", "startup.startupDurationMs");
+        AddNestedPresentSignal(signals, reportElement, "timing", "renderedVideoFrames", "timing.renderedVideoFrames");
+        AddNestedPresentSignal(signals, reportElement, "timing", "droppedVideoFrames", "timing.droppedVideoFrames");
+        AddNestedPresentSignal(signals, reportElement, "timing", "expectedFrameDurationMs", "timing.expectedFrameDurationMs");
+        AddNestedPresentSignal(signals, reportElement, "timing", "maxFrameGapMs", "timing.maxFrameGapMs");
+        AddNestedPresentSignal(signals, reportElement, "timing", "framePacingSourceFrameRate", "timing.framePacingSourceFrameRate");
+        AddNestedPresentSignal(signals, reportElement, "timing", "lateFrameDropToleranceMs", "timing.lateFrameDropToleranceMs");
+        AddNestedPresentSignal(signals, reportElement, "timing", "renderIntervalMsP95", "timing.renderIntervalMsP95");
+        AddNestedPresentSignal(signals, reportElement, "timing", "renderIntervalMsP99", "timing.renderIntervalMsP99");
+        AddNestedPresentSignal(signals, reportElement, "sync", "audioVideoDriftMsP95", "sync.audioVideoDriftMsP95");
+        AddNestedPresentSignal(signals, reportElement, "buffers", "videoStarvedPasses", "buffers.videoStarvedPasses");
+        AddNestedPresentSignal(signals, reportElement, "buffers", "audioStarvedPasses", "buffers.audioStarvedPasses");
+        AddNestedPresentSignal(signals, reportElement, "colorPipeline", "actualHdrOutput", "colorPipeline.actualHdrOutput");
+        AddNestedPresentSignal(signals, reportElement, "colorPipeline", "dxgiInput", "colorPipeline.dxgiInput");
+        AddNestedPresentSignal(signals, reportElement, "colorPipeline", "dxgiOutput", "colorPipeline.dxgiOutput");
+        AddNestedPresentSignal(signals, reportElement, "colorPipeline", "conversionStatus", "colorPipeline.conversionStatus");
+        AddNestedPresentSignal(signals, reportElement, "colorPipeline", "forceSdrOutput", "colorPipeline.forceSdrOutput");
+        AddNestedPresentSignal(signals, reportElement, "display", "refreshRateHz", "display.refreshRateHz");
+        return signals;
+    }
+
+    private static void AddNestedPresentSignal(
+        List<string> signals,
+        JsonElement reportElement,
+        string sectionName,
+        string propertyName,
+        string signal)
+    {
+        if (reportElement.ValueKind != JsonValueKind.Object ||
+            !TryGetPropertyIgnoreCase(reportElement, sectionName, out var section) ||
+            section.ValueKind != JsonValueKind.Object ||
+            !TryGetPropertyIgnoreCase(section, propertyName, out _))
+        {
+            return;
+        }
+
+        AddUnique(signals, signal);
     }
 
     private static void WriteJson<T>(T value, string outputPath)
@@ -1700,16 +1797,28 @@ internal static class Program
         public PlaybackQualityReportEnvelope(
             string relativePath,
             PlaybackQualityReport report,
-            PlaybackQualityModelAnalysis? modelAnalysis)
+            PlaybackQualityModelAnalysis? modelAnalysis,
+            IEnumerable<string>? presentSignals = null,
+            bool hasSignalPresenceEvidence = false)
         {
             RelativePath = relativePath;
             Report = report;
             ModelAnalysis = modelAnalysis;
+            HasSignalPresenceEvidence = hasSignalPresenceEvidence;
+            if (presentSignals != null)
+            {
+                foreach (var signal in presentSignals)
+                {
+                    AddUnique(PresentSignals, signal);
+                }
+            }
         }
 
         public string RelativePath { get; }
         public PlaybackQualityReport Report { get; }
         public PlaybackQualityModelAnalysis? ModelAnalysis { get; }
+        public bool HasSignalPresenceEvidence { get; }
+        public List<string> PresentSignals { get; } = new List<string>();
     }
 
     private sealed class ReportAnalysisSummary
