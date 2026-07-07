@@ -33,6 +33,11 @@ namespace NextGenEmby.Core.PlaybackQuality
             AddUnique(requiredSignals, "source.frameRate");
             AddUnique(requiredSignals, "source.hdrKind");
 
+            AddExpectedSourceStringSignal(requiredSignals, expected.VideoRange, "source.videoRange");
+            AddExpectedSourceStringSignal(requiredSignals, expected.ColorPrimaries, "source.colorPrimaries");
+            AddExpectedSourceStringSignal(requiredSignals, expected.ColorTransfer, "source.colorTransfer");
+            AddExpectedSourceStringSignal(requiredSignals, expected.ColorSpace, "source.colorSpace");
+
             if (!string.IsNullOrWhiteSpace(expected.HdrPlaybackStrategy))
             {
                 AddUnique(requiredSignals, "source.hdrPlaybackStrategy");
@@ -330,6 +335,14 @@ namespace NextGenEmby.Core.PlaybackQuality
                     return report.Source.FrameRate > 0;
                 case "source.hdrKind":
                     return !string.IsNullOrWhiteSpace(report.Source.HdrKind);
+                case "source.videoRange":
+                    return !string.IsNullOrWhiteSpace(report.Source.VideoRange);
+                case "source.colorPrimaries":
+                    return !string.IsNullOrWhiteSpace(report.Source.ColorPrimaries);
+                case "source.colorTransfer":
+                    return !string.IsNullOrWhiteSpace(report.Source.ColorTransfer);
+                case "source.colorSpace":
+                    return !string.IsNullOrWhiteSpace(report.Source.ColorSpace);
                 case "source.hdrPlaybackStrategy":
                     return !string.IsNullOrWhiteSpace(report.Source.HdrPlaybackStrategy);
                 case "source.isHdr":
@@ -543,6 +556,17 @@ namespace NextGenEmby.Core.PlaybackQuality
             where T : struct
         {
             if (value.HasValue)
+            {
+                AddUnique(requiredSignals, signal);
+            }
+        }
+
+        private static void AddExpectedSourceStringSignal(
+            List<string> requiredSignals,
+            string value,
+            string signal)
+        {
+            if (!string.IsNullOrWhiteSpace(value))
             {
                 AddUnique(requiredSignals, signal);
             }

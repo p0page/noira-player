@@ -65,6 +65,16 @@
         "message": "source.hdrKind matched expected DolbyVisionUnsupported."
       },
       {
+        "name": "ExpectedVideoRange",
+        "signal": "source.videoRange",
+        "status": "pass",
+        "failureArea": "unsupported-source",
+        "failureClass": "",
+        "expected": "Dolby Vision",
+        "actual": "Dolby Vision",
+        "message": "source.videoRange matched expected Dolby Vision."
+      },
+      {
         "name": "ExpectedHdrPlaybackStrategy",
         "signal": "source.hdrPlaybackStrategy",
         "status": "pass",
@@ -158,7 +168,7 @@
     "environment": {
       "collectorVersion": "materialize-baseline-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "working-tree-source-color-metadata-v0.1",
+      "sourceRevision": "working-tree-source-color-expectation-gate-v0.1",
       "buildConfiguration": "Debug"
     },
     "limitations": [
@@ -174,6 +184,10 @@
       "height": 2160,
       "frameRate": 60,
       "hdrKind": "DolbyVisionUnsupported",
+      "videoRange": "Dolby Vision",
+      "colorPrimaries": "",
+      "colorTransfer": "",
+      "colorSpace": "",
       "hdrPlaybackStrategy": "Dolby Vision unsupported",
       "isHdr": true,
       "isDirectPlayable": false,
@@ -210,7 +224,7 @@
       "width": 3840,
       "height": 2160,
       "frameRate": 60,
-      "videoRange": "",
+      "videoRange": "Dolby Vision",
       "colorPrimaries": "",
       "colorTransfer": "",
       "colorSpace": "",
@@ -396,7 +410,7 @@
     "environment": {
       "collectorVersion": "materialize-baseline-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "working-tree-source-color-metadata-v0.1",
+      "sourceRevision": "working-tree-source-color-expectation-gate-v0.1",
       "buildConfiguration": "Debug",
       "signals": [
         "environment.collectorVersion",
@@ -417,7 +431,7 @@
       "width": 3840,
       "height": 2160,
       "frameRate": 60,
-      "videoRange": "",
+      "videoRange": "Dolby Vision",
       "colorPrimaries": "",
       "colorTransfer": "",
       "colorSpace": "",
@@ -440,6 +454,7 @@
         "source.width",
         "source.height",
         "source.frameRate",
+        "source.videoRange",
         "source.hdrKind",
         "source.hdrPlaybackStrategy",
         "source.isHdr",
@@ -721,6 +736,7 @@
       "source.width",
       "source.height",
       "source.hdrKind",
+      "source.videoRange",
       "source.hdrPlaybackStrategy",
       "source.isHdr",
       "source.isDirectPlayable",

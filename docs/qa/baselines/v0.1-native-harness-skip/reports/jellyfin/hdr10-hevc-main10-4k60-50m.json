@@ -45,7 +45,7 @@
     "environment": {
       "collectorVersion": "materialize-native-harness-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "working-tree-source-color-metadata-v0.1",
+      "sourceRevision": "working-tree-source-color-expectation-gate-v0.1",
       "buildConfiguration": "Debug"
     },
     "limitations": [
@@ -62,6 +62,10 @@
       "height": 2160,
       "frameRate": 60,
       "hdrKind": "Hdr10",
+      "videoRange": "HDR10",
+      "colorPrimaries": "bt2020",
+      "colorTransfer": "smpte2084",
+      "colorSpace": "bt2020nc",
       "hdrPlaybackStrategy": "",
       "isHdr": true,
       "isDirectPlayable": true,
@@ -255,7 +259,7 @@
     "environment": {
       "collectorVersion": "materialize-native-harness-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "working-tree-source-color-metadata-v0.1",
+      "sourceRevision": "working-tree-source-color-expectation-gate-v0.1",
       "buildConfiguration": "Debug",
       "signals": [
         "environment.collectorVersion",

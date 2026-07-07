@@ -310,6 +310,23 @@ function New-Expected(
         requireMatchedDisplayRefreshRate = $RequireMatchedDisplayRefreshRate
     }
 
+    $videoRange = Normalize-String $VideoStream.VideoRange
+    $colorPrimaries = Normalize-String $VideoStream.ColorPrimaries
+    $colorTransfer = Normalize-String $VideoStream.ColorTransfer
+    $colorSpace = Normalize-String $VideoStream.ColorSpace
+    if (-not [string]::IsNullOrWhiteSpace($videoRange)) {
+        $expected.videoRange = $videoRange
+    }
+    if (-not [string]::IsNullOrWhiteSpace($colorPrimaries)) {
+        $expected.colorPrimaries = $colorPrimaries
+    }
+    if (-not [string]::IsNullOrWhiteSpace($colorTransfer)) {
+        $expected.colorTransfer = $colorTransfer
+    }
+    if (-not [string]::IsNullOrWhiteSpace($colorSpace)) {
+        $expected.colorSpace = $colorSpace
+    }
+
     if ($HdrProfile.isDolbyVision) {
         $expected.dolbyVisionProfile = $HdrProfile.dolbyVisionProfile
         $expected.dolbyVisionCompatibilityId = $HdrProfile.dolbyVisionCompatibilityId
@@ -407,6 +424,10 @@ function New-ErrorHandlingReferenceCase {
             height = 1080
             frameRate = 60.0
             hdrKind = 'Sdr'
+            videoRange = 'SDR'
+            colorPrimaries = 'bt709'
+            colorTransfer = 'bt709'
+            colorSpace = 'bt709'
             isDirectPlayable = $true
             expectedHdrOutput = 'Sdr'
             dxgiInputColorSpace = 'RGB_FULL_G22_NONE_P709'

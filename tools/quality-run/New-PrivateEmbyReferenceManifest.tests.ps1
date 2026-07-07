@@ -245,7 +245,11 @@ try {
         if (-not ($expandedManifest.cases | Where-Object {
             $_.caseId -eq 'private-emby/playback-info-sdr/playback-info-sdr-source/sdr-smoke' -and
             ($_.purpose -contains 'sdr-smoke') -and
-            $_.expected.hdrKind -eq 'Sdr'
+            $_.expected.hdrKind -eq 'Sdr' -and
+            $_.expected.videoRange -eq 'SDR' -and
+            $_.expected.colorPrimaries -eq 'bt709' -and
+            $_.expected.colorTransfer -eq 'bt709' -and
+            $_.expected.colorSpace -eq 'bt709'
         })) {
             throw 'Generated manifest should use PlaybackInfo media sources when Items do not include MediaSources.'
         }
@@ -315,9 +319,10 @@ try {
         $_.category -eq 'challenge' -and
         $_.severity -eq 'medium' -and
         $_.stability -eq 'variable' -and
-        $_.expected.hdrKind -eq 'DolbyVisionUnsupported' -and
-        $_.expected.dolbyVisionProfile -eq 5 -and
-        $_.expected.isDirectPlayable -eq $false
+            $_.expected.hdrKind -eq 'DolbyVisionUnsupported' -and
+            $_.expected.videoRange -eq 'Dolby Vision' -and
+            $_.expected.dolbyVisionProfile -eq 5 -and
+            $_.expected.isDirectPlayable -eq $false
     })) {
         throw 'Generated manifest should include a DV Profile 5 reject case from stream metadata.'
     }
@@ -336,9 +341,13 @@ try {
         $_.category -eq 'stable' -and
         $_.severity -eq 'high' -and
         $_.stability -eq 'stable' -and
-        ($_.purpose -contains 'tracks') -and
-        ($_.purpose -contains 'subtitles') -and
-        ($_.purpose -contains 'end-of-stream')
+            ($_.purpose -contains 'tracks') -and
+            ($_.purpose -contains 'subtitles') -and
+            ($_.purpose -contains 'end-of-stream') -and
+            $_.expected.videoRange -eq 'SDR' -and
+            $_.expected.colorPrimaries -eq 'bt709' -and
+            $_.expected.colorTransfer -eq 'bt709' -and
+            $_.expected.colorSpace -eq 'bt709'
     })) {
         throw 'Generated manifest should include stable track, subtitle, and end-of-stream purposes on the SDR smoke case.'
     }
@@ -347,10 +356,14 @@ try {
         $_.caseId -eq 'private-emby/dv81-movie/dv81-source/dv-fallback' -and
         $_.category -eq 'challenge' -and
         $_.severity -eq 'high' -and
-        $_.stability -eq 'variable' -and
-        $_.expected.hdrKind -eq 'DolbyVisionWithHdr10Fallback' -and
-        $_.expected.dolbyVisionCompatibilityId -eq 1 -and
-        $_.expected.hasHdr10BaseLayer -eq $true
+            $_.stability -eq 'variable' -and
+            $_.expected.hdrKind -eq 'DolbyVisionWithHdr10Fallback' -and
+            $_.expected.videoRange -eq 'HDR10 Dolby Vision' -and
+            $_.expected.colorPrimaries -eq 'bt2020' -and
+            $_.expected.colorTransfer -eq 'smpte2084' -and
+            $_.expected.colorSpace -eq 'bt2020nc' -and
+            $_.expected.dolbyVisionCompatibilityId -eq 1 -and
+            $_.expected.hasHdr10BaseLayer -eq $true
     })) {
         throw 'Generated manifest should include a DV Profile 8.1 HDR10 fallback case from stream metadata.'
     }
@@ -367,9 +380,13 @@ try {
         $_.caseId -eq 'private-emby/cadence-movie/cadence-source/cadence-23976' -and
         $_.category -eq 'challenge' -and
         $_.severity -eq 'high' -and
-        $_.stability -eq 'stable' -and
-        $_.expected.frameRate -eq 23.976 -and
-        $_.expected.requireMatchedDisplayRefreshRate -eq $true
+            $_.stability -eq 'stable' -and
+            $_.expected.frameRate -eq 23.976 -and
+            $_.expected.videoRange -eq 'HDR10' -and
+            $_.expected.colorPrimaries -eq 'bt2020' -and
+            $_.expected.colorTransfer -eq 'smpte2084' -and
+            $_.expected.colorSpace -eq 'bt2020nc' -and
+            $_.expected.requireMatchedDisplayRefreshRate -eq $true
     })) {
         throw 'Generated manifest should include a 23.976 cadence case.'
     }
@@ -377,7 +394,11 @@ try {
     if (-not ($manifest.cases | Where-Object {
         $_.forceSdrOutput -eq $true -and
         $_.expected.hdrKind -eq 'Hdr10' -and
-        $_.expected.hdrOutput -eq 'Sdr'
+        $_.expected.hdrOutput -eq 'Sdr' -and
+        $_.expected.videoRange -eq 'HDR10' -and
+        $_.expected.colorPrimaries -eq 'bt2020' -and
+        $_.expected.colorTransfer -eq 'smpte2084' -and
+        $_.expected.colorSpace -eq 'bt2020nc'
     })) {
         throw 'Generated manifest should include an HDR force-SDR case.'
     }

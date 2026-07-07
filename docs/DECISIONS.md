@@ -1,12 +1,22 @@
 # 技术决策
 
+## 2026-07-08: manifest 明确声明的 source raw color metadata 进入 required-signal gate
+
+决策：`PlaybackQualityExpected` 新增 `VideoRange`、`ColorPrimaries`、`ColorTransfer` 和 `ColorSpace`。当 reference manifest 写出对应 expected 值时，`PlaybackQualityEvaluator` 会比较 `report.source.videoRange`、`source.colorPrimaries`、`source.colorTransfer` 和 `source.colorSpace`，`PlaybackQualityRequiredSignalPolicy` 也会要求这些信号存在。未声明的字段不进入 required-signal gate。
+
+原因：上一轮只把 raw source color metadata 暴露为可选 evidence signal，模型仍无法区分“manifest 没有要求该字段”和“采集器应该提供但缺失”。HDR/DV 相关优化需要先确认输入流的 range/primaries/transfer/matrix 来自 playback-info 或真实解析路径，而不是从文件名、`HdrKind` 或策略分类反推。把 manifest 明确声明的字段纳入 gate，可以让缺采集、采集错误和播放输出问题分开归因。
+
+影响：私有 Emby manifest 生成器会从 playback-info 视频流字段写入这些 expected 值；公开示例 manifest 和 v0.1 source-only/core-probe/native-harness-skip baseline 已刷新。source-only/core-probe 的 synthetic source 只复制 manifest 显式 expected 值用于评测链路验证，不代表真实 App/native collector 已解析到这些字段。
+
+边界：这是 evaluation contract/testability 变更，不改变播放行为、源选择、HDR/DV 策略、DXGI conversion、阈值、case expected behavior 或 pass/fail 标准。评测器仍不得从文件名、显示标题、`HdrKind`、Dolby Vision profile 分类或播放策略推导 raw source color metadata。
+
 ## 2026-07-08: analyzer version 升级到 5 并暴露 source raw color metadata
 
 决策：`PlaybackQualityReportAnalyzer.CurrentAnalyzerVersion` 从 4 升级到 5。`EmbyMediaStream` 新增 `VideoRange`、`ColorPrimaries`、`ColorTransfer` 和 `ColorSpace`，`EmbyApiClient` 从 playback-info `MediaStreams[]` 映射，`PlaybackQualityReportMapper` 从视频流透传到 `PlaybackQualitySource`，`PlaybackQualityReportAnalyzer` 输出 `source.videoRange`、`source.colorPrimaries`、`source.colorTransfer` 和 `source.colorSpace` evidence signals，`PlaybackQualitySignalCatalog` 将这些信号登记为正式 report signals。
 
 原因：v0.1 覆盖能力要求色彩元数据包括 primaries、transfer、matrix/range。此前 Core 已用这些字段辅助 HDR/DV 分类，但 report 只暴露分类后的 `HdrKind` 和播放策略，模型无法判断 raw input color metadata 是否来自服务端/采集器，也无法区分“采集缺口”和“颜色管线判断错误”。
 
-边界：这是 instrumentation/testability 和报告契约变更，不改变播放行为、源选择、HDR/DV 策略、DXGI color conversion、阈值或 pass/fail 规则。评测器不得从文件名、`HdrKind`、`DisplayTitle` 或 profile 分类反推 raw color 字段。当前只作为可选 evidence signal 暴露，暂不加入 required-signal gate；gate 收紧需要后续先让 reference manifest 或真实 collector 提供可验证的 raw source color expectation。
+边界：这是 instrumentation/testability 和报告契约变更，不改变播放行为、源选择、HDR/DV 策略、DXGI color conversion、阈值或 pass/fail 规则。评测器不得从文件名、`HdrKind`、`DisplayTitle` 或 profile 分类反推 raw color 字段。后续 manifest gate 已把明确声明的 expected raw source color 字段纳入 required-signal 检查；未声明字段仍保持可选。
 
 ## 2026-07-08: analyzer version 升级到 4 并要求音频声道数证据
 

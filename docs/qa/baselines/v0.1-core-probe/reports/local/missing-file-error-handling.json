@@ -44,7 +44,7 @@
     "environment": {
       "collectorVersion": "materialize-core-probe-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "working-tree-source-color-metadata-v0.1",
+      "sourceRevision": "working-tree-source-color-expectation-gate-v0.1",
       "buildConfiguration": "Debug"
     },
     "limitations": [
@@ -62,6 +62,10 @@
       "height": 1080,
       "frameRate": 60,
       "hdrKind": "Sdr",
+      "videoRange": "SDR",
+      "colorPrimaries": "bt709",
+      "colorTransfer": "bt709",
+      "colorSpace": "bt709",
       "hdrPlaybackStrategy": "",
       "isHdr": false,
       "isDirectPlayable": true,
@@ -256,7 +260,7 @@
     "environment": {
       "collectorVersion": "materialize-core-probe-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "working-tree-source-color-metadata-v0.1",
+      "sourceRevision": "working-tree-source-color-expectation-gate-v0.1",
       "buildConfiguration": "Debug",
       "signals": [
         "environment.collectorVersion",

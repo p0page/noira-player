@@ -2,11 +2,19 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-08 更新：source raw color expectation 进入 manifest/report-set gate
+
+`PlaybackQualityExpected` 现在可以声明 `videoRange`、`colorPrimaries`、`colorTransfer` 和 `colorSpace`。当 reference manifest 明确写出这些 expected 值时，`PlaybackQualityEvaluator` 会逐项比较 `report.source` 的实际值，`PlaybackQualityRequiredSignalPolicy` 也会把对应的 `source.*` 字段加入 required signals；如果 manifest 没有写出这些字段，则不会强制要求采集器伪造。
+
+私有 Emby manifest 生成器现在会从 playback-info 的视频流字段透传这些 raw source color metadata，公开示例 manifest 和三套 baseline 已刷新。source-only/core-probe 只会把 manifest 中明确声明的 expected 值写入 synthetic diagnostic source，用于验证评测链路；真实 App/native collector 后续仍必须从服务端或实际解析路径提供这些字段。
+
+边界：这是 evaluation contract/testability 变更，不改变播放行为、源选择、HDR/DV 策略、DXGI conversion、阈值或 pass/fail 标准。评测器仍不得从文件名、`HdrKind`、`DisplayTitle` 或 profile 分类反推出 raw color metadata。
+
 ## 2026-07-08 更新：source raw color metadata 进入可选证据链
 
 `PlaybackQualityReportAnalyzer.CurrentAnalyzerVersion` 已升级到 5。`EmbyMediaStream` 现在保留 Emby playback-info 的 `MediaStreams[].VideoRange`、`ColorPrimaries`、`ColorTransfer` 和 `ColorSpace`，`PlaybackQualityReportMapper` 会把选中视频源的这些 raw color metadata 透传到 `report.source`，`PlaybackQualityReportAnalyzer` 会输出 `source.videoRange`、`source.colorPrimaries`、`source.colorTransfer` 和 `source.colorSpace` evidence signals。
 
-边界：这是 instrumentation/testability 和报告契约变更，不改变播放行为、源选择、HDR/DV 策略、DXGI color conversion、阈值或 pass/fail 规则。评测器不得从文件名、`HdrKind`、`DisplayTitle` 或 profile 分类反推这些 raw color 字段；只有服务端或采集器明确提供的值才算证据。本轮没有把这些新字段加入 required-signal gate，因为当前 reference manifest 尚未记录 raw source color expectation，source-only/core-probe baseline 也没有真实 playback-info raw color metadata；下一步应补 manifest/collector 侧的真实 source color expectation，再单独收紧 gate。
+边界：这是 instrumentation/testability 和报告契约变更，不改变播放行为、源选择、HDR/DV 策略、DXGI color conversion、阈值或 pass/fail 规则。评测器不得从文件名、`HdrKind`、`DisplayTitle` 或 profile 分类反推这些 raw color 字段；只有服务端或采集器明确提供的值才算证据。后续的 source raw color expectation gate 已把 manifest 明确声明的字段纳入 required-signal 检查；未声明字段仍保持可选。
 
 ## 2026-07-08 更新：音频声道数进入轨道证据链
 

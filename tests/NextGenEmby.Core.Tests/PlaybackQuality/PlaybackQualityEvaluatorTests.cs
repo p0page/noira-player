@@ -276,6 +276,67 @@ public sealed class PlaybackQualityEvaluatorTests
     }
 
     [Fact]
+    public void Evaluate_Fails_When_Source_Color_Metadata_Does_Not_Match_Expected_Source()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "wrong-source-color-metadata",
+            Expected = new PlaybackQualityExpected
+            {
+                VideoRange = "HDR10",
+                ColorPrimaries = "bt2020",
+                ColorTransfer = "smpte2084",
+                ColorSpace = "bt2020nc",
+                RequireValidatedConversion = false
+            },
+            Source = new PlaybackQualitySource
+            {
+                VideoRange = "SDR",
+                ColorPrimaries = "bt709",
+                ColorTransfer = "bt709",
+                ColorSpace = "bt709"
+            }
+        };
+
+        PlaybackQualityEvaluator.Evaluate(report);
+
+        Assert.Equal("fail", report.Result);
+        Assert.Equal("unsupported-source", report.Analysis.PrimaryFailureArea);
+        Assert.Contains("source.videoRange", report.Analysis.RelevantSignals);
+        Assert.Contains("source.colorPrimaries", report.Analysis.RelevantSignals);
+        Assert.Contains("source.colorTransfer", report.Analysis.RelevantSignals);
+        Assert.Contains("source.colorSpace", report.Analysis.RelevantSignals);
+        Assert.Contains(report.Checks, check =>
+            check.Name == "ExpectedVideoRange" &&
+            check.Signal == "source.videoRange" &&
+            check.Expected == "HDR10" &&
+            check.Actual == "SDR" &&
+            check.Status == "fail" &&
+            check.FailureArea == "unsupported-source");
+        Assert.Contains(report.Checks, check =>
+            check.Name == "ExpectedColorPrimaries" &&
+            check.Signal == "source.colorPrimaries" &&
+            check.Expected == "bt2020" &&
+            check.Actual == "bt709" &&
+            check.Status == "fail" &&
+            check.FailureArea == "unsupported-source");
+        Assert.Contains(report.Checks, check =>
+            check.Name == "ExpectedColorTransfer" &&
+            check.Signal == "source.colorTransfer" &&
+            check.Expected == "smpte2084" &&
+            check.Actual == "bt709" &&
+            check.Status == "fail" &&
+            check.FailureArea == "unsupported-source");
+        Assert.Contains(report.Checks, check =>
+            check.Name == "ExpectedColorSpace" &&
+            check.Signal == "source.colorSpace" &&
+            check.Expected == "bt2020nc" &&
+            check.Actual == "bt709" &&
+            check.Status == "fail" &&
+            check.FailureArea == "unsupported-source");
+    }
+
+    [Fact]
     public void Evaluate_Fails_When_Hdr_Source_Strategy_Does_Not_Match_Expected_Source()
     {
         var report = new PlaybackQualityReport

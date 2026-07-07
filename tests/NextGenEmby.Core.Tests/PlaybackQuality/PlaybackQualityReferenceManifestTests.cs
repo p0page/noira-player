@@ -163,6 +163,26 @@ public sealed class PlaybackQualityReferenceManifestTests
     }
 
     [Fact]
+    public void RequiredSignals_Include_Source_Color_Metadata_When_Expected()
+    {
+        var referenceCase = CreateCase(
+            "source/color-metadata",
+            tier: 1,
+            purpose: "hdr-output");
+        referenceCase.Expected.VideoRange = "HDR10";
+        referenceCase.Expected.ColorPrimaries = "bt2020";
+        referenceCase.Expected.ColorTransfer = "smpte2084";
+        referenceCase.Expected.ColorSpace = "bt2020nc";
+
+        var requiredSignals = PlaybackQualityRequiredSignalPolicy.CreateRequiredSignals(referenceCase);
+
+        Assert.Contains("source.videoRange", requiredSignals);
+        Assert.Contains("source.colorPrimaries", requiredSignals);
+        Assert.Contains("source.colorTransfer", requiredSignals);
+        Assert.Contains("source.colorSpace", requiredSignals);
+    }
+
+    [Fact]
     public void Validate_Preserves_Optional_Emby_Item_Capture_Metadata()
     {
         var manifest = new PlaybackQualityReferenceManifest
@@ -395,6 +415,10 @@ public sealed class PlaybackQualityReferenceManifestTests
             "netflix/chimera-4k-2398-hdr-pq",
             tier: 2,
             purpose: "hdr-output");
+        referenceCase.Expected.VideoRange = "HDR10";
+        referenceCase.Expected.ColorPrimaries = "bt2020";
+        referenceCase.Expected.ColorTransfer = "smpte2084";
+        referenceCase.Expected.ColorSpace = "bt2020nc";
         var descriptor = CreateDescriptor(
             codec: "hevc",
             width: 3840,
@@ -421,6 +445,10 @@ public sealed class PlaybackQualityReferenceManifestTests
         Assert.Equal(2160, request.Expected.Height);
         Assert.Equal(23.976, request.Expected.FrameRate);
         Assert.Equal("Hdr10", request.Expected.HdrKind);
+        Assert.Equal("HDR10", request.Expected.VideoRange);
+        Assert.Equal("bt2020", request.Expected.ColorPrimaries);
+        Assert.Equal("smpte2084", request.Expected.ColorTransfer);
+        Assert.Equal("bt2020nc", request.Expected.ColorSpace);
         Assert.False(request.UseDefaultExpectedWhenMissing);
     }
 
@@ -1045,6 +1073,50 @@ public sealed class PlaybackQualityReferenceManifestTests
         Assert.Contains(validation.Errors, error =>
             error.Code == "report.requiredSignal.missing" &&
             error.Signal == "colorPipeline.isTenBitSwapChain");
+    }
+
+    [Fact]
+    public void ValidateReportSet_Rejects_Missing_Source_Color_Metadata_When_Expected()
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        var referenceCase = CreateCase(
+            "jellyfin/hdr10-source-color-metadata",
+            tier: 1,
+            purpose: "hdr-output");
+        referenceCase.Expected.VideoRange = "HDR10";
+        referenceCase.Expected.ColorPrimaries = "bt2020";
+        referenceCase.Expected.ColorTransfer = "smpte2084";
+        referenceCase.Expected.ColorSpace = "bt2020nc";
+        manifest.Cases.Add(referenceCase);
+        var report = CreateReport(
+            "jellyfin/hdr10-source-color-metadata",
+            codec: "hevc",
+            width: 3840,
+            height: 2160,
+            frameRate: 23.976,
+            hdrKind: "Hdr10");
+
+        var validation = PlaybackQualityReferenceReportSetValidator.Validate(
+            manifest,
+            new[] { report });
+
+        Assert.False(validation.IsValid);
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.requiredSignal.missing" &&
+            error.Signal == "source.videoRange" &&
+            error.FailureClass == "insufficient instrumentation");
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.requiredSignal.missing" &&
+            error.Signal == "source.colorPrimaries" &&
+            error.FailureClass == "insufficient instrumentation");
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.requiredSignal.missing" &&
+            error.Signal == "source.colorTransfer" &&
+            error.FailureClass == "insufficient instrumentation");
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.requiredSignal.missing" &&
+            error.Signal == "source.colorSpace" &&
+            error.FailureClass == "insufficient instrumentation");
     }
 
     [Fact]

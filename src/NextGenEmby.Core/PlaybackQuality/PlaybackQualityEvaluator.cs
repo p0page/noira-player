@@ -226,6 +226,34 @@ namespace NextGenEmby.Core.PlaybackQuality
                 ignoreCase: false);
             CheckExpectedString(
                 report,
+                "ExpectedVideoRange",
+                report.Source.VideoRange,
+                expected.VideoRange,
+                "source.videoRange",
+                ignoreCase: false);
+            CheckExpectedString(
+                report,
+                "ExpectedColorPrimaries",
+                report.Source.ColorPrimaries,
+                expected.ColorPrimaries,
+                "source.colorPrimaries",
+                ignoreCase: false);
+            CheckExpectedString(
+                report,
+                "ExpectedColorTransfer",
+                report.Source.ColorTransfer,
+                expected.ColorTransfer,
+                "source.colorTransfer",
+                ignoreCase: false);
+            CheckExpectedString(
+                report,
+                "ExpectedColorSpace",
+                report.Source.ColorSpace,
+                expected.ColorSpace,
+                "source.colorSpace",
+                ignoreCase: false);
+            CheckExpectedString(
+                report,
                 "ExpectedHdrPlaybackStrategy",
                 report.Source.HdrPlaybackStrategy,
                 expected.HdrPlaybackStrategy,
@@ -813,6 +841,10 @@ namespace NextGenEmby.Core.PlaybackQuality
                 "ExpectedWidth",
                 "ExpectedHeight",
                 "ExpectedHdrKind",
+                "ExpectedVideoRange",
+                "ExpectedColorPrimaries",
+                "ExpectedColorTransfer",
+                "ExpectedColorSpace",
                 "ExpectedHdrPlaybackStrategy",
                 "ExpectedIsHdr",
                 "ExpectedIsDirectPlayable",
