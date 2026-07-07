@@ -772,9 +772,10 @@ try {
         $_.caseId -eq 'netflix/chimera-4k-2398-hdr-pq' -and
         $_.signal -eq 'display.refreshRateHz' -and
         $_.failureArea -eq 'frame-pacing' -and
+        $_.failureClass -eq 'insufficient instrumentation' -and
         ($_.codeTargets -contains 'src/NextGenEmby.Native/Media/FramePacing.h')
     })) {
-        throw 'Expected playback quality CLI validate-report-set missing telemetry output to include triaged display refresh evidence.'
+        throw 'Expected playback quality CLI validate-report-set missing telemetry output to include triaged display refresh evidence and failure class.'
     }
 
     @'

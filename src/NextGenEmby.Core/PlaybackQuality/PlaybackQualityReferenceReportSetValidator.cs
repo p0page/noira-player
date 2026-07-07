@@ -53,6 +53,8 @@ namespace NextGenEmby.Core.PlaybackQuality
 
         public string FailureArea { get; set; } = "";
 
+        public string FailureClass { get; set; } = "";
+
         public string SuggestedNextAction { get; set; } = "";
 
         public List<string> CodeTargets { get; } = new List<string>();
@@ -535,6 +537,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                 Actual = actual,
                 Message = message,
                 FailureArea = triage.FailureArea,
+                FailureClass = ClassifyReportSetFailure(code, signal),
                 SuggestedNextAction = triage.SuggestedNextAction
             };
             foreach (var target in triage.CodeTargets)
@@ -543,6 +546,32 @@ namespace NextGenEmby.Core.PlaybackQuality
             }
 
             validation.Errors.Add(error);
+        }
+
+        private static string ClassifyReportSetFailure(string code, string signal)
+        {
+            if (string.Equals(code, "report.requiredSignal.missing", StringComparison.Ordinal))
+            {
+                return "insufficient instrumentation";
+            }
+
+            if (string.Equals(code, "report.missing", StringComparison.Ordinal))
+            {
+                return "environment issue";
+            }
+
+            if (string.Equals(code, "report.duplicate-run-id", StringComparison.Ordinal) ||
+                string.Equals(code, "report.extra", StringComparison.Ordinal))
+            {
+                return "evaluation harness bug";
+            }
+
+            if (StartsWithSignal(signal, "source."))
+            {
+                return "external service/protocol issue";
+            }
+
+            return "needs human confirmation";
         }
 
         private static PlaybackQualityReportSetSignalTriage CreateSignalTriage(string signal)

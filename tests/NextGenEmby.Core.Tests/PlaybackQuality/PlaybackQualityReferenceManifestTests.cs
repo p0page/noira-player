@@ -436,16 +436,20 @@ public sealed class PlaybackQualityReferenceManifestTests
         Assert.Equal(0, validation.MatchedCaseCount);
         Assert.Contains(validation.Errors, error =>
             error.Code == "report.duplicate-run-id" &&
-            error.CaseId == "netflix/chimera-4k-2398-hdr-pq");
+            error.CaseId == "netflix/chimera-4k-2398-hdr-pq" &&
+            error.FailureClass == "evaluation harness bug");
         Assert.Contains(validation.Errors, error =>
             error.Code == "report.missing" &&
-            error.CaseId == "jellyfin/dv-profile5-hevc-4k");
+            error.CaseId == "jellyfin/dv-profile5-hevc-4k" &&
+            error.FailureClass == "environment issue");
         Assert.Contains(validation.Errors, error =>
             error.Code == "report.extra" &&
-            error.ReportRunId == "unexpected/case");
+            error.ReportRunId == "unexpected/case" &&
+            error.FailureClass == "evaluation harness bug");
         Assert.Contains(validation.Errors, error =>
             error.Code == "report.source.codec.mismatch" &&
-            error.Signal == "source.codec");
+            error.Signal == "source.codec" &&
+            error.FailureClass == "external service/protocol issue");
         Assert.Contains(validation.Errors, error =>
             error.Code == "report.source.width.mismatch" &&
             error.Signal == "source.width");
@@ -551,7 +555,8 @@ public sealed class PlaybackQualityReferenceManifestTests
         Assert.Equal(0, validation.MatchedCaseCount);
         Assert.Contains(validation.Errors, error =>
             error.Code == "report.requiredSignal.missing" &&
-            error.Signal == "colorPipeline.actualHdrOutput");
+            error.Signal == "colorPipeline.actualHdrOutput" &&
+            error.FailureClass == "insufficient instrumentation");
         Assert.Contains(validation.Errors, error =>
             error.Code == "report.requiredSignal.missing" &&
             error.Signal == "colorPipeline.dxgiInput");
@@ -644,6 +649,7 @@ public sealed class PlaybackQualityReferenceManifestTests
             item.Signal == "display.hdrStatus");
 
         Assert.Equal("color-pipeline", error.FailureArea);
+        Assert.Equal("insufficient instrumentation", error.FailureClass);
         Assert.Contains(
             "src/NextGenEmby.Native/DxDeviceResources.cpp",
             error.CodeTargets);
