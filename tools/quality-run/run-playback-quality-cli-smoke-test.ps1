@@ -910,6 +910,22 @@ try {
         throw 'Expected playback quality CLI optimization action to accept candidate.'
     }
 
+    if (-not ($comparison.codeTargets -contains 'src/NextGenEmby.Native/Media/FramePacing.h')) {
+        throw 'Expected playback quality CLI comparison output to include frame-pacing code target.'
+    }
+
+    if (-not ($comparison.nextActions | Where-Object {
+        $_.rank -eq 1 -and
+        $_.action -eq 'accept-candidate' -and
+        $_.risk -eq 'low' -and
+        $_.failureArea -eq 'frame-pacing' -and
+        ($_.caseIds -contains 'candidate') -and
+        ($_.signals -contains 'timing.maxFrameGapMs') -and
+        ($_.codeTargets -contains 'src/NextGenEmby.Native/Media/FramePacing.h')
+    })) {
+        throw 'Expected playback quality CLI comparison output to include ranked next action context.'
+    }
+
     if (-not ($comparison.improvements | Where-Object { $_.signal -eq 'timing.maxFrameGapMs' })) {
         throw 'Expected playback quality CLI comparison to include timing.maxFrameGapMs improvement.'
     }

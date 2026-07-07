@@ -29,6 +29,9 @@ namespace NextGenEmby.Core.PlaybackQuality
         public List<string> ResolvedFailureAreas { get; } = new List<string>();
         public List<string> NewFailureAreas { get; } = new List<string>();
         public List<string> PersistingFailureAreas { get; } = new List<string>();
+        public List<string> CodeTargets { get; } = new List<string>();
+        public List<PlaybackQualitySuiteNextAction> NextActions { get; } =
+            new List<PlaybackQualitySuiteNextAction>();
         public List<string> Limitations { get; } = new List<string>();
     }
 
@@ -407,6 +410,8 @@ namespace NextGenEmby.Core.PlaybackQuality
             ApplyDecision(comparison);
             ApplyOptimization(comparison);
             ApplyStallGuard(comparison, context);
+            ApplyComparisonCodeTargets(comparison);
+            AddComparisonNextAction(comparison);
             return comparison;
         }
 
@@ -615,6 +620,147 @@ namespace NextGenEmby.Core.PlaybackQuality
             AddUnique(comparison.Optimization.Blockers, "iteration.stalled");
             CopyValues(comparison.PersistingFailureAreas, comparison.Optimization.FailureAreas);
             CopyValues(comparison.Coverage.MatchedSignals, comparison.Optimization.Signals);
+        }
+
+        private static void ApplyComparisonCodeTargets(PlaybackQualityRunComparison comparison)
+        {
+            PlaybackQualityCodeTargetCatalog.AddForFailureAreas(
+                comparison.CodeTargets,
+                comparison.Optimization.FailureAreas);
+            PlaybackQualityCodeTargetCatalog.AddForFailureAreas(
+                comparison.CodeTargets,
+                comparison.NewFailureAreas);
+            PlaybackQualityCodeTargetCatalog.AddForFailureAreas(
+                comparison.CodeTargets,
+                comparison.PersistingFailureAreas);
+            PlaybackQualityCodeTargetCatalog.AddForFailureAreas(
+                comparison.CodeTargets,
+                comparison.ResolvedFailureAreas);
+            AddDeltaCodeTargets(comparison, comparison.Improvements);
+            AddDeltaCodeTargets(comparison, comparison.Regressions);
+            AddDeltaCodeTargets(comparison, comparison.PolicyChanges);
+            PlaybackQualityCodeTargetCatalog.AddForSignals(
+                comparison.CodeTargets,
+                comparison.Optimization.Signals);
+            PlaybackQualityCodeTargetCatalog.AddForSignals(
+                comparison.CodeTargets,
+                comparison.Confidence.Signals);
+            PlaybackQualityCodeTargetCatalog.AddForSignals(
+                comparison.CodeTargets,
+                comparison.Coverage.MatchedSignals);
+            PlaybackQualityCodeTargetCatalog.AddForSignals(
+                comparison.CodeTargets,
+                comparison.Coverage.UnmatchedBaselineSignals);
+            PlaybackQualityCodeTargetCatalog.AddForSignals(
+                comparison.CodeTargets,
+                comparison.Coverage.UnmatchedCandidateSignals);
+
+            if (comparison.CodeTargets.Count == 0 &&
+                comparison.Optimization.Action == "collect-comparable-evidence")
+            {
+                PlaybackQualityCodeTargetCatalog.AddForFailureArea(
+                    comparison.CodeTargets,
+                    "evidence-collection");
+            }
+        }
+
+        private static void AddDeltaCodeTargets(
+            PlaybackQualityRunComparison comparison,
+            List<PlaybackQualitySignalDelta> deltas)
+        {
+            foreach (var delta in deltas)
+            {
+                PlaybackQualityCodeTargetCatalog.AddForFailureArea(
+                    comparison.CodeTargets,
+                    delta.FailureArea);
+                PlaybackQualityCodeTargetCatalog.AddForSignal(
+                    comparison.CodeTargets,
+                    delta.Signal);
+            }
+        }
+
+        private static void AddComparisonNextAction(PlaybackQualityRunComparison comparison)
+        {
+            var action = new PlaybackQualitySuiteNextAction
+            {
+                Rank = 1,
+                Action = comparison.Optimization.Action,
+                Risk = comparison.Optimization.Risk,
+                FailureArea = GetComparisonTargetFailureArea(comparison)
+            };
+
+            AddUnique(
+                action.CaseIds,
+                string.IsNullOrWhiteSpace(comparison.CaseId)
+                    ? string.IsNullOrWhiteSpace(comparison.CandidateRunId)
+                        ? comparison.BaselineRunId
+                        : comparison.CandidateRunId
+                    : comparison.CaseId);
+            CopyValues(comparison.Optimization.Signals, action.Signals);
+            AddDeltaSignals(action.Signals, comparison.Improvements);
+            AddDeltaSignals(action.Signals, comparison.Regressions);
+            AddDeltaSignals(action.Signals, comparison.PolicyChanges);
+            CopyValues(comparison.Optimization.Blockers, action.Blockers);
+            CopyValues(comparison.Optimization.Reasons, action.Reasons);
+            AddUnique(action.Reasons, comparison.SuggestedNextAction);
+            CopyValues(comparison.CodeTargets, action.CodeTargets);
+            comparison.NextActions.Add(action);
+        }
+
+        private static void AddDeltaSignals(
+            List<string> signals,
+            List<PlaybackQualitySignalDelta> deltas)
+        {
+            foreach (var delta in deltas)
+            {
+                AddUnique(signals, delta.Signal);
+            }
+        }
+
+        private static string GetComparisonTargetFailureArea(
+            PlaybackQualityRunComparison comparison)
+        {
+            var priorityAreas = new[]
+            {
+                "unsupported-source",
+                "color-pipeline",
+                "startup",
+                "buffering",
+                "av-sync",
+                "frame-pacing",
+                "unknown"
+            };
+
+            foreach (var area in priorityAreas)
+            {
+                if (comparison.Optimization.FailureAreas.Contains(area) ||
+                    comparison.NewFailureAreas.Contains(area) ||
+                    comparison.PersistingFailureAreas.Contains(area) ||
+                    comparison.ResolvedFailureAreas.Contains(area) ||
+                    HasDeltaFailureArea(comparison.Improvements, area) ||
+                    HasDeltaFailureArea(comparison.Regressions, area) ||
+                    HasDeltaFailureArea(comparison.PolicyChanges, area))
+                {
+                    return area;
+                }
+            }
+
+            return "";
+        }
+
+        private static bool HasDeltaFailureArea(
+            List<PlaybackQualitySignalDelta> deltas,
+            string failureArea)
+        {
+            foreach (var delta in deltas)
+            {
+                if (delta.FailureArea == failureArea)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static void ApplyPartialConfidenceOptimization(
