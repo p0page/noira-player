@@ -9,7 +9,10 @@ $ErrorActionPreference = 'Stop'
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot '..\..')
 $protectedAppRoots = @('src/NextGenEmby.App')
 $allowedAppInstrumentationPaths = @(
-    'src/NextGenEmby.App/Playback/WinRtNativePlaybackEngine.cs'
+    'src/NextGenEmby.App/Playback/WinRtNativePlaybackEngine.cs',
+    'src/NextGenEmby.App/Navigation/PlaybackLaunchRequest.cs',
+    'src/NextGenEmby.App/MainPage.xaml.cs',
+    'src/NextGenEmby.App/Views/PlaybackPage.xaml.cs'
 )
 $coreTestFilter = 'FullyQualifiedName~PlaybackQuality|FullyQualifiedName~Playback|FullyQualifiedName~EmbyProgress'
 

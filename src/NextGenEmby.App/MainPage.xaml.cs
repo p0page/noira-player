@@ -833,6 +833,21 @@ namespace NextGenEmby.App
                             command.MediaSourceId,
                             forceSdrOutput: command.ForceSdrOutput));
                     return;
+
+                case "quality-run":
+                    NavigateTo(
+                        typeof(PlaybackPage),
+                        new PlaybackLaunchRequest(
+                            command.ItemId,
+                            command.ItemName,
+                            command.StartPositionTicks,
+                            command.MediaSourceId,
+                            forceSdrOutput: command.ForceSdrOutput,
+                            qualityRunId: command.RunId,
+                            qualityRunDurationSeconds: command.DurationSeconds,
+                            qualityExpected: command.Expected,
+                            qualityCommandReceivedAtUtc: DateTimeOffset.UtcNow));
+                    return;
             }
         }
 #endif

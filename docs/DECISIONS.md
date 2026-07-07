@@ -1,12 +1,22 @@
 # 技术决策
 
+## 2026-07-08: DEBUG App-hosted quality-run 作为真实播放采集入口
+
+决策：复用现有 `DevelopmentNavigationCommand route = quality-run`，在 DEBUG App 中将其分发到 `PlaybackPage`。播放成功后，App 等待命令指定的采集窗口，读取当前 `PlaybackDescriptor`、`IPlaybackBackendDiagnostics.DisplayStatus` 和 `IPlaybackQualityMetricsProvider` metrics，通过 `PlaybackQualityRuntimeEvidenceCollector.ComposeRunResult` 生成标准 `PlaybackQualityRunResult` envelope，并写入 App LocalFolder 的 `quality-run/captured/<runId>.json`。CLI 和 App 共享 `PlaybackQualityCapturedReportPath.GetReportRelativePath`，保证 App captured report 可以被 `materialize-native-harness-report-set --captured-reports-dir` 按同一 run-id 相对路径导入。
+
+原因：v0.1 已经有 source-only、core-probe、native-harness skip 和 captured-report import，但缺少真实 App/native 播放会话产出 raw report 的入口。完全独立 App-free native harness 仍然成本较高；DEBUG App-hosted collector 是当前最小可行路径，因为它复用已经能登录、拿 Emby playback-info、创建 native graph、读 native metrics 的现有 App 播放链路，同时不新建并行评测框架。
+
+边界：这是 instrumentation/testability 变更，不改变普通播放策略、source selection、HDR/DV 策略、阈值、expected behavior 或 pass/fail 规则。它也不验证 HDMI InfoFrame、显示器 EOTF 或肉眼颜色准确性。当前 App-hosted capture 只记录 `load` 和采样时的 `play` lifecycle event；如果 report-set validation 后续要求 pause/resume/stop/seek 等完整 lifecycle，缺口应如实归类为 `insufficient instrumentation`，不能当成播放器效果优化结果。
+
+影响：`run-playback-core-checks.ps1` 的 App diff guard allowlist 扩展为精确允许 DEBUG quality-run 接线文件：`Playback/WinRtNativePlaybackEngine.cs`、`Navigation/PlaybackLaunchRequest.cs`、`MainPage.xaml.cs`、`Views/PlaybackPage.xaml.cs`。这不是允许 UI 或交互工作进入本阶段；XAML、App project、manifest/package 和未列入 App 文件仍被阻断。
+
 ## 2026-07-08: playback-core validation guard 精确允许 App playback metrics adapter
 
-决策：`tools\quality-run\run-playback-core-checks.ps1` 的 App diff guard 继续保护 `src/NextGenEmby.App`，但新增精确 allowlist：`src/NextGenEmby.App/Playback/WinRtNativePlaybackEngine.cs`。Plan 输出会暴露 `appDiffGuard.allowedPaths`，测试会确认 allowlist 没有包含 `Views`、XAML、App project 或 package 路径。
+决策：`tools\quality-run\run-playback-core-checks.ps1` 的 App diff guard 继续保护 `src/NextGenEmby.App`，但新增精确 allowlist。最初只允许 `src/NextGenEmby.App/Playback/WinRtNativePlaybackEngine.cs`；随后为了接通 DEBUG App-hosted `quality-run` collector，allowlist 扩展到 `PlaybackLaunchRequest.cs`、`MainPage.xaml.cs` 和 `PlaybackPage.xaml.cs`。Plan 输出会暴露 `appDiffGuard.allowedPaths`，测试会确认 allowlist 没有包含 XAML、App project、manifest/package 或未列入 App 文件。
 
 原因：当前 v0.1 评测链路已经把 `WinRtNativePlaybackEngine` 接入 `IPlaybackQualityMetricsProvider`，这是把真实 App/native 播放 metrics 带入 Core report 的 instrumentation/testability 改动。原 guard 把任何 App diff 都视为 UI/App 交互改动，导致 `run-playback-core-checks.ps1` 在当前合法评测分支上被阻断，反而破坏 v0.1 “有文档化命令可以运行”的完成标准。
 
-边界：这不是允许 App UI 或交互改动进入 playback-core validation。XAML、页面、导航、项目文件、manifest、MSIX/package 相关路径仍被 guard 拦截。allowlist 只覆盖播放 metrics adapter；如果未来新增 App-hosted collector 或更多 App playback instrumentation，应单独记录决策并扩展测试，而不能泛化放行整个 App/Playback 目录。
+边界：这不是允许 App UI 或交互改动进入 playback-core validation。XAML、项目文件、manifest、MSIX/package 相关路径仍被 guard 拦截。allowlist 只覆盖已记录的播放质量 instrumentation 接线；如果未来新增 App-hosted collector 文件或更多 App playback instrumentation，应单独记录决策并扩展测试，而不能泛化放行整个 App/Playback 或 Views 目录。
 
 ## 2026-07-08: native harness 命令支持导入 captured report
 

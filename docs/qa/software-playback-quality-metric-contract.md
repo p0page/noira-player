@@ -197,6 +197,8 @@ When color expectations are supplied, the matching color-pipeline observations m
 
 `PlaybackQualityReportSerializer.Serialize(PlaybackQualityRunResult)` writes a single JSON envelope with top-level `schemaVersion = 1`, `evaluationVersion`, `caseMetadata`, `report`, and `modelAnalysis`. `caseMetadata` contains `caseId`, `category`, `severity`, and `stability` so a single report remains model-consumable without joining against the manifest. Automated runs should prefer this envelope when handing evidence to a model, while still allowing separate report or analysis JSON for debugging. The envelope `schemaVersion`, `evaluationVersion`, nested `report.schemaVersion`, and `modelAnalysis.analyzerVersion` version different contracts and should be checked independently.
 
+DEBUG App-hosted `quality-run` capture writes this same envelope shape under the App LocalFolder `quality-run/captured/<runId>.json`. The run-id to relative-path mapping is owned by `PlaybackQualityCapturedReportPath.GetReportRelativePath`; `local/foo` maps to `local/foo.json`, and unsafe absolute or traversal-style run IDs must be rejected. Captured App reports should be treated as real App/native software evidence only for fields actually present in the report. They still do not prove HDMI/display output correctness, and missing lifecycle or runtime fields must remain `insufficient instrumentation` rather than being inferred.
+
 `materialize-run-result` is the App-free CLI normalization command for captured evidence that is still a raw `PlaybackQualityReport` or an older envelope with stale/incomplete `modelAnalysis`. It reads `--report`, reruns the current Core analyzer with JSON field-presence evidence, and writes a standard `PlaybackQualityRunResult` envelope:
 
 ```powershell

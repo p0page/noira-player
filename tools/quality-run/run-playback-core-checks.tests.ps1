@@ -36,13 +36,29 @@ if (-not ($plan.appDiffGuard.protectedRoots -contains 'src/NextGenEmby.App')) {
     throw 'Expected App diff guard to protect src/NextGenEmby.App.'
 }
 
-if (-not ($plan.appDiffGuard.allowedPaths -contains 'src/NextGenEmby.App/Playback/WinRtNativePlaybackEngine.cs')) {
-    throw 'Expected App diff guard to allow only the playback metrics adapter instrumentation file.'
+$expectedAllowedAppInstrumentationPaths = @(
+    'src/NextGenEmby.App/Playback/WinRtNativePlaybackEngine.cs',
+    'src/NextGenEmby.App/Navigation/PlaybackLaunchRequest.cs',
+    'src/NextGenEmby.App/MainPage.xaml.cs',
+    'src/NextGenEmby.App/Views/PlaybackPage.xaml.cs'
+)
+
+foreach ($expectedPath in $expectedAllowedAppInstrumentationPaths) {
+    if (-not ($plan.appDiffGuard.allowedPaths -contains $expectedPath)) {
+        throw ('Expected App diff guard to allow playback quality instrumentation path: ' + $expectedPath)
+    }
 }
 
-if ($plan.appDiffGuard.allowedPaths -contains 'src/NextGenEmby.App/Views/PlaybackPage.xaml.cs' -or
-    $plan.appDiffGuard.allowedPaths -contains 'src/NextGenEmby.App/NextGenEmby.App.csproj') {
-    throw 'App diff guard must not allow App UI, XAML, or project/package changes.'
+foreach ($allowedPath in $plan.appDiffGuard.allowedPaths) {
+    if ($expectedAllowedAppInstrumentationPaths -notcontains $allowedPath) {
+        throw ('Unexpected App diff guard allowlist path: ' + $allowedPath)
+    }
+}
+
+if ($plan.appDiffGuard.allowedPaths -contains 'src/NextGenEmby.App/Views/PlaybackPage.xaml' -or
+    $plan.appDiffGuard.allowedPaths -contains 'src/NextGenEmby.App/NextGenEmby.App.csproj' -or
+    $plan.appDiffGuard.allowedPaths -contains 'src/NextGenEmby.App/Package.appxmanifest') {
+    throw 'App diff guard must not allow App XAML, project, package, or packaging changes.'
 }
 
 if (-not $plan.coreTestFilter) {

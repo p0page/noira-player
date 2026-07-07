@@ -1,3 +1,6 @@
+using System;
+using NextGenEmby.Core.PlaybackQuality;
+
 namespace NextGenEmby.App.Navigation
 {
     internal sealed class PlaybackLaunchRequest
@@ -8,7 +11,11 @@ namespace NextGenEmby.App.Navigation
             long startPositionTicks = 0,
             string mediaSourceId = "",
             long runtimeTicks = 0,
-            bool forceSdrOutput = false)
+            bool forceSdrOutput = false,
+            string qualityRunId = "",
+            int qualityRunDurationSeconds = 0,
+            PlaybackQualityExpected? qualityExpected = null,
+            DateTimeOffset? qualityCommandReceivedAtUtc = null)
         {
             ItemId = itemId ?? "";
             ItemName = itemName ?? "";
@@ -16,6 +23,10 @@ namespace NextGenEmby.App.Navigation
             MediaSourceId = mediaSourceId ?? "";
             RuntimeTicks = runtimeTicks < 0 ? 0 : runtimeTicks;
             ForceSdrOutput = forceSdrOutput;
+            QualityRunId = string.IsNullOrWhiteSpace(qualityRunId) ? "" : qualityRunId.Trim();
+            QualityRunDurationSeconds = qualityRunDurationSeconds < 10 ? 10 : qualityRunDurationSeconds;
+            QualityExpected = qualityExpected;
+            QualityCommandReceivedAtUtc = qualityCommandReceivedAtUtc ?? DateTimeOffset.UtcNow;
         }
 
         public string ItemId { get; }
@@ -29,5 +40,15 @@ namespace NextGenEmby.App.Navigation
         public long RuntimeTicks { get; }
 
         public bool ForceSdrOutput { get; }
+
+        public string QualityRunId { get; }
+
+        public int QualityRunDurationSeconds { get; }
+
+        public PlaybackQualityExpected? QualityExpected { get; }
+
+        public DateTimeOffset QualityCommandReceivedAtUtc { get; }
+
+        public bool IsQualityRun => !string.IsNullOrWhiteSpace(QualityRunId);
     }
 }

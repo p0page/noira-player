@@ -283,6 +283,56 @@ public sealed class PlaybackQualityRuntimeEvidenceCollectorTests
         Assert.Contains("timing.renderedVideoFrames", result.ModelAnalysis.MissingEvidence);
     }
 
+    [Fact]
+    public void ComposeRunResult_Includes_Captured_Lifecycle_Evidence()
+    {
+        var referenceCase = new PlaybackQualityReferenceCase
+        {
+            CaseId = "local/lifecycle-capture",
+            Expected = new PlaybackQualityExpected
+            {
+                Codec = "hevc",
+                Width = 3840,
+                Height = 2160,
+                FrameRate = 23.976,
+                HdrKind = "Hdr10",
+                MinRenderedVideoFrames = 120
+            }
+        };
+        referenceCase.Purpose.Add("timeline");
+
+        var lifecycle = new PlaybackQualityLifecycle();
+        lifecycle.Events.Add(new PlaybackQualityLifecycleEvent
+        {
+            Operation = "load",
+            Status = "success",
+            State = "Playing",
+            PositionTicks = 0
+        });
+        lifecycle.Events.Add(new PlaybackQualityLifecycleEvent
+        {
+            Operation = "play",
+            Status = "success",
+            State = "Playing",
+            PositionTicks = 120_000_000
+        });
+
+        var result = PlaybackQualityRuntimeEvidenceCollector.ComposeRunResult(
+            referenceCase,
+            CreateDescriptor(),
+            lifecycle: lifecycle);
+
+        Assert.Contains(result.Report.Lifecycle.Events, e =>
+            e.Operation == "load" &&
+            e.Status == "success" &&
+            e.State == "Playing");
+        Assert.Contains(result.Report.Lifecycle.Events, e =>
+            e.Operation == "play" &&
+            e.PositionTicks == 120_000_000);
+        Assert.Contains("lifecycle.load", result.ModelAnalysis.EvidenceSignals);
+        Assert.Contains("lifecycle.play", result.ModelAnalysis.EvidenceSignals);
+    }
+
     private static PlaybackDescriptor CreateDescriptor()
     {
         var source = new EmbyMediaSource

@@ -10,7 +10,9 @@ using NextGenEmby.App.Services;
 using NextGenEmby.App.Storage;
 using NextGenEmby.Core.Emby;
 using NextGenEmby.Core.Playback;
+using NextGenEmby.Core.PlaybackQuality;
 using Windows.Media.Protection;
+using Windows.Storage;
 using Windows.System;
 using Windows.UI.Core;
 using Windows.UI.Xaml;
@@ -1026,6 +1028,9 @@ namespace NextGenEmby.App.Views
             await Task.Yield();
 
             await _orchestrator.StartAsync(request.ItemId, sources, request.StartPositionTicks, request.MediaSourceId);
+#if DEBUG
+            var playbackStartedAtUtc = DateTimeOffset.UtcNow;
+#endif
             await PlaybackDiagnosticsLog.WriteLineAsync(
                 "Orchestrator start completed state=" + _orchestrator.State +
                 " currentSource=" + (_orchestrator.CurrentMediaSource == null ? "" : _orchestrator.CurrentMediaSource.Id));
@@ -1035,6 +1040,9 @@ namespace NextGenEmby.App.Views
             ShowOverlay();
             _progressTimer.Start();
             await ReportPlaybackStartedAsync();
+#if DEBUG
+            ScheduleQualityRunCapture(request, playbackStartedAtUtc);
+#endif
             UpdateStatus(_orchestrator.State);
             UpdateProgressSlider();
             UpdateControlStates();
@@ -1046,6 +1054,171 @@ namespace NextGenEmby.App.Views
         }
 
 #if DEBUG
+        private void ScheduleQualityRunCapture(
+            PlaybackLaunchRequest request,
+            DateTimeOffset playbackStartedAtUtc)
+        {
+            if (!request.IsQualityRun)
+            {
+                return;
+            }
+
+            var descriptor = _orchestrator.CurrentDescriptor;
+            if (descriptor == null)
+            {
+                _ = WriteQualityRunCommandResultAsync(
+                    "capture-skipped",
+                    "quality-run has no current playback descriptor");
+                return;
+            }
+
+            _ = CaptureQualityRunAsync(request, descriptor, playbackStartedAtUtc);
+        }
+
+        private async Task CaptureQualityRunAsync(
+            PlaybackLaunchRequest request,
+            PlaybackDescriptor descriptor,
+            DateTimeOffset playbackStartedAtUtc)
+        {
+            try
+            {
+                await PlaybackDiagnosticsLog.WriteLineAsync(
+                    "QualityRun capture scheduled runId=" + request.QualityRunId +
+                    " durationSeconds=" + request.QualityRunDurationSeconds);
+
+                await Task.Delay(TimeSpan.FromSeconds(request.QualityRunDurationSeconds));
+
+                var capturedPositionTicks = GetCurrentPositionTicks();
+                var referenceCase = PlaybackQualityCaptureReferenceCaseFactory.Create(
+                    request.QualityRunId,
+                    descriptor,
+                    request.QualityExpected);
+                var lifecycle = CreateQualityRunLifecycle(
+                    request.StartPositionTicks,
+                    capturedPositionTicks,
+                    _orchestrator.State.ToString());
+                var startup = new PlaybackQualityStartup
+                {
+                    CommandReceivedAt = request.QualityCommandReceivedAtUtc.ToString("O"),
+                    PlaybackStartedAt = playbackStartedAtUtc.ToString("O"),
+                    StartupDurationMs =
+                        (playbackStartedAtUtc - request.QualityCommandReceivedAtUtc).TotalMilliseconds
+                };
+                var environment = new PlaybackQualityEnvironment
+                {
+                    CollectorVersion = "app-hosted-quality-run-v0.1",
+                    PlayerCoreVersion = "NextGenEmby.Core",
+                    BuildConfiguration = "Debug"
+                };
+
+                var result = PlaybackQualityRuntimeEvidenceCollector.ComposeRunResult(
+                    referenceCase,
+                    descriptor,
+                    _backend as IPlaybackBackendDiagnostics,
+                    _backend as IPlaybackQualityMetricsProvider,
+                    startup,
+                    environment,
+                    lifecycle);
+                var relativePath = await WriteQualityRunReportAsync(request.QualityRunId, result);
+                await WriteQualityRunCommandResultAsync("captured", relativePath);
+                await PlaybackDiagnosticsLog.WriteLineAsync(
+                    "QualityRun capture wrote " + relativePath);
+            }
+            catch (Exception ex)
+            {
+                await PlaybackDiagnosticsLog.WriteLineAsync(
+                    "QualityRun capture exception " + ex.GetType().FullName + " " + ex.Message);
+                await WriteQualityRunCommandResultAsync(
+                    "capture-exception",
+                    ex.GetType().FullName + " " + ex.Message);
+            }
+        }
+
+        private static PlaybackQualityLifecycle CreateQualityRunLifecycle(
+            long startPositionTicks,
+            long capturedPositionTicks,
+            string state)
+        {
+            var lifecycle = new PlaybackQualityLifecycle();
+            lifecycle.Events.Add(new PlaybackQualityLifecycleEvent
+            {
+                Operation = "load",
+                Status = "success",
+                State = state,
+                PositionTicks = startPositionTicks,
+                Message = "app-hosted quality-run opened playback"
+            });
+            lifecycle.Events.Add(new PlaybackQualityLifecycleEvent
+            {
+                Operation = "play",
+                Status = "success",
+                State = state,
+                PositionTicks = capturedPositionTicks,
+                Message = "app-hosted quality-run captured playback sample"
+            });
+
+            return lifecycle;
+        }
+
+        private static async Task<string> WriteQualityRunReportAsync(
+            string runId,
+            PlaybackQualityRunResult result)
+        {
+            var reportRelativePath = PlaybackQualityCapturedReportPath.GetReportRelativePath(runId);
+            var qualityRunFolder = await ApplicationData.Current.LocalFolder.CreateFolderAsync(
+                "quality-run",
+                CreationCollisionOption.OpenIfExists);
+            var capturedFolder = await qualityRunFolder.CreateFolderAsync(
+                "captured",
+                CreationCollisionOption.OpenIfExists);
+            var folder = await EnsureQualityRunFolderPathAsync(capturedFolder, reportRelativePath);
+            var fileName = GetQualityRunFileName(reportRelativePath);
+            var file = await folder.CreateFileAsync(
+                fileName,
+                CreationCollisionOption.ReplaceExisting);
+
+            await FileIO.WriteTextAsync(file, PlaybackQualityReportSerializer.Serialize(result));
+            return "quality-run/captured/" + reportRelativePath;
+        }
+
+        private static async Task<StorageFolder> EnsureQualityRunFolderPathAsync(
+            StorageFolder root,
+            string relativePath)
+        {
+            var folder = root;
+            var segments = relativePath.Split('/');
+            for (var index = 0; index < segments.Length - 1; index++)
+            {
+                folder = await folder.CreateFolderAsync(
+                    segments[index],
+                    CreationCollisionOption.OpenIfExists);
+            }
+
+            return folder;
+        }
+
+        private static string GetQualityRunFileName(string relativePath)
+        {
+            var segments = relativePath.Split('/');
+            return segments[segments.Length - 1];
+        }
+
+        private static async Task WriteQualityRunCommandResultAsync(
+            string status,
+            string detail)
+        {
+            try
+            {
+                var file = await ApplicationData.Current.LocalFolder.CreateFileAsync(
+                    "dev-command-result.txt",
+                    CreationCollisionOption.ReplaceExisting);
+                await FileIO.WriteTextAsync(file, status + Environment.NewLine + (detail ?? ""));
+            }
+            catch
+            {
+            }
+        }
+
         private static IReadOnlyList<EmbyMediaSource> ApplyForcedSdrOutputForDiagnostics(IReadOnlyList<EmbyMediaSource> sources)
         {
             return sources.Select(CloneForSdrOutputDiagnostics).ToList();

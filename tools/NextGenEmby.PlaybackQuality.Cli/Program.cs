@@ -997,9 +997,7 @@ internal static class Program
 
     private static string GetRunIdComparisonRelativePath(string runId)
     {
-        return runId.EndsWith(".json", StringComparison.OrdinalIgnoreCase)
-            ? runId
-            : runId + ".json";
+        return PlaybackQualityCapturedReportPath.GetReportRelativePath(runId);
     }
 
     private static Dictionary<string, string> EnumerateJsonFilesByRelativePath(string directory)
