@@ -58,7 +58,7 @@ dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQ
 
 The command emits `schemaVersion = 1`, `isValid`, `caseCount`, `tiers`, `categories`, `severities`, `stabilities`, `purposes`, `cases`, structured `errors`, and `coverage`. `cases` is a schedulable summary of caseId, uri, tier, category, severity, stability, purpose, and expected source metadata. Valid categories are `stable`, `challenge`, and `quarantine`; valid severities are `info`, `low`, `medium`, `high`, and `critical`; valid stabilities are `stable`, `variable`, `flaky`, and `unknown`. Legacy manifests without category/severity/stability are treated as `stable` / `medium` / `stable`. Invalid manifests return a non-zero exit code so automation can stop before collecting misleading playback evidence. `isValid = true` only means the manifest can be scheduled; `coverage.status = ready` means the corpus includes the required playback Core risk purposes for broad candidate evaluation: `sdr-smoke`, `hdr-output`, `hdr-force-sdr`, `dv-reject`, `dv-fallback`, `cadence-23.976`, `frame-pacing`, `av-sync`, `buffering`, `timeline`, `tracks`, `subtitles`, and `error-handling`. If `coverage.status = incomplete`, the model should treat `coverage.missingPurposes` as a sample-corpus gap and avoid over-optimizing Core from a narrow corpus.
 
-当前 `docs/qa/playback-quality-reference-manifest.example.json` 是可调度的默认参考 manifest。它包含 8 个 case：
+当前 `docs/qa/playback-quality-reference-manifest.example.json` 是可调度的默认参考 manifest。它包含 9 个 case：
 
 - Jellyfin SDR HEVC Main10 1080p60 3M：`sdr-smoke`、`av-sync`。
 - Jellyfin HDR10 HEVC Main10 1080p60 10M：`hdr-output`。
@@ -67,6 +67,8 @@ The command emits `schemaVersion = 1`, `isValid`, `caseCount`, `tiers`, `categor
 - Jellyfin Dolby Vision Profile 5 4K60：`dv-reject`，期望 Core 解析后明确拒播为 `DolbyVisionUnsupported`。
 - Jellyfin Dolby Vision Profile 8.1 4K60：`dv-fallback`，期望 Core 解析为 `DolbyVisionWithHdr10Fallback`。
 - `local/chimera-23976-hdr10-cadence`：本地 Emby 绑定占位，用于 `cadence-23.976` 和 `frame-pacing`。公开直链还没有稳定验证到 23.976 HDR10 样本，所以这里使用 `emby-item` 调度，而不是提交不可靠 URL。
+- `local/sdr-resume-seek-timeline`：本地 Emby 绑定占位，用于 resume/seek timeline 误差证据。
+- `local/missing-file-error-handling`：合成错误路径 case，用于验证缺失源、打开失败或拒播能进入一等 `result = error` 报告，而不是被误报为播放质量失败。
 
 Jellyfin 公开直链 case 应以 `direct-uri` 调度；本地 23.976 case 应以 `emby-item` 调度并生成 `quality-run` dev command。`tools/quality-run/run-playback-quality-cli-smoke-test.ps1` 会校验这些不变量，防止 example manifest 退化成 coverage 不完整或不可调度的状态。
 
@@ -315,7 +317,7 @@ dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQ
 
 因此，core-probe 结果可以证明评测链路、required signals、orchestrator 生命周期和模型报告结构已经闭合；不能证明真实播放质量。进入播放器优化前，仍需要 native graph 或真实媒体软件采集器提供真实 decoder/render/buffer/frame timing/A-V sync/color telemetry。
 
-当前归档在 `docs/qa/baselines/v0.1-core-probe/`。该 report-set 覆盖 example manifest 的 8 个 case，`validate-report-set` 为 `isValid = true`。Dolby Vision Profile 5 case 预期输出 `status = unsupported` 和 `primaryFailureArea = unsupported-source`，不应要求 color conversion telemetry。
+当前归档在 `docs/qa/baselines/v0.1-core-probe/`。该 report-set 覆盖 example manifest 的 9 个 case，`validate-report-set` 为 `isValid = true`。Dolby Vision Profile 5 case 预期输出 `status = unsupported` 和 `primaryFailureArea = unsupported-source`，不应要求 color conversion telemetry；`local/missing-file-error-handling` 预期输出 `result = error` 和 `failureArea = error-handling`。
 
 ## Runtime Evidence Collector
 

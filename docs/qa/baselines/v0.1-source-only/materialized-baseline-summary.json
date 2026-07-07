@@ -1,17 +1,17 @@
 {
   "schemaVersion": 1,
-  "caseCount": 8,
+  "caseCount": 9,
   "reportsDirectory": "docs\\qa\\baselines\\v0.1-source-only\\reports",
   "environment": {
     "collectorVersion": "materialize-baseline-report-set-v1",
     "playerCoreVersion": "NextGenEmby.Core",
-    "sourceRevision": "827e4ba",
+    "sourceRevision": "efa9246",
     "buildConfiguration": "Debug"
   },
   "manifestValidation": {
     "schemaVersion": 1,
     "isValid": true,
-    "caseCount": 8,
+    "caseCount": 9,
     "coverage": {
       "status": "ready",
       "isCoreEvaluationReady": true,
@@ -28,7 +28,8 @@
         "buffering",
         "timeline",
         "tracks",
-        "subtitles"
+        "subtitles",
+        "error-handling"
       ],
       "coveredPurposes": [
         "sdr-smoke",
@@ -42,7 +43,8 @@
         "buffering",
         "timeline",
         "tracks",
-        "subtitles"
+        "subtitles",
+        "error-handling"
       ],
       "missingPurposes": [],
       "reasons": [
@@ -67,7 +69,8 @@
       "dv-fallback",
       "cadence-23.976",
       "frame-pacing",
-      "timeline"
+      "timeline",
+      "error-handling"
     ],
     "categories": [
       "stable",
@@ -448,6 +451,51 @@
           "requireValidatedConversion": true,
           "requireMatchedDisplayRefreshRate": false
         }
+      },
+      {
+        "caseId": "local/missing-file-error-handling",
+        "category": "stable",
+        "severity": "medium",
+        "stability": "stable",
+        "uri": "emby://quality-cases/missing-file-error-handling",
+        "itemId": "quality-case-missing-file-error-handling",
+        "mediaSourceId": "quality-source-missing-file-error-handling",
+        "startPositionTicks": 0,
+        "forceSdrOutput": false,
+        "tier": 1,
+        "purpose": [
+          "error-handling"
+        ],
+        "expected": {
+          "codec": "hevc",
+          "width": 1920,
+          "height": 1080,
+          "frameRate": 60,
+          "hdrKind": "Sdr",
+          "hdrPlaybackStrategy": "",
+          "isHdr": false,
+          "isDirectPlayable": true,
+          "isDolbyVision": null,
+          "dolbyVisionProfile": null,
+          "dolbyVisionCompatibilityId": null,
+          "hasHdr10BaseLayer": null,
+          "hasHlgBaseLayer": null,
+          "hdrOutput": "Sdr",
+          "dxgiInput": "YCBCR_STUDIO_G22_LEFT_P709",
+          "dxgiOutput": "RGB_FULL_G22_NONE_P709",
+          "maxStartupDurationMs": null,
+          "minRenderedVideoFrames": null,
+          "maxDroppedFrames": null,
+          "maxFrameGapMs": null,
+          "maxRenderIntervalMsP95": null,
+          "maxRenderIntervalMsP99": null,
+          "maxAudioVideoDriftMsP95": null,
+          "maxSeekPositionErrorMs": null,
+          "maxVideoStarvedPasses": null,
+          "maxAudioStarvedPasses": null,
+          "requireValidatedConversion": false,
+          "requireMatchedDisplayRefreshRate": false
+        }
       }
     ],
     "errors": []
@@ -752,10 +800,9 @@
       "status": "fail",
       "reportRelativePath": "jellyfin/dv-profile5-hevc-4k60.json",
       "reportPath": "docs\\qa\\baselines\\v0.1-source-only\\reports\\jellyfin/dv-profile5-hevc-4k60.json",
-      "primaryFailureArea": "color-pipeline",
+      "primaryFailureArea": "startup",
       "failureAreas": [
-        "startup",
-        "color-pipeline"
+        "startup"
       ],
       "failureClasses": [
         "insufficient instrumentation"
@@ -774,7 +821,6 @@
         "source.hasHlgBaseLayer",
         "source.frameRate",
         "startup.startupDurationMs",
-        "colorPipeline.conversionStatus",
         "environment.collectorVersion",
         "environment.playerCoreVersion",
         "environment.sourceRevision",
@@ -796,13 +842,7 @@
       ],
       "missingEvidence": [
         "timing.renderedVideoFrames",
-        "startup.startupDurationMs",
-        "sync.audioVideoDriftMsP95",
-        "buffers.queuedAudioBuffers",
-        "colorPipeline.dxgiInput",
-        "colorPipeline.conversionStatus",
-        "display.hdrStatus",
-        "display.refreshRateHz"
+        "startup.startupDurationMs"
       ],
       "blockers": [
         "sample.insufficient",
@@ -1043,6 +1083,40 @@
       "blockers": [
         "sample.insufficient",
         "missingEvidence"
+      ]
+    },
+    {
+      "caseId": "local/missing-file-error-handling",
+      "category": "stable",
+      "severity": "medium",
+      "stability": "stable",
+      "status": "error",
+      "reportRelativePath": "local/missing-file-error-handling.json",
+      "reportPath": "docs\\qa\\baselines\\v0.1-source-only\\reports\\local/missing-file-error-handling.json",
+      "primaryFailureArea": "error-handling",
+      "failureAreas": [
+        "error-handling"
+      ],
+      "failureClasses": [
+        "insufficient instrumentation"
+      ],
+      "evidenceSignals": [
+        "error.code",
+        "error.message",
+        "error.operation",
+        "error.exceptionType",
+        "error.failureClass",
+        "error.failureArea",
+        "error.isTerminal",
+        "error.isRetriable",
+        "environment.collectorVersion",
+        "environment.playerCoreVersion",
+        "environment.sourceRevision",
+        "environment.buildConfiguration"
+      ],
+      "missingEvidence": [],
+      "blockers": [
+        "result.error"
       ]
     }
   ]

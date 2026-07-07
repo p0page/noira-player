@@ -5,19 +5,21 @@
 生成命令：
 
 ```powershell
-dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- materialize-baseline-report-set --manifest docs\qa\playback-quality-reference-manifest.example.json --reports-dir docs\qa\baselines\v0.1-source-only\reports --source-revision 827e4ba --player-core-version NextGenEmby.Core --build-configuration Debug --output docs\qa\baselines\v0.1-source-only\materialized-baseline-summary.json
+dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- materialize-baseline-report-set --manifest docs\qa\playback-quality-reference-manifest.example.json --reports-dir docs\qa\baselines\v0.1-source-only\reports --source-revision efa9246 --player-core-version NextGenEmby.Core --build-configuration Debug --output docs\qa\baselines\v0.1-source-only\materialized-baseline-summary.json
 dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- validate-report-set --manifest docs\qa\playback-quality-reference-manifest.example.json --reports-dir docs\qa\baselines\v0.1-source-only\reports --output docs\qa\baselines\v0.1-source-only\report-set-validation.json
 dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- analyze-report-set --reports-dir docs\qa\baselines\v0.1-source-only\reports --output docs\qa\baselines\v0.1-source-only\report-analysis-summary.json
 ```
 
 结果摘要：
 
-- manifest case 覆盖：8/8。
+- manifest case 覆盖：9/9。
 - report-set validation：`isValid = false`。
 - 缺报告错误：0。
-- 缺失 telemetry 错误：68。
+- matched case 数量：1，来自 `local/missing-file-error-handling` 的一等 `result = error` envelope。
+- 缺失 telemetry 错误：67。
 - 缺失 telemetry failure class：全部为 `insufficient instrumentation`。
 - report-analysis decision：`fix-report-analysis`。
+- report-analysis blockedReportCount：8。
 - report-analysis risk：`high`。
 
 边界：

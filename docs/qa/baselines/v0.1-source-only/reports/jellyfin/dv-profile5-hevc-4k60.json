@@ -12,15 +12,13 @@
     "runId": "jellyfin/dv-profile5-hevc-4k60",
     "result": "fail",
     "failureReasons": [
-      "StartupDurationMs is missing for startup validation.",
-      "ConversionStatus is missing for color-pipeline validation."
+      "StartupDurationMs is missing for startup validation."
     ],
     "analysis": {
-      "primaryFailureArea": "color-pipeline",
-      "suggestedNextAction": "Inspect HDR display switch and DXGI color-space mapping.",
+      "primaryFailureArea": "startup",
+      "suggestedNextAction": "Inspect Emby request, source open, demux initialization, and first-frame readiness.",
       "relevantSignals": [
-        "startup.startupDurationMs",
-        "colorPipeline.conversionStatus"
+        "startup.startupDurationMs"
       ],
       "ignoredSignals": []
     },
@@ -154,22 +152,12 @@
         "expected": "3000.000",
         "actual": "",
         "message": "StartupDurationMs is missing for startup validation."
-      },
-      {
-        "name": "ConversionStatus",
-        "signal": "colorPipeline.conversionStatus",
-        "status": "fail",
-        "failureArea": "color-pipeline",
-        "failureClass": "insufficient instrumentation",
-        "expected": "validated",
-        "actual": "",
-        "message": "ConversionStatus is missing for color-pipeline validation."
       }
     ],
     "environment": {
       "collectorVersion": "materialize-baseline-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "827e4ba",
+      "sourceRevision": "efa9246",
       "buildConfiguration": "Debug"
     },
     "limitations": [
@@ -274,6 +262,16 @@
       ],
       "subtitles": []
     },
+    "error": {
+      "code": "",
+      "message": "",
+      "operation": "",
+      "exceptionType": "",
+      "failureClass": "",
+      "failureArea": "error-handling",
+      "isTerminal": false,
+      "isRetriable": false
+    },
     "timing": {
       "renderPasses": 0,
       "decodedVideoFrames": 0,
@@ -326,8 +324,8 @@
     "analyzerVersion": 1,
     "runId": "jellyfin/dv-profile5-hevc-4k60",
     "result": "fail",
-    "primaryFailureArea": "color-pipeline",
-    "suggestedNextAction": "Inspect HDR display switch and DXGI color-space mapping.",
+    "primaryFailureArea": "startup",
+    "suggestedNextAction": "Inspect Emby request, source open, demux initialization, and first-frame readiness.",
     "startup": {
       "status": "slow",
       "reason": "Startup timing failed expected thresholds.",
@@ -344,7 +342,7 @@
     "environment": {
       "collectorVersion": "materialize-baseline-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "827e4ba",
+      "sourceRevision": "efa9246",
       "buildConfiguration": "Debug",
       "signals": [
         "environment.collectorVersion",
@@ -411,9 +409,19 @@
       ],
       "missingSignals": []
     },
+    "error": {
+      "code": "",
+      "message": "",
+      "operation": "",
+      "exceptionType": "",
+      "failureClass": "",
+      "failureArea": "error-handling",
+      "isTerminal": false,
+      "isRetriable": false
+    },
     "colorPipeline": {
-      "status": "mismatch",
-      "reason": "Color pipeline observations did not match expected output.",
+      "status": "missing-evidence",
+      "reason": "Color pipeline telemetry is missing.",
       "actualHdrOutput": "",
       "swapChainFormat": "",
       "swapChainColorSpace": "",
@@ -423,12 +431,8 @@
       "conversionStatus": "",
       "isVideoProcessorColorSpaceValidated": false,
       "forceSdrOutput": false,
-      "signals": [
-        "colorPipeline.conversionStatus"
-      ],
-      "mismatchedSignals": [
-        "colorPipeline.conversionStatus"
-      ]
+      "signals": [],
+      "mismatchedSignals": []
     },
     "buffering": {
       "status": "missing-evidence",
@@ -492,13 +496,7 @@
       "blockerSignals": [
         "sample.status",
         "timing.renderedVideoFrames",
-        "startup.startupDurationMs",
-        "sync.audioVideoDriftMsP95",
-        "buffers.queuedAudioBuffers",
-        "colorPipeline.dxgiInput",
-        "colorPipeline.conversionStatus",
-        "display.hdrStatus",
-        "display.refreshRateHz"
+        "startup.startupDurationMs"
       ],
       "targetFailureAreas": []
     },
@@ -522,13 +520,7 @@
         "suggestedAction": "Collect missing telemetry before optimizing playback behavior; absent evidence is treated separately from a real playback failure.",
         "signals": [
           "timing.renderedVideoFrames",
-          "startup.startupDurationMs",
-          "sync.audioVideoDriftMsP95",
-          "buffers.queuedAudioBuffers",
-          "colorPipeline.dxgiInput",
-          "colorPipeline.conversionStatus",
-          "display.hdrStatus",
-          "display.refreshRateHz"
+          "startup.startupDurationMs"
         ],
         "codeTargets": [
           "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
@@ -539,27 +531,6 @@
       },
       {
         "rank": 2,
-        "kind": "failure",
-        "failureArea": "color-pipeline",
-        "suggestedAction": "Compare source HDR kind, display HDR state, swapchain format, DXGI input/output color spaces, and conversion validation.",
-        "signals": [
-          "colorPipeline.actualHdrOutput",
-          "colorPipeline.swapChainFormat",
-          "colorPipeline.swapChainColorSpace",
-          "colorPipeline.isTenBitSwapChain",
-          "colorPipeline.dxgiInput",
-          "colorPipeline.dxgiOutput",
-          "colorPipeline.conversionStatus",
-          "display.hdrStatus"
-        ],
-        "codeTargets": [
-          "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
-          "src/NextGenEmby.Native/DxDeviceResources.cpp",
-          "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
-        ]
-      },
-      {
-        "rank": 3,
         "kind": "failure",
         "failureArea": "startup",
         "suggestedAction": "Separate Emby request latency, native open/demux initialization, and first-frame readiness before changing render pacing.",
@@ -576,8 +547,7 @@
       }
     ],
     "failureReasons": [
-      "StartupDurationMs is missing for startup validation.",
-      "ConversionStatus is missing for color-pipeline validation."
+      "StartupDurationMs is missing for startup validation."
     ],
     "failedChecks": [
       {
@@ -589,45 +559,15 @@
         "expected": "3000.000",
         "actual": "",
         "message": "StartupDurationMs is missing for startup validation."
-      },
-      {
-        "name": "ConversionStatus",
-        "signal": "colorPipeline.conversionStatus",
-        "status": "fail",
-        "failureArea": "color-pipeline",
-        "failureClass": "insufficient instrumentation",
-        "expected": "validated",
-        "actual": "",
-        "message": "ConversionStatus is missing for color-pipeline validation."
       }
     ],
     "failureClasses": [
       "insufficient instrumentation"
     ],
     "failureAreas": [
-      "startup",
-      "color-pipeline"
+      "startup"
     ],
     "investigationHints": [
-      {
-        "failureArea": "color-pipeline",
-        "suggestedAction": "Compare source HDR kind, display HDR state, swapchain format, DXGI input/output color spaces, and conversion validation.",
-        "codeTargets": [
-          "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
-          "src/NextGenEmby.Native/DxDeviceResources.cpp",
-          "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
-        ],
-        "signals": [
-          "colorPipeline.actualHdrOutput",
-          "colorPipeline.swapChainFormat",
-          "colorPipeline.swapChainColorSpace",
-          "colorPipeline.isTenBitSwapChain",
-          "colorPipeline.dxgiInput",
-          "colorPipeline.dxgiOutput",
-          "colorPipeline.conversionStatus",
-          "display.hdrStatus"
-        ]
-      },
       {
         "failureArea": "startup",
         "suggestedAction": "Separate Emby request latency, native open/demux initialization, and first-frame readiness before changing render pacing.",
@@ -653,13 +593,7 @@
         ],
         "signals": [
           "timing.renderedVideoFrames",
-          "startup.startupDurationMs",
-          "sync.audioVideoDriftMsP95",
-          "buffers.queuedAudioBuffers",
-          "colorPipeline.dxgiInput",
-          "colorPipeline.conversionStatus",
-          "display.hdrStatus",
-          "display.refreshRateHz"
+          "startup.startupDurationMs"
         ]
       }
     ],
@@ -677,7 +611,6 @@
       "source.hasHlgBaseLayer",
       "source.frameRate",
       "startup.startupDurationMs",
-      "colorPipeline.conversionStatus",
       "environment.collectorVersion",
       "environment.playerCoreVersion",
       "environment.sourceRevision",
@@ -699,13 +632,7 @@
     ],
     "missingEvidence": [
       "timing.renderedVideoFrames",
-      "startup.startupDurationMs",
-      "sync.audioVideoDriftMsP95",
-      "buffers.queuedAudioBuffers",
-      "colorPipeline.dxgiInput",
-      "colorPipeline.conversionStatus",
-      "display.hdrStatus",
-      "display.refreshRateHz"
+      "startup.startupDurationMs"
     ],
     "limitations": [
       "software-only: does not verify actual HDMI InfoFrame output",

@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "isValid": false,
-  "expectedCaseCount": 8,
-  "reportCount": 8,
-  "matchedCaseCount": 0,
+  "expectedCaseCount": 9,
+  "reportCount": 9,
+  "matchedCaseCount": 1,
   "cases": [
     {
       "caseId": "jellyfin/sdr-hevc-main10-1080p60-3m",
@@ -86,8 +86,7 @@
       "reportRunId": "jellyfin/dv-profile5-hevc-4k60",
       "status": "mismatch",
       "signals": [
-        "startup.startupDurationMs",
-        "colorPipeline.conversionStatus"
+        "startup.startupDurationMs"
       ]
     },
     {
@@ -152,6 +151,15 @@
         "colorPipeline.dxgiOutput",
         "colorPipeline.conversionStatus"
       ]
+    },
+    {
+      "caseId": "local/missing-file-error-handling",
+      "category": "stable",
+      "severity": "medium",
+      "stability": "stable",
+      "reportRunId": "local/missing-file-error-handling",
+      "status": "matched",
+      "signals": []
     }
   ],
   "errors": [
@@ -731,23 +739,6 @@
         "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
         "src/NextGenEmby.Native/NativePlaybackEngine.cpp",
         "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
-      ]
-    },
-    {
-      "code": "report.requiredSignal.missing",
-      "caseId": "jellyfin/dv-profile5-hevc-4k60",
-      "reportRunId": "jellyfin/dv-profile5-hevc-4k60",
-      "signal": "colorPipeline.conversionStatus",
-      "expected": "present",
-      "actual": "",
-      "message": "Playback quality report is missing a required telemetry signal.",
-      "failureArea": "color-pipeline",
-      "failureClass": "insufficient instrumentation",
-      "suggestedNextAction": "Collect display HDR state, swapchain format/color space, DXGI mapping, and conversion validation before optimizing color pipeline behavior.",
-      "codeTargets": [
-        "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
-        "src/NextGenEmby.Native/DxDeviceResources.cpp",
-        "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
       ]
     },
     {

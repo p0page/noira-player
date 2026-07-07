@@ -175,7 +175,7 @@
     "environment": {
       "collectorVersion": "materialize-baseline-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "827e4ba",
+      "sourceRevision": "efa9246",
       "buildConfiguration": "Debug"
     },
     "limitations": [
@@ -280,6 +280,16 @@
       ],
       "subtitles": []
     },
+    "error": {
+      "code": "",
+      "message": "",
+      "operation": "",
+      "exceptionType": "",
+      "failureClass": "",
+      "failureArea": "error-handling",
+      "isTerminal": false,
+      "isRetriable": false
+    },
     "timing": {
       "renderPasses": 0,
       "decodedVideoFrames": 0,
@@ -350,7 +360,7 @@
     "environment": {
       "collectorVersion": "materialize-baseline-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "827e4ba",
+      "sourceRevision": "efa9246",
       "buildConfiguration": "Debug",
       "signals": [
         "environment.collectorVersion",
@@ -415,6 +425,16 @@
         "tracks.audio.codec"
       ],
       "missingSignals": []
+    },
+    "error": {
+      "code": "",
+      "message": "",
+      "operation": "",
+      "exceptionType": "",
+      "failureClass": "",
+      "failureArea": "error-handling",
+      "isTerminal": false,
+      "isRetriable": false
     },
     "colorPipeline": {
       "status": "mismatch",

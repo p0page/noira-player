@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "isValid": true,
-  "expectedCaseCount": 8,
-  "reportCount": 8,
-  "matchedCaseCount": 8,
+  "expectedCaseCount": 9,
+  "reportCount": 9,
+  "matchedCaseCount": 9,
   "cases": [
     {
       "caseId": "jellyfin/sdr-hevc-main10-1080p60-3m",
@@ -74,6 +74,15 @@
       "severity": "high",
       "stability": "unknown",
       "reportRunId": "local/sdr-resume-seek-timeline",
+      "status": "matched",
+      "signals": []
+    },
+    {
+      "caseId": "local/missing-file-error-handling",
+      "category": "stable",
+      "severity": "medium",
+      "stability": "stable",
+      "reportRunId": "local/missing-file-error-handling",
       "status": "matched",
       "signals": []
     }

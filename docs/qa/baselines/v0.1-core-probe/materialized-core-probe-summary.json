@@ -1,17 +1,17 @@
 {
   "schemaVersion": 1,
-  "caseCount": 8,
+  "caseCount": 9,
   "reportsDirectory": "docs\\qa\\baselines\\v0.1-core-probe\\reports",
   "environment": {
     "collectorVersion": "materialize-core-probe-report-set-v1",
     "playerCoreVersion": "NextGenEmby.Core",
-    "sourceRevision": "fb7452f\u002Bworking-tree",
+    "sourceRevision": "efa9246",
     "buildConfiguration": "Debug"
   },
   "manifestValidation": {
     "schemaVersion": 1,
     "isValid": true,
-    "caseCount": 8,
+    "caseCount": 9,
     "coverage": {
       "status": "ready",
       "isCoreEvaluationReady": true,
@@ -28,7 +28,8 @@
         "buffering",
         "timeline",
         "tracks",
-        "subtitles"
+        "subtitles",
+        "error-handling"
       ],
       "coveredPurposes": [
         "sdr-smoke",
@@ -42,7 +43,8 @@
         "buffering",
         "timeline",
         "tracks",
-        "subtitles"
+        "subtitles",
+        "error-handling"
       ],
       "missingPurposes": [],
       "reasons": [
@@ -67,7 +69,8 @@
       "dv-fallback",
       "cadence-23.976",
       "frame-pacing",
-      "timeline"
+      "timeline",
+      "error-handling"
     ],
     "categories": [
       "stable",
@@ -446,6 +449,51 @@
           "maxVideoStarvedPasses": 0,
           "maxAudioStarvedPasses": 0,
           "requireValidatedConversion": true,
+          "requireMatchedDisplayRefreshRate": false
+        }
+      },
+      {
+        "caseId": "local/missing-file-error-handling",
+        "category": "stable",
+        "severity": "medium",
+        "stability": "stable",
+        "uri": "emby://quality-cases/missing-file-error-handling",
+        "itemId": "quality-case-missing-file-error-handling",
+        "mediaSourceId": "quality-source-missing-file-error-handling",
+        "startPositionTicks": 0,
+        "forceSdrOutput": false,
+        "tier": 1,
+        "purpose": [
+          "error-handling"
+        ],
+        "expected": {
+          "codec": "hevc",
+          "width": 1920,
+          "height": 1080,
+          "frameRate": 60,
+          "hdrKind": "Sdr",
+          "hdrPlaybackStrategy": "",
+          "isHdr": false,
+          "isDirectPlayable": true,
+          "isDolbyVision": null,
+          "dolbyVisionProfile": null,
+          "dolbyVisionCompatibilityId": null,
+          "hasHdr10BaseLayer": null,
+          "hasHlgBaseLayer": null,
+          "hdrOutput": "Sdr",
+          "dxgiInput": "YCBCR_STUDIO_G22_LEFT_P709",
+          "dxgiOutput": "RGB_FULL_G22_NONE_P709",
+          "maxStartupDurationMs": null,
+          "minRenderedVideoFrames": null,
+          "maxDroppedFrames": null,
+          "maxFrameGapMs": null,
+          "maxRenderIntervalMsP95": null,
+          "maxRenderIntervalMsP99": null,
+          "maxAudioVideoDriftMsP95": null,
+          "maxSeekPositionErrorMs": null,
+          "maxVideoStarvedPasses": null,
+          "maxAudioStarvedPasses": null,
+          "requireValidatedConversion": false,
           "requireMatchedDisplayRefreshRate": false
         }
       }
@@ -958,6 +1006,40 @@
       "missingEvidence": [],
       "blockers": [
         "result.pass"
+      ]
+    },
+    {
+      "caseId": "local/missing-file-error-handling",
+      "category": "stable",
+      "severity": "medium",
+      "stability": "stable",
+      "status": "error",
+      "reportRelativePath": "local/missing-file-error-handling.json",
+      "reportPath": "docs\\qa\\baselines\\v0.1-core-probe\\reports\\local/missing-file-error-handling.json",
+      "primaryFailureArea": "error-handling",
+      "failureAreas": [
+        "error-handling"
+      ],
+      "failureClasses": [
+        "sample issue"
+      ],
+      "evidenceSignals": [
+        "error.code",
+        "error.message",
+        "error.operation",
+        "error.exceptionType",
+        "error.failureClass",
+        "error.failureArea",
+        "error.isTerminal",
+        "error.isRetriable",
+        "environment.collectorVersion",
+        "environment.playerCoreVersion",
+        "environment.sourceRevision",
+        "environment.buildConfiguration"
+      ],
+      "missingEvidence": [],
+      "blockers": [
+        "result.error"
       ]
     }
   ]
