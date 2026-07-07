@@ -46,6 +46,12 @@ namespace NextGenEmby.Core.PlaybackQuality
         public string Actual { get; set; } = "";
 
         public string Message { get; set; } = "";
+
+        public string FailureArea { get; set; } = "";
+
+        public string SuggestedNextAction { get; set; } = "";
+
+        public List<string> CodeTargets { get; } = new List<string>();
     }
 
     public sealed class PlaybackQualityReferenceReportSetEntry
@@ -507,7 +513,8 @@ namespace NextGenEmby.Core.PlaybackQuality
             string actual,
             string message)
         {
-            validation.Errors.Add(new PlaybackQualityReferenceReportSetError
+            var triage = CreateSignalTriage(signal);
+            var error = new PlaybackQualityReferenceReportSetError
             {
                 Code = code,
                 CaseId = caseId,
@@ -515,8 +522,135 @@ namespace NextGenEmby.Core.PlaybackQuality
                 Signal = signal,
                 Expected = expected,
                 Actual = actual,
-                Message = message
-            });
+                Message = message,
+                FailureArea = triage.FailureArea,
+                SuggestedNextAction = triage.SuggestedNextAction
+            };
+            foreach (var target in triage.CodeTargets)
+            {
+                AddUnique(error.CodeTargets, target);
+            }
+
+            validation.Errors.Add(error);
+        }
+
+        private static PlaybackQualityReportSetSignalTriage CreateSignalTriage(string signal)
+        {
+            if (StartsWithSignal(signal, "source."))
+            {
+                return NewTriage(
+                    "unsupported-source",
+                    "Verify media source selection, codec support, HDR/Dolby Vision classification, and fallback policy before tuning playback timing.",
+                    new[]
+                    {
+                        "src/NextGenEmby.Core/Playback/PlaybackOrchestrator.cs",
+                        "src/NextGenEmby.Core/Playback/HdrPlaybackProfileClassifier.cs",
+                        "src/NextGenEmby.Core/Emby"
+                    });
+            }
+
+            if (StartsWithSignal(signal, "startup."))
+            {
+                return NewTriage(
+                    "startup",
+                    "Separate Emby request latency, native open/demux initialization, and first-frame readiness before changing render pacing.",
+                    new[]
+                    {
+                        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+                        "src/NextGenEmby.Native/NativePlaybackEngine.cpp",
+                        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+                    });
+            }
+
+            if (StartsWithSignal(signal, "timing.") ||
+                string.Equals(signal, "display.refreshRateHz", StringComparison.Ordinal))
+            {
+                return NewTriage(
+                    "frame-pacing",
+                    "Collect render intervals, frame gaps, source/display cadence, and wait/drop threshold evidence before changing frame pacing behavior.",
+                    new[]
+                    {
+                        "src/NextGenEmby.Native/Media/FramePacing.h",
+                        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp",
+                        "src/NextGenEmby.Native/HdrDisplayController.cpp",
+                        "src/NextGenEmby.Core/PlaybackQuality/PlaybackRefreshRatePolicy.cs"
+                    });
+            }
+
+            if (StartsWithSignal(signal, "sync."))
+            {
+                return NewTriage(
+                    "av-sync",
+                    "Inspect XAudio clock derivation, queued buffer depth, video PTS comparison, and audio-wait policy.",
+                    new[]
+                    {
+                        "src/NextGenEmby.Native/Media/AudioRenderer.cpp",
+                        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp",
+                        "src/NextGenEmby.Native/Media/FramePacing.h"
+                    });
+            }
+
+            if (StartsWithSignal(signal, "buffers."))
+            {
+                return NewTriage(
+                    "buffering",
+                    "Inspect demux, network, decode starvation, and audio queue depth before changing frame drop thresholds.",
+                    new[]
+                    {
+                        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp",
+                        "src/NextGenEmby.Native/Media/VideoDecoder.cpp",
+                        "src/NextGenEmby.Native/Media/AudioDecoder.cpp"
+                    });
+            }
+
+            if (StartsWithSignal(signal, "colorPipeline.") ||
+                string.Equals(signal, "display.hdrStatus", StringComparison.Ordinal))
+            {
+                return NewTriage(
+                    "color-pipeline",
+                    "Collect display HDR state, swapchain format/color space, DXGI mapping, and conversion validation before optimizing color pipeline behavior.",
+                    new[]
+                    {
+                        "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
+                        "src/NextGenEmby.Native/DxDeviceResources.cpp",
+                        "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
+                    });
+            }
+
+            return NewTriage(
+                "evidence-collection",
+                "Collect missing telemetry before optimizing playback behavior; absent evidence is separate from a real playback failure.",
+                new[]
+                {
+                    "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+                    "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+                    "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
+                    "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+                });
+        }
+
+        private static bool StartsWithSignal(string signal, string prefix)
+        {
+            return !string.IsNullOrWhiteSpace(signal) &&
+                signal.StartsWith(prefix, StringComparison.Ordinal);
+        }
+
+        private static PlaybackQualityReportSetSignalTriage NewTriage(
+            string failureArea,
+            string suggestedNextAction,
+            string[] codeTargets)
+        {
+            var triage = new PlaybackQualityReportSetSignalTriage
+            {
+                FailureArea = failureArea,
+                SuggestedNextAction = suggestedNextAction
+            };
+            foreach (var target in codeTargets)
+            {
+                triage.CodeTargets.Add(target);
+            }
+
+            return triage;
         }
 
         private static void AddUnique(List<string> values, string value)
@@ -526,5 +660,14 @@ namespace NextGenEmby.Core.PlaybackQuality
                 values.Add(value);
             }
         }
+    }
+
+    internal sealed class PlaybackQualityReportSetSignalTriage
+    {
+        public string FailureArea { get; set; } = "";
+
+        public string SuggestedNextAction { get; set; } = "";
+
+        public List<string> CodeTargets { get; } = new List<string>();
     }
 }

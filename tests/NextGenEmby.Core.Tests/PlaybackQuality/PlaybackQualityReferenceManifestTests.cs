@@ -542,6 +542,40 @@ public sealed class PlaybackQualityReferenceManifestTests
     }
 
     [Fact]
+    public void ValidateReportSet_Annotates_Missing_Signals_With_Model_Triage_Targets()
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        var referenceCase = CreateCase(
+            "jellyfin/hdr10-4k-missing-display-state",
+            tier: 1,
+            purpose: "hdr-output");
+        referenceCase.Expected.HdrOutput = "Hdr10";
+        manifest.Cases.Add(referenceCase);
+        var report = CreateReport(
+            "jellyfin/hdr10-4k-missing-display-state",
+            codec: "hevc",
+            width: 3840,
+            height: 2160,
+            frameRate: 23.976,
+            hdrKind: "Hdr10");
+
+        var validation = PlaybackQualityReferenceReportSetValidator.Validate(
+            manifest,
+            new[] { report });
+        var error = validation.Errors.Single(item =>
+            item.Code == "report.requiredSignal.missing" &&
+            item.Signal == "display.hdrStatus");
+
+        Assert.Equal("color-pipeline", error.FailureArea);
+        Assert.Contains(
+            "src/NextGenEmby.Native/DxDeviceResources.cpp",
+            error.CodeTargets);
+        Assert.Contains(
+            "display HDR state",
+            error.SuggestedNextAction);
+    }
+
+    [Fact]
     public void ValidateReportSet_Accepts_Explicit_Zero_Required_Counters_When_Signal_Presence_Is_Captured()
     {
         var manifest = new PlaybackQualityReferenceManifest();

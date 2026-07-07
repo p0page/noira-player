@@ -648,9 +648,11 @@ try {
     if (-not ($missingSignalReportSetValidation.errors | Where-Object {
         $_.code -eq 'report.requiredSignal.missing' -and
         $_.caseId -eq 'netflix/chimera-4k-2398-hdr-pq' -and
-        $_.signal -eq 'display.refreshRateHz'
+        $_.signal -eq 'display.refreshRateHz' -and
+        $_.failureArea -eq 'frame-pacing' -and
+        ($_.codeTargets -contains 'src/NextGenEmby.Native/Media/FramePacing.h')
     })) {
-        throw 'Expected playback quality CLI validate-report-set missing telemetry output to include missing display refresh evidence.'
+        throw 'Expected playback quality CLI validate-report-set missing telemetry output to include triaged display refresh evidence.'
     }
 
     @'

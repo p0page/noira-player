@@ -140,7 +140,7 @@ After reports are captured, validate that the report set covers the manifest bef
 dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- validate-report-set --manifest docs\qa\playback-quality-reference-manifest.example.json --reports-dir captured-reports --output report-set-validation.json
 ```
 
-report-set gate 会按 `report.runId` 匹配 manifest `caseId`，拒绝缺失 case、额外报告、重复 runId、source metadata 不匹配以及 case 级 `requiredSignals` 缺失。缺失 telemetry 会输出为 `report.requiredSignal.missing`，并带上精确的 `signal` 和 `caseId`。CLI 会保留 JSON 字段 presence，所以显式写出的 0 counter（例如 `videoStarvedPasses: 0`）会被视为已采集，字段不存在才会被视为缺证据。运行 `compare-suite` 前必须先跑这个 gate；report set 不匹配 manifest 或缺少必要 telemetry 都属于证据采集失败，不是播放 Core 优化证据。
+report-set gate 会按 `report.runId` 匹配 manifest `caseId`，拒绝缺失 case、额外报告、重复 runId、source metadata 不匹配以及 case 级 `requiredSignals` 缺失。缺失 telemetry 会输出为 `report.requiredSignal.missing`，并带上精确的 `signal`、`caseId`、`failureArea`、`suggestedNextAction` 和 `codeTargets`。CLI 会保留 JSON 字段 presence，所以显式写出的 0 counter（例如 `videoStarvedPasses: 0`）会被视为已采集，字段不存在才会被视为缺证据。运行 `compare-suite` 前必须先跑这个 gate；report set 不匹配 manifest 或缺少必要 telemetry 都属于证据采集失败，不是播放 Core 优化证据。
 
 ## 单报告分析
 
