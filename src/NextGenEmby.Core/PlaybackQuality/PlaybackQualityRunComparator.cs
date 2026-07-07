@@ -499,6 +499,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                 AddUnique(
                     comparison.Optimization.Reasons,
                     "weak comparison confidence blocks playback Core optimization");
+                AddComparabilityBlocker(comparison);
                 AddEnvironmentIdentityBlocker(comparison);
                 CopyValues(comparison.Confidence.Reasons, comparison.Optimization.Blockers);
                 CopyValues(comparison.Confidence.Signals, comparison.Optimization.Signals);
@@ -512,6 +513,15 @@ namespace NextGenEmby.Core.PlaybackQuality
             }
 
             ApplyStrongConfidenceOptimization(comparison);
+        }
+
+        private static void AddComparabilityBlocker(
+            PlaybackQualityRunComparison comparison)
+        {
+            if (comparison.Comparability.Status == "incompatible")
+            {
+                AddUnique(comparison.Optimization.Blockers, "comparison.incompatible-inputs");
+            }
         }
 
         private static void AddEnvironmentIdentityBlocker(

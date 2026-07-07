@@ -17,6 +17,8 @@ try {
     $analysisStaleEnvelopeSetDir = Join-Path $tempRoot 'analysis-stale-envelope-report-set'
     $analysisStaleEnvelopeSetPath = Join-Path $tempRoot 'analysis-stale-envelope-report-set.json'
     $outputPath = Join-Path $tempRoot 'comparison.json'
+    $incompatibleCandidatePath = Join-Path $tempRoot 'candidate-incompatible-source.json'
+    $incompatibleOutputPath = Join-Path $tempRoot 'comparison-incompatible-source.json'
     $envelopeOutputPath = Join-Path $tempRoot 'comparison-envelope.json'
     $suitePath = Join-Path $tempRoot 'suite.json'
     $baselineDir = Join-Path $tempRoot 'baseline-suite'
@@ -857,6 +859,40 @@ try {
 
     if (-not ($comparison.improvements | Where-Object { $_.signal -eq 'timing.maxFrameGapMs' })) {
         throw 'Expected playback quality CLI comparison to include timing.maxFrameGapMs improvement.'
+    }
+
+    $incompatibleCandidate = Get-Content -Raw -LiteralPath $candidatePath | ConvertFrom-Json
+    $incompatibleCandidate.source.mediaSourceId = 'source-2'
+    $incompatibleCandidate | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $incompatibleCandidatePath -Encoding UTF8
+
+    Push-Location $repoRoot
+    try {
+        dotnet run `
+            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
+            --no-build `
+            -- compare `
+            --baseline $baselinePath `
+            --candidate $incompatibleCandidatePath `
+            --output $incompatibleOutputPath
+        if ($LASTEXITCODE -ne 0) {
+            throw 'playback quality CLI incompatible comparison returned a non-zero exit code.'
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    $incompatibleComparison = Get-Content -Raw -LiteralPath $incompatibleOutputPath | ConvertFrom-Json
+    if ($incompatibleComparison.result -ne 'insufficient-evidence') {
+        throw 'Expected playback quality CLI incompatible comparison to be insufficient evidence.'
+    }
+
+    if (-not ($incompatibleComparison.optimization.blockers -contains 'comparison.incompatible-inputs')) {
+        throw 'Expected incompatible comparison output to include machine-readable incompatibility blocker.'
+    }
+
+    if (-not ($incompatibleComparison.optimization.signals -contains 'source.mediaSourceId')) {
+        throw 'Expected incompatible comparison output to include mismatched source signal.'
     }
 
     Push-Location $repoRoot

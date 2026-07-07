@@ -479,6 +479,7 @@ public sealed class PlaybackQualityRunComparatorTests
         Assert.Equal("collect-comparable-evidence", comparison.Optimization.Action);
         Assert.Equal("high", comparison.Optimization.Risk);
         Assert.Contains("weak comparison confidence blocks playback Core optimization", comparison.Optimization.Reasons);
+        Assert.Contains("comparison.incompatible-inputs", comparison.Optimization.Blockers);
         Assert.Contains("comparison inputs are incompatible", comparison.Optimization.Blockers);
         Assert.Contains("source.mediaSourceId", comparison.Optimization.Signals);
     }
