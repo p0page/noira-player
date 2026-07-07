@@ -56,6 +56,8 @@ namespace NextGenEmby.App.Views
             Unloaded += HomePage_OnUnloaded;
             HeroPlayButton.GotFocus += HomeFocusTarget_OnGotFocus;
             HeroDetailsButton.GotFocus += HomeFocusTarget_OnGotFocus;
+            ApplyHomeCommandButtonFocusTreatment(HeroPlayButton);
+            ApplyHomeCommandButtonFocusTreatment(HeroDetailsButton);
         }
 
         protected override void OnNavigatedTo(NavigationEventArgs e)
@@ -181,6 +183,49 @@ namespace NextGenEmby.App.Views
 
             focusChrome.Background = (Brush)Application.Current.Resources[
                 isFocused ? "AppFocusedCardFillBrush" : "AppTransparentBrush"];
+        }
+
+        private void ApplyHomeCommandButtonFocusTreatment(Button button)
+        {
+            button.UseSystemFocusVisuals = false;
+            ApplyHomeCommandButtonMatteFocus(button, isFocused: false);
+            button.GotFocus += HomeCommandButton_OnGotFocus;
+            button.LostFocus += HomeCommandButton_OnLostFocus;
+        }
+
+        private void HomeCommandButton_OnGotFocus(object sender, RoutedEventArgs e)
+        {
+            ApplyHomeCommandButtonMatteFocus(sender as Button, isFocused: true);
+        }
+
+        private void HomeCommandButton_OnLostFocus(object sender, RoutedEventArgs e)
+        {
+            ApplyHomeCommandButtonMatteFocus(sender as Button, isFocused: false);
+        }
+
+        private void ApplyHomeCommandButtonMatteFocus(Button? button, bool isFocused)
+        {
+            if (button == null)
+            {
+                return;
+            }
+
+            if (isFocused)
+            {
+                button.Background = (Brush)Application.Current.Resources["AppFocusedCardFillBrush"];
+                button.BorderBrush = (Brush)Application.Current.Resources["AppTransparentBrush"];
+                return;
+            }
+
+            if (button == HeroPlayButton)
+            {
+                button.Background = (Brush)Application.Current.Resources["AppActionBrush"];
+                button.BorderBrush = (Brush)Application.Current.Resources["AppActionBrush"];
+                return;
+            }
+
+            button.Background = (Brush)Application.Current.Resources["AppChromeBrush"];
+            button.BorderBrush = (Brush)Application.Current.Resources["AppHairlineBrush"];
         }
 
         private static T? FindNamedDescendant<T>(DependencyObject? root, string name)

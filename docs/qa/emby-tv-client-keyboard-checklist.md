@@ -2187,3 +2187,66 @@ Fix rerun findings:
 - Decision:
   - Commit this batch as the shared Library/Search/Movies poster-grid and fixture-artwork correction.
   - Next design-conformance batch should target Home first viewport/top composition and command-sheet option focus, rather than broadening this commit further.
+
+### 2026-07-08 - Design Conformance Batch 02 Follow-Up Home Top And Command Sheets Baseline
+
+- App version: 0.1.0.211.
+- Scope: run the deferred Home first-viewport/top-composition issue and the lower-severity command-sheet option-focus issue before fixing either one.
+- Data source: DEBUG fixtures only; no private server data or personal media assets.
+- Screenshot set: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch03-baseline-20260708-014441`.
+- Keyboard-only validation:
+  - `home-fixture`: launch succeeded, `dev-command-result.txt` reported `completed / home-fixture`.
+  - Captured Home initial focus, Guide-open state, first rail focus, and resume-row focus.
+  - `movies-fixture`: launch succeeded, `dev-command-result.txt` reported `completed / movies-fixture`.
+  - Pressed `Up` from the movie grid to focus Sort, `Enter` to open Sort sheet, `Escape`, `Right` to Filter, and `Enter` to open Filter sheet.
+
+Findings recorded before fixes:
+
+| ID | Severity | Page | Evidence | Expected | Actual | Proposed batch fix |
+| --- | --- | --- | --- | --- | --- | --- |
+| DC-02F.01 | Fail | Home first viewport | `home-initial.png` shows a large framed Continue Watching decision surface with a complete hairline perimeter and a bright left active edge. | Home should be a rail-first personal media dashboard. A hero/continue decision can exist, but it must be compact, unframed, and leave the first rail as the dominant first-viewport structure. | The top surface still reads as a dashboard module. It makes Continue Watching look like a one-item hero promo even though Continue Watching is also a rail concept. | Remove the full framed hero container and bright active edge. Convert the top decision into an unframed compact feature strip, then let Media Libraries / source rails carry the first viewport. |
+| DC-02F.02 | Concern | Home Guide over content | `home-guide.png` shows Guide focus is matte and readable, but the large framed Home top surface remains visible behind it and competes with the opened guide. | Guide should remain quiet and source-aware while content remains primary. Underlying Home content should not expose a second strong frame competing with the guide. | Guide treatment is acceptable, but the Home top frame makes the composition feel heavier than the current design system intends. | Fix with the same Home top-composition change as DC-02F.01 rather than changing Guide behavior. |
+| DC-02F.03 | Fail | Movies Sort / Filter sheets | `movies-sort-sheet.png`, `movies-filter-sheet.png`, and `movies-filter-sheet-down.png` show the sheet as a large bottom panel whose option area is pushed too low in the viewport; source inspection from Batch 02 already showed option focus using system-like outline treatment. | Command sheets should be grounded matte panels with visible options and matte command focus. They should not feel like floating glass, bright focus frames, or clipped bottom drawers. | The sheet is matte, but its vertical placement and option visibility are weak at 1600x900. The option focus recipe is not yet promoted to the shared matte command style. | Rework the Library option sheet presenter to sit higher with a fixed visible content area and shared matte option-button focus. |
+| DC-02F.04 | Concern | Movies toolbar controls | `movies-toolbar-sort-focus.png` and `movies-toolbar-filter-focus.png` show toolbar controls are quiet enough, but still look like generic bordered command boxes rather than the final matte command recipe. | Toolbar controls may use subtle hairline structure, but focused state should be fill/luminance first with no bright edge as the default cue. | Usable and lower priority than the sheet; the control shape is close but not fully aligned with the command-focus vocabulary. | Align toolbar focus tokens while touching the sheet styles, if it can be done through shared resources without broad page churn. |
+
+- Decision:
+  - Fix Home top composition and Library command sheets as one visual-system batch.
+  - Do not change Guide behavior in this batch; the guide issue is secondary to the underlying Home frame.
+  - Keep media-card poster focus unchanged from Batch 02 unless a shared resource forces a small adjustment.
+
+### 2026-07-08 - Design Conformance Batch 02 Follow-Up Home Top And Command Sheets Fix Rerun
+
+- App version: 0.1.0.213.
+- Scope: rerun the Home top-composition and Library command-sheet checks after source-level fixes.
+- Data source: DEBUG fixtures only; no private server data or personal media assets.
+- Screenshot set: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch02-followup-rerun-20260708-020356`.
+- Implementation note:
+  - A first rerun on app version 0.1.0.212 corrected the oversized Home frame, but exposed clipped Home command buttons at the bottom of the top feature strip.
+  - App version 0.1.0.213 increased the compact Home strip height and tightened inner spacing so the Play and Details commands fit without restoring the old framed hero module.
+- Keyboard-only validation:
+  - `home-fixture`: launch succeeded and produced Home initial, first-rail-focus, resume-focus, and guide screenshots.
+  - `movies-fixture`: launch succeeded and produced Sort sheet, Filter sheet, and option-focus screenshots.
+  - Sort and Filter sheets were opened with keyboard focus movement only (`Up`, `Enter`, `Escape`, `Right`, `Enter`, then arrow movement inside the sheet).
+
+Fix rerun findings:
+
+| ID | Result | Page | Evidence | Outcome | Residual risk |
+| --- | --- | --- | --- | --- | --- |
+| DC-02F.01 | Pass with concern | Home first viewport | `home-initial.png` and `home-first-rail-focus.png`. | The top Continue Watching decision is now an unframed compact feature strip. The previous complete hairline perimeter and bright left active edge are gone, and the first rail reads as the main Home structure. | The feature strip is still a single-item decision area. That is acceptable for this batch, but future real-data runs should confirm it does not compete with populated Continue Watching rails. |
+| DC-02F.02 | Pass | Home Guide over content | `home-guide.png`. | Guide behavior did not need to change. Removing the large underlying Home frame makes the opened Guide feel less visually contested. | None specific to this batch. |
+| DC-02F.03 | Pass | Movies Sort / Filter sheets | `movies-sort-sheet.png`, `movies-filter-sheet.png`, and `movies-filter-sheet-down.png`. | Sort and Filter now use a top-positioned matte sheet with visible options and a fill-first focus treatment. The sheet no longer behaves like a large bottom drawer, and option focus no longer depends on a bright outline. | The current sheet width is intentionally generous for TV readability; future longer option labels should be checked against localized strings. |
+| DC-02F.04 | Pass with concern | Movies toolbar controls | `movies-toolbar-sort-focus.png` and `movies-toolbar-filter-focus.png`. | Sort and Filter toolbar commands now use the shared matte command treatment. Resting hairlines remain subtle enough to define hit targets without becoming the focus cue. | This is acceptable for keyboard/controller use, but native Xbox focus rendering may still need per-platform tuning if WinUI adds unexpected focus visuals. |
+
+- Source-level contracts:
+  - Added a Home source test that requires the compact unframed top feature strip and rejects the removed accent-edge resources.
+  - Added a Library source test that requires shared matte command styles, top-positioned option sheets, and no old bottom-drawer alignment.
+- Verification:
+  - Targeted design source tests were first run red against the baseline, then green after implementation.
+  - `dotnet test tests\NextGenEmby.Core.Tests\NextGenEmby.Core.Tests.csproj --filter "FullyQualifiedName~HomeAccessibilitySourceTests|FullyQualifiedName~LibraryPageSourceTests"`: passed, 21 tests.
+  - `dotnet test tests\NextGenEmby.Core.Tests\NextGenEmby.Core.Tests.csproj --filter "FullyQualifiedName~Design"`: passed, 66 tests.
+  - `dotnet test tests\NextGenEmby.Core.Tests\NextGenEmby.Core.Tests.csproj`: passed, 474 tests.
+  - `MSBuild.exe NextGenXboxEmby.sln /p:Configuration=Debug /p:Platform=x64 /m`: passed, 0 warnings and 0 errors.
+  - Signed and installed `NextGenEmby.App_0.1.0.213_x64_Debug.msix`; installed app version query returned 0.1.0.213.
+- Decision:
+  - Commit this batch as the Home top-composition and Library command-sheet focus correction.
+  - Next design-conformance batch can move to the detail/playback surfaces or broader native Xbox focus tuning, depending on which screen development consumes first.

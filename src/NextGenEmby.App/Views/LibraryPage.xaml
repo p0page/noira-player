@@ -56,7 +56,8 @@
                         AutomationProperties.Name="Sort"
                         HorizontalAlignment="Stretch"
                         HorizontalContentAlignment="Stretch"
-                        Click="SortButton_OnClick">
+                        Click="SortButton_OnClick"
+                        Style="{StaticResource TvCommandButtonStyle}">
                         <Grid ColumnSpacing="12">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
@@ -85,7 +86,8 @@
                         AutomationProperties.Name="Filter"
                         HorizontalAlignment="Stretch"
                         HorizontalContentAlignment="Stretch"
-                        Click="FilterButton_OnClick">
+                        Click="FilterButton_OnClick"
+                        Style="{StaticResource TvCommandButtonStyle}">
                         <Grid ColumnSpacing="12">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
@@ -219,14 +221,20 @@
             <Grid Margin="{StaticResource TvPageMargin}">
                 <Border
                     HorizontalAlignment="Center"
-                    VerticalAlignment="Bottom"
-                    Width="720"
+                    VerticalAlignment="Top"
+                    Width="{StaticResource TvLibraryOptionSheetWidth}"
+                    MaxHeight="{StaticResource TvLibraryOptionSheetMaxHeight}"
+                    Margin="{StaticResource TvLibraryOptionSheetMargin}"
                     Background="{StaticResource AppSurfaceBrush}"
                     BorderBrush="{StaticResource AppHairlineBrush}"
                     BorderThickness="1"
                     CornerRadius="8"
-                    Padding="28">
-                    <StackPanel Spacing="16">
+                    Padding="{StaticResource TvLibraryOptionSheetPadding}">
+                    <Grid RowSpacing="16">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
                         <StackPanel Spacing="4">
                             <TextBlock
                                 x:Name="OptionSheetTitleBlock"
@@ -240,10 +248,15 @@
                                 Text="Choose an option" />
                         </StackPanel>
 
-                        <StackPanel
-                            x:Name="OptionSheetOptionsPanel"
-                            Spacing="10" />
-                    </StackPanel>
+                        <ScrollViewer
+                            Grid.Row="1"
+                            VerticalScrollBarVisibility="Hidden"
+                            VerticalScrollMode="Enabled">
+                            <StackPanel
+                                x:Name="OptionSheetOptionsPanel"
+                                Spacing="10" />
+                        </ScrollViewer>
+                    </Grid>
                 </Border>
             </Grid>
         </Grid>

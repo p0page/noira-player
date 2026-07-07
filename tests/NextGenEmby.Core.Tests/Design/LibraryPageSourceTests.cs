@@ -90,6 +90,28 @@ public sealed class LibraryPageSourceTests
     }
 
     [Fact]
+    public void Library_Option_Sheet_Uses_Matte_Command_Structure()
+    {
+        var appXaml = ReadAppSource("App.xaml");
+        var pageXaml = ReadAppSource("Views", "LibraryPage.xaml");
+        var source = ReadAppSource("Views", "LibraryPage.xaml.cs");
+
+        Assert.Contains("x:Key=\"TvCommandButtonStyle\"", appXaml);
+        Assert.Contains("x:Key=\"TvLibraryOptionSheetOptionButtonStyle\"", appXaml);
+        Assert.Contains("x:Key=\"TvLibraryOptionSheetWidth\"", appXaml);
+        Assert.Contains("x:Key=\"TvLibraryOptionSheetMargin\"", appXaml);
+        Assert.Contains("Style=\"{StaticResource TvCommandButtonStyle}\"", pageXaml);
+        Assert.Contains("Width=\"{StaticResource TvLibraryOptionSheetWidth}\"", pageXaml);
+        Assert.Contains("Margin=\"{StaticResource TvLibraryOptionSheetMargin}\"", pageXaml);
+        Assert.Contains("VerticalAlignment=\"Top\"", pageXaml);
+        Assert.DoesNotContain("VerticalAlignment=\"Bottom\"", pageXaml);
+        Assert.Contains("Style = (Style)Application.Current.Resources[\"TvLibraryOptionSheetOptionButtonStyle\"]", source);
+        Assert.Contains("button.UseSystemFocusVisuals = false;", source);
+        Assert.Contains("isPreview ? BrushResource(\"AppFocusedCardFillBrush\") : BrushResource(\"AppChromeBrush\")", source);
+        Assert.DoesNotContain("isPreview ? BrushResource(\"AppAccentBrush\") : BrushResource(\"AppHairlineBrush\")", source);
+    }
+
+    [Fact]
     public void Library_Page_Passes_Development_Photo_Uri_To_Photo_Viewer()
     {
         var source = ReadAppSource("Views", "LibraryPage.xaml.cs");

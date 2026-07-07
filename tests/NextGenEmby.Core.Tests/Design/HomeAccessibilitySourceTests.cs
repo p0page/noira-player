@@ -92,6 +92,25 @@ public sealed class HomeAccessibilitySourceTests
     }
 
     [Fact]
+    public void Home_Top_Decision_Surface_Is_Compact_And_Unframed()
+    {
+        var root = FindRepositoryRoot();
+        var appXaml = File.ReadAllText(Path.Combine(root, "src", "NextGenEmby.App", "App.xaml"));
+        var homeXaml = File.ReadAllText(Path.Combine(root, "src", "NextGenEmby.App", "Views", "HomePage.xaml"));
+
+        Assert.Contains("<x:Double x:Key=\"TvHomeHeroHeight\">196</x:Double>", appXaml);
+        Assert.Contains("<x:Double x:Key=\"TvHomeHeroContentSpacing\">8</x:Double>", appXaml);
+        Assert.Contains("x:Name=\"HomeFeatureStrip\"", homeXaml);
+        Assert.Contains("Background=\"{StaticResource AppTransparentBrush}\"", homeXaml);
+        Assert.DoesNotContain("TvHomeHeroAccentWidth", appXaml);
+        Assert.DoesNotContain("TvHomeHeroAccentMargin", appXaml);
+        Assert.DoesNotContain("TvHomeHeroAccentCornerRadius", appXaml);
+        Assert.DoesNotContain("TvHomeHeroAccentWidth", homeXaml);
+        Assert.DoesNotContain("TvHomeHeroAccentMargin", homeXaml);
+        Assert.DoesNotContain("Background=\"{StaticResource AppAccentBrush}\"", homeXaml);
+    }
+
+    [Fact]
     public void Home_Xaml_Renders_Server_Sections_As_Dedicated_Rail()
     {
         var xaml = File.ReadAllText(Path.Combine(

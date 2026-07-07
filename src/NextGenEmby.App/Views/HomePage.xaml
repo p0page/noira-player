@@ -39,10 +39,9 @@
                 </Grid>
 
                 <Border
+                    x:Name="HomeFeatureStrip"
                     Height="{StaticResource TvHomeHeroHeight}"
-                    Background="{StaticResource AppSurfaceBrush}"
-                    BorderBrush="{StaticResource AppHairlineBrush}"
-                    BorderThickness="1"
+                    Background="{StaticResource AppTransparentBrush}"
                     CornerRadius="{StaticResource TvHomeHeroCornerRadius}">
                     <Grid>
                         <Image
@@ -59,13 +58,6 @@
                                 </LinearGradientBrush>
                             </Border.Background>
                         </Border>
-                        <Border
-                            Width="{StaticResource TvHomeHeroAccentWidth}"
-                            Margin="{StaticResource TvHomeHeroAccentMargin}"
-                            HorizontalAlignment="Left"
-                            Background="{StaticResource AppAccentBrush}"
-                            CornerRadius="{StaticResource TvHomeHeroAccentCornerRadius}" />
-
                         <Grid Padding="{StaticResource TvHomeHeroPadding}" ColumnSpacing="{StaticResource TvHomeHeroColumnSpacing}">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
@@ -80,7 +72,7 @@
                                     Text="Continue watching"
                                     FontSize="{StaticResource TvHomeHeroEyebrowFontSize}"
                                     FontWeight="SemiBold"
-                                    Foreground="{StaticResource AppWarmBrush}" />
+                                    Foreground="{StaticResource AppMutedTextBrush}" />
                                 <Image
                                     x:Name="HeroLogoImage"
                                     MaxWidth="{StaticResource TvHomeHeroLogoMaxWidth}"
@@ -115,7 +107,7 @@
                                         BorderBrush="{StaticResource AppActionBrush}"
                                         Foreground="{StaticResource AppOnActionBrush}"
                                         Click="HeroPlay_OnClick"
-                                        UseSystemFocusVisuals="True"
+                                        UseSystemFocusVisuals="False"
                                         XYFocusRight="{x:Bind HeroDetailsButton}">
                                         <StackPanel Orientation="Horizontal" Spacing="10">
                                             <SymbolIcon Symbol="Play" />
@@ -128,7 +120,7 @@
                                         MinWidth="148"
                                         Height="52"
                                         Click="HeroDetails_OnClick"
-                                        UseSystemFocusVisuals="True"
+                                        UseSystemFocusVisuals="False"
                                         XYFocusLeft="{x:Bind HeroPlayButton}">
                                         <StackPanel Orientation="Horizontal" Spacing="10">
                                             <SymbolIcon Symbol="ContactInfo" />

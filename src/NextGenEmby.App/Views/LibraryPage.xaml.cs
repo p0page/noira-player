@@ -57,6 +57,8 @@ namespace NextGenEmby.App.Views
             AddHandler(KeyDownEvent, new KeyEventHandler(Page_OnKeyDown), true);
             Loaded += LibraryPage_OnLoaded;
             Unloaded += LibraryPage_OnUnloaded;
+            ApplyCommandButtonFocusTreatment(SortButton);
+            ApplyCommandButtonFocusTreatment(FilterButton);
         }
 
         protected override async void OnNavigatedTo(NavigationEventArgs e)
@@ -1118,11 +1120,13 @@ namespace NextGenEmby.App.Views
             var button = new Button
             {
                 Tag = index,
+                Style = (Style)Application.Current.Resources["TvLibraryOptionSheetOptionButtonStyle"],
                 HorizontalAlignment = HorizontalAlignment.Stretch,
                 HorizontalContentAlignment = HorizontalAlignment.Stretch,
                 MinHeight = 58,
-                Background = isPreview ? BrushResource("AppRaisedSurfaceBrush") : BrushResource("AppChromeBrush"),
-                BorderBrush = isPreview ? BrushResource("AppAccentBrush") : BrushResource("AppHairlineBrush")
+                Background = isPreview ? BrushResource("AppFocusedCardFillBrush") : BrushResource("AppChromeBrush"),
+                BorderBrush = BrushResource("AppTransparentBrush"),
+                UseSystemFocusVisuals = false
             };
 
             button.Click += OptionSheetOption_OnClick;
@@ -1146,7 +1150,7 @@ namespace NextGenEmby.App.Views
 
             var selectedIcon = new SymbolIcon(Symbol.Accept)
             {
-                Foreground = BrushResource("AppAccentBrush"),
+                Foreground = BrushResource("AppTextBrush"),
                 Visibility = isPreview ? Visibility.Visible : Visibility.Collapsed,
                 VerticalAlignment = VerticalAlignment.Center
             };
@@ -1155,6 +1159,39 @@ namespace NextGenEmby.App.Views
 
             button.Content = row;
             return button;
+        }
+
+        private void ApplyCommandButtonFocusTreatment(Button button)
+        {
+            button.UseSystemFocusVisuals = false;
+            ApplyCommandButtonMatteFocus(button, isFocused: false);
+            button.GotFocus += CommandButton_OnGotFocus;
+            button.LostFocus += CommandButton_OnLostFocus;
+        }
+
+        private void CommandButton_OnGotFocus(object sender, RoutedEventArgs e)
+        {
+            ApplyCommandButtonMatteFocus(sender as Button, isFocused: true);
+        }
+
+        private void CommandButton_OnLostFocus(object sender, RoutedEventArgs e)
+        {
+            ApplyCommandButtonMatteFocus(sender as Button, isFocused: false);
+        }
+
+        private static void ApplyCommandButtonMatteFocus(Button? button, bool isFocused)
+        {
+            if (button == null)
+            {
+                return;
+            }
+
+            button.Background = isFocused
+                ? BrushResource("AppFocusedCardFillBrush")
+                : BrushResource("AppChromeBrush");
+            button.BorderBrush = isFocused
+                ? BrushResource("AppTransparentBrush")
+                : BrushResource("AppHairlineBrush");
         }
 
         private void OptionSheetOption_OnClick(object sender, RoutedEventArgs e)
