@@ -96,6 +96,7 @@
             <Grid Grid.Row="5">
                 <GridView
                     x:Name="ResultsGrid"
+                    ContainerContentChanging="ResultsGrid_OnContainerContentChanging"
                     IsItemClickEnabled="True"
                     ItemClick="ResultsGrid_OnItemClick"
                     SelectionMode="None"
@@ -105,25 +106,41 @@
                     <GridView.ItemTemplate>
                         <DataTemplate>
                             <Grid
+                                x:Name="PosterCardRoot"
                                 Width="{StaticResource TvPosterCardWidth}"
                                 Height="{StaticResource TvPosterCardHeight}"
-                                Background="{StaticResource AppRaisedSurfaceBrush}">
+                                Background="{StaticResource AppTransparentBrush}"
+                                RenderTransformOrigin="0.5,0.5">
                                 <Border
-                                    BorderBrush="{StaticResource AppHairlineBrush}"
-                                    BorderThickness="1"
-                                    CornerRadius="{StaticResource TvPosterCardCornerRadius}" />
-                                <TextBlock
-                                    Text="{Binding Initials}"
-                                    Style="{StaticResource TvPosterFallbackInitialsTextStyle}" />
-                                <Image
-                                    Source="{Binding ImageSource}"
-                                    Stretch="UniformToFill" />
-                                <Border Background="{StaticResource AppArtworkDimBrush}" />
-                                <Border
-                                    VerticalAlignment="Bottom"
-                                    Background="{StaticResource AppCardScrimBrush}"
-                                    Padding="{StaticResource TvPosterCardScrimPadding}">
-                                    <StackPanel Spacing="4">
+                                    x:Name="PosterSelectedBackplate"
+                                    Background="{StaticResource TvPosterSelectedBackplateBrush}"
+                                    CornerRadius="{StaticResource TvPosterCardCornerRadius}"
+                                    Opacity="0" />
+                                <StackPanel
+                                    Margin="{StaticResource TvPosterSelectedBackplatePadding}"
+                                    Spacing="8">
+                                    <Grid
+                                        x:Name="PosterArtworkFrame"
+                                        Width="{StaticResource TvPosterArtworkWidth}"
+                                        Height="{StaticResource TvPosterArtworkHeight}">
+                                        <Border
+                                            Background="{StaticResource AppRaisedSurfaceBrush}"
+                                            CornerRadius="{StaticResource TvPosterCardCornerRadius}" />
+                                        <TextBlock
+                                            Text="{Binding Initials}"
+                                            Style="{StaticResource TvPosterFallbackInitialsTextStyle}" />
+                                        <Image
+                                            Source="{Binding ImageSource}"
+                                            Stretch="UniformToFill" />
+                                        <Border
+                                            x:Name="PosterArtworkDim"
+                                            Background="{StaticResource AppArtworkDimBrush}"
+                                            Opacity="0.18" />
+                                    </Grid>
+                                    <StackPanel
+                                        x:Name="PosterMetadataPanel"
+                                        Height="{StaticResource TvPosterMetadataHeight}"
+                                        Spacing="4">
                                         <TextBlock
                                             Text="{Binding Title}"
                                             Style="{StaticResource TvPosterCardTitleTextStyle}" />
@@ -131,7 +148,7 @@
                                             Text="{Binding Meta}"
                                             Style="{StaticResource TvPosterCardMetaTextStyle}" />
                                     </StackPanel>
-                                </Border>
+                                </StackPanel>
                             </Grid>
                         </DataTemplate>
                     </GridView.ItemTemplate>

@@ -2109,3 +2109,81 @@ Fix rerun findings:
 - Decision:
   - Commit this batch as the shared Home/Shell focus and resume-card correction.
   - Next design-conformance batch should target the Home first viewport/top composition and realistic fixture artwork, then revisit normal poster selected state.
+
+### 2026-07-08 - Design Conformance Batch 02 Library, Search, And Poster Grids Baseline
+
+- App version: 0.1.0.210.
+- Scope: run the next design-conformance batch before fixing poster-grid, search-result, option-sheet, and fixture-artwork visual drift.
+- Data source:
+  - DEBUG `home-fixture` for Home first viewport carry-over evidence.
+  - DEBUG `collections-fixture` for deterministic collection root, child movie grid, toolbar, and sort sheet.
+  - DEBUG `search-fixture` for deterministic mixed search-result poster grid.
+  - DEBUG `search-error` for search recovery / empty-error state.
+- Screenshot sets:
+  - Home: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch02-20260708-010135`.
+  - Collections: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch02-collections-20260708-010335`.
+  - Search: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch02-search-20260708-010515`.
+  - Search error: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch02-search-error-20260708-010702`.
+- Keyboard-only validation:
+  - `home-fixture`: launch succeeded, `dev-command-result.txt` reported `completed / home-fixture`, initial focus was `Play`.
+  - `collections-fixture`: launch succeeded, initial focus landed on the first collection item, `Enter` opened `Signal Archives`, `Up` reached `Sort`, and `Enter` opened the sort sheet.
+  - `search-fixture`: launch succeeded, focus moved from `Search title` to scope chips, recent terms, and then the search result grid with `Down`/`Right`.
+  - `search-error`: launch succeeded and showed the matte search recovery state.
+
+Findings recorded before fixes:
+
+| ID | Severity | Page | Evidence | Expected | Actual | Proposed batch fix |
+| --- | --- | --- | --- | --- | --- | --- |
+| DC-02.01 | Fail | Library poster grid | `collections-child-grid.png` shows focused `Aurora Protocol` with a bright complete perimeter frame, title/meta inside the poster scrim, and the old per-card hairline template. | Movie/series items use vertical poster cards, with focused state as an integrated matte selected backplate around poster plus title/meta below or attached as one object; no bright frame, glass card, or heavy shadow. | Focus is readable but still uses the rejected older card-focus vocabulary. Text is trapped inside the artwork instead of the newer ordinary-movie-card direction. | Replace the shared poster grid template with image-first poster artwork, title/meta below the image, and a focused matte backplate/scale treatment. |
+| DC-02.02 | Concern | Library toolbar / sort sheet | `collections-toolbar.png` and `collections-sort-sheet.png` show a grounded matte sheet, but focused options still use a high-contrast full outline. | Toolbar controls may use command matte focus. Sheets should feel grounded and avoid floating glass plates or bright focus frames. | The sheet is acceptably matte and not glassy, but option focus still feels like the old bright-frame system. | Keep the sheet structure for now, but move option/button focus toward the shared matte command recipe in the same component pass if scope allows. |
+| DC-02.03 | Fail | Search results | `search-down3.png` shows Search result cards sharing the same bright perimeter focus and text-inside-poster template as Library. | Search results share the poster-grid selected treatment. Scope chips are compact and neutral; recent terms should not steal recovery focus. | Scope/recent navigation is usable, but result cards visually fail the same poster-grid rule as Library. | Update Search to consume the same poster-card selected-state structure as Library. |
+| DC-02.04 | Concern | Empty / no-artwork states | `search-error-initial.png` shows a matte recovery state; source inspection shows Search has fallback initials, but Library's poster template lacks an equivalent fallback text/icon inside the card. | Empty state, unavailable poster tile, and fallback initials remain intentional matte surfaces, not abstract generated art. | Search error state is acceptable. No-artwork tile coverage is incomplete and Library fallback would look blank rather than intentional. | Add or standardize Library/Search no-artwork fallback anatomy and add source tests for it. |
+| DC-02.05 | Fail | Fixture artwork / visual QA | `tools/Generate-HomeQaArtworkAssets.ps1` still generates abstract geometric artwork with high-saturation cyan/green/amber/red accents; screenshots show media covers do not resemble film posters. | Visual QA must include realistic fictional posters with faces, title blocks, high-contrast crops, saturated content color, and varied genres. | Current fixture art is useful for layout but weak for judging the final movie-card direction and still pulls the product toward generic sci-fi UI. | Replace generated QA artwork with more movie-like fictional poster/wide compositions and align generator tokens with the current cool graphite/artwork-led rules. |
+| DC-02.06 | Blocked | Movies route | `movies` route has no deterministic fixture payload and may require a saved session. | Batch 02 should be able to validate a normal Movies grid without depending on private server data. | Collections/search fixtures cover poster-grid behavior, but they are not a direct Movies fixture. | Add a deterministic movie-grid fixture route or route `movies` to QA movie items in DEBUG when explicitly launched by `dev-command.json`. |
+| DC-02.07 | Fail | Home first viewport carry-over | `home-initial.png` still shows a large framed Home decision surface above rails. | Home should be a rail-first personal media dashboard; any hero must be compact enough that high-value rails carry the first viewport. | Batch 01's deferred Home top-composition failure remains visible. | Fold the Home first-viewport cleanup into this batch or schedule it as the immediate next batch if poster-grid scope grows too large. |
+
+- Decision:
+  - Fix now as a grouped visual-system batch for shared poster cards, Search/Library parity, no-artwork fallback, deterministic Movies fixture coverage, and QA artwork realism.
+  - Keep sort/filter sheet layout unless it blocks the shared command-focus cleanup; its current issue is lower severity than media-card focus.
+  - Treat Home first viewport as part of the same design-conformance wave, but do not let it delay poster-grid source contracts if it becomes too broad.
+
+### 2026-07-08 - Design Conformance Batch 02 Library, Search, And Poster Grids Fix Rerun
+
+- App version: 0.1.0.211.
+- Scope: grouped correction for shared poster-grid focus, Search/Library parity, deterministic Movies fixture coverage, no-artwork fallback contracts, and packaged QA artwork realism.
+- Data source: DEBUG fixtures only; no private server data or personal media assets.
+- Source contracts added before implementation:
+  - Poster-grid items suppress the system bright focus ring and use a matte selected backplate plus slight lift.
+  - Poster artwork remains image-first, while title/meta are placed below the image instead of inside a bottom card box.
+  - Library and Search consume the same poster selected-state structure.
+  - Library and Search expose an intentional no-artwork fallback with initials rather than an empty blank tile.
+  - `movies-fixture` provides deterministic movie-grid coverage for visual QA.
+  - QA artwork generation moves from abstract neon blocks to fictional movie-like poster and wide artwork.
+- Automated verification:
+  - Red path confirmed the new poster-grid source contracts failed before the implementation batch.
+  - Targeted poster/navigation tests passed: 34 total.
+  - Targeted Design tests passed: 64 total.
+  - Full Core test suite passed: 472 total.
+  - App Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.211_x64_Debug.msix`.
+  - Signed and installed `NextGenEmby.App 0.1.0.211` for screenshot rerun.
+- Keyboard-only validation with installed DEBUG fixtures:
+  - `movies-fixture`: launch succeeded, `dev-command-result.txt` reported `completed / movies-fixture`, focus landed on the movie grid, and keyboard traversal reached neighboring movie cards and the toolbar.
+  - `search-fixture`: launch succeeded, focus moved through the search controls into the result grid, and result-card traversal used the shared poster selected treatment.
+  - Movies screenshot set: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch02-rerun-movies-20260708-012810`.
+  - Search screenshot set: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch02-rerun-search-20260708-012942`.
+
+Fix rerun findings:
+
+| ID | Severity | Page | Evidence | Expected | Actual | Follow-up |
+| --- | --- | --- | --- | --- | --- | --- |
+| DC-02.01 | Pass with concern | Library / Movies poster grid | `movies-initial.png` and `movies-right.png` show the selected movie card using an integrated matte backplate and slight lift, without the previous full bright perimeter frame. | Movie/series items use vertical poster cards with quiet selected treatment, title/meta below the image, and no heavy glass/shadow vocabulary. | The poster selected state now matches the ordinary movie-card direction. The deterministic Movies fixture currently has a small item count, so dense multi-row behavior should keep being checked with larger datasets. | Expand fixture coverage when richer media samples are added. |
+| DC-02.02 | Concern | Library toolbar / sort sheet | `movies-toolbar.png` and `movies-sort-sheet.png` still show a functional matte command sheet, but option focus keeps some system-level contrast. | Sheets should stay grounded and avoid floating glass plates or bright focus frames. | Lower-severity drift remains; media-card focus was corrected first. | Handle command-sheet option focus in a command-component batch. |
+| DC-02.03 | Pass | Search results | `search-results.png` and `search-results-right.png` show Search result cards using the same poster selected-state structure as Library/Movies. | Search results share the poster-grid selected treatment. | Search/Library visual parity is restored for poster cards. | Continue testing with mixed item types and missing artwork. |
+| DC-02.04 | Pass with concern | Empty / no-artwork states | Source contracts now require `Initials` fallback in Library and Search poster templates; Search recovery remains matte. | Empty state, unavailable poster tile, and fallback initials remain intentional matte surfaces. | The shared fallback anatomy is present in source. Runtime screenshots did not yet include a forced no-artwork movie tile. | Add a deterministic missing-poster item to a future fixture. |
+| DC-02.05 | Pass with concern | Fixture artwork / visual QA | Regenerated QA posters and wide art now use fictional cover-like compositions instead of abstract cyan/green/amber/red blocks. | Visual QA should include realistic fictional posters and wide art that stress real card composition. | Artwork now supports judging poster-card structure better, though it is still generated/stylized rather than photoreal production artwork. | Improve genre variety and real-media-like crops when fixture art is expanded. |
+| DC-02.06 | Pass | Movies route | `movies-fixture` launches deterministically and reports `completed / movies-fixture`. | Movie-grid validation must not depend on private server state. | Deterministic Movies visual QA route is available. | Keep this route as the default movie-grid regression target. |
+| DC-02.07 | Deferred fail | Home first viewport carry-over | Home first-viewport evidence from the Batch 02 baseline still applies. | Home should be a rail-first personal media dashboard; any hero must be compact enough that high-value rails carry the first viewport. | Not addressed in this poster-grid batch to keep the commit reviewable. | Make Home top composition the next design-conformance batch. |
+
+- Decision:
+  - Commit this batch as the shared Library/Search/Movies poster-grid and fixture-artwork correction.
+  - Next design-conformance batch should target Home first viewport/top composition and command-sheet option focus, rather than broadening this commit further.

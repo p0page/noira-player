@@ -82,14 +82,17 @@ public sealed class DevelopmentHomeFixtureTests
     }
 
     [Fact]
-    public void Qa_Artwork_Generator_Uses_Light_Global_Scrim()
+    public void Qa_Artwork_Generator_Uses_Local_Poster_And_Wide_Scrims()
     {
         var script = File.ReadAllText(Path.Combine(
             FindRepositoryRoot(),
             "tools",
             "Generate-HomeQaArtworkAssets.ps1"));
 
-        Assert.Contains("FromArgb(24, 0, 0, 0)", script);
+        Assert.Contains("New-QaPosterArtwork", script);
+        Assert.Contains("New-QaWideArtwork", script);
+        Assert.Contains("LinearGradientBrush", script);
+        Assert.Contains("Draw-PosterTypography", script);
         Assert.DoesNotContain("FromArgb(80, 0, 0, 0)", script);
     }
 

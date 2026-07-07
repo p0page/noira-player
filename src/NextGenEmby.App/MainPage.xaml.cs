@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using NextGenEmby.Core.Diagnostics;
+using NextGenEmby.Core.Emby;
 using NextGenEmby.Core.Input;
 using NextGenEmby.Core.Playback;
 using NextGenEmby.App.Navigation;
@@ -820,6 +822,10 @@ namespace NextGenEmby.App
                     NavigateLibrary(new LibraryNavigationRequest("Movies", "movies", "Movie"));
                     return;
 
+                case "movies-fixture":
+                    NavigateLibrary(CreateMoviesFixtureNavigationRequest());
+                    return;
+
                 case "tv":
                     NavigateLibrary(new LibraryNavigationRequest("TV Shows", "tvshows", "Series"));
                     return;
@@ -987,6 +993,26 @@ namespace NextGenEmby.App
                             forceSdrOutput: command.ForceSdrOutput));
                     return;
             }
+        }
+
+        private static LibraryNavigationRequest CreateMoviesFixtureNavigationRequest()
+        {
+            var fixture = DevelopmentHomeFixture.Create();
+            IReadOnlyList<EmbyMediaItem> items;
+            if (!fixture.LibraryPreviews.TryGetValue("qa-library-movies", out items))
+            {
+                items = fixture.LatestItems;
+            }
+
+            return new LibraryNavigationRequest(
+                "Movies",
+                "movies",
+                "Movie",
+                "",
+                "",
+                new LibraryNavigationQuery(requireItemTypeMatch: true),
+                items,
+                fixture.ArtworkUris);
         }
 #endif
 

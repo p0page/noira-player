@@ -66,6 +66,7 @@
             <SolidColorBrush x:Key="AppGuideFocusFillBrush" Color="{StaticResource AppGuideFocusFillColor}" />
             <SolidColorBrush x:Key="AppAccentBrush" Color="{StaticResource AppAccentColor}" />
             <SolidColorBrush x:Key="AppFocusedCardFillBrush" Color="{StaticResource AppFocusedCardFillColor}" />
+            <SolidColorBrush x:Key="TvPosterSelectedBackplateBrush" Color="{StaticResource AppFocusedCardFillColor}" />
             <SolidColorBrush x:Key="AppActionBrush" Color="{StaticResource AppActionColor}" />
             <SolidColorBrush x:Key="AppMutedTextBrush" Color="{StaticResource AppMutedTextColor}" />
             <SolidColorBrush x:Key="AppTextBrush" Color="{StaticResource AppTextColor}" />
@@ -108,14 +109,19 @@
             <Thickness x:Key="TvPanelPadding">22</Thickness>
             <Thickness x:Key="TvPosterGridItemMargin">0,0,14,14</Thickness>
             <Thickness x:Key="TvPosterCardScrimPadding">14,12</Thickness>
+            <Thickness x:Key="TvPosterSelectedBackplatePadding">8</Thickness>
             <CornerRadius x:Key="TvPosterCardCornerRadius">6</CornerRadius>
             <x:Double x:Key="TvGuideCollapsedWidth">72</x:Double>
             <x:Double x:Key="TvGuideExpandedWidth">248</x:Double>
             <x:Double x:Key="TvSettingsContentMaxWidth">980</x:Double>
             <x:Double x:Key="TvListArtworkSize">76</x:Double>
             <x:Double x:Key="TvCompactArtworkSize">64</x:Double>
-            <x:Double x:Key="TvPosterCardWidth">168</x:Double>
-            <x:Double x:Key="TvPosterCardHeight">250</x:Double>
+            <x:Double x:Key="TvPosterCardWidth">184</x:Double>
+            <x:Double x:Key="TvPosterCardHeight">326</x:Double>
+            <x:Double x:Key="TvPosterArtworkWidth">168</x:Double>
+            <x:Double x:Key="TvPosterArtworkHeight">252</x:Double>
+            <x:Double x:Key="TvPosterMetadataHeight">52</x:Double>
+            <x:Double x:Key="TvPosterFocusedItemScale">1.025</x:Double>
             <x:Double x:Key="TvHomeSectionSpacing">22</x:Double>
             <x:Double x:Key="TvHomeRailHeaderSpacing">18</x:Double>
             <x:Double x:Key="TvHomeRailCardSpacing">18</x:Double>
@@ -271,7 +277,7 @@
             <Style x:Key="TvPosterGridItemStyle" TargetType="GridViewItem">
                 <Setter Property="HorizontalContentAlignment" Value="Stretch" />
                 <Setter Property="VerticalContentAlignment" Value="Stretch" />
-                <Setter Property="UseSystemFocusVisuals" Value="True" />
+                <Setter Property="UseSystemFocusVisuals" Value="False" />
                 <Setter Property="Padding" Value="0" />
                 <Setter Property="Margin" Value="{StaticResource TvPosterGridItemMargin}" />
             </Style>

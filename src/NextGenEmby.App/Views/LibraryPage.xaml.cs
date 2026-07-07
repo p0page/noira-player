@@ -25,7 +25,7 @@ namespace NextGenEmby.App.Views
     {
         private readonly ApplicationDataSessionStore _sessionStore = new ApplicationDataSessionStore();
         private const string OrganizationChildItemTypes = "Movie,Series,Episode,Video,MusicVideo,Audio,Photo";
-        private const double GridItemWidth = 168d;
+        private const double GridItemWidth = 184d;
         private const double GridItemTrailingMargin = 14d;
         private static readonly LibraryQueryOption[] SortOptions =
         {
@@ -702,6 +702,11 @@ namespace NextGenEmby.App.Views
             ActivateLibraryItem(gridItem == null ? null : gridItem.Item);
         }
 
+        private void ItemsGrid_OnContainerContentChanging(ListViewBase sender, ContainerContentChangingEventArgs args)
+        {
+            PosterGridFocusVisuals.PrepareContainer(args.ItemContainer as GridViewItem);
+        }
+
         private void ActivateLibraryItem(EmbyMediaItem? item)
         {
             if (item == null || string.IsNullOrWhiteSpace(item.Id))
@@ -1246,6 +1251,16 @@ namespace NextGenEmby.App.Views
             return meta;
         }
 
+        private static string CreateInitials(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return "?";
+            }
+
+            return value.Trim().Substring(0, 1).ToUpperInvariant();
+        }
+
         public sealed class LibraryGridItem
         {
             public LibraryGridItem(EmbyMediaItem item, BitmapImage? imageSource)
@@ -1254,6 +1269,7 @@ namespace NextGenEmby.App.Views
                 ImageSource = imageSource;
                 Title = string.IsNullOrWhiteSpace(item.Name) ? item.Id : item.Name;
                 Meta = CreateMeta(item);
+                Initials = CreateInitials(Title);
             }
 
             public EmbyMediaItem Item { get; }
@@ -1261,6 +1277,8 @@ namespace NextGenEmby.App.Views
             public string Title { get; }
 
             public string Meta { get; }
+
+            public string Initials { get; }
 
             public BitmapImage? ImageSource { get; }
         }

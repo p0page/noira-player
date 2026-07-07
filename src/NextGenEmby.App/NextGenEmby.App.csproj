@@ -121,6 +121,7 @@
     <Compile Include="Views\PhotoViewerPage.xaml.cs">
       <DependentUpon>PhotoViewerPage.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Views\PosterGridFocusVisuals.cs" />
     <Compile Include="Views\SearchPage.xaml.cs">
       <DependentUpon>SearchPage.xaml</DependentUpon>
     </Compile>

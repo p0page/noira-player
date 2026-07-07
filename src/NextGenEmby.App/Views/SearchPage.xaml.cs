@@ -24,7 +24,7 @@ namespace NextGenEmby.App.Views
         private const string PosterCardWidthResourceKey = "TvPosterCardWidth";
         private const string PosterGridItemMarginResourceKey = "TvPosterGridItemMargin";
         private const string SearchRecentTermButtonStyleResourceKey = "TvSearchRecentTermButtonStyle";
-        private const double FallbackPosterCardWidth = 168d;
+        private const double FallbackPosterCardWidth = 184d;
         private const double FallbackPosterCardTrailingMargin = 14d;
         private readonly ApplicationDataSessionStore _sessionStore = new ApplicationDataSessionStore();
         private readonly RecentSearchTermStore _recentSearchTermStore = new RecentSearchTermStore();
@@ -655,6 +655,11 @@ namespace NextGenEmby.App.Views
         {
             var card = e.ClickedItem as SearchResultCard;
             NavigateToDetails(card == null ? null : card.Item);
+        }
+
+        private void ResultsGrid_OnContainerContentChanging(ListViewBase sender, ContainerContentChangingEventArgs args)
+        {
+            PosterGridFocusVisuals.PrepareContainer(args.ItemContainer as GridViewItem);
         }
 
         private void NavigateToDetails(EmbyMediaItem? item)
