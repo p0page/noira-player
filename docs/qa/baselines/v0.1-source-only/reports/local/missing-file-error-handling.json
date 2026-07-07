@@ -43,7 +43,7 @@
     "environment": {
       "collectorVersion": "materialize-baseline-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "279db00",
+      "sourceRevision": "71f564b",
       "buildConfiguration": "Debug"
     },
     "limitations": [
@@ -222,7 +222,7 @@
     "environment": {
       "collectorVersion": "materialize-baseline-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "279db00",
+      "sourceRevision": "71f564b",
       "buildConfiguration": "Debug",
       "signals": [
         "environment.collectorVersion",

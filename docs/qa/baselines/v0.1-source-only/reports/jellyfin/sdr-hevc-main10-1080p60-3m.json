@@ -188,7 +188,7 @@
     "environment": {
       "collectorVersion": "materialize-baseline-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "279db00",
+      "sourceRevision": "71f564b",
       "buildConfiguration": "Debug"
     },
     "limitations": [
@@ -328,9 +328,9 @@
       "isRetriable": false
     },
     "runtimeMetrics": {
-      "status": "unknown",
-      "providerStatus": "unknown",
-      "reason": "",
+      "status": "unavailable",
+      "providerStatus": "source-only",
+      "reason": "Runtime metrics provider did not return a playback quality snapshot.",
       "hasSnapshot": false,
       "hasPlaybackSample": false
     },
@@ -407,7 +407,7 @@
     "environment": {
       "collectorVersion": "materialize-baseline-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "279db00",
+      "sourceRevision": "71f564b",
       "buildConfiguration": "Debug",
       "signals": [
         "environment.collectorVersion",
@@ -499,12 +499,18 @@
       "isRetriable": false
     },
     "runtimeMetrics": {
-      "status": "unknown",
-      "providerStatus": "unknown",
-      "reason": "",
+      "status": "unavailable",
+      "providerStatus": "source-only",
+      "reason": "Runtime metrics provider did not return a playback quality snapshot.",
       "hasSnapshot": false,
       "hasPlaybackSample": false,
-      "signals": []
+      "signals": [
+        "runtimeMetrics.status",
+        "runtimeMetrics.providerStatus",
+        "runtimeMetrics.reason",
+        "runtimeMetrics.hasSnapshot",
+        "runtimeMetrics.hasPlaybackSample"
+      ]
     },
     "colorPipeline": {
       "status": "mismatch",
@@ -901,6 +907,11 @@
       "tracks.subtitles.index",
       "tracks.subtitles.codec",
       "tracks.subtitles.isExternal",
+      "runtimeMetrics.status",
+      "runtimeMetrics.providerStatus",
+      "runtimeMetrics.reason",
+      "runtimeMetrics.hasSnapshot",
+      "runtimeMetrics.hasPlaybackSample",
       "position.requestedStartPositionTicks",
       "position.seekTargetPositionTicks"
     ],
