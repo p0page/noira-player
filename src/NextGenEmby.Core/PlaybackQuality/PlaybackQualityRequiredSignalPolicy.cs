@@ -49,6 +49,33 @@ namespace NextGenEmby.Core.PlaybackQuality
                 AddUnique(requiredSignals, "position.seekPositionErrorMs");
             }
 
+            if (HasPurpose(referenceCase, "tracks") ||
+                HasPurpose(referenceCase, "subtitles") ||
+                HasPurpose(referenceCase, "audio-switch") ||
+                HasPurpose(referenceCase, "subtitle-switch"))
+            {
+                AddUnique(requiredSignals, "tracks.videoTrackCount");
+                AddUnique(requiredSignals, "tracks.audioTrackCount");
+                AddUnique(requiredSignals, "tracks.subtitleTrackCount");
+            }
+
+            if (HasPurpose(referenceCase, "subtitles") ||
+                HasPurpose(referenceCase, "subtitle-switch") ||
+                HasPurpose(referenceCase, "subtitle-off"))
+            {
+                AddUnique(requiredSignals, "tracks.isSubtitleDisabled");
+            }
+
+            if (HasPurpose(referenceCase, "audio-switch"))
+            {
+                AddUnique(requiredSignals, "tracks.selectedAudioStreamIndex");
+            }
+
+            if (HasPurpose(referenceCase, "subtitle-switch"))
+            {
+                AddUnique(requiredSignals, "tracks.selectedSubtitleStreamIndex");
+            }
+
             if (expected.MinRenderedVideoFrames.HasValue ||
                 HasPurpose(referenceCase, "frame-pacing") ||
                 HasPurpose(referenceCase, "cadence-23.976"))
@@ -205,6 +232,40 @@ namespace NextGenEmby.Core.PlaybackQuality
                     return report.Position.SeekPositionErrorMs.HasValue ||
                         (report.Position.SeekTargetPositionTicks.HasValue &&
                             report.Position.ActualPositionTicks.HasValue);
+                case "tracks.videoTrackCount":
+                    if (presentSignals != null)
+                    {
+                        return true;
+                    }
+
+                    return report.Tracks.VideoTrackCount > 0 || report.Tracks.Video.Count > 0;
+                case "tracks.audioTrackCount":
+                    if (presentSignals != null)
+                    {
+                        return true;
+                    }
+
+                    return report.Tracks.AudioTrackCount > 0 || report.Tracks.Audio.Count > 0;
+                case "tracks.subtitleTrackCount":
+                    if (presentSignals != null)
+                    {
+                        return true;
+                    }
+
+                    return report.Tracks.SubtitleTrackCount > 0 || report.Tracks.Subtitles.Count > 0;
+                case "tracks.selectedVideoStreamIndex":
+                    return report.Tracks.SelectedVideoStreamIndex.HasValue;
+                case "tracks.selectedAudioStreamIndex":
+                    return report.Tracks.SelectedAudioStreamIndex.HasValue;
+                case "tracks.selectedSubtitleStreamIndex":
+                    return report.Tracks.SelectedSubtitleStreamIndex.HasValue;
+                case "tracks.isSubtitleDisabled":
+                    if (presentSignals != null)
+                    {
+                        return true;
+                    }
+
+                    return HasTrackEvidence(report);
                 case "timing.renderedVideoFrames":
                     return report.Timing.RenderedVideoFrames > 0;
                 case "timing.droppedVideoFrames":
@@ -301,6 +362,19 @@ namespace NextGenEmby.Core.PlaybackQuality
                 report.Timing.DecodedVideoFrames > 0 ||
                 report.Timing.RenderedVideoFrames > 0 ||
                 report.Timing.DroppedVideoFrames > 0;
+        }
+
+        private static bool HasTrackEvidence(PlaybackQualityReport report)
+        {
+            return report.Tracks.VideoTrackCount > 0 ||
+                report.Tracks.AudioTrackCount > 0 ||
+                report.Tracks.SubtitleTrackCount > 0 ||
+                report.Tracks.Video.Count > 0 ||
+                report.Tracks.Audio.Count > 0 ||
+                report.Tracks.Subtitles.Count > 0 ||
+                report.Tracks.SelectedVideoStreamIndex.HasValue ||
+                report.Tracks.SelectedAudioStreamIndex.HasValue ||
+                report.Tracks.SelectedSubtitleStreamIndex.HasValue;
         }
 
         private static bool HasBufferEvidence(PlaybackQualityReport report)

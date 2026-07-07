@@ -1,6 +1,7 @@
 using NextGenEmby.Core.Playback;
 using NextGenEmby.Core.PlaybackQuality;
 using NextGenEmby.Core.Emby;
+using System.Linq;
 using Xunit;
 
 namespace NextGenEmby.Core.Tests.PlaybackQuality;
@@ -166,26 +167,54 @@ public sealed class PlaybackQualityReportMapperTests
         {
             Kind = EmbyStreamKind.Video,
             Codec = "hevc",
-            Index = 0
+            Index = 0,
+            Language = "und",
+            DisplayTitle = "4K HEVC Main10",
+            RealFrameRate = 23.976,
+            AverageFrameRate = 23.976
         });
         source.Streams.Add(new EmbyMediaStream
         {
             Kind = EmbyStreamKind.Audio,
             Codec = "aac",
-            Index = 1
+            Index = 1,
+            Language = "jpn",
+            ChannelLayout = "5.1",
+            DisplayTitle = "Japanese AAC 5.1"
         });
         source.Streams.Add(new EmbyMediaStream
         {
             Kind = EmbyStreamKind.Audio,
             Codec = "truehd",
-            Index = 2
+            Index = 2,
+            Language = "eng",
+            ChannelLayout = "7.1",
+            DisplayTitle = "English TrueHD 7.1"
+        });
+        source.Streams.Add(new EmbyMediaStream
+        {
+            Kind = EmbyStreamKind.Subtitle,
+            Codec = "srt",
+            Index = 7,
+            Language = "zho",
+            DisplayTitle = "Chinese SRT",
+            IsExternal = true
+        });
+        source.Streams.Add(new EmbyMediaStream
+        {
+            Kind = EmbyStreamKind.Subtitle,
+            Codec = "ass",
+            Index = 8,
+            Language = "eng",
+            DisplayTitle = "English ASS"
         });
         var descriptor = new PlaybackDescriptor(
             "item-1",
             source,
             new[] { source },
             startPositionTicks: 600_000_000,
-            audioStreamIndex: 2);
+            audioStreamIndex: 2,
+            subtitleStreamIndex: 7);
 
         PlaybackQualityReportMapper.ApplySource(report, descriptor);
 
@@ -208,6 +237,57 @@ public sealed class PlaybackQualityReportMapperTests
         Assert.True(report.Source.HasHdr10BaseLayer);
         Assert.False(report.Source.HasHlgBaseLayer);
         Assert.Equal("truehd", report.Source.AudioCodec);
+        Assert.Equal(1, report.Tracks.VideoTrackCount);
+        Assert.Equal(2, report.Tracks.AudioTrackCount);
+        Assert.Equal(2, report.Tracks.SubtitleTrackCount);
+        Assert.Equal(0, report.Tracks.SelectedVideoStreamIndex);
+        Assert.Equal(2, report.Tracks.SelectedAudioStreamIndex);
+        Assert.Equal(7, report.Tracks.SelectedSubtitleStreamIndex);
+        Assert.False(report.Tracks.IsSubtitleDisabled);
+        var video = Assert.Single(report.Tracks.Video);
+        Assert.Equal(0, video.Index);
+        Assert.Equal("hevc", video.Codec);
+        Assert.Equal("und", video.Language);
+        Assert.Equal("4K HEVC Main10", video.DisplayTitle);
+        Assert.Equal(23.976, video.RealFrameRate);
+        var audio = report.Tracks.Audio.Single(track => track.Index == 2);
+        Assert.Equal("truehd", audio.Codec);
+        Assert.Equal("eng", audio.Language);
+        Assert.Equal("7.1", audio.ChannelLayout);
+        Assert.Equal("English TrueHD 7.1", audio.DisplayTitle);
+        var subtitle = report.Tracks.Subtitles.Single(track => track.Index == 7);
+        Assert.Equal("srt", subtitle.Codec);
+        Assert.Equal("zho", subtitle.Language);
+        Assert.Equal("Chinese SRT", subtitle.DisplayTitle);
+        Assert.True(subtitle.IsExternal);
+    }
+
+    [Fact]
+    public void ApplySource_Reports_Subtitles_Disabled_When_Selected_Subtitle_Is_Null()
+    {
+        var report = new PlaybackQualityReport();
+        var source = new EmbyMediaSource
+        {
+            Id = "source-1"
+        };
+        source.Streams.Add(new EmbyMediaStream
+        {
+            Kind = EmbyStreamKind.Subtitle,
+            Codec = "srt",
+            Index = 7
+        });
+        var descriptor = new PlaybackDescriptor(
+            "item-1",
+            source,
+            new[] { source },
+            startPositionTicks: 0,
+            subtitleStreamIndex: null);
+
+        PlaybackQualityReportMapper.ApplySource(report, descriptor);
+
+        Assert.True(report.Tracks.IsSubtitleDisabled);
+        Assert.Null(report.Tracks.SelectedSubtitleStreamIndex);
+        Assert.Equal(1, report.Tracks.SubtitleTrackCount);
     }
 
     [Fact]

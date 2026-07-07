@@ -1188,6 +1188,32 @@ try {
     "frameRate": 23.976,
     "hdrKind": "Sdr"
   },
+  "tracks": {
+    "videoTrackCount": 1,
+    "audioTrackCount": 1,
+    "subtitleTrackCount": 0,
+    "selectedVideoStreamIndex": 0,
+    "selectedAudioStreamIndex": 1,
+    "isSubtitleDisabled": true,
+    "video": [
+      {
+        "index": 0,
+        "kind": "Video",
+        "codec": "hevc",
+        "language": "und"
+      }
+    ],
+    "audio": [
+      {
+        "index": 1,
+        "kind": "Audio",
+        "codec": "aac",
+        "language": "eng",
+        "channelLayout": "2.0"
+      }
+    ],
+    "subtitles": []
+  },
   "position": {
     "requestedStartPositionTicks": 600000000,
     "seekTargetPositionTicks": 600000000,
@@ -1249,6 +1275,32 @@ try {
     "height": 2160,
     "frameRate": 23.976,
     "hdrKind": "Sdr"
+  },
+  "tracks": {
+    "videoTrackCount": 1,
+    "audioTrackCount": 1,
+    "subtitleTrackCount": 0,
+    "selectedVideoStreamIndex": 0,
+    "selectedAudioStreamIndex": 1,
+    "isSubtitleDisabled": true,
+    "video": [
+      {
+        "index": 0,
+        "kind": "Video",
+        "codec": "hevc",
+        "language": "und"
+      }
+    ],
+    "audio": [
+      {
+        "index": 1,
+        "kind": "Audio",
+        "codec": "aac",
+        "language": "eng",
+        "channelLayout": "2.0"
+      }
+    ],
+    "subtitles": []
   },
   "position": {
     "requestedStartPositionTicks": 600000000,
@@ -1349,7 +1401,9 @@ try {
         "av-sync",
         "buffering",
         "frame-pacing",
-        "timeline"
+        "timeline",
+        "tracks",
+        "subtitles"
       ],
       "expected": {
         "codec": "hevc",
@@ -1824,6 +1878,30 @@ try {
       "frameRate": 23.976,
       "hdrKind": "Sdr"
     },
+    "tracks": {
+      "videoTrackCount": 1,
+      "audioTrackCount": 1,
+      "subtitleTrackCount": 0,
+      "isSubtitleDisabled": true,
+      "video": [
+        {
+          "index": 0,
+          "kind": "Video",
+          "codec": "hevc",
+          "language": "und"
+        }
+      ],
+      "audio": [
+        {
+          "index": 1,
+          "kind": "Audio",
+          "codec": "aac",
+          "language": "eng",
+          "channelLayout": "2.0"
+        }
+      ],
+      "subtitles": []
+    },
     "position": {
       "requestedStartPositionTicks": 600000000,
       "seekTargetPositionTicks": 600000000,
@@ -1884,6 +1962,30 @@ try {
       "height": 2160,
       "frameRate": 23.976,
       "hdrKind": "Sdr"
+    },
+    "tracks": {
+      "videoTrackCount": 1,
+      "audioTrackCount": 1,
+      "subtitleTrackCount": 0,
+      "isSubtitleDisabled": true,
+      "video": [
+        {
+          "index": 0,
+          "kind": "Video",
+          "codec": "hevc",
+          "language": "und"
+        }
+      ],
+      "audio": [
+        {
+          "index": 1,
+          "kind": "Audio",
+          "codec": "aac",
+          "language": "eng",
+          "channelLayout": "2.0"
+        }
+      ],
+      "subtitles": []
     },
     "position": {
       "requestedStartPositionTicks": 600000000,
@@ -1996,6 +2098,30 @@ try {
     "frameRate": 23.976,
     "hdrKind": "Hdr10"
   },
+  "tracks": {
+    "videoTrackCount": 1,
+    "audioTrackCount": 1,
+    "subtitleTrackCount": 0,
+    "isSubtitleDisabled": true,
+    "video": [
+      {
+        "index": 0,
+        "kind": "Video",
+        "codec": "hevc",
+        "language": "und"
+      }
+    ],
+    "audio": [
+      {
+        "index": 1,
+        "kind": "Audio",
+        "codec": "aac",
+        "language": "eng",
+        "channelLayout": "2.0"
+      }
+    ],
+    "subtitles": []
+  },
   "position": {
     "requestedStartPositionTicks": 600000000,
     "seekTargetPositionTicks": 600000000,
@@ -2103,6 +2229,30 @@ try {
       "height": 2160,
       "frameRate": 23.976,
       "hdrKind": "Sdr"
+    },
+    "tracks": {
+      "videoTrackCount": 1,
+      "audioTrackCount": 1,
+      "subtitleTrackCount": 0,
+      "isSubtitleDisabled": true,
+      "video": [
+        {
+          "index": 0,
+          "kind": "Video",
+          "codec": "hevc",
+          "language": "und"
+        }
+      ],
+      "audio": [
+        {
+          "index": 1,
+          "kind": "Audio",
+          "codec": "aac",
+          "language": "eng",
+          "channelLayout": "2.0"
+        }
+      ],
+      "subtitles": []
     },
     "position": {
       "requestedStartPositionTicks": 600000000,
@@ -2256,6 +2406,30 @@ try {
       "height": 2160,
       "frameRate": 23.976,
       "hdrKind": "Sdr"
+    },
+    "tracks": {
+      "videoTrackCount": 1,
+      "audioTrackCount": 1,
+      "subtitleTrackCount": 0,
+      "isSubtitleDisabled": true,
+      "video": [
+        {
+          "index": 0,
+          "kind": "Video",
+          "codec": "hevc",
+          "language": "und"
+        }
+      ],
+      "audio": [
+        {
+          "index": 1,
+          "kind": "Audio",
+          "codec": "aac",
+          "language": "eng",
+          "channelLayout": "2.0"
+        }
+      ],
+      "subtitles": []
     },
     "position": {
       "requestedStartPositionTicks": 600000000,
@@ -2647,7 +2821,9 @@ try {
         'frame-pacing',
         'av-sync',
         'buffering',
-        'timeline'
+        'timeline',
+        'tracks',
+        'subtitles'
     )
     foreach ($purpose in $requiredPurposes) {
         if (-not ($exampleManifestValidation.coverage.coveredPurposes -contains $purpose)) {
@@ -2772,6 +2948,16 @@ try {
         ($_.requiredSignals -contains 'position.seekPositionErrorMs')
     })) {
         throw 'Expected example reference run plan to schedule the local timeline case with position required signals.'
+    }
+
+    if (-not ($exampleRunPlan.cases | Where-Object {
+        $_.caseId -eq 'jellyfin/sdr-hevc-main10-1080p60-3m' -and
+        ($_.requiredSignals -contains 'tracks.videoTrackCount') -and
+        ($_.requiredSignals -contains 'tracks.audioTrackCount') -and
+        ($_.requiredSignals -contains 'tracks.subtitleTrackCount') -and
+        ($_.requiredSignals -contains 'tracks.isSubtitleDisabled')
+    })) {
+        throw 'Expected example reference run plan to schedule SDR track/subtitle required signals.'
     }
 
     Write-Output 'playback-quality-cli smoke ok'

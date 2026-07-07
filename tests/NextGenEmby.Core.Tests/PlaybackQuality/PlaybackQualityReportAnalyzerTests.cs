@@ -195,6 +195,63 @@ public sealed class PlaybackQualityReportAnalyzerTests
     }
 
     [Fact]
+    public void Analyze_Summarizes_Track_And_Subtitle_Evidence_For_Model()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "tracks-ready",
+            Result = "pass",
+            Tracks = new PlaybackQualityTracks
+            {
+                VideoTrackCount = 1,
+                AudioTrackCount = 2,
+                SubtitleTrackCount = 1,
+                SelectedVideoStreamIndex = 0,
+                SelectedAudioStreamIndex = 2,
+                SelectedSubtitleStreamIndex = 7,
+                IsSubtitleDisabled = false
+            }
+        };
+        report.Tracks.Video.Add(new PlaybackQualityTrack
+        {
+            Index = 0,
+            Codec = "hevc",
+            Language = "und"
+        });
+        report.Tracks.Audio.Add(new PlaybackQualityTrack
+        {
+            Index = 2,
+            Codec = "truehd",
+            Language = "eng",
+            ChannelLayout = "7.1"
+        });
+        report.Tracks.Subtitles.Add(new PlaybackQualityTrack
+        {
+            Index = 7,
+            Codec = "srt",
+            Language = "zho",
+            IsExternal = true
+        });
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Equal("ready", analysis.Tracks.Status);
+        Assert.Equal(1, analysis.Tracks.VideoTrackCount);
+        Assert.Equal(2, analysis.Tracks.AudioTrackCount);
+        Assert.Equal(1, analysis.Tracks.SubtitleTrackCount);
+        Assert.Equal(0, analysis.Tracks.SelectedVideoStreamIndex);
+        Assert.Equal(2, analysis.Tracks.SelectedAudioStreamIndex);
+        Assert.Equal(7, analysis.Tracks.SelectedSubtitleStreamIndex);
+        Assert.False(analysis.Tracks.IsSubtitleDisabled);
+        Assert.Contains("tracks.videoTrackCount", analysis.Tracks.Signals);
+        Assert.Contains("tracks.audioTrackCount", analysis.Tracks.Signals);
+        Assert.Contains("tracks.subtitleTrackCount", analysis.Tracks.Signals);
+        Assert.Contains("tracks.selectedAudioStreamIndex", analysis.EvidenceSignals);
+        Assert.Contains("tracks.selectedSubtitleStreamIndex", analysis.EvidenceSignals);
+        Assert.Contains("tracks.subtitles.isExternal", analysis.EvidenceSignals);
+    }
+
+    [Fact]
     public void Analyze_Adds_Evidence_Collection_Hint_When_Failed_Report_Has_Missing_Evidence()
     {
         var report = new PlaybackQualityReport

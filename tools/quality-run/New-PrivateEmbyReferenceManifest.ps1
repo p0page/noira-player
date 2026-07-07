@@ -503,7 +503,7 @@ function New-ReferenceManifest([object[]]$Items) {
 
     $sdr = Select-FirstCandidate $candidates { $_.HdrProfile.kind -eq 'Sdr' } { $_.Bitrate }
     if ($null -ne $sdr) {
-        $cases += New-ReferenceCase $sdr 'sdr-smoke' @('sdr-smoke', 'av-sync') 1 $false $false
+        $cases += New-ReferenceCase $sdr 'sdr-smoke' @('sdr-smoke', 'av-sync', 'tracks', 'subtitles') 1 $false $false
         $cases += New-ReferenceCase $sdr 'timeline' @('timeline') 1 $false $false -StartPositionTicks 600000000 -MaxSeekPositionErrorMs 500.0
     }
 

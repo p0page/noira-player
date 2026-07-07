@@ -298,7 +298,9 @@ try {
         'frame-pacing',
         'av-sync',
         'buffering',
-        'timeline'
+        'timeline',
+        'tracks',
+        'subtitles'
     )
     foreach ($purpose in $requiredPurposes) {
         if (-not ($validation.coverage.coveredPurposes -contains $purpose)) {
@@ -322,6 +324,14 @@ try {
         $_.expected.maxSeekPositionErrorMs -eq 500
     })) {
         throw 'Generated manifest should include a seek/resume timeline case with position threshold metadata.'
+    }
+
+    if (-not ($manifest.cases | Where-Object {
+        $_.caseId -eq 'private-emby/sdr-movie/sdr-source/sdr-smoke' -and
+        ($_.purpose -contains 'tracks') -and
+        ($_.purpose -contains 'subtitles')
+    })) {
+        throw 'Generated manifest should include track and subtitle discovery purposes on the SDR smoke case.'
     }
 
     if (-not ($manifest.cases | Where-Object {

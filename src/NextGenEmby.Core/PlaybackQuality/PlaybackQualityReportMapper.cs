@@ -90,6 +90,56 @@ namespace NextGenEmby.Core.PlaybackQuality
             report.Source.HasHdr10BaseLayer = source.HdrProfile.HasHdr10BaseLayer;
             report.Source.HasHlgBaseLayer = source.HdrProfile.HasHlgBaseLayer;
             report.Source.AudioCodec = audio?.Codec ?? "";
+            ApplyTracks(report, descriptor, video);
+        }
+
+        private static void ApplyTracks(
+            PlaybackQualityReport report,
+            PlaybackDescriptor descriptor,
+            EmbyMediaStream? selectedVideo)
+        {
+            report.Tracks.Video.Clear();
+            report.Tracks.Audio.Clear();
+            report.Tracks.Subtitles.Clear();
+
+            foreach (var stream in descriptor.MediaSource.VideoStreams)
+            {
+                report.Tracks.Video.Add(MapTrack(stream));
+            }
+
+            foreach (var stream in descriptor.MediaSource.AudioStreams)
+            {
+                report.Tracks.Audio.Add(MapTrack(stream));
+            }
+
+            foreach (var stream in descriptor.MediaSource.SubtitleStreams)
+            {
+                report.Tracks.Subtitles.Add(MapTrack(stream));
+            }
+
+            report.Tracks.VideoTrackCount = report.Tracks.Video.Count;
+            report.Tracks.AudioTrackCount = report.Tracks.Audio.Count;
+            report.Tracks.SubtitleTrackCount = report.Tracks.Subtitles.Count;
+            report.Tracks.SelectedVideoStreamIndex = selectedVideo?.Index;
+            report.Tracks.SelectedAudioStreamIndex = descriptor.AudioStreamIndex;
+            report.Tracks.SelectedSubtitleStreamIndex = descriptor.SubtitleStreamIndex;
+            report.Tracks.IsSubtitleDisabled = !descriptor.SubtitleStreamIndex.HasValue;
+        }
+
+        private static PlaybackQualityTrack MapTrack(EmbyMediaStream stream)
+        {
+            return new PlaybackQualityTrack
+            {
+                Index = stream.Index,
+                Kind = stream.Kind.ToString(),
+                Codec = stream.Codec,
+                Language = stream.Language,
+                ChannelLayout = stream.ChannelLayout,
+                DisplayTitle = stream.DisplayTitle,
+                IsExternal = stream.IsExternal,
+                RealFrameRate = stream.RealFrameRate,
+                AverageFrameRate = stream.AverageFrameRate
+            };
         }
 
         private static string MapActualHdrOutput(PlaybackDisplayStatus status)

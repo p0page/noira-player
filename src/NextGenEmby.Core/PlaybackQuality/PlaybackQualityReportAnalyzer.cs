@@ -12,6 +12,7 @@ namespace NextGenEmby.Core.PlaybackQuality
         public PlaybackQualityStartupAssessment Startup { get; set; } = new PlaybackQualityStartupAssessment();
         public PlaybackQualityEnvironmentAssessment Environment { get; set; } = new PlaybackQualityEnvironmentAssessment();
         public PlaybackQualitySourceAssessment Source { get; set; } = new PlaybackQualitySourceAssessment();
+        public PlaybackQualityTracksAssessment Tracks { get; set; } = new PlaybackQualityTracksAssessment();
         public PlaybackQualityColorPipelineAssessment ColorPipeline { get; set; } = new PlaybackQualityColorPipelineAssessment();
         public PlaybackQualityBufferingAssessment Buffering { get; set; } = new PlaybackQualityBufferingAssessment();
         public PlaybackQualityAvSyncAssessment AvSync { get; set; } = new PlaybackQualityAvSyncAssessment();
@@ -69,6 +70,21 @@ namespace NextGenEmby.Core.PlaybackQuality
         public bool HasHlgBaseLayer { get; set; }
         public List<string> Signals { get; } = new List<string>();
         public List<string> MismatchedSignals { get; } = new List<string>();
+    }
+
+    public sealed class PlaybackQualityTracksAssessment
+    {
+        public string Status { get; set; } = "unknown";
+        public string Reason { get; set; } = "";
+        public int VideoTrackCount { get; set; }
+        public int AudioTrackCount { get; set; }
+        public int SubtitleTrackCount { get; set; }
+        public int? SelectedVideoStreamIndex { get; set; }
+        public int? SelectedAudioStreamIndex { get; set; }
+        public int? SelectedSubtitleStreamIndex { get; set; }
+        public bool IsSubtitleDisabled { get; set; }
+        public List<string> Signals { get; } = new List<string>();
+        public List<string> MissingSignals { get; } = new List<string>();
     }
 
     public sealed class PlaybackQualityColorPipelineAssessment
@@ -256,6 +272,7 @@ namespace NextGenEmby.Core.PlaybackQuality
             analysis.Startup = AssessStartup(report);
             analysis.Environment = AssessEnvironment(report);
             analysis.Source = AssessSource(report);
+            analysis.Tracks = AssessTracks(report);
             analysis.ColorPipeline = AssessColorPipeline(report);
             analysis.Buffering = AssessBuffering(report, signalPresence);
             analysis.AvSync = AssessAvSync(report);
@@ -275,6 +292,157 @@ namespace NextGenEmby.Core.PlaybackQuality
             }
 
             return analysis;
+        }
+
+        private static PlaybackQualityTracksAssessment AssessTracks(
+            PlaybackQualityReport report)
+        {
+            var tracks = new PlaybackQualityTracksAssessment
+            {
+                VideoTrackCount = CountOrListCount(report.Tracks.VideoTrackCount, report.Tracks.Video),
+                AudioTrackCount = CountOrListCount(report.Tracks.AudioTrackCount, report.Tracks.Audio),
+                SubtitleTrackCount = CountOrListCount(report.Tracks.SubtitleTrackCount, report.Tracks.Subtitles),
+                SelectedVideoStreamIndex = report.Tracks.SelectedVideoStreamIndex,
+                SelectedAudioStreamIndex = report.Tracks.SelectedAudioStreamIndex,
+                SelectedSubtitleStreamIndex = report.Tracks.SelectedSubtitleStreamIndex,
+                IsSubtitleDisabled = report.Tracks.IsSubtitleDisabled
+            };
+
+            var hasTrackEvidence =
+                tracks.VideoTrackCount > 0 ||
+                tracks.AudioTrackCount > 0 ||
+                tracks.SubtitleTrackCount > 0 ||
+                tracks.SelectedVideoStreamIndex.HasValue ||
+                tracks.SelectedAudioStreamIndex.HasValue ||
+                tracks.SelectedSubtitleStreamIndex.HasValue;
+
+            if (!hasTrackEvidence)
+            {
+                tracks.Status = "missing-evidence";
+                tracks.Reason = "Track discovery telemetry is missing.";
+                AddUnique(tracks.MissingSignals, "tracks.videoTrackCount");
+                AddUnique(tracks.MissingSignals, "tracks.audioTrackCount");
+                AddUnique(tracks.MissingSignals, "tracks.subtitleTrackCount");
+                return tracks;
+            }
+
+            AddTrackCountSignal(tracks, "tracks.videoTrackCount", tracks.VideoTrackCount);
+            AddTrackCountSignal(tracks, "tracks.audioTrackCount", tracks.AudioTrackCount);
+            AddTrackCountSignal(tracks, "tracks.subtitleTrackCount", tracks.SubtitleTrackCount);
+
+            if (tracks.SelectedVideoStreamIndex.HasValue)
+            {
+                AddUnique(tracks.Signals, "tracks.selectedVideoStreamIndex");
+            }
+
+            if (tracks.SelectedAudioStreamIndex.HasValue)
+            {
+                AddUnique(tracks.Signals, "tracks.selectedAudioStreamIndex");
+            }
+
+            if (tracks.SelectedSubtitleStreamIndex.HasValue)
+            {
+                AddUnique(tracks.Signals, "tracks.selectedSubtitleStreamIndex");
+            }
+
+            AddUnique(tracks.Signals, "tracks.isSubtitleDisabled");
+            AddTrackDetailSignals(tracks, report);
+
+            if (tracks.VideoTrackCount <= 0)
+            {
+                tracks.Status = "missing-video";
+                tracks.Reason = "Video track evidence is missing.";
+                AddUnique(tracks.MissingSignals, "tracks.videoTrackCount");
+                return tracks;
+            }
+
+            if (tracks.AudioTrackCount <= 0)
+            {
+                tracks.Status = "partial";
+                tracks.Reason = "Audio track evidence is missing.";
+                AddUnique(tracks.MissingSignals, "tracks.audioTrackCount");
+                return tracks;
+            }
+
+            tracks.Status = "ready";
+            tracks.Reason = tracks.SubtitleTrackCount > 0
+                ? "Video, audio, and subtitle track discovery telemetry is available."
+                : "Video and audio track discovery telemetry is available; no subtitle track was reported.";
+            return tracks;
+        }
+
+        private static int CountOrListCount(
+            int count,
+            IReadOnlyCollection<PlaybackQualityTrack> tracks)
+        {
+            return count > 0 ? count : tracks.Count;
+        }
+
+        private static void AddTrackCountSignal(
+            PlaybackQualityTracksAssessment tracks,
+            string signal,
+            int count)
+        {
+            if (count >= 0)
+            {
+                AddUnique(tracks.Signals, signal);
+            }
+        }
+
+        private static void AddTrackDetailSignals(
+            PlaybackQualityTracksAssessment tracks,
+            PlaybackQualityReport report)
+        {
+            foreach (var track in report.Tracks.Video)
+            {
+                AddCommonTrackSignals(tracks, "tracks.video", track);
+                if (track.RealFrameRate > 0)
+                {
+                    AddUnique(tracks.Signals, "tracks.video.realFrameRate");
+                }
+
+                if (track.AverageFrameRate > 0)
+                {
+                    AddUnique(tracks.Signals, "tracks.video.averageFrameRate");
+                }
+            }
+
+            foreach (var track in report.Tracks.Audio)
+            {
+                AddCommonTrackSignals(tracks, "tracks.audio", track);
+                if (!string.IsNullOrWhiteSpace(track.ChannelLayout))
+                {
+                    AddUnique(tracks.Signals, "tracks.audio.channelLayout");
+                }
+            }
+
+            foreach (var track in report.Tracks.Subtitles)
+            {
+                AddCommonTrackSignals(tracks, "tracks.subtitles", track);
+                AddUnique(tracks.Signals, "tracks.subtitles.isExternal");
+            }
+        }
+
+        private static void AddCommonTrackSignals(
+            PlaybackQualityTracksAssessment tracks,
+            string prefix,
+            PlaybackQualityTrack track)
+        {
+            AddUnique(tracks.Signals, prefix + ".index");
+            if (!string.IsNullOrWhiteSpace(track.Codec))
+            {
+                AddUnique(tracks.Signals, prefix + ".codec");
+            }
+
+            if (!string.IsNullOrWhiteSpace(track.Language))
+            {
+                AddUnique(tracks.Signals, prefix + ".language");
+            }
+
+            if (!string.IsNullOrWhiteSpace(track.DisplayTitle))
+            {
+                AddUnique(tracks.Signals, prefix + ".displayTitle");
+            }
         }
 
         private static PlaybackQualityStartupAssessment AssessStartup(
@@ -1589,6 +1757,11 @@ namespace NextGenEmby.Core.PlaybackQuality
             }
 
             foreach (var signal in analysis.AvSync.Signals)
+            {
+                AddUnique(analysis.EvidenceSignals, signal);
+            }
+
+            foreach (var signal in analysis.Tracks.Signals)
             {
                 AddUnique(analysis.EvidenceSignals, signal);
             }

@@ -7,7 +7,9 @@
       "tier": 1,
       "purpose": [
         "sdr-smoke",
-        "av-sync"
+        "av-sync",
+        "tracks",
+        "subtitles"
       ],
       "expected": {
         "codec": "hevc",

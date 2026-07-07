@@ -95,7 +95,9 @@ namespace NextGenEmby.Core.PlaybackQuality
             "frame-pacing",
             "av-sync",
             "buffering",
-            "timeline"
+            "timeline",
+            "tracks",
+            "subtitles"
         };
 
         public static PlaybackQualityReferenceManifestValidation Validate(

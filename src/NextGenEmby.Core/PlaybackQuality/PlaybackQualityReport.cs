@@ -23,6 +23,7 @@ namespace NextGenEmby.Core.PlaybackQuality
         public PlaybackQualitySource Source { get; set; } = new PlaybackQualitySource();
         public PlaybackQualityStartup Startup { get; set; } = new PlaybackQualityStartup();
         public PlaybackQualityPosition Position { get; set; } = new PlaybackQualityPosition();
+        public PlaybackQualityTracks Tracks { get; set; } = new PlaybackQualityTracks();
         public PlaybackQualityTiming Timing { get; set; } = new PlaybackQualityTiming();
         public PlaybackQualitySync Sync { get; set; } = new PlaybackQualitySync();
         public PlaybackQualityBuffers Buffers { get; set; } = new PlaybackQualityBuffers();
@@ -91,6 +92,33 @@ namespace NextGenEmby.Core.PlaybackQuality
         public long? SeekTargetPositionTicks { get; set; }
         public long? ActualPositionTicks { get; set; }
         public double? SeekPositionErrorMs { get; set; }
+    }
+
+    public sealed class PlaybackQualityTracks
+    {
+        public int VideoTrackCount { get; set; }
+        public int AudioTrackCount { get; set; }
+        public int SubtitleTrackCount { get; set; }
+        public int? SelectedVideoStreamIndex { get; set; }
+        public int? SelectedAudioStreamIndex { get; set; }
+        public int? SelectedSubtitleStreamIndex { get; set; }
+        public bool IsSubtitleDisabled { get; set; } = true;
+        public List<PlaybackQualityTrack> Video { get; } = new List<PlaybackQualityTrack>();
+        public List<PlaybackQualityTrack> Audio { get; } = new List<PlaybackQualityTrack>();
+        public List<PlaybackQualityTrack> Subtitles { get; } = new List<PlaybackQualityTrack>();
+    }
+
+    public sealed class PlaybackQualityTrack
+    {
+        public int Index { get; set; }
+        public string Kind { get; set; } = "";
+        public string Codec { get; set; } = "";
+        public string Language { get; set; } = "";
+        public string ChannelLayout { get; set; } = "";
+        public string DisplayTitle { get; set; } = "";
+        public bool IsExternal { get; set; }
+        public double RealFrameRate { get; set; }
+        public double AverageFrameRate { get; set; }
     }
 
     public sealed class PlaybackQualityTiming

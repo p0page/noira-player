@@ -47,6 +47,8 @@ public sealed class PlaybackQualityReferenceManifestTests
         Assert.Contains("sdr-smoke", result.Coverage.MissingPurposes);
         Assert.Contains("dv-fallback", result.Coverage.MissingPurposes);
         Assert.Contains("timeline", result.Coverage.MissingPurposes);
+        Assert.Contains("tracks", result.Coverage.MissingPurposes);
+        Assert.Contains("subtitles", result.Coverage.MissingPurposes);
         Assert.Contains("reference manifest is missing required playback quality purposes", result.Coverage.Reasons);
         Assert.Contains("Add reference cases", result.Coverage.SuggestedNextAction);
     }
@@ -98,6 +100,14 @@ public sealed class PlaybackQualityReferenceManifestTests
             "timeline/seek-position",
             tier: 1,
             purpose: "timeline"));
+        manifest.Cases.Add(CreateCase(
+            "tracks/discovery",
+            tier: 1,
+            purpose: "tracks"));
+        manifest.Cases.Add(CreateCase(
+            "subtitles/discovery",
+            tier: 1,
+            purpose: "subtitles"));
 
         var result = PlaybackQualityReferenceManifestValidator.Validate(manifest);
 
@@ -108,6 +118,8 @@ public sealed class PlaybackQualityReferenceManifestTests
         Assert.Contains("hdr-output", result.Coverage.CoveredPurposes);
         Assert.Contains("frame-pacing", result.Coverage.CoveredPurposes);
         Assert.Contains("timeline", result.Coverage.CoveredPurposes);
+        Assert.Contains("tracks", result.Coverage.CoveredPurposes);
+        Assert.Contains("subtitles", result.Coverage.CoveredPurposes);
         Assert.Contains("reference manifest covers required playback quality purposes", result.Coverage.Reasons);
     }
 
@@ -675,6 +687,8 @@ public sealed class PlaybackQualityReferenceManifestTests
         referenceCase.Purpose.Add("frame-pacing");
         referenceCase.Purpose.Add("av-sync");
         referenceCase.Purpose.Add("buffering");
+        referenceCase.Purpose.Add("tracks");
+        referenceCase.Purpose.Add("subtitles");
         referenceCase.Purpose.Add("hdr-force-sdr");
         referenceCase.Expected.HdrPlaybackStrategy = "HDR10 direct";
         referenceCase.Expected.IsHdr = true;
@@ -722,6 +736,50 @@ public sealed class PlaybackQualityReferenceManifestTests
         Assert.Contains("position.seekTargetPositionTicks", requiredSignals);
         Assert.Contains("position.actualPositionTicks", requiredSignals);
         Assert.Contains("position.seekPositionErrorMs", requiredSignals);
+    }
+
+    [Fact]
+    public void RequiredSignalPolicy_Requires_Track_And_Subtitle_Signals_For_Track_Purposes()
+    {
+        var referenceCase = CreateCase(
+            "tracks/subtitle-rich",
+            tier: 1,
+            purpose: "tracks");
+        referenceCase.Purpose.Add("subtitles");
+        referenceCase.Purpose.Add("audio-switch");
+        referenceCase.Purpose.Add("subtitle-switch");
+
+        var requiredSignals = PlaybackQualityRequiredSignalPolicy.CreateRequiredSignals(referenceCase);
+
+        Assert.Contains("tracks.videoTrackCount", requiredSignals);
+        Assert.Contains("tracks.audioTrackCount", requiredSignals);
+        Assert.Contains("tracks.subtitleTrackCount", requiredSignals);
+        Assert.Contains("tracks.selectedAudioStreamIndex", requiredSignals);
+        Assert.Contains("tracks.selectedSubtitleStreamIndex", requiredSignals);
+        Assert.Contains("tracks.isSubtitleDisabled", requiredSignals);
+    }
+
+    [Fact]
+    public void RequiredSignalPolicy_Recognizes_Track_Report_Signals()
+    {
+        var report = new PlaybackQualityReport
+        {
+            Tracks = new PlaybackQualityTracks
+            {
+                VideoTrackCount = 1,
+                AudioTrackCount = 2,
+                SubtitleTrackCount = 1,
+                SelectedAudioStreamIndex = 2,
+                IsSubtitleDisabled = true
+            }
+        };
+
+        Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "tracks.videoTrackCount"));
+        Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "tracks.audioTrackCount"));
+        Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "tracks.subtitleTrackCount"));
+        Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "tracks.selectedAudioStreamIndex"));
+        Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "tracks.isSubtitleDisabled"));
+        Assert.False(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "tracks.selectedSubtitleStreamIndex"));
     }
 
     private static PlaybackQualityReferenceCase CreateCase(
