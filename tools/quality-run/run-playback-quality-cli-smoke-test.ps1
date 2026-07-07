@@ -1188,6 +1188,12 @@ try {
     "frameRate": 23.976,
     "hdrKind": "Sdr"
   },
+  "position": {
+    "requestedStartPositionTicks": 600000000,
+    "seekTargetPositionTicks": 600000000,
+    "actualPositionTicks": 600000000,
+    "seekPositionErrorMs": 0
+  },
   "timing": {
     "renderPasses": 1440,
     "renderedVideoFrames": 1440,
@@ -1243,6 +1249,12 @@ try {
     "height": 2160,
     "frameRate": 23.976,
     "hdrKind": "Sdr"
+  },
+  "position": {
+    "requestedStartPositionTicks": 600000000,
+    "seekTargetPositionTicks": 600000000,
+    "actualPositionTicks": 600000000,
+    "seekPositionErrorMs": 0
   },
   "timing": {
     "renderPasses": 1440,
@@ -1336,7 +1348,8 @@ try {
         "cadence-23.976",
         "av-sync",
         "buffering",
-        "frame-pacing"
+        "frame-pacing",
+        "timeline"
       ],
       "expected": {
         "codec": "hevc",
@@ -1811,6 +1824,12 @@ try {
       "frameRate": 23.976,
       "hdrKind": "Sdr"
     },
+    "position": {
+      "requestedStartPositionTicks": 600000000,
+      "seekTargetPositionTicks": 600000000,
+      "actualPositionTicks": 600000000,
+      "seekPositionErrorMs": 0
+    },
     "timing": {
       "renderPasses": 1440,
       "renderedVideoFrames": 1440,
@@ -1865,6 +1884,12 @@ try {
       "height": 2160,
       "frameRate": 23.976,
       "hdrKind": "Sdr"
+    },
+    "position": {
+      "requestedStartPositionTicks": 600000000,
+      "seekTargetPositionTicks": 600000000,
+      "actualPositionTicks": 600000000,
+      "seekPositionErrorMs": 0
     },
     "timing": {
       "renderPasses": 1440,
@@ -1971,6 +1996,12 @@ try {
     "frameRate": 23.976,
     "hdrKind": "Hdr10"
   },
+  "position": {
+    "requestedStartPositionTicks": 600000000,
+    "seekTargetPositionTicks": 600000000,
+    "actualPositionTicks": 600000000,
+    "seekPositionErrorMs": 0
+  },
   "checks": [
     {
       "name": "MaxFrameGapMs",
@@ -2072,6 +2103,12 @@ try {
       "height": 2160,
       "frameRate": 23.976,
       "hdrKind": "Sdr"
+    },
+    "position": {
+      "requestedStartPositionTicks": 600000000,
+      "seekTargetPositionTicks": 600000000,
+      "actualPositionTicks": 600000000,
+      "seekPositionErrorMs": 0
     },
     "timing": {
       "renderPasses": 1440,
@@ -2219,6 +2256,12 @@ try {
       "height": 2160,
       "frameRate": 23.976,
       "hdrKind": "Sdr"
+    },
+    "position": {
+      "requestedStartPositionTicks": 600000000,
+      "seekTargetPositionTicks": 600000000,
+      "actualPositionTicks": 600000000,
+      "seekPositionErrorMs": 0
     },
     "timing": {
       "renderPasses": 1440,
@@ -2603,7 +2646,8 @@ try {
         'cadence-23.976',
         'frame-pacing',
         'av-sync',
-        'buffering'
+        'buffering',
+        'timeline'
     )
     foreach ($purpose in $requiredPurposes) {
         if (-not ($exampleManifestValidation.coverage.coveredPurposes -contains $purpose)) {
@@ -2654,6 +2698,14 @@ try {
         $_.expected.hasHdr10BaseLayer -eq $true
     })) {
         throw 'Expected example reference manifest to include a Dolby Vision Profile 8.1 HDR10 fallback case.'
+    }
+
+    if (-not ($exampleManifestValidation.cases | Where-Object {
+        $_.caseId -eq 'local/sdr-resume-seek-timeline' -and
+        $_.startPositionTicks -eq 600000000 -and
+        $_.expected.maxSeekPositionErrorMs -eq 500
+    })) {
+        throw 'Expected example reference manifest to include a local resume/seek timeline case.'
     }
 
     Push-Location $repoRoot
@@ -2708,6 +2760,18 @@ try {
         ($_.requiredSignals -contains 'sync.audioVideoDriftMsP95')
     })) {
         throw 'Expected example reference run plan to schedule the local 23.976 cadence case through an Emby quality-run command.'
+    }
+
+    if (-not ($exampleRunPlan.cases | Where-Object {
+        $_.caseId -eq 'local/sdr-resume-seek-timeline' -and
+        $_.captureMode -eq 'emby-item' -and
+        $_.devCommand.route -eq 'quality-run' -and
+        $_.devCommand.startPositionTicks -eq 600000000 -and
+        ($_.requiredSignals -contains 'position.seekTargetPositionTicks') -and
+        ($_.requiredSignals -contains 'position.actualPositionTicks') -and
+        ($_.requiredSignals -contains 'position.seekPositionErrorMs')
+    })) {
+        throw 'Expected example reference run plan to schedule the local timeline case with position required signals.'
     }
 
     Write-Output 'playback-quality-cli smoke ok'

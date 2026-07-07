@@ -728,6 +728,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                 "color-pipeline",
                 "startup",
                 "buffering",
+                "timeline",
                 "av-sync",
                 "frame-pacing",
                 "unknown"

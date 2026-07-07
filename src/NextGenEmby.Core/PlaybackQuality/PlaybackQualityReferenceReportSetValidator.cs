@@ -554,6 +554,14 @@ namespace NextGenEmby.Core.PlaybackQuality
                     PlaybackQualityCodeTargetCatalog.GetForFailureArea("startup"));
             }
 
+            if (StartsWithSignal(signal, "position."))
+            {
+                return NewTriage(
+                    "timeline",
+                    "Collect seek target, actual playback position, and derived position error before changing seek or resume behavior.",
+                    PlaybackQualityCodeTargetCatalog.GetForFailureArea("timeline"));
+            }
+
             if (StartsWithSignal(signal, "timing.") ||
                 string.Equals(signal, "display.refreshRateHz", StringComparison.Ordinal))
             {

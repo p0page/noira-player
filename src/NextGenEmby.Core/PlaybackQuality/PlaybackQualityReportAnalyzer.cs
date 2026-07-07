@@ -766,6 +766,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                 "color-pipeline",
                 "startup",
                 "buffering",
+                "timeline",
                 "av-sync",
                 "frame-pacing",
                 "unknown"
@@ -1057,6 +1058,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                 "color-pipeline",
                 "startup",
                 "buffering",
+                "timeline",
                 "av-sync",
                 "frame-pacing",
                 "unknown"
@@ -1098,6 +1100,15 @@ namespace NextGenEmby.Core.PlaybackQuality
                 report.Startup.StartupDurationMs <= 0)
             {
                 analysis.MissingEvidence.Add("startup.startupDurationMs");
+            }
+
+            if (report.Expected != null &&
+                report.Expected.MaxSeekPositionErrorMs.HasValue &&
+                !report.Position.SeekPositionErrorMs.HasValue &&
+                (!report.Position.SeekTargetPositionTicks.HasValue ||
+                    !report.Position.ActualPositionTicks.HasValue))
+            {
+                analysis.MissingEvidence.Add("position.seekPositionErrorMs");
             }
 
             if (report.Expected != null &&
@@ -1431,6 +1442,19 @@ namespace NextGenEmby.Core.PlaybackQuality
                             "buffers.audioStarvedPasses",
                             "buffers.queuedAudioBuffers"
                         });
+                case "timeline":
+                    return NewHint(
+                        area,
+                        "Inspect seek preview commit/cancel state, requested resume position, demux seek completion, and native playback position reporting.",
+                        PlaybackQualityCodeTargetCatalog.GetForFailureArea(area),
+                        new[]
+                        {
+                            "position.requestedStartPositionTicks",
+                            "position.seekTargetPositionTicks",
+                            "position.actualPositionTicks",
+                            "position.seekPositionErrorMs",
+                            "sync.videoPositionTicks"
+                        });
                 case "av-sync":
                     return NewHint(
                         area,
@@ -1554,6 +1578,28 @@ namespace NextGenEmby.Core.PlaybackQuality
             foreach (var signal in analysis.AvSync.Signals)
             {
                 AddUnique(analysis.EvidenceSignals, signal);
+            }
+
+            if (report.Position.RequestedStartPositionTicks.HasValue)
+            {
+                AddUnique(analysis.EvidenceSignals, "position.requestedStartPositionTicks");
+            }
+
+            if (report.Position.SeekTargetPositionTicks.HasValue)
+            {
+                AddUnique(analysis.EvidenceSignals, "position.seekTargetPositionTicks");
+            }
+
+            if (report.Position.ActualPositionTicks.HasValue)
+            {
+                AddUnique(analysis.EvidenceSignals, "position.actualPositionTicks");
+            }
+
+            if (report.Position.SeekPositionErrorMs.HasValue ||
+                (report.Position.SeekTargetPositionTicks.HasValue &&
+                    report.Position.ActualPositionTicks.HasValue))
+            {
+                AddUnique(analysis.EvidenceSignals, "position.seekPositionErrorMs");
             }
 
             if (report.Timing.LateFrameDropToleranceMs > 0)

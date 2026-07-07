@@ -297,7 +297,8 @@ try {
         'cadence-23.976',
         'frame-pacing',
         'av-sync',
-        'buffering'
+        'buffering',
+        'timeline'
     )
     foreach ($purpose in $requiredPurposes) {
         if (-not ($validation.coverage.coveredPurposes -contains $purpose)) {
@@ -312,6 +313,15 @@ try {
         $_.expected.isDirectPlayable -eq $false
     })) {
         throw 'Generated manifest should include a DV Profile 5 reject case from stream metadata.'
+    }
+
+    if (-not ($manifest.cases | Where-Object {
+        $_.caseId -eq 'private-emby/sdr-movie/sdr-source/timeline' -and
+        ($_.purpose -contains 'timeline') -and
+        $_.startPositionTicks -eq 600000000 -and
+        $_.expected.maxSeekPositionErrorMs -eq 500
+    })) {
+        throw 'Generated manifest should include a seek/resume timeline case with position threshold metadata.'
     }
 
     if (-not ($manifest.cases | Where-Object {

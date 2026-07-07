@@ -32,6 +32,15 @@ namespace NextGenEmby.Core.PlaybackQuality
             "src/NextGenEmby.Native/Media/AudioDecoder.cpp"
         };
 
+        private static readonly string[] TimelineTargets =
+        {
+            "src/NextGenEmby.Core/Playback/PlaybackOrchestrator.cs",
+            "src/NextGenEmby.Core/Playback/SeekPreviewSession.cs",
+            "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+            "src/NextGenEmby.Native/NativePlaybackEngine.cpp",
+            "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+        };
+
         private static readonly string[] AvSyncTargets =
         {
             "src/NextGenEmby.Native/Media/AudioRenderer.cpp",
@@ -73,6 +82,8 @@ namespace NextGenEmby.Core.PlaybackQuality
                     return StartupTargets;
                 case "buffering":
                     return BufferingTargets;
+                case "timeline":
+                    return TimelineTargets;
                 case "av-sync":
                     return AvSyncTargets;
                 case "frame-pacing":
@@ -101,6 +112,11 @@ namespace NextGenEmby.Core.PlaybackQuality
             if (StartsWithSignal(signal, "startup."))
             {
                 return "startup";
+            }
+
+            if (StartsWithSignal(signal, "position."))
+            {
+                return "timeline";
             }
 
             if (StartsWithSignal(signal, "timing.") ||

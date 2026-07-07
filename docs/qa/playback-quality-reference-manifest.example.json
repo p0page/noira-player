@@ -192,6 +192,35 @@
         "requireValidatedConversion": true,
         "requireMatchedDisplayRefreshRate": true
       }
+    },
+    {
+      "caseId": "local/sdr-resume-seek-timeline",
+      "uri": "emby://quality-cases/sdr-resume-seek-timeline",
+      "itemId": "quality-case-sdr-resume-seek-timeline",
+      "mediaSourceId": "quality-source-sdr-resume-seek-timeline",
+      "startPositionTicks": 600000000,
+      "tier": 2,
+      "purpose": [
+        "timeline"
+      ],
+      "expected": {
+        "codec": "hevc",
+        "width": 1920,
+        "height": 1080,
+        "frameRate": 60.0,
+        "hdrKind": "Sdr",
+        "isHdr": false,
+        "isDirectPlayable": true,
+        "hdrOutput": "Sdr",
+        "dxgiInput": "YCBCR_STUDIO_G22_LEFT_P709",
+        "dxgiOutput": "RGB_FULL_G22_NONE_P709",
+        "maxStartupDurationMs": 5000.0,
+        "maxSeekPositionErrorMs": 500.0,
+        "maxVideoStarvedPasses": 0,
+        "maxAudioStarvedPasses": 0,
+        "requireValidatedConversion": true,
+        "requireMatchedDisplayRefreshRate": false
+      }
     }
   ]
 }

@@ -539,6 +539,45 @@ public sealed class PlaybackQualityEvaluatorTests
     }
 
     [Fact]
+    public void Evaluate_Fails_When_Seek_Position_Error_Exceeds_Threshold()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "seek-lands-late",
+            Expected = new PlaybackQualityExpected
+            {
+                MaxSeekPositionErrorMs = 250,
+                RequireValidatedConversion = false
+            },
+            Position = new PlaybackQualityPosition
+            {
+                SeekTargetPositionTicks = 600_000_000,
+                ActualPositionTicks = 610_000_000
+            }
+        };
+
+        PlaybackQualityEvaluator.Evaluate(report);
+
+        Assert.Equal("fail", report.Result);
+        Assert.Equal(1000.0, report.Position.SeekPositionErrorMs);
+        Assert.Contains(
+            "SeekPositionErrorMs 1000.000 exceeded MaxSeekPositionErrorMs 250.000.",
+            report.FailureReasons);
+        Assert.Equal("timeline", report.Analysis.PrimaryFailureArea);
+        Assert.Equal(
+            "Inspect seek/resume timeline state, demux seek completion, and playback position reporting.",
+            report.Analysis.SuggestedNextAction);
+        Assert.Contains("position.seekPositionErrorMs", report.Analysis.RelevantSignals);
+        Assert.Contains(report.Checks, check =>
+            check.Name == "SeekPositionErrorMs" &&
+            check.Signal == "position.seekPositionErrorMs" &&
+            check.Expected == "250.000" &&
+            check.Actual == "1000.000" &&
+            check.Status == "fail" &&
+            check.FailureArea == "timeline");
+    }
+
+    [Fact]
     public void Evaluate_Fails_With_Missing_Color_Pipeline_Reasons_When_Color_Evidence_Is_Required()
     {
         var report = new PlaybackQualityReport

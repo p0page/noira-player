@@ -94,7 +94,8 @@ namespace NextGenEmby.Core.PlaybackQuality
             "cadence-23.976",
             "frame-pacing",
             "av-sync",
-            "buffering"
+            "buffering",
+            "timeline"
         };
 
         public static PlaybackQualityReferenceManifestValidation Validate(
@@ -261,6 +262,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                 MaxRenderIntervalMsP95 = source.MaxRenderIntervalMsP95,
                 MaxRenderIntervalMsP99 = source.MaxRenderIntervalMsP99,
                 MaxAudioVideoDriftMsP95 = source.MaxAudioVideoDriftMsP95,
+                MaxSeekPositionErrorMs = source.MaxSeekPositionErrorMs,
                 MaxVideoStarvedPasses = source.MaxVideoStarvedPasses,
                 MaxAudioStarvedPasses = source.MaxAudioStarvedPasses,
                 RequireValidatedConversion = source.RequireValidatedConversion,

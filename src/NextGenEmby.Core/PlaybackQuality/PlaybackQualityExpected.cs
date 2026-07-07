@@ -25,6 +25,7 @@ namespace NextGenEmby.Core.PlaybackQuality
         public double? MaxRenderIntervalMsP95 { get; set; }
         public double? MaxRenderIntervalMsP99 { get; set; }
         public double? MaxAudioVideoDriftMsP95 { get; set; }
+        public double? MaxSeekPositionErrorMs { get; set; }
         public long? MaxVideoStarvedPasses { get; set; }
         public long? MaxAudioStarvedPasses { get; set; }
         public bool RequireValidatedConversion { get; set; } = true;

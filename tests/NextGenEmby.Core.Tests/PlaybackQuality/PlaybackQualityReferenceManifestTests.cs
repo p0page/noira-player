@@ -46,6 +46,7 @@ public sealed class PlaybackQualityReferenceManifestTests
         Assert.False(result.Coverage.IsCoreEvaluationReady);
         Assert.Contains("sdr-smoke", result.Coverage.MissingPurposes);
         Assert.Contains("dv-fallback", result.Coverage.MissingPurposes);
+        Assert.Contains("timeline", result.Coverage.MissingPurposes);
         Assert.Contains("reference manifest is missing required playback quality purposes", result.Coverage.Reasons);
         Assert.Contains("Add reference cases", result.Coverage.SuggestedNextAction);
     }
@@ -93,6 +94,10 @@ public sealed class PlaybackQualityReferenceManifestTests
             "network/buffering",
             tier: 1,
             purpose: "buffering"));
+        manifest.Cases.Add(CreateCase(
+            "timeline/seek-position",
+            tier: 1,
+            purpose: "timeline"));
 
         var result = PlaybackQualityReferenceManifestValidator.Validate(manifest);
 
@@ -102,6 +107,7 @@ public sealed class PlaybackQualityReferenceManifestTests
         Assert.Empty(result.Coverage.MissingPurposes);
         Assert.Contains("hdr-output", result.Coverage.CoveredPurposes);
         Assert.Contains("frame-pacing", result.Coverage.CoveredPurposes);
+        Assert.Contains("timeline", result.Coverage.CoveredPurposes);
         Assert.Contains("reference manifest covers required playback quality purposes", result.Coverage.Reasons);
     }
 
@@ -685,6 +691,7 @@ public sealed class PlaybackQualityReferenceManifestTests
         referenceCase.Expected.MaxRenderIntervalMsP95 = 55;
         referenceCase.Expected.MaxRenderIntervalMsP99 = 80;
         referenceCase.Expected.MaxAudioVideoDriftMsP95 = 40;
+        referenceCase.Expected.MaxSeekPositionErrorMs = 250;
         referenceCase.Expected.MaxVideoStarvedPasses = 0;
         referenceCase.Expected.MaxAudioStarvedPasses = 0;
         referenceCase.Expected.HdrOutput = "Hdr10";
@@ -699,6 +706,22 @@ public sealed class PlaybackQualityReferenceManifestTests
         var requiredSignals = PlaybackQualityRequiredSignalPolicy.CreateRequiredSignals(referenceCase);
 
         Assert.All(requiredSignals, signal => Assert.Contains(signal, knownSignals));
+    }
+
+    [Fact]
+    public void RequiredSignalPolicy_Requires_Position_Signals_For_Seek_Threshold()
+    {
+        var referenceCase = CreateCase(
+            "timeline/seek-position",
+            tier: 1,
+            purpose: "timeline");
+        referenceCase.Expected.MaxSeekPositionErrorMs = 250;
+
+        var requiredSignals = PlaybackQualityRequiredSignalPolicy.CreateRequiredSignals(referenceCase);
+
+        Assert.Contains("position.seekTargetPositionTicks", requiredSignals);
+        Assert.Contains("position.actualPositionTicks", requiredSignals);
+        Assert.Contains("position.seekPositionErrorMs", requiredSignals);
     }
 
     private static PlaybackQualityReferenceCase CreateCase(

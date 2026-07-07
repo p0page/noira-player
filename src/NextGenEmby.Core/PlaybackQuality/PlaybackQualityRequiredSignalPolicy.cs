@@ -40,6 +40,15 @@ namespace NextGenEmby.Core.PlaybackQuality
                 AddUnique(requiredSignals, "startup.startupDurationMs");
             }
 
+            if (expected.MaxSeekPositionErrorMs.HasValue ||
+                HasPurpose(referenceCase, "timeline") ||
+                HasPurpose(referenceCase, "seek"))
+            {
+                AddUnique(requiredSignals, "position.seekTargetPositionTicks");
+                AddUnique(requiredSignals, "position.actualPositionTicks");
+                AddUnique(requiredSignals, "position.seekPositionErrorMs");
+            }
+
             if (expected.MinRenderedVideoFrames.HasValue ||
                 HasPurpose(referenceCase, "frame-pacing") ||
                 HasPurpose(referenceCase, "cadence-23.976"))
@@ -186,6 +195,16 @@ namespace NextGenEmby.Core.PlaybackQuality
                     return report.Source.DolbyVisionCompatibilityId.HasValue;
                 case "startup.startupDurationMs":
                     return report.Startup.StartupDurationMs > 0;
+                case "position.requestedStartPositionTicks":
+                    return report.Position.RequestedStartPositionTicks.HasValue;
+                case "position.seekTargetPositionTicks":
+                    return report.Position.SeekTargetPositionTicks.HasValue;
+                case "position.actualPositionTicks":
+                    return report.Position.ActualPositionTicks.HasValue;
+                case "position.seekPositionErrorMs":
+                    return report.Position.SeekPositionErrorMs.HasValue ||
+                        (report.Position.SeekTargetPositionTicks.HasValue &&
+                            report.Position.ActualPositionTicks.HasValue);
                 case "timing.renderedVideoFrames":
                     return report.Timing.RenderedVideoFrames > 0;
                 case "timing.droppedVideoFrames":

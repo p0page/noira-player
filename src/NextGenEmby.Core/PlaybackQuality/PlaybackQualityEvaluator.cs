@@ -5,6 +5,7 @@ namespace NextGenEmby.Core.PlaybackQuality
     public static class PlaybackQualityEvaluator
     {
         private const double FrameRateTolerance = 0.01;
+        private const double TicksPerMillisecond = 10000.0;
 
         public static void Evaluate(PlaybackQualityReport report)
         {
@@ -25,6 +26,7 @@ namespace NextGenEmby.Core.PlaybackQuality
             CheckExpectedSourceMetadata(report, expected);
             CheckExpectedFrameRate(report, expected);
             CheckStartupDuration(report, expected);
+            CheckSeekPositionError(report, expected);
             CheckMin(
                 report,
                 "RenderedVideoFrames",
@@ -820,6 +822,13 @@ namespace NextGenEmby.Core.PlaybackQuality
                 return;
             }
 
+            if (HasReason(report, "SeekPositionErrorMs"))
+            {
+                report.Analysis.PrimaryFailureArea = "timeline";
+                report.Analysis.SuggestedNextAction = "Inspect seek/resume timeline state, demux seek completion, and playback position reporting.";
+                return;
+            }
+
             if (HasReason(report, "VideoStarvedPasses", "AudioStarvedPasses"))
             {
                 report.Analysis.PrimaryFailureArea = "buffering";
@@ -843,6 +852,63 @@ namespace NextGenEmby.Core.PlaybackQuality
 
             report.Analysis.PrimaryFailureArea = "unknown";
             report.Analysis.SuggestedNextAction = "Inspect raw metrics and failure reasons.";
+        }
+
+        private static void CheckSeekPositionError(
+            PlaybackQualityReport report,
+            PlaybackQualityExpected expected)
+        {
+            if (!expected.MaxSeekPositionErrorMs.HasValue)
+            {
+                return;
+            }
+
+            var errorMs = ResolveSeekPositionErrorMs(report.Position);
+            if (!errorMs.HasValue)
+            {
+                var message = "SeekPositionErrorMs is missing for timeline validation.";
+                report.FailureReasons.Add(message);
+                report.Checks.Add(new PlaybackQualityCheck
+                {
+                    Name = "SeekPositionErrorMs",
+                    Signal = "position.seekPositionErrorMs",
+                    Status = "fail",
+                    FailureArea = "timeline",
+                    Expected = Format(expected.MaxSeekPositionErrorMs.Value),
+                    Actual = "",
+                    Message = message
+                });
+                AddRelevantSignal(report, "position.seekPositionErrorMs");
+                return;
+            }
+
+            report.Position.SeekPositionErrorMs = errorMs.Value;
+            CheckMax(
+                report,
+                "SeekPositionErrorMs",
+                errorMs.Value,
+                expected.MaxSeekPositionErrorMs,
+                "MaxSeekPositionErrorMs",
+                "position.seekPositionErrorMs",
+                "timeline");
+        }
+
+        private static double? ResolveSeekPositionErrorMs(PlaybackQualityPosition position)
+        {
+            if (position.SeekPositionErrorMs.HasValue)
+            {
+                return System.Math.Abs(position.SeekPositionErrorMs.Value);
+            }
+
+            if (position.SeekTargetPositionTicks.HasValue &&
+                position.ActualPositionTicks.HasValue)
+            {
+                return System.Math.Abs(
+                    position.ActualPositionTicks.Value - position.SeekTargetPositionTicks.Value) /
+                    TicksPerMillisecond;
+            }
+
+            return null;
         }
 
         private static bool HasReason(PlaybackQualityReport report, params string[] fragments)

@@ -47,6 +47,15 @@ public sealed class PlaybackQualityCodeTargetCatalogTests
     }
 
     [Fact]
+    public void GetForSignal_Returns_Timeline_Targets_For_Position_Signal()
+    {
+        var targets = PlaybackQualityCodeTargetCatalog.GetForSignal("position.seekPositionErrorMs");
+
+        Assert.Contains("src/NextGenEmby.Core/Playback/PlaybackOrchestrator.cs", targets);
+        Assert.Contains("src/NextGenEmby.Native/Media/PlaybackGraph.cpp", targets);
+    }
+
+    [Fact]
     public void GetForSignal_Returns_Evidence_Targets_For_Unknown_Signal()
     {
         var targets = PlaybackQualityCodeTargetCatalog.GetForSignal("custom.missingSignal");

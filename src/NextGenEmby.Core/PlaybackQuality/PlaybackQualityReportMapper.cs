@@ -50,6 +50,7 @@ namespace NextGenEmby.Core.PlaybackQuality
             report.Sync.AudioVideoDriftMsP95 = metrics.AudioVideoDriftMsP95;
             report.Sync.AudioVideoDriftMsP99 = metrics.AudioVideoDriftMsP99;
             report.Sync.AudioVideoDriftMsMax = metrics.AudioVideoDriftMsMax;
+            report.Position.ActualPositionTicks = metrics.VideoPositionTicks;
 
             report.Buffers.SubmittedAudioFrames = metrics.SubmittedAudioFrames;
             report.Buffers.QueuedAudioBuffers = metrics.QueuedAudioBuffers;
@@ -70,6 +71,8 @@ namespace NextGenEmby.Core.PlaybackQuality
 
             report.Source.ItemId = descriptor.ItemId;
             report.Source.MediaSourceId = source.Id;
+            report.Position.RequestedStartPositionTicks = descriptor.StartPositionTicks;
+            report.Position.SeekTargetPositionTicks = descriptor.StartPositionTicks;
             report.Source.Codec = FirstNonEmpty(video?.Codec, source.HdrProfile.Codec);
             report.Source.Width = source.Width;
             report.Source.Height = source.Height;

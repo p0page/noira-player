@@ -333,7 +333,9 @@ function New-ReferenceCase(
     [string[]]$Purpose,
     [int]$Tier,
     [bool]$ForceSdrOutput,
-    [bool]$RequireMatchedDisplayRefreshRate
+    [bool]$RequireMatchedDisplayRefreshRate,
+    [long]$StartPositionTicks = 0,
+    [double]$MaxSeekPositionErrorMs = 0
 ) {
     $hdrOutput = if ($ForceSdrOutput) { 'Sdr' } elseif ($Candidate.HdrProfile.isHdr) { 'Hdr10' } else { 'Sdr' }
     $dxgiOutput = if ($ForceSdrOutput -or -not $Candidate.HdrProfile.isHdr) {
@@ -343,7 +345,18 @@ function New-ReferenceCase(
         'RGB_FULL_G2084_NONE_P2020'
     }
 
-    [pscustomobject][ordered]@{
+    $expected = New-Expected `
+        -VideoStream $Candidate.VideoStream `
+        -FrameRate $Candidate.FrameRate `
+        -HdrProfile $Candidate.HdrProfile `
+        -HdrOutput $hdrOutput `
+        -DxgiOutput $dxgiOutput `
+        -RequireMatchedDisplayRefreshRate $RequireMatchedDisplayRefreshRate
+    if ($MaxSeekPositionErrorMs -gt 0) {
+        Add-Member -InputObject $expected -NotePropertyName 'maxSeekPositionErrorMs' -NotePropertyValue $MaxSeekPositionErrorMs -Force
+    }
+
+    $case = [ordered]@{
         caseId = ('private-emby/{0}/{1}/{2}' -f $Candidate.ItemId, $Candidate.MediaSourceId, $Suffix)
         uri = ('emby://items/{0}' -f $Candidate.ItemId)
         itemId = $Candidate.ItemId
@@ -351,14 +364,14 @@ function New-ReferenceCase(
         forceSdrOutput = $ForceSdrOutput
         tier = $Tier
         purpose = @($Purpose)
-        expected = New-Expected `
-            -VideoStream $Candidate.VideoStream `
-            -FrameRate $Candidate.FrameRate `
-            -HdrProfile $Candidate.HdrProfile `
-            -HdrOutput $hdrOutput `
-            -DxgiOutput $dxgiOutput `
-            -RequireMatchedDisplayRefreshRate $RequireMatchedDisplayRefreshRate
+        expected = $expected
     }
+
+    if ($StartPositionTicks -gt 0) {
+        $case.startPositionTicks = $StartPositionTicks
+    }
+
+    [pscustomobject]$case
 }
 
 function ConvertTo-Candidates([object[]]$Items) {
@@ -491,6 +504,7 @@ function New-ReferenceManifest([object[]]$Items) {
     $sdr = Select-FirstCandidate $candidates { $_.HdrProfile.kind -eq 'Sdr' } { $_.Bitrate }
     if ($null -ne $sdr) {
         $cases += New-ReferenceCase $sdr 'sdr-smoke' @('sdr-smoke', 'av-sync') 1 $false $false
+        $cases += New-ReferenceCase $sdr 'timeline' @('timeline') 1 $false $false -StartPositionTicks 600000000 -MaxSeekPositionErrorMs 500.0
     }
 
     $hdr10 = Select-FirstCandidate $candidates { $_.HdrProfile.kind -eq 'Hdr10' -and [int]$_.VideoStream.Width -le 1920 } { $_.Bitrate }

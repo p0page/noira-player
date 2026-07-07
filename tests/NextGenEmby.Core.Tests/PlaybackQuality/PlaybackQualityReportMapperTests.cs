@@ -114,6 +114,34 @@ public sealed class PlaybackQualityReportMapperTests
     }
 
     [Fact]
+    public void ApplyMetrics_Copies_Actual_Position_For_Timeline_Signals()
+    {
+        var report = new PlaybackQualityReport();
+        var metrics = new PlaybackQualityMetricsSnapshot
+        {
+            VideoPositionTicks = 610_000_000
+        };
+
+        PlaybackQualityReportMapper.ApplyMetrics(report, metrics);
+
+        Assert.Equal(610_000_000, report.Position.ActualPositionTicks);
+    }
+
+    [Fact]
+    public void ApplyMetrics_Copies_Zero_Actual_Position_For_Timeline_Signals()
+    {
+        var report = new PlaybackQualityReport();
+        var metrics = new PlaybackQualityMetricsSnapshot
+        {
+            VideoPositionTicks = 0
+        };
+
+        PlaybackQualityReportMapper.ApplyMetrics(report, metrics);
+
+        Assert.Equal(0, report.Position.ActualPositionTicks);
+    }
+
+    [Fact]
     public void ApplySource_Copies_Playback_Source_Metadata()
     {
         var report = new PlaybackQualityReport();
@@ -156,12 +184,14 @@ public sealed class PlaybackQualityReportMapperTests
             "item-1",
             source,
             new[] { source },
-            startPositionTicks: 0,
+            startPositionTicks: 600_000_000,
             audioStreamIndex: 2);
 
         PlaybackQualityReportMapper.ApplySource(report, descriptor);
 
         Assert.Equal("item-1", report.Source.ItemId);
+        Assert.Equal(600_000_000, report.Position.RequestedStartPositionTicks);
+        Assert.Equal(600_000_000, report.Position.SeekTargetPositionTicks);
         Assert.Equal("source-1", report.Source.MediaSourceId);
         Assert.Equal("hevc", report.Source.Codec);
         Assert.Equal(3840, report.Source.Width);
