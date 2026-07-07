@@ -85,6 +85,17 @@ namespace NextGenEmby.Core.PlaybackQuality
     public static class PlaybackQualityReferenceReportSetValidator
     {
         private const double FrameRateTolerance = 0.01;
+        private static readonly string[] RequiredSkipSignals =
+        {
+            "skip.code",
+            "skip.reason",
+            "skip.operation",
+            "skip.failureClass",
+            "skip.failureArea",
+            "skip.isExpected",
+            "skip.isRetriable",
+            "lifecycle.skip"
+        };
 
         public static PlaybackQualityReferenceReportSetValidation Validate(
             PlaybackQualityReferenceManifest manifest,
@@ -222,12 +233,20 @@ namespace NextGenEmby.Core.PlaybackQuality
                     ReportRunId = report.RunId,
                     Status = "matched"
                 };
-                if (!IsErrorHandlingReport(referenceCase, report))
+                if (!IsErrorHandlingReport(referenceCase, report) &&
+                    !IsSkipReport(report))
                 {
                     ValidateSource(validation, status, referenceCase.Expected, report);
                 }
 
-                ValidateRequiredSignals(validation, status, referenceCase, entry);
+                if (IsSkipReport(report))
+                {
+                    ValidateSkipSignals(validation, status, entry);
+                }
+                else
+                {
+                    ValidateRequiredSignals(validation, status, referenceCase, entry);
+                }
                 if (status.Signals.Count > 0)
                 {
                     status.Status = "mismatch";
@@ -264,6 +283,12 @@ namespace NextGenEmby.Core.PlaybackQuality
                 report != null &&
                 string.Equals(report.Result, "error", StringComparison.OrdinalIgnoreCase) &&
                 referenceCase.Purpose.Contains("error-handling");
+        }
+
+        private static bool IsSkipReport(PlaybackQualityReport report)
+        {
+            return report != null &&
+                string.Equals(report.Result, "skip", StringComparison.OrdinalIgnoreCase);
         }
 
         private static void ValidateSource(
@@ -382,6 +407,35 @@ namespace NextGenEmby.Core.PlaybackQuality
                     "present",
                     "",
                     "Playback quality report is missing a required telemetry signal.");
+            }
+        }
+
+        private static void ValidateSkipSignals(
+            PlaybackQualityReferenceReportSetValidation validation,
+            PlaybackQualityReferenceReportCaseStatus status,
+            PlaybackQualityReferenceReportSetEntry entry)
+        {
+            foreach (var signal in RequiredSkipSignals)
+            {
+                if (status.Signals.Contains(signal) ||
+                    PlaybackQualityRequiredSignalPolicy.HasReportSignal(
+                        entry.Report,
+                        signal,
+                        entry.HasSignalPresenceEvidence ? entry.PresentSignals : null))
+                {
+                    continue;
+                }
+
+                AddUnique(status.Signals, signal);
+                AddError(
+                    validation,
+                    "report.requiredSignal.missing",
+                    status.CaseId,
+                    status.ReportRunId,
+                    signal,
+                    "present",
+                    "",
+                    "Playback quality skip report is missing a required skip signal.");
             }
         }
 

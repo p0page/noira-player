@@ -501,6 +501,37 @@ public sealed class PlaybackQualityReferenceManifestTests
     }
 
     [Fact]
+    public void ValidateReportSet_Accepts_Skip_Report_Without_Playback_Metadata()
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        var referenceCase = CreateCase(
+            "native-harness/not-implemented",
+            tier: 1,
+            purpose: "frame-pacing");
+        manifest.Cases.Add(referenceCase);
+        var result = PlaybackQualityRuntimeEvidenceCollector.ComposeSkipRunResult(
+            referenceCase,
+            new PlaybackQualitySkip
+            {
+                Code = "native-harness.not-implemented",
+                Reason = "Native playback harness is not implemented.",
+                Operation = "materialize-native-harness",
+                FailureClass = "insufficient instrumentation",
+                FailureArea = "evidence-collection",
+                IsExpected = true,
+                IsRetriable = true
+            });
+
+        var validation = PlaybackQualityReferenceReportSetValidator.Validate(
+            manifest,
+            new[] { result.Report });
+
+        Assert.True(validation.IsValid);
+        Assert.Equal(1, validation.MatchedCaseCount);
+        Assert.Empty(validation.Errors);
+    }
+
+    [Fact]
     public void ValidateReportSet_Rejects_Missing_Extra_Duplicate_And_Mismatched_Reports()
     {
         var manifest = new PlaybackQualityReferenceManifest();

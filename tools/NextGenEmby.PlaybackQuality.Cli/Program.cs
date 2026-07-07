@@ -52,6 +52,11 @@ internal static class Program
                 return RunMaterializeCoreProbeReportSet(args);
             }
 
+            if (string.Equals(args[0], "materialize-native-harness-report-set", StringComparison.OrdinalIgnoreCase))
+            {
+                return RunMaterializeNativeHarnessReportSet(args);
+            }
+
             if (string.Equals(args[0], "analyze-report-set", StringComparison.OrdinalIgnoreCase))
             {
                 return RunAnalyzeReportSet(args);
@@ -157,6 +162,16 @@ internal static class Program
         var manifest = ReadJson<PlaybackQualityReferenceManifest>(options.ManifestPath);
         var validation = PlaybackQualityReferenceManifestValidator.Validate(manifest);
         var output = MaterializeCoreProbeReportSet(validation, options);
+        WriteJson(output, options.OutputPath);
+        return validation.IsValid ? 0 : 2;
+    }
+
+    private static int RunMaterializeNativeHarnessReportSet(string[] args)
+    {
+        var options = ParseMaterializeNativeHarnessReportSetOptions(args);
+        var manifest = ReadJson<PlaybackQualityReferenceManifest>(options.ManifestPath);
+        var validation = PlaybackQualityReferenceManifestValidator.Validate(manifest);
+        var output = MaterializeNativeHarnessReportSet(validation, options);
         WriteJson(output, options.OutputPath);
         return validation.IsValid ? 0 : 2;
     }
@@ -486,6 +501,12 @@ internal static class Program
         string[] args)
     {
         return ParseMaterializeReportSetOptions(args, "materialize-core-probe-report-set");
+    }
+
+    private static MaterializeBaselineReportSetOptions ParseMaterializeNativeHarnessReportSetOptions(
+        string[] args)
+    {
+        return ParseMaterializeReportSetOptions(args, "materialize-native-harness-report-set");
     }
 
     private static MaterializeBaselineReportSetOptions ParseMaterializeReportSetOptions(
@@ -1301,6 +1322,12 @@ internal static class Program
                 {
                     AddUnique(signals, "lifecycle.error");
                 }
+
+                if (string.Equals(status, "skip", StringComparison.Ordinal) ||
+                    string.Equals(status, "skipped", StringComparison.Ordinal))
+                {
+                    AddUnique(signals, "lifecycle.skip");
+                }
             }
         }
     }
@@ -1462,6 +1489,70 @@ internal static class Program
         return output;
     }
 
+    private static MaterializedBaselineReportSet MaterializeNativeHarnessReportSet(
+        PlaybackQualityReferenceManifestValidation validation,
+        MaterializeBaselineReportSetOptions options)
+    {
+        var output = new MaterializedBaselineReportSet
+        {
+            ReportsDirectory = options.ReportsDirectory,
+            ManifestValidation = validation,
+            Environment = CreateNativeHarnessEnvironment(options)
+        };
+        AddUnique(
+            output.Limitations,
+            "native-harness: native playback graph was not opened by this command");
+        AddUnique(
+            output.Limitations,
+            "native-harness: report is a standard skip envelope for the missing real native collector");
+
+        if (!validation.IsValid)
+        {
+            return output;
+        }
+
+        Directory.CreateDirectory(options.ReportsDirectory);
+        foreach (var referenceCase in validation.Cases)
+        {
+            var reportRelativePath = GetRunIdComparisonRelativePath(referenceCase.CaseId);
+            var reportPath = Path.Combine(options.ReportsDirectory, reportRelativePath);
+            var result = PlaybackQualityRuntimeEvidenceCollector.ComposeSkipRunResult(
+                referenceCase,
+                new PlaybackQualitySkip
+                {
+                    Code = "native-harness.not-implemented",
+                    Reason = "Native playback harness is not implemented in this software-only evaluator yet.",
+                    Operation = "materialize-native-harness",
+                    FailureClass = "insufficient instrumentation",
+                    FailureArea = "evidence-collection",
+                    IsExpected = true,
+                    IsRetriable = true
+                },
+                output.Environment);
+            AddUnique(
+                result.Report.Limitations,
+                "native-harness: native playback graph was not opened by this command");
+            AddUnique(
+                result.Report.Limitations,
+                "native-harness: report is a standard skip envelope for the missing real native collector");
+            AddUnique(
+                result.ModelAnalysis.Limitations,
+                "native-harness: native playback graph was not opened by this command");
+            AddUnique(
+                result.ModelAnalysis.Limitations,
+                "native-harness: report is a standard skip envelope for the missing real native collector");
+            WriteJson(result, reportPath);
+            output.Cases.Add(CreateMaterializedBaselineCase(
+                referenceCase,
+                reportRelativePath,
+                reportPath,
+                result));
+        }
+
+        output.CaseCount = output.Cases.Count;
+        return output;
+    }
+
     private static PlaybackQualityEnvironment CreateBaselineEnvironment(
         MaterializeBaselineReportSetOptions options)
     {
@@ -1483,6 +1574,20 @@ internal static class Program
         {
             CollectorVersion = string.IsNullOrWhiteSpace(options.CollectorVersion)
                 ? "materialize-core-probe-report-set-v1"
+                : options.CollectorVersion,
+            PlayerCoreVersion = options.PlayerCoreVersion,
+            SourceRevision = options.SourceRevision,
+            BuildConfiguration = options.BuildConfiguration
+        };
+    }
+
+    private static PlaybackQualityEnvironment CreateNativeHarnessEnvironment(
+        MaterializeBaselineReportSetOptions options)
+    {
+        return new PlaybackQualityEnvironment
+        {
+            CollectorVersion = string.IsNullOrWhiteSpace(options.CollectorVersion)
+                ? "materialize-native-harness-report-set-v1"
                 : options.CollectorVersion,
             PlayerCoreVersion = options.PlayerCoreVersion,
             SourceRevision = options.SourceRevision,
@@ -2924,6 +3029,7 @@ internal static class Program
         writer.WriteLine("  playback-quality materialize-run-result --report <report.json> [--output <run-result.json>]");
         writer.WriteLine("  playback-quality materialize-baseline-report-set --manifest <reference-manifest.json> --reports-dir <reports-dir> [--collector-version <version>] [--player-core-version <version>] [--source-revision <revision>] [--build-configuration <config>] [--output <summary.json>]");
         writer.WriteLine("  playback-quality materialize-core-probe-report-set --manifest <reference-manifest.json> --reports-dir <reports-dir> [--collector-version <version>] [--player-core-version <version>] [--source-revision <revision>] [--build-configuration <config>] [--output <summary.json>]");
+        writer.WriteLine("  playback-quality materialize-native-harness-report-set --manifest <reference-manifest.json> --reports-dir <reports-dir> [--collector-version <version>] [--player-core-version <version>] [--source-revision <revision>] [--build-configuration <config>] [--output <summary.json>]");
         writer.WriteLine("  playback-quality analyze-report-set --reports-dir <reports-dir> [--output <analysis-summary.json>]");
         writer.WriteLine("  playback-quality compare --baseline <report.json> --candidate <report.json> [--previous <comparison.json>...] [--stall-threshold <n>] [--output <comparison.json>]");
         writer.WriteLine("  playback-quality summarize --comparison <comparison.json> [--comparison <comparison.json>...] [--output <suite.json>]");

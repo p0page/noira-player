@@ -135,6 +135,20 @@ dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQ
 
 这一步的用途是建立可版本化 baseline artifact，并证明评测链路能完整覆盖 manifest。它不能替代真正的播放采集；当 App/native 采集器可用后，应使用真实采集的 envelope 替换 source-only baseline。
 
+## Materialize Native Harness Gap Report Set
+
+如果当前任务需要检查 native-harness report-set 契约，但真实 App-free native playback harness 尚未实现，可以先物化一个标准 skip report set：
+
+```powershell
+dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- materialize-native-harness-report-set --manifest docs\qa\playback-quality-reference-manifest.example.json --reports-dir captured-native-harness-skip-reports --source-revision <git-sha-or-working-tree-id> --player-core-version <core-version> --build-configuration Debug --output captured-native-harness-skip-summary.json
+
+dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- validate-report-set --manifest docs\qa\playback-quality-reference-manifest.example.json --reports-dir captured-native-harness-skip-reports --output captured-native-harness-skip-validation.json
+```
+
+该命令不会打开 native playback graph，不会解码真实媒体，也不会伪造 timing、buffering、A/V sync、display 或 color 指标。它为每个 manifest case 写入 `report.result = skip`、`skip.code = native-harness.not-implemented`、`skip.failureClass = insufficient instrumentation` 和 `skip.failureArea = evidence-collection`，并通过 `lifecycle.events[].status = skipped` 暴露 `lifecycle.skip` 证据。
+
+这类 report-set 的用途是把“真实 native 采集器还没实现”这个缺口变成可验证 artifact。它可以通过 `validate-report-set`，但不能用于播放质量优化、before/after 采纳决策、真实帧率判断、A/V sync 判断或 HDR/SDR 色彩正确性判断。自动化模型看到这类报告时，下一步应补 native harness 或把真实 App/native 指标接入报告链路，而不是修改播放器行为。
+
 快速迭代时可以只计划一个子集，例如只跑 tier 2 以内的 HDR case：
 
 ```powershell

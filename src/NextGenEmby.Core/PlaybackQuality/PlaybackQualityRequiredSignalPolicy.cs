@@ -242,6 +242,19 @@ namespace NextGenEmby.Core.PlaybackQuality
 
             switch (signal)
             {
+                case "skip.code":
+                    return !string.IsNullOrWhiteSpace(report.Skip.Code);
+                case "skip.reason":
+                    return !string.IsNullOrWhiteSpace(report.Skip.Reason);
+                case "skip.operation":
+                    return !string.IsNullOrWhiteSpace(report.Skip.Operation);
+                case "skip.failureClass":
+                    return !string.IsNullOrWhiteSpace(report.Skip.FailureClass);
+                case "skip.failureArea":
+                    return !string.IsNullOrWhiteSpace(report.Skip.FailureArea);
+                case "skip.isExpected":
+                case "skip.isRetriable":
+                    return !string.IsNullOrWhiteSpace(report.Skip.Code);
                 case "error.code":
                     return !string.IsNullOrWhiteSpace(report.Error.Code);
                 case "error.message":
