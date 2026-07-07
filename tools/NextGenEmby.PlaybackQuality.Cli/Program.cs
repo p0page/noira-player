@@ -2117,6 +2117,7 @@ internal static class Program
 
     private sealed class ReportAnalysisSummary
     {
+        public int SchemaVersion { get; set; } = 1;
         public int TotalReportCount { get; set; }
         public int AnalyzedReportCount { get; set; }
         public int UnavailableReportCount { get; set; }

@@ -252,6 +252,10 @@ try {
     }
 
     $analysisSet = Get-Content -Raw -LiteralPath $analysisSetPath | ConvertFrom-Json
+    if ($analysisSet.schemaVersion -ne 1) {
+        throw 'Expected analyze-report-set output schemaVersion 1.'
+    }
+
     if ($analysisSet.totalReportCount -ne 2 -or $analysisSet.analyzedReportCount -ne 2) {
         throw 'Expected analyze-report-set output to analyze both raw reports.'
     }
@@ -311,6 +315,10 @@ try {
     }
 
     $analysisEnvelopeSet = Get-Content -Raw -LiteralPath $analysisEnvelopeSetPath | ConvertFrom-Json
+    if ($analysisEnvelopeSet.schemaVersion -ne 1) {
+        throw 'Expected analyze-report-set envelope output schemaVersion 1.'
+    }
+
     if (-not ($analysisEnvelopeSet.cases | Where-Object {
         $_.caseId -eq 'candidate' -and
         $_.hasModelAnalysis -eq $true -and
