@@ -77,6 +77,12 @@ try {
     "frameRate": 23.976,
     "hdrKind": "Sdr"
   },
+  "timing": {
+    "renderedVideoFrames": 240,
+    "expectedFrameDurationMs": 41.708,
+    "framePacingSourceFrameRate": 23.976,
+    "lateFrameDropToleranceMs": 104.271
+  },
   "checks": [
     {
       "name": "MaxFrameGapMs",
@@ -103,6 +109,12 @@ try {
     "height": 2160,
     "frameRate": 23.976,
     "hdrKind": "Sdr"
+  },
+  "timing": {
+    "renderedVideoFrames": 240,
+    "expectedFrameDurationMs": 41.708,
+    "framePacingSourceFrameRate": 23.976,
+    "lateFrameDropToleranceMs": 104.271
   },
   "checks": [
     {
@@ -161,6 +173,19 @@ try {
 
     if (-not ($analysis.evidenceSignals -contains 'timing.maxFrameGapMs')) {
         throw 'Expected analyze-report output to include max frame gap evidence signal.'
+    }
+
+    if (-not ($analysis.evidenceSignals -contains 'timing.framePacingSourceFrameRate')) {
+        throw 'Expected analyze-report output to include frame pacing source frame rate evidence signal.'
+    }
+
+    if (-not ($analysis.evidenceSignals -contains 'timing.lateFrameDropToleranceMs')) {
+        throw 'Expected analyze-report output to include late frame drop tolerance evidence signal.'
+    }
+
+    if ($analysis.framePacing.lateFrameDropToleranceFrameRatio -lt 2.4 -or
+        $analysis.framePacing.lateFrameDropToleranceFrameRatio -gt 2.6) {
+        throw 'Expected analyze-report output to normalize late frame drop tolerance to source frames.'
     }
 
     if (-not ($analysis.failedChecks | Where-Object { $_.signal -eq 'timing.maxFrameGapMs' -and $_.actual -eq '120.000' })) {
