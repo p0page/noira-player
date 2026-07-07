@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Linq;
 using NextGenEmby.Core.Emby;
 using NextGenEmby.Core.Playback;
 using NextGenEmby.Core.PlaybackQuality;
@@ -577,6 +579,48 @@ public sealed class PlaybackQualityReferenceManifestTests
         Assert.Contains(validation.Errors, error =>
             error.Code == "report.requiredSignal.missing" &&
             error.Signal == "buffers.audioStarvedPasses");
+    }
+
+    [Fact]
+    public void RequiredSignalPolicy_Only_Emits_Known_Report_Signals()
+    {
+        var referenceCase = CreateCase(
+            "jellyfin/rich-required-signal-case",
+            tier: 1,
+            purpose: "cadence-23.976");
+        referenceCase.Purpose.Add("frame-pacing");
+        referenceCase.Purpose.Add("av-sync");
+        referenceCase.Purpose.Add("buffering");
+        referenceCase.Purpose.Add("hdr-force-sdr");
+        referenceCase.Expected.HdrPlaybackStrategy = "HDR10 direct";
+        referenceCase.Expected.IsHdr = true;
+        referenceCase.Expected.IsDirectPlayable = true;
+        referenceCase.Expected.IsDolbyVision = false;
+        referenceCase.Expected.DolbyVisionProfile = 8;
+        referenceCase.Expected.DolbyVisionCompatibilityId = 1;
+        referenceCase.Expected.HasHdr10BaseLayer = true;
+        referenceCase.Expected.HasHlgBaseLayer = false;
+        referenceCase.Expected.MaxStartupDurationMs = 5000;
+        referenceCase.Expected.MinRenderedVideoFrames = 120;
+        referenceCase.Expected.MaxDroppedFrames = 0;
+        referenceCase.Expected.MaxFrameGapMs = 105;
+        referenceCase.Expected.MaxRenderIntervalMsP95 = 55;
+        referenceCase.Expected.MaxRenderIntervalMsP99 = 80;
+        referenceCase.Expected.MaxAudioVideoDriftMsP95 = 40;
+        referenceCase.Expected.MaxVideoStarvedPasses = 0;
+        referenceCase.Expected.MaxAudioStarvedPasses = 0;
+        referenceCase.Expected.HdrOutput = "Hdr10";
+        referenceCase.Expected.DxgiInput = "YCBCR_STUDIO_G2084_TOPLEFT_P2020";
+        referenceCase.Expected.DxgiOutput = "RGB_FULL_G2084_NONE_P2020";
+        referenceCase.Expected.RequireValidatedConversion = true;
+        referenceCase.Expected.RequireMatchedDisplayRefreshRate = true;
+        referenceCase.ForceSdrOutput = true;
+
+        var knownSignals = new HashSet<string>(
+            PlaybackQualitySignalCatalog.ReportSignals.Select(signal => signal.Signal));
+        var requiredSignals = PlaybackQualityRequiredSignalPolicy.CreateRequiredSignals(referenceCase);
+
+        Assert.All(requiredSignals, signal => Assert.Contains(signal, knownSignals));
     }
 
     private static PlaybackQualityReferenceCase CreateCase(

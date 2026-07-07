@@ -1077,37 +1077,16 @@ internal static class Program
     private static List<string> CollectPresentReportSignals(JsonElement reportElement)
     {
         var signals = new List<string>();
-        AddNestedPresentSignal(signals, reportElement, "source", "codec", "source.codec");
-        AddNestedPresentSignal(signals, reportElement, "source", "width", "source.width");
-        AddNestedPresentSignal(signals, reportElement, "source", "height", "source.height");
-        AddNestedPresentSignal(signals, reportElement, "source", "frameRate", "source.frameRate");
-        AddNestedPresentSignal(signals, reportElement, "source", "hdrKind", "source.hdrKind");
-        AddNestedPresentSignal(signals, reportElement, "source", "hdrPlaybackStrategy", "source.hdrPlaybackStrategy");
-        AddNestedPresentSignal(signals, reportElement, "source", "isHdr", "source.isHdr");
-        AddNestedPresentSignal(signals, reportElement, "source", "isDirectPlayable", "source.isDirectPlayable");
-        AddNestedPresentSignal(signals, reportElement, "source", "isDolbyVision", "source.isDolbyVision");
-        AddNestedPresentSignal(signals, reportElement, "source", "dolbyVisionProfile", "source.dolbyVisionProfile");
-        AddNestedPresentSignal(signals, reportElement, "source", "dolbyVisionCompatibilityId", "source.dolbyVisionCompatibilityId");
-        AddNestedPresentSignal(signals, reportElement, "source", "hasHdr10BaseLayer", "source.hasHdr10BaseLayer");
-        AddNestedPresentSignal(signals, reportElement, "source", "hasHlgBaseLayer", "source.hasHlgBaseLayer");
-        AddNestedPresentSignal(signals, reportElement, "startup", "startupDurationMs", "startup.startupDurationMs");
-        AddNestedPresentSignal(signals, reportElement, "timing", "renderedVideoFrames", "timing.renderedVideoFrames");
-        AddNestedPresentSignal(signals, reportElement, "timing", "droppedVideoFrames", "timing.droppedVideoFrames");
-        AddNestedPresentSignal(signals, reportElement, "timing", "expectedFrameDurationMs", "timing.expectedFrameDurationMs");
-        AddNestedPresentSignal(signals, reportElement, "timing", "maxFrameGapMs", "timing.maxFrameGapMs");
-        AddNestedPresentSignal(signals, reportElement, "timing", "framePacingSourceFrameRate", "timing.framePacingSourceFrameRate");
-        AddNestedPresentSignal(signals, reportElement, "timing", "lateFrameDropToleranceMs", "timing.lateFrameDropToleranceMs");
-        AddNestedPresentSignal(signals, reportElement, "timing", "renderIntervalMsP95", "timing.renderIntervalMsP95");
-        AddNestedPresentSignal(signals, reportElement, "timing", "renderIntervalMsP99", "timing.renderIntervalMsP99");
-        AddNestedPresentSignal(signals, reportElement, "sync", "audioVideoDriftMsP95", "sync.audioVideoDriftMsP95");
-        AddNestedPresentSignal(signals, reportElement, "buffers", "videoStarvedPasses", "buffers.videoStarvedPasses");
-        AddNestedPresentSignal(signals, reportElement, "buffers", "audioStarvedPasses", "buffers.audioStarvedPasses");
-        AddNestedPresentSignal(signals, reportElement, "colorPipeline", "actualHdrOutput", "colorPipeline.actualHdrOutput");
-        AddNestedPresentSignal(signals, reportElement, "colorPipeline", "dxgiInput", "colorPipeline.dxgiInput");
-        AddNestedPresentSignal(signals, reportElement, "colorPipeline", "dxgiOutput", "colorPipeline.dxgiOutput");
-        AddNestedPresentSignal(signals, reportElement, "colorPipeline", "conversionStatus", "colorPipeline.conversionStatus");
-        AddNestedPresentSignal(signals, reportElement, "colorPipeline", "forceSdrOutput", "colorPipeline.forceSdrOutput");
-        AddNestedPresentSignal(signals, reportElement, "display", "refreshRateHz", "display.refreshRateHz");
+        foreach (var descriptor in PlaybackQualitySignalCatalog.ReportSignals)
+        {
+            AddNestedPresentSignal(
+                signals,
+                reportElement,
+                descriptor.Section,
+                descriptor.Property,
+                descriptor.Signal);
+        }
+
         return signals;
     }
 
