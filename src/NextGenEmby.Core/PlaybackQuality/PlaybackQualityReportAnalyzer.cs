@@ -22,6 +22,7 @@ namespace NextGenEmby.Core.PlaybackQuality
         public List<PlaybackQualityTriageStep> TriageSteps { get; } = new List<PlaybackQualityTriageStep>();
         public List<string> FailureReasons { get; } = new List<string>();
         public List<PlaybackQualityCheck> FailedChecks { get; } = new List<PlaybackQualityCheck>();
+        public List<string> FailureClasses { get; } = new List<string>();
         public List<string> FailureAreas { get; } = new List<string>();
         public List<PlaybackQualityInvestigationHint> InvestigationHints { get; } = new List<PlaybackQualityInvestigationHint>();
         public List<string> EvidenceSignals { get; } = new List<string>();
@@ -220,7 +221,19 @@ namespace NextGenEmby.Core.PlaybackQuality
                 if (check.Status == "fail" && !string.IsNullOrWhiteSpace(check.FailureArea))
                 {
                     AddUnique(analysis.FailureAreas, check.FailureArea);
-                    analysis.FailedChecks.Add(CloneCheck(check));
+                    var failedCheck = CloneCheck(check);
+                    if (string.IsNullOrWhiteSpace(failedCheck.FailureClass))
+                    {
+                        failedCheck.FailureClass =
+                            PlaybackQualityFailureClassification.Classify(check);
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(failedCheck.FailureClass))
+                    {
+                        AddUnique(analysis.FailureClasses, failedCheck.FailureClass);
+                    }
+
+                    analysis.FailedChecks.Add(failedCheck);
                 }
             }
 
@@ -1635,6 +1648,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                 Signal = check.Signal,
                 Status = check.Status,
                 FailureArea = check.FailureArea,
+                FailureClass = check.FailureClass,
                 Expected = check.Expected,
                 Actual = check.Actual,
                 Message = check.Message

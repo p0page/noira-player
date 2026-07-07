@@ -164,6 +164,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                 });
             }
 
+            AssignFailureClasses(report);
             report.Result = report.FailureReasons.Count == 0 ? "pass" : "fail";
             if (report.Result == "pass")
             {
@@ -852,6 +853,19 @@ namespace NextGenEmby.Core.PlaybackQuality
 
             report.Analysis.PrimaryFailureArea = "unknown";
             report.Analysis.SuggestedNextAction = "Inspect raw metrics and failure reasons.";
+        }
+
+        private static void AssignFailureClasses(PlaybackQualityReport report)
+        {
+            foreach (var check in report.Checks)
+            {
+                if (check.Status == "fail" &&
+                    string.IsNullOrWhiteSpace(check.FailureClass))
+                {
+                    check.FailureClass =
+                        PlaybackQualityFailureClassification.Classify(check);
+                }
+            }
         }
 
         private static void CheckSeekPositionError(

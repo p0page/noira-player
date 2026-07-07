@@ -26,6 +26,7 @@ public sealed class PlaybackQualityReportAnalyzerTests
             Name = "ActualHdrOutput",
             Status = "fail",
             FailureArea = "color-pipeline",
+            FailureClass = "player-core bug",
             Signal = "colorPipeline.actualHdrOutput",
             Expected = "Hdr10",
             Actual = "Sdr",
@@ -36,6 +37,7 @@ public sealed class PlaybackQualityReportAnalyzerTests
             Name = "MaxFrameGapMs",
             Status = "fail",
             FailureArea = "frame-pacing",
+            FailureClass = "player-core bug",
             Signal = "timing.maxFrameGapMs",
             Expected = "105.000",
             Actual = "180.000",
@@ -48,6 +50,7 @@ public sealed class PlaybackQualityReportAnalyzerTests
         Assert.Equal("fail", analysis.Result);
         Assert.Equal("color-pipeline", analysis.PrimaryFailureArea);
         Assert.Equal(new[] { "color-pipeline", "frame-pacing" }, analysis.FailureAreas);
+        Assert.Equal(new[] { "player-core bug" }, analysis.FailureClasses);
         Assert.Contains("colorPipeline.actualHdrOutput", analysis.EvidenceSignals);
         Assert.Contains("timing.maxFrameGapMs", analysis.EvidenceSignals);
         Assert.Contains("ActualHdrOutput Sdr did not match expected Hdr10.", analysis.FailureReasons);
@@ -108,6 +111,37 @@ public sealed class PlaybackQualityReportAnalyzerTests
             hint.CodeTargets.Contains("src/NextGenEmby.Native/Media/PlaybackGraph.cpp") &&
             hint.CodeTargets.Contains("src/NextGenEmby.Core/PlaybackQuality/PlaybackRefreshRatePolicy.cs") &&
             hint.Signals.Contains("timing.maxFrameGapMs"));
+    }
+
+    [Fact]
+    public void Analyze_Classifies_Unclassified_Failed_Checks_For_Older_Raw_Reports()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "legacy-missing-evidence",
+            Result = "fail",
+            Analysis = new PlaybackQualityAnalysis
+            {
+                PrimaryFailureArea = "color-pipeline"
+            }
+        };
+        report.Checks.Add(new PlaybackQualityCheck
+        {
+            Name = "DxgiInput",
+            Status = "fail",
+            FailureArea = "color-pipeline",
+            Signal = "colorPipeline.dxgiInput",
+            Expected = "YCBCR_STUDIO_G2084_TOPLEFT_P2020",
+            Actual = "",
+            Message = "DxgiInput is missing for color-pipeline validation."
+        });
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Equal(new[] { "insufficient instrumentation" }, analysis.FailureClasses);
+        Assert.Contains(analysis.FailedChecks, check =>
+            check.Name == "DxgiInput" &&
+            check.FailureClass == "insufficient instrumentation");
     }
 
     [Fact]
@@ -1307,6 +1341,7 @@ public sealed class PlaybackQualityReportAnalyzerTests
         {
             Status = "fail",
             FailureArea = "av-sync",
+            FailureClass = "player-core bug",
             Signal = "sync.audioVideoDriftMsP95"
         });
 
@@ -1326,6 +1361,9 @@ public sealed class PlaybackQualityReportAnalyzerTests
         Assert.Contains("\"framePacing\"", json);
         Assert.Contains("\"triageSteps\"", json);
         Assert.Contains("\"failureAreas\"", json);
+        Assert.Contains("\"failureClasses\"", json);
+        Assert.Contains("\"failureClass\"", json);
+        Assert.Contains("\"player-core bug\"", json);
         Assert.Contains("\"investigationHints\"", json);
         Assert.Contains("\"evidenceSignals\"", json);
         Assert.Contains("\"missingEvidence\"", json);

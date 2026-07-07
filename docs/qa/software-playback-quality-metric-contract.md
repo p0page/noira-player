@@ -12,6 +12,7 @@ The primary consumer of `quality-run` reports is an automated model or agent, no
 6. Always separate startup/network, timeline/seek, frame pacing, A/V sync, buffering, and color pipeline signals.
 7. Never hide one class of failure behind another. HDR output mismatch remains a failure even if frame pacing is good.
 8. Always record display refresh evidence when diagnosing cadence problems. 23.976fps and 24fps sources can look subtly wrong even when no frames are obviously dropped.
+9. Always separate `failureArea` from `failureClass`: the area says where to investigate; the class says why the case failed or why evidence is not yet trustworthy.
 
 ## Required Top-Level Fields
 
@@ -21,6 +22,7 @@ The primary consumer of `quality-run` reports is an automated model or agent, no
 - `result`: `pass`, `fail`, or `observed`.
 - `failureReasons`: exact reasons used for pass/fail.
 - `analysis`: model-facing triage hints.
+- `checks[].failureClass`: conservative failure responsibility classification for failed checks.
 - `limitations`: facts the report cannot prove.
 - `source`, `startup`, `position`, `timing`, `sync`, `buffers`, `colorPipeline`, `display`: raw metric sections.
 
@@ -49,6 +51,25 @@ The primary consumer of `quality-run` reports is an automated model or agent, no
 
 `analysis.ignoredSignals` lists signals deliberately not used for the conclusion, for example startup duration when only frame pacing is being evaluated.
 
+## Failure Classification
+
+`checks[].failureArea` and `modelAnalysis.failureAreas` localize the likely playback subsystem. `checks[].failureClass` and `modelAnalysis.failureClasses` classify responsibility or evidence quality. Automated consumers must read both before editing playback code.
+
+Supported phase-1 failure classes are:
+
+- `player-core bug`
+- `unsupported by current MVP`
+- `evaluation harness bug`
+- `sample issue`
+- `environment issue`
+- `external service/protocol issue`
+- `insufficient instrumentation`
+- `ambiguous expectation`
+- `flaky / nondeterministic`
+- `needs human confirmation`
+
+Classification is intentionally conservative. Missing actual values or messages such as `is missing for ... validation` are `insufficient instrumentation`, not proof of a player bug. A failed `ExpectedIsDirectPlayable` check where the expected value is `True` and the actual value is `False` is `unsupported by current MVP`. Filled threshold mismatches in playback timing, buffering, A/V sync, color output, startup, or timeline checks default to `player-core bug` unless a more specific class is available. If the evaluator cannot classify a failed check from structured evidence, it must use `ambiguous expectation` or `needs human confirmation` rather than guessing.
+
 ## Model Analysis Output
 
 `PlaybackQualityReportAnalyzer` turns a full report into a compact model-facing JSON object. It does not replace the raw report; it highlights the fields an automated agent should inspect first.
@@ -69,8 +90,9 @@ The analyzer output must include:
 - `framePacing` with a machine-readable failure pattern, normalized severity fields, and the signals that caused it;
 - `triageSteps` with ranked, machine-readable next investigation steps;
 - `failureAreas` containing every failed check area, not only the primary area;
+- `failureClasses` containing every failed check class, not only the primary area;
 - `failureReasons` copied from the report;
-- `failedChecks` with each failed check's signal, expected value, actual value, and message;
+- `failedChecks` with each failed check's signal, expected value, actual value, failure area, failure class, and message;
 - `investigationHints` with failure-area-specific suggested actions, Core/native code targets, and signals to inspect next;
 - `evidenceSignals` listing report fields used as evidence;
 - `missingEvidence` listing critical unset fields that make diagnosis weaker;

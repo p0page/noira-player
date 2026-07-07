@@ -36,6 +36,7 @@ namespace NextGenEmby.Core.PlaybackQuality
         public string Signal { get; set; } = "";
         public string Status { get; set; } = "not-applicable";
         public string FailureArea { get; set; } = "";
+        public string FailureClass { get; set; } = "";
         public string Expected { get; set; } = "";
         public string Actual { get; set; } = "";
         public string Message { get; set; } = "";

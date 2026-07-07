@@ -142,7 +142,8 @@ public sealed class PlaybackQualityEvaluatorTests
             check.Name == "StartupDurationMs" &&
             check.Signal == "startup.startupDurationMs" &&
             check.Status == "fail" &&
-            check.FailureArea == "startup");
+            check.FailureArea == "startup" &&
+            check.FailureClass == "player-core bug");
     }
 
     [Fact]
@@ -172,7 +173,8 @@ public sealed class PlaybackQualityEvaluatorTests
             check.Expected == "2000.000" &&
             check.Actual == "" &&
             check.Status == "fail" &&
-            check.FailureArea == "startup");
+            check.FailureArea == "startup" &&
+            check.FailureClass == "insufficient instrumentation");
     }
 
     [Fact]
@@ -326,7 +328,8 @@ public sealed class PlaybackQualityEvaluatorTests
             check.Expected == "True" &&
             check.Actual == "False" &&
             check.Status == "fail" &&
-            check.FailureArea == "unsupported-source");
+            check.FailureArea == "unsupported-source" &&
+            check.FailureClass == "unsupported by current MVP");
         Assert.Contains(report.Checks, check =>
             check.Name == "ExpectedDolbyVisionProfile" &&
             check.Signal == "source.dolbyVisionProfile" &&
@@ -574,7 +577,8 @@ public sealed class PlaybackQualityEvaluatorTests
             check.Expected == "250.000" &&
             check.Actual == "1000.000" &&
             check.Status == "fail" &&
-            check.FailureArea == "timeline");
+            check.FailureArea == "timeline" &&
+            check.FailureClass == "player-core bug");
     }
 
     [Fact]
@@ -748,6 +752,14 @@ public sealed class PlaybackQualityEvaluatorTests
             Result = "pass",
             Source = new PlaybackQualitySource { ItemId = "item-1", MediaSourceId = "source-1" }
         };
+        report.Checks.Add(new PlaybackQualityCheck
+        {
+            Name = "MaxFrameGapMs",
+            Status = "fail",
+            FailureArea = "frame-pacing",
+            FailureClass = "player-core bug",
+            Signal = "timing.maxFrameGapMs"
+        });
 
         var json = PlaybackQualityReportSerializer.Serialize(report);
         var parsed = PlaybackQualityReportSerializer.Deserialize(json);
@@ -757,6 +769,7 @@ public sealed class PlaybackQualityEvaluatorTests
         Assert.Contains("\"runId\"", json);
         Assert.Contains("\"analysis\"", json);
         Assert.Contains("\"checks\"", json);
+        Assert.Contains("\"failureClass\"", json);
         Assert.Contains("\"limitations\"", json);
         Assert.Equal("roundtrip", parsed.RunId);
         Assert.Equal("source-1", parsed.Source.MediaSourceId);

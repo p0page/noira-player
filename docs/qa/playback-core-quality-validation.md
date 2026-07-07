@@ -150,7 +150,7 @@ report-set gate 输出 `schemaVersion = 1`，并按 `report.runId` 匹配 manife
 dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- analyze-report --report captured-report.json --output report-analysis.json
 ```
 
-`--report` 可以是 raw `PlaybackQualityReport`，也可以是包含顶层 `report` 字段的 `PlaybackQualityRunResult` envelope。命令会重新运行当前 Core 的 `PlaybackQualityReportAnalyzer`，输出 `failureAreas`、`failedChecks`、`evidenceSignals`、`missingEvidence`、`optimizationGate`、`framePacing` 和 `triageSteps`。如果报告 pin 住颜色输出期望，`missingEvidence` 会标记缺失的 `display.hdrStatus`、swapchain 格式/色彩空间和 HDR10 十位 swapchain 证据。自动化模型应先读取这个分析结果，再决定是补采集证据还是修改播放 Core。
+`--report` 可以是 raw `PlaybackQualityReport`，也可以是包含顶层 `report` 字段的 `PlaybackQualityRunResult` envelope。命令会重新运行当前 Core 的 `PlaybackQualityReportAnalyzer`，输出 `failureAreas`、`failureClasses`、`failedChecks`、`evidenceSignals`、`missingEvidence`、`optimizationGate`、`framePacing` 和 `triageSteps`。`failureArea` 指向要调查的播放子系统，`failureClass` 说明失败责任或证据质量；例如缺失 telemetry 应标记为 `insufficient instrumentation`，而不是直接当作播放器 bug。如果报告 pin 住颜色输出期望，`missingEvidence` 会标记缺失的 `display.hdrStatus`、swapchain 格式/色彩空间和 HDR10 十位 swapchain 证据。自动化模型应先读取这个分析结果，再决定是补采集证据还是修改播放 Core。
 
 当模型需要快速审计一整个报告目录，但还没有进入 baseline/candidate 比较时，使用目录级分析：
 
