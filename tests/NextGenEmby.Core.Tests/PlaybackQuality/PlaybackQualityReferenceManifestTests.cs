@@ -27,6 +27,7 @@ public sealed class PlaybackQualityReferenceManifestTests
 
         var result = PlaybackQualityReferenceManifestValidator.Validate(manifest);
 
+        Assert.Equal(PlaybackQualityRunResult.CurrentEvaluationVersion, result.EvaluationVersion);
         Assert.True(result.IsValid);
         Assert.Empty(result.Errors);
         Assert.Equal(2, result.CaseCount);
@@ -449,6 +450,7 @@ public sealed class PlaybackQualityReferenceManifestTests
             manifest,
             new[] { report });
 
+        Assert.Equal(PlaybackQualityRunResult.CurrentEvaluationVersion, validation.EvaluationVersion);
         Assert.True(validation.IsValid);
         Assert.Equal(1, validation.ExpectedCaseCount);
         Assert.Equal(1, validation.ReportCount);

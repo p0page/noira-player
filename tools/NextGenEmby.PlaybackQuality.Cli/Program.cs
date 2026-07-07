@@ -3437,6 +3437,8 @@ internal static class Program
     private sealed class MaterializedBaselineReportSet
     {
         public int SchemaVersion { get; set; } = 1;
+        public string EvaluationVersion { get; set; } =
+            PlaybackQualityRunResult.CurrentEvaluationVersion;
 
         public int CaseCount { get; set; }
 
@@ -3484,6 +3486,8 @@ internal static class Program
     private sealed class CandidateEvaluationOutput
     {
         public int SchemaVersion { get; set; } = 1;
+        public string EvaluationVersion { get; set; } =
+            PlaybackQualityRunResult.CurrentEvaluationVersion;
         public string Action { get; set; } = "collect-comparable-evidence";
         public string Decision { get; set; } = "collect-comparable-evidence";
         public string Risk { get; set; } = "high";
@@ -3541,6 +3545,8 @@ internal static class Program
     private sealed class ReportAnalysisSummary
     {
         public int SchemaVersion { get; set; } = 1;
+        public string EvaluationVersion { get; set; } =
+            PlaybackQualityRunResult.CurrentEvaluationVersion;
         public string Action { get; set; } = "";
         public string Decision { get; set; } = "";
         public string Risk { get; set; } = "";
@@ -3687,6 +3693,8 @@ internal static class Program
     private sealed class PlaybackQualityRunPlan
     {
         public int SchemaVersion { get; set; } = 1;
+        public string EvaluationVersion { get; set; } =
+            PlaybackQualityRunResult.CurrentEvaluationVersion;
         public int CaseCount { get; set; }
         public int DurationSeconds { get; set; }
         public string ReportsDirectory { get; set; } = "";

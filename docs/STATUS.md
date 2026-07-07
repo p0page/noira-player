@@ -2,6 +2,12 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-08 更新：模型消费输出统一带 evaluationVersion
+
+manifest validation、report-set validation、single comparison、comparison suite、run plan、materialized report-set summary、report-analysis summary 和 candidate evaluation 现在都会输出 `evaluationVersion = playback-quality-v0.1`。
+
+边界：这是 JSON 契约版本信号，不改变播放器行为、case 分类、阈值或比较算法。模型应同时检查 `schemaVersion` 和 `evaluationVersion`：前者描述 JSON shape，后者描述评测合同。
+
 ## 2026-07-08 更新：player identity 进入 report-set gate
 
 `validate-report-set` 现在要求每个 report 携带 `environment.playerCoreVersion` 和 `environment.sourceRevision`。缺失、null 或空白值会输出 `report.environment.missing`，并归类为 `insufficient instrumentation`。`plan-runs` 也会在 `evidenceRequirements` 中要求每个采集报告带上这两个身份字段。

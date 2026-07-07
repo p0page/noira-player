@@ -18,6 +18,7 @@ public sealed class PlaybackQualityRunComparatorTests
         var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
 
         Assert.Equal(1, comparison.SchemaVersion);
+        Assert.Equal(PlaybackQualityRunResult.CurrentEvaluationVersion, comparison.EvaluationVersion);
         Assert.Equal("baseline", comparison.BaselineRunId);
         Assert.Equal("candidate", comparison.CandidateRunId);
         Assert.Equal("improved", comparison.Result);

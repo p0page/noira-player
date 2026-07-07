@@ -18,6 +18,7 @@ public sealed class PlaybackQualityComparisonSuiteTests
         var suite = PlaybackQualityComparisonSuiteAggregator.Summarize(new[] { improved, unchanged });
 
         Assert.Equal(1, suite.SchemaVersion);
+        Assert.Equal(PlaybackQualityRunResult.CurrentEvaluationVersion, suite.EvaluationVersion);
         Assert.Equal(2, suite.TotalComparisonCount);
         Assert.Equal(1, suite.ImprovedCount);
         Assert.Equal(1, suite.UnchangedCount);

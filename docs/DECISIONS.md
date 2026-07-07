@@ -1,5 +1,13 @@
 # 技术决策
 
+## 2026-07-08: 模型消费输出统一暴露 evaluationVersion
+
+决策：manifest validation、report-set validation、single comparison、comparison suite、run plan、materialized report-set summary、report-analysis summary 和 candidate evaluation 输出都暴露 `evaluationVersion = playback-quality-v0.1`。
+
+原因：这些 JSON 都会被模型直接消费。仅有 `schemaVersion` 只能说明 JSON shape，不能说明当前评测合同版本；模型在比较 baseline/candidate 或读取历史 artifact 时需要先确认评测合同一致。
+
+边界：这只扩展 JSON 契约，不改变播放器行为、case 分类、阈值、expected behavior、pass/fail 判断或比较算法。
+
 ## 2026-07-08: report-set gate 要求播放器身份
 
 决策：`validate-report-set` 会要求每个 report 包含 `environment.playerCoreVersion` 和 `environment.sourceRevision`，缺失、null 或空白时输出 `report.environment.missing`，并归类为 `insufficient instrumentation`。`plan-runs` 会把这两个字段列入 `evidenceRequirements`，让采集器在运行前就知道最终 report-set 的身份要求。
