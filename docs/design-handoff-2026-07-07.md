@@ -9,6 +9,7 @@ This document summarizes the design output on the `codex/xbox-emby-design-system
 3. `docs/design-previews/README.md` explains which preview directions are current and which are rejected historical artifacts.
 4. `docs/design-previews/playback-osd-compact.html` is the current playback OSD HTML preview. It is a visual target for density and spacing, not production code.
 5. `docs/design-previews/A3-ideal-*.png` files are native render targets for final mood and material. They are useful for visual calibration, but `DESIGN.md` is still authoritative when a generated image overshoots green, borders, or glass.
+6. `docs/qa/design-conformance-checklist.md` batches visual QA against the design system before implementation work is accepted.
 
 Historical PNG previews under `docs/design-previews/` remain useful for comparison, but the A2 line is superseded by the A3 Artwork-Backed Matte Fluent rules in `DESIGN.md`.
 
@@ -55,6 +56,7 @@ Secondary pages should compose existing rules instead of creating local visual e
 
 ## QA Before Development Acceptance
 
+- Run the matching batch in `docs/qa/design-conformance-checklist.md` and record findings before fixing individual issues.
 - The screen reads as a TV media client, not a desktop dashboard or a marketing landing page.
 - At least 90 percent of persistent chrome is neutral graphite.
 - Green appears only as play/progress/success signal, never as a large fill or navigation marker.

@@ -6,6 +6,8 @@ This checklist is the required local verification path after every meaningful UI
 
 Mouse is allowed only for operating external tooling, window management, or closing system prompts that cannot be reached by app input. Do not use mouse clicks inside the app content to pass a checklist item.
 
+For visual-system acceptance, run the relevant batch in `docs/qa/design-conformance-checklist.md` alongside this functional checklist. Record the whole batch first, then fix shared visual or interaction causes together instead of repairing one route at a time.
+
 ## Run Log
 
 ### 2026-07-06 - Library Portal App Icon
@@ -315,9 +317,10 @@ For each screenshot, check:
 
 - No clipped primary text.
 - No incoherent overlap.
-- Focus frame visible.
+- Focus visible from TV distance without relying on a bright complete perimeter frame as the default card focus.
 - Page proportions are not oversized.
 - Artwork is used in preference to flat placeholders when server provides it.
+- The screen still matches `docs/DESIGN.md` gates: neutral graphite chrome, restrained green, no decorative blur over plain graphite, no default highlit borders, and no committed private media.
 
 ## Completion Rule
 
@@ -332,6 +335,8 @@ If any checklist item fails, record:
 - Proposed design or implementation fix.
 
 Then continue design and implementation until the route passes.
+
+For design-system failures, finish the current design-conformance batch first, document all findings, then make one grouped fix plan and rerun the batch.
 
 ## Run Log
 
