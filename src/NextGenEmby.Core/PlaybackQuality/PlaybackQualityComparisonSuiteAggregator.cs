@@ -301,6 +301,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                 case "same-build":
                     suite.Environment.SameBuildCount++;
                     AddUnique(suite.Environment.SameBuildCaseIds, comparison.CaseId);
+                    AddSameBuildEnvironmentBlocker(suite);
                     break;
                 case "partial":
                     suite.Environment.PartialCount++;
@@ -322,6 +323,15 @@ namespace NextGenEmby.Core.PlaybackQuality
             AddUnique(
                 suite.Reasons,
                 "suite contains comparisons without complete baseline and candidate build identity");
+        }
+
+        private static void AddSameBuildEnvironmentBlocker(
+            PlaybackQualityComparisonSuite suite)
+        {
+            AddUnique(suite.Blockers, "suite.environment-same-build");
+            AddUnique(
+                suite.Reasons,
+                "suite contains comparisons where candidate build identity matches baseline");
         }
 
         private static void AddComparisonEvidence(

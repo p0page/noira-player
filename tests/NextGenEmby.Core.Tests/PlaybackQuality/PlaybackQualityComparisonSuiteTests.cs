@@ -267,14 +267,20 @@ public sealed class PlaybackQualityComparisonSuiteTests
 
         var suite = PlaybackQualityComparisonSuiteAggregator.Summarize(new[] { comparison });
 
+        Assert.Equal("collect-comparable-evidence", suite.Action);
+        Assert.Equal("high", suite.Risk);
         Assert.Equal(1, suite.Environment.SameBuildCount);
         Assert.Equal(0, suite.Environment.DifferentBuildCount);
         Assert.Contains("same-build/case.json", suite.Environment.SameBuildCaseIds);
+        Assert.Contains("suite.environment-same-build", suite.Blockers);
         Assert.Contains("environment.playerCoreVersion", suite.Environment.Signals);
         Assert.Contains("environment.sourceRevision", suite.Environment.Signals);
         var caseSummary = Assert.Single(suite.Cases);
         Assert.Equal("same-build", caseSummary.EnvironmentStatus);
         Assert.Contains("environment.sourceRevision", caseSummary.EnvironmentSignals);
+        var nextAction = Assert.Single(suite.NextActions);
+        Assert.Contains("suite.environment-same-build", nextAction.Blockers);
+        Assert.Contains("same-build/case.json", nextAction.CaseIds);
         var json = PlaybackQualityReportSerializer.Serialize(suite);
         Assert.Contains("\"sameBuildCount\": 1", json);
         Assert.Contains("\"environmentStatus\": \"same-build\"", json);
