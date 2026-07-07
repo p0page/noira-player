@@ -330,10 +330,13 @@ try {
         $_.caseId -eq 'candidate' -and
         $_.hasModelAnalysis -eq $true -and
         $_.isBlocked -eq $true -and
+        $_.expectedBehavior -eq 'timing.maxFrameGapMs expected 105.000.' -and
+        $_.actualBehavior -eq 'timing.maxFrameGapMs actual 120.000.' -and
+        $_.primaryFailureClass -eq 'player-core bug' -and
         ($_.failureAreas -contains 'frame-pacing') -and
         ($_.signals -contains 'timing.maxFrameGapMs')
     })) {
-        throw 'Expected analyze-report-set output to expose analyzed candidate blockers and signals.'
+        throw 'Expected analyze-report-set output to expose analyzed candidate behavior summary, primary failure class, blockers, and signals.'
     }
 
     New-Item -ItemType Directory -Path $analysisEnvelopeSetDir | Out-Null

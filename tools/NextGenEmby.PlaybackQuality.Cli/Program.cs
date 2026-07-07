@@ -1969,6 +1969,12 @@ internal static class Program
             item.Status = string.IsNullOrWhiteSpace(optimizationGate.Status)
                 ? "unknown"
                 : optimizationGate.Status;
+            item.ExpectedBehavior = envelope.ModelAnalysis.ExpectedBehavior ?? "";
+            item.ActualBehavior = envelope.ModelAnalysis.ActualBehavior ?? "";
+            item.PrimaryFailureClass =
+                envelope.ModelAnalysis.PrimaryFailureClass ?? "";
+            item.PrimaryFailureArea =
+                envelope.ModelAnalysis.PrimaryFailureArea ?? "";
             item.CanOptimizePlaybackCore = optimizationGate.CanOptimizePlaybackCore;
             item.IsBlocked = IsOptimizationGateBlocked(optimizationGate);
             if (item.IsBlocked)
@@ -2764,6 +2770,10 @@ internal static class Program
         public string CaseId { get; set; } = "";
         public bool HasModelAnalysis { get; set; }
         public string Status { get; set; } = "";
+        public string ExpectedBehavior { get; set; } = "";
+        public string ActualBehavior { get; set; } = "";
+        public string PrimaryFailureClass { get; set; } = "";
+        public string PrimaryFailureArea { get; set; } = "";
         public bool CanOptimizePlaybackCore { get; set; }
         public bool IsBlocked { get; set; }
         public List<string> Blockers { get; } = new List<string>();
