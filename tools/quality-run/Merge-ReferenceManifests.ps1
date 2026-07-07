@@ -1,7 +1,9 @@
 param(
     [Parameter(Mandatory = $true)]
     [string[]]$ManifestPath,
-    [string]$OutputPath = ''
+    [string]$OutputPath = '',
+    [ValidateSet('fail', 'skip')]
+    [string]$DuplicateCaseIdMode = 'fail'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -76,6 +78,10 @@ foreach ($path in $manifestPaths) {
         }
 
         if (-not $caseIds.Add($caseId)) {
+            if ($DuplicateCaseIdMode -eq 'skip') {
+                continue
+            }
+
             throw ('Reference manifest caseId is duplicated across inputs: ' + $caseId)
         }
 

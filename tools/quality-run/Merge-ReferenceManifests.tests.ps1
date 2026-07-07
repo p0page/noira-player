@@ -16,6 +16,7 @@ try {
     $mergedPath = Join-Path $tempRoot 'merged.local.json'
     $validationPath = Join-Path $tempRoot 'merged-validation.json'
     $duplicateOutputPath = Join-Path $tempRoot 'duplicate-output.local.json'
+    $skipDuplicateOutputPath = Join-Path $tempRoot 'skip-duplicate-output.local.json'
 
     @'
 {
@@ -164,6 +165,23 @@ try {
 
     if (Test-Path -LiteralPath $duplicateOutputPath) {
         throw 'Merge-ReferenceManifests.ps1 should not write merged output when duplicate caseId values are present.'
+    }
+
+    & $scriptPath `
+        -ManifestPath $manifestAPath, $duplicateManifestPath `
+        -OutputPath $skipDuplicateOutputPath `
+        -DuplicateCaseIdMode 'skip'
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Merge-ReferenceManifests.ps1 should support explicitly skipping duplicate caseId values.'
+    }
+
+    $skipDuplicateMerged = Get-Content -Raw -LiteralPath $skipDuplicateOutputPath | ConvertFrom-Json
+    if ($skipDuplicateMerged.cases.Count -ne 1) {
+        throw 'Skipping duplicate caseId values should keep only the first case.'
+    }
+
+    if ($skipDuplicateMerged.cases[0].uri -ne 'https://media.example/sdr.mp4') {
+        throw 'Skipping duplicate caseId values should preserve the first matching case.'
     }
 
     Write-Output 'merge-reference-manifests tests ok'
