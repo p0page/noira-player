@@ -174,6 +174,13 @@ namespace NextGenEmby.Core.PlaybackQuality
     {
         public static PlaybackQualityModelAnalysis Analyze(PlaybackQualityReport report)
         {
+            return Analyze(report, presentSignals: null);
+        }
+
+        public static PlaybackQualityModelAnalysis Analyze(
+            PlaybackQualityReport report,
+            IEnumerable<string>? presentSignals)
+        {
             var analysis = new PlaybackQualityModelAnalysis
             {
                 RunId = report.RunId,
@@ -183,6 +190,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                     : report.Analysis.PrimaryFailureArea,
                 SuggestedNextAction = report.Analysis.SuggestedNextAction
             };
+            var signalPresence = new PlaybackQualitySignalPresence(presentSignals);
 
             foreach (var check in report.Checks)
             {
@@ -217,11 +225,11 @@ namespace NextGenEmby.Core.PlaybackQuality
             analysis.Startup = AssessStartup(report);
             analysis.Source = AssessSource(report);
             analysis.ColorPipeline = AssessColorPipeline(report);
-            analysis.Buffering = AssessBuffering(report);
+            analysis.Buffering = AssessBuffering(report, signalPresence);
             analysis.AvSync = AssessAvSync(report);
             analysis.Cadence = AssessCadence(report);
             AddDerivedEvidence(analysis, report);
-            AddMissingEvidence(analysis, report);
+            AddMissingEvidence(analysis, report, signalPresence);
             analysis.OptimizationGate = AssessOptimizationGate(analysis);
             analysis.FramePacing = ClassifyFramePacing(analysis, report);
             AddInvestigationHints(analysis);
@@ -293,7 +301,8 @@ namespace NextGenEmby.Core.PlaybackQuality
         }
 
         private static PlaybackQualityBufferingAssessment AssessBuffering(
-            PlaybackQualityReport report)
+            PlaybackQualityReport report,
+            PlaybackQualitySignalPresence signalPresence)
         {
             var buffering = new PlaybackQualityBufferingAssessment
             {
@@ -307,13 +316,17 @@ namespace NextGenEmby.Core.PlaybackQuality
                 buffering.SubmittedAudioFrames > 0 ||
                 buffering.QueuedAudioBuffers > 0 ||
                 buffering.VideoStarvedPasses > 0 ||
-                buffering.AudioStarvedPasses > 0;
+                buffering.AudioStarvedPasses > 0 ||
+                signalPresence.Has("buffers.submittedAudioFrames") ||
+                signalPresence.Has("buffers.queuedAudioBuffers") ||
+                signalPresence.Has("buffers.videoStarvedPasses") ||
+                signalPresence.Has("buffers.audioStarvedPasses");
             if (hasBufferEvidence)
             {
-                AddUnique(buffering.Signals, "buffers.submittedAudioFrames");
-                AddUnique(buffering.Signals, "buffers.queuedAudioBuffers");
-                AddUnique(buffering.Signals, "buffers.videoStarvedPasses");
-                AddUnique(buffering.Signals, "buffers.audioStarvedPasses");
+                AddBufferSignalIfPresent(buffering, signalPresence, "buffers.submittedAudioFrames");
+                AddBufferSignalIfPresent(buffering, signalPresence, "buffers.queuedAudioBuffers");
+                AddBufferSignalIfPresent(buffering, signalPresence, "buffers.videoStarvedPasses");
+                AddBufferSignalIfPresent(buffering, signalPresence, "buffers.audioStarvedPasses");
             }
 
             foreach (var check in report.Checks)
@@ -351,6 +364,32 @@ namespace NextGenEmby.Core.PlaybackQuality
             buffering.Status = "stable";
             buffering.Reason = "Buffering telemetry is available and no starvation failures were reported.";
             return buffering;
+        }
+
+        private static void AddBufferSignalIfPresent(
+            PlaybackQualityBufferingAssessment buffering,
+            PlaybackQualitySignalPresence signalPresence,
+            string signal)
+        {
+            if (signalPresence.HasCapturedSignals)
+            {
+                if (signalPresence.Has(signal))
+                {
+                    AddUnique(buffering.Signals, signal);
+                }
+
+                return;
+            }
+
+            AddUnique(buffering.Signals, signal);
+        }
+
+        private static bool HasBufferSignalEvidence(PlaybackQualitySignalPresence signalPresence)
+        {
+            return signalPresence.Has("buffers.submittedAudioFrames") ||
+                signalPresence.Has("buffers.queuedAudioBuffers") ||
+                signalPresence.Has("buffers.videoStarvedPasses") ||
+                signalPresence.Has("buffers.audioStarvedPasses");
         }
 
         private static PlaybackQualityAvSyncAssessment AssessAvSync(
@@ -949,7 +988,8 @@ namespace NextGenEmby.Core.PlaybackQuality
 
         private static void AddMissingEvidence(
             PlaybackQualityModelAnalysis analysis,
-            PlaybackQualityReport report)
+            PlaybackQualityReport report,
+            PlaybackQualitySignalPresence signalPresence)
         {
             if (string.IsNullOrWhiteSpace(report.Source.Codec))
             {
@@ -1014,17 +1054,22 @@ namespace NextGenEmby.Core.PlaybackQuality
 
             if (report.Expected != null &&
                 report.Expected.MaxAudioVideoDriftMsP95.HasValue &&
-                report.Sync.AudioVideoDriftMsP95 <= 0)
+                report.Sync.AudioVideoDriftMsP95 <= 0 &&
+                !signalPresence.Has("sync.audioVideoDriftMsP95"))
             {
                 analysis.MissingEvidence.Add("sync.audioVideoDriftMsP95");
             }
 
-            if (report.Sync.AudioVideoDriftMsP95 <= 0 && report.Timing.RenderedVideoFrames == 0)
+            if (report.Sync.AudioVideoDriftMsP95 <= 0 &&
+                report.Timing.RenderedVideoFrames == 0 &&
+                !signalPresence.Has("sync.audioVideoDriftMsP95"))
             {
                 AddUnique(analysis.MissingEvidence, "sync.audioVideoDriftMsP95");
             }
 
-            if (report.Buffers.QueuedAudioBuffers == 0 && report.Timing.RenderedVideoFrames == 0)
+            if (report.Buffers.QueuedAudioBuffers == 0 &&
+                report.Timing.RenderedVideoFrames == 0 &&
+                !HasBufferSignalEvidence(signalPresence))
             {
                 analysis.MissingEvidence.Add("buffers.queuedAudioBuffers");
             }
@@ -1459,6 +1504,40 @@ namespace NextGenEmby.Core.PlaybackQuality
             if (!values.Contains(value))
             {
                 values.Add(value);
+            }
+        }
+
+        private sealed class PlaybackQualitySignalPresence
+        {
+            public PlaybackQualitySignalPresence(IEnumerable<string>? signals)
+            {
+                HasCapturedSignals = signals != null;
+                if (signals == null)
+                {
+                    return;
+                }
+
+                foreach (var signal in signals)
+                {
+                    AddUnique(Signals, signal);
+                }
+            }
+
+            public bool HasCapturedSignals { get; }
+
+            private List<string> Signals { get; } = new List<string>();
+
+            public bool Has(string signal)
+            {
+                foreach (var existing in Signals)
+                {
+                    if (string.Equals(existing, signal, System.StringComparison.Ordinal))
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
             }
         }
     }

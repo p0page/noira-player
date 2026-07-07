@@ -532,6 +532,34 @@ public sealed class PlaybackQualityReportAnalyzerTests
     }
 
     [Fact]
+    public void Analyze_Treats_Explicit_Zero_Starvation_Counters_As_Buffering_Evidence_When_Signal_Presence_Is_Captured()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "zero-starvation",
+            Result = "observed",
+            Buffers = new PlaybackQualityBuffers
+            {
+                VideoStarvedPasses = 0,
+                AudioStarvedPasses = 0
+            }
+        };
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(
+            report,
+            new[]
+            {
+                "buffers.videoStarvedPasses",
+                "buffers.audioStarvedPasses"
+            });
+
+        Assert.Equal("stable", analysis.Buffering.Status);
+        Assert.Contains("buffers.videoStarvedPasses", analysis.Buffering.Signals);
+        Assert.Contains("buffers.audioStarvedPasses", analysis.Buffering.Signals);
+        Assert.DoesNotContain("buffers.queuedAudioBuffers", analysis.MissingEvidence);
+    }
+
+    [Fact]
     public void Analyze_Marks_Buffering_Starved_From_Buffering_Checks()
     {
         var report = new PlaybackQualityReport

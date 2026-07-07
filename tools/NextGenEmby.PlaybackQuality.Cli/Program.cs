@@ -102,8 +102,10 @@ internal static class Program
     private static int RunAnalyzeReport(string[] args)
     {
         var options = ParseAnalyzeReportOptions(args);
-        var report = ReadPlaybackQualityReport(options.ReportPath);
-        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+        var envelope = ReadPlaybackQualityReportEnvelope(
+            options.ReportPath,
+            Path.GetFileName(options.ReportPath));
+        var analysis = AnalyzeReport(envelope);
         WriteJson(analysis, options.OutputPath);
         return 0;
     }
@@ -1004,7 +1006,7 @@ internal static class Program
         {
             var modelAnalysis = HasUsableModelAnalysis(envelope.ModelAnalysis)
                 ? envelope.ModelAnalysis
-                : PlaybackQualityReportAnalyzer.Analyze(envelope.Report);
+                : AnalyzeReport(envelope);
             analyzed.Add(new PlaybackQualityReportEnvelope(
                 envelope.RelativePath,
                 envelope.Report,
@@ -1025,7 +1027,7 @@ internal static class Program
             var modelAnalysis = envelope.ModelAnalysis;
             if (modelAnalysis != null && !HasUsableModelAnalysis(modelAnalysis))
             {
-                modelAnalysis = PlaybackQualityReportAnalyzer.Analyze(envelope.Report);
+                modelAnalysis = AnalyzeReport(envelope);
             }
 
             refreshed.Add(new PlaybackQualityReportEnvelope(
@@ -1037,6 +1039,14 @@ internal static class Program
         }
 
         return refreshed;
+    }
+
+    private static PlaybackQualityModelAnalysis AnalyzeReport(
+        PlaybackQualityReportEnvelope envelope)
+    {
+        return envelope.HasSignalPresenceEvidence
+            ? PlaybackQualityReportAnalyzer.Analyze(envelope.Report, envelope.PresentSignals)
+            : PlaybackQualityReportAnalyzer.Analyze(envelope.Report);
     }
 
     private static bool HasUsableModelAnalysis(PlaybackQualityModelAnalysis? modelAnalysis)

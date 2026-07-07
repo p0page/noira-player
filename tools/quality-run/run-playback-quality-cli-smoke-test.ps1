@@ -70,6 +70,7 @@ try {
     $zeroCounterManifestPath = Join-Path $tempRoot 'zero-counter-reference-manifest.json'
     $zeroCounterReportSetDir = Join-Path $tempRoot 'zero-counter-reference-report-set'
     $zeroCounterReportSetValidationPath = Join-Path $tempRoot 'zero-counter-reference-report-set-validation.json'
+    $zeroCounterAnalysisPath = Join-Path $tempRoot 'zero-counter-analysis.json'
 
     @'
 {
@@ -719,6 +720,36 @@ try {
     if ($zeroCounterReportSetValidation.isValid -ne $true -or
         $zeroCounterReportSetValidation.matchedCaseCount -ne 1) {
         throw 'Expected playback quality CLI validate-report-set zero-counter output to be valid.'
+    }
+
+    Push-Location $repoRoot
+    try {
+        dotnet run `
+            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
+            --no-build `
+            -- analyze-report `
+            --report (Join-Path $zeroCounterReportSetDir 'zero-counter.json') `
+            --output $zeroCounterAnalysisPath
+        if ($LASTEXITCODE -ne 0) {
+            throw 'Expected playback quality CLI analyze-report to accept explicit zero required counters.'
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    $zeroCounterAnalysis = Get-Content -Raw -LiteralPath $zeroCounterAnalysisPath | ConvertFrom-Json
+    if ($zeroCounterAnalysis.buffering.status -ne 'stable') {
+        throw 'Expected playback quality CLI analyze-report zero-counter buffering status to be stable.'
+    }
+
+    if (-not ($zeroCounterAnalysis.buffering.signals -contains 'buffers.videoStarvedPasses') -or
+        -not ($zeroCounterAnalysis.buffering.signals -contains 'buffers.audioStarvedPasses')) {
+        throw 'Expected playback quality CLI analyze-report zero-counter buffering signals to include explicit zero counters.'
+    }
+
+    if ($zeroCounterAnalysis.missingEvidence -contains 'buffers.queuedAudioBuffers') {
+        throw 'Expected playback quality CLI analyze-report zero-counter output not to treat explicit zero starvation counters as missing buffer evidence.'
     }
 
     Push-Location $repoRoot
