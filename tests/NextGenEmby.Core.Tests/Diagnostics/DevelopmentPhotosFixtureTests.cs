@@ -42,6 +42,19 @@ public sealed class DevelopmentPhotosFixtureTests
     }
 
     [Fact]
+    public void Create_Provides_Dense_Album_For_Photo_Grid_Wrap_Validation()
+    {
+        var fixture = DevelopmentPhotosFixture.Create();
+        var album = fixture.Items.Single(item => item.Id == "fixture-photo-album-night-market");
+        var albumItems = fixture.GetItemsForParent(album.Id);
+
+        Assert.True(albumItems.Count >= 10, "Photos fixture album should be dense enough to validate grid wrap.");
+        Assert.Equal(albumItems.Count, album.ChildCount);
+        Assert.All(albumItems, item => Assert.Equal("Photo", item.Type));
+        Assert.Equal(albumItems.Count, albumItems.Select(item => item.Id).Distinct().Count());
+    }
+
+    [Fact]
     public void ArtworkUris_Point_To_Packaged_Qa_Assets()
     {
         var fixture = DevelopmentPhotosFixture.Create();

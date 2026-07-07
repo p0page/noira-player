@@ -2786,3 +2786,75 @@ Fix rerun findings:
 - Decision:
   - Mark Batch 06 Settings diagnostics hierarchy as resolved for deterministic local validation.
   - Keep any future copy/export diagnostics work as a support feature, not a visual-system blocker.
+
+### 2026-07-08 - Design Conformance Batch 05 Photos Density Baseline
+
+- App version: 0.1.0.228.
+- Scope: rerun the remaining Batch 05 Photos density concern after later grid/focus fixes.
+- Data source: DEBUG `photos-fixture` only; no private server data, credentials, screenshots, or personal media assets were written to the repository.
+- Evidence root: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch05-photos-density-baseline-228-20260708-055036`.
+- Keyboard-only validation:
+  - Closed the existing app frame, wrote `dev-command.json` with route `photos-fixture`, and launched through AppUserModelId `NextGenEmby.App_h8qjz0sr1sg4m!App`.
+  - Captured the Photos root.
+  - Pressed `Enter` to open `Night Market`.
+  - Pressed `Right`, `Right` inside the album.
+  - Pressed `Escape` to return to the Photos root.
+  - The route reported `completed / photos-fixture`.
+- Screenshots:
+  - Photos root: `01-photos-root.png`.
+  - Album opened: `02-album-opened.png`.
+  - Album focus after two right moves: `04-album-right-2.png`.
+  - Return to root: `05-return-root.png`.
+  - Route result: `route-result.txt`.
+
+Baseline findings:
+
+| ID | Severity | Page | Evidence | Expected | Actual | Proposed batch fix |
+| --- | --- | --- | --- | --- | --- | --- |
+| DC-05.03 | Concern | Photos fixture density | `01-photos-root.png`, `02-album-opened.png`, and `04-album-right-2.png`. | Photos should prove both sparse-folder handling and denser album wrap behavior using the photo-specific landscape tile recipe. | The visual recipe remains aligned, but the deterministic fixture has only 3 root items and 4 album items, leaving a large unused right/lower canvas and no multi-row album evidence. | Expand `photos-fixture` with a denser album while preserving sparse root coverage; verify D-pad movement across row wrap and back recovery. |
+
+- Decision:
+  - Treat this as fixture coverage and QA evidence work, not a page-layout redesign.
+  - Keep the landscape photo tile recipe; add enough deterministic photo items to validate realistic album density.
+
+### 2026-07-08 - Design Conformance Batch 05 Photos Density Fix Rerun
+
+- App version: 0.1.0.229.
+- Scope: rerun Photos after expanding the deterministic nested album from 4 to 12 photo items.
+- Data source: DEBUG `photos-fixture` only; no private server data, credentials, screenshots, or personal media assets were written to the repository.
+- Evidence root: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch05-photos-density-fix-229-20260708-055637`.
+- Keyboard-only validation:
+  - Signed and installed `NextGenEmby.App 0.1.0.229`.
+  - Closed the existing app frame, wrote `dev-command.json` with route `photos-fixture`, and launched through AppUserModelId `NextGenEmby.App_h8qjz0sr1sg4m!App`.
+  - Captured the Photos root to keep sparse folder coverage.
+  - Pressed `Enter` to open `Night Market`.
+  - Pressed `Right`, `Right`, `Right` to move across the first album row.
+  - Pressed `Down`, `Down` to validate row movement inside the denser album.
+  - Pressed `Escape` to return to the Photos root.
+  - The route reported `completed / photos-fixture`.
+- Screenshots:
+  - Photos root: `01-photos-root.png`.
+  - Dense album opened: `02-album-opened-dense.png`.
+  - First row far-right focus: `03-first-row-far-right.png`.
+  - Second row focus: `04-second-row.png`.
+  - Additional Down movement: `05-third-row.png`.
+  - Return to root: `06-return-root.png`.
+  - Route result: `route-result.txt`.
+- Fixture contract added before implementation:
+  - `DevelopmentPhotosFixture.Create_Provides_Dense_Album_For_Photo_Grid_Wrap_Validation` requires the nested fixture album to contain at least 10 unique photo items and match `ChildCount`.
+
+Fix rerun findings:
+
+| ID | Status | Page | Evidence | Result | Residual risk |
+| --- | --- | --- | --- | --- | --- |
+| DC-05.03 | Pass | Photos fixture density | `02-album-opened-dense.png`, `04-second-row.png`, `06-return-root.png`, and `DevelopmentPhotosFixtureTests.Create_Provides_Dense_Album_For_Photo_Grid_Wrap_Validation`. | Photos now prove both sparse root folders and a denser nested album using the photo-specific landscape tile recipe. The 12-item album fills the canvas with multiple visible rows, focus remains matte, and Escape returns to the root anchor. | Real server photo libraries should still be sampled for actual image aspect-ratio variety, but deterministic density coverage is no longer sparse. |
+
+- Verification:
+  - Red path confirmed `DevelopmentPhotosFixtureTests.Create_Provides_Dense_Album_For_Photo_Grid_Wrap_Validation` failed before implementation because the nested album had only 4 photos.
+  - Targeted Photos fixture tests passed: 5 tests.
+  - Full Core test suite passed: 494 tests.
+  - Visual Studio MSBuild Debug x64 build passed, producing `NextGenEmby.App_0.1.0.229_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.229`.
+- Decision:
+  - Mark Batch 05 Photos deterministic density as resolved.
+  - Keep real-server photo aspect-ratio variety as later live-data validation, not as a blocker for the current visual-system slice.
