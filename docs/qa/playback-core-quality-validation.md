@@ -294,6 +294,10 @@ var result = PlaybackQualityRuntimeEvidenceCollector.ComposeErrorRunResult(
 
 这类报告的 `report.result` 为 `error`，`report.error` 保留稳定错误信号。模型应优先读取 `error.code`、`error.operation`、`error.failureClass` 和 `error.failureArea`，再决定是修播放器 core、补 harness、换样本，还是标记当前 MVP 不支持。`error-handling` case 不要求 source/timing/startup 播放 telemetry；如果评测器要求这些信号，优先怀疑 required-signal policy 或 analyzer 规则错误。
 
+## Skip Reports
+
+`report.result = skip` 表示某个 case 被明确跳过，而不是播放成功、播放失败或 source unsupported。报告必须尽量保留 `skip.code`、`skip.reason`、`skip.operation`、`skip.failureClass`、`skip.failureArea`、`skip.isExpected` 和 `skip.isRetriable`。模型应把 `skip.*` 当作行动入口：可能需要补采集器、把 case 放入 quarantine、记录当前 MVP 不支持，或等待人工确认。`skip` 报告不要求 source/timing/startup/buffering/A/V sync/color telemetry；缺少这些播放证据本身不是播放器 core bug。注意：CLI gate 层的 `status = skipped` 只表示 before/after suite 因前置 gate 失败而没有运行，不等同于单个播放 report 的 `result = skip`。
+
 # Materialize Core Probe Report Set
 
 `materialize-core-probe-report-set` 是 v0.1 的第一条非 source-only、App-free、hardware-free core 评测路径：

@@ -118,6 +118,69 @@ namespace NextGenEmby.Core.PlaybackQuality
                 CreateCaseMetadata(referenceCase));
         }
 
+        public static PlaybackQualityRunResult ComposeSkipRunResult(
+            PlaybackQualityReferenceCase referenceCase,
+            PlaybackQualitySkip skip,
+            PlaybackQualityEnvironment? environment = null)
+        {
+            if (referenceCase == null)
+            {
+                throw new ArgumentNullException(nameof(referenceCase));
+            }
+
+            if (skip == null)
+            {
+                throw new ArgumentNullException(nameof(skip));
+            }
+
+            var report = new PlaybackQualityReport
+            {
+                RunId = referenceCase.CaseId ?? "",
+                Expected = CloneExpected(referenceCase.Expected),
+                Environment = MergeEnvironment(environment),
+                Result = "skip",
+                Skip = CloneSkip(skip)
+            };
+            report.Skip.FailureArea = string.IsNullOrWhiteSpace(report.Skip.FailureArea)
+                ? "evidence-collection"
+                : report.Skip.FailureArea;
+            report.Skip.FailureClass = string.IsNullOrWhiteSpace(report.Skip.FailureClass)
+                ? "needs human confirmation"
+                : report.Skip.FailureClass;
+
+            var message = FormatSkipMessage(report.Skip);
+            report.FailureReasons.Add(message);
+            report.Analysis.PrimaryFailureArea = report.Skip.FailureArea;
+            report.Analysis.SuggestedNextAction =
+                "Review the structured skip reason before interpreting missing playback telemetry.";
+            AddSkipSignal(report, "skip.code");
+            AddSkipSignal(report, "skip.reason");
+            AddSkipSignal(report, "skip.operation");
+            AddSkipSignal(report, "skip.failureClass");
+            AddSkipSignal(report, "skip.failureArea");
+            AddSkipSignal(report, "skip.isExpected");
+            AddSkipSignal(report, "skip.isRetriable");
+
+            report.Checks.Add(new PlaybackQualityCheck
+            {
+                Name = "PlaybackQualitySkipped",
+                Signal = "skip.reason",
+                Status = "skip",
+                FailureArea = report.Skip.FailureArea,
+                FailureClass = report.Skip.FailureClass,
+                Expected = "reference case evaluated or explicitly skipped",
+                Actual = string.IsNullOrWhiteSpace(report.Skip.Code)
+                    ? report.Skip.Reason
+                    : report.Skip.Code,
+                Message = message
+            });
+
+            return new PlaybackQualityRunResult(
+                report,
+                PlaybackQualityReportAnalyzer.Analyze(report),
+                CreateCaseMetadata(referenceCase));
+        }
+
         private static void AddErrorSignal(
             PlaybackQualityReport report,
             string signal)
@@ -141,6 +204,29 @@ namespace NextGenEmby.Core.PlaybackQuality
             return code + ": " + error.Message;
         }
 
+        private static void AddSkipSignal(
+            PlaybackQualityReport report,
+            string signal)
+        {
+            if (!report.Analysis.RelevantSignals.Contains(signal))
+            {
+                report.Analysis.RelevantSignals.Add(signal);
+            }
+        }
+
+        private static string FormatSkipMessage(PlaybackQualitySkip skip)
+        {
+            var code = string.IsNullOrWhiteSpace(skip.Code)
+                ? "quality.skip"
+                : skip.Code;
+            if (string.IsNullOrWhiteSpace(skip.Reason))
+            {
+                return code;
+            }
+
+            return code + ": " + skip.Reason;
+        }
+
         private static PlaybackQualityError CloneError(PlaybackQualityError source)
         {
             return new PlaybackQualityError
@@ -152,6 +238,20 @@ namespace NextGenEmby.Core.PlaybackQuality
                 FailureClass = source.FailureClass,
                 FailureArea = source.FailureArea,
                 IsTerminal = source.IsTerminal,
+                IsRetriable = source.IsRetriable
+            };
+        }
+
+        private static PlaybackQualitySkip CloneSkip(PlaybackQualitySkip source)
+        {
+            return new PlaybackQualitySkip
+            {
+                Code = source.Code,
+                Reason = source.Reason,
+                Operation = source.Operation,
+                FailureClass = source.FailureClass,
+                FailureArea = source.FailureArea,
+                IsExpected = source.IsExpected,
                 IsRetriable = source.IsRetriable
             };
         }

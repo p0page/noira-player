@@ -125,6 +125,11 @@ namespace NextGenEmby.Core.PlaybackQuality
                 return "error-handling";
             }
 
+            if (StartsWithSignal(signal, "skip."))
+            {
+                return "evidence-collection";
+            }
+
             if (StartsWithSignal(signal, "startup."))
             {
                 return "startup";

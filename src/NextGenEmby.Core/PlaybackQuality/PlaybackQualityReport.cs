@@ -25,6 +25,7 @@ namespace NextGenEmby.Core.PlaybackQuality
         public PlaybackQualityPosition Position { get; set; } = new PlaybackQualityPosition();
         public PlaybackQualityTracks Tracks { get; set; } = new PlaybackQualityTracks();
         public PlaybackQualityError Error { get; set; } = new PlaybackQualityError();
+        public PlaybackQualitySkip Skip { get; set; } = new PlaybackQualitySkip();
         public PlaybackQualityTiming Timing { get; set; } = new PlaybackQualityTiming();
         public PlaybackQualitySync Sync { get; set; } = new PlaybackQualitySync();
         public PlaybackQualityBuffers Buffers { get; set; } = new PlaybackQualityBuffers();
@@ -131,6 +132,17 @@ namespace NextGenEmby.Core.PlaybackQuality
         public string FailureClass { get; set; } = "";
         public string FailureArea { get; set; } = "error-handling";
         public bool IsTerminal { get; set; }
+        public bool IsRetriable { get; set; }
+    }
+
+    public sealed class PlaybackQualitySkip
+    {
+        public string Code { get; set; } = "";
+        public string Reason { get; set; } = "";
+        public string Operation { get; set; } = "";
+        public string FailureClass { get; set; } = "";
+        public string FailureArea { get; set; } = "evidence-collection";
+        public bool IsExpected { get; set; }
         public bool IsRetriable { get; set; }
     }
 

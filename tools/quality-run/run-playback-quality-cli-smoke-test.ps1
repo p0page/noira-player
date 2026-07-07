@@ -10,6 +10,8 @@ try {
     $baselineEnvelopePath = Join-Path $tempRoot 'baseline-envelope.json'
     $candidateEnvelopePath = Join-Path $tempRoot 'candidate-envelope.json'
     $analysisPath = Join-Path $tempRoot 'analysis.json'
+    $skipReportPath = Join-Path $tempRoot 'skip-report.json'
+    $skipAnalysisPath = Join-Path $tempRoot 'skip-analysis.json'
     $analysisSetDir = Join-Path $tempRoot 'analysis-report-set'
     $analysisSetPath = Join-Path $tempRoot 'analysis-report-set.json'
     $analysisEnvelopeSetDir = Join-Path $tempRoot 'analysis-envelope-report-set'
@@ -242,6 +244,58 @@ try {
 
     if (-not ($analysis.failedChecks | Where-Object { $_.signal -eq 'timing.maxFrameGapMs' -and $_.actual -eq '120.000' })) {
         throw 'Expected analyze-report output to include failed check details.'
+    }
+
+    @'
+{
+  "runId": "skip-subtitle-render",
+  "metricVersion": "software-quality-v1",
+  "result": "skip",
+  "environment": {
+    "playerCoreVersion": "core-candidate",
+    "sourceRevision": "candidate-revision",
+    "buildConfiguration": "Debug"
+  },
+  "skip": {
+    "code": "capability.subtitle-render.not-supported",
+    "reason": "Subtitle visual render verification is outside v0.1 software evidence.",
+    "operation": "subtitle-render-validation",
+    "failureClass": "unsupported by current MVP",
+    "failureArea": "evidence-collection",
+    "isExpected": true,
+    "isRetriable": false
+  }
+}
+'@ | Set-Content -LiteralPath $skipReportPath -Encoding UTF8
+
+    Push-Location $repoRoot
+    try {
+        dotnet run `
+            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
+            --no-build `
+            -- analyze-report `
+            --report $skipReportPath `
+            --output $skipAnalysisPath
+        if ($LASTEXITCODE -ne 0) {
+            throw 'playback quality CLI analyze-report returned a non-zero exit code for skip report.'
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    $skipAnalysis = Get-Content -Raw -LiteralPath $skipAnalysisPath | ConvertFrom-Json
+    if ($skipAnalysis.result -ne 'skip' -or
+        $skipAnalysis.skip.code -ne 'capability.subtitle-render.not-supported' -or
+        $skipAnalysis.primaryFailureClass -ne 'unsupported by current MVP' -or
+        $skipAnalysis.primaryFailureArea -ne 'evidence-collection') {
+        throw 'Expected analyze-report output to preserve first-class skip result evidence.'
+    }
+
+    if (-not ($skipAnalysis.evidenceSignals -contains 'skip.reason') -or
+        ($skipAnalysis.missingEvidence -contains 'source.codec') -or
+        ($skipAnalysis.missingEvidence -contains 'timing.renderedVideoFrames')) {
+        throw 'Expected analyze-report skip output to use skip evidence without playback telemetry noise.'
     }
 
     New-Item -ItemType Directory -Path $analysisSetDir | Out-Null

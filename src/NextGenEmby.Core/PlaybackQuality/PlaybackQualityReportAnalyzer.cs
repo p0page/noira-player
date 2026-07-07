@@ -17,6 +17,7 @@ namespace NextGenEmby.Core.PlaybackQuality
         public PlaybackQualitySourceAssessment Source { get; set; } = new PlaybackQualitySourceAssessment();
         public PlaybackQualityTracksAssessment Tracks { get; set; } = new PlaybackQualityTracksAssessment();
         public PlaybackQualityError Error { get; set; } = new PlaybackQualityError();
+        public PlaybackQualitySkip Skip { get; set; } = new PlaybackQualitySkip();
         public PlaybackQualityColorPipelineAssessment ColorPipeline { get; set; } = new PlaybackQualityColorPipelineAssessment();
         public PlaybackQualityBufferingAssessment Buffering { get; set; } = new PlaybackQualityBufferingAssessment();
         public PlaybackQualityAvSyncAssessment AvSync { get; set; } = new PlaybackQualityAvSyncAssessment();
@@ -279,6 +280,7 @@ namespace NextGenEmby.Core.PlaybackQuality
             analysis.Source = AssessSource(report);
             analysis.Tracks = AssessTracks(report);
             analysis.Error = AssessError(analysis, report);
+            analysis.Skip = AssessSkip(analysis, report);
             analysis.ColorPipeline = AssessColorPipeline(report);
             analysis.Buffering = AssessBuffering(report, signalPresence);
             analysis.AvSync = AssessAvSync(report);
@@ -317,6 +319,16 @@ namespace NextGenEmby.Core.PlaybackQuality
             PlaybackQualityModelAnalysis analysis,
             PlaybackQualityReport report)
         {
+            if (report.Result == "skip" ||
+                !string.IsNullOrWhiteSpace(report.Skip.Code) ||
+                !string.IsNullOrWhiteSpace(report.Skip.Reason))
+            {
+                analysis.ExpectedBehavior =
+                    "Reference case was evaluated or explicitly skipped with a structured reason.";
+                analysis.ActualBehavior = FormatSkipBehavior(report.Skip);
+                return;
+            }
+
             if (report.Result == "error" ||
                 !string.IsNullOrWhiteSpace(report.Error.Code) ||
                 !string.IsNullOrWhiteSpace(report.Error.Message))
@@ -377,6 +389,20 @@ namespace NextGenEmby.Core.PlaybackQuality
                 ? ""
                 : ": " + error.Message;
             return operation + " failed with " + code + message;
+        }
+
+        private static string FormatSkipBehavior(PlaybackQualitySkip skip)
+        {
+            var operation = string.IsNullOrWhiteSpace(skip.Operation)
+                ? "reference case"
+                : skip.Operation;
+            var code = string.IsNullOrWhiteSpace(skip.Code)
+                ? "quality.skip"
+                : skip.Code;
+            var reason = string.IsNullOrWhiteSpace(skip.Reason)
+                ? ""
+                : ": " + skip.Reason;
+            return operation + " skipped with " + code + reason;
         }
 
         private static PlaybackQualityTracksAssessment AssessTracks(
@@ -503,7 +529,74 @@ namespace NextGenEmby.Core.PlaybackQuality
             return error;
         }
 
+        private static PlaybackQualitySkip AssessSkip(
+            PlaybackQualityModelAnalysis analysis,
+            PlaybackQualityReport report)
+        {
+            var skip = new PlaybackQualitySkip
+            {
+                Code = report.Skip.Code,
+                Reason = report.Skip.Reason,
+                Operation = report.Skip.Operation,
+                FailureClass = report.Skip.FailureClass,
+                FailureArea = string.IsNullOrWhiteSpace(report.Skip.FailureArea)
+                    ? "evidence-collection"
+                    : report.Skip.FailureArea,
+                IsExpected = report.Skip.IsExpected,
+                IsRetriable = report.Skip.IsRetriable
+            };
+
+            if (report.Result != "skip" &&
+                string.IsNullOrWhiteSpace(skip.Code) &&
+                string.IsNullOrWhiteSpace(skip.Reason))
+            {
+                return skip;
+            }
+
+            AddSkipSignal(analysis, "skip.code", skip.Code);
+            AddSkipSignal(analysis, "skip.reason", skip.Reason);
+            AddSkipSignal(analysis, "skip.operation", skip.Operation);
+            AddSkipSignal(analysis, "skip.failureClass", skip.FailureClass);
+            AddSkipSignal(analysis, "skip.failureArea", skip.FailureArea);
+            AddUnique(analysis.EvidenceSignals, "skip.isExpected");
+            AddUnique(analysis.EvidenceSignals, "skip.isRetriable");
+
+            if (!string.IsNullOrWhiteSpace(skip.FailureArea))
+            {
+                AddUnique(analysis.FailureAreas, skip.FailureArea);
+                if (string.IsNullOrWhiteSpace(analysis.PrimaryFailureArea) ||
+                    analysis.PrimaryFailureArea == "none")
+                {
+                    analysis.PrimaryFailureArea = skip.FailureArea;
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(skip.FailureClass))
+            {
+                AddUnique(analysis.FailureClasses, skip.FailureClass);
+            }
+
+            if (string.IsNullOrWhiteSpace(analysis.SuggestedNextAction))
+            {
+                analysis.SuggestedNextAction =
+                    "Review the structured skip reason before interpreting missing playback telemetry.";
+            }
+
+            return skip;
+        }
+
         private static void AddErrorSignal(
+            PlaybackQualityModelAnalysis analysis,
+            string signal,
+            string value)
+        {
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                AddUnique(analysis.EvidenceSignals, signal);
+            }
+        }
+
+        private static void AddSkipSignal(
             PlaybackQualityModelAnalysis analysis,
             string signal,
             string value)
@@ -1406,6 +1499,17 @@ namespace NextGenEmby.Core.PlaybackQuality
             PlaybackQualityReport report,
             PlaybackQualitySignalPresence signalPresence)
         {
+            if (report.Result == "skip")
+            {
+                if (string.IsNullOrWhiteSpace(report.Skip.Code) &&
+                    string.IsNullOrWhiteSpace(report.Skip.Reason))
+                {
+                    analysis.MissingEvidence.Add("skip.reason");
+                }
+
+                return;
+            }
+
             if (report.Result == "error")
             {
                 if (string.IsNullOrWhiteSpace(report.Error.Code))

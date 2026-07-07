@@ -8,6 +8,87 @@ namespace NextGenEmby.Core.Tests.PlaybackQuality;
 public sealed class PlaybackQualityRuntimeEvidenceCollectorTests
 {
     [Fact]
+    public void ComposeSkipRunResult_Reports_Structured_Skip_Without_Playback_Telemetry_Noise()
+    {
+        var referenceCase = new PlaybackQualityReferenceCase
+        {
+            CaseId = "local/subtitle-render-skip",
+            Category = "challenge",
+            Severity = "medium",
+            Stability = "stable",
+            Expected = new PlaybackQualityExpected
+            {
+                Codec = "hevc",
+                Width = 1920,
+                Height = 1080,
+                FrameRate = 23.976,
+                HdrKind = "Sdr",
+                MaxStartupDurationMs = 2000,
+                MinRenderedVideoFrames = 120
+            }
+        };
+        referenceCase.Purpose.Add("subtitles");
+
+        var result = PlaybackQualityRuntimeEvidenceCollector.ComposeSkipRunResult(
+            referenceCase,
+            new PlaybackQualitySkip
+            {
+                Code = "capability.subtitle-render.not-supported",
+                Reason = "Subtitle visual render verification is outside v0.1 software evidence.",
+                Operation = "subtitle-render-validation",
+                FailureClass = PlaybackQualityFailureClassification.UnsupportedByCurrentMvp,
+                FailureArea = "evidence-collection",
+                IsExpected = true,
+                IsRetriable = false
+            },
+            new PlaybackQualityEnvironment
+            {
+                CollectorVersion = "runtime-skip-test",
+                PlayerCoreVersion = "NextGenEmby.Core.Tests",
+                SourceRevision = "test-revision",
+                BuildConfiguration = "Debug"
+            });
+
+        Assert.Equal("local/subtitle-render-skip", result.CaseMetadata.CaseId);
+        Assert.Equal("challenge", result.CaseMetadata.Category);
+        Assert.Equal("skip", result.Report.Result);
+        Assert.Equal("capability.subtitle-render.not-supported", result.Report.Skip.Code);
+        Assert.Equal("Subtitle visual render verification is outside v0.1 software evidence.", result.Report.Skip.Reason);
+        Assert.Equal("subtitle-render-validation", result.Report.Skip.Operation);
+        Assert.Equal(PlaybackQualityFailureClassification.UnsupportedByCurrentMvp, result.Report.Skip.FailureClass);
+        Assert.Equal("evidence-collection", result.Report.Skip.FailureArea);
+        Assert.True(result.Report.Skip.IsExpected);
+        Assert.False(result.Report.Skip.IsRetriable);
+        Assert.Equal("evidence-collection", result.Report.Analysis.PrimaryFailureArea);
+        Assert.Contains("skip.code", result.Report.Analysis.RelevantSignals);
+        Assert.Contains("skip.reason", result.Report.Analysis.RelevantSignals);
+        Assert.Contains("skip.failureClass", result.Report.Analysis.RelevantSignals);
+        Assert.Contains("skip.failureArea", result.Report.Analysis.RelevantSignals);
+        Assert.Contains(result.Report.Checks, check =>
+            check.Name == "PlaybackQualitySkipped" &&
+            check.Signal == "skip.reason" &&
+            check.Status == "skip" &&
+            check.FailureArea == "evidence-collection" &&
+            check.FailureClass == PlaybackQualityFailureClassification.UnsupportedByCurrentMvp);
+
+        Assert.Equal("skip", result.ModelAnalysis.Result);
+        Assert.Equal("evidence-collection", result.ModelAnalysis.PrimaryFailureArea);
+        Assert.Equal(PlaybackQualityFailureClassification.UnsupportedByCurrentMvp, result.ModelAnalysis.PrimaryFailureClass);
+        Assert.Equal("capability.subtitle-render.not-supported", result.ModelAnalysis.Skip.Code);
+        Assert.Equal("evidence-collection", result.ModelAnalysis.Skip.FailureArea);
+        Assert.Contains(PlaybackQualityFailureClassification.UnsupportedByCurrentMvp, result.ModelAnalysis.FailureClasses);
+        Assert.Contains("evidence-collection", result.ModelAnalysis.FailureAreas);
+        Assert.Contains("skip.code", result.ModelAnalysis.EvidenceSignals);
+        Assert.Contains("skip.reason", result.ModelAnalysis.EvidenceSignals);
+        Assert.Contains("skip.operation", result.ModelAnalysis.EvidenceSignals);
+        Assert.DoesNotContain("source.codec", result.ModelAnalysis.MissingEvidence);
+        Assert.DoesNotContain("timing.renderedVideoFrames", result.ModelAnalysis.MissingEvidence);
+        Assert.DoesNotContain("startup.startupDurationMs", result.ModelAnalysis.MissingEvidence);
+        Assert.Contains("explicitly skipped", result.ModelAnalysis.ExpectedBehavior);
+        Assert.Contains("capability.subtitle-render.not-supported", result.ModelAnalysis.ActualBehavior);
+    }
+
+    [Fact]
     public void ComposeErrorRunResult_Reports_Runtime_Error_Without_Playback_Telemetry_Noise()
     {
         var referenceCase = new PlaybackQualityReferenceCase
