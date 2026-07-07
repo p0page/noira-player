@@ -1,5 +1,6 @@
 using NextGenEmby.Core.Playback;
 using NextGenEmby.Core.Emby;
+using System;
 using System.Linq;
 
 namespace NextGenEmby.Core.PlaybackQuality
@@ -71,6 +72,8 @@ namespace NextGenEmby.Core.PlaybackQuality
 
             report.Source.ItemId = descriptor.ItemId;
             report.Source.MediaSourceId = source.Id;
+            report.Source.HasDirectStreamUrl = !string.IsNullOrWhiteSpace(source.DirectStreamUrl);
+            report.Source.DirectStreamProtocol = MapDirectStreamProtocol(source.DirectStreamUrl);
             report.Source.Container = source.Container;
             report.Source.Bitrate = source.Bitrate;
             report.Source.DurationTicks = source.RunTimeTicks;
@@ -178,6 +181,34 @@ namespace NextGenEmby.Core.PlaybackQuality
                 default:
                     return "Unknown";
             }
+        }
+
+        private static string MapDirectStreamProtocol(string directStreamUrl)
+        {
+            if (string.IsNullOrWhiteSpace(directStreamUrl))
+            {
+                return "";
+            }
+
+            if (directStreamUrl.StartsWith("/", StringComparison.Ordinal))
+            {
+                return "relative";
+            }
+
+            if (directStreamUrl.Length >= 2 &&
+                char.IsLetter(directStreamUrl[0]) &&
+                directStreamUrl[1] == ':')
+            {
+                return "file-path";
+            }
+
+            if (Uri.TryCreate(directStreamUrl, UriKind.Absolute, out var uri) &&
+                !string.IsNullOrWhiteSpace(uri.Scheme))
+            {
+                return uri.Scheme.ToLowerInvariant();
+            }
+
+            return "unknown";
         }
 
         private static string FirstNonEmpty(string? first, string second)

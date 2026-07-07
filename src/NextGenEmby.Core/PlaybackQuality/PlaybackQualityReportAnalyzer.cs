@@ -71,6 +71,8 @@ namespace NextGenEmby.Core.PlaybackQuality
     {
         public string Status { get; set; } = "unknown";
         public string Reason { get; set; } = "";
+        public bool HasDirectStreamUrl { get; set; }
+        public string DirectStreamProtocol { get; set; } = "";
         public string Container { get; set; } = "";
         public long Bitrate { get; set; }
         public long DurationTicks { get; set; }
@@ -236,7 +238,7 @@ namespace NextGenEmby.Core.PlaybackQuality
 
     public static class PlaybackQualityReportAnalyzer
     {
-        public const int CurrentAnalyzerVersion = 2;
+        public const int CurrentAnalyzerVersion = 3;
 
         public static PlaybackQualityModelAnalysis Analyze(PlaybackQualityReport report)
         {
@@ -1180,6 +1182,8 @@ namespace NextGenEmby.Core.PlaybackQuality
         {
             var source = new PlaybackQualitySourceAssessment
             {
+                HasDirectStreamUrl = report.Source.HasDirectStreamUrl,
+                DirectStreamProtocol = report.Source.DirectStreamProtocol,
                 Container = report.Source.Container,
                 Bitrate = report.Source.Bitrate,
                 DurationTicks = report.Source.DurationTicks,
@@ -1295,6 +1299,8 @@ namespace NextGenEmby.Core.PlaybackQuality
         {
             var hasSourceEvidence =
                 !string.IsNullOrWhiteSpace(source.Codec) ||
+                source.HasDirectStreamUrl ||
+                !string.IsNullOrWhiteSpace(source.DirectStreamProtocol) ||
                 !string.IsNullOrWhiteSpace(source.Container) ||
                 source.Bitrate > 0 ||
                 source.DurationTicks > 0 ||
@@ -1310,6 +1316,16 @@ namespace NextGenEmby.Core.PlaybackQuality
             if (!string.IsNullOrWhiteSpace(source.Codec))
             {
                 AddUnique(source.Signals, "source.codec");
+            }
+
+            if (source.HasDirectStreamUrl)
+            {
+                AddUnique(source.Signals, "source.hasDirectStreamUrl");
+            }
+
+            if (!string.IsNullOrWhiteSpace(source.DirectStreamProtocol))
+            {
+                AddUnique(source.Signals, "source.directStreamProtocol");
             }
 
             if (!string.IsNullOrWhiteSpace(source.Container))

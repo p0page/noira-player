@@ -137,6 +137,20 @@ public sealed class PlaybackQualityReferenceManifestTests
     }
 
     [Fact]
+    public void RequiredSignals_Include_NonSensitive_Direct_Stream_Locator_Evidence()
+    {
+        var referenceCase = CreateCase(
+            "source/direct-stream-protocol",
+            tier: 1,
+            purpose: "sdr-smoke");
+
+        var requiredSignals = PlaybackQualityRequiredSignalPolicy.CreateRequiredSignals(referenceCase);
+
+        Assert.Contains("source.hasDirectStreamUrl", requiredSignals);
+        Assert.Contains("source.directStreamProtocol", requiredSignals);
+    }
+
+    [Fact]
     public void Validate_Preserves_Optional_Emby_Item_Capture_Metadata()
     {
         var manifest = new PlaybackQualityReferenceManifest
@@ -1080,6 +1094,8 @@ public sealed class PlaybackQualityReferenceManifestTests
             HasSignalPresenceEvidence = true
         };
         entry.PresentSignals.Add("source.codec");
+        entry.PresentSignals.Add("source.hasDirectStreamUrl");
+        entry.PresentSignals.Add("source.directStreamProtocol");
         entry.PresentSignals.Add("source.width");
         entry.PresentSignals.Add("source.height");
         entry.PresentSignals.Add("source.frameRate");
@@ -1462,6 +1478,8 @@ public sealed class PlaybackQualityReferenceManifestTests
             Source = new PlaybackQualitySource
             {
                 Codec = codec,
+                HasDirectStreamUrl = true,
+                DirectStreamProtocol = "https",
                 Width = width,
                 Height = height,
                 FrameRate = frameRate,

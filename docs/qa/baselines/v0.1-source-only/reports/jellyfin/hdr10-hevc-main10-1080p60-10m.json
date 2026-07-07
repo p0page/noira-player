@@ -188,7 +188,7 @@
     "environment": {
       "collectorVersion": "materialize-baseline-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "working-tree-analyzer-v2",
+      "sourceRevision": "working-tree-direct-stream-locator-v0.1",
       "buildConfiguration": "Debug"
     },
     "limitations": [
@@ -231,6 +231,8 @@
     "source": {
       "itemId": "jellyfin/hdr10-hevc-main10-1080p60-10m",
       "mediaSourceId": "jellyfin/hdr10-hevc-main10-1080p60-10m",
+      "hasDirectStreamUrl": true,
+      "directStreamProtocol": "https",
       "container": "",
       "bitrate": 0,
       "durationTicks": 0,
@@ -380,7 +382,7 @@
     }
   },
   "modelAnalysis": {
-    "analyzerVersion": 2,
+    "analyzerVersion": 3,
     "runId": "jellyfin/hdr10-hevc-main10-1080p60-10m",
     "result": "fail",
     "expectedBehavior": "startup.startupDurationMs expected 5000.000.",
@@ -418,7 +420,7 @@
     "environment": {
       "collectorVersion": "materialize-baseline-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "working-tree-analyzer-v2",
+      "sourceRevision": "working-tree-direct-stream-locator-v0.1",
       "buildConfiguration": "Debug",
       "signals": [
         "environment.collectorVersion",
@@ -430,6 +432,8 @@
     "source": {
       "status": "matched",
       "reason": "Parsed source metadata is available and has no unsupported-source mismatches.",
+      "hasDirectStreamUrl": true,
+      "directStreamProtocol": "https",
       "container": "",
       "bitrate": 0,
       "durationTicks": 0,
@@ -451,6 +455,8 @@
       "hasHlgBaseLayer": false,
       "signals": [
         "source.codec",
+        "source.hasDirectStreamUrl",
+        "source.directStreamProtocol",
         "source.width",
         "source.height",
         "source.frameRate",
@@ -890,6 +896,8 @@
       "environment.playerCoreVersion",
       "environment.sourceRevision",
       "environment.buildConfiguration",
+      "source.hasDirectStreamUrl",
+      "source.directStreamProtocol",
       "source.hdrPlaybackStrategy",
       "source.isDolbyVision",
       "source.hasHdr10BaseLayer",

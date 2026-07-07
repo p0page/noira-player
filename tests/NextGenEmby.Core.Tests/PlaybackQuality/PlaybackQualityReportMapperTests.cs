@@ -149,6 +149,7 @@ public sealed class PlaybackQualityReportMapperTests
         var source = new EmbyMediaSource
         {
             Id = "source-1",
+            DirectStreamUrl = "https://media.example.invalid/emby/videos/1/stream.mkv?api_key=secret-token",
             Container = "mkv",
             Bitrate = 76_000_000,
             RunTimeTicks = 70_200_000_000,
@@ -242,6 +243,9 @@ public sealed class PlaybackQualityReportMapperTests
         Assert.Equal(600_000_000, report.Position.RequestedStartPositionTicks);
         Assert.Equal(600_000_000, report.Position.SeekTargetPositionTicks);
         Assert.Equal("source-1", report.Source.MediaSourceId);
+        Assert.True(report.Source.HasDirectStreamUrl);
+        Assert.Equal("https", report.Source.DirectStreamProtocol);
+        Assert.DoesNotContain("secret-token", report.Source.DirectStreamProtocol);
         Assert.Equal("mkv", report.Source.Container);
         Assert.Equal(76_000_000, report.Source.Bitrate);
         Assert.Equal(70_200_000_000, report.Source.DurationTicks);

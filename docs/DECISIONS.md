@@ -1,5 +1,13 @@
 # 技术决策
 
+## 2026-07-08: analyzer version 升级到 3 并要求 direct stream locator 证据
+
+决策：`PlaybackQualityReportAnalyzer.CurrentAnalyzerVersion` 从 2 升级到 3。`PlaybackQualitySource` 和 `PlaybackQualityModelAnalysis.Source` 新增 `hasDirectStreamUrl` 与 `directStreamProtocol`，`PlaybackQualityReportMapper` 只从 `EmbyMediaSource.DirectStreamUrl` 提取非敏感 locator evidence：是否存在 direct stream URL，以及 URL scheme/protocol；不写入完整 URL、query string、token 或个人服务地址。非 error case 的 required-signal policy 现在要求 `source.hasDirectStreamUrl` 和 `source.directStreamProtocol`。
+
+原因：v0.1 覆盖能力包含媒体加载、本地/远端 URL、Emby item/stream 信息解析，以及源选择/协议诊断。此前 report 只保留 source id、codec、container 等媒体属性，模型无法判断采集器是否拿到了实际直连流定位信息，也无法区分协议/source-selection 证据缺失与播放质量问题。只记录 protocol 可以提供诊断入口，同时避免把私有 Emby URL 或 token 写入报告。
+
+边界：这是 instrumentation/testability 和报告契约变更，不改变播放行为、源选择策略、转码策略、HDR/DV 策略、阈值或 pass/fail 规则。缺少这两个 locator 信号会被 report-set gate 归类为 `insufficient instrumentation`，不应被解释为播放器 core 播放质量回归。
+
 ## 2026-07-08: 模型消费输出统一暴露 evaluationVersion
 
 决策：manifest validation、report-set validation、single comparison、comparison suite、run plan、materialized report-set summary、report-analysis summary 和 candidate evaluation 输出都暴露 `evaluationVersion = playback-quality-v0.1`。

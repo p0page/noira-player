@@ -68,6 +68,8 @@ namespace NextGenEmby.Core.PlaybackQuality
     {
         public string ItemId { get; set; } = "";
         public string MediaSourceId { get; set; } = "";
+        public bool HasDirectStreamUrl { get; set; }
+        public string DirectStreamProtocol { get; set; } = "";
         public string Container { get; set; } = "";
         public long Bitrate { get; set; }
         public long DurationTicks { get; set; }

@@ -154,7 +154,7 @@
     "environment": {
       "collectorVersion": "materialize-core-probe-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "working-tree-analyzer-v2",
+      "sourceRevision": "working-tree-direct-stream-locator-v0.1",
       "buildConfiguration": "Debug"
     },
     "limitations": [
@@ -199,6 +199,8 @@
     "source": {
       "itemId": "jellyfin/dv-profile5-hevc-4k60",
       "mediaSourceId": "jellyfin/dv-profile5-hevc-4k60",
+      "hasDirectStreamUrl": true,
+      "directStreamProtocol": "https",
       "container": "",
       "bitrate": 0,
       "durationTicks": 0,
@@ -397,7 +399,7 @@
     }
   },
   "modelAnalysis": {
-    "analyzerVersion": 2,
+    "analyzerVersion": 3,
     "runId": "jellyfin/dv-profile5-hevc-4k60",
     "result": "unsupported",
     "expectedBehavior": "Unsupported sources are identified without entering playback-quality tuning.",
@@ -440,7 +442,7 @@
     "environment": {
       "collectorVersion": "materialize-core-probe-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "working-tree-analyzer-v2",
+      "sourceRevision": "working-tree-direct-stream-locator-v0.1",
       "buildConfiguration": "Debug",
       "signals": [
         "environment.collectorVersion",
@@ -452,6 +454,8 @@
     "source": {
       "status": "unsupported",
       "reason": "Parsed source is not directly playable by the current Core HDR policy.",
+      "hasDirectStreamUrl": true,
+      "directStreamProtocol": "https",
       "container": "",
       "bitrate": 0,
       "durationTicks": 0,
@@ -473,6 +477,8 @@
       "hasHlgBaseLayer": false,
       "signals": [
         "source.codec",
+        "source.hasDirectStreamUrl",
+        "source.directStreamProtocol",
         "source.width",
         "source.height",
         "source.frameRate",
@@ -727,6 +733,8 @@
       "environment.playerCoreVersion",
       "environment.sourceRevision",
       "environment.buildConfiguration",
+      "source.hasDirectStreamUrl",
+      "source.directStreamProtocol",
       "sync.audioVideoDriftMsP50",
       "sync.audioVideoDriftMsP95",
       "sync.audioVideoDriftMsP99",

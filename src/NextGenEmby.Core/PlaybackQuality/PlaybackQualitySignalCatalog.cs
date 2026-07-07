@@ -63,6 +63,8 @@ namespace NextGenEmby.Core.PlaybackQuality
                 new PlaybackQualityReportSignalDescriptor("runtimeMetrics.reason", "runtimeMetrics", "reason"),
                 new PlaybackQualityReportSignalDescriptor("runtimeMetrics.hasSnapshot", "runtimeMetrics", "hasSnapshot"),
                 new PlaybackQualityReportSignalDescriptor("runtimeMetrics.hasPlaybackSample", "runtimeMetrics", "hasPlaybackSample"),
+                new PlaybackQualityReportSignalDescriptor("source.hasDirectStreamUrl", "source", "hasDirectStreamUrl"),
+                new PlaybackQualityReportSignalDescriptor("source.directStreamProtocol", "source", "directStreamProtocol"),
                 new PlaybackQualityReportSignalDescriptor("source.container", "source", "container"),
                 new PlaybackQualityReportSignalDescriptor("source.bitrate", "source", "bitrate"),
                 new PlaybackQualityReportSignalDescriptor("source.durationTicks", "source", "durationTicks"),

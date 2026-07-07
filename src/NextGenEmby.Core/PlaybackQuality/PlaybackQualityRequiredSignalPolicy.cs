@@ -26,6 +26,8 @@ namespace NextGenEmby.Core.PlaybackQuality
             }
 
             AddUnique(requiredSignals, "source.codec");
+            AddUnique(requiredSignals, "source.hasDirectStreamUrl");
+            AddUnique(requiredSignals, "source.directStreamProtocol");
             AddUnique(requiredSignals, "source.width");
             AddUnique(requiredSignals, "source.height");
             AddUnique(requiredSignals, "source.frameRate");
@@ -293,6 +295,10 @@ namespace NextGenEmby.Core.PlaybackQuality
                         report.RuntimeMetrics.Status != "unknown";
                 case "source.codec":
                     return !string.IsNullOrWhiteSpace(report.Source.Codec);
+                case "source.hasDirectStreamUrl":
+                    return report.Source.HasDirectStreamUrl;
+                case "source.directStreamProtocol":
+                    return !string.IsNullOrWhiteSpace(report.Source.DirectStreamProtocol);
                 case "source.container":
                     return !string.IsNullOrWhiteSpace(report.Source.Container);
                 case "source.bitrate":

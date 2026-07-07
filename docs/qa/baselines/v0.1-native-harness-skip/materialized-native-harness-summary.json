@@ -1,15 +1,17 @@
 {
   "schemaVersion": 1,
+  "evaluationVersion": "playback-quality-v0.1",
   "caseCount": 9,
   "reportsDirectory": "docs\\qa\\baselines\\v0.1-native-harness-skip\\reports",
   "environment": {
     "collectorVersion": "materialize-native-harness-report-set-v1",
     "playerCoreVersion": "NextGenEmby.Core",
-    "sourceRevision": "working-tree-analyzer-v2",
+    "sourceRevision": "working-tree-direct-stream-locator-v0.1",
     "buildConfiguration": "Debug"
   },
   "manifestValidation": {
     "schemaVersion": 1,
+    "evaluationVersion": "playback-quality-v0.1",
     "isValid": true,
     "caseCount": 9,
     "coverage": {

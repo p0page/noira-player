@@ -1,5 +1,6 @@
 {
   "schemaVersion": 1,
+  "evaluationVersion": "playback-quality-v0.1",
   "isValid": false,
   "expectedCaseCount": 9,
   "reportCount": 9,

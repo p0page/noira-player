@@ -2,6 +2,12 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-08 更新：direct stream locator 进入 source 证据链
+
+`PlaybackQualityReportAnalyzer.CurrentAnalyzerVersion` 已升级到 3。`report.source` 和 `modelAnalysis.source` 现在暴露 `hasDirectStreamUrl` 与 `directStreamProtocol`，只记录是否存在 direct stream URL 和协议/scheme，不记录完整 URL、query string、token 或个人服务地址。非 error case 的 `requiredSignals` 现在要求 `source.hasDirectStreamUrl` 和 `source.directStreamProtocol`；缺失时会作为 `insufficient instrumentation` 阻断 report-set，而不是被解释为播放质量问题。
+
+边界：这是 instrumentation/testability 与报告契约变更，不改变播放行为、源选择策略、转码策略、HDR/DV 策略或 pass/fail 阈值。已刷新 `docs/qa/baselines/v0.1-source-only/`、`docs/qa/baselines/v0.1-core-probe/` 和 `docs/qa/baselines/v0.1-native-harness-skip/`；归档 reports 的 `modelAnalysis.analyzerVersion` 均为 3。source-only baseline 仍是 9/9 case 有报告、2 个 matched、103 个缺运行时 telemetry，结论没有因为新增 locator 证据而被放宽。
+
 ## 2026-07-08 更新：模型消费输出统一带 evaluationVersion
 
 manifest validation、report-set validation、single comparison、comparison suite、run plan、materialized report-set summary、report-analysis summary 和 candidate evaluation 现在都会输出 `evaluationVersion = playback-quality-v0.1`。
@@ -34,7 +40,7 @@ manifest validation、report-set validation、single comparison、comparison sui
 
 ## 2026-07-08 更新：analyzer version 2 与 baseline 刷新
 
-`PlaybackQualityReportAnalyzer.CurrentAnalyzerVersion` 已升级到 2，用于标记 `source.hasChapterMetadata`、nullable `source.chapterCount` 和章节 metadata presence 语义进入模型分析契约。已刷新 `docs/qa/baselines/v0.1-source-only/`、`docs/qa/baselines/v0.1-core-probe/` 和 `docs/qa/baselines/v0.1-native-harness-skip/`，归档 reports 的 `modelAnalysis.analyzerVersion` 均为 2。
+`PlaybackQualityReportAnalyzer.CurrentAnalyzerVersion` 此前升级到 2，用于标记 `source.hasChapterMetadata`、nullable `source.chapterCount` 和章节 metadata presence 语义进入模型分析契约。对应 baseline 已刷新过；当前最新 analyzer version 见上方 direct stream locator 更新。
 
 边界：这不是播放效果优化，也不改变阈值、expected behavior 或 pass/fail 规则。source-only baseline 仍用于暴露缺运行时 telemetry；native-harness-skip 仍表达真实 native collector 尚未实现；core-probe 仍是 App-free/in-process 的 core orchestration 诊断路径，不代表真实解码、显示或 A/V sync 效果。
 
@@ -185,6 +191,7 @@ manifest validation、report-set validation、single comparison、comparison sui
 - error-handling 已进入 report、analyzer、required signal policy、signal catalog、code target catalog 和 core-probe 路径；错误样本会报告为 `result = error`，而不是伪装成播放质量失败。
 - `skip` 已进入 report、analyzer、signal catalog 和 runtime evidence collector 路径；当前评测器或 MVP 明确跳过的能力可以报告为 `result = skip`，并保留 `skip.*` 结构化原因，不再被误报为普通播放 telemetry 缺失。
 - `source.container`、`source.bitrate` 和 `source.durationTicks` 已从 `EmbyMediaSource` 进入 report、model analysis、signal catalog 和 required-signal presence 检查，模型可以在 source metadata 层判断容器、码率和时长证据。
+- `source.hasDirectStreamUrl` 和 `source.directStreamProtocol` 已从 `EmbyMediaSource.DirectStreamUrl` 进入 report、model analysis、signal catalog 和 required-signal presence 检查；报告只保留非敏感 locator evidence，不保留完整 URL。
 - `source.hasChapterMetadata`、`source.chapterCount` 和 `source.chapters[]` 已从 Emby playback-info 的 media source chapters 进入 report、model analysis、signal catalog、required-signal presence 检查和 `metadata-duration` capability coverage；服务端未返回 chapters 字段、明确返回空章节列表、返回章节明细三种情况会被区分，不把缺字段伪装成 0 章。
 - `runtimeMetrics.status`、`runtimeMetrics.providerStatus`、`runtimeMetrics.reason`、`runtimeMetrics.hasSnapshot` 和 `runtimeMetrics.hasPlaybackSample` 已进入 report、model analysis、signal catalog 和 required-signal presence 检查；source-only baseline 会明确标记 `providerStatus = source-only`，模型可以先判断 runtime metrics 采集是否真实可用。
 - `modelAnalysis` 已输出 `expectedBehavior` / `actualBehavior` 摘要，模型不需要只从分散的 `checks[].expected` / `checks[].actual` 推断 case 行为差异。

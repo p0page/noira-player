@@ -1,5 +1,6 @@
 {
   "schemaVersion": 1,
+  "evaluationVersion": "playback-quality-v0.1",
   "action": "collect-comparable-evidence",
   "decision": "collect-comparable-evidence",
   "risk": "high",

@@ -234,7 +234,7 @@
     "environment": {
       "collectorVersion": "materialize-core-probe-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "working-tree-analyzer-v2",
+      "sourceRevision": "working-tree-direct-stream-locator-v0.1",
       "buildConfiguration": "Debug"
     },
     "limitations": [
@@ -279,6 +279,8 @@
     "source": {
       "itemId": "jellyfin/dv-profile8-1-hevc-4k60-hdr10-fallback",
       "mediaSourceId": "jellyfin/dv-profile8-1-hevc-4k60-hdr10-fallback",
+      "hasDirectStreamUrl": true,
+      "directStreamProtocol": "https",
       "container": "",
       "bitrate": 0,
       "durationTicks": 0,
@@ -477,7 +479,7 @@
     }
   },
   "modelAnalysis": {
-    "analyzerVersion": 2,
+    "analyzerVersion": 3,
     "runId": "jellyfin/dv-profile8-1-hevc-4k60-hdr10-fallback",
     "result": "pass",
     "expectedBehavior": "Playback quality checks passed.",
@@ -522,7 +524,7 @@
     "environment": {
       "collectorVersion": "materialize-core-probe-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "working-tree-analyzer-v2",
+      "sourceRevision": "working-tree-direct-stream-locator-v0.1",
       "buildConfiguration": "Debug",
       "signals": [
         "environment.collectorVersion",
@@ -534,6 +536,8 @@
     "source": {
       "status": "matched",
       "reason": "Parsed source metadata is available and has no unsupported-source mismatches.",
+      "hasDirectStreamUrl": true,
+      "directStreamProtocol": "https",
       "container": "",
       "bitrate": 0,
       "durationTicks": 0,
@@ -555,6 +559,8 @@
       "hasHlgBaseLayer": false,
       "signals": [
         "source.codec",
+        "source.hasDirectStreamUrl",
+        "source.directStreamProtocol",
         "source.width",
         "source.height",
         "source.frameRate",
@@ -790,6 +796,8 @@
       "environment.playerCoreVersion",
       "environment.sourceRevision",
       "environment.buildConfiguration",
+      "source.hasDirectStreamUrl",
+      "source.directStreamProtocol",
       "sync.audioVideoDriftMsP50",
       "sync.audioVideoDriftMsP95",
       "sync.audioVideoDriftMsP99",

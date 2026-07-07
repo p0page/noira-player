@@ -44,7 +44,7 @@
     "environment": {
       "collectorVersion": "materialize-core-probe-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "working-tree-analyzer-v2",
+      "sourceRevision": "working-tree-direct-stream-locator-v0.1",
       "buildConfiguration": "Debug"
     },
     "limitations": [
@@ -89,6 +89,8 @@
     "source": {
       "itemId": "",
       "mediaSourceId": "",
+      "hasDirectStreamUrl": false,
+      "directStreamProtocol": "",
       "container": "",
       "bitrate": 0,
       "durationTicks": 0,
@@ -218,7 +220,7 @@
     }
   },
   "modelAnalysis": {
-    "analyzerVersion": 2,
+    "analyzerVersion": 3,
     "runId": "local/missing-file-error-handling",
     "result": "error",
     "expectedBehavior": "Playback operation completed without a terminal runtime error.",
@@ -250,7 +252,7 @@
     "environment": {
       "collectorVersion": "materialize-core-probe-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "working-tree-analyzer-v2",
+      "sourceRevision": "working-tree-direct-stream-locator-v0.1",
       "buildConfiguration": "Debug",
       "signals": [
         "environment.collectorVersion",
@@ -262,6 +264,8 @@
     "source": {
       "status": "missing-evidence",
       "reason": "Source codec, frame rate, and HDR kind are missing.",
+      "hasDirectStreamUrl": false,
+      "directStreamProtocol": "",
       "container": "",
       "bitrate": 0,
       "durationTicks": 0,

@@ -45,7 +45,7 @@
     "environment": {
       "collectorVersion": "materialize-native-harness-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "working-tree-analyzer-v2",
+      "sourceRevision": "working-tree-direct-stream-locator-v0.1",
       "buildConfiguration": "Debug"
     },
     "limitations": [
@@ -89,6 +89,8 @@
     "source": {
       "itemId": "",
       "mediaSourceId": "",
+      "hasDirectStreamUrl": false,
+      "directStreamProtocol": "",
       "container": "",
       "bitrate": 0,
       "durationTicks": 0,
@@ -218,7 +220,7 @@
     }
   },
   "modelAnalysis": {
-    "analyzerVersion": 2,
+    "analyzerVersion": 3,
     "runId": "jellyfin/sdr-hevc-main10-1080p60-3m",
     "result": "skip",
     "expectedBehavior": "Reference case was evaluated or explicitly skipped with a structured reason.",
@@ -249,7 +251,7 @@
     "environment": {
       "collectorVersion": "materialize-native-harness-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "working-tree-analyzer-v2",
+      "sourceRevision": "working-tree-direct-stream-locator-v0.1",
       "buildConfiguration": "Debug",
       "signals": [
         "environment.collectorVersion",
@@ -261,6 +263,8 @@
     "source": {
       "status": "missing-evidence",
       "reason": "Source codec, frame rate, and HDR kind are missing.",
+      "hasDirectStreamUrl": false,
+      "directStreamProtocol": "",
       "container": "",
       "bitrate": 0,
       "durationTicks": 0,
