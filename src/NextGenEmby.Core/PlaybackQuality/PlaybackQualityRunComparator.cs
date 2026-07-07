@@ -22,6 +22,7 @@ namespace NextGenEmby.Core.PlaybackQuality
             new PlaybackQualityComparisonCoverage();
         public List<PlaybackQualitySignalDelta> Improvements { get; } = new List<PlaybackQualitySignalDelta>();
         public List<PlaybackQualitySignalDelta> Regressions { get; } = new List<PlaybackQualitySignalDelta>();
+        public List<PlaybackQualitySignalDelta> PolicyChanges { get; } = new List<PlaybackQualitySignalDelta>();
         public List<string> ResolvedFailureAreas { get; } = new List<string>();
         public List<string> NewFailureAreas { get; } = new List<string>();
         public List<string> PersistingFailureAreas { get; } = new List<string>();
@@ -679,6 +680,12 @@ namespace NextGenEmby.Core.PlaybackQuality
                 baselineAnalysis.FramePacing.MaxFrameGapFrameRatio,
                 candidateAnalysis.FramePacing.MaxFrameGapFrameRatio,
                 requirePositive: true);
+            CompareDerivedPolicyChange(
+                comparison,
+                "framePacing.lateFrameDropToleranceFrameRatio",
+                baselineAnalysis.FramePacing.LateFrameDropToleranceFrameRatio,
+                candidateAnalysis.FramePacing.LateFrameDropToleranceFrameRatio,
+                requirePositive: true);
             if (HasObservedFrameCount(baseline) && HasObservedFrameCount(candidate))
             {
                 CompareDerivedLowerIsBetter(
@@ -688,6 +695,34 @@ namespace NextGenEmby.Core.PlaybackQuality
                     candidateAnalysis.FramePacing.DroppedVideoFramePercent,
                     requirePositive: false);
             }
+        }
+
+        private static void CompareDerivedPolicyChange(
+            PlaybackQualityRunComparison comparison,
+            string signal,
+            double baselineActual,
+            double candidateActual,
+            bool requirePositive)
+        {
+            if (requirePositive &&
+                (baselineActual <= 0 || candidateActual <= 0))
+            {
+                return;
+            }
+
+            AddUnique(comparison.Coverage.MatchedSignals, signal);
+
+            var numericDelta = candidateActual - baselineActual;
+            if (Math.Abs(numericDelta) <= DerivedSignalEpsilon)
+            {
+                return;
+            }
+
+            comparison.PolicyChanges.Add(CreateDelta(
+                CreateDerivedCheck(signal, baselineActual),
+                CreateDerivedCheck(signal, candidateActual),
+                numericDelta < 0 ? "decreased" : "increased",
+                numericDelta));
         }
 
         private static bool IsFramePacingComparison(

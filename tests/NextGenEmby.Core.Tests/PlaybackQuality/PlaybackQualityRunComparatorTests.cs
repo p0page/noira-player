@@ -147,6 +147,37 @@ public sealed class PlaybackQualityRunComparatorTests
     }
 
     [Fact]
+    public void Compare_Reports_Frame_Pacing_Policy_Changes_Without_Classifying_Them_As_Quality_Deltas()
+    {
+        var frameDurationMs = 1000.0 / 60.0;
+        var baseline = CreateReport(
+            "baseline",
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "50.000", "80.000"));
+        baseline.Timing.ExpectedFrameDurationMs = frameDurationMs;
+        baseline.Timing.LateFrameDropToleranceMs = frameDurationMs * 6.0;
+
+        var candidate = CreateReport(
+            "candidate",
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "50.000", "80.000"));
+        candidate.Timing.ExpectedFrameDurationMs = frameDurationMs;
+        candidate.Timing.LateFrameDropToleranceMs = frameDurationMs * 2.5;
+
+        var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
+
+        Assert.Contains("framePacing.lateFrameDropToleranceFrameRatio", comparison.Coverage.MatchedSignals);
+        Assert.Contains(comparison.PolicyChanges, delta =>
+            delta.Signal == "framePacing.lateFrameDropToleranceFrameRatio" &&
+            delta.Direction == "decreased" &&
+            delta.FailureArea == "frame-pacing" &&
+            delta.NumericDelta < -3.49 &&
+            delta.NumericDelta > -3.51);
+        Assert.DoesNotContain(comparison.Improvements, delta =>
+            delta.Signal == "framePacing.lateFrameDropToleranceFrameRatio");
+        Assert.DoesNotContain(comparison.Regressions, delta =>
+            delta.Signal == "framePacing.lateFrameDropToleranceFrameRatio");
+    }
+
+    [Fact]
     public void Compare_Reports_Mixed_When_One_Signal_Improves_And_Another_Regresses()
     {
         var baseline = CreateReport(
@@ -388,6 +419,7 @@ public sealed class PlaybackQualityRunComparatorTests
         Assert.Contains("\"optimization\"", json);
         Assert.Contains("\"coverage\"", json);
         Assert.Contains("\"improvements\"", json);
+        Assert.Contains("\"policyChanges\"", json);
         Assert.Contains("\"timing.maxFrameGapMs\"", json);
     }
 
