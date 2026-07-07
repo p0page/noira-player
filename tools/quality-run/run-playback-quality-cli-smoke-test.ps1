@@ -1346,6 +1346,16 @@ try {
         throw 'Expected same-build active gate to include target case id.'
     }
 
+    $sameBuildComparisonPath = Join-Path $candidateEvaluationSameBuildComparisonsDir 'item-1\source-1.json'
+    if (-not (Test-Path -LiteralPath $sameBuildComparisonPath)) {
+        throw 'Expected same-build evaluate-candidate to write per-case comparison output.'
+    }
+
+    $sameBuildComparison = Get-Content -Raw -LiteralPath $sameBuildComparisonPath | ConvertFrom-Json
+    if (-not ($sameBuildComparison.optimization.blockers -contains 'comparison.environment-same-build')) {
+        throw 'Expected same-build comparison output to include machine-readable environment blocker.'
+    }
+
     @'
 {
   "schemaVersion": 1,

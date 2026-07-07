@@ -107,6 +107,7 @@ public sealed class PlaybackQualityRunComparatorTests
         Assert.Equal("collect-comparable-evidence", comparison.Decision);
         Assert.Equal("collect-comparable-evidence", comparison.Optimization.Action);
         Assert.Equal("high", comparison.Optimization.Risk);
+        Assert.Contains("comparison.environment-same-build", comparison.Optimization.Blockers);
         Assert.Contains("candidate build identity matches baseline", comparison.Optimization.Blockers);
         Assert.Contains("environment.sourceRevision", comparison.Optimization.Signals);
     }
@@ -132,6 +133,7 @@ public sealed class PlaybackQualityRunComparatorTests
         Assert.Equal("collect-comparable-evidence", comparison.Decision);
         Assert.Equal("collect-comparable-evidence", comparison.Optimization.Action);
         Assert.Equal("high", comparison.Optimization.Risk);
+        Assert.Contains("comparison.environment-evidence-missing", comparison.Optimization.Blockers);
         Assert.Contains("comparison is missing baseline and candidate build identity", comparison.Optimization.Blockers);
         Assert.Contains("environment.identity", comparison.Optimization.Signals);
     }

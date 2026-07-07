@@ -499,6 +499,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                 AddUnique(
                     comparison.Optimization.Reasons,
                     "weak comparison confidence blocks playback Core optimization");
+                AddEnvironmentIdentityBlocker(comparison);
                 CopyValues(comparison.Confidence.Reasons, comparison.Optimization.Blockers);
                 CopyValues(comparison.Confidence.Signals, comparison.Optimization.Signals);
                 return;
@@ -511,6 +512,22 @@ namespace NextGenEmby.Core.PlaybackQuality
             }
 
             ApplyStrongConfidenceOptimization(comparison);
+        }
+
+        private static void AddEnvironmentIdentityBlocker(
+            PlaybackQualityRunComparison comparison)
+        {
+            if (comparison.Environment.Status == "same-build")
+            {
+                AddUnique(comparison.Optimization.Blockers, "comparison.environment-same-build");
+                return;
+            }
+
+            if (comparison.Environment.Status == "missing-evidence" ||
+                comparison.Environment.Status == "partial")
+            {
+                AddUnique(comparison.Optimization.Blockers, "comparison.environment-evidence-missing");
+            }
         }
 
         private static void ApplyStallGuard(
