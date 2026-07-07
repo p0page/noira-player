@@ -22,6 +22,7 @@ namespace NextGenEmby.App.Views
         public LoginPage()
         {
             InitializeComponent();
+            MatteButtonFocusVisuals.PrepareCommandButton(ConnectButton);
             RegisterLoginDirectionalFocusHandlers();
             _viewModel = new LoginViewModel();
             Loaded += LoginPage_OnLoaded;

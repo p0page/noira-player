@@ -24,6 +24,7 @@ namespace NextGenEmby.App.Views
         private const string PosterCardWidthResourceKey = "TvPosterCardWidth";
         private const string PosterGridItemMarginResourceKey = "TvPosterGridItemMargin";
         private const string SearchRecentTermButtonStyleResourceKey = "TvSearchRecentTermButtonStyle";
+        private const string SearchScopeButtonStyleResourceKey = "TvUtilitySearchScopeButtonStyle";
         private const double FallbackPosterCardWidth = 184d;
         private const double FallbackPosterCardTrailingMargin = 14d;
         private readonly ApplicationDataSessionStore _sessionStore = new ApplicationDataSessionStore();
@@ -44,10 +45,18 @@ namespace NextGenEmby.App.Views
         public SearchPage()
         {
             InitializeComponent();
+            PrepareSearchUtilityControls();
             NavigationCacheMode = Windows.UI.Xaml.Navigation.NavigationCacheMode.Enabled;
             AddHandler(KeyDownEvent, new KeyEventHandler(Page_OnKeyDown), true);
             Loaded += SearchPage_OnLoaded;
             Unloaded += SearchPage_OnUnloaded;
+        }
+
+        private void PrepareSearchUtilityControls()
+        {
+            MatteButtonFocusVisuals.PrepareCommandButton(SearchActionButton);
+            MatteButtonFocusVisuals.PrepareCommandButton(EmptyEditButton);
+            MatteButtonFocusVisuals.PrepareCommandButton(EmptyRetryButton);
         }
 
         protected override void OnNavigatedTo(NavigationEventArgs e)
@@ -476,22 +485,23 @@ namespace NextGenEmby.App.Views
                 var button = new Button
                 {
                     Content = scope.Label,
-                    Tag = scope,
-                    MinWidth = 96,
-                    Height = 46,
-                    Padding = new Thickness(18, 7, 18, 7),
-                    UseSystemFocusVisuals = true
+                    Tag = scope
                 };
+                ApplyScopeButtonStyle(button);
                 button.Click += ScopeButton_OnClick;
                 button.GotFocus += ScopeButton_OnGotFocus;
+                button.LostFocus += ScopeButton_OnLostFocus;
                 _scopeButtons.Add(button);
                 ScopesPanel.Children.Add(button);
             }
         }
 
-        private static void ScopeButton_OnGotFocus(object sender, RoutedEventArgs e)
+        private void ScopeButton_OnGotFocus(object sender, RoutedEventArgs e)
         {
-            var target = sender as Control;
+            var button = sender as Button;
+            UpdateScopeButtonVisual(button, isFocused: true);
+
+            var target = button as Control;
             if (target == null)
             {
                 return;
@@ -504,6 +514,11 @@ namespace NextGenEmby.App.Views
                 HorizontalOffset = 0,
                 VerticalAlignmentRatio = 0.0
             });
+        }
+
+        private void ScopeButton_OnLostFocus(object sender, RoutedEventArgs e)
+        {
+            UpdateScopeButtonVisual(sender as Button, isFocused: false);
         }
 
         private IReadOnlyList<string> LoadRecentTerms()
@@ -554,6 +569,7 @@ namespace NextGenEmby.App.Views
                     Tag = term
                 };
                 ApplyRecentTermButtonStyle(button);
+                MatteButtonFocusVisuals.PrepareCommandButton(button);
                 AutomationProperties.SetName(button, "Recent search " + term);
                 button.Click += RecentTerm_OnClick;
                 button.GotFocus += RecentTerm_OnGotFocus;
@@ -572,6 +588,18 @@ namespace NextGenEmby.App.Views
             {
                 button.Style = style;
             }
+        }
+
+        private static void ApplyScopeButtonStyle(Button button)
+        {
+            var resources = Application.Current.Resources;
+            if (resources.ContainsKey(SearchScopeButtonStyleResourceKey) &&
+                resources[SearchScopeButtonStyleResourceKey] is Style style)
+            {
+                button.Style = style;
+            }
+
+            button.UseSystemFocusVisuals = false;
         }
 
         private static void RecentTerm_OnGotFocus(object sender, RoutedEventArgs e)
@@ -639,16 +667,26 @@ namespace NextGenEmby.App.Views
 
         private void ApplyScopeButtonState()
         {
-            var resources = Application.Current.Resources;
             foreach (var button in _scopeButtons)
             {
-                var scope = button.Tag as EmbySearchScope;
-                var isSelected = scope != null &&
-                    string.Equals(scope.Key, _selectedScopeKey, StringComparison.OrdinalIgnoreCase);
-                button.Background = (Brush)resources[isSelected ? "AppRaisedSurfaceBrush" : "AppChromeBrush"];
-                button.BorderBrush = (Brush)resources[isSelected ? "AppAccentBrush" : "AppHairlineBrush"];
-                button.Foreground = (Brush)resources[isSelected ? "AppTextBrush" : "AppMutedTextBrush"];
+                UpdateScopeButtonVisual(button, button.FocusState != FocusState.Unfocused);
             }
+        }
+
+        private void UpdateScopeButtonVisual(Button? button, bool isFocused)
+        {
+            if (button == null)
+            {
+                return;
+            }
+
+            var resources = Application.Current.Resources;
+            var scope = button.Tag as EmbySearchScope;
+            var isSelected = scope != null &&
+                string.Equals(scope.Key, _selectedScopeKey, StringComparison.OrdinalIgnoreCase);
+            button.Background = (Brush)resources[isFocused || isSelected ? "AppFocusedCardFillBrush" : "AppChromeBrush"];
+            button.BorderBrush = (Brush)resources["AppTransparentBrush"];
+            button.Foreground = (Brush)resources[isFocused || isSelected ? "AppTextBrush" : "AppMutedTextBrush"];
         }
 
         private void ResultsGrid_OnItemClick(object sender, ItemClickEventArgs e)

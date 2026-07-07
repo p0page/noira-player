@@ -36,6 +36,21 @@ namespace NextGenEmby.App.Views
             ApplyCommandButton(button, isFocused: button.FocusState != FocusState.Unfocused);
         }
 
+        public static void PrepareDangerButton(Button? button)
+        {
+            if (button == null)
+            {
+                return;
+            }
+
+            button.UseSystemFocusVisuals = false;
+            button.GotFocus -= DangerButton_OnGotFocus;
+            button.LostFocus -= DangerButton_OnLostFocus;
+            button.GotFocus += DangerButton_OnGotFocus;
+            button.LostFocus += DangerButton_OnLostFocus;
+            ApplyDangerButton(button, isFocused: button.FocusState != FocusState.Unfocused);
+        }
+
         private static void ListButton_OnGotFocus(object sender, RoutedEventArgs e)
         {
             ApplyListButton(sender as Button, isFocused: true);
@@ -54,6 +69,16 @@ namespace NextGenEmby.App.Views
         private static void CommandButton_OnLostFocus(object sender, RoutedEventArgs e)
         {
             ApplyCommandButton(sender as Button, isFocused: false);
+        }
+
+        private static void DangerButton_OnGotFocus(object sender, RoutedEventArgs e)
+        {
+            ApplyDangerButton(sender as Button, isFocused: true);
+        }
+
+        private static void DangerButton_OnLostFocus(object sender, RoutedEventArgs e)
+        {
+            ApplyDangerButton(sender as Button, isFocused: false);
         }
 
         private static void ApplyListButton(Button? button, bool isFocused)
@@ -79,6 +104,19 @@ namespace NextGenEmby.App.Views
             button.Background = isFocused
                 ? BrushResource("AppFocusedCardFillBrush")
                 : BrushResource("AppChromeBrush");
+            button.BorderBrush = BrushResource("AppTransparentBrush");
+        }
+
+        private static void ApplyDangerButton(Button? button, bool isFocused)
+        {
+            if (button == null)
+            {
+                return;
+            }
+
+            button.Background = isFocused
+                ? BrushResource("AppDangerFocusedBrush")
+                : BrushResource("AppDangerBrush");
             button.BorderBrush = BrushResource("AppTransparentBrush");
         }
 

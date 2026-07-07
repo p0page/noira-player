@@ -163,10 +163,10 @@ Goal: verify utility surfaces are practical and consistent without becoming a se
 
 | ID | Route | Keyboard Path | Design Checks | Result | Notes |
 | --- | --- | --- | --- | --- | --- |
-| 06.01 | Login empty session | Tab/arrows through fields, submit success or failure | Login is TV-accessible, failure focus returns to an editable target, and form controls use neutral matte focus. | Not Run | |
-| 06.02 | Settings | Guide to Settings, move all controls | Settings uses shared typography, command focus, and panel surfaces. Diagnostics stay secondary and do not dominate. | Not Run | |
-| 06.03 | Sign out confirmation | Open, cancel, reopen, confirm only on safe target | Destructive action is explicit, local, and safe by default. Danger color appears only inside the confirmation context. | Not Run | |
-| 06.04 | Network/server errors | Fixture or controlled failure | Error states explain what happened and provide visible recovery controls without changing the app's visual language. | Not Run | |
+| 06.01 | Login empty session | Tab/arrows through fields, submit success or failure | Login is TV-accessible, failure focus returns to an editable target, and form controls use neutral matte focus. | Pass with concern | 0.1.0.222 uses a stable matte utility form panel, TV-scale fields, neutral field focus, and a matte Connect action. Residual concern: validate native text-entry focus rendering on Xbox hardware. |
+| 06.02 | Settings | Guide to Settings, move all controls | Settings uses shared typography, command focus, and panel surfaces. Diagnostics stay secondary and do not dominate. | Pass with concern | 0.1.0.222 uses matte command focus for Settings actions and lowers diagnostics visual weight. Residual concern: diagnostics is still visible in the first viewport, which is acceptable for DEBUG/local builds but may need disclosure treatment later. |
+| 06.03 | Sign out confirmation | Open, cancel, reopen, confirm only on safe target | Destructive action is explicit, local, and safe by default. Danger color appears only inside the confirmation context. | Pass | 0.1.0.222 keeps safe default focus on Keep signed in, scopes red to the final Sign out action, and removes old perimeter focus from both confirmation buttons. |
+| 06.04 | Network/server errors | Fixture or controlled failure | Error states explain what happened and provide visible recovery controls without changing the app's visual language. | Pass with concern | 0.1.0.222 keeps recovery clear and reachable while moving Search input, scope chips, and recovery buttons to the matte utility recipe. Residual concern: real server/offline failures should be rechecked after hardware text input validation. |
 
 Evidence to capture:
 

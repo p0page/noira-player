@@ -26,7 +26,7 @@
             <Border
                 Grid.Row="1"
                 Background="{StaticResource AppSurfaceBrush}"
-                BorderBrush="{StaticResource AppHairlineBrush}"
+                BorderBrush="{StaticResource AppTransparentBrush}"
                 BorderThickness="1"
                 CornerRadius="8"
                 Padding="18">
@@ -40,13 +40,13 @@
                         AutomationProperties.Name="Search title"
                         PlaceholderText="Title, person, playlist, music"
                         KeyDown="SearchBox_OnKeyDown"
-                        UseSystemFocusVisuals="True" />
+                        Style="{StaticResource TvUtilityFieldTextBoxStyle}" />
                     <Button
                         x:Name="SearchActionButton"
                         Grid.Column="1"
                         MinWidth="146"
                         Click="Search_OnClick"
-                        UseSystemFocusVisuals="True">
+                        Style="{StaticResource TvUtilityCommandButtonStyle}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <SymbolIcon Symbol="Find" />
                             <TextBlock Text="Search" />
@@ -181,11 +181,13 @@
                         <Button
                             x:Name="EmptyEditButton"
                             Click="EmptyEdit_OnClick"
-                            Content="Edit search" />
+                            Content="Edit search"
+                            Style="{StaticResource TvUtilityCommandButtonStyle}" />
                         <Button
                             x:Name="EmptyRetryButton"
                             Click="EmptyRetry_OnClick"
-                            Content="Search again" />
+                            Content="Search again"
+                            Style="{StaticResource TvUtilityCommandButtonStyle}" />
                     </StackPanel>
                 </StackPanel>
             </Grid>

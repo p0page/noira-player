@@ -58,7 +58,7 @@
                                     AutomationProperties.Name="Sign out of Emby"
                                     Click="SignOutButton_OnClick"
                                     Content="Sign out"
-                                    Style="{StaticResource TvSettingsAccountActionButtonStyle}" />
+                                    Style="{StaticResource TvUtilityCommandButtonStyle}" />
                             </Grid>
                         </StackPanel>
                     </Border>
@@ -72,7 +72,7 @@
                                 IsEnabled="True"
                                 Checked="ThumbstickSeekPreviewCheckBox_OnChanged"
                                 Unchecked="ThumbstickSeekPreviewCheckBox_OnChanged"
-                                Style="{StaticResource TvSettingsCheckBoxStyle}" />
+                                Style="{StaticResource TvUtilityCheckBoxStyle}" />
                             <TextBlock
                                 x:Name="ThumbstickSeekPreviewStatusBlock"
                                 Style="{StaticResource TvMutedBodyTextStyle}" />
@@ -82,9 +82,11 @@
                         </StackPanel>
                     </Border>
 
-                    <Border Style="{StaticResource TvPanelStyle}">
-                        <StackPanel Spacing="14">
-                            <TextBlock Text="Diagnostics" Style="{StaticResource TvPanelTitleTextStyle}" />
+                    <Border Style="{StaticResource TvDiagnosticsPanelStyle}">
+                        <StackPanel Spacing="12">
+                            <TextBlock
+                                Text="Diagnostics"
+                                Style="{StaticResource TvOptionLabelTextStyle}" />
                             <Grid ColumnSpacing="18">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="160" />
@@ -140,13 +142,13 @@
                             AutomationProperties.Name="Keep signed in"
                             Click="CancelSignOutButton_OnClick"
                             Content="Keep signed in"
-                            Style="{StaticResource TvSettingsAccountActionButtonStyle}" />
+                            Style="{StaticResource TvUtilityCommandButtonStyle}" />
                         <Button
                             x:Name="ConfirmSignOutButton"
                             AutomationProperties.Name="Confirm sign out"
                             Click="ConfirmSignOutButton_OnClick"
                             Content="Sign out"
-                            Style="{StaticResource TvSettingsDangerButtonStyle}" />
+                            Style="{StaticResource TvUtilityDangerButtonStyle}" />
                     </StackPanel>
                 </StackPanel>
             </Border>

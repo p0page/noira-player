@@ -14,15 +14,15 @@ public sealed class SettingsPageSourceTests
         var settingsXaml = File.ReadAllText(Path.Combine(root, "src", "NextGenEmby.App", "Views", "SettingsPage.xaml"));
         var settingsSource = File.ReadAllText(Path.Combine(root, "src", "NextGenEmby.App", "Views", "SettingsPage.xaml.cs"));
 
-        Assert.Contains("TvSettingsAccountActionButtonStyle", appXaml);
-        Assert.Contains("TvSettingsDangerButtonStyle", appXaml);
+        Assert.Contains("TvUtilityCommandButtonStyle", appXaml);
+        Assert.Contains("TvUtilityDangerButtonStyle", appXaml);
         Assert.Contains("x:Name=\"SignOutButton\"", settingsXaml);
         Assert.Contains("AutomationProperties.Name=\"Sign out of Emby\"", settingsXaml);
-        Assert.Contains("Style=\"{StaticResource TvSettingsAccountActionButtonStyle}\"", settingsXaml);
+        Assert.Contains("Style=\"{StaticResource TvUtilityCommandButtonStyle}\"", settingsXaml);
         Assert.Contains("x:Name=\"SignOutConfirmLayer\"", settingsXaml);
         Assert.Contains("x:Name=\"ConfirmSignOutButton\"", settingsXaml);
         Assert.Contains("x:Name=\"CancelSignOutButton\"", settingsXaml);
-        Assert.Contains("Style=\"{StaticResource TvSettingsDangerButtonStyle}\"", settingsXaml);
+        Assert.Contains("Style=\"{StaticResource TvUtilityDangerButtonStyle}\"", settingsXaml);
         Assert.Contains("SignOutButton_OnClick", settingsSource);
         Assert.Contains("ConfirmSignOutButton_OnClick", settingsSource);
         Assert.Contains("CancelSignOutButton_OnClick", settingsSource);
@@ -34,6 +34,26 @@ public sealed class SettingsPageSourceTests
         Assert.Contains("Frame.Navigate(typeof(LoginPage))", settingsSource);
         Assert.Contains("Frame.BackStack.Clear()", settingsSource);
         Assert.Contains("CancelSignOutButton.Focus(FocusState.Keyboard)", settingsSource);
+    }
+
+    [Fact]
+    public void Settings_Page_Uses_Matte_Utility_Focus_And_Secondary_Diagnostics()
+    {
+        var root = FindRepositoryRoot();
+        var appXaml = File.ReadAllText(Path.Combine(root, "src", "NextGenEmby.App", "App.xaml"));
+        var settingsXaml = File.ReadAllText(Path.Combine(root, "src", "NextGenEmby.App", "Views", "SettingsPage.xaml"));
+        var settingsSource = File.ReadAllText(Path.Combine(root, "src", "NextGenEmby.App", "Views", "SettingsPage.xaml.cs"));
+
+        Assert.Contains("TvUtilityCommandButtonStyle", appXaml);
+        Assert.Contains("TvUtilityDangerButtonStyle", appXaml);
+        Assert.Contains("TvDiagnosticsPanelStyle", appXaml);
+        Assert.Contains("Style=\"{StaticResource TvUtilityCommandButtonStyle}\"", settingsXaml);
+        Assert.Contains("Style=\"{StaticResource TvUtilityDangerButtonStyle}\"", settingsXaml);
+        Assert.Contains("Style=\"{StaticResource TvDiagnosticsPanelStyle}\"", settingsXaml);
+        Assert.Contains("<Setter Property=\"UseSystemFocusVisuals\" Value=\"False\" />", appXaml);
+        Assert.Contains("MatteButtonFocusVisuals.PrepareCommandButton(SignOutButton)", settingsSource);
+        Assert.Contains("MatteButtonFocusVisuals.PrepareCommandButton(CancelSignOutButton)", settingsSource);
+        Assert.Contains("MatteButtonFocusVisuals.PrepareDangerButton(ConfirmSignOutButton)", settingsSource);
     }
 
     private static string FindRepositoryRoot()

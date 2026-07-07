@@ -160,6 +160,43 @@ public sealed class SearchAccessibilitySourceTests
         Assert.DoesNotContain("MaxWidth = 260", searchPageSource);
     }
 
+    [Fact]
+    public void Search_Utility_Controls_Use_Matte_Form_And_Command_Styles()
+    {
+        var root = FindRepositoryRoot();
+        var appXaml = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NextGenEmby.App",
+            "App.xaml"));
+        var searchPageXaml = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NextGenEmby.App",
+            "Views",
+            "SearchPage.xaml"));
+        var searchPageSource = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NextGenEmby.App",
+            "Views",
+            "SearchPage.xaml.cs"));
+
+        Assert.Contains("TvUtilityFieldTextBoxStyle", appXaml);
+        Assert.Contains("TvUtilityCommandButtonStyle", appXaml);
+        Assert.Contains("TvUtilitySearchScopeButtonStyle", appXaml);
+        Assert.Contains("Style=\"{StaticResource TvUtilityFieldTextBoxStyle}\"", searchPageXaml);
+        Assert.Contains("Style=\"{StaticResource TvUtilityCommandButtonStyle}\"", searchPageXaml);
+        Assert.Contains("ApplyScopeButtonStyle(button)", searchPageSource);
+        Assert.Contains("UpdateScopeButtonVisual(button", searchPageSource);
+        Assert.Contains("MatteButtonFocusVisuals.PrepareCommandButton(SearchActionButton)", searchPageSource);
+        Assert.Contains("MatteButtonFocusVisuals.PrepareCommandButton(EmptyEditButton)", searchPageSource);
+        Assert.Contains("MatteButtonFocusVisuals.PrepareCommandButton(EmptyRetryButton)", searchPageSource);
+        Assert.DoesNotContain("UseSystemFocusVisuals=\"True\"", searchPageXaml);
+        Assert.DoesNotContain("UseSystemFocusVisuals = true", searchPageSource);
+        Assert.DoesNotContain("AppAccentBrush", searchPageSource);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

@@ -24,8 +24,16 @@ namespace NextGenEmby.App.Views
         public SettingsPage()
         {
             InitializeComponent();
+            PrepareSettingsUtilityVisuals();
             RegisterSettingsDirectionalFocusHandlers();
             Loaded += SettingsPage_OnLoaded;
+        }
+
+        private void PrepareSettingsUtilityVisuals()
+        {
+            MatteButtonFocusVisuals.PrepareCommandButton(SignOutButton);
+            MatteButtonFocusVisuals.PrepareCommandButton(CancelSignOutButton);
+            MatteButtonFocusVisuals.PrepareDangerButton(ConfirmSignOutButton);
         }
 
         private async void SettingsPage_OnLoaded(object sender, RoutedEventArgs e)

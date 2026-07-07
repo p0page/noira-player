@@ -42,6 +42,25 @@ public sealed class LoginAccessibilitySourceTests
         Assert.Contains("new Control[] { ServerUrlBox, UserNameBox, PasswordBox, ConnectButton }", loginPageSource);
     }
 
+    [Fact]
+    public void Login_Page_Uses_Matte_Utility_Form_Styles()
+    {
+        var root = FindRepositoryRoot();
+        var appXaml = File.ReadAllText(Path.Combine(root, "src", "NextGenEmby.App", "App.xaml"));
+        var loginXaml = File.ReadAllText(Path.Combine(root, "src", "NextGenEmby.App", "Views", "LoginPage.xaml"));
+        var loginPageSource = File.ReadAllText(Path.Combine(root, "src", "NextGenEmby.App", "Views", "LoginPage.xaml.cs"));
+
+        Assert.Contains("TvUtilityFormPanelStyle", appXaml);
+        Assert.Contains("TvUtilityFieldTextBoxStyle", appXaml);
+        Assert.Contains("TvUtilityFieldPasswordBoxStyle", appXaml);
+        Assert.Contains("TvUtilityCommandButtonStyle", appXaml);
+        Assert.Contains("Style=\"{StaticResource TvUtilityFormPanelStyle}\"", loginXaml);
+        Assert.Contains("Style=\"{StaticResource TvUtilityFieldTextBoxStyle}\"", loginXaml);
+        Assert.Contains("Style=\"{StaticResource TvUtilityFieldPasswordBoxStyle}\"", loginXaml);
+        Assert.Contains("Style=\"{StaticResource TvUtilityCommandButtonStyle}\"", loginXaml);
+        Assert.Contains("MatteButtonFocusVisuals.PrepareCommandButton(ConnectButton)", loginPageSource);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

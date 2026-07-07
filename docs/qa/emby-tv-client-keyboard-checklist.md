@@ -2471,3 +2471,80 @@ Fix rerun findings:
   - Commit this batch as secondary-media visual-system alignment.
   - Keep Source Hub as an explicit future product/navigation decision.
   - Keep real Live TV stream playback, real audio playback, and real server artwork density out of this visual batch.
+
+### 2026-07-08 - Design Conformance Batch 06 Account, Settings, Login, And Recovery Baseline
+
+- App version: 0.1.0.220.
+- Scope: run Batch 06 before utility-surface visual fixes, covering Login, Settings, sign-out confirmation, and Search error recovery.
+- Data source: DEBUG fixture routes and empty-session utility routes only; no private server data, credentials, screenshots, or personal media assets were written to the repository.
+- Evidence root: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch06-utility-baseline-20260708-041330`.
+- Contact sheets:
+  - Login: `login\contact-login.png`.
+  - Settings: `settings\contact-settings.png`.
+  - Search error: `search-error\contact-search-error.png`.
+- Fixture routes:
+  - `login`.
+  - `settings`.
+  - `search-error`.
+- Keyboard-only validation:
+  - Closed the existing `Next Gen Xbox Emby` ApplicationFrameWindow before each installed-app route launch.
+  - Wrote `dev-command.json` into the app LocalState folder and launched through AppUserModelId `NextGenEmby.App_h8qjz0sr1sg4m!App`.
+  - Login path: `Tab`, `Tab`, `Tab`, `Enter`.
+  - Settings path: `Up`, `Enter`, `Escape`.
+  - Search error path: `Down`, `Down`, `Right`.
+  - Fixture routes completed and screenshots/UIA snapshots were captured into the evidence root.
+
+Findings recorded before fixes:
+
+| ID | Severity | Page | Evidence | Expected | Actual | Proposed batch fix |
+| --- | --- | --- | --- | --- | --- | --- |
+| DC-06.01 | Fail | Login | `login\contact-login.png` and UIA snapshots `01-initial.uia.txt` through `05-empty-submit-error.uia.txt`. | Login should be TV-accessible and visually aligned with the matte utility system: calm panel, readable form scale, neutral focus, and failed login returning to an editable target. | Keyboard navigation reaches the fields and empty submit returns focus to the editable form, but the page still looks like a developer form. Controls are tiny and left-biased on a large black canvas, the Connect button uses default command styling, and TextBox/PasswordBox focus relies on bright perimeter lines. | Introduce a shared utility form surface: centered/left-balanced matte panel with TV-scale fields, neutral form focus resources, `TvCommandButtonStyle` for Connect, and clearer empty/error status placement. |
+| DC-06.02 | Concern | Settings | `settings\contact-settings.png`, especially `01-initial.png` and `02-signout-focus.png`. | Settings should use shared typography, command focus, and panel surfaces. Diagnostics should be secondary and should not dominate the first viewport. | The account/playback/diagnostics structure is usable and already uses shared panels, but Sign out and checkbox focus still show old complete focus outlines. Diagnostics appears as a prominent first-screen panel instead of a secondary/support section. | Migrate settings buttons, checkbox, and combo-like utility controls to matte focus defaults. Reduce diagnostics visual priority or move it behind a secondary disclosure while keeping it reachable. |
+| DC-06.03 | Concern | Sign out confirmation | `settings\03-confirm-layer.png` and `settings\03-confirm-layer.uia.txt`. | Destructive action should be explicit, local, and safe by default. Danger color should appear only inside the confirmation context. | The confirmation copy and scoped danger button are appropriate, and Escape cancels. However the buttons inherit old focus visuals, so the confirmation still visually belongs to the older utility styling. | Keep the centered confirmation model and safe default, but use matte command focus for both actions. Keep red only on the final destructive button. |
+| DC-06.04 | Concern | Search error recovery | `search-error\contact-search-error.png` and UIA snapshots for initial, scope, recovery, and retry focus. | Error states should explain what happened and provide visible recovery controls without changing the app's visual language. | Recovery works: the page shows `Unable to search`, `Edit search`, and `Search again`, and focus can reach both actions. The search box, scope chips, and recovery buttons still use older border-heavy utility styling. | Apply the shared utility command/form focus recipe to Search input, scope chips, recent-term chips, and error recovery actions. Keep the centered recovery copy because it is clear and does not steal navigation. |
+
+- Decision:
+  - Treat Batch 06 as a utility-surface visual-system batch.
+  - Fix Login, Settings, and Search recovery together around a shared neutral matte form/command style instead of one-off page tweaks.
+  - Keep destructive sign-out red only inside the confirmation action.
+  - Keep diagnostics reachable but visually secondary.
+
+### 2026-07-08 - Design Conformance Batch 06 Account, Settings, Login, And Recovery Fix Rerun
+
+- App version: 0.1.0.222.
+- Scope: rerun Login, Settings, sign-out confirmation, and Search error recovery after shared matte utility form/command fixes.
+- Data source: DEBUG fixture routes and empty-session utility routes only; no private server data, credentials, screenshots, or personal media assets were written to the repository.
+- Evidence root: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch06-utility-fix-222-20260708-043420`.
+- Contact sheets:
+  - Login: `login\contact-login.png`.
+  - Settings: `settings\contact-settings.png`.
+  - Search error: `search-error\contact-search-error.png`.
+- Keyboard-only validation:
+  - Signed and installed `NextGenEmby.App 0.1.0.222`.
+  - Login path: `Tab`, `Tab`, `Tab`, `Enter`.
+  - Settings path: `Up`, `Enter`, `Escape`.
+  - Search error path: `Down`, `Down`, `Right`.
+  - Fixture routes completed through `dev-command.json`.
+- Source-level contracts added before implementation:
+  - Login uses shared matte utility form, field, and command styles, and Connect uses `MatteButtonFocusVisuals`.
+  - Settings uses shared utility command/danger styles, a lower-weight diagnostics panel, and matte focus helpers for sign-out confirmation actions.
+  - Search input, scope chips, recent terms, and error recovery actions use the same matte utility recipe; selected scope chips no longer use accent borders.
+
+Fix rerun findings:
+
+| ID | Status | Page | Evidence | Result | Residual risk |
+| --- | --- | --- | --- | --- | --- |
+| DC-06.01 | Pass with concern | Login | `login\contact-login.png`, especially `01-initial.png` and `05-empty-submit-error.png`. | Login now presents a stable matte utility panel with TV-scale fields and a neutral Connect action. Empty submit still returns focus to an editable field. | Native text-entry focus and software keyboard behavior should be checked on Xbox hardware. |
+| DC-06.02 | Pass with concern | Settings | `settings\contact-settings.png`, especially `01-initial.png` and `02-signout-focus.png`. | Settings keeps the simple account/playback/diagnostics structure, but command focus now uses matte fill instead of old bright perimeter focus. Diagnostics is visually lower weight. | Diagnostics remains visible in the first viewport for local/debug usefulness; a future production build may hide it behind a secondary disclosure. |
+| DC-06.03 | Pass | Sign out confirmation | `settings\03-confirm-layer.png`. | Confirmation remains explicit and safe by default. Red is scoped to the final destructive Sign out button, and focus is matte rather than a bright outline. | None for this visual slice. |
+| DC-06.04 | Pass with concern | Search error recovery | `search-error\contact-search-error.png`, especially `03-recovery-focus.png` and `04-search-again-focus.png`. | Recovery controls remain centered, readable, and reachable. Search input, scope chips, and retry/edit actions now use matte utility styling and no accent focus border. | Real offline/server failures should be rerun after hardware text input validation. |
+
+- Verification:
+  - Red path confirmed the new Login, Settings, and Search source contracts failed before implementation.
+  - Targeted source tests passed: `LoginAccessibilitySourceTests`, `SettingsPageSourceTests`, and `SearchAccessibilitySourceTests`, 12 tests.
+  - Design source tests passed: 78 tests.
+  - Visual Studio MSBuild Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.222_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.222`.
+- Decision:
+  - Commit this batch as utility-surface visual-system alignment.
+  - Keep Xbox hardware text-entry behavior, production diagnostics disclosure, and real offline-server recovery as follow-up validation rather than blockers for this visual-system slice.

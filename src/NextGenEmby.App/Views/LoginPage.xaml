@@ -5,34 +5,63 @@
     Background="{StaticResource AppBackgroundBrush}">
     <Grid>
         <ScrollViewer VerticalScrollBarVisibility="Auto">
-            <Grid Margin="{StaticResource TvPageMargin}" MaxWidth="940" HorizontalAlignment="Left">
-                <StackPanel Spacing="22">
-                    <StackPanel Spacing="10">
-                        <TextBlock Text="Next Gen Xbox Emby" FontSize="34" FontWeight="SemiBold" />
+            <Grid
+                Margin="{StaticResource TvPageMargin}"
+                HorizontalAlignment="Left"
+                MaxWidth="{StaticResource TvUtilityContentMaxWidth}">
+                <Border Style="{StaticResource TvUtilityFormPanelStyle}">
+                    <StackPanel Spacing="24">
+                        <StackPanel Spacing="8">
+                            <TextBlock
+                                Text="Connect to Emby"
+                                Style="{StaticResource TvPageTitleTextStyle}" />
+                            <TextBlock
+                                Text="Use your server address and account."
+                                Style="{StaticResource TvPageSubtitleTextStyle}" />
+                        </StackPanel>
+
+                        <Grid RowSpacing="16">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <TextBox
+                                x:Name="ServerUrlBox"
+                                Grid.Row="0"
+                                Header="Server URL"
+                                PlaceholderText="http://emby.local:8096"
+                                Style="{StaticResource TvUtilityFieldTextBoxStyle}" />
+                            <TextBox
+                                x:Name="UserNameBox"
+                                Grid.Row="1"
+                                Header="Username"
+                                PlaceholderText="emby user"
+                                Style="{StaticResource TvUtilityFieldTextBoxStyle}" />
+                            <PasswordBox
+                                x:Name="PasswordBox"
+                                Grid.Row="2"
+                                Header="Password"
+                                PasswordRevealMode="Hidden"
+                                Style="{StaticResource TvUtilityFieldPasswordBoxStyle}" />
+                        </Grid>
+
+                        <StackPanel Orientation="Horizontal" Spacing="14">
+                            <Button
+                                x:Name="ConnectButton"
+                                Click="Connect_OnClick"
+                                Content="Connect"
+                                Style="{StaticResource TvUtilityCommandButtonStyle}" />
+                        </StackPanel>
+
+                        <TextBlock
+                            x:Name="StatusBlock"
+                            MinHeight="28"
+                            Style="{StaticResource TvMutedBodyTextStyle}"
+                            TextWrapping="Wrap" />
                     </StackPanel>
-
-                    <Grid RowSpacing="14" MaxWidth="640">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
-
-                        <TextBox x:Name="ServerUrlBox" Grid.Row="0" Header="Server URL" PlaceholderText="http://emby.local:8096" />
-                        <TextBox x:Name="UserNameBox" Grid.Row="1" Header="Username" PlaceholderText="emby user" />
-                        <PasswordBox x:Name="PasswordBox" Grid.Row="2" Header="Password" PasswordRevealMode="Hidden" />
-                    </Grid>
-
-                    <StackPanel Orientation="Horizontal" Spacing="14">
-                        <Button x:Name="ConnectButton" Content="Connect" Click="Connect_OnClick" />
-                    </StackPanel>
-
-                    <TextBlock
-                        x:Name="StatusBlock"
-                        Foreground="{StaticResource AppMutedTextBrush}"
-                        FontSize="18"
-                        TextWrapping="Wrap" />
-                </StackPanel>
+                </Border>
             </Grid>
         </ScrollViewer>
     </Grid>
