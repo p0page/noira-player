@@ -1699,6 +1699,7 @@ internal static class Program
         CopyValues(suite.CodeTargets, gate.CodeTargets);
         ApplySuiteGateConfidence(gate, suite);
         ApplySuiteGateResultCounts(gate, suite);
+        CopySuiteSignalSummaries(suite.SignalSummaries, gate.SignalSummaries);
         CopySuiteNextActions(suite.NextActions, gate.NextActions);
         gate.Environment = suite.Environment;
         foreach (var summary in suite.Cases)
@@ -1771,6 +1772,28 @@ internal static class Program
         CopyValues(suite.Signals, gate.Confidence.Signals);
         CopyValues(suite.Reasons, gate.Confidence.Reasons);
         CopyValues(suite.Blockers, gate.Confidence.Reasons);
+    }
+
+    private static void CopySuiteSignalSummaries(
+        List<PlaybackQualitySuiteSignalSummary> source,
+        List<PlaybackQualitySuiteSignalSummary> target)
+    {
+        foreach (var summary in source)
+        {
+            var clone = new PlaybackQualitySuiteSignalSummary
+            {
+                Signal = summary.Signal,
+                FailureArea = summary.FailureArea,
+                Outcome = summary.Outcome,
+                ImprovementCount = summary.ImprovementCount,
+                RegressionCount = summary.RegressionCount,
+                PolicyChangeCount = summary.PolicyChangeCount
+            };
+
+            CopyValues(summary.CaseIds, clone.CaseIds);
+            CopyValues(summary.Directions, clone.Directions);
+            target.Add(clone);
+        }
     }
 
     private static void CopySuiteNextActions(
@@ -2077,6 +2100,8 @@ internal static class Program
         public List<string> TargetFailureAreas { get; } = new List<string>();
         public List<string> TargetCaseIds { get; } = new List<string>();
         public List<string> CaseIds { get; } = new List<string>();
+        public List<PlaybackQualitySuiteSignalSummary> SignalSummaries { get; } =
+            new List<PlaybackQualitySuiteSignalSummary>();
         public List<string> CodeTargets { get; } = new List<string>();
         public List<string> SuggestedNextActions { get; } = new List<string>();
         public List<PlaybackQualitySuiteNextAction> NextActions { get; } =

@@ -211,7 +211,7 @@ dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQ
 - `baselineReportAnalysis` / `candidateReportAnalysis`：baseline 和 candidate 每个 report 的 `modelAnalysis.optimizationGate` 摘要，包含 report 数量、已分析数量、缺失 analysis 数量、blocked 数量、聚合 `blockers`、`signals`、`failureAreas`、最高优先级 `targetFailureAreas`、对应 `targetCaseIds`、`codeTargets`、`suggestedNextActions`，以及每个 case 的 `status`、`blockers`、`signals`、`failureAreas`、`targetFailureAreas`、`codeTargets` 和 `suggestedNextActions`。
 - `suite`：只有 manifest、manifest coverage、report-set、baseline report-analysis 和 candidate report-analysis 都有效时才产生有效 before/after 比较结果。
 - `activeGate`：模型当前应处理的 gate。它是第一个 `status != pass` 的 gate；如果全部通过，则指向最终 `suite` gate。
-- `evidenceGates`：模型优先读取的门禁摘要，按 `manifest`、`manifest-coverage`、`baseline-report-set`、`candidate-report-set`、`baseline-report-analysis`、`candidate-report-analysis`、`suite` 顺序给出 `status`、`action`、`risk`、`confidence`、`resultCounts`、`blockers`、`signals`、`failureAreas`、`targetFailureAreas`、`targetCaseIds`、`caseIds`、`codeTargets`、`suggestedNextActions` 和 `nextActions`。当 gate 来自 suite 时，还会带 `environment` 摘要，并聚合 `comparison.*` per-case blocker，方便模型先识别缺失、部分、同构建、输入不兼容或 comparison coverage 问题，再按 case 展开。
+- `evidenceGates`：模型优先读取的门禁摘要，按 `manifest`、`manifest-coverage`、`baseline-report-set`、`candidate-report-set`、`baseline-report-analysis`、`candidate-report-analysis`、`suite` 顺序给出 `status`、`action`、`risk`、`confidence`、`resultCounts`、`signalSummaries`、`blockers`、`signals`、`failureAreas`、`targetFailureAreas`、`targetCaseIds`、`caseIds`、`codeTargets`、`suggestedNextActions` 和 `nextActions`。当 gate 来自 suite 时，还会带 `environment` 摘要，并聚合 `comparison.*` per-case blocker，方便模型先识别缺失、部分、同构建、输入不兼容或 comparison coverage 问题，再按 case 展开。
 - `action`、`risk`、`reasons`、`blockers`：给模型直接使用的下一步决策摘要。
 
 `activeGate.risk` 是 gate 级风险摘要。suite gate 继承 suite risk；前置通过 gate 为 `low`，前置阻断或 skipped suite 为 `high`。模型可以只读取 `activeGate.action`、`activeGate.risk` 和 `activeGate.nextActions[0]` 来决定下一步是否允许自动保留候选；只有 `action = accept-candidate` 且 `risk = low` 才是自动保留信号。
@@ -221,6 +221,8 @@ dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQ
 `confidence` 是 gate 级证据强度摘要。suite gate 会聚合 suite 的 `totalCount`、`strongCount`、`partialCount`、`weakCount`、`insufficientEvidenceCount` 和整体 `level`；`level = strong` 表示当前 before/after 比较证据可直接支持低风险接受，`partial` 表示只能作为方向性证据，`weak` 表示必须先补可比较证据。manifest、report-set 或 report-analysis gate 被阻断时，`confidence.level = weak`，因为这些前置证据不能支撑播放 Core 优化结论。
 
 `resultCounts` 是 gate 级 suite 比较结果分布摘要。suite gate 会聚合 `totalCount`、`improvedCount`、`regressedCount`、`mixedCount`、`unchangedCount`、`insufficientEvidenceCount` 和 `policyChangeCount`；前置 gate 和 skipped suite 保持 0。模型必须把 `resultCounts` 当作指标结果分布，而不是采纳决策：例如缺少 build identity 时仍可能有 `improvedCount > 0`，但 `blockers`、`confidence.level = weak` 和 `action = collect-comparable-evidence` 仍要求先补证据。
+
+`signalSummaries` 是 gate 级 suite 信号证据摘要。suite gate 会聚合每个 signal/failure area 的 `outcome`、improvement/regression/policy-change 计数、case IDs 和方向；前置 gate 和 skipped suite 保持空列表。模型应先用 `activeGate.signalSummaries` 判断具体受影响的播放 Core 信号，再按需展开 `suite.cases` 或 comparison。
 
 `nextActions` 是 gate 级结构化执行摘要。suite gate 会复制 suite 的 ranked `nextActions`，每项包含 `rank`、`action`、`risk`、可选 `failureArea`、`caseIds`、`signals`、`reasons`、`blockers` 和 `codeTargets`；skipped suite 会给出 rank 1 的 `collect-comparable-evidence` 动作。模型应优先读取 `activeGate.nextActions[0]`，用它决定下一步操作、目标样本和可能需要查看的 Core/native 文件；`suggestedNextActions` 仍保留为文本提示。
 

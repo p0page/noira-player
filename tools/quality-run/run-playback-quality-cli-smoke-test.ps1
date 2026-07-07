@@ -1310,6 +1310,16 @@ try {
         throw 'Expected evaluate-candidate active gate to expose improved suite result counts.'
     }
 
+    if (-not ($candidateEvaluation.activeGate.signalSummaries | Where-Object {
+        $_.signal -eq 'timing.maxFrameGapMs' -and
+        $_.failureArea -eq 'frame-pacing' -and
+        $_.outcome -eq 'improved' -and
+        $_.improvementCount -eq 1 -and
+        ($_.caseIds -contains 'item-1/source-1')
+    })) {
+        throw 'Expected evaluate-candidate active gate to expose suite signal summaries.'
+    }
+
     $candidateGateNextActions = @($candidateEvaluation.activeGate.nextActions)
     if ($candidateGateNextActions.Count -ne 1 -or
         $candidateGateNextActions[0].rank -ne 1 -or
