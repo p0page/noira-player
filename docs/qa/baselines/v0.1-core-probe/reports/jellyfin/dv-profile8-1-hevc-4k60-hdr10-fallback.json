@@ -234,7 +234,7 @@
     "environment": {
       "collectorVersion": "materialize-core-probe-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "0f53faa",
+      "sourceRevision": "279db00",
       "buildConfiguration": "Debug"
     },
     "limitations": [
@@ -374,6 +374,13 @@
       "isExpected": false,
       "isRetriable": false
     },
+    "runtimeMetrics": {
+      "status": "captured",
+      "providerStatus": "returned-snapshot",
+      "reason": "Runtime metrics snapshot contains playback sample evidence.",
+      "hasSnapshot": true,
+      "hasPlaybackSample": true
+    },
     "timing": {
       "renderPasses": 240,
       "decodedVideoFrames": 240,
@@ -447,7 +454,7 @@
     "environment": {
       "collectorVersion": "materialize-core-probe-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "0f53faa",
+      "sourceRevision": "279db00",
       "buildConfiguration": "Debug",
       "signals": [
         "environment.collectorVersion",
@@ -538,6 +545,20 @@
       "failureArea": "evidence-collection",
       "isExpected": false,
       "isRetriable": false
+    },
+    "runtimeMetrics": {
+      "status": "captured",
+      "providerStatus": "returned-snapshot",
+      "reason": "Runtime metrics snapshot contains playback sample evidence.",
+      "hasSnapshot": true,
+      "hasPlaybackSample": true,
+      "signals": [
+        "runtimeMetrics.status",
+        "runtimeMetrics.providerStatus",
+        "runtimeMetrics.reason",
+        "runtimeMetrics.hasSnapshot",
+        "runtimeMetrics.hasPlaybackSample"
+      ]
     },
     "colorPipeline": {
       "status": "matched",
@@ -696,6 +717,11 @@
       "tracks.audio.language",
       "tracks.audio.displayTitle",
       "tracks.audio.channelLayout",
+      "runtimeMetrics.status",
+      "runtimeMetrics.providerStatus",
+      "runtimeMetrics.reason",
+      "runtimeMetrics.hasSnapshot",
+      "runtimeMetrics.hasPlaybackSample",
       "position.requestedStartPositionTicks",
       "position.seekTargetPositionTicks",
       "position.actualPositionTicks",
