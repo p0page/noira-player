@@ -571,6 +571,45 @@ public sealed class PlaybackQualityReferenceManifestTests
     }
 
     [Fact]
+    public void ValidateReportSet_Rejects_Unknown_Error_Failure_Area()
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        var referenceCase = CreateCase(
+            "errors/unknown-area",
+            tier: 1,
+            purpose: "error-handling");
+        manifest.Cases.Add(referenceCase);
+        var report = new PlaybackQualityReport
+        {
+            RunId = "errors/unknown-area",
+            Result = "error",
+            Error = new PlaybackQualityError
+            {
+                Code = "source.open.failed",
+                Message = "The media file could not be opened.",
+                FailureClass = "sample issue",
+                FailureArea = "mystery-area"
+            }
+        };
+        report.Lifecycle.Events.Add(new PlaybackQualityLifecycleEvent
+        {
+            Operation = "open",
+            Status = "error"
+        });
+
+        var validation = PlaybackQualityReferenceReportSetValidator.Validate(
+            manifest,
+            new[] { report });
+
+        Assert.False(validation.IsValid);
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.failureArea.invalid" &&
+            error.Signal == "error.failureArea" &&
+            error.Actual == "mystery-area" &&
+            error.FailureClass == "evaluation harness bug");
+    }
+
+    [Fact]
     public void ValidateReportSet_Accepts_Skip_Report_Without_Playback_Metadata()
     {
         var manifest = new PlaybackQualityReferenceManifest();
@@ -632,6 +671,46 @@ public sealed class PlaybackQualityReferenceManifestTests
             error.Code == "report.failureClass.invalid" &&
             error.Signal == "skip.failureClass" &&
             error.Actual == "mystery class" &&
+            error.FailureClass == "evaluation harness bug");
+    }
+
+    [Fact]
+    public void ValidateReportSet_Rejects_Unknown_Check_Failure_Area()
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        var referenceCase = CreateCase(
+            "netflix/chimera-4k-2398-hdr-pq",
+            tier: 2,
+            purpose: "hdr-output");
+        manifest.Cases.Add(referenceCase);
+        var report = CreateReport(
+            "netflix/chimera-4k-2398-hdr-pq",
+            codec: "hevc",
+            width: 3840,
+            height: 2160,
+            frameRate: 23.976,
+            hdrKind: "Hdr10");
+        report.Result = "fail";
+        report.ColorPipeline.ConversionStatus = "validated";
+        report.Checks.Add(new PlaybackQualityCheck
+        {
+            Name = "MysteryCheck",
+            Signal = "timing.maxFrameGapMs",
+            Status = "fail",
+            FailureArea = "mystery-area",
+            Expected = "within threshold",
+            Actual = "above threshold"
+        });
+
+        var validation = PlaybackQualityReferenceReportSetValidator.Validate(
+            manifest,
+            new[] { report });
+
+        Assert.False(validation.IsValid);
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.failureArea.invalid" &&
+            error.Signal == "checks.failureArea" &&
+            error.Actual == "mystery-area" &&
             error.FailureClass == "evaluation harness bug");
     }
 

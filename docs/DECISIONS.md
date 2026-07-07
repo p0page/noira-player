@@ -1,5 +1,13 @@
 # 技术决策
 
+## 2026-07-08: report-set gate 校验 failureArea 枚举
+
+决策：`PlaybackQualityCodeTargetCatalog` 暴露 `KnownFailureAreas` / `IsKnownFailureArea`，`validate-report-set` 会拒绝未知的 `analysis.primaryFailureArea`、`error.failureArea`、`skip.failureArea` 和 `checks.failureArea`，并输出 `report.failureArea.invalid`。
+
+原因：failure area 是后续模型定位代码和规划优化的核心索引。任意字符串或 typo 会让模型把问题导向不存在的模块，或者绕过已有 code target catalog。
+
+边界：这只校验 report-set 契约，不改变播放器行为、阈值或 expected behavior。未知 failureArea 被归类为 `evaluation harness bug`，表示采集器、手写 fixture 或 evaluator 输出不符合当前 area catalog。
+
 ## 2026-07-08: report-set gate 校验 report result 枚举
 
 决策：新增 `PlaybackQualityReportResult` 作为 v0.1 报告结果枚举，`validate-report-set` 会拒绝未知的 `report.result`，合法值固定为 `pass`、`fail`、`skip`、`unsupported`、`error`。

@@ -250,6 +250,7 @@ namespace NextGenEmby.Core.PlaybackQuality
 
                 ValidateReportResult(validation, status, report);
                 ValidateFailureClasses(validation, status, report);
+                ValidateFailureAreas(validation, status, report);
 
                 if (status.Signals.Count > 0)
                 {
@@ -284,6 +285,60 @@ namespace NextGenEmby.Core.PlaybackQuality
                 string.Join(", ", PlaybackQualityReportResult.KnownResults),
                 report.Result,
                 "Playback quality report contains an unknown result.");
+        }
+
+        private static void ValidateFailureAreas(
+            PlaybackQualityReferenceReportSetValidation validation,
+            PlaybackQualityReferenceReportCaseStatus status,
+            PlaybackQualityReport report)
+        {
+            ValidateFailureArea(
+                validation,
+                status,
+                "analysis.primaryFailureArea",
+                report.Analysis.PrimaryFailureArea);
+            ValidateFailureArea(
+                validation,
+                status,
+                "error.failureArea",
+                report.Error.FailureArea);
+            ValidateFailureArea(
+                validation,
+                status,
+                "skip.failureArea",
+                report.Skip.FailureArea);
+            foreach (var check in report.Checks)
+            {
+                ValidateFailureArea(
+                    validation,
+                    status,
+                    "checks.failureArea",
+                    check.FailureArea);
+            }
+        }
+
+        private static void ValidateFailureArea(
+            PlaybackQualityReferenceReportSetValidation validation,
+            PlaybackQualityReferenceReportCaseStatus status,
+            string signal,
+            string failureArea)
+        {
+            if (string.IsNullOrWhiteSpace(failureArea) ||
+                PlaybackQualityCodeTargetCatalog.IsKnownFailureArea(failureArea))
+            {
+                return;
+            }
+
+            AddUnique(status.Signals, signal);
+            AddError(
+                validation,
+                "report.failureArea.invalid",
+                status.CaseId,
+                status.ReportRunId,
+                signal,
+                string.Join(", ", PlaybackQualityCodeTargetCatalog.KnownFailureAreas),
+                failureArea,
+                "Playback quality report contains an unknown failure area.");
         }
 
         private static void ValidateFailureClasses(
@@ -724,6 +779,7 @@ namespace NextGenEmby.Core.PlaybackQuality
             if (string.Equals(code, "report.duplicate-run-id", StringComparison.Ordinal) ||
                 string.Equals(code, "report.extra", StringComparison.Ordinal) ||
                 string.Equals(code, "report.result.invalid", StringComparison.Ordinal) ||
+                string.Equals(code, "report.failureArea.invalid", StringComparison.Ordinal) ||
                 string.Equals(code, "report.failureClass.invalid", StringComparison.Ordinal))
             {
                 return PlaybackQualityFailureClassification.EvaluationHarnessBug;

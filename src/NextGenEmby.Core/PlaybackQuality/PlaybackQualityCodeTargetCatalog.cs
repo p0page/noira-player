@@ -79,6 +79,46 @@ namespace NextGenEmby.Core.PlaybackQuality
             "src/NextGenEmby.Native"
         };
 
+        public static readonly string[] KnownFailureAreas =
+        {
+            "none",
+            "unsupported-source",
+            "color-pipeline",
+            "startup",
+            "error-handling",
+            "buffering",
+            "timeline",
+            "av-sync",
+            "frame-pacing",
+            "evidence-collection",
+            "metadata",
+            "tracks",
+            "subtitles",
+            "reporting",
+            "unknown"
+        };
+
+        public static bool IsKnownFailureArea(string failureArea)
+        {
+            if (string.IsNullOrWhiteSpace(failureArea))
+            {
+                return false;
+            }
+
+            foreach (var known in KnownFailureAreas)
+            {
+                if (string.Equals(
+                    known,
+                    failureArea,
+                    System.StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         public static IReadOnlyList<string> GetForFailureArea(string failureArea)
         {
             switch (failureArea)

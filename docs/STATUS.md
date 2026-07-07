@@ -2,6 +2,12 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-08 更新：failureArea 枚举进入 report-set gate
+
+`validate-report-set` 现在会校验 `analysis.primaryFailureArea`、`error.failureArea`、`skip.failureArea` 和 `checks.failureArea` 是否属于当前 area catalog。未知值会输出 `report.failureArea.invalid`，并归类为 `evaluation harness bug`。
+
+边界：这是报告契约校验，不改变播放器行为或 pass/fail 阈值。它保证模型消费的 failure area 能稳定映射到已有诊断模块和 code target catalog。
+
 ## 2026-07-08 更新：report result 枚举进入 report-set gate
 
 `validate-report-set` 现在会校验 `report.result` 是否属于 v0.1 最终结果枚举：`pass`、`fail`、`skip`、`unsupported`、`error`。未知值会输出 `report.result.invalid`，并归类为 `evaluation harness bug`。
