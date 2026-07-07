@@ -175,7 +175,7 @@
     "environment": {
       "collectorVersion": "materialize-baseline-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "efa9246",
+      "sourceRevision": "f4f4e48",
       "buildConfiguration": "Debug"
     },
     "limitations": [
@@ -342,6 +342,8 @@
     "analyzerVersion": 1,
     "runId": "jellyfin/hdr10-hevc-main10-1080p60-10m-force-sdr",
     "result": "fail",
+    "expectedBehavior": "startup.startupDurationMs expected 5000.000.",
+    "actualBehavior": "startup.startupDurationMs actual evidence was missing.",
     "primaryFailureArea": "color-pipeline",
     "suggestedNextAction": "Inspect HDR display switch and DXGI color-space mapping.",
     "startup": {
@@ -360,7 +362,7 @@
     "environment": {
       "collectorVersion": "materialize-baseline-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "efa9246",
+      "sourceRevision": "f4f4e48",
       "buildConfiguration": "Debug",
       "signals": [
         "environment.collectorVersion",

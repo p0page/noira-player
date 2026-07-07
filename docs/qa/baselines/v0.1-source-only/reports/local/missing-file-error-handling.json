@@ -42,7 +42,7 @@
     "environment": {
       "collectorVersion": "materialize-baseline-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "efa9246",
+      "sourceRevision": "f4f4e48",
       "buildConfiguration": "Debug"
     },
     "limitations": [
@@ -185,6 +185,8 @@
     "analyzerVersion": 1,
     "runId": "local/missing-file-error-handling",
     "result": "error",
+    "expectedBehavior": "Playback operation completed without a terminal runtime error.",
+    "actualBehavior": "materialize-baseline failed with source-only.error-case: Source-only materialization does not open playback; this synthetic error keeps error-handling cases in the first-class error report shape.",
     "primaryFailureArea": "error-handling",
     "suggestedNextAction": "Inspect runtime playback error evidence before interpreting playback-quality metrics.",
     "startup": {
@@ -199,7 +201,7 @@
     "environment": {
       "collectorVersion": "materialize-baseline-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "efa9246",
+      "sourceRevision": "f4f4e48",
       "buildConfiguration": "Debug",
       "signals": [
         "environment.collectorVersion",

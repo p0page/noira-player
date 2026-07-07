@@ -173,7 +173,7 @@
     "environment": {
       "collectorVersion": "materialize-core-probe-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "efa9246",
+      "sourceRevision": "f4f4e48",
       "buildConfiguration": "Debug"
     },
     "limitations": [
@@ -353,6 +353,8 @@
     "analyzerVersion": 1,
     "runId": "local/sdr-resume-seek-timeline",
     "result": "pass",
+    "expectedBehavior": "Playback quality checks passed.",
+    "actualBehavior": "Playback quality checks passed.",
     "primaryFailureArea": "none",
     "suggestedNextAction": "No failing thresholds.",
     "startup": {
@@ -371,7 +373,7 @@
     "environment": {
       "collectorVersion": "materialize-core-probe-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "efa9246",
+      "sourceRevision": "f4f4e48",
       "buildConfiguration": "Debug",
       "signals": [
         "environment.collectorVersion",
