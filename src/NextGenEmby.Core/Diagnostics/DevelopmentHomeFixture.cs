@@ -25,6 +25,17 @@ namespace NextGenEmby.Core.Diagnostics
                 MediaItem(artworkUris, "qa-movie-summit", "Summit Line", "Movie", 2022, 92, "qa-poster-06.png", "qa-wide-06.png")
             };
             var noArtworkMovie = MediaItemWithoutArtwork("qa-movie-no-artwork", "No Poster Signal", "Movie", 2021, 107);
+            var moviePreviewExtras = new[]
+            {
+                MediaItem(artworkUris, "qa-movie-meridian", "Glass Meridian", "Movie", 2024, 101, "qa-poster-07.png", "qa-wide-07.png"),
+                MediaItem(artworkUris, "qa-movie-last-train", "Last Train North", "Movie", 2023, 116, "qa-poster-08.png", "qa-wide-08.png"),
+                MediaItem(artworkUris, "qa-movie-paper-sun", "The Paper Sun", "Movie", 2022, 94, "qa-poster-09.png", "qa-wide-09.png"),
+                MediaItem(artworkUris, "qa-movie-orchard", "Signal Orchard", "Movie", 2025, 109, "qa-poster-10.png", "qa-wide-10.png"),
+                MediaItem(artworkUris, "qa-movie-low-tide", "Low Tide Static", "Movie", 2021, 99, "qa-poster-11.png", "qa-wide-11.png"),
+                MediaItem(artworkUris, "qa-movie-field", "Field Recordings", "Movie", 2020, 83, "qa-poster-12.png", "qa-wide-12.png"),
+                MediaItem(artworkUris, "qa-movie-night-transfer", "Night Transfer", "Movie", 2023, 103, "qa-poster-13.png", "qa-wide-13.png"),
+                MediaItem(artworkUris, "qa-movie-eastern-relay", "Eastern Relay", "Movie", 2024, 97, "qa-poster-14.png", "qa-wide-14.png")
+            };
             var shows = new[]
             {
                 MediaItem(artworkUris, "qa-show-northline", "Northline", "Series", 2026, 48, "qa-poster-07.png", "qa-wide-07.png"),
@@ -53,7 +64,7 @@ namespace NextGenEmby.Core.Diagnostics
 
             var libraryPreviews = new Dictionary<string, IReadOnlyList<EmbyMediaItem>>(StringComparer.Ordinal)
             {
-                ["qa-library-movies"] = movies.Take(1).Concat(new[] { noArtworkMovie }).Concat(movies.Skip(1).Take(4)).ToList(),
+                ["qa-library-movies"] = movies.Take(1).Concat(new[] { noArtworkMovie }).Concat(movies.Skip(1)).Concat(moviePreviewExtras).ToList(),
                 ["qa-library-tv"] = shows.Take(5).ToList(),
                 ["qa-library-douban"] = movies.Skip(1).Take(5).ToList(),
                 ["qa-library-netflix"] = shows.Skip(1).Take(4).ToList(),

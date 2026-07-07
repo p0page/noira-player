@@ -90,6 +90,22 @@ public sealed class DevelopmentHomeFixtureTests
     }
 
     [Fact]
+    public void Create_Provides_Dense_Movies_Preview_For_Grid_Wrap_Validation()
+    {
+        var fixture = DevelopmentHomeFixture.Create();
+
+        Assert.True(
+            fixture.LibraryPreviews.TryGetValue("qa-library-movies", out var movies),
+            "Movies preview fixture is missing.");
+
+        Assert.True(movies.Count >= 12, "Movies preview should cover multiple rows on TV-width grids.");
+        Assert.All(movies, item => Assert.Equal("Movie", item.Type));
+        Assert.Equal(movies.Count, movies.Select(item => item.Id).Distinct(StringComparer.Ordinal).Count());
+        Assert.Equal("qa-movie-aurora", movies[0].Id);
+        Assert.Equal("qa-movie-no-artwork", movies[1].Id);
+    }
+
+    [Fact]
     public void Create_Configured_Rows_Carry_Section_Owned_Artwork()
     {
         var fixture = DevelopmentHomeFixture.Create();

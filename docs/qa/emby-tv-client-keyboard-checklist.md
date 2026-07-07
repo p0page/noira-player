@@ -2612,3 +2612,37 @@ Follow-up findings:
 - Decision:
   - Mark Batch 02 no-artwork runtime coverage as resolved for deterministic fixtures.
   - Keep live-server missing-artwork variants as a future data-shape validation, not a blocker for the current visual-system pass.
+
+### 2026-07-08 - Design Conformance Batch 02 Movies Grid Density Follow-Up
+
+- App version: 0.1.0.225.
+- Scope: close the remaining Batch 02 movie-grid density concern by expanding `movies-fixture` from a single short row to a multi-row deterministic movie grid.
+- Data source: DEBUG `movies-fixture` only; no private server data, credentials, screenshots, or personal media assets were written to the repository.
+- Evidence root: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch02-movies-density-225-20260708-051355`.
+- Keyboard-only validation:
+  - Closed the existing app frame, wrote `dev-command.json` with route `movies-fixture`, and launched through AppUserModelId `NextGenEmby.App_h8qjz0sr1sg4m!App`.
+  - Captured the initial 15-item movie grid.
+  - Pressed `Right` to keep the deterministic missing-poster item reachable as the second card.
+  - Pressed `Down` to move from the first-row missing-poster item into the second row, then `Right` to verify second-row horizontal movement.
+  - The route reported `completed / movies-fixture`; `dev-command.json` and `dev-command-result.txt` were removed after validation.
+- Screenshots:
+  - Initial dense grid: `movies-00-initial.png`.
+  - Missing-poster focus remains second: `movies-01-no-art-focus.png`.
+  - Second-row focus: `movies-02-second-row.png`.
+  - Second-row right movement: `movies-03-second-row-right.png`.
+  - Focus log: `focus-log.txt`.
+
+Follow-up findings:
+
+| ID | Status | Page | Evidence | Result | Residual risk |
+| --- | --- | --- | --- | --- | --- |
+| DC-02.01 | Pass | Movies grid density and focus | `movies-00-initial.png`, `movies-02-second-row.png`, and `focus-log.txt`. | `movies-fixture` now exposes 15 deterministic movie cards, including the missing-poster card at index 2. The grid wraps to a second row, and keyboard focus can move down and across without returning to toolbar or collapsing into empty canvas. | Fixture artwork is still local generated QA art. Real-server poster density remains covered by live-data validation, not by this deterministic fixture. |
+
+- Verification:
+  - Red path confirmed `DevelopmentHomeFixtureTests.Create_Provides_Dense_Movies_Preview_For_Grid_Wrap_Validation` failed before implementation because the movie preview had only 6 items.
+  - Targeted Home fixture tests passed: 7 tests.
+  - Visual Studio MSBuild Debug x64 build passed, producing `NextGenEmby.App_0.1.0.225_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.225`.
+- Decision:
+  - Mark Batch 02 movie-grid deterministic density as resolved.
+  - Keep real-server poster variety and metadata length as future live-data validation.
