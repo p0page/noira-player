@@ -43,7 +43,7 @@
     "environment": {
       "collectorVersion": "materialize-core-probe-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "52cf57e",
+      "sourceRevision": "2e8621b",
       "buildConfiguration": "Debug"
     },
     "limitations": [
@@ -136,6 +136,15 @@
       "isTerminal": true,
       "isRetriable": false
     },
+    "skip": {
+      "code": "",
+      "reason": "",
+      "operation": "",
+      "failureClass": "",
+      "failureArea": "evidence-collection",
+      "isExpected": false,
+      "isRetriable": false
+    },
     "timing": {
       "renderPasses": 0,
       "decodedVideoFrames": 0,
@@ -205,7 +214,7 @@
     "environment": {
       "collectorVersion": "materialize-core-probe-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "52cf57e",
+      "sourceRevision": "2e8621b",
       "buildConfiguration": "Debug",
       "signals": [
         "environment.collectorVersion",
@@ -258,6 +267,15 @@
       "failureClass": "sample issue",
       "failureArea": "error-handling",
       "isTerminal": true,
+      "isRetriable": false
+    },
+    "skip": {
+      "code": "",
+      "reason": "",
+      "operation": "",
+      "failureClass": "",
+      "failureArea": "evidence-collection",
+      "isExpected": false,
       "isRetriable": false
     },
     "colorPipeline": {

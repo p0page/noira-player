@@ -5,7 +5,7 @@
   "environment": {
     "collectorVersion": "materialize-core-probe-report-set-v1",
     "playerCoreVersion": "NextGenEmby.Core",
-    "sourceRevision": "52cf57e",
+    "sourceRevision": "2e8621b",
     "buildConfiguration": "Debug"
   },
   "manifestValidation": {
