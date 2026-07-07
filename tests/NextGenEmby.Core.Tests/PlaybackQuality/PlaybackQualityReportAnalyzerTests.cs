@@ -76,21 +76,35 @@ public sealed class PlaybackQualityReportAnalyzerTests
                 Width = 3840,
                 Height = 2160,
                 FrameRate = 23.976,
+                ChapterCount = 2,
                 HdrKind = "Hdr10"
             }
         };
+        report.Source.Chapters.Add(new PlaybackQualityChapter
+        {
+            Name = "Opening",
+            StartPositionTicks = 0,
+            ImageTag = "chapter-0"
+        });
 
         var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
 
         Assert.Equal("mkv", analysis.Source.Container);
         Assert.Equal(76_000_000, analysis.Source.Bitrate);
         Assert.Equal(70_200_000_000, analysis.Source.DurationTicks);
+        Assert.Equal(2, analysis.Source.ChapterCount);
         Assert.Contains("source.container", analysis.Source.Signals);
         Assert.Contains("source.bitrate", analysis.Source.Signals);
         Assert.Contains("source.durationTicks", analysis.Source.Signals);
+        Assert.Contains("source.chapterCount", analysis.Source.Signals);
+        Assert.Contains("source.chapters.startPositionTicks", analysis.Source.Signals);
+        Assert.Contains("source.chapters.name", analysis.Source.Signals);
         Assert.Contains("source.container", analysis.EvidenceSignals);
         Assert.Contains("source.bitrate", analysis.EvidenceSignals);
         Assert.Contains("source.durationTicks", analysis.EvidenceSignals);
+        Assert.Contains("source.chapterCount", analysis.EvidenceSignals);
+        Assert.Contains("source.chapters.startPositionTicks", analysis.EvidenceSignals);
+        Assert.Contains("source.chapters.name", analysis.EvidenceSignals);
     }
 
     [Fact]

@@ -1401,15 +1401,47 @@ internal static class Program
         string propertyName,
         string signal)
     {
-        if (reportElement.ValueKind != JsonValueKind.Object ||
-            !TryGetPropertyIgnoreCase(reportElement, sectionName, out var section) ||
-            section.ValueKind != JsonValueKind.Object ||
-            !TryGetPropertyIgnoreCase(section, propertyName, out _))
+        var path = string.IsNullOrWhiteSpace(sectionName)
+            ? propertyName
+            : sectionName + "." + propertyName;
+        if (!HasNestedProperty(reportElement, path.Split('.'), index: 0))
         {
             return;
         }
 
         AddUnique(signals, signal);
+    }
+
+    private static bool HasNestedProperty(
+        JsonElement element,
+        string[] path,
+        int index)
+    {
+        if (index >= path.Length)
+        {
+            return true;
+        }
+
+        if (element.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in element.EnumerateArray())
+            {
+                if (HasNestedProperty(item, path, index))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        if (element.ValueKind != JsonValueKind.Object ||
+            !TryGetPropertyIgnoreCase(element, path[index], out var next))
+        {
+            return false;
+        }
+
+        return HasNestedProperty(next, path, index + 1);
     }
 
     private static void WriteJson<T>(T value, string outputPath)
@@ -2603,7 +2635,10 @@ internal static class Program
                 "source.codec",
                 "source.width",
                 "source.height",
-                "source.frameRate"),
+                "source.frameRate",
+                "source.chapterCount",
+                "source.chapters.startPositionTicks",
+                "source.chapters.name"),
             new ReportAnalysisCapabilityDefinition(
                 "source-capability",
                 "unsupported-source",

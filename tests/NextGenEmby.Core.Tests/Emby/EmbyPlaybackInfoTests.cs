@@ -102,6 +102,46 @@ public sealed class EmbyPlaybackInfoTests
     }
 
     [Fact]
+    public async Task GetPlaybackInfoAsync_Parses_Chapters_When_Server_Returns_Them()
+    {
+        var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
+            HttpStatusCode.OK,
+            """
+            {
+              "MediaSources": [
+                {
+                  "Id": "source-with-chapters",
+                  "MediaStreams": [],
+                  "Chapters": [
+                    {
+                      "Name": "Opening",
+                      "StartPositionTicks": 0,
+                      "ImageTag": "chapter-image-0"
+                    },
+                    {
+                      "Name": "Act 1",
+                      "StartPositionTicks": 900000000
+                    }
+                  ]
+                }
+              ]
+            }
+            """));
+        using var http = new HttpClient(handler);
+        var client = CreateClient(http);
+
+        var source = Assert.Single(await client.GetPlaybackInfoAsync(Session(), "movie-1"));
+
+        Assert.Equal(2, source.Chapters.Count);
+        Assert.Equal("Opening", source.Chapters[0].Name);
+        Assert.Equal(0, source.Chapters[0].StartPositionTicks);
+        Assert.Equal("chapter-image-0", source.Chapters[0].ImageTag);
+        Assert.Equal("Act 1", source.Chapters[1].Name);
+        Assert.Equal(900_000_000, source.Chapters[1].StartPositionTicks);
+        Assert.Equal("", source.Chapters[1].ImageTag);
+    }
+
+    [Fact]
     public async Task GetPlaybackInfoAsync_Treats_Pq_Bt2020_Video_As_Hdr_Even_When_VideoRange_Is_Sdr()
     {
         var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(

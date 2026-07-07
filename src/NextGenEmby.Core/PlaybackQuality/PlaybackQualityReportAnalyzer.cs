@@ -78,6 +78,8 @@ namespace NextGenEmby.Core.PlaybackQuality
         public int Width { get; set; }
         public int Height { get; set; }
         public double FrameRate { get; set; }
+        public int ChapterCount { get; set; }
+        public List<PlaybackQualityChapter> Chapters { get; } = new List<PlaybackQualityChapter>();
         public string HdrKind { get; set; } = "";
         public string HdrPlaybackStrategy { get; set; } = "";
         public bool IsHdr { get; set; }
@@ -1184,6 +1186,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                 Width = report.Source.Width,
                 Height = report.Source.Height,
                 FrameRate = report.Source.FrameRate,
+                ChapterCount = report.Source.ChapterCount,
                 HdrKind = report.Source.HdrKind,
                 HdrPlaybackStrategy = report.Source.HdrPlaybackStrategy,
                 IsHdr = report.Source.IsHdr,
@@ -1194,6 +1197,15 @@ namespace NextGenEmby.Core.PlaybackQuality
                 HasHdr10BaseLayer = report.Source.HasHdr10BaseLayer,
                 HasHlgBaseLayer = report.Source.HasHlgBaseLayer
             };
+            foreach (var chapter in report.Source.Chapters)
+            {
+                source.Chapters.Add(new PlaybackQualityChapter
+                {
+                    Name = chapter.Name,
+                    StartPositionTicks = chapter.StartPositionTicks,
+                    ImageTag = chapter.ImageTag
+                });
+            }
 
             AddSourceSignals(source);
             foreach (var check in report.Checks)
@@ -1287,6 +1299,8 @@ namespace NextGenEmby.Core.PlaybackQuality
                 source.Width > 0 ||
                 source.Height > 0 ||
                 source.FrameRate > 0 ||
+                source.ChapterCount > 0 ||
+                source.Chapters.Count > 0 ||
                 !string.IsNullOrWhiteSpace(source.HdrKind) ||
                 !string.IsNullOrWhiteSpace(source.HdrPlaybackStrategy);
 
@@ -1323,6 +1337,25 @@ namespace NextGenEmby.Core.PlaybackQuality
             if (source.FrameRate > 0)
             {
                 AddUnique(source.Signals, "source.frameRate");
+            }
+
+            if (source.ChapterCount > 0 || source.Chapters.Count > 0)
+            {
+                AddUnique(source.Signals, "source.chapterCount");
+            }
+
+            foreach (var chapter in source.Chapters)
+            {
+                AddUnique(source.Signals, "source.chapters.startPositionTicks");
+                if (!string.IsNullOrWhiteSpace(chapter.Name))
+                {
+                    AddUnique(source.Signals, "source.chapters.name");
+                }
+
+                if (!string.IsNullOrWhiteSpace(chapter.ImageTag))
+                {
+                    AddUnique(source.Signals, "source.chapters.imageTag");
+                }
             }
 
             if (!string.IsNullOrWhiteSpace(source.HdrKind))

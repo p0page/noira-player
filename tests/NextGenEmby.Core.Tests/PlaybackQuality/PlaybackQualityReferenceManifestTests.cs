@@ -1048,7 +1048,8 @@ public sealed class PlaybackQualityReferenceManifestTests
             {
                 Container = "mkv",
                 Bitrate = 76_000_000,
-                DurationTicks = 70_200_000_000
+                DurationTicks = 70_200_000_000,
+                ChapterCount = 1
             },
             RuntimeMetrics = new PlaybackQualityRuntimeMetrics
             {
@@ -1085,10 +1086,20 @@ public sealed class PlaybackQualityReferenceManifestTests
             IsDefault = false,
             IsForced = true
         });
+        report.Source.Chapters.Add(new PlaybackQualityChapter
+        {
+            Name = "Opening",
+            StartPositionTicks = 0,
+            ImageTag = "chapter-0"
+        });
 
         Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "source.container"));
         Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "source.bitrate"));
         Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "source.durationTicks"));
+        Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "source.chapterCount"));
+        Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "source.chapters.name"));
+        Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "source.chapters.startPositionTicks"));
+        Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "source.chapters.imageTag"));
         Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "runtimeMetrics.status"));
         Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "runtimeMetrics.providerStatus"));
         Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "runtimeMetrics.reason"));

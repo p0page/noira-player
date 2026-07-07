@@ -132,7 +132,15 @@ try {
     "width": 3840,
     "height": 2160,
     "frameRate": 23.976,
-    "hdrKind": "Sdr"
+    "hdrKind": "Sdr",
+    "chapterCount": 1,
+    "chapters": [
+      {
+        "name": "Opening",
+        "startPositionTicks": 0,
+        "imageTag": "chapter-0"
+      }
+    ]
   },
   "timing": {
     "renderedVideoFrames": 240,
@@ -170,7 +178,15 @@ try {
     "width": 3840,
     "height": 2160,
     "frameRate": 23.976,
-    "hdrKind": "Sdr"
+    "hdrKind": "Sdr",
+    "chapterCount": 1,
+    "chapters": [
+      {
+        "name": "Opening",
+        "startPositionTicks": 0,
+        "imageTag": "chapter-0"
+      }
+    ]
   },
   "timing": {
     "renderedVideoFrames": 240,
@@ -415,6 +431,15 @@ try {
 
     if (-not ($analysisSet.signals -contains 'timing.maxFrameGapMs')) {
         throw 'Expected analyze-report-set output to aggregate evidence signals.'
+    }
+
+    if (-not ($analysisSet.capabilityCoverage | Where-Object {
+        $_.capability -eq 'metadata-duration' -and
+        ($_.evidenceSignals -contains 'source.chapterCount') -and
+        ($_.evidenceSignals -contains 'source.chapters.startPositionTicks') -and
+        ($_.evidenceSignals -contains 'source.chapters.name')
+    })) {
+        throw 'Expected analyze-report-set output to expose chapter metadata evidence in metadata-duration coverage.'
     }
 
     if (-not ($analysisSet.capabilityCoverage | Where-Object {

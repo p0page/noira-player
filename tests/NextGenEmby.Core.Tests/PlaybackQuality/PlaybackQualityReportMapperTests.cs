@@ -166,6 +166,17 @@ public sealed class PlaybackQualityReportMapperTests
                 HasHlgBaseLayer = false
             }
         };
+        source.Chapters.Add(new EmbyChapter
+        {
+            Name = "Opening",
+            StartPositionTicks = 0,
+            ImageTag = "chapter-0"
+        });
+        source.Chapters.Add(new EmbyChapter
+        {
+            Name = "Act 1",
+            StartPositionTicks = 900_000_000
+        });
         source.Streams.Add(new EmbyMediaStream
         {
             Kind = EmbyStreamKind.Video,
@@ -238,6 +249,13 @@ public sealed class PlaybackQualityReportMapperTests
         Assert.Equal(3840, report.Source.Width);
         Assert.Equal(2160, report.Source.Height);
         Assert.Equal(23.976, report.Source.FrameRate);
+        Assert.Equal(2, report.Source.ChapterCount);
+        Assert.Equal("Opening", report.Source.Chapters[0].Name);
+        Assert.Equal(0, report.Source.Chapters[0].StartPositionTicks);
+        Assert.Equal("chapter-0", report.Source.Chapters[0].ImageTag);
+        Assert.Equal("Act 1", report.Source.Chapters[1].Name);
+        Assert.Equal(900_000_000, report.Source.Chapters[1].StartPositionTicks);
+        Assert.Equal("", report.Source.Chapters[1].ImageTag);
         Assert.Equal(1000.0 / 23.976, report.Timing.ExpectedFrameDurationMs, precision: 6);
         Assert.Equal("DolbyVisionWithHdr10Fallback", report.Source.HdrKind);
         Assert.Equal("HDR10 fallback from Dolby Vision", report.Source.HdrPlaybackStrategy);

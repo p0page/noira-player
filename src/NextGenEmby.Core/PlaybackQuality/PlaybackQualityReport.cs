@@ -74,6 +74,8 @@ namespace NextGenEmby.Core.PlaybackQuality
         public int Width { get; set; }
         public int Height { get; set; }
         public double FrameRate { get; set; }
+        public int ChapterCount { get; set; }
+        public List<PlaybackQualityChapter> Chapters { get; } = new List<PlaybackQualityChapter>();
         public string HdrKind { get; set; } = "";
         public string HdrPlaybackStrategy { get; set; } = "";
         public bool IsHdr { get; set; }
@@ -84,6 +86,13 @@ namespace NextGenEmby.Core.PlaybackQuality
         public bool HasHdr10BaseLayer { get; set; }
         public bool HasHlgBaseLayer { get; set; }
         public string AudioCodec { get; set; } = "";
+    }
+
+    public sealed class PlaybackQualityChapter
+    {
+        public string Name { get; set; } = "";
+        public long StartPositionTicks { get; set; }
+        public string ImageTag { get; set; } = "";
     }
 
     public sealed class PlaybackQualityStartup

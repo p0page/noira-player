@@ -80,6 +80,18 @@ namespace NextGenEmby.Core.PlaybackQuality
             report.Source.Width = source.Width;
             report.Source.Height = source.Height;
             report.Source.FrameRate = source.VideoFrameRate;
+            report.Source.Chapters.Clear();
+            foreach (var chapter in source.Chapters)
+            {
+                report.Source.Chapters.Add(new PlaybackQualityChapter
+                {
+                    Name = chapter.Name,
+                    StartPositionTicks = chapter.StartPositionTicks,
+                    ImageTag = chapter.ImageTag
+                });
+            }
+
+            report.Source.ChapterCount = report.Source.Chapters.Count;
             report.Timing.ExpectedFrameDurationMs = source.VideoFrameRate > 0
                 ? 1000.0 / source.VideoFrameRate
                 : 0;

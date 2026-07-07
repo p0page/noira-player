@@ -299,6 +299,14 @@ namespace NextGenEmby.Core.PlaybackQuality
                     return report.Source.Bitrate > 0;
                 case "source.durationTicks":
                     return report.Source.DurationTicks > 0;
+                case "source.chapterCount":
+                    return presentSignals != null || report.Source.ChapterCount > 0 || report.Source.Chapters.Count > 0;
+                case "source.chapters.name":
+                    return presentSignals != null || HasChapterTextEvidence(report, chapter => chapter.Name);
+                case "source.chapters.startPositionTicks":
+                    return presentSignals != null || report.Source.Chapters.Count > 0;
+                case "source.chapters.imageTag":
+                    return presentSignals != null || HasChapterTextEvidence(report, chapter => chapter.ImageTag);
                 case "source.width":
                     return report.Source.Width > 0;
                 case "source.height":
@@ -558,6 +566,21 @@ namespace NextGenEmby.Core.PlaybackQuality
             foreach (var track in tracks)
             {
                 if (select(track).HasValue)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool HasChapterTextEvidence(
+            PlaybackQualityReport report,
+            Func<PlaybackQualityChapter, string> select)
+        {
+            foreach (var chapter in report.Source.Chapters)
+            {
+                if (!string.IsNullOrWhiteSpace(select(chapter)))
                 {
                     return true;
                 }
