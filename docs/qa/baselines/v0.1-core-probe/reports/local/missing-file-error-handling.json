@@ -24,7 +24,8 @@
         "error.operation",
         "error.exceptionType",
         "error.failureClass",
-        "error.failureArea"
+        "error.failureArea",
+        "lifecycle.error"
       ],
       "ignoredSignals": []
     },
@@ -43,7 +44,7 @@
     "environment": {
       "collectorVersion": "materialize-core-probe-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "57a2f31",
+      "sourceRevision": "cab88ba",
       "buildConfiguration": "Debug"
     },
     "limitations": [
@@ -110,6 +111,17 @@
       "commandReceivedAt": "",
       "playbackStartedAt": "",
       "startupDurationMs": 0
+    },
+    "lifecycle": {
+      "events": [
+        {
+          "operation": "open",
+          "status": "error",
+          "state": "",
+          "positionTicks": null,
+          "message": "Core probe intentionally materialized an error-handling reference case without opening playback."
+        }
+      ]
     },
     "position": {
       "requestedStartPositionTicks": null,
@@ -221,10 +233,22 @@
       "signals": [],
       "failedSignals": []
     },
+    "lifecycle": {
+      "status": "error",
+      "reason": "Playback lifecycle telemetry captured a terminal error.",
+      "operations": [
+        "open"
+      ],
+      "signals": [
+        "lifecycle.open",
+        "lifecycle.error"
+      ],
+      "missingOperations": []
+    },
     "environment": {
       "collectorVersion": "materialize-core-probe-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "57a2f31",
+      "sourceRevision": "cab88ba",
       "buildConfiguration": "Debug",
       "signals": [
         "environment.collectorVersion",
@@ -456,12 +480,14 @@
       "error.exceptionType",
       "error.failureClass",
       "error.failureArea",
+      "lifecycle.error",
       "error.isTerminal",
       "error.isRetriable",
       "environment.collectorVersion",
       "environment.playerCoreVersion",
       "environment.sourceRevision",
-      "environment.buildConfiguration"
+      "environment.buildConfiguration",
+      "lifecycle.open"
     ],
     "missingEvidence": [],
     "limitations": [

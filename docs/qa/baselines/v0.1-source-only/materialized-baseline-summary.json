@@ -5,7 +5,7 @@
   "environment": {
     "collectorVersion": "materialize-baseline-report-set-v1",
     "playerCoreVersion": "NextGenEmby.Core",
-    "sourceRevision": "57a2f31",
+    "sourceRevision": "cab88ba",
     "buildConfiguration": "Debug"
   },
   "manifestValidation": {
@@ -570,6 +570,12 @@
         "position.seekTargetPositionTicks"
       ],
       "missingEvidence": [
+        "lifecycle.load",
+        "lifecycle.play",
+        "lifecycle.pause",
+        "lifecycle.resume",
+        "lifecycle.stop",
+        "lifecycle.seek",
         "timing.renderedVideoFrames",
         "startup.startupDurationMs",
         "sync.audioVideoDriftMsP95",
@@ -651,6 +657,12 @@
         "position.seekTargetPositionTicks"
       ],
       "missingEvidence": [
+        "lifecycle.load",
+        "lifecycle.play",
+        "lifecycle.pause",
+        "lifecycle.resume",
+        "lifecycle.stop",
+        "lifecycle.seek",
         "timing.renderedVideoFrames",
         "startup.startupDurationMs",
         "sync.audioVideoDriftMsP95",
@@ -731,6 +743,12 @@
         "position.seekTargetPositionTicks"
       ],
       "missingEvidence": [
+        "lifecycle.load",
+        "lifecycle.play",
+        "lifecycle.pause",
+        "lifecycle.resume",
+        "lifecycle.stop",
+        "lifecycle.seek",
         "timing.renderedVideoFrames",
         "startup.startupDurationMs",
         "sync.audioVideoDriftMsP95",
@@ -812,6 +830,12 @@
         "position.seekTargetPositionTicks"
       ],
       "missingEvidence": [
+        "lifecycle.load",
+        "lifecycle.play",
+        "lifecycle.pause",
+        "lifecycle.resume",
+        "lifecycle.stop",
+        "lifecycle.seek",
         "timing.renderedVideoFrames",
         "startup.startupDurationMs",
         "sync.audioVideoDriftMsP95",
@@ -886,6 +910,12 @@
         "position.seekTargetPositionTicks"
       ],
       "missingEvidence": [
+        "lifecycle.load",
+        "lifecycle.play",
+        "lifecycle.pause",
+        "lifecycle.resume",
+        "lifecycle.stop",
+        "lifecycle.seek",
         "timing.renderedVideoFrames",
         "startup.startupDurationMs"
       ],
@@ -960,6 +990,12 @@
         "position.seekTargetPositionTicks"
       ],
       "missingEvidence": [
+        "lifecycle.load",
+        "lifecycle.play",
+        "lifecycle.pause",
+        "lifecycle.resume",
+        "lifecycle.stop",
+        "lifecycle.seek",
         "timing.renderedVideoFrames",
         "startup.startupDurationMs",
         "sync.audioVideoDriftMsP95",
@@ -1050,6 +1086,12 @@
         "timing.expectedFrameDurationMs"
       ],
       "missingEvidence": [
+        "lifecycle.load",
+        "lifecycle.play",
+        "lifecycle.pause",
+        "lifecycle.resume",
+        "lifecycle.stop",
+        "lifecycle.seek",
         "timing.renderedVideoFrames",
         "startup.startupDurationMs",
         "timing.renderIntervalMsP95",
@@ -1137,6 +1179,12 @@
         "position.seekTargetPositionTicks"
       ],
       "missingEvidence": [
+        "lifecycle.load",
+        "lifecycle.play",
+        "lifecycle.pause",
+        "lifecycle.resume",
+        "lifecycle.stop",
+        "lifecycle.seek",
         "timing.renderedVideoFrames",
         "startup.startupDurationMs",
         "position.seekPositionErrorMs",
@@ -1179,12 +1227,14 @@
         "error.exceptionType",
         "error.failureClass",
         "error.failureArea",
+        "lifecycle.error",
         "error.isTerminal",
         "error.isRetriable",
         "environment.collectorVersion",
         "environment.playerCoreVersion",
         "environment.sourceRevision",
-        "environment.buildConfiguration"
+        "environment.buildConfiguration",
+        "lifecycle.materialize-baseline"
       ],
       "missingEvidence": [],
       "blockers": [

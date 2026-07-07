@@ -5,7 +5,7 @@
 生成命令：
 
 ```powershell
-dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- materialize-core-probe-report-set --manifest docs\qa\playback-quality-reference-manifest.example.json --reports-dir docs\qa\baselines\v0.1-core-probe\reports --source-revision 57a2f31 --player-core-version NextGenEmby.Core --build-configuration Debug --output docs\qa\baselines\v0.1-core-probe\materialized-core-probe-summary.json
+dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- materialize-core-probe-report-set --manifest docs\qa\playback-quality-reference-manifest.example.json --reports-dir docs\qa\baselines\v0.1-core-probe\reports --source-revision cab88ba --player-core-version NextGenEmby.Core --build-configuration Debug --output docs\qa\baselines\v0.1-core-probe\materialized-core-probe-summary.json
 dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- validate-report-set --manifest docs\qa\playback-quality-reference-manifest.example.json --reports-dir docs\qa\baselines\v0.1-core-probe\reports --output docs\qa\baselines\v0.1-core-probe\report-set-validation.json
 dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- analyze-report-set --reports-dir docs\qa\baselines\v0.1-core-probe\reports --output docs\qa\baselines\v0.1-core-probe\report-analysis-summary.json
 ```
@@ -25,7 +25,7 @@ dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQ
 边界：
 
 - 这是实际 player core 软件评测，不是 source-only 静态报告。
-- 它会执行 `PlaybackOrchestrator` 的 start、pause、resume、seek、track switch、subtitle switch 和 stop 路径。
+- 它会执行 `PlaybackOrchestrator` 的 load、play、pause、resume、seek、track switch、subtitle switch 和 stop 路径，并把这些操作写入 `lifecycle.events[]`。
 - 它使用 in-process diagnostic backend，不打开 native playback graph，不解码真实媒体，不访问网络，不验证 HDMI / 显示器输出。
 - startup、display、timing、buffering、A/V sync 指标是 deterministic probe telemetry，只能用于验证评测链路和 core orchestration 证据，不代表真实播放效果。
 - 后续进入播放效果优化前，仍需要 native graph 或真实媒体采集器提供 decoder、renderer、buffer、frame pacing、A/V sync、color pipeline 的真实软件 telemetry。

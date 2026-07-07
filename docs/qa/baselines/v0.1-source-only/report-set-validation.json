@@ -3,7 +3,7 @@
   "isValid": false,
   "expectedCaseCount": 9,
   "reportCount": 9,
-  "matchedCaseCount": 1,
+  "matchedCaseCount": 2,
   "cases": [
     {
       "caseId": "jellyfin/sdr-hevc-main10-1080p60-3m",
@@ -13,6 +13,11 @@
       "reportRunId": "jellyfin/sdr-hevc-main10-1080p60-3m",
       "status": "mismatch",
       "signals": [
+        "lifecycle.load",
+        "lifecycle.play",
+        "lifecycle.pause",
+        "lifecycle.resume",
+        "lifecycle.stop",
         "startup.startupDurationMs",
         "colorPipeline.actualHdrOutput",
         "display.hdrStatus",
@@ -31,6 +36,11 @@
       "reportRunId": "jellyfin/hdr10-hevc-main10-1080p60-10m",
       "status": "mismatch",
       "signals": [
+        "lifecycle.load",
+        "lifecycle.play",
+        "lifecycle.pause",
+        "lifecycle.resume",
+        "lifecycle.stop",
         "startup.startupDurationMs",
         "colorPipeline.actualHdrOutput",
         "display.hdrStatus",
@@ -49,6 +59,11 @@
       "reportRunId": "jellyfin/hdr10-hevc-main10-1080p60-10m-force-sdr",
       "status": "mismatch",
       "signals": [
+        "lifecycle.load",
+        "lifecycle.play",
+        "lifecycle.pause",
+        "lifecycle.resume",
+        "lifecycle.stop",
         "startup.startupDurationMs",
         "colorPipeline.actualHdrOutput",
         "display.hdrStatus",
@@ -68,6 +83,11 @@
       "reportRunId": "jellyfin/hdr10-hevc-main10-4k60-50m",
       "status": "mismatch",
       "signals": [
+        "lifecycle.load",
+        "lifecycle.play",
+        "lifecycle.pause",
+        "lifecycle.resume",
+        "lifecycle.stop",
         "startup.startupDurationMs",
         "colorPipeline.actualHdrOutput",
         "display.hdrStatus",
@@ -84,10 +104,8 @@
       "severity": "medium",
       "stability": "stable",
       "reportRunId": "jellyfin/dv-profile5-hevc-4k60",
-      "status": "mismatch",
-      "signals": [
-        "startup.startupDurationMs"
-      ]
+      "status": "matched",
+      "signals": []
     },
     {
       "caseId": "jellyfin/dv-profile8-1-hevc-4k60-hdr10-fallback",
@@ -97,6 +115,11 @@
       "reportRunId": "jellyfin/dv-profile8-1-hevc-4k60-hdr10-fallback",
       "status": "mismatch",
       "signals": [
+        "lifecycle.load",
+        "lifecycle.play",
+        "lifecycle.pause",
+        "lifecycle.resume",
+        "lifecycle.stop",
         "startup.startupDurationMs",
         "colorPipeline.actualHdrOutput",
         "display.hdrStatus",
@@ -115,6 +138,11 @@
       "reportRunId": "local/chimera-23976-hdr10-cadence",
       "status": "mismatch",
       "signals": [
+        "lifecycle.load",
+        "lifecycle.play",
+        "lifecycle.pause",
+        "lifecycle.resume",
+        "lifecycle.stop",
         "startup.startupDurationMs",
         "timing.renderedVideoFrames",
         "timing.maxFrameGapMs",
@@ -140,7 +168,13 @@
       "reportRunId": "local/sdr-resume-seek-timeline",
       "status": "mismatch",
       "signals": [
+        "lifecycle.load",
+        "lifecycle.play",
+        "lifecycle.pause",
+        "lifecycle.resume",
+        "lifecycle.stop",
         "startup.startupDurationMs",
+        "lifecycle.seek",
         "position.actualPositionTicks",
         "position.seekPositionErrorMs",
         "colorPipeline.actualHdrOutput",
@@ -167,6 +201,96 @@
       "code": "report.requiredSignal.missing",
       "caseId": "jellyfin/sdr-hevc-main10-1080p60-3m",
       "reportRunId": "jellyfin/sdr-hevc-main10-1080p60-3m",
+      "signal": "lifecycle.load",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "evidence-collection",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect missing telemetry before optimizing playback behavior; absent evidence is separate from a real playback failure.",
+      "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/sdr-hevc-main10-1080p60-3m",
+      "reportRunId": "jellyfin/sdr-hevc-main10-1080p60-3m",
+      "signal": "lifecycle.play",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "evidence-collection",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect missing telemetry before optimizing playback behavior; absent evidence is separate from a real playback failure.",
+      "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/sdr-hevc-main10-1080p60-3m",
+      "reportRunId": "jellyfin/sdr-hevc-main10-1080p60-3m",
+      "signal": "lifecycle.pause",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "evidence-collection",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect missing telemetry before optimizing playback behavior; absent evidence is separate from a real playback failure.",
+      "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/sdr-hevc-main10-1080p60-3m",
+      "reportRunId": "jellyfin/sdr-hevc-main10-1080p60-3m",
+      "signal": "lifecycle.resume",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "evidence-collection",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect missing telemetry before optimizing playback behavior; absent evidence is separate from a real playback failure.",
+      "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/sdr-hevc-main10-1080p60-3m",
+      "reportRunId": "jellyfin/sdr-hevc-main10-1080p60-3m",
+      "signal": "lifecycle.stop",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "evidence-collection",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect missing telemetry before optimizing playback behavior; absent evidence is separate from a real playback failure.",
+      "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/sdr-hevc-main10-1080p60-3m",
+      "reportRunId": "jellyfin/sdr-hevc-main10-1080p60-3m",
       "signal": "startup.startupDurationMs",
       "expected": "present",
       "actual": "",
@@ -303,6 +427,96 @@
       "code": "report.requiredSignal.missing",
       "caseId": "jellyfin/hdr10-hevc-main10-1080p60-10m",
       "reportRunId": "jellyfin/hdr10-hevc-main10-1080p60-10m",
+      "signal": "lifecycle.load",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "evidence-collection",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect missing telemetry before optimizing playback behavior; absent evidence is separate from a real playback failure.",
+      "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/hdr10-hevc-main10-1080p60-10m",
+      "reportRunId": "jellyfin/hdr10-hevc-main10-1080p60-10m",
+      "signal": "lifecycle.play",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "evidence-collection",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect missing telemetry before optimizing playback behavior; absent evidence is separate from a real playback failure.",
+      "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/hdr10-hevc-main10-1080p60-10m",
+      "reportRunId": "jellyfin/hdr10-hevc-main10-1080p60-10m",
+      "signal": "lifecycle.pause",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "evidence-collection",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect missing telemetry before optimizing playback behavior; absent evidence is separate from a real playback failure.",
+      "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/hdr10-hevc-main10-1080p60-10m",
+      "reportRunId": "jellyfin/hdr10-hevc-main10-1080p60-10m",
+      "signal": "lifecycle.resume",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "evidence-collection",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect missing telemetry before optimizing playback behavior; absent evidence is separate from a real playback failure.",
+      "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/hdr10-hevc-main10-1080p60-10m",
+      "reportRunId": "jellyfin/hdr10-hevc-main10-1080p60-10m",
+      "signal": "lifecycle.stop",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "evidence-collection",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect missing telemetry before optimizing playback behavior; absent evidence is separate from a real playback failure.",
+      "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/hdr10-hevc-main10-1080p60-10m",
+      "reportRunId": "jellyfin/hdr10-hevc-main10-1080p60-10m",
       "signal": "startup.startupDurationMs",
       "expected": "present",
       "actual": "",
@@ -433,6 +647,96 @@
         "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
         "src/NextGenEmby.Native/DxDeviceResources.cpp",
         "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/hdr10-hevc-main10-1080p60-10m-force-sdr",
+      "reportRunId": "jellyfin/hdr10-hevc-main10-1080p60-10m-force-sdr",
+      "signal": "lifecycle.load",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "evidence-collection",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect missing telemetry before optimizing playback behavior; absent evidence is separate from a real playback failure.",
+      "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/hdr10-hevc-main10-1080p60-10m-force-sdr",
+      "reportRunId": "jellyfin/hdr10-hevc-main10-1080p60-10m-force-sdr",
+      "signal": "lifecycle.play",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "evidence-collection",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect missing telemetry before optimizing playback behavior; absent evidence is separate from a real playback failure.",
+      "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/hdr10-hevc-main10-1080p60-10m-force-sdr",
+      "reportRunId": "jellyfin/hdr10-hevc-main10-1080p60-10m-force-sdr",
+      "signal": "lifecycle.pause",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "evidence-collection",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect missing telemetry before optimizing playback behavior; absent evidence is separate from a real playback failure.",
+      "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/hdr10-hevc-main10-1080p60-10m-force-sdr",
+      "reportRunId": "jellyfin/hdr10-hevc-main10-1080p60-10m-force-sdr",
+      "signal": "lifecycle.resume",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "evidence-collection",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect missing telemetry before optimizing playback behavior; absent evidence is separate from a real playback failure.",
+      "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/hdr10-hevc-main10-1080p60-10m-force-sdr",
+      "reportRunId": "jellyfin/hdr10-hevc-main10-1080p60-10m-force-sdr",
+      "signal": "lifecycle.stop",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "evidence-collection",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect missing telemetry before optimizing playback behavior; absent evidence is separate from a real playback failure.",
+      "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
       ]
     },
     {
@@ -592,6 +896,96 @@
       "code": "report.requiredSignal.missing",
       "caseId": "jellyfin/hdr10-hevc-main10-4k60-50m",
       "reportRunId": "jellyfin/hdr10-hevc-main10-4k60-50m",
+      "signal": "lifecycle.load",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "evidence-collection",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect missing telemetry before optimizing playback behavior; absent evidence is separate from a real playback failure.",
+      "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/hdr10-hevc-main10-4k60-50m",
+      "reportRunId": "jellyfin/hdr10-hevc-main10-4k60-50m",
+      "signal": "lifecycle.play",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "evidence-collection",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect missing telemetry before optimizing playback behavior; absent evidence is separate from a real playback failure.",
+      "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/hdr10-hevc-main10-4k60-50m",
+      "reportRunId": "jellyfin/hdr10-hevc-main10-4k60-50m",
+      "signal": "lifecycle.pause",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "evidence-collection",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect missing telemetry before optimizing playback behavior; absent evidence is separate from a real playback failure.",
+      "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/hdr10-hevc-main10-4k60-50m",
+      "reportRunId": "jellyfin/hdr10-hevc-main10-4k60-50m",
+      "signal": "lifecycle.resume",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "evidence-collection",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect missing telemetry before optimizing playback behavior; absent evidence is separate from a real playback failure.",
+      "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/hdr10-hevc-main10-4k60-50m",
+      "reportRunId": "jellyfin/hdr10-hevc-main10-4k60-50m",
+      "signal": "lifecycle.stop",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "evidence-collection",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect missing telemetry before optimizing playback behavior; absent evidence is separate from a real playback failure.",
+      "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/hdr10-hevc-main10-4k60-50m",
+      "reportRunId": "jellyfin/hdr10-hevc-main10-4k60-50m",
       "signal": "startup.startupDurationMs",
       "expected": "present",
       "actual": "",
@@ -726,18 +1120,91 @@
     },
     {
       "code": "report.requiredSignal.missing",
-      "caseId": "jellyfin/dv-profile5-hevc-4k60",
-      "reportRunId": "jellyfin/dv-profile5-hevc-4k60",
-      "signal": "startup.startupDurationMs",
+      "caseId": "jellyfin/dv-profile8-1-hevc-4k60-hdr10-fallback",
+      "reportRunId": "jellyfin/dv-profile8-1-hevc-4k60-hdr10-fallback",
+      "signal": "lifecycle.load",
       "expected": "present",
       "actual": "",
       "message": "Playback quality report is missing a required telemetry signal.",
-      "failureArea": "startup",
+      "failureArea": "evidence-collection",
       "failureClass": "insufficient instrumentation",
-      "suggestedNextAction": "Separate Emby request latency, native open/demux initialization, and first-frame readiness before changing render pacing.",
+      "suggestedNextAction": "Collect missing telemetry before optimizing playback behavior; absent evidence is separate from a real playback failure.",
       "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
         "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
-        "src/NextGenEmby.Native/NativePlaybackEngine.cpp",
+        "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/dv-profile8-1-hevc-4k60-hdr10-fallback",
+      "reportRunId": "jellyfin/dv-profile8-1-hevc-4k60-hdr10-fallback",
+      "signal": "lifecycle.play",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "evidence-collection",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect missing telemetry before optimizing playback behavior; absent evidence is separate from a real playback failure.",
+      "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/dv-profile8-1-hevc-4k60-hdr10-fallback",
+      "reportRunId": "jellyfin/dv-profile8-1-hevc-4k60-hdr10-fallback",
+      "signal": "lifecycle.pause",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "evidence-collection",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect missing telemetry before optimizing playback behavior; absent evidence is separate from a real playback failure.",
+      "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/dv-profile8-1-hevc-4k60-hdr10-fallback",
+      "reportRunId": "jellyfin/dv-profile8-1-hevc-4k60-hdr10-fallback",
+      "signal": "lifecycle.resume",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "evidence-collection",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect missing telemetry before optimizing playback behavior; absent evidence is separate from a real playback failure.",
+      "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/dv-profile8-1-hevc-4k60-hdr10-fallback",
+      "reportRunId": "jellyfin/dv-profile8-1-hevc-4k60-hdr10-fallback",
+      "signal": "lifecycle.stop",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "evidence-collection",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect missing telemetry before optimizing playback behavior; absent evidence is separate from a real playback failure.",
+      "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
         "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
       ]
     },
@@ -875,6 +1342,96 @@
         "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
         "src/NextGenEmby.Native/DxDeviceResources.cpp",
         "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "local/chimera-23976-hdr10-cadence",
+      "reportRunId": "local/chimera-23976-hdr10-cadence",
+      "signal": "lifecycle.load",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "evidence-collection",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect missing telemetry before optimizing playback behavior; absent evidence is separate from a real playback failure.",
+      "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "local/chimera-23976-hdr10-cadence",
+      "reportRunId": "local/chimera-23976-hdr10-cadence",
+      "signal": "lifecycle.play",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "evidence-collection",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect missing telemetry before optimizing playback behavior; absent evidence is separate from a real playback failure.",
+      "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "local/chimera-23976-hdr10-cadence",
+      "reportRunId": "local/chimera-23976-hdr10-cadence",
+      "signal": "lifecycle.pause",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "evidence-collection",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect missing telemetry before optimizing playback behavior; absent evidence is separate from a real playback failure.",
+      "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "local/chimera-23976-hdr10-cadence",
+      "reportRunId": "local/chimera-23976-hdr10-cadence",
+      "signal": "lifecycle.resume",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "evidence-collection",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect missing telemetry before optimizing playback behavior; absent evidence is separate from a real playback failure.",
+      "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "local/chimera-23976-hdr10-cadence",
+      "reportRunId": "local/chimera-23976-hdr10-cadence",
+      "signal": "lifecycle.stop",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "evidence-collection",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect missing telemetry before optimizing playback behavior; absent evidence is separate from a real playback failure.",
+      "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
       ]
     },
     {
@@ -1143,6 +1700,96 @@
       "code": "report.requiredSignal.missing",
       "caseId": "local/sdr-resume-seek-timeline",
       "reportRunId": "local/sdr-resume-seek-timeline",
+      "signal": "lifecycle.load",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "evidence-collection",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect missing telemetry before optimizing playback behavior; absent evidence is separate from a real playback failure.",
+      "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "local/sdr-resume-seek-timeline",
+      "reportRunId": "local/sdr-resume-seek-timeline",
+      "signal": "lifecycle.play",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "evidence-collection",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect missing telemetry before optimizing playback behavior; absent evidence is separate from a real playback failure.",
+      "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "local/sdr-resume-seek-timeline",
+      "reportRunId": "local/sdr-resume-seek-timeline",
+      "signal": "lifecycle.pause",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "evidence-collection",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect missing telemetry before optimizing playback behavior; absent evidence is separate from a real playback failure.",
+      "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "local/sdr-resume-seek-timeline",
+      "reportRunId": "local/sdr-resume-seek-timeline",
+      "signal": "lifecycle.resume",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "evidence-collection",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect missing telemetry before optimizing playback behavior; absent evidence is separate from a real playback failure.",
+      "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "local/sdr-resume-seek-timeline",
+      "reportRunId": "local/sdr-resume-seek-timeline",
+      "signal": "lifecycle.stop",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "evidence-collection",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect missing telemetry before optimizing playback behavior; absent evidence is separate from a real playback failure.",
+      "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "local/sdr-resume-seek-timeline",
+      "reportRunId": "local/sdr-resume-seek-timeline",
       "signal": "startup.startupDurationMs",
       "expected": "present",
       "actual": "",
@@ -1153,6 +1800,24 @@
       "codeTargets": [
         "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
         "src/NextGenEmby.Native/NativePlaybackEngine.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "local/sdr-resume-seek-timeline",
+      "reportRunId": "local/sdr-resume-seek-timeline",
+      "signal": "lifecycle.seek",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "evidence-collection",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect missing telemetry before optimizing playback behavior; absent evidence is separate from a real playback failure.",
+      "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
         "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
       ]
     },

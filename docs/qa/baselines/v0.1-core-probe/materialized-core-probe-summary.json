@@ -5,7 +5,7 @@
   "environment": {
     "collectorVersion": "materialize-core-probe-report-set-v1",
     "playerCoreVersion": "NextGenEmby.Core",
-    "sourceRevision": "57a2f31",
+    "sourceRevision": "cab88ba",
     "buildConfiguration": "Debug"
   },
   "manifestValidation": {
@@ -563,6 +563,11 @@
         "tracks.subtitles.language",
         "tracks.subtitles.displayTitle",
         "tracks.subtitles.isExternal",
+        "lifecycle.load",
+        "lifecycle.play",
+        "lifecycle.pause",
+        "lifecycle.resume",
+        "lifecycle.stop",
         "runtimeMetrics.status",
         "runtimeMetrics.providerStatus",
         "runtimeMetrics.reason",
@@ -575,7 +580,9 @@
         "timing.lateFrameDropToleranceMs",
         "timing.framePacingSourceFrameRate"
       ],
-      "missingEvidence": [],
+      "missingEvidence": [
+        "lifecycle.seek"
+      ],
       "blockers": [
         "result.pass"
       ]
@@ -633,6 +640,11 @@
         "tracks.audio.language",
         "tracks.audio.displayTitle",
         "tracks.audio.channelLayout",
+        "lifecycle.load",
+        "lifecycle.play",
+        "lifecycle.pause",
+        "lifecycle.resume",
+        "lifecycle.stop",
         "runtimeMetrics.status",
         "runtimeMetrics.providerStatus",
         "runtimeMetrics.reason",
@@ -645,7 +657,9 @@
         "timing.lateFrameDropToleranceMs",
         "timing.framePacingSourceFrameRate"
       ],
-      "missingEvidence": [],
+      "missingEvidence": [
+        "lifecycle.seek"
+      ],
       "blockers": [
         "result.pass"
       ]
@@ -702,6 +716,11 @@
         "tracks.audio.language",
         "tracks.audio.displayTitle",
         "tracks.audio.channelLayout",
+        "lifecycle.load",
+        "lifecycle.play",
+        "lifecycle.pause",
+        "lifecycle.resume",
+        "lifecycle.stop",
         "runtimeMetrics.status",
         "runtimeMetrics.providerStatus",
         "runtimeMetrics.reason",
@@ -714,7 +733,9 @@
         "timing.lateFrameDropToleranceMs",
         "timing.framePacingSourceFrameRate"
       ],
-      "missingEvidence": [],
+      "missingEvidence": [
+        "lifecycle.seek"
+      ],
       "blockers": [
         "result.pass"
       ]
@@ -772,6 +793,11 @@
         "tracks.audio.language",
         "tracks.audio.displayTitle",
         "tracks.audio.channelLayout",
+        "lifecycle.load",
+        "lifecycle.play",
+        "lifecycle.pause",
+        "lifecycle.resume",
+        "lifecycle.stop",
         "runtimeMetrics.status",
         "runtimeMetrics.providerStatus",
         "runtimeMetrics.reason",
@@ -784,7 +810,9 @@
         "timing.lateFrameDropToleranceMs",
         "timing.framePacingSourceFrameRate"
       ],
-      "missingEvidence": [],
+      "missingEvidence": [
+        "lifecycle.seek"
+      ],
       "blockers": [
         "result.pass"
       ]
@@ -836,6 +864,11 @@
         "tracks.audio.language",
         "tracks.audio.displayTitle",
         "tracks.audio.channelLayout",
+        "lifecycle.load",
+        "lifecycle.play",
+        "lifecycle.pause",
+        "lifecycle.resume",
+        "lifecycle.stop",
         "runtimeMetrics.status",
         "runtimeMetrics.providerStatus",
         "runtimeMetrics.reason",
@@ -908,6 +941,11 @@
         "tracks.audio.language",
         "tracks.audio.displayTitle",
         "tracks.audio.channelLayout",
+        "lifecycle.load",
+        "lifecycle.play",
+        "lifecycle.pause",
+        "lifecycle.resume",
+        "lifecycle.stop",
         "runtimeMetrics.status",
         "runtimeMetrics.providerStatus",
         "runtimeMetrics.reason",
@@ -920,7 +958,9 @@
         "timing.lateFrameDropToleranceMs",
         "timing.framePacingSourceFrameRate"
       ],
-      "missingEvidence": [],
+      "missingEvidence": [
+        "lifecycle.seek"
+      ],
       "blockers": [
         "result.pass"
       ]
@@ -982,6 +1022,11 @@
         "tracks.audio.language",
         "tracks.audio.displayTitle",
         "tracks.audio.channelLayout",
+        "lifecycle.load",
+        "lifecycle.play",
+        "lifecycle.pause",
+        "lifecycle.resume",
+        "lifecycle.stop",
         "runtimeMetrics.status",
         "runtimeMetrics.providerStatus",
         "runtimeMetrics.reason",
@@ -994,7 +1039,9 @@
         "timing.lateFrameDropToleranceMs",
         "timing.framePacingSourceFrameRate"
       ],
-      "missingEvidence": [],
+      "missingEvidence": [
+        "lifecycle.seek"
+      ],
       "blockers": [
         "result.pass"
       ]
@@ -1056,6 +1103,12 @@
         "tracks.audio.language",
         "tracks.audio.displayTitle",
         "tracks.audio.channelLayout",
+        "lifecycle.load",
+        "lifecycle.play",
+        "lifecycle.pause",
+        "lifecycle.resume",
+        "lifecycle.seek",
+        "lifecycle.stop",
         "runtimeMetrics.status",
         "runtimeMetrics.providerStatus",
         "runtimeMetrics.reason",
@@ -1094,12 +1147,14 @@
         "error.exceptionType",
         "error.failureClass",
         "error.failureArea",
+        "lifecycle.error",
         "error.isTerminal",
         "error.isRetriable",
         "environment.collectorVersion",
         "environment.playerCoreVersion",
         "environment.sourceRevision",
-        "environment.buildConfiguration"
+        "environment.buildConfiguration",
+        "lifecycle.open"
       ],
       "missingEvidence": [],
       "blockers": [

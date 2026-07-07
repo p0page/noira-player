@@ -131,7 +131,7 @@ dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQ
 dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- materialize-baseline-report-set --manifest docs\qa\playback-quality-reference-manifest.example.json --reports-dir docs\qa\baselines\v0.1-source-only\reports --source-revision <git-sha> --player-core-version <core-version> --build-configuration Debug --output docs\qa\baselines\v0.1-source-only\materialized-baseline-summary.json
 ```
 
-该命令不会打开媒体，也不会声称播放成功。它只把 reference case 转成当前 Core 可消费的 `PlaybackQualityRunResult` envelope，写入 `report.runId = caseId` 的标准路径，在顶层 `caseMetadata` 保留 case 分类/严重度/稳定性，并显式加入 `source-only: playback execution was not run by this command` limitation。后续仍必须运行 `validate-report-set` 和 `analyze-report-set`；缺失的 display、timing、buffering、sync、startup、seek telemetry 应被报告为 `insufficient instrumentation`，而不是播放器 core bug。
+该命令不会打开媒体，也不会声称播放成功。它只把 reference case 转成当前 Core 可消费的 `PlaybackQualityRunResult` envelope，写入 `report.runId = caseId` 的标准路径，在顶层 `caseMetadata` 保留 case 分类/严重度/稳定性，并显式加入 `source-only: playback execution was not run by this command` limitation。后续仍必须运行 `validate-report-set` 和 `analyze-report-set`；缺失的 lifecycle、display、timing、buffering、sync、startup、seek telemetry 应被报告为 `insufficient instrumentation`，而不是播放器 core bug。
 
 这一步的用途是建立可版本化 baseline artifact，并证明评测链路能完整覆盖 manifest。它不能替代真正的播放采集；当 App/native 采集器可用后，应使用真实采集的 envelope 替换 source-only baseline。
 
@@ -308,7 +308,7 @@ dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQ
 dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- analyze-report-set --reports-dir docs\qa\baselines\v0.1-core-probe\reports --output docs\qa\baselines\v0.1-core-probe\report-analysis-summary.json
 ```
 
-该命令会驱动 `PlaybackOrchestrator` 执行 start、pause、resume、seek、音轨切换、字幕切换和 stop，然后生成标准 `PlaybackQualityRunResult` envelope。报告会保留 `caseMetadata`、source、startup、position、tracks、timing、sync、buffers、colorPipeline、display、limitations 和 `modelAnalysis`。
+该命令会驱动 `PlaybackOrchestrator` 执行 load、play、pause、resume、seek、音轨切换、字幕切换和 stop，然后生成标准 `PlaybackQualityRunResult` envelope。报告会保留 `caseMetadata`、source、startup、position、tracks、lifecycle、timing、sync、buffers、colorPipeline、display、limitations 和 `modelAnalysis`。
 
 边界必须保留：
 

@@ -176,7 +176,7 @@
     "environment": {
       "collectorVersion": "materialize-baseline-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "57a2f31",
+      "sourceRevision": "cab88ba",
       "buildConfiguration": "Debug"
     },
     "limitations": [
@@ -241,6 +241,9 @@
       "commandReceivedAt": "",
       "playbackStartedAt": "",
       "startupDurationMs": 0
+    },
+    "lifecycle": {
+      "events": []
     },
     "position": {
       "requestedStartPositionTicks": 0,
@@ -380,10 +383,24 @@
         "startup.startupDurationMs"
       ]
     },
+    "lifecycle": {
+      "status": "missing-evidence",
+      "reason": "Playback lifecycle event telemetry is missing.",
+      "operations": [],
+      "signals": [],
+      "missingOperations": [
+        "load",
+        "play",
+        "pause",
+        "resume",
+        "stop",
+        "seek"
+      ]
+    },
     "environment": {
       "collectorVersion": "materialize-baseline-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "57a2f31",
+      "sourceRevision": "cab88ba",
       "buildConfiguration": "Debug",
       "signals": [
         "environment.collectorVersion",
@@ -571,6 +588,12 @@
       ],
       "blockerSignals": [
         "sample.status",
+        "lifecycle.load",
+        "lifecycle.play",
+        "lifecycle.pause",
+        "lifecycle.resume",
+        "lifecycle.stop",
+        "lifecycle.seek",
         "timing.renderedVideoFrames",
         "startup.startupDurationMs",
         "sync.audioVideoDriftMsP95",
@@ -608,6 +631,12 @@
         "failureArea": "evidence-collection",
         "suggestedAction": "Collect missing telemetry before optimizing playback behavior; absent evidence is treated separately from a real playback failure.",
         "signals": [
+          "lifecycle.load",
+          "lifecycle.play",
+          "lifecycle.pause",
+          "lifecycle.resume",
+          "lifecycle.stop",
+          "lifecycle.seek",
           "timing.renderedVideoFrames",
           "startup.startupDurationMs",
           "sync.audioVideoDriftMsP95",
@@ -776,6 +805,12 @@
           "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
         ],
         "signals": [
+          "lifecycle.load",
+          "lifecycle.play",
+          "lifecycle.pause",
+          "lifecycle.resume",
+          "lifecycle.stop",
+          "lifecycle.seek",
           "timing.renderedVideoFrames",
           "startup.startupDurationMs",
           "sync.audioVideoDriftMsP95",
@@ -835,6 +870,12 @@
       "position.seekTargetPositionTicks"
     ],
     "missingEvidence": [
+      "lifecycle.load",
+      "lifecycle.play",
+      "lifecycle.pause",
+      "lifecycle.resume",
+      "lifecycle.stop",
+      "lifecycle.seek",
       "timing.renderedVideoFrames",
       "startup.startupDurationMs",
       "sync.audioVideoDriftMsP95",

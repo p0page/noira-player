@@ -174,7 +174,7 @@
     "environment": {
       "collectorVersion": "materialize-core-probe-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "57a2f31",
+      "sourceRevision": "cab88ba",
       "buildConfiguration": "Debug"
     },
     "limitations": [
@@ -241,6 +241,45 @@
       "commandReceivedAt": "2026-01-01T00:00:00.000Z",
       "playbackStartedAt": "2026-01-01T00:00:00.250Z",
       "startupDurationMs": 250
+    },
+    "lifecycle": {
+      "events": [
+        {
+          "operation": "load",
+          "status": "observed",
+          "state": "Playing",
+          "positionTicks": 0,
+          "message": "core-probe selected source and created playback descriptor"
+        },
+        {
+          "operation": "play",
+          "status": "observed",
+          "state": "Playing",
+          "positionTicks": 0,
+          "message": "core-probe started playback"
+        },
+        {
+          "operation": "pause",
+          "status": "observed",
+          "state": "Paused",
+          "positionTicks": 0,
+          "message": "core-probe paused playback"
+        },
+        {
+          "operation": "resume",
+          "status": "observed",
+          "state": "Playing",
+          "positionTicks": 0,
+          "message": "core-probe resumed playback"
+        },
+        {
+          "operation": "stop",
+          "status": "observed",
+          "state": "Stopped",
+          "positionTicks": 0,
+          "message": "core-probe stopped playback"
+        }
+      ]
     },
     "position": {
       "requestedStartPositionTicks": 0,
@@ -403,10 +442,31 @@
       ],
       "failedSignals": []
     },
+    "lifecycle": {
+      "status": "partial",
+      "reason": "Playback lifecycle telemetry is present but incomplete.",
+      "operations": [
+        "load",
+        "play",
+        "pause",
+        "resume",
+        "stop"
+      ],
+      "signals": [
+        "lifecycle.load",
+        "lifecycle.play",
+        "lifecycle.pause",
+        "lifecycle.resume",
+        "lifecycle.stop"
+      ],
+      "missingOperations": [
+        "seek"
+      ]
+    },
     "environment": {
       "collectorVersion": "materialize-core-probe-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "57a2f31",
+      "sourceRevision": "cab88ba",
       "buildConfiguration": "Debug",
       "signals": [
         "environment.collectorVersion",
@@ -626,7 +686,21 @@
     "failedChecks": [],
     "failureClasses": [],
     "failureAreas": [],
-    "investigationHints": [],
+    "investigationHints": [
+      {
+        "failureArea": "evidence-collection",
+        "suggestedAction": "Collect missing telemetry before optimizing playback behavior; absent evidence is treated separately from a real playback failure.",
+        "codeTargets": [
+          "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+          "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+          "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
+          "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+        ],
+        "signals": [
+          "lifecycle.seek"
+        ]
+      }
+    ],
     "evidenceSignals": [
       "source.codec",
       "source.width",
@@ -673,6 +747,11 @@
       "tracks.subtitles.language",
       "tracks.subtitles.displayTitle",
       "tracks.subtitles.isExternal",
+      "lifecycle.load",
+      "lifecycle.play",
+      "lifecycle.pause",
+      "lifecycle.resume",
+      "lifecycle.stop",
       "runtimeMetrics.status",
       "runtimeMetrics.providerStatus",
       "runtimeMetrics.reason",
@@ -685,7 +764,9 @@
       "timing.lateFrameDropToleranceMs",
       "timing.framePacingSourceFrameRate"
     ],
-    "missingEvidence": [],
+    "missingEvidence": [
+      "lifecycle.seek"
+    ],
     "limitations": [
       "software-only: does not verify actual HDMI InfoFrame output",
       "software-only: does not verify display panel EOTF, luminance, or color accuracy",

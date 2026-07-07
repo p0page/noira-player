@@ -60,6 +60,11 @@
     "tracks.audio.language",
     "tracks.audio.displayTitle",
     "tracks.audio.channelLayout",
+    "lifecycle.load",
+    "lifecycle.play",
+    "lifecycle.pause",
+    "lifecycle.resume",
+    "lifecycle.stop",
     "runtimeMetrics.status",
     "runtimeMetrics.providerStatus",
     "runtimeMetrics.reason",
@@ -94,12 +99,15 @@
     "error.exceptionType",
     "error.failureClass",
     "error.failureArea",
+    "lifecycle.error",
     "error.isTerminal",
     "error.isRetriable",
+    "lifecycle.open",
     "sync.audioClockTicks",
     "sync.videoPositionTicks",
     "sync.clockDeltaMs",
-    "sync.driftDirection"
+    "sync.driftDirection",
+    "lifecycle.seek"
   ],
   "failureAreas": [
     "error-handling"
@@ -110,15 +118,19 @@
     "src/NextGenEmby.Core/Playback/PlaybackOrchestrator.cs",
     "src/NextGenEmby.Core/Playback/HdrPlaybackProfileClassifier.cs",
     "src/NextGenEmby.Core/Emby",
+    "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+    "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+    "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
+    "src/NextGenEmby.Native/Media/PlaybackGraph.cpp",
     "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityRuntimeEvidenceCollector.cs",
     "src/NextGenEmby.Native/NativePlaybackEngine.cpp",
-    "src/NextGenEmby.Native/Media/PlaybackGraph.cpp",
     "src/NextGenEmby.Native/Media/HttpMediaInput.cpp"
   ],
   "suggestedNextActions": [
     "Source is expected to be unsupported; preserve source classification evidence and skip playback-quality thresholds.",
     "Verify media source selection, codec support, HDR/Dolby Vision classification, and fallback policy before tuning playback timing.",
     "No failing thresholds.",
+    "Collect missing telemetry before optimizing playback behavior; absent evidence is treated separately from a real playback failure.",
     "Inspect runtime playback error evidence before interpreting playback-quality metrics.",
     "Inspect the failing playback operation, source availability, native open errors, cancellation, timeout, and exception classification before interpreting playback-quality metrics."
   ],
@@ -239,22 +251,32 @@
     {
       "capability": "lifecycle",
       "failureArea": "startup",
-      "status": "evidence-present",
+      "status": "partial",
       "evidenceCaseCount": 9,
-      "missingCaseCount": 0,
+      "missingCaseCount": 6,
       "blockedCaseCount": 0,
       "requiredSignals": [
-        "startup.commandReceivedAt",
-        "startup.playbackStartedAt",
-        "startup.startupDurationMs",
-        "error.operation",
-        "skip.operation"
+        "lifecycle.load",
+        "lifecycle.play",
+        "lifecycle.pause",
+        "lifecycle.resume",
+        "lifecycle.seek",
+        "lifecycle.stop",
+        "lifecycle.endOfStream",
+        "lifecycle.error"
       ],
       "evidenceSignals": [
-        "startup.startupDurationMs",
-        "error.operation"
+        "lifecycle.load",
+        "lifecycle.play",
+        "lifecycle.pause",
+        "lifecycle.resume",
+        "lifecycle.stop",
+        "lifecycle.error",
+        "lifecycle.seek"
       ],
-      "missingSignals": [],
+      "missingSignals": [
+        "lifecycle.seek"
+      ],
       "blockers": [],
       "caseIds": [
         "jellyfin/dv-profile5-hevc-4k60",
@@ -267,7 +289,9 @@
         "local/missing-file-error-handling",
         "local/sdr-resume-seek-timeline"
       ],
-      "suggestedNextActions": []
+      "suggestedNextActions": [
+        "Collect structured lifecycle operation evidence before diagnosing playback state transitions."
+      ]
     },
     {
       "capability": "seek-resume",
@@ -683,6 +707,11 @@
         "tracks.audio.language",
         "tracks.audio.displayTitle",
         "tracks.audio.channelLayout",
+        "lifecycle.load",
+        "lifecycle.play",
+        "lifecycle.pause",
+        "lifecycle.resume",
+        "lifecycle.stop",
         "runtimeMetrics.status",
         "runtimeMetrics.providerStatus",
         "runtimeMetrics.reason",
@@ -717,18 +746,22 @@
         "error.exceptionType",
         "error.failureClass",
         "error.failureArea",
+        "lifecycle.error",
         "error.isTerminal",
         "error.isRetriable",
+        "lifecycle.open",
         "sync.audioClockTicks",
         "sync.videoPositionTicks",
         "sync.clockDeltaMs",
-        "sync.driftDirection"
+        "sync.driftDirection",
+        "lifecycle.seek"
       ],
       "reasons": [
         "report analysis has no optimization blockers",
         "Source is expected to be unsupported; preserve source classification evidence and skip playback-quality thresholds.",
         "Verify media source selection, codec support, HDR/Dolby Vision classification, and fallback policy before tuning playback timing.",
         "No failing thresholds.",
+        "Collect missing telemetry before optimizing playback behavior; absent evidence is treated separately from a real playback failure.",
         "Inspect runtime playback error evidence before interpreting playback-quality metrics.",
         "Inspect the failing playback operation, source availability, native open errors, cancellation, timeout, and exception classification before interpreting playback-quality metrics."
       ],
@@ -741,9 +774,12 @@
         "src/NextGenEmby.Core/Playback/PlaybackOrchestrator.cs",
         "src/NextGenEmby.Core/Playback/HdrPlaybackProfileClassifier.cs",
         "src/NextGenEmby.Core/Emby",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp",
         "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityRuntimeEvidenceCollector.cs",
         "src/NextGenEmby.Native/NativePlaybackEngine.cpp",
-        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp",
         "src/NextGenEmby.Native/Media/HttpMediaInput.cpp"
       ]
     }
@@ -799,6 +835,11 @@
         "tracks.audio.language",
         "tracks.audio.displayTitle",
         "tracks.audio.channelLayout",
+        "lifecycle.load",
+        "lifecycle.play",
+        "lifecycle.pause",
+        "lifecycle.resume",
+        "lifecycle.stop",
         "runtimeMetrics.status",
         "runtimeMetrics.providerStatus",
         "runtimeMetrics.reason",
@@ -882,6 +923,11 @@
         "tracks.audio.language",
         "tracks.audio.displayTitle",
         "tracks.audio.channelLayout",
+        "lifecycle.load",
+        "lifecycle.play",
+        "lifecycle.pause",
+        "lifecycle.resume",
+        "lifecycle.stop",
         "runtimeMetrics.status",
         "runtimeMetrics.providerStatus",
         "runtimeMetrics.reason",
@@ -894,12 +940,20 @@
         "timing.lateFrameDropToleranceMs",
         "timing.framePacingSourceFrameRate"
       ],
-      "missingSignals": [],
+      "missingSignals": [
+        "lifecycle.seek"
+      ],
       "failureAreas": [],
       "targetFailureAreas": [],
-      "codeTargets": [],
+      "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+      ],
       "suggestedNextActions": [
-        "No failing thresholds."
+        "No failing thresholds.",
+        "Collect missing telemetry before optimizing playback behavior; absent evidence is treated separately from a real playback failure."
       ]
     },
     {
@@ -957,6 +1011,11 @@
         "tracks.audio.language",
         "tracks.audio.displayTitle",
         "tracks.audio.channelLayout",
+        "lifecycle.load",
+        "lifecycle.play",
+        "lifecycle.pause",
+        "lifecycle.resume",
+        "lifecycle.stop",
         "runtimeMetrics.status",
         "runtimeMetrics.providerStatus",
         "runtimeMetrics.reason",
@@ -969,12 +1028,20 @@
         "timing.lateFrameDropToleranceMs",
         "timing.framePacingSourceFrameRate"
       ],
-      "missingSignals": [],
+      "missingSignals": [
+        "lifecycle.seek"
+      ],
       "failureAreas": [],
       "targetFailureAreas": [],
-      "codeTargets": [],
+      "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+      ],
       "suggestedNextActions": [
-        "No failing thresholds."
+        "No failing thresholds.",
+        "Collect missing telemetry before optimizing playback behavior; absent evidence is treated separately from a real playback failure."
       ]
     },
     {
@@ -1033,6 +1100,11 @@
         "tracks.audio.language",
         "tracks.audio.displayTitle",
         "tracks.audio.channelLayout",
+        "lifecycle.load",
+        "lifecycle.play",
+        "lifecycle.pause",
+        "lifecycle.resume",
+        "lifecycle.stop",
         "runtimeMetrics.status",
         "runtimeMetrics.providerStatus",
         "runtimeMetrics.reason",
@@ -1045,12 +1117,20 @@
         "timing.lateFrameDropToleranceMs",
         "timing.framePacingSourceFrameRate"
       ],
-      "missingSignals": [],
+      "missingSignals": [
+        "lifecycle.seek"
+      ],
       "failureAreas": [],
       "targetFailureAreas": [],
-      "codeTargets": [],
+      "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+      ],
       "suggestedNextActions": [
-        "No failing thresholds."
+        "No failing thresholds.",
+        "Collect missing telemetry before optimizing playback behavior; absent evidence is treated separately from a real playback failure."
       ]
     },
     {
@@ -1109,6 +1189,11 @@
         "tracks.audio.language",
         "tracks.audio.displayTitle",
         "tracks.audio.channelLayout",
+        "lifecycle.load",
+        "lifecycle.play",
+        "lifecycle.pause",
+        "lifecycle.resume",
+        "lifecycle.stop",
         "runtimeMetrics.status",
         "runtimeMetrics.providerStatus",
         "runtimeMetrics.reason",
@@ -1121,12 +1206,20 @@
         "timing.lateFrameDropToleranceMs",
         "timing.framePacingSourceFrameRate"
       ],
-      "missingSignals": [],
+      "missingSignals": [
+        "lifecycle.seek"
+      ],
       "failureAreas": [],
       "targetFailureAreas": [],
-      "codeTargets": [],
+      "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+      ],
       "suggestedNextActions": [
-        "No failing thresholds."
+        "No failing thresholds.",
+        "Collect missing telemetry before optimizing playback behavior; absent evidence is treated separately from a real playback failure."
       ]
     },
     {
@@ -1189,6 +1282,11 @@
         "tracks.subtitles.language",
         "tracks.subtitles.displayTitle",
         "tracks.subtitles.isExternal",
+        "lifecycle.load",
+        "lifecycle.play",
+        "lifecycle.pause",
+        "lifecycle.resume",
+        "lifecycle.stop",
         "runtimeMetrics.status",
         "runtimeMetrics.providerStatus",
         "runtimeMetrics.reason",
@@ -1201,12 +1299,20 @@
         "timing.lateFrameDropToleranceMs",
         "timing.framePacingSourceFrameRate"
       ],
-      "missingSignals": [],
+      "missingSignals": [
+        "lifecycle.seek"
+      ],
       "failureAreas": [],
       "targetFailureAreas": [],
-      "codeTargets": [],
+      "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+      ],
       "suggestedNextActions": [
-        "No failing thresholds."
+        "No failing thresholds.",
+        "Collect missing telemetry before optimizing playback behavior; absent evidence is treated separately from a real playback failure."
       ]
     },
     {
@@ -1269,6 +1375,11 @@
         "tracks.audio.language",
         "tracks.audio.displayTitle",
         "tracks.audio.channelLayout",
+        "lifecycle.load",
+        "lifecycle.play",
+        "lifecycle.pause",
+        "lifecycle.resume",
+        "lifecycle.stop",
         "runtimeMetrics.status",
         "runtimeMetrics.providerStatus",
         "runtimeMetrics.reason",
@@ -1281,12 +1392,20 @@
         "timing.lateFrameDropToleranceMs",
         "timing.framePacingSourceFrameRate"
       ],
-      "missingSignals": [],
+      "missingSignals": [
+        "lifecycle.seek"
+      ],
       "failureAreas": [],
       "targetFailureAreas": [],
-      "codeTargets": [],
+      "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+      ],
       "suggestedNextActions": [
-        "No failing thresholds."
+        "No failing thresholds.",
+        "Collect missing telemetry before optimizing playback behavior; absent evidence is treated separately from a real playback failure."
       ]
     },
     {
@@ -1310,12 +1429,14 @@
         "error.exceptionType",
         "error.failureClass",
         "error.failureArea",
+        "lifecycle.error",
         "error.isTerminal",
         "error.isRetriable",
         "environment.collectorVersion",
         "environment.playerCoreVersion",
         "environment.sourceRevision",
-        "environment.buildConfiguration"
+        "environment.buildConfiguration",
+        "lifecycle.open"
       ],
       "missingSignals": [],
       "failureAreas": [
@@ -1394,6 +1515,12 @@
         "tracks.audio.language",
         "tracks.audio.displayTitle",
         "tracks.audio.channelLayout",
+        "lifecycle.load",
+        "lifecycle.play",
+        "lifecycle.pause",
+        "lifecycle.resume",
+        "lifecycle.seek",
+        "lifecycle.stop",
         "runtimeMetrics.status",
         "runtimeMetrics.providerStatus",
         "runtimeMetrics.reason",

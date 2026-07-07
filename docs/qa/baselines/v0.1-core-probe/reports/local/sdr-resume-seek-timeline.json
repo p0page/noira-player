@@ -174,7 +174,7 @@
     "environment": {
       "collectorVersion": "materialize-core-probe-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "57a2f31",
+      "sourceRevision": "cab88ba",
       "buildConfiguration": "Debug"
     },
     "limitations": [
@@ -241,6 +241,52 @@
       "commandReceivedAt": "2026-01-01T00:00:00.000Z",
       "playbackStartedAt": "2026-01-01T00:00:00.250Z",
       "startupDurationMs": 250
+    },
+    "lifecycle": {
+      "events": [
+        {
+          "operation": "load",
+          "status": "observed",
+          "state": "Playing",
+          "positionTicks": 600000000,
+          "message": "core-probe selected source and created playback descriptor"
+        },
+        {
+          "operation": "play",
+          "status": "observed",
+          "state": "Playing",
+          "positionTicks": 600000000,
+          "message": "core-probe started playback"
+        },
+        {
+          "operation": "pause",
+          "status": "observed",
+          "state": "Paused",
+          "positionTicks": 600000000,
+          "message": "core-probe paused playback"
+        },
+        {
+          "operation": "resume",
+          "status": "observed",
+          "state": "Playing",
+          "positionTicks": 600000000,
+          "message": "core-probe resumed playback"
+        },
+        {
+          "operation": "seek",
+          "status": "observed",
+          "state": "Playing",
+          "positionTicks": 900000000,
+          "message": "core-probe seeked playback"
+        },
+        {
+          "operation": "stop",
+          "status": "observed",
+          "state": "Stopped",
+          "positionTicks": 900000000,
+          "message": "core-probe stopped playback"
+        }
+      ]
     },
     "position": {
       "requestedStartPositionTicks": 600000000,
@@ -391,10 +437,31 @@
       ],
       "failedSignals": []
     },
+    "lifecycle": {
+      "status": "observed",
+      "reason": "Playback lifecycle telemetry captured required operations.",
+      "operations": [
+        "load",
+        "play",
+        "pause",
+        "resume",
+        "seek",
+        "stop"
+      ],
+      "signals": [
+        "lifecycle.load",
+        "lifecycle.play",
+        "lifecycle.pause",
+        "lifecycle.resume",
+        "lifecycle.seek",
+        "lifecycle.stop"
+      ],
+      "missingOperations": []
+    },
     "environment": {
       "collectorVersion": "materialize-core-probe-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "57a2f31",
+      "sourceRevision": "cab88ba",
       "buildConfiguration": "Debug",
       "signals": [
         "environment.collectorVersion",
@@ -660,6 +727,12 @@
       "tracks.audio.language",
       "tracks.audio.displayTitle",
       "tracks.audio.channelLayout",
+      "lifecycle.load",
+      "lifecycle.play",
+      "lifecycle.pause",
+      "lifecycle.resume",
+      "lifecycle.seek",
+      "lifecycle.stop",
       "runtimeMetrics.status",
       "runtimeMetrics.providerStatus",
       "runtimeMetrics.reason",

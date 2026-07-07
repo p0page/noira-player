@@ -24,7 +24,8 @@
         "error.operation",
         "error.exceptionType",
         "error.failureClass",
-        "error.failureArea"
+        "error.failureArea",
+        "lifecycle.error"
       ],
       "ignoredSignals": []
     },
@@ -43,7 +44,7 @@
     "environment": {
       "collectorVersion": "materialize-baseline-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "57a2f31",
+      "sourceRevision": "cab88ba",
       "buildConfiguration": "Debug"
     },
     "limitations": [
@@ -108,6 +109,17 @@
       "commandReceivedAt": "",
       "playbackStartedAt": "",
       "startupDurationMs": 0
+    },
+    "lifecycle": {
+      "events": [
+        {
+          "operation": "materialize-baseline",
+          "status": "error",
+          "state": "",
+          "positionTicks": null,
+          "message": "Source-only materialization does not open playback; this synthetic error keeps error-handling cases in the first-class error report shape."
+        }
+      ]
     },
     "position": {
       "requestedStartPositionTicks": null,
@@ -219,10 +231,22 @@
       "signals": [],
       "failedSignals": []
     },
+    "lifecycle": {
+      "status": "error",
+      "reason": "Playback lifecycle telemetry captured a terminal error.",
+      "operations": [
+        "materialize-baseline"
+      ],
+      "signals": [
+        "lifecycle.materialize-baseline",
+        "lifecycle.error"
+      ],
+      "missingOperations": []
+    },
     "environment": {
       "collectorVersion": "materialize-baseline-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "57a2f31",
+      "sourceRevision": "cab88ba",
       "buildConfiguration": "Debug",
       "signals": [
         "environment.collectorVersion",
@@ -454,12 +478,14 @@
       "error.exceptionType",
       "error.failureClass",
       "error.failureArea",
+      "lifecycle.error",
       "error.isTerminal",
       "error.isRetriable",
       "environment.collectorVersion",
       "environment.playerCoreVersion",
       "environment.sourceRevision",
-      "environment.buildConfiguration"
+      "environment.buildConfiguration",
+      "lifecycle.materialize-baseline"
     ],
     "missingEvidence": [],
     "limitations": [
