@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Linq;
 using NextGenEmby.Core.PlaybackQuality;
 using Xunit;
 
@@ -1262,6 +1264,54 @@ public sealed class PlaybackQualityReportAnalyzerTests
         Assert.Contains("\"sync.audioVideoDriftMsP95\"", json);
     }
 
+    [Fact]
+    public void Analyze_Only_Emits_Known_Model_Facing_Signals()
+    {
+        var analyses = new[]
+        {
+            PlaybackQualityReportAnalyzer.Analyze(CreateOptimizationReadyFailure()),
+            PlaybackQualityReportAnalyzer.Analyze(new PlaybackQualityReport
+            {
+                RunId = "missing-evidence",
+                Result = "fail"
+            }),
+            PlaybackQualityReportAnalyzer.Analyze(new PlaybackQualityReport
+            {
+                RunId = "startup-evidence",
+                Result = "pass",
+                Startup = new PlaybackQualityStartup
+                {
+                    CommandReceivedAt = "2026-07-07T01:00:00Z",
+                    PlaybackStartedAt = "2026-07-07T01:00:01Z",
+                    StartupDurationMs = 1000
+                }
+            }),
+            PlaybackQualityReportAnalyzer.Analyze(new PlaybackQualityReport
+            {
+                RunId = "sync-evidence",
+                Result = "pass",
+                Sync = new PlaybackQualitySync
+                {
+                    AudioClockTicks = 100,
+                    VideoPositionTicks = 90,
+                    AudioVideoDriftMsP50 = 4,
+                    AudioVideoDriftMsP95 = 8,
+                    AudioVideoDriftMsP99 = 12,
+                    AudioVideoDriftMsMax = 18
+                }
+            })
+        };
+        var knownSignals = new HashSet<string>(
+            PlaybackQualitySignalCatalog.KnownSignals.Select(signal => signal.Signal));
+        var emittedSignals = new HashSet<string>();
+        foreach (var analysis in analyses)
+        {
+            AddAnalysisSignals(emittedSignals, analysis);
+        }
+
+        Assert.All(emittedSignals, signal => Assert.Contains(signal, knownSignals));
+    }
+
     private static PlaybackQualityReport CreateOptimizationReadyFailure()
     {
         var report = new PlaybackQualityReport
@@ -1307,5 +1357,45 @@ public sealed class PlaybackQualityReportAnalyzerTests
         });
 
         return report;
+    }
+
+    private static void AddAnalysisSignals(
+        HashSet<string> signals,
+        PlaybackQualityModelAnalysis analysis)
+    {
+        AddSignals(signals, analysis.EvidenceSignals);
+        AddSignals(signals, analysis.MissingEvidence);
+        AddSignals(signals, analysis.Startup.Signals);
+        AddSignals(signals, analysis.Startup.FailedSignals);
+        AddSignals(signals, analysis.Source.Signals);
+        AddSignals(signals, analysis.Source.MismatchedSignals);
+        AddSignals(signals, analysis.ColorPipeline.Signals);
+        AddSignals(signals, analysis.ColorPipeline.MismatchedSignals);
+        AddSignals(signals, analysis.Buffering.Signals);
+        AddSignals(signals, analysis.Buffering.FailedSignals);
+        AddSignals(signals, analysis.AvSync.Signals);
+        AddSignals(signals, analysis.AvSync.FailedSignals);
+        AddSignals(signals, analysis.Cadence.Signals);
+        AddSignals(signals, analysis.OptimizationGate.BlockerSignals);
+        AddSignals(signals, analysis.FramePacing.Signals);
+        foreach (var hint in analysis.InvestigationHints)
+        {
+            AddSignals(signals, hint.Signals);
+        }
+
+        foreach (var step in analysis.TriageSteps)
+        {
+            AddSignals(signals, step.Signals);
+        }
+    }
+
+    private static void AddSignals(
+        HashSet<string> target,
+        IEnumerable<string> signals)
+    {
+        foreach (var signal in signals)
+        {
+            target.Add(signal);
+        }
     }
 }
