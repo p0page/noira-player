@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using NextGenEmby.Core.Playback;
+using NextGenEmby.Core.PlaybackQuality;
 using NextGenEmby.App.Services;
 using CoreNativePlaybackOpenRequest = NextGenEmby.Core.Playback.NativePlaybackOpenRequest;
 using NativeHdrStatus = NextGenEmby.Native.NativeHdrStatus;
@@ -10,7 +11,9 @@ using NativePlaybackState = NextGenEmby.Native.NativePlaybackState;
 
 namespace NextGenEmby.App.Playback
 {
-    public sealed class WinRtNativePlaybackEngine : INativePlaybackEngine
+    public sealed class WinRtNativePlaybackEngine :
+        INativePlaybackEngine,
+        IPlaybackQualityMetricsProvider
     {
         private readonly NativePlaybackEngine _engine;
 
@@ -52,6 +55,53 @@ namespace NextGenEmby.App.Playback
                     status.VideoProcessorInputColorSpace ?? "",
                     status.VideoProcessorOutputColorSpace ?? "",
                     status.VideoProcessorConversionStatus ?? "");
+            }
+        }
+
+        public bool TryGetQualityMetrics(out PlaybackQualityMetricsSnapshot metrics)
+        {
+            try
+            {
+                var nativeMetrics = _engine.QualityMetrics();
+                if (nativeMetrics == null)
+                {
+                    metrics = new PlaybackQualityMetricsSnapshot();
+                    return false;
+                }
+
+                metrics = new PlaybackQualityMetricsSnapshot
+                {
+                    RenderPasses = nativeMetrics.RenderPasses,
+                    DecodedVideoFrames = nativeMetrics.DecodedVideoFrames,
+                    RenderedVideoFrames = nativeMetrics.RenderedVideoFrames,
+                    SubmittedAudioFrames = nativeMetrics.SubmittedAudioFrames,
+                    DroppedVideoFrames = nativeMetrics.DroppedVideoFrames,
+                    SeekPrerollDroppedFrames = nativeMetrics.SeekPrerollDroppedFrames,
+                    VideoAheadWaitCount = nativeMetrics.VideoAheadWaitCount,
+                    VideoStarvedPasses = nativeMetrics.VideoStarvedPasses,
+                    AudioStarvedPasses = nativeMetrics.AudioStarvedPasses,
+                    QueuedAudioBuffers = nativeMetrics.QueuedAudioBuffers,
+                    AudioClockTicks = nativeMetrics.AudioClockTicks,
+                    VideoPositionTicks = nativeMetrics.VideoPositionTicks,
+                    RenderIntervalMsP50 = nativeMetrics.RenderIntervalMsP50,
+                    RenderIntervalMsP95 = nativeMetrics.RenderIntervalMsP95,
+                    RenderIntervalMsP99 = nativeMetrics.RenderIntervalMsP99,
+                    MaxFrameGapMs = nativeMetrics.MaxFrameGapMs,
+                    FramePacingSourceFrameRate = nativeMetrics.FramePacingSourceFrameRate,
+                    LateFrameDropToleranceMs = nativeMetrics.LateFrameDropToleranceMs,
+                    AudioVideoDriftMsP50 = nativeMetrics.AudioVideoDriftMsP50,
+                    AudioVideoDriftMsP95 = nativeMetrics.AudioVideoDriftMsP95,
+                    AudioVideoDriftMsP99 = nativeMetrics.AudioVideoDriftMsP99,
+                    AudioVideoDriftMsMax = nativeMetrics.AudioVideoDriftMsMax
+                };
+                return true;
+            }
+            catch (Exception ex)
+            {
+                PlaybackDiagnosticsLog.WriteLine(
+                    "Native quality metrics unavailable " + ex.GetType().FullName + " " + ex.Message);
+                metrics = new PlaybackQualityMetricsSnapshot();
+                return false;
             }
         }
 
