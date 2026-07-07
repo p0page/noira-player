@@ -676,8 +676,13 @@ try {
         $materializedBaselineReport.report.runId -ne 'netflix/chimera-4k-2398-hdr-pq' -or
         $materializedBaselineReport.report.environment.sourceRevision -ne 'smoke-baseline-revision' -or
         $materializedBaselineReport.report.source.codec -ne 'hevc' -or
+        $materializedBaselineReport.report.runtimeMetrics.status -ne 'unavailable' -or
+        $materializedBaselineReport.report.runtimeMetrics.providerStatus -ne 'source-only' -or
+        $materializedBaselineReport.modelAnalysis.runtimeMetrics.status -ne 'unavailable' -or
+        $materializedBaselineReport.modelAnalysis.runtimeMetrics.providerStatus -ne 'source-only' -or
+        -not ($materializedBaselineReport.modelAnalysis.evidenceSignals -contains 'runtimeMetrics.status') -or
         $materializedBaselineReport.modelAnalysis.runId -ne 'netflix/chimera-4k-2398-hdr-pq') {
-        throw 'Expected materialize-baseline-report-set to write PlaybackQualityRunResult envelope with case metadata, source, and environment evidence.'
+        throw 'Expected materialize-baseline-report-set to write PlaybackQualityRunResult envelope with case metadata, source, environment, and source-only runtime metrics evidence.'
     }
 
     if (-not ($materializedBaselineReport.report.limitations -contains 'source-only: playback execution was not run by this command')) {

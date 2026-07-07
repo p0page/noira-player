@@ -1330,6 +1330,8 @@ internal static class Program
                 referenceCase,
                 CreateSourceOnlyDescriptor(referenceCase));
             request.Environment = output.Environment;
+            request.RuntimeMetrics =
+                PlaybackQualityRuntimeMetricsFactory.Unavailable("source-only");
 
             var result = HasPurpose(referenceCase, "error-handling")
                 ? PlaybackQualityRuntimeEvidenceCollector.ComposeErrorRunResult(
