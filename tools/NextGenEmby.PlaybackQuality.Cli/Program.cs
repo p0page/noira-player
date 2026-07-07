@@ -1060,6 +1060,9 @@ internal static class Program
         AddUnique(
             plan.EvidenceRequirements,
             "run validate-report-set before compare-suite or evaluate-candidate");
+        AddUnique(
+            plan.EvidenceRequirements,
+            "capture every requiredSignals entry or let analyze-report classify it as missing evidence");
 
         if (!validation.IsValid)
         {
@@ -1102,11 +1105,146 @@ internal static class Program
                 AddUnique(planCase.Purpose, purpose);
             }
 
+            AddRequiredSignals(planCase.RequiredSignals, referenceCase);
+
             plan.Cases.Add(planCase);
         }
 
         plan.CaseCount = plan.Cases.Count;
         return plan;
+    }
+
+    private static void AddRequiredSignals(
+        List<string> requiredSignals,
+        PlaybackQualityReferenceCase referenceCase)
+    {
+        var expected = referenceCase.Expected ?? new PlaybackQualityExpected();
+
+        AddUnique(requiredSignals, "source.codec");
+        AddUnique(requiredSignals, "source.width");
+        AddUnique(requiredSignals, "source.height");
+        AddUnique(requiredSignals, "source.frameRate");
+        AddUnique(requiredSignals, "source.hdrKind");
+
+        if (!string.IsNullOrWhiteSpace(expected.HdrPlaybackStrategy))
+        {
+            AddUnique(requiredSignals, "source.hdrPlaybackStrategy");
+        }
+
+        AddNullableSourceSignal(requiredSignals, expected.IsHdr, "source.isHdr");
+        AddNullableSourceSignal(requiredSignals, expected.IsDirectPlayable, "source.isDirectPlayable");
+        AddNullableSourceSignal(requiredSignals, expected.IsDolbyVision, "source.isDolbyVision");
+        AddNullableSourceSignal(requiredSignals, expected.DolbyVisionProfile, "source.dolbyVisionProfile");
+        AddNullableSourceSignal(requiredSignals, expected.DolbyVisionCompatibilityId, "source.dolbyVisionCompatibilityId");
+        AddNullableSourceSignal(requiredSignals, expected.HasHdr10BaseLayer, "source.hasHdr10BaseLayer");
+        AddNullableSourceSignal(requiredSignals, expected.HasHlgBaseLayer, "source.hasHlgBaseLayer");
+
+        if (expected.MaxStartupDurationMs.HasValue)
+        {
+            AddUnique(requiredSignals, "startup.startupDurationMs");
+        }
+
+        if (expected.MinRenderedVideoFrames.HasValue ||
+            HasPurpose(referenceCase, "frame-pacing") ||
+            HasPurpose(referenceCase, "cadence-23.976"))
+        {
+            AddUnique(requiredSignals, "timing.renderedVideoFrames");
+        }
+
+        if (expected.MaxDroppedFrames.HasValue)
+        {
+            AddUnique(requiredSignals, "timing.droppedVideoFrames");
+        }
+
+        if (expected.MaxFrameGapMs.HasValue ||
+            HasPurpose(referenceCase, "frame-pacing") ||
+            HasPurpose(referenceCase, "cadence-23.976"))
+        {
+            AddUnique(requiredSignals, "timing.expectedFrameDurationMs");
+            AddUnique(requiredSignals, "timing.maxFrameGapMs");
+            AddUnique(requiredSignals, "timing.framePacingSourceFrameRate");
+            AddUnique(requiredSignals, "timing.lateFrameDropToleranceMs");
+        }
+
+        if (expected.MaxRenderIntervalMsP95.HasValue ||
+            HasPurpose(referenceCase, "frame-pacing"))
+        {
+            AddUnique(requiredSignals, "timing.renderIntervalMsP95");
+        }
+
+        if (expected.MaxRenderIntervalMsP99.HasValue ||
+            HasPurpose(referenceCase, "frame-pacing"))
+        {
+            AddUnique(requiredSignals, "timing.renderIntervalMsP99");
+        }
+
+        if (expected.MaxAudioVideoDriftMsP95.HasValue ||
+            HasPurpose(referenceCase, "av-sync"))
+        {
+            AddUnique(requiredSignals, "sync.audioVideoDriftMsP95");
+        }
+
+        if (expected.MaxVideoStarvedPasses.HasValue ||
+            HasPurpose(referenceCase, "buffering"))
+        {
+            AddUnique(requiredSignals, "buffers.videoStarvedPasses");
+        }
+
+        if (expected.MaxAudioStarvedPasses.HasValue ||
+            HasPurpose(referenceCase, "buffering"))
+        {
+            AddUnique(requiredSignals, "buffers.audioStarvedPasses");
+        }
+
+        if (!string.IsNullOrWhiteSpace(expected.HdrOutput))
+        {
+            AddUnique(requiredSignals, "colorPipeline.actualHdrOutput");
+        }
+
+        if (!string.IsNullOrWhiteSpace(expected.DxgiInput))
+        {
+            AddUnique(requiredSignals, "colorPipeline.dxgiInput");
+        }
+
+        if (!string.IsNullOrWhiteSpace(expected.DxgiOutput))
+        {
+            AddUnique(requiredSignals, "colorPipeline.dxgiOutput");
+        }
+
+        if (expected.RequireValidatedConversion)
+        {
+            AddUnique(requiredSignals, "colorPipeline.conversionStatus");
+        }
+
+        if (referenceCase.ForceSdrOutput || HasPurpose(referenceCase, "hdr-force-sdr"))
+        {
+            AddUnique(requiredSignals, "colorPipeline.forceSdrOutput");
+        }
+
+        if (expected.RequireMatchedDisplayRefreshRate ||
+            HasPurpose(referenceCase, "cadence-23.976"))
+        {
+            AddUnique(requiredSignals, "display.refreshRateHz");
+        }
+    }
+
+    private static void AddNullableSourceSignal<T>(
+        List<string> requiredSignals,
+        T? value,
+        string signal)
+        where T : struct
+    {
+        if (value.HasValue)
+        {
+            AddUnique(requiredSignals, signal);
+        }
+    }
+
+    private static bool HasPurpose(
+        PlaybackQualityReferenceCase referenceCase,
+        string purpose)
+    {
+        return referenceCase.Purpose.Contains(purpose);
     }
 
     private static PlaybackQualityRunPlanFilters CreateRunPlanFilters(
@@ -1778,6 +1916,7 @@ internal static class Program
         public string CaptureMode { get; set; } = "";
         public string ReportRelativePath { get; set; } = "";
         public string ReportPath { get; set; } = "";
+        public List<string> RequiredSignals { get; } = new List<string>();
         public PlaybackQualityExpected Expected { get; set; } =
             new PlaybackQualityExpected();
         public DevelopmentNavigationCommand? DevCommand { get; set; }

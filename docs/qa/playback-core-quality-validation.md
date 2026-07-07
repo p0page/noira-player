@@ -90,7 +90,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools\quality-run\New-Privat
 dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- plan-runs --manifest docs\qa\playback-quality-reference-manifest.example.json --reports-dir baseline-reports --duration 60 --output baseline-run-plan.json
 ```
 
-`plan-runs` 不执行播放，也不打包 App。它把每个 manifest case 转成标准 `runId`、`sourceUri`、`durationSeconds`、`expected`、`reportRelativePath` 和 `reportPath`，让模型或脚本按同一套 key 采集 `PlaybackQualityRunResult`。生成的报告应写入 plan 里的 `reportPath`，之后再运行 report-set 校验和候选评估。
+`plan-runs` 不执行播放，也不打包 App。它把每个 manifest case 转成标准 `runId`、`sourceUri`、`durationSeconds`、`requiredSignals`、`expected`、`reportRelativePath` 和 `reportPath`，让模型或脚本按同一套 key 采集 `PlaybackQualityRunResult`。生成的报告应写入 plan 里的 `reportPath`，之后再运行 report-set 校验和候选评估。
+
+`requiredSignals` 是模型采集前的 case 级 telemetry checklist。它会根据 `expected` 和 `purpose` 自动列出必须出现在报告里的信号，例如 `source.codec`、`source.hdrKind`、`colorPipeline.actualHdrOutput`、`display.refreshRateHz`、`timing.framePacingSourceFrameRate`、`sync.audioVideoDriftMsP95`、`buffers.videoStarvedPasses`。如果报告缺这些信号，应先补采集或让 `analyze-report` 明确标记 missing evidence，不要直接根据窄证据修改播放 Core。
 
 快速迭代时可以只计划一个子集，例如只跑 tier 2 以内的 HDR case：
 

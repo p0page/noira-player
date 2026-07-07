@@ -398,7 +398,9 @@ try {
         $_.sourceUri -eq 'https://example.invalid/netflix/chimera-4k-2398-hdr-pq.mp4' -and
         $_.reportRelativePath -eq 'netflix/chimera-4k-2398-hdr-pq.json' -and
         $_.durationSeconds -eq 60 -and
-        $_.expected.hdrKind -eq 'Hdr10'
+        $_.expected.hdrKind -eq 'Hdr10' -and
+        ($_.requiredSignals -contains 'source.codec') -and
+        ($_.requiredSignals -contains 'source.hdrKind')
     })) {
         throw 'Expected playback quality CLI plan-runs output to include a runnable HDR case.'
     }
@@ -500,7 +502,8 @@ try {
         $_.devCommand.durationSeconds -eq 45 -and
         $_.devCommand.startPositionTicks -eq 123 -and
         $_.devCommand.forceSdrOutput -eq $true -and
-        $_.devCommand.expected.hdrKind -eq 'Hdr10'
+        $_.devCommand.expected.hdrKind -eq 'Hdr10' -and
+        ($_.requiredSignals -contains 'colorPipeline.forceSdrOutput')
     })) {
         throw 'Expected playback quality CLI plan-runs output to include Emby quality-run dev command.'
     }
@@ -1696,7 +1699,11 @@ try {
     if (-not ($exampleRunPlan.cases | Where-Object {
         $_.caseId -eq 'jellyfin/hdr10-hevc-main10-4k60-50m' -and
         $_.captureMode -eq 'direct-uri' -and
-        $_.devCommand -eq $null
+        $_.devCommand -eq $null -and
+        ($_.requiredSignals -contains 'buffers.videoStarvedPasses') -and
+        ($_.requiredSignals -contains 'buffers.audioStarvedPasses') -and
+        ($_.requiredSignals -contains 'colorPipeline.actualHdrOutput') -and
+        ($_.requiredSignals -contains 'colorPipeline.dxgiInput')
     })) {
         throw 'Expected example reference run plan to schedule public Jellyfin media as direct-uri.'
     }
@@ -1707,7 +1714,11 @@ try {
         $_.devCommand.route -eq 'quality-run' -and
         $_.devCommand.itemId -eq 'quality-case-chimera-23976-hdr10' -and
         $_.expected.frameRate -eq 23.976 -and
-        $_.expected.requireMatchedDisplayRefreshRate -eq $true
+        $_.expected.requireMatchedDisplayRefreshRate -eq $true -and
+        ($_.requiredSignals -contains 'display.refreshRateHz') -and
+        ($_.requiredSignals -contains 'timing.framePacingSourceFrameRate') -and
+        ($_.requiredSignals -contains 'timing.lateFrameDropToleranceMs') -and
+        ($_.requiredSignals -contains 'sync.audioVideoDriftMsP95')
     })) {
         throw 'Expected example reference run plan to schedule the local 23.976 cadence case through an Emby quality-run command.'
     }
