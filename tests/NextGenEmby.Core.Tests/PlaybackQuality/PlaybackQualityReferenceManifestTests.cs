@@ -151,6 +151,18 @@ public sealed class PlaybackQualityReferenceManifestTests
     }
 
     [Fact]
+    public void SignalCatalog_Includes_Source_Color_Metadata_Evidence()
+    {
+        var reportSignals = new HashSet<string>(
+            PlaybackQualitySignalCatalog.ReportSignals.Select(signal => signal.Signal));
+
+        Assert.Contains("source.videoRange", reportSignals);
+        Assert.Contains("source.colorPrimaries", reportSignals);
+        Assert.Contains("source.colorTransfer", reportSignals);
+        Assert.Contains("source.colorSpace", reportSignals);
+    }
+
+    [Fact]
     public void Validate_Preserves_Optional_Emby_Item_Capture_Metadata()
     {
         var manifest = new PlaybackQualityReferenceManifest

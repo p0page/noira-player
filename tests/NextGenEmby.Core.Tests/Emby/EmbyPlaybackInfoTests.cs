@@ -35,6 +35,9 @@ public sealed class EmbyPlaybackInfoTests
                       "RealFrameRate": 23.976,
                       "AverageFrameRate": 24.0,
                       "VideoRange": "HDR10",
+                      "ColorPrimaries": "bt2020",
+                      "ColorTransfer": "smpte2084",
+                      "ColorSpace": "bt2020nc",
                       "DisplayTitle": "4K HEVC Main10 HDR10"
                     },
                     {
@@ -80,6 +83,10 @@ public sealed class EmbyPlaybackInfoTests
         Assert.Equal("http://emby.local:8096/Videos/movie-1/stream?static=true&mediaSourceId=source-4k&api_key=token-123&container=mkv", source.DirectStreamUrl);
         var video = source.VideoStreams.Single();
         Assert.Equal("hevc", video.Codec);
+        Assert.Equal("HDR10", video.VideoRange);
+        Assert.Equal("bt2020", video.ColorPrimaries);
+        Assert.Equal("smpte2084", video.ColorTransfer);
+        Assert.Equal("bt2020nc", video.ColorSpace);
         Assert.Equal(23.976, video.RealFrameRate);
         Assert.Equal(24.0, video.AverageFrameRate);
         var audio = source.AudioStreams.Single();

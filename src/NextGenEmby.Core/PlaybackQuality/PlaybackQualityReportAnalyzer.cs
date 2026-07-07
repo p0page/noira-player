@@ -80,6 +80,10 @@ namespace NextGenEmby.Core.PlaybackQuality
         public int Width { get; set; }
         public int Height { get; set; }
         public double FrameRate { get; set; }
+        public string VideoRange { get; set; } = "";
+        public string ColorPrimaries { get; set; } = "";
+        public string ColorTransfer { get; set; } = "";
+        public string ColorSpace { get; set; } = "";
         public bool HasChapterMetadata { get; set; }
         public int? ChapterCount { get; set; }
         public List<PlaybackQualityChapter> Chapters { get; } = new List<PlaybackQualityChapter>();
@@ -238,7 +242,7 @@ namespace NextGenEmby.Core.PlaybackQuality
 
     public static class PlaybackQualityReportAnalyzer
     {
-        public const int CurrentAnalyzerVersion = 4;
+        public const int CurrentAnalyzerVersion = 5;
 
         public static PlaybackQualityModelAnalysis Analyze(PlaybackQualityReport report)
         {
@@ -1196,6 +1200,10 @@ namespace NextGenEmby.Core.PlaybackQuality
                 Width = report.Source.Width,
                 Height = report.Source.Height,
                 FrameRate = report.Source.FrameRate,
+                VideoRange = report.Source.VideoRange,
+                ColorPrimaries = report.Source.ColorPrimaries,
+                ColorTransfer = report.Source.ColorTransfer,
+                ColorSpace = report.Source.ColorSpace,
                 HasChapterMetadata = report.Source.HasChapterMetadata,
                 ChapterCount = report.Source.ChapterCount,
                 HdrKind = report.Source.HdrKind,
@@ -1312,6 +1320,10 @@ namespace NextGenEmby.Core.PlaybackQuality
                 source.Width > 0 ||
                 source.Height > 0 ||
                 source.FrameRate > 0 ||
+                !string.IsNullOrWhiteSpace(source.VideoRange) ||
+                !string.IsNullOrWhiteSpace(source.ColorPrimaries) ||
+                !string.IsNullOrWhiteSpace(source.ColorTransfer) ||
+                !string.IsNullOrWhiteSpace(source.ColorSpace) ||
                 source.HasChapterMetadata ||
                 source.ChapterCount.HasValue ||
                 source.Chapters.Count > 0 ||
@@ -1361,6 +1373,26 @@ namespace NextGenEmby.Core.PlaybackQuality
             if (source.FrameRate > 0)
             {
                 AddUnique(source.Signals, "source.frameRate");
+            }
+
+            if (!string.IsNullOrWhiteSpace(source.VideoRange))
+            {
+                AddUnique(source.Signals, "source.videoRange");
+            }
+
+            if (!string.IsNullOrWhiteSpace(source.ColorPrimaries))
+            {
+                AddUnique(source.Signals, "source.colorPrimaries");
+            }
+
+            if (!string.IsNullOrWhiteSpace(source.ColorTransfer))
+            {
+                AddUnique(source.Signals, "source.colorTransfer");
+            }
+
+            if (!string.IsNullOrWhiteSpace(source.ColorSpace))
+            {
+                AddUnique(source.Signals, "source.colorSpace");
             }
 
             if (source.HasChapterMetadata)

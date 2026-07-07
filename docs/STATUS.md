@@ -2,6 +2,12 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-08 更新：source raw color metadata 进入可选证据链
+
+`PlaybackQualityReportAnalyzer.CurrentAnalyzerVersion` 已升级到 5。`EmbyMediaStream` 现在保留 Emby playback-info 的 `MediaStreams[].VideoRange`、`ColorPrimaries`、`ColorTransfer` 和 `ColorSpace`，`PlaybackQualityReportMapper` 会把选中视频源的这些 raw color metadata 透传到 `report.source`，`PlaybackQualityReportAnalyzer` 会输出 `source.videoRange`、`source.colorPrimaries`、`source.colorTransfer` 和 `source.colorSpace` evidence signals。
+
+边界：这是 instrumentation/testability 和报告契约变更，不改变播放行为、源选择、HDR/DV 策略、DXGI color conversion、阈值或 pass/fail 规则。评测器不得从文件名、`HdrKind`、`DisplayTitle` 或 profile 分类反推这些 raw color 字段；只有服务端或采集器明确提供的值才算证据。本轮没有把这些新字段加入 required-signal gate，因为当前 reference manifest 尚未记录 raw source color expectation，source-only/core-probe baseline 也没有真实 playback-info raw color metadata；下一步应补 manifest/collector 侧的真实 source color expectation，再单独收紧 gate。
+
 ## 2026-07-08 更新：音频声道数进入轨道证据链
 
 `PlaybackQualityReportAnalyzer.CurrentAnalyzerVersion` 已升级到 4。`EmbyMediaStream` 和 `PlaybackQualityTrack` 现在保留 Emby playback-info 的 `MediaStreams[].Channels`，`PlaybackQualityReportMapper` 会把音轨声道数透传到 report，`PlaybackQualityReportAnalyzer` 会输出 `tracks.audio.channels` evidence signal。track/subtitle purpose 的 `requiredSignals` 现在要求 `tracks.audio.channels`；缺失时应归类为 `insufficient instrumentation`，不能从 `ChannelLayout` 或 `DisplayTitle` 推断。

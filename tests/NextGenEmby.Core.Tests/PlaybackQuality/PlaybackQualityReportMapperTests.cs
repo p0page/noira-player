@@ -184,6 +184,10 @@ public sealed class PlaybackQualityReportMapperTests
             Codec = "hevc",
             Index = 0,
             Language = "und",
+            VideoRange = "HDR10",
+            ColorPrimaries = "bt2020",
+            ColorTransfer = "smpte2084",
+            ColorSpace = "bt2020nc",
             DisplayTitle = "4K HEVC Main10",
             RealFrameRate = 23.976,
             AverageFrameRate = 23.976,
@@ -252,6 +256,10 @@ public sealed class PlaybackQualityReportMapperTests
         Assert.Equal(76_000_000, report.Source.Bitrate);
         Assert.Equal(70_200_000_000, report.Source.DurationTicks);
         Assert.Equal("hevc", report.Source.Codec);
+        Assert.Equal("HDR10", report.Source.VideoRange);
+        Assert.Equal("bt2020", report.Source.ColorPrimaries);
+        Assert.Equal("smpte2084", report.Source.ColorTransfer);
+        Assert.Equal("bt2020nc", report.Source.ColorSpace);
         Assert.Equal(3840, report.Source.Width);
         Assert.Equal(2160, report.Source.Height);
         Assert.Equal(23.976, report.Source.FrameRate);

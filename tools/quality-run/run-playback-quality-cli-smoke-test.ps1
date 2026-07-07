@@ -3512,7 +3512,7 @@ try {
     ]
   },
   "modelAnalysis": {
-    "analyzerVersion": 4,
+    "analyzerVersion": 5,
     "runId": "item-1/source-1",
     "result": "fail",
     "suggestedNextAction": "Collect a longer playback sample before optimizing playback Core.",
@@ -3725,7 +3725,7 @@ try {
     ]
   },
   "modelAnalysis": {
-    "analyzerVersion": 4,
+    "analyzerVersion": 5,
     "runId": "item-1/source-1",
     "result": "fail",
     "suggestedNextAction": "Collect comparable source metadata before optimizing playback Core.",

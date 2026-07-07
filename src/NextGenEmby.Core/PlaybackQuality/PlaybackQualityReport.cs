@@ -77,6 +77,10 @@ namespace NextGenEmby.Core.PlaybackQuality
         public int Width { get; set; }
         public int Height { get; set; }
         public double FrameRate { get; set; }
+        public string VideoRange { get; set; } = "";
+        public string ColorPrimaries { get; set; } = "";
+        public string ColorTransfer { get; set; } = "";
+        public string ColorSpace { get; set; } = "";
         public bool HasChapterMetadata { get; set; }
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public int? ChapterCount { get; set; }

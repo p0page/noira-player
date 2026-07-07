@@ -174,7 +174,7 @@
     "environment": {
       "collectorVersion": "materialize-core-probe-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "working-tree-audio-channel-evidence-v0.1",
+      "sourceRevision": "working-tree-source-color-metadata-v0.1",
       "buildConfiguration": "Debug"
     },
     "limitations": [
@@ -229,6 +229,10 @@
       "width": 1920,
       "height": 1080,
       "frameRate": 60,
+      "videoRange": "",
+      "colorPrimaries": "",
+      "colorTransfer": "",
+      "colorSpace": "",
       "hasChapterMetadata": false,
       "chapters": [],
       "hdrKind": "Sdr",
@@ -445,7 +449,7 @@
     }
   },
   "modelAnalysis": {
-    "analyzerVersion": 4,
+    "analyzerVersion": 5,
     "runId": "jellyfin/sdr-hevc-main10-1080p60-3m",
     "result": "pass",
     "expectedBehavior": "Playback quality checks passed.",
@@ -492,7 +496,7 @@
     "environment": {
       "collectorVersion": "materialize-core-probe-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "working-tree-audio-channel-evidence-v0.1",
+      "sourceRevision": "working-tree-source-color-metadata-v0.1",
       "buildConfiguration": "Debug",
       "signals": [
         "environment.collectorVersion",
@@ -513,6 +517,10 @@
       "width": 1920,
       "height": 1080,
       "frameRate": 60,
+      "videoRange": "",
+      "colorPrimaries": "",
+      "colorTransfer": "",
+      "colorSpace": "",
       "hasChapterMetadata": false,
       "chapterCount": null,
       "chapters": [],

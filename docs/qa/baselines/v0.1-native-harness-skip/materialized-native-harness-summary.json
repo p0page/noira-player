@@ -6,7 +6,7 @@
   "environment": {
     "collectorVersion": "materialize-native-harness-report-set-v1",
     "playerCoreVersion": "NextGenEmby.Core",
-    "sourceRevision": "working-tree-audio-channel-evidence-v0.1",
+    "sourceRevision": "working-tree-source-color-metadata-v0.1",
     "buildConfiguration": "Debug"
   },
   "manifestValidation": {

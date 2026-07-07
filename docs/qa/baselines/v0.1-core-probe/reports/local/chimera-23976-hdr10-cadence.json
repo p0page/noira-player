@@ -224,7 +224,7 @@
     "environment": {
       "collectorVersion": "materialize-core-probe-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "working-tree-audio-channel-evidence-v0.1",
+      "sourceRevision": "working-tree-source-color-metadata-v0.1",
       "buildConfiguration": "Debug"
     },
     "limitations": [
@@ -278,6 +278,10 @@
       "width": 3840,
       "height": 2160,
       "frameRate": 23.976,
+      "videoRange": "",
+      "colorPrimaries": "",
+      "colorTransfer": "",
+      "colorSpace": "",
       "hasChapterMetadata": false,
       "chapters": [],
       "hdrKind": "Hdr10",
@@ -472,7 +476,7 @@
     }
   },
   "modelAnalysis": {
-    "analyzerVersion": 4,
+    "analyzerVersion": 5,
     "runId": "local/chimera-23976-hdr10-cadence",
     "result": "pass",
     "expectedBehavior": "Playback quality checks passed.",
@@ -517,7 +521,7 @@
     "environment": {
       "collectorVersion": "materialize-core-probe-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "working-tree-audio-channel-evidence-v0.1",
+      "sourceRevision": "working-tree-source-color-metadata-v0.1",
       "buildConfiguration": "Debug",
       "signals": [
         "environment.collectorVersion",
@@ -538,6 +542,10 @@
       "width": 3840,
       "height": 2160,
       "frameRate": 23.976,
+      "videoRange": "",
+      "colorPrimaries": "",
+      "colorTransfer": "",
+      "colorSpace": "",
       "hasChapterMetadata": false,
       "chapterCount": null,
       "chapters": [],

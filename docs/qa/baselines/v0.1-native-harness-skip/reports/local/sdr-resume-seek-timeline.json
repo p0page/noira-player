@@ -45,7 +45,7 @@
     "environment": {
       "collectorVersion": "materialize-native-harness-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "working-tree-audio-channel-evidence-v0.1",
+      "sourceRevision": "working-tree-source-color-metadata-v0.1",
       "buildConfiguration": "Debug"
     },
     "limitations": [
@@ -98,6 +98,10 @@
       "width": 0,
       "height": 0,
       "frameRate": 0,
+      "videoRange": "",
+      "colorPrimaries": "",
+      "colorTransfer": "",
+      "colorSpace": "",
       "hasChapterMetadata": false,
       "chapters": [],
       "hdrKind": "",
@@ -220,7 +224,7 @@
     }
   },
   "modelAnalysis": {
-    "analyzerVersion": 4,
+    "analyzerVersion": 5,
     "runId": "local/sdr-resume-seek-timeline",
     "result": "skip",
     "expectedBehavior": "Reference case was evaluated or explicitly skipped with a structured reason.",
@@ -251,7 +255,7 @@
     "environment": {
       "collectorVersion": "materialize-native-harness-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "working-tree-audio-channel-evidence-v0.1",
+      "sourceRevision": "working-tree-source-color-metadata-v0.1",
       "buildConfiguration": "Debug",
       "signals": [
         "environment.collectorVersion",
@@ -272,6 +276,10 @@
       "width": 0,
       "height": 0,
       "frameRate": 0,
+      "videoRange": "",
+      "colorPrimaries": "",
+      "colorTransfer": "",
+      "colorSpace": "",
       "hasChapterMetadata": false,
       "chapterCount": null,
       "chapters": [],

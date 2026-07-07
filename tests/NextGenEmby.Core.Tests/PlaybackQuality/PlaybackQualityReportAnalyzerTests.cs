@@ -18,7 +18,7 @@ public sealed class PlaybackQualityReportAnalyzerTests
 
         var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
 
-        Assert.Equal(4, PlaybackQualityReportAnalyzer.CurrentAnalyzerVersion);
+        Assert.Equal(5, PlaybackQualityReportAnalyzer.CurrentAnalyzerVersion);
         Assert.Equal(PlaybackQualityReportAnalyzer.CurrentAnalyzerVersion, analysis.AnalyzerVersion);
     }
 
@@ -93,6 +93,10 @@ public sealed class PlaybackQualityReportAnalyzerTests
                 Width = 3840,
                 Height = 2160,
                 FrameRate = 23.976,
+                VideoRange = "HDR10",
+                ColorPrimaries = "bt2020",
+                ColorTransfer = "smpte2084",
+                ColorSpace = "bt2020nc",
                 HasChapterMetadata = true,
                 ChapterCount = 2,
                 HdrKind = "Hdr10"
@@ -112,6 +116,10 @@ public sealed class PlaybackQualityReportAnalyzerTests
         Assert.Equal("https", analysis.Source.DirectStreamProtocol);
         Assert.Equal(76_000_000, analysis.Source.Bitrate);
         Assert.Equal(70_200_000_000, analysis.Source.DurationTicks);
+        Assert.Equal("HDR10", analysis.Source.VideoRange);
+        Assert.Equal("bt2020", analysis.Source.ColorPrimaries);
+        Assert.Equal("smpte2084", analysis.Source.ColorTransfer);
+        Assert.Equal("bt2020nc", analysis.Source.ColorSpace);
         Assert.True(analysis.Source.HasChapterMetadata);
         Assert.Equal(2, analysis.Source.ChapterCount);
         Assert.Contains("source.container", analysis.Source.Signals);
@@ -119,6 +127,10 @@ public sealed class PlaybackQualityReportAnalyzerTests
         Assert.Contains("source.directStreamProtocol", analysis.Source.Signals);
         Assert.Contains("source.bitrate", analysis.Source.Signals);
         Assert.Contains("source.durationTicks", analysis.Source.Signals);
+        Assert.Contains("source.videoRange", analysis.Source.Signals);
+        Assert.Contains("source.colorPrimaries", analysis.Source.Signals);
+        Assert.Contains("source.colorTransfer", analysis.Source.Signals);
+        Assert.Contains("source.colorSpace", analysis.Source.Signals);
         Assert.Contains("source.hasChapterMetadata", analysis.Source.Signals);
         Assert.Contains("source.chapterCount", analysis.Source.Signals);
         Assert.Contains("source.chapters.startPositionTicks", analysis.Source.Signals);
@@ -128,6 +140,10 @@ public sealed class PlaybackQualityReportAnalyzerTests
         Assert.Contains("source.directStreamProtocol", analysis.EvidenceSignals);
         Assert.Contains("source.bitrate", analysis.EvidenceSignals);
         Assert.Contains("source.durationTicks", analysis.EvidenceSignals);
+        Assert.Contains("source.videoRange", analysis.EvidenceSignals);
+        Assert.Contains("source.colorPrimaries", analysis.EvidenceSignals);
+        Assert.Contains("source.colorTransfer", analysis.EvidenceSignals);
+        Assert.Contains("source.colorSpace", analysis.EvidenceSignals);
         Assert.Contains("source.hasChapterMetadata", analysis.EvidenceSignals);
         Assert.Contains("source.chapterCount", analysis.EvidenceSignals);
         Assert.Contains("source.chapters.startPositionTicks", analysis.EvidenceSignals);

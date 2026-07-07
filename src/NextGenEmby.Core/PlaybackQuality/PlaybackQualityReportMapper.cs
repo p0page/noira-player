@@ -83,6 +83,10 @@ namespace NextGenEmby.Core.PlaybackQuality
             report.Source.Width = source.Width;
             report.Source.Height = source.Height;
             report.Source.FrameRate = source.VideoFrameRate;
+            report.Source.VideoRange = video?.VideoRange ?? "";
+            report.Source.ColorPrimaries = video?.ColorPrimaries ?? "";
+            report.Source.ColorTransfer = video?.ColorTransfer ?? "";
+            report.Source.ColorSpace = video?.ColorSpace ?? "";
             report.Source.Chapters.Clear();
             foreach (var chapter in source.Chapters)
             {
