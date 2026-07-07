@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using NextGenEmby.Core.Emby;
 using NextGenEmby.Core.Playback;
+using NextGenEmby.Core.PlaybackQuality;
 using Xunit;
 
 namespace NextGenEmby.Core.Tests.Playback;
@@ -132,7 +133,36 @@ public sealed class NativeDirectXPlaybackBackendTests
         Assert.Equal(HdrOutputStatus.Unknown, diagnostics.DisplayStatus.HdrStatus);
     }
 
-    private sealed class RecordingNativePlaybackEngine : INativePlaybackEngine
+    [Fact]
+    public void QualityMetrics_Are_Delegated_When_Native_Engine_Provides_Them()
+    {
+        var engine = new RecordingNativePlaybackEngine
+        {
+            Metrics = new PlaybackQualityMetricsSnapshot
+            {
+                RenderedVideoFrames = 240,
+                DroppedVideoFrames = 1,
+                VideoPositionTicks = 90_000_000,
+                AudioClockTicks = 89_950_000,
+                MaxFrameGapMs = 42.5,
+                AudioVideoDriftMsP95 = 12.0
+            }
+        };
+        var backend = new NativeDirectXPlaybackBackend(engine);
+        var metricsProvider = Assert.IsAssignableFrom<IPlaybackQualityMetricsProvider>(backend);
+
+        Assert.True(metricsProvider.TryGetQualityMetrics(out var metrics));
+        Assert.Equal(240UL, metrics.RenderedVideoFrames);
+        Assert.Equal(1UL, metrics.DroppedVideoFrames);
+        Assert.Equal(90_000_000, metrics.VideoPositionTicks);
+        Assert.Equal(89_950_000, metrics.AudioClockTicks);
+        Assert.Equal(42.5, metrics.MaxFrameGapMs);
+        Assert.Equal(12.0, metrics.AudioVideoDriftMsP95);
+    }
+
+    private sealed class RecordingNativePlaybackEngine :
+        INativePlaybackEngine,
+        IPlaybackQualityMetricsProvider
     {
         public NativePlaybackOpenRequest? LastRequest { get; private set; }
         public long CurrentPositionTicks { get; set; }
@@ -142,9 +172,10 @@ public sealed class NativeDirectXPlaybackBackendTests
         public PlaybackBackendCapabilities Capabilities { get; } =
             new PlaybackBackendCapabilities(
                 PlaybackBackendFeature.DirectPlayHttp |
-                PlaybackBackendFeature.NativeAudioOutput);
+            PlaybackBackendFeature.NativeAudioOutput);
         public PlaybackDisplayStatus DisplayStatus { get; } =
             new PlaybackDisplayStatus(HdrOutputStatus.Unknown, false, false);
+        public PlaybackQualityMetricsSnapshot? Metrics { get; set; }
 
         public event EventHandler<PlaybackStateChangedEventArgs>? StateChanged;
 
@@ -191,6 +222,18 @@ public sealed class NativeDirectXPlaybackBackendTests
         public void Raise(PlaybackState state, string message)
         {
             StateChanged?.Invoke(this, new PlaybackStateChangedEventArgs(state, message));
+        }
+
+        public bool TryGetQualityMetrics(out PlaybackQualityMetricsSnapshot metrics)
+        {
+            if (Metrics == null)
+            {
+                metrics = new PlaybackQualityMetricsSnapshot();
+                return false;
+            }
+
+            metrics = Metrics;
+            return true;
         }
     }
 }

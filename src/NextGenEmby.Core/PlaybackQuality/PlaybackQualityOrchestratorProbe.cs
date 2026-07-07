@@ -20,7 +20,9 @@ namespace NextGenEmby.Core.PlaybackQuality
             }
 
             var mediaSource = CreateMediaSource(referenceCase);
-            var backend = new ProbePlaybackBackend(CreateDisplayStatus(referenceCase));
+            var backend = new ProbePlaybackBackend(
+                referenceCase,
+                CreateDisplayStatus(referenceCase));
             var orchestrator = new PlaybackOrchestrator(backend);
             var itemId = string.IsNullOrWhiteSpace(referenceCase.ItemId)
                 ? referenceCase.CaseId
@@ -58,13 +60,13 @@ namespace NextGenEmby.Core.PlaybackQuality
             var descriptor = orchestrator.CurrentDescriptor ??
                 throw new InvalidOperationException("Core probe could not capture playback descriptor.");
             var actualPositionTicks = backend.CurrentPositionTicks;
-            var request = PlaybackQualityReferenceCaseReportRequestFactory.CreateRequest(
+            var request = PlaybackQualityRuntimeEvidenceCollector.CreateRequest(
                 referenceCase,
                 descriptor,
-                backend.DisplayStatus,
-                CreateMetrics(referenceCase, actualPositionTicks),
-                CreateStartup());
-            request.Environment = environment;
+                backend,
+                backend,
+                CreateStartup(),
+                environment);
 
             var composed = PlaybackQualityReportComposer.Compose(request);
             var report = composed.Report;
@@ -394,10 +396,17 @@ namespace NextGenEmby.Core.PlaybackQuality
         private sealed class ProbePlaybackBackend :
             IPlaybackBackend,
             IPlaybackBackendDiagnostics,
+            IPlaybackQualityMetricsProvider,
             IPlaybackStreamSwitchingBackend
         {
-            public ProbePlaybackBackend(PlaybackDisplayStatus displayStatus)
+            private readonly PlaybackQualityReferenceCase _referenceCase;
+
+            public ProbePlaybackBackend(
+                PlaybackQualityReferenceCase referenceCase,
+                PlaybackDisplayStatus displayStatus)
             {
+                _referenceCase = referenceCase ??
+                    throw new ArgumentNullException(nameof(referenceCase));
                 DisplayStatus = displayStatus;
             }
 
@@ -478,6 +487,12 @@ namespace NextGenEmby.Core.PlaybackQuality
                         "core-probe stopped",
                         CurrentPositionTicks));
                 return Task.CompletedTask;
+            }
+
+            public bool TryGetQualityMetrics(out PlaybackQualityMetricsSnapshot metrics)
+            {
+                metrics = CreateMetrics(_referenceCase, CurrentPositionTicks);
+                return true;
             }
 
             public Task SwitchAudioStreamAsync(int audioStreamIndex)

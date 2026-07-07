@@ -2,6 +2,17 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-07 更新：runtime evidence collector
+
+已新增 Core 侧的 runtime evidence collector：
+
+- `IPlaybackQualityMetricsProvider` 作为可选 metrics instrumentation 接口，不修改既有 `IPlaybackBackendDiagnostics` 契约，避免破坏当前 App adapter。
+- `PlaybackQualityRuntimeEvidenceCollector` 可从 reference case、`PlaybackDescriptor`、backend display diagnostics、metrics snapshot、startup 和 environment 生成标准 `PlaybackQualityRunResult`。
+- `NativeDirectXPlaybackBackend` 会在底层 native engine 实现 `IPlaybackQualityMetricsProvider` 时委托读取 metrics；如果底层不支持，不伪造 metrics。
+- `PlaybackQualityOrchestratorProbe` 已改为通过同一 collector/provider 路径生成报告。
+
+这一步属于 instrumentation/testability，不是播放行为优化。它把 native 已有的 `QualityMetrics()` 能力接到 Core 评测契约的入口处；后续仍需要让实际 WinRT App adapter 或独立 harness 实现该 provider，才能把真实 native graph metrics 写入采集报告。
+
 ## 已完成
 
 - `PlaybackQuality` 报告已覆盖 source、startup、position、timing、sync、buffers、colorPipeline、display 等核心软件信号。
@@ -18,6 +29,7 @@
 - App-free 验证命令为 `tools\quality-run\run-playback-core-checks.ps1`，当前结果为 pass。
 - 本轮新增 tracks/subtitles telemetry：报告会记录视频轨、音轨、字幕轨数量、当前选中音轨/字幕轨、字幕关闭状态和轨道明细。
 - reference manifest coverage 现在要求 `tracks` 和 `subtitles` purpose；默认公开 manifest 与私有 Emby manifest 生成脚本已同步更新。
+- Core 已有可选 runtime metrics provider 和 runtime evidence collector，可把 backend display diagnostics、native metrics snapshot、startup 和 environment 合成为标准 report envelope。
 
 ## 当前缺口
 
@@ -25,6 +37,7 @@
 - 字幕 v0.1 只验证识别、选择和关闭状态，不验证最终视觉渲染正确性。
 - 缓冲、frame timing、A/V sync 和颜色信号仍依赖当前 native instrumentation 的覆盖度，后续需要继续补强证据质量。
 - v0.1 尚未完成真实播放采集 baseline/candidate；当前 source-only baseline 只能证明评测链路闭环和缺失证据分类，不证明播放效果。
+- WinRT App adapter 或独立真实播放 harness 尚未把 native `QualityMetrics()` 接入 `IPlaybackQualityMetricsProvider`；当前 core-probe 仍是 deterministic probe telemetry。
 
 ## 风险
 

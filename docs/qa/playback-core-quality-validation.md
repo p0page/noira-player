@@ -302,3 +302,27 @@ dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQ
 因此，core-probe 结果可以证明评测链路、required signals、orchestrator 生命周期和模型报告结构已经闭合；不能证明真实播放质量。进入播放器优化前，仍需要 native graph 或真实媒体软件采集器提供真实 decoder/render/buffer/frame timing/A-V sync/color telemetry。
 
 当前归档在 `docs/qa/baselines/v0.1-core-probe/`。该 report-set 覆盖 example manifest 的 8 个 case，`validate-report-set` 为 `isValid = true`。Dolby Vision Profile 5 case 预期输出 `status = unsupported` 和 `primaryFailureArea = unsupported-source`，不应要求 color conversion telemetry。
+
+## Runtime Evidence Collector
+
+真实播放采集器应优先使用 Core 侧 collector，而不是手写 report JSON：
+
+```csharp
+var result = PlaybackQualityRuntimeEvidenceCollector.ComposeRunResult(
+    referenceCase,
+    descriptor,
+    backendDiagnostics,
+    metricsProvider,
+    startup,
+    environment);
+```
+
+输入语义：
+
+- `referenceCase` 提供 case id、category、severity、stability 和 expected behavior。
+- `descriptor` 提供实际选中的 media source、轨道状态、起播位置和 direct stream URL。
+- `backendDiagnostics.DisplayStatus` 提供 HDR/display/swapchain/color pipeline 证据。
+- `IPlaybackQualityMetricsProvider.TryGetQualityMetrics` 提供 timing、buffering、A/V sync 和 position metrics；返回 false 时 collector 不写 metrics，后续 gate 应按缺证据处理。
+- `startup` 和 `environment` 分别提供起播耗时与 build identity。
+
+这条路径仍然是纯软件闭环。它不证明 HDMI InfoFrame、显示器 EOTF 或肉眼颜色准确性；它只保证真实播放 harness 采到的软件证据能进入现有 `PlaybackQualityReportComposer`、analyzer、report-set validation 和 candidate evaluation。

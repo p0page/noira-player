@@ -1,11 +1,13 @@
 using System;
 using System.Threading.Tasks;
+using NextGenEmby.Core.PlaybackQuality;
 
 namespace NextGenEmby.Core.Playback
 {
     public sealed class NativeDirectXPlaybackBackend :
         IPlaybackBackend,
         IPlaybackBackendDiagnostics,
+        IPlaybackQualityMetricsProvider,
         IPlaybackStreamSwitchingBackend
     {
         private readonly INativePlaybackEngine _engine;
@@ -23,6 +25,17 @@ namespace NextGenEmby.Core.Playback
         public PlaybackBackendCapabilities Capabilities => _engine.Capabilities;
 
         public PlaybackDisplayStatus DisplayStatus => _engine.DisplayStatus;
+
+        public bool TryGetQualityMetrics(out PlaybackQualityMetricsSnapshot metrics)
+        {
+            if (_engine is IPlaybackQualityMetricsProvider provider)
+            {
+                return provider.TryGetQualityMetrics(out metrics);
+            }
+
+            metrics = new PlaybackQualityMetricsSnapshot();
+            return false;
+        }
 
         public Task StartAsync(PlaybackDescriptor descriptor)
         {
