@@ -1,6 +1,8 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using NextGenEmby.Core.Diagnostics;
+using NextGenEmby.Core.Emby;
+using NextGenEmby.Core.Playback;
 using NextGenEmby.Core.PlaybackQuality;
 
 namespace NextGenEmby.PlaybackQuality.Cli;
@@ -38,6 +40,11 @@ internal static class Program
             if (string.Equals(args[0], "materialize-run-result", StringComparison.OrdinalIgnoreCase))
             {
                 return RunMaterializeRunResult(args);
+            }
+
+            if (string.Equals(args[0], "materialize-baseline-report-set", StringComparison.OrdinalIgnoreCase))
+            {
+                return RunMaterializeBaselineReportSet(args);
             }
 
             if (string.Equals(args[0], "analyze-report-set", StringComparison.OrdinalIgnoreCase))
@@ -126,6 +133,16 @@ internal static class Program
             AnalyzeReport(envelope));
         WriteJson(result, options.OutputPath);
         return 0;
+    }
+
+    private static int RunMaterializeBaselineReportSet(string[] args)
+    {
+        var options = ParseMaterializeBaselineReportSetOptions(args);
+        var manifest = ReadJson<PlaybackQualityReferenceManifest>(options.ManifestPath);
+        var validation = PlaybackQualityReferenceManifestValidator.Validate(manifest);
+        var output = MaterializeBaselineReportSet(validation, options);
+        WriteJson(output, options.OutputPath);
+        return validation.IsValid ? 0 : 2;
     }
 
     private static int RunAnalyzeReportSet(string[] args)
@@ -433,6 +450,55 @@ internal static class Program
                 default:
                     throw new ArgumentException("Unknown analyze-report-set option: " + arg);
             }
+        }
+
+        if (string.IsNullOrWhiteSpace(options.ReportsDirectory))
+        {
+            throw new ArgumentException("Missing required option --reports-dir.");
+        }
+
+        return options;
+    }
+
+    private static MaterializeBaselineReportSetOptions ParseMaterializeBaselineReportSetOptions(
+        string[] args)
+    {
+        var options = new MaterializeBaselineReportSetOptions();
+        for (var index = 1; index < args.Length; index++)
+        {
+            var arg = args[index];
+            switch (arg)
+            {
+                case "--manifest":
+                    options.ManifestPath = ReadValue(args, ref index, arg);
+                    break;
+                case "--reports-dir":
+                    options.ReportsDirectory = ReadValue(args, ref index, arg);
+                    break;
+                case "--collector-version":
+                    options.CollectorVersion = ReadValue(args, ref index, arg);
+                    break;
+                case "--player-core-version":
+                    options.PlayerCoreVersion = ReadValue(args, ref index, arg);
+                    break;
+                case "--source-revision":
+                    options.SourceRevision = ReadValue(args, ref index, arg);
+                    break;
+                case "--build-configuration":
+                    options.BuildConfiguration = ReadValue(args, ref index, arg);
+                    break;
+                case "--output":
+                    options.OutputPath = ReadValue(args, ref index, arg);
+                    break;
+                default:
+                    throw new ArgumentException(
+                        "Unknown materialize-baseline-report-set option: " + arg);
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(options.ManifestPath))
+        {
+            throw new ArgumentException("Missing required option --manifest.");
         }
 
         if (string.IsNullOrWhiteSpace(options.ReportsDirectory))
@@ -1158,6 +1224,204 @@ internal static class Program
         }
 
         File.WriteAllText(outputPath, json);
+    }
+
+    private static MaterializedBaselineReportSet MaterializeBaselineReportSet(
+        PlaybackQualityReferenceManifestValidation validation,
+        MaterializeBaselineReportSetOptions options)
+    {
+        var output = new MaterializedBaselineReportSet
+        {
+            ReportsDirectory = options.ReportsDirectory,
+            ManifestValidation = validation,
+            Environment = CreateBaselineEnvironment(options)
+        };
+        AddUnique(
+            output.Limitations,
+            "source-only: playback execution was not run by this command");
+        AddUnique(
+            output.Limitations,
+            "source-only: display, timing, buffering, sync, startup, and seek telemetry may be missing");
+
+        if (!validation.IsValid)
+        {
+            return output;
+        }
+
+        Directory.CreateDirectory(options.ReportsDirectory);
+        foreach (var referenceCase in validation.Cases)
+        {
+            var reportRelativePath = GetRunIdComparisonRelativePath(referenceCase.CaseId);
+            var reportPath = Path.Combine(options.ReportsDirectory, reportRelativePath);
+            var request = PlaybackQualityReferenceCaseReportRequestFactory.CreateRequest(
+                referenceCase,
+                CreateSourceOnlyDescriptor(referenceCase));
+            request.Environment = output.Environment;
+
+            var result = PlaybackQualityReportComposer.Compose(request);
+            AddUnique(
+                result.Report.Limitations,
+                "source-only: playback execution was not run by this command");
+            AddUnique(
+                result.ModelAnalysis.Limitations,
+                "source-only: playback execution was not run by this command");
+            WriteJson(result, reportPath);
+            output.Cases.Add(CreateMaterializedBaselineCase(
+                referenceCase,
+                reportRelativePath,
+                reportPath,
+                result));
+        }
+
+        output.CaseCount = output.Cases.Count;
+        return output;
+    }
+
+    private static PlaybackQualityEnvironment CreateBaselineEnvironment(
+        MaterializeBaselineReportSetOptions options)
+    {
+        return new PlaybackQualityEnvironment
+        {
+            CollectorVersion = string.IsNullOrWhiteSpace(options.CollectorVersion)
+                ? "materialize-baseline-report-set-v1"
+                : options.CollectorVersion,
+            PlayerCoreVersion = options.PlayerCoreVersion,
+            SourceRevision = options.SourceRevision,
+            BuildConfiguration = options.BuildConfiguration
+        };
+    }
+
+    private static MaterializedBaselineReportCase CreateMaterializedBaselineCase(
+        PlaybackQualityReferenceCase referenceCase,
+        string reportRelativePath,
+        string reportPath,
+        PlaybackQualityRunResult result)
+    {
+        var item = new MaterializedBaselineReportCase
+        {
+            CaseId = referenceCase.CaseId,
+            Category = referenceCase.Category,
+            Status = result.Report.Result,
+            ReportRelativePath = reportRelativePath,
+            ReportPath = reportPath,
+            PrimaryFailureArea = result.ModelAnalysis.PrimaryFailureArea
+        };
+        CopyValues(result.ModelAnalysis.FailureAreas, item.FailureAreas);
+        CopyValues(result.ModelAnalysis.FailureClasses, item.FailureClasses);
+        CopyValues(result.ModelAnalysis.EvidenceSignals, item.EvidenceSignals);
+        CopyValues(result.ModelAnalysis.MissingEvidence, item.MissingEvidence);
+        CopyValues(result.ModelAnalysis.OptimizationGate.Blockers, item.Blockers);
+        return item;
+    }
+
+    private static PlaybackDescriptor CreateSourceOnlyDescriptor(
+        PlaybackQualityReferenceCase referenceCase)
+    {
+        var expected = referenceCase.Expected ?? new PlaybackQualityExpected();
+        var mediaSource = new EmbyMediaSource
+        {
+            Id = string.IsNullOrWhiteSpace(referenceCase.MediaSourceId)
+                ? referenceCase.CaseId
+                : referenceCase.MediaSourceId,
+            DirectStreamUrl = referenceCase.Uri,
+            Width = expected.Width,
+            Height = expected.Height,
+            VideoFrameRate = expected.FrameRate,
+            HdrProfile = CreateHdrPlaybackProfile(expected)
+        };
+        mediaSource.Streams.Add(new EmbyMediaStream
+        {
+            Kind = EmbyStreamKind.Video,
+            Codec = expected.Codec,
+            Index = 0,
+            RealFrameRate = expected.FrameRate,
+            AverageFrameRate = expected.FrameRate
+        });
+        mediaSource.Streams.Add(new EmbyMediaStream
+        {
+            Kind = EmbyStreamKind.Audio,
+            Codec = "unknown",
+            Index = 1
+        });
+
+        var subtitleStreamIndex = ShouldIncludeSourceOnlySubtitleTrack(referenceCase)
+            ? 2
+            : (int?)null;
+        if (subtitleStreamIndex.HasValue)
+        {
+            mediaSource.Streams.Add(new EmbyMediaStream
+            {
+                Kind = EmbyStreamKind.Subtitle,
+                Codec = "unknown",
+                Index = subtitleStreamIndex.Value
+            });
+        }
+
+        return new PlaybackDescriptor(
+            string.IsNullOrWhiteSpace(referenceCase.ItemId)
+                ? referenceCase.CaseId
+                : referenceCase.ItemId,
+            mediaSource,
+            new[] { mediaSource },
+            referenceCase.StartPositionTicks,
+            audioStreamIndex: 1,
+            subtitleStreamIndex: null);
+    }
+
+    private static bool ShouldIncludeSourceOnlySubtitleTrack(
+        PlaybackQualityReferenceCase referenceCase)
+    {
+        return referenceCase.Purpose.Contains("subtitles");
+    }
+
+    private static HdrPlaybackProfile CreateHdrPlaybackProfile(PlaybackQualityExpected expected)
+    {
+        var profile = new HdrPlaybackProfile
+        {
+            Kind = ParseHdrPlaybackKind(expected.HdrKind),
+            Codec = expected.Codec,
+            IsDolbyVision = expected.IsDolbyVision == true,
+            DolbyVisionProfile = expected.DolbyVisionProfile,
+            DolbyVisionCompatibilityId = expected.DolbyVisionCompatibilityId,
+            HasHdr10BaseLayer = expected.HasHdr10BaseLayer == true,
+            HasHlgBaseLayer = expected.HasHlgBaseLayer == true
+        };
+        return profile;
+    }
+
+    private static HdrPlaybackKind ParseHdrPlaybackKind(string hdrKind)
+    {
+        if (string.Equals(hdrKind, "Hdr10", StringComparison.Ordinal))
+        {
+            return HdrPlaybackKind.Hdr10;
+        }
+
+        if (string.Equals(hdrKind, "Hlg", StringComparison.Ordinal))
+        {
+            return HdrPlaybackKind.Hlg;
+        }
+
+        if (string.Equals(hdrKind, "DolbyVisionWithHdr10Fallback", StringComparison.Ordinal))
+        {
+            return HdrPlaybackKind.DolbyVisionWithHdr10Fallback;
+        }
+
+        if (string.Equals(hdrKind, "DolbyVisionWithHlgFallback", StringComparison.Ordinal))
+        {
+            return HdrPlaybackKind.DolbyVisionWithHlgFallback;
+        }
+
+        if (string.Equals(hdrKind, "DolbyVisionUnsupported", StringComparison.Ordinal))
+        {
+            return HdrPlaybackKind.DolbyVisionUnsupported;
+        }
+
+        if (string.Equals(hdrKind, "UnknownHdr", StringComparison.Ordinal))
+        {
+            return HdrPlaybackKind.UnknownHdr;
+        }
+
+        return HdrPlaybackKind.Sdr;
     }
 
     private static PlaybackQualityRunPlan CreateRunPlan(
@@ -2087,6 +2351,7 @@ internal static class Program
         writer.WriteLine("Usage:");
         writer.WriteLine("  playback-quality analyze-report --report <report.json> [--output <analysis.json>]");
         writer.WriteLine("  playback-quality materialize-run-result --report <report.json> [--output <run-result.json>]");
+        writer.WriteLine("  playback-quality materialize-baseline-report-set --manifest <reference-manifest.json> --reports-dir <reports-dir> [--collector-version <version>] [--player-core-version <version>] [--source-revision <revision>] [--build-configuration <config>] [--output <summary.json>]");
         writer.WriteLine("  playback-quality analyze-report-set --reports-dir <reports-dir> [--output <analysis-summary.json>]");
         writer.WriteLine("  playback-quality compare --baseline <report.json> --candidate <report.json> [--previous <comparison.json>...] [--stall-threshold <n>] [--output <comparison.json>]");
         writer.WriteLine("  playback-quality summarize --comparison <comparison.json> [--comparison <comparison.json>...] [--output <suite.json>]");
@@ -2121,6 +2386,17 @@ internal static class Program
     private sealed class AnalyzeReportSetOptions
     {
         public string ReportsDirectory { get; set; } = "";
+        public string OutputPath { get; set; } = "";
+    }
+
+    private sealed class MaterializeBaselineReportSetOptions
+    {
+        public string ManifestPath { get; set; } = "";
+        public string ReportsDirectory { get; set; } = "";
+        public string CollectorVersion { get; set; } = "";
+        public string PlayerCoreVersion { get; set; } = "";
+        public string SourceRevision { get; set; } = "";
+        public string BuildConfiguration { get; set; } = "";
         public string OutputPath { get; set; } = "";
     }
 
@@ -2192,6 +2468,51 @@ internal static class Program
         public string OutputRelativePath { get; }
         public string BaselinePath { get; }
         public string CandidatePath { get; }
+    }
+
+    private sealed class MaterializedBaselineReportSet
+    {
+        public int SchemaVersion { get; set; } = 1;
+
+        public int CaseCount { get; set; }
+
+        public string ReportsDirectory { get; set; } = "";
+
+        public PlaybackQualityEnvironment Environment { get; set; } =
+            new PlaybackQualityEnvironment();
+
+        public PlaybackQualityReferenceManifestValidation ManifestValidation { get; set; } =
+            new PlaybackQualityReferenceManifestValidation();
+
+        public List<string> Limitations { get; } = new List<string>();
+
+        public List<MaterializedBaselineReportCase> Cases { get; } =
+            new List<MaterializedBaselineReportCase>();
+    }
+
+    private sealed class MaterializedBaselineReportCase
+    {
+        public string CaseId { get; set; } = "";
+
+        public string Category { get; set; } = "stable";
+
+        public string Status { get; set; } = "";
+
+        public string ReportRelativePath { get; set; } = "";
+
+        public string ReportPath { get; set; } = "";
+
+        public string PrimaryFailureArea { get; set; } = "";
+
+        public List<string> FailureAreas { get; } = new List<string>();
+
+        public List<string> FailureClasses { get; } = new List<string>();
+
+        public List<string> EvidenceSignals { get; } = new List<string>();
+
+        public List<string> MissingEvidence { get; } = new List<string>();
+
+        public List<string> Blockers { get; } = new List<string>();
     }
 
     private sealed class CandidateEvaluationOutput

@@ -8,6 +8,7 @@
 - `PlaybackQualityReportAnalyzer` 已输出模型可消费的 failure area、failure class、evidence、missing evidence、triage steps 和 optimization gate。
 - reference manifest、report-set validation、analyze-report、compare、compare-suite、evaluate-candidate、plan-runs 已形成 App-free 闭环。
 - `materialize-run-result` 已可把 raw report 或旧 envelope 归一化为包含当前 `modelAnalysis` 的 `PlaybackQualityRunResult` envelope。
+- `materialize-baseline-report-set` 已可从 reference manifest 生成 source-only baseline envelope，用于建立可版本化 baseline artifact 并暴露缺失 telemetry。
 - reference manifest case 已支持 `stable`、`challenge`、`quarantine` 分类，并在 validation、report-set status 和 run plan 中保留。
 - report-set validation errors 已输出 `failureClass`，可区分缺 telemetry、缺报告、重复/额外报告和 source metadata mismatch。
 - App-free 验证命令为 `tools\quality-run\run-playback-core-checks.ps1`，当前结果为 pass。
@@ -19,7 +20,7 @@
 - 轨道切换目前主要是发现/选择状态证据，尚未证明切换后的 native 播放行为完整正确。
 - 字幕 v0.1 只验证识别、选择和关闭状态，不验证最终视觉渲染正确性。
 - 缓冲、frame timing、A/V sync 和颜色信号仍依赖当前 native instrumentation 的覆盖度，后续需要继续补强证据质量。
-- v0.1 尚未完成一组真实 baseline/candidate 的完整可版本化评测报告归档。
+- v0.1 尚未完成真实播放采集 baseline/candidate；当前只能先归档 source-only baseline，并诚实标记缺失 telemetry。
 
 ## 风险
 
@@ -29,4 +30,4 @@
 
 ## 下一步
 
-优先用真实样本采集路径写入或归一化 `PlaybackQualityRunResult` envelope 到 plan 指定路径，并跑一次完整 baseline report-set validation，诚实记录 fail、unsupported、missing evidence 和 unstable case。
+先归档一次 source-only baseline report-set、report-set validation 和 report-analysis summary，确认 JSON 可被模型消费；随后优先补真实 App/native 采集器，把 source-only baseline 替换为实际播放 evidence。

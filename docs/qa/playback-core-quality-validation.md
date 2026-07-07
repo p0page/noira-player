@@ -121,6 +121,18 @@ dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQ
 
 `requiredSignals` 是模型采集前的 case 级 telemetry checklist。它会根据 `expected` 和 `purpose` 自动列出必须出现在报告里的信号，例如 `source.codec`、`source.hdrKind`、`colorPipeline.actualHdrOutput`、`display.hdrStatus`、`colorPipeline.swapChainFormat`、`colorPipeline.swapChainColorSpace`、`display.refreshRateHz`、`position.seekTargetPositionTicks`、`position.actualPositionTicks`、`position.seekPositionErrorMs`、`tracks.videoTrackCount`、`tracks.audioTrackCount`、`tracks.subtitleTrackCount`、`tracks.isSubtitleDisabled`、`timing.framePacingSourceFrameRate`、`sync.audioVideoDriftMsP95`、`buffers.videoStarvedPasses`。HDR10 输出还会要求 `colorPipeline.isTenBitSwapChain`；如果采集到的值是 `false`，evaluator 会把它判为 `color-pipeline` 失败，避免模型只凭推断的 `actualHdrOutput` 优化颜色管线。timeline/seek case 或 `expected.maxSeekPositionErrorMs` 会要求 position telemetry；tracks/subtitles case 会要求轨道发现和字幕关闭状态 telemetry；如果报告缺这些信号，应先补采集或让 `analyze-report` 明确标记 missing evidence，不要直接根据窄证据修改播放 Core。
 
+## Materialize Source-Only Baseline
+
+如果还没有 App/native 播放采集器，可以先物化一个 source-only baseline report set：
+
+```powershell
+dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- materialize-baseline-report-set --manifest docs\qa\playback-quality-reference-manifest.example.json --reports-dir docs\qa\baselines\v0.1-source-only\reports --source-revision <git-sha> --player-core-version <core-version> --build-configuration Debug --output docs\qa\baselines\v0.1-source-only\materialized-baseline-summary.json
+```
+
+该命令不会打开媒体，也不会声称播放成功。它只把 reference case 转成当前 Core 可消费的 `PlaybackQualityRunResult` envelope，写入 `report.runId = caseId` 的标准路径，并显式加入 `source-only: playback execution was not run by this command` limitation。后续仍必须运行 `validate-report-set` 和 `analyze-report-set`；缺失的 display、timing、buffering、sync、startup、seek telemetry 应被报告为 `insufficient instrumentation`，而不是播放器 core bug。
+
+这一步的用途是建立可版本化 baseline artifact，并证明评测链路能完整覆盖 manifest。它不能替代真正的播放采集；当 App/native 采集器可用后，应使用真实采集的 envelope 替换 source-only baseline。
+
 快速迭代时可以只计划一个子集，例如只跑 tier 2 以内的 HDR case：
 
 ```powershell

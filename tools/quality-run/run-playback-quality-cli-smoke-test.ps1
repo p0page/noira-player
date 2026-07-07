@@ -78,6 +78,9 @@ try {
     $manifestValidationPath = Join-Path $tempRoot 'reference-manifest-validation.json'
     $runPlanPath = Join-Path $tempRoot 'reference-run-plan.json'
     $filteredRunPlanPath = Join-Path $tempRoot 'reference-run-plan-filtered.json'
+    $materializedBaselineDir = Join-Path $tempRoot 'materialized-baseline-report-set'
+    $materializedBaselineSummaryPath = Join-Path $tempRoot 'materialized-baseline-summary.json'
+    $materializedBaselineValidationPath = Join-Path $tempRoot 'materialized-baseline-validation.json'
     $exampleManifestPath = Join-Path $repoRoot 'docs\qa\playback-quality-reference-manifest.example.json'
     $exampleManifestValidationPath = Join-Path $tempRoot 'example-reference-manifest-validation.json'
     $exampleRunPlanPath = Join-Path $tempRoot 'example-reference-run-plan.json'
@@ -523,6 +526,90 @@ try {
         ($_.requiredSignals -contains 'source.hdrKind')
     })) {
         throw 'Expected playback quality CLI plan-runs output to include a runnable HDR case.'
+    }
+
+    Push-Location $repoRoot
+    try {
+        dotnet run `
+            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
+            --no-build `
+            -- materialize-baseline-report-set `
+            --manifest $manifestPath `
+            --reports-dir $materializedBaselineDir `
+            --source-revision smoke-baseline-revision `
+            --player-core-version smoke-core `
+            --build-configuration Debug `
+            --output $materializedBaselineSummaryPath
+        if ($LASTEXITCODE -ne 0) {
+            throw 'playback quality CLI materialize-baseline-report-set returned a non-zero exit code.'
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    $materializedBaselineSummary = Get-Content -Raw -LiteralPath $materializedBaselineSummaryPath | ConvertFrom-Json
+    if ($materializedBaselineSummary.schemaVersion -ne 1 -or
+        $materializedBaselineSummary.caseCount -ne 2 -or
+        $materializedBaselineSummary.reportsDirectory -ne $materializedBaselineDir) {
+        throw 'Expected materialize-baseline-report-set summary to describe generated reports.'
+    }
+
+    if (-not ($materializedBaselineSummary.limitations -contains 'source-only: playback execution was not run by this command')) {
+        throw 'Expected materialize-baseline-report-set summary to expose source-only limitation.'
+    }
+
+    $materializedBaselineReportPath = Join-Path $materializedBaselineDir 'netflix\chimera-4k-2398-hdr-pq.json'
+    if (-not (Test-Path -LiteralPath $materializedBaselineReportPath)) {
+        throw 'Expected materialize-baseline-report-set to write run-id based report path.'
+    }
+
+    $materializedBaselineReport = Get-Content -Raw -LiteralPath $materializedBaselineReportPath | ConvertFrom-Json
+    if ($materializedBaselineReport.schemaVersion -ne 1 -or
+        $materializedBaselineReport.report.runId -ne 'netflix/chimera-4k-2398-hdr-pq' -or
+        $materializedBaselineReport.report.environment.sourceRevision -ne 'smoke-baseline-revision' -or
+        $materializedBaselineReport.report.source.codec -ne 'hevc' -or
+        $materializedBaselineReport.modelAnalysis.runId -ne 'netflix/chimera-4k-2398-hdr-pq') {
+        throw 'Expected materialize-baseline-report-set to write PlaybackQualityRunResult envelope with source and environment evidence.'
+    }
+
+    if (-not ($materializedBaselineReport.report.limitations -contains 'source-only: playback execution was not run by this command')) {
+        throw 'Expected materialized baseline report to carry source-only limitation.'
+    }
+
+    Push-Location $repoRoot
+    try {
+        dotnet run `
+            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
+            --no-build `
+            -- validate-report-set `
+            --manifest $manifestPath `
+            --reports-dir $materializedBaselineDir `
+            --output $materializedBaselineValidationPath
+        if ($LASTEXITCODE -ne 2) {
+            throw 'Expected materialized source-only baseline to fail report-set validation for missing telemetry.'
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    $materializedBaselineValidation = Get-Content -Raw -LiteralPath $materializedBaselineValidationPath | ConvertFrom-Json
+    if ($materializedBaselineValidation.expectedCaseCount -ne 2 -or
+        $materializedBaselineValidation.reportCount -ne 2) {
+        throw 'Expected materialized source-only baseline validation to cover every manifest case.'
+    }
+
+    if ($materializedBaselineValidation.errors | Where-Object { $_.code -eq 'report.missing' }) {
+        throw 'Expected materialized source-only baseline to avoid missing report errors.'
+    }
+
+    if (-not ($materializedBaselineValidation.errors | Where-Object {
+        $_.code -eq 'report.requiredSignal.missing' -and
+        $_.caseId -eq 'netflix/chimera-4k-2398-hdr-pq' -and
+        $_.failureClass -eq 'insufficient instrumentation'
+    })) {
+        throw 'Expected materialized source-only baseline to expose missing telemetry as insufficient instrumentation.'
     }
 
     Push-Location $repoRoot
