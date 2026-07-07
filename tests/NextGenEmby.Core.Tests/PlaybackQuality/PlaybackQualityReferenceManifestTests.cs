@@ -980,6 +980,14 @@ public sealed class PlaybackQualityReferenceManifestTests
                 Bitrate = 76_000_000,
                 DurationTicks = 70_200_000_000
             },
+            RuntimeMetrics = new PlaybackQualityRuntimeMetrics
+            {
+                Status = "captured",
+                ProviderStatus = "returned-snapshot",
+                Reason = "Runtime metrics snapshot contains playback sample evidence.",
+                HasSnapshot = true,
+                HasPlaybackSample = true
+            },
             Tracks = new PlaybackQualityTracks
             {
                 VideoTrackCount = 1,
@@ -993,6 +1001,11 @@ public sealed class PlaybackQualityReferenceManifestTests
         Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "source.container"));
         Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "source.bitrate"));
         Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "source.durationTicks"));
+        Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "runtimeMetrics.status"));
+        Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "runtimeMetrics.providerStatus"));
+        Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "runtimeMetrics.reason"));
+        Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "runtimeMetrics.hasSnapshot"));
+        Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "runtimeMetrics.hasPlaybackSample"));
         Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "tracks.videoTrackCount"));
         Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "tracks.audioTrackCount"));
         Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "tracks.subtitleTrackCount"));

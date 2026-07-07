@@ -18,6 +18,7 @@ namespace NextGenEmby.Core.PlaybackQuality
         public PlaybackQualityTracksAssessment Tracks { get; set; } = new PlaybackQualityTracksAssessment();
         public PlaybackQualityError Error { get; set; } = new PlaybackQualityError();
         public PlaybackQualitySkip Skip { get; set; } = new PlaybackQualitySkip();
+        public PlaybackQualityRuntimeMetricsAssessment RuntimeMetrics { get; set; } = new PlaybackQualityRuntimeMetricsAssessment();
         public PlaybackQualityColorPipelineAssessment ColorPipeline { get; set; } = new PlaybackQualityColorPipelineAssessment();
         public PlaybackQualityBufferingAssessment Buffering { get; set; } = new PlaybackQualityBufferingAssessment();
         public PlaybackQualityAvSyncAssessment AvSync { get; set; } = new PlaybackQualityAvSyncAssessment();
@@ -110,6 +111,16 @@ namespace NextGenEmby.Core.PlaybackQuality
         public bool ForceSdrOutput { get; set; }
         public List<string> Signals { get; } = new List<string>();
         public List<string> MismatchedSignals { get; } = new List<string>();
+    }
+
+    public sealed class PlaybackQualityRuntimeMetricsAssessment
+    {
+        public string Status { get; set; } = "unknown";
+        public string ProviderStatus { get; set; } = "unknown";
+        public string Reason { get; set; } = "";
+        public bool HasSnapshot { get; set; }
+        public bool HasPlaybackSample { get; set; }
+        public List<string> Signals { get; } = new List<string>();
     }
 
     public sealed class PlaybackQualityBufferingAssessment
@@ -284,6 +295,7 @@ namespace NextGenEmby.Core.PlaybackQuality
             analysis.Tracks = AssessTracks(report);
             analysis.Error = AssessError(analysis, report);
             analysis.Skip = AssessSkip(analysis, report);
+            analysis.RuntimeMetrics = AssessRuntimeMetrics(report);
             analysis.ColorPipeline = AssessColorPipeline(report);
             analysis.Buffering = AssessBuffering(report, signalPresence);
             analysis.AvSync = AssessAvSync(report);
@@ -1109,6 +1121,47 @@ namespace NextGenEmby.Core.PlaybackQuality
             source.Status = "matched";
             source.Reason = "Parsed source metadata is available and has no unsupported-source mismatches.";
             return source;
+        }
+
+        private static PlaybackQualityRuntimeMetricsAssessment AssessRuntimeMetrics(
+            PlaybackQualityReport report)
+        {
+            var metrics = new PlaybackQualityRuntimeMetricsAssessment
+            {
+                Status = string.IsNullOrWhiteSpace(report.RuntimeMetrics.Status)
+                    ? "unknown"
+                    : report.RuntimeMetrics.Status,
+                ProviderStatus = string.IsNullOrWhiteSpace(report.RuntimeMetrics.ProviderStatus)
+                    ? "unknown"
+                    : report.RuntimeMetrics.ProviderStatus,
+                Reason = report.RuntimeMetrics.Reason,
+                HasSnapshot = report.RuntimeMetrics.HasSnapshot,
+                HasPlaybackSample = report.RuntimeMetrics.HasPlaybackSample
+            };
+
+            var hasKnownStatus = metrics.Status != "unknown";
+            if (hasKnownStatus)
+            {
+                AddUnique(metrics.Signals, "runtimeMetrics.status");
+            }
+
+            if (metrics.ProviderStatus != "unknown")
+            {
+                AddUnique(metrics.Signals, "runtimeMetrics.providerStatus");
+            }
+
+            if (!string.IsNullOrWhiteSpace(metrics.Reason))
+            {
+                AddUnique(metrics.Signals, "runtimeMetrics.reason");
+            }
+
+            if (hasKnownStatus)
+            {
+                AddUnique(metrics.Signals, "runtimeMetrics.hasSnapshot");
+                AddUnique(metrics.Signals, "runtimeMetrics.hasPlaybackSample");
+            }
+
+            return metrics;
         }
 
         private static void AddSourceSignals(PlaybackQualitySourceAssessment source)
@@ -2079,6 +2132,11 @@ namespace NextGenEmby.Core.PlaybackQuality
             }
 
             foreach (var signal in analysis.Tracks.Signals)
+            {
+                AddUnique(analysis.EvidenceSignals, signal);
+            }
+
+            foreach (var signal in analysis.RuntimeMetrics.Signals)
             {
                 AddUnique(analysis.EvidenceSignals, signal);
             }

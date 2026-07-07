@@ -24,10 +24,22 @@ namespace NextGenEmby.Core.PlaybackQuality
             }
 
             PlaybackQualityMetricsSnapshot? metrics = null;
+            PlaybackQualityRuntimeMetrics runtimeMetrics;
             var provider = metricsProvider ?? diagnostics as IPlaybackQualityMetricsProvider;
-            if (provider != null && provider.TryGetQualityMetrics(out var snapshot))
+            if (provider == null)
+            {
+                runtimeMetrics = PlaybackQualityRuntimeMetricsFactory.Unavailable("not-provided");
+            }
+            else if (provider.TryGetQualityMetrics(out var snapshot))
             {
                 metrics = snapshot;
+                runtimeMetrics = PlaybackQualityRuntimeMetricsFactory.FromSnapshot(
+                    snapshot,
+                    "returned-snapshot");
+            }
+            else
+            {
+                runtimeMetrics = PlaybackQualityRuntimeMetricsFactory.Unavailable("returned-false");
             }
 
             var request = PlaybackQualityReferenceCaseReportRequestFactory.CreateRequest(
@@ -36,6 +48,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                 diagnostics?.DisplayStatus,
                 metrics,
                 startup);
+            request.RuntimeMetrics = runtimeMetrics;
             request.Environment = environment;
             return request;
         }

@@ -239,6 +239,18 @@ namespace NextGenEmby.Core.PlaybackQuality
                 case "error.isTerminal":
                 case "error.isRetriable":
                     return !string.IsNullOrWhiteSpace(report.Error.Code);
+                case "runtimeMetrics.status":
+                    return !string.IsNullOrWhiteSpace(report.RuntimeMetrics.Status) &&
+                        report.RuntimeMetrics.Status != "unknown";
+                case "runtimeMetrics.providerStatus":
+                    return !string.IsNullOrWhiteSpace(report.RuntimeMetrics.ProviderStatus) &&
+                        report.RuntimeMetrics.ProviderStatus != "unknown";
+                case "runtimeMetrics.reason":
+                    return !string.IsNullOrWhiteSpace(report.RuntimeMetrics.Reason);
+                case "runtimeMetrics.hasSnapshot":
+                case "runtimeMetrics.hasPlaybackSample":
+                    return !string.IsNullOrWhiteSpace(report.RuntimeMetrics.Status) &&
+                        report.RuntimeMetrics.Status != "unknown";
                 case "source.codec":
                     return !string.IsNullOrWhiteSpace(report.Source.Codec);
                 case "source.container":

@@ -247,6 +247,40 @@ public sealed class PlaybackQualityRuntimeEvidenceCollectorTests
         Assert.Contains("colorPipeline.actualHdrOutput", result.ModelAnalysis.EvidenceSignals);
     }
 
+    [Fact]
+    public void ComposeRunResult_Reports_Runtime_Metrics_Unavailable_When_Provider_Returns_False()
+    {
+        var referenceCase = new PlaybackQualityReferenceCase
+        {
+            CaseId = "local/runtime-metrics-unavailable",
+            Expected = new PlaybackQualityExpected
+            {
+                Codec = "hevc",
+                Width = 3840,
+                Height = 2160,
+                FrameRate = 23.976,
+                HdrKind = "Hdr10",
+                MinRenderedVideoFrames = 120
+            }
+        };
+        referenceCase.Purpose.Add("frame-pacing");
+
+        var result = PlaybackQualityRuntimeEvidenceCollector.ComposeRunResult(
+            referenceCase,
+            CreateDescriptor(),
+            metricsProvider: new NoRuntimeMetricsProvider());
+
+        Assert.Equal("unavailable", result.Report.RuntimeMetrics.Status);
+        Assert.Equal("returned-false", result.Report.RuntimeMetrics.ProviderStatus);
+        Assert.False(result.Report.RuntimeMetrics.HasSnapshot);
+        Assert.False(result.Report.RuntimeMetrics.HasPlaybackSample);
+        Assert.Equal("unavailable", result.ModelAnalysis.RuntimeMetrics.Status);
+        Assert.Equal("returned-false", result.ModelAnalysis.RuntimeMetrics.ProviderStatus);
+        Assert.Contains("runtimeMetrics.status", result.ModelAnalysis.EvidenceSignals);
+        Assert.Contains("runtimeMetrics.reason", result.ModelAnalysis.EvidenceSignals);
+        Assert.Contains("timing.renderedVideoFrames", result.ModelAnalysis.MissingEvidence);
+    }
+
     private static PlaybackDescriptor CreateDescriptor()
     {
         var source = new EmbyMediaSource
@@ -341,6 +375,15 @@ public sealed class PlaybackQualityRuntimeEvidenceCollectorTests
                 AudioVideoDriftMsMax = 24.0
             };
             return true;
+        }
+    }
+
+    private sealed class NoRuntimeMetricsProvider : IPlaybackQualityMetricsProvider
+    {
+        public bool TryGetQualityMetrics(out PlaybackQualityMetricsSnapshot metrics)
+        {
+            metrics = new PlaybackQualityMetricsSnapshot();
+            return false;
         }
     }
 }

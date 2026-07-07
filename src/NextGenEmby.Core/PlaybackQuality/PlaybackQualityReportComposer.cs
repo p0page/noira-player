@@ -15,6 +15,8 @@ namespace NextGenEmby.Core.PlaybackQuality
 
         public PlaybackQualityMetricsSnapshot? Metrics { get; set; }
 
+        public PlaybackQualityRuntimeMetrics? RuntimeMetrics { get; set; }
+
         public PlaybackQualityStartup? Startup { get; set; }
 
         public PlaybackQualityEnvironment? Environment { get; set; }
@@ -106,6 +108,18 @@ namespace NextGenEmby.Core.PlaybackQuality
                 PlaybackQualityReportMapper.ApplyMetrics(report, request.Metrics);
             }
 
+            if (request.RuntimeMetrics != null)
+            {
+                report.RuntimeMetrics = CloneRuntimeMetrics(request.RuntimeMetrics);
+            }
+            else if (request.Metrics != null)
+            {
+                report.RuntimeMetrics =
+                    PlaybackQualityRuntimeMetricsFactory.FromSnapshot(
+                        request.Metrics,
+                        "not-applicable");
+            }
+
             if (request.Startup != null)
             {
                 report.Startup = request.Startup;
@@ -145,6 +159,19 @@ namespace NextGenEmby.Core.PlaybackQuality
                 Category = string.IsNullOrWhiteSpace(source.Category) ? "stable" : source.Category,
                 Severity = string.IsNullOrWhiteSpace(source.Severity) ? "medium" : source.Severity,
                 Stability = string.IsNullOrWhiteSpace(source.Stability) ? "stable" : source.Stability
+            };
+        }
+
+        private static PlaybackQualityRuntimeMetrics CloneRuntimeMetrics(
+            PlaybackQualityRuntimeMetrics source)
+        {
+            return new PlaybackQualityRuntimeMetrics
+            {
+                Status = source.Status,
+                ProviderStatus = source.ProviderStatus,
+                Reason = source.Reason,
+                HasSnapshot = source.HasSnapshot,
+                HasPlaybackSample = source.HasPlaybackSample
             };
         }
 

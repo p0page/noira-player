@@ -169,6 +169,52 @@ public sealed class PlaybackQualityReportComposerTests
     }
 
     [Fact]
+    public void Compose_Classifies_Empty_Runtime_Metrics_Snapshot_For_Model()
+    {
+        var expected = CreateHdrExpected(maxFrameGapMs: 105);
+        expected.MinRenderedVideoFrames = 120;
+
+        var result = PlaybackQualityReportComposer.Compose(new PlaybackQualityReportRequest
+        {
+            RunId = "empty-runtime-metrics",
+            Descriptor = CreatePlaybackDescriptor(frameRate: 23.976),
+            Metrics = new PlaybackQualityMetricsSnapshot(),
+            Expected = expected
+        });
+
+        Assert.Equal("empty-snapshot", result.Report.RuntimeMetrics.Status);
+        Assert.Equal("not-applicable", result.Report.RuntimeMetrics.ProviderStatus);
+        Assert.True(result.Report.RuntimeMetrics.HasSnapshot);
+        Assert.False(result.Report.RuntimeMetrics.HasPlaybackSample);
+        Assert.Equal("empty-snapshot", result.ModelAnalysis.RuntimeMetrics.Status);
+        Assert.Equal("not-applicable", result.ModelAnalysis.RuntimeMetrics.ProviderStatus);
+        Assert.True(result.ModelAnalysis.RuntimeMetrics.HasSnapshot);
+        Assert.False(result.ModelAnalysis.RuntimeMetrics.HasPlaybackSample);
+        Assert.Contains("runtimeMetrics.status", result.ModelAnalysis.EvidenceSignals);
+        Assert.Contains("runtimeMetrics.reason", result.ModelAnalysis.EvidenceSignals);
+        Assert.Contains("timing.renderedVideoFrames", result.ModelAnalysis.MissingEvidence);
+    }
+
+    [Fact]
+    public void Compose_Does_Not_Report_Default_Runtime_Metrics_As_Evidence()
+    {
+        var result = PlaybackQualityReportComposer.Compose(new PlaybackQualityReportRequest
+        {
+            RunId = "no-runtime-metrics",
+            Descriptor = CreatePlaybackDescriptor(frameRate: 23.976),
+            Expected = CreateHdrExpected(maxFrameGapMs: 105)
+        });
+
+        Assert.Equal("unknown", result.Report.RuntimeMetrics.Status);
+        Assert.Equal("unknown", result.ModelAnalysis.RuntimeMetrics.Status);
+        Assert.DoesNotContain("runtimeMetrics.status", result.ModelAnalysis.EvidenceSignals);
+        Assert.DoesNotContain("runtimeMetrics.providerStatus", result.ModelAnalysis.EvidenceSignals);
+        Assert.DoesNotContain("runtimeMetrics.reason", result.ModelAnalysis.EvidenceSignals);
+        Assert.DoesNotContain("runtimeMetrics.hasSnapshot", result.ModelAnalysis.EvidenceSignals);
+        Assert.DoesNotContain("runtimeMetrics.hasPlaybackSample", result.ModelAnalysis.EvidenceSignals);
+    }
+
+    [Fact]
     public void Compose_Copies_Environment_Evidence_For_Model()
     {
         var result = PlaybackQualityReportComposer.Compose(new PlaybackQualityReportRequest
