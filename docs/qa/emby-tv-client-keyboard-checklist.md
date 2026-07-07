@@ -2646,3 +2646,38 @@ Follow-up findings:
 - Decision:
   - Mark Batch 02 movie-grid deterministic density as resolved.
   - Keep real-server poster variety and metadata length as future live-data validation.
+
+### 2026-07-08 - Design Conformance Batch 02 Option Sheet Label Constraint Follow-Up
+
+- App version: 0.1.0.226.
+- Scope: close the remaining Batch 02 Sort/Filter long-label concern by constraining option-sheet text to stable one-line ellipsis behavior.
+- Data source: DEBUG `movies-fixture` only; no private server data, credentials, screenshots, or personal media assets were written to the repository.
+- Evidence root: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch02-option-label-226-20260708-052315`.
+- Keyboard-only validation:
+  - Closed the existing app frame, wrote `dev-command.json` with route `movies-fixture`, and launched through AppUserModelId `NextGenEmby.App_h8qjz0sr1sg4m!App`.
+  - Pressed `Up` from the movie grid to focus Sort.
+  - Pressed `Enter` to open the Sort sheet.
+  - Pressed `Down` to move preview/focus to `Recently added`.
+  - Pressed `Escape` to close the sheet and return focus to Sort.
+- Screenshots:
+  - Sort focus: `movies-01-sort-focus.png`.
+  - Sort sheet initial: `movies-02-sort-sheet-initial.png`.
+  - Sort sheet after Down: `movies-03-sort-sheet-down.png`.
+  - Sheet closed: `movies-04-sort-sheet-closed.png`.
+  - Focus log: `focus-log.txt`.
+
+Follow-up findings:
+
+| ID | Status | Page | Evidence | Result | Residual risk |
+| --- | --- | --- | --- | --- | --- |
+| DC-02.02 | Pass | Library Sort/Filter sheets | `movies-02-sort-sheet-initial.png`, `movies-03-sort-sheet-down.png`, and `LibraryPageSourceTests.Library_Option_Sheet_Constrains_Long_Labels`. | The Sort sheet remains a grounded matte panel with fill-first option focus. The subtitle and option labels now have explicit one-line ellipsis constraints, so localized or server-derived long labels cannot resize the sheet or reintroduce hard-frame focus. | Real localized builds should still sample translated labels, but the layout contract now constrains their rendering. |
+
+- Verification:
+  - Red path confirmed `LibraryPageSourceTests.Library_Option_Sheet_Constrains_Long_Labels` failed before implementation because the subtitle and option rows lacked `MaxLines`.
+  - Targeted Library page source tests passed: 12 tests.
+  - Design source tests passed: 79 tests.
+  - Visual Studio MSBuild Debug x64 build passed, producing `NextGenEmby.App_0.1.0.226_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.226`.
+- Decision:
+  - Mark Batch 02 Sort/Filter option-sheet visual constraints as resolved for deterministic fixtures and source contracts.
+  - Keep full localization sampling as a later release-hardening activity rather than a current visual-system blocker.

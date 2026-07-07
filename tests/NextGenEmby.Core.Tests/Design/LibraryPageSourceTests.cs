@@ -112,6 +112,19 @@ public sealed class LibraryPageSourceTests
     }
 
     [Fact]
+    public void Library_Option_Sheet_Constrains_Long_Labels()
+    {
+        var pageXaml = ReadAppSource("Views", "LibraryPage.xaml");
+        var source = ReadAppSource("Views", "LibraryPage.xaml.cs");
+
+        Assert.Contains("x:Name=\"OptionSheetSubtitleBlock\"", pageXaml);
+        Assert.Contains("MaxLines=\"1\"", pageXaml);
+        Assert.Contains("TextTrimming=\"CharacterEllipsis\"", pageXaml);
+        Assert.Contains("MaxLines = 1", source);
+        Assert.Contains("TextTrimming = TextTrimming.CharacterEllipsis", source);
+    }
+
+    [Fact]
     public void Library_Page_Passes_Development_Photo_Uri_To_Photo_Viewer()
     {
         var source = ReadAppSource("Views", "LibraryPage.xaml.cs");

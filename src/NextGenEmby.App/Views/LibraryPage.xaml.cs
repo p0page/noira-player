@@ -1161,6 +1161,7 @@ namespace NextGenEmby.App.Views
                 FontSize = 18,
                 FontWeight = FontWeights.SemiBold,
                 Foreground = BrushResource("AppTextBrush"),
+                MaxLines = 1,
                 TextTrimming = TextTrimming.CharacterEllipsis,
                 VerticalAlignment = VerticalAlignment.Center
             });

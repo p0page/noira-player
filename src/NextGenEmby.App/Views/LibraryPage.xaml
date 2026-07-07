@@ -245,6 +245,8 @@
                                 x:Name="OptionSheetSubtitleBlock"
                                 FontSize="16"
                                 Foreground="{StaticResource AppMutedTextBrush}"
+                                MaxLines="1"
+                                TextTrimming="CharacterEllipsis"
                                 Text="Choose an option" />
                         </StackPanel>
 
