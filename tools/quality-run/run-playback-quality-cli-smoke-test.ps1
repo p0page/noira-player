@@ -1,6 +1,7 @@
-$ErrorActionPreference = 'Stop'
+﻿$ErrorActionPreference = 'Stop'
 
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot '..\..')
+$cliDll = Join-Path $repoRoot 'tools\NextGenEmby.PlaybackQuality.Cli\bin\Debug\net9.0\NextGenEmby.PlaybackQuality.Cli.dll'
 $tempRoot = Join-Path ([System.IO.Path]::GetTempPath()) ('playback-quality-cli-' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $tempRoot | Out-Null
 
@@ -12,6 +13,8 @@ try {
     $analysisPath = Join-Path $tempRoot 'analysis.json'
     $skipReportPath = Join-Path $tempRoot 'skip-report.json'
     $skipAnalysisPath = Join-Path $tempRoot 'skip-analysis.json'
+    $skipAnalysisSetDir = Join-Path $tempRoot 'skip-analysis-report-set'
+    $skipAnalysisSetPath = Join-Path $tempRoot 'skip-analysis-report-set.json'
     $analysisSetDir = Join-Path $tempRoot 'analysis-report-set'
     $analysisSetPath = Join-Path $tempRoot 'analysis-report-set.json'
     $analysisEnvelopeSetDir = Join-Path $tempRoot 'analysis-envelope-report-set'
@@ -202,10 +205,8 @@ try {
 
     Push-Location $repoRoot
     try {
-        dotnet run `
-            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
-            --no-build `
-            -- analyze-report `
+        dotnet $cliDll `
+            analyze-report `
             --report $candidatePath `
             --output $analysisPath
         if ($LASTEXITCODE -ne 0) {
@@ -270,10 +271,8 @@ try {
 
     Push-Location $repoRoot
     try {
-        dotnet run `
-            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
-            --no-build `
-            -- analyze-report `
+        dotnet $cliDll `
+            analyze-report `
             --report $skipReportPath `
             --output $skipAnalysisPath
         if ($LASTEXITCODE -ne 0) {
@@ -298,16 +297,40 @@ try {
         throw 'Expected analyze-report skip output to use skip evidence without playback telemetry noise.'
     }
 
+    New-Item -ItemType Directory -Path $skipAnalysisSetDir | Out-Null
+    Copy-Item -LiteralPath $skipReportPath -Destination (Join-Path $skipAnalysisSetDir 'skip-report.json')
+
+    Push-Location $repoRoot
+    try {
+        dotnet $cliDll `
+            analyze-report-set `
+            --reports-dir $skipAnalysisSetDir `
+            --output $skipAnalysisSetPath
+        if ($LASTEXITCODE -ne 0) {
+            throw 'playback quality CLI analyze-report-set skip report returned a non-zero exit code.'
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    $skipAnalysisSet = Get-Content -Raw -LiteralPath $skipAnalysisSetPath | ConvertFrom-Json
+    if (-not ($skipAnalysisSet.capabilityCoverage | Where-Object {
+        $_.capability -eq 'runtime-metrics' -and
+        $_.status -eq 'not-observed' -and
+        $_.missingCaseCount -eq 0
+    })) {
+        throw 'Expected analyze-report-set capability coverage not to require runtime metrics for skip-only reports.'
+    }
+
     New-Item -ItemType Directory -Path $analysisSetDir | Out-Null
     Copy-Item -LiteralPath $baselinePath -Destination (Join-Path $analysisSetDir 'baseline.json')
     Copy-Item -LiteralPath $candidatePath -Destination (Join-Path $analysisSetDir 'candidate.json')
 
     Push-Location $repoRoot
     try {
-        dotnet run `
-            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
-            --no-build `
-            -- analyze-report-set `
+        dotnet $cliDll `
+            analyze-report-set `
             --reports-dir $analysisSetDir `
             --output $analysisSetPath
         if ($LASTEXITCODE -ne 0) {
@@ -368,6 +391,26 @@ try {
         throw 'Expected analyze-report-set output to aggregate evidence signals.'
     }
 
+    if (-not ($analysisSet.capabilityCoverage | Where-Object {
+        $_.capability -eq 'frame-pacing' -and
+        $_.status -eq 'blocked' -and
+        ($_.caseIds -contains 'candidate') -and
+        ($_.evidenceSignals -contains 'timing.maxFrameGapMs') -and
+        ($_.evidenceSignals -contains 'timing.framePacingSourceFrameRate') -and
+        ($_.blockers -contains 'missingEvidence')
+    })) {
+        throw 'Expected analyze-report-set output to expose blocked frame-pacing capability coverage.'
+    }
+
+    if (-not ($analysisSet.capabilityCoverage | Where-Object {
+        $_.capability -eq 'runtime-metrics' -and
+        $_.status -eq 'missing-evidence' -and
+        ($_.missingSignals -contains 'runtimeMetrics.status') -and
+        ($_.suggestedNextActions -contains 'Collect runtime metrics provider evidence before optimizing playback Core.')
+    })) {
+        throw 'Expected analyze-report-set output to expose missing runtime metrics capability coverage.'
+    }
+
     if (-not ($analysisSet.failureAreas -contains 'frame-pacing')) {
         throw 'Expected analyze-report-set output to aggregate failure areas.'
     }
@@ -399,10 +442,8 @@ try {
 
     Push-Location $repoRoot
     try {
-        dotnet run `
-            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
-            --no-build `
-            -- analyze-report-set `
+        dotnet $cliDll `
+            analyze-report-set `
             --reports-dir $analysisEnvelopeSetDir `
             --output $analysisEnvelopeSetPath
         if ($LASTEXITCODE -ne 0) {
@@ -446,10 +487,8 @@ try {
 
     Push-Location $repoRoot
     try {
-        dotnet run `
-            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
-            --no-build `
-            -- analyze-report-set `
+        dotnet $cliDll `
+            analyze-report-set `
             --reports-dir $analysisStaleEnvelopeSetDir `
             --output $analysisStaleEnvelopeSetPath
         if ($LASTEXITCODE -ne 0) {
@@ -535,10 +574,8 @@ try {
 
     Push-Location $repoRoot
     try {
-        dotnet run `
-            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
-            --no-build `
-            -- validate-manifest `
+        dotnet $cliDll `
+            validate-manifest `
             --manifest $manifestPath `
             --output $manifestValidationPath
         if ($LASTEXITCODE -ne 0) {
@@ -579,10 +616,8 @@ try {
 
     Push-Location $repoRoot
     try {
-        dotnet run `
-            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
-            --no-build `
-            -- plan-runs `
+        dotnet $cliDll `
+            plan-runs `
             --manifest $manifestPath `
             --reports-dir captured-baseline `
             --duration 60 `
@@ -625,10 +660,8 @@ try {
 
     Push-Location $repoRoot
     try {
-        dotnet run `
-            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
-            --no-build `
-            -- materialize-baseline-report-set `
+        dotnet $cliDll `
+            materialize-baseline-report-set `
             --manifest $manifestPath `
             --reports-dir $materializedBaselineDir `
             --source-revision smoke-baseline-revision `
@@ -704,10 +737,8 @@ try {
 
     Push-Location $repoRoot
     try {
-        dotnet run `
-            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
-            --no-build `
-            -- validate-report-set `
+        dotnet $cliDll `
+            validate-report-set `
             --manifest $manifestPath `
             --reports-dir $materializedBaselineDir `
             --output $materializedBaselineValidationPath
@@ -791,10 +822,8 @@ try {
 
     Push-Location $repoRoot
     try {
-        dotnet run `
-            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
-            --no-build `
-            -- materialize-core-probe-report-set `
+        dotnet $cliDll `
+            materialize-core-probe-report-set `
             --manifest $coreProbeManifestPath `
             --reports-dir $coreProbeDir `
             --source-revision smoke-core-probe-revision `
@@ -850,10 +879,8 @@ try {
 
     Push-Location $repoRoot
     try {
-        dotnet run `
-            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
-            --no-build `
-            -- validate-report-set `
+        dotnet $cliDll `
+            validate-report-set `
             --manifest $coreProbeManifestPath `
             --reports-dir $coreProbeDir `
             --output $coreProbeValidationPath
@@ -873,10 +900,8 @@ try {
 
     Push-Location $repoRoot
     try {
-        dotnet run `
-            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
-            --no-build `
-            -- plan-runs `
+        dotnet $cliDll `
+            plan-runs `
             --manifest $manifestPath `
             --reports-dir captured-hdr-smoke `
             --duration 60 `
@@ -941,10 +966,8 @@ try {
 
     Push-Location $repoRoot
     try {
-        dotnet run `
-            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
-            --no-build `
-            -- plan-runs `
+        dotnet $cliDll `
+            plan-runs `
             --manifest $embyRunPlanManifestPath `
             --reports-dir captured-emby `
             --duration 45 `
@@ -1037,10 +1060,8 @@ try {
 
     Push-Location $repoRoot
     try {
-        dotnet run `
-            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
-            --no-build `
-            -- validate-report-set `
+        dotnet $cliDll `
+            validate-report-set `
             --manifest $manifestPath `
             --reports-dir $reportSetDir `
             --output $reportSetValidationPath
@@ -1115,10 +1136,8 @@ try {
 
     Push-Location $repoRoot
     try {
-        dotnet run `
-            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
-            --no-build `
-            -- validate-report-set `
+        dotnet $cliDll `
+            validate-report-set `
             --manifest $manifestPath `
             --reports-dir $missingSignalReportSetDir `
             --output $missingSignalReportSetValidationPath
@@ -1206,10 +1225,8 @@ try {
 
     Push-Location $repoRoot
     try {
-        dotnet run `
-            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
-            --no-build `
-            -- validate-report-set `
+        dotnet $cliDll `
+            validate-report-set `
             --manifest $zeroCounterManifestPath `
             --reports-dir $zeroCounterReportSetDir `
             --output $zeroCounterReportSetValidationPath
@@ -1229,10 +1246,8 @@ try {
 
     Push-Location $repoRoot
     try {
-        dotnet run `
-            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
-            --no-build `
-            -- analyze-report `
+        dotnet $cliDll `
+            analyze-report `
             --report (Join-Path $zeroCounterReportSetDir 'zero-counter.json') `
             --output $zeroCounterAnalysisPath
         if ($LASTEXITCODE -ne 0) {
@@ -1259,10 +1274,8 @@ try {
 
     Push-Location $repoRoot
     try {
-        dotnet run `
-            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
-            --no-build `
-            -- compare `
+        dotnet $cliDll `
+            compare `
             --baseline $baselinePath `
             --candidate $candidatePath `
             --output $outputPath
@@ -1321,10 +1334,8 @@ try {
 
     Push-Location $repoRoot
     try {
-        dotnet run `
-            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
-            --no-build `
-            -- compare `
+        dotnet $cliDll `
+            compare `
             --baseline $baselinePath `
             --candidate $incompatibleCandidatePath `
             --output $incompatibleOutputPath
@@ -1359,10 +1370,8 @@ try {
 
     Push-Location $repoRoot
     try {
-        dotnet run `
-            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
-            --no-build `
-            -- compare `
+        dotnet $cliDll `
+            compare `
             --baseline $missingChecksBaselinePath `
             --candidate $candidatePath `
             --output $missingChecksOutputPath
@@ -1396,10 +1405,8 @@ try {
 
     Push-Location $repoRoot
     try {
-        dotnet run `
-            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
-            --no-build `
-            -- compare `
+        dotnet $cliDll `
+            compare `
             --baseline $baselinePath `
             --candidate $noMatchedCandidatePath `
             --output $noMatchedOutputPath
@@ -1422,10 +1429,8 @@ try {
 
     Push-Location $repoRoot
     try {
-        dotnet run `
-            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
-            --no-build `
-            -- compare `
+        dotnet $cliDll `
+            compare `
             --baseline $baselineEnvelopePath `
             --candidate $candidateEnvelopePath `
             --output $envelopeOutputPath
@@ -1448,10 +1453,8 @@ try {
 
     Push-Location $repoRoot
     try {
-        dotnet run `
-            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
-            --no-build `
-            -- summarize `
+        dotnet $cliDll `
+            summarize `
             --comparison $outputPath `
             --output $suitePath
         if ($LASTEXITCODE -ne 0) {
@@ -1490,10 +1493,8 @@ try {
 
     Push-Location $repoRoot
     try {
-        dotnet run `
-            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
-            --no-build `
-            -- compare-suite `
+        dotnet $cliDll `
+            compare-suite `
             --baseline-dir $baselineDir `
             --candidate-dir $candidateDir `
             --comparisons-dir $comparisonsDir `
@@ -1552,10 +1553,8 @@ try {
     $materializedRunResultPath = Join-Path $tempRoot 'materialized-run-result.json'
     Push-Location $repoRoot
     try {
-        dotnet run `
-            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
-            --no-build `
-            -- materialize-run-result `
+        dotnet $cliDll `
+            materialize-run-result `
             --report $baselineEnvelopePath `
             --output $materializedRunResultPath
         if ($LASTEXITCODE -ne 0) {
@@ -1831,10 +1830,8 @@ try {
 
     Push-Location $repoRoot
     try {
-        dotnet run `
-            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
-            --no-build `
-            -- compare-suite `
+        dotnet $cliDll `
+            compare-suite `
             --baseline-dir $runIdBaselineDir `
             --candidate-dir $runIdCandidateDir `
             --match-by run-id `
@@ -1916,10 +1913,8 @@ try {
 
     Push-Location $repoRoot
     try {
-        dotnet run `
-            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
-            --no-build `
-            -- evaluate-candidate `
+        dotnet $cliDll `
+            evaluate-candidate `
             --manifest $candidateEvaluationManifestPath `
             --baseline-dir $runIdBaselineDir `
             --candidate-dir $runIdCandidateDir `
@@ -2069,10 +2064,8 @@ try {
 
     Push-Location $repoRoot
     try {
-        dotnet run `
-            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
-            --no-build `
-            -- evaluate-candidate `
+        dotnet $cliDll `
+            evaluate-candidate `
             --manifest $candidateEvaluationManifestPath `
             --baseline-dir $candidateEvaluationMissingEnvironmentBaselineDir `
             --candidate-dir $candidateEvaluationMissingEnvironmentCandidateDir `
@@ -2159,10 +2152,8 @@ try {
 
     Push-Location $repoRoot
     try {
-        dotnet run `
-            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
-            --no-build `
-            -- evaluate-candidate `
+        dotnet $cliDll `
+            evaluate-candidate `
             --manifest $candidateEvaluationManifestPath `
             --baseline-dir $candidateEvaluationPartialEnvironmentBaselineDir `
             --candidate-dir $candidateEvaluationPartialEnvironmentCandidateDir `
@@ -2225,10 +2216,8 @@ try {
 
     Push-Location $repoRoot
     try {
-        dotnet run `
-            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
-            --no-build `
-            -- evaluate-candidate `
+        dotnet $cliDll `
+            evaluate-candidate `
             --manifest $candidateEvaluationManifestPath `
             --baseline-dir $candidateEvaluationSameBuildBaselineDir `
             --candidate-dir $candidateEvaluationSameBuildCandidateDir `
@@ -2306,10 +2295,8 @@ try {
 
     Push-Location $repoRoot
     try {
-        dotnet run `
-            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
-            --no-build `
-            -- evaluate-candidate `
+        dotnet $cliDll `
+            evaluate-candidate `
             --manifest $candidateEvaluationNarrowManifestPath `
             --baseline-dir $runIdBaselineDir `
             --candidate-dir $runIdCandidateDir `
@@ -2543,10 +2530,8 @@ try {
 
     Push-Location $repoRoot
     try {
-        dotnet run `
-            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
-            --no-build `
-            -- evaluate-candidate `
+        dotnet $cliDll `
+            evaluate-candidate `
             --manifest $candidateEvaluationManifestPath `
             --baseline-dir $candidateEvaluationEmptyAnalysisBaselineDir `
             --candidate-dir $candidateEvaluationEmptyAnalysisCandidateDir `
@@ -2650,10 +2635,8 @@ try {
 
     Push-Location $repoRoot
     try {
-        dotnet run `
-            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
-            --no-build `
-            -- evaluate-candidate `
+        dotnet $cliDll `
+            evaluate-candidate `
             --manifest $candidateEvaluationManifestPath `
             --baseline-dir $runIdBaselineDir `
             --candidate-dir $candidateEvaluationInvalidCandidateDir `
@@ -2841,10 +2824,8 @@ try {
 
     Push-Location $repoRoot
     try {
-        dotnet run `
-            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
-            --no-build `
-            -- evaluate-candidate `
+        dotnet $cliDll `
+            evaluate-candidate `
             --manifest $candidateEvaluationManifestPath `
             --baseline-dir $baselineEvaluationBlockedAnalysisBaselineDir `
             --candidate-dir $runIdCandidateDir `
@@ -3020,10 +3001,8 @@ try {
 
     Push-Location $repoRoot
     try {
-        dotnet run `
-            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
-            --no-build `
-            -- evaluate-candidate `
+        dotnet $cliDll `
+            evaluate-candidate `
             --manifest $candidateEvaluationManifestPath `
             --baseline-dir $runIdBaselineDir `
             --candidate-dir $candidateEvaluationBlockedAnalysisCandidateDir `
@@ -3147,10 +3126,8 @@ try {
 
     Push-Location $repoRoot
     try {
-        dotnet run `
-            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
-            --no-build `
-            -- compare `
+        dotnet $cliDll `
+            compare `
             --baseline (Join-Path $candidateEvaluationStallBaselineDir 'baseline-a.json') `
             --candidate (Join-Path $candidateEvaluationStallCandidateDir 'candidate-a.json') `
             --output $candidateEvaluationStallPreviousComparisonPath
@@ -3164,10 +3141,8 @@ try {
 
     Push-Location $repoRoot
     try {
-        dotnet run `
-            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
-            --no-build `
-            -- evaluate-candidate `
+        dotnet $cliDll `
+            evaluate-candidate `
             --manifest $candidateEvaluationManifestPath `
             --baseline-dir $candidateEvaluationStallBaselineDir `
             --candidate-dir $candidateEvaluationStallCandidateDir `
@@ -3211,10 +3186,8 @@ try {
 
     Push-Location $repoRoot
     try {
-        dotnet run `
-            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
-            --no-build `
-            -- compare `
+        dotnet $cliDll `
+            compare `
             --baseline $baselineEnvelopePath `
             --candidate $baselineEnvelopePath `
             --output (Join-Path $previousComparisonsDir 'case-stall.json')
@@ -3228,10 +3201,8 @@ try {
 
     Push-Location $repoRoot
     try {
-        dotnet run `
-            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
-            --no-build `
-            -- compare-suite `
+        dotnet $cliDll `
+            compare-suite `
             --baseline-dir $stallBaselineDir `
             --candidate-dir $stallCandidateDir `
             --previous-comparisons-dir $previousComparisonsDir `
@@ -3295,10 +3266,8 @@ try {
 
     Push-Location $repoRoot
     try {
-        dotnet run `
-            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
-            --no-build `
-            -- validate-manifest `
+        dotnet $cliDll `
+            validate-manifest `
             --manifest $exampleManifestPath `
             --output $exampleManifestValidationPath
         if ($LASTEXITCODE -ne 0) {
@@ -3419,10 +3388,8 @@ try {
 
     Push-Location $repoRoot
     try {
-        dotnet run `
-            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
-            --no-build `
-            -- plan-runs `
+        dotnet $cliDll `
+            plan-runs `
             --manifest $exampleManifestPath `
             --reports-dir captured-example `
             --duration 30 `

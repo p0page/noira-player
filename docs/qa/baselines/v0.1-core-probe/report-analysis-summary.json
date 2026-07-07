@@ -122,6 +122,514 @@
     "Inspect runtime playback error evidence before interpreting playback-quality metrics.",
     "Inspect the failing playback operation, source availability, native open errors, cancellation, timeout, and exception classification before interpreting playback-quality metrics."
   ],
+  "capabilityCoverage": [
+    {
+      "capability": "media-loading",
+      "failureArea": "startup",
+      "status": "evidence-present",
+      "evidenceCaseCount": 9,
+      "missingCaseCount": 0,
+      "blockedCaseCount": 0,
+      "requiredSignals": [
+        "source.codec",
+        "startup.commandReceivedAt",
+        "startup.playbackStartedAt",
+        "startup.startupDurationMs",
+        "error.operation"
+      ],
+      "evidenceSignals": [
+        "source.codec",
+        "startup.startupDurationMs",
+        "error.operation"
+      ],
+      "missingSignals": [],
+      "blockers": [],
+      "caseIds": [
+        "jellyfin/dv-profile5-hevc-4k60",
+        "jellyfin/dv-profile8-1-hevc-4k60-hdr10-fallback",
+        "jellyfin/hdr10-hevc-main10-1080p60-10m-force-sdr",
+        "jellyfin/hdr10-hevc-main10-1080p60-10m",
+        "jellyfin/hdr10-hevc-main10-4k60-50m",
+        "jellyfin/sdr-hevc-main10-1080p60-3m",
+        "local/chimera-23976-hdr10-cadence",
+        "local/missing-file-error-handling",
+        "local/sdr-resume-seek-timeline"
+      ],
+      "suggestedNextActions": []
+    },
+    {
+      "capability": "metadata-duration",
+      "failureArea": "metadata",
+      "status": "evidence-present",
+      "evidenceCaseCount": 8,
+      "missingCaseCount": 0,
+      "blockedCaseCount": 0,
+      "requiredSignals": [
+        "source.container",
+        "source.bitrate",
+        "source.durationTicks",
+        "source.codec",
+        "source.width",
+        "source.height",
+        "source.frameRate"
+      ],
+      "evidenceSignals": [
+        "source.codec",
+        "source.width",
+        "source.height",
+        "source.frameRate"
+      ],
+      "missingSignals": [],
+      "blockers": [],
+      "caseIds": [
+        "jellyfin/dv-profile5-hevc-4k60",
+        "jellyfin/dv-profile8-1-hevc-4k60-hdr10-fallback",
+        "jellyfin/hdr10-hevc-main10-1080p60-10m-force-sdr",
+        "jellyfin/hdr10-hevc-main10-1080p60-10m",
+        "jellyfin/hdr10-hevc-main10-4k60-50m",
+        "jellyfin/sdr-hevc-main10-1080p60-3m",
+        "local/chimera-23976-hdr10-cadence",
+        "local/sdr-resume-seek-timeline"
+      ],
+      "suggestedNextActions": []
+    },
+    {
+      "capability": "source-capability",
+      "failureArea": "unsupported-source",
+      "status": "evidence-present",
+      "evidenceCaseCount": 8,
+      "missingCaseCount": 0,
+      "blockedCaseCount": 0,
+      "requiredSignals": [
+        "source.hdrKind",
+        "source.hdrPlaybackStrategy",
+        "source.isHdr",
+        "source.isDirectPlayable",
+        "source.isDolbyVision",
+        "source.dolbyVisionProfile",
+        "source.dolbyVisionCompatibilityId",
+        "source.hasHdr10BaseLayer",
+        "source.hasHlgBaseLayer"
+      ],
+      "evidenceSignals": [
+        "source.hdrKind",
+        "source.hdrPlaybackStrategy",
+        "source.isHdr",
+        "source.isDirectPlayable",
+        "source.isDolbyVision",
+        "source.dolbyVisionProfile",
+        "source.hasHdr10BaseLayer",
+        "source.hasHlgBaseLayer",
+        "source.dolbyVisionCompatibilityId"
+      ],
+      "missingSignals": [],
+      "blockers": [],
+      "caseIds": [
+        "jellyfin/dv-profile5-hevc-4k60",
+        "jellyfin/dv-profile8-1-hevc-4k60-hdr10-fallback",
+        "jellyfin/hdr10-hevc-main10-1080p60-10m-force-sdr",
+        "jellyfin/hdr10-hevc-main10-1080p60-10m",
+        "jellyfin/hdr10-hevc-main10-4k60-50m",
+        "jellyfin/sdr-hevc-main10-1080p60-3m",
+        "local/chimera-23976-hdr10-cadence",
+        "local/sdr-resume-seek-timeline"
+      ],
+      "suggestedNextActions": []
+    },
+    {
+      "capability": "lifecycle",
+      "failureArea": "startup",
+      "status": "evidence-present",
+      "evidenceCaseCount": 9,
+      "missingCaseCount": 0,
+      "blockedCaseCount": 0,
+      "requiredSignals": [
+        "startup.commandReceivedAt",
+        "startup.playbackStartedAt",
+        "startup.startupDurationMs",
+        "error.operation",
+        "skip.operation"
+      ],
+      "evidenceSignals": [
+        "startup.startupDurationMs",
+        "error.operation"
+      ],
+      "missingSignals": [],
+      "blockers": [],
+      "caseIds": [
+        "jellyfin/dv-profile5-hevc-4k60",
+        "jellyfin/dv-profile8-1-hevc-4k60-hdr10-fallback",
+        "jellyfin/hdr10-hevc-main10-1080p60-10m-force-sdr",
+        "jellyfin/hdr10-hevc-main10-1080p60-10m",
+        "jellyfin/hdr10-hevc-main10-4k60-50m",
+        "jellyfin/sdr-hevc-main10-1080p60-3m",
+        "local/chimera-23976-hdr10-cadence",
+        "local/missing-file-error-handling",
+        "local/sdr-resume-seek-timeline"
+      ],
+      "suggestedNextActions": []
+    },
+    {
+      "capability": "seek-resume",
+      "failureArea": "timeline",
+      "status": "evidence-present",
+      "evidenceCaseCount": 8,
+      "missingCaseCount": 0,
+      "blockedCaseCount": 0,
+      "requiredSignals": [
+        "position.requestedStartPositionTicks",
+        "position.seekTargetPositionTicks",
+        "position.actualPositionTicks",
+        "position.seekPositionErrorMs"
+      ],
+      "evidenceSignals": [
+        "position.requestedStartPositionTicks",
+        "position.seekTargetPositionTicks",
+        "position.actualPositionTicks",
+        "position.seekPositionErrorMs"
+      ],
+      "missingSignals": [],
+      "blockers": [],
+      "caseIds": [
+        "jellyfin/dv-profile5-hevc-4k60",
+        "jellyfin/dv-profile8-1-hevc-4k60-hdr10-fallback",
+        "jellyfin/hdr10-hevc-main10-1080p60-10m-force-sdr",
+        "jellyfin/hdr10-hevc-main10-1080p60-10m",
+        "jellyfin/hdr10-hevc-main10-4k60-50m",
+        "jellyfin/sdr-hevc-main10-1080p60-3m",
+        "local/chimera-23976-hdr10-cadence",
+        "local/sdr-resume-seek-timeline"
+      ],
+      "suggestedNextActions": []
+    },
+    {
+      "capability": "tracks",
+      "failureArea": "tracks",
+      "status": "evidence-present",
+      "evidenceCaseCount": 8,
+      "missingCaseCount": 0,
+      "blockedCaseCount": 0,
+      "requiredSignals": [
+        "tracks.videoTrackCount",
+        "tracks.audioTrackCount",
+        "tracks.subtitleTrackCount",
+        "tracks.selectedVideoStreamIndex",
+        "tracks.selectedAudioStreamIndex",
+        "tracks.video.codec",
+        "tracks.audio.codec"
+      ],
+      "evidenceSignals": [
+        "tracks.videoTrackCount",
+        "tracks.audioTrackCount",
+        "tracks.subtitleTrackCount",
+        "tracks.selectedVideoStreamIndex",
+        "tracks.video.codec",
+        "tracks.audio.codec"
+      ],
+      "missingSignals": [],
+      "blockers": [],
+      "caseIds": [
+        "jellyfin/dv-profile5-hevc-4k60",
+        "jellyfin/dv-profile8-1-hevc-4k60-hdr10-fallback",
+        "jellyfin/hdr10-hevc-main10-1080p60-10m-force-sdr",
+        "jellyfin/hdr10-hevc-main10-1080p60-10m",
+        "jellyfin/hdr10-hevc-main10-4k60-50m",
+        "jellyfin/sdr-hevc-main10-1080p60-3m",
+        "local/chimera-23976-hdr10-cadence",
+        "local/sdr-resume-seek-timeline"
+      ],
+      "suggestedNextActions": []
+    },
+    {
+      "capability": "subtitles",
+      "failureArea": "subtitles",
+      "status": "evidence-present",
+      "evidenceCaseCount": 8,
+      "missingCaseCount": 0,
+      "blockedCaseCount": 0,
+      "requiredSignals": [
+        "tracks.subtitleTrackCount",
+        "tracks.selectedSubtitleStreamIndex",
+        "tracks.isSubtitleDisabled",
+        "tracks.subtitles.codec",
+        "tracks.subtitles.language",
+        "tracks.subtitles.isExternal"
+      ],
+      "evidenceSignals": [
+        "tracks.subtitleTrackCount",
+        "tracks.isSubtitleDisabled",
+        "tracks.subtitles.codec",
+        "tracks.subtitles.language",
+        "tracks.subtitles.isExternal"
+      ],
+      "missingSignals": [],
+      "blockers": [],
+      "caseIds": [
+        "jellyfin/dv-profile5-hevc-4k60",
+        "jellyfin/dv-profile8-1-hevc-4k60-hdr10-fallback",
+        "jellyfin/hdr10-hevc-main10-1080p60-10m-force-sdr",
+        "jellyfin/hdr10-hevc-main10-1080p60-10m",
+        "jellyfin/hdr10-hevc-main10-4k60-50m",
+        "jellyfin/sdr-hevc-main10-1080p60-3m",
+        "local/chimera-23976-hdr10-cadence",
+        "local/sdr-resume-seek-timeline"
+      ],
+      "suggestedNextActions": []
+    },
+    {
+      "capability": "runtime-metrics",
+      "failureArea": "evidence-collection",
+      "status": "evidence-present",
+      "evidenceCaseCount": 8,
+      "missingCaseCount": 0,
+      "blockedCaseCount": 0,
+      "requiredSignals": [
+        "runtimeMetrics.status",
+        "runtimeMetrics.providerStatus",
+        "runtimeMetrics.reason",
+        "runtimeMetrics.hasSnapshot",
+        "runtimeMetrics.hasPlaybackSample"
+      ],
+      "evidenceSignals": [
+        "runtimeMetrics.status",
+        "runtimeMetrics.providerStatus",
+        "runtimeMetrics.reason",
+        "runtimeMetrics.hasSnapshot",
+        "runtimeMetrics.hasPlaybackSample"
+      ],
+      "missingSignals": [],
+      "blockers": [],
+      "caseIds": [
+        "jellyfin/dv-profile5-hevc-4k60",
+        "jellyfin/dv-profile8-1-hevc-4k60-hdr10-fallback",
+        "jellyfin/hdr10-hevc-main10-1080p60-10m-force-sdr",
+        "jellyfin/hdr10-hevc-main10-1080p60-10m",
+        "jellyfin/hdr10-hevc-main10-4k60-50m",
+        "jellyfin/sdr-hevc-main10-1080p60-3m",
+        "local/chimera-23976-hdr10-cadence",
+        "local/sdr-resume-seek-timeline"
+      ],
+      "suggestedNextActions": []
+    },
+    {
+      "capability": "buffering",
+      "failureArea": "buffering",
+      "status": "evidence-present",
+      "evidenceCaseCount": 7,
+      "missingCaseCount": 0,
+      "blockedCaseCount": 0,
+      "requiredSignals": [
+        "buffers.submittedAudioFrames",
+        "buffers.queuedAudioBuffers",
+        "buffers.videoStarvedPasses",
+        "buffers.audioStarvedPasses"
+      ],
+      "evidenceSignals": [
+        "buffers.videoStarvedPasses",
+        "buffers.audioStarvedPasses"
+      ],
+      "missingSignals": [],
+      "blockers": [],
+      "caseIds": [
+        "jellyfin/dv-profile8-1-hevc-4k60-hdr10-fallback",
+        "jellyfin/hdr10-hevc-main10-1080p60-10m-force-sdr",
+        "jellyfin/hdr10-hevc-main10-1080p60-10m",
+        "jellyfin/hdr10-hevc-main10-4k60-50m",
+        "jellyfin/sdr-hevc-main10-1080p60-3m",
+        "local/chimera-23976-hdr10-cadence",
+        "local/sdr-resume-seek-timeline"
+      ],
+      "suggestedNextActions": []
+    },
+    {
+      "capability": "frame-pacing",
+      "failureArea": "frame-pacing",
+      "status": "evidence-present",
+      "evidenceCaseCount": 8,
+      "missingCaseCount": 0,
+      "blockedCaseCount": 0,
+      "requiredSignals": [
+        "timing.renderedVideoFrames",
+        "timing.droppedVideoFrames",
+        "timing.expectedFrameDurationMs",
+        "timing.maxFrameGapMs",
+        "timing.framePacingSourceFrameRate",
+        "timing.lateFrameDropToleranceMs",
+        "timing.renderIntervalMsP95",
+        "timing.renderIntervalMsP99",
+        "display.refreshRateHz",
+        "cadence.clockSpeedAdjustmentPercent",
+        "cadence.isFractionalCadence",
+        "framePacing.renderIntervalP95FrameRatio",
+        "framePacing.renderIntervalP99FrameRatio",
+        "framePacing.maxFrameGapFrameRatio",
+        "framePacing.droppedVideoFramePercent",
+        "framePacing.lateFrameDropToleranceFrameRatio"
+      ],
+      "evidenceSignals": [
+        "timing.lateFrameDropToleranceMs",
+        "timing.framePacingSourceFrameRate",
+        "timing.maxFrameGapMs",
+        "timing.renderIntervalMsP95",
+        "timing.renderIntervalMsP99",
+        "display.refreshRateHz"
+      ],
+      "missingSignals": [],
+      "blockers": [],
+      "caseIds": [
+        "jellyfin/dv-profile5-hevc-4k60",
+        "jellyfin/dv-profile8-1-hevc-4k60-hdr10-fallback",
+        "jellyfin/hdr10-hevc-main10-1080p60-10m-force-sdr",
+        "jellyfin/hdr10-hevc-main10-1080p60-10m",
+        "jellyfin/hdr10-hevc-main10-4k60-50m",
+        "jellyfin/sdr-hevc-main10-1080p60-3m",
+        "local/chimera-23976-hdr10-cadence",
+        "local/sdr-resume-seek-timeline"
+      ],
+      "suggestedNextActions": []
+    },
+    {
+      "capability": "av-sync",
+      "failureArea": "av-sync",
+      "status": "evidence-present",
+      "evidenceCaseCount": 8,
+      "missingCaseCount": 0,
+      "blockedCaseCount": 0,
+      "requiredSignals": [
+        "sync.audioClockTicks",
+        "sync.videoPositionTicks",
+        "sync.audioVideoDriftMsP50",
+        "sync.audioVideoDriftMsP95",
+        "sync.audioVideoDriftMsP99",
+        "sync.audioVideoDriftMsMax",
+        "sync.clockDeltaMs",
+        "sync.driftDirection"
+      ],
+      "evidenceSignals": [
+        "sync.audioVideoDriftMsP50",
+        "sync.audioVideoDriftMsP95",
+        "sync.audioVideoDriftMsP99",
+        "sync.audioVideoDriftMsMax",
+        "sync.audioClockTicks",
+        "sync.videoPositionTicks",
+        "sync.clockDeltaMs",
+        "sync.driftDirection"
+      ],
+      "missingSignals": [],
+      "blockers": [],
+      "caseIds": [
+        "jellyfin/dv-profile5-hevc-4k60",
+        "jellyfin/dv-profile8-1-hevc-4k60-hdr10-fallback",
+        "jellyfin/hdr10-hevc-main10-1080p60-10m-force-sdr",
+        "jellyfin/hdr10-hevc-main10-1080p60-10m",
+        "jellyfin/hdr10-hevc-main10-4k60-50m",
+        "jellyfin/sdr-hevc-main10-1080p60-3m",
+        "local/chimera-23976-hdr10-cadence",
+        "local/sdr-resume-seek-timeline"
+      ],
+      "suggestedNextActions": []
+    },
+    {
+      "capability": "color",
+      "failureArea": "color-pipeline",
+      "status": "evidence-present",
+      "evidenceCaseCount": 8,
+      "missingCaseCount": 0,
+      "blockedCaseCount": 0,
+      "requiredSignals": [
+        "source.hdrKind",
+        "colorPipeline.actualHdrOutput",
+        "colorPipeline.swapChainFormat",
+        "colorPipeline.swapChainColorSpace",
+        "colorPipeline.isTenBitSwapChain",
+        "colorPipeline.dxgiInput",
+        "colorPipeline.dxgiOutput",
+        "colorPipeline.conversionStatus",
+        "colorPipeline.isVideoProcessorColorSpaceValidated",
+        "colorPipeline.forceSdrOutput",
+        "display.hdrStatus"
+      ],
+      "evidenceSignals": [
+        "source.hdrKind",
+        "colorPipeline.actualHdrOutput",
+        "colorPipeline.dxgiInput",
+        "colorPipeline.dxgiOutput",
+        "colorPipeline.isTenBitSwapChain",
+        "colorPipeline.conversionStatus"
+      ],
+      "missingSignals": [],
+      "blockers": [],
+      "caseIds": [
+        "jellyfin/dv-profile5-hevc-4k60",
+        "jellyfin/dv-profile8-1-hevc-4k60-hdr10-fallback",
+        "jellyfin/hdr10-hevc-main10-1080p60-10m-force-sdr",
+        "jellyfin/hdr10-hevc-main10-1080p60-10m",
+        "jellyfin/hdr10-hevc-main10-4k60-50m",
+        "jellyfin/sdr-hevc-main10-1080p60-3m",
+        "local/chimera-23976-hdr10-cadence",
+        "local/sdr-resume-seek-timeline"
+      ],
+      "suggestedNextActions": []
+    },
+    {
+      "capability": "error-handling",
+      "failureArea": "error-handling",
+      "status": "evidence-present",
+      "evidenceCaseCount": 1,
+      "missingCaseCount": 0,
+      "blockedCaseCount": 0,
+      "requiredSignals": [
+        "error.code",
+        "error.message",
+        "error.operation",
+        "error.exceptionType",
+        "error.failureClass",
+        "error.failureArea",
+        "error.isTerminal",
+        "error.isRetriable"
+      ],
+      "evidenceSignals": [
+        "error.code",
+        "error.message",
+        "error.operation",
+        "error.exceptionType",
+        "error.failureClass",
+        "error.failureArea",
+        "error.isTerminal",
+        "error.isRetriable"
+      ],
+      "missingSignals": [],
+      "blockers": [],
+      "caseIds": [
+        "local/missing-file-error-handling"
+      ],
+      "suggestedNextActions": []
+    },
+    {
+      "capability": "skip-handling",
+      "failureArea": "evidence-collection",
+      "status": "not-observed",
+      "evidenceCaseCount": 0,
+      "missingCaseCount": 0,
+      "blockedCaseCount": 0,
+      "requiredSignals": [
+        "skip.code",
+        "skip.reason",
+        "skip.operation",
+        "skip.failureClass",
+        "skip.failureArea",
+        "skip.isExpected",
+        "skip.isRetriable"
+      ],
+      "evidenceSignals": [],
+      "missingSignals": [],
+      "blockers": [],
+      "caseIds": [],
+      "suggestedNextActions": [
+        "Collect structured skip reason evidence for intentionally unexecuted cases."
+      ]
+    }
+  ],
   "nextActions": [
     {
       "rank": 1,
@@ -245,6 +753,7 @@
       "caseId": "jellyfin/dv-profile5-hevc-4k60",
       "hasModelAnalysis": true,
       "status": "not-needed",
+      "result": "unsupported",
       "expectedBehavior": "Unsupported sources are identified without entering playback-quality tuning.",
       "actualBehavior": "Report result was unsupported.",
       "primaryFailureClass": "none",
@@ -302,6 +811,7 @@
         "timing.lateFrameDropToleranceMs",
         "timing.framePacingSourceFrameRate"
       ],
+      "missingSignals": [],
       "failureAreas": [],
       "targetFailureAreas": [],
       "codeTargets": [
@@ -318,6 +828,7 @@
       "caseId": "jellyfin/dv-profile8-1-hevc-4k60-hdr10-fallback",
       "hasModelAnalysis": true,
       "status": "not-needed",
+      "result": "pass",
       "expectedBehavior": "Playback quality checks passed.",
       "actualBehavior": "Playback quality checks passed.",
       "primaryFailureClass": "none",
@@ -383,6 +894,7 @@
         "timing.lateFrameDropToleranceMs",
         "timing.framePacingSourceFrameRate"
       ],
+      "missingSignals": [],
       "failureAreas": [],
       "targetFailureAreas": [],
       "codeTargets": [],
@@ -394,6 +906,7 @@
       "caseId": "jellyfin/hdr10-hevc-main10-1080p60-10m-force-sdr",
       "hasModelAnalysis": true,
       "status": "not-needed",
+      "result": "pass",
       "expectedBehavior": "Playback quality checks passed.",
       "actualBehavior": "Playback quality checks passed.",
       "primaryFailureClass": "none",
@@ -456,6 +969,7 @@
         "timing.lateFrameDropToleranceMs",
         "timing.framePacingSourceFrameRate"
       ],
+      "missingSignals": [],
       "failureAreas": [],
       "targetFailureAreas": [],
       "codeTargets": [],
@@ -467,6 +981,7 @@
       "caseId": "jellyfin/hdr10-hevc-main10-1080p60-10m",
       "hasModelAnalysis": true,
       "status": "not-needed",
+      "result": "pass",
       "expectedBehavior": "Playback quality checks passed.",
       "actualBehavior": "Playback quality checks passed.",
       "primaryFailureClass": "none",
@@ -530,6 +1045,7 @@
         "timing.lateFrameDropToleranceMs",
         "timing.framePacingSourceFrameRate"
       ],
+      "missingSignals": [],
       "failureAreas": [],
       "targetFailureAreas": [],
       "codeTargets": [],
@@ -541,6 +1057,7 @@
       "caseId": "jellyfin/hdr10-hevc-main10-4k60-50m",
       "hasModelAnalysis": true,
       "status": "not-needed",
+      "result": "pass",
       "expectedBehavior": "Playback quality checks passed.",
       "actualBehavior": "Playback quality checks passed.",
       "primaryFailureClass": "none",
@@ -604,6 +1121,7 @@
         "timing.lateFrameDropToleranceMs",
         "timing.framePacingSourceFrameRate"
       ],
+      "missingSignals": [],
       "failureAreas": [],
       "targetFailureAreas": [],
       "codeTargets": [],
@@ -615,6 +1133,7 @@
       "caseId": "jellyfin/sdr-hevc-main10-1080p60-3m",
       "hasModelAnalysis": true,
       "status": "not-needed",
+      "result": "pass",
       "expectedBehavior": "Playback quality checks passed.",
       "actualBehavior": "Playback quality checks passed.",
       "primaryFailureClass": "none",
@@ -682,6 +1201,7 @@
         "timing.lateFrameDropToleranceMs",
         "timing.framePacingSourceFrameRate"
       ],
+      "missingSignals": [],
       "failureAreas": [],
       "targetFailureAreas": [],
       "codeTargets": [],
@@ -693,6 +1213,7 @@
       "caseId": "local/chimera-23976-hdr10-cadence",
       "hasModelAnalysis": true,
       "status": "not-needed",
+      "result": "pass",
       "expectedBehavior": "Playback quality checks passed.",
       "actualBehavior": "Playback quality checks passed.",
       "primaryFailureClass": "none",
@@ -760,6 +1281,7 @@
         "timing.lateFrameDropToleranceMs",
         "timing.framePacingSourceFrameRate"
       ],
+      "missingSignals": [],
       "failureAreas": [],
       "targetFailureAreas": [],
       "codeTargets": [],
@@ -771,6 +1293,7 @@
       "caseId": "local/missing-file-error-handling",
       "hasModelAnalysis": true,
       "status": "not-needed",
+      "result": "error",
       "expectedBehavior": "Playback operation completed without a terminal runtime error.",
       "actualBehavior": "open failed with core-probe.error-case: Core probe intentionally materialized an error-handling reference case without opening playback.",
       "primaryFailureClass": "sample issue",
@@ -794,6 +1317,7 @@
         "environment.sourceRevision",
         "environment.buildConfiguration"
       ],
+      "missingSignals": [],
       "failureAreas": [
         "error-handling"
       ],
@@ -814,6 +1338,7 @@
       "caseId": "local/sdr-resume-seek-timeline",
       "hasModelAnalysis": true,
       "status": "not-needed",
+      "result": "pass",
       "expectedBehavior": "Playback quality checks passed.",
       "actualBehavior": "Playback quality checks passed.",
       "primaryFailureClass": "none",
@@ -880,6 +1405,7 @@
         "timing.lateFrameDropToleranceMs",
         "timing.framePacingSourceFrameRate"
       ],
+      "missingSignals": [],
       "failureAreas": [],
       "targetFailureAreas": [],
       "codeTargets": [],

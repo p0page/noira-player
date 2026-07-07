@@ -1971,6 +1971,7 @@ internal static class Program
             item.Status = string.IsNullOrWhiteSpace(optimizationGate.Status)
                 ? "unknown"
                 : optimizationGate.Status;
+            item.Result = envelope.ModelAnalysis.Result ?? "";
             item.ExpectedBehavior = envelope.ModelAnalysis.ExpectedBehavior ?? "";
             item.ActualBehavior = envelope.ModelAnalysis.ActualBehavior ?? "";
             item.PrimaryFailureClass =
@@ -1986,6 +1987,7 @@ internal static class Program
 
             CopyValues(envelope.ModelAnalysis.FailureAreas, item.FailureAreas);
             CopyValues(envelope.ModelAnalysis.EvidenceSignals, item.Signals);
+            CopyValues(envelope.ModelAnalysis.MissingEvidence, item.MissingSignals);
             CopyValues(optimizationGate.Blockers, item.Blockers);
             CopyValues(optimizationGate.BlockerSignals, item.Signals);
             CopyValues(optimizationGate.TargetFailureAreas, item.TargetFailureAreas);
@@ -2013,6 +2015,7 @@ internal static class Program
             summary.Cases.Add(item);
         }
 
+        AddReportAnalysisCapabilityCoverage(summary);
         AddReportAnalysisTargets(summary);
         ApplyReportAnalysisDecision(summary);
         AddReportAnalysisNextAction(summary);
@@ -2029,6 +2032,362 @@ internal static class Program
         CopyValues(item.TargetFailureAreas, summary.TargetFailureAreas);
         CopyValues(item.CodeTargets, summary.CodeTargets);
         CopyValues(item.SuggestedNextActions, summary.SuggestedNextActions);
+    }
+
+    private static void AddReportAnalysisCapabilityCoverage(ReportAnalysisSummary summary)
+    {
+        foreach (var definition in CreateReportAnalysisCapabilityDefinitions())
+        {
+            var coverage = new ReportAnalysisCapabilityCoverage
+            {
+                Capability = definition.Capability,
+                FailureArea = definition.FailureArea
+            };
+            CopyValues(definition.Signals, coverage.RequiredSignals);
+
+            foreach (var item in summary.Cases)
+            {
+                var evidenceSignals = GetMatchingSignals(item.Signals, definition.Signals);
+                var missingSignals = GetMatchingSignals(item.MissingSignals, definition.Signals);
+                if (ShouldTreatAbsentCapabilityAsMissing(item, definition) &&
+                    evidenceSignals.Count == 0 &&
+                    missingSignals.Count == 0)
+                {
+                    AddUnique(missingSignals, definition.PrimarySignal);
+                }
+
+                if (evidenceSignals.Count > 0)
+                {
+                    coverage.EvidenceCaseCount++;
+                    AddUnique(coverage.CaseIds, item.CaseId);
+                    CopyValues(evidenceSignals, coverage.EvidenceSignals);
+                }
+
+                if (missingSignals.Count > 0)
+                {
+                    coverage.MissingCaseCount++;
+                    AddUnique(coverage.CaseIds, item.CaseId);
+                    CopyValues(missingSignals, coverage.MissingSignals);
+                }
+
+                if (!IsReportAnalysisCapabilityBlocked(item, definition))
+                {
+                    continue;
+                }
+
+                coverage.BlockedCaseCount++;
+                AddUnique(coverage.CaseIds, item.CaseId);
+                CopyValues(item.Blockers, coverage.Blockers);
+                CopyValues(item.SuggestedNextActions, coverage.SuggestedNextActions);
+            }
+
+            coverage.Status = GetReportAnalysisCapabilityStatus(coverage);
+            if (coverage.Status != "evidence-present")
+            {
+                AddUnique(
+                    coverage.SuggestedNextActions,
+                    definition.SuggestedNextAction);
+            }
+
+            summary.CapabilityCoverage.Add(coverage);
+        }
+    }
+
+    private static bool IsReportAnalysisCapabilityBlocked(
+        ReportAnalysisCase item,
+        ReportAnalysisCapabilityDefinition definition)
+    {
+        if (!item.IsBlocked)
+        {
+            return false;
+        }
+
+        if (!string.IsNullOrWhiteSpace(definition.FailureArea) &&
+            (item.TargetFailureAreas.Contains(definition.FailureArea) ||
+                item.FailureAreas.Contains(definition.FailureArea)))
+        {
+            return true;
+        }
+
+        foreach (var signal in item.Signals)
+        {
+            if (MatchesAnySignal(signal, definition.Signals))
+            {
+                return true;
+            }
+        }
+
+        foreach (var signal in item.MissingSignals)
+        {
+            if (MatchesAnySignal(signal, definition.Signals))
+            {
+                return true;
+            }
+        }
+
+        if (definition.Capability == "runtime-metrics")
+        {
+            foreach (var blocker in item.Blockers)
+            {
+                if (blocker.StartsWith("runtimeMetrics.", StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private static bool ShouldTreatAbsentCapabilityAsMissing(
+        ReportAnalysisCase item,
+        ReportAnalysisCapabilityDefinition definition)
+    {
+        if (!definition.MissingWhenAbsent)
+        {
+            return false;
+        }
+
+        return item.Result != "skip" &&
+            item.Result != "error" &&
+            item.Result != "unsupported";
+    }
+
+    private static List<string> GetMatchingSignals(
+        IEnumerable<string> signals,
+        IEnumerable<string> requiredSignals)
+    {
+        var matches = new List<string>();
+        foreach (var signal in signals)
+        {
+            if (MatchesAnySignal(signal, requiredSignals))
+            {
+                AddUnique(matches, signal);
+            }
+        }
+
+        return matches;
+    }
+
+    private static bool MatchesAnySignal(
+        string signal,
+        IEnumerable<string> requiredSignals)
+    {
+        foreach (var requiredSignal in requiredSignals)
+        {
+            if (string.Equals(signal, requiredSignal, StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static string GetReportAnalysisCapabilityStatus(
+        ReportAnalysisCapabilityCoverage coverage)
+    {
+        if (coverage.BlockedCaseCount > 0)
+        {
+            return "blocked";
+        }
+
+        if (coverage.MissingCaseCount > 0 && coverage.EvidenceCaseCount > 0)
+        {
+            return "partial";
+        }
+
+        if (coverage.MissingCaseCount > 0)
+        {
+            return "missing-evidence";
+        }
+
+        if (coverage.EvidenceCaseCount > 0)
+        {
+            return "evidence-present";
+        }
+
+        return "not-observed";
+    }
+
+    private static IEnumerable<ReportAnalysisCapabilityDefinition>
+        CreateReportAnalysisCapabilityDefinitions()
+    {
+        return new[]
+        {
+            new ReportAnalysisCapabilityDefinition(
+                "media-loading",
+                "startup",
+                "Collect startup and source-open evidence before diagnosing media loading.",
+                false,
+                "source.codec",
+                "startup.commandReceivedAt",
+                "startup.playbackStartedAt",
+                "startup.startupDurationMs",
+                "error.operation"),
+            new ReportAnalysisCapabilityDefinition(
+                "metadata-duration",
+                "metadata",
+                "Collect source metadata, duration, bitrate, and frame-rate evidence.",
+                false,
+                "source.container",
+                "source.bitrate",
+                "source.durationTicks",
+                "source.codec",
+                "source.width",
+                "source.height",
+                "source.frameRate"),
+            new ReportAnalysisCapabilityDefinition(
+                "source-capability",
+                "unsupported-source",
+                "Collect codec, HDR/Dolby Vision, and direct-play classification evidence.",
+                false,
+                "source.hdrKind",
+                "source.hdrPlaybackStrategy",
+                "source.isHdr",
+                "source.isDirectPlayable",
+                "source.isDolbyVision",
+                "source.dolbyVisionProfile",
+                "source.dolbyVisionCompatibilityId",
+                "source.hasHdr10BaseLayer",
+                "source.hasHlgBaseLayer"),
+            new ReportAnalysisCapabilityDefinition(
+                "lifecycle",
+                "startup",
+                "Collect lifecycle timestamps or structured error/skip operation evidence.",
+                false,
+                "startup.commandReceivedAt",
+                "startup.playbackStartedAt",
+                "startup.startupDurationMs",
+                "error.operation",
+                "skip.operation"),
+            new ReportAnalysisCapabilityDefinition(
+                "seek-resume",
+                "timeline",
+                "Collect requested start, seek target, actual position, and seek error evidence.",
+                false,
+                "position.requestedStartPositionTicks",
+                "position.seekTargetPositionTicks",
+                "position.actualPositionTicks",
+                "position.seekPositionErrorMs"),
+            new ReportAnalysisCapabilityDefinition(
+                "tracks",
+                "tracks",
+                "Collect video/audio/subtitle track discovery and selected-track evidence.",
+                false,
+                "tracks.videoTrackCount",
+                "tracks.audioTrackCount",
+                "tracks.subtitleTrackCount",
+                "tracks.selectedVideoStreamIndex",
+                "tracks.selectedAudioStreamIndex",
+                "tracks.video.codec",
+                "tracks.audio.codec"),
+            new ReportAnalysisCapabilityDefinition(
+                "subtitles",
+                "subtitles",
+                "Collect subtitle track discovery, selected subtitle, and subtitle-off state evidence.",
+                false,
+                "tracks.subtitleTrackCount",
+                "tracks.selectedSubtitleStreamIndex",
+                "tracks.isSubtitleDisabled",
+                "tracks.subtitles.codec",
+                "tracks.subtitles.language",
+                "tracks.subtitles.isExternal"),
+            new ReportAnalysisCapabilityDefinition(
+                "runtime-metrics",
+                "evidence-collection",
+                "Collect runtime metrics provider evidence before optimizing playback Core.",
+                true,
+                "runtimeMetrics.status",
+                "runtimeMetrics.providerStatus",
+                "runtimeMetrics.reason",
+                "runtimeMetrics.hasSnapshot",
+                "runtimeMetrics.hasPlaybackSample"),
+            new ReportAnalysisCapabilityDefinition(
+                "buffering",
+                "buffering",
+                "Collect audio queue and video/audio starvation evidence before tuning frame pacing.",
+                false,
+                "buffers.submittedAudioFrames",
+                "buffers.queuedAudioBuffers",
+                "buffers.videoStarvedPasses",
+                "buffers.audioStarvedPasses"),
+            new ReportAnalysisCapabilityDefinition(
+                "frame-pacing",
+                "frame-pacing",
+                "Resolve frame-pacing evidence blockers before editing playback timing.",
+                false,
+                "timing.renderedVideoFrames",
+                "timing.droppedVideoFrames",
+                "timing.expectedFrameDurationMs",
+                "timing.maxFrameGapMs",
+                "timing.framePacingSourceFrameRate",
+                "timing.lateFrameDropToleranceMs",
+                "timing.renderIntervalMsP95",
+                "timing.renderIntervalMsP99",
+                "display.refreshRateHz",
+                "cadence.clockSpeedAdjustmentPercent",
+                "cadence.isFractionalCadence",
+                "framePacing.renderIntervalP95FrameRatio",
+                "framePacing.renderIntervalP99FrameRatio",
+                "framePacing.maxFrameGapFrameRatio",
+                "framePacing.droppedVideoFramePercent",
+                "framePacing.lateFrameDropToleranceFrameRatio"),
+            new ReportAnalysisCapabilityDefinition(
+                "av-sync",
+                "av-sync",
+                "Collect audio/video clock and drift evidence before changing sync behavior.",
+                false,
+                "sync.audioClockTicks",
+                "sync.videoPositionTicks",
+                "sync.audioVideoDriftMsP50",
+                "sync.audioVideoDriftMsP95",
+                "sync.audioVideoDriftMsP99",
+                "sync.audioVideoDriftMsMax",
+                "sync.clockDeltaMs",
+                "sync.driftDirection"),
+            new ReportAnalysisCapabilityDefinition(
+                "color",
+                "color-pipeline",
+                "Collect HDR display, swapchain, DXGI, and conversion evidence before changing color behavior.",
+                false,
+                "source.hdrKind",
+                "colorPipeline.actualHdrOutput",
+                "colorPipeline.swapChainFormat",
+                "colorPipeline.swapChainColorSpace",
+                "colorPipeline.isTenBitSwapChain",
+                "colorPipeline.dxgiInput",
+                "colorPipeline.dxgiOutput",
+                "colorPipeline.conversionStatus",
+                "colorPipeline.isVideoProcessorColorSpaceValidated",
+                "colorPipeline.forceSdrOutput",
+                "display.hdrStatus"),
+            new ReportAnalysisCapabilityDefinition(
+                "error-handling",
+                "error-handling",
+                "Collect structured error code, operation, class, and area evidence for failed playback operations.",
+                false,
+                "error.code",
+                "error.message",
+                "error.operation",
+                "error.exceptionType",
+                "error.failureClass",
+                "error.failureArea",
+                "error.isTerminal",
+                "error.isRetriable"),
+            new ReportAnalysisCapabilityDefinition(
+                "skip-handling",
+                "evidence-collection",
+                "Collect structured skip reason evidence for intentionally unexecuted cases.",
+                false,
+                "skip.code",
+                "skip.reason",
+                "skip.operation",
+                "skip.failureClass",
+                "skip.failureArea",
+                "skip.isExpected",
+                "skip.isRetriable")
+        };
     }
 
     private static void AddReportAnalysisTargets(ReportAnalysisSummary summary)
@@ -2761,10 +3120,60 @@ internal static class Program
         public List<string> TargetCaseIds { get; } = new List<string>();
         public List<string> CodeTargets { get; } = new List<string>();
         public List<string> SuggestedNextActions { get; } = new List<string>();
+        public List<ReportAnalysisCapabilityCoverage> CapabilityCoverage { get; } =
+            new List<ReportAnalysisCapabilityCoverage>();
         public List<PlaybackQualitySuiteNextAction> NextActions { get; } =
             new List<PlaybackQualitySuiteNextAction>();
         public List<ReportAnalysisCase> Cases { get; } =
             new List<ReportAnalysisCase>();
+    }
+
+    private sealed class ReportAnalysisCapabilityCoverage
+    {
+        public string Capability { get; set; } = "";
+        public string FailureArea { get; set; } = "";
+        public string Status { get; set; } = "not-observed";
+        public int EvidenceCaseCount { get; set; }
+        public int MissingCaseCount { get; set; }
+        public int BlockedCaseCount { get; set; }
+        public List<string> RequiredSignals { get; } = new List<string>();
+        public List<string> EvidenceSignals { get; } = new List<string>();
+        public List<string> MissingSignals { get; } = new List<string>();
+        public List<string> Blockers { get; } = new List<string>();
+        public List<string> CaseIds { get; } = new List<string>();
+        public List<string> SuggestedNextActions { get; } = new List<string>();
+    }
+
+    private sealed class ReportAnalysisCapabilityDefinition
+    {
+        public ReportAnalysisCapabilityDefinition(
+            string capability,
+            string failureArea,
+            string suggestedNextAction,
+            bool missingWhenAbsent,
+            params string[] signals)
+        {
+            Capability = capability;
+            FailureArea = failureArea;
+            SuggestedNextAction = suggestedNextAction;
+            MissingWhenAbsent = missingWhenAbsent;
+            foreach (var signal in signals)
+            {
+                AddUnique(Signals, signal);
+            }
+        }
+
+        public string Capability { get; }
+
+        public string FailureArea { get; }
+
+        public string SuggestedNextAction { get; }
+
+        public bool MissingWhenAbsent { get; }
+
+        public string PrimarySignal => Signals.Count == 0 ? "" : Signals[0];
+
+        public List<string> Signals { get; } = new List<string>();
     }
 
     private sealed class ReportAnalysisCase
@@ -2772,6 +3181,7 @@ internal static class Program
         public string CaseId { get; set; } = "";
         public bool HasModelAnalysis { get; set; }
         public string Status { get; set; } = "";
+        public string Result { get; set; } = "";
         public string ExpectedBehavior { get; set; } = "";
         public string ActualBehavior { get; set; } = "";
         public string PrimaryFailureClass { get; set; } = "";
@@ -2780,6 +3190,7 @@ internal static class Program
         public bool IsBlocked { get; set; }
         public List<string> Blockers { get; } = new List<string>();
         public List<string> Signals { get; } = new List<string>();
+        public List<string> MissingSignals { get; } = new List<string>();
         public List<string> FailureAreas { get; } = new List<string>();
         public List<string> TargetFailureAreas { get; } = new List<string>();
         public List<string> CodeTargets { get; } = new List<string>();
