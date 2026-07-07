@@ -33,6 +33,10 @@ try {
     $candidateEvaluationNarrowCoverageComparisonsDir = Join-Path $tempRoot 'candidate-evaluation-narrow-coverage-comparisons'
     $candidateEvaluationPath = Join-Path $tempRoot 'candidate-evaluation.json'
     $candidateEvaluationComparisonsDir = Join-Path $tempRoot 'candidate-evaluation-comparisons'
+    $candidateEvaluationMissingEnvironmentBaselineDir = Join-Path $tempRoot 'candidate-evaluation-missing-environment-baseline'
+    $candidateEvaluationMissingEnvironmentCandidateDir = Join-Path $tempRoot 'candidate-evaluation-missing-environment-candidate'
+    $candidateEvaluationMissingEnvironmentComparisonsDir = Join-Path $tempRoot 'candidate-evaluation-missing-environment-comparisons'
+    $candidateEvaluationMissingEnvironmentPath = Join-Path $tempRoot 'candidate-evaluation-missing-environment.json'
     $candidateEvaluationEmptyAnalysisBaselineDir = Join-Path $tempRoot 'candidate-evaluation-empty-analysis-baseline'
     $candidateEvaluationEmptyAnalysisCandidateDir = Join-Path $tempRoot 'candidate-evaluation-empty-analysis-candidate'
     $candidateEvaluationEmptyAnalysisPath = Join-Path $tempRoot 'candidate-evaluation-empty-analysis.json'
@@ -1229,6 +1233,59 @@ try {
 
     if (-not ($candidateEvaluation.evidenceGates | Where-Object { $_.name -eq 'suite' -and $_.status -eq 'pass' -and $_.action -eq 'accept-candidate' })) {
         throw 'Expected evaluate-candidate suite evidence gate to pass with accept-candidate action.'
+    }
+
+    New-Item -ItemType Directory -Path $candidateEvaluationMissingEnvironmentBaselineDir | Out-Null
+    New-Item -ItemType Directory -Path $candidateEvaluationMissingEnvironmentCandidateDir | Out-Null
+    $baselineWithoutEnvironment = Get-Content -Raw -LiteralPath (Join-Path $runIdBaselineDir 'baseline-a.json') | ConvertFrom-Json
+    $candidateWithoutEnvironment = Get-Content -Raw -LiteralPath (Join-Path $runIdCandidateDir 'candidate-renamed.json') | ConvertFrom-Json
+    $baselineWithoutEnvironment.PSObject.Properties.Remove('environment')
+    $candidateWithoutEnvironment.PSObject.Properties.Remove('environment')
+    $baselineWithoutEnvironment | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath (Join-Path $candidateEvaluationMissingEnvironmentBaselineDir 'baseline-a.json') -Encoding UTF8
+    $candidateWithoutEnvironment | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath (Join-Path $candidateEvaluationMissingEnvironmentCandidateDir 'candidate-a.json') -Encoding UTF8
+
+    Push-Location $repoRoot
+    try {
+        dotnet run `
+            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
+            --no-build `
+            -- evaluate-candidate `
+            --manifest $candidateEvaluationManifestPath `
+            --baseline-dir $candidateEvaluationMissingEnvironmentBaselineDir `
+            --candidate-dir $candidateEvaluationMissingEnvironmentCandidateDir `
+            --match-by run-id `
+            --comparisons-dir $candidateEvaluationMissingEnvironmentComparisonsDir `
+            --output $candidateEvaluationMissingEnvironmentPath
+        if ($LASTEXITCODE -eq 0) {
+            throw 'Expected playback quality CLI evaluate-candidate to reject missing build identity evidence.'
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    $missingEnvironmentEvaluation = Get-Content -Raw -LiteralPath $candidateEvaluationMissingEnvironmentPath | ConvertFrom-Json
+    if ($missingEnvironmentEvaluation.action -ne 'collect-comparable-evidence') {
+        throw 'Expected missing build identity evaluate-candidate output to collect comparable evidence.'
+    }
+
+    if ($null -eq $missingEnvironmentEvaluation.activeGate -or
+        $missingEnvironmentEvaluation.activeGate.name -ne 'suite' -or
+        $missingEnvironmentEvaluation.activeGate.status -ne 'blocked') {
+        throw 'Expected missing build identity active gate to point at blocked suite.'
+    }
+
+    if ($null -eq $missingEnvironmentEvaluation.activeGate.environment -or
+        $missingEnvironmentEvaluation.activeGate.environment.missingEvidenceCount -ne 1) {
+        throw 'Expected missing build identity active gate to expose environment missing evidence count.'
+    }
+
+    if (-not ($missingEnvironmentEvaluation.activeGate.signals -contains 'environment.identity')) {
+        throw 'Expected missing build identity active gate to include environment identity signal.'
+    }
+
+    if (-not ($missingEnvironmentEvaluation.activeGate.targetCaseIds -contains 'item-1/source-1')) {
+        throw 'Expected missing build identity active gate to include target case id.'
     }
 
     @'

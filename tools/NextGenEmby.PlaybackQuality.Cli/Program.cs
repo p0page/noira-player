@@ -1598,6 +1598,7 @@ internal static class Program
         CopyValues(suite.FailureAreas, gate.FailureAreas);
         CopyValues(suite.TargetFailureAreas, gate.TargetFailureAreas);
         CopyValues(suite.TargetCaseIds, gate.TargetCaseIds);
+        gate.Environment = suite.Environment;
         foreach (var summary in suite.Cases)
         {
             AddUnique(gate.CaseIds, summary.CaseId);
@@ -1847,6 +1848,7 @@ internal static class Program
         public string Summary { get; set; } = "";
         public List<string> Blockers { get; } = new List<string>();
         public List<string> Signals { get; } = new List<string>();
+        public PlaybackQualityComparisonSuiteEnvironment? Environment { get; set; }
         public List<string> FailureAreas { get; } = new List<string>();
         public List<string> TargetFailureAreas { get; } = new List<string>();
         public List<string> TargetCaseIds { get; } = new List<string>();

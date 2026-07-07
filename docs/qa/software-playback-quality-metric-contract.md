@@ -211,7 +211,7 @@ dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQ
 - `baselineReportAnalysis` / `candidateReportAnalysis`：baseline 和 candidate 每个 report 的 `modelAnalysis.optimizationGate` 摘要，包含 report 数量、已分析数量、缺失 analysis 数量、blocked 数量、聚合 `blockers`、`signals`、`failureAreas`、最高优先级 `targetFailureAreas`、对应 `targetCaseIds`，以及每个 case 的 `status`、`blockers`、`signals`、`failureAreas` 和 `targetFailureAreas`。
 - `suite`：只有 manifest、manifest coverage、report-set、baseline report-analysis 和 candidate report-analysis 都有效时才产生有效 before/after 比较结果。
 - `activeGate`：模型当前应处理的 gate。它是第一个 `status != pass` 的 gate；如果全部通过，则指向最终 `suite` gate。
-- `evidenceGates`：模型优先读取的门禁摘要，按 `manifest`、`manifest-coverage`、`baseline-report-set`、`candidate-report-set`、`baseline-report-analysis`、`candidate-report-analysis`、`suite` 顺序给出 `status`、`action`、`blockers`、`signals`、`failureAreas`、`targetFailureAreas`、`targetCaseIds` 和 `caseIds`。
+- `evidenceGates`：模型优先读取的门禁摘要，按 `manifest`、`manifest-coverage`、`baseline-report-set`、`candidate-report-set`、`baseline-report-analysis`、`candidate-report-analysis`、`suite` 顺序给出 `status`、`action`、`blockers`、`signals`、`failureAreas`、`targetFailureAreas`、`targetCaseIds` 和 `caseIds`。当 gate 来自 suite 时，还会带 `environment` 摘要，方便模型直接识别缺失、部分、同构建或不同构建的 before/after 证据。
 - `action`、`risk`、`reasons`、`blockers`：给模型直接使用的下一步决策摘要。
 
 自动化模型循环必须按以下规则消费结果：
@@ -219,7 +219,7 @@ dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQ
 - 先读取 `activeGate`。需要完整审计时再读取 `evidenceGates`；`activeGate` 总是从同一列表派生，避免模型重复推断当前入口。
 - 如果 `blockers` 包含 manifest、manifest coverage 或 report-set 问题，先修复样本集、证据采集、源选择、报告 runId 或 source metadata，不要修改播放核心。`manifest-coverage.incomplete` 表示样本目的覆盖不足，模型应先补 `activeGate.signals` 中列出的 missing purposes。
 - 如果 `baseline-report-analysis` 或 `candidate-report-analysis` 被阻断，优先读取该 gate 的 `blockers`、`signals`、`targetFailureAreas` 和 `caseIds`。这些字段来自对应 envelope 的 `modelAnalysis.optimizationGate`，表示报告自身还不能作为播放核心优化依据，例如 source mismatch、缺失证据或样本不足。此时 suite 会被跳过。
-- 如果 `activeGate.name = suite` 且被阻断，优先读取 `activeGate.targetFailureAreas` 和 `activeGate.targetCaseIds`，再按需展开 `suite.cases` 或单 case comparison。
+- 如果 `activeGate.name = suite` 且被阻断，优先读取 `activeGate.environment`、`activeGate.targetFailureAreas` 和 `activeGate.targetCaseIds`，再按需展开 `suite.cases` 或单 case comparison。
 - 需要定位具体 report 时，读取 `baselineReportAnalysis.cases` 或 `candidateReportAnalysis.cases`。raw `PlaybackQualityReport` 没有 envelope-level `modelAnalysis` 时会显示 `status = unavailable`；自动化采集应优先写入 `PlaybackQualityRunResult` envelope。如果 envelope 存在 `modelAnalysis` 但 `modelAnalysis.runId` / `modelAnalysis.result` 缺失，或 `modelAnalysis.analyzerVersion` 不匹配当前 analyzer，`evaluate-candidate` 必须用当前 Core analyzer 重新生成 analysis；空 `{}` 不得被视为有效 report-analysis 证据。
 - 只有当 `action = accept-candidate` 且 `risk = low` 时，候选播放核心改动才可以被自动保留。
 - `review-unmatched-signals`、`collect-comparable-evidence`、`change-optimization-strategy` 等动作都不是通过信号，模型应继续采集或缩小改动范围。
