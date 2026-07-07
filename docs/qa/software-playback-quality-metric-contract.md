@@ -17,6 +17,7 @@ The primary consumer of `quality-run` reports is an automated model or agent, no
 ## Required Top-Level Fields
 
 - `schemaVersion`: JSON schema version.
+- `evaluationVersion`: stable evaluation contract identifier for model and baseline compatibility, currently `playback-quality-v0.1`.
 - `metricVersion`: semantic version for metric meaning, initially `software-quality-v1`.
 - `runId`: stable case identifier.
 - `result`: `pass`, `fail`, or `observed`.
@@ -78,6 +79,7 @@ The analyzer output must include:
 
 - `analyzerVersion`，用于 CLI 判断 envelope 内嵌的 `modelAnalysis` 是否可复用；
 - `primaryFailureArea` copied from report analysis;
+- `primaryFailureClass` with the highest-priority failure responsibility/evidence class;
 - `environment` with collector version, player core version, source revision, build configuration, and evidence signals;
 - `startup` with command/start timestamps, startup duration, evidence signals, and failed startup signals;
 - `source` with parsed source status, HDR/Dolby Vision playback strategy, source evidence signals, and source mismatch signals;
@@ -184,7 +186,7 @@ When color expectations are supplied, the matching color-pipeline observations m
 
 `PlaybackQualityReportComposer` 会把 `PlaybackQualityReportRequest.Environment` 写入 report 和 model analysis。调用方显式传入的字段优先；缺失字段会从进程环境变量补齐：`NEXTGENEMBY_PLAYBACK_QUALITY_COLLECTOR_VERSION`、`NEXTGENEMBY_PLAYER_CORE_VERSION`、`NEXTGENEMBY_SOURCE_REVISION`、`NEXTGENEMBY_BUILD_CONFIGURATION`。自动化采集 baseline/candidate 时必须为 candidate 设置不同的 `SOURCE_REVISION` 或 `PLAYER_CORE_VERSION`，否则 comparison 会被判定为 `same-build` 或缺少构建证据，不能自动接受优化。
 
-`PlaybackQualityReportSerializer.Serialize(PlaybackQualityRunResult)` writes a single JSON envelope with top-level `schemaVersion = 1`, `caseMetadata`, `report`, and `modelAnalysis`. `caseMetadata` contains `caseId`, `category`, `severity`, and `stability` so a single report remains model-consumable without joining against the manifest. Automated runs should prefer this envelope when handing evidence to a model, while still allowing separate report or analysis JSON for debugging. The envelope `schemaVersion`, nested `report.schemaVersion`, and `modelAnalysis.analyzerVersion` version different contracts and should be checked independently.
+`PlaybackQualityReportSerializer.Serialize(PlaybackQualityRunResult)` writes a single JSON envelope with top-level `schemaVersion = 1`, `evaluationVersion`, `caseMetadata`, `report`, and `modelAnalysis`. `caseMetadata` contains `caseId`, `category`, `severity`, and `stability` so a single report remains model-consumable without joining against the manifest. Automated runs should prefer this envelope when handing evidence to a model, while still allowing separate report or analysis JSON for debugging. The envelope `schemaVersion`, `evaluationVersion`, nested `report.schemaVersion`, and `modelAnalysis.analyzerVersion` version different contracts and should be checked independently.
 
 `materialize-run-result` is the App-free CLI normalization command for captured evidence that is still a raw `PlaybackQualityReport` or an older envelope with stale/incomplete `modelAnalysis`. It reads `--report`, reruns the current Core analyzer with JSON field-presence evidence, and writes a standard `PlaybackQualityRunResult` envelope:
 

@@ -102,6 +102,7 @@ public sealed class PlaybackQualityReportAnalyzerTests
         Assert.Equal("hdr-and-pacing", analysis.RunId);
         Assert.Equal("fail", analysis.Result);
         Assert.Equal("color-pipeline", analysis.PrimaryFailureArea);
+        Assert.Equal("player-core bug", analysis.PrimaryFailureClass);
         Assert.Equal(new[] { "color-pipeline", "frame-pacing" }, analysis.FailureAreas);
         Assert.Equal(new[] { "player-core bug" }, analysis.FailureClasses);
         Assert.Contains("colorPipeline.actualHdrOutput", analysis.EvidenceSignals);

@@ -10,6 +10,7 @@ namespace NextGenEmby.Core.PlaybackQuality
         public string ExpectedBehavior { get; set; } = "";
         public string ActualBehavior { get; set; } = "";
         public string PrimaryFailureArea { get; set; } = "none";
+        public string PrimaryFailureClass { get; set; } = "none";
         public string SuggestedNextAction { get; set; } = "";
         public PlaybackQualityStartupAssessment Startup { get; set; } = new PlaybackQualityStartupAssessment();
         public PlaybackQualityEnvironmentAssessment Environment { get; set; } = new PlaybackQualityEnvironmentAssessment();
@@ -288,6 +289,7 @@ namespace NextGenEmby.Core.PlaybackQuality
             analysis.FramePacing = ClassifyFramePacing(analysis, report);
             AddInvestigationHints(analysis);
             AddTriageSteps(analysis);
+            analysis.PrimaryFailureClass = GetPrimaryFailureClass(analysis);
 
             if (string.IsNullOrWhiteSpace(analysis.SuggestedNextAction))
             {
@@ -297,6 +299,18 @@ namespace NextGenEmby.Core.PlaybackQuality
             }
 
             return analysis;
+        }
+
+        private static string GetPrimaryFailureClass(
+            PlaybackQualityModelAnalysis analysis)
+        {
+            if (analysis.FailureClasses.Count > 0 &&
+                !string.IsNullOrWhiteSpace(analysis.FailureClasses[0]))
+            {
+                return analysis.FailureClasses[0];
+            }
+
+            return "none";
         }
 
         private static void AddBehaviorSummary(

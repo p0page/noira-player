@@ -37,6 +37,8 @@ namespace NextGenEmby.Core.PlaybackQuality
 
     public sealed class PlaybackQualityRunResult
     {
+        public const string CurrentEvaluationVersion = "playback-quality-v0.1";
+
         public PlaybackQualityRunResult(
             PlaybackQualityReport report,
             PlaybackQualityModelAnalysis modelAnalysis,
@@ -51,6 +53,8 @@ namespace NextGenEmby.Core.PlaybackQuality
         }
 
         public int SchemaVersion { get; set; } = 1;
+
+        public string EvaluationVersion { get; set; } = CurrentEvaluationVersion;
 
         public PlaybackQualityCaseMetadata CaseMetadata { get; }
 
