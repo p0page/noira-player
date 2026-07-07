@@ -99,6 +99,11 @@ $commands = @(
         -Command 'powershell' `
         -Arguments @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', 'tools\quality-run\run-playback-quality-cli-smoke-test.ps1')
     New-CommandPlan `
+        -Name 'private-emby-reference-manifest-test' `
+        -Description 'Verify secret-safe private Emby reference manifest generation from offline media-source metadata.' `
+        -Command 'powershell' `
+        -Arguments @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', 'tools\quality-run\New-PrivateEmbyReferenceManifest.tests.ps1')
+    New-CommandPlan `
         -Name 'native-helper-test' `
         -Description 'Compile and run the standalone native playback quality metrics helper test.' `
         -Command 'cmd' `

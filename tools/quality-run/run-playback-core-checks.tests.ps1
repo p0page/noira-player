@@ -82,6 +82,10 @@ if (-not ($plan.commands | Where-Object { $_.name -eq 'playback-quality-cli-smok
     throw 'Expected playback-quality-cli-smoke-test command in playback-core validation plan.'
 }
 
+if (-not ($plan.commands | Where-Object { $_.name -eq 'private-emby-reference-manifest-test' })) {
+    throw 'Expected private-emby-reference-manifest-test command in playback-core validation plan.'
+}
+
 if (-not ($plan.commands | Where-Object { $_.name -eq 'native-display-refresh-test' })) {
     throw 'Expected native-display-refresh-test command in playback-core validation plan.'
 }
