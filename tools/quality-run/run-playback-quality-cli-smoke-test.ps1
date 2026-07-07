@@ -1013,6 +1013,10 @@ try {
     }
 
     $suite = Get-Content -Raw -LiteralPath $suitePath | ConvertFrom-Json
+    if ($suite.schemaVersion -ne 1) {
+        throw 'Expected playback quality CLI suite output schemaVersion 1.'
+    }
+
     if ($suite.action -ne 'accept-candidate') {
         throw 'Expected playback quality CLI suite action to accept candidate.'
     }
@@ -1053,6 +1057,10 @@ try {
     }
 
     $suiteFromReports = Get-Content -Raw -LiteralPath $suiteFromReportsPath | ConvertFrom-Json
+    if ($suiteFromReports.schemaVersion -ne 1) {
+        throw 'Expected playback quality CLI compare-suite output schemaVersion 1.'
+    }
+
     if ($suiteFromReports.action -ne 'accept-candidate') {
         throw 'Expected playback quality CLI compare-suite action to accept candidate.'
     }
@@ -1218,6 +1226,10 @@ try {
     }
 
     $runIdSuite = Get-Content -Raw -LiteralPath $runIdSuitePath | ConvertFrom-Json
+    if ($runIdSuite.schemaVersion -ne 1) {
+        throw 'Expected playback quality CLI compare-suite run-id matching output schemaVersion 1.'
+    }
+
     if ($runIdSuite.action -ne 'accept-candidate') {
         throw 'Expected playback quality CLI compare-suite run-id matching action to accept candidate.'
     }
@@ -2429,6 +2441,10 @@ try {
     }
 
     $stallSuite = Get-Content -Raw -LiteralPath $stallSuitePath | ConvertFrom-Json
+    if ($stallSuite.schemaVersion -ne 1) {
+        throw 'Expected playback quality CLI compare-suite stall output schemaVersion 1.'
+    }
+
     if ($stallSuite.action -ne 'change-optimization-strategy') {
         throw 'Expected playback quality CLI compare-suite stall action to change optimization strategy.'
     }

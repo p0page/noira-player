@@ -5,6 +5,7 @@ namespace NextGenEmby.Core.PlaybackQuality
 {
     public sealed class PlaybackQualityComparisonSuite
     {
+        public int SchemaVersion { get; set; } = 1;
         public int TotalComparisonCount { get; set; }
         public int ImprovedCount { get; set; }
         public int RegressedCount { get; set; }

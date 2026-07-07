@@ -17,6 +17,7 @@ public sealed class PlaybackQualityComparisonSuiteTests
 
         var suite = PlaybackQualityComparisonSuiteAggregator.Summarize(new[] { improved, unchanged });
 
+        Assert.Equal(1, suite.SchemaVersion);
         Assert.Equal(2, suite.TotalComparisonCount);
         Assert.Equal(1, suite.ImprovedCount);
         Assert.Equal(1, suite.UnchangedCount);
@@ -128,6 +129,7 @@ public sealed class PlaybackQualityComparisonSuiteTests
             summary.CaseIds.Contains("case-policy-change") &&
             summary.Directions.Contains("decreased"));
         var json = PlaybackQualityReportSerializer.Serialize(suite);
+        Assert.Contains("\"schemaVersion\": 1", json);
         Assert.Contains("\"policyChangeCount\": 1", json);
         Assert.Contains("\"outcome\": \"policy-changed\"", json);
     }
