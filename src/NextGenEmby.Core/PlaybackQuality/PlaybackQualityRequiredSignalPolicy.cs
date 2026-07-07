@@ -21,6 +21,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                 AddUnique(requiredSignals, "error.message");
                 AddUnique(requiredSignals, "error.failureClass");
                 AddUnique(requiredSignals, "error.failureArea");
+                AddUnique(requiredSignals, "lifecycle.error");
                 return requiredSignals;
             }
 
@@ -43,6 +44,17 @@ namespace NextGenEmby.Core.PlaybackQuality
             AddNullableSourceSignal(requiredSignals, expected.HasHdr10BaseLayer, "source.hasHdr10BaseLayer");
             AddNullableSourceSignal(requiredSignals, expected.HasHlgBaseLayer, "source.hasHlgBaseLayer");
 
+            if (IsExpectedUnsupportedSource(expected))
+            {
+                return requiredSignals;
+            }
+
+            AddUnique(requiredSignals, "lifecycle.load");
+            AddUnique(requiredSignals, "lifecycle.play");
+            AddUnique(requiredSignals, "lifecycle.pause");
+            AddUnique(requiredSignals, "lifecycle.resume");
+            AddUnique(requiredSignals, "lifecycle.stop");
+
             if (expected.MaxStartupDurationMs.HasValue)
             {
                 AddUnique(requiredSignals, "startup.startupDurationMs");
@@ -52,6 +64,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                 HasPurpose(referenceCase, "timeline") ||
                 HasPurpose(referenceCase, "seek"))
             {
+                AddUnique(requiredSignals, "lifecycle.seek");
                 AddUnique(requiredSignals, "position.seekTargetPositionTicks");
                 AddUnique(requiredSignals, "position.actualPositionTicks");
                 AddUnique(requiredSignals, "position.seekPositionErrorMs");
@@ -281,6 +294,33 @@ namespace NextGenEmby.Core.PlaybackQuality
                     return report.Source.DolbyVisionCompatibilityId.HasValue;
                 case "startup.startupDurationMs":
                     return report.Startup.StartupDurationMs > 0;
+                case "lifecycle.load":
+                    return HasLifecycleOperation(report, "load");
+                case "lifecycle.play":
+                    return HasLifecycleOperation(report, "play");
+                case "lifecycle.pause":
+                    return HasLifecycleOperation(report, "pause");
+                case "lifecycle.resume":
+                    return HasLifecycleOperation(report, "resume");
+                case "lifecycle.seek":
+                    return HasLifecycleOperation(report, "seek");
+                case "lifecycle.stop":
+                    return HasLifecycleOperation(report, "stop");
+                case "lifecycle.endOfStream":
+                    return HasLifecycleOperation(report, "endOfStream");
+                case "lifecycle.audio-switch":
+                    return HasLifecycleOperation(report, "audio-switch");
+                case "lifecycle.subtitle-switch":
+                    return HasLifecycleOperation(report, "subtitle-switch");
+                case "lifecycle.subtitle-off":
+                    return HasLifecycleOperation(report, "subtitle-off");
+                case "lifecycle.error":
+                    return HasLifecycleOperation(report, "error") ||
+                        HasLifecycleStatus(report, "error") ||
+                        HasLifecycleStatus(report, "failed");
+                case "lifecycle.skip":
+                    return HasLifecycleOperation(report, "skip") ||
+                        HasLifecycleStatus(report, "skipped");
                 case "position.requestedStartPositionTicks":
                     return report.Position.RequestedStartPositionTicks.HasValue;
                 case "position.seekTargetPositionTicks":
@@ -388,6 +428,36 @@ namespace NextGenEmby.Core.PlaybackQuality
             foreach (var presentSignal in presentSignals)
             {
                 if (string.Equals(presentSignal, signal, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool HasLifecycleOperation(
+            PlaybackQualityReport report,
+            string operation)
+        {
+            foreach (var item in report.Lifecycle.Events)
+            {
+                if (string.Equals(item.Operation, operation, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool HasLifecycleStatus(
+            PlaybackQualityReport report,
+            string status)
+        {
+            foreach (var item in report.Lifecycle.Events)
+            {
+                if (string.Equals(item.Status, status, StringComparison.Ordinal))
                 {
                     return true;
                 }

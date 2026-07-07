@@ -19,6 +19,8 @@ namespace NextGenEmby.Core.PlaybackQuality
 
         public PlaybackQualityStartup? Startup { get; set; }
 
+        public PlaybackQualityLifecycle? Lifecycle { get; set; }
+
         public PlaybackQualityEnvironment? Environment { get; set; }
 
         public PlaybackQualityExpected? Expected { get; set; }
@@ -125,6 +127,11 @@ namespace NextGenEmby.Core.PlaybackQuality
                 report.Startup = request.Startup;
             }
 
+            if (request.Lifecycle != null)
+            {
+                report.Lifecycle = CloneLifecycle(request.Lifecycle);
+            }
+
             if (request.Environment != null)
             {
                 report.Environment = MergeEnvironment(request.Environment);
@@ -173,6 +180,30 @@ namespace NextGenEmby.Core.PlaybackQuality
                 HasSnapshot = source.HasSnapshot,
                 HasPlaybackSample = source.HasPlaybackSample
             };
+        }
+
+        private static PlaybackQualityLifecycle CloneLifecycle(
+            PlaybackQualityLifecycle source)
+        {
+            var lifecycle = new PlaybackQualityLifecycle();
+            foreach (var item in source.Events)
+            {
+                if (item == null)
+                {
+                    continue;
+                }
+
+                lifecycle.Events.Add(new PlaybackQualityLifecycleEvent
+                {
+                    Operation = item.Operation,
+                    Status = item.Status,
+                    State = item.State,
+                    PositionTicks = item.PositionTicks,
+                    Message = item.Message
+                });
+            }
+
+            return lifecycle;
         }
 
         private static PlaybackQualityEnvironment MergeEnvironment(

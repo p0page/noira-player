@@ -22,6 +22,7 @@ namespace NextGenEmby.Core.PlaybackQuality
         public PlaybackQualityExpected? Expected { get; set; }
         public PlaybackQualitySource Source { get; set; } = new PlaybackQualitySource();
         public PlaybackQualityStartup Startup { get; set; } = new PlaybackQualityStartup();
+        public PlaybackQualityLifecycle Lifecycle { get; set; } = new PlaybackQualityLifecycle();
         public PlaybackQualityPosition Position { get; set; } = new PlaybackQualityPosition();
         public PlaybackQualityTracks Tracks { get; set; } = new PlaybackQualityTracks();
         public PlaybackQualityError Error { get; set; } = new PlaybackQualityError();
@@ -90,6 +91,21 @@ namespace NextGenEmby.Core.PlaybackQuality
         public string CommandReceivedAt { get; set; } = "";
         public string PlaybackStartedAt { get; set; } = "";
         public double StartupDurationMs { get; set; }
+    }
+
+    public sealed class PlaybackQualityLifecycle
+    {
+        public List<PlaybackQualityLifecycleEvent> Events { get; } =
+            new List<PlaybackQualityLifecycleEvent>();
+    }
+
+    public sealed class PlaybackQualityLifecycleEvent
+    {
+        public string Operation { get; set; } = "";
+        public string Status { get; set; } = "observed";
+        public string State { get; set; } = "";
+        public long? PositionTicks { get; set; }
+        public string Message { get; set; } = "";
     }
 
     public sealed class PlaybackQualityRuntimeMetrics

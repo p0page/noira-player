@@ -97,6 +97,14 @@ namespace NextGenEmby.Core.PlaybackQuality
             report.Error.FailureArea = string.IsNullOrWhiteSpace(report.Error.FailureArea)
                 ? "error-handling"
                 : report.Error.FailureArea;
+            report.Lifecycle.Events.Add(new PlaybackQualityLifecycleEvent
+            {
+                Operation = string.IsNullOrWhiteSpace(report.Error.Operation)
+                    ? "error"
+                    : report.Error.Operation,
+                Status = "error",
+                Message = report.Error.Message
+            });
 
             var failureClass = string.IsNullOrWhiteSpace(report.Error.FailureClass)
                 ? "needs human confirmation"
@@ -112,6 +120,7 @@ namespace NextGenEmby.Core.PlaybackQuality
             AddErrorSignal(report, "error.exceptionType");
             AddErrorSignal(report, "error.failureClass");
             AddErrorSignal(report, "error.failureArea");
+            AddErrorSignal(report, "lifecycle.error");
 
             report.Checks.Add(new PlaybackQualityCheck
             {
@@ -160,6 +169,14 @@ namespace NextGenEmby.Core.PlaybackQuality
             report.Skip.FailureClass = string.IsNullOrWhiteSpace(report.Skip.FailureClass)
                 ? "needs human confirmation"
                 : report.Skip.FailureClass;
+            report.Lifecycle.Events.Add(new PlaybackQualityLifecycleEvent
+            {
+                Operation = string.IsNullOrWhiteSpace(report.Skip.Operation)
+                    ? "skip"
+                    : report.Skip.Operation,
+                Status = "skipped",
+                Message = report.Skip.Reason
+            });
 
             var message = FormatSkipMessage(report.Skip);
             report.FailureReasons.Add(message);
@@ -173,6 +190,7 @@ namespace NextGenEmby.Core.PlaybackQuality
             AddSkipSignal(report, "skip.failureArea");
             AddSkipSignal(report, "skip.isExpected");
             AddSkipSignal(report, "skip.isRetriable");
+            AddSkipSignal(report, "lifecycle.skip");
 
             report.Checks.Add(new PlaybackQualityCheck
             {

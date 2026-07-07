@@ -47,6 +47,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                 referenceCase,
                 CreateDisplayStatus(referenceCase));
             var orchestrator = new PlaybackOrchestrator(backend);
+            var lifecycle = new PlaybackQualityLifecycle();
             var itemId = string.IsNullOrWhiteSpace(referenceCase.ItemId)
                 ? referenceCase.CaseId
                 : referenceCase.ItemId;
@@ -56,33 +57,94 @@ namespace NextGenEmby.Core.PlaybackQuality
                 new[] { mediaSource },
                 referenceCase.StartPositionTicks,
                 mediaSource.Id).ConfigureAwait(false);
+            AddLifecycleEvent(
+                lifecycle,
+                "load",
+                backend.CurrentPositionTicks,
+                orchestrator.State.ToString(),
+                "core-probe selected source and created playback descriptor");
+            AddLifecycleEvent(
+                lifecycle,
+                "play",
+                backend.CurrentPositionTicks,
+                orchestrator.State.ToString(),
+                "core-probe started playback");
             await orchestrator.PauseAsync().ConfigureAwait(false);
+            AddLifecycleEvent(
+                lifecycle,
+                "pause",
+                backend.CurrentPositionTicks,
+                orchestrator.State.ToString(),
+                "core-probe paused playback");
             await orchestrator.ResumeAsync().ConfigureAwait(false);
+            AddLifecycleEvent(
+                lifecycle,
+                "resume",
+                backend.CurrentPositionTicks,
+                orchestrator.State.ToString(),
+                "core-probe resumed playback");
 
             if (HasPurpose(referenceCase, "audio-switch"))
             {
                 await orchestrator.SwitchAudioStreamAsync(1).ConfigureAwait(false);
+                AddLifecycleEvent(
+                    lifecycle,
+                    "audio-switch",
+                    backend.CurrentPositionTicks,
+                    orchestrator.State.ToString(),
+                    "core-probe switched audio stream");
             }
 
             if (HasPurpose(referenceCase, "subtitle-switch"))
             {
                 await orchestrator.SwitchSubtitleStreamAsync(3).ConfigureAwait(false);
+                AddLifecycleEvent(
+                    lifecycle,
+                    "subtitle-switch",
+                    backend.CurrentPositionTicks,
+                    orchestrator.State.ToString(),
+                    "core-probe switched subtitle stream");
             }
             else if (HasPurpose(referenceCase, "subtitle-off"))
             {
                 await orchestrator.SwitchSubtitleStreamAsync(3).ConfigureAwait(false);
+                AddLifecycleEvent(
+                    lifecycle,
+                    "subtitle-switch",
+                    backend.CurrentPositionTicks,
+                    orchestrator.State.ToString(),
+                    "core-probe switched subtitle stream");
                 await orchestrator.SwitchSubtitleStreamAsync(null).ConfigureAwait(false);
+                AddLifecycleEvent(
+                    lifecycle,
+                    "subtitle-off",
+                    backend.CurrentPositionTicks,
+                    orchestrator.State.ToString(),
+                    "core-probe disabled subtitles");
             }
 
             var seekTargetTicks = ResolveSeekTargetTicks(referenceCase);
             if (ShouldProbeSeek(referenceCase))
             {
                 await orchestrator.SeekAsync(seekTargetTicks).ConfigureAwait(false);
+                AddLifecycleEvent(
+                    lifecycle,
+                    "seek",
+                    backend.CurrentPositionTicks,
+                    orchestrator.State.ToString(),
+                    "core-probe seeked playback");
             }
 
             var descriptor = orchestrator.CurrentDescriptor ??
                 throw new InvalidOperationException("Core probe could not capture playback descriptor.");
             var actualPositionTicks = backend.CurrentPositionTicks;
+            await orchestrator.StopAsync().ConfigureAwait(false);
+            AddLifecycleEvent(
+                lifecycle,
+                "stop",
+                backend.CurrentPositionTicks,
+                orchestrator.State.ToString(),
+                "core-probe stopped playback");
             var request = PlaybackQualityRuntimeEvidenceCollector.CreateRequest(
                 referenceCase,
                 descriptor,
@@ -90,6 +152,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                 backend,
                 CreateStartup(),
                 environment);
+            request.Lifecycle = lifecycle;
 
             var composed = PlaybackQualityReportComposer.Compose(request);
             var report = composed.Report;
@@ -101,8 +164,6 @@ namespace NextGenEmby.Core.PlaybackQuality
                 HasPurpose(referenceCase, "hdr-force-sdr");
             AddProbeLimitations(report.Limitations);
             PlaybackQualityEvaluator.Evaluate(report);
-
-            await orchestrator.StopAsync().ConfigureAwait(false);
 
             return new PlaybackQualityRunResult(
                 report,
@@ -406,6 +467,23 @@ namespace NextGenEmby.Core.PlaybackQuality
             AddUnique(
                 limitations,
                 "core-probe: startup, display, timing, buffering, and A/V sync values are deterministic probe telemetry");
+        }
+
+        private static void AddLifecycleEvent(
+            PlaybackQualityLifecycle lifecycle,
+            string operation,
+            long? positionTicks,
+            string state,
+            string message)
+        {
+            lifecycle.Events.Add(new PlaybackQualityLifecycleEvent
+            {
+                Operation = operation,
+                Status = "observed",
+                State = state,
+                PositionTicks = positionTicks,
+                Message = message
+            });
         }
 
         private static void AddUnique(List<string> values, string value)

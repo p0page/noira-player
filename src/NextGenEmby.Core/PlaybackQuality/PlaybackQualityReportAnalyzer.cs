@@ -13,6 +13,7 @@ namespace NextGenEmby.Core.PlaybackQuality
         public string PrimaryFailureClass { get; set; } = "none";
         public string SuggestedNextAction { get; set; } = "";
         public PlaybackQualityStartupAssessment Startup { get; set; } = new PlaybackQualityStartupAssessment();
+        public PlaybackQualityLifecycleAssessment Lifecycle { get; set; } = new PlaybackQualityLifecycleAssessment();
         public PlaybackQualityEnvironmentAssessment Environment { get; set; } = new PlaybackQualityEnvironmentAssessment();
         public PlaybackQualitySourceAssessment Source { get; set; } = new PlaybackQualitySourceAssessment();
         public PlaybackQualityTracksAssessment Tracks { get; set; } = new PlaybackQualityTracksAssessment();
@@ -46,6 +47,15 @@ namespace NextGenEmby.Core.PlaybackQuality
         public double StartupDurationMs { get; set; }
         public List<string> Signals { get; } = new List<string>();
         public List<string> FailedSignals { get; } = new List<string>();
+    }
+
+    public sealed class PlaybackQualityLifecycleAssessment
+    {
+        public string Status { get; set; } = "unknown";
+        public string Reason { get; set; } = "";
+        public List<string> Operations { get; } = new List<string>();
+        public List<string> Signals { get; } = new List<string>();
+        public List<string> MissingOperations { get; } = new List<string>();
     }
 
     public sealed class PlaybackQualityEnvironmentAssessment
@@ -290,6 +300,7 @@ namespace NextGenEmby.Core.PlaybackQuality
             AddBehaviorSummary(analysis, report);
             analysis.Sample = AssessSample(report);
             analysis.Startup = AssessStartup(report);
+            analysis.Lifecycle = AssessLifecycle(report);
             analysis.Environment = AssessEnvironment(report);
             analysis.Source = AssessSource(report);
             analysis.Tracks = AssessTracks(report);
@@ -749,6 +760,97 @@ namespace NextGenEmby.Core.PlaybackQuality
             startup.Status = "ready";
             startup.Reason = "Startup telemetry is available and no startup threshold failed.";
             return startup;
+        }
+
+        private static PlaybackQualityLifecycleAssessment AssessLifecycle(
+            PlaybackQualityReport report)
+        {
+            var lifecycle = new PlaybackQualityLifecycleAssessment();
+            foreach (var item in report.Lifecycle.Events)
+            {
+                if (item == null || string.IsNullOrWhiteSpace(item.Operation))
+                {
+                    continue;
+                }
+
+                var operation = item.Operation;
+                AddUnique(lifecycle.Operations, operation);
+                AddUnique(lifecycle.Signals, "lifecycle." + operation);
+                if (string.Equals(item.Status, "error", System.StringComparison.Ordinal) ||
+                    string.Equals(item.Status, "failed", System.StringComparison.Ordinal))
+                {
+                    AddUnique(lifecycle.Signals, "lifecycle.error");
+                }
+            }
+
+            if (lifecycle.Signals.Count == 0)
+            {
+                lifecycle.Status = "missing-evidence";
+                lifecycle.Reason = "Playback lifecycle event telemetry is missing.";
+                AddRequiredLifecycleOperations(lifecycle, report);
+                return lifecycle;
+            }
+
+            AddRequiredLifecycleOperations(lifecycle, report);
+            if (lifecycle.MissingOperations.Count > 0)
+            {
+                lifecycle.Status = "partial";
+                lifecycle.Reason = "Playback lifecycle telemetry is present but incomplete.";
+                return lifecycle;
+            }
+
+            if (lifecycle.Signals.Contains("lifecycle.error"))
+            {
+                lifecycle.Status = "error";
+                lifecycle.Reason = "Playback lifecycle telemetry captured a terminal error.";
+                return lifecycle;
+            }
+
+            lifecycle.Status = "observed";
+            lifecycle.Reason = "Playback lifecycle telemetry captured required operations.";
+            return lifecycle;
+        }
+
+        private static void AddRequiredLifecycleOperations(
+            PlaybackQualityLifecycleAssessment lifecycle,
+            PlaybackQualityReport report)
+        {
+            if (report.Result == "skip")
+            {
+                return;
+            }
+
+            if (report.Result == "error")
+            {
+                AddMissingLifecycleOperation(lifecycle, "error");
+                return;
+            }
+
+            if (report.Result == "unsupported")
+            {
+                return;
+            }
+
+            AddMissingLifecycleOperation(lifecycle, "load");
+            AddMissingLifecycleOperation(lifecycle, "play");
+            AddMissingLifecycleOperation(lifecycle, "pause");
+            AddMissingLifecycleOperation(lifecycle, "resume");
+            AddMissingLifecycleOperation(lifecycle, "stop");
+            if (report.Position.SeekTargetPositionTicks.HasValue)
+            {
+                AddMissingLifecycleOperation(lifecycle, "seek");
+            }
+        }
+
+        private static void AddMissingLifecycleOperation(
+            PlaybackQualityLifecycleAssessment lifecycle,
+            string operation)
+        {
+            if (!lifecycle.Operations.Contains(operation) &&
+                !lifecycle.Signals.Contains("lifecycle." + operation))
+            {
+                AddUnique(lifecycle.MissingOperations, operation);
+            }
         }
 
         private static PlaybackQualityEnvironmentAssessment AssessEnvironment(
@@ -1603,7 +1705,17 @@ namespace NextGenEmby.Core.PlaybackQuality
                     analysis.MissingEvidence.Add("error.code");
                 }
 
+                foreach (var operation in analysis.Lifecycle.MissingOperations)
+                {
+                    AddUnique(analysis.MissingEvidence, "lifecycle." + operation);
+                }
+
                 return;
+            }
+
+            foreach (var operation in analysis.Lifecycle.MissingOperations)
+            {
+                AddUnique(analysis.MissingEvidence, "lifecycle." + operation);
             }
 
             if (string.IsNullOrWhiteSpace(report.Source.Codec))
@@ -2141,6 +2253,11 @@ namespace NextGenEmby.Core.PlaybackQuality
             }
 
             foreach (var signal in analysis.Tracks.Signals)
+            {
+                AddUnique(analysis.EvidenceSignals, signal);
+            }
+
+            foreach (var signal in analysis.Lifecycle.Signals)
             {
                 AddUnique(analysis.EvidenceSignals, signal);
             }

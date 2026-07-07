@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Threading.Tasks;
 using NextGenEmby.Core.PlaybackQuality;
 using Xunit;
@@ -87,6 +88,23 @@ public sealed class PlaybackQualityOrchestratorProbeTests
         Assert.Equal(1, result.Report.Tracks.SubtitleTrackCount);
         Assert.Equal(1, result.Report.Tracks.SelectedAudioStreamIndex);
         Assert.Equal(3, result.Report.Tracks.SelectedSubtitleStreamIndex);
+        var lifecycleOperations = result.Report.Lifecycle.Events
+            .Select(item => item.Operation)
+            .ToArray();
+        Assert.Contains("load", lifecycleOperations);
+        Assert.Contains("play", lifecycleOperations);
+        Assert.Contains("pause", lifecycleOperations);
+        Assert.Contains("resume", lifecycleOperations);
+        Assert.Contains("seek", lifecycleOperations);
+        Assert.Contains("stop", lifecycleOperations);
+        Assert.All(result.Report.Lifecycle.Events, item => Assert.Equal("observed", item.Status));
+        Assert.Equal("observed", result.ModelAnalysis.Lifecycle.Status);
+        Assert.Contains("lifecycle.load", result.ModelAnalysis.EvidenceSignals);
+        Assert.Contains("lifecycle.play", result.ModelAnalysis.EvidenceSignals);
+        Assert.Contains("lifecycle.pause", result.ModelAnalysis.EvidenceSignals);
+        Assert.Contains("lifecycle.resume", result.ModelAnalysis.EvidenceSignals);
+        Assert.Contains("lifecycle.seek", result.ModelAnalysis.EvidenceSignals);
+        Assert.Contains("lifecycle.stop", result.ModelAnalysis.EvidenceSignals);
         Assert.Contains(
             "core-probe: PlaybackOrchestrator lifecycle was executed with an in-process diagnostic backend",
             result.Report.Limitations);

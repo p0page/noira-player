@@ -1260,7 +1260,49 @@ internal static class Program
                 descriptor.Signal);
         }
 
+        AddLifecyclePresentSignals(signals, reportElement);
         return signals;
+    }
+
+    private static void AddLifecyclePresentSignals(
+        List<string> signals,
+        JsonElement reportElement)
+    {
+        if (reportElement.ValueKind != JsonValueKind.Object ||
+            !TryGetPropertyIgnoreCase(reportElement, "lifecycle", out var lifecycle) ||
+            lifecycle.ValueKind != JsonValueKind.Object ||
+            !TryGetPropertyIgnoreCase(lifecycle, "events", out var events) ||
+            events.ValueKind != JsonValueKind.Array)
+        {
+            return;
+        }
+
+        foreach (var item in events.EnumerateArray())
+        {
+            if (item.ValueKind != JsonValueKind.Object ||
+                !TryGetPropertyIgnoreCase(item, "operation", out var operationElement) ||
+                operationElement.ValueKind != JsonValueKind.String)
+            {
+                continue;
+            }
+
+            var operation = operationElement.GetString();
+            if (!string.IsNullOrWhiteSpace(operation))
+            {
+                AddUnique(signals, "lifecycle." + operation);
+            }
+
+            if (TryGetPropertyIgnoreCase(item, "status", out var statusElement) &&
+                statusElement.ValueKind == JsonValueKind.String)
+            {
+                var status = statusElement.GetString();
+                if (string.Equals(status, "error", StringComparison.Ordinal) ||
+                    string.Equals(status, "failed", StringComparison.Ordinal))
+                {
+                    AddUnique(signals, "lifecycle.error");
+                }
+            }
+        }
     }
 
     private static void AddNestedPresentSignal(
@@ -2254,13 +2296,16 @@ internal static class Program
             new ReportAnalysisCapabilityDefinition(
                 "lifecycle",
                 "startup",
-                "Collect lifecycle timestamps or structured error/skip operation evidence.",
+                "Collect structured lifecycle operation evidence before diagnosing playback state transitions.",
                 false,
-                "startup.commandReceivedAt",
-                "startup.playbackStartedAt",
-                "startup.startupDurationMs",
-                "error.operation",
-                "skip.operation"),
+                "lifecycle.load",
+                "lifecycle.play",
+                "lifecycle.pause",
+                "lifecycle.resume",
+                "lifecycle.seek",
+                "lifecycle.stop",
+                "lifecycle.endOfStream",
+                "lifecycle.error"),
             new ReportAnalysisCapabilityDefinition(
                 "seek-resume",
                 "timeline",

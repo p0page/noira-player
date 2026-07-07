@@ -478,6 +478,12 @@ public sealed class PlaybackQualityReferenceManifestTests
                 FailureArea = "error-handling"
             }
         };
+        report.Lifecycle.Events.Add(new PlaybackQualityLifecycleEvent
+        {
+            Operation = "open",
+            Status = "error",
+            Message = "The media file was not found."
+        });
 
         var validation = PlaybackQualityReferenceReportSetValidator.Validate(
             manifest,
@@ -785,6 +791,11 @@ public sealed class PlaybackQualityReferenceManifestTests
         entry.PresentSignals.Add("source.height");
         entry.PresentSignals.Add("source.frameRate");
         entry.PresentSignals.Add("source.hdrKind");
+        entry.PresentSignals.Add("lifecycle.load");
+        entry.PresentSignals.Add("lifecycle.play");
+        entry.PresentSignals.Add("lifecycle.pause");
+        entry.PresentSignals.Add("lifecycle.resume");
+        entry.PresentSignals.Add("lifecycle.stop");
         entry.PresentSignals.Add("colorPipeline.conversionStatus");
         entry.PresentSignals.Add("buffers.videoStarvedPasses");
         entry.PresentSignals.Add("buffers.audioStarvedPasses");
@@ -1083,7 +1094,7 @@ public sealed class PlaybackQualityReferenceManifestTests
         double frameRate,
         string hdrKind)
     {
-        return new PlaybackQualityReport
+        var report = new PlaybackQualityReport
         {
             RunId = runId,
             Source = new PlaybackQualitySource
@@ -1095,5 +1106,27 @@ public sealed class PlaybackQualityReferenceManifestTests
                 HdrKind = hdrKind
             }
         };
+        AddObservedLifecycle(report);
+        return report;
+    }
+
+    private static void AddObservedLifecycle(PlaybackQualityReport report)
+    {
+        AddObservedLifecycleEvent(report, "load");
+        AddObservedLifecycleEvent(report, "play");
+        AddObservedLifecycleEvent(report, "pause");
+        AddObservedLifecycleEvent(report, "resume");
+        AddObservedLifecycleEvent(report, "stop");
+    }
+
+    private static void AddObservedLifecycleEvent(
+        PlaybackQualityReport report,
+        string operation)
+    {
+        report.Lifecycle.Events.Add(new PlaybackQualityLifecycleEvent
+        {
+            Operation = operation,
+            Status = "observed"
+        });
     }
 }

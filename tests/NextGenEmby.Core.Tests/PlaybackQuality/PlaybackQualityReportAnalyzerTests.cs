@@ -1698,8 +1698,29 @@ public sealed class PlaybackQualityReportAnalyzerTests
             Expected = "105.000",
             Actual = "180.000"
         });
+        AddObservedLifecycle(report);
 
         return report;
+    }
+
+    private static void AddObservedLifecycle(PlaybackQualityReport report)
+    {
+        AddObservedLifecycleEvent(report, "load");
+        AddObservedLifecycleEvent(report, "play");
+        AddObservedLifecycleEvent(report, "pause");
+        AddObservedLifecycleEvent(report, "resume");
+        AddObservedLifecycleEvent(report, "stop");
+    }
+
+    private static void AddObservedLifecycleEvent(
+        PlaybackQualityReport report,
+        string operation)
+    {
+        report.Lifecycle.Events.Add(new PlaybackQualityLifecycleEvent
+        {
+            Operation = operation,
+            Status = "observed"
+        });
     }
 
     private static void AddAnalysisSignals(
@@ -1710,6 +1731,7 @@ public sealed class PlaybackQualityReportAnalyzerTests
         AddSignals(signals, analysis.MissingEvidence);
         AddSignals(signals, analysis.Startup.Signals);
         AddSignals(signals, analysis.Startup.FailedSignals);
+        AddSignals(signals, analysis.Lifecycle.Signals);
         AddSignals(signals, analysis.Source.Signals);
         AddSignals(signals, analysis.Source.MismatchedSignals);
         AddSignals(signals, analysis.ColorPipeline.Signals);

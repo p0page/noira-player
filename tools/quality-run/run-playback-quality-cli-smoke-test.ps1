@@ -871,10 +871,27 @@ try {
         throw 'Expected core probe report to carry native graph limitation.'
     }
 
+    $coreProbeLifecycleOperations = @(
+        $coreProbeReport.report.lifecycle.events |
+            Where-Object { $_.status -eq 'observed' } |
+            ForEach-Object { $_.operation }
+    )
+    foreach ($operation in @('load', 'play', 'pause', 'resume', 'seek', 'stop')) {
+        if (-not ($coreProbeLifecycleOperations -contains $operation)) {
+            throw "Expected core probe report to expose observed lifecycle operation '$operation'."
+        }
+    }
+
     if (-not ($coreProbeReport.modelAnalysis.evidenceSignals -contains 'position.seekPositionErrorMs') -or
         -not ($coreProbeReport.modelAnalysis.evidenceSignals -contains 'tracks.selectedAudioStreamIndex') -or
-        -not ($coreProbeReport.modelAnalysis.evidenceSignals -contains 'tracks.selectedSubtitleStreamIndex')) {
-        throw 'Expected core probe model analysis to expose timeline and track-switch evidence signals.'
+        -not ($coreProbeReport.modelAnalysis.evidenceSignals -contains 'tracks.selectedSubtitleStreamIndex') -or
+        -not ($coreProbeReport.modelAnalysis.evidenceSignals -contains 'lifecycle.load') -or
+        -not ($coreProbeReport.modelAnalysis.evidenceSignals -contains 'lifecycle.play') -or
+        -not ($coreProbeReport.modelAnalysis.evidenceSignals -contains 'lifecycle.pause') -or
+        -not ($coreProbeReport.modelAnalysis.evidenceSignals -contains 'lifecycle.resume') -or
+        -not ($coreProbeReport.modelAnalysis.evidenceSignals -contains 'lifecycle.seek') -or
+        -not ($coreProbeReport.modelAnalysis.evidenceSignals -contains 'lifecycle.stop')) {
+        throw 'Expected core probe model analysis to expose lifecycle, timeline, and track-switch evidence signals.'
     }
 
     Push-Location $repoRoot
@@ -1009,6 +1026,15 @@ try {
     "frameRate": 23.976,
     "hdrKind": "Hdr10"
   },
+  "lifecycle": {
+    "events": [
+      { "operation": "load", "status": "observed" },
+      { "operation": "play", "status": "observed" },
+      { "operation": "pause", "status": "observed" },
+      { "operation": "resume", "status": "observed" },
+      { "operation": "stop", "status": "observed" }
+    ]
+  },
   "timing": {
     "renderedVideoFrames": 1440,
     "expectedFrameDurationMs": 41.708,
@@ -1054,6 +1080,15 @@ try {
     "failureArea": "error-handling",
     "isTerminal": true,
     "isRetriable": false
+  },
+  "lifecycle": {
+    "events": [
+      {
+        "operation": "open",
+        "status": "error",
+        "message": "The media file was not found."
+      }
+    ]
   }
 }
 '@ | Set-Content -LiteralPath (Join-Path $reportSetDir 'case-error.json') -Encoding UTF8
@@ -1212,6 +1247,15 @@ try {
     "height": 2160,
     "frameRate": 23.976,
     "hdrKind": "Hdr10"
+  },
+  "lifecycle": {
+    "events": [
+      { "operation": "load", "status": "observed" },
+      { "operation": "play", "status": "observed" },
+      { "operation": "pause", "status": "observed" },
+      { "operation": "resume", "status": "observed" },
+      { "operation": "stop", "status": "observed" }
+    ]
   },
   "buffers": {
     "videoStarvedPasses": 0,
@@ -1601,6 +1645,16 @@ try {
     "frameRate": 23.976,
     "hdrKind": "Sdr"
   },
+  "lifecycle": {
+    "events": [
+      { "operation": "load", "status": "observed" },
+      { "operation": "play", "status": "observed" },
+      { "operation": "pause", "status": "observed" },
+      { "operation": "resume", "status": "observed" },
+      { "operation": "seek", "status": "observed" },
+      { "operation": "stop", "status": "observed" }
+    ]
+  },
   "tracks": {
     "videoTrackCount": 1,
     "audioTrackCount": 1,
@@ -1688,6 +1742,16 @@ try {
     "height": 2160,
     "frameRate": 23.976,
     "hdrKind": "Sdr"
+  },
+  "lifecycle": {
+    "events": [
+      { "operation": "load", "status": "observed" },
+      { "operation": "play", "status": "observed" },
+      { "operation": "pause", "status": "observed" },
+      { "operation": "resume", "status": "observed" },
+      { "operation": "seek", "status": "observed" },
+      { "operation": "stop", "status": "observed" }
+    ]
   },
   "tracks": {
     "videoTrackCount": 1,
@@ -1780,6 +1844,15 @@ try {
     "isTerminal": true,
     "isRetriable": false
   },
+  "lifecycle": {
+    "events": [
+      {
+        "operation": "open",
+        "status": "error",
+        "message": "The media file was not found."
+      }
+    ]
+  },
   "checks": [
     {
       "name": "PlaybackRuntimeError",
@@ -1813,6 +1886,15 @@ try {
     "failureArea": "error-handling",
     "isTerminal": true,
     "isRetriable": false
+  },
+  "lifecycle": {
+    "events": [
+      {
+        "operation": "open",
+        "status": "error",
+        "message": "The media file was not found."
+      }
+    ]
   },
   "checks": [
     {
@@ -2370,6 +2452,16 @@ try {
       "frameRate": 23.976,
       "hdrKind": "Sdr"
     },
+    "lifecycle": {
+      "events": [
+        { "operation": "load", "status": "observed" },
+        { "operation": "play", "status": "observed" },
+        { "operation": "pause", "status": "observed" },
+        { "operation": "resume", "status": "observed" },
+        { "operation": "seek", "status": "observed" },
+        { "operation": "stop", "status": "observed" }
+      ]
+    },
     "tracks": {
       "videoTrackCount": 1,
       "audioTrackCount": 1,
@@ -2454,6 +2546,16 @@ try {
       "height": 2160,
       "frameRate": 23.976,
       "hdrKind": "Sdr"
+    },
+    "lifecycle": {
+      "events": [
+        { "operation": "load", "status": "observed" },
+        { "operation": "play", "status": "observed" },
+        { "operation": "pause", "status": "observed" },
+        { "operation": "resume", "status": "observed" },
+        { "operation": "seek", "status": "observed" },
+        { "operation": "stop", "status": "observed" }
+      ]
     },
     "tracks": {
       "videoTrackCount": 1,
@@ -2720,6 +2822,16 @@ try {
       "frameRate": 23.976,
       "hdrKind": "Sdr"
     },
+    "lifecycle": {
+      "events": [
+        { "operation": "load", "status": "observed" },
+        { "operation": "play", "status": "observed" },
+        { "operation": "pause", "status": "observed" },
+        { "operation": "resume", "status": "observed" },
+        { "operation": "seek", "status": "observed" },
+        { "operation": "stop", "status": "observed" }
+      ]
+    },
     "tracks": {
       "videoTrackCount": 1,
       "audioTrackCount": 1,
@@ -2896,6 +3008,16 @@ try {
       "height": 2160,
       "frameRate": 23.976,
       "hdrKind": "Sdr"
+    },
+    "lifecycle": {
+      "events": [
+        { "operation": "load", "status": "observed" },
+        { "operation": "play", "status": "observed" },
+        { "operation": "pause", "status": "observed" },
+        { "operation": "resume", "status": "observed" },
+        { "operation": "seek", "status": "observed" },
+        { "operation": "stop", "status": "observed" }
+      ]
     },
     "tracks": {
       "videoTrackCount": 1,
@@ -3443,6 +3565,7 @@ try {
         $_.captureMode -eq 'emby-item' -and
         $_.devCommand.route -eq 'quality-run' -and
         $_.devCommand.startPositionTicks -eq 600000000 -and
+        ($_.requiredSignals -contains 'lifecycle.seek') -and
         ($_.requiredSignals -contains 'position.seekTargetPositionTicks') -and
         ($_.requiredSignals -contains 'position.actualPositionTicks') -and
         ($_.requiredSignals -contains 'position.seekPositionErrorMs')
@@ -3455,6 +3578,11 @@ try {
         $_.category -eq 'stable' -and
         $_.severity -eq 'high' -and
         $_.stability -eq 'stable' -and
+        ($_.requiredSignals -contains 'lifecycle.load') -and
+        ($_.requiredSignals -contains 'lifecycle.play') -and
+        ($_.requiredSignals -contains 'lifecycle.pause') -and
+        ($_.requiredSignals -contains 'lifecycle.resume') -and
+        ($_.requiredSignals -contains 'lifecycle.stop') -and
         ($_.requiredSignals -contains 'tracks.videoTrackCount') -and
         ($_.requiredSignals -contains 'tracks.audioTrackCount') -and
         ($_.requiredSignals -contains 'tracks.subtitleTrackCount') -and
