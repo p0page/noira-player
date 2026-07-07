@@ -1399,6 +1399,10 @@ try {
         throw 'Expected missing build identity active gate to include environment identity signal.'
     }
 
+    if (-not ($missingEnvironmentEvaluation.activeGate.blockers -contains 'comparison.environment-evidence-missing')) {
+        throw 'Expected missing build identity active gate to include comparison environment blocker.'
+    }
+
     if (-not ($missingEnvironmentEvaluation.activeGate.targetCaseIds -contains 'item-1/source-1')) {
         throw 'Expected missing build identity active gate to include target case id.'
     }
@@ -1449,6 +1453,10 @@ try {
 
     if (-not ($partialEnvironmentEvaluation.activeGate.blockers -contains 'suite.environment-evidence-missing')) {
         throw 'Expected partial build identity active gate to include environment evidence blocker.'
+    }
+
+    if (-not ($partialEnvironmentEvaluation.activeGate.blockers -contains 'comparison.environment-evidence-missing')) {
+        throw 'Expected partial build identity active gate to include comparison environment blocker.'
     }
 
     $partialEnvironmentComparisonPath = Join-Path $candidateEvaluationPartialEnvironmentComparisonsDir 'item-1\source-1.json'
@@ -1509,6 +1517,10 @@ try {
 
     if (-not ($sameBuildEvaluation.activeGate.blockers -contains 'suite.environment-same-build')) {
         throw 'Expected same-build active gate to include environment same-build blocker.'
+    }
+
+    if (-not ($sameBuildEvaluation.activeGate.blockers -contains 'comparison.environment-same-build')) {
+        throw 'Expected same-build active gate to include comparison environment blocker.'
     }
 
     if (-not ($sameBuildEvaluation.activeGate.targetCaseIds -contains 'item-1/source-1')) {

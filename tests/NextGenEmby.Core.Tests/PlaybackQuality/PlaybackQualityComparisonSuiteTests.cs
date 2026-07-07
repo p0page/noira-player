@@ -147,6 +147,7 @@ public sealed class PlaybackQualityComparisonSuiteTests
         Assert.Equal(1, suite.InsufficientEvidenceCount);
         Assert.Equal(1, suite.WeakConfidenceCount);
         Assert.Contains("suite.weak-evidence", suite.Blockers);
+        Assert.Contains("comparison.missing-checks", suite.Blockers);
         Assert.Contains("evidence/missing-baseline", suite.TargetCaseIds);
         Assert.Contains("src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs", suite.CodeTargets);
         Assert.Contains("src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp", suite.CodeTargets);
@@ -195,6 +196,7 @@ public sealed class PlaybackQualityComparisonSuiteTests
         Assert.Equal("collect-comparable-evidence", nextAction.Action);
         Assert.Equal("high", nextAction.Risk);
         Assert.Contains("suite.weak-evidence", nextAction.Blockers);
+        Assert.Contains("comparison.missing-checks", nextAction.Blockers);
         Assert.Contains("evidence/missing-baseline", nextAction.CaseIds);
         Assert.Contains("src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs", nextAction.CodeTargets);
         Assert.Contains("suite contains weak or insufficient comparison evidence", nextAction.Reasons);

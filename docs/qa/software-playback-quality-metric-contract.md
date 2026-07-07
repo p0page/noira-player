@@ -211,7 +211,7 @@ dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQ
 - `baselineReportAnalysis` / `candidateReportAnalysis`：baseline 和 candidate 每个 report 的 `modelAnalysis.optimizationGate` 摘要，包含 report 数量、已分析数量、缺失 analysis 数量、blocked 数量、聚合 `blockers`、`signals`、`failureAreas`、最高优先级 `targetFailureAreas`、对应 `targetCaseIds`，以及每个 case 的 `status`、`blockers`、`signals`、`failureAreas` 和 `targetFailureAreas`。
 - `suite`：只有 manifest、manifest coverage、report-set、baseline report-analysis 和 candidate report-analysis 都有效时才产生有效 before/after 比较结果。
 - `activeGate`：模型当前应处理的 gate。它是第一个 `status != pass` 的 gate；如果全部通过，则指向最终 `suite` gate。
-- `evidenceGates`：模型优先读取的门禁摘要，按 `manifest`、`manifest-coverage`、`baseline-report-set`、`candidate-report-set`、`baseline-report-analysis`、`candidate-report-analysis`、`suite` 顺序给出 `status`、`action`、`blockers`、`signals`、`failureAreas`、`targetFailureAreas`、`targetCaseIds` 和 `caseIds`。当 gate 来自 suite 时，还会带 `environment` 摘要，方便模型直接识别缺失、部分、同构建或不同构建的 before/after 证据。
+- `evidenceGates`：模型优先读取的门禁摘要，按 `manifest`、`manifest-coverage`、`baseline-report-set`、`candidate-report-set`、`baseline-report-analysis`、`candidate-report-analysis`、`suite` 顺序给出 `status`、`action`、`blockers`、`signals`、`failureAreas`、`targetFailureAreas`、`targetCaseIds` 和 `caseIds`。当 gate 来自 suite 时，还会带 `environment` 摘要，并聚合 `comparison.*` per-case blocker，方便模型先识别缺失、部分、同构建、输入不兼容或 comparison coverage 问题，再按 case 展开。
 - `action`、`risk`、`reasons`、`blockers`：给模型直接使用的下一步决策摘要。
 
 自动化模型循环必须按以下规则消费结果：

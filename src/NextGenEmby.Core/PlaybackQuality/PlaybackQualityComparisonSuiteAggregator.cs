@@ -338,6 +338,14 @@ namespace NextGenEmby.Core.PlaybackQuality
             PlaybackQualityComparisonSuite suite,
             PlaybackQualityRunComparison comparison)
         {
+            foreach (var blocker in comparison.Optimization.Blockers)
+            {
+                if (blocker.StartsWith("comparison.", StringComparison.Ordinal))
+                {
+                    AddUnique(suite.Blockers, blocker);
+                }
+            }
+
             foreach (var signal in comparison.Optimization.Signals)
             {
                 AddUnique(suite.Signals, signal);
