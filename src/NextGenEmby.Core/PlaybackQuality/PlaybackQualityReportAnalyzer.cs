@@ -4,6 +4,7 @@ namespace NextGenEmby.Core.PlaybackQuality
 {
     public sealed class PlaybackQualityModelAnalysis
     {
+        public int AnalyzerVersion { get; set; }
         public string RunId { get; set; } = "";
         public string Result { get; set; } = "";
         public string PrimaryFailureArea { get; set; } = "none";
@@ -176,6 +177,8 @@ namespace NextGenEmby.Core.PlaybackQuality
 
     public static class PlaybackQualityReportAnalyzer
     {
+        public const int CurrentAnalyzerVersion = 1;
+
         public static PlaybackQualityModelAnalysis Analyze(PlaybackQualityReport report)
         {
             return Analyze(report, presentSignals: null);
@@ -187,6 +190,7 @@ namespace NextGenEmby.Core.PlaybackQuality
         {
             var analysis = new PlaybackQualityModelAnalysis
             {
+                AnalyzerVersion = CurrentAnalyzerVersion,
                 RunId = report.RunId,
                 Result = report.Result,
                 PrimaryFailureArea = string.IsNullOrWhiteSpace(report.Analysis.PrimaryFailureArea)

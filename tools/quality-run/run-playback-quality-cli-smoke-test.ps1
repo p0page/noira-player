@@ -14,6 +14,8 @@ try {
     $analysisSetPath = Join-Path $tempRoot 'analysis-report-set.json'
     $analysisEnvelopeSetDir = Join-Path $tempRoot 'analysis-envelope-report-set'
     $analysisEnvelopeSetPath = Join-Path $tempRoot 'analysis-envelope-report-set.json'
+    $analysisStaleEnvelopeSetDir = Join-Path $tempRoot 'analysis-stale-envelope-report-set'
+    $analysisStaleEnvelopeSetPath = Join-Path $tempRoot 'analysis-stale-envelope-report-set.json'
     $outputPath = Join-Path $tempRoot 'comparison.json'
     $envelopeOutputPath = Join-Path $tempRoot 'comparison-envelope.json'
     $suitePath = Join-Path $tempRoot 'suite.json'
@@ -288,6 +290,49 @@ try {
         ($_.signals -contains 'timing.maxFrameGapMs')
     })) {
         throw 'Expected analyze-report-set output to refresh empty envelope modelAnalysis.'
+    }
+
+    New-Item -ItemType Directory -Path $analysisStaleEnvelopeSetDir | Out-Null
+    @"
+{
+  "report": $candidateReportJson,
+  "modelAnalysis": {
+    "runId": "candidate",
+    "result": "pass",
+    "evidenceSignals": [],
+    "optimizationGate": {
+      "status": "ready",
+      "canOptimizePlaybackCore": true,
+      "targetFailureAreas": []
+    }
+  }
+}
+"@ | Set-Content -LiteralPath (Join-Path $analysisStaleEnvelopeSetDir 'candidate-stale-envelope.json') -Encoding UTF8
+
+    Push-Location $repoRoot
+    try {
+        dotnet run `
+            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
+            --no-build `
+            -- analyze-report-set `
+            --reports-dir $analysisStaleEnvelopeSetDir `
+            --output $analysisStaleEnvelopeSetPath
+        if ($LASTEXITCODE -ne 0) {
+            throw 'playback quality CLI analyze-report-set stale envelope refresh returned a non-zero exit code.'
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    $analysisStaleEnvelopeSet = Get-Content -Raw -LiteralPath $analysisStaleEnvelopeSetPath | ConvertFrom-Json
+    if (-not ($analysisStaleEnvelopeSet.cases | Where-Object {
+        $_.caseId -eq 'candidate' -and
+        $_.hasModelAnalysis -eq $true -and
+        ($_.failureAreas -contains 'frame-pacing') -and
+        ($_.signals -contains 'timing.maxFrameGapMs')
+    })) {
+        throw 'Expected analyze-report-set output to refresh stale envelope modelAnalysis.'
     }
 
     @'
@@ -1540,6 +1585,7 @@ try {
     ]
   },
   "modelAnalysis": {
+    "analyzerVersion": 1,
     "runId": "item-1/source-1",
     "result": "fail",
     "optimizationGate": {
@@ -1671,6 +1717,7 @@ try {
     ]
   },
   "modelAnalysis": {
+    "analyzerVersion": 1,
     "runId": "item-1/source-1",
     "result": "fail",
     "optimizationGate": {

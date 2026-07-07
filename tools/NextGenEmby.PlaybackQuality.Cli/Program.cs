@@ -1052,6 +1052,7 @@ internal static class Program
     private static bool HasUsableModelAnalysis(PlaybackQualityModelAnalysis? modelAnalysis)
     {
         return modelAnalysis != null &&
+            modelAnalysis.AnalyzerVersion == PlaybackQualityReportAnalyzer.CurrentAnalyzerVersion &&
             !string.IsNullOrWhiteSpace(modelAnalysis.RunId) &&
             !string.IsNullOrWhiteSpace(modelAnalysis.Result);
     }
