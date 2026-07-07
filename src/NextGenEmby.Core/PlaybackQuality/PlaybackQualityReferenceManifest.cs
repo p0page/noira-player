@@ -34,6 +34,8 @@ namespace NextGenEmby.Core.PlaybackQuality
 
     public sealed class PlaybackQualityReferenceManifestValidation
     {
+        public int SchemaVersion { get; set; } = 1;
+
         public bool IsValid => Errors.Count == 0;
 
         public int CaseCount { get; set; }

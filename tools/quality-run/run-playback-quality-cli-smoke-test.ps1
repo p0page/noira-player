@@ -427,6 +427,10 @@ try {
     }
 
     $manifestValidation = Get-Content -Raw -LiteralPath $manifestValidationPath | ConvertFrom-Json
+    if ($manifestValidation.schemaVersion -ne 1) {
+        throw 'Expected playback quality CLI validate-manifest output schemaVersion 1.'
+    }
+
     if ($manifestValidation.isValid -ne $true) {
         throw 'Expected playback quality CLI validate-manifest output to be valid.'
     }
@@ -657,6 +661,10 @@ try {
     }
 
     $reportSetValidation = Get-Content -Raw -LiteralPath $reportSetValidationPath | ConvertFrom-Json
+    if ($reportSetValidation.schemaVersion -ne 1) {
+        throw 'Expected playback quality CLI validate-report-set output schemaVersion 1.'
+    }
+
     if ($reportSetValidation.isValid -ne $true) {
         throw 'Expected playback quality CLI validate-report-set output to be valid.'
     }
@@ -714,6 +722,10 @@ try {
     }
 
     $missingSignalReportSetValidation = Get-Content -Raw -LiteralPath $missingSignalReportSetValidationPath | ConvertFrom-Json
+    if ($missingSignalReportSetValidation.schemaVersion -ne 1) {
+        throw 'Expected playback quality CLI invalid validate-report-set output schemaVersion 1.'
+    }
+
     if ($missingSignalReportSetValidation.isValid -ne $false) {
         throw 'Expected playback quality CLI validate-report-set missing telemetry output to be invalid.'
     }

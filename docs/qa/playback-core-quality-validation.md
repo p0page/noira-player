@@ -56,7 +56,7 @@ Use the App-free CLI to validate a playback reference corpus manifest before usi
 dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- validate-manifest --manifest docs\qa\playback-quality-reference-manifest.example.json --output manifest-validation.json
 ```
 
-The command emits `isValid`, `caseCount`, `tiers`, `purposes`, `cases`, structured `errors`, and `coverage`. `cases` is a schedulable summary of caseId, uri, tier, purpose, and expected source metadata. Invalid manifests return a non-zero exit code so automation can stop before collecting misleading playback evidence. `isValid = true` only means the manifest can be scheduled; `coverage.status = ready` means the corpus includes the required playback Core risk purposes for broad candidate evaluation: `sdr-smoke`, `hdr-output`, `hdr-force-sdr`, `dv-reject`, `dv-fallback`, `cadence-23.976`, `frame-pacing`, `av-sync`, and `buffering`. If `coverage.status = incomplete`, the model should treat `coverage.missingPurposes` as a sample-corpus gap and avoid over-optimizing Core from a narrow corpus.
+The command emits `schemaVersion = 1`, `isValid`, `caseCount`, `tiers`, `purposes`, `cases`, structured `errors`, and `coverage`. `cases` is a schedulable summary of caseId, uri, tier, purpose, and expected source metadata. Invalid manifests return a non-zero exit code so automation can stop before collecting misleading playback evidence. `isValid = true` only means the manifest can be scheduled; `coverage.status = ready` means the corpus includes the required playback Core risk purposes for broad candidate evaluation: `sdr-smoke`, `hdr-output`, `hdr-force-sdr`, `dv-reject`, `dv-fallback`, `cadence-23.976`, `frame-pacing`, `av-sync`, and `buffering`. If `coverage.status = incomplete`, the model should treat `coverage.missingPurposes` as a sample-corpus gap and avoid over-optimizing Core from a narrow corpus.
 
 当前 `docs/qa/playback-quality-reference-manifest.example.json` 是可调度的默认参考 manifest。它包含 7 个 case：
 
@@ -140,7 +140,7 @@ After reports are captured, validate that the report set covers the manifest bef
 dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- validate-report-set --manifest docs\qa\playback-quality-reference-manifest.example.json --reports-dir captured-reports --output report-set-validation.json
 ```
 
-report-set gate 会按 `report.runId` 匹配 manifest `caseId`，拒绝缺失 case、额外报告、重复 runId、source metadata 不匹配以及 case 级 `requiredSignals` 缺失。缺失 telemetry 会输出为 `report.requiredSignal.missing`，并带上精确的 `signal`、`caseId`、`failureArea`、`suggestedNextAction` 和 `codeTargets`。CLI 会保留 JSON 字段 presence，所以显式写出的 0 counter（例如 `videoStarvedPasses: 0`）会被视为已采集，字段不存在才会被视为缺证据。运行 `compare-suite` 前必须先跑这个 gate；report set 不匹配 manifest 或缺少必要 telemetry 都属于证据采集失败，不是播放 Core 优化证据。
+report-set gate 输出 `schemaVersion = 1`，并按 `report.runId` 匹配 manifest `caseId`，拒绝缺失 case、额外报告、重复 runId、source metadata 不匹配以及 case 级 `requiredSignals` 缺失。缺失 telemetry 会输出为 `report.requiredSignal.missing`，并带上精确的 `signal`、`caseId`、`failureArea`、`suggestedNextAction` 和 `codeTargets`。CLI 会保留 JSON 字段 presence，所以显式写出的 0 counter（例如 `videoStarvedPasses: 0`）会被视为已采集，字段不存在才会被视为缺证据。运行 `compare-suite` 前必须先跑这个 gate；report set 不匹配 manifest 或缺少必要 telemetry 都属于证据采集失败，不是播放 Core 优化证据。
 
 ## 单报告分析
 

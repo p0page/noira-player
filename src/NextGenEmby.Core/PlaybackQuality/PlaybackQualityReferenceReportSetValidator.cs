@@ -5,6 +5,8 @@ namespace NextGenEmby.Core.PlaybackQuality
 {
     public sealed class PlaybackQualityReferenceReportSetValidation
     {
+        public int SchemaVersion { get; set; } = 1;
+
         public bool IsValid => Errors.Count == 0;
 
         public int ExpectedCaseCount { get; set; }
