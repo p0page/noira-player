@@ -249,6 +249,7 @@ public sealed class PlaybackQualityReportMapperTests
         Assert.Equal(3840, report.Source.Width);
         Assert.Equal(2160, report.Source.Height);
         Assert.Equal(23.976, report.Source.FrameRate);
+        Assert.True(report.Source.HasChapterMetadata);
         Assert.Equal(2, report.Source.ChapterCount);
         Assert.Equal("Opening", report.Source.Chapters[0].Name);
         Assert.Equal(0, report.Source.Chapters[0].StartPositionTicks);
@@ -296,6 +297,27 @@ public sealed class PlaybackQualityReportMapperTests
         Assert.True(subtitle.IsExternal);
         Assert.False(subtitle.IsDefault);
         Assert.True(subtitle.IsForced);
+    }
+
+    [Fact]
+    public void ApplySource_Does_Not_Report_Chapter_Count_When_Metadata_Was_Not_Observed()
+    {
+        var report = new PlaybackQualityReport();
+        var source = new EmbyMediaSource
+        {
+            Id = "source-1"
+        };
+        var descriptor = new PlaybackDescriptor(
+            "item-1",
+            source,
+            new[] { source },
+            startPositionTicks: 0);
+
+        PlaybackQualityReportMapper.ApplySource(report, descriptor);
+
+        Assert.False(report.Source.HasChapterMetadata);
+        Assert.Null(report.Source.ChapterCount);
+        Assert.Empty(report.Source.Chapters);
     }
 
     [Fact]

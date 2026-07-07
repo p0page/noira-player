@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace NextGenEmby.Core.PlaybackQuality
 {
@@ -74,7 +75,9 @@ namespace NextGenEmby.Core.PlaybackQuality
         public int Width { get; set; }
         public int Height { get; set; }
         public double FrameRate { get; set; }
-        public int ChapterCount { get; set; }
+        public bool HasChapterMetadata { get; set; }
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public int? ChapterCount { get; set; }
         public List<PlaybackQualityChapter> Chapters { get; } = new List<PlaybackQualityChapter>();
         public string HdrKind { get; set; } = "";
         public string HdrPlaybackStrategy { get; set; } = "";

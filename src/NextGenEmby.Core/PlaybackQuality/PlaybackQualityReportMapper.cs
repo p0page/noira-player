@@ -91,7 +91,11 @@ namespace NextGenEmby.Core.PlaybackQuality
                 });
             }
 
-            report.Source.ChapterCount = report.Source.Chapters.Count;
+            report.Source.HasChapterMetadata =
+                source.HasChapterMetadata || report.Source.Chapters.Count > 0;
+            report.Source.ChapterCount = report.Source.HasChapterMetadata
+                ? report.Source.Chapters.Count
+                : (int?)null;
             report.Timing.ExpectedFrameDurationMs = source.VideoFrameRate > 0
                 ? 1000.0 / source.VideoFrameRate
                 : 0;

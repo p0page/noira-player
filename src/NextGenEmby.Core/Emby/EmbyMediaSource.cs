@@ -35,6 +35,7 @@ namespace NextGenEmby.Core.Emby
 
         public string DirectStreamUrl { get; set; } = "";
         public string PlaySessionId { get; set; } = "";
+        public bool HasChapterMetadata { get; set; }
         public List<EmbyMediaStream> Streams { get; } = new List<EmbyMediaStream>();
         public List<EmbyChapter> Chapters { get; } = new List<EmbyChapter>();
 

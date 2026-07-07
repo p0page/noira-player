@@ -299,8 +299,16 @@ namespace NextGenEmby.Core.PlaybackQuality
                     return report.Source.Bitrate > 0;
                 case "source.durationTicks":
                     return report.Source.DurationTicks > 0;
+                case "source.hasChapterMetadata":
+                    return presentSignals != null ||
+                        report.Source.HasChapterMetadata ||
+                        report.Source.ChapterCount.HasValue ||
+                        report.Source.Chapters.Count > 0;
                 case "source.chapterCount":
-                    return presentSignals != null || report.Source.ChapterCount > 0 || report.Source.Chapters.Count > 0;
+                    return presentSignals != null ||
+                        report.Source.HasChapterMetadata ||
+                        report.Source.ChapterCount.HasValue ||
+                        report.Source.Chapters.Count > 0;
                 case "source.chapters.name":
                     return presentSignals != null || HasChapterTextEvidence(report, chapter => chapter.Name);
                 case "source.chapters.startPositionTicks":

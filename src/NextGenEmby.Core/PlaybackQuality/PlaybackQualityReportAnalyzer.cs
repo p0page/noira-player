@@ -78,7 +78,8 @@ namespace NextGenEmby.Core.PlaybackQuality
         public int Width { get; set; }
         public int Height { get; set; }
         public double FrameRate { get; set; }
-        public int ChapterCount { get; set; }
+        public bool HasChapterMetadata { get; set; }
+        public int? ChapterCount { get; set; }
         public List<PlaybackQualityChapter> Chapters { get; } = new List<PlaybackQualityChapter>();
         public string HdrKind { get; set; } = "";
         public string HdrPlaybackStrategy { get; set; } = "";
@@ -1186,6 +1187,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                 Width = report.Source.Width,
                 Height = report.Source.Height,
                 FrameRate = report.Source.FrameRate,
+                HasChapterMetadata = report.Source.HasChapterMetadata,
                 ChapterCount = report.Source.ChapterCount,
                 HdrKind = report.Source.HdrKind,
                 HdrPlaybackStrategy = report.Source.HdrPlaybackStrategy,
@@ -1299,7 +1301,8 @@ namespace NextGenEmby.Core.PlaybackQuality
                 source.Width > 0 ||
                 source.Height > 0 ||
                 source.FrameRate > 0 ||
-                source.ChapterCount > 0 ||
+                source.HasChapterMetadata ||
+                source.ChapterCount.HasValue ||
                 source.Chapters.Count > 0 ||
                 !string.IsNullOrWhiteSpace(source.HdrKind) ||
                 !string.IsNullOrWhiteSpace(source.HdrPlaybackStrategy);
@@ -1339,7 +1342,14 @@ namespace NextGenEmby.Core.PlaybackQuality
                 AddUnique(source.Signals, "source.frameRate");
             }
 
-            if (source.ChapterCount > 0 || source.Chapters.Count > 0)
+            if (source.HasChapterMetadata)
+            {
+                AddUnique(source.Signals, "source.hasChapterMetadata");
+            }
+
+            if (source.HasChapterMetadata ||
+                source.ChapterCount.HasValue ||
+                source.Chapters.Count > 0)
             {
                 AddUnique(source.Signals, "source.chapterCount");
             }

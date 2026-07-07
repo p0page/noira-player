@@ -76,6 +76,7 @@ public sealed class PlaybackQualityReportAnalyzerTests
                 Width = 3840,
                 Height = 2160,
                 FrameRate = 23.976,
+                HasChapterMetadata = true,
                 ChapterCount = 2,
                 HdrKind = "Hdr10"
             }
@@ -92,19 +93,48 @@ public sealed class PlaybackQualityReportAnalyzerTests
         Assert.Equal("mkv", analysis.Source.Container);
         Assert.Equal(76_000_000, analysis.Source.Bitrate);
         Assert.Equal(70_200_000_000, analysis.Source.DurationTicks);
+        Assert.True(analysis.Source.HasChapterMetadata);
         Assert.Equal(2, analysis.Source.ChapterCount);
         Assert.Contains("source.container", analysis.Source.Signals);
         Assert.Contains("source.bitrate", analysis.Source.Signals);
         Assert.Contains("source.durationTicks", analysis.Source.Signals);
+        Assert.Contains("source.hasChapterMetadata", analysis.Source.Signals);
         Assert.Contains("source.chapterCount", analysis.Source.Signals);
         Assert.Contains("source.chapters.startPositionTicks", analysis.Source.Signals);
         Assert.Contains("source.chapters.name", analysis.Source.Signals);
         Assert.Contains("source.container", analysis.EvidenceSignals);
         Assert.Contains("source.bitrate", analysis.EvidenceSignals);
         Assert.Contains("source.durationTicks", analysis.EvidenceSignals);
+        Assert.Contains("source.hasChapterMetadata", analysis.EvidenceSignals);
         Assert.Contains("source.chapterCount", analysis.EvidenceSignals);
         Assert.Contains("source.chapters.startPositionTicks", analysis.EvidenceSignals);
         Assert.Contains("source.chapters.name", analysis.EvidenceSignals);
+    }
+
+    [Fact]
+    public void Analyze_Does_Not_Emit_Chapter_Evidence_When_Metadata_Was_Not_Observed()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "source-without-chapter-metadata",
+            Result = "pass",
+            Source = new PlaybackQualitySource
+            {
+                Codec = "hevc",
+                FrameRate = 23.976,
+                HdrKind = "Sdr"
+            }
+        };
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.False(analysis.Source.HasChapterMetadata);
+        Assert.Null(analysis.Source.ChapterCount);
+        Assert.DoesNotContain("source.hasChapterMetadata", analysis.Source.Signals);
+        Assert.DoesNotContain("source.hasChapterMetadata", analysis.EvidenceSignals);
+        Assert.DoesNotContain("source.chapterCount", analysis.Source.Signals);
+        Assert.DoesNotContain("source.chapterCount", analysis.EvidenceSignals);
+        Assert.DoesNotContain("source.chapters.startPositionTicks", analysis.EvidenceSignals);
     }
 
     [Fact]

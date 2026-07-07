@@ -1049,6 +1049,7 @@ public sealed class PlaybackQualityReferenceManifestTests
                 Container = "mkv",
                 Bitrate = 76_000_000,
                 DurationTicks = 70_200_000_000,
+                HasChapterMetadata = true,
                 ChapterCount = 1
             },
             RuntimeMetrics = new PlaybackQualityRuntimeMetrics
@@ -1096,6 +1097,7 @@ public sealed class PlaybackQualityReferenceManifestTests
         Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "source.container"));
         Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "source.bitrate"));
         Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "source.durationTicks"));
+        Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "source.hasChapterMetadata"));
         Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "source.chapterCount"));
         Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "source.chapters.name"));
         Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "source.chapters.startPositionTicks"));

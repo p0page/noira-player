@@ -2636,6 +2636,7 @@ internal static class Program
                 "source.width",
                 "source.height",
                 "source.frameRate",
+                "source.hasChapterMetadata",
                 "source.chapterCount",
                 "source.chapters.startPositionTicks",
                 "source.chapters.name"),

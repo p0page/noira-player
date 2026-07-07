@@ -70,6 +70,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                 new PlaybackQualityReportSignalDescriptor("source.width", "source", "width"),
                 new PlaybackQualityReportSignalDescriptor("source.height", "source", "height"),
                 new PlaybackQualityReportSignalDescriptor("source.frameRate", "source", "frameRate"),
+                new PlaybackQualityReportSignalDescriptor("source.hasChapterMetadata", "source", "hasChapterMetadata"),
                 new PlaybackQualityReportSignalDescriptor("source.chapterCount", "source", "chapterCount"),
                 new PlaybackQualityReportSignalDescriptor("source.chapters.name", "source.chapters", "name"),
                 new PlaybackQualityReportSignalDescriptor("source.chapters.startPositionTicks", "source.chapters", "startPositionTicks"),

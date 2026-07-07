@@ -133,6 +133,7 @@ try {
     "height": 2160,
     "frameRate": 23.976,
     "hdrKind": "Sdr",
+    "hasChapterMetadata": true,
     "chapterCount": 1,
     "chapters": [
       {
@@ -179,6 +180,7 @@ try {
     "height": 2160,
     "frameRate": 23.976,
     "hdrKind": "Sdr",
+    "hasChapterMetadata": true,
     "chapterCount": 1,
     "chapters": [
       {
@@ -435,6 +437,7 @@ try {
 
     if (-not ($analysisSet.capabilityCoverage | Where-Object {
         $_.capability -eq 'metadata-duration' -and
+        ($_.evidenceSignals -contains 'source.hasChapterMetadata') -and
         ($_.evidenceSignals -contains 'source.chapterCount') -and
         ($_.evidenceSignals -contains 'source.chapters.startPositionTicks') -and
         ($_.evidenceSignals -contains 'source.chapters.name')

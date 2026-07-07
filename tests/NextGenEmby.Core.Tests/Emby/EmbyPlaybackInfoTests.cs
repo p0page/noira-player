@@ -132,6 +132,7 @@ public sealed class EmbyPlaybackInfoTests
 
         var source = Assert.Single(await client.GetPlaybackInfoAsync(Session(), "movie-1"));
 
+        Assert.True(source.HasChapterMetadata);
         Assert.Equal(2, source.Chapters.Count);
         Assert.Equal("Opening", source.Chapters[0].Name);
         Assert.Equal(0, source.Chapters[0].StartPositionTicks);
@@ -139,6 +140,40 @@ public sealed class EmbyPlaybackInfoTests
         Assert.Equal("Act 1", source.Chapters[1].Name);
         Assert.Equal(900_000_000, source.Chapters[1].StartPositionTicks);
         Assert.Equal("", source.Chapters[1].ImageTag);
+    }
+
+    [Fact]
+    public async Task GetPlaybackInfoAsync_Distinguishes_Missing_And_Explicit_Empty_Chapters()
+    {
+        var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
+            HttpStatusCode.OK,
+            """
+            {
+              "MediaSources": [
+                {
+                  "Id": "source-missing-chapters",
+                  "MediaStreams": []
+                },
+                {
+                  "Id": "source-empty-chapters",
+                  "MediaStreams": [],
+                  "Chapters": []
+                }
+              ]
+            }
+            """));
+        using var http = new HttpClient(handler);
+        var client = CreateClient(http);
+
+        var sources = await client.GetPlaybackInfoAsync(Session(), "movie-1");
+
+        var missing = sources.Single(source => source.Id == "source-missing-chapters");
+        Assert.False(missing.HasChapterMetadata);
+        Assert.Empty(missing.Chapters);
+
+        var empty = sources.Single(source => source.Id == "source-empty-chapters");
+        Assert.True(empty.HasChapterMetadata);
+        Assert.Empty(empty.Chapters);
     }
 
     [Fact]
@@ -386,6 +421,8 @@ public sealed class EmbyPlaybackInfoTests
         Assert.Equal("source-minimal", source.Id);
         Assert.Equal("source-minimal", source.Name);
         Assert.Empty(source.Streams);
+        Assert.False(source.HasChapterMetadata);
+        Assert.Empty(source.Chapters);
         Assert.False(source.IsHdr);
     }
 

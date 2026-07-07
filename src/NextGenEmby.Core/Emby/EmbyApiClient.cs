@@ -826,14 +826,18 @@ namespace NextGenEmby.Core.Emby
                 }
             }
 
-            foreach (var chapter in source.Chapters ?? new List<ChapterDto>())
+            if (source.Chapters != null)
             {
-                result.Chapters.Add(new EmbyChapter
+                result.HasChapterMetadata = true;
+                foreach (var chapter in source.Chapters)
                 {
-                    Name = chapter.Name ?? "",
-                    StartPositionTicks = chapter.StartPositionTicks,
-                    ImageTag = chapter.ImageTag ?? ""
-                });
+                    result.Chapters.Add(new EmbyChapter
+                    {
+                        Name = chapter.Name ?? "",
+                        StartPositionTicks = chapter.StartPositionTicks,
+                        ImageTag = chapter.ImageTag ?? ""
+                    });
+                }
             }
 
             return result;
@@ -1108,7 +1112,7 @@ namespace NextGenEmby.Core.Emby
             public bool AddApiKeyToDirectStreamUrl { get; set; }
             public string PlaySessionId { get; set; } = "";
             public List<MediaStreamDto> MediaStreams { get; set; } = new List<MediaStreamDto>();
-            public List<ChapterDto> Chapters { get; set; } = new List<ChapterDto>();
+            public List<ChapterDto>? Chapters { get; set; }
         }
 
         private sealed class MediaStreamDto
