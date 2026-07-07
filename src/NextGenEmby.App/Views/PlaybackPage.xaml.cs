@@ -228,6 +228,7 @@ namespace NextGenEmby.App.Views
             _developmentPlaybackMediaSourceId = "";
             _developmentPlaybackAudioStreamIndex = null;
             _developmentPlaybackSubtitleStreamIndex = null;
+            SubtitleSafeSampleBlock.Visibility = Visibility.Collapsed;
 
             if (e.Parameter is PlaybackOptionsFixtureNavigationRequest)
             {
@@ -1217,6 +1218,7 @@ namespace NextGenEmby.App.Views
             _hasPlaybackContext = true;
 
             ManualDebugPanel.Visibility = Visibility.Collapsed;
+            SubtitleSafeSampleBlock.Visibility = Visibility.Visible;
             StreamUrlBox.Text = "";
             StreamUrlBox.IsEnabled = false;
             NowPlayingBlock.Text = fixture.ItemName;
@@ -1293,6 +1295,7 @@ namespace NextGenEmby.App.Views
             _developmentPlaybackSubtitleStreamIndex = GetFirstStreamIndex(selectedSource, EmbyStreamKind.Subtitle);
             RenderDevelopmentPlaybackOptions();
             UpdateStatus(CorePlaybackState.Playing, "Source: " + option.Label);
+            UpdatePlaybackOptionChips();
             if (_infoVisible)
             {
                 UpdateInfo();
@@ -1303,6 +1306,7 @@ namespace NextGenEmby.App.Views
         {
             _developmentPlaybackAudioStreamIndex = option.StreamIndex;
             UpdateStatus(CorePlaybackState.Playing, "Audio: " + option.Label);
+            UpdatePlaybackOptionChips();
             if (_infoVisible)
             {
                 UpdateInfo();
@@ -1313,6 +1317,7 @@ namespace NextGenEmby.App.Views
         {
             _developmentPlaybackSubtitleStreamIndex = option.StreamIndex;
             UpdateStatus(CorePlaybackState.Playing, "Subtitles: " + option.Label);
+            UpdatePlaybackOptionChips();
             if (_infoVisible)
             {
                 UpdateInfo();
@@ -1973,9 +1978,9 @@ namespace NextGenEmby.App.Views
         private static void SetTransportControlVisual(Control control, bool isFocused)
         {
             var resources = Application.Current.Resources;
-            control.BorderBrush = (Brush)resources[isFocused ? "AppAccentBrush" : "AppHairlineBrush"];
-            control.BorderThickness = isFocused ? new Thickness(2) : new Thickness(1);
-            control.Background = (Brush)resources[isFocused ? "AppRaisedSurfaceBrush" : "AppChromeBrush"];
+            control.BorderBrush = (Brush)resources[isFocused ? "AppFocusedCardFillBrush" : "AppTransparentBrush"];
+            control.BorderThickness = new Thickness(1);
+            control.Background = (Brush)resources[isFocused ? "AppFocusedCardFillBrush" : "AppChromeBrush"];
         }
 
         private PlaybackTransportFocusTarget? GetFocusedTransportTarget()
@@ -2180,9 +2185,9 @@ namespace NextGenEmby.App.Views
         private static void SetMoreDrawerControlVisual(Control control, bool isFocused)
         {
             var resources = Application.Current.Resources;
-            control.BorderBrush = (Brush)resources[isFocused ? "AppAccentBrush" : "AppHairlineBrush"];
-            control.BorderThickness = isFocused ? new Thickness(2) : new Thickness(1);
-            control.Background = (Brush)resources[isFocused ? "AppRaisedSurfaceBrush" : "AppChromeBrush"];
+            control.BorderBrush = (Brush)resources["AppTransparentBrush"];
+            control.BorderThickness = control is ComboBox ? new Thickness(0) : new Thickness(1);
+            control.Background = (Brush)resources[isFocused ? "AppFocusedCardFillBrush" : "AppChromeBrush"];
         }
 
         private PlaybackMoreDrawerFocusTarget? GetFocusedMoreDrawerTarget()
@@ -2394,6 +2399,10 @@ namespace NextGenEmby.App.Views
             {
                 ProgressSlider.Maximum = Math.Max(1, durationSeconds);
                 ProgressSlider.Value = Math.Min(ProgressSlider.Maximum, positionSeconds);
+                CurrentTimeBlock.Text = FormatPosition(TimeSpan.FromSeconds(positionSeconds));
+                DurationBlock.Text = _durationTicks > 0
+                    ? FormatPosition(TimeSpan.FromTicks(_durationTicks))
+                    : "--:--";
             }
             finally
             {
@@ -2438,6 +2447,7 @@ namespace NextGenEmby.App.Views
                 ProgressSlider.IsEnabled = true;
                 MoreButton.IsEnabled = true;
                 InfoButton.IsEnabled = true;
+                UpdatePlaybackOptionChips();
                 return;
             }
 #endif
@@ -2455,6 +2465,7 @@ namespace NextGenEmby.App.Views
             ProgressSlider.IsEnabled = hasActivePlayback && IsPlaybackSeekable();
             MoreButton.IsEnabled = true;
             InfoButton.IsEnabled = true;
+            UpdatePlaybackOptionChips();
 
             if (_overlayVisible && !_moreVisible)
             {
@@ -2511,6 +2522,37 @@ namespace NextGenEmby.App.Views
                 "Position: " + FormatPosition(position) + Environment.NewLine +
                 CreateDisplayDiagnosticLines() +
                 "URL: " + source.DirectStreamUrl;
+        }
+
+        private void UpdatePlaybackOptionChips()
+        {
+#if DEBUG
+            if (_usesDevelopmentPlaybackOptionsFixture)
+            {
+                var fixtureSource = GetDevelopmentPlaybackSource();
+                SourceChipBlock.Text = fixtureSource == null ? "Source" : fixtureSource.Name;
+                AudioChipBlock.Text = fixtureSource == null
+                    ? "Audio"
+                    : CreateSelectedStreamLabel(fixtureSource, _developmentPlaybackAudioStreamIndex, EmbyStreamKind.Audio, "Default");
+                SubtitleChipBlock.Text = fixtureSource == null
+                    ? "Subtitles"
+                    : CreateSelectedStreamLabel(fixtureSource, _developmentPlaybackSubtitleStreamIndex, EmbyStreamKind.Subtitle, "Off");
+                return;
+            }
+#endif
+            var descriptor = _orchestrator.CurrentDescriptor;
+            var source = descriptor?.MediaSource;
+            if (descriptor == null || source == null)
+            {
+                SourceChipBlock.Text = "Source";
+                AudioChipBlock.Text = "Audio";
+                SubtitleChipBlock.Text = "Subtitles";
+                return;
+            }
+
+            SourceChipBlock.Text = source.Name;
+            AudioChipBlock.Text = CreateSelectedStreamLabel(source, descriptor.AudioStreamIndex, EmbyStreamKind.Audio, "Default");
+            SubtitleChipBlock.Text = CreateSelectedStreamLabel(source, descriptor.SubtitleStreamIndex, EmbyStreamKind.Subtitle, "Off");
         }
 
         private string CreateDisplayDiagnosticLines()

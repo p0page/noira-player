@@ -47,6 +47,90 @@ public sealed class PlaybackOptionsFixtureSourceTests
         Assert.Contains("ClearTransportFocusForMoreDrawer();", playbackPageSource);
     }
 
+    [Fact]
+    public void Playback_Osd_Uses_Compact_Status_Capsule_And_Transport_Strip()
+    {
+        var root = FindRepositoryRoot();
+        var playbackPageXaml = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NextGenEmby.App",
+            "Views",
+            "PlaybackPage.xaml"));
+
+        Assert.Contains("x:Name=\"PlaybackStatusCapsule\"", playbackPageXaml);
+        Assert.Contains("x:Name=\"PlaybackTransportStrip\"", playbackPageXaml);
+        Assert.Contains("x:Name=\"PlaybackTimelineRow\"", playbackPageXaml);
+        Assert.Contains("x:Name=\"TransportControlsPanel\"", playbackPageXaml);
+        Assert.Contains("x:Name=\"CurrentTimeBlock\"", playbackPageXaml);
+        Assert.Contains("x:Name=\"DurationBlock\"", playbackPageXaml);
+        Assert.DoesNotContain("Padding=\"40,22\"", playbackPageXaml);
+    }
+
+    [Fact]
+    public void Playback_Transport_And_Menu_Use_Matte_Focus_Without_Bright_Frames()
+    {
+        var root = FindRepositoryRoot();
+        var appXaml = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NextGenEmby.App",
+            "App.xaml"));
+        var playbackPageXaml = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NextGenEmby.App",
+            "Views",
+            "PlaybackPage.xaml"));
+        var playbackPageSource = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NextGenEmby.App",
+            "Views",
+            "PlaybackPage.xaml.cs"));
+
+        Assert.Contains("TvPlaybackTransportButtonStyle", appXaml);
+        Assert.Contains("TvPlaybackPrimaryTransportButtonStyle", appXaml);
+        Assert.Contains("TvPlaybackMoreMenuButtonStyle", appXaml);
+        Assert.Contains("TvPlaybackOptionComboBoxStyle", appXaml);
+        Assert.Contains("FocusVisualPrimaryBrush\" Value=\"{StaticResource AppFocusedCardFillBrush}", appXaml);
+        Assert.Contains("FocusVisualSecondaryBrush\" Value=\"{StaticResource AppTransparentBrush}", appXaml);
+        Assert.Contains("Style=\"{StaticResource TvPlaybackTransportButtonStyle}\"", playbackPageXaml);
+        Assert.Contains("Style=\"{StaticResource TvPlaybackPrimaryTransportButtonStyle}\"", playbackPageXaml);
+        Assert.Contains("Style=\"{StaticResource TvPlaybackMoreMenuButtonStyle}\"", playbackPageXaml);
+        Assert.Contains("Style=\"{StaticResource TvPlaybackOptionComboBoxStyle}\"", playbackPageXaml);
+        Assert.DoesNotContain("resources[isFocused ? \"AppAccentBrush\" : \"AppHairlineBrush\"]", playbackPageSource);
+        Assert.Contains("resources[\"AppTransparentBrush\"]", playbackPageSource);
+        Assert.Contains("control is ComboBox ? new Thickness(0) : new Thickness(1)", playbackPageSource);
+        Assert.Contains("resources[isFocused ? \"AppFocusedCardFillBrush\" : \"AppChromeBrush\"]", playbackPageSource);
+    }
+
+    [Fact]
+    public void Playback_More_Uses_Compact_Menu_Instead_Of_Full_Height_Drawer()
+    {
+        var root = FindRepositoryRoot();
+        var appXaml = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NextGenEmby.App",
+            "App.xaml"));
+        var playbackPageXaml = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NextGenEmby.App",
+            "Views",
+            "PlaybackPage.xaml"));
+
+        Assert.Contains("TvPlaybackMoreMenuWidth", appXaml);
+        Assert.Contains("TvPlaybackMoreMenuMaxHeight", appXaml);
+        Assert.Contains("x:Name=\"MoreMenuPanel\"", playbackPageXaml);
+        Assert.Contains("MaxHeight=\"{StaticResource TvPlaybackMoreMenuMaxHeight}\"", playbackPageXaml);
+        Assert.Contains("VerticalAlignment=\"Bottom\"", playbackPageXaml);
+        Assert.Contains("Margin=\"{StaticResource TvPlaybackMoreMenuMargin}\"", playbackPageXaml);
+        Assert.Contains("x:Name=\"SubtitleSafeSampleBlock\"", playbackPageXaml);
+        Assert.DoesNotContain("Width=\"370\"", playbackPageXaml);
+    }
+
     private static int CountOccurrences(string value, string pattern)
     {
         var count = 0;

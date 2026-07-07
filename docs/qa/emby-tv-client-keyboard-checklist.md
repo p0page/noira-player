@@ -2324,3 +2324,70 @@ Fix rerun findings:
   - Commit this batch as the Details page visual-system alignment.
   - Leave Explore/Cast vertical focus routing for a smaller interaction-focused pass.
   - Keep atmosphere rendering intentionally source-aware: use backdrop-derived mood when available, and black/matte fallback when Emby lacks useful artwork.
+
+### 2026-07-08 - Design Conformance Batch 04 Playback OSD And Options Baseline
+
+- App version: 0.1.0.216.
+- Scope: run Batch 04 Playback before making visual fixes, covering the default OSD, transport strip, source/audio/subtitle options, and info panel.
+- Data source: DEBUG `playback-options-fixture`; no private server data or personal media assets.
+- Runtime evidence:
+  - Screenshot attempt set: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch04-playback-baseline-20260708-030052`.
+  - UIA snapshot set: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch04-playback-baseline-uia-20260708-030412`.
+  - `dev-command-result.txt` reported `completed / playback-options-fixture`.
+- Tooling limitation:
+  - `CopyFromScreen` and `PrintWindow(PW_RENDERFULLCONTENT)` both captured the UWP content layer as black in this run.
+  - UI Automation confirmed the fixture and overlay controls were present, so this baseline uses UIA text/bounds snapshots plus source inspection for evidence.
+  - Future playback visual QA should prefer Computer Use / Windows Graphics Capture when available, or add an app-owned diagnostic screenshot surface if playback composition remains black to external capture.
+- Keyboard-only validation:
+  - Closed the existing app frame, wrote `dev-command.json` with route `playback-options-fixture`, and launched through AppUserModelId `NextGenEmby.App_h8qjz0sr1sg4m!App`.
+  - Initial fixture state opened Playback with More drawer visible and Source focused.
+  - Pressed `Escape`; More closed and default OSD stayed visible with More focused in the transport row.
+  - Pressed `Right`; transport focus moved within the bottom row.
+  - Pressed `M`; More reopened.
+  - Pressed `Down` to Audio, `Down` to Subtitles, `Down` to Info, and `Enter` to open the info panel.
+
+Findings recorded before fixes:
+
+| ID | Severity | Page | Evidence | Expected | Actual | Proposed batch fix |
+| --- | --- | --- | --- | --- | --- | --- |
+| DC-04.01 | Fail | Playback default OSD | UIA `02-default-osd-after-escape.uia.txt` shows `Aurora Protocol`, progress slider, `State`, `Playing - Fixture options ready`, and the full transport row all packed into the bottom overlay. Source `PlaybackPage.xaml` uses one bottom `Border` with three stacked rows. | Default playback invocation should be compact chrome: optional top-left title/status capsule plus bottom transport strip inside safe area. Playback UI stays subordinate to video/subtitles. | The current default OSD is a large bottom information panel. Title, state, timeline, and controls all live in the same bottom block, so it reads like a debug/control surface rather than the A3 compact strip model. | Split playback chrome into a small top-left status/title capsule and a compact bottom transport strip. Keep default strip focused on timeline, chips, transport, subtitles/audio, and More. |
+| DC-04.02 | Fail | Transport strip focus and density | UIA shows transport buttons as large text rectangles, for example `Pause` `183x78`, `More` `177x78`, and `Stop` `168x78`. Source uses default `Button` elements without a playback-specific compact focus style. | Focused transport targets should sit fully inside the strip with visible internal breathing room, use matte fill/luminance, and avoid bright complete focus frames. Expected target height is roughly 52px to 56px. | Buttons are usable but too tall and command-button-like for the compact OSD. They likely inherit generic button focus visuals instead of a playback-specific matte transport recipe. | Introduce shared playback transport button styles for compact icon/text or icon-only controls, disable system focus visuals where needed, and reserve internal strip padding for focus scale. |
+| DC-04.03 | Concern | Timeline and progress | UIA shows a disabled `Slider` with no exposed current/duration time labels in the default OSD snapshot. Source places status text on the right instead of time labels around the timeline. | Playback progress should use muted green for active progress, expose current/duration time, and keep non-playback controls neutral. | Seek/progress behavior exists, but the visual anatomy is not the target TV transport anatomy. The default OSD prioritizes state text over time comprehension. | Replace the default slider anatomy with a compact timeline row that includes start/current and duration labels, with muted green active progress and neutral track. |
+| DC-04.04 | Fail | Playback options / More | UIA `01-options-drawer-initial.uia.txt`, `05-audio-focus.uia.txt`, and `08-info-open.uia.txt` show Source, Audio, Subtitles, and Info are reachable, but they live in a full-height right drawer (`489x1974` at the captured scale). | Source, audio, subtitle, info, and more choices should open lightweight menus. They should not be flattened into the default OSD, and the menu should not compete with the video/subtitle field. | The options are correctly not flattened into the default strip, but the full-height drawer feels heavier than the playback design target and can dominate the video. | Rework More into a compact matte floating menu or short side sheet aligned to the bottom OSD, keeping Source/Audio/Subtitles/Info reachable through D-pad. |
+| DC-04.05 | Blocked | Subtitle/video conflict | The deterministic `playback-options-fixture` exposes playback controls and menus, but no subtitle text/video baseline is rendered for measuring subtitle collision. | Subtitle baseline remains readable. Move or shorten OSD/menu before adding stronger blur, borders, or shadows. | Cannot verify subtitle collision from this fixture. Source-level review still suggests the large bottom OSD would reduce subtitle-safe space more than the compact target. | Add a deterministic playback visual fixture with subtitle sample text or a synthetic subtitle baseline so subtitle-safe OSD can be tested without private media. |
+| DC-04.06 | Concern | Visual capture reliability | Screenshot files in `ngxe-batch04-playback-baseline-20260708-030052` and `ngxe-batch04-printwindow.png` captured a black app content layer while UIA saw all controls. | Playback visual QA should produce reliable evidence without depending on manual inspection. | Current capture method is weak for UWP playback composition. UIA can validate geometry and routes, but not material, contrast, or focus paint. | Keep UIA/source as fallback, but prefer Computer Use / Windows Graphics Capture for playback visual passes and consider a non-video fixture background for OSD screenshots. |
+
+- Decision:
+  - Fix now as a grouped playback visual-system batch for compact OSD structure, transport focus/density, timeline anatomy, and More menu weight.
+  - Add source-level design contracts first because screenshot capture is unreliable for playback composition in this environment.
+  - Keep actual native playback/stream switching behavior out of this visual batch.
+
+### 2026-07-08 - Design Conformance Batch 04 Playback OSD And Options Fix Rerun
+
+- App version: 0.1.0.219.
+- Scope: rerun Batch 04 after compact playback OSD, matte transport focus, timeline anatomy, source/audio/subtitle chips, subtitle-safe sample text, and compact More menu changes.
+- Data source: DEBUG `playback-options-fixture`; no private server data or personal media assets.
+- Runtime evidence:
+  - Screenshot: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch04-playback-fix-219-more.png`.
+  - UIA snapshot set: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch04-playback-fix-219-uia-20260708-033058`.
+  - `dev-command-result.txt` reported `completed / playback-options-fixture`.
+- Keyboard-only validation:
+  - Closed the existing app frame, wrote `dev-command.json` with route `playback-options-fixture`, and launched through AppUserModelId `NextGenEmby.App_h8qjz0sr1sg4m!App`.
+  - Initial fixture state opened Playback with compact More visible and Source focused.
+  - Pressed `Escape`; More closed and default OSD stayed visible with More focused in the bottom strip.
+  - Screenshot capture now produced usable UI evidence for the synthetic matte fixture background. Live/native video composition may still need separate hardware capture.
+
+Fix rerun findings:
+
+| ID | Status | Page | Evidence | Result | Residual risk |
+| --- | --- | --- | --- | --- | --- |
+| DC-04.01 | Pass | Playback default OSD | `01-initial-more.uia.txt` and `02-default-osd.uia.txt` show top-left `Aurora Protocol` capsule at `114,135,303,44` plus a separate bottom transport strip. | The OSD is no longer one large bottom information panel. Title/status moved to the compact top-left capsule, and playback controls sit in the bottom strip. | Real playback may tune auto-hide timing and status copy separately from this fixture. |
+| DC-04.02 | Pass | Transport strip focus and density | Bottom controls sit inside the strip: Pause `1526,1920,157,81`, Resume `1695,1920,180,81`, More `3564,1920,153,81`. Screenshot shows matte focus fill rather than bright complete outlines. | Transport now reads as TV playback chrome instead of a generic command row, with internal breathing room retained. | Xbox focus rendering should still be checked on hardware because WinUI theme focus can vary by platform. |
+| DC-04.03 | Pass | Timeline and progress | UIA exposes current time `02:40`, duration `01:58:00`, and slider `267,1857,3285,48`. Screenshot shows time labels around the scrubber. | Timeline anatomy now prioritizes current/duration comprehension and keeps debug state out of the transport strip. | Seek preview behavior should be rerun with real seekable media in an interaction batch. |
+| DC-04.04 | Pass | Playback options / More | More menu changed from the baseline full-height drawer (`489x1974`) to a compact bottom-aligned menu (`579x494`). | Source, audio, subtitles, and info remain reachable through D-pad, but no longer dominate the video field. Source focus is matte fill, not a bright white frame. | If the final native control cannot suppress ComboBox template visuals on Xbox, replace these with matte option rows plus lightweight flyouts. |
+| DC-04.05 | Pass with concern | Subtitle/video conflict | Fixture screenshot displays `Subtitle sample stays above controls` between the video field and the bottom strip. | The synthetic subtitle baseline remains above the compact strip and is not occluded by More. | This is still a synthetic subtitle sample, not timed text over a live video renderer. Recheck with real subtitles and overscan on hardware. |
+| DC-04.06 | Pass with concern | Visual capture reliability | `CopyFromScreen` produced usable evidence for `ngxe-batch04-playback-fix-219-more.png`. | Playback visual QA can now capture the synthetic fixture because it uses a matte app-owned visual field instead of only relying on native video composition. | Real video composition may still capture differently; keep UIA/source as fallback and prefer hardware/Windows Graphics Capture for native playback. |
+
+- Decision:
+  - Commit this batch as playback OSD visual-system alignment.
+  - Keep native stream switching, real subtitle collision, and hardware focus rendering as follow-up validation, not as blockers for this visual-system slice.
