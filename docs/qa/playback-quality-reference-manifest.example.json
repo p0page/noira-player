@@ -4,6 +4,8 @@
     {
       "caseId": "jellyfin/sdr-hevc-main10-1080p60-3m",
       "category": "stable",
+      "severity": "high",
+      "stability": "stable",
       "uri": "https://repo.jellyfin.org/test-videos/SDR/HEVC%2010bit/Test%20Jellyfin%201080p%20HEVC%2010bit%203M.mp4",
       "tier": 1,
       "purpose": [
@@ -34,6 +36,8 @@
     {
       "caseId": "jellyfin/hdr10-hevc-main10-1080p60-10m",
       "category": "stable",
+      "severity": "critical",
+      "stability": "stable",
       "uri": "https://repo.jellyfin.org/test-videos/HDR/HDR10/HEVC/Test%20Jellyfin%201080p%20HEVC%20HDR10%2010M.mp4",
       "tier": 1,
       "purpose": [
@@ -60,6 +64,8 @@
     {
       "caseId": "jellyfin/hdr10-hevc-main10-1080p60-10m-force-sdr",
       "category": "challenge",
+      "severity": "high",
+      "stability": "stable",
       "uri": "https://repo.jellyfin.org/test-videos/HDR/HDR10/HEVC/Test%20Jellyfin%201080p%20HEVC%20HDR10%2010M.mp4",
       "forceSdrOutput": true,
       "tier": 2,
@@ -87,6 +93,8 @@
     {
       "caseId": "jellyfin/hdr10-hevc-main10-4k60-50m",
       "category": "challenge",
+      "severity": "high",
+      "stability": "variable",
       "uri": "https://repo.jellyfin.org/test-videos/HDR/HDR10/HEVC/Test%20Jellyfin%204K%20HEVC%20HDR10%2050M.mp4",
       "tier": 3,
       "purpose": [
@@ -113,6 +121,8 @@
     {
       "caseId": "jellyfin/dv-profile5-hevc-4k60",
       "category": "challenge",
+      "severity": "medium",
+      "stability": "stable",
       "uri": "https://repo.jellyfin.org/test-videos/HDR/Dolby%20Vision/Test%20Jellyfin%204K%20DV%20P5.mp4",
       "tier": 3,
       "purpose": [
@@ -140,6 +150,8 @@
     {
       "caseId": "jellyfin/dv-profile8-1-hevc-4k60-hdr10-fallback",
       "category": "challenge",
+      "severity": "high",
+      "stability": "stable",
       "uri": "https://repo.jellyfin.org/test-videos/HDR/Dolby%20Vision/Test%20Jellyfin%204K%20DV%20P8.1.mp4",
       "tier": 3,
       "purpose": [
@@ -172,6 +184,8 @@
     {
       "caseId": "local/chimera-23976-hdr10-cadence",
       "category": "challenge",
+      "severity": "high",
+      "stability": "unknown",
       "uri": "emby://quality-cases/chimera-23976-hdr10",
       "itemId": "quality-case-chimera-23976-hdr10",
       "mediaSourceId": "quality-source-chimera-23976-hdr10",
@@ -205,6 +219,8 @@
     {
       "caseId": "local/sdr-resume-seek-timeline",
       "category": "stable",
+      "severity": "high",
+      "stability": "unknown",
       "uri": "emby://quality-cases/sdr-resume-seek-timeline",
       "itemId": "quality-case-sdr-resume-seek-timeline",
       "mediaSourceId": "quality-source-sdr-resume-seek-timeline",

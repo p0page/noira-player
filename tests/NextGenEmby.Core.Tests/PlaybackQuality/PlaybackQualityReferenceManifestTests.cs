@@ -185,6 +185,58 @@ public sealed class PlaybackQualityReferenceManifestTests
     }
 
     [Fact]
+    public void Validate_Preserves_And_Validates_Case_Severity_And_Stability()
+    {
+        var manifest = new PlaybackQualityReferenceManifest
+        {
+            SchemaVersion = 1
+        };
+        var referenceCase = CreateCase(
+            "jellyfin/hdr10-critical",
+            tier: 1,
+            purpose: "hdr-output");
+        referenceCase.Severity = "critical";
+        referenceCase.Stability = "variable";
+        manifest.Cases.Add(referenceCase);
+
+        var result = PlaybackQualityReferenceManifestValidator.Validate(manifest);
+
+        Assert.True(result.IsValid);
+        Assert.Contains("critical", result.Severities);
+        Assert.Contains("variable", result.Stabilities);
+        Assert.Contains(result.Cases, item =>
+            item.CaseId == "jellyfin/hdr10-critical" &&
+            item.Severity == "critical" &&
+            item.Stability == "variable");
+    }
+
+    [Fact]
+    public void Validate_Rejects_Invalid_Case_Severity_And_Stability()
+    {
+        var manifest = new PlaybackQualityReferenceManifest
+        {
+            SchemaVersion = 1
+        };
+        var referenceCase = CreateCase(
+            "jellyfin/invalid-triage-fields",
+            tier: 1,
+            purpose: "hdr-output");
+        referenceCase.Severity = "urgent";
+        referenceCase.Stability = "sometimes";
+        manifest.Cases.Add(referenceCase);
+
+        var result = PlaybackQualityReferenceManifestValidator.Validate(manifest);
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, error =>
+            error.Code == "case.severity.invalid" &&
+            error.Signal == "severity");
+        Assert.Contains(result.Errors, error =>
+            error.Code == "case.stability.invalid" &&
+            error.Signal == "stability");
+    }
+
+    [Fact]
     public void Validate_Rejects_Invalid_Case_Category()
     {
         var manifest = new PlaybackQualityReferenceManifest
@@ -363,6 +415,8 @@ public sealed class PlaybackQualityReferenceManifestTests
             tier: 2,
             purpose: "hdr-output");
         referenceCase.Category = "challenge";
+        referenceCase.Severity = "high";
+        referenceCase.Stability = "variable";
         manifest.Cases.Add(referenceCase);
         var report = CreateReport(
             "netflix/chimera-4k-2398-hdr-pq",
@@ -385,6 +439,8 @@ public sealed class PlaybackQualityReferenceManifestTests
         Assert.Contains(validation.Cases, item =>
             item.CaseId == "netflix/chimera-4k-2398-hdr-pq" &&
             item.Category == "challenge" &&
+            item.Severity == "high" &&
+            item.Stability == "variable" &&
             item.Status == "matched" &&
             item.ReportRunId == "netflix/chimera-4k-2398-hdr-pq");
     }

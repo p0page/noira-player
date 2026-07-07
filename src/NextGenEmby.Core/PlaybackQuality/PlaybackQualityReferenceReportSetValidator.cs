@@ -28,6 +28,10 @@ namespace NextGenEmby.Core.PlaybackQuality
 
         public string Category { get; set; } = "stable";
 
+        public string Severity { get; set; } = "medium";
+
+        public string Stability { get; set; } = "stable";
+
         public string ReportRunId { get; set; } = "";
 
         public string Status { get; set; } = "";
@@ -191,6 +195,8 @@ namespace NextGenEmby.Core.PlaybackQuality
                     {
                         CaseId = caseId,
                         Category = NormalizeCaseCategory(referenceCase.Category),
+                        Severity = NormalizeCaseSeverity(referenceCase.Severity),
+                        Stability = NormalizeCaseStability(referenceCase.Stability),
                         Status = "missing"
                     });
                     AddError(
@@ -211,6 +217,8 @@ namespace NextGenEmby.Core.PlaybackQuality
                 {
                     CaseId = caseId,
                     Category = NormalizeCaseCategory(referenceCase.Category),
+                    Severity = NormalizeCaseSeverity(referenceCase.Severity),
+                    Stability = NormalizeCaseStability(referenceCase.Stability),
                     ReportRunId = report.RunId,
                     Status = "matched"
                 };
@@ -232,6 +240,16 @@ namespace NextGenEmby.Core.PlaybackQuality
         private static string NormalizeCaseCategory(string category)
         {
             return string.IsNullOrWhiteSpace(category) ? "stable" : category;
+        }
+
+        private static string NormalizeCaseSeverity(string severity)
+        {
+            return string.IsNullOrWhiteSpace(severity) ? "medium" : severity;
+        }
+
+        private static string NormalizeCaseStability(string stability)
+        {
+            return string.IsNullOrWhiteSpace(stability) ? "stable" : stability;
         }
 
         private static void ValidateSource(

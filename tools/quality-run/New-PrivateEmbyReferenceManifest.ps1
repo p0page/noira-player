@@ -338,6 +338,18 @@ function New-ReferenceCase(
     [double]$MaxSeekPositionErrorMs = 0
 ) {
     $category = if ($Tier -le 1) { 'stable' } else { 'challenge' }
+    $severity = if (($Purpose -contains 'sdr-smoke') -or
+        ($Purpose -contains 'hdr-output') -or
+        ($Purpose -contains 'hdr-force-sdr') -or
+        ($Purpose -contains 'dv-fallback') -or
+        ($Purpose -contains 'cadence-23.976') -or
+        ($Purpose -contains 'timeline')) {
+        'high'
+    }
+    else {
+        'medium'
+    }
+    $stability = if ($Tier -ge 3) { 'variable' } else { 'stable' }
     $hdrOutput = if ($ForceSdrOutput) { 'Sdr' } elseif ($Candidate.HdrProfile.isHdr) { 'Hdr10' } else { 'Sdr' }
     $dxgiOutput = if ($ForceSdrOutput -or -not $Candidate.HdrProfile.isHdr) {
         'RGB_FULL_G22_NONE_P709'
@@ -360,6 +372,8 @@ function New-ReferenceCase(
     $case = [ordered]@{
         caseId = ('private-emby/{0}/{1}/{2}' -f $Candidate.ItemId, $Candidate.MediaSourceId, $Suffix)
         category = $category
+        severity = $severity
+        stability = $stability
         uri = ('emby://items/{0}' -f $Candidate.ItemId)
         itemId = $Candidate.ItemId
         mediaSourceId = $Candidate.MediaSourceId

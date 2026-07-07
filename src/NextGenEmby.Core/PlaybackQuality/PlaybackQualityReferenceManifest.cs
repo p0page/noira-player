@@ -16,6 +16,10 @@ namespace NextGenEmby.Core.PlaybackQuality
 
         public string Category { get; set; } = "stable";
 
+        public string Severity { get; set; } = "medium";
+
+        public string Stability { get; set; } = "stable";
+
         public string Uri { get; set; } = "";
 
         public string ItemId { get; set; } = "";
@@ -50,6 +54,10 @@ namespace NextGenEmby.Core.PlaybackQuality
         public List<string> Purposes { get; } = new List<string>();
 
         public List<string> Categories { get; } = new List<string>();
+
+        public List<string> Severities { get; } = new List<string>();
+
+        public List<string> Stabilities { get; } = new List<string>();
 
         public List<PlaybackQualityReferenceCase> Cases { get; } =
             new List<PlaybackQualityReferenceCase>();
@@ -151,6 +159,8 @@ namespace NextGenEmby.Core.PlaybackQuality
 
             var caseId = referenceCase.CaseId ?? "";
             var category = NormalizeCaseCategory(referenceCase.Category);
+            var severity = NormalizeCaseSeverity(referenceCase.Severity);
+            var stability = NormalizeCaseStability(referenceCase.Stability);
             if (string.IsNullOrWhiteSpace(caseId))
             {
                 AddError(
@@ -182,6 +192,34 @@ namespace NextGenEmby.Core.PlaybackQuality
             else
             {
                 AddUnique(validation.Categories, category);
+            }
+
+            if (!IsValidCaseSeverity(severity))
+            {
+                AddError(
+                    validation,
+                    "case.severity.invalid",
+                    caseId,
+                    "severity",
+                    "Playback quality reference severity must be info, low, medium, high, or critical.");
+            }
+            else
+            {
+                AddUnique(validation.Severities, severity);
+            }
+
+            if (!IsValidCaseStability(stability))
+            {
+                AddError(
+                    validation,
+                    "case.stability.invalid",
+                    caseId,
+                    "stability",
+                    "Playback quality reference stability must be stable, variable, flaky, or unknown.");
+            }
+            else
+            {
+                AddUnique(validation.Stabilities, stability);
             }
 
             if (string.IsNullOrWhiteSpace(referenceCase.Uri))
@@ -235,6 +273,8 @@ namespace NextGenEmby.Core.PlaybackQuality
             {
                 CaseId = source.CaseId,
                 Category = NormalizeCaseCategory(source.Category),
+                Severity = NormalizeCaseSeverity(source.Severity),
+                Stability = NormalizeCaseStability(source.Stability),
                 Uri = source.Uri,
                 ItemId = source.ItemId,
                 MediaSourceId = source.MediaSourceId,
@@ -262,6 +302,33 @@ namespace NextGenEmby.Core.PlaybackQuality
             return category == "stable" ||
                 category == "challenge" ||
                 category == "quarantine";
+        }
+
+        private static string NormalizeCaseSeverity(string severity)
+        {
+            return string.IsNullOrWhiteSpace(severity) ? "medium" : severity;
+        }
+
+        private static bool IsValidCaseSeverity(string severity)
+        {
+            return severity == "info" ||
+                severity == "low" ||
+                severity == "medium" ||
+                severity == "high" ||
+                severity == "critical";
+        }
+
+        private static string NormalizeCaseStability(string stability)
+        {
+            return string.IsNullOrWhiteSpace(stability) ? "stable" : stability;
+        }
+
+        private static bool IsValidCaseStability(string stability)
+        {
+            return stability == "stable" ||
+                stability == "variable" ||
+                stability == "flaky" ||
+                stability == "unknown";
         }
 
         private static PlaybackQualityExpected CloneExpected(PlaybackQualityExpected source)

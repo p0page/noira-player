@@ -1301,6 +1301,8 @@ internal static class Program
         {
             CaseId = referenceCase.CaseId,
             Category = referenceCase.Category,
+            Severity = referenceCase.Severity,
+            Stability = referenceCase.Stability,
             Status = result.Report.Result,
             ReportRelativePath = reportRelativePath,
             ReportPath = reportPath,
@@ -1466,6 +1468,8 @@ internal static class Program
             {
                 CaseId = referenceCase.CaseId,
                 Category = referenceCase.Category,
+                Severity = referenceCase.Severity,
+                Stability = referenceCase.Stability,
                 RunId = referenceCase.CaseId,
                 SourceUri = referenceCase.Uri,
                 Tier = referenceCase.Tier,
@@ -2495,6 +2499,8 @@ internal static class Program
         public string CaseId { get; set; } = "";
 
         public string Category { get; set; } = "stable";
+        public string Severity { get; set; } = "medium";
+        public string Stability { get; set; } = "stable";
 
         public string Status { get; set; } = "";
 
@@ -2683,6 +2689,8 @@ internal static class Program
     {
         public string CaseId { get; set; } = "";
         public string Category { get; set; } = "stable";
+        public string Severity { get; set; } = "medium";
+        public string Stability { get; set; } = "stable";
         public string RunId { get; set; } = "";
         public string SourceUri { get; set; } = "";
         public int Tier { get; set; }

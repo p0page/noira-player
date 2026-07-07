@@ -409,6 +409,8 @@ try {
   "cases": [
     {
       "caseId": "netflix/chimera-4k-2398-hdr-pq",
+      "severity": "high",
+      "stability": "variable",
       "uri": "https://example.invalid/netflix/chimera-4k-2398-hdr-pq.mp4",
       "tier": 2,
       "purpose": [
@@ -425,6 +427,8 @@ try {
     },
     {
       "caseId": "jellyfin/dv-profile5-hevc-4k",
+      "severity": "medium",
+      "stability": "stable",
       "uri": "https://example.invalid/jellyfin/dv-profile5-hevc-4k.mp4",
       "tier": 3,
       "purpose": [
@@ -478,6 +482,8 @@ try {
     if (-not ($manifestValidation.cases | Where-Object {
         $_.caseId -eq 'netflix/chimera-4k-2398-hdr-pq' -and
         $_.tier -eq 2 -and
+        $_.severity -eq 'high' -and
+        $_.stability -eq 'variable' -and
         $_.expected.codec -eq 'hevc' -and
         $_.expected.hdrKind -eq 'Hdr10'
     })) {
@@ -519,6 +525,8 @@ try {
         $_.caseId -eq 'netflix/chimera-4k-2398-hdr-pq' -and
         $_.runId -eq 'netflix/chimera-4k-2398-hdr-pq' -and
         $_.sourceUri -eq 'https://example.invalid/netflix/chimera-4k-2398-hdr-pq.mp4' -and
+        $_.severity -eq 'high' -and
+        $_.stability -eq 'variable' -and
         $_.reportRelativePath -eq 'netflix/chimera-4k-2398-hdr-pq.json' -and
         $_.durationSeconds -eq 60 -and
         $_.expected.hdrKind -eq 'Hdr10' -and
@@ -557,6 +565,14 @@ try {
 
     if (-not ($materializedBaselineSummary.limitations -contains 'source-only: playback execution was not run by this command')) {
         throw 'Expected materialize-baseline-report-set summary to expose source-only limitation.'
+    }
+
+    if (-not ($materializedBaselineSummary.cases | Where-Object {
+        $_.caseId -eq 'netflix/chimera-4k-2398-hdr-pq' -and
+        $_.severity -eq 'high' -and
+        $_.stability -eq 'variable'
+    })) {
+        throw 'Expected materialize-baseline-report-set summary to preserve case severity and stability.'
     }
 
     $materializedBaselineReportPath = Join-Path $materializedBaselineDir 'netflix\chimera-4k-2398-hdr-pq.json'
@@ -2953,9 +2969,16 @@ try {
         throw 'Expected example reference manifest validation to expose stable and challenge case categories.'
     }
 
+    if (-not ($exampleManifestValidation.severities -contains 'critical') -or
+        -not ($exampleManifestValidation.stabilities -contains 'variable')) {
+        throw 'Expected example reference manifest validation to expose severity and stability dimensions.'
+    }
+
     if (-not ($exampleManifestValidation.cases | Where-Object {
         $_.caseId -eq 'jellyfin/hdr10-hevc-main10-4k60-50m' -and
         $_.category -eq 'challenge' -and
+        $_.severity -eq 'high' -and
+        $_.stability -eq 'variable' -and
         $_.uri -eq 'https://repo.jellyfin.org/test-videos/HDR/HDR10/HEVC/Test%20Jellyfin%204K%20HEVC%20HDR10%2050M.mp4' -and
         $_.expected.codec -eq 'hevc' -and
         $_.expected.width -eq 3840 -and
@@ -3076,6 +3099,8 @@ try {
     if (-not ($exampleRunPlan.cases | Where-Object {
         $_.caseId -eq 'jellyfin/sdr-hevc-main10-1080p60-3m' -and
         $_.category -eq 'stable' -and
+        $_.severity -eq 'high' -and
+        $_.stability -eq 'stable' -and
         ($_.requiredSignals -contains 'tracks.videoTrackCount') -and
         ($_.requiredSignals -contains 'tracks.audioTrackCount') -and
         ($_.requiredSignals -contains 'tracks.subtitleTrackCount') -and

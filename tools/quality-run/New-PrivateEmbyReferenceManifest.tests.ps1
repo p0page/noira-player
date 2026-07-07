@@ -311,6 +311,8 @@ try {
     if (-not ($manifest.cases | Where-Object {
         $_.caseId -eq 'private-emby/dv5-movie/dv5-source/dv-reject' -and
         $_.category -eq 'challenge' -and
+        $_.severity -eq 'medium' -and
+        $_.stability -eq 'variable' -and
         $_.expected.hdrKind -eq 'DolbyVisionUnsupported' -and
         $_.expected.dolbyVisionProfile -eq 5 -and
         $_.expected.isDirectPlayable -eq $false
@@ -330,6 +332,8 @@ try {
     if (-not ($manifest.cases | Where-Object {
         $_.caseId -eq 'private-emby/sdr-movie/sdr-source/sdr-smoke' -and
         $_.category -eq 'stable' -and
+        $_.severity -eq 'high' -and
+        $_.stability -eq 'stable' -and
         ($_.purpose -contains 'tracks') -and
         ($_.purpose -contains 'subtitles')
     })) {
@@ -339,6 +343,8 @@ try {
     if (-not ($manifest.cases | Where-Object {
         $_.caseId -eq 'private-emby/dv81-movie/dv81-source/dv-fallback' -and
         $_.category -eq 'challenge' -and
+        $_.severity -eq 'high' -and
+        $_.stability -eq 'variable' -and
         $_.expected.hdrKind -eq 'DolbyVisionWithHdr10Fallback' -and
         $_.expected.dolbyVisionCompatibilityId -eq 1 -and
         $_.expected.hasHdr10BaseLayer -eq $true
@@ -357,6 +363,8 @@ try {
     if (-not ($manifest.cases | Where-Object {
         $_.caseId -eq 'private-emby/cadence-movie/cadence-source/cadence-23976' -and
         $_.category -eq 'challenge' -and
+        $_.severity -eq 'high' -and
+        $_.stability -eq 'stable' -and
         $_.expected.frameRate -eq 23.976 -and
         $_.expected.requireMatchedDisplayRefreshRate -eq $true
     })) {
