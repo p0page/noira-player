@@ -68,11 +68,11 @@ Goal: verify that the broad Emby product model is clear without turning the app 
 
 | ID | Route | Keyboard Path | Design Checks | Result | Notes |
 | --- | --- | --- | --- | --- | --- |
-| 01.01 | Home saved session or `home-fixture` | Launch | Home opens as a rail-first TV surface, not a landing page or single hero promo. Continue Watching and Next Up are lists/rails when data exists. | Not Run | |
-| 01.02 | Home | `M`, arrows, `Escape` | Guide opens as a quiet left source guide; content remains primary; no green nav markers; Search and More/Source Hub are present or intentionally deferred. | Not Run | |
-| 01.03 | Home rails | `Down`, `Right`, `Left`, `Down` | Focus is borderless and readable; row movement preserves column intent; card scale does not shift layout. | Not Run | |
-| 01.04 | Continue Watching / Next Up | Focus several wide cards | Unfocused cards keep bottom black gradient only; focused card uses low-height attached text/progress material if blur is available; no hard glass box or double container. | Not Run | |
-| 01.05 | Media Libraries / server sections | Focus and open a card | Library and section cards use source-appropriate artwork and quiet matte focus; no oversized green banner or bright outline. | Not Run | |
+| 01.01 | Home saved session or `home-fixture` | Launch | Home opens as a rail-first TV surface, not a landing page or single hero promo. Continue Watching and Next Up are lists/rails when data exists. | Pass with concern | Batch 02 follow-up rerun converted the top decision into an unframed compact feature strip and made the first rail the dominant structure. Residual concern: populated real Continue Watching data should confirm the feature strip does not compete with rails. |
+| 01.02 | Home | `M`, arrows, `Escape` | Guide opens as a quiet left source guide; content remains primary; no green nav markers; Search and More/Source Hub are present or intentionally deferred. | Pass with concern | Guide focus/active state uses matte fill and no green nav marker. Source Hub/lower-frequency grouping remains an accepted future navigation decision, echoed by Batch 05.04. |
+| 01.03 | Home rails | `Down`, `Right`, `Left`, `Down` | Focus is borderless and readable; row movement preserves column intent; card scale does not shift layout. | Pass | Batch 01 and follow-up reruns moved Home cards to matte fill/scale focus; operation-matrix routes also cover horizontal and vertical row movement. |
+| 01.04 | Continue Watching / Next Up | Focus several wide cards | Unfocused cards keep bottom black gradient only; focused card uses low-height attached text/progress material if blur is available; no hard glass box or double container. | Pass | Batch 01 fix rerun shows resume rows as wide cards with full-bleed art, bottom black scrim, stable title/meta, and progress. |
+| 01.05 | Media Libraries / server sections | Focus and open a card | Library and section cards use source-appropriate artwork and quiet matte focus; no oversized green banner or bright outline. | Pass with concern | Home media-library and server-section cards use matte focus and passive green accents were removed. Residual concern: fixture art is generated/stylized and real-server artwork density should still be checked. |
 
 Evidence to capture:
 
@@ -87,11 +87,11 @@ Goal: verify normal poster-grid browsing, filtering, searching, and fallback sta
 
 | ID | Route | Keyboard Path | Design Checks | Result | Notes |
 | --- | --- | --- | --- | --- | --- |
-| 02.01 | Movies / library grid | Open grid, `Right`, `Down`, `Up` | Movie/series items use vertical poster cards by default. Focused card may use integrated matte selected backplate around poster plus title/meta; no bright frame, glass card, or heavy shadow. | Not Run | |
-| 02.02 | Library toolbar | `Up`, open Sort/Filter, `Escape` | Toolbar controls use matte command focus, not poster-card focus. Sheets feel grounded, not floating glass plates. | Not Run | |
-| 02.03 | Search `search-fixture` | Type/search or use fixture scopes | Search results share the poster-grid selected treatment. Scope chips are compact and neutral. Recent search terms do not steal recovery focus. | Not Run | |
-| 02.04 | Empty and no-artwork grid states | Empty query or fallback fixture | Empty state, unavailable poster tile, and fallback initials remain intentional matte surfaces, not abstract generated art. | Not Run | |
-| 02.05 | Collections and playlists | `collections-fixture`, `playlists-fixture` | Mixed collection/playlist surfaces use the same grid/list language while preserving ordered playlist semantics and folder-like collection behavior. | Not Run | |
+| 02.01 | Movies / library grid | Open grid, `Right`, `Down`, `Up` | Movie/series items use vertical poster cards by default. Focused card may use integrated matte selected backplate around poster plus title/meta; no bright frame, glass card, or heavy shadow. | Pass with concern | Batch 02 fix rerun shows Movies/Library poster focus using the integrated matte backplate and title/meta below artwork. Residual concern: current deterministic fixture item count is small. |
+| 02.02 | Library toolbar | `Up`, open Sort/Filter, `Escape` | Toolbar controls use matte command focus, not poster-card focus. Sheets feel grounded, not floating glass plates. | Pass with concern | Batch 02 follow-up rerun moved Sort/Filter sheets to a higher grounded matte panel with visible options and fill-first focus. Residual concern: long localized option labels need future stress testing. |
+| 02.03 | Search `search-fixture` | Type/search or use fixture scopes | Search results share the poster-grid selected treatment. Scope chips are compact and neutral. Recent search terms do not steal recovery focus. | Pass | Batch 02 fix rerun restores Search/Library poster-card parity. Batch 06 also moved utility search controls to matte form/command treatment. |
+| 02.04 | Empty and no-artwork grid states | Empty query or fallback fixture | Empty state, unavailable poster tile, and fallback initials remain intentional matte surfaces, not abstract generated art. | Pass with concern | Source contracts require fallback initials in Library and Search poster templates, and Search recovery is matte. Residual concern: runtime screenshots still need a forced missing-poster movie tile. |
+| 02.05 | Collections and playlists | `collections-fixture`, `playlists-fixture` | Mixed collection/playlist surfaces use the same grid/list language while preserving ordered playlist semantics and folder-like collection behavior. | Pass with concern | Operation-matrix evidence verifies deterministic collection/playlist roots and child browsing. Visual anatomy inherits the shared poster-grid treatment; real-server collection/playlist shapes still need validation. |
 
 Evidence to capture:
 
@@ -107,11 +107,11 @@ Goal: verify the deterministic details decision surface, Emby-specific source co
 
 | ID | Route | Keyboard Path | Design Checks | Result | Notes |
 | --- | --- | --- | --- | --- | --- |
-| 03.01 | Movie details or `details-fixture` | Open item | First viewport shows title, metadata, source/version/action decisions, and one right-side artwork atmosphere zone. If no artwork exists, the right side falls back to black/matte, not fake gradients. | Not Run | |
-| 03.02 | Versions/source | Move to version selector, change option | Source selection is reachable before playback and shows selected state separately from focus. Selection does not reuse bright focus color. | Not Run | |
-| 03.03 | Audio/subtitle controls | Move through available controls | Audio and subtitle choices are reachable, compact, and framed as Emby playback decisions, not decorative chips. | Not Run | |
-| 03.04 | Favorite/watched/actions | Toggle fixture states | State feedback is visible, muted, and local. Green appears only when the state is active/current and not as a large action fill. | Not Run | |
-| 03.05 | Cast, similar, facets, collection/playlist actions | Move below fold and open/close layers | Secondary rails derive from card/list rules, with B/Escape closing one layer and restoring focus. | Not Run | |
+| 03.01 | Movie details or `details-fixture` | Open item | First viewport shows title, metadata, source/version/action decisions, and one right-side artwork atmosphere zone. If no artwork exists, the right side falls back to black/matte, not fake gradients. | Pass with concern | Batch 03 fix rerun removes the duplicate poster viewer and uses left content/action plus right atmosphere zone. Residual concern: real Emby backdrop quality and no-art fallback should be checked live. |
+| 03.02 | Versions/source | Move to version selector, change option | Source selection is reachable before playback and shows selected state separately from focus. Selection does not reuse bright focus color. | Pass | Batch 03 fix rerun shows matte source focus and neutral selected-source marker instead of green. |
+| 03.03 | Audio/subtitle controls | Move through available controls | Audio and subtitle choices are reachable, compact, and framed as Emby playback decisions, not decorative chips. | Pass with concern | Details source/audio/subtitle controls use the same compact Emby decision vocabulary; longer localized stream labels should still be checked for wrapping. |
+| 03.04 | Favorite/watched/actions | Toggle fixture states | State feedback is visible, muted, and local. Green appears only when the state is active/current and not as a large action fill. | Pass with concern | Operation-matrix evidence verifies fixture favorite/watched toggles and Batch 03 action row uses matte command styles. Live mutation should only be rerun on disposable user data. |
+| 03.05 | Cast, similar, facets, collection/playlist actions | Move below fold and open/close layers | Secondary rails derive from card/list rules, with B/Escape closing one layer and restoring focus. | Pass with concern | Batch 03 visual rerun validates secondary-rail anatomy and add-to sheet styling. The 2026-07-08 Details interaction follow-up confirms Down moves from More like this to Explore to Cast & crew, and Up returns to Explore. Residual concern: real mixed metadata/cast shapes still need live validation. |
 
 Evidence to capture:
 
@@ -126,11 +126,11 @@ Goal: verify that playback controls remain subordinate to video/subtitles while 
 
 | ID | Route | Keyboard Path | Design Checks | Result | Notes |
 | --- | --- | --- | --- | --- | --- |
-| 04.01 | `manual-playback` or real playback | Start playback, show OSD | Shell chrome disappears. OSD is compact: optional top-left status/title capsule plus bottom transport strip inside safe area. | Not Run | |
-| 04.02 | Transport strip | `Left`/`Right`, `Enter`, `Escape` | Strip preserves internal padding. Focused 52px to 56px targets sit fully inside the panel with top and bottom breathing room. | Not Run | |
-| 04.03 | Timeline and progress | Seek or preview seek | Playback progress uses muted green only for active playback/progress. Other sliders and diagnostics stay neutral. | Not Run | |
-| 04.04 | `playback-options-fixture` | `M`, `Down`/`Up`, selectors, `Escape` | Source, audio, subtitles, info, and more options open lightweight menus. They are not flattened into the default OSD. | Not Run | |
-| 04.05 | Subtitles/video conflict | Show subtitle text if available | Subtitle baseline remains readable. Move or shorten OSD/menu before adding stronger blur, borders, or shadows. | Not Run | |
+| 04.01 | `manual-playback` or real playback | Start playback, show OSD | Shell chrome disappears. OSD is compact: optional top-left status/title capsule plus bottom transport strip inside safe area. | Pass | Batch 04 fix rerun splits playback chrome into a small top-left status capsule and compact bottom transport strip. |
+| 04.02 | Transport strip | `Left`/`Right`, `Enter`, `Escape` | Strip preserves internal padding. Focused 52px to 56px targets sit fully inside the panel with top and bottom breathing room. | Pass | Batch 04 fix rerun shows matte transport focus and controls sitting inside the strip with breathing room. |
+| 04.03 | Timeline and progress | Seek or preview seek | Playback progress uses muted green only for active playback/progress. Other sliders and diagnostics stay neutral. | Pass | Batch 04 fix rerun exposes current/duration labels and the compact muted-green progress anatomy. |
+| 04.04 | `playback-options-fixture` | `M`, `Down`/`Up`, selectors, `Escape` | Source, audio, subtitles, info, and more options open lightweight menus. They are not flattened into the default OSD. | Pass with concern | More menu is compact and bottom-aligned, with Source/Audio/Subtitles/Info still reachable. Residual concern: native ComboBox focus behavior should be checked on Xbox. |
+| 04.05 | Subtitles/video conflict | Show subtitle text if available | Subtitle baseline remains readable. Move or shorten OSD/menu before adding stronger blur, borders, or shadows. | Pass with concern | Synthetic subtitle sample remains above the compact strip and is not occluded. Real timed subtitles and overscan need hardware/live-media validation. |
 
 Evidence to capture:
 

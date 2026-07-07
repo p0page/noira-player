@@ -2548,3 +2548,34 @@ Fix rerun findings:
 - Decision:
   - Commit this batch as utility-surface visual-system alignment.
   - Keep Xbox hardware text-entry behavior, production diagnostics disclosure, and real offline-server recovery as follow-up validation rather than blockers for this visual-system slice.
+
+### 2026-07-08 - Design Conformance Batch 03 Details Secondary Interaction Follow-Up
+
+- App version: 0.1.0.222.
+- Scope: rerun the remaining Batch 03 below-fold interaction concern after later details/poster/focus fixes.
+- Data source: DEBUG `details-fixture`; no private server data or personal media assets.
+- Evidence root: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch07-details-interaction-baseline-20260708-044207`.
+- Keyboard-only validation:
+  - Closed the existing app frame, wrote `dev-command.json` with route `details-fixture`, and launched through AppUserModelId `NextGenEmby.App_h8qjz0sr1sg4m!App`.
+  - Pressed `Down` repeatedly from the default Details focus and captured screenshots plus UIA focused element names at every step.
+  - Pressed `Up` from the Cast & crew focused state to verify reverse movement.
+- Focus log:
+  - Initial: primary action button.
+  - `Down 1`: selected `4K SDR Direct` source.
+  - `Down 2`: `1080p fallback` source.
+  - `Down 3`: organize/action area.
+  - `Down 4`: More like this item `Midnight Signal`.
+  - `Down 5`: Explore facet `Browse Genre Sci-Fi`.
+  - `Down 6`: Cast & crew item `Maya Chen, Lena Ortiz`.
+  - `Up from Cast`: returned to Explore facet `Browse Genre Sci-Fi`.
+
+Follow-up findings:
+
+| ID | Status | Page | Evidence | Result | Residual risk |
+| --- | --- | --- | --- | --- | --- |
+| DC-03.06 | Pass with concern | Details below-fold vertical focus | `down-04.png`, `down-05.png`, `down-06.png`, and `focus-log.txt`. | The current route now moves predictably from More like this to Explore to Cast & crew, with all three sections visible and focused targets reachable by D-pad. Up from Cast returns to Explore. | Fixture cast/facet data is compact. Recheck with real Details items that have longer people names, more facets, and larger similar/cast rails. |
+| DC-03.08 | Concern | Details atmosphere crop while below fold | `down-04.png` through `down-06.png`. | The right-side atmosphere remains non-interactive and does not block reading/focus. | The fixture's large Logo crop appears in the lower-right atmosphere zone and can become visually loud below the first viewport. This is not an interaction blocker, but real backdrop/logo crops should be sampled during live-media validation. |
+
+- Decision:
+  - Mark the Batch 03 below-fold interaction concern as resolved for the deterministic fixture.
+  - Keep real-media metadata density and atmosphere crop behavior as future live-data validation, not as blockers for the current design-system pass.
