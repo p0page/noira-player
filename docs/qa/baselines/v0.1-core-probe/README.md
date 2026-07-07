@@ -5,7 +5,7 @@
 生成命令：
 
 ```powershell
-dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- materialize-core-probe-report-set --manifest docs\qa\playback-quality-reference-manifest.example.json --reports-dir docs\qa\baselines\v0.1-core-probe\reports --source-revision working-tree-direct-stream-locator-v0.1 --player-core-version NextGenEmby.Core --build-configuration Debug --output docs\qa\baselines\v0.1-core-probe\materialized-core-probe-summary.json
+dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- materialize-core-probe-report-set --manifest docs\qa\playback-quality-reference-manifest.example.json --reports-dir docs\qa\baselines\v0.1-core-probe\reports --source-revision working-tree-audio-channel-evidence-v0.1 --player-core-version NextGenEmby.Core --build-configuration Debug --output docs\qa\baselines\v0.1-core-probe\materialized-core-probe-summary.json
 dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- validate-report-set --manifest docs\qa\playback-quality-reference-manifest.example.json --reports-dir docs\qa\baselines\v0.1-core-probe\reports --output docs\qa\baselines\v0.1-core-probe\report-set-validation.json
 dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- analyze-report-set --reports-dir docs\qa\baselines\v0.1-core-probe\reports --output docs\qa\baselines\v0.1-core-probe\report-analysis-summary.json
 ```
@@ -17,7 +17,7 @@ dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQ
 - report 数量：9。
 - matched case 数量：9。
 - validation error 数量：0。
-- modelAnalysis analyzerVersion：3。
+- modelAnalysis analyzerVersion：4。
 - report-analysis decision：`no-change`。
 - report-analysis blockedReportCount：0。
 - Dolby Vision Profile 5 case：`status = unsupported`，`primaryFailureArea = unsupported-source`。

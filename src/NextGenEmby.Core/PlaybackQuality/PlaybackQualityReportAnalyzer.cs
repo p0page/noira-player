@@ -238,7 +238,7 @@ namespace NextGenEmby.Core.PlaybackQuality
 
     public static class PlaybackQualityReportAnalyzer
     {
-        public const int CurrentAnalyzerVersion = 3;
+        public const int CurrentAnalyzerVersion = 4;
 
         public static PlaybackQualityModelAnalysis Analyze(PlaybackQualityReport report)
         {
@@ -680,6 +680,11 @@ namespace NextGenEmby.Core.PlaybackQuality
                 if (!string.IsNullOrWhiteSpace(track.ChannelLayout))
                 {
                     AddUnique(tracks.Signals, "tracks.audio.channelLayout");
+                }
+
+                if (track.Channels > 0)
+                {
+                    AddUnique(tracks.Signals, "tracks.audio.channels");
                 }
             }
 

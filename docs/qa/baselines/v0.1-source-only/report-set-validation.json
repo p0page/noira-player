@@ -21,6 +21,7 @@
         "lifecycle.stop",
         "lifecycle.endOfStream",
         "startup.startupDurationMs",
+        "tracks.audio.channels",
         "colorPipeline.actualHdrOutput",
         "display.hdrStatus",
         "colorPipeline.swapChainFormat",
@@ -321,6 +322,24 @@
       "codeTargets": [
         "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
         "src/NextGenEmby.Native/NativePlaybackEngine.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/sdr-hevc-main10-1080p60-3m",
+      "reportRunId": "jellyfin/sdr-hevc-main10-1080p60-3m",
+      "signal": "tracks.audio.channels",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "evidence-collection",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect missing telemetry before optimizing playback behavior; absent evidence is separate from a real playback failure.",
+      "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
         "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
       ]
     },

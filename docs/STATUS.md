@@ -2,11 +2,17 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-08 更新：音频声道数进入轨道证据链
+
+`PlaybackQualityReportAnalyzer.CurrentAnalyzerVersion` 已升级到 4。`EmbyMediaStream` 和 `PlaybackQualityTrack` 现在保留 Emby playback-info 的 `MediaStreams[].Channels`，`PlaybackQualityReportMapper` 会把音轨声道数透传到 report，`PlaybackQualityReportAnalyzer` 会输出 `tracks.audio.channels` evidence signal。track/subtitle purpose 的 `requiredSignals` 现在要求 `tracks.audio.channels`；缺失时应归类为 `insufficient instrumentation`，不能从 `ChannelLayout` 或 `DisplayTitle` 推断。
+
+边界：这是 instrumentation/testability 和报告契约变更，不改变播放行为、音轨选择、解码、转码、阈值或 pass/fail 规则。诊断样本和 baseline 会显式写入声道数，用于让模型区分“服务端/采集器提供了声道数证据”和“只有文本 layout/title 可读”。
+
 ## 2026-07-08 更新：direct stream locator 进入 source 证据链
 
 `PlaybackQualityReportAnalyzer.CurrentAnalyzerVersion` 已升级到 3。`report.source` 和 `modelAnalysis.source` 现在暴露 `hasDirectStreamUrl` 与 `directStreamProtocol`，只记录是否存在 direct stream URL 和协议/scheme，不记录完整 URL、query string、token 或个人服务地址。非 error case 的 `requiredSignals` 现在要求 `source.hasDirectStreamUrl` 和 `source.directStreamProtocol`；缺失时会作为 `insufficient instrumentation` 阻断 report-set，而不是被解释为播放质量问题。
 
-边界：这是 instrumentation/testability 与报告契约变更，不改变播放行为、源选择策略、转码策略、HDR/DV 策略或 pass/fail 阈值。已刷新 `docs/qa/baselines/v0.1-source-only/`、`docs/qa/baselines/v0.1-core-probe/` 和 `docs/qa/baselines/v0.1-native-harness-skip/`；归档 reports 的 `modelAnalysis.analyzerVersion` 均为 3。source-only baseline 仍是 9/9 case 有报告、2 个 matched、103 个缺运行时 telemetry，结论没有因为新增 locator 证据而被放宽。
+边界：这是 instrumentation/testability 与报告契约变更，不改变播放行为、源选择策略、转码策略、HDR/DV 策略或 pass/fail 阈值。该版本对应 analyzer version 3；当前最新 analyzer version 见上方音频声道数更新。source-only baseline 仍用于证明缺运行时 telemetry 时会被如实 gate，结论没有因为新增 locator 证据而被放宽。
 
 ## 2026-07-08 更新：模型消费输出统一带 evaluationVersion
 
@@ -40,7 +46,7 @@ manifest validation、report-set validation、single comparison、comparison sui
 
 ## 2026-07-08 更新：analyzer version 2 与 baseline 刷新
 
-`PlaybackQualityReportAnalyzer.CurrentAnalyzerVersion` 此前升级到 2，用于标记 `source.hasChapterMetadata`、nullable `source.chapterCount` 和章节 metadata presence 语义进入模型分析契约。对应 baseline 已刷新过；当前最新 analyzer version 见上方 direct stream locator 更新。
+`PlaybackQualityReportAnalyzer.CurrentAnalyzerVersion` 此前升级到 2，用于标记 `source.hasChapterMetadata`、nullable `source.chapterCount` 和章节 metadata presence 语义进入模型分析契约。对应 baseline 已刷新过；当前最新 analyzer version 见上方音频声道数更新。
 
 边界：这不是播放效果优化，也不改变阈值、expected behavior 或 pass/fail 规则。source-only baseline 仍用于暴露缺运行时 telemetry；native-harness-skip 仍表达真实 native collector 尚未实现；core-probe 仍是 App-free/in-process 的 core orchestration 诊断路径，不代表真实解码、显示或 A/V sync 效果。
 
@@ -82,8 +88,8 @@ manifest validation、report-set validation、single comparison、comparison sui
 - `EmbyMediaStream` 和 `PlaybackQualityTrack` 现在保留 nullable `IsDefault` / `IsForced`。
 - `EmbyApiClient` 会从 Emby playback-info 的 `MediaStreams[].IsDefault` / `IsForced` 映射这些字段。
 - `PlaybackQualityReportMapper` 会把 video/audio/subtitle 轨道的 external/default/forced 透传到 report。
-- `PlaybackQualityReportAnalyzer` 会输出 `tracks.video.isExternal`、`tracks.video.isDefault`、`tracks.video.isForced`、`tracks.audio.isExternal`、`tracks.audio.isDefault`、`tracks.audio.isForced`、`tracks.subtitles.isExternal`、`tracks.subtitles.isDefault` 和 `tracks.subtitles.isForced` evidence signals。
-- `PlaybackQualityRequiredSignalPolicy` 现在把 track/subtitle purpose 的 external/default/forced 当成 required signals；缺失时应先归类为 telemetry 缺口。
+- `PlaybackQualityReportAnalyzer` 会输出 `tracks.video.isExternal`、`tracks.video.isDefault`、`tracks.video.isForced`、`tracks.audio.isExternal`、`tracks.audio.channels`、`tracks.audio.isDefault`、`tracks.audio.isForced`、`tracks.subtitles.isExternal`、`tracks.subtitles.isDefault` 和 `tracks.subtitles.isForced` evidence signals。
+- `PlaybackQualityRequiredSignalPolicy` 现在把 track/subtitle purpose 的 audio channels 和 external/default/forced 当成 required signals；缺失时应先归类为 telemetry 缺口。
 - source-only materializer 和 core-probe diagnostic source 会为诊断轨道写入明确 default/forced 值，避免 baseline 因测试样本本身缺字段而无法覆盖该证据链。
 
 边界：这仍是 instrumentation/testability，不改变播放行为、轨道选择策略、音轨/字幕切换、字幕渲染、阈值或 pass/fail 规则。nullable 字段为 `null` 时表示采集器没有拿到证据，不能被模型解释成明确 `false`。
@@ -179,13 +185,13 @@ manifest validation、report-set validation、single comparison、comparison sui
 - `materialize-run-result` 已可把 raw report 或旧 envelope 归一化为包含当前 `modelAnalysis` 的 `PlaybackQualityRunResult` envelope。
 - `materialize-run-result` 会保留已有 envelope 的 `caseMetadata`；raw report 会补默认 case metadata。
 - `materialize-baseline-report-set` 已可从 reference manifest 生成 source-only baseline envelope，用于建立可版本化 baseline artifact 并暴露缺失 telemetry。
-- `docs/qa/baselines/v0.1-source-only/` 已归档 source-only baseline：9/9 case 有报告；DV Profile 5 预期 `unsupported` case 和 `error-handling` case 匹配，其余 7 个播放 case 因 103 个缺失 telemetry 失败，全部归类为 `insufficient instrumentation`。
+- `docs/qa/baselines/v0.1-source-only/` 已归档 source-only baseline：9/9 case 有报告；DV Profile 5 预期 `unsupported` case 和 `error-handling` case 匹配，其余 7 个播放 case 因 104 个缺失 telemetry 失败，全部归类为 `insufficient instrumentation`。
 - reference manifest case 已支持 `stable`、`challenge`、`quarantine` 分类，并在 validation、report-set status 和 run plan 中保留。
 - reference manifest case 已支持 `severity` 和 `stability`，并在 validation、report-set status、run plan 和 baseline summary 中保留。
 - `PlaybackQualityRunResult` envelope 已输出 `caseMetadata`，单个报告可直接暴露 case id、category、severity 和 stability。
 - report-set validation errors 已输出 `failureClass`，可区分缺 telemetry、缺报告、重复/额外报告和 source metadata mismatch。
 - App-free 验证命令为 `tools\quality-run\run-playback-core-checks.ps1`，当前结果为 pass。
-- 本轮新增 tracks/subtitles telemetry：报告会记录视频轨、音轨、字幕轨数量、当前选中音轨/字幕轨、字幕关闭状态和轨道明细。
+- 本轮新增 tracks/subtitles telemetry：报告会记录视频轨、音轨、字幕轨数量、音频声道数、当前选中音轨/字幕轨、字幕关闭状态和轨道明细。
 - reference manifest coverage 现在要求 `tracks` 和 `subtitles` purpose；默认公开 manifest 与私有 Emby manifest 生成脚本已同步更新。
 - Core 已有可选 runtime metrics provider 和 runtime evidence collector，可把 backend display diagnostics、native metrics snapshot、startup 和 environment 合成为标准 report envelope；App 侧 WinRT native adapter 现在也会把 native `QualityMetrics()` 映射进该 provider 路径，并通过 `native-winrt:*` provider status 标明证据来源。
 - error-handling 已进入 report、analyzer、required signal policy、signal catalog、code target catalog 和 core-probe 路径；错误样本会报告为 `result = error`，而不是伪装成播放质量失败。

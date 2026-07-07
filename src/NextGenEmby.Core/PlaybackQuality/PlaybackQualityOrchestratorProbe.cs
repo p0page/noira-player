@@ -217,6 +217,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                 Codec = "eac3",
                 Language = "eng",
                 ChannelLayout = "5.1",
+                Channels = 6,
                 DisplayTitle = "English 5.1",
                 IsDefault = true,
                 IsForced = false
@@ -228,6 +229,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                 Codec = "aac",
                 Language = "jpn",
                 ChannelLayout = "2.0",
+                Channels = 2,
                 DisplayTitle = "Japanese Stereo",
                 IsDefault = false,
                 IsForced = false

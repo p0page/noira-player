@@ -188,7 +188,7 @@
     "environment": {
       "collectorVersion": "materialize-baseline-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "working-tree-direct-stream-locator-v0.1",
+      "sourceRevision": "working-tree-audio-channel-evidence-v0.1",
       "buildConfiguration": "Debug"
     },
     "limitations": [
@@ -282,6 +282,7 @@
           "codec": "hevc",
           "language": "",
           "channelLayout": "",
+          "channels": 0,
           "displayTitle": "",
           "isExternal": false,
           "isDefault": true,
@@ -297,6 +298,7 @@
           "codec": "unknown",
           "language": "",
           "channelLayout": "",
+          "channels": 0,
           "displayTitle": "",
           "isExternal": false,
           "isDefault": true,
@@ -382,7 +384,7 @@
     }
   },
   "modelAnalysis": {
-    "analyzerVersion": 3,
+    "analyzerVersion": 4,
     "runId": "local/sdr-resume-seek-timeline",
     "result": "fail",
     "expectedBehavior": "startup.startupDurationMs expected 5000.000.",
@@ -420,7 +422,7 @@
     "environment": {
       "collectorVersion": "materialize-baseline-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "working-tree-direct-stream-locator-v0.1",
+      "sourceRevision": "working-tree-audio-channel-evidence-v0.1",
       "buildConfiguration": "Debug",
       "signals": [
         "environment.collectorVersion",

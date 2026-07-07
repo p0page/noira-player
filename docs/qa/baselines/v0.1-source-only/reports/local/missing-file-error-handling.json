@@ -44,7 +44,7 @@
     "environment": {
       "collectorVersion": "materialize-baseline-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "working-tree-direct-stream-locator-v0.1",
+      "sourceRevision": "working-tree-audio-channel-evidence-v0.1",
       "buildConfiguration": "Debug"
     },
     "limitations": [
@@ -218,7 +218,7 @@
     }
   },
   "modelAnalysis": {
-    "analyzerVersion": 3,
+    "analyzerVersion": 4,
     "runId": "local/missing-file-error-handling",
     "result": "error",
     "expectedBehavior": "Playback operation completed without a terminal runtime error.",
@@ -250,7 +250,7 @@
     "environment": {
       "collectorVersion": "materialize-baseline-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "working-tree-direct-stream-locator-v0.1",
+      "sourceRevision": "working-tree-audio-channel-evidence-v0.1",
       "buildConfiguration": "Debug",
       "signals": [
         "environment.collectorVersion",

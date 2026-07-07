@@ -125,6 +125,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                 new PlaybackQualityReportSignalDescriptor("tracks.audio.codec", "tracks.audio", "codec"),
                 new PlaybackQualityReportSignalDescriptor("tracks.audio.language", "tracks.audio", "language"),
                 new PlaybackQualityReportSignalDescriptor("tracks.audio.channelLayout", "tracks.audio", "channelLayout"),
+                new PlaybackQualityReportSignalDescriptor("tracks.audio.channels", "tracks.audio", "channels"),
                 new PlaybackQualityReportSignalDescriptor("tracks.audio.displayTitle", "tracks.audio", "displayTitle"),
                 new PlaybackQualityReportSignalDescriptor("tracks.audio.isExternal", "tracks.audio", "isExternal"),
                 new PlaybackQualityReportSignalDescriptor("tracks.audio.isDefault", "tracks.audio", "isDefault"),

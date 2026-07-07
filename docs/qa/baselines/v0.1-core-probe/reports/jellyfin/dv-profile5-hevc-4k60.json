@@ -154,7 +154,7 @@
     "environment": {
       "collectorVersion": "materialize-core-probe-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "working-tree-direct-stream-locator-v0.1",
+      "sourceRevision": "working-tree-audio-channel-evidence-v0.1",
       "buildConfiguration": "Debug"
     },
     "limitations": [
@@ -286,6 +286,7 @@
           "codec": "hevc",
           "language": "",
           "channelLayout": "",
+          "channels": 0,
           "displayTitle": "",
           "isExternal": false,
           "isDefault": true,
@@ -301,6 +302,7 @@
           "codec": "eac3",
           "language": "eng",
           "channelLayout": "5.1",
+          "channels": 6,
           "displayTitle": "English 5.1",
           "isExternal": false,
           "isDefault": true,
@@ -314,6 +316,7 @@
           "codec": "aac",
           "language": "jpn",
           "channelLayout": "2.0",
+          "channels": 2,
           "displayTitle": "Japanese Stereo",
           "isExternal": false,
           "isDefault": false,
@@ -399,7 +402,7 @@
     }
   },
   "modelAnalysis": {
-    "analyzerVersion": 3,
+    "analyzerVersion": 4,
     "runId": "jellyfin/dv-profile5-hevc-4k60",
     "result": "unsupported",
     "expectedBehavior": "Unsupported sources are identified without entering playback-quality tuning.",
@@ -442,7 +445,7 @@
     "environment": {
       "collectorVersion": "materialize-core-probe-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "working-tree-direct-stream-locator-v0.1",
+      "sourceRevision": "working-tree-audio-channel-evidence-v0.1",
       "buildConfiguration": "Debug",
       "signals": [
         "environment.collectorVersion",
@@ -523,7 +526,8 @@
         "tracks.audio.isExternal",
         "tracks.audio.isDefault",
         "tracks.audio.isForced",
-        "tracks.audio.channelLayout"
+        "tracks.audio.channelLayout",
+        "tracks.audio.channels"
       ],
       "missingSignals": []
     },
@@ -759,6 +763,7 @@
       "tracks.audio.isDefault",
       "tracks.audio.isForced",
       "tracks.audio.channelLayout",
+      "tracks.audio.channels",
       "lifecycle.load",
       "lifecycle.play",
       "lifecycle.pause",

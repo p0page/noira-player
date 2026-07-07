@@ -18,7 +18,7 @@ public sealed class PlaybackQualityReportAnalyzerTests
 
         var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
 
-        Assert.Equal(3, PlaybackQualityReportAnalyzer.CurrentAnalyzerVersion);
+        Assert.Equal(4, PlaybackQualityReportAnalyzer.CurrentAnalyzerVersion);
         Assert.Equal(PlaybackQualityReportAnalyzer.CurrentAnalyzerVersion, analysis.AnalyzerVersion);
     }
 
@@ -380,6 +380,7 @@ public sealed class PlaybackQualityReportAnalyzerTests
             Codec = "truehd",
             Language = "eng",
             ChannelLayout = "7.1",
+            Channels = 8,
             IsDefault = true,
             IsForced = false
         });
@@ -408,6 +409,8 @@ public sealed class PlaybackQualityReportAnalyzerTests
         Assert.Contains("tracks.subtitleTrackCount", analysis.Tracks.Signals);
         Assert.Contains("tracks.selectedAudioStreamIndex", analysis.EvidenceSignals);
         Assert.Contains("tracks.selectedSubtitleStreamIndex", analysis.EvidenceSignals);
+        Assert.Contains("tracks.audio.channels", analysis.Tracks.Signals);
+        Assert.Contains("tracks.audio.channels", analysis.EvidenceSignals);
         Assert.Contains("tracks.video.isExternal", analysis.EvidenceSignals);
         Assert.Contains("tracks.video.isDefault", analysis.EvidenceSignals);
         Assert.Contains("tracks.video.isForced", analysis.EvidenceSignals);

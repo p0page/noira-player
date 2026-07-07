@@ -197,6 +197,7 @@ public sealed class PlaybackQualityReportMapperTests
             Index = 1,
             Language = "jpn",
             ChannelLayout = "5.1",
+            Channels = 6,
             DisplayTitle = "Japanese AAC 5.1"
         });
         source.Streams.Add(new EmbyMediaStream
@@ -206,6 +207,7 @@ public sealed class PlaybackQualityReportMapperTests
             Index = 2,
             Language = "eng",
             ChannelLayout = "7.1",
+            Channels = 8,
             DisplayTitle = "English TrueHD 7.1",
             IsDefault = true,
             IsForced = false
@@ -291,6 +293,7 @@ public sealed class PlaybackQualityReportMapperTests
         Assert.Equal("truehd", audio.Codec);
         Assert.Equal("eng", audio.Language);
         Assert.Equal("7.1", audio.ChannelLayout);
+        Assert.Equal(8, audio.Channels);
         Assert.Equal("English TrueHD 7.1", audio.DisplayTitle);
         Assert.True(audio.IsDefault);
         Assert.False(audio.IsForced);

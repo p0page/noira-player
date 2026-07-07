@@ -43,6 +43,7 @@ public sealed class EmbyPlaybackInfoTests
                       "Codec": "truehd",
                       "Language": "eng",
                       "ChannelLayout": "7.1",
+                      "Channels": 8,
                       "IsDefault": true,
                       "IsForced": false,
                       "DisplayTitle": "English TrueHD 7.1 Atmos"
@@ -83,6 +84,7 @@ public sealed class EmbyPlaybackInfoTests
         Assert.Equal(24.0, video.AverageFrameRate);
         var audio = source.AudioStreams.Single();
         Assert.Equal("truehd", audio.Codec);
+        Assert.Equal(8, audio.Channels);
         Assert.True(audio.IsDefault);
         Assert.False(audio.IsForced);
         var subtitle = source.SubtitleStreams.Single();

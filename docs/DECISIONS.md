@@ -1,5 +1,13 @@
 # 技术决策
 
+## 2026-07-08: analyzer version 升级到 4 并要求音频声道数证据
+
+决策：`PlaybackQualityReportAnalyzer.CurrentAnalyzerVersion` 从 3 升级到 4。`EmbyMediaStream` 和 `PlaybackQualityTrack` 新增 `Channels`，`EmbyApiClient` 从 playback-info `MediaStreams[].Channels` 映射，`PlaybackQualityReportMapper` 透传到 report，`PlaybackQualityReportAnalyzer` 输出 `tracks.audio.channels` evidence signal。track/subtitle purpose 的 required-signal policy 现在要求 `tracks.audio.channels`。
+
+原因：v0.1 覆盖能力要求媒体能力识别包含音频 codec/channel/layout。此前报告有 `tracks.audio.channelLayout` 和 `displayTitle`，但没有保留服务端明确给出的声道数，模型只能从文本推断 5.1/7.1。声道数应作为独立 telemetry，缺失时报告为 instrumentation 缺口。
+
+边界：这是 instrumentation/testability 和报告契约变更，不改变播放行为、音轨选择、解码、转码、阈值或 pass/fail 规则。评测器不得从 `ChannelLayout`、`DisplayTitle` 或文件名推断 `Channels`；只有采集器/服务端明确提供的正数才算 `tracks.audio.channels` 证据。
+
 ## 2026-07-08: analyzer version 升级到 3 并要求 direct stream locator 证据
 
 决策：`PlaybackQualityReportAnalyzer.CurrentAnalyzerVersion` 从 2 升级到 3。`PlaybackQualitySource` 和 `PlaybackQualityModelAnalysis.Source` 新增 `hasDirectStreamUrl` 与 `directStreamProtocol`，`PlaybackQualityReportMapper` 只从 `EmbyMediaSource.DirectStreamUrl` 提取非敏感 locator evidence：是否存在 direct stream URL，以及 URL scheme/protocol；不写入完整 URL、query string、token 或个人服务地址。非 error case 的 required-signal policy 现在要求 `source.hasDirectStreamUrl` 和 `source.directStreamProtocol`。

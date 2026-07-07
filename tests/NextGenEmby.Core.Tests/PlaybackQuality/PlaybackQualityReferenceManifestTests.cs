@@ -1258,6 +1258,7 @@ public sealed class PlaybackQualityReferenceManifestTests
         Assert.Contains("tracks.video.isDefault", requiredSignals);
         Assert.Contains("tracks.video.isForced", requiredSignals);
         Assert.Contains("tracks.audio.isExternal", requiredSignals);
+        Assert.Contains("tracks.audio.channels", requiredSignals);
         Assert.Contains("tracks.audio.isDefault", requiredSignals);
         Assert.Contains("tracks.audio.isForced", requiredSignals);
         Assert.Contains("tracks.subtitles.isExternal", requiredSignals);
@@ -1350,6 +1351,7 @@ public sealed class PlaybackQualityReferenceManifestTests
         report.Tracks.Audio.Add(new PlaybackQualityTrack
         {
             Index = 2,
+            Channels = 8,
             IsDefault = true,
             IsForced = false
         });
@@ -1388,6 +1390,7 @@ public sealed class PlaybackQualityReferenceManifestTests
         Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "tracks.video.isDefault"));
         Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "tracks.video.isForced"));
         Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "tracks.audio.isExternal"));
+        Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "tracks.audio.channels"));
         Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "tracks.audio.isDefault"));
         Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "tracks.audio.isForced"));
         Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "tracks.subtitles.isExternal"));

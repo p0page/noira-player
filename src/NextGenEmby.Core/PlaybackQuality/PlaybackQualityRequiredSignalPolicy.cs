@@ -89,6 +89,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                 AddUnique(requiredSignals, "tracks.video.isDefault");
                 AddUnique(requiredSignals, "tracks.video.isForced");
                 AddUnique(requiredSignals, "tracks.audio.isExternal");
+                AddUnique(requiredSignals, "tracks.audio.channels");
                 AddUnique(requiredSignals, "tracks.audio.isDefault");
                 AddUnique(requiredSignals, "tracks.audio.isForced");
             }
@@ -422,6 +423,8 @@ namespace NextGenEmby.Core.PlaybackQuality
                     return HasTrackFlagEvidence(report.Tracks.Video, track => track.IsForced);
                 case "tracks.audio.isExternal":
                     return report.Tracks.Audio.Count > 0;
+                case "tracks.audio.channels":
+                    return HasAudioChannelEvidence(report);
                 case "tracks.audio.isDefault":
                     return HasTrackFlagEvidence(report.Tracks.Audio, track => track.IsDefault);
                 case "tracks.audio.isForced":
@@ -580,6 +583,19 @@ namespace NextGenEmby.Core.PlaybackQuality
             foreach (var track in tracks)
             {
                 if (select(track).HasValue)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool HasAudioChannelEvidence(PlaybackQualityReport report)
+        {
+            foreach (var track in report.Tracks.Audio)
+            {
+                if (track.Channels > 0)
                 {
                     return true;
                 }

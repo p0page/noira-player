@@ -45,7 +45,7 @@
     "environment": {
       "collectorVersion": "materialize-native-harness-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "working-tree-direct-stream-locator-v0.1",
+      "sourceRevision": "working-tree-audio-channel-evidence-v0.1",
       "buildConfiguration": "Debug"
     },
     "limitations": [
@@ -220,7 +220,7 @@
     }
   },
   "modelAnalysis": {
-    "analyzerVersion": 3,
+    "analyzerVersion": 4,
     "runId": "local/missing-file-error-handling",
     "result": "skip",
     "expectedBehavior": "Reference case was evaluated or explicitly skipped with a structured reason.",
@@ -251,7 +251,7 @@
     "environment": {
       "collectorVersion": "materialize-native-harness-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "working-tree-direct-stream-locator-v0.1",
+      "sourceRevision": "working-tree-audio-channel-evidence-v0.1",
       "buildConfiguration": "Debug",
       "signals": [
         "environment.collectorVersion",

@@ -157,6 +157,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                 Codec = stream.Codec,
                 Language = stream.Language,
                 ChannelLayout = stream.ChannelLayout,
+                Channels = stream.Channels,
                 DisplayTitle = stream.DisplayTitle,
                 IsExternal = stream.IsExternal,
                 IsDefault = stream.IsDefault,

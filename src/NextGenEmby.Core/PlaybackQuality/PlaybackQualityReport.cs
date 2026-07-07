@@ -160,6 +160,7 @@ namespace NextGenEmby.Core.PlaybackQuality
         public string Codec { get; set; } = "";
         public string Language { get; set; } = "";
         public string ChannelLayout { get; set; } = "";
+        public int Channels { get; set; }
         public string DisplayTitle { get; set; } = "";
         public bool IsExternal { get; set; }
         public bool? IsDefault { get; set; }

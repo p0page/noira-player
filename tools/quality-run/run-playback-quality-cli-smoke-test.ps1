@@ -2104,6 +2104,7 @@ try {
         "codec": "aac",
         "language": "eng",
         "channelLayout": "2.0",
+        "channels": 2,
         "isExternal": false,
         "isDefault": true,
         "isForced": false
@@ -2222,6 +2223,7 @@ try {
         "codec": "aac",
         "language": "eng",
         "channelLayout": "2.0",
+        "channels": 2,
         "isExternal": false,
         "isDefault": true,
         "isForced": false
@@ -3004,6 +3006,7 @@ try {
           "codec": "aac",
           "language": "eng",
           "channelLayout": "2.0",
+          "channels": 2,
           "isExternal": false,
           "isDefault": true,
           "isForced": false
@@ -3123,6 +3126,7 @@ try {
           "codec": "aac",
           "language": "eng",
           "channelLayout": "2.0",
+          "channels": 2,
           "isExternal": false,
           "isDefault": true,
           "isForced": false
@@ -3280,6 +3284,7 @@ try {
         "codec": "aac",
         "language": "eng",
         "channelLayout": "2.0",
+        "channels": 2,
         "isExternal": false,
         "isDefault": true,
         "isForced": false
@@ -3445,6 +3450,7 @@ try {
           "codec": "aac",
           "language": "eng",
           "channelLayout": "2.0",
+          "channels": 2,
           "isExternal": false,
           "isDefault": true,
           "isForced": false
@@ -3506,7 +3512,7 @@ try {
     ]
   },
   "modelAnalysis": {
-    "analyzerVersion": 3,
+    "analyzerVersion": 4,
     "runId": "item-1/source-1",
     "result": "fail",
     "suggestedNextAction": "Collect a longer playback sample before optimizing playback Core.",
@@ -3657,6 +3663,7 @@ try {
           "codec": "aac",
           "language": "eng",
           "channelLayout": "2.0",
+          "channels": 2,
           "isExternal": false,
           "isDefault": true,
           "isForced": false
@@ -3718,7 +3725,7 @@ try {
     ]
   },
   "modelAnalysis": {
-    "analyzerVersion": 3,
+    "analyzerVersion": 4,
     "runId": "item-1/source-1",
     "result": "fail",
     "suggestedNextAction": "Collect comparable source metadata before optimizing playback Core.",
@@ -4222,6 +4229,7 @@ try {
         ($_.requiredSignals -contains 'tracks.video.isDefault') -and
         ($_.requiredSignals -contains 'tracks.video.isForced') -and
         ($_.requiredSignals -contains 'tracks.audio.isExternal') -and
+        ($_.requiredSignals -contains 'tracks.audio.channels') -and
         ($_.requiredSignals -contains 'tracks.audio.isDefault') -and
         ($_.requiredSignals -contains 'tracks.audio.isForced') -and
         ($_.requiredSignals -contains 'tracks.subtitles.isExternal') -and
