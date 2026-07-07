@@ -154,7 +154,7 @@
     "environment": {
       "collectorVersion": "materialize-core-probe-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "d22e145",
+      "sourceRevision": "f63c1dd",
       "buildConfiguration": "Debug"
     },
     "limitations": [
@@ -335,7 +335,7 @@
     },
     "runtimeMetrics": {
       "status": "captured",
-      "providerStatus": "returned-snapshot",
+      "providerStatus": "core-probe:returned-snapshot",
       "reason": "Runtime metrics snapshot contains playback sample evidence.",
       "hasSnapshot": true,
       "hasPlaybackSample": true
@@ -432,7 +432,7 @@
     "environment": {
       "collectorVersion": "materialize-core-probe-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "d22e145",
+      "sourceRevision": "f63c1dd",
       "buildConfiguration": "Debug",
       "signals": [
         "environment.collectorVersion",
@@ -525,7 +525,7 @@
     },
     "runtimeMetrics": {
       "status": "captured",
-      "providerStatus": "returned-snapshot",
+      "providerStatus": "core-probe:returned-snapshot",
       "reason": "Runtime metrics snapshot contains playback sample evidence.",
       "hasSnapshot": true,
       "hasPlaybackSample": true,
