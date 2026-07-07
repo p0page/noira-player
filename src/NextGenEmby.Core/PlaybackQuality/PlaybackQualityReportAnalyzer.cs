@@ -10,6 +10,7 @@ namespace NextGenEmby.Core.PlaybackQuality
         public string PrimaryFailureArea { get; set; } = "none";
         public string SuggestedNextAction { get; set; } = "";
         public PlaybackQualityStartupAssessment Startup { get; set; } = new PlaybackQualityStartupAssessment();
+        public PlaybackQualityEnvironmentAssessment Environment { get; set; } = new PlaybackQualityEnvironmentAssessment();
         public PlaybackQualitySourceAssessment Source { get; set; } = new PlaybackQualitySourceAssessment();
         public PlaybackQualityColorPipelineAssessment ColorPipeline { get; set; } = new PlaybackQualityColorPipelineAssessment();
         public PlaybackQualityBufferingAssessment Buffering { get; set; } = new PlaybackQualityBufferingAssessment();
@@ -37,6 +38,15 @@ namespace NextGenEmby.Core.PlaybackQuality
         public double StartupDurationMs { get; set; }
         public List<string> Signals { get; } = new List<string>();
         public List<string> FailedSignals { get; } = new List<string>();
+    }
+
+    public sealed class PlaybackQualityEnvironmentAssessment
+    {
+        public string CollectorVersion { get; set; } = "";
+        public string PlayerCoreVersion { get; set; } = "";
+        public string SourceRevision { get; set; } = "";
+        public string BuildConfiguration { get; set; } = "";
+        public List<string> Signals { get; } = new List<string>();
     }
 
     public sealed class PlaybackQualitySourceAssessment
@@ -231,6 +241,7 @@ namespace NextGenEmby.Core.PlaybackQuality
 
             analysis.Sample = AssessSample(report);
             analysis.Startup = AssessStartup(report);
+            analysis.Environment = AssessEnvironment(report);
             analysis.Source = AssessSource(report);
             analysis.ColorPipeline = AssessColorPipeline(report);
             analysis.Buffering = AssessBuffering(report, signalPresence);
@@ -306,6 +317,40 @@ namespace NextGenEmby.Core.PlaybackQuality
             startup.Status = "ready";
             startup.Reason = "Startup telemetry is available and no startup threshold failed.";
             return startup;
+        }
+
+        private static PlaybackQualityEnvironmentAssessment AssessEnvironment(
+            PlaybackQualityReport report)
+        {
+            var environment = new PlaybackQualityEnvironmentAssessment
+            {
+                CollectorVersion = report.Environment.CollectorVersion,
+                PlayerCoreVersion = report.Environment.PlayerCoreVersion,
+                SourceRevision = report.Environment.SourceRevision,
+                BuildConfiguration = report.Environment.BuildConfiguration
+            };
+
+            if (!string.IsNullOrWhiteSpace(environment.CollectorVersion))
+            {
+                AddUnique(environment.Signals, "environment.collectorVersion");
+            }
+
+            if (!string.IsNullOrWhiteSpace(environment.PlayerCoreVersion))
+            {
+                AddUnique(environment.Signals, "environment.playerCoreVersion");
+            }
+
+            if (!string.IsNullOrWhiteSpace(environment.SourceRevision))
+            {
+                AddUnique(environment.Signals, "environment.sourceRevision");
+            }
+
+            if (!string.IsNullOrWhiteSpace(environment.BuildConfiguration))
+            {
+                AddUnique(environment.Signals, "environment.buildConfiguration");
+            }
+
+            return environment;
         }
 
         private static PlaybackQualityBufferingAssessment AssessBuffering(
@@ -1542,6 +1587,11 @@ namespace NextGenEmby.Core.PlaybackQuality
             PlaybackQualityModelAnalysis analysis,
             PlaybackQualityReport report)
         {
+            foreach (var signal in analysis.Environment.Signals)
+            {
+                AddUnique(analysis.EvidenceSignals, signal);
+            }
+
             foreach (var signal in analysis.AvSync.Signals)
             {
                 AddUnique(analysis.EvidenceSignals, signal);

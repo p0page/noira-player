@@ -11,6 +11,7 @@ namespace NextGenEmby.Core.PlaybackQuality
         public List<string> FailureReasons { get; } = new List<string>();
         public PlaybackQualityAnalysis Analysis { get; set; } = new PlaybackQualityAnalysis();
         public List<PlaybackQualityCheck> Checks { get; } = new List<PlaybackQualityCheck>();
+        public PlaybackQualityEnvironment Environment { get; set; } = new PlaybackQualityEnvironment();
         public List<string> Limitations { get; } = new List<string>
         {
             "software-only: does not verify actual HDMI InfoFrame output",
@@ -45,6 +46,14 @@ namespace NextGenEmby.Core.PlaybackQuality
         public string SuggestedNextAction { get; set; } = "";
         public List<string> RelevantSignals { get; } = new List<string>();
         public List<string> IgnoredSignals { get; } = new List<string>();
+    }
+
+    public sealed class PlaybackQualityEnvironment
+    {
+        public string CollectorVersion { get; set; } = "";
+        public string PlayerCoreVersion { get; set; } = "";
+        public string SourceRevision { get; set; } = "";
+        public string BuildConfiguration { get; set; } = "";
     }
 
     public sealed class PlaybackQualitySource

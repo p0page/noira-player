@@ -193,7 +193,7 @@ Use the App-free CLI when an automated model run needs to compare two serialized
 dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- compare --baseline baseline.json --candidate candidate.json --output comparison.json
 ```
 
-The `compare` and `compare-suite` commands accept either a raw `PlaybackQualityReport` JSON file or a `PlaybackQualityRunResult` envelope with a top-level `report` property.
+The `compare` and `compare-suite` commands accept either a raw `PlaybackQualityReport` JSON file or a `PlaybackQualityRunResult` envelope with a top-level `report` property. Generated comparison JSON includes `environment.status` plus baseline/candidate build identity fields, so model loops can verify whether evidence came from the intended Core revision before accepting or rejecting a candidate change.
 
 For iterative optimization loops, pass previous comparison JSON files to enable repeated-unchanged stall protection:
 
@@ -235,6 +235,7 @@ Playback quality reports are optimized for model/agent consumption:
 - `analysis.primaryFailureArea` identifies the first area to investigate;
 - `PlaybackQualityReportComposer` is the App-free entry point that combines source, display, metrics, expected thresholds, evaluation, and model analysis in one call;
 - `PlaybackQualityReferenceCaseReportRequestFactory` converts a validated reference case and actual playback evidence into a composer request with `runId = caseId`;
+- `modelAnalysis.environment` exposes collector version, player core version, source revision, and build configuration so before/after report sets can be tied back to the Core revision that produced them;
 - `modelAnalysis.startup`, `modelAnalysis.source`, `modelAnalysis.colorPipeline`, `modelAnalysis.buffering`, and `modelAnalysis.avSync` summarize the raw report into status fields, evidence signals, and failed/mismatched signals so automated optimization can choose the right failure area before editing playback Core;
 - `modelAnalysis.cadence` exposes the source/display refresh relationship, nearest 1x/2x/2.5x/3x/4x/5x target, Hz delta, tolerance, fractional 2.5x pulldown marker, and Kodi-style clock-speed adjustment used for frame cadence diagnosis;
 - `modelAnalysis.avSync.clockDeltaMs` 和 `driftDirection` 是从 `sync.videoPositionTicks - sync.audioClockTicks` 派生的方向化 A/V sync 诊断；它们帮助模型区分 `video-ahead`、`audio-ahead`、`aligned`，但不属于 `requiredSignals` 采集清单，缺少时应先补 clock telemetry；

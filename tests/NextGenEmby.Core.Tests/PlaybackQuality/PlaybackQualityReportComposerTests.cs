@@ -129,6 +129,45 @@ public sealed class PlaybackQualityReportComposerTests
     }
 
     [Fact]
+    public void Compose_Copies_Environment_Evidence_For_Model()
+    {
+        var result = PlaybackQualityReportComposer.Compose(new PlaybackQualityReportRequest
+        {
+            RunId = "build-identity",
+            Descriptor = CreatePlaybackDescriptor(frameRate: 23.976),
+            DisplayStatus = CreateHdrDisplayStatus(refreshRateHz: 59.94006),
+            Metrics = CreateStableMetrics(maxFrameGapMs: 60),
+            Expected = CreateHdrExpected(maxFrameGapMs: 105),
+            Environment = new PlaybackQualityEnvironment
+            {
+                CollectorVersion = "quality-run-v2",
+                PlayerCoreVersion = "native-core-v42",
+                SourceRevision = "abc1234",
+                BuildConfiguration = "Debug"
+            }
+        });
+
+        Assert.Equal("quality-run-v2", result.Report.Environment.CollectorVersion);
+        Assert.Equal("native-core-v42", result.Report.Environment.PlayerCoreVersion);
+        Assert.Equal("abc1234", result.Report.Environment.SourceRevision);
+        Assert.Equal("Debug", result.Report.Environment.BuildConfiguration);
+        Assert.Equal("quality-run-v2", result.ModelAnalysis.Environment.CollectorVersion);
+        Assert.Equal("native-core-v42", result.ModelAnalysis.Environment.PlayerCoreVersion);
+        Assert.Equal("abc1234", result.ModelAnalysis.Environment.SourceRevision);
+        Assert.Equal("Debug", result.ModelAnalysis.Environment.BuildConfiguration);
+        Assert.Contains("environment.collectorVersion", result.ModelAnalysis.Environment.Signals);
+        Assert.Contains("environment.playerCoreVersion", result.ModelAnalysis.Environment.Signals);
+        Assert.Contains("environment.sourceRevision", result.ModelAnalysis.Environment.Signals);
+        Assert.Contains("environment.buildConfiguration", result.ModelAnalysis.Environment.Signals);
+        Assert.Contains("environment.sourceRevision", result.ModelAnalysis.EvidenceSignals);
+
+        var json = PlaybackQualityReportSerializer.Serialize(result);
+
+        Assert.Contains("\"environment\"", json);
+        Assert.Contains("\"sourceRevision\": \"abc1234\"", json);
+    }
+
+    [Fact]
     public void Compose_Uses_Default_Expected_Thresholds_When_Requested()
     {
         var result = PlaybackQualityReportComposer.Compose(new PlaybackQualityReportRequest

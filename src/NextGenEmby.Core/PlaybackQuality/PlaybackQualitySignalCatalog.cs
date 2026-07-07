@@ -39,6 +39,10 @@ namespace NextGenEmby.Core.PlaybackQuality
         private static readonly IReadOnlyList<PlaybackQualityReportSignalDescriptor> ReportSignalList =
             new List<PlaybackQualityReportSignalDescriptor>
             {
+                new PlaybackQualityReportSignalDescriptor("environment.collectorVersion", "environment", "collectorVersion"),
+                new PlaybackQualityReportSignalDescriptor("environment.playerCoreVersion", "environment", "playerCoreVersion"),
+                new PlaybackQualityReportSignalDescriptor("environment.sourceRevision", "environment", "sourceRevision"),
+                new PlaybackQualityReportSignalDescriptor("environment.buildConfiguration", "environment", "buildConfiguration"),
                 new PlaybackQualityReportSignalDescriptor("source.codec", "source", "codec"),
                 new PlaybackQualityReportSignalDescriptor("source.width", "source", "width"),
                 new PlaybackQualityReportSignalDescriptor("source.height", "source", "height"),

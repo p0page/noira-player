@@ -15,6 +15,8 @@ namespace NextGenEmby.Core.PlaybackQuality
 
         public PlaybackQualityStartup? Startup { get; set; }
 
+        public PlaybackQualityEnvironment? Environment { get; set; }
+
         public PlaybackQualityExpected? Expected { get; set; }
 
         public bool UseDefaultExpectedWhenMissing { get; set; }
@@ -72,6 +74,11 @@ namespace NextGenEmby.Core.PlaybackQuality
             if (request.Startup != null)
             {
                 report.Startup = request.Startup;
+            }
+
+            if (request.Environment != null)
+            {
+                report.Environment = request.Environment;
             }
 
             PlaybackQualityEvaluator.Evaluate(report);

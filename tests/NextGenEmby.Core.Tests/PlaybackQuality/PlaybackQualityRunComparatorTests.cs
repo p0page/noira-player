@@ -53,6 +53,37 @@ public sealed class PlaybackQualityRunComparatorTests
     }
 
     [Fact]
+    public void Compare_Surfaces_Build_Identity_For_Model()
+    {
+        var baseline = CreateReport(
+            "baseline",
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "180.000"));
+        baseline.Environment.PlayerCoreVersion = "native-core-base";
+        baseline.Environment.SourceRevision = "base123";
+        baseline.Environment.BuildConfiguration = "Debug";
+
+        var candidate = CreateReport(
+            "candidate",
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "120.000"));
+        candidate.Environment.PlayerCoreVersion = "native-core-candidate";
+        candidate.Environment.SourceRevision = "candidate456";
+        candidate.Environment.BuildConfiguration = "Debug";
+
+        var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
+
+        Assert.Equal("different-build", comparison.Environment.Status);
+        Assert.Equal("native-core-base", comparison.Environment.BaselinePlayerCoreVersion);
+        Assert.Equal("native-core-candidate", comparison.Environment.CandidatePlayerCoreVersion);
+        Assert.Equal("base123", comparison.Environment.BaselineSourceRevision);
+        Assert.Equal("candidate456", comparison.Environment.CandidateSourceRevision);
+        Assert.Equal("Debug", comparison.Environment.BaselineBuildConfiguration);
+        Assert.Equal("Debug", comparison.Environment.CandidateBuildConfiguration);
+        Assert.Contains("environment.playerCoreVersion", comparison.Environment.Signals);
+        Assert.Contains("environment.sourceRevision", comparison.Environment.Signals);
+        Assert.Contains("environment.buildConfiguration", comparison.Environment.Signals);
+    }
+
+    [Fact]
     public void Compare_Reports_Regressed_When_Passing_Signal_Starts_Failing()
     {
         var baseline = CreateReport(

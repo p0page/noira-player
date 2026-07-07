@@ -20,6 +20,8 @@ namespace NextGenEmby.Core.PlaybackQuality
             new PlaybackQualityComparisonOptimization();
         public PlaybackQualityComparisonCoverage Coverage { get; set; } =
             new PlaybackQualityComparisonCoverage();
+        public PlaybackQualityComparisonEnvironment Environment { get; set; } =
+            new PlaybackQualityComparisonEnvironment();
         public List<PlaybackQualitySignalDelta> Improvements { get; } = new List<PlaybackQualitySignalDelta>();
         public List<PlaybackQualitySignalDelta> Regressions { get; } = new List<PlaybackQualitySignalDelta>();
         public List<PlaybackQualitySignalDelta> PolicyChanges { get; } = new List<PlaybackQualitySignalDelta>();
@@ -68,6 +70,20 @@ namespace NextGenEmby.Core.PlaybackQuality
         public List<string> MatchedSignals { get; } = new List<string>();
         public List<string> UnmatchedBaselineSignals { get; } = new List<string>();
         public List<string> UnmatchedCandidateSignals { get; } = new List<string>();
+    }
+
+    public sealed class PlaybackQualityComparisonEnvironment
+    {
+        public string Status { get; set; } = "missing-evidence";
+        public string BaselineCollectorVersion { get; set; } = "";
+        public string CandidateCollectorVersion { get; set; } = "";
+        public string BaselinePlayerCoreVersion { get; set; } = "";
+        public string CandidatePlayerCoreVersion { get; set; } = "";
+        public string BaselineSourceRevision { get; set; } = "";
+        public string CandidateSourceRevision { get; set; } = "";
+        public string BaselineBuildConfiguration { get; set; } = "";
+        public string CandidateBuildConfiguration { get; set; } = "";
+        public List<string> Signals { get; } = new List<string>();
     }
 
     public sealed class PlaybackQualitySignalDelta
@@ -119,7 +135,8 @@ namespace NextGenEmby.Core.PlaybackQuality
             var comparison = new PlaybackQualityRunComparison
             {
                 BaselineRunId = baseline.RunId,
-                CandidateRunId = candidate.RunId
+                CandidateRunId = candidate.RunId,
+                Environment = AssessEnvironment(baseline, candidate)
             };
             comparison.Coverage.BaselineCheckCount = baseline.Checks.Count;
             comparison.Coverage.CandidateCheckCount = candidate.Checks.Count;
@@ -189,6 +206,107 @@ namespace NextGenEmby.Core.PlaybackQuality
             }
 
             return FinalizeComparison(comparison, context);
+        }
+
+        private static PlaybackQualityComparisonEnvironment AssessEnvironment(
+            PlaybackQualityReport baseline,
+            PlaybackQualityReport candidate)
+        {
+            var environment = new PlaybackQualityComparisonEnvironment
+            {
+                BaselineCollectorVersion = baseline.Environment.CollectorVersion,
+                CandidateCollectorVersion = candidate.Environment.CollectorVersion,
+                BaselinePlayerCoreVersion = baseline.Environment.PlayerCoreVersion,
+                CandidatePlayerCoreVersion = candidate.Environment.PlayerCoreVersion,
+                BaselineSourceRevision = baseline.Environment.SourceRevision,
+                CandidateSourceRevision = candidate.Environment.SourceRevision,
+                BaselineBuildConfiguration = baseline.Environment.BuildConfiguration,
+                CandidateBuildConfiguration = candidate.Environment.BuildConfiguration
+            };
+
+            AddEnvironmentSignalIfPresent(
+                environment,
+                "environment.collectorVersion",
+                environment.BaselineCollectorVersion,
+                environment.CandidateCollectorVersion);
+            AddEnvironmentSignalIfPresent(
+                environment,
+                "environment.playerCoreVersion",
+                environment.BaselinePlayerCoreVersion,
+                environment.CandidatePlayerCoreVersion);
+            AddEnvironmentSignalIfPresent(
+                environment,
+                "environment.sourceRevision",
+                environment.BaselineSourceRevision,
+                environment.CandidateSourceRevision);
+            AddEnvironmentSignalIfPresent(
+                environment,
+                "environment.buildConfiguration",
+                environment.BaselineBuildConfiguration,
+                environment.CandidateBuildConfiguration);
+
+            var baselineHasIdentity = HasEnvironmentIdentity(baseline.Environment);
+            var candidateHasIdentity = HasEnvironmentIdentity(candidate.Environment);
+            if (!baselineHasIdentity && !candidateHasIdentity)
+            {
+                environment.Status = "missing-evidence";
+                return environment;
+            }
+
+            if (!baselineHasIdentity || !candidateHasIdentity)
+            {
+                environment.Status = "partial";
+                return environment;
+            }
+
+            environment.Status =
+                HasDifferentEnvironmentIdentity(environment)
+                    ? "different-build"
+                    : "same-build";
+            return environment;
+        }
+
+        private static bool HasEnvironmentIdentity(PlaybackQualityEnvironment environment)
+        {
+            return !string.IsNullOrWhiteSpace(environment.SourceRevision) ||
+                !string.IsNullOrWhiteSpace(environment.PlayerCoreVersion);
+        }
+
+        private static bool HasDifferentEnvironmentIdentity(
+            PlaybackQualityComparisonEnvironment environment)
+        {
+            return IsDifferentNonEmpty(
+                    environment.BaselineSourceRevision,
+                    environment.CandidateSourceRevision) ||
+                IsDifferentNonEmpty(
+                    environment.BaselinePlayerCoreVersion,
+                    environment.CandidatePlayerCoreVersion) ||
+                IsDifferentNonEmpty(
+                    environment.BaselineBuildConfiguration,
+                    environment.CandidateBuildConfiguration) ||
+                IsDifferentNonEmpty(
+                    environment.BaselineCollectorVersion,
+                    environment.CandidateCollectorVersion);
+        }
+
+        private static bool IsDifferentNonEmpty(string baselineValue, string candidateValue)
+        {
+            return !string.IsNullOrWhiteSpace(baselineValue) &&
+                !string.IsNullOrWhiteSpace(candidateValue) &&
+                !string.Equals(baselineValue, candidateValue, StringComparison.Ordinal);
+        }
+
+        private static void AddEnvironmentSignalIfPresent(
+            PlaybackQualityComparisonEnvironment environment,
+            string signal,
+            string baselineValue,
+            string candidateValue)
+        {
+            if (!string.IsNullOrWhiteSpace(baselineValue) ||
+                !string.IsNullOrWhiteSpace(candidateValue))
+            {
+                AddUnique(environment.Signals, signal);
+            }
         }
 
         private static void AddUnmatchedBaselineSignals(
