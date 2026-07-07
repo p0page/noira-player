@@ -582,11 +582,15 @@ try {
 
     $materializedBaselineReport = Get-Content -Raw -LiteralPath $materializedBaselineReportPath | ConvertFrom-Json
     if ($materializedBaselineReport.schemaVersion -ne 1 -or
+        $materializedBaselineReport.caseMetadata.caseId -ne 'netflix/chimera-4k-2398-hdr-pq' -or
+        $materializedBaselineReport.caseMetadata.category -ne 'stable' -or
+        $materializedBaselineReport.caseMetadata.severity -ne 'high' -or
+        $materializedBaselineReport.caseMetadata.stability -ne 'variable' -or
         $materializedBaselineReport.report.runId -ne 'netflix/chimera-4k-2398-hdr-pq' -or
         $materializedBaselineReport.report.environment.sourceRevision -ne 'smoke-baseline-revision' -or
         $materializedBaselineReport.report.source.codec -ne 'hevc' -or
         $materializedBaselineReport.modelAnalysis.runId -ne 'netflix/chimera-4k-2398-hdr-pq') {
-        throw 'Expected materialize-baseline-report-set to write PlaybackQualityRunResult envelope with source and environment evidence.'
+        throw 'Expected materialize-baseline-report-set to write PlaybackQualityRunResult envelope with case metadata, source, and environment evidence.'
     }
 
     if (-not ($materializedBaselineReport.report.limitations -contains 'source-only: playback execution was not run by this command')) {

@@ -367,8 +367,14 @@ public sealed class PlaybackQualityReferenceManifestTests
             referenceCase,
             descriptor);
         referenceCase.Expected.Codec = "av1";
+        referenceCase.Severity = "critical";
 
         Assert.Equal("netflix/chimera-4k-2398-hdr-pq", request.RunId);
+        Assert.NotNull(request.CaseMetadata);
+        Assert.Equal("netflix/chimera-4k-2398-hdr-pq", request.CaseMetadata!.CaseId);
+        Assert.Equal("stable", request.CaseMetadata.Category);
+        Assert.Equal("medium", request.CaseMetadata.Severity);
+        Assert.Equal("stable", request.CaseMetadata.Stability);
         Assert.Same(descriptor, request.Descriptor);
         Assert.NotNull(request.Expected);
         Assert.Equal("hevc", request.Expected!.Codec);

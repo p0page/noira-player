@@ -83,6 +83,13 @@ public sealed class PlaybackQualityReportComposerTests
         var result = PlaybackQualityReportComposer.Compose(new PlaybackQualityReportRequest
         {
             RunId = "json-run",
+            CaseMetadata = new PlaybackQualityCaseMetadata
+            {
+                CaseId = "json-run",
+                Category = "challenge",
+                Severity = "high",
+                Stability = "variable"
+            },
             Descriptor = CreatePlaybackDescriptor(frameRate: 23.976),
             DisplayStatus = CreateHdrDisplayStatus(refreshRateHz: 59.94006),
             Metrics = CreateStableMetrics(maxFrameGapMs: 60),
@@ -94,9 +101,38 @@ public sealed class PlaybackQualityReportComposerTests
         Assert.Contains("\"schemaVersion\": 1", json);
         Assert.Contains("\"report\"", json);
         Assert.Contains("\"modelAnalysis\"", json);
+        Assert.Contains("\"caseMetadata\"", json);
+        Assert.Contains("\"category\": \"challenge\"", json);
+        Assert.Contains("\"severity\": \"high\"", json);
+        Assert.Contains("\"stability\": \"variable\"", json);
         Assert.Contains("\"runId\": \"json-run\"", json);
         Assert.Contains("\"result\": \"pass\"", json);
         Assert.Contains("\"display.refreshRateHz\"", json);
+    }
+
+    [Fact]
+    public void Compose_Copies_Case_Metadata_For_Model_Consumable_Report_Envelope()
+    {
+        var result = PlaybackQualityReportComposer.Compose(new PlaybackQualityReportRequest
+        {
+            RunId = "case-metadata-run",
+            CaseMetadata = new PlaybackQualityCaseMetadata
+            {
+                CaseId = "case-metadata-run",
+                Category = "stable",
+                Severity = "critical",
+                Stability = "stable"
+            },
+            Descriptor = CreatePlaybackDescriptor(frameRate: 23.976),
+            DisplayStatus = CreateHdrDisplayStatus(refreshRateHz: 59.94006),
+            Metrics = CreateStableMetrics(maxFrameGapMs: 60),
+            Expected = CreateHdrExpected(maxFrameGapMs: 105)
+        });
+
+        Assert.Equal("case-metadata-run", result.CaseMetadata.CaseId);
+        Assert.Equal("stable", result.CaseMetadata.Category);
+        Assert.Equal("critical", result.CaseMetadata.Severity);
+        Assert.Equal("stable", result.CaseMetadata.Stability);
     }
 
     [Fact]

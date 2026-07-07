@@ -25,6 +25,19 @@ namespace NextGenEmby.Core.PlaybackQuality
             return new PlaybackQualityReportRequest
             {
                 RunId = referenceCase.CaseId,
+                CaseMetadata = new PlaybackQualityCaseMetadata
+                {
+                    CaseId = referenceCase.CaseId,
+                    Category = string.IsNullOrWhiteSpace(referenceCase.Category)
+                        ? "stable"
+                        : referenceCase.Category,
+                    Severity = string.IsNullOrWhiteSpace(referenceCase.Severity)
+                        ? "medium"
+                        : referenceCase.Severity,
+                    Stability = string.IsNullOrWhiteSpace(referenceCase.Stability)
+                        ? "stable"
+                        : referenceCase.Stability
+                },
                 Descriptor = descriptor,
                 DisplayStatus = displayStatus,
                 Metrics = metrics,

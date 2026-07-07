@@ -117,7 +117,7 @@ dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQ
 dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- plan-runs --manifest docs\qa\playback-quality-reference-manifest.example.json --reports-dir baseline-reports --duration 60 --output baseline-run-plan.json
 ```
 
-`plan-runs` 不执行播放，也不打包 App。它把每个 manifest case 转成标准 `runId`、`sourceUri`、`durationSeconds`、`category`、`severity`、`stability`、`requiredSignals`、`expected`、`reportRelativePath` 和 `reportPath`，让模型或脚本按同一套 key 采集 `PlaybackQualityRunResult`。生成的报告应写入 plan 里的 `reportPath`，之后再运行 report-set 校验和候选评估。
+`plan-runs` 不执行播放，也不打包 App。它把每个 manifest case 转成标准 `runId`、`sourceUri`、`durationSeconds`、`category`、`severity`、`stability`、`requiredSignals`、`expected`、`reportRelativePath` 和 `reportPath`，让模型或脚本按同一套 key 采集 `PlaybackQualityRunResult`。生成的 envelope 应在顶层 `caseMetadata` 保留 `caseId`、`category`、`severity` 和 `stability`，并写入 plan 里的 `reportPath`，之后再运行 report-set 校验和候选评估。
 
 `requiredSignals` 是模型采集前的 case 级 telemetry checklist。它会根据 `expected` 和 `purpose` 自动列出必须出现在报告里的信号，例如 `source.codec`、`source.hdrKind`、`colorPipeline.actualHdrOutput`、`display.hdrStatus`、`colorPipeline.swapChainFormat`、`colorPipeline.swapChainColorSpace`、`display.refreshRateHz`、`position.seekTargetPositionTicks`、`position.actualPositionTicks`、`position.seekPositionErrorMs`、`tracks.videoTrackCount`、`tracks.audioTrackCount`、`tracks.subtitleTrackCount`、`tracks.isSubtitleDisabled`、`timing.framePacingSourceFrameRate`、`sync.audioVideoDriftMsP95`、`buffers.videoStarvedPasses`。HDR10 输出还会要求 `colorPipeline.isTenBitSwapChain`；如果采集到的值是 `false`，evaluator 会把它判为 `color-pipeline` 失败，避免模型只凭推断的 `actualHdrOutput` 优化颜色管线。timeline/seek case 或 `expected.maxSeekPositionErrorMs` 会要求 position telemetry；tracks/subtitles case 会要求轨道发现和字幕关闭状态 telemetry；如果报告缺这些信号，应先补采集或让 `analyze-report` 明确标记 missing evidence，不要直接根据窄证据修改播放 Core。
 
@@ -129,7 +129,7 @@ dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQ
 dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- materialize-baseline-report-set --manifest docs\qa\playback-quality-reference-manifest.example.json --reports-dir docs\qa\baselines\v0.1-source-only\reports --source-revision <git-sha> --player-core-version <core-version> --build-configuration Debug --output docs\qa\baselines\v0.1-source-only\materialized-baseline-summary.json
 ```
 
-该命令不会打开媒体，也不会声称播放成功。它只把 reference case 转成当前 Core 可消费的 `PlaybackQualityRunResult` envelope，写入 `report.runId = caseId` 的标准路径，并显式加入 `source-only: playback execution was not run by this command` limitation。后续仍必须运行 `validate-report-set` 和 `analyze-report-set`；缺失的 display、timing、buffering、sync、startup、seek telemetry 应被报告为 `insufficient instrumentation`，而不是播放器 core bug。
+该命令不会打开媒体，也不会声称播放成功。它只把 reference case 转成当前 Core 可消费的 `PlaybackQualityRunResult` envelope，写入 `report.runId = caseId` 的标准路径，在顶层 `caseMetadata` 保留 case 分类/严重度/稳定性，并显式加入 `source-only: playback execution was not run by this command` limitation。后续仍必须运行 `validate-report-set` 和 `analyze-report-set`；缺失的 display、timing、buffering、sync、startup、seek telemetry 应被报告为 `insufficient instrumentation`，而不是播放器 core bug。
 
 这一步的用途是建立可版本化 baseline artifact，并证明评测链路能完整覆盖 manifest。它不能替代真正的播放采集；当 App/native 采集器可用后，应使用真实采集的 envelope 替换 source-only baseline。
 
@@ -213,7 +213,7 @@ dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQ
 
 `activeGate.nextActions` 是 gate 级结构化执行摘要，每项包含 `rank`、`action`、`risk`、可选 `failureArea`、`caseIds`、`signals`、`reasons`、`blockers` 和 `codeTargets`。suite gate 会复制 suite 的 ranked `nextActions`；前置 gate 和 skipped suite 会从自身的 action/risk/signals/blockers/case/code target 生成 rank 1 动作。模型应优先读取 `activeGate.nextActions[0]`，再决定是否需要展开 `suite.cases` 或单个 comparison。
 
-`evaluate-candidate` 仍会把 raw `PlaybackQualityReport` 视为没有 envelope-level `modelAnalysis`，并在 report-analysis summary 中显示 `status = unavailable`；这让旧报告可以继续走 suite 比较，但自动化采集应优先写入完整 `PlaybackQualityRunResult` envelope。新的 envelope 会带顶层 `schemaVersion = 1`，内部 `report.schemaVersion` 和 `modelAnalysis.analyzerVersion` 仍分别描述原始报告与分析器契约。若 envelope 里存在 `modelAnalysis` 但 `modelAnalysis.runId` / `modelAnalysis.result` 缺失，或 `modelAnalysis.analyzerVersion` 不匹配当前 analyzer，门禁会把它视为不可复用并用当前 Core analyzer 重新生成，然后再决定 report-analysis gate 是否阻断。空对象 `{}` 不能绕过 report-analysis gate。
+`evaluate-candidate` 仍会把 raw `PlaybackQualityReport` 视为没有 envelope-level `modelAnalysis`，并在 report-analysis summary 中显示 `status = unavailable`；这让旧报告可以继续走 suite 比较，但自动化采集应优先写入完整 `PlaybackQualityRunResult` envelope。新的 envelope 会带顶层 `schemaVersion = 1` 和 `caseMetadata`，内部 `report.schemaVersion` 和 `modelAnalysis.analyzerVersion` 仍分别描述原始报告与分析器契约。若 envelope 里存在 `modelAnalysis` 但 `modelAnalysis.runId` / `modelAnalysis.result` 缺失，或 `modelAnalysis.analyzerVersion` 不匹配当前 analyzer，门禁会把它视为不可复用并用当前 Core analyzer 重新生成，然后再决定 report-analysis gate 是否阻断。空对象 `{}` 不能绕过 report-analysis gate。
 
 ## Compare Reports
 

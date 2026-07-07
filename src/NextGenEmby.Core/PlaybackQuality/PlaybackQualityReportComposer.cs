@@ -7,6 +7,8 @@ namespace NextGenEmby.Core.PlaybackQuality
     {
         public string RunId { get; set; } = "";
 
+        public PlaybackQualityCaseMetadata? CaseMetadata { get; set; }
+
         public PlaybackDescriptor? Descriptor { get; set; }
 
         public PlaybackDisplayStatus? DisplayStatus { get; set; }
@@ -22,17 +24,35 @@ namespace NextGenEmby.Core.PlaybackQuality
         public bool UseDefaultExpectedWhenMissing { get; set; }
     }
 
+    public sealed class PlaybackQualityCaseMetadata
+    {
+        public string CaseId { get; set; } = "";
+
+        public string Category { get; set; } = "stable";
+
+        public string Severity { get; set; } = "medium";
+
+        public string Stability { get; set; } = "stable";
+    }
+
     public sealed class PlaybackQualityRunResult
     {
         public PlaybackQualityRunResult(
             PlaybackQualityReport report,
-            PlaybackQualityModelAnalysis modelAnalysis)
+            PlaybackQualityModelAnalysis modelAnalysis,
+            PlaybackQualityCaseMetadata? caseMetadata = null)
         {
             Report = report ?? throw new ArgumentNullException(nameof(report));
             ModelAnalysis = modelAnalysis ?? throw new ArgumentNullException(nameof(modelAnalysis));
+            CaseMetadata = caseMetadata ?? new PlaybackQualityCaseMetadata
+            {
+                CaseId = report.RunId
+            };
         }
 
         public int SchemaVersion { get; set; } = 1;
+
+        public PlaybackQualityCaseMetadata CaseMetadata { get; }
 
         public PlaybackQualityReport Report { get; }
 
@@ -99,7 +119,29 @@ namespace NextGenEmby.Core.PlaybackQuality
             PlaybackQualityEvaluator.Evaluate(report);
             return new PlaybackQualityRunResult(
                 report,
-                PlaybackQualityReportAnalyzer.Analyze(report));
+                PlaybackQualityReportAnalyzer.Analyze(report),
+                CloneCaseMetadata(request.CaseMetadata, report.RunId));
+        }
+
+        private static PlaybackQualityCaseMetadata CloneCaseMetadata(
+            PlaybackQualityCaseMetadata? source,
+            string runId)
+        {
+            if (source == null)
+            {
+                return new PlaybackQualityCaseMetadata
+                {
+                    CaseId = runId ?? ""
+                };
+            }
+
+            return new PlaybackQualityCaseMetadata
+            {
+                CaseId = string.IsNullOrWhiteSpace(source.CaseId) ? runId ?? "" : source.CaseId,
+                Category = string.IsNullOrWhiteSpace(source.Category) ? "stable" : source.Category,
+                Severity = string.IsNullOrWhiteSpace(source.Severity) ? "medium" : source.Severity,
+                Stability = string.IsNullOrWhiteSpace(source.Stability) ? "stable" : source.Stability
+            };
         }
 
         private static PlaybackQualityEnvironment MergeEnvironment(
