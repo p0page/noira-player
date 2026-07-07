@@ -999,6 +999,19 @@ namespace NextGenEmby.Core.PlaybackQuality
                 analysis.MissingEvidence.Add("timing.expectedFrameDurationMs");
             }
 
+            if (analysis.FailureAreas.Contains("frame-pacing"))
+            {
+                if (report.Timing.FramePacingSourceFrameRate <= 0)
+                {
+                    AddUnique(analysis.MissingEvidence, "timing.framePacingSourceFrameRate");
+                }
+
+                if (report.Timing.LateFrameDropToleranceMs <= 0)
+                {
+                    AddUnique(analysis.MissingEvidence, "timing.lateFrameDropToleranceMs");
+                }
+            }
+
             if (report.Expected != null &&
                 report.Expected.MaxAudioVideoDriftMsP95.HasValue &&
                 report.Sync.AudioVideoDriftMsP95 <= 0)

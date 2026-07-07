@@ -810,6 +810,21 @@ public sealed class PlaybackQualityReportAnalyzerTests
     }
 
     [Fact]
+    public void Analyze_Reports_Missing_Frame_Pacing_Policy_When_Frame_Pacing_Fails()
+    {
+        var report = CreateOptimizationReadyFailure();
+        report.Timing.FramePacingSourceFrameRate = 0;
+        report.Timing.LateFrameDropToleranceMs = 0;
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Contains("timing.framePacingSourceFrameRate", analysis.MissingEvidence);
+        Assert.Contains("timing.lateFrameDropToleranceMs", analysis.MissingEvidence);
+        Assert.False(analysis.OptimizationGate.CanOptimizePlaybackCore);
+        Assert.Contains("missingEvidence", analysis.OptimizationGate.Blockers);
+    }
+
+    [Fact]
     public void Analyze_Classifies_Frame_Pacing_As_Sustained_Jitter_When_P95_Render_Interval_Fails()
     {
         var report = CreateOptimizationReadyFailure();
@@ -1238,7 +1253,9 @@ public sealed class PlaybackQualityReportAnalyzerTests
             Timing = new PlaybackQualityTiming
             {
                 RenderedVideoFrames = 240,
-                ExpectedFrameDurationMs = 1000.0 / 23.976
+                ExpectedFrameDurationMs = 1000.0 / 23.976,
+                FramePacingSourceFrameRate = 23.976,
+                LateFrameDropToleranceMs = (1000.0 / 23.976) * 2.5
             },
             ColorPipeline = new PlaybackQualityColorPipeline
             {
