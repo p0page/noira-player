@@ -2119,6 +2119,11 @@ internal static class Program
                 ? "unknown"
                 : optimizationGate.Status;
             item.Result = envelope.ModelAnalysis.Result ?? "";
+            if (string.Equals(item.Result, "skip", StringComparison.OrdinalIgnoreCase))
+            {
+                summary.SkippedReportCount++;
+            }
+
             item.ExpectedBehavior = envelope.ModelAnalysis.ExpectedBehavior ?? "";
             item.ActualBehavior = envelope.ModelAnalysis.ActualBehavior ?? "";
             item.PrimaryFailureClass =
@@ -2617,6 +2622,23 @@ internal static class Program
             return;
         }
 
+        if (summary.SkippedReportCount > 0)
+        {
+            summary.Action = "collect-comparable-evidence";
+            summary.Decision = "collect-comparable-evidence";
+            summary.Risk = "high";
+            summary.Confidence.Level = "weak";
+            summary.Confidence.StrongCount =
+                summary.AnalyzedReportCount - summary.SkippedReportCount;
+            summary.Confidence.WeakCount = summary.SkippedReportCount;
+            AddUnique(
+                summary.Confidence.Reasons,
+                "one or more reports were explicitly skipped");
+            CopyValues(summary.Signals, summary.Confidence.Signals);
+            CopyValues(summary.Blockers, summary.Confidence.Reasons);
+            return;
+        }
+
         summary.Action = "continue-next-triage-step";
         summary.Decision = "no-change";
         summary.Risk = "low";
@@ -2702,6 +2724,7 @@ internal static class Program
             "buffering",
             "av-sync",
             "frame-pacing",
+            "evidence-collection",
             "unknown"
         };
 
@@ -3264,6 +3287,7 @@ internal static class Program
         public int AnalyzedReportCount { get; set; }
         public int UnavailableReportCount { get; set; }
         public int BlockedReportCount { get; set; }
+        public int SkippedReportCount { get; set; }
         public List<string> Blockers { get; } = new List<string>();
         public List<string> Signals { get; } = new List<string>();
         public List<string> FailureAreas { get; } = new List<string>();

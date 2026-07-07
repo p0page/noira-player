@@ -319,6 +319,21 @@ try {
     }
 
     $skipAnalysisSet = Get-Content -Raw -LiteralPath $skipAnalysisSetPath | ConvertFrom-Json
+    if ($skipAnalysisSet.action -ne 'collect-comparable-evidence' -or
+        $skipAnalysisSet.decision -ne 'collect-comparable-evidence' -or
+        $skipAnalysisSet.risk -ne 'high' -or
+        $skipAnalysisSet.confidence.level -ne 'weak' -or
+        -not ($skipAnalysisSet.blockers -contains 'result.skip') -or
+        -not ($skipAnalysisSet.targetFailureAreas -contains 'evidence-collection') -or
+        -not ($skipAnalysisSet.nextActions | Where-Object {
+            $_.rank -eq 1 -and
+            $_.action -eq 'collect-comparable-evidence' -and
+            $_.risk -eq 'high' -and
+            $_.failureArea -eq 'evidence-collection'
+        })) {
+        throw 'Expected analyze-report-set skip-only output to require evidence collection.'
+    }
+
     if (-not ($skipAnalysisSet.capabilityCoverage | Where-Object {
         $_.capability -eq 'runtime-metrics' -and
         $_.status -eq 'not-observed' -and
