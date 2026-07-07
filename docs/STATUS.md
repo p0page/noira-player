@@ -2,6 +2,12 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-08 更新：player identity 进入 report-set gate
+
+`validate-report-set` 现在要求每个 report 携带 `environment.playerCoreVersion` 和 `environment.sourceRevision`。缺失、null 或空白值会输出 `report.environment.missing`，并归类为 `insufficient instrumentation`。
+
+边界：这是最终 report-set 的可追溯性要求，不改变播放器行为。它保证后续模型进行 baseline/candidate 比较时，能知道证据来自哪个播放器版本和源码修订。
+
 ## 2026-07-08 更新：failureArea 枚举进入 report-set gate
 
 `validate-report-set` 现在会校验 `analysis.primaryFailureArea`、`error.failureArea`、`skip.failureArea` 和 `checks.failureArea` 是否属于当前 area catalog。未知值会输出 `report.failureArea.invalid`，并归类为 `evaluation harness bug`。

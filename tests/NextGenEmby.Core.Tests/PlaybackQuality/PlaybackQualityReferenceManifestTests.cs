@@ -495,6 +495,75 @@ public sealed class PlaybackQualityReferenceManifestTests
     }
 
     [Fact]
+    public void ValidateReportSet_Rejects_Missing_Player_Identity()
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        var referenceCase = CreateCase(
+            "netflix/chimera-4k-2398-hdr-pq",
+            tier: 2,
+            purpose: "hdr-output");
+        manifest.Cases.Add(referenceCase);
+        var report = CreateReport(
+            "netflix/chimera-4k-2398-hdr-pq",
+            codec: "hevc",
+            width: 3840,
+            height: 2160,
+            frameRate: 23.976,
+            hdrKind: "Hdr10");
+        report.Environment.PlayerCoreVersion = "";
+        report.Environment.SourceRevision = "";
+        report.ColorPipeline.ConversionStatus = "validated";
+
+        var validation = PlaybackQualityReferenceReportSetValidator.Validate(
+            manifest,
+            new[] { report });
+
+        Assert.False(validation.IsValid);
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.environment.missing" &&
+            error.Signal == "environment.playerCoreVersion" &&
+            error.FailureClass == "insufficient instrumentation");
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.environment.missing" &&
+            error.Signal == "environment.sourceRevision" &&
+            error.FailureClass == "insufficient instrumentation");
+    }
+
+    [Fact]
+    public void ValidateReportSet_Rejects_Null_Player_Identity()
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        var referenceCase = CreateCase(
+            "netflix/chimera-4k-2398-hdr-pq",
+            tier: 2,
+            purpose: "hdr-output");
+        manifest.Cases.Add(referenceCase);
+        var report = CreateReport(
+            "netflix/chimera-4k-2398-hdr-pq",
+            codec: "hevc",
+            width: 3840,
+            height: 2160,
+            frameRate: 23.976,
+            hdrKind: "Hdr10");
+        report.Environment = null!;
+        report.ColorPipeline.ConversionStatus = "validated";
+
+        var validation = PlaybackQualityReferenceReportSetValidator.Validate(
+            manifest,
+            new[] { report });
+
+        Assert.False(validation.IsValid);
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.environment.missing" &&
+            error.Signal == "environment.playerCoreVersion" &&
+            error.FailureClass == "insufficient instrumentation");
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.environment.missing" &&
+            error.Signal == "environment.sourceRevision" &&
+            error.FailureClass == "insufficient instrumentation");
+    }
+
+    [Fact]
     public void ValidateReportSet_Accepts_Error_Handling_Report_Without_Source_Metadata()
     {
         var manifest = new PlaybackQualityReferenceManifest();
@@ -521,6 +590,7 @@ public sealed class PlaybackQualityReferenceManifestTests
             Status = "error",
             Message = "The media file was not found."
         });
+        AddTestEnvironment(report);
 
         var validation = PlaybackQualityReferenceReportSetValidator.Validate(
             manifest,
@@ -630,6 +700,7 @@ public sealed class PlaybackQualityReferenceManifestTests
                 IsExpected = true,
                 IsRetriable = true
             });
+        AddTestEnvironment(result.Report);
 
         var validation = PlaybackQualityReferenceReportSetValidator.Validate(
             manifest,
@@ -1380,6 +1451,12 @@ public sealed class PlaybackQualityReferenceManifestTests
         {
             RunId = runId,
             Result = "pass",
+            Environment = new PlaybackQualityEnvironment
+            {
+                PlayerCoreVersion = "test-core",
+                SourceRevision = "test-revision",
+                BuildConfiguration = "Debug"
+            },
             Source = new PlaybackQualitySource
             {
                 Codec = codec,
@@ -1400,6 +1477,13 @@ public sealed class PlaybackQualityReferenceManifestTests
         AddObservedLifecycleEvent(report, "pause");
         AddObservedLifecycleEvent(report, "resume");
         AddObservedLifecycleEvent(report, "stop");
+    }
+
+    private static void AddTestEnvironment(PlaybackQualityReport report)
+    {
+        report.Environment.PlayerCoreVersion = "test-core";
+        report.Environment.SourceRevision = "test-revision";
+        report.Environment.BuildConfiguration = "Debug";
     }
 
     private static void AddObservedLifecycleEvent(

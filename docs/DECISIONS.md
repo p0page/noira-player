@@ -1,5 +1,13 @@
 # 技术决策
 
+## 2026-07-08: report-set gate 要求播放器身份
+
+决策：`validate-report-set` 会要求每个 report 包含 `environment.playerCoreVersion` 和 `environment.sourceRevision`，缺失、null 或空白时输出 `report.environment.missing`，并归类为 `insufficient instrumentation`。
+
+原因：v0.1 的报告要用于版本化比较和模型后续优化。如果 report 没有播放器版本和源码修订，模型无法判断证据来自哪个 core/native 版本，也无法可靠做前后对比。
+
+边界：这只要求最终可比较 report-set 的环境身份完整，不改变播放器行为、阈值或 expected behavior。`collectorVersion` 和 `buildConfiguration` 仍作为有用环境信号记录，但本轮不作为 report-set 必填项。
+
 ## 2026-07-08: report-set gate 校验 failureArea 枚举
 
 决策：`PlaybackQualityCodeTargetCatalog` 暴露 `KnownFailureAreas` / `IsKnownFailureArea`，`validate-report-set` 会拒绝未知的 `analysis.primaryFailureArea`、`error.failureArea`、`skip.failureArea` 和 `checks.failureArea`，并输出 `report.failureArea.invalid`。

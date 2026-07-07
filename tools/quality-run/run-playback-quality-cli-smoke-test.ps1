@@ -1373,6 +1373,11 @@ try {
   "runId": "netflix/chimera-4k-2398-hdr-pq",
   "metricVersion": "software-quality-v1",
   "result": "pass",
+  "environment": {
+    "playerCoreVersion": "smoke-core",
+    "sourceRevision": "smoke-report-set-revision",
+    "buildConfiguration": "Debug"
+  },
   "source": {
     "codec": "hevc",
     "width": 3840,
@@ -1409,6 +1414,11 @@ try {
   "runId": "jellyfin/dv-profile5-hevc-4k",
   "metricVersion": "software-quality-v1",
   "result": "unsupported",
+  "environment": {
+    "playerCoreVersion": "smoke-core",
+    "sourceRevision": "smoke-report-set-revision",
+    "buildConfiguration": "Debug"
+  },
   "source": {
     "codec": "hevc",
     "width": 3840,
@@ -1426,6 +1436,11 @@ try {
   "runId": "local/missing-file-error-handling",
   "metricVersion": "software-quality-v1",
   "result": "error",
+  "environment": {
+    "playerCoreVersion": "smoke-core",
+    "sourceRevision": "smoke-report-set-revision",
+    "buildConfiguration": "Debug"
+  },
   "error": {
     "code": "source.open.missing-file",
     "message": "The media file was not found.",
@@ -1482,6 +1497,11 @@ try {
   "runId": "netflix/chimera-4k-2398-hdr-pq",
   "metricVersion": "software-quality-v1",
   "result": "pass",
+  "environment": {
+    "playerCoreVersion": "smoke-core",
+    "sourceRevision": "smoke-missing-signal-revision",
+    "buildConfiguration": "Debug"
+  },
   "source": {
     "codec": "hevc",
     "width": 3840,
@@ -1496,6 +1516,11 @@ try {
   "runId": "jellyfin/dv-profile5-hevc-4k",
   "metricVersion": "software-quality-v1",
   "result": "unsupported",
+  "environment": {
+    "playerCoreVersion": "smoke-core",
+    "sourceRevision": "smoke-missing-signal-revision",
+    "buildConfiguration": "Debug"
+  },
   "source": {
     "codec": "hevc",
     "width": 3840,
@@ -1513,6 +1538,11 @@ try {
   "runId": "local/missing-file-error-handling",
   "metricVersion": "software-quality-v1",
   "result": "error",
+  "environment": {
+    "playerCoreVersion": "smoke-core",
+    "sourceRevision": "smoke-missing-signal-revision",
+    "buildConfiguration": "Debug"
+  },
   "error": {
     "code": "source.open.missing-file",
     "message": "The media file was not found.",
@@ -1599,6 +1629,11 @@ try {
   "runId": "jellyfin/zero-starvation-buffering",
   "metricVersion": "software-quality-v1",
   "result": "pass",
+  "environment": {
+    "playerCoreVersion": "smoke-core",
+    "sourceRevision": "smoke-zero-counter-revision",
+    "buildConfiguration": "Debug"
+  },
   "source": {
     "codec": "hevc",
     "width": 3840,
@@ -2566,55 +2601,75 @@ try {
         throw 'Expected missing build identity evaluate-candidate decision to collect comparable evidence.'
     }
 
+    if ($missingEnvironmentEvaluation.baselineReportSetValidation.isValid -ne $false) {
+        throw 'Expected missing build identity baseline report-set validation to fail.'
+    }
+
+    if ($missingEnvironmentEvaluation.candidateReportSetValidation.isValid -ne $false) {
+        throw 'Expected missing build identity candidate report-set validation to fail.'
+    }
+
+    if (-not ($missingEnvironmentEvaluation.blockers -contains 'baseline-report-set.invalid') -or
+        -not ($missingEnvironmentEvaluation.blockers -contains 'candidate-report-set.invalid')) {
+        throw 'Expected missing build identity evaluate-candidate output to include report-set blockers.'
+    }
+
+    if (-not ($missingEnvironmentEvaluation.baselineReportSetValidation.errors | Where-Object {
+        $_.code -eq 'report.environment.missing' -and
+        $_.signal -eq 'environment.playerCoreVersion' -and
+        $_.failureClass -eq 'insufficient instrumentation'
+    })) {
+        throw 'Expected missing build identity baseline report-set validation to require playerCoreVersion.'
+    }
+
+    if (-not ($missingEnvironmentEvaluation.baselineReportSetValidation.errors | Where-Object {
+        $_.code -eq 'report.environment.missing' -and
+        $_.signal -eq 'environment.sourceRevision' -and
+        $_.failureClass -eq 'insufficient instrumentation'
+    })) {
+        throw 'Expected missing build identity baseline report-set validation to require sourceRevision.'
+    }
+
     if ($null -eq $missingEnvironmentEvaluation.activeGate -or
-        $missingEnvironmentEvaluation.activeGate.name -ne 'suite' -or
+        $missingEnvironmentEvaluation.activeGate.name -ne 'baseline-report-set' -or
         $missingEnvironmentEvaluation.activeGate.status -ne 'blocked' -or
         $missingEnvironmentEvaluation.activeGate.risk -ne 'high') {
-        throw 'Expected missing build identity active gate to point at blocked suite.'
+        throw 'Expected missing build identity active gate to point at blocked baseline report-set.'
     }
 
-    if ($null -eq $missingEnvironmentEvaluation.activeGate.environment -or
-        $missingEnvironmentEvaluation.activeGate.environment.missingEvidenceCount -ne 1) {
-        throw 'Expected missing build identity active gate to expose environment missing evidence count.'
+    if (-not ($missingEnvironmentEvaluation.activeGate.signals -contains 'environment.playerCoreVersion') -or
+        -not ($missingEnvironmentEvaluation.activeGate.signals -contains 'environment.sourceRevision')) {
+        throw 'Expected missing build identity active gate to include player identity signals.'
     }
 
-    if (-not ($missingEnvironmentEvaluation.activeGate.signals -contains 'environment.identity')) {
-        throw 'Expected missing build identity active gate to include environment identity signal.'
+    if (-not ($missingEnvironmentEvaluation.activeGate.blockers -contains 'baseline-report-set.invalid')) {
+        throw 'Expected missing build identity active gate to include baseline report-set blocker.'
     }
 
-    if (-not ($missingEnvironmentEvaluation.activeGate.blockers -contains 'comparison.environment-evidence-missing')) {
-        throw 'Expected missing build identity active gate to include comparison environment blocker.'
+    if (-not ($missingEnvironmentEvaluation.activeGate.caseIds -contains 'item-1/source-1')) {
+        throw 'Expected missing build identity active gate to include affected case id.'
     }
 
-    if (-not ($missingEnvironmentEvaluation.activeGate.targetCaseIds -contains 'item-1/source-1')) {
-        throw 'Expected missing build identity active gate to include target case id.'
+    $missingEnvironmentBaselineGate = $missingEnvironmentEvaluation.evidenceGates |
+        Where-Object { $_.name -eq 'baseline-report-set' } |
+        Select-Object -First 1
+    if ($null -eq $missingEnvironmentBaselineGate -or $missingEnvironmentBaselineGate.status -ne 'blocked') {
+        throw 'Expected missing build identity baseline report-set gate to be blocked.'
     }
 
-    if (-not ($missingEnvironmentEvaluation.activeGate.codeTargets -contains 'src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs')) {
-        throw 'Expected missing build identity active gate to include evidence collection code target.'
+    $missingEnvironmentCandidateGate = $missingEnvironmentEvaluation.evidenceGates |
+        Where-Object { $_.name -eq 'candidate-report-set' } |
+        Select-Object -First 1
+    if ($null -eq $missingEnvironmentCandidateGate -or $missingEnvironmentCandidateGate.status -ne 'blocked') {
+        throw 'Expected missing build identity candidate report-set gate to be blocked.'
     }
 
-    if ($null -eq $missingEnvironmentEvaluation.activeGate.confidence -or
-        $missingEnvironmentEvaluation.activeGate.confidence.level -ne 'weak' -or
-        $missingEnvironmentEvaluation.activeGate.confidence.weakCount -ne 1) {
-        throw 'Expected missing build identity active gate to expose weak suite confidence.'
+    if (-not ($missingEnvironmentEvaluation.evidenceGates | Where-Object { $_.name -eq 'suite' -and $_.status -eq 'skipped' })) {
+        throw 'Expected missing build identity evaluate-candidate suite evidence gate to be skipped.'
     }
 
-    if ($null -eq $missingEnvironmentEvaluation.activeGate.resultCounts -or
-        $missingEnvironmentEvaluation.activeGate.resultCounts.totalCount -ne 2 -or
-        $missingEnvironmentEvaluation.activeGate.resultCounts.improvedCount -ne 1 -or
-        $missingEnvironmentEvaluation.activeGate.resultCounts.unchangedCount -ne 1) {
-        throw 'Expected missing build identity active gate to keep suite result counts separate from evidence blockers.'
-    }
-
-    $missingEnvironmentGateNextActions = @($missingEnvironmentEvaluation.activeGate.nextActions)
-    if ($missingEnvironmentGateNextActions.Count -ne 1 -or
-        $missingEnvironmentGateNextActions[0].rank -ne 1 -or
-        $missingEnvironmentGateNextActions[0].action -ne 'collect-comparable-evidence' -or
-        $missingEnvironmentGateNextActions[0].risk -ne 'high' -or
-        -not ($missingEnvironmentGateNextActions[0].caseIds -contains 'item-1/source-1') -or
-        -not ($missingEnvironmentGateNextActions[0].blockers -contains 'suite.environment-evidence-missing')) {
-        throw 'Expected missing build identity active gate to expose ranked suite next action.'
+    if (Test-Path -LiteralPath $candidateEvaluationMissingEnvironmentComparisonsDir) {
+        throw 'Expected missing build identity evaluate-candidate evidence to skip comparison output.'
     }
 
     New-Item -ItemType Directory -Path $candidateEvaluationPartialEnvironmentBaselineDir | Out-Null
@@ -2650,33 +2705,59 @@ try {
         throw 'Expected partial build identity evaluate-candidate output to collect comparable evidence.'
     }
 
+    if ($partialEnvironmentEvaluation.baselineReportSetValidation.isValid -ne $true) {
+        throw 'Expected partial build identity baseline report-set validation to pass.'
+    }
+
+    if ($partialEnvironmentEvaluation.candidateReportSetValidation.isValid -ne $false) {
+        throw 'Expected partial build identity candidate report-set validation to fail.'
+    }
+
+    if (-not ($partialEnvironmentEvaluation.blockers -contains 'candidate-report-set.invalid')) {
+        throw 'Expected partial build identity evaluate-candidate output to include candidate report-set blocker.'
+    }
+
+    if (-not ($partialEnvironmentEvaluation.candidateReportSetValidation.errors | Where-Object {
+        $_.code -eq 'report.environment.missing' -and
+        $_.signal -eq 'environment.playerCoreVersion' -and
+        $_.failureClass -eq 'insufficient instrumentation'
+    })) {
+        throw 'Expected partial build identity candidate report-set validation to require playerCoreVersion.'
+    }
+
+    if (-not ($partialEnvironmentEvaluation.candidateReportSetValidation.errors | Where-Object {
+        $_.code -eq 'report.environment.missing' -and
+        $_.signal -eq 'environment.sourceRevision' -and
+        $_.failureClass -eq 'insufficient instrumentation'
+    })) {
+        throw 'Expected partial build identity candidate report-set validation to require sourceRevision.'
+    }
+
     if ($null -eq $partialEnvironmentEvaluation.activeGate -or
-        $partialEnvironmentEvaluation.activeGate.name -ne 'suite' -or
+        $partialEnvironmentEvaluation.activeGate.name -ne 'candidate-report-set' -or
         $partialEnvironmentEvaluation.activeGate.status -ne 'blocked') {
-        throw 'Expected partial build identity active gate to point at blocked suite.'
+        throw 'Expected partial build identity active gate to point at blocked candidate report-set.'
     }
 
-    if ($null -eq $partialEnvironmentEvaluation.activeGate.environment -or
-        $partialEnvironmentEvaluation.activeGate.environment.partialCount -ne 1) {
-        throw 'Expected partial build identity active gate to expose environment partial count.'
+    if (-not ($partialEnvironmentEvaluation.activeGate.signals -contains 'environment.playerCoreVersion') -or
+        -not ($partialEnvironmentEvaluation.activeGate.signals -contains 'environment.sourceRevision')) {
+        throw 'Expected partial build identity active gate to include player identity signals.'
     }
 
-    if (-not ($partialEnvironmentEvaluation.activeGate.blockers -contains 'suite.environment-evidence-missing')) {
-        throw 'Expected partial build identity active gate to include environment evidence blocker.'
+    if (-not ($partialEnvironmentEvaluation.activeGate.blockers -contains 'candidate-report-set.invalid')) {
+        throw 'Expected partial build identity active gate to include candidate report-set blocker.'
     }
 
-    if (-not ($partialEnvironmentEvaluation.activeGate.blockers -contains 'comparison.environment-evidence-missing')) {
-        throw 'Expected partial build identity active gate to include comparison environment blocker.'
+    if (-not ($partialEnvironmentEvaluation.activeGate.caseIds -contains 'item-1/source-1')) {
+        throw 'Expected partial build identity active gate to include affected case id.'
     }
 
-    $partialEnvironmentComparisonPath = Join-Path $candidateEvaluationPartialEnvironmentComparisonsDir 'item-1\source-1.json'
-    if (-not (Test-Path -LiteralPath $partialEnvironmentComparisonPath)) {
-        throw 'Expected partial build identity evaluate-candidate to write per-case comparison output.'
+    if (-not ($partialEnvironmentEvaluation.evidenceGates | Where-Object { $_.name -eq 'suite' -and $_.status -eq 'skipped' })) {
+        throw 'Expected partial build identity evaluate-candidate suite evidence gate to be skipped.'
     }
 
-    $partialEnvironmentComparison = Get-Content -Raw -LiteralPath $partialEnvironmentComparisonPath | ConvertFrom-Json
-    if (-not ($partialEnvironmentComparison.optimization.blockers -contains 'comparison.environment-evidence-missing')) {
-        throw 'Expected partial build identity comparison output to include machine-readable environment blocker.'
+    if (Test-Path -LiteralPath $candidateEvaluationPartialEnvironmentComparisonsDir) {
+        throw 'Expected partial build identity evaluate-candidate evidence to skip comparison output.'
     }
 
     New-Item -ItemType Directory -Path $candidateEvaluationSameBuildBaselineDir | Out-Null
@@ -2838,6 +2919,11 @@ try {
     "runId": "item-1/source-1",
     "metricVersion": "software-quality-v1",
     "result": "fail",
+    "environment": {
+      "playerCoreVersion": "smoke-core",
+      "sourceRevision": "smoke-empty-analysis-baseline-revision",
+      "buildConfiguration": "Debug"
+    },
     "source": {
       "itemId": "item-1",
       "mediaSourceId": "source-1",
@@ -2950,6 +3036,11 @@ try {
     "runId": "item-1/source-1",
     "metricVersion": "software-quality-v1",
     "result": "fail",
+    "environment": {
+      "playerCoreVersion": "smoke-core",
+      "sourceRevision": "smoke-empty-analysis-candidate-revision",
+      "buildConfiguration": "Debug"
+    },
     "source": {
       "itemId": "item-1",
       "mediaSourceId": "source-1",
@@ -3112,6 +3203,12 @@ try {
 {
   "runId": "item-1/source-1",
   "metricVersion": "software-quality-v1",
+  "result": "fail",
+  "environment": {
+    "playerCoreVersion": "smoke-core",
+    "sourceRevision": "smoke-invalid-candidate-revision",
+    "buildConfiguration": "Debug"
+  },
   "source": {
     "itemId": "item-1",
     "mediaSourceId": "source-1",
@@ -3259,6 +3356,11 @@ try {
     "runId": "item-1/source-1",
     "metricVersion": "software-quality-v1",
     "result": "fail",
+    "environment": {
+      "playerCoreVersion": "smoke-core",
+      "sourceRevision": "smoke-blocked-analysis-baseline-revision",
+      "buildConfiguration": "Debug"
+    },
     "source": {
       "itemId": "item-1",
       "mediaSourceId": "source-1",
@@ -3464,6 +3566,11 @@ try {
     "runId": "item-1/source-1",
     "metricVersion": "software-quality-v1",
     "result": "fail",
+    "environment": {
+      "playerCoreVersion": "smoke-core",
+      "sourceRevision": "smoke-blocked-analysis-candidate-revision",
+      "buildConfiguration": "Debug"
+    },
     "source": {
       "itemId": "item-1",
       "mediaSourceId": "source-1",

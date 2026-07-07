@@ -249,6 +249,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                 }
 
                 ValidateReportResult(validation, status, report);
+                ValidateReportEnvironment(validation, status, report);
                 ValidateFailureClasses(validation, status, report);
                 ValidateFailureAreas(validation, status, report);
 
@@ -285,6 +286,47 @@ namespace NextGenEmby.Core.PlaybackQuality
                 string.Join(", ", PlaybackQualityReportResult.KnownResults),
                 report.Result,
                 "Playback quality report contains an unknown result.");
+        }
+
+        private static void ValidateReportEnvironment(
+            PlaybackQualityReferenceReportSetValidation validation,
+            PlaybackQualityReferenceReportCaseStatus status,
+            PlaybackQualityReport report)
+        {
+            var environment = report.Environment ?? new PlaybackQualityEnvironment();
+            ValidateRequiredEnvironmentSignal(
+                validation,
+                status,
+                "environment.playerCoreVersion",
+                environment.PlayerCoreVersion);
+            ValidateRequiredEnvironmentSignal(
+                validation,
+                status,
+                "environment.sourceRevision",
+                environment.SourceRevision);
+        }
+
+        private static void ValidateRequiredEnvironmentSignal(
+            PlaybackQualityReferenceReportSetValidation validation,
+            PlaybackQualityReferenceReportCaseStatus status,
+            string signal,
+            string value)
+        {
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                return;
+            }
+
+            AddUnique(status.Signals, signal);
+            AddError(
+                validation,
+                "report.environment.missing",
+                status.CaseId,
+                status.ReportRunId,
+                signal,
+                "present",
+                "missing",
+                "Playback quality report is missing required player identity.");
         }
 
         private static void ValidateFailureAreas(
@@ -766,7 +808,8 @@ namespace NextGenEmby.Core.PlaybackQuality
 
         private static string ClassifyReportSetFailure(string code, string signal)
         {
-            if (string.Equals(code, "report.requiredSignal.missing", StringComparison.Ordinal))
+            if (string.Equals(code, "report.requiredSignal.missing", StringComparison.Ordinal) ||
+                string.Equals(code, "report.environment.missing", StringComparison.Ordinal))
             {
                 return PlaybackQualityFailureClassification.InsufficientInstrumentation;
             }
