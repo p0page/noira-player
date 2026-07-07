@@ -3065,3 +3065,59 @@ Fix rerun findings:
 - Decision:
   - Keep Music list-first. Artwork is Preview context, not a new browsing model.
   - Keep the no-art state quiet and text-first; do not add fake placeholders when Emby does not expose usable music imagery.
+
+### 2026-07-08 - Design Conformance Batch 07 Shell Guide Boundary Baseline
+
+- App version: 0.1.0.238.
+- Scope: verify the source Guide boundaries over Home, Search text entry, and Playback.
+- Data source: DEBUG `home-fixture`, `search-fixture`, and `playback-options-fixture`; no private server data, credentials, screenshots, or personal media assets were written to the repository.
+- Evidence root: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch07-source-guide-audit-0.1.0.238-20260708-072349`.
+- Keyboard-only validation:
+  - Launched `home-fixture`, pressed `M`, and captured the expanded Guide over Home.
+  - Launched `search-fixture`, pressed `M` while the Search box had focus, and captured the resulting Search state.
+  - Launched `playback-options-fixture`, pressed `M`, and captured the Playback More boundary.
+  - All three routes reported `completed` in their route result files.
+- Evidence:
+  - Home Guide screenshot and UIA: `01-home-guide-open.png`, `01-home-guide-open.uia.txt`.
+  - Search text-entry boundary screenshot and UIA: `02-search-guide-open.png`, `02-search-guide-open.uia.txt`.
+  - Playback menu boundary screenshot and UIA: `03-playback-menu-boundary.png`, `03-playback-menu-boundary.uia.txt`.
+
+Findings recorded before fixes:
+
+| ID | Severity | Page | Evidence | Expected | Actual | Proposed batch fix |
+| --- | --- | --- | --- | --- | --- | --- |
+| DC-07.01 | Pass | Home Guide | `01-home-guide-open.png` and `01-home-guide-open.uia.txt`. | `M` opens a matte left source Guide with Home focused, Search near the top, Settings pinned to the bottom, and content still visible. | The expanded Guide is 248px wide at the captured scale, Home is focused, fixed destinations Search through Unwatched are reachable, and Settings is pinned at the bottom. | No fix needed. |
+| DC-07.02 | Fail | Search Guide boundary | `02-search-guide-open.png` and `02-search-guide-open.uia.txt`. | The local keyboard/controller surrogate should open the Guide without changing query text when a text box has focus. | Pressing `M` inserted `m` into the Search query (`mAurora Protocol`) and left the Guide collapsed. This makes the keyboard surrogate diverge from real controller Menu behavior and pollutes the user's search. | Route the Menu surrogate before editable text input consumes it, or introduce an explicit non-text keyboard surrogate for controller Menu and update the automation contract. |
+| DC-07.03 | Pass | Playback Guide suppression | `03-playback-menu-boundary.png` and `03-playback-menu-boundary.uia.txt`. | Playback must suppress the app Guide; Menu belongs to the playback OSD / More menu while video is active. | No Home/Search/Movies Guide list appeared. The compact More menu remained focused on Source with Audio, Subtitles, and Info reachable. | No fix needed. |
+| DC-07.04 | Concern | Source breadth | `01-home-guide-open.uia.txt` and `MainPage.xaml`. | A complete Emby client needs an explicit source model for fixed destinations, unpinned libraries, and server-defined overflow. | The current implementation exposes all fixed app destinations as first-level Guide actions and has no More / Source Hub entity. This is acceptable for the current fixture family but still leaves unpinned/server-defined overflow as a future IA decision. | Keep current first-level fixed destinations for now; defer More / Source Hub until server-defined source overflow is implemented or real data proves first-level overload. |
+
+- Decision:
+  - Fix DC-07.02 in this batch because it is an interaction correctness issue and affects local keyboard/controller validation.
+  - Do not implement Source Hub in this batch. The current first-level Guide is acceptable for fixed destinations, and Source Hub should remain tied to real server-defined overflow rather than invented as decorative navigation.
+
+### 2026-07-08 - Design Conformance Batch 07 Shell Guide Boundary Fix Rerun
+
+- App version: 0.1.0.240.
+- Scope: rerun the Search text-entry Guide boundary after clarifying the local keyboard surrogate for controller Menu.
+- Data source: DEBUG `search-fixture`; no private server data, credentials, screenshots, or personal media assets were written to the repository.
+- Evidence root: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch07-search-menu-surrogates-0.1.0.240-20260708-074259`.
+- Keyboard-only validation:
+  - Launched `search-fixture` with the Search box focused.
+  - Pressed `Ctrl+M` as the non-text keyboard surrogate for controller Menu.
+  - Captured UIA after the Guide opened.
+- Evidence:
+  - `01-ctrl-m.uia.txt`.
+  - `01-ctrl-m.png`.
+
+Fix rerun findings:
+
+| ID | Status | Page | Evidence | Result | Residual risk |
+| --- | --- | --- | --- | --- | --- |
+| DC-07.02 | Pass | Search Guide boundary | `01-ctrl-m.uia.txt`. | `Ctrl+M` opened the expanded Guide, focused the Search guide item, and preserved the Search box value as `Aurora Protocol`. The bad `mAurora Protocol` state did not recur. | Plain `M` remains a literal text input when an editable field has focus. That is intentional for keyboard text entry and should not be used as the editable-field controller Menu surrogate. |
+
+- Verification:
+  - Targeted shell source tests passed after removing the ineffective CoreDispatcher interception experiment.
+  - The first attempted production-code interception did not stop TextBox text insertion, proving the issue is an automation-key conflict rather than a missing app route.
+- Decision:
+  - Update the checklist contract instead of blocking typed `m` in text fields. Use `M` on normal content surfaces and `Ctrl+M` while editable text has focus.
+  - Keep real controller `GamepadMenu` as the platform-faithful path for Xbox hardware validation.

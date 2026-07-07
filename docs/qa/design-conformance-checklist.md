@@ -17,7 +17,7 @@ This checklist turns `docs/DESIGN.md` and the A3 render targets into an executab
 - Run this checklist in batches. During a batch, record every finding before making fixes.
 - Do not repair one checklist item at a time while the batch is still running.
 - After a batch, group findings by shared cause, make a unified fix plan, implement that batch, then rerun the same batch.
-- Use keyboard-only app input: arrows, `Enter`/`Space`, `Escape`, `M`, and any documented surrogate keys.
+- Use keyboard-only app input: arrows, `Enter`/`Space`, `Escape`, `M`, and any documented surrogate keys. When focus is inside editable text, use `Ctrl+M` as the local keyboard surrogate for controller Menu so the test does not type a literal `m` into the field.
 - Prefer deterministic DEBUG fixture routes when the visual state needs repeatable evidence.
 - Use real saved-session artwork when available for stress testing, but never commit private screenshots, credentials, server URLs, or downloaded personal media assets.
 - Record screenshots or text snapshots for every `Concern`, `Fail`, or `Blocked` result.
@@ -174,6 +174,24 @@ Evidence to capture:
 - Settings first viewport.
 - Sign-out confirmation.
 - Error or retry state.
+
+## Batch 07 - Shell Guide Boundaries
+
+Goal: verify that the source Guide remains a fast global navigation model without stealing playback focus or colliding with text entry.
+
+| ID | Route | Keyboard Path | Design Checks | Result | Notes |
+| --- | --- | --- | --- | --- | --- |
+| 07.01 | `home-fixture` | `M` | Guide opens as a matte left source list with Home focused, Search near the top, Settings pinned to the bottom, and content still visible. | Pass | 0.1.0.238 opens the 248px Guide over Home. The fixed destination family is visible from Search through Unwatched, with Settings separated at the bottom. |
+| 07.02 | `search-fixture` | `Ctrl+M` while Search box is focused | Controller menu surrogate should open Guide without polluting the query text. | Pass | Plain `M` is a text character and is not a valid editable-field surrogate. 0.1.0.240 confirms `Ctrl+M` opens the Guide with Search focused and preserves the query text. |
+| 07.03 | `playback-options-fixture` | `M` | Playback must not open the app Guide; Menu belongs to playback OSD / More while video is active. | Pass | 0.1.0.238 keeps the Guide suppressed on Playback and leaves Source/Audio/Subtitles/Info in the compact More menu. |
+| 07.04 | Source breadth | Open Guide and inspect destinations | The current source model must be explicit: either first-level fixed destinations are accepted, or More / Source Hub is introduced for unpinned/server-defined sources. | Pass with concern | The current implementation exposes all fixed app destinations as first-level Guide actions. This is acceptable for the current fixture set, but the future More / Source Hub decision remains the owner for unpinned or server-defined source overflow. |
+
+Evidence to capture:
+
+- Guide-open state over Home.
+- Guide/menu behavior while Search text input has focus.
+- Playback menu boundary proving app Guide is suppressed.
+- Destination list or Source Hub/overflow state.
 
 ## Batch Run Template
 
