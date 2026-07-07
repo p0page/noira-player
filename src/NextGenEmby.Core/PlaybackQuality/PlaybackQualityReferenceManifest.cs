@@ -110,6 +110,7 @@ namespace NextGenEmby.Core.PlaybackQuality
             "timeline",
             "tracks",
             "subtitles",
+            "end-of-stream",
             "error-handling"
         };
 

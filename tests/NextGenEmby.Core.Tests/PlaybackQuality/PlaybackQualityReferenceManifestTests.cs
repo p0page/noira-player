@@ -49,6 +49,7 @@ public sealed class PlaybackQualityReferenceManifestTests
         Assert.Contains("timeline", result.Coverage.MissingPurposes);
         Assert.Contains("tracks", result.Coverage.MissingPurposes);
         Assert.Contains("subtitles", result.Coverage.MissingPurposes);
+        Assert.Contains("end-of-stream", result.Coverage.MissingPurposes);
         Assert.Contains("error-handling", result.Coverage.MissingPurposes);
         Assert.Contains("reference manifest is missing required playback quality purposes", result.Coverage.Reasons);
         Assert.Contains("Add reference cases", result.Coverage.SuggestedNextAction);
@@ -110,6 +111,10 @@ public sealed class PlaybackQualityReferenceManifestTests
             tier: 1,
             purpose: "subtitles"));
         manifest.Cases.Add(CreateCase(
+            "lifecycle/end-of-stream",
+            tier: 1,
+            purpose: "end-of-stream"));
+        manifest.Cases.Add(CreateCase(
             "errors/missing-file",
             tier: 1,
             purpose: "error-handling"));
@@ -125,6 +130,7 @@ public sealed class PlaybackQualityReferenceManifestTests
         Assert.Contains("timeline", result.Coverage.CoveredPurposes);
         Assert.Contains("tracks", result.Coverage.CoveredPurposes);
         Assert.Contains("subtitles", result.Coverage.CoveredPurposes);
+        Assert.Contains("end-of-stream", result.Coverage.CoveredPurposes);
         Assert.Contains("error-handling", result.Coverage.CoveredPurposes);
         Assert.Contains("reference manifest covers required playback quality purposes", result.Coverage.Reasons);
     }
@@ -911,6 +917,19 @@ public sealed class PlaybackQualityReferenceManifestTests
         Assert.Contains("position.seekTargetPositionTicks", requiredSignals);
         Assert.Contains("position.actualPositionTicks", requiredSignals);
         Assert.Contains("position.seekPositionErrorMs", requiredSignals);
+    }
+
+    [Fact]
+    public void RequiredSignalPolicy_Requires_EndOfStream_Lifecycle_Signal_For_EndOfStream_Purpose()
+    {
+        var referenceCase = CreateCase(
+            "lifecycle/end-of-stream",
+            tier: 1,
+            purpose: "end-of-stream");
+
+        var requiredSignals = PlaybackQualityRequiredSignalPolicy.CreateRequiredSignals(referenceCase);
+
+        Assert.Contains("lifecycle.endOfStream", requiredSignals);
     }
 
     [Fact]

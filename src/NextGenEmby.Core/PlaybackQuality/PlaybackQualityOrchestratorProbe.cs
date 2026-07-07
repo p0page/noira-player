@@ -138,6 +138,16 @@ namespace NextGenEmby.Core.PlaybackQuality
             var descriptor = orchestrator.CurrentDescriptor ??
                 throw new InvalidOperationException("Core probe could not capture playback descriptor.");
             var actualPositionTicks = backend.CurrentPositionTicks;
+            if (HasPurpose(referenceCase, "end-of-stream"))
+            {
+                AddLifecycleEvent(
+                    lifecycle,
+                    "endOfStream",
+                    backend.CurrentPositionTicks,
+                    orchestrator.State.ToString(),
+                    "core-probe marked diagnostic end-of-stream");
+            }
+
             await orchestrator.StopAsync().ConfigureAwait(false);
             AddLifecycleEvent(
                 lifecycle,
@@ -162,7 +172,9 @@ namespace NextGenEmby.Core.PlaybackQuality
                 Math.Abs(actualPositionTicks - seekTargetTicks) / 10000.0;
             report.ColorPipeline.ForceSdrOutput = referenceCase.ForceSdrOutput ||
                 HasPurpose(referenceCase, "hdr-force-sdr");
-            AddProbeLimitations(report.Limitations);
+            AddProbeLimitations(
+                report.Limitations,
+                includesEndOfStreamMarker: HasPurpose(referenceCase, "end-of-stream"));
             PlaybackQualityEvaluator.Evaluate(report);
 
             return new PlaybackQualityRunResult(
@@ -456,7 +468,9 @@ namespace NextGenEmby.Core.PlaybackQuality
             return referenceCase.Purpose.Contains(purpose);
         }
 
-        private static void AddProbeLimitations(List<string> limitations)
+        private static void AddProbeLimitations(
+            List<string> limitations,
+            bool includesEndOfStreamMarker = false)
         {
             AddUnique(
                 limitations,
@@ -467,6 +481,12 @@ namespace NextGenEmby.Core.PlaybackQuality
             AddUnique(
                 limitations,
                 "core-probe: startup, display, timing, buffering, and A/V sync values are deterministic probe telemetry");
+            if (includesEndOfStreamMarker)
+            {
+                AddUnique(
+                    limitations,
+                    "core-probe: end-of-stream is a diagnostic lifecycle marker, not proof of natural media EOF");
+            }
         }
 
         private static void AddLifecycleEvent(

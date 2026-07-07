@@ -301,6 +301,7 @@ try {
         'timeline',
         'tracks',
         'subtitles',
+        'end-of-stream',
         'error-handling'
     )
     foreach ($purpose in $requiredPurposes) {
@@ -336,9 +337,10 @@ try {
         $_.severity -eq 'high' -and
         $_.stability -eq 'stable' -and
         ($_.purpose -contains 'tracks') -and
-        ($_.purpose -contains 'subtitles')
+        ($_.purpose -contains 'subtitles') -and
+        ($_.purpose -contains 'end-of-stream')
     })) {
-        throw 'Generated manifest should include stable track and subtitle discovery purposes on the SDR smoke case.'
+        throw 'Generated manifest should include stable track, subtitle, and end-of-stream purposes on the SDR smoke case.'
     }
 
     if (-not ($manifest.cases | Where-Object {

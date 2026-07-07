@@ -55,6 +55,11 @@ namespace NextGenEmby.Core.PlaybackQuality
             AddUnique(requiredSignals, "lifecycle.resume");
             AddUnique(requiredSignals, "lifecycle.stop");
 
+            if (HasPurpose(referenceCase, "end-of-stream"))
+            {
+                AddUnique(requiredSignals, "lifecycle.endOfStream");
+            }
+
             if (expected.MaxStartupDurationMs.HasValue)
             {
                 AddUnique(requiredSignals, "startup.startupDurationMs");

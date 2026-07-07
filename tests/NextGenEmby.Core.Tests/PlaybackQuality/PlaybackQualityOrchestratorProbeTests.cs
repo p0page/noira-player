@@ -118,4 +118,45 @@ public sealed class PlaybackQualityOrchestratorProbeTests
             "core-probe: native playback graph, decoder, renderer, network I/O, and HDMI output were not opened",
             result.ModelAnalysis.Limitations);
     }
+
+    [Fact]
+    public async Task RunAsync_Records_EndOfStream_Lifecycle_When_Case_Requires_EndOfStream()
+    {
+        var referenceCase = new PlaybackQualityReferenceCase
+        {
+            CaseId = "local/core-probe-end-of-stream",
+            Category = "challenge",
+            Severity = "medium",
+            Stability = "stable",
+            Uri = "emby://quality-cases/core-probe-end-of-stream",
+            Expected = new PlaybackQualityExpected
+            {
+                Codec = "hevc",
+                Width = 1920,
+                Height = 1080,
+                FrameRate = 60.0,
+                HdrKind = "Sdr",
+                IsHdr = false,
+                IsDirectPlayable = true,
+                HdrOutput = "Sdr",
+                DxgiInput = "YCBCR_STUDIO_G22_LEFT_P709",
+                DxgiOutput = "RGB_FULL_G22_NONE_P709",
+                MaxStartupDurationMs = 5000.0,
+                MaxVideoStarvedPasses = 0,
+                MaxAudioStarvedPasses = 0,
+                RequireValidatedConversion = true
+            }
+        };
+        referenceCase.Purpose.Add("end-of-stream");
+
+        var result = await PlaybackQualityOrchestratorProbe.RunAsync(referenceCase);
+
+        Assert.Contains(result.Report.Lifecycle.Events, item =>
+            item.Operation == "endOfStream" &&
+            item.Status == "observed");
+        Assert.Contains("lifecycle.endOfStream", result.ModelAnalysis.EvidenceSignals);
+        Assert.Contains(
+            "core-probe: end-of-stream is a diagnostic lifecycle marker, not proof of natural media EOF",
+            result.Report.Limitations);
+    }
 }

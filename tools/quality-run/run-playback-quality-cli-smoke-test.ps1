@@ -1652,6 +1652,7 @@ try {
       { "operation": "pause", "status": "observed" },
       { "operation": "resume", "status": "observed" },
       { "operation": "seek", "status": "observed" },
+      { "operation": "endOfStream", "status": "observed" },
       { "operation": "stop", "status": "observed" }
     ]
   },
@@ -1750,6 +1751,7 @@ try {
       { "operation": "pause", "status": "observed" },
       { "operation": "resume", "status": "observed" },
       { "operation": "seek", "status": "observed" },
+      { "operation": "endOfStream", "status": "observed" },
       { "operation": "stop", "status": "observed" }
     ]
   },
@@ -1964,7 +1966,8 @@ try {
         "frame-pacing",
         "timeline",
         "tracks",
-        "subtitles"
+        "subtitles",
+        "end-of-stream"
       ],
       "expected": {
         "codec": "hevc",
@@ -2459,6 +2462,7 @@ try {
         { "operation": "pause", "status": "observed" },
         { "operation": "resume", "status": "observed" },
         { "operation": "seek", "status": "observed" },
+        { "operation": "endOfStream", "status": "observed" },
         { "operation": "stop", "status": "observed" }
       ]
     },
@@ -2554,6 +2558,7 @@ try {
         { "operation": "pause", "status": "observed" },
         { "operation": "resume", "status": "observed" },
         { "operation": "seek", "status": "observed" },
+        { "operation": "endOfStream", "status": "observed" },
         { "operation": "stop", "status": "observed" }
       ]
     },
@@ -2829,6 +2834,7 @@ try {
         { "operation": "pause", "status": "observed" },
         { "operation": "resume", "status": "observed" },
         { "operation": "seek", "status": "observed" },
+        { "operation": "endOfStream", "status": "observed" },
         { "operation": "stop", "status": "observed" }
       ]
     },
@@ -3016,6 +3022,7 @@ try {
         { "operation": "pause", "status": "observed" },
         { "operation": "resume", "status": "observed" },
         { "operation": "seek", "status": "observed" },
+        { "operation": "endOfStream", "status": "observed" },
         { "operation": "stop", "status": "observed" }
       ]
     },
@@ -3427,6 +3434,7 @@ try {
         'timeline',
         'tracks',
         'subtitles',
+        'end-of-stream',
         'error-handling'
     )
     foreach ($purpose in $requiredPurposes) {

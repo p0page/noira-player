@@ -7,12 +7,13 @@
 已新增 `PlaybackQualityReport.lifecycle` 和 `modelAnalysis.lifecycle`：
 - report 会保存 `lifecycle.events[]`，记录 `operation`、`status`、`state`、`positionTicks` 和 `message`。
 - core-probe 现在会记录 `load`、`play`、`pause`、`resume`、`seek`、`stop`，音轨/字幕切换也会作为生命周期事件保存。
+- `end-of-stream` 已进入 reference manifest required purpose 和 required-signal policy；core-probe 可输出 `lifecycle.endOfStream` diagnostic marker。
 - error/skip 路径会输出对应的 lifecycle event，例如 `lifecycle.error` 或 `lifecycle.skip`。
 - `PlaybackQualityReportAnalyzer` 会把生命周期事件转换为 `lifecycle.*` evidence signals，并在可播放报告缺少 `load/play/pause/resume/stop` 时标记 missing evidence。
 - `validate-report-set` 的 required-signal policy 已要求可播放 case 提供生命周期证据；明确 unsupported 的 source 不要求播放生命周期。
 - CLI JSON presence collector 已能从 `lifecycle.events[]` 提取 `lifecycle.*` 信号，手写 raw JSON report 也能被 report-set validation 正确识别。
 
-这一步属于 instrumentation/testability，不改变播放器播放行为、阈值或 pass/fail 规则。它补齐的是 v0.1 “播放生命周期：load、play、pause、resume、stop、error” 的机器可读证据入口；`endOfStream` 仍是后续真实播放 harness 需要补的能力。
+这一步属于 instrumentation/testability，不改变播放器播放行为、阈值或 pass/fail 规则。它补齐的是 v0.1 “播放生命周期：load、play、pause、resume、stop、end-of-stream、error” 的机器可读证据入口；core-probe 的 `endOfStream` 只是 diagnostic marker，不证明真实媒体自然播放到 EOF。
 
 ## 2026-07-08 更新：report-set capability coverage 摘要
 
@@ -105,7 +106,7 @@
 优先补真实 App/native 或 native-graph 软件采集器，把 source-only baseline 中的缺失 telemetry 替换为实际播放 evidence；同时保持 core-probe 作为 App-free orchestration 回归守卫。
 # 2026-07-07 更新：v0.1 core-probe 评测闭环
 
-当前已经新增 `materialize-core-probe-report-set`，可以在不启动 App、不打包 UWP、不依赖 Xbox 或显示器的情况下，驱动 `PlaybackOrchestrator` 走 start、pause、resume、seek、track switch、subtitle switch 和 stop 路径，并生成标准 `PlaybackQualityRunResult` envelope。
+当前已经新增 `materialize-core-probe-report-set`，可以在不启动 App、不打包 UWP、不依赖 Xbox 或显示器的情况下，驱动 `PlaybackOrchestrator` 走 load、play、pause、resume、seek、track switch、subtitle switch、diagnostic end-of-stream marker 和 stop 路径，并生成标准 `PlaybackQualityRunResult` envelope。
 
 已归档 `docs/qa/baselines/v0.1-core-probe/`：
 

@@ -12,7 +12,8 @@
         "sdr-smoke",
         "av-sync",
         "tracks",
-        "subtitles"
+        "subtitles",
+        "end-of-stream"
       ],
       "expected": {
         "codec": "hevc",
