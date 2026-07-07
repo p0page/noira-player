@@ -72,6 +72,21 @@ public sealed class PosterGridVisualSourceTests
         Assert.DoesNotContain("#FF6B6B", script);
     }
 
+    [Fact]
+    public void Qa_Artwork_Generator_Uses_Cinematic_Scene_Primitives_Instead_Of_Abstract_Test_Cards()
+    {
+        var script = File.ReadAllText(Path.Combine(
+            FindRepositoryRoot(),
+            "tools",
+            "Generate-HomeQaArtworkAssets.ps1"));
+
+        Assert.Contains("Draw-CinematicPosterScene", script);
+        Assert.Contains("Draw-CinematicWideScene", script);
+        Assert.Contains("Draw-FilmBillingBlock", script);
+        Assert.Contains("Draw-AtmosphereTexture", script);
+        Assert.DoesNotContain("Watch-ready wide artwork", script);
+    }
+
     private static string ReadAppSource(params string[] segments)
     {
         var parts = new string[segments.Length + 3];

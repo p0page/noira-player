@@ -110,6 +110,254 @@ function Draw-SoftLight {
     $lightBrush.Dispose()
 }
 
+function Draw-AtmosphereTexture {
+    param(
+        [System.Drawing.Graphics]$Graphics,
+        [int]$Width,
+        [int]$Height,
+        [System.Drawing.Color]$Accent,
+        [int]$Seed
+    )
+
+    $random = [System.Random]::new($Seed * 97)
+    $speckBrush = New-Brush (Color-WithAlpha $Accent 32)
+    $mistPen = New-Pen (Color-WithAlpha $Accent 28) 1
+
+    for ($i = 0; $i -lt 42; $i++) {
+        $x = [float]$random.Next(0, $Width)
+        $y = [float]$random.Next(0, $Height)
+        $size = [float]$random.Next(1, [Math]::Max(2, [int]($Width * 0.012)))
+        $Graphics.FillEllipse($speckBrush, $x, $y, $size, $size)
+    }
+
+    for ($i = 0; $i -lt 10; $i++) {
+        $y = [float]($Height * (0.16 + ($i * 0.055)))
+        $x1 = [float]$random.Next(-[int]($Width * 0.12), [int]($Width * 0.28))
+        $x2 = [float]($Width * (0.74 + ($random.NextDouble() * 0.24)))
+        $Graphics.DrawLine($mistPen, $x1, $y, $x2, $y + [float]$random.Next(-10, 12))
+    }
+
+    $speckBrush.Dispose()
+    $mistPen.Dispose()
+}
+
+function Draw-PosterSilhouette {
+    param(
+        [System.Drawing.Graphics]$Graphics,
+        [int]$Width,
+        [int]$Height,
+        [System.Drawing.Color]$Accent,
+        [int]$Seed
+    )
+
+    $centerX = [float]($Width * (0.44 + (($Seed % 5) * 0.028)))
+    $headY = [float]($Height * 0.18)
+    $headW = [float]($Width * 0.22)
+    $headH = [float]($Height * 0.17)
+    $shoulderY = [float]($Height * 0.35)
+    $shoulderW = [float]($Width * 0.58)
+    $shoulderH = [float]($Height * 0.36)
+
+    $shadowBrush = New-Brush (Color-WithAlpha $canvas 238)
+    $Graphics.FillEllipse(
+        $shadowBrush,
+        $centerX - ($headW * 0.50),
+        $headY,
+        $headW,
+        $headH)
+
+    $coatRect = [System.Drawing.RectangleF]::new(
+        $centerX - ($shoulderW * 0.50),
+        $shoulderY,
+        $shoulderW,
+        $shoulderH)
+    Draw-RoundedRect $Graphics $shadowBrush $coatRect ([Math]::Max(18, $Width * 0.08))
+    $shadowBrush.Dispose()
+
+    $rimPen = New-Pen (Color-WithAlpha $Accent 120) ([Math]::Max(2, $Width * 0.012))
+    $Graphics.DrawArc(
+        $rimPen,
+        $centerX - ($headW * 0.50),
+        $headY,
+        $headW,
+        $headH,
+        285,
+        120)
+    $Graphics.DrawLine(
+        $rimPen,
+        $centerX + ($shoulderW * 0.16),
+        $shoulderY + ($shoulderH * 0.10),
+        $centerX + ($shoulderW * 0.30),
+        $shoulderY + ($shoulderH * 0.78))
+    $rimPen.Dispose()
+}
+
+function Draw-CinematicPosterScene {
+    param(
+        [System.Drawing.Graphics]$Graphics,
+        [int]$Width,
+        [int]$Height,
+        [System.Drawing.Color]$Accent,
+        [System.Drawing.Color]$Deep,
+        [int]$Seed
+    )
+
+    Draw-SoftLight $Graphics $Width $Height $Accent $Seed
+    Draw-AtmosphereTexture $Graphics $Width $Height $Accent $Seed
+
+    $sceneBrush = New-Brush (Color-WithAlpha $Deep 160)
+    $midBrush = New-Brush (Color-WithAlpha $surface 190)
+    $accentBrush = New-Brush (Color-WithAlpha $Accent 90)
+
+    switch ($Seed % 4) {
+        0 {
+            $mountainPoints = [System.Drawing.PointF[]]@(
+                [System.Drawing.PointF]::new(0, [float]($Height * 0.46)),
+                [System.Drawing.PointF]::new([float]($Width * 0.18), [float]($Height * 0.26)),
+                [System.Drawing.PointF]::new([float]($Width * 0.38), [float]($Height * 0.50)),
+                [System.Drawing.PointF]::new([float]($Width * 0.60), [float]($Height * 0.31)),
+                [System.Drawing.PointF]::new($Width, [float]($Height * 0.54)),
+                [System.Drawing.PointF]::new($Width, [float]($Height * 0.72)),
+                [System.Drawing.PointF]::new(0, [float]($Height * 0.72)))
+            $Graphics.FillPolygon($sceneBrush, $mountainPoints)
+        }
+        1 {
+            for ($i = 0; $i -lt 7; $i++) {
+                $x = [float]($Width * (0.05 + ($i * 0.13)))
+                $buildingHeight = [float]($Height * (0.18 + (($i % 3) * 0.08)))
+                $Graphics.FillRectangle($sceneBrush, $x, [float]($Height * 0.48 - $buildingHeight), [float]($Width * 0.08), $buildingHeight)
+                $Graphics.FillRectangle($accentBrush, $x + 8, [float]($Height * 0.50 - $buildingHeight), [float]($Width * 0.018), [float]($buildingHeight * 0.70))
+            }
+        }
+        2 {
+            $corridorPen = New-Pen (Color-WithAlpha $Accent 90) ([Math]::Max(1, $Width * 0.006))
+            for ($i = 0; $i -lt 7; $i++) {
+                $offset = [float]($i * $Width * 0.075)
+                $Graphics.DrawLine($corridorPen, $offset, [float]($Height * 0.18), [float]($Width * 0.50), [float]($Height * 0.58))
+                $Graphics.DrawLine($corridorPen, $Width - $offset, [float]($Height * 0.18), [float]($Width * 0.50), [float]($Height * 0.58))
+            }
+            $corridorPen.Dispose()
+        }
+        default {
+            $Graphics.FillEllipse($midBrush, [float]($Width * 0.10), [float]($Height * 0.18), [float]($Width * 0.80), [float]($Height * 0.28))
+            $Graphics.FillRectangle($sceneBrush, 0, [float]($Height * 0.48), $Width, [float]($Height * 0.18))
+        }
+    }
+
+    Draw-PosterSilhouette $Graphics $Width $Height $Accent $Seed
+
+    $sceneBrush.Dispose()
+    $midBrush.Dispose()
+    $accentBrush.Dispose()
+}
+
+function Draw-FilmBillingBlock {
+    param(
+        [System.Drawing.Graphics]$Graphics,
+        [int]$Width,
+        [int]$Height,
+        [System.Drawing.Color]$TextColor,
+        [System.Drawing.Color]$Accent,
+        [int]$Seed
+    )
+
+    $billingFont = [System.Drawing.Font]::new("Segoe UI", [float]($Width * 0.024), [System.Drawing.FontStyle]::Regular)
+    $mutedBrush = New-Brush (Color-WithAlpha $TextColor 174)
+    $accentBrush = New-Brush (Color-WithAlpha $Accent 190)
+    $format = [System.Drawing.StringFormat]::new()
+    $format.Alignment = [System.Drawing.StringAlignment]::Center
+    $format.LineAlignment = [System.Drawing.StringAlignment]::Near
+
+    $Graphics.FillRectangle(
+        $accentBrush,
+        [float]($Width * 0.31),
+        [float]($Height * 0.912),
+        [float]($Width * 0.38),
+        [float]([Math]::Max(2, $Height * 0.006)))
+
+    $billing = if (($Seed % 2) -eq 0) { "UHD  HDR  5.1  SUBTITLES  2026" } else { "ORIGINAL FEATURE  RESTORED SOUND  2026" }
+    $billingRect = [System.Drawing.RectangleF]::new(
+        [float]($Width * 0.08),
+        [float]($Height * 0.935),
+        [float]($Width * 0.84),
+        [float]($Height * 0.045))
+    $Graphics.DrawString($billing, $billingFont, $mutedBrush, $billingRect, $format)
+
+    $format.Dispose()
+    $billingFont.Dispose()
+    $mutedBrush.Dispose()
+    $accentBrush.Dispose()
+}
+
+function Draw-CinematicWideScene {
+    param(
+        [System.Drawing.Graphics]$Graphics,
+        [int]$Width,
+        [int]$Height,
+        [System.Drawing.Color]$Accent,
+        [System.Drawing.Color]$Deep,
+        [int]$Seed
+    )
+
+    Draw-SoftLight $Graphics $Width $Height $Accent ($Seed + 9)
+    Draw-AtmosphereTexture $Graphics $Width $Height $Accent ($Seed + 21)
+
+    $groundBrush = New-Brush (Color-WithAlpha $Deep 168)
+    $sceneBrush = New-Brush (Color-WithAlpha $surface 218)
+    $accentBrush = New-Brush (Color-WithAlpha $Accent 120)
+
+    switch ($Seed % 4) {
+        0 {
+            $Graphics.FillRectangle($groundBrush, 0, [float]($Height * 0.60), $Width, [float]($Height * 0.40))
+            for ($i = 0; $i -lt 9; $i++) {
+                $x = [float]($Width * (0.07 + ($i * 0.095)))
+                $h = [float]($Height * (0.18 + (($i % 4) * 0.06)))
+                $Graphics.FillRectangle($sceneBrush, $x, [float]($Height * 0.60 - $h), [float]($Width * 0.055), $h)
+                if (($i % 2) -eq 0) {
+                    $Graphics.FillRectangle($accentBrush, $x + 6, [float]($Height * 0.58 - $h), [float]($Width * 0.012), [float]($h * 0.70))
+                }
+            }
+        }
+        1 {
+            $ridgePoints = [System.Drawing.PointF[]]@(
+                [System.Drawing.PointF]::new(0, [float]($Height * 0.54)),
+                [System.Drawing.PointF]::new([float]($Width * 0.22), [float]($Height * 0.30)),
+                [System.Drawing.PointF]::new([float]($Width * 0.46), [float]($Height * 0.58)),
+                [System.Drawing.PointF]::new([float]($Width * 0.68), [float]($Height * 0.34)),
+                [System.Drawing.PointF]::new($Width, [float]($Height * 0.55)),
+                [System.Drawing.PointF]::new($Width, $Height),
+                [System.Drawing.PointF]::new(0, $Height))
+            $Graphics.FillPolygon($groundBrush, $ridgePoints)
+        }
+        2 {
+            $corridorPen = New-Pen (Color-WithAlpha $Accent 88) ([Math]::Max(1, $Width * 0.004))
+            $Graphics.FillRectangle($groundBrush, 0, [float]($Height * 0.54), $Width, [float]($Height * 0.46))
+            for ($i = 0; $i -lt 10; $i++) {
+                $x = [float]($i * $Width * 0.085)
+                $Graphics.DrawLine($corridorPen, $x, 0, [float]($Width * 0.58), [float]($Height * 0.64))
+                $Graphics.DrawLine($corridorPen, $Width - $x, 0, [float]($Width * 0.58), [float]($Height * 0.64))
+            }
+            $corridorPen.Dispose()
+        }
+        default {
+            $Graphics.FillRectangle($groundBrush, 0, [float]($Height * 0.56), $Width, [float]($Height * 0.44))
+            $Graphics.FillEllipse($sceneBrush, [float]($Width * 0.46), [float]($Height * 0.10), [float]($Width * 0.34), [float]($Height * 0.62))
+        }
+    }
+
+    $figureBrush = New-Brush (Color-WithAlpha $canvas 230)
+    $rimPen = New-Pen (Color-WithAlpha $Accent 115) ([Math]::Max(2, $Width * 0.006))
+    $figureX = [float]($Width * (0.64 + (($Seed % 3) * 0.035)))
+    $Graphics.FillEllipse($figureBrush, $figureX, [float]($Height * 0.32), [float]($Width * 0.075), [float]($Height * 0.13))
+    Draw-RoundedRect $Graphics $figureBrush ([System.Drawing.RectangleF]::new($figureX - $Width * 0.018, [float]($Height * 0.44), [float]($Width * 0.12), [float]($Height * 0.30))) 12
+    $Graphics.DrawLine($rimPen, $figureX + $Width * 0.08, [float]($Height * 0.36), $figureX + $Width * 0.11, [float]($Height * 0.70))
+    $figureBrush.Dispose()
+    $rimPen.Dispose()
+    $groundBrush.Dispose()
+    $sceneBrush.Dispose()
+    $accentBrush.Dispose()
+}
+
 function Draw-CinematicSubject {
     param(
         [System.Drawing.Graphics]$Graphics,
@@ -173,10 +421,8 @@ function Draw-PosterTypography {
 
     $titleFont = [System.Drawing.Font]::new("Segoe UI Semibold", [float]($Width * 0.068), [System.Drawing.FontStyle]::Bold)
     $smallFont = [System.Drawing.Font]::new("Segoe UI", [float]($Width * 0.036), [System.Drawing.FontStyle]::Regular)
-    $billingFont = [System.Drawing.Font]::new("Segoe UI", [float]($Width * 0.026), [System.Drawing.FontStyle]::Regular)
     $titleBrush = New-Brush $TitleColor
     $mutedBrush = New-Brush (Color-WithAlpha $muted 205)
-    $accentBrush = New-Brush (Color-WithAlpha $Accent 190)
     $format = [System.Drawing.StringFormat]::new()
     $format.Alignment = [System.Drawing.StringAlignment]::Center
     $format.LineAlignment = [System.Drawing.StringAlignment]::Near
@@ -185,38 +431,24 @@ function Draw-PosterTypography {
         [float]($Width * 0.08),
         [float]($Height * 0.665),
         [float]($Width * 0.84),
-        [float]($Height * 0.17))
+        [float]($Height * 0.16))
     $Graphics.DrawString($Title, $titleFont, $titleBrush, $titleRect, $format)
 
     $meta = if (($Seed % 3) -eq 0) { "A PRIVATE LIBRARY FEATURE" } elseif (($Seed % 3) -eq 1) { "DIRECTOR'S CUT" } else { "RESTORED EDITION" }
     $metaRect = [System.Drawing.RectangleF]::new(
         [float]($Width * 0.08),
-        [float]($Height * 0.845),
+        [float]($Height * 0.835),
         [float]($Width * 0.84),
         [float]($Height * 0.05))
     $Graphics.DrawString($meta, $smallFont, $mutedBrush, $metaRect, $format)
 
-    $Graphics.FillRectangle(
-        $accentBrush,
-        [float]($Width * 0.32),
-        [float]($Height * 0.925),
-        [float]($Width * 0.36),
-        [float]([Math]::Max(2, $Height * 0.006)))
-
-    $billingRect = [System.Drawing.RectangleF]::new(
-        [float]($Width * 0.10),
-        [float]($Height * 0.94),
-        [float]($Width * 0.80),
-        [float]($Height * 0.04))
-    $Graphics.DrawString("HD 5.1  SUBTITLES  2026", $billingFont, $mutedBrush, $billingRect, $format)
+    Draw-FilmBillingBlock $Graphics $Width $Height $TitleColor $Accent $Seed
 
     $format.Dispose()
     $titleBrush.Dispose()
     $mutedBrush.Dispose()
-    $accentBrush.Dispose()
     $titleFont.Dispose()
     $smallFont.Dispose()
-    $billingFont.Dispose()
 }
 
 function New-QaPosterArtwork {
@@ -248,15 +480,14 @@ function New-QaPosterArtwork {
     $graphics.FillRectangle($background, 0, 0, $width, $height)
     $background.Dispose()
 
-    Draw-SoftLight $graphics $width $height $accent $Seed
-    Draw-CinematicSubject $graphics $width $height $accent $skin $Seed
+    Draw-CinematicPosterScene $graphics $width $height $accent $deep $Seed
 
     $scrim = [System.Drawing.Drawing2D.LinearGradientBrush]::new(
-        [System.Drawing.Rectangle]::new(0, [int]($height * 0.56), $width, [int]($height * 0.44)),
+        [System.Drawing.Rectangle]::new(0, [int]($height * 0.50), $width, [int]($height * 0.50)),
         [System.Drawing.Color]::FromArgb(0, 0, 0, 0),
-        [System.Drawing.Color]::FromArgb(214, 0, 0, 0),
+        [System.Drawing.Color]::FromArgb(226, 0, 0, 0),
         [System.Drawing.Drawing2D.LinearGradientMode]::Vertical)
-    $graphics.FillRectangle($scrim, 0, [int]($height * 0.56), $width, [int]($height * 0.44))
+    $graphics.FillRectangle($scrim, 0, [int]($height * 0.50), $width, [int]($height * 0.50))
     $scrim.Dispose()
 
     Draw-PosterTypography $graphics $width $height $Title $titleColor $accent $Seed
@@ -299,24 +530,7 @@ function New-QaWideArtwork {
     $graphics.FillRectangle($background, 0, 0, $width, $height)
     $background.Dispose()
 
-    Draw-SoftLight $graphics $width $height $accent ($Seed + 9)
-
-    $horizonBrush = New-Brush (Color-WithAlpha $surface 230)
-    $graphics.FillRectangle($horizonBrush, 0, [int]($height * 0.58), $width, [int]($height * 0.42))
-    $horizonBrush.Dispose()
-
-    $linePen = New-Pen (Color-WithAlpha $hairline 230) ([Math]::Max(2, $width * 0.006))
-    $graphics.DrawLine($linePen, 0, [float]($height * 0.58), $width, [float]($height * 0.58))
-    $linePen.Dispose()
-
-    $figureBrush = New-Brush (Color-WithAlpha $raised 238)
-    Draw-RoundedRect $graphics $figureBrush ([System.Drawing.RectangleF]::new([float]($width * 0.66), [float]($height * 0.24), [float]($width * 0.16), [float]($height * 0.48))) 14
-    Draw-RoundedRect $graphics $figureBrush ([System.Drawing.RectangleF]::new([float]($width * 0.22), [float]($height * 0.30), [float]($width * 0.12), [float]($height * 0.38))) 10
-    $figureBrush.Dispose()
-
-    $accentBrush = New-Brush (Color-WithAlpha $accent 180)
-    $graphics.FillRectangle($accentBrush, [float]($width * 0.72), [float]($height * 0.34), [float]($width * 0.035), [float]($height * 0.30))
-    $accentBrush.Dispose()
+    Draw-CinematicWideScene $graphics $width $height $accent $deep $Seed
 
     $scrim = [System.Drawing.Drawing2D.LinearGradientBrush]::new(
         [System.Drawing.Rectangle]::new(0, 0, $width, $height),
@@ -331,7 +545,7 @@ function New-QaWideArtwork {
     $titleBrush = New-Brush $titleColor
     $mutedBrush = New-Brush (Color-WithAlpha $muted 205)
     $graphics.DrawString($Title, $titleFont, $titleBrush, [float]($width * 0.07), [float]($height * 0.68))
-    $graphics.DrawString("Watch-ready wide artwork", $metaFont, $mutedBrush, [float]($width * 0.07), [float]($height * 0.80))
+    $graphics.DrawString("Original feature artwork", $metaFont, $mutedBrush, [float]($width * 0.07), [float]($height * 0.80))
     $titleBrush.Dispose()
     $mutedBrush.Dispose()
     $titleFont.Dispose()

@@ -2914,3 +2914,57 @@ Fix rerun findings:
 - Decision:
   - Mark Batch 03 Details no-art atmosphere fallback as resolved for deterministic local validation.
   - Keep real-server missing-art sampling as live-data validation, not as a blocker for the current visual-system slice.
+
+### 2026-07-08 - Design Conformance Batch 01/02 QA Artwork Realism Baseline
+
+- App version: 0.1.0.230.
+- Scope: inspect the packaged QA artwork used by Home, Movies, Search, Details, Collections, Playlists, Live TV, Music, and Photos fixture routes.
+- Data source: local generated `Assets/QaHome` images only; no private server data, credentials, screenshots, or personal media assets were written to the repository.
+- Evidence:
+  - `qa-poster-01.png` uses a simple rounded character, flat abstract background shapes, and a dark lower title scrim.
+  - `qa-wide-01.png` uses abstract rounded slabs and a horizon strip, reading more like a generated test card than a movie/series still.
+  - `tools/Generate-HomeQaArtworkAssets.ps1` already avoids the rejected cyan/amber/red palette, but its subject matter still lacks movie-poster semantics.
+
+Baseline findings:
+
+| ID | Severity | Page | Evidence | Expected | Actual | Proposed batch fix |
+| --- | --- | --- | --- | --- | --- | --- |
+| DC-01.05 / DC-02.05 | Concern | Fixture artwork realism | `qa-poster-01.png`, `qa-wide-01.png`, and `Generate-HomeQaArtworkAssets.ps1`. | Fixture artwork should be fictional and copyright-safe while still feeling like real media covers: cinematic crop, subject/scene, title lockup, billing/detail marks, and varied genre mood. | The current assets are useful for layout but too icon-like and abstract, which can understate real poster density and overstate calm blank space. | Strengthen the local generator with cinematic poster/wide-scene drawing primitives and regenerate the packaged QAHome assets. |
+
+- Decision:
+  - Keep generated local QA artwork to avoid committing private media or copyrighted posters.
+  - Improve media realism enough for visual QA, without trying to make the generated images photorealistic.
+
+### 2026-07-08 - Design Conformance Batch 01/02 QA Artwork Realism Fix Rerun
+
+- App version: 0.1.0.231.
+- Scope: validate regenerated packaged QA artwork in Home and Movies fixture surfaces.
+- Data source: locally generated `Assets/QaHome` images and DEBUG fixture routes only; no private server data, credentials, screenshots, or personal media assets were written to the repository.
+- Evidence root: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch01-qa-artwork-realism-231-20260708-062233`.
+- Keyboard-only validation:
+  - Regenerated `qa-poster-01.png` through `qa-poster-14.png` and `qa-wide-01.png` through `qa-wide-14.png` from `tools/Generate-HomeQaArtworkAssets.ps1`.
+  - Signed and installed `NextGenEmby.App 0.1.0.231`.
+  - Closed the existing app frame, wrote `dev-command.json` with route `home-fixture`, and launched through AppUserModelId `NextGenEmby.App_h8qjz0sr1sg4m!App`.
+  - Closed the app frame, wrote `dev-command.json` with route `movies-fixture`, and relaunched through the same AppUserModelId.
+  - Both routes reported `completed` in their route result files.
+- Screenshots:
+  - Home fixture with regenerated wide artwork: `01-home-initial.png`.
+  - Movies fixture with regenerated poster artwork: `02-movies-initial.png`.
+  - Route results: `01-home-route-result.txt`, `02-movies-route-result.txt`.
+- Fixture contract added before implementation:
+  - `PosterGridVisualSourceTests.Qa_Artwork_Generator_Uses_Cinematic_Scene_Primitives_Instead_Of_Abstract_Test_Cards` requires cinematic poster scene primitives, cinematic wide scene primitives, a film billing block, atmosphere texture, and removal of the old `Watch-ready wide artwork` copy.
+
+Fix rerun findings:
+
+| ID | Status | Page | Evidence | Result | Residual risk |
+| --- | --- | --- | --- | --- | --- |
+| DC-01.05 / DC-02.05 | Pass with concern | QA artwork realism | `qa-poster-01.png`, `qa-wide-01.png`, `01-home-initial.png`, `02-movies-initial.png`, and `PosterGridVisualSourceTests.Qa_Artwork_Generator_Uses_Cinematic_Scene_Primitives_Instead_Of_Abstract_Test_Cards`. | Packaged QA artwork now reads more like fictional media artwork: cinematic silhouettes/scenes, local atmosphere texture, title lockups, and billing/detail marks. Home wide cards stay subdued, while Movies posters provide denser media-cover signals than the previous icon-like test cards. | The assets remain generated and not photorealistic. Real saved-session artwork still needs separate sampling for poster crop, brightness, and mixed server artwork quality. |
+
+- Verification:
+  - Red path confirmed `PosterGridVisualSourceTests.Qa_Artwork_Generator_Uses_Cinematic_Scene_Primitives_Instead_Of_Abstract_Test_Cards` failed before implementation because the generator lacked the cinematic scene primitives.
+  - Targeted poster/home/details fixture tests passed: 17 tests.
+  - Visual Studio MSBuild Debug x64 build passed, producing `NextGenEmby.App_0.1.0.231_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.231`.
+- Decision:
+  - Treat the abstract-QA-art concern as improved enough for deterministic visual QA.
+  - Keep real server artwork sampling as a live-data validation item, not as a blocker for local fixture-based page work.

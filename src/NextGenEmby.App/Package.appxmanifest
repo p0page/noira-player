@@ -5,7 +5,7 @@
   xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
   xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
   IgnorableNamespaces="uap mp rescap">
-  <Identity Name="NextGenEmby.App" Publisher="CN=NextGenEmby" Version="0.1.0.230" />
+  <Identity Name="NextGenEmby.App" Publisher="CN=NextGenEmby" Version="0.1.0.231" />
   <mp:PhoneIdentity PhoneProductId="2f85d12f-04bb-42e1-ae35-a9047e1e0111" PhonePublisherId="00000000-0000-0000-0000-000000000000" />
   <Properties>
     <DisplayName>Next Gen Xbox Emby</DisplayName>
