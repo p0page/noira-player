@@ -139,6 +139,32 @@ public sealed class PlaybackQualityRunComparatorTests
     }
 
     [Fact]
+    public void Compare_Blocks_Candidate_Acceptance_When_Build_Identity_Is_Partial()
+    {
+        var baseline = CreateReport(
+            "baseline",
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "180.000"));
+        var candidate = CreateReport(
+            "candidate",
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "120.000"));
+        candidate.Environment = new PlaybackQualityEnvironment();
+
+        var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
+
+        Assert.Equal("partial", comparison.Environment.Status);
+        Assert.Equal("weak", comparison.Confidence.Level);
+        Assert.Contains("comparison is missing complete baseline and candidate build identity", comparison.Confidence.Reasons);
+        Assert.Contains("environment.identity", comparison.Confidence.Signals);
+        Assert.Equal("collect-comparable-evidence", comparison.Decision);
+        Assert.Equal("collect-comparable-evidence", comparison.Optimization.Action);
+        Assert.Equal("high", comparison.Optimization.Risk);
+        Assert.Contains("comparison.environment-evidence-missing", comparison.Optimization.Blockers);
+        Assert.Contains("comparison is missing complete baseline and candidate build identity", comparison.Optimization.Blockers);
+        Assert.Contains("environment.identity", comparison.Optimization.Signals);
+        Assert.Contains("environment.sourceRevision", comparison.Optimization.Signals);
+    }
+
+    [Fact]
     public void Compare_Reports_Regressed_When_Passing_Signal_Starts_Failing()
     {
         var baseline = CreateReport(

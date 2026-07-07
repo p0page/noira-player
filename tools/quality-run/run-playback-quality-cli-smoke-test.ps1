@@ -37,6 +37,10 @@ try {
     $candidateEvaluationMissingEnvironmentCandidateDir = Join-Path $tempRoot 'candidate-evaluation-missing-environment-candidate'
     $candidateEvaluationMissingEnvironmentComparisonsDir = Join-Path $tempRoot 'candidate-evaluation-missing-environment-comparisons'
     $candidateEvaluationMissingEnvironmentPath = Join-Path $tempRoot 'candidate-evaluation-missing-environment.json'
+    $candidateEvaluationPartialEnvironmentBaselineDir = Join-Path $tempRoot 'candidate-evaluation-partial-environment-baseline'
+    $candidateEvaluationPartialEnvironmentCandidateDir = Join-Path $tempRoot 'candidate-evaluation-partial-environment-candidate'
+    $candidateEvaluationPartialEnvironmentComparisonsDir = Join-Path $tempRoot 'candidate-evaluation-partial-environment-comparisons'
+    $candidateEvaluationPartialEnvironmentPath = Join-Path $tempRoot 'candidate-evaluation-partial-environment.json'
     $candidateEvaluationSameBuildBaselineDir = Join-Path $tempRoot 'candidate-evaluation-same-build-baseline'
     $candidateEvaluationSameBuildCandidateDir = Join-Path $tempRoot 'candidate-evaluation-same-build-candidate'
     $candidateEvaluationSameBuildComparisonsDir = Join-Path $tempRoot 'candidate-evaluation-same-build-comparisons'
@@ -1290,6 +1294,64 @@ try {
 
     if (-not ($missingEnvironmentEvaluation.activeGate.targetCaseIds -contains 'item-1/source-1')) {
         throw 'Expected missing build identity active gate to include target case id.'
+    }
+
+    New-Item -ItemType Directory -Path $candidateEvaluationPartialEnvironmentBaselineDir | Out-Null
+    New-Item -ItemType Directory -Path $candidateEvaluationPartialEnvironmentCandidateDir | Out-Null
+    $partialEnvironmentBaseline = Get-Content -Raw -LiteralPath (Join-Path $runIdBaselineDir 'baseline-a.json') | ConvertFrom-Json
+    $partialEnvironmentCandidate = Get-Content -Raw -LiteralPath (Join-Path $runIdCandidateDir 'candidate-renamed.json') | ConvertFrom-Json
+    $partialEnvironmentCandidate.PSObject.Properties.Remove('environment')
+    $partialEnvironmentBaseline | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath (Join-Path $candidateEvaluationPartialEnvironmentBaselineDir 'baseline-a.json') -Encoding UTF8
+    $partialEnvironmentCandidate | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath (Join-Path $candidateEvaluationPartialEnvironmentCandidateDir 'candidate-a.json') -Encoding UTF8
+
+    Push-Location $repoRoot
+    try {
+        dotnet run `
+            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
+            --no-build `
+            -- evaluate-candidate `
+            --manifest $candidateEvaluationManifestPath `
+            --baseline-dir $candidateEvaluationPartialEnvironmentBaselineDir `
+            --candidate-dir $candidateEvaluationPartialEnvironmentCandidateDir `
+            --match-by run-id `
+            --comparisons-dir $candidateEvaluationPartialEnvironmentComparisonsDir `
+            --output $candidateEvaluationPartialEnvironmentPath
+        if ($LASTEXITCODE -eq 0) {
+            throw 'Expected playback quality CLI evaluate-candidate to reject partial build identity evidence.'
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    $partialEnvironmentEvaluation = Get-Content -Raw -LiteralPath $candidateEvaluationPartialEnvironmentPath | ConvertFrom-Json
+    if ($partialEnvironmentEvaluation.action -ne 'collect-comparable-evidence') {
+        throw 'Expected partial build identity evaluate-candidate output to collect comparable evidence.'
+    }
+
+    if ($null -eq $partialEnvironmentEvaluation.activeGate -or
+        $partialEnvironmentEvaluation.activeGate.name -ne 'suite' -or
+        $partialEnvironmentEvaluation.activeGate.status -ne 'blocked') {
+        throw 'Expected partial build identity active gate to point at blocked suite.'
+    }
+
+    if ($null -eq $partialEnvironmentEvaluation.activeGate.environment -or
+        $partialEnvironmentEvaluation.activeGate.environment.partialCount -ne 1) {
+        throw 'Expected partial build identity active gate to expose environment partial count.'
+    }
+
+    if (-not ($partialEnvironmentEvaluation.activeGate.blockers -contains 'suite.environment-evidence-missing')) {
+        throw 'Expected partial build identity active gate to include environment evidence blocker.'
+    }
+
+    $partialEnvironmentComparisonPath = Join-Path $candidateEvaluationPartialEnvironmentComparisonsDir 'item-1\source-1.json'
+    if (-not (Test-Path -LiteralPath $partialEnvironmentComparisonPath)) {
+        throw 'Expected partial build identity evaluate-candidate to write per-case comparison output.'
+    }
+
+    $partialEnvironmentComparison = Get-Content -Raw -LiteralPath $partialEnvironmentComparisonPath | ConvertFrom-Json
+    if (-not ($partialEnvironmentComparison.optimization.blockers -contains 'comparison.environment-evidence-missing')) {
+        throw 'Expected partial build identity comparison output to include machine-readable environment blocker.'
     }
 
     New-Item -ItemType Directory -Path $candidateEvaluationSameBuildBaselineDir | Out-Null
