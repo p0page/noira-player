@@ -1552,6 +1552,7 @@ internal static class Program
         }
 
         AddReportAnalysisTargets(summary);
+        ApplyReportAnalysisDecision(summary);
         return summary;
     }
 
@@ -1593,6 +1594,61 @@ internal static class Program
                 AddUnique(summary.TargetCaseIds, item.CaseId);
             }
         }
+    }
+
+    private static void ApplyReportAnalysisDecision(ReportAnalysisSummary summary)
+    {
+        summary.Confidence.TotalCount = summary.TotalReportCount;
+
+        if (summary.AnalyzedReportCount == 0)
+        {
+            summary.Action = "collect-comparable-evidence";
+            summary.Risk = "high";
+            summary.Confidence.Level = "weak";
+            summary.Confidence.WeakCount = summary.TotalReportCount;
+            AddUnique(
+                summary.Confidence.Reasons,
+                "report analysis is unavailable");
+            return;
+        }
+
+        if (summary.BlockedReportCount > 0)
+        {
+            summary.Action = "fix-report-analysis";
+            summary.Risk = "high";
+            summary.Confidence.Level = "weak";
+            summary.Confidence.StrongCount =
+                summary.AnalyzedReportCount - summary.BlockedReportCount;
+            summary.Confidence.WeakCount =
+                summary.BlockedReportCount + summary.UnavailableReportCount;
+            AddUnique(
+                summary.Confidence.Reasons,
+                "report analysis has optimization blockers");
+            CopyValues(summary.Signals, summary.Confidence.Signals);
+            CopyValues(summary.Blockers, summary.Confidence.Reasons);
+            return;
+        }
+
+        if (summary.UnavailableReportCount > 0)
+        {
+            summary.Action = "collect-comparable-evidence";
+            summary.Risk = "high";
+            summary.Confidence.Level = "weak";
+            summary.Confidence.StrongCount = summary.AnalyzedReportCount;
+            summary.Confidence.WeakCount = summary.UnavailableReportCount;
+            AddUnique(
+                summary.Confidence.Reasons,
+                "some report analysis is unavailable");
+            return;
+        }
+
+        summary.Action = "continue-next-triage-step";
+        summary.Risk = "low";
+        summary.Confidence.Level = "strong";
+        summary.Confidence.StrongCount = summary.AnalyzedReportCount;
+        AddUnique(
+            summary.Confidence.Reasons,
+            "report analysis has no optimization blockers");
     }
 
     private static void AddModelAnalysisCodeTargets(
@@ -2118,6 +2174,10 @@ internal static class Program
     private sealed class ReportAnalysisSummary
     {
         public int SchemaVersion { get; set; } = 1;
+        public string Action { get; set; } = "";
+        public string Risk { get; set; } = "";
+        public CandidateEvaluationGateConfidence Confidence { get; set; } =
+            new CandidateEvaluationGateConfidence();
         public int TotalReportCount { get; set; }
         public int AnalyzedReportCount { get; set; }
         public int UnavailableReportCount { get; set; }
