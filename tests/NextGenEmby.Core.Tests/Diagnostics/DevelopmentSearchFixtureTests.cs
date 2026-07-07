@@ -47,7 +47,9 @@ public sealed class DevelopmentSearchFixtureTests
     {
         var root = FindRepositoryRoot();
         var artworkUris = DevelopmentSearchFixture.CreateArtworkUris();
-        var items = DevelopmentSearchFixture.CreateItemsForScope("all");
+        var items = DevelopmentSearchFixture.CreateItemsForScope("all")
+            .Where(item => !string.IsNullOrWhiteSpace(item.PrimaryImageTag))
+            .ToList();
 
         Assert.NotEmpty(items);
         foreach (var item in items)
@@ -63,6 +65,21 @@ public sealed class DevelopmentSearchFixtureTests
             Assert.Equal("qa", item.PrimaryImageTag);
             Assert.Equal(item.Id, item.PrimaryImageItemId);
         }
+    }
+
+    [Fact]
+    public void CreateItemsForScope_Includes_NoArtwork_Result_For_Fallback_Validation()
+    {
+        var artworkUris = DevelopmentSearchFixture.CreateArtworkUris();
+        var items = DevelopmentSearchFixture.CreateItemsForScope("movies");
+
+        var item = Assert.Single(items, item => item.Id == "fixture-movie-no-artwork");
+
+        Assert.Equal("No Poster Signal", item.Name);
+        Assert.Equal("Movie", item.Type);
+        Assert.True(string.IsNullOrWhiteSpace(item.PrimaryImageTag));
+        Assert.True(string.IsNullOrWhiteSpace(item.PrimaryImageItemId));
+        Assert.False(artworkUris.ContainsKey(DevelopmentSearchFixture.ArtworkKey(item.Id, "Primary")));
     }
 
     private static string FindRepositoryRoot()

@@ -49,7 +49,9 @@ public sealed class DevelopmentHomeFixtureTests
             .Concat(fixture.ConfiguredRows.Select(row => DevelopmentHomeFixture.ArtworkKey(row.ParentItem.Id, "Thumb")))
             .Concat(fixture.ContinueItems.Take(1).Select(item => DevelopmentHomeFixture.ArtworkKey(item.Id, "Primary")))
             .Concat(fixture.ContinueItems.Take(1).Select(item => DevelopmentHomeFixture.ArtworkKey(item.Id, "Backdrop")))
-            .Concat(fixture.LatestItems.Select(item => DevelopmentHomeFixture.ArtworkKey(item.Id, "Primary")))
+            .Concat(fixture.LatestItems
+                .Where(item => !string.IsNullOrWhiteSpace(item.PrimaryImageTag))
+                .Select(item => DevelopmentHomeFixture.ArtworkKey(item.Id, "Primary")))
             .Distinct(StringComparer.Ordinal)
             .ToList();
 
@@ -64,6 +66,27 @@ public sealed class DevelopmentHomeFixtureTests
             var assetPath = Path.Combine(root, "src", "NextGenEmby.App", relativePath);
             Assert.True(File.Exists(assetPath), "Missing packaged QA artwork asset " + assetPath);
         }
+    }
+
+    [Fact]
+    public void Create_Includes_Deterministic_Movie_Without_Artwork_For_Fallback_Validation()
+    {
+        var fixture = DevelopmentHomeFixture.Create();
+
+        Assert.True(
+            fixture.LibraryPreviews.TryGetValue("qa-library-movies", out var movies),
+            "Movies preview fixture is missing.");
+        var item = Assert.Single(movies, item => item.Id == "qa-movie-no-artwork");
+
+        Assert.Equal("No Poster Signal", item.Name);
+        Assert.Equal("Movie", item.Type);
+        Assert.True(string.IsNullOrWhiteSpace(item.PrimaryImageTag));
+        Assert.True(string.IsNullOrWhiteSpace(item.PrimaryImageItemId));
+        Assert.True(string.IsNullOrWhiteSpace(item.BackdropImageTag));
+        Assert.True(string.IsNullOrWhiteSpace(item.BackdropImageItemId));
+        Assert.False(fixture.ArtworkUris.ContainsKey(DevelopmentHomeFixture.ArtworkKey(item.Id, "Primary")));
+        Assert.False(fixture.ArtworkUris.ContainsKey(DevelopmentHomeFixture.ArtworkKey(item.Id, "Backdrop")));
+        Assert.False(fixture.ArtworkUris.ContainsKey(DevelopmentHomeFixture.ArtworkKey(item.Id, "Thumb")));
     }
 
     [Fact]

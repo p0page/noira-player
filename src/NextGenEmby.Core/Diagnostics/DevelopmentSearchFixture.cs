@@ -17,6 +17,7 @@ namespace NextGenEmby.Core.Diagnostics
             Items = new[]
             {
                 CreateItem(artworkUris, "fixture-movie-aurora", "Aurora Protocol", "Movie", 2026, 24000000000, "qa-poster-01.png"),
+                CreateItemWithoutArtwork("fixture-movie-no-artwork", "No Poster Signal", "Movie", 2021, 64200000000),
                 CreateItem(artworkUris, "fixture-series-polar", "Polar Archive", "Series", 2025, 0, "qa-poster-07.png", childCount: 18),
                 CreateItem(artworkUris, "fixture-episode-signal", "Signal Room", "Episode", 2026, 27000000000, "qa-poster-10.png", parentIndexNumber: 1, indexNumber: 3),
                 CreateItem(artworkUris, "fixture-video-gallery", "Behind the Glass", "Video", 2024, 9000000000, "qa-poster-04.png"),
@@ -82,6 +83,24 @@ namespace NextGenEmby.Core.Diagnostics
                 ParentIndexNumber = parentIndexNumber,
                 IndexNumber = indexNumber,
                 ChildCount = childCount,
+                UserData = new EmbyUserData()
+            };
+        }
+
+        private static EmbyMediaItem CreateItemWithoutArtwork(
+            string id,
+            string name,
+            string type,
+            int? year,
+            long runtimeTicks)
+        {
+            return new EmbyMediaItem
+            {
+                Id = id,
+                Name = name,
+                Type = type,
+                ProductionYear = year,
+                RunTimeTicks = runtimeTicks > 0 ? runtimeTicks : (long?)null,
                 UserData = new EmbyUserData()
             };
         }

@@ -2579,3 +2579,36 @@ Follow-up findings:
 - Decision:
   - Mark the Batch 03 below-fold interaction concern as resolved for the deterministic fixture.
   - Keep real-media metadata density and atmosphere crop behavior as future live-data validation, not as blockers for the current design-system pass.
+
+### 2026-07-08 - Design Conformance Batch 02 Missing Poster Fallback Rerun
+
+- App version: 0.1.0.224.
+- Scope: close the remaining Batch 02 no-artwork runtime gap by adding a deterministic missing-poster item to the movie-grid and search fixtures.
+- Data source: DEBUG `movies-fixture` and `search-fixture` only; no private server data, credentials, screenshots, or personal media assets were written to the repository.
+- Evidence root: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch02-missing-poster-fallback-224-20260708-050532`.
+- Keyboard-only validation:
+  - Closed the existing app frame, wrote `dev-command.json` with route `movies-fixture`, and launched through AppUserModelId `NextGenEmby.App_h8qjz0sr1sg4m!App`.
+  - Pressed `Right` from the first Movies grid item to focus `No Poster Signal`.
+  - Closed the app frame, wrote `dev-command.json` with route `search-fixture`, relaunched, then pressed `Down`, `Down`, `Down`, `Right` to focus the same missing-poster item in Search results.
+  - Both fixture routes reported `completed` in `dev-command-result.txt`; `dev-command.json` and `dev-command-result.txt` were removed after validation.
+- Screenshots:
+  - Movies selected no-art tile: `movies-01.png`.
+  - Search selected no-art result: `search-04.png`.
+  - Focus log: `focus-log.txt`.
+
+Follow-up findings:
+
+| ID | Status | Page | Evidence | Result | Residual risk |
+| --- | --- | --- | --- | --- | --- |
+| DC-02.04 | Pass | Movies and Search no-artwork fallback | `movies-01.png`, `search-04.png`, and `focus-log.txt`. | `No Poster Signal` renders as an intentional quiet fallback surface with the `N` initials, title/meta below artwork, and the shared matte selected backplate. It does not use generated abstract art, a bright focus frame, or a glass/shadow treatment. | Real Emby libraries can expose missing artwork through different tag/item-id combinations; re-run against live saved-session items when one is available. |
+
+- Verification:
+  - Red path confirmed `DevelopmentHomeFixtureTests.Create_Includes_Deterministic_Movie_Without_Artwork_For_Fallback_Validation` and `DevelopmentSearchFixtureTests.CreateItemsForScope_Includes_NoArtwork_Result_For_Fallback_Validation` failed before fixture implementation.
+  - Targeted fixture tests passed: `DevelopmentHomeFixtureTests` and `DevelopmentSearchFixtureTests`, 11 tests.
+  - Design/source plus fixture tests passed: 89 tests.
+  - Full Core test suite passed: 488 tests.
+  - Visual Studio MSBuild Debug x64 build passed, producing `NextGenEmby.App_0.1.0.224_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.224`.
+- Decision:
+  - Mark Batch 02 no-artwork runtime coverage as resolved for deterministic fixtures.
+  - Keep live-server missing-artwork variants as a future data-shape validation, not a blocker for the current visual-system pass.

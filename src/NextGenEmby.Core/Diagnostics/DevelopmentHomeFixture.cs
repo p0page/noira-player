@@ -24,6 +24,7 @@ namespace NextGenEmby.Core.Diagnostics
                 MediaItem(artworkUris, "qa-movie-orbit", "Quiet Orbit", "Movie", 2023, 126, "qa-poster-05.png", "qa-wide-05.png"),
                 MediaItem(artworkUris, "qa-movie-summit", "Summit Line", "Movie", 2022, 92, "qa-poster-06.png", "qa-wide-06.png")
             };
+            var noArtworkMovie = MediaItemWithoutArtwork("qa-movie-no-artwork", "No Poster Signal", "Movie", 2021, 107);
             var shows = new[]
             {
                 MediaItem(artworkUris, "qa-show-northline", "Northline", "Series", 2026, 48, "qa-poster-07.png", "qa-wide-07.png"),
@@ -52,7 +53,7 @@ namespace NextGenEmby.Core.Diagnostics
 
             var libraryPreviews = new Dictionary<string, IReadOnlyList<EmbyMediaItem>>(StringComparer.Ordinal)
             {
-                ["qa-library-movies"] = movies.Take(6).ToList(),
+                ["qa-library-movies"] = movies.Take(1).Concat(new[] { noArtworkMovie }).Concat(movies.Skip(1).Take(4)).ToList(),
                 ["qa-library-tv"] = shows.Take(5).ToList(),
                 ["qa-library-douban"] = movies.Skip(1).Take(5).ToList(),
                 ["qa-library-netflix"] = shows.Skip(1).Take(4).ToList(),
@@ -126,6 +127,24 @@ namespace NextGenEmby.Core.Diagnostics
                         ? null
                         : (double)resumeMinutes / runtimeMinutes * 100d
                 }
+            };
+        }
+
+        private static EmbyMediaItem MediaItemWithoutArtwork(
+            string id,
+            string name,
+            string type,
+            int year,
+            int runtimeMinutes)
+        {
+            return new EmbyMediaItem
+            {
+                Id = id,
+                Name = name,
+                Type = type,
+                ProductionYear = year,
+                RunTimeTicks = runtimeMinutes * MinuteTicks,
+                UserData = new EmbyUserData()
             };
         }
 
