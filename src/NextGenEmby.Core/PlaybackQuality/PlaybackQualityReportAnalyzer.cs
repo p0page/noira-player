@@ -1505,6 +1505,15 @@ namespace NextGenEmby.Core.PlaybackQuality
                 }
             }
 
+            if (analysis.RuntimeMetrics.Status == "unavailable" ||
+                analysis.RuntimeMetrics.Status == "empty-snapshot")
+            {
+                AddUnique(gate.Blockers, "runtimeMetrics." + analysis.RuntimeMetrics.Status);
+                AddUnique(gate.BlockerSignals, "runtimeMetrics.status");
+                AddUnique(gate.BlockerSignals, "runtimeMetrics.providerStatus");
+                AddUnique(gate.BlockerSignals, "runtimeMetrics.hasPlaybackSample");
+            }
+
             if (analysis.FailureAreas.Count == 0)
             {
                 AddUnique(gate.Blockers, "failureAreas.missing");

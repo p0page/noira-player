@@ -968,6 +968,40 @@ public sealed class PlaybackQualityReportAnalyzerTests
     }
 
     [Fact]
+    public void Analyze_Blocks_Playback_Core_Optimization_When_Runtime_Metrics_Are_Unavailable()
+    {
+        var report = CreateOptimizationReadyFailure();
+        report.RuntimeMetrics = PlaybackQualityRuntimeMetricsFactory.Unavailable("source-only");
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.False(analysis.OptimizationGate.CanOptimizePlaybackCore);
+        Assert.Equal("blocked", analysis.OptimizationGate.Status);
+        Assert.Contains("runtimeMetrics.unavailable", analysis.OptimizationGate.Blockers);
+        Assert.Contains("runtimeMetrics.status", analysis.OptimizationGate.BlockerSignals);
+        Assert.Contains("runtimeMetrics.providerStatus", analysis.OptimizationGate.BlockerSignals);
+        Assert.DoesNotContain("frame-pacing", analysis.OptimizationGate.TargetFailureAreas);
+    }
+
+    [Fact]
+    public void Analyze_Blocks_Playback_Core_Optimization_When_Runtime_Metrics_Snapshot_Is_Empty()
+    {
+        var report = CreateOptimizationReadyFailure();
+        report.RuntimeMetrics = PlaybackQualityRuntimeMetricsFactory.FromSnapshot(
+            new PlaybackQualityMetricsSnapshot(),
+            "returned-snapshot");
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.False(analysis.OptimizationGate.CanOptimizePlaybackCore);
+        Assert.Equal("blocked", analysis.OptimizationGate.Status);
+        Assert.Contains("runtimeMetrics.empty-snapshot", analysis.OptimizationGate.Blockers);
+        Assert.Contains("runtimeMetrics.status", analysis.OptimizationGate.BlockerSignals);
+        Assert.Contains("runtimeMetrics.hasPlaybackSample", analysis.OptimizationGate.BlockerSignals);
+        Assert.DoesNotContain("frame-pacing", analysis.OptimizationGate.TargetFailureAreas);
+    }
+
+    [Fact]
     public void Analyze_Targets_Highest_Priority_Failure_Area_When_Frame_Pacing_Also_Fails()
     {
         var report = CreateOptimizationReadyFailure();
