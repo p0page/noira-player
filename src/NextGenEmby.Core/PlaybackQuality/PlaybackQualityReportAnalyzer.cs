@@ -94,6 +94,9 @@ namespace NextGenEmby.Core.PlaybackQuality
         public string Reason { get; set; } = "";
         public long AudioClockTicks { get; set; }
         public long VideoPositionTicks { get; set; }
+        public long ClockDeltaTicks { get; set; }
+        public double ClockDeltaMs { get; set; }
+        public string DriftDirection { get; set; } = "unknown";
         public double AudioVideoDriftMsP50 { get; set; }
         public double AudioVideoDriftMsP95 { get; set; }
         public double AudioVideoDriftMsP99 { get; set; }
@@ -407,6 +410,7 @@ namespace NextGenEmby.Core.PlaybackQuality
             };
 
             var hasClockEvidence = sync.AudioClockTicks != 0 || sync.VideoPositionTicks != 0;
+            var hasClockPair = sync.AudioClockTicks != 0 && sync.VideoPositionTicks != 0;
             var hasDriftEvidence =
                 sync.AudioVideoDriftMsP50 > 0 ||
                 sync.AudioVideoDriftMsP95 > 0 ||
@@ -416,6 +420,15 @@ namespace NextGenEmby.Core.PlaybackQuality
             {
                 AddUnique(sync.Signals, "sync.audioClockTicks");
                 AddUnique(sync.Signals, "sync.videoPositionTicks");
+            }
+
+            if (hasClockPair)
+            {
+                sync.ClockDeltaTicks = sync.VideoPositionTicks - sync.AudioClockTicks;
+                sync.ClockDeltaMs = sync.ClockDeltaTicks / 10000.0;
+                sync.DriftDirection = ClassifyAvSyncDriftDirection(sync.ClockDeltaTicks);
+                AddUnique(sync.Signals, "sync.clockDeltaMs");
+                AddUnique(sync.Signals, "sync.driftDirection");
             }
 
             if (hasDriftEvidence)
@@ -454,6 +467,21 @@ namespace NextGenEmby.Core.PlaybackQuality
             sync.Status = "synced";
             sync.Reason = "A/V sync telemetry is available and no sync threshold failed.";
             return sync;
+        }
+
+        private static string ClassifyAvSyncDriftDirection(long clockDeltaTicks)
+        {
+            if (clockDeltaTicks > 0)
+            {
+                return "video-ahead";
+            }
+
+            if (clockDeltaTicks < 0)
+            {
+                return "audio-ahead";
+            }
+
+            return "aligned";
         }
 
         private static PlaybackQualityColorPipelineAssessment AssessColorPipeline(
@@ -1386,6 +1414,8 @@ namespace NextGenEmby.Core.PlaybackQuality
                         },
                         new[]
                         {
+                            "sync.clockDeltaMs",
+                            "sync.driftDirection",
                             "sync.audioVideoDriftMsP50",
                             "sync.audioVideoDriftMsP95",
                             "sync.audioVideoDriftMsP99",

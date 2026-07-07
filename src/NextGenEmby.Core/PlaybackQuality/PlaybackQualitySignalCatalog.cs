@@ -92,6 +92,8 @@ namespace NextGenEmby.Core.PlaybackQuality
                 new PlaybackQualitySignalDescriptor("sample.status", "model"),
                 new PlaybackQualitySignalDescriptor("cadence.clockSpeedAdjustmentPercent", "model"),
                 new PlaybackQualitySignalDescriptor("cadence.isFractionalCadence", "model"),
+                new PlaybackQualitySignalDescriptor("sync.clockDeltaMs", "model"),
+                new PlaybackQualitySignalDescriptor("sync.driftDirection", "model"),
                 new PlaybackQualitySignalDescriptor("framePacing.renderIntervalP95FrameRatio", "model"),
                 new PlaybackQualitySignalDescriptor("framePacing.renderIntervalP99FrameRatio", "model"),
                 new PlaybackQualitySignalDescriptor("framePacing.maxFrameGapFrameRatio", "model"),

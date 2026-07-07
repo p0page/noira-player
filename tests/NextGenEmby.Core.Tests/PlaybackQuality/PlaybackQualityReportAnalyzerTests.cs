@@ -626,6 +626,38 @@ public sealed class PlaybackQualityReportAnalyzerTests
         Assert.Contains("sync.audioVideoDriftMsMax", analysis.AvSync.Signals);
     }
 
+    [Theory]
+    [InlineData(2_000_000, 2_010_000, 10_000, 1.0, "video-ahead")]
+    [InlineData(2_010_000, 2_000_000, -10_000, -1.0, "audio-ahead")]
+    [InlineData(2_000_000, 2_000_000, 0, 0.0, "aligned")]
+    public void Analyze_Derives_AvSync_Clock_Delta_Direction_For_Model(
+        long audioClockTicks,
+        long videoPositionTicks,
+        long expectedDeltaTicks,
+        double expectedDeltaMs,
+        string expectedDirection)
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "av-sync-direction",
+            Result = "pass",
+            Sync = new PlaybackQualitySync
+            {
+                AudioClockTicks = audioClockTicks,
+                VideoPositionTicks = videoPositionTicks,
+                AudioVideoDriftMsP95 = expectedDeltaMs < 0 ? -expectedDeltaMs : expectedDeltaMs
+            }
+        };
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Equal(expectedDeltaTicks, analysis.AvSync.ClockDeltaTicks);
+        Assert.Equal(expectedDeltaMs, analysis.AvSync.ClockDeltaMs);
+        Assert.Equal(expectedDirection, analysis.AvSync.DriftDirection);
+        Assert.Contains("sync.clockDeltaMs", analysis.AvSync.Signals);
+        Assert.Contains("sync.driftDirection", analysis.AvSync.Signals);
+    }
+
     [Fact]
     public void Analyze_Marks_AvSync_Drift_From_AvSync_Checks()
     {

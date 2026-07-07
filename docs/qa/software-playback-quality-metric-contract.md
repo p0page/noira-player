@@ -59,7 +59,7 @@ The analyzer output must include:
 - `source` with parsed source status, HDR/Dolby Vision playback strategy, source evidence signals, and source mismatch signals;
 - `colorPipeline` with actual HDR output, swapchain/DXGI observations, conversion status, evidence signals, and color mismatch signals;
 - `buffering` with submitted/queued audio buffer evidence, video/audio starvation counters, and failed buffering signals;
-- `avSync` with audio/video clock evidence, drift percentiles, max drift, and failed A/V sync signals;
+- `avSync` with audio/video clock evidence, derived clock delta direction, drift percentiles, max drift, and failed A/V sync signals;
 - `sample` with `status`, rendered frame count, expected minimum rendered frames, derived sample durations, additional required frames, and a reason;
 - `cadence` with source frame rate, display refresh rate, nearest supported 1x/2x/2.5x/3x/4x/5x target, delta, tolerance, status, and evidence signals;
 - `optimizationGate` with a machine-readable decision on whether this run is usable for playback Core optimization;
@@ -80,6 +80,7 @@ This keeps model iteration grounded in evidence. For example, a report can ident
 `buffering.status` must be checked before tuning frame pacing. `starved` means buffering thresholds failed and the model should inspect demux/decode/network/audio queue supply before changing frame drop or render timing; `observed-starvation` means starvation counters were non-zero but no buffering threshold failed; `missing-evidence` means supply telemetry is absent; `stable` means buffering telemetry exists and no starvation failure was reported.
 CLI 生成 modelAnalysis 时会使用 JSON 字段 presence 区分显式 0 counter 和字段缺失；因此 `videoStarvedPasses: 0` / `audioStarvedPasses: 0` 可以让 `buffering.status = stable`，不会因为对象反序列化后的默认 0 被误判为 `missing-evidence`。
 `avSync.status` must be checked before changing audio clock or frame pacing logic. `drift` means A/V sync thresholds failed; `missing-evidence` means clock/drift telemetry is absent; `synced` means sync telemetry exists and no A/V sync threshold failed.
+`avSync.clockDeltaTicks = videoPositionTicks - audioClockTicks`，`avSync.clockDeltaMs` 是同一差值的毫秒形式。正值表示视频时间戳领先音频时钟（`driftDirection = video-ahead`），负值表示音频领先视频（`audio-ahead`），0 表示当前采样点对齐（`aligned`）。这些字段是从已有 clock telemetry 派生的模型诊断项，用来指导模型判断应该检查 XAudio clock、队列深度还是视频 PTS 等待策略；它们不是新的采集字段，也不替代 `audioVideoDriftMsP95` 阈值。
 `sample.status` must be checked before changing playback timing logic. `insufficient` means the run did not render enough frames to support frame-pacing optimization from that run alone.
 `sample.observedSampleDurationMs`, `sample.minimumSampleDurationMs`, and `sample.additionalRenderedFramesRequired` must be derived when frame-rate evidence exists. These fields let an automated model choose the next capture duration instead of guessing from raw frame counts.
 `cadence.status` must be checked for frame-pacing work involving 23.976fps, 24fps, 25fps, 50fps, or 60fps sources. `matched` means the software-observed display refresh is within the same 0.15Hz tolerance used by `PlaybackRefreshRatePolicy`; `mismatch` means the report should inspect refresh selection before timing thresholds. `cadence.bestMultiplier`, `cadence.bestTargetRefreshRateHz`, and `cadence.refreshDeltaHz` let the model see whether the display is nearest to the supported 1x, 2x, 2.5x, 3x, 4x, or 5x target without parsing human text. `cadence.isFractionalCadence` marks 2.5x pulldown-style cadence such as 23.976fps on 59.94Hz or 24fps on 60Hz; this can be acceptable fallback evidence, but refresh selection should prefer integer cadence targets such as 24Hz, 48Hz, or 120Hz when available.
@@ -136,6 +137,7 @@ The matching optional `expected.hdrPlaybackStrategy`, `expected.isHdr`, `expecte
 `expectedFrameDurationMs` is derived from `source.frameRate` as `1000 / frameRate` when a usable frame rate exists. It lets the model compare frame gaps and render interval percentiles against the source cadence instead of reading them as isolated numbers.
 
 `audioVideoDriftMsP95` is the p95 absolute difference between video frame PTS and XAudio-derived clock at render decision time. When `expected.maxAudioVideoDriftMsP95` is supplied, the drift metric must be present and positive; a default zero value is treated as missing evidence and an A/V sync failure.
+`modelAnalysis.avSync.clockDeltaMs` 和 `driftDirection` 只在同一份报告里同时存在非零 `audioClockTicks` 与 `videoPositionTicks` 时生成；如果缺少任一 clock 端，方向保持 `unknown`，模型应先补采集证据，不要根据绝对漂移值猜测领先方向。
 
 `actualHdrOutput` is derived from native display status and swapchain state. It is not a direct HDMI analyzer reading.
 
