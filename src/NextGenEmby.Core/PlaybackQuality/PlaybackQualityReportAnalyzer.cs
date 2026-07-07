@@ -1081,6 +1081,26 @@ namespace NextGenEmby.Core.PlaybackQuality
                 analysis.MissingEvidence.Add("colorPipeline.actualHdrOutput");
             }
 
+            if (report.Expected != null &&
+                RequiresColorPipelineSurfaceEvidence(report.Expected))
+            {
+                if (string.IsNullOrWhiteSpace(report.ColorPipeline.SwapChainFormat))
+                {
+                    AddUnique(analysis.MissingEvidence, "colorPipeline.swapChainFormat");
+                }
+
+                if (string.IsNullOrWhiteSpace(report.ColorPipeline.SwapChainColorSpace))
+                {
+                    AddUnique(analysis.MissingEvidence, "colorPipeline.swapChainColorSpace");
+                }
+
+                if (RequiresTenBitSwapChainEvidence(report.Expected) &&
+                    !HasTenBitSwapChainEvidence(report, signalPresence))
+                {
+                    AddUnique(analysis.MissingEvidence, "colorPipeline.isTenBitSwapChain");
+                }
+            }
+
             if (string.IsNullOrWhiteSpace(report.ColorPipeline.DxgiInput))
             {
                 AddUnique(analysis.MissingEvidence, "colorPipeline.dxgiInput");
@@ -1109,6 +1129,45 @@ namespace NextGenEmby.Core.PlaybackQuality
             {
                 analysis.MissingEvidence.Add("display.refreshRateHz");
             }
+        }
+
+        private static bool RequiresColorPipelineSurfaceEvidence(
+            PlaybackQualityExpected expected)
+        {
+            return !string.IsNullOrWhiteSpace(expected.HdrOutput) ||
+                !string.IsNullOrWhiteSpace(expected.DxgiOutput);
+        }
+
+        private static bool RequiresTenBitSwapChainEvidence(
+            PlaybackQualityExpected expected)
+        {
+            return IsHdr10LikeOutput(expected.HdrOutput) ||
+                IsHdr10LikeColorSpace(expected.DxgiOutput);
+        }
+
+        private static bool HasTenBitSwapChainEvidence(
+            PlaybackQualityReport report,
+            PlaybackQualitySignalPresence signalPresence)
+        {
+            if (signalPresence.HasCapturedSignals)
+            {
+                return signalPresence.Has("colorPipeline.isTenBitSwapChain");
+            }
+
+            return report.ColorPipeline.IsTenBitSwapChain;
+        }
+
+        private static bool IsHdr10LikeOutput(string value)
+        {
+            return string.Equals(value, "Hdr10", System.StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(value, "Hdr", System.StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(value, "Hlg", System.StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsHdr10LikeColorSpace(string value)
+        {
+            return value.IndexOf("G2084", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                value.IndexOf("P2020", System.StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         private static PlaybackQualitySampleAssessment AssessSample(PlaybackQualityReport report)
@@ -1289,6 +1348,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                             "colorPipeline.actualHdrOutput",
                             "colorPipeline.swapChainFormat",
                             "colorPipeline.swapChainColorSpace",
+                            "colorPipeline.isTenBitSwapChain",
                             "colorPipeline.dxgiInput",
                             "colorPipeline.dxgiOutput",
                             "colorPipeline.conversionStatus",

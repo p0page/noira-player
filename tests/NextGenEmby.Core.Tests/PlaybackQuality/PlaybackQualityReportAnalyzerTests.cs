@@ -100,7 +100,8 @@ public sealed class PlaybackQualityReportAnalyzerTests
             hint.FailureArea == "color-pipeline" &&
             hint.CodeTargets.Contains("src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp") &&
             hint.CodeTargets.Contains("src/NextGenEmby.Native/DxDeviceResources.cpp") &&
-            hint.Signals.Contains("colorPipeline.actualHdrOutput"));
+            hint.Signals.Contains("colorPipeline.actualHdrOutput") &&
+            hint.Signals.Contains("colorPipeline.isTenBitSwapChain"));
         Assert.Contains(analysis.InvestigationHints, hint =>
             hint.FailureArea == "frame-pacing" &&
             hint.CodeTargets.Contains("src/NextGenEmby.Native/Media/FramePacing.h") &&
@@ -464,6 +465,9 @@ public sealed class PlaybackQualityReportAnalyzerTests
         Assert.True(analysis.ColorPipeline.IsTenBitSwapChain);
         Assert.True(analysis.ColorPipeline.IsVideoProcessorColorSpaceValidated);
         Assert.Contains("colorPipeline.actualHdrOutput", analysis.ColorPipeline.Signals);
+        Assert.Contains("colorPipeline.swapChainFormat", analysis.ColorPipeline.Signals);
+        Assert.Contains("colorPipeline.swapChainColorSpace", analysis.ColorPipeline.Signals);
+        Assert.Contains("colorPipeline.isTenBitSwapChain", analysis.ColorPipeline.Signals);
         Assert.Contains("colorPipeline.dxgiInput", analysis.ColorPipeline.Signals);
         Assert.Contains("colorPipeline.conversionStatus", analysis.ColorPipeline.Signals);
     }
@@ -1195,6 +1199,10 @@ public sealed class PlaybackQualityReportAnalyzerTests
         var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
 
         Assert.Contains("colorPipeline.actualHdrOutput", analysis.MissingEvidence);
+        Assert.Contains("display.hdrStatus", analysis.MissingEvidence);
+        Assert.Contains("colorPipeline.swapChainFormat", analysis.MissingEvidence);
+        Assert.Contains("colorPipeline.swapChainColorSpace", analysis.MissingEvidence);
+        Assert.Contains("colorPipeline.isTenBitSwapChain", analysis.MissingEvidence);
         Assert.Contains("colorPipeline.dxgiInput", analysis.MissingEvidence);
         Assert.Contains("colorPipeline.dxgiOutput", analysis.MissingEvidence);
         Assert.Contains("colorPipeline.conversionStatus", analysis.MissingEvidence);
