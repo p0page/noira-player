@@ -1351,6 +1351,9 @@ internal static class Program
         }
 
         AddUnique(gate.Blockers, "manifest-coverage.incomplete");
+        PlaybackQualityCodeTargetCatalog.AddForFailureArea(
+            gate.CodeTargets,
+            "evidence-collection");
         foreach (var purpose in coverage.MissingPurposes)
         {
             AddUnique(gate.Signals, purpose);
@@ -1381,6 +1384,14 @@ internal static class Program
             {
                 AddUnique(gate.Signals, error.Signal);
                 AddUnique(gate.CaseIds, error.CaseId);
+                CopyValues(error.CodeTargets, gate.CodeTargets);
+            }
+
+            if (gate.CodeTargets.Count == 0)
+            {
+                PlaybackQualityCodeTargetCatalog.AddForFailureArea(
+                    gate.CodeTargets,
+                    "evidence-collection");
             }
         }
 
@@ -1430,8 +1441,16 @@ internal static class Program
                 AddUnique(gate.TargetFailureAreas, area);
             }
 
+            CopyValues(item.CodeTargets, gate.CodeTargets);
             AddUnique(gate.CaseIds, item.CaseId);
             AddUnique(gate.TargetCaseIds, item.CaseId);
+        }
+
+        if (gate.Status == "blocked" && gate.CodeTargets.Count == 0)
+        {
+            PlaybackQualityCodeTargetCatalog.AddForFailureArea(
+                gate.CodeTargets,
+                "evidence-collection");
         }
 
         if (summary.AnalyzedReportCount == 0)
@@ -1484,6 +1503,23 @@ internal static class Program
             CopyValues(optimizationGate.Blockers, item.Blockers);
             CopyValues(optimizationGate.BlockerSignals, item.Signals);
             CopyValues(optimizationGate.TargetFailureAreas, item.TargetFailureAreas);
+            AddModelAnalysisCodeTargets(envelope.ModelAnalysis, item.CodeTargets);
+            PlaybackQualityCodeTargetCatalog.AddForSignals(
+                item.CodeTargets,
+                optimizationGate.BlockerSignals);
+            PlaybackQualityCodeTargetCatalog.AddForFailureAreas(
+                item.CodeTargets,
+                item.TargetFailureAreas);
+            PlaybackQualityCodeTargetCatalog.AddForFailureAreas(
+                item.CodeTargets,
+                item.FailureAreas);
+            if (item.IsBlocked && item.CodeTargets.Count == 0)
+            {
+                PlaybackQualityCodeTargetCatalog.AddForFailureArea(
+                    item.CodeTargets,
+                    "evidence-collection");
+            }
+
             AddReportAnalysisSummaryEvidence(summary, item);
             summary.Cases.Add(item);
         }
@@ -1500,6 +1536,7 @@ internal static class Program
         CopyValues(item.Signals, summary.Signals);
         CopyValues(item.FailureAreas, summary.FailureAreas);
         CopyValues(item.TargetFailureAreas, summary.TargetFailureAreas);
+        CopyValues(item.CodeTargets, summary.CodeTargets);
     }
 
     private static void AddReportAnalysisTargets(ReportAnalysisSummary summary)
@@ -1517,6 +1554,9 @@ internal static class Program
 
         summary.TargetFailureAreas.Clear();
         AddUnique(summary.TargetFailureAreas, targetArea);
+        PlaybackQualityCodeTargetCatalog.AddForFailureArea(
+            summary.CodeTargets,
+            targetArea);
         foreach (var item in summary.Cases)
         {
             if (item.TargetFailureAreas.Contains(targetArea) ||
@@ -1524,6 +1564,21 @@ internal static class Program
             {
                 AddUnique(summary.TargetCaseIds, item.CaseId);
             }
+        }
+    }
+
+    private static void AddModelAnalysisCodeTargets(
+        PlaybackQualityModelAnalysis analysis,
+        List<string> codeTargets)
+    {
+        foreach (var step in analysis.TriageSteps)
+        {
+            CopyValues(step.CodeTargets, codeTargets);
+        }
+
+        foreach (var hint in analysis.InvestigationHints)
+        {
+            CopyValues(hint.CodeTargets, codeTargets);
         }
     }
 
@@ -1598,6 +1653,7 @@ internal static class Program
         CopyValues(suite.FailureAreas, gate.FailureAreas);
         CopyValues(suite.TargetFailureAreas, gate.TargetFailureAreas);
         CopyValues(suite.TargetCaseIds, gate.TargetCaseIds);
+        CopyValues(suite.CodeTargets, gate.CodeTargets);
         gate.Environment = suite.Environment;
         foreach (var summary in suite.Cases)
         {
@@ -1823,6 +1879,7 @@ internal static class Program
         public List<string> FailureAreas { get; } = new List<string>();
         public List<string> TargetFailureAreas { get; } = new List<string>();
         public List<string> TargetCaseIds { get; } = new List<string>();
+        public List<string> CodeTargets { get; } = new List<string>();
         public List<ReportAnalysisCase> Cases { get; } =
             new List<ReportAnalysisCase>();
     }
@@ -1838,6 +1895,7 @@ internal static class Program
         public List<string> Signals { get; } = new List<string>();
         public List<string> FailureAreas { get; } = new List<string>();
         public List<string> TargetFailureAreas { get; } = new List<string>();
+        public List<string> CodeTargets { get; } = new List<string>();
     }
 
     private sealed class CandidateEvaluationGate
@@ -1853,6 +1911,7 @@ internal static class Program
         public List<string> TargetFailureAreas { get; } = new List<string>();
         public List<string> TargetCaseIds { get; } = new List<string>();
         public List<string> CaseIds { get; } = new List<string>();
+        public List<string> CodeTargets { get; } = new List<string>();
     }
 
     private sealed class PlaybackQualityRunPlan

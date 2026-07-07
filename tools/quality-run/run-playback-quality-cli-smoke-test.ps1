@@ -1407,6 +1407,10 @@ try {
         throw 'Expected missing build identity active gate to include target case id.'
     }
 
+    if (-not ($missingEnvironmentEvaluation.activeGate.codeTargets -contains 'src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs')) {
+        throw 'Expected missing build identity active gate to include evidence collection code target.'
+    }
+
     New-Item -ItemType Directory -Path $candidateEvaluationPartialEnvironmentBaselineDir | Out-Null
     New-Item -ItemType Directory -Path $candidateEvaluationPartialEnvironmentCandidateDir | Out-Null
     $partialEnvironmentBaseline = Get-Content -Raw -LiteralPath (Join-Path $runIdBaselineDir 'baseline-a.json') | ConvertFrom-Json
@@ -1850,6 +1854,10 @@ try {
         throw 'Expected invalid evaluate-candidate candidate report-set gate to include mismatched source signal.'
     }
 
+    if (-not ($invalidCandidateGate.codeTargets -contains 'src/NextGenEmby.Core/Playback/HdrPlaybackProfileClassifier.cs')) {
+        throw 'Expected invalid evaluate-candidate candidate report-set gate to include source classification code target.'
+    }
+
     if (-not ($invalidCandidateGate.caseIds -contains 'item-1/source-1')) {
         throw 'Expected invalid evaluate-candidate candidate report-set gate to include affected case id.'
     }
@@ -2104,6 +2112,10 @@ try {
         throw 'Expected blocked report-analysis active gate to point at blocked candidate report-analysis gate.'
     }
 
+    if (-not ($blockedAnalysisEvaluation.activeGate.codeTargets -contains 'src/NextGenEmby.Core/Playback/HdrPlaybackProfileClassifier.cs')) {
+        throw 'Expected blocked report-analysis active gate to include source classification code target.'
+    }
+
     if ($null -eq $blockedAnalysisEvaluation.candidateReportAnalysis -or
         $blockedAnalysisEvaluation.candidateReportAnalysis.totalReportCount -ne 1 -or
         $blockedAnalysisEvaluation.candidateReportAnalysis.analyzedReportCount -ne 1 -or
@@ -2127,6 +2139,10 @@ try {
         throw 'Expected blocked report-analysis summary case to include model analysis blocker signal.'
     }
 
+    if (-not ($blockedAnalysisCase.codeTargets -contains 'src/NextGenEmby.Core/Playback/HdrPlaybackProfileClassifier.cs')) {
+        throw 'Expected blocked report-analysis summary case to include source classification code target.'
+    }
+
     if (Test-Path -LiteralPath $candidateEvaluationBlockedAnalysisComparisonsDir) {
         throw 'Expected blocked report-analysis evidence to skip comparison output.'
     }
@@ -2148,6 +2164,10 @@ try {
 
     if (-not ($blockedAnalysisGate.caseIds -contains 'item-1/source-1')) {
         throw 'Expected candidate report-analysis gate to include affected case id.'
+    }
+
+    if (-not ($blockedAnalysisGate.codeTargets -contains 'src/NextGenEmby.Core/Playback/HdrPlaybackProfileClassifier.cs')) {
+        throw 'Expected candidate report-analysis gate to include source classification code target.'
     }
 
     if (-not ($blockedAnalysisEvaluation.evidenceGates | Where-Object { $_.name -eq 'suite' -and $_.status -eq 'skipped' })) {

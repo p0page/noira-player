@@ -1378,12 +1378,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                     return NewHint(
                         area,
                         "Verify media source selection, codec support, HDR/Dolby Vision classification, and fallback policy before tuning playback timing.",
-                        new[]
-                        {
-                            "src/NextGenEmby.Core/Playback/PlaybackOrchestrator.cs",
-                            "src/NextGenEmby.Core/Playback/HdrPlaybackProfileClassifier.cs",
-                            "src/NextGenEmby.Core/Emby"
-                        },
+                        PlaybackQualityCodeTargetCatalog.GetForFailureArea(area),
                         new[]
                         {
                             "source.codec",
@@ -1402,12 +1397,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                     return NewHint(
                         area,
                         "Compare source HDR kind, display HDR state, swapchain format, DXGI input/output color spaces, and conversion validation.",
-                        new[]
-                        {
-                            "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
-                            "src/NextGenEmby.Native/DxDeviceResources.cpp",
-                            "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
-                        },
+                        PlaybackQualityCodeTargetCatalog.GetForFailureArea(area),
                         new[]
                         {
                             "colorPipeline.actualHdrOutput",
@@ -1423,12 +1413,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                     return NewHint(
                         area,
                         "Separate Emby request latency, native open/demux initialization, and first-frame readiness before changing render pacing.",
-                        new[]
-                        {
-                            "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
-                            "src/NextGenEmby.Native/NativePlaybackEngine.cpp",
-                            "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
-                        },
+                        PlaybackQualityCodeTargetCatalog.GetForFailureArea(area),
                         new[]
                         {
                             "startup.commandReceivedAt",
@@ -1439,12 +1424,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                     return NewHint(
                         area,
                         "Inspect demux, network, decode starvation, and audio queue depth before changing frame drop thresholds.",
-                        new[]
-                        {
-                            "src/NextGenEmby.Native/Media/PlaybackGraph.cpp",
-                            "src/NextGenEmby.Native/Media/VideoDecoder.cpp",
-                            "src/NextGenEmby.Native/Media/AudioDecoder.cpp"
-                        },
+                        PlaybackQualityCodeTargetCatalog.GetForFailureArea(area),
                         new[]
                         {
                             "buffers.videoStarvedPasses",
@@ -1455,12 +1435,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                     return NewHint(
                         area,
                         "Inspect XAudio clock derivation, queued buffer depth, video PTS comparison, and audio-wait policy.",
-                        new[]
-                        {
-                            "src/NextGenEmby.Native/Media/AudioRenderer.cpp",
-                            "src/NextGenEmby.Native/Media/PlaybackGraph.cpp",
-                            "src/NextGenEmby.Native/Media/FramePacing.h"
-                        },
+                        PlaybackQualityCodeTargetCatalog.GetForFailureArea(area),
                         new[]
                         {
                             "sync.clockDeltaMs",
@@ -1516,13 +1491,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                     return NewHint(
                         area,
                         "Inspect render interval percentiles, max frame gap, source/display cadence match, wait/drop thresholds, and starvation counters together.",
-                        new[]
-                        {
-                            "src/NextGenEmby.Native/Media/FramePacing.h",
-                            "src/NextGenEmby.Native/Media/PlaybackGraph.cpp",
-                            "src/NextGenEmby.Native/HdrDisplayController.cpp",
-                            "src/NextGenEmby.Core/PlaybackQuality/PlaybackRefreshRatePolicy.cs"
-                        },
+                        PlaybackQualityCodeTargetCatalog.GetForFailureArea(area),
                         new[]
                         {
                             "timing.expectedFrameDurationMs",
@@ -1537,23 +1506,13 @@ namespace NextGenEmby.Core.PlaybackQuality
                     return NewHint(
                         area,
                         "Collect missing telemetry before optimizing playback behavior; absent evidence is treated separately from a real playback failure.",
-                        new[]
-                        {
-                            "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
-                            "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
-                            "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
-                            "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
-                        },
+                        PlaybackQualityCodeTargetCatalog.GetForFailureArea(area),
                         new string[0]);
                 default:
                     return NewHint(
                         "unknown",
                         "Inspect raw metrics, failed checks, and missing evidence before changing playback behavior.",
-                        new[]
-                        {
-                            "src/NextGenEmby.Core/PlaybackQuality",
-                            "src/NextGenEmby.Native"
-                        },
+                        PlaybackQualityCodeTargetCatalog.GetForFailureArea("unknown"),
                         new string[0]);
             }
         }
@@ -1561,7 +1520,7 @@ namespace NextGenEmby.Core.PlaybackQuality
         private static PlaybackQualityInvestigationHint NewHint(
             string area,
             string suggestedAction,
-            string[] codeTargets,
+            IEnumerable<string> codeTargets,
             string[] signals)
         {
             var hint = new PlaybackQualityInvestigationHint

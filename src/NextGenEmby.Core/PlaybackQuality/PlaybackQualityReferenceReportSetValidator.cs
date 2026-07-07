@@ -541,12 +541,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                 return NewTriage(
                     "unsupported-source",
                     "Verify media source selection, codec support, HDR/Dolby Vision classification, and fallback policy before tuning playback timing.",
-                    new[]
-                    {
-                        "src/NextGenEmby.Core/Playback/PlaybackOrchestrator.cs",
-                        "src/NextGenEmby.Core/Playback/HdrPlaybackProfileClassifier.cs",
-                        "src/NextGenEmby.Core/Emby"
-                    });
+                    PlaybackQualityCodeTargetCatalog.GetForFailureArea("unsupported-source"));
             }
 
             if (StartsWithSignal(signal, "startup."))
@@ -554,12 +549,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                 return NewTriage(
                     "startup",
                     "Separate Emby request latency, native open/demux initialization, and first-frame readiness before changing render pacing.",
-                    new[]
-                    {
-                        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
-                        "src/NextGenEmby.Native/NativePlaybackEngine.cpp",
-                        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
-                    });
+                    PlaybackQualityCodeTargetCatalog.GetForFailureArea("startup"));
             }
 
             if (StartsWithSignal(signal, "timing.") ||
@@ -568,13 +558,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                 return NewTriage(
                     "frame-pacing",
                     "Collect render intervals, frame gaps, source/display cadence, and wait/drop threshold evidence before changing frame pacing behavior.",
-                    new[]
-                    {
-                        "src/NextGenEmby.Native/Media/FramePacing.h",
-                        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp",
-                        "src/NextGenEmby.Native/HdrDisplayController.cpp",
-                        "src/NextGenEmby.Core/PlaybackQuality/PlaybackRefreshRatePolicy.cs"
-                    });
+                    PlaybackQualityCodeTargetCatalog.GetForFailureArea("frame-pacing"));
             }
 
             if (StartsWithSignal(signal, "sync."))
@@ -582,12 +566,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                 return NewTriage(
                     "av-sync",
                     "Inspect XAudio clock derivation, queued buffer depth, video PTS comparison, and audio-wait policy.",
-                    new[]
-                    {
-                        "src/NextGenEmby.Native/Media/AudioRenderer.cpp",
-                        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp",
-                        "src/NextGenEmby.Native/Media/FramePacing.h"
-                    });
+                    PlaybackQualityCodeTargetCatalog.GetForFailureArea("av-sync"));
             }
 
             if (StartsWithSignal(signal, "buffers."))
@@ -595,12 +574,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                 return NewTriage(
                     "buffering",
                     "Inspect demux, network, decode starvation, and audio queue depth before changing frame drop thresholds.",
-                    new[]
-                    {
-                        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp",
-                        "src/NextGenEmby.Native/Media/VideoDecoder.cpp",
-                        "src/NextGenEmby.Native/Media/AudioDecoder.cpp"
-                    });
+                    PlaybackQualityCodeTargetCatalog.GetForFailureArea("buffering"));
             }
 
             if (StartsWithSignal(signal, "colorPipeline.") ||
@@ -609,24 +583,13 @@ namespace NextGenEmby.Core.PlaybackQuality
                 return NewTriage(
                     "color-pipeline",
                     "Collect display HDR state, swapchain format/color space, DXGI mapping, and conversion validation before optimizing color pipeline behavior.",
-                    new[]
-                    {
-                        "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
-                        "src/NextGenEmby.Native/DxDeviceResources.cpp",
-                        "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
-                    });
+                    PlaybackQualityCodeTargetCatalog.GetForFailureArea("color-pipeline"));
             }
 
             return NewTriage(
                 "evidence-collection",
                 "Collect missing telemetry before optimizing playback behavior; absent evidence is separate from a real playback failure.",
-                new[]
-                {
-                    "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
-                    "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
-                    "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
-                    "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
-                });
+                PlaybackQualityCodeTargetCatalog.GetForFailureArea("evidence-collection"));
         }
 
         private static bool StartsWithSignal(string signal, string prefix)
@@ -638,7 +601,7 @@ namespace NextGenEmby.Core.PlaybackQuality
         private static PlaybackQualityReportSetSignalTriage NewTriage(
             string failureArea,
             string suggestedNextAction,
-            string[] codeTargets)
+            IEnumerable<string> codeTargets)
         {
             var triage = new PlaybackQualityReportSetSignalTriage
             {
