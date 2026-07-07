@@ -153,6 +153,14 @@ dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQ
 
 DEBUG App 现在有一个最小 App-hosted capture 入口：`plan-runs` 生成的 `devCommand.route = quality-run` 可以写入 App LocalFolder 的 `dev-command.json`。App 会走普通 item playback 路径，在 `durationSeconds` 指定的采样窗口内主动执行 pause、resume、seek、stop，然后把标准 `PlaybackQualityRunResult` envelope 写到 App LocalFolder 的 `quality-run/captured/<runId>.json`。例如 `runId = local/foo` 会写成 `quality-run/captured/local/foo.json`。如果打开媒体或播放命令阶段失败，App 会在同一路径写入标准 error envelope，而不是只留下缺失 report。这一步仍是 App-hosted 软件采集，不验证 Xbox/HDMI/display 输出；报告中的 display/color/frame timing/A/V sync 只代表当前 native/App 软件层暴露的指标。
 
+在 Windows 本机导出 App LocalFolder 中的 captured reports：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\quality-run\Export-AppQualityRunReports.ps1 -OutputDirectory docs\qa\private\native-captured.local -SummaryPath docs\qa\private\native-captured-export-summary.local.json
+```
+
+该脚本默认从 `%LOCALAPPDATA%\Packages\NextGenEmby.App_*\LocalState\quality-run\captured` 复制 report，保留 `local/foo.json` 这类 report-set 相对路径。输出目录应放在 ignored/private 位置，不要提交真实 App captured report 或私有 Emby case。
+
 当 App-hosted 或 native collector 已经能为每个 case 产出 raw `PlaybackQualityReport` 或 `PlaybackQualityRunResult` envelope 时，不要新建 report-set 格式；把 captured report 放在 ignored/private 目录，并用同一个命令导入：
 
 ```powershell

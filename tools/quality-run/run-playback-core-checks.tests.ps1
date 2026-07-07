@@ -119,6 +119,10 @@ if (-not ($plan.commands | Where-Object { $_.name -eq 'merge-reference-manifests
     throw 'Expected merge-reference-manifests-test command in playback-core validation plan.'
 }
 
+if (-not ($plan.commands | Where-Object { $_.name -eq 'export-app-quality-run-reports-test' })) {
+    throw 'Expected export-app-quality-run-reports-test command in playback-core validation plan.'
+}
+
 if (-not ($plan.commands | Where-Object { $_.name -eq 'native-display-refresh-test' })) {
     throw 'Expected native-display-refresh-test command in playback-core validation plan.'
 }

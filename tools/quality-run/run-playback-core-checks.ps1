@@ -126,6 +126,11 @@ $commands = @(
         -Command 'powershell' `
         -Arguments @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', 'tools\quality-run\Merge-ReferenceManifests.tests.ps1')
     New-CommandPlan `
+        -Name 'export-app-quality-run-reports-test' `
+        -Description 'Verify App-hosted quality-run captured reports can be exported from LocalState while preserving report-set relative paths.' `
+        -Command 'powershell' `
+        -Arguments @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', 'tools\quality-run\Export-AppQualityRunReports.tests.ps1')
+    New-CommandPlan `
         -Name 'native-helper-test' `
         -Description 'Compile and run the standalone native playback quality metrics helper test.' `
         -Command 'cmd' `
