@@ -4,6 +4,12 @@ These are style-tile previews for the visual foundation only. They are not inter
 
 Use `contact-sheet.png` for the original A/B/C/D comparison. The A2 line has been superseded by the new Artwork-Backed Matte Fluent direction.
 
+Development handoff:
+
+- `../DESIGN.md` is the source of truth for tokens and rules.
+- `../design-handoff-2026-07-07.md` summarizes the branch output and how to consume it during page development.
+- `playback-osd-compact.html` is the current playback OSD HTML preview. Use `?state=tracks` to inspect the subtitle/audio menu state.
+
 ## A3. Artwork-Backed Matte Fluent
 
 Current design direction. Scratch rendered previews exist outside the repo for review; commit a final preview only after the direction is selected.
@@ -21,6 +27,7 @@ Current design direction. Scratch rendered previews exist outside the repo for r
 - Blur-backed regions must map to real Emby artwork candidates: `Backdrop`, `Thumb`, `Banner`, or sometimes `Primary`. No candidate means matte fallback.
 - Every A3 preview for cards, rows, library, and home systems must show three asset-availability states: rich `Backdrop`/`Thumb`, only `Primary`, and no usable artwork.
 - Details pages are the exception: they use one right-side atmosphere zone. Use `Backdrop`, `Thumb`, `Banner`, or cropped `Primary` as atmosphere; if no image exists, leave the page on black/matte canvas. Do not create a separate poster fallback panel, no-art identity panel, title watermark, or generated placeholder art for details.
+- Playback pages use compact video-first OSD chrome: top-left title/status, bottom transport strip, subtitle protection, and lightweight menus for source/audio/subtitle/more. Do not turn playback into a large centered glass control card.
 
 Risk: the next preview must prove that blur is meaningful only over real artwork, that matte fallback states still look intentional when no backdrop exists, and that the matte main surface does not become flat or generic.
 

@@ -322,6 +322,26 @@ Default Home vocabulary:
 
 The exact ordering may become user/server configurable later. The visual system must still define stable row behavior, source labels, fallback artwork states, and focus treatment before that customization exists.
 
+## Page Coverage And Derivation
+
+The core visual system is complete enough for first implementation when these screen families follow the rules in this file:
+
+- Shell and navigation: left source Guide, Search entry, More / Source Hub, settings/user/server access.
+- Home: high-throughput personal media dashboard with rails for Continue Watching, Next Up, recent media, libraries, Live TV, collections, playlists, and user-intent routes.
+- Library and Search: poster grids, row/list variants, shared card states, and matte fallback states.
+- Details: deterministic content/actions/selectors on the left, a single right-side artwork atmosphere zone, and black/matte fallback when no artwork exists.
+- Playback: video-first surface with compact OSD, subtitle protection, track/source menus, and matte fallback when live-video blur is not reliable.
+
+Secondary pages should be derived from these families instead of inventing new chrome:
+
+- Settings, server selection, user switching, diagnostics, and account pages use matte panels and action/list rows. They do not use artwork blur unless real artwork or video sits behind the panel.
+- More / Source Hub uses the Guide/source model: grouped destinations, pinned/unpinned sources, and stable list or grid targets. It is not a generic overflow drawer.
+- Live TV can use denser list rows and channel/program artwork when available, but sparse artwork must remain first-class through matte fallback tiles.
+- Music and Photos should use the same source-aware rails, square/list artwork variants, and matte fallbacks. Do not create a separate decorative album-wall or gallery-lightbox language unless a later page spec explicitly defines it.
+- Empty, loading, error, confirmation, version/source selector, audio selector, and subtitle selector states use the same matte panel, list-row, button, and focus rules as Details and Playback.
+
+If a secondary page cannot be drawn by composing existing tokens, card families, panels, Guide behavior, and action rows, that is a signal to extend `DESIGN.md` first rather than adding page-local visual exceptions.
+
 ## Focus System
 
 The default focus language is **borderless content priority**, not a drawn focus frame. This is the main difference between this system and older technology UI. The user should understand what is focused because that item becomes clearer, slightly larger, and more visually prioritized while its surroundings recede.
@@ -577,6 +597,10 @@ Visual rules:
 
 - OSD panels are dark matte overlays by default. Use artwork-backed blur only over active video/artwork when it improves readability.
 - Keep the bottom subtitle region readable. If a panel competes with subtitles, move or shorten the panel before adding stronger decoration.
+- Default playback invocation uses compact chrome, not a large centered glass card. A valid composition is a small top-left title/status capsule plus a bottom full-width transport strip inside the TV safe area.
+- The bottom transport strip contains timeline/time labels, compact source/capability chips, centered seek/play controls, and right-side `字幕/音轨` plus `更多` entries. Track, subtitle, source, and diagnostics choices open lightweight menus; they are not all flattened into the default OSD.
+- The OSD must preserve internal padding. Focused transport targets must sit fully inside the strip with visible top and bottom breathing room; do not let a 52px to 56px focused target touch or overflow the panel edge.
+- Subtitles sit above the transport strip. If the subtitle baseline collides with the strip or menu, move the OSD/menu before adding stronger blur, shadows, or decorative outlines.
 - Transport controls use neutral focus fill for the current controller target, neutral action surface for Play/Resume, tiny `play_accent` only inside the play glyph/confirm mark, and `secondary` for playback progress. Non-playback sliders such as brightness, audio, filters, or diagnostics stay neutral gray.
 - Diagnostics use `mono` and `tertiary`, never the focus or play accent colors.
 
