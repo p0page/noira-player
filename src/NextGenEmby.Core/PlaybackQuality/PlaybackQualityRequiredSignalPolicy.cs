@@ -97,14 +97,14 @@ namespace NextGenEmby.Core.PlaybackQuality
                 AddUnique(requiredSignals, "colorPipeline.actualHdrOutput");
             }
 
-            if (RequiresColorPipelineSurfaceEvidence(expected))
+            if (PlaybackQualityColorExpectationPolicy.RequiresSurfaceEvidence(expected))
             {
                 AddUnique(requiredSignals, "display.hdrStatus");
                 AddUnique(requiredSignals, "colorPipeline.swapChainFormat");
                 AddUnique(requiredSignals, "colorPipeline.swapChainColorSpace");
             }
 
-            if (RequiresTenBitSwapChainEvidence(expected))
+            if (PlaybackQualityColorExpectationPolicy.RequiresTenBitSwapChain(expected))
             {
                 AddUnique(requiredSignals, "colorPipeline.isTenBitSwapChain");
             }
@@ -274,33 +274,6 @@ namespace NextGenEmby.Core.PlaybackQuality
             string purpose)
         {
             return referenceCase.Purpose.Contains(purpose);
-        }
-
-        private static bool RequiresColorPipelineSurfaceEvidence(
-            PlaybackQualityExpected expected)
-        {
-            return !string.IsNullOrWhiteSpace(expected.HdrOutput) ||
-                !string.IsNullOrWhiteSpace(expected.DxgiOutput);
-        }
-
-        private static bool RequiresTenBitSwapChainEvidence(
-            PlaybackQualityExpected expected)
-        {
-            return IsHdr10LikeOutput(expected.HdrOutput) ||
-                IsHdr10LikeColorSpace(expected.DxgiOutput);
-        }
-
-        private static bool IsHdr10LikeOutput(string value)
-        {
-            return string.Equals(value, "Hdr10", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(value, "Hdr", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(value, "Hlg", StringComparison.OrdinalIgnoreCase);
-        }
-
-        private static bool IsHdr10LikeColorSpace(string value)
-        {
-            return value.IndexOf("G2084", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                value.IndexOf("P2020", StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         private static bool HasTimingEvidence(PlaybackQualityReport report)

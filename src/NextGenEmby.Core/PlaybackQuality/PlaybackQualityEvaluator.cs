@@ -466,7 +466,7 @@ namespace NextGenEmby.Core.PlaybackQuality
             PlaybackQualityReport report,
             PlaybackQualityExpected expected)
         {
-            if (!RequiresTenBitSwapChain(expected))
+            if (!PlaybackQualityColorExpectationPolicy.RequiresTenBitSwapChain(expected))
             {
                 return;
             }
@@ -493,25 +493,6 @@ namespace NextGenEmby.Core.PlaybackQuality
                 report.FailureReasons.Add(message);
                 AddRelevantSignal(report, "colorPipeline.isTenBitSwapChain");
             }
-        }
-
-        private static bool RequiresTenBitSwapChain(PlaybackQualityExpected expected)
-        {
-            return IsHdr10LikeOutput(expected.HdrOutput) ||
-                IsHdr10LikeColorSpace(expected.DxgiOutput);
-        }
-
-        private static bool IsHdr10LikeOutput(string value)
-        {
-            return string.Equals(value, "Hdr10", System.StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(value, "Hdr", System.StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(value, "Hlg", System.StringComparison.OrdinalIgnoreCase);
-        }
-
-        private static bool IsHdr10LikeColorSpace(string value)
-        {
-            return value.IndexOf("G2084", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
-                value.IndexOf("P2020", System.StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         private static void CheckStartupDuration(
