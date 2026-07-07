@@ -1,5 +1,6 @@
 {
   "schemaVersion": 1,
+  "evaluationVersion": "playback-quality-v0.1",
   "caseMetadata": {
     "caseId": "local/chimera-23976-hdr10-cadence",
     "category": "challenge",
@@ -247,7 +248,7 @@
     "environment": {
       "collectorVersion": "materialize-baseline-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "f4f4e48",
+      "sourceRevision": "52cf57e",
       "buildConfiguration": "Debug"
     },
     "limitations": [
@@ -417,6 +418,7 @@
     "expectedBehavior": "startup.startupDurationMs expected 7000.000.",
     "actualBehavior": "startup.startupDurationMs actual evidence was missing.",
     "primaryFailureArea": "color-pipeline",
+    "primaryFailureClass": "insufficient instrumentation",
     "suggestedNextAction": "Inspect HDR display switch and DXGI color-space mapping.",
     "startup": {
       "status": "slow",
@@ -434,7 +436,7 @@
     "environment": {
       "collectorVersion": "materialize-baseline-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "f4f4e48",
+      "sourceRevision": "52cf57e",
       "buildConfiguration": "Debug",
       "signals": [
         "environment.collectorVersion",

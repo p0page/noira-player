@@ -1,5 +1,6 @@
 {
   "schemaVersion": 1,
+  "evaluationVersion": "playback-quality-v0.1",
   "caseMetadata": {
     "caseId": "local/missing-file-error-handling",
     "category": "stable",
@@ -42,7 +43,7 @@
     "environment": {
       "collectorVersion": "materialize-core-probe-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "f4f4e48",
+      "sourceRevision": "52cf57e",
       "buildConfiguration": "Debug"
     },
     "limitations": [
@@ -190,6 +191,7 @@
     "expectedBehavior": "Playback operation completed without a terminal runtime error.",
     "actualBehavior": "open failed with core-probe.error-case: Core probe intentionally materialized an error-handling reference case without opening playback.",
     "primaryFailureArea": "error-handling",
+    "primaryFailureClass": "sample issue",
     "suggestedNextAction": "Inspect runtime playback error evidence before interpreting playback-quality metrics.",
     "startup": {
       "status": "missing-evidence",
@@ -203,7 +205,7 @@
     "environment": {
       "collectorVersion": "materialize-core-probe-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "f4f4e48",
+      "sourceRevision": "52cf57e",
       "buildConfiguration": "Debug",
       "signals": [
         "environment.collectorVersion",

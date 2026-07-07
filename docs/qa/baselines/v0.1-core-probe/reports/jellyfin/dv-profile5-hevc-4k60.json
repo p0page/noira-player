@@ -1,5 +1,6 @@
 {
   "schemaVersion": 1,
+  "evaluationVersion": "playback-quality-v0.1",
   "caseMetadata": {
     "caseId": "jellyfin/dv-profile5-hevc-4k60",
     "category": "challenge",
@@ -153,7 +154,7 @@
     "environment": {
       "collectorVersion": "materialize-core-probe-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "f4f4e48",
+      "sourceRevision": "52cf57e",
       "buildConfiguration": "Debug"
     },
     "limitations": [
@@ -336,6 +337,7 @@
     "expectedBehavior": "Unsupported sources are identified without entering playback-quality tuning.",
     "actualBehavior": "Report result was unsupported.",
     "primaryFailureArea": "unsupported-source",
+    "primaryFailureClass": "none",
     "suggestedNextAction": "Source is expected to be unsupported; preserve source classification evidence and skip playback-quality thresholds.",
     "startup": {
       "status": "ready",
@@ -353,7 +355,7 @@
     "environment": {
       "collectorVersion": "materialize-core-probe-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "f4f4e48",
+      "sourceRevision": "52cf57e",
       "buildConfiguration": "Debug",
       "signals": [
         "environment.collectorVersion",

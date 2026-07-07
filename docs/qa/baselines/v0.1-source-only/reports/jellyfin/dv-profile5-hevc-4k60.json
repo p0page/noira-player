@@ -1,5 +1,6 @@
 {
   "schemaVersion": 1,
+  "evaluationVersion": "playback-quality-v0.1",
   "caseMetadata": {
     "caseId": "jellyfin/dv-profile5-hevc-4k60",
     "category": "challenge",
@@ -157,7 +158,7 @@
     "environment": {
       "collectorVersion": "materialize-baseline-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "f4f4e48",
+      "sourceRevision": "52cf57e",
       "buildConfiguration": "Debug"
     },
     "limitations": [
@@ -327,6 +328,7 @@
     "expectedBehavior": "startup.startupDurationMs expected 3000.000.",
     "actualBehavior": "startup.startupDurationMs actual evidence was missing.",
     "primaryFailureArea": "startup",
+    "primaryFailureClass": "insufficient instrumentation",
     "suggestedNextAction": "Inspect Emby request, source open, demux initialization, and first-frame readiness.",
     "startup": {
       "status": "slow",
@@ -344,7 +346,7 @@
     "environment": {
       "collectorVersion": "materialize-baseline-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "f4f4e48",
+      "sourceRevision": "52cf57e",
       "buildConfiguration": "Debug",
       "signals": [
         "environment.collectorVersion",

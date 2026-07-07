@@ -1,5 +1,6 @@
 {
   "schemaVersion": 1,
+  "evaluationVersion": "playback-quality-v0.1",
   "caseMetadata": {
     "caseId": "local/sdr-resume-seek-timeline",
     "category": "stable",
@@ -173,7 +174,7 @@
     "environment": {
       "collectorVersion": "materialize-core-probe-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "f4f4e48",
+      "sourceRevision": "52cf57e",
       "buildConfiguration": "Debug"
     },
     "limitations": [
@@ -356,6 +357,7 @@
     "expectedBehavior": "Playback quality checks passed.",
     "actualBehavior": "Playback quality checks passed.",
     "primaryFailureArea": "none",
+    "primaryFailureClass": "none",
     "suggestedNextAction": "No failing thresholds.",
     "startup": {
       "status": "ready",
@@ -373,7 +375,7 @@
     "environment": {
       "collectorVersion": "materialize-core-probe-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "f4f4e48",
+      "sourceRevision": "52cf57e",
       "buildConfiguration": "Debug",
       "signals": [
         "environment.collectorVersion",
