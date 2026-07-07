@@ -13,6 +13,7 @@ namespace NextGenEmby.Core.PlaybackQuality
         public PlaybackQualityEnvironmentAssessment Environment { get; set; } = new PlaybackQualityEnvironmentAssessment();
         public PlaybackQualitySourceAssessment Source { get; set; } = new PlaybackQualitySourceAssessment();
         public PlaybackQualityTracksAssessment Tracks { get; set; } = new PlaybackQualityTracksAssessment();
+        public PlaybackQualityError Error { get; set; } = new PlaybackQualityError();
         public PlaybackQualityColorPipelineAssessment ColorPipeline { get; set; } = new PlaybackQualityColorPipelineAssessment();
         public PlaybackQualityBufferingAssessment Buffering { get; set; } = new PlaybackQualityBufferingAssessment();
         public PlaybackQualityAvSyncAssessment AvSync { get; set; } = new PlaybackQualityAvSyncAssessment();
@@ -273,6 +274,7 @@ namespace NextGenEmby.Core.PlaybackQuality
             analysis.Environment = AssessEnvironment(report);
             analysis.Source = AssessSource(report);
             analysis.Tracks = AssessTracks(report);
+            analysis.Error = AssessError(analysis, report);
             analysis.ColorPipeline = AssessColorPipeline(report);
             analysis.Buffering = AssessBuffering(report, signalPresence);
             analysis.AvSync = AssessAvSync(report);
@@ -369,6 +371,64 @@ namespace NextGenEmby.Core.PlaybackQuality
                 ? "Video, audio, and subtitle track discovery telemetry is available."
                 : "Video and audio track discovery telemetry is available; no subtitle track was reported.";
             return tracks;
+        }
+
+        private static PlaybackQualityError AssessError(
+            PlaybackQualityModelAnalysis analysis,
+            PlaybackQualityReport report)
+        {
+            var error = new PlaybackQualityError
+            {
+                Code = report.Error.Code,
+                Message = report.Error.Message,
+                Operation = report.Error.Operation,
+                ExceptionType = report.Error.ExceptionType,
+                FailureClass = report.Error.FailureClass,
+                FailureArea = string.IsNullOrWhiteSpace(report.Error.FailureArea)
+                    ? "error-handling"
+                    : report.Error.FailureArea,
+                IsTerminal = report.Error.IsTerminal,
+                IsRetriable = report.Error.IsRetriable
+            };
+
+            if (report.Result != "error" &&
+                string.IsNullOrWhiteSpace(error.Code) &&
+                string.IsNullOrWhiteSpace(error.Message))
+            {
+                return error;
+            }
+
+            AddErrorSignal(analysis, "error.code", error.Code);
+            AddErrorSignal(analysis, "error.message", error.Message);
+            AddErrorSignal(analysis, "error.operation", error.Operation);
+            AddErrorSignal(analysis, "error.exceptionType", error.ExceptionType);
+            AddErrorSignal(analysis, "error.failureClass", error.FailureClass);
+            AddErrorSignal(analysis, "error.failureArea", error.FailureArea);
+            AddUnique(analysis.EvidenceSignals, "error.isTerminal");
+            AddUnique(analysis.EvidenceSignals, "error.isRetriable");
+
+            if (!string.IsNullOrWhiteSpace(error.FailureArea))
+            {
+                AddUnique(analysis.FailureAreas, error.FailureArea);
+            }
+
+            if (!string.IsNullOrWhiteSpace(error.FailureClass))
+            {
+                AddUnique(analysis.FailureClasses, error.FailureClass);
+            }
+
+            return error;
+        }
+
+        private static void AddErrorSignal(
+            PlaybackQualityModelAnalysis analysis,
+            string signal,
+            string value)
+        {
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                AddUnique(analysis.EvidenceSignals, signal);
+            }
         }
 
         private static int CountOrListCount(
@@ -944,6 +1004,7 @@ namespace NextGenEmby.Core.PlaybackQuality
             var priorityAreas = new[]
             {
                 "unsupported-source",
+                "error-handling",
                 "color-pipeline",
                 "startup",
                 "buffering",
@@ -1236,6 +1297,7 @@ namespace NextGenEmby.Core.PlaybackQuality
             var priorityAreas = new[]
             {
                 "unsupported-source",
+                "error-handling",
                 "color-pipeline",
                 "startup",
                 "buffering",
@@ -1261,6 +1323,16 @@ namespace NextGenEmby.Core.PlaybackQuality
             PlaybackQualityReport report,
             PlaybackQualitySignalPresence signalPresence)
         {
+            if (report.Result == "error")
+            {
+                if (string.IsNullOrWhiteSpace(report.Error.Code))
+                {
+                    analysis.MissingEvidence.Add("error.code");
+                }
+
+                return;
+            }
+
             if (string.IsNullOrWhiteSpace(report.Source.Codec))
             {
                 analysis.MissingEvidence.Add("source.codec");
@@ -1599,6 +1671,20 @@ namespace NextGenEmby.Core.PlaybackQuality
                             "source.dolbyVisionCompatibilityId",
                             "source.hasHdr10BaseLayer",
                             "source.hasHlgBaseLayer"
+                        });
+                case "error-handling":
+                    return NewHint(
+                        area,
+                        "Inspect the failing playback operation, source availability, native open errors, cancellation, timeout, and exception classification before interpreting playback-quality metrics.",
+                        PlaybackQualityCodeTargetCatalog.GetForFailureArea(area),
+                        new[]
+                        {
+                            "error.code",
+                            "error.message",
+                            "error.operation",
+                            "error.exceptionType",
+                            "error.failureClass",
+                            "error.failureArea"
                         });
                 case "color-pipeline":
                     return NewHint(

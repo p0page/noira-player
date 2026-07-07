@@ -300,7 +300,8 @@ try {
         'buffering',
         'timeline',
         'tracks',
-        'subtitles'
+        'subtitles',
+        'error-handling'
     )
     foreach ($purpose in $requiredPurposes) {
         if (-not ($validation.coverage.coveredPurposes -contains $purpose)) {
@@ -377,6 +378,14 @@ try {
         $_.expected.hdrOutput -eq 'Sdr'
     })) {
         throw 'Generated manifest should include an HDR force-SDR case.'
+    }
+
+    if (-not ($manifest.cases | Where-Object {
+        $_.caseId -eq 'private-emby/error-handling/missing-file' -and
+        ($_.purpose -contains 'error-handling') -and
+        $_.uri -eq 'emby://quality-cases/missing-file-error-handling'
+    })) {
+        throw 'Generated manifest should include a secret-safe error-handling case.'
     }
 
     Write-Output 'private-emby-reference-manifest tests ok'

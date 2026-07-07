@@ -247,6 +247,33 @@
         "requireValidatedConversion": true,
         "requireMatchedDisplayRefreshRate": false
       }
+    },
+    {
+      "caseId": "local/missing-file-error-handling",
+      "category": "stable",
+      "severity": "medium",
+      "stability": "stable",
+      "uri": "emby://quality-cases/missing-file-error-handling",
+      "itemId": "quality-case-missing-file-error-handling",
+      "mediaSourceId": "quality-source-missing-file-error-handling",
+      "tier": 1,
+      "purpose": [
+        "error-handling"
+      ],
+      "expected": {
+        "codec": "hevc",
+        "width": 1920,
+        "height": 1080,
+        "frameRate": 60.0,
+        "hdrKind": "Sdr",
+        "isHdr": false,
+        "isDirectPlayable": true,
+        "hdrOutput": "Sdr",
+        "dxgiInput": "YCBCR_STUDIO_G22_LEFT_P709",
+        "dxgiOutput": "RGB_FULL_G22_NONE_P709",
+        "requireValidatedConversion": false,
+        "requireMatchedDisplayRefreshRate": false
+      }
     }
   ]
 }

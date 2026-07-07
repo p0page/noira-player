@@ -15,6 +15,14 @@ namespace NextGenEmby.Core.PlaybackQuality
             }
 
             var expected = referenceCase.Expected ?? new PlaybackQualityExpected();
+            if (HasPurpose(referenceCase, "error-handling"))
+            {
+                AddUnique(requiredSignals, "error.code");
+                AddUnique(requiredSignals, "error.message");
+                AddUnique(requiredSignals, "error.failureClass");
+                AddUnique(requiredSignals, "error.failureArea");
+                return requiredSignals;
+            }
 
             AddUnique(requiredSignals, "source.codec");
             AddUnique(requiredSignals, "source.width");
@@ -216,6 +224,21 @@ namespace NextGenEmby.Core.PlaybackQuality
 
             switch (signal)
             {
+                case "error.code":
+                    return !string.IsNullOrWhiteSpace(report.Error.Code);
+                case "error.message":
+                    return !string.IsNullOrWhiteSpace(report.Error.Message);
+                case "error.operation":
+                    return !string.IsNullOrWhiteSpace(report.Error.Operation);
+                case "error.exceptionType":
+                    return !string.IsNullOrWhiteSpace(report.Error.ExceptionType);
+                case "error.failureClass":
+                    return !string.IsNullOrWhiteSpace(report.Error.FailureClass);
+                case "error.failureArea":
+                    return !string.IsNullOrWhiteSpace(report.Error.FailureArea);
+                case "error.isTerminal":
+                case "error.isRetriable":
+                    return !string.IsNullOrWhiteSpace(report.Error.Code);
                 case "source.codec":
                     return !string.IsNullOrWhiteSpace(report.Source.Codec);
                 case "source.width":

@@ -8,6 +8,87 @@ namespace NextGenEmby.Core.Tests.PlaybackQuality;
 public sealed class PlaybackQualityRuntimeEvidenceCollectorTests
 {
     [Fact]
+    public void ComposeErrorRunResult_Reports_Runtime_Error_Without_Playback_Telemetry_Noise()
+    {
+        var referenceCase = new PlaybackQualityReferenceCase
+        {
+            CaseId = "local/missing-file",
+            Category = "stable",
+            Severity = "high",
+            Stability = "stable",
+            Expected = new PlaybackQualityExpected
+            {
+                Codec = "hevc",
+                Width = 3840,
+                Height = 2160,
+                FrameRate = 23.976,
+                HdrKind = "Hdr10",
+                HdrOutput = "Hdr10",
+                MaxStartupDurationMs = 2000,
+                MinRenderedVideoFrames = 120
+            }
+        };
+        referenceCase.Purpose.Add("error-handling");
+
+        var result = PlaybackQualityRuntimeEvidenceCollector.ComposeErrorRunResult(
+            referenceCase,
+            new PlaybackQualityError
+            {
+                Code = "source.open.missing-file",
+                Message = "The media file was not found.",
+                Operation = "open",
+                ExceptionType = "FileNotFoundException",
+                FailureClass = "sample issue",
+                FailureArea = "error-handling",
+                IsTerminal = true,
+                IsRetriable = false
+            },
+            new PlaybackQualityEnvironment
+            {
+                CollectorVersion = "runtime-error-test",
+                PlayerCoreVersion = "NextGenEmby.Core.Tests",
+                SourceRevision = "test-revision",
+                BuildConfiguration = "Debug"
+            });
+
+        Assert.Equal("local/missing-file", result.CaseMetadata.CaseId);
+        Assert.Equal("error", result.Report.Result);
+        Assert.Equal("source.open.missing-file", result.Report.Error.Code);
+        Assert.Equal("The media file was not found.", result.Report.Error.Message);
+        Assert.Equal("open", result.Report.Error.Operation);
+        Assert.Equal("FileNotFoundException", result.Report.Error.ExceptionType);
+        Assert.Equal("sample issue", result.Report.Error.FailureClass);
+        Assert.Equal("error-handling", result.Report.Error.FailureArea);
+        Assert.True(result.Report.Error.IsTerminal);
+        Assert.False(result.Report.Error.IsRetriable);
+        Assert.Equal("error-handling", result.Report.Analysis.PrimaryFailureArea);
+        Assert.Contains("error.code", result.Report.Analysis.RelevantSignals);
+        Assert.Contains(result.Report.Checks, check =>
+            check.Name == "PlaybackRuntimeError" &&
+            check.Signal == "error.code" &&
+            check.Status == "fail" &&
+            check.FailureArea == "error-handling" &&
+            check.FailureClass == "sample issue");
+
+        Assert.Equal("error", result.ModelAnalysis.Result);
+        Assert.Equal("error-handling", result.ModelAnalysis.PrimaryFailureArea);
+        Assert.Equal("source.open.missing-file", result.ModelAnalysis.Error.Code);
+        Assert.Equal("sample issue", result.ModelAnalysis.Error.FailureClass);
+        Assert.Equal("error-handling", result.ModelAnalysis.Error.FailureArea);
+        Assert.Contains("sample issue", result.ModelAnalysis.FailureClasses);
+        Assert.Contains("error-handling", result.ModelAnalysis.FailureAreas);
+        Assert.Contains("error.code", result.ModelAnalysis.EvidenceSignals);
+        Assert.Contains("error.message", result.ModelAnalysis.EvidenceSignals);
+        Assert.Contains("error.operation", result.ModelAnalysis.EvidenceSignals);
+        Assert.DoesNotContain("source.codec", result.ModelAnalysis.MissingEvidence);
+        Assert.DoesNotContain("timing.renderedVideoFrames", result.ModelAnalysis.MissingEvidence);
+        Assert.DoesNotContain("startup.startupDurationMs", result.ModelAnalysis.MissingEvidence);
+        Assert.Contains(result.ModelAnalysis.InvestigationHints, hint =>
+            hint.FailureArea == "error-handling" &&
+            hint.Signals.Contains("error.code"));
+    }
+
+    [Fact]
     public void ComposeRunResult_Uses_Backend_Display_And_Metrics_Evidence()
     {
         var referenceCase = new PlaybackQualityReferenceCase

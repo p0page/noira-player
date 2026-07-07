@@ -19,6 +19,29 @@ namespace NextGenEmby.Core.PlaybackQuality
                 throw new ArgumentNullException(nameof(referenceCase));
             }
 
+            if (HasPurpose(referenceCase, "error-handling"))
+            {
+                var errorResult = PlaybackQualityRuntimeEvidenceCollector.ComposeErrorRunResult(
+                    referenceCase,
+                    new PlaybackQualityError
+                    {
+                        Code = "core-probe.error-case",
+                        Message = "Core probe intentionally materialized an error-handling reference case without opening playback.",
+                        Operation = "open",
+                        ExceptionType = "PlaybackQualityProbeException",
+                        FailureClass = "sample issue",
+                        FailureArea = "error-handling",
+                        IsTerminal = true,
+                        IsRetriable = false
+                    },
+                    environment);
+                AddProbeLimitations(errorResult.Report.Limitations);
+                return new PlaybackQualityRunResult(
+                    errorResult.Report,
+                    PlaybackQualityReportAnalyzer.Analyze(errorResult.Report),
+                    errorResult.CaseMetadata);
+            }
+
             var mediaSource = CreateMediaSource(referenceCase);
             var backend = new ProbePlaybackBackend(
                 referenceCase,

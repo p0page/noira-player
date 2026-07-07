@@ -109,7 +109,8 @@ namespace NextGenEmby.Core.PlaybackQuality
             "buffering",
             "timeline",
             "tracks",
-            "subtitles"
+            "subtitles",
+            "error-handling"
         };
 
         public static PlaybackQualityReferenceManifestValidation Validate(

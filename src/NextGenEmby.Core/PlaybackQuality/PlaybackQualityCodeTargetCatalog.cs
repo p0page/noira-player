@@ -25,6 +25,15 @@ namespace NextGenEmby.Core.PlaybackQuality
             "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
         };
 
+        private static readonly string[] ErrorHandlingTargets =
+        {
+            "src/NextGenEmby.Core/Playback/PlaybackOrchestrator.cs",
+            "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityRuntimeEvidenceCollector.cs",
+            "src/NextGenEmby.Native/NativePlaybackEngine.cpp",
+            "src/NextGenEmby.Native/Media/PlaybackGraph.cpp",
+            "src/NextGenEmby.Native/Media/HttpMediaInput.cpp"
+        };
+
         private static readonly string[] BufferingTargets =
         {
             "src/NextGenEmby.Native/Media/PlaybackGraph.cpp",
@@ -80,6 +89,8 @@ namespace NextGenEmby.Core.PlaybackQuality
                     return ColorPipelineTargets;
                 case "startup":
                     return StartupTargets;
+                case "error-handling":
+                    return ErrorHandlingTargets;
                 case "buffering":
                     return BufferingTargets;
                 case "timeline":
@@ -107,6 +118,11 @@ namespace NextGenEmby.Core.PlaybackQuality
             if (StartsWithSignal(signal, "source."))
             {
                 return "unsupported-source";
+            }
+
+            if (StartsWithSignal(signal, "error."))
+            {
+                return "error-handling";
             }
 
             if (StartsWithSignal(signal, "startup."))

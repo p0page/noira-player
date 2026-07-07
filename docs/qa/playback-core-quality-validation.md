@@ -56,7 +56,7 @@ Use the App-free CLI to validate a playback reference corpus manifest before usi
 dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- validate-manifest --manifest docs\qa\playback-quality-reference-manifest.example.json --output manifest-validation.json
 ```
 
-The command emits `schemaVersion = 1`, `isValid`, `caseCount`, `tiers`, `categories`, `severities`, `stabilities`, `purposes`, `cases`, structured `errors`, and `coverage`. `cases` is a schedulable summary of caseId, uri, tier, category, severity, stability, purpose, and expected source metadata. Valid categories are `stable`, `challenge`, and `quarantine`; valid severities are `info`, `low`, `medium`, `high`, and `critical`; valid stabilities are `stable`, `variable`, `flaky`, and `unknown`. Legacy manifests without category/severity/stability are treated as `stable` / `medium` / `stable`. Invalid manifests return a non-zero exit code so automation can stop before collecting misleading playback evidence. `isValid = true` only means the manifest can be scheduled; `coverage.status = ready` means the corpus includes the required playback Core risk purposes for broad candidate evaluation: `sdr-smoke`, `hdr-output`, `hdr-force-sdr`, `dv-reject`, `dv-fallback`, `cadence-23.976`, `frame-pacing`, `av-sync`, `buffering`, `timeline`, `tracks`, and `subtitles`. If `coverage.status = incomplete`, the model should treat `coverage.missingPurposes` as a sample-corpus gap and avoid over-optimizing Core from a narrow corpus.
+The command emits `schemaVersion = 1`, `isValid`, `caseCount`, `tiers`, `categories`, `severities`, `stabilities`, `purposes`, `cases`, structured `errors`, and `coverage`. `cases` is a schedulable summary of caseId, uri, tier, category, severity, stability, purpose, and expected source metadata. Valid categories are `stable`, `challenge`, and `quarantine`; valid severities are `info`, `low`, `medium`, `high`, and `critical`; valid stabilities are `stable`, `variable`, `flaky`, and `unknown`. Legacy manifests without category/severity/stability are treated as `stable` / `medium` / `stable`. Invalid manifests return a non-zero exit code so automation can stop before collecting misleading playback evidence. `isValid = true` only means the manifest can be scheduled; `coverage.status = ready` means the corpus includes the required playback Core risk purposes for broad candidate evaluation: `sdr-smoke`, `hdr-output`, `hdr-force-sdr`, `dv-reject`, `dv-fallback`, `cadence-23.976`, `frame-pacing`, `av-sync`, `buffering`, `timeline`, `tracks`, `subtitles`, and `error-handling`. If `coverage.status = incomplete`, the model should treat `coverage.missingPurposes` as a sample-corpus gap and avoid over-optimizing Core from a narrow corpus.
 
 当前 `docs/qa/playback-quality-reference-manifest.example.json` 是可调度的默认参考 manifest。它包含 8 个 case：
 
@@ -266,7 +266,7 @@ Playback quality reports are optimized for model/agent consumption:
 - `PlaybackQualityReportComposer` is the App-free entry point that combines source, display, metrics, expected thresholds, evaluation, and model analysis in one call;
 - `PlaybackQualityReferenceCaseReportRequestFactory` converts a validated reference case and actual playback evidence into a composer request with `runId = caseId`;
 - `modelAnalysis.environment` exposes collector version, player core version, source revision, and build configuration so before/after report sets can be tied back to the Core revision that produced them;
-- `modelAnalysis.startup`, `modelAnalysis.source`, `modelAnalysis.tracks`, `modelAnalysis.colorPipeline`, `modelAnalysis.buffering`, and `modelAnalysis.avSync` summarize the raw report into status fields, evidence signals, and failed/mismatched signals so automated optimization can choose the right failure area before editing playback Core;
+- `modelAnalysis.startup`, `modelAnalysis.source`, `modelAnalysis.tracks`, `modelAnalysis.error`, `modelAnalysis.colorPipeline`, `modelAnalysis.buffering`, and `modelAnalysis.avSync` summarize the raw report into status fields, evidence signals, and failed/mismatched signals so automated optimization can choose the right failure area before editing playback Core;
 - `modelAnalysis.cadence` exposes the source/display refresh relationship, nearest 1x/2x/2.5x/3x/4x/5x target, Hz delta, tolerance, fractional 2.5x pulldown marker, and Kodi-style clock-speed adjustment used for frame cadence diagnosis;
 - `modelAnalysis.avSync.clockDeltaMs` 和 `driftDirection` 是从 `sync.videoPositionTicks - sync.audioClockTicks` 派生的方向化 A/V sync 诊断；它们帮助模型区分 `video-ahead`、`audio-ahead`、`aligned`，但不属于 `requiredSignals` 采集清单，缺少时应先补 clock telemetry；
 - `modelAnalysis.framePacing` exposes both the machine-readable failure pattern and normalized severity fields such as interval-to-frame ratios and dropped-frame percent, so automated optimization can compare stutter evidence across source frame rates;
@@ -278,6 +278,20 @@ Playback quality reports are optimized for model/agent consumption:
 - `PlaybackQualityRunComparator` compares baseline and candidate reports after a Core change and classifies the run as improved, regressed, mixed, unchanged, or insufficient evidence, including baseline/candidate run IDs, comparability checks, strong/partial/weak confidence, direct optimization action/risk, suggested next action, reasons, suite/case code targets, optional repeated-unchanged stall protection, matched/unmatched signal coverage, unmatched candidate failures, no-matching-signal evidence gaps, and a machine-readable keep/reject/split/collect-evidence decision;
 - `display.refreshRateHz` is treated as required evidence for diagnosing 23.976fps/24fps cadence issues and is exposed by native display status when HDMI mode data is available;
 - `limitations` prevents the model from inferring hardware facts that pure software telemetry cannot prove.
+
+## Error Handling Reports
+
+错误路径也必须输出标准 envelope，而不是只抛异常或留下缺失 telemetry。真实采集器或 probe 遇到打开失败、取消、超时、缺失文件、native 错误或明确拒播时，应使用：
+
+```csharp
+var result = PlaybackQualityRuntimeEvidenceCollector.ComposeErrorRunResult(
+    referenceCase,
+    error,
+    environment);
+```
+
+这类报告的 `report.result` 为 `error`，`report.error` 保留稳定错误信号。模型应优先读取 `error.code`、`error.operation`、`error.failureClass` 和 `error.failureArea`，再决定是修播放器 core、补 harness、换样本，还是标记当前 MVP 不支持。`error-handling` case 不要求 source/timing/startup 播放 telemetry；如果评测器要求这些信号，优先怀疑 required-signal policy 或 analyzer 规则错误。
+
 # Materialize Core Probe Report Set
 
 `materialize-core-probe-report-set` 是 v0.1 的第一条非 source-only、App-free、hardware-free core 评测路径：

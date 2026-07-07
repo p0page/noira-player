@@ -49,6 +49,7 @@ public sealed class PlaybackQualityReferenceManifestTests
         Assert.Contains("timeline", result.Coverage.MissingPurposes);
         Assert.Contains("tracks", result.Coverage.MissingPurposes);
         Assert.Contains("subtitles", result.Coverage.MissingPurposes);
+        Assert.Contains("error-handling", result.Coverage.MissingPurposes);
         Assert.Contains("reference manifest is missing required playback quality purposes", result.Coverage.Reasons);
         Assert.Contains("Add reference cases", result.Coverage.SuggestedNextAction);
     }
@@ -108,6 +109,10 @@ public sealed class PlaybackQualityReferenceManifestTests
             "subtitles/discovery",
             tier: 1,
             purpose: "subtitles"));
+        manifest.Cases.Add(CreateCase(
+            "errors/missing-file",
+            tier: 1,
+            purpose: "error-handling"));
 
         var result = PlaybackQualityReferenceManifestValidator.Validate(manifest);
 
@@ -120,6 +125,7 @@ public sealed class PlaybackQualityReferenceManifestTests
         Assert.Contains("timeline", result.Coverage.CoveredPurposes);
         Assert.Contains("tracks", result.Coverage.CoveredPurposes);
         Assert.Contains("subtitles", result.Coverage.CoveredPurposes);
+        Assert.Contains("error-handling", result.Coverage.CoveredPurposes);
         Assert.Contains("reference manifest covers required playback quality purposes", result.Coverage.Reasons);
     }
 
@@ -449,6 +455,37 @@ public sealed class PlaybackQualityReferenceManifestTests
             item.Stability == "variable" &&
             item.Status == "matched" &&
             item.ReportRunId == "netflix/chimera-4k-2398-hdr-pq");
+    }
+
+    [Fact]
+    public void ValidateReportSet_Accepts_Error_Handling_Report_Without_Source_Metadata()
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        var referenceCase = CreateCase(
+            "errors/missing-file",
+            tier: 1,
+            purpose: "error-handling");
+        manifest.Cases.Add(referenceCase);
+        var report = new PlaybackQualityReport
+        {
+            RunId = "errors/missing-file",
+            Result = "error",
+            Error = new PlaybackQualityError
+            {
+                Code = "source.open.missing-file",
+                Message = "The media file was not found.",
+                FailureClass = "sample issue",
+                FailureArea = "error-handling"
+            }
+        };
+
+        var validation = PlaybackQualityReferenceReportSetValidator.Validate(
+            manifest,
+            new[] { report });
+
+        Assert.True(validation.IsValid);
+        Assert.Equal(1, validation.MatchedCaseCount);
+        Assert.Empty(validation.Errors);
     }
 
     [Fact]
@@ -884,6 +921,22 @@ public sealed class PlaybackQualityReferenceManifestTests
         Assert.Contains("tracks.selectedAudioStreamIndex", requiredSignals);
         Assert.Contains("tracks.selectedSubtitleStreamIndex", requiredSignals);
         Assert.Contains("tracks.isSubtitleDisabled", requiredSignals);
+    }
+
+    [Fact]
+    public void RequiredSignalPolicy_Requires_Error_Signals_For_Error_Handling_Purpose()
+    {
+        var referenceCase = CreateCase(
+            "errors/missing-file",
+            tier: 1,
+            purpose: "error-handling");
+
+        var requiredSignals = PlaybackQualityRequiredSignalPolicy.CreateRequiredSignals(referenceCase);
+
+        Assert.Contains("error.code", requiredSignals);
+        Assert.Contains("error.message", requiredSignals);
+        Assert.Contains("error.failureClass", requiredSignals);
+        Assert.Contains("error.failureArea", requiredSignals);
     }
 
     [Fact]

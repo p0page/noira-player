@@ -1632,6 +1632,74 @@ try {
 }
 '@ | Set-Content -LiteralPath (Join-Path $runIdCandidateDir 'candidate-renamed.json') -Encoding UTF8
 
+    @'
+{
+  "runId": "errors/missing-file",
+  "metricVersion": "software-quality-v1",
+  "result": "error",
+  "environment": {
+    "playerCoreVersion": "core-baseline",
+    "sourceRevision": "baseline-revision",
+    "buildConfiguration": "Debug"
+  },
+  "error": {
+    "code": "source.open.missing-file",
+    "message": "The media file was not found.",
+    "operation": "open",
+    "exceptionType": "FileNotFoundException",
+    "failureClass": "sample issue",
+    "failureArea": "error-handling",
+    "isTerminal": true,
+    "isRetriable": false
+  },
+  "checks": [
+    {
+      "name": "PlaybackRuntimeError",
+      "signal": "error.code",
+      "status": "fail",
+      "failureArea": "error-handling",
+      "failureClass": "sample issue",
+      "expected": "playback operation completed",
+      "actual": "source.open.missing-file"
+    }
+  ]
+}
+'@ | Set-Content -LiteralPath (Join-Path $runIdBaselineDir 'error-baseline.json') -Encoding UTF8
+
+    @'
+{
+  "runId": "errors/missing-file",
+  "metricVersion": "software-quality-v1",
+  "result": "error",
+  "environment": {
+    "playerCoreVersion": "core-candidate",
+    "sourceRevision": "candidate-revision",
+    "buildConfiguration": "Debug"
+  },
+  "error": {
+    "code": "source.open.missing-file",
+    "message": "The media file was not found.",
+    "operation": "open",
+    "exceptionType": "FileNotFoundException",
+    "failureClass": "sample issue",
+    "failureArea": "error-handling",
+    "isTerminal": true,
+    "isRetriable": false
+  },
+  "checks": [
+    {
+      "name": "PlaybackRuntimeError",
+      "signal": "error.code",
+      "status": "fail",
+      "failureArea": "error-handling",
+      "failureClass": "sample issue",
+      "expected": "playback operation completed",
+      "actual": "source.open.missing-file"
+    }
+  ]
+}
+'@ | Set-Content -LiteralPath (Join-Path $runIdCandidateDir 'error-candidate.json') -Encoding UTF8
+
     Push-Location $repoRoot
     try {
         dotnet run `
@@ -1689,6 +1757,21 @@ try {
         "timeline",
         "tracks",
         "subtitles"
+      ],
+      "expected": {
+        "codec": "hevc",
+        "width": 3840,
+        "height": 2160,
+        "frameRate": 23.976,
+        "hdrKind": "Sdr"
+      }
+    },
+    {
+      "caseId": "errors/missing-file",
+      "uri": "https://example.invalid/errors/missing-file.mp4",
+      "tier": 1,
+      "purpose": [
+        "error-handling"
       ],
       "expected": {
         "codec": "hevc",
@@ -1761,13 +1844,14 @@ try {
 
     if ($null -eq $candidateEvaluation.activeGate.confidence -or
         $candidateEvaluation.activeGate.confidence.level -ne 'strong' -or
-        $candidateEvaluation.activeGate.confidence.strongCount -ne 1) {
+        $candidateEvaluation.activeGate.confidence.strongCount -ne 2) {
         throw 'Expected evaluate-candidate active gate to expose strong suite confidence.'
     }
 
     if ($null -eq $candidateEvaluation.activeGate.resultCounts -or
-        $candidateEvaluation.activeGate.resultCounts.totalCount -ne 1 -or
-        $candidateEvaluation.activeGate.resultCounts.improvedCount -ne 1) {
+        $candidateEvaluation.activeGate.resultCounts.totalCount -ne 2 -or
+        $candidateEvaluation.activeGate.resultCounts.improvedCount -ne 1 -or
+        $candidateEvaluation.activeGate.resultCounts.unchangedCount -ne 1) {
         throw 'Expected evaluate-candidate active gate to expose improved suite result counts.'
     }
 
@@ -1791,17 +1875,17 @@ try {
     }
 
     if ($null -eq $candidateEvaluation.baselineReportAnalysis -or
-        $candidateEvaluation.baselineReportAnalysis.totalReportCount -ne 1 -or
+        $candidateEvaluation.baselineReportAnalysis.totalReportCount -ne 2 -or
         $candidateEvaluation.baselineReportAnalysis.analyzedReportCount -ne 0 -or
-        $candidateEvaluation.baselineReportAnalysis.unavailableReportCount -ne 1 -or
+        $candidateEvaluation.baselineReportAnalysis.unavailableReportCount -ne 2 -or
         $candidateEvaluation.baselineReportAnalysis.blockedReportCount -ne 0) {
         throw 'Expected evaluate-candidate to summarize unavailable baseline report analysis for raw reports.'
     }
 
     if ($null -eq $candidateEvaluation.candidateReportAnalysis -or
-        $candidateEvaluation.candidateReportAnalysis.totalReportCount -ne 1 -or
+        $candidateEvaluation.candidateReportAnalysis.totalReportCount -ne 2 -or
         $candidateEvaluation.candidateReportAnalysis.analyzedReportCount -ne 0 -or
-        $candidateEvaluation.candidateReportAnalysis.unavailableReportCount -ne 1 -or
+        $candidateEvaluation.candidateReportAnalysis.unavailableReportCount -ne 2 -or
         $candidateEvaluation.candidateReportAnalysis.blockedReportCount -ne 0) {
         throw 'Expected evaluate-candidate to summarize unavailable candidate report analysis for raw reports.'
     }
@@ -1851,6 +1935,8 @@ try {
     $candidateWithoutEnvironment.PSObject.Properties.Remove('environment')
     $baselineWithoutEnvironment | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath (Join-Path $candidateEvaluationMissingEnvironmentBaselineDir 'baseline-a.json') -Encoding UTF8
     $candidateWithoutEnvironment | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath (Join-Path $candidateEvaluationMissingEnvironmentCandidateDir 'candidate-a.json') -Encoding UTF8
+    Copy-Item -LiteralPath (Join-Path $runIdBaselineDir 'error-baseline.json') -Destination (Join-Path $candidateEvaluationMissingEnvironmentBaselineDir 'error-baseline.json')
+    Copy-Item -LiteralPath (Join-Path $runIdCandidateDir 'error-candidate.json') -Destination (Join-Path $candidateEvaluationMissingEnvironmentCandidateDir 'error-candidate.json')
 
     Push-Location $repoRoot
     try {
@@ -1916,8 +2002,9 @@ try {
     }
 
     if ($null -eq $missingEnvironmentEvaluation.activeGate.resultCounts -or
-        $missingEnvironmentEvaluation.activeGate.resultCounts.totalCount -ne 1 -or
-        $missingEnvironmentEvaluation.activeGate.resultCounts.improvedCount -ne 1) {
+        $missingEnvironmentEvaluation.activeGate.resultCounts.totalCount -ne 2 -or
+        $missingEnvironmentEvaluation.activeGate.resultCounts.improvedCount -ne 1 -or
+        $missingEnvironmentEvaluation.activeGate.resultCounts.unchangedCount -ne 1) {
         throw 'Expected missing build identity active gate to keep suite result counts separate from evidence blockers.'
     }
 
@@ -1938,6 +2025,8 @@ try {
     $partialEnvironmentCandidate.PSObject.Properties.Remove('environment')
     $partialEnvironmentBaseline | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath (Join-Path $candidateEvaluationPartialEnvironmentBaselineDir 'baseline-a.json') -Encoding UTF8
     $partialEnvironmentCandidate | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath (Join-Path $candidateEvaluationPartialEnvironmentCandidateDir 'candidate-a.json') -Encoding UTF8
+    Copy-Item -LiteralPath (Join-Path $runIdBaselineDir 'error-baseline.json') -Destination (Join-Path $candidateEvaluationPartialEnvironmentBaselineDir 'error-baseline.json')
+    Copy-Item -LiteralPath (Join-Path $runIdCandidateDir 'error-candidate.json') -Destination (Join-Path $candidateEvaluationPartialEnvironmentCandidateDir 'error-candidate.json')
 
     Push-Location $repoRoot
     try {
@@ -2002,6 +2091,8 @@ try {
     $sameBuildCandidate.environment.buildConfiguration = $sameBuildBaseline.environment.buildConfiguration
     $sameBuildBaseline | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath (Join-Path $candidateEvaluationSameBuildBaselineDir 'baseline-a.json') -Encoding UTF8
     $sameBuildCandidate | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath (Join-Path $candidateEvaluationSameBuildCandidateDir 'candidate-a.json') -Encoding UTF8
+    Copy-Item -LiteralPath (Join-Path $runIdBaselineDir 'error-baseline.json') -Destination (Join-Path $candidateEvaluationSameBuildBaselineDir 'error-baseline.json')
+    Copy-Item -LiteralPath (Join-Path $runIdCandidateDir 'error-candidate.json') -Destination (Join-Path $candidateEvaluationSameBuildCandidateDir 'error-candidate.json')
 
     Push-Location $repoRoot
     try {
@@ -2318,6 +2409,8 @@ try {
   "modelAnalysis": {}
 }
 '@ | Set-Content -LiteralPath (Join-Path $candidateEvaluationEmptyAnalysisCandidateDir 'candidate-empty-analysis.json') -Encoding UTF8
+    Copy-Item -LiteralPath (Join-Path $runIdBaselineDir 'error-baseline.json') -Destination (Join-Path $candidateEvaluationEmptyAnalysisBaselineDir 'error-baseline.json')
+    Copy-Item -LiteralPath (Join-Path $runIdCandidateDir 'error-candidate.json') -Destination (Join-Path $candidateEvaluationEmptyAnalysisCandidateDir 'error-candidate.json')
 
     Push-Location $repoRoot
     try {
@@ -2615,6 +2708,7 @@ try {
   }
 }
 '@ | Set-Content -LiteralPath (Join-Path $baselineEvaluationBlockedAnalysisBaselineDir 'baseline-blocked-analysis.json') -Encoding UTF8
+    Copy-Item -LiteralPath (Join-Path $runIdBaselineDir 'error-baseline.json') -Destination (Join-Path $baselineEvaluationBlockedAnalysisBaselineDir 'error-baseline.json')
 
     Push-Location $repoRoot
     try {
@@ -2652,8 +2746,9 @@ try {
     }
 
     if ($null -eq $blockedBaselineAnalysisEvaluation.baselineReportAnalysis -or
-        $blockedBaselineAnalysisEvaluation.baselineReportAnalysis.totalReportCount -ne 1 -or
+        $blockedBaselineAnalysisEvaluation.baselineReportAnalysis.totalReportCount -ne 2 -or
         $blockedBaselineAnalysisEvaluation.baselineReportAnalysis.analyzedReportCount -ne 1 -or
+        $blockedBaselineAnalysisEvaluation.baselineReportAnalysis.unavailableReportCount -ne 1 -or
         $blockedBaselineAnalysisEvaluation.baselineReportAnalysis.blockedReportCount -ne 1) {
         throw 'Expected blocked baseline report-analysis output to summarize analyzed blocked baseline report.'
     }
@@ -2792,6 +2887,7 @@ try {
   }
 }
 '@ | Set-Content -LiteralPath (Join-Path $candidateEvaluationBlockedAnalysisCandidateDir 'candidate-blocked-analysis.json') -Encoding UTF8
+    Copy-Item -LiteralPath (Join-Path $runIdCandidateDir 'error-candidate.json') -Destination (Join-Path $candidateEvaluationBlockedAnalysisCandidateDir 'error-candidate.json')
 
     Push-Location $repoRoot
     try {
@@ -2845,9 +2941,9 @@ try {
     }
 
     if ($null -eq $blockedAnalysisEvaluation.candidateReportAnalysis -or
-        $blockedAnalysisEvaluation.candidateReportAnalysis.totalReportCount -ne 1 -or
+        $blockedAnalysisEvaluation.candidateReportAnalysis.totalReportCount -ne 2 -or
         $blockedAnalysisEvaluation.candidateReportAnalysis.analyzedReportCount -ne 1 -or
-        $blockedAnalysisEvaluation.candidateReportAnalysis.unavailableReportCount -ne 0 -or
+        $blockedAnalysisEvaluation.candidateReportAnalysis.unavailableReportCount -ne 1 -or
         $blockedAnalysisEvaluation.candidateReportAnalysis.blockedReportCount -ne 1) {
         throw 'Expected blocked report-analysis evaluate-candidate output to summarize analyzed blocked candidate report.'
     }
@@ -2915,6 +3011,8 @@ try {
     New-Item -ItemType Directory -Path $candidateEvaluationStallPreviousComparisonsDir | Out-Null
     Copy-Item -LiteralPath (Join-Path $runIdBaselineDir 'baseline-a.json') -Destination (Join-Path $candidateEvaluationStallBaselineDir 'baseline-a.json')
     Copy-Item -LiteralPath (Join-Path $runIdBaselineDir 'baseline-a.json') -Destination (Join-Path $candidateEvaluationStallCandidateDir 'candidate-a.json')
+    Copy-Item -LiteralPath (Join-Path $runIdBaselineDir 'error-baseline.json') -Destination (Join-Path $candidateEvaluationStallBaselineDir 'error-baseline.json')
+    Copy-Item -LiteralPath (Join-Path $runIdCandidateDir 'error-candidate.json') -Destination (Join-Path $candidateEvaluationStallCandidateDir 'error-candidate.json')
     $candidateEvaluationStallPreviousComparisonPath = Join-Path $candidateEvaluationStallPreviousComparisonsDir 'item-1\source-1.json'
     New-Item -ItemType Directory -Path (Split-Path -Parent $candidateEvaluationStallPreviousComparisonPath) | Out-Null
 
@@ -3108,7 +3206,8 @@ try {
         'buffering',
         'timeline',
         'tracks',
-        'subtitles'
+        'subtitles',
+        'error-handling'
     )
     foreach ($purpose in $requiredPurposes) {
         if (-not ($exampleManifestValidation.coverage.coveredPurposes -contains $purpose)) {
@@ -3180,6 +3279,13 @@ try {
         $_.expected.maxSeekPositionErrorMs -eq 500
     })) {
         throw 'Expected example reference manifest to include a local resume/seek timeline case.'
+    }
+
+    if (-not ($exampleManifestValidation.cases | Where-Object {
+        $_.caseId -eq 'local/missing-file-error-handling' -and
+        ($_.purpose -contains 'error-handling')
+    })) {
+        throw 'Expected example reference manifest to include a local error-handling case.'
     }
 
     Push-Location $repoRoot

@@ -57,5 +57,174 @@ namespace NextGenEmby.Core.PlaybackQuality
                     startup,
                     environment));
         }
+
+        public static PlaybackQualityRunResult ComposeErrorRunResult(
+            PlaybackQualityReferenceCase referenceCase,
+            PlaybackQualityError error,
+            PlaybackQualityEnvironment? environment = null)
+        {
+            if (referenceCase == null)
+            {
+                throw new ArgumentNullException(nameof(referenceCase));
+            }
+
+            if (error == null)
+            {
+                throw new ArgumentNullException(nameof(error));
+            }
+
+            var report = new PlaybackQualityReport
+            {
+                RunId = referenceCase.CaseId ?? "",
+                Expected = CloneExpected(referenceCase.Expected),
+                Environment = MergeEnvironment(environment),
+                Result = "error",
+                Error = CloneError(error)
+            };
+            report.Error.FailureArea = string.IsNullOrWhiteSpace(report.Error.FailureArea)
+                ? "error-handling"
+                : report.Error.FailureArea;
+
+            var failureClass = string.IsNullOrWhiteSpace(report.Error.FailureClass)
+                ? "needs human confirmation"
+                : report.Error.FailureClass;
+            var message = FormatErrorMessage(report.Error);
+            report.FailureReasons.Add(message);
+            report.Analysis.PrimaryFailureArea = report.Error.FailureArea;
+            report.Analysis.SuggestedNextAction =
+                "Inspect runtime playback error evidence before interpreting playback-quality metrics.";
+            AddErrorSignal(report, "error.code");
+            AddErrorSignal(report, "error.message");
+            AddErrorSignal(report, "error.operation");
+            AddErrorSignal(report, "error.exceptionType");
+            AddErrorSignal(report, "error.failureClass");
+            AddErrorSignal(report, "error.failureArea");
+
+            report.Checks.Add(new PlaybackQualityCheck
+            {
+                Name = "PlaybackRuntimeError",
+                Signal = "error.code",
+                Status = "fail",
+                FailureArea = report.Error.FailureArea,
+                FailureClass = failureClass,
+                Expected = "playback operation completed",
+                Actual = report.Error.Code,
+                Message = message
+            });
+
+            return new PlaybackQualityRunResult(
+                report,
+                PlaybackQualityReportAnalyzer.Analyze(report),
+                CreateCaseMetadata(referenceCase));
+        }
+
+        private static void AddErrorSignal(
+            PlaybackQualityReport report,
+            string signal)
+        {
+            if (!report.Analysis.RelevantSignals.Contains(signal))
+            {
+                report.Analysis.RelevantSignals.Add(signal);
+            }
+        }
+
+        private static string FormatErrorMessage(PlaybackQualityError error)
+        {
+            var code = string.IsNullOrWhiteSpace(error.Code)
+                ? "runtime.error"
+                : error.Code;
+            if (string.IsNullOrWhiteSpace(error.Message))
+            {
+                return code;
+            }
+
+            return code + ": " + error.Message;
+        }
+
+        private static PlaybackQualityError CloneError(PlaybackQualityError source)
+        {
+            return new PlaybackQualityError
+            {
+                Code = source.Code,
+                Message = source.Message,
+                Operation = source.Operation,
+                ExceptionType = source.ExceptionType,
+                FailureClass = source.FailureClass,
+                FailureArea = source.FailureArea,
+                IsTerminal = source.IsTerminal,
+                IsRetriable = source.IsRetriable
+            };
+        }
+
+        private static PlaybackQualityCaseMetadata CreateCaseMetadata(
+            PlaybackQualityReferenceCase referenceCase)
+        {
+            return new PlaybackQualityCaseMetadata
+            {
+                CaseId = referenceCase.CaseId ?? "",
+                Category = string.IsNullOrWhiteSpace(referenceCase.Category)
+                    ? "stable"
+                    : referenceCase.Category,
+                Severity = string.IsNullOrWhiteSpace(referenceCase.Severity)
+                    ? "medium"
+                    : referenceCase.Severity,
+                Stability = string.IsNullOrWhiteSpace(referenceCase.Stability)
+                    ? "stable"
+                    : referenceCase.Stability
+            };
+        }
+
+        private static PlaybackQualityEnvironment MergeEnvironment(
+            PlaybackQualityEnvironment? environment)
+        {
+            return new PlaybackQualityEnvironment
+            {
+                CollectorVersion = environment?.CollectorVersion ?? "",
+                PlayerCoreVersion = environment?.PlayerCoreVersion ?? "",
+                SourceRevision = environment?.SourceRevision ?? "",
+                BuildConfiguration = environment?.BuildConfiguration ?? ""
+            };
+        }
+
+        private static PlaybackQualityExpected CloneExpected(
+            PlaybackQualityExpected source)
+        {
+            if (source == null)
+            {
+                return new PlaybackQualityExpected();
+            }
+
+            return new PlaybackQualityExpected
+            {
+                Codec = source.Codec,
+                Width = source.Width,
+                Height = source.Height,
+                FrameRate = source.FrameRate,
+                HdrKind = source.HdrKind,
+                HdrPlaybackStrategy = source.HdrPlaybackStrategy,
+                IsHdr = source.IsHdr,
+                IsDirectPlayable = source.IsDirectPlayable,
+                IsDolbyVision = source.IsDolbyVision,
+                DolbyVisionProfile = source.DolbyVisionProfile,
+                DolbyVisionCompatibilityId = source.DolbyVisionCompatibilityId,
+                HasHdr10BaseLayer = source.HasHdr10BaseLayer,
+                HasHlgBaseLayer = source.HasHlgBaseLayer,
+                HdrOutput = source.HdrOutput,
+                DxgiInput = source.DxgiInput,
+                DxgiOutput = source.DxgiOutput,
+                MaxStartupDurationMs = source.MaxStartupDurationMs,
+                MinRenderedVideoFrames = source.MinRenderedVideoFrames,
+                MaxDroppedFrames = source.MaxDroppedFrames,
+                MaxFrameGapMs = source.MaxFrameGapMs,
+                MaxRenderIntervalMsP95 = source.MaxRenderIntervalMsP95,
+                MaxRenderIntervalMsP99 = source.MaxRenderIntervalMsP99,
+                MaxAudioVideoDriftMsP95 = source.MaxAudioVideoDriftMsP95,
+                MaxSeekPositionErrorMs = source.MaxSeekPositionErrorMs,
+                MaxVideoStarvedPasses = source.MaxVideoStarvedPasses,
+                MaxAudioStarvedPasses = source.MaxAudioStarvedPasses,
+                RequireValidatedConversion = source.RequireValidatedConversion,
+                RequireMatchedDisplayRefreshRate = source.RequireMatchedDisplayRefreshRate
+            };
+        }
     }
 }

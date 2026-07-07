@@ -222,7 +222,11 @@ namespace NextGenEmby.Core.PlaybackQuality
                     ReportRunId = report.RunId,
                     Status = "matched"
                 };
-                ValidateSource(validation, status, referenceCase.Expected, report);
+                if (!IsErrorHandlingReport(referenceCase, report))
+                {
+                    ValidateSource(validation, status, referenceCase.Expected, report);
+                }
+
                 ValidateRequiredSignals(validation, status, referenceCase, entry);
                 if (status.Signals.Count > 0)
                 {
@@ -250,6 +254,16 @@ namespace NextGenEmby.Core.PlaybackQuality
         private static string NormalizeCaseStability(string stability)
         {
             return string.IsNullOrWhiteSpace(stability) ? "stable" : stability;
+        }
+
+        private static bool IsErrorHandlingReport(
+            PlaybackQualityReferenceCase referenceCase,
+            PlaybackQualityReport report)
+        {
+            return referenceCase != null &&
+                report != null &&
+                string.Equals(report.Result, "error", StringComparison.OrdinalIgnoreCase) &&
+                referenceCase.Purpose.Contains("error-handling");
         }
 
         private static void ValidateSource(
@@ -600,6 +614,14 @@ namespace NextGenEmby.Core.PlaybackQuality
                     "unsupported-source",
                     "Verify media source selection, codec support, HDR/Dolby Vision classification, and fallback policy before tuning playback timing.",
                     PlaybackQualityCodeTargetCatalog.GetForFailureArea("unsupported-source"));
+            }
+
+            if (StartsWithSignal(signal, "error."))
+            {
+                return NewTriage(
+                    "error-handling",
+                    "Collect runtime open, cancel, timeout, source availability, and native error evidence before interpreting playback-quality metrics.",
+                    PlaybackQualityCodeTargetCatalog.GetForFailureArea("error-handling"));
             }
 
             if (StartsWithSignal(signal, "startup."))

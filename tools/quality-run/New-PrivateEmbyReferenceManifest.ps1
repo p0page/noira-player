@@ -390,6 +390,32 @@ function New-ReferenceCase(
     [pscustomobject]$case
 }
 
+function New-ErrorHandlingReferenceCase {
+    [pscustomobject][ordered]@{
+        caseId = 'private-emby/error-handling/missing-file'
+        category = 'stable'
+        severity = 'medium'
+        stability = 'stable'
+        uri = 'emby://quality-cases/missing-file-error-handling'
+        itemId = 'quality-case-missing-file-error-handling'
+        mediaSourceId = 'quality-source-missing-file-error-handling'
+        tier = 1
+        purpose = @('error-handling')
+        expected = [pscustomobject][ordered]@{
+            codec = 'hevc'
+            width = 1920
+            height = 1080
+            frameRate = 60.0
+            hdrKind = 'Sdr'
+            isDirectPlayable = $true
+            expectedHdrOutput = 'Sdr'
+            dxgiInputColorSpace = 'RGB_FULL_G22_NONE_P709'
+            dxgiOutputColorSpace = 'RGB_FULL_G22_NONE_P709'
+            requireValidatedConversion = $false
+        }
+    }
+}
+
 function ConvertTo-Candidates([object[]]$Items) {
     $candidates = @()
     foreach ($item in $Items) {
@@ -561,6 +587,8 @@ function New-ReferenceManifest([object[]]$Items) {
     if ($null -ne $cadence) {
         $cases += New-ReferenceCase $cadence 'cadence-23976' @('cadence-23.976', 'frame-pacing') 2 $false $true
     }
+
+    $cases += New-ErrorHandlingReferenceCase
 
     [pscustomobject][ordered]@{
         schemaVersion = 1
