@@ -176,6 +176,17 @@ namespace NextGenEmby.Core.PlaybackQuality
                 AddUnique(summary.Signals, signal);
             }
 
+            if (comparison.Environment.Status == "missing-evidence" ||
+                comparison.Environment.Status == "partial")
+            {
+                AddUnique(summary.EnvironmentSignals, "environment.identity");
+                AddUnique(summary.Signals, "environment.identity");
+                AddUnique(summary.Blockers, "environment.evidence-missing");
+                AddUnique(
+                    summary.Reasons,
+                    "comparison is missing complete baseline and candidate build identity");
+            }
+
             foreach (var improvement in comparison.Improvements)
             {
                 AddUnique(summary.Signals, improvement.Signal);
@@ -273,6 +284,9 @@ namespace NextGenEmby.Core.PlaybackQuality
             PlaybackQualityComparisonSuite suite,
             PlaybackQualityRunComparison comparison)
         {
+            AddUnique(suite.Environment.Signals, "environment.identity");
+            AddUnique(suite.Signals, "environment.identity");
+
             foreach (var signal in comparison.Environment.Signals)
             {
                 AddUnique(suite.Environment.Signals, signal);
@@ -521,6 +535,18 @@ namespace NextGenEmby.Core.PlaybackQuality
                 suite.Risk = "high";
                 AddUnique(suite.Blockers, "suite.weak-evidence");
                 AddUnique(suite.Reasons, "suite contains weak or insufficient comparison evidence");
+                return;
+            }
+
+            if (suite.Environment.MissingEvidenceCount > 0 ||
+                suite.Environment.PartialCount > 0)
+            {
+                suite.Action = "collect-comparable-evidence";
+                suite.Risk = "high";
+                AddUnique(suite.Blockers, "suite.environment-evidence-missing");
+                AddUnique(
+                    suite.Reasons,
+                    "suite contains comparisons without complete baseline and candidate build identity");
                 return;
             }
 

@@ -153,6 +153,34 @@ public sealed class PlaybackQualityComparisonSuiteTests
     }
 
     [Fact]
+    public void Summarize_CollectsEvidence_When_Build_Identity_Is_Missing()
+    {
+        var baseline = Report(
+            "baseline",
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "180.000"));
+        var candidate = Report(
+            "candidate",
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "120.000"));
+        baseline.Environment = new PlaybackQualityEnvironment();
+        candidate.Environment = new PlaybackQualityEnvironment();
+
+        var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
+        comparison.CaseId = "missing-env/case.json";
+
+        var suite = PlaybackQualityComparisonSuiteAggregator.Summarize(new[] { comparison });
+
+        Assert.Equal("collect-comparable-evidence", suite.Action);
+        Assert.Equal("high", suite.Risk);
+        Assert.Equal(1, suite.Environment.MissingEvidenceCount);
+        Assert.Contains("suite.environment-evidence-missing", suite.Blockers);
+        Assert.Contains("environment.identity", suite.Environment.Signals);
+        Assert.Contains("missing-env/case.json", suite.TargetCaseIds);
+        var nextAction = Assert.Single(suite.NextActions);
+        Assert.Contains("missing-env/case.json", nextAction.CaseIds);
+        Assert.Contains("environment.identity", nextAction.Signals);
+    }
+
+    [Fact]
     public void Summarize_Emits_NextAction_For_Evidence_Blockers()
     {
         var weak = PlaybackQualityRunComparator.Compare(
@@ -319,6 +347,9 @@ public sealed class PlaybackQualityComparisonSuiteTests
         params PlaybackQualityCheck[] checks)
     {
         var report = new PlaybackQualityReport { RunId = runId };
+        report.Environment.PlayerCoreVersion = "core-" + runId;
+        report.Environment.SourceRevision = "revision-" + runId;
+        report.Environment.BuildConfiguration = "Debug";
         report.Source.ItemId = "item-1";
         report.Source.MediaSourceId = "source-1";
         report.Source.FrameRate = 23.976;

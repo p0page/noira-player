@@ -79,6 +79,11 @@ try {
   "runId": "baseline",
   "metricVersion": "software-quality-v1",
   "result": "fail",
+  "environment": {
+    "playerCoreVersion": "core-baseline",
+    "sourceRevision": "baseline-revision",
+    "buildConfiguration": "Debug"
+  },
   "source": {
     "itemId": "item-1",
     "mediaSourceId": "source-1",
@@ -112,6 +117,11 @@ try {
   "runId": "candidate",
   "metricVersion": "software-quality-v1",
   "result": "fail",
+  "environment": {
+    "playerCoreVersion": "core-candidate",
+    "sourceRevision": "candidate-revision",
+    "buildConfiguration": "Debug"
+  },
   "source": {
     "itemId": "item-1",
     "mediaSourceId": "source-1",
@@ -952,6 +962,11 @@ try {
 {
   "runId": "item-1/source-1",
   "metricVersion": "software-quality-v1",
+  "environment": {
+    "playerCoreVersion": "core-baseline",
+    "sourceRevision": "baseline-revision",
+    "buildConfiguration": "Debug"
+  },
   "source": {
     "itemId": "item-1",
     "mediaSourceId": "source-1",
@@ -1003,6 +1018,11 @@ try {
 {
   "runId": "item-1/source-1",
   "metricVersion": "software-quality-v1",
+  "environment": {
+    "playerCoreVersion": "core-candidate",
+    "sourceRevision": "candidate-revision",
+    "buildConfiguration": "Debug"
+  },
   "source": {
     "itemId": "item-1",
     "mediaSourceId": "source-1",
