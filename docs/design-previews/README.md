@@ -19,7 +19,8 @@ Current design direction. Scratch rendered previews exist outside the repo for r
 - This direction uses the Apple TV/Xbox references as usage logic for artwork-backed materials, not as layouts to copy.
 - Next previews must follow the streaming/personal media client research in `../design-research/2026-07-07-tv-streaming-and-personal-media-clients.md`: Home is a high-throughput personal media dashboard, Continue Watching is a rail/list, and navigation must support a left source-guide or source-hub model for the full Emby destination family.
 - Blur-backed regions must map to real Emby artwork candidates: `Backdrop`, `Thumb`, `Banner`, or sometimes `Primary`. No candidate means matte fallback.
-- Every A3 preview must show three asset-availability states: rich `Backdrop`/`Thumb`, only `Primary`, and no usable artwork.
+- Every A3 preview for cards, rows, library, and home systems must show three asset-availability states: rich `Backdrop`/`Thumb`, only `Primary`, and no usable artwork.
+- Details pages are the exception: they use one right-side atmosphere zone. Use `Backdrop`, `Thumb`, `Banner`, or cropped `Primary` as atmosphere; if no image exists, leave the page on black/matte canvas. Do not create a separate poster fallback panel, no-art identity panel, title watermark, or generated placeholder art for details.
 
 Risk: the next preview must prove that blur is meaningful only over real artwork, that matte fallback states still look intentional when no backdrop exists, and that the matte main surface does not become flat or generic.
 

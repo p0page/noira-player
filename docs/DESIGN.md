@@ -501,6 +501,24 @@ Visual rules:
 - The focus treatment remains neutral even when the focused action is Play or Resume.
 - If an action is unavailable, keep the rest of the row aligned; do not let hidden controls collapse the primary Play target.
 
+### Details Artwork Zone
+
+Movie and episode details use an atmosphere-first artwork zone on the right side of the page. This zone is not a poster viewer and not a metadata panel. Its job is to give the page cinematic mood while the left/middle content column carries deterministic information: title, metadata, overview, Play/Resume, version, audio, subtitles, media-source count, and subtitle count.
+
+Source priority:
+
+- Prefer `Backdrop`, then `Thumb`, then `Banner`, then `Primary`.
+- Any available image may be cropped, enlarged, darkened, feathered, and lightly blurred because the zone is atmosphere, not a complete-image presentation.
+- `Primary` is allowed as a details atmosphere source. Do not add a separate visible poster fallback or duplicate poster thumbnail just because the source image is portrait.
+- If no candidate image exists, the right side falls back to the normal black/matte canvas with the same scrim gradient. Do not add generated placeholder art, large title watermarks, abstract gradients, or a special no-art identity panel.
+
+Visual rules:
+
+- The artwork zone should fade into the content column with black scrim, preserving title and selector readability.
+- It may leave quiet negative space when the selected artwork composition supports it. Do not fill the right side with extra controls merely to avoid emptiness.
+- Playback decision controls remain in the content column and should not migrate into the artwork zone.
+- The no-art state should look like a calm dark-room page, not like a broken image slot and not like a settings page.
+
 ### Cards
 
 Media cards are artwork-first. The artwork crop, title, progress, and borderless focus treatment are the card's identity.
@@ -574,7 +592,7 @@ Every artwork-backed material in a mockup or implementation review must name its
 
 Artwork-backed blur is allowed only after a matching `EmbyArtworkPolicy` candidate exists:
 
-- Hero and details backdrop source: `Backdrop`, then `Thumb`, then `Banner`, then `Primary`.
+- Hero and details atmosphere source: `Backdrop`, then `Thumb`, then `Banner`, then `Primary`.
 - Item wide-card source: `Thumb`, then `Backdrop`, then `Banner`, then `Primary`.
 - Library and server-section wide-card source: `Thumb`, then `Backdrop`, then `Banner`, then `Primary` from the library view or section parent item.
 - Poster-card source: `Primary`, then `Thumb`, then `Backdrop`; use it as poster artwork, not as a page blur source unless it is the focused item and the crop remains recognizable.
@@ -583,7 +601,9 @@ Artwork-backed blur is allowed only after a matching `EmbyArtworkPolicy` candida
 Fallback rules:
 
 - If no candidate exists, use matte `surface`/`surface_overlay`; do not blur, synthesize, or substitute abstract artwork.
+- For details-page atmosphere specifically, if no candidate exists, use the black/matte canvas with the same scrim behavior. Do not create a special placeholder illustration, typographic poster, title watermark, or no-art information panel.
 - If the only candidate is `Primary` and the target is a wide resume card, crop `Primary` directly into the wide card. Keep the crop center-stable unless the app later has reliable focal-point metadata. Do not add a secondary mini-poster inside the card. If the cropped artwork becomes unusably blank or text-only, fall back to matte rather than inventing generated art.
+- If the only candidate is `Primary` and the target is the details artwork zone, crop and darken `Primary` as atmosphere. Do not preserve poster completeness at the cost of the details layout.
 - Child item artwork can populate child cards. It must not become the parent section's persistent blur background unless the section or parent has no usable artwork and the view explicitly presents that child item as the active subject.
 - Playback OSD may sample the live video layer only if the platform compositor provides it cheaply and reliably. Otherwise use matte `surface_overlay`; do not require video-frame extraction from Emby.
 - Live TV and program surfaces may use available channel/program artwork, but must assume sparse images and keep matte fallbacks visually first-class.
@@ -591,12 +611,12 @@ Fallback rules:
 Rules:
 
 - Visual reviews must include at least one realistic poster stress-test screen, not only abstract landscapes, grayscale placeholders, or component boards. Use fictional but movie-like covers with faces, typography blocks, high-contrast crops, saturated content color, and varied genres to test whether chrome, focus, artwork-backed blur, and OSD remain legible.
-- Visual reviews must include three artwork-availability states: rich `Backdrop`/`Thumb` available, only `Primary` available, and no usable artwork. The matte fallback must feel designed, not like a broken cinematic layout.
+- Visual reviews for card, row, library, and home systems must include three artwork-availability states: rich `Backdrop`/`Thumb` available, only `Primary` available, and no usable artwork. Details-page reviews should instead validate the single atmosphere-zone rule across arbitrary image sizes plus the no-image black/matte state; do not create separate poster or no-art identity concepts for details.
 - Backdrops may be used as wide environmental washes only when they are darkened, cropped, and protected by scrim.
-- Poster and backdrop artwork should keep recognizable subject matter when they are presented as artwork. `Primary` cropped into a wide resume card is allowed even though it can lose part of the poster composition; compensate with title readability, progress clarity, and selected-state emphasis instead of adding a second visible poster.
+- Poster and backdrop artwork should keep recognizable subject matter when they are presented as artwork. `Primary` cropped into a wide resume card or details atmosphere zone is allowed even though it can lose part of the poster composition; compensate with title readability, progress clarity, selected-state emphasis, and scrim rather than adding a second visible poster.
 - Use one artwork-driven accent at most per view, and only if it does not conflict with `primary`, `secondary`, or state colors.
 - Never use AI-generated abstract gradients as a fallback for missing media.
-- Missing artwork fallback is a matte surface with text and a small media-type icon.
+- Missing artwork fallback is a matte surface with text and a small media-type icon for cards and library tiles. Details pages use black/matte canvas instead.
 - Server-configured home section cards use the section or parent item artwork first, especially `Thumb`, `Backdrop`, `Banner`, and `Primary` in that order for wide cards. Child item artwork is only a fallback when the section itself has no consumable image.
 - Details organize sheets use the destination item artwork first for collection and playlist rows, with the same wide-card preference: `Thumb`, `Backdrop`, `Banner`, then `Primary`. Child item posters are not the primary visual source for these rows.
 
