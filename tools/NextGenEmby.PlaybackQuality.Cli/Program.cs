@@ -1320,6 +1320,10 @@ internal static class Program
                 AddUnique(gate.Signals, error.Signal);
                 AddUnique(gate.CaseIds, error.CaseId);
             }
+
+            MarkWeakGateConfidence(
+                gate,
+                "manifest validation failed before comparison evidence was usable");
         }
 
         return gate;
@@ -1360,6 +1364,9 @@ internal static class Program
             AddUnique(gate.Signals, purpose);
         }
 
+        MarkWeakGateConfidence(
+            gate,
+            "manifest coverage is incomplete before comparison evidence is usable");
         return gate;
     }
 
@@ -1395,6 +1402,10 @@ internal static class Program
                     gate.CodeTargets,
                     "evidence-collection");
             }
+
+            MarkWeakGateConfidence(
+                gate,
+                name + " validation failed before comparison evidence was usable");
         }
 
         return gate;
@@ -1454,6 +1465,13 @@ internal static class Program
             PlaybackQualityCodeTargetCatalog.AddForFailureArea(
                 gate.CodeTargets,
                 "evidence-collection");
+        }
+
+        if (gate.Status == "blocked")
+        {
+            MarkWeakGateConfidence(
+                gate,
+                label + " blocked playback Core optimization evidence");
         }
 
         if (summary.AnalyzedReportCount == 0)
@@ -1677,6 +1695,7 @@ internal static class Program
         CopyValues(suite.TargetFailureAreas, gate.TargetFailureAreas);
         CopyValues(suite.TargetCaseIds, gate.TargetCaseIds);
         CopyValues(suite.CodeTargets, gate.CodeTargets);
+        ApplySuiteGateConfidence(gate, suite);
         gate.Environment = suite.Environment;
         foreach (var summary in suite.Cases)
         {
@@ -1700,7 +1719,52 @@ internal static class Program
         AddUnique(
             gate.SuggestedNextActions,
             "Resolve earlier evidence gates before running the comparison suite.");
+        MarkWeakGateConfidence(
+            gate,
+            "comparison suite was skipped because earlier evidence gates failed");
         return gate;
+    }
+
+    private static void ApplySuiteGateConfidence(
+        CandidateEvaluationGate gate,
+        PlaybackQualityComparisonSuite suite)
+    {
+        gate.Confidence.TotalCount = suite.TotalComparisonCount;
+        gate.Confidence.StrongCount = suite.StrongConfidenceCount;
+        gate.Confidence.PartialCount = suite.PartialConfidenceCount;
+        gate.Confidence.WeakCount = suite.WeakConfidenceCount;
+        gate.Confidence.InsufficientEvidenceCount = suite.InsufficientEvidenceCount;
+
+        if (suite.WeakConfidenceCount > 0 || suite.InsufficientEvidenceCount > 0)
+        {
+            gate.Confidence.Level = "weak";
+        }
+        else if (suite.PartialConfidenceCount > 0)
+        {
+            gate.Confidence.Level = "partial";
+        }
+        else if (suite.StrongConfidenceCount > 0)
+        {
+            gate.Confidence.Level = "strong";
+        }
+        else
+        {
+            gate.Confidence.Level = "weak";
+        }
+
+        CopyValues(suite.Signals, gate.Confidence.Signals);
+        CopyValues(suite.Reasons, gate.Confidence.Reasons);
+        CopyValues(suite.Blockers, gate.Confidence.Reasons);
+    }
+
+    private static void MarkWeakGateConfidence(
+        CandidateEvaluationGate gate,
+        string reason)
+    {
+        gate.Confidence.Level = "weak";
+        AddUnique(gate.Confidence.Reasons, reason);
+        CopyValues(gate.Signals, gate.Confidence.Signals);
+        CopyValues(gate.Blockers, gate.Confidence.Reasons);
     }
 
     private static CandidateEvaluationGate SelectActiveGate(
@@ -1933,6 +1997,8 @@ internal static class Program
         public string Status { get; set; } = "";
         public string Action { get; set; } = "";
         public string Summary { get; set; } = "";
+        public CandidateEvaluationGateConfidence Confidence { get; set; } =
+            new CandidateEvaluationGateConfidence();
         public List<string> Blockers { get; } = new List<string>();
         public List<string> Signals { get; } = new List<string>();
         public PlaybackQualityComparisonSuiteEnvironment? Environment { get; set; }
@@ -1942,6 +2008,18 @@ internal static class Program
         public List<string> CaseIds { get; } = new List<string>();
         public List<string> CodeTargets { get; } = new List<string>();
         public List<string> SuggestedNextActions { get; } = new List<string>();
+    }
+
+    private sealed class CandidateEvaluationGateConfidence
+    {
+        public string Level { get; set; } = "";
+        public int TotalCount { get; set; }
+        public int StrongCount { get; set; }
+        public int PartialCount { get; set; }
+        public int WeakCount { get; set; }
+        public int InsufficientEvidenceCount { get; set; }
+        public List<string> Signals { get; } = new List<string>();
+        public List<string> Reasons { get; } = new List<string>();
     }
 
     private sealed class PlaybackQualityRunPlan

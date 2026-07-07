@@ -1297,6 +1297,12 @@ try {
         throw 'Expected evaluate-candidate active gate to point at passing suite decision.'
     }
 
+    if ($null -eq $candidateEvaluation.activeGate.confidence -or
+        $candidateEvaluation.activeGate.confidence.level -ne 'strong' -or
+        $candidateEvaluation.activeGate.confidence.strongCount -ne 1) {
+        throw 'Expected evaluate-candidate active gate to expose strong suite confidence.'
+    }
+
     if ($null -eq $candidateEvaluation.baselineReportAnalysis -or
         $candidateEvaluation.baselineReportAnalysis.totalReportCount -ne 1 -or
         $candidateEvaluation.baselineReportAnalysis.analyzedReportCount -ne 0 -or
@@ -1409,6 +1415,12 @@ try {
 
     if (-not ($missingEnvironmentEvaluation.activeGate.codeTargets -contains 'src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs')) {
         throw 'Expected missing build identity active gate to include evidence collection code target.'
+    }
+
+    if ($null -eq $missingEnvironmentEvaluation.activeGate.confidence -or
+        $missingEnvironmentEvaluation.activeGate.confidence.level -ne 'weak' -or
+        $missingEnvironmentEvaluation.activeGate.confidence.weakCount -ne 1) {
+        throw 'Expected missing build identity active gate to expose weak suite confidence.'
     }
 
     New-Item -ItemType Directory -Path $candidateEvaluationPartialEnvironmentBaselineDir | Out-Null
@@ -1753,6 +1765,11 @@ try {
         $emptyAnalysisEvaluation.activeGate.name -ne 'baseline-report-analysis' -or
         $emptyAnalysisEvaluation.activeGate.status -ne 'blocked') {
         throw 'Expected incomplete model analysis evaluate-candidate active gate to block baseline report-analysis.'
+    }
+
+    if ($null -eq $emptyAnalysisEvaluation.activeGate.confidence -or
+        $emptyAnalysisEvaluation.activeGate.confidence.level -ne 'weak') {
+        throw 'Expected blocked report-analysis active gate to expose weak evidence confidence.'
     }
 
     if ($null -eq $emptyAnalysisEvaluation.baselineReportAnalysis -or
