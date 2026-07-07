@@ -2,6 +2,12 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-08 更新：report-analysis summary 聚合证据来源和限制
+
+`analyze-report-set` 的集合级 JSON 现在会输出 `evidenceSources[]` 和 `limitations[]`。`evidenceSources[]` 聚合每个报告里明确的 `runtimeMetrics.providerStatus`，例如 `source-only` 或 `core-probe:returned-snapshot`；默认 `unknown` 不会被当成证据来源。`limitations[]` 聚合 report-level limitation，模型不需要展开每个 case 就能看到当前报告集是否来自 source-only、core-probe、native-harness import/skip 或其他受限采集路径。
+
+边界：这是模型消费契约增强，不改变播放行为、native graph、阈值、expected behavior、report-set pass/fail 或候选采纳规则。`core-probe:returned-snapshot` 仍只证明 deterministic in-process probe 产生了软件诊断指标，不证明真实 native decode/render、HDMI 输出、颜色准确性或 A/V sync 真实表现。
+
 ## 2026-07-08 更新：runtime metrics 采集状态进入 playable report-set gate
 
 `PlaybackQualityRequiredSignalPolicy` 现在会对非 error、非明确 unsupported 的可播放 case 要求 `runtimeMetrics.status`、`runtimeMetrics.providerStatus`、`runtimeMetrics.hasSnapshot` 和 `runtimeMetrics.hasPlaybackSample`。这让 report-set validation 可以在比较或候选评测前识别“报告缺少 runtime metrics 采集状态”这一类 instrumentation 缺口。

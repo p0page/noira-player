@@ -2362,6 +2362,8 @@ internal static class Program
                 CaseId = GetReportEnvelopeCaseId(envelope),
                 HasModelAnalysis = envelope.ModelAnalysis != null
             };
+            AddReportAnalysisEvidenceSource(summary, envelope.Report);
+            CopyValues(envelope.Report.Limitations, summary.Limitations);
 
             if (envelope.ModelAnalysis == null)
             {
@@ -2430,6 +2432,21 @@ internal static class Program
         ApplyReportAnalysisDecision(summary);
         AddReportAnalysisNextAction(summary);
         return summary;
+    }
+
+    private static void AddReportAnalysisEvidenceSource(
+        ReportAnalysisSummary summary,
+        PlaybackQualityReport report)
+    {
+        var providerStatus = report.RuntimeMetrics.ProviderStatus;
+        if (!string.IsNullOrWhiteSpace(providerStatus) &&
+            !string.Equals(
+                providerStatus,
+                "unknown",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            AddUnique(summary.EvidenceSources, providerStatus);
+        }
     }
 
     private static void AddReportAnalysisSummaryEvidence(
@@ -3572,6 +3589,8 @@ internal static class Program
         public List<string> TargetCaseIds { get; } = new List<string>();
         public List<string> CodeTargets { get; } = new List<string>();
         public List<string> SuggestedNextActions { get; } = new List<string>();
+        public List<string> EvidenceSources { get; } = new List<string>();
+        public List<string> Limitations { get; } = new List<string>();
         public List<ReportAnalysisCapabilityCoverage> CapabilityCoverage { get; } =
             new List<ReportAnalysisCapabilityCoverage>();
         public List<PlaybackQualitySuiteNextAction> NextActions { get; } =

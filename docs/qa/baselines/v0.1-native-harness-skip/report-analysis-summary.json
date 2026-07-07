@@ -81,6 +81,15 @@
     "Review the structured skip reason before interpreting missing playback telemetry.",
     "Collect missing telemetry before optimizing playback behavior; absent evidence is treated separately from a real playback failure."
   ],
+  "evidenceSources": [],
+  "limitations": [
+    "software-only: does not verify actual HDMI InfoFrame output",
+    "software-only: does not verify display panel EOTF, luminance, or color accuracy",
+    "software-only: does not detect TV-side tone mapping",
+    "internal-timing: frame intervals are measured in the player, not by an external photodiode or HDMI capture device",
+    "native-harness: native playback graph was not opened by this command",
+    "native-harness: report is a standard skip envelope for the missing real native collector"
+  ],
   "capabilityCoverage": [
     {
       "capability": "media-loading",

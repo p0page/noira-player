@@ -271,6 +271,16 @@
     "Inspect the failing playback operation, source availability, native open errors, cancellation, timeout, and exception classification before interpreting playback-quality metrics.",
     "Inspect seek preview commit/cancel state, requested resume position, demux seek completion, and native playback position reporting."
   ],
+  "evidenceSources": [
+    "source-only"
+  ],
+  "limitations": [
+    "software-only: does not verify actual HDMI InfoFrame output",
+    "software-only: does not verify display panel EOTF, luminance, or color accuracy",
+    "software-only: does not detect TV-side tone mapping",
+    "internal-timing: frame intervals are measured in the player, not by an external photodiode or HDMI capture device",
+    "source-only: playback execution was not run by this command"
+  ],
   "capabilityCoverage": [
     {
       "capability": "media-loading",

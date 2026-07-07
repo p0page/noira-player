@@ -152,6 +152,19 @@
     "Inspect runtime playback error evidence before interpreting playback-quality metrics.",
     "Inspect the failing playback operation, source availability, native open errors, cancellation, timeout, and exception classification before interpreting playback-quality metrics."
   ],
+  "evidenceSources": [
+    "core-probe:returned-snapshot"
+  ],
+  "limitations": [
+    "software-only: does not verify actual HDMI InfoFrame output",
+    "software-only: does not verify display panel EOTF, luminance, or color accuracy",
+    "software-only: does not detect TV-side tone mapping",
+    "internal-timing: frame intervals are measured in the player, not by an external photodiode or HDMI capture device",
+    "core-probe: PlaybackOrchestrator lifecycle was executed with an in-process diagnostic backend",
+    "core-probe: native playback graph, decoder, renderer, network I/O, and HDMI output were not opened",
+    "core-probe: startup, display, timing, buffering, and A/V sync values are deterministic probe telemetry",
+    "core-probe: end-of-stream is a diagnostic lifecycle marker, not proof of natural media EOF"
+  ],
   "capabilityCoverage": [
     {
       "capability": "media-loading",

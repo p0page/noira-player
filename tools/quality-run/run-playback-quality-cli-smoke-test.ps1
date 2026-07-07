@@ -86,10 +86,12 @@ try {
     $materializedBaselineDir = Join-Path $tempRoot 'materialized-baseline-report-set'
     $materializedBaselineSummaryPath = Join-Path $tempRoot 'materialized-baseline-summary.json'
     $materializedBaselineValidationPath = Join-Path $tempRoot 'materialized-baseline-validation.json'
+    $materializedBaselineAnalysisPath = Join-Path $tempRoot 'materialized-baseline-analysis.json'
     $coreProbeManifestPath = Join-Path $tempRoot 'core-probe-reference-manifest.json'
     $coreProbeDir = Join-Path $tempRoot 'core-probe-report-set'
     $coreProbeSummaryPath = Join-Path $tempRoot 'core-probe-summary.json'
     $coreProbeValidationPath = Join-Path $tempRoot 'core-probe-validation.json'
+    $coreProbeAnalysisPath = Join-Path $tempRoot 'core-probe-analysis.json'
     $nativeHarnessManifestPath = Join-Path $tempRoot 'native-harness-reference-manifest.json'
     $nativeHarnessDir = Join-Path $tempRoot 'native-harness-report-set'
     $nativeHarnessSummaryPath = Join-Path $tempRoot 'native-harness-summary.json'
@@ -839,6 +841,33 @@ try {
         throw 'Expected materialized source-only baseline to expose missing telemetry as insufficient instrumentation.'
     }
 
+    Push-Location $repoRoot
+    try {
+        dotnet $cliDll `
+            analyze-report-set `
+            --reports-dir $materializedBaselineDir `
+            --output $materializedBaselineAnalysisPath
+        if ($LASTEXITCODE -ne 0) {
+            throw 'playback quality CLI analyze-report-set source-only baseline returned a non-zero exit code.'
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    $materializedBaselineAnalysis = Get-Content -Raw -LiteralPath $materializedBaselineAnalysisPath | ConvertFrom-Json
+    if (-not ($materializedBaselineAnalysis.evidenceSources -contains 'source-only')) {
+        throw 'Expected source-only analyze-report-set summary to expose source-only evidence source.'
+    }
+
+    if ($materializedBaselineAnalysis.evidenceSources -contains 'unknown') {
+        throw 'Expected source-only analyze-report-set summary not to aggregate unknown evidence source.'
+    }
+
+    if (-not ($materializedBaselineAnalysis.limitations -contains 'source-only: playback execution was not run by this command')) {
+        throw 'Expected source-only analyze-report-set summary to expose source-only limitation.'
+    }
+
     @'
 {
   "schemaVersion": 1,
@@ -984,6 +1013,33 @@ try {
     if ($coreProbeValidation.isValid -ne $true -or
         $coreProbeValidation.matchedCaseCount -ne 1) {
         throw 'Expected materialized core probe validation to match every case.'
+    }
+
+    Push-Location $repoRoot
+    try {
+        dotnet $cliDll `
+            analyze-report-set `
+            --reports-dir $coreProbeDir `
+            --output $coreProbeAnalysisPath
+        if ($LASTEXITCODE -ne 0) {
+            throw 'playback quality CLI analyze-report-set core-probe returned a non-zero exit code.'
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    $coreProbeAnalysis = Get-Content -Raw -LiteralPath $coreProbeAnalysisPath | ConvertFrom-Json
+    if (-not ($coreProbeAnalysis.evidenceSources -contains 'core-probe:returned-snapshot')) {
+        throw 'Expected core-probe analyze-report-set summary to expose core-probe evidence source.'
+    }
+
+    if ($coreProbeAnalysis.evidenceSources -contains 'unknown') {
+        throw 'Expected core-probe analyze-report-set summary not to aggregate unknown evidence source.'
+    }
+
+    if (-not ($coreProbeAnalysis.limitations -contains 'core-probe: native playback graph, decoder, renderer, network I/O, and HDMI output were not opened')) {
+        throw 'Expected core-probe analyze-report-set summary to expose core-probe limitation.'
     }
 
     @'

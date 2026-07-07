@@ -1,5 +1,15 @@
 # 技术决策
 
+## 2026-07-08: report-analysis summary 聚合证据来源和限制
+
+决策：`analyze-report-set` 输出的 `ReportAnalysisSummary` 新增 `evidenceSources[]` 和 `limitations[]`。`evidenceSources[]` 聚合非 `unknown` 的 `report.runtimeMetrics.providerStatus`；`limitations[]` 聚合每个 report 的 limitation 字符串。
+
+原因：单 report 已经包含 runtime provider 和 limitation，但自动化模型通常先读集合级 summary 决定下一步。如果 summary 只显示 `decision = no-change` 或 capability `evidence-present`，模型需要额外展开所有 case 才能知道证据来自 deterministic `core-probe`、source-only materializer、native-winrt captured evidence，还是 skip/import 路径。集合级聚合能减少误把 probe 指标当成真实 native 播放质量证据的风险。
+
+影响：三套 v0.1 baseline 的 `report-analysis-summary.json` 已刷新。source-only summary 暴露 `evidenceSources = ["source-only"]`；core-probe summary 暴露 `["core-probe:returned-snapshot"]`；native-harness-skip 不伪造 runtime evidence source，但会聚合 skip/native-harness limitation。
+
+边界：这是模型消费 JSON 的可解释性增强，不改变播放行为、native graph、阈值、expected behavior、report-set validation、analysis decision 或候选评估规则。`unknown` provider status 不进入 `evidenceSources[]`，避免把缺省状态当成证据来源。
+
 ## 2026-07-08: playable report-set 要求 runtime metrics 采集状态
 
 决策：`PlaybackQualityRequiredSignalPolicy` 对非 error、非明确 unsupported 的可播放 case 新增 required signals：`runtimeMetrics.status`、`runtimeMetrics.providerStatus`、`runtimeMetrics.hasSnapshot` 和 `runtimeMetrics.hasPlaybackSample`。`validate-report-set` 会把缺少这些信号的报告归类为 `insufficient instrumentation`。
