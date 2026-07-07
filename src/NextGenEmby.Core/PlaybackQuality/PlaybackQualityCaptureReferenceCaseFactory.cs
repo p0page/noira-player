@@ -33,6 +33,33 @@ namespace NextGenEmby.Core.PlaybackQuality
             };
         }
 
+        public static PlaybackQualityReferenceCase Create(
+            string runId,
+            string itemId,
+            string mediaSourceId,
+            long startPositionTicks,
+            bool forceSdrOutput,
+            PlaybackQualityExpected? expected,
+            string uri = "",
+            string category = "stable",
+            string severity = "medium",
+            string stability = "stable")
+        {
+            return new PlaybackQualityReferenceCase
+            {
+                CaseId = Normalize(runId, nameof(runId)),
+                Category = NormalizeOrDefault(category, "stable"),
+                Severity = NormalizeOrDefault(severity, "medium"),
+                Stability = NormalizeOrDefault(stability, "stable"),
+                Uri = uri ?? "",
+                ItemId = itemId ?? "",
+                MediaSourceId = mediaSourceId ?? "",
+                StartPositionTicks = startPositionTicks < 0 ? 0 : startPositionTicks,
+                ForceSdrOutput = forceSdrOutput,
+                Expected = CloneExpected(expected)
+            };
+        }
+
         private static string Normalize(string value, string parameterName)
         {
             if (string.IsNullOrWhiteSpace(value))

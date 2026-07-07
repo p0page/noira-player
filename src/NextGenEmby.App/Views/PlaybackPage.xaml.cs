@@ -1181,6 +1181,55 @@ namespace NextGenEmby.App.Views
             return "quality-run/captured/" + reportRelativePath;
         }
 
+        private async Task WriteQualityRunErrorReportAsync(Exception exception)
+        {
+            var request = _launchRequest;
+            if (request == null || !request.IsQualityRun)
+            {
+                return;
+            }
+
+            try
+            {
+                var referenceCase = PlaybackQualityCaptureReferenceCaseFactory.Create(
+                    request.QualityRunId,
+                    request.ItemId,
+                    request.MediaSourceId,
+                    request.StartPositionTicks,
+                    request.ForceSdrOutput,
+                    request.QualityExpected);
+                var result = PlaybackQualityRuntimeEvidenceCollector.ComposeErrorRunResult(
+                    referenceCase,
+                    new PlaybackQualityError
+                    {
+                        Code = "app-hosted-quality-run.playback-command-failed",
+                        Message = exception.Message ?? "",
+                        Operation = "quality-run-open",
+                        ExceptionType = exception.GetType().FullName ?? exception.GetType().Name,
+                        FailureClass = "needs human confirmation",
+                        FailureArea = "error-handling",
+                        IsTerminal = true,
+                        IsRetriable = false
+                    },
+                    new PlaybackQualityEnvironment
+                    {
+                        CollectorVersion = "app-hosted-quality-run-v0.1",
+                        PlayerCoreVersion = "NextGenEmby.Core",
+                        BuildConfiguration = "Debug"
+                    });
+                var relativePath = await WriteQualityRunReportAsync(request.QualityRunId, result);
+                await WriteQualityRunCommandResultAsync("capture-error", relativePath);
+            }
+            catch (Exception writeException)
+            {
+                await PlaybackDiagnosticsLog.WriteLineAsync(
+                    "QualityRun error report exception " +
+                    writeException.GetType().FullName +
+                    " " +
+                    writeException.Message);
+            }
+        }
+
         private static async Task<StorageFolder> EnsureQualityRunFolderPathAsync(
             StorageFolder root,
             string relativePath)
@@ -1366,6 +1415,9 @@ namespace NextGenEmby.App.Views
             catch (Exception ex)
             {
                 await PlaybackDiagnosticsLog.WriteLineAsync("Playback command exception " + ex.GetType().FullName + " " + ex.Message);
+#if DEBUG
+                await WriteQualityRunErrorReportAsync(ex);
+#endif
                 _hasPlaybackContext = _orchestrator.CurrentDescriptor != null;
                 UpdateStatus(CorePlaybackState.Failed, ex.Message);
                 ShowOverlay();

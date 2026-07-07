@@ -74,6 +74,37 @@ public sealed class PlaybackQualityCaptureContractTests
         Assert.Equal(40, referenceCase.Expected.MaxAudioVideoDriftMsP95);
     }
 
+    [Fact]
+    public void CreateReferenceCase_For_Failed_Launch_Preserves_Command_Evidence()
+    {
+        var referenceCase = PlaybackQualityCaptureReferenceCaseFactory.Create(
+            "local/open-failed",
+            itemId: "item-1",
+            mediaSourceId: "source-1",
+            startPositionTicks: 456_000_000,
+            forceSdrOutput: true,
+            expected: new PlaybackQualityExpected
+            {
+                Codec = "hevc",
+                HdrKind = "Hdr10",
+                HdrOutput = "Hdr10"
+            },
+            category: "stable",
+            severity: "high",
+            stability: "quarantine");
+
+        Assert.Equal("local/open-failed", referenceCase.CaseId);
+        Assert.Equal("item-1", referenceCase.ItemId);
+        Assert.Equal("source-1", referenceCase.MediaSourceId);
+        Assert.Equal(456_000_000, referenceCase.StartPositionTicks);
+        Assert.True(referenceCase.ForceSdrOutput);
+        Assert.Equal("stable", referenceCase.Category);
+        Assert.Equal("high", referenceCase.Severity);
+        Assert.Equal("quarantine", referenceCase.Stability);
+        Assert.Equal("hevc", referenceCase.Expected.Codec);
+        Assert.Equal("Hdr10", referenceCase.Expected.HdrOutput);
+    }
+
     private static PlaybackDescriptor CreateDescriptor()
     {
         var source = new EmbyMediaSource

@@ -26,6 +26,8 @@ public sealed class AppHostedQualityCaptureContractTests
         Assert.Contains("ScheduleQualityRunCapture", playbackPage, StringComparison.Ordinal);
         Assert.Contains("PlaybackQualityCaptureReferenceCaseFactory.Create", playbackPage, StringComparison.Ordinal);
         Assert.Contains("PlaybackQualityRuntimeEvidenceCollector.ComposeRunResult", playbackPage, StringComparison.Ordinal);
+        Assert.Contains("WriteQualityRunErrorReportAsync", playbackPage, StringComparison.Ordinal);
+        Assert.Contains("PlaybackQualityRuntimeEvidenceCollector.ComposeErrorRunResult", playbackPage, StringComparison.Ordinal);
         Assert.Contains("PlaybackQualityCapturedReportPath.GetReportRelativePath", playbackPage, StringComparison.Ordinal);
         Assert.Contains("PlaybackQualityReportSerializer.Serialize", playbackPage, StringComparison.Ordinal);
         Assert.Contains("quality-run", playbackPage, StringComparison.Ordinal);
