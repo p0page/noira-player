@@ -17,6 +17,8 @@ namespace NextGenEmby.Core.PlaybackQuality
         public int WeakConfidenceCount { get; set; }
         public string Action { get; set; } = "collect-comparable-evidence";
         public string Risk { get; set; } = "high";
+        public PlaybackQualityComparisonSuiteEnvironment Environment { get; set; } =
+            new PlaybackQualityComparisonSuiteEnvironment();
         public List<string> Reasons { get; } = new List<string>();
         public List<string> Blockers { get; } = new List<string>();
         public List<string> Signals { get; } = new List<string>();
@@ -32,6 +34,19 @@ namespace NextGenEmby.Core.PlaybackQuality
             new List<PlaybackQualityComparisonCaseSummary>();
         public List<PlaybackQualityRunComparison> Comparisons { get; } =
             new List<PlaybackQualityRunComparison>();
+    }
+
+    public sealed class PlaybackQualityComparisonSuiteEnvironment
+    {
+        public int MissingEvidenceCount { get; set; }
+        public int PartialCount { get; set; }
+        public int SameBuildCount { get; set; }
+        public int DifferentBuildCount { get; set; }
+        public List<string> MissingEvidenceCaseIds { get; } = new List<string>();
+        public List<string> PartialCaseIds { get; } = new List<string>();
+        public List<string> SameBuildCaseIds { get; } = new List<string>();
+        public List<string> DifferentBuildCaseIds { get; } = new List<string>();
+        public List<string> Signals { get; } = new List<string>();
     }
 
     public sealed class PlaybackQualitySuiteNextAction
@@ -69,10 +84,12 @@ namespace NextGenEmby.Core.PlaybackQuality
         public string Action { get; set; } = "";
         public string Risk { get; set; } = "";
         public string Confidence { get; set; } = "";
+        public string EnvironmentStatus { get; set; } = "";
         public string SuggestedNextAction { get; set; } = "";
         public int PolicyChangeCount { get; set; }
         public List<string> Reasons { get; } = new List<string>();
         public List<string> Signals { get; } = new List<string>();
+        public List<string> EnvironmentSignals { get; } = new List<string>();
         public List<string> FailureAreas { get; } = new List<string>();
         public List<string> Blockers { get; } = new List<string>();
         public List<string> CodeTargets { get; } = new List<string>();
@@ -99,6 +116,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                 suite.Comparisons.Add(comparison);
                 suite.Cases.Add(CreateCaseSummary(comparison));
                 CountComparison(suite, comparison);
+                AddEnvironmentEvidence(suite, comparison);
                 AddComparisonEvidence(suite, comparison);
                 AddSignalSummaries(suite, comparison);
             }
@@ -123,6 +141,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                 Action = comparison.Optimization.Action,
                 Risk = comparison.Optimization.Risk,
                 Confidence = comparison.Confidence.Level,
+                EnvironmentStatus = comparison.Environment.Status,
                 SuggestedNextAction = comparison.SuggestedNextAction
             };
 
@@ -148,6 +167,12 @@ namespace NextGenEmby.Core.PlaybackQuality
 
             foreach (var signal in comparison.Confidence.Signals)
             {
+                AddUnique(summary.Signals, signal);
+            }
+
+            foreach (var signal in comparison.Environment.Signals)
+            {
+                AddUnique(summary.EnvironmentSignals, signal);
                 AddUnique(summary.Signals, signal);
             }
 
@@ -242,6 +267,36 @@ namespace NextGenEmby.Core.PlaybackQuality
             }
 
             suite.PolicyChangeCount += comparison.PolicyChanges.Count;
+        }
+
+        private static void AddEnvironmentEvidence(
+            PlaybackQualityComparisonSuite suite,
+            PlaybackQualityRunComparison comparison)
+        {
+            foreach (var signal in comparison.Environment.Signals)
+            {
+                AddUnique(suite.Environment.Signals, signal);
+            }
+
+            switch (comparison.Environment.Status)
+            {
+                case "different-build":
+                    suite.Environment.DifferentBuildCount++;
+                    AddUnique(suite.Environment.DifferentBuildCaseIds, comparison.CaseId);
+                    break;
+                case "same-build":
+                    suite.Environment.SameBuildCount++;
+                    AddUnique(suite.Environment.SameBuildCaseIds, comparison.CaseId);
+                    break;
+                case "partial":
+                    suite.Environment.PartialCount++;
+                    AddUnique(suite.Environment.PartialCaseIds, comparison.CaseId);
+                    break;
+                default:
+                    suite.Environment.MissingEvidenceCount++;
+                    AddUnique(suite.Environment.MissingEvidenceCaseIds, comparison.CaseId);
+                    break;
+            }
         }
 
         private static void AddComparisonEvidence(

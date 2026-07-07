@@ -220,6 +220,39 @@ public sealed class PlaybackQualityComparisonSuiteTests
     }
 
     [Fact]
+    public void Summarize_Surfaces_Environment_Evidence_For_Model_Gating()
+    {
+        var baseline = Report(
+            "baseline",
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "180.000"));
+        baseline.Environment.PlayerCoreVersion = "native-core-v42";
+        baseline.Environment.SourceRevision = "same123";
+
+        var candidate = Report(
+            "candidate",
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "120.000"));
+        candidate.Environment.PlayerCoreVersion = "native-core-v42";
+        candidate.Environment.SourceRevision = "same123";
+
+        var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
+        comparison.CaseId = "same-build/case.json";
+
+        var suite = PlaybackQualityComparisonSuiteAggregator.Summarize(new[] { comparison });
+
+        Assert.Equal(1, suite.Environment.SameBuildCount);
+        Assert.Equal(0, suite.Environment.DifferentBuildCount);
+        Assert.Contains("same-build/case.json", suite.Environment.SameBuildCaseIds);
+        Assert.Contains("environment.playerCoreVersion", suite.Environment.Signals);
+        Assert.Contains("environment.sourceRevision", suite.Environment.Signals);
+        var caseSummary = Assert.Single(suite.Cases);
+        Assert.Equal("same-build", caseSummary.EnvironmentStatus);
+        Assert.Contains("environment.sourceRevision", caseSummary.EnvironmentSignals);
+        var json = PlaybackQualityReportSerializer.Serialize(suite);
+        Assert.Contains("\"sameBuildCount\": 1", json);
+        Assert.Contains("\"environmentStatus\": \"same-build\"", json);
+    }
+
+    [Fact]
     public void Summarize_Emits_Persisting_FailureAreas_For_Unchanged_Cases()
     {
         var unchanged = Compare(
