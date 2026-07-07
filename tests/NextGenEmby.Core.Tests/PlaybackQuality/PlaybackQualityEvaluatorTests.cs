@@ -58,6 +58,7 @@ public sealed class PlaybackQualityEvaluatorTests
                 ActualHdrOutput = "Hdr10",
                 DxgiInput = "YCBCR_STUDIO_G2084_TOPLEFT_P2020",
                 DxgiOutput = "RGB_FULL_G2084_NONE_P2020",
+                IsTenBitSwapChain = true,
                 ConversionStatus = "validated"
             }
         };
@@ -68,6 +69,45 @@ public sealed class PlaybackQualityEvaluatorTests
         Assert.Empty(report.FailureReasons);
         Assert.Equal("none", report.Analysis.PrimaryFailureArea);
         Assert.Equal("No failing thresholds.", report.Analysis.SuggestedNextAction);
+    }
+
+    [Fact]
+    public void Evaluate_Fails_When_Hdr10_Output_Uses_Non_Ten_Bit_SwapChain()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "hdr10-eight-bit-swapchain",
+            Expected = new PlaybackQualityExpected
+            {
+                HdrOutput = "Hdr10",
+                DxgiInput = "YCBCR_STUDIO_G2084_TOPLEFT_P2020",
+                DxgiOutput = "RGB_FULL_G2084_NONE_P2020",
+                RequireValidatedConversion = false
+            },
+            ColorPipeline = new PlaybackQualityColorPipeline
+            {
+                ActualHdrOutput = "Hdr10",
+                DxgiInput = "YCBCR_STUDIO_G2084_TOPLEFT_P2020",
+                DxgiOutput = "RGB_FULL_G2084_NONE_P2020",
+                IsTenBitSwapChain = false
+            }
+        };
+
+        PlaybackQualityEvaluator.Evaluate(report);
+
+        Assert.Equal("fail", report.Result);
+        Assert.Contains(
+            "IsTenBitSwapChain False did not match expected True.",
+            report.FailureReasons);
+        Assert.Equal("color-pipeline", report.Analysis.PrimaryFailureArea);
+        Assert.Contains("colorPipeline.isTenBitSwapChain", report.Analysis.RelevantSignals);
+        Assert.Contains(report.Checks, check =>
+            check.Name == "IsTenBitSwapChain" &&
+            check.Signal == "colorPipeline.isTenBitSwapChain" &&
+            check.Expected == "True" &&
+            check.Actual == "False" &&
+            check.Status == "fail" &&
+            check.FailureArea == "color-pipeline");
     }
 
     [Fact]

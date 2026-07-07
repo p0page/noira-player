@@ -110,6 +110,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                 expected.DxgiOutput,
                 "colorPipeline.dxgiOutput",
                 "color-pipeline");
+            CheckExpectedTenBitSwapChain(report, expected);
             CheckMatchedRefreshRate(report, expected);
 
             if (expected.RequireValidatedConversion &&
@@ -461,6 +462,58 @@ namespace NextGenEmby.Core.PlaybackQuality
             }
         }
 
+        private static void CheckExpectedTenBitSwapChain(
+            PlaybackQualityReport report,
+            PlaybackQualityExpected expected)
+        {
+            if (!RequiresTenBitSwapChain(expected))
+            {
+                return;
+            }
+
+            const string expectedText = "True";
+            var actualText = report.ColorPipeline.IsTenBitSwapChain.ToString();
+            var failed = !report.ColorPipeline.IsTenBitSwapChain;
+            var message = "IsTenBitSwapChain " + actualText + " did not match expected " + expectedText + ".";
+            report.Checks.Add(new PlaybackQualityCheck
+            {
+                Name = "IsTenBitSwapChain",
+                Signal = "colorPipeline.isTenBitSwapChain",
+                Status = failed ? "fail" : "pass",
+                FailureArea = "color-pipeline",
+                Expected = expectedText,
+                Actual = actualText,
+                Message = failed
+                    ? message
+                    : "IsTenBitSwapChain matched expected " + expectedText + "."
+            });
+
+            if (failed)
+            {
+                report.FailureReasons.Add(message);
+                AddRelevantSignal(report, "colorPipeline.isTenBitSwapChain");
+            }
+        }
+
+        private static bool RequiresTenBitSwapChain(PlaybackQualityExpected expected)
+        {
+            return IsHdr10LikeOutput(expected.HdrOutput) ||
+                IsHdr10LikeColorSpace(expected.DxgiOutput);
+        }
+
+        private static bool IsHdr10LikeOutput(string value)
+        {
+            return string.Equals(value, "Hdr10", System.StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(value, "Hdr", System.StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(value, "Hlg", System.StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsHdr10LikeColorSpace(string value)
+        {
+            return value.IndexOf("G2084", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                value.IndexOf("P2020", System.StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
         private static void CheckStartupDuration(
             PlaybackQualityReport report,
             PlaybackQualityExpected expected)
@@ -772,7 +825,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                 return;
             }
 
-            if (HasReason(report, "ActualHdrOutput", "DxgiInput", "DxgiOutput", "ConversionStatus"))
+            if (HasReason(report, "ActualHdrOutput", "DxgiInput", "DxgiOutput", "IsTenBitSwapChain", "ConversionStatus"))
             {
                 report.Analysis.PrimaryFailureArea = "color-pipeline";
                 report.Analysis.SuggestedNextAction = "Inspect HDR display switch and DXGI color-space mapping.";
