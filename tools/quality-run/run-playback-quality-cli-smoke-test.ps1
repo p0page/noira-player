@@ -260,6 +260,10 @@ try {
         throw 'Expected analyze-report-set output to expose a direct blocked action.'
     }
 
+    if ($analysisSet.decision -ne 'fix-report-analysis') {
+        throw 'Expected analyze-report-set output to expose a direct blocked decision.'
+    }
+
     if ($analysisSet.risk -ne 'high') {
         throw 'Expected analyze-report-set output to expose high risk for blocked analysis.'
     }

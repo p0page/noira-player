@@ -1604,6 +1604,7 @@ internal static class Program
         if (summary.AnalyzedReportCount == 0)
         {
             summary.Action = "collect-comparable-evidence";
+            summary.Decision = "collect-comparable-evidence";
             summary.Risk = "high";
             summary.Confidence.Level = "weak";
             summary.Confidence.WeakCount = summary.TotalReportCount;
@@ -1616,6 +1617,7 @@ internal static class Program
         if (summary.BlockedReportCount > 0)
         {
             summary.Action = "fix-report-analysis";
+            summary.Decision = "fix-report-analysis";
             summary.Risk = "high";
             summary.Confidence.Level = "weak";
             summary.Confidence.StrongCount =
@@ -1633,6 +1635,7 @@ internal static class Program
         if (summary.UnavailableReportCount > 0)
         {
             summary.Action = "collect-comparable-evidence";
+            summary.Decision = "collect-comparable-evidence";
             summary.Risk = "high";
             summary.Confidence.Level = "weak";
             summary.Confidence.StrongCount = summary.AnalyzedReportCount;
@@ -1644,6 +1647,7 @@ internal static class Program
         }
 
         summary.Action = "continue-next-triage-step";
+        summary.Decision = "no-change";
         summary.Risk = "low";
         summary.Confidence.Level = "strong";
         summary.Confidence.StrongCount = summary.AnalyzedReportCount;
@@ -2210,6 +2214,7 @@ internal static class Program
     {
         public int SchemaVersion { get; set; } = 1;
         public string Action { get; set; } = "";
+        public string Decision { get; set; } = "";
         public string Risk { get; set; } = "";
         public CandidateEvaluationGateConfidence Confidence { get; set; } =
             new CandidateEvaluationGateConfidence();
