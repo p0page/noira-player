@@ -241,6 +241,10 @@ namespace NextGenEmby.Core.PlaybackQuality
                     return !string.IsNullOrWhiteSpace(report.Error.Code);
                 case "source.codec":
                     return !string.IsNullOrWhiteSpace(report.Source.Codec);
+                case "source.container":
+                    return !string.IsNullOrWhiteSpace(report.Source.Container);
+                case "source.bitrate":
+                    return report.Source.Bitrate > 0;
                 case "source.width":
                     return report.Source.Width > 0;
                 case "source.height":

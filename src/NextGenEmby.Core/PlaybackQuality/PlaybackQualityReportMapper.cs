@@ -71,6 +71,8 @@ namespace NextGenEmby.Core.PlaybackQuality
 
             report.Source.ItemId = descriptor.ItemId;
             report.Source.MediaSourceId = source.Id;
+            report.Source.Container = source.Container;
+            report.Source.Bitrate = source.Bitrate;
             report.Position.RequestedStartPositionTicks = descriptor.StartPositionTicks;
             report.Position.SeekTargetPositionTicks = descriptor.StartPositionTicks;
             report.Source.Codec = FirstNonEmpty(video?.Codec, source.HdrProfile.Codec);

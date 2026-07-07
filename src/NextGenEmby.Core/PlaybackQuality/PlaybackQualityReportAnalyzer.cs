@@ -60,6 +60,8 @@ namespace NextGenEmby.Core.PlaybackQuality
     {
         public string Status { get; set; } = "unknown";
         public string Reason { get; set; } = "";
+        public string Container { get; set; } = "";
+        public long Bitrate { get; set; }
         public string Codec { get; set; } = "";
         public int Width { get; set; }
         public int Height { get; set; }
@@ -1049,6 +1051,8 @@ namespace NextGenEmby.Core.PlaybackQuality
         {
             var source = new PlaybackQualitySourceAssessment
             {
+                Container = report.Source.Container,
+                Bitrate = report.Source.Bitrate,
                 Codec = report.Source.Codec,
                 Width = report.Source.Width,
                 Height = report.Source.Height,
@@ -1109,6 +1113,8 @@ namespace NextGenEmby.Core.PlaybackQuality
         {
             var hasSourceEvidence =
                 !string.IsNullOrWhiteSpace(source.Codec) ||
+                !string.IsNullOrWhiteSpace(source.Container) ||
+                source.Bitrate > 0 ||
                 source.Width > 0 ||
                 source.Height > 0 ||
                 source.FrameRate > 0 ||
@@ -1118,6 +1124,16 @@ namespace NextGenEmby.Core.PlaybackQuality
             if (!string.IsNullOrWhiteSpace(source.Codec))
             {
                 AddUnique(source.Signals, "source.codec");
+            }
+
+            if (!string.IsNullOrWhiteSpace(source.Container))
+            {
+                AddUnique(source.Signals, "source.container");
+            }
+
+            if (source.Bitrate > 0)
+            {
+                AddUnique(source.Signals, "source.bitrate");
             }
 
             if (source.Width > 0)
@@ -2040,6 +2056,11 @@ namespace NextGenEmby.Core.PlaybackQuality
             PlaybackQualityReport report)
         {
             foreach (var signal in analysis.Environment.Signals)
+            {
+                AddUnique(analysis.EvidenceSignals, signal);
+            }
+
+            foreach (var signal in analysis.Source.Signals)
             {
                 AddUnique(analysis.EvidenceSignals, signal);
             }

@@ -61,6 +61,35 @@ public sealed class PlaybackQualityReportAnalyzerTests
     }
 
     [Fact]
+    public void Analyze_Exposes_Source_Container_And_Bitrate_Evidence()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "source-container-bitrate",
+            Result = "pass",
+            Source = new PlaybackQualitySource
+            {
+                Codec = "hevc",
+                Container = "mkv",
+                Bitrate = 76_000_000,
+                Width = 3840,
+                Height = 2160,
+                FrameRate = 23.976,
+                HdrKind = "Hdr10"
+            }
+        };
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Equal("mkv", analysis.Source.Container);
+        Assert.Equal(76_000_000, analysis.Source.Bitrate);
+        Assert.Contains("source.container", analysis.Source.Signals);
+        Assert.Contains("source.bitrate", analysis.Source.Signals);
+        Assert.Contains("source.container", analysis.EvidenceSignals);
+        Assert.Contains("source.bitrate", analysis.EvidenceSignals);
+    }
+
+    [Fact]
     public void Analyze_Preserves_Secondary_Failure_Areas_For_Model_Triage()
     {
         var report = new PlaybackQualityReport

@@ -149,6 +149,8 @@ public sealed class PlaybackQualityReportMapperTests
         var source = new EmbyMediaSource
         {
             Id = "source-1",
+            Container = "mkv",
+            Bitrate = 76_000_000,
             Width = 3840,
             Height = 2160,
             VideoFrameRate = 23.976,
@@ -222,6 +224,8 @@ public sealed class PlaybackQualityReportMapperTests
         Assert.Equal(600_000_000, report.Position.RequestedStartPositionTicks);
         Assert.Equal(600_000_000, report.Position.SeekTargetPositionTicks);
         Assert.Equal("source-1", report.Source.MediaSourceId);
+        Assert.Equal("mkv", report.Source.Container);
+        Assert.Equal(76_000_000, report.Source.Bitrate);
         Assert.Equal("hevc", report.Source.Codec);
         Assert.Equal(3840, report.Source.Width);
         Assert.Equal(2160, report.Source.Height);

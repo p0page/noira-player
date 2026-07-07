@@ -58,6 +58,8 @@ namespace NextGenEmby.Core.PlaybackQuality
                 new PlaybackQualityReportSignalDescriptor("skip.failureArea", "skip", "failureArea"),
                 new PlaybackQualityReportSignalDescriptor("skip.isExpected", "skip", "isExpected"),
                 new PlaybackQualityReportSignalDescriptor("skip.isRetriable", "skip", "isRetriable"),
+                new PlaybackQualityReportSignalDescriptor("source.container", "source", "container"),
+                new PlaybackQualityReportSignalDescriptor("source.bitrate", "source", "bitrate"),
                 new PlaybackQualityReportSignalDescriptor("source.codec", "source", "codec"),
                 new PlaybackQualityReportSignalDescriptor("source.width", "source", "width"),
                 new PlaybackQualityReportSignalDescriptor("source.height", "source", "height"),

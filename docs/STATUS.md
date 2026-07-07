@@ -43,6 +43,7 @@
 - Core 已有可选 runtime metrics provider 和 runtime evidence collector，可把 backend display diagnostics、native metrics snapshot、startup 和 environment 合成为标准 report envelope。
 - error-handling 已进入 report、analyzer、required signal policy、signal catalog、code target catalog 和 core-probe 路径；错误样本会报告为 `result = error`，而不是伪装成播放质量失败。
 - `skip` 已进入 report、analyzer、signal catalog 和 runtime evidence collector 路径；当前评测器或 MVP 明确跳过的能力可以报告为 `result = skip`，并保留 `skip.*` 结构化原因，不再被误报为普通播放 telemetry 缺失。
+- `source.container` 和 `source.bitrate` 已从 `EmbyMediaSource` 进入 report、model analysis、signal catalog 和 required-signal presence 检查，模型可以在 source metadata 层判断容器和码率证据。
 - `modelAnalysis` 已输出 `expectedBehavior` / `actualBehavior` 摘要，模型不需要只从分散的 `checks[].expected` / `checks[].actual` 推断 case 行为差异。
 - `PlaybackQualityRunResult` envelope 已输出 `evaluationVersion = playback-quality-v0.1`，`modelAnalysis` 已输出 `primaryFailureClass`，便于模型直接判断报告契约版本和失败责任分类。
 - `analyze-report-set` 的每个 case summary 已透传 `expectedBehavior`、`actualBehavior`、`primaryFailureClass` 和 `primaryFailureArea`，模型读取集合级报告时不必先展开单个 report envelope 才能定位主要差异。
@@ -51,6 +52,7 @@
 
 - 轨道切换目前主要是发现/选择状态证据，尚未证明切换后的 native 播放行为完整正确。
 - 字幕 v0.1 只验证识别、选择和关闭状态，不验证最终视觉渲染正确性。
+- duration / chapters 仍未进入 `PlaybackDescriptor` / `EmbyMediaSource` 的播放质量报告路径；当前不能声称 v0.1 已覆盖 duration 或章节识别。
 - 缓冲、frame timing、A/V sync 和颜色信号仍依赖当前 native instrumentation 的覆盖度，后续需要继续补强证据质量。
 - v0.1 尚未完成真实播放采集 baseline/candidate；当前 source-only baseline 只能证明评测链路闭环和缺失证据分类，不证明播放效果。
 - WinRT App adapter 或独立真实播放 harness 尚未把 native `QualityMetrics()` 接入 `IPlaybackQualityMetricsProvider`；当前 core-probe 仍是 deterministic probe telemetry。

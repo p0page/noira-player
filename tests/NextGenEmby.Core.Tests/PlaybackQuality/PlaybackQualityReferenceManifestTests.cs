@@ -970,10 +970,15 @@ public sealed class PlaybackQualityReferenceManifestTests
     }
 
     [Fact]
-    public void RequiredSignalPolicy_Recognizes_Track_Report_Signals()
+    public void RequiredSignalPolicy_Recognizes_Source_And_Track_Report_Signals()
     {
         var report = new PlaybackQualityReport
         {
+            Source = new PlaybackQualitySource
+            {
+                Container = "mkv",
+                Bitrate = 76_000_000
+            },
             Tracks = new PlaybackQualityTracks
             {
                 VideoTrackCount = 1,
@@ -984,6 +989,8 @@ public sealed class PlaybackQualityReferenceManifestTests
             }
         };
 
+        Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "source.container"));
+        Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "source.bitrate"));
         Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "tracks.videoTrackCount"));
         Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "tracks.audioTrackCount"));
         Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "tracks.subtitleTrackCount"));
