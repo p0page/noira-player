@@ -268,6 +268,19 @@ try {
         throw 'Expected analyze-report-set output to expose weak confidence for blocked analysis.'
     }
 
+    if (-not ($analysisSet.nextActions | Where-Object {
+        $_.rank -eq 1 -and
+        $_.action -eq 'fix-report-analysis' -and
+        $_.risk -eq 'high' -and
+        $_.failureArea -eq 'frame-pacing' -and
+        ($_.caseIds -contains 'candidate') -and
+        ($_.signals -contains 'timing.maxFrameGapMs') -and
+        ($_.blockers -contains 'missingEvidence') -and
+        ($_.codeTargets -contains 'src/NextGenEmby.Native/Media/FramePacing.h')
+    })) {
+        throw 'Expected analyze-report-set output to expose ranked next action context.'
+    }
+
     if ($analysisSet.totalReportCount -ne 2 -or $analysisSet.analyzedReportCount -ne 2) {
         throw 'Expected analyze-report-set output to analyze both raw reports.'
     }

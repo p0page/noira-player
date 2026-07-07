@@ -1553,6 +1553,7 @@ internal static class Program
 
         AddReportAnalysisTargets(summary);
         ApplyReportAnalysisDecision(summary);
+        AddReportAnalysisNextAction(summary);
         return summary;
     }
 
@@ -1649,6 +1650,40 @@ internal static class Program
         AddUnique(
             summary.Confidence.Reasons,
             "report analysis has no optimization blockers");
+    }
+
+    private static void AddReportAnalysisNextAction(ReportAnalysisSummary summary)
+    {
+        var action = new PlaybackQualitySuiteNextAction
+        {
+            Rank = 1,
+            Action = summary.Action,
+            Risk = summary.Risk,
+            FailureArea = summary.TargetFailureAreas.Count > 0
+                ? summary.TargetFailureAreas[0]
+                : summary.FailureAreas.Count > 0
+                    ? summary.FailureAreas[0]
+                    : ""
+        };
+
+        if (summary.TargetCaseIds.Count > 0)
+        {
+            CopyValues(summary.TargetCaseIds, action.CaseIds);
+        }
+        else
+        {
+            foreach (var item in summary.Cases)
+            {
+                AddUnique(action.CaseIds, item.CaseId);
+            }
+        }
+
+        CopyValues(summary.Signals, action.Signals);
+        CopyValues(summary.Blockers, action.Blockers);
+        CopyValues(summary.CodeTargets, action.CodeTargets);
+        CopyValues(summary.Confidence.Reasons, action.Reasons);
+        CopyValues(summary.SuggestedNextActions, action.Reasons);
+        summary.NextActions.Add(action);
     }
 
     private static void AddModelAnalysisCodeTargets(
@@ -2189,6 +2224,8 @@ internal static class Program
         public List<string> TargetCaseIds { get; } = new List<string>();
         public List<string> CodeTargets { get; } = new List<string>();
         public List<string> SuggestedNextActions { get; } = new List<string>();
+        public List<PlaybackQualitySuiteNextAction> NextActions { get; } =
+            new List<PlaybackQualitySuiteNextAction>();
         public List<ReportAnalysisCase> Cases { get; } =
             new List<ReportAnalysisCase>();
     }
