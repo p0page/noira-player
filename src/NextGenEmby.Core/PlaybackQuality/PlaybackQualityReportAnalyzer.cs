@@ -143,6 +143,7 @@ namespace NextGenEmby.Core.PlaybackQuality
         public double ClockSpeedMultiplier { get; set; } = 1.0;
         public double ClockSpeedAdjustmentPercent { get; set; }
         public bool IsClockSpeedAdjustmentRequired { get; set; }
+        public bool IsFractionalCadence { get; set; }
         public string Reason { get; set; } = "";
         public List<string> Signals { get; } = new List<string>();
     }
@@ -1209,6 +1210,11 @@ namespace NextGenEmby.Core.PlaybackQuality
             if (cadence.IsClockSpeedAdjustmentRequired)
             {
                 AddUnique(cadence.Signals, "cadence.clockSpeedAdjustmentPercent");
+            }
+
+            if (cadence.IsFractionalCadence)
+            {
+                AddUnique(cadence.Signals, "cadence.isFractionalCadence");
             }
 
             return cadence;

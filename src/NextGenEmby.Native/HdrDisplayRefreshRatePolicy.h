@@ -9,6 +9,7 @@ namespace winrt::NextGenEmby::Native::implementation
     public:
         static constexpr double MatchTolerance = 0.15;
         static constexpr double NoMatchWeight = 1000000.0;
+        static constexpr double FractionalCadencePenalty = 0.1;
 
         static bool HasUsableVideoFrameRate(double videoFrameRate) noexcept
         {
@@ -49,6 +50,11 @@ namespace winrt::NextGenEmby::Native::implementation
                 if (difference <= MatchTolerance)
                 {
                     auto weight = difference / videoFrameRate;
+                    if (IsFractionalMultiplier(ratio))
+                    {
+                        weight += FractionalCadencePenalty;
+                    }
+
                     if (displayRefreshRate <= 30.0 &&
                         !IsCinemaLowRefresh(displayRefreshRate))
                     {
@@ -75,6 +81,11 @@ namespace winrt::NextGenEmby::Native::implementation
         {
             return std::fabs(displayRefreshRate - 24.0) <= MatchTolerance ||
                 std::fabs(displayRefreshRate - (24.0 / 1.001)) <= MatchTolerance;
+        }
+
+        static bool IsFractionalMultiplier(double ratio) noexcept
+        {
+            return std::fabs(ratio - std::round(ratio)) > 0.001;
         }
     };
 }

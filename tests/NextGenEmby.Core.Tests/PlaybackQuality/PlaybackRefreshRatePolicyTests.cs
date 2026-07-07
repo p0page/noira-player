@@ -40,6 +40,8 @@ public sealed class PlaybackRefreshRatePolicyTests
     public void IsBetterRefreshRateForVideo_Prefers_Exact_Or_Ntsc_Compatible_Cadence()
     {
         Assert.True(PlaybackRefreshRatePolicy.IsBetterRefreshRateForVideo(23.976024, 59.94006, 23.976));
+        Assert.True(PlaybackRefreshRatePolicy.IsBetterRefreshRateForVideo(24.0, 59.94006, 23.976));
+        Assert.True(PlaybackRefreshRatePolicy.IsBetterRefreshRateForVideo(24.0, 60.0, 24.0));
         Assert.True(PlaybackRefreshRatePolicy.IsBetterRefreshRateForVideo(59.94006, 60.0, 23.976));
         Assert.True(PlaybackRefreshRatePolicy.IsBetterRefreshRateForVideo(60.0, 59.94006, 24.0));
         Assert.True(PlaybackRefreshRatePolicy.IsBetterRefreshRateForVideo(119.88012, 120.0, 23.976));

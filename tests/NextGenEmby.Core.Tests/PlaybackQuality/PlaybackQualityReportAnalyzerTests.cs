@@ -917,6 +917,18 @@ public sealed class PlaybackQualityReportAnalyzerTests
     }
 
     [Fact]
+    public void Analyze_Flags_Fractional_Cadence_For_Cinema_Source_On_Pulldown_Display()
+    {
+        var report = CreateOptimizationReadyFailure();
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.True(analysis.Cadence.IsFractionalCadence);
+        Assert.Contains("cadence.isFractionalCadence", analysis.Cadence.Signals);
+        Assert.Contains("fractional", analysis.Cadence.Reason);
+    }
+
+    [Fact]
     public void Analyze_Reports_Cadence_Clock_Speed_Adjustment_When_Display_Is_Whole_Number_Cinema_Mode()
     {
         var report = CreateOptimizationReadyFailure();

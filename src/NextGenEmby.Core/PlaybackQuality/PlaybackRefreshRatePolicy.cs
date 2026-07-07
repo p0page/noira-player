@@ -7,6 +7,7 @@ namespace NextGenEmby.Core.PlaybackQuality
         public const double MatchTolerance = 0.15;
         public const double NoMatchWeight = 1000000.0;
         public const double ClockSpeedAdjustmentEpsilonPercent = 0.01;
+        public const double FractionalCadencePenalty = 0.1;
 
         private static readonly double[] SupportedRatios = { 1.0, 2.0, 2.5, 3.0, 4.0, 5.0 };
 
@@ -64,10 +65,9 @@ namespace NextGenEmby.Core.PlaybackQuality
             if (assessment.RefreshDeltaHz <= MatchTolerance)
             {
                 ApplyClockSpeedAdjustment(assessment);
+                assessment.IsFractionalCadence = IsFractionalMultiplier(assessment.BestMultiplier);
                 assessment.Status = "matched";
-                assessment.Reason = assessment.IsClockSpeedAdjustmentRequired
-                    ? "Display refresh rate matches source cadence with clock speed adjustment."
-                    : "Display refresh rate matches source cadence.";
+                assessment.Reason = CreateMatchedReason(assessment);
             }
             else
             {
@@ -124,6 +124,11 @@ namespace NextGenEmby.Core.PlaybackQuality
                 }
 
                 var weight = difference / videoFrameRate;
+                if (IsFractionalMultiplier(ratio))
+                {
+                    weight += FractionalCadencePenalty;
+                }
+
                 if (displayRefreshRate <= 30.0 && !IsCinemaLowRefresh(displayRefreshRate))
                 {
                     weight += 1.0;
@@ -147,6 +152,33 @@ namespace NextGenEmby.Core.PlaybackQuality
         {
             return Math.Abs(displayRefreshRate - 24.0) <= MatchTolerance ||
                 Math.Abs(displayRefreshRate - (24.0 / 1.001)) <= MatchTolerance;
+        }
+
+        private static bool IsFractionalMultiplier(double ratio)
+        {
+            return Math.Abs(ratio - Math.Round(ratio)) > 0.001;
+        }
+
+        private static string CreateMatchedReason(
+            PlaybackQualityCadenceAssessment assessment)
+        {
+            if (assessment.IsFractionalCadence &&
+                assessment.IsClockSpeedAdjustmentRequired)
+            {
+                return "Display refresh rate matches source cadence with fractional cadence pulldown and clock speed adjustment.";
+            }
+
+            if (assessment.IsFractionalCadence)
+            {
+                return "Display refresh rate matches source cadence with fractional cadence pulldown.";
+            }
+
+            if (assessment.IsClockSpeedAdjustmentRequired)
+            {
+                return "Display refresh rate matches source cadence with clock speed adjustment.";
+            }
+
+            return "Display refresh rate matches source cadence.";
         }
 
         private static bool IsFinite(double value)

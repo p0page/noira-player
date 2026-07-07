@@ -23,6 +23,8 @@ int main()
     assert(HdrDisplayRefreshRatePolicy::MatchesVideoFrameRate(120.0, 30.0));
 
     assert(HdrDisplayRefreshRatePolicy::IsBetterRefreshRateForVideo(23.976024, 59.94006, 23.976));
+    assert(HdrDisplayRefreshRatePolicy::IsBetterRefreshRateForVideo(24.0, 59.94006, 23.976));
+    assert(HdrDisplayRefreshRatePolicy::IsBetterRefreshRateForVideo(24.0, 60.0, 24.0));
     assert(HdrDisplayRefreshRatePolicy::IsBetterRefreshRateForVideo(59.94006, 60.0, 23.976));
     assert(HdrDisplayRefreshRatePolicy::IsBetterRefreshRateForVideo(60.0, 59.94006, 24.0));
     assert(HdrDisplayRefreshRatePolicy::IsBetterRefreshRateForVideo(119.88012, 120.0, 23.976));
