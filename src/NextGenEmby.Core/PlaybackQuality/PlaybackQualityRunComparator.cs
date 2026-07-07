@@ -614,6 +614,8 @@ namespace NextGenEmby.Core.PlaybackQuality
         {
             comparison.Optimization.Action = "change-optimization-strategy";
             comparison.Optimization.Risk = "high";
+            comparison.SuggestedNextAction =
+                "Change optimization strategy for the stalled playback Core failure area before making more similar candidate edits.";
             AddUnique(
                 comparison.Optimization.Reasons,
                 "repeated unchanged comparisons indicate optimization stall");

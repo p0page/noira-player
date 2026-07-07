@@ -391,6 +391,14 @@ public sealed class PlaybackQualityRunComparatorTests
         Assert.Contains("iteration.stalled", comparison.Optimization.Blockers);
         Assert.Contains("frame-pacing", comparison.Optimization.FailureAreas);
         Assert.Contains("timing.maxFrameGapMs", comparison.Optimization.Signals);
+        Assert.Contains("Change optimization strategy", comparison.SuggestedNextAction);
+        var nextAction = Assert.Single(comparison.NextActions);
+        Assert.Equal("change-optimization-strategy", nextAction.Action);
+        Assert.Equal("frame-pacing", nextAction.FailureArea);
+        Assert.Contains("iteration.stalled", nextAction.Blockers);
+        Assert.Contains(
+            nextAction.Reasons,
+            reason => reason.Contains("Change optimization strategy"));
     }
 
     [Fact]
