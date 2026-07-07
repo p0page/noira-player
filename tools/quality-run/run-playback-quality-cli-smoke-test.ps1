@@ -1270,6 +1270,10 @@ try {
     }
 
     $candidateEvaluation = Get-Content -Raw -LiteralPath $candidateEvaluationPath | ConvertFrom-Json
+    if ($candidateEvaluation.schemaVersion -ne 1) {
+        throw 'Expected playback quality CLI evaluate-candidate output schemaVersion 1.'
+    }
+
     if ($candidateEvaluation.action -ne 'accept-candidate') {
         throw 'Expected playback quality CLI evaluate-candidate action to accept candidate.'
     }

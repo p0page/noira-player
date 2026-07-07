@@ -177,7 +177,7 @@ dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQ
 - 检查 baseline report envelope 里的 `modelAnalysis.optimizationGate` 是否允许作为比较基线；
 - 检查 candidate report envelope 里的 `modelAnalysis.optimizationGate` 是否允许继续优化；
 - 只有前六步都有效时，才调用 `compare-suite` 做 before/after 比较；
-- 输出一个模型可直接消费的 JSON，包含 `action`、`risk`、`blockers`、`activeGate`、`evidenceGates`、`baselineReportAnalysis`、`candidateReportAnalysis`、manifest/report-set 校验结果和 suite 结果。
+- 输出一个模型可直接消费的 JSON，包含 `schemaVersion`、`action`、`risk`、`blockers`、`activeGate`、`evidenceGates`、`baselineReportAnalysis`、`candidateReportAnalysis`、manifest/report-set 校验结果和 suite 结果。
 
 这条命令默认使用 `--match-by run-id`，因此 manifest `caseId`、baseline `report.runId`、candidate `report.runId` 应保持一致。任何 missing/extra/duplicate/metadata mismatch 都会被视为证据采集失败，而不是播放核心优化结论。自动化模型循环应先修复采集或源选择问题，再根据 suite 结果决定保留、拆分、回退或继续修改播放核心。
 

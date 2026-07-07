@@ -205,6 +205,7 @@ dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQ
 
 输出字段语义：
 
+- `schemaVersion`：candidate evaluation JSON schema version，目前为 `1`。
 - `manifestValidation`：reference manifest 是否可调度，包含 case、tier、purpose 和 expected source metadata 校验。
 - `baselineReportSetValidation`：baseline 是否完整覆盖 manifest，并且实际源元数据是否匹配预期。
 - `candidateReportSetValidation`：candidate 是否完整覆盖 manifest，并且实际源元数据是否匹配预期。

@@ -2041,6 +2041,7 @@ internal static class Program
 
     private sealed class CandidateEvaluationOutput
     {
+        public int SchemaVersion { get; set; } = 1;
         public string Action { get; set; } = "collect-comparable-evidence";
         public string Risk { get; set; } = "high";
         public List<string> Reasons { get; } = new List<string>();
