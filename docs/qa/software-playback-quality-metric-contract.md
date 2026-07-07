@@ -211,8 +211,10 @@ dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQ
 - `baselineReportAnalysis` / `candidateReportAnalysis`：baseline 和 candidate 每个 report 的 `modelAnalysis.optimizationGate` 摘要，包含 report 数量、已分析数量、缺失 analysis 数量、blocked 数量、聚合 `blockers`、`signals`、`failureAreas`、最高优先级 `targetFailureAreas`、对应 `targetCaseIds`、`codeTargets`、`suggestedNextActions`，以及每个 case 的 `status`、`blockers`、`signals`、`failureAreas`、`targetFailureAreas`、`codeTargets` 和 `suggestedNextActions`。
 - `suite`：只有 manifest、manifest coverage、report-set、baseline report-analysis 和 candidate report-analysis 都有效时才产生有效 before/after 比较结果。
 - `activeGate`：模型当前应处理的 gate。它是第一个 `status != pass` 的 gate；如果全部通过，则指向最终 `suite` gate。
-- `evidenceGates`：模型优先读取的门禁摘要，按 `manifest`、`manifest-coverage`、`baseline-report-set`、`candidate-report-set`、`baseline-report-analysis`、`candidate-report-analysis`、`suite` 顺序给出 `status`、`action`、`confidence`、`resultCounts`、`blockers`、`signals`、`failureAreas`、`targetFailureAreas`、`targetCaseIds`、`caseIds`、`codeTargets`、`suggestedNextActions` 和 `nextActions`。当 gate 来自 suite 时，还会带 `environment` 摘要，并聚合 `comparison.*` per-case blocker，方便模型先识别缺失、部分、同构建、输入不兼容或 comparison coverage 问题，再按 case 展开。
+- `evidenceGates`：模型优先读取的门禁摘要，按 `manifest`、`manifest-coverage`、`baseline-report-set`、`candidate-report-set`、`baseline-report-analysis`、`candidate-report-analysis`、`suite` 顺序给出 `status`、`action`、`risk`、`confidence`、`resultCounts`、`blockers`、`signals`、`failureAreas`、`targetFailureAreas`、`targetCaseIds`、`caseIds`、`codeTargets`、`suggestedNextActions` 和 `nextActions`。当 gate 来自 suite 时，还会带 `environment` 摘要，并聚合 `comparison.*` per-case blocker，方便模型先识别缺失、部分、同构建、输入不兼容或 comparison coverage 问题，再按 case 展开。
 - `action`、`risk`、`reasons`、`blockers`：给模型直接使用的下一步决策摘要。
+
+`activeGate.risk` 是 gate 级风险摘要。suite gate 继承 suite risk；前置通过 gate 为 `low`，前置阻断或 skipped suite 为 `high`。模型可以只读取 `activeGate.action`、`activeGate.risk` 和 `activeGate.nextActions[0]` 来决定下一步是否允许自动保留候选；只有 `action = accept-candidate` 且 `risk = low` 才是自动保留信号。
 
 `suggestedNextActions` 只聚合已有建议文本：manifest coverage 的覆盖建议、report-set error 的采集或源选择建议、`modelAnalysis.suggestedNextAction`、triage step/hint 的 `suggestedAction`，以及 suite case summary 的 `suggestedNextAction`。模型应把它们作为下一步操作提示；最终是否修改 Core 仍由 `action`、`blockers`、`risk`、`targetFailureAreas`、`targetCaseIds`、`codeTargets` 和 comparison 证据共同决定。
 

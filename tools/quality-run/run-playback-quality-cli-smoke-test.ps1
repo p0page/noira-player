@@ -1293,7 +1293,8 @@ try {
     if ($null -eq $candidateEvaluation.activeGate -or
         $candidateEvaluation.activeGate.name -ne 'suite' -or
         $candidateEvaluation.activeGate.status -ne 'pass' -or
-        $candidateEvaluation.activeGate.action -ne 'accept-candidate') {
+        $candidateEvaluation.activeGate.action -ne 'accept-candidate' -or
+        $candidateEvaluation.activeGate.risk -ne 'low') {
         throw 'Expected evaluate-candidate active gate to point at passing suite decision.'
     }
 
@@ -1407,7 +1408,8 @@ try {
 
     if ($null -eq $missingEnvironmentEvaluation.activeGate -or
         $missingEnvironmentEvaluation.activeGate.name -ne 'suite' -or
-        $missingEnvironmentEvaluation.activeGate.status -ne 'blocked') {
+        $missingEnvironmentEvaluation.activeGate.status -ne 'blocked' -or
+        $missingEnvironmentEvaluation.activeGate.risk -ne 'high') {
         throw 'Expected missing build identity active gate to point at blocked suite.'
     }
 

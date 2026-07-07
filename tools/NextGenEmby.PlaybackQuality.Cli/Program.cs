@@ -303,6 +303,7 @@ internal static class Program
             evaluation.EvidenceGates.Add(CreateSkippedSuiteGate());
         }
 
+        ApplyDefaultGateRisks(evaluation.EvidenceGates);
         evaluation.ActiveGate = SelectActiveGate(evaluation.EvidenceGates);
         WriteJson(evaluation, options.OutputPath);
         return evaluation.Blockers.Count == 0 ? 0 : 2;
@@ -1686,6 +1687,7 @@ internal static class Program
             Name = "suite",
             Status = suite.Blockers.Count == 0 ? "pass" : "blocked",
             Action = suite.Action,
+            Risk = suite.Risk,
             Summary = "comparison suite action: " + suite.Action
         };
 
@@ -1715,6 +1717,7 @@ internal static class Program
             Name = "suite",
             Status = "skipped",
             Action = "collect-comparable-evidence",
+            Risk = "high",
             Summary = "comparison suite skipped because an earlier evidence gate failed"
         };
         AddUnique(gate.Blockers, "suite.skipped");
@@ -1814,6 +1817,22 @@ internal static class Program
         AddUnique(gate.Confidence.Reasons, reason);
         CopyValues(gate.Signals, gate.Confidence.Signals);
         CopyValues(gate.Blockers, gate.Confidence.Reasons);
+    }
+
+    private static void ApplyDefaultGateRisks(
+        List<CandidateEvaluationGate> gates)
+    {
+        foreach (var gate in gates)
+        {
+            if (!string.IsNullOrWhiteSpace(gate.Risk))
+            {
+                continue;
+            }
+
+            gate.Risk = string.Equals(gate.Status, "pass", StringComparison.OrdinalIgnoreCase)
+                ? "low"
+                : "high";
+        }
     }
 
     private static CandidateEvaluationGate SelectActiveGate(
@@ -2045,6 +2064,7 @@ internal static class Program
         public string Name { get; set; } = "";
         public string Status { get; set; } = "";
         public string Action { get; set; } = "";
+        public string Risk { get; set; } = "";
         public string Summary { get; set; } = "";
         public CandidateEvaluationGateConfidence Confidence { get; set; } =
             new CandidateEvaluationGateConfidence();
