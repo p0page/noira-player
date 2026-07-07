@@ -1278,6 +1278,10 @@ try {
         throw 'Expected playback quality CLI evaluate-candidate action to accept candidate.'
     }
 
+    if ($candidateEvaluation.decision -ne 'keep-candidate') {
+        throw 'Expected playback quality CLI evaluate-candidate decision to keep candidate.'
+    }
+
     if ($candidateEvaluation.manifestValidation.isValid -ne $true) {
         throw 'Expected playback quality CLI evaluate-candidate manifest validation to be valid.'
     }
@@ -1418,6 +1422,10 @@ try {
     $missingEnvironmentEvaluation = Get-Content -Raw -LiteralPath $candidateEvaluationMissingEnvironmentPath | ConvertFrom-Json
     if ($missingEnvironmentEvaluation.action -ne 'collect-comparable-evidence') {
         throw 'Expected missing build identity evaluate-candidate output to collect comparable evidence.'
+    }
+
+    if ($missingEnvironmentEvaluation.decision -ne 'collect-comparable-evidence') {
+        throw 'Expected missing build identity evaluate-candidate decision to collect comparable evidence.'
     }
 
     if ($null -eq $missingEnvironmentEvaluation.activeGate -or

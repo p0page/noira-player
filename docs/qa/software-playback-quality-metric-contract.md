@@ -213,7 +213,9 @@ dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQ
 - `suite`：只有 manifest、manifest coverage、report-set、baseline report-analysis 和 candidate report-analysis 都有效时才产生有效 before/after 比较结果。
 - `activeGate`：模型当前应处理的 gate。它是第一个 `status != pass` 的 gate；如果全部通过，则指向最终 `suite` gate。
 - `evidenceGates`：模型优先读取的门禁摘要，按 `manifest`、`manifest-coverage`、`baseline-report-set`、`candidate-report-set`、`baseline-report-analysis`、`candidate-report-analysis`、`suite` 顺序给出 `status`、`action`、`risk`、`confidence`、`resultCounts`、`signalSummaries`、`blockers`、`signals`、`failureAreas`、`targetFailureAreas`、`targetCaseIds`、`caseIds`、`codeTargets`、`suggestedNextActions` 和 `nextActions`。当 gate 来自 suite 时，还会带 `environment` 摘要，并聚合 `comparison.*` per-case blocker，方便模型先识别缺失、部分、同构建、输入不兼容或 comparison coverage 问题，再按 case 展开。
-- `action`、`risk`、`reasons`、`blockers`：给模型直接使用的下一步决策摘要。
+- `action`、`decision`、`risk`、`reasons`、`blockers`：给模型直接使用的下一步决策摘要。
+
+`decision` 是 candidate evaluation 的顶层机器决策摘要，用于避免模型从 `action` 文本二次推断是否保留候选。`accept-candidate` 映射为 `keep-candidate`，`reject-candidate` / `split-candidate` 保持同名，`continue-next-triage-step` 映射为 `no-change`，`collect-comparable-evidence`、`review-unmatched-signals` 和 `change-optimization-strategy` 保持原动作名。模型应优先用 `decision` 判断是否保留候选，再用 `action`、`risk`、`activeGate` 和 `nextActions` 定位下一步。
 
 `activeGate.risk` 是 gate 级风险摘要。suite gate 继承 suite risk；前置通过 gate 为 `low`，前置阻断或 skipped suite 为 `high`。模型可以只读取 `activeGate.action`、`activeGate.risk` 和 `activeGate.nextActions[0]` 来决定下一步是否允许自动保留候选；只有 `action = accept-candidate` 且 `risk = low` 才是自动保留信号。
 
@@ -234,7 +236,7 @@ dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQ
 - 如果 `baseline-report-analysis` 或 `candidate-report-analysis` 被阻断，优先读取该 gate 的 `blockers`、`signals`、`targetFailureAreas`、`caseIds`、`codeTargets` 和 `suggestedNextActions`。这些字段来自对应 envelope 的 `modelAnalysis.optimizationGate`，表示报告自身还不能作为播放核心优化依据，例如 source mismatch、缺失证据或样本不足。此时 suite 会被跳过。
 - 如果 `activeGate.name = suite` 且被阻断，优先读取 `activeGate.environment`、`activeGate.confidence`、`activeGate.resultCounts`、`activeGate.nextActions`、`activeGate.targetFailureAreas` 和 `activeGate.targetCaseIds`，再按需展开 `suite.cases` 或单 case comparison。
 - 需要定位具体 report 时，读取 `baselineReportAnalysis.cases` 或 `candidateReportAnalysis.cases`。raw `PlaybackQualityReport` 没有 envelope-level `modelAnalysis` 时会显示 `status = unavailable`；自动化采集应优先写入 `PlaybackQualityRunResult` envelope。如果 envelope 存在 `modelAnalysis` 但 `modelAnalysis.runId` / `modelAnalysis.result` 缺失，或 `modelAnalysis.analyzerVersion` 不匹配当前 analyzer，`evaluate-candidate` 必须用当前 Core analyzer 重新生成 analysis；空 `{}` 不得被视为有效 report-analysis 证据。
-- 只有当 `action = accept-candidate` 且 `risk = low` 时，候选播放核心改动才可以被自动保留。
+- 只有当 `decision = keep-candidate` 且 `risk = low` 时，候选播放核心改动才可以被自动保留。
 - `review-unmatched-signals`、`collect-comparable-evidence`、`change-optimization-strategy` 等动作都不是通过信号，模型应继续采集或缩小改动范围。
 - `--comparisons-dir` 产出的单 case comparison 是定位问题样本的入口；模型应优先读取对应 case 的 comparison，再决定下一次修改。
 

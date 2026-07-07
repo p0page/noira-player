@@ -306,6 +306,7 @@ internal static class Program
         ApplyDefaultGateRisks(evaluation.EvidenceGates);
         ApplyDefaultGateNextActions(evaluation.EvidenceGates);
         evaluation.ActiveGate = SelectActiveGate(evaluation.EvidenceGates);
+        evaluation.Decision = CreateCandidateEvaluationDecision(evaluation.Action);
         WriteJson(evaluation, options.OutputPath);
         return evaluation.Blockers.Count == 0 ? 0 : 2;
     }
@@ -1899,6 +1900,27 @@ internal static class Program
         }
     }
 
+    private static string CreateCandidateEvaluationDecision(string action)
+    {
+        switch (action)
+        {
+            case "accept-candidate":
+                return "keep-candidate";
+            case "reject-candidate":
+                return "reject-candidate";
+            case "split-candidate":
+                return "split-candidate";
+            case "continue-next-triage-step":
+                return "no-change";
+            case "collect-comparable-evidence":
+            case "review-unmatched-signals":
+            case "change-optimization-strategy":
+                return action;
+            default:
+                return "collect-comparable-evidence";
+        }
+    }
+
     private static CandidateEvaluationGate SelectActiveGate(
         List<CandidateEvaluationGate> gates)
     {
@@ -2043,6 +2065,7 @@ internal static class Program
     {
         public int SchemaVersion { get; set; } = 1;
         public string Action { get; set; } = "collect-comparable-evidence";
+        public string Decision { get; set; } = "collect-comparable-evidence";
         public string Risk { get; set; } = "high";
         public List<string> Reasons { get; } = new List<string>();
         public List<string> Blockers { get; } = new List<string>();
