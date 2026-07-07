@@ -2391,3 +2391,41 @@ Fix rerun findings:
 - Decision:
   - Commit this batch as playback OSD visual-system alignment.
   - Keep native stream switching, real subtitle collision, and hardware focus rendering as follow-up validation, not as blockers for this visual-system slice.
+
+### 2026-07-08 - Design Conformance Batch 05 Secondary Media Surfaces Baseline
+
+- App version: 0.1.0.219.
+- Scope: run Batch 05 before visual fixes, covering Live TV, Music, Photos, and the current source/destination model.
+- Data source: DEBUG fixture routes only; no private server data, credentials, or personal media assets were written to the repository.
+- Evidence root: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch05-secondary-baseline-20260708-033759`.
+- Contact sheets:
+  - Live TV: `contact-livetv.png`.
+  - Music: `contact-music.png`.
+  - Photos: `contact-photos.png`.
+- Fixture routes:
+  - `livetv-fixture`.
+  - `music-fixture`.
+  - `photos-fixture`.
+  - `home-fixture` for the current Guide / destination-family check.
+- Keyboard-only validation:
+  - Closed the existing `Next Gen Xbox Emby` ApplicationFrameWindow before each installed-app fixture launch.
+  - Wrote `dev-command.json` into the app LocalState folder and launched through AppUserModelId `NextGenEmby.App_h8qjz0sr1sg4m!App`.
+  - Live TV path: `Down`, `Down`, `Down`, `Enter`, `Escape`.
+  - Music path: `Down`, `Right`, `Right`, `Enter`, `Escape`, `Left`.
+  - Photos path: `Enter`, `Right`, `Right`, `Enter`, `Escape`, `Escape`.
+  - Guide / destination path: launched Home fixture and captured the current collapsed rail / page action model.
+
+Findings recorded before fixes:
+
+| ID | Severity | Page | Evidence | Expected | Actual | Proposed batch fix |
+| --- | --- | --- | --- | --- | --- | --- |
+| DC-05.01 | Fail | Live TV | `livetv-fixture\01-initial.png` through `06-after-escape.png`, `contact-livetv.png`, and UIA snapshots for focused channels and the unsupported layer. | Live TV should use dense matte channel/program rows, a source-aware current-program preview, and a transient unsupported layer that follows the newer matte command language. Focus should be visible without relying on a bright complete perimeter frame. | Channel navigation works and Escape restores focus to `Kids Studio`, but channel rows still use a bright full focus frame. The right preview reads as a large empty graphite information panel, and the unsupported playback layer uses the older centered modal plus bright outlined Close target. | Keep the dense channel-list structure, but migrate row focus to the shared matte list treatment, redesign the current-program preview as a compact media-first panel, and move unsupported playback messaging to a shared matte transient layer. |
+| DC-05.02 | Concern | Music | `music-fixture\01-initial.png` through `07-back-album-or-artist.png`, `contact-music.png`, and UIA snapshots for Artist -> Album -> Song focus. | Music should preserve TV-readable density with list/column navigation where it is better than poster grids. Focus and empty/unsupported states should still follow the same matte visual system as the rest of the app. | The three-column browsing model is appropriate and keyboard paths work. Artist, album, and song focus restores correctly after the unsupported layer. Visual focus still uses bright complete outlines, the Now panel is sparse, and the unsupported layer shares the older modal style. | Preserve the three-column architecture, migrate list focus and the unsupported layer to shared matte styles, and tune the Now panel into a compact album/song context area instead of a static diagnostic panel. |
+| DC-05.03 | Fail | Photos | `photos-fixture\01-root.png` through `07-album-escape-root.png`, `contact-photos.png`, and UIA snapshots for album, photo, viewer, and focus restoration. | Photos should prioritize immersive artwork and minimal chrome. Root/album grids can be dense, but they should occupy the TV canvas with photo-appropriate media tiles rather than generic poster-library anatomy. Focus should avoid bright perimeter frames. | Album opening, photo navigation, viewer opening, and Escape restoration all work. The viewer is close to the intended minimal immersive direction. Root and album pages still look like generic poster grids: small vertical cards cluster on the left with a large unused right side, and focused cards use bright full frames. | Add a photo-specific visual recipe: larger landscape or square media tiles, stronger use of the available canvas, matte focus without a perimeter frame, and viewer styling kept minimal. Reuse Library mechanics only where they do not force movie-poster proportions. |
+| DC-05.04 | Concern | Guide / source destinations | `home-guide\01-guide.png` and `01-guide.uia.txt`. | The client should expose the full Emby destination family, including lower-frequency or server-defined surfaces, through a source-aware navigation model. If the current model is collapsed Guide only, the design docs and checklist should explicitly say that. | The collapsed left rail exposes Home, Search, Movies, Shows, Live TV, Collections, Playlists, Music, Photos, Favorites, Unwatched, and Settings. No explicit Source Hub or expanded More destination view was found in this fixture. Pressing the tested guide key path captured the collapsed rail and Home content rather than a separate source hub. | Product/design decision needed before implementation: either accept the collapsed Guide plus section More buttons as the current source model and update the docs, or add a Source Hub fixture/view for unpinned libraries and secondary routes. |
+
+- Decision:
+  - Treat Batch 05 as a secondary-media visual-system batch, not as a playback/native-feature batch.
+  - Fix Live TV and Music together around the shared matte list focus and shared unsupported/transient layer.
+  - Fix Photos with a photo-specific grid recipe instead of forcing the movie-poster card system.
+  - Resolve the Source Hub question before code changes: the current app has a complete collapsed destination rail, but not a distinct Source Hub surface.
