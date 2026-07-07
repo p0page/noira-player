@@ -145,13 +145,17 @@
                         x:Name="AudioSummaryBlock"
                         FontSize="18"
                         Foreground="{StaticResource AppMutedTextBrush}"
-                        TextWrapping="Wrap" />
+                        MaxLines="1"
+                        TextTrimming="CharacterEllipsis"
+                        TextWrapping="NoWrap" />
 
                     <TextBlock
                         x:Name="SubtitleSummaryBlock"
                         FontSize="18"
                         Foreground="{StaticResource AppMutedTextBrush}"
-                        TextWrapping="Wrap" />
+                        MaxLines="1"
+                        TextTrimming="CharacterEllipsis"
+                        TextWrapping="NoWrap" />
 
                     <StackPanel
                         x:Name="OrganizeSection"

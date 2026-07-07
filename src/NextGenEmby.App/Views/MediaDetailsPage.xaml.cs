@@ -2932,7 +2932,9 @@ namespace NextGenEmby.App.Views
             {
                 Text = CreateSourceSummary(source),
                 FontSize = 18,
-                TextWrapping = TextWrapping.WrapWholeWords
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                MaxLines = 1,
+                TextWrapping = TextWrapping.NoWrap
             });
 
             var details = CreateSourceDetails(source);
@@ -2943,7 +2945,9 @@ namespace NextGenEmby.App.Views
                     Text = details,
                     FontSize = 14,
                     Foreground = (Windows.UI.Xaml.Media.Brush)Application.Current.Resources["AppMutedTextBrush"],
-                    TextWrapping = TextWrapping.Wrap
+                    TextTrimming = TextTrimming.CharacterEllipsis,
+                    MaxLines = 1,
+                    TextWrapping = TextWrapping.NoWrap
                 });
             }
 

@@ -2681,3 +2681,38 @@ Follow-up findings:
 - Decision:
   - Mark Batch 02 Sort/Filter option-sheet visual constraints as resolved for deterministic fixtures and source contracts.
   - Keep full localization sampling as a later release-hardening activity rather than a current visual-system blocker.
+
+### 2026-07-08 - Design Conformance Batch 03 Details Stream Label Constraint Follow-Up
+
+- App version: 0.1.0.227.
+- Scope: close the remaining Batch 03 long source/audio/subtitle label concern by constraining Details stream text and adding deterministic long Emby labels to `details-fixture`.
+- Data source: DEBUG `details-fixture` only; no private server data, credentials, screenshots, or personal media assets were written to the repository.
+- Evidence root: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch03-details-stream-labels-227-20260708-053515`.
+- Keyboard-only validation:
+  - Closed the existing app frame, wrote `dev-command.json` with route `details-fixture`, and launched through AppUserModelId `NextGenEmby.App_h8qjz0sr1sg4m!App`.
+  - Captured the initial Details first viewport with long source/audio/subtitle fixture labels.
+  - Pressed `Down` to focus the first version/source option.
+  - Pressed `Down` again to focus the second version/source option and confirm scroll/focus remain stable.
+  - The route reported `completed / details-fixture`; screenshots and the route result were saved under the evidence root.
+- Screenshots:
+  - Details initial viewport: `01-details-initial.png`.
+  - First version focus: `02-details-first-version-focus.png`.
+  - Second version focus: `03-details-second-version-focus.png`.
+  - Route result: `route-result.txt`.
+
+Follow-up findings:
+
+| ID | Status | Page | Evidence | Result | Residual risk |
+| --- | --- | --- | --- | --- | --- |
+| DC-03.03 | Pass | Details source/audio/subtitle controls | `01-details-initial.png`, `02-details-first-version-focus.png`, `03-details-second-version-focus.png`, `MediaDetailsAccessibilitySourceTests.Details_Source_And_Stream_Text_Constrain_Long_Emby_Labels`, and `DevelopmentDetailsFixtureTests.Create_Includes_Long_Stream_Labels_For_Details_Overflow_Coverage`. | Long source names and stream labels now remain bounded to one-line ellipsis. The Details decision surface keeps stable card heights, muted source selection, and compact Emby playback vocabulary. | Real localized stream titles can still vary by server/plugin, but the page-level layout contract now prevents wrapping-driven density breaks. |
+
+- Verification:
+  - Red path confirmed `DevelopmentDetailsFixtureTests.Create_Includes_Long_Stream_Labels_For_Details_Overflow_Coverage` failed before fixture implementation because the fixture only used short stream labels.
+  - Red path confirmed `MediaDetailsAccessibilitySourceTests.Details_Source_And_Stream_Text_Constrain_Long_Emby_Labels` failed before implementation because Details summaries lacked explicit one-line ellipsis constraints.
+  - Targeted Details source and fixture tests passed: 14 tests.
+  - Full Core test suite passed: 492 tests.
+  - Visual Studio MSBuild Debug x64 build passed, producing `NextGenEmby.App_0.1.0.227_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.227`.
+- Decision:
+  - Mark Batch 03 audio/subtitle/source long-label handling as resolved for deterministic fixtures and source contracts.
+  - Keep live-server localization and plugin-generated stream titles as later release-hardening validation.

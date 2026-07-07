@@ -56,6 +56,29 @@ public sealed class DevelopmentDetailsFixtureTests
         }
     }
 
+    [Fact]
+    public void Create_Includes_Long_Stream_Labels_For_Details_Overflow_Coverage()
+    {
+        var fixture = DevelopmentDetailsFixture.Create();
+        var audioLabels = fixture.MediaSources
+            .SelectMany(source => source.AudioStreams)
+            .Select(stream => stream.DisplayTitle)
+            .Where(label => !string.IsNullOrWhiteSpace(label))
+            .ToList();
+        var subtitleLabels = fixture.MediaSources
+            .SelectMany(source => source.SubtitleStreams)
+            .Select(stream => stream.DisplayTitle)
+            .Where(label => !string.IsNullOrWhiteSpace(label))
+            .ToList();
+
+        Assert.Contains(audioLabels, label =>
+            label.Length >= 56 &&
+            label.IndexOf("commentary", StringComparison.OrdinalIgnoreCase) >= 0);
+        Assert.Contains(subtitleLabels, label =>
+            label.Length >= 56 &&
+            label.IndexOf("descriptive", StringComparison.OrdinalIgnoreCase) >= 0);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

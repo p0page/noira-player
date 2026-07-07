@@ -249,6 +249,52 @@ public sealed class MediaDetailsAccessibilitySourceTests
         Assert.DoesNotContain("UseSystemFocusVisuals = true", detailsSource);
     }
 
+    [Fact]
+    public void Details_Source_And_Stream_Text_Constrain_Long_Emby_Labels()
+    {
+        var root = FindRepositoryRoot();
+        var detailsXaml = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NextGenEmby.App",
+            "Views",
+            "MediaDetailsPage.xaml"));
+        var detailsSource = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NextGenEmby.App",
+            "Views",
+            "MediaDetailsPage.xaml.cs"));
+
+        var audioSummaryBlock = SliceFrom(detailsXaml, "x:Name=\"AudioSummaryBlock\"", "x:Name=\"SubtitleSummaryBlock\"");
+        var subtitleSummaryBlock = SliceFrom(detailsXaml, "x:Name=\"SubtitleSummaryBlock\"", "x:Name=\"OrganizeSection\"");
+        Assert.Contains("MaxLines=\"1\"", audioSummaryBlock);
+        Assert.Contains("TextTrimming=\"CharacterEllipsis\"", audioSummaryBlock);
+        Assert.Contains("TextWrapping=\"NoWrap\"", audioSummaryBlock);
+        Assert.Contains("MaxLines=\"1\"", subtitleSummaryBlock);
+        Assert.Contains("TextTrimming=\"CharacterEllipsis\"", subtitleSummaryBlock);
+        Assert.Contains("TextWrapping=\"NoWrap\"", subtitleSummaryBlock);
+
+        var sourceTitleBlock = SliceFrom(detailsSource, "Text = CreateSourceSummary(source)", "var details = CreateSourceDetails(source);");
+        Assert.Contains("TextTrimming = TextTrimming.CharacterEllipsis", sourceTitleBlock);
+        Assert.Contains("MaxLines = 1", sourceTitleBlock);
+        Assert.DoesNotContain("TextWrapping = TextWrapping.Wrap", sourceTitleBlock);
+
+        var sourceDetailsBlock = SliceFrom(detailsSource, "Text = details", "layout.Children.Add(marker);");
+        Assert.Contains("TextTrimming = TextTrimming.CharacterEllipsis", sourceDetailsBlock);
+        Assert.Contains("MaxLines = 1", sourceDetailsBlock);
+        Assert.DoesNotContain("TextWrapping = TextWrapping.Wrap", sourceDetailsBlock);
+    }
+
+    private static string SliceFrom(string source, string startMarker, string endMarker)
+    {
+        var start = source.IndexOf(startMarker, StringComparison.Ordinal);
+        Assert.True(start >= 0, "Missing source marker " + startMarker);
+        var end = source.IndexOf(endMarker, start, StringComparison.Ordinal);
+        Assert.True(end > start, "Missing source marker " + endMarker);
+        return source.Substring(start, end - start);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
