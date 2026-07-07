@@ -2,6 +2,14 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-08 更新：runtime metrics 采集状态进入 playable report-set gate
+
+`PlaybackQualityRequiredSignalPolicy` 现在会对非 error、非明确 unsupported 的可播放 case 要求 `runtimeMetrics.status`、`runtimeMetrics.providerStatus`、`runtimeMetrics.hasSnapshot` 和 `runtimeMetrics.hasPlaybackSample`。这让 report-set validation 可以在比较或候选评测前识别“报告缺少 runtime metrics 采集状态”这一类 instrumentation 缺口。
+
+`HasSnapshot = false` 或 `HasPlaybackSample = false` 不是缺字段；只要 `runtimeMetrics.status` 明确为 `unavailable`、`empty-snapshot` 或 `captured`，这些布尔值就算作采集状态证据。是否允许模型优化播放 core 仍由 `modelAnalysis.optimizationGate` 决定：`unavailable` 和 `empty-snapshot` 会继续作为 evidence-collection blocker。
+
+边界：这是 report-set evaluation contract 变更，不改变播放行为、native graph、阈值、expected behavior 或 pass/fail 标准。error-handling case 和明确 unsupported source 不要求 runtime playback sample。
+
 ## 2026-07-08 更新：source raw color expectation 进入 manifest/report-set gate
 
 `PlaybackQualityExpected` 现在可以声明 `videoRange`、`colorPrimaries`、`colorTransfer` 和 `colorSpace`。当 reference manifest 明确写出这些 expected 值时，`PlaybackQualityEvaluator` 会逐项比较 `report.source` 的实际值，`PlaybackQualityRequiredSignalPolicy` 也会把对应的 `source.*` 字段加入 required signals；如果 manifest 没有写出这些字段，则不会强制要求采集器伪造。

@@ -5,7 +5,7 @@
 生成命令：
 
 ```powershell
-dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- materialize-native-harness-report-set --manifest docs\qa\playback-quality-reference-manifest.example.json --reports-dir docs\qa\baselines\v0.1-native-harness-skip\reports --source-revision working-tree-source-color-expectation-gate-v0.1 --player-core-version NextGenEmby.Core --build-configuration Debug --output docs\qa\baselines\v0.1-native-harness-skip\materialized-native-harness-summary.json
+dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- materialize-native-harness-report-set --manifest docs\qa\playback-quality-reference-manifest.example.json --reports-dir docs\qa\baselines\v0.1-native-harness-skip\reports --source-revision working-tree-runtime-metrics-gate-v0.1 --player-core-version NextGenEmby.Core --build-configuration Debug --output docs\qa\baselines\v0.1-native-harness-skip\materialized-native-harness-summary.json
 dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- validate-report-set --manifest docs\qa\playback-quality-reference-manifest.example.json --reports-dir docs\qa\baselines\v0.1-native-harness-skip\reports --output docs\qa\baselines\v0.1-native-harness-skip\report-set-validation.json
 dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- analyze-report-set --reports-dir docs\qa\baselines\v0.1-native-harness-skip\reports --output docs\qa\baselines\v0.1-native-harness-skip\report-analysis-summary.json
 ```

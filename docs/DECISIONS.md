@@ -1,5 +1,15 @@
 # 技术决策
 
+## 2026-07-08: playable report-set 要求 runtime metrics 采集状态
+
+决策：`PlaybackQualityRequiredSignalPolicy` 对非 error、非明确 unsupported 的可播放 case 新增 required signals：`runtimeMetrics.status`、`runtimeMetrics.providerStatus`、`runtimeMetrics.hasSnapshot` 和 `runtimeMetrics.hasPlaybackSample`。`validate-report-set` 会把缺少这些信号的报告归类为 `insufficient instrumentation`。
+
+原因：runtime counters 只有在知道采集器状态时才可解释。此前 analyzer 已能把 `unavailable` 和 `empty-snapshot` 阻断为 evidence-collection 问题，但 report-set gate 没有强制外部 captured report 声明采集状态；手写或第三方 report 可能带了 timing/buffer 数字，却没有说明这些数字来自真实 provider、空 snapshot，还是默认值。
+
+影响：source-only baseline 继续显式写入 `runtimeMetrics.status = unavailable` 与 `providerStatus = source-only`，因此新增 gate 不把 source-only 误判为缺字段；core-probe baseline 继续通过，并以 `core-probe:returned-snapshot` 标记 deterministic provider；native-harness-skip 仍只要求 skip 证据，不要求 runtime playback sample。
+
+边界：这是 report-set evaluation contract 变更，不改变播放行为、native graph、阈值、expected behavior、case 分类或 pass/fail 标准。`HasSnapshot = false` 或 `HasPlaybackSample = false` 是有效采集状态证据，不是缺字段；这些状态是否阻断优化由 `modelAnalysis.optimizationGate` 处理。
+
 ## 2026-07-08: manifest 明确声明的 source raw color metadata 进入 required-signal gate
 
 决策：`PlaybackQualityExpected` 新增 `VideoRange`、`ColorPrimaries`、`ColorTransfer` 和 `ColorSpace`。当 reference manifest 写出对应 expected 值时，`PlaybackQualityEvaluator` 会比较 `report.source.videoRange`、`source.colorPrimaries`、`source.colorTransfer` 和 `source.colorSpace`，`PlaybackQualityRequiredSignalPolicy` 也会要求这些信号存在。未声明的字段不进入 required-signal gate。

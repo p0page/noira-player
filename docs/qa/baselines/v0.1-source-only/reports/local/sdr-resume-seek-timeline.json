@@ -228,7 +228,7 @@
     "environment": {
       "collectorVersion": "materialize-baseline-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "working-tree-source-color-expectation-gate-v0.1",
+      "sourceRevision": "working-tree-runtime-metrics-gate-v0.1",
       "buildConfiguration": "Debug"
     },
     "limitations": [
@@ -470,7 +470,7 @@
     "environment": {
       "collectorVersion": "materialize-baseline-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "working-tree-source-color-expectation-gate-v0.1",
+      "sourceRevision": "working-tree-runtime-metrics-gate-v0.1",
       "buildConfiguration": "Debug",
       "signals": [
         "environment.collectorVersion",

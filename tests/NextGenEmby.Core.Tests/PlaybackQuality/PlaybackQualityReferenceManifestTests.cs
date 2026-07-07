@@ -498,6 +498,7 @@ public sealed class PlaybackQualityReferenceManifestTests
             height: 2160,
             frameRate: 23.976,
             hdrKind: "Hdr10");
+        AddCapturedRuntimeMetrics(report);
         report.ColorPipeline.ConversionStatus = "validated";
 
         var validation = PlaybackQualityReferenceReportSetValidator.Validate(
@@ -1189,6 +1190,11 @@ public sealed class PlaybackQualityReferenceManifestTests
         entry.PresentSignals.Add("lifecycle.pause");
         entry.PresentSignals.Add("lifecycle.resume");
         entry.PresentSignals.Add("lifecycle.stop");
+        AddCapturedRuntimeMetrics(report);
+        entry.PresentSignals.Add("runtimeMetrics.status");
+        entry.PresentSignals.Add("runtimeMetrics.providerStatus");
+        entry.PresentSignals.Add("runtimeMetrics.hasSnapshot");
+        entry.PresentSignals.Add("runtimeMetrics.hasPlaybackSample");
         entry.PresentSignals.Add("colorPipeline.conversionStatus");
         entry.PresentSignals.Add("buffers.videoStarvedPasses");
         entry.PresentSignals.Add("buffers.audioStarvedPasses");
@@ -1317,6 +1323,60 @@ public sealed class PlaybackQualityReferenceManifestTests
         var requiredSignals = PlaybackQualityRequiredSignalPolicy.CreateRequiredSignals(referenceCase);
 
         Assert.Contains("lifecycle.endOfStream", requiredSignals);
+    }
+
+    [Fact]
+    public void RequiredSignalPolicy_Requires_Runtime_Metrics_State_For_Playable_Cases()
+    {
+        var referenceCase = CreateCase(
+            "runtime-metrics/playable-case",
+            tier: 1,
+            purpose: "sdr-smoke");
+
+        var requiredSignals = PlaybackQualityRequiredSignalPolicy.CreateRequiredSignals(referenceCase);
+
+        Assert.Contains("runtimeMetrics.status", requiredSignals);
+        Assert.Contains("runtimeMetrics.providerStatus", requiredSignals);
+        Assert.Contains("runtimeMetrics.hasSnapshot", requiredSignals);
+        Assert.Contains("runtimeMetrics.hasPlaybackSample", requiredSignals);
+    }
+
+    [Fact]
+    public void ValidateReportSet_Rejects_Playable_Report_Missing_Runtime_Metrics_State()
+    {
+        var referenceCase = CreateCase(
+            "runtime-metrics/missing-state",
+            tier: 1,
+            purpose: "sdr-smoke");
+        referenceCase.Expected.RequireValidatedConversion = false;
+        var manifest = new PlaybackQualityReferenceManifest();
+        manifest.Cases.Add(referenceCase);
+        var report = CreateReport(
+            "runtime-metrics/missing-state",
+            codec: "hevc",
+            width: 3840,
+            height: 2160,
+            frameRate: 23.976,
+            hdrKind: "Hdr10");
+
+        var validation = PlaybackQualityReferenceReportSetValidator.Validate(
+            manifest,
+            new[] { new PlaybackQualityReferenceReportSetEntry(report) });
+
+        Assert.False(validation.IsValid);
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.requiredSignal.missing" &&
+            error.Signal == "runtimeMetrics.status" &&
+            error.FailureClass == PlaybackQualityFailureClassification.InsufficientInstrumentation);
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.requiredSignal.missing" &&
+            error.Signal == "runtimeMetrics.providerStatus");
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.requiredSignal.missing" &&
+            error.Signal == "runtimeMetrics.hasSnapshot");
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.requiredSignal.missing" &&
+            error.Signal == "runtimeMetrics.hasPlaybackSample");
     }
 
     [Fact]
@@ -1591,6 +1651,16 @@ public sealed class PlaybackQualityReferenceManifestTests
         report.Environment.PlayerCoreVersion = "test-core";
         report.Environment.SourceRevision = "test-revision";
         report.Environment.BuildConfiguration = "Debug";
+    }
+
+    private static void AddCapturedRuntimeMetrics(PlaybackQualityReport report)
+    {
+        report.RuntimeMetrics = PlaybackQualityRuntimeMetricsFactory.FromSnapshot(
+            new PlaybackQualityMetricsSnapshot
+            {
+                RenderedVideoFrames = 240
+            },
+            "test-provider:returned-snapshot");
     }
 
     private static void AddObservedLifecycleEvent(

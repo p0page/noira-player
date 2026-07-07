@@ -1422,6 +1422,13 @@ try {
     "framePacingSourceFrameRate": 23.976,
     "lateFrameDropToleranceMs": 104.271
   },
+  "runtimeMetrics": {
+    "status": "captured",
+    "providerStatus": "smoke-provider:returned-snapshot",
+    "reason": "Runtime metrics snapshot contains playback sample evidence.",
+    "hasSnapshot": true,
+    "hasPlaybackSample": true
+  },
   "colorPipeline": {
     "conversionStatus": "validated"
   },
@@ -1680,6 +1687,13 @@ try {
   "buffers": {
     "videoStarvedPasses": 0,
     "audioStarvedPasses": 0
+  },
+  "runtimeMetrics": {
+    "status": "captured",
+    "providerStatus": "smoke-provider:returned-snapshot",
+    "reason": "Runtime metrics snapshot contains playback sample evidence.",
+    "hasSnapshot": true,
+    "hasPlaybackSample": true
   },
   "colorPipeline": {
     "conversionStatus": "validated"
@@ -2147,6 +2161,13 @@ try {
     "videoStarvedPasses": 0,
     "audioStarvedPasses": 0
   },
+  "runtimeMetrics": {
+    "status": "captured",
+    "providerStatus": "smoke-provider:returned-snapshot",
+    "reason": "Runtime metrics snapshot contains playback sample evidence.",
+    "hasSnapshot": true,
+    "hasPlaybackSample": true
+  },
   "colorPipeline": {
     "conversionStatus": "validated",
     "forceSdrOutput": true
@@ -2265,6 +2286,13 @@ try {
     "queuedAudioBuffers": 4,
     "videoStarvedPasses": 0,
     "audioStarvedPasses": 0
+  },
+  "runtimeMetrics": {
+    "status": "captured",
+    "providerStatus": "smoke-provider:returned-snapshot",
+    "reason": "Runtime metrics snapshot contains playback sample evidence.",
+    "hasSnapshot": true,
+    "hasPlaybackSample": true
   },
   "colorPipeline": {
     "conversionStatus": "validated",
@@ -2983,6 +3011,13 @@ try {
         { "operation": "stop", "status": "observed" }
       ]
     },
+    "runtimeMetrics": {
+      "status": "captured",
+      "providerStatus": "smoke-provider:returned-snapshot",
+      "reason": "Runtime metrics snapshot contains playback sample evidence.",
+      "hasSnapshot": true,
+      "hasPlaybackSample": true
+    },
     "tracks": {
       "videoTrackCount": 1,
       "audioTrackCount": 1,
@@ -3102,6 +3137,13 @@ try {
         { "operation": "endOfStream", "status": "observed" },
         { "operation": "stop", "status": "observed" }
       ]
+    },
+    "runtimeMetrics": {
+      "status": "captured",
+      "providerStatus": "smoke-provider:returned-snapshot",
+      "reason": "Runtime metrics snapshot contains playback sample evidence.",
+      "hasSnapshot": true,
+      "hasPlaybackSample": true
     },
     "tracks": {
       "videoTrackCount": 1,
@@ -3427,6 +3469,13 @@ try {
         { "operation": "stop", "status": "observed" }
       ]
     },
+    "runtimeMetrics": {
+      "status": "captured",
+      "providerStatus": "smoke-provider:returned-snapshot",
+      "reason": "Runtime metrics snapshot contains playback sample evidence.",
+      "hasSnapshot": true,
+      "hasPlaybackSample": true
+    },
     "tracks": {
       "videoTrackCount": 1,
       "audioTrackCount": 1,
@@ -3639,6 +3688,13 @@ try {
         { "operation": "endOfStream", "status": "observed" },
         { "operation": "stop", "status": "observed" }
       ]
+    },
+    "runtimeMetrics": {
+      "status": "captured",
+      "providerStatus": "smoke-provider:returned-snapshot",
+      "reason": "Runtime metrics snapshot contains playback sample evidence.",
+      "hasSnapshot": true,
+      "hasPlaybackSample": true
     },
     "tracks": {
       "videoTrackCount": 1,

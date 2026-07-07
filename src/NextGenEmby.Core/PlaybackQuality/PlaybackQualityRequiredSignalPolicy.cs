@@ -56,6 +56,11 @@ namespace NextGenEmby.Core.PlaybackQuality
                 return requiredSignals;
             }
 
+            AddUnique(requiredSignals, "runtimeMetrics.status");
+            AddUnique(requiredSignals, "runtimeMetrics.providerStatus");
+            AddUnique(requiredSignals, "runtimeMetrics.hasSnapshot");
+            AddUnique(requiredSignals, "runtimeMetrics.hasPlaybackSample");
+
             AddUnique(requiredSignals, "lifecycle.load");
             AddUnique(requiredSignals, "lifecycle.play");
             AddUnique(requiredSignals, "lifecycle.pause");
