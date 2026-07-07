@@ -1538,6 +1538,11 @@ namespace NextGenEmby.Core.PlaybackQuality
             PlaybackQualityModelAnalysis analysis,
             PlaybackQualityReport report)
         {
+            foreach (var signal in analysis.AvSync.Signals)
+            {
+                AddUnique(analysis.EvidenceSignals, signal);
+            }
+
             if (report.Timing.LateFrameDropToleranceMs > 0)
             {
                 AddUnique(analysis.EvidenceSignals, "timing.lateFrameDropToleranceMs");

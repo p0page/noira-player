@@ -656,6 +656,8 @@ public sealed class PlaybackQualityReportAnalyzerTests
         Assert.Equal(expectedDirection, analysis.AvSync.DriftDirection);
         Assert.Contains("sync.clockDeltaMs", analysis.AvSync.Signals);
         Assert.Contains("sync.driftDirection", analysis.AvSync.Signals);
+        Assert.Contains("sync.clockDeltaMs", analysis.EvidenceSignals);
+        Assert.Contains("sync.driftDirection", analysis.EvidenceSignals);
     }
 
     [Fact]
