@@ -7,6 +7,61 @@ namespace NextGenEmby.Core.Tests.Design;
 public sealed class HomeAccessibilitySourceTests
 {
     [Fact]
+    public void Home_Card_Focus_Uses_Matte_Treatment_Instead_Of_System_Ring()
+    {
+        var root = FindRepositoryRoot();
+        var appXaml = File.ReadAllText(Path.Combine(root, "src", "NextGenEmby.App", "App.xaml"));
+        var source = File.ReadAllText(Path.Combine(root, "src", "NextGenEmby.App", "Views", "HomePage.xaml.cs"));
+
+        Assert.Contains("AppFocusedCardFillColor", appXaml);
+        Assert.Contains("AppFocusedCardFillBrush", appXaml);
+        Assert.Contains("button.UseSystemFocusVisuals = false;", source);
+        Assert.Contains("ApplyHomeCardMatteFocus(button, isFocused: true)", source);
+        Assert.Contains("ApplyHomeCardMatteFocus(button, isFocused: false)", source);
+        Assert.DoesNotContain("UseSystemFocusVisuals = true", source);
+        Assert.DoesNotContain("SystemControlFocusVisualPrimaryBrush", source);
+    }
+
+    [Fact]
+    public void Resume_Rows_Render_Wide_Cards_With_Progress_And_Bottom_Scrim()
+    {
+        var root = FindRepositoryRoot();
+        var appXaml = File.ReadAllText(Path.Combine(root, "src", "NextGenEmby.App", "App.xaml"));
+        var source = File.ReadAllText(Path.Combine(root, "src", "NextGenEmby.App", "Views", "HomePage.xaml.cs"));
+
+        Assert.Contains("TvHomeResumeCardWidth", appXaml);
+        Assert.Contains("TvHomeResumeCardHeight", appXaml);
+        Assert.Contains("HomeRowVisualKind.Resume", source);
+        Assert.Contains("AddUniqueRow(renderedRowTitles, \"Continue watching\", continueItems, null, HomeRowVisualKind.Resume)", source);
+        Assert.Contains("AddUniqueRow(renderedRowTitles, \"Next up\", nextUpItems, null, HomeRowVisualKind.Resume)", source);
+        Assert.Contains("CreateResumeItemButton(item)", source);
+        Assert.Contains("EmbyArtworkPolicy.SelectItemWideArtwork(item, 760)", source);
+        Assert.Contains("CreateResumeProgressBar(item)", source);
+    }
+
+    [Fact]
+    public void Passive_Home_Section_Chrome_Does_Not_Use_Green_Decorative_Accents()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            FindRepositoryRoot(),
+            "src",
+            "NextGenEmby.App",
+            "Views",
+            "HomePage.xaml.cs"));
+
+        var sectionStart = source.IndexOf("private Button CreateHomeSectionButton", StringComparison.Ordinal);
+        var scrimStart = source.IndexOf("private static Border CreateHomeWideCardTextScrim", StringComparison.Ordinal);
+
+        Assert.True(sectionStart >= 0);
+        Assert.True(scrimStart > sectionStart);
+        var sectionSource = source.Substring(sectionStart, scrimStart - sectionStart);
+
+        Assert.DoesNotContain("AppWarmBrush", sectionSource);
+        Assert.DoesNotContain("TvHomeWideCardSideAccentWidth", sectionSource);
+        Assert.DoesNotContain("TvHomeWideCardAccentHeight", sectionSource);
+    }
+
+    [Fact]
     public void Dynamic_Home_Buttons_Set_Automation_Names()
     {
         var source = File.ReadAllText(Path.Combine(

@@ -2071,3 +2071,41 @@ Findings recorded before fixes:
 - Decision:
   - Do not fix single rows one by one.
   - Next implementation batch should address shared Home/Shell focus language, Home progress-row anatomy, and passive green usage together before rerunning Batch 01.
+
+### 2026-07-08 - Design Conformance Batch 01 Home And Guide Fix Rerun
+
+- App version: 0.1.0.210.
+- Scope: unified fix for the Home/Shell focus language, Home progress-row anatomy, and passive green card decoration found in Batch 01.
+- Data source: DEBUG `home-fixture` with packaged QA artwork; no private Emby server or personal media assets.
+- Source contracts added before implementation:
+  - Home cards must use matte focus treatment instead of system bright focus rings.
+  - Continue Watching and Next Up must render as wide resume cards with progress and bottom text protection.
+  - Passive Home section chrome must not use green decorative accents.
+  - Guide active/focus state must use quiet matte fill instead of a bright full border.
+- Automated verification:
+  - Red path confirmed the new source contracts failed before the implementation batch.
+  - Targeted Design tests passed: 59 total.
+  - Full Core test suite passed: 466 total.
+  - `git diff --check` passed with line-ending warnings only.
+  - App Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.210_x64_Debug.msix`.
+- Keyboard-only validation with installed DEBUG fixture:
+  - Wrote `dev-command.json` with route `home-fixture` and launched through AppUserModelId `NextGenEmby.App_h8qjz0sr1sg4m!App`.
+  - `dev-command-result.txt` reported `completed / home-fixture`.
+  - Initial focus: `Play`.
+  - Pressed `M`; Guide opened with focus on `Home`.
+  - Pressed `Escape`, then `Down` repeatedly to traverse library and resume rows; focus reached `Aurora Protocol`, `Northline S1:E4`, and then `Harbor Run` after `Right`.
+  - Screenshot set: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch01-210-20260708-005212`.
+
+Fix rerun findings:
+
+| ID | Severity | Page | Evidence | Expected | Actual | Follow-up |
+| --- | --- | --- | --- | --- | --- | --- |
+| DC-01.01 | Fail | Home first viewport | Initial Home screenshot still shows the top decision surface as a large framed module with a vertical active edge. | Home should read as a rail-first TV media surface, with artwork and rows carrying the page. | Unchanged in this batch; still too close to the older dashboard-like model. | Handle as the next Home top-composition batch rather than mixing it into row/focus fixes. |
+| DC-01.02 | Pass with concern | Home card focus | Focused Home cards now use matte fill/scale treatment and suppress the system bright focus ring. | Card focus should use scale, luminance, local dimming, and optional matte selected backplate. | Shared Home cards now follow the quiet focus language. Normal poster-grid selected-backplate still needs a library-grid-specific pass. | Recheck movie grid selected state when the library grid design is implemented. |
+| DC-01.03 | Pass | Continue Watching / Next Up | Resume rows now render wide cards with full-bleed wide art, bottom black scrim, stable title/meta area, and progress indicator. | Continue Watching and Next Up should use wide resume-card anatomy. | Matches the current design rule and improves TV scan clarity. | Continue to tune artwork crops with more realistic fixture media. |
+| DC-01.04 | Concern | Guide | Expanded Guide focus/active state now uses matte fill and transparent border. | Guide should stay quiet, source-aware, and use matte focus language. | Focus treatment is aligned; Source Hub / lower-frequency source grouping is still deferred. | Handle source grouping in a source-management/navigation batch. |
+| DC-01.05 | Concern | Fixture artwork / green usage | Passive green card accents were removed from Home cards; green remains only as a signal/progress color. | Green should stay a signal rather than page texture, and visual QA should use realistic fictional media covers. | Color usage is improved, but fixture artwork is still abstract and weak for final judgment. | Replace or extend packaged QA artwork with realistic fictional posters and wide art. |
+
+- Decision:
+  - Commit this batch as the shared Home/Shell focus and resume-card correction.
+  - Next design-conformance batch should target the Home first viewport/top composition and realistic fixture artwork, then revisit normal poster selected state.

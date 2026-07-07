@@ -37,11 +37,56 @@ namespace NextGenEmby.App
         public MainPage()
         {
             InitializeComponent();
+            RegisterGuideButtonFocusHandlers();
             ApplyGuideOpenState(isOpen: false);
             AddHandler(KeyDownEvent, new KeyEventHandler(Page_OnKeyDown), true);
             ContentFrame.Navigated += ContentFrame_OnNavigated;
             NavigateLogin();
             Loaded += MainPage_OnLoaded;
+        }
+
+        private void RegisterGuideButtonFocusHandlers()
+        {
+            foreach (var button in GetGuideButtons())
+            {
+                button.GotFocus += GuideButton_OnGotFocus;
+                button.LostFocus += GuideButton_OnLostFocus;
+            }
+        }
+
+        private Button[] GetGuideButtons()
+        {
+            return new[]
+            {
+                HomeButton,
+                SearchButton,
+                MoviesButton,
+                TvButton,
+                LiveTvButton,
+                CollectionsButton,
+                PlaylistsButton,
+                MusicButton,
+                PhotosButton,
+                FavoritesButton,
+                UnwatchedButton,
+                SettingsButton
+            };
+        }
+
+        private void GuideButton_OnGotFocus(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button button)
+            {
+                var resources = Application.Current.Resources;
+                button.Background = (Brush)resources["AppGuideFocusFillBrush"];
+                button.BorderBrush = (Brush)resources["AppTransparentBrush"];
+                button.Foreground = (Brush)resources["AppTextBrush"];
+            }
+        }
+
+        private void GuideButton_OnLostFocus(object sender, RoutedEventArgs e)
+        {
+            ApplyShellButtonState(ContentFrame.CurrentSourcePageType, _currentLibraryRequest);
         }
 
         private async void MainPage_OnLoaded(object sender, RoutedEventArgs e)
@@ -324,8 +369,8 @@ namespace NextGenEmby.App
         private static void SetShellButtonActive(Button button, bool isActive)
         {
             var resources = Application.Current.Resources;
-            button.Background = (Brush)resources[isActive ? "AppRaisedSurfaceBrush" : "AppTransparentBrush"];
-            button.BorderBrush = (Brush)resources[isActive ? "AppGuideActiveBorderBrush" : "AppTransparentBrush"];
+            button.Background = (Brush)resources[isActive ? "AppGuideFocusFillBrush" : "AppTransparentBrush"];
+            button.BorderBrush = (Brush)resources["AppTransparentBrush"];
             button.Foreground = (Brush)resources[isActive ? "AppTextBrush" : "AppMutedTextBrush"];
         }
 

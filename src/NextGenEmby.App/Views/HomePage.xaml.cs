@@ -23,6 +23,7 @@ namespace NextGenEmby.App.Views
 {
     public sealed partial class HomePage : Page, ITvContentFocusTarget
     {
+        private const string HomeCardFocusChromeElementName = "FocusChrome";
         private readonly ApplicationDataSessionStore _sessionStore = new ApplicationDataSessionStore();
         private EmbySession? _session;
         private EmbyApiClient? _client;
@@ -143,16 +144,21 @@ namespace NextGenEmby.App.Views
         private void HomeCard_OnGotFocus(object sender, RoutedEventArgs e)
         {
             HomeFocusTarget_OnGotFocus(sender, e);
-            SetHomeCardScale(sender as Control, GetDoubleResource("TvHomeFocusedCardScale", 1.035));
+            var button = sender as Button;
+            ApplyHomeCardMatteFocus(button, isFocused: true);
+            SetHomeCardScale(button, GetDoubleResource("TvHomeFocusedCardScale", 1.035));
         }
 
         private void HomeCard_OnLostFocus(object sender, RoutedEventArgs e)
         {
-            SetHomeCardScale(sender as Control, 1.0);
+            var button = sender as Button;
+            ApplyHomeCardMatteFocus(button, isFocused: false);
+            SetHomeCardScale(button, 1.0);
         }
 
         private void ApplyHomeCardFocusTreatment(Button button)
         {
+            button.UseSystemFocusVisuals = false;
             button.RenderTransformOrigin = new Windows.Foundation.Point(0.5, 0.5);
             button.RenderTransform = new ScaleTransform
             {
@@ -161,6 +167,46 @@ namespace NextGenEmby.App.Views
             };
             button.GotFocus += HomeCard_OnGotFocus;
             button.LostFocus += HomeCard_OnLostFocus;
+        }
+
+        private static void ApplyHomeCardMatteFocus(Button? button, bool isFocused)
+        {
+            var focusChrome = FindNamedDescendant<Border>(
+                button == null ? null : button.Content as DependencyObject,
+                HomeCardFocusChromeElementName);
+            if (focusChrome == null)
+            {
+                return;
+            }
+
+            focusChrome.Background = (Brush)Application.Current.Resources[
+                isFocused ? "AppFocusedCardFillBrush" : "AppTransparentBrush"];
+        }
+
+        private static T? FindNamedDescendant<T>(DependencyObject? root, string name)
+            where T : FrameworkElement
+        {
+            if (root == null)
+            {
+                return null;
+            }
+
+            if (root is T element && string.Equals(element.Name, name, StringComparison.Ordinal))
+            {
+                return element;
+            }
+
+            var childCount = VisualTreeHelper.GetChildrenCount(root);
+            for (var index = 0; index < childCount; index++)
+            {
+                var match = FindNamedDescendant<T>(VisualTreeHelper.GetChild(root, index), name);
+                if (match != null)
+                {
+                    return match;
+                }
+            }
+
+            return null;
         }
 
         private static void SetHomeCardScale(Control? control, double scale)
@@ -794,8 +840,8 @@ namespace NextGenEmby.App.Views
             StatusBlock.Text = "";
 
             var renderedRowTitles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            AddUniqueRow(renderedRowTitles, "Continue watching", continueItems, null);
-            AddUniqueRow(renderedRowTitles, "Next up", nextUpItems, null);
+            AddUniqueRow(renderedRowTitles, "Continue watching", continueItems, null, HomeRowVisualKind.Resume);
+            AddUniqueRow(renderedRowTitles, "Next up", nextUpItems, null, HomeRowVisualKind.Resume);
 
             foreach (var configuredRow in configuredRows)
             {
@@ -1017,8 +1063,7 @@ namespace NextGenEmby.App.Views
                 Padding = new Thickness(0),
                 Tag = request,
                 HorizontalContentAlignment = HorizontalAlignment.Stretch,
-                VerticalContentAlignment = VerticalAlignment.Stretch,
-                UseSystemFocusVisuals = true
+                VerticalContentAlignment = VerticalAlignment.Stretch
             };
             ApplyHomeCardFocusTreatment(button);
             button.Click += LibraryButton_OnClick;
@@ -1058,16 +1103,7 @@ namespace NextGenEmby.App.Views
                 });
             }
 
-            root.Children.Add(new Border
-            {
-                Height = GetDoubleResource("TvHomeWideCardAccentHeight", 4),
-                VerticalAlignment = VerticalAlignment.Top,
-                Background = view.IsTvLibrary
-                    ? (Brush)Application.Current.Resources["AppWarmBrush"]
-                    : (Brush)Application.Current.Resources["AppAccentBrush"],
-                CornerRadius = new CornerRadius(cardCornerRadius.TopLeft, cardCornerRadius.TopRight, 0, 0)
-            });
-
+            root.Children.Add(CreateHomeCardFocusChrome(cardCornerRadius));
             root.Children.Add(CreateHomeWideCardTextScrim());
             root.Children.Add(new StackPanel
             {
@@ -1117,8 +1153,7 @@ namespace NextGenEmby.App.Views
                 Padding = new Thickness(0),
                 Tag = request,
                 HorizontalContentAlignment = HorizontalAlignment.Stretch,
-                VerticalContentAlignment = VerticalAlignment.Stretch,
-                UseSystemFocusVisuals = true
+                VerticalContentAlignment = VerticalAlignment.Stretch
             };
             ApplyHomeCardFocusTreatment(button);
             button.Click += LibraryButton_OnClick;
@@ -1158,15 +1193,7 @@ namespace NextGenEmby.App.Views
                 });
             }
 
-            root.Children.Add(new Border
-            {
-                Width = GetDoubleResource("TvHomeWideCardSideAccentWidth", 4),
-                Margin = new Thickness(0, 18, 0, 18),
-                HorizontalAlignment = HorizontalAlignment.Left,
-                Background = (Brush)Application.Current.Resources["AppWarmBrush"],
-                CornerRadius = new CornerRadius(0, 3, 3, 0)
-            });
-
+            root.Children.Add(CreateHomeCardFocusChrome(cardCornerRadius));
             root.Children.Add(CreateHomeWideCardTextScrim());
             root.Children.Add(new StackPanel
             {
@@ -1232,6 +1259,17 @@ namespace NextGenEmby.App.Views
             };
         }
 
+        private static Border CreateHomeCardFocusChrome(CornerRadius cornerRadius)
+        {
+            return new Border
+            {
+                Name = HomeCardFocusChromeElementName,
+                Background = (Brush)Application.Current.Resources["AppTransparentBrush"],
+                CornerRadius = cornerRadius,
+                IsHitTestVisible = false
+            };
+        }
+
         private static double GetDoubleResource(string key, double fallback)
         {
             var resources = Application.Current.Resources;
@@ -1288,7 +1326,8 @@ namespace NextGenEmby.App.Views
         private void AddRow(
             string title,
             IReadOnlyList<EmbyMediaItem>? items,
-            LibraryNavigationRequest? moreRequest)
+            LibraryNavigationRequest? moreRequest,
+            HomeRowVisualKind visualKind)
         {
             if (items == null || items.Count == 0)
             {
@@ -1353,7 +1392,9 @@ namespace NextGenEmby.App.Views
             for (var itemIndex = 0; itemIndex < items.Count; itemIndex++)
             {
                 var item = items[itemIndex];
-                var itemButton = CreateItemButton(item);
+                var itemButton = visualKind == HomeRowVisualKind.Resume
+                    ? CreateResumeItemButton(item)
+                    : CreateItemButton(item);
                 RegisterRowButton(itemButton, rowIndex, itemIndex);
                 if (firstRowButton == null)
                 {
@@ -1398,7 +1439,8 @@ namespace NextGenEmby.App.Views
             HashSet<string> renderedRowTitles,
             string title,
             IReadOnlyList<EmbyMediaItem>? items,
-            LibraryNavigationRequest? moreRequest)
+            LibraryNavigationRequest? moreRequest,
+            HomeRowVisualKind visualKind = HomeRowVisualKind.Poster)
         {
             if (items == null || items.Count == 0)
             {
@@ -1411,7 +1453,185 @@ namespace NextGenEmby.App.Views
                 return;
             }
 
-            AddRow(key, items, moreRequest);
+            AddRow(key, items, moreRequest, visualKind);
+        }
+
+        private Button CreateResumeItemButton(EmbyMediaItem item)
+        {
+            var cardCornerRadius = GetCornerRadiusResource("TvHomePosterCardCornerRadius", 6);
+            var button = new Button
+            {
+                Width = GetDoubleResource("TvHomeResumeCardWidth", 340),
+                Height = GetDoubleResource("TvHomeResumeCardHeight", 192),
+                Padding = new Thickness(0),
+                Tag = item,
+                HorizontalContentAlignment = HorizontalAlignment.Stretch,
+                VerticalContentAlignment = VerticalAlignment.Stretch
+            };
+            button.Click += ItemButton_OnClick;
+            AutomationProperties.SetName(button, string.IsNullOrWhiteSpace(item.Name) ? item.Id : item.Name);
+
+            var root = new Grid
+            {
+                Background = (Brush)Application.Current.Resources["AppRaisedSurfaceBrush"]
+            };
+
+            var wideArtwork = EmbyArtworkPolicy.SelectItemWideArtwork(item, 760);
+            var wideImage = CreateBitmapImage(wideArtwork);
+            if (wideImage != null)
+            {
+                root.Background = new ImageBrush
+                {
+                    ImageSource = wideImage,
+                    Stretch = Stretch.UniformToFill
+                };
+            }
+
+            root.Children.Add(new Border
+            {
+                BorderBrush = (Brush)Application.Current.Resources["AppHairlineBrush"],
+                BorderThickness = new Thickness(1),
+                CornerRadius = cardCornerRadius
+            });
+            root.Children.Add(new Border
+            {
+                Background = (Brush)Application.Current.Resources["AppArtworkDimBrush"],
+                CornerRadius = cardCornerRadius
+            });
+            root.Children.Add(CreateHomeCardFocusChrome(cardCornerRadius));
+            root.Children.Add(CreateResumeCardTextScrim(cardCornerRadius));
+            root.Children.Add(new StackPanel
+            {
+                Margin = GetThicknessResource("TvHomeResumeCardTextMargin", new Thickness(12, 10, 12, 24)),
+                VerticalAlignment = VerticalAlignment.Bottom,
+                Spacing = 4,
+                Children =
+                {
+                    new TextBlock
+                    {
+                        Text = string.IsNullOrWhiteSpace(item.Name) ? item.Id : item.Name,
+                        FontSize = GetDoubleResource("TvHomeRowPosterTitleFontSize", 16),
+                        FontWeight = Windows.UI.Text.FontWeights.SemiBold,
+                        Foreground = (Brush)Application.Current.Resources["AppTextBrush"],
+                        TextTrimming = TextTrimming.CharacterEllipsis,
+                        MaxLines = 1
+                    },
+                    new TextBlock
+                    {
+                        Text = CreateResumeMeta(item),
+                        FontSize = GetDoubleResource("TvHomeRowPosterMetaFontSize", 13),
+                        Foreground = (Brush)Application.Current.Resources["AppMutedTextBrush"],
+                        TextTrimming = TextTrimming.CharacterEllipsis,
+                        MaxLines = 1
+                    }
+                }
+            });
+            root.Children.Add(CreateResumeProgressBar(item));
+
+            button.Content = root;
+            return button;
+        }
+
+        private static Border CreateResumeCardTextScrim(CornerRadius cardCornerRadius)
+        {
+            var scrim = new LinearGradientBrush
+            {
+                StartPoint = new Windows.Foundation.Point(0, 0),
+                EndPoint = new Windows.Foundation.Point(0, 1)
+            };
+            scrim.GradientStops.Add(new GradientStop
+            {
+                Color = (Windows.UI.Color)Application.Current.Resources["AppTransparentColor"],
+                Offset = 0
+            });
+            scrim.GradientStops.Add(new GradientStop
+            {
+                Color = (Windows.UI.Color)Application.Current.Resources["AppCardScrimColor"],
+                Offset = 0.56
+            });
+            scrim.GradientStops.Add(new GradientStop
+            {
+                Color = (Windows.UI.Color)Application.Current.Resources["AppCardScrimColor"],
+                Offset = 1
+            });
+
+            return new Border
+            {
+                Height = GetDoubleResource("TvHomeResumeCardScrimHeight", 78),
+                VerticalAlignment = VerticalAlignment.Bottom,
+                Background = scrim,
+                CornerRadius = new CornerRadius(0, 0, cardCornerRadius.BottomRight, cardCornerRadius.BottomLeft)
+            };
+        }
+
+        private static FrameworkElement CreateResumeProgressBar(EmbyMediaItem item)
+        {
+            var height = GetDoubleResource("TvHomeResumeProgressHeight", 4);
+            var trackWidth = Math.Max(0, GetDoubleResource("TvHomeResumeCardWidth", 340) - 28);
+            var progressWidth = trackWidth * CalculateResumeProgress(item);
+            var track = new Grid
+            {
+                Width = trackWidth,
+                Height = height,
+                Margin = new Thickness(14, 0, 14, 10),
+                VerticalAlignment = VerticalAlignment.Bottom,
+                HorizontalAlignment = HorizontalAlignment.Left,
+                Background = (Brush)Application.Current.Resources["AppHairlineBrush"]
+            };
+            track.Children.Add(new Border
+            {
+                Width = progressWidth,
+                Height = height,
+                HorizontalAlignment = HorizontalAlignment.Left,
+                Background = (Brush)Application.Current.Resources["AppWarmBrush"],
+                CornerRadius = new CornerRadius(2)
+            });
+
+            return track;
+        }
+
+        private static double CalculateResumeProgress(EmbyMediaItem item)
+        {
+            if (item.UserData != null && item.UserData.PlayedPercentage > 0)
+            {
+                return Math.Max(0, Math.Min(1, item.UserData.PlayedPercentage.Value / 100d));
+            }
+
+            if (item.UserData == null ||
+                item.UserData.PlaybackPositionTicks <= 0 ||
+                !item.RunTimeTicks.HasValue ||
+                item.RunTimeTicks.Value <= 0)
+            {
+                return 0;
+            }
+
+            return Math.Max(0, Math.Min(1, item.UserData.PlaybackPositionTicks / (double)item.RunTimeTicks.Value));
+        }
+
+        private static string CreateResumeMeta(EmbyMediaItem item)
+        {
+            if (item.UserData != null &&
+                item.UserData.PlaybackPositionTicks > 0 &&
+                item.RunTimeTicks.HasValue &&
+                item.RunTimeTicks.Value > 0)
+            {
+                return "Resume " +
+                    FormatCompactDuration(TimeSpan.FromTicks(item.UserData.PlaybackPositionTicks)) +
+                    " of " +
+                    FormatCompactDuration(TimeSpan.FromTicks(item.RunTimeTicks.Value));
+            }
+
+            return CreateMeta(item);
+        }
+
+        private static string FormatCompactDuration(TimeSpan duration)
+        {
+            if (duration.TotalHours >= 1)
+            {
+                return (int)duration.TotalHours + "h " + duration.Minutes + "m";
+            }
+
+            return Math.Max(1, duration.Minutes) + "m";
         }
 
         private Button CreateItemButton(EmbyMediaItem item)
@@ -1424,8 +1644,7 @@ namespace NextGenEmby.App.Views
                 Padding = new Thickness(0),
                 Tag = item,
                 HorizontalContentAlignment = HorizontalAlignment.Stretch,
-                VerticalContentAlignment = VerticalAlignment.Stretch,
-                UseSystemFocusVisuals = true
+                VerticalContentAlignment = VerticalAlignment.Stretch
             };
             button.Click += ItemButton_OnClick;
             AutomationProperties.SetName(button, string.IsNullOrWhiteSpace(item.Name) ? item.Id : item.Name);
@@ -1456,6 +1675,7 @@ namespace NextGenEmby.App.Views
             {
                 Background = (Brush)Application.Current.Resources["AppArtworkDimBrush"]
             });
+            root.Children.Add(CreateHomeCardFocusChrome(cardCornerRadius));
 
             var overlay = new Border
             {
@@ -1974,6 +2194,12 @@ namespace NextGenEmby.App.Views
             }
 
             return meta;
+        }
+
+        private enum HomeRowVisualKind
+        {
+            Poster,
+            Resume
         }
 
         private sealed class HomeSectionRow

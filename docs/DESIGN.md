@@ -18,9 +18,10 @@ colors:
   artwork_blur_surface: "#D910161C"
   artwork_blur_tint: "#33080D12"
   hairline: "#2E3944"
-  guide_active_border: "#516170"
+  guide_focus_fill: "#33202832"
   focus: "#EEF3F6"
   focus_fill: "#8068727A"
+  card_focus_fill: "#4D68727A"
   high_visibility_focus_edge: "#66EEF3F6"
   success: "#78B985"
   warning: "#D3A64A"
@@ -228,13 +229,13 @@ Reference links reviewed for this pass:
 - **Artwork blur surface `#D910161C`:** dark translucent material used only when a real poster, banner, backdrop, or video frame sits underneath and contributes color. It must never be used over plain graphite canvas.
 - **Artwork blur tint `#33080D12`:** optional cool dark tint over the sampled artwork before blur. Use it to stabilize contrast, not to create a colored wash.
 - **Hairline `#2E3944`:** dividers and inactive card borders. Hairlines support structure; they must not become the focus language.
-- **Guide active border `#516170`:** quiet current-route outline or separator for the shell rail when implementation requires a distinct active-route token. It is intentionally weaker than focus and must not become the controller target style.
+- **Guide focus fill `#33202832`:** quiet current-route and guide-navigation fill for the shell rail. It is deliberately darker than full content focus so the rail remains available without competing with media artwork.
 - **Text `#EEF3F6`:** cool off-white primary text. It keeps the interface precise and slightly technological without blue glow.
 - **Muted text `#A9B3BA`:** metadata and secondary labels.
 - **Subtle text `#73818C`:** timestamps, disabled labels, and tertiary metadata.
 - **Primary action surface `#252D35`:** neutral Play, Resume, and primary command surface. It is not a green button.
 - **Play accent `#78B985`:** tiny play/confirm signal only: play glyph accent, micro tick, or small status dot. Never use it as a large fill.
-- **Focus `#EEF3F6`, `focus_fill #8068727A`:** borderless focus state system. Luminance, scale, selected fill, and local dimming do the work. Do not treat this as a perimeter-frame recipe.
+- **Focus `#EEF3F6`, `focus_fill #8068727A`, `card_focus_fill #4D68727A`:** borderless focus state system. Luminance, scale, selected fill, and local dimming do the work. `card_focus_fill` is the translucent media-card overlay; do not treat these tokens as a perimeter-frame recipe.
 - **High-visibility focus edge `#66EEF3F6`:** accessibility fallback only, used when platform or user settings require a visible edge. It is not the default visual style.
 - **Secondary / progress `#5D8F68`:** muted green for active playback, current resume, focused watched-progress, and explicit watched/success state. It is darker and quieter than `play_accent`; ordinary passive progress can use neutral gray.
 - **Tertiary `#84909A`:** steel-gray informational state only, such as diagnostics and neutral playback capability badges. It is gray, not blue accent color.

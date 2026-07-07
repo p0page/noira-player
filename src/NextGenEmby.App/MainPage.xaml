@@ -20,7 +20,7 @@
             <Setter Property="FocusVisualMargin" Value="-3" />
             <Setter Property="FocusVisualPrimaryThickness" Value="2" />
             <Setter Property="FocusVisualSecondaryThickness" Value="1" />
-            <Setter Property="UseSystemFocusVisuals" Value="True" />
+            <Setter Property="UseSystemFocusVisuals" Value="False" />
         </Style>
     </Page.Resources>
 
@@ -49,11 +49,11 @@
                         Height="44"
                         HorizontalAlignment="Center"
                         Background="{StaticResource AppRaisedSurfaceBrush}"
-                        BorderBrush="{StaticResource AppAccentBrush}"
+                        BorderBrush="{StaticResource AppTransparentBrush}"
                         BorderThickness="1"
                         CornerRadius="8">
                         <SymbolIcon
-                            Foreground="{StaticResource AppAccentBrush}"
+                            Foreground="{StaticResource AppTextBrush}"
                             Symbol="Library"
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center" />
