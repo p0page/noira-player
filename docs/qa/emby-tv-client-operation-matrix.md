@@ -105,7 +105,7 @@ Status values:
 | Operation | Keyboard Path | Status | Evidence | Next Work |
 | --- | --- | --- | --- | --- |
 | Open Settings | `M`, eleven `Down`, `Return` | Verified | 0.1.0.126 Computer Use route opened Settings from the expanded Guide with keyboard input only | Keep as shell regression route |
-| Inspect signed-in server | Settings page text snapshot | Verified | 0.1.0.126 Settings showed `cyber on https://c1.zdz.plus:443`, `App 0.1.0.126 / Emby client 0.1.0`, input map, and latest diagnostics | Keep startup diagnostics available and add copy/export only if needed |
+| Inspect signed-in server | Settings page text snapshot | Verified | 0.1.0.126 Settings showed a redacted signed-in private server, `App 0.1.0.126 / Emby client 0.1.0`, input map, and latest diagnostics | Keep startup diagnostics available and add copy/export only if needed |
 | Toggle input/playback diagnostics | `Space` on default Settings focus | Verified | 0.1.0.126 `Space` toggled thumbstick seek preview off and updated the status text; a second `Space` restored it on. No app-content mouse clicks were used | Add additional TV-mode scale/theme toggles only after shared theme tokens exist |
 | App version / startup diagnostics | Settings page text snapshot | Verified | 0.1.0.126 Settings exposed app/client version and `Last launch completed`; formatter ignores older crash blocks | Keep startup diagnostics available and add copy/export only if needed |
 
