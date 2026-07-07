@@ -501,6 +501,45 @@ public sealed class PlaybackQualityReferenceManifestTests
     }
 
     [Fact]
+    public void ValidateReportSet_Rejects_Unknown_Error_Failure_Class()
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        var referenceCase = CreateCase(
+            "errors/unknown-class",
+            tier: 1,
+            purpose: "error-handling");
+        manifest.Cases.Add(referenceCase);
+        var report = new PlaybackQualityReport
+        {
+            RunId = "errors/unknown-class",
+            Result = "error",
+            Error = new PlaybackQualityError
+            {
+                Code = "source.open.failed",
+                Message = "The media file could not be opened.",
+                FailureClass = "mystery class",
+                FailureArea = "error-handling"
+            }
+        };
+        report.Lifecycle.Events.Add(new PlaybackQualityLifecycleEvent
+        {
+            Operation = "open",
+            Status = "error"
+        });
+
+        var validation = PlaybackQualityReferenceReportSetValidator.Validate(
+            manifest,
+            new[] { report });
+
+        Assert.False(validation.IsValid);
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.failureClass.invalid" &&
+            error.Signal == "error.failureClass" &&
+            error.Actual == "mystery class" &&
+            error.FailureClass == "evaluation harness bug");
+    }
+
+    [Fact]
     public void ValidateReportSet_Accepts_Skip_Report_Without_Playback_Metadata()
     {
         var manifest = new PlaybackQualityReferenceManifest();
@@ -529,6 +568,40 @@ public sealed class PlaybackQualityReferenceManifestTests
         Assert.True(validation.IsValid);
         Assert.Equal(1, validation.MatchedCaseCount);
         Assert.Empty(validation.Errors);
+    }
+
+    [Fact]
+    public void ValidateReportSet_Rejects_Unknown_Skip_Failure_Class()
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        var referenceCase = CreateCase(
+            "native-harness/unknown-class",
+            tier: 1,
+            purpose: "frame-pacing");
+        manifest.Cases.Add(referenceCase);
+        var result = PlaybackQualityRuntimeEvidenceCollector.ComposeSkipRunResult(
+            referenceCase,
+            new PlaybackQualitySkip
+            {
+                Code = "native-harness.not-implemented",
+                Reason = "Native playback harness is not implemented.",
+                Operation = "materialize-native-harness",
+                FailureClass = "mystery class",
+                FailureArea = "evidence-collection",
+                IsExpected = true,
+                IsRetriable = true
+            });
+
+        var validation = PlaybackQualityReferenceReportSetValidator.Validate(
+            manifest,
+            new[] { result.Report });
+
+        Assert.False(validation.IsValid);
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.failureClass.invalid" &&
+            error.Signal == "skip.failureClass" &&
+            error.Actual == "mystery class" &&
+            error.FailureClass == "evaluation harness bug");
     }
 
     [Fact]

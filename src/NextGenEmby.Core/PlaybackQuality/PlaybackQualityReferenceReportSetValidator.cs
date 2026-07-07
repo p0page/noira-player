@@ -247,6 +247,9 @@ namespace NextGenEmby.Core.PlaybackQuality
                 {
                     ValidateRequiredSignals(validation, status, referenceCase, entry);
                 }
+
+                ValidateFailureClasses(validation, status, report);
+
                 if (status.Signals.Count > 0)
                 {
                     status.Status = "mismatch";
@@ -258,6 +261,55 @@ namespace NextGenEmby.Core.PlaybackQuality
 
                 validation.Cases.Add(status);
             }
+        }
+
+        private static void ValidateFailureClasses(
+            PlaybackQualityReferenceReportSetValidation validation,
+            PlaybackQualityReferenceReportCaseStatus status,
+            PlaybackQualityReport report)
+        {
+            ValidateFailureClass(
+                validation,
+                status,
+                "error.failureClass",
+                report.Error.FailureClass);
+            ValidateFailureClass(
+                validation,
+                status,
+                "skip.failureClass",
+                report.Skip.FailureClass);
+            foreach (var check in report.Checks)
+            {
+                ValidateFailureClass(
+                    validation,
+                    status,
+                    "checks.failureClass",
+                    check.FailureClass);
+            }
+        }
+
+        private static void ValidateFailureClass(
+            PlaybackQualityReferenceReportSetValidation validation,
+            PlaybackQualityReferenceReportCaseStatus status,
+            string signal,
+            string failureClass)
+        {
+            if (string.IsNullOrWhiteSpace(failureClass) ||
+                PlaybackQualityFailureClassification.IsKnown(failureClass))
+            {
+                return;
+            }
+
+            AddUnique(status.Signals, signal);
+            AddError(
+                validation,
+                "report.failureClass.invalid",
+                status.CaseId,
+                status.ReportRunId,
+                signal,
+                string.Join(", ", PlaybackQualityFailureClassification.KnownFailureClasses),
+                failureClass,
+                "Playback quality report contains an unknown failure class.");
         }
 
         private static string NormalizeCaseCategory(string category)
@@ -638,26 +690,27 @@ namespace NextGenEmby.Core.PlaybackQuality
         {
             if (string.Equals(code, "report.requiredSignal.missing", StringComparison.Ordinal))
             {
-                return "insufficient instrumentation";
+                return PlaybackQualityFailureClassification.InsufficientInstrumentation;
             }
 
             if (string.Equals(code, "report.missing", StringComparison.Ordinal))
             {
-                return "environment issue";
+                return PlaybackQualityFailureClassification.EnvironmentIssue;
             }
 
             if (string.Equals(code, "report.duplicate-run-id", StringComparison.Ordinal) ||
-                string.Equals(code, "report.extra", StringComparison.Ordinal))
+                string.Equals(code, "report.extra", StringComparison.Ordinal) ||
+                string.Equals(code, "report.failureClass.invalid", StringComparison.Ordinal))
             {
-                return "evaluation harness bug";
+                return PlaybackQualityFailureClassification.EvaluationHarnessBug;
             }
 
             if (StartsWithSignal(signal, "source."))
             {
-                return "external service/protocol issue";
+                return PlaybackQualityFailureClassification.ExternalServiceOrProtocolIssue;
             }
 
-            return "needs human confirmation";
+            return PlaybackQualityFailureClassification.NeedsHumanConfirmation;
         }
 
         private static PlaybackQualityReportSetSignalTriage CreateSignalTriage(string signal)

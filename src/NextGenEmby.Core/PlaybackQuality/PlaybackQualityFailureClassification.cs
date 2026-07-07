@@ -13,6 +13,41 @@ namespace NextGenEmby.Core.PlaybackQuality
         public const string FlakyOrNondeterministic = "flaky / nondeterministic";
         public const string NeedsHumanConfirmation = "needs human confirmation";
 
+        public static readonly string[] KnownFailureClasses =
+        {
+            PlayerCoreBug,
+            UnsupportedByCurrentMvp,
+            EvaluationHarnessBug,
+            SampleIssue,
+            EnvironmentIssue,
+            ExternalServiceOrProtocolIssue,
+            InsufficientInstrumentation,
+            AmbiguousExpectation,
+            FlakyOrNondeterministic,
+            NeedsHumanConfirmation
+        };
+
+        public static bool IsKnown(string failureClass)
+        {
+            if (string.IsNullOrWhiteSpace(failureClass))
+            {
+                return false;
+            }
+
+            foreach (var known in KnownFailureClasses)
+            {
+                if (string.Equals(
+                    known,
+                    failureClass,
+                    System.StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         public static string Classify(PlaybackQualityCheck check)
         {
             if (check == null || check.Status != "fail")

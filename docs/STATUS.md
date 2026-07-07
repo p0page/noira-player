@@ -2,6 +2,12 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-08 更新：failureClass 枚举进入 report-set gate
+
+`validate-report-set` 现在会校验 `error.failureClass`、`skip.failureClass` 和 `checks.failureClass` 是否属于当前枚举：`player-core bug`、`unsupported by current MVP`、`evaluation harness bug`、`sample issue`、`environment issue`、`external service/protocol issue`、`insufficient instrumentation`、`ambiguous expectation`、`flaky / nondeterministic`、`needs human confirmation`。未知值会输出 `report.failureClass.invalid`，并归类为 `evaluation harness bug`。
+
+边界：这是报告契约校验，不改变播放器行为或 pass/fail 阈值。它防止 typo 或临时分类进入模型消费链路。
+
 ## 2026-07-08 更新：analyzer version 2 与 baseline 刷新
 
 `PlaybackQualityReportAnalyzer.CurrentAnalyzerVersion` 已升级到 2，用于标记 `source.hasChapterMetadata`、nullable `source.chapterCount` 和章节 metadata presence 语义进入模型分析契约。已刷新 `docs/qa/baselines/v0.1-source-only/`、`docs/qa/baselines/v0.1-core-probe/` 和 `docs/qa/baselines/v0.1-native-harness-skip/`，归档 reports 的 `modelAnalysis.analyzerVersion` 均为 2。

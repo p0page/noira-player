@@ -1,5 +1,13 @@
 # 技术决策
 
+## 2026-07-08: report-set gate 校验 failureClass 枚举
+
+决策：`PlaybackQualityFailureClassification` 暴露统一的 `KnownFailureClasses` / `IsKnown`，`validate-report-set` 会拒绝 report 中未知的 `error.failureClass`、`skip.failureClass` 和 `checks.failureClass`，并输出 `report.failureClass.invalid`。
+
+原因：v0.1 报告的消费对象是模型。failure class 如果可以任意拼写，模型会把同一种责任归因拆成多类，或者把 typo 当成新类别，后续自动优化会被带偏。report-set gate 应在进入 compare/evaluate 前阻断这类契约错误。
+
+边界：这只校验评测报告契约，不改变播放行为、case expected behavior、阈值或 failure area 判断。未知 failureClass 被归类为 `evaluation harness bug`，表示采集器、手写报告或 evaluator 输出不符合当前枚举。
+
 ## 2026-07-08: analyzer version 升级到 2
 
 决策：`PlaybackQualityReportAnalyzer.CurrentAnalyzerVersion` 从 1 升级到 2，并刷新 v0.1 source-only、core-probe 和 native-harness-skip 归档 artifact。
