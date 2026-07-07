@@ -109,6 +109,11 @@ $commands = @(
         -Command 'powershell' `
         -Arguments @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', 'tools\quality-run\Test-PublicReferenceMedia.tests.ps1')
     New-CommandPlan `
+        -Name 'merge-reference-manifests-test' `
+        -Description 'Verify small public/private reference manifests can be merged into one local corpus without duplicate case IDs.' `
+        -Command 'powershell' `
+        -Arguments @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', 'tools\quality-run\Merge-ReferenceManifests.tests.ps1')
+    New-CommandPlan `
         -Name 'native-helper-test' `
         -Description 'Compile and run the standalone native playback quality metrics helper test.' `
         -Command 'cmd' `

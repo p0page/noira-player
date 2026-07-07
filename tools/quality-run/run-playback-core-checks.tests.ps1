@@ -90,6 +90,10 @@ if (-not ($plan.commands | Where-Object { $_.name -eq 'public-reference-media-pr
     throw 'Expected public-reference-media-probe-test command in playback-core validation plan.'
 }
 
+if (-not ($plan.commands | Where-Object { $_.name -eq 'merge-reference-manifests-test' })) {
+    throw 'Expected merge-reference-manifests-test command in playback-core validation plan.'
+}
+
 if (-not ($plan.commands | Where-Object { $_.name -eq 'native-display-refresh-test' })) {
     throw 'Expected native-display-refresh-test command in playback-core validation plan.'
 }

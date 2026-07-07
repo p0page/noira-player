@@ -98,6 +98,19 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools\quality-run\New-Privat
 
 脚本先分页读取 Movie/Episode item，再对没有 `MediaSources` 的 item 补取 `/Items/{ItemId}/PlaybackInfo`。HDR/Dolby Vision 分类只使用实际 stream metadata，例如 codec、`VideoRange`、`ColorPrimaries`、`ColorTransfer` 和 `ColorSpace`；item 名称、source 名称和 display title 不参与 DV 判定。若要定位特定片源，可以加 `-SearchTerm '<title>'` 输出到另一个 ignored manifest。生成后仍应运行 `validate-manifest`，把 `coverage.missingPurposes` 当作样本缺口，而不是播放 Core 结论。
 
+如果全库扫描慢或会超时，优先生成多个小的 ignored manifest，再合并成一个综合 corpus：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\quality-run\New-PrivateEmbyReferenceManifest.ps1 -SearchTerm '<title-a>' -OutputPath docs\qa\private\title-a-reference-manifest.local.json -Limit 50
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\quality-run\New-PrivateEmbyReferenceManifest.ps1 -SearchTerm '<title-b>' -OutputPath docs\qa\private\title-b-reference-manifest.local.json -Limit 50
+
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\quality-run\Merge-ReferenceManifests.ps1 -ManifestPath "docs\qa\playback-quality-reference-manifest.example.json,docs\qa\private\title-a-reference-manifest.local.json,docs\qa\private\title-b-reference-manifest.local.json" -OutputPath docs\qa\private\combined-reference-manifest.local.json
+
+dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- validate-manifest --manifest docs\qa\private\combined-reference-manifest.local.json --output docs\qa\private\combined-reference-manifest-validation.local.json
+```
+
+`Merge-ReferenceManifests.ps1` 只拼接 `cases`，保留输入顺序，并拒绝重复 `caseId`。这让模型可以把公开 Jellyfin DV 样本、公开 HDR10 压力样本和私有 Emby 真实库样本放进同一个本地评测集，同时仍保证所有私有 locator 和报告留在 `.gitignore` 覆盖路径。当前本机验证过的 `public example + 007 私有搜索结果` 综合 manifest 有 12 个 case，`coverage.status = ready`，覆盖 `sdr-smoke`、`hdr-output`、`hdr-force-sdr`、`dv-reject`、`dv-fallback`、`cadence-23.976`、`frame-pacing`、`av-sync` 和 `buffering`。
+
 验证 manifest 后，可以生成 App-free 采集计划：
 
 ```powershell
