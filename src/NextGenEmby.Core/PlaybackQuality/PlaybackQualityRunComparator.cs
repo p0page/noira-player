@@ -443,6 +443,27 @@ namespace NextGenEmby.Core.PlaybackQuality
                 return;
             }
 
+            if (comparison.Environment.Status == "missing-evidence")
+            {
+                comparison.Confidence.Level = "weak";
+                AddUnique(
+                    comparison.Confidence.Reasons,
+                    "comparison is missing baseline and candidate build identity");
+                AddUnique(comparison.Confidence.Signals, "environment.identity");
+                return;
+            }
+
+            if (comparison.Environment.Status == "partial")
+            {
+                comparison.Confidence.Level = "weak";
+                AddUnique(
+                    comparison.Confidence.Reasons,
+                    "comparison is missing complete baseline and candidate build identity");
+                AddUnique(comparison.Confidence.Signals, "environment.identity");
+                CopyValues(comparison.Environment.Signals, comparison.Confidence.Signals);
+                return;
+            }
+
             if (HasUnmatchedEvidence(comparison))
             {
                 comparison.Confidence.Level = "partial";
@@ -657,12 +678,14 @@ namespace NextGenEmby.Core.PlaybackQuality
 
         private static void ApplyDecision(PlaybackQualityRunComparison comparison)
         {
-            if (comparison.Environment.Status == "same-build" &&
+            if ((comparison.Environment.Status == "same-build" ||
+                    comparison.Environment.Status == "missing-evidence" ||
+                    comparison.Environment.Status == "partial") &&
                 comparison.Result != "insufficient-evidence")
             {
                 comparison.Decision = "collect-comparable-evidence";
                 comparison.SuggestedNextAction =
-                    "Collect reports from a distinct candidate build before deciding on playback Core changes.";
+                    "Collect reports with distinct baseline and candidate build identity before deciding on playback Core changes.";
                 return;
             }
 

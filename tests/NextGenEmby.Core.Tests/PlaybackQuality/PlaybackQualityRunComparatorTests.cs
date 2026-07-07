@@ -112,6 +112,31 @@ public sealed class PlaybackQualityRunComparatorTests
     }
 
     [Fact]
+    public void Compare_Blocks_Candidate_Acceptance_When_Build_Identity_Is_Missing()
+    {
+        var baseline = CreateReport(
+            "baseline",
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "180.000"));
+        var candidate = CreateReport(
+            "candidate",
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "120.000"));
+        baseline.Environment = new PlaybackQualityEnvironment();
+        candidate.Environment = new PlaybackQualityEnvironment();
+
+        var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
+
+        Assert.Equal("missing-evidence", comparison.Environment.Status);
+        Assert.Equal("weak", comparison.Confidence.Level);
+        Assert.Contains("comparison is missing baseline and candidate build identity", comparison.Confidence.Reasons);
+        Assert.Contains("environment.identity", comparison.Confidence.Signals);
+        Assert.Equal("collect-comparable-evidence", comparison.Decision);
+        Assert.Equal("collect-comparable-evidence", comparison.Optimization.Action);
+        Assert.Equal("high", comparison.Optimization.Risk);
+        Assert.Contains("comparison is missing baseline and candidate build identity", comparison.Optimization.Blockers);
+        Assert.Contains("environment.identity", comparison.Optimization.Signals);
+    }
+
+    [Fact]
     public void Compare_Reports_Regressed_When_Passing_Signal_Starts_Failing()
     {
         var baseline = CreateReport(
@@ -512,6 +537,9 @@ public sealed class PlaybackQualityRunComparatorTests
         params PlaybackQualityCheck[] checks)
     {
         var report = new PlaybackQualityReport { RunId = runId };
+        report.Environment.PlayerCoreVersion = "core-" + runId;
+        report.Environment.SourceRevision = "revision-" + runId;
+        report.Environment.BuildConfiguration = "Debug";
         foreach (var check in checks)
         {
             report.Checks.Add(check);

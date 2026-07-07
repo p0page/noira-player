@@ -305,12 +305,23 @@ namespace NextGenEmby.Core.PlaybackQuality
                 case "partial":
                     suite.Environment.PartialCount++;
                     AddUnique(suite.Environment.PartialCaseIds, comparison.CaseId);
+                    AddEnvironmentEvidenceBlocker(suite);
                     break;
                 default:
                     suite.Environment.MissingEvidenceCount++;
                     AddUnique(suite.Environment.MissingEvidenceCaseIds, comparison.CaseId);
+                    AddEnvironmentEvidenceBlocker(suite);
                     break;
             }
+        }
+
+        private static void AddEnvironmentEvidenceBlocker(
+            PlaybackQualityComparisonSuite suite)
+        {
+            AddUnique(suite.Blockers, "suite.environment-evidence-missing");
+            AddUnique(
+                suite.Reasons,
+                "suite contains comparisons without complete baseline and candidate build identity");
         }
 
         private static void AddComparisonEvidence(
