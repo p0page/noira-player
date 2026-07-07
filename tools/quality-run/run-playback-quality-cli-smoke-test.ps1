@@ -697,6 +697,10 @@ try {
         throw 'Expected playback quality CLI plan-runs output to keep requested duration.'
     }
 
+    if (-not ($runPlan.evidenceRequirements -contains 'capture environment.playerCoreVersion and environment.sourceRevision for every report')) {
+        throw 'Expected playback quality CLI plan-runs output to require player identity evidence.'
+    }
+
     if (-not ($runPlan.cases | Where-Object {
         $_.caseId -eq 'netflix/chimera-4k-2398-hdr-pq' -and
         $_.runId -eq 'netflix/chimera-4k-2398-hdr-pq' -and

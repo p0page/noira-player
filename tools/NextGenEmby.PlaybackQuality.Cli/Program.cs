@@ -1993,6 +1993,9 @@ internal static class Program
             "capture one PlaybackQualityRunResult envelope per planned case");
         AddUnique(
             plan.EvidenceRequirements,
+            "capture environment.playerCoreVersion and environment.sourceRevision for every report");
+        AddUnique(
+            plan.EvidenceRequirements,
             "write each report to reportPath using runId as the comparison key");
         AddUnique(
             plan.EvidenceRequirements,
