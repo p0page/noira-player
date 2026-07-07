@@ -83,8 +83,10 @@ namespace NextGenEmby.Core.PlaybackQuality
                 AddUnique(requiredSignals, "tracks.videoTrackCount");
                 AddUnique(requiredSignals, "tracks.audioTrackCount");
                 AddUnique(requiredSignals, "tracks.subtitleTrackCount");
+                AddUnique(requiredSignals, "tracks.video.isExternal");
                 AddUnique(requiredSignals, "tracks.video.isDefault");
                 AddUnique(requiredSignals, "tracks.video.isForced");
+                AddUnique(requiredSignals, "tracks.audio.isExternal");
                 AddUnique(requiredSignals, "tracks.audio.isDefault");
                 AddUnique(requiredSignals, "tracks.audio.isForced");
             }
@@ -94,6 +96,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                 HasPurpose(referenceCase, "subtitle-off"))
             {
                 AddUnique(requiredSignals, "tracks.isSubtitleDisabled");
+                AddUnique(requiredSignals, "tracks.subtitles.isExternal");
                 AddUnique(requiredSignals, "tracks.subtitles.isDefault");
                 AddUnique(requiredSignals, "tracks.subtitles.isForced");
             }
@@ -389,14 +392,20 @@ namespace NextGenEmby.Core.PlaybackQuality
                     }
 
                     return HasTrackEvidence(report);
+                case "tracks.video.isExternal":
+                    return report.Tracks.Video.Count > 0;
                 case "tracks.video.isDefault":
                     return HasTrackFlagEvidence(report.Tracks.Video, track => track.IsDefault);
                 case "tracks.video.isForced":
                     return HasTrackFlagEvidence(report.Tracks.Video, track => track.IsForced);
+                case "tracks.audio.isExternal":
+                    return report.Tracks.Audio.Count > 0;
                 case "tracks.audio.isDefault":
                     return HasTrackFlagEvidence(report.Tracks.Audio, track => track.IsDefault);
                 case "tracks.audio.isForced":
                     return HasTrackFlagEvidence(report.Tracks.Audio, track => track.IsForced);
+                case "tracks.subtitles.isExternal":
+                    return report.Tracks.Subtitles.Count > 0;
                 case "tracks.subtitles.isDefault":
                     return HasTrackFlagEvidence(report.Tracks.Subtitles, track => track.IsDefault);
                 case "tracks.subtitles.isForced":

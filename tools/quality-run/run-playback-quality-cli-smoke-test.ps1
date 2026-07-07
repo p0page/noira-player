@@ -1799,6 +1799,7 @@ try {
         "kind": "Video",
         "codec": "hevc",
         "language": "und",
+        "isExternal": false,
         "isDefault": true,
         "isForced": false
       }
@@ -1810,6 +1811,7 @@ try {
         "codec": "aac",
         "language": "eng",
         "channelLayout": "2.0",
+        "isExternal": false,
         "isDefault": true,
         "isForced": false
       }
@@ -1912,6 +1914,7 @@ try {
         "kind": "Video",
         "codec": "hevc",
         "language": "und",
+        "isExternal": false,
         "isDefault": true,
         "isForced": false
       }
@@ -1923,6 +1926,7 @@ try {
         "codec": "aac",
         "language": "eng",
         "channelLayout": "2.0",
+        "isExternal": false,
         "isDefault": true,
         "isForced": false
       }
@@ -2635,6 +2639,7 @@ try {
           "kind": "Video",
           "codec": "hevc",
           "language": "und",
+          "isExternal": false,
           "isDefault": true,
           "isForced": false
         }
@@ -2646,6 +2651,7 @@ try {
           "codec": "aac",
           "language": "eng",
           "channelLayout": "2.0",
+          "isExternal": false,
           "isDefault": true,
           "isForced": false
         }
@@ -2745,6 +2751,7 @@ try {
           "kind": "Video",
           "codec": "hevc",
           "language": "und",
+          "isExternal": false,
           "isDefault": true,
           "isForced": false
         }
@@ -2756,6 +2763,7 @@ try {
           "codec": "aac",
           "language": "eng",
           "channelLayout": "2.0",
+          "isExternal": false,
           "isDefault": true,
           "isForced": false
         }
@@ -2894,6 +2902,7 @@ try {
         "kind": "Video",
         "codec": "hevc",
         "language": "und",
+        "isExternal": false,
         "isDefault": true,
         "isForced": false
       }
@@ -2905,6 +2914,7 @@ try {
         "codec": "aac",
         "language": "eng",
         "channelLayout": "2.0",
+        "isExternal": false,
         "isDefault": true,
         "isForced": false
       }
@@ -3049,6 +3059,7 @@ try {
           "kind": "Video",
           "codec": "hevc",
           "language": "und",
+          "isExternal": false,
           "isDefault": true,
           "isForced": false
         }
@@ -3060,6 +3071,7 @@ try {
           "codec": "aac",
           "language": "eng",
           "channelLayout": "2.0",
+          "isExternal": false,
           "isDefault": true,
           "isForced": false
         }
@@ -3251,6 +3263,7 @@ try {
           "kind": "Video",
           "codec": "hevc",
           "language": "und",
+          "isExternal": false,
           "isDefault": true,
           "isForced": false
         }
@@ -3262,6 +3275,7 @@ try {
           "codec": "aac",
           "language": "eng",
           "channelLayout": "2.0",
+          "isExternal": false,
           "isDefault": true,
           "isForced": false
         }
@@ -3822,10 +3836,13 @@ try {
         ($_.requiredSignals -contains 'tracks.videoTrackCount') -and
         ($_.requiredSignals -contains 'tracks.audioTrackCount') -and
         ($_.requiredSignals -contains 'tracks.subtitleTrackCount') -and
+        ($_.requiredSignals -contains 'tracks.video.isExternal') -and
         ($_.requiredSignals -contains 'tracks.video.isDefault') -and
         ($_.requiredSignals -contains 'tracks.video.isForced') -and
+        ($_.requiredSignals -contains 'tracks.audio.isExternal') -and
         ($_.requiredSignals -contains 'tracks.audio.isDefault') -and
         ($_.requiredSignals -contains 'tracks.audio.isForced') -and
+        ($_.requiredSignals -contains 'tracks.subtitles.isExternal') -and
         ($_.requiredSignals -contains 'tracks.subtitles.isDefault') -and
         ($_.requiredSignals -contains 'tracks.subtitles.isForced') -and
         ($_.requiredSignals -contains 'tracks.isSubtitleDisabled')

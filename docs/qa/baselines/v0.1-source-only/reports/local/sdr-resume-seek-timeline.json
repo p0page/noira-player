@@ -188,7 +188,7 @@
     "environment": {
       "collectorVersion": "materialize-baseline-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "working-tree-track-default-forced",
+      "sourceRevision": "working-tree-track-external-default-forced",
       "buildConfiguration": "Debug"
     },
     "limitations": [
@@ -416,7 +416,7 @@
     "environment": {
       "collectorVersion": "materialize-baseline-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "working-tree-track-default-forced",
+      "sourceRevision": "working-tree-track-external-default-forced",
       "buildConfiguration": "Debug",
       "signals": [
         "environment.collectorVersion",
@@ -478,12 +478,14 @@
         "tracks.isSubtitleDisabled",
         "tracks.video.index",
         "tracks.video.codec",
+        "tracks.video.isExternal",
         "tracks.video.isDefault",
         "tracks.video.isForced",
         "tracks.video.realFrameRate",
         "tracks.video.averageFrameRate",
         "tracks.audio.index",
         "tracks.audio.codec",
+        "tracks.audio.isExternal",
         "tracks.audio.isDefault",
         "tracks.audio.isForced"
       ],
@@ -931,12 +933,14 @@
       "tracks.isSubtitleDisabled",
       "tracks.video.index",
       "tracks.video.codec",
+      "tracks.video.isExternal",
       "tracks.video.isDefault",
       "tracks.video.isForced",
       "tracks.video.realFrameRate",
       "tracks.video.averageFrameRate",
       "tracks.audio.index",
       "tracks.audio.codec",
+      "tracks.audio.isExternal",
       "tracks.audio.isDefault",
       "tracks.audio.isForced",
       "runtimeMetrics.status",

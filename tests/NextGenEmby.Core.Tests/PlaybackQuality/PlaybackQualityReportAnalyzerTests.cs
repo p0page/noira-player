@@ -341,8 +341,10 @@ public sealed class PlaybackQualityReportAnalyzerTests
         Assert.Contains("tracks.subtitleTrackCount", analysis.Tracks.Signals);
         Assert.Contains("tracks.selectedAudioStreamIndex", analysis.EvidenceSignals);
         Assert.Contains("tracks.selectedSubtitleStreamIndex", analysis.EvidenceSignals);
+        Assert.Contains("tracks.video.isExternal", analysis.EvidenceSignals);
         Assert.Contains("tracks.video.isDefault", analysis.EvidenceSignals);
         Assert.Contains("tracks.video.isForced", analysis.EvidenceSignals);
+        Assert.Contains("tracks.audio.isExternal", analysis.EvidenceSignals);
         Assert.Contains("tracks.audio.isDefault", analysis.EvidenceSignals);
         Assert.Contains("tracks.audio.isForced", analysis.EvidenceSignals);
         Assert.Contains("tracks.subtitles.isExternal", analysis.EvidenceSignals);

@@ -681,7 +681,6 @@ namespace NextGenEmby.Core.PlaybackQuality
             foreach (var track in report.Tracks.Subtitles)
             {
                 AddCommonTrackSignals(tracks, "tracks.subtitles", track);
-                AddUnique(tracks.Signals, "tracks.subtitles.isExternal");
             }
         }
 
@@ -705,6 +704,8 @@ namespace NextGenEmby.Core.PlaybackQuality
             {
                 AddUnique(tracks.Signals, prefix + ".displayTitle");
             }
+
+            AddUnique(tracks.Signals, prefix + ".isExternal");
 
             if (track.IsDefault.HasValue)
             {

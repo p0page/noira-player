@@ -982,10 +982,13 @@ public sealed class PlaybackQualityReferenceManifestTests
         Assert.Contains("tracks.selectedAudioStreamIndex", requiredSignals);
         Assert.Contains("tracks.selectedSubtitleStreamIndex", requiredSignals);
         Assert.Contains("tracks.isSubtitleDisabled", requiredSignals);
+        Assert.Contains("tracks.video.isExternal", requiredSignals);
         Assert.Contains("tracks.video.isDefault", requiredSignals);
         Assert.Contains("tracks.video.isForced", requiredSignals);
+        Assert.Contains("tracks.audio.isExternal", requiredSignals);
         Assert.Contains("tracks.audio.isDefault", requiredSignals);
         Assert.Contains("tracks.audio.isForced", requiredSignals);
+        Assert.Contains("tracks.subtitles.isExternal", requiredSignals);
         Assert.Contains("tracks.subtitles.isDefault", requiredSignals);
         Assert.Contains("tracks.subtitles.isForced", requiredSignals);
     }
@@ -1096,10 +1099,13 @@ public sealed class PlaybackQualityReferenceManifestTests
         Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "tracks.subtitleTrackCount"));
         Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "tracks.selectedAudioStreamIndex"));
         Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "tracks.isSubtitleDisabled"));
+        Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "tracks.video.isExternal"));
         Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "tracks.video.isDefault"));
         Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "tracks.video.isForced"));
+        Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "tracks.audio.isExternal"));
         Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "tracks.audio.isDefault"));
         Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "tracks.audio.isForced"));
+        Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "tracks.subtitles.isExternal"));
         Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "tracks.subtitles.isDefault"));
         Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "tracks.subtitles.isForced"));
         Assert.False(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "tracks.selectedSubtitleStreamIndex"));

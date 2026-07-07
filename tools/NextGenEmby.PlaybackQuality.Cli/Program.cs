@@ -2503,9 +2503,11 @@ internal static class Program
                 "tracks.selectedVideoStreamIndex",
                 "tracks.selectedAudioStreamIndex",
                 "tracks.video.codec",
+                "tracks.video.isExternal",
                 "tracks.video.isDefault",
                 "tracks.video.isForced",
                 "tracks.audio.codec",
+                "tracks.audio.isExternal",
                 "tracks.audio.isDefault",
                 "tracks.audio.isForced"),
             new ReportAnalysisCapabilityDefinition(
