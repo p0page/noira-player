@@ -1303,6 +1303,12 @@ try {
         throw 'Expected evaluate-candidate active gate to expose strong suite confidence.'
     }
 
+    if ($null -eq $candidateEvaluation.activeGate.resultCounts -or
+        $candidateEvaluation.activeGate.resultCounts.totalCount -ne 1 -or
+        $candidateEvaluation.activeGate.resultCounts.improvedCount -ne 1) {
+        throw 'Expected evaluate-candidate active gate to expose improved suite result counts.'
+    }
+
     if ($null -eq $candidateEvaluation.baselineReportAnalysis -or
         $candidateEvaluation.baselineReportAnalysis.totalReportCount -ne 1 -or
         $candidateEvaluation.baselineReportAnalysis.analyzedReportCount -ne 0 -or
@@ -1421,6 +1427,12 @@ try {
         $missingEnvironmentEvaluation.activeGate.confidence.level -ne 'weak' -or
         $missingEnvironmentEvaluation.activeGate.confidence.weakCount -ne 1) {
         throw 'Expected missing build identity active gate to expose weak suite confidence.'
+    }
+
+    if ($null -eq $missingEnvironmentEvaluation.activeGate.resultCounts -or
+        $missingEnvironmentEvaluation.activeGate.resultCounts.totalCount -ne 1 -or
+        $missingEnvironmentEvaluation.activeGate.resultCounts.improvedCount -ne 1) {
+        throw 'Expected missing build identity active gate to keep suite result counts separate from evidence blockers.'
     }
 
     New-Item -ItemType Directory -Path $candidateEvaluationPartialEnvironmentBaselineDir | Out-Null

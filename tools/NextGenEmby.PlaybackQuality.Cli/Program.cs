@@ -1696,6 +1696,7 @@ internal static class Program
         CopyValues(suite.TargetCaseIds, gate.TargetCaseIds);
         CopyValues(suite.CodeTargets, gate.CodeTargets);
         ApplySuiteGateConfidence(gate, suite);
+        ApplySuiteGateResultCounts(gate, suite);
         gate.Environment = suite.Environment;
         foreach (var summary in suite.Cases)
         {
@@ -1755,6 +1756,19 @@ internal static class Program
         CopyValues(suite.Signals, gate.Confidence.Signals);
         CopyValues(suite.Reasons, gate.Confidence.Reasons);
         CopyValues(suite.Blockers, gate.Confidence.Reasons);
+    }
+
+    private static void ApplySuiteGateResultCounts(
+        CandidateEvaluationGate gate,
+        PlaybackQualityComparisonSuite suite)
+    {
+        gate.ResultCounts.TotalCount = suite.TotalComparisonCount;
+        gate.ResultCounts.ImprovedCount = suite.ImprovedCount;
+        gate.ResultCounts.RegressedCount = suite.RegressedCount;
+        gate.ResultCounts.MixedCount = suite.MixedCount;
+        gate.ResultCounts.UnchangedCount = suite.UnchangedCount;
+        gate.ResultCounts.InsufficientEvidenceCount = suite.InsufficientEvidenceCount;
+        gate.ResultCounts.PolicyChangeCount = suite.PolicyChangeCount;
     }
 
     private static void MarkWeakGateConfidence(
@@ -1999,6 +2013,8 @@ internal static class Program
         public string Summary { get; set; } = "";
         public CandidateEvaluationGateConfidence Confidence { get; set; } =
             new CandidateEvaluationGateConfidence();
+        public CandidateEvaluationGateResultCounts ResultCounts { get; set; } =
+            new CandidateEvaluationGateResultCounts();
         public List<string> Blockers { get; } = new List<string>();
         public List<string> Signals { get; } = new List<string>();
         public PlaybackQualityComparisonSuiteEnvironment? Environment { get; set; }
@@ -2020,6 +2036,17 @@ internal static class Program
         public int InsufficientEvidenceCount { get; set; }
         public List<string> Signals { get; } = new List<string>();
         public List<string> Reasons { get; } = new List<string>();
+    }
+
+    private sealed class CandidateEvaluationGateResultCounts
+    {
+        public int TotalCount { get; set; }
+        public int ImprovedCount { get; set; }
+        public int RegressedCount { get; set; }
+        public int MixedCount { get; set; }
+        public int UnchangedCount { get; set; }
+        public int InsufficientEvidenceCount { get; set; }
+        public int PolicyChangeCount { get; set; }
     }
 
     private sealed class PlaybackQualityRunPlan
