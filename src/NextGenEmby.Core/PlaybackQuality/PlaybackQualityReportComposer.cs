@@ -32,6 +32,8 @@ namespace NextGenEmby.Core.PlaybackQuality
             ModelAnalysis = modelAnalysis ?? throw new ArgumentNullException(nameof(modelAnalysis));
         }
 
+        public int SchemaVersion { get; set; } = 1;
+
         public PlaybackQualityReport Report { get; }
 
         public PlaybackQualityModelAnalysis ModelAnalysis { get; }

@@ -25,6 +25,7 @@ public sealed class PlaybackQualityReportComposerTests
             Expected = expected
         });
 
+        Assert.Equal(1, result.SchemaVersion);
         Assert.Equal("hdr10-stable", result.Report.RunId);
         Assert.Equal("pass", result.Report.Result);
         Assert.Empty(result.Report.FailureReasons);
@@ -90,6 +91,7 @@ public sealed class PlaybackQualityReportComposerTests
 
         var json = PlaybackQualityReportSerializer.Serialize(result);
 
+        Assert.Contains("\"schemaVersion\": 1", json);
         Assert.Contains("\"report\"", json);
         Assert.Contains("\"modelAnalysis\"", json);
         Assert.Contains("\"runId\": \"json-run\"", json);
