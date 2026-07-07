@@ -293,6 +293,7 @@ public sealed class PlaybackQualityReferenceManifestTests
             height: 2160,
             frameRate: 23.976,
             hdrKind: "Hdr10");
+        report.ColorPipeline.ConversionStatus = "validated";
 
         var validation = PlaybackQualityReferenceReportSetValidator.Validate(
             manifest,
@@ -439,6 +440,59 @@ public sealed class PlaybackQualityReferenceManifestTests
         Assert.Contains(validation.Errors, error =>
             error.Code == "report.source.hasHdr10BaseLayer.mismatch" &&
             error.Signal == "source.hasHdr10BaseLayer");
+    }
+
+    [Fact]
+    public void ValidateReportSet_Rejects_Missing_Required_Telemetry_Signals()
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        var referenceCase = CreateCase(
+            "jellyfin/hdr10-4k-23976",
+            tier: 1,
+            purpose: "hdr-output");
+        referenceCase.Expected.HdrOutput = "Hdr10";
+        referenceCase.Expected.DxgiInput = "YCBCR_STUDIO_G2084_TOPLEFT_P2020";
+        referenceCase.Expected.DxgiOutput = "RGB_FULL_G2084_NONE_P2020";
+        referenceCase.Expected.MaxAudioVideoDriftMsP95 = 40;
+        referenceCase.Expected.RequireMatchedDisplayRefreshRate = true;
+        manifest.Cases.Add(referenceCase);
+        var report = CreateReport(
+            "jellyfin/hdr10-4k-23976",
+            codec: "hevc",
+            width: 3840,
+            height: 2160,
+            frameRate: 23.976,
+            hdrKind: "Hdr10");
+
+        var validation = PlaybackQualityReferenceReportSetValidator.Validate(
+            manifest,
+            new[] { report });
+
+        Assert.False(validation.IsValid);
+        Assert.Equal(0, validation.MatchedCaseCount);
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.requiredSignal.missing" &&
+            error.Signal == "colorPipeline.actualHdrOutput");
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.requiredSignal.missing" &&
+            error.Signal == "colorPipeline.dxgiInput");
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.requiredSignal.missing" &&
+            error.Signal == "colorPipeline.dxgiOutput");
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.requiredSignal.missing" &&
+            error.Signal == "colorPipeline.conversionStatus");
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.requiredSignal.missing" &&
+            error.Signal == "sync.audioVideoDriftMsP95");
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.requiredSignal.missing" &&
+            error.Signal == "display.refreshRateHz");
+        Assert.Contains(validation.Cases, item =>
+            item.CaseId == "jellyfin/hdr10-4k-23976" &&
+            item.Status == "mismatch" &&
+            item.Signals.Contains("colorPipeline.actualHdrOutput") &&
+            item.Signals.Contains("display.refreshRateHz"));
     }
 
     private static PlaybackQualityReferenceCase CreateCase(

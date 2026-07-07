@@ -65,6 +65,8 @@ try {
     $embyRunPlanPath = Join-Path $tempRoot 'emby-run-plan.json'
     $reportSetDir = Join-Path $tempRoot 'reference-report-set'
     $reportSetValidationPath = Join-Path $tempRoot 'reference-report-set-validation.json'
+    $missingSignalReportSetDir = Join-Path $tempRoot 'reference-report-set-missing-signals'
+    $missingSignalReportSetValidationPath = Join-Path $tempRoot 'reference-report-set-missing-signals-validation.json'
 
     @'
 {
@@ -519,6 +521,19 @@ try {
     "height": 2160,
     "frameRate": 23.976,
     "hdrKind": "Hdr10"
+  },
+  "timing": {
+    "renderedVideoFrames": 1440,
+    "expectedFrameDurationMs": 41.708,
+    "maxFrameGapMs": 48.0,
+    "framePacingSourceFrameRate": 23.976,
+    "lateFrameDropToleranceMs": 104.271
+  },
+  "colorPipeline": {
+    "conversionStatus": "validated"
+  },
+  "display": {
+    "refreshRateHz": 23.976
   }
 }
 '@ | Set-Content -LiteralPath (Join-Path $reportSetDir 'case-a.json') -Encoding UTF8
@@ -532,6 +547,9 @@ try {
     "height": 2160,
     "frameRate": 23.976,
     "hdrKind": "DolbyVisionUnsupported"
+  },
+  "colorPipeline": {
+    "conversionStatus": "not-applicable"
   }
 }
 '@ | Set-Content -LiteralPath (Join-Path $reportSetDir 'case-b.json') -Encoding UTF8
@@ -560,6 +578,75 @@ try {
 
     if ($reportSetValidation.matchedCaseCount -ne 2) {
         throw 'Expected playback quality CLI validate-report-set output to include two matched cases.'
+    }
+
+    New-Item -ItemType Directory -Path $missingSignalReportSetDir | Out-Null
+    @'
+{
+  "runId": "netflix/chimera-4k-2398-hdr-pq",
+  "metricVersion": "software-quality-v1",
+  "source": {
+    "codec": "hevc",
+    "width": 3840,
+    "height": 2160,
+    "frameRate": 23.976,
+    "hdrKind": "Hdr10"
+  }
+}
+'@ | Set-Content -LiteralPath (Join-Path $missingSignalReportSetDir 'case-a.json') -Encoding UTF8
+    @'
+{
+  "runId": "jellyfin/dv-profile5-hevc-4k",
+  "metricVersion": "software-quality-v1",
+  "source": {
+    "codec": "hevc",
+    "width": 3840,
+    "height": 2160,
+    "frameRate": 23.976,
+    "hdrKind": "DolbyVisionUnsupported"
+  },
+  "colorPipeline": {
+    "conversionStatus": "not-applicable"
+  }
+}
+'@ | Set-Content -LiteralPath (Join-Path $missingSignalReportSetDir 'case-b.json') -Encoding UTF8
+
+    Push-Location $repoRoot
+    try {
+        dotnet run `
+            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
+            --no-build `
+            -- validate-report-set `
+            --manifest $manifestPath `
+            --reports-dir $missingSignalReportSetDir `
+            --output $missingSignalReportSetValidationPath
+        if ($LASTEXITCODE -ne 2) {
+            throw 'Expected playback quality CLI validate-report-set to return 2 for missing required telemetry.'
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    $missingSignalReportSetValidation = Get-Content -Raw -LiteralPath $missingSignalReportSetValidationPath | ConvertFrom-Json
+    if ($missingSignalReportSetValidation.isValid -ne $false) {
+        throw 'Expected playback quality CLI validate-report-set missing telemetry output to be invalid.'
+    }
+
+    if (-not ($missingSignalReportSetValidation.errors | Where-Object {
+        $_.code -eq 'report.requiredSignal.missing' -and
+        $_.caseId -eq 'netflix/chimera-4k-2398-hdr-pq' -and
+        $_.signal -eq 'timing.expectedFrameDurationMs'
+    })) {
+        throw 'Expected playback quality CLI validate-report-set missing telemetry output to include missing timing evidence.'
+    }
+
+    if (-not ($missingSignalReportSetValidation.errors | Where-Object {
+        $_.code -eq 'report.requiredSignal.missing' -and
+        $_.caseId -eq 'netflix/chimera-4k-2398-hdr-pq' -and
+        $_.signal -eq 'display.refreshRateHz'
+    })) {
+        throw 'Expected playback quality CLI validate-report-set missing telemetry output to include missing display refresh evidence.'
     }
 
     Push-Location $repoRoot
@@ -724,6 +811,32 @@ try {
     "frameRate": 23.976,
     "hdrKind": "Sdr"
   },
+  "timing": {
+    "renderPasses": 1440,
+    "renderedVideoFrames": 1440,
+    "expectedFrameDurationMs": 41.708,
+    "renderIntervalMsP95": 43.0,
+    "renderIntervalMsP99": 45.0,
+    "maxFrameGapMs": 180.0,
+    "framePacingSourceFrameRate": 23.976,
+    "lateFrameDropToleranceMs": 104.271
+  },
+  "sync": {
+    "audioVideoDriftMsP95": 20.0
+  },
+  "buffers": {
+    "submittedAudioFrames": 48000,
+    "queuedAudioBuffers": 4,
+    "videoStarvedPasses": 0,
+    "audioStarvedPasses": 0
+  },
+  "colorPipeline": {
+    "conversionStatus": "validated",
+    "forceSdrOutput": true
+  },
+  "display": {
+    "refreshRateHz": 23.976
+  },
   "checks": [
     {
       "name": "MaxFrameGapMs",
@@ -748,6 +861,32 @@ try {
     "height": 2160,
     "frameRate": 23.976,
     "hdrKind": "Sdr"
+  },
+  "timing": {
+    "renderPasses": 1440,
+    "renderedVideoFrames": 1440,
+    "expectedFrameDurationMs": 41.708,
+    "renderIntervalMsP95": 42.0,
+    "renderIntervalMsP99": 44.0,
+    "maxFrameGapMs": 120.0,
+    "framePacingSourceFrameRate": 23.976,
+    "lateFrameDropToleranceMs": 104.271
+  },
+  "sync": {
+    "audioVideoDriftMsP95": 18.0
+  },
+  "buffers": {
+    "submittedAudioFrames": 48000,
+    "queuedAudioBuffers": 4,
+    "videoStarvedPasses": 0,
+    "audioStarvedPasses": 0
+  },
+  "colorPipeline": {
+    "conversionStatus": "validated",
+    "forceSdrOutput": true
+  },
+  "display": {
+    "refreshRateHz": 23.976
   },
   "checks": [
     {
@@ -1009,6 +1148,32 @@ try {
       "frameRate": 23.976,
       "hdrKind": "Sdr"
     },
+    "timing": {
+      "renderPasses": 1440,
+      "renderedVideoFrames": 1440,
+      "expectedFrameDurationMs": 41.708,
+      "renderIntervalMsP95": 43.0,
+      "renderIntervalMsP99": 45.0,
+      "maxFrameGapMs": 180.0,
+      "framePacingSourceFrameRate": 23.976,
+      "lateFrameDropToleranceMs": 104.271
+    },
+    "sync": {
+      "audioVideoDriftMsP95": 20.0
+    },
+    "buffers": {
+      "submittedAudioFrames": 48000,
+      "queuedAudioBuffers": 4,
+      "videoStarvedPasses": 0,
+      "audioStarvedPasses": 0
+    },
+    "colorPipeline": {
+      "conversionStatus": "validated",
+      "forceSdrOutput": true
+    },
+    "display": {
+      "refreshRateHz": 23.976
+    },
     "checks": [
       {
         "name": "MaxFrameGapMs",
@@ -1037,6 +1202,32 @@ try {
       "height": 2160,
       "frameRate": 23.976,
       "hdrKind": "Sdr"
+    },
+    "timing": {
+      "renderPasses": 1440,
+      "renderedVideoFrames": 1440,
+      "expectedFrameDurationMs": 41.708,
+      "renderIntervalMsP95": 42.0,
+      "renderIntervalMsP99": 44.0,
+      "maxFrameGapMs": 120.0,
+      "framePacingSourceFrameRate": 23.976,
+      "lateFrameDropToleranceMs": 104.271
+    },
+    "sync": {
+      "audioVideoDriftMsP95": 18.0
+    },
+    "buffers": {
+      "submittedAudioFrames": 48000,
+      "queuedAudioBuffers": 4,
+      "videoStarvedPasses": 0,
+      "audioStarvedPasses": 0
+    },
+    "colorPipeline": {
+      "conversionStatus": "validated",
+      "forceSdrOutput": true
+    },
+    "display": {
+      "refreshRateHz": 23.976
     },
     "checks": [
       {
@@ -1206,6 +1397,32 @@ try {
       "frameRate": 23.976,
       "hdrKind": "Sdr"
     },
+    "timing": {
+      "renderPasses": 1440,
+      "renderedVideoFrames": 1440,
+      "expectedFrameDurationMs": 41.708,
+      "renderIntervalMsP95": 43.0,
+      "renderIntervalMsP99": 45.0,
+      "maxFrameGapMs": 180.0,
+      "framePacingSourceFrameRate": 23.976,
+      "lateFrameDropToleranceMs": 104.271
+    },
+    "sync": {
+      "audioVideoDriftMsP95": 20.0
+    },
+    "buffers": {
+      "submittedAudioFrames": 48000,
+      "queuedAudioBuffers": 4,
+      "videoStarvedPasses": 0,
+      "audioStarvedPasses": 0
+    },
+    "colorPipeline": {
+      "conversionStatus": "validated",
+      "forceSdrOutput": true
+    },
+    "display": {
+      "refreshRateHz": 23.976
+    },
     "checks": [
       {
         "name": "RenderedVideoFrames",
@@ -1310,6 +1527,32 @@ try {
       "height": 2160,
       "frameRate": 23.976,
       "hdrKind": "Sdr"
+    },
+    "timing": {
+      "renderPasses": 1440,
+      "renderedVideoFrames": 1440,
+      "expectedFrameDurationMs": 41.708,
+      "renderIntervalMsP95": 42.0,
+      "renderIntervalMsP99": 44.0,
+      "maxFrameGapMs": 120.0,
+      "framePacingSourceFrameRate": 23.976,
+      "lateFrameDropToleranceMs": 104.271
+    },
+    "sync": {
+      "audioVideoDriftMsP95": 18.0
+    },
+    "buffers": {
+      "submittedAudioFrames": 48000,
+      "queuedAudioBuffers": 4,
+      "videoStarvedPasses": 0,
+      "audioStarvedPasses": 0
+    },
+    "colorPipeline": {
+      "conversionStatus": "validated",
+      "forceSdrOutput": true
+    },
+    "display": {
+      "refreshRateHz": 23.976
     },
     "checks": [
       {

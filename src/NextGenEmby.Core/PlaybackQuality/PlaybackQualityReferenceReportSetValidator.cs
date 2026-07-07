@@ -162,6 +162,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                     Status = "matched"
                 };
                 ValidateSource(validation, status, referenceCase.Expected, report);
+                ValidateRequiredSignals(validation, status, referenceCase, report);
                 if (status.Signals.Count > 0)
                 {
                     status.Status = "mismatch";
@@ -262,6 +263,33 @@ namespace NextGenEmby.Core.PlaybackQuality
                 "source.hasHlgBaseLayer",
                 expected.HasHlgBaseLayer,
                 report.Source.HasHlgBaseLayer);
+        }
+
+        private static void ValidateRequiredSignals(
+            PlaybackQualityReferenceReportSetValidation validation,
+            PlaybackQualityReferenceReportCaseStatus status,
+            PlaybackQualityReferenceCase referenceCase,
+            PlaybackQualityReport report)
+        {
+            foreach (var signal in PlaybackQualityRequiredSignalPolicy.CreateRequiredSignals(referenceCase))
+            {
+                if (status.Signals.Contains(signal) ||
+                    PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, signal))
+                {
+                    continue;
+                }
+
+                AddUnique(status.Signals, signal);
+                AddError(
+                    validation,
+                    "report.requiredSignal.missing",
+                    status.CaseId,
+                    status.ReportRunId,
+                    signal,
+                    "present",
+                    "",
+                    "Playback quality report is missing a required telemetry signal.");
+            }
         }
 
         private static void CheckString(
