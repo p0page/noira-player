@@ -977,7 +977,8 @@ public sealed class PlaybackQualityReferenceManifestTests
             Source = new PlaybackQualitySource
             {
                 Container = "mkv",
-                Bitrate = 76_000_000
+                Bitrate = 76_000_000,
+                DurationTicks = 70_200_000_000
             },
             Tracks = new PlaybackQualityTracks
             {
@@ -991,6 +992,7 @@ public sealed class PlaybackQualityReferenceManifestTests
 
         Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "source.container"));
         Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "source.bitrate"));
+        Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "source.durationTicks"));
         Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "tracks.videoTrackCount"));
         Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "tracks.audioTrackCount"));
         Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "tracks.subtitleTrackCount"));

@@ -72,6 +72,7 @@ public sealed class PlaybackQualityReportAnalyzerTests
                 Codec = "hevc",
                 Container = "mkv",
                 Bitrate = 76_000_000,
+                DurationTicks = 70_200_000_000,
                 Width = 3840,
                 Height = 2160,
                 FrameRate = 23.976,
@@ -83,10 +84,13 @@ public sealed class PlaybackQualityReportAnalyzerTests
 
         Assert.Equal("mkv", analysis.Source.Container);
         Assert.Equal(76_000_000, analysis.Source.Bitrate);
+        Assert.Equal(70_200_000_000, analysis.Source.DurationTicks);
         Assert.Contains("source.container", analysis.Source.Signals);
         Assert.Contains("source.bitrate", analysis.Source.Signals);
+        Assert.Contains("source.durationTicks", analysis.Source.Signals);
         Assert.Contains("source.container", analysis.EvidenceSignals);
         Assert.Contains("source.bitrate", analysis.EvidenceSignals);
+        Assert.Contains("source.durationTicks", analysis.EvidenceSignals);
     }
 
     [Fact]

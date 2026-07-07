@@ -67,6 +67,7 @@ namespace NextGenEmby.Core.PlaybackQuality
         public string MediaSourceId { get; set; } = "";
         public string Container { get; set; } = "";
         public long Bitrate { get; set; }
+        public long DurationTicks { get; set; }
         public string Codec { get; set; } = "";
         public int Width { get; set; }
         public int Height { get; set; }

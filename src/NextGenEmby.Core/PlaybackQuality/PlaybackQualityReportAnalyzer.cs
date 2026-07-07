@@ -62,6 +62,7 @@ namespace NextGenEmby.Core.PlaybackQuality
         public string Reason { get; set; } = "";
         public string Container { get; set; } = "";
         public long Bitrate { get; set; }
+        public long DurationTicks { get; set; }
         public string Codec { get; set; } = "";
         public int Width { get; set; }
         public int Height { get; set; }
@@ -1053,6 +1054,7 @@ namespace NextGenEmby.Core.PlaybackQuality
             {
                 Container = report.Source.Container,
                 Bitrate = report.Source.Bitrate,
+                DurationTicks = report.Source.DurationTicks,
                 Codec = report.Source.Codec,
                 Width = report.Source.Width,
                 Height = report.Source.Height,
@@ -1115,6 +1117,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                 !string.IsNullOrWhiteSpace(source.Codec) ||
                 !string.IsNullOrWhiteSpace(source.Container) ||
                 source.Bitrate > 0 ||
+                source.DurationTicks > 0 ||
                 source.Width > 0 ||
                 source.Height > 0 ||
                 source.FrameRate > 0 ||
@@ -1134,6 +1137,11 @@ namespace NextGenEmby.Core.PlaybackQuality
             if (source.Bitrate > 0)
             {
                 AddUnique(source.Signals, "source.bitrate");
+            }
+
+            if (source.DurationTicks > 0)
+            {
+                AddUnique(source.Signals, "source.durationTicks");
             }
 
             if (source.Width > 0)

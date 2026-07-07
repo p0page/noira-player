@@ -780,6 +780,7 @@ namespace NextGenEmby.Core.Emby
                 Name = string.IsNullOrWhiteSpace(source.Name) ? id : source.Name,
                 Container = source.Container ?? "",
                 Bitrate = source.Bitrate,
+                RunTimeTicks = source.RunTimeTicks,
                 PlaySessionId = playSessionId,
                 DirectStreamUrl = BuildDirectStreamUrl(session, itemId, playSessionId, source)
             };
@@ -1090,6 +1091,7 @@ namespace NextGenEmby.Core.Emby
             public string Name { get; set; } = "";
             public string Container { get; set; } = "";
             public long Bitrate { get; set; }
+            public long RunTimeTicks { get; set; }
             public string DirectStreamUrl { get; set; } = "";
             public bool AddApiKeyToDirectStreamUrl { get; set; }
             public string PlaySessionId { get; set; } = "";

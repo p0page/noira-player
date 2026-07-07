@@ -12,6 +12,7 @@ namespace NextGenEmby.Core.Emby
         public string Name { get; set; } = "";
         public string Container { get; set; } = "";
         public long Bitrate { get; set; }
+        public long RunTimeTicks { get; set; }
         public int Width { get; set; }
         public int Height { get; set; }
         public double VideoFrameRate { get; set; }

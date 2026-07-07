@@ -23,6 +23,7 @@ public sealed class EmbyPlaybackInfoTests
                   "Name": "4K HDR",
                   "Container": "mkv",
                   "Bitrate": 76000000,
+                  "RunTimeTicks": 70200000000,
                   "Path": "/media/movie.mkv",
                   "MediaStreams": [
                     {
@@ -67,6 +68,7 @@ public sealed class EmbyPlaybackInfoTests
         Assert.True(source.IsHdr);
         Assert.Equal(HdrPlaybackKind.Hdr10, source.HdrProfile.Kind);
         Assert.Equal("HDR10", source.HdrProfile.PlaybackStrategy);
+        Assert.Equal(70_200_000_000, source.RunTimeTicks);
         Assert.Equal(3840, source.Width);
         Assert.Equal(2160, source.Height);
         Assert.Equal(23.976, source.VideoFrameRate);
