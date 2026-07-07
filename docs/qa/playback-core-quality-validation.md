@@ -189,7 +189,7 @@ dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQ
 
 `activeGate.signalSummaries` 是 suite 级信号证据摘要，按 signal 和 failure area 聚合 `outcome`、improvement/regression/policy-change 计数、case IDs 和方向。模型可先用它判断具体受影响的播放 Core 信号，再决定是否展开 full suite 或单个 comparison。
 
-`activeGate.nextActions` 是 gate 级结构化执行摘要。suite gate 会复制 suite 的 ranked `nextActions`，每项包含 `rank`、`action`、`risk`、可选 `failureArea`、`caseIds`、`signals`、`reasons`、`blockers` 和 `codeTargets`；skipped suite 会给出 rank 1 的 `collect-comparable-evidence` 动作。模型应优先读取 `activeGate.nextActions[0]`，再决定是否需要展开 `suite.cases` 或单个 comparison。
+`activeGate.nextActions` 是 gate 级结构化执行摘要，每项包含 `rank`、`action`、`risk`、可选 `failureArea`、`caseIds`、`signals`、`reasons`、`blockers` 和 `codeTargets`。suite gate 会复制 suite 的 ranked `nextActions`；前置 gate 和 skipped suite 会从自身的 action/risk/signals/blockers/case/code target 生成 rank 1 动作。模型应优先读取 `activeGate.nextActions[0]`，再决定是否需要展开 `suite.cases` 或单个 comparison。
 
 `evaluate-candidate` 仍会把 raw `PlaybackQualityReport` 视为没有 envelope-level `modelAnalysis`，并在 report-analysis summary 中显示 `status = unavailable`；这让旧报告可以继续走 suite 比较，但自动化采集应优先写入完整 `PlaybackQualityRunResult` envelope。若 envelope 里存在 `modelAnalysis` 但 `modelAnalysis.runId` / `modelAnalysis.result` 缺失，或 `modelAnalysis.analyzerVersion` 不匹配当前 analyzer，门禁会把它视为不可复用并用当前 Core analyzer 重新生成，然后再决定 report-analysis gate 是否阻断。空对象 `{}` 不能绕过 report-analysis gate。
 

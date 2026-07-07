@@ -224,7 +224,7 @@ dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQ
 
 `signalSummaries` 是 gate 级 suite 信号证据摘要。suite gate 会聚合每个 signal/failure area 的 `outcome`、improvement/regression/policy-change 计数、case IDs 和方向；前置 gate 和 skipped suite 保持空列表。模型应先用 `activeGate.signalSummaries` 判断具体受影响的播放 Core 信号，再按需展开 `suite.cases` 或 comparison。
 
-`nextActions` 是 gate 级结构化执行摘要。suite gate 会复制 suite 的 ranked `nextActions`，每项包含 `rank`、`action`、`risk`、可选 `failureArea`、`caseIds`、`signals`、`reasons`、`blockers` 和 `codeTargets`；skipped suite 会给出 rank 1 的 `collect-comparable-evidence` 动作。模型应优先读取 `activeGate.nextActions[0]`，用它决定下一步操作、目标样本和可能需要查看的 Core/native 文件；`suggestedNextActions` 仍保留为文本提示。
+`nextActions` 是 gate 级结构化执行摘要，每项包含 `rank`、`action`、`risk`、可选 `failureArea`、`caseIds`、`signals`、`reasons`、`blockers` 和 `codeTargets`。suite gate 会复制 suite 的 ranked `nextActions`；前置 gate 和 skipped suite 会从自身的 action/risk/signals/blockers/case/code target 生成 rank 1 动作。模型应优先读取 `activeGate.nextActions[0]`，用它决定下一步操作、目标样本和可能需要查看的 Core/native 文件；`suggestedNextActions` 仍保留为文本提示。
 
 自动化模型循环必须按以下规则消费结果：
 

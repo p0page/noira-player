@@ -304,6 +304,7 @@ internal static class Program
         }
 
         ApplyDefaultGateRisks(evaluation.EvidenceGates);
+        ApplyDefaultGateNextActions(evaluation.EvidenceGates);
         evaluation.ActiveGate = SelectActiveGate(evaluation.EvidenceGates);
         WriteJson(evaluation, options.OutputPath);
         return evaluation.Blockers.Count == 0 ? 0 : 2;
@@ -1855,6 +1856,46 @@ internal static class Program
             gate.Risk = string.Equals(gate.Status, "pass", StringComparison.OrdinalIgnoreCase)
                 ? "low"
                 : "high";
+        }
+    }
+
+    private static void ApplyDefaultGateNextActions(
+        List<CandidateEvaluationGate> gates)
+    {
+        foreach (var gate in gates)
+        {
+            if (gate.NextActions.Count > 0)
+            {
+                continue;
+            }
+
+            var action = new PlaybackQualitySuiteNextAction
+            {
+                Rank = 1,
+                Action = gate.Action,
+                Risk = string.IsNullOrWhiteSpace(gate.Risk) ? "high" : gate.Risk,
+                FailureArea = gate.TargetFailureAreas.Count > 0
+                    ? gate.TargetFailureAreas[0]
+                    : gate.FailureAreas.Count > 0
+                        ? gate.FailureAreas[0]
+                        : ""
+            };
+
+            if (gate.TargetCaseIds.Count > 0)
+            {
+                CopyValues(gate.TargetCaseIds, action.CaseIds);
+            }
+            else
+            {
+                CopyValues(gate.CaseIds, action.CaseIds);
+            }
+
+            CopyValues(gate.Signals, action.Signals);
+            CopyValues(gate.Blockers, action.Blockers);
+            CopyValues(gate.CodeTargets, action.CodeTargets);
+            AddUnique(action.Reasons, gate.Summary);
+            CopyValues(gate.SuggestedNextActions, action.Reasons);
+            gate.NextActions.Add(action);
         }
     }
 

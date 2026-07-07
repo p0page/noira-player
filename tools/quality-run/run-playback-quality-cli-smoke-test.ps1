@@ -1662,6 +1662,17 @@ try {
         throw 'Expected incomplete manifest coverage active gate to include suggested next action.'
     }
 
+    $narrowCoverageGateNextActions = @($narrowCoverageEvaluation.activeGate.nextActions)
+    if ($narrowCoverageGateNextActions.Count -ne 1 -or
+        $narrowCoverageGateNextActions[0].rank -ne 1 -or
+        $narrowCoverageGateNextActions[0].action -ne 'collect-comparable-evidence' -or
+        $narrowCoverageGateNextActions[0].risk -ne 'high' -or
+        -not ($narrowCoverageGateNextActions[0].signals -contains 'sdr-smoke') -or
+        -not ($narrowCoverageGateNextActions[0].blockers -contains 'manifest-coverage.incomplete') -or
+        -not ($narrowCoverageGateNextActions[0].codeTargets -contains 'src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs')) {
+        throw 'Expected incomplete manifest coverage active gate to expose ranked next action.'
+    }
+
     if (-not ($narrowCoverageEvaluation.evidenceGates | Where-Object { $_.name -eq 'suite' -and $_.status -eq 'skipped' })) {
         throw 'Expected incomplete manifest coverage evidence to skip suite comparison.'
     }
