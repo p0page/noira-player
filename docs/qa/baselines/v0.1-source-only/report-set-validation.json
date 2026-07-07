@@ -1,0 +1,1310 @@
+{
+  "schemaVersion": 1,
+  "isValid": false,
+  "expectedCaseCount": 8,
+  "reportCount": 8,
+  "matchedCaseCount": 0,
+  "cases": [
+    {
+      "caseId": "jellyfin/sdr-hevc-main10-1080p60-3m",
+      "category": "stable",
+      "reportRunId": "jellyfin/sdr-hevc-main10-1080p60-3m",
+      "status": "mismatch",
+      "signals": [
+        "startup.startupDurationMs",
+        "colorPipeline.actualHdrOutput",
+        "display.hdrStatus",
+        "colorPipeline.swapChainFormat",
+        "colorPipeline.swapChainColorSpace",
+        "colorPipeline.dxgiInput",
+        "colorPipeline.dxgiOutput",
+        "colorPipeline.conversionStatus"
+      ]
+    },
+    {
+      "caseId": "jellyfin/hdr10-hevc-main10-1080p60-10m",
+      "category": "stable",
+      "reportRunId": "jellyfin/hdr10-hevc-main10-1080p60-10m",
+      "status": "mismatch",
+      "signals": [
+        "startup.startupDurationMs",
+        "colorPipeline.actualHdrOutput",
+        "display.hdrStatus",
+        "colorPipeline.swapChainFormat",
+        "colorPipeline.swapChainColorSpace",
+        "colorPipeline.dxgiInput",
+        "colorPipeline.dxgiOutput",
+        "colorPipeline.conversionStatus"
+      ]
+    },
+    {
+      "caseId": "jellyfin/hdr10-hevc-main10-1080p60-10m-force-sdr",
+      "category": "challenge",
+      "reportRunId": "jellyfin/hdr10-hevc-main10-1080p60-10m-force-sdr",
+      "status": "mismatch",
+      "signals": [
+        "startup.startupDurationMs",
+        "colorPipeline.actualHdrOutput",
+        "display.hdrStatus",
+        "colorPipeline.swapChainFormat",
+        "colorPipeline.swapChainColorSpace",
+        "colorPipeline.dxgiInput",
+        "colorPipeline.dxgiOutput",
+        "colorPipeline.conversionStatus",
+        "colorPipeline.forceSdrOutput"
+      ]
+    },
+    {
+      "caseId": "jellyfin/hdr10-hevc-main10-4k60-50m",
+      "category": "challenge",
+      "reportRunId": "jellyfin/hdr10-hevc-main10-4k60-50m",
+      "status": "mismatch",
+      "signals": [
+        "startup.startupDurationMs",
+        "colorPipeline.actualHdrOutput",
+        "display.hdrStatus",
+        "colorPipeline.swapChainFormat",
+        "colorPipeline.swapChainColorSpace",
+        "colorPipeline.dxgiInput",
+        "colorPipeline.dxgiOutput",
+        "colorPipeline.conversionStatus"
+      ]
+    },
+    {
+      "caseId": "jellyfin/dv-profile5-hevc-4k60",
+      "category": "challenge",
+      "reportRunId": "jellyfin/dv-profile5-hevc-4k60",
+      "status": "mismatch",
+      "signals": [
+        "startup.startupDurationMs",
+        "colorPipeline.conversionStatus"
+      ]
+    },
+    {
+      "caseId": "jellyfin/dv-profile8-1-hevc-4k60-hdr10-fallback",
+      "category": "challenge",
+      "reportRunId": "jellyfin/dv-profile8-1-hevc-4k60-hdr10-fallback",
+      "status": "mismatch",
+      "signals": [
+        "startup.startupDurationMs",
+        "colorPipeline.actualHdrOutput",
+        "display.hdrStatus",
+        "colorPipeline.swapChainFormat",
+        "colorPipeline.swapChainColorSpace",
+        "colorPipeline.dxgiInput",
+        "colorPipeline.dxgiOutput",
+        "colorPipeline.conversionStatus"
+      ]
+    },
+    {
+      "caseId": "local/chimera-23976-hdr10-cadence",
+      "category": "challenge",
+      "reportRunId": "local/chimera-23976-hdr10-cadence",
+      "status": "mismatch",
+      "signals": [
+        "startup.startupDurationMs",
+        "timing.renderedVideoFrames",
+        "timing.maxFrameGapMs",
+        "timing.framePacingSourceFrameRate",
+        "timing.lateFrameDropToleranceMs",
+        "timing.renderIntervalMsP95",
+        "timing.renderIntervalMsP99",
+        "colorPipeline.actualHdrOutput",
+        "display.hdrStatus",
+        "colorPipeline.swapChainFormat",
+        "colorPipeline.swapChainColorSpace",
+        "colorPipeline.dxgiInput",
+        "colorPipeline.dxgiOutput",
+        "colorPipeline.conversionStatus",
+        "display.refreshRateHz"
+      ]
+    },
+    {
+      "caseId": "local/sdr-resume-seek-timeline",
+      "category": "stable",
+      "reportRunId": "local/sdr-resume-seek-timeline",
+      "status": "mismatch",
+      "signals": [
+        "startup.startupDurationMs",
+        "position.actualPositionTicks",
+        "position.seekPositionErrorMs",
+        "colorPipeline.actualHdrOutput",
+        "display.hdrStatus",
+        "colorPipeline.swapChainFormat",
+        "colorPipeline.swapChainColorSpace",
+        "colorPipeline.dxgiInput",
+        "colorPipeline.dxgiOutput",
+        "colorPipeline.conversionStatus"
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/sdr-hevc-main10-1080p60-3m",
+      "reportRunId": "jellyfin/sdr-hevc-main10-1080p60-3m",
+      "signal": "startup.startupDurationMs",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "startup",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Separate Emby request latency, native open/demux initialization, and first-frame readiness before changing render pacing.",
+      "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/sdr-hevc-main10-1080p60-3m",
+      "reportRunId": "jellyfin/sdr-hevc-main10-1080p60-3m",
+      "signal": "colorPipeline.actualHdrOutput",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "color-pipeline",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect display HDR state, swapchain format/color space, DXGI mapping, and conversion validation before optimizing color pipeline behavior.",
+      "codeTargets": [
+        "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
+        "src/NextGenEmby.Native/DxDeviceResources.cpp",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/sdr-hevc-main10-1080p60-3m",
+      "reportRunId": "jellyfin/sdr-hevc-main10-1080p60-3m",
+      "signal": "display.hdrStatus",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "color-pipeline",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect display HDR state, swapchain format/color space, DXGI mapping, and conversion validation before optimizing color pipeline behavior.",
+      "codeTargets": [
+        "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
+        "src/NextGenEmby.Native/DxDeviceResources.cpp",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/sdr-hevc-main10-1080p60-3m",
+      "reportRunId": "jellyfin/sdr-hevc-main10-1080p60-3m",
+      "signal": "colorPipeline.swapChainFormat",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "color-pipeline",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect display HDR state, swapchain format/color space, DXGI mapping, and conversion validation before optimizing color pipeline behavior.",
+      "codeTargets": [
+        "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
+        "src/NextGenEmby.Native/DxDeviceResources.cpp",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/sdr-hevc-main10-1080p60-3m",
+      "reportRunId": "jellyfin/sdr-hevc-main10-1080p60-3m",
+      "signal": "colorPipeline.swapChainColorSpace",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "color-pipeline",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect display HDR state, swapchain format/color space, DXGI mapping, and conversion validation before optimizing color pipeline behavior.",
+      "codeTargets": [
+        "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
+        "src/NextGenEmby.Native/DxDeviceResources.cpp",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/sdr-hevc-main10-1080p60-3m",
+      "reportRunId": "jellyfin/sdr-hevc-main10-1080p60-3m",
+      "signal": "colorPipeline.dxgiInput",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "color-pipeline",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect display HDR state, swapchain format/color space, DXGI mapping, and conversion validation before optimizing color pipeline behavior.",
+      "codeTargets": [
+        "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
+        "src/NextGenEmby.Native/DxDeviceResources.cpp",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/sdr-hevc-main10-1080p60-3m",
+      "reportRunId": "jellyfin/sdr-hevc-main10-1080p60-3m",
+      "signal": "colorPipeline.dxgiOutput",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "color-pipeline",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect display HDR state, swapchain format/color space, DXGI mapping, and conversion validation before optimizing color pipeline behavior.",
+      "codeTargets": [
+        "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
+        "src/NextGenEmby.Native/DxDeviceResources.cpp",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/sdr-hevc-main10-1080p60-3m",
+      "reportRunId": "jellyfin/sdr-hevc-main10-1080p60-3m",
+      "signal": "colorPipeline.conversionStatus",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "color-pipeline",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect display HDR state, swapchain format/color space, DXGI mapping, and conversion validation before optimizing color pipeline behavior.",
+      "codeTargets": [
+        "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
+        "src/NextGenEmby.Native/DxDeviceResources.cpp",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/hdr10-hevc-main10-1080p60-10m",
+      "reportRunId": "jellyfin/hdr10-hevc-main10-1080p60-10m",
+      "signal": "startup.startupDurationMs",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "startup",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Separate Emby request latency, native open/demux initialization, and first-frame readiness before changing render pacing.",
+      "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/hdr10-hevc-main10-1080p60-10m",
+      "reportRunId": "jellyfin/hdr10-hevc-main10-1080p60-10m",
+      "signal": "colorPipeline.actualHdrOutput",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "color-pipeline",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect display HDR state, swapchain format/color space, DXGI mapping, and conversion validation before optimizing color pipeline behavior.",
+      "codeTargets": [
+        "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
+        "src/NextGenEmby.Native/DxDeviceResources.cpp",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/hdr10-hevc-main10-1080p60-10m",
+      "reportRunId": "jellyfin/hdr10-hevc-main10-1080p60-10m",
+      "signal": "display.hdrStatus",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "color-pipeline",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect display HDR state, swapchain format/color space, DXGI mapping, and conversion validation before optimizing color pipeline behavior.",
+      "codeTargets": [
+        "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
+        "src/NextGenEmby.Native/DxDeviceResources.cpp",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/hdr10-hevc-main10-1080p60-10m",
+      "reportRunId": "jellyfin/hdr10-hevc-main10-1080p60-10m",
+      "signal": "colorPipeline.swapChainFormat",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "color-pipeline",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect display HDR state, swapchain format/color space, DXGI mapping, and conversion validation before optimizing color pipeline behavior.",
+      "codeTargets": [
+        "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
+        "src/NextGenEmby.Native/DxDeviceResources.cpp",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/hdr10-hevc-main10-1080p60-10m",
+      "reportRunId": "jellyfin/hdr10-hevc-main10-1080p60-10m",
+      "signal": "colorPipeline.swapChainColorSpace",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "color-pipeline",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect display HDR state, swapchain format/color space, DXGI mapping, and conversion validation before optimizing color pipeline behavior.",
+      "codeTargets": [
+        "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
+        "src/NextGenEmby.Native/DxDeviceResources.cpp",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/hdr10-hevc-main10-1080p60-10m",
+      "reportRunId": "jellyfin/hdr10-hevc-main10-1080p60-10m",
+      "signal": "colorPipeline.dxgiInput",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "color-pipeline",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect display HDR state, swapchain format/color space, DXGI mapping, and conversion validation before optimizing color pipeline behavior.",
+      "codeTargets": [
+        "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
+        "src/NextGenEmby.Native/DxDeviceResources.cpp",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/hdr10-hevc-main10-1080p60-10m",
+      "reportRunId": "jellyfin/hdr10-hevc-main10-1080p60-10m",
+      "signal": "colorPipeline.dxgiOutput",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "color-pipeline",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect display HDR state, swapchain format/color space, DXGI mapping, and conversion validation before optimizing color pipeline behavior.",
+      "codeTargets": [
+        "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
+        "src/NextGenEmby.Native/DxDeviceResources.cpp",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/hdr10-hevc-main10-1080p60-10m",
+      "reportRunId": "jellyfin/hdr10-hevc-main10-1080p60-10m",
+      "signal": "colorPipeline.conversionStatus",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "color-pipeline",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect display HDR state, swapchain format/color space, DXGI mapping, and conversion validation before optimizing color pipeline behavior.",
+      "codeTargets": [
+        "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
+        "src/NextGenEmby.Native/DxDeviceResources.cpp",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/hdr10-hevc-main10-1080p60-10m-force-sdr",
+      "reportRunId": "jellyfin/hdr10-hevc-main10-1080p60-10m-force-sdr",
+      "signal": "startup.startupDurationMs",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "startup",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Separate Emby request latency, native open/demux initialization, and first-frame readiness before changing render pacing.",
+      "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/hdr10-hevc-main10-1080p60-10m-force-sdr",
+      "reportRunId": "jellyfin/hdr10-hevc-main10-1080p60-10m-force-sdr",
+      "signal": "colorPipeline.actualHdrOutput",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "color-pipeline",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect display HDR state, swapchain format/color space, DXGI mapping, and conversion validation before optimizing color pipeline behavior.",
+      "codeTargets": [
+        "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
+        "src/NextGenEmby.Native/DxDeviceResources.cpp",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/hdr10-hevc-main10-1080p60-10m-force-sdr",
+      "reportRunId": "jellyfin/hdr10-hevc-main10-1080p60-10m-force-sdr",
+      "signal": "display.hdrStatus",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "color-pipeline",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect display HDR state, swapchain format/color space, DXGI mapping, and conversion validation before optimizing color pipeline behavior.",
+      "codeTargets": [
+        "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
+        "src/NextGenEmby.Native/DxDeviceResources.cpp",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/hdr10-hevc-main10-1080p60-10m-force-sdr",
+      "reportRunId": "jellyfin/hdr10-hevc-main10-1080p60-10m-force-sdr",
+      "signal": "colorPipeline.swapChainFormat",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "color-pipeline",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect display HDR state, swapchain format/color space, DXGI mapping, and conversion validation before optimizing color pipeline behavior.",
+      "codeTargets": [
+        "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
+        "src/NextGenEmby.Native/DxDeviceResources.cpp",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/hdr10-hevc-main10-1080p60-10m-force-sdr",
+      "reportRunId": "jellyfin/hdr10-hevc-main10-1080p60-10m-force-sdr",
+      "signal": "colorPipeline.swapChainColorSpace",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "color-pipeline",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect display HDR state, swapchain format/color space, DXGI mapping, and conversion validation before optimizing color pipeline behavior.",
+      "codeTargets": [
+        "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
+        "src/NextGenEmby.Native/DxDeviceResources.cpp",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/hdr10-hevc-main10-1080p60-10m-force-sdr",
+      "reportRunId": "jellyfin/hdr10-hevc-main10-1080p60-10m-force-sdr",
+      "signal": "colorPipeline.dxgiInput",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "color-pipeline",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect display HDR state, swapchain format/color space, DXGI mapping, and conversion validation before optimizing color pipeline behavior.",
+      "codeTargets": [
+        "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
+        "src/NextGenEmby.Native/DxDeviceResources.cpp",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/hdr10-hevc-main10-1080p60-10m-force-sdr",
+      "reportRunId": "jellyfin/hdr10-hevc-main10-1080p60-10m-force-sdr",
+      "signal": "colorPipeline.dxgiOutput",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "color-pipeline",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect display HDR state, swapchain format/color space, DXGI mapping, and conversion validation before optimizing color pipeline behavior.",
+      "codeTargets": [
+        "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
+        "src/NextGenEmby.Native/DxDeviceResources.cpp",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/hdr10-hevc-main10-1080p60-10m-force-sdr",
+      "reportRunId": "jellyfin/hdr10-hevc-main10-1080p60-10m-force-sdr",
+      "signal": "colorPipeline.conversionStatus",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "color-pipeline",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect display HDR state, swapchain format/color space, DXGI mapping, and conversion validation before optimizing color pipeline behavior.",
+      "codeTargets": [
+        "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
+        "src/NextGenEmby.Native/DxDeviceResources.cpp",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/hdr10-hevc-main10-1080p60-10m-force-sdr",
+      "reportRunId": "jellyfin/hdr10-hevc-main10-1080p60-10m-force-sdr",
+      "signal": "colorPipeline.forceSdrOutput",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "color-pipeline",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect display HDR state, swapchain format/color space, DXGI mapping, and conversion validation before optimizing color pipeline behavior.",
+      "codeTargets": [
+        "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
+        "src/NextGenEmby.Native/DxDeviceResources.cpp",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/hdr10-hevc-main10-4k60-50m",
+      "reportRunId": "jellyfin/hdr10-hevc-main10-4k60-50m",
+      "signal": "startup.startupDurationMs",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "startup",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Separate Emby request latency, native open/demux initialization, and first-frame readiness before changing render pacing.",
+      "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/hdr10-hevc-main10-4k60-50m",
+      "reportRunId": "jellyfin/hdr10-hevc-main10-4k60-50m",
+      "signal": "colorPipeline.actualHdrOutput",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "color-pipeline",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect display HDR state, swapchain format/color space, DXGI mapping, and conversion validation before optimizing color pipeline behavior.",
+      "codeTargets": [
+        "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
+        "src/NextGenEmby.Native/DxDeviceResources.cpp",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/hdr10-hevc-main10-4k60-50m",
+      "reportRunId": "jellyfin/hdr10-hevc-main10-4k60-50m",
+      "signal": "display.hdrStatus",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "color-pipeline",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect display HDR state, swapchain format/color space, DXGI mapping, and conversion validation before optimizing color pipeline behavior.",
+      "codeTargets": [
+        "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
+        "src/NextGenEmby.Native/DxDeviceResources.cpp",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/hdr10-hevc-main10-4k60-50m",
+      "reportRunId": "jellyfin/hdr10-hevc-main10-4k60-50m",
+      "signal": "colorPipeline.swapChainFormat",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "color-pipeline",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect display HDR state, swapchain format/color space, DXGI mapping, and conversion validation before optimizing color pipeline behavior.",
+      "codeTargets": [
+        "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
+        "src/NextGenEmby.Native/DxDeviceResources.cpp",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/hdr10-hevc-main10-4k60-50m",
+      "reportRunId": "jellyfin/hdr10-hevc-main10-4k60-50m",
+      "signal": "colorPipeline.swapChainColorSpace",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "color-pipeline",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect display HDR state, swapchain format/color space, DXGI mapping, and conversion validation before optimizing color pipeline behavior.",
+      "codeTargets": [
+        "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
+        "src/NextGenEmby.Native/DxDeviceResources.cpp",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/hdr10-hevc-main10-4k60-50m",
+      "reportRunId": "jellyfin/hdr10-hevc-main10-4k60-50m",
+      "signal": "colorPipeline.dxgiInput",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "color-pipeline",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect display HDR state, swapchain format/color space, DXGI mapping, and conversion validation before optimizing color pipeline behavior.",
+      "codeTargets": [
+        "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
+        "src/NextGenEmby.Native/DxDeviceResources.cpp",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/hdr10-hevc-main10-4k60-50m",
+      "reportRunId": "jellyfin/hdr10-hevc-main10-4k60-50m",
+      "signal": "colorPipeline.dxgiOutput",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "color-pipeline",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect display HDR state, swapchain format/color space, DXGI mapping, and conversion validation before optimizing color pipeline behavior.",
+      "codeTargets": [
+        "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
+        "src/NextGenEmby.Native/DxDeviceResources.cpp",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/hdr10-hevc-main10-4k60-50m",
+      "reportRunId": "jellyfin/hdr10-hevc-main10-4k60-50m",
+      "signal": "colorPipeline.conversionStatus",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "color-pipeline",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect display HDR state, swapchain format/color space, DXGI mapping, and conversion validation before optimizing color pipeline behavior.",
+      "codeTargets": [
+        "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
+        "src/NextGenEmby.Native/DxDeviceResources.cpp",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/dv-profile5-hevc-4k60",
+      "reportRunId": "jellyfin/dv-profile5-hevc-4k60",
+      "signal": "startup.startupDurationMs",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "startup",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Separate Emby request latency, native open/demux initialization, and first-frame readiness before changing render pacing.",
+      "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/dv-profile5-hevc-4k60",
+      "reportRunId": "jellyfin/dv-profile5-hevc-4k60",
+      "signal": "colorPipeline.conversionStatus",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "color-pipeline",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect display HDR state, swapchain format/color space, DXGI mapping, and conversion validation before optimizing color pipeline behavior.",
+      "codeTargets": [
+        "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
+        "src/NextGenEmby.Native/DxDeviceResources.cpp",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/dv-profile8-1-hevc-4k60-hdr10-fallback",
+      "reportRunId": "jellyfin/dv-profile8-1-hevc-4k60-hdr10-fallback",
+      "signal": "startup.startupDurationMs",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "startup",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Separate Emby request latency, native open/demux initialization, and first-frame readiness before changing render pacing.",
+      "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/dv-profile8-1-hevc-4k60-hdr10-fallback",
+      "reportRunId": "jellyfin/dv-profile8-1-hevc-4k60-hdr10-fallback",
+      "signal": "colorPipeline.actualHdrOutput",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "color-pipeline",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect display HDR state, swapchain format/color space, DXGI mapping, and conversion validation before optimizing color pipeline behavior.",
+      "codeTargets": [
+        "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
+        "src/NextGenEmby.Native/DxDeviceResources.cpp",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/dv-profile8-1-hevc-4k60-hdr10-fallback",
+      "reportRunId": "jellyfin/dv-profile8-1-hevc-4k60-hdr10-fallback",
+      "signal": "display.hdrStatus",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "color-pipeline",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect display HDR state, swapchain format/color space, DXGI mapping, and conversion validation before optimizing color pipeline behavior.",
+      "codeTargets": [
+        "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
+        "src/NextGenEmby.Native/DxDeviceResources.cpp",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/dv-profile8-1-hevc-4k60-hdr10-fallback",
+      "reportRunId": "jellyfin/dv-profile8-1-hevc-4k60-hdr10-fallback",
+      "signal": "colorPipeline.swapChainFormat",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "color-pipeline",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect display HDR state, swapchain format/color space, DXGI mapping, and conversion validation before optimizing color pipeline behavior.",
+      "codeTargets": [
+        "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
+        "src/NextGenEmby.Native/DxDeviceResources.cpp",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/dv-profile8-1-hevc-4k60-hdr10-fallback",
+      "reportRunId": "jellyfin/dv-profile8-1-hevc-4k60-hdr10-fallback",
+      "signal": "colorPipeline.swapChainColorSpace",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "color-pipeline",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect display HDR state, swapchain format/color space, DXGI mapping, and conversion validation before optimizing color pipeline behavior.",
+      "codeTargets": [
+        "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
+        "src/NextGenEmby.Native/DxDeviceResources.cpp",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/dv-profile8-1-hevc-4k60-hdr10-fallback",
+      "reportRunId": "jellyfin/dv-profile8-1-hevc-4k60-hdr10-fallback",
+      "signal": "colorPipeline.dxgiInput",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "color-pipeline",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect display HDR state, swapchain format/color space, DXGI mapping, and conversion validation before optimizing color pipeline behavior.",
+      "codeTargets": [
+        "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
+        "src/NextGenEmby.Native/DxDeviceResources.cpp",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/dv-profile8-1-hevc-4k60-hdr10-fallback",
+      "reportRunId": "jellyfin/dv-profile8-1-hevc-4k60-hdr10-fallback",
+      "signal": "colorPipeline.dxgiOutput",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "color-pipeline",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect display HDR state, swapchain format/color space, DXGI mapping, and conversion validation before optimizing color pipeline behavior.",
+      "codeTargets": [
+        "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
+        "src/NextGenEmby.Native/DxDeviceResources.cpp",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "jellyfin/dv-profile8-1-hevc-4k60-hdr10-fallback",
+      "reportRunId": "jellyfin/dv-profile8-1-hevc-4k60-hdr10-fallback",
+      "signal": "colorPipeline.conversionStatus",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "color-pipeline",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect display HDR state, swapchain format/color space, DXGI mapping, and conversion validation before optimizing color pipeline behavior.",
+      "codeTargets": [
+        "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
+        "src/NextGenEmby.Native/DxDeviceResources.cpp",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "local/chimera-23976-hdr10-cadence",
+      "reportRunId": "local/chimera-23976-hdr10-cadence",
+      "signal": "startup.startupDurationMs",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "startup",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Separate Emby request latency, native open/demux initialization, and first-frame readiness before changing render pacing.",
+      "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "local/chimera-23976-hdr10-cadence",
+      "reportRunId": "local/chimera-23976-hdr10-cadence",
+      "signal": "timing.renderedVideoFrames",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "frame-pacing",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect render intervals, frame gaps, source/display cadence, and wait/drop threshold evidence before changing frame pacing behavior.",
+      "codeTargets": [
+        "src/NextGenEmby.Native/Media/FramePacing.h",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp",
+        "src/NextGenEmby.Native/HdrDisplayController.cpp",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackRefreshRatePolicy.cs"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "local/chimera-23976-hdr10-cadence",
+      "reportRunId": "local/chimera-23976-hdr10-cadence",
+      "signal": "timing.maxFrameGapMs",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "frame-pacing",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect render intervals, frame gaps, source/display cadence, and wait/drop threshold evidence before changing frame pacing behavior.",
+      "codeTargets": [
+        "src/NextGenEmby.Native/Media/FramePacing.h",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp",
+        "src/NextGenEmby.Native/HdrDisplayController.cpp",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackRefreshRatePolicy.cs"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "local/chimera-23976-hdr10-cadence",
+      "reportRunId": "local/chimera-23976-hdr10-cadence",
+      "signal": "timing.framePacingSourceFrameRate",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "frame-pacing",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect render intervals, frame gaps, source/display cadence, and wait/drop threshold evidence before changing frame pacing behavior.",
+      "codeTargets": [
+        "src/NextGenEmby.Native/Media/FramePacing.h",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp",
+        "src/NextGenEmby.Native/HdrDisplayController.cpp",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackRefreshRatePolicy.cs"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "local/chimera-23976-hdr10-cadence",
+      "reportRunId": "local/chimera-23976-hdr10-cadence",
+      "signal": "timing.lateFrameDropToleranceMs",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "frame-pacing",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect render intervals, frame gaps, source/display cadence, and wait/drop threshold evidence before changing frame pacing behavior.",
+      "codeTargets": [
+        "src/NextGenEmby.Native/Media/FramePacing.h",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp",
+        "src/NextGenEmby.Native/HdrDisplayController.cpp",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackRefreshRatePolicy.cs"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "local/chimera-23976-hdr10-cadence",
+      "reportRunId": "local/chimera-23976-hdr10-cadence",
+      "signal": "timing.renderIntervalMsP95",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "frame-pacing",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect render intervals, frame gaps, source/display cadence, and wait/drop threshold evidence before changing frame pacing behavior.",
+      "codeTargets": [
+        "src/NextGenEmby.Native/Media/FramePacing.h",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp",
+        "src/NextGenEmby.Native/HdrDisplayController.cpp",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackRefreshRatePolicy.cs"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "local/chimera-23976-hdr10-cadence",
+      "reportRunId": "local/chimera-23976-hdr10-cadence",
+      "signal": "timing.renderIntervalMsP99",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "frame-pacing",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect render intervals, frame gaps, source/display cadence, and wait/drop threshold evidence before changing frame pacing behavior.",
+      "codeTargets": [
+        "src/NextGenEmby.Native/Media/FramePacing.h",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp",
+        "src/NextGenEmby.Native/HdrDisplayController.cpp",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackRefreshRatePolicy.cs"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "local/chimera-23976-hdr10-cadence",
+      "reportRunId": "local/chimera-23976-hdr10-cadence",
+      "signal": "colorPipeline.actualHdrOutput",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "color-pipeline",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect display HDR state, swapchain format/color space, DXGI mapping, and conversion validation before optimizing color pipeline behavior.",
+      "codeTargets": [
+        "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
+        "src/NextGenEmby.Native/DxDeviceResources.cpp",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "local/chimera-23976-hdr10-cadence",
+      "reportRunId": "local/chimera-23976-hdr10-cadence",
+      "signal": "display.hdrStatus",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "color-pipeline",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect display HDR state, swapchain format/color space, DXGI mapping, and conversion validation before optimizing color pipeline behavior.",
+      "codeTargets": [
+        "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
+        "src/NextGenEmby.Native/DxDeviceResources.cpp",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "local/chimera-23976-hdr10-cadence",
+      "reportRunId": "local/chimera-23976-hdr10-cadence",
+      "signal": "colorPipeline.swapChainFormat",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "color-pipeline",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect display HDR state, swapchain format/color space, DXGI mapping, and conversion validation before optimizing color pipeline behavior.",
+      "codeTargets": [
+        "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
+        "src/NextGenEmby.Native/DxDeviceResources.cpp",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "local/chimera-23976-hdr10-cadence",
+      "reportRunId": "local/chimera-23976-hdr10-cadence",
+      "signal": "colorPipeline.swapChainColorSpace",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "color-pipeline",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect display HDR state, swapchain format/color space, DXGI mapping, and conversion validation before optimizing color pipeline behavior.",
+      "codeTargets": [
+        "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
+        "src/NextGenEmby.Native/DxDeviceResources.cpp",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "local/chimera-23976-hdr10-cadence",
+      "reportRunId": "local/chimera-23976-hdr10-cadence",
+      "signal": "colorPipeline.dxgiInput",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "color-pipeline",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect display HDR state, swapchain format/color space, DXGI mapping, and conversion validation before optimizing color pipeline behavior.",
+      "codeTargets": [
+        "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
+        "src/NextGenEmby.Native/DxDeviceResources.cpp",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "local/chimera-23976-hdr10-cadence",
+      "reportRunId": "local/chimera-23976-hdr10-cadence",
+      "signal": "colorPipeline.dxgiOutput",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "color-pipeline",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect display HDR state, swapchain format/color space, DXGI mapping, and conversion validation before optimizing color pipeline behavior.",
+      "codeTargets": [
+        "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
+        "src/NextGenEmby.Native/DxDeviceResources.cpp",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "local/chimera-23976-hdr10-cadence",
+      "reportRunId": "local/chimera-23976-hdr10-cadence",
+      "signal": "colorPipeline.conversionStatus",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "color-pipeline",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect display HDR state, swapchain format/color space, DXGI mapping, and conversion validation before optimizing color pipeline behavior.",
+      "codeTargets": [
+        "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
+        "src/NextGenEmby.Native/DxDeviceResources.cpp",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "local/chimera-23976-hdr10-cadence",
+      "reportRunId": "local/chimera-23976-hdr10-cadence",
+      "signal": "display.refreshRateHz",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "frame-pacing",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect render intervals, frame gaps, source/display cadence, and wait/drop threshold evidence before changing frame pacing behavior.",
+      "codeTargets": [
+        "src/NextGenEmby.Native/Media/FramePacing.h",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp",
+        "src/NextGenEmby.Native/HdrDisplayController.cpp",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackRefreshRatePolicy.cs"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "local/sdr-resume-seek-timeline",
+      "reportRunId": "local/sdr-resume-seek-timeline",
+      "signal": "startup.startupDurationMs",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "startup",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Separate Emby request latency, native open/demux initialization, and first-frame readiness before changing render pacing.",
+      "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "local/sdr-resume-seek-timeline",
+      "reportRunId": "local/sdr-resume-seek-timeline",
+      "signal": "position.actualPositionTicks",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "timeline",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect seek target, actual playback position, and derived position error before changing seek or resume behavior.",
+      "codeTargets": [
+        "src/NextGenEmby.Core/Playback/PlaybackOrchestrator.cs",
+        "src/NextGenEmby.Core/Playback/SeekPreviewSession.cs",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "local/sdr-resume-seek-timeline",
+      "reportRunId": "local/sdr-resume-seek-timeline",
+      "signal": "position.seekPositionErrorMs",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "timeline",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect seek target, actual playback position, and derived position error before changing seek or resume behavior.",
+      "codeTargets": [
+        "src/NextGenEmby.Core/Playback/PlaybackOrchestrator.cs",
+        "src/NextGenEmby.Core/Playback/SeekPreviewSession.cs",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "local/sdr-resume-seek-timeline",
+      "reportRunId": "local/sdr-resume-seek-timeline",
+      "signal": "colorPipeline.actualHdrOutput",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "color-pipeline",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect display HDR state, swapchain format/color space, DXGI mapping, and conversion validation before optimizing color pipeline behavior.",
+      "codeTargets": [
+        "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
+        "src/NextGenEmby.Native/DxDeviceResources.cpp",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "local/sdr-resume-seek-timeline",
+      "reportRunId": "local/sdr-resume-seek-timeline",
+      "signal": "display.hdrStatus",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "color-pipeline",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect display HDR state, swapchain format/color space, DXGI mapping, and conversion validation before optimizing color pipeline behavior.",
+      "codeTargets": [
+        "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
+        "src/NextGenEmby.Native/DxDeviceResources.cpp",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "local/sdr-resume-seek-timeline",
+      "reportRunId": "local/sdr-resume-seek-timeline",
+      "signal": "colorPipeline.swapChainFormat",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "color-pipeline",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect display HDR state, swapchain format/color space, DXGI mapping, and conversion validation before optimizing color pipeline behavior.",
+      "codeTargets": [
+        "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
+        "src/NextGenEmby.Native/DxDeviceResources.cpp",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "local/sdr-resume-seek-timeline",
+      "reportRunId": "local/sdr-resume-seek-timeline",
+      "signal": "colorPipeline.swapChainColorSpace",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "color-pipeline",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect display HDR state, swapchain format/color space, DXGI mapping, and conversion validation before optimizing color pipeline behavior.",
+      "codeTargets": [
+        "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
+        "src/NextGenEmby.Native/DxDeviceResources.cpp",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "local/sdr-resume-seek-timeline",
+      "reportRunId": "local/sdr-resume-seek-timeline",
+      "signal": "colorPipeline.dxgiInput",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "color-pipeline",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect display HDR state, swapchain format/color space, DXGI mapping, and conversion validation before optimizing color pipeline behavior.",
+      "codeTargets": [
+        "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
+        "src/NextGenEmby.Native/DxDeviceResources.cpp",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "local/sdr-resume-seek-timeline",
+      "reportRunId": "local/sdr-resume-seek-timeline",
+      "signal": "colorPipeline.dxgiOutput",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "color-pipeline",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect display HDR state, swapchain format/color space, DXGI mapping, and conversion validation before optimizing color pipeline behavior.",
+      "codeTargets": [
+        "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
+        "src/NextGenEmby.Native/DxDeviceResources.cpp",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
+      ]
+    },
+    {
+      "code": "report.requiredSignal.missing",
+      "caseId": "local/sdr-resume-seek-timeline",
+      "reportRunId": "local/sdr-resume-seek-timeline",
+      "signal": "colorPipeline.conversionStatus",
+      "expected": "present",
+      "actual": "",
+      "message": "Playback quality report is missing a required telemetry signal.",
+      "failureArea": "color-pipeline",
+      "failureClass": "insufficient instrumentation",
+      "suggestedNextAction": "Collect display HDR state, swapchain format/color space, DXGI mapping, and conversion validation before optimizing color pipeline behavior.",
+      "codeTargets": [
+        "src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp",
+        "src/NextGenEmby.Native/DxDeviceResources.cpp",
+        "src/NextGenEmby.Native/NativePlaybackEngine.cpp"
+      ]
+    }
+  ]
+}
