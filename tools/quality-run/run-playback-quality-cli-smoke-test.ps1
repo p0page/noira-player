@@ -176,6 +176,12 @@ try {
 
     @"
 {
+  "caseMetadata": {
+    "caseId": "baseline",
+    "category": "stable",
+    "severity": "critical",
+    "stability": "variable"
+  },
   "report": $baselineReportJson,
   "modelAnalysis": {}
 }
@@ -1299,10 +1305,14 @@ try {
     }
 
     if ($materializedRunResult.report.runId -ne 'baseline' -or
+        $materializedRunResult.caseMetadata.caseId -ne 'baseline' -or
+        $materializedRunResult.caseMetadata.category -ne 'stable' -or
+        $materializedRunResult.caseMetadata.severity -ne 'critical' -or
+        $materializedRunResult.caseMetadata.stability -ne 'variable' -or
         $materializedRunResult.modelAnalysis.runId -ne 'baseline' -or
         $materializedRunResult.modelAnalysis.result -ne 'fail' -or
         $materializedRunResult.modelAnalysis.analyzerVersion -lt 1) {
-        throw 'Expected materialize-run-result to preserve report and regenerate model analysis.'
+        throw 'Expected materialize-run-result to preserve case metadata and report while regenerating model analysis.'
     }
 
     New-Item -ItemType Directory -Path $runIdBaselineDir | Out-Null

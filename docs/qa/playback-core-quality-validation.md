@@ -170,7 +170,7 @@ dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQ
 dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- materialize-run-result --report captured-raw-report.json --output captured-run-result.json
 ```
 
-该命令只重新生成当前 analyzer 的 `modelAnalysis`，不修改播放行为、阈值或 case 预期。后续 report-set、suite 和 candidate evaluation 应优先消费这个 envelope。
+该命令只重新生成当前 analyzer 的 `modelAnalysis`，不修改播放行为、阈值或 case 预期。已有 envelope 的顶层 `caseMetadata` 会被保留；raw report 没有该字段时使用 `report.runId` 和默认 `stable` / `medium` / `stable`。后续 report-set、suite 和 candidate evaluation 应优先消费这个 envelope。
 
 当模型需要快速审计一整个报告目录，但还没有进入 baseline/candidate 比较时，使用目录级分析：
 

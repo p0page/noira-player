@@ -130,7 +130,8 @@ internal static class Program
             Path.GetFileName(options.ReportPath));
         var result = new PlaybackQualityRunResult(
             envelope.Report,
-            AnalyzeReport(envelope));
+            AnalyzeReport(envelope),
+            envelope.CaseMetadata);
         WriteJson(result, options.OutputPath);
         return 0;
     }
@@ -1068,6 +1069,17 @@ internal static class Program
                     throw new InvalidOperationException(
                         "Could not parse report property in JSON file: " + path);
                 PlaybackQualityModelAnalysis? modelAnalysis = null;
+                PlaybackQualityCaseMetadata? caseMetadata = null;
+                if (TryGetPropertyIgnoreCase(
+                    document.RootElement,
+                    "caseMetadata",
+                    out var caseMetadataElement) &&
+                    caseMetadataElement.ValueKind == JsonValueKind.Object)
+                {
+                    caseMetadata =
+                        caseMetadataElement.Deserialize<PlaybackQualityCaseMetadata>(JsonOptions);
+                }
+
                 if (TryGetPropertyIgnoreCase(
                     document.RootElement,
                     "modelAnalysis",
@@ -1082,6 +1094,7 @@ internal static class Program
                     relativePath,
                     report,
                     modelAnalysis,
+                    NormalizeCaseMetadata(caseMetadata, report.RunId),
                     CollectPresentReportSignals(reportElement),
                     hasSignalPresenceEvidence: true);
             }
@@ -1092,9 +1105,39 @@ internal static class Program
                 relativePath,
                 rawReport,
                 null,
+                NormalizeCaseMetadata(null, rawReport.RunId),
                 CollectPresentReportSignals(document.RootElement),
                 hasSignalPresenceEvidence: true);
         }
+    }
+
+    private static PlaybackQualityCaseMetadata NormalizeCaseMetadata(
+        PlaybackQualityCaseMetadata? caseMetadata,
+        string runId)
+    {
+        if (caseMetadata == null)
+        {
+            return new PlaybackQualityCaseMetadata
+            {
+                CaseId = runId ?? ""
+            };
+        }
+
+        return new PlaybackQualityCaseMetadata
+        {
+            CaseId = string.IsNullOrWhiteSpace(caseMetadata.CaseId)
+                ? runId ?? ""
+                : caseMetadata.CaseId,
+            Category = string.IsNullOrWhiteSpace(caseMetadata.Category)
+                ? "stable"
+                : caseMetadata.Category,
+            Severity = string.IsNullOrWhiteSpace(caseMetadata.Severity)
+                ? "medium"
+                : caseMetadata.Severity,
+            Stability = string.IsNullOrWhiteSpace(caseMetadata.Stability)
+                ? "stable"
+                : caseMetadata.Stability
+        };
     }
 
     private static List<PlaybackQualityReportEnvelope> EnsureModelAnalysis(
@@ -1110,6 +1153,7 @@ internal static class Program
                 envelope.RelativePath,
                 envelope.Report,
                 modelAnalysis,
+                envelope.CaseMetadata,
                 envelope.PresentSignals,
                 envelope.HasSignalPresenceEvidence));
         }
@@ -1133,6 +1177,7 @@ internal static class Program
                 envelope.RelativePath,
                 envelope.Report,
                 modelAnalysis,
+                envelope.CaseMetadata,
                 envelope.PresentSignals,
                 envelope.HasSignalPresenceEvidence));
         }
@@ -2552,12 +2597,14 @@ internal static class Program
             string relativePath,
             PlaybackQualityReport report,
             PlaybackQualityModelAnalysis? modelAnalysis,
+            PlaybackQualityCaseMetadata caseMetadata,
             IEnumerable<string>? presentSignals = null,
             bool hasSignalPresenceEvidence = false)
         {
             RelativePath = relativePath;
             Report = report;
             ModelAnalysis = modelAnalysis;
+            CaseMetadata = caseMetadata;
             HasSignalPresenceEvidence = hasSignalPresenceEvidence;
             if (presentSignals != null)
             {
@@ -2571,6 +2618,7 @@ internal static class Program
         public string RelativePath { get; }
         public PlaybackQualityReport Report { get; }
         public PlaybackQualityModelAnalysis? ModelAnalysis { get; }
+        public PlaybackQualityCaseMetadata CaseMetadata { get; }
         public bool HasSignalPresenceEvidence { get; }
         public List<string> PresentSignals { get; } = new List<string>();
     }
