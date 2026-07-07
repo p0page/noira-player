@@ -174,7 +174,7 @@
     "environment": {
       "collectorVersion": "materialize-core-probe-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "2e8621b",
+      "sourceRevision": "80ab085",
       "buildConfiguration": "Debug"
     },
     "limitations": [
@@ -219,6 +219,8 @@
     "source": {
       "itemId": "jellyfin/hdr10-hevc-main10-1080p60-10m",
       "mediaSourceId": "jellyfin/hdr10-hevc-main10-1080p60-10m",
+      "container": "",
+      "bitrate": 0,
       "codec": "hevc",
       "width": 1920,
       "height": 1080,
@@ -384,7 +386,7 @@
     "environment": {
       "collectorVersion": "materialize-core-probe-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "2e8621b",
+      "sourceRevision": "80ab085",
       "buildConfiguration": "Debug",
       "signals": [
         "environment.collectorVersion",
@@ -396,6 +398,8 @@
     "source": {
       "status": "matched",
       "reason": "Parsed source metadata is available and has no unsupported-source mismatches.",
+      "container": "",
+      "bitrate": 0,
       "codec": "hevc",
       "width": 1920,
       "height": 1080,
@@ -604,6 +608,10 @@
       "environment.playerCoreVersion",
       "environment.sourceRevision",
       "environment.buildConfiguration",
+      "source.hdrPlaybackStrategy",
+      "source.isDolbyVision",
+      "source.hasHdr10BaseLayer",
+      "source.hasHlgBaseLayer",
       "sync.audioVideoDriftMsP50",
       "sync.audioVideoDriftMsP95",
       "sync.audioVideoDriftMsP99",

@@ -43,7 +43,7 @@
     "environment": {
       "collectorVersion": "materialize-baseline-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "2e8621b",
+      "sourceRevision": "80ab085",
       "buildConfiguration": "Debug"
     },
     "limitations": [
@@ -86,6 +86,8 @@
     "source": {
       "itemId": "",
       "mediaSourceId": "",
+      "container": "",
+      "bitrate": 0,
       "codec": "",
       "width": 0,
       "height": 0,
@@ -212,7 +214,7 @@
     "environment": {
       "collectorVersion": "materialize-baseline-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "2e8621b",
+      "sourceRevision": "80ab085",
       "buildConfiguration": "Debug",
       "signals": [
         "environment.collectorVersion",
@@ -224,6 +226,8 @@
     "source": {
       "status": "missing-evidence",
       "reason": "Source codec, frame rate, and HDR kind are missing.",
+      "container": "",
+      "bitrate": 0,
       "codec": "",
       "width": 0,
       "height": 0,

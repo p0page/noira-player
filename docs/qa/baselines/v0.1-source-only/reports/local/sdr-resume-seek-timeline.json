@@ -188,7 +188,7 @@
     "environment": {
       "collectorVersion": "materialize-baseline-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "2e8621b",
+      "sourceRevision": "80ab085",
       "buildConfiguration": "Debug"
     },
     "limitations": [
@@ -231,6 +231,8 @@
     "source": {
       "itemId": "quality-case-sdr-resume-seek-timeline",
       "mediaSourceId": "quality-source-sdr-resume-seek-timeline",
+      "container": "",
+      "bitrate": 0,
       "codec": "hevc",
       "width": 1920,
       "height": 1080,
@@ -385,7 +387,7 @@
     "environment": {
       "collectorVersion": "materialize-baseline-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "2e8621b",
+      "sourceRevision": "80ab085",
       "buildConfiguration": "Debug",
       "signals": [
         "environment.collectorVersion",
@@ -397,6 +399,8 @@
     "source": {
       "status": "matched",
       "reason": "Parsed source metadata is available and has no unsupported-source mismatches.",
+      "container": "",
+      "bitrate": 0,
       "codec": "hevc",
       "width": 1920,
       "height": 1080,
@@ -845,6 +849,10 @@
       "environment.playerCoreVersion",
       "environment.sourceRevision",
       "environment.buildConfiguration",
+      "source.hdrPlaybackStrategy",
+      "source.isDolbyVision",
+      "source.hasHdr10BaseLayer",
+      "source.hasHlgBaseLayer",
       "tracks.videoTrackCount",
       "tracks.audioTrackCount",
       "tracks.subtitleTrackCount",
