@@ -428,6 +428,7 @@ public sealed class PlaybackQualityRunComparatorTests
         Assert.Equal("collect-comparable-evidence", comparison.Decision);
         Assert.Contains("Collect comparable baseline and candidate checks", comparison.SuggestedNextAction);
         Assert.Contains("comparison requires baseline and candidate checks", comparison.Limitations);
+        Assert.Contains("comparison.missing-checks", comparison.Optimization.Blockers);
     }
 
     [Fact]
@@ -444,6 +445,7 @@ public sealed class PlaybackQualityRunComparatorTests
 
         Assert.Equal("insufficient-evidence", comparison.Result);
         Assert.Contains("comparison requires at least one matching check signal", comparison.Limitations);
+        Assert.Contains("comparison.no-matched-signals", comparison.Optimization.Blockers);
     }
 
     [Fact]

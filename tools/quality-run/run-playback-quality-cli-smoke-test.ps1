@@ -19,6 +19,10 @@ try {
     $outputPath = Join-Path $tempRoot 'comparison.json'
     $incompatibleCandidatePath = Join-Path $tempRoot 'candidate-incompatible-source.json'
     $incompatibleOutputPath = Join-Path $tempRoot 'comparison-incompatible-source.json'
+    $missingChecksBaselinePath = Join-Path $tempRoot 'baseline-missing-checks.json'
+    $missingChecksOutputPath = Join-Path $tempRoot 'comparison-missing-checks.json'
+    $noMatchedCandidatePath = Join-Path $tempRoot 'candidate-no-matched-signals.json'
+    $noMatchedOutputPath = Join-Path $tempRoot 'comparison-no-matched-signals.json'
     $envelopeOutputPath = Join-Path $tempRoot 'comparison-envelope.json'
     $suitePath = Join-Path $tempRoot 'suite.json'
     $baselineDir = Join-Path $tempRoot 'baseline-suite'
@@ -893,6 +897,73 @@ try {
 
     if (-not ($incompatibleComparison.optimization.signals -contains 'source.mediaSourceId')) {
         throw 'Expected incompatible comparison output to include mismatched source signal.'
+    }
+
+    $missingChecksBaseline = Get-Content -Raw -LiteralPath $baselinePath | ConvertFrom-Json
+    $missingChecksBaseline.checks = @()
+    $missingChecksBaseline | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $missingChecksBaselinePath -Encoding UTF8
+
+    Push-Location $repoRoot
+    try {
+        dotnet run `
+            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
+            --no-build `
+            -- compare `
+            --baseline $missingChecksBaselinePath `
+            --candidate $candidatePath `
+            --output $missingChecksOutputPath
+        if ($LASTEXITCODE -ne 0) {
+            throw 'playback quality CLI missing-checks comparison returned a non-zero exit code.'
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    $missingChecksComparison = Get-Content -Raw -LiteralPath $missingChecksOutputPath | ConvertFrom-Json
+    if ($missingChecksComparison.result -ne 'insufficient-evidence') {
+        throw 'Expected playback quality CLI missing-checks comparison to be insufficient evidence.'
+    }
+
+    if (-not ($missingChecksComparison.optimization.blockers -contains 'comparison.missing-checks')) {
+        throw 'Expected missing-checks comparison output to include machine-readable coverage blocker.'
+    }
+
+    $noMatchedCandidate = Get-Content -Raw -LiteralPath $candidatePath | ConvertFrom-Json
+    $noMatchedCandidate.checks = @([pscustomobject]@{
+        name = 'ActualHdrOutput'
+        signal = 'colorPipeline.actualHdrOutput'
+        status = 'fail'
+        failureArea = 'color-pipeline'
+        expected = 'Hdr10'
+        actual = 'Sdr'
+    })
+    $noMatchedCandidate | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $noMatchedCandidatePath -Encoding UTF8
+
+    Push-Location $repoRoot
+    try {
+        dotnet run `
+            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
+            --no-build `
+            -- compare `
+            --baseline $baselinePath `
+            --candidate $noMatchedCandidatePath `
+            --output $noMatchedOutputPath
+        if ($LASTEXITCODE -ne 0) {
+            throw 'playback quality CLI no-matched-signals comparison returned a non-zero exit code.'
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    $noMatchedComparison = Get-Content -Raw -LiteralPath $noMatchedOutputPath | ConvertFrom-Json
+    if ($noMatchedComparison.result -ne 'insufficient-evidence') {
+        throw 'Expected playback quality CLI no-matched-signals comparison to be insufficient evidence.'
+    }
+
+    if (-not ($noMatchedComparison.optimization.blockers -contains 'comparison.no-matched-signals')) {
+        throw 'Expected no-matched-signals comparison output to include machine-readable coverage blocker.'
     }
 
     Push-Location $repoRoot
