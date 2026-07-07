@@ -1351,6 +1351,7 @@ internal static class Program
         }
 
         AddUnique(gate.Blockers, "manifest-coverage.incomplete");
+        AddUnique(gate.SuggestedNextActions, coverage.SuggestedNextAction);
         PlaybackQualityCodeTargetCatalog.AddForFailureArea(
             gate.CodeTargets,
             "evidence-collection");
@@ -1385,6 +1386,7 @@ internal static class Program
                 AddUnique(gate.Signals, error.Signal);
                 AddUnique(gate.CaseIds, error.CaseId);
                 CopyValues(error.CodeTargets, gate.CodeTargets);
+                AddUnique(gate.SuggestedNextActions, error.SuggestedNextAction);
             }
 
             if (gate.CodeTargets.Count == 0)
@@ -1442,6 +1444,7 @@ internal static class Program
             }
 
             CopyValues(item.CodeTargets, gate.CodeTargets);
+            CopyValues(item.SuggestedNextActions, gate.SuggestedNextActions);
             AddUnique(gate.CaseIds, item.CaseId);
             AddUnique(gate.TargetCaseIds, item.CaseId);
         }
@@ -1504,6 +1507,9 @@ internal static class Program
             CopyValues(optimizationGate.BlockerSignals, item.Signals);
             CopyValues(optimizationGate.TargetFailureAreas, item.TargetFailureAreas);
             AddModelAnalysisCodeTargets(envelope.ModelAnalysis, item.CodeTargets);
+            AddModelAnalysisSuggestedNextActions(
+                envelope.ModelAnalysis,
+                item.SuggestedNextActions);
             PlaybackQualityCodeTargetCatalog.AddForSignals(
                 item.CodeTargets,
                 optimizationGate.BlockerSignals);
@@ -1537,6 +1543,7 @@ internal static class Program
         CopyValues(item.FailureAreas, summary.FailureAreas);
         CopyValues(item.TargetFailureAreas, summary.TargetFailureAreas);
         CopyValues(item.CodeTargets, summary.CodeTargets);
+        CopyValues(item.SuggestedNextActions, summary.SuggestedNextActions);
     }
 
     private static void AddReportAnalysisTargets(ReportAnalysisSummary summary)
@@ -1579,6 +1586,22 @@ internal static class Program
         foreach (var hint in analysis.InvestigationHints)
         {
             CopyValues(hint.CodeTargets, codeTargets);
+        }
+    }
+
+    private static void AddModelAnalysisSuggestedNextActions(
+        PlaybackQualityModelAnalysis analysis,
+        List<string> suggestedNextActions)
+    {
+        AddUnique(suggestedNextActions, analysis.SuggestedNextAction);
+        foreach (var step in analysis.TriageSteps)
+        {
+            AddUnique(suggestedNextActions, step.SuggestedAction);
+        }
+
+        foreach (var hint in analysis.InvestigationHints)
+        {
+            AddUnique(suggestedNextActions, hint.SuggestedAction);
         }
     }
 
@@ -1658,6 +1681,7 @@ internal static class Program
         foreach (var summary in suite.Cases)
         {
             AddUnique(gate.CaseIds, summary.CaseId);
+            AddUnique(gate.SuggestedNextActions, summary.SuggestedNextAction);
         }
 
         return gate;
@@ -1673,6 +1697,9 @@ internal static class Program
             Summary = "comparison suite skipped because an earlier evidence gate failed"
         };
         AddUnique(gate.Blockers, "suite.skipped");
+        AddUnique(
+            gate.SuggestedNextActions,
+            "Resolve earlier evidence gates before running the comparison suite.");
         return gate;
     }
 
@@ -1880,6 +1907,7 @@ internal static class Program
         public List<string> TargetFailureAreas { get; } = new List<string>();
         public List<string> TargetCaseIds { get; } = new List<string>();
         public List<string> CodeTargets { get; } = new List<string>();
+        public List<string> SuggestedNextActions { get; } = new List<string>();
         public List<ReportAnalysisCase> Cases { get; } =
             new List<ReportAnalysisCase>();
     }
@@ -1896,6 +1924,7 @@ internal static class Program
         public List<string> FailureAreas { get; } = new List<string>();
         public List<string> TargetFailureAreas { get; } = new List<string>();
         public List<string> CodeTargets { get; } = new List<string>();
+        public List<string> SuggestedNextActions { get; } = new List<string>();
     }
 
     private sealed class CandidateEvaluationGate
@@ -1912,6 +1941,7 @@ internal static class Program
         public List<string> TargetCaseIds { get; } = new List<string>();
         public List<string> CaseIds { get; } = new List<string>();
         public List<string> CodeTargets { get; } = new List<string>();
+        public List<string> SuggestedNextActions { get; } = new List<string>();
     }
 
     private sealed class PlaybackQualityRunPlan

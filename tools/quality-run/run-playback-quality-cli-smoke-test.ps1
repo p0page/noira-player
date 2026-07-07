@@ -1603,6 +1603,10 @@ try {
         throw 'Expected incomplete manifest coverage active gate to include missing purpose signal.'
     }
 
+    if (-not ($narrowCoverageEvaluation.activeGate.suggestedNextActions -contains 'Add reference cases for missing playback quality purposes before relying on broad Core candidate evaluation.')) {
+        throw 'Expected incomplete manifest coverage active gate to include suggested next action.'
+    }
+
     if (-not ($narrowCoverageEvaluation.evidenceGates | Where-Object { $_.name -eq 'suite' -and $_.status -eq 'skipped' })) {
         throw 'Expected incomplete manifest coverage evidence to skip suite comparison.'
     }
@@ -1858,6 +1862,10 @@ try {
         throw 'Expected invalid evaluate-candidate candidate report-set gate to include source classification code target.'
     }
 
+    if (-not ($invalidCandidateGate.suggestedNextActions -contains 'Verify media source selection, codec support, HDR/Dolby Vision classification, and fallback policy before tuning playback timing.')) {
+        throw 'Expected invalid evaluate-candidate candidate report-set gate to include suggested next action.'
+    }
+
     if (-not ($invalidCandidateGate.caseIds -contains 'item-1/source-1')) {
         throw 'Expected invalid evaluate-candidate candidate report-set gate to include affected case id.'
     }
@@ -1922,6 +1930,21 @@ try {
     "analyzerVersion": 1,
     "runId": "item-1/source-1",
     "result": "fail",
+    "suggestedNextAction": "Collect a longer playback sample before optimizing playback Core.",
+    "triageSteps": [
+      {
+        "rank": 1,
+        "kind": "blocker",
+        "failureArea": "startup",
+        "suggestedAction": "Collect enough rendered-frame and startup readiness evidence before tuning playback Core behavior.",
+        "signals": [
+          "sample.status"
+        ],
+        "codeTargets": [
+          "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs"
+        ]
+      }
+    ],
     "optimizationGate": {
       "status": "blocked",
       "canOptimizePlaybackCore": false,
@@ -2054,6 +2077,21 @@ try {
     "analyzerVersion": 1,
     "runId": "item-1/source-1",
     "result": "fail",
+    "suggestedNextAction": "Collect comparable source metadata before optimizing playback Core.",
+    "triageSteps": [
+      {
+        "rank": 1,
+        "kind": "blocker",
+        "failureArea": "unsupported-source",
+        "suggestedAction": "Verify media source selection, codec support, HDR/Dolby Vision classification, and fallback policy before tuning playback timing.",
+        "signals": [
+          "source.hdrKind"
+        ],
+        "codeTargets": [
+          "src/NextGenEmby.Core/Playback/HdrPlaybackProfileClassifier.cs"
+        ]
+      }
+    ],
     "optimizationGate": {
       "status": "blocked",
       "canOptimizePlaybackCore": false,
@@ -2116,6 +2154,10 @@ try {
         throw 'Expected blocked report-analysis active gate to include source classification code target.'
     }
 
+    if (-not ($blockedAnalysisEvaluation.activeGate.suggestedNextActions -contains 'Collect comparable source metadata before optimizing playback Core.')) {
+        throw 'Expected blocked report-analysis active gate to include model analysis suggested next action.'
+    }
+
     if ($null -eq $blockedAnalysisEvaluation.candidateReportAnalysis -or
         $blockedAnalysisEvaluation.candidateReportAnalysis.totalReportCount -ne 1 -or
         $blockedAnalysisEvaluation.candidateReportAnalysis.analyzedReportCount -ne 1 -or
@@ -2143,6 +2185,10 @@ try {
         throw 'Expected blocked report-analysis summary case to include source classification code target.'
     }
 
+    if (-not ($blockedAnalysisCase.suggestedNextActions -contains 'Verify media source selection, codec support, HDR/Dolby Vision classification, and fallback policy before tuning playback timing.')) {
+        throw 'Expected blocked report-analysis summary case to include triage suggested action.'
+    }
+
     if (Test-Path -LiteralPath $candidateEvaluationBlockedAnalysisComparisonsDir) {
         throw 'Expected blocked report-analysis evidence to skip comparison output.'
     }
@@ -2168,6 +2214,10 @@ try {
 
     if (-not ($blockedAnalysisGate.codeTargets -contains 'src/NextGenEmby.Core/Playback/HdrPlaybackProfileClassifier.cs')) {
         throw 'Expected candidate report-analysis gate to include source classification code target.'
+    }
+
+    if (-not ($blockedAnalysisGate.suggestedNextActions -contains 'Collect comparable source metadata before optimizing playback Core.')) {
+        throw 'Expected candidate report-analysis gate to include model analysis suggested next action.'
     }
 
     if (-not ($blockedAnalysisEvaluation.evidenceGates | Where-Object { $_.name -eq 'suite' -and $_.status -eq 'skipped' })) {
