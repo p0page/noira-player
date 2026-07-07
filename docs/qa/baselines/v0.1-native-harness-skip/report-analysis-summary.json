@@ -1,0 +1,900 @@
+{
+  "schemaVersion": 1,
+  "action": "collect-comparable-evidence",
+  "decision": "collect-comparable-evidence",
+  "risk": "high",
+  "confidence": {
+    "level": "weak",
+    "totalCount": 9,
+    "strongCount": 0,
+    "partialCount": 0,
+    "weakCount": 9,
+    "insufficientEvidenceCount": 0,
+    "signals": [
+      "skip.reason",
+      "skip.code",
+      "skip.operation",
+      "skip.failureClass",
+      "skip.failureArea",
+      "skip.isExpected",
+      "skip.isRetriable",
+      "lifecycle.skip",
+      "environment.collectorVersion",
+      "environment.playerCoreVersion",
+      "environment.sourceRevision",
+      "environment.buildConfiguration",
+      "lifecycle.materialize-native-harness"
+    ],
+    "reasons": [
+      "one or more reports were explicitly skipped",
+      "result.skip"
+    ]
+  },
+  "totalReportCount": 9,
+  "analyzedReportCount": 9,
+  "unavailableReportCount": 0,
+  "blockedReportCount": 0,
+  "skippedReportCount": 9,
+  "blockers": [
+    "result.skip"
+  ],
+  "signals": [
+    "skip.reason",
+    "skip.code",
+    "skip.operation",
+    "skip.failureClass",
+    "skip.failureArea",
+    "skip.isExpected",
+    "skip.isRetriable",
+    "lifecycle.skip",
+    "environment.collectorVersion",
+    "environment.playerCoreVersion",
+    "environment.sourceRevision",
+    "environment.buildConfiguration",
+    "lifecycle.materialize-native-harness"
+  ],
+  "failureAreas": [
+    "evidence-collection"
+  ],
+  "targetFailureAreas": [
+    "evidence-collection"
+  ],
+  "targetCaseIds": [
+    "jellyfin/dv-profile5-hevc-4k60",
+    "jellyfin/dv-profile8-1-hevc-4k60-hdr10-fallback",
+    "jellyfin/hdr10-hevc-main10-1080p60-10m-force-sdr",
+    "jellyfin/hdr10-hevc-main10-1080p60-10m",
+    "jellyfin/hdr10-hevc-main10-4k60-50m",
+    "jellyfin/sdr-hevc-main10-1080p60-3m",
+    "local/chimera-23976-hdr10-cadence",
+    "local/missing-file-error-handling",
+    "local/sdr-resume-seek-timeline"
+  ],
+  "codeTargets": [
+    "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+    "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+    "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
+    "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+  ],
+  "suggestedNextActions": [
+    "Review the structured skip reason before interpreting missing playback telemetry.",
+    "Collect missing telemetry before optimizing playback behavior; absent evidence is treated separately from a real playback failure."
+  ],
+  "capabilityCoverage": [
+    {
+      "capability": "media-loading",
+      "failureArea": "startup",
+      "status": "not-observed",
+      "evidenceCaseCount": 0,
+      "missingCaseCount": 0,
+      "blockedCaseCount": 0,
+      "requiredSignals": [
+        "source.codec",
+        "startup.commandReceivedAt",
+        "startup.playbackStartedAt",
+        "startup.startupDurationMs",
+        "error.operation"
+      ],
+      "evidenceSignals": [],
+      "missingSignals": [],
+      "blockers": [],
+      "caseIds": [],
+      "suggestedNextActions": [
+        "Collect startup and source-open evidence before diagnosing media loading."
+      ]
+    },
+    {
+      "capability": "metadata-duration",
+      "failureArea": "metadata",
+      "status": "not-observed",
+      "evidenceCaseCount": 0,
+      "missingCaseCount": 0,
+      "blockedCaseCount": 0,
+      "requiredSignals": [
+        "source.container",
+        "source.bitrate",
+        "source.durationTicks",
+        "source.codec",
+        "source.width",
+        "source.height",
+        "source.frameRate"
+      ],
+      "evidenceSignals": [],
+      "missingSignals": [],
+      "blockers": [],
+      "caseIds": [],
+      "suggestedNextActions": [
+        "Collect source metadata, duration, bitrate, and frame-rate evidence."
+      ]
+    },
+    {
+      "capability": "source-capability",
+      "failureArea": "unsupported-source",
+      "status": "not-observed",
+      "evidenceCaseCount": 0,
+      "missingCaseCount": 0,
+      "blockedCaseCount": 0,
+      "requiredSignals": [
+        "source.hdrKind",
+        "source.hdrPlaybackStrategy",
+        "source.isHdr",
+        "source.isDirectPlayable",
+        "source.isDolbyVision",
+        "source.dolbyVisionProfile",
+        "source.dolbyVisionCompatibilityId",
+        "source.hasHdr10BaseLayer",
+        "source.hasHlgBaseLayer"
+      ],
+      "evidenceSignals": [],
+      "missingSignals": [],
+      "blockers": [],
+      "caseIds": [],
+      "suggestedNextActions": [
+        "Collect codec, HDR/Dolby Vision, and direct-play classification evidence."
+      ]
+    },
+    {
+      "capability": "lifecycle",
+      "failureArea": "startup",
+      "status": "not-observed",
+      "evidenceCaseCount": 0,
+      "missingCaseCount": 0,
+      "blockedCaseCount": 0,
+      "requiredSignals": [
+        "lifecycle.load",
+        "lifecycle.play",
+        "lifecycle.pause",
+        "lifecycle.resume",
+        "lifecycle.seek",
+        "lifecycle.stop",
+        "lifecycle.endOfStream",
+        "lifecycle.error"
+      ],
+      "evidenceSignals": [],
+      "missingSignals": [],
+      "blockers": [],
+      "caseIds": [],
+      "suggestedNextActions": [
+        "Collect structured lifecycle operation evidence before diagnosing playback state transitions."
+      ]
+    },
+    {
+      "capability": "seek-resume",
+      "failureArea": "timeline",
+      "status": "not-observed",
+      "evidenceCaseCount": 0,
+      "missingCaseCount": 0,
+      "blockedCaseCount": 0,
+      "requiredSignals": [
+        "position.requestedStartPositionTicks",
+        "position.seekTargetPositionTicks",
+        "position.actualPositionTicks",
+        "position.seekPositionErrorMs"
+      ],
+      "evidenceSignals": [],
+      "missingSignals": [],
+      "blockers": [],
+      "caseIds": [],
+      "suggestedNextActions": [
+        "Collect requested start, seek target, actual position, and seek error evidence."
+      ]
+    },
+    {
+      "capability": "tracks",
+      "failureArea": "tracks",
+      "status": "not-observed",
+      "evidenceCaseCount": 0,
+      "missingCaseCount": 0,
+      "blockedCaseCount": 0,
+      "requiredSignals": [
+        "tracks.videoTrackCount",
+        "tracks.audioTrackCount",
+        "tracks.subtitleTrackCount",
+        "tracks.selectedVideoStreamIndex",
+        "tracks.selectedAudioStreamIndex",
+        "tracks.video.codec",
+        "tracks.audio.codec"
+      ],
+      "evidenceSignals": [],
+      "missingSignals": [],
+      "blockers": [],
+      "caseIds": [],
+      "suggestedNextActions": [
+        "Collect video/audio/subtitle track discovery and selected-track evidence."
+      ]
+    },
+    {
+      "capability": "subtitles",
+      "failureArea": "subtitles",
+      "status": "not-observed",
+      "evidenceCaseCount": 0,
+      "missingCaseCount": 0,
+      "blockedCaseCount": 0,
+      "requiredSignals": [
+        "tracks.subtitleTrackCount",
+        "tracks.selectedSubtitleStreamIndex",
+        "tracks.isSubtitleDisabled",
+        "tracks.subtitles.codec",
+        "tracks.subtitles.language",
+        "tracks.subtitles.isExternal"
+      ],
+      "evidenceSignals": [],
+      "missingSignals": [],
+      "blockers": [],
+      "caseIds": [],
+      "suggestedNextActions": [
+        "Collect subtitle track discovery, selected subtitle, and subtitle-off state evidence."
+      ]
+    },
+    {
+      "capability": "runtime-metrics",
+      "failureArea": "evidence-collection",
+      "status": "not-observed",
+      "evidenceCaseCount": 0,
+      "missingCaseCount": 0,
+      "blockedCaseCount": 0,
+      "requiredSignals": [
+        "runtimeMetrics.status",
+        "runtimeMetrics.providerStatus",
+        "runtimeMetrics.reason",
+        "runtimeMetrics.hasSnapshot",
+        "runtimeMetrics.hasPlaybackSample"
+      ],
+      "evidenceSignals": [],
+      "missingSignals": [],
+      "blockers": [],
+      "caseIds": [],
+      "suggestedNextActions": [
+        "Collect runtime metrics provider evidence before optimizing playback Core."
+      ]
+    },
+    {
+      "capability": "buffering",
+      "failureArea": "buffering",
+      "status": "not-observed",
+      "evidenceCaseCount": 0,
+      "missingCaseCount": 0,
+      "blockedCaseCount": 0,
+      "requiredSignals": [
+        "buffers.submittedAudioFrames",
+        "buffers.queuedAudioBuffers",
+        "buffers.videoStarvedPasses",
+        "buffers.audioStarvedPasses"
+      ],
+      "evidenceSignals": [],
+      "missingSignals": [],
+      "blockers": [],
+      "caseIds": [],
+      "suggestedNextActions": [
+        "Collect audio queue and video/audio starvation evidence before tuning frame pacing."
+      ]
+    },
+    {
+      "capability": "frame-pacing",
+      "failureArea": "frame-pacing",
+      "status": "not-observed",
+      "evidenceCaseCount": 0,
+      "missingCaseCount": 0,
+      "blockedCaseCount": 0,
+      "requiredSignals": [
+        "timing.renderedVideoFrames",
+        "timing.droppedVideoFrames",
+        "timing.expectedFrameDurationMs",
+        "timing.maxFrameGapMs",
+        "timing.framePacingSourceFrameRate",
+        "timing.lateFrameDropToleranceMs",
+        "timing.renderIntervalMsP95",
+        "timing.renderIntervalMsP99",
+        "display.refreshRateHz",
+        "cadence.clockSpeedAdjustmentPercent",
+        "cadence.isFractionalCadence",
+        "framePacing.renderIntervalP95FrameRatio",
+        "framePacing.renderIntervalP99FrameRatio",
+        "framePacing.maxFrameGapFrameRatio",
+        "framePacing.droppedVideoFramePercent",
+        "framePacing.lateFrameDropToleranceFrameRatio"
+      ],
+      "evidenceSignals": [],
+      "missingSignals": [],
+      "blockers": [],
+      "caseIds": [],
+      "suggestedNextActions": [
+        "Resolve frame-pacing evidence blockers before editing playback timing."
+      ]
+    },
+    {
+      "capability": "av-sync",
+      "failureArea": "av-sync",
+      "status": "not-observed",
+      "evidenceCaseCount": 0,
+      "missingCaseCount": 0,
+      "blockedCaseCount": 0,
+      "requiredSignals": [
+        "sync.audioClockTicks",
+        "sync.videoPositionTicks",
+        "sync.audioVideoDriftMsP50",
+        "sync.audioVideoDriftMsP95",
+        "sync.audioVideoDriftMsP99",
+        "sync.audioVideoDriftMsMax",
+        "sync.clockDeltaMs",
+        "sync.driftDirection"
+      ],
+      "evidenceSignals": [],
+      "missingSignals": [],
+      "blockers": [],
+      "caseIds": [],
+      "suggestedNextActions": [
+        "Collect audio/video clock and drift evidence before changing sync behavior."
+      ]
+    },
+    {
+      "capability": "color",
+      "failureArea": "color-pipeline",
+      "status": "not-observed",
+      "evidenceCaseCount": 0,
+      "missingCaseCount": 0,
+      "blockedCaseCount": 0,
+      "requiredSignals": [
+        "source.hdrKind",
+        "colorPipeline.actualHdrOutput",
+        "colorPipeline.swapChainFormat",
+        "colorPipeline.swapChainColorSpace",
+        "colorPipeline.isTenBitSwapChain",
+        "colorPipeline.dxgiInput",
+        "colorPipeline.dxgiOutput",
+        "colorPipeline.conversionStatus",
+        "colorPipeline.isVideoProcessorColorSpaceValidated",
+        "colorPipeline.forceSdrOutput",
+        "display.hdrStatus"
+      ],
+      "evidenceSignals": [],
+      "missingSignals": [],
+      "blockers": [],
+      "caseIds": [],
+      "suggestedNextActions": [
+        "Collect HDR display, swapchain, DXGI, and conversion evidence before changing color behavior."
+      ]
+    },
+    {
+      "capability": "error-handling",
+      "failureArea": "error-handling",
+      "status": "not-observed",
+      "evidenceCaseCount": 0,
+      "missingCaseCount": 0,
+      "blockedCaseCount": 0,
+      "requiredSignals": [
+        "error.code",
+        "error.message",
+        "error.operation",
+        "error.exceptionType",
+        "error.failureClass",
+        "error.failureArea",
+        "error.isTerminal",
+        "error.isRetriable"
+      ],
+      "evidenceSignals": [],
+      "missingSignals": [],
+      "blockers": [],
+      "caseIds": [],
+      "suggestedNextActions": [
+        "Collect structured error code, operation, class, and area evidence for failed playback operations."
+      ]
+    },
+    {
+      "capability": "skip-handling",
+      "failureArea": "evidence-collection",
+      "status": "evidence-present",
+      "evidenceCaseCount": 9,
+      "missingCaseCount": 0,
+      "blockedCaseCount": 0,
+      "requiredSignals": [
+        "skip.code",
+        "skip.reason",
+        "skip.operation",
+        "skip.failureClass",
+        "skip.failureArea",
+        "skip.isExpected",
+        "skip.isRetriable"
+      ],
+      "evidenceSignals": [
+        "skip.reason",
+        "skip.code",
+        "skip.operation",
+        "skip.failureClass",
+        "skip.failureArea",
+        "skip.isExpected",
+        "skip.isRetriable"
+      ],
+      "missingSignals": [],
+      "blockers": [],
+      "caseIds": [
+        "jellyfin/dv-profile5-hevc-4k60",
+        "jellyfin/dv-profile8-1-hevc-4k60-hdr10-fallback",
+        "jellyfin/hdr10-hevc-main10-1080p60-10m-force-sdr",
+        "jellyfin/hdr10-hevc-main10-1080p60-10m",
+        "jellyfin/hdr10-hevc-main10-4k60-50m",
+        "jellyfin/sdr-hevc-main10-1080p60-3m",
+        "local/chimera-23976-hdr10-cadence",
+        "local/missing-file-error-handling",
+        "local/sdr-resume-seek-timeline"
+      ],
+      "suggestedNextActions": []
+    }
+  ],
+  "nextActions": [
+    {
+      "rank": 1,
+      "action": "collect-comparable-evidence",
+      "risk": "high",
+      "failureArea": "evidence-collection",
+      "caseIds": [
+        "jellyfin/dv-profile5-hevc-4k60",
+        "jellyfin/dv-profile8-1-hevc-4k60-hdr10-fallback",
+        "jellyfin/hdr10-hevc-main10-1080p60-10m-force-sdr",
+        "jellyfin/hdr10-hevc-main10-1080p60-10m",
+        "jellyfin/hdr10-hevc-main10-4k60-50m",
+        "jellyfin/sdr-hevc-main10-1080p60-3m",
+        "local/chimera-23976-hdr10-cadence",
+        "local/missing-file-error-handling",
+        "local/sdr-resume-seek-timeline"
+      ],
+      "signals": [
+        "skip.reason",
+        "skip.code",
+        "skip.operation",
+        "skip.failureClass",
+        "skip.failureArea",
+        "skip.isExpected",
+        "skip.isRetriable",
+        "lifecycle.skip",
+        "environment.collectorVersion",
+        "environment.playerCoreVersion",
+        "environment.sourceRevision",
+        "environment.buildConfiguration",
+        "lifecycle.materialize-native-harness"
+      ],
+      "reasons": [
+        "one or more reports were explicitly skipped",
+        "result.skip",
+        "Review the structured skip reason before interpreting missing playback telemetry.",
+        "Collect missing telemetry before optimizing playback behavior; absent evidence is treated separately from a real playback failure."
+      ],
+      "blockers": [
+        "result.skip"
+      ],
+      "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+      ]
+    }
+  ],
+  "cases": [
+    {
+      "caseId": "jellyfin/dv-profile5-hevc-4k60",
+      "hasModelAnalysis": true,
+      "status": "not-needed",
+      "result": "skip",
+      "expectedBehavior": "Reference case was evaluated or explicitly skipped with a structured reason.",
+      "actualBehavior": "materialize-native-harness skipped with native-harness.not-implemented: Native playback harness is not implemented in this software-only evaluator yet.",
+      "primaryFailureClass": "insufficient instrumentation",
+      "primaryFailureArea": "evidence-collection",
+      "canOptimizePlaybackCore": false,
+      "isBlocked": false,
+      "blockers": [
+        "result.skip"
+      ],
+      "signals": [
+        "skip.reason",
+        "skip.code",
+        "skip.operation",
+        "skip.failureClass",
+        "skip.failureArea",
+        "skip.isExpected",
+        "skip.isRetriable",
+        "lifecycle.skip",
+        "environment.collectorVersion",
+        "environment.playerCoreVersion",
+        "environment.sourceRevision",
+        "environment.buildConfiguration",
+        "lifecycle.materialize-native-harness"
+      ],
+      "missingSignals": [],
+      "failureAreas": [
+        "evidence-collection"
+      ],
+      "targetFailureAreas": [],
+      "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+      ],
+      "suggestedNextActions": [
+        "Review the structured skip reason before interpreting missing playback telemetry.",
+        "Collect missing telemetry before optimizing playback behavior; absent evidence is treated separately from a real playback failure."
+      ]
+    },
+    {
+      "caseId": "jellyfin/dv-profile8-1-hevc-4k60-hdr10-fallback",
+      "hasModelAnalysis": true,
+      "status": "not-needed",
+      "result": "skip",
+      "expectedBehavior": "Reference case was evaluated or explicitly skipped with a structured reason.",
+      "actualBehavior": "materialize-native-harness skipped with native-harness.not-implemented: Native playback harness is not implemented in this software-only evaluator yet.",
+      "primaryFailureClass": "insufficient instrumentation",
+      "primaryFailureArea": "evidence-collection",
+      "canOptimizePlaybackCore": false,
+      "isBlocked": false,
+      "blockers": [
+        "result.skip"
+      ],
+      "signals": [
+        "skip.reason",
+        "skip.code",
+        "skip.operation",
+        "skip.failureClass",
+        "skip.failureArea",
+        "skip.isExpected",
+        "skip.isRetriable",
+        "lifecycle.skip",
+        "environment.collectorVersion",
+        "environment.playerCoreVersion",
+        "environment.sourceRevision",
+        "environment.buildConfiguration",
+        "lifecycle.materialize-native-harness"
+      ],
+      "missingSignals": [],
+      "failureAreas": [
+        "evidence-collection"
+      ],
+      "targetFailureAreas": [],
+      "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+      ],
+      "suggestedNextActions": [
+        "Review the structured skip reason before interpreting missing playback telemetry.",
+        "Collect missing telemetry before optimizing playback behavior; absent evidence is treated separately from a real playback failure."
+      ]
+    },
+    {
+      "caseId": "jellyfin/hdr10-hevc-main10-1080p60-10m-force-sdr",
+      "hasModelAnalysis": true,
+      "status": "not-needed",
+      "result": "skip",
+      "expectedBehavior": "Reference case was evaluated or explicitly skipped with a structured reason.",
+      "actualBehavior": "materialize-native-harness skipped with native-harness.not-implemented: Native playback harness is not implemented in this software-only evaluator yet.",
+      "primaryFailureClass": "insufficient instrumentation",
+      "primaryFailureArea": "evidence-collection",
+      "canOptimizePlaybackCore": false,
+      "isBlocked": false,
+      "blockers": [
+        "result.skip"
+      ],
+      "signals": [
+        "skip.reason",
+        "skip.code",
+        "skip.operation",
+        "skip.failureClass",
+        "skip.failureArea",
+        "skip.isExpected",
+        "skip.isRetriable",
+        "lifecycle.skip",
+        "environment.collectorVersion",
+        "environment.playerCoreVersion",
+        "environment.sourceRevision",
+        "environment.buildConfiguration",
+        "lifecycle.materialize-native-harness"
+      ],
+      "missingSignals": [],
+      "failureAreas": [
+        "evidence-collection"
+      ],
+      "targetFailureAreas": [],
+      "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+      ],
+      "suggestedNextActions": [
+        "Review the structured skip reason before interpreting missing playback telemetry.",
+        "Collect missing telemetry before optimizing playback behavior; absent evidence is treated separately from a real playback failure."
+      ]
+    },
+    {
+      "caseId": "jellyfin/hdr10-hevc-main10-1080p60-10m",
+      "hasModelAnalysis": true,
+      "status": "not-needed",
+      "result": "skip",
+      "expectedBehavior": "Reference case was evaluated or explicitly skipped with a structured reason.",
+      "actualBehavior": "materialize-native-harness skipped with native-harness.not-implemented: Native playback harness is not implemented in this software-only evaluator yet.",
+      "primaryFailureClass": "insufficient instrumentation",
+      "primaryFailureArea": "evidence-collection",
+      "canOptimizePlaybackCore": false,
+      "isBlocked": false,
+      "blockers": [
+        "result.skip"
+      ],
+      "signals": [
+        "skip.reason",
+        "skip.code",
+        "skip.operation",
+        "skip.failureClass",
+        "skip.failureArea",
+        "skip.isExpected",
+        "skip.isRetriable",
+        "lifecycle.skip",
+        "environment.collectorVersion",
+        "environment.playerCoreVersion",
+        "environment.sourceRevision",
+        "environment.buildConfiguration",
+        "lifecycle.materialize-native-harness"
+      ],
+      "missingSignals": [],
+      "failureAreas": [
+        "evidence-collection"
+      ],
+      "targetFailureAreas": [],
+      "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+      ],
+      "suggestedNextActions": [
+        "Review the structured skip reason before interpreting missing playback telemetry.",
+        "Collect missing telemetry before optimizing playback behavior; absent evidence is treated separately from a real playback failure."
+      ]
+    },
+    {
+      "caseId": "jellyfin/hdr10-hevc-main10-4k60-50m",
+      "hasModelAnalysis": true,
+      "status": "not-needed",
+      "result": "skip",
+      "expectedBehavior": "Reference case was evaluated or explicitly skipped with a structured reason.",
+      "actualBehavior": "materialize-native-harness skipped with native-harness.not-implemented: Native playback harness is not implemented in this software-only evaluator yet.",
+      "primaryFailureClass": "insufficient instrumentation",
+      "primaryFailureArea": "evidence-collection",
+      "canOptimizePlaybackCore": false,
+      "isBlocked": false,
+      "blockers": [
+        "result.skip"
+      ],
+      "signals": [
+        "skip.reason",
+        "skip.code",
+        "skip.operation",
+        "skip.failureClass",
+        "skip.failureArea",
+        "skip.isExpected",
+        "skip.isRetriable",
+        "lifecycle.skip",
+        "environment.collectorVersion",
+        "environment.playerCoreVersion",
+        "environment.sourceRevision",
+        "environment.buildConfiguration",
+        "lifecycle.materialize-native-harness"
+      ],
+      "missingSignals": [],
+      "failureAreas": [
+        "evidence-collection"
+      ],
+      "targetFailureAreas": [],
+      "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+      ],
+      "suggestedNextActions": [
+        "Review the structured skip reason before interpreting missing playback telemetry.",
+        "Collect missing telemetry before optimizing playback behavior; absent evidence is treated separately from a real playback failure."
+      ]
+    },
+    {
+      "caseId": "jellyfin/sdr-hevc-main10-1080p60-3m",
+      "hasModelAnalysis": true,
+      "status": "not-needed",
+      "result": "skip",
+      "expectedBehavior": "Reference case was evaluated or explicitly skipped with a structured reason.",
+      "actualBehavior": "materialize-native-harness skipped with native-harness.not-implemented: Native playback harness is not implemented in this software-only evaluator yet.",
+      "primaryFailureClass": "insufficient instrumentation",
+      "primaryFailureArea": "evidence-collection",
+      "canOptimizePlaybackCore": false,
+      "isBlocked": false,
+      "blockers": [
+        "result.skip"
+      ],
+      "signals": [
+        "skip.reason",
+        "skip.code",
+        "skip.operation",
+        "skip.failureClass",
+        "skip.failureArea",
+        "skip.isExpected",
+        "skip.isRetriable",
+        "lifecycle.skip",
+        "environment.collectorVersion",
+        "environment.playerCoreVersion",
+        "environment.sourceRevision",
+        "environment.buildConfiguration",
+        "lifecycle.materialize-native-harness"
+      ],
+      "missingSignals": [],
+      "failureAreas": [
+        "evidence-collection"
+      ],
+      "targetFailureAreas": [],
+      "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+      ],
+      "suggestedNextActions": [
+        "Review the structured skip reason before interpreting missing playback telemetry.",
+        "Collect missing telemetry before optimizing playback behavior; absent evidence is treated separately from a real playback failure."
+      ]
+    },
+    {
+      "caseId": "local/chimera-23976-hdr10-cadence",
+      "hasModelAnalysis": true,
+      "status": "not-needed",
+      "result": "skip",
+      "expectedBehavior": "Reference case was evaluated or explicitly skipped with a structured reason.",
+      "actualBehavior": "materialize-native-harness skipped with native-harness.not-implemented: Native playback harness is not implemented in this software-only evaluator yet.",
+      "primaryFailureClass": "insufficient instrumentation",
+      "primaryFailureArea": "evidence-collection",
+      "canOptimizePlaybackCore": false,
+      "isBlocked": false,
+      "blockers": [
+        "result.skip"
+      ],
+      "signals": [
+        "skip.reason",
+        "skip.code",
+        "skip.operation",
+        "skip.failureClass",
+        "skip.failureArea",
+        "skip.isExpected",
+        "skip.isRetriable",
+        "lifecycle.skip",
+        "environment.collectorVersion",
+        "environment.playerCoreVersion",
+        "environment.sourceRevision",
+        "environment.buildConfiguration",
+        "lifecycle.materialize-native-harness"
+      ],
+      "missingSignals": [],
+      "failureAreas": [
+        "evidence-collection"
+      ],
+      "targetFailureAreas": [],
+      "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+      ],
+      "suggestedNextActions": [
+        "Review the structured skip reason before interpreting missing playback telemetry.",
+        "Collect missing telemetry before optimizing playback behavior; absent evidence is treated separately from a real playback failure."
+      ]
+    },
+    {
+      "caseId": "local/missing-file-error-handling",
+      "hasModelAnalysis": true,
+      "status": "not-needed",
+      "result": "skip",
+      "expectedBehavior": "Reference case was evaluated or explicitly skipped with a structured reason.",
+      "actualBehavior": "materialize-native-harness skipped with native-harness.not-implemented: Native playback harness is not implemented in this software-only evaluator yet.",
+      "primaryFailureClass": "insufficient instrumentation",
+      "primaryFailureArea": "evidence-collection",
+      "canOptimizePlaybackCore": false,
+      "isBlocked": false,
+      "blockers": [
+        "result.skip"
+      ],
+      "signals": [
+        "skip.reason",
+        "skip.code",
+        "skip.operation",
+        "skip.failureClass",
+        "skip.failureArea",
+        "skip.isExpected",
+        "skip.isRetriable",
+        "lifecycle.skip",
+        "environment.collectorVersion",
+        "environment.playerCoreVersion",
+        "environment.sourceRevision",
+        "environment.buildConfiguration",
+        "lifecycle.materialize-native-harness"
+      ],
+      "missingSignals": [],
+      "failureAreas": [
+        "evidence-collection"
+      ],
+      "targetFailureAreas": [],
+      "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+      ],
+      "suggestedNextActions": [
+        "Review the structured skip reason before interpreting missing playback telemetry.",
+        "Collect missing telemetry before optimizing playback behavior; absent evidence is treated separately from a real playback failure."
+      ]
+    },
+    {
+      "caseId": "local/sdr-resume-seek-timeline",
+      "hasModelAnalysis": true,
+      "status": "not-needed",
+      "result": "skip",
+      "expectedBehavior": "Reference case was evaluated or explicitly skipped with a structured reason.",
+      "actualBehavior": "materialize-native-harness skipped with native-harness.not-implemented: Native playback harness is not implemented in this software-only evaluator yet.",
+      "primaryFailureClass": "insufficient instrumentation",
+      "primaryFailureArea": "evidence-collection",
+      "canOptimizePlaybackCore": false,
+      "isBlocked": false,
+      "blockers": [
+        "result.skip"
+      ],
+      "signals": [
+        "skip.reason",
+        "skip.code",
+        "skip.operation",
+        "skip.failureClass",
+        "skip.failureArea",
+        "skip.isExpected",
+        "skip.isRetriable",
+        "lifecycle.skip",
+        "environment.collectorVersion",
+        "environment.playerCoreVersion",
+        "environment.sourceRevision",
+        "environment.buildConfiguration",
+        "lifecycle.materialize-native-harness"
+      ],
+      "missingSignals": [],
+      "failureAreas": [
+        "evidence-collection"
+      ],
+      "targetFailureAreas": [],
+      "codeTargets": [
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+        "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+        "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
+        "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+      ],
+      "suggestedNextActions": [
+        "Review the structured skip reason before interpreting missing playback telemetry.",
+        "Collect missing telemetry before optimizing playback behavior; absent evidence is treated separately from a real playback failure."
+      ]
+    }
+  ]
+}

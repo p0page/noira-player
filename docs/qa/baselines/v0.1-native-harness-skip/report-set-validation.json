@@ -1,0 +1,91 @@
+{
+  "schemaVersion": 1,
+  "isValid": true,
+  "expectedCaseCount": 9,
+  "reportCount": 9,
+  "matchedCaseCount": 9,
+  "cases": [
+    {
+      "caseId": "jellyfin/sdr-hevc-main10-1080p60-3m",
+      "category": "stable",
+      "severity": "high",
+      "stability": "stable",
+      "reportRunId": "jellyfin/sdr-hevc-main10-1080p60-3m",
+      "status": "matched",
+      "signals": []
+    },
+    {
+      "caseId": "jellyfin/hdr10-hevc-main10-1080p60-10m",
+      "category": "stable",
+      "severity": "critical",
+      "stability": "stable",
+      "reportRunId": "jellyfin/hdr10-hevc-main10-1080p60-10m",
+      "status": "matched",
+      "signals": []
+    },
+    {
+      "caseId": "jellyfin/hdr10-hevc-main10-1080p60-10m-force-sdr",
+      "category": "challenge",
+      "severity": "high",
+      "stability": "stable",
+      "reportRunId": "jellyfin/hdr10-hevc-main10-1080p60-10m-force-sdr",
+      "status": "matched",
+      "signals": []
+    },
+    {
+      "caseId": "jellyfin/hdr10-hevc-main10-4k60-50m",
+      "category": "challenge",
+      "severity": "high",
+      "stability": "variable",
+      "reportRunId": "jellyfin/hdr10-hevc-main10-4k60-50m",
+      "status": "matched",
+      "signals": []
+    },
+    {
+      "caseId": "jellyfin/dv-profile5-hevc-4k60",
+      "category": "challenge",
+      "severity": "medium",
+      "stability": "stable",
+      "reportRunId": "jellyfin/dv-profile5-hevc-4k60",
+      "status": "matched",
+      "signals": []
+    },
+    {
+      "caseId": "jellyfin/dv-profile8-1-hevc-4k60-hdr10-fallback",
+      "category": "challenge",
+      "severity": "high",
+      "stability": "stable",
+      "reportRunId": "jellyfin/dv-profile8-1-hevc-4k60-hdr10-fallback",
+      "status": "matched",
+      "signals": []
+    },
+    {
+      "caseId": "local/chimera-23976-hdr10-cadence",
+      "category": "challenge",
+      "severity": "high",
+      "stability": "unknown",
+      "reportRunId": "local/chimera-23976-hdr10-cadence",
+      "status": "matched",
+      "signals": []
+    },
+    {
+      "caseId": "local/sdr-resume-seek-timeline",
+      "category": "stable",
+      "severity": "high",
+      "stability": "unknown",
+      "reportRunId": "local/sdr-resume-seek-timeline",
+      "status": "matched",
+      "signals": []
+    },
+    {
+      "caseId": "local/missing-file-error-handling",
+      "category": "stable",
+      "severity": "medium",
+      "stability": "stable",
+      "reportRunId": "local/missing-file-error-handling",
+      "status": "matched",
+      "signals": []
+    }
+  ],
+  "errors": []
+}
