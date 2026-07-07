@@ -1331,7 +1331,21 @@ internal static class Program
                 CreateSourceOnlyDescriptor(referenceCase));
             request.Environment = output.Environment;
 
-            var result = PlaybackQualityReportComposer.Compose(request);
+            var result = HasPurpose(referenceCase, "error-handling")
+                ? PlaybackQualityRuntimeEvidenceCollector.ComposeErrorRunResult(
+                    referenceCase,
+                    new PlaybackQualityError
+                    {
+                        Code = "source-only.error-case",
+                        Message = "Source-only materialization does not open playback; this synthetic error keeps error-handling cases in the first-class error report shape.",
+                        Operation = "materialize-baseline",
+                        FailureClass = "insufficient instrumentation",
+                        FailureArea = "error-handling",
+                        IsTerminal = true,
+                        IsRetriable = false
+                    },
+                    output.Environment)
+                : PlaybackQualityReportComposer.Compose(request);
             AddUnique(
                 result.Report.Limitations,
                 "source-only: playback execution was not run by this command");
@@ -1348,6 +1362,14 @@ internal static class Program
 
         output.CaseCount = output.Cases.Count;
         return output;
+    }
+
+    private static bool HasPurpose(
+        PlaybackQualityReferenceCase referenceCase,
+        string purpose)
+    {
+        return referenceCase.Purpose.Any(item =>
+            string.Equals(item, purpose, StringComparison.OrdinalIgnoreCase));
     }
 
     private static MaterializedBaselineReportSet MaterializeCoreProbeReportSet(

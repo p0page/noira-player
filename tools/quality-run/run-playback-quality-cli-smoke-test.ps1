@@ -451,6 +451,26 @@ try {
         "frameRate": 23.976,
         "hdrKind": "DolbyVisionUnsupported"
       }
+    },
+    {
+      "caseId": "local/missing-file-error-handling",
+      "category": "stable",
+      "severity": "medium",
+      "stability": "stable",
+      "uri": "emby://quality-cases/missing-file-error-handling",
+      "itemId": "quality-case-missing-file-error-handling",
+      "mediaSourceId": "quality-source-missing-file-error-handling",
+      "tier": 1,
+      "purpose": [
+        "error-handling"
+      ],
+      "expected": {
+        "codec": "hevc",
+        "width": 1920,
+        "height": 1080,
+        "frameRate": 60.0,
+        "hdrKind": "Sdr"
+      }
     }
   ]
 }
@@ -481,8 +501,8 @@ try {
         throw 'Expected playback quality CLI validate-manifest output to be valid.'
     }
 
-    if ($manifestValidation.caseCount -ne 2) {
-        throw 'Expected playback quality CLI validate-manifest output to include two cases.'
+    if ($manifestValidation.caseCount -ne 3) {
+        throw 'Expected playback quality CLI validate-manifest output to include three cases.'
     }
 
     if (-not ($manifestValidation.purposes | Where-Object { $_ -eq 'hdr-output' })) {
@@ -523,8 +543,8 @@ try {
         throw 'Expected playback quality CLI plan-runs output schemaVersion 1.'
     }
 
-    if ($runPlan.caseCount -ne 2) {
-        throw 'Expected playback quality CLI plan-runs output to include two cases.'
+    if ($runPlan.caseCount -ne 3) {
+        throw 'Expected playback quality CLI plan-runs output to include three cases.'
     }
 
     if ($runPlan.durationSeconds -ne 60) {
@@ -568,7 +588,7 @@ try {
 
     $materializedBaselineSummary = Get-Content -Raw -LiteralPath $materializedBaselineSummaryPath | ConvertFrom-Json
     if ($materializedBaselineSummary.schemaVersion -ne 1 -or
-        $materializedBaselineSummary.caseCount -ne 2 -or
+        $materializedBaselineSummary.caseCount -ne 3 -or
         $materializedBaselineSummary.reportsDirectory -ne $materializedBaselineDir) {
         throw 'Expected materialize-baseline-report-set summary to describe generated reports.'
     }
@@ -607,6 +627,19 @@ try {
         throw 'Expected materialized baseline report to carry source-only limitation.'
     }
 
+    $materializedBaselineErrorReportPath = Join-Path $materializedBaselineDir 'local\missing-file-error-handling.json'
+    if (-not (Test-Path -LiteralPath $materializedBaselineErrorReportPath)) {
+        throw 'Expected materialize-baseline-report-set to write an error-handling report.'
+    }
+
+    $materializedBaselineErrorReport = Get-Content -Raw -LiteralPath $materializedBaselineErrorReportPath | ConvertFrom-Json
+    if ($materializedBaselineErrorReport.report.result -ne 'error' -or
+        $materializedBaselineErrorReport.report.error.code -ne 'source-only.error-case' -or
+        $materializedBaselineErrorReport.report.error.failureArea -ne 'error-handling' -or
+        $materializedBaselineErrorReport.modelAnalysis.result -ne 'error') {
+        throw 'Expected source-only materializer to emit a first-class error envelope for error-handling cases.'
+    }
+
     Push-Location $repoRoot
     try {
         dotnet run `
@@ -625,8 +658,8 @@ try {
     }
 
     $materializedBaselineValidation = Get-Content -Raw -LiteralPath $materializedBaselineValidationPath | ConvertFrom-Json
-    if ($materializedBaselineValidation.expectedCaseCount -ne 2 -or
-        $materializedBaselineValidation.reportCount -ne 2) {
+    if ($materializedBaselineValidation.expectedCaseCount -ne 3 -or
+        $materializedBaselineValidation.reportCount -ne 3) {
         throw 'Expected materialized source-only baseline validation to cover every manifest case.'
     }
 
@@ -922,6 +955,23 @@ try {
   }
 }
 '@ | Set-Content -LiteralPath (Join-Path $reportSetDir 'case-b.json') -Encoding UTF8
+    @'
+{
+  "runId": "local/missing-file-error-handling",
+  "metricVersion": "software-quality-v1",
+  "result": "error",
+  "error": {
+    "code": "source.open.missing-file",
+    "message": "The media file was not found.",
+    "operation": "open",
+    "exceptionType": "FileNotFoundException",
+    "failureClass": "sample issue",
+    "failureArea": "error-handling",
+    "isTerminal": true,
+    "isRetriable": false
+  }
+}
+'@ | Set-Content -LiteralPath (Join-Path $reportSetDir 'case-error.json') -Encoding UTF8
 
     Push-Location $repoRoot
     try {
@@ -949,8 +999,8 @@ try {
         throw 'Expected playback quality CLI validate-report-set output to be valid.'
     }
 
-    if ($reportSetValidation.matchedCaseCount -ne 2) {
-        throw 'Expected playback quality CLI validate-report-set output to include two matched cases.'
+    if ($reportSetValidation.matchedCaseCount -ne 3) {
+        throw 'Expected playback quality CLI validate-report-set output to include three matched cases.'
     }
 
     New-Item -ItemType Directory -Path $missingSignalReportSetDir | Out-Null
@@ -983,6 +1033,23 @@ try {
   }
 }
 '@ | Set-Content -LiteralPath (Join-Path $missingSignalReportSetDir 'case-b.json') -Encoding UTF8
+    @'
+{
+  "runId": "local/missing-file-error-handling",
+  "metricVersion": "software-quality-v1",
+  "result": "error",
+  "error": {
+    "code": "source.open.missing-file",
+    "message": "The media file was not found.",
+    "operation": "open",
+    "exceptionType": "FileNotFoundException",
+    "failureClass": "sample issue",
+    "failureArea": "error-handling",
+    "isTerminal": true,
+    "isRetriable": false
+  }
+}
+'@ | Set-Content -LiteralPath (Join-Path $missingSignalReportSetDir 'case-error.json') -Encoding UTF8
 
     Push-Location $repoRoot
     try {
