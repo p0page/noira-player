@@ -104,6 +104,11 @@ $commands = @(
         -Command 'powershell' `
         -Arguments @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', 'tools\quality-run\New-PrivateEmbyReferenceManifest.tests.ps1')
     New-CommandPlan `
+        -Name 'public-reference-media-probe-test' `
+        -Description 'Verify public reference media probing reports URL reachability and expected source metadata without private Emby data.' `
+        -Command 'powershell' `
+        -Arguments @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', 'tools\quality-run\Test-PublicReferenceMedia.tests.ps1')
+    New-CommandPlan `
         -Name 'native-helper-test' `
         -Description 'Compile and run the standalone native playback quality metrics helper test.' `
         -Command 'cmd' `

@@ -86,6 +86,10 @@ if (-not ($plan.commands | Where-Object { $_.name -eq 'private-emby-reference-ma
     throw 'Expected private-emby-reference-manifest-test command in playback-core validation plan.'
 }
 
+if (-not ($plan.commands | Where-Object { $_.name -eq 'public-reference-media-probe-test' })) {
+    throw 'Expected public-reference-media-probe-test command in playback-core validation plan.'
+}
+
 if (-not ($plan.commands | Where-Object { $_.name -eq 'native-display-refresh-test' })) {
     throw 'Expected native-display-refresh-test command in playback-core validation plan.'
 }

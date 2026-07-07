@@ -70,6 +70,20 @@ The command emits `isValid`, `caseCount`, `tiers`, `purposes`, `cases`, structur
 
 Jellyfin 公开直链 case 应以 `direct-uri` 调度；本地 23.976 case 应以 `emby-item` 调度并生成 `quality-run` dev command。`tools/quality-run/run-playback-quality-cli-smoke-test.ps1` 会校验这些不变量，防止 example manifest 退化成 coverage 不完整或不可调度的状态。
 
+## 公开素材探测
+
+`validate-manifest` 只能证明 manifest 结构可调度，不能证明公开 URL 当前可访问，也不能证明文件实际 metadata 仍然匹配预期。进入播放优化前，可以用 `ffprobe` 跑公开素材探测：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\quality-run\Test-PublicReferenceMedia.ps1 -CaseId 'jellyfin/hdr10-hevc-main10-4k60-50m' -OutputPath docs\qa\private\jellyfin-hdr10-4k60-50m-probe.local.json
+```
+
+脚本只探测 `http://` 和 `https://` case；`emby://` 或本地私有 case 会以 `status = skipped`、`reason = non-public-uri` 输出。默认输出路径位于 `docs/qa/private/*.local.json`，属于 `.gitignore` 覆盖范围，不应提交。
+
+输出报告面向模型消费：每个公开 case 会给出 `source.codec`、`source.width`、`source.height`、`source.frameRate` 和可由 `ffprobe` 判断的 `source.hdrKind` 检查结果，并保留 `probe.codec/profile/pixelFormat/colorTransfer/colorPrimaries/bitRate` 等原始证据。HDR10 与 SDR 会直接比较；Dolby Vision、动态 metadata 或需要播放器解析的 HDR 分类不会仅凭文件名判定，会输出跳过原因，后续仍应依赖播放 Core 解析后的报告。
+
+当前 Jellyfin 4K60 HDR10 50M 公开样片已在本机验证通过：`ffprobe` 读到 HEVC Main 10、3840x2160、60fps、`bt2020nc`、`smpte2084`、`bt2020`、约 49.2 Mbps。这个结论只说明源文件 metadata 匹配 manifest，不代表 Xbox 已正确输出 HDR，也不代表颜色管线等价于 Kodi。
+
 私有 Emby 服务器可以作为真实库测试源，但不得进入仓库。服务器 URL、用户名、密码、真实 `itemId`、真实 `mediaSourceId`、采集出的私有报告和本地 manifest 应只放在环境变量、系统临时目录或 `.gitignore` 覆盖的路径中，例如 `docs/qa/private/`、`tools/quality-run/private/`、`*.private.json`、`*.local.json`、`*.secrets.json` 或 `.env`。提交前必须用 `rg` 检查真实服务器地址、账号和密码没有出现在 tracked 文件或 diff 中。
 
 可以用本地脚本从私有 Emby 库生成 ignored manifest：
