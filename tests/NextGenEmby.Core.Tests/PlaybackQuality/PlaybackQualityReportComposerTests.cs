@@ -169,6 +169,39 @@ public sealed class PlaybackQualityReportComposerTests
     }
 
     [Fact]
+    public void Compose_Copies_Position_Evidence_Before_Evaluating_Seek_Threshold()
+    {
+        var expected = CreateHdrExpected(maxFrameGapMs: 105);
+        expected.MaxSeekPositionErrorMs = 250;
+
+        var result = PlaybackQualityReportComposer.Compose(new PlaybackQualityReportRequest
+        {
+            RunId = "seek-position-run",
+            Descriptor = CreatePlaybackDescriptor(frameRate: 23.976),
+            DisplayStatus = CreateHdrDisplayStatus(refreshRateHz: 59.94006),
+            Metrics = CreateStableMetrics(maxFrameGapMs: 60),
+            Expected = expected,
+            Position = new PlaybackQualityPosition
+            {
+                RequestedStartPositionTicks = 100_000_000,
+                SeekTargetPositionTicks = 300_000_000,
+                ActualPositionTicks = 301_000_000
+            }
+        });
+
+        Assert.Equal(100_000_000, result.Report.Position.RequestedStartPositionTicks);
+        Assert.Equal(300_000_000, result.Report.Position.SeekTargetPositionTicks);
+        Assert.Equal(301_000_000, result.Report.Position.ActualPositionTicks);
+        Assert.Equal(100, result.Report.Position.SeekPositionErrorMs);
+        Assert.Contains(result.Report.Checks, check =>
+            check.Name == "SeekPositionErrorMs" &&
+            check.Status == "pass" &&
+            check.Signal == "position.seekPositionErrorMs");
+        Assert.DoesNotContain("position.seekPositionErrorMs", result.ModelAnalysis.MissingEvidence);
+        Assert.Contains("position.seekPositionErrorMs", result.ModelAnalysis.EvidenceSignals);
+    }
+
+    [Fact]
     public void Compose_Classifies_Empty_Runtime_Metrics_Snapshot_For_Model()
     {
         var expected = CreateHdrExpected(maxFrameGapMs: 105);

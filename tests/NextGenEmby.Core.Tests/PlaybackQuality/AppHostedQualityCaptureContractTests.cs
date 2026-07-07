@@ -24,12 +24,22 @@ public sealed class AppHostedQualityCaptureContractTests
         Assert.Contains("PlaybackQualityExpected?", launchRequest, StringComparison.Ordinal);
 
         Assert.Contains("ScheduleQualityRunCapture", playbackPage, StringComparison.Ordinal);
+        Assert.Contains("RunQualityRunLifecycleProbeAsync", playbackPage, StringComparison.Ordinal);
+        Assert.Contains("_orchestrator.PauseAsync()", playbackPage, StringComparison.Ordinal);
+        Assert.Contains("_orchestrator.ResumeAsync()", playbackPage, StringComparison.Ordinal);
+        Assert.Contains("_orchestrator.SeekAsync", playbackPage, StringComparison.Ordinal);
+        Assert.Contains("_orchestrator.StopAsync()", playbackPage, StringComparison.Ordinal);
         Assert.Contains("PlaybackQualityCaptureReferenceCaseFactory.Create", playbackPage, StringComparison.Ordinal);
         Assert.Contains("PlaybackQualityRuntimeEvidenceCollector.ComposeRunResult", playbackPage, StringComparison.Ordinal);
         Assert.Contains("WriteQualityRunErrorReportAsync", playbackPage, StringComparison.Ordinal);
         Assert.Contains("PlaybackQualityRuntimeEvidenceCollector.ComposeErrorRunResult", playbackPage, StringComparison.Ordinal);
         Assert.Contains("PlaybackQualityCapturedReportPath.GetReportRelativePath", playbackPage, StringComparison.Ordinal);
         Assert.Contains("PlaybackQualityReportSerializer.Serialize", playbackPage, StringComparison.Ordinal);
+        Assert.Contains("lifecycle.Events.Add", playbackPage, StringComparison.Ordinal);
+        Assert.Contains("\"pause\"", playbackPage, StringComparison.Ordinal);
+        Assert.Contains("\"resume\"", playbackPage, StringComparison.Ordinal);
+        Assert.Contains("\"seek\"", playbackPage, StringComparison.Ordinal);
+        Assert.Contains("\"stop\"", playbackPage, StringComparison.Ordinal);
         Assert.Contains("quality-run", playbackPage, StringComparison.Ordinal);
         Assert.Contains("captured", playbackPage, StringComparison.Ordinal);
     }

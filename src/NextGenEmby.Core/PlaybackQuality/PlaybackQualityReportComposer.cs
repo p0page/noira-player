@@ -17,6 +17,8 @@ namespace NextGenEmby.Core.PlaybackQuality
 
         public PlaybackQualityRuntimeMetrics? RuntimeMetrics { get; set; }
 
+        public PlaybackQualityPosition? Position { get; set; }
+
         public PlaybackQualityStartup? Startup { get; set; }
 
         public PlaybackQualityLifecycle? Lifecycle { get; set; }
@@ -122,6 +124,11 @@ namespace NextGenEmby.Core.PlaybackQuality
                         "not-applicable");
             }
 
+            if (request.Position != null)
+            {
+                report.Position = ClonePosition(request.Position);
+            }
+
             if (request.Startup != null)
             {
                 report.Startup = request.Startup;
@@ -179,6 +186,18 @@ namespace NextGenEmby.Core.PlaybackQuality
                 Reason = source.Reason,
                 HasSnapshot = source.HasSnapshot,
                 HasPlaybackSample = source.HasPlaybackSample
+            };
+        }
+
+        private static PlaybackQualityPosition ClonePosition(
+            PlaybackQualityPosition source)
+        {
+            return new PlaybackQualityPosition
+            {
+                RequestedStartPositionTicks = source.RequestedStartPositionTicks,
+                SeekTargetPositionTicks = source.SeekTargetPositionTicks,
+                ActualPositionTicks = source.ActualPositionTicks,
+                SeekPositionErrorMs = source.SeekPositionErrorMs
             };
         }
 

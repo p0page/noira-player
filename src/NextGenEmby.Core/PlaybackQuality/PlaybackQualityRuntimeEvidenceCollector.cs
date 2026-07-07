@@ -12,7 +12,8 @@ namespace NextGenEmby.Core.PlaybackQuality
             IPlaybackQualityMetricsProvider? metricsProvider = null,
             PlaybackQualityStartup? startup = null,
             PlaybackQualityEnvironment? environment = null,
-            PlaybackQualityLifecycle? lifecycle = null)
+            PlaybackQualityLifecycle? lifecycle = null,
+            PlaybackQualityPosition? position = null)
         {
             if (referenceCase == null)
             {
@@ -52,6 +53,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                 startup);
             request.RuntimeMetrics = runtimeMetrics;
             request.Lifecycle = lifecycle;
+            request.Position = position;
             request.Environment = environment;
             return request;
         }
@@ -76,7 +78,8 @@ namespace NextGenEmby.Core.PlaybackQuality
             IPlaybackQualityMetricsProvider? metricsProvider = null,
             PlaybackQualityStartup? startup = null,
             PlaybackQualityEnvironment? environment = null,
-            PlaybackQualityLifecycle? lifecycle = null)
+            PlaybackQualityLifecycle? lifecycle = null,
+            PlaybackQualityPosition? position = null)
         {
             return PlaybackQualityReportComposer.Compose(
                 CreateRequest(
@@ -86,7 +89,8 @@ namespace NextGenEmby.Core.PlaybackQuality
                     metricsProvider,
                     startup,
                     environment,
-                    lifecycle));
+                    lifecycle,
+                    position));
         }
 
         public static PlaybackQualityRunResult ComposeErrorRunResult(

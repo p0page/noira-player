@@ -333,6 +333,41 @@ public sealed class PlaybackQualityRuntimeEvidenceCollectorTests
         Assert.Contains("lifecycle.play", result.ModelAnalysis.EvidenceSignals);
     }
 
+    [Fact]
+    public void ComposeRunResult_Includes_Captured_Position_Evidence()
+    {
+        var referenceCase = new PlaybackQualityReferenceCase
+        {
+            CaseId = "local/position-capture",
+            Expected = new PlaybackQualityExpected
+            {
+                Codec = "hevc",
+                Width = 3840,
+                Height = 2160,
+                FrameRate = 23.976,
+                HdrKind = "Hdr10",
+                MaxSeekPositionErrorMs = 500
+            }
+        };
+        referenceCase.Purpose.Add("timeline");
+
+        var result = PlaybackQualityRuntimeEvidenceCollector.ComposeRunResult(
+            referenceCase,
+            CreateDescriptor(),
+            position: new PlaybackQualityPosition
+            {
+                RequestedStartPositionTicks = 0,
+                SeekTargetPositionTicks = 500_000_000,
+                ActualPositionTicks = 502_000_000
+            });
+
+        Assert.Equal(500_000_000, result.Report.Position.SeekTargetPositionTicks);
+        Assert.Equal(502_000_000, result.Report.Position.ActualPositionTicks);
+        Assert.Equal(200, result.Report.Position.SeekPositionErrorMs);
+        Assert.Contains("position.seekPositionErrorMs", result.ModelAnalysis.EvidenceSignals);
+        Assert.DoesNotContain("position.seekPositionErrorMs", result.ModelAnalysis.MissingEvidence);
+    }
+
     private static PlaybackDescriptor CreateDescriptor()
     {
         var source = new EmbyMediaSource

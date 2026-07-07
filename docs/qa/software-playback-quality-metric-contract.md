@@ -199,6 +199,8 @@ When color expectations are supplied, the matching color-pipeline observations m
 
 DEBUG App-hosted `quality-run` capture writes this same envelope shape under the App LocalFolder `quality-run/captured/<runId>.json`. The run-id to relative-path mapping is owned by `PlaybackQualityCapturedReportPath.GetReportRelativePath`; `local/foo` maps to `local/foo.json`, and unsafe absolute or traversal-style run IDs must be rejected. Captured App reports should be treated as real App/native software evidence only for fields actually present in the report. They still do not prove HDMI/display output correctness, and missing lifecycle or runtime fields must remain `insufficient instrumentation` rather than being inferred.
 
+`PlaybackQualityReportRequest.Position` lets App-hosted or native collectors provide requested start position, seek target, actual position, and seek error before `PlaybackQualityEvaluator` runs. This is required for honest seek/resume validation: adding position fields after composition is not equivalent, because evaluator checks and model analysis would already have been computed.
+
 `materialize-run-result` is the App-free CLI normalization command for captured evidence that is still a raw `PlaybackQualityReport` or an older envelope with stale/incomplete `modelAnalysis`. It reads `--report`, reruns the current Core analyzer with JSON field-presence evidence, and writes a standard `PlaybackQualityRunResult` envelope:
 
 ```powershell

@@ -1086,17 +1086,21 @@ namespace NextGenEmby.App.Views
                     "QualityRun capture scheduled runId=" + request.QualityRunId +
                     " durationSeconds=" + request.QualityRunDurationSeconds);
 
-                await Task.Delay(TimeSpan.FromSeconds(request.QualityRunDurationSeconds));
-
-                var capturedPositionTicks = GetCurrentPositionTicks();
                 var referenceCase = PlaybackQualityCaptureReferenceCaseFactory.Create(
                     request.QualityRunId,
                     descriptor,
                     request.QualityExpected);
                 var lifecycle = CreateQualityRunLifecycle(
                     request.StartPositionTicks,
-                    capturedPositionTicks,
+                    GetCurrentPositionTicks(),
                     _orchestrator.State.ToString());
+                var position = CreateQualityRunPosition(request.StartPositionTicks);
+                await RunQualityRunLifecycleProbeAsync(
+                    request,
+                    lifecycle,
+                    position,
+                    DateTimeOffset.UtcNow);
+
                 var startup = new PlaybackQualityStartup
                 {
                     CommandReceivedAt = request.QualityCommandReceivedAtUtc.ToString("O"),
@@ -1118,7 +1122,8 @@ namespace NextGenEmby.App.Views
                     _backend as IPlaybackQualityMetricsProvider,
                     startup,
                     environment,
-                    lifecycle);
+                    lifecycle,
+                    position);
                 var relativePath = await WriteQualityRunReportAsync(request.QualityRunId, result);
                 await WriteQualityRunCommandResultAsync("captured", relativePath);
                 await PlaybackDiagnosticsLog.WriteLineAsync(
@@ -1158,6 +1163,110 @@ namespace NextGenEmby.App.Views
             });
 
             return lifecycle;
+        }
+
+        private static PlaybackQualityPosition CreateQualityRunPosition(long requestedStartPositionTicks)
+        {
+            return new PlaybackQualityPosition
+            {
+                RequestedStartPositionTicks = Math.Max(0, requestedStartPositionTicks)
+            };
+        }
+
+        private async Task RunQualityRunLifecycleProbeAsync(
+            PlaybackLaunchRequest request,
+            PlaybackQualityLifecycle lifecycle,
+            PlaybackQualityPosition position,
+            DateTimeOffset probeStartedAtUtc)
+        {
+            var duration = TimeSpan.FromSeconds(request.QualityRunDurationSeconds);
+            var firstDelay = GetQualityRunProbeDelay(duration, 0.20);
+            var shortDelay = GetQualityRunProbeDelay(duration, 0.05);
+
+            await Task.Delay(firstDelay);
+
+            await _orchestrator.PauseAsync();
+            AddQualityRunLifecycleEvent(lifecycle, "pause", "success", "app-hosted quality-run paused playback");
+
+            await Task.Delay(shortDelay);
+
+            await _orchestrator.ResumeAsync();
+            AddQualityRunLifecycleEvent(lifecycle, "resume", "success", "app-hosted quality-run resumed playback");
+
+            await Task.Delay(shortDelay);
+
+            if (IsPlaybackSeekable())
+            {
+                var seekTargetTicks = CalculateQualityRunSeekTargetTicks();
+                position.SeekTargetPositionTicks = seekTargetTicks;
+                await _orchestrator.SeekAsync(seekTargetTicks);
+                await Task.Delay(shortDelay);
+                var actualPositionTicks = GetCurrentPositionTicks();
+                position.ActualPositionTicks = actualPositionTicks;
+                position.SeekPositionErrorMs =
+                    Math.Abs(actualPositionTicks - seekTargetTicks) / 10000.0;
+                AddQualityRunLifecycleEvent(
+                    lifecycle,
+                    "seek",
+                    "success",
+                    "app-hosted quality-run seek completed");
+            }
+            else
+            {
+                position.ActualPositionTicks = GetCurrentPositionTicks();
+                AddQualityRunLifecycleEvent(
+                    lifecycle,
+                    "seek",
+                    "skipped",
+                    "app-hosted quality-run skipped seek because playback was not seekable");
+            }
+
+            var elapsed = DateTimeOffset.UtcNow - probeStartedAtUtc;
+            if (elapsed < duration)
+            {
+                await Task.Delay(duration - elapsed);
+            }
+
+            await _orchestrator.StopAsync();
+            AddQualityRunLifecycleEvent(
+                lifecycle,
+                "stop",
+                "success",
+                "app-hosted quality-run stopped playback");
+        }
+
+        private static TimeSpan GetQualityRunProbeDelay(TimeSpan duration, double ratio)
+        {
+            var milliseconds = Math.Max(250, Math.Min(1500, duration.TotalMilliseconds * ratio));
+            return TimeSpan.FromMilliseconds(milliseconds);
+        }
+
+        private long CalculateQualityRunSeekTargetTicks()
+        {
+            var currentPositionTicks = GetCurrentPositionTicks();
+            var targetTicks = currentPositionTicks + TimeSpan.FromSeconds(1).Ticks;
+            if (_durationTicks > TimeSpan.FromSeconds(2).Ticks)
+            {
+                targetTicks = Math.Min(targetTicks, _durationTicks - TimeSpan.FromSeconds(1).Ticks);
+            }
+
+            return ClampToDuration(Math.Max(0, targetTicks));
+        }
+
+        private void AddQualityRunLifecycleEvent(
+            PlaybackQualityLifecycle lifecycle,
+            string operation,
+            string status,
+            string message)
+        {
+            lifecycle.Events.Add(new PlaybackQualityLifecycleEvent
+            {
+                Operation = operation,
+                Status = status,
+                State = _orchestrator.State.ToString(),
+                PositionTicks = GetCurrentPositionTicks(),
+                Message = message
+            });
         }
 
         private static async Task<string> WriteQualityRunReportAsync(

@@ -151,7 +151,7 @@ dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQ
 
 这类 report-set 的用途是把“真实 native 采集器还没实现”这个缺口变成可验证 artifact。它可以通过 `validate-report-set`，但不能用于播放质量优化、before/after 采纳决策、真实帧率判断、A/V sync 判断或 HDR/SDR 色彩正确性判断。自动化模型看到这类报告时，下一步应补 native harness 或把真实 App/native 指标接入报告链路，而不是修改播放器行为。
 
-DEBUG App 现在有一个最小 App-hosted capture 入口：`plan-runs` 生成的 `devCommand.route = quality-run` 可以写入 App LocalFolder 的 `dev-command.json`。App 会走普通 item playback 路径，等待 `durationSeconds` 指定的采样窗口，然后把标准 `PlaybackQualityRunResult` envelope 写到 App LocalFolder 的 `quality-run/captured/<runId>.json`。例如 `runId = local/foo` 会写成 `quality-run/captured/local/foo.json`。如果打开媒体或播放命令阶段失败，App 会在同一路径写入标准 error envelope，而不是只留下缺失 report。这一步仍是 App-hosted 软件采集，不验证 Xbox/HDMI/display 输出；报告中的 display/color/frame timing/A/V sync 只代表当前 native/App 软件层暴露的指标。
+DEBUG App 现在有一个最小 App-hosted capture 入口：`plan-runs` 生成的 `devCommand.route = quality-run` 可以写入 App LocalFolder 的 `dev-command.json`。App 会走普通 item playback 路径，在 `durationSeconds` 指定的采样窗口内主动执行 pause、resume、seek、stop，然后把标准 `PlaybackQualityRunResult` envelope 写到 App LocalFolder 的 `quality-run/captured/<runId>.json`。例如 `runId = local/foo` 会写成 `quality-run/captured/local/foo.json`。如果打开媒体或播放命令阶段失败，App 会在同一路径写入标准 error envelope，而不是只留下缺失 report。这一步仍是 App-hosted 软件采集，不验证 Xbox/HDMI/display 输出；报告中的 display/color/frame timing/A/V sync 只代表当前 native/App 软件层暴露的指标。
 
 当 App-hosted 或 native collector 已经能为每个 case 产出 raw `PlaybackQualityReport` 或 `PlaybackQualityRunResult` envelope 时，不要新建 report-set 格式；把 captured report 放在 ignored/private 目录，并用同一个命令导入：
 
