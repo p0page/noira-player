@@ -53,6 +53,22 @@ public sealed class LiveTvPageSourceTests
         Assert.Contains("IsUpKey(e.Key)", liveTvPageSource);
     }
 
+    [Fact]
+    public void LiveTv_Page_Uses_Matte_List_Focus_And_Transient_Unsupported_Layer()
+    {
+        var appXaml = ReadAppSource("App.xaml");
+        var liveTvXaml = ReadAppSource("Views", "LiveTvPage.xaml");
+        var liveTvPageSource = ReadAppSource("Views", "LiveTvPage.xaml.cs");
+
+        Assert.Contains("TvTransientMessagePanelStyle", appXaml);
+        Assert.Contains("Style=\"{StaticResource TvTransientMessagePanelStyle}\"", liveTvXaml);
+        Assert.Contains("Style=\"{StaticResource TvLibraryOptionSheetOptionButtonStyle}\"", liveTvXaml);
+        Assert.Contains("MatteButtonFocusVisuals.PrepareListButton(button)", liveTvPageSource);
+        Assert.Contains("MatteButtonFocusVisuals.PrepareCommandButton(UnsupportedCloseButton)", liveTvPageSource);
+        Assert.Contains("MatteButtonFocusVisuals.PrepareCommandButton(FallbackRetryButton)", liveTvPageSource);
+        Assert.Contains("UseSystemFocusVisuals\" Value=\"False\"", appXaml);
+    }
+
     private static string ReadAppSource(params string[] segments)
     {
         var parts = new string[segments.Length + 3];

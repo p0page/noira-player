@@ -36,6 +36,8 @@ namespace NextGenEmby.App.Views
         public LiveTvPage()
         {
             InitializeComponent();
+            MatteButtonFocusVisuals.PrepareCommandButton(FallbackRetryButton);
+            MatteButtonFocusVisuals.PrepareCommandButton(UnsupportedCloseButton);
             AddHandler(KeyDownEvent, new KeyEventHandler(LiveTvPage_OnKeyDown), true);
             Loaded += LiveTvPage_OnLoaded;
         }
@@ -191,6 +193,7 @@ namespace NextGenEmby.App.Views
                 Tag = channel,
                 Content = CreateChannelButtonContent(CreateChannelLogoFrame(session, client, channel), channel)
             };
+            MatteButtonFocusVisuals.PrepareListButton(button);
             AutomationProperties.SetName(button, "Channel " + CreateChannelTitle(channel));
             button.GotFocus += (sender, args) => UpdatePreview(channel);
             button.Click += ChannelButton_OnClick;
@@ -313,6 +316,7 @@ namespace NextGenEmby.App.Views
                 Tag = channel,
                 Content = CreateChannelButtonContent(CreateDevelopmentChannelLogoFrame(channel), channel)
             };
+            MatteButtonFocusVisuals.PrepareListButton(button);
             AutomationProperties.SetName(button, "Channel " + CreateChannelTitle(channel));
             button.GotFocus += (sender, args) => UpdatePreview(channel);
             button.Click += ChannelButton_OnClick;

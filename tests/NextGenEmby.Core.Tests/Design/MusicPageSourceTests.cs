@@ -119,6 +119,37 @@ public sealed class MusicPageSourceTests
         Assert.Contains("_albumButtons.Contains(focusedButton)", musicPageSource);
     }
 
+    [Fact]
+    public void Music_Page_Uses_Matte_List_Focus_And_Transient_Unsupported_Layer()
+    {
+        var root = FindRepositoryRoot();
+        var appXaml = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NextGenEmby.App",
+            "App.xaml"));
+        var musicPageXaml = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NextGenEmby.App",
+            "Views",
+            "MusicPage.xaml"));
+        var musicPageSource = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NextGenEmby.App",
+            "Views",
+            "MusicPage.xaml.cs"));
+
+        Assert.Contains("TvTransientMessagePanelStyle", appXaml);
+        Assert.Contains("Style=\"{StaticResource TvTransientMessagePanelStyle}\"", musicPageXaml);
+        Assert.Contains("Style=\"{StaticResource TvLibraryOptionSheetOptionButtonStyle}\"", musicPageXaml);
+        Assert.Contains("MatteButtonFocusVisuals.PrepareListButton(button)", musicPageSource);
+        Assert.Contains("MatteButtonFocusVisuals.PrepareCommandButton(AllSongsButton)", musicPageSource);
+        Assert.Contains("MatteButtonFocusVisuals.PrepareCommandButton(UnsupportedCloseButton)", musicPageSource);
+        Assert.Contains("MatteButtonFocusVisuals.PrepareCommandButton(FallbackRetryButton)", musicPageSource);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

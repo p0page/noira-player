@@ -123,8 +123,8 @@
                         <DataTemplate>
                             <Grid
                                 x:Name="PosterCardRoot"
-                                Width="{StaticResource TvPosterCardWidth}"
-                                Height="{StaticResource TvPosterCardHeight}"
+                                Width="{Binding CardWidth}"
+                                Height="{Binding CardHeight}"
                                 Background="{StaticResource AppTransparentBrush}"
                                 RenderTransformOrigin="0.5,0.5">
                                 <Grid.Resources>
@@ -142,8 +142,8 @@
                                     Spacing="8">
                                     <Grid
                                         x:Name="PosterArtworkFrame"
-                                        Width="{StaticResource TvPosterArtworkWidth}"
-                                        Height="{StaticResource TvPosterArtworkHeight}">
+                                        Width="{Binding ArtworkWidth}"
+                                        Height="{Binding ArtworkHeight}">
                                         <Border
                                             Background="{StaticResource AppRaisedSurfaceBrush}"
                                             CornerRadius="{StaticResource TvPosterCardCornerRadius}" />
@@ -160,7 +160,7 @@
                                     </Grid>
                                     <StackPanel
                                         x:Name="PosterMetadataPanel"
-                                        Height="{StaticResource TvPosterMetadataHeight}"
+                                        Height="{Binding MetadataHeight}"
                                         Spacing="4">
                                         <TextBlock
                                             Text="{Binding Title}"

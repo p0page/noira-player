@@ -32,6 +32,25 @@ public sealed class PhotoViewerSourceTests
         Assert.Contains("new BitmapImage(new Uri(_request.DevelopmentImageUri))", source);
     }
 
+    [Fact]
+    public void Photos_Library_Uses_Photo_Specific_Grid_Recipe()
+    {
+        var appXaml = ReadAppSource("App.xaml");
+        var libraryXaml = ReadAppSource("Views", "LibraryPage.xaml");
+        var librarySource = ReadAppSource("Views", "LibraryPage.xaml.cs");
+
+        Assert.Contains("TvPhotoCardWidth", appXaml);
+        Assert.Contains("Width=\"{Binding CardWidth}\"", libraryXaml);
+        Assert.Contains("Height=\"{Binding CardHeight}\"", libraryXaml);
+        Assert.Contains("Width=\"{Binding ArtworkWidth}\"", libraryXaml);
+        Assert.Contains("Height=\"{Binding ArtworkHeight}\"", libraryXaml);
+        Assert.Contains("Height=\"{Binding MetadataHeight}\"", libraryXaml);
+        Assert.Contains("IsPhotoSurfaceRequest(_request)", librarySource);
+        Assert.Contains("usePhotoRecipe", librarySource);
+        Assert.Contains("CardWidth = usePhotoRecipe ? PhotoCardWidth : PosterCardWidth", librarySource);
+        Assert.Contains("ArtworkHeight = usePhotoRecipe ? PhotoArtworkHeight : PosterArtworkHeight", librarySource);
+    }
+
     private static string ReadAppSource(params string[] segments)
     {
         var parts = new string[segments.Length + 3];

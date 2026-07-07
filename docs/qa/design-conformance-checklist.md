@@ -145,10 +145,10 @@ Goal: verify that non-movie media types are first-class Emby surfaces without br
 
 | ID | Route | Keyboard Path | Design Checks | Result | Notes |
 | --- | --- | --- | --- | --- | --- |
-| 05.01 | `livetv-fixture` | Move channel list and open unsupported layer | Channel list, current-program preview, and unsupported playback layer use matte list/card rules and recover with B/Escape. | Not Run | |
-| 05.02 | `music-fixture` | Move artists/albums/songs, open unsupported layer | Dense music browsing stays TV-readable and does not copy poster-grid treatment where list columns work better. | Not Run | |
-| 05.03 | `photos-fixture` | Open album, open photo, B/Escape back | Photos use immersive artwork priority. Chrome is minimal, focus stays visible, and back behavior restores the photo/album anchor. | Not Run | |
-| 05.04 | Favorites / Unwatched / server libraries | Guide or More/Source Hub | Source-aware navigation supports the full Emby destination family without overloading first-level navigation. | Not Run | |
+| 05.01 | `livetv-fixture` | Move channel list and open unsupported layer | Channel list, current-program preview, and unsupported playback layer use matte list/card rules and recover with B/Escape. | Pass with concern | 0.1.0.220 uses matte row focus and a bottom transient unsupported layer. Program preview is compact and text-first until real EPG artwork is available. |
+| 05.02 | `music-fixture` | Move artists/albums/songs, open unsupported layer | Dense music browsing stays TV-readable and does not copy poster-grid treatment where list columns work better. | Pass with concern | 0.1.0.220 preserves the dense three-column model and matte row focus. Now panel remains intentionally text-first. |
+| 05.03 | `photos-fixture` | Open album, open photo, B/Escape back | Photos use immersive artwork priority. Chrome is minimal, focus stays visible, and back behavior restores the photo/album anchor. | Pass with concern | 0.1.0.220 uses a photo-specific landscape tile recipe and preserves viewer/back recovery. Sparse fixture data still leaves open canvas. |
+| 05.04 | Favorites / Unwatched / server libraries | Guide or More/Source Hub | Source-aware navigation supports the full Emby destination family without overloading first-level navigation. | Concern | Current accepted model is collapsed Guide plus page section actions; no distinct Source Hub route exists yet. |
 
 Evidence to capture:
 

@@ -50,6 +50,9 @@ namespace NextGenEmby.App.Views
         public MusicPage()
         {
             InitializeComponent();
+            MatteButtonFocusVisuals.PrepareCommandButton(AllSongsButton);
+            MatteButtonFocusVisuals.PrepareCommandButton(FallbackRetryButton);
+            MatteButtonFocusVisuals.PrepareCommandButton(UnsupportedCloseButton);
             AddHandler(KeyDownEvent, new KeyEventHandler(MusicPage_OnKeyDown), true);
             Loaded += MusicPage_OnLoaded;
             Unloaded += MusicPage_OnUnloaded;
@@ -716,6 +719,7 @@ namespace NextGenEmby.App.Views
                     secondaryLine,
                     artworkSize)
             };
+            MatteButtonFocusVisuals.PrepareListButton(button);
             AutomationProperties.SetName(button, automationName);
             return button;
         }
@@ -794,6 +798,7 @@ namespace NextGenEmby.App.Views
                     secondaryLine,
                     artworkSize)
             };
+            MatteButtonFocusVisuals.PrepareListButton(button);
             AutomationProperties.SetName(button, automationName);
             return button;
         }

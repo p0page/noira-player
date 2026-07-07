@@ -151,6 +151,8 @@
 
                 <Border
                     Grid.Column="3"
+                    MinHeight="260"
+                    VerticalAlignment="Top"
                     Style="{StaticResource TvPanelStyle}">
                     <StackPanel Spacing="14">
                         <TextBlock
@@ -194,7 +196,8 @@
                         x:Name="FallbackRetryButton"
                         HorizontalAlignment="Center"
                         AutomationProperties.Name="Retry music"
-                        Click="RefreshButton_OnClick">
+                        Click="RefreshButton_OnClick"
+                        Style="{StaticResource TvLibraryOptionSheetOptionButtonStyle}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <SymbolIcon Symbol="Refresh" />
                             <TextBlock Text="Retry" />
@@ -209,10 +212,7 @@
             Background="{StaticResource AppImmersiveScrimBrush}"
             Visibility="Collapsed">
             <Border
-                MaxWidth="620"
-                HorizontalAlignment="Center"
-                VerticalAlignment="Center"
-                Style="{StaticResource TvPanelStyle}">
+                Style="{StaticResource TvTransientMessagePanelStyle}">
                 <StackPanel Spacing="16">
                     <TextBlock
                         x:Name="UnsupportedTitleBlock"
@@ -228,7 +228,8 @@
                         x:Name="UnsupportedCloseButton"
                         HorizontalAlignment="Center"
                         AutomationProperties.Name="Close music message"
-                        Click="UnsupportedCloseButton_OnClick">
+                        Click="UnsupportedCloseButton_OnClick"
+                        Style="{StaticResource TvLibraryOptionSheetOptionButtonStyle}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <SymbolIcon Symbol="Back" />
                             <TextBlock Text="Close" />

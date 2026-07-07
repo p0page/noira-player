@@ -2429,3 +2429,45 @@ Findings recorded before fixes:
   - Fix Live TV and Music together around the shared matte list focus and shared unsupported/transient layer.
   - Fix Photos with a photo-specific grid recipe instead of forcing the movie-poster card system.
   - Resolve the Source Hub question before code changes: the current app has a complete collapsed destination rail, but not a distinct Source Hub surface.
+
+### 2026-07-08 - Design Conformance Batch 05 Secondary Media Surfaces Fix Rerun
+
+- App version: 0.1.0.220.
+- Scope: rerun Live TV, Music, Photos, and source-destination assumptions after secondary-media visual-system fixes.
+- Data source: DEBUG fixture routes only; no private server data, credentials, or personal media assets were written to the repository.
+- Evidence root: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch05-secondary-fix-220-20260708-040111`.
+- Contact sheets:
+  - Live TV: `contact-livetv.png`.
+  - Music: `contact-music.png`.
+  - Photos: `contact-photos.png`.
+- Keyboard-only validation:
+  - Signed and installed `NextGenEmby.App 0.1.0.220`.
+  - Live TV path: `Down`, `Down`, `Down`, `Enter`, `Escape`.
+  - Music path: `Down`, `Right`, `Right`, `Enter`, `Escape`, `Left`.
+  - Photos path: `Enter`, `Right`, `Right`, `Enter`, `Escape`, `Escape`.
+  - Fixture routes completed through `dev-command.json`; final result reported `completed / photos-fixture`.
+- Source-level contracts added before implementation:
+  - Live TV and Music list rows opt into shared matte button focus instead of system focus rings.
+  - Live TV and Music unsupported playback messages use a shared bottom transient matte panel.
+  - Photos use a photo-specific landscape tile recipe through `LibraryGridItem` dimensions instead of forcing poster-card proportions.
+
+Fix rerun findings:
+
+| ID | Status | Page | Evidence | Result | Residual risk |
+| --- | --- | --- | --- | --- | --- |
+| DC-05.01 | Pass with concern | Live TV | `contact-livetv.png`, `livetv-fixture\05-unsupported-layer.png`. | Channel focus now reads as a matte fill change without a bright complete perimeter frame. The current-program preview is compact and top-aligned instead of a tall empty graphite panel. Unsupported playback opens as a bottom transient matte panel and Escape returns to the invoking channel. | Preview content is still text-first because the fixture has channel logos and EPG text, not a real program artwork feed. Real Live TV servers should be checked for logo and program metadata density. |
+| DC-05.02 | Pass with concern | Music | `contact-music.png`, `music-fixture\05-unsupported-layer.png`. | The three-column artist/album/song model remains dense and TV-readable. Artist, album, and song focus use matte fill rather than the old complete focus frame. Unsupported audio playback uses the same transient panel and Escape restores song focus. | The Now panel is intentionally text-first. A richer album-art panel can be added later, but it should not reduce list density or turn music into a poster grid. |
+| DC-05.03 | Pass with concern | Photos | `contact-photos.png`, `photos-fixture\02-album-opened.png`, and `05-viewer-opened.png`. | Photos now use a landscape media-tile recipe with image-first artwork and metadata below. The viewer remains immersive and Escape restores to the photo, then the album root. | The fixture has only a few photos/albums, so the right side still has open canvas. That is acceptable for sparse folders, but real larger albums should be checked for wrap density. |
+| DC-05.04 | Concern | Guide / source destinations | Batch 05 baseline `home-guide\01-guide.png`; no source code changes in this fix. | The current product model remains the collapsed left Guide plus page-level section actions. This exposes the full pinned destination family without introducing a new Source Hub surface. | A distinct Source Hub may still be useful for unpinned server-defined libraries, but it should be designed as a product-model decision rather than slipped into this visual fix. |
+
+- Verification:
+  - Red path confirmed the new Live TV, Music, and Photos source contracts failed before implementation.
+  - Targeted source tests passed: `LiveTvPageSourceTests`, `MusicPageSourceTests`, and `PhotoViewerSourceTests`, 14 tests.
+  - Design source tests passed: 75 tests.
+  - Full Core test suite passed: 483 tests.
+  - Visual Studio MSBuild Debug x64 build passed with 0 warnings and 0 errors.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.220`.
+- Decision:
+  - Commit this batch as secondary-media visual-system alignment.
+  - Keep Source Hub as an explicit future product/navigation decision.
+  - Keep real Live TV stream playback, real audio playback, and real server artwork density out of this visual batch.

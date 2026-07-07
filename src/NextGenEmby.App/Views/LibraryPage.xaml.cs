@@ -25,7 +25,16 @@ namespace NextGenEmby.App.Views
     {
         private readonly ApplicationDataSessionStore _sessionStore = new ApplicationDataSessionStore();
         private const string OrganizationChildItemTypes = "Movie,Series,Episode,Video,MusicVideo,Audio,Photo";
-        private const double GridItemWidth = 184d;
+        private const double PosterCardWidth = 184d;
+        private const double PosterCardHeight = 326d;
+        private const double PosterArtworkWidth = 168d;
+        private const double PosterArtworkHeight = 252d;
+        private const double PosterMetadataHeight = 52d;
+        private const double PhotoCardWidth = 322d;
+        private const double PhotoCardHeight = 238d;
+        private const double PhotoArtworkWidth = 306d;
+        private const double PhotoArtworkHeight = 174d;
+        private const double PhotoMetadataHeight = 42d;
         private const double GridItemTrailingMargin = 14d;
         private static readonly LibraryQueryOption[] SortOptions =
         {
@@ -378,7 +387,8 @@ namespace NextGenEmby.App.Views
                             ApplyItemTypeGuard(
                                 request,
                                 SelectDevelopmentItemsForRequest(request)),
-                            request.DevelopmentArtworkUris),
+                            request.DevelopmentArtworkUris,
+                            IsPhotoSurfaceRequest(_request)),
                         loadGeneration);
                     focusFallback = !focusFirstItem;
                     return;
@@ -420,7 +430,7 @@ namespace NextGenEmby.App.Views
                         items = ApplyItemTypeGuard(request, items);
                     }
 
-                    gridItems = CreateGridItems(session, client, items);
+                    gridItems = CreateGridItems(session, client, items, IsPhotoSurfaceRequest(_request));
                 }
 
                 if (!CanApplyLoad(loadGeneration))
@@ -549,7 +559,8 @@ namespace NextGenEmby.App.Views
         private static IReadOnlyList<LibraryGridItem> CreateGridItems(
             EmbySession session,
             EmbyApiClient client,
-            IReadOnlyList<EmbyMediaItem> items)
+            IReadOnlyList<EmbyMediaItem> items,
+            bool usePhotoRecipe)
         {
             var gridItems = new List<LibraryGridItem>();
             if (items == null)
@@ -565,7 +576,7 @@ namespace NextGenEmby.App.Views
                     imageSource = new BitmapImage(new Uri(client.GetImageUrl(session, item.Id, "Primary", 420)));
                 }
 
-                gridItems.Add(new LibraryGridItem(item, imageSource));
+                gridItems.Add(new LibraryGridItem(item, imageSource, usePhotoRecipe));
             }
 
             return gridItems;
@@ -669,7 +680,8 @@ namespace NextGenEmby.App.Views
 
         private static IReadOnlyList<LibraryGridItem> CreateDevelopmentGridItems(
             IReadOnlyList<EmbyMediaItem> items,
-            IReadOnlyDictionary<string, string> artworkUris)
+            IReadOnlyDictionary<string, string> artworkUris,
+            bool usePhotoRecipe)
         {
             var gridItems = new List<LibraryGridItem>();
             if (items == null)
@@ -691,7 +703,7 @@ namespace NextGenEmby.App.Views
                     imageSource = new BitmapImage(new Uri(uri));
                 }
 
-                gridItems.Add(new LibraryGridItem(item, imageSource));
+                gridItems.Add(new LibraryGridItem(item, imageSource, usePhotoRecipe));
             }
 
             return gridItems;
@@ -928,9 +940,14 @@ namespace NextGenEmby.App.Views
 
         private int GetVisibleColumnCount()
         {
-            var stride = GridItemWidth + GridItemTrailingMargin;
+            var stride = GetGridItemWidth() + GridItemTrailingMargin;
             var available = Math.Max(stride, ItemsGrid.ActualWidth + GridItemTrailingMargin);
             return Math.Max(1, (int)Math.Floor(available / stride));
+        }
+
+        private double GetGridItemWidth()
+        {
+            return IsPhotoSurfaceRequest(_request) ? PhotoCardWidth : PosterCardWidth;
         }
 
         private static bool IsFocusWithin(object focusedElement, DependencyObject target)
@@ -1272,6 +1289,18 @@ namespace NextGenEmby.App.Views
             return IsSectionRequest(request) || IsPlaylistRequest(request);
         }
 
+        private static bool IsPhotoSurfaceRequest(LibraryNavigationRequest? request)
+        {
+            if (request == null)
+            {
+                return false;
+            }
+
+            return string.Equals(request.CollectionType, "photos", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(request.Query.MediaTypes, "Photo", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(request.IncludeItemTypes, "Photo,Folder", StringComparison.OrdinalIgnoreCase);
+        }
+
         private static string CreateMeta(EmbyMediaItem item)
         {
             var meta = string.IsNullOrWhiteSpace(item.Type) ? "Item" : item.Type;
@@ -1300,13 +1329,18 @@ namespace NextGenEmby.App.Views
 
         public sealed class LibraryGridItem
         {
-            public LibraryGridItem(EmbyMediaItem item, BitmapImage? imageSource)
+            public LibraryGridItem(EmbyMediaItem item, BitmapImage? imageSource, bool usePhotoRecipe = false)
             {
                 Item = item;
                 ImageSource = imageSource;
                 Title = string.IsNullOrWhiteSpace(item.Name) ? item.Id : item.Name;
                 Meta = CreateMeta(item);
                 Initials = CreateInitials(Title);
+                CardWidth = usePhotoRecipe ? PhotoCardWidth : PosterCardWidth;
+                CardHeight = usePhotoRecipe ? PhotoCardHeight : PosterCardHeight;
+                ArtworkWidth = usePhotoRecipe ? PhotoArtworkWidth : PosterArtworkWidth;
+                ArtworkHeight = usePhotoRecipe ? PhotoArtworkHeight : PosterArtworkHeight;
+                MetadataHeight = usePhotoRecipe ? PhotoMetadataHeight : PosterMetadataHeight;
             }
 
             public EmbyMediaItem Item { get; }
@@ -1318,6 +1352,16 @@ namespace NextGenEmby.App.Views
             public string Initials { get; }
 
             public BitmapImage? ImageSource { get; }
+
+            public double CardWidth { get; }
+
+            public double CardHeight { get; }
+
+            public double ArtworkWidth { get; }
+
+            public double ArtworkHeight { get; }
+
+            public double MetadataHeight { get; }
         }
 
         private sealed class LibraryQueryOption
