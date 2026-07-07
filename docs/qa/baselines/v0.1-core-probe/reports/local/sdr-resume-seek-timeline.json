@@ -174,7 +174,7 @@
     "environment": {
       "collectorVersion": "materialize-core-probe-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "cab88ba",
+      "sourceRevision": "d22e145",
       "buildConfiguration": "Debug"
     },
     "limitations": [
@@ -461,7 +461,7 @@
     "environment": {
       "collectorVersion": "materialize-core-probe-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "cab88ba",
+      "sourceRevision": "d22e145",
       "buildConfiguration": "Debug",
       "signals": [
         "environment.collectorVersion",

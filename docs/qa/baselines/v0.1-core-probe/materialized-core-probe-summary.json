@@ -5,7 +5,7 @@
   "environment": {
     "collectorVersion": "materialize-core-probe-report-set-v1",
     "playerCoreVersion": "NextGenEmby.Core",
-    "sourceRevision": "cab88ba",
+    "sourceRevision": "d22e145",
     "buildConfiguration": "Debug"
   },
   "manifestValidation": {
@@ -29,6 +29,7 @@
         "timeline",
         "tracks",
         "subtitles",
+        "end-of-stream",
         "error-handling"
       ],
       "coveredPurposes": [
@@ -44,6 +45,7 @@
         "timeline",
         "tracks",
         "subtitles",
+        "end-of-stream",
         "error-handling"
       ],
       "missingPurposes": [],
@@ -61,6 +63,7 @@
       "av-sync",
       "tracks",
       "subtitles",
+      "end-of-stream",
       "hdr-output",
       "hdr-force-sdr",
       "buffering",
@@ -102,7 +105,8 @@
           "sdr-smoke",
           "av-sync",
           "tracks",
-          "subtitles"
+          "subtitles",
+          "end-of-stream"
         ],
         "expected": {
           "codec": "hevc",
@@ -567,6 +571,7 @@
         "lifecycle.play",
         "lifecycle.pause",
         "lifecycle.resume",
+        "lifecycle.endOfStream",
         "lifecycle.stop",
         "runtimeMetrics.status",
         "runtimeMetrics.providerStatus",

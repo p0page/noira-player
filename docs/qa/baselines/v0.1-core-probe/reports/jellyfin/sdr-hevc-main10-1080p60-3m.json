@@ -174,7 +174,7 @@
     "environment": {
       "collectorVersion": "materialize-core-probe-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "cab88ba",
+      "sourceRevision": "d22e145",
       "buildConfiguration": "Debug"
     },
     "limitations": [
@@ -184,7 +184,8 @@
       "internal-timing: frame intervals are measured in the player, not by an external photodiode or HDMI capture device",
       "core-probe: PlaybackOrchestrator lifecycle was executed with an in-process diagnostic backend",
       "core-probe: native playback graph, decoder, renderer, network I/O, and HDMI output were not opened",
-      "core-probe: startup, display, timing, buffering, and A/V sync values are deterministic probe telemetry"
+      "core-probe: startup, display, timing, buffering, and A/V sync values are deterministic probe telemetry",
+      "core-probe: end-of-stream is a diagnostic lifecycle marker, not proof of natural media EOF"
     ],
     "expected": {
       "codec": "hevc",
@@ -271,6 +272,13 @@
           "state": "Playing",
           "positionTicks": 0,
           "message": "core-probe resumed playback"
+        },
+        {
+          "operation": "endOfStream",
+          "status": "observed",
+          "state": "Playing",
+          "positionTicks": 0,
+          "message": "core-probe marked diagnostic end-of-stream"
         },
         {
           "operation": "stop",
@@ -450,6 +458,7 @@
         "play",
         "pause",
         "resume",
+        "endOfStream",
         "stop"
       ],
       "signals": [
@@ -457,6 +466,7 @@
         "lifecycle.play",
         "lifecycle.pause",
         "lifecycle.resume",
+        "lifecycle.endOfStream",
         "lifecycle.stop"
       ],
       "missingOperations": [
@@ -466,7 +476,7 @@
     "environment": {
       "collectorVersion": "materialize-core-probe-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "cab88ba",
+      "sourceRevision": "d22e145",
       "buildConfiguration": "Debug",
       "signals": [
         "environment.collectorVersion",
@@ -751,6 +761,7 @@
       "lifecycle.play",
       "lifecycle.pause",
       "lifecycle.resume",
+      "lifecycle.endOfStream",
       "lifecycle.stop",
       "runtimeMetrics.status",
       "runtimeMetrics.providerStatus",
@@ -774,7 +785,8 @@
       "internal-timing: frame intervals are measured in the player, not by an external photodiode or HDMI capture device",
       "core-probe: PlaybackOrchestrator lifecycle was executed with an in-process diagnostic backend",
       "core-probe: native playback graph, decoder, renderer, network I/O, and HDMI output were not opened",
-      "core-probe: startup, display, timing, buffering, and A/V sync values are deterministic probe telemetry"
+      "core-probe: startup, display, timing, buffering, and A/V sync values are deterministic probe telemetry",
+      "core-probe: end-of-stream is a diagnostic lifecycle marker, not proof of natural media EOF"
     ]
   }
 }
