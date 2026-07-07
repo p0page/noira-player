@@ -31,6 +31,7 @@
             <Color x:Key="AppHairlineColor">#2E3944</Color>
             <Color x:Key="AppWarmColor">#5D8F68</Color>
             <Color x:Key="AppTertiaryColor">#84909A</Color>
+            <Color x:Key="AppSourceSelectedColor">#84909A</Color>
             <Color x:Key="AppDangerColor">#E05F5F</Color>
             <Color x:Key="AppCardScrimColor">#D905070A</Color>
             <Color x:Key="AppOnActionColor">#EEF3F6</Color>
@@ -74,6 +75,7 @@
             <SolidColorBrush x:Key="AppHairlineBrush" Color="{StaticResource AppHairlineColor}" />
             <SolidColorBrush x:Key="AppWarmBrush" Color="{StaticResource AppWarmColor}" />
             <SolidColorBrush x:Key="AppTertiaryBrush" Color="{StaticResource AppTertiaryColor}" />
+            <SolidColorBrush x:Key="AppSourceSelectedBrush" Color="{StaticResource AppSourceSelectedColor}" />
             <SolidColorBrush x:Key="AppDangerBrush" Color="{StaticResource AppDangerColor}" />
             <SolidColorBrush x:Key="AppCardScrimBrush" Color="{StaticResource AppCardScrimColor}" />
             <SolidColorBrush x:Key="AppOnActionBrush" Color="{StaticResource AppOnActionColor}" />
@@ -169,6 +171,7 @@
             <x:Double x:Key="TvDetailsPosterWidth">240</x:Double>
             <x:Double x:Key="TvDetailsPosterHeight">360</x:Double>
             <x:Double x:Key="TvDetailsColumnSpacing">34</x:Double>
+            <x:Double x:Key="TvDetailsContentColumnWidth">900</x:Double>
             <x:Double x:Key="TvDetailsContentMaxWidth">900</x:Double>
             <x:Double x:Key="TvDetailsLogoMaxWidth">600</x:Double>
             <x:Double x:Key="TvDetailsLogoMaxHeight">112</x:Double>
@@ -226,6 +229,93 @@
                 <Setter Property="BorderBrush" Value="{StaticResource AppTransparentBrush}" />
                 <Setter Property="BorderThickness" Value="1" />
                 <Setter Property="CornerRadius" Value="6" />
+                <Setter Property="UseSystemFocusVisuals" Value="False" />
+            </Style>
+
+            <Style x:Key="TvDetailsPrimaryActionButtonStyle" TargetType="Button">
+                <Setter Property="MinHeight" Value="54" />
+                <Setter Property="MinWidth" Value="162" />
+                <Setter Property="Padding" Value="20,9" />
+                <Setter Property="FontSize" Value="18" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Foreground" Value="{StaticResource AppOnActionBrush}" />
+                <Setter Property="Background" Value="{StaticResource AppActionBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource AppActionBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="6" />
+                <Setter Property="UseSystemFocusVisuals" Value="False" />
+            </Style>
+
+            <Style x:Key="TvDetailsActionButtonStyle" TargetType="Button">
+                <Setter Property="MinHeight" Value="54" />
+                <Setter Property="MinWidth" Value="144" />
+                <Setter Property="Padding" Value="20,9" />
+                <Setter Property="FontSize" Value="18" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Foreground" Value="{StaticResource AppTextBrush}" />
+                <Setter Property="Background" Value="{StaticResource AppChromeBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource AppHairlineBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="6" />
+                <Setter Property="UseSystemFocusVisuals" Value="False" />
+            </Style>
+
+            <Style x:Key="TvDetailsIconActionButtonStyle" TargetType="Button">
+                <Setter Property="Width" Value="54" />
+                <Setter Property="Height" Value="54" />
+                <Setter Property="MinWidth" Value="54" />
+                <Setter Property="MinHeight" Value="54" />
+                <Setter Property="Padding" Value="0" />
+                <Setter Property="Foreground" Value="{StaticResource AppTextBrush}" />
+                <Setter Property="Background" Value="{StaticResource AppChromeBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource AppHairlineBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="6" />
+                <Setter Property="UseSystemFocusVisuals" Value="False" />
+            </Style>
+
+            <Style x:Key="TvDetailsSourceOptionButtonStyle" TargetType="Button">
+                <Setter Property="MinHeight" Value="74" />
+                <Setter Property="MinWidth" Value="360" />
+                <Setter Property="Padding" Value="18,14" />
+                <Setter Property="HorizontalAlignment" Value="Stretch" />
+                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                <Setter Property="VerticalContentAlignment" Value="Stretch" />
+                <Setter Property="Foreground" Value="{StaticResource AppTextBrush}" />
+                <Setter Property="Background" Value="{StaticResource AppChromeBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource AppHairlineBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="6" />
+                <Setter Property="UseSystemFocusVisuals" Value="False" />
+            </Style>
+
+            <Style x:Key="TvDetailsAddToSheetOptionButtonStyle" TargetType="Button">
+                <Setter Property="MinHeight" Value="84" />
+                <Setter Property="MinWidth" Value="360" />
+                <Setter Property="Padding" Value="10" />
+                <Setter Property="HorizontalAlignment" Value="Stretch" />
+                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                <Setter Property="VerticalContentAlignment" Value="Stretch" />
+                <Setter Property="Foreground" Value="{StaticResource AppTextBrush}" />
+                <Setter Property="Background" Value="{StaticResource AppChromeBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource AppTransparentBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="6" />
+                <Setter Property="UseSystemFocusVisuals" Value="False" />
+            </Style>
+
+            <Style x:Key="TvPosterGridCardButtonStyle" TargetType="Button">
+                <Setter Property="Width" Value="{StaticResource TvPosterCardWidth}" />
+                <Setter Property="Height" Value="{StaticResource TvPosterCardHeight}" />
+                <Setter Property="MinWidth" Value="{StaticResource TvPosterCardWidth}" />
+                <Setter Property="MinHeight" Value="{StaticResource TvPosterCardHeight}" />
+                <Setter Property="Padding" Value="0" />
+                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                <Setter Property="VerticalContentAlignment" Value="Stretch" />
+                <Setter Property="Background" Value="{StaticResource AppTransparentBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource AppTransparentBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="{StaticResource TvPosterCardCornerRadius}" />
                 <Setter Property="UseSystemFocusVisuals" Value="False" />
             </Style>
 

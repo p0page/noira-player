@@ -2250,3 +2250,77 @@ Fix rerun findings:
 - Decision:
   - Commit this batch as the Home top-composition and Library command-sheet focus correction.
   - Next design-conformance batch can move to the detail/playback surfaces or broader native Xbox focus tuning, depending on which screen development consumes first.
+
+### 2026-07-08 - Design Conformance Batch 03 Details And Metadata Actions Baseline
+
+- App version: 0.1.0.213.
+- Scope: run Batch 03 Details before making visual fixes, covering first viewport, media versions, organize sheet, and below-fold secondary rails.
+- Data source: DEBUG `details-fixture`; no private server data or personal media assets.
+- Valid screenshot set: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch03-details-baseline-20260708-021939`.
+- Launch probe set: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-details-relaunch-probe-20260708-021839`.
+- Keyboard-only validation:
+  - Wrote `dev-command.json` with route `details-fixture`.
+  - Cold launch consumed the command and `dev-command-result.txt` reported `completed / details-fixture`.
+  - The first attempt left a stale UWP frame on Login after `MediaDetailsPage` briefly navigated; the validation run closed the app frame, relaunched, and confirmed the Details fixture remained visible through repeated screenshots.
+  - From the Details default focus, pressed `Down` into Versions, `Down` and `Enter` to select the fallback source, `Down` into Organize, `Enter` to open Add to collection, `Down` inside the sheet, `Escape` to close, then `Down` toward secondary rails.
+
+Findings recorded before fixes:
+
+| ID | Severity | Page | Evidence | Expected | Actual | Proposed batch fix |
+| --- | --- | --- | --- | --- | --- | --- |
+| DC-03.01 | Fail | Details first viewport | `details-initial.png` and probe screenshots show a complete visible poster card on the left and the deterministic information column on the right. | Details should use a deterministic content/action column plus one right-side atmosphere artwork zone. The artwork zone is not a poster viewer and should fade into the content column. | The page still follows the older poster-and-info layout. The visible poster competes with the Details decision surface, while the right side is occupied by controls instead of atmosphere. | Recompose Details into a left/middle content column and a single right-side artwork atmosphere zone. Use `Backdrop`, then `Thumb`, `Banner`, and `Primary` as atmosphere source, with black/matte fallback and no duplicate visible poster. |
+| DC-03.02 | Fail | Details action row | `details-initial.png` shows `Resume` with a bright complete focus outline. Source shows Details action buttons still opt into system focus visuals. | Details media actions should use 52px matte command targets. Focus should be fill/luminance first with no bright full perimeter; Play/Resume fill remains neutral graphite. | Action focus is readable but uses the rejected system outline vocabulary. | Add a shared Details media-action button style, disable system focus visuals on action buttons, and apply the neutral matte focused fill in code or style resources. |
+| DC-03.03 | Fail | Version/source selection | `details-version-focus.png` and `details-version-selected.png` show source rows with full bright focus outlines and a green vertical selected bar. | Source selection must be reachable before playback and visually separate selection from focus. It should not use green for neutral source selection or a bright focus frame as the main cue. | Focus and selection are both visually heavy. The selected-source marker uses the same green family reserved for active playback/progress/watched state. | Create a Details source-option style using matte fill for focus and a neutral/tertiary selected marker. Keep selected state distinct from focus without using green or a bright perimeter. |
+| DC-03.04 | Concern | Add-to collection sheet | `details-collection-sheet.png` and `details-collection-sheet-down.png` show a usable matte sheet, but option focus is a high-contrast complete outline and the panel is visually disconnected from the newer command-sheet recipe. | Add-to sheets should be grounded matte panels with visible options and matte option focus. A complete outline can be reserved for exceptional separation, not normal focus. | The sheet works, but it looks like an older modal style compared with the newer Library Sort/Filter sheets. | Reuse or parallel the shared matte option-sheet command treatment introduced for Library, while preserving the richer thumbnail row anatomy if useful. |
+| DC-03.05 | Fail | Details secondary rails | `details-similar-focus.png` shows More like this cards with a bright full focus frame and text still trapped inside the poster image. | Secondary media rails should follow the shared poster-card selected-backplate rules: poster artwork first, title/meta below or attached as one object, no bright frame. | Details recommendation cards did not receive the Batch 02 poster-card update. | Move Details similar/person media cards onto the shared poster-card visual recipe or add a Details-specific source contract that requires the same selected-backplate behavior. |
+| DC-03.06 | Concern | Below-fold vertical focus | `details-explore-focus.png` and `details-explore-second-down.png` did not produce a visible Explore chip focus transition after moving down from More like this. | D-pad movement should move predictably between More like this, Explore facets, and Cast & crew, with visible focus and scroll anchoring. | Navigation may still be functional through another path, but the attempted vertical route did not visibly land on Explore. | Add an explicit Details section focus policy for Similar -> Explore -> Cast & crew, then rerun the same keyboard path. |
+| DC-03.07 | Concern | Fixture automation reliability | `dev-command-result.txt` can report `completed / details-fixture` even when a stale frame still shows Login unless the old app frame is closed first. | Fixture routes should provide reliable installed-app evidence. The validation protocol should not confuse a completed command with the final visible page. | This was recoverable by closing the UWP frame before relaunch, but it is easy to mis-capture. | Update the run protocol to close the `Next Gen Xbox Emby` ApplicationFrameWindow before cold-launch fixture routes; consider adding a visible-page assertion to future automation. |
+
+- Decision:
+  - Fix now as a grouped Details visual-system batch for first-viewport composition, media action focus, version/source focus, add-to sheet focus, and secondary poster rails.
+  - Treat the Explore focus issue as part of the same batch if it can be solved through a local Details focus policy; otherwise document it as a separate interaction follow-up after the visual structure is changed.
+  - Keep playback/native logic out of this batch.
+
+### 2026-07-08 - Design Conformance Batch 03 Details And Metadata Actions Fix Rerun
+
+- App version: 0.1.0.216.
+- Scope: rerun the Details first viewport, source/version selection, organize sheet, and secondary media rails after visual-system fixes.
+- Data source: DEBUG `details-fixture`; no private server data or personal media assets.
+- Screenshot sets:
+  - Primary rerun: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch03-details-rerun-20260708-024354`.
+  - Atmosphere tuning rerun: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch03-details-rerun2-20260708-024826`.
+  - Final first-viewport check: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch03-details-final-20260708-025051`.
+- Keyboard-only validation:
+  - Closed the existing `Next Gen Xbox Emby` ApplicationFrameWindow before each installed-app fixture launch.
+  - `details-fixture` launch succeeded and `dev-command-result.txt` reported `completed / details-fixture`.
+  - Captured the first viewport, source focus, selected fallback source, add-to sheet, and lower secondary rail state through keyboard/controller-equivalent navigation.
+- Source contracts added before implementation:
+  - Details uses a deterministic content/action column plus a right-side atmosphere zone, not a visible poster viewer.
+  - Atmosphere artwork resolves through `Backdrop`, then `Thumb`, `Banner`, and `Primary`; when artwork is missing or visually weak, a black/matte fallback is acceptable.
+  - Details action controls suppress system focus visuals and use matte fill/luminance as the primary focus cue.
+  - Version/source selected state uses a neutral marker instead of green; green remains reserved for progress, playback, or watched-state signals.
+  - Add-to sheet options and secondary media rails avoid bright full-perimeter focus frames.
+  - Details recommendation cards follow the shared poster-card anatomy: poster artwork first, title/meta below the image.
+- Automated verification:
+  - Red path confirmed the new Details visual-system source contracts failed before implementation.
+  - Targeted Details source tests passed: 3 total.
+  - Full Core test suite passed: 477 total.
+  - Visual Studio MSBuild Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.216_x64_Debug.msix`.
+  - Signed and installed `NextGenEmby.App 0.1.0.216` for screenshot rerun.
+
+Fix rerun findings:
+
+| ID | Result | Page | Evidence | Outcome | Residual risk |
+| --- | --- | --- | --- | --- | --- |
+| DC-03.01 | Pass with concern | Details first viewport | `details-final-initial.png`. | The visible poster viewer is removed. The page now reads as a left content/action column with a right atmosphere zone. The right side intentionally stays quiet and can fall back to black/matte when no useful artwork exists. | The packaged QA wide artwork is very dark, so this fixture mostly validates composition rather than rich atmosphere rendering. Real Emby backdrops should still be checked with live media because native image loading and backdrop quality will vary. |
+| DC-03.02 | Pass | Details action row | `details-final-initial.png`. | Details actions now use shared matte command styles and suppress the old complete system focus outline. Resume keeps a neutral graphite action fill instead of becoming an accent-colored CTA. | Native Xbox focus rendering may still require platform tuning if WinUI adds unexpected focus adorners. |
+| DC-03.03 | Pass | Version/source selection | `details-rerun-source-focus.png` and `details-rerun-source-selected.png`. | Source focus uses matte fill, and selected source uses a neutral steel marker instead of green. Selection and focus are visually distinct without a bright full frame. | Longer localized stream labels should be checked for wrapping and clipping. |
+| DC-03.04 | Pass with concern | Add-to collection sheet | `details-rerun-add-sheet.png`. | Add-to options use the same quieter matte option treatment as the newer command-sheet direction, without the previous bright option frame. | The sheet still has richer thumbnail anatomy than Sort/Filter. This is acceptable for choosing collections/playlists, but it should not drift into decorative glass. |
+| DC-03.05 | Pass | Details secondary rails | `details-rerun-secondary-focus.png`. | Secondary media cards now share the poster-grid anatomy: image-first poster, title/meta below, matte focus treatment, no text trapped in an in-poster scrim. | The scripted Down route did not reliably land on every below-fold group, so this pass validates visual anatomy more than full section-to-section navigation. |
+| DC-03.06 | Concern | Below-fold vertical focus | Rerun keyboard path toward secondary rails. | The page remains keyboard navigable through primary controls and sheets, but the Similar -> Explore -> Cast & crew vertical route still needs a dedicated interaction pass. | Keep as a follow-up interaction issue rather than mixing it into the visual-system commit. |
+| DC-03.07 | Pass | Fixture automation reliability | Installed-app reruns for version 0.1.0.216. | Closing the old app frame before writing and launching fixture commands produced stable Details screenshots matching the requested route. | Future automation should add a visible-page assertion so a completed command result cannot be confused with a stale frame. |
+
+- Decision:
+  - Commit this batch as the Details page visual-system alignment.
+  - Leave Explore/Cast vertical focus routing for a smaller interaction-focused pass.
+  - Keep atmosphere rendering intentionally source-aware: use backdrop-derived mood when available, and black/matte fallback when Emby lacks useful artwork.

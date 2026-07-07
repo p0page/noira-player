@@ -4,45 +4,53 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     Background="{StaticResource AppBackgroundBrush}">
     <Grid>
-        <Image
-            x:Name="BackdropImage"
-            Stretch="UniformToFill"
-            Opacity="0.35" />
-        <Border Background="{StaticResource AppDetailsBackdropWashBrush}" />
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="3*" />
+            <ColumnDefinition Width="2*" />
+        </Grid.ColumnDefinitions>
 
-        <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <Border
+            x:Name="DetailsAtmosphereFallback"
+            Grid.Column="1"
+            Background="{StaticResource AppBackgroundBrush}" />
+        <Grid
+            x:Name="DetailsAtmosphereZone"
+            Grid.Column="1"
+            Canvas.ZIndex="1"
+            IsHitTestVisible="False">
+            <Image
+                x:Name="AtmosphereImage"
+                Stretch="UniformToFill"
+                Opacity="0.72" />
+            <Border>
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                        <GradientStop Color="#F205070A" Offset="0" />
+                        <GradientStop Color="#6605070A" Offset="0.52" />
+                        <GradientStop Color="#1A10161C" Offset="1" />
+                    </LinearGradientBrush>
+                </Border.Background>
+            </Border>
+        </Grid>
+        <Border Grid.ColumnSpan="2">
+            <Border.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                    <GradientStop Color="#F205070A" Offset="0" />
+                    <GradientStop Color="#E605070A" Offset="0.46" />
+                    <GradientStop Color="#2210161C" Offset="1" />
+                </LinearGradientBrush>
+            </Border.Background>
+        </Border>
+
+        <ScrollViewer
+            Grid.ColumnSpan="2"
+            VerticalScrollBarVisibility="Auto">
             <Grid
-                Margin="{StaticResource TvPageMargin}"
-                ColumnSpacing="{StaticResource TvDetailsColumnSpacing}">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-
-                <Border
-                    Width="{StaticResource TvDetailsPosterWidth}"
-                    Height="{StaticResource TvDetailsPosterHeight}"
-                    HorizontalAlignment="Left"
-                    VerticalAlignment="Top"
-                    Background="{StaticResource AppRaisedSurfaceBrush}"
-                    CornerRadius="8">
-                    <Grid>
-                        <Image
-                            x:Name="PosterImage"
-                            Stretch="UniformToFill" />
-                        <TextBlock
-                            x:Name="PosterFallbackBlock"
-                            Text="No image"
-                            FontSize="18"
-                            Foreground="{StaticResource AppMutedTextBrush}"
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center" />
-                    </Grid>
-                </Border>
-
+                Margin="{StaticResource TvPageMargin}">
                 <StackPanel
-                    Grid.Column="1"
+                    Width="{StaticResource TvDetailsContentColumnWidth}"
                     MaxWidth="{StaticResource TvDetailsContentMaxWidth}"
+                    HorizontalAlignment="Left"
                     Spacing="18">
                     <StackPanel Spacing="8">
                         <Image
@@ -72,13 +80,8 @@
                         Spacing="12">
                         <Button
                             x:Name="PlayButton"
-                            MinWidth="162"
-                            Height="54"
-                            Background="{StaticResource AppActionBrush}"
-                            BorderBrush="{StaticResource AppActionBrush}"
-                            Foreground="{StaticResource AppOnActionBrush}"
                             Click="Play_OnClick"
-                            UseSystemFocusVisuals="True">
+                            Style="{StaticResource TvDetailsPrimaryActionButtonStyle}">
                             <StackPanel Orientation="Horizontal" Spacing="12">
                                 <SymbolIcon Symbol="Play" />
                                 <TextBlock
@@ -90,9 +93,8 @@
                         <Button
                             x:Name="RestartButton"
                             MinWidth="144"
-                            Height="54"
                             Click="Restart_OnClick"
-                            UseSystemFocusVisuals="True"
+                            Style="{StaticResource TvDetailsActionButtonStyle}"
                             Visibility="Collapsed">
                             <StackPanel Orientation="Horizontal" Spacing="10">
                                 <SymbolIcon Symbol="Refresh" />
@@ -102,9 +104,8 @@
                         <Button
                             x:Name="FavoriteButton"
                             MinWidth="176"
-                            Height="54"
                             Click="Favorite_OnClick"
-                            UseSystemFocusVisuals="True">
+                            Style="{StaticResource TvDetailsActionButtonStyle}">
                             <StackPanel Orientation="Horizontal" Spacing="10">
                                 <SymbolIcon Symbol="Favorite" />
                                 <TextBlock
@@ -116,9 +117,8 @@
                         <Button
                             x:Name="WatchedButton"
                             MinWidth="178"
-                            Height="54"
                             Click="Watched_OnClick"
-                            UseSystemFocusVisuals="True">
+                            Style="{StaticResource TvDetailsActionButtonStyle}">
                             <StackPanel Orientation="Horizontal" Spacing="10">
                                 <SymbolIcon Symbol="View" />
                                 <TextBlock
@@ -131,9 +131,8 @@
                             x:Name="RefreshButton"
                             AutomationProperties.Name="Refresh"
                             Click="Refresh_OnClick"
-                            Style="{StaticResource IconButtonStyle}"
-                            ToolTipService.ToolTip="Refresh"
-                            UseSystemFocusVisuals="True">
+                            Style="{StaticResource TvDetailsIconActionButtonStyle}"
+                            ToolTipService.ToolTip="Refresh">
                             <SymbolIcon Symbol="Refresh" />
                         </Button>
                     </StackPanel>
@@ -173,9 +172,8 @@
                             <Button
                                 x:Name="AddToCollectionButton"
                                 MinWidth="214"
-                                Height="54"
                                 Click="AddToCollection_OnClick"
-                                UseSystemFocusVisuals="True">
+                                Style="{StaticResource TvDetailsActionButtonStyle}">
                                 <StackPanel Orientation="Horizontal" Spacing="10">
                                     <SymbolIcon Symbol="Add" />
                                     <TextBlock Text="Add to collection" FontSize="18" />
@@ -184,9 +182,8 @@
                             <Button
                                 x:Name="AddToPlaylistButton"
                                 MinWidth="194"
-                                Height="54"
                                 Click="AddToPlaylist_OnClick"
-                                UseSystemFocusVisuals="True">
+                                Style="{StaticResource TvDetailsActionButtonStyle}">
                                 <StackPanel Orientation="Horizontal" Spacing="10">
                                     <SymbolIcon Symbol="Add" />
                                     <TextBlock Text="Add to playlist" FontSize="18" />
@@ -285,6 +282,7 @@
 
         <Grid
             x:Name="AddToSheetRoot"
+            Grid.ColumnSpan="2"
             Canvas.ZIndex="20"
             Background="{StaticResource AppModalScrimBrush}"
             Visibility="Collapsed">

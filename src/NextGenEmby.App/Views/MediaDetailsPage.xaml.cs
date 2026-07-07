@@ -55,8 +55,56 @@ namespace NextGenEmby.App.Views
         public MediaDetailsPage()
         {
             InitializeComponent();
+            ApplyDetailsCommandFocusTreatment(PlayButton);
+            ApplyDetailsCommandFocusTreatment(RestartButton);
+            ApplyDetailsCommandFocusTreatment(FavoriteButton);
+            ApplyDetailsCommandFocusTreatment(WatchedButton);
+            ApplyDetailsCommandFocusTreatment(RefreshButton);
+            ApplyDetailsCommandFocusTreatment(AddToCollectionButton);
+            ApplyDetailsCommandFocusTreatment(AddToPlaylistButton);
             AddHandler(KeyDownEvent, new KeyEventHandler(Page_OnKeyDown), true);
             Unloaded += MediaDetailsPage_OnUnloaded;
+        }
+
+        private void ApplyDetailsCommandFocusTreatment(Button button)
+        {
+            button.UseSystemFocusVisuals = false;
+            button.GotFocus += DetailsCommandButton_OnGotFocus;
+            button.LostFocus += DetailsCommandButton_OnLostFocus;
+        }
+
+        private void DetailsCommandButton_OnGotFocus(object sender, RoutedEventArgs e)
+        {
+            var button = sender as Button;
+            if (button == null)
+            {
+                return;
+            }
+
+            button.Background = BrushResource("AppFocusedCardFillBrush");
+            button.BorderBrush = BrushResource("AppTransparentBrush");
+            button.Foreground = BrushResource("AppTextBrush");
+        }
+
+        private void DetailsCommandButton_OnLostFocus(object sender, RoutedEventArgs e)
+        {
+            var button = sender as Button;
+            if (button == null)
+            {
+                return;
+            }
+
+            if (ReferenceEquals(button, PlayButton))
+            {
+                button.Background = BrushResource("AppActionBrush");
+                button.BorderBrush = BrushResource("AppActionBrush");
+                button.Foreground = BrushResource("AppOnActionBrush");
+                return;
+            }
+
+            button.Background = BrushResource("AppChromeBrush");
+            button.BorderBrush = BrushResource("AppHairlineBrush");
+            button.Foreground = BrushResource("AppTextBrush");
         }
 
         protected override async void OnNavigatedTo(NavigationEventArgs e)
@@ -692,25 +740,14 @@ namespace NextGenEmby.App.Views
                     LogoImage.Visibility = Visibility.Visible;
                 }
 
-                var posterArtwork = EmbyArtworkPolicy.SelectPosterArtwork(item, 720);
-                if (posterArtwork != null)
+                var atmosphereArtwork = EmbyArtworkPolicy.SelectHeroArtwork(item, 1920);
+                if (atmosphereArtwork != null)
                 {
-                    PosterImage.Source = new BitmapImage(new Uri(client.GetImageUrl(
+                    AtmosphereImage.Source = new BitmapImage(new Uri(client.GetImageUrl(
                         session,
-                        posterArtwork.ItemId,
-                        posterArtwork.ImageType,
-                        posterArtwork.MaxWidth)));
-                    PosterFallbackBlock.Visibility = Visibility.Collapsed;
-                }
-
-                var backdropArtwork = EmbyArtworkPolicy.SelectHeroArtwork(item, 1920);
-                if (backdropArtwork != null)
-                {
-                    BackdropImage.Source = new BitmapImage(new Uri(client.GetImageUrl(
-                        session,
-                        backdropArtwork.ItemId,
-                        backdropArtwork.ImageType,
-                        backdropArtwork.MaxWidth)));
+                        atmosphereArtwork.ItemId,
+                        atmosphereArtwork.ImageType,
+                        atmosphereArtwork.MaxWidth)));
                 }
             }
             catch
@@ -738,7 +775,7 @@ namespace NextGenEmby.App.Views
             _item = fixture.Item;
 
             RenderItem();
-            ApplyDevelopmentDetailsArtwork(fixture.Item);
+            ApplyDetailsAtmosphereArtwork(fixture.Item);
 
             _mediaSources = fixture.MediaSources;
             _selectedMediaSourceId = ResolveSelectedPlaybackMediaSourceId();
@@ -787,19 +824,16 @@ namespace NextGenEmby.App.Views
             _developmentDetailsFocusGeneration++;
         }
 
-        private void ApplyDevelopmentDetailsArtwork(EmbyMediaItem item)
+        private void ApplyDetailsAtmosphereArtwork(EmbyMediaItem item)
         {
-            var posterSource = CreateDevelopmentArtworkImageSource(item.PrimaryImageItemId, "Primary");
-            if (posterSource != null)
+            var atmosphereSource =
+                CreateDevelopmentArtworkImageSource(item.BackdropImageItemId, "Backdrop") ??
+                CreateDevelopmentArtworkImageSource(item.ThumbImageItemId, "Thumb") ??
+                CreateDevelopmentArtworkImageSource(item.BannerImageItemId, "Banner") ??
+                CreateDevelopmentArtworkImageSource(item.PrimaryImageItemId, "Primary");
+            if (atmosphereSource != null)
             {
-                PosterImage.Source = posterSource;
-                PosterFallbackBlock.Visibility = Visibility.Collapsed;
-            }
-
-            var backdropSource = CreateDevelopmentArtworkImageSource(item.BackdropImageItemId, "Backdrop");
-            if (backdropSource != null)
-            {
-                BackdropImage.Source = backdropSource;
+                AtmosphereImage.Source = atmosphereSource;
             }
         }
 
@@ -1703,11 +1737,12 @@ namespace NextGenEmby.App.Views
                 VerticalContentAlignment = VerticalAlignment.Stretch,
                 Background = BrushResource("AppChromeBrush"),
                 BorderBrush = BrushResource("AppHairlineBrush"),
-                UseSystemFocusVisuals = true
+                UseSystemFocusVisuals = false
             };
             AutomationProperties.SetName(button, CreateMetadataFacetAutomationName(facet));
             button.Click += MetadataFacet_OnClick;
             button.GotFocus += SecondaryRailButton_OnGotFocus;
+            button.LostFocus += SecondaryRailButton_OnLostFocus;
 
             button.Content = new StackPanel
             {
@@ -1871,7 +1906,7 @@ namespace NextGenEmby.App.Views
                 HorizontalContentAlignment = HorizontalAlignment.Stretch,
                 Padding = new Thickness(18, 14, 18, 14),
                 Tag = episode,
-                UseSystemFocusVisuals = true
+                UseSystemFocusVisuals = false
             };
 
             var text = new StackPanel
@@ -1901,40 +1936,12 @@ namespace NextGenEmby.App.Views
 #if DEBUG
         private Button CreateDevelopmentSimilarItemButton(EmbyMediaItem item)
         {
-            var button = new Button
-            {
-                Width = 148,
-                Height = 220,
-                MinWidth = 148,
-                MinHeight = 220,
-                Padding = new Thickness(0),
-                Tag = item,
-                HorizontalContentAlignment = HorizontalAlignment.Stretch,
-                VerticalContentAlignment = VerticalAlignment.Stretch,
-                UseSystemFocusVisuals = true
-            };
-            AutomationProperties.SetName(button, string.IsNullOrWhiteSpace(item.Name) ? item.Id : item.Name);
-            button.Click += SimilarItem_OnClick;
-            button.GotFocus += SecondaryRailButton_OnGotFocus;
-
-            var root = new Grid
-            {
-                Background = (Brush)Application.Current.Resources["AppRaisedSurfaceBrush"]
-            };
-
             var artworkBrush = CreateDevelopmentArtworkBrush(item, "Primary");
-            if (artworkBrush != null)
-            {
-                root.Background = artworkBrush;
-            }
-
-            root.Children.Add(CreateRailCardBorder());
-            root.Children.Add(CreateSecondaryRailTextScrim(
+            return CreateSecondaryPosterRailButton(
+                item,
+                artworkBrush,
                 string.IsNullOrWhiteSpace(item.Name) ? item.Id : item.Name,
-                CreateMeta(item)));
-
-            button.Content = root;
-            return button;
+                CreateMeta(item));
         }
 
         private Button CreateDevelopmentPersonButton(EmbyPerson person)
@@ -1949,12 +1956,13 @@ namespace NextGenEmby.App.Views
                 Tag = person,
                 HorizontalContentAlignment = HorizontalAlignment.Stretch,
                 VerticalContentAlignment = VerticalAlignment.Stretch,
-                UseSystemFocusVisuals = true,
+                UseSystemFocusVisuals = false,
                 IsEnabled = !string.IsNullOrWhiteSpace(person.Id)
             };
             AutomationProperties.SetName(button, CreatePersonAutomationName(person));
             button.Click += Person_OnClick;
             button.GotFocus += SecondaryRailButton_OnGotFocus;
+            button.LostFocus += SecondaryRailButton_OnLostFocus;
 
             var root = new Grid
             {
@@ -2010,31 +2018,11 @@ namespace NextGenEmby.App.Views
 
         private Button CreateSimilarItemButton(EmbySession session, EmbyApiClient client, EmbyMediaItem item)
         {
-            var button = new Button
-            {
-                Width = 148,
-                Height = 220,
-                MinWidth = 148,
-                MinHeight = 220,
-                Padding = new Thickness(0),
-                Tag = item,
-                HorizontalContentAlignment = HorizontalAlignment.Stretch,
-                VerticalContentAlignment = VerticalAlignment.Stretch,
-                UseSystemFocusVisuals = true
-            };
-            AutomationProperties.SetName(button, string.IsNullOrWhiteSpace(item.Name) ? item.Id : item.Name);
-            button.Click += SimilarItem_OnClick;
-            button.GotFocus += SecondaryRailButton_OnGotFocus;
-
-            var root = new Grid
-            {
-                Background = (Brush)Application.Current.Resources["AppRaisedSurfaceBrush"]
-            };
-
+            ImageBrush? artworkBrush = null;
             var posterArtwork = EmbyArtworkPolicy.SelectPosterArtwork(item, 360);
             if (posterArtwork != null)
             {
-                root.Background = new ImageBrush
+                artworkBrush = new ImageBrush
                 {
                     ImageSource = new BitmapImage(new Uri(client.GetImageUrl(
                         session,
@@ -2045,38 +2033,85 @@ namespace NextGenEmby.App.Views
                 };
             }
 
-            root.Children.Add(CreateRailCardBorder());
-            root.Children.Add(new Border
+            return CreateSecondaryPosterRailButton(
+                item,
+                artworkBrush,
+                string.IsNullOrWhiteSpace(item.Name) ? item.Id : item.Name,
+                CreateMeta(item));
+        }
+
+        private Button CreateSecondaryPosterRailButton(
+            EmbyMediaItem item,
+            ImageBrush? artworkBrush,
+            string title,
+            string meta)
+        {
+            var button = new Button
             {
-                Background = (Brush)Application.Current.Resources["AppCardScrimBrush"],
-                VerticalAlignment = VerticalAlignment.Bottom,
-                Padding = new Thickness(10, 8, 10, 8),
-                Child = new StackPanel
+                Style = (Style)Application.Current.Resources["TvPosterGridCardButtonStyle"],
+                Tag = item,
+                UseSystemFocusVisuals = false
+            };
+            AutomationProperties.SetName(button, string.IsNullOrWhiteSpace(title) ? item.Id : title);
+            button.Click += SimilarItem_OnClick;
+            button.GotFocus += SecondaryRailButton_OnGotFocus;
+            button.LostFocus += SecondaryRailButton_OnLostFocus;
+
+            var artworkFrame = new Border
+            {
+                Width = (double)Application.Current.Resources["TvPosterArtworkWidth"],
+                Height = (double)Application.Current.Resources["TvPosterArtworkHeight"],
+                CornerRadius = (CornerRadius)Application.Current.Resources["TvPosterCardCornerRadius"],
+                Background = BrushResource("AppRaisedSurfaceBrush")
+            };
+
+            if (artworkBrush != null)
+            {
+                artworkFrame.Background = artworkBrush;
+            }
+            else
+            {
+                artworkFrame.Child = new TextBlock
                 {
-                    Spacing = 3,
-                    Children =
+                    Text = CreateFallbackInitial(item),
+                    Style = (Style)Application.Current.Resources["TvPosterFallbackInitialsTextStyle"]
+                };
+            }
+
+            var metadata = new StackPanel
+            {
+                Height = (double)Application.Current.Resources["TvPosterMetadataHeight"],
+                Spacing = 2,
+                Children =
+                {
+                    new TextBlock
                     {
-                        new TextBlock
-                        {
-                            Text = string.IsNullOrWhiteSpace(item.Name) ? item.Id : item.Name,
-                            FontSize = 15,
-                            FontWeight = Windows.UI.Text.FontWeights.SemiBold,
-                            TextTrimming = TextTrimming.CharacterEllipsis,
-                            MaxLines = 2
-                        },
-                        new TextBlock
-                        {
-                            Text = CreateMeta(item),
-                            FontSize = 12,
-                            Foreground = (Brush)Application.Current.Resources["AppMutedTextBrush"],
-                            TextTrimming = TextTrimming.CharacterEllipsis,
-                            MaxLines = 1
-                        }
+                        Text = title ?? "",
+                        Style = (Style)Application.Current.Resources["TvPosterCardTitleTextStyle"]
+                    },
+                    new TextBlock
+                    {
+                        Text = meta ?? "",
+                        Style = (Style)Application.Current.Resources["TvPosterCardMetaTextStyle"]
                     }
                 }
-            });
+            };
 
-            button.Content = root;
+            button.Content = new Border
+            {
+                Padding = (Thickness)Application.Current.Resources["TvPosterSelectedBackplatePadding"],
+                CornerRadius = (CornerRadius)Application.Current.Resources["TvPosterCardCornerRadius"],
+                Background = BrushResource("AppTransparentBrush"),
+                Child = new StackPanel
+                {
+                    Spacing = 8,
+                    Children =
+                    {
+                        artworkFrame,
+                        metadata
+                    }
+                }
+            };
             return button;
         }
 
@@ -2092,12 +2127,13 @@ namespace NextGenEmby.App.Views
                 Tag = person,
                 HorizontalContentAlignment = HorizontalAlignment.Stretch,
                 VerticalContentAlignment = VerticalAlignment.Stretch,
-                UseSystemFocusVisuals = true,
+                UseSystemFocusVisuals = false,
                 IsEnabled = !string.IsNullOrWhiteSpace(person.Id)
             };
             AutomationProperties.SetName(button, CreatePersonAutomationName(person));
             button.Click += Person_OnClick;
             button.GotFocus += SecondaryRailButton_OnGotFocus;
+            button.LostFocus += SecondaryRailButton_OnLostFocus;
 
             var root = new Grid
             {
@@ -2152,13 +2188,14 @@ namespace NextGenEmby.App.Views
         {
             var button = new Button
             {
+                Style = (Style)Application.Current.Resources["TvDetailsAddToSheetOptionButtonStyle"],
                 Tag = -1,
                 HorizontalAlignment = HorizontalAlignment.Stretch,
                 HorizontalContentAlignment = HorizontalAlignment.Stretch,
                 MinHeight = 58,
                 Background = BrushResource("AppChromeBrush"),
-                BorderBrush = BrushResource("AppHairlineBrush"),
-                UseSystemFocusVisuals = true
+                BorderBrush = BrushResource("AppTransparentBrush"),
+                UseSystemFocusVisuals = false
             };
             button.Click += AddToSheetOption_OnClick;
 
@@ -2179,14 +2216,15 @@ namespace NextGenEmby.App.Views
             var isPreview = index == _addToSheetPreviewIndex;
             var button = new Button
             {
+                Style = (Style)Application.Current.Resources["TvDetailsAddToSheetOptionButtonStyle"],
                 Tag = index,
                 HorizontalAlignment = HorizontalAlignment.Stretch,
                 HorizontalContentAlignment = HorizontalAlignment.Stretch,
                 MinHeight = 84,
                 Padding = new Thickness(10),
-                Background = isPreview ? BrushResource("AppRaisedSurfaceBrush") : BrushResource("AppChromeBrush"),
-                BorderBrush = isPreview ? BrushResource("AppAccentBrush") : BrushResource("AppHairlineBrush"),
-                UseSystemFocusVisuals = true
+                Background = isPreview ? BrushResource("AppFocusedCardFillBrush") : BrushResource("AppChromeBrush"),
+                BorderBrush = BrushResource("AppTransparentBrush"),
+                UseSystemFocusVisuals = false
             };
             AutomationProperties.SetName(button, CreateDisplayName(target));
             button.Click += AddToSheetOption_OnClick;
@@ -2231,7 +2269,7 @@ namespace NextGenEmby.App.Views
 
             var selectedIcon = new SymbolIcon(Symbol.Accept)
             {
-                Foreground = BrushResource("AppAccentBrush"),
+                Foreground = BrushResource("AppSourceSelectedBrush"),
                 Visibility = isPreview ? Visibility.Visible : Visibility.Collapsed,
                 VerticalAlignment = VerticalAlignment.Center
             };
@@ -2551,6 +2589,13 @@ namespace NextGenEmby.App.Views
                 return;
             }
 
+            var button = sender as Button;
+            if (button != null)
+            {
+                button.Background = BrushResource("AppFocusedCardFillBrush");
+                button.BorderBrush = BrushResource("AppTransparentBrush");
+            }
+
             target.StartBringIntoView(new BringIntoViewOptions
             {
                 AnimationDesired = true,
@@ -2559,6 +2604,25 @@ namespace NextGenEmby.App.Views
                 VerticalAlignmentRatio = 0.62,
                 VerticalOffset = -12
             });
+        }
+
+        private static void SecondaryRailButton_OnLostFocus(object sender, RoutedEventArgs e)
+        {
+            var button = sender as Button;
+            if (button == null)
+            {
+                return;
+            }
+
+            if (button.Tag is MetadataFacet)
+            {
+                button.Background = BrushResource("AppChromeBrush");
+                button.BorderBrush = BrushResource("AppHairlineBrush");
+                return;
+            }
+
+            button.Background = BrushResource("AppTransparentBrush");
+            button.BorderBrush = BrushResource("AppTransparentBrush");
         }
 
         private static void AddToSheetOption_OnGotFocus(object sender, RoutedEventArgs e)
@@ -2781,9 +2845,7 @@ namespace NextGenEmby.App.Views
             LogoImage.Source = null;
             LogoImage.Visibility = Visibility.Collapsed;
             TitleBlock.Visibility = Visibility.Visible;
-            PosterImage.Source = null;
-            BackdropImage.Source = null;
-            PosterFallbackBlock.Visibility = Visibility.Visible;
+            AtmosphereImage.Source = null;
         }
 
         private void LogoImage_OnImageOpened(object sender, RoutedEventArgs e)
@@ -2835,11 +2897,11 @@ namespace NextGenEmby.App.Views
         {
             var button = new Button
             {
+                Style = (Style)Application.Current.Resources["TvDetailsSourceOptionButtonStyle"],
                 HorizontalAlignment = HorizontalAlignment.Stretch,
                 HorizontalContentAlignment = HorizontalAlignment.Stretch,
-                Padding = new Thickness(18, 14, 18, 14),
                 Tag = source,
-                UseSystemFocusVisuals = true
+                UseSystemFocusVisuals = false
             };
 
             var layout = new Grid
@@ -2854,7 +2916,7 @@ namespace NextGenEmby.App.Views
                 Name = "SourceSelectionMarker",
                 Width = 4,
                 Margin = new Thickness(0, 2, 14, 2),
-                Background = (Brush)Application.Current.Resources["AppWarmBrush"],
+                Background = (Brush)Application.Current.Resources["AppSourceSelectedBrush"],
                 CornerRadius = new CornerRadius(2),
                 Visibility = Visibility.Collapsed
             };
@@ -2891,6 +2953,8 @@ namespace NextGenEmby.App.Views
             button.Content = layout;
             ApplySourceButtonState(button, source);
             button.Click += SourceVersion_OnClick;
+            button.GotFocus += SourceButton_OnGotFocus;
+            button.LostFocus += SourceButton_OnLostFocus;
             return button;
         }
 
@@ -2919,11 +2983,41 @@ namespace NextGenEmby.App.Views
             var marker = GetSourceSelectionMarker(button);
             if (marker != null)
             {
+                marker.Background = BrushResource("AppSourceSelectedBrush");
                 marker.Visibility = isSelected ? Visibility.Visible : Visibility.Collapsed;
             }
 
             var namePrefix = isSelected ? "Selected version, " : "Version, ";
             AutomationProperties.SetName(button, namePrefix + CreateSourceSummary(source));
+        }
+
+        private void SourceButton_OnGotFocus(object sender, RoutedEventArgs e)
+        {
+            var button = sender as Button;
+            if (button == null)
+            {
+                return;
+            }
+
+            button.Background = BrushResource("AppFocusedCardFillBrush");
+            button.BorderBrush = BrushResource("AppTransparentBrush");
+            button.StartBringIntoView(new BringIntoViewOptions
+            {
+                AnimationDesired = true,
+                VerticalAlignmentRatio = 0.48,
+                VerticalOffset = -8
+            });
+        }
+
+        private void SourceButton_OnLostFocus(object sender, RoutedEventArgs e)
+        {
+            var button = sender as Button;
+            if (button == null || !(button.Tag is EmbyMediaSource source))
+            {
+                return;
+            }
+
+            ApplySourceButtonState(button, source);
         }
 
         private static Border? GetSourceSelectionMarker(Button button)

@@ -168,6 +168,87 @@ public sealed class MediaDetailsAccessibilitySourceTests
         Assert.Contains("string.IsNullOrWhiteSpace(_restoreMetadataFacetKey)", detailsPageSource);
     }
 
+    [Fact]
+    public void Details_Visual_System_Uses_Atmosphere_Zone_Instead_Of_Visible_Poster_Viewer()
+    {
+        var root = FindRepositoryRoot();
+        var detailsXaml = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NextGenEmby.App",
+            "Views",
+            "MediaDetailsPage.xaml"));
+        var detailsSource = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NextGenEmby.App",
+            "Views",
+            "MediaDetailsPage.xaml.cs"));
+
+        Assert.Contains("DetailsAtmosphereZone", detailsXaml);
+        Assert.Contains("AtmosphereImage", detailsXaml);
+        Assert.Contains("DetailsAtmosphereFallback", detailsXaml);
+        Assert.Contains("ApplyDetailsAtmosphereArtwork", detailsSource);
+        Assert.DoesNotContain("x:Name=\"PosterImage\"", detailsXaml);
+        Assert.DoesNotContain("x:Name=\"PosterFallbackBlock\"", detailsXaml);
+        Assert.DoesNotContain("PosterImage.Source", detailsSource);
+    }
+
+    [Fact]
+    public void Details_Interactive_Controls_Use_Matte_Focus_Without_System_Focus_Rings()
+    {
+        var root = FindRepositoryRoot();
+        var appXaml = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NextGenEmby.App",
+            "App.xaml"));
+        var detailsXaml = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NextGenEmby.App",
+            "Views",
+            "MediaDetailsPage.xaml"));
+        var detailsSource = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NextGenEmby.App",
+            "Views",
+            "MediaDetailsPage.xaml.cs"));
+
+        Assert.Contains("TvDetailsPrimaryActionButtonStyle", appXaml);
+        Assert.Contains("TvDetailsActionButtonStyle", appXaml);
+        Assert.Contains("TvDetailsSourceOptionButtonStyle", appXaml);
+        Assert.Contains("TvDetailsAddToSheetOptionButtonStyle", appXaml);
+        Assert.Contains("Style=\"{StaticResource TvDetailsPrimaryActionButtonStyle}\"", detailsXaml);
+        Assert.Contains("Style=\"{StaticResource TvDetailsActionButtonStyle}\"", detailsXaml);
+        Assert.Contains("Style=\"{StaticResource TvDetailsIconActionButtonStyle}\"", detailsXaml);
+        Assert.DoesNotContain("UseSystemFocusVisuals=\"True\"", detailsXaml);
+        Assert.Contains("UseSystemFocusVisuals = false", detailsSource);
+        Assert.Contains("Style = (Style)Application.Current.Resources[\"TvDetailsSourceOptionButtonStyle\"]", detailsSource);
+        Assert.Contains("Style = (Style)Application.Current.Resources[\"TvDetailsAddToSheetOptionButtonStyle\"]", detailsSource);
+        Assert.Contains("ApplyDetailsCommandFocusTreatment", detailsSource);
+    }
+
+    [Fact]
+    public void Details_Source_Selection_And_Secondary_Rails_Do_Not_Use_Green_Or_Bright_Frame_Focus()
+    {
+        var root = FindRepositoryRoot();
+        var detailsSource = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NextGenEmby.App",
+            "Views",
+            "MediaDetailsPage.xaml.cs"));
+
+        Assert.Contains("AppSourceSelectedBrush", detailsSource);
+        Assert.Contains("CreateSecondaryPosterRailButton", detailsSource);
+        Assert.Contains("TvPosterGridCardButtonStyle", detailsSource);
+        Assert.DoesNotContain("marker.Background = isSelected ? BrushResource(\"AppSecondaryBrush\")", detailsSource);
+        Assert.DoesNotContain("BorderBrush = isPreview ? BrushResource(\"AppAccentBrush\") : BrushResource(\"AppHairlineBrush\")", detailsSource);
+        Assert.DoesNotContain("UseSystemFocusVisuals = true", detailsSource);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
