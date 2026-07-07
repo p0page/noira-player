@@ -86,6 +86,7 @@
       "report analysis has optimization blockers",
       "sample.insufficient",
       "missingEvidence",
+      "runtimeMetrics.unavailable",
       "source.unsupported",
       "result.error"
     ]
@@ -97,6 +98,7 @@
   "blockers": [
     "sample.insufficient",
     "missingEvidence",
+    "runtimeMetrics.unavailable",
     "source.unsupported",
     "result.error"
   ],
@@ -314,6 +316,7 @@
         "report analysis has optimization blockers",
         "sample.insufficient",
         "missingEvidence",
+        "runtimeMetrics.unavailable",
         "source.unsupported",
         "result.error",
         "Inspect Emby request, source open, demux initialization, and first-frame readiness.",
@@ -330,6 +333,7 @@
       "blockers": [
         "sample.insufficient",
         "missingEvidence",
+        "runtimeMetrics.unavailable",
         "source.unsupported",
         "result.error"
       ],
@@ -368,6 +372,7 @@
       "blockers": [
         "sample.insufficient",
         "missingEvidence",
+        "runtimeMetrics.unavailable",
         "source.unsupported"
       ],
       "signals": [
@@ -442,7 +447,8 @@
       "isBlocked": true,
       "blockers": [
         "sample.insufficient",
-        "missingEvidence"
+        "missingEvidence",
+        "runtimeMetrics.unavailable"
       ],
       "signals": [
         "source.codec",
@@ -537,7 +543,8 @@
       "isBlocked": true,
       "blockers": [
         "sample.insufficient",
-        "missingEvidence"
+        "missingEvidence",
+        "runtimeMetrics.unavailable"
       ],
       "signals": [
         "source.codec",
@@ -629,7 +636,8 @@
       "isBlocked": true,
       "blockers": [
         "sample.insufficient",
-        "missingEvidence"
+        "missingEvidence",
+        "runtimeMetrics.unavailable"
       ],
       "signals": [
         "source.codec",
@@ -722,7 +730,8 @@
       "isBlocked": true,
       "blockers": [
         "sample.insufficient",
-        "missingEvidence"
+        "missingEvidence",
+        "runtimeMetrics.unavailable"
       ],
       "signals": [
         "source.codec",
@@ -815,7 +824,8 @@
       "isBlocked": true,
       "blockers": [
         "sample.insufficient",
-        "missingEvidence"
+        "missingEvidence",
+        "runtimeMetrics.unavailable"
       ],
       "signals": [
         "source.codec",
@@ -912,7 +922,8 @@
       "isBlocked": true,
       "blockers": [
         "sample.insufficient",
-        "missingEvidence"
+        "missingEvidence",
+        "runtimeMetrics.unavailable"
       ],
       "signals": [
         "source.codec",
@@ -1058,7 +1069,8 @@
       "isBlocked": true,
       "blockers": [
         "sample.insufficient",
-        "missingEvidence"
+        "missingEvidence",
+        "runtimeMetrics.unavailable"
       ],
       "signals": [
         "source.codec",

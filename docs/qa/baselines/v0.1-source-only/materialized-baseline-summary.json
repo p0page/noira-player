@@ -5,7 +5,7 @@
   "environment": {
     "collectorVersion": "materialize-baseline-report-set-v1",
     "playerCoreVersion": "NextGenEmby.Core",
-    "sourceRevision": "71f564b",
+    "sourceRevision": "57a2f31",
     "buildConfiguration": "Debug"
   },
   "manifestValidation": {
@@ -585,7 +585,8 @@
       ],
       "blockers": [
         "sample.insufficient",
-        "missingEvidence"
+        "missingEvidence",
+        "runtimeMetrics.unavailable"
       ]
     },
     {
@@ -666,7 +667,8 @@
       ],
       "blockers": [
         "sample.insufficient",
-        "missingEvidence"
+        "missingEvidence",
+        "runtimeMetrics.unavailable"
       ]
     },
     {
@@ -744,7 +746,8 @@
       ],
       "blockers": [
         "sample.insufficient",
-        "missingEvidence"
+        "missingEvidence",
+        "runtimeMetrics.unavailable"
       ]
     },
     {
@@ -825,7 +828,8 @@
       ],
       "blockers": [
         "sample.insufficient",
-        "missingEvidence"
+        "missingEvidence",
+        "runtimeMetrics.unavailable"
       ]
     },
     {
@@ -888,6 +892,7 @@
       "blockers": [
         "sample.insufficient",
         "missingEvidence",
+        "runtimeMetrics.unavailable",
         "source.unsupported"
       ]
     },
@@ -971,7 +976,8 @@
       ],
       "blockers": [
         "sample.insufficient",
-        "missingEvidence"
+        "missingEvidence",
+        "runtimeMetrics.unavailable"
       ]
     },
     {
@@ -1065,7 +1071,8 @@
       ],
       "blockers": [
         "sample.insufficient",
-        "missingEvidence"
+        "missingEvidence",
+        "runtimeMetrics.unavailable"
       ]
     },
     {
@@ -1146,7 +1153,8 @@
       ],
       "blockers": [
         "sample.insufficient",
-        "missingEvidence"
+        "missingEvidence",
+        "runtimeMetrics.unavailable"
       ]
     },
     {

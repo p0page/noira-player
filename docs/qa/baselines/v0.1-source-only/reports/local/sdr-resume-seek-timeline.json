@@ -188,7 +188,7 @@
     "environment": {
       "collectorVersion": "materialize-baseline-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "71f564b",
+      "sourceRevision": "57a2f31",
       "buildConfiguration": "Debug"
     },
     "limitations": [
@@ -395,7 +395,7 @@
     "environment": {
       "collectorVersion": "materialize-baseline-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "71f564b",
+      "sourceRevision": "57a2f31",
       "buildConfiguration": "Debug",
       "signals": [
         "environment.collectorVersion",
@@ -578,7 +578,8 @@
       "canOptimizePlaybackCore": false,
       "blockers": [
         "sample.insufficient",
-        "missingEvidence"
+        "missingEvidence",
+        "runtimeMetrics.unavailable"
       ],
       "blockerSignals": [
         "sample.status",
@@ -594,7 +595,10 @@
         "colorPipeline.dxgiOutput",
         "colorPipeline.conversionStatus",
         "display.hdrStatus",
-        "display.refreshRateHz"
+        "display.refreshRateHz",
+        "runtimeMetrics.status",
+        "runtimeMetrics.providerStatus",
+        "runtimeMetrics.hasPlaybackSample"
       ],
       "targetFailureAreas": []
     },
