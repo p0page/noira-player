@@ -670,7 +670,7 @@ Then continue design and implementation until the route passes.
   - MSIX signed and installed locally as `NextGenEmby.App 0.1.0.117`.
 - Local visual validation:
   - Debug route opened Settings with result `completed / settings`.
-  - Screenshot showed account `cyber on https://c1.zdz.plus:443`, `App 0.1.0.117 / Emby client 0.1.0`, visible checkbox focus, input map, and `Last launch completed`.
+  - Screenshot showed account `redacted-user on https://emby.example:443`, `App 0.1.0.117 / Emby client 0.1.0`, visible checkbox focus, input map, and `Last launch completed`.
   - No app-content mouse clicks were used.
 - Keyboard validation limitation:
   - Windows `SendInput` kept `Next Gen Xbox Emby` foreground, but synthetic `Down`, `Enter`, and `Space` did not reliably drive UWP focus/toggle state in this desktop session.
@@ -790,7 +790,7 @@ Then continue design and implementation until the route passes.
   - Pressed `M` to open the expanded Guide rail.
   - Pressed `Up`; screenshot validation showed the Guide rail stayed open and the Home guide item had a visible cyan focus frame.
   - Pressed eleven `Down`, then `Return`; Settings opened from the Guide without using an app-content mouse click.
-  - Settings exposed account `cyber on https://c1.zdz.plus:443`, `App 0.1.0.126 / Emby client 0.1.0`, `Playback input`, `Thumbstick seek preview`, the controller input map, and latest startup diagnostics.
+  - Settings exposed account `redacted-user on https://emby.example:443`, `App 0.1.0.126 / Emby client 0.1.0`, `Playback input`, `Thumbstick seek preview`, the controller input map, and latest startup diagnostics.
   - Pressed `Space` on the default Settings focus; the status text changed to `Left thumbstick seek preview is off; D-pad seek remains available.`
   - Pressed `Space` again to restore the setting; the status text returned to `Left thumbstick previews the target position before seek commits.`
   - No app-content mouse clicks were used.

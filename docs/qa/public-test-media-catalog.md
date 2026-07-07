@@ -18,6 +18,33 @@ Notes:
 
 - Netflix states the open source content is available under Creative Commons Attribution 4.0.
 - Prefer short derived local clips for repeatable quality-run cases.
+- Do not put a Netflix sample into the executable manifest until its exact download URL returns HTTP 200 and ffprobe confirms codec, resolution, frame rate, and HDR metadata.
+
+### Jellyfin Test Videos
+
+URL: https://repo.jellyfin.org/test-videos/
+
+Use for:
+
+- public direct-link SDR/HDR/Dolby Vision playback smoke tests;
+- HEVC Main10 decode coverage;
+- HDR10 output and force-SDR validation;
+- Dolby Vision Profile 5 reject and Profile 8.1 HDR10 fallback classification;
+- 4K/60fps/high-bitrate buffering stress.
+
+Current executable manifest links:
+
+- SDR HEVC Main10 1080p60 3M: https://repo.jellyfin.org/test-videos/SDR/HEVC%2010bit/Test%20Jellyfin%201080p%20HEVC%2010bit%203M.mp4
+- HDR10 HEVC Main10 1080p60 10M: https://repo.jellyfin.org/test-videos/HDR/HDR10/HEVC/Test%20Jellyfin%201080p%20HEVC%20HDR10%2010M.mp4
+- HDR10 HEVC Main10 4K60 50M: https://repo.jellyfin.org/test-videos/HDR/HDR10/HEVC/Test%20Jellyfin%204K%20HEVC%20HDR10%2050M.mp4
+- Dolby Vision Profile 5 4K60: https://repo.jellyfin.org/test-videos/HDR/Dolby%20Vision/Test%20Jellyfin%204K%20DV%20P5.mp4
+- Dolby Vision Profile 8.1 4K60: https://repo.jellyfin.org/test-videos/HDR/Dolby%20Vision/Test%20Jellyfin%204K%20DV%20P8.1.mp4
+
+Notes:
+
+- These links are suitable for `direct-uri` run plans when the network can reach `repo.jellyfin.org`.
+- The 4K60 HDR10 50M file is the current public buffering/HDR stress case.
+- Public Jellyfin samples cover the main SDR/HDR/DV classifications, but not the current 23.976 HDR cadence case; keep that as a local Emby-bound reference case until a stable public 23.976 HDR10 URL is verified.
 
 ### DVB HDR Test Content
 
@@ -104,3 +131,9 @@ Start with at most five local cases:
 ## Local Encoding Rule
 
 If a public source is raw, EXR, Y4M, or otherwise not directly playable, create a local HEVC MKV/MP4 derivative and add it to Emby manually. The repository stores only the case template and source URL, not the media.
+
+## Private Emby Sources
+
+Private Emby servers are valid runtime test sources for Xbox and playback Core validation, but their URL, credentials, item IDs, media source IDs, and captured private reports must stay outside committed files.
+
+Use environment variables, a system temporary directory, or ignored local files such as `docs/qa/private/*.json`, `tools/quality-run/private/*.json`, `*.private.json`, `*.local.json`, `*.secrets.json`, or `.env`. Public manifests should contain only public direct links or non-sensitive placeholder IDs.

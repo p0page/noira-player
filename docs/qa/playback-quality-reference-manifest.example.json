@@ -2,25 +2,111 @@
   "schemaVersion": 1,
   "cases": [
     {
-      "caseId": "netflix/chimera-4k-2398-hdr-pq",
-      "uri": "https://download.opencontent.netflix.com/example/chimera-4k-2398-hdr-pq.mp4",
+      "caseId": "jellyfin/sdr-hevc-main10-1080p60-3m",
+      "uri": "https://repo.jellyfin.org/test-videos/SDR/HEVC%2010bit/Test%20Jellyfin%201080p%20HEVC%2010bit%203M.mp4",
+      "tier": 1,
+      "purpose": [
+        "sdr-smoke",
+        "av-sync"
+      ],
+      "expected": {
+        "codec": "hevc",
+        "width": 1920,
+        "height": 1080,
+        "frameRate": 60.0,
+        "hdrKind": "Sdr",
+        "isHdr": false,
+        "isDirectPlayable": true,
+        "hdrOutput": "Sdr",
+        "dxgiInput": "YCBCR_STUDIO_G22_LEFT_P709",
+        "dxgiOutput": "RGB_FULL_G22_NONE_P709",
+        "maxStartupDurationMs": 5000.0,
+        "maxAudioVideoDriftMsP95": 80.0,
+        "maxVideoStarvedPasses": 0,
+        "maxAudioStarvedPasses": 0,
+        "requireValidatedConversion": true,
+        "requireMatchedDisplayRefreshRate": false
+      }
+    },
+    {
+      "caseId": "jellyfin/hdr10-hevc-main10-1080p60-10m",
+      "uri": "https://repo.jellyfin.org/test-videos/HDR/HDR10/HEVC/Test%20Jellyfin%201080p%20HEVC%20HDR10%2010M.mp4",
+      "tier": 1,
+      "purpose": [
+        "hdr-output"
+      ],
+      "expected": {
+        "codec": "hevc",
+        "width": 1920,
+        "height": 1080,
+        "frameRate": 60.0,
+        "hdrKind": "Hdr10",
+        "isHdr": true,
+        "isDirectPlayable": true,
+        "hdrOutput": "Hdr10",
+        "dxgiInput": "YCBCR_STUDIO_G2084_TOPLEFT_P2020",
+        "dxgiOutput": "RGB_FULL_G2084_NONE_P2020",
+        "maxStartupDurationMs": 5000.0,
+        "maxVideoStarvedPasses": 0,
+        "maxAudioStarvedPasses": 0,
+        "requireValidatedConversion": true,
+        "requireMatchedDisplayRefreshRate": false
+      }
+    },
+    {
+      "caseId": "jellyfin/hdr10-hevc-main10-1080p60-10m-force-sdr",
+      "uri": "https://repo.jellyfin.org/test-videos/HDR/HDR10/HEVC/Test%20Jellyfin%201080p%20HEVC%20HDR10%2010M.mp4",
+      "forceSdrOutput": true,
       "tier": 2,
       "purpose": [
-        "hdr-output",
-        "cadence-23.976",
-        "frame-pacing"
+        "hdr-force-sdr"
+      ],
+      "expected": {
+        "codec": "hevc",
+        "width": 1920,
+        "height": 1080,
+        "frameRate": 60.0,
+        "hdrKind": "Hdr10",
+        "isHdr": true,
+        "isDirectPlayable": true,
+        "hdrOutput": "Sdr",
+        "dxgiInput": "YCBCR_STUDIO_G2084_TOPLEFT_P2020",
+        "dxgiOutput": "RGB_FULL_G22_NONE_P709",
+        "maxStartupDurationMs": 5000.0,
+        "maxVideoStarvedPasses": 0,
+        "maxAudioStarvedPasses": 0,
+        "requireValidatedConversion": true,
+        "requireMatchedDisplayRefreshRate": false
+      }
+    },
+    {
+      "caseId": "jellyfin/hdr10-hevc-main10-4k60-50m",
+      "uri": "https://repo.jellyfin.org/test-videos/HDR/HDR10/HEVC/Test%20Jellyfin%204K%20HEVC%20HDR10%2050M.mp4",
+      "tier": 3,
+      "purpose": [
+        "buffering"
       ],
       "expected": {
         "codec": "hevc",
         "width": 3840,
         "height": 2160,
-        "frameRate": 23.976,
-        "hdrKind": "Hdr10"
+        "frameRate": 60.0,
+        "hdrKind": "Hdr10",
+        "isHdr": true,
+        "isDirectPlayable": true,
+        "hdrOutput": "Hdr10",
+        "dxgiInput": "YCBCR_STUDIO_G2084_TOPLEFT_P2020",
+        "dxgiOutput": "RGB_FULL_G2084_NONE_P2020",
+        "maxStartupDurationMs": 7000.0,
+        "maxVideoStarvedPasses": 0,
+        "maxAudioStarvedPasses": 0,
+        "requireValidatedConversion": true,
+        "requireMatchedDisplayRefreshRate": false
       }
     },
     {
-      "caseId": "jellyfin/dv-profile5-hevc-4k",
-      "uri": "https://syd1.mirror.jellyfin.org/test-videos/example/dv-profile5-hevc-4k.mp4",
+      "caseId": "jellyfin/dv-profile5-hevc-4k60",
+      "uri": "https://repo.jellyfin.org/test-videos/HDR/Dolby%20Vision/Test%20Jellyfin%204K%20DV%20P5.mp4",
       "tier": 3,
       "purpose": [
         "dv-reject",
@@ -30,7 +116,7 @@
         "codec": "hevc",
         "width": 3840,
         "height": 2160,
-        "frameRate": 23.976,
+        "frameRate": 60.0,
         "hdrKind": "DolbyVisionUnsupported",
         "hdrPlaybackStrategy": "Dolby Vision unsupported",
         "isHdr": true,
@@ -38,7 +124,73 @@
         "isDolbyVision": true,
         "dolbyVisionProfile": 5,
         "hasHdr10BaseLayer": false,
-        "hasHlgBaseLayer": false
+        "hasHlgBaseLayer": false,
+        "maxStartupDurationMs": 3000.0,
+        "requireValidatedConversion": true,
+        "requireMatchedDisplayRefreshRate": false
+      }
+    },
+    {
+      "caseId": "jellyfin/dv-profile8-1-hevc-4k60-hdr10-fallback",
+      "uri": "https://repo.jellyfin.org/test-videos/HDR/Dolby%20Vision/Test%20Jellyfin%204K%20DV%20P8.1.mp4",
+      "tier": 3,
+      "purpose": [
+        "dv-fallback"
+      ],
+      "expected": {
+        "codec": "hevc",
+        "width": 3840,
+        "height": 2160,
+        "frameRate": 60.0,
+        "hdrKind": "DolbyVisionWithHdr10Fallback",
+        "hdrPlaybackStrategy": "HDR10 fallback from Dolby Vision",
+        "isHdr": true,
+        "isDirectPlayable": true,
+        "isDolbyVision": true,
+        "dolbyVisionProfile": 8,
+        "dolbyVisionCompatibilityId": 1,
+        "hasHdr10BaseLayer": true,
+        "hasHlgBaseLayer": false,
+        "hdrOutput": "Hdr10",
+        "dxgiInput": "YCBCR_STUDIO_G2084_TOPLEFT_P2020",
+        "dxgiOutput": "RGB_FULL_G2084_NONE_P2020",
+        "maxStartupDurationMs": 7000.0,
+        "maxVideoStarvedPasses": 0,
+        "maxAudioStarvedPasses": 0,
+        "requireValidatedConversion": true,
+        "requireMatchedDisplayRefreshRate": false
+      }
+    },
+    {
+      "caseId": "local/chimera-23976-hdr10-cadence",
+      "uri": "emby://quality-cases/chimera-23976-hdr10",
+      "itemId": "quality-case-chimera-23976-hdr10",
+      "mediaSourceId": "quality-source-chimera-23976-hdr10",
+      "tier": 2,
+      "purpose": [
+        "cadence-23.976",
+        "frame-pacing"
+      ],
+      "expected": {
+        "codec": "hevc",
+        "width": 3840,
+        "height": 2160,
+        "frameRate": 23.976,
+        "hdrKind": "Hdr10",
+        "isHdr": true,
+        "isDirectPlayable": true,
+        "hdrOutput": "Hdr10",
+        "dxgiInput": "YCBCR_STUDIO_G2084_TOPLEFT_P2020",
+        "dxgiOutput": "RGB_FULL_G2084_NONE_P2020",
+        "maxStartupDurationMs": 7000.0,
+        "maxFrameGapMs": 104.3,
+        "maxRenderIntervalMsP95": 52.1,
+        "maxRenderIntervalMsP99": 83.4,
+        "maxAudioVideoDriftMsP95": 80.0,
+        "maxVideoStarvedPasses": 0,
+        "maxAudioStarvedPasses": 0,
+        "requireValidatedConversion": true,
+        "requireMatchedDisplayRefreshRate": true
       }
     }
   ]

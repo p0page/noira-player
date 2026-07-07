@@ -25,3 +25,13 @@ ARM64/
 dlldata.c
 .research/
 .superpowers/
+
+# Local-only playback QA credentials, manifests, and captured private reports.
+docs/qa/private/
+tools/quality-run/private/
+*.private.json
+*.local.json
+*.secrets.json
+.env
+.env.*
+!.env.example

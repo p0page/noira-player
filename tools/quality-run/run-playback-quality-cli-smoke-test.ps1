@@ -58,6 +58,9 @@ try {
     $manifestValidationPath = Join-Path $tempRoot 'reference-manifest-validation.json'
     $runPlanPath = Join-Path $tempRoot 'reference-run-plan.json'
     $filteredRunPlanPath = Join-Path $tempRoot 'reference-run-plan-filtered.json'
+    $exampleManifestPath = Join-Path $repoRoot 'docs\qa\playback-quality-reference-manifest.example.json'
+    $exampleManifestValidationPath = Join-Path $tempRoot 'example-reference-manifest-validation.json'
+    $exampleRunPlanPath = Join-Path $tempRoot 'example-reference-run-plan.json'
     $embyRunPlanManifestPath = Join-Path $tempRoot 'emby-run-plan-manifest.json'
     $embyRunPlanPath = Join-Path $tempRoot 'emby-run-plan.json'
     $reportSetDir = Join-Path $tempRoot 'reference-report-set'
@@ -1573,6 +1576,140 @@ try {
 
     if (-not ($stallComparison.optimization.blockers | Where-Object { $_ -eq 'iteration.stalled' })) {
         throw 'Expected playback quality CLI compare-suite stall comparison to include iteration.stalled blocker.'
+    }
+
+    Push-Location $repoRoot
+    try {
+        dotnet run `
+            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
+            --no-build `
+            -- validate-manifest `
+            --manifest $exampleManifestPath `
+            --output $exampleManifestValidationPath
+        if ($LASTEXITCODE -ne 0) {
+            throw 'playback quality CLI validate-manifest returned a non-zero exit code for the example reference manifest.'
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    $exampleManifestValidation = Get-Content -Raw -LiteralPath $exampleManifestValidationPath | ConvertFrom-Json
+    if ($exampleManifestValidation.isValid -ne $true) {
+        throw 'Expected example reference manifest validation to be valid.'
+    }
+
+    if ($exampleManifestValidation.caseCount -lt 7) {
+        throw 'Expected example reference manifest to include the public/core reference case set.'
+    }
+
+    if ($exampleManifestValidation.coverage.status -ne 'ready' -or
+        $exampleManifestValidation.coverage.isCoreEvaluationReady -ne $true) {
+        throw 'Expected example reference manifest coverage to be ready for Core evaluation.'
+    }
+
+    $requiredPurposes = @(
+        'sdr-smoke',
+        'hdr-output',
+        'hdr-force-sdr',
+        'dv-reject',
+        'dv-fallback',
+        'cadence-23.976',
+        'frame-pacing',
+        'av-sync',
+        'buffering'
+    )
+    foreach ($purpose in $requiredPurposes) {
+        if (-not ($exampleManifestValidation.coverage.coveredPurposes -contains $purpose)) {
+            throw ('Expected example reference manifest to cover purpose: ' + $purpose)
+        }
+    }
+
+    if (-not ($exampleManifestValidation.cases | Where-Object {
+        $_.caseId -eq 'jellyfin/hdr10-hevc-main10-4k60-50m' -and
+        $_.uri -eq 'https://repo.jellyfin.org/test-videos/HDR/HDR10/HEVC/Test%20Jellyfin%204K%20HEVC%20HDR10%2050M.mp4' -and
+        $_.expected.codec -eq 'hevc' -and
+        $_.expected.width -eq 3840 -and
+        $_.expected.height -eq 2160 -and
+        $_.expected.frameRate -eq 60 -and
+        $_.expected.hdrKind -eq 'Hdr10' -and
+        $_.expected.hdrOutput -eq 'Hdr10' -and
+        $_.expected.dxgiInput -eq 'YCBCR_STUDIO_G2084_TOPLEFT_P2020'
+    })) {
+        throw 'Expected example reference manifest to include the verified Jellyfin 4K60 HDR10 50M case.'
+    }
+
+    if (-not ($exampleManifestValidation.cases | Where-Object {
+        $_.caseId -eq 'jellyfin/hdr10-hevc-main10-1080p60-10m-force-sdr' -and
+        $_.forceSdrOutput -eq $true -and
+        $_.expected.hdrKind -eq 'Hdr10' -and
+        $_.expected.hdrOutput -eq 'Sdr'
+    })) {
+        throw 'Expected example reference manifest to include an HDR force-SDR validation case.'
+    }
+
+    if (-not ($exampleManifestValidation.cases | Where-Object {
+        $_.caseId -eq 'jellyfin/dv-profile5-hevc-4k60' -and
+        $_.expected.hdrKind -eq 'DolbyVisionUnsupported' -and
+        $_.expected.hdrPlaybackStrategy -eq 'Dolby Vision unsupported' -and
+        $_.expected.isDirectPlayable -eq $false -and
+        $_.expected.dolbyVisionProfile -eq 5
+    })) {
+        throw 'Expected example reference manifest to include a Dolby Vision Profile 5 reject case.'
+    }
+
+    if (-not ($exampleManifestValidation.cases | Where-Object {
+        $_.caseId -eq 'jellyfin/dv-profile8-1-hevc-4k60-hdr10-fallback' -and
+        $_.expected.hdrKind -eq 'DolbyVisionWithHdr10Fallback' -and
+        $_.expected.hdrPlaybackStrategy -eq 'HDR10 fallback from Dolby Vision' -and
+        $_.expected.isDirectPlayable -eq $true -and
+        $_.expected.dolbyVisionProfile -eq 8 -and
+        $_.expected.dolbyVisionCompatibilityId -eq 1 -and
+        $_.expected.hasHdr10BaseLayer -eq $true
+    })) {
+        throw 'Expected example reference manifest to include a Dolby Vision Profile 8.1 HDR10 fallback case.'
+    }
+
+    Push-Location $repoRoot
+    try {
+        dotnet run `
+            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
+            --no-build `
+            -- plan-runs `
+            --manifest $exampleManifestPath `
+            --reports-dir captured-example `
+            --duration 30 `
+            --output $exampleRunPlanPath
+        if ($LASTEXITCODE -ne 0) {
+            throw 'playback quality CLI plan-runs returned a non-zero exit code for the example reference manifest.'
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    $exampleRunPlan = Get-Content -Raw -LiteralPath $exampleRunPlanPath | ConvertFrom-Json
+    if ($exampleRunPlan.caseCount -ne $exampleManifestValidation.caseCount) {
+        throw 'Expected example reference run plan case count to match manifest validation.'
+    }
+
+    if (-not ($exampleRunPlan.cases | Where-Object {
+        $_.caseId -eq 'jellyfin/hdr10-hevc-main10-4k60-50m' -and
+        $_.captureMode -eq 'direct-uri' -and
+        $_.devCommand -eq $null
+    })) {
+        throw 'Expected example reference run plan to schedule public Jellyfin media as direct-uri.'
+    }
+
+    if (-not ($exampleRunPlan.cases | Where-Object {
+        $_.caseId -eq 'local/chimera-23976-hdr10-cadence' -and
+        $_.captureMode -eq 'emby-item' -and
+        $_.devCommand.route -eq 'quality-run' -and
+        $_.devCommand.itemId -eq 'quality-case-chimera-23976-hdr10' -and
+        $_.expected.frameRate -eq 23.976 -and
+        $_.expected.requireMatchedDisplayRefreshRate -eq $true
+    })) {
+        throw 'Expected example reference run plan to schedule the local 23.976 cadence case through an Emby quality-run command.'
     }
 
     Write-Output 'playback-quality-cli smoke ok'

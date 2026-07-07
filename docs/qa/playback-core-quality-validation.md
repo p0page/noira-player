@@ -58,6 +58,20 @@ dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQ
 
 The command emits `isValid`, `caseCount`, `tiers`, `purposes`, `cases`, structured `errors`, and `coverage`. `cases` is a schedulable summary of caseId, uri, tier, purpose, and expected source metadata. Invalid manifests return a non-zero exit code so automation can stop before collecting misleading playback evidence. `isValid = true` only means the manifest can be scheduled; `coverage.status = ready` means the corpus includes the required playback Core risk purposes for broad candidate evaluation: `sdr-smoke`, `hdr-output`, `hdr-force-sdr`, `dv-reject`, `dv-fallback`, `cadence-23.976`, `frame-pacing`, `av-sync`, and `buffering`. If `coverage.status = incomplete`, the model should treat `coverage.missingPurposes` as a sample-corpus gap and avoid over-optimizing Core from a narrow corpus.
 
+当前 `docs/qa/playback-quality-reference-manifest.example.json` 是可调度的默认参考 manifest。它包含 7 个 case：
+
+- Jellyfin SDR HEVC Main10 1080p60 3M：`sdr-smoke`、`av-sync`。
+- Jellyfin HDR10 HEVC Main10 1080p60 10M：`hdr-output`。
+- 同一个 Jellyfin HDR10 1080p60 10M 源的 force-SDR 变体：`hdr-force-sdr`。
+- Jellyfin HDR10 HEVC Main10 4K60 50M：`buffering` 和 4K/60/HDR 解码压力。
+- Jellyfin Dolby Vision Profile 5 4K60：`dv-reject`，期望 Core 解析后明确拒播为 `DolbyVisionUnsupported`。
+- Jellyfin Dolby Vision Profile 8.1 4K60：`dv-fallback`，期望 Core 解析为 `DolbyVisionWithHdr10Fallback`。
+- `local/chimera-23976-hdr10-cadence`：本地 Emby 绑定占位，用于 `cadence-23.976` 和 `frame-pacing`。公开直链还没有稳定验证到 23.976 HDR10 样本，所以这里使用 `emby-item` 调度，而不是提交不可靠 URL。
+
+Jellyfin 公开直链 case 应以 `direct-uri` 调度；本地 23.976 case 应以 `emby-item` 调度并生成 `quality-run` dev command。`tools/quality-run/run-playback-quality-cli-smoke-test.ps1` 会校验这些不变量，防止 example manifest 退化成 coverage 不完整或不可调度的状态。
+
+私有 Emby 服务器可以作为真实库测试源，但不得进入仓库。服务器 URL、用户名、密码、真实 `itemId`、真实 `mediaSourceId`、采集出的私有报告和本地 manifest 应只放在环境变量、系统临时目录或 `.gitignore` 覆盖的路径中，例如 `docs/qa/private/`、`tools/quality-run/private/`、`*.private.json`、`*.local.json`、`*.secrets.json` 或 `.env`。提交前必须用 `rg` 检查真实服务器地址、账号和密码没有出现在 tracked 文件或 diff 中。
+
 验证 manifest 后，可以生成 App-free 采集计划：
 
 ```powershell
