@@ -435,6 +435,14 @@ namespace NextGenEmby.Core.PlaybackQuality
                 return;
             }
 
+            if (comparison.Environment.Status == "same-build")
+            {
+                comparison.Confidence.Level = "weak";
+                AddUnique(comparison.Confidence.Reasons, "candidate build identity matches baseline");
+                CopyValues(comparison.Environment.Signals, comparison.Confidence.Signals);
+                return;
+            }
+
             if (HasUnmatchedEvidence(comparison))
             {
                 comparison.Confidence.Level = "partial";
@@ -649,6 +657,15 @@ namespace NextGenEmby.Core.PlaybackQuality
 
         private static void ApplyDecision(PlaybackQualityRunComparison comparison)
         {
+            if (comparison.Environment.Status == "same-build" &&
+                comparison.Result != "insufficient-evidence")
+            {
+                comparison.Decision = "collect-comparable-evidence";
+                comparison.SuggestedNextAction =
+                    "Collect reports from a distinct candidate build before deciding on playback Core changes.";
+                return;
+            }
+
             switch (comparison.Result)
             {
                 case "improved":

@@ -84,6 +84,34 @@ public sealed class PlaybackQualityRunComparatorTests
     }
 
     [Fact]
+    public void Compare_Blocks_Candidate_Acceptance_When_Build_Identity_Is_Unchanged()
+    {
+        var baseline = CreateReport(
+            "baseline",
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "180.000"));
+        baseline.Environment.PlayerCoreVersion = "native-core-v42";
+        baseline.Environment.SourceRevision = "same123";
+
+        var candidate = CreateReport(
+            "candidate",
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "120.000"));
+        candidate.Environment.PlayerCoreVersion = "native-core-v42";
+        candidate.Environment.SourceRevision = "same123";
+
+        var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
+
+        Assert.Equal("same-build", comparison.Environment.Status);
+        Assert.Equal("weak", comparison.Confidence.Level);
+        Assert.Contains("candidate build identity matches baseline", comparison.Confidence.Reasons);
+        Assert.Contains("environment.sourceRevision", comparison.Confidence.Signals);
+        Assert.Equal("collect-comparable-evidence", comparison.Decision);
+        Assert.Equal("collect-comparable-evidence", comparison.Optimization.Action);
+        Assert.Equal("high", comparison.Optimization.Risk);
+        Assert.Contains("candidate build identity matches baseline", comparison.Optimization.Blockers);
+        Assert.Contains("environment.sourceRevision", comparison.Optimization.Signals);
+    }
+
+    [Fact]
     public void Compare_Reports_Regressed_When_Passing_Signal_Starts_Failing()
     {
         var baseline = CreateReport(
