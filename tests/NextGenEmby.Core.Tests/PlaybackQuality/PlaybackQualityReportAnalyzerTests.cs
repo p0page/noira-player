@@ -8,6 +8,21 @@ namespace NextGenEmby.Core.Tests.PlaybackQuality;
 public sealed class PlaybackQualityReportAnalyzerTests
 {
     [Fact]
+    public void Analyze_Emits_Current_Analyzer_Version()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "analyzer-version",
+            Result = "pass"
+        };
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Equal(2, PlaybackQualityReportAnalyzer.CurrentAnalyzerVersion);
+        Assert.Equal(PlaybackQualityReportAnalyzer.CurrentAnalyzerVersion, analysis.AnalyzerVersion);
+    }
+
+    [Fact]
     public void Analyze_Summarizes_Expected_And_Actual_Behavior_For_Failed_Checks()
     {
         var report = new PlaybackQualityReport

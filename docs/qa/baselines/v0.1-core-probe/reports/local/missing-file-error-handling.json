@@ -44,7 +44,7 @@
     "environment": {
       "collectorVersion": "materialize-core-probe-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "working-tree-track-external-default-forced",
+      "sourceRevision": "working-tree-analyzer-v2",
       "buildConfiguration": "Debug"
     },
     "limitations": [
@@ -96,6 +96,8 @@
       "width": 0,
       "height": 0,
       "frameRate": 0,
+      "hasChapterMetadata": false,
+      "chapters": [],
       "hdrKind": "",
       "hdrPlaybackStrategy": "",
       "isHdr": false,
@@ -216,7 +218,7 @@
     }
   },
   "modelAnalysis": {
-    "analyzerVersion": 1,
+    "analyzerVersion": 2,
     "runId": "local/missing-file-error-handling",
     "result": "error",
     "expectedBehavior": "Playback operation completed without a terminal runtime error.",
@@ -248,7 +250,7 @@
     "environment": {
       "collectorVersion": "materialize-core-probe-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "working-tree-track-external-default-forced",
+      "sourceRevision": "working-tree-analyzer-v2",
       "buildConfiguration": "Debug",
       "signals": [
         "environment.collectorVersion",
@@ -267,6 +269,9 @@
       "width": 0,
       "height": 0,
       "frameRate": 0,
+      "hasChapterMetadata": false,
+      "chapterCount": null,
+      "chapters": [],
       "hdrKind": "",
       "hdrPlaybackStrategy": "",
       "isHdr": false,

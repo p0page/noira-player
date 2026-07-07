@@ -234,7 +234,7 @@
     "environment": {
       "collectorVersion": "materialize-core-probe-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "working-tree-track-external-default-forced",
+      "sourceRevision": "working-tree-analyzer-v2",
       "buildConfiguration": "Debug"
     },
     "limitations": [
@@ -286,6 +286,8 @@
       "width": 3840,
       "height": 2160,
       "frameRate": 60,
+      "hasChapterMetadata": false,
+      "chapters": [],
       "hdrKind": "DolbyVisionWithHdr10Fallback",
       "hdrPlaybackStrategy": "HDR10 fallback from Dolby Vision",
       "isHdr": true,
@@ -475,7 +477,7 @@
     }
   },
   "modelAnalysis": {
-    "analyzerVersion": 1,
+    "analyzerVersion": 2,
     "runId": "jellyfin/dv-profile8-1-hevc-4k60-hdr10-fallback",
     "result": "pass",
     "expectedBehavior": "Playback quality checks passed.",
@@ -520,7 +522,7 @@
     "environment": {
       "collectorVersion": "materialize-core-probe-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "working-tree-track-external-default-forced",
+      "sourceRevision": "working-tree-analyzer-v2",
       "buildConfiguration": "Debug",
       "signals": [
         "environment.collectorVersion",
@@ -539,6 +541,9 @@
       "width": 3840,
       "height": 2160,
       "frameRate": 60,
+      "hasChapterMetadata": false,
+      "chapterCount": null,
+      "chapters": [],
       "hdrKind": "DolbyVisionWithHdr10Fallback",
       "hdrPlaybackStrategy": "HDR10 fallback from Dolby Vision",
       "isHdr": true,

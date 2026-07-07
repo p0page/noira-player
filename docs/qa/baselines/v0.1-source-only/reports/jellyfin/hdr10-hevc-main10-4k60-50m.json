@@ -188,7 +188,7 @@
     "environment": {
       "collectorVersion": "materialize-baseline-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "working-tree-track-external-default-forced",
+      "sourceRevision": "working-tree-analyzer-v2",
       "buildConfiguration": "Debug"
     },
     "limitations": [
@@ -238,6 +238,8 @@
       "width": 3840,
       "height": 2160,
       "frameRate": 60,
+      "hasChapterMetadata": false,
+      "chapters": [],
       "hdrKind": "Hdr10",
       "hdrPlaybackStrategy": "HDR10",
       "isHdr": true,
@@ -378,7 +380,7 @@
     }
   },
   "modelAnalysis": {
-    "analyzerVersion": 1,
+    "analyzerVersion": 2,
     "runId": "jellyfin/hdr10-hevc-main10-4k60-50m",
     "result": "fail",
     "expectedBehavior": "startup.startupDurationMs expected 7000.000.",
@@ -416,7 +418,7 @@
     "environment": {
       "collectorVersion": "materialize-baseline-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "working-tree-track-external-default-forced",
+      "sourceRevision": "working-tree-analyzer-v2",
       "buildConfiguration": "Debug",
       "signals": [
         "environment.collectorVersion",
@@ -435,6 +437,9 @@
       "width": 3840,
       "height": 2160,
       "frameRate": 60,
+      "hasChapterMetadata": false,
+      "chapterCount": null,
+      "chapters": [],
       "hdrKind": "Hdr10",
       "hdrPlaybackStrategy": "HDR10",
       "isHdr": true,

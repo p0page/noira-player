@@ -324,7 +324,11 @@
         "source.codec",
         "source.width",
         "source.height",
-        "source.frameRate"
+        "source.frameRate",
+        "source.hasChapterMetadata",
+        "source.chapterCount",
+        "source.chapters.startPositionTicks",
+        "source.chapters.name"
       ],
       "evidenceSignals": [
         "source.codec",

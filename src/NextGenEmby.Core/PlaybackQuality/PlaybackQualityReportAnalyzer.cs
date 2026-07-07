@@ -236,7 +236,7 @@ namespace NextGenEmby.Core.PlaybackQuality
 
     public static class PlaybackQualityReportAnalyzer
     {
-        public const int CurrentAnalyzerVersion = 1;
+        public const int CurrentAnalyzerVersion = 2;
 
         public static PlaybackQualityModelAnalysis Analyze(PlaybackQualityReport report)
         {

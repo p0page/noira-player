@@ -1,5 +1,13 @@
 # 技术决策
 
+## 2026-07-08: analyzer version 升级到 2
+
+决策：`PlaybackQualityReportAnalyzer.CurrentAnalyzerVersion` 从 1 升级到 2，并刷新 v0.1 source-only、core-probe 和 native-harness-skip 归档 artifact。
+
+原因：`modelAnalysis.source.signals` 和集合级 `capabilityCoverage` 新增了 `source.hasChapterMetadata`，且 `chapterCount` 从非 nullable 计数改为 nullable evidence。旧 envelope 的 `modelAnalysis` 不能继续被视为同一契约下的可复用分析，否则自动化模型会漏读章节 metadata presence 语义。
+
+边界：这是 report/analyzer 契约版本变更，不改变播放行为、阈值、case expected behavior 或 pass/fail 规则。刷新后的 source-only baseline 仍然因为缺运行时 telemetry 而保持失败；native-harness-skip 仍然只表达采集器未实现；core-probe 仍然只是 App-free/in-process 诊断评测。
+
 ## 2026-07-08: DEBUG App-hosted quality-run 作为真实播放采集入口
 
 决策：复用现有 `DevelopmentNavigationCommand route = quality-run`，在 DEBUG App 中将其分发到 `PlaybackPage`。播放成功后，App 在命令指定的采集窗口内主动执行 pause、resume、seek、stop，读取当前 `PlaybackDescriptor`、`IPlaybackBackendDiagnostics.DisplayStatus` 和 `IPlaybackQualityMetricsProvider` metrics，通过 `PlaybackQualityRuntimeEvidenceCollector.ComposeRunResult` 生成标准 `PlaybackQualityRunResult` envelope，并写入 App LocalFolder 的 `quality-run/captured/<runId>.json`。seek target、actual position 和 seek error 会作为 position evidence 在 evaluator 运行前写入 report。如果打开媒体或播放命令执行阶段失败，App 会通过 `ComposeErrorRunResult` 写入标准 error envelope。CLI 和 App 共享 `PlaybackQualityCapturedReportPath.GetReportRelativePath`，保证 App captured report 可以被 `materialize-native-harness-report-set --captured-reports-dir` 按同一 run-id 相对路径导入。

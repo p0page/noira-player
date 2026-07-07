@@ -5,7 +5,7 @@
   "environment": {
     "collectorVersion": "materialize-native-harness-report-set-v1",
     "playerCoreVersion": "NextGenEmby.Core",
-    "sourceRevision": "working-tree-track-external-default-forced",
+    "sourceRevision": "working-tree-analyzer-v2",
     "buildConfiguration": "Debug"
   },
   "manifestValidation": {

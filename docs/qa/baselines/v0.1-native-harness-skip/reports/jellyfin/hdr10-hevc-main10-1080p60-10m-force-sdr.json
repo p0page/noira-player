@@ -45,7 +45,7 @@
     "environment": {
       "collectorVersion": "materialize-native-harness-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "working-tree-track-external-default-forced",
+      "sourceRevision": "working-tree-analyzer-v2",
       "buildConfiguration": "Debug"
     },
     "limitations": [
@@ -96,6 +96,8 @@
       "width": 0,
       "height": 0,
       "frameRate": 0,
+      "hasChapterMetadata": false,
+      "chapters": [],
       "hdrKind": "",
       "hdrPlaybackStrategy": "",
       "isHdr": false,
@@ -216,7 +218,7 @@
     }
   },
   "modelAnalysis": {
-    "analyzerVersion": 1,
+    "analyzerVersion": 2,
     "runId": "jellyfin/hdr10-hevc-main10-1080p60-10m-force-sdr",
     "result": "skip",
     "expectedBehavior": "Reference case was evaluated or explicitly skipped with a structured reason.",
@@ -247,7 +249,7 @@
     "environment": {
       "collectorVersion": "materialize-native-harness-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "working-tree-track-external-default-forced",
+      "sourceRevision": "working-tree-analyzer-v2",
       "buildConfiguration": "Debug",
       "signals": [
         "environment.collectorVersion",
@@ -266,6 +268,9 @@
       "width": 0,
       "height": 0,
       "frameRate": 0,
+      "hasChapterMetadata": false,
+      "chapterCount": null,
+      "chapters": [],
       "hdrKind": "",
       "hdrPlaybackStrategy": "",
       "isHdr": false,

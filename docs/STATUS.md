@@ -2,6 +2,12 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-08 更新：analyzer version 2 与 baseline 刷新
+
+`PlaybackQualityReportAnalyzer.CurrentAnalyzerVersion` 已升级到 2，用于标记 `source.hasChapterMetadata`、nullable `source.chapterCount` 和章节 metadata presence 语义进入模型分析契约。已刷新 `docs/qa/baselines/v0.1-source-only/`、`docs/qa/baselines/v0.1-core-probe/` 和 `docs/qa/baselines/v0.1-native-harness-skip/`，归档 reports 的 `modelAnalysis.analyzerVersion` 均为 2。
+
+边界：这不是播放效果优化，也不改变阈值、expected behavior 或 pass/fail 规则。source-only baseline 仍用于暴露缺运行时 telemetry；native-harness-skip 仍表达真实 native collector 尚未实现；core-probe 仍是 App-free/in-process 的 core orchestration 诊断路径，不代表真实解码、显示或 A/V sync 效果。
+
 ## 2026-07-08 更新：DEBUG App-hosted quality-run 采集入口已接通
 
 `DevelopmentNavigationCommand` 的 `route = quality-run` 现在不再只停留在解析层：
