@@ -21,6 +21,7 @@ public sealed class PlaybackQualityComparisonSuiteTests
         Assert.Equal(1, suite.ImprovedCount);
         Assert.Equal(1, suite.UnchangedCount);
         Assert.Equal("accept-candidate", suite.Action);
+        Assert.Equal("keep-candidate", suite.Decision);
         Assert.Equal("low", suite.Risk);
         Assert.Contains("suite has strong improvement and no blocking comparisons", suite.Reasons);
         Assert.Contains("timing.maxFrameGapMs", suite.Signals);
@@ -40,6 +41,7 @@ public sealed class PlaybackQualityComparisonSuiteTests
         var suite = PlaybackQualityComparisonSuiteAggregator.Summarize(new[] { improved, regressed });
 
         Assert.Equal("reject-candidate", suite.Action);
+        Assert.Equal("reject-candidate", suite.Decision);
         Assert.Equal("high", suite.Risk);
         Assert.Equal(1, suite.RegressedCount);
         Assert.Contains("suite.regression", suite.Blockers);
@@ -107,6 +109,7 @@ public sealed class PlaybackQualityComparisonSuiteTests
         var suite = PlaybackQualityComparisonSuiteAggregator.Summarize(new[] { comparison });
 
         Assert.Equal("continue-next-triage-step", suite.Action);
+        Assert.Equal("no-change", suite.Decision);
         Assert.Equal(0, suite.ImprovedCount);
         Assert.Equal(0, suite.RegressedCount);
         Assert.Equal(1, suite.PolicyChangeCount);
@@ -143,6 +146,7 @@ public sealed class PlaybackQualityComparisonSuiteTests
         var suite = PlaybackQualityComparisonSuiteAggregator.Summarize(new[] { improved, weak });
 
         Assert.Equal("collect-comparable-evidence", suite.Action);
+        Assert.Equal("collect-comparable-evidence", suite.Decision);
         Assert.Equal("high", suite.Risk);
         Assert.Equal(1, suite.InsufficientEvidenceCount);
         Assert.Equal(1, suite.WeakConfidenceCount);
@@ -171,6 +175,7 @@ public sealed class PlaybackQualityComparisonSuiteTests
         var suite = PlaybackQualityComparisonSuiteAggregator.Summarize(new[] { comparison });
 
         Assert.Equal("collect-comparable-evidence", suite.Action);
+        Assert.Equal("collect-comparable-evidence", suite.Decision);
         Assert.Equal("high", suite.Risk);
         Assert.Equal(1, suite.Environment.MissingEvidenceCount);
         Assert.Contains("suite.environment-evidence-missing", suite.Blockers);
@@ -335,6 +340,7 @@ public sealed class PlaybackQualityComparisonSuiteTests
 
         var target = Assert.Single(suite.TargetFailureAreas);
         Assert.Equal("color-pipeline", target);
+        Assert.Equal("split-candidate", suite.Decision);
         var targetCase = Assert.Single(suite.TargetCaseIds);
         Assert.Equal("case-color", targetCase);
         Assert.Contains("src/NextGenEmby.Native/Media/DxgiColorSpaceMapper.cpp", suite.CodeTargets);

@@ -1017,6 +1017,10 @@ try {
         throw 'Expected playback quality CLI suite action to accept candidate.'
     }
 
+    if ($suite.decision -ne 'keep-candidate') {
+        throw 'Expected playback quality CLI suite decision to keep candidate.'
+    }
+
     if ($suite.totalComparisonCount -ne 1) {
         throw 'Expected playback quality CLI suite to include one comparison.'
     }
@@ -1051,6 +1055,10 @@ try {
     $suiteFromReports = Get-Content -Raw -LiteralPath $suiteFromReportsPath | ConvertFrom-Json
     if ($suiteFromReports.action -ne 'accept-candidate') {
         throw 'Expected playback quality CLI compare-suite action to accept candidate.'
+    }
+
+    if ($suiteFromReports.decision -ne 'keep-candidate') {
+        throw 'Expected playback quality CLI compare-suite decision to keep candidate.'
     }
 
     if ($suiteFromReports.totalComparisonCount -ne 1) {
@@ -1212,6 +1220,10 @@ try {
     $runIdSuite = Get-Content -Raw -LiteralPath $runIdSuitePath | ConvertFrom-Json
     if ($runIdSuite.action -ne 'accept-candidate') {
         throw 'Expected playback quality CLI compare-suite run-id matching action to accept candidate.'
+    }
+
+    if ($runIdSuite.decision -ne 'keep-candidate') {
+        throw 'Expected playback quality CLI compare-suite run-id matching decision to keep candidate.'
     }
 
     if (-not ($runIdSuite.cases | Where-Object { $_.caseId -eq 'item-1/source-1' -and $_.action -eq 'accept-candidate' })) {
@@ -2419,6 +2431,10 @@ try {
     $stallSuite = Get-Content -Raw -LiteralPath $stallSuitePath | ConvertFrom-Json
     if ($stallSuite.action -ne 'change-optimization-strategy') {
         throw 'Expected playback quality CLI compare-suite stall action to change optimization strategy.'
+    }
+
+    if ($stallSuite.decision -ne 'change-optimization-strategy') {
+        throw 'Expected playback quality CLI compare-suite stall decision to change optimization strategy.'
     }
 
     if (-not ($stallSuite.failureAreas -contains 'frame-pacing')) {

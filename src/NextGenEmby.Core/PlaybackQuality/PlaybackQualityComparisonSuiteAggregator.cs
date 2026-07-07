@@ -16,6 +16,7 @@ namespace NextGenEmby.Core.PlaybackQuality
         public int PartialConfidenceCount { get; set; }
         public int WeakConfidenceCount { get; set; }
         public string Action { get; set; } = "collect-comparable-evidence";
+        public string Decision { get; set; } = "collect-comparable-evidence";
         public string Risk { get; set; } = "high";
         public PlaybackQualityComparisonSuiteEnvironment Environment { get; set; } =
             new PlaybackQualityComparisonSuiteEnvironment();
@@ -123,6 +124,7 @@ namespace NextGenEmby.Core.PlaybackQuality
 
             suite.TotalComparisonCount = suite.Comparisons.Count;
             ApplySuiteAction(suite);
+            suite.Decision = CreateSuiteDecision(suite.Action);
             ApplyTargetFailureAreas(suite);
             AddNextActions(suite);
             return suite;
@@ -615,6 +617,27 @@ namespace NextGenEmby.Core.PlaybackQuality
             }
 
             return false;
+        }
+
+        private static string CreateSuiteDecision(string action)
+        {
+            switch (action)
+            {
+                case "accept-candidate":
+                    return "keep-candidate";
+                case "reject-candidate":
+                    return "reject-candidate";
+                case "split-candidate":
+                    return "split-candidate";
+                case "continue-next-triage-step":
+                    return "no-change";
+                case "collect-comparable-evidence":
+                case "review-unmatched-signals":
+                case "change-optimization-strategy":
+                    return action;
+                default:
+                    return "collect-comparable-evidence";
+            }
         }
 
         private static void AddImprovementSignals(PlaybackQualityComparisonSuite suite)
