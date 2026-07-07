@@ -92,6 +92,9 @@ try {
     $coreProbeSummaryPath = Join-Path $tempRoot 'core-probe-summary.json'
     $coreProbeValidationPath = Join-Path $tempRoot 'core-probe-validation.json'
     $coreProbeAnalysisPath = Join-Path $tempRoot 'core-probe-analysis.json'
+    $coreProbeCandidateEvaluationPath = Join-Path $tempRoot 'core-probe-candidate-evaluation.json'
+    $coreProbeCandidateEvaluationComparisonsDir = Join-Path $tempRoot 'core-probe-candidate-evaluation-comparisons'
+    $archivedCoreProbeReportsDir = Join-Path $repoRoot 'docs\qa\baselines\v0.1-core-probe\reports'
     $nativeHarnessManifestPath = Join-Path $tempRoot 'native-harness-reference-manifest.json'
     $nativeHarnessDir = Join-Path $tempRoot 'native-harness-report-set'
     $nativeHarnessSummaryPath = Join-Path $tempRoot 'native-harness-summary.json'
@@ -1057,6 +1060,35 @@ try {
         throw 'Expected core-probe analyze-report-set summary to mark playback evidence as orchestration-only.'
     }
 
+    Push-Location $repoRoot
+    try {
+        dotnet $cliDll `
+            evaluate-candidate `
+            --manifest $exampleManifestPath `
+            --baseline-dir $archivedCoreProbeReportsDir `
+            --candidate-dir $archivedCoreProbeReportsDir `
+            --match-by run-id `
+            --comparisons-dir $coreProbeCandidateEvaluationComparisonsDir `
+            --output $coreProbeCandidateEvaluationPath
+        if ($LASTEXITCODE -eq 0) {
+            throw 'Expected core-probe candidate evaluation to reject non-native playback evidence.'
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    $coreProbeCandidateEvaluation = Get-Content -Raw -LiteralPath $coreProbeCandidateEvaluationPath | ConvertFrom-Json
+    if ($coreProbeCandidateEvaluation.activeGate.name -ne 'baseline-playback-evidence' -or
+        $coreProbeCandidateEvaluation.activeGate.status -ne 'blocked' -or
+        -not ($coreProbeCandidateEvaluation.activeGate.blockers -contains 'baseline-playback-evidence.insufficient')) {
+        throw 'Expected core-probe candidate evaluation to block at baseline playback evidence gate.'
+    }
+
+    if (Test-Path -LiteralPath $coreProbeCandidateEvaluationComparisonsDir) {
+        throw 'Expected core-probe playback-evidence gate to skip comparison output.'
+    }
+
     @'
 {
   "schemaVersion": 1,
@@ -1516,7 +1548,7 @@ try {
   },
   "runtimeMetrics": {
     "status": "captured",
-    "providerStatus": "smoke-provider:returned-snapshot",
+    "providerStatus": "native-winrt:returned-snapshot",
     "reason": "Runtime metrics snapshot contains playback sample evidence.",
     "hasSnapshot": true,
     "hasPlaybackSample": true
@@ -1782,7 +1814,7 @@ try {
   },
   "runtimeMetrics": {
     "status": "captured",
-    "providerStatus": "smoke-provider:returned-snapshot",
+    "providerStatus": "native-winrt:returned-snapshot",
     "reason": "Runtime metrics snapshot contains playback sample evidence.",
     "hasSnapshot": true,
     "hasPlaybackSample": true
@@ -2255,7 +2287,7 @@ try {
   },
   "runtimeMetrics": {
     "status": "captured",
-    "providerStatus": "smoke-provider:returned-snapshot",
+    "providerStatus": "native-winrt:returned-snapshot",
     "reason": "Runtime metrics snapshot contains playback sample evidence.",
     "hasSnapshot": true,
     "hasPlaybackSample": true
@@ -2381,7 +2413,7 @@ try {
   },
   "runtimeMetrics": {
     "status": "captured",
-    "providerStatus": "smoke-provider:returned-snapshot",
+    "providerStatus": "native-winrt:returned-snapshot",
     "reason": "Runtime metrics snapshot contains playback sample evidence.",
     "hasSnapshot": true,
     "hasPlaybackSample": true
@@ -2688,8 +2720,8 @@ try {
         throw 'Expected evaluate-candidate candidate report-analysis summary to include unavailable raw-report case.'
     }
 
-    if ($null -eq $candidateEvaluation.evidenceGates -or $candidateEvaluation.evidenceGates.Count -ne 7) {
-        throw 'Expected playback quality CLI evaluate-candidate to emit seven evidence gates.'
+    if ($null -eq $candidateEvaluation.evidenceGates -or $candidateEvaluation.evidenceGates.Count -ne 9) {
+        throw 'Expected playback quality CLI evaluate-candidate to emit nine evidence gates.'
     }
 
     if (-not ($candidateEvaluation.evidenceGates | Where-Object { $_.name -eq 'manifest' -and $_.status -eq 'pass' })) {
@@ -2714,6 +2746,14 @@ try {
 
     if (-not ($candidateEvaluation.evidenceGates | Where-Object { $_.name -eq 'candidate-report-analysis' -and $_.status -eq 'pass' })) {
         throw 'Expected evaluate-candidate candidate report-analysis evidence gate to pass.'
+    }
+
+    if (-not ($candidateEvaluation.evidenceGates | Where-Object { $_.name -eq 'baseline-playback-evidence' -and $_.status -eq 'pass' })) {
+        throw 'Expected evaluate-candidate baseline playback evidence gate to pass.'
+    }
+
+    if (-not ($candidateEvaluation.evidenceGates | Where-Object { $_.name -eq 'candidate-playback-evidence' -and $_.status -eq 'pass' })) {
+        throw 'Expected evaluate-candidate candidate playback evidence gate to pass.'
     }
 
     if (-not ($candidateEvaluation.evidenceGates | Where-Object { $_.name -eq 'suite' -and $_.status -eq 'pass' -and $_.action -eq 'accept-candidate' })) {
@@ -3105,7 +3145,7 @@ try {
     },
     "runtimeMetrics": {
       "status": "captured",
-      "providerStatus": "smoke-provider:returned-snapshot",
+      "providerStatus": "native-winrt:returned-snapshot",
       "reason": "Runtime metrics snapshot contains playback sample evidence.",
       "hasSnapshot": true,
       "hasPlaybackSample": true
@@ -3232,7 +3272,7 @@ try {
     },
     "runtimeMetrics": {
       "status": "captured",
-      "providerStatus": "smoke-provider:returned-snapshot",
+      "providerStatus": "native-winrt:returned-snapshot",
       "reason": "Runtime metrics snapshot contains playback sample evidence.",
       "hasSnapshot": true,
       "hasPlaybackSample": true
@@ -3563,7 +3603,7 @@ try {
     },
     "runtimeMetrics": {
       "status": "captured",
-      "providerStatus": "smoke-provider:returned-snapshot",
+      "providerStatus": "native-winrt:returned-snapshot",
       "reason": "Runtime metrics snapshot contains playback sample evidence.",
       "hasSnapshot": true,
       "hasPlaybackSample": true
@@ -3783,7 +3823,7 @@ try {
     },
     "runtimeMetrics": {
       "status": "captured",
-      "providerStatus": "smoke-provider:returned-snapshot",
+      "providerStatus": "native-winrt:returned-snapshot",
       "reason": "Runtime metrics snapshot contains playback sample evidence.",
       "hasSnapshot": true,
       "hasPlaybackSample": true

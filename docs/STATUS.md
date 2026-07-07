@@ -2,6 +2,14 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-08 更新：evaluate-candidate 增加 playback evidence 门禁
+
+`evaluate-candidate` 现在会在 `baseline-report-analysis` / `candidate-report-analysis` 之后、`suite` 比较之前增加 `baseline-playback-evidence` 和 `candidate-playback-evidence` 两个门禁。它们直接读取 `analyze-report-set` 输出的 `playbackEvidence.canEvaluateNativePlayback`：只有 baseline 和 candidate 都包含 native/App 软件播放证据时，才允许进入 before/after suite 比较。
+
+source-only baseline 和 core-probe baseline 仍然有价值，但不能再被误用成 native playback candidate evidence。source-only 会被归类为缺播放证据，core-probe 会被归类为 orchestration-only；这两类 report-set 在候选评测中会停在 playback evidence gate，且不会产出 comparison 目录。导入的 `native-winrt:*` captured report 仍可通过该门禁，但只代表软件层 App/native playback evidence，不证明 HDMI、显示器 EOTF 或人工观感。
+
+边界：这是 candidate evaluation 契约增强，不改变播放行为、native graph、report-set validation、analyzer decision、阈值、expected behavior、comparison scoring 或候选采纳规则。它只防止模型在证据范围不足时继续做播放 core 优化判断。
+
 ## 2026-07-08 更新：report-analysis summary 增加 playbackEvidence 范围判断
 
 `analyze-report-set` 的集合级 JSON 现在会输出 `playbackEvidence`。它从 `evidenceSources[]`、`limitations[]` 和 skip 数量派生当前报告集的播放证据范围：source-only baseline 会标记为 `scope = source-only` / `status = missing`；core-probe baseline 会标记为 `scope = orchestration-only` / `status = limited`；native-harness skip 会标记为 `scope = none` / `status = missing`；导入的 `native-winrt:*` captured report 会标记为 `scope = native-software` / `status = available`。

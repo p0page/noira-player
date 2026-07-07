@@ -337,6 +337,24 @@ internal static class Program
             CopyValues(candidateReportAnalysisGate.Blockers, evaluation.Blockers);
         }
 
+        var baselinePlaybackEvidenceGate = CreatePlaybackEvidenceGate(
+            "baseline-playback-evidence",
+            baselineReportAnalysis);
+        if (baselinePlaybackEvidenceGate.Status == "blocked")
+        {
+            AddUnique(evaluation.Blockers, "baseline-playback-evidence.insufficient");
+            CopyValues(baselinePlaybackEvidenceGate.Blockers, evaluation.Blockers);
+        }
+
+        var candidatePlaybackEvidenceGate = CreatePlaybackEvidenceGate(
+            "candidate-playback-evidence",
+            candidateReportAnalysis);
+        if (candidatePlaybackEvidenceGate.Status == "blocked")
+        {
+            AddUnique(evaluation.Blockers, "candidate-playback-evidence.insufficient");
+            CopyValues(candidatePlaybackEvidenceGate.Blockers, evaluation.Blockers);
+        }
+
         evaluation.EvidenceGates.Add(CreateManifestGate(evaluation.ManifestValidation));
         evaluation.EvidenceGates.Add(manifestCoverageGate);
         evaluation.EvidenceGates.Add(CreateReportSetGate(
@@ -349,6 +367,8 @@ internal static class Program
             evaluation.CandidateReportSetValidation));
         evaluation.EvidenceGates.Add(baselineReportAnalysisGate);
         evaluation.EvidenceGates.Add(candidateReportAnalysisGate);
+        evaluation.EvidenceGates.Add(baselinePlaybackEvidenceGate);
+        evaluation.EvidenceGates.Add(candidatePlaybackEvidenceGate);
 
         if (evaluation.Blockers.Count == 0)
         {
@@ -2342,6 +2362,43 @@ internal static class Program
         {
             gate.Summary =
                 label + " is unavailable; continuing with report-set and suite evidence";
+        }
+
+        return gate;
+    }
+
+    private static CandidateEvaluationGate CreatePlaybackEvidenceGate(
+        string name,
+        ReportAnalysisSummary summary)
+    {
+        var label = name.Replace("-", " ", StringComparison.Ordinal);
+        var hasNativePlaybackEvidence =
+            summary.PlaybackEvidence.CanEvaluateNativePlayback;
+        var gate = new CandidateEvaluationGate
+        {
+            Name = name,
+            Status = hasNativePlaybackEvidence ? "pass" : "blocked",
+            Action = hasNativePlaybackEvidence
+                ? "continue"
+                : "collect-comparable-evidence",
+            Summary = hasNativePlaybackEvidence
+                ? label + " has native/App software playback evidence"
+                : label + " lacks native/App software playback evidence"
+        };
+
+        CopyValues(summary.EvidenceSources, gate.Signals);
+        CopyValues(summary.Limitations, gate.SuggestedNextActions);
+        CopyValues(summary.PlaybackEvidence.Reasons, gate.SuggestedNextActions);
+
+        if (gate.Status == "blocked")
+        {
+            AddUnique(gate.Blockers, name + ".insufficient");
+            PlaybackQualityCodeTargetCatalog.AddForFailureArea(
+                gate.CodeTargets,
+                "evidence-collection");
+            MarkWeakGateConfidence(
+                gate,
+                label + " is not sufficient for native playback candidate comparison");
         }
 
         return gate;

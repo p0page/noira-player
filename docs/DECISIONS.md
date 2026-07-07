@@ -1,5 +1,15 @@
 # 技术决策
 
+## 2026-07-08: candidate evaluation 要求 native/App 软件播放证据
+
+决策：`evaluate-candidate` 在 report-analysis gate 之后新增 `baseline-playback-evidence` 和 `candidate-playback-evidence`。两个 gate 复用 `ReportAnalysisSummary.PlaybackEvidence.CanEvaluateNativePlayback` 作为唯一判据；任一侧没有 native/App 软件播放证据时，candidate evaluation 停在对应 gate，顶层 blockers 写入 `baseline-playback-evidence.insufficient` 或 `candidate-playback-evidence.insufficient`，并跳过 suite comparison。
+
+原因：`core-probe` 已经能证明播放器 core orchestration、生命周期事件和报告链路闭合，但它不打开 native playback graph，也不解码真实媒体。此前只要 report-set 和 report-analysis 都通过，`evaluate-candidate` 仍可能继续进入 suite，把 core-probe 的 deterministic telemetry 误用于候选播放质量判断。新增 gate 让模型在进入 before/after 比较前必须先确认 baseline 和 candidate 都有可比较的 native/App 软件播放证据。
+
+影响：source-only 和 core-probe report-set 不能通过 playback evidence gate；导入 `native-winrt:*` captured report 可以作为本阶段纯软件闭环里的 native/App playback evidence。CLI smoke 覆盖了 core-probe 被阻断和 native-winrt fixture 通过两条路径。
+
+边界：这是候选评估门禁变更，不改变播放行为、native graph、report-set validation、analyzer 输出、阈值、expected behavior、comparison scoring 或 suite 决策逻辑。`native/App 软件播放证据` 仍不等于硬件显示输出验证。
+
 ## 2026-07-08: report-analysis summary 增加 playbackEvidence 范围判断
 
 决策：`analyze-report-set` 输出的 `ReportAnalysisSummary` 新增 `playbackEvidence`。该对象包含 `scope`、`status`、`canEvaluateNativePlayback`、`canEvaluateOrchestration` 和 `reasons[]`，从集合级 `evidenceSources[]`、`limitations[]` 与 skip 计数派生，不改变既有分析结果。
