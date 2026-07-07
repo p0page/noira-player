@@ -35,3 +35,17 @@
 ## 下一步
 
 先归档一次 source-only baseline report-set、report-set validation 和 report-analysis summary，确认 JSON 可被模型消费；随后优先补真实 App/native 采集器，把 source-only baseline 替换为实际播放 evidence。
+# 2026-07-07 更新：v0.1 core-probe 评测闭环
+
+当前已经新增 `materialize-core-probe-report-set`，可以在不启动 App、不打包 UWP、不依赖 Xbox 或显示器的情况下，驱动 `PlaybackOrchestrator` 走 start、pause、resume、seek、track switch、subtitle switch 和 stop 路径，并生成标准 `PlaybackQualityRunResult` envelope。
+
+已归档 `docs/qa/baselines/v0.1-core-probe/`：
+
+- 8/8 reference case 生成 report。
+- `validate-report-set` 结果为 `isValid = true`，`matchedCaseCount = 8`，error 数量为 0。
+- `analyze-report-set` 结果为 `decision = no-change`，`blockedReportCount = 0`。
+- Dolby Vision Profile 5 case 被标记为 `unsupported` / `unsupported-source`，不再误报为 color-pipeline 缺证据。
+
+边界仍需明确：core-probe 是实际 player core 软件评测，但它使用 in-process diagnostic backend，不打开 native playback graph，不解码真实媒体，不验证 HDMI / 显示器输出。它证明评测链路、case metadata、required signals、orchestrator 生命周期和模型报告结构已经闭合；它不证明真实播放质量、颜色准确性、帧率稳定性或 A/V sync 真实表现。
+
+下一步应补 native graph 或真实媒体软件采集器，让 frame timing、decoder/rendered frames、buffering、A/V sync、color pipeline 从真实播放路径产生，而不是 deterministic probe telemetry。

@@ -278,3 +278,27 @@ Playback quality reports are optimized for model/agent consumption:
 - `PlaybackQualityRunComparator` compares baseline and candidate reports after a Core change and classifies the run as improved, regressed, mixed, unchanged, or insufficient evidence, including baseline/candidate run IDs, comparability checks, strong/partial/weak confidence, direct optimization action/risk, suggested next action, reasons, suite/case code targets, optional repeated-unchanged stall protection, matched/unmatched signal coverage, unmatched candidate failures, no-matching-signal evidence gaps, and a machine-readable keep/reject/split/collect-evidence decision;
 - `display.refreshRateHz` is treated as required evidence for diagnosing 23.976fps/24fps cadence issues and is exposed by native display status when HDMI mode data is available;
 - `limitations` prevents the model from inferring hardware facts that pure software telemetry cannot prove.
+# Materialize Core Probe Report Set
+
+`materialize-core-probe-report-set` 是 v0.1 的第一条非 source-only、App-free、hardware-free core 评测路径：
+
+```powershell
+dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- materialize-core-probe-report-set --manifest docs\qa\playback-quality-reference-manifest.example.json --reports-dir docs\qa\baselines\v0.1-core-probe\reports --source-revision <git-sha-or-working-tree-id> --player-core-version NextGenEmby.Core --build-configuration Debug --output docs\qa\baselines\v0.1-core-probe\materialized-core-probe-summary.json
+dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- validate-report-set --manifest docs\qa\playback-quality-reference-manifest.example.json --reports-dir docs\qa\baselines\v0.1-core-probe\reports --output docs\qa\baselines\v0.1-core-probe\report-set-validation.json
+dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- analyze-report-set --reports-dir docs\qa\baselines\v0.1-core-probe\reports --output docs\qa\baselines\v0.1-core-probe\report-analysis-summary.json
+```
+
+该命令会驱动 `PlaybackOrchestrator` 执行 start、pause、resume、seek、音轨切换、字幕切换和 stop，然后生成标准 `PlaybackQualityRunResult` envelope。报告会保留 `caseMetadata`、source、startup、position、tracks、timing、sync、buffers、colorPipeline、display、limitations 和 `modelAnalysis`。
+
+边界必须保留：
+
+- 不启动 App。
+- 不打包 UWP。
+- 不依赖 Xbox、显示器或人工肉眼判断。
+- 不打开 native playback graph。
+- 不解码真实媒体。
+- 不验证 HDMI / 显示器输出。
+
+因此，core-probe 结果可以证明评测链路、required signals、orchestrator 生命周期和模型报告结构已经闭合；不能证明真实播放质量。进入播放器优化前，仍需要 native graph 或真实媒体软件采集器提供真实 decoder/render/buffer/frame timing/A-V sync/color telemetry。
+
+当前归档在 `docs/qa/baselines/v0.1-core-probe/`。该 report-set 覆盖 example manifest 的 8 个 case，`validate-report-set` 为 `isValid = true`。Dolby Vision Profile 5 case 预期输出 `status = unsupported` 和 `primaryFailureArea = unsupported-source`，不应要求 color conversion telemetry。

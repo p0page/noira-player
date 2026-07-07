@@ -16,3 +16,9 @@
 ## v0.1 裁判边界
 
 v0.1 可以验证媒体源解析、播放生命周期、seek/resume、轨道发现、字幕选择状态、缓冲、frame timing、A/V sync、颜色元数据和错误处理的软件证据。它不验证最终显示设备画质，也不以总分替代结构化失败诊断。
+# 2026-07-07 补充原则
+
+1. `unsupported` 是有效评测结果，不是 pass 的变体。对当前 MVP 明确不支持的源，报告应保留 source 分类证据，并避免要求不会发生的播放、解码、色彩转换或显示输出 telemetry。
+2. probe telemetry 必须显式标注来源。`core-probe` 可以证明 player core orchestration 和 report-set 链路闭合，但不能证明真实媒体播放质量。
+3. 当报告消费对象是模型时，`missingEvidence` 必须指向下一步真实可行动的证据缺口。不要把 unsupported source 误导成 color-pipeline、frame-pacing 或 A/V sync 缺证据。
+4. deterministic probe 数据可以用于验证评测系统本身，但不能用于声称播放器颜色、帧率、缓冲或同步能力提升。

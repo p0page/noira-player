@@ -26,6 +26,24 @@ namespace NextGenEmby.Core.PlaybackQuality
             CheckExpectedSourceMetadata(report, expected);
             CheckExpectedFrameRate(report, expected);
             CheckStartupDuration(report, expected);
+
+            if (IsExpectedUnsupportedSource(expected))
+            {
+                AssignFailureClasses(report);
+                if (report.FailureReasons.Count == 0)
+                {
+                    report.Result = "unsupported";
+                    report.Analysis.PrimaryFailureArea = "unsupported-source";
+                    report.Analysis.SuggestedNextAction =
+                        "Source is expected to be unsupported; preserve source classification evidence and skip playback-quality thresholds.";
+                    return;
+                }
+
+                report.Result = "fail";
+                AssignFailureAnalysis(report);
+                return;
+            }
+
             CheckSeekPositionError(report, expected);
             CheckMin(
                 report,
@@ -853,6 +871,16 @@ namespace NextGenEmby.Core.PlaybackQuality
 
             report.Analysis.PrimaryFailureArea = "unknown";
             report.Analysis.SuggestedNextAction = "Inspect raw metrics and failure reasons.";
+        }
+
+        private static bool IsExpectedUnsupportedSource(PlaybackQualityExpected expected)
+        {
+            return expected != null &&
+                ((expected.IsDirectPlayable.HasValue && !expected.IsDirectPlayable.Value) ||
+                string.Equals(
+                    expected.HdrKind,
+                    "DolbyVisionUnsupported",
+                    System.StringComparison.Ordinal));
         }
 
         private static void AssignFailureClasses(PlaybackQualityReport report)

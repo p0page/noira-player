@@ -340,6 +340,66 @@ public sealed class PlaybackQualityEvaluatorTests
     }
 
     [Fact]
+    public void Evaluate_Marks_Expected_Unsupported_Source_Without_Color_Conversion_Failure()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "dv-profile5-unsupported",
+            Expected = new PlaybackQualityExpected
+            {
+                Codec = "hevc",
+                Width = 3840,
+                Height = 2160,
+                FrameRate = 60,
+                HdrKind = "DolbyVisionUnsupported",
+                HdrPlaybackStrategy = "Dolby Vision unsupported",
+                IsHdr = true,
+                IsDirectPlayable = false,
+                IsDolbyVision = true,
+                DolbyVisionProfile = 5,
+                HasHdr10BaseLayer = false,
+                HasHlgBaseLayer = false,
+                MaxStartupDurationMs = 3000,
+                RequireValidatedConversion = true
+            },
+            Source = new PlaybackQualitySource
+            {
+                Codec = "hevc",
+                Width = 3840,
+                Height = 2160,
+                FrameRate = 60,
+                HdrKind = "DolbyVisionUnsupported",
+                HdrPlaybackStrategy = "Dolby Vision unsupported",
+                IsHdr = true,
+                IsDirectPlayable = false,
+                IsDolbyVision = true,
+                DolbyVisionProfile = 5,
+                HasHdr10BaseLayer = false,
+                HasHlgBaseLayer = false
+            },
+            Startup = new PlaybackQualityStartup
+            {
+                StartupDurationMs = 250
+            }
+        };
+
+        PlaybackQualityEvaluator.Evaluate(report);
+
+        Assert.Equal("unsupported", report.Result);
+        Assert.Empty(report.FailureReasons);
+        Assert.Equal("unsupported-source", report.Analysis.PrimaryFailureArea);
+        Assert.Equal(
+            "Source is expected to be unsupported; preserve source classification evidence and skip playback-quality thresholds.",
+            report.Analysis.SuggestedNextAction);
+        Assert.Contains(report.Checks, check =>
+            check.Name == "ExpectedIsDirectPlayable" &&
+            check.Signal == "source.isDirectPlayable" &&
+            check.Status == "pass");
+        Assert.DoesNotContain(report.Checks, check =>
+            check.Signal == "colorPipeline.conversionStatus");
+    }
+
+    [Fact]
     public void Evaluate_Fails_When_Rendered_Frame_Count_Is_Below_Minimum()
     {
         var report = new PlaybackQualityReport

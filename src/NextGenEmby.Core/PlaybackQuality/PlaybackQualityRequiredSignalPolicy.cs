@@ -130,32 +130,40 @@ namespace NextGenEmby.Core.PlaybackQuality
 
             if (!string.IsNullOrWhiteSpace(expected.HdrOutput))
             {
-                AddUnique(requiredSignals, "colorPipeline.actualHdrOutput");
+                if (!IsExpectedUnsupportedSource(expected))
+                {
+                    AddUnique(requiredSignals, "colorPipeline.actualHdrOutput");
+                }
             }
 
-            if (PlaybackQualityColorExpectationPolicy.RequiresSurfaceEvidence(expected))
+            if (!IsExpectedUnsupportedSource(expected) &&
+                PlaybackQualityColorExpectationPolicy.RequiresSurfaceEvidence(expected))
             {
                 AddUnique(requiredSignals, "display.hdrStatus");
                 AddUnique(requiredSignals, "colorPipeline.swapChainFormat");
                 AddUnique(requiredSignals, "colorPipeline.swapChainColorSpace");
             }
 
-            if (PlaybackQualityColorExpectationPolicy.RequiresTenBitSwapChain(expected))
+            if (!IsExpectedUnsupportedSource(expected) &&
+                PlaybackQualityColorExpectationPolicy.RequiresTenBitSwapChain(expected))
             {
                 AddUnique(requiredSignals, "colorPipeline.isTenBitSwapChain");
             }
 
-            if (!string.IsNullOrWhiteSpace(expected.DxgiInput))
+            if (!IsExpectedUnsupportedSource(expected) &&
+                !string.IsNullOrWhiteSpace(expected.DxgiInput))
             {
                 AddUnique(requiredSignals, "colorPipeline.dxgiInput");
             }
 
-            if (!string.IsNullOrWhiteSpace(expected.DxgiOutput))
+            if (!IsExpectedUnsupportedSource(expected) &&
+                !string.IsNullOrWhiteSpace(expected.DxgiOutput))
             {
                 AddUnique(requiredSignals, "colorPipeline.dxgiOutput");
             }
 
-            if (expected.RequireValidatedConversion)
+            if (!IsExpectedUnsupportedSource(expected) &&
+                expected.RequireValidatedConversion)
             {
                 AddUnique(requiredSignals, "colorPipeline.conversionStatus");
             }
@@ -172,6 +180,16 @@ namespace NextGenEmby.Core.PlaybackQuality
             }
 
             return requiredSignals;
+        }
+
+        private static bool IsExpectedUnsupportedSource(PlaybackQualityExpected expected)
+        {
+            return expected != null &&
+                ((expected.IsDirectPlayable.HasValue && !expected.IsDirectPlayable.Value) ||
+                string.Equals(
+                    expected.HdrKind,
+                    "DolbyVisionUnsupported",
+                    StringComparison.Ordinal));
         }
 
         public static bool HasReportSignal(

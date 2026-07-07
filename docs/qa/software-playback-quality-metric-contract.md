@@ -294,3 +294,8 @@ When multiple failures occur, choose `analysis.primaryFailureArea` by this order
 8. `unknown`
 
 This priority is intentional. A model should not optimize frame pacing when the actual problem is that the source is unsupported or HDR output is wrong.
+# 2026-07-07 Contract Addendum
+
+`report.result = unsupported` is a first-class result. When `expected.isDirectPlayable = false` or `expected.hdrKind = DolbyVisionUnsupported`, the report should preserve source classification evidence and skip playback-quality thresholds that cannot run for that source. In that state, required-signal generation and model analysis must not ask for color conversion telemetry such as `colorPipeline.actualHdrOutput`, `colorPipeline.dxgiInput`, `colorPipeline.dxgiOutput`, or `colorPipeline.conversionStatus`.
+
+`materialize-core-probe-report-set` produces a standard `PlaybackQualityRunResult` envelope by driving `PlaybackOrchestrator` with an in-process diagnostic backend. Reports from this command must include explicit `core-probe` limitations. They are valid software evidence for orchestration, report-shape, required-signal, case-metadata, and model-analysis contracts, but they are not proof of native decode/render quality, HDMI output, actual display HDR state, frame pacing, buffering, color accuracy, or A/V sync behavior.

@@ -81,6 +81,10 @@ try {
     $materializedBaselineDir = Join-Path $tempRoot 'materialized-baseline-report-set'
     $materializedBaselineSummaryPath = Join-Path $tempRoot 'materialized-baseline-summary.json'
     $materializedBaselineValidationPath = Join-Path $tempRoot 'materialized-baseline-validation.json'
+    $coreProbeManifestPath = Join-Path $tempRoot 'core-probe-reference-manifest.json'
+    $coreProbeDir = Join-Path $tempRoot 'core-probe-report-set'
+    $coreProbeSummaryPath = Join-Path $tempRoot 'core-probe-summary.json'
+    $coreProbeValidationPath = Join-Path $tempRoot 'core-probe-validation.json'
     $exampleManifestPath = Join-Path $repoRoot 'docs\qa\playback-quality-reference-manifest.example.json'
     $exampleManifestValidationPath = Join-Path $tempRoot 'example-reference-manifest-validation.json'
     $exampleRunPlanPath = Join-Path $tempRoot 'example-reference-run-plan.json'
@@ -636,6 +640,140 @@ try {
         $_.failureClass -eq 'insufficient instrumentation'
     })) {
         throw 'Expected materialized source-only baseline to expose missing telemetry as insufficient instrumentation.'
+    }
+
+    @'
+{
+  "schemaVersion": 1,
+  "cases": [
+    {
+      "caseId": "local/core-probe-sdr-timeline-tracks",
+      "category": "stable",
+      "severity": "high",
+      "stability": "stable",
+      "uri": "emby://quality-cases/core-probe-sdr-timeline-tracks",
+      "itemId": "quality-case-core-probe",
+      "mediaSourceId": "quality-source-core-probe",
+      "startPositionTicks": 600000000,
+      "tier": 1,
+      "purpose": [
+        "sdr-smoke",
+        "timeline",
+        "tracks",
+        "audio-switch",
+        "subtitle-switch",
+        "frame-pacing",
+        "av-sync",
+        "buffering"
+      ],
+      "expected": {
+        "codec": "hevc",
+        "width": 1920,
+        "height": 1080,
+        "frameRate": 60.0,
+        "hdrKind": "Sdr",
+        "isHdr": false,
+        "isDirectPlayable": true,
+        "hdrOutput": "Sdr",
+        "dxgiInput": "YCBCR_STUDIO_G22_LEFT_P709",
+        "dxgiOutput": "RGB_FULL_G22_NONE_P709",
+        "maxStartupDurationMs": 5000.0,
+        "minRenderedVideoFrames": 120,
+        "maxDroppedFrames": 0,
+        "maxFrameGapMs": 40.0,
+        "maxRenderIntervalMsP95": 20.0,
+        "maxRenderIntervalMsP99": 25.0,
+        "maxAudioVideoDriftMsP95": 80.0,
+        "maxSeekPositionErrorMs": 500.0,
+        "maxVideoStarvedPasses": 0,
+        "maxAudioStarvedPasses": 0,
+        "requireValidatedConversion": true
+      }
+    }
+  ]
+}
+'@ | Set-Content -LiteralPath $coreProbeManifestPath -Encoding UTF8
+
+    Push-Location $repoRoot
+    try {
+        dotnet run `
+            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
+            --no-build `
+            -- materialize-core-probe-report-set `
+            --manifest $coreProbeManifestPath `
+            --reports-dir $coreProbeDir `
+            --source-revision smoke-core-probe-revision `
+            --player-core-version smoke-core `
+            --build-configuration Debug `
+            --output $coreProbeSummaryPath
+        if ($LASTEXITCODE -ne 0) {
+            throw 'playback quality CLI materialize-core-probe-report-set returned a non-zero exit code.'
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    $coreProbeSummary = Get-Content -Raw -LiteralPath $coreProbeSummaryPath | ConvertFrom-Json
+    if ($coreProbeSummary.schemaVersion -ne 1 -or
+        $coreProbeSummary.caseCount -ne 1 -or
+        $coreProbeSummary.reportsDirectory -ne $coreProbeDir) {
+        throw 'Expected materialize-core-probe-report-set summary to describe generated reports.'
+    }
+
+    if (-not ($coreProbeSummary.limitations -contains 'core-probe: native playback graph, decoder, renderer, network I/O, and HDMI output were not opened')) {
+        throw 'Expected materialize-core-probe-report-set summary to expose core-probe limitation.'
+    }
+
+    $coreProbeReportPath = Join-Path $coreProbeDir 'local\core-probe-sdr-timeline-tracks.json'
+    if (-not (Test-Path -LiteralPath $coreProbeReportPath)) {
+        throw 'Expected materialize-core-probe-report-set to write run-id based report path.'
+    }
+
+    $coreProbeReport = Get-Content -Raw -LiteralPath $coreProbeReportPath | ConvertFrom-Json
+    if ($coreProbeReport.schemaVersion -ne 1 -or
+        $coreProbeReport.caseMetadata.caseId -ne 'local/core-probe-sdr-timeline-tracks' -or
+        $coreProbeReport.report.result -ne 'pass' -or
+        $coreProbeReport.report.position.requestedStartPositionTicks -ne 600000000 -or
+        $coreProbeReport.report.position.seekTargetPositionTicks -ne 900000000 -or
+        $coreProbeReport.report.position.actualPositionTicks -ne 900000000 -or
+        $coreProbeReport.report.tracks.selectedAudioStreamIndex -ne 1 -or
+        $coreProbeReport.report.tracks.selectedSubtitleStreamIndex -ne 3 -or
+        $coreProbeReport.report.environment.sourceRevision -ne 'smoke-core-probe-revision') {
+        throw 'Expected materialize-core-probe-report-set to write a model-consumable core probe envelope.'
+    }
+
+    if (-not ($coreProbeReport.report.limitations -contains 'core-probe: native playback graph, decoder, renderer, network I/O, and HDMI output were not opened')) {
+        throw 'Expected core probe report to carry native graph limitation.'
+    }
+
+    if (-not ($coreProbeReport.modelAnalysis.evidenceSignals -contains 'position.seekPositionErrorMs') -or
+        -not ($coreProbeReport.modelAnalysis.evidenceSignals -contains 'tracks.selectedAudioStreamIndex') -or
+        -not ($coreProbeReport.modelAnalysis.evidenceSignals -contains 'tracks.selectedSubtitleStreamIndex')) {
+        throw 'Expected core probe model analysis to expose timeline and track-switch evidence signals.'
+    }
+
+    Push-Location $repoRoot
+    try {
+        dotnet run `
+            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
+            --no-build `
+            -- validate-report-set `
+            --manifest $coreProbeManifestPath `
+            --reports-dir $coreProbeDir `
+            --output $coreProbeValidationPath
+        if ($LASTEXITCODE -ne 0) {
+            throw 'Expected materialized core probe report-set to pass validation.'
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    $coreProbeValidation = Get-Content -Raw -LiteralPath $coreProbeValidationPath | ConvertFrom-Json
+    if ($coreProbeValidation.isValid -ne $true -or
+        $coreProbeValidation.matchedCaseCount -ne 1) {
+        throw 'Expected materialized core probe validation to match every case.'
     }
 
     Push-Location $repoRoot

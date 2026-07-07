@@ -1283,6 +1283,11 @@ namespace NextGenEmby.Core.PlaybackQuality
                 analysis.MissingEvidence.Add("startup.startupDurationMs");
             }
 
+            if (IsExpectedUnsupportedSource(report.Expected))
+            {
+                return;
+            }
+
             if (report.Expected != null &&
                 report.Expected.MaxSeekPositionErrorMs.HasValue &&
                 !report.Position.SeekPositionErrorMs.HasValue &&
@@ -1408,6 +1413,16 @@ namespace NextGenEmby.Core.PlaybackQuality
             {
                 analysis.MissingEvidence.Add("display.refreshRateHz");
             }
+        }
+
+        private static bool IsExpectedUnsupportedSource(PlaybackQualityExpected? expected)
+        {
+            return expected != null &&
+                ((expected.IsDirectPlayable.HasValue && !expected.IsDirectPlayable.Value) ||
+                string.Equals(
+                    expected.HdrKind,
+                    "DolbyVisionUnsupported",
+                    System.StringComparison.Ordinal));
         }
 
         private static bool HasTenBitSwapChainEvidence(

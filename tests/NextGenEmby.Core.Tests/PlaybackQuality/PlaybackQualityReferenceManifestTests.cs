@@ -887,6 +887,36 @@ public sealed class PlaybackQualityReferenceManifestTests
     }
 
     [Fact]
+    public void RequiredSignalPolicy_Does_Not_Require_Color_Conversion_For_Explicit_Unsupported_Source()
+    {
+        var referenceCase = CreateCase(
+            "jellyfin/dv-profile5-hevc-4k",
+            tier: 3,
+            purpose: "dv-reject");
+        referenceCase.Expected.HdrKind = "DolbyVisionUnsupported";
+        referenceCase.Expected.HdrPlaybackStrategy = "Dolby Vision unsupported";
+        referenceCase.Expected.IsHdr = true;
+        referenceCase.Expected.IsDirectPlayable = false;
+        referenceCase.Expected.IsDolbyVision = true;
+        referenceCase.Expected.DolbyVisionProfile = 5;
+        referenceCase.Expected.HasHdr10BaseLayer = false;
+        referenceCase.Expected.HasHlgBaseLayer = false;
+        referenceCase.Expected.RequireValidatedConversion = true;
+
+        var requiredSignals = PlaybackQualityRequiredSignalPolicy.CreateRequiredSignals(referenceCase);
+
+        Assert.Contains("source.hdrKind", requiredSignals);
+        Assert.Contains("source.hdrPlaybackStrategy", requiredSignals);
+        Assert.Contains("source.isDirectPlayable", requiredSignals);
+        Assert.Contains("source.isDolbyVision", requiredSignals);
+        Assert.Contains("source.dolbyVisionProfile", requiredSignals);
+        Assert.DoesNotContain("colorPipeline.actualHdrOutput", requiredSignals);
+        Assert.DoesNotContain("colorPipeline.dxgiInput", requiredSignals);
+        Assert.DoesNotContain("colorPipeline.dxgiOutput", requiredSignals);
+        Assert.DoesNotContain("colorPipeline.conversionStatus", requiredSignals);
+    }
+
+    [Fact]
     public void RequiredSignalPolicy_Recognizes_Track_Report_Signals()
     {
         var report = new PlaybackQualityReport

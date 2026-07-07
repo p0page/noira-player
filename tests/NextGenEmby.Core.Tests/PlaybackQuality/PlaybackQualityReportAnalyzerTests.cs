@@ -1360,6 +1360,65 @@ public sealed class PlaybackQualityReportAnalyzerTests
     }
 
     [Fact]
+    public void Analyze_Does_Not_Request_Color_Pipeline_Evidence_For_Expected_Unsupported_Source()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "dv-profile5-unsupported",
+            Result = "unsupported",
+            Expected = new PlaybackQualityExpected
+            {
+                Codec = "hevc",
+                Width = 3840,
+                Height = 2160,
+                FrameRate = 60,
+                HdrKind = "DolbyVisionUnsupported",
+                HdrPlaybackStrategy = "Dolby Vision unsupported",
+                IsHdr = true,
+                IsDirectPlayable = false,
+                IsDolbyVision = true,
+                DolbyVisionProfile = 5,
+                HasHdr10BaseLayer = false,
+                HasHlgBaseLayer = false,
+                RequireValidatedConversion = true
+            },
+            Source = new PlaybackQualitySource
+            {
+                Codec = "hevc",
+                Width = 3840,
+                Height = 2160,
+                FrameRate = 60,
+                HdrKind = "DolbyVisionUnsupported",
+                HdrPlaybackStrategy = "Dolby Vision unsupported",
+                IsHdr = true,
+                IsDirectPlayable = false,
+                IsDolbyVision = true,
+                DolbyVisionProfile = 5,
+                HasHdr10BaseLayer = false,
+                HasHlgBaseLayer = false
+            },
+            Startup = new PlaybackQualityStartup
+            {
+                StartupDurationMs = 250
+            }
+        };
+
+        PlaybackQualityEvaluator.Evaluate(report);
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Equal("unsupported", report.Result);
+        Assert.Equal("unsupported", analysis.Result);
+        Assert.Equal("unsupported", analysis.Source.Status);
+        Assert.Contains("source.isDirectPlayable", analysis.EvidenceSignals);
+        Assert.DoesNotContain("colorPipeline.dxgiInput", analysis.MissingEvidence);
+        Assert.DoesNotContain("colorPipeline.dxgiOutput", analysis.MissingEvidence);
+        Assert.DoesNotContain("colorPipeline.conversionStatus", analysis.MissingEvidence);
+        Assert.DoesNotContain(analysis.InvestigationHints, hint =>
+            hint.FailureArea == "evidence-collection" &&
+            hint.Signals.Contains("colorPipeline.conversionStatus"));
+    }
+
+    [Fact]
     public void Analyze_Adds_Expected_Frame_Duration_As_Frame_Pacing_Evidence()
     {
         var report = new PlaybackQualityReport

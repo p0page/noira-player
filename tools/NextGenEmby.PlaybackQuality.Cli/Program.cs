@@ -47,6 +47,11 @@ internal static class Program
                 return RunMaterializeBaselineReportSet(args);
             }
 
+            if (string.Equals(args[0], "materialize-core-probe-report-set", StringComparison.OrdinalIgnoreCase))
+            {
+                return RunMaterializeCoreProbeReportSet(args);
+            }
+
             if (string.Equals(args[0], "analyze-report-set", StringComparison.OrdinalIgnoreCase))
             {
                 return RunAnalyzeReportSet(args);
@@ -142,6 +147,16 @@ internal static class Program
         var manifest = ReadJson<PlaybackQualityReferenceManifest>(options.ManifestPath);
         var validation = PlaybackQualityReferenceManifestValidator.Validate(manifest);
         var output = MaterializeBaselineReportSet(validation, options);
+        WriteJson(output, options.OutputPath);
+        return validation.IsValid ? 0 : 2;
+    }
+
+    private static int RunMaterializeCoreProbeReportSet(string[] args)
+    {
+        var options = ParseMaterializeCoreProbeReportSetOptions(args);
+        var manifest = ReadJson<PlaybackQualityReferenceManifest>(options.ManifestPath);
+        var validation = PlaybackQualityReferenceManifestValidator.Validate(manifest);
+        var output = MaterializeCoreProbeReportSet(validation, options);
         WriteJson(output, options.OutputPath);
         return validation.IsValid ? 0 : 2;
     }
@@ -464,6 +479,19 @@ internal static class Program
     private static MaterializeBaselineReportSetOptions ParseMaterializeBaselineReportSetOptions(
         string[] args)
     {
+        return ParseMaterializeReportSetOptions(args, "materialize-baseline-report-set");
+    }
+
+    private static MaterializeBaselineReportSetOptions ParseMaterializeCoreProbeReportSetOptions(
+        string[] args)
+    {
+        return ParseMaterializeReportSetOptions(args, "materialize-core-probe-report-set");
+    }
+
+    private static MaterializeBaselineReportSetOptions ParseMaterializeReportSetOptions(
+        string[] args,
+        string commandName)
+    {
         var options = new MaterializeBaselineReportSetOptions();
         for (var index = 1; index < args.Length; index++)
         {
@@ -493,7 +521,7 @@ internal static class Program
                     break;
                 default:
                     throw new ArgumentException(
-                        "Unknown materialize-baseline-report-set option: " + arg);
+                        "Unknown " + commandName + " option: " + arg);
             }
         }
 
@@ -1322,6 +1350,52 @@ internal static class Program
         return output;
     }
 
+    private static MaterializedBaselineReportSet MaterializeCoreProbeReportSet(
+        PlaybackQualityReferenceManifestValidation validation,
+        MaterializeBaselineReportSetOptions options)
+    {
+        var output = new MaterializedBaselineReportSet
+        {
+            ReportsDirectory = options.ReportsDirectory,
+            ManifestValidation = validation,
+            Environment = CreateCoreProbeEnvironment(options)
+        };
+        AddUnique(
+            output.Limitations,
+            "core-probe: PlaybackOrchestrator lifecycle was executed with an in-process diagnostic backend");
+        AddUnique(
+            output.Limitations,
+            "core-probe: native playback graph, decoder, renderer, network I/O, and HDMI output were not opened");
+        AddUnique(
+            output.Limitations,
+            "core-probe: startup, display, timing, buffering, and A/V sync values are deterministic probe telemetry");
+
+        if (!validation.IsValid)
+        {
+            return output;
+        }
+
+        Directory.CreateDirectory(options.ReportsDirectory);
+        foreach (var referenceCase in validation.Cases)
+        {
+            var reportRelativePath = GetRunIdComparisonRelativePath(referenceCase.CaseId);
+            var reportPath = Path.Combine(options.ReportsDirectory, reportRelativePath);
+            var result = PlaybackQualityOrchestratorProbe
+                .RunAsync(referenceCase, output.Environment)
+                .GetAwaiter()
+                .GetResult();
+            WriteJson(result, reportPath);
+            output.Cases.Add(CreateMaterializedBaselineCase(
+                referenceCase,
+                reportRelativePath,
+                reportPath,
+                result));
+        }
+
+        output.CaseCount = output.Cases.Count;
+        return output;
+    }
+
     private static PlaybackQualityEnvironment CreateBaselineEnvironment(
         MaterializeBaselineReportSetOptions options)
     {
@@ -1329,6 +1403,20 @@ internal static class Program
         {
             CollectorVersion = string.IsNullOrWhiteSpace(options.CollectorVersion)
                 ? "materialize-baseline-report-set-v1"
+                : options.CollectorVersion,
+            PlayerCoreVersion = options.PlayerCoreVersion,
+            SourceRevision = options.SourceRevision,
+            BuildConfiguration = options.BuildConfiguration
+        };
+    }
+
+    private static PlaybackQualityEnvironment CreateCoreProbeEnvironment(
+        MaterializeBaselineReportSetOptions options)
+    {
+        return new PlaybackQualityEnvironment
+        {
+            CollectorVersion = string.IsNullOrWhiteSpace(options.CollectorVersion)
+                ? "materialize-core-probe-report-set-v1"
                 : options.CollectorVersion,
             PlayerCoreVersion = options.PlayerCoreVersion,
             SourceRevision = options.SourceRevision,
@@ -2401,6 +2489,7 @@ internal static class Program
         writer.WriteLine("  playback-quality analyze-report --report <report.json> [--output <analysis.json>]");
         writer.WriteLine("  playback-quality materialize-run-result --report <report.json> [--output <run-result.json>]");
         writer.WriteLine("  playback-quality materialize-baseline-report-set --manifest <reference-manifest.json> --reports-dir <reports-dir> [--collector-version <version>] [--player-core-version <version>] [--source-revision <revision>] [--build-configuration <config>] [--output <summary.json>]");
+        writer.WriteLine("  playback-quality materialize-core-probe-report-set --manifest <reference-manifest.json> --reports-dir <reports-dir> [--collector-version <version>] [--player-core-version <version>] [--source-revision <revision>] [--build-configuration <config>] [--output <summary.json>]");
         writer.WriteLine("  playback-quality analyze-report-set --reports-dir <reports-dir> [--output <analysis-summary.json>]");
         writer.WriteLine("  playback-quality compare --baseline <report.json> --candidate <report.json> [--previous <comparison.json>...] [--stall-threshold <n>] [--output <comparison.json>]");
         writer.WriteLine("  playback-quality summarize --comparison <comparison.json> [--comparison <comparison.json>...] [--output <suite.json>]");
