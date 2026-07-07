@@ -44,7 +44,7 @@
     "environment": {
       "collectorVersion": "materialize-core-probe-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "f63c1dd",
+      "sourceRevision": "working-tree-track-default-forced",
       "buildConfiguration": "Debug"
     },
     "limitations": [
@@ -248,7 +248,7 @@
     "environment": {
       "collectorVersion": "materialize-core-probe-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "f63c1dd",
+      "sourceRevision": "working-tree-track-default-forced",
       "buildConfiguration": "Debug",
       "signals": [
         "environment.collectorVersion",

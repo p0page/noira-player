@@ -83,6 +83,10 @@ namespace NextGenEmby.Core.PlaybackQuality
                 AddUnique(requiredSignals, "tracks.videoTrackCount");
                 AddUnique(requiredSignals, "tracks.audioTrackCount");
                 AddUnique(requiredSignals, "tracks.subtitleTrackCount");
+                AddUnique(requiredSignals, "tracks.video.isDefault");
+                AddUnique(requiredSignals, "tracks.video.isForced");
+                AddUnique(requiredSignals, "tracks.audio.isDefault");
+                AddUnique(requiredSignals, "tracks.audio.isForced");
             }
 
             if (HasPurpose(referenceCase, "subtitles") ||
@@ -90,6 +94,8 @@ namespace NextGenEmby.Core.PlaybackQuality
                 HasPurpose(referenceCase, "subtitle-off"))
             {
                 AddUnique(requiredSignals, "tracks.isSubtitleDisabled");
+                AddUnique(requiredSignals, "tracks.subtitles.isDefault");
+                AddUnique(requiredSignals, "tracks.subtitles.isForced");
             }
 
             if (HasPurpose(referenceCase, "audio-switch"))
@@ -383,6 +389,18 @@ namespace NextGenEmby.Core.PlaybackQuality
                     }
 
                     return HasTrackEvidence(report);
+                case "tracks.video.isDefault":
+                    return HasTrackFlagEvidence(report.Tracks.Video, track => track.IsDefault);
+                case "tracks.video.isForced":
+                    return HasTrackFlagEvidence(report.Tracks.Video, track => track.IsForced);
+                case "tracks.audio.isDefault":
+                    return HasTrackFlagEvidence(report.Tracks.Audio, track => track.IsDefault);
+                case "tracks.audio.isForced":
+                    return HasTrackFlagEvidence(report.Tracks.Audio, track => track.IsForced);
+                case "tracks.subtitles.isDefault":
+                    return HasTrackFlagEvidence(report.Tracks.Subtitles, track => track.IsDefault);
+                case "tracks.subtitles.isForced":
+                    return HasTrackFlagEvidence(report.Tracks.Subtitles, track => track.IsForced);
                 case "timing.renderedVideoFrames":
                     return report.Timing.RenderedVideoFrames > 0;
                 case "timing.droppedVideoFrames":
@@ -522,6 +540,21 @@ namespace NextGenEmby.Core.PlaybackQuality
                 report.Tracks.SelectedVideoStreamIndex.HasValue ||
                 report.Tracks.SelectedAudioStreamIndex.HasValue ||
                 report.Tracks.SelectedSubtitleStreamIndex.HasValue;
+        }
+
+        private static bool HasTrackFlagEvidence(
+            IReadOnlyCollection<PlaybackQualityTrack> tracks,
+            Func<PlaybackQualityTrack, bool?> select)
+        {
+            foreach (var track in tracks)
+            {
+                if (select(track).HasValue)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static bool HasBufferEvidence(PlaybackQualityReport report)

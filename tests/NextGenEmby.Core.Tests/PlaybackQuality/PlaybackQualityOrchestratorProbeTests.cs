@@ -116,6 +116,12 @@ public sealed class PlaybackQualityOrchestratorProbeTests
         Assert.Contains("position.seekPositionErrorMs", result.ModelAnalysis.EvidenceSignals);
         Assert.Contains("tracks.selectedAudioStreamIndex", result.ModelAnalysis.EvidenceSignals);
         Assert.Contains("tracks.selectedSubtitleStreamIndex", result.ModelAnalysis.EvidenceSignals);
+        Assert.Contains("tracks.video.isDefault", result.ModelAnalysis.EvidenceSignals);
+        Assert.Contains("tracks.video.isForced", result.ModelAnalysis.EvidenceSignals);
+        Assert.Contains("tracks.audio.isDefault", result.ModelAnalysis.EvidenceSignals);
+        Assert.Contains("tracks.audio.isForced", result.ModelAnalysis.EvidenceSignals);
+        Assert.Contains("tracks.subtitles.isDefault", result.ModelAnalysis.EvidenceSignals);
+        Assert.Contains("tracks.subtitles.isForced", result.ModelAnalysis.EvidenceSignals);
         Assert.Contains(
             "core-probe: native playback graph, decoder, renderer, network I/O, and HDMI output were not opened",
             result.ModelAnalysis.Limitations);

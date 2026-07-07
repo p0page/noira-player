@@ -303,21 +303,27 @@ public sealed class PlaybackQualityReportAnalyzerTests
         {
             Index = 0,
             Codec = "hevc",
-            Language = "und"
+            Language = "und",
+            IsDefault = true,
+            IsForced = false
         });
         report.Tracks.Audio.Add(new PlaybackQualityTrack
         {
             Index = 2,
             Codec = "truehd",
             Language = "eng",
-            ChannelLayout = "7.1"
+            ChannelLayout = "7.1",
+            IsDefault = true,
+            IsForced = false
         });
         report.Tracks.Subtitles.Add(new PlaybackQualityTrack
         {
             Index = 7,
             Codec = "srt",
             Language = "zho",
-            IsExternal = true
+            IsExternal = true,
+            IsDefault = false,
+            IsForced = true
         });
 
         var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
@@ -335,7 +341,13 @@ public sealed class PlaybackQualityReportAnalyzerTests
         Assert.Contains("tracks.subtitleTrackCount", analysis.Tracks.Signals);
         Assert.Contains("tracks.selectedAudioStreamIndex", analysis.EvidenceSignals);
         Assert.Contains("tracks.selectedSubtitleStreamIndex", analysis.EvidenceSignals);
+        Assert.Contains("tracks.video.isDefault", analysis.EvidenceSignals);
+        Assert.Contains("tracks.video.isForced", analysis.EvidenceSignals);
+        Assert.Contains("tracks.audio.isDefault", analysis.EvidenceSignals);
+        Assert.Contains("tracks.audio.isForced", analysis.EvidenceSignals);
         Assert.Contains("tracks.subtitles.isExternal", analysis.EvidenceSignals);
+        Assert.Contains("tracks.subtitles.isDefault", analysis.EvidenceSignals);
+        Assert.Contains("tracks.subtitles.isForced", analysis.EvidenceSignals);
     }
 
     [Fact]

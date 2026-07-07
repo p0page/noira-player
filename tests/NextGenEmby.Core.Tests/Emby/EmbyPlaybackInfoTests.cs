@@ -43,6 +43,8 @@ public sealed class EmbyPlaybackInfoTests
                       "Codec": "truehd",
                       "Language": "eng",
                       "ChannelLayout": "7.1",
+                      "IsDefault": true,
+                      "IsForced": false,
                       "DisplayTitle": "English TrueHD 7.1 Atmos"
                     },
                     {
@@ -51,6 +53,8 @@ public sealed class EmbyPlaybackInfoTests
                       "Codec": "ass",
                       "Language": "chi",
                       "IsExternal": true,
+                      "IsDefault": false,
+                      "IsForced": true,
                       "DisplayTitle": "Chinese ASS"
                     }
                   ]
@@ -77,8 +81,14 @@ public sealed class EmbyPlaybackInfoTests
         Assert.Equal("hevc", video.Codec);
         Assert.Equal(23.976, video.RealFrameRate);
         Assert.Equal(24.0, video.AverageFrameRate);
-        Assert.Equal("truehd", source.AudioStreams.Single().Codec);
-        Assert.True(source.SubtitleStreams.Single().IsExternal);
+        var audio = source.AudioStreams.Single();
+        Assert.Equal("truehd", audio.Codec);
+        Assert.True(audio.IsDefault);
+        Assert.False(audio.IsForced);
+        var subtitle = source.SubtitleStreams.Single();
+        Assert.True(subtitle.IsExternal);
+        Assert.False(subtitle.IsDefault);
+        Assert.True(subtitle.IsForced);
 
         var request = handler.LastRequest!;
         Assert.Equal(HttpMethod.Get, request.Method);

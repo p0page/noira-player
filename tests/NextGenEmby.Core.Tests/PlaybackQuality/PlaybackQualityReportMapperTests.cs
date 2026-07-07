@@ -174,7 +174,9 @@ public sealed class PlaybackQualityReportMapperTests
             Language = "und",
             DisplayTitle = "4K HEVC Main10",
             RealFrameRate = 23.976,
-            AverageFrameRate = 23.976
+            AverageFrameRate = 23.976,
+            IsDefault = true,
+            IsForced = false
         });
         source.Streams.Add(new EmbyMediaStream
         {
@@ -192,7 +194,9 @@ public sealed class PlaybackQualityReportMapperTests
             Index = 2,
             Language = "eng",
             ChannelLayout = "7.1",
-            DisplayTitle = "English TrueHD 7.1"
+            DisplayTitle = "English TrueHD 7.1",
+            IsDefault = true,
+            IsForced = false
         });
         source.Streams.Add(new EmbyMediaStream
         {
@@ -201,7 +205,9 @@ public sealed class PlaybackQualityReportMapperTests
             Index = 7,
             Language = "zho",
             DisplayTitle = "Chinese SRT",
-            IsExternal = true
+            IsExternal = true,
+            IsDefault = false,
+            IsForced = true
         });
         source.Streams.Add(new EmbyMediaStream
         {
@@ -256,16 +262,22 @@ public sealed class PlaybackQualityReportMapperTests
         Assert.Equal("und", video.Language);
         Assert.Equal("4K HEVC Main10", video.DisplayTitle);
         Assert.Equal(23.976, video.RealFrameRate);
+        Assert.True(video.IsDefault);
+        Assert.False(video.IsForced);
         var audio = report.Tracks.Audio.Single(track => track.Index == 2);
         Assert.Equal("truehd", audio.Codec);
         Assert.Equal("eng", audio.Language);
         Assert.Equal("7.1", audio.ChannelLayout);
         Assert.Equal("English TrueHD 7.1", audio.DisplayTitle);
+        Assert.True(audio.IsDefault);
+        Assert.False(audio.IsForced);
         var subtitle = report.Tracks.Subtitles.Single(track => track.Index == 7);
         Assert.Equal("srt", subtitle.Codec);
         Assert.Equal("zho", subtitle.Language);
         Assert.Equal("Chinese SRT", subtitle.DisplayTitle);
         Assert.True(subtitle.IsExternal);
+        Assert.False(subtitle.IsDefault);
+        Assert.True(subtitle.IsForced);
     }
 
     [Fact]

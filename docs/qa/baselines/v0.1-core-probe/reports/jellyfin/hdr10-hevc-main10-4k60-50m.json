@@ -174,7 +174,7 @@
     "environment": {
       "collectorVersion": "materialize-core-probe-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "f63c1dd",
+      "sourceRevision": "working-tree-track-default-forced",
       "buildConfiguration": "Debug"
     },
     "limitations": [
@@ -304,6 +304,8 @@
           "channelLayout": "",
           "displayTitle": "",
           "isExternal": false,
+          "isDefault": true,
+          "isForced": false,
           "realFrameRate": 60,
           "averageFrameRate": 60
         }
@@ -317,6 +319,8 @@
           "channelLayout": "5.1",
           "displayTitle": "English 5.1",
           "isExternal": false,
+          "isDefault": true,
+          "isForced": false,
           "realFrameRate": 0,
           "averageFrameRate": 0
         },
@@ -328,6 +332,8 @@
           "channelLayout": "2.0",
           "displayTitle": "Japanese Stereo",
           "isExternal": false,
+          "isDefault": false,
+          "isForced": false,
           "realFrameRate": 0,
           "averageFrameRate": 0
         }
@@ -454,7 +460,7 @@
     "environment": {
       "collectorVersion": "materialize-core-probe-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "f63c1dd",
+      "sourceRevision": "working-tree-track-default-forced",
       "buildConfiguration": "Debug",
       "signals": [
         "environment.collectorVersion",
@@ -515,12 +521,16 @@
         "tracks.isSubtitleDisabled",
         "tracks.video.index",
         "tracks.video.codec",
+        "tracks.video.isDefault",
+        "tracks.video.isForced",
         "tracks.video.realFrameRate",
         "tracks.video.averageFrameRate",
         "tracks.audio.index",
         "tracks.audio.codec",
         "tracks.audio.language",
         "tracks.audio.displayTitle",
+        "tracks.audio.isDefault",
+        "tracks.audio.isForced",
         "tracks.audio.channelLayout"
       ],
       "missingSignals": []
@@ -720,12 +730,16 @@
       "tracks.isSubtitleDisabled",
       "tracks.video.index",
       "tracks.video.codec",
+      "tracks.video.isDefault",
+      "tracks.video.isForced",
       "tracks.video.realFrameRate",
       "tracks.video.averageFrameRate",
       "tracks.audio.index",
       "tracks.audio.codec",
       "tracks.audio.language",
       "tracks.audio.displayTitle",
+      "tracks.audio.isDefault",
+      "tracks.audio.isForced",
       "tracks.audio.channelLayout",
       "lifecycle.load",
       "lifecycle.play",

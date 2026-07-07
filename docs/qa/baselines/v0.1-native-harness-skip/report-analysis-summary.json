@@ -213,7 +213,11 @@
         "tracks.selectedVideoStreamIndex",
         "tracks.selectedAudioStreamIndex",
         "tracks.video.codec",
-        "tracks.audio.codec"
+        "tracks.video.isDefault",
+        "tracks.video.isForced",
+        "tracks.audio.codec",
+        "tracks.audio.isDefault",
+        "tracks.audio.isForced"
       ],
       "evidenceSignals": [],
       "missingSignals": [],
@@ -236,7 +240,9 @@
         "tracks.isSubtitleDisabled",
         "tracks.subtitles.codec",
         "tracks.subtitles.language",
-        "tracks.subtitles.isExternal"
+        "tracks.subtitles.isExternal",
+        "tracks.subtitles.isDefault",
+        "tracks.subtitles.isForced"
       ],
       "evidenceSignals": [],
       "missingSignals": [],

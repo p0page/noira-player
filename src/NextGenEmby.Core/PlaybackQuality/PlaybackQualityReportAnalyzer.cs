@@ -705,6 +705,16 @@ namespace NextGenEmby.Core.PlaybackQuality
             {
                 AddUnique(tracks.Signals, prefix + ".displayTitle");
             }
+
+            if (track.IsDefault.HasValue)
+            {
+                AddUnique(tracks.Signals, prefix + ".isDefault");
+            }
+
+            if (track.IsForced.HasValue)
+            {
+                AddUnique(tracks.Signals, prefix + ".isForced");
+            }
         }
 
         private static PlaybackQualityStartupAssessment AssessStartup(

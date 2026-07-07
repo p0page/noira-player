@@ -140,6 +140,8 @@ namespace NextGenEmby.Core.PlaybackQuality
                 ChannelLayout = stream.ChannelLayout,
                 DisplayTitle = stream.DisplayTitle,
                 IsExternal = stream.IsExternal,
+                IsDefault = stream.IsDefault,
+                IsForced = stream.IsForced,
                 RealFrameRate = stream.RealFrameRate,
                 AverageFrameRate = stream.AverageFrameRate
             };

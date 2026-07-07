@@ -1282,6 +1282,7 @@ internal static class Program
         }
 
         AddLifecyclePresentSignals(signals, reportElement);
+        AddTrackPresentSignals(signals, reportElement);
         return signals;
     }
 
@@ -1329,6 +1330,66 @@ internal static class Program
                     AddUnique(signals, "lifecycle.skip");
                 }
             }
+        }
+    }
+
+    private static void AddTrackPresentSignals(
+        List<string> signals,
+        JsonElement reportElement)
+    {
+        if (reportElement.ValueKind != JsonValueKind.Object ||
+            !TryGetPropertyIgnoreCase(reportElement, "tracks", out var tracks) ||
+            tracks.ValueKind != JsonValueKind.Object)
+        {
+            return;
+        }
+
+        AddTrackCollectionPresentSignals(signals, tracks, "video", "tracks.video");
+        AddTrackCollectionPresentSignals(signals, tracks, "audio", "tracks.audio");
+        AddTrackCollectionPresentSignals(signals, tracks, "subtitles", "tracks.subtitles");
+    }
+
+    private static void AddTrackCollectionPresentSignals(
+        List<string> signals,
+        JsonElement tracks,
+        string collectionName,
+        string signalPrefix)
+    {
+        if (!TryGetPropertyIgnoreCase(tracks, collectionName, out var collection) ||
+            collection.ValueKind != JsonValueKind.Array)
+        {
+            return;
+        }
+
+        foreach (var item in collection.EnumerateArray())
+        {
+            if (item.ValueKind != JsonValueKind.Object)
+            {
+                continue;
+            }
+
+            AddTrackPropertyPresentSignal(signals, item, "index", signalPrefix + ".index");
+            AddTrackPropertyPresentSignal(signals, item, "codec", signalPrefix + ".codec");
+            AddTrackPropertyPresentSignal(signals, item, "language", signalPrefix + ".language");
+            AddTrackPropertyPresentSignal(signals, item, "channelLayout", signalPrefix + ".channelLayout");
+            AddTrackPropertyPresentSignal(signals, item, "displayTitle", signalPrefix + ".displayTitle");
+            AddTrackPropertyPresentSignal(signals, item, "isExternal", signalPrefix + ".isExternal");
+            AddTrackPropertyPresentSignal(signals, item, "isDefault", signalPrefix + ".isDefault");
+            AddTrackPropertyPresentSignal(signals, item, "isForced", signalPrefix + ".isForced");
+            AddTrackPropertyPresentSignal(signals, item, "realFrameRate", signalPrefix + ".realFrameRate");
+            AddTrackPropertyPresentSignal(signals, item, "averageFrameRate", signalPrefix + ".averageFrameRate");
+        }
+    }
+
+    private static void AddTrackPropertyPresentSignal(
+        List<string> signals,
+        JsonElement track,
+        string propertyName,
+        string signal)
+    {
+        if (TryGetPropertyIgnoreCase(track, propertyName, out _))
+        {
+            AddUnique(signals, signal);
         }
     }
 
@@ -1641,13 +1702,17 @@ internal static class Program
             Codec = expected.Codec,
             Index = 0,
             RealFrameRate = expected.FrameRate,
-            AverageFrameRate = expected.FrameRate
+            AverageFrameRate = expected.FrameRate,
+            IsDefault = true,
+            IsForced = false
         });
         mediaSource.Streams.Add(new EmbyMediaStream
         {
             Kind = EmbyStreamKind.Audio,
             Codec = "unknown",
-            Index = 1
+            Index = 1,
+            IsDefault = true,
+            IsForced = false
         });
 
         var subtitleStreamIndex = ShouldIncludeSourceOnlySubtitleTrack(referenceCase)
@@ -1659,7 +1724,9 @@ internal static class Program
             {
                 Kind = EmbyStreamKind.Subtitle,
                 Codec = "unknown",
-                Index = subtitleStreamIndex.Value
+                Index = subtitleStreamIndex.Value,
+                IsDefault = false,
+                IsForced = false
             });
         }
 
@@ -2436,7 +2503,11 @@ internal static class Program
                 "tracks.selectedVideoStreamIndex",
                 "tracks.selectedAudioStreamIndex",
                 "tracks.video.codec",
-                "tracks.audio.codec"),
+                "tracks.video.isDefault",
+                "tracks.video.isForced",
+                "tracks.audio.codec",
+                "tracks.audio.isDefault",
+                "tracks.audio.isForced"),
             new ReportAnalysisCapabilityDefinition(
                 "subtitles",
                 "subtitles",
@@ -2447,7 +2518,9 @@ internal static class Program
                 "tracks.isSubtitleDisabled",
                 "tracks.subtitles.codec",
                 "tracks.subtitles.language",
-                "tracks.subtitles.isExternal"),
+                "tracks.subtitles.isExternal",
+                "tracks.subtitles.isDefault",
+                "tracks.subtitles.isForced"),
             new ReportAnalysisCapabilityDefinition(
                 "runtime-metrics",
                 "evidence-collection",

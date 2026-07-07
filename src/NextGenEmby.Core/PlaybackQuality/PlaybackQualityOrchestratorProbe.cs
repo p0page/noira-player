@@ -206,7 +206,9 @@ namespace NextGenEmby.Core.PlaybackQuality
                 Kind = EmbyStreamKind.Video,
                 Codec = expected.Codec,
                 RealFrameRate = expected.FrameRate,
-                AverageFrameRate = expected.FrameRate
+                AverageFrameRate = expected.FrameRate,
+                IsDefault = true,
+                IsForced = false
             });
             source.Streams.Add(new EmbyMediaStream
             {
@@ -215,7 +217,9 @@ namespace NextGenEmby.Core.PlaybackQuality
                 Codec = "eac3",
                 Language = "eng",
                 ChannelLayout = "5.1",
-                DisplayTitle = "English 5.1"
+                DisplayTitle = "English 5.1",
+                IsDefault = true,
+                IsForced = false
             });
             source.Streams.Add(new EmbyMediaStream
             {
@@ -224,7 +228,9 @@ namespace NextGenEmby.Core.PlaybackQuality
                 Codec = "aac",
                 Language = "jpn",
                 ChannelLayout = "2.0",
-                DisplayTitle = "Japanese Stereo"
+                DisplayTitle = "Japanese Stereo",
+                IsDefault = false,
+                IsForced = false
             });
 
             if (HasSubtitlePurpose(referenceCase))
@@ -236,7 +242,9 @@ namespace NextGenEmby.Core.PlaybackQuality
                     Codec = "srt",
                     Language = "eng",
                     DisplayTitle = "English",
-                    IsExternal = false
+                    IsExternal = false,
+                    IsDefault = false,
+                    IsForced = false
                 });
             }
 

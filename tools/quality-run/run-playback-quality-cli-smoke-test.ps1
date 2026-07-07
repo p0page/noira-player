@@ -1789,7 +1789,7 @@ try {
   "tracks": {
     "videoTrackCount": 1,
     "audioTrackCount": 1,
-    "subtitleTrackCount": 0,
+    "subtitleTrackCount": 1,
     "selectedVideoStreamIndex": 0,
     "selectedAudioStreamIndex": 1,
     "isSubtitleDisabled": true,
@@ -1798,7 +1798,9 @@ try {
         "index": 0,
         "kind": "Video",
         "codec": "hevc",
-        "language": "und"
+        "language": "und",
+        "isDefault": true,
+        "isForced": false
       }
     ],
     "audio": [
@@ -1807,10 +1809,22 @@ try {
         "kind": "Audio",
         "codec": "aac",
         "language": "eng",
-        "channelLayout": "2.0"
+        "channelLayout": "2.0",
+        "isDefault": true,
+        "isForced": false
       }
     ],
-    "subtitles": []
+    "subtitles": [
+      {
+        "index": 2,
+        "kind": "Subtitle",
+        "codec": "srt",
+        "language": "eng",
+        "isExternal": false,
+        "isDefault": false,
+        "isForced": false
+      }
+    ]
   },
   "position": {
     "requestedStartPositionTicks": 600000000,
@@ -1888,7 +1902,7 @@ try {
   "tracks": {
     "videoTrackCount": 1,
     "audioTrackCount": 1,
-    "subtitleTrackCount": 0,
+    "subtitleTrackCount": 1,
     "selectedVideoStreamIndex": 0,
     "selectedAudioStreamIndex": 1,
     "isSubtitleDisabled": true,
@@ -1897,7 +1911,9 @@ try {
         "index": 0,
         "kind": "Video",
         "codec": "hevc",
-        "language": "und"
+        "language": "und",
+        "isDefault": true,
+        "isForced": false
       }
     ],
     "audio": [
@@ -1906,10 +1922,22 @@ try {
         "kind": "Audio",
         "codec": "aac",
         "language": "eng",
-        "channelLayout": "2.0"
+        "channelLayout": "2.0",
+        "isDefault": true,
+        "isForced": false
       }
     ],
-    "subtitles": []
+    "subtitles": [
+      {
+        "index": 2,
+        "kind": "Subtitle",
+        "codec": "srt",
+        "language": "eng",
+        "isExternal": false,
+        "isDefault": false,
+        "isForced": false
+      }
+    ]
   },
   "position": {
     "requestedStartPositionTicks": 600000000,
@@ -2599,14 +2627,16 @@ try {
     "tracks": {
       "videoTrackCount": 1,
       "audioTrackCount": 1,
-      "subtitleTrackCount": 0,
+      "subtitleTrackCount": 1,
       "isSubtitleDisabled": true,
       "video": [
         {
           "index": 0,
           "kind": "Video",
           "codec": "hevc",
-          "language": "und"
+          "language": "und",
+          "isDefault": true,
+          "isForced": false
         }
       ],
       "audio": [
@@ -2615,10 +2645,22 @@ try {
           "kind": "Audio",
           "codec": "aac",
           "language": "eng",
-          "channelLayout": "2.0"
+          "channelLayout": "2.0",
+          "isDefault": true,
+          "isForced": false
         }
       ],
-      "subtitles": []
+      "subtitles": [
+        {
+          "index": 2,
+          "kind": "Subtitle",
+          "codec": "srt",
+          "language": "eng",
+          "isExternal": false,
+          "isDefault": false,
+          "isForced": false
+        }
+      ]
     },
     "position": {
       "requestedStartPositionTicks": 600000000,
@@ -2695,14 +2737,16 @@ try {
     "tracks": {
       "videoTrackCount": 1,
       "audioTrackCount": 1,
-      "subtitleTrackCount": 0,
+      "subtitleTrackCount": 1,
       "isSubtitleDisabled": true,
       "video": [
         {
           "index": 0,
           "kind": "Video",
           "codec": "hevc",
-          "language": "und"
+          "language": "und",
+          "isDefault": true,
+          "isForced": false
         }
       ],
       "audio": [
@@ -2711,10 +2755,22 @@ try {
           "kind": "Audio",
           "codec": "aac",
           "language": "eng",
-          "channelLayout": "2.0"
+          "channelLayout": "2.0",
+          "isDefault": true,
+          "isForced": false
         }
       ],
-      "subtitles": []
+      "subtitles": [
+        {
+          "index": 2,
+          "kind": "Subtitle",
+          "codec": "srt",
+          "language": "eng",
+          "isExternal": false,
+          "isDefault": false,
+          "isForced": false
+        }
+      ]
     },
     "position": {
       "requestedStartPositionTicks": 600000000,
@@ -2830,14 +2886,16 @@ try {
   "tracks": {
     "videoTrackCount": 1,
     "audioTrackCount": 1,
-    "subtitleTrackCount": 0,
+    "subtitleTrackCount": 1,
     "isSubtitleDisabled": true,
     "video": [
       {
         "index": 0,
         "kind": "Video",
         "codec": "hevc",
-        "language": "und"
+        "language": "und",
+        "isDefault": true,
+        "isForced": false
       }
     ],
     "audio": [
@@ -2846,10 +2904,22 @@ try {
         "kind": "Audio",
         "codec": "aac",
         "language": "eng",
-        "channelLayout": "2.0"
+        "channelLayout": "2.0",
+        "isDefault": true,
+        "isForced": false
       }
     ],
-    "subtitles": []
+    "subtitles": [
+      {
+        "index": 2,
+        "kind": "Subtitle",
+        "codec": "srt",
+        "language": "eng",
+        "isExternal": false,
+        "isDefault": false,
+        "isForced": false
+      }
+    ]
   },
   "position": {
     "requestedStartPositionTicks": 600000000,
@@ -2971,14 +3041,16 @@ try {
     "tracks": {
       "videoTrackCount": 1,
       "audioTrackCount": 1,
-      "subtitleTrackCount": 0,
+      "subtitleTrackCount": 1,
       "isSubtitleDisabled": true,
       "video": [
         {
           "index": 0,
           "kind": "Video",
           "codec": "hevc",
-          "language": "und"
+          "language": "und",
+          "isDefault": true,
+          "isForced": false
         }
       ],
       "audio": [
@@ -2987,10 +3059,22 @@ try {
           "kind": "Audio",
           "codec": "aac",
           "language": "eng",
-          "channelLayout": "2.0"
+          "channelLayout": "2.0",
+          "isDefault": true,
+          "isForced": false
         }
       ],
-      "subtitles": []
+      "subtitles": [
+        {
+          "index": 2,
+          "kind": "Subtitle",
+          "codec": "srt",
+          "language": "eng",
+          "isExternal": false,
+          "isDefault": false,
+          "isForced": false
+        }
+      ]
     },
     "position": {
       "requestedStartPositionTicks": 600000000,
@@ -3159,14 +3243,16 @@ try {
     "tracks": {
       "videoTrackCount": 1,
       "audioTrackCount": 1,
-      "subtitleTrackCount": 0,
+      "subtitleTrackCount": 1,
       "isSubtitleDisabled": true,
       "video": [
         {
           "index": 0,
           "kind": "Video",
           "codec": "hevc",
-          "language": "und"
+          "language": "und",
+          "isDefault": true,
+          "isForced": false
         }
       ],
       "audio": [
@@ -3175,10 +3261,22 @@ try {
           "kind": "Audio",
           "codec": "aac",
           "language": "eng",
-          "channelLayout": "2.0"
+          "channelLayout": "2.0",
+          "isDefault": true,
+          "isForced": false
         }
       ],
-      "subtitles": []
+      "subtitles": [
+        {
+          "index": 2,
+          "kind": "Subtitle",
+          "codec": "srt",
+          "language": "eng",
+          "isExternal": false,
+          "isDefault": false,
+          "isForced": false
+        }
+      ]
     },
     "position": {
       "requestedStartPositionTicks": 600000000,
@@ -3724,6 +3822,12 @@ try {
         ($_.requiredSignals -contains 'tracks.videoTrackCount') -and
         ($_.requiredSignals -contains 'tracks.audioTrackCount') -and
         ($_.requiredSignals -contains 'tracks.subtitleTrackCount') -and
+        ($_.requiredSignals -contains 'tracks.video.isDefault') -and
+        ($_.requiredSignals -contains 'tracks.video.isForced') -and
+        ($_.requiredSignals -contains 'tracks.audio.isDefault') -and
+        ($_.requiredSignals -contains 'tracks.audio.isForced') -and
+        ($_.requiredSignals -contains 'tracks.subtitles.isDefault') -and
+        ($_.requiredSignals -contains 'tracks.subtitles.isForced') -and
         ($_.requiredSignals -contains 'tracks.isSubtitleDisabled')
     })) {
         throw 'Expected example reference run plan to schedule SDR track/subtitle required signals.'

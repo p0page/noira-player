@@ -2,6 +2,19 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-08 更新：track default/forced 元数据成为模型证据
+
+已补齐轨道 default/forced 诊断链路：
+
+- `EmbyMediaStream` 和 `PlaybackQualityTrack` 现在保留 nullable `IsDefault` / `IsForced`。
+- `EmbyApiClient` 会从 Emby playback-info 的 `MediaStreams[].IsDefault` / `IsForced` 映射这些字段。
+- `PlaybackQualityReportMapper` 会把 video/audio/subtitle 轨道的 default/forced 透传到 report。
+- `PlaybackQualityReportAnalyzer` 会输出 `tracks.video.isDefault`、`tracks.video.isForced`、`tracks.audio.isDefault`、`tracks.audio.isForced`、`tracks.subtitles.isDefault` 和 `tracks.subtitles.isForced` evidence signals。
+- `PlaybackQualityRequiredSignalPolicy` 现在把 track/subtitle purpose 的 default/forced 当成 required signals；缺失时应先归类为 telemetry 缺口。
+- source-only materializer 和 core-probe diagnostic source 会为诊断轨道写入明确 default/forced 值，避免 baseline 因测试样本本身缺字段而无法覆盖该证据链。
+
+边界：这仍是 instrumentation/testability，不改变播放行为、轨道选择策略、音轨/字幕切换、字幕渲染、阈值或 pass/fail 规则。nullable 字段为 `null` 时表示采集器没有拿到证据，不能被模型解释成明确 `false`。
+
 ## 2026-07-08 更新：native-harness 缺口可物化为标准 skip 报告
 
 已新增 `materialize-native-harness-report-set`：

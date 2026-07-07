@@ -176,7 +176,7 @@
     "environment": {
       "collectorVersion": "materialize-baseline-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "d22e145",
+      "sourceRevision": "working-tree-track-default-forced",
       "buildConfiguration": "Debug"
     },
     "limitations": [
@@ -268,6 +268,8 @@
           "channelLayout": "",
           "displayTitle": "",
           "isExternal": false,
+          "isDefault": true,
+          "isForced": false,
           "realFrameRate": 60,
           "averageFrameRate": 60
         }
@@ -281,6 +283,8 @@
           "channelLayout": "",
           "displayTitle": "",
           "isExternal": false,
+          "isDefault": true,
+          "isForced": false,
           "realFrameRate": 0,
           "averageFrameRate": 0
         }
@@ -400,7 +404,7 @@
     "environment": {
       "collectorVersion": "materialize-baseline-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "d22e145",
+      "sourceRevision": "working-tree-track-default-forced",
       "buildConfiguration": "Debug",
       "signals": [
         "environment.collectorVersion",
@@ -462,10 +466,14 @@
         "tracks.isSubtitleDisabled",
         "tracks.video.index",
         "tracks.video.codec",
+        "tracks.video.isDefault",
+        "tracks.video.isForced",
         "tracks.video.realFrameRate",
         "tracks.video.averageFrameRate",
         "tracks.audio.index",
-        "tracks.audio.codec"
+        "tracks.audio.codec",
+        "tracks.audio.isDefault",
+        "tracks.audio.isForced"
       ],
       "missingSignals": []
     },
@@ -857,10 +865,14 @@
       "tracks.isSubtitleDisabled",
       "tracks.video.index",
       "tracks.video.codec",
+      "tracks.video.isDefault",
+      "tracks.video.isForced",
       "tracks.video.realFrameRate",
       "tracks.video.averageFrameRate",
       "tracks.audio.index",
       "tracks.audio.codec",
+      "tracks.audio.isDefault",
+      "tracks.audio.isForced",
       "runtimeMetrics.status",
       "runtimeMetrics.providerStatus",
       "runtimeMetrics.reason",
