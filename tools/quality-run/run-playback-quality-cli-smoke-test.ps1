@@ -37,6 +37,10 @@ try {
     $candidateEvaluationMissingEnvironmentCandidateDir = Join-Path $tempRoot 'candidate-evaluation-missing-environment-candidate'
     $candidateEvaluationMissingEnvironmentComparisonsDir = Join-Path $tempRoot 'candidate-evaluation-missing-environment-comparisons'
     $candidateEvaluationMissingEnvironmentPath = Join-Path $tempRoot 'candidate-evaluation-missing-environment.json'
+    $candidateEvaluationSameBuildBaselineDir = Join-Path $tempRoot 'candidate-evaluation-same-build-baseline'
+    $candidateEvaluationSameBuildCandidateDir = Join-Path $tempRoot 'candidate-evaluation-same-build-candidate'
+    $candidateEvaluationSameBuildComparisonsDir = Join-Path $tempRoot 'candidate-evaluation-same-build-comparisons'
+    $candidateEvaluationSameBuildPath = Join-Path $tempRoot 'candidate-evaluation-same-build.json'
     $candidateEvaluationEmptyAnalysisBaselineDir = Join-Path $tempRoot 'candidate-evaluation-empty-analysis-baseline'
     $candidateEvaluationEmptyAnalysisCandidateDir = Join-Path $tempRoot 'candidate-evaluation-empty-analysis-candidate'
     $candidateEvaluationEmptyAnalysisPath = Join-Path $tempRoot 'candidate-evaluation-empty-analysis.json'
@@ -1286,6 +1290,60 @@ try {
 
     if (-not ($missingEnvironmentEvaluation.activeGate.targetCaseIds -contains 'item-1/source-1')) {
         throw 'Expected missing build identity active gate to include target case id.'
+    }
+
+    New-Item -ItemType Directory -Path $candidateEvaluationSameBuildBaselineDir | Out-Null
+    New-Item -ItemType Directory -Path $candidateEvaluationSameBuildCandidateDir | Out-Null
+    $sameBuildBaseline = Get-Content -Raw -LiteralPath (Join-Path $runIdBaselineDir 'baseline-a.json') | ConvertFrom-Json
+    $sameBuildCandidate = Get-Content -Raw -LiteralPath (Join-Path $runIdCandidateDir 'candidate-renamed.json') | ConvertFrom-Json
+    $sameBuildCandidate.environment.playerCoreVersion = $sameBuildBaseline.environment.playerCoreVersion
+    $sameBuildCandidate.environment.sourceRevision = $sameBuildBaseline.environment.sourceRevision
+    $sameBuildCandidate.environment.buildConfiguration = $sameBuildBaseline.environment.buildConfiguration
+    $sameBuildBaseline | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath (Join-Path $candidateEvaluationSameBuildBaselineDir 'baseline-a.json') -Encoding UTF8
+    $sameBuildCandidate | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath (Join-Path $candidateEvaluationSameBuildCandidateDir 'candidate-a.json') -Encoding UTF8
+
+    Push-Location $repoRoot
+    try {
+        dotnet run `
+            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
+            --no-build `
+            -- evaluate-candidate `
+            --manifest $candidateEvaluationManifestPath `
+            --baseline-dir $candidateEvaluationSameBuildBaselineDir `
+            --candidate-dir $candidateEvaluationSameBuildCandidateDir `
+            --match-by run-id `
+            --comparisons-dir $candidateEvaluationSameBuildComparisonsDir `
+            --output $candidateEvaluationSameBuildPath
+        if ($LASTEXITCODE -eq 0) {
+            throw 'Expected playback quality CLI evaluate-candidate to reject same-build identity evidence.'
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    $sameBuildEvaluation = Get-Content -Raw -LiteralPath $candidateEvaluationSameBuildPath | ConvertFrom-Json
+    if ($sameBuildEvaluation.action -ne 'collect-comparable-evidence') {
+        throw 'Expected same-build evaluate-candidate output to collect comparable evidence.'
+    }
+
+    if ($null -eq $sameBuildEvaluation.activeGate -or
+        $sameBuildEvaluation.activeGate.name -ne 'suite' -or
+        $sameBuildEvaluation.activeGate.status -ne 'blocked') {
+        throw 'Expected same-build active gate to point at blocked suite.'
+    }
+
+    if ($null -eq $sameBuildEvaluation.activeGate.environment -or
+        $sameBuildEvaluation.activeGate.environment.sameBuildCount -ne 1) {
+        throw 'Expected same-build active gate to expose environment same-build count.'
+    }
+
+    if (-not ($sameBuildEvaluation.activeGate.blockers -contains 'suite.environment-same-build')) {
+        throw 'Expected same-build active gate to include environment same-build blocker.'
+    }
+
+    if (-not ($sameBuildEvaluation.activeGate.targetCaseIds -contains 'item-1/source-1')) {
+        throw 'Expected same-build active gate to include target case id.'
     }
 
     @'
