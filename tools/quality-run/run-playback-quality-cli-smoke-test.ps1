@@ -1309,6 +1309,15 @@ try {
         throw 'Expected evaluate-candidate active gate to expose improved suite result counts.'
     }
 
+    $candidateGateNextActions = @($candidateEvaluation.activeGate.nextActions)
+    if ($candidateGateNextActions.Count -ne 1 -or
+        $candidateGateNextActions[0].rank -ne 1 -or
+        $candidateGateNextActions[0].action -ne 'accept-candidate' -or
+        $candidateGateNextActions[0].risk -ne 'low' -or
+        -not ($candidateGateNextActions[0].caseIds -contains 'item-1/source-1')) {
+        throw 'Expected evaluate-candidate active gate to expose ranked suite next action.'
+    }
+
     if ($null -eq $candidateEvaluation.baselineReportAnalysis -or
         $candidateEvaluation.baselineReportAnalysis.totalReportCount -ne 1 -or
         $candidateEvaluation.baselineReportAnalysis.analyzedReportCount -ne 0 -or
@@ -1433,6 +1442,16 @@ try {
         $missingEnvironmentEvaluation.activeGate.resultCounts.totalCount -ne 1 -or
         $missingEnvironmentEvaluation.activeGate.resultCounts.improvedCount -ne 1) {
         throw 'Expected missing build identity active gate to keep suite result counts separate from evidence blockers.'
+    }
+
+    $missingEnvironmentGateNextActions = @($missingEnvironmentEvaluation.activeGate.nextActions)
+    if ($missingEnvironmentGateNextActions.Count -ne 1 -or
+        $missingEnvironmentGateNextActions[0].rank -ne 1 -or
+        $missingEnvironmentGateNextActions[0].action -ne 'collect-comparable-evidence' -or
+        $missingEnvironmentGateNextActions[0].risk -ne 'high' -or
+        -not ($missingEnvironmentGateNextActions[0].caseIds -contains 'item-1/source-1') -or
+        -not ($missingEnvironmentGateNextActions[0].blockers -contains 'suite.environment-evidence-missing')) {
+        throw 'Expected missing build identity active gate to expose ranked suite next action.'
     }
 
     New-Item -ItemType Directory -Path $candidateEvaluationPartialEnvironmentBaselineDir | Out-Null

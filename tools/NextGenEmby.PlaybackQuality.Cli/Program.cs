@@ -1697,6 +1697,7 @@ internal static class Program
         CopyValues(suite.CodeTargets, gate.CodeTargets);
         ApplySuiteGateConfidence(gate, suite);
         ApplySuiteGateResultCounts(gate, suite);
+        CopySuiteNextActions(suite.NextActions, gate.NextActions);
         gate.Environment = suite.Environment;
         foreach (var summary in suite.Cases)
         {
@@ -1720,6 +1721,17 @@ internal static class Program
         AddUnique(
             gate.SuggestedNextActions,
             "Resolve earlier evidence gates before running the comparison suite.");
+        var nextAction = new PlaybackQualitySuiteNextAction
+        {
+            Rank = 1,
+            Action = gate.Action,
+            Risk = "high"
+        };
+        AddUnique(nextAction.Blockers, "suite.skipped");
+        AddUnique(
+            nextAction.Reasons,
+            "comparison suite was skipped because earlier evidence gates failed");
+        gate.NextActions.Add(nextAction);
         MarkWeakGateConfidence(
             gate,
             "comparison suite was skipped because earlier evidence gates failed");
@@ -1756,6 +1768,29 @@ internal static class Program
         CopyValues(suite.Signals, gate.Confidence.Signals);
         CopyValues(suite.Reasons, gate.Confidence.Reasons);
         CopyValues(suite.Blockers, gate.Confidence.Reasons);
+    }
+
+    private static void CopySuiteNextActions(
+        List<PlaybackQualitySuiteNextAction> source,
+        List<PlaybackQualitySuiteNextAction> target)
+    {
+        foreach (var action in source)
+        {
+            var clone = new PlaybackQualitySuiteNextAction
+            {
+                Rank = action.Rank,
+                Action = action.Action,
+                Risk = action.Risk,
+                FailureArea = action.FailureArea
+            };
+
+            CopyValues(action.CaseIds, clone.CaseIds);
+            CopyValues(action.Signals, clone.Signals);
+            CopyValues(action.Reasons, clone.Reasons);
+            CopyValues(action.Blockers, clone.Blockers);
+            CopyValues(action.CodeTargets, clone.CodeTargets);
+            target.Add(clone);
+        }
     }
 
     private static void ApplySuiteGateResultCounts(
@@ -2024,6 +2059,8 @@ internal static class Program
         public List<string> CaseIds { get; } = new List<string>();
         public List<string> CodeTargets { get; } = new List<string>();
         public List<string> SuggestedNextActions { get; } = new List<string>();
+        public List<PlaybackQualitySuiteNextAction> NextActions { get; } =
+            new List<PlaybackQualitySuiteNextAction>();
     }
 
     private sealed class CandidateEvaluationGateConfidence
