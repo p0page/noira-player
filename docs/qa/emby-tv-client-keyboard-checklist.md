@@ -2716,3 +2716,73 @@ Follow-up findings:
 - Decision:
   - Mark Batch 03 audio/subtitle/source long-label handling as resolved for deterministic fixtures and source contracts.
   - Keep live-server localization and plugin-generated stream titles as later release-hardening validation.
+
+### 2026-07-08 - Design Conformance Batch 06 Settings Diagnostics Disclosure Baseline
+
+- App version: 0.1.0.227.
+- Scope: rerun the remaining Batch 06 Settings diagnostics concern after later page fixes.
+- Data source: DEBUG `settings` route only; no private server data, credentials, screenshots, or personal media assets were written to the repository.
+- Evidence root: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch06-settings-diagnostics-baseline-227-20260708-054026`.
+- Keyboard-only validation:
+  - Closed the existing app frame, wrote `dev-command.json` with route `settings`, and launched through AppUserModelId `NextGenEmby.App_h8qjz0sr1sg4m!App`.
+  - Captured the initial Settings first viewport.
+  - Pressed `Up` to focus `Sign out`.
+  - Pressed `Enter` to open the sign-out confirmation and `Escape` to cancel.
+  - The route reported `completed / settings`.
+- Screenshots:
+  - Settings initial viewport: `01-settings-initial.png`.
+  - Sign out focus: `02-settings-signout-focus.png`.
+  - Sign-out confirmation: `03-settings-confirmation.png`.
+  - After cancel: `04-settings-after-cancel.png`.
+  - Route result: `route-result.txt`.
+
+Baseline findings:
+
+| ID | Severity | Page | Evidence | Expected | Actual | Proposed batch fix |
+| --- | --- | --- | --- | --- | --- | --- |
+| DC-06.02 | Concern | Settings diagnostics | `01-settings-initial.png` and `02-settings-signout-focus.png`. | Settings should make account and playback input the primary first-screen tasks; diagnostics should be reachable but secondary. | The matte visual style is aligned, but the full diagnostics panel and recent startup log are visible in the first viewport, giving the utility page a developer-console weight. | Keep a compact Diagnostics row in Settings, but move the full startup summary/log behind a controller-reachable matte disclosure action. |
+
+- Decision:
+  - Treat this as a Settings visual hierarchy fix, not a navigation model change.
+  - Keep diagnostics available for local/debug usefulness, but make detailed logs opt-in.
+
+### 2026-07-08 - Design Conformance Batch 06 Settings Diagnostics Disclosure Fix Rerun
+
+- App version: 0.1.0.228.
+- Scope: rerun the Settings diagnostics concern after moving detailed startup diagnostics behind a matte disclosure action.
+- Data source: DEBUG `settings` route only; no private server data, credentials, screenshots, or personal media assets were written to the repository.
+- Evidence root: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch06-settings-diagnostics-fix-228-20260708-054550`.
+- Keyboard-only validation:
+  - Signed and installed `NextGenEmby.App 0.1.0.228`; the first install attempt was blocked by the previous app process and succeeded after closing it.
+  - Closed the existing app frame, wrote `dev-command.json` with route `settings`, and launched through AppUserModelId `NextGenEmby.App_h8qjz0sr1sg4m!App`.
+  - Captured the initial Settings first viewport.
+  - Pressed `Down` from the playback-input checkbox to focus `Show details`.
+  - Pressed `Enter` to expand Diagnostics details.
+  - Pressed `Up`, `Up` to confirm the disclosure path does not trap focus and can return to Sign out.
+  - The route reported `completed / settings`.
+- Screenshots:
+  - Settings initial viewport: `01-settings-initial.png`.
+  - Diagnostics disclosure focus: `02-diagnostics-toggle-focus.png`.
+  - Diagnostics expanded: `03-diagnostics-expanded.png`.
+  - Sign out focus after disclosure path: `04-signout-focus-after-disclosure-path.png`.
+  - Route result: `route-result.txt`.
+- Source-level contract added before implementation:
+  - Settings diagnostics details must be hidden by default in `DiagnosticsDetailsPanel`.
+  - `DiagnosticsToggleButton` must be reachable through the same D-pad focus order as Sign out and Thumbstick seek preview.
+  - The Diagnostics disclosure action uses the shared matte utility command style and `MatteButtonFocusVisuals`.
+
+Fix rerun findings:
+
+| ID | Status | Page | Evidence | Result | Residual risk |
+| --- | --- | --- | --- | --- | --- |
+| DC-06.02 | Pass | Settings diagnostics | `01-settings-initial.png`, `02-diagnostics-toggle-focus.png`, `03-diagnostics-expanded.png`, and `SettingsPageSourceTests.Settings_Diagnostics_Details_Are_Behind_Controller_Reachable_Disclosure`. | Settings now keeps account and playback input as the first-screen tasks. Diagnostics remains visible as a compact status row, and full startup/log details are available only after focusing and opening `Show details`. The disclosure uses matte focus and stays in the normal controller path. | None for this local visual-system slice. Hardware text-entry validation remains tracked under Login/Search concerns. |
+
+- Verification:
+  - Red path confirmed `SettingsPageSourceTests.Settings_Diagnostics_Details_Are_Behind_Controller_Reachable_Disclosure` failed before implementation because Settings had no diagnostics disclosure control.
+  - Targeted Settings source tests passed: 3 tests.
+  - Full Core test suite passed: 493 tests.
+  - Visual Studio MSBuild Debug x64 build passed, producing `NextGenEmby.App_0.1.0.228_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.228`.
+- Decision:
+  - Mark Batch 06 Settings diagnostics hierarchy as resolved for deterministic local validation.
+  - Keep any future copy/export diagnostics work as a support feature, not a visual-system blocker.

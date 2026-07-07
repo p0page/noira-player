@@ -13,7 +13,7 @@
                     <StackPanel Spacing="6">
                         <TextBlock Text="Settings" Style="{StaticResource TvPageTitleTextStyle}" />
                         <TextBlock
-                            Text="Account, input, and diagnostics"
+                            Text="Account and playback input"
                             Style="{StaticResource TvPageSubtitleTextStyle}" />
                     </StackPanel>
 
@@ -84,10 +84,32 @@
 
                     <Border Style="{StaticResource TvDiagnosticsPanelStyle}">
                         <StackPanel Spacing="12">
-                            <TextBlock
-                                Text="Diagnostics"
-                                Style="{StaticResource TvOptionLabelTextStyle}" />
-                            <Grid ColumnSpacing="18">
+                            <Grid ColumnSpacing="16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Spacing="4">
+                                    <TextBlock
+                                        Text="Diagnostics"
+                                        Style="{StaticResource TvOptionLabelTextStyle}" />
+                                    <TextBlock
+                                        x:Name="DiagnosticsSummaryBlock"
+                                        Style="{StaticResource TvMutedBodyTextStyle}" />
+                                </StackPanel>
+                                <Button
+                                    x:Name="DiagnosticsToggleButton"
+                                    Grid.Column="1"
+                                    HorizontalAlignment="Right"
+                                    Click="DiagnosticsToggleButton_OnClick"
+                                    Content="Show details"
+                                    Style="{StaticResource TvUtilityCommandButtonStyle}" />
+                            </Grid>
+
+                            <Grid
+                                x:Name="DiagnosticsDetailsPanel"
+                                ColumnSpacing="18"
+                                Visibility="Collapsed">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="160" />
                                     <ColumnDefinition Width="*" />

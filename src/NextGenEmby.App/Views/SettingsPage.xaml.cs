@@ -18,6 +18,7 @@ namespace NextGenEmby.App.Views
     {
         private readonly ApplicationDataSessionStore _sessionStore = new ApplicationDataSessionStore();
         private readonly PlaybackPreferenceStore _playbackPreferences = new PlaybackPreferenceStore();
+        private bool _diagnosticsExpanded;
         private bool _loadingSettings;
         private bool _signingOut;
 
@@ -32,6 +33,7 @@ namespace NextGenEmby.App.Views
         private void PrepareSettingsUtilityVisuals()
         {
             MatteButtonFocusVisuals.PrepareCommandButton(SignOutButton);
+            MatteButtonFocusVisuals.PrepareCommandButton(DiagnosticsToggleButton);
             MatteButtonFocusVisuals.PrepareCommandButton(CancelSignOutButton);
             MatteButtonFocusVisuals.PrepareDangerButton(ConfirmSignOutButton);
         }
@@ -58,6 +60,7 @@ namespace NextGenEmby.App.Views
             UpdateThumbstickSeekPreviewStatus();
             InputMapBlock.Text = "D-pad: arrow keys / A: Enter or Space / B: Escape / Menu: M";
             RenderStartupDiagnostics();
+            UpdateDiagnosticsDisclosure();
             _loadingSettings = false;
             FocusDefaultContent();
         }
@@ -163,7 +166,7 @@ namespace NextGenEmby.App.Views
 
         private bool MoveSettingsFocus(object sender, int delta)
         {
-            var controls = new Control[] { SignOutButton, ThumbstickSeekPreviewCheckBox };
+            var controls = new Control[] { SignOutButton, ThumbstickSeekPreviewCheckBox, DiagnosticsToggleButton };
             var current = sender as Control;
             if (current == null)
             {
@@ -257,10 +260,24 @@ namespace NextGenEmby.App.Views
         private void RenderStartupDiagnostics()
         {
             var lines = ReadStartupDiagnostics();
-            StartupDiagnosticsBlock.Text = SettingsDiagnosticsFormatter.FormatStartupSummary(lines);
+            var summary = SettingsDiagnosticsFormatter.FormatStartupSummary(lines);
+            DiagnosticsSummaryBlock.Text = "Startup: " + summary;
+            StartupDiagnosticsBlock.Text = summary;
             StartupDiagnosticsTailBlock.Text = lines.Length == 0
                 ? "No log lines recorded."
                 : string.Join(Environment.NewLine, lines.Reverse().Take(3).Reverse());
+        }
+
+        private void DiagnosticsToggleButton_OnClick(object sender, RoutedEventArgs e)
+        {
+            _diagnosticsExpanded = !_diagnosticsExpanded;
+            UpdateDiagnosticsDisclosure();
+        }
+
+        private void UpdateDiagnosticsDisclosure()
+        {
+            DiagnosticsDetailsPanel.Visibility = _diagnosticsExpanded ? Visibility.Visible : Visibility.Collapsed;
+            DiagnosticsToggleButton.Content = _diagnosticsExpanded ? "Hide details" : "Show details";
         }
 
         private static string[] ReadStartupDiagnostics()

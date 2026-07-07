@@ -56,6 +56,34 @@ public sealed class SettingsPageSourceTests
         Assert.Contains("MatteButtonFocusVisuals.PrepareDangerButton(ConfirmSignOutButton)", settingsSource);
     }
 
+    [Fact]
+    public void Settings_Diagnostics_Details_Are_Behind_Controller_Reachable_Disclosure()
+    {
+        var root = FindRepositoryRoot();
+        var settingsXaml = File.ReadAllText(Path.Combine(root, "src", "NextGenEmby.App", "Views", "SettingsPage.xaml"));
+        var settingsSource = File.ReadAllText(Path.Combine(root, "src", "NextGenEmby.App", "Views", "SettingsPage.xaml.cs"));
+        var diagnosticsPanel = SliceFrom(settingsXaml, "x:Name=\"DiagnosticsToggleButton\"", "</Border>");
+
+        Assert.Contains("x:Name=\"DiagnosticsToggleButton\"", settingsXaml);
+        Assert.Contains("Click=\"DiagnosticsToggleButton_OnClick\"", settingsXaml);
+        Assert.Contains("Style=\"{StaticResource TvUtilityCommandButtonStyle}\"", diagnosticsPanel);
+        Assert.Contains("x:Name=\"DiagnosticsDetailsPanel\"", diagnosticsPanel);
+        Assert.Contains("Visibility=\"Collapsed\"", diagnosticsPanel);
+        Assert.Contains("MatteButtonFocusVisuals.PrepareCommandButton(DiagnosticsToggleButton)", settingsSource);
+        Assert.Contains("new Control[] { SignOutButton, ThumbstickSeekPreviewCheckBox, DiagnosticsToggleButton }", settingsSource);
+        Assert.Contains("DiagnosticsToggleButton_OnClick", settingsSource);
+        Assert.Contains("DiagnosticsDetailsPanel.Visibility = _diagnosticsExpanded ? Visibility.Visible : Visibility.Collapsed", settingsSource);
+    }
+
+    private static string SliceFrom(string source, string startMarker, string endMarker)
+    {
+        var start = source.IndexOf(startMarker, StringComparison.Ordinal);
+        Assert.True(start >= 0, "Missing source marker " + startMarker);
+        var end = source.IndexOf(endMarker, start, StringComparison.Ordinal);
+        Assert.True(end > start, "Missing source marker " + endMarker);
+        return source.Substring(start, end - start);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
