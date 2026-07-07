@@ -92,6 +92,7 @@ The analyzer output must include:
 - `triageSteps` with ranked, machine-readable next investigation steps;
 - `failureAreas` containing every failed check area, not only the primary area;
 - `failureClasses` containing every failed check class, not only the primary area;
+- `expectedBehavior` and `actualBehavior` with a compact model-facing summary of what the case expected and what the collected report showed;
 - `failureReasons` copied from the report;
 - `failedChecks` with each failed check's signal, expected value, actual value, failure area, failure class, and message;
 - `investigationHints` with failure-area-specific suggested actions, Core/native code targets, and signals to inspect next;

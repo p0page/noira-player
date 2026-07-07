@@ -8,6 +8,59 @@ namespace NextGenEmby.Core.Tests.PlaybackQuality;
 public sealed class PlaybackQualityReportAnalyzerTests
 {
     [Fact]
+    public void Analyze_Summarizes_Expected_And_Actual_Behavior_For_Failed_Checks()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "behavior-summary",
+            Result = "fail",
+            Analysis = new PlaybackQualityAnalysis
+            {
+                PrimaryFailureArea = "color-pipeline"
+            }
+        };
+        report.Checks.Add(new PlaybackQualityCheck
+        {
+            Name = "ActualHdrOutput",
+            Status = "fail",
+            FailureArea = "color-pipeline",
+            FailureClass = "player-core bug",
+            Signal = "colorPipeline.actualHdrOutput",
+            Expected = "Hdr10",
+            Actual = "Sdr"
+        });
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Equal("colorPipeline.actualHdrOutput expected Hdr10.", analysis.ExpectedBehavior);
+        Assert.Equal("colorPipeline.actualHdrOutput actual Sdr.", analysis.ActualBehavior);
+    }
+
+    [Fact]
+    public void Analyze_Summarizes_Expected_And_Actual_Behavior_For_Error_Reports()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "error-summary",
+            Result = "error",
+            Error = new PlaybackQualityError
+            {
+                Code = "source.open.missing-file",
+                Message = "The media file was not found.",
+                Operation = "open",
+                FailureClass = "sample issue",
+                FailureArea = "error-handling",
+                IsTerminal = true
+            }
+        };
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Equal("Playback operation completed without a terminal runtime error.", analysis.ExpectedBehavior);
+        Assert.Equal("open failed with source.open.missing-file: The media file was not found.", analysis.ActualBehavior);
+    }
+
+    [Fact]
     public void Analyze_Preserves_Secondary_Failure_Areas_For_Model_Triage()
     {
         var report = new PlaybackQualityReport

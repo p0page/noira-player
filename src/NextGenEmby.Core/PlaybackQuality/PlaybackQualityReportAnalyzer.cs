@@ -7,6 +7,8 @@ namespace NextGenEmby.Core.PlaybackQuality
         public int AnalyzerVersion { get; set; }
         public string RunId { get; set; } = "";
         public string Result { get; set; } = "";
+        public string ExpectedBehavior { get; set; } = "";
+        public string ActualBehavior { get; set; } = "";
         public string PrimaryFailureArea { get; set; } = "none";
         public string SuggestedNextAction { get; set; } = "";
         public PlaybackQualityStartupAssessment Startup { get; set; } = new PlaybackQualityStartupAssessment();
@@ -269,6 +271,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                 AddUnique(analysis.Limitations, limitation);
             }
 
+            AddBehaviorSummary(analysis, report);
             analysis.Sample = AssessSample(report);
             analysis.Startup = AssessStartup(report);
             analysis.Environment = AssessEnvironment(report);
@@ -294,6 +297,72 @@ namespace NextGenEmby.Core.PlaybackQuality
             }
 
             return analysis;
+        }
+
+        private static void AddBehaviorSummary(
+            PlaybackQualityModelAnalysis analysis,
+            PlaybackQualityReport report)
+        {
+            if (report.Result == "error" ||
+                !string.IsNullOrWhiteSpace(report.Error.Code) ||
+                !string.IsNullOrWhiteSpace(report.Error.Message))
+            {
+                analysis.ExpectedBehavior =
+                    "Playback operation completed without a terminal runtime error.";
+                analysis.ActualBehavior = FormatErrorBehavior(report.Error);
+                return;
+            }
+
+            if (analysis.FailedChecks.Count > 0)
+            {
+                var check = analysis.FailedChecks[0];
+                var subject = string.IsNullOrWhiteSpace(check.Signal)
+                    ? check.Name
+                    : check.Signal;
+                analysis.ExpectedBehavior = string.IsNullOrWhiteSpace(check.Expected)
+                    ? subject + " expected evidence to be present."
+                    : subject + " expected " + check.Expected + ".";
+                analysis.ActualBehavior = string.IsNullOrWhiteSpace(check.Actual)
+                    ? subject + " actual evidence was missing."
+                    : subject + " actual " + check.Actual + ".";
+                return;
+            }
+
+            if (report.Result == "pass")
+            {
+                analysis.ExpectedBehavior = "Playback quality checks passed.";
+                analysis.ActualBehavior = "Playback quality checks passed.";
+                return;
+            }
+
+            if (report.Result == "unsupported")
+            {
+                analysis.ExpectedBehavior =
+                    "Unsupported sources are identified without entering playback-quality tuning.";
+                analysis.ActualBehavior =
+                    "Report result was unsupported.";
+                return;
+            }
+
+            analysis.ExpectedBehavior =
+                "Playback quality evidence satisfies the reference case expectations.";
+            analysis.ActualBehavior = string.IsNullOrWhiteSpace(report.Result)
+                ? "Report result was not specified."
+                : "Report result was " + report.Result + ".";
+        }
+
+        private static string FormatErrorBehavior(PlaybackQualityError error)
+        {
+            var operation = string.IsNullOrWhiteSpace(error.Operation)
+                ? "playback operation"
+                : error.Operation;
+            var code = string.IsNullOrWhiteSpace(error.Code)
+                ? "unknown-error"
+                : error.Code;
+            var message = string.IsNullOrWhiteSpace(error.Message)
+                ? ""
+                : ": " + error.Message;
+            return operation + " failed with " + code + message;
         }
 
         private static PlaybackQualityTracksAssessment AssessTracks(
