@@ -35,6 +35,11 @@ internal static class Program
                 return RunAnalyzeReport(args);
             }
 
+            if (string.Equals(args[0], "materialize-run-result", StringComparison.OrdinalIgnoreCase))
+            {
+                return RunMaterializeRunResult(args);
+            }
+
             if (string.Equals(args[0], "analyze-report-set", StringComparison.OrdinalIgnoreCase))
             {
                 return RunAnalyzeReportSet(args);
@@ -107,6 +112,19 @@ internal static class Program
             Path.GetFileName(options.ReportPath));
         var analysis = AnalyzeReport(envelope);
         WriteJson(analysis, options.OutputPath);
+        return 0;
+    }
+
+    private static int RunMaterializeRunResult(string[] args)
+    {
+        var options = ParseReportInputOutputOptions(args, "materialize-run-result");
+        var envelope = ReadPlaybackQualityReportEnvelope(
+            options.ReportPath,
+            Path.GetFileName(options.ReportPath));
+        var result = new PlaybackQualityRunResult(
+            envelope.Report,
+            AnalyzeReport(envelope));
+        WriteJson(result, options.OutputPath);
         return 0;
     }
 
@@ -361,7 +379,19 @@ internal static class Program
 
     private static AnalyzeReportOptions ParseAnalyzeReportOptions(string[] args)
     {
-        var options = new AnalyzeReportOptions();
+        var options = ParseReportInputOutputOptions(args, "analyze-report");
+        return new AnalyzeReportOptions
+        {
+            ReportPath = options.ReportPath,
+            OutputPath = options.OutputPath
+        };
+    }
+
+    private static ReportInputOutputOptions ParseReportInputOutputOptions(
+        string[] args,
+        string commandName)
+    {
+        var options = new ReportInputOutputOptions();
         for (var index = 1; index < args.Length; index++)
         {
             var arg = args[index];
@@ -374,7 +404,7 @@ internal static class Program
                     options.OutputPath = ReadValue(args, ref index, arg);
                     break;
                 default:
-                    throw new ArgumentException("Unknown analyze-report option: " + arg);
+                    throw new ArgumentException("Unknown " + commandName + " option: " + arg);
             }
         }
 
@@ -2055,6 +2085,7 @@ internal static class Program
     {
         writer.WriteLine("Usage:");
         writer.WriteLine("  playback-quality analyze-report --report <report.json> [--output <analysis.json>]");
+        writer.WriteLine("  playback-quality materialize-run-result --report <report.json> [--output <run-result.json>]");
         writer.WriteLine("  playback-quality analyze-report-set --reports-dir <reports-dir> [--output <analysis-summary.json>]");
         writer.WriteLine("  playback-quality compare --baseline <report.json> --candidate <report.json> [--previous <comparison.json>...] [--stall-threshold <n>] [--output <comparison.json>]");
         writer.WriteLine("  playback-quality summarize --comparison <comparison.json> [--comparison <comparison.json>...] [--output <suite.json>]");
@@ -2075,6 +2106,12 @@ internal static class Program
     }
 
     private sealed class AnalyzeReportOptions
+    {
+        public string ReportPath { get; set; } = "";
+        public string OutputPath { get; set; } = "";
+    }
+
+    private sealed class ReportInputOutputOptions
     {
         public string ReportPath { get; set; } = "";
         public string OutputPath { get; set; } = "";

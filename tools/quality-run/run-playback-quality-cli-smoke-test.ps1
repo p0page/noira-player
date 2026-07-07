@@ -1168,6 +1168,35 @@ try {
         throw 'Expected playback quality CLI compare-suite comparison to include caseId.'
     }
 
+    $materializedRunResultPath = Join-Path $tempRoot 'materialized-run-result.json'
+    Push-Location $repoRoot
+    try {
+        dotnet run `
+            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
+            --no-build `
+            -- materialize-run-result `
+            --report $baselineEnvelopePath `
+            --output $materializedRunResultPath
+        if ($LASTEXITCODE -ne 0) {
+            throw 'playback quality CLI materialize-run-result returned a non-zero exit code.'
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    $materializedRunResult = Get-Content -Raw -LiteralPath $materializedRunResultPath | ConvertFrom-Json
+    if ($materializedRunResult.schemaVersion -ne 1) {
+        throw 'Expected materialize-run-result to write PlaybackQualityRunResult schemaVersion 1.'
+    }
+
+    if ($materializedRunResult.report.runId -ne 'baseline' -or
+        $materializedRunResult.modelAnalysis.runId -ne 'baseline' -or
+        $materializedRunResult.modelAnalysis.result -ne 'fail' -or
+        $materializedRunResult.modelAnalysis.analyzerVersion -lt 1) {
+        throw 'Expected materialize-run-result to preserve report and regenerate model analysis.'
+    }
+
     New-Item -ItemType Directory -Path $runIdBaselineDir | Out-Null
     New-Item -ItemType Directory -Path $runIdCandidateDir | Out-Null
     @'

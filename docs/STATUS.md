@@ -7,6 +7,7 @@
 - `PlaybackQuality` 报告已覆盖 source、startup、position、timing、sync、buffers、colorPipeline、display 等核心软件信号。
 - `PlaybackQualityReportAnalyzer` 已输出模型可消费的 failure area、failure class、evidence、missing evidence、triage steps 和 optimization gate。
 - reference manifest、report-set validation、analyze-report、compare、compare-suite、evaluate-candidate、plan-runs 已形成 App-free 闭环。
+- `materialize-run-result` 已可把 raw report 或旧 envelope 归一化为包含当前 `modelAnalysis` 的 `PlaybackQualityRunResult` envelope。
 - App-free 验证命令为 `tools\quality-run\run-playback-core-checks.ps1`，当前结果为 pass。
 - 本轮新增 tracks/subtitles telemetry：报告会记录视频轨、音轨、字幕轨数量、当前选中音轨/字幕轨、字幕关闭状态和轨道明细。
 - reference manifest coverage 现在要求 `tracks` 和 `subtitles` purpose；默认公开 manifest 与私有 Emby manifest 生成脚本已同步更新。
@@ -26,4 +27,4 @@
 
 ## 下一步
 
-优先补齐真实样本采集路径，让 `PlaybackQualityRunResult` envelope 稳定写入 plan 指定路径，并跑一次完整 baseline report-set validation，诚实记录 fail、unsupported、missing evidence 和 unstable case。
+优先用真实样本采集路径写入或归一化 `PlaybackQualityRunResult` envelope 到 plan 指定路径，并跑一次完整 baseline report-set validation，诚实记录 fail、unsupported、missing evidence 和 unstable case。

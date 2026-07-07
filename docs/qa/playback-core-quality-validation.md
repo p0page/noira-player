@@ -152,6 +152,14 @@ dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQ
 
 `--report` 可以是 raw `PlaybackQualityReport`，也可以是包含顶层 `report` 字段的 `PlaybackQualityRunResult` envelope。命令会重新运行当前 Core 的 `PlaybackQualityReportAnalyzer`，输出 `failureAreas`、`failureClasses`、`failedChecks`、`evidenceSignals`、`missingEvidence`、`optimizationGate`、`framePacing` 和 `triageSteps`。`failureArea` 指向要调查的播放子系统，`failureClass` 说明失败责任或证据质量；例如缺失 telemetry 应标记为 `insufficient instrumentation`，而不是直接当作播放器 bug。如果报告 pin 住颜色输出期望，`missingEvidence` 会标记缺失的 `display.hdrStatus`、swapchain 格式/色彩空间和 HDR10 十位 swapchain 证据。自动化模型应先读取这个分析结果，再决定是补采集证据还是修改播放 Core。
 
+如果采集端暂时只能写出 raw report，使用 `materialize-run-result` 把它归一化为首选 envelope：
+
+```powershell
+dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- materialize-run-result --report captured-raw-report.json --output captured-run-result.json
+```
+
+该命令只重新生成当前 analyzer 的 `modelAnalysis`，不修改播放行为、阈值或 case 预期。后续 report-set、suite 和 candidate evaluation 应优先消费这个 envelope。
+
 当模型需要快速审计一整个报告目录，但还没有进入 baseline/candidate 比较时，使用目录级分析：
 
 ```powershell
