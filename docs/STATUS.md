@@ -2,6 +2,20 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-08 更新：native harness 已支持导入外部采集报告
+
+`materialize-native-harness-report-set` 现在支持 `--captured-reports-dir`：
+
+- 如果传入 captured report 目录，CLI 会按 manifest case 的标准 run-id 相对路径读取 raw `PlaybackQualityReport` 或已有 `PlaybackQualityRunResult` envelope。
+- 导入报告会被归一化为当前标准 envelope，补入 manifest `caseMetadata`，用当前 analyzer 刷新 `modelAnalysis`，并写入 `--reports-dir`。
+- `--source-revision`、`--player-core-version` 和 `--build-configuration` 会作为本轮归一化环境元数据写入 report；captured report 里已有的 collector version 会在未显式传入 `--collector-version` 时保留。
+- 如果某个 manifest case 缺少 captured report，会生成 `report.result = skip`、`skip.code = native-harness.capture-missing`、`failureClass = insufficient instrumentation` 的标准 skip envelope，而不是让 report-set 缺 case。
+- 导入模式会显式写入 `native-harness: imported captured playback evidence; CLI did not open native playback graph` limitation，避免模型误以为 CLI 自己执行了 native graph。
+
+边界：这一步仍不实现真实 native 播放采集器，也不打开媒体、不解码、不验证 HDMI/display 输出、不伪造 runtime metrics。它解决的是“真实 App/native collector 一旦产出 report，如何进入现有 v0.1 report-set/validation/analyze/compare 链路”的缺口。
+
+验证限制：本轮重新运行 `tools\quality-run\run-playback-core-checks.ps1` 时被 App diff guard 拦截，因为当前分支已有 `src/NextGenEmby.App/Playback/WinRtNativePlaybackEngine.cs` 的 native metrics bridge 改动。该改动不是本轮新增，但会触发“App-free validation 不接受 App diff”的保护。后续如果继续保留 App adapter metrics bridge，需要拆分 guard 策略或把 App adapter 验证从 Core-only 总入口中单独记录。
+
 ## 2026-07-08 更新：track external/default/forced 元数据成为模型证据
 
 已补齐轨道 external/default/forced 诊断链路：

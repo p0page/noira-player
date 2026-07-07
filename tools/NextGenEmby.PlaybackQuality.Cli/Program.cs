@@ -525,6 +525,9 @@ internal static class Program
                 case "--reports-dir":
                     options.ReportsDirectory = ReadValue(args, ref index, arg);
                     break;
+                case "--captured-reports-dir":
+                    options.CapturedReportsDirectory = ReadValue(args, ref index, arg);
+                    break;
                 case "--collector-version":
                     options.CollectorVersion = ReadValue(args, ref index, arg);
                     break;
@@ -1560,12 +1563,23 @@ internal static class Program
             ManifestValidation = validation,
             Environment = CreateNativeHarnessEnvironment(options)
         };
-        AddUnique(
-            output.Limitations,
-            "native-harness: native playback graph was not opened by this command");
-        AddUnique(
-            output.Limitations,
-            "native-harness: report is a standard skip envelope for the missing real native collector");
+        var hasCapturedReportsDirectory =
+            !string.IsNullOrWhiteSpace(options.CapturedReportsDirectory);
+        if (hasCapturedReportsDirectory)
+        {
+            AddUnique(
+                output.Limitations,
+                "native-harness: imported captured playback evidence; CLI did not open native playback graph");
+        }
+        else
+        {
+            AddUnique(
+                output.Limitations,
+                "native-harness: native playback graph was not opened by this command");
+            AddUnique(
+                output.Limitations,
+                "native-harness: report is a standard skip envelope for the missing real native collector");
+        }
 
         if (!validation.IsValid)
         {
@@ -1577,31 +1591,33 @@ internal static class Program
         {
             var reportRelativePath = GetRunIdComparisonRelativePath(referenceCase.CaseId);
             var reportPath = Path.Combine(options.ReportsDirectory, reportRelativePath);
-            var result = PlaybackQualityRuntimeEvidenceCollector.ComposeSkipRunResult(
-                referenceCase,
-                new PlaybackQualitySkip
+            PlaybackQualityRunResult result;
+            if (hasCapturedReportsDirectory &&
+                TryReadCapturedNativeHarnessRunResult(
+                    options,
+                    referenceCase,
+                    reportRelativePath,
+                    out var capturedResult))
+            {
+                result = capturedResult;
+                AddNativeHarnessImportedLimitations(result);
+            }
+            else
+            {
+                result = PlaybackQualityRuntimeEvidenceCollector.ComposeSkipRunResult(
+                    referenceCase,
+                    CreateNativeHarnessSkip(hasCapturedReportsDirectory),
+                    output.Environment);
+                if (hasCapturedReportsDirectory)
                 {
-                    Code = "native-harness.not-implemented",
-                    Reason = "Native playback harness is not implemented in this software-only evaluator yet.",
-                    Operation = "materialize-native-harness",
-                    FailureClass = "insufficient instrumentation",
-                    FailureArea = "evidence-collection",
-                    IsExpected = true,
-                    IsRetriable = true
-                },
-                output.Environment);
-            AddUnique(
-                result.Report.Limitations,
-                "native-harness: native playback graph was not opened by this command");
-            AddUnique(
-                result.Report.Limitations,
-                "native-harness: report is a standard skip envelope for the missing real native collector");
-            AddUnique(
-                result.ModelAnalysis.Limitations,
-                "native-harness: native playback graph was not opened by this command");
-            AddUnique(
-                result.ModelAnalysis.Limitations,
-                "native-harness: report is a standard skip envelope for the missing real native collector");
+                    AddNativeHarnessImportedLimitations(result);
+                }
+                else
+                {
+                    AddNativeHarnessSkipLimitations(result);
+                }
+            }
+
             WriteJson(result, reportPath);
             output.Cases.Add(CreateMaterializedBaselineCase(
                 referenceCase,
@@ -1612,6 +1628,140 @@ internal static class Program
 
         output.CaseCount = output.Cases.Count;
         return output;
+    }
+
+    private static bool TryReadCapturedNativeHarnessRunResult(
+        MaterializeBaselineReportSetOptions options,
+        PlaybackQualityReferenceCase referenceCase,
+        string reportRelativePath,
+        out PlaybackQualityRunResult result)
+    {
+        var capturedPath = Path.Combine(
+            options.CapturedReportsDirectory,
+            reportRelativePath);
+        if (!File.Exists(capturedPath))
+        {
+            result = null!;
+            return false;
+        }
+
+        var envelope = ReadPlaybackQualityReportEnvelope(
+            capturedPath,
+            reportRelativePath);
+        envelope.Report.RunId = referenceCase.CaseId ?? envelope.Report.RunId;
+        envelope.Report.Expected = referenceCase.Expected ?? new PlaybackQualityExpected();
+        envelope.Report.Environment = MergeImportedNativeHarnessEnvironment(
+            envelope.Report.Environment,
+            options);
+
+        var normalizedEnvelope = new PlaybackQualityReportEnvelope(
+            reportRelativePath,
+            envelope.Report,
+            null,
+            CreateCaseMetadata(referenceCase),
+            envelope.PresentSignals,
+            envelope.HasSignalPresenceEvidence);
+        result = new PlaybackQualityRunResult(
+            normalizedEnvelope.Report,
+            AnalyzeReport(normalizedEnvelope),
+            normalizedEnvelope.CaseMetadata);
+        return true;
+    }
+
+    private static PlaybackQualityEnvironment MergeImportedNativeHarnessEnvironment(
+        PlaybackQualityEnvironment captured,
+        MaterializeBaselineReportSetOptions options)
+    {
+        return new PlaybackQualityEnvironment
+        {
+            CollectorVersion = !string.IsNullOrWhiteSpace(options.CollectorVersion)
+                ? options.CollectorVersion
+                : captured.CollectorVersion,
+            PlayerCoreVersion = !string.IsNullOrWhiteSpace(options.PlayerCoreVersion)
+                ? options.PlayerCoreVersion
+                : captured.PlayerCoreVersion,
+            SourceRevision = !string.IsNullOrWhiteSpace(options.SourceRevision)
+                ? options.SourceRevision
+                : captured.SourceRevision,
+            BuildConfiguration = !string.IsNullOrWhiteSpace(options.BuildConfiguration)
+                ? options.BuildConfiguration
+                : captured.BuildConfiguration
+        };
+    }
+
+    private static PlaybackQualityCaseMetadata CreateCaseMetadata(
+        PlaybackQualityReferenceCase referenceCase)
+    {
+        return new PlaybackQualityCaseMetadata
+        {
+            CaseId = referenceCase.CaseId ?? "",
+            Category = string.IsNullOrWhiteSpace(referenceCase.Category)
+                ? "stable"
+                : referenceCase.Category,
+            Severity = string.IsNullOrWhiteSpace(referenceCase.Severity)
+                ? "medium"
+                : referenceCase.Severity,
+            Stability = string.IsNullOrWhiteSpace(referenceCase.Stability)
+                ? "stable"
+                : referenceCase.Stability
+        };
+    }
+
+    private static PlaybackQualitySkip CreateNativeHarnessSkip(
+        bool hasCapturedReportsDirectory)
+    {
+        if (hasCapturedReportsDirectory)
+        {
+            return new PlaybackQualitySkip
+            {
+                Code = "native-harness.capture-missing",
+                Reason = "Native harness captured report was not found for this manifest case.",
+                Operation = "materialize-native-harness-import",
+                FailureClass = "insufficient instrumentation",
+                FailureArea = "evidence-collection",
+                IsExpected = false,
+                IsRetriable = true
+            };
+        }
+
+        return new PlaybackQualitySkip
+        {
+            Code = "native-harness.not-implemented",
+            Reason = "Native playback harness is not implemented in this software-only evaluator yet.",
+            Operation = "materialize-native-harness",
+            FailureClass = "insufficient instrumentation",
+            FailureArea = "evidence-collection",
+            IsExpected = true,
+            IsRetriable = true
+        };
+    }
+
+    private static void AddNativeHarnessImportedLimitations(
+        PlaybackQualityRunResult result)
+    {
+        AddUnique(
+            result.Report.Limitations,
+            "native-harness: imported captured playback evidence; CLI did not open native playback graph");
+        AddUnique(
+            result.ModelAnalysis.Limitations,
+            "native-harness: imported captured playback evidence; CLI did not open native playback graph");
+    }
+
+    private static void AddNativeHarnessSkipLimitations(
+        PlaybackQualityRunResult result)
+    {
+        AddUnique(
+            result.Report.Limitations,
+            "native-harness: native playback graph was not opened by this command");
+        AddUnique(
+            result.Report.Limitations,
+            "native-harness: report is a standard skip envelope for the missing real native collector");
+        AddUnique(
+            result.ModelAnalysis.Limitations,
+            "native-harness: native playback graph was not opened by this command");
+        AddUnique(
+            result.ModelAnalysis.Limitations,
+            "native-harness: report is a standard skip envelope for the missing real native collector");
     }
 
     private static PlaybackQualityEnvironment CreateBaselineEnvironment(
@@ -3127,7 +3277,7 @@ internal static class Program
         writer.WriteLine("  playback-quality materialize-run-result --report <report.json> [--output <run-result.json>]");
         writer.WriteLine("  playback-quality materialize-baseline-report-set --manifest <reference-manifest.json> --reports-dir <reports-dir> [--collector-version <version>] [--player-core-version <version>] [--source-revision <revision>] [--build-configuration <config>] [--output <summary.json>]");
         writer.WriteLine("  playback-quality materialize-core-probe-report-set --manifest <reference-manifest.json> --reports-dir <reports-dir> [--collector-version <version>] [--player-core-version <version>] [--source-revision <revision>] [--build-configuration <config>] [--output <summary.json>]");
-        writer.WriteLine("  playback-quality materialize-native-harness-report-set --manifest <reference-manifest.json> --reports-dir <reports-dir> [--collector-version <version>] [--player-core-version <version>] [--source-revision <revision>] [--build-configuration <config>] [--output <summary.json>]");
+        writer.WriteLine("  playback-quality materialize-native-harness-report-set --manifest <reference-manifest.json> [--captured-reports-dir <captured-reports-dir>] --reports-dir <reports-dir> [--collector-version <version>] [--player-core-version <version>] [--source-revision <revision>] [--build-configuration <config>] [--output <summary.json>]");
         writer.WriteLine("  playback-quality analyze-report-set --reports-dir <reports-dir> [--output <analysis-summary.json>]");
         writer.WriteLine("  playback-quality compare --baseline <report.json> --candidate <report.json> [--previous <comparison.json>...] [--stall-threshold <n>] [--output <comparison.json>]");
         writer.WriteLine("  playback-quality summarize --comparison <comparison.json> [--comparison <comparison.json>...] [--output <suite.json>]");
@@ -3169,6 +3319,7 @@ internal static class Program
     {
         public string ManifestPath { get; set; } = "";
         public string ReportsDirectory { get; set; } = "";
+        public string CapturedReportsDirectory { get; set; } = "";
         public string CollectorVersion { get; set; } = "";
         public string PlayerCoreVersion { get; set; } = "";
         public string SourceRevision { get; set; } = "";

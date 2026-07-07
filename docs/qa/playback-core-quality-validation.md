@@ -149,6 +149,16 @@ dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQ
 
 这类 report-set 的用途是把“真实 native 采集器还没实现”这个缺口变成可验证 artifact。它可以通过 `validate-report-set`，但不能用于播放质量优化、before/after 采纳决策、真实帧率判断、A/V sync 判断或 HDR/SDR 色彩正确性判断。自动化模型看到这类报告时，下一步应补 native harness 或把真实 App/native 指标接入报告链路，而不是修改播放器行为。
 
+当 App-hosted 或 native collector 已经能为每个 case 产出 raw `PlaybackQualityReport` 或 `PlaybackQualityRunResult` envelope 时，不要新建 report-set 格式；把 captured report 放在 ignored/private 目录，并用同一个命令导入：
+
+```powershell
+dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- materialize-native-harness-report-set --manifest docs\qa\playback-quality-reference-manifest.example.json --captured-reports-dir docs\qa\private\native-captured.local --reports-dir docs\qa\private\native-normalized.local --source-revision <git-sha-or-working-tree-id> --player-core-version <core-version> --build-configuration Debug --output docs\qa\private\native-normalized-summary.local.json
+
+dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- validate-report-set --manifest docs\qa\playback-quality-reference-manifest.example.json --reports-dir docs\qa\private\native-normalized.local --output docs\qa\private\native-normalized-validation.local.json
+```
+
+`--captured-reports-dir` 使用和标准 report-set 相同的相对路径：`caseId = local/foo` 对应 `local\foo.json`。导入模式会刷新当前 `modelAnalysis`、补入 manifest `caseMetadata`，并保留 captured report 中明确存在的 JSON 字段 presence。它不会打开 native playback graph，也不会伪造缺失的 runtime metrics、display、timing、buffering、A/V sync 或 color evidence；如果某个 case 没有 captured report，会输出 `skip.code = native-harness.capture-missing`，让模型把问题归类为 evidence collection 缺口，而不是播放器 core bug。
+
 快速迭代时可以只计划一个子集，例如只跑 tier 2 以内的 HDR case：
 
 ```powershell

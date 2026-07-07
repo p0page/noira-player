@@ -94,6 +94,13 @@ try {
     $nativeHarnessDir = Join-Path $tempRoot 'native-harness-report-set'
     $nativeHarnessSummaryPath = Join-Path $tempRoot 'native-harness-summary.json'
     $nativeHarnessValidationPath = Join-Path $tempRoot 'native-harness-validation.json'
+    $nativeHarnessCapturedDir = Join-Path $tempRoot 'native-harness-captured-report-set'
+    $nativeHarnessImportedDir = Join-Path $tempRoot 'native-harness-imported-report-set'
+    $nativeHarnessImportedSummaryPath = Join-Path $tempRoot 'native-harness-imported-summary.json'
+    $nativeHarnessImportedValidationPath = Join-Path $tempRoot 'native-harness-imported-validation.json'
+    $nativeHarnessMissingCapturedDir = Join-Path $tempRoot 'native-harness-missing-captured-report-set'
+    $nativeHarnessMissingImportDir = Join-Path $tempRoot 'native-harness-missing-import-report-set'
+    $nativeHarnessMissingImportSummaryPath = Join-Path $tempRoot 'native-harness-missing-import-summary.json'
     $exampleManifestPath = Join-Path $repoRoot 'docs\qa\playback-quality-reference-manifest.example.json'
     $exampleManifestValidationPath = Join-Path $tempRoot 'example-reference-manifest-validation.json'
     $exampleRunPlanPath = Join-Path $tempRoot 'example-reference-run-plan.json'
@@ -1043,6 +1050,194 @@ try {
     if ($nativeHarnessValidation.isValid -ne $true -or
         $nativeHarnessValidation.matchedCaseCount -ne 1) {
         throw 'Expected materialized native harness validation to match every case.'
+    }
+
+    $nativeHarnessCapturedReportDir = Join-Path $nativeHarnessCapturedDir 'local'
+    New-Item -ItemType Directory -Path $nativeHarnessCapturedReportDir | Out-Null
+    @'
+{
+  "runId": "local/native-harness-sdr-smoke",
+  "metricVersion": "software-quality-v1",
+  "result": "pass",
+  "environment": {
+    "collectorVersion": "app-native-harness-v0",
+    "playerCoreVersion": "captured-core",
+    "sourceRevision": "captured-revision",
+    "buildConfiguration": "Debug"
+  },
+  "source": {
+    "codec": "hevc",
+    "width": 1920,
+    "height": 1080,
+    "frameRate": 60.0,
+    "hdrKind": "Sdr",
+    "isHdr": false,
+    "isDirectPlayable": true
+  },
+  "startup": {
+    "commandReceivedAt": "2026-07-08T00:00:00.000Z",
+    "playbackStartedAt": "2026-07-08T00:00:00.300Z",
+    "startupDurationMs": 300.0
+  },
+  "lifecycle": {
+    "events": [
+      { "operation": "load", "status": "observed", "state": "opening", "positionTicks": 0 },
+      { "operation": "play", "status": "observed", "state": "playing", "positionTicks": 0 },
+      { "operation": "pause", "status": "observed", "state": "paused", "positionTicks": 30000000 },
+      { "operation": "resume", "status": "observed", "state": "playing", "positionTicks": 30000000 },
+      { "operation": "stop", "status": "observed", "state": "stopped", "positionTicks": 120000000 }
+    ]
+  },
+  "runtimeMetrics": {
+    "status": "captured",
+    "providerStatus": "native-winrt:returned-snapshot",
+    "reason": "captured by smoke native harness fixture",
+    "hasSnapshot": true,
+    "hasPlaybackSample": true
+  },
+  "timing": {
+    "renderedVideoFrames": 240,
+    "droppedVideoFrames": 0,
+    "expectedFrameDurationMs": 16.667,
+    "renderIntervalMsP95": 16.9,
+    "renderIntervalMsP99": 18.0,
+    "maxFrameGapMs": 22.0,
+    "framePacingSourceFrameRate": 60.0,
+    "lateFrameDropToleranceMs": 41.667
+  },
+  "sync": {
+    "audioClockTicks": 120000000,
+    "videoPositionTicks": 120000000,
+    "audioVideoDriftMsP95": 12.0
+  },
+  "buffers": {
+    "videoStarvedPasses": 0,
+    "audioStarvedPasses": 0
+  },
+  "colorPipeline": {
+    "actualHdrOutput": "Sdr",
+    "swapChainFormat": "B8G8R8A8_UNORM",
+    "swapChainColorSpace": "RGB_FULL_G22_NONE_P709",
+    "conversionStatus": "not-required"
+  },
+  "display": {
+    "hdrStatus": "Sdr",
+    "isHdrDisplayAvailable": false,
+    "isHdrOutputActive": false,
+    "refreshRateHz": 60.0
+  },
+  "checks": [
+    {
+      "name": "RenderedVideoFrames",
+      "signal": "timing.renderedVideoFrames",
+      "status": "pass",
+      "failureArea": "frame-pacing",
+      "expected": ">= 120",
+      "actual": "240"
+    }
+  ]
+}
+'@ | Set-Content -LiteralPath (Join-Path $nativeHarnessCapturedReportDir 'native-harness-sdr-smoke.json') -Encoding UTF8
+
+    Push-Location $repoRoot
+    try {
+        dotnet $cliDll `
+            materialize-native-harness-report-set `
+            --manifest $nativeHarnessManifestPath `
+            --captured-reports-dir $nativeHarnessCapturedDir `
+            --reports-dir $nativeHarnessImportedDir `
+            --source-revision smoke-native-harness-import-revision `
+            --player-core-version smoke-core `
+            --build-configuration Debug `
+            --output $nativeHarnessImportedSummaryPath
+        if ($LASTEXITCODE -ne 0) {
+            throw 'playback quality CLI materialize-native-harness-report-set import returned a non-zero exit code.'
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    $nativeHarnessImportedSummary = Get-Content -Raw -LiteralPath $nativeHarnessImportedSummaryPath | ConvertFrom-Json
+    if ($nativeHarnessImportedSummary.schemaVersion -ne 1 -or
+        $nativeHarnessImportedSummary.caseCount -ne 1 -or
+        $nativeHarnessImportedSummary.reportsDirectory -ne $nativeHarnessImportedDir) {
+        throw 'Expected materialize-native-harness-report-set import summary to describe generated reports.'
+    }
+
+    if (-not ($nativeHarnessImportedSummary.limitations -contains 'native-harness: imported captured playback evidence; CLI did not open native playback graph')) {
+        throw 'Expected materialize-native-harness-report-set import summary to expose import limitation.'
+    }
+
+    $nativeHarnessImportedReportPath = Join-Path $nativeHarnessImportedDir 'local\native-harness-sdr-smoke.json'
+    if (-not (Test-Path -LiteralPath $nativeHarnessImportedReportPath)) {
+        throw 'Expected materialize-native-harness-report-set import to write run-id based report path.'
+    }
+
+    $nativeHarnessImportedReport = Get-Content -Raw -LiteralPath $nativeHarnessImportedReportPath | ConvertFrom-Json
+    if ($nativeHarnessImportedReport.schemaVersion -ne 1 -or
+        $nativeHarnessImportedReport.caseMetadata.caseId -ne 'local/native-harness-sdr-smoke' -or
+        $nativeHarnessImportedReport.report.result -ne 'pass' -or
+        $nativeHarnessImportedReport.report.environment.sourceRevision -ne 'smoke-native-harness-import-revision' -or
+        $nativeHarnessImportedReport.report.runtimeMetrics.providerStatus -ne 'native-winrt:returned-snapshot') {
+        throw 'Expected materialize-native-harness-report-set import to normalize captured native playback evidence.'
+    }
+
+    if (-not ($nativeHarnessImportedReport.modelAnalysis.evidenceSignals -contains 'runtimeMetrics.providerStatus') -or
+        -not ($nativeHarnessImportedReport.modelAnalysis.evidenceSignals -contains 'timing.renderedVideoFrames') -or
+        -not ($nativeHarnessImportedReport.report.limitations -contains 'native-harness: imported captured playback evidence; CLI did not open native playback graph')) {
+        throw 'Expected imported native harness report to carry runtime evidence and import limitation.'
+    }
+
+    Push-Location $repoRoot
+    try {
+        dotnet $cliDll `
+            validate-report-set `
+            --manifest $nativeHarnessManifestPath `
+            --reports-dir $nativeHarnessImportedDir `
+            --output $nativeHarnessImportedValidationPath
+        if ($LASTEXITCODE -ne 0) {
+            throw 'Expected imported native harness report-set to pass validation.'
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    $nativeHarnessImportedValidation = Get-Content -Raw -LiteralPath $nativeHarnessImportedValidationPath | ConvertFrom-Json
+    if ($nativeHarnessImportedValidation.isValid -ne $true -or
+        $nativeHarnessImportedValidation.matchedCaseCount -ne 1) {
+        throw 'Expected imported native harness validation to match every case.'
+    }
+
+    New-Item -ItemType Directory -Path $nativeHarnessMissingCapturedDir | Out-Null
+    Push-Location $repoRoot
+    try {
+        dotnet $cliDll `
+            materialize-native-harness-report-set `
+            --manifest $nativeHarnessManifestPath `
+            --captured-reports-dir $nativeHarnessMissingCapturedDir `
+            --reports-dir $nativeHarnessMissingImportDir `
+            --source-revision smoke-native-harness-missing-import-revision `
+            --player-core-version smoke-core `
+            --build-configuration Debug `
+            --output $nativeHarnessMissingImportSummaryPath
+        if ($LASTEXITCODE -ne 0) {
+            throw 'playback quality CLI materialize-native-harness-report-set missing import returned a non-zero exit code.'
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    $nativeHarnessMissingImportReportPath = Join-Path $nativeHarnessMissingImportDir 'local\native-harness-sdr-smoke.json'
+    $nativeHarnessMissingImportReport = Get-Content -Raw -LiteralPath $nativeHarnessMissingImportReportPath | ConvertFrom-Json
+    if ($nativeHarnessMissingImportReport.report.result -ne 'skip' -or
+        $nativeHarnessMissingImportReport.report.skip.code -ne 'native-harness.capture-missing' -or
+        $nativeHarnessMissingImportReport.report.skip.failureClass -ne 'insufficient instrumentation' -or
+        $nativeHarnessMissingImportReport.report.skip.failureArea -ne 'evidence-collection' -or
+        $nativeHarnessMissingImportReport.report.environment.sourceRevision -ne 'smoke-native-harness-missing-import-revision') {
+        throw 'Expected native harness import to materialize a structured skip when captured evidence is missing.'
     }
 
     Push-Location $repoRoot
