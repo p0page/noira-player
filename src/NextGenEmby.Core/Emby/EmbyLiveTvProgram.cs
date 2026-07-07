@@ -14,6 +14,14 @@ namespace NextGenEmby.Core.Emby
 
         public string OfficialRating { get; set; } = "";
 
+        public string PrimaryImageTag { get; set; } = "";
+
+        public string ThumbImageTag { get; set; } = "";
+
+        public string BackdropImageTag { get; set; } = "";
+
+        public string BannerImageTag { get; set; } = "";
+
         public long? RunTimeTicks { get; set; }
 
         public DateTimeOffset StartDate { get; set; }

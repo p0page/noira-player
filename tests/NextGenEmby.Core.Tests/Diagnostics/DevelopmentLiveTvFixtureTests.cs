@@ -21,12 +21,32 @@ public sealed class DevelopmentLiveTvFixtureTests
     }
 
     [Fact]
+    public void Create_Provides_Current_Program_Artwork_For_Media_First_Preview()
+    {
+        var fixture = DevelopmentLiveTvFixture.Create();
+
+        foreach (var channel in fixture.Channels)
+        {
+            Assert.NotNull(channel.CurrentProgram);
+            var program = channel.CurrentProgram!;
+            Assert.False(string.IsNullOrWhiteSpace(program.Id));
+            Assert.False(string.IsNullOrWhiteSpace(program.ThumbImageTag));
+            Assert.True(
+                fixture.ArtworkUris.ContainsKey(DevelopmentLiveTvFixture.ArtworkKey(program.Id, "Thumb")),
+                "Missing current-program Thumb artwork for " + program.Id);
+        }
+    }
+
+    [Fact]
     public void ArtworkUris_Point_To_Packaged_Qa_Assets()
     {
         var fixture = DevelopmentLiveTvFixture.Create();
         var root = FindRepositoryRoot();
         var expectedKeys = fixture.Channels
             .Select(channel => DevelopmentLiveTvFixture.ArtworkKey(channel.Id, "Primary"))
+            .Concat(fixture.Channels
+                .Where(channel => channel.CurrentProgram != null)
+                .Select(channel => DevelopmentLiveTvFixture.ArtworkKey(channel.CurrentProgram!.Id, "Thumb")))
             .ToList();
 
         foreach (var key in expectedKeys)

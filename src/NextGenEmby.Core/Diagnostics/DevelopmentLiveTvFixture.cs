@@ -25,6 +25,7 @@ namespace NextGenEmby.Core.Diagnostics
                     baseDate,
                     TimeSpan.FromMinutes(30),
                     "qa-wide-01.png",
+                    "qa-wide-05.png",
                     isNews: true),
                 Channel(
                     artworkUris,
@@ -37,6 +38,7 @@ namespace NextGenEmby.Core.Diagnostics
                     baseDate.AddMinutes(10),
                     TimeSpan.FromMinutes(110),
                     "qa-wide-02.png",
+                    "qa-wide-06.png",
                     isMovie: true),
                 Channel(
                     artworkUris,
@@ -49,6 +51,7 @@ namespace NextGenEmby.Core.Diagnostics
                     baseDate.AddMinutes(20),
                     TimeSpan.FromMinutes(95),
                     "qa-wide-03.png",
+                    "qa-wide-10.png",
                     isSports: true),
                 Channel(
                     artworkUris,
@@ -61,6 +64,7 @@ namespace NextGenEmby.Core.Diagnostics
                     baseDate.AddMinutes(5),
                     TimeSpan.FromMinutes(25),
                     "qa-wide-04.png",
+                    "qa-wide-11.png",
                     isKids: true)
             };
 
@@ -83,12 +87,14 @@ namespace NextGenEmby.Core.Diagnostics
             DateTimeOffset start,
             TimeSpan duration,
             string primaryAsset,
+            string programThumbAsset,
             bool isMovie = false,
             bool isSports = false,
             bool isNews = false,
             bool isKids = false)
         {
             AddArtwork(artworkUris, id, "Primary", primaryAsset);
+            AddArtwork(artworkUris, id + "-program", "Thumb", programThumbAsset);
 
             return new EmbyLiveTvChannel
             {
@@ -104,6 +110,7 @@ namespace NextGenEmby.Core.Diagnostics
                     EpisodeTitle = episodeTitle,
                     Overview = overview,
                     OfficialRating = isKids ? "TV-G" : "TV-PG",
+                    ThumbImageTag = ArtworkTag,
                     StartDate = start,
                     EndDate = start.Add(duration),
                     RunTimeTicks = duration.Ticks,

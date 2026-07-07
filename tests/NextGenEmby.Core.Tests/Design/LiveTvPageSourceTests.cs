@@ -42,6 +42,28 @@ public sealed class LiveTvPageSourceTests
     }
 
     [Fact]
+    public void LiveTv_Current_Program_Preview_Uses_Media_First_Artwork_When_Available()
+    {
+        var liveTvXaml = ReadAppSource("Views", "LiveTvPage.xaml");
+        var liveTvPageSource = ReadAppSource("Views", "LiveTvPage.xaml.cs");
+        var contentColumns = SliceFrom(liveTvXaml, "<Grid Grid.Row=\"1\" ColumnSpacing=\"24\">", "<ScrollViewer");
+
+        Assert.Contains("ColumnDefinition Width=\"1120\"", contentColumns);
+        Assert.Contains("ColumnDefinition Width=\"520\"", contentColumns);
+        Assert.DoesNotContain("ColumnDefinition Width=\"*\"", contentColumns);
+        Assert.DoesNotContain("ColumnDefinition Width=\"4*\"", contentColumns);
+        Assert.Contains("PreviewArtworkFrame", liveTvXaml);
+        Assert.Contains("PreviewArtworkImage", liveTvXaml);
+        Assert.Contains("CornerRadius=\"{StaticResource TvHomeWideCardCornerRadius}\"", liveTvXaml);
+        Assert.DoesNotContain("AppCardCornerRadius", liveTvXaml);
+        Assert.Contains("UpdatePreviewArtwork(channel)", liveTvPageSource);
+        Assert.Contains("CreateProgramArtworkImageSource(channel)", liveTvPageSource);
+        Assert.Contains("DevelopmentLiveTvFixture.ArtworkKey(program.Id, \"Thumb\")", liveTvPageSource);
+        Assert.Contains("_liveProgramArtworkUris[channel.Id] = client.GetImageUrl(session, program.Id,", liveTvPageSource);
+        Assert.Contains("PreviewArtworkFrame.Visibility = Visibility.Collapsed", liveTvPageSource);
+    }
+
+    [Fact]
     public void LiveTv_Page_Handles_Dpad_Channel_List_Movement_Explicitly()
     {
         var liveTvPageSource = ReadAppSource("Views", "LiveTvPage.xaml.cs");
@@ -77,6 +99,15 @@ public sealed class LiveTvPageSourceTests
         parts[2] = "NextGenEmby.App";
         Array.Copy(segments, 0, parts, 3, segments.Length);
         return File.ReadAllText(Path.Combine(parts));
+    }
+
+    private static string SliceFrom(string source, string startMarker, string endMarker)
+    {
+        var start = source.IndexOf(startMarker, StringComparison.Ordinal);
+        Assert.True(start >= 0, "Missing source marker " + startMarker);
+        var end = source.IndexOf(endMarker, start, StringComparison.Ordinal);
+        Assert.True(end > start, "Missing source marker " + endMarker);
+        return source.Substring(start, end - start);
     }
 
     private static string FindRepositoryRoot()

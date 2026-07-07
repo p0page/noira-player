@@ -222,7 +222,7 @@ namespace NextGenEmby.Core.Emby
         {
             var parameters = new List<string>();
             AddQueryParameter(parameters, "UserId", session.UserId);
-            AddQueryParameter(parameters, "Fields", "CurrentProgram,Overview,PrimaryImageAspectRatio");
+            AddQueryParameter(parameters, "Fields", "CurrentProgram,Overview,PrimaryImageAspectRatio,ImageTags,BackdropImageTags");
             AddQueryParameter(parameters, "Limit", Math.Max(1, limit).ToString());
             AddImageQueryParameters(parameters);
 
@@ -734,6 +734,8 @@ namespace NextGenEmby.Core.Emby
 
         private static EmbyLiveTvProgram MapLiveTvProgram(LiveTvProgramDto program)
         {
+            var imageTags = program.ImageTags;
+            var backdropImageTags = program.BackdropImageTags;
             return new EmbyLiveTvProgram
             {
                 Id = program.Id ?? "",
@@ -741,6 +743,10 @@ namespace NextGenEmby.Core.Emby
                 EpisodeTitle = program.EpisodeTitle ?? "",
                 Overview = program.Overview ?? "",
                 OfficialRating = program.OfficialRating ?? "",
+                PrimaryImageTag = imageTags != null && imageTags.TryGetValue("Primary", out var primary) ? primary ?? "" : "",
+                ThumbImageTag = imageTags != null && imageTags.TryGetValue("Thumb", out var thumb) ? thumb ?? "" : "",
+                BackdropImageTag = backdropImageTags != null && backdropImageTags.Count > 0 ? backdropImageTags[0] ?? "" : "",
+                BannerImageTag = imageTags != null && imageTags.TryGetValue("Banner", out var banner) ? banner ?? "" : "",
                 RunTimeTicks = program.RunTimeTicks,
                 StartDate = program.StartDate.GetValueOrDefault(),
                 EndDate = program.EndDate.GetValueOrDefault(),
@@ -1141,6 +1147,8 @@ namespace NextGenEmby.Core.Emby
             public string EpisodeTitle { get; set; } = "";
             public string Overview { get; set; } = "";
             public string OfficialRating { get; set; } = "";
+            public Dictionary<string, string> ImageTags { get; set; } = new Dictionary<string, string>();
+            public List<string> BackdropImageTags { get; set; } = new List<string>();
             public long? RunTimeTicks { get; set; }
             public DateTimeOffset? StartDate { get; set; }
             public DateTimeOffset? EndDate { get; set; }

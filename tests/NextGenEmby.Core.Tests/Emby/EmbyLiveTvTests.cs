@@ -50,6 +50,8 @@ public sealed class EmbyLiveTvTests
                     "Name": "Evening News",
                     "EpisodeTitle": "Local Edition",
                     "Overview": "Headlines and weather.",
+                    "ImageTags": { "Primary": "program-primary", "Thumb": "program-thumb", "Banner": "program-banner" },
+                    "BackdropImageTags": [ "program-backdrop" ],
                     "OfficialRating": "TV-PG",
                     "RunTimeTicks": 18000000000,
                     "StartDate": "2026-07-06T08:00:00.0000000Z",
@@ -77,11 +79,15 @@ public sealed class EmbyLiveTvTests
         Assert.NotNull(channel.CurrentProgram);
         Assert.Equal("Evening News", channel.CurrentProgram!.Name);
         Assert.Equal("Local Edition", channel.CurrentProgram.EpisodeTitle);
+        Assert.Equal("program-primary", channel.CurrentProgram.PrimaryImageTag);
+        Assert.Equal("program-thumb", channel.CurrentProgram.ThumbImageTag);
+        Assert.Equal("program-backdrop", channel.CurrentProgram.BackdropImageTag);
+        Assert.Equal("program-banner", channel.CurrentProgram.BannerImageTag);
         Assert.True(channel.CurrentProgram.IsNews);
         Assert.Equal(new DateTimeOffset(2026, 7, 6, 8, 0, 0, TimeSpan.Zero), channel.CurrentProgram.StartDate);
         Assert.Equal("/LiveTv/Channels", handler.LastRequest!.RequestUri!.AbsolutePath);
         Assert.Contains("UserId=user-1", handler.LastRequest.RequestUri.Query);
-        Assert.Contains("Fields=CurrentProgram%2COverview%2CPrimaryImageAspectRatio", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("Fields=CurrentProgram%2COverview%2CPrimaryImageAspectRatio%2CImageTags%2CBackdropImageTags", handler.LastRequest.RequestUri.Query);
         Assert.Contains("Limit=24", handler.LastRequest.RequestUri.Query);
         Assert.Contains("EnableImages=true", handler.LastRequest.RequestUri.Query);
     }

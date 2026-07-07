@@ -29,6 +29,8 @@ namespace NextGenEmby.App.Views
         private Button? _firstChannelButton;
         private Button? _unsupportedReturnFocusTarget;
         private LiveTvNavigationRequest? _request;
+        private readonly Dictionary<string, string> _liveProgramArtworkUris =
+            new Dictionary<string, string>(StringComparer.Ordinal);
 #if DEBUG
         private DevelopmentLiveTvFixtureSnapshot? _developmentLiveTvFixture;
 #endif
@@ -110,7 +112,9 @@ namespace NextGenEmby.App.Views
             _channelButtons.Clear();
             _firstChannelButton = null;
             _unsupportedReturnFocusTarget = null;
+            _liveProgramArtworkUris.Clear();
             StatusBlock.Text = "Loading channels";
+            ClearPreviewArtwork();
             PreviewTitleBlock.Text = "Select a channel";
             PreviewBodyBlock.Text = "Live TV channels and current programs appear here when the server exposes them.";
 
@@ -168,8 +172,10 @@ namespace NextGenEmby.App.Views
             IReadOnlyList<EmbyLiveTvChannel> channels)
         {
             _channelButtons.Clear();
+            _liveProgramArtworkUris.Clear();
             foreach (var channel in channels)
             {
+                CacheLiveProgramArtworkUri(session, client, channel);
                 var button = CreateChannelButton(session, client, channel);
                 if (_firstChannelButton == null)
                 {
@@ -285,6 +291,8 @@ namespace NextGenEmby.App.Views
             _channelButtons.Clear();
             _firstChannelButton = null;
             _unsupportedReturnFocusTarget = null;
+            _liveProgramArtworkUris.Clear();
+            ClearPreviewArtwork();
             StatusBlock.Text = "Fixture Live TV guide";
             PreviewTitleBlock.Text = "Select a channel";
             PreviewBodyBlock.Text = "Live TV channels and current programs appear here when the server exposes them.";
@@ -464,8 +472,91 @@ namespace NextGenEmby.App.Views
 
         private void UpdatePreview(EmbyLiveTvChannel channel)
         {
+            UpdatePreviewArtwork(channel);
             PreviewTitleBlock.Text = CreateChannelTitle(channel);
             PreviewBodyBlock.Text = CreateProgramDescription(channel.CurrentProgram);
+        }
+
+        private void UpdatePreviewArtwork(EmbyLiveTvChannel channel)
+        {
+            var source = CreateProgramArtworkImageSource(channel);
+            if (source == null)
+            {
+                ClearPreviewArtwork();
+                return;
+            }
+
+            PreviewArtworkImage.Source = source;
+            PreviewArtworkFrame.Visibility = Visibility.Visible;
+        }
+
+        private void ClearPreviewArtwork()
+        {
+            PreviewArtworkImage.Source = null;
+            PreviewArtworkFrame.Visibility = Visibility.Collapsed;
+        }
+
+        private BitmapImage? CreateProgramArtworkImageSource(EmbyLiveTvChannel channel)
+        {
+            var program = channel.CurrentProgram;
+            if (program == null || string.IsNullOrWhiteSpace(program.Id))
+            {
+                return null;
+            }
+
+#if DEBUG
+            if (_developmentLiveTvFixture != null)
+            {
+                string imageUri;
+                if ((_developmentLiveTvFixture.ArtworkUris.TryGetValue(
+                        DevelopmentLiveTvFixture.ArtworkKey(program.Id, "Thumb"),
+                        out imageUri) ||
+                    _developmentLiveTvFixture.ArtworkUris.TryGetValue(
+                        DevelopmentLiveTvFixture.ArtworkKey(program.Id, "Backdrop"),
+                        out imageUri) ||
+                    _developmentLiveTvFixture.ArtworkUris.TryGetValue(
+                        DevelopmentLiveTvFixture.ArtworkKey(program.Id, "Primary"),
+                        out imageUri)) &&
+                    !string.IsNullOrWhiteSpace(imageUri))
+                {
+                    return new BitmapImage(new Uri(imageUri));
+                }
+            }
+#endif
+
+            return _liveProgramArtworkUris.TryGetValue(channel.Id, out var uri) &&
+                !string.IsNullOrWhiteSpace(uri)
+                ? new BitmapImage(new Uri(uri))
+                : null;
+        }
+
+        private void CacheLiveProgramArtworkUri(
+            EmbySession session,
+            EmbyApiClient client,
+            EmbyLiveTvChannel channel)
+        {
+            var program = channel.CurrentProgram;
+            if (program == null || string.IsNullOrWhiteSpace(program.Id))
+            {
+                return;
+            }
+
+            if (!string.IsNullOrWhiteSpace(program.ThumbImageTag))
+            {
+                _liveProgramArtworkUris[channel.Id] = client.GetImageUrl(session, program.Id, "Thumb", 720);
+                return;
+            }
+
+            if (!string.IsNullOrWhiteSpace(program.BackdropImageTag))
+            {
+                _liveProgramArtworkUris[channel.Id] = client.GetImageUrl(session, program.Id, "Backdrop", 720);
+                return;
+            }
+
+            if (!string.IsNullOrWhiteSpace(program.PrimaryImageTag))
+            {
+                _liveProgramArtworkUris[channel.Id] = client.GetImageUrl(session, program.Id, "Primary", 720);
+            }
         }
 
         private static string CreateChannelTitle(EmbyLiveTvChannel channel)

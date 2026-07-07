@@ -38,8 +38,8 @@
 
             <Grid Grid.Row="1" ColumnSpacing="24">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="5*" />
-                    <ColumnDefinition Width="4*" />
+                    <ColumnDefinition Width="1120" />
+                    <ColumnDefinition Width="520" />
                 </Grid.ColumnDefinitions>
 
                 <ScrollViewer
@@ -61,6 +61,18 @@
                         <TextBlock
                             Style="{StaticResource TvBadgeTextStyle}"
                             Text="Now" />
+                        <Border
+                            x:Name="PreviewArtworkFrame"
+                            Height="190"
+                            Background="{StaticResource AppRaisedSurfaceBrush}"
+                            BorderBrush="{StaticResource AppTransparentBrush}"
+                            BorderThickness="0"
+                            CornerRadius="{StaticResource TvHomeWideCardCornerRadius}"
+                            Visibility="Collapsed">
+                            <Image
+                                x:Name="PreviewArtworkImage"
+                                Stretch="UniformToFill" />
+                        </Border>
                         <TextBlock
                             x:Name="PreviewTitleBlock"
                             Style="{StaticResource TvPanelTitleTextStyle}"

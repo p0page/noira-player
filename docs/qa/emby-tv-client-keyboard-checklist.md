@@ -2968,3 +2968,64 @@ Fix rerun findings:
 - Decision:
   - Treat the abstract-QA-art concern as improved enough for deterministic visual QA.
   - Keep real server artwork sampling as a live-data validation item, not as a blocker for local fixture-based page work.
+
+### 2026-07-08 - Design Conformance Batch 05 Live TV Program Artwork Baseline
+
+- App version: 0.1.0.231.
+- Scope: inspect the Live TV current-program preview after the secondary-media matte fix.
+- Data source: source inspection and existing DEBUG `livetv-fixture`; no private server data, credentials, screenshots, or personal media assets were written to the repository.
+- Evidence:
+  - `EmbyLiveTvProgram` did not preserve program `ImageTags` or `BackdropImageTags`.
+  - `EmbyApiClient.GetLiveTvChannelsAsync` requested `CurrentProgram`, `Overview`, and `PrimaryImageAspectRatio`, but not program artwork fields.
+  - `DevelopmentLiveTvFixture` provided channel Primary artwork only; current programs had metadata but no artwork URI.
+  - `LiveTvPage` rendered the right Now preview as compact text-only content.
+
+Baseline findings:
+
+| ID | Severity | Page | Evidence | Expected | Actual | Proposed batch fix |
+| --- | --- | --- | --- | --- | --- | --- |
+| DC-05.01 | Concern | Live TV Now preview | Source inspection of `EmbyApiClient`, `EmbyLiveTvProgram`, `DevelopmentLiveTvFixture`, and `LiveTvPage`. | When Emby exposes artwork on the current program, the Now panel should use that image as media-first context while keeping a readable text fallback. | The page could not consume or prove current-program artwork, so the preview stayed text-first even in deterministic fixture data. | Preserve current-program image tags, add fixture program artwork, render a bounded artwork region above the Now text, and keep the no-art fallback text-first. |
+
+- Decision:
+  - Treat current-program artwork as optional Emby data, not a hard requirement for Live TV browsing.
+  - Add deterministic artwork coverage without attempting live stream playback or Emby transcoding.
+
+### 2026-07-08 - Design Conformance Batch 05 Live TV Program Artwork Fix Rerun
+
+- App version: 0.1.0.235.
+- Scope: verify the Live TV Now preview after adding current-program artwork support.
+- Data source: DEBUG `livetv-fixture` and packaged QA artwork only; no private server data, credentials, screenshots, or personal media assets were written to the repository.
+- Evidence root: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch05-livetv-program-artwork-235-20260708-064552`.
+- Keyboard-only validation:
+  - Signed and installed `NextGenEmby.App 0.1.0.235`.
+  - Closed the existing app frame, wrote `dev-command.json` with route `livetv-fixture`, and launched through AppUserModelId `NextGenEmby.App_h8qjz0sr1sg4m!App`.
+  - The route reported `completed / livetv-fixture`.
+  - Captured the initial Live TV screen with `101 News 24` focused and program artwork visible in the Now panel.
+  - Pressed `Down`; focus moved to `202 Cinema One`, and the Now panel updated to the second channel's artwork and program text.
+- Screenshots:
+  - Initial Live TV program artwork: `01-livetv-program-artwork-initial.png`.
+  - Second channel program artwork: `02-livetv-program-artwork-second-channel.png`.
+  - Route result: `route-result.txt`.
+- Fixture/API/source contracts added before implementation:
+  - `DevelopmentLiveTvFixtureTests.Create_Provides_Current_Program_Artwork_For_Media_First_Preview` requires fixture current programs to expose artwork URI coverage.
+  - `EmbyLiveTvTests.GetLiveTvChannelsAsync_Requests_Current_Program_And_Maps_Channel_Artwork` requires current-program artwork fields to be requested and mapped.
+  - `LiveTvPageSourceTests.LiveTv_Current_Program_Preview_Uses_Media_First_Artwork_When_Available` requires the bounded Now artwork frame, artwork-source fallback order, and no accidental `AppCardCornerRadius` dependency.
+
+Fix rerun findings:
+
+| ID | Status | Page | Evidence | Result | Residual risk |
+| --- | --- | --- | --- | --- | --- |
+| DC-05.01 | Pass with concern | Live TV Now preview | `01-livetv-program-artwork-initial.png`, `02-livetv-program-artwork-second-channel.png`, `route-result.txt`, and the Live TV fixture/API/source tests. | Current-program preview is now media-first when artwork exists, with a bounded image region and stable text below it. Channel list focus remains matte and dense, and no artwork state still falls back to text. | Real Live TV servers may expose no program artwork, portrait-biased art, stale channel logos, or provider-specific EPG shapes. Hardware/controller activation of the unsupported-playback layer should be re-run separately because the ad-hoc Enter screenshot was not conclusive. |
+
+- Verification:
+  - Red path confirmed the targeted Live TV fixture/API/source tests failed before implementation because program artwork was not modeled, requested, or rendered.
+  - Targeted Live TV tests passed: 12 tests.
+  - Full Core test suite passed: 499 tests.
+  - `git diff --check` passed with no whitespace errors.
+  - Private server URL, username, and password token scan returned no repository matches.
+  - Visual Studio MSBuild Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.235_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate, verified with `signtool verify /pa`, and installed locally as `NextGenEmby.App 0.1.0.235`.
+  - Intermediate installed-app reruns caught a missing XAML resource and a too-wide content layout before the final 0.1.0.235 screenshot pass.
+- Decision:
+  - Mark deterministic current-program artwork support as covered for Live TV browsing.
+  - Keep real EPG artwork sampling and hardware unsupported-playback activation as live-data/platform validation, not as blockers for this visual-system slice.
