@@ -8,6 +8,8 @@
     {
       "caseId": "jellyfin/sdr-hevc-main10-1080p60-3m",
       "category": "stable",
+      "severity": "high",
+      "stability": "stable",
       "reportRunId": "jellyfin/sdr-hevc-main10-1080p60-3m",
       "status": "mismatch",
       "signals": [
@@ -24,6 +26,8 @@
     {
       "caseId": "jellyfin/hdr10-hevc-main10-1080p60-10m",
       "category": "stable",
+      "severity": "critical",
+      "stability": "stable",
       "reportRunId": "jellyfin/hdr10-hevc-main10-1080p60-10m",
       "status": "mismatch",
       "signals": [
@@ -40,6 +44,8 @@
     {
       "caseId": "jellyfin/hdr10-hevc-main10-1080p60-10m-force-sdr",
       "category": "challenge",
+      "severity": "high",
+      "stability": "stable",
       "reportRunId": "jellyfin/hdr10-hevc-main10-1080p60-10m-force-sdr",
       "status": "mismatch",
       "signals": [
@@ -57,6 +63,8 @@
     {
       "caseId": "jellyfin/hdr10-hevc-main10-4k60-50m",
       "category": "challenge",
+      "severity": "high",
+      "stability": "variable",
       "reportRunId": "jellyfin/hdr10-hevc-main10-4k60-50m",
       "status": "mismatch",
       "signals": [
@@ -73,6 +81,8 @@
     {
       "caseId": "jellyfin/dv-profile5-hevc-4k60",
       "category": "challenge",
+      "severity": "medium",
+      "stability": "stable",
       "reportRunId": "jellyfin/dv-profile5-hevc-4k60",
       "status": "mismatch",
       "signals": [
@@ -83,6 +93,8 @@
     {
       "caseId": "jellyfin/dv-profile8-1-hevc-4k60-hdr10-fallback",
       "category": "challenge",
+      "severity": "high",
+      "stability": "stable",
       "reportRunId": "jellyfin/dv-profile8-1-hevc-4k60-hdr10-fallback",
       "status": "mismatch",
       "signals": [
@@ -99,6 +111,8 @@
     {
       "caseId": "local/chimera-23976-hdr10-cadence",
       "category": "challenge",
+      "severity": "high",
+      "stability": "unknown",
       "reportRunId": "local/chimera-23976-hdr10-cadence",
       "status": "mismatch",
       "signals": [
@@ -122,6 +136,8 @@
     {
       "caseId": "local/sdr-resume-seek-timeline",
       "category": "stable",
+      "severity": "high",
+      "stability": "unknown",
       "reportRunId": "local/sdr-resume-seek-timeline",
       "status": "mismatch",
       "signals": [

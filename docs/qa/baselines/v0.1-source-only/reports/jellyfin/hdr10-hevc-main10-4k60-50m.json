@@ -1,5 +1,11 @@
 {
   "schemaVersion": 1,
+  "caseMetadata": {
+    "caseId": "jellyfin/hdr10-hevc-main10-4k60-50m",
+    "category": "challenge",
+    "severity": "high",
+    "stability": "variable"
+  },
   "report": {
     "schemaVersion": 1,
     "metricVersion": "software-quality-v1",
@@ -181,7 +187,7 @@
     "environment": {
       "collectorVersion": "materialize-baseline-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "306dc2d",
+      "sourceRevision": "827e4ba",
       "buildConfiguration": "Debug"
     },
     "limitations": [
@@ -356,7 +362,7 @@
     "environment": {
       "collectorVersion": "materialize-baseline-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "306dc2d",
+      "sourceRevision": "827e4ba",
       "buildConfiguration": "Debug",
       "signals": [
         "environment.collectorVersion",

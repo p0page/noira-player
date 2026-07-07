@@ -1,5 +1,11 @@
 {
   "schemaVersion": 1,
+  "caseMetadata": {
+    "caseId": "jellyfin/sdr-hevc-main10-1080p60-3m",
+    "category": "stable",
+    "severity": "high",
+    "stability": "stable"
+  },
   "report": {
     "schemaVersion": 1,
     "metricVersion": "software-quality-v1",
@@ -181,7 +187,7 @@
     "environment": {
       "collectorVersion": "materialize-baseline-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "306dc2d",
+      "sourceRevision": "827e4ba",
       "buildConfiguration": "Debug"
     },
     "limitations": [
@@ -368,7 +374,7 @@
     "environment": {
       "collectorVersion": "materialize-baseline-report-set-v1",
       "playerCoreVersion": "NextGenEmby.Core",
-      "sourceRevision": "306dc2d",
+      "sourceRevision": "827e4ba",
       "buildConfiguration": "Debug",
       "signals": [
         "environment.collectorVersion",
