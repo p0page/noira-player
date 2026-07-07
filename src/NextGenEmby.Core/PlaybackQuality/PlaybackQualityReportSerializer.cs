@@ -32,6 +32,11 @@ namespace NextGenEmby.Core.PlaybackQuality
             return JsonSerializer.Serialize(comparison, Options);
         }
 
+        public static string Serialize(PlaybackQualityComparisonSuite suite)
+        {
+            return JsonSerializer.Serialize(suite, Options);
+        }
+
         public static PlaybackQualityReport Deserialize(string json)
         {
             return JsonSerializer.Deserialize<PlaybackQualityReport>(json, Options) ??

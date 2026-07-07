@@ -11,6 +11,7 @@ namespace NextGenEmby.Core.PlaybackQuality
         public int MixedCount { get; set; }
         public int UnchangedCount { get; set; }
         public int InsufficientEvidenceCount { get; set; }
+        public int PolicyChangeCount { get; set; }
         public int StrongConfidenceCount { get; set; }
         public int PartialConfidenceCount { get; set; }
         public int WeakConfidenceCount { get; set; }
@@ -53,6 +54,7 @@ namespace NextGenEmby.Core.PlaybackQuality
         public string Outcome { get; set; } = "unchanged";
         public int ImprovementCount { get; set; }
         public int RegressionCount { get; set; }
+        public int PolicyChangeCount { get; set; }
         public List<string> CaseIds { get; } = new List<string>();
         public List<string> Directions { get; } = new List<string>();
     }
@@ -68,6 +70,7 @@ namespace NextGenEmby.Core.PlaybackQuality
         public string Risk { get; set; } = "";
         public string Confidence { get; set; } = "";
         public string SuggestedNextAction { get; set; } = "";
+        public int PolicyChangeCount { get; set; }
         public List<string> Reasons { get; } = new List<string>();
         public List<string> Signals { get; } = new List<string>();
         public List<string> FailureAreas { get; } = new List<string>();
@@ -160,6 +163,16 @@ namespace NextGenEmby.Core.PlaybackQuality
                 AddUnique(summary.FailureAreas, regression.FailureArea);
             }
 
+            foreach (var policyChange in comparison.PolicyChanges)
+            {
+                summary.PolicyChangeCount++;
+                AddUnique(summary.Signals, policyChange.Signal);
+                AddUnique(summary.FailureAreas, policyChange.FailureArea);
+                AddUnique(
+                    summary.Reasons,
+                    "candidate changed Core policy signal without quality delta");
+            }
+
             foreach (var area in comparison.Optimization.FailureAreas)
             {
                 AddUnique(summary.FailureAreas, area);
@@ -227,6 +240,8 @@ namespace NextGenEmby.Core.PlaybackQuality
                     suite.WeakConfidenceCount++;
                     break;
             }
+
+            suite.PolicyChangeCount += comparison.PolicyChanges.Count;
         }
 
         private static void AddComparisonEvidence(
@@ -247,6 +262,12 @@ namespace NextGenEmby.Core.PlaybackQuality
             {
                 AddUnique(suite.Signals, regression.Signal);
                 AddUnique(suite.FailureAreas, regression.FailureArea);
+            }
+
+            foreach (var policyChange in comparison.PolicyChanges)
+            {
+                AddUnique(suite.Signals, policyChange.Signal);
+                AddUnique(suite.FailureAreas, policyChange.FailureArea);
             }
 
             foreach (var area in comparison.NewFailureAreas)
@@ -285,6 +306,11 @@ namespace NextGenEmby.Core.PlaybackQuality
             foreach (var regression in comparison.Regressions)
             {
                 AddSignalSummaryDelta(suite, comparison, regression, isImprovement: false);
+            }
+
+            foreach (var policyChange in comparison.PolicyChanges)
+            {
+                AddSignalSummaryPolicyChange(suite, comparison, policyChange);
             }
         }
 
@@ -327,6 +353,36 @@ namespace NextGenEmby.Core.PlaybackQuality
             UpdateSignalSummaryOutcome(summary);
         }
 
+        private static void AddSignalSummaryPolicyChange(
+            PlaybackQualityComparisonSuite suite,
+            PlaybackQualityRunComparison comparison,
+            PlaybackQualitySignalDelta delta)
+        {
+            if (string.IsNullOrWhiteSpace(delta.Signal))
+            {
+                return;
+            }
+
+            var summary = FindSignalSummary(
+                suite.SignalSummaries,
+                delta.Signal,
+                delta.FailureArea);
+            if (summary == null)
+            {
+                summary = new PlaybackQualitySuiteSignalSummary
+                {
+                    Signal = delta.Signal,
+                    FailureArea = delta.FailureArea
+                };
+                suite.SignalSummaries.Add(summary);
+            }
+
+            summary.PolicyChangeCount++;
+            AddUnique(summary.CaseIds, comparison.CaseId);
+            AddUnique(summary.Directions, delta.Direction);
+            UpdateSignalSummaryOutcome(summary);
+        }
+
         private static PlaybackQualitySuiteSignalSummary? FindSignalSummary(
             List<PlaybackQualitySuiteSignalSummary> summaries,
             string signal,
@@ -357,6 +413,10 @@ namespace NextGenEmby.Core.PlaybackQuality
             else if (summary.RegressionCount > 0)
             {
                 summary.Outcome = "regressed";
+            }
+            else if (summary.PolicyChangeCount > 0)
+            {
+                summary.Outcome = "policy-changed";
             }
         }
 

@@ -87,6 +87,49 @@ public sealed class PlaybackQualityComparisonSuiteTests
     }
 
     [Fact]
+    public void Summarize_Surfaces_Policy_Changes_As_Neutral_Model_Context()
+    {
+        var frameDurationMs = 1000.0 / 60.0;
+        var baseline = Report(
+            "baseline",
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "50.000", "80.000"));
+        baseline.Timing.ExpectedFrameDurationMs = frameDurationMs;
+        baseline.Timing.LateFrameDropToleranceMs = frameDurationMs * 6.0;
+
+        var candidate = Report(
+            "candidate",
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "50.000", "80.000"));
+        candidate.Timing.ExpectedFrameDurationMs = frameDurationMs;
+        candidate.Timing.LateFrameDropToleranceMs = frameDurationMs * 2.5;
+        var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
+        comparison.CaseId = "case-policy-change";
+
+        var suite = PlaybackQualityComparisonSuiteAggregator.Summarize(new[] { comparison });
+
+        Assert.Equal("continue-next-triage-step", suite.Action);
+        Assert.Equal(0, suite.ImprovedCount);
+        Assert.Equal(0, suite.RegressedCount);
+        Assert.Equal(1, suite.PolicyChangeCount);
+        Assert.Contains("framePacing.lateFrameDropToleranceFrameRatio", suite.Signals);
+        var caseSummary = Assert.Single(suite.Cases);
+        Assert.Equal(1, caseSummary.PolicyChangeCount);
+        Assert.Contains("framePacing.lateFrameDropToleranceFrameRatio", caseSummary.Signals);
+        Assert.Contains("candidate changed Core policy signal without quality delta", caseSummary.Reasons);
+        Assert.Contains(suite.SignalSummaries, summary =>
+            summary.Signal == "framePacing.lateFrameDropToleranceFrameRatio" &&
+            summary.FailureArea == "frame-pacing" &&
+            summary.Outcome == "policy-changed" &&
+            summary.PolicyChangeCount == 1 &&
+            summary.ImprovementCount == 0 &&
+            summary.RegressionCount == 0 &&
+            summary.CaseIds.Contains("case-policy-change") &&
+            summary.Directions.Contains("decreased"));
+        var json = PlaybackQualityReportSerializer.Serialize(suite);
+        Assert.Contains("\"policyChangeCount\": 1", json);
+        Assert.Contains("\"outcome\": \"policy-changed\"", json);
+    }
+
+    [Fact]
     public void Summarize_CollectsEvidence_When_Any_Comparison_Is_Weak_And_None_Regress()
     {
         var improved = Compare(
