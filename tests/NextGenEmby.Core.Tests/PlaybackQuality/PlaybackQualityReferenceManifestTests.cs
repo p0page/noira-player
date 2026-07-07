@@ -498,6 +498,50 @@ public sealed class PlaybackQualityReferenceManifestTests
     }
 
     [Fact]
+    public void ValidateReportSet_Rejects_Hdr_Output_Without_Display_And_SwapChain_Evidence()
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        var referenceCase = CreateCase(
+            "jellyfin/hdr10-4k-color-pipeline",
+            tier: 1,
+            purpose: "hdr-output");
+        referenceCase.Expected.HdrOutput = "Hdr10";
+        referenceCase.Expected.DxgiInput = "YCBCR_STUDIO_G2084_TOPLEFT_P2020";
+        referenceCase.Expected.DxgiOutput = "RGB_FULL_G2084_NONE_P2020";
+        referenceCase.Expected.RequireValidatedConversion = true;
+        manifest.Cases.Add(referenceCase);
+        var report = CreateReport(
+            "jellyfin/hdr10-4k-color-pipeline",
+            codec: "hevc",
+            width: 3840,
+            height: 2160,
+            frameRate: 23.976,
+            hdrKind: "Hdr10");
+        report.ColorPipeline.ActualHdrOutput = "Hdr10";
+        report.ColorPipeline.DxgiInput = "YCBCR_STUDIO_G2084_TOPLEFT_P2020";
+        report.ColorPipeline.DxgiOutput = "RGB_FULL_G2084_NONE_P2020";
+        report.ColorPipeline.ConversionStatus = "validated";
+
+        var validation = PlaybackQualityReferenceReportSetValidator.Validate(
+            manifest,
+            new[] { report });
+
+        Assert.False(validation.IsValid);
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.requiredSignal.missing" &&
+            error.Signal == "display.hdrStatus");
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.requiredSignal.missing" &&
+            error.Signal == "colorPipeline.swapChainFormat");
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.requiredSignal.missing" &&
+            error.Signal == "colorPipeline.swapChainColorSpace");
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.requiredSignal.missing" &&
+            error.Signal == "colorPipeline.isTenBitSwapChain");
+    }
+
+    [Fact]
     public void ValidateReportSet_Accepts_Explicit_Zero_Required_Counters_When_Signal_Presence_Is_Captured()
     {
         var manifest = new PlaybackQualityReferenceManifest();

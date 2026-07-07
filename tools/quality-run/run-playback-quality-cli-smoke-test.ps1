@@ -2049,6 +2049,10 @@ try {
         ($_.requiredSignals -contains 'buffers.videoStarvedPasses') -and
         ($_.requiredSignals -contains 'buffers.audioStarvedPasses') -and
         ($_.requiredSignals -contains 'colorPipeline.actualHdrOutput') -and
+        ($_.requiredSignals -contains 'display.hdrStatus') -and
+        ($_.requiredSignals -contains 'colorPipeline.swapChainFormat') -and
+        ($_.requiredSignals -contains 'colorPipeline.swapChainColorSpace') -and
+        ($_.requiredSignals -contains 'colorPipeline.isTenBitSwapChain') -and
         ($_.requiredSignals -contains 'colorPipeline.dxgiInput')
     })) {
         throw 'Expected example reference run plan to schedule public Jellyfin media as direct-uri.'

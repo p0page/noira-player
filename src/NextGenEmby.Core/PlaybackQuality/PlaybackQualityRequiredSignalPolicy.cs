@@ -97,6 +97,18 @@ namespace NextGenEmby.Core.PlaybackQuality
                 AddUnique(requiredSignals, "colorPipeline.actualHdrOutput");
             }
 
+            if (RequiresColorPipelineSurfaceEvidence(expected))
+            {
+                AddUnique(requiredSignals, "display.hdrStatus");
+                AddUnique(requiredSignals, "colorPipeline.swapChainFormat");
+                AddUnique(requiredSignals, "colorPipeline.swapChainColorSpace");
+            }
+
+            if (RequiresTenBitSwapChainEvidence(expected))
+            {
+                AddUnique(requiredSignals, "colorPipeline.isTenBitSwapChain");
+            }
+
             if (!string.IsNullOrWhiteSpace(expected.DxgiInput))
             {
                 AddUnique(requiredSignals, "colorPipeline.dxgiInput");
@@ -207,6 +219,12 @@ namespace NextGenEmby.Core.PlaybackQuality
                     return HasBufferEvidence(report);
                 case "colorPipeline.actualHdrOutput":
                     return !string.IsNullOrWhiteSpace(report.ColorPipeline.ActualHdrOutput);
+                case "colorPipeline.swapChainFormat":
+                    return !string.IsNullOrWhiteSpace(report.ColorPipeline.SwapChainFormat);
+                case "colorPipeline.swapChainColorSpace":
+                    return !string.IsNullOrWhiteSpace(report.ColorPipeline.SwapChainColorSpace);
+                case "colorPipeline.isTenBitSwapChain":
+                    return presentSignals != null || report.ColorPipeline.IsTenBitSwapChain;
                 case "colorPipeline.dxgiInput":
                     return !string.IsNullOrWhiteSpace(report.ColorPipeline.DxgiInput);
                 case "colorPipeline.dxgiOutput":
@@ -215,6 +233,8 @@ namespace NextGenEmby.Core.PlaybackQuality
                     return !string.IsNullOrWhiteSpace(report.ColorPipeline.ConversionStatus);
                 case "colorPipeline.forceSdrOutput":
                     return report.ColorPipeline.ForceSdrOutput;
+                case "display.hdrStatus":
+                    return !string.IsNullOrWhiteSpace(report.Display.HdrStatus);
                 case "display.refreshRateHz":
                     return report.Display.RefreshRateHz > 0;
                 default:
@@ -254,6 +274,33 @@ namespace NextGenEmby.Core.PlaybackQuality
             string purpose)
         {
             return referenceCase.Purpose.Contains(purpose);
+        }
+
+        private static bool RequiresColorPipelineSurfaceEvidence(
+            PlaybackQualityExpected expected)
+        {
+            return !string.IsNullOrWhiteSpace(expected.HdrOutput) ||
+                !string.IsNullOrWhiteSpace(expected.DxgiOutput);
+        }
+
+        private static bool RequiresTenBitSwapChainEvidence(
+            PlaybackQualityExpected expected)
+        {
+            return IsHdr10LikeOutput(expected.HdrOutput) ||
+                IsHdr10LikeColorSpace(expected.DxgiOutput);
+        }
+
+        private static bool IsHdr10LikeOutput(string value)
+        {
+            return string.Equals(value, "Hdr10", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(value, "Hdr", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(value, "Hlg", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsHdr10LikeColorSpace(string value)
+        {
+            return value.IndexOf("G2084", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                value.IndexOf("P2020", StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         private static bool HasTimingEvidence(PlaybackQualityReport report)
