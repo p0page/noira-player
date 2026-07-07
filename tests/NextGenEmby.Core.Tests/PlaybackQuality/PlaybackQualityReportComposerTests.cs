@@ -1,3 +1,4 @@
+using System;
 using NextGenEmby.Core.Emby;
 using NextGenEmby.Core.Playback;
 using NextGenEmby.Core.PlaybackQuality;
@@ -168,6 +169,36 @@ public sealed class PlaybackQualityReportComposerTests
     }
 
     [Fact]
+    public void Compose_Fills_Missing_Environment_Evidence_From_Process()
+    {
+        WithEnvironment("NEXTGENEMBY_PLAYBACK_QUALITY_COLLECTOR_VERSION", "quality-run-env", () =>
+        WithEnvironment("NEXTGENEMBY_PLAYER_CORE_VERSION", "native-core-env", () =>
+        WithEnvironment("NEXTGENEMBY_SOURCE_REVISION", "env1234", () =>
+        WithEnvironment("NEXTGENEMBY_BUILD_CONFIGURATION", "Release", () =>
+        {
+            var result = PlaybackQualityReportComposer.Compose(new PlaybackQualityReportRequest
+            {
+                RunId = "environment-from-process",
+                Descriptor = CreatePlaybackDescriptor(frameRate: 23.976),
+                DisplayStatus = CreateHdrDisplayStatus(refreshRateHz: 59.94006),
+                Metrics = CreateStableMetrics(maxFrameGapMs: 60),
+                Expected = CreateHdrExpected(maxFrameGapMs: 105),
+                Environment = new PlaybackQualityEnvironment
+                {
+                    CollectorVersion = "explicit-collector"
+                }
+            });
+
+            Assert.Equal("explicit-collector", result.Report.Environment.CollectorVersion);
+            Assert.Equal("native-core-env", result.Report.Environment.PlayerCoreVersion);
+            Assert.Equal("env1234", result.Report.Environment.SourceRevision);
+            Assert.Equal("Release", result.Report.Environment.BuildConfiguration);
+            Assert.Contains("environment.playerCoreVersion", result.ModelAnalysis.Environment.Signals);
+            Assert.Contains("environment.sourceRevision", result.ModelAnalysis.EvidenceSignals);
+        }))));
+    }
+
+    [Fact]
     public void Compose_Uses_Default_Expected_Thresholds_When_Requested()
     {
         var result = PlaybackQualityReportComposer.Compose(new PlaybackQualityReportRequest
@@ -284,5 +315,19 @@ public sealed class PlaybackQualityReportComposerTests
             RequireValidatedConversion = true,
             RequireMatchedDisplayRefreshRate = true
         };
+    }
+
+    private static void WithEnvironment(string name, string value, Action action)
+    {
+        var previous = Environment.GetEnvironmentVariable(name);
+        Environment.SetEnvironmentVariable(name, value);
+        try
+        {
+            action();
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(name, previous);
+        }
     }
 }
