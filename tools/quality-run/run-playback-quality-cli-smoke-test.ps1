@@ -849,6 +849,10 @@ try {
     }
 
     $comparison = Get-Content -Raw -LiteralPath $outputPath | ConvertFrom-Json
+    if ($comparison.schemaVersion -ne 1) {
+        throw 'Expected playback quality CLI comparison output schemaVersion 1.'
+    }
+
     if ($comparison.result -ne 'improved') {
         throw 'Expected playback quality CLI comparison result to be improved.'
     }
@@ -887,6 +891,10 @@ try {
     }
 
     $incompatibleComparison = Get-Content -Raw -LiteralPath $incompatibleOutputPath | ConvertFrom-Json
+    if ($incompatibleComparison.schemaVersion -ne 1) {
+        throw 'Expected playback quality CLI incompatible comparison output schemaVersion 1.'
+    }
+
     if ($incompatibleComparison.result -ne 'insufficient-evidence') {
         throw 'Expected playback quality CLI incompatible comparison to be insufficient evidence.'
     }
@@ -1083,6 +1091,10 @@ try {
     }
 
     $comparisonFromSuite = Get-Content -Raw -LiteralPath $comparisonFromSuitePath | ConvertFrom-Json
+    if ($comparisonFromSuite.schemaVersion -ne 1) {
+        throw 'Expected playback quality CLI compare-suite comparison output schemaVersion 1.'
+    }
+
     if ($comparisonFromSuite.result -ne 'improved') {
         throw 'Expected playback quality CLI compare-suite comparison result to be improved.'
     }

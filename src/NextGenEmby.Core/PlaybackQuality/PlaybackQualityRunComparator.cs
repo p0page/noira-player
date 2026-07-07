@@ -6,6 +6,7 @@ namespace NextGenEmby.Core.PlaybackQuality
 {
     public sealed class PlaybackQualityRunComparison
     {
+        public int SchemaVersion { get; set; } = 1;
         public string CaseId { get; set; } = "";
         public string BaselineRunId { get; set; } = "";
         public string CandidateRunId { get; set; } = "";

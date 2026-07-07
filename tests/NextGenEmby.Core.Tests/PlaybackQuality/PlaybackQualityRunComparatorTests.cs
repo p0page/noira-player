@@ -17,6 +17,7 @@ public sealed class PlaybackQualityRunComparatorTests
 
         var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
 
+        Assert.Equal(1, comparison.SchemaVersion);
         Assert.Equal("baseline", comparison.BaselineRunId);
         Assert.Equal("candidate", comparison.CandidateRunId);
         Assert.Equal("improved", comparison.Result);
@@ -525,6 +526,7 @@ public sealed class PlaybackQualityRunComparatorTests
 
         var json = PlaybackQualityReportSerializer.Serialize(comparison);
 
+        Assert.Contains("\"schemaVersion\": 1", json);
         Assert.Contains("\"baselineRunId\"", json);
         Assert.Contains("\"candidateRunId\"", json);
         Assert.Contains("\"decision\"", json);
