@@ -79,6 +79,25 @@ public sealed class DevelopmentDetailsFixtureTests
             label.IndexOf("descriptive", StringComparison.OrdinalIgnoreCase) >= 0);
     }
 
+    [Fact]
+    public void CreateWithoutArtwork_Leaves_Main_Item_Artwork_Empty_For_Fallback_Coverage()
+    {
+        var fixture = DevelopmentDetailsFixture.CreateWithoutArtwork();
+
+        Assert.Equal("fixture-detail-no-art", fixture.Item.Id);
+        Assert.True(string.IsNullOrWhiteSpace(fixture.Item.PrimaryImageTag));
+        Assert.True(string.IsNullOrWhiteSpace(fixture.Item.PrimaryImageItemId));
+        Assert.True(string.IsNullOrWhiteSpace(fixture.Item.BackdropImageTag));
+        Assert.True(string.IsNullOrWhiteSpace(fixture.Item.BackdropImageItemId));
+        Assert.True(string.IsNullOrWhiteSpace(fixture.Item.ThumbImageTag));
+        Assert.True(string.IsNullOrWhiteSpace(fixture.Item.ThumbImageItemId));
+        Assert.False(fixture.ArtworkUris.ContainsKey(DevelopmentDetailsFixture.ArtworkKey(fixture.Item.Id, "Primary")));
+        Assert.False(fixture.ArtworkUris.ContainsKey(DevelopmentDetailsFixture.ArtworkKey(fixture.Item.Id, "Backdrop")));
+        Assert.False(fixture.ArtworkUris.ContainsKey(DevelopmentDetailsFixture.ArtworkKey(fixture.Item.Id, "Thumb")));
+        Assert.True(fixture.MediaSources.Count >= 2);
+        Assert.NotEmpty(fixture.SimilarItems);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

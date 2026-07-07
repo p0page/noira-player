@@ -48,6 +48,8 @@ namespace NextGenEmby.App.Views
         private const int DevelopmentDetailsFocusRetryCount = 6;
         private bool _usesDevelopmentDetailsFixture;
         private int _developmentDetailsFocusGeneration;
+        private MediaDetailsDevelopmentFixtureKind _developmentDetailsFixtureKind =
+            MediaDetailsDevelopmentFixtureKind.Standard;
         private IReadOnlyDictionary<string, string> _developmentDetailsArtworkUris =
             new Dictionary<string, string>(StringComparer.Ordinal);
 #endif
@@ -133,6 +135,7 @@ namespace NextGenEmby.App.Views
             var loadGeneration = BeginLoad();
 #if DEBUG
             _usesDevelopmentDetailsFixture = false;
+            _developmentDetailsFixtureKind = MediaDetailsDevelopmentFixtureKind.Standard;
             _developmentDetailsArtworkUris = new Dictionary<string, string>(StringComparer.Ordinal);
 #endif
 
@@ -151,6 +154,7 @@ namespace NextGenEmby.App.Views
 #if DEBUG
                 if (request.UseDevelopmentFixture)
                 {
+                    _developmentDetailsFixtureKind = request.DevelopmentFixtureKind;
                     RenderDevelopmentDetailsFixture(loadGeneration);
                     return;
                 }
@@ -769,7 +773,9 @@ namespace NextGenEmby.App.Views
                 return;
             }
 
-            var fixture = DevelopmentDetailsFixture.Create();
+            var fixture = _developmentDetailsFixtureKind == MediaDetailsDevelopmentFixtureKind.NoArtwork
+                ? DevelopmentDetailsFixture.CreateWithoutArtwork()
+                : DevelopmentDetailsFixture.Create();
             _usesDevelopmentDetailsFixture = true;
             _developmentDetailsArtworkUris = fixture.ArtworkUris;
             _item = fixture.Item;
@@ -826,6 +832,7 @@ namespace NextGenEmby.App.Views
 
         private void ApplyDetailsAtmosphereArtwork(EmbyMediaItem item)
         {
+            AtmosphereImage.Source = null;
             var atmosphereSource =
                 CreateDevelopmentArtworkImageSource(item.BackdropImageItemId, "Backdrop") ??
                 CreateDevelopmentArtworkImageSource(item.ThumbImageItemId, "Thumb") ??

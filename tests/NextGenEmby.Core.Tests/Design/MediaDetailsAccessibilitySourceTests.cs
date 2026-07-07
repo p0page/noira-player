@@ -41,6 +41,49 @@ public sealed class MediaDetailsAccessibilitySourceTests
     }
 
     [Fact]
+    public void Details_Fixture_Development_Route_Covers_No_Artwork_Atmosphere_Fallback()
+    {
+        var root = FindRepositoryRoot();
+        var mainPageSource = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NextGenEmby.App",
+            "MainPage.xaml.cs"));
+        var requestSource = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NextGenEmby.App",
+            "Navigation",
+            "MediaDetailsNavigationRequest.cs"));
+        var commandSource = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NextGenEmby.Core",
+            "Diagnostics",
+            "DevelopmentNavigationCommand.cs"));
+        var detailsXaml = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NextGenEmby.App",
+            "Views",
+            "MediaDetailsPage.xaml"));
+        var detailsPageSource = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NextGenEmby.App",
+            "Views",
+            "MediaDetailsPage.xaml.cs"));
+
+        Assert.Contains("case \"details-no-art-fixture\"", mainPageSource);
+        Assert.Contains("details-no-art-fixture", commandSource);
+        Assert.Contains("MediaDetailsDevelopmentFixtureKind", requestSource);
+        Assert.Contains("MediaDetailsDevelopmentFixtureKind.NoArtwork", mainPageSource);
+        Assert.Contains("DevelopmentDetailsFixture.CreateWithoutArtwork()", detailsPageSource);
+        Assert.Contains("DetailsAtmosphereFallback", detailsXaml);
+        Assert.Contains("AtmosphereImage.Source = null", detailsPageSource);
+    }
+
+    [Fact]
     public void Details_Selected_Version_State_Does_Not_ReUse_Focus_Border_Color()
     {
         var root = FindRepositoryRoot();

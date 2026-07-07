@@ -12,20 +12,39 @@ namespace NextGenEmby.Core.Diagnostics
 
         public static DevelopmentDetailsFixtureSnapshot Create()
         {
+            return CreateCore(includeItemArtwork: true);
+        }
+
+        public static DevelopmentDetailsFixtureSnapshot CreateWithoutArtwork()
+        {
+            return CreateCore(includeItemArtwork: false);
+        }
+
+        private static DevelopmentDetailsFixtureSnapshot CreateCore(bool includeItemArtwork)
+        {
             var artworkUris = new Dictionary<string, string>(StringComparer.Ordinal);
 
-            var item = MediaItem(
-                artworkUris,
-                "fixture-detail-aurora",
-                "Aurora Protocol",
-                "Movie",
-                2026,
-                118,
-                "qa-poster-01.png",
-                "qa-wide-01.png",
-                resumeMinutes: 24);
-            item.Overview =
-                "A signal analyst follows a rogue broadcast through abandoned orbital relays and uncovers a quiet conspiracy hidden inside a forgotten media archive.";
+            var item = includeItemArtwork
+                ? MediaItem(
+                    artworkUris,
+                    "fixture-detail-aurora",
+                    "Aurora Protocol",
+                    "Movie",
+                    2026,
+                    118,
+                    "qa-poster-01.png",
+                    "qa-wide-01.png",
+                    resumeMinutes: 24)
+                : MediaItemWithoutArtwork(
+                    "fixture-detail-no-art",
+                    "No Artwork Signal",
+                    "Movie",
+                    2024,
+                    103,
+                    resumeMinutes: 0);
+            item.Overview = includeItemArtwork
+                ? "A signal analyst follows a rogue broadcast through abandoned orbital relays and uncovers a quiet conspiracy hidden inside a forgotten media archive."
+                : "A library item intentionally missing poster, thumb, and backdrop artwork, used to verify that the Details surface falls back to a quiet matte atmosphere without fake placeholder art.";
             item.People = new[]
             {
                 Person(artworkUris, "fixture-person-maya", "Maya Chen", "Lena Ortiz", "Actor", "qa-poster-09.png"),
@@ -141,6 +160,31 @@ namespace NextGenEmby.Core.Diagnostics
                 BackdropImageItemId = id,
                 ThumbImageTag = ArtworkTag,
                 ThumbImageItemId = id,
+                UserData = new EmbyUserData
+                {
+                    PlaybackPositionTicks = Math.Max(0, resumeMinutes) * MinuteTicks,
+                    PlayedPercentage = resumeMinutes <= 0 || runtimeMinutes <= 0
+                        ? null
+                        : (double)resumeMinutes / runtimeMinutes * 100d
+                }
+            };
+        }
+
+        private static EmbyMediaItem MediaItemWithoutArtwork(
+            string id,
+            string name,
+            string type,
+            int year,
+            int runtimeMinutes,
+            int resumeMinutes = 0)
+        {
+            return new EmbyMediaItem
+            {
+                Id = id,
+                Name = name,
+                Type = type,
+                ProductionYear = year,
+                RunTimeTicks = runtimeMinutes * MinuteTicks,
                 UserData = new EmbyUserData
                 {
                     PlaybackPositionTicks = Math.Max(0, resumeMinutes) * MinuteTicks,

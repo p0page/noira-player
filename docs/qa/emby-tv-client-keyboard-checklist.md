@@ -2858,3 +2858,59 @@ Fix rerun findings:
 - Decision:
   - Mark Batch 05 Photos deterministic density as resolved.
   - Keep real-server photo aspect-ratio variety as later live-data validation, not as a blocker for the current visual-system slice.
+
+### 2026-07-08 - Design Conformance Batch 03 Details No-Art Atmosphere Baseline
+
+- App version: 0.1.0.229.
+- Scope: inspect the deterministic Details coverage for missing artwork fallback.
+- Data source: source inspection plus existing DEBUG `details-fixture`; no private server data, credentials, screenshots, or personal media assets were written to the repository.
+- Evidence:
+  - `details-fixture` renders an artwork-backed Details page using packaged QA poster/backdrop assets.
+  - `MediaDetailsPage.xaml` contains `DetailsAtmosphereFallback` using the app background brush and an atmosphere gradient layer.
+  - `ApplyDetailsAtmosphereArtwork` only proves the artwork path because `DevelopmentDetailsFixture.Create()` always assigns Primary and Backdrop image ids.
+
+Baseline findings:
+
+| ID | Severity | Page | Evidence | Expected | Actual | Proposed batch fix |
+| --- | --- | --- | --- | --- | --- | --- |
+| DC-03.01 | Concern | Details no-art atmosphere | Source inspection of `DevelopmentDetailsFixture.Create()`, `MediaDetailsPage.xaml`, and `ApplyDetailsAtmosphereArtwork`. | Details should prove that items without poster/backdrop art fall back to a matte black atmosphere instead of empty broken imagery or a fake placeholder. | The page has a fallback layer, but no deterministic `details` route creates a missing-art item, so the no-art state is not keyboard/screenshot-proven. | Add a `details-no-art-fixture` route that preserves playable sources and secondary rails while leaving the main item without Primary/Backdrop artwork, then verify the first viewport. |
+
+- Decision:
+  - Treat this as deterministic coverage for an already intended visual fallback, not a redesign of Details.
+  - Do not fake a placeholder image for no-art Details; the expected fallback is matte black atmosphere with the same content hierarchy.
+
+### 2026-07-08 - Design Conformance Batch 03 Details No-Art Atmosphere Fix Rerun
+
+- App version: 0.1.0.230.
+- Scope: validate the new deterministic no-art Details route.
+- Data source: DEBUG `details-no-art-fixture` only; no private server data, credentials, screenshots, or personal media assets were written to the repository.
+- Evidence root: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch03-details-no-art-fallback-230-20260708-061025`.
+- Keyboard-only validation:
+  - Signed and installed `NextGenEmby.App 0.1.0.230`.
+  - Closed the existing app frame, wrote `dev-command.json` with route `details-no-art-fixture`, and launched through AppUserModelId `NextGenEmby.App_h8qjz0sr1sg4m!App`.
+  - The route reported `completed / details-no-art-fixture`.
+  - Captured the Details no-art first viewport.
+  - Pressed `Down` once and captured a second screenshot to confirm the no-art page remained stable.
+- Screenshots:
+  - No-art Details first viewport: `01-details-no-art-initial.png`.
+  - No-art Details after one Down key: `02-details-no-art-down-1.png`.
+  - Route result: `route-result.txt`.
+- Fixture contract added before implementation:
+  - `DevelopmentDetailsFixtureTests.CreateWithoutArtwork_Leaves_Main_Item_Artwork_Empty_For_Fallback_Coverage` requires the main no-art item to omit Primary, Backdrop, and Thumb artwork ids/tags and artwork URI keys while preserving playable sources and similar items.
+  - `MediaDetailsAccessibilitySourceTests.Details_Fixture_Development_Route_Covers_No_Artwork_Atmosphere_Fallback` requires `details-no-art-fixture`, the no-art fixture kind, the matte fallback layer, and explicit atmosphere source clearing.
+
+Fix rerun findings:
+
+| ID | Status | Page | Evidence | Result | Residual risk |
+| --- | --- | --- | --- | --- | --- |
+| DC-03.01 | Pass | Details no-art atmosphere | `01-details-no-art-initial.png`, `02-details-no-art-down-1.png`, `route-result.txt`, and the two no-art Details fixture/source tests. | Details now has a deterministic missing-art route. The first viewport preserves title, metadata, actions, playable versions, audio/subtitle summaries, organize actions, and secondary rails while the right atmosphere zone falls back to matte black. No fake placeholder art or stale background image appears. | Real saved-session Details should still be sampled for server-specific missing-art records and backdrop quality, but deterministic no-art fallback is covered. |
+
+- Verification:
+  - Red path confirmed the targeted Details tests failed before implementation because `DevelopmentDetailsFixture.CreateWithoutArtwork()` and the `details-no-art-fixture` route did not exist.
+  - Targeted Details fixture/source tests passed: 16 tests.
+  - Full Core test suite passed: 496 tests.
+  - Visual Studio MSBuild Debug x64 build passed, producing `NextGenEmby.App_0.1.0.230_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.230`.
+- Decision:
+  - Mark Batch 03 Details no-art atmosphere fallback as resolved for deterministic local validation.
+  - Keep real-server missing-art sampling as live-data validation, not as a blocker for the current visual-system slice.

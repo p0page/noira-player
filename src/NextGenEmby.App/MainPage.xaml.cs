@@ -968,6 +968,16 @@ namespace NextGenEmby.App
                             useDevelopmentFixture: true));
                     return;
 
+                case "details-no-art-fixture":
+                    NavigateTo(
+                        typeof(MediaDetailsPage),
+                        new MediaDetailsNavigationRequest(
+                            "fixture-detail-no-art",
+                            "No Artwork Signal",
+                            useDevelopmentFixture: true,
+                            developmentFixtureKind: MediaDetailsDevelopmentFixtureKind.NoArtwork));
+                    return;
+
                 case "photo":
                     NavigateTo(typeof(PhotoViewerPage), new PhotoViewerNavigationRequest(command.ItemId, command.ItemName));
                     return;
