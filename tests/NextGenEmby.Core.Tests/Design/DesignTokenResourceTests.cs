@@ -24,7 +24,7 @@ public sealed class DesignTokenResourceTests
         ("AppChromeHoverColor", "chrome_hover"),
         ("AppChromePressedColor", "chrome_pressed"),
         ("AppAccentColor", "focus"),
-        ("AppFocusSecondaryColor", "focus_secondary"),
+        ("AppFocusSecondaryColor", "focus_fill"),
         ("AppActionColor", "primary"),
         ("AppMutedTextColor", "text_muted"),
         ("AppTextColor", "text"),

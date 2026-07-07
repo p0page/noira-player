@@ -2004,3 +2004,70 @@ For design-system failures, finish the current design-conformance batch first, d
   - No app-content mouse clicks were used.
 - Cleanup:
   - Stopped the fake sign-out server, removed temporary debug files, removed the loopback exemption, and left the installed app in a logged-out Login state.
+
+### 2026-07-07 - Design Conformance Source Gate
+
+- App version: source tree after `40444cc docs: add design conformance QA batches`; installed local app remains `0.1.0.207`.
+- Scope: begin the new design-conformance loop by running the lowest-cost source/design contract layer before launching a visual fixture batch.
+- Checklist batch:
+  - `docs/qa/design-conformance-checklist.md` universal gates and Automation Ladder.
+  - Batch 01 was not visually executed yet because source-level design contracts already failed.
+- Automated validation:
+  - Ran `dotnet test tests\NextGenEmby.Core.Tests\NextGenEmby.Core.Tests.csproj --filter "FullyQualifiedName~Design"`.
+  - Result: 53 passed, 3 failed.
+- Findings recorded before fixes:
+
+| ID | Severity | Page | Evidence | Expected | Actual | Proposed batch fix |
+| --- | --- | --- | --- | --- | --- | --- |
+| DC-00.01 | Fail | Shared tokens / app shell / playback / icon generator | `DesignTokenResourceTests.App_Runtime_Colors_Are_Backed_By_Design_Tokens`, `DesignTokenResourceTests.Playback_Resources_ReUse_Design_Canvas_And_Surface_Family`, and `IconAssetContractTests.Icon_Generator_Tokens_Map_To_Design_Tokens` failed. | Runtime XAML resources and icon generator consume the current `docs/DESIGN.md` token palette, including `canvas #05070A`. | Runtime XAML and icon generator still use older `canvas #050607`, and source inspection shows additional old palette values such as cyan focus, warm amber, and older surface shades. | Update the shared runtime color resources and icon generator token map as one token-alignment batch, then rerun the design source tests before slower Home/Guide visual verification. |
+
+- Decision:
+  - Do not start per-route visual fixes yet.
+  - Fix the shared token drift first because it affects all pages and would make screenshot comparison noisy.
+
+### 2026-07-07 - Design Token Alignment Batch
+
+- App version: 0.1.0.208.
+- Scope: fix the shared token drift found by the Design Conformance Source Gate before running slower screenshot-based visual review.
+- Implementation changes:
+  - Updated `App.xaml` runtime color resources to match the current `docs/DESIGN.md` palette: cool graphite canvas/surfaces, neutral focus, muted green progress, and no default cyan/amber action language.
+  - Updated `tools/Generate-AppIconAssets.ps1` from the superseded Player Status Aperture color contract to the current Player Lift Mark token contract.
+  - Regenerated Store, 44px, 150px, wide, and splash PNG assets from the updated generator.
+  - Updated design source tests so `AppFocusSecondaryColor` maps to `focus_fill`, and the icon contract checks neutral focus plus muted green playback/progress signals instead of cyan focus and amber progress.
+  - Updated `docs/DESIGN.md` migration notes to reflect that shared runtime tokens and icon generator tokens are now aligned, while page-level usage still needs migration.
+- Automated verification:
+  - `dotnet test tests\NextGenEmby.Core.Tests\NextGenEmby.Core.Tests.csproj --filter "FullyQualifiedName~Design"` passed: 56 total.
+  - `dotnet test tests\NextGenEmby.Core.Tests\NextGenEmby.Core.Tests.csproj` passed: 463 total.
+  - Restored native `packages.config` dependencies into `src/NextGenEmby.Native/packages` after the first App build found the native NuGet packages missing locally.
+  - `MSBuild NextGenXboxEmby.sln /p:Configuration=Debug /p:Platform=x64 /m` passed with 0 warnings and 0 errors.
+  - Signed and installed `NextGenEmby.App 0.1.0.208`.
+- Follow-up:
+  - Page controls still use old focus-frame and action-brush shapes in places. Those should be fixed in page batches, not by adding new raw colors.
+
+### 2026-07-07 - Design Conformance Batch 01 Home And Guide Baseline
+
+- App version: 0.1.0.208.
+- Scope: run the first Home/Guide design-conformance batch after shared token alignment.
+- Data source: DEBUG `home-fixture` with packaged QA artwork; no private Emby server or personal media assets.
+- Automation layer: installed app DEBUG fixture plus Windows keyboard/screenshot automation, not app-content mouse clicks.
+- Keyboard-only validation:
+  - Killed the running app, wrote `dev-command.json` with route `home-fixture`, and launched through AppUserModelId `NextGenEmby.App_h8qjz0sr1sg4m!App`.
+  - `dev-command-result.txt` reported `completed / home-fixture`.
+  - Initial focus: `Play`.
+  - Pressed `M`; Guide opened with focus on `Home`.
+  - Pressed `Escape`, then `Down`; focus moved to `Hot Movies`.
+  - Pressed `Right`, `Right`; focus moved to `Anime`.
+
+Findings recorded before fixes:
+
+| ID | Severity | Page | Evidence | Expected | Actual | Proposed batch fix |
+| --- | --- | --- | --- | --- | --- | --- |
+| DC-01.01 | Fail | Home first viewport | Home screenshot from `home-fixture` shows a large top decision surface with a full highlighted border and vertical active edge. | Home should read as a rail-first TV media surface, with artwork and rows carrying the page, not a large framed dashboard hero. | The current top surface still looks like the previous implementation model and uses a bright complete outline. | Rework Home top composition toward the A3 rail-first structure; remove complete bright frame from the hero/decision surface. |
+| DC-01.02 | Fail | Home card focus | Focused `Hot Movies` library card uses a complete bright perimeter frame. | Card focus should use scale, luminance, local dimming, and optional matte selected backplate; bright full frames are not the normal focus language. | Focus remains readable but visually contradicts `DESIGN.md`. | Replace default Home card focus frame with matte fill/luminance/scale treatment and reserve high-visibility edge for fallback only. |
+| DC-01.03 | Fail | Continue Watching / Next Up | Home fixture screenshot shows Continue Watching and Next Up as small poster-like cards below the library rows. | Continue Watching and Next Up should use wide resume-card anatomy with full-bleed crop, bottom black scrim, progress, and stable title protection. | The rows do not match the wide resume-card rule and reduce TV scan clarity. | Implement the wide resume-card anatomy for Home progress rows before deeper route visual QA. |
+| DC-01.04 | Concern | Guide | Expanded Guide is source-aware and keyboard reachable, but it lists every source directly and still uses a bright full focus outline. | Guide should stay quiet, source-aware, and include Search plus More/Source Hub for lower-frequency or unpinned sources. Focus should use matte fill, not a bright outline. | Guide is functional and comprehensive, but visually too frame-heavy and does not yet express the Source Hub model. | Adjust Guide focus treatment and decide whether to introduce Source Hub grouping in the same shell batch or defer to a source-management batch. |
+| DC-01.05 | Concern | Fixture artwork / green usage | Packaged QA cards use abstract block artwork and repeated muted green bars/top accents. | Visual QA should include realistic fictional posters/wide art, and green should stay a signal rather than page texture. | Fixture is useful for layout but weak for final visual judgment; green still appears as repeated card decoration. | Replace/extend fixture artwork with realistic fictional media covers and remove passive green card accents. |
+
+- Decision:
+  - Do not fix single rows one by one.
+  - Next implementation batch should address shared Home/Shell focus language, Home progress-row anatomy, and passive green usage together before rerunning Batch 01.

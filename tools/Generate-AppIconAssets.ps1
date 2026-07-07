@@ -18,19 +18,19 @@ function New-IconColor {
 }
 
 $script:IconTokens = @{
-    Canvas = New-IconColor 5 6 7
-    Surface = New-IconColor 16 20 24
-    Raised = New-IconColor 26 32 39
-    Shelf = New-IconColor 26 32 39
-    ShelfMuted = New-IconColor 16 20 24
-    Inset = New-IconColor 9 12 15
-    Hairline = New-IconColor 48 56 66
-    Focus = New-IconColor 59 213 255
-    Play = New-IconColor 97 212 124
-    PlayCut = New-IconColor 4 16 7
-    Progress = New-IconColor 224 184 106
-    Text = New-IconColor 246 241 232
-    MutedText = New-IconColor 185 192 200
+    Canvas = New-IconColor 5 7 10
+    Surface = New-IconColor 16 22 28
+    Raised = New-IconColor 32 40 50
+    Shelf = New-IconColor 37 45 53
+    ShelfMuted = New-IconColor 16 22 28
+    Inset = New-IconColor 8 13 18
+    Hairline = New-IconColor 46 57 68
+    Focus = New-IconColor 238 243 246
+    Play = New-IconColor 37 45 53
+    PlayCut = New-IconColor 120 185 133
+    Progress = New-IconColor 93 143 104
+    Text = New-IconColor 238 243 246
+    MutedText = New-IconColor 169 179 186
 }
 
 $script:IconGeometry = @{
@@ -155,7 +155,7 @@ function Draw-FocusPath {
     $Graphics.DrawLine($Pen, $Rect.Left + ($Scale * 0.060), $Rect.Top + ($Scale * 0.065), $Rect.Left + ($Scale * 0.060), $Rect.Top + ($Scale * 0.335))
 }
 
-function Draw-PlaybackCore {
+function Draw-LiftedPlaySurface {
     param(
         [System.Drawing.Graphics]$Graphics,
         [System.Drawing.RectangleF]$Rect
@@ -175,7 +175,7 @@ function Draw-ProgressBase {
     $Graphics.DrawLine($Pen, $Rect.Left + ($Scale * 0.200), $Rect.Bottom - ($Scale * 0.080), $Rect.Right - ($Scale * 0.200), $Rect.Bottom - ($Scale * 0.080))
 }
 
-function Draw-PlayerStatusAperture {
+function Draw-PlayerLiftMark {
     param(
         [System.Drawing.Graphics]$Graphics,
         [System.Drawing.RectangleF]$Rect
@@ -203,7 +203,7 @@ function Draw-PlayerStatusAperture {
         Draw-FocusPath -Graphics $Graphics -Pen $focusPen -Rect $screen -Scale $s
 
         $playRect = [System.Drawing.RectangleF]::new($x + ($s * 0.395), $y + ($s * 0.335), $s * 0.210, $s * 0.235)
-        Draw-PlaybackCore -Graphics $Graphics -Rect $playRect
+        Draw-LiftedPlaySurface -Graphics $Graphics -Rect $playRect
 
         $stateBase = [System.Drawing.RectangleF]::new($x + ($s * 0.355), $y + ($s * 0.625), $s * 0.290, $s * 0.030)
         Fill-RoundedRect -Graphics $Graphics -Brush $mutedBrush -Rect $stateBase -Radius ($s * 0.012)
@@ -249,17 +249,17 @@ function New-AppIconBitmap {
         if ($Kind -eq "Wide") {
             $markSize = $Height * 0.860
             $mark = [System.Drawing.RectangleF]::new(($Width - $markSize) / 2, ($Height - $markSize) / 2, $markSize, $markSize)
-            Draw-PlayerStatusAperture -Graphics $graphics -Rect $mark
+            Draw-PlayerLiftMark -Graphics $graphics -Rect $mark
         }
         elseif ($Kind -eq "Splash") {
             $markSize = $Height * 0.760
             $mark = [System.Drawing.RectangleF]::new(($Width - $markSize) / 2, ($Height - $markSize) / 2, $markSize, $markSize)
-            Draw-PlayerStatusAperture -Graphics $graphics -Rect $mark
+            Draw-PlayerLiftMark -Graphics $graphics -Rect $mark
         }
         else {
             $inset = [Math]::Min($Width, $Height) * $script:IconGeometry.MarkInset
             $mark = [System.Drawing.RectangleF]::new($inset, $inset, $Width - ($inset * 2), $Height - ($inset * 2))
-            Draw-PlayerStatusAperture -Graphics $graphics -Rect $mark
+            Draw-PlayerLiftMark -Graphics $graphics -Rect $mark
         }
     }
     finally {
@@ -300,4 +300,4 @@ Save-AppIcon -Name "Square150x150Logo.png" -Width 150 -Height 150 -Kind "Square"
 Save-AppIcon -Name "Wide310x150Logo.png" -Width 310 -Height 150 -Kind "Wide"
 Save-AppIcon -Name "SplashScreen.png" -Width 620 -Height 300 -Kind "Splash"
 
-Write-Host "Generated Player Status Aperture app icon assets in $AssetsPath"
+Write-Host "Generated Player Lift Mark app icon assets in $AssetsPath"

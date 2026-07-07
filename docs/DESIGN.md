@@ -784,9 +784,8 @@ Suggested migration mapping:
 
 Known implementation drift to resolve later:
 
-- `src/NextGenEmby.App/App.xaml` still defines the previous cyan `AppAccentColor`, warm `AppWarmColor`, and green `AppActionColor` token family.
-- `SystemControlFocusVisualPrimaryBrush` currently follows the old accent color. Future work should remap high-visibility focus to the neutral focus family while preserving accessibility.
-- `tools/Generate-AppIconAssets.ps1` still uses the older Player Focus Mark color/geometry language. Future icon generation should align with Player Lift Mark before producing final assets.
+- `src/NextGenEmby.App/App.xaml` and `tools/Generate-AppIconAssets.ps1` now map their shared color tokens to this document's palette. Page-level usage may still need migration where controls treat those legacy resource names as large action fills or old focus frames.
+- `SystemControlFocusVisualPrimaryBrush` now follows the neutral focus family. Future work should still validate accessibility/high-visibility focus on Xbox hardware.
 - Existing XAML may still use `BorderBrush`, `UseSystemFocusVisuals`, and current action/warm brushes for focus and state. That is expected until an implementation pass migrates visual resources; new work should not extend the old color language.
 - Existing surface resources may still imply acrylic-like panels. Future work should replace generic acrylic with `artwork_blur_surface` only where an active poster/banner/video sits behind it.
 - Main latest shell code still has a visible collapsed `72px` Guide rail. The visual target is now reopened as `collapsed_or_summoned`: keep the left source Guide model, then validate whether Xbox feels better with a 72px collapsed rail, a fully hidden Guide, or page-adaptive behavior.

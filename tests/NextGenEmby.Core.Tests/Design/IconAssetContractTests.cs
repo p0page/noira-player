@@ -65,6 +65,7 @@ public sealed class IconAssetContractTests
         Assert.Equal(designColors["hairline"], iconColors["Hairline"]);
         Assert.Equal(designColors["focus"], iconColors["Focus"]);
         Assert.Equal(designColors["primary"], iconColors["Play"]);
+        Assert.Equal(designColors["play_accent"], iconColors["PlayCut"]);
         Assert.Equal(designColors["secondary"], iconColors["Progress"]);
         Assert.Equal(designColors["text"], iconColors["Text"]);
         Assert.Equal(designColors["text_muted"], iconColors["MutedText"]);
@@ -77,11 +78,13 @@ public sealed class IconAssetContractTests
         var design = File.ReadAllText(Path.Combine(root, "docs", "DESIGN.md"));
         var script = File.ReadAllText(Path.Combine(root, "tools", "Generate-AppIconAssets.ps1"));
 
-        Assert.Contains("Player Status Aperture", design, StringComparison.Ordinal);
-        Assert.Contains("Draw-PlayerStatusAperture", script, StringComparison.Ordinal);
+        Assert.Contains("Player Lift Mark", design, StringComparison.Ordinal);
+        Assert.Contains("Draw-PlayerLiftMark", script, StringComparison.Ordinal);
         Assert.Contains("Draw-FocusPath", script, StringComparison.Ordinal);
-        Assert.Contains("Draw-PlaybackCore", script, StringComparison.Ordinal);
+        Assert.Contains("Draw-LiftedPlaySurface", script, StringComparison.Ordinal);
         Assert.Contains("Draw-ProgressBase", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("Draw-PlayerStatusAperture", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("Draw-PlaybackCore", script, StringComparison.Ordinal);
         Assert.DoesNotContain("Draw-WidePlayerSignals", script, StringComparison.Ordinal);
         Assert.DoesNotContain("sideMeter", script, StringComparison.Ordinal);
         Assert.DoesNotContain("subtitleLine", script, StringComparison.Ordinal);
@@ -89,15 +92,15 @@ public sealed class IconAssetContractTests
     }
 
     [Fact]
-    public void Icon_Assets_Preserve_Focus_Play_And_Progress_Signals_At_All_Sizes()
+    public void Icon_Assets_Preserve_Neutral_Focus_And_Green_Playback_Signals_At_All_Sizes()
     {
         var assetRoot = Path.Combine(FindRepositoryRoot(), "src", "NextGenEmby.App", "Assets");
 
-        AssertIconSignals(Path.Combine(assetRoot, "Square44x44Logo.png"), 12, 28, 22);
-        AssertIconSignals(Path.Combine(assetRoot, "StoreLogo.png"), 14, 34, 26);
-        AssertIconSignals(Path.Combine(assetRoot, "Square150x150Logo.png"), 160, 360, 300);
-        AssertIconSignals(Path.Combine(assetRoot, "Wide310x150Logo.png"), 140, 320, 240);
-        AssertIconSignals(Path.Combine(assetRoot, "SplashScreen.png"), 420, 1000, 760);
+        AssertIconSignals(Path.Combine(assetRoot, "Square44x44Logo.png"), 8, 46);
+        AssertIconSignals(Path.Combine(assetRoot, "StoreLogo.png"), 10, 56);
+        AssertIconSignals(Path.Combine(assetRoot, "Square150x150Logo.png"), 160, 620);
+        AssertIconSignals(Path.Combine(assetRoot, "Wide310x150Logo.png"), 140, 560);
+        AssertIconSignals(Path.Combine(assetRoot, "SplashScreen.png"), 420, 1760);
     }
 
     private static string FindRepositoryRoot()
@@ -189,57 +192,42 @@ public sealed class IconAssetContractTests
     private static void AssertIconSignals(
         string path,
         int minimumFocusPixels,
-        int minimumPlayPixels,
-        int minimumProgressPixels)
+        int minimumGreenPixels)
     {
         var bitmap = ReadPngRgbaPixels(path);
 
         var focusPixels = bitmap.Pixels.Count(IsFocusPixel);
-        var playPixels = bitmap.Pixels.Count(IsPlayPixel);
-        var progressPixels = bitmap.Pixels.Count(IsProgressPixel);
+        var greenPixels = bitmap.Pixels.Count(IsGreenSignalPixel);
 
         Assert.True(
             focusPixels >= minimumFocusPixels,
-            $"{Path.GetFileName(path)} should preserve the cyan controller-focus signal; found {focusPixels} pixels.");
+            $"{Path.GetFileName(path)} should preserve the neutral focus signal; found {focusPixels} pixels.");
         Assert.True(
-            playPixels >= minimumPlayPixels,
-            $"{Path.GetFileName(path)} should preserve the green play/confirm signal; found {playPixels} pixels.");
-        Assert.True(
-            progressPixels >= minimumProgressPixels,
-            $"{Path.GetFileName(path)} should preserve the amber progress signal; found {progressPixels} pixels.");
+            greenPixels >= minimumGreenPixels,
+            $"{Path.GetFileName(path)} should preserve muted green play/progress signals; found {greenPixels} pixels.");
     }
 
     private static bool IsFocusPixel(RgbaPixel color)
     {
         return color.A > 160 &&
-            color.B > 130 &&
-            color.G > 100 &&
-            color.R < 90 &&
-            color.B - color.R > 70 &&
-            color.G - color.R > 45;
+            color.R > 165 &&
+            color.G > 170 &&
+            color.B > 175 &&
+            Math.Abs(color.R - color.G) < 24 &&
+            Math.Abs(color.G - color.B) < 24;
     }
 
-    private static bool IsPlayPixel(RgbaPixel color)
+    private static bool IsGreenSignalPixel(RgbaPixel color)
     {
         return color.A > 180 &&
-            color.G > 140 &&
-            color.R > 45 &&
-            color.R < 135 &&
-            color.B > 55 &&
-            color.B < 150 &&
-            color.G - color.R > 55 &&
-            color.G - color.B > 35;
-    }
-
-    private static bool IsProgressPixel(RgbaPixel color)
-    {
-        return color.A > 180 &&
-            color.R > 160 &&
-            color.G > 120 &&
-            color.B > 45 &&
-            color.B < 135 &&
-            color.R - color.B > 80 &&
-            color.G - color.B > 45;
+            color.R >= 70 &&
+            color.R <= 135 &&
+            color.G >= 125 &&
+            color.G <= 200 &&
+            color.B >= 75 &&
+            color.B <= 150 &&
+            color.G - color.R >= 25 &&
+            color.G - color.B >= 5;
     }
 
     private static DecodedPng ReadPngRgbaPixels(string path)
