@@ -36,6 +36,15 @@ if (-not ($plan.appDiffGuard.protectedRoots -contains 'src/NextGenEmby.App')) {
     throw 'Expected App diff guard to protect src/NextGenEmby.App.'
 }
 
+if (-not ($plan.appDiffGuard.allowedPaths -contains 'src/NextGenEmby.App/Playback/WinRtNativePlaybackEngine.cs')) {
+    throw 'Expected App diff guard to allow only the playback metrics adapter instrumentation file.'
+}
+
+if ($plan.appDiffGuard.allowedPaths -contains 'src/NextGenEmby.App/Views/PlaybackPage.xaml.cs' -or
+    $plan.appDiffGuard.allowedPaths -contains 'src/NextGenEmby.App/NextGenEmby.App.csproj') {
+    throw 'App diff guard must not allow App UI, XAML, or project/package changes.'
+}
+
 if (-not $plan.coreTestFilter) {
     throw 'Expected playback-specific Core test filter in playback-core validation plan.'
 }

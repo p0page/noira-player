@@ -16,7 +16,7 @@ tools\quality-run\run-playback-core-checks.ps1
 
 The command emits `scope = playback-core`, plus `includedRoots` and `excludedRoots` fields so automated model runs can verify that the run is isolated from App interaction work.
 
-Before running tests or builds, the command also runs an App diff guard. The guard fails if the current worktree, index, or playback-quality branch diff contains changes under `src/NextGenEmby.App`. This keeps playback Core evaluation independent from parallel Xbox UI/App worktrees.
+Before running tests or builds, the command also runs an App diff guard. The guard fails if the current worktree, index, or playback-quality branch diff contains disallowed changes under `src/NextGenEmby.App`. The only current allowlist entry is `src/NextGenEmby.App/Playback/WinRtNativePlaybackEngine.cs`, because that file is the App adapter that exposes native playback metrics to the Core evaluation path. App UI, XAML, project, package, and interaction changes remain blocked so playback Core validation stays isolated from parallel Xbox UI/App worktrees.
 
 The command validates:
 
@@ -37,6 +37,8 @@ The command deliberately excludes:
 - unrelated Core interaction/focus policy tests;
 - App package generation;
 - MSIX packaging.
+
+The command plan exposes `appDiffGuard.allowedPaths` so automated model runs can verify that the App exception remains limited to playback-quality instrumentation and has not expanded into UI or packaging work.
 
 Use an App package build only when validating Xbox integration or a change that directly touches App/XAML behavior.
 

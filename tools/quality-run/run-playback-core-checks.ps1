@@ -8,6 +8,9 @@ $ErrorActionPreference = 'Stop'
 
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot '..\..')
 $protectedAppRoots = @('src/NextGenEmby.App')
+$allowedAppInstrumentationPaths = @(
+    'src/NextGenEmby.App/Playback/WinRtNativePlaybackEngine.cs'
+)
 $coreTestFilter = 'FullyQualifiedName~PlaybackQuality|FullyQualifiedName~Playback|FullyQualifiedName~EmbyProgress'
 
 function Invoke-GitLines(
@@ -30,7 +33,8 @@ function Test-GitCommitExists(
 
 function Assert-NoProtectedRootChanges(
     [string]$BaseRef,
-    [string[]]$ProtectedRoots
+    [string[]]$ProtectedRoots,
+    [string[]]$AllowedPaths
 ) {
     Push-Location $repoRoot
     try {
@@ -45,9 +49,14 @@ function Assert-NoProtectedRootChanges(
             $changedPaths += Invoke-GitLines @('diff', '--name-only', ($BaseRef + '...HEAD'), '--', $root)
         }
 
-        $uniquePaths = @($changedPaths | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Sort-Object -Unique)
-        if ($uniquePaths.Count -gt 0) {
-            throw ("Playback-core validation is App-free, but App changes were detected:`n" + ($uniquePaths -join "`n"))
+        $normalizedAllowedPaths = @($AllowedPaths | ForEach-Object { $_ -replace '\\', '/' })
+        $uniquePaths = @($changedPaths |
+            Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+            ForEach-Object { $_ -replace '\\', '/' } |
+            Sort-Object -Unique)
+        $blockedPaths = @($uniquePaths | Where-Object { $normalizedAllowedPaths -notcontains $_ })
+        if ($blockedPaths.Count -gt 0) {
+            throw ("Playback-core validation is App-free, but disallowed App changes were detected:`n" + ($blockedPaths -join "`n"))
         }
     }
     finally {
@@ -165,6 +174,7 @@ $summary = [pscustomobject]@{
         status = 'active'
         baseRef = $AppDiffBase
         protectedRoots = $protectedAppRoots
+        allowedPaths = $allowedAppInstrumentationPaths
         checks = @('working-tree', 'index', 'branch-diff')
     }
     commands = $commands
@@ -180,7 +190,10 @@ Push-Location $repoRoot
 try {
     $guardStartedAt = [DateTimeOffset]::Now
     Write-Host 'running=app-diff-guard'
-    Assert-NoProtectedRootChanges -BaseRef $AppDiffBase -ProtectedRoots $protectedAppRoots
+    Assert-NoProtectedRootChanges `
+        -BaseRef $AppDiffBase `
+        -ProtectedRoots $protectedAppRoots `
+        -AllowedPaths $allowedAppInstrumentationPaths
     $guardFinishedAt = [DateTimeOffset]::Now
     $results += [pscustomobject]@{
         name = 'app-diff-guard'

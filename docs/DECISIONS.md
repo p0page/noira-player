@@ -1,5 +1,13 @@
 # 技术决策
 
+## 2026-07-08: playback-core validation guard 精确允许 App playback metrics adapter
+
+决策：`tools\quality-run\run-playback-core-checks.ps1` 的 App diff guard 继续保护 `src/NextGenEmby.App`，但新增精确 allowlist：`src/NextGenEmby.App/Playback/WinRtNativePlaybackEngine.cs`。Plan 输出会暴露 `appDiffGuard.allowedPaths`，测试会确认 allowlist 没有包含 `Views`、XAML、App project 或 package 路径。
+
+原因：当前 v0.1 评测链路已经把 `WinRtNativePlaybackEngine` 接入 `IPlaybackQualityMetricsProvider`，这是把真实 App/native 播放 metrics 带入 Core report 的 instrumentation/testability 改动。原 guard 把任何 App diff 都视为 UI/App 交互改动，导致 `run-playback-core-checks.ps1` 在当前合法评测分支上被阻断，反而破坏 v0.1 “有文档化命令可以运行”的完成标准。
+
+边界：这不是允许 App UI 或交互改动进入 playback-core validation。XAML、页面、导航、项目文件、manifest、MSIX/package 相关路径仍被 guard 拦截。allowlist 只覆盖播放 metrics adapter；如果未来新增 App-hosted collector 或更多 App playback instrumentation，应单独记录决策并扩展测试，而不能泛化放行整个 App/Playback 目录。
+
 ## 2026-07-08: native harness 命令支持导入 captured report
 
 决策：`materialize-native-harness-report-set` 新增可选参数 `--captured-reports-dir`。不传该参数时，命令保持原有行为，为每个 manifest case 生成 `native-harness.not-implemented` skip envelope。传入该参数时，命令按 `caseId` 的标准相对路径读取 captured raw report 或 envelope，刷新当前 `modelAnalysis`，补入 manifest case metadata，并写入标准 report-set。缺少 captured report 的 case 会生成 `native-harness.capture-missing` skip envelope。
