@@ -1,5 +1,13 @@
 # 技术决策
 
+## 2026-07-08: report-set gate 校验 report result 枚举
+
+决策：新增 `PlaybackQualityReportResult` 作为 v0.1 报告结果枚举，`validate-report-set` 会拒绝未知的 `report.result`，合法值固定为 `pass`、`fail`、`skip`、`unsupported`、`error`。
+
+原因：目标报告的消费对象是模型。`observed` 或临时状态如果进入 report-set，会让模型无法可靠区分“已裁决结果”和“中间采集状态”。report-set gate 必须只接受 v0.1 明确声明的最终结果状态。
+
+边界：这只收紧 report-set 契约，不改变 `PlaybackQualityReport` 的默认构造值，也不改变播放器行为、阈值或 expected behavior。未知 result 被归类为 `evaluation harness bug`。
+
 ## 2026-07-08: report-set gate 校验 failureClass 枚举
 
 决策：`PlaybackQualityFailureClassification` 暴露统一的 `KnownFailureClasses` / `IsKnown`，`validate-report-set` 会拒绝 report 中未知的 `error.failureClass`、`skip.failureClass` 和 `checks.failureClass`，并输出 `report.failureClass.invalid`。

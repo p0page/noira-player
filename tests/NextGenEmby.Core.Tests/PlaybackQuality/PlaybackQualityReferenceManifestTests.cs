@@ -464,6 +464,37 @@ public sealed class PlaybackQualityReferenceManifestTests
     }
 
     [Fact]
+    public void ValidateReportSet_Rejects_Unknown_Report_Result()
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        var referenceCase = CreateCase(
+            "netflix/chimera-4k-2398-hdr-pq",
+            tier: 2,
+            purpose: "hdr-output");
+        manifest.Cases.Add(referenceCase);
+        var report = CreateReport(
+            "netflix/chimera-4k-2398-hdr-pq",
+            codec: "hevc",
+            width: 3840,
+            height: 2160,
+            frameRate: 23.976,
+            hdrKind: "Hdr10");
+        report.ColorPipeline.ConversionStatus = "validated";
+        report.Result = "observed";
+
+        var validation = PlaybackQualityReferenceReportSetValidator.Validate(
+            manifest,
+            new[] { report });
+
+        Assert.False(validation.IsValid);
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.result.invalid" &&
+            error.Signal == "result" &&
+            error.Actual == "observed" &&
+            error.FailureClass == "evaluation harness bug");
+    }
+
+    [Fact]
     public void ValidateReportSet_Accepts_Error_Handling_Report_Without_Source_Metadata()
     {
         var manifest = new PlaybackQualityReferenceManifest();
@@ -1269,6 +1300,7 @@ public sealed class PlaybackQualityReferenceManifestTests
         var report = new PlaybackQualityReport
         {
             RunId = runId,
+            Result = "pass",
             Source = new PlaybackQualitySource
             {
                 Codec = codec,

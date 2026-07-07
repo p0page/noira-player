@@ -1372,6 +1372,7 @@ try {
 {
   "runId": "netflix/chimera-4k-2398-hdr-pq",
   "metricVersion": "software-quality-v1",
+  "result": "pass",
   "source": {
     "codec": "hevc",
     "width": 3840,
@@ -1407,6 +1408,7 @@ try {
 {
   "runId": "jellyfin/dv-profile5-hevc-4k",
   "metricVersion": "software-quality-v1",
+  "result": "unsupported",
   "source": {
     "codec": "hevc",
     "width": 3840,
@@ -1479,6 +1481,7 @@ try {
 {
   "runId": "netflix/chimera-4k-2398-hdr-pq",
   "metricVersion": "software-quality-v1",
+  "result": "pass",
   "source": {
     "codec": "hevc",
     "width": 3840,
@@ -1492,6 +1495,7 @@ try {
 {
   "runId": "jellyfin/dv-profile5-hevc-4k",
   "metricVersion": "software-quality-v1",
+  "result": "unsupported",
   "source": {
     "codec": "hevc",
     "width": 3840,
@@ -1594,6 +1598,7 @@ try {
 {
   "runId": "jellyfin/zero-starvation-buffering",
   "metricVersion": "software-quality-v1",
+  "result": "pass",
   "source": {
     "codec": "hevc",
     "width": 3840,
@@ -1984,6 +1989,7 @@ try {
 {
   "runId": "item-1/source-1",
   "metricVersion": "software-quality-v1",
+  "result": "fail",
   "environment": {
     "playerCoreVersion": "core-baseline",
     "sourceRevision": "baseline-revision",
@@ -2099,6 +2105,7 @@ try {
 {
   "runId": "item-1/source-1",
   "metricVersion": "software-quality-v1",
+  "result": "fail",
   "environment": {
     "playerCoreVersion": "core-candidate",
     "sourceRevision": "candidate-revision",
@@ -3251,6 +3258,7 @@ try {
   "report": {
     "runId": "item-1/source-1",
     "metricVersion": "software-quality-v1",
+    "result": "fail",
     "source": {
       "itemId": "item-1",
       "mediaSourceId": "source-1",
@@ -3455,6 +3463,7 @@ try {
   "report": {
     "runId": "item-1/source-1",
     "metricVersion": "software-quality-v1",
+    "result": "fail",
     "source": {
       "itemId": "item-1",
       "mediaSourceId": "source-1",

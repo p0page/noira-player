@@ -248,6 +248,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                     ValidateRequiredSignals(validation, status, referenceCase, entry);
                 }
 
+                ValidateReportResult(validation, status, report);
                 ValidateFailureClasses(validation, status, report);
 
                 if (status.Signals.Count > 0)
@@ -261,6 +262,28 @@ namespace NextGenEmby.Core.PlaybackQuality
 
                 validation.Cases.Add(status);
             }
+        }
+
+        private static void ValidateReportResult(
+            PlaybackQualityReferenceReportSetValidation validation,
+            PlaybackQualityReferenceReportCaseStatus status,
+            PlaybackQualityReport report)
+        {
+            if (PlaybackQualityReportResult.IsKnown(report.Result))
+            {
+                return;
+            }
+
+            AddUnique(status.Signals, "result");
+            AddError(
+                validation,
+                "report.result.invalid",
+                status.CaseId,
+                status.ReportRunId,
+                "result",
+                string.Join(", ", PlaybackQualityReportResult.KnownResults),
+                report.Result,
+                "Playback quality report contains an unknown result.");
         }
 
         private static void ValidateFailureClasses(
@@ -700,6 +723,7 @@ namespace NextGenEmby.Core.PlaybackQuality
 
             if (string.Equals(code, "report.duplicate-run-id", StringComparison.Ordinal) ||
                 string.Equals(code, "report.extra", StringComparison.Ordinal) ||
+                string.Equals(code, "report.result.invalid", StringComparison.Ordinal) ||
                 string.Equals(code, "report.failureClass.invalid", StringComparison.Ordinal))
             {
                 return PlaybackQualityFailureClassification.EvaluationHarnessBug;
