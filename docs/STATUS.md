@@ -2,6 +2,12 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-08 更新：report-analysis summary 增加 playbackEvidence 范围判断
+
+`analyze-report-set` 的集合级 JSON 现在会输出 `playbackEvidence`。它从 `evidenceSources[]`、`limitations[]` 和 skip 数量派生当前报告集的播放证据范围：source-only baseline 会标记为 `scope = source-only` / `status = missing`；core-probe baseline 会标记为 `scope = orchestration-only` / `status = limited`；native-harness skip 会标记为 `scope = none` / `status = missing`；导入的 `native-winrt:*` captured report 会标记为 `scope = native-software` / `status = available`。
+
+这让模型不需要只靠 `decision`、`risk` 或 capability `evidence-present` 判断证据强度。特别是 core-probe 仍可作为 App-free orchestrator 回归守卫，但 `playbackEvidence.canEvaluateNativePlayback = false` 会明确阻止它被误当成真实 native decode/render、frame pacing、A/V sync 或 color 管线证据。
+
 ## 2026-07-08 更新：report-analysis summary 聚合证据来源和限制
 
 `analyze-report-set` 的集合级 JSON 现在会输出 `evidenceSources[]` 和 `limitations[]`。`evidenceSources[]` 聚合每个报告里明确的 `runtimeMetrics.providerStatus`，例如 `source-only` 或 `core-probe:returned-snapshot`；默认 `unknown` 不会被当成证据来源。`limitations[]` 聚合 report-level limitation，模型不需要展开每个 case 就能看到当前报告集是否来自 source-only、core-probe、native-harness import/skip 或其他受限采集路径。

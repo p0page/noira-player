@@ -90,6 +90,15 @@
     "native-harness: native playback graph was not opened by this command",
     "native-harness: report is a standard skip envelope for the missing real native collector"
   ],
+  "playbackEvidence": {
+    "scope": "none",
+    "status": "missing",
+    "canEvaluateNativePlayback": false,
+    "canEvaluateOrchestration": false,
+    "reasons": [
+      "all playback evidence was skipped or not collected"
+    ]
+  },
   "capabilityCoverage": [
     {
       "capability": "media-loading",

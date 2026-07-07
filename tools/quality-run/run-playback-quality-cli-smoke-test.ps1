@@ -100,6 +100,7 @@ try {
     $nativeHarnessImportedDir = Join-Path $tempRoot 'native-harness-imported-report-set'
     $nativeHarnessImportedSummaryPath = Join-Path $tempRoot 'native-harness-imported-summary.json'
     $nativeHarnessImportedValidationPath = Join-Path $tempRoot 'native-harness-imported-validation.json'
+    $nativeHarnessImportedAnalysisPath = Join-Path $tempRoot 'native-harness-imported-analysis.json'
     $nativeHarnessMissingCapturedDir = Join-Path $tempRoot 'native-harness-missing-captured-report-set'
     $nativeHarnessMissingImportDir = Join-Path $tempRoot 'native-harness-missing-import-report-set'
     $nativeHarnessMissingImportSummaryPath = Join-Path $tempRoot 'native-harness-missing-import-summary.json'
@@ -868,6 +869,13 @@ try {
         throw 'Expected source-only analyze-report-set summary to expose source-only limitation.'
     }
 
+    if ($materializedBaselineAnalysis.playbackEvidence.scope -ne 'source-only' -or
+        $materializedBaselineAnalysis.playbackEvidence.status -ne 'missing' -or
+        $materializedBaselineAnalysis.playbackEvidence.canEvaluateNativePlayback -ne $false -or
+        $materializedBaselineAnalysis.playbackEvidence.canEvaluateOrchestration -ne $false) {
+        throw 'Expected source-only analyze-report-set summary to mark playback evidence as missing source-only evidence.'
+    }
+
     @'
 {
   "schemaVersion": 1,
@@ -1040,6 +1048,13 @@ try {
 
     if (-not ($coreProbeAnalysis.limitations -contains 'core-probe: native playback graph, decoder, renderer, network I/O, and HDMI output were not opened')) {
         throw 'Expected core-probe analyze-report-set summary to expose core-probe limitation.'
+    }
+
+    if ($coreProbeAnalysis.playbackEvidence.scope -ne 'orchestration-only' -or
+        $coreProbeAnalysis.playbackEvidence.status -ne 'limited' -or
+        $coreProbeAnalysis.playbackEvidence.canEvaluateNativePlayback -ne $false -or
+        $coreProbeAnalysis.playbackEvidence.canEvaluateOrchestration -ne $true) {
+        throw 'Expected core-probe analyze-report-set summary to mark playback evidence as orchestration-only.'
     }
 
     @'
@@ -1311,6 +1326,27 @@ try {
     if ($nativeHarnessImportedValidation.isValid -ne $true -or
         $nativeHarnessImportedValidation.matchedCaseCount -ne 1) {
         throw 'Expected imported native harness validation to match every case.'
+    }
+
+    Push-Location $repoRoot
+    try {
+        dotnet $cliDll `
+            analyze-report-set `
+            --reports-dir $nativeHarnessImportedDir `
+            --output $nativeHarnessImportedAnalysisPath
+        if ($LASTEXITCODE -ne 0) {
+            throw 'playback quality CLI analyze-report-set imported native harness returned a non-zero exit code.'
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    $nativeHarnessImportedAnalysis = Get-Content -Raw -LiteralPath $nativeHarnessImportedAnalysisPath | ConvertFrom-Json
+    if ($nativeHarnessImportedAnalysis.playbackEvidence.scope -ne 'native-software' -or
+        $nativeHarnessImportedAnalysis.playbackEvidence.status -ne 'available' -or
+        $nativeHarnessImportedAnalysis.playbackEvidence.canEvaluateNativePlayback -ne $true) {
+        throw 'Expected imported native harness analyze-report-set summary to mark native software playback evidence as available.'
     }
 
     New-Item -ItemType Directory -Path $nativeHarnessMissingCapturedDir | Out-Null

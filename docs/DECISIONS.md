@@ -1,5 +1,15 @@
 # 技术决策
 
+## 2026-07-08: report-analysis summary 增加 playbackEvidence 范围判断
+
+决策：`analyze-report-set` 输出的 `ReportAnalysisSummary` 新增 `playbackEvidence`。该对象包含 `scope`、`status`、`canEvaluateNativePlayback`、`canEvaluateOrchestration` 和 `reasons[]`，从集合级 `evidenceSources[]`、`limitations[]` 与 skip 计数派生，不改变既有分析结果。
+
+原因：`core-probe` 对 orchestrator 和报告链路是有效软件证据，但不能证明真实 native decode/render、frame pacing、A/V sync 或 color 管线。仅靠 `decision = no-change` / `risk = low` 或 capability `evidence-present`，自动化模型仍可能过度信任 deterministic probe。`playbackEvidence` 把证据范围显式编码成机器字段，减少模型二次推断。
+
+影响：source-only baseline 的 `playbackEvidence.scope = source-only`、`status = missing`；core-probe baseline 的 `scope = orchestration-only`、`status = limited`、`canEvaluateNativePlayback = false`；native-harness-skip baseline 的 `scope = none`、`status = missing`。CLI smoke 还覆盖了导入 `native-winrt:*` captured report 时 `scope = native-software`、`status = available`。
+
+边界：这是模型消费契约增强，不改变播放行为、native graph、report-set validation、analysis decision、risk、candidate gate、阈值或 expected behavior。`native-software` 仍只表示软件层 captured evidence，可用于本阶段纯软件闭环；它不证明 HDMI InfoFrame、显示器 EOTF 或人工观感。
+
 ## 2026-07-08: report-analysis summary 聚合证据来源和限制
 
 决策：`analyze-report-set` 输出的 `ReportAnalysisSummary` 新增 `evidenceSources[]` 和 `limitations[]`。`evidenceSources[]` 聚合非 `unknown` 的 `report.runtimeMetrics.providerStatus`；`limitations[]` 聚合每个 report 的 limitation 字符串。

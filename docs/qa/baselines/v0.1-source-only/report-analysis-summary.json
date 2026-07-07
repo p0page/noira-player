@@ -281,6 +281,15 @@
     "internal-timing: frame intervals are measured in the player, not by an external photodiode or HDMI capture device",
     "source-only: playback execution was not run by this command"
   ],
+  "playbackEvidence": {
+    "scope": "source-only",
+    "status": "missing",
+    "canEvaluateNativePlayback": false,
+    "canEvaluateOrchestration": false,
+    "reasons": [
+      "source-only reports do not execute playback"
+    ]
+  },
   "capabilityCoverage": [
     {
       "capability": "media-loading",

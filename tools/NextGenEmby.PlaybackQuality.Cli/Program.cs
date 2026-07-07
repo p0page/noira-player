@@ -2428,6 +2428,7 @@ internal static class Program
         }
 
         AddReportAnalysisCapabilityCoverage(summary);
+        AddReportAnalysisPlaybackEvidence(summary);
         AddReportAnalysisTargets(summary);
         ApplyReportAnalysisDecision(summary);
         AddReportAnalysisNextAction(summary);
@@ -2447,6 +2448,88 @@ internal static class Program
         {
             AddUnique(summary.EvidenceSources, providerStatus);
         }
+    }
+
+    private static void AddReportAnalysisPlaybackEvidence(
+        ReportAnalysisSummary summary)
+    {
+        var hasNative = HasEvidenceSourcePrefix(summary, "native-winrt:");
+        var hasCoreProbe = HasEvidenceSourcePrefix(summary, "core-probe:");
+        var hasSourceOnly = summary.EvidenceSources.Contains("source-only");
+
+        if (hasNative && !hasCoreProbe && !hasSourceOnly &&
+            summary.SkippedReportCount == 0)
+        {
+            summary.PlaybackEvidence.Scope = "native-software";
+            summary.PlaybackEvidence.Status = "available";
+            summary.PlaybackEvidence.CanEvaluateNativePlayback = true;
+            summary.PlaybackEvidence.CanEvaluateOrchestration = true;
+            AddUnique(
+                summary.PlaybackEvidence.Reasons,
+                "native-winrt runtime metrics provider evidence is present");
+            return;
+        }
+
+        if (hasCoreProbe && !hasNative)
+        {
+            summary.PlaybackEvidence.Scope = "orchestration-only";
+            summary.PlaybackEvidence.Status = "limited";
+            summary.PlaybackEvidence.CanEvaluateNativePlayback = false;
+            summary.PlaybackEvidence.CanEvaluateOrchestration = true;
+            AddUnique(
+                summary.PlaybackEvidence.Reasons,
+                "core-probe evidence does not open the native playback graph");
+            return;
+        }
+
+        if (hasSourceOnly && !hasNative && !hasCoreProbe)
+        {
+            summary.PlaybackEvidence.Scope = "source-only";
+            summary.PlaybackEvidence.Status = "missing";
+            AddUnique(
+                summary.PlaybackEvidence.Reasons,
+                "source-only reports do not execute playback");
+            return;
+        }
+
+        if (summary.SkippedReportCount > 0 &&
+            summary.EvidenceSources.Count == 0)
+        {
+            summary.PlaybackEvidence.Scope = "none";
+            summary.PlaybackEvidence.Status = "missing";
+            AddUnique(
+                summary.PlaybackEvidence.Reasons,
+                "all playback evidence was skipped or not collected");
+            return;
+        }
+
+        if (summary.EvidenceSources.Count > 1 ||
+            summary.SkippedReportCount > 0)
+        {
+            summary.PlaybackEvidence.Scope = "mixed";
+            summary.PlaybackEvidence.Status = hasNative ? "partial" : "limited";
+            summary.PlaybackEvidence.CanEvaluateNativePlayback = hasNative;
+            summary.PlaybackEvidence.CanEvaluateOrchestration =
+                hasNative || hasCoreProbe;
+            AddUnique(
+                summary.PlaybackEvidence.Reasons,
+                "report set contains mixed playback evidence sources");
+        }
+    }
+
+    private static bool HasEvidenceSourcePrefix(
+        ReportAnalysisSummary summary,
+        string prefix)
+    {
+        foreach (var source in summary.EvidenceSources)
+        {
+            if (source.StartsWith(prefix, StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static void AddReportAnalysisSummaryEvidence(
@@ -3591,12 +3674,23 @@ internal static class Program
         public List<string> SuggestedNextActions { get; } = new List<string>();
         public List<string> EvidenceSources { get; } = new List<string>();
         public List<string> Limitations { get; } = new List<string>();
+        public ReportAnalysisPlaybackEvidence PlaybackEvidence { get; set; } =
+            new ReportAnalysisPlaybackEvidence();
         public List<ReportAnalysisCapabilityCoverage> CapabilityCoverage { get; } =
             new List<ReportAnalysisCapabilityCoverage>();
         public List<PlaybackQualitySuiteNextAction> NextActions { get; } =
             new List<PlaybackQualitySuiteNextAction>();
         public List<ReportAnalysisCase> Cases { get; } =
             new List<ReportAnalysisCase>();
+    }
+
+    private sealed class ReportAnalysisPlaybackEvidence
+    {
+        public string Scope { get; set; } = "none";
+        public string Status { get; set; } = "missing";
+        public bool CanEvaluateNativePlayback { get; set; }
+        public bool CanEvaluateOrchestration { get; set; }
+        public List<string> Reasons { get; } = new List<string>();
     }
 
     private sealed class ReportAnalysisCapabilityCoverage

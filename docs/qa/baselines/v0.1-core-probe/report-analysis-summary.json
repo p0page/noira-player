@@ -165,6 +165,15 @@
     "core-probe: startup, display, timing, buffering, and A/V sync values are deterministic probe telemetry",
     "core-probe: end-of-stream is a diagnostic lifecycle marker, not proof of natural media EOF"
   ],
+  "playbackEvidence": {
+    "scope": "orchestration-only",
+    "status": "limited",
+    "canEvaluateNativePlayback": false,
+    "canEvaluateOrchestration": true,
+    "reasons": [
+      "core-probe evidence does not open the native playback graph"
+    ]
+  },
   "capabilityCoverage": [
     {
       "capability": "media-loading",
