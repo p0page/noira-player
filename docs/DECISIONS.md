@@ -581,3 +581,22 @@
 影响：后续同 manifest baseline/candidate 对比会在逐 case matched signals 中暴露 Present duration evidence。它能辅助解释 cadence、frame pacing 和 A/V sync 异常，但不改变现有 pass/fail 阈值。
 
 边界：`presentDurationMs*` 当前只作为诊断 evidence，不自动解释成 improvement 或 regression；短样本中的数值波动不能单独驱动 candidate 接受或拒绝。
+# 2026-07-08: audio-ahead wait duration 作为 Present 前等待诊断证据
+
+决策：native/headless 播放质量报告新增 `timing.audioAheadWaitDurationMsP50/P95/P99/Max`，专门记录 pending video frame 因音频 clock 尚未追上而停留在 `ShouldWaitForAudio` 路径的等待时长。该信号进入 report schema、signal catalog、model analysis evidence signals、native-headless smoke 断言和 candidate comparison matched signals。
+
+原因：`presentDurationMs*` 已经显示 A/V smoke 的 jitter 不在 `DxDeviceResources.Present()` 内部，但仍缺少证据区分 audio-clock gating、render loop sleep、decode starvation 等 Present 前因素。`audioAheadWaitDurationMs*` 让模型可以直接看到“视频等音频”这段等待的分布。
+
+影响：同一 41-case manifest 的 `playback-core-tuning-audio-wait-evidence-41case-f7f7315.local` comparison 为 `no-change`，不会被解释成 quality improvement。该信号目前只作为诊断和 matched evidence，不自动驱动 improvement/regression。
+
+边界：不要用该信号替代 A/V sync 正确性判断，也不要因为它存在就放宽 frame pacing 或 drift 阈值。它只说明等待发生在哪里、等待多久；是否需要改播放策略仍必须由同 manifest candidate comparison 证明。
+
+# 2026-07-08: RenderLoopWait 1ms 实验不采纳
+
+决策：不采纳把 `PlaybackFramePacing::RenderLoopWait()` 从 5ms 降到 1ms 的策略调整。本轮 TDD 验证了该改动可以通过 native frame pacing 单测，但 native-headless A/V smoke 没有改善 `renderIntervalMsP95`，并且 `audioAheadWaitDurationMsP99/Max` 变差，因此已回退。
+
+原因：A/V smoke 中 `audioAheadWaitDurationMsP50≈15.6ms`、`P95≈31ms` 的形态更像底层 sleep/timer 调度粒度，而不是 constexpr 等待值本身。单纯把 sleep 请求从 5ms 改到 1ms 不能保证实际唤醒粒度改善。
+
+影响：下一步调优应聚焦高精度 wait primitive、wait scheduling、或 render loop 结构，而不是继续调小固定 sleep 常量。任何候选实现都必须先保留现有 A/V sync、buffering、seek/timeline、track/subtitle 和 color/DXGI evidence，并通过同一 41-case manifest 的 baseline/candidate comparison。
+
+边界：这不是结论性地证明 Windows timer quantum 是唯一根因；它只排除了“把 5ms 改 1ms 就能改善”的低成本假设。后续需要更强证据或更小心的候选实现。

@@ -442,3 +442,16 @@ manifest validation、report-set validation、single comparison、comparison sui
 关键证据：`local/native-headless-av-smoke` 的 `timing.renderIntervalMsP95` 约为 47ms，但 `timing.presentDurationMsP95` 约为 0.07ms，说明当前 native-headless A/V jitter 主要不在 swapchain Present/vsync blocking 内，而更可能发生在 Present 前的 render loop、audio-clock gating、decode 或等待路径。
 
 边界：这是诊断证据增强，不是播放策略优化。该 candidate 不应被标记为 accepted quality improvement；下一轮应继续沿同一 41-case manifest，聚焦 Present 前的调度/等待路径，优先补足或调整能解释 `videoAheadWaitCount`、render interval 和 A/V drift 关系的证据或小步策略。
+# 2026-07-08 更新：audio-ahead wait duration 证据补齐，A/V jitter 初步定位到 coarse sleep / audio clock gating
+
+本轮在已接受的 `playback-core-tuning-seek-evidence-16ba684.local` 之后补齐 `timing.audioAheadWaitDurationMsP50/P95/P99/Max`。该信号记录 pending video frame 因 `ShouldWaitForAudio` 等待音频时钟追上所花的时间，用来区分“视频渲染/Present 慢”与“Present 前等待音频时钟”。
+
+已用同一 41-case manifest 生成 ignored candidate：`docs/qa/private/candidates/playback-core-tuning-audio-wait-evidence-41case-f7f7315.local/`，并输出 comparison：`docs/qa/private/comparisons/playback-core-tuning-audio-wait-evidence-41case-f7f7315.local/`。结果：41/41 case 可比较，baseline/candidate validation 均通过，`decision = no-change`，0 improved，0 regressed，0 mixed，41 strong confidence。`local/native-headless-av-smoke` 的 matched signals 已包含 `timing.audioAheadWaitDurationMsP50/P95/P99/Max`、`timing.presentDurationMs*`、render interval、A/V drift、buffering、seek/timeline、track/subtitle 和 color/DXGI 证据。
+
+关键 A/V 样本证据：该 case 为 30fps SDR H.264/AAC，software display cadence 为 60Hz。candidate 中 `renderIntervalMsP50/P95/P99` 约为 `31.5/47.1/47.6ms`，`presentDurationMsP95` 约 `0.08ms`，`audioAheadWaitDurationMsP50/P95/P99/Max` 约 `15.6/31.3/31.3/31.3ms`，`videoAheadWaitCount = 52`，`audioVideoDriftMsP95 = 10ms`。这说明当前 jitter 主要不在 swapchain Present，而集中在音频时钟 gating 与 render loop 等待路径。
+
+本轮还做了一个最小策略实验：把 `PlaybackFramePacing::RenderLoopWait()` 从 5ms 降到 1ms。targeted native test 先按 TDD 红灯失败，改实现后绿灯，但 native-headless A/V smoke 未改善：`renderIntervalMsP95` 基本不变，`audioAheadWaitDurationMsP99/Max` 反而变差。因此该实验已回退，不采纳为播放策略调整。
+
+当前结论：不要继续盲目调整 audio ahead tolerance 或固定 sleep 常量。`audioAheadWaitDuration` 的 15.6ms / 31ms 形态更接近 Windows coarse timer quantum，下一步应优先研究并验证更可靠的 render loop 等待 primitive 或 wait scheduling，而不是放宽/收紧 evaluator 阈值。
+
+边界：这是诊断证据增强和一次被拒绝的小实验，不是可采纳的播放质量优化。它不证明真实 Xbox/HDMI 输出、HDR、A/V sync 或主观流畅度已经改善。后续任何等待策略调整仍必须走同一 41-case manifest 的 baseline/candidate comparison，并明确记录 improvement/regression/mixed 与剩余风险。
