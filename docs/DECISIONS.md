@@ -1,5 +1,15 @@
 # 技术决策
 
+## 2026-07-08: App-free headless harness 先输出结构化 native linkage blocker
+
+决策：新增 `tools/NextGenEmby.PlaybackQuality.Headless` 作为 App-free captured report producer。当前版本只生成标准 `PlaybackQualityRunResult` skip envelope，skip code 为 `native-headless.native-link-blocked`，并通过 `materialize-native-harness-report-set` 的 captured import 路径进入现有 report-set 链路。该 provider 当前不得写入 `native-headless:returned-snapshot`。
+
+原因：现有 `NextGenEmby.Native` 是 Windows Store C++/WinRT dynamic library，IDL 公开入口包含 `AttachSurface(Windows.UI.Xaml.Controls.SwapChainPanel)`，播放入口通过 WinRT/UWP projection 暴露。虽然 `DxDeviceResources` 在没有 swapchain 时多处会返回 false 而不是直接崩溃，`PlaybackGraph` 公开复用仍受 WinRT runtimeclass、UWP component activation、FFmpeg UWP linkage 和 surface host 边界限制。直接用外部 ffmpeg 或只拼 JSON 会让模型误以为已经获得真实 native playback evidence。
+
+影响：现在可以用一个 App-free 命令产出可导入、可校验、可分析的 headless report，并把真实 blocker 暴露给模型。下一步真实 native/software evidence 需要先抽出 native graph host 或 render-surface/playback-surface abstraction，再让 harness 调用 `PlaybackGraph` 实际 open direct-uri/local sample。
+
+边界：该决策不优化播放效果，不改变 native graph 行为，不证明 HDR、颜色、帧率或 A/V sync。skip-only report 必须继续被 `analyze-report-set` 判定为缺 native playback evidence，不能进入 candidate playback evidence gate。
+
 ## 2026-07-08: App-free native evidence provider 身份进入 playbackEvidence 判断
 
 决策：`analyze-report-set` 的 native/software playback evidence 判断从单一 `native-winrt:*` 扩展为 provider catalog：`native-winrt:*`、`native-headless:*` 和 `native-win32-harness:*`。这些 provider 会让集合级 `playbackEvidence.scope = native-software`、`status = available`、`canEvaluateNativePlayback = true`，前提是 report-set 没有混入 core-probe/source-only/skip-only 证据。

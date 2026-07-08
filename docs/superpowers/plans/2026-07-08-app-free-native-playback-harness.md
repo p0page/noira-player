@@ -122,7 +122,7 @@ git commit -m "feat: recognize app-free native playback evidence"
 - Consumes: `PlaybackQualityReferenceManifest.Load`, `PlaybackQualityRuntimeEvidenceCollector.ComposeRunResult`, `PlaybackQualityCapturedReportPath.GetReportRelativePath`.
 - Produces: `quality-run/captured/<case-id>.json` files with real `runtimeMetrics.providerStatus = native-headless:returned-snapshot` when native open succeeds, or a structured error/skip result when App-free native open is still blocked.
 
-- [ ] **Step 1: Write failing smoke test**
+- [x] **Step 1: Write failing smoke test**
 
 Create `tools/quality-run/run-native-headless-harness-smoke-test.ps1` that:
 
@@ -143,7 +143,7 @@ $report.report.environment.collectorVersion -eq 'native-headless-harness-v0.1'
 $report.caseMetadata.caseId -eq 'jellyfin/sdr-hevc-main10-1080p60-3m'
 ```
 
-- [ ] **Step 2: Run smoke and verify RED**
+- [x] **Step 2: Run smoke and verify RED**
 
 Run:
 
@@ -153,7 +153,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools\quality-run\run-native
 
 Expected: FAIL because `tools\NextGenEmby.PlaybackQuality.Headless` does not exist.
 
-- [ ] **Step 3: Add the headless project scaffold**
+- [x] **Step 3: Add the headless project scaffold**
 
 Create `tools/NextGenEmby.PlaybackQuality.Headless/NextGenEmby.PlaybackQuality.Headless.csproj`:
 
@@ -171,7 +171,7 @@ Create `tools/NextGenEmby.PlaybackQuality.Headless/NextGenEmby.PlaybackQuality.H
 </Project>
 ```
 
-- [ ] **Step 4: Implement the minimal command shape without fake playback metrics**
+- [x] **Step 4: Implement the minimal command shape without fake playback metrics**
 
 In `Program.cs`, parse `--case-id`, `--stream-url`, `--duration-seconds`, and `--reports-dir`; create a `PlaybackQualityReferenceCase` from the inputs; write a captured `PlaybackQualityRunResult` using `PlaybackQualityRuntimeEvidenceCollector.ComposeSkipRunResult` until real native open is wired:
 
@@ -196,7 +196,7 @@ The first implementation must clearly add a report limitation:
 native-headless: command shape exists, but real App-free native open is not wired yet
 ```
 
-- [ ] **Step 5: Run smoke and verify GREEN**
+- [x] **Step 5: Run smoke and verify GREEN**
 
 Run:
 
@@ -226,7 +226,7 @@ git commit -m "feat: add app-free headless playback report producer"
 - Consumes: Task 2 command shape and report output path.
 - Produces: a harness run that really opens the sample and reports either decoded software evidence or a structured `insufficient instrumentation` skip/error if native decode is unavailable.
 
-- [ ] **Step 1: Write failing assertion for real-open evidence**
+- [x] **Step 1: Write failing assertion for real-open evidence**
 
 Update smoke to reject the Task 2 limitation:
 
@@ -243,7 +243,7 @@ $report.report.runtimeMetrics.providerStatus -eq 'native-headless:returned-snaps
 $report.report.error.failureClass -eq 'insufficient instrumentation'
 ```
 
-- [ ] **Step 2: Run smoke and verify RED**
+- [x] **Step 2: Run smoke and verify RED**
 
 Run:
 
@@ -253,7 +253,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools\quality-run\run-native
 
 Expected: FAIL because Task 2 still emits the contract limitation.
 
-- [ ] **Step 3: Implement the smallest real-open path**
+- [x] **Step 3: Implement the smallest real-open path**
 
 Prefer project-native code. If direct `NextGenEmby.Native` reuse is blocked by Windows Store/AppContainer linkage, add a structured `skip` with:
 
@@ -266,7 +266,7 @@ Reason = "Current NextGenEmby.Native build is a Windows Store C++/WinRT componen
 
 Do not silently fall back to external `ffmpeg` as player evidence.
 
-- [ ] **Step 4: Document the actual result**
+- [x] **Step 4: Document the actual result**
 
 If real-open succeeds, document the command and captured report-set. If it is blocked by native linkage, document the exact blocker and the next render-surface decoupling task:
 

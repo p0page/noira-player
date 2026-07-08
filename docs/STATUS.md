@@ -2,6 +2,14 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-08 更新：App-free native-headless harness 入口和结构化 blocker
+
+新增 `tools/NextGenEmby.PlaybackQuality.Headless`，可以在不启动、不打包、不部署 UWP App 的情况下，用公开 direct-uri 输入生成标准 `PlaybackQualityRunResult` captured report。新增 smoke `tools/quality-run/run-native-headless-harness-smoke-test.ps1` 覆盖 `captured report -> materialize-native-harness-report-set import -> validate-report-set -> analyze-report-set`，并已纳入 `run-playback-core-checks.ps1` 的 App-free 验证计划。
+
+当前该 harness 不会伪造 `native-headless:returned-snapshot`，也不会把 skip-only report 伪装成 native playback evidence。它输出 `native-headless.native-link-blocked` 结构化 skip，明确记录当前 blocker：`NextGenEmby.Native` 仍是 Windows Store C++/WinRT 组件，公开播放入口通过 UWP projection 暴露，surface API 绑定 `SwapChainPanel`；真实 App-free native open 需要先补一个 native graph host 或 render-surface 抽象。
+
+边界：这一步证明的是 App-free report 入口、导入、校验和分析链路已经能消费 headless runner 产物；它仍不打开真实 native graph，不解码，不渲染，不产生 frame pacing / A/V sync / color pipeline 证据，因此 `analyze-report-set` 必须保持 `playbackEvidence.canEvaluateNativePlayback = false`。
+
 ## 2026-07-08 更新：App-free native evidence provider 身份进入 playbackEvidence 判断
 
 `analyze-report-set` 的 `playbackEvidence` 判断现在不再只识别 `native-winrt:*`，也会把 `native-headless:*` 和 `native-win32-harness:*` 视为 native/software playback evidence provider。CLI smoke 新增了 `native-headless:returned-snapshot` 变体，确认这类 App-free provider 会输出 `playbackEvidence.scope = native-software`、`status = available` 和 `canEvaluateNativePlayback = true`。

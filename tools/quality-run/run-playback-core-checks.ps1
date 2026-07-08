@@ -111,6 +111,11 @@ $commands = @(
         -Command 'powershell' `
         -Arguments @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', 'tools\quality-run\run-playback-quality-cli-smoke-test.ps1')
     New-CommandPlan `
+        -Name 'native-headless-harness-smoke-test' `
+        -Description 'Run the App-free native-headless harness command shape and captured report contract smoke test.' `
+        -Command 'powershell' `
+        -Arguments @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', 'tools\quality-run\run-native-headless-harness-smoke-test.ps1')
+    New-CommandPlan `
         -Name 'private-emby-reference-manifest-test' `
         -Description 'Verify secret-safe private Emby reference manifest generation from offline media-source metadata.' `
         -Command 'powershell' `
@@ -178,6 +183,7 @@ $summary = [pscustomobject]@{
         'tests/NextGenEmby.Core.Tests',
         'tests/NextGenEmby.Native.Tests',
         'tools/NextGenEmby.PlaybackQuality.Cli',
+        'tools/NextGenEmby.PlaybackQuality.Headless',
         'tools/quality-run'
     )
     excludedRoots = @('src/NextGenEmby.App')
