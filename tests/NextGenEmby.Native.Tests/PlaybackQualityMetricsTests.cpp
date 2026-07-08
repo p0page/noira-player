@@ -11,6 +11,9 @@ int main()
     metrics.RecordRenderIntervalMs(41.0);
     metrics.RecordRenderIntervalMs(42.0);
     metrics.RecordRenderIntervalMs(100.0);
+    metrics.RecordPresentDurationMs(2.0);
+    metrics.RecordPresentDurationMs(17.0);
+    metrics.RecordPresentDurationMs(34.0);
     metrics.RecordAudioVideoDriftTicks(200000);
     metrics.RecordAudioVideoDriftTicks(-400000);
 
@@ -36,6 +39,9 @@ int main()
     assert(snapshot.RenderIntervalMsP50 >= 41.0);
     assert(snapshot.RenderIntervalMsP95 >= 100.0);
     assert(snapshot.MaxFrameGapMs == 100.0);
+    assert(snapshot.PresentDurationMsP50 >= 2.0);
+    assert(snapshot.PresentDurationMsP95 >= 34.0);
+    assert(snapshot.PresentDurationMsMax == 34.0);
     assert(snapshot.AudioVideoDriftMsP95 >= 40.0);
     assert(snapshot.AudioVideoDriftMsMax >= 40.0);
     assert(snapshot.AudioClockTicks == 2'000'000);
@@ -47,6 +53,7 @@ int main()
     snapshot = metrics.Snapshot();
     assert(snapshot.RenderPasses == 0);
     assert(snapshot.MaxFrameGapMs == 0.0);
+    assert(snapshot.PresentDurationMsMax == 0.0);
     assert(snapshot.AudioVideoDriftMsMax == 0.0);
     assert(snapshot.FramePacingSourceFrameRate == 0.0);
     assert(snapshot.LateFrameDropToleranceMs == 0.0);

@@ -26,6 +26,10 @@ namespace winrt::NextGenEmby::Native::implementation
         double RenderIntervalMsP95{0.0};
         double RenderIntervalMsP99{0.0};
         double MaxFrameGapMs{0.0};
+        double PresentDurationMsP50{0.0};
+        double PresentDurationMsP95{0.0};
+        double PresentDurationMsP99{0.0};
+        double PresentDurationMsMax{0.0};
         double FramePacingSourceFrameRate{0.0};
         double LateFrameDropToleranceMs{0.0};
         double AudioVideoDriftMsP50{0.0};
@@ -125,6 +129,11 @@ namespace winrt::NextGenEmby::Native::implementation
             m_renderIntervals.Add(value);
         }
 
+        void RecordPresentDurationMs(double value) noexcept
+        {
+            m_presentDurations.Add(value);
+        }
+
         void RecordAudioVideoDriftTicks(int64_t driftTicks) noexcept
         {
             m_audioVideoDriftMs.Add(static_cast<double>(driftTicks) / 10000.0);
@@ -149,6 +158,10 @@ namespace winrt::NextGenEmby::Native::implementation
             snapshot.RenderIntervalMsP95 = m_renderIntervals.Percentile(95);
             snapshot.RenderIntervalMsP99 = m_renderIntervals.Percentile(99);
             snapshot.MaxFrameGapMs = m_renderIntervals.Max();
+            snapshot.PresentDurationMsP50 = m_presentDurations.Percentile(50);
+            snapshot.PresentDurationMsP95 = m_presentDurations.Percentile(95);
+            snapshot.PresentDurationMsP99 = m_presentDurations.Percentile(99);
+            snapshot.PresentDurationMsMax = m_presentDurations.Max();
             snapshot.FramePacingSourceFrameRate = FramePacingSourceFrameRate;
             snapshot.LateFrameDropToleranceMs = LateFrameDropToleranceMs;
             snapshot.AudioVideoDriftMsP50 = m_audioVideoDriftMs.Percentile(50);
@@ -160,6 +173,7 @@ namespace winrt::NextGenEmby::Native::implementation
 
     private:
         PlaybackQualityHistogram m_renderIntervals;
+        PlaybackQualityHistogram m_presentDurations;
         PlaybackQualityHistogram m_audioVideoDriftMs;
     };
 }

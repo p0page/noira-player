@@ -18,6 +18,10 @@ namespace NextGenEmby.Core.PlaybackQuality
         public double RenderIntervalMsP95 { get; set; }
         public double RenderIntervalMsP99 { get; set; }
         public double MaxFrameGapMs { get; set; }
+        public double PresentDurationMsP50 { get; set; }
+        public double PresentDurationMsP95 { get; set; }
+        public double PresentDurationMsP99 { get; set; }
+        public double PresentDurationMsMax { get; set; }
         public double FramePacingSourceFrameRate { get; set; }
         public double LateFrameDropToleranceMs { get; set; }
         public double AudioVideoDriftMsP50 { get; set; }

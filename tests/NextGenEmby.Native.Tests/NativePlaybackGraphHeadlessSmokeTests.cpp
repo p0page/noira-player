@@ -159,6 +159,10 @@ int wmain(int argc, wchar_t** argv)
             << " renderIntervalMsP95=" << playbackSnapshot.RenderIntervalMsP95
             << " renderIntervalMsP99=" << playbackSnapshot.RenderIntervalMsP99
             << " maxFrameGapMs=" << playbackSnapshot.MaxFrameGapMs
+            << " presentDurationMsP50=" << playbackSnapshot.PresentDurationMsP50
+            << " presentDurationMsP95=" << playbackSnapshot.PresentDurationMsP95
+            << " presentDurationMsP99=" << playbackSnapshot.PresentDurationMsP99
+            << " presentDurationMsMax=" << playbackSnapshot.PresentDurationMsMax
             << " framePacingSourceFrameRate=" << playbackSnapshot.FramePacingSourceFrameRate
             << " lateFrameDropToleranceMs=" << playbackSnapshot.LateFrameDropToleranceMs
             << " audioVideoDriftMsP50=" << playbackSnapshot.AudioVideoDriftMsP50

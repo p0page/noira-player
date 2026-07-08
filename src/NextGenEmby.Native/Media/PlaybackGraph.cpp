@@ -500,8 +500,16 @@ namespace winrt::NextGenEmby::Native::implementation
             auto rendered = m_videoRenderer.Render(frame, m_hdrOutputActive);
             m_positionTicks = frame.PositionTicks;
             UpdateSubtitleCue();
+            auto presentStartedAt = std::chrono::steady_clock::now();
             auto presented = m_deviceResources.Present();
             auto renderedAt = std::chrono::steady_clock::now();
+            if (presented)
+            {
+                auto presentDuration = std::chrono::duration<double, std::milli>(
+                    renderedAt - presentStartedAt).count();
+                m_qualityMetrics.RecordPresentDurationMs(presentDuration);
+            }
+
             if (rendered && presented)
             {
                 if (m_lastRenderedFrameAt.time_since_epoch().count() != 0)

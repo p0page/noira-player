@@ -80,6 +80,10 @@ public sealed class PlaybackQualityReportMapperTests
             RenderIntervalMsP95 = 45.2,
             RenderIntervalMsP99 = 80.0,
             MaxFrameGapMs = 120.0,
+            PresentDurationMsP50 = 2.0,
+            PresentDurationMsP95 = 16.7,
+            PresentDurationMsP99 = 33.4,
+            PresentDurationMsMax = 50.1,
             FramePacingSourceFrameRate = 60.0,
             LateFrameDropToleranceMs = 41.6667,
             AudioVideoDriftMsP50 = 12.0,
@@ -100,6 +104,10 @@ public sealed class PlaybackQualityReportMapperTests
         Assert.Equal(45.2, report.Timing.RenderIntervalMsP95);
         Assert.Equal(80.0, report.Timing.RenderIntervalMsP99);
         Assert.Equal(120.0, report.Timing.MaxFrameGapMs);
+        Assert.Equal(2.0, report.Timing.PresentDurationMsP50);
+        Assert.Equal(16.7, report.Timing.PresentDurationMsP95);
+        Assert.Equal(33.4, report.Timing.PresentDurationMsP99);
+        Assert.Equal(50.1, report.Timing.PresentDurationMsMax);
         Assert.Equal(60.0, report.Timing.FramePacingSourceFrameRate);
         Assert.Equal(41.6667, report.Timing.LateFrameDropToleranceMs);
         Assert.Equal(123456, report.Sync.AudioClockTicks);
