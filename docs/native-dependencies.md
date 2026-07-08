@@ -1,4 +1,4 @@
-# 原生依赖记录
+﻿# 原生依赖记录
 
 日期：2026-07-05
 
@@ -32,14 +32,14 @@
 
 MSBuild 接入方式：
 
-- `src/NextGenEmby.Native/packages.config` 固定 `FFmpegInteropX.FFmpegUWP` 版本。
-- `src/NextGenEmby.Native/NextGenEmby.Native.vcxproj` 导入 `packages\FFmpegInteropX.FFmpegUWP.5.1.100\build\native\FFmpegInteropX.FFmpegUWP.targets`。
+- `src/NoiraPlayer.Native/packages.config` 固定 `FFmpegInteropX.FFmpegUWP` 版本。
+- `src/NoiraPlayer.Native/NoiraPlayer.Native.vcxproj` 导入 `packages\FFmpegInteropX.FFmpegUWP.5.1.100\build\native\FFmpegInteropX.FFmpegUWP.targets`。
 - 该 targets 会自动加入 `include` 路径、`runtimes\win10-$(PlatformTarget)\native` lib 路径、FFmpeg linker inputs，并把对应架构 DLL 加入 copy-local。
 - Debug x64 构建已确认使用 `runtimes\win10-x64\native`，并把 `avcodec-59.dll`、`avdevice-59.dll`、`avfilter-8.dll`、`avformat-59.dll`、`avutil-57.dll`、`swresample-4.dll`、`swscale-6.dll` 复制到 native 输出目录。
 
 仓库策略：
 
-- 不提交 `src/NextGenEmby.Native/packages/` 下还原出来的 NuGet 二进制。
+- 不提交 `src/NoiraPlayer.Native/packages/` 下还原出来的 NuGet 二进制。
 - 只提交 `packages.config`、`.vcxproj` 接入点、源码里的 FFmpeg probe 边界和依赖说明。
 - 如果后续需要修改 FFmpeg 构建参数，再改为自建 UWP FFmpeg，并把构建脚本、校验和、源码版本和 configure 命令放进仓库。
 

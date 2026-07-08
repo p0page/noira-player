@@ -1,5 +1,7 @@
 # Artwork-Backed Matte Fluent Handoff
 
+> Document status: historical handoff. Use `docs/README.md`, `docs/DESIGN.md`, and `docs/a3-visual-convergence-rules.md` as the current design sources of truth.
+
 This document summarizes the design output on the `codex/xbox-emby-design-system-v2` branch. It is a development handoff, not a new visual direction.
 
 ## Read Order

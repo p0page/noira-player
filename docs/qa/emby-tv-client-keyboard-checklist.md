@@ -1,5 +1,7 @@
 # Emby TV Client Keyboard Checklist
 
+> Document status: long-running QA log. Use `docs/README.md` and `docs/qa/emby-tv-client-operation-matrix.md` for current coverage orientation. Historical run entries may retain old package names, paths, and app titles.
+
 Date: 2026-07-06
 
 This checklist is the required local verification path after every meaningful UI or interaction development batch. Use keyboard input only for app interaction, because these keys map to the future controller path.

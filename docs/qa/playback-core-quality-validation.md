@@ -1,4 +1,4 @@
-# Playback Core Quality Validation
+﻿# Playback Core Quality Validation
 
 This document defines the App-free validation path for playback quality work.
 
@@ -16,7 +16,7 @@ tools\quality-run\run-playback-core-checks.ps1
 
 The command emits `scope = playback-core`, plus `includedRoots` and `excludedRoots` fields so automated model runs can verify that the run is isolated from App interaction work.
 
-Before running tests or builds, the command also runs an App diff guard. The guard fails if the current worktree, index, or playback-quality branch diff contains disallowed changes under `src/NextGenEmby.App`. The only current allowlist entry is `src/NextGenEmby.App/Playback/WinRtNativePlaybackEngine.cs`, because that file is the App adapter that exposes native playback metrics to the Core evaluation path. App UI, XAML, project, package, and interaction changes remain blocked so playback Core validation stays isolated from parallel Xbox UI/App worktrees.
+Before running tests or builds, the command also runs an App diff guard. The guard fails if the current worktree, index, or playback-quality branch diff contains disallowed changes under `src/NoiraPlayer.App`. The only current allowlist entry is `src/NoiraPlayer.App/Playback/WinRtNativePlaybackEngine.cs`, because that file is the App adapter that exposes native playback metrics to the Core evaluation path. App UI, XAML, project, package, and interaction changes remain blocked so playback Core validation stays isolated from parallel Xbox UI/App worktrees.
 
 The command validates:
 
@@ -32,7 +32,7 @@ The command validates:
 
 The command deliberately excludes:
 
-- `NextGenEmby.App.csproj`;
+- `NoiraPlayer.App.csproj`;
 - XAML interaction work;
 - unrelated Core interaction/focus policy tests;
 - App package generation;
@@ -46,7 +46,7 @@ Use an App package build only when validating Xbox integration or a change that 
 
 当源帧率缺失或无效时，`PlaybackFramePacing` 保留旧的 100ms late-frame drop 阈值。当 Core 已经拿到可用源帧率时，`PlaybackGraph` 会把帧率传给 native pacing，late-frame drop 阈值会按帧率自适应：约 2.5 个源帧，并设置 40ms 下限。这样 23.976/24fps 会接近原有容忍度，同时避免 50/60fps 播放在丢帧追赶前容忍过多晚到帧。
 
-`native-frame-pacing-test` 会在不构建、不打包 App 的情况下编译并运行 `tests/NextGenEmby.Native.Tests/FramePacingTests.cpp`。自动化播放优化应把它视为 Core/native 策略门禁，而不是 Xbox 视觉效果验证。
+`native-frame-pacing-test` 会在不构建、不打包 App 的情况下编译并运行 `tests/NoiraPlayer.Native.Tests/FramePacingTests.cpp`。自动化播放优化应把它视为 Core/native 策略门禁，而不是 Xbox 视觉效果验证。
 
 质量报告会把这条策略暴露为 `timing.framePacingSourceFrameRate`、`timing.lateFrameDropToleranceMs`、`modelAnalysis.framePacing.lateFrameDropToleranceMs` 和 `modelAnalysis.framePacing.lateFrameDropToleranceFrameRatio`。这些字段描述 native pacing 实际采用的策略参数，不代表真实 HDMI 输出或肉眼观感。
 
@@ -55,7 +55,7 @@ Use an App package build only when validating Xbox integration or a change that 
 Use the App-free CLI to validate a playback reference corpus manifest before using it in automated runs:
 
 ```powershell
-dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- validate-manifest --manifest docs\qa\playback-quality-reference-manifest.example.json --output manifest-validation.json
+dotnet run --project tools\NoiraPlayer.PlaybackQuality.Cli\NoiraPlayer.PlaybackQuality.Cli.csproj -- validate-manifest --manifest docs\qa\playback-quality-reference-manifest.example.json --output manifest-validation.json
 ```
 
 The command emits `schemaVersion = 1`, `evaluationVersion = playback-quality-v0.1`, `isValid`, `caseCount`, `tiers`, `categories`, `severities`, `stabilities`, `purposes`, `cases`, structured `errors`, and `coverage`. `cases` is a schedulable summary of caseId, uri, tier, category, severity, stability, purpose, and expected source metadata. Valid categories are `stable`, `challenge`, and `quarantine`; valid severities are `info`, `low`, `medium`, `high`, and `critical`; valid stabilities are `stable`, `variable`, `flaky`, and `unknown`. Legacy manifests without category/severity/stability are treated as `stable` / `medium` / `stable`. Invalid manifests return a non-zero exit code so automation can stop before collecting misleading playback evidence. `isValid = true` only means the manifest can be scheduled; `coverage.status = ready` means the corpus includes the required playback Core risk purposes for broad candidate evaluation: `sdr-smoke`, `hdr-output`, `hdr-force-sdr`, `dv-reject`, `dv-fallback`, `cadence-23.976`, `frame-pacing`, `av-sync`, `buffering`, `timeline`, `tracks`, `subtitles`, `end-of-stream`, and `error-handling`. If `coverage.status = incomplete`, the model should treat `coverage.missingPurposes` as a sample-corpus gap and avoid over-optimizing Core from a narrow corpus.
@@ -93,9 +93,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools\quality-run\Test-Publi
 可以用本地脚本从私有 Emby 库生成 ignored manifest：
 
 ```powershell
-$env:NEXTGENEMBY_QA_SERVER_URL = '<private-emby-url>'
-$env:NEXTGENEMBY_QA_USERNAME = '<private-user>'
-$env:NEXTGENEMBY_QA_PASSWORD = '<private-password>'
+$env:NOIRAPLAYER_QA_SERVER_URL = '<private-emby-url>'
+$env:NOIRAPLAYER_QA_USERNAME = '<private-user>'
+$env:NOIRAPLAYER_QA_PASSWORD = '<private-password>'
 
 powershell -NoProfile -ExecutionPolicy Bypass -File tools\quality-run\New-PrivateEmbyReferenceManifest.ps1 -OutputPath docs\qa\private\emby-reference-manifest.local.json -Limit 1000
 ```
@@ -110,7 +110,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools\quality-run\New-Privat
 
 powershell -NoProfile -ExecutionPolicy Bypass -File tools\quality-run\Merge-ReferenceManifests.ps1 -ManifestPath "docs\qa\playback-quality-reference-manifest.example.json,docs\qa\private\title-a-reference-manifest.local.json,docs\qa\private\title-b-reference-manifest.local.json" -OutputPath docs\qa\private\combined-reference-manifest.local.json -DuplicateCaseIdMode skip
 
-dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- validate-manifest --manifest docs\qa\private\combined-reference-manifest.local.json --output docs\qa\private\combined-reference-manifest-validation.local.json
+dotnet run --project tools\NoiraPlayer.PlaybackQuality.Cli\NoiraPlayer.PlaybackQuality.Cli.csproj -- validate-manifest --manifest docs\qa\private\combined-reference-manifest.local.json --output docs\qa\private\combined-reference-manifest-validation.local.json
 ```
 
 `Merge-ReferenceManifests.ps1` 只拼接 `cases` 并保留输入顺序，默认 `-DuplicateCaseIdMode fail` 会拒绝重复 `caseId`，用于严格检查手写 manifest。私有 Emby 多搜索词采集会自然产生重叠样本，此时应显式使用 `-DuplicateCaseIdMode skip`，保留第一个 case 并跳过后续重复 case，避免把同一个真实片源重复放大为多份证据。这让模型可以把公开 Jellyfin DV 样本、公开 HDR10 压力样本和私有 Emby 真实库样本放进同一个本地评测集，同时仍保证所有私有 locator 和报告留在 `.gitignore` 覆盖路径。coverage 现在还要求 `timeline`、`tracks` 和 `subtitles` case；旧的综合 manifest 需要补入 seek/resume timeline、轨道发现和字幕发现样本后，才能重新视为 broad Core candidate evaluation 的 ready 证据。
@@ -118,7 +118,7 @@ dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQ
 验证 manifest 后，可以生成 App-free 采集计划：
 
 ```powershell
-dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- plan-runs --manifest docs\qa\playback-quality-reference-manifest.example.json --reports-dir baseline-reports --duration 60 --output baseline-run-plan.json
+dotnet run --project tools\NoiraPlayer.PlaybackQuality.Cli\NoiraPlayer.PlaybackQuality.Cli.csproj -- plan-runs --manifest docs\qa\playback-quality-reference-manifest.example.json --reports-dir baseline-reports --duration 60 --output baseline-run-plan.json
 ```
 
 `plan-runs` 不执行播放，也不打包 App。它把每个 manifest case 转成标准 `runId`、`sourceUri`、`durationSeconds`、`category`、`severity`、`stability`、`requiredSignals`、`expected`、`reportRelativePath` 和 `reportPath`，让模型或脚本按同一套 key 采集 `PlaybackQualityRunResult`。生成的 envelope 应在顶层 `caseMetadata` 保留 `caseId`、`category`、`severity` 和 `stability`，在 `report.environment` 写入 `playerCoreVersion` 和 `sourceRevision`，并写入 plan 里的 `reportPath`，之后再运行 report-set 校验和候选评估。
@@ -132,7 +132,7 @@ dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQ
 如果还没有 App/native 播放采集器，可以先物化一个 source-only baseline report set：
 
 ```powershell
-dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- materialize-baseline-report-set --manifest docs\qa\playback-quality-reference-manifest.example.json --reports-dir docs\qa\baselines\v0.1-source-only\reports --source-revision <git-sha> --player-core-version <core-version> --build-configuration Debug --output docs\qa\baselines\v0.1-source-only\materialized-baseline-summary.json
+dotnet run --project tools\NoiraPlayer.PlaybackQuality.Cli\NoiraPlayer.PlaybackQuality.Cli.csproj -- materialize-baseline-report-set --manifest docs\qa\playback-quality-reference-manifest.example.json --reports-dir docs\qa\baselines\v0.1-source-only\reports --source-revision <git-sha> --player-core-version <core-version> --build-configuration Debug --output docs\qa\baselines\v0.1-source-only\materialized-baseline-summary.json
 ```
 
 该命令不会打开媒体，也不会声称播放成功。它只把 reference case 转成当前 Core 可消费的 `PlaybackQualityRunResult` envelope，写入 `report.runId = caseId` 的标准路径，在顶层 `caseMetadata` 保留 case 分类/严重度/稳定性，并显式加入 `source-only: playback execution was not run by this command` limitation。后续仍必须运行 `validate-report-set` 和 `analyze-report-set`；缺失的 lifecycle、display、timing、buffering、sync、startup、seek telemetry 应被报告为 `insufficient instrumentation`，而不是播放器 core bug。
@@ -144,9 +144,9 @@ dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQ
 如果当前任务需要检查 native-harness report-set 契约，但真实 App-free native playback harness 尚未实现，可以先物化一个标准 skip report set：
 
 ```powershell
-dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- materialize-native-harness-report-set --manifest docs\qa\playback-quality-reference-manifest.example.json --reports-dir captured-native-harness-skip-reports --source-revision <git-sha-or-working-tree-id> --player-core-version <core-version> --build-configuration Debug --output captured-native-harness-skip-summary.json
+dotnet run --project tools\NoiraPlayer.PlaybackQuality.Cli\NoiraPlayer.PlaybackQuality.Cli.csproj -- materialize-native-harness-report-set --manifest docs\qa\playback-quality-reference-manifest.example.json --reports-dir captured-native-harness-skip-reports --source-revision <git-sha-or-working-tree-id> --player-core-version <core-version> --build-configuration Debug --output captured-native-harness-skip-summary.json
 
-dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- validate-report-set --manifest docs\qa\playback-quality-reference-manifest.example.json --reports-dir captured-native-harness-skip-reports --output captured-native-harness-skip-validation.json
+dotnet run --project tools\NoiraPlayer.PlaybackQuality.Cli\NoiraPlayer.PlaybackQuality.Cli.csproj -- validate-report-set --manifest docs\qa\playback-quality-reference-manifest.example.json --reports-dir captured-native-harness-skip-reports --output captured-native-harness-skip-validation.json
 ```
 
 该命令不会打开 native playback graph，不会解码真实媒体，也不会伪造 timing、buffering、A/V sync、display 或 color 指标。它为每个 manifest case 写入 `report.result = skip`、`skip.code = native-harness.not-implemented`、`skip.failureClass = insufficient instrumentation` 和 `skip.failureArea = evidence-collection`，并通过 `lifecycle.events[].status = skipped` 暴露 `lifecycle.skip` 证据。
@@ -169,14 +169,14 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools\quality-run\Write-AppQ
 powershell -NoProfile -ExecutionPolicy Bypass -File tools\quality-run\Export-AppQualityRunReports.ps1 -OutputDirectory docs\qa\private\native-captured.local -SummaryPath docs\qa\private\native-captured-export-summary.local.json
 ```
 
-该脚本默认从 `%LOCALAPPDATA%\Packages\NextGenEmby.App_*\LocalState\quality-run\captured` 复制 report，保留 `local/foo.json` 这类 report-set 相对路径。输出目录应放在 ignored/private 位置，不要提交真实 App captured report 或私有 Emby case。
+该脚本默认从 `%LOCALAPPDATA%\Packages\NoiraPlayer.App_*\LocalState\quality-run\captured` 复制 report，保留 `local/foo.json` 这类 report-set 相对路径。输出目录应放在 ignored/private 位置，不要提交真实 App captured report 或私有 Emby case。
 
 当 App-hosted 或 native collector 已经能为每个 case 产出 raw `PlaybackQualityReport` 或 `PlaybackQualityRunResult` envelope 时，不要新建 report-set 格式；把 captured report 放在 ignored/private 目录，并用同一个命令导入：
 
 ```powershell
-dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- materialize-native-harness-report-set --manifest docs\qa\playback-quality-reference-manifest.example.json --captured-reports-dir docs\qa\private\native-captured.local --reports-dir docs\qa\private\native-normalized.local --source-revision <git-sha-or-working-tree-id> --player-core-version <core-version> --build-configuration Debug --output docs\qa\private\native-normalized-summary.local.json
+dotnet run --project tools\NoiraPlayer.PlaybackQuality.Cli\NoiraPlayer.PlaybackQuality.Cli.csproj -- materialize-native-harness-report-set --manifest docs\qa\playback-quality-reference-manifest.example.json --captured-reports-dir docs\qa\private\native-captured.local --reports-dir docs\qa\private\native-normalized.local --source-revision <git-sha-or-working-tree-id> --player-core-version <core-version> --build-configuration Debug --output docs\qa\private\native-normalized-summary.local.json
 
-dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- validate-report-set --manifest docs\qa\playback-quality-reference-manifest.example.json --reports-dir docs\qa\private\native-normalized.local --output docs\qa\private\native-normalized-validation.local.json
+dotnet run --project tools\NoiraPlayer.PlaybackQuality.Cli\NoiraPlayer.PlaybackQuality.Cli.csproj -- validate-report-set --manifest docs\qa\playback-quality-reference-manifest.example.json --reports-dir docs\qa\private\native-normalized.local --output docs\qa\private\native-normalized-validation.local.json
 ```
 
 `--captured-reports-dir` 使用和标准 report-set 相同的相对路径：`caseId = local/foo` 对应 `local\foo.json`。App-hosted capture 和 CLI 都通过 `PlaybackQualityCapturedReportPath.GetReportRelativePath` 生成该相对路径，避免 run-id key 不一致。导入模式会刷新当前 `modelAnalysis`、补入 manifest `caseMetadata`，并保留 captured report 中明确存在的 JSON 字段 presence。它不会打开 native playback graph，也不会伪造缺失的 runtime metrics、display、timing、buffering、A/V sync 或 color evidence；如果某个 case 没有 captured report，会输出 `skip.code = native-harness.capture-missing`，让模型把问题归类为 evidence collection 缺口，而不是播放器 core bug。
@@ -184,7 +184,7 @@ dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQ
 快速迭代时可以只计划一个子集，例如只跑 tier 2 以内的 HDR case：
 
 ```powershell
-dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- plan-runs --manifest docs\qa\playback-quality-reference-manifest.example.json --reports-dir baseline-reports --duration 60 --purpose hdr-output --max-tier 2 --output hdr-smoke-run-plan.json
+dotnet run --project tools\NoiraPlayer.PlaybackQuality.Cli\NoiraPlayer.PlaybackQuality.Cli.csproj -- plan-runs --manifest docs\qa\playback-quality-reference-manifest.example.json --reports-dir baseline-reports --duration 60 --purpose hdr-output --max-tier 2 --output hdr-smoke-run-plan.json
 ```
 
 输出里的 `filters` 会记录实际使用的 `purposes` 和 `maxTier`；`caseCount` 表示过滤后的计划 case 数，完整 manifest 总数仍在 `manifestValidation.caseCount`。
@@ -197,7 +197,7 @@ dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQ
 After reports are captured, validate that the report set covers the manifest before comparing candidates:
 
 ```powershell
-dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- validate-report-set --manifest docs\qa\playback-quality-reference-manifest.example.json --reports-dir captured-reports --output report-set-validation.json
+dotnet run --project tools\NoiraPlayer.PlaybackQuality.Cli\NoiraPlayer.PlaybackQuality.Cli.csproj -- validate-report-set --manifest docs\qa\playback-quality-reference-manifest.example.json --reports-dir captured-reports --output report-set-validation.json
 ```
 
 report-set gate 输出 `schemaVersion = 1` 和 `evaluationVersion = playback-quality-v0.1`，并按 `report.runId` 匹配 manifest `caseId`，拒绝缺失 case、额外报告、重复 runId、source metadata 不匹配以及 case 级 `requiredSignals` 缺失。缺失 telemetry 会输出为 `report.requiredSignal.missing`，并带上精确的 `signal`、`caseId`、`failureArea`、`failureClass`、`suggestedNextAction` 和 `codeTargets`。CLI 会保留 JSON 字段 presence，所以显式写出的 0 counter（例如 `videoStarvedPasses: 0`）会被视为已采集，字段不存在才会被视为缺证据。运行 `compare-suite` 前必须先跑这个 gate；report set 不匹配 manifest 或缺少必要 telemetry 都属于证据采集失败，不是播放 Core 优化证据。
@@ -207,7 +207,7 @@ report-set gate 输出 `schemaVersion = 1` 和 `evaluationVersion = playback-qua
 当模型只需要诊断一份已经采集好的播放质量报告，而不是比较 baseline/candidate 时，使用 App-free CLI 直接生成模型分析 JSON：
 
 ```powershell
-dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- analyze-report --report captured-report.json --output report-analysis.json
+dotnet run --project tools\NoiraPlayer.PlaybackQuality.Cli\NoiraPlayer.PlaybackQuality.Cli.csproj -- analyze-report --report captured-report.json --output report-analysis.json
 ```
 
 `--report` 可以是 raw `PlaybackQualityReport`，也可以是包含顶层 `report` 字段的 `PlaybackQualityRunResult` envelope。命令会重新运行当前 Core 的 `PlaybackQualityReportAnalyzer`，输出 `failureAreas`、`failureClasses`、`failedChecks`、`evidenceSignals`、`missingEvidence`、`optimizationGate`、`framePacing` 和 `triageSteps`。`failureArea` 指向要调查的播放子系统，`failureClass` 说明失败责任或证据质量；例如缺失 telemetry 应标记为 `insufficient instrumentation`，而不是直接当作播放器 bug。如果报告 pin 住颜色输出期望，`missingEvidence` 会标记缺失的 `display.hdrStatus`、swapchain 格式/色彩空间和 HDR10 十位 swapchain 证据。自动化模型应先读取这个分析结果，再决定是补采集证据还是修改播放 Core。
@@ -215,7 +215,7 @@ dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQ
 如果采集端暂时只能写出 raw report，使用 `materialize-run-result` 把它归一化为首选 envelope：
 
 ```powershell
-dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- materialize-run-result --report captured-raw-report.json --output captured-run-result.json
+dotnet run --project tools\NoiraPlayer.PlaybackQuality.Cli\NoiraPlayer.PlaybackQuality.Cli.csproj -- materialize-run-result --report captured-raw-report.json --output captured-run-result.json
 ```
 
 该命令只重新生成当前 analyzer 的 `modelAnalysis`，不修改播放行为、阈值或 case 预期。已有 envelope 的顶层 `caseMetadata` 会被保留；raw report 没有该字段时使用 `report.runId` 和默认 `stable` / `medium` / `stable`。后续 report-set、suite 和 candidate evaluation 应优先消费这个 envelope。
@@ -223,7 +223,7 @@ dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQ
 当模型需要快速审计一整个报告目录，但还没有进入 baseline/candidate 比较时，使用目录级分析：
 
 ```powershell
-dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- analyze-report-set --reports-dir captured-reports --output report-analysis-summary.json
+dotnet run --project tools\NoiraPlayer.PlaybackQuality.Cli\NoiraPlayer.PlaybackQuality.Cli.csproj -- analyze-report-set --reports-dir captured-reports --output report-analysis-summary.json
 ```
 
 `analyze-report-set` 会读取目录下所有 `*.json`，对 raw report 自动运行当前 Core analyzer；对已有 envelope，如果 `modelAnalysis.runId` 或 `modelAnalysis.result` 缺失，或 `modelAnalysis.analyzerVersion` 不等于当前 `PlaybackQualityReportAnalyzer.CurrentAnalyzerVersion`，也会把该 analysis 视为不可复用并重新生成。输出复用候选评测中的 report-analysis summary，包含 `schemaVersion = 1`、`evaluationVersion = playback-quality-v0.1`、`action`、`decision`、`risk`、`confidence`、`nextActions`、`totalReportCount`、`analyzedReportCount`、`unavailableReportCount`、`blockedReportCount`、聚合 `evidenceSources`、`limitations`、`playbackEvidence`、`blockers`、`signals`、`failureAreas`、`targetFailureAreas`、`targetCaseIds`、`codeTargets`、`suggestedNextActions`，以及每个 case 的 `status`、`expectedBehavior`、`actualBehavior`、`primaryFailureClass`、`primaryFailureArea`、`blockers`、`signals`、`failureAreas`、`targetFailureAreas`、`codeTargets`、`suggestedNextActions`。`evidenceSources` 只聚合非 `unknown` 的 runtime metrics provider status；`limitations` 让模型在不展开单 case 的情况下识别 source-only、core-probe、native import 或 skip placeholder；`playbackEvidence` 会把集合标记为 `source-only`、`orchestration-only`、`native-software`、`none` 或 `mixed`，并直接说明是否可用于 native playback 或 orchestrator 级判断。模型应先读取 `decision`、`playbackEvidence`、`evidenceSources`、`limitations` 和 `nextActions[0]`，再用 `cases[]` 的行为摘要和主失败分类定位具体 case，最后用 `action`、`risk` 和 `confidence.level` 判断能否继续优化 Core；rank 1 action 会携带目标 failure area、case、signals、blockers 和 code targets。这一步适合在采集完成后立即判断证据是否足够、下一步应补 telemetry 还是修改播放 Core。
@@ -233,7 +233,7 @@ dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQ
 当另一个 worktree 正在修改 Xbox App 交互时，播放核心候选改动应优先走 App-free 门禁，不打包、不启动 UWP App：
 
 ```powershell
-dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- evaluate-candidate --manifest docs\qa\playback-quality-reference-manifest.example.json --baseline-dir baseline-reports --candidate-dir candidate-reports --match-by run-id --comparisons-dir comparisons --output candidate-evaluation.json
+dotnet run --project tools\NoiraPlayer.PlaybackQuality.Cli\NoiraPlayer.PlaybackQuality.Cli.csproj -- evaluate-candidate --manifest docs\qa\playback-quality-reference-manifest.example.json --baseline-dir baseline-reports --candidate-dir candidate-reports --match-by run-id --comparisons-dir comparisons --output candidate-evaluation.json
 ```
 
 `evaluate-candidate` 会按固定顺序执行：
@@ -270,7 +270,7 @@ dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQ
 Use the App-free CLI when an automated model run needs to compare two serialized playback quality reports without building the Xbox App:
 
 ```powershell
-dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- compare --baseline baseline.json --candidate candidate.json --output comparison.json
+dotnet run --project tools\NoiraPlayer.PlaybackQuality.Cli\NoiraPlayer.PlaybackQuality.Cli.csproj -- compare --baseline baseline.json --candidate candidate.json --output comparison.json
 ```
 
 The `compare` and `compare-suite` commands accept either a raw `PlaybackQualityReport` JSON file or a `PlaybackQualityRunResult` envelope with a top-level `report` property. Generated comparison JSON includes `schemaVersion = 1`, `evaluationVersion = playback-quality-v0.1`, `environment.status`, baseline/candidate build identity fields, `codeTargets`, and ranked `nextActions`, so model loops can verify whether evidence came from the intended Core revision and locate the next Core/native file before accepting or rejecting a candidate change. If comparison evidence has missing, partial, or same-build identity, it is treated as weak evidence and must collect comparable evidence before accepting the candidate. Per-case comparison blockers use `comparison.environment-evidence-missing`, `comparison.environment-same-build`, `comparison.incompatible-inputs`, `comparison.missing-checks`, or `comparison.no-matched-signals`; suite blockers distinguish missing identity with `suite.environment-evidence-missing` and same-build identity with `suite.environment-same-build`.
@@ -278,19 +278,19 @@ The `compare` and `compare-suite` commands accept either a raw `PlaybackQualityR
 For iterative optimization loops, pass previous comparison JSON files to enable repeated-unchanged stall protection:
 
 ```powershell
-dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- compare --baseline baseline.json --candidate candidate.json --previous previous-comparison.json --stall-threshold 2 --output comparison.json
+dotnet run --project tools\NoiraPlayer.PlaybackQuality.Cli\NoiraPlayer.PlaybackQuality.Cli.csproj -- compare --baseline baseline.json --candidate candidate.json --previous previous-comparison.json --stall-threshold 2 --output comparison.json
 ```
 
 When a candidate Core change is validated across multiple samples, summarize all comparison JSON files before deciding whether to keep the change:
 
 ```powershell
-dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- summarize --comparison comparison-a.json --comparison comparison-b.json --output suite.json
+dotnet run --project tools\NoiraPlayer.PlaybackQuality.Cli\NoiraPlayer.PlaybackQuality.Cli.csproj -- summarize --comparison comparison-a.json --comparison comparison-b.json --output suite.json
 ```
 
 If an automated run already has baseline and candidate report directories, compare the matching report files and produce the suite in one command:
 
 ```powershell
-dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- compare-suite --baseline-dir baseline-reports --candidate-dir candidate-reports --comparisons-dir comparisons --output suite.json
+dotnet run --project tools\NoiraPlayer.PlaybackQuality.Cli\NoiraPlayer.PlaybackQuality.Cli.csproj -- compare-suite --baseline-dir baseline-reports --candidate-dir candidate-reports --comparisons-dir comparisons --output suite.json
 ```
 
 The suite output includes `schemaVersion`, `evaluationVersion`, `decision`, and ranked `nextActions`. Automated model loops should verify `schemaVersion = 1` and `evaluationVersion = playback-quality-v0.1`, then read `decision` plus rank 1 before expanding the full `comparisons` payload; rank 1 carries the suite action, risk, target case IDs, signals, blockers, reasons, and likely Core/native code targets.
@@ -299,7 +299,7 @@ It also includes `signalSummaries`, which aggregates improvements and regression
 `compare-suite` matches reports by relative `*.json` path by default. Manifest-driven runs should prefer `--match-by run-id`, which pairs baseline/candidate reports by `report.runId` and writes `caseId = runId` into generated comparisons:
 
 ```powershell
-dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- compare-suite --baseline-dir baseline-reports --candidate-dir candidate-reports --match-by run-id --comparisons-dir comparisons --output suite.json
+dotnet run --project tools\NoiraPlayer.PlaybackQuality.Cli\NoiraPlayer.PlaybackQuality.Cli.csproj -- compare-suite --baseline-dir baseline-reports --candidate-dir candidate-reports --match-by run-id --comparisons-dir comparisons --output suite.json
 ```
 
 Missing or extra files fail the command so the model does not optimize from an incomplete sample set. `--comparisons-dir` is optional and writes each individual comparison. `--previous-comparisons-dir` may point at a previous comparison directory with the same matching keys so repeated-unchanged stall protection works in batch runs; missing previous files for newly added cases are allowed. Generated comparisons include `caseId`, and the suite emits a compact `cases` list so model loops can locate the exact sample behind a suite-level action. Each case summary includes `suggestedNextAction`, `reasons`, and `codeTargets`, so the model can understand the case-level action rationale and likely Core/native files before opening the full comparison JSON. Suite-level and case-level `failureAreas` include persisting failures even when the comparison result is unchanged, so stalled or continuing optimization still has a concrete playback Core target. Suite-level `targetFailureAreas` exposes the highest-priority Core target, `targetCaseIds` points to the matching samples, and suite-level `codeTargets` exposes the likely files for the current gate. Automated runs should not infer priority or localization from unordered lists. When the suite is blocked by weak or insufficient evidence and no playback failure area can be chosen yet, `targetFailureAreas` may be empty, but `targetCaseIds` and `codeTargets` still point at the cases and evidence-collection files that need comparable evidence.
@@ -353,9 +353,9 @@ var result = PlaybackQualityRuntimeEvidenceCollector.ComposeErrorRunResult(
 `materialize-core-probe-report-set` 是 v0.1 的第一条非 source-only、App-free、hardware-free core 评测路径：
 
 ```powershell
-dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- materialize-core-probe-report-set --manifest docs\qa\playback-quality-reference-manifest.example.json --reports-dir docs\qa\baselines\v0.1-core-probe\reports --source-revision <git-sha-or-working-tree-id> --player-core-version NextGenEmby.Core --build-configuration Debug --output docs\qa\baselines\v0.1-core-probe\materialized-core-probe-summary.json
-dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- validate-report-set --manifest docs\qa\playback-quality-reference-manifest.example.json --reports-dir docs\qa\baselines\v0.1-core-probe\reports --output docs\qa\baselines\v0.1-core-probe\report-set-validation.json
-dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- analyze-report-set --reports-dir docs\qa\baselines\v0.1-core-probe\reports --output docs\qa\baselines\v0.1-core-probe\report-analysis-summary.json
+dotnet run --project tools\NoiraPlayer.PlaybackQuality.Cli\NoiraPlayer.PlaybackQuality.Cli.csproj -- materialize-core-probe-report-set --manifest docs\qa\playback-quality-reference-manifest.example.json --reports-dir docs\qa\baselines\v0.1-core-probe\reports --source-revision <git-sha-or-working-tree-id> --player-core-version NoiraPlayer.Core --build-configuration Debug --output docs\qa\baselines\v0.1-core-probe\materialized-core-probe-summary.json
+dotnet run --project tools\NoiraPlayer.PlaybackQuality.Cli\NoiraPlayer.PlaybackQuality.Cli.csproj -- validate-report-set --manifest docs\qa\playback-quality-reference-manifest.example.json --reports-dir docs\qa\baselines\v0.1-core-probe\reports --output docs\qa\baselines\v0.1-core-probe\report-set-validation.json
+dotnet run --project tools\NoiraPlayer.PlaybackQuality.Cli\NoiraPlayer.PlaybackQuality.Cli.csproj -- analyze-report-set --reports-dir docs\qa\baselines\v0.1-core-probe\reports --output docs\qa\baselines\v0.1-core-probe\report-analysis-summary.json
 ```
 
 该命令会驱动 `PlaybackOrchestrator` 执行 load、play、pause、resume、seek、音轨切换、字幕切换和 stop，然后生成标准 `PlaybackQualityRunResult` envelope。报告会保留 `caseMetadata`、source、startup、position、tracks、lifecycle、timing、sync、buffers、colorPipeline、display、limitations 和 `modelAnalysis`。

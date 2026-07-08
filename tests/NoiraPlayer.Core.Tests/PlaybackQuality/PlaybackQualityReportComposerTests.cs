@@ -289,10 +289,10 @@ public sealed class PlaybackQualityReportComposerTests
     [Fact]
     public void Compose_Fills_Missing_Environment_Evidence_From_Process()
     {
-        WithEnvironment("NEXTGENEMBY_PLAYBACK_QUALITY_COLLECTOR_VERSION", "quality-run-env", () =>
-        WithEnvironment("NEXTGENEMBY_PLAYER_CORE_VERSION", "native-core-env", () =>
-        WithEnvironment("NEXTGENEMBY_SOURCE_REVISION", "env1234", () =>
-        WithEnvironment("NEXTGENEMBY_BUILD_CONFIGURATION", "Release", () =>
+        WithEnvironment("NOIRAPLAYER_PLAYBACK_QUALITY_COLLECTOR_VERSION", "quality-run-env", () =>
+        WithEnvironment("NOIRAPLAYER_PLAYER_CORE_VERSION", "native-core-env", () =>
+        WithEnvironment("NOIRAPLAYER_SOURCE_REVISION", "env1234", () =>
+        WithEnvironment("NOIRAPLAYER_BUILD_CONFIGURATION", "Release", () =>
         {
             var result = PlaybackQualityReportComposer.Compose(new PlaybackQualityReportRequest
             {

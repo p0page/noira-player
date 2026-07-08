@@ -1,4 +1,23 @@
-# 技术决策
+﻿# 技术决策
+## 2026-07-08: 文档入口和历史记录边界集中到 docs/README.md
+
+决策：新增 `docs/README.md` 作为文档入口，集中说明当前权威文档、冻结评测结果、历史 plan/log 和 latest-wins 规则。历史 plan、handoff、smoke log 和 QA run log 可以保留旧项目名、旧路径和旧命令；当前执行前必须优先核对 `docs/README.md` 指向的活文档和现有代码路径。
+
+原因：项目连续经历 UI、Xbox 实机、播放 core 评测、Noira 改名等多条并行工作流，文档中同时存在当前事实、历史执行计划、长 QA 记录和冻结 report-set。继续把所有文档视为同等权威会导致模型误读旧命令或改动不应改动的评测结果。
+
+影响：`docs/qa/baselines/` 在当前整理阶段保持冻结；`docs/plans/` 与 `docs/superpowers/plans/` 默认作为历史输入；新长期事实写入 `docs/STATUS.md`，新技术取舍写入 `docs/DECISIONS.md`，新评测规则写入 `docs/EVAL_PHILOSOPHY.md` 或 metric contract。
+
+边界：这只是文档治理变更，不改变播放 core、评测规则、样本 expected behavior 或 baseline/candidate 结果。历史记录中的旧名称不代表当前命令失效记录被删除；需要复盘时仍可从原文和 git history 追溯。
+
+## 2026-07-08: 项目改名后环境变量前缀同步为 NOIRAPLAYER
+
+决策：播放质量工具链和私有 Emby manifest 生成脚本使用 `NOIRAPLAYER_*` 环境变量前缀，包括 `NOIRAPLAYER_PLAYBACK_QUALITY_COLLECTOR_VERSION`、`NOIRAPLAYER_PLAYER_CORE_VERSION`、`NOIRAPLAYER_SOURCE_REVISION`、`NOIRAPLAYER_BUILD_CONFIGURATION`、`NOIRAPLAYER_QA_SERVER_URL`、`NOIRAPLAYER_QA_USERNAME`、`NOIRAPLAYER_QA_PASSWORD` 和 `NOIRAPLAYER_VCRUNTIME140_APP_PATH`。
+
+原因：代码、项目、包名和用户品牌已经从旧项目名切换到 Noira / NoiraPlayer。继续暴露旧环境变量前缀会让后续自动化、文档和模型目标产生歧义，也会增加私有配置维护成本。
+
+影响：旧 `NEXTGENEMBY_*` 变量不再作为当前文档化接口。需要本地运行私有 Emby manifest 或 playback-quality 工具时，应使用新的 `NOIRAPLAYER_*` 名称。
+
+边界：变量含义没有改变；本轮只改名，不改变私有数据读取、report environment 字段优先级、baseline/candidate 判定逻辑或 QA 样本规范。
 
 ## 2026-07-08: wait reason counter 必须拆分并保留零值证据
 
@@ -42,7 +61,7 @@
 
 ## 2026-07-08: App-free native helper 作为第一条真实软件播放采集路径
 
-决策：`tools/NextGenEmby.PlaybackQuality.Headless` 保留默认 skip/blocker 模式，同时新增 `--native-helper-exe`。当传入 native helper exe 时，C# harness 负责调用 helper、解析 key=value metrics、组合 `PlaybackDescriptor`、`PlaybackQualityLifecycle`、`PlaybackQualityPosition` 和 `native-headless:returned-snapshot` metrics provider，再输出标准 `PlaybackQualityRunResult`。`run-native-headless-harness-smoke-test.ps1` 负责在本机编译 helper、补齐 FFmpegInteropX UWP DLL 与 `vcruntime140_app.dll`，并用本地生成的声明样本跑完整 captured import / validate / analyze 链路；默认 skip/blocker 路径仍保留公开 Jellyfin direct-uri 作为命令契约输入。
+决策：`tools/NoiraPlayer.PlaybackQuality.Headless` 保留默认 skip/blocker 模式，同时新增 `--native-helper-exe`。当传入 native helper exe 时，C# harness 负责调用 helper、解析 key=value metrics、组合 `PlaybackDescriptor`、`PlaybackQualityLifecycle`、`PlaybackQualityPosition` 和 `native-headless:returned-snapshot` metrics provider，再输出标准 `PlaybackQualityRunResult`。`run-native-headless-harness-smoke-test.ps1` 负责在本机编译 helper、补齐 FFmpegInteropX UWP DLL 与 `vcruntime140_app.dll`，并用本地生成的声明样本跑完整 captured import / validate / analyze 链路；默认 skip/blocker 路径仍保留公开 Jellyfin direct-uri 作为命令契约输入。
 
 原因：目标要求摆脱 UWP App 启动、打包、部署和 UI，获得第一套可复现的真实播放软件证据。直接让 C# 工具链接 C++/WinRT 组件仍会被 UWP projection 影响；把 native `PlaybackGraph` helper 做成独立 exe，可以先在 desktop/headless 进程里验证 FFmpeg open、D3D offscreen swapchain、decode/render metrics 和生命周期，再复用现有 C# report 契约，避免新建平行评测框架。
 
@@ -82,9 +101,9 @@
 
 ## 2026-07-08: App-free headless harness 先输出结构化 native linkage blocker
 
-决策：新增 `tools/NextGenEmby.PlaybackQuality.Headless` 作为 App-free captured report producer。当前版本只生成标准 `PlaybackQualityRunResult` skip envelope，skip code 为 `native-headless.native-link-blocked`，并通过 `materialize-native-harness-report-set` 的 captured import 路径进入现有 report-set 链路。该 provider 当前不得写入 `native-headless:returned-snapshot`。
+决策：新增 `tools/NoiraPlayer.PlaybackQuality.Headless` 作为 App-free captured report producer。当前版本只生成标准 `PlaybackQualityRunResult` skip envelope，skip code 为 `native-headless.native-link-blocked`，并通过 `materialize-native-harness-report-set` 的 captured import 路径进入现有 report-set 链路。该 provider 当前不得写入 `native-headless:returned-snapshot`。
 
-原因：现有 `NextGenEmby.Native` 是 Windows Store C++/WinRT dynamic library，IDL 公开入口包含 `AttachSurface(Windows.UI.Xaml.Controls.SwapChainPanel)`，播放入口通过 WinRT/UWP projection 暴露。虽然 `DxDeviceResources` 在没有 swapchain 时多处会返回 false 而不是直接崩溃，`PlaybackGraph` 公开复用仍受 WinRT runtimeclass、UWP component activation、FFmpeg UWP linkage 和 surface host 边界限制。直接用外部 ffmpeg 或只拼 JSON 会让模型误以为已经获得真实 native playback evidence。
+原因：现有 `NoiraPlayer.Native` 是 Windows Store C++/WinRT dynamic library，IDL 公开入口包含 `AttachSurface(Windows.UI.Xaml.Controls.SwapChainPanel)`，播放入口通过 WinRT/UWP projection 暴露。虽然 `DxDeviceResources` 在没有 swapchain 时多处会返回 false 而不是直接崩溃，`PlaybackGraph` 公开复用仍受 WinRT runtimeclass、UWP component activation、FFmpeg UWP linkage 和 surface host 边界限制。直接用外部 ffmpeg 或只拼 JSON 会让模型误以为已经获得真实 native playback evidence。
 
 影响：现在可以用一个 App-free 命令产出可导入、可校验、可分析的 headless report，并把真实 blocker 暴露给模型。下一步真实 native/software evidence 需要先抽出 native graph host 或 render-surface/playback-surface abstraction，再让 harness 调用 `PlaybackGraph` 实际 open direct-uri/local sample。
 
@@ -242,7 +261,7 @@
 
 ## 2026-07-08: playback-core validation guard 精确允许 App playback metrics adapter
 
-决策：`tools\quality-run\run-playback-core-checks.ps1` 的 App diff guard 继续保护 `src/NextGenEmby.App`，但新增精确 allowlist。最初只允许 `src/NextGenEmby.App/Playback/WinRtNativePlaybackEngine.cs`；随后为了接通 DEBUG App-hosted `quality-run` collector，allowlist 扩展到 `PlaybackLaunchRequest.cs`、`MainPage.xaml.cs` 和 `PlaybackPage.xaml.cs`。Plan 输出会暴露 `appDiffGuard.allowedPaths`，测试会确认 allowlist 没有包含 XAML、App project、manifest/package 或未列入 App 文件。
+决策：`tools\quality-run\run-playback-core-checks.ps1` 的 App diff guard 继续保护 `src/NoiraPlayer.App`，但新增精确 allowlist。最初只允许 `src/NoiraPlayer.App/Playback/WinRtNativePlaybackEngine.cs`；随后为了接通 DEBUG App-hosted `quality-run` collector，allowlist 扩展到 `PlaybackLaunchRequest.cs`、`MainPage.xaml.cs` 和 `PlaybackPage.xaml.cs`。Plan 输出会暴露 `appDiffGuard.allowedPaths`，测试会确认 allowlist 没有包含 XAML、App project、manifest/package 或未列入 App 文件。
 
 原因：当前 v0.1 评测链路已经把 `WinRtNativePlaybackEngine` 接入 `IPlaybackQualityMetricsProvider`，这是把真实 App/native 播放 metrics 带入 Core report 的 instrumentation/testability 改动。原 guard 把任何 App diff 都视为 UI/App 交互改动，导致 `run-playback-core-checks.ps1` 在当前合法评测分支上被阻断，反而破坏 v0.1 “有文档化命令可以运行”的完成标准。
 
@@ -659,7 +678,7 @@
 
 实现边界：
 
-- `tools/NextGenEmby.PlaybackQuality.Headless` 在 helper 进程退出后读取 `Stopwatch.Elapsed` 和 `Process.TotalProcessorTime`，计算 `cpu / wall-clock`。
+- `tools/NoiraPlayer.PlaybackQuality.Headless` 在 helper 进程退出后读取 `Stopwatch.Elapsed` 和 `Process.TotalProcessorTime`，计算 `cpu / wall-clock`。
 - process-cost 信号只在数值大于 0 时进入 `modelAnalysis.evidenceSignals`。
 - comparator 只有在 baseline 和 candidate 都有 process-cost 证据时才把这些信号加入 matched signals，避免把旧 schema baseline 的缺失字段误解为改善或退化。
 - 该变更不改变播放器行为、播放策略、evaluator 阈值、case expected behavior 或 pass/fail 规则。

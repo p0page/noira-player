@@ -33,7 +33,7 @@ src/NoiraPlayer.App      UWP app, XAML views, app services, storage
 src/NoiraPlayer.Core     Emby API models, policies, testable core logic
 src/NoiraPlayer.Native   C++/WinRT native playback engine
 tests/                   Automated tests
-docs/                    Design notes, dependency notes, QA notes, plans
+docs/                    Documentation index, design, QA, playback-quality notes
 tools/                   Local helper scripts
 ```
 
@@ -60,7 +60,8 @@ Run core tests:
 dotnet test tests\NoiraPlayer.Core.Tests\NoiraPlayer.Core.Tests.csproj -v minimal
 ```
 
-More implementation and validation notes are in `docs/`.
+Start with `docs/README.md` for the current documentation map, source-of-truth
+rules, and validation notes.
 
 ## Third-Party Software
 

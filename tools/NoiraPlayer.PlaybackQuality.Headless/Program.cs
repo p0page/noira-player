@@ -660,7 +660,7 @@ internal static class NativeHeadlessHarness
 
     private static string GetSourceRevision()
     {
-        var fromEnvironment = Environment.GetEnvironmentVariable("NEXTGENEMBY_SOURCE_REVISION");
+        var fromEnvironment = Environment.GetEnvironmentVariable("NOIRAPLAYER_SOURCE_REVISION");
         if (!string.IsNullOrWhiteSpace(fromEnvironment))
         {
             return fromEnvironment.Trim();

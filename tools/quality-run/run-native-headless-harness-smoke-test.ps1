@@ -170,7 +170,7 @@ Native headless subtitle smoke
 
 function Get-AppRuntimePath {
     $candidates = @(
-        $env:NEXTGENEMBY_VCRUNTIME140_APP_PATH,
+        $env:NOIRAPLAYER_VCRUNTIME140_APP_PATH,
         'C:\Program Files (x86)\Microsoft SDKs\UWPNuGetPackages\microsoft.net.native.compiler\1.7.6\tools\x64\ilc\lib\MSCRT\vcruntime140_app.dll',
         'C:\Users\yqzzx\.nuget\packages\microsoft.web.webview2\1.0.2849.39\tools\wv2winrt\vcruntime140_app.dll',
         'C:\Program Files\PowerToys\KeyboardManagerEditor\vcruntime140_app.dll',

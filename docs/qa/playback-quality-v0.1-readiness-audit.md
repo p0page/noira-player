@@ -1,8 +1,8 @@
-# v0.1 播放质量评测就绪度审计
+﻿# v0.1 播放质量评测就绪度审计
 
 日期：2026-07-08
 
-范围：当前 `NextGenEmby.Core` / `PlaybackQuality` / `quality-run` 评测体系。本审计只判断软件评测裁判是否就绪，不判断播放效果是否提升。
+范围：当前 `NoiraPlayer.Core` / `PlaybackQuality` / `quality-run` 评测体系。本审计只判断软件评测裁判是否就绪，不判断播放效果是否提升。
 
 ## 当前结论
 

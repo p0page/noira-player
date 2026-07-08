@@ -1,8 +1,8 @@
-# TV Streaming And Personal Media Client Research
+﻿# TV Streaming And Personal Media Client Research
 
 Date: 2026-07-07
 
-Scope: visual-system and shell-structure research for Next Gen Xbox Emby on Xbox/TV. This document records the current reference pass before new preview generation or implementation work. It contains no private server credentials, no private artwork, and no implementation changes.
+Scope: visual-system and shell-structure research for Noira on Xbox/TV. This document records the current reference pass before new preview generation or implementation work. It contains no private server credentials, no private artwork, and no implementation changes.
 
 ## Framing
 

@@ -1,4 +1,4 @@
-# 播放质量参考素材集
+﻿# 播放质量参考素材集
 
 这个文档只定义“素材来源和用途”，不把大视频文件放进仓库。目标是给自动化模型循环提供稳定的输入集合，让报告能覆盖 HDR、帧率、码率、DV 降级/拒播、字幕音轨和容器边界。
 
@@ -112,7 +112,7 @@
 
 当前已有：
 - `tools/quality-run/run-playback-core-checks.ps1`
-- `tools/NextGenEmby.PlaybackQuality.Cli`
+- `tools/NoiraPlayer.PlaybackQuality.Cli`
 
 ### Tier 1: 小文件播放 Smoke
 
@@ -155,7 +155,7 @@
 参考素材集应使用 `PlaybackQualityReferenceManifest` 描述，并在进入自动化播放前先通过 CLI 校验：
 
 ```powershell
-dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj -- validate-manifest --manifest docs\qa\playback-quality-reference-manifest.example.json --output manifest-validation.json
+dotnet run --project tools\NoiraPlayer.PlaybackQuality.Cli\NoiraPlayer.PlaybackQuality.Cli.csproj -- validate-manifest --manifest docs\qa\playback-quality-reference-manifest.example.json --output manifest-validation.json
 ```
 
 校验会检查 `caseId` 唯一性、`uri`、`tier`、`purpose`，以及 `expected.codec/width/height/frameRate/hdrKind`。这些字段不完整时，模型不应启动播放优化，因为它无法确认当前样本是不是预期素材。

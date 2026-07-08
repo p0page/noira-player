@@ -1,7 +1,7 @@
 ﻿param(
-    [string]$ServerUrl = $env:NEXTGENEMBY_QA_SERVER_URL,
-    [string]$UserName = $env:NEXTGENEMBY_QA_USERNAME,
-    [string]$Password = $env:NEXTGENEMBY_QA_PASSWORD,
+    [string]$ServerUrl = $env:NOIRAPLAYER_QA_SERVER_URL,
+    [string]$UserName = $env:NOIRAPLAYER_QA_USERNAME,
+    [string]$Password = $env:NOIRAPLAYER_QA_PASSWORD,
     [string]$ItemsJsonPath = '',
     [string]$PlaybackInfoJsonDirectory = '',
     [string]$OutputPath = '',
@@ -663,7 +663,7 @@ function Read-ItemsFromEmby() {
     if ([string]::IsNullOrWhiteSpace($normalizedServerUrl) -or
         [string]::IsNullOrWhiteSpace($UserName) -or
         [string]::IsNullOrWhiteSpace($Password)) {
-        throw 'Set NEXTGENEMBY_QA_SERVER_URL, NEXTGENEMBY_QA_USERNAME, and NEXTGENEMBY_QA_PASSWORD, or pass -ItemsJsonPath for offline generation.'
+        throw 'Set NOIRAPLAYER_QA_SERVER_URL, NOIRAPLAYER_QA_USERNAME, and NOIRAPLAYER_QA_PASSWORD, or pass -ItemsJsonPath for offline generation.'
     }
 
     $auth = Invoke-EmbyJson `

@@ -72,13 +72,13 @@ namespace NoiraPlayer.Core.PlaybackQuality
     public static class PlaybackQualityReportComposer
     {
         private const string CollectorVersionEnvironmentVariable =
-            "NEXTGENEMBY_PLAYBACK_QUALITY_COLLECTOR_VERSION";
+            "NOIRAPLAYER_PLAYBACK_QUALITY_COLLECTOR_VERSION";
         private const string PlayerCoreVersionEnvironmentVariable =
-            "NEXTGENEMBY_PLAYER_CORE_VERSION";
+            "NOIRAPLAYER_PLAYER_CORE_VERSION";
         private const string SourceRevisionEnvironmentVariable =
-            "NEXTGENEMBY_SOURCE_REVISION";
+            "NOIRAPLAYER_SOURCE_REVISION";
         private const string BuildConfigurationEnvironmentVariable =
-            "NEXTGENEMBY_BUILD_CONFIGURATION";
+            "NOIRAPLAYER_BUILD_CONFIGURATION";
 
         public static PlaybackQualityRunResult Compose(PlaybackQualityReportRequest request)
         {
