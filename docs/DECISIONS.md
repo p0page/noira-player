@@ -1,5 +1,15 @@
 # 技术决策
 
+## 2026-07-08: wait reason counter 必须拆分并保留零值证据
+
+决策：`timing.videoAheadWaitCount` 继续作为历史兼容的总等待计数，新增 `timing.audioAheadWaitCount` 和 `timing.videoClockWaitCount`。native `PlaybackGraph` 在 `ShouldWaitForAudio` 分支累加 audio-ahead wait，在 `ShouldWaitForVideoClock` 分支累加 video-clock wait；Core report、analyzer、signal catalog、required-signal policy、headless parser 与 comparison matched signals 均消费这两个拆分字段。
+
+原因：前一轮 near-threshold audio catch-up wait 实验被拒绝后，现有 `videoAheadWaitCount` 只能说明“视频帧被延后渲染”，无法区分等待来自音频时钟追赶、软件 video clock pacing，还是两者混合。继续在这个总计数上调 sleep/tolerance 会让模型把不同根因混在一起判断。
+
+影响：当 report 出现 `videoAheadWaitCount > 0` 时，`audioAheadWaitCount` 和 `videoClockWaitCount` 即使为 0 也会作为 evidence signal 暴露。`0` 在这里不是缺失值，而是“该等待原因未发生”的负证据。`local/native-headless-av-smoke` 当前显示 `videoAheadWaitCount = 71`、`audioAheadWaitCount = 71`、`videoClockWaitCount = 0`，因此该样本的等待更应优先分析 audio-clock gating，而不是 video-clock pacing。
+
+边界：这是 instrumentation/testability 变更，不改变播放行为、评测阈值、样本预期或候选采纳规则。41-case comparison 结果为 `decision = no-change`，不应被解释为播放质量改善。当前拆分首先覆盖 native-headless/Core report 路径；如需 App-hosted WinRT quality-run 同等信号，后续应单独扩展对应 bridge。
+
 ## 2026-07-08: native color evidence 必须来自 helper/source snapshot 与 DXGI runtime observation
 
 决策：App-free native helper 的颜色证据分两层采集：source raw color metadata 来自 FFmpeg 打开的实际流 snapshot，DXGI input/output 与 conversion status 来自 `DxDeviceResources` 在渲染路径中的 runtime observation。`PlaybackQuality.Headless` 只负责解析 helper 输出并写入标准 report，不从 manifest expected、文件名、case id 或预分类结果倒填 actual color evidence。

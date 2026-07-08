@@ -2,6 +2,18 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-08 更新：wait reason evidence 已拆分，A/V jitter 定位更明确
+
+本轮只做 instrumentation/testability，不改变播放策略。`videoAheadWaitCount` 保持为兼容用总计数，同时新增 `audioAheadWaitCount` 与 `videoClockWaitCount`，用于区分 pending video frame 是在等待音频时钟追赶，还是在等待软件 video clock pacing。`PlaybackGraph`、native metrics snapshot、Core report mapper、analyzer、signal catalog、required-signal policy、headless parser、comparison matched signals 和 native-headless smoke 均已接入该拆分。
+
+关键设计点：当 `videoAheadWaitCount > 0` 时，`timing.videoAheadWaitCount`、`timing.audioAheadWaitCount` 和 `timing.videoClockWaitCount` 都会进入 `modelAnalysis.evidenceSignals`。即使 `videoClockWaitCount = 0`，它也必须作为有意义的负证据暴露给模型，避免只记录非零异常造成诊断偏差。
+
+已提交代码：`a2bfdd7 chore: split native wait reason evidence`。验证已通过 `powershell -NoProfile -ExecutionPolicy Bypass -File tools\quality-run\run-playback-core-checks.ps1`，覆盖 389 个 Core 测试、CLI smoke、native-headless smoke、native helper tests、native frame pacing/render loop/display refresh/offscreen tests 和 native Debug x64 build。
+
+已用上一轮 accepted baseline `docs/qa/private/candidates/playback-core-tuning-process-cost-evidence-41case-b292019.local/` 生成同 manifest candidate：`docs/qa/private/candidates/playback-core-tuning-wait-reason-evidence-41case-a2bfdd7.local/`，并输出 comparison：`docs/qa/private/comparisons/playback-core-tuning-wait-reason-evidence-41case-a2bfdd7.local/`。结果为 41/41 case 可比，baseline/candidate validation 均通过，`decision = no-change`，`improved = 0`，`regressed = 0`，`mixed = 0`，`unchanged = 41`，strong confidence 41/41。
+
+关键 A/V 样本证据：`local/native-headless-av-smoke` 中 `videoAheadWaitCount = 71`，`audioAheadWaitCount = 71`，`videoClockWaitCount = 0`，`avSync = synced`，且三个 wait reason signals 均进入 evidence。当前可判断该样本的等待主要来自 audio-clock gating，而不是 software video clock pacing；但这仍不是播放质量优化，只是让后续调优有更可靠的根因信号。
+
 ## 2026-07-08 更新：native-headless 首个 color pipeline instrumentation 已进入 report
 
 App-free native helper 现在会从 FFmpeg source snapshot 输出 `source.videoRange`、`source.colorPrimaries`、`source.colorTransfer` 和 `source.colorSpace`，并从 `DxDeviceResources` 输出 `colorPipeline.dxgiInput`、`colorPipeline.dxgiOutput`、`colorPipeline.conversionStatus` 与 `isVideoProcessorColorSpaceValidated`。这些字段已经进入 `PlaybackQuality.Headless` 生成的 `PlaybackQualityRunResult`，并被 `materialize-native-harness-report-set -> validate-report-set -> analyze-report-set` 消费。
