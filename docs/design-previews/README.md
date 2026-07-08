@@ -7,7 +7,6 @@ Development handoff:
 - `../DESIGN.md` is the source of truth for tokens, visual rules, artwork policy, focus behavior, accessibility, and fallback requirements.
 - `../design-handoff-2026-07-07.md` explains how to consume the design system during page development.
 - `../a3-visual-convergence-rules.md` defines the current screenshot-first convergence phase for the retained A3 render targets.
-- `playback-osd-compact.html` is the current playback OSD HTML preview. Use `?state=tracks` to inspect the subtitle/audio menu state. It is useful for density and layout checks, not native blur quality.
 
 ## Retained Native Render Targets
 

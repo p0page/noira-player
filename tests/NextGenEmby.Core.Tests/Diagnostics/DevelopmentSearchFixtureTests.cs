@@ -1,5 +1,4 @@
 using System;
-using System.IO;
 using System.Linq;
 using NextGenEmby.Core.Diagnostics;
 using NextGenEmby.Core.Emby;
@@ -43,28 +42,15 @@ public sealed class DevelopmentSearchFixtureTests
     }
 
     [Fact]
-    public void CreateItemsForScope_Provides_Packaged_Artwork_For_Result_Cards()
+    public void CreateItemsForScope_Does_Not_Depend_On_Packaged_Qa_Artwork()
     {
-        var root = FindRepositoryRoot();
         var artworkUris = DevelopmentSearchFixture.CreateArtworkUris();
         var items = DevelopmentSearchFixture.CreateItemsForScope("all")
-            .Where(item => !string.IsNullOrWhiteSpace(item.PrimaryImageTag))
             .ToList();
 
         Assert.NotEmpty(items);
-        foreach (var item in items)
-        {
-            var key = DevelopmentSearchFixture.ArtworkKey(item.Id, "Primary");
-            Assert.True(artworkUris.TryGetValue(key, out var uri), "Missing search artwork URI for " + key);
-            Assert.StartsWith("ms-appx:///Assets/QaHome/", uri, StringComparison.Ordinal);
-
-            var relativePath = uri.Substring("ms-appx:///".Length).Replace('/', Path.DirectorySeparatorChar);
-            var assetPath = Path.Combine(root, "src", "NextGenEmby.App", relativePath);
-            Assert.True(File.Exists(assetPath), "Missing packaged QA artwork asset " + assetPath);
-
-            Assert.Equal("qa", item.PrimaryImageTag);
-            Assert.Equal(item.Id, item.PrimaryImageItemId);
-        }
+        Assert.Empty(artworkUris);
+        Assert.All(items, item => Assert.True(string.IsNullOrWhiteSpace(item.PrimaryImageTag)));
     }
 
     [Fact]
@@ -82,19 +68,4 @@ public sealed class DevelopmentSearchFixtureTests
         Assert.False(artworkUris.ContainsKey(DevelopmentSearchFixture.ArtworkKey(item.Id, "Primary")));
     }
 
-    private static string FindRepositoryRoot()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory != null)
-        {
-            if (File.Exists(Path.Combine(directory.FullName, "tools", "Generate-AppIconAssets.ps1")))
-            {
-                return directory.FullName;
-            }
-
-            directory = directory.Parent;
-        }
-
-        throw new InvalidOperationException("Repository root not found.");
-    }
 }

@@ -340,47 +340,33 @@
                         Spacing="8">
                         <Border
                             x:Name="AudioDecisionChip"
-                            MinWidth="204"
-                            MaxWidth="260"
+                            MinWidth="188"
+                            MaxWidth="240"
                             Background="{StaticResource AppDetailsDecisionTileBrush}"
                             CornerRadius="8"
-                            Padding="16,10">
-                            <StackPanel Spacing="2">
-                                <TextBlock
-                                    Text="Audio"
-                                    FontSize="13"
-                                    Foreground="{StaticResource AppTextSubtleBrush}"
-                                    MaxLines="1" />
-                                <TextBlock
-                                    x:Name="AudioSummaryBlock"
-                                    FontSize="16"
-                                    Foreground="{StaticResource AppMutedTextBrush}"
-                                    MaxLines="1"
-                                    TextTrimming="CharacterEllipsis"
-                                    TextWrapping="NoWrap" />
-                            </StackPanel>
+                            Padding="14,8">
+                            <TextBlock
+                                x:Name="AudioSummaryBlock"
+                                FontSize="16"
+                                Foreground="{StaticResource AppMutedTextBrush}"
+                                MaxLines="1"
+                                TextTrimming="CharacterEllipsis"
+                                TextWrapping="NoWrap" />
                         </Border>
                         <Border
                             x:Name="SubtitleDecisionChip"
-                            MinWidth="204"
-                            MaxWidth="260"
+                            MinWidth="188"
+                            MaxWidth="240"
                             Background="{StaticResource AppDetailsDecisionTileBrush}"
                             CornerRadius="8"
-                            Padding="16,10">
-                            <StackPanel Spacing="2">
-                                <TextBlock
-                                    Text="Subtitles"
-                                    FontSize="13"
-                                    Foreground="{StaticResource AppTextSubtleBrush}"
-                                    MaxLines="1" />
-                                <TextBlock
-                                    x:Name="SubtitleSummaryBlock"
-                                    FontSize="16"
-                                    Foreground="{StaticResource AppMutedTextBrush}"
-                                    MaxLines="1"
-                                    TextTrimming="CharacterEllipsis"
-                                    TextWrapping="NoWrap" />
-                            </StackPanel>
+                            Padding="14,8">
+                            <TextBlock
+                                x:Name="SubtitleSummaryBlock"
+                                FontSize="16"
+                                Foreground="{StaticResource AppMutedTextBrush}"
+                                MaxLines="1"
+                                TextTrimming="CharacterEllipsis"
+                                TextWrapping="NoWrap" />
                         </Border>
                     </StackPanel>
                 </Grid>

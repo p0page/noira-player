@@ -351,7 +351,7 @@ If a secondary page cannot be drawn by composing existing tokens, card families,
 
 ## Native Render Intent
 
-HTML previews in `docs/design-previews/` are structure and density checks. They are useful for D-pad geometry, safe areas, row composition, and basic hierarchy, but they are not authoritative for native material quality, blur softness, compositor cost, or exact focus animation.
+Historical HTML previews are not part of the current implementation target. Use the retained A3 native render targets in `docs/design-previews/` for visual mood and density, then validate final native material, blur softness, compositor cost, and focus animation inside the Xbox/XAML implementation.
 
 Generated native render targets are mood and material references. They can show the desired final feeling better than HTML when the target depends on platform rendering, especially video-backed blur, artwork atmosphere, and subtle local dimming. They are still not implementation screenshots. If a render conflicts with the token rules in this file, this file wins.
 
@@ -785,7 +785,7 @@ Suggested migration mapping:
 - Current green `AppActionColor #78E68B` should shrink to `play_accent #78B985` and appear only as a micro-signal.
 - Current warm `AppWarmColor #E4B84C` should be retired from default UI progress. Map progress to muted green `secondary/progress #5D8F68`.
 - Current surfaces stay in the same dark family but should shift toward the matte `canvas`, `surface`, and `surface_raised` roles.
-- Current generated app icon concepts under `docs/icon-concepts` are exploration artifacts only and should not define the final visual identity.
+- Superseded generated app icon concepts were removed from the worktree. The production icon family is owned by `tools/Generate-AppIconAssets.ps1`.
 
 Known implementation drift to resolve later:
 

@@ -6,7 +6,7 @@ namespace NextGenEmby.Core.Diagnostics
 {
     public static class DevelopmentMusicFixture
     {
-        private const string ArtworkTag = "qa";
+        private const string ArtworkTag = "";
         private const long MinuteTicks = TimeSpan.TicksPerMinute;
 
         public static DevelopmentMusicFixtureSnapshot Create()
@@ -14,24 +14,24 @@ namespace NextGenEmby.Core.Diagnostics
             var artworkUris = new Dictionary<string, string>(StringComparer.Ordinal);
             var artists = new[]
             {
-                Artist(artworkUris, "qa-artist-kairos", "Kairos Collective", 2026, 10, "qa-poster-11.png"),
-                Artist(artworkUris, "qa-artist-mira", "Mira Vale", 2025, 12, "qa-poster-12.png"),
-                Artist(artworkUris, "qa-artist-signal", "Signal Room", 2024, 8, "qa-poster-13.png")
+                Artist(artworkUris, "qa-artist-kairos", "Kairos Collective", 2026, 10, ""),
+                Artist(artworkUris, "qa-artist-mira", "Mira Vale", 2025, 12, ""),
+                Artist(artworkUris, "qa-artist-signal", "Signal Room", 2024, 8, "")
             };
             var albums = new[]
             {
-                Album(artworkUris, "qa-album-nocturne", "Nocturne Signals", artists[0], 2026, 10, "qa-poster-11.png"),
-                Album(artworkUris, "qa-album-city", "City Lights Archive", artists[1], 2025, 12, "qa-poster-12.png"),
-                Album(artworkUris, "qa-album-lobby", "Neon Lobby Themes", artists[2], 2024, 8, "qa-poster-13.png")
+                Album(artworkUris, "qa-album-nocturne", "Nocturne Signals", artists[0], 2026, 10, ""),
+                Album(artworkUris, "qa-album-city", "City Lights Archive", artists[1], 2025, 12, ""),
+                Album(artworkUris, "qa-album-lobby", "Neon Lobby Themes", artists[2], 2024, 8, "")
             };
             var songs = new[]
             {
-                Song(artworkUris, "qa-song-opening", "Opening Credits", albums[0], artists[0], 1, 0, 3, "qa-poster-11.png"),
-                Song(artworkUris, "qa-song-glass", "Glass Elevator", albums[0], artists[0], 2, 0, 4, "qa-poster-11.png"),
-                Song(artworkUris, "qa-song-static", "Soft Static", albums[0], artists[0], 3, 0, 2, "qa-poster-11.png"),
-                Song(artworkUris, "qa-song-late", "Late Train Window", albums[1], artists[1], 1, 0, 5, "qa-poster-12.png"),
-                Song(artworkUris, "qa-song-rooftop", "Rooftop Weather", albums[1], artists[1], 2, 0, 4, "qa-poster-12.png"),
-                Song(artworkUris, "qa-song-lobby", "Lobby Theme", albums[2], artists[2], 1, 0, 3, "qa-poster-13.png")
+                Song(artworkUris, "qa-song-opening", "Opening Credits", albums[0], artists[0], 1, 0, 3, ""),
+                Song(artworkUris, "qa-song-glass", "Glass Elevator", albums[0], artists[0], 2, 0, 4, ""),
+                Song(artworkUris, "qa-song-static", "Soft Static", albums[0], artists[0], 3, 0, 2, ""),
+                Song(artworkUris, "qa-song-late", "Late Train Window", albums[1], artists[1], 1, 0, 5, ""),
+                Song(artworkUris, "qa-song-rooftop", "Rooftop Weather", albums[1], artists[1], 2, 0, 4, ""),
+                Song(artworkUris, "qa-song-lobby", "Lobby Theme", albums[2], artists[2], 1, 0, 3, "")
             };
 
             return new DevelopmentMusicFixtureSnapshot(artists, albums, songs, artworkUris);
@@ -144,7 +144,10 @@ namespace NextGenEmby.Core.Diagnostics
             string imageType,
             string assetName)
         {
-            artworkUris[ArtworkKey(itemId, imageType)] = "ms-appx:///Assets/QaHome/" + assetName;
+            _ = artworkUris;
+            _ = itemId;
+            _ = imageType;
+            _ = assetName;
         }
     }
 }

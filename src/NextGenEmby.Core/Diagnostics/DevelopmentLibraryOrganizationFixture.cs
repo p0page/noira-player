@@ -6,7 +6,7 @@ namespace NextGenEmby.Core.Diagnostics
 {
     public static class DevelopmentLibraryOrganizationFixture
     {
-        private const string ArtworkTag = "qa";
+        private const string ArtworkTag = "";
         private const long MinuteTicks = TimeSpan.TicksPerMinute;
 
         public static DevelopmentLibraryOrganizationFixtureSnapshot Create()
@@ -14,25 +14,25 @@ namespace NextGenEmby.Core.Diagnostics
             var artworkUris = new Dictionary<string, string>(StringComparer.Ordinal);
             var items = new[]
             {
-                Container(artworkUris, "fixture-collection-signal", "Signal Archives", "BoxSet", 4, "qa-wide-06.png"),
-                Container(artworkUris, "fixture-collection-city", "City Nights", "BoxSet", 3, "qa-wide-07.png"),
-                Container(artworkUris, "fixture-playlist-weekend", "Weekend Queue", "Playlist", 5, "qa-wide-08.png"),
-                Container(artworkUris, "fixture-playlist-documentary", "Documentary Stack", "Playlist", 3, "qa-wide-12.png"),
-                MediaItem(artworkUris, "fixture-org-aurora", "Aurora Protocol", "Movie", "fixture-collection-signal", 2026, 118, "qa-poster-01.png", "qa-wide-01.png"),
-                MediaItem(artworkUris, "fixture-org-midnight", "Midnight Signal", "Movie", "fixture-collection-signal", 2025, 104, "qa-poster-02.png", "qa-wide-02.png"),
-                MediaItem(artworkUris, "fixture-org-afterimage", "Afterimage", "Movie", "fixture-collection-signal", 2026, 111, "qa-poster-04.png", "qa-wide-04.png"),
-                MediaItem(artworkUris, "fixture-org-orbit", "Quiet Orbit", "Movie", "fixture-collection-signal", 2023, 126, "qa-poster-05.png", "qa-wide-05.png"),
-                MediaItem(artworkUris, "fixture-org-harbor", "Harbor Run", "Movie", "fixture-collection-city", 2024, 96, "qa-poster-03.png", "qa-wide-03.png"),
-                MediaItem(artworkUris, "fixture-org-summit", "Summit Line", "Movie", "fixture-collection-city", 2022, 92, "qa-poster-06.png", "qa-wide-06.png"),
-                MediaItem(artworkUris, "fixture-org-city-night", "City at Night", "Movie", "fixture-collection-city", 2023, 73, "qa-poster-13.png", "qa-wide-13.png"),
-                MediaItem(artworkUris, "fixture-org-northline-e4", "Northline S1:E4", "Episode", "fixture-playlist-weekend", 2026, 49, "qa-poster-10.png", "qa-wide-10.png", resumeMinutes: 12),
-                MediaItem(artworkUris, "fixture-org-roomtone-e1", "Room Tone S2:E1", "Episode", "fixture-playlist-weekend", 2025, 51, "qa-poster-11.png", "qa-wide-11.png"),
-                MediaItem(artworkUris, "fixture-org-ocean", "Ocean Archive", "Movie", "fixture-playlist-weekend", 2024, 88, "qa-poster-12.png", "qa-wide-12.png"),
-                MediaItem(artworkUris, "fixture-org-sound", "Sound Room", "Movie", "fixture-playlist-weekend", 2022, 81, "qa-poster-14.png", "qa-wide-14.png"),
-                MediaItem(artworkUris, "fixture-org-roomtone", "Room Tone", "Series", "fixture-playlist-weekend", 2025, 52, "qa-poster-08.png", "qa-wide-08.png"),
-                MediaItem(artworkUris, "fixture-org-doc-ocean", "Ocean Archive", "Movie", "fixture-playlist-documentary", 2024, 88, "qa-poster-12.png", "qa-wide-12.png"),
-                MediaItem(artworkUris, "fixture-org-doc-city", "City at Night", "Movie", "fixture-playlist-documentary", 2023, 73, "qa-poster-13.png", "qa-wide-13.png"),
-                MediaItem(artworkUris, "fixture-org-doc-sound", "Sound Room", "Movie", "fixture-playlist-documentary", 2022, 81, "qa-poster-14.png", "qa-wide-14.png")
+                Container(artworkUris, "fixture-collection-signal", "Signal Archives", "BoxSet", 4, ""),
+                Container(artworkUris, "fixture-collection-city", "City Nights", "BoxSet", 3, ""),
+                Container(artworkUris, "fixture-playlist-weekend", "Weekend Queue", "Playlist", 5, ""),
+                Container(artworkUris, "fixture-playlist-documentary", "Documentary Stack", "Playlist", 3, ""),
+                MediaItem(artworkUris, "fixture-org-aurora", "Aurora Protocol", "Movie", "fixture-collection-signal", 2026, 118, "", ""),
+                MediaItem(artworkUris, "fixture-org-midnight", "Midnight Signal", "Movie", "fixture-collection-signal", 2025, 104, "", ""),
+                MediaItem(artworkUris, "fixture-org-afterimage", "Afterimage", "Movie", "fixture-collection-signal", 2026, 111, "", ""),
+                MediaItem(artworkUris, "fixture-org-orbit", "Quiet Orbit", "Movie", "fixture-collection-signal", 2023, 126, "", ""),
+                MediaItem(artworkUris, "fixture-org-harbor", "Harbor Run", "Movie", "fixture-collection-city", 2024, 96, "", ""),
+                MediaItem(artworkUris, "fixture-org-summit", "Summit Line", "Movie", "fixture-collection-city", 2022, 92, "", ""),
+                MediaItem(artworkUris, "fixture-org-city-night", "City at Night", "Movie", "fixture-collection-city", 2023, 73, "", ""),
+                MediaItem(artworkUris, "fixture-org-northline-e4", "Northline S1:E4", "Episode", "fixture-playlist-weekend", 2026, 49, "", "", resumeMinutes: 12),
+                MediaItem(artworkUris, "fixture-org-roomtone-e1", "Room Tone S2:E1", "Episode", "fixture-playlist-weekend", 2025, 51, "", ""),
+                MediaItem(artworkUris, "fixture-org-ocean", "Ocean Archive", "Movie", "fixture-playlist-weekend", 2024, 88, "", ""),
+                MediaItem(artworkUris, "fixture-org-sound", "Sound Room", "Movie", "fixture-playlist-weekend", 2022, 81, "", ""),
+                MediaItem(artworkUris, "fixture-org-roomtone", "Room Tone", "Series", "fixture-playlist-weekend", 2025, 52, "", ""),
+                MediaItem(artworkUris, "fixture-org-doc-ocean", "Ocean Archive", "Movie", "fixture-playlist-documentary", 2024, 88, "", ""),
+                MediaItem(artworkUris, "fixture-org-doc-city", "City at Night", "Movie", "fixture-playlist-documentary", 2023, 73, "", ""),
+                MediaItem(artworkUris, "fixture-org-doc-sound", "Sound Room", "Movie", "fixture-playlist-documentary", 2022, 81, "", "")
             };
 
             return new DevelopmentLibraryOrganizationFixtureSnapshot(items, artworkUris);
@@ -133,7 +133,10 @@ namespace NextGenEmby.Core.Diagnostics
             string imageType,
             string assetName)
         {
-            artworkUris[ArtworkKey(itemId, imageType)] = "ms-appx:///Assets/QaHome/" + assetName;
+            _ = artworkUris;
+            _ = itemId;
+            _ = imageType;
+            _ = assetName;
         }
     }
 }

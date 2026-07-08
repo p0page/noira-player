@@ -1,4 +1,3 @@
-using System.IO;
 using System.Linq;
 using NextGenEmby.Core.Diagnostics;
 using Xunit;
@@ -34,38 +33,12 @@ public sealed class DevelopmentLibraryOrganizationFixtureTests
     }
 
     [Fact]
-    public void ArtworkUris_Point_To_Packaged_Qa_Assets()
+    public void ArtworkUris_Are_Empty_After_Removing_Packaged_Qa_Assets()
     {
         var fixture = DevelopmentLibraryOrganizationFixture.Create();
-        var root = FindRepositoryRoot();
-        var expectedKeys = fixture.Items
-            .Select(item => item.Type == "BoxSet" || item.Type == "Playlist"
-                ? DevelopmentLibraryOrganizationFixture.ArtworkKey(item.Id, "Thumb")
-                : DevelopmentLibraryOrganizationFixture.ArtworkKey(item.Id, "Primary"))
-            .ToList();
 
-        foreach (var key in expectedKeys)
-        {
-            Assert.True(fixture.ArtworkUris.TryGetValue(key, out var uri), "Missing fixture artwork URI for " + key);
-            var relativeAsset = uri.Replace("ms-appx:///", "").Replace('/', Path.DirectorySeparatorChar);
-            var assetPath = Path.Combine(root, "src", "NextGenEmby.App", relativeAsset);
-            Assert.True(File.Exists(assetPath), "Missing packaged QA artwork asset " + assetPath);
-        }
-    }
-
-    private static string FindRepositoryRoot()
-    {
-        var directory = new DirectoryInfo(System.AppContext.BaseDirectory);
-        while (directory != null)
-        {
-            if (File.Exists(Path.Combine(directory.FullName, "tools", "Generate-AppIconAssets.ps1")))
-            {
-                return directory.FullName;
-            }
-
-            directory = directory.Parent;
-        }
-
-        throw new DirectoryNotFoundException("Repository root not found.");
+        Assert.Empty(fixture.ArtworkUris);
+        Assert.All(fixture.Items, item => Assert.True(string.IsNullOrWhiteSpace(item.PrimaryImageTag)));
+        Assert.All(fixture.Items, item => Assert.True(string.IsNullOrWhiteSpace(item.ThumbImageTag)));
     }
 }

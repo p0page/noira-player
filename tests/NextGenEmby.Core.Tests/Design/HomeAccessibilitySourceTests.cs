@@ -203,10 +203,15 @@ public sealed class HomeAccessibilitySourceTests
         var homeXaml = File.ReadAllText(Path.Combine(root, "src", "NextGenEmby.App", "Views", "HomePage.xaml"));
 
         var titleStyle = ExtractSourceBlock(appXaml, "<Style x:Key=\"TvPageTitleTextStyle\"", "<Style x:Key=\"TvPageSubtitleTextStyle\"");
+        var headerBlock = ExtractSourceBlock(homeXaml, "x:Name=\"HomeChromeHeader\"", "x:Name=\"HeroBackdropImage\"");
 
         Assert.Contains("<Setter Property=\"FontSize\" Value=\"28\" />", titleStyle);
         Assert.DoesNotContain("<Setter Property=\"FontSize\" Value=\"34\" />", titleStyle);
-        Assert.Contains("Opacity=\"0.72\"", homeXaml);
+        Assert.Contains("<x:Double x:Key=\"TvHomeHeaderChromeOpacity\">0.56</x:Double>", appXaml);
+        Assert.Contains("Opacity=\"{StaticResource TvHomeHeaderChromeOpacity}\"", headerBlock);
+        Assert.Contains("Visibility=\"Collapsed\"", headerBlock);
+        Assert.Contains("Opacity=\"0.48\"", headerBlock);
+        Assert.DoesNotContain("Opacity=\"0.72\"", headerBlock);
         Assert.DoesNotContain("UseSystemFocusVisuals=\"True\"", homeXaml);
     }
 

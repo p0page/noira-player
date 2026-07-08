@@ -6,7 +6,7 @@ namespace NextGenEmby.Core.Diagnostics
 {
     public static class DevelopmentLiveTvFixture
     {
-        private const string ArtworkTag = "qa";
+        private const string ArtworkTag = "";
 
         public static DevelopmentLiveTvFixtureSnapshot Create()
         {
@@ -24,8 +24,8 @@ namespace NextGenEmby.Core.Diagnostics
                     "Headlines, weather, and transit updates for the next hour.",
                     baseDate,
                     TimeSpan.FromMinutes(30),
-                    "qa-wide-01.png",
-                    "qa-wide-05.png",
+                    "",
+                    "",
                     isNews: true),
                 Channel(
                     artworkUris,
@@ -37,8 +37,8 @@ namespace NextGenEmby.Core.Diagnostics
                     "A curated movie block used to validate long Live TV program descriptions.",
                     baseDate.AddMinutes(10),
                     TimeSpan.FromMinutes(110),
-                    "qa-wide-02.png",
-                    "qa-wide-06.png",
+                    "",
+                    "",
                     isMovie: true),
                 Channel(
                     artworkUris,
@@ -50,8 +50,8 @@ namespace NextGenEmby.Core.Diagnostics
                     "Live sports coverage with pre-game context and halftime analysis.",
                     baseDate.AddMinutes(20),
                     TimeSpan.FromMinutes(95),
-                    "qa-wide-03.png",
-                    "qa-wide-10.png",
+                    "",
+                    "",
                     isSports: true),
                 Channel(
                     artworkUris,
@@ -63,8 +63,8 @@ namespace NextGenEmby.Core.Diagnostics
                     "A family-safe workshop episode with simple craft segments.",
                     baseDate.AddMinutes(5),
                     TimeSpan.FromMinutes(25),
-                    "qa-wide-04.png",
-                    "qa-wide-11.png",
+                    "",
+                    "",
                     isKids: true)
             };
 
@@ -130,7 +130,10 @@ namespace NextGenEmby.Core.Diagnostics
             string imageType,
             string assetName)
         {
-            artworkUris[ArtworkKey(itemId, imageType)] = "ms-appx:///Assets/QaHome/" + assetName;
+            _ = artworkUris;
+            _ = itemId;
+            _ = imageType;
+            _ = assetName;
         }
     }
 }

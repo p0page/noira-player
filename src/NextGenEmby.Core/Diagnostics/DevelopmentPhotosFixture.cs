@@ -30,7 +30,7 @@ namespace NextGenEmby.Core.Diagnostics
 
     public static class DevelopmentPhotosFixture
     {
-        private const string ArtworkTag = "qa";
+        private const string ArtworkTag = "";
 
         public static DevelopmentPhotosFixtureSnapshot Create()
         {
@@ -41,25 +41,25 @@ namespace NextGenEmby.Core.Diagnostics
                 "Night Market",
                 2026,
                 12,
-                "qa-wide-08.png");
+                "");
 
             var items = new[]
             {
                 album,
-                Photo(artworkUris, "fixture-photo-rooftop", "Rooftop After Rain", "", 2026, "qa-wide-09.png"),
-                Photo(artworkUris, "fixture-photo-window", "Window Seat", "", 2025, "qa-wide-10.png"),
-                Photo(artworkUris, "fixture-photo-lanterns", "Lantern Street", album.Id, 2026, "qa-wide-11.png"),
-                Photo(artworkUris, "fixture-photo-noodles", "Late Noodles", album.Id, 2026, "qa-wide-12.png"),
-                Photo(artworkUris, "fixture-photo-crossing", "Blue Crossing", album.Id, 2026, "qa-wide-13.png"),
-                Photo(artworkUris, "fixture-photo-last-train", "Last Train", album.Id, 2026, "qa-wide-14.png"),
-                Photo(artworkUris, "fixture-photo-station-arcade", "Station Arcade", album.Id, 2026, "qa-wide-09.png"),
-                Photo(artworkUris, "fixture-photo-rain-glass", "Rain Glass", album.Id, 2026, "qa-wide-10.png"),
-                Photo(artworkUris, "fixture-photo-rooftop-market", "Rooftop Market", album.Id, 2026, "qa-wide-11.png"),
-                Photo(artworkUris, "fixture-photo-midnight-stall", "Midnight Stall", album.Id, 2026, "qa-wide-12.png"),
-                Photo(artworkUris, "fixture-photo-neon-crosswalk", "Neon Crosswalk", album.Id, 2026, "qa-wide-13.png"),
-                Photo(artworkUris, "fixture-photo-platform-lights", "Platform Lights", album.Id, 2026, "qa-wide-14.png"),
-                Photo(artworkUris, "fixture-photo-market-awning", "Market Awning", album.Id, 2026, "qa-wide-09.png"),
-                Photo(artworkUris, "fixture-photo-closing-time", "Closing Time", album.Id, 2026, "qa-wide-10.png")
+                Photo(artworkUris, "fixture-photo-rooftop", "Rooftop After Rain", "", 2026, ""),
+                Photo(artworkUris, "fixture-photo-window", "Window Seat", "", 2025, ""),
+                Photo(artworkUris, "fixture-photo-lanterns", "Lantern Street", album.Id, 2026, ""),
+                Photo(artworkUris, "fixture-photo-noodles", "Late Noodles", album.Id, 2026, ""),
+                Photo(artworkUris, "fixture-photo-crossing", "Blue Crossing", album.Id, 2026, ""),
+                Photo(artworkUris, "fixture-photo-last-train", "Last Train", album.Id, 2026, ""),
+                Photo(artworkUris, "fixture-photo-station-arcade", "Station Arcade", album.Id, 2026, ""),
+                Photo(artworkUris, "fixture-photo-rain-glass", "Rain Glass", album.Id, 2026, ""),
+                Photo(artworkUris, "fixture-photo-rooftop-market", "Rooftop Market", album.Id, 2026, ""),
+                Photo(artworkUris, "fixture-photo-midnight-stall", "Midnight Stall", album.Id, 2026, ""),
+                Photo(artworkUris, "fixture-photo-neon-crosswalk", "Neon Crosswalk", album.Id, 2026, ""),
+                Photo(artworkUris, "fixture-photo-platform-lights", "Platform Lights", album.Id, 2026, ""),
+                Photo(artworkUris, "fixture-photo-market-awning", "Market Awning", album.Id, 2026, ""),
+                Photo(artworkUris, "fixture-photo-closing-time", "Closing Time", album.Id, 2026, "")
             };
 
             return new DevelopmentPhotosFixtureSnapshot(items, artworkUris);
@@ -124,7 +124,10 @@ namespace NextGenEmby.Core.Diagnostics
             string imageType,
             string assetName)
         {
-            artworkUris[ArtworkKey(itemId, imageType)] = "ms-appx:///Assets/QaHome/" + assetName;
+            _ = artworkUris;
+            _ = itemId;
+            _ = imageType;
+            _ = assetName;
         }
     }
 }

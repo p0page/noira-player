@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using NextGenEmby.Core.Diagnostics;
 using NextGenEmby.Core.Emby;
@@ -40,32 +39,15 @@ public sealed class DevelopmentHomeFixtureTests
     }
 
     [Fact]
-    public void Create_Provides_Packaged_Artwork_For_Visible_Home_Surfaces()
+    public void Create_Does_Not_Depend_On_Packaged_Qa_Artwork()
     {
-        var root = FindRepositoryRoot();
         var fixture = DevelopmentHomeFixture.Create();
-        var visibleArtworkKeys = fixture.LibraryViews
-            .Select(view => DevelopmentHomeFixture.ArtworkKey(view.Id, "Thumb"))
-            .Concat(fixture.ConfiguredRows.Select(row => DevelopmentHomeFixture.ArtworkKey(row.ParentItem.Id, "Thumb")))
-            .Concat(fixture.ContinueItems.Take(1).Select(item => DevelopmentHomeFixture.ArtworkKey(item.Id, "Primary")))
-            .Concat(fixture.ContinueItems.Take(1).Select(item => DevelopmentHomeFixture.ArtworkKey(item.Id, "Backdrop")))
-            .Concat(fixture.LatestItems
-                .Where(item => !string.IsNullOrWhiteSpace(item.PrimaryImageTag))
-                .Select(item => DevelopmentHomeFixture.ArtworkKey(item.Id, "Primary")))
-            .Distinct(StringComparer.Ordinal)
-            .ToList();
 
-        Assert.NotEmpty(visibleArtworkKeys);
-
-        foreach (var key in visibleArtworkKeys)
-        {
-            Assert.True(fixture.ArtworkUris.TryGetValue(key, out var uri), "Missing artwork URI for " + key);
-            Assert.StartsWith("ms-appx:///Assets/QaHome/", uri, StringComparison.Ordinal);
-
-            var relativePath = uri.Substring("ms-appx:///".Length).Replace('/', Path.DirectorySeparatorChar);
-            var assetPath = Path.Combine(root, "src", "NextGenEmby.App", relativePath);
-            Assert.True(File.Exists(assetPath), "Missing packaged QA artwork asset " + assetPath);
-        }
+        Assert.Empty(fixture.ArtworkUris);
+        Assert.All(fixture.LibraryViews, view => Assert.True(string.IsNullOrWhiteSpace(view.ThumbImageTag)));
+        Assert.All(fixture.LatestItems, item => Assert.True(string.IsNullOrWhiteSpace(item.PrimaryImageTag)));
+        Assert.All(fixture.ContinueItems, item => Assert.True(string.IsNullOrWhiteSpace(item.PrimaryImageTag)));
+        Assert.All(fixture.ContinueItems, item => Assert.True(string.IsNullOrWhiteSpace(item.BackdropImageTag)));
     }
 
     [Fact]
@@ -106,7 +88,7 @@ public sealed class DevelopmentHomeFixtureTests
     }
 
     [Fact]
-    public void Create_Configured_Rows_Carry_Section_Owned_Artwork()
+    public void Create_Configured_Rows_Do_Not_Carry_Packaged_Qa_Artwork()
     {
         var fixture = DevelopmentHomeFixture.Create();
         var row = fixture.ConfiguredRows.Single(item => item.Title == "Hot Movies");
@@ -115,40 +97,9 @@ public sealed class DevelopmentHomeFixtureTests
         Assert.NotNull(sectionProperty);
         var section = Assert.IsType<EmbyHomeSection>(sectionProperty!.GetValue(row));
         Assert.Equal("qa-section-hot-movies", section.Id);
-        Assert.Equal("qa", section.ThumbImageTag);
+        Assert.True(string.IsNullOrWhiteSpace(section.ThumbImageTag));
         Assert.Equal("qa-section-hot-movies", section.ThumbImageItemId);
-        Assert.True(fixture.ArtworkUris.ContainsKey(DevelopmentHomeFixture.ArtworkKey(section.Id, "Thumb")));
-    }
-
-    [Fact]
-    public void Qa_Artwork_Generator_Uses_Local_Poster_And_Wide_Scrims()
-    {
-        var script = File.ReadAllText(Path.Combine(
-            FindRepositoryRoot(),
-            "tools",
-            "Generate-HomeQaArtworkAssets.ps1"));
-
-        Assert.Contains("New-QaPosterArtwork", script);
-        Assert.Contains("New-QaWideArtwork", script);
-        Assert.Contains("LinearGradientBrush", script);
-        Assert.Contains("Draw-PosterTypography", script);
-        Assert.DoesNotContain("FromArgb(80, 0, 0, 0)", script);
-    }
-
-    private static string FindRepositoryRoot()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory != null)
-        {
-            if (File.Exists(Path.Combine(directory.FullName, "tools", "Generate-AppIconAssets.ps1")))
-            {
-                return directory.FullName;
-            }
-
-            directory = directory.Parent;
-        }
-
-        throw new InvalidOperationException("Repository root not found.");
+        Assert.False(fixture.ArtworkUris.ContainsKey(DevelopmentHomeFixture.ArtworkKey(section.Id, "Thumb")));
     }
 
     private static int FindRowIndex(

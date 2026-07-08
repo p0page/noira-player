@@ -1,5 +1,4 @@
 using System;
-using System.IO;
 using System.Linq;
 using NextGenEmby.Core.Diagnostics;
 using Xunit;
@@ -28,32 +27,17 @@ public sealed class DevelopmentDetailsFixtureTests
     }
 
     [Fact]
-    public void Create_Provides_Packaged_Artwork_For_Visible_Details_Surfaces()
+    public void Create_Does_Not_Depend_On_Packaged_Qa_Artwork()
     {
-        var root = FindRepositoryRoot();
         var fixture = DevelopmentDetailsFixture.Create();
-        var visibleArtworkKeys = new[]
-            {
-                DevelopmentDetailsFixture.ArtworkKey(fixture.Item.Id, "Primary"),
-                DevelopmentDetailsFixture.ArtworkKey(fixture.Item.Id, "Backdrop")
-            }
-            .Concat(fixture.SimilarItems.Select(item => DevelopmentDetailsFixture.ArtworkKey(item.Id, "Primary")))
-            .Concat(fixture.CollectionTargets.Select(item => DevelopmentDetailsFixture.ArtworkKey(item.Id, "Thumb")))
-            .Concat(fixture.PlaylistTargets.Select(item => DevelopmentDetailsFixture.ArtworkKey(item.Id, "Thumb")))
-            .Concat(fixture.Item.People.Select(person => DevelopmentDetailsFixture.ArtworkKey(person.Id, "Primary")))
-            .Distinct(StringComparer.Ordinal)
-            .ToList();
 
-        Assert.NotEmpty(visibleArtworkKeys);
-        foreach (var key in visibleArtworkKeys)
-        {
-            Assert.True(fixture.ArtworkUris.TryGetValue(key, out var uri), "Missing Details artwork URI for " + key);
-            Assert.StartsWith("ms-appx:///Assets/QaHome/", uri, StringComparison.Ordinal);
-
-            var relativePath = uri.Substring("ms-appx:///".Length).Replace('/', Path.DirectorySeparatorChar);
-            var assetPath = Path.Combine(root, "src", "NextGenEmby.App", relativePath);
-            Assert.True(File.Exists(assetPath), "Missing packaged QA artwork asset " + assetPath);
-        }
+        Assert.Empty(fixture.ArtworkUris);
+        Assert.True(string.IsNullOrWhiteSpace(fixture.Item.PrimaryImageTag));
+        Assert.True(string.IsNullOrWhiteSpace(fixture.Item.BackdropImageTag));
+        Assert.All(fixture.SimilarItems, item => Assert.True(string.IsNullOrWhiteSpace(item.PrimaryImageTag)));
+        Assert.All(fixture.CollectionTargets, item => Assert.True(string.IsNullOrWhiteSpace(item.ThumbImageTag)));
+        Assert.All(fixture.PlaylistTargets, item => Assert.True(string.IsNullOrWhiteSpace(item.ThumbImageTag)));
+        Assert.All(fixture.Item.People, person => Assert.True(string.IsNullOrWhiteSpace(person.PrimaryImageTag)));
     }
 
     [Fact]
@@ -148,46 +132,22 @@ public sealed class DevelopmentDetailsFixtureTests
     }
 
     [Fact]
-    public void CreateWithPrimaryOnlyArtwork_Provides_Poster_Only_Atmosphere_Coverage()
+    public void CreateWithPrimaryOnlyArtwork_NoLonger_Uses_Packaged_Qa_Artwork()
     {
-        var root = FindRepositoryRoot();
         var fixture = DevelopmentDetailsFixture.CreateWithPrimaryOnlyArtwork();
 
         Assert.Equal("fixture-detail-primary-only", fixture.Item.Id);
         Assert.Equal("Poster Only Signal", fixture.Item.Name);
-        Assert.Equal("qa", fixture.Item.PrimaryImageTag);
+        Assert.True(string.IsNullOrWhiteSpace(fixture.Item.PrimaryImageTag));
         Assert.Equal(fixture.Item.Id, fixture.Item.PrimaryImageItemId);
         Assert.True(string.IsNullOrWhiteSpace(fixture.Item.BackdropImageTag));
         Assert.True(string.IsNullOrWhiteSpace(fixture.Item.BackdropImageItemId));
         Assert.True(string.IsNullOrWhiteSpace(fixture.Item.ThumbImageTag));
         Assert.True(string.IsNullOrWhiteSpace(fixture.Item.ThumbImageItemId));
-        Assert.True(fixture.ArtworkUris.ContainsKey(DevelopmentDetailsFixture.ArtworkKey(fixture.Item.Id, "Primary")));
+        Assert.False(fixture.ArtworkUris.ContainsKey(DevelopmentDetailsFixture.ArtworkKey(fixture.Item.Id, "Primary")));
         Assert.False(fixture.ArtworkUris.ContainsKey(DevelopmentDetailsFixture.ArtworkKey(fixture.Item.Id, "Backdrop")));
         Assert.False(fixture.ArtworkUris.ContainsKey(DevelopmentDetailsFixture.ArtworkKey(fixture.Item.Id, "Thumb")));
         Assert.True(fixture.MediaSources.Count >= 2);
         Assert.NotEmpty(fixture.SimilarItems);
-
-        var uri = fixture.ArtworkUris[DevelopmentDetailsFixture.ArtworkKey(fixture.Item.Id, "Primary")];
-        Assert.StartsWith("ms-appx:///Assets/QaHome/", uri, StringComparison.Ordinal);
-        Assert.EndsWith("qa-poster-13.png", uri, StringComparison.Ordinal);
-        var relativePath = uri.Substring("ms-appx:///".Length).Replace('/', Path.DirectorySeparatorChar);
-        var assetPath = Path.Combine(root, "src", "NextGenEmby.App", relativePath);
-        Assert.True(File.Exists(assetPath), "Missing packaged Primary-only Details artwork asset " + assetPath);
-    }
-
-    private static string FindRepositoryRoot()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory != null)
-        {
-            if (File.Exists(Path.Combine(directory.FullName, "tools", "Generate-AppIconAssets.ps1")))
-            {
-                return directory.FullName;
-            }
-
-            directory = directory.Parent;
-        }
-
-        throw new InvalidOperationException("Repository root not found.");
     }
 }

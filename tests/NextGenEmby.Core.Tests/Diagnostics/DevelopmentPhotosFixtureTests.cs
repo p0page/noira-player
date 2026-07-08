@@ -1,4 +1,3 @@
-using System.IO;
 using System.Linq;
 using NextGenEmby.Core.Diagnostics;
 using Xunit;
@@ -14,7 +13,7 @@ public sealed class DevelopmentPhotosFixtureTests
 
         Assert.Contains(fixture.Items, item => item.Id == "fixture-photo-album-night-market" && item.Type == "Folder");
         Assert.Contains(fixture.Items, item => item.Id == "fixture-photo-rooftop" && item.Type == "Photo" && item.ParentId == "");
-        Assert.Contains(fixture.ArtworkUris.Keys, key => key == DevelopmentPhotosFixture.ArtworkKey("fixture-photo-rooftop", "Primary"));
+        Assert.Empty(fixture.ArtworkUris);
     }
 
     [Fact]
@@ -55,37 +54,11 @@ public sealed class DevelopmentPhotosFixtureTests
     }
 
     [Fact]
-    public void ArtworkUris_Point_To_Packaged_Qa_Assets()
+    public void ArtworkUris_Are_Empty_After_Removing_Packaged_Qa_Assets()
     {
         var fixture = DevelopmentPhotosFixture.Create();
-        var root = FindRepositoryRoot();
-        var expectedKeys = fixture.Items
-            .Where(item => item.Type == "Photo" || item.Type == "Folder")
-            .Select(item => DevelopmentPhotosFixture.ArtworkKey(item.Id, "Primary"))
-            .ToList();
 
-        foreach (var key in expectedKeys)
-        {
-            Assert.True(fixture.ArtworkUris.TryGetValue(key, out var uri), "Missing fixture artwork URI for " + key);
-            var relativeAsset = uri.Replace("ms-appx:///", "").Replace('/', Path.DirectorySeparatorChar);
-            var assetPath = Path.Combine(root, "src", "NextGenEmby.App", relativeAsset);
-            Assert.True(File.Exists(assetPath), "Missing packaged QA artwork asset " + assetPath);
-        }
-    }
-
-    private static string FindRepositoryRoot()
-    {
-        var directory = new DirectoryInfo(System.AppContext.BaseDirectory);
-        while (directory != null)
-        {
-            if (File.Exists(Path.Combine(directory.FullName, "tools", "Generate-AppIconAssets.ps1")))
-            {
-                return directory.FullName;
-            }
-
-            directory = directory.Parent;
-        }
-
-        throw new DirectoryNotFoundException("Repository root not found.");
+        Assert.Empty(fixture.ArtworkUris);
+        Assert.All(fixture.Items, item => Assert.True(string.IsNullOrWhiteSpace(item.PrimaryImageTag)));
     }
 }

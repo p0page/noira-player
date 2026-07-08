@@ -8,10 +8,9 @@ This document summarizes the design output on the `codex/xbox-emby-design-system
 2. `docs/design-research/2026-07-07-tv-streaming-and-personal-media-clients.md` explains why the system uses a source-aware TV dashboard rather than a sparse streaming-service hero layout.
 3. `docs/a3-visual-convergence-rules.md` defines the current implementation phase: visual convergence with the A3 targets first, broader controller-focus architecture later.
 4. `docs/design-previews/README.md` lists the retained preview targets and explains why superseded PNGs were removed.
-5. `docs/design-previews/playback-osd-compact.html` is the current playback OSD HTML preview. It is a visual target for density and spacing, not production code.
-6. `docs/design-previews/A3-ideal-*.png` files are native render targets for final mood and material. They are useful for visual calibration, but `DESIGN.md` is still authoritative when a generated image overshoots green, borders, or glass.
-7. `docs/qa/a3-visual-convergence-checklist.md` is the screenshot-first visual acceptance gate for the current A3 phase.
-8. `docs/qa/design-conformance-checklist.md` batches broader visual QA against the design system before implementation work is accepted.
+5. `docs/design-previews/A3-ideal-*.png` files are native render targets for final mood and material. They are useful for visual calibration, but `DESIGN.md` is still authoritative when a generated image overshoots green, borders, or glass.
+6. `docs/qa/a3-visual-convergence-checklist.md` is the screenshot-first visual acceptance gate for the current A3 phase.
+7. `docs/qa/design-conformance-checklist.md` batches broader visual QA against the design system before implementation work is accepted.
 
 Superseded PNG previews were removed from `docs/design-previews/` so development handoff stays anchored to the selected A3 Artwork-Backed Matte Fluent direction. Recover historical options from git history only if the design system is intentionally reopened.
 

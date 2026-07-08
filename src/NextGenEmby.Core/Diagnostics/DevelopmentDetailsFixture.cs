@@ -7,7 +7,7 @@ namespace NextGenEmby.Core.Diagnostics
 {
     public static class DevelopmentDetailsFixture
     {
-        private const string ArtworkTag = "qa";
+        private const string ArtworkTag = "";
         private const long MinuteTicks = TimeSpan.TicksPerMinute;
 
         public static DevelopmentDetailsFixtureSnapshot Create()
@@ -40,9 +40,9 @@ namespace NextGenEmby.Core.Diagnostics
             item.Overview = CreateMainItemOverview(artworkMode, sourceLabelMode);
             item.People = new[]
             {
-                Person(artworkUris, "fixture-person-maya", "Maya Chen", "Lena Ortiz", "Actor", "qa-poster-09.png"),
-                Person(artworkUris, "fixture-person-owen", "Owen Vale", "Director", "Director", "qa-poster-10.png"),
-                Person(artworkUris, "fixture-person-iris", "Iris Nakamura", "Composer", "Composer", "qa-poster-11.png")
+                Person(artworkUris, "fixture-person-maya", "Maya Chen", "Lena Ortiz", "Actor", ""),
+                Person(artworkUris, "fixture-person-owen", "Owen Vale", "Director", "Director", ""),
+                Person(artworkUris, "fixture-person-iris", "Iris Nakamura", "Composer", "Composer", "")
             };
             item.GenreItems = new[]
             {
@@ -63,25 +63,25 @@ namespace NextGenEmby.Core.Diagnostics
 
             var organizeAncestors = new[]
             {
-                Target(artworkUris, "fixture-collection-night", "Night City Collection", "BoxSet", 2026, 7, "qa-wide-06.png"),
-                Target(artworkUris, "fixture-playlist-weekend", "Weekend Queue", "Playlist", 2026, 12, "qa-wide-08.png")
+                Target(artworkUris, "fixture-collection-night", "Night City Collection", "BoxSet", 2026, 7, ""),
+                Target(artworkUris, "fixture-playlist-weekend", "Weekend Queue", "Playlist", 2026, 12, "")
             };
             var collectionTargets = new[]
             {
-                Target(artworkUris, "fixture-collection-night", "Night City Collection", "BoxSet", 2026, 7, "qa-wide-06.png"),
-                Target(artworkUris, "fixture-collection-signal", "Signal Archives", "BoxSet", 2025, 5, "qa-wide-07.png")
+                Target(artworkUris, "fixture-collection-night", "Night City Collection", "BoxSet", 2026, 7, ""),
+                Target(artworkUris, "fixture-collection-signal", "Signal Archives", "BoxSet", 2025, 5, "")
             };
             var playlistTargets = new[]
             {
-                Target(artworkUris, "fixture-playlist-weekend", "Weekend Queue", "Playlist", 2026, 12, "qa-wide-08.png"),
-                Target(artworkUris, "fixture-playlist-late", "Late Night Watchlist", "Playlist", 2024, 18, "qa-wide-09.png")
+                Target(artworkUris, "fixture-playlist-weekend", "Weekend Queue", "Playlist", 2026, 12, ""),
+                Target(artworkUris, "fixture-playlist-late", "Late Night Watchlist", "Playlist", 2024, 18, "")
             };
             var similarItems = new[]
             {
-                MediaItem(artworkUris, "fixture-similar-midnight", "Midnight Signal", "Movie", 2025, 104, "qa-poster-02.png", "qa-wide-02.png"),
-                MediaItem(artworkUris, "fixture-similar-harbor", "Harbor Run", "Movie", 2024, 96, "qa-poster-03.png", "qa-wide-03.png"),
-                MediaItem(artworkUris, "fixture-similar-afterimage", "Afterimage", "Movie", 2026, 111, "qa-poster-04.png", "qa-wide-04.png"),
-                MediaItem(artworkUris, "fixture-similar-orbit", "Quiet Orbit", "Movie", 2023, 126, "qa-poster-05.png", "qa-wide-05.png")
+                MediaItem(artworkUris, "fixture-similar-midnight", "Midnight Signal", "Movie", 2025, 104, "", ""),
+                MediaItem(artworkUris, "fixture-similar-harbor", "Harbor Run", "Movie", 2024, 96, "", ""),
+                MediaItem(artworkUris, "fixture-similar-afterimage", "Afterimage", "Movie", 2026, 111, "", ""),
+                MediaItem(artworkUris, "fixture-similar-orbit", "Quiet Orbit", "Movie", 2023, 126, "", "")
             };
 
             return new DevelopmentDetailsFixtureSnapshot(
@@ -121,8 +121,8 @@ namespace NextGenEmby.Core.Diagnostics
                     "Movie",
                     2026,
                     118,
-                    "qa-poster-01.png",
-                    "qa-wide-01.png",
+                    "",
+                    "",
                     resumeMinutes: 24);
             }
 
@@ -145,7 +145,7 @@ namespace NextGenEmby.Core.Diagnostics
                         "Movie",
                         2025,
                         109,
-                        "qa-poster-13.png",
+                        "",
                         resumeMinutes: 19);
 
                 default:
@@ -156,8 +156,8 @@ namespace NextGenEmby.Core.Diagnostics
                         "Movie",
                         2026,
                         118,
-                        "qa-poster-01.png",
-                        "qa-wide-01.png",
+                        "",
+                        "",
                         resumeMinutes: 24);
             }
         }
@@ -475,7 +475,10 @@ namespace NextGenEmby.Core.Diagnostics
             string imageType,
             string assetName)
         {
-            artworkUris[ArtworkKey(itemId, imageType)] = "ms-appx:///Assets/QaHome/" + assetName;
+            _ = artworkUris;
+            _ = itemId;
+            _ = imageType;
+            _ = assetName;
         }
     }
 }

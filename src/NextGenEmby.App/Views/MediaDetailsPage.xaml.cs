@@ -3006,8 +3006,8 @@ namespace NextGenEmby.App.Views
             var button = new Button
             {
                 Style = (Style)Application.Current.Resources["TvDetailsDecisionChipButtonStyle"],
-                MinWidth = 238,
-                MaxWidth = 280,
+                MinWidth = 220,
+                MaxWidth = 320,
                 HorizontalAlignment = HorizontalAlignment.Left,
                 HorizontalContentAlignment = HorizontalAlignment.Stretch,
                 Tag = source,
@@ -3016,23 +3016,14 @@ namespace NextGenEmby.App.Views
 
             var panel = new StackPanel
             {
-                Spacing = 2
+                Spacing = 0
             };
 
             panel.Children.Add(new TextBlock
             {
-                Text = CreateSourceCountLabel(sourceCount),
-                FontSize = 13,
-                Foreground = (Windows.UI.Xaml.Media.Brush)Application.Current.Resources["AppTextSubtleBrush"],
-                TextTrimming = TextTrimming.CharacterEllipsis,
-                MaxLines = 1,
-                TextWrapping = TextWrapping.NoWrap
-            });
-
-            panel.Children.Add(new TextBlock
-            {
-                Text = CreateSourceDecisionSummary(source),
+                Text = CreateSourceDecisionLine(source, sourceCount),
                 FontSize = 16,
+                Foreground = (Windows.UI.Xaml.Media.Brush)Application.Current.Resources["AppMutedTextBrush"],
                 TextTrimming = TextTrimming.CharacterEllipsis,
                 MaxLines = 1,
                 TextWrapping = TextWrapping.NoWrap
@@ -3231,6 +3222,45 @@ namespace NextGenEmby.App.Views
             return parts.Count == 0 ? "Version" : string.Join(" • ", parts);
         }
 
+        private static string CreateSourceDecisionLine(EmbyMediaSource source, int sourceCount)
+        {
+            var summary = CreateSourceDecisionDockSummary(source);
+            if (sourceCount <= 1)
+            {
+                return summary;
+            }
+
+            return CreateSourceCountLabel(sourceCount) + " / " + summary;
+        }
+
+        private static string CreateSourceDecisionDockSummary(EmbyMediaSource source)
+        {
+            var parts = new List<string>();
+            var resolution = CreateSourceResolutionLabel(source);
+            if (!string.IsNullOrWhiteSpace(resolution))
+            {
+                parts.Add(resolution);
+            }
+
+            var hdr = CreateShortHdrLabel(source.HdrProfile);
+            if (!string.IsNullOrWhiteSpace(hdr))
+            {
+                parts.Add(hdr);
+            }
+
+            var video = source.VideoStreams.FirstOrDefault();
+            if (video != null && !string.IsNullOrWhiteSpace(video.Codec))
+            {
+                parts.Add(video.Codec.ToUpperInvariant());
+            }
+            else if (!string.IsNullOrWhiteSpace(source.Container))
+            {
+                parts.Add(source.Container.ToUpperInvariant());
+            }
+
+            return parts.Count == 0 ? "Version" : string.Join(" • ", parts);
+        }
+
         private static IReadOnlyList<string> CreateDetailsFactLabels(
             EmbyMediaItem item,
             EmbyMediaSource? source)
@@ -3393,7 +3423,7 @@ namespace NextGenEmby.App.Views
 
         private static string CreateSourceCountLabel(int sourceCount)
         {
-            return sourceCount <= 1 ? "Source" : "Source · " + sourceCount + " versions";
+            return sourceCount <= 1 ? "Version" : sourceCount + " versions";
         }
 
         private static string CreateSourceDetails(EmbyMediaSource source)

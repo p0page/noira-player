@@ -501,12 +501,14 @@ public sealed class MediaDetailsAccessibilitySourceTests
 
         var audioDecisionChip = SliceFrom(detailsXaml, "x:Name=\"AudioDecisionChip\"", "x:Name=\"SubtitleDecisionChip\"");
         var subtitleDecisionChip = SliceFrom(detailsXaml, "x:Name=\"SubtitleDecisionChip\"", "x:Name=\"AddToSheetRoot\"");
-        Assert.Contains("MinWidth=\"204\"", audioDecisionChip);
-        Assert.Contains("MaxWidth=\"260\"", audioDecisionChip);
-        Assert.Contains("Padding=\"16,10\"", audioDecisionChip);
-        Assert.Contains("MinWidth=\"204\"", subtitleDecisionChip);
-        Assert.Contains("MaxWidth=\"260\"", subtitleDecisionChip);
-        Assert.Contains("Padding=\"16,10\"", subtitleDecisionChip);
+        Assert.Contains("MinWidth=\"188\"", audioDecisionChip);
+        Assert.Contains("MaxWidth=\"240\"", audioDecisionChip);
+        Assert.Contains("Padding=\"14,8\"", audioDecisionChip);
+        Assert.Contains("MinWidth=\"188\"", subtitleDecisionChip);
+        Assert.Contains("MaxWidth=\"240\"", subtitleDecisionChip);
+        Assert.Contains("Padding=\"14,8\"", subtitleDecisionChip);
+        Assert.DoesNotContain("Text=\"Audio\"", audioDecisionChip);
+        Assert.DoesNotContain("Text=\"Subtitles\"", subtitleDecisionChip);
 
         var audioSummaryBlock = SliceFrom(detailsXaml, "x:Name=\"AudioSummaryBlock\"", "x:Name=\"SubtitleDecisionChip\"");
         var subtitleSummaryBlock = SliceFrom(detailsXaml, "x:Name=\"SubtitleSummaryBlock\"", "x:Name=\"AddToSheetRoot\"");
@@ -518,15 +520,27 @@ public sealed class MediaDetailsAccessibilitySourceTests
         Assert.Contains("TextWrapping=\"NoWrap\"", subtitleSummaryBlock);
 
         var sourceButton = SliceFrom(detailsSource, "private Button CreateSourceButton(EmbyMediaSource source, int sourceCount)", "private void UpdateSourceButtonStates()");
-        Assert.Contains("MaxWidth = 280", sourceButton);
+        Assert.Contains("MaxWidth = 320", sourceButton);
         Assert.Contains("HorizontalAlignment = HorizontalAlignment.Left", sourceButton);
-        Assert.Contains("Text = CreateSourceDecisionSummary(source)", sourceButton);
+        Assert.Contains("Text = CreateSourceDecisionLine(source, sourceCount)", sourceButton);
         Assert.DoesNotContain("CreateSourceDetails(source)", sourceButton);
 
-        var sourceTitleBlock = SliceFrom(detailsSource, "Text = CreateSourceDecisionSummary(source)", "button.Content = panel;");
+        var sourceTitleBlock = SliceFrom(detailsSource, "Text = CreateSourceDecisionLine(source, sourceCount)", "button.Content = panel;");
         Assert.Contains("TextTrimming = TextTrimming.CharacterEllipsis", sourceTitleBlock);
         Assert.Contains("MaxLines = 1", sourceTitleBlock);
         Assert.DoesNotContain("TextWrapping = TextWrapping.Wrap", sourceTitleBlock);
+
+        var sourceDecisionLine = SliceFrom(detailsSource, "private static string CreateSourceDecisionLine", "private static IReadOnlyList<string> CreateDetailsFactLabels");
+        Assert.Contains("CreateSourceDecisionDockSummary(source)", sourceDecisionLine);
+        Assert.DoesNotContain("CreateSourceDecisionSummary(source)", sourceDecisionLine);
+        Assert.DoesNotContain("FormatBitrate", sourceDecisionLine);
+
+        var dockSummary = SliceFrom(detailsSource, "private static string CreateSourceDecisionDockSummary", "private static IReadOnlyList<string> CreateDetailsFactLabels");
+        Assert.DoesNotContain("FormatBitrate", dockSummary);
+
+        var sourceCountLabel = SliceFrom(detailsSource, "private static string CreateSourceCountLabel", "private static string CreateSourceDetails");
+        Assert.Contains("sourceCount <= 1 ? \"Version\" : sourceCount + \" versions\"", sourceCountLabel);
+        Assert.DoesNotContain("\"Source", sourceCountLabel);
     }
 
     [Fact]
@@ -620,27 +634,27 @@ public sealed class MediaDetailsAccessibilitySourceTests
         Assert.Contains("FontSize=\"19\"", watchedButtonText);
 
         var decisionChipStyle = SliceFrom(appXaml, "x:Key=\"TvDetailsDecisionChipButtonStyle\"", "</Style>");
-        Assert.Contains("<Setter Property=\"MinHeight\" Value=\"62\" />", decisionChipStyle);
-        Assert.Contains("<Setter Property=\"Padding\" Value=\"16,10\" />", decisionChipStyle);
+        Assert.Contains("<Setter Property=\"MinHeight\" Value=\"52\" />", decisionChipStyle);
+        Assert.Contains("<Setter Property=\"Padding\" Value=\"14,8\" />", decisionChipStyle);
 
         var audioDecisionChip = SliceFrom(detailsXaml, "x:Name=\"AudioDecisionChip\"", "x:Name=\"SubtitleDecisionChip\"");
-        Assert.Contains("MinWidth=\"204\"", audioDecisionChip);
-        Assert.Contains("MaxWidth=\"260\"", audioDecisionChip);
-        Assert.Contains("Padding=\"16,10\"", audioDecisionChip);
-        Assert.Contains("FontSize=\"13\"", audioDecisionChip);
+        Assert.Contains("MinWidth=\"188\"", audioDecisionChip);
+        Assert.Contains("MaxWidth=\"240\"", audioDecisionChip);
+        Assert.Contains("Padding=\"14,8\"", audioDecisionChip);
+        Assert.DoesNotContain("FontSize=\"13\"", audioDecisionChip);
         Assert.Contains("FontSize=\"16\"", audioDecisionChip);
 
         var subtitleDecisionChip = SliceFrom(detailsXaml, "x:Name=\"SubtitleDecisionChip\"", "x:Name=\"AddToSheetRoot\"");
-        Assert.Contains("MinWidth=\"204\"", subtitleDecisionChip);
-        Assert.Contains("MaxWidth=\"260\"", subtitleDecisionChip);
-        Assert.Contains("Padding=\"16,10\"", subtitleDecisionChip);
-        Assert.Contains("FontSize=\"13\"", subtitleDecisionChip);
+        Assert.Contains("MinWidth=\"188\"", subtitleDecisionChip);
+        Assert.Contains("MaxWidth=\"240\"", subtitleDecisionChip);
+        Assert.Contains("Padding=\"14,8\"", subtitleDecisionChip);
+        Assert.DoesNotContain("FontSize=\"13\"", subtitleDecisionChip);
         Assert.Contains("FontSize=\"16\"", subtitleDecisionChip);
 
         var sourceButton = SliceFrom(detailsSource, "private Button CreateSourceButton(EmbyMediaSource source, int sourceCount)", "private void UpdateSourceButtonStates()");
-        Assert.Contains("MinWidth = 238", sourceButton);
-        Assert.Contains("MaxWidth = 280", sourceButton);
-        Assert.Contains("FontSize = 13", sourceButton);
+        Assert.Contains("MinWidth = 220", sourceButton);
+        Assert.Contains("MaxWidth = 320", sourceButton);
+        Assert.DoesNotContain("FontSize = 13", sourceButton);
         Assert.Contains("FontSize = 16", sourceButton);
     }
 
@@ -814,8 +828,9 @@ public sealed class MediaDetailsAccessibilitySourceTests
         Assert.DoesNotContain("foreach (var source in _mediaSources)", renderPlaybackInfo);
 
         var sourceButton = SliceFrom(detailsSource, "private Button CreateSourceButton(EmbyMediaSource source, int sourceCount)", "private void UpdateSourceButtonStates()");
-        Assert.Contains("Text = CreateSourceCountLabel(sourceCount)", sourceButton);
-        Assert.Contains("Text = CreateSourceDecisionSummary(source)", sourceButton);
+        Assert.Contains("Text = CreateSourceDecisionLine(source, sourceCount)", sourceButton);
+        Assert.DoesNotContain("Text = CreateSourceCountLabel(sourceCount)", sourceButton);
+        Assert.DoesNotContain("Text = CreateSourceDecisionSummary(source)", sourceButton);
         Assert.DoesNotContain("SourceSelectionMarker", sourceButton);
         Assert.DoesNotContain("layout.ColumnDefinitions.Add(new ColumnDefinition", sourceButton);
 
