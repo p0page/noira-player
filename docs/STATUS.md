@@ -321,13 +321,13 @@ manifest validation、report-set validation、single comparison、comparison sui
 
 ## 当前缺口
 
-- 当前 readiness audit 见 `docs/qa/playback-quality-v0.1-readiness-audit.md`。结论是：v0.1 裁判框架和证据门禁已经基本成型，但尚不能宣称完成，因为还没有可复现的 native/App 软件播放 report-set 作为真实 playback evidence baseline。
+- 当前 readiness audit 见 `docs/qa/playback-quality-v0.1-readiness-audit.md`。结论需要更新：v0.1 裁判框架和证据门禁已经基本成型，本轮已经补上可复现的 App-free native-headless 本地 report-set；但它还只是 smoke/report-set，不是归档 baseline/candidate。
 - 轨道切换目前主要是发现/选择状态证据，尚未证明切换后的 native 播放行为完整正确。
-- 字幕 v0.1 只验证识别、选择和关闭状态，不验证最终视觉渲染正确性。
+- 字幕 v0.1 已用本地 mov_text 样本验证 stream discovery 和关闭状态，不验证字幕选择、解码或最终视觉渲染正确性。
 - duration 和服务端明确返回的 chapters 已能从 Emby playback-info 的 media source 进入播放质量报告；这只覆盖章节元数据识别，不覆盖章节 UI、章节跳转或按章节 seek 行为。
-- 缓冲、frame timing、A/V sync 和颜色信号仍依赖当前 native instrumentation 的覆盖度，后续需要继续补强证据质量。
-- v0.1 尚未完成真实播放采集 baseline/candidate；当前 source-only baseline 只能证明评测链路闭环和缺失证据分类，不证明播放效果。
-- WinRT App adapter 或独立真实播放 harness 尚未把 native `QualityMetrics()` 接入真实采集 baseline；当前 core-probe 仍是 deterministic probe telemetry。新增 `runtimeMetrics.*` 只能说明采集状态，不证明 native graph 已经产生真实播放指标。
+- frame-pacing 仍是 `partial`，主要缺 `display.refreshRateHz`；HDR/HLG/DV 复杂样本、tone mapping、硬件输出和显示器行为仍未纳入纯软件闭环。
+- v0.1 尚未完成真实播放采集 baseline/candidate 归档；source-only baseline 仍只证明评测链路闭环和缺失证据分类，不证明播放效果。
+- WinRT App adapter 已能接入 native `QualityMetrics()`，独立 native-headless harness 也能产生本地真实播放软件指标；但归档 baseline/candidate 仍需要后续明确版本化产物。
 - error-handling 目前能标准化错误 envelope，但真实 App/native harness 仍需要把实际异常、取消、超时和拒播原因映射到稳定 error code。
 
 ## 风险
@@ -338,7 +338,7 @@ manifest validation、report-set validation、single comparison、comparison sui
 
 ## 下一步
 
-优先补真实 App/native 或 native-graph 软件采集器，把 source-only baseline 中的缺失 telemetry 替换为实际播放 evidence；同时保持 core-probe 作为 App-free orchestration 回归守卫。
+下一步优先把 native-headless smoke 的产物提升为版本化 report-set baseline/candidate，并继续补 display refresh、HDR 复杂样本、切流/字幕选择行为和 error-handling native case；同时保持 core-probe 作为 App-free orchestration 回归守卫。
 # 2026-07-07 更新：v0.1 core-probe 评测闭环
 
 当前已经新增 `materialize-core-probe-report-set`，可以在不启动 App、不打包 UWP、不依赖 Xbox 或显示器的情况下，驱动 `PlaybackOrchestrator` 走 load、play、pause、resume、seek、track switch、subtitle switch、diagnostic end-of-stream marker 和 stop 路径，并生成标准 `PlaybackQualityRunResult` envelope。
