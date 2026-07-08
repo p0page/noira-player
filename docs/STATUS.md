@@ -390,6 +390,7 @@ manifest validation、report-set validation、single comparison、comparison sui
 - `PlaybackFramePacing` 新增 `ShouldWaitForVideoClock`，`PlaybackGraph` 在无 audio clock 路径使用 wall-clock video PTS pacing。
 - `PlaybackQualityEvaluator` 新增 `RenderIntervalMsP95Cadence` 检查：要求 matched display refresh case 的 P95 渲染间隔至少达到源帧时长的 75%。
 - `PlaybackQualityRunComparator` 对 frame-ratio 派生信号改为按可接受区间 `0.75..1.5` 判断，而不是简单 lower-is-better，避免把“从过快接近目标帧时长”误判成回退。
+- `PlaybackQualityRunComparator` 现在把 track/subtitle 稳定证据纳入 comparison matched signals，包括轨道数量、选中流、字幕关闭状态、音轨 codec/channels 和字幕 codec/language 等，避免这类证据只停留在 report-set analysis 中。
 - native harness captured report 导入和 compare 路径会在有 manifest expected 时按当前 evaluator 规则重新评估，避免历史 raw/stale checks 干扰同一 manifest 的 candidate 比较。
 
 已用同一 manifest 生成提交绑定 candidate：`docs/qa/private/candidates/playback-core-tuning-video-clock-61fecb3.local/`，`sourceRevision = 61fecb3`，并输出 ignored 对比：`docs/qa/private/comparisons/playback-core-tuning-video-clock-61fecb3.local/`。该 candidate 使用归档 baseline 的 `core-reference-manifest.local.json` 作为固定输入，避免当前私有 manifest 变化破坏可比性。

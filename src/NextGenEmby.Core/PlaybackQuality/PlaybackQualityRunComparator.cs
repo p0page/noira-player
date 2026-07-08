@@ -199,6 +199,7 @@ namespace NextGenEmby.Core.PlaybackQuality
             AddCandidateOnlyFailures(comparison, candidate, baselineByKey, matchedKeys);
             AddUnmatchedCandidateSignals(comparison, candidate, matchedKeys);
             AddFramePacingSeverityDeltas(comparison, baseline, candidate);
+            AddTrackAndSubtitleEvidenceDeltas(comparison, baseline, candidate);
 
             if (comparison.Improvements.Count > 0 && comparison.Regressions.Count > 0)
             {
@@ -1004,6 +1005,182 @@ namespace NextGenEmby.Core.PlaybackQuality
                     numericDelta < 0 ? "decreased" : "increased",
                     numericDelta));
             }
+        }
+
+        private static void AddTrackAndSubtitleEvidenceDeltas(
+            PlaybackQualityRunComparison comparison,
+            PlaybackQualityReport baseline,
+            PlaybackQualityReport candidate)
+        {
+            if (!HasTrackComparisonEvidence(baseline) &&
+                !HasTrackComparisonEvidence(candidate))
+            {
+                return;
+            }
+
+            CompareEvidenceValue(
+                comparison,
+                "tracks.videoTrackCount",
+                "tracks",
+                baseline.Tracks.VideoTrackCount.ToString(CultureInfo.InvariantCulture),
+                candidate.Tracks.VideoTrackCount.ToString(CultureInfo.InvariantCulture));
+            CompareEvidenceValue(
+                comparison,
+                "tracks.audioTrackCount",
+                "tracks",
+                baseline.Tracks.AudioTrackCount.ToString(CultureInfo.InvariantCulture),
+                candidate.Tracks.AudioTrackCount.ToString(CultureInfo.InvariantCulture));
+            CompareEvidenceValue(
+                comparison,
+                "tracks.subtitleTrackCount",
+                "subtitles",
+                baseline.Tracks.SubtitleTrackCount.ToString(CultureInfo.InvariantCulture),
+                candidate.Tracks.SubtitleTrackCount.ToString(CultureInfo.InvariantCulture));
+            CompareEvidenceValue(
+                comparison,
+                "tracks.selectedVideoStreamIndex",
+                "tracks",
+                FormatNullableInt(baseline.Tracks.SelectedVideoStreamIndex),
+                FormatNullableInt(candidate.Tracks.SelectedVideoStreamIndex));
+            CompareEvidenceValue(
+                comparison,
+                "tracks.selectedAudioStreamIndex",
+                "tracks",
+                FormatNullableInt(baseline.Tracks.SelectedAudioStreamIndex),
+                FormatNullableInt(candidate.Tracks.SelectedAudioStreamIndex));
+            CompareEvidenceValue(
+                comparison,
+                "tracks.selectedSubtitleStreamIndex",
+                "subtitles",
+                FormatNullableInt(baseline.Tracks.SelectedSubtitleStreamIndex),
+                FormatNullableInt(candidate.Tracks.SelectedSubtitleStreamIndex));
+            CompareEvidenceValue(
+                comparison,
+                "tracks.isSubtitleDisabled",
+                "subtitles",
+                FormatBool(baseline.Tracks.IsSubtitleDisabled),
+                FormatBool(candidate.Tracks.IsSubtitleDisabled));
+
+            CompareTrackListEvidence(comparison, "tracks.video.codec", "tracks", baseline.Tracks.Video, candidate.Tracks.Video, track => track.Codec);
+            CompareTrackListEvidence(comparison, "tracks.video.isExternal", "tracks", baseline.Tracks.Video, candidate.Tracks.Video, track => FormatBool(track.IsExternal));
+            CompareTrackListEvidence(comparison, "tracks.video.isDefault", "tracks", baseline.Tracks.Video, candidate.Tracks.Video, track => FormatNullableBool(track.IsDefault));
+            CompareTrackListEvidence(comparison, "tracks.video.isForced", "tracks", baseline.Tracks.Video, candidate.Tracks.Video, track => FormatNullableBool(track.IsForced));
+            CompareTrackListEvidence(comparison, "tracks.audio.codec", "tracks", baseline.Tracks.Audio, candidate.Tracks.Audio, track => track.Codec);
+            CompareTrackListEvidence(comparison, "tracks.audio.language", "tracks", baseline.Tracks.Audio, candidate.Tracks.Audio, track => track.Language);
+            CompareTrackListEvidence(comparison, "tracks.audio.channels", "tracks", baseline.Tracks.Audio, candidate.Tracks.Audio, track => track.Channels.ToString(CultureInfo.InvariantCulture));
+            CompareTrackListEvidence(comparison, "tracks.audio.isExternal", "tracks", baseline.Tracks.Audio, candidate.Tracks.Audio, track => FormatBool(track.IsExternal));
+            CompareTrackListEvidence(comparison, "tracks.audio.isDefault", "tracks", baseline.Tracks.Audio, candidate.Tracks.Audio, track => FormatNullableBool(track.IsDefault));
+            CompareTrackListEvidence(comparison, "tracks.audio.isForced", "tracks", baseline.Tracks.Audio, candidate.Tracks.Audio, track => FormatNullableBool(track.IsForced));
+            CompareTrackListEvidence(comparison, "tracks.subtitles.codec", "subtitles", baseline.Tracks.Subtitles, candidate.Tracks.Subtitles, track => track.Codec);
+            CompareTrackListEvidence(comparison, "tracks.subtitles.language", "subtitles", baseline.Tracks.Subtitles, candidate.Tracks.Subtitles, track => track.Language);
+            CompareTrackListEvidence(comparison, "tracks.subtitles.isExternal", "subtitles", baseline.Tracks.Subtitles, candidate.Tracks.Subtitles, track => FormatBool(track.IsExternal));
+            CompareTrackListEvidence(comparison, "tracks.subtitles.isDefault", "subtitles", baseline.Tracks.Subtitles, candidate.Tracks.Subtitles, track => FormatNullableBool(track.IsDefault));
+            CompareTrackListEvidence(comparison, "tracks.subtitles.isForced", "subtitles", baseline.Tracks.Subtitles, candidate.Tracks.Subtitles, track => FormatNullableBool(track.IsForced));
+        }
+
+        private static bool HasTrackComparisonEvidence(PlaybackQualityReport report)
+        {
+            return report.Tracks.VideoTrackCount > 0 ||
+                report.Tracks.AudioTrackCount > 0 ||
+                report.Tracks.SubtitleTrackCount > 0 ||
+                report.Tracks.Video.Count > 0 ||
+                report.Tracks.Audio.Count > 0 ||
+                report.Tracks.Subtitles.Count > 0 ||
+                report.Tracks.SelectedVideoStreamIndex.HasValue ||
+                report.Tracks.SelectedAudioStreamIndex.HasValue ||
+                report.Tracks.SelectedSubtitleStreamIndex.HasValue;
+        }
+
+        private static void CompareTrackListEvidence(
+            PlaybackQualityRunComparison comparison,
+            string signal,
+            string failureArea,
+            IReadOnlyList<PlaybackQualityTrack> baseline,
+            IReadOnlyList<PlaybackQualityTrack> candidate,
+            Func<PlaybackQualityTrack, string> selectValue)
+        {
+            if (baseline.Count == 0 && candidate.Count == 0)
+            {
+                return;
+            }
+
+            CompareEvidenceValue(
+                comparison,
+                signal,
+                failureArea,
+                JoinTrackValues(baseline, selectValue),
+                JoinTrackValues(candidate, selectValue));
+        }
+
+        private static void CompareEvidenceValue(
+            PlaybackQualityRunComparison comparison,
+            string signal,
+            string failureArea,
+            string baselineActual,
+            string candidateActual)
+        {
+            AddUnique(comparison.Coverage.MatchedSignals, signal);
+            if (string.Equals(baselineActual, candidateActual, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            comparison.Regressions.Add(CreateDelta(
+                CreateEvidenceCheck(signal, failureArea, baselineActual),
+                CreateEvidenceCheck(signal, failureArea, candidateActual),
+                "changed",
+                0));
+            AddUnique(comparison.NewFailureAreas, failureArea);
+        }
+
+        private static PlaybackQualityCheck CreateEvidenceCheck(
+            string signal,
+            string failureArea,
+            string actual)
+        {
+            return new PlaybackQualityCheck
+            {
+                Name = signal,
+                Signal = signal,
+                FailureArea = failureArea,
+                Status = "observed",
+                Actual = actual
+            };
+        }
+
+        private static string JoinTrackValues(
+            IReadOnlyList<PlaybackQualityTrack> tracks,
+            Func<PlaybackQualityTrack, string> selectValue)
+        {
+            var values = new List<string>();
+            foreach (var track in tracks)
+            {
+                values.Add(Normalize(selectValue(track)));
+            }
+
+            return string.Join("|", values.ToArray());
+        }
+
+        private static string FormatNullableInt(int? value)
+        {
+            return value.HasValue
+                ? value.Value.ToString(CultureInfo.InvariantCulture)
+                : "";
+        }
+
+        private static string FormatBool(bool value)
+        {
+            return value ? "true" : "false";
+        }
+
+        private static string FormatNullableBool(bool? value)
+        {
+            return value.HasValue ? FormatBool(value.Value) : "";
+        }
+
+        private static string Normalize(string value)
+        {
+            return string.IsNullOrWhiteSpace(value) ? "" : value.Trim();
         }
 
         private static void AddFramePacingSeverityDeltas(

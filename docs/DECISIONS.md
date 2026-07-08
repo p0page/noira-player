@@ -541,3 +541,13 @@
 影响：提交绑定候选 `playback-core-tuning-video-clock-61fecb3.local` 在同一 manifest 对比下为可采纳候选：`accept-candidate`，5 个 improvement，0 regression。该候选使用归档 baseline 的 `core-reference-manifest.local.json` 作为固定输入，避免当前私有 manifest 变化影响同 manifest 比较。
 
 边界：该规则只改变 candidate comparison 对派生 frame-ratio 的解释，不放宽 stable case expected behavior，也不删除任何失败。单报告 evaluator 仍独立输出 pass/fail checks。
+
+# 2026-07-08: track/subtitle evidence 进入 candidate comparison
+
+决策：`PlaybackQualityRunComparator` 在 baseline/candidate comparison 中加入 track/subtitle 稳定证据比较。两个报告都有轨道证据时，比较轨道数量、选中流、字幕关闭状态、音轨 codec/channels、字幕 codec/language/default/forced/external 等信号；相同则进入 `coverage.matchedSignals`，不同则作为对应 `tracks` 或 `subtitles` regression 暴露。
+
+原因：report-set analysis 已能证明 track/subtitle evidence 存在，但同一 manifest 的 candidate comparison 之前没有把这些信号写入 matched comparison。调优目标要求模型能在同一 manifest 下同时看到 cadence、frame pacing、A/V sync、buffering、seek/timeline、track/subtitle 和 color/DXGI 证据的对比；track/subtitle 不能只停留在集合级 coverage。
+
+影响：`playback-core-tuning-video-clock-61fecb3.local` 重新对比后仍为 `accept-candidate`，41 个 comparison、5 个 improvement、0 regression、0 mixed；comparison JSON 中已出现 `tracks.subtitleTrackCount`、`tracks.isSubtitleDisabled`、`tracks.audio.codec`、`tracks.subtitles.codec` 等 matched signals。
+
+边界：这是 comparison evidence 补齐，不改变样本预期、不放宽 stable 标准、不改变播放器行为，也不把轨道变化自动解释成改善。轨道/字幕证据变化默认需要模型审查，避免播放策略调优意外改变源发现或选择状态。

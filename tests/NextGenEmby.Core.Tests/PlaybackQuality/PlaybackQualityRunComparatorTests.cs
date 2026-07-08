@@ -337,6 +337,33 @@ public sealed class PlaybackQualityRunComparatorTests
     }
 
     [Fact]
+    public void Compare_Reports_Includes_Track_And_Subtitle_Evidence_Signals()
+    {
+        var baseline = CreateReport(
+            "baseline",
+            Check("MaxFrameGapMs", "pass", "frame-pacing", "timing.maxFrameGapMs", "105.000", "80.000"));
+        AddTrackEvidence(baseline);
+
+        var candidate = CreateReport(
+            "candidate",
+            Check("MaxFrameGapMs", "pass", "frame-pacing", "timing.maxFrameGapMs", "105.000", "80.000"));
+        AddTrackEvidence(candidate);
+
+        var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
+
+        Assert.Contains("tracks.videoTrackCount", comparison.Coverage.MatchedSignals);
+        Assert.Contains("tracks.audioTrackCount", comparison.Coverage.MatchedSignals);
+        Assert.Contains("tracks.subtitleTrackCount", comparison.Coverage.MatchedSignals);
+        Assert.Contains("tracks.selectedAudioStreamIndex", comparison.Coverage.MatchedSignals);
+        Assert.Contains("tracks.isSubtitleDisabled", comparison.Coverage.MatchedSignals);
+        Assert.Contains("tracks.audio.codec", comparison.Coverage.MatchedSignals);
+        Assert.Contains("tracks.audio.channels", comparison.Coverage.MatchedSignals);
+        Assert.Contains("tracks.subtitles.codec", comparison.Coverage.MatchedSignals);
+        Assert.Contains("tracks.subtitles.language", comparison.Coverage.MatchedSignals);
+        Assert.Empty(comparison.Regressions);
+    }
+
+    [Fact]
     public void Compare_Reports_PartialConfidence_When_Signals_Are_Unmatched()
     {
         var baseline = CreateReport(
@@ -589,6 +616,46 @@ public sealed class PlaybackQualityRunComparatorTests
 
         report.Result = HasFailedCheck(report) ? "fail" : "pass";
         return report;
+    }
+
+    private static void AddTrackEvidence(PlaybackQualityReport report)
+    {
+        report.Tracks.VideoTrackCount = 1;
+        report.Tracks.AudioTrackCount = 1;
+        report.Tracks.SubtitleTrackCount = 1;
+        report.Tracks.SelectedVideoStreamIndex = 0;
+        report.Tracks.SelectedAudioStreamIndex = 1;
+        report.Tracks.SelectedSubtitleStreamIndex = 2;
+        report.Tracks.IsSubtitleDisabled = false;
+        report.Tracks.Video.Add(new PlaybackQualityTrack
+        {
+            Index = 0,
+            Kind = "Video",
+            Codec = "hevc",
+            IsDefault = true,
+            IsForced = false
+        });
+        report.Tracks.Audio.Add(new PlaybackQualityTrack
+        {
+            Index = 1,
+            Kind = "Audio",
+            Codec = "aac",
+            Language = "eng",
+            ChannelLayout = "5.1",
+            Channels = 6,
+            IsDefault = true,
+            IsForced = false
+        });
+        report.Tracks.Subtitles.Add(new PlaybackQualityTrack
+        {
+            Index = 2,
+            Kind = "Subtitle",
+            Codec = "mov_text",
+            Language = "eng",
+            IsExternal = false,
+            IsDefault = false,
+            IsForced = false
+        });
     }
 
     private static PlaybackQualityCheck Check(
