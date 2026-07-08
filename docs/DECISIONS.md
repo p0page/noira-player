@@ -620,3 +620,13 @@
 影响：这些字段进入 native metrics、WinRT bridge、Core report schema、signal catalog、model analysis evidence signals、headless parser、native-headless smoke 断言和 candidate comparison matched signals。同一 41-case manifest 的 `playback-core-tuning-audio-wait-target-evidence-41case-8e13b26.local` comparison 为 `decision = no-change`，不会被解释成 quality improvement。
 
 边界：`target/oversleep` 当前只作为诊断和模型可消费 evidence，不自动驱动 improvement/regression，也不替代 A/V sync 正确性判断。任何等待策略候选仍必须生成同 manifest baseline/candidate comparison，并明确记录 improved/regressed/mixed 与剩余风险。
+
+# 2026-07-08: audio target precise wait 候选暂不采纳
+
+决策：不采纳本轮 yield-based audio target precise wait 策略。该策略在 `ShouldWaitForAudio` 分支用 `framePosition - audioPosition - VideoAheadTolerance` 计算下一轮 render loop 的等待目标，并用 yield loop 等待到目标时间，避免固定 5ms sleep 多轮叠加。
+
+原因：同一 41-case manifest comparison 的 suite 结果为 `decision = no-change`，0 improved / 0 regressed / 0 mixed。目标 A/V case 的诊断信号确实改善，`renderIntervalMsP95` 从约 47.5ms 降到 38.0ms，`audioAheadWaitOversleepMsP95` 从约 16.9ms 降到 6.8ms；但这些信号当前没有明确 improvement 规则，且 yield loop 的 CPU 成本没有被当前评测覆盖。
+
+影响：实验代码回退，不改变当前播放器 Core/native 行为。该结果保留为下一步设计低开销高精度 wait primitive 的证据：方向上应继续围绕 audio target / oversleep，而不是继续调整固定 sleep 常量。
+
+边界：不要把本轮诊断改善解释为已采纳优化。除非后续补齐 CPU/调度开销证据，或引入可证明低开销的等待 primitive，并再次通过同 manifest baseline/candidate comparison，否则该策略不进入主线。

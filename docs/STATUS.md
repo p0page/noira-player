@@ -486,3 +486,13 @@ manifest validation、report-set validation、single comparison、comparison sui
 关键 A/V 样本证据：`local/native-headless-av-smoke` 中 candidate 的 `renderIntervalMsP50/P95/P99` 约为 `31.6/47.5/47.6ms`，`audioAheadWaitDurationMsP50/P95/P99/Max` 约为 `15.6/31.3/40.0/40.0ms`，`audioAheadWaitTargetMsP50/P95/Max` 约为 `13.3/23.3/23.3ms`，`audioAheadWaitOversleepMsP50/P95/Max` 约为 `5.2/16.9/17.8ms`。这说明当前 A/V jitter 的一部分不是单纯策略目标过大，而是实际唤醒相对目标存在明显 oversleep。
 
 边界：这是诊断证据增强，不是播放策略优化；它不改变 evaluator 阈值、不放宽样本预期，也不证明真实 Xbox/HDMI 输出或主观流畅度改善。下一步更适合小步验证等待 primitive / wait scheduling，而不是继续盲调固定 sleep 常量或 audio-ahead 阈值。
+
+# 2026-07-08 更新：audio target precise wait 候选暂不采纳
+
+本轮基于 `audioAheadWaitTargetMs*` / `audioAheadWaitOversleepMs*` 做了一个最小策略候选：当 `PlaybackGraph` 因 `ShouldWaitForAudio` 暂停 pending video frame 时，下一轮 render loop 不再固定 sleep 5ms，而是按当前 frame/audio 差值计算 audio-ahead target，并用 yield-based precise wait 等到目标时间。
+
+该候选按 TDD 增加 `PlaybackFramePacing::AudioAheadWaitDuration` 测试，先红灯失败，再实现后通过；native UWP Debug x64 build 通过；native-headless smoke 通过。随后用同一 41-case manifest 生成 ignored candidate：`docs/qa/private/candidates/playback-core-tuning-audio-target-precise-wait-41case-working.local/`，并输出 comparison：`docs/qa/private/comparisons/playback-core-tuning-audio-target-precise-wait-41case-working.local/`。结果：41/41 case 可比，validation 通过，`decision = no-change`，0 improved，0 regressed，0 mixed，41 strong confidence。
+
+目标 A/V case 的诊断信号有改善：`renderIntervalMsP95` 约 `47.5ms -> 38.0ms`，`audioAheadWaitOversleepMsP50/P95/Max` 约 `5.2/16.9/17.8ms -> 0.1/6.8/6.8ms`，`audioVideoDriftMsP95` 保持 `10ms`，submitted/queued audio 未下降。但 evaluator 当前只把这些信号作为 matched diagnostic evidence，不自动判定 improvement。
+
+结论：该候选证明“按 audio target 等待”方向比继续调固定 sleep 常量更有希望，但暂不采纳。原因是 suite 决策仍为 `no-change`，且 yield-based precise wait 可能引入 CPU 成本，当前评测器还没有 CPU/调度开销证据。实验代码已回退；下一步应优先补充 wait reason / CPU 或低开销高精度 wait primitive，再做同 manifest candidate comparison。
