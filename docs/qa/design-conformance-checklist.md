@@ -193,6 +193,22 @@ Evidence to capture:
 - Playback menu boundary proving app Guide is suppressed.
 - Destination list or Source Hub/overflow state.
 
+## Batch 08 - Saved Session Artwork Smoke
+
+Goal: sample real saved-session Emby data to confirm the fixture-derived visual rules survive real artwork, real titles, and sparse/messy metadata.
+
+| ID | Route | Keyboard Path | Design Checks | Result | Notes |
+| --- | --- | --- | --- | --- | --- |
+| 08.01 | Saved-session Home | Login or saved launch, refresh if needed | Real Home rows use the same rail-first matte structure; real wide artwork does not create bright borders, decorative glass, or green-dominant chrome. | Pass with concern | 0.1.0.240 real saved-session smoke confirmed Home settles into real media libraries and Continue Watching rows after Refresh. Residual concern: immediate post-login Home initially asked for Refresh before loading rows, and the top Continue Watching feature duplicates the first Continue Watching rail item in the first viewport. |
+| 08.02 | Saved-session Movies | `movies`, `Right` | Real poster cards keep the integrated matte selected backplate; no-artwork fallback glyphs should be meaningful media initials, not punctuation from raw filenames/titles. | Pass | 0.1.0.241 real Movies rerun keeps the selected backplate direction and fixes missing-poster initials: quoted titles render `F` instead of `"` and extension-like titles render `M` instead of `.`. |
+| 08.03 | Saved-session artwork mix | Inspect visible real posters and wide cards | Real portrait, logo-like, dark, bright, CJK, and filename-like assets remain readable with title text as fallback. | Pass with concern | Real cards remain readable and dense. Residual concern: library cleanliness varies heavily, so title/meta fallback must be robust when posters are missing or filenames leak through. |
+
+Evidence to capture:
+
+- Saved-session Home before and after row settlement.
+- Saved-session Movies focused card and no-artwork fallback card.
+- UIA text proving real titles/meta remain reachable without committing private screenshots.
+
 ## Batch Run Template
 
 Copy this block into `docs/qa/emby-tv-client-keyboard-checklist.md` after each run:

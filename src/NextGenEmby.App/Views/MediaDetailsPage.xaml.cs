@@ -9,6 +9,7 @@ using NextGenEmby.App.Storage;
 using NextGenEmby.Core.Diagnostics;
 using NextGenEmby.Core.Emby;
 using NextGenEmby.Core.Input;
+using NextGenEmby.Core.Media;
 using NextGenEmby.Core.Playback;
 using Windows.System;
 using Windows.UI.Core;
@@ -3276,8 +3277,7 @@ namespace NextGenEmby.App.Views
 
         private static string CreateFallbackInitial(EmbyMediaItem item)
         {
-            var name = CreateDisplayName(item);
-            return string.IsNullOrWhiteSpace(name) ? "?" : name.Substring(0, 1).ToUpperInvariant();
+            return PosterFallbackInitials.Create(CreateDisplayName(item));
         }
 
         private static Brush BrushResource(string key)

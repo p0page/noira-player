@@ -3121,3 +3121,46 @@ Fix rerun findings:
 - Decision:
   - Update the checklist contract instead of blocking typed `m` in text fields. Use `M` on normal content surfaces and `Ctrl+M` while editable text has focus.
   - Keep real controller `GamepadMenu` as the platform-faithful path for Xbox hardware validation.
+
+### 2026-07-08 - Design Conformance Batch 08 Saved Session Artwork Smoke Baseline
+
+- App version: 0.1.0.240.
+- Scope: sample real saved-session Home and Movies surfaces after the fixture-based page work, without committing private screenshots, server details, credentials, or personal media assets.
+- Data source: real saved Emby session created locally through the DEBUG login bridge; the temporary login file was removed after launch.
+- Evidence roots:
+  - Home: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-real-saved-home-0.1.0.240-20260708-074908`.
+  - Movies: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-real-saved-movies-0.1.0.240-20260708-075232`.
+- Keyboard-only / automation validation:
+  - Normal launch first landed on Login, so a temporary local DEBUG login file was used and then deleted.
+  - Captured Home immediately after login: `01-home-real.png`, `01-home-real.uia.txt`.
+  - Invoked `Refresh`, waited for rows to load, and captured settled Home: `03-home-real-settled.png`, `03-home-real-settled.uia.txt`.
+  - Launched saved-session `movies` route, captured initial Movies grid, sent `Right`, and captured the next focused card: `01-movies-real-initial.png`, `02-movies-real-right.png`.
+
+Findings recorded before fixes:
+
+| ID | Severity | Page | Evidence | Expected | Actual | Proposed batch fix |
+| --- | --- | --- | --- | --- | --- | --- |
+| DC-08.01 | Concern | Home saved session | `01-home-real.png`, `02-home-real-after-refresh.png`, `03-home-real-settled.png`. | Home should load into real media rows after saved login and keep the rail-first matte layout with real artwork. | The design direction holds after Refresh: real wide artwork, media-library rows, and Continue Watching use the target matte structure. However, the immediate post-login Home asked for Refresh and showed Loading before rows appeared. | Keep as a product/runtime follow-up: improve post-login automatic refresh or loading transition. Do not block visual-system adoption. |
+| DC-08.02 | Concern | Home Continue Watching composition | `03-home-real-settled.png`. | Feature strip and rails should reinforce browsing without obvious duplicate noise in the first viewport. | The top Continue Watching feature and first Continue Watching rail both show the same first resume item. It is visually acceptable but may feel redundant with populated real data. | Keep for now; revisit after more real saved-session samples and product decision on whether the top feature should mirror current focus, highlight a different item, or collapse when Continue Watching rail is immediately below. |
+| DC-08.03 | Pass | Movies selected poster focus | `01-movies-real-initial.png`, `02-movies-real-right.png`. | Real poster-grid focus should use integrated matte selected backplate, no bright complete perimeter frame, and metadata below artwork. | Real Movies grid matches the ordinary movie-card selected treatment, including after `Right`. Real portrait artwork and CJK titles remain readable. | No fix needed. |
+| DC-08.04 | Fail | Movies no-artwork fallback initials | `01-movies-real-initial.png` and `02-movies-real-right.png`. | Missing-poster fallback should use a meaningful media initial from the title and ignore leading punctuation, quotes, dots, and filename noise. | Missing-poster cards exposed punctuation as large fallback glyphs: a quoted title rendered `"` and extension-like entries can render `.`. | Replace per-page first-character fallback with a shared initial helper that skips punctuation and returns the first letter/digit/CJK character, falling back to `?` only when no useful character exists. |
+
+- Decision:
+  - Fix DC-08.04 now because it is small, deterministic, and directly surfaced by real saved-session artwork.
+  - Defer DC-08.01 and DC-08.02 as product/runtime concerns; they need broader saved-session sampling rather than a visual token change.
+
+### 2026-07-08 - Design Conformance Batch 08 Saved Session Artwork Smoke Fix Rerun
+
+- App version: 0.1.0.241.
+- Scope: rerun the saved-session Movies missing-poster fallback after replacing per-page first-character initials with a shared punctuation-skipping helper.
+- Data source: existing local saved Emby session; no credentials, server details, screenshots, or personal media assets were written to the repository.
+- Evidence root: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-real-saved-movies-fallback-0.1.0.241-20260708-080156`.
+- Verification before visual rerun:
+  - Red path: `PosterFallbackInitialsTests` failed before implementation because `NextGenEmby.Core.Media.PosterFallbackInitials` did not exist.
+  - Green path: `PosterFallbackInitialsTests` and `PosterGridVisualSourceTests` passed after adding the shared helper and wiring Library, Search, and Details secondary poster rails to it.
+
+Fix rerun findings:
+
+| ID | Status | Page | Evidence | Result | Residual risk |
+| --- | --- | --- | --- | --- | --- |
+| DC-08.04 | Pass | Movies no-artwork fallback initials | `01-movies-fallback-rerun.png`, `01-movies-fallback-rerun.uia.txt`, and `route-result.txt`. | Saved-session Movies opened successfully. UIA confirmed the quoted `Friends` title now exposes fallback `F` with no quote fallback, and the `.MP4` title now exposes fallback `M` with no dot fallback. | Real library may include titles whose first useful character is still not ideal because the source title itself is a raw filename; title cleanup is a metadata/product concern separate from fallback glyph selection. |

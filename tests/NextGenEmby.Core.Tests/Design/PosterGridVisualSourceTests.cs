@@ -46,6 +46,23 @@ public sealed class PosterGridVisualSourceTests
     }
 
     [Fact]
+    public void Poster_Fallback_Initials_Are_Shared_And_Ignore_Title_Punctuation()
+    {
+        var librarySource = ReadAppSource("Views", "LibraryPage.xaml.cs");
+        var searchSource = ReadAppSource("Views", "SearchPage.xaml.cs");
+        var detailsSource = ReadAppSource("Views", "MediaDetailsPage.xaml.cs");
+        var helperSource = ReadCoreSource("Media", "PosterFallbackInitials.cs");
+
+        Assert.Contains("PosterFallbackInitials.Create(value)", librarySource);
+        Assert.Contains("PosterFallbackInitials.Create(value)", searchSource);
+        Assert.Contains("PosterFallbackInitials.Create(CreateDisplayName(item))", detailsSource);
+        Assert.Contains("char.IsLetterOrDigit(character)", helperSource);
+        Assert.DoesNotContain("value.Trim().Substring(0, 1)", librarySource);
+        Assert.DoesNotContain("value.Trim().Substring(0, 1)", searchSource);
+        Assert.DoesNotContain("name.Substring(0, 1)", detailsSource);
+    }
+
+    [Fact]
     public void Development_Routes_Include_Deterministic_Movies_Fixture()
     {
         var navigationSource = ReadCoreSource("Diagnostics", "DevelopmentNavigationCommand.cs");

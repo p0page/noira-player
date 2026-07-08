@@ -8,6 +8,7 @@ using NextGenEmby.App.Storage;
 using NextGenEmby.Core.Diagnostics;
 using NextGenEmby.Core.Emby;
 using NextGenEmby.Core.Input;
+using NextGenEmby.Core.Media;
 using Windows.System;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Automation;
@@ -1041,12 +1042,7 @@ namespace NextGenEmby.App.Views
 
         private static string CreateInitials(string value)
         {
-            if (string.IsNullOrWhiteSpace(value))
-            {
-                return "?";
-            }
-
-            return value.Trim().Substring(0, 1).ToUpperInvariant();
+            return PosterFallbackInitials.Create(value);
         }
     }
 }

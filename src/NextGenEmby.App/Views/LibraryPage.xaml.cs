@@ -9,6 +9,7 @@ using NextGenEmby.App.Storage;
 using NextGenEmby.Core.Diagnostics;
 using NextGenEmby.Core.Emby;
 using NextGenEmby.Core.Input;
+using NextGenEmby.Core.Media;
 using Windows.UI.Core;
 using Windows.UI.Text;
 using Windows.UI.Xaml;
@@ -1320,12 +1321,7 @@ namespace NextGenEmby.App.Views
 
         private static string CreateInitials(string value)
         {
-            if (string.IsNullOrWhiteSpace(value))
-            {
-                return "?";
-            }
-
-            return value.Trim().Substring(0, 1).ToUpperInvariant();
+            return PosterFallbackInitials.Create(value);
         }
 
         public sealed class LibraryGridItem
