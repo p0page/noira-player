@@ -184,7 +184,45 @@ public sealed class DevelopmentNavigationCommandTests
 
         Assert.False(ok);
         Assert.Null(command);
-        Assert.Equal("dev-command.json route requires itemId.", error);
+        Assert.Equal("dev-command.json route requires itemId or streamUrl.", error);
+    }
+
+    [Fact]
+    public void TryParseJson_Accepts_QualityRun_With_StreamUrl_Without_ItemId()
+    {
+        const string json = """
+        {
+          "route": "quality-run",
+          "runId": "jellyfin/hdr10-direct",
+          "streamUrl": " https://repo.jellyfin.org/test-videos/HDR/HDR10/HEVC/sample.mp4 ",
+          "durationSeconds": 30,
+          "expected": {
+            "codec": "hevc",
+            "width": 3840,
+            "height": 2160,
+            "hdrKind": "Hdr10"
+          }
+        }
+        """;
+
+        var ok = DevelopmentNavigationCommand.TryParseJson(
+            json,
+            out var command,
+            out var error);
+
+        Assert.True(ok, error);
+        Assert.NotNull(command);
+        Assert.Equal("quality-run", command!.Route);
+        Assert.Equal("", command.ItemId);
+        Assert.Equal("jellyfin/hdr10-direct", command.RunId);
+        Assert.Equal(
+            "https://repo.jellyfin.org/test-videos/HDR/HDR10/HEVC/sample.mp4",
+            command.StreamUrl);
+        Assert.Equal(30, command.DurationSeconds);
+        Assert.NotNull(command.Expected);
+        Assert.Equal("hevc", command.Expected!.Codec);
+        Assert.Equal(3840, command.Expected.Width);
+        Assert.Equal("Hdr10", command.Expected.HdrKind);
     }
 
     [Fact]

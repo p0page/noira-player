@@ -78,7 +78,16 @@ namespace NextGenEmby.Core.Diagnostics
                 return false;
             }
 
-            if (RequiresItemId(parsed.Route) && string.IsNullOrWhiteSpace(parsed.ItemId))
+            if (parsed.Route == "quality-run")
+            {
+                if (string.IsNullOrWhiteSpace(parsed.ItemId) &&
+                    string.IsNullOrWhiteSpace(parsed.StreamUrl))
+                {
+                    error = "dev-command.json route requires itemId or streamUrl.";
+                    return false;
+                }
+            }
+            else if (RequiresItemId(parsed.Route) && string.IsNullOrWhiteSpace(parsed.ItemId))
             {
                 error = "dev-command.json route requires itemId.";
                 return false;
@@ -131,8 +140,7 @@ namespace NextGenEmby.Core.Diagnostics
         {
             return route == "details" ||
                 route == "photo" ||
-                route == "playback" ||
-                route == "quality-run";
+                route == "playback";
         }
     }
 }

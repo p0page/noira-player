@@ -2,6 +2,12 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-08 更新：公开 direct-uri case 可进入 App-hosted quality-run
+
+`plan-runs` 现在会为 HTTP/HTTPS `direct-uri` case 生成 `devCommand.route = quality-run`，并把 manifest `uri` 写入 `devCommand.streamUrl`。DEBUG App 的 `quality-run` 路径现在也接受 `itemId` 或 `streamUrl` 二选一：有 `itemId` 时继续走 Emby item playback；只有 `streamUrl` 时走 direct stream native playback，并复用同一套 App-hosted pause/resume/seek/stop 采集和 `quality-run/captured/<runId>.json` 报告写入路径。
+
+边界：这是 instrumentation/testability 变更，目的是让公开 Jellyfin 等直链样本可以产出 App/native 软件播放报告，不需要把私人 Emby item 写入仓库。direct-uri 路径不会从文件名推断 HDR/DV/color metadata；如果当前 App/native 链路没有实际解析出 codec、color、track 等源证据，报告应继续暴露为缺 instrumentation，而不是伪装成 pass。
+
 ## 2026-07-08 更新：evaluate-candidate 增加 playback evidence 门禁
 
 `evaluate-candidate` 现在会在 `baseline-report-analysis` / `candidate-report-analysis` 之后、`suite` 比较之前增加 `baseline-playback-evidence` 和 `candidate-playback-evidence` 两个门禁。它们直接读取 `analyze-report-set` 输出的 `playbackEvidence.canEvaluateNativePlayback`：只有 baseline 和 candidate 都包含 native/App 软件播放证据时，才允许进入 before/after suite 比较。

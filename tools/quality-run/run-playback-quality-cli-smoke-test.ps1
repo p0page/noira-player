@@ -4359,7 +4359,9 @@ try {
     if (-not ($exampleRunPlan.cases | Where-Object {
         $_.caseId -eq 'jellyfin/hdr10-hevc-main10-4k60-50m' -and
         $_.captureMode -eq 'direct-uri' -and
-        $_.devCommand -eq $null -and
+        $_.devCommand.route -eq 'quality-run' -and
+        $_.devCommand.streamUrl -eq 'https://repo.jellyfin.org/test-videos/HDR/HDR10/HEVC/Test%20Jellyfin%204K%20HEVC%20HDR10%2050M.mp4' -and
+        $_.devCommand.runId -eq 'jellyfin/hdr10-hevc-main10-4k60-50m' -and
         ($_.requiredSignals -contains 'buffers.videoStarvedPasses') -and
         ($_.requiredSignals -contains 'buffers.audioStarvedPasses') -and
         ($_.requiredSignals -contains 'colorPipeline.actualHdrOutput') -and
@@ -4369,7 +4371,7 @@ try {
         ($_.requiredSignals -contains 'colorPipeline.isTenBitSwapChain') -and
         ($_.requiredSignals -contains 'colorPipeline.dxgiInput')
     })) {
-        throw 'Expected example reference run plan to schedule public Jellyfin media as direct-uri.'
+        throw 'Expected example reference run plan to schedule public Jellyfin direct-uri through a quality-run dev command.'
     }
 
     if (-not ($exampleRunPlan.cases | Where-Object {

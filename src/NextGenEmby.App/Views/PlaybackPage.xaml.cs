@@ -207,7 +207,8 @@ namespace NextGenEmby.App.Views
             PlaybackDiagnosticsLog.WriteLine(
                 "Playback navigated launch=" + (_launchRequest != null) +
                 " item=" + (_launchRequest == null ? "" : _launchRequest.ItemId) +
-                " source=" + (_launchRequest == null ? "" : _launchRequest.MediaSourceId));
+                " source=" + (_launchRequest == null ? "" : _launchRequest.MediaSourceId) +
+                " direct=" + (_launchRequest != null && _launchRequest.HasDirectStreamUrl));
             if (_launchRequest == null)
             {
                 NowPlayingBlock.Text = "Manual Direct Stream";
@@ -228,11 +229,11 @@ namespace NextGenEmby.App.Views
 
             _currentItemName = _launchRequest.ItemName;
             NowPlayingBlock.Text = string.IsNullOrWhiteSpace(_currentItemName)
-                ? _launchRequest.ItemId
+                ? GetLaunchRequestDisplayName(_launchRequest)
                 : _currentItemName;
             StreamUrlBox.Text = "";
             StreamUrlBox.IsEnabled = false;
-            _ = RunPlaybackCommandAsync(() => StartItemPlaybackAsync(_launchRequest));
+            _ = RunPlaybackCommandAsync(() => StartLaunchRequestPlaybackAsync(_launchRequest));
         }
 
         private async void Start_OnClick(object sender, RoutedEventArgs e)
@@ -921,11 +922,22 @@ namespace NextGenEmby.App.Views
             PlaybackDiagnosticsLog.WriteLine("Playback page start requested launch=" + (_launchRequest != null));
             if (_launchRequest != null)
             {
-                await StartItemPlaybackAsync(_launchRequest);
+                await StartLaunchRequestPlaybackAsync(_launchRequest);
                 return;
             }
 
             await StartManualPlaybackAsync();
+        }
+
+        private async Task StartLaunchRequestPlaybackAsync(PlaybackLaunchRequest request)
+        {
+            if (request.HasDirectStreamUrl)
+            {
+                await StartDirectStreamQualityRunPlaybackAsync(request);
+                return;
+            }
+
+            await StartItemPlaybackAsync(request);
         }
 
         private async Task StartManualPlaybackAsync()
@@ -1034,6 +1046,59 @@ namespace NextGenEmby.App.Views
             await PlaybackDiagnosticsLog.WriteLineAsync(
                 "Orchestrator start completed state=" + _orchestrator.State +
                 " currentSource=" + (_orchestrator.CurrentMediaSource == null ? "" : _orchestrator.CurrentMediaSource.Id));
+            _lastPositionTicks = request.StartPositionTicks;
+            _hasPlaybackContext = _orchestrator.CurrentDescriptor != null;
+            _playbackStoppedReported = false;
+            ShowOverlay();
+            _progressTimer.Start();
+            await ReportPlaybackStartedAsync();
+#if DEBUG
+            ScheduleQualityRunCapture(request, playbackStartedAtUtc);
+#endif
+            UpdateStatus(_orchestrator.State);
+            UpdateProgressSlider();
+            UpdateControlStates();
+            UpdateStreamControls();
+            if (_infoVisible)
+            {
+                UpdateInfo();
+            }
+        }
+
+        private async Task StartDirectStreamQualityRunPlaybackAsync(PlaybackLaunchRequest request)
+        {
+            await PlaybackDiagnosticsLog.WriteLineAsync(
+                "Direct stream quality-run begin runId=" + request.QualityRunId +
+                " urlLength=" + request.DirectStreamUrl.Length +
+                " startTicks=" + request.StartPositionTicks);
+
+            _currentItemName = string.IsNullOrWhiteSpace(request.ItemName)
+                ? GetLaunchRequestDisplayName(request)
+                : request.ItemName;
+            _durationTicks = request.RuntimeTicks;
+            _lastPlaybackSessionRequest = null;
+            NowPlayingBlock.Text = _currentItemName;
+            ManualDebugPanel.Visibility = Visibility.Collapsed;
+            UpdateStatus(CorePlaybackState.Opening, "Opening direct stream");
+            UpdateProgressSlider();
+            UpdateControlStates();
+            ShowOverlay();
+            await Task.Yield();
+
+            await EnsureNativeSurfaceReadyAsync();
+            var source = CreateDirectStreamQualityRunSource(request);
+            await _orchestrator.StartAsync(
+                GetDirectStreamQualityRunItemId(request),
+                new[] { source },
+                request.StartPositionTicks,
+                source.Id);
+#if DEBUG
+            var playbackStartedAtUtc = DateTimeOffset.UtcNow;
+#endif
+            await PlaybackDiagnosticsLog.WriteLineAsync(
+                "Direct stream quality-run start completed state=" + _orchestrator.State +
+                " currentSource=" + (_orchestrator.CurrentMediaSource == null ? "" : _orchestrator.CurrentMediaSource.Id));
+
             _lastPositionTicks = request.StartPositionTicks;
             _hasPlaybackContext = _orchestrator.CurrentDescriptor != null;
             _playbackStoppedReported = false;
@@ -1306,7 +1371,8 @@ namespace NextGenEmby.App.Views
                     request.MediaSourceId,
                     request.StartPositionTicks,
                     request.ForceSdrOutput,
-                    request.QualityExpected);
+                    request.QualityExpected,
+                    uri: request.DirectStreamUrl);
                 var result = PlaybackQualityRuntimeEvidenceCollector.ComposeErrorRunResult(
                     referenceCase,
                     new PlaybackQualityError
@@ -1551,6 +1617,65 @@ namespace NextGenEmby.App.Views
 
                 await PlaybackDiagnosticsLog.WriteLineAsync("Playback command finally");
             }
+        }
+
+        private static string GetLaunchRequestDisplayName(PlaybackLaunchRequest request)
+        {
+            if (!string.IsNullOrWhiteSpace(request.ItemId))
+            {
+                return request.ItemId;
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.QualityRunId))
+            {
+                return request.QualityRunId;
+            }
+
+            return "Direct Stream";
+        }
+
+        private static string GetDirectStreamQualityRunItemId(PlaybackLaunchRequest request)
+        {
+            if (!string.IsNullOrWhiteSpace(request.ItemId))
+            {
+                return request.ItemId;
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.QualityRunId))
+            {
+                return request.QualityRunId;
+            }
+
+            return DemoItemId;
+        }
+
+        private static EmbyMediaSource CreateDirectStreamQualityRunSource(PlaybackLaunchRequest request)
+        {
+            var expected = request.QualityExpected;
+            var frameRate = expected != null && expected.FrameRate > 0
+                ? expected.FrameRate
+                : 0;
+            var sourceId = string.IsNullOrWhiteSpace(request.MediaSourceId)
+                ? "direct-uri"
+                : request.MediaSourceId;
+            var source = new EmbyMediaSource
+            {
+                Id = sourceId,
+                Name = "Direct Stream Quality Run",
+                DirectStreamUrl = request.DirectStreamUrl,
+                RunTimeTicks = request.RuntimeTicks,
+                VideoFrameRate = frameRate
+            };
+            source.Streams.Add(new EmbyMediaStream
+            {
+                Index = 0,
+                Kind = EmbyStreamKind.Video,
+                DisplayTitle = "Direct stream quality run",
+                RealFrameRate = frameRate,
+                AverageFrameRate = frameRate
+            });
+
+            return source;
         }
 
         private EmbyMediaSource CreateManualSource()

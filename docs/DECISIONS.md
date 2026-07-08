@@ -132,6 +132,14 @@
 
 影响：`run-playback-core-checks.ps1` 的 App diff guard allowlist 扩展为精确允许 DEBUG quality-run 接线文件：`Playback/WinRtNativePlaybackEngine.cs`、`Navigation/PlaybackLaunchRequest.cs`、`MainPage.xaml.cs`、`Views/PlaybackPage.xaml.cs`。这不是允许 UI 或交互工作进入本阶段；XAML、App project、manifest/package 和未列入 App 文件仍被阻断。
 
+## 2026-07-08: HTTP/HTTPS direct-uri case 可生成 App-hosted quality-run 命令
+
+决策：`plan-runs` 对 HTTP/HTTPS `direct-uri` reference case 也生成 `devCommand.route = quality-run`，并把 `referenceCase.uri` 写入 `devCommand.streamUrl`。`DevelopmentNavigationCommand` 对 `quality-run` 改为要求 `itemId` 或 `streamUrl` 二选一；DEBUG App 收到只有 `streamUrl` 的 `quality-run` 时，使用 direct stream native playback 路径启动，并复用同一套 App-hosted capture、error envelope 和 report export/import 机制。
+
+原因：v0.1 需要第一套不依赖私人 Emby 服务的 native/App 软件播放证据。公开 Jellyfin 样本已经进入 reference manifest，但此前 `plan-runs` 只给有 `itemId` 的 case 输出 App `quality-run` command，导致公开样本只能停留在 source/probe 层，不能被 App-hosted collector 实际打开。
+
+边界：这是采集入口和调度能力，不是播放策略优化。direct-uri 路径不从 URL、文件名或 manifest expected 反推真实源元数据；如果 App/native 当前没有解析出 codec、HDR/color、轨道或字幕证据，report-set validation 和 analyzer 应继续把这些缺口归类为 instrumentation/metadata 缺失。`devCommand.streamUrl` 只在本地 App command 和 private/local artifact 中使用；提交仓库时仍不得包含私人服务地址、账号、密码或个人素材路径。
+
 ## 2026-07-08: playback-core validation guard 精确允许 App playback metrics adapter
 
 决策：`tools\quality-run\run-playback-core-checks.ps1` 的 App diff guard 继续保护 `src/NextGenEmby.App`，但新增精确 allowlist。最初只允许 `src/NextGenEmby.App/Playback/WinRtNativePlaybackEngine.cs`；随后为了接通 DEBUG App-hosted `quality-run` collector，allowlist 扩展到 `PlaybackLaunchRequest.cs`、`MainPage.xaml.cs` 和 `PlaybackPage.xaml.cs`。Plan 输出会暴露 `appDiffGuard.allowedPaths`，测试会确认 allowlist 没有包含 XAML、App project、manifest/package 或未列入 App 文件。

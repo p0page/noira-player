@@ -18,11 +18,17 @@ public sealed class AppHostedQualityCaptureContractTests
         Assert.Contains("qualityRunId: command.RunId", mainPage, StringComparison.Ordinal);
         Assert.Contains("qualityExpected: command.Expected", mainPage, StringComparison.Ordinal);
         Assert.Contains("qualityRunDurationSeconds: command.DurationSeconds", mainPage, StringComparison.Ordinal);
+        Assert.Contains("streamUrl: command.StreamUrl", mainPage, StringComparison.Ordinal);
 
         Assert.Contains("public string QualityRunId { get; }", launchRequest, StringComparison.Ordinal);
+        Assert.Contains("public string DirectStreamUrl { get; }", launchRequest, StringComparison.Ordinal);
+        Assert.Contains("public bool HasDirectStreamUrl", launchRequest, StringComparison.Ordinal);
         Assert.Contains("public bool IsQualityRun", launchRequest, StringComparison.Ordinal);
         Assert.Contains("PlaybackQualityExpected?", launchRequest, StringComparison.Ordinal);
 
+        Assert.Contains("StartLaunchRequestPlaybackAsync", playbackPage, StringComparison.Ordinal);
+        Assert.Contains("StartDirectStreamQualityRunPlaybackAsync", playbackPage, StringComparison.Ordinal);
+        Assert.Contains("CreateDirectStreamQualityRunSource", playbackPage, StringComparison.Ordinal);
         Assert.Contains("ScheduleQualityRunCapture", playbackPage, StringComparison.Ordinal);
         Assert.Contains("RunQualityRunLifecycleProbeAsync", playbackPage, StringComparison.Ordinal);
         Assert.Contains("_orchestrator.PauseAsync()", playbackPage, StringComparison.Ordinal);

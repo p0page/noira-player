@@ -15,7 +15,8 @@ namespace NextGenEmby.App.Navigation
             string qualityRunId = "",
             int qualityRunDurationSeconds = 0,
             PlaybackQualityExpected? qualityExpected = null,
-            DateTimeOffset? qualityCommandReceivedAtUtc = null)
+            DateTimeOffset? qualityCommandReceivedAtUtc = null,
+            string streamUrl = "")
         {
             ItemId = itemId ?? "";
             ItemName = itemName ?? "";
@@ -23,6 +24,7 @@ namespace NextGenEmby.App.Navigation
             MediaSourceId = mediaSourceId ?? "";
             RuntimeTicks = runtimeTicks < 0 ? 0 : runtimeTicks;
             ForceSdrOutput = forceSdrOutput;
+            DirectStreamUrl = string.IsNullOrWhiteSpace(streamUrl) ? "" : streamUrl.Trim();
             QualityRunId = string.IsNullOrWhiteSpace(qualityRunId) ? "" : qualityRunId.Trim();
             QualityRunDurationSeconds = qualityRunDurationSeconds < 10 ? 10 : qualityRunDurationSeconds;
             QualityExpected = qualityExpected;
@@ -41,6 +43,8 @@ namespace NextGenEmby.App.Navigation
 
         public bool ForceSdrOutput { get; }
 
+        public string DirectStreamUrl { get; }
+
         public string QualityRunId { get; }
 
         public int QualityRunDurationSeconds { get; }
@@ -50,5 +54,7 @@ namespace NextGenEmby.App.Navigation
         public DateTimeOffset QualityCommandReceivedAtUtc { get; }
 
         public bool IsQualityRun => !string.IsNullOrWhiteSpace(QualityRunId);
+
+        public bool HasDirectStreamUrl => !string.IsNullOrWhiteSpace(DirectStreamUrl);
     }
 }

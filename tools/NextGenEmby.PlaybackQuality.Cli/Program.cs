@@ -2042,6 +2042,7 @@ internal static class Program
 
             var relativePath = GetRunIdComparisonRelativePath(referenceCase.CaseId);
             var hasEmbyItem = !string.IsNullOrWhiteSpace(referenceCase.ItemId);
+            var hasDirectStreamUri = IsDirectStreamRunUri(referenceCase.Uri);
             var planCase = new PlaybackQualityRunPlanCase
             {
                 CaseId = referenceCase.CaseId,
@@ -2060,7 +2061,7 @@ internal static class Program
                 Expected = CloneExpected(referenceCase.Expected)
             };
 
-            if (hasEmbyItem)
+            if (hasEmbyItem || hasDirectStreamUri)
             {
                 planCase.DevCommand = CreateQualityRunCommand(
                     referenceCase,
@@ -2123,6 +2124,17 @@ internal static class Program
         return false;
     }
 
+    private static bool IsDirectStreamRunUri(string uri)
+    {
+        if (!Uri.TryCreate(uri, UriKind.Absolute, out var parsed))
+        {
+            return false;
+        }
+
+        return string.Equals(parsed.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(parsed.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static DevelopmentNavigationCommand CreateQualityRunCommand(
         PlaybackQualityReferenceCase referenceCase,
         int durationSeconds)
@@ -2132,6 +2144,7 @@ internal static class Program
             Route = "quality-run",
             ItemId = referenceCase.ItemId,
             MediaSourceId = referenceCase.MediaSourceId,
+            StreamUrl = string.IsNullOrWhiteSpace(referenceCase.ItemId) ? referenceCase.Uri : "",
             StartPositionTicks = Math.Max(0, referenceCase.StartPositionTicks),
             ForceSdrOutput = referenceCase.ForceSdrOutput,
             RunId = referenceCase.CaseId,

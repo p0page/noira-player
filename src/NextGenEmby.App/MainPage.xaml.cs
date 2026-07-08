@@ -846,7 +846,8 @@ namespace NextGenEmby.App
                             qualityRunId: command.RunId,
                             qualityRunDurationSeconds: command.DurationSeconds,
                             qualityExpected: command.Expected,
-                            qualityCommandReceivedAtUtc: DateTimeOffset.UtcNow));
+                            qualityCommandReceivedAtUtc: DateTimeOffset.UtcNow,
+                            streamUrl: command.StreamUrl));
                     return;
             }
         }
