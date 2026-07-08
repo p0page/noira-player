@@ -57,9 +57,9 @@ public sealed class DevelopmentDetailsFixtureTests
     }
 
     [Fact]
-    public void Create_Includes_Long_Stream_Labels_For_Details_Overflow_Coverage()
+    public void CreateWithLongSourceLabels_Includes_Long_Stream_Labels_For_Details_Overflow_Coverage()
     {
-        var fixture = DevelopmentDetailsFixture.Create();
+        var fixture = DevelopmentDetailsFixture.CreateWithLongSourceLabels();
         var audioLabels = fixture.MediaSources
             .SelectMany(source => source.AudioStreams)
             .Select(stream => stream.DisplayTitle)
@@ -77,6 +77,55 @@ public sealed class DevelopmentDetailsFixtureTests
         Assert.Contains(subtitleLabels, label =>
             label.Length >= 56 &&
             label.IndexOf("descriptive", StringComparison.OrdinalIgnoreCase) >= 0);
+    }
+
+    [Fact]
+    public void Create_Uses_Concise_Stream_Labels_For_Default_Details_Visual_Baseline()
+    {
+        var fixture = DevelopmentDetailsFixture.Create();
+        var visibleLabels = fixture.MediaSources
+            .Select(source => source.Name)
+            .Concat(fixture.MediaSources.SelectMany(source => source.AudioStreams).Select(stream => stream.DisplayTitle))
+            .Concat(fixture.MediaSources.SelectMany(source => source.SubtitleStreams).Select(stream => stream.DisplayTitle))
+            .Where(label => !string.IsNullOrWhiteSpace(label))
+            .ToList();
+
+        Assert.NotEmpty(visibleLabels);
+        Assert.All(visibleLabels, label => Assert.True(label.Length <= 48, "Default Details fixture label is too long: " + label));
+        Assert.DoesNotContain(visibleLabels, label => label.IndexOf("commentary", StringComparison.OrdinalIgnoreCase) >= 0);
+        Assert.DoesNotContain(visibleLabels, label => label.IndexOf("descriptive", StringComparison.OrdinalIgnoreCase) >= 0);
+    }
+
+    [Fact]
+    public void CreateWithLongSourceLabels_Covers_Details_Decision_Overflow_As_Separate_Stress_Fixture()
+    {
+        var fixture = DevelopmentDetailsFixture.CreateWithLongSourceLabels();
+        var sourceNames = fixture.MediaSources
+            .Select(source => source.Name)
+            .Where(label => !string.IsNullOrWhiteSpace(label))
+            .ToList();
+        var audioLabels = fixture.MediaSources
+            .SelectMany(source => source.AudioStreams)
+            .Select(stream => stream.DisplayTitle)
+            .Where(label => !string.IsNullOrWhiteSpace(label))
+            .ToList();
+        var subtitleLabels = fixture.MediaSources
+            .SelectMany(source => source.SubtitleStreams)
+            .Select(stream => stream.DisplayTitle)
+            .Where(label => !string.IsNullOrWhiteSpace(label))
+            .ToList();
+
+        Assert.Equal("fixture-detail-long-source", fixture.Item.Id);
+        Assert.Contains(sourceNames, label =>
+            label.Length >= 56 &&
+            label.IndexOf("archival", StringComparison.OrdinalIgnoreCase) >= 0);
+        Assert.Contains(audioLabels, label =>
+            label.Length >= 56 &&
+            label.IndexOf("commentary", StringComparison.OrdinalIgnoreCase) >= 0);
+        Assert.Contains(subtitleLabels, label =>
+            label.Length >= 56 &&
+            label.IndexOf("descriptive", StringComparison.OrdinalIgnoreCase) >= 0);
+        Assert.NotEmpty(fixture.SimilarItems);
     }
 
     [Fact]

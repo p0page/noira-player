@@ -994,6 +994,16 @@ namespace NextGenEmby.App
                             developmentFixtureKind: MediaDetailsDevelopmentFixtureKind.PrimaryOnlyArtwork));
                     return;
 
+                case "details-long-source-fixture":
+                    NavigateTo(
+                        typeof(MediaDetailsPage),
+                        new MediaDetailsNavigationRequest(
+                            "fixture-detail-long-source",
+                            "Long Source Signal",
+                            useDevelopmentFixture: true,
+                            developmentFixtureKind: MediaDetailsDevelopmentFixtureKind.LongSourceLabels));
+                    return;
+
                 case "photo":
                     NavigateTo(typeof(PhotoViewerPage), new PhotoViewerNavigationRequest(command.ItemId, command.ItemName));
                     return;

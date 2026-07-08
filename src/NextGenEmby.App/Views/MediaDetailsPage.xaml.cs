@@ -103,12 +103,12 @@ namespace NextGenEmby.App.Views
             if (ReferenceEquals(button, PlayButton))
             {
                 button.Background = BrushResource("AppActionBrush");
-                button.BorderBrush = BrushResource("AppActionBrush");
+                button.BorderBrush = BrushResource("AppTransparentBrush");
                 button.Foreground = BrushResource("AppOnActionBrush");
                 return;
             }
 
-            button.Background = BrushResource("AppChromeBrush");
+            button.Background = BrushResource("AppDetailsDecisionTileBrush");
             button.BorderBrush = BrushResource("AppTransparentBrush");
             button.Foreground = BrushResource("AppTextBrush");
         }
@@ -862,6 +862,9 @@ namespace NextGenEmby.App.Views
 
                 case MediaDetailsDevelopmentFixtureKind.PrimaryOnlyArtwork:
                     return DevelopmentDetailsFixture.CreateWithPrimaryOnlyArtwork();
+
+                case MediaDetailsDevelopmentFixtureKind.LongSourceLabels:
+                    return DevelopmentDetailsFixture.CreateWithLongSourceLabels();
 
                 default:
                     return DevelopmentDetailsFixture.Create();
@@ -3063,7 +3066,7 @@ namespace NextGenEmby.App.Views
             button.BorderBrush = (Brush)Application.Current.Resources["AppTransparentBrush"];
             button.BorderThickness = new Thickness(1);
             button.Background = (Brush)Application.Current.Resources[
-                isSelected ? "AppChromePressedBrush" : "AppChromeBrush"];
+                isSelected ? "AppDetailsDecisionTileSelectedBrush" : "AppDetailsDecisionTileBrush"];
 
             var namePrefix = isSelected ? "Selected version, " : "Version, ";
             AutomationProperties.SetName(button, namePrefix + CreateSourceSummary(source));

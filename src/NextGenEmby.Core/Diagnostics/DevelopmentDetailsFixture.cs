@@ -12,25 +12,32 @@ namespace NextGenEmby.Core.Diagnostics
 
         public static DevelopmentDetailsFixtureSnapshot Create()
         {
-            return CreateCore(ItemArtworkMode.Full);
+            return CreateCore(ItemArtworkMode.Full, SourceLabelMode.Standard);
         }
 
         public static DevelopmentDetailsFixtureSnapshot CreateWithoutArtwork()
         {
-            return CreateCore(ItemArtworkMode.None);
+            return CreateCore(ItemArtworkMode.None, SourceLabelMode.Standard);
         }
 
         public static DevelopmentDetailsFixtureSnapshot CreateWithPrimaryOnlyArtwork()
         {
-            return CreateCore(ItemArtworkMode.PrimaryOnly);
+            return CreateCore(ItemArtworkMode.PrimaryOnly, SourceLabelMode.Standard);
         }
 
-        private static DevelopmentDetailsFixtureSnapshot CreateCore(ItemArtworkMode artworkMode)
+        public static DevelopmentDetailsFixtureSnapshot CreateWithLongSourceLabels()
+        {
+            return CreateCore(ItemArtworkMode.Full, SourceLabelMode.LongStress);
+        }
+
+        private static DevelopmentDetailsFixtureSnapshot CreateCore(
+            ItemArtworkMode artworkMode,
+            SourceLabelMode sourceLabelMode)
         {
             var artworkUris = new Dictionary<string, string>(StringComparer.Ordinal);
 
-            var item = CreateMainItem(artworkMode, artworkUris);
-            item.Overview = CreateMainItemOverview(artworkMode);
+            var item = CreateMainItem(artworkMode, sourceLabelMode, artworkUris);
+            item.Overview = CreateMainItemOverview(artworkMode, sourceLabelMode);
             item.People = new[]
             {
                 Person(artworkUris, "fixture-person-maya", "Maya Chen", "Lena Ortiz", "Actor", "qa-poster-09.png"),
@@ -52,33 +59,7 @@ namespace NextGenEmby.Core.Diagnostics
                 Reference("", "Atmospheric")
             };
 
-            var mediaSources = new[]
-            {
-                MediaSource(
-                    "fixture-source-4k",
-                    "4K SDR Direct - archival remaster",
-                    "mkv",
-                    3840,
-                    2160,
-                    22_000_000,
-                    videoCodec: "hevc",
-                    audioOne: "English EAC3 5.1 commentary - director and sound team archival mix",
-                    audioTwo: "Japanese AAC stereo original theatrical dialogue preservation track",
-                    subtitleOne: "English SDH descriptive captions for quiet dialogue and radio chatter",
-                    subtitleTwo: "Chinese Simplified forced narrative signs and alien language captions"),
-                MediaSource(
-                    "fixture-source-1080p",
-                    "1080p fallback - mobile compatible encode",
-                    "mp4",
-                    1920,
-                    1080,
-                    8_500_000,
-                    videoCodec: "h264",
-                    audioOne: "English AAC Stereo",
-                    audioTwo: "",
-                    subtitleOne: "English SDH",
-                    subtitleTwo: "")
-            };
+            var mediaSources = CreateMediaSources(sourceLabelMode);
 
             var organizeAncestors = new[]
             {
@@ -120,10 +101,31 @@ namespace NextGenEmby.Core.Diagnostics
             PrimaryOnly
         }
 
+        private enum SourceLabelMode
+        {
+            Standard,
+            LongStress
+        }
+
         private static EmbyMediaItem CreateMainItem(
             ItemArtworkMode artworkMode,
+            SourceLabelMode sourceLabelMode,
             IDictionary<string, string> artworkUris)
         {
+            if (sourceLabelMode == SourceLabelMode.LongStress)
+            {
+                return MediaItem(
+                    artworkUris,
+                    "fixture-detail-long-source",
+                    "Long Source Signal",
+                    "Movie",
+                    2026,
+                    118,
+                    "qa-poster-01.png",
+                    "qa-wide-01.png",
+                    resumeMinutes: 24);
+            }
+
             switch (artworkMode)
             {
                 case ItemArtworkMode.None:
@@ -160,8 +162,15 @@ namespace NextGenEmby.Core.Diagnostics
             }
         }
 
-        private static string CreateMainItemOverview(ItemArtworkMode artworkMode)
+        private static string CreateMainItemOverview(
+            ItemArtworkMode artworkMode,
+            SourceLabelMode sourceLabelMode)
         {
+            if (sourceLabelMode == SourceLabelMode.LongStress)
+            {
+                return "A deterministic Details stress item with unusually long version, audio, and subtitle names, used to judge whether the low decision area remains cinematic instead of turning into a technical table.";
+            }
+
             switch (artworkMode)
             {
                 case ItemArtworkMode.None:
@@ -173,6 +182,68 @@ namespace NextGenEmby.Core.Diagnostics
                 default:
                     return "A signal analyst follows a rogue broadcast through abandoned orbital relays and uncovers a quiet conspiracy hidden inside a forgotten media archive.";
             }
+        }
+
+        private static IReadOnlyList<EmbyMediaSource> CreateMediaSources(SourceLabelMode sourceLabelMode)
+        {
+            if (sourceLabelMode == SourceLabelMode.LongStress)
+            {
+                return new[]
+                {
+                    MediaSource(
+                        "fixture-source-4k-long",
+                        "4K SDR archival remaster with director commentary mezzanine encode",
+                        "mkv",
+                        3840,
+                        2160,
+                        22_000_000,
+                        videoCodec: "hevc",
+                        audioOne: "English EAC3 5.1 commentary - director and sound team archival mix",
+                        audioTwo: "Japanese AAC stereo original theatrical dialogue preservation track",
+                        subtitleOne: "English SDH descriptive captions for quiet dialogue and radio chatter",
+                        subtitleTwo: "Chinese Simplified forced narrative signs and alien language captions"),
+                    MediaSource(
+                        "fixture-source-1080p-long",
+                        "1080p fallback mobile compatible archival service encode",
+                        "mp4",
+                        1920,
+                        1080,
+                        8_500_000,
+                        videoCodec: "h264",
+                        audioOne: "English AAC Stereo",
+                        audioTwo: "",
+                        subtitleOne: "English SDH",
+                        subtitleTwo: "")
+                };
+            }
+
+            return new[]
+            {
+                MediaSource(
+                    "fixture-source-4k",
+                    "4K SDR Direct",
+                    "mkv",
+                    3840,
+                    2160,
+                    22_000_000,
+                    videoCodec: "hevc",
+                    audioOne: "English EAC3 5.1",
+                    audioTwo: "Japanese AAC stereo",
+                    subtitleOne: "English SDH",
+                    subtitleTwo: "Chinese Simplified forced"),
+                MediaSource(
+                    "fixture-source-1080p",
+                    "1080p fallback",
+                    "mp4",
+                    1920,
+                    1080,
+                    8_500_000,
+                    videoCodec: "h264",
+                    audioOne: "English AAC stereo",
+                    audioTwo: "",
+                    subtitleOne: "English SDH",
+                    subtitleTwo: "")
+            };
         }
 
         public static string ArtworkKey(string itemId, string imageType)

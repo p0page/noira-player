@@ -48,6 +48,8 @@
             <Color x:Key="AppArtworkDimColor">#26000000</Color>
             <Color x:Key="AppHeroPosterDimColor">#1A000000</Color>
             <Color x:Key="AppDetailsBackdropWashColor">#D910161C</Color>
+            <Color x:Key="AppDetailsDecisionTileColor">#B810161C</Color>
+            <Color x:Key="AppDetailsDecisionTileSelectedColor">#B8202832</Color>
             <Color x:Key="AppModalScrimColor">#CC05070A</Color>
             <Color x:Key="AppPlaybackCanvasColor">#05070A</Color>
             <Color x:Key="AppPlaybackOverlayColor">#D910161C</Color>
@@ -92,6 +94,8 @@
             <SolidColorBrush x:Key="AppArtworkDimBrush" Color="{StaticResource AppArtworkDimColor}" />
             <SolidColorBrush x:Key="AppHeroPosterDimBrush" Color="{StaticResource AppHeroPosterDimColor}" />
             <SolidColorBrush x:Key="AppDetailsBackdropWashBrush" Color="{StaticResource AppDetailsBackdropWashColor}" />
+            <SolidColorBrush x:Key="AppDetailsDecisionTileBrush" Color="{StaticResource AppDetailsDecisionTileColor}" />
+            <SolidColorBrush x:Key="AppDetailsDecisionTileSelectedBrush" Color="{StaticResource AppDetailsDecisionTileSelectedColor}" />
             <SolidColorBrush x:Key="AppModalScrimBrush" Color="{StaticResource AppModalScrimColor}" />
             <SolidColorBrush x:Key="AppPlaybackCanvasBrush" Color="{StaticResource AppPlaybackCanvasColor}" />
             <SolidColorBrush x:Key="AppPlaybackOverlayBrush" Color="{StaticResource AppPlaybackOverlayColor}" />
@@ -389,7 +393,7 @@
                 <Setter Property="FontWeight" Value="SemiBold" />
                 <Setter Property="Foreground" Value="{StaticResource AppOnActionBrush}" />
                 <Setter Property="Background" Value="{StaticResource AppActionBrush}" />
-                <Setter Property="BorderBrush" Value="{StaticResource AppActionBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource AppTransparentBrush}" />
                 <Setter Property="BorderThickness" Value="1" />
                 <Setter Property="CornerRadius" Value="8" />
                 <Setter Property="UseSystemFocusVisuals" Value="False" />
@@ -402,8 +406,8 @@
                 <Setter Property="FontSize" Value="19" />
                 <Setter Property="FontWeight" Value="SemiBold" />
                 <Setter Property="Foreground" Value="{StaticResource AppTextBrush}" />
-                <Setter Property="Background" Value="{StaticResource AppChromeBrush}" />
-                <Setter Property="BorderBrush" Value="{StaticResource AppHairlineBrush}" />
+                <Setter Property="Background" Value="{StaticResource AppDetailsDecisionTileBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource AppTransparentBrush}" />
                 <Setter Property="BorderThickness" Value="1" />
                 <Setter Property="CornerRadius" Value="8" />
                 <Setter Property="UseSystemFocusVisuals" Value="False" />
@@ -416,8 +420,8 @@
                 <Setter Property="MinHeight" Value="66" />
                 <Setter Property="Padding" Value="0" />
                 <Setter Property="Foreground" Value="{StaticResource AppTextBrush}" />
-                <Setter Property="Background" Value="{StaticResource AppChromeBrush}" />
-                <Setter Property="BorderBrush" Value="{StaticResource AppHairlineBrush}" />
+                <Setter Property="Background" Value="{StaticResource AppDetailsDecisionTileBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource AppTransparentBrush}" />
                 <Setter Property="BorderThickness" Value="1" />
                 <Setter Property="CornerRadius" Value="8" />
                 <Setter Property="UseSystemFocusVisuals" Value="False" />
@@ -447,7 +451,7 @@
                 <Setter Property="HorizontalContentAlignment" Value="Stretch" />
                 <Setter Property="VerticalContentAlignment" Value="Center" />
                 <Setter Property="Foreground" Value="{StaticResource AppTextBrush}" />
-                <Setter Property="Background" Value="{StaticResource AppChromeBrush}" />
+                <Setter Property="Background" Value="{StaticResource AppDetailsDecisionTileBrush}" />
                 <Setter Property="BorderBrush" Value="{StaticResource AppTransparentBrush}" />
                 <Setter Property="BorderThickness" Value="1" />
                 <Setter Property="CornerRadius" Value="8" />

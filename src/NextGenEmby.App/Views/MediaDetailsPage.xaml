@@ -342,7 +342,7 @@
                             x:Name="AudioDecisionChip"
                             MinWidth="204"
                             MaxWidth="260"
-                            Background="{StaticResource AppChromeBrush}"
+                            Background="{StaticResource AppDetailsDecisionTileBrush}"
                             CornerRadius="8"
                             Padding="16,10">
                             <StackPanel Spacing="2">
@@ -364,7 +364,7 @@
                             x:Name="SubtitleDecisionChip"
                             MinWidth="204"
                             MaxWidth="260"
-                            Background="{StaticResource AppChromeBrush}"
+                            Background="{StaticResource AppDetailsDecisionTileBrush}"
                             CornerRadius="8"
                             Padding="16,10">
                             <StackPanel Spacing="2">

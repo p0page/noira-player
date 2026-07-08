@@ -4,7 +4,8 @@ namespace NextGenEmby.App.Navigation
     {
         Standard,
         NoArtwork,
-        PrimaryOnlyArtwork
+        PrimaryOnlyArtwork,
+        LongSourceLabels
     }
 
     public sealed class MediaDetailsNavigationRequest

@@ -155,6 +155,41 @@ public sealed class MediaDetailsAccessibilitySourceTests
     }
 
     [Fact]
+    public void Details_Fixture_Development_Route_Covers_Long_Source_Label_Stress()
+    {
+        var root = FindRepositoryRoot();
+        var mainPageSource = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NextGenEmby.App",
+            "MainPage.xaml.cs"));
+        var requestSource = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NextGenEmby.App",
+            "Navigation",
+            "MediaDetailsNavigationRequest.cs"));
+        var commandSource = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NextGenEmby.Core",
+            "Diagnostics",
+            "DevelopmentNavigationCommand.cs"));
+        var detailsPageSource = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NextGenEmby.App",
+            "Views",
+            "MediaDetailsPage.xaml.cs"));
+
+        Assert.Contains("case \"details-long-source-fixture\"", mainPageSource);
+        Assert.Contains("details-long-source-fixture", commandSource);
+        Assert.Contains("LongSourceLabels", requestSource);
+        Assert.Contains("MediaDetailsDevelopmentFixtureKind.LongSourceLabels", mainPageSource);
+        Assert.Contains("DevelopmentDetailsFixture.CreateWithLongSourceLabels()", detailsPageSource);
+    }
+
+    [Fact]
     public void Details_Selected_Version_State_Does_Not_ReUse_Focus_Border_Color()
     {
         var root = FindRepositoryRoot();
@@ -596,6 +631,67 @@ public sealed class MediaDetailsAccessibilitySourceTests
         Assert.Contains("MaxWidth = 280", sourceButton);
         Assert.Contains("FontSize = 13", sourceButton);
         Assert.Contains("FontSize = 16", sourceButton);
+    }
+
+    [Fact]
+    public void A3_Details_Decision_Tiles_Use_Material_Fill_Not_Hairline_Button_Frames()
+    {
+        var root = FindRepositoryRoot();
+        var appXaml = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NextGenEmby.App",
+            "App.xaml"));
+        var detailsXaml = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NextGenEmby.App",
+            "Views",
+            "MediaDetailsPage.xaml"));
+        var detailsSource = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NextGenEmby.App",
+            "Views",
+            "MediaDetailsPage.xaml.cs"));
+
+        Assert.Contains("<Color x:Key=\"AppDetailsDecisionTileColor\">#B810161C</Color>", appXaml);
+        Assert.Contains("<Color x:Key=\"AppDetailsDecisionTileSelectedColor\">#B8202832</Color>", appXaml);
+        Assert.Contains("<SolidColorBrush x:Key=\"AppDetailsDecisionTileBrush\" Color=\"{StaticResource AppDetailsDecisionTileColor}\" />", appXaml);
+        Assert.Contains("<SolidColorBrush x:Key=\"AppDetailsDecisionTileSelectedBrush\" Color=\"{StaticResource AppDetailsDecisionTileSelectedColor}\" />", appXaml);
+
+        var primaryActionStyle = SliceFrom(appXaml, "x:Key=\"TvDetailsPrimaryActionButtonStyle\"", "</Style>");
+        Assert.Contains("<Setter Property=\"BorderBrush\" Value=\"{StaticResource AppTransparentBrush}\" />", primaryActionStyle);
+
+        var actionStyle = SliceFrom(appXaml, "x:Key=\"TvDetailsActionButtonStyle\"", "</Style>");
+        Assert.Contains("<Setter Property=\"Background\" Value=\"{StaticResource AppDetailsDecisionTileBrush}\" />", actionStyle);
+        Assert.Contains("<Setter Property=\"BorderBrush\" Value=\"{StaticResource AppTransparentBrush}\" />", actionStyle);
+        Assert.DoesNotContain("AppHairlineBrush", actionStyle);
+
+        var iconActionStyle = SliceFrom(appXaml, "x:Key=\"TvDetailsIconActionButtonStyle\"", "</Style>");
+        Assert.Contains("<Setter Property=\"Background\" Value=\"{StaticResource AppDetailsDecisionTileBrush}\" />", iconActionStyle);
+        Assert.Contains("<Setter Property=\"BorderBrush\" Value=\"{StaticResource AppTransparentBrush}\" />", iconActionStyle);
+        Assert.DoesNotContain("AppHairlineBrush", iconActionStyle);
+
+        var decisionChipStyle = SliceFrom(appXaml, "x:Key=\"TvDetailsDecisionChipButtonStyle\"", "</Style>");
+        Assert.Contains("<Setter Property=\"Background\" Value=\"{StaticResource AppDetailsDecisionTileBrush}\" />", decisionChipStyle);
+        Assert.Contains("<Setter Property=\"BorderBrush\" Value=\"{StaticResource AppTransparentBrush}\" />", decisionChipStyle);
+
+        var audioDecisionChip = SliceFrom(detailsXaml, "x:Name=\"AudioDecisionChip\"", "x:Name=\"SubtitleDecisionChip\"");
+        var subtitleDecisionChip = SliceFrom(detailsXaml, "x:Name=\"SubtitleDecisionChip\"", "x:Name=\"AddToSheetRoot\"");
+        Assert.Contains("Background=\"{StaticResource AppDetailsDecisionTileBrush}\"", audioDecisionChip);
+        Assert.Contains("Background=\"{StaticResource AppDetailsDecisionTileBrush}\"", subtitleDecisionChip);
+
+        var lostFocus = SliceFrom(detailsSource, "private void DetailsCommandButton_OnLostFocus", "protected override async void OnNavigatedTo");
+        Assert.Contains("button.BorderBrush = BrushResource(\"AppTransparentBrush\");", lostFocus);
+        Assert.Contains("button.Background = BrushResource(\"AppDetailsDecisionTileBrush\");", lostFocus);
+        Assert.DoesNotContain("button.BorderBrush = BrushResource(\"AppActionBrush\");", lostFocus);
+        Assert.DoesNotContain("button.Background = BrushResource(\"AppChromeBrush\");", lostFocus);
+
+        var sourceState = SliceFrom(detailsSource, "private void ApplySourceButtonState", "private void SourceButton_OnGotFocus");
+        Assert.Contains("isSelected ? \"AppDetailsDecisionTileSelectedBrush\" : \"AppDetailsDecisionTileBrush\"", sourceState);
+        Assert.DoesNotContain("AppChromePressedBrush", sourceState);
+        Assert.DoesNotContain("AppChromeBrush", sourceState);
     }
 
     [Fact]

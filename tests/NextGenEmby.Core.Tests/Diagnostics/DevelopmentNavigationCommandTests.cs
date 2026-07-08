@@ -45,6 +45,7 @@ public sealed class DevelopmentNavigationCommandTests
     [InlineData("Search-Error", "search-error")]
     [InlineData("Details-Fixture", "details-fixture")]
     [InlineData("Details-Real-Sample", "details-real-sample")]
+    [InlineData("Details-Long-Source-Fixture", "details-long-source-fixture")]
     [InlineData("Playback-Options-Fixture", "playback-options-fixture")]
     public void TryParseJson_Accepts_Guide_Routes(string route, string normalizedRoute)
     {

@@ -42,6 +42,8 @@ colors:
   section_artwork_wash: "#9C080D12"
   artwork_dim: "#26000000"
   hero_poster_dim: "#1A000000"
+  details_decision_tile: "#B810161C"
+  details_decision_tile_selected: "#B8202832"
   modal_scrim: "#CC05070A"
   playback_drawer: "#F010161C"
   button_disabled_background: "#4D10161C"
@@ -228,6 +230,7 @@ Reference links reviewed for this pass:
 - **Overlay `#D910161C`:** dark overlay panel over artwork or video when blur is unavailable or undesirable.
 - **Artwork blur surface `#D910161C`:** dark translucent material used only when a real poster, banner, backdrop, or video frame sits underneath and contributes color. It must never be used over plain graphite canvas.
 - **Artwork blur tint `#33080D12`:** optional cool dark tint over the sampled artwork before blur. Use it to stabilize contrast, not to create a colored wash.
+- **Details decision tile `#B810161C` and selected `#B8202832`:** lower-alpha graphite material for Details Play-adjacent decisions, source/audio/subtitle chips, and similar artwork-backed controls. Use it to reduce UWP button-frame weight over atmosphere; do not use it as a generic panel background on plain canvas.
 - **Hairline `#2E3944`:** dividers and inactive card borders. Hairlines support structure; they must not become the focus language.
 - **Guide focus fill `#33202832`:** quiet current-route and guide-navigation fill for the shell rail. It is deliberately darker than full content focus so the rail remains available without competing with media artwork.
 - **Text `#EEF3F6`:** cool off-white primary text. It keeps the interface precise and slightly technological without blue glow.
@@ -404,7 +407,7 @@ Shared TV resources should continue migrating into `App.xaml` before page-local 
 
 - Shell: Guide chrome color, collapsed/expanded widths, standard and immersive page margins.
 - Text: page title/subtitle, section title, subsection title, option label, status, panel title, body, muted body, badge, and diagnostics text styles.
-- Surfaces: panel surface, list button, icon button, nav button, modal scrim, artwork dim, hero wash, details wash, playback canvas, playback overlay, playback drawer, and immersive control brush.
+- Surfaces: panel surface, list button, icon button, nav button, modal scrim, artwork dim, hero wash, details wash, details decision material, playback canvas, playback overlay, playback drawer, and immersive control brush.
 - Media rows: shared `TvListButtonStyle`, `TvListArtworkSize`, and `TvCompactArtworkSize` for browse-only list shells such as Live TV and Music.
 - Poster grids: shared `TvPosterGridItemStyle`, `TvPosterGridItemMargin`, `TvPosterCardWidth`, `TvPosterCardHeight`, `TvPosterCardCornerRadius`, `TvPosterCardScrimPadding`, poster title/meta text styles, fallback-initial style, and empty-state title/body styles for Library and Search.
 - Home decision surface and rail cards: Hero height, padding, column spacing, logo limits, title/meta type sizes, poster size, accent shape, library/server-section wide-card dimensions, poster-row dimensions, rail spacing, corner radii, artwork opacity, bottom text scrim height, and focused-card scale are shared resources (`TvHomeHeroHeight`, `TvHomeHeroPadding`, `TvHomeHeroPosterWidth`, `TvHomeHeroPosterHeight`, `TvHomeWideCardWidth`, `TvHomeWideCardHeight`, `TvHomeRowPosterCardWidth`, `TvHomeRowPosterCardHeight`, `TvHomeLibraryArtworkOpacity`, `TvHomeSectionArtworkOpacity`, `TvHomeWideCardTextScrimHeight`, and `TvHomeFocusedCardScale`) so skins can reshape Home without rewriting Emby data flow.
