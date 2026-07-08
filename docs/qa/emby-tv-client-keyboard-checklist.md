@@ -10,6 +10,73 @@ For visual-system acceptance, run the relevant batch in `docs/qa/design-conforma
 
 ## Run Log
 
+### 2026-07-08 - Design Conformance Batch 10 Saved Session Search Fix Rerun
+
+App version: `0.1.0.243`
+
+Scope:
+
+- Batch: Saved-session Search after routing handled TextBox Enter events while preserving handled `GamepadA` TextBox activation.
+- Build/install source: locally built, signed, and installed package `NextGenEmby.App 0.1.0.243`.
+- Data source: existing local saved session; no credentials, server details, screenshots, or personal media assets were written to the repository.
+- Evidence root: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-real-search-batch10-fix-0.1.0.243-20260708-084317`.
+
+Verification before visual rerun:
+
+- Red path: `SearchAccessibilitySourceTests.Search_Box_Registers_Handled_Textbox_Enter_For_Submit` failed before implementation because Search still used a plain XAML `KeyDown` binding.
+- Green path: the same Search source tests passed after registering `SearchBox.AddHandler(KeyDownEvent, new KeyEventHandler(SearchBox_OnKeyDown), true);`, removing the XAML binding, and guarding `GamepadA` so already-handled TextBox activation is not treated as submit.
+- Build/sign/install: MSBuild Debug x64 package build passed with 0 warnings and 0 errors; `signtool verify /pa` passed; installed version reported `0.1.0.243`.
+
+Keyboard-only / automation validation:
+
+- Launched saved-session `search` through `dev-command.json`.
+- Focused `SearchBox`, entered a generic one-character query, and sent `Enter`.
+- Captured Search initial, submitted state, scope movement, empty/recovery movement, and Guide-open state.
+- Summary flags: `SearchSubmittedState=True`, `StatusChangedBeforeTimeout=True`, `HasSearchBox=True`, `HasScopes=True`, `GuideOpensFromSearchSurface=True`; final-state follow-up reached `FinalStateReached=True`.
+
+Fix rerun findings:
+
+| ID | Status | Page | Evidence | Result | Residual risk |
+| --- | --- | --- | --- | --- | --- |
+| DC-10.02 | Pass | Search submit | `02-search-results.uia.txt`, `02b-search-final.uia.txt`, `02c-search-final-foreground.png`, `summary.txt`, `final-state-summary.txt`. | `Enter` from the focused query field now submits search and reaches the `No results` recovery state instead of staying on `Enter a search.` | This proves submit and recovery state, not result-card visuals. |
+| DC-10.03 | Pass with concern | Search scopes and Guide | `03-search-scope-right.*`, `04-search-result-grid-down.*`, `05-search-guide-from-results.*`. | Scope chips remain visible and matte; the Search surface still opens the expanded Guide with Search selected. | The generic query did not return result cards, so real result-grid navigation remains a later saved-session sample. |
+
+Decision:
+
+- Accept DC-10.02 as fixed.
+- Keep a future saved-session Search-result-card sample for a private-safe query that returns real media.
+
+### 2026-07-08 - Design Conformance Batch 10 Saved Session Search Baseline
+
+App version: `0.1.0.241`
+
+Scope:
+
+- Batch: Saved-session Search.
+- Build/install source: installed package `NextGenEmby.App 0.1.0.241`.
+- Data source: saved session; screenshots and UIA snapshots stored outside the repository.
+- Evidence root: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-real-search-batch10-0.1.0.241-20260708-082312`.
+
+Keyboard-only validation:
+
+- Route: `search`.
+- Keys: type a generic query, `Enter`, scope movement, guide open surrogate.
+- Expected: pressing `Enter` from the focused search field runs search and replaces `Enter a search.` with a results, empty, or error recovery state.
+- Actual: the field accepted the generic query, but after `Enter` the status still read `Enter a search.`.
+- Result: Fail.
+
+Findings recorded before fixes:
+
+| ID | Severity | Page | Evidence | Expected | Actual | Proposed batch fix |
+| --- | --- | --- | --- | --- | --- | --- |
+| DC-10.01 | Pass | Search | `01-search-initial.*`, `02-search-results.uia.txt` | Search opens with field, command action, and scope chips visible. | Search loaded correctly and accepted typed input. | None. |
+| DC-10.02 | Fail | Search | `02-search-results.uia.txt`, `02-visible-names.txt` | `Enter` from the focused query field submits search. | Status remained `Enter a search.` while the field contained a query. | Route handled TextBox Enter events to the existing search command path, then rerun Batch 10. |
+| DC-10.03 | Concern | Search | `03-search-scope-right.*`, `06-search-guide-from-results.*` | Scopes and Guide remain reachable from Search. | Scopes and Guide were reachable, but result-grid navigation could not be proven because search did not submit. | Rerun after DC-10.02. |
+
+Decision:
+
+- Fix DC-10.02 as a batch-level interaction bug, then rerun the same saved-session Search batch before accepting the page.
+
 ### 2026-07-06 - Library Portal App Icon
 
 App version: `0.1.0.72`

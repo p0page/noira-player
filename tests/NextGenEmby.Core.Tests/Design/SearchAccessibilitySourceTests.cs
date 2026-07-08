@@ -87,6 +87,44 @@ public sealed class SearchAccessibilitySourceTests
     }
 
     [Fact]
+    public void Search_Box_Registers_Handled_Textbox_Enter_For_Submit()
+    {
+        var root = FindRepositoryRoot();
+        var searchPageXaml = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NextGenEmby.App",
+            "Views",
+            "SearchPage.xaml"));
+        var searchPageSource = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NextGenEmby.App",
+            "Views",
+            "SearchPage.xaml.cs"));
+
+        Assert.DoesNotContain("KeyDown=\"SearchBox_OnKeyDown\"", searchPageXaml);
+        Assert.Contains("SearchBox.AddHandler(KeyDownEvent, new KeyEventHandler(SearchBox_OnKeyDown), true);", searchPageSource);
+        Assert.Contains("e.Key == VirtualKey.Enter", searchPageSource);
+        Assert.Contains("await SearchAsync();", searchPageSource);
+    }
+
+    [Fact]
+    public void Search_Box_Does_Not_Submit_Handled_GamepadA_Textbox_Activation()
+    {
+        var searchPageSource = File.ReadAllText(Path.Combine(
+            FindRepositoryRoot(),
+            "src",
+            "NextGenEmby.App",
+            "Views",
+            "SearchPage.xaml.cs"));
+
+        Assert.Contains("var keyAlreadyHandled = e.Handled;", searchPageSource);
+        Assert.Contains("(!keyAlreadyHandled && e.Key == VirtualKey.GamepadA)", searchPageSource);
+        Assert.DoesNotContain("e.Key == VirtualKey.Enter || e.Key == VirtualKey.GamepadA", searchPageSource);
+    }
+
+    [Fact]
     public void Search_Empty_State_Left_Right_Keys_Move_Between_Recovery_Actions()
     {
         var searchPageSource = File.ReadAllText(Path.Combine(

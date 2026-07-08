@@ -48,6 +48,7 @@ namespace NextGenEmby.App.Views
             InitializeComponent();
             PrepareSearchUtilityControls();
             NavigationCacheMode = Windows.UI.Xaml.Navigation.NavigationCacheMode.Enabled;
+            SearchBox.AddHandler(KeyDownEvent, new KeyEventHandler(SearchBox_OnKeyDown), true);
             AddHandler(KeyDownEvent, new KeyEventHandler(Page_OnKeyDown), true);
             Loaded += SearchPage_OnLoaded;
             Unloaded += SearchPage_OnUnloaded;
@@ -132,7 +133,9 @@ namespace NextGenEmby.App.Views
 
         private async void SearchBox_OnKeyDown(object sender, KeyRoutedEventArgs e)
         {
-            if (e.Key == VirtualKey.Enter || e.Key == VirtualKey.GamepadA)
+            var keyAlreadyHandled = e.Handled;
+            if (e.Key == VirtualKey.Enter ||
+                (!keyAlreadyHandled && e.Key == VirtualKey.GamepadA))
             {
                 e.Handled = true;
                 await SearchAsync();

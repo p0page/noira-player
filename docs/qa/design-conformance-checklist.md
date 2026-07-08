@@ -227,6 +227,24 @@ Evidence to capture:
 - Playback OSD after real media reaches Playing.
 - Route result and diagnostics snapshots stored outside the repository.
 
+## Batch 10 - Saved Session Search
+
+Goal: verify that real saved-session search is usable with keyboard/controller-equivalent input, keeps scope controls TV-readable, and returns a real result or recovery state without leaking private screenshots into the repository.
+
+| ID | Route | Keyboard Path | Design Checks | Result | Notes |
+| --- | --- | --- | --- | --- | --- |
+| 10.01 | Saved-session Search | `search`, type a generic query | Search opens with the quiet left rail, title field, command action, and compact neutral scope chips visible. Text entry remains inside the matte utility field. | Pass | 0.1.0.241 saved-session baseline opened Search, focused `Search title`, showed All / Movies / Shows / Episodes / Collections / Playlists / People / Music / Photos / Live TV scopes, and accepted the generic query. Evidence root: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-real-search-batch10-0.1.0.241-20260708-082312`. |
+| 10.02 | Saved-session Search submit | Press `Enter` from the focused search field | Controller/keyboard submit should run search, then replace `Enter a search.` with a real results count, no-results state, or search error recovery. | Pass | 0.1.0.241 baseline UIA still reported `Enter a search.` after `Enter` while the search field held a one-character query. 0.1.0.243 rerun routed handled TextBox Enter events to the existing Search command path and reached the `No results` recovery state instead. |
+| 10.03 | Saved-session Search scopes and global guide | `Right` through scopes, `Ctrl+M` from the surface | Scope focus should remain matte and compact; global Guide should still open from Search without corrupting editable text. | Pass with concern | 0.1.0.243 rerun confirmed scope chips and Guide entry remain reachable from the submitted Search surface. Because the generic query produced `No results`, real result-card navigation still needs a later private-safe query sample. Evidence root: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-real-search-batch10-fix-0.1.0.243-20260708-084317`. |
+
+Evidence to capture:
+
+- Search initial state with field and scope chips.
+- Search submit state after a generic query.
+- Scope-focus state.
+- Guide-open state from Search.
+- UIA text snapshots stored outside the repository with private result names redacted or not committed.
+
 ## Batch Run Template
 
 Copy this block into `docs/qa/emby-tv-client-keyboard-checklist.md` after each run:

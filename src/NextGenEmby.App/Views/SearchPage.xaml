@@ -39,7 +39,6 @@
                         x:Name="SearchBox"
                         AutomationProperties.Name="Search title"
                         PlaceholderText="Title, person, playlist, music"
-                        KeyDown="SearchBox_OnKeyDown"
                         Style="{StaticResource TvUtilityFieldTextBoxStyle}" />
                     <Button
                         x:Name="SearchActionButton"
