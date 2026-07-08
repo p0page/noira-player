@@ -531,3 +531,28 @@ manifest validation、report-set validation、single comparison、comparison sui
 对比中的播放质量结论保持保守：这次改动是 instrumentation/testability 增强，不是播放策略优化。`local/native-headless-av-smoke` 的 render interval、A/V drift、audio-ahead wait、buffering、seek/timeline、track/subtitle 和 color/DXGI 证据保持可比，但 suite 仍然判定 `no-change`。
 
 重要边界：旧 baseline `38ae764` 没有 process-cost 字段，因此本轮不能判断 high-resolution waitable timer 的 CPU 成本是否改善或退化；它只能证明新的证据链已经可用。下一轮如果要评价 CPU/process-cost 变化，应以 `b292019` 生成的 candidate 作为带 process-cost schema 的新 baseline，再生成后续 candidate 做同 manifest 对比。
+
+# 2026-07-08 更新：audio prewake margin 候选不采纳
+
+本轮尝试了一个最小 native 调度候选：在 `PlaybackFramePacing::AudioAheadWaitDuration` 中，当 audio-ahead target 大于 2ms 时提前 2ms 醒来重新采样，而不是一次性等待到理论边界。TDD 过程为：先修改 `FramePacingTests.cpp` 使当前实现失败，再实现 `AudioAheadPreWakeMarginTicks = 20000` 后通过 targeted native frame pacing test。
+
+提交前完整验证已通过：`tools/quality-run/run-playback-core-checks.ps1` 退出码为 0，覆盖 Core tests、quality CLI、native-headless smoke、candidate comparison script tests 和 native build。随后曾提交为 `aa2eddc chore: prewake audio ahead render wait`。
+
+已生成 commit-bound 41-case candidate 和 comparison：
+
+- candidate：`docs/qa/private/candidates/playback-core-tuning-audio-prewake-margin-41case-aa2eddc.local/`
+- comparison：`docs/qa/private/comparisons/playback-core-tuning-audio-prewake-margin-41case-aa2eddc.local/`
+- baseline：`docs/qa/private/candidates/playback-core-tuning-process-cost-evidence-41case-b292019.local/`
+- 结果：41/41 case 可比，validation 通过，`manifest.sameCaseIds = true`，`decision = no-change`，0 improved / 0 regressed / 0 mixed / 41 unchanged，strong confidence 41/41。
+
+目标 A/V native-headless case 的 commit-bound 指标是 mixed，不支持采纳：
+
+- render P50/P95/P99：`33.2845/40.179/40.7123ms -> 32.9412/40.771/41.1449ms`
+- audio-ahead wait P50/P95/P99：`27.0436/31.3399/31.3715ms -> 24.9388/33.2936/34.6695ms`
+- audio-ahead oversleep P50/P95/P99：`0.5162/8.0066/8.0382ms -> 0/6.7835/6.9554ms`
+- A/V drift P50/P95 保持 `6.6667/10ms`
+- process CPU ratio：`0.16178209840959137 -> 0.1522388292376957`
+- `videoAheadWaitCount` 增加 `71 -> 91`
+- submitted/queued audio 保持 `82/12`
+
+结论：该候选降低了 oversleep 和进程 CPU ratio，但没有稳定改善 render P95/P99，且增加了 audio-ahead wait 次数。因此不作为 accepted candidate 保留；`aa2eddc` 的代码改动已回退。后续不要继续靠固定 prewake margin 调参，应优先补充更稳定的多次采样/长样本证据，或设计能同时降低 oversleep 与 render interval 的更明确调度策略。

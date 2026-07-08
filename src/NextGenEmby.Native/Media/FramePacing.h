@@ -11,7 +11,6 @@ namespace winrt::NextGenEmby::Native::implementation
         static constexpr int64_t VideoAheadToleranceTicks = 100000;
         static constexpr int64_t VideoDropToleranceTicks = 1000000;
         static constexpr int64_t MinimumFrameRateAdaptiveDropToleranceTicks = 400000;
-        static constexpr int64_t AudioAheadPreWakeMarginTicks = 20000;
         static constexpr double LateFrameDropFrameTolerance = 2.5;
 
         static constexpr std::chrono::milliseconds RenderLoopWait() noexcept
@@ -38,13 +37,8 @@ namespace winrt::NextGenEmby::Native::implementation
                 return std::chrono::microseconds(0);
             }
 
-            auto waitTicks = framePositionTicks - audioPositionTicks - VideoAheadToleranceTicks;
-            if (waitTicks > AudioAheadPreWakeMarginTicks)
-            {
-                waitTicks -= AudioAheadPreWakeMarginTicks;
-            }
-
-            return std::chrono::microseconds(waitTicks / 10);
+            return std::chrono::microseconds(
+                (framePositionTicks - audioPositionTicks - VideoAheadToleranceTicks) / 10);
         }
 
         static constexpr bool ShouldDropLateFrame(

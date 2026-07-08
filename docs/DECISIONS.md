@@ -655,3 +655,13 @@
 - 该变更不改变播放器行为、播放策略、evaluator 阈值、case expected behavior 或 pass/fail 规则。
 
 当前 `b292019` 与 `38ae764` 的 41-case comparison 结果为 `decision = no-change`。由于 `38ae764` baseline 没有 process-cost 字段，本轮不能给出 CPU 成本前后结论；下一轮以 `b292019` 之后的 report-set 为 baseline 时，才可以比较 process-cost 是否发生变化。
+
+# 2026-07-08: audio prewake margin 候选不进入主线
+
+决策：不采纳 `aa2eddc` 的 audio-ahead prewake margin 策略。该策略在 `AudioAheadWaitDuration` 中为大于 2ms 的等待提前 2ms 唤醒重新采样，试图降低 high-resolution waitable timer 的 oversleep。
+
+原因：虽然 41-case comparison 中没有 suite-level regression，且 `local/native-headless-av-smoke` 的 oversleep P95 和 process CPU ratio 有改善，但 commit-bound 指标没有稳定改善目标 frame pacing：render P95/P99 从 `40.179/40.7123ms` 变为 `40.771/41.1449ms`，audio-ahead wait P95/P99 也从 `31.3399/31.3715ms` 变为 `33.2936/34.6695ms`。同时 `videoAheadWaitCount` 从 `71` 增加到 `91`。这属于 mixed diagnostic/no-change，不足以作为播放策略主线改动。
+
+影响：保留该实验的 candidate/comparison 产物作为反证，不保留代码行为。后续 wait/scheduling 调优不能仅靠固定 prewake margin 继续试参；需要更稳定的重复采样、长样本证据，或更明确地同时改善 render interval、oversleep、A/V drift 和 process cost 的策略。
+
+边界：这不是降低 stable eval 标准，也不是删除测试；相反，本轮因为 commit-bound 同 manifest comparison 不支持采纳而回退了策略代码。
