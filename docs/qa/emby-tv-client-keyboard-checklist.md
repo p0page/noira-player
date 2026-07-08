@@ -3164,3 +3164,31 @@ Fix rerun findings:
 | ID | Status | Page | Evidence | Result | Residual risk |
 | --- | --- | --- | --- | --- | --- |
 | DC-08.04 | Pass | Movies no-artwork fallback initials | `01-movies-fallback-rerun.png`, `01-movies-fallback-rerun.uia.txt`, and `route-result.txt`. | Saved-session Movies opened successfully. UIA confirmed the quoted `Friends` title now exposes fallback `F` with no quote fallback, and the `.MP4` title now exposes fallback `M` with no dot fallback. | Real library may include titles whose first useful character is still not ideal because the source title itself is a raw filename; title cleanup is a metadata/product concern separate from fallback glyph selection. |
+
+### 2026-07-08 - Design Conformance Batch 09 Saved Session Details And Playback Handoff
+
+- App version: 0.1.0.241.
+- Scope: verify the real saved-session main chain from Movies to Details to Playback after the poster-grid and Details fixture work.
+- Data source: existing local saved Emby session; no credentials, server details, screenshots, or personal media assets were written to the repository.
+- Evidence roots:
+  - Details handoff: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-real-details-batch09-0.1.0.241-20260708-080925`.
+  - Playback handoff: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-real-playback-settled-batch09-0.1.0.241-20260708-081524`.
+- Keyboard-only / automation validation:
+  - Launched saved-session `movies` through `dev-command.json`, moved `Right` to a poster-backed real movie, and pressed `Enter` to open Details.
+  - Captured Movies before open: `01-movies-before-open.png`, `01-movies-before-open.uia.txt`.
+  - Captured Details initial state and two `Down` movements: `02-details-initial.png`, `03-details-down-1.png`, `04-details-down-2.png`.
+  - Pressed `Escape` and captured return to Movies: `05-after-escape.png`.
+  - Repeated the route, pressed `Enter` on the Details Play action, waited until playback reached `Playing`, and captured `01-playback-settled.png`, `01-playback-settled.uia.txt`, plus `playback-diagnostics.log`.
+
+Findings recorded before fixes:
+
+| ID | Severity | Page | Evidence | Expected | Actual | Proposed batch fix |
+| --- | --- | --- | --- | --- | --- | --- |
+| DC-09.01 | Pass | Movies to Details | `01-movies-before-open.png`, `02-details-initial.png`, and UIA snapshots. | Real Movies card opens Details; Play is focused; source/version information is visible without breaking matte focus. | Details opened successfully, Play was the initial focus target, and source metadata was visible in the first viewport. | No fix needed. |
+| DC-09.02 | Concern | Details source/audio/subtitle decisions | `02-details-initial.uia.txt`, `03-details-down-1.uia.txt`, `04-details-down-2.uia.txt`. | Real Details should expose source, audio, subtitle decisions when alternatives exist, while summaries remain readable when there is only one choice. | Version, audio summary, subtitle summary, organize actions, facets, and cast rails were readable. This item had a single source/audio and no listed subtitles, so the run cannot prove real multi-choice selector behavior. | Keep fixture selector coverage as canonical for multi-choice behavior; add a real saved-session sample when a media item with multiple audio/subtitle choices is available. |
+| DC-09.03 | Concern | Details artwork atmosphere | `02-details-initial.png`. | Right-side media should act as atmosphere and not become a clear poster viewer. | The real item used a large dimmed poster crop on the right. It stayed non-interactive and dark, but visually reads close to a clear poster wall when no backdrop is available. | Defer until more real details samples exist; possible later adjustment is stronger dim/crop/blur for Primary-only atmosphere while preserving backdrop richness. |
+| DC-09.04 | Pass | Details to Playback | `01-playback-settled.png`, `01-playback-settled.uia.txt`, and `playback-diagnostics.log`. | Play should reach real playback and show compact OSD with source/audio/subtitle/more controls inside the strip. | The second playback run waited for `Playing`. The compact bottom OSD stayed intact and exposed source, audio, subtitles, transport, stop, and More. | No fix needed. |
+
+- Decision:
+  - No implementation change in this batch. The two concerns require broader real-media sampling rather than a single visual-token adjustment.
+  - Keep Batch 04 fixture playback as the deterministic OSD contract and Batch 09 real playback as saved-session smoke coverage.

@@ -209,6 +209,24 @@ Evidence to capture:
 - Saved-session Movies focused card and no-artwork fallback card.
 - UIA text proving real titles/meta remain reachable without committing private screenshots.
 
+## Batch 09 - Saved Session Details And Playback Handoff
+
+Goal: verify that a real saved-session movie can move through the main chain from Movies to Details to Playback without breaking the matte visual system or controller focus model.
+
+| ID | Route | Keyboard Path | Design Checks | Result | Notes |
+| --- | --- | --- | --- | --- | --- |
+| 09.01 | Saved-session Movies to Details | `movies`, `Right`, `Enter` | Real item opens Details with Play focused, source/version summary visible, and no bright card-frame vocabulary. | Pass | 0.1.0.241 real saved-session run opened a poster-backed movie from Movies into Details; Play remained the initial focus target and source metadata was visible. |
+| 09.02 | Saved-session Details source and metadata | `Down`, `Down` | Versions, audio/subtitle summaries, organize actions, facets, and secondary rails stay TV-readable and use matte focus. | Pass with concern | Version focus and organize focus worked with readable source/audio/subtitle summaries. Residual concern: for single-source/single-audio/no-subtitle media, audio and subtitle are summaries rather than focusable selectors, so this run cannot prove multi-choice selector behavior on real media. |
+| 09.03 | Saved-session Details artwork atmosphere | Open real item with poster art | Right-side atmosphere should feel like background context, not a separate poster viewer; poster-only fallback should stay dim and non-interactive. | Pass with concern | The real item used a large dimmed poster crop on the right. It stayed non-interactive and did not introduce glass or borders, but it reads close to a clear poster wall when no backdrop is available. Keep sampling before changing the recipe. |
+| 09.04 | Saved-session Details to Playback | `Enter` on Play, wait for playback | Real playback reaches compact OSD with source/audio/subtitle/more controls and returns useful playback state. | Pass | 0.1.0.241 real playback reached `Playing`, exposed compact bottom OSD, and kept source/audio/subtitle/more controls inside the strip. |
+
+Evidence to capture:
+
+- Movies focused item before opening Details.
+- Details first viewport and down-navigation snapshots.
+- Playback OSD after real media reaches Playing.
+- Route result and diagnostics snapshots stored outside the repository.
+
 ## Batch Run Template
 
 Copy this block into `docs/qa/emby-tv-client-keyboard-checklist.md` after each run:
