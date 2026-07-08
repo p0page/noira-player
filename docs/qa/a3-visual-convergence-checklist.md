@@ -88,10 +88,10 @@ Goal: move Home toward the A3 media-wall target.
 
 | ID | Route | Checks | Result | Notes |
 | --- | --- | --- | --- | --- |
-| A3-02.01 | Home | First viewport shows multiple media choices and rails, not a single management-style hero panel. | Not Run | Continue Watching may lead, but should not become a form-like hero. |
-| A3-02.02 | Home | Continue Watching cards use one wide-card anatomy with black scrim by default and subtle focused material only in the text/progress zone. | Not Run | No nested text containers. |
-| A3-02.03 | Home | Media libraries/server sections are subdued source cards, not large bordered dashboard tiles. | Not Run | Artwork may be darkened; borders should not dominate. |
-| A3-02.04 | Home | Real artwork creates the page color; chrome stays graphite. | Not Run | Green must remain sparse. |
+| A3-02.01 | Home | First viewport shows multiple media choices and rails, not a single management-style hero panel. | Concern | Local-only real capture shows multiple rails and many media choices, which is directionally right. The first read still starts with a desktop-like page title/status area and a sparse top hero instead of the dense A3 media wall. |
+| A3-02.02 | Home | Continue Watching cards use one wide-card anatomy with black scrim by default and subtle focused material only in the text/progress zone. | Concern | Real Continue Watching cards use wide artwork and black scrims, but card borders and control-like focus treatment still read heavier than the A3 target. |
+| A3-02.03 | Home | Media libraries/server sections are subdued source cards, not large bordered dashboard tiles. | Concern | Library cards use real artwork and darkened overlays, but the row still has visible rectangular borders and sits too high in the page hierarchy. |
+| A3-02.04 | Home | Real artwork creates the page color; chrome stays graphite. | Concern | Real posters and thumbnails now supply most color. Green remains mostly progress/play, but the canvas still has desktop chrome and top-right refresh weight that should recede. |
 
 Acceptance:
 
@@ -103,10 +103,10 @@ Goal: move Library/Movie grid toward the A3 poster-wall target.
 
 | ID | Route | Checks | Result | Notes |
 | --- | --- | --- | --- | --- |
-| A3-03.01 | Movies grid | Sort/filter controls are light utility controls, not the visual anchor. | Not Run | Toolbar should not look like a settings form. |
-| A3-03.02 | Movies grid | Poster density and spacing are close to A3: many visible posters, enough breathing room, no desktop table feeling. | Not Run | Preserve TV readability. |
-| A3-03.03 | Focused poster | Focus uses integrated matte backplate, subtle scale/luminance, and readable title/meta. | Not Run | No bright complete border. |
-| A3-03.04 | No-art fallback | Fallback cards are quiet and do not dominate the grid. | Not Run | Initials are acceptable but should remain secondary. |
+| A3-03.01 | Movies grid | Sort/filter controls are light utility controls, not the visual anchor. | Concern | Real capture shows sort/filter controls remain large and form-like relative to the poster wall. They should shrink into utility chrome. |
+| A3-03.02 | Movies grid | Poster density and spacing are close to A3: many visible posters, enough breathing room, no desktop table feeling. | Concern | Real capture has strong poster density and enough first-viewport inventory, but the page still starts as a desktop list with title, count, refresh, and toolbar. |
+| A3-03.03 | Focused poster | Focus uses integrated matte backplate, subtle scale/luminance, and readable title/meta. | Concern | Current focus is readable, but still boxier and more bordered than the A3 poster-focus target. Use the A3 integrated matte backplate and subtle scale/luminance as the next visual recipe. |
+| A3-03.04 | No-art fallback | Fallback cards are quiet and do not dominate the grid. | Concern | Real capture includes no-art tiles. They are functional but still too block-like when focused; fallback should be quieter and secondary to posters. |
 
 Acceptance:
 
@@ -118,11 +118,11 @@ Goal: move Details toward full-screen artwork atmosphere.
 
 | ID | Route | Checks | Result | Notes |
 | --- | --- | --- | --- | --- |
-| A3-04.01 | Details fixture, `details-primary-only-fixture`, and `details-real-sample` | The page reads as one atmospheric canvas, not left form plus right poster. | Concern | Fixture artwork validates repeatable structure only; it is too abstract/dark to prove final atmosphere. Local-only real Emby artwork shows the right side can carry color and subject matter while the left scrim protects text. The primary-only fixture proves cropped `Primary` can become dim atmosphere instead of a second poster viewer, and the no-art fixture now proves the black/matte fallback without fake placeholder art. Needs more real samples across bright artwork and varied metadata/source cases before Pass. |
+| A3-04.01 | Details fixture, `details-primary-only-fixture`, `details-real-sample`, and `details-real-bright-sample` | The page reads as one atmospheric canvas, not left form plus right poster. | Concern | Fixture artwork validates repeatable structure only; it is too abstract/dark to prove final atmosphere. Local-only real Emby artwork shows the right side can carry color and subject matter while the left scrim protects text. The 0.1.0.276 bright-artwork route deliberately selected a high-luma real item and confirmed that even a pale/right-heavy source remains atmosphere behind the protected reading column. The primary-only fixture proves cropped `Primary` can become dim atmosphere instead of a second poster viewer, and the no-art fixture now proves the black/matte fallback without fake placeholder art. Needs more real samples across varied metadata/source cases before Pass. |
 | A3-04.02 | Details fixture and `details-real-sample` | Title, metadata, badges, overview, and credits sit in a left information column with strong hierarchy. | Concern | The reading band now uses `TvDetailsContentMargin` `56,156,56,48`, `TvDetailsContentColumnWidth`/`MaxWidth` `680`, and an overview max width of `640` with three-line ellipsis, moving the content below the page-header zone so it reads more like a cinematic information band. The latest facts pass adds a passive first-viewport fact row and compact director/genre text, so Details no longer reads as only a title plus overview. Remaining gap: facts/credits are structurally useful but need broader real-artwork and localization stress before Pass. |
-| A3-04.03 | Details fixture, `details-long-source-fixture`, `details-primary-only-fixture`, and `details-real-sample` | Play/source/audio/subtitle/actions form a bottom decision island close to A3. | Concern | The dock is bottom-anchored by layout instead of runtime top calculations, so DPI-aware screenshots show it in the first viewport. The 0.1.0.261 local pass made the dock outer shell transparent, the 0.1.0.262 local pass reduced source/audio/subtitle from detailed parameters to compact decision summaries, and the 0.1.0.269 local pass moved the dock to `TvDetailsDecisionDockMargin` `56,0,56,112` so it no longer reads as a bottom-edge toolbar. The 0.1.0.273 local pass moved non-primary actions and source/audio/subtitle chips to lower-alpha `AppDetailsDecisionTileBrush` material and removed default hairline button frames. The 0.1.0.274 local pass split long source/audio/subtitle labels into `details-long-source-fixture`, keeping the standard fixture as a clean visual baseline while proving long labels stay one-line and do not resize the low decision area. The 0.1.0.275 local pass added a Details-specific focused decision tile fill so focused Play/source decisions no longer reuse the brighter global card-focus material. Remaining gap: bright artwork and real controller traversal still need stress before Pass. |
+| A3-04.03 | Details fixture, `details-long-source-fixture`, `details-primary-only-fixture`, `details-real-sample`, and `details-real-bright-sample` | Play/source/audio/subtitle/actions form a bottom decision island close to A3. | Concern | The dock is bottom-anchored by layout instead of runtime top calculations, so DPI-aware screenshots show it in the first viewport. The 0.1.0.261 local pass made the dock outer shell transparent, the 0.1.0.262 local pass reduced source/audio/subtitle from detailed parameters to compact decision summaries, and the 0.1.0.269 local pass moved the dock to `TvDetailsDecisionDockMargin` `56,0,56,112` so it no longer reads as a bottom-edge toolbar. The 0.1.0.273 local pass moved non-primary actions and source/audio/subtitle chips to lower-alpha `AppDetailsDecisionTileBrush` material and removed default hairline button frames. The 0.1.0.274 local pass split long source/audio/subtitle labels into `details-long-source-fixture`, keeping the standard fixture as a clean visual baseline while proving long labels stay one-line and do not resize the low decision area. The 0.1.0.275 local pass added a Details-specific focused decision tile fill so focused Play/source decisions no longer reuse the brighter global card-focus material. The 0.1.0.276 bright-artwork pass confirms the low decision island remains readable over a pale/high-luma real background. Remaining gap: real controller traversal still needs stress before Pass. |
 | A3-04.04 | Details no-art fixture | No image falls back to black/matte without fake poster, gradient, or generated placeholder. | Pass | `details-no-art-fixture` captures as a quiet black/matte atmosphere with the normal left information and low decision areas. It does not synthesize poster art, gradient art, title watermarks, or a no-art panel. |
-| A3-04.05 | `details-primary-only-fixture` and real Details items | Primary-only atmosphere is dim/cropped enough to avoid becoming a separate poster viewer. | Concern | `details-primary-only-fixture` provides deterministic primary-only coverage without private assets, and `details-real-sample` runs against local saved-session artwork without committing screenshots/assets. Latest fixture review shows the right side remains atmosphere rather than a clear duplicate poster. Latest real sample uses actual artwork and confirms the source/audio/subtitle dock can populate from live data, but this is still not enough to accept broad real-world coverage. |
+| A3-04.05 | `details-primary-only-fixture`, `details-real-sample`, and `details-real-bright-sample` | Primary-only atmosphere is dim/cropped enough to avoid becoming a separate poster viewer. | Concern | `details-primary-only-fixture` provides deterministic primary-only coverage without private assets, and both real routes run against local saved-session artwork without committing screenshots/assets. Latest fixture review shows the right side remains atmosphere rather than a clear duplicate poster. The 0.1.0.276 bright sample selected a pale real item and showed the crop/wash can handle high-luma poster-derived atmosphere, but this is still not enough to accept broad real-world coverage. |
 
 Acceptance:
 
@@ -449,6 +449,62 @@ Findings recorded before fixes:
 Decision:
 
 - Continue visual fix. Focused Details action/source material is now closer to the matte cinema rule and remains borderless over fixture and local real artwork. A3-04 remains `Concern` because bright real artwork and controller-driven traversal across source/audio/subtitle decisions still need stress before Pass.
+
+### 2026-07-08 - A3 Details Bright Real Artwork Sampling Pass
+
+App version: `0.1.0.276` local validation package; repository manifest should remain restored after validation.
+
+Scope:
+
+- Batch: A3-04 Details Atmosphere
+- Routes: `details-real-bright-sample`, `details-real-sample`
+- Evidence root: `%TEMP%\ngxe-a3-details-bright-real-20260708-2005`
+- Data source: saved-session local-only real artwork. The bright route downloads small artwork samples into memory, estimates luma, and does not persist source images, tokens, server URLs, credentials, or item-specific private data.
+
+Screenshots reviewed:
+
+- Current: `details-real-bright-sample-local-only-completed.png`, `details-real-sample-local-only.png`
+- Target: `docs/design-previews/A3-ideal-details-atmosphere.png`
+
+Findings recorded before fixes:
+
+| ID | Severity | Screenshot | Expected A3 quality | Actual | Proposed visual fix |
+| --- | --- | --- | --- | --- | --- |
+| A3-04.01 | Concern | `details-real-bright-sample-local-only-completed.png` | A high-luma real artwork source should still read as atmosphere, not a white panel beside a form. | The left scrim protects title, facts, overview, and credits; the pale right side remains dimmed enough to feel like poster-derived atmosphere instead of a separate poster viewer. | Keep `details-real-bright-sample` as a local-only stress route for bright-artwork validation. |
+| A3-04.03 | Concern | `details-real-bright-sample-local-only-completed.png` | The low decision island remains readable over bright real artwork without adding a bright outline or hard outer dock. | Play/source/audio/subtitle tiles remain legible and visually subordinate. The route takes longer than normal because it samples up to 60 real movie images before navigation. | For future capture scripts, wait on `dev-command-result.txt` completion instead of using a fixed sleep. |
+
+Decision:
+
+- Treat bright real artwork stress as covered structurally by the new route. A3-04 remains `Concern`, not `Pass`, because controller traversal and broader real-library metadata/source variation still need visual stress before final acceptance.
+
+### 2026-07-08 - A3 Home And Library Real Artwork Baseline
+
+App version: `0.1.0.275` local installed package; Home/Library implementation is unchanged by the later Details-only `0.1.0.276` validation route.
+
+Scope:
+
+- Batch: A3-02 Home Media Wall, A3-03 Library Poster Wall
+- Routes: `home`, `movies`, `movies-fixture`
+- Evidence root: `%TEMP%\ngxe-main-flow-pages-20260708-195222`
+- Data source: saved-session local-only real artwork plus deterministic `movies-fixture`; real screenshots remain local-only and must not be committed.
+
+Screenshots reviewed:
+
+- Current: `home-real-current-local-only.png`, `movies-real-current-local-only.png`, `movies-fixture-current.png`
+- Target: `docs/design-previews/A3-ideal-home-dashboard.png`, `docs/design-previews/A3-ideal-library-poster-focus.png`
+
+Findings recorded before fixes:
+
+| ID | Severity | Screenshot | Expected A3 quality | Actual | Proposed visual fix |
+| --- | --- | --- | --- | --- | --- |
+| A3-02.01 | Concern | `home-real-current-local-only.png` | Home first read is a dense media wall with rails and real artwork carrying color. | Real artwork density is much better than early fixture evidence, but the top page title/status and sparse hero still make Home read partly like a desktop dashboard. | Reduce the page-header/refresh weight and let rails occupy the first read earlier. |
+| A3-02.02 | Concern | `home-real-current-local-only.png` | Continue Watching wide cards feel like media, with black scrims and subtle focus material. | The anatomy is close enough to keep, but borders/focus chrome remain more visible than A3. | Reuse the Details/Library matte-focus direction: luminance/scale/text protection before outlines. |
+| A3-03.01 | Concern | `movies-real-current-local-only.png` | Library utility controls are subordinate to the poster wall. | Sort/filter controls and refresh still read as form chrome. | Collapse toolbar visual weight before changing poster density. |
+| A3-03.02 | Concern | `movies-real-current-local-only.png` | The poster wall shows many real posters while staying readable from TV distance. | Density is directionally good with real posters; the surrounding title/count/toolbar still makes the page feel desktop. | Preserve density, reduce top chrome and focused-card boxiness. |
+
+Decision:
+
+- Use these Home/Library screenshots as the next visual baseline. Do not treat them as Pass: they prove real artwork/data density is available, while also showing that chrome hierarchy and focus material still need A3 convergence.
 
 ```md
 ### YYYY-MM-DD - A3 Batch NN

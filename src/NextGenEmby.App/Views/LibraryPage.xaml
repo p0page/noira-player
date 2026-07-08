@@ -35,7 +35,7 @@
                     HorizontalAlignment="Right"
                     VerticalAlignment="Center"
                     Click="Refresh_OnClick"
-                    Opacity="0.72"
+                    Opacity="0.48"
                     Style="{StaticResource IconButtonStyle}"
                     ToolTipService.ToolTip="Refresh"
                     UseSystemFocusVisuals="False">
@@ -47,19 +47,20 @@
                 x:Name="OptionsPanel"
                 Grid.Row="1"
                 Orientation="Horizontal"
-                Spacing="18">
-                <StackPanel Width="220" Spacing="6">
+                Spacing="{StaticResource TvLibraryToolbarSpacing}">
+                <StackPanel Width="{StaticResource TvLibraryToolbarButtonWidth}" Spacing="0">
                     <TextBlock
                         Style="{StaticResource TvOptionLabelTextStyle}"
-                        Text="Sort" />
+                        Text="Sort"
+                        Visibility="Collapsed" />
                     <Button
                         x:Name="SortButton"
                         AutomationProperties.Name="Sort"
                         HorizontalAlignment="Stretch"
                         HorizontalContentAlignment="Stretch"
                         Click="SortButton_OnClick"
-                        Style="{StaticResource TvCommandButtonStyle}">
-                        <Grid ColumnSpacing="12">
+                        Style="{StaticResource TvLibraryToolbarButtonStyle}">
+                        <Grid ColumnSpacing="8">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
@@ -67,7 +68,6 @@
                             <TextBlock
                                 x:Name="SortValueBlock"
                                 VerticalAlignment="Center"
-                                FontSize="16"
                                 Text="Title"
                                 TextTrimming="CharacterEllipsis" />
                             <SymbolIcon
@@ -78,18 +78,19 @@
                     </Button>
                 </StackPanel>
 
-                <StackPanel Width="220" Spacing="6">
+                <StackPanel Width="{StaticResource TvLibraryToolbarButtonWidth}" Spacing="0">
                     <TextBlock
                         Style="{StaticResource TvOptionLabelTextStyle}"
-                        Text="Filter" />
+                        Text="Filter"
+                        Visibility="Collapsed" />
                     <Button
                         x:Name="FilterButton"
                         AutomationProperties.Name="Filter"
                         HorizontalAlignment="Stretch"
                         HorizontalContentAlignment="Stretch"
                         Click="FilterButton_OnClick"
-                        Style="{StaticResource TvCommandButtonStyle}">
-                        <Grid ColumnSpacing="12">
+                        Style="{StaticResource TvLibraryToolbarButtonStyle}">
+                        <Grid ColumnSpacing="8">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
@@ -97,7 +98,6 @@
                             <TextBlock
                                 x:Name="FilterValueBlock"
                                 VerticalAlignment="Center"
-                                FontSize="16"
                                 Text="All"
                                 TextTrimming="CharacterEllipsis" />
                             <SymbolIcon

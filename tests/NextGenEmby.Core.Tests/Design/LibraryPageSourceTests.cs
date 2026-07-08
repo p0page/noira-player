@@ -100,7 +100,7 @@ public sealed class LibraryPageSourceTests
         Assert.Contains("x:Key=\"TvLibraryOptionSheetOptionButtonStyle\"", appXaml);
         Assert.Contains("x:Key=\"TvLibraryOptionSheetWidth\"", appXaml);
         Assert.Contains("x:Key=\"TvLibraryOptionSheetMargin\"", appXaml);
-        Assert.Contains("Style=\"{StaticResource TvCommandButtonStyle}\"", pageXaml);
+        Assert.Contains("Style=\"{StaticResource TvLibraryToolbarButtonStyle}\"", pageXaml);
         Assert.Contains("Width=\"{StaticResource TvLibraryOptionSheetWidth}\"", pageXaml);
         Assert.Contains("Margin=\"{StaticResource TvLibraryOptionSheetMargin}\"", pageXaml);
         Assert.Contains("VerticalAlignment=\"Top\"", pageXaml);
@@ -152,7 +152,7 @@ public sealed class LibraryPageSourceTests
 
         Assert.Contains("<Setter Property=\"FontSize\" Value=\"28\" />", titleStyle);
         Assert.DoesNotContain("<Setter Property=\"FontSize\" Value=\"34\" />", titleStyle);
-        Assert.Contains("Opacity=\"0.72\"", pageXaml);
+        Assert.Contains("Opacity=\"0.48\"", pageXaml);
         Assert.DoesNotContain("UseSystemFocusVisuals=\"True\"", pageXaml);
     }
 

@@ -11,7 +11,9 @@ using NextGenEmby.App.Navigation;
 using NextGenEmby.App.Services;
 using NextGenEmby.App.Storage;
 using NextGenEmby.App.Views;
+using Windows.Graphics.Imaging;
 using Windows.Storage;
+using Windows.Storage.Streams;
 using Windows.UI.Core;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
@@ -971,7 +973,11 @@ namespace NextGenEmby.App
                     return;
 
                 case "details-real-sample":
-                    await NavigateToRealDetailsSampleAsync();
+                    await NavigateToRealDetailsSampleAsync(DevelopmentRealDetailsSampleMode.FirstSupported);
+                    return;
+
+                case "details-real-bright-sample":
+                    await NavigateToRealDetailsSampleAsync(DevelopmentRealDetailsSampleMode.BrightestArtwork);
                     return;
 
                 case "details-no-art-fixture":
@@ -1031,7 +1037,7 @@ namespace NextGenEmby.App
             }
         }
 
-        private async Task NavigateToRealDetailsSampleAsync()
+        private async Task NavigateToRealDetailsSampleAsync(DevelopmentRealDetailsSampleMode sampleMode)
         {
             var session = await _sessionStore.LoadAsync();
             if (session == null)
@@ -1045,12 +1051,12 @@ namespace NextGenEmby.App
                 var items = await client.GetItemsAsync(session, new EmbyItemsQuery
                 {
                     IncludeItemTypes = "Movie",
-                    Limit = 24,
+                    Limit = sampleMode == DevelopmentRealDetailsSampleMode.BrightestArtwork ? 60 : 24,
                     Recursive = true,
                     SortBy = "DateCreated",
                     SortOrder = "Descending"
-                });
-                var sample = SelectRealArtworkDetailsSample(items);
+                }) ?? Array.Empty<EmbyMediaItem>();
+                var sample = await SelectRealArtworkDetailsSampleAsync(http, client, session, items, sampleMode);
                 if (sample == null)
                 {
                     throw new InvalidOperationException("No real movie item with supported artwork is available for details-real-sample.");
@@ -1060,15 +1066,107 @@ namespace NextGenEmby.App
             }
         }
 
-        private static EmbyMediaItem? SelectRealArtworkDetailsSample(IReadOnlyList<EmbyMediaItem> items)
+        private static async Task<EmbyMediaItem?> SelectRealArtworkDetailsSampleAsync(
+            HttpClient http,
+            EmbyApiClient client,
+            EmbySession session,
+            IReadOnlyList<EmbyMediaItem> items,
+            DevelopmentRealDetailsSampleMode sampleMode)
         {
-            return (items ?? Array.Empty<EmbyMediaItem>())
-                .FirstOrDefault(HasRealDetailsArtwork);
+            if (sampleMode != DevelopmentRealDetailsSampleMode.BrightestArtwork)
+            {
+                return DevelopmentRealDetailsSampleSelector.SelectFirstSupported(items);
+            }
+
+            var brightnessScores = new Dictionary<string, double>(StringComparer.Ordinal);
+            foreach (var item in items ?? Array.Empty<EmbyMediaItem>())
+            {
+                var score = await TryMeasureRealArtworkBrightnessAsync(http, client, session, item);
+                if (score.HasValue && !string.IsNullOrWhiteSpace(item.Id))
+                {
+                    brightnessScores[item.Id] = score.Value;
+                }
+            }
+
+            return DevelopmentRealDetailsSampleSelector.SelectBrightestSupported(items, brightnessScores);
         }
 
-        private static bool HasRealDetailsArtwork(EmbyMediaItem item)
+        private static async Task<double?> TryMeasureRealArtworkBrightnessAsync(
+            HttpClient http,
+            EmbyApiClient client,
+            EmbySession session,
+            EmbyMediaItem item)
         {
-            return EmbyArtworkPolicy.SelectHeroArtwork(item, 1920) != null;
+            var artwork = EmbyArtworkPolicy.SelectHeroArtwork(item, 320);
+            if (artwork == null)
+            {
+                return null;
+            }
+
+            try
+            {
+                var imageUrl = client.GetImageUrl(session, artwork.ItemId, artwork.ImageType, 320);
+                var bytes = await http.GetByteArrayAsync(imageUrl);
+                if (bytes == null || bytes.Length == 0)
+                {
+                    return null;
+                }
+
+                using (var stream = new InMemoryRandomAccessStream())
+                {
+                    using (var writer = new DataWriter(stream))
+                    {
+                        writer.WriteBytes(bytes);
+                        await writer.StoreAsync();
+                        await writer.FlushAsync();
+                        writer.DetachStream();
+                    }
+
+                    stream.Seek(0);
+                    var decoder = await BitmapDecoder.CreateAsync(stream);
+                    var scale = Math.Min(
+                        1d,
+                        96d / Math.Max(1d, Math.Max(decoder.PixelWidth, decoder.PixelHeight)));
+                    var transform = new BitmapTransform
+                    {
+                        ScaledWidth = (uint)Math.Max(1, (int)Math.Round(decoder.PixelWidth * scale)),
+                        ScaledHeight = (uint)Math.Max(1, (int)Math.Round(decoder.PixelHeight * scale))
+                    };
+                    var pixels = await decoder.GetPixelDataAsync(
+                        BitmapPixelFormat.Bgra8,
+                        BitmapAlphaMode.Premultiplied,
+                        transform,
+                        ExifOrientationMode.IgnoreExifOrientation,
+                        ColorManagementMode.DoNotColorManage);
+
+                    return CalculateAverageLuma(pixels.DetachPixelData());
+                }
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private static double CalculateAverageLuma(byte[] bgraPixels)
+        {
+            if (bgraPixels == null || bgraPixels.Length < 4)
+            {
+                return 0d;
+            }
+
+            var total = 0d;
+            var count = 0;
+            for (var index = 0; index + 3 < bgraPixels.Length; index += 4)
+            {
+                var blue = bgraPixels[index];
+                var green = bgraPixels[index + 1];
+                var red = bgraPixels[index + 2];
+                total += (red * 0.2126d) + (green * 0.7152d) + (blue * 0.0722d);
+                count++;
+            }
+
+            return count == 0 ? 0d : total / count / 255d;
         }
 
         private static LibraryNavigationRequest CreateMoviesFixtureNavigationRequest()

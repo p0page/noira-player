@@ -197,6 +197,30 @@ public sealed class DesignTokenResourceTests
         Assert.DoesNotContain("Width=\"182\"", homeXaml);
     }
 
+    [Fact]
+    public void A3_Home_And_Library_Primary_Chrome_Uses_Compact_Recessed_Tokens()
+    {
+        var root = FindRepositoryRoot();
+        var appXaml = File.ReadAllText(Path.Combine(root, "src", "NextGenEmby.App", "App.xaml"));
+        var homeXaml = File.ReadAllText(Path.Combine(root, "src", "NextGenEmby.App", "Views", "HomePage.xaml"));
+        var libraryXaml = File.ReadAllText(Path.Combine(root, "src", "NextGenEmby.App", "Views", "LibraryPage.xaml"));
+
+        Assert.Contains("<x:Double x:Key=\"TvHomeHeaderChromeOpacity\">0.56</x:Double>", appXaml);
+        Assert.Contains("x:Name=\"HomeChromeHeader\"", homeXaml);
+        Assert.Contains("Opacity=\"{StaticResource TvHomeHeaderChromeOpacity}\"", homeXaml);
+        Assert.Contains("x:Name=\"HomeChromeSubtitleBlock\"", homeXaml);
+        Assert.Contains("Visibility=\"Collapsed\"", SliceFrom(homeXaml, "x:Name=\"HomeChromeSubtitleBlock\"", "/>"));
+
+        Assert.Contains("<x:Double x:Key=\"TvLibraryToolbarButtonWidth\">168</x:Double>", appXaml);
+        Assert.Contains("<x:Double x:Key=\"TvLibraryToolbarButtonHeight\">44</x:Double>", appXaml);
+        Assert.Contains("<x:Double x:Key=\"TvLibraryToolbarSpacing\">10</x:Double>", appXaml);
+        Assert.Contains("<Style x:Key=\"TvLibraryToolbarButtonStyle\"", appXaml);
+        Assert.Contains("Spacing=\"{StaticResource TvLibraryToolbarSpacing}\"", libraryXaml);
+        Assert.Contains("Width=\"{StaticResource TvLibraryToolbarButtonWidth}\"", libraryXaml);
+        Assert.Contains("Style=\"{StaticResource TvLibraryToolbarButtonStyle}\"", libraryXaml);
+        Assert.DoesNotContain("Width=\"220\"", libraryXaml);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
@@ -272,5 +296,14 @@ public sealed class DesignTokenResourceTests
     private static string NormalizeColor(string color)
     {
         return color.Trim().ToUpperInvariant();
+    }
+
+    private static string SliceFrom(string source, string startMarker, string endMarker)
+    {
+        var start = source.IndexOf(startMarker, StringComparison.Ordinal);
+        Assert.True(start >= 0, "Start marker not found: " + startMarker);
+        var end = source.IndexOf(endMarker, start, StringComparison.Ordinal);
+        Assert.True(end > start, "End marker not found after start marker: " + endMarker);
+        return source.Substring(start, end - start);
     }
 }

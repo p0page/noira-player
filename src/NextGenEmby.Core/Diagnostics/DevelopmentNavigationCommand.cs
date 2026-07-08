@@ -92,6 +92,7 @@ namespace NextGenEmby.Core.Diagnostics
                 case "search-error":
                 case "details-fixture":
                 case "details-real-sample":
+                case "details-real-bright-sample":
                 case "details-no-art-fixture":
                 case "details-primary-only-fixture":
                 case "details-long-source-fixture":

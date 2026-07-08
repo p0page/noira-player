@@ -11,18 +11,25 @@
             HorizontalScrollBarVisibility="Disabled"
             HorizontalScrollMode="Disabled">
             <StackPanel Margin="{StaticResource TvPageMargin}" Spacing="{StaticResource TvHomeSectionSpacing}">
-                <Grid>
+                <Grid
+                    x:Name="HomeChromeHeader"
+                    Opacity="{StaticResource TvHomeHeaderChromeOpacity}">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <StackPanel Spacing="4">
                         <TextBlock
+                            x:Name="HomeChromeTitleBlock"
                             Text="Home"
-                            Style="{StaticResource TvPageTitleTextStyle}" />
+                            FontSize="16"
+                            FontWeight="SemiBold"
+                            Foreground="{StaticResource AppMutedTextBrush}" />
                         <TextBlock
+                            x:Name="HomeChromeSubtitleBlock"
                             Text="Ready for the next thing"
-                            Style="{StaticResource TvMutedBodyTextStyle}" />
+                            Style="{StaticResource TvMutedBodyTextStyle}"
+                            Visibility="Collapsed" />
                     </StackPanel>
                     <Button
                         x:Name="RefreshButton"
@@ -31,7 +38,7 @@
                         HorizontalAlignment="Right"
                         VerticalAlignment="Center"
                         Click="Refresh_OnClick"
-                        Opacity="0.72"
+                        Opacity="0.48"
                         Style="{StaticResource IconButtonStyle}"
                         ToolTipService.ToolTip="Refresh"
                         UseSystemFocusVisuals="False">

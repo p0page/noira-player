@@ -53,13 +53,24 @@ public sealed class MediaDetailsAccessibilitySourceTests
         Assert.Contains("await RunDevelopmentCommandAsync(command);", mainPageSource);
         Assert.Contains("private async Task RunDevelopmentCommandAsync(DevelopmentNavigationCommand command)", mainPageSource);
         Assert.Contains("case \"details-real-sample\":", mainPageSource);
-        Assert.Contains("await NavigateToRealDetailsSampleAsync();", mainPageSource);
-        Assert.Contains("private async Task NavigateToRealDetailsSampleAsync()", mainPageSource);
+        Assert.Contains("case \"details-real-bright-sample\":", mainPageSource);
+        Assert.Contains("await NavigateToRealDetailsSampleAsync(DevelopmentRealDetailsSampleMode.FirstSupported);", mainPageSource);
+        Assert.Contains("await NavigateToRealDetailsSampleAsync(DevelopmentRealDetailsSampleMode.BrightestArtwork);", mainPageSource);
+        Assert.Contains("private async Task NavigateToRealDetailsSampleAsync(DevelopmentRealDetailsSampleMode sampleMode)", mainPageSource);
         Assert.Contains("await _sessionStore.LoadAsync()", mainPageSource);
         Assert.Contains("IncludeItemTypes = \"Movie\"", mainPageSource);
-        Assert.Contains("Limit = 24", mainPageSource);
-        Assert.Contains("SelectRealArtworkDetailsSample(items)", mainPageSource);
-        Assert.Contains("HasRealDetailsArtwork(", mainPageSource);
+        Assert.Contains("Limit = sampleMode == DevelopmentRealDetailsSampleMode.BrightestArtwork ? 60 : 24", mainPageSource);
+        Assert.Contains("DevelopmentRealDetailsSampleSelector.SelectFirstSupported(items)", mainPageSource);
+        Assert.Contains("DevelopmentRealDetailsSampleSelector.SelectBrightestSupported(items, brightnessScores)", mainPageSource);
+        Assert.Contains("TryMeasureRealArtworkBrightnessAsync(", mainPageSource);
+        var realSampleBlock = SliceFrom(
+            mainPageSource,
+            "private async Task NavigateToRealDetailsSampleAsync(DevelopmentRealDetailsSampleMode sampleMode)",
+            "private static LibraryNavigationRequest CreateMoviesFixtureNavigationRequest()");
+        Assert.Contains("BitmapDecoder.CreateAsync", realSampleBlock);
+        Assert.Contains("new InMemoryRandomAccessStream()", realSampleBlock);
+        Assert.DoesNotContain("CreateFileAsync", realSampleBlock);
+        Assert.DoesNotContain("FileIO.WriteBytesAsync", realSampleBlock);
     }
 
     [Fact]
