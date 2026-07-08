@@ -455,3 +455,24 @@ manifest validation、report-set validation、single comparison、comparison sui
 当前结论：不要继续盲目调整 audio ahead tolerance 或固定 sleep 常量。`audioAheadWaitDuration` 的 15.6ms / 31ms 形态更接近 Windows coarse timer quantum，下一步应优先研究并验证更可靠的 render loop 等待 primitive 或 wait scheduling，而不是放宽/收紧 evaluator 阈值。
 
 边界：这是诊断证据增强和一次被拒绝的小实验，不是可采纳的播放质量优化。它不证明真实 Xbox/HDMI 输出、HDR、A/V sync 或主观流畅度已经改善。后续任何等待策略调整仍必须走同一 41-case manifest 的 baseline/candidate comparison，并明确记录 improvement/regression/mixed 与剩余风险。
+
+# 2026-07-08 更新：near-threshold audio catch-up wait 实验不采纳
+
+本轮继续沿已接受的 `playback-core-tuning-audio-wait-evidence-41case-f7f7315.local` 做第二轮纯软件 Core 调优实验。假设是：A/V smoke 中 15ms/31ms 级别的 audio-ahead 等待可能来自固定 5ms sleep 的粗粒度唤醒；如果 pending video frame 只比音频时钟超前少量时间，则改用更短的 1ms wait 可能减少阈值附近 overshoot。
+
+按 TDD 做了最小 native 策略实验：
+
+- `PlaybackFramePacing::AudioCatchUpRenderLoopWait`：远离阈值仍保持默认 5ms；当 `framePosition - audioPosition - VideoAheadTolerance <= 6ms` 时返回 1ms。
+- `PlaybackGraph` 在 `ShouldWaitForAudio` 分支把下一轮 render loop wait 改为该动态值。
+- targeted native test 先红灯失败，再实现后绿灯；native UWP Debug x64 build 通过。
+
+已生成 ignored candidate：`docs/qa/private/candidates/playback-core-tuning-audio-catchup-wait-41case-working.local/`，并输出 comparison：`docs/qa/private/comparisons/playback-core-tuning-audio-catchup-wait-41case-working.local/`。结果：41/41 case 可比，baseline/candidate validation 均通过，`decision = no-change`，0 improved，0 regressed，0 mixed，41 strong confidence。
+
+关键 A/V case 对比：
+
+- baseline `local/native-headless-av-smoke`：render P50/P95/P99 `31.5218/47.0978/47.6411ms`，audio-ahead wait P50/P95/P99/Max `15.6418/31.2524/31.2728/31.2728ms`，`videoAheadWaitCount = 52`，drift P95 `10ms`。
+- candidate：render P50/P95/P99 `31.4879/47.1216/47.7064ms`，audio-ahead wait P50/P95/P99/Max `15.4844/31.4748/38.0209/38.0209ms`，`videoAheadWaitCount = 52`，drift P95 `10ms`。
+
+结论：该候选没有可采纳的质量改善，且 audio-ahead wait P95/P99/Max 变差，decoded/submitted/queued audio 也略降。因此实验代码已回退，不作为播放器 Core/native 策略调整提交。
+
+下一步建议：不要继续围绕固定 sleep 常量或小窗口阈值试错。下一轮应优先补充更能解释调度行为的证据，例如 audio-ahead wait 的目标剩余时间、实际 oversleep delta、render pass 间隔原因分类，或改造为可复用/低开销的等待 primitive 后再做同 manifest candidate comparison。

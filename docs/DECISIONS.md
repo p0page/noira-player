@@ -600,3 +600,13 @@
 影响：下一步调优应聚焦高精度 wait primitive、wait scheduling、或 render loop 结构，而不是继续调小固定 sleep 常量。任何候选实现都必须先保留现有 A/V sync、buffering、seek/timeline、track/subtitle 和 color/DXGI evidence，并通过同一 41-case manifest 的 baseline/candidate comparison。
 
 边界：这不是结论性地证明 Windows timer quantum 是唯一根因；它只排除了“把 5ms 改 1ms 就能改善”的低成本假设。后续需要更强证据或更小心的候选实现。
+
+# 2026-07-08: near-threshold audio catch-up wait 实验不采纳
+
+决策：不采纳“只在音频即将追上视频阈值时把 render loop wait 从 5ms 降到 1ms”的策略调整。实验实现为 `PlaybackFramePacing::AudioCatchUpRenderLoopWait`：远离阈值保持默认 5ms；当 `framePosition - audioPosition - VideoAheadTolerance <= 6ms` 时使用 1ms，并由 `PlaybackGraph` 的 `ShouldWaitForAudio` 分支传递到下一轮 render loop sleep。
+
+原因：该假设通过了 TDD targeted native test 和 native UWP Debug x64 build，但同一 41-case manifest comparison 不支持采纳。`playback-core-tuning-audio-catchup-wait-41case-working.local` 相对 `playback-core-tuning-audio-wait-evidence-41case-f7f7315.local` 的结果为 `decision = no-change`，41/41 unchanged。关键 A/V case 中 render P95/P99 从 `47.0978/47.6411ms` 变为 `47.1216/47.7064ms`，audio-ahead wait P95/P99/Max 从 `31.2524/31.2728/31.2728ms` 变为 `31.4748/38.0209/38.0209ms`。
+
+影响：实验代码已回退，不改变当前播放器 Core/native 行为。该结果排除了“只在阈值附近缩短 sleep”这个低成本候选；它也说明 1ms wait 本身并不能可靠降低当前 A/V smoke 的等待抖动。
+
+边界：该实验仍是短样本 native-headless 纯软件证据，不代表真实 Xbox/HDMI 输出体验。下一步不应继续调整固定 sleep 常量或阈值窗口；应先补充 wait target、oversleep delta、wait reason 等诊断信号，或设计可复用且低开销的等待 primitive，再用同一 41-case manifest 做 baseline/candidate comparison。
