@@ -2445,6 +2445,26 @@ namespace NextGenEmby.Core.PlaybackQuality
                 AddUnique(analysis.EvidenceSignals, "timing.presentDurationMsMax");
             }
 
+            if (report.Timing.AudioAheadWaitDurationMsP50 > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.audioAheadWaitDurationMsP50");
+            }
+
+            if (report.Timing.AudioAheadWaitDurationMsP95 > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.audioAheadWaitDurationMsP95");
+            }
+
+            if (report.Timing.AudioAheadWaitDurationMsP99 > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.audioAheadWaitDurationMsP99");
+            }
+
+            if (report.Timing.AudioAheadWaitDurationMsMax > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.audioAheadWaitDurationMsMax");
+            }
+
             if (report.Timing.ExpectedFrameDurationMs <= 0)
             {
                 return;

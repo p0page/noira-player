@@ -1173,6 +1173,10 @@ namespace NextGenEmby.Core.PlaybackQuality
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.presentDurationMsP95");
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.presentDurationMsP99");
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.presentDurationMsMax");
+                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitDurationMsP50");
+                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitDurationMsP95");
+                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitDurationMsP99");
+                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitDurationMsMax");
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.maxFrameGapMs");
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.expectedFrameDurationMs");
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.framePacingSourceFrameRate");
@@ -1219,6 +1223,10 @@ namespace NextGenEmby.Core.PlaybackQuality
                 report.Timing.PresentDurationMsP95 > 0 ||
                 report.Timing.PresentDurationMsP99 > 0 ||
                 report.Timing.PresentDurationMsMax > 0 ||
+                report.Timing.AudioAheadWaitDurationMsP50 > 0 ||
+                report.Timing.AudioAheadWaitDurationMsP95 > 0 ||
+                report.Timing.AudioAheadWaitDurationMsP99 > 0 ||
+                report.Timing.AudioAheadWaitDurationMsMax > 0 ||
                 report.Timing.MaxFrameGapMs > 0 ||
                 report.Timing.ExpectedFrameDurationMs > 0 ||
                 report.Timing.FramePacingSourceFrameRate > 0;

@@ -87,6 +87,8 @@ namespace winrt::NextGenEmby::Native::implementation
         void UpdateSubtitleCue();
         void ResetRuntimeStats() noexcept;
         void ResetVideoClock() noexcept;
+        void ResetAudioAheadWait() noexcept;
+        void RecordAudioAheadWaitIfNeeded() noexcept;
         void ApplyFramePacingPolicyMetrics() noexcept;
         void SetVideoPrerollTarget(int64_t targetTicks) noexcept;
         bool ShouldWaitForVideoClock(DecodedVideoFrame const& frame);
@@ -127,6 +129,7 @@ namespace winrt::NextGenEmby::Native::implementation
         std::optional<int64_t> m_videoPrerollTargetTicks;
         std::chrono::steady_clock::time_point m_lastRuntimeStatsLog{};
         std::chrono::steady_clock::time_point m_lastRenderedFrameAt{};
+        std::optional<std::chrono::steady_clock::time_point> m_audioAheadWaitStartedAt;
         std::chrono::steady_clock::time_point m_videoClockStartedAt{};
         int64_t m_videoClockStartPositionTicks{0};
         std::thread m_renderThread;

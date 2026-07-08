@@ -1256,6 +1256,23 @@ public sealed class PlaybackQualityReportAnalyzerTests
     }
 
     [Fact]
+    public void Analyze_Reports_Audio_Ahead_Wait_Duration_Timing_Evidence()
+    {
+        var report = CreateOptimizationReadyFailure();
+        report.Timing.AudioAheadWaitDurationMsP50 = 5.0;
+        report.Timing.AudioAheadWaitDurationMsP95 = 15.0;
+        report.Timing.AudioAheadWaitDurationMsP99 = 20.0;
+        report.Timing.AudioAheadWaitDurationMsMax = 25.0;
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Contains("timing.audioAheadWaitDurationMsP50", analysis.EvidenceSignals);
+        Assert.Contains("timing.audioAheadWaitDurationMsP95", analysis.EvidenceSignals);
+        Assert.Contains("timing.audioAheadWaitDurationMsP99", analysis.EvidenceSignals);
+        Assert.Contains("timing.audioAheadWaitDurationMsMax", analysis.EvidenceSignals);
+    }
+
+    [Fact]
     public void Analyze_Reports_Missing_Frame_Pacing_Policy_When_Frame_Pacing_Fails()
     {
         var report = CreateOptimizationReadyFailure();

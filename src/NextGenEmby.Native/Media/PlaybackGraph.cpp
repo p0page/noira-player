@@ -142,6 +142,7 @@ namespace winrt::NextGenEmby::Native::implementation
         if (m_open)
         {
             m_paused = true;
+            ResetAudioAheadWait();
             m_audioRenderer.Pause();
             m_stateChanged.notify_all();
         }
@@ -215,6 +216,7 @@ namespace winrt::NextGenEmby::Native::implementation
         m_audioRenderer.Stop();
         m_audioDecoder.Close();
         m_pendingVideoFrame.reset();
+        ResetAudioAheadWait();
         m_videoDecoder.Seek(m_positionTicks);
         SetVideoPrerollTarget(m_positionTicks);
         m_audioDecoder.Open(m_mediaSource, audioStreamIndex, true);
@@ -465,12 +467,18 @@ namespace winrt::NextGenEmby::Native::implementation
                     *audioPosition,
                     hasQueuedAudio))
                 {
+                    if (!m_audioAheadWaitStartedAt)
+                    {
+                        m_audioAheadWaitStartedAt = std::chrono::steady_clock::now();
+                    }
+
                     ++m_videoAheadWaitCount;
                     ++m_qualityMetrics.VideoAheadWaitCount;
                     LogRuntimeStatsIfDue();
                     return true;
                 }
 
+                RecordAudioAheadWaitIfNeeded();
                 if (PlaybackFramePacing::ShouldDropLateFrame(
                     frame.PositionTicks,
                     *audioPosition,
@@ -488,12 +496,16 @@ namespace winrt::NextGenEmby::Native::implementation
                 m_qualityMetrics.VideoPositionTicks = frame.PositionTicks;
                 m_qualityMetrics.RecordAudioVideoDriftTicks(frame.PositionTicks - *audioPosition);
             }
-            else if (ShouldWaitForVideoClock(frame))
+            else
             {
-                ++m_videoAheadWaitCount;
-                ++m_qualityMetrics.VideoAheadWaitCount;
-                LogRuntimeStatsIfDue();
-                return true;
+                ResetAudioAheadWait();
+                if (ShouldWaitForVideoClock(frame))
+                {
+                    ++m_videoAheadWaitCount;
+                    ++m_qualityMetrics.VideoAheadWaitCount;
+                    LogRuntimeStatsIfDue();
+                    return true;
+                }
             }
 
             EnsureHdrOutputForFrame(frame);
@@ -621,6 +633,7 @@ namespace winrt::NextGenEmby::Native::implementation
         m_qualityMetrics.Reset();
         m_lastRuntimeStatsLog = {};
         m_lastRenderedFrameAt = {};
+        ResetAudioAheadWait();
         ResetVideoClock();
     }
 
@@ -628,6 +641,25 @@ namespace winrt::NextGenEmby::Native::implementation
     {
         m_videoClockStartedAt = {};
         m_videoClockStartPositionTicks = 0;
+    }
+
+    void PlaybackGraph::ResetAudioAheadWait() noexcept
+    {
+        m_audioAheadWaitStartedAt.reset();
+    }
+
+    void PlaybackGraph::RecordAudioAheadWaitIfNeeded() noexcept
+    {
+        if (!m_audioAheadWaitStartedAt)
+        {
+            return;
+        }
+
+        auto now = std::chrono::steady_clock::now();
+        auto durationMs = std::chrono::duration<double, std::milli>(
+            now - *m_audioAheadWaitStartedAt).count();
+        m_qualityMetrics.RecordAudioAheadWaitDurationMs(durationMs);
+        ResetAudioAheadWait();
     }
 
     bool PlaybackGraph::ShouldWaitForVideoClock(DecodedVideoFrame const& frame)

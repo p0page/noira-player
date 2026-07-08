@@ -68,6 +68,18 @@ namespace winrt::NextGenEmby::Native::implementation
         double PresentDurationMsMax() const noexcept { return m_presentDurationMsMax; }
         void PresentDurationMsMax(double value) noexcept { m_presentDurationMsMax = value; }
 
+        double AudioAheadWaitDurationMsP50() const noexcept { return m_audioAheadWaitDurationMsP50; }
+        void AudioAheadWaitDurationMsP50(double value) noexcept { m_audioAheadWaitDurationMsP50 = value; }
+
+        double AudioAheadWaitDurationMsP95() const noexcept { return m_audioAheadWaitDurationMsP95; }
+        void AudioAheadWaitDurationMsP95(double value) noexcept { m_audioAheadWaitDurationMsP95 = value; }
+
+        double AudioAheadWaitDurationMsP99() const noexcept { return m_audioAheadWaitDurationMsP99; }
+        void AudioAheadWaitDurationMsP99(double value) noexcept { m_audioAheadWaitDurationMsP99 = value; }
+
+        double AudioAheadWaitDurationMsMax() const noexcept { return m_audioAheadWaitDurationMsMax; }
+        void AudioAheadWaitDurationMsMax(double value) noexcept { m_audioAheadWaitDurationMsMax = value; }
+
         double FramePacingSourceFrameRate() const noexcept { return m_framePacingSourceFrameRate; }
         void FramePacingSourceFrameRate(double value) noexcept { m_framePacingSourceFrameRate = value; }
 
@@ -107,6 +119,10 @@ namespace winrt::NextGenEmby::Native::implementation
         double m_presentDurationMsP95{0.0};
         double m_presentDurationMsP99{0.0};
         double m_presentDurationMsMax{0.0};
+        double m_audioAheadWaitDurationMsP50{0.0};
+        double m_audioAheadWaitDurationMsP95{0.0};
+        double m_audioAheadWaitDurationMsP99{0.0};
+        double m_audioAheadWaitDurationMsMax{0.0};
         double m_framePacingSourceFrameRate{0.0};
         double m_lateFrameDropToleranceMs{0.0};
         double m_audioVideoDriftMsP50{0.0};

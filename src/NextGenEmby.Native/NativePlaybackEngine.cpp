@@ -199,6 +199,10 @@ namespace winrt::NextGenEmby::Native::implementation
         metrics.PresentDurationMsP95(snapshot.PresentDurationMsP95);
         metrics.PresentDurationMsP99(snapshot.PresentDurationMsP99);
         metrics.PresentDurationMsMax(snapshot.PresentDurationMsMax);
+        metrics.AudioAheadWaitDurationMsP50(snapshot.AudioAheadWaitDurationMsP50);
+        metrics.AudioAheadWaitDurationMsP95(snapshot.AudioAheadWaitDurationMsP95);
+        metrics.AudioAheadWaitDurationMsP99(snapshot.AudioAheadWaitDurationMsP99);
+        metrics.AudioAheadWaitDurationMsMax(snapshot.AudioAheadWaitDurationMsMax);
         metrics.FramePacingSourceFrameRate(snapshot.FramePacingSourceFrameRate);
         metrics.LateFrameDropToleranceMs(snapshot.LateFrameDropToleranceMs);
         metrics.AudioVideoDriftMsP50(snapshot.AudioVideoDriftMsP50);

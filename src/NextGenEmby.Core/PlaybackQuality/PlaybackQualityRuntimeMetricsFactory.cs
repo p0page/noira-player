@@ -53,6 +53,14 @@ namespace NextGenEmby.Core.PlaybackQuality
                 metrics.RenderIntervalMsP95 > 0 ||
                 metrics.RenderIntervalMsP99 > 0 ||
                 metrics.MaxFrameGapMs > 0 ||
+                metrics.PresentDurationMsP50 > 0 ||
+                metrics.PresentDurationMsP95 > 0 ||
+                metrics.PresentDurationMsP99 > 0 ||
+                metrics.PresentDurationMsMax > 0 ||
+                metrics.AudioAheadWaitDurationMsP50 > 0 ||
+                metrics.AudioAheadWaitDurationMsP95 > 0 ||
+                metrics.AudioAheadWaitDurationMsP99 > 0 ||
+                metrics.AudioAheadWaitDurationMsMax > 0 ||
                 metrics.FramePacingSourceFrameRate > 0 ||
                 metrics.LateFrameDropToleranceMs > 0 ||
                 metrics.AudioVideoDriftMsP50 > 0 ||

@@ -30,6 +30,10 @@ namespace winrt::NextGenEmby::Native::implementation
         double PresentDurationMsP95{0.0};
         double PresentDurationMsP99{0.0};
         double PresentDurationMsMax{0.0};
+        double AudioAheadWaitDurationMsP50{0.0};
+        double AudioAheadWaitDurationMsP95{0.0};
+        double AudioAheadWaitDurationMsP99{0.0};
+        double AudioAheadWaitDurationMsMax{0.0};
         double FramePacingSourceFrameRate{0.0};
         double LateFrameDropToleranceMs{0.0};
         double AudioVideoDriftMsP50{0.0};
@@ -134,6 +138,11 @@ namespace winrt::NextGenEmby::Native::implementation
             m_presentDurations.Add(value);
         }
 
+        void RecordAudioAheadWaitDurationMs(double value) noexcept
+        {
+            m_audioAheadWaitDurations.Add(value);
+        }
+
         void RecordAudioVideoDriftTicks(int64_t driftTicks) noexcept
         {
             m_audioVideoDriftMs.Add(static_cast<double>(driftTicks) / 10000.0);
@@ -162,6 +171,10 @@ namespace winrt::NextGenEmby::Native::implementation
             snapshot.PresentDurationMsP95 = m_presentDurations.Percentile(95);
             snapshot.PresentDurationMsP99 = m_presentDurations.Percentile(99);
             snapshot.PresentDurationMsMax = m_presentDurations.Max();
+            snapshot.AudioAheadWaitDurationMsP50 = m_audioAheadWaitDurations.Percentile(50);
+            snapshot.AudioAheadWaitDurationMsP95 = m_audioAheadWaitDurations.Percentile(95);
+            snapshot.AudioAheadWaitDurationMsP99 = m_audioAheadWaitDurations.Percentile(99);
+            snapshot.AudioAheadWaitDurationMsMax = m_audioAheadWaitDurations.Max();
             snapshot.FramePacingSourceFrameRate = FramePacingSourceFrameRate;
             snapshot.LateFrameDropToleranceMs = LateFrameDropToleranceMs;
             snapshot.AudioVideoDriftMsP50 = m_audioVideoDriftMs.Percentile(50);
@@ -174,6 +187,7 @@ namespace winrt::NextGenEmby::Native::implementation
     private:
         PlaybackQualityHistogram m_renderIntervals;
         PlaybackQualityHistogram m_presentDurations;
+        PlaybackQualityHistogram m_audioAheadWaitDurations;
         PlaybackQualityHistogram m_audioVideoDriftMs;
     };
 }

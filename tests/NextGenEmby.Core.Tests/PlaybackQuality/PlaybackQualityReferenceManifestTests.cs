@@ -175,6 +175,18 @@ public sealed class PlaybackQualityReferenceManifestTests
     }
 
     [Fact]
+    public void SignalCatalog_Includes_Audio_Ahead_Wait_Duration_Timing_Evidence()
+    {
+        var reportSignals = new HashSet<string>(
+            PlaybackQualitySignalCatalog.ReportSignals.Select(signal => signal.Signal));
+
+        Assert.Contains("timing.audioAheadWaitDurationMsP50", reportSignals);
+        Assert.Contains("timing.audioAheadWaitDurationMsP95", reportSignals);
+        Assert.Contains("timing.audioAheadWaitDurationMsP99", reportSignals);
+        Assert.Contains("timing.audioAheadWaitDurationMsMax", reportSignals);
+    }
+
+    [Fact]
     public void RequiredSignals_Include_Source_Color_Metadata_When_Expected()
     {
         var referenceCase = CreateCase(

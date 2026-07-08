@@ -73,6 +73,10 @@ namespace NextGenEmby.Native
         Double PresentDurationMsP95;
         Double PresentDurationMsP99;
         Double PresentDurationMsMax;
+        Double AudioAheadWaitDurationMsP50;
+        Double AudioAheadWaitDurationMsP95;
+        Double AudioAheadWaitDurationMsP99;
+        Double AudioAheadWaitDurationMsMax;
         Double FramePacingSourceFrameRate;
         Double LateFrameDropToleranceMs;
         Double AudioVideoDriftMsP50;
