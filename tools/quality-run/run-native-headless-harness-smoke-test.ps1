@@ -58,6 +58,13 @@ function New-NativePlaybackAvSample {
     $sampleDirectory = Join-Path $smokeRoot 'samples'
     New-Item -ItemType Directory -Path $sampleDirectory -Force | Out-Null
     $samplePath = Join-Path $sampleDirectory 'native-headless-av-smoke.mp4'
+    $subtitlePath = Join-Path $sampleDirectory 'native-headless-av-smoke.srt'
+    @"
+1
+00:00:00,000 --> 00:00:02,500
+Native headless subtitle smoke
+
+"@ | Set-Content -LiteralPath $subtitlePath -Encoding UTF8
     $ffmpeg = 'C:\Program Files\FFmpeg\bin\ffmpeg.exe'
     if (-not (Test-Path -LiteralPath $ffmpeg)) {
         throw "ffmpeg.exe was not found at $ffmpeg."
@@ -70,6 +77,10 @@ function New-NativePlaybackAvSample {
         -i testsrc2=size=320x180:rate=30 `
         -f lavfi `
         -i sine=frequency=1000:sample_rate=48000 `
+        -i $subtitlePath `
+        -map 0:v:0 `
+        -map 1:a:0 `
+        -map 2:s:0 `
         -t 3 `
         -vf "setparams=range=tv:color_primaries=bt709:color_trc=bt709:colorspace=bt709" `
         -pix_fmt yuv420p `
@@ -78,6 +89,8 @@ function New-NativePlaybackAvSample {
         -bf 0 `
         -c:a aac `
         -b:a 128k `
+        -c:s mov_text `
+        -metadata:s:s:0 language=eng `
         -shortest `
         -movflags +faststart `
         $samplePath
@@ -403,6 +416,11 @@ if ($nativeAvReport.report.tracks.audioTrackCount -lt 1) {
     throw 'Expected native helper A/V report to include discovered audio tracks.'
 }
 
+if ($nativeAvReport.report.tracks.subtitleTrackCount -lt 1 -or
+    $nativeAvReport.report.tracks.subtitles.Count -lt 1) {
+    throw 'Expected native helper A/V report to include discovered subtitle tracks.'
+}
+
 if ($nativeAvReport.report.buffers.submittedAudioFrames -le 0) {
     throw 'Expected native helper A/V report to include submitted audio frames.'
 }
@@ -452,7 +470,8 @@ if ($nativeAvReport.report.sync.audioClockTicks -le 0 -or
       "purpose": [
         "audio-switch",
         "av-sync",
-        "buffering"
+        "buffering",
+        "subtitles"
       ],
       "expected": {
         "codec": "h264",
@@ -504,8 +523,9 @@ if ($nativeMaterializedReport.modelAnalysis.avSync.status -ne 'not-applicable') 
 
 $nativeAvMaterializedReport = Get-Content -LiteralPath $nativeAvMaterializedReportPath -Raw | ConvertFrom-Json
 if ($nativeAvMaterializedReport.report.tracks.audioTrackCount -lt 1 -or
+    $nativeAvMaterializedReport.report.tracks.subtitleTrackCount -lt 1 -or
     $nativeAvMaterializedReport.modelAnalysis.avSync.status -ne 'synced') {
-    throw 'Expected materialized native helper A/V report to preserve audio track and A/V sync evidence.'
+    throw 'Expected materialized native helper A/V report to preserve audio/subtitle track and A/V sync evidence.'
 }
 
 dotnet run --project (Join-Path $repoRoot 'tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj') -- `
@@ -533,6 +553,11 @@ if ($nativeAnalysis.playbackEvidence.canEvaluateNativePlayback -ne $true) {
 $nativeAvSyncCoverage = $nativeAnalysis.capabilityCoverage | Where-Object { $_.capability -eq 'av-sync' } | Select-Object -First 1
 if ($null -eq $nativeAvSyncCoverage -or $nativeAvSyncCoverage.status -ne 'evidence-present') {
     throw 'Expected native helper A/V report to claim A/V sync capability evidence.'
+}
+
+$nativeSubtitleCoverage = $nativeAnalysis.capabilityCoverage | Where-Object { $_.capability -eq 'subtitles' } | Select-Object -First 1
+if ($null -eq $nativeSubtitleCoverage -or $nativeSubtitleCoverage.status -ne 'evidence-present') {
+    throw 'Expected native helper A/V report to claim subtitle discovery capability evidence.'
 }
 
 Write-Host 'native-headless-harness smoke ok'

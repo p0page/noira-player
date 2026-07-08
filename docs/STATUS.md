@@ -22,7 +22,7 @@ App-free native helper 现在会从 FFmpeg source snapshot 输出 `source.videoR
 
 `run-native-headless-harness-smoke-test.ps1` 现在包含第二个本地生成 case：`local/native-headless-av-smoke`，category 为 `challenge`。该样本包含 bt709 SDR 视频和 AAC 音轨，native helper 会实际打开 PlaybackGraph，采集 submitted audio frames、queued audio buffers、audio/video clock ticks 和 drift percentile。最新 report-set 中 `tracks`、`buffering`、`av-sync` 和 `color` capability 都能从 native/software evidence 得到消费。
 
-边界：这仍然不是播放策略优化，也不验证硬件输出。A/V sync evidence 来自软件 clock/drift 采样，不能代表外部 HDMI/显示设备测量；subtitle 当前只覆盖发现通道，仍没有带字幕样本证明真实 subtitle decode/render。
+边界：这仍然不是播放策略优化，也不验证硬件输出。A/V sync evidence 来自软件 clock/drift 采样，不能代表外部 HDMI/显示设备测量；subtitle 当前只覆盖带 mov_text 样本的 stream discovery 和 disabled state，仍不证明字幕选择、解码或最终渲染正确。
 
 ## 2026-07-08 更新：App-free native-headless helper 已产生真实 native/software playback evidence
 

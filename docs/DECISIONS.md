@@ -28,7 +28,7 @@
 
 影响：native-headless smoke 新增 `local/native-headless-av-smoke` challenge case，使用本地生成的 bt709 SDR + AAC 样本。该 case 现在能在 captured/materialized/validated/analyzed 链路中保留 audio track、submitted audio frames、queued audio buffers、audio/video clock ticks 与 drift percentile。`capabilityCoverage.av-sync` 和 `capabilityCoverage.buffering` 因此可以基于真实 native/software report 标记为 `evidence-present`。
 
-边界：stream snapshot 是采集证据，不改变源选择、音轨选择、字幕选择、解码、渲染、同步或缓冲策略。当前 challenge 只覆盖一条 AAC 音轨；多音轨切换、字幕样本和字幕渲染仍需后续 case。
+边界：stream snapshot 是采集证据，不改变源选择、音轨选择、字幕选择、解码、渲染、同步或缓冲策略。当前 challenge 覆盖一条 AAC 音轨和一条 mov_text 字幕轨的发现证据；多音轨切换、字幕选择和字幕渲染仍需后续 case。
 
 ## 2026-07-08: App-free native helper 作为第一条真实软件播放采集路径
 
