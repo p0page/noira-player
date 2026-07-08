@@ -139,6 +139,9 @@ namespace NextGenEmby.Core.PlaybackQuality
         public string Reason { get; set; } = "";
         public bool HasSnapshot { get; set; }
         public bool HasPlaybackSample { get; set; }
+        public double ProcessWallClockMs { get; set; }
+        public double ProcessCpuTimeMs { get; set; }
+        public double ProcessCpuUtilizationRatio { get; set; }
         public List<string> Signals { get; } = new List<string>();
     }
 
@@ -1294,7 +1297,10 @@ namespace NextGenEmby.Core.PlaybackQuality
                     : report.RuntimeMetrics.ProviderStatus,
                 Reason = report.RuntimeMetrics.Reason,
                 HasSnapshot = report.RuntimeMetrics.HasSnapshot,
-                HasPlaybackSample = report.RuntimeMetrics.HasPlaybackSample
+                HasPlaybackSample = report.RuntimeMetrics.HasPlaybackSample,
+                ProcessWallClockMs = report.RuntimeMetrics.ProcessWallClockMs,
+                ProcessCpuTimeMs = report.RuntimeMetrics.ProcessCpuTimeMs,
+                ProcessCpuUtilizationRatio = report.RuntimeMetrics.ProcessCpuUtilizationRatio
             };
 
             var hasKnownStatus = metrics.Status != "unknown";
@@ -1317,6 +1323,21 @@ namespace NextGenEmby.Core.PlaybackQuality
             {
                 AddUnique(metrics.Signals, "runtimeMetrics.hasSnapshot");
                 AddUnique(metrics.Signals, "runtimeMetrics.hasPlaybackSample");
+            }
+
+            if (metrics.ProcessWallClockMs > 0)
+            {
+                AddUnique(metrics.Signals, "runtimeMetrics.processWallClockMs");
+            }
+
+            if (metrics.ProcessCpuTimeMs > 0)
+            {
+                AddUnique(metrics.Signals, "runtimeMetrics.processCpuTimeMs");
+            }
+
+            if (metrics.ProcessCpuUtilizationRatio > 0)
+            {
+                AddUnique(metrics.Signals, "runtimeMetrics.processCpuUtilizationRatio");
             }
 
             return metrics;

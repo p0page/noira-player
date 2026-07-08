@@ -1119,6 +1119,24 @@ public sealed class PlaybackQualityReportAnalyzerTests
     }
 
     [Fact]
+    public void Analyze_Reports_Runtime_Process_Cost_Evidence()
+    {
+        var report = CreateOptimizationReadyFailure();
+        report.RuntimeMetrics.ProcessWallClockMs = 5123.4;
+        report.RuntimeMetrics.ProcessCpuTimeMs = 245.6;
+        report.RuntimeMetrics.ProcessCpuUtilizationRatio = 0.048;
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Equal(5123.4, analysis.RuntimeMetrics.ProcessWallClockMs);
+        Assert.Equal(245.6, analysis.RuntimeMetrics.ProcessCpuTimeMs);
+        Assert.Equal(0.048, analysis.RuntimeMetrics.ProcessCpuUtilizationRatio);
+        Assert.Contains("runtimeMetrics.processWallClockMs", analysis.EvidenceSignals);
+        Assert.Contains("runtimeMetrics.processCpuTimeMs", analysis.EvidenceSignals);
+        Assert.Contains("runtimeMetrics.processCpuUtilizationRatio", analysis.EvidenceSignals);
+    }
+
+    [Fact]
     public void Analyze_Blocks_Playback_Core_Optimization_When_Runtime_Metrics_Snapshot_Is_Empty()
     {
         var report = CreateOptimizationReadyFailure();

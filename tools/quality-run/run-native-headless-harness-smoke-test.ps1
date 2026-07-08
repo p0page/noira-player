@@ -594,6 +594,12 @@ if ($nativeAvReport.report.timing.audioAheadWaitOversleepMsP95 -le 0 -or
     throw 'Expected native helper A/V report to include audio-ahead wait oversleep evidence.'
 }
 
+if ($nativeAvReport.report.runtimeMetrics.processWallClockMs -le 0 -or
+    $nativeAvReport.report.runtimeMetrics.processCpuTimeMs -le 0 -or
+    $nativeAvReport.report.runtimeMetrics.processCpuUtilizationRatio -le 0) {
+    throw 'Expected native helper A/V report to include process CPU and wall-clock cost evidence.'
+}
+
 if ($nativeAvReport.report.sync.audioClockTicks -le 0 -or
     $nativeAvReport.report.sync.videoPositionTicks -le 0 -or
     $nativeAvReport.report.sync.audioVideoDriftMsP95 -le 0) {

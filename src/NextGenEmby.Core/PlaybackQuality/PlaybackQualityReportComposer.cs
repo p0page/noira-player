@@ -185,7 +185,10 @@ namespace NextGenEmby.Core.PlaybackQuality
                 ProviderStatus = source.ProviderStatus,
                 Reason = source.Reason,
                 HasSnapshot = source.HasSnapshot,
-                HasPlaybackSample = source.HasPlaybackSample
+                HasPlaybackSample = source.HasPlaybackSample,
+                ProcessWallClockMs = source.ProcessWallClockMs,
+                ProcessCpuTimeMs = source.ProcessCpuTimeMs,
+                ProcessCpuUtilizationRatio = source.ProcessCpuUtilizationRatio
             };
         }
 

@@ -1210,6 +1210,13 @@ namespace NextGenEmby.Core.PlaybackQuality
                 AddUnique(comparison.Coverage.MatchedSignals, "buffers.videoStarvedPasses");
                 AddUnique(comparison.Coverage.MatchedSignals, "buffers.audioStarvedPasses");
             }
+
+            if (HasProcessCostEvidence(baseline) && HasProcessCostEvidence(candidate))
+            {
+                AddUnique(comparison.Coverage.MatchedSignals, "runtimeMetrics.processWallClockMs");
+                AddUnique(comparison.Coverage.MatchedSignals, "runtimeMetrics.processCpuTimeMs");
+                AddUnique(comparison.Coverage.MatchedSignals, "runtimeMetrics.processCpuUtilizationRatio");
+            }
         }
 
         private static bool HasRuntimePlaybackEvidence(PlaybackQualityReport report)
@@ -1264,6 +1271,13 @@ namespace NextGenEmby.Core.PlaybackQuality
                 report.Buffers.QueuedAudioBuffers > 0 ||
                 report.Buffers.VideoStarvedPasses > 0 ||
                 report.Buffers.AudioStarvedPasses > 0;
+        }
+
+        private static bool HasProcessCostEvidence(PlaybackQualityReport report)
+        {
+            return report.RuntimeMetrics.ProcessWallClockMs > 0 ||
+                report.RuntimeMetrics.ProcessCpuTimeMs > 0 ||
+                report.RuntimeMetrics.ProcessCpuUtilizationRatio > 0;
         }
 
         private static bool HasTrackComparisonEvidence(PlaybackQualityReport report)

@@ -123,7 +123,7 @@ internal static class NativeHeadlessHarness
         AddLifecycleEvent(lifecycle, "seek", "completed", helper.SeekActualPositionTicks);
         AddLifecycleEvent(lifecycle, "stop", "completed", helper.SeekActualPositionTicks);
 
-        var runResult = PlaybackQualityRuntimeEvidenceCollector.ComposeRunResult(
+        var request = PlaybackQualityRuntimeEvidenceCollector.CreateRequest(
             referenceCase,
             descriptor,
             diagnostics,
@@ -145,6 +145,14 @@ internal static class NativeHeadlessHarness
                     ? Math.Abs(helper.SeekActualPositionTicks - NativeHelperSeekTargetPositionTicks) / 10000.0
                     : null
             });
+        if (request.RuntimeMetrics != null)
+        {
+            request.RuntimeMetrics.ProcessWallClockMs = helper.ProcessWallClockMs;
+            request.RuntimeMetrics.ProcessCpuTimeMs = helper.ProcessCpuTimeMs;
+            request.RuntimeMetrics.ProcessCpuUtilizationRatio = helper.ProcessCpuUtilizationRatio;
+        }
+
+        var runResult = PlaybackQualityReportComposer.Compose(request);
 
         AddLimitation(
             runResult,
@@ -184,6 +192,11 @@ internal static class NativeHeadlessHarness
         var stderrTask = process.StandardError.ReadToEndAsync();
         var exited = process.WaitForExit(Math.Max(15, options.DurationSeconds + 15) * 1000);
         startedAt.Stop();
+        var processWallClockMs = startedAt.Elapsed.TotalMilliseconds;
+        var processCpuTimeMs = TryGetProcessCpuTimeMs(process);
+        var processCpuUtilizationRatio = processWallClockMs > 0
+            ? processCpuTimeMs / processWallClockMs
+            : 0.0;
 
         if (!exited)
         {
@@ -225,8 +238,22 @@ internal static class NativeHeadlessHarness
             source,
             color,
             display,
-            startedAt.Elapsed.TotalMilliseconds,
+            processWallClockMs,
+            processCpuTimeMs,
+            processCpuUtilizationRatio,
             seekActualPositionTicks);
+    }
+
+    private static double TryGetProcessCpuTimeMs(Process process)
+    {
+        try
+        {
+            return process.TotalProcessorTime.TotalMilliseconds;
+        }
+        catch
+        {
+            return 0.0;
+        }
     }
 
     private static bool TryParseMetrics(
@@ -781,6 +808,8 @@ internal sealed class NativeHeadlessHelperResult
         NativeHeadlessColorInfo color,
         NativeHeadlessDisplayInfo display,
         double startupDurationMs,
+        double processCpuTimeMs,
+        double processCpuUtilizationRatio,
         long seekActualPositionTicks,
         string errorMessage)
     {
@@ -790,6 +819,9 @@ internal sealed class NativeHeadlessHelperResult
         Color = color;
         Display = display;
         StartupDurationMs = startupDurationMs;
+        ProcessWallClockMs = startupDurationMs;
+        ProcessCpuTimeMs = processCpuTimeMs;
+        ProcessCpuUtilizationRatio = processCpuUtilizationRatio;
         SeekActualPositionTicks = seekActualPositionTicks;
         ErrorMessage = errorMessage;
     }
@@ -806,6 +838,12 @@ internal sealed class NativeHeadlessHelperResult
 
     public double StartupDurationMs { get; }
 
+    public double ProcessWallClockMs { get; }
+
+    public double ProcessCpuTimeMs { get; }
+
+    public double ProcessCpuUtilizationRatio { get; }
+
     public long SeekActualPositionTicks { get; }
 
     public string ErrorMessage { get; }
@@ -816,6 +854,8 @@ internal sealed class NativeHeadlessHelperResult
         NativeHeadlessColorInfo color,
         NativeHeadlessDisplayInfo display,
         double startupDurationMs,
+        double processCpuTimeMs,
+        double processCpuUtilizationRatio,
         long seekActualPositionTicks)
     {
         return new NativeHeadlessHelperResult(
@@ -825,6 +865,8 @@ internal sealed class NativeHeadlessHelperResult
             color,
             display,
             startupDurationMs,
+            processCpuTimeMs,
+            processCpuUtilizationRatio,
             seekActualPositionTicks,
             "");
     }
@@ -837,6 +879,8 @@ internal sealed class NativeHeadlessHelperResult
             new NativeHeadlessSourceInfo(),
             new NativeHeadlessColorInfo(),
             new NativeHeadlessDisplayInfo(),
+            0,
+            0,
             0,
             0,
             errorMessage);

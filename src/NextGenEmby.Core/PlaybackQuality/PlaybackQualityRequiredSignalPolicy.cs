@@ -304,6 +304,12 @@ namespace NextGenEmby.Core.PlaybackQuality
                 case "runtimeMetrics.hasPlaybackSample":
                     return !string.IsNullOrWhiteSpace(report.RuntimeMetrics.Status) &&
                         report.RuntimeMetrics.Status != "unknown";
+                case "runtimeMetrics.processWallClockMs":
+                    return report.RuntimeMetrics.ProcessWallClockMs > 0;
+                case "runtimeMetrics.processCpuTimeMs":
+                    return report.RuntimeMetrics.ProcessCpuTimeMs > 0;
+                case "runtimeMetrics.processCpuUtilizationRatio":
+                    return report.RuntimeMetrics.ProcessCpuUtilizationRatio > 0;
                 case "source.codec":
                     return !string.IsNullOrWhiteSpace(report.Source.Codec);
                 case "source.hasDirectStreamUrl":

@@ -133,6 +133,9 @@ namespace NextGenEmby.Core.PlaybackQuality
         public string Reason { get; set; } = "";
         public bool HasSnapshot { get; set; }
         public bool HasPlaybackSample { get; set; }
+        public double ProcessWallClockMs { get; set; }
+        public double ProcessCpuTimeMs { get; set; }
+        public double ProcessCpuUtilizationRatio { get; set; }
     }
 
     public sealed class PlaybackQualityPosition

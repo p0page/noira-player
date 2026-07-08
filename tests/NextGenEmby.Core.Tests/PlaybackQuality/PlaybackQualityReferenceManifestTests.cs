@@ -195,6 +195,17 @@ public sealed class PlaybackQualityReferenceManifestTests
     }
 
     [Fact]
+    public void SignalCatalog_Includes_Runtime_Process_Cost_Evidence()
+    {
+        var reportSignals = new HashSet<string>(
+            PlaybackQualitySignalCatalog.ReportSignals.Select(signal => signal.Signal));
+
+        Assert.Contains("runtimeMetrics.processWallClockMs", reportSignals);
+        Assert.Contains("runtimeMetrics.processCpuTimeMs", reportSignals);
+        Assert.Contains("runtimeMetrics.processCpuUtilizationRatio", reportSignals);
+    }
+
+    [Fact]
     public void RequiredSignals_Include_Source_Color_Metadata_When_Expected()
     {
         var referenceCase = CreateCase(
@@ -1507,7 +1518,10 @@ public sealed class PlaybackQualityReferenceManifestTests
                 ProviderStatus = "returned-snapshot",
                 Reason = "Runtime metrics snapshot contains playback sample evidence.",
                 HasSnapshot = true,
-                HasPlaybackSample = true
+                HasPlaybackSample = true,
+                ProcessWallClockMs = 5123.4,
+                ProcessCpuTimeMs = 245.6,
+                ProcessCpuUtilizationRatio = 0.048
             },
             Tracks = new PlaybackQualityTracks
             {
@@ -1557,6 +1571,9 @@ public sealed class PlaybackQualityReferenceManifestTests
         Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "runtimeMetrics.reason"));
         Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "runtimeMetrics.hasSnapshot"));
         Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "runtimeMetrics.hasPlaybackSample"));
+        Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "runtimeMetrics.processWallClockMs"));
+        Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "runtimeMetrics.processCpuTimeMs"));
+        Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "runtimeMetrics.processCpuUtilizationRatio"));
         Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "tracks.videoTrackCount"));
         Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "tracks.audioTrackCount"));
         Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "tracks.subtitleTrackCount"));
@@ -1693,6 +1710,9 @@ public sealed class PlaybackQualityReferenceManifestTests
                 RenderedVideoFrames = 240
             },
             "test-provider:returned-snapshot");
+        report.RuntimeMetrics.ProcessWallClockMs = 5123.4;
+        report.RuntimeMetrics.ProcessCpuTimeMs = 245.6;
+        report.RuntimeMetrics.ProcessCpuUtilizationRatio = 0.048;
     }
 
     private static void AddObservedLifecycleEvent(

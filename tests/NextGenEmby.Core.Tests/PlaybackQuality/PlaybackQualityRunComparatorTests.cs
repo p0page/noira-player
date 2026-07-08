@@ -427,6 +427,9 @@ public sealed class PlaybackQualityRunComparatorTests
         Assert.Contains("buffers.queuedAudioBuffers", comparison.Coverage.MatchedSignals);
         Assert.Contains("buffers.videoStarvedPasses", comparison.Coverage.MatchedSignals);
         Assert.Contains("buffers.audioStarvedPasses", comparison.Coverage.MatchedSignals);
+        Assert.Contains("runtimeMetrics.processWallClockMs", comparison.Coverage.MatchedSignals);
+        Assert.Contains("runtimeMetrics.processCpuTimeMs", comparison.Coverage.MatchedSignals);
+        Assert.Contains("runtimeMetrics.processCpuUtilizationRatio", comparison.Coverage.MatchedSignals);
         Assert.Empty(comparison.Regressions);
     }
 
@@ -746,6 +749,9 @@ public sealed class PlaybackQualityRunComparatorTests
         report.Buffers.QueuedAudioBuffers = 12;
         report.Buffers.VideoStarvedPasses = 0;
         report.Buffers.AudioStarvedPasses = 0;
+        report.RuntimeMetrics.ProcessWallClockMs = 5123.4;
+        report.RuntimeMetrics.ProcessCpuTimeMs = 245.6;
+        report.RuntimeMetrics.ProcessCpuUtilizationRatio = 0.048;
     }
 
     private static PlaybackQualityCheck Check(
