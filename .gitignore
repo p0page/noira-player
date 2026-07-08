@@ -28,7 +28,10 @@ dlldata.c
 .superpowers/
 
 # Local-only playback QA credentials, manifests, and captured private reports.
-docs/qa/private/
+docs/qa/private/*
+!docs/qa/private/README.md
+!docs/qa/private/*.template.json
+docs/qa/private/reports/
 tools/quality-run/private/
 *.private.json
 *.local.json
