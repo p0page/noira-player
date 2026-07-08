@@ -610,3 +610,13 @@
 影响：实验代码已回退，不改变当前播放器 Core/native 行为。该结果排除了“只在阈值附近缩短 sleep”这个低成本候选；它也说明 1ms wait 本身并不能可靠降低当前 A/V smoke 的等待抖动。
 
 边界：该实验仍是短样本 native-headless 纯软件证据，不代表真实 Xbox/HDMI 输出体验。下一步不应继续调整固定 sleep 常量或阈值窗口；应先补充 wait target、oversleep delta、wait reason 等诊断信号，或设计可复用且低开销的等待 primitive，再用同一 41-case manifest 做 baseline/candidate comparison。
+
+# 2026-07-08: audio-ahead wait target/oversleep 作为等待调度诊断证据
+
+决策：native/headless 播放质量报告新增 `timing.audioAheadWaitTargetMsP50/P95/P99/Max` 和 `timing.audioAheadWaitOversleepMsP50/P95/P99/Max`。`target` 表示 pending video frame 进入 `ShouldWaitForAudio` 时，按当前 audio-ahead tolerance 计算还需要等待音频追上的理论剩余时间；`oversleep` 表示实际等待时长超过该目标的部分。
+
+原因：此前 `audioAheadWaitDurationMs*` 只能说明“视频等音频等了多久”，但无法区分等待来自合理策略目标，还是底层 wait/sleep 唤醒过粗导致的过冲。A/V smoke 的新证据显示 target P95 约 23.3ms，而 oversleep P95 约 16.9ms，因此下一步调优应优先验证 wait primitive / wait scheduling，而不是继续盲调固定 sleep 常量或 audio-ahead 阈值。
+
+影响：这些字段进入 native metrics、WinRT bridge、Core report schema、signal catalog、model analysis evidence signals、headless parser、native-headless smoke 断言和 candidate comparison matched signals。同一 41-case manifest 的 `playback-core-tuning-audio-wait-target-evidence-41case-8e13b26.local` comparison 为 `decision = no-change`，不会被解释成 quality improvement。
+
+边界：`target/oversleep` 当前只作为诊断和模型可消费 evidence，不自动驱动 improvement/regression，也不替代 A/V sync 正确性判断。任何等待策略候选仍必须生成同 manifest baseline/candidate comparison，并明确记录 improved/regressed/mixed 与剩余风险。

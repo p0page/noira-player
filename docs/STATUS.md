@@ -476,3 +476,13 @@ manifest validation、report-set validation、single comparison、comparison sui
 结论：该候选没有可采纳的质量改善，且 audio-ahead wait P95/P99/Max 变差，decoded/submitted/queued audio 也略降。因此实验代码已回退，不作为播放器 Core/native 策略调整提交。
 
 下一步建议：不要继续围绕固定 sleep 常量或小窗口阈值试错。下一轮应优先补充更能解释调度行为的证据，例如 audio-ahead wait 的目标剩余时间、实际 oversleep delta、render pass 间隔原因分类，或改造为可复用/低开销的等待 primitive 后再做同 manifest candidate comparison。
+
+# 2026-07-08 更新：audio-ahead wait target/oversleep 证据进入 41-case comparison
+
+本轮在已接受的 `playback-core-tuning-audio-wait-evidence-41case-f7f7315.local` 之后补齐 `timing.audioAheadWaitTargetMsP50/P95/P99/Max` 和 `timing.audioAheadWaitOversleepMsP50/P95/P99/Max`。前者记录进入 `ShouldWaitForAudio` 时理论上还需要等音频追上阈值多久；后者记录实际等待时长超过该目标的 delta。
+
+已用同一 41-case manifest 生成 ignored candidate：`docs/qa/private/candidates/playback-core-tuning-audio-wait-target-evidence-41case-8e13b26.local/`，并输出 comparison：`docs/qa/private/comparisons/playback-core-tuning-audio-wait-target-evidence-41case-8e13b26.local/`。结果：41/41 case 可比，baseline/candidate validation 均通过，`manifest.sameCaseIds = true`，`decision = no-change`，0 improved，0 regressed，0 mixed，41 strong confidence。
+
+关键 A/V 样本证据：`local/native-headless-av-smoke` 中 candidate 的 `renderIntervalMsP50/P95/P99` 约为 `31.6/47.5/47.6ms`，`audioAheadWaitDurationMsP50/P95/P99/Max` 约为 `15.6/31.3/40.0/40.0ms`，`audioAheadWaitTargetMsP50/P95/Max` 约为 `13.3/23.3/23.3ms`，`audioAheadWaitOversleepMsP50/P95/Max` 约为 `5.2/16.9/17.8ms`。这说明当前 A/V jitter 的一部分不是单纯策略目标过大，而是实际唤醒相对目标存在明显 oversleep。
+
+边界：这是诊断证据增强，不是播放策略优化；它不改变 evaluator 阈值、不放宽样本预期，也不证明真实 Xbox/HDMI 输出或主观流畅度改善。下一步更适合小步验证等待 primitive / wait scheduling，而不是继续盲调固定 sleep 常量或 audio-ahead 阈值。
