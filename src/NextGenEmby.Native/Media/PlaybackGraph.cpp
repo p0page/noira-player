@@ -473,22 +473,26 @@ namespace winrt::NextGenEmby::Native::implementation
             }
 
             EnsureHdrOutputForFrame(frame);
-            m_videoRenderer.Render(frame, m_hdrOutputActive);
+            auto rendered = m_videoRenderer.Render(frame, m_hdrOutputActive);
             m_positionTicks = frame.PositionTicks;
             UpdateSubtitleCue();
-            m_deviceResources.Present();
+            auto presented = m_deviceResources.Present();
             auto renderedAt = std::chrono::steady_clock::now();
-            if (m_lastRenderedFrameAt.time_since_epoch().count() != 0)
+            if (rendered && presented)
             {
-                auto elapsed = std::chrono::duration<double, std::milli>(
-                    renderedAt - m_lastRenderedFrameAt).count();
-                m_qualityMetrics.RecordRenderIntervalMs(elapsed);
+                if (m_lastRenderedFrameAt.time_since_epoch().count() != 0)
+                {
+                    auto elapsed = std::chrono::duration<double, std::milli>(
+                        renderedAt - m_lastRenderedFrameAt).count();
+                    m_qualityMetrics.RecordRenderIntervalMs(elapsed);
+                }
+
+                m_lastRenderedFrameAt = renderedAt;
+                ++m_renderedVideoFrameCount;
+                ++m_qualityMetrics.RenderedVideoFrames;
             }
 
-            m_lastRenderedFrameAt = renderedAt;
             m_pendingVideoFrame.reset();
-            ++m_renderedVideoFrameCount;
-            ++m_qualityMetrics.RenderedVideoFrames;
             m_qualityMetrics.QueuedAudioBuffers = m_audioRenderer.QueuedBufferCount();
             LogRuntimeStatsIfDue();
             return true;

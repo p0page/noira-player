@@ -1,5 +1,15 @@
 # 技术决策
 
+## 2026-07-08: rendered frame metrics 必须以 render 和 present 成功为前提
+
+决策：`VideoRenderer::Render` 从 `void` 改为返回 `bool`，表示当前帧是否成功写入 back buffer；`PlaybackGraph::RenderNextFrame` 只有在 render 成功且 `DxDeviceResources::Present()` 成功时，才更新 render interval、`m_renderedVideoFrameCount` 和 `PlaybackQualityMetrics.RenderedVideoFrames`。
+
+原因：App-free/headless 路线会遇到无 swapchain、无 surface 或 present 不可用的情况。此前 renderer 失败被吞掉，graph 仍会把解码到的帧计为 rendered frame，可能让模型把“真实渲染证据”与“仅解码/推进帧”混在一起。评测系统需要诚实暴露缺 surface instrumentation，而不是产生漂亮但错误的 frame pacing 证据。
+
+影响：当前 UWP surface 正常时行为应保持一致；无 surface 或 present 失败时，decoded frame 可以继续反映解码进度，但 rendered frame 和 render interval 不会被伪造。新增 contract test 固化该约束。
+
+边界：这不改变 HDR 策略、帧选择、音频同步、drop 策略或渲染算法；只是修正 metrics 采样条件。真实 App-free native playback evidence 仍需要后续 native host/render-surface 解耦。
+
 ## 2026-07-08: PlaybackGraph 使用普通 native open request
 
 决策：`PlaybackGraph::Open` 改为接收 `PlaybackGraphOpenRequest`，该 struct 定义在 `PlaybackGraph.h`，包含 direct stream URL、start position、音轨/字幕选择和 video frame rate。`NativePlaybackEngine` 继续保留 WinRT/UWP public API，并在 adapter 层把 `NativePlaybackOpenRequest` 转换成 `PlaybackGraphOpenRequest`。

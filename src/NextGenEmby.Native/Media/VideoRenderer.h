@@ -32,7 +32,7 @@ namespace winrt::NextGenEmby::Native::implementation
     public:
         explicit VideoRenderer(DxDeviceResources& deviceResources);
 
-        void Render(DecodedVideoFrame const& frame, bool hdrDisplayActive);
+        bool Render(DecodedVideoFrame const& frame, bool hdrDisplayActive);
         void ClearToBlack();
 
     private:

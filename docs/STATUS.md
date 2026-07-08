@@ -2,6 +2,12 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-08 更新：RenderedVideoFrames 不再在 surface render/present 失败时累加
+
+`VideoRenderer::Render` 现在返回是否真的把当前帧写入 back buffer，`PlaybackGraph::RenderNextFrame` 只有在 `Render(...)` 和 `Present()` 都成功时才记录 render interval 并累加 `RenderedVideoFrames`。这避免未来 headless/no-surface runner 只要成功解码就误报“已渲染帧”。
+
+边界：这不是播放效果优化，也不代表 headless runner 已经能真实打开媒体；它只是让 native metrics 在缺失 surface 或 present 失败时更诚实地区分 decoded frame 与 rendered frame。
+
 ## 2026-07-08 更新：PlaybackGraph open request 已脱离 WinRT runtimeclass
 
 `PlaybackGraph::Open` 现在接收普通 native `PlaybackGraphOpenRequest`，不再直接接收 `NextGenEmby::Native::NativePlaybackOpenRequest`。`NativePlaybackEngine` 负责把 WinRT/UWP request 转换成 graph request，再调用 `m_graph->Open(graphRequest)`。新增 `NativePlaybackGraphDecouplingContractTests` 防止 `PlaybackGraph.h` 重新 include `NativePlaybackEngine.g.h` 或把 WinRT runtimeclass 暴露回 graph open 参数。

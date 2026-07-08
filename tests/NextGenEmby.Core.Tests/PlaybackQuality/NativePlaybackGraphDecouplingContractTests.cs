@@ -23,6 +23,21 @@ public sealed class NativePlaybackGraphDecouplingContractTests
         Assert.Contains("m_graph->Open(graphRequest)", engineSource, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void PlaybackGraph_Does_Not_Count_Rendered_Frame_When_Surface_Render_Or_Present_Fails()
+    {
+        var root = FindRepositoryRoot();
+        var rendererHeader = File.ReadAllText(Path.Combine(root, "src", "NextGenEmby.Native", "Media", "VideoRenderer.h"));
+        var rendererSource = File.ReadAllText(Path.Combine(root, "src", "NextGenEmby.Native", "Media", "VideoRenderer.cpp"));
+        var graphSource = File.ReadAllText(Path.Combine(root, "src", "NextGenEmby.Native", "Media", "PlaybackGraph.cpp"));
+
+        Assert.Contains("bool Render(DecodedVideoFrame const& frame, bool hdrDisplayActive);", rendererHeader, StringComparison.Ordinal);
+        Assert.Contains("return rendered;", rendererSource, StringComparison.Ordinal);
+        Assert.Contains("auto rendered = m_videoRenderer.Render(frame, m_hdrOutputActive);", graphSource, StringComparison.Ordinal);
+        Assert.Contains("auto presented = m_deviceResources.Present();", graphSource, StringComparison.Ordinal);
+        Assert.Contains("if (rendered && presented)", graphSource, StringComparison.Ordinal);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

@@ -8,7 +8,7 @@ namespace winrt::NextGenEmby::Native::implementation
     {
     }
 
-    void VideoRenderer::Render(DecodedVideoFrame const& frame, bool hdrDisplayActive)
+    bool VideoRenderer::Render(DecodedVideoFrame const& frame, bool hdrDisplayActive)
     {
         auto outputHdr10 = hdrDisplayActive &&
             ShouldOutputHdr10ForFrame(frame.HdrKind, m_deviceResources.IsTenBitSwapChain());
@@ -54,7 +54,7 @@ namespace winrt::NextGenEmby::Native::implementation
 
         if (!rendered && !frame.BgraPixels.empty())
         {
-            m_deviceResources.DrawBgraFrameToBackBuffer(
+            rendered = m_deviceResources.DrawBgraFrameToBackBuffer(
                 frame.BgraPixels.data(),
                 frame.Width,
                 frame.Height,
@@ -62,6 +62,8 @@ namespace winrt::NextGenEmby::Native::implementation
                 frame.DisplayHeight,
                 frame.BgraStride);
         }
+
+        return rendered;
     }
 
     void VideoRenderer::ClearToBlack()
