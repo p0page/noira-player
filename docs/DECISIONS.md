@@ -1,5 +1,25 @@
 # 技术决策
 
+## 2026-07-08: App-free native helper 作为第一条真实软件播放采集路径
+
+决策：`tools/NextGenEmby.PlaybackQuality.Headless` 保留默认 skip/blocker 模式，同时新增 `--native-helper-exe`。当传入 native helper exe 时，C# harness 负责调用 helper、解析 key=value metrics、组合 `PlaybackDescriptor`、`PlaybackQualityLifecycle`、`PlaybackQualityPosition` 和 `native-headless:returned-snapshot` metrics provider，再输出标准 `PlaybackQualityRunResult`。`run-native-headless-harness-smoke-test.ps1` 负责在本机编译 helper、补齐 FFmpegInteropX UWP DLL 与 `vcruntime140_app.dll`，并用本地生成的声明样本跑完整 captured import / validate / analyze 链路；默认 skip/blocker 路径仍保留公开 Jellyfin direct-uri 作为命令契约输入。
+
+原因：目标要求摆脱 UWP App 启动、打包、部署和 UI，获得第一套可复现的真实播放软件证据。直接让 C# 工具链接 C++/WinRT 组件仍会被 UWP projection 影响；把 native `PlaybackGraph` helper 做成独立 exe，可以先在 desktop/headless 进程里验证 FFmpeg open、D3D offscreen swapchain、decode/render metrics 和生命周期，再复用现有 C# report 契约，避免新建平行评测框架。
+
+影响：`native-headless` report 现在有两种明确语义：没有 helper 时是结构化 skip，不得算作 playback evidence；传入 helper 且成功返回 snapshot 时是 App-free native/software playback evidence，`analyze-report-set` 会把集合级 `playbackEvidence.canEvaluateNativePlayback` 判为 `true`。helper 会从 FFmpeg 实际 source snapshot 输出 codec、尺寸、帧率和 HDR kind，不能从 manifest expected 或文件名倒填 actual。
+
+边界：这仍是纯软件层证据，不验证 HDMI InfoFrame、电视 EOTF、真实 HDR 亮度或主观观感。当前 helper 还没有暴露完整 DXGI input/output color space、display refresh snapshot、真实音轨/字幕轨发现和更稳定的 A/V sync 证据，因此 report 可以进入评测链路，但优化播放 core 前仍应先补齐这些 instrumentation。
+
+## 2026-07-08: App-free surface blocker 收窄为 graph host/lifecycle blocker
+
+决策：新增独立 native smoke `DxDeviceResourcesOffscreenTests.cpp`，直接在桌面进程中创建 DirectX composition swapchain，并验证 `ClearToBlack()` 与 `Present()` 成功。为此给 `DxDeviceResources` 增加只读查询 `HasRenderTarget()`，并把该 smoke 接入 `run-playback-core-checks.ps1`。`native-headless` runner 的结构化 limitation 同步改为说明 offscreen swapchain 已通过 smoke，剩余 blocker 是缺少 native `PlaybackGraph` host 和 lifecycle bridge。
+
+原因：此前 App-free native harness 的 blocker 描述把 UWP projection、`SwapChainPanel` surface 和 graph host 耦合混在一起。当前目标需要逐层拆开真实阻塞点，避免模型继续围绕已经可验证的 surface 问题打转。composition swapchain 能在无 `SwapChainPanel` 的进程中创建后，下一步应集中在如何把 `PlaybackGraph` 以 App-free 方式实例化、打开 direct-uri/local sample，并把 lifecycle/metrics 写回现有 report-set 契约。
+
+影响：评测链路现在有一个更细的 native surface contract：如果后续 helper 连 offscreen render target 都建不起来，`native-dx-offscreen-test` 会先失败；如果它能建 surface 但不能打开媒体，问题应归到 graph host/linkage/lifecycle，而不是泛化为 XAML surface 缺失。
+
+边界：该 smoke 本身不代表真实 native playback evidence，不改变播放策略、解码、渲染算法、HDR/color 处理或 metrics 阈值。真实播放证据由 `native-headless` helper 路径产生；offscreen smoke 只负责保护无 `SwapChainPanel` render target 的底层前提。
+
 ## 2026-07-08: rendered frame metrics 必须以 render 和 present 成功为前提
 
 决策：`VideoRenderer::Render` 从 `void` 改为返回 `bool`，表示当前帧是否成功写入 back buffer；`PlaybackGraph::RenderNextFrame` 只有在 render 成功且 `DxDeviceResources::Present()` 成功时，才更新 render interval、`m_renderedVideoFrameCount` 和 `PlaybackQualityMetrics.RenderedVideoFrames`。

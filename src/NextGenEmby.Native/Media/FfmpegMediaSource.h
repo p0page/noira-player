@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <deque>
 #include <optional>
+#include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <winrt/Windows.Foundation.h>
@@ -13,6 +14,16 @@ struct AVStream;
 
 namespace winrt::NextGenEmby::Native::implementation
 {
+    struct FfmpegVideoStreamSnapshot
+    {
+        int32_t StreamIndex{-1};
+        std::string Codec;
+        uint32_t Width{0};
+        uint32_t Height{0};
+        double FrameRate{0.0};
+        std::string HdrKind;
+    };
+
     class FfmpegMediaSource
     {
     public:
@@ -22,6 +33,7 @@ namespace winrt::NextGenEmby::Native::implementation
         std::optional<int32_t> TryFindStream(int mediaType, int32_t selectedStreamIndex) const;
         int32_t FindRequiredStream(int mediaType, int32_t selectedStreamIndex) const;
         AVStream* Stream(int32_t streamIndex) const;
+        std::optional<FfmpegVideoStreamSnapshot> BestVideoStreamSnapshot() const;
         void RegisterStream(int32_t streamIndex);
         void UnregisterStream(int32_t streamIndex) noexcept;
         bool TryReadPacket(int32_t streamIndex, AVPacket* packet);

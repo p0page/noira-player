@@ -1,0 +1,136 @@
+#include <cassert>
+#include <chrono>
+#include <cstdlib>
+#include <cwchar>
+#include <iostream>
+#include <string>
+#include <thread>
+
+#include <winrt/base.h>
+
+#include "DxDeviceResources.h"
+#include "Media/PlaybackGraph.h"
+
+using namespace std::chrono_literals;
+using winrt::NextGenEmby::Native::implementation::DxDeviceResources;
+using winrt::NextGenEmby::Native::implementation::PlaybackGraph;
+using winrt::NextGenEmby::Native::implementation::PlaybackGraphOpenRequest;
+
+namespace
+{
+    constexpr int64_t SeekTargetPositionTicks = 0;
+    constexpr wchar_t const* DefaultStreamUrl =
+        L"https://repo.jellyfin.org/test-videos/SDR/HEVC%2010bit/Test%20Jellyfin%201080p%20HEVC%2010bit%203M.mp4";
+
+    struct Options
+    {
+        std::wstring StreamUrl{DefaultStreamUrl};
+        int DurationSeconds{3};
+    };
+
+    Options ParseOptions(int argc, wchar_t** argv)
+    {
+        Options options;
+        for (auto index = 1; index < argc; ++index)
+        {
+            if (std::wcscmp(argv[index], L"--stream-url") == 0 && index + 1 < argc)
+            {
+                options.StreamUrl = argv[++index];
+            }
+            else if (std::wcscmp(argv[index], L"--duration-seconds") == 0 && index + 1 < argc)
+            {
+                auto parsed = std::wcstol(argv[++index], nullptr, 10);
+                if (parsed > 0 && parsed < 120)
+                {
+                    options.DurationSeconds = static_cast<int>(parsed);
+                }
+            }
+        }
+
+        return options;
+    }
+}
+
+int wmain(int argc, wchar_t** argv)
+{
+    auto options = ParseOptions(argc, argv);
+    winrt::init_apartment(winrt::apartment_type::multi_threaded);
+
+    DxDeviceResources resources;
+    resources.CreateSwapChain(1280, 720, false);
+    assert(resources.HasRenderTarget());
+
+    PlaybackGraph graph(resources);
+    PlaybackGraphOpenRequest request{};
+    request.DirectStreamUrl = options.StreamUrl;
+
+    try
+    {
+        graph.Open(request);
+        auto sampleWindow = std::chrono::milliseconds(options.DurationSeconds * 1000);
+        auto halfWindow = sampleWindow / 2;
+        if (halfWindow < 500ms)
+        {
+            halfWindow = 500ms;
+        }
+
+        std::this_thread::sleep_for(halfWindow);
+        auto playbackSnapshot = graph.QualityMetricsSnapshot();
+
+        graph.Pause();
+        std::this_thread::sleep_for(100ms);
+        graph.Resume();
+        graph.Seek(SeekTargetPositionTicks);
+        std::this_thread::sleep_for(sampleWindow - halfWindow);
+
+        auto seekSnapshot = graph.QualityMetricsSnapshot();
+        auto source = graph.VideoSourceSnapshot();
+        graph.Stop();
+
+        std::cout << "decodedVideoFrames=" << playbackSnapshot.DecodedVideoFrames
+            << " renderedVideoFrames=" << playbackSnapshot.RenderedVideoFrames
+            << " renderPasses=" << playbackSnapshot.RenderPasses
+            << " submittedAudioFrames=" << playbackSnapshot.SubmittedAudioFrames
+            << " queuedAudioBuffers=" << playbackSnapshot.QueuedAudioBuffers
+            << " droppedVideoFrames=" << playbackSnapshot.DroppedVideoFrames
+            << " seekPrerollDroppedFrames=" << playbackSnapshot.SeekPrerollDroppedFrames
+            << " videoAheadWaitCount=" << playbackSnapshot.VideoAheadWaitCount
+            << " videoStarvedPasses=" << playbackSnapshot.VideoStarvedPasses
+            << " audioStarvedPasses=" << playbackSnapshot.AudioStarvedPasses
+            << " audioClockTicks=" << playbackSnapshot.AudioClockTicks
+            << " videoPositionTicks=" << playbackSnapshot.VideoPositionTicks
+            << " seekActualPositionTicks=" << seekSnapshot.VideoPositionTicks
+            << " renderIntervalMsP50=" << playbackSnapshot.RenderIntervalMsP50
+            << " renderIntervalMsP95=" << playbackSnapshot.RenderIntervalMsP95
+            << " renderIntervalMsP99=" << playbackSnapshot.RenderIntervalMsP99
+            << " maxFrameGapMs=" << playbackSnapshot.MaxFrameGapMs
+            << " framePacingSourceFrameRate=" << playbackSnapshot.FramePacingSourceFrameRate
+            << " lateFrameDropToleranceMs=" << playbackSnapshot.LateFrameDropToleranceMs
+            << " audioVideoDriftMsP50=" << playbackSnapshot.AudioVideoDriftMsP50
+            << " audioVideoDriftMsP95=" << playbackSnapshot.AudioVideoDriftMsP95
+            << " audioVideoDriftMsP99=" << playbackSnapshot.AudioVideoDriftMsP99
+            << " audioVideoDriftMsMax=" << playbackSnapshot.AudioVideoDriftMsMax
+            << " sourceCodec=" << (source ? source->Codec : "")
+            << " sourceWidth=" << (source ? source->Width : 0)
+            << " sourceHeight=" << (source ? source->Height : 0)
+            << " sourceFrameRate=" << (source ? source->FrameRate : 0.0)
+            << " sourceHdrKind=" << (source ? source->HdrKind : "")
+            << std::endl;
+
+        assert(playbackSnapshot.DecodedVideoFrames > 1);
+        assert(playbackSnapshot.RenderedVideoFrames > 1);
+        return 0;
+    }
+    catch (winrt::hresult_error const& error)
+    {
+        std::wcerr << L"native playback graph smoke failed: " << error.message().c_str() << std::endl;
+        graph.Stop();
+        return 2;
+    }
+    catch (std::exception const& error)
+    {
+        std::cerr << "native playback graph smoke failed: " << error.what() << std::endl;
+        graph.Stop();
+        return 2;
+    }
+}

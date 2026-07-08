@@ -2,6 +2,24 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-08 更新：App-free native-headless helper 已产生真实 native/software playback evidence
+
+`tools/NextGenEmby.PlaybackQuality.Headless` 现在支持 `--native-helper-exe`。传入由 smoke 编译出的 `NativePlaybackGraphHeadlessSmokeTests.exe` 时，headless harness 会在不启动、不打包、不部署 UWP App 的情况下调用 native helper，打开本地生成的声明样本，执行最小生命周期 `load/play/pause/resume/seek/stop`，解析 native metrics，并输出标准 `PlaybackQualityRunResult`。
+
+`tools/quality-run/run-native-headless-harness-smoke-test.ps1` 已覆盖两条路径：不传 helper 时继续输出结构化 `native-headless.native-link-blocked` skip，传 helper 时编译/运行 App-free native `PlaybackGraph` helper，生成 captured report，再走 `materialize-native-harness-report-set -> validate-report-set -> analyze-report-set`。最新 smoke 中 `analyze-report-set` 识别到 `evidenceSources = ["native-headless:returned-snapshot"]`，`playbackEvidence.scope = native-software`，`canEvaluateNativePlayback = true`。
+
+当前真实 helper report 仍会诚实暴露缺口：它能采集 decoded/rendered frames、render intervals、source codec/width/height/frameRate、生命周期和 runtime metrics provider；但仍缺 `colorPipeline.dxgiInput`、`display.refreshRateHz` 等更深 instrumentation，且不验证 HDMI/显示器/HDR 观感。该 report 可作为软件播放证据进入评测链路，但还不能作为“颜色、HDR、帧率或 A/V sync 已优化”的证明。
+
+文档化运行命令：单项 smoke 使用 `powershell -NoProfile -ExecutionPolicy Bypass -File tools\quality-run\run-native-headless-harness-smoke-test.ps1`；本阶段完整门禁使用 `powershell -NoProfile -ExecutionPolicy Bypass -File tools\quality-run\run-playback-core-checks.ps1`。stable smoke 使用本地生成样本来避免公网波动；公开 Jellyfin direct-uri 已作为 challenge 手动验证过，可真实打开并被 materialize / validate / analyze 消费，但不放进稳定门禁。
+
+## 2026-07-08 更新：offscreen DirectX composition swapchain 已通过 native smoke
+
+新增 `tests/NextGenEmby.Native.Tests/DxDeviceResourcesOffscreenTests.cpp`，并把 `native-dx-offscreen-test` 纳入 `tools/quality-run/run-playback-core-checks.ps1`。该测试在不创建 UWP `SwapChainPanel` 的桌面进程里调用 `DxDeviceResources::CreateSwapChain(16, 16, false)`，随后验证 `HasRenderTarget()`、`ClearToBlack()` 和 `Present()`。
+
+这一步把 App-free playback 的 surface blocker 收窄了：当前证据显示 composition swapchain/offscreen render target 本身可以在独立 native smoke 中创建和 present。后续真实 helper 已经基于这个前提打开本地样本、驱动 `PlaybackGraph` 生命周期，并把 metrics 写成 `PlaybackQualityRunResult`；如果未来该层回归，`native-dx-offscreen-test` 会先暴露 render target 前提失败。
+
+边界：这仍不是“真实播放证据”。该 smoke 不打开媒体、不解码、不运行 `PlaybackGraph`、不产生 frame pacing / A/V sync / color pipeline runtime evidence，也不证明 HDR、颜色或显示输出正确。
+
 ## 2026-07-08 更新：RenderedVideoFrames 不再在 surface render/present 失败时累加
 
 `VideoRenderer::Render` 现在返回是否真的把当前帧写入 back buffer，`PlaybackGraph::RenderNextFrame` 只有在 `Render(...)` 和 `Present()` 都成功时才记录 render interval 并累加 `RenderedVideoFrames`。这避免未来 headless/no-surface runner 只要成功解码就误报“已渲染帧”。

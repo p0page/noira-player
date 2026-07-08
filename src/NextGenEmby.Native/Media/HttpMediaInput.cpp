@@ -14,12 +14,12 @@ namespace winrt::NextGenEmby::Native::implementation
 
         Uri uri{url};
         auto scheme = uri.SchemeName();
-        if (scheme != L"http" && scheme != L"https")
+        if (scheme != L"http" && scheme != L"https" && scheme != L"file")
         {
-            throw winrt::hresult_invalid_argument(L"Direct stream URL must use HTTP or HTTPS.");
+            throw winrt::hresult_invalid_argument(L"Direct stream URL must use HTTP, HTTPS, or file.");
         }
 
-        if (uri.Host().empty())
+        if (scheme != L"file" && uri.Host().empty())
         {
             throw winrt::hresult_invalid_argument(L"Direct stream URL must include a host.");
         }

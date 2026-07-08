@@ -75,6 +75,7 @@ namespace winrt::NextGenEmby::Native::implementation
         void SwitchSubtitleStream(std::optional<int32_t> subtitleStreamIndex);
         int64_t CurrentPositionTicks() const noexcept;
         PlaybackQualityMetricsSnapshot QualityMetricsSnapshot() const noexcept;
+        std::optional<FfmpegVideoStreamSnapshot> VideoSourceSnapshot() const;
 
     private:
         void StartRenderLoop();

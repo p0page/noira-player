@@ -3,12 +3,14 @@
 #include "HttpMediaInput.h"
 #include "../NativePlaybackDiagnostics.h"
 
+#include <cctype>
 #include <string>
 
 #pragma warning(push)
 #pragma warning(disable : 4244 4819)
 extern "C"
 {
+#include <libavcodec/codec_id.h>
 #include <libavcodec/packet.h>
 #include <libavformat/avformat.h>
 #include <libavutil/avutil.h>
@@ -34,6 +36,105 @@ namespace
         auto message = std::string(operation) + " failed: " + GetFfmpegErrorMessage(errorCode);
         return winrt::hresult_error(E_FAIL, winrt::to_hstring(message));
     }
+
+    bool IsValidRational(AVRational value)
+    {
+        return value.num > 0 && value.den > 0;
+    }
+
+    double ToFrameRate(AVRational value)
+    {
+        return IsValidRational(value)
+            ? static_cast<double>(value.num) / static_cast<double>(value.den)
+            : 0.0;
+    }
+
+    double SelectFrameRate(AVStream const* stream)
+    {
+        if (stream == nullptr)
+        {
+            return 0.0;
+        }
+
+        auto average = ToFrameRate(stream->avg_frame_rate);
+        if (average > 0.0)
+        {
+            return average;
+        }
+
+        return ToFrameRate(stream->r_frame_rate);
+    }
+
+    std::string MapHdrKind(AVColorTransferCharacteristic transfer)
+    {
+        switch (transfer)
+        {
+        case AVCOL_TRC_SMPTE2084:
+            return "Hdr10";
+        case AVCOL_TRC_ARIB_STD_B67:
+            return "Hlg";
+        default:
+            return "Sdr";
+        }
+    }
+
+    int HexValue(char value)
+    {
+        if (value >= '0' && value <= '9')
+        {
+            return value - '0';
+        }
+
+        if (value >= 'a' && value <= 'f')
+        {
+            return value - 'a' + 10;
+        }
+
+        if (value >= 'A' && value <= 'F')
+        {
+            return value - 'A' + 10;
+        }
+
+        return -1;
+    }
+
+    std::string ConvertFileUriToLocalPath(std::string const& source)
+    {
+        auto path = source;
+        if (path.rfind("file:///", 0) == 0)
+        {
+            path = path.substr(8);
+        }
+        else if (path.rfind("file://", 0) == 0)
+        {
+            path = path.substr(7);
+        }
+        else
+        {
+            return source;
+        }
+
+        std::string decoded;
+        decoded.reserve(path.size());
+        for (auto index = size_t{0}; index < path.size(); ++index)
+        {
+            if (path[index] == '%' && index + 2 < path.size())
+            {
+                auto high = HexValue(path[index + 1]);
+                auto low = HexValue(path[index + 2]);
+                if (high >= 0 && low >= 0)
+                {
+                    decoded.push_back(static_cast<char>((high << 4) + low));
+                    index += 2;
+                    continue;
+                }
+            }
+
+            decoded.push_back(path[index] == '/' ? '\\' : path[index]);
+        }
+
+        return decoded;
+    }
 }
 
 namespace winrt::NextGenEmby::Native::implementation
@@ -54,7 +155,7 @@ namespace winrt::NextGenEmby::Native::implementation
         AVFormatContext* formatContext = nullptr;
         try
         {
-            auto source = winrt::to_string(url);
+            auto source = ConvertFileUriToLocalPath(winrt::to_string(url));
             auto result = avformat_open_input(&formatContext, source.c_str(), nullptr, nullptr);
             if (result < 0)
             {
@@ -190,6 +291,28 @@ namespace winrt::NextGenEmby::Native::implementation
         }
 
         return stream;
+    }
+
+    std::optional<FfmpegVideoStreamSnapshot> FfmpegMediaSource::BestVideoStreamSnapshot() const
+    {
+        auto streamIndex = TryFindStream(AVMEDIA_TYPE_VIDEO, -1);
+        if (!streamIndex)
+        {
+            return std::nullopt;
+        }
+
+        auto stream = Stream(streamIndex.value());
+        auto codecpar = stream->codecpar;
+        FfmpegVideoStreamSnapshot snapshot{};
+        snapshot.StreamIndex = streamIndex.value();
+        snapshot.Codec = codecpar->codec_id == AV_CODEC_ID_NONE
+            ? ""
+            : avcodec_get_name(codecpar->codec_id);
+        snapshot.Width = codecpar->width > 0 ? static_cast<uint32_t>(codecpar->width) : 0;
+        snapshot.Height = codecpar->height > 0 ? static_cast<uint32_t>(codecpar->height) : 0;
+        snapshot.FrameRate = SelectFrameRate(stream);
+        snapshot.HdrKind = MapHdrKind(codecpar->color_trc);
+        return snapshot;
     }
 
     void FfmpegMediaSource::RegisterStream(int32_t streamIndex)

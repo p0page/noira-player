@@ -86,6 +86,7 @@ $nativeHelperCommand = '"' + $vcvars + '" >nul && cl /nologo /std:c++20 /EHsc /I
 $nativeFramePacingCommand = '"' + $vcvars + '" >nul && cl /nologo /std:c++20 /EHsc /I src\NextGenEmby.Native /Fo:C:\tmp\FramePacingTests.obj tests\NextGenEmby.Native.Tests\FramePacingTests.cpp /Fe:C:\tmp\FramePacingTests.exe && C:\tmp\FramePacingTests.exe'
 $nativeDisplayRefreshCommand = '"' + $vcvars + '" >nul && cl /nologo /std:c++20 /EHsc /I src\NextGenEmby.Native /Fo:C:\tmp\DisplayRefreshRatePolicyTests.obj tests\NextGenEmby.Native.Tests\DisplayRefreshRatePolicyTests.cpp /Fe:C:\tmp\DisplayRefreshRatePolicyTests.exe && C:\tmp\DisplayRefreshRatePolicyTests.exe'
 $nativeDisplayRefreshSnapshotCommand = '"' + $vcvars + '" >nul && cl /nologo /std:c++20 /EHsc /I src\NextGenEmby.Native /Fo:C:\tmp\HdrDisplayRefreshRateSnapshotTests.obj tests\NextGenEmby.Native.Tests\HdrDisplayRefreshRateSnapshotTests.cpp /Fe:C:\tmp\HdrDisplayRefreshRateSnapshotTests.exe && C:\tmp\HdrDisplayRefreshRateSnapshotTests.exe'
+$nativeDxOffscreenCommand = '"' + $vcvars + '" >nul && if not exist C:\tmp\nextgenemby-native-dx-offscreen mkdir C:\tmp\nextgenemby-native-dx-offscreen && cl /nologo /std:c++20 /EHsc /DWIN32_LEAN_AND_MEAN /DWINRT_LEAN_AND_MEAN /I src\NextGenEmby.Native /I src\NextGenEmby.Native\packages\FFmpegInteropX.FFmpegUWP.5.1.100\include /Fo:C:\tmp\nextgenemby-native-dx-offscreen\ tests\NextGenEmby.Native.Tests\DxDeviceResourcesOffscreenTests.cpp src\NextGenEmby.Native\DxDeviceResources.cpp src\NextGenEmby.Native\Media\DxgiColorSpaceMapper.cpp src\NextGenEmby.Native\Media\HdrToneMappingPass.cpp src\NextGenEmby.Native\NativePlaybackDiagnostics.cpp /Fe:C:\tmp\DxDeviceResourcesOffscreenTests.exe d3d11.lib dxgi.lib d2d1.lib dwrite.lib d3dcompiler.lib windowsapp.lib && C:\tmp\DxDeviceResourcesOffscreenTests.exe'
 $nativeRestoreCommand = '"' + $vcvars + '" >nul && msbuild src\NextGenEmby.Native\NextGenEmby.Native.vcxproj /t:Restore /p:RestorePackagesConfig=true /p:Configuration=Debug /p:Platform=x64 /v:minimal'
 $nativeBuildCommand = '"' + $vcvars + '" >nul && msbuild src\NextGenEmby.Native\NextGenEmby.Native.vcxproj /p:Configuration=Debug /p:Platform=x64 /m /v:minimal'
 
@@ -112,7 +113,7 @@ $commands = @(
         -Arguments @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', 'tools\quality-run\run-playback-quality-cli-smoke-test.ps1')
     New-CommandPlan `
         -Name 'native-headless-harness-smoke-test' `
-        -Description 'Run the App-free native-headless harness command shape and captured report contract smoke test.' `
+        -Description 'Run the App-free native-headless skip path and real native helper captured report smoke test.' `
         -Command 'powershell' `
         -Arguments @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', 'tools\quality-run\run-native-headless-harness-smoke-test.ps1')
     New-CommandPlan `
@@ -160,6 +161,11 @@ $commands = @(
         -Description 'Compile and run the standalone native display refresh snapshot normalization test.' `
         -Command 'cmd' `
         -Arguments @('/c', $nativeDisplayRefreshSnapshotCommand)
+    New-CommandPlan `
+        -Name 'native-dx-offscreen-test' `
+        -Description 'Compile and run the native DirectX offscreen composition swapchain test.' `
+        -Command 'cmd' `
+        -Arguments @('/c', $nativeDxOffscreenCommand)
     New-CommandPlan `
         -Name 'native-restore' `
         -Description 'Restore native packages.config dependencies required by the native playback project.' `

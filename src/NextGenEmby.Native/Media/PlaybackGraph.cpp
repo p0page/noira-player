@@ -102,7 +102,10 @@ namespace winrt::NextGenEmby::Native::implementation
 
             m_url = request.DirectStreamUrl;
             m_positionTicks = startPositionTicks;
-            m_preferredVideoFrameRate = request.VideoFrameRate;
+            auto sourceVideo = m_mediaSource.BestVideoStreamSnapshot();
+            m_preferredVideoFrameRate = request.VideoFrameRate > 0.0
+                ? request.VideoFrameRate
+                : (sourceVideo ? sourceVideo->FrameRate : 0.0);
             m_hasSeenVideoFrameColor = false;
             m_requestedHdrOutput = false;
             m_hdrOutputActive = false;
@@ -269,6 +272,12 @@ namespace winrt::NextGenEmby::Native::implementation
         snapshot.VideoPositionTicks = m_positionTicks;
         snapshot.QueuedAudioBuffers = m_audioRenderer.QueuedBufferCount();
         return snapshot;
+    }
+
+    std::optional<FfmpegVideoStreamSnapshot> PlaybackGraph::VideoSourceSnapshot() const
+    {
+        std::lock_guard lock(m_graphMutex);
+        return m_mediaSource.BestVideoStreamSnapshot();
     }
 
     void PlaybackGraph::StartRenderLoop()

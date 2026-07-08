@@ -1,5 +1,7 @@
 using System.Diagnostics;
 using System.Reflection;
+using NextGenEmby.Core.Emby;
+using NextGenEmby.Core.Playback;
 using NextGenEmby.Core.PlaybackQuality;
 
 var result = NativeHeadlessHarnessOptions.TryParse(args, out var options, out var error)
@@ -16,10 +18,11 @@ return result.ExitCode;
 internal static class NativeHeadlessHarness
 {
     private const string CollectorVersion = "native-headless-harness-v0.1";
+    private const long NativeHelperSeekTargetPositionTicks = 0;
     private const string NativeWinRtLinkageLimitation =
         "native-headless: current NextGenEmby.Native build is a Windows Store C++/WinRT component with public playback entrypoints bound to UWP projection";
     private const string NativeGraphHostLimitation =
-        "native-headless: real App-free playback evidence requires a native graph host or render-surface abstraction before this runner can open PlaybackGraph";
+        "native-headless: offscreen DirectX composition swapchain is smoke-tested, but this runner still lacks a native PlaybackGraph host and lifecycle bridge";
 
     public static NativeHeadlessHarnessResult Run(NativeHeadlessHarnessOptions options)
     {
@@ -37,12 +40,17 @@ internal static class NativeHeadlessHarness
         referenceCase.Purpose.Add("sdr-smoke");
         referenceCase.Purpose.Add("frame-pacing");
 
+        if (!string.IsNullOrWhiteSpace(options.NativeHelperExe))
+        {
+            return RunNativeHelper(options, referenceCase);
+        }
+
         var runResult = PlaybackQualityRuntimeEvidenceCollector.ComposeSkipRunResult(
             referenceCase,
             new PlaybackQualitySkip
             {
                 Code = "native-headless.native-link-blocked",
-                Reason = "Current NextGenEmby.Native build is a Windows Store C++/WinRT component whose public playback entrypoint is projected through UWP and exposes AttachSurface(SwapChainPanel); App-free native open needs a native graph host or render-surface abstraction before this runner can open PlaybackGraph.",
+                Reason = "Current NextGenEmby.Native build is a Windows Store C++/WinRT component whose public playback entrypoint is projected through UWP and exposes AttachSurface(SwapChainPanel); an offscreen DirectX composition swapchain can be created, but App-free native open still needs a native PlaybackGraph host and lifecycle bridge.",
                 Operation = "native-headless-open",
                 FailureClass = PlaybackQualityFailureClassification.InsufficientInstrumentation,
                 FailureArea = "evidence-collection",
@@ -72,6 +80,374 @@ internal static class NativeHeadlessHarness
         File.WriteAllText(reportPath, PlaybackQualityReportSerializer.Serialize(runResult));
 
         return new NativeHeadlessHarnessResult(reportPath, 0);
+    }
+
+    private static NativeHeadlessHarnessResult RunNativeHelper(
+        NativeHeadlessHarnessOptions options,
+        PlaybackQualityReferenceCase referenceCase)
+    {
+        var commandReceivedAt = DateTimeOffset.UtcNow;
+        var helper = RunHelperProcess(options);
+        var playbackStartedAt = DateTimeOffset.UtcNow;
+        var reportPath = GetReportPath(options.ReportsDir, options.CaseId);
+        Directory.CreateDirectory(Path.GetDirectoryName(reportPath) ?? options.ReportsDir);
+
+        if (helper.ExitCode != 0)
+        {
+            var errorResult = PlaybackQualityRuntimeEvidenceCollector.ComposeErrorRunResult(
+                referenceCase,
+                new PlaybackQualityError
+                {
+                    Code = "native-headless.helper-failed",
+                    Message = helper.ErrorMessage,
+                    Operation = "native-headless-open",
+                    ExceptionType = "native-helper-exit",
+                    FailureClass = PlaybackQualityFailureClassification.InsufficientInstrumentation,
+                    FailureArea = "evidence-collection",
+                    IsTerminal = true,
+                    IsRetriable = true
+                },
+                CreateEnvironment());
+            File.WriteAllText(reportPath, PlaybackQualityReportSerializer.Serialize(errorResult));
+            return new NativeHeadlessHarnessResult(reportPath, 1);
+        }
+
+        var descriptor = CreateDescriptor(options.StreamUrl, helper.Source);
+        var diagnostics = new NativeHeadlessDiagnostics();
+        var provider = new NativeHeadlessMetricsProvider(helper.Metrics);
+        var lifecycle = new PlaybackQualityLifecycle();
+        AddLifecycleEvent(lifecycle, "load", "completed", 0);
+        AddLifecycleEvent(lifecycle, "play", "completed", 0);
+        AddLifecycleEvent(lifecycle, "pause", "completed", helper.Metrics.VideoPositionTicks);
+        AddLifecycleEvent(lifecycle, "resume", "completed", helper.Metrics.VideoPositionTicks);
+        AddLifecycleEvent(lifecycle, "seek", "completed", helper.SeekActualPositionTicks);
+        AddLifecycleEvent(lifecycle, "stop", "completed", helper.SeekActualPositionTicks);
+
+        var runResult = PlaybackQualityRuntimeEvidenceCollector.ComposeRunResult(
+            referenceCase,
+            descriptor,
+            diagnostics,
+            provider,
+            new PlaybackQualityStartup
+            {
+                CommandReceivedAt = commandReceivedAt.ToString("O"),
+                PlaybackStartedAt = playbackStartedAt.ToString("O"),
+                StartupDurationMs = helper.StartupDurationMs
+            },
+            CreateEnvironment(),
+            lifecycle,
+            new PlaybackQualityPosition
+            {
+                RequestedStartPositionTicks = 0,
+                SeekTargetPositionTicks = NativeHelperSeekTargetPositionTicks,
+                ActualPositionTicks = helper.SeekActualPositionTicks,
+                SeekPositionErrorMs = helper.SeekActualPositionTicks >= NativeHelperSeekTargetPositionTicks
+                    ? Math.Abs(helper.SeekActualPositionTicks - NativeHelperSeekTargetPositionTicks) / 10000.0
+                    : null
+            });
+
+        AddLimitation(
+            runResult,
+            "native-headless: helper executed App-free native PlaybackGraph with an offscreen DirectX composition swapchain");
+        AddLimitation(
+            runResult,
+            "native-headless: source codec/color/track metadata is limited to what this first helper exposes");
+        AddLimitation(
+            runResult,
+            "native-headless: timing metrics are captured before the seek operation; seek outcome is reported as separate position evidence");
+
+        File.WriteAllText(reportPath, PlaybackQualityReportSerializer.Serialize(runResult));
+        return new NativeHeadlessHarnessResult(reportPath, 0);
+    }
+
+    private static NativeHeadlessHelperResult RunHelperProcess(NativeHeadlessHarnessOptions options)
+    {
+        using var process = new Process();
+        process.StartInfo = new ProcessStartInfo
+        {
+            FileName = options.NativeHelperExe,
+            Arguments = "--stream-url " + QuoteArgument(options.StreamUrl) +
+                " --duration-seconds " + options.DurationSeconds.ToString(),
+            WorkingDirectory = Path.GetDirectoryName(options.NativeHelperExe) ?? "",
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+
+        var startedAt = Stopwatch.StartNew();
+        process.Start();
+        var stdoutTask = process.StandardOutput.ReadToEndAsync();
+        var stderrTask = process.StandardError.ReadToEndAsync();
+        var exited = process.WaitForExit(Math.Max(15, options.DurationSeconds + 15) * 1000);
+        startedAt.Stop();
+
+        if (!exited)
+        {
+            try
+            {
+                process.Kill(entireProcessTree: true);
+            }
+            catch
+            {
+            }
+
+            return NativeHeadlessHelperResult.Failed(
+                "Native helper timed out before returning playback metrics.");
+        }
+
+        var stdout = stdoutTask.GetAwaiter().GetResult();
+        var stderr = stderrTask.GetAwaiter().GetResult();
+
+        if (process.ExitCode != 0)
+        {
+            return NativeHeadlessHelperResult.Failed(
+                FirstNonEmpty(stderr.Trim(), stdout.Trim(), "Native helper exited with code " + process.ExitCode + "."));
+        }
+
+        if (!TryParseMetrics(stdout, out var metrics, out var source, out var seekActualPositionTicks, out var parseError))
+        {
+            return NativeHeadlessHelperResult.Failed(parseError);
+        }
+
+        return NativeHeadlessHelperResult.Succeeded(
+            metrics,
+            source,
+            startedAt.Elapsed.TotalMilliseconds,
+            seekActualPositionTicks);
+    }
+
+    private static bool TryParseMetrics(
+        string stdout,
+        out PlaybackQualityMetricsSnapshot metrics,
+        out NativeHeadlessSourceInfo source,
+        out long seekActualPositionTicks,
+        out string error)
+    {
+        metrics = new PlaybackQualityMetricsSnapshot();
+        source = new NativeHeadlessSourceInfo();
+        seekActualPositionTicks = 0;
+        error = "";
+
+        var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var token in stdout.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries))
+        {
+            var separator = token.IndexOf('=');
+            if (separator <= 0 || separator == token.Length - 1)
+            {
+                continue;
+            }
+
+            values[token.Substring(0, separator)] = token.Substring(separator + 1);
+        }
+
+        if (!TryGetUInt64(values, "decodedVideoFrames", out var decodedVideoFrames) ||
+            !TryGetUInt64(values, "renderedVideoFrames", out var renderedVideoFrames))
+        {
+            error = "Native helper did not return decoded/rendered frame metrics.";
+            return false;
+        }
+
+        metrics.DecodedVideoFrames = decodedVideoFrames;
+        metrics.RenderedVideoFrames = renderedVideoFrames;
+        metrics.RenderPasses = GetUInt64(values, "renderPasses");
+        metrics.SubmittedAudioFrames = GetUInt64(values, "submittedAudioFrames");
+        metrics.QueuedAudioBuffers = GetUInt64(values, "queuedAudioBuffers");
+        metrics.DroppedVideoFrames = GetUInt64(values, "droppedVideoFrames");
+        metrics.SeekPrerollDroppedFrames = GetUInt64(values, "seekPrerollDroppedFrames");
+        metrics.VideoAheadWaitCount = GetUInt64(values, "videoAheadWaitCount");
+        metrics.VideoStarvedPasses = GetUInt64(values, "videoStarvedPasses");
+        metrics.AudioStarvedPasses = GetUInt64(values, "audioStarvedPasses");
+        metrics.AudioClockTicks = GetInt64(values, "audioClockTicks");
+        metrics.VideoPositionTicks = GetInt64(values, "videoPositionTicks");
+        seekActualPositionTicks = values.ContainsKey("seekActualPositionTicks")
+            ? GetInt64(values, "seekActualPositionTicks")
+            : metrics.VideoPositionTicks;
+        metrics.RenderIntervalMsP50 = GetDouble(values, "renderIntervalMsP50");
+        metrics.RenderIntervalMsP95 = GetDouble(values, "renderIntervalMsP95");
+        metrics.RenderIntervalMsP99 = GetDouble(values, "renderIntervalMsP99");
+        metrics.MaxFrameGapMs = GetDouble(values, "maxFrameGapMs");
+        metrics.FramePacingSourceFrameRate = GetDouble(values, "framePacingSourceFrameRate");
+        metrics.LateFrameDropToleranceMs = GetDouble(values, "lateFrameDropToleranceMs");
+        metrics.AudioVideoDriftMsP50 = GetDouble(values, "audioVideoDriftMsP50");
+        metrics.AudioVideoDriftMsP95 = GetDouble(values, "audioVideoDriftMsP95");
+        metrics.AudioVideoDriftMsP99 = GetDouble(values, "audioVideoDriftMsP99");
+        metrics.AudioVideoDriftMsMax = GetDouble(values, "audioVideoDriftMsMax");
+        source = new NativeHeadlessSourceInfo
+        {
+            Codec = GetString(values, "sourceCodec"),
+            Width = GetInt32(values, "sourceWidth"),
+            Height = GetInt32(values, "sourceHeight"),
+            FrameRate = GetDouble(values, "sourceFrameRate"),
+            HdrKind = GetString(values, "sourceHdrKind")
+        };
+        return true;
+    }
+
+    private static bool TryGetUInt64(
+        Dictionary<string, string> values,
+        string key,
+        out ulong value)
+    {
+        value = 0;
+        return values.TryGetValue(key, out var raw) &&
+            ulong.TryParse(raw, out value);
+    }
+
+    private static ulong GetUInt64(
+        Dictionary<string, string> values,
+        string key)
+    {
+        return TryGetUInt64(values, key, out var value)
+            ? value
+            : 0;
+    }
+
+    private static long GetInt64(
+        Dictionary<string, string> values,
+        string key)
+    {
+        return values.TryGetValue(key, out var raw) &&
+            long.TryParse(raw, out var value)
+                ? value
+                : 0;
+    }
+
+    private static int GetInt32(
+        Dictionary<string, string> values,
+        string key)
+    {
+        return values.TryGetValue(key, out var raw) &&
+            int.TryParse(raw, out var value)
+                ? value
+                : 0;
+    }
+
+    private static string GetString(
+        Dictionary<string, string> values,
+        string key)
+    {
+        return values.TryGetValue(key, out var value)
+            ? value
+            : "";
+    }
+
+    private static double GetDouble(
+        Dictionary<string, string> values,
+        string key)
+    {
+        return values.TryGetValue(key, out var raw) &&
+            double.TryParse(
+                raw,
+                System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture,
+                out var value)
+                    ? value
+                    : 0;
+    }
+
+    private static string QuoteArgument(string value)
+    {
+        return "\"" + value.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
+    }
+
+    private static string FirstNonEmpty(params string[] values)
+    {
+        foreach (var value in values)
+        {
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                return value;
+            }
+        }
+
+        return "";
+    }
+
+    private static PlaybackDescriptor CreateDescriptor(
+        string streamUrl,
+        NativeHeadlessSourceInfo sourceInfo)
+    {
+        var source = new EmbyMediaSource
+        {
+            Id = "native-headless-direct-uri",
+            Name = "native-headless-direct-uri",
+            DirectStreamUrl = streamUrl,
+            Container = "mp4",
+            Width = sourceInfo.Width,
+            Height = sourceInfo.Height,
+            VideoFrameRate = sourceInfo.FrameRate,
+            HdrProfile = HdrPlaybackProfile.Sdr()
+        };
+        source.Streams.Add(new EmbyMediaStream
+        {
+            Index = 0,
+            Kind = EmbyStreamKind.Video,
+            Codec = sourceInfo.Codec,
+            RealFrameRate = sourceInfo.FrameRate,
+            AverageFrameRate = sourceInfo.FrameRate
+        });
+
+        source.HdrProfile.Codec = sourceInfo.Codec;
+        if (string.Equals(sourceInfo.HdrKind, "Hdr10", StringComparison.OrdinalIgnoreCase))
+        {
+            source.HdrProfile = new HdrPlaybackProfile
+            {
+                Kind = HdrPlaybackKind.Hdr10,
+                Codec = sourceInfo.Codec
+            };
+        }
+        else if (string.Equals(sourceInfo.HdrKind, "Hlg", StringComparison.OrdinalIgnoreCase))
+        {
+            source.HdrProfile = new HdrPlaybackProfile
+            {
+                Kind = HdrPlaybackKind.Hlg,
+                Codec = sourceInfo.Codec
+            };
+        }
+
+        return new PlaybackDescriptor(
+            itemId: "",
+            mediaSource: source,
+            availableSources: new[] { source },
+            startPositionTicks: 0,
+            audioStreamIndex: null,
+            subtitleStreamIndex: null);
+    }
+
+    private static void AddLifecycleEvent(
+        PlaybackQualityLifecycle lifecycle,
+        string operation,
+        string status,
+        long? positionTicks)
+    {
+        lifecycle.Events.Add(new PlaybackQualityLifecycleEvent
+        {
+            Operation = operation,
+            Status = status,
+            PositionTicks = positionTicks
+        });
+    }
+
+    private static void AddLimitation(
+        PlaybackQualityRunResult result,
+        string limitation)
+    {
+        if (!result.Report.Limitations.Contains(limitation))
+        {
+            result.Report.Limitations.Add(limitation);
+        }
+    }
+
+    private static PlaybackQualityEnvironment CreateEnvironment()
+    {
+        return new PlaybackQualityEnvironment
+        {
+            CollectorVersion = CollectorVersion,
+            PlayerCoreVersion = GetPlayerCoreVersion(),
+            SourceRevision = GetSourceRevision(),
+            BuildConfiguration = GetBuildConfiguration()
+        };
     }
 
     public static NativeHeadlessHarnessResult CreateArgumentError(string error)
@@ -150,6 +526,7 @@ internal sealed class NativeHeadlessHarnessOptions
     public string StreamUrl { get; private set; } = "";
     public int DurationSeconds { get; private set; } = 5;
     public string ReportsDir { get; private set; } = "";
+    public string NativeHelperExe { get; private set; } = "";
 
     public static bool TryParse(
         string[] args,
@@ -195,6 +572,9 @@ internal sealed class NativeHeadlessHarnessOptions
                 case "--reports-dir":
                     options.ReportsDir = value.Trim();
                     break;
+                case "--native-helper-exe":
+                    options.NativeHelperExe = value.Trim();
+                    break;
                 default:
                     error = "Unknown argument '" + name + "'.";
                     return false;
@@ -220,6 +600,13 @@ internal sealed class NativeHeadlessHarnessOptions
             return false;
         }
 
+        if (!string.IsNullOrWhiteSpace(options.NativeHelperExe) &&
+            !File.Exists(options.NativeHelperExe))
+        {
+            error = "--native-helper-exe must point to an existing helper executable.";
+            return false;
+        }
+
         return true;
     }
 }
@@ -227,3 +614,112 @@ internal sealed class NativeHeadlessHarnessOptions
 internal sealed record NativeHeadlessHarnessResult(
     string ReportPath,
     int ExitCode);
+
+internal sealed class NativeHeadlessHelperResult
+{
+    private NativeHeadlessHelperResult(
+        int exitCode,
+        PlaybackQualityMetricsSnapshot metrics,
+        NativeHeadlessSourceInfo source,
+        double startupDurationMs,
+        long seekActualPositionTicks,
+        string errorMessage)
+    {
+        ExitCode = exitCode;
+        Metrics = metrics;
+        Source = source;
+        StartupDurationMs = startupDurationMs;
+        SeekActualPositionTicks = seekActualPositionTicks;
+        ErrorMessage = errorMessage;
+    }
+
+    public int ExitCode { get; }
+
+    public PlaybackQualityMetricsSnapshot Metrics { get; }
+
+    public NativeHeadlessSourceInfo Source { get; }
+
+    public double StartupDurationMs { get; }
+
+    public long SeekActualPositionTicks { get; }
+
+    public string ErrorMessage { get; }
+
+    public static NativeHeadlessHelperResult Succeeded(
+        PlaybackQualityMetricsSnapshot metrics,
+        NativeHeadlessSourceInfo source,
+        double startupDurationMs,
+        long seekActualPositionTicks)
+    {
+        return new NativeHeadlessHelperResult(0, metrics, source, startupDurationMs, seekActualPositionTicks, "");
+    }
+
+    public static NativeHeadlessHelperResult Failed(string errorMessage)
+    {
+        return new NativeHeadlessHelperResult(
+            1,
+            new PlaybackQualityMetricsSnapshot(),
+            new NativeHeadlessSourceInfo(),
+            0,
+            0,
+            errorMessage);
+    }
+}
+
+internal sealed class NativeHeadlessSourceInfo
+{
+    public string Codec { get; set; } = "";
+
+    public int Width { get; set; }
+
+    public int Height { get; set; }
+
+    public double FrameRate { get; set; }
+
+    public string HdrKind { get; set; } = "";
+}
+
+internal sealed class NativeHeadlessMetricsProvider :
+    IPlaybackQualityMetricsProvider,
+    IPlaybackQualityMetricsProviderIdentity
+{
+    private readonly PlaybackQualityMetricsSnapshot _metrics;
+
+    public NativeHeadlessMetricsProvider(PlaybackQualityMetricsSnapshot metrics)
+    {
+        _metrics = metrics;
+    }
+
+    public string PlaybackQualityMetricsProviderId => "native-headless";
+
+    public bool TryGetQualityMetrics(out PlaybackQualityMetricsSnapshot metrics)
+    {
+        metrics = _metrics;
+        return true;
+    }
+}
+
+internal sealed class NativeHeadlessDiagnostics : IPlaybackBackendDiagnostics
+{
+    public PlaybackBackendCapabilities Capabilities { get; } =
+        new PlaybackBackendCapabilities(
+            PlaybackBackendFeature.DirectPlayHttp |
+            PlaybackBackendFeature.Hevc |
+            PlaybackBackendFeature.HevcMain10 |
+            PlaybackBackendFeature.NativeAudioOutput);
+
+    public PlaybackDisplayStatus DisplayStatus { get; } =
+        new PlaybackDisplayStatus(
+            HdrOutputStatus.Off,
+            isHdrDisplayAvailable: false,
+            isHdrOutputActive: false,
+            message: "native-headless offscreen composition swapchain",
+            swapChainFormat: "DXGI_FORMAT_B8G8R8A8_UNORM",
+            swapChainColorSpace: "DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709",
+            isTenBitSwapChain: false,
+            isVideoProcessorColorSpaceValidated: false,
+            videoProcessorInputColorSpace: "",
+            videoProcessorOutputColorSpace: "",
+            videoProcessorConversionStatus: "native-headless helper does not yet expose color conversion validation",
+            refreshRateHz: 0);
+}

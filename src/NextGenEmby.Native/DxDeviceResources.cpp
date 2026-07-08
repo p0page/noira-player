@@ -831,6 +831,11 @@ namespace winrt::NextGenEmby::Native::implementation
         return SUCCEEDED(m_swapChain->Present(1, 0));
     }
 
+    bool DxDeviceResources::HasRenderTarget() const noexcept
+    {
+        return m_swapChain != nullptr;
+    }
+
     ID3D11Device* DxDeviceResources::Device() const noexcept
     {
         return m_device.Get();
