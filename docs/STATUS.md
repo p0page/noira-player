@@ -2,6 +2,12 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-08 更新：PlaybackGraph open request 已脱离 WinRT runtimeclass
+
+`PlaybackGraph::Open` 现在接收普通 native `PlaybackGraphOpenRequest`，不再直接接收 `NextGenEmby::Native::NativePlaybackOpenRequest`。`NativePlaybackEngine` 负责把 WinRT/UWP request 转换成 graph request，再调用 `m_graph->Open(graphRequest)`。新增 `NativePlaybackGraphDecouplingContractTests` 防止 `PlaybackGraph.h` 重新 include `NativePlaybackEngine.g.h` 或把 WinRT runtimeclass 暴露回 graph open 参数。
+
+边界：这一步只是把 WinRT runtimeclass 依赖从 native graph 内核往 adapter 层外推，降低后续 App-free native host 的耦合；它还没有创建 desktop/headless native host，也没有让 headless harness 真实打开 `PlaybackGraph`。
+
 ## 2026-07-08 更新：App-free native-headless harness 入口和结构化 blocker
 
 新增 `tools/NextGenEmby.PlaybackQuality.Headless`，可以在不启动、不打包、不部署 UWP App 的情况下，用公开 direct-uri 输入生成标准 `PlaybackQualityRunResult` captured report。新增 smoke `tools/quality-run/run-native-headless-harness-smoke-test.ps1` 覆盖 `captured report -> materialize-native-harness-report-set import -> validate-report-set -> analyze-report-set`，并已纳入 `run-playback-core-checks.ps1` 的 App-free 验证计划。

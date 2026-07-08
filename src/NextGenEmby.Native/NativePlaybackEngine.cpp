@@ -88,6 +88,26 @@ namespace winrt::NextGenEmby::Native::implementation
                 L" refresh=" + std::to_wstring(snapshot.RefreshRateHz) +
                 L" message=" + std::wstring(snapshot.Message.c_str());
         }
+
+        PlaybackGraphOpenRequest CreatePlaybackGraphOpenRequest(
+            NextGenEmby::Native::NativePlaybackOpenRequest const& request)
+        {
+            if (request == nullptr)
+            {
+                throw winrt::hresult_invalid_argument(L"Playback request is required.");
+            }
+
+            return PlaybackGraphOpenRequest
+            {
+                request.DirectStreamUrl(),
+                request.StartPositionTicks(),
+                request.AudioStreamIndex(),
+                request.HasAudioStreamIndex(),
+                request.SubtitleStreamIndex(),
+                request.HasSubtitleStreamIndex(),
+                request.VideoFrameRate()
+            };
+        }
     }
 
     NativePlaybackEngine::NativePlaybackEngine()
@@ -190,12 +210,13 @@ namespace winrt::NextGenEmby::Native::implementation
         try
         {
             AppendNativePlaybackDiagnostic(L"NativePlaybackEngine.OpenAsync enter");
-            auto videoFrameRate = request.VideoFrameRate();
+            auto graphRequest = CreatePlaybackGraphOpenRequest(request);
+            auto videoFrameRate = graphRequest.VideoFrameRate;
             AppendNativePlaybackDiagnostic(L"NativePlaybackEngine.OpenAsync request videoFrameRate=" + std::to_wstring(videoFrameRate));
             UpdateDisplayStatus(m_hdr.Probe());
 
             AppendNativePlaybackDiagnostic(L"NativePlaybackEngine.OpenAsync graph Open begin");
-            m_graph->Open(request);
+            m_graph->Open(graphRequest);
             AppendNativePlaybackDiagnostic(L"NativePlaybackEngine.OpenAsync graph Open end");
             m_positionTicks = m_graph->CurrentPositionTicks();
             AppendNativePlaybackDiagnostic(L"NativePlaybackEngine.OpenAsync CurrentPositionTicks read");

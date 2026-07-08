@@ -1,5 +1,15 @@
 # 技术决策
 
+## 2026-07-08: PlaybackGraph 使用普通 native open request
+
+决策：`PlaybackGraph::Open` 改为接收 `PlaybackGraphOpenRequest`，该 struct 定义在 `PlaybackGraph.h`，包含 direct stream URL、start position、音轨/字幕选择和 video frame rate。`NativePlaybackEngine` 继续保留 WinRT/UWP public API，并在 adapter 层把 `NativePlaybackOpenRequest` 转换成 `PlaybackGraphOpenRequest`。
+
+原因：App-free playback harness 的主要 blocker 是 native graph 内核和 WinRT/UWP projection、`SwapChainPanel` surface host 纠缠。先把 open request 从 WinRT runtimeclass 解出来，可以让后续 headless/Win32/native host 在不依赖 IDL runtimeclass 的情况下复用 graph 参数契约。这个变化比直接引入新 native host 小，风险集中在 adapter 转换层。
+
+影响：新增 contract test 防止 `PlaybackGraph.h` 重新 include `NativePlaybackEngine.g.h`，并要求 `NativePlaybackEngine.cpp` 显式执行 `CreatePlaybackGraphOpenRequest(request)` 后再调用 `m_graph->Open(graphRequest)`。Native build 已验证该重构不破坏当前 C++/WinRT 组件编译。
+
+边界：这不改变播放行为、不改变解码、渲染、HDR、音频或 metrics 采集。App-free headless harness 仍然输出 native linkage blocker；下一步仍需要 graph host/render-surface 抽象，才能真实 open direct-uri/local sample。
+
 ## 2026-07-08: App-free headless harness 先输出结构化 native linkage blocker
 
 决策：新增 `tools/NextGenEmby.PlaybackQuality.Headless` 作为 App-free captured report producer。当前版本只生成标准 `PlaybackQualityRunResult` skip envelope，skip code 为 `native-headless.native-link-blocked`，并通过 `materialize-native-harness-report-set` 的 captured import 路径进入现有 report-set 链路。该 provider 当前不得写入 `native-headless:returned-snapshot`。

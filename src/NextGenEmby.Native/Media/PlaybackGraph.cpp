@@ -33,12 +33,12 @@ namespace winrt::NextGenEmby::Native::implementation
         Stop();
     }
 
-    void PlaybackGraph::Open(NextGenEmby::Native::NativePlaybackOpenRequest const& request)
+    void PlaybackGraph::Open(PlaybackGraphOpenRequest const& request)
     {
         AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open enter");
-        if (request == nullptr)
+        if (request.DirectStreamUrl.empty())
         {
-            throw winrt::hresult_invalid_argument(L"Playback request is required.");
+            throw winrt::hresult_invalid_argument(L"Playback direct stream URL is required.");
         }
 
         AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open Stop begin");
@@ -54,8 +54,8 @@ namespace winrt::NextGenEmby::Native::implementation
             AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open CreateDevice end");
             AppendNativePlaybackDiagnostic(
                 L"PlaybackGraph.Open MediaSource.Open begin urlLength=" +
-                std::to_wstring(request.DirectStreamUrl().size()));
-            m_mediaSource.Open(request.DirectStreamUrl());
+                std::to_wstring(request.DirectStreamUrl.size()));
+            m_mediaSource.Open(request.DirectStreamUrl);
             AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open MediaSource.Open end");
             AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open VideoDecoder.Open begin");
             m_videoDecoder.Open(
@@ -67,14 +67,14 @@ namespace winrt::NextGenEmby::Native::implementation
             AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open AudioDecoder.Open begin");
             m_audioDecoder.Open(
                 m_mediaSource,
-                request.AudioStreamIndex(),
-                request.HasAudioStreamIndex());
+                request.AudioStreamIndex,
+                request.HasAudioStreamIndex);
             AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open AudioDecoder.Open end");
             AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open AudioRenderer.Open begin");
-            m_audioRenderer.Open(request.AudioStreamIndex(), request.HasAudioStreamIndex());
+            m_audioRenderer.Open(request.AudioStreamIndex, request.HasAudioStreamIndex);
             AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open AudioRenderer.Open end");
-            auto subtitleStreamIndex = request.HasSubtitleStreamIndex()
-                ? std::optional<int32_t>{request.SubtitleStreamIndex()}
+            auto subtitleStreamIndex = request.HasSubtitleStreamIndex
+                ? std::optional<int32_t>{request.SubtitleStreamIndex}
                 : std::nullopt;
             if (subtitleStreamIndex)
             {
@@ -89,7 +89,7 @@ namespace winrt::NextGenEmby::Native::implementation
             AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open ClearToBlack begin");
             m_videoRenderer.ClearToBlack();
             AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open ClearToBlack end");
-            auto startPositionTicks = (std::max<int64_t>)(0, request.StartPositionTicks());
+            auto startPositionTicks = (std::max<int64_t>)(0, request.StartPositionTicks);
             if (startPositionTicks > 0)
             {
                 AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open Seek startup begin");
@@ -100,9 +100,9 @@ namespace winrt::NextGenEmby::Native::implementation
                 AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open Seek startup end");
             }
 
-            m_url = request.DirectStreamUrl();
+            m_url = request.DirectStreamUrl;
             m_positionTicks = startPositionTicks;
-            m_preferredVideoFrameRate = request.VideoFrameRate();
+            m_preferredVideoFrameRate = request.VideoFrameRate;
             m_hasSeenVideoFrameColor = false;
             m_requestedHdrOutput = false;
             m_hdrOutputActive = false;

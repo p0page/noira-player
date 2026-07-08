@@ -4,7 +4,6 @@
 #include "AudioRenderer.h"
 #include "DxDeviceResources.h"
 #include "FfmpegMediaSource.h"
-#include "NativePlaybackEngine.g.h"
 #include "PlaybackQualityMetrics.h"
 #include "SubtitleDecoder.h"
 #include "SubtitleRenderer.h"
@@ -28,6 +27,17 @@ namespace winrt::NextGenEmby::Native::implementation
 
     using PlaybackGraphStateChangedHandler = std::function<void(PlaybackGraphState state, winrt::hstring const& message)>;
     using PlaybackGraphHdrOutputChangedHandler = std::function<bool(bool desiredHdrOutput, double preferredRefreshRate)>;
+
+    struct PlaybackGraphOpenRequest
+    {
+        winrt::hstring DirectStreamUrl;
+        int64_t StartPositionTicks{0};
+        int32_t AudioStreamIndex{0};
+        bool HasAudioStreamIndex{false};
+        int32_t SubtitleStreamIndex{0};
+        bool HasSubtitleStreamIndex{false};
+        double VideoFrameRate{0.0};
+    };
 
     struct HdrOutputDecision
     {
@@ -56,7 +66,7 @@ namespace winrt::NextGenEmby::Native::implementation
             PlaybackGraphHdrOutputChangedHandler hdrOutputChanged = nullptr);
         ~PlaybackGraph();
 
-        void Open(NextGenEmby::Native::NativePlaybackOpenRequest const& request);
+        void Open(PlaybackGraphOpenRequest const& request);
         void Pause();
         void Resume();
         void Seek(int64_t positionTicks);
