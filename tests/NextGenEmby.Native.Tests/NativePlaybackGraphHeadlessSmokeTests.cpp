@@ -9,10 +9,12 @@
 #include <winrt/base.h>
 
 #include "DxDeviceResources.h"
+#include "HdrDisplayRefreshRatePolicy.h"
 #include "Media/PlaybackGraph.h"
 
 using namespace std::chrono_literals;
 using winrt::NextGenEmby::Native::implementation::DxDeviceResources;
+using winrt::NextGenEmby::Native::implementation::HdrDisplayRefreshRatePolicy;
 using winrt::NextGenEmby::Native::implementation::PlaybackGraph;
 using winrt::NextGenEmby::Native::implementation::PlaybackGraphOpenRequest;
 
@@ -133,6 +135,9 @@ int wmain(int argc, wchar_t** argv)
         auto seekSnapshot = graph.QualityMetricsSnapshot();
         auto source = graph.VideoSourceSnapshot();
         auto tracks = graph.SourceTrackSnapshots();
+        auto displayRefreshRateHz = source
+            ? HdrDisplayRefreshRatePolicy::SelectSoftwareOnlyRefreshRateSnapshot(source->FrameRate)
+            : 0.0;
         graph.Stop();
 
         std::cout << "decodedVideoFrames=" << playbackSnapshot.DecodedVideoFrames
@@ -171,6 +176,8 @@ int wmain(int argc, wchar_t** argv)
             << " dxgiOutput=" << FormatDxgiColorSpace(resources.LastVideoProcessorOutputColorSpace())
             << " conversionStatus=" << winrt::to_string(winrt::hstring(resources.LastVideoProcessorConversionStatus()))
             << " isVideoProcessorColorSpaceValidated=" << (resources.LastVideoProcessorConversionWasValidated() ? 1 : 0)
+            << " displayRefreshRateHz=" << displayRefreshRateHz
+            << " displayRefreshPolicy=software-only-cadence-policy"
             << " sourceTrackCount=" << tracks.size();
 
         for (auto index = size_t{0}; index < tracks.size(); ++index)

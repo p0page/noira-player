@@ -481,3 +481,23 @@
 原因：Dolby Vision Profile 5 这类当前 MVP 不支持的源，正确结论应是 `unsupported` / `unsupported-source`。如果继续要求色彩转换 telemetry，会把“没有进入播放/转换路径”的结果误报成 color-pipeline instrumentation 缺口，误导后续模型去修错误模块。
 
 影响：DV Profile 5 case 现在在 core-probe baseline 中输出 `status = unsupported`，保留 source 分类证据，不携带无关 color missing evidence。可播放的 HDR10、force-SDR、DV Profile 8.1 fallback case 仍然要求 color/display/conversion telemetry。
+
+# 2026-07-08: headless display refresh 只作为软件 policy snapshot
+
+决策：`native-headless` report 中的 `display.refreshRateHz` 来自 native `HdrDisplayRefreshRatePolicy::SelectSoftwareOnlyRefreshRateSnapshot`，用于软件闭环里的 cadence 分析；它不声明 HDMI 输出、系统显示模式或电视面板真的切换到了该刷新率。report 必须保留 limitation：`native-headless: display refresh is a software policy snapshot; HDMI/display output is not verified`。
+
+原因：当前目标是脱离 Xbox/显示器形成可复现的软件评测证据。缺少 refresh evidence 会让 frame-pacing/cadence 一直停在缺证据状态；但在 headless 环境中伪装成真实显示器输出同样会误导后续模型。因此只输出“策略选择结果”，并在 limitation 中明确硬件不可验证。
+
+影响：`run-native-headless-harness-smoke-test.ps1` 的 SDR/HDR10 矩阵可以让模型消费 source frame rate、display refresh policy、cadence ratio、frame interval、drop/wait/starvation 和 DXGI mapping。后续 Core 调优可以基于这些软件证据比较变化，但任何 HDMI/HDR 输出结论仍需独立硬件验证。
+
+边界：该决策不改变播放策略、不改变实际刷新率切换、不改变 HDR/tone mapping/frame pacing 算法，只增加 instrumentation 和 report-set 覆盖。
+
+# 2026-07-08: SDR/HDR10 frame-rate 矩阵使用本地生成样本
+
+决策：native-headless smoke 使用 FFmpeg 本地生成 SDR 23.976/24/30/60fps 和 HDR10 24fps 样本，所有 source color、HDR kind、frame rate 和 DXGI mapping 都必须来自 native helper 实际解析与 runtime observation，不从文件名、case id 或 manifest expected 倒填 actual evidence。
+
+原因：评测系统的消费者是模型，错误的 actual evidence 会把后续调优带偏。本地生成样本可复现、无私有服务器依赖、不会把账号或媒体库信息写入仓库，也能稳定覆盖目标中的 SDR/HDR10 与常见帧率组合。
+
+影响：最新 native-headless report-set 有 9 个 native/software playback reports，SDR 和 HDR10 都覆盖 23.976/24/30/60fps，`frame-pacing` coverage 为 `evidence-present`，4 个 HDR10 case 都进入 `color` coverage。生成产物只保存在 ignored 的 `artifacts/` 下。
+
+边界：本地样本短小且是合成画面，只能证明解析、DXGI mapping、cadence 和 timing evidence 链路可用；不能代表真实影视素材的观感、码率压力、字幕渲染复杂度或硬件 HDR 输出。

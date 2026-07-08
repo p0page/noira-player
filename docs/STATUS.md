@@ -354,3 +354,13 @@ manifest validation、report-set validation、single comparison、comparison sui
 边界仍需明确：core-probe 是实际 player core 软件评测，但它使用 in-process diagnostic backend，不打开 native playback graph，不解码真实媒体，不验证 HDMI / 显示器输出。它证明评测链路、case metadata、required signals、orchestrator 生命周期和模型报告结构已经闭合；它不证明真实播放质量、颜色准确性、帧率稳定性或 A/V sync 真实表现。
 
 下一步应补 native graph 或真实媒体软件采集器，让 frame timing、decoder/rendered frames、buffering、A/V sync、color pipeline 从真实播放路径产生，而不是 deterministic probe telemetry。
+
+# 2026-07-08 更新：HDR / display refresh / frame pacing 软件证据闭环
+
+本阶段继续保持“不做播放策略调优”的边界，只补评测证据。`native-headless` helper 现在会从 native `HdrDisplayRefreshRatePolicy` 输出 `displayRefreshRateHz` 和 `displayRefreshPolicy=software-only-cadence-policy`，C# headless harness 会把它写入标准 report 的 `display.refreshRateHz`，并在 limitations 中明确记录：`native-headless: display refresh is a software policy snapshot; HDMI/display output is not verified`。
+
+`tools/quality-run/run-native-headless-harness-smoke-test.ps1` 现在会生成并运行本地样本矩阵：SDR 23.976fps、SDR 24fps、SDR 30fps、SDR 60fps、HDR10 23.976fps、HDR10 24fps、HDR10 30fps、HDR10 60fps，以及一个带 AAC/mov_text 的 A/V challenge 样本。所有样本都通过 native helper 实际打开 PlaybackGraph，进入 `captured -> materialize-native-harness-report-set -> validate-report-set -> analyze-report-set` 链路。
+
+最新 smoke 结果显示 `native-analysis.json` 中 `totalReportCount = 9`，`frame-pacing` capability 为 `evidence-present`，`evidenceCaseCount = 9`，不再缺 `display.refreshRateHz`；`color` capability 覆盖了 4 个 HDR10 帧率 case。HDR10 样本实际解析为 `Hdr10 / HDR10 / bt2020 / smpte2084 / bt2020nc`，DXGI mapping 也从 runtime observation 进入 report。
+
+边界仍然明确：这不是 HDMI、电视 EOTF、HDR InfoFrame 或肉眼颜色正确性的验证；`display.refreshRateHz` 在 headless 中是软件 policy snapshot，不代表系统真的切换了显示器刷新率。当前成果的意义是让模型可以基于可复现 report 判断 source color、DXGI mapping、cadence、frame interval、dropped/wait/starvation 等软件证据是否存在，然后再进入后续 Core 调优。

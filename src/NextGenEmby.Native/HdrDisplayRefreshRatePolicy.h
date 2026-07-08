@@ -32,6 +32,43 @@ namespace winrt::NextGenEmby::Native::implementation
                 RefreshWeight(selectedRefreshRate, videoFrameRate);
         }
 
+        static double SelectSoftwareOnlyRefreshRateSnapshot(double videoFrameRate) noexcept
+        {
+            if (!HasUsableVideoFrameRate(videoFrameRate))
+            {
+                return 0.0;
+            }
+
+            constexpr double RefreshRateCandidates[] =
+            {
+                23.976024,
+                24.0,
+                25.0,
+                29.97003,
+                30.0,
+                50.0,
+                59.94006,
+                60.0,
+                100.0,
+                119.88012,
+                120.0
+            };
+
+            auto selectedRefreshRate = 0.0;
+            for (auto candidate : RefreshRateCandidates)
+            {
+                if (selectedRefreshRate <= 0.0 ||
+                    IsBetterRefreshRateForVideo(candidate, selectedRefreshRate, videoFrameRate))
+                {
+                    selectedRefreshRate = candidate;
+                }
+            }
+
+            return MatchesVideoFrameRate(selectedRefreshRate, videoFrameRate)
+                ? selectedRefreshRate
+                : 0.0;
+        }
+
         static double RefreshWeight(double displayRefreshRate, double videoFrameRate) noexcept
         {
             if (!HasUsableVideoFrameRate(videoFrameRate) ||

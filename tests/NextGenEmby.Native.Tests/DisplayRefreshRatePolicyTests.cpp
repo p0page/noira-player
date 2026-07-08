@@ -33,4 +33,10 @@ int main()
     assert(HdrDisplayRefreshRatePolicy::IsBetterRefreshRateForVideo(59.94006, 29.97003, 29.97003));
     assert(HdrDisplayRefreshRatePolicy::IsBetterRefreshRateForVideo(60.0, 30.0, 30.0));
     assert(!HdrDisplayRefreshRatePolicy::IsBetterRefreshRateForVideo(59.94006, 23.976024, 23.976));
+
+    assert(HdrDisplayRefreshRatePolicy::SelectSoftwareOnlyRefreshRateSnapshot(23.976) == 23.976024);
+    assert(HdrDisplayRefreshRatePolicy::SelectSoftwareOnlyRefreshRateSnapshot(24.0) == 24.0);
+    assert(HdrDisplayRefreshRatePolicy::SelectSoftwareOnlyRefreshRateSnapshot(30.0) == 60.0);
+    assert(HdrDisplayRefreshRatePolicy::SelectSoftwareOnlyRefreshRateSnapshot(60.0) == 60.0);
+    assert(HdrDisplayRefreshRatePolicy::SelectSoftwareOnlyRefreshRateSnapshot(0.0) == 0.0);
 }
