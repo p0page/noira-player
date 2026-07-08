@@ -127,6 +127,14 @@ if (-not ($plan.commands | Where-Object { $_.name -eq 'merge-reference-manifests
     throw 'Expected merge-reference-manifests-test command in playback-core validation plan.'
 }
 
+if (-not ($plan.commands | Where-Object { $_.name -eq 'playback-core-tuning-baseline-test' })) {
+    throw 'Expected playback-core-tuning-baseline-test command in playback-core validation plan.'
+}
+
+if (-not ($plan.commands | Where-Object { $_.name -eq 'playback-core-tuning-candidate-comparison-test' })) {
+    throw 'Expected playback-core-tuning-candidate-comparison-test command in playback-core validation plan.'
+}
+
 if (-not ($plan.commands | Where-Object { $_.name -eq 'export-app-quality-run-reports-test' })) {
     throw 'Expected export-app-quality-run-reports-test command in playback-core validation plan.'
 }

@@ -501,3 +501,13 @@
 影响：最新 native-headless report-set 有 9 个 native/software playback reports，SDR 和 HDR10 都覆盖 23.976/24/30/60fps，`frame-pacing` coverage 为 `evidence-present`，4 个 HDR10 case 都进入 `color` coverage。生成产物只保存在 ignored 的 `artifacts/` 下。
 
 边界：本地样本短小且是合成画面，只能证明解析、DXGI mapping、cadence 和 timing evidence 链路可用；不能代表真实影视素材的观感、码率压力、字幕渲染复杂度或硬件 HDR 输出。
+
+# 2026-07-08: baseline/candidate 对比必须携带一致的 build identity
+
+决策：播放器 Core 调优不直接基于单次 report 做结论，而是通过 `New-PlaybackCoreTuningBaseline.ps1` 生成 baseline/candidate report-set，再用 `Compare-PlaybackCoreTuningCandidate.ps1` 调用 `evaluate-candidate --match-by run-id` 进行同一 manifest 下的对比。
+
+原因：调优证据的消费对象是模型。模型必须能确认 baseline 和 candidate 来自不同 build identity，且报告集合匹配同一批 case。没有 native/App software playback evidence 时，比较应被门禁拦截为 `collect-comparable-evidence`，不能伪装成可接受的调优结果。
+
+影响：`run-native-headless-harness-smoke-test.ps1` 现在接收 `PlayerCoreVersion`、`SourceRevision` 和 `BuildConfiguration`，并在 materialized native report 中写入这些值。baseline 编排脚本会把本轮 source revision 传给 native-headless，避免 native report 在 candidate 对比中触发 `suite.environment-same-build`。
+
+边界：这不改变播放器行为、阈值、expected behavior 或 pass/fail 规则。当前 full no-op candidate 对比结果为 `decision = no-change`，说明评测链路可用，但没有 measured improvement；因此不能据此声明播放器 Core 已被优化。

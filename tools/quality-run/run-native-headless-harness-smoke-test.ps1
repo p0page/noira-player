@@ -1,3 +1,10 @@
+param(
+    [string]$PlayerCoreVersion = 'smoke-core',
+    [string]$SourceRevision = 'smoke-native-headless-real-revision',
+    [string]$ImportSourceRevision = 'smoke-native-headless-import-revision',
+    [string]$BuildConfiguration = 'Debug'
+)
+
 $ErrorActionPreference = 'Stop'
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
@@ -408,9 +415,9 @@ dotnet run --project (Join-Path $repoRoot 'tools\NextGenEmby.PlaybackQuality.Cli
     --captured-reports-dir $capturedDir `
     --reports-dir $materializedDir `
     --collector-version native-headless-harness-v0.1 `
-    --player-core-version smoke-core `
-    --source-revision smoke-native-headless-import-revision `
-    --build-configuration Debug `
+    --player-core-version $PlayerCoreVersion `
+    --source-revision $ImportSourceRevision `
+    --build-configuration $BuildConfiguration `
     --output $summaryPath
 if ($LASTEXITCODE -ne 0) {
     throw 'Expected materialize-native-harness-report-set to import native-headless captured report.'
@@ -898,9 +905,9 @@ dotnet run --project (Join-Path $repoRoot 'tools\NextGenEmby.PlaybackQuality.Cli
     --captured-reports-dir $nativeCapturedDir `
     --reports-dir $nativeMaterializedDir `
     --collector-version native-headless-harness-v0.1 `
-    --player-core-version smoke-core `
-    --source-revision smoke-native-headless-real-revision `
-    --build-configuration Debug `
+    --player-core-version $PlayerCoreVersion `
+    --source-revision $SourceRevision `
+    --build-configuration $BuildConfiguration `
     --output $nativeSummaryPath
 if ($LASTEXITCODE -ne 0) {
     throw 'Expected materialize-native-harness-report-set to import native helper report.'
@@ -915,6 +922,12 @@ if (-not (Test-Path $nativeAvMaterializedReportPath)) {
 }
 
 $nativeMaterializedReport = Get-Content -LiteralPath $nativeMaterializedReportPath -Raw | ConvertFrom-Json
+if ($nativeMaterializedReport.report.environment.playerCoreVersion -ne $PlayerCoreVersion -or
+    $nativeMaterializedReport.report.environment.sourceRevision -ne $SourceRevision -or
+    $nativeMaterializedReport.report.environment.buildConfiguration -ne $BuildConfiguration) {
+    throw 'Expected materialized native helper report to use the requested build identity.'
+}
+
 if ($nativeMaterializedReport.modelAnalysis.avSync.status -ne 'not-applicable') {
     throw 'Expected video-only native helper report to mark A/V sync as not-applicable.'
 }

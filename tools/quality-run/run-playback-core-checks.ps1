@@ -132,6 +132,16 @@ $commands = @(
         -Command 'powershell' `
         -Arguments @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', 'tools\quality-run\Merge-ReferenceManifests.tests.ps1')
     New-CommandPlan `
+        -Name 'playback-core-tuning-baseline-test' `
+        -Description 'Verify the reproducible playback Core tuning baseline command can build a valid public-only report-set without private data or native-headless.' `
+        -Command 'powershell' `
+        -Arguments @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', 'tools\quality-run\New-PlaybackCoreTuningBaseline.tests.ps1')
+    New-CommandPlan `
+        -Name 'playback-core-tuning-candidate-comparison-test' `
+        -Description 'Verify playback Core tuning candidates are compared against the same manifest with reproducible baseline/candidate evidence.' `
+        -Command 'powershell' `
+        -Arguments @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', 'tools\quality-run\Compare-PlaybackCoreTuningCandidate.tests.ps1')
+    New-CommandPlan `
         -Name 'export-app-quality-run-reports-test' `
         -Description 'Verify App-hosted quality-run captured reports can be exported from LocalState while preserving report-set relative paths.' `
         -Command 'powershell' `

@@ -364,3 +364,17 @@ manifest validation、report-set validation、single comparison、comparison sui
 最新 smoke 结果显示 `native-analysis.json` 中 `totalReportCount = 9`，`frame-pacing` capability 为 `evidence-present`，`evidenceCaseCount = 9`，不再缺 `display.refreshRateHz`；`color` capability 覆盖了 4 个 HDR10 帧率 case。HDR10 样本实际解析为 `Hdr10 / HDR10 / bt2020 / smpte2084 / bt2020nc`，DXGI mapping 也从 runtime observation 进入 report。
 
 边界仍然明确：这不是 HDMI、电视 EOTF、HDR InfoFrame 或肉眼颜色正确性的验证；`display.refreshRateHz` 在 headless 中是软件 policy snapshot，不代表系统真的切换了显示器刷新率。当前成果的意义是让模型可以基于可复现 report 判断 source color、DXGI mapping、cadence、frame interval、dropped/wait/starvation 等软件证据是否存在，然后再进入后续 Core 调优。
+
+# 2026-07-08 更新：播放器 Core 调优 baseline/candidate 闭环
+
+本阶段新增第一套本地可复现的播放器 Core 调优 baseline 编排：
+
+- `tools/quality-run/New-PlaybackCoreTuningBaseline.ps1` 可以合并公开 manifest、ignored 私有 Emby manifest 和 native-headless 本地生成样本，输出统一 manifest、reports、validation、analysis、run plan 和 `baseline-summary.local.json`。
+- `tools/quality-run/Compare-PlaybackCoreTuningCandidate.ps1` 使用 baseline manifest 校验 baseline/candidate report-set，并通过 `evaluate-candidate --match-by run-id` 生成 candidate evaluation、逐 case comparison 和 `comparison-summary.local.json`。
+- native-headless smoke 现在接受并传递 `PlayerCoreVersion`、`SourceRevision` 和 `BuildConfiguration`，避免 baseline/candidate 的 native report 被误判为 same-build。
+
+当前本地私有 baseline 输出位于 ignored 的 `docs/qa/private/baselines/playback-core-tuning-baseline.local/`。本轮完整 baseline 结果为：41 个 report，manifest/report-set validation 通过，native-headless 已包含，playback evidence 为 mixed/partial 且可评估 native software playback。
+
+本轮还生成了 ignored 的 no-op candidate，并用同一 manifest 完成对比：41 个 comparison 全部 strong/unchanged，`decision = no-change`，无 blockers、无 regression、无 measured improvement。该结果说明评测链路已经可以闭合，但当前没有证据支持接受任何 Core/native 播放策略调整；因此本轮没有修改播放器 core/native 行为。
+
+边界：这些输出仍是本地私有/ignored artifact，不提交真实私有 Emby case、itemId、mediaSourceId、URL、账号信息或 captured report。headless display refresh 仍是软件 policy snapshot，不代表 HDMI/display 硬件输出验证。
