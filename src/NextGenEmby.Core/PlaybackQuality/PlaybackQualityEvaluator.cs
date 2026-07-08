@@ -5,6 +5,7 @@ namespace NextGenEmby.Core.PlaybackQuality
     public static class PlaybackQualityEvaluator
     {
         private const double FrameRateTolerance = 0.01;
+        private const double MinimumRenderCadenceIntervalRatio = 0.75;
         private const double TicksPerMillisecond = 10000.0;
 
         public static void Evaluate(PlaybackQualityReport report)
@@ -85,6 +86,7 @@ namespace NextGenEmby.Core.PlaybackQuality
                 "MaxRenderIntervalMsP99",
                 "timing.renderIntervalMsP99",
                 "frame-pacing");
+            CheckMinimumRenderCadence(report, expected);
             CheckMeasuredMax(
                 report,
                 "AudioVideoDriftMsP95",
@@ -508,6 +510,45 @@ namespace NextGenEmby.Core.PlaybackQuality
             {
                 report.FailureReasons.Add(mismatchMessage);
                 AddRelevantSignal(report, "display.refreshRateHz");
+            }
+        }
+
+        private static void CheckMinimumRenderCadence(
+            PlaybackQualityReport report,
+            PlaybackQualityExpected expected)
+        {
+            if (!expected.RequireMatchedDisplayRefreshRate ||
+                report.Timing.RenderedVideoFrames < 2 ||
+                report.Timing.ExpectedFrameDurationMs <= 0 ||
+                report.Timing.RenderIntervalMsP95 <= 0 ||
+                !PlaybackRefreshRatePolicy.HasUsableVideoFrameRate(report.Source.FrameRate))
+            {
+                return;
+            }
+
+            var minimumIntervalMs =
+                report.Timing.ExpectedFrameDurationMs * MinimumRenderCadenceIntervalRatio;
+            var actual = Format(report.Timing.RenderIntervalMsP95);
+            var expectedText = ">= " + Format(minimumIntervalMs);
+            var failed = report.Timing.RenderIntervalMsP95 < minimumIntervalMs;
+            var message = "RenderIntervalMsP95 " + actual +
+                " was below minimum cadence interval " + Format(minimumIntervalMs) + ".";
+
+            report.Checks.Add(new PlaybackQualityCheck
+            {
+                Name = "RenderIntervalMsP95Cadence",
+                Signal = "timing.renderIntervalMsP95",
+                Status = failed ? "fail" : "pass",
+                FailureArea = "frame-pacing",
+                Expected = expectedText,
+                Actual = actual,
+                Message = failed ? message : "RenderIntervalMsP95 cadence matched source frame duration."
+            });
+
+            if (failed)
+            {
+                report.FailureReasons.Add(message);
+                AddRelevantSignal(report, "timing.renderIntervalMsP95");
             }
         }
 

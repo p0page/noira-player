@@ -378,3 +378,28 @@ manifest validation、report-set validation、single comparison、comparison sui
 本轮还生成了 ignored 的 no-op candidate，并用同一 manifest 完成对比：41 个 comparison 全部 strong/unchanged，`decision = no-change`，无 blockers、无 regression、无 measured improvement。该结果说明评测链路已经可以闭合，但当前没有证据支持接受任何 Core/native 播放策略调整；因此本轮没有修改播放器 core/native 行为。
 
 边界：这些输出仍是本地私有/ignored artifact，不提交真实私有 Emby case、itemId、mediaSourceId、URL、账号信息或 captured report。headless display refresh 仍是软件 policy snapshot，不代表 HDMI/display 硬件输出验证。
+
+# 2026-07-08 更新：第一轮 Core/native 小步调优已由 baseline/candidate 采纳
+
+本轮在已归档的 `docs/qa/private/baselines/playback-core-tuning-baseline.local/` 之上，只做了一个有 baseline 证据支撑的小步 native 播放策略调整：当 native `PlaybackGraph` 没有可用 audio clock 时，视频帧不再按 render loop / Present 速度尽快输出，而是用首帧 PTS 建立 video clock，并按帧时间戳等待。
+
+触发原因来自 baseline：video-only native-headless 23.976/24/30fps 样本的 `timing.renderIntervalMsP95` 接近 16ms，明显比源帧时长更快。此前 evaluator 只限制“过慢/间隔过大”，没有识别“低帧率内容被过快渲染”的 cadence 问题。
+
+本轮改动：
+
+- `PlaybackFramePacing` 新增 `ShouldWaitForVideoClock`，`PlaybackGraph` 在无 audio clock 路径使用 wall-clock video PTS pacing。
+- `PlaybackQualityEvaluator` 新增 `RenderIntervalMsP95Cadence` 检查：要求 matched display refresh case 的 P95 渲染间隔至少达到源帧时长的 75%。
+- `PlaybackQualityRunComparator` 对 frame-ratio 派生信号改为按可接受区间 `0.75..1.5` 判断，而不是简单 lower-is-better，避免把“从过快接近目标帧时长”误判成回退。
+- native harness captured report 导入和 compare 路径会在有 manifest expected 时按当前 evaluator 规则重新评估，避免历史 raw/stale checks 干扰同一 manifest 的 candidate 比较。
+
+已用同一 manifest 生成 candidate：`docs/qa/private/candidates/playback-core-tuning-video-clock-candidate.local/`，并输出 ignored 对比：`docs/qa/private/comparisons/playback-core-tuning-video-clock-candidate.local/`。
+
+对比结论：41 个 case 全部可比，`accept-candidate` / `keep-candidate`，5 个 `frame-pacing` improvement，0 regression，0 mixed。改善集中在 video-only native-headless case：
+
+- `local/native-headless-hdr10-23976`：`RenderIntervalMsP95` 16.752ms -> 48.022ms。
+- `local/native-headless-hdr10-24`：16.780ms -> 47.558ms。
+- `local/native-headless-hdr10-30`：17.068ms -> 47.074ms。
+- `local/native-headless-sdr-23976`：16.308ms -> 48.086ms。
+- `local/native-headless-sdr-24`：16.191ms -> 48.057ms。
+
+边界：这是纯软件 native-headless 证据，不证明 Xbox HDMI 输出、HDR InfoFrame、显示器 EOTF 或真实影视素材观感。30fps case 目前落在可接受区间内但仍偏慢，后续应继续用同一 baseline/candidate 机制观察真实 A/V case、含音轨 case、网络媒体和更长样本，不应直接扩大结论。

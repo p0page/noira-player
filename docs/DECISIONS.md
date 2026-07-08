@@ -511,3 +511,33 @@
 影响：`run-native-headless-harness-smoke-test.ps1` 现在接收 `PlayerCoreVersion`、`SourceRevision` 和 `BuildConfiguration`，并在 materialized native report 中写入这些值。baseline 编排脚本会把本轮 source revision 传给 native-headless，避免 native report 在 candidate 对比中触发 `suite.environment-same-build`。
 
 边界：这不改变播放器行为、阈值、expected behavior 或 pass/fail 规则。当前 full no-op candidate 对比结果为 `decision = no-change`，说明评测链路可用，但没有 measured improvement；因此不能据此声明播放器 Core 已被优化。
+
+# 2026-07-08: video-only native 播放使用视频时钟限速
+
+决策：当 native `PlaybackGraph` 没有可用 audio clock 时，使用第一帧 PTS 与 `steady_clock` 建立 video clock。后续视频帧如果相对该时钟过早，会保留 pending frame 并等待，而不是立即渲染。
+
+原因：baseline/candidate 调优目标要求所有 Core/native 策略调整都必须有同一 manifest 对比证据。baseline 暴露了 video-only 23.976/24/30fps 样本的渲染间隔 P95 接近 16ms，说明无音轨路径被 render loop / Present 节奏驱动，低帧率内容实际被过快输出。已有 audio clock 路径只覆盖含音轨样本，不能保护 video-only 样本。
+
+影响：`PlaybackFramePacing.ShouldWaitForVideoClock` 成为无 audio clock 路径的等待判定；`PlaybackGraph` 在 resume 或切回 audio clock 时重置 video clock，避免旧时钟污染后续播放。candidate 对比结果为 41 个 case 可比，5 个 frame-pacing improvement，0 regression。
+
+边界：该策略只解决“无 audio clock 时视频过快输出”的软件 pacing 问题。不证明硬件刷新率切换、HDR 输出、A/V sync 或真实素材主观观感已经正确；含音轨播放仍优先使用 audio clock。
+
+# 2026-07-08: cadence 评测同时检查过慢和过快
+
+决策：`PlaybackQualityEvaluator` 在 matched display refresh case 中新增 `RenderIntervalMsP95Cadence` 检查：当存在可用源帧率、期望帧时长和至少 2 帧渲染样本时，`timing.renderIntervalMsP95` 必须不低于源帧时长的 75%。
+
+原因：此前 evaluator 已有 max render interval 检查，可以发现明显卡顿/过慢，但无法发现 24fps 内容以接近 60Hz loop 速度输出的“过快 cadence”。这会让模型误以为 low-frame-rate video-only case 通过了 frame-pacing。
+
+影响：同一 raw/native report 在导入或 compare 时会被当前 evaluator 规则重新评估，历史 captured report 的 stale checks 不再掩盖新规则发现的问题。
+
+边界：75% 是最低节奏守卫，不是最终画质标准。它用于识别明显 under-paced/too-fast 输出；更精细的 frame pacing、jitter、display cadence 和硬件输出仍需要后续更严格的样本与指标。
+
+# 2026-07-08: frame-ratio candidate 对比按可接受区间判断
+
+决策：`PlaybackQualityRunComparator` 对 `framePacing.renderIntervalP95FrameRatio`、`renderIntervalP99FrameRatio` 和 `maxFrameGapFrameRatio` 使用 `0.75..1.5` 可接受区间比较。baseline 在区间外而 candidate 进入区间时记为 improvement；反向记为 regression；都在区间内不因为数值轻微变化制造噪音。
+
+原因：frame-ratio 信号不是单纯 lower-is-better。对于低帧率内容，被过快渲染时 ratio 会显著低于 1；candidate 增大并靠近 1 是改善，而不是回退。此前 lower-is-better 规则会把这类正确变化误判为 mixed/regression。
+
+影响：`playback-core-tuning-video-clock-candidate.local` 在同一 manifest 对比下从可疑 mixed 变成可采纳候选：`accept-candidate`，5 个 improvement，0 regression。
+
+边界：该规则只改变 candidate comparison 对派生 frame-ratio 的解释，不放宽 stable case expected behavior，也不删除任何失败。单报告 evaluator 仍独立输出 pass/fail checks。

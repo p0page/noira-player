@@ -1123,7 +1123,9 @@ try {
         "maxFrameGapMs": 40.0,
         "maxAudioVideoDriftMsP95": 80.0,
         "maxVideoStarvedPasses": 0,
-        "maxAudioStarvedPasses": 0
+        "maxAudioStarvedPasses": 0,
+        "requireValidatedConversion": false,
+        "requireMatchedDisplayRefreshRate": true
       }
     }
   ]
@@ -1335,6 +1337,19 @@ try {
         throw 'Expected materialize-native-harness-report-set import to normalize captured native playback evidence.'
     }
 
+    if (-not ($nativeHarnessImportedReport.report.checks | Where-Object {
+            $_.name -eq 'DisplayRefreshRateHz' -and
+            $_.signal -eq 'display.refreshRateHz' -and
+            $_.status -eq 'pass'
+        }) -or
+        -not ($nativeHarnessImportedReport.report.checks | Where-Object {
+            $_.name -eq 'RenderIntervalMsP95Cadence' -and
+            $_.signal -eq 'timing.renderIntervalMsP95' -and
+            $_.status -eq 'pass'
+        })) {
+        throw 'Expected imported native harness report to be re-evaluated against manifest playback thresholds.'
+    }
+
     if (-not ($nativeHarnessImportedReport.modelAnalysis.evidenceSignals -contains 'runtimeMetrics.providerStatus') -or
         -not ($nativeHarnessImportedReport.modelAnalysis.evidenceSignals -contains 'timing.renderedVideoFrames') -or
         -not ($nativeHarnessImportedReport.report.limitations -contains 'native-harness: imported captured playback evidence; CLI did not open native playback graph')) {
@@ -1381,6 +1396,260 @@ try {
         $nativeHarnessImportedAnalysis.playbackEvidence.status -ne 'available' -or
         $nativeHarnessImportedAnalysis.playbackEvidence.canEvaluateNativePlayback -ne $true) {
         throw 'Expected imported native harness analyze-report-set summary to mark native software playback evidence as available.'
+    }
+
+    $rawCadenceManifestPath = Join-Path $tempRoot 'native-raw-cadence-manifest.json'
+    $rawCadenceBaselineDir = Join-Path $tempRoot 'native-raw-cadence-baseline'
+    $rawCadenceCandidateDir = Join-Path $tempRoot 'native-raw-cadence-candidate'
+    $rawCadenceComparisonsDir = Join-Path $tempRoot 'native-raw-cadence-comparisons'
+    $rawCadenceEvaluationPath = Join-Path $tempRoot 'native-raw-cadence-evaluation.json'
+    New-Item -ItemType Directory -Path (Join-Path $rawCadenceBaselineDir 'local') | Out-Null
+    New-Item -ItemType Directory -Path (Join-Path $rawCadenceCandidateDir 'local') | Out-Null
+    @'
+{
+  "schemaVersion": 1,
+  "cases": [
+    {
+      "caseId": "local/native-raw-cadence-24",
+      "category": "stable",
+      "severity": "high",
+      "stability": "stable",
+      "uri": "file:///quality-cases/native-raw-cadence-24.mp4",
+      "tier": 1,
+      "purpose": [
+        "sdr-smoke",
+        "hdr-output",
+        "hdr-force-sdr",
+        "dv-reject",
+        "dv-fallback",
+        "cadence-23.976",
+        "frame-pacing",
+        "av-sync",
+        "buffering",
+        "timeline",
+        "tracks",
+        "subtitles",
+        "end-of-stream",
+        "error-handling",
+        "cadence-24"
+      ],
+      "expected": {
+        "codec": "h264",
+        "width": 320,
+        "height": 180,
+        "frameRate": 24.0,
+        "hdrKind": "Sdr",
+        "minRenderedVideoFrames": 1,
+        "requireValidatedConversion": false,
+        "requireMatchedDisplayRefreshRate": true
+      }
+    }
+  ]
+}
+'@ | Set-Content -LiteralPath $rawCadenceManifestPath -Encoding UTF8
+
+    @'
+{
+  "runId": "local/native-raw-cadence-24",
+  "metricVersion": "software-quality-v1",
+  "result": "pass",
+  "expected": {
+    "codec": "h264",
+    "width": 320,
+    "height": 180,
+    "frameRate": 24.0,
+    "hdrKind": "Sdr",
+    "minRenderedVideoFrames": 1,
+    "requireValidatedConversion": false,
+    "requireMatchedDisplayRefreshRate": true
+  },
+  "environment": {
+    "collectorVersion": "native-headless-harness-v0.1",
+    "playerCoreVersion": "smoke-core",
+    "sourceRevision": "raw-cadence-baseline",
+    "buildConfiguration": "Debug"
+  },
+  "source": {
+    "codec": "h264",
+    "hasDirectStreamUrl": true,
+    "directStreamProtocol": "file",
+    "width": 320,
+    "height": 180,
+    "frameRate": 24.0,
+    "hdrKind": "Sdr",
+    "isHdr": false,
+    "isDirectPlayable": true,
+    "isDolbyVision": false,
+    "hasHdr10BaseLayer": false,
+    "hasHlgBaseLayer": false
+  },
+  "startup": {
+    "commandReceivedAt": "2026-07-08T00:00:00.000Z",
+    "playbackStartedAt": "2026-07-08T00:00:00.300Z",
+    "startupDurationMs": 300.0
+  },
+  "lifecycle": {
+    "events": [
+      { "operation": "load", "status": "completed", "positionTicks": 0 },
+      { "operation": "play", "status": "completed", "positionTicks": 0 },
+      { "operation": "pause", "status": "completed", "positionTicks": 10000000 },
+      { "operation": "resume", "status": "completed", "positionTicks": 10000000 },
+      { "operation": "seek", "status": "completed", "positionTicks": 0 },
+      { "operation": "stop", "status": "completed", "positionTicks": 30000000 },
+      { "operation": "error", "status": "not-applicable", "positionTicks": 0 }
+    ]
+  },
+  "runtimeMetrics": {
+    "status": "captured",
+    "providerStatus": "native-headless:returned-snapshot",
+    "reason": "raw cadence baseline fixture",
+    "hasSnapshot": true,
+    "hasPlaybackSample": true
+  },
+  "timing": {
+    "renderedVideoFrames": 72,
+    "expectedFrameDurationMs": 41.667,
+    "renderIntervalMsP95": 16.7,
+    "renderIntervalMsP99": 17.0,
+    "maxFrameGapMs": 17.0,
+    "framePacingSourceFrameRate": 24.0,
+    "lateFrameDropToleranceMs": 104.167
+  },
+  "display": {
+    "hdrStatus": "Off",
+    "refreshRateHz": 24.0
+  },
+  "colorPipeline": {
+    "dxgiInput": "YCBCR_STUDIO_G22_LEFT_P709",
+    "dxgiOutput": "RGB_FULL_G22_NONE_P709",
+    "conversionStatus": "not-required"
+  },
+  "error": {
+    "code": "none",
+    "message": "no error",
+    "operation": "",
+    "exceptionType": "",
+    "failureClass": "insufficient instrumentation",
+    "failureArea": "error-handling",
+    "isTerminal": false,
+    "isRetriable": false
+  },
+  "checks": []
+}
+'@ | Set-Content -LiteralPath (Join-Path $rawCadenceBaselineDir 'local\native-raw-cadence-24.json') -Encoding UTF8
+
+    @'
+{
+  "runId": "local/native-raw-cadence-24",
+  "metricVersion": "software-quality-v1",
+  "result": "pass",
+  "expected": {
+    "codec": "h264",
+    "width": 320,
+    "height": 180,
+    "frameRate": 24.0,
+    "hdrKind": "Sdr",
+    "minRenderedVideoFrames": 1,
+    "requireValidatedConversion": false,
+    "requireMatchedDisplayRefreshRate": true
+  },
+  "environment": {
+    "collectorVersion": "native-headless-harness-v0.1",
+    "playerCoreVersion": "smoke-core",
+    "sourceRevision": "raw-cadence-candidate",
+    "buildConfiguration": "Debug"
+  },
+  "source": {
+    "codec": "h264",
+    "hasDirectStreamUrl": true,
+    "directStreamProtocol": "file",
+    "width": 320,
+    "height": 180,
+    "frameRate": 24.0,
+    "hdrKind": "Sdr",
+    "isHdr": false,
+    "isDirectPlayable": true,
+    "isDolbyVision": false,
+    "hasHdr10BaseLayer": false,
+    "hasHlgBaseLayer": false
+  },
+  "startup": {
+    "commandReceivedAt": "2026-07-08T00:00:00.000Z",
+    "playbackStartedAt": "2026-07-08T00:00:00.300Z",
+    "startupDurationMs": 300.0
+  },
+  "lifecycle": {
+    "events": [
+      { "operation": "load", "status": "completed", "positionTicks": 0 },
+      { "operation": "play", "status": "completed", "positionTicks": 0 },
+      { "operation": "pause", "status": "completed", "positionTicks": 10000000 },
+      { "operation": "resume", "status": "completed", "positionTicks": 10000000 },
+      { "operation": "seek", "status": "completed", "positionTicks": 0 },
+      { "operation": "stop", "status": "completed", "positionTicks": 15000000 },
+      { "operation": "error", "status": "not-applicable", "positionTicks": 0 }
+    ]
+  },
+  "runtimeMetrics": {
+    "status": "captured",
+    "providerStatus": "native-headless:returned-snapshot",
+    "reason": "raw cadence candidate fixture",
+    "hasSnapshot": true,
+    "hasPlaybackSample": true
+  },
+  "timing": {
+    "renderedVideoFrames": 36,
+    "expectedFrameDurationMs": 41.667,
+    "renderIntervalMsP95": 48.0,
+    "renderIntervalMsP99": 48.2,
+    "maxFrameGapMs": 48.2,
+    "framePacingSourceFrameRate": 24.0,
+    "lateFrameDropToleranceMs": 104.167
+  },
+  "display": {
+    "hdrStatus": "Off",
+    "refreshRateHz": 24.0
+  },
+  "colorPipeline": {
+    "dxgiInput": "YCBCR_STUDIO_G22_LEFT_P709",
+    "dxgiOutput": "RGB_FULL_G22_NONE_P709",
+    "conversionStatus": "not-required"
+  },
+  "error": {
+    "code": "none",
+    "message": "no error",
+    "operation": "",
+    "exceptionType": "",
+    "failureClass": "insufficient instrumentation",
+    "failureArea": "error-handling",
+    "isTerminal": false,
+    "isRetriable": false
+  },
+  "checks": []
+}
+'@ | Set-Content -LiteralPath (Join-Path $rawCadenceCandidateDir 'local\native-raw-cadence-24.json') -Encoding UTF8
+
+    Push-Location $repoRoot
+    try {
+        dotnet $cliDll `
+            evaluate-candidate `
+            --manifest $rawCadenceManifestPath `
+            --baseline-dir $rawCadenceBaselineDir `
+            --candidate-dir $rawCadenceCandidateDir `
+            --match-by run-id `
+            --comparisons-dir $rawCadenceComparisonsDir `
+            --output $rawCadenceEvaluationPath
+        if ($LASTEXITCODE -ne 0) {
+            throw 'Expected raw native cadence candidate evaluation to pass.'
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    $rawCadenceEvaluation = Get-Content -Raw -LiteralPath $rawCadenceEvaluationPath | ConvertFrom-Json
+    if ($rawCadenceEvaluation.suite.improvedCount -ne 1 -or
+        $rawCadenceEvaluation.suite.regressedCount -ne 0) {
+        throw 'Expected raw native cadence candidate evaluation to detect improvement from current evaluator rules.'
     }
 
     New-Item -ItemType Directory -Path (Join-Path $nativeHeadlessImportedDir 'local') | Out-Null

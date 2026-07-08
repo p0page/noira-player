@@ -153,6 +153,7 @@ namespace winrt::NextGenEmby::Native::implementation
         if (m_open)
         {
             m_paused = false;
+            ResetVideoClock();
             m_audioRenderer.Resume();
             m_stateChanged.notify_all();
         }
@@ -457,6 +458,7 @@ namespace winrt::NextGenEmby::Native::implementation
 
             if (auto audioPosition = m_audioRenderer.CurrentPositionTicks())
             {
+                ResetVideoClock();
                 auto hasQueuedAudio = m_audioRenderer.QueuedBufferCount() > 0;
                 if (PlaybackFramePacing::ShouldWaitForAudio(
                     frame.PositionTicks,
@@ -485,6 +487,13 @@ namespace winrt::NextGenEmby::Native::implementation
                 m_qualityMetrics.AudioClockTicks = *audioPosition;
                 m_qualityMetrics.VideoPositionTicks = frame.PositionTicks;
                 m_qualityMetrics.RecordAudioVideoDriftTicks(frame.PositionTicks - *audioPosition);
+            }
+            else if (ShouldWaitForVideoClock(frame))
+            {
+                ++m_videoAheadWaitCount;
+                ++m_qualityMetrics.VideoAheadWaitCount;
+                LogRuntimeStatsIfDue();
+                return true;
             }
 
             EnsureHdrOutputForFrame(frame);
@@ -604,6 +613,32 @@ namespace winrt::NextGenEmby::Native::implementation
         m_qualityMetrics.Reset();
         m_lastRuntimeStatsLog = {};
         m_lastRenderedFrameAt = {};
+        ResetVideoClock();
+    }
+
+    void PlaybackGraph::ResetVideoClock() noexcept
+    {
+        m_videoClockStartedAt = {};
+        m_videoClockStartPositionTicks = 0;
+    }
+
+    bool PlaybackGraph::ShouldWaitForVideoClock(DecodedVideoFrame const& frame)
+    {
+        auto now = std::chrono::steady_clock::now();
+        if (m_videoClockStartedAt.time_since_epoch().count() == 0 ||
+            frame.PositionTicks <= m_videoClockStartPositionTicks)
+        {
+            m_videoClockStartedAt = now;
+            m_videoClockStartPositionTicks = frame.PositionTicks;
+            return false;
+        }
+
+        auto elapsedTicks = static_cast<int64_t>(
+            std::chrono::duration<double>(now - m_videoClockStartedAt).count() * 10000000.0);
+        return PlaybackFramePacing::ShouldWaitForVideoClock(
+            frame.PositionTicks,
+            m_videoClockStartPositionTicks,
+            elapsedTicks);
     }
 
     void PlaybackGraph::ApplyFramePacingPolicyMetrics() noexcept

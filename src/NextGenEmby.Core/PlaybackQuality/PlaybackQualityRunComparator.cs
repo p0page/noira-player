@@ -107,6 +107,8 @@ namespace NextGenEmby.Core.PlaybackQuality
     public static class PlaybackQualityRunComparator
     {
         private const double DerivedSignalEpsilon = 0.0001;
+        private const double MinimumAcceptableFrameRatio = 0.75;
+        private const double MaximumAcceptableFrameRatio = 1.5;
 
         public static PlaybackQualityRunComparison Compare(
             PlaybackQualityReport baseline,
@@ -1017,19 +1019,19 @@ namespace NextGenEmby.Core.PlaybackQuality
             var baselineAnalysis = PlaybackQualityReportAnalyzer.Analyze(baseline);
             var candidateAnalysis = PlaybackQualityReportAnalyzer.Analyze(candidate);
 
-            CompareDerivedLowerIsBetter(
+            CompareDerivedFrameRatio(
                 comparison,
                 "framePacing.renderIntervalP95FrameRatio",
                 baselineAnalysis.FramePacing.RenderIntervalP95FrameRatio,
                 candidateAnalysis.FramePacing.RenderIntervalP95FrameRatio,
                 requirePositive: true);
-            CompareDerivedLowerIsBetter(
+            CompareDerivedFrameRatio(
                 comparison,
                 "framePacing.renderIntervalP99FrameRatio",
                 baselineAnalysis.FramePacing.RenderIntervalP99FrameRatio,
                 candidateAnalysis.FramePacing.RenderIntervalP99FrameRatio,
                 requirePositive: true);
-            CompareDerivedLowerIsBetter(
+            CompareDerivedFrameRatio(
                 comparison,
                 "framePacing.maxFrameGapFrameRatio",
                 baselineAnalysis.FramePacing.MaxFrameGapFrameRatio,
@@ -1092,6 +1094,95 @@ namespace NextGenEmby.Core.PlaybackQuality
         {
             return report.Timing.RenderedVideoFrames > 0 ||
                 report.Timing.DroppedVideoFrames > 0;
+        }
+
+        private static void CompareDerivedFrameRatio(
+            PlaybackQualityRunComparison comparison,
+            string signal,
+            double baselineActual,
+            double candidateActual,
+            bool requirePositive)
+        {
+            if (requirePositive &&
+                (baselineActual <= 0 || candidateActual <= 0))
+            {
+                return;
+            }
+
+            AddUnique(comparison.Coverage.MatchedSignals, signal);
+
+            var numericDelta = candidateActual - baselineActual;
+            var baselineAcceptable = IsAcceptableFrameRatio(baselineActual);
+            var candidateAcceptable = IsAcceptableFrameRatio(candidateActual);
+            if (!baselineAcceptable && candidateAcceptable)
+            {
+                comparison.Improvements.Add(CreateDelta(
+                    CreateDerivedCheck(signal, baselineActual),
+                    CreateDerivedCheck(signal, candidateActual),
+                    numericDelta < 0 ? "decreased" : "increased",
+                    numericDelta));
+                return;
+            }
+
+            if (baselineAcceptable && !candidateAcceptable)
+            {
+                comparison.Regressions.Add(CreateDelta(
+                    CreateDerivedCheck(signal, baselineActual),
+                    CreateDerivedCheck(signal, candidateActual),
+                    numericDelta < 0 ? "decreased" : "increased",
+                    numericDelta));
+                return;
+            }
+
+            if (baselineAcceptable && candidateAcceptable)
+            {
+                return;
+            }
+
+            var baselineDistance = FrameRatioDistanceFromAcceptableRange(baselineActual);
+            var candidateDistance = FrameRatioDistanceFromAcceptableRange(candidateActual);
+            if (Math.Abs(candidateDistance - baselineDistance) <= DerivedSignalEpsilon)
+            {
+                return;
+            }
+
+            if (candidateDistance < baselineDistance)
+            {
+                comparison.Improvements.Add(CreateDelta(
+                    CreateDerivedCheck(signal, baselineActual),
+                    CreateDerivedCheck(signal, candidateActual),
+                    numericDelta < 0 ? "decreased" : "increased",
+                    numericDelta));
+            }
+            else
+            {
+                comparison.Regressions.Add(CreateDelta(
+                    CreateDerivedCheck(signal, baselineActual),
+                    CreateDerivedCheck(signal, candidateActual),
+                    numericDelta < 0 ? "decreased" : "increased",
+                    numericDelta));
+            }
+        }
+
+        private static bool IsAcceptableFrameRatio(double value)
+        {
+            return value >= MinimumAcceptableFrameRatio &&
+                value <= MaximumAcceptableFrameRatio;
+        }
+
+        private static double FrameRatioDistanceFromAcceptableRange(double value)
+        {
+            if (value < MinimumAcceptableFrameRatio)
+            {
+                return MinimumAcceptableFrameRatio - value;
+            }
+
+            if (value > MaximumAcceptableFrameRatio)
+            {
+                return value - MaximumAcceptableFrameRatio;
+            }
+
+            return 0;
         }
 
         private static void CompareDerivedLowerIsBetter(

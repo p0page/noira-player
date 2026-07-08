@@ -86,8 +86,10 @@ namespace winrt::NextGenEmby::Native::implementation
         uint32_t DecodeNextAudioFrame();
         void UpdateSubtitleCue();
         void ResetRuntimeStats() noexcept;
+        void ResetVideoClock() noexcept;
         void ApplyFramePacingPolicyMetrics() noexcept;
         void SetVideoPrerollTarget(int64_t targetTicks) noexcept;
+        bool ShouldWaitForVideoClock(DecodedVideoFrame const& frame);
         void EnsureHdrOutputForFrame(DecodedVideoFrame const& frame);
         void LogRuntimeStatsIfDue();
         void NotifyStateChanged(PlaybackGraphState state, winrt::hstring const& message) const noexcept;
@@ -125,6 +127,8 @@ namespace winrt::NextGenEmby::Native::implementation
         std::optional<int64_t> m_videoPrerollTargetTicks;
         std::chrono::steady_clock::time_point m_lastRuntimeStatsLog{};
         std::chrono::steady_clock::time_point m_lastRenderedFrameAt{};
+        std::chrono::steady_clock::time_point m_videoClockStartedAt{};
+        int64_t m_videoClockStartPositionTicks{0};
         std::thread m_renderThread;
         mutable std::mutex m_graphMutex;
         std::condition_variable m_stateChanged;

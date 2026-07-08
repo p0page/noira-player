@@ -59,5 +59,14 @@ namespace winrt::NextGenEmby::Native::implementation
             return hasQueuedAudio &&
                 audioPositionTicks > framePositionTicks + LateFrameDropToleranceTicks(videoFrameRate);
         }
+
+        static constexpr bool ShouldWaitForVideoClock(
+            int64_t framePositionTicks,
+            int64_t clockStartPositionTicks,
+            int64_t clockElapsedTicks) noexcept
+        {
+            return framePositionTicks > clockStartPositionTicks &&
+                framePositionTicks - clockStartPositionTicks > clockElapsedTicks + VideoAheadToleranceTicks;
+        }
     };
 }

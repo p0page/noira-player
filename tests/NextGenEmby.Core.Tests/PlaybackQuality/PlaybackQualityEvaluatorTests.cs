@@ -542,6 +542,51 @@ public sealed class PlaybackQualityEvaluatorTests
     }
 
     [Fact]
+    public void Evaluate_Fails_When_Render_Cadence_Is_Faster_Than_Source_Frame_Duration()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "under-paced-video-clock",
+            Expected = new PlaybackQualityExpected
+            {
+                RequireMatchedDisplayRefreshRate = true,
+                RequireValidatedConversion = false
+            },
+            Source = new PlaybackQualitySource
+            {
+                FrameRate = 24
+            },
+            Display = new PlaybackQualityDisplay
+            {
+                RefreshRateHz = 24
+            },
+            Timing = new PlaybackQualityTiming
+            {
+                RenderedVideoFrames = 72,
+                ExpectedFrameDurationMs = 1000.0 / 24.0,
+                RenderIntervalMsP95 = 16.7,
+                RenderIntervalMsP99 = 17.0
+            }
+        };
+
+        PlaybackQualityEvaluator.Evaluate(report);
+
+        Assert.Equal("fail", report.Result);
+        Assert.Contains(
+            "RenderIntervalMsP95 16.700 was below minimum cadence interval 31.250.",
+            report.FailureReasons);
+        Assert.Equal("frame-pacing", report.Analysis.PrimaryFailureArea);
+        Assert.Contains("timing.renderIntervalMsP95", report.Analysis.RelevantSignals);
+        Assert.Contains(report.Checks, check =>
+            check.Name == "RenderIntervalMsP95Cadence" &&
+            check.Signal == "timing.renderIntervalMsP95" &&
+            check.Expected == ">= 31.250" &&
+            check.Actual == "16.700" &&
+            check.Status == "fail" &&
+            check.FailureArea == "frame-pacing");
+    }
+
+    [Fact]
     public void Evaluate_Fails_When_Render_Interval_Percentile_Is_Required_But_Missing()
     {
         var report = new PlaybackQualityReport

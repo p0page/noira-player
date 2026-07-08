@@ -24,4 +24,8 @@ int main()
     assert(PlaybackFramePacing::ShouldDropLateFrame(1'000'000, 1'500'001, true, 60.0));
     assert(!PlaybackFramePacing::ShouldDropLateFrame(1'000'000, 1'350'000, true, 60.0));
     assert(!PlaybackFramePacing::ShouldDropLateFrame(1'000'000, 1'500'001, false, 60.0));
+
+    assert(PlaybackFramePacing::ShouldWaitForVideoClock(1'000'000, 0, 800'000));
+    assert(!PlaybackFramePacing::ShouldWaitForVideoClock(1'000'000, 0, 950'000));
+    assert(!PlaybackFramePacing::ShouldWaitForVideoClock(0, 0, 0));
 }

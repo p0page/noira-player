@@ -104,8 +104,8 @@ internal static class Program
     private static int RunCompare(string[] args)
     {
         var options = ParseCompareOptions(args);
-        var baseline = ReadPlaybackQualityReport(options.BaselinePath);
-        var candidate = ReadPlaybackQualityReport(options.CandidatePath);
+        var baseline = ReadPlaybackQualityReportForCurrentEvaluation(options.BaselinePath);
+        var candidate = ReadPlaybackQualityReportForCurrentEvaluation(options.CandidatePath);
         var context = new PlaybackQualityComparisonContext
         {
             StallComparisonCountThreshold = options.StallComparisonCountThreshold
@@ -213,8 +213,8 @@ internal static class Program
 
         foreach (var pair in reportPairs)
         {
-            var baseline = ReadPlaybackQualityReport(pair.BaselinePath);
-            var candidate = ReadPlaybackQualityReport(pair.CandidatePath);
+            var baseline = ReadPlaybackQualityReportForCurrentEvaluation(pair.BaselinePath);
+            var candidate = ReadPlaybackQualityReportForCurrentEvaluation(pair.CandidatePath);
             var context = new PlaybackQualityComparisonContext
             {
                 StallComparisonCountThreshold = options.StallComparisonCountThreshold
@@ -1119,6 +1119,13 @@ internal static class Program
         return ReadPlaybackQualityReportEnvelope(path, Path.GetFileName(path)).Report;
     }
 
+    private static PlaybackQualityReport ReadPlaybackQualityReportForCurrentEvaluation(string path)
+    {
+        var report = ReadPlaybackQualityReport(path);
+        EvaluateReportWithCurrentRules(report);
+        return report;
+    }
+
     private static PlaybackQualityReportEnvelope ReadPlaybackQualityReportEnvelope(
         string path,
         string relativePath)
@@ -1703,6 +1710,7 @@ internal static class Program
         envelope.Report.Environment = MergeImportedNativeHarnessEnvironment(
             envelope.Report.Environment,
             options);
+        EvaluateReportWithCurrentRules(envelope.Report);
 
         var normalizedEnvelope = new PlaybackQualityReportEnvelope(
             reportRelativePath,
@@ -1716,6 +1724,19 @@ internal static class Program
             AnalyzeReport(normalizedEnvelope),
             normalizedEnvelope.CaseMetadata);
         return true;
+    }
+
+    private static void EvaluateReportWithCurrentRules(
+        PlaybackQualityReport report)
+    {
+        if (report.Expected == null ||
+            string.Equals(report.Result, "skip", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(report.Result, "error", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        PlaybackQualityEvaluator.Evaluate(report);
     }
 
     private static PlaybackQualityEnvironment MergeImportedNativeHarnessEnvironment(
