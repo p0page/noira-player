@@ -98,6 +98,34 @@ public sealed class DevelopmentDetailsFixtureTests
         Assert.NotEmpty(fixture.SimilarItems);
     }
 
+    [Fact]
+    public void CreateWithPrimaryOnlyArtwork_Provides_Poster_Only_Atmosphere_Coverage()
+    {
+        var root = FindRepositoryRoot();
+        var fixture = DevelopmentDetailsFixture.CreateWithPrimaryOnlyArtwork();
+
+        Assert.Equal("fixture-detail-primary-only", fixture.Item.Id);
+        Assert.Equal("Poster Only Signal", fixture.Item.Name);
+        Assert.Equal("qa", fixture.Item.PrimaryImageTag);
+        Assert.Equal(fixture.Item.Id, fixture.Item.PrimaryImageItemId);
+        Assert.True(string.IsNullOrWhiteSpace(fixture.Item.BackdropImageTag));
+        Assert.True(string.IsNullOrWhiteSpace(fixture.Item.BackdropImageItemId));
+        Assert.True(string.IsNullOrWhiteSpace(fixture.Item.ThumbImageTag));
+        Assert.True(string.IsNullOrWhiteSpace(fixture.Item.ThumbImageItemId));
+        Assert.True(fixture.ArtworkUris.ContainsKey(DevelopmentDetailsFixture.ArtworkKey(fixture.Item.Id, "Primary")));
+        Assert.False(fixture.ArtworkUris.ContainsKey(DevelopmentDetailsFixture.ArtworkKey(fixture.Item.Id, "Backdrop")));
+        Assert.False(fixture.ArtworkUris.ContainsKey(DevelopmentDetailsFixture.ArtworkKey(fixture.Item.Id, "Thumb")));
+        Assert.True(fixture.MediaSources.Count >= 2);
+        Assert.NotEmpty(fixture.SimilarItems);
+
+        var uri = fixture.ArtworkUris[DevelopmentDetailsFixture.ArtworkKey(fixture.Item.Id, "Primary")];
+        Assert.StartsWith("ms-appx:///Assets/QaHome/", uri, StringComparison.Ordinal);
+        Assert.EndsWith("qa-poster-13.png", uri, StringComparison.Ordinal);
+        var relativePath = uri.Substring("ms-appx:///".Length).Replace('/', Path.DirectorySeparatorChar);
+        var assetPath = Path.Combine(root, "src", "NextGenEmby.App", relativePath);
+        Assert.True(File.Exists(assetPath), "Missing packaged Primary-only Details artwork asset " + assetPath);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

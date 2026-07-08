@@ -1118,7 +1118,7 @@ namespace NextGenEmby.App.Views
             var background = new Border
             {
                 Background = (Brush)Application.Current.Resources["AppChromeBrush"],
-                BorderBrush = (Brush)Application.Current.Resources["AppHairlineBrush"],
+                BorderBrush = (Brush)Application.Current.Resources["AppTransparentBrush"],
                 BorderThickness = new Thickness(1),
                 CornerRadius = cardCornerRadius
             };
@@ -1208,7 +1208,7 @@ namespace NextGenEmby.App.Views
             root.Children.Add(new Border
             {
                 Background = (Brush)Application.Current.Resources["AppChromeBrush"],
-                BorderBrush = (Brush)Application.Current.Resources["AppHairlineBrush"],
+                BorderBrush = (Brush)Application.Current.Resources["AppTransparentBrush"],
                 BorderThickness = new Thickness(1),
                 CornerRadius = cardCornerRadius
             });
@@ -1534,7 +1534,7 @@ namespace NextGenEmby.App.Views
 
             root.Children.Add(new Border
             {
-                BorderBrush = (Brush)Application.Current.Resources["AppHairlineBrush"],
+                BorderBrush = (Brush)Application.Current.Resources["AppTransparentBrush"],
                 BorderThickness = new Thickness(1),
                 CornerRadius = cardCornerRadius
             });
@@ -1712,7 +1712,7 @@ namespace NextGenEmby.App.Views
 
             root.Children.Add(new Border
             {
-                BorderBrush = (Brush)Application.Current.Resources["AppHairlineBrush"],
+                BorderBrush = (Brush)Application.Current.Resources["AppTransparentBrush"],
                 BorderThickness = new Thickness(1),
                 CornerRadius = cardCornerRadius
             });

@@ -170,6 +170,57 @@ public sealed class HomeAccessibilitySourceTests
         Assert.Contains("CreateArtworkBrush(EmbyArtworkPolicy.SelectHomeSectionWideArtwork(row.Section, maxWidth))", source);
     }
 
+    [Fact]
+    public void A3_Passive_Home_Media_Cards_Do_Not_Use_Hairline_Structure()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            FindRepositoryRoot(),
+            "src",
+            "NextGenEmby.App",
+            "Views",
+            "HomePage.xaml.cs"));
+
+        var libraryCardSource = ExtractSourceBlock(source, "private Button CreateLibraryButton", "private Button CreateHomeSectionButton");
+        var sectionCardSource = ExtractSourceBlock(source, "private Button CreateHomeSectionButton", "private static Border CreateHomeWideCardTextScrim");
+        var resumeCardSource = ExtractSourceBlock(source, "private Button CreateResumeItemButton", "private static Border CreateResumeCardTextScrim");
+        var posterCardSource = ExtractSourceBlock(source, "private Button CreateItemButton", "private async Task<IReadOnlyList<T>> TryLoadListAsync");
+
+        Assert.DoesNotContain("AppHairlineBrush", libraryCardSource);
+        Assert.DoesNotContain("AppHairlineBrush", sectionCardSource);
+        Assert.DoesNotContain("AppHairlineBrush", resumeCardSource);
+        Assert.DoesNotContain("AppHairlineBrush", posterCardSource);
+        Assert.Contains("CreateHomeCardFocusChrome", libraryCardSource);
+        Assert.Contains("CreateHomeCardFocusChrome", sectionCardSource);
+        Assert.Contains("CreateHomeCardFocusChrome", resumeCardSource);
+        Assert.Contains("CreateHomeCardFocusChrome", posterCardSource);
+    }
+
+    [Fact]
+    public void A3_Home_Header_And_Refresh_Are_Subordinate_To_Media()
+    {
+        var root = FindRepositoryRoot();
+        var appXaml = File.ReadAllText(Path.Combine(root, "src", "NextGenEmby.App", "App.xaml"));
+        var homeXaml = File.ReadAllText(Path.Combine(root, "src", "NextGenEmby.App", "Views", "HomePage.xaml"));
+
+        var titleStyle = ExtractSourceBlock(appXaml, "<Style x:Key=\"TvPageTitleTextStyle\"", "<Style x:Key=\"TvPageSubtitleTextStyle\"");
+
+        Assert.Contains("<Setter Property=\"FontSize\" Value=\"28\" />", titleStyle);
+        Assert.DoesNotContain("<Setter Property=\"FontSize\" Value=\"34\" />", titleStyle);
+        Assert.Contains("Opacity=\"0.72\"", homeXaml);
+        Assert.DoesNotContain("UseSystemFocusVisuals=\"True\"", homeXaml);
+    }
+
+    private static string ExtractSourceBlock(string source, string startMarker, string endMarker)
+    {
+        var start = source.IndexOf(startMarker, StringComparison.Ordinal);
+        var end = source.IndexOf(endMarker, StringComparison.Ordinal);
+
+        Assert.True(start >= 0, "Start marker not found: " + startMarker);
+        Assert.True(end > start, "End marker not found after start marker: " + endMarker);
+
+        return source.Substring(start, end - start);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

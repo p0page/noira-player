@@ -125,6 +125,38 @@ public sealed class LibraryPageSourceTests
     }
 
     [Fact]
+    public void A3_Library_Toolbar_Commands_Are_Borderless_When_Passive()
+    {
+        var appXaml = ReadAppSource("App.xaml");
+        var source = ReadAppSource("Views", "LibraryPage.xaml.cs");
+
+        var commandStyle = ExtractSourceBlock(appXaml, "<Style x:Key=\"TvCommandButtonStyle\"", "<Style x:Key=\"TvUtilityFormPanelStyle\"");
+        var iconStyle = ExtractSourceBlock(appXaml, "<Style x:Key=\"IconButtonStyle\"", "<Style x:Key=\"TvNavButtonStyle\"");
+        var commandFocusSource = ExtractSourceBlock(source, "private static void ApplyCommandButtonMatteFocus", "private void OptionSheetOption_OnClick");
+
+        Assert.DoesNotContain("AppHairlineBrush", commandStyle);
+        Assert.DoesNotContain("AppHairlineBrush", iconStyle);
+        Assert.DoesNotContain("BrushResource(\"AppHairlineBrush\")", commandFocusSource);
+        Assert.Contains("AppTransparentBrush", commandStyle);
+        Assert.Contains("AppTransparentBrush", iconStyle);
+        Assert.Contains("BrushResource(\"AppTransparentBrush\")", commandFocusSource);
+    }
+
+    [Fact]
+    public void A3_Library_Header_And_Refresh_Are_Subordinate_To_Poster_Wall()
+    {
+        var appXaml = ReadAppSource("App.xaml");
+        var pageXaml = ReadAppSource("Views", "LibraryPage.xaml");
+
+        var titleStyle = ExtractSourceBlock(appXaml, "<Style x:Key=\"TvPageTitleTextStyle\"", "<Style x:Key=\"TvPageSubtitleTextStyle\"");
+
+        Assert.Contains("<Setter Property=\"FontSize\" Value=\"28\" />", titleStyle);
+        Assert.DoesNotContain("<Setter Property=\"FontSize\" Value=\"34\" />", titleStyle);
+        Assert.Contains("Opacity=\"0.72\"", pageXaml);
+        Assert.DoesNotContain("UseSystemFocusVisuals=\"True\"", pageXaml);
+    }
+
+    [Fact]
     public void Library_Page_Passes_Development_Photo_Uri_To_Photo_Viewer()
     {
         var source = ReadAppSource("Views", "LibraryPage.xaml.cs");
@@ -173,6 +205,17 @@ public sealed class LibraryPageSourceTests
         parts[2] = "NextGenEmby.App";
         Array.Copy(segments, 0, parts, 3, segments.Length);
         return File.ReadAllText(Path.Combine(parts));
+    }
+
+    private static string ExtractSourceBlock(string source, string startMarker, string endMarker)
+    {
+        var start = source.IndexOf(startMarker, StringComparison.Ordinal);
+        var end = source.IndexOf(endMarker, StringComparison.Ordinal);
+
+        Assert.True(start >= 0, "Start marker not found: " + startMarker);
+        Assert.True(end > start, "End marker not found after start marker: " + endMarker);
+
+        return source.Substring(start, end - start);
     }
 
     private static string FindRepositoryRoot()

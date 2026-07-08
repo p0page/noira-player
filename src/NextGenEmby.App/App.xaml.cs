@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using Windows.ApplicationModel.Activation;
 using Windows.Storage;
+using Windows.UI;
 using Windows.UI.ViewManagement;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
@@ -46,6 +47,7 @@ namespace NextGenEmby.App
             {
                 WriteStartupDiagnostic("App.OnLaunched start previousState=" + e.PreviousExecutionState);
                 ApplicationView.GetForCurrentView().SetDesiredBoundsMode(ApplicationViewBoundsMode.UseCoreWindow);
+                ApplyA3TitleBarTreatment();
 
                 var rootFrame = Window.Current.Content as Frame;
                 if (rootFrame == null)
@@ -72,6 +74,28 @@ namespace NextGenEmby.App
         private static string FormatException(Exception ex)
         {
             return ex.GetType().FullName + " " + ex.Message + Environment.NewLine + ex.StackTrace;
+        }
+
+        private static void ApplyA3TitleBarTreatment()
+        {
+            var titleBar = ApplicationView.GetForCurrentView().TitleBar;
+            var canvas = Color.FromArgb(255, 5, 7, 10);
+            var surface = Color.FromArgb(255, 16, 22, 28);
+            var text = Color.FromArgb(255, 238, 243, 246);
+            var muted = Color.FromArgb(255, 169, 179, 186);
+
+            titleBar.BackgroundColor = canvas;
+            titleBar.ForegroundColor = text;
+            titleBar.InactiveBackgroundColor = canvas;
+            titleBar.InactiveForegroundColor = muted;
+            titleBar.ButtonBackgroundColor = canvas;
+            titleBar.ButtonForegroundColor = text;
+            titleBar.ButtonHoverBackgroundColor = surface;
+            titleBar.ButtonHoverForegroundColor = text;
+            titleBar.ButtonPressedBackgroundColor = surface;
+            titleBar.ButtonPressedForegroundColor = text;
+            titleBar.ButtonInactiveBackgroundColor = canvas;
+            titleBar.ButtonInactiveForegroundColor = muted;
         }
 
         private static void WriteStartupDiagnostic(string message)

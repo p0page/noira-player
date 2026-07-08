@@ -3,7 +3,8 @@ namespace NextGenEmby.App.Navigation
     public enum MediaDetailsDevelopmentFixtureKind
     {
         Standard,
-        NoArtwork
+        NoArtwork,
+        PrimaryOnlyArtwork
     }
 
     public sealed class MediaDetailsNavigationRequest

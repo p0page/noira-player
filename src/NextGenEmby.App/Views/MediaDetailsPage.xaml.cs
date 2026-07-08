@@ -25,6 +25,9 @@ namespace NextGenEmby.App.Views
 {
     public sealed partial class MediaDetailsPage : Page, ITvContentFocusTarget
     {
+        private const double DetailsWideAtmosphereOpacity = 0.9;
+        private const double DetailsPrimaryOnlyAtmosphereOpacity = 0.58;
+
         private static readonly object s_pendingMetadataFacetRestoreGate = new object();
         private static readonly Dictionary<string, string> s_pendingMetadataFacetRestoreKeys =
             new Dictionary<string, string>(StringComparer.Ordinal);
@@ -106,7 +109,7 @@ namespace NextGenEmby.App.Views
             }
 
             button.Background = BrushResource("AppChromeBrush");
-            button.BorderBrush = BrushResource("AppHairlineBrush");
+            button.BorderBrush = BrushResource("AppTransparentBrush");
             button.Foreground = BrushResource("AppTextBrush");
         }
 
@@ -622,6 +625,7 @@ namespace NextGenEmby.App.Views
                 TitleBlock.Text = "Item unavailable";
                 MetaBlock.Text = "";
                 OverviewBlock.Text = "";
+                RenderDetailsFirstReadFacts();
                 StatusBlock.Text = "Go back and choose another item.";
                 PlayButton.IsEnabled = false;
                 PlayButtonText.Text = "Play";
@@ -636,6 +640,7 @@ namespace NextGenEmby.App.Views
             OverviewBlock.Text = string.IsNullOrWhiteSpace(_item.Overview)
                 ? "No overview available."
                 : _item.Overview;
+            RenderDetailsFirstReadFacts();
             StatusBlock.Text = "";
             UpdateActionButtons();
             RenderOrganizeSection();
@@ -753,6 +758,7 @@ namespace NextGenEmby.App.Views
                         atmosphereArtwork.ItemId,
                         atmosphereArtwork.ImageType,
                         atmosphereArtwork.MaxWidth)));
+                    ApplyDetailsAtmosphereTreatment(atmosphereArtwork.ImageType);
                 }
             }
             catch
@@ -766,6 +772,24 @@ namespace NextGenEmby.App.Views
             return Task.CompletedTask;
         }
 
+        private void ApplyDetailsAtmosphereTreatment(string imageType)
+        {
+            if (string.Equals(imageType, "Primary", StringComparison.OrdinalIgnoreCase))
+            {
+                AtmosphereImage.Opacity = DetailsPrimaryOnlyAtmosphereOpacity;
+                PrimaryAtmosphereWash.Visibility = Visibility.Visible;
+                return;
+            }
+
+            ResetDetailsAtmosphereTreatment();
+        }
+
+        private void ResetDetailsAtmosphereTreatment()
+        {
+            AtmosphereImage.Opacity = DetailsWideAtmosphereOpacity;
+            PrimaryAtmosphereWash.Visibility = Visibility.Collapsed;
+        }
+
 #if DEBUG
         private void RenderDevelopmentDetailsFixture(int loadGeneration)
         {
@@ -774,9 +798,7 @@ namespace NextGenEmby.App.Views
                 return;
             }
 
-            var fixture = _developmentDetailsFixtureKind == MediaDetailsDevelopmentFixtureKind.NoArtwork
-                ? DevelopmentDetailsFixture.CreateWithoutArtwork()
-                : DevelopmentDetailsFixture.Create();
+            var fixture = CreateDevelopmentDetailsFixture();
             _usesDevelopmentDetailsFixture = true;
             _developmentDetailsArtworkUris = fixture.ArtworkUris;
             _item = fixture.Item;
@@ -831,17 +853,38 @@ namespace NextGenEmby.App.Views
             _developmentDetailsFocusGeneration++;
         }
 
+        private DevelopmentDetailsFixtureSnapshot CreateDevelopmentDetailsFixture()
+        {
+            switch (_developmentDetailsFixtureKind)
+            {
+                case MediaDetailsDevelopmentFixtureKind.NoArtwork:
+                    return DevelopmentDetailsFixture.CreateWithoutArtwork();
+
+                case MediaDetailsDevelopmentFixtureKind.PrimaryOnlyArtwork:
+                    return DevelopmentDetailsFixture.CreateWithPrimaryOnlyArtwork();
+
+                default:
+                    return DevelopmentDetailsFixture.Create();
+            }
+        }
+
         private void ApplyDetailsAtmosphereArtwork(EmbyMediaItem item)
         {
             AtmosphereImage.Source = null;
-            var atmosphereSource =
-                CreateDevelopmentArtworkImageSource(item.BackdropImageItemId, "Backdrop") ??
-                CreateDevelopmentArtworkImageSource(item.ThumbImageItemId, "Thumb") ??
-                CreateDevelopmentArtworkImageSource(item.BannerImageItemId, "Banner") ??
-                CreateDevelopmentArtworkImageSource(item.PrimaryImageItemId, "Primary");
+            ResetDetailsAtmosphereTreatment();
+            var atmosphereArtwork = EmbyArtworkPolicy.SelectHeroArtwork(item, 1920);
+            if (atmosphereArtwork == null)
+            {
+                return;
+            }
+
+            var atmosphereSource = CreateDevelopmentArtworkImageSource(
+                atmosphereArtwork.ItemId,
+                atmosphereArtwork.ImageType);
             if (atmosphereSource != null)
             {
                 AtmosphereImage.Source = atmosphereSource;
+                ApplyDetailsAtmosphereTreatment(atmosphereArtwork.ImageType);
             }
         }
 
@@ -1744,7 +1787,7 @@ namespace NextGenEmby.App.Views
                 HorizontalContentAlignment = HorizontalAlignment.Stretch,
                 VerticalContentAlignment = VerticalAlignment.Stretch,
                 Background = BrushResource("AppChromeBrush"),
-                BorderBrush = BrushResource("AppHairlineBrush"),
+                BorderBrush = BrushResource("AppTransparentBrush"),
                 UseSystemFocusVisuals = false
             };
             AutomationProperties.SetName(button, CreateMetadataFacetAutomationName(facet));
@@ -1878,32 +1921,83 @@ namespace NextGenEmby.App.Views
             {
                 AudioSummaryBlock.Text = "";
                 SubtitleSummaryBlock.Text = "";
+                PlaybackDecisionChipsPanel.Visibility = Visibility.Collapsed;
                 return;
             }
 
-            var header = new TextBlock
-            {
-                Text = "Versions",
-                FontSize = 22,
-                FontWeight = Windows.UI.Text.FontWeights.SemiBold
-            };
-            VersionsPanel.Children.Add(header);
+            PlaybackDecisionChipsPanel.Visibility = Visibility.Visible;
 
             if (_mediaSources.Count == 0)
             {
                 VersionsPanel.Children.Add(CreateMutedText("No playable versions returned."));
-                AudioSummaryBlock.Text = "Audio: unavailable";
-                SubtitleSummaryBlock.Text = "Subtitles: unavailable";
+                AudioSummaryBlock.Text = "Unavailable";
+                SubtitleSummaryBlock.Text = "Unavailable";
                 return;
             }
 
-            foreach (var source in _mediaSources)
+            var selectedSource = GetSelectedMediaSource();
+            if (selectedSource == null)
             {
-                VersionsPanel.Children.Add(CreateSourceButton(source));
+                VersionsPanel.Children.Add(CreateMutedText("No playable versions returned."));
+                AudioSummaryBlock.Text = "Unavailable";
+                SubtitleSummaryBlock.Text = "Unavailable";
+                return;
             }
 
-            AudioSummaryBlock.Text = "Audio: " + CreateAudioSummary(_mediaSources);
-            SubtitleSummaryBlock.Text = "Subtitles: " + CreateSubtitleSummary(_mediaSources);
+            VersionsPanel.Children.Add(CreateSourceButton(selectedSource, _mediaSources.Count));
+            AudioSummaryBlock.Text = CreateAudioDecisionSummary(selectedSource);
+            SubtitleSummaryBlock.Text = CreateSubtitleDecisionSummary(selectedSource);
+            RenderDetailsFirstReadFacts();
+        }
+
+        private void RenderDetailsFirstReadFacts()
+        {
+            DetailsFactChipsPanel.Children.Clear();
+            DetailsFactChipsPanel.Visibility = Visibility.Collapsed;
+            DetailsCreditsBlock.Text = "";
+            DetailsCreditsBlock.Visibility = Visibility.Collapsed;
+
+            var item = _item;
+            if (item == null)
+            {
+                return;
+            }
+
+            foreach (var label in CreateDetailsFactLabels(item, GetSelectedMediaSource()).Take(5))
+            {
+                DetailsFactChipsPanel.Children.Add(CreateDetailsFactChip(label));
+            }
+
+            DetailsFactChipsPanel.Visibility = DetailsFactChipsPanel.Children.Count == 0
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+
+            var credits = CreateDetailsCreditsSummary(item);
+            if (!string.IsNullOrWhiteSpace(credits))
+            {
+                DetailsCreditsBlock.Text = credits;
+                DetailsCreditsBlock.Visibility = Visibility.Visible;
+            }
+        }
+
+        private Border CreateDetailsFactChip(string label)
+        {
+            return new Border
+            {
+                Background = BrushResource("AppChromeBrush"),
+                CornerRadius = new CornerRadius(6),
+                Padding = new Thickness(12, 6, 12, 6),
+                Child = new TextBlock
+                {
+                    Text = label,
+                    FontSize = 16,
+                    FontWeight = Windows.UI.Text.FontWeights.SemiBold,
+                    Foreground = BrushResource("AppMutedTextBrush"),
+                    TextTrimming = TextTrimming.CharacterEllipsis,
+                    MaxLines = 1,
+                    MaxWidth = 156
+                }
+            };
         }
 
         private void AddEpisodeButton(EmbyMediaItem episode)
@@ -2333,7 +2427,7 @@ namespace NextGenEmby.App.Views
         {
             return new Border
             {
-                BorderBrush = (Brush)Application.Current.Resources["AppHairlineBrush"],
+                BorderBrush = (Brush)Application.Current.Resources["AppTransparentBrush"],
                 BorderThickness = new Thickness(1),
                 CornerRadius = new CornerRadius(6)
             };
@@ -2625,7 +2719,7 @@ namespace NextGenEmby.App.Views
             if (button.Tag is MetadataFacet)
             {
                 button.Background = BrushResource("AppChromeBrush");
-                button.BorderBrush = BrushResource("AppHairlineBrush");
+                button.BorderBrush = BrushResource("AppTransparentBrush");
                 return;
             }
 
@@ -2710,14 +2804,15 @@ namespace NextGenEmby.App.Views
                 return;
             }
 
+            var sourceToSelect = ResolveClickedSourceVersion(source);
             var decision = MediaDetailsVersionSelectionPolicy.Select(
                 GetMediaSourceIds(),
-                source.Id,
-                CreateSourceSummary(source),
+                sourceToSelect.Id,
+                CreateSourceSummary(sourceToSelect),
                 _selectedMediaSourceId);
             _selectedMediaSourceId = decision.SelectedMediaSourceId;
             StatusBlock.Text = decision.StatusMessage;
-            UpdateSourceButtonStates();
+            RenderPlaybackInfo();
         }
 
         private void NavigateToPlayback(string mediaSourceId)
@@ -2833,6 +2928,7 @@ namespace NextGenEmby.App.Views
             VersionsPanel.Children.Clear();
             AudioSummaryBlock.Text = "";
             SubtitleSummaryBlock.Text = "";
+            PlaybackDecisionChipsPanel.Visibility = Visibility.Collapsed;
             OrganizeSummaryBlock.Text = "";
             OrganizeSection.Visibility = Visibility.Collapsed;
             AddToCollectionButton.IsEnabled = false;
@@ -2854,6 +2950,7 @@ namespace NextGenEmby.App.Views
             LogoImage.Visibility = Visibility.Collapsed;
             TitleBlock.Visibility = Visibility.Visible;
             AtmosphereImage.Source = null;
+            ResetDetailsAtmosphereTreatment();
         }
 
         private void LogoImage_OnImageOpened(object sender, RoutedEventArgs e)
@@ -2901,68 +2998,44 @@ namespace NextGenEmby.App.Views
             };
         }
 
-        private Button CreateSourceButton(EmbyMediaSource source)
+        private Button CreateSourceButton(EmbyMediaSource source, int sourceCount)
         {
             var button = new Button
             {
-                Style = (Style)Application.Current.Resources["TvDetailsSourceOptionButtonStyle"],
-                HorizontalAlignment = HorizontalAlignment.Stretch,
+                Style = (Style)Application.Current.Resources["TvDetailsDecisionChipButtonStyle"],
+                MinWidth = 238,
+                MaxWidth = 280,
+                HorizontalAlignment = HorizontalAlignment.Left,
                 HorizontalContentAlignment = HorizontalAlignment.Stretch,
                 Tag = source,
                 UseSystemFocusVisuals = false
             };
 
-            var layout = new Grid
-            {
-                HorizontalAlignment = HorizontalAlignment.Stretch
-            };
-            layout.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-            layout.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-
-            var marker = new Border
-            {
-                Name = "SourceSelectionMarker",
-                Width = 4,
-                Margin = new Thickness(0, 2, 14, 2),
-                Background = (Brush)Application.Current.Resources["AppSourceSelectedBrush"],
-                CornerRadius = new CornerRadius(2),
-                Visibility = Visibility.Collapsed
-            };
-            Grid.SetColumn(marker, 0);
-
             var panel = new StackPanel
             {
-                Spacing = 4
+                Spacing = 2
             };
-            Grid.SetColumn(panel, 1);
 
             panel.Children.Add(new TextBlock
             {
-                Text = CreateSourceSummary(source),
-                FontSize = 18,
+                Text = CreateSourceCountLabel(sourceCount),
+                FontSize = 13,
+                Foreground = (Windows.UI.Xaml.Media.Brush)Application.Current.Resources["AppTextSubtleBrush"],
                 TextTrimming = TextTrimming.CharacterEllipsis,
                 MaxLines = 1,
                 TextWrapping = TextWrapping.NoWrap
             });
 
-            var details = CreateSourceDetails(source);
-            if (!string.IsNullOrWhiteSpace(details))
+            panel.Children.Add(new TextBlock
             {
-                panel.Children.Add(new TextBlock
-                {
-                    Text = details,
-                    FontSize = 14,
-                    Foreground = (Windows.UI.Xaml.Media.Brush)Application.Current.Resources["AppMutedTextBrush"],
-                    TextTrimming = TextTrimming.CharacterEllipsis,
-                    MaxLines = 1,
-                    TextWrapping = TextWrapping.NoWrap
-                });
-            }
+                Text = CreateSourceDecisionSummary(source),
+                FontSize = 16,
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                MaxLines = 1,
+                TextWrapping = TextWrapping.NoWrap
+            });
 
-            layout.Children.Add(marker);
-            layout.Children.Add(panel);
-
-            button.Content = layout;
+            button.Content = panel;
             ApplySourceButtonState(button, source);
             button.Click += SourceVersion_OnClick;
             button.GotFocus += SourceButton_OnGotFocus;
@@ -2987,17 +3060,10 @@ namespace NextGenEmby.App.Views
                 source.Id,
                 _selectedMediaSourceId,
                 StringComparison.Ordinal);
-            button.BorderBrush = (Brush)Application.Current.Resources["AppHairlineBrush"];
+            button.BorderBrush = (Brush)Application.Current.Resources["AppTransparentBrush"];
             button.BorderThickness = new Thickness(1);
             button.Background = (Brush)Application.Current.Resources[
                 isSelected ? "AppChromePressedBrush" : "AppChromeBrush"];
-
-            var marker = GetSourceSelectionMarker(button);
-            if (marker != null)
-            {
-                marker.Background = BrushResource("AppSourceSelectedBrush");
-                marker.Visibility = isSelected ? Visibility.Visible : Visibility.Collapsed;
-            }
 
             var namePrefix = isSelected ? "Selected version, " : "Version, ";
             AutomationProperties.SetName(button, namePrefix + CreateSourceSummary(source));
@@ -3032,27 +3098,39 @@ namespace NextGenEmby.App.Views
             ApplySourceButtonState(button, source);
         }
 
-        private static Border? GetSourceSelectionMarker(Button button)
-        {
-            if (button.Content is Grid layout)
-            {
-                return layout.Children
-                    .OfType<Border>()
-                    .FirstOrDefault(candidate => string.Equals(
-                        candidate.Name,
-                        "SourceSelectionMarker",
-                        StringComparison.Ordinal));
-            }
-
-            return null;
-        }
-
         private string ResolveSelectedPlaybackMediaSourceId()
         {
             _selectedMediaSourceId = MediaDetailsVersionSelectionPolicy.ResolvePlaybackSource(
                 GetMediaSourceIds(),
                 _selectedMediaSourceId);
             return _selectedMediaSourceId;
+        }
+
+        private EmbyMediaSource? GetSelectedMediaSource()
+        {
+            var mediaSourceId = ResolveSelectedPlaybackMediaSourceId();
+            return _mediaSources.FirstOrDefault(source => string.Equals(
+                    source.Id,
+                    mediaSourceId,
+                    StringComparison.Ordinal)) ??
+                _mediaSources.FirstOrDefault();
+        }
+
+        private EmbyMediaSource ResolveClickedSourceVersion(EmbyMediaSource source)
+        {
+            if (_mediaSources.Count <= 1 ||
+                !string.Equals(source.Id, _selectedMediaSourceId, StringComparison.Ordinal))
+            {
+                return source;
+            }
+
+            var selectedIndex = _mediaSources
+                .Select((candidate, index) => new { candidate, index })
+                .FirstOrDefault(entry => string.Equals(
+                    entry.candidate.Id,
+                    source.Id,
+                    StringComparison.Ordinal))?.index ?? 0;
+            return _mediaSources[(selectedIndex + 1) % _mediaSources.Count];
         }
 
         private IReadOnlyList<string> GetMediaSourceIds()
@@ -3117,6 +3195,204 @@ namespace NextGenEmby.App.Views
             return parts.Count == 0 ? "Unknown version" : string.Join(" / ", parts);
         }
 
+        private static string CreateSourceDecisionSummary(EmbyMediaSource source)
+        {
+            var parts = new List<string>();
+            var resolution = CreateSourceResolutionLabel(source);
+            if (!string.IsNullOrWhiteSpace(resolution))
+            {
+                parts.Add(resolution);
+            }
+
+            var hdr = CreateShortHdrLabel(source.HdrProfile);
+            if (!string.IsNullOrWhiteSpace(hdr))
+            {
+                parts.Add(hdr);
+            }
+
+            var video = source.VideoStreams.FirstOrDefault();
+            if (video != null && !string.IsNullOrWhiteSpace(video.Codec))
+            {
+                parts.Add(video.Codec.ToUpperInvariant());
+            }
+            else if (!string.IsNullOrWhiteSpace(source.Container))
+            {
+                parts.Add(source.Container.ToUpperInvariant());
+            }
+
+            if (source.Bitrate > 0)
+            {
+                parts.Add(FormatBitrate(source.Bitrate));
+            }
+
+            return parts.Count == 0 ? "Version" : string.Join(" • ", parts);
+        }
+
+        private static IReadOnlyList<string> CreateDetailsFactLabels(
+            EmbyMediaItem item,
+            EmbyMediaSource? source)
+        {
+            var labels = new List<string>();
+            if (source != null)
+            {
+                AddDistinctFact(labels, CreateSourceResolutionLabel(source));
+                AddDistinctFact(labels, CreateShortHdrLabel(source.HdrProfile));
+
+                var video = source.VideoStreams.FirstOrDefault();
+                if (video != null && !string.IsNullOrWhiteSpace(video.Codec))
+                {
+                    AddDistinctFact(labels, video.Codec.ToUpperInvariant());
+                }
+
+                AddDistinctFact(labels, CreateDetailsAudioFact(source));
+                AddDistinctFact(labels, CreateDetailsSubtitleFact(source));
+            }
+
+            foreach (var genre in item.GenreItems
+                .Select(reference => reference.Name)
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .Take(2))
+            {
+                AddDistinctFact(labels, genre);
+            }
+
+            return labels;
+        }
+
+        private static void AddDistinctFact(List<string> labels, string label)
+        {
+            if (string.IsNullOrWhiteSpace(label))
+            {
+                return;
+            }
+
+            if (labels.Any(existing => string.Equals(existing, label, StringComparison.OrdinalIgnoreCase)))
+            {
+                return;
+            }
+
+            labels.Add(label);
+        }
+
+        private static string CreateDetailsAudioFact(EmbyMediaSource source)
+        {
+            var audio = source.AudioStreams.FirstOrDefault();
+            if (audio == null)
+            {
+                return "";
+            }
+
+            var parts = new List<string>();
+            if (!string.IsNullOrWhiteSpace(audio.Codec))
+            {
+                parts.Add(audio.Codec.ToUpperInvariant());
+            }
+
+            if (!string.IsNullOrWhiteSpace(audio.ChannelLayout))
+            {
+                parts.Add(CreateDetailsChannelLayoutFact(audio.ChannelLayout));
+            }
+
+            return parts.Count == 0 ? CreateCompactDisplayFact(audio.DisplayTitle) : string.Join(" ", parts);
+        }
+
+        private static string CreateDetailsChannelLayoutFact(string channelLayout)
+        {
+            if (string.IsNullOrWhiteSpace(channelLayout))
+            {
+                return "";
+            }
+
+            var parenIndex = channelLayout.IndexOf('(');
+            return parenIndex > 0
+                ? channelLayout.Substring(0, parenIndex)
+                : channelLayout;
+        }
+
+        private static string CreateDetailsSubtitleFact(EmbyMediaSource source)
+        {
+            var subtitle = source.SubtitleStreams.FirstOrDefault();
+            if (subtitle == null)
+            {
+                return "";
+            }
+
+            if (!string.IsNullOrWhiteSpace(subtitle.Language))
+            {
+                return subtitle.Language.ToUpperInvariant() + " subtitles";
+            }
+
+            return string.IsNullOrWhiteSpace(subtitle.DisplayTitle)
+                ? "Subtitles"
+                : CreateCompactDisplayFact(subtitle.DisplayTitle);
+        }
+
+        private static string CreateCompactDisplayFact(string displayTitle)
+        {
+            if (string.IsNullOrWhiteSpace(displayTitle))
+            {
+                return "";
+            }
+
+            var words = displayTitle
+                .Split(new[] { ' ', '/', ',', '-', '(', ')' }, StringSplitOptions.RemoveEmptyEntries)
+                .Where(word => word.Length <= 8)
+                .Take(3)
+                .ToList();
+            return words.Count == 0 ? "" : string.Join(" ", words);
+        }
+
+        private static string CreateSourceResolutionLabel(EmbyMediaSource source)
+        {
+            if (source.Width >= 3800 || source.Height >= 2160)
+            {
+                return "4K";
+            }
+
+            if (source.Height > 0)
+            {
+                return source.Height + "p";
+            }
+
+            if (source.Width > 0)
+            {
+                return source.Width + "w";
+            }
+
+            return "";
+        }
+
+        private static string CreateShortHdrLabel(HdrPlaybackProfile profile)
+        {
+            if (profile == null || profile.Kind == HdrPlaybackKind.Sdr)
+            {
+                return "SDR";
+            }
+
+            switch (profile.Kind)
+            {
+                case HdrPlaybackKind.Hdr10:
+                    return "HDR10";
+                case HdrPlaybackKind.Hlg:
+                    return "HLG";
+                case HdrPlaybackKind.DolbyVisionWithHdr10Fallback:
+                    return "DV/HDR10";
+                case HdrPlaybackKind.DolbyVisionWithHlgFallback:
+                    return "DV/HLG";
+                case HdrPlaybackKind.DolbyVisionUnsupported:
+                    return "DV unsupported";
+                case HdrPlaybackKind.UnknownHdr:
+                    return "HDR";
+                default:
+                    return "HDR";
+            }
+        }
+
+        private static string CreateSourceCountLabel(int sourceCount)
+        {
+            return sourceCount <= 1 ? "Source" : "Source · " + sourceCount + " versions";
+        }
+
         private static string CreateSourceDetails(EmbyMediaSource source)
         {
             var details = new List<string>();
@@ -3172,6 +3448,22 @@ namespace NextGenEmby.App.Views
             return subtitles.Count == 0 ? "None listed" : string.Join(", ", subtitles);
         }
 
+        private static string CreateAudioDecisionSummary(EmbyMediaSource source)
+        {
+            var audio = source.AudioStreams
+                .Select(CreateStreamSummary)
+                .FirstOrDefault(summary => !string.IsNullOrWhiteSpace(summary));
+            return string.IsNullOrWhiteSpace(audio) ? "None listed" : audio;
+        }
+
+        private static string CreateSubtitleDecisionSummary(EmbyMediaSource source)
+        {
+            var subtitle = source.SubtitleStreams
+                .Select(CreateStreamSummary)
+                .FirstOrDefault(summary => !string.IsNullOrWhiteSpace(summary));
+            return string.IsNullOrWhiteSpace(subtitle) ? "None listed" : subtitle;
+        }
+
         private static string CreateStreamSummary(EmbyMediaStream stream)
         {
             if (!string.IsNullOrWhiteSpace(stream.DisplayTitle))
@@ -3217,6 +3509,44 @@ namespace NextGenEmby.App.Views
             }
 
             return title;
+        }
+
+        private static string CreateDetailsCreditsSummary(EmbyMediaItem item)
+        {
+            var parts = new List<string>();
+            var director = CreateDetailsDirectorSummary(item);
+            if (!string.IsNullOrWhiteSpace(director))
+            {
+                parts.Add("Director: " + director);
+            }
+
+            var genres = CreateDetailsGenreSummary(item);
+            if (!string.IsNullOrWhiteSpace(genres))
+            {
+                parts.Add("Genre: " + genres);
+            }
+
+            return string.Join(" / ", parts);
+        }
+
+        private static string CreateDetailsDirectorSummary(EmbyMediaItem item)
+        {
+            return item.People
+                .Where(person =>
+                    string.Equals(person.Type, "Director", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(person.Role, "Director", StringComparison.OrdinalIgnoreCase))
+                .Select(person => person.Name)
+                .FirstOrDefault(name => !string.IsNullOrWhiteSpace(name)) ?? "";
+        }
+
+        private static string CreateDetailsGenreSummary(EmbyMediaItem item)
+        {
+            var genres = item.GenreItems
+                .Select(reference => reference.Name)
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .Take(3)
+                .ToList();
+            return string.Join(", ", genres);
         }
 
         private static string CreatePersonRole(EmbyPerson person)

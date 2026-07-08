@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 using NextGenEmby.Core.Diagnostics;
 using NextGenEmby.Core.Emby;
@@ -775,7 +777,7 @@ namespace NextGenEmby.App
 
                 await WriteDevelopmentCommandResultAsync("running", command.Route);
                 await PlaybackDiagnosticsLog.WriteLineAsync("DevelopmentCommand running route=" + command.Route);
-                RunDevelopmentCommand(command);
+                await RunDevelopmentCommandAsync(command);
                 await file.DeleteAsync(StorageDeleteOption.PermanentDelete);
                 await PlaybackDiagnosticsLog.WriteLineAsync("DevelopmentCommand completed route=" + command.Route);
                 await WriteDevelopmentCommandResultAsync("completed", command.Route);
@@ -802,7 +804,7 @@ namespace NextGenEmby.App
             }
         }
 
-        private void RunDevelopmentCommand(DevelopmentNavigationCommand command)
+        private async Task RunDevelopmentCommandAsync(DevelopmentNavigationCommand command)
         {
             switch (command.Route)
             {
@@ -968,6 +970,10 @@ namespace NextGenEmby.App
                             useDevelopmentFixture: true));
                     return;
 
+                case "details-real-sample":
+                    await NavigateToRealDetailsSampleAsync();
+                    return;
+
                 case "details-no-art-fixture":
                     NavigateTo(
                         typeof(MediaDetailsPage),
@@ -976,6 +982,16 @@ namespace NextGenEmby.App
                             "No Artwork Signal",
                             useDevelopmentFixture: true,
                             developmentFixtureKind: MediaDetailsDevelopmentFixtureKind.NoArtwork));
+                    return;
+
+                case "details-primary-only-fixture":
+                    NavigateTo(
+                        typeof(MediaDetailsPage),
+                        new MediaDetailsNavigationRequest(
+                            "fixture-detail-primary-only",
+                            "Poster Only Signal",
+                            useDevelopmentFixture: true,
+                            developmentFixtureKind: MediaDetailsDevelopmentFixtureKind.PrimaryOnlyArtwork));
                     return;
 
                 case "photo":
@@ -1003,6 +1019,46 @@ namespace NextGenEmby.App
                             forceSdrOutput: command.ForceSdrOutput));
                     return;
             }
+        }
+
+        private async Task NavigateToRealDetailsSampleAsync()
+        {
+            var session = await _sessionStore.LoadAsync();
+            if (session == null)
+            {
+                throw new InvalidOperationException("No saved session is available for details-real-sample.");
+            }
+
+            using (var http = new HttpClient())
+            {
+                var client = EmbyClientFactory.Create(http, session);
+                var items = await client.GetItemsAsync(session, new EmbyItemsQuery
+                {
+                    IncludeItemTypes = "Movie",
+                    Limit = 24,
+                    Recursive = true,
+                    SortBy = "DateCreated",
+                    SortOrder = "Descending"
+                });
+                var sample = SelectRealArtworkDetailsSample(items);
+                if (sample == null)
+                {
+                    throw new InvalidOperationException("No real movie item with supported artwork is available for details-real-sample.");
+                }
+
+                NavigateTo(typeof(MediaDetailsPage), new MediaDetailsNavigationRequest(sample.Id, sample.Name));
+            }
+        }
+
+        private static EmbyMediaItem? SelectRealArtworkDetailsSample(IReadOnlyList<EmbyMediaItem> items)
+        {
+            return (items ?? Array.Empty<EmbyMediaItem>())
+                .FirstOrDefault(HasRealDetailsArtwork);
+        }
+
+        private static bool HasRealDetailsArtwork(EmbyMediaItem item)
+        {
+            return EmbyArtworkPolicy.SelectHeroArtwork(item, 1920) != null;
         }
 
         private static LibraryNavigationRequest CreateMoviesFixtureNavigationRequest()

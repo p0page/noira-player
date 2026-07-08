@@ -12,39 +12,25 @@ namespace NextGenEmby.Core.Diagnostics
 
         public static DevelopmentDetailsFixtureSnapshot Create()
         {
-            return CreateCore(includeItemArtwork: true);
+            return CreateCore(ItemArtworkMode.Full);
         }
 
         public static DevelopmentDetailsFixtureSnapshot CreateWithoutArtwork()
         {
-            return CreateCore(includeItemArtwork: false);
+            return CreateCore(ItemArtworkMode.None);
         }
 
-        private static DevelopmentDetailsFixtureSnapshot CreateCore(bool includeItemArtwork)
+        public static DevelopmentDetailsFixtureSnapshot CreateWithPrimaryOnlyArtwork()
+        {
+            return CreateCore(ItemArtworkMode.PrimaryOnly);
+        }
+
+        private static DevelopmentDetailsFixtureSnapshot CreateCore(ItemArtworkMode artworkMode)
         {
             var artworkUris = new Dictionary<string, string>(StringComparer.Ordinal);
 
-            var item = includeItemArtwork
-                ? MediaItem(
-                    artworkUris,
-                    "fixture-detail-aurora",
-                    "Aurora Protocol",
-                    "Movie",
-                    2026,
-                    118,
-                    "qa-poster-01.png",
-                    "qa-wide-01.png",
-                    resumeMinutes: 24)
-                : MediaItemWithoutArtwork(
-                    "fixture-detail-no-art",
-                    "No Artwork Signal",
-                    "Movie",
-                    2024,
-                    103,
-                    resumeMinutes: 0);
-            item.Overview = includeItemArtwork
-                ? "A signal analyst follows a rogue broadcast through abandoned orbital relays and uncovers a quiet conspiracy hidden inside a forgotten media archive."
-                : "A library item intentionally missing poster, thumb, and backdrop artwork, used to verify that the Details surface falls back to a quiet matte atmosphere without fake placeholder art.";
+            var item = CreateMainItem(artworkMode, artworkUris);
+            item.Overview = CreateMainItemOverview(artworkMode);
             item.People = new[]
             {
                 Person(artworkUris, "fixture-person-maya", "Maya Chen", "Lena Ortiz", "Actor", "qa-poster-09.png"),
@@ -127,6 +113,68 @@ namespace NextGenEmby.Core.Diagnostics
                 artworkUris);
         }
 
+        private enum ItemArtworkMode
+        {
+            Full,
+            None,
+            PrimaryOnly
+        }
+
+        private static EmbyMediaItem CreateMainItem(
+            ItemArtworkMode artworkMode,
+            IDictionary<string, string> artworkUris)
+        {
+            switch (artworkMode)
+            {
+                case ItemArtworkMode.None:
+                    return MediaItemWithoutArtwork(
+                        "fixture-detail-no-art",
+                        "No Artwork Signal",
+                        "Movie",
+                        2024,
+                        103,
+                        resumeMinutes: 0);
+
+                case ItemArtworkMode.PrimaryOnly:
+                    return MediaItemWithPrimaryOnlyArtwork(
+                        artworkUris,
+                        "fixture-detail-primary-only",
+                        "Poster Only Signal",
+                        "Movie",
+                        2025,
+                        109,
+                        "qa-poster-13.png",
+                        resumeMinutes: 19);
+
+                default:
+                    return MediaItem(
+                        artworkUris,
+                        "fixture-detail-aurora",
+                        "Aurora Protocol",
+                        "Movie",
+                        2026,
+                        118,
+                        "qa-poster-01.png",
+                        "qa-wide-01.png",
+                        resumeMinutes: 24);
+            }
+        }
+
+        private static string CreateMainItemOverview(ItemArtworkMode artworkMode)
+        {
+            switch (artworkMode)
+            {
+                case ItemArtworkMode.None:
+                    return "A library item intentionally missing poster, thumb, and backdrop artwork, used to verify that the Details surface falls back to a quiet matte atmosphere without fake placeholder art.";
+
+                case ItemArtworkMode.PrimaryOnly:
+                    return "A library item intentionally exposing only a vertical Primary image, used to verify that Details treats poster-only media as atmosphere instead of a separate poster viewer.";
+
+                default:
+                    return "A signal analyst follows a rogue broadcast through abandoned orbital relays and uncovers a quiet conspiracy hidden inside a forgotten media archive.";
+            }
+        }
+
         public static string ArtworkKey(string itemId, string imageType)
         {
             return (itemId ?? "") + "|" + (imageType ?? "");
@@ -185,6 +233,37 @@ namespace NextGenEmby.Core.Diagnostics
                 Type = type,
                 ProductionYear = year,
                 RunTimeTicks = runtimeMinutes * MinuteTicks,
+                UserData = new EmbyUserData
+                {
+                    PlaybackPositionTicks = Math.Max(0, resumeMinutes) * MinuteTicks,
+                    PlayedPercentage = resumeMinutes <= 0 || runtimeMinutes <= 0
+                        ? null
+                        : (double)resumeMinutes / runtimeMinutes * 100d
+                }
+            };
+        }
+
+        private static EmbyMediaItem MediaItemWithPrimaryOnlyArtwork(
+            IDictionary<string, string> artworkUris,
+            string id,
+            string name,
+            string type,
+            int year,
+            int runtimeMinutes,
+            string posterAsset,
+            int resumeMinutes = 0)
+        {
+            AddArtwork(artworkUris, id, "Primary", posterAsset);
+
+            return new EmbyMediaItem
+            {
+                Id = id,
+                Name = name,
+                Type = type,
+                ProductionYear = year,
+                RunTimeTicks = runtimeMinutes * MinuteTicks,
+                PrimaryImageTag = ArtworkTag,
+                PrimaryImageItemId = id,
                 UserData = new EmbyUserData
                 {
                     PlaybackPositionTicks = Math.Max(0, resumeMinutes) * MinuteTicks,

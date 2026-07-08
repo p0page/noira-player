@@ -1208,9 +1208,7 @@ namespace NextGenEmby.App.Views
             button.Background = isFocused
                 ? BrushResource("AppFocusedCardFillBrush")
                 : BrushResource("AppChromeBrush");
-            button.BorderBrush = isFocused
-                ? BrushResource("AppTransparentBrush")
-                : BrushResource("AppHairlineBrush");
+            button.BorderBrush = BrushResource("AppTransparentBrush");
         }
 
         private void OptionSheetOption_OnClick(object sender, RoutedEventArgs e)

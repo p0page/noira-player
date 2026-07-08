@@ -35,9 +35,10 @@
                     HorizontalAlignment="Right"
                     VerticalAlignment="Center"
                     Click="Refresh_OnClick"
+                    Opacity="0.72"
                     Style="{StaticResource IconButtonStyle}"
                     ToolTipService.ToolTip="Refresh"
-                    UseSystemFocusVisuals="True">
+                    UseSystemFocusVisuals="False">
                     <SymbolIcon Symbol="Refresh" />
                 </Button>
             </Grid>

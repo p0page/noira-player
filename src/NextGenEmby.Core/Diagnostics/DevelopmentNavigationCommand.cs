@@ -91,7 +91,9 @@ namespace NextGenEmby.Core.Diagnostics
                 case "search-fixture":
                 case "search-error":
                 case "details-fixture":
+                case "details-real-sample":
                 case "details-no-art-fixture":
+                case "details-primary-only-fixture":
                 case "playback-options-fixture":
                 case "settings":
                 case "livetv":

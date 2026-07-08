@@ -6,12 +6,14 @@ This document summarizes the design output on the `codex/xbox-emby-design-system
 
 1. `docs/DESIGN.md` is the source of truth for tokens, visual rules, page derivation, artwork policy, focus behavior, and QA.
 2. `docs/design-research/2026-07-07-tv-streaming-and-personal-media-clients.md` explains why the system uses a source-aware TV dashboard rather than a sparse streaming-service hero layout.
-3. `docs/design-previews/README.md` explains which preview directions are current and which are rejected historical artifacts.
-4. `docs/design-previews/playback-osd-compact.html` is the current playback OSD HTML preview. It is a visual target for density and spacing, not production code.
-5. `docs/design-previews/A3-ideal-*.png` files are native render targets for final mood and material. They are useful for visual calibration, but `DESIGN.md` is still authoritative when a generated image overshoots green, borders, or glass.
-6. `docs/qa/design-conformance-checklist.md` batches visual QA against the design system before implementation work is accepted.
+3. `docs/a3-visual-convergence-rules.md` defines the current implementation phase: visual convergence with the A3 targets first, broader controller-focus architecture later.
+4. `docs/design-previews/README.md` lists the retained preview targets and explains why superseded PNGs were removed.
+5. `docs/design-previews/playback-osd-compact.html` is the current playback OSD HTML preview. It is a visual target for density and spacing, not production code.
+6. `docs/design-previews/A3-ideal-*.png` files are native render targets for final mood and material. They are useful for visual calibration, but `DESIGN.md` is still authoritative when a generated image overshoots green, borders, or glass.
+7. `docs/qa/a3-visual-convergence-checklist.md` is the screenshot-first visual acceptance gate for the current A3 phase.
+8. `docs/qa/design-conformance-checklist.md` batches broader visual QA against the design system before implementation work is accepted.
 
-Historical PNG previews under `docs/design-previews/` remain useful for comparison, but the A2 line is superseded by the A3 Artwork-Backed Matte Fluent rules in `DESIGN.md`.
+Superseded PNG previews were removed from `docs/design-previews/` so development handoff stays anchored to the selected A3 Artwork-Backed Matte Fluent direction. Recover historical options from git history only if the design system is intentionally reopened.
 
 ## Core Page Coverage
 
@@ -56,6 +58,8 @@ Secondary pages should compose existing rules instead of creating local visual e
 
 ## QA Before Development Acceptance
 
+- During the A3 Visual Convergence phase, run `docs/qa/a3-visual-convergence-checklist.md` before the broader conformance checklist.
+- Do not accept a page based on keyboard/UIA success if screenshots still read as desktop UWP instead of the A3 target mood.
 - Run the matching batch in `docs/qa/design-conformance-checklist.md` and record findings before fixing individual issues.
 - The screen reads as a TV media client, not a desktop dashboard or a marketing landing page.
 - At least 90 percent of persistent chrome is neutral graphite.

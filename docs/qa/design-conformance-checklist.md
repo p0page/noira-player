@@ -8,6 +8,8 @@ This checklist turns `docs/DESIGN.md` and the A3 render targets into an executab
 
 - `docs/DESIGN.md`: authoritative visual rules, token rules, artwork feasibility, and QA gates.
 - `docs/design-handoff-2026-07-07.md`: development read order and current implementation priorities.
+- `docs/a3-visual-convergence-rules.md`: current A3 phase scope, visual-first boundaries, and focus-governance deferrals.
+- `docs/qa/a3-visual-convergence-checklist.md`: screenshot-first visual acceptance gate for the A3 convergence phase.
 - `docs/design-previews/A3-ideal-*.png`: mood and material calibration only. If a render conflicts with `DESIGN.md`, `DESIGN.md` wins.
 - `docs/qa/emby-tv-client-operation-matrix.md`: full functional operation coverage.
 - `docs/qa/emby-tv-client-keyboard-checklist.md`: keyboard/controller execution protocol and run log.
@@ -15,6 +17,7 @@ This checklist turns `docs/DESIGN.md` and the A3 render targets into an executab
 ## Execution Rules
 
 - Run this checklist in batches. During a batch, record every finding before making fixes.
+- During the A3 Visual Convergence phase, run `docs/qa/a3-visual-convergence-checklist.md` first and treat this file as the broader design-system regression pass.
 - Do not repair one checklist item at a time while the batch is still running.
 - After a batch, group findings by shared cause, make a unified fix plan, implement that batch, then rerun the same batch.
 - Use keyboard-only app input: arrows, `Enter`/`Space`, `Escape`, `M`, and any documented surrogate keys. When focus is inside editable text, use `Ctrl+M` as the local keyboard surrogate for controller Menu so the test does not type a literal `m` into the field.
