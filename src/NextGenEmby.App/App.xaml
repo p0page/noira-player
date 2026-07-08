@@ -10,45 +10,56 @@
                 <muxc:XamlControlsResources />
             </ResourceDictionary.MergedDictionaries>
 
-            <Color x:Key="AppBackgroundColor">#050607</Color>
-            <Color x:Key="AppCanvasAltColor">#090C0F</Color>
-            <Color x:Key="AppSurfaceColor">#101418</Color>
-            <Color x:Key="AppRaisedSurfaceColor">#1A2027</Color>
-            <Color x:Key="AppChromeColor">#D9101418</Color>
-            <Color x:Key="AppShellRailColor">#E603060A</Color>
-            <Color x:Key="AppImmersiveScrimColor">#66050607</Color>
-            <Color x:Key="AppImmersiveControlColor">#D9101418</Color>
-            <Color x:Key="AppChromeHoverColor">#E61A2027</Color>
-            <Color x:Key="AppChromePressedColor">#F0212932</Color>
-            <Color x:Key="AppAccentColor">#3BD5FF</Color>
-            <Color x:Key="AppFocusSecondaryColor">#F6F1E8</Color>
-            <Color x:Key="AppActionColor">#61D47C</Color>
-            <Color x:Key="AppMutedTextColor">#B9C0C8</Color>
-            <Color x:Key="AppTextColor">#F6F1E8</Color>
-            <Color x:Key="AppTextSubtleColor">#78838F</Color>
-            <Color x:Key="AppHairlineColor">#303842</Color>
-            <Color x:Key="AppWarmColor">#E0B86A</Color>
-            <Color x:Key="AppTertiaryColor">#7FA7C7</Color>
-            <Color x:Key="AppDangerColor">#FF6B6B</Color>
-            <Color x:Key="AppCardScrimColor">#D9050607</Color>
-            <Color x:Key="AppOnActionColor">#041007</Color>
-            <Color x:Key="AppOnSecondaryColor">#120B02</Color>
-            <Color x:Key="AppHeroBackdropWashColor">#D9050607</Color>
-            <Color x:Key="AppHeroGradientStartColor">#F2050607</Color>
-            <Color x:Key="AppHeroGradientMidColor">#D9050607</Color>
-            <Color x:Key="AppHeroGradientEndColor">#66050607</Color>
-            <Color x:Key="AppArtworkDimColor">#22000000</Color>
-            <Color x:Key="AppHeroPosterDimColor">#18000000</Color>
-            <Color x:Key="AppDetailsBackdropWashColor">#D9101418</Color>
-            <Color x:Key="AppModalScrimColor">#CC050607</Color>
-            <Color x:Key="AppPlaybackCanvasColor">#050607</Color>
-            <Color x:Key="AppPlaybackOverlayColor">#D9101418</Color>
-            <Color x:Key="AppPlaybackDrawerColor">#F0101418</Color>
+            <Color x:Key="AppBackgroundColor">#05070A</Color>
+            <Color x:Key="AppCanvasAltColor">#080D12</Color>
+            <Color x:Key="AppSurfaceColor">#10161C</Color>
+            <Color x:Key="AppRaisedSurfaceColor">#202832</Color>
+            <Color x:Key="AppChromeColor">#D910161C</Color>
+            <Color x:Key="AppShellRailColor">#E6080D12</Color>
+            <Color x:Key="AppImmersiveScrimColor">#6605070A</Color>
+            <Color x:Key="AppImmersiveControlColor">#D910161C</Color>
+            <Color x:Key="AppChromeHoverColor">#E6202832</Color>
+            <Color x:Key="AppChromePressedColor">#F02B3540</Color>
+            <Color x:Key="AppGuideFocusFillColor">#33202832</Color>
+            <Color x:Key="AppAccentColor">#EEF3F6</Color>
+            <Color x:Key="AppFocusSecondaryColor">#8068727A</Color>
+            <Color x:Key="AppFocusedCardFillColor">#4D68727A</Color>
+            <Color x:Key="AppActionColor">#252D35</Color>
+            <Color x:Key="AppMutedTextColor">#A9B3BA</Color>
+            <Color x:Key="AppTextColor">#EEF3F6</Color>
+            <Color x:Key="AppTextSubtleColor">#73818C</Color>
+            <Color x:Key="AppHairlineColor">#2E3944</Color>
+            <Color x:Key="AppWarmColor">#5D8F68</Color>
+            <Color x:Key="AppTertiaryColor">#84909A</Color>
+            <Color x:Key="AppSourceSelectedColor">#84909A</Color>
+            <Color x:Key="AppDangerColor">#E05F5F</Color>
+            <Color x:Key="AppDangerFocusedColor">#F07676</Color>
+            <Color x:Key="AppCardScrimColor">#D905070A</Color>
+            <Color x:Key="AppUtilityPanelColor">#D910161C</Color>
+            <Color x:Key="AppUtilitySecondaryPanelColor">#9910161C</Color>
+            <Color x:Key="AppOnActionColor">#EEF3F6</Color>
+            <Color x:Key="AppOnSecondaryColor">#031006</Color>
+            <Color x:Key="AppHeroBackdropWashColor">#D905070A</Color>
+            <Color x:Key="AppHeroGradientStartColor">#F205070A</Color>
+            <Color x:Key="AppHeroGradientMidColor">#D905070A</Color>
+            <Color x:Key="AppHeroGradientEndColor">#6605070A</Color>
+            <Color x:Key="AppLibraryArtworkWashColor">#A6080D12</Color>
+            <Color x:Key="AppSectionArtworkWashColor">#9C080D12</Color>
+            <Color x:Key="AppArtworkDimColor">#26000000</Color>
+            <Color x:Key="AppHeroPosterDimColor">#1A000000</Color>
+            <Color x:Key="AppDetailsBackdropWashColor">#D910161C</Color>
+            <Color x:Key="AppDetailsDecisionTileColor">#B810161C</Color>
+            <Color x:Key="AppDetailsDecisionTileSelectedColor">#B8202832</Color>
+            <Color x:Key="AppDetailsDecisionTileFocusedColor">#D8202832</Color>
+            <Color x:Key="AppModalScrimColor">#CC05070A</Color>
+            <Color x:Key="AppPlaybackCanvasColor">#05070A</Color>
+            <Color x:Key="AppPlaybackOverlayColor">#D910161C</Color>
+            <Color x:Key="AppPlaybackDrawerColor">#F010161C</Color>
             <Color x:Key="AppTransparentColor">#00000000</Color>
-            <Color x:Key="ButtonBackgroundDisabledColor">#4D101418</Color>
-            <Color x:Key="ButtonForegroundDisabledColor">#7AB9C0C8</Color>
-            <Color x:Key="ButtonBorderPointerOverColor">#4A5968</Color>
-            <Color x:Key="ButtonBorderDisabledColor">#33303842</Color>
+            <Color x:Key="ButtonBackgroundDisabledColor">#4D10161C</Color>
+            <Color x:Key="ButtonForegroundDisabledColor">#7AA9B3BA</Color>
+            <Color x:Key="ButtonBorderPointerOverColor">#516170</Color>
+            <Color x:Key="ButtonBorderDisabledColor">#332E3944</Color>
             <SolidColorBrush x:Key="AppBackgroundBrush" Color="{StaticResource AppBackgroundColor}" />
             <SolidColorBrush x:Key="AppCanvasAltBrush" Color="{StaticResource AppCanvasAltColor}" />
             <SolidColorBrush x:Key="AppSurfaceBrush" Color="{StaticResource AppSurfaceColor}" />
@@ -59,7 +70,10 @@
             <SolidColorBrush x:Key="AppImmersiveControlBrush" Color="{StaticResource AppImmersiveControlColor}" />
             <SolidColorBrush x:Key="AppChromeHoverBrush" Color="{StaticResource AppChromeHoverColor}" />
             <SolidColorBrush x:Key="AppChromePressedBrush" Color="{StaticResource AppChromePressedColor}" />
+            <SolidColorBrush x:Key="AppGuideFocusFillBrush" Color="{StaticResource AppGuideFocusFillColor}" />
             <SolidColorBrush x:Key="AppAccentBrush" Color="{StaticResource AppAccentColor}" />
+            <SolidColorBrush x:Key="AppFocusedCardFillBrush" Color="{StaticResource AppFocusedCardFillColor}" />
+            <SolidColorBrush x:Key="TvPosterSelectedBackplateBrush" Color="{StaticResource AppFocusedCardFillColor}" />
             <SolidColorBrush x:Key="AppActionBrush" Color="{StaticResource AppActionColor}" />
             <SolidColorBrush x:Key="AppMutedTextBrush" Color="{StaticResource AppMutedTextColor}" />
             <SolidColorBrush x:Key="AppTextBrush" Color="{StaticResource AppTextColor}" />
@@ -67,14 +81,23 @@
             <SolidColorBrush x:Key="AppHairlineBrush" Color="{StaticResource AppHairlineColor}" />
             <SolidColorBrush x:Key="AppWarmBrush" Color="{StaticResource AppWarmColor}" />
             <SolidColorBrush x:Key="AppTertiaryBrush" Color="{StaticResource AppTertiaryColor}" />
+            <SolidColorBrush x:Key="AppSourceSelectedBrush" Color="{StaticResource AppSourceSelectedColor}" />
             <SolidColorBrush x:Key="AppDangerBrush" Color="{StaticResource AppDangerColor}" />
+            <SolidColorBrush x:Key="AppDangerFocusedBrush" Color="{StaticResource AppDangerFocusedColor}" />
             <SolidColorBrush x:Key="AppCardScrimBrush" Color="{StaticResource AppCardScrimColor}" />
+            <SolidColorBrush x:Key="AppUtilityPanelBrush" Color="{StaticResource AppUtilityPanelColor}" />
+            <SolidColorBrush x:Key="AppUtilitySecondaryPanelBrush" Color="{StaticResource AppUtilitySecondaryPanelColor}" />
             <SolidColorBrush x:Key="AppOnActionBrush" Color="{StaticResource AppOnActionColor}" />
             <SolidColorBrush x:Key="AppOnSecondaryBrush" Color="{StaticResource AppOnSecondaryColor}" />
             <SolidColorBrush x:Key="AppHeroBackdropWashBrush" Color="{StaticResource AppHeroBackdropWashColor}" />
+            <SolidColorBrush x:Key="AppLibraryArtworkWashBrush" Color="{StaticResource AppLibraryArtworkWashColor}" />
+            <SolidColorBrush x:Key="AppSectionArtworkWashBrush" Color="{StaticResource AppSectionArtworkWashColor}" />
             <SolidColorBrush x:Key="AppArtworkDimBrush" Color="{StaticResource AppArtworkDimColor}" />
             <SolidColorBrush x:Key="AppHeroPosterDimBrush" Color="{StaticResource AppHeroPosterDimColor}" />
             <SolidColorBrush x:Key="AppDetailsBackdropWashBrush" Color="{StaticResource AppDetailsBackdropWashColor}" />
+            <SolidColorBrush x:Key="AppDetailsDecisionTileBrush" Color="{StaticResource AppDetailsDecisionTileColor}" />
+            <SolidColorBrush x:Key="AppDetailsDecisionTileSelectedBrush" Color="{StaticResource AppDetailsDecisionTileSelectedColor}" />
+            <SolidColorBrush x:Key="AppDetailsDecisionTileFocusedBrush" Color="{StaticResource AppDetailsDecisionTileFocusedColor}" />
             <SolidColorBrush x:Key="AppModalScrimBrush" Color="{StaticResource AppModalScrimColor}" />
             <SolidColorBrush x:Key="AppPlaybackCanvasBrush" Color="{StaticResource AppPlaybackCanvasColor}" />
             <SolidColorBrush x:Key="AppPlaybackOverlayBrush" Color="{StaticResource AppPlaybackOverlayColor}" />
@@ -82,6 +105,18 @@
             <SolidColorBrush x:Key="AppTransparentBrush" Color="{StaticResource AppTransparentColor}" />
             <SolidColorBrush x:Key="SystemControlFocusVisualPrimaryBrush" Color="{StaticResource AppAccentColor}" />
             <SolidColorBrush x:Key="SystemControlFocusVisualSecondaryBrush" Color="{StaticResource AppFocusSecondaryColor}" />
+            <SolidColorBrush x:Key="TextControlBackground" Color="{StaticResource AppChromeColor}" />
+            <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="{StaticResource AppChromeHoverColor}" />
+            <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="{StaticResource AppChromeHoverColor}" />
+            <SolidColorBrush x:Key="TextControlForeground" Color="{StaticResource AppTextColor}" />
+            <SolidColorBrush x:Key="TextControlForegroundFocused" Color="{StaticResource AppTextColor}" />
+            <SolidColorBrush x:Key="TextControlHeaderForeground" Color="{StaticResource AppMutedTextColor}" />
+            <SolidColorBrush x:Key="TextControlHeaderForegroundFocused" Color="{StaticResource AppTextColor}" />
+            <SolidColorBrush x:Key="TextControlBorderBrush" Color="{StaticResource AppTransparentColor}" />
+            <SolidColorBrush x:Key="TextControlBorderBrushFocused" Color="{StaticResource AppFocusSecondaryColor}" />
+            <SolidColorBrush x:Key="TextControlBorderBrushPointerOver" Color="{StaticResource AppFocusSecondaryColor}" />
+            <SolidColorBrush x:Key="TextControlPlaceholderForeground" Color="{StaticResource AppTextSubtleColor}" />
+            <SolidColorBrush x:Key="TextControlPlaceholderForegroundFocused" Color="{StaticResource AppMutedTextColor}" />
             <SolidColorBrush x:Key="ButtonBackground" Color="{StaticResource AppChromeColor}" />
             <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="{StaticResource AppChromeHoverColor}" />
             <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="{StaticResource AppChromePressedColor}" />
@@ -100,20 +135,110 @@
             <Thickness x:Key="TvPanelPadding">22</Thickness>
             <Thickness x:Key="TvPosterGridItemMargin">0,0,14,14</Thickness>
             <Thickness x:Key="TvPosterCardScrimPadding">14,12</Thickness>
+            <Thickness x:Key="TvPosterSelectedBackplatePadding">8</Thickness>
             <CornerRadius x:Key="TvPosterCardCornerRadius">6</CornerRadius>
             <x:Double x:Key="TvGuideCollapsedWidth">72</x:Double>
             <x:Double x:Key="TvGuideExpandedWidth">248</x:Double>
             <x:Double x:Key="TvSettingsContentMaxWidth">980</x:Double>
             <x:Double x:Key="TvListArtworkSize">76</x:Double>
             <x:Double x:Key="TvCompactArtworkSize">64</x:Double>
-            <x:Double x:Key="TvPosterCardWidth">168</x:Double>
-            <x:Double x:Key="TvPosterCardHeight">250</x:Double>
+            <x:Double x:Key="TvPosterCardWidth">184</x:Double>
+            <x:Double x:Key="TvPosterCardHeight">326</x:Double>
+            <x:Double x:Key="TvPosterArtworkWidth">168</x:Double>
+            <x:Double x:Key="TvPosterArtworkHeight">252</x:Double>
+            <x:Double x:Key="TvPosterMetadataHeight">52</x:Double>
+            <x:Double x:Key="TvPosterFocusedItemScale">1.025</x:Double>
+            <x:Double x:Key="TvPhotoCardWidth">322</x:Double>
+            <x:Double x:Key="TvPhotoCardHeight">238</x:Double>
+            <x:Double x:Key="TvPhotoArtworkWidth">306</x:Double>
+            <x:Double x:Key="TvPhotoArtworkHeight">174</x:Double>
+            <x:Double x:Key="TvPhotoMetadataHeight">42</x:Double>
+            <x:Double x:Key="TvHomeHeaderChromeOpacity">0.56</x:Double>
+            <x:Double x:Key="TvHomeSectionSpacing">22</x:Double>
+            <x:Double x:Key="TvHomeRailHeaderSpacing">18</x:Double>
+            <x:Double x:Key="TvHomeRailCardSpacing">18</x:Double>
+            <x:Double x:Key="TvHomeRowSpacing">22</x:Double>
+            <x:Double x:Key="TvHomeRowHeaderSpacing">12</x:Double>
+            <x:Double x:Key="TvHomeRowCardSpacing">14</x:Double>
+            <x:Double x:Key="TvHomeHeroHeight">196</x:Double>
+            <x:Double x:Key="TvHomeHeroColumnSpacing">30</x:Double>
+            <x:Double x:Key="TvHomeHeroContentSpacing">8</x:Double>
+            <x:Double x:Key="TvHomeHeroEyebrowFontSize">17</x:Double>
+            <x:Double x:Key="TvHomeHeroTitleFontSize">32</x:Double>
+            <x:Double x:Key="TvHomeHeroMetaFontSize">17</x:Double>
+            <x:Double x:Key="TvHomeHeroLogoMaxWidth">430</x:Double>
+            <x:Double x:Key="TvHomeHeroLogoMaxHeight">64</x:Double>
+            <x:Double x:Key="TvHomeHeroPosterWidth">128</x:Double>
+            <x:Double x:Key="TvHomeHeroPosterHeight">160</x:Double>
+            <x:Double x:Key="TvHomeHeroPosterFallbackFontSize">18</x:Double>
+            <CornerRadius x:Key="TvHomeHeroCornerRadius">8</CornerRadius>
+            <CornerRadius x:Key="TvHomeHeroPosterCornerRadius">7</CornerRadius>
+            <Thickness x:Key="TvHomeHeroPadding">0,10,0,10</Thickness>
+            <x:Double x:Key="TvHomeWideCardWidth">276</x:Double>
+            <x:Double x:Key="TvHomeWideCardHeight">136</x:Double>
+            <x:Double x:Key="TvHomeWideCardTitleFontSize">22</x:Double>
+            <x:Double x:Key="TvHomeWideCardSubtitleFontSize">15</x:Double>
+            <x:Double x:Key="TvHomeWideCardAccentHeight">4</x:Double>
+            <x:Double x:Key="TvHomeWideCardSideAccentWidth">4</x:Double>
+            <x:Double x:Key="TvHomeResumeCardWidth">340</x:Double>
+            <x:Double x:Key="TvHomeResumeCardHeight">192</x:Double>
+            <x:Double x:Key="TvHomeResumeCardScrimHeight">78</x:Double>
+            <x:Double x:Key="TvHomeResumeProgressHeight">4</x:Double>
+            <Thickness x:Key="TvHomeResumeCardTextMargin">12,10,12,24</Thickness>
+            <x:Double x:Key="TvHomeRowPosterCardWidth">172</x:Double>
+            <x:Double x:Key="TvHomeRowPosterCardHeight">252</x:Double>
+            <x:Double x:Key="TvHomeRowTitleFontSize">24</x:Double>
+            <x:Double x:Key="TvHomeRowPosterTitleFontSize">16</x:Double>
+            <x:Double x:Key="TvHomeRowPosterMetaFontSize">13</x:Double>
+            <x:Double x:Key="TvHomeFocusedCardScale">1.035</x:Double>
+            <CornerRadius x:Key="TvHomeWideCardCornerRadius">8</CornerRadius>
+            <CornerRadius x:Key="TvHomePosterCardCornerRadius">6</CornerRadius>
+            <Thickness x:Key="TvHomeWideCardTextMargin">20</Thickness>
+            <Thickness x:Key="TvHomePosterCardScrimPadding">12,10</Thickness>
+            <x:Double x:Key="TvHomeLibraryArtworkOpacity">0.88</x:Double>
+            <x:Double x:Key="TvHomeSectionArtworkOpacity">0.9</x:Double>
+            <x:Double x:Key="TvHomeWideCardTextScrimHeight">92</x:Double>
             <x:Double x:Key="TvDetailsPosterWidth">240</x:Double>
             <x:Double x:Key="TvDetailsPosterHeight">360</x:Double>
             <x:Double x:Key="TvDetailsColumnSpacing">34</x:Double>
-            <x:Double x:Key="TvDetailsContentMaxWidth">900</x:Double>
+            <Thickness x:Key="TvDetailsContentMargin">56,156,56,48</Thickness>
+            <Thickness x:Key="TvDetailsDecisionDockMargin">56,0,56,112</Thickness>
+            <x:Double x:Key="TvDetailsContentColumnWidth">680</x:Double>
+            <x:Double x:Key="TvDetailsContentMaxWidth">680</x:Double>
             <x:Double x:Key="TvDetailsLogoMaxWidth">600</x:Double>
             <x:Double x:Key="TvDetailsLogoMaxHeight">112</x:Double>
+            <x:Double x:Key="TvSearchRecentTermMinHeight">44</x:Double>
+            <x:Double x:Key="TvSearchRecentTermMinWidth">112</x:Double>
+            <x:Double x:Key="TvSearchRecentTermMaxWidth">260</x:Double>
+            <Thickness x:Key="TvSearchRecentTermPadding">18,7</Thickness>
+            <x:Double x:Key="TvLibraryToolbarButtonWidth">168</x:Double>
+            <x:Double x:Key="TvLibraryToolbarButtonHeight">44</x:Double>
+            <x:Double x:Key="TvLibraryToolbarSpacing">10</x:Double>
+            <x:Double x:Key="TvLibraryOptionSheetWidth">620</x:Double>
+            <x:Double x:Key="TvLibraryOptionSheetMaxHeight">600</x:Double>
+            <Thickness x:Key="TvLibraryOptionSheetMargin">0,96,0,0</Thickness>
+            <Thickness x:Key="TvLibraryOptionSheetPadding">26</Thickness>
+            <Thickness x:Key="TvPlaybackStatusCapsuleMargin">56,44,0,0</Thickness>
+            <Thickness x:Key="TvPlaybackStatusCapsulePadding">20,14</Thickness>
+            <x:Double x:Key="TvPlaybackStatusCapsuleMaxWidth">680</x:Double>
+            <Thickness x:Key="TvPlaybackTransportStripMargin">56,0,56,44</Thickness>
+            <Thickness x:Key="TvPlaybackTransportStripPadding">26,14</Thickness>
+            <CornerRadius x:Key="TvPlaybackTransportStripCornerRadius">8</CornerRadius>
+            <Thickness x:Key="TvPlaybackSubtitleSafeSampleMargin">56,0,56,196</Thickness>
+            <x:Double x:Key="TvPlaybackTransportChipMinWidth">118</x:Double>
+            <x:Double x:Key="TvPlaybackMoreMenuWidth">430</x:Double>
+            <x:Double x:Key="TvPlaybackMoreMenuMaxHeight">620</x:Double>
+            <Thickness x:Key="TvPlaybackMoreMenuMargin">0,0,56,184</Thickness>
+            <Thickness x:Key="TvPlaybackMoreMenuPadding">22</Thickness>
+            <x:Double x:Key="TvTransientMessagePanelMaxWidth">760</x:Double>
+            <Thickness x:Key="TvTransientMessagePanelMargin">0,0,0,96</Thickness>
+            <Thickness x:Key="TvTransientMessagePanelPadding">26</Thickness>
+            <x:Double x:Key="TvUtilityContentMaxWidth">780</x:Double>
+            <Thickness x:Key="TvUtilityFormPanelPadding">30</Thickness>
+            <Thickness x:Key="TvUtilityFieldPadding">18,9</Thickness>
+            <Thickness x:Key="TvUtilityCommandPadding">20,9</Thickness>
+            <x:Double x:Key="TvUtilityFieldMinHeight">58</x:Double>
+            <x:Double x:Key="TvUtilityCommandMinHeight">52</x:Double>
 
             <Style TargetType="Button">
                 <Setter Property="MinHeight" Value="52" />
@@ -132,8 +257,311 @@
                 <Setter Property="UseSystemFocusVisuals" Value="True" />
             </Style>
 
+            <Style x:Key="TvCommandButtonStyle" TargetType="Button">
+                <Setter Property="MinHeight" Value="52" />
+                <Setter Property="MinWidth" Value="132" />
+                <Setter Property="Padding" Value="20,9" />
+                <Setter Property="FontSize" Value="18" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Foreground" Value="{StaticResource AppTextBrush}" />
+                <Setter Property="Background" Value="{StaticResource AppChromeBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource AppTransparentBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="6" />
+                <Setter Property="UseSystemFocusVisuals" Value="False" />
+            </Style>
+
+            <Style x:Key="TvUtilityFormPanelStyle" TargetType="Border">
+                <Setter Property="MinWidth" Value="620" />
+                <Setter Property="MaxWidth" Value="{StaticResource TvUtilityContentMaxWidth}" />
+                <Setter Property="Padding" Value="{StaticResource TvUtilityFormPanelPadding}" />
+                <Setter Property="Background" Value="{StaticResource AppUtilityPanelBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource AppTransparentBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="8" />
+            </Style>
+
+            <Style x:Key="TvDiagnosticsPanelStyle" TargetType="Border">
+                <Setter Property="Padding" Value="18" />
+                <Setter Property="Background" Value="{StaticResource AppUtilitySecondaryPanelBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource AppTransparentBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="8" />
+            </Style>
+
+            <Style x:Key="TvUtilityFieldTextBoxStyle" TargetType="TextBox">
+                <Setter Property="MinHeight" Value="{StaticResource TvUtilityFieldMinHeight}" />
+                <Setter Property="FontSize" Value="19" />
+                <Setter Property="Padding" Value="{StaticResource TvUtilityFieldPadding}" />
+                <Setter Property="Foreground" Value="{StaticResource AppTextBrush}" />
+                <Setter Property="Background" Value="{StaticResource AppChromeBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource AppTransparentBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="FocusVisualPrimaryBrush" Value="{StaticResource AppFocusedCardFillBrush}" />
+                <Setter Property="FocusVisualSecondaryBrush" Value="{StaticResource AppTransparentBrush}" />
+                <Setter Property="FocusVisualPrimaryThickness" Value="1" />
+                <Setter Property="FocusVisualSecondaryThickness" Value="0" />
+                <Setter Property="FocusVisualMargin" Value="0" />
+                <Setter Property="UseSystemFocusVisuals" Value="False" />
+            </Style>
+
+            <Style x:Key="TvUtilityFieldPasswordBoxStyle" TargetType="PasswordBox">
+                <Setter Property="MinHeight" Value="{StaticResource TvUtilityFieldMinHeight}" />
+                <Setter Property="FontSize" Value="19" />
+                <Setter Property="Padding" Value="{StaticResource TvUtilityFieldPadding}" />
+                <Setter Property="Foreground" Value="{StaticResource AppTextBrush}" />
+                <Setter Property="Background" Value="{StaticResource AppChromeBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource AppTransparentBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="FocusVisualPrimaryBrush" Value="{StaticResource AppFocusedCardFillBrush}" />
+                <Setter Property="FocusVisualSecondaryBrush" Value="{StaticResource AppTransparentBrush}" />
+                <Setter Property="FocusVisualPrimaryThickness" Value="1" />
+                <Setter Property="FocusVisualSecondaryThickness" Value="0" />
+                <Setter Property="FocusVisualMargin" Value="0" />
+                <Setter Property="UseSystemFocusVisuals" Value="False" />
+            </Style>
+
+            <Style x:Key="TvUtilityCommandButtonStyle" TargetType="Button">
+                <Setter Property="MinHeight" Value="{StaticResource TvUtilityCommandMinHeight}" />
+                <Setter Property="MinWidth" Value="152" />
+                <Setter Property="Padding" Value="{StaticResource TvUtilityCommandPadding}" />
+                <Setter Property="FontSize" Value="18" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Foreground" Value="{StaticResource AppTextBrush}" />
+                <Setter Property="Background" Value="{StaticResource AppChromeBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource AppTransparentBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="6" />
+                <Setter Property="UseSystemFocusVisuals" Value="False" />
+            </Style>
+
+            <Style x:Key="TvLibraryToolbarButtonStyle" TargetType="Button">
+                <Setter Property="MinHeight" Value="{StaticResource TvLibraryToolbarButtonHeight}" />
+                <Setter Property="Height" Value="{StaticResource TvLibraryToolbarButtonHeight}" />
+                <Setter Property="MinWidth" Value="132" />
+                <Setter Property="Padding" Value="14,6" />
+                <Setter Property="FontSize" Value="15" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Foreground" Value="{StaticResource AppTextBrush}" />
+                <Setter Property="Background" Value="{StaticResource AppChromeBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource AppTransparentBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="6" />
+                <Setter Property="UseSystemFocusVisuals" Value="False" />
+            </Style>
+
+            <Style x:Key="TvUtilityDangerButtonStyle" TargetType="Button">
+                <Setter Property="MinHeight" Value="{StaticResource TvUtilityCommandMinHeight}" />
+                <Setter Property="MinWidth" Value="152" />
+                <Setter Property="Padding" Value="{StaticResource TvUtilityCommandPadding}" />
+                <Setter Property="FontSize" Value="18" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Foreground" Value="{StaticResource AppBackgroundBrush}" />
+                <Setter Property="Background" Value="{StaticResource AppDangerBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource AppTransparentBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="6" />
+                <Setter Property="UseSystemFocusVisuals" Value="False" />
+            </Style>
+
+            <Style x:Key="TvUtilityCheckBoxStyle" TargetType="CheckBox">
+                <Setter Property="FontSize" Value="19" />
+                <Setter Property="Foreground" Value="{StaticResource AppTextBrush}" />
+                <Setter Property="FocusVisualPrimaryBrush" Value="{StaticResource AppFocusedCardFillBrush}" />
+                <Setter Property="FocusVisualSecondaryBrush" Value="{StaticResource AppTransparentBrush}" />
+                <Setter Property="FocusVisualPrimaryThickness" Value="1" />
+                <Setter Property="FocusVisualSecondaryThickness" Value="0" />
+                <Setter Property="FocusVisualMargin" Value="0" />
+                <Setter Property="UseSystemFocusVisuals" Value="False" />
+            </Style>
+
+            <Style x:Key="TvUtilitySearchScopeButtonStyle" TargetType="Button">
+                <Setter Property="MinHeight" Value="44" />
+                <Setter Property="MinWidth" Value="96" />
+                <Setter Property="Padding" Value="18,7" />
+                <Setter Property="FontSize" Value="16" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Foreground" Value="{StaticResource AppMutedTextBrush}" />
+                <Setter Property="Background" Value="{StaticResource AppChromeBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource AppTransparentBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="6" />
+                <Setter Property="UseSystemFocusVisuals" Value="False" />
+            </Style>
+
+            <Style x:Key="TvLibraryOptionSheetOptionButtonStyle" TargetType="Button">
+                <Setter Property="MinHeight" Value="56" />
+                <Setter Property="MinWidth" Value="280" />
+                <Setter Property="Padding" Value="18,11" />
+                <Setter Property="HorizontalAlignment" Value="Stretch" />
+                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                <Setter Property="VerticalContentAlignment" Value="Center" />
+                <Setter Property="FontSize" Value="18" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Foreground" Value="{StaticResource AppTextBrush}" />
+                <Setter Property="Background" Value="{StaticResource AppChromeBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource AppTransparentBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="6" />
+                <Setter Property="UseSystemFocusVisuals" Value="False" />
+            </Style>
+
+            <Style x:Key="TvDetailsPrimaryActionButtonStyle" TargetType="Button">
+                <Setter Property="MinHeight" Value="76" />
+                <Setter Property="MinWidth" Value="220" />
+                <Setter Property="Padding" Value="28,16" />
+                <Setter Property="FontSize" Value="20" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Foreground" Value="{StaticResource AppOnActionBrush}" />
+                <Setter Property="Background" Value="{StaticResource AppActionBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource AppTransparentBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="8" />
+                <Setter Property="UseSystemFocusVisuals" Value="False" />
+            </Style>
+
+            <Style x:Key="TvDetailsActionButtonStyle" TargetType="Button">
+                <Setter Property="MinHeight" Value="66" />
+                <Setter Property="MinWidth" Value="160" />
+                <Setter Property="Padding" Value="24,14" />
+                <Setter Property="FontSize" Value="19" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Foreground" Value="{StaticResource AppTextBrush}" />
+                <Setter Property="Background" Value="{StaticResource AppDetailsDecisionTileBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource AppTransparentBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="8" />
+                <Setter Property="UseSystemFocusVisuals" Value="False" />
+            </Style>
+
+            <Style x:Key="TvDetailsIconActionButtonStyle" TargetType="Button">
+                <Setter Property="Width" Value="66" />
+                <Setter Property="Height" Value="66" />
+                <Setter Property="MinWidth" Value="66" />
+                <Setter Property="MinHeight" Value="66" />
+                <Setter Property="Padding" Value="0" />
+                <Setter Property="Foreground" Value="{StaticResource AppTextBrush}" />
+                <Setter Property="Background" Value="{StaticResource AppDetailsDecisionTileBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource AppTransparentBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="8" />
+                <Setter Property="UseSystemFocusVisuals" Value="False" />
+            </Style>
+
+            <Style x:Key="TvDetailsSourceOptionButtonStyle" TargetType="Button">
+                <Setter Property="MinHeight" Value="74" />
+                <Setter Property="MinWidth" Value="360" />
+                <Setter Property="Padding" Value="18,14" />
+                <Setter Property="HorizontalAlignment" Value="Stretch" />
+                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                <Setter Property="VerticalContentAlignment" Value="Stretch" />
+                <Setter Property="Foreground" Value="{StaticResource AppTextBrush}" />
+                <Setter Property="Background" Value="{StaticResource AppChromeBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource AppHairlineBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="6" />
+                <Setter Property="UseSystemFocusVisuals" Value="False" />
+            </Style>
+
+            <Style x:Key="TvDetailsDecisionChipButtonStyle" TargetType="Button">
+                <Setter Property="MinHeight" Value="52" />
+                <Setter Property="MinWidth" Value="238" />
+                <Setter Property="MaxWidth" Value="340" />
+                <Setter Property="Padding" Value="14,8" />
+                <Setter Property="HorizontalAlignment" Value="Left" />
+                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                <Setter Property="VerticalContentAlignment" Value="Center" />
+                <Setter Property="Foreground" Value="{StaticResource AppTextBrush}" />
+                <Setter Property="Background" Value="{StaticResource AppDetailsDecisionTileBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource AppTransparentBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="8" />
+                <Setter Property="UseSystemFocusVisuals" Value="False" />
+            </Style>
+
+            <Style x:Key="TvDetailsAddToSheetOptionButtonStyle" TargetType="Button">
+                <Setter Property="MinHeight" Value="84" />
+                <Setter Property="MinWidth" Value="360" />
+                <Setter Property="Padding" Value="10" />
+                <Setter Property="HorizontalAlignment" Value="Stretch" />
+                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                <Setter Property="VerticalContentAlignment" Value="Stretch" />
+                <Setter Property="Foreground" Value="{StaticResource AppTextBrush}" />
+                <Setter Property="Background" Value="{StaticResource AppChromeBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource AppTransparentBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="6" />
+                <Setter Property="UseSystemFocusVisuals" Value="False" />
+            </Style>
+
+            <Style x:Key="TvPlaybackTransportButtonStyle" TargetType="Button">
+                <Setter Property="MinHeight" Value="54" />
+                <Setter Property="MinWidth" Value="76" />
+                <Setter Property="Padding" Value="16,8" />
+                <Setter Property="FontSize" Value="16" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Foreground" Value="{StaticResource AppTextBrush}" />
+                <Setter Property="Background" Value="{StaticResource AppChromeBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource AppTransparentBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="6" />
+                <Setter Property="UseSystemFocusVisuals" Value="False" />
+            </Style>
+
+            <Style x:Key="TvPlaybackPrimaryTransportButtonStyle" TargetType="Button" BasedOn="{StaticResource TvPlaybackTransportButtonStyle}">
+                <Setter Property="MinWidth" Value="82" />
+                <Setter Property="Background" Value="{StaticResource AppActionBrush}" />
+                <Setter Property="Foreground" Value="{StaticResource AppOnActionBrush}" />
+            </Style>
+
+            <Style x:Key="TvPlaybackMoreMenuButtonStyle" TargetType="Button">
+                <Setter Property="MinHeight" Value="54" />
+                <Setter Property="MinWidth" Value="240" />
+                <Setter Property="Padding" Value="18,8" />
+                <Setter Property="HorizontalAlignment" Value="Stretch" />
+                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                <Setter Property="VerticalContentAlignment" Value="Center" />
+                <Setter Property="FontSize" Value="17" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Foreground" Value="{StaticResource AppTextBrush}" />
+                <Setter Property="Background" Value="{StaticResource AppChromeBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource AppTransparentBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="6" />
+                <Setter Property="UseSystemFocusVisuals" Value="False" />
+            </Style>
+
+            <Style x:Key="TvPlaybackOptionComboBoxStyle" TargetType="ComboBox">
+                <Setter Property="MinHeight" Value="54" />
+                <Setter Property="Foreground" Value="{StaticResource AppTextBrush}" />
+                <Setter Property="Background" Value="{StaticResource AppChromeBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource AppTransparentBrush}" />
+                <Setter Property="BorderThickness" Value="0" />
+                <Setter Property="FocusVisualPrimaryBrush" Value="{StaticResource AppFocusedCardFillBrush}" />
+                <Setter Property="FocusVisualSecondaryBrush" Value="{StaticResource AppTransparentBrush}" />
+                <Setter Property="FocusVisualPrimaryThickness" Value="1" />
+                <Setter Property="FocusVisualSecondaryThickness" Value="0" />
+                <Setter Property="FocusVisualMargin" Value="0" />
+                <Setter Property="UseSystemFocusVisuals" Value="False" />
+            </Style>
+
+            <Style x:Key="TvPosterGridCardButtonStyle" TargetType="Button">
+                <Setter Property="Width" Value="{StaticResource TvPosterCardWidth}" />
+                <Setter Property="Height" Value="{StaticResource TvPosterCardHeight}" />
+                <Setter Property="MinWidth" Value="{StaticResource TvPosterCardWidth}" />
+                <Setter Property="MinHeight" Value="{StaticResource TvPosterCardHeight}" />
+                <Setter Property="Padding" Value="0" />
+                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                <Setter Property="VerticalContentAlignment" Value="Stretch" />
+                <Setter Property="Background" Value="{StaticResource AppTransparentBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource AppTransparentBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="{StaticResource TvPosterCardCornerRadius}" />
+                <Setter Property="UseSystemFocusVisuals" Value="False" />
+            </Style>
+
             <Style x:Key="TvPageTitleTextStyle" TargetType="TextBlock">
-                <Setter Property="FontSize" Value="34" />
+                <Setter Property="FontSize" Value="28" />
                 <Setter Property="FontWeight" Value="SemiBold" />
                 <Setter Property="Foreground" Value="{StaticResource AppTextBrush}" />
                 <Setter Property="TextWrapping" Value="Wrap" />
@@ -149,6 +577,16 @@
                 <Setter Property="Background" Value="{StaticResource AppSurfaceBrush}" />
                 <Setter Property="CornerRadius" Value="8" />
                 <Setter Property="Padding" Value="{StaticResource TvPanelPadding}" />
+            </Style>
+
+            <Style x:Key="TvTransientMessagePanelStyle" TargetType="Border">
+                <Setter Property="MaxWidth" Value="{StaticResource TvTransientMessagePanelMaxWidth}" />
+                <Setter Property="HorizontalAlignment" Value="Center" />
+                <Setter Property="VerticalAlignment" Value="Bottom" />
+                <Setter Property="Margin" Value="{StaticResource TvTransientMessagePanelMargin}" />
+                <Setter Property="Background" Value="{StaticResource AppSurfaceBrush}" />
+                <Setter Property="CornerRadius" Value="8" />
+                <Setter Property="Padding" Value="{StaticResource TvTransientMessagePanelPadding}" />
             </Style>
 
             <Style x:Key="TvPanelTitleTextStyle" TargetType="TextBlock">
@@ -212,7 +650,7 @@
             <Style x:Key="TvPosterGridItemStyle" TargetType="GridViewItem">
                 <Setter Property="HorizontalContentAlignment" Value="Stretch" />
                 <Setter Property="VerticalContentAlignment" Value="Stretch" />
-                <Setter Property="UseSystemFocusVisuals" Value="True" />
+                <Setter Property="UseSystemFocusVisuals" Value="False" />
                 <Setter Property="Padding" Value="0" />
                 <Setter Property="Margin" Value="{StaticResource TvPosterGridItemMargin}" />
             </Style>
@@ -264,14 +702,14 @@
                 <Setter Property="HorizontalContentAlignment" Value="Stretch" />
                 <Setter Property="VerticalContentAlignment" Value="Center" />
                 <Setter Property="Background" Value="{StaticResource AppChromeBrush}" />
-                <Setter Property="BorderBrush" Value="{StaticResource AppHairlineBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource AppTransparentBrush}" />
                 <Setter Property="BorderThickness" Value="1" />
                 <Setter Property="CornerRadius" Value="6" />
                 <Setter Property="Foreground" Value="{StaticResource AppTextBrush}" />
                 <Setter Property="FocusVisualMargin" Value="-3" />
                 <Setter Property="FocusVisualPrimaryThickness" Value="2" />
                 <Setter Property="FocusVisualSecondaryThickness" Value="1" />
-                <Setter Property="UseSystemFocusVisuals" Value="True" />
+                <Setter Property="UseSystemFocusVisuals" Value="False" />
             </Style>
 
             <Style x:Key="TvDiagnosticsTextStyle" TargetType="TextBlock">
@@ -284,6 +722,40 @@
             <Style x:Key="TvSettingsCheckBoxStyle" TargetType="CheckBox">
                 <Setter Property="FontSize" Value="19" />
                 <Setter Property="Foreground" Value="{StaticResource AppTextBrush}" />
+                <Setter Property="FocusVisualMargin" Value="-3" />
+                <Setter Property="FocusVisualPrimaryThickness" Value="2" />
+                <Setter Property="FocusVisualSecondaryThickness" Value="1" />
+                <Setter Property="UseSystemFocusVisuals" Value="True" />
+            </Style>
+
+            <Style x:Key="TvSettingsAccountActionButtonStyle" TargetType="Button">
+                <Setter Property="MinHeight" Value="48" />
+                <Setter Property="MinWidth" Value="152" />
+                <Setter Property="Padding" Value="18,8" />
+                <Setter Property="FontSize" Value="17" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Background" Value="{StaticResource AppChromeBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource AppHairlineBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="6" />
+                <Setter Property="Foreground" Value="{StaticResource AppTextBrush}" />
+                <Setter Property="FocusVisualMargin" Value="-3" />
+                <Setter Property="FocusVisualPrimaryThickness" Value="2" />
+                <Setter Property="FocusVisualSecondaryThickness" Value="1" />
+                <Setter Property="UseSystemFocusVisuals" Value="True" />
+            </Style>
+
+            <Style x:Key="TvSettingsDangerButtonStyle" TargetType="Button">
+                <Setter Property="MinHeight" Value="48" />
+                <Setter Property="MinWidth" Value="152" />
+                <Setter Property="Padding" Value="18,8" />
+                <Setter Property="FontSize" Value="17" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Background" Value="{StaticResource AppDangerBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource AppDangerBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="6" />
+                <Setter Property="Foreground" Value="{StaticResource AppBackgroundBrush}" />
                 <Setter Property="FocusVisualMargin" Value="-3" />
                 <Setter Property="FocusVisualPrimaryThickness" Value="2" />
                 <Setter Property="FocusVisualSecondaryThickness" Value="1" />
@@ -309,7 +781,7 @@
                 <Setter Property="MinHeight" Value="52" />
                 <Setter Property="Padding" Value="0" />
                 <Setter Property="Background" Value="{StaticResource AppChromeBrush}" />
-                <Setter Property="BorderBrush" Value="{StaticResource AppHairlineBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource AppTransparentBrush}" />
                 <Setter Property="BorderThickness" Value="1" />
                 <Setter Property="CornerRadius" Value="6" />
                 <Setter Property="Foreground" Value="{StaticResource AppTextBrush}" />
@@ -333,7 +805,22 @@
                 <Setter Property="FocusVisualMargin" Value="-3" />
                 <Setter Property="FocusVisualPrimaryThickness" Value="2" />
                 <Setter Property="FocusVisualSecondaryThickness" Value="1" />
-                <Setter Property="UseSystemFocusVisuals" Value="True" />
+                <Setter Property="UseSystemFocusVisuals" Value="False" />
+            </Style>
+
+            <Style x:Key="TvSearchRecentTermButtonStyle" TargetType="Button">
+                <Setter Property="MinHeight" Value="{StaticResource TvSearchRecentTermMinHeight}" />
+                <Setter Property="MinWidth" Value="{StaticResource TvSearchRecentTermMinWidth}" />
+                <Setter Property="MaxWidth" Value="{StaticResource TvSearchRecentTermMaxWidth}" />
+                <Setter Property="Padding" Value="{StaticResource TvSearchRecentTermPadding}" />
+                <Setter Property="FontSize" Value="16" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Background" Value="{StaticResource AppChromeBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource AppTransparentBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="6" />
+                <Setter Property="Foreground" Value="{StaticResource AppTextBrush}" />
+                <Setter Property="UseSystemFocusVisuals" Value="False" />
             </Style>
 
             <Style TargetType="TextBox">

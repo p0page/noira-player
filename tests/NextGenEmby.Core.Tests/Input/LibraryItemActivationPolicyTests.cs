@@ -9,13 +9,21 @@ public sealed class LibraryItemActivationPolicyTests
     [InlineData("Movie")]
     [InlineData("Series")]
     [InlineData("Episode")]
-    [InlineData("BoxSet")]
-    [InlineData("Playlist")]
     public void ChooseRoute_Opens_Details_For_Standard_Media(string itemType)
     {
         var route = LibraryItemActivationPolicy.ChooseRoute(itemType);
 
         Assert.Equal(LibraryItemActivationRoute.Details, route);
+    }
+
+    [Theory]
+    [InlineData("BoxSet")]
+    [InlineData("Playlist")]
+    public void ChooseRoute_Opens_Organization_Items_As_Browse_Folders(string itemType)
+    {
+        var route = LibraryItemActivationPolicy.ChooseRoute(itemType);
+
+        Assert.Equal(LibraryItemActivationRoute.BrowseFolder, route);
     }
 
     [Fact]
@@ -24,6 +32,14 @@ public sealed class LibraryItemActivationPolicyTests
         var route = LibraryItemActivationPolicy.ChooseRoute("Photo");
 
         Assert.Equal(LibraryItemActivationRoute.PhotoViewer, route);
+    }
+
+    [Fact]
+    public void ChooseRoute_Opens_Folder_Browse_For_Folders()
+    {
+        var route = LibraryItemActivationPolicy.ChooseRoute("Folder");
+
+        Assert.Equal(LibraryItemActivationRoute.BrowseFolder, route);
     }
 
     [Fact]

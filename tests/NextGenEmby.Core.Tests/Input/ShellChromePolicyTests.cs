@@ -17,6 +17,17 @@ public sealed class ShellChromePolicyTests
     }
 
     [Fact]
+    public void Media_Details_Content_Keeps_Guide_Visible()
+    {
+        var decision = ShellChromePolicy.GetDecision(ShellContentMode.MediaDetails);
+
+        Assert.True(decision.IsGuideVisible);
+        Assert.False(decision.IsContentImmersive);
+        Assert.False(decision.BlocksGlobalBack);
+        Assert.False(decision.SuppressGuideNavigation);
+    }
+
+    [Fact]
     public void Playback_Content_Is_Immersive_And_Controls_Back_Itself()
     {
         var decision = ShellChromePolicy.GetDecision(ShellContentMode.Playback);

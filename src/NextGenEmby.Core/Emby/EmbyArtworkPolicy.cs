@@ -84,6 +84,16 @@ namespace NextGenEmby.Core.Emby
                 return null;
             }
 
+            var sectionCandidate =
+                CreateCandidate(section.Id, section.ThumbImageItemId, "Thumb", section.ThumbImageTag, maxWidth) ??
+                CreateCandidate(section.Id, section.BackdropImageItemId, "Backdrop", section.BackdropImageTag, maxWidth) ??
+                CreateCandidate(section.Id, section.BannerImageItemId, "Banner", section.BannerImageTag, maxWidth) ??
+                CreateCandidate(section.Id, section.PrimaryImageItemId, "Primary", section.PrimaryImageTag, maxWidth);
+            if (sectionCandidate != null)
+            {
+                return sectionCandidate;
+            }
+
             var item = section.ParentItem;
             if (item == null)
             {

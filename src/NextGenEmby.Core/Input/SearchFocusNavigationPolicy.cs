@@ -6,6 +6,7 @@ namespace NextGenEmby.Core.Input
         SearchBox,
         SearchAction,
         ScopeRail,
+        RecentTerms,
         ResultGrid,
         EmptyState
     }
@@ -15,10 +16,13 @@ namespace NextGenEmby.Core.Input
         None,
         FocusSearchBox,
         FocusSelectedScope,
+        FocusRecentTerms,
         FocusFirstResult,
         FocusEmptyState,
         MoveScopeLeft,
-        MoveScopeRight
+        MoveScopeRight,
+        MoveRecentLeft,
+        MoveRecentRight
     }
 
     public sealed class SearchFocusNavigationDecision
@@ -41,7 +45,8 @@ namespace NextGenEmby.Core.Input
             bool moveLeftKeyPressed,
             bool moveRightKeyPressed,
             bool focusedResultInFirstRow,
-            bool emptyStateVisible = false)
+            bool emptyStateVisible = false,
+            bool recentTermsVisible = false)
         {
             if (moveDownKeyPressed)
             {
@@ -52,6 +57,21 @@ namespace NextGenEmby.Core.Input
                 }
 
                 if (focusArea == SearchFocusArea.ScopeRail)
+                {
+                    if (recentTermsVisible)
+                    {
+                        return Decision(SearchFocusNavigationAction.FocusRecentTerms);
+                    }
+
+                    if (emptyStateVisible)
+                    {
+                        return Decision(SearchFocusNavigationAction.FocusEmptyState);
+                    }
+
+                    return Decision(SearchFocusNavigationAction.FocusFirstResult);
+                }
+
+                if (focusArea == SearchFocusArea.RecentTerms)
                 {
                     if (emptyStateVisible)
                     {
@@ -69,13 +89,28 @@ namespace NextGenEmby.Core.Input
                     return Decision(SearchFocusNavigationAction.FocusSearchBox);
                 }
 
+                if (focusArea == SearchFocusArea.RecentTerms)
+                {
+                    return Decision(SearchFocusNavigationAction.FocusSelectedScope);
+                }
+
                 if (focusArea == SearchFocusArea.ResultGrid && focusedResultInFirstRow)
                 {
+                    if (recentTermsVisible)
+                    {
+                        return Decision(SearchFocusNavigationAction.FocusRecentTerms);
+                    }
+
                     return Decision(SearchFocusNavigationAction.FocusSelectedScope);
                 }
 
                 if (focusArea == SearchFocusArea.EmptyState)
                 {
+                    if (recentTermsVisible)
+                    {
+                        return Decision(SearchFocusNavigationAction.FocusRecentTerms);
+                    }
+
                     return Decision(SearchFocusNavigationAction.FocusSelectedScope);
                 }
             }
@@ -90,6 +125,19 @@ namespace NextGenEmby.Core.Input
                 if (moveRightKeyPressed)
                 {
                     return Decision(SearchFocusNavigationAction.MoveScopeRight);
+                }
+            }
+
+            if (focusArea == SearchFocusArea.RecentTerms)
+            {
+                if (moveLeftKeyPressed)
+                {
+                    return Decision(SearchFocusNavigationAction.MoveRecentLeft);
+                }
+
+                if (moveRightKeyPressed)
+                {
+                    return Decision(SearchFocusNavigationAction.MoveRecentRight);
                 }
             }
 

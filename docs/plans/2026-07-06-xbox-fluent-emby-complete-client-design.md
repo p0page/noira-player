@@ -322,7 +322,7 @@ Behavior:
 
 ## App Icon Direction
 
-Icon name: Player Focus Mark.
+Icon name: Player Status Aperture.
 
 Concept:
 
@@ -330,8 +330,8 @@ Concept:
 - A compact playback viewport, not a wordmark or brand initial.
 - One crisp cyan controller-focus edge.
 - One green play/confirm surface.
-- Subtle subtitle/audio status marks.
 - A small amber progress base, used flat rather than glowing.
+- The same centered aperture primitive across square, wide, and splash assets.
 - No Emby logo, Xbox logo, Microsoft logo, film-strip cliche, generic play triangle alone, embedded brand name, or product initials.
 - No cyan glow, portal ring, glass prism, or holographic motif.
 
@@ -339,7 +339,7 @@ Rationale:
 
 - Player attributes survive future product renaming better than a wordmark or initial.
 - The focus edge connects the icon to controller navigation without turning focus into decoration.
-- Green maps to Play/Resume, muted marks map to subtitle/audio state, and amber maps to progress.
+- Green maps to Play/Resume and amber maps to progress, while the matte aperture keeps the mark tied to playback instead of brand text.
 
 Required assets:
 
@@ -352,7 +352,7 @@ Required assets:
 Validation:
 
 - Icon remains legible at 44 px.
-- Wide tile does not look like a banner ad.
+- Wide tile does not look like a banner ad or a miniature app page.
 - Splash screen is symbol-only and matches the dark Fluent TV shell.
 
 ## Non-Goals

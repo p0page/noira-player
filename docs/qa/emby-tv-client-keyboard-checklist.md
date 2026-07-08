@@ -6,7 +6,76 @@ This checklist is the required local verification path after every meaningful UI
 
 Mouse is allowed only for operating external tooling, window management, or closing system prompts that cannot be reached by app input. Do not use mouse clicks inside the app content to pass a checklist item.
 
+For visual-system acceptance, run the relevant batch in `docs/qa/design-conformance-checklist.md` alongside this functional checklist. Record the whole batch first, then fix shared visual or interaction causes together instead of repairing one route at a time.
+
 ## Run Log
+
+### 2026-07-08 - Design Conformance Batch 10 Saved Session Search Fix Rerun
+
+App version: `0.1.0.243`
+
+Scope:
+
+- Batch: Saved-session Search after routing handled TextBox Enter events while preserving handled `GamepadA` TextBox activation.
+- Build/install source: locally built, signed, and installed package `NextGenEmby.App 0.1.0.243`.
+- Data source: existing local saved session; no credentials, server details, screenshots, or personal media assets were written to the repository.
+- Evidence root: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-real-search-batch10-fix-0.1.0.243-20260708-084317`.
+
+Verification before visual rerun:
+
+- Red path: `SearchAccessibilitySourceTests.Search_Box_Registers_Handled_Textbox_Enter_For_Submit` failed before implementation because Search still used a plain XAML `KeyDown` binding.
+- Green path: the same Search source tests passed after registering `SearchBox.AddHandler(KeyDownEvent, new KeyEventHandler(SearchBox_OnKeyDown), true);`, removing the XAML binding, and guarding `GamepadA` so already-handled TextBox activation is not treated as submit.
+- Build/sign/install: MSBuild Debug x64 package build passed with 0 warnings and 0 errors; `signtool verify /pa` passed; installed version reported `0.1.0.243`.
+
+Keyboard-only / automation validation:
+
+- Launched saved-session `search` through `dev-command.json`.
+- Focused `SearchBox`, entered a generic one-character query, and sent `Enter`.
+- Captured Search initial, submitted state, scope movement, empty/recovery movement, and Guide-open state.
+- Summary flags: `SearchSubmittedState=True`, `StatusChangedBeforeTimeout=True`, `HasSearchBox=True`, `HasScopes=True`, `GuideOpensFromSearchSurface=True`; final-state follow-up reached `FinalStateReached=True`.
+
+Fix rerun findings:
+
+| ID | Status | Page | Evidence | Result | Residual risk |
+| --- | --- | --- | --- | --- | --- |
+| DC-10.02 | Pass | Search submit | `02-search-results.uia.txt`, `02b-search-final.uia.txt`, `02c-search-final-foreground.png`, `summary.txt`, `final-state-summary.txt`. | `Enter` from the focused query field now submits search and reaches the `No results` recovery state instead of staying on `Enter a search.` | This proves submit and recovery state, not result-card visuals. |
+| DC-10.03 | Pass with concern | Search scopes and Guide | `03-search-scope-right.*`, `04-search-result-grid-down.*`, `05-search-guide-from-results.*`. | Scope chips remain visible and matte; the Search surface still opens the expanded Guide with Search selected. | The generic query did not return result cards, so real result-grid navigation remains a later saved-session sample. |
+
+Decision:
+
+- Accept DC-10.02 as fixed.
+- Keep a future saved-session Search-result-card sample for a private-safe query that returns real media.
+
+### 2026-07-08 - Design Conformance Batch 10 Saved Session Search Baseline
+
+App version: `0.1.0.241`
+
+Scope:
+
+- Batch: Saved-session Search.
+- Build/install source: installed package `NextGenEmby.App 0.1.0.241`.
+- Data source: saved session; screenshots and UIA snapshots stored outside the repository.
+- Evidence root: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-real-search-batch10-0.1.0.241-20260708-082312`.
+
+Keyboard-only validation:
+
+- Route: `search`.
+- Keys: type a generic query, `Enter`, scope movement, guide open surrogate.
+- Expected: pressing `Enter` from the focused search field runs search and replaces `Enter a search.` with a results, empty, or error recovery state.
+- Actual: the field accepted the generic query, but after `Enter` the status still read `Enter a search.`.
+- Result: Fail.
+
+Findings recorded before fixes:
+
+| ID | Severity | Page | Evidence | Expected | Actual | Proposed batch fix |
+| --- | --- | --- | --- | --- | --- | --- |
+| DC-10.01 | Pass | Search | `01-search-initial.*`, `02-search-results.uia.txt` | Search opens with field, command action, and scope chips visible. | Search loaded correctly and accepted typed input. | None. |
+| DC-10.02 | Fail | Search | `02-search-results.uia.txt`, `02-visible-names.txt` | `Enter` from the focused query field submits search. | Status remained `Enter a search.` while the field contained a query. | Route handled TextBox Enter events to the existing search command path, then rerun Batch 10. |
+| DC-10.03 | Concern | Search | `03-search-scope-right.*`, `06-search-guide-from-results.*` | Scopes and Guide remain reachable from Search. | Scopes and Guide were reachable, but result-grid navigation could not be proven because search did not submit. | Rerun after DC-10.02. |
+
+Decision:
+
+- Fix DC-10.02 as a batch-level interaction bug, then rerun the same saved-session Search batch before accepting the page.
 
 ### 2026-07-06 - Library Portal App Icon
 
@@ -315,9 +384,10 @@ For each screenshot, check:
 
 - No clipped primary text.
 - No incoherent overlap.
-- Focus frame visible.
+- Focus visible from TV distance without relying on a bright complete perimeter frame as the default card focus.
 - Page proportions are not oversized.
 - Artwork is used in preference to flat placeholders when server provides it.
+- The screen still matches `docs/DESIGN.md` gates: neutral graphite chrome, restrained green, no decorative blur over plain graphite, no default highlit borders, and no committed private media.
 
 ## Completion Rule
 
@@ -332,6 +402,8 @@ If any checklist item fails, record:
 - Proposed design or implementation fix.
 
 Then continue design and implementation until the route passes.
+
+For design-system failures, finish the current design-conformance batch first, document all findings, then make one grouped fix plan and rerun the batch.
 
 ## Run Log
 
@@ -670,7 +742,7 @@ Then continue design and implementation until the route passes.
   - MSIX signed and installed locally as `NextGenEmby.App 0.1.0.117`.
 - Local visual validation:
   - Debug route opened Settings with result `completed / settings`.
-  - Screenshot showed account `redacted-user on https://emby.example:443`, `App 0.1.0.117 / Emby client 0.1.0`, visible checkbox focus, input map, and `Last launch completed`.
+  - Screenshot showed a redacted signed-in private server, `App 0.1.0.117 / Emby client 0.1.0`, visible checkbox focus, input map, and `Last launch completed`.
   - No app-content mouse clicks were used.
 - Keyboard validation limitation:
   - Windows `SendInput` kept `Next Gen Xbox Emby` foreground, but synthetic `Down`, `Enter`, and `Space` did not reliably drive UWP focus/toggle state in this desktop session.
@@ -790,7 +862,7 @@ Then continue design and implementation until the route passes.
   - Pressed `M` to open the expanded Guide rail.
   - Pressed `Up`; screenshot validation showed the Guide rail stayed open and the Home guide item had a visible cyan focus frame.
   - Pressed eleven `Down`, then `Return`; Settings opened from the Guide without using an app-content mouse click.
-  - Settings exposed account `redacted-user on https://emby.example:443`, `App 0.1.0.126 / Emby client 0.1.0`, `Playback input`, `Thumbstick seek preview`, the controller input map, and latest startup diagnostics.
+  - Settings exposed a redacted signed-in private server, `App 0.1.0.126 / Emby client 0.1.0`, `Playback input`, `Thumbstick seek preview`, the controller input map, and latest startup diagnostics.
   - Pressed `Space` on the default Settings focus; the status text changed to `Left thumbstick seek preview is off; D-pad seek remains available.`
   - Pressed `Space` again to restore the setting; the status text returned to `Left thumbstick previews the target position before seek commits.`
   - No app-content mouse clicks were used.
@@ -1162,3 +1234,2028 @@ Then continue design and implementation until the route passes.
   - No app-content mouse clicks were used. Runtime keyboard validation for this route remains blocked by local UWP startup, so this pass is not marked runtime Verified.
 - Follow-up:
   - Restore a working local UWP launch path, then run Home -> Movies -> multi-version Details with keyboard only. Expected result: Enter on a version stays on Details and visibly selects the source; Enter on Play starts playback with that selected `MediaSourceId`.
+
+### 2026-07-06 - Debug Startup Recovery And Manual Playback Focus
+
+- App version: 0.1.0.148.
+- Scope: restore a reliable local UWP launch and keyboard validation route after the saved Emby session was lost, without changing native decoding or normal Emby playback logic.
+- Root cause:
+  - The earlier local activation failure came from registering/installing the wrong loose package layout: the XAML metadata provider path was `CLRHost.dll`.
+  - The clean MSIX package layout uses `NextGenEmby.App.exe` as the provider path and launches correctly.
+  - `MainPage_OnLoaded` also gated DEBUG `dev-command.json` execution behind a saved session, so a missing session left the app on Login and blocked local playback/OSD validation.
+- Interaction changes:
+  - Added a DEBUG startup policy so a present `dev-command.json` runs even when no saved Emby session exists.
+  - Manual Direct Stream now chooses initial focus from a policy: valid playable URL focuses `Play direct stream`; invalid or empty URL focuses the URL box.
+  - PlaybackPage applies the manual focus target after Loaded with retry diagnostics, avoiding early focus failure before the page is ready.
+- Automated verification:
+  - TDD red path confirmed `DevelopmentCommandStartupPolicy` was missing before implementation.
+  - TDD red path confirmed the manual direct-stream initial-focus policy was missing before implementation.
+  - Core tests passed: 323 total.
+  - `git diff --check` passed; only line-ending normalization warnings were reported.
+  - App Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.148_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.148`.
+  - Installed package manifest provider paths were correct: `NextGenEmby.Native.dll`, `NextGenEmby.App.exe`, and `Microsoft.Web.WebView2.Core.dll`.
+- Keyboard-only validation with Computer Use:
+  - Wrote a local DEBUG `dev-command.json` using route `manual-playback`, stream URL `https://download.blender.org/peach/bigbuckbunny_movies/BigBuckBunny_320x180.mp4`, and `autoStart:false`.
+  - Launched the installed app through Computer Use. `dev-command-result.txt` reported `completed / manual-playback`.
+  - Playback diagnostics showed `MainPage.Navigated page=PlaybackPage parameter=ManualDirectStreamLaunchOptions`.
+  - Diagnostics showed manual initial focus first failed before layout, then succeeded on Loaded with `target=StartButton applied=True`.
+  - Pressed `Enter`; the native backend opened the MP4 and reached `Opening` then `Playing`. UIA text showed `Playing`, enabled `Pause`, enabled `Stop`, and `More`.
+  - Pressed `M`; the playback More drawer opened and exposed `Playback Options`, current source `Manual Direct Stream`, Audio, Subtitles, and Info.
+  - Pressed `Escape`; More closed and playback remained `Playing`.
+  - No app-content mouse clicks were used.
+- Tooling note:
+  - Computer Use screenshot capture intermittently timed out on this UWP/native-surface window, so this run relied on accessibility text plus app diagnostics. UI Automation continued to report the text box as the focused element even when app logs and keyboard behavior proved the TV action target was active.
+- Follow-up:
+  - Re-run the real Emby Details version-selection route after a saved session or test credentials are restored.
+  - Keep using the manual direct-stream fixture as the deterministic local playback/OSD regression path while the Xbox is unavailable.
+
+### 2026-07-06 - Home Dynamic Card Theme Tokens
+
+- App version: 0.1.0.150.
+- Scope: continue the Matte Cinema Fluent skinning migration by removing the remaining page-local raw color brushes from Home dynamic card code.
+- Visual tokenization:
+  - Added `library_artwork_wash` and `section_artwork_wash` to `docs/DESIGN.md`.
+  - Added matching `AppLibraryArtworkWashBrush` and `AppSectionArtworkWashBrush` resources to `App.xaml`.
+  - Home media library cards and server section cards now consume those wash brushes.
+  - Home poster fallback now consumes `AppRaisedSurfaceBrush`; poster artwork dimming consumes the existing `AppArtworkDimBrush`.
+- Automated verification:
+  - TDD red path confirmed `View_CodeBehind_Does_Not_Create_Page_Local_Raw_Color_Brushes` failed on four `HomePage.xaml.cs` raw color brushes before migration.
+  - Design token tests passed: 3 total.
+  - Manual direct-stream focus retry policy tests passed after a runtime smoke caught the pre-Loaded retry exhaustion bug.
+  - Core tests passed: 328 total.
+  - `git diff --check` passed; only line-ending normalization warnings were reported.
+  - App Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.150_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.150`.
+- Keyboard-only validation with Computer Use:
+  - Wrote the DEBUG `manual-playback` fixture with the Big Buck Bunny MP4 URL and `autoStart:false`.
+  - Launched installed 0.1.0.150 and waited for the route to enter Manual Direct Stream.
+  - Pressed `Enter`; UIA text showed `Playing`, enabled `Pause`, enabled `Stop`, and visible `More`.
+  - Pressed `M`; the More drawer exposed `Playback Options`, source `Manual Direct Stream`, Audio, Subtitles, and Info.
+  - Pressed `Escape`; More closed while playback continued.
+  - Native diagnostics showed `NativePlaybackEngine.OpenAsync success end`, `Native state Playing`, and increasing render/audio counters.
+  - No app-content mouse clicks were used.
+- Limitation:
+  - The saved Emby session is still absent on this machine, so this pass could not visually inspect real Home library cards after the token migration. The new design test prevents Home code-behind from reintroducing page-local raw color brushes, and a future saved-session run should capture Home screenshots with real server artwork.
+
+### 2026-07-06 - Home Fixture Screenshot Route
+
+- App version: 0.1.0.153.
+- Scope: add a deterministic DEBUG-only Home QA route so Home visual and keyboard checks can run on this machine even while the saved Emby session is absent.
+- Interaction changes:
+  - `dev-command.json` accepts route `home-fixture`.
+  - The route navigates to Home with representative fixture data: Continue watching, Next up, Media Libraries, server-configured rows such as Hot Movies, Hot TV Series, Douban Top Rated, Netflix, Anime, and Documentaries.
+  - The fixture uses packaged QA artwork under `Assets/QaHome` and the normal Home rendering path, not a separate demo page.
+  - Hero and dynamic Home buttons now expose automation names so keyboard/UIA verification can identify the current controller target.
+- Automated verification:
+  - TDD red path confirmed `home-fixture` was not accepted before route support.
+  - TDD red path confirmed `DevelopmentHomeFixture` was missing before implementation.
+  - TDD red path confirmed Hero action buttons did not expose automation names before the XAML update.
+  - Targeted fixture/accessibility tests passed.
+  - App Debug x64 build passed, producing `NextGenEmby.App_0.1.0.153_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.153`.
+- Keyboard-only validation:
+  - Wrote `dev-command.json` with route `home-fixture` and launched the installed app.
+  - `dev-command-result.txt` reported `completed / home-fixture`.
+  - UIA text confirmed Home, Media Libraries, Hot Movies, Hot TV Series, Douban Top Rated, Netflix, Continue watching, and More Hot Movies were present.
+  - Using keyboard input only, focus moved from `Play` to `Hot Movies`, then horizontally to `Hot TV Series` and `Douban Top Rated`, then down to `Aurora Protocol` in Continue watching.
+  - Screenshots were captured from the UWP `ApplicationFrameHost` window after minimizing unrelated same-title/Codex windows: top Play focus, Media Libraries focus, Douban focus, Continue watching focus, and a lower-row view.
+  - No app-content mouse clicks were used.
+- Limitation:
+  - The fixture proves Home layout, focus, screenshot capture, and section coverage without a live Emby session. Real server artwork still needs a saved-session pass.
+  - The generated QA artwork is intentionally local and repeatable, but it currently reads very dark under the Home card washes. A later visual polish pass should tune artwork visibility while preserving text contrast.
+
+### 2026-07-06 - Home Wide Artwork Visibility Polish
+
+- App version: 0.1.0.156.
+- Scope: make Home media-library and server-section cards consume their own wide artwork in the deterministic fixture route, and move artwork visibility controls into shared Matte Cinema Fluent resources.
+- Root cause:
+  - `CreateLibraryArtworkBrush` and `CreateHomeSectionArtworkBrush` returned `null` when `_client` or `_session` was absent.
+  - That was correct for live Emby URL construction, but wrong for the DEBUG `home-fixture` route because fixture artwork is resolved from the packaged `Assets/QaHome` URI map before a live client is needed.
+  - The earlier dark-card screenshot therefore combined two issues: fixture cards were falling back too often, and the wide-card image treatment was still hard-coded.
+- Visual/token changes:
+  - Added `TvHomeLibraryArtworkOpacity`, `TvHomeSectionArtworkOpacity`, and `TvHomeWideCardTextScrimHeight` resources.
+  - Reduced `library_artwork_wash` and `section_artwork_wash` so artwork carries more of the card surface.
+  - Replaced the Home wide-card bottom text band with a transparent-to-scrim gradient.
+  - Regenerated local QA artwork with a lighter global scrim so screenshots represent visible media artwork instead of nearly black placeholders.
+- Automated verification:
+  - TDD red path confirmed Home wide-card artwork treatment was not tokenized before implementation.
+  - TDD red path confirmed the QA artwork generator still used the old heavy global scrim.
+  - TDD red path confirmed fixture artwork was blocked by live `_client/_session` checks.
+  - Targeted design/fixture/accessibility tests passed: 10 total.
+  - App Debug x64 build passed, producing `NextGenEmby.App_0.1.0.156_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.156`.
+- Keyboard-only validation:
+  - Wrote `dev-command.json` with route `home-fixture` and launched the installed app.
+  - `dev-command-result.txt` reported `completed / home-fixture`.
+  - Using keyboard input only, focus moved from `Play` to `Hot Movies`, then horizontally to `Hot TV Series` and `Douban Top Rated`, then down to `Aurora Protocol`.
+  - Screenshots were captured from the UWP `ApplicationFrameHost` window under `C:\Users\yqzzx\AppData\Local\Temp\nextgenemby-home-fixture-156-shots`.
+  - The media library rail now shows the fixture wide artwork on library/section cards instead of mostly empty matte surfaces.
+  - No app-content mouse clicks were used.
+
+### 2026-07-06 - Search Error Recovery Fixture
+
+- App version: 0.1.0.159.
+- Scope: turn Search server-failure recovery into a deterministic keyboard regression route while the Xbox and saved Emby session are unavailable.
+- Interaction changes:
+  - `dev-command.json` accepts route `search-error`.
+  - The DEBUG route navigates to Search, fills `Aurora Protocol`, and renders the existing `Unable to search` recovery panel with `Edit search` and `Search again`.
+  - SearchBox now handles `Down` itself so TextBox editing behavior cannot trap D-pad navigation before the selected scope.
+  - The Search error-state actions now handle `Left`/`Right` between `Edit search` and `Search again`.
+- Automated verification:
+  - TDD red path confirmed `search-error` was not accepted before route support.
+  - TDD red path confirmed the Search error route did not render a deterministic keyboard recovery state before implementation.
+  - Computer Use found two real focus bugs during validation; TDD red paths then covered query `Down` routing and error-action left/right routing before fixes.
+  - Core tests passed: 340 total.
+  - App Debug x64 build passed, producing `NextGenEmby.App_0.1.0.159_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.159`.
+- Keyboard-only validation with Computer Use:
+  - Wrote `dev-command.json` with route `search-error` and launched the installed app.
+  - `dev-command-result.txt` reported `completed / search-error`.
+  - Initial Search state showed `Aurora Protocol`, `Unable to search`, recovery copy, `Edit search`, and `Search again`, with focus on the query box.
+  - Pressed `Down`; visual focus moved from the query box to the selected `All` scope.
+  - Pressed `Down`; visual focus moved to `Edit search`.
+  - Pressed `Right`; visual focus moved to `Search again`.
+  - Pressed `Return`; the deterministic retry re-rendered the error state and returned focus to the query box.
+  - Repeated `Down`, `Down`, `Right`, `Left`; visual focus returned from `Search again` to `Edit search`.
+  - No app-content mouse clicks were used.
+- Tooling note:
+  - UI Automation `focused_element` intermittently continued to report `SearchBox` after D-pad moves, while screenshots and actual button activation showed the visible TV focus correctly moved. This run therefore used Computer Use screenshots as the authority for focus position.
+
+### 2026-07-06 - Search Results Scope Fixture
+
+- App version: 0.1.0.161.
+- Scope: add a deterministic Search results route that covers every TV search scope and stress-tests the far-right scope rail without a saved Emby session.
+- Interaction changes:
+  - `dev-command.json` accepts route `search-fixture`.
+  - The DEBUG route renders Search with `Aurora Protocol` and representative results for Movie, Series, Episode, Video, MusicVideo, BoxSet, Playlist, Person, MusicAlbum, Audio, Photo, and TvChannel.
+  - Search scope buttons call `StartBringIntoView` on focus so far-right scopes stay visible during D-pad navigation.
+  - Search result status text now uses `1 result` for singular counts and `results` otherwise.
+- Automated verification:
+  - TDD red path confirmed `search-fixture` was not accepted before route support.
+  - TDD red path confirmed `DevelopmentSearchFixture` did not exist before fixture data was implemented.
+  - TDD red path confirmed the Search page did not render fixture results or keep scope focus visible before implementation.
+  - Computer Use visual validation caught `1 results / Live TV`; a TDD red path then added `SearchResultStatusTextPolicy` before the text fix.
+  - Core tests passed: 348 total.
+  - App Debug x64 build passed, producing `NextGenEmby.App_0.1.0.161_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.161`.
+- Keyboard-only validation with Computer Use:
+  - Wrote `dev-command.json` with route `search-fixture` and launched the installed app.
+  - `dev-command-result.txt` reported `completed / search-fixture`.
+  - Initial Search state showed `12 results / All` with fixture cards including `Aurora Protocol`, `Polar Archive`, `Signal Room`, `Night City Collection`, `Weekend Queue`, `Maya Chen`, `Nocturne Signals`, `Opening Credits`, `Neon Lobby Still`, and `News 24`.
+  - Pressed `Down`, then nine `Right` presses; focus moved to far-right `Live TV` and the scope rail scrolled to keep it visible.
+  - Pressed `Return`; the fixture filtered to `1 result / Live TV` and showed `News 24`.
+  - Pressed `Down`; focus moved from `Live TV` to the `News 24` result card.
+  - Pressed `Up`; focus returned to `Live TV`.
+  - Pressed `Left`; focus moved from `Live TV` to `Photos`.
+  - No app-content mouse clicks were used.
+- Limitation:
+  - The fixture currently uses initials-only fallback cards. A later visual pass should add packaged QA artwork for Search results so this route can validate poster/thumbnail treatment as well as focus. This was addressed in the 0.1.0.162 pass below.
+
+### 2026-07-06 - Search Fixture Artwork Polish
+
+- App version: 0.1.0.162.
+- Scope: remove the initials-only visual fallback from the deterministic Search fixture route by giving every representative result a packaged QA poster image.
+- Visual/data changes:
+  - `DevelopmentSearchFixture` now exposes an artwork URI map using the same packaged `Assets/QaHome` artwork pipeline as the Home fixture.
+  - Each fixture item now carries `PrimaryImageTag` and `PrimaryImageItemId`, so the fixture resembles normal Emby media item image metadata instead of UI-only mock data.
+  - `SearchPage` resolves DEBUG fixture artwork through `CreateDevelopmentArtworkImageSource(item)` and still falls back cleanly if a fixture asset is missing.
+- Automated verification:
+  - TDD red path confirmed `DevelopmentSearchFixture` did not expose `CreateArtworkUris()` or `ArtworkKey()` before the change.
+  - TDD red path confirmed Search UI source did not consume development artwork before implementation.
+  - Targeted Search fixture/source tests passed: 8 total.
+  - Core tests passed: 349 total.
+  - `git diff --check` passed; only line-ending normalization warnings were reported.
+  - App Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.162_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.162`.
+- Keyboard-only validation with Computer Use:
+  - Wrote `dev-command.json` with route `search-fixture` and cold-launched the installed app.
+  - Initial Search fixture state showed `12 results / All` and every visible card rendered packaged QA artwork instead of initials-only fallback.
+  - Pressed `Down`; focus moved from the query box to the selected `All` scope.
+  - Pressed nine `Right` keys; focus moved to far-right `Live TV` and the scope rail scrolled to keep it visible.
+  - Pressed `Return`; the fixture filtered to `1 result / Live TV` and showed `News 24` with packaged QA artwork.
+  - Pressed `Down`; focus moved to the `News 24` card with a clear TV focus rectangle.
+  - Pressed `Up`; focus returned to `Live TV`.
+  - Pressed `Left`; focus moved from `Live TV` to `Photos`.
+  - No app-content mouse clicks were used.
+- Tooling note:
+  - The first launch attempt only activated an already-running login window, so the DEBUG command was not re-read. The validation run killed the existing app process, rewrote `dev-command.json`, and cold-launched 0.1.0.162 before capturing screenshots.
+
+### 2026-07-07 - Details Fixture Below-Fold Route
+
+- App version: 0.1.0.166.
+- Scope: add a deterministic Details route for media versions, organize sheets, similar items, and cast/crew validation while the Xbox and saved Emby session are unavailable.
+- Interaction/data changes:
+  - `dev-command.json` accepts route `details-fixture`.
+  - The route opens `Aurora Protocol` through the normal `MediaDetailsPage` path with fixture playback versions, ancestors, collection targets, playlist targets, similar items, people, and packaged QA artwork.
+  - Details fixture add-to sheets update local fixture ancestors and restore focus without calling live Emby mutation APIs.
+  - Media Details now uses a `MediaDetails` shell content mode: Guide remains visible, but normal navigation prefers the Details content default focus instead of the left Guide rail.
+  - Selected media versions no longer reuse the focus border color. The selected version uses a warm internal status bar; the cyan outer focus rectangle is reserved for the current keyboard/controller focus.
+- Automated verification:
+  - TDD red path confirmed `details-fixture` was not accepted before route support.
+  - TDD red path confirmed `DevelopmentDetailsFixture` was missing before fixture data was implemented.
+  - TDD red path confirmed the Details fixture source contract did not cover below-fold rails, fixture artwork, add-to sheets, or deferred content focus before implementation.
+  - Computer Use caught a real cold-launch focus bug: 0.1.0.163/0.1.0.165 could land on the Guide Home button instead of `Resume`.
+  - TDD red path confirmed `ShellContentMode.MediaDetails` did not exist before the shell focus-policy fix.
+  - TDD red path confirmed selected version styling reused the focus border color before the internal status-bar fix.
+  - Core tests passed: 356 total.
+  - App Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.166_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.166`.
+- Keyboard-only validation with Computer Use:
+  - Killed any running app process, wrote `dev-command.json` with route `details-fixture`, and cold-launched the installed app.
+  - Initial Details state showed `Aurora Protocol`, `Resume`, two Versions, Organize actions, More like this, and Cast & crew. Focus landed on `Resume`, not the Guide rail.
+  - Pressed `Down`; focus moved to the first version. The first version showed both the cyan focus rectangle and the warm selected-version status bar.
+  - Pressed `Down`, `Enter`; the second version `1080p fallback` became selected with the warm status bar and the app stayed on Details instead of launching playback.
+  - Pressed `Down` to `Add to collection`, `Enter` to open the sheet, `Down` to `Signal Archives`, and `Enter` to confirm. The sheet closed, focus restored, and status changed to `Added to fixture collection: Signal Archives`.
+  - Pressed `Right` to `Add to playlist`, `Enter` to open the playlist sheet, and `Escape` to close it. Focus restored to `Add to playlist`.
+  - Pressed `Down` to More like this, then `Down` to Cast & crew. Focus stayed visible and the viewport scrolled predictably.
+  - No app-content mouse clicks were used.
+- Follow-up:
+  - Re-run against a real saved Emby session when available: multi-version server item, similar-items server response, and live add-to success on disposable collection/playlist targets.
+
+### 2026-07-07 - Playback Options Fixture Route
+
+- App version: 0.1.0.173.
+- Scope: add deterministic playback More drawer Source/Audio/Subtitles/Info validation without touching native decoding or Emby transcode paths.
+- Interaction changes:
+  - `dev-command.json` accepts route `playback-options-fixture`.
+  - The route renders `Aurora Protocol` directly on `PlaybackPage`, opens the More drawer, pins the overlay, and exposes fixture sources, audio tracks, subtitles, and Info.
+  - Source/audio/subtitle fixture changes update local playback status/info only and do not call backend/orchestrator stream switching.
+  - Collapsed Source/Audio/Subtitles combo boxes route Up/Down to drawer focus. Only expanded dropdowns use Up/Down to change values.
+  - Info toggle preserves Info focus; opening More clears transport focus visuals.
+- Automated verification:
+  - TDD red paths confirmed missing route/fixture/source contract, combo directional policy, `ProcessKeyboardAccelerators` binding, replay guard, Info focus preservation, and transport focus clearing before implementation.
+  - Core tests passed: 365 total.
+  - App Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.173_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.173`.
+- Keyboard-only validation with Computer Use:
+  - Killed any running app process, wrote `dev-command.json` with route `playback-options-fixture`, and cold-launched 0.1.0.173.
+  - Initial More drawer focus landed on Source with `4K Direct · 3840x2160`.
+  - Pressed `Down`; focus moved Source -> Audio without changing Source.
+  - Pressed `Enter`, `Down`, `Enter`; Audio changed to `Japanese AAC Stereo`.
+  - Pressed `Down`; focus moved Audio -> Subtitles without changing Audio.
+  - Pressed `Enter`, `Down`, `Enter`; Subtitles changed to `English SDH External`.
+  - Pressed `Down`, `Enter`; Info opened and showed State, Item, Source, Audio, Subtitles, Position, and Fixture fields. Focus stayed on Info.
+  - Pressed `Escape`; More closed and focus returned to the transport More button.
+  - Pressed `M`; More reopened with Source as the only strong focus, with no simultaneous transport More highlight.
+  - No app-content mouse clicks were used.
+- Bugs caught/fixed:
+  - Collapsed ComboBox `Down` changed Source before moving focus.
+  - Early ComboBox handling and CoreWindow handling double-processed one `Down`, skipping Audio.
+  - Info toggle reset focus to Source.
+  - Reopening More showed simultaneous Source and transport More focus.
+- Follow-up:
+  - Fixture validates UI/controller flow without native stream switching. A future saved-session/media pass should verify live multi-audio/subtitle switching against real Emby items.
+
+### 2026-07-07 - Details Favorite And Watched Fixture Toggles
+
+- App version: 0.1.0.175.
+- Scope: verify Details favorite/watched actions with keyboard/controller input using the deterministic `details-fixture` route, without mutating live Emby user data.
+- Interaction changes:
+  - Added a core `MediaDetailsUserDataTogglePolicy` so favorite and watched toggles flip one field while preserving resume position, played percentage, and the other user-data state.
+  - `details-fixture` now handles Favorite/Watched locally and updates button labels/status without calling `SetFavoriteAsync` or `SetPlayedAsync`.
+  - Details fixture default focus now uses a short Low-priority retry loop. Computer Use caught the old single-dispatch focus path landing on the collapsed Guide Home button, so `Right`, `Right`, `Return` navigated Home instead of activating Add favorite.
+- Automated verification:
+  - TDD red path confirmed `MediaDetailsUserDataTogglePolicy` did not exist before implementation.
+  - TDD red path confirmed the Details fixture source did not contain the local user-data toggle path.
+  - TDD red path confirmed Details fixture focus did not use Low-priority retry before the cold-launch focus fix.
+  - Core tests passed: 369 total.
+  - App Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.175_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.175`.
+- Keyboard-only validation with Computer Use:
+  - Killed any running app process, wrote `dev-command.json` with route `details-fixture`, and cold-launched 0.1.0.175.
+  - Initial Details state showed `Aurora Protocol`; the true TV focus landed on `Resume` and the collapsed Guide Home button was not focused.
+  - Pressed `Right`, `Right`, `Return`; `Add favorite` changed to `Remove favorite`, status changed to `Fixture favorite added.`, and focus stayed on the Favorite button.
+  - Pressed `Right`, `Return`; `Mark watched` changed to `Mark unwatched`, status changed to `Fixture marked watched.`, and focus stayed on the Watched button.
+  - Pressed `Return`; Watched toggled back to `Mark watched` with `Fixture marked unwatched.`.
+  - Pressed `Left`, `Return`; Favorite toggled back to `Add favorite` with `Fixture favorite removed.`.
+  - No app-content mouse clicks were used.
+- Follow-up:
+  - Re-run live favorite/watched toggles only on a disposable item or fixture user after the saved Emby session is restored.
+
+### 2026-07-07 - Music Positive Browse Fixture Route
+
+- App version: 0.1.0.177.
+- Scope: add and verify a deterministic positive Music browse route while the current Emby server/session does not expose real `MusicAlbum` or `Audio` rows.
+- Interaction changes:
+  - `dev-command.json` accepts route `music-fixture`.
+  - The route opens Music with packaged QA album/song artwork, 3 fixture albums, 6 fixture songs, and the existing Albums/Songs/Preview three-column layout.
+  - Album activation filters Songs locally and keeps the route browse-only; song activation opens the existing `Music playback unavailable` layer.
+  - Music now tracks album/song buttons explicitly and handles D-pad/arrow Up/Down/Left/Right in the page instead of relying on default UWP XY focus. This fixes the bug where `Down` stayed on the first song and `Return` activated the wrong item.
+  - Closing the unsupported music layer restores focus to the song that opened it.
+- Automated verification:
+  - TDD red path confirmed `music-fixture` was not accepted before route support.
+  - TDD red path confirmed `DevelopmentMusicFixture` did not exist before fixture data was implemented.
+  - TDD red path confirmed Music page source did not render the positive fixture route before implementation.
+  - Computer Use caught the real list-movement bug; TDD then added `MusicListFocusPolicy` before the explicit page focus fix.
+  - Core tests passed: 383 total.
+  - App Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.177_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.177`.
+- Keyboard-only validation with Computer Use:
+  - Wrote `dev-command.json` with route `music-fixture` and launched the installed app.
+  - `dev-command-result.txt` reported `completed / music-fixture`.
+  - Initial Music state showed `Fixture music library`, 3 albums, 6 songs, and focus on `Nocturne Signals`.
+  - Pressed `Down`; focus moved to `City Lights Archive`, and the Preview pane updated to that album.
+  - Pressed `Return`; Songs filtered to `City Lights Archive`, showed 2 songs, showed the `All` action, and focused `Late Train Window`.
+  - Pressed `Down`, `Return`; focus moved to `Rooftop Weather`, and the `Music playback unavailable` layer opened for `Rooftop Weather` with `Close` focused.
+  - Pressed `Escape`; the layer closed and focus returned to `Rooftop Weather`.
+  - Pressed `Up`, `Up`; focus moved to `All`. Pressed `Return`; the full 6-song list returned with `Opening Credits` focused.
+  - Pressed `Left`; focus moved back to `Nocturne Signals`. Pressed `Right`; focus returned to `Opening Credits`.
+  - No app-content mouse clicks were used.
+- Follow-up:
+  - Re-run Music against a real saved Emby session with albums/songs after session restore, then add artist/album-artist hierarchy if the server exposes usable artist metadata.
+
+### 2026-07-07 - Home Server Sections Artwork Rail
+
+- App version: 0.1.0.179.
+- Scope: make server-configured Emby home sections first-class TV entrances, separate from media-library cards, with section-owned wide artwork preferred over child poster fallbacks.
+- Interaction/data changes:
+  - `GetHomeSectionsAsync` now requests image metadata and maps section-owned `Thumb`, `Backdrop`, `Banner`, `Primary`, and `Logo` image fields.
+  - Home renders a dedicated `Server sections` rail between `Media Libraries` and content/status rows.
+  - `EmbyArtworkPolicy.SelectHomeSectionWideArtwork` now prefers section-owned wide images before falling back to `ParentItem` artwork.
+  - Home focus policy now treats `Server sections` as its own controller stop: Hero -> Media Libraries -> Server sections -> content rows.
+  - DEBUG `home-fixture` section requests carry fixture items/artwork into Library, so local validation no longer depends on a saved Emby session.
+- Automated verification:
+  - TDD red paths confirmed HomeSections did not request/map image metadata, section-owned artwork was ignored, and Home had no dedicated section focus zone before implementation.
+  - Computer Use caught a real fixture bug where opening `Douban Top Rated` showed `Sign in first`; source tests then drove the fixture handoff fix.
+  - Core tests passed: 395 total.
+  - App Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.179_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.179`.
+- Keyboard-only validation with Computer Use:
+  - Wrote `dev-command.json` with route `home-fixture` and cold-launched the installed app.
+  - Initial Home showed `Play` focused on the hero, a `Media Libraries` rail, and a distinct `Server sections` rail with Hot Movies, Hot TV Series, Douban Top Rated, and Netflix cards using packaged wide artwork.
+  - Pressed `Down`; focus moved from hero `Play` to the first Media Libraries card.
+  - Pressed `Down`; focus moved to the first Server sections card.
+  - Pressed `Right`, `Right`; focus moved across Server sections to `Douban Top Rated` while the rail kept the focused card visible.
+  - Pressed `Return`; Library opened as `Douban Top Rated` with 7 fixture items and artwork-backed cards.
+  - Pressed `Escape`; Home restored focus to the originating `Douban Top Rated` Server sections card.
+  - No app-content mouse clicks were used.
+- Follow-up:
+  - Re-run the same rail against real server-provided section artwork when the saved Emby session is restored.
+
+### 2026-07-07 - Photos Positive Browse Fixture Route
+
+- App version: 0.1.0.182.
+- Scope: add and verify a deterministic positive Photos browse route while the current saved Emby session/server route only exposes the Photos empty state.
+- Interaction changes:
+  - `dev-command.json` accepts route `photos-fixture`.
+  - The route opens the normal Library page as `Photos` with `Photo,Folder` item support, packaged QA artwork, root photos, and a root album.
+  - Folder activation opens a nested Photos Library request with the same fixture item/artwork set and filters by `ParentId`.
+  - Photo activation opens the immersive Photo viewer with a DEBUG-only packaged image URI so local validation does not require a saved Emby session.
+  - Library back navigation stores the originating item on the navigation request and restores focus to that item after returning from the Photo viewer.
+- Automated verification:
+  - TDD red paths confirmed `DevelopmentPhotosFixture`, route support, `BrowseFolder` activation, Photo viewer image handoff, and `photos-fixture` source handling did not exist before implementation.
+  - Computer Use caught a real focus restoration bug: after opening `Blue Crossing` and pressing `Escape`, focus initially reset to the first album item instead of the originating photo. A second TDD red path moved restore state onto `LibraryNavigationRequest`, after which focus returned to `Blue Crossing`.
+  - Core tests passed: 407 total.
+  - App Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.182_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.182`.
+- Keyboard-only validation with Computer Use:
+  - Wrote `dev-command.json` with route `photos-fixture` and launched the installed app.
+  - `dev-command-result.txt` reported `completed / photos-fixture`.
+  - Initial Photos state showed `Photos`, `3 items`, `Night Market`, `Rooftop After Rain`, and `Window Seat`, with focus on `Night Market`.
+  - Pressed `Return`; `Night Market` opened as a nested album with `4 items`.
+  - Pressed `Right`, `Right`; visible focus moved to `Blue Crossing`.
+  - Pressed `Return`; the immersive Photo viewer opened for `Blue Crossing`, showed `Photo`, rendered the packaged image, and did not show `Sign in first` or `Photo unavailable`.
+  - Pressed `Escape`; the app returned to the `Night Market` album and restored focus to `Blue Crossing`.
+  - Pressed `Escape` again; the app returned to the root Photos grid with `Night Market` focused.
+  - No app-content mouse clicks were used.
+- Follow-up:
+  - Re-run Photos against a real saved Emby session with server-provided photo folders and image URLs, then decide whether Photos needs a dedicated album-first layout instead of the generic Library grid.
+
+### 2026-07-07 - Live TV Positive Browse Fixture Route
+
+- App version: 0.1.0.184.
+- Scope: add and verify a deterministic positive Live TV browse route while the current local validation path does not expose real Live TV channels.
+- Interaction changes:
+  - `dev-command.json` accepts route `livetv-fixture`.
+  - The route opens the normal Live TV page with four fixture channels, current-program metadata, and packaged channel artwork.
+  - Channel activation remains browse-only and opens the existing `Live TV playback unavailable` layer; it does not start live streams and does not touch the native decoding path.
+  - Live TV now tracks channel buttons explicitly and handles Up/Down keys on the page so D-pad style movement remains deterministic.
+  - Closing the unsupported layer restores focus to the channel that opened it.
+- Automated verification:
+  - TDD red path confirmed `DevelopmentLiveTvFixture` and `livetv-fixture` route acceptance did not exist before implementation.
+  - TDD red path confirmed the Live TV page did not render a positive fixture route, consume fixture artwork, or restore invoking-channel focus before implementation.
+  - Computer Use caught the real channel-list movement bug: `Down` initially did not leave the first channel. Source tests then drove the explicit `_channelButtons` movement path through `MusicListFocusPolicy`.
+  - Core tests passed: 414 total.
+  - App Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.184_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.184`.
+- Keyboard-only validation with Computer Use:
+  - Wrote `dev-command.json` with route `livetv-fixture` and launched the installed app.
+  - `dev-command-result.txt` reported `completed / livetv-fixture`.
+  - Initial Live TV state showed `Fixture Live TV guide`, `101 News 24`, `202 Cinema One`, `303 Match Center`, and `404 Kids Studio`, with focus on `101 News 24`.
+  - Pressed `Down`; focus moved to `202 Cinema One`, and the Now preview updated to `Matinee Window`.
+  - Pressed `Down`, `Down`; focus moved through the list to `404 Kids Studio`, and the Now preview updated to `Saturday Workshop - Paper City`.
+  - Pressed `Return`; the `Live TV playback unavailable` layer opened for `Kids Studio` with `Close` focused.
+  - Pressed `Escape`; the layer closed and focus returned to `404 Kids Studio`.
+  - Pressed `Up`; focus moved to `303 Match Center`, and the Now preview updated to `Late Match - Quarter Final`.
+  - No app-content mouse clicks were used.
+- Follow-up:
+  - Re-run Live TV against a real Live TV-enabled Emby server after session restore. Keep live stream playback and Emby transcoding outside this fixture route until they become explicit goals.
+
+### 2026-07-07 - Collections And Playlists Positive Fixture Routes
+
+- App version: 0.1.0.185.
+- Scope: add and verify deterministic positive browse routes for organization libraries while keeping the existing Library grid and Matte Cinema Fluent card treatment.
+- Interaction changes:
+  - `dev-command.json` accepts routes `collections-fixture` and `playlists-fixture`.
+  - `BoxSet` and `Playlist` now activate as browseable Library containers instead of opening dead-end Details routes.
+  - Organization child pages use a media-child include set so collection/playlist contents can show Movie, Series, Episode, Video, MusicVideo, Audio, and Photo child items.
+  - Library back navigation keeps the originating root card and restores focus after returning from the nested collection or playlist.
+- Automated verification:
+  - TDD red path confirmed `DevelopmentLibraryOrganizationFixture`, `collections-fixture`, and `playlists-fixture` did not exist before implementation.
+  - TDD red path confirmed `BoxSet` and `Playlist` still routed to Details before the activation policy update.
+  - Targeted fixture/route/source/activation tests passed: 46 total.
+  - Core tests passed: 421 total.
+  - App Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.185_x64_Debug.msix`.
+  - The first signing attempt used an untrusted same-subject certificate and install failed with `0x800B0109`; root-cause check found the trusted `CN=NextGenEmby` certificate thumbprint `6CB453A2FEC300C6E5034152C6C1A68DE31A7BD0`, re-signed the package, and installed `NextGenEmby.App 0.1.0.185`.
+- Keyboard-only validation with Computer Use:
+  - Wrote `dev-command.json` with route `collections-fixture` and cold-launched the installed app.
+  - `dev-command-result.txt` reported `completed / collections-fixture`.
+  - Initial Collections state showed `Collections`, `2 items`, `Signal Archives`, and `City Nights`, with focus on `Signal Archives`.
+  - Pressed `Return`; `Signal Archives` opened as a nested Library with `4 items`: `Aurora Protocol`, `Midnight Signal`, `Afterimage`, and `Quiet Orbit`.
+  - Pressed `Right`; focus moved from `Aurora Protocol` to `Midnight Signal`.
+  - Pressed `Escape`; the app returned to root Collections and restored focus to `Signal Archives`.
+  - Wrote `dev-command.json` with route `playlists-fixture` and cold-launched the installed app.
+  - Initial Playlists state showed `Playlists`, `2 items`, `Weekend Queue`, and `Documentary Stack`, with focus on `Weekend Queue`.
+  - Pressed `Return`; `Weekend Queue` opened as a nested Library with `5 items`: `Northline S1:E4`, `Room Tone S2:E1`, `Ocean Archive`, `Sound Room`, and `Room Tone`.
+  - Pressed `Right`, `Right`; focus moved to `Ocean Archive`, and long episode metadata stayed clipped within its card.
+  - Pressed `Escape`; the app returned to root Playlists and restored focus to `Weekend Queue`.
+  - No app-content mouse clicks were used.
+- Follow-up:
+  - Re-run Collections and Playlists against a real saved Emby session. If real playlist children do not resolve through `ParentId` on the target server, add a dedicated playlist-items API path while keeping this fixture route as a controller regression.
+
+### 2026-07-07 - Playlist Items Endpoint Route
+
+- App version: 0.1.0.186.
+- Scope: replace the remaining real-server playlist child loading risk with Emby's dedicated playlist item endpoint while keeping the existing Playlists fixture route and Library grid interaction intact.
+- Interaction changes:
+  - `EmbyApiClient.GetPlaylistItemsAsync` uses `GET /Playlists/{Id}/Items` with `UserId`, `Limit`, standard item fields, and image metadata.
+  - Nested playlist Library requests now carry `ContainerItemType`, so `Playlist` children use the playlist endpoint instead of a generic `ParentId` query.
+  - Playlist child pages are treated as read-only ordered sequences: Sort/Filter are hidden, and Up from the first row routes to Refresh instead of exposing controls that the endpoint does not support.
+- Automated verification:
+  - TDD red path confirmed `GetPlaylistItemsAsync` did not exist before implementation.
+  - TDD red path confirmed LibraryPage lacked `ContainerItemType`, `IsPlaylistRequest`, and `GetPlaylistItemsAsync` routing before implementation.
+  - TDD red path confirmed read-only sequence requests did not hide Sort/Filter before implementation.
+  - Targeted playlist endpoint, source, fixture, and activation tests passed: 15 total.
+  - Core tests passed: 424 total.
+  - `git diff --check` passed with only LF/CRLF working-copy warnings.
+  - App Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.186_x64_Debug.msix`.
+  - First install attempt failed with `0x800B0100` because the package was not signed. Root-cause check showed `Get-AuthenticodeSignature` was `NotSigned`; signing with trusted `CN=NextGenEmby` thumbprint `6CB453A2FEC300C6E5034152C6C1A68DE31A7BD0` produced `Status: Valid`, then install succeeded as `NextGenEmby.App 0.1.0.186`.
+- Keyboard-only validation with Computer Use:
+  - Wrote `dev-command.json` with route `playlists-fixture` and cold-launched the installed app.
+  - `dev-command-result.txt` reported `completed / playlists-fixture`.
+  - Initial Playlists state showed `Playlists`, `2 items`, `Weekend Queue`, and `Documentary Stack`, with focus on `Weekend Queue`.
+  - Pressed `Return`; `Weekend Queue` opened as a nested playlist page with `5 items`: `Northline S1:E4`, `Room Tone S2:E1`, `Ocean Archive`, `Sound Room`, and `Room Tone`.
+  - Verified the nested playlist page hides Sort/Filter and keeps only the Refresh action in the toolbar, matching the ordered playlist endpoint behavior.
+  - Pressed `Right`, `Right`; visible focus moved to `Ocean Archive` without card resizing or label overlap.
+  - Pressed `Escape`; the app returned to root Playlists and restored focus to `Weekend Queue`.
+  - No app-content mouse clicks were used. Computer Use required window rebinds after two capture/foreground metadata hiccups, but all app interactions were completed through keyboard/controller-mapped input.
+- Follow-up:
+  - Re-run a real saved Emby session where playlist items are not reliably returned by `ParentId`, and verify the live endpoint returns mixed video/audio playlist children with the same focus behavior.
+
+### 2026-07-07 - Details Metadata Facet Browse
+
+- App version: 0.1.0.190.
+- Scope: make Details metadata actionable for couch navigation by rendering Genre, Studio, and Tag chips in an `Explore` rail, then opening Library result pages filtered to the selected facet.
+- Interaction changes:
+  - `EmbyApiClient.GetItemAsync` now requests and maps `GenreItems`, `Studios`, `TagItems`, and string-only `Tags` fallback into typed item references.
+  - `EmbyItemsQuery` and `LibraryNavigationQuery` now carry `Genres`, `GenreIds`, `Studios`, `StudioIds`, and `Tags` so Details chips can open filtered Library pages.
+  - Details renders focusable metadata chips below `More like this`; Genre/Studio chips prefer ids when available and fall back to names for less compatible Emby servers.
+  - Back navigation stores the originating metadata chip by item id, so a rebuilt Details page restores focus to the chip instead of jumping to `Resume`.
+- Automated verification:
+  - TDD red paths confirmed metadata DTO mapping, `/Items` facet query serialization, Details chip rendering/navigation, and backstack focus restoration did not exist before implementation.
+  - Computer Use found a real focus bug where `Escape` from `Genre: Sci-Fi` returned to `Resume`; the fix moved metadata focus restoration into a cross-instance pending map and suppressed default focus while restore is pending.
+  - Core tests passed: 429 total.
+  - `git diff --check` passed with only LF/CRLF working-copy warnings.
+  - App Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.190_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.190`.
+- Keyboard-only validation with Computer Use:
+  - Wrote `dev-command.json` with route `details-fixture` and cold-launched the installed app.
+  - Initial Details state showed `Aurora Protocol` with focus on `Resume`.
+  - Pressed `Down` five times; focus moved to `Explore` and landed on `Genre / Sci-Fi`.
+  - Pressed `Return`; Library opened as `Genre: Sci-Fi` with 15 fixture items and focus on `Aurora Protocol`.
+  - Pressed `Escape`; Details returned to the `Explore` rail with focus restored to the originating `Sci-Fi` chip, not the top `Resume` action.
+  - No app-content mouse clicks were used.
+- Follow-up:
+  - Re-run against a real saved Emby session to verify server-specific `GenreItems`, `Studios`, `TagItems`, and `Tags` shapes plus live `/Items` facet filtering.
+
+### 2026-07-07 - Login Failure Recovery And Guide Focus Contrast
+
+- App version: 0.1.0.195.
+- Scope: verify failed login recovery with controller-mapped keyboard input while separating passive Guide active-route state from true controller focus.
+- Interaction/design changes:
+  - `dev-command.json` accepts route `login`, allowing deterministic local validation of Login without clearing real saved session state.
+  - `docs/DESIGN.md` now defines `colors.guide_active_border`; `App.xaml` exposes `AppGuideActiveBorderColor` and `AppGuideActiveBorderBrush`.
+  - Guide active route uses `AppGuideActiveBorderBrush` instead of `AppAccentBrush`, keeping cyan reserved for true focus.
+  - `LoginPage` implements `ITvContentFocusTarget`, and `ShellContentMode.Login` makes normal Login navigation prefer content focus over the Guide rail.
+  - Failed login returns focus to the relevant editable field: username/password validation errors target their field, while connection/auth failures return to Server URL.
+  - Login controls register `KeyDownEvent` with `handledEventsToo: true`, so D-pad-style Up/Down moves through Server URL -> Username -> Password -> Connect even when a TextBox would otherwise consume the arrow key.
+- Automated verification:
+  - TDD red path confirmed `login` was not an accepted development route before implementation.
+  - TDD red path confirmed Guide active state reused `AppAccentBrush` and had no dedicated active-route design token before implementation.
+  - Computer Use found the real focus ambiguity where Guide Home looked focused while Server URL had true focus; the active-route brush was split from the focus brush.
+  - Computer Use found the real Login recovery bug where focus could move to Guide Home after a failed retry; `ShellContentMode.Login` and `ITvContentFocusTarget` fixed default Login focus.
+  - Computer Use found the real TextBox directional bug where `Down` stayed inside Server URL; `handledEventsToo` key routing fixed D-pad-style form movement.
+  - Core tests passed: 434 total.
+  - `git diff --check` passed with only LF/CRLF working-copy warnings.
+  - App Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.195_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate thumbprint `6CB453A2FEC300C6E5034152C6C1A68DE31A7BD0`, verified with `signtool verify /pa`, and installed locally as `NextGenEmby.App 0.1.0.195`.
+- Keyboard-only validation with Computer Use:
+  - Wrote `dev-command.json` with route `login` and `dev-login.json` with invalid credentials, then cold-launched the installed app.
+  - Initial state showed Login failure text, Server URL focused, and Guide Home shown only as passive active route without cyan focus.
+  - Pressed `Down`; focus moved from Server URL to Username, proving TextBox arrow-key capture works.
+  - Pressed `Up`, `Ctrl+A`, typed `http://127.0.0.1:8`, then pressed `Down`, `Down`, `Down`, `Return`.
+  - The retry failed as expected and focus returned to Server URL with the edited URL still visible.
+  - No app-content mouse clicks were used. `dev-login.json` and `dev-command.json` were removed from LocalState after validation.
+- Follow-up:
+  - Re-run Login from a deliberately cleared real session before release packaging, then decide whether the Login page should get denser TV-mode copy or a server-discovery affordance.
+
+### 2026-07-07 - Player Status Aperture App Icon Refresh
+
+- App version: 0.1.0.196.
+- Scope: refine the app identity away from brand text, initials, and miniature UI screenshots while keeping the Matte Cinema Fluent player vocabulary.
+- Design alignment:
+  - `docs/DESIGN.md`, the complete-client design plan, the app-icon refresh plan, and `docs/icon-concepts/README.md` now define **Player Status Aperture** as the production icon direction.
+  - The generator uses reusable player-property primitives: `Draw-FocusPath`, `Draw-PlaybackCore`, and `Draw-ProgressBase`.
+  - Store, square, wide, and splash assets reuse the same centered aperture symbol: compact playback viewport, cyan controller focus path, green play/confirm core, and flat amber progress base.
+  - Removed the prior tiny subtitle/audio marks and wide-tile pseudo UI stack because they became too small and screenshot-like at 44 px.
+- Automated verification:
+  - TDD red path confirmed the new `Player Status Aperture` contract did not exist before implementation.
+  - Targeted icon contract tests passed: 4 total.
+  - Core tests passed: 435 total.
+  - `git diff --check` passed with only LF/CRLF working-copy warnings.
+  - Regenerated `StoreLogo.png`, `Square44x44Logo.png`, `Square150x150Logo.png`, `Wide310x150Logo.png`, and `SplashScreen.png` from `tools/Generate-AppIconAssets.ps1`.
+  - Opened and inspected the generated 44 px, 150 px, wide, and splash PNGs locally; the 44 px mark preserves focus/play/progress, and the wide tile now reads as the same centered player-property symbol instead of a banner or page layout.
+  - App Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.196_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate thumbprint `6CB453A2FEC300C6E5034152C6C1A68DE31A7BD0`, verified with `signtool verify /pa`, and installed locally as `NextGenEmby.App 0.1.0.196`.
+- Keyboard-only validation with Computer Use:
+  - Wrote `dev-command.json` with route `home-fixture`, launched the installed app through AppUserModelId `NextGenEmby.App_h8qjz0sr1sg4m!App`, and confirmed the Home fixture rendered with Media Libraries, Server sections, and Continue watching.
+  - Pressed `Down`, `Right`, `Right`; focus moved from the hero area into the Media Libraries rail and landed on `Douban Top Rated` without mouse clicks.
+  - Cleared the process and cold-launched the installed app again; Windows process inspection confirmed the running executable path was `NextGenEmby.App_0.1.0.196_x64__h8qjz0sr1sg4m`.
+  - On the Login page, pressed `Down`, `Down`, `Up`; the final screenshot showed focus on Username, proving the D-pad-style TextBox movement still works after the asset/package refresh.
+  - Computer Use `get_window_state` intermittently returned a stale `0.1.0.162` path in its window metadata even while `list_windows` and Windows process inspection both reported `0.1.0.196`; process/package verification is the source of truth for this pass.
+  - No app-content mouse clicks were used. `dev-command.json` and `dev-command-result.txt` were removed from LocalState after validation.
+- Follow-up:
+  - When Xbox hardware is available again, inspect the Start tile and splash surface on-console so the new centered wide tile can be judged in the real shell, not only the generated PNG and local package.
+
+### 2026-07-07 - Home Rail Card Token And Focus Polish
+
+- App version: 0.1.0.197.
+- Scope: make the Home rails feel less assembled by hand by promoting repeated card measurements and focus treatment into shared skin resources.
+- Interaction/design changes:
+  - `App.xaml` now owns Home rail spacing, wide-card dimensions, poster-card dimensions, Home card title/meta type sizes, card radii, scrim padding, and `TvHomeFocusedCardScale`.
+  - `HomePage.xaml` consumes Home spacing tokens for page sections, rail headers, rail card gaps, and row gaps.
+  - `HomePage.xaml.cs` consumes Home card metrics through resource helpers instead of hardcoded library-card, section-card, and poster-card sizes.
+  - Home media-library cards and server-section cards now share a unified wide-card footprint, making the two rails scan as one mature TV system.
+  - Home rail cards use a render-transform focus scale so the current controller target lifts without resizing or reflowing the rail.
+- Automated verification:
+  - TDD red path confirmed the new Home rail card metric/focus token contract failed before implementation.
+  - Targeted Home rail token contract passed: 1 test.
+  - Design/source tests passed: 50 total.
+  - Core tests passed: 436 total.
+  - `git diff --check` passed with only LF/CRLF working-copy warnings.
+  - App Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.197_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate thumbprint `6CB453A2FEC300C6E5034152C6C1A68DE31A7BD0`, verified with `signtool verify /pa`, and installed locally as `NextGenEmby.App 0.1.0.197`.
+- Keyboard-only validation with Computer Use:
+  - Wrote `dev-command.json` with route `home-fixture` and launched the installed app through AppUserModelId `NextGenEmby.App_h8qjz0sr1sg4m!App`; the window path resolved to `NextGenEmby.App_0.1.0.197_x64__h8qjz0sr1sg4m`.
+  - Initial Home showed unified-width `Media Libraries` and `Server sections` cards with no label overlap.
+  - Pressed `Down`; focus moved from hero Play to `Hot Movies`, the card scaled visually, and the focus frame remained fully visible.
+  - Pressed `Right`, `Right`; focus moved across Media Libraries to `Douban Top Rated`, old cards returned to normal scale, and the rail kept the focused card visible.
+  - Pressed `Down`, `Right`; focus moved into Server sections and across to `Hot TV Series` without overlapping neighboring cards.
+  - Pressed `Down`; focus moved to the `Continue watching` poster row, with poster title/meta still contained in the card.
+  - No app-content mouse clicks were used. `dev-command.json` and `dev-command-result.txt` were removed from LocalState after validation.
+- Follow-up:
+  - Continue extracting remaining page-local Home hero measurements and evaluate whether real-server artwork needs a slightly lighter Home wash once saved-session screenshots are available again.
+
+### 2026-07-07 - Home Hero Token And Poster Row Navigation Polish
+
+- App version: 0.1.0.199.
+- Scope: make the Home top decision surface less oversized on TV, promote its repeated visual measurements into skin resources, and fix poster-row horizontal D-pad movement found during keyboard validation.
+- Interaction/design changes:
+  - `App.xaml` now owns Home Hero height, padding, column spacing, logo max size, title/meta type sizes, poster size, poster fallback type size, accent width/margin/radius, and Hero/poster corner radii.
+  - `HomePage.xaml` consumes the new Hero tokens instead of hard-coded `246px` height, `26,24,26,24` padding, `38px` title type, and fixed `182px` poster column.
+  - The Hero is now a compact decision surface: Play remains the first visible action, while Media Libraries and Server sections have more useful first-screen presence.
+  - Home poster-row focus targets now track both row index and item index, so `Left`/`Right` moves inside a content row instead of repeatedly resolving back to the first item.
+- Automated verification:
+  - TDD red path confirmed the Home Hero token contract failed before implementation.
+  - TDD red path confirmed Home row focus targets lacked `itemIndex`/`ItemIndex` before the poster-row navigation fix.
+  - Targeted Home Hero token contract passed: 1 test.
+  - Targeted poster-row left/right focus tests passed: 3 total.
+  - Home focus policy tests passed: 15 total.
+  - Design/source tests passed: 51 total.
+  - Core tests passed: 440 total.
+  - App Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.199_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate thumbprint `6CB453A2FEC300C6E5034152C6C1A68DE31A7BD0`, verified with `signtool verify /pa`, and installed locally as `NextGenEmby.App 0.1.0.199`.
+- Keyboard-only validation with Computer Use:
+  - Wrote `dev-command.json` with route `home-fixture` and launched the installed app through AppUserModelId `NextGenEmby.App_h8qjz0sr1sg4m!App`; the window path resolved to `NextGenEmby.App_0.1.0.199_x64__h8qjz0sr1sg4m`.
+  - Initial Home showed the compact Hero with Play focused, Media Libraries visible immediately below, Server sections visible in the same first-screen scan, and no text overlap.
+  - Pressed `Down`, `Down`, `Down`, `Right`; focus moved from Hero through Media Libraries and Server sections into Continue watching, then landed on the second poster `Northline S1:E4`.
+  - Pressed `Left`; focus returned to the first Continue watching poster `Aurora Protocol`.
+  - No app-content mouse clicks were used. `dev-command.json` was consumed by the app and `dev-command-result.txt` reported `completed` / `home-fixture`.
+- Follow-up:
+  - Continue extracting the remaining one-off Home action button metrics and evaluate row-item focus against real-server rows with more than two visible posters once saved-session screenshots are available again.
+
+### 2026-07-07 - Home Poster Row Column Memory
+
+- App version: 0.1.0.200.
+- Scope: make Home poster-row vertical navigation preserve the viewer's visual column when moving between rows, matching mature TV streaming clients.
+- Interaction/design changes:
+  - `HomeFocusInputPolicy` now passes `rowItemCounts` into `MoveDown`/`MoveUp`.
+  - Row targets carry the current `ItemIndex` across vertical moves and clamp to the target row's last available item.
+  - No playback decoding, media loading, or Emby transcoding behavior changed.
+- Automated verification:
+  - TDD red path confirmed vertical row movement previously reset `ItemIndex` to 0.
+  - Targeted column-preservation tests passed: 3 total.
+  - Home focus policy tests passed: 18 total.
+  - Core tests passed: 443 total.
+  - App Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.200_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate thumbprint `6CB453A2FEC300C6E5034152C6C1A68DE31A7BD0`, verified with `signtool verify /pa`, and installed locally as `NextGenEmby.App 0.1.0.200`.
+- Keyboard-only validation with Computer Use:
+  - Wrote `dev-command.json` with route `home-fixture` and launched the installed app through AppUserModelId `NextGenEmby.App_h8qjz0sr1sg4m!App`; the window path resolved to `NextGenEmby.App_0.1.0.200_x64__h8qjz0sr1sg4m`.
+  - Pressed `Down`, `Down`, `Down`, `Right`, `Down`; focus moved from Continue watching column 2 to Next up column 2 (`Room Tone S2:E1`).
+  - Pressed `Up`; focus returned to Continue watching column 2 (`Northline S1:E4`).
+  - Pressed `Down`, `Down`; focus landed on Hot Movies column 2 (`Midnight Signal`) instead of snapping to `Aurora Protocol`.
+  - No app-content mouse clicks were used. `dev-command.json` and `dev-command-result.txt` were removed from LocalState after validation.
+- Follow-up:
+  - Add a fixture row with fewer items than the source row to keyboard-validate the clamp case visually, not only through policy tests.
+
+### 2026-07-07 - Search Recent Terms Rail
+
+- App version: 0.1.0.203.
+- Scope: reduce TV/controller text-entry cost by adding a keyboard-addressable recent-search rail to Search.
+- Interaction/design changes:
+  - Added `SearchRecentTermsPolicy` in Core for trimming, whitespace collapse, case-insensitive de-duplication, latest-first ordering, max-count limiting, and LocalSettings serialization.
+  - Added `RecentSearchTermStore` in the app layer for persistent recent terms.
+  - Search now renders a compact `Recent searches` chip rail between scope filters and results when terms exist.
+  - `SearchFocusNavigationPolicy` now routes Scope -> Recent terms -> Results/Empty state, with Up returning through the same layers and Left/Right moving within recent terms.
+  - DEBUG `search-fixture` seeds deterministic recent terms so the route can be validated without a real saved Emby session.
+  - No playback decoding, media loading, or Emby transcoding behavior changed.
+- Automated verification:
+  - TDD red path confirmed `SearchRecentTermsPolicy` did not exist before implementation.
+  - TDD red path confirmed `SearchFocusNavigationPolicy` lacked `RecentTerms` focus area/actions before implementation.
+  - TDD red path confirmed Search XAML/code-behind did not render recent terms or include `RecentSearchTermStore` before implementation.
+  - Targeted recent-term policy tests passed: 5 total.
+  - Search focus navigation tests passed: 13 total.
+  - Search-related Core tests passed: 44 total.
+  - Full Core test suite passed: 455 total.
+  - `git diff --check` passed with no whitespace errors.
+  - App Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.203_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate thumbprint `6CB453A2FEC300C6E5034152C6C1A68DE31A7BD0`, verified with `signtool verify /pa`, and installed locally as `NextGenEmby.App 0.1.0.203`.
+- Keyboard-only validation with Computer Use:
+  - Wrote `dev-command.json` with route `search-fixture` and launched the installed app through AppUserModelId `NextGenEmby.App_h8qjz0sr1sg4m!App`; the window path resolved to `NextGenEmby.App_0.1.0.203_x64__h8qjz0sr1sg4m`.
+  - Initial Search showed the Search box focused, scope rail visible, `Recent searches` chips (`Friends`, `Aurora Protocol`, `News 24`) visible, and result cards below with no text overlap.
+  - Pressed `Down`, `Down`, `Right`, `Return`; focus moved through All scope into recent terms, activated `Aurora Protocol`, promoted it to the first recent term, refreshed results, and placed the visible focus frame on the first result card.
+  - Pressed `Up`; focus returned from the first result to `Aurora Protocol` in recent terms.
+  - Pressed `Up`; focus returned from recent terms to the All scope.
+  - Pressed `Down`; focus re-entered the first recent term instead of skipping directly to results.
+  - Re-ran DEBUG `search-error`: initial error state showed no `Recent searches` rail, so `Down`, `Down` focused `Edit search`, `Right` focused `Search again`, and `Return` retried to the query box. The retry then added the submitted query as a recent term, which matches the committed-search behavior.
+  - No app-content mouse clicks were used. `dev-command.json` and `dev-command-result.txt` were removed from LocalState after validation, and the app process was stopped.
+- Follow-up:
+  - Re-run Search recent terms against a non-DEBUG saved session across two app launches to prove LocalSettings persistence with real user queries.
+
+### 2026-07-07 - Search Recent Term Style Tokens
+
+- App version: 0.1.0.204.
+- Scope: promote the new Search recent-term chip metrics into shared TV resources so future skins can adjust the component without editing code.
+- Interaction/design changes:
+  - Added `TvSearchRecentTermMinHeight`, `TvSearchRecentTermMinWidth`, `TvSearchRecentTermMaxWidth`, and `TvSearchRecentTermPadding` resources.
+  - Added `TvSearchRecentTermButtonStyle` for the chip background, border, text, focus, sizing, and padding.
+  - SearchPage now applies `TvSearchRecentTermButtonStyle` to dynamically created recent-term buttons instead of hard-coding button dimensions in code-behind.
+  - No playback decoding, media loading, or Emby transcoding behavior changed.
+- Automated verification:
+  - TDD red path confirmed the shared Search recent-term resources/style did not exist before implementation.
+  - Targeted source test passed: `Search_Recent_Term_Buttons_Use_Shared_Tv_Style_Tokens`.
+  - Full Core test suite passed: 456 total.
+  - `git diff --check` passed with no whitespace errors.
+  - App Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.204_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate thumbprint `6CB453A2FEC300C6E5034152C6C1A68DE31A7BD0`, verified with `signtool verify /pa`, and installed locally as `NextGenEmby.App 0.1.0.204`.
+- Keyboard-only validation with Computer Use:
+  - Wrote `dev-command.json` with route `search-fixture` and launched the installed app through AppUserModelId `NextGenEmby.App_h8qjz0sr1sg4m!App`; the window path resolved to `NextGenEmby.App_0.1.0.204_x64__h8qjz0sr1sg4m`.
+  - Initial Search showed the styled `Recent searches` chips (`Friends`, `Aurora Protocol`, `News 24`) visible under the scope rail with no text overflow or layout jump.
+  - Pressed `Down`, `Down`, `Right`, `Return`; focus moved through All scope into recent terms, activated `Aurora Protocol`, refreshed results, and placed the visible focus frame on the first result card.
+  - Pressed `Up`; focus returned from the first result to `Aurora Protocol` in recent terms.
+  - No app-content mouse clicks were used. `dev-command.json` and `dev-command-result.txt` were removed from LocalState after validation, and the app process was stopped.
+
+### 2026-07-07 - App Icon Pixel Contract
+
+- App version: 0.1.0.204.
+- Scope: strengthen the app identity checklist for the brand-neutral `Player Status Aperture` icon without repainting the already-matching production assets.
+- Interaction/design changes:
+  - Confirmed the production icon family is generated from `tools/Generate-AppIconAssets.ps1` and matches the current script byte-for-byte for Store, square, wide, and splash assets.
+  - Added a pixel-level icon contract that decodes the PNG assets without extra graphics packages and verifies that every required asset preserves the cyan controller-focus signal, green play/confirm signal, and amber progress signal.
+  - Kept the icon symbol-only: no brand text, no initials, no official third-party logos, no portal/glow concept.
+  - No playback decoding, media loading, or Emby transcoding behavior changed.
+- Automated verification:
+  - Temporary regeneration check matched all production icon asset hashes.
+  - Targeted icon pixel test passed: `Icon_Assets_Preserve_Focus_Play_And_Progress_Signals_At_All_Sizes`.
+- Visual validation:
+  - Inspected `Square44x44Logo.png` at original size; the focus corner, play core, and progress base remain visible at 44 px without relying on text.
+
+### 2026-07-07 - Home Poster Row Clamp Fixture
+
+- App version: 0.1.0.205.
+- Scope: keyboard-validate the Home poster-row clamp case where the source row is wider than the target row.
+- Interaction/design changes:
+  - Added a DEBUG Home fixture row, `Tonight Picks`, directly after the wider `Hot Movies` row.
+  - `Tonight Picks` intentionally contains two items so D-pad movement from a later Hot Movies column must clamp to the last available card instead of losing focus or snapping back to column 1.
+  - No playback decoding, media loading, real Emby loading, or Emby transcoding behavior changed.
+- Automated verification:
+  - TDD red path confirmed the Home fixture did not yet place a short row directly after `Hot Movies`.
+  - Targeted Home fixture and Home focus policy tests passed: 23 total.
+  - Full Core test suite passed: 458 total.
+  - `git diff --check` passed with no whitespace errors.
+  - App Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.205_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate thumbprint `6CB453A2FEC300C6E5034152C6C1A68DE31A7BD0`, verified with `signtool verify /pa`, and installed locally as `NextGenEmby.App 0.1.0.205`.
+- Keyboard-only validation with Computer Use:
+  - Wrote `dev-command.json` with route `home-fixture` and launched the installed app through AppUserModelId `NextGenEmby.App_h8qjz0sr1sg4m!App`; the window path resolved to `NextGenEmby.App_0.1.0.205_x64__h8qjz0sr1sg4m`.
+  - Initial Home showed `Tonight Picks` in Server sections, proving the fixture change was active in the installed app.
+  - Pressed `Down` five times to reach the `Hot Movies` poster row, then `Right`, `Right` to move into a later column. The visible focus reached `Afterimage` in a row with six cards.
+  - Pressed `Down`; focus clamped into the two-item `Tonight Picks` row on `City at Night`, the last available card, with no blank-column focus and no reset to `Ocean Archive`.
+  - No app-content mouse clicks were used. `dev-command.json` and `dev-command-result.txt` were removed from LocalState after validation, and the app process was stopped.
+
+### 2026-07-07 - Music Artist Hierarchy
+
+- App version: 0.1.0.207.
+- Scope: add artist-aware Music browsing without changing audio playback or native decoding.
+- Interaction/design changes:
+  - Music now renders four TV columns: Artists, Albums, Songs, and Preview.
+  - The Artists column includes `All music` plus derived/fixture `MusicArtist` entries; selecting an artist filters Albums and Songs in place.
+  - Emby item parsing now preserves `Artists`, `ArtistItems`, `AlbumArtist`, and `AlbumArtists`, and list queries request artist fields so real server metadata can feed the hierarchy.
+  - Music fixture data now includes artist items, artist artwork, and explicit artist-album-song references.
+  - Fixed the keyboard focus return path found during validation: after filtering by an artist, `Left` from Songs/Albums returns to the active artist instead of snapping to `All music`.
+  - No playback decoding, music playback, real Emby loading contracts, or Emby transcoding behavior changed.
+- Automated verification:
+  - TDD red path confirmed `EmbyMediaItem`, `MusicBrowseQueryFactory`, `DevelopmentMusicFixtureSnapshot`, and Music page source lacked artist hierarchy support before implementation.
+  - Targeted Music artist tests passed: 14 total.
+  - Full Core test suite passed: 462 total.
+  - `git diff --check` passed with no whitespace errors.
+  - App Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.207_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate thumbprint `6CB453A2FEC300C6E5034152C6C1A68DE31A7BD0`, verified with `signtool verify /pa`, and installed locally as `NextGenEmby.App 0.1.0.207`.
+- Keyboard-only validation with Computer Use:
+  - Wrote `dev-command.json` with route `music-fixture` and launched the installed app through AppUserModelId `NextGenEmby.App_h8qjz0sr1sg4m!App`; the window path resolved to `NextGenEmby.App_0.1.0.207_x64__h8qjz0sr1sg4m`.
+  - Initial Music showed Artists, Albums, Songs, and Preview columns with focus on `All music`, 3 artists, 3 albums, 6 songs, packaged artwork, and no text overlap.
+  - Pressed `Down`; focus moved to `Kairos Collective` and the preview switched to Artist metadata.
+  - Pressed `Return`; Music filtered to `Kairos Collective - 1 album - 3 songs`, Albums focused `Nocturne Signals`, and Songs showed the three matching songs.
+  - Pressed `Right`; focus moved from the album column to `Opening Credits` in Songs. Pressed `Down`; focus moved to `Glass Elevator` and preview updated.
+  - Pressed `Return`; the browse-only `Music playback unavailable` layer opened with `Close` focused. Pressed `Escape`; the layer closed and focus restored to `Glass Elevator`.
+  - Pressed `Left`, `Left`; focus returned to active artist `Kairos Collective`, not `All music`, confirming the validation-found focus bug was fixed.
+  - Pressed `Up`, `Return`; `All music` restored the full 3 album / 6 song list.
+  - No app-content mouse clicks were used.
+
+### 2026-07-07 - Playback Progress Reporting
+
+- App version: 0.1.0.207.
+- Scope: verify the real Emby playback lifecycle reporting path without changing native decoding or playback backend code.
+- Validation setup:
+  - Started a local fake Emby server on `127.0.0.1:5876` with authenticate, home data, `PlaybackInfo`, and playback session endpoints.
+  - Added the UWP package loopback exemption for `NextGenEmby.App_h8qjz0sr1sg4m` so the installed app could reach the local validation server.
+  - Seeded `dev-login.json` with the fake server session and `dev-command.json` with `{"route":"playback","itemId":"progress-item","itemName":"Progress Fixture","mediaSourceId":"progress-source-1","startPositionTicks":0}`.
+- Keyboard-only validation with Computer Use:
+  - Launched the installed app through AppUserModelId `NextGenEmby.App_h8qjz0sr1sg4m!App`; the window path resolved to `NextGenEmby.App_0.1.0.207_x64__h8qjz0sr1sg4m`.
+  - The app reached Playback from the saved session, requested `/Items/progress-item/PlaybackInfo?UserId=progress-user`, and started direct playback of the returned media source.
+  - The fake server captured `/Sessions/Playing` with `ItemId` `progress-item`, `MediaSourceId` `progress-source-1`, `PlaySessionId` `progress-session-1`, `PlayMethod` `DirectPlay`, and a non-negative `PositionTicks`.
+  - After the timer ticks, the fake server captured four `/Sessions/Playing/Progress` requests with `EventName` `TimeUpdate` and increasing `PositionTicks`.
+  - Pressed `Escape` from Playback; the app returned to Home and the fake server captured `/Sessions/Playing/Stopped` with the same item, media source, play session, direct-play method, and final `PositionTicks`.
+  - No app-content mouse clicks were used.
+- Follow-up:
+  - Re-run against a real Emby server session when hardware or a persistent validation server is available.
+
+### 2026-07-07 - Empty Session Login
+
+- App version: 0.1.0.207.
+- Scope: verify the first-run / no-saved-session login route using keyboard-only input.
+- Validation setup:
+  - Rebuilt the Debug x64 solution and re-signed `NextGenEmby.App_0.1.0.207_x64_Debug.msix` after an earlier stale package registration produced a local `System.BadImageFormatException` during COM activation; the fresh MSBuild/sign/install path launched successfully.
+  - Reinstalled the package with `Add-AppDevPackage.ps1 -Force` to clear the saved session and start from the Login page.
+  - Started a local fake Emby server on `127.0.0.1:5877` with authenticate, views, and empty home row endpoints.
+  - Added the UWP package loopback exemption for `NextGenEmby.App_h8qjz0sr1sg4m` so the installed app could reach the local validation server.
+- Keyboard-only validation with Computer Use:
+  - Launched the installed app through AppUserModelId `NextGenEmby.App_h8qjz0sr1sg4m!App`; the window path resolved to `NextGenEmby.App_0.1.0.207_x64__h8qjz0sr1sg4m`.
+  - The clean launch showed the Login page with focus on Server URL.
+  - Pressed `Ctrl+A`, typed `http://127.0.0.1:5877`, pressed `Tab`, typed the username, pressed `Tab`, typed the password, pressed `Tab`, and pressed `Return`.
+  - The fake server captured `POST /Users/AuthenticateByName` with the keyboard-entered username/password, then the app navigated to Home and requested Resume, NextUp, Latest, Views, HomeSections, and library rows.
+  - Closed and relaunched the app; Home loaded from the saved token without another `/Users/AuthenticateByName` request, confirming credential persistence.
+  - No app-content mouse clicks were used.
+- Cleanup and follow-up:
+  - Stopped the fake login server, removed temporary debug files, removed the loopback exemption, removed local crash-dump registry capture, and reinstalled the package again to leave the app on the Login page with no saved fake session.
+  - A final Computer Use screenshot confirmed the clean Login page and Server URL focus.
+  - Add a TV-accessible sign-out / clear-session action in Settings so this route can be revalidated without reinstalling the package.
+
+### 2026-07-07 - Settings Sign Out And Session Clear
+
+- App version: 0.1.0.207.
+- Scope: add and verify a TV/controller-reachable sign-out route so empty-session login can be reset without reinstalling the app.
+- Interaction/design changes:
+  - Added a `Sign out` account action to Settings below the signed-in session summary.
+  - Added a modal confirmation layer with a safe default focus on `Keep signed in`; users must move right to the destructive `Sign out` action before confirming.
+  - Added shared `TvSettingsAccountActionButtonStyle` and `TvSettingsDangerButtonStyle` resources so account actions and destructive confirmations are skin/theme-adjustable from `App.xaml`.
+  - Added directional focus handling so `Up` from the default `Thumbstick seek preview` focus reaches `Sign out`, `Down` returns to the playback input, `Left`/`Right` move within the confirmation layer, and `Escape` cancels the layer.
+  - Confirming sign-out calls `ApplicationDataSessionStore.ClearAsync()`, navigates to `LoginPage`, and clears the frame back stack.
+  - No playback decoding, playback reporting, Emby media loading contracts, or Emby transcoding behavior changed.
+- Automated verification:
+  - TDD red path confirmed Settings did not yet expose shared sign-out styles, controller-reachable sign-out controls, confirmation handlers, session clearing, or Login navigation.
+  - Targeted Settings source contract passed: `Settings_Page_Renders_Controller_Reachable_Sign_Out_Action`.
+  - Full Core test suite passed: 463 total.
+  - `git diff --check` passed with no whitespace errors.
+  - App Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.207_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate thumbprint `6CB453A2FEC300C6E5034152C6C1A68DE31A7BD0`, verified with `signtool verify /pa`, and installed locally as `NextGenEmby.App 0.1.0.207`.
+- Keyboard-only validation with Computer Use:
+  - Started a local fake Emby server on `127.0.0.1:5878`, added a UWP loopback exemption for `NextGenEmby.App_h8qjz0sr1sg4m`, seeded `dev-login.json`, and used DEBUG route `settings` so the installed app logged in and opened Settings.
+  - Initial Settings showed `Settings Tester on http://127.0.0.1:5878`, app/client version, `Sign out`, and default focus on `Thumbstick seek preview`.
+  - Pressed `Up`; focus moved to `Sign out` with a clear cyan focus frame.
+  - Pressed `Return`; the confirmation layer opened, dimmed the Settings page, and focused `Keep signed in`.
+  - Pressed `Escape`; the layer closed and focus returned to `Sign out`.
+  - Removed `dev-login.json` before final confirmation so Login would not auto-authenticate again after sign-out.
+  - Pressed `Return`, `Right`, `Return`; focus moved to the destructive `Sign out`, the app cleared the saved session, navigated to Login, and focused Server URL.
+  - Relaunched the app; it stayed on Login and the fake server request count remained unchanged, proving the saved session was cleared.
+  - No app-content mouse clicks were used.
+- Cleanup:
+  - Stopped the fake sign-out server, removed temporary debug files, removed the loopback exemption, and left the installed app in a logged-out Login state.
+
+### 2026-07-07 - Design Conformance Source Gate
+
+- App version: source tree after `40444cc docs: add design conformance QA batches`; installed local app remains `0.1.0.207`.
+- Scope: begin the new design-conformance loop by running the lowest-cost source/design contract layer before launching a visual fixture batch.
+- Checklist batch:
+  - `docs/qa/design-conformance-checklist.md` universal gates and Automation Ladder.
+  - Batch 01 was not visually executed yet because source-level design contracts already failed.
+- Automated validation:
+  - Ran `dotnet test tests\NextGenEmby.Core.Tests\NextGenEmby.Core.Tests.csproj --filter "FullyQualifiedName~Design"`.
+  - Result: 53 passed, 3 failed.
+- Findings recorded before fixes:
+
+| ID | Severity | Page | Evidence | Expected | Actual | Proposed batch fix |
+| --- | --- | --- | --- | --- | --- | --- |
+| DC-00.01 | Fail | Shared tokens / app shell / playback / icon generator | `DesignTokenResourceTests.App_Runtime_Colors_Are_Backed_By_Design_Tokens`, `DesignTokenResourceTests.Playback_Resources_ReUse_Design_Canvas_And_Surface_Family`, and `IconAssetContractTests.Icon_Generator_Tokens_Map_To_Design_Tokens` failed. | Runtime XAML resources and icon generator consume the current `docs/DESIGN.md` token palette, including `canvas #05070A`. | Runtime XAML and icon generator still use older `canvas #050607`, and source inspection shows additional old palette values such as cyan focus, warm amber, and older surface shades. | Update the shared runtime color resources and icon generator token map as one token-alignment batch, then rerun the design source tests before slower Home/Guide visual verification. |
+
+- Decision:
+  - Do not start per-route visual fixes yet.
+  - Fix the shared token drift first because it affects all pages and would make screenshot comparison noisy.
+
+### 2026-07-07 - Design Token Alignment Batch
+
+- App version: 0.1.0.208.
+- Scope: fix the shared token drift found by the Design Conformance Source Gate before running slower screenshot-based visual review.
+- Implementation changes:
+  - Updated `App.xaml` runtime color resources to match the current `docs/DESIGN.md` palette: cool graphite canvas/surfaces, neutral focus, muted green progress, and no default cyan/amber action language.
+  - Updated `tools/Generate-AppIconAssets.ps1` from the superseded Player Status Aperture color contract to the current Player Lift Mark token contract.
+  - Regenerated Store, 44px, 150px, wide, and splash PNG assets from the updated generator.
+  - Updated design source tests so `AppFocusSecondaryColor` maps to `focus_fill`, and the icon contract checks neutral focus plus muted green playback/progress signals instead of cyan focus and amber progress.
+  - Updated `docs/DESIGN.md` migration notes to reflect that shared runtime tokens and icon generator tokens are now aligned, while page-level usage still needs migration.
+- Automated verification:
+  - `dotnet test tests\NextGenEmby.Core.Tests\NextGenEmby.Core.Tests.csproj --filter "FullyQualifiedName~Design"` passed: 56 total.
+  - `dotnet test tests\NextGenEmby.Core.Tests\NextGenEmby.Core.Tests.csproj` passed: 463 total.
+  - Restored native `packages.config` dependencies into `src/NextGenEmby.Native/packages` after the first App build found the native NuGet packages missing locally.
+  - `MSBuild NextGenXboxEmby.sln /p:Configuration=Debug /p:Platform=x64 /m` passed with 0 warnings and 0 errors.
+  - Signed and installed `NextGenEmby.App 0.1.0.208`.
+- Follow-up:
+  - Page controls still use old focus-frame and action-brush shapes in places. Those should be fixed in page batches, not by adding new raw colors.
+
+### 2026-07-07 - Design Conformance Batch 01 Home And Guide Baseline
+
+- App version: 0.1.0.208.
+- Scope: run the first Home/Guide design-conformance batch after shared token alignment.
+- Data source: DEBUG `home-fixture` with packaged QA artwork; no private Emby server or personal media assets.
+- Automation layer: installed app DEBUG fixture plus Windows keyboard/screenshot automation, not app-content mouse clicks.
+- Keyboard-only validation:
+  - Killed the running app, wrote `dev-command.json` with route `home-fixture`, and launched through AppUserModelId `NextGenEmby.App_h8qjz0sr1sg4m!App`.
+  - `dev-command-result.txt` reported `completed / home-fixture`.
+  - Initial focus: `Play`.
+  - Pressed `M`; Guide opened with focus on `Home`.
+  - Pressed `Escape`, then `Down`; focus moved to `Hot Movies`.
+  - Pressed `Right`, `Right`; focus moved to `Anime`.
+
+Findings recorded before fixes:
+
+| ID | Severity | Page | Evidence | Expected | Actual | Proposed batch fix |
+| --- | --- | --- | --- | --- | --- | --- |
+| DC-01.01 | Fail | Home first viewport | Home screenshot from `home-fixture` shows a large top decision surface with a full highlighted border and vertical active edge. | Home should read as a rail-first TV media surface, with artwork and rows carrying the page, not a large framed dashboard hero. | The current top surface still looks like the previous implementation model and uses a bright complete outline. | Rework Home top composition toward the A3 rail-first structure; remove complete bright frame from the hero/decision surface. |
+| DC-01.02 | Fail | Home card focus | Focused `Hot Movies` library card uses a complete bright perimeter frame. | Card focus should use scale, luminance, local dimming, and optional matte selected backplate; bright full frames are not the normal focus language. | Focus remains readable but visually contradicts `DESIGN.md`. | Replace default Home card focus frame with matte fill/luminance/scale treatment and reserve high-visibility edge for fallback only. |
+| DC-01.03 | Fail | Continue Watching / Next Up | Home fixture screenshot shows Continue Watching and Next Up as small poster-like cards below the library rows. | Continue Watching and Next Up should use wide resume-card anatomy with full-bleed crop, bottom black scrim, progress, and stable title protection. | The rows do not match the wide resume-card rule and reduce TV scan clarity. | Implement the wide resume-card anatomy for Home progress rows before deeper route visual QA. |
+| DC-01.04 | Concern | Guide | Expanded Guide is source-aware and keyboard reachable, but it lists every source directly and still uses a bright full focus outline. | Guide should stay quiet, source-aware, and include Search plus More/Source Hub for lower-frequency or unpinned sources. Focus should use matte fill, not a bright outline. | Guide is functional and comprehensive, but visually too frame-heavy and does not yet express the Source Hub model. | Adjust Guide focus treatment and decide whether to introduce Source Hub grouping in the same shell batch or defer to a source-management batch. |
+| DC-01.05 | Concern | Fixture artwork / green usage | Packaged QA cards use abstract block artwork and repeated muted green bars/top accents. | Visual QA should include realistic fictional posters/wide art, and green should stay a signal rather than page texture. | Fixture is useful for layout but weak for final visual judgment; green still appears as repeated card decoration. | Replace/extend fixture artwork with realistic fictional media covers and remove passive green card accents. |
+
+- Decision:
+  - Do not fix single rows one by one.
+  - Next implementation batch should address shared Home/Shell focus language, Home progress-row anatomy, and passive green usage together before rerunning Batch 01.
+
+### 2026-07-08 - Design Conformance Batch 01 Home And Guide Fix Rerun
+
+- App version: 0.1.0.210.
+- Scope: unified fix for the Home/Shell focus language, Home progress-row anatomy, and passive green card decoration found in Batch 01.
+- Data source: DEBUG `home-fixture` with packaged QA artwork; no private Emby server or personal media assets.
+- Source contracts added before implementation:
+  - Home cards must use matte focus treatment instead of system bright focus rings.
+  - Continue Watching and Next Up must render as wide resume cards with progress and bottom text protection.
+  - Passive Home section chrome must not use green decorative accents.
+  - Guide active/focus state must use quiet matte fill instead of a bright full border.
+- Automated verification:
+  - Red path confirmed the new source contracts failed before the implementation batch.
+  - Targeted Design tests passed: 59 total.
+  - Full Core test suite passed: 466 total.
+  - `git diff --check` passed with line-ending warnings only.
+  - App Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.210_x64_Debug.msix`.
+- Keyboard-only validation with installed DEBUG fixture:
+  - Wrote `dev-command.json` with route `home-fixture` and launched through AppUserModelId `NextGenEmby.App_h8qjz0sr1sg4m!App`.
+  - `dev-command-result.txt` reported `completed / home-fixture`.
+  - Initial focus: `Play`.
+  - Pressed `M`; Guide opened with focus on `Home`.
+  - Pressed `Escape`, then `Down` repeatedly to traverse library and resume rows; focus reached `Aurora Protocol`, `Northline S1:E4`, and then `Harbor Run` after `Right`.
+  - Screenshot set: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch01-210-20260708-005212`.
+
+Fix rerun findings:
+
+| ID | Severity | Page | Evidence | Expected | Actual | Follow-up |
+| --- | --- | --- | --- | --- | --- | --- |
+| DC-01.01 | Fail | Home first viewport | Initial Home screenshot still shows the top decision surface as a large framed module with a vertical active edge. | Home should read as a rail-first TV media surface, with artwork and rows carrying the page. | Unchanged in this batch; still too close to the older dashboard-like model. | Handle as the next Home top-composition batch rather than mixing it into row/focus fixes. |
+| DC-01.02 | Pass with concern | Home card focus | Focused Home cards now use matte fill/scale treatment and suppress the system bright focus ring. | Card focus should use scale, luminance, local dimming, and optional matte selected backplate. | Shared Home cards now follow the quiet focus language. Normal poster-grid selected-backplate still needs a library-grid-specific pass. | Recheck movie grid selected state when the library grid design is implemented. |
+| DC-01.03 | Pass | Continue Watching / Next Up | Resume rows now render wide cards with full-bleed wide art, bottom black scrim, stable title/meta area, and progress indicator. | Continue Watching and Next Up should use wide resume-card anatomy. | Matches the current design rule and improves TV scan clarity. | Continue to tune artwork crops with more realistic fixture media. |
+| DC-01.04 | Concern | Guide | Expanded Guide focus/active state now uses matte fill and transparent border. | Guide should stay quiet, source-aware, and use matte focus language. | Focus treatment is aligned; Source Hub / lower-frequency source grouping is still deferred. | Handle source grouping in a source-management/navigation batch. |
+| DC-01.05 | Concern | Fixture artwork / green usage | Passive green card accents were removed from Home cards; green remains only as a signal/progress color. | Green should stay a signal rather than page texture, and visual QA should use realistic fictional media covers. | Color usage is improved, but fixture artwork is still abstract and weak for final judgment. | Replace or extend packaged QA artwork with realistic fictional posters and wide art. |
+
+- Decision:
+  - Commit this batch as the shared Home/Shell focus and resume-card correction.
+  - Next design-conformance batch should target the Home first viewport/top composition and realistic fixture artwork, then revisit normal poster selected state.
+
+### 2026-07-08 - Design Conformance Batch 02 Library, Search, And Poster Grids Baseline
+
+- App version: 0.1.0.210.
+- Scope: run the next design-conformance batch before fixing poster-grid, search-result, option-sheet, and fixture-artwork visual drift.
+- Data source:
+  - DEBUG `home-fixture` for Home first viewport carry-over evidence.
+  - DEBUG `collections-fixture` for deterministic collection root, child movie grid, toolbar, and sort sheet.
+  - DEBUG `search-fixture` for deterministic mixed search-result poster grid.
+  - DEBUG `search-error` for search recovery / empty-error state.
+- Screenshot sets:
+  - Home: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch02-20260708-010135`.
+  - Collections: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch02-collections-20260708-010335`.
+  - Search: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch02-search-20260708-010515`.
+  - Search error: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch02-search-error-20260708-010702`.
+- Keyboard-only validation:
+  - `home-fixture`: launch succeeded, `dev-command-result.txt` reported `completed / home-fixture`, initial focus was `Play`.
+  - `collections-fixture`: launch succeeded, initial focus landed on the first collection item, `Enter` opened `Signal Archives`, `Up` reached `Sort`, and `Enter` opened the sort sheet.
+  - `search-fixture`: launch succeeded, focus moved from `Search title` to scope chips, recent terms, and then the search result grid with `Down`/`Right`.
+  - `search-error`: launch succeeded and showed the matte search recovery state.
+
+Findings recorded before fixes:
+
+| ID | Severity | Page | Evidence | Expected | Actual | Proposed batch fix |
+| --- | --- | --- | --- | --- | --- | --- |
+| DC-02.01 | Fail | Library poster grid | `collections-child-grid.png` shows focused `Aurora Protocol` with a bright complete perimeter frame, title/meta inside the poster scrim, and the old per-card hairline template. | Movie/series items use vertical poster cards, with focused state as an integrated matte selected backplate around poster plus title/meta below or attached as one object; no bright frame, glass card, or heavy shadow. | Focus is readable but still uses the rejected older card-focus vocabulary. Text is trapped inside the artwork instead of the newer ordinary-movie-card direction. | Replace the shared poster grid template with image-first poster artwork, title/meta below the image, and a focused matte backplate/scale treatment. |
+| DC-02.02 | Concern | Library toolbar / sort sheet | `collections-toolbar.png` and `collections-sort-sheet.png` show a grounded matte sheet, but focused options still use a high-contrast full outline. | Toolbar controls may use command matte focus. Sheets should feel grounded and avoid floating glass plates or bright focus frames. | The sheet is acceptably matte and not glassy, but option focus still feels like the old bright-frame system. | Keep the sheet structure for now, but move option/button focus toward the shared matte command recipe in the same component pass if scope allows. |
+| DC-02.03 | Fail | Search results | `search-down3.png` shows Search result cards sharing the same bright perimeter focus and text-inside-poster template as Library. | Search results share the poster-grid selected treatment. Scope chips are compact and neutral; recent terms should not steal recovery focus. | Scope/recent navigation is usable, but result cards visually fail the same poster-grid rule as Library. | Update Search to consume the same poster-card selected-state structure as Library. |
+| DC-02.04 | Concern | Empty / no-artwork states | `search-error-initial.png` shows a matte recovery state; source inspection shows Search has fallback initials, but Library's poster template lacks an equivalent fallback text/icon inside the card. | Empty state, unavailable poster tile, and fallback initials remain intentional matte surfaces, not abstract generated art. | Search error state is acceptable. No-artwork tile coverage is incomplete and Library fallback would look blank rather than intentional. | Add or standardize Library/Search no-artwork fallback anatomy and add source tests for it. |
+| DC-02.05 | Fail | Fixture artwork / visual QA | `tools/Generate-HomeQaArtworkAssets.ps1` still generates abstract geometric artwork with high-saturation cyan/green/amber/red accents; screenshots show media covers do not resemble film posters. | Visual QA must include realistic fictional posters with faces, title blocks, high-contrast crops, saturated content color, and varied genres. | Current fixture art is useful for layout but weak for judging the final movie-card direction and still pulls the product toward generic sci-fi UI. | Replace generated QA artwork with more movie-like fictional poster/wide compositions and align generator tokens with the current cool graphite/artwork-led rules. |
+| DC-02.06 | Blocked | Movies route | `movies` route has no deterministic fixture payload and may require a saved session. | Batch 02 should be able to validate a normal Movies grid without depending on private server data. | Collections/search fixtures cover poster-grid behavior, but they are not a direct Movies fixture. | Add a deterministic movie-grid fixture route or route `movies` to QA movie items in DEBUG when explicitly launched by `dev-command.json`. |
+| DC-02.07 | Fail | Home first viewport carry-over | `home-initial.png` still shows a large framed Home decision surface above rails. | Home should be a rail-first personal media dashboard; any hero must be compact enough that high-value rails carry the first viewport. | Batch 01's deferred Home top-composition failure remains visible. | Fold the Home first-viewport cleanup into this batch or schedule it as the immediate next batch if poster-grid scope grows too large. |
+
+- Decision:
+  - Fix now as a grouped visual-system batch for shared poster cards, Search/Library parity, no-artwork fallback, deterministic Movies fixture coverage, and QA artwork realism.
+  - Keep sort/filter sheet layout unless it blocks the shared command-focus cleanup; its current issue is lower severity than media-card focus.
+  - Treat Home first viewport as part of the same design-conformance wave, but do not let it delay poster-grid source contracts if it becomes too broad.
+
+### 2026-07-08 - Design Conformance Batch 02 Library, Search, And Poster Grids Fix Rerun
+
+- App version: 0.1.0.211.
+- Scope: grouped correction for shared poster-grid focus, Search/Library parity, deterministic Movies fixture coverage, no-artwork fallback contracts, and packaged QA artwork realism.
+- Data source: DEBUG fixtures only; no private server data or personal media assets.
+- Source contracts added before implementation:
+  - Poster-grid items suppress the system bright focus ring and use a matte selected backplate plus slight lift.
+  - Poster artwork remains image-first, while title/meta are placed below the image instead of inside a bottom card box.
+  - Library and Search consume the same poster selected-state structure.
+  - Library and Search expose an intentional no-artwork fallback with initials rather than an empty blank tile.
+  - `movies-fixture` provides deterministic movie-grid coverage for visual QA.
+  - QA artwork generation moves from abstract neon blocks to fictional movie-like poster and wide artwork.
+- Automated verification:
+  - Red path confirmed the new poster-grid source contracts failed before the implementation batch.
+  - Targeted poster/navigation tests passed: 34 total.
+  - Targeted Design tests passed: 64 total.
+  - Full Core test suite passed: 472 total.
+  - App Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.211_x64_Debug.msix`.
+  - Signed and installed `NextGenEmby.App 0.1.0.211` for screenshot rerun.
+- Keyboard-only validation with installed DEBUG fixtures:
+  - `movies-fixture`: launch succeeded, `dev-command-result.txt` reported `completed / movies-fixture`, focus landed on the movie grid, and keyboard traversal reached neighboring movie cards and the toolbar.
+  - `search-fixture`: launch succeeded, focus moved through the search controls into the result grid, and result-card traversal used the shared poster selected treatment.
+  - Movies screenshot set: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch02-rerun-movies-20260708-012810`.
+  - Search screenshot set: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch02-rerun-search-20260708-012942`.
+
+Fix rerun findings:
+
+| ID | Severity | Page | Evidence | Expected | Actual | Follow-up |
+| --- | --- | --- | --- | --- | --- | --- |
+| DC-02.01 | Pass with concern | Library / Movies poster grid | `movies-initial.png` and `movies-right.png` show the selected movie card using an integrated matte backplate and slight lift, without the previous full bright perimeter frame. | Movie/series items use vertical poster cards with quiet selected treatment, title/meta below the image, and no heavy glass/shadow vocabulary. | The poster selected state now matches the ordinary movie-card direction. The deterministic Movies fixture currently has a small item count, so dense multi-row behavior should keep being checked with larger datasets. | Expand fixture coverage when richer media samples are added. |
+| DC-02.02 | Concern | Library toolbar / sort sheet | `movies-toolbar.png` and `movies-sort-sheet.png` still show a functional matte command sheet, but option focus keeps some system-level contrast. | Sheets should stay grounded and avoid floating glass plates or bright focus frames. | Lower-severity drift remains; media-card focus was corrected first. | Handle command-sheet option focus in a command-component batch. |
+| DC-02.03 | Pass | Search results | `search-results.png` and `search-results-right.png` show Search result cards using the same poster selected-state structure as Library/Movies. | Search results share the poster-grid selected treatment. | Search/Library visual parity is restored for poster cards. | Continue testing with mixed item types and missing artwork. |
+| DC-02.04 | Pass with concern | Empty / no-artwork states | Source contracts now require `Initials` fallback in Library and Search poster templates; Search recovery remains matte. | Empty state, unavailable poster tile, and fallback initials remain intentional matte surfaces. | The shared fallback anatomy is present in source. Runtime screenshots did not yet include a forced no-artwork movie tile. | Add a deterministic missing-poster item to a future fixture. |
+| DC-02.05 | Pass with concern | Fixture artwork / visual QA | Regenerated QA posters and wide art now use fictional cover-like compositions instead of abstract cyan/green/amber/red blocks. | Visual QA should include realistic fictional posters and wide art that stress real card composition. | Artwork now supports judging poster-card structure better, though it is still generated/stylized rather than photoreal production artwork. | Improve genre variety and real-media-like crops when fixture art is expanded. |
+| DC-02.06 | Pass | Movies route | `movies-fixture` launches deterministically and reports `completed / movies-fixture`. | Movie-grid validation must not depend on private server state. | Deterministic Movies visual QA route is available. | Keep this route as the default movie-grid regression target. |
+| DC-02.07 | Deferred fail | Home first viewport carry-over | Home first-viewport evidence from the Batch 02 baseline still applies. | Home should be a rail-first personal media dashboard; any hero must be compact enough that high-value rails carry the first viewport. | Not addressed in this poster-grid batch to keep the commit reviewable. | Make Home top composition the next design-conformance batch. |
+
+- Decision:
+  - Commit this batch as the shared Library/Search/Movies poster-grid and fixture-artwork correction.
+  - Next design-conformance batch should target Home first viewport/top composition and command-sheet option focus, rather than broadening this commit further.
+
+### 2026-07-08 - Design Conformance Batch 02 Follow-Up Home Top And Command Sheets Baseline
+
+- App version: 0.1.0.211.
+- Scope: run the deferred Home first-viewport/top-composition issue and the lower-severity command-sheet option-focus issue before fixing either one.
+- Data source: DEBUG fixtures only; no private server data or personal media assets.
+- Screenshot set: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch03-baseline-20260708-014441`.
+- Keyboard-only validation:
+  - `home-fixture`: launch succeeded, `dev-command-result.txt` reported `completed / home-fixture`.
+  - Captured Home initial focus, Guide-open state, first rail focus, and resume-row focus.
+  - `movies-fixture`: launch succeeded, `dev-command-result.txt` reported `completed / movies-fixture`.
+  - Pressed `Up` from the movie grid to focus Sort, `Enter` to open Sort sheet, `Escape`, `Right` to Filter, and `Enter` to open Filter sheet.
+
+Findings recorded before fixes:
+
+| ID | Severity | Page | Evidence | Expected | Actual | Proposed batch fix |
+| --- | --- | --- | --- | --- | --- | --- |
+| DC-02F.01 | Fail | Home first viewport | `home-initial.png` shows a large framed Continue Watching decision surface with a complete hairline perimeter and a bright left active edge. | Home should be a rail-first personal media dashboard. A hero/continue decision can exist, but it must be compact, unframed, and leave the first rail as the dominant first-viewport structure. | The top surface still reads as a dashboard module. It makes Continue Watching look like a one-item hero promo even though Continue Watching is also a rail concept. | Remove the full framed hero container and bright active edge. Convert the top decision into an unframed compact feature strip, then let Media Libraries / source rails carry the first viewport. |
+| DC-02F.02 | Concern | Home Guide over content | `home-guide.png` shows Guide focus is matte and readable, but the large framed Home top surface remains visible behind it and competes with the opened guide. | Guide should remain quiet and source-aware while content remains primary. Underlying Home content should not expose a second strong frame competing with the guide. | Guide treatment is acceptable, but the Home top frame makes the composition feel heavier than the current design system intends. | Fix with the same Home top-composition change as DC-02F.01 rather than changing Guide behavior. |
+| DC-02F.03 | Fail | Movies Sort / Filter sheets | `movies-sort-sheet.png`, `movies-filter-sheet.png`, and `movies-filter-sheet-down.png` show the sheet as a large bottom panel whose option area is pushed too low in the viewport; source inspection from Batch 02 already showed option focus using system-like outline treatment. | Command sheets should be grounded matte panels with visible options and matte command focus. They should not feel like floating glass, bright focus frames, or clipped bottom drawers. | The sheet is matte, but its vertical placement and option visibility are weak at 1600x900. The option focus recipe is not yet promoted to the shared matte command style. | Rework the Library option sheet presenter to sit higher with a fixed visible content area and shared matte option-button focus. |
+| DC-02F.04 | Concern | Movies toolbar controls | `movies-toolbar-sort-focus.png` and `movies-toolbar-filter-focus.png` show toolbar controls are quiet enough, but still look like generic bordered command boxes rather than the final matte command recipe. | Toolbar controls may use subtle hairline structure, but focused state should be fill/luminance first with no bright edge as the default cue. | Usable and lower priority than the sheet; the control shape is close but not fully aligned with the command-focus vocabulary. | Align toolbar focus tokens while touching the sheet styles, if it can be done through shared resources without broad page churn. |
+
+- Decision:
+  - Fix Home top composition and Library command sheets as one visual-system batch.
+  - Do not change Guide behavior in this batch; the guide issue is secondary to the underlying Home frame.
+  - Keep media-card poster focus unchanged from Batch 02 unless a shared resource forces a small adjustment.
+
+### 2026-07-08 - Design Conformance Batch 02 Follow-Up Home Top And Command Sheets Fix Rerun
+
+- App version: 0.1.0.213.
+- Scope: rerun the Home top-composition and Library command-sheet checks after source-level fixes.
+- Data source: DEBUG fixtures only; no private server data or personal media assets.
+- Screenshot set: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch02-followup-rerun-20260708-020356`.
+- Implementation note:
+  - A first rerun on app version 0.1.0.212 corrected the oversized Home frame, but exposed clipped Home command buttons at the bottom of the top feature strip.
+  - App version 0.1.0.213 increased the compact Home strip height and tightened inner spacing so the Play and Details commands fit without restoring the old framed hero module.
+- Keyboard-only validation:
+  - `home-fixture`: launch succeeded and produced Home initial, first-rail-focus, resume-focus, and guide screenshots.
+  - `movies-fixture`: launch succeeded and produced Sort sheet, Filter sheet, and option-focus screenshots.
+  - Sort and Filter sheets were opened with keyboard focus movement only (`Up`, `Enter`, `Escape`, `Right`, `Enter`, then arrow movement inside the sheet).
+
+Fix rerun findings:
+
+| ID | Result | Page | Evidence | Outcome | Residual risk |
+| --- | --- | --- | --- | --- | --- |
+| DC-02F.01 | Pass with concern | Home first viewport | `home-initial.png` and `home-first-rail-focus.png`. | The top Continue Watching decision is now an unframed compact feature strip. The previous complete hairline perimeter and bright left active edge are gone, and the first rail reads as the main Home structure. | The feature strip is still a single-item decision area. That is acceptable for this batch, but future real-data runs should confirm it does not compete with populated Continue Watching rails. |
+| DC-02F.02 | Pass | Home Guide over content | `home-guide.png`. | Guide behavior did not need to change. Removing the large underlying Home frame makes the opened Guide feel less visually contested. | None specific to this batch. |
+| DC-02F.03 | Pass | Movies Sort / Filter sheets | `movies-sort-sheet.png`, `movies-filter-sheet.png`, and `movies-filter-sheet-down.png`. | Sort and Filter now use a top-positioned matte sheet with visible options and a fill-first focus treatment. The sheet no longer behaves like a large bottom drawer, and option focus no longer depends on a bright outline. | The current sheet width is intentionally generous for TV readability; future longer option labels should be checked against localized strings. |
+| DC-02F.04 | Pass with concern | Movies toolbar controls | `movies-toolbar-sort-focus.png` and `movies-toolbar-filter-focus.png`. | Sort and Filter toolbar commands now use the shared matte command treatment. Resting hairlines remain subtle enough to define hit targets without becoming the focus cue. | This is acceptable for keyboard/controller use, but native Xbox focus rendering may still need per-platform tuning if WinUI adds unexpected focus visuals. |
+
+- Source-level contracts:
+  - Added a Home source test that requires the compact unframed top feature strip and rejects the removed accent-edge resources.
+  - Added a Library source test that requires shared matte command styles, top-positioned option sheets, and no old bottom-drawer alignment.
+- Verification:
+  - Targeted design source tests were first run red against the baseline, then green after implementation.
+  - `dotnet test tests\NextGenEmby.Core.Tests\NextGenEmby.Core.Tests.csproj --filter "FullyQualifiedName~HomeAccessibilitySourceTests|FullyQualifiedName~LibraryPageSourceTests"`: passed, 21 tests.
+  - `dotnet test tests\NextGenEmby.Core.Tests\NextGenEmby.Core.Tests.csproj --filter "FullyQualifiedName~Design"`: passed, 66 tests.
+  - `dotnet test tests\NextGenEmby.Core.Tests\NextGenEmby.Core.Tests.csproj`: passed, 474 tests.
+  - `MSBuild.exe NextGenXboxEmby.sln /p:Configuration=Debug /p:Platform=x64 /m`: passed, 0 warnings and 0 errors.
+  - Signed and installed `NextGenEmby.App_0.1.0.213_x64_Debug.msix`; installed app version query returned 0.1.0.213.
+- Decision:
+  - Commit this batch as the Home top-composition and Library command-sheet focus correction.
+  - Next design-conformance batch can move to the detail/playback surfaces or broader native Xbox focus tuning, depending on which screen development consumes first.
+
+### 2026-07-08 - Design Conformance Batch 03 Details And Metadata Actions Baseline
+
+- App version: 0.1.0.213.
+- Scope: run Batch 03 Details before making visual fixes, covering first viewport, media versions, organize sheet, and below-fold secondary rails.
+- Data source: DEBUG `details-fixture`; no private server data or personal media assets.
+- Valid screenshot set: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch03-details-baseline-20260708-021939`.
+- Launch probe set: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-details-relaunch-probe-20260708-021839`.
+- Keyboard-only validation:
+  - Wrote `dev-command.json` with route `details-fixture`.
+  - Cold launch consumed the command and `dev-command-result.txt` reported `completed / details-fixture`.
+  - The first attempt left a stale UWP frame on Login after `MediaDetailsPage` briefly navigated; the validation run closed the app frame, relaunched, and confirmed the Details fixture remained visible through repeated screenshots.
+  - From the Details default focus, pressed `Down` into Versions, `Down` and `Enter` to select the fallback source, `Down` into Organize, `Enter` to open Add to collection, `Down` inside the sheet, `Escape` to close, then `Down` toward secondary rails.
+
+Findings recorded before fixes:
+
+| ID | Severity | Page | Evidence | Expected | Actual | Proposed batch fix |
+| --- | --- | --- | --- | --- | --- | --- |
+| DC-03.01 | Fail | Details first viewport | `details-initial.png` and probe screenshots show a complete visible poster card on the left and the deterministic information column on the right. | Details should use a deterministic content/action column plus one right-side atmosphere artwork zone. The artwork zone is not a poster viewer and should fade into the content column. | The page still follows the older poster-and-info layout. The visible poster competes with the Details decision surface, while the right side is occupied by controls instead of atmosphere. | Recompose Details into a left/middle content column and a single right-side artwork atmosphere zone. Use `Backdrop`, then `Thumb`, `Banner`, and `Primary` as atmosphere source, with black/matte fallback and no duplicate visible poster. |
+| DC-03.02 | Fail | Details action row | `details-initial.png` shows `Resume` with a bright complete focus outline. Source shows Details action buttons still opt into system focus visuals. | Details media actions should use 52px matte command targets. Focus should be fill/luminance first with no bright full perimeter; Play/Resume fill remains neutral graphite. | Action focus is readable but uses the rejected system outline vocabulary. | Add a shared Details media-action button style, disable system focus visuals on action buttons, and apply the neutral matte focused fill in code or style resources. |
+| DC-03.03 | Fail | Version/source selection | `details-version-focus.png` and `details-version-selected.png` show source rows with full bright focus outlines and a green vertical selected bar. | Source selection must be reachable before playback and visually separate selection from focus. It should not use green for neutral source selection or a bright focus frame as the main cue. | Focus and selection are both visually heavy. The selected-source marker uses the same green family reserved for active playback/progress/watched state. | Create a Details source-option style using matte fill for focus and a neutral/tertiary selected marker. Keep selected state distinct from focus without using green or a bright perimeter. |
+| DC-03.04 | Concern | Add-to collection sheet | `details-collection-sheet.png` and `details-collection-sheet-down.png` show a usable matte sheet, but option focus is a high-contrast complete outline and the panel is visually disconnected from the newer command-sheet recipe. | Add-to sheets should be grounded matte panels with visible options and matte option focus. A complete outline can be reserved for exceptional separation, not normal focus. | The sheet works, but it looks like an older modal style compared with the newer Library Sort/Filter sheets. | Reuse or parallel the shared matte option-sheet command treatment introduced for Library, while preserving the richer thumbnail row anatomy if useful. |
+| DC-03.05 | Fail | Details secondary rails | `details-similar-focus.png` shows More like this cards with a bright full focus frame and text still trapped inside the poster image. | Secondary media rails should follow the shared poster-card selected-backplate rules: poster artwork first, title/meta below or attached as one object, no bright frame. | Details recommendation cards did not receive the Batch 02 poster-card update. | Move Details similar/person media cards onto the shared poster-card visual recipe or add a Details-specific source contract that requires the same selected-backplate behavior. |
+| DC-03.06 | Concern | Below-fold vertical focus | `details-explore-focus.png` and `details-explore-second-down.png` did not produce a visible Explore chip focus transition after moving down from More like this. | D-pad movement should move predictably between More like this, Explore facets, and Cast & crew, with visible focus and scroll anchoring. | Navigation may still be functional through another path, but the attempted vertical route did not visibly land on Explore. | Add an explicit Details section focus policy for Similar -> Explore -> Cast & crew, then rerun the same keyboard path. |
+| DC-03.07 | Concern | Fixture automation reliability | `dev-command-result.txt` can report `completed / details-fixture` even when a stale frame still shows Login unless the old app frame is closed first. | Fixture routes should provide reliable installed-app evidence. The validation protocol should not confuse a completed command with the final visible page. | This was recoverable by closing the UWP frame before relaunch, but it is easy to mis-capture. | Update the run protocol to close the `Next Gen Xbox Emby` ApplicationFrameWindow before cold-launch fixture routes; consider adding a visible-page assertion to future automation. |
+
+- Decision:
+  - Fix now as a grouped Details visual-system batch for first-viewport composition, media action focus, version/source focus, add-to sheet focus, and secondary poster rails.
+  - Treat the Explore focus issue as part of the same batch if it can be solved through a local Details focus policy; otherwise document it as a separate interaction follow-up after the visual structure is changed.
+  - Keep playback/native logic out of this batch.
+
+### 2026-07-08 - Design Conformance Batch 03 Details And Metadata Actions Fix Rerun
+
+- App version: 0.1.0.216.
+- Scope: rerun the Details first viewport, source/version selection, organize sheet, and secondary media rails after visual-system fixes.
+- Data source: DEBUG `details-fixture`; no private server data or personal media assets.
+- Screenshot sets:
+  - Primary rerun: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch03-details-rerun-20260708-024354`.
+  - Atmosphere tuning rerun: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch03-details-rerun2-20260708-024826`.
+  - Final first-viewport check: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch03-details-final-20260708-025051`.
+- Keyboard-only validation:
+  - Closed the existing `Next Gen Xbox Emby` ApplicationFrameWindow before each installed-app fixture launch.
+  - `details-fixture` launch succeeded and `dev-command-result.txt` reported `completed / details-fixture`.
+  - Captured the first viewport, source focus, selected fallback source, add-to sheet, and lower secondary rail state through keyboard/controller-equivalent navigation.
+- Source contracts added before implementation:
+  - Details uses a deterministic content/action column plus a right-side atmosphere zone, not a visible poster viewer.
+  - Atmosphere artwork resolves through `Backdrop`, then `Thumb`, `Banner`, and `Primary`; when artwork is missing or visually weak, a black/matte fallback is acceptable.
+  - Details action controls suppress system focus visuals and use matte fill/luminance as the primary focus cue.
+  - Version/source selected state uses a neutral marker instead of green; green remains reserved for progress, playback, or watched-state signals.
+  - Add-to sheet options and secondary media rails avoid bright full-perimeter focus frames.
+  - Details recommendation cards follow the shared poster-card anatomy: poster artwork first, title/meta below the image.
+- Automated verification:
+  - Red path confirmed the new Details visual-system source contracts failed before implementation.
+  - Targeted Details source tests passed: 3 total.
+  - Full Core test suite passed: 477 total.
+  - Visual Studio MSBuild Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.216_x64_Debug.msix`.
+  - Signed and installed `NextGenEmby.App 0.1.0.216` for screenshot rerun.
+
+Fix rerun findings:
+
+| ID | Result | Page | Evidence | Outcome | Residual risk |
+| --- | --- | --- | --- | --- | --- |
+| DC-03.01 | Pass with concern | Details first viewport | `details-final-initial.png`. | The visible poster viewer is removed. The page now reads as a left content/action column with a right atmosphere zone. The right side intentionally stays quiet and can fall back to black/matte when no useful artwork exists. | The packaged QA wide artwork is very dark, so this fixture mostly validates composition rather than rich atmosphere rendering. Real Emby backdrops should still be checked with live media because native image loading and backdrop quality will vary. |
+| DC-03.02 | Pass | Details action row | `details-final-initial.png`. | Details actions now use shared matte command styles and suppress the old complete system focus outline. Resume keeps a neutral graphite action fill instead of becoming an accent-colored CTA. | Native Xbox focus rendering may still require platform tuning if WinUI adds unexpected focus adorners. |
+| DC-03.03 | Pass | Version/source selection | `details-rerun-source-focus.png` and `details-rerun-source-selected.png`. | Source focus uses matte fill, and selected source uses a neutral steel marker instead of green. Selection and focus are visually distinct without a bright full frame. | Longer localized stream labels should be checked for wrapping and clipping. |
+| DC-03.04 | Pass with concern | Add-to collection sheet | `details-rerun-add-sheet.png`. | Add-to options use the same quieter matte option treatment as the newer command-sheet direction, without the previous bright option frame. | The sheet still has richer thumbnail anatomy than Sort/Filter. This is acceptable for choosing collections/playlists, but it should not drift into decorative glass. |
+| DC-03.05 | Pass | Details secondary rails | `details-rerun-secondary-focus.png`. | Secondary media cards now share the poster-grid anatomy: image-first poster, title/meta below, matte focus treatment, no text trapped in an in-poster scrim. | The scripted Down route did not reliably land on every below-fold group, so this pass validates visual anatomy more than full section-to-section navigation. |
+| DC-03.06 | Concern | Below-fold vertical focus | Rerun keyboard path toward secondary rails. | The page remains keyboard navigable through primary controls and sheets, but the Similar -> Explore -> Cast & crew vertical route still needs a dedicated interaction pass. | Keep as a follow-up interaction issue rather than mixing it into the visual-system commit. |
+| DC-03.07 | Pass | Fixture automation reliability | Installed-app reruns for version 0.1.0.216. | Closing the old app frame before writing and launching fixture commands produced stable Details screenshots matching the requested route. | Future automation should add a visible-page assertion so a completed command result cannot be confused with a stale frame. |
+
+- Decision:
+  - Commit this batch as the Details page visual-system alignment.
+  - Leave Explore/Cast vertical focus routing for a smaller interaction-focused pass.
+  - Keep atmosphere rendering intentionally source-aware: use backdrop-derived mood when available, and black/matte fallback when Emby lacks useful artwork.
+
+### 2026-07-08 - Design Conformance Batch 04 Playback OSD And Options Baseline
+
+- App version: 0.1.0.216.
+- Scope: run Batch 04 Playback before making visual fixes, covering the default OSD, transport strip, source/audio/subtitle options, and info panel.
+- Data source: DEBUG `playback-options-fixture`; no private server data or personal media assets.
+- Runtime evidence:
+  - Screenshot attempt set: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch04-playback-baseline-20260708-030052`.
+  - UIA snapshot set: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch04-playback-baseline-uia-20260708-030412`.
+  - `dev-command-result.txt` reported `completed / playback-options-fixture`.
+- Tooling limitation:
+  - `CopyFromScreen` and `PrintWindow(PW_RENDERFULLCONTENT)` both captured the UWP content layer as black in this run.
+  - UI Automation confirmed the fixture and overlay controls were present, so this baseline uses UIA text/bounds snapshots plus source inspection for evidence.
+  - Future playback visual QA should prefer Computer Use / Windows Graphics Capture when available, or add an app-owned diagnostic screenshot surface if playback composition remains black to external capture.
+- Keyboard-only validation:
+  - Closed the existing app frame, wrote `dev-command.json` with route `playback-options-fixture`, and launched through AppUserModelId `NextGenEmby.App_h8qjz0sr1sg4m!App`.
+  - Initial fixture state opened Playback with More drawer visible and Source focused.
+  - Pressed `Escape`; More closed and default OSD stayed visible with More focused in the transport row.
+  - Pressed `Right`; transport focus moved within the bottom row.
+  - Pressed `M`; More reopened.
+  - Pressed `Down` to Audio, `Down` to Subtitles, `Down` to Info, and `Enter` to open the info panel.
+
+Findings recorded before fixes:
+
+| ID | Severity | Page | Evidence | Expected | Actual | Proposed batch fix |
+| --- | --- | --- | --- | --- | --- | --- |
+| DC-04.01 | Fail | Playback default OSD | UIA `02-default-osd-after-escape.uia.txt` shows `Aurora Protocol`, progress slider, `State`, `Playing - Fixture options ready`, and the full transport row all packed into the bottom overlay. Source `PlaybackPage.xaml` uses one bottom `Border` with three stacked rows. | Default playback invocation should be compact chrome: optional top-left title/status capsule plus bottom transport strip inside safe area. Playback UI stays subordinate to video/subtitles. | The current default OSD is a large bottom information panel. Title, state, timeline, and controls all live in the same bottom block, so it reads like a debug/control surface rather than the A3 compact strip model. | Split playback chrome into a small top-left status/title capsule and a compact bottom transport strip. Keep default strip focused on timeline, chips, transport, subtitles/audio, and More. |
+| DC-04.02 | Fail | Transport strip focus and density | UIA shows transport buttons as large text rectangles, for example `Pause` `183x78`, `More` `177x78`, and `Stop` `168x78`. Source uses default `Button` elements without a playback-specific compact focus style. | Focused transport targets should sit fully inside the strip with visible internal breathing room, use matte fill/luminance, and avoid bright complete focus frames. Expected target height is roughly 52px to 56px. | Buttons are usable but too tall and command-button-like for the compact OSD. They likely inherit generic button focus visuals instead of a playback-specific matte transport recipe. | Introduce shared playback transport button styles for compact icon/text or icon-only controls, disable system focus visuals where needed, and reserve internal strip padding for focus scale. |
+| DC-04.03 | Concern | Timeline and progress | UIA shows a disabled `Slider` with no exposed current/duration time labels in the default OSD snapshot. Source places status text on the right instead of time labels around the timeline. | Playback progress should use muted green for active progress, expose current/duration time, and keep non-playback controls neutral. | Seek/progress behavior exists, but the visual anatomy is not the target TV transport anatomy. The default OSD prioritizes state text over time comprehension. | Replace the default slider anatomy with a compact timeline row that includes start/current and duration labels, with muted green active progress and neutral track. |
+| DC-04.04 | Fail | Playback options / More | UIA `01-options-drawer-initial.uia.txt`, `05-audio-focus.uia.txt`, and `08-info-open.uia.txt` show Source, Audio, Subtitles, and Info are reachable, but they live in a full-height right drawer (`489x1974` at the captured scale). | Source, audio, subtitle, info, and more choices should open lightweight menus. They should not be flattened into the default OSD, and the menu should not compete with the video/subtitle field. | The options are correctly not flattened into the default strip, but the full-height drawer feels heavier than the playback design target and can dominate the video. | Rework More into a compact matte floating menu or short side sheet aligned to the bottom OSD, keeping Source/Audio/Subtitles/Info reachable through D-pad. |
+| DC-04.05 | Blocked | Subtitle/video conflict | The deterministic `playback-options-fixture` exposes playback controls and menus, but no subtitle text/video baseline is rendered for measuring subtitle collision. | Subtitle baseline remains readable. Move or shorten OSD/menu before adding stronger blur, borders, or shadows. | Cannot verify subtitle collision from this fixture. Source-level review still suggests the large bottom OSD would reduce subtitle-safe space more than the compact target. | Add a deterministic playback visual fixture with subtitle sample text or a synthetic subtitle baseline so subtitle-safe OSD can be tested without private media. |
+| DC-04.06 | Concern | Visual capture reliability | Screenshot files in `ngxe-batch04-playback-baseline-20260708-030052` and `ngxe-batch04-printwindow.png` captured a black app content layer while UIA saw all controls. | Playback visual QA should produce reliable evidence without depending on manual inspection. | Current capture method is weak for UWP playback composition. UIA can validate geometry and routes, but not material, contrast, or focus paint. | Keep UIA/source as fallback, but prefer Computer Use / Windows Graphics Capture for playback visual passes and consider a non-video fixture background for OSD screenshots. |
+
+- Decision:
+  - Fix now as a grouped playback visual-system batch for compact OSD structure, transport focus/density, timeline anatomy, and More menu weight.
+  - Add source-level design contracts first because screenshot capture is unreliable for playback composition in this environment.
+  - Keep actual native playback/stream switching behavior out of this visual batch.
+
+### 2026-07-08 - Design Conformance Batch 04 Playback OSD And Options Fix Rerun
+
+- App version: 0.1.0.219.
+- Scope: rerun Batch 04 after compact playback OSD, matte transport focus, timeline anatomy, source/audio/subtitle chips, subtitle-safe sample text, and compact More menu changes.
+- Data source: DEBUG `playback-options-fixture`; no private server data or personal media assets.
+- Runtime evidence:
+  - Screenshot: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch04-playback-fix-219-more.png`.
+  - UIA snapshot set: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch04-playback-fix-219-uia-20260708-033058`.
+  - `dev-command-result.txt` reported `completed / playback-options-fixture`.
+- Keyboard-only validation:
+  - Closed the existing app frame, wrote `dev-command.json` with route `playback-options-fixture`, and launched through AppUserModelId `NextGenEmby.App_h8qjz0sr1sg4m!App`.
+  - Initial fixture state opened Playback with compact More visible and Source focused.
+  - Pressed `Escape`; More closed and default OSD stayed visible with More focused in the bottom strip.
+  - Screenshot capture now produced usable UI evidence for the synthetic matte fixture background. Live/native video composition may still need separate hardware capture.
+
+Fix rerun findings:
+
+| ID | Status | Page | Evidence | Result | Residual risk |
+| --- | --- | --- | --- | --- | --- |
+| DC-04.01 | Pass | Playback default OSD | `01-initial-more.uia.txt` and `02-default-osd.uia.txt` show top-left `Aurora Protocol` capsule at `114,135,303,44` plus a separate bottom transport strip. | The OSD is no longer one large bottom information panel. Title/status moved to the compact top-left capsule, and playback controls sit in the bottom strip. | Real playback may tune auto-hide timing and status copy separately from this fixture. |
+| DC-04.02 | Pass | Transport strip focus and density | Bottom controls sit inside the strip: Pause `1526,1920,157,81`, Resume `1695,1920,180,81`, More `3564,1920,153,81`. Screenshot shows matte focus fill rather than bright complete outlines. | Transport now reads as TV playback chrome instead of a generic command row, with internal breathing room retained. | Xbox focus rendering should still be checked on hardware because WinUI theme focus can vary by platform. |
+| DC-04.03 | Pass | Timeline and progress | UIA exposes current time `02:40`, duration `01:58:00`, and slider `267,1857,3285,48`. Screenshot shows time labels around the scrubber. | Timeline anatomy now prioritizes current/duration comprehension and keeps debug state out of the transport strip. | Seek preview behavior should be rerun with real seekable media in an interaction batch. |
+| DC-04.04 | Pass | Playback options / More | More menu changed from the baseline full-height drawer (`489x1974`) to a compact bottom-aligned menu (`579x494`). | Source, audio, subtitles, and info remain reachable through D-pad, but no longer dominate the video field. Source focus is matte fill, not a bright white frame. | If the final native control cannot suppress ComboBox template visuals on Xbox, replace these with matte option rows plus lightweight flyouts. |
+| DC-04.05 | Pass with concern | Subtitle/video conflict | Fixture screenshot displays `Subtitle sample stays above controls` between the video field and the bottom strip. | The synthetic subtitle baseline remains above the compact strip and is not occluded by More. | This is still a synthetic subtitle sample, not timed text over a live video renderer. Recheck with real subtitles and overscan on hardware. |
+| DC-04.06 | Pass with concern | Visual capture reliability | `CopyFromScreen` produced usable evidence for `ngxe-batch04-playback-fix-219-more.png`. | Playback visual QA can now capture the synthetic fixture because it uses a matte app-owned visual field instead of only relying on native video composition. | Real video composition may still capture differently; keep UIA/source as fallback and prefer hardware/Windows Graphics Capture for native playback. |
+
+- Decision:
+  - Commit this batch as playback OSD visual-system alignment.
+  - Keep native stream switching, real subtitle collision, and hardware focus rendering as follow-up validation, not as blockers for this visual-system slice.
+
+### 2026-07-08 - Design Conformance Batch 05 Secondary Media Surfaces Baseline
+
+- App version: 0.1.0.219.
+- Scope: run Batch 05 before visual fixes, covering Live TV, Music, Photos, and the current source/destination model.
+- Data source: DEBUG fixture routes only; no private server data, credentials, or personal media assets were written to the repository.
+- Evidence root: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch05-secondary-baseline-20260708-033759`.
+- Contact sheets:
+  - Live TV: `contact-livetv.png`.
+  - Music: `contact-music.png`.
+  - Photos: `contact-photos.png`.
+- Fixture routes:
+  - `livetv-fixture`.
+  - `music-fixture`.
+  - `photos-fixture`.
+  - `home-fixture` for the current Guide / destination-family check.
+- Keyboard-only validation:
+  - Closed the existing `Next Gen Xbox Emby` ApplicationFrameWindow before each installed-app fixture launch.
+  - Wrote `dev-command.json` into the app LocalState folder and launched through AppUserModelId `NextGenEmby.App_h8qjz0sr1sg4m!App`.
+  - Live TV path: `Down`, `Down`, `Down`, `Enter`, `Escape`.
+  - Music path: `Down`, `Right`, `Right`, `Enter`, `Escape`, `Left`.
+  - Photos path: `Enter`, `Right`, `Right`, `Enter`, `Escape`, `Escape`.
+  - Guide / destination path: launched Home fixture and captured the current collapsed rail / page action model.
+
+Findings recorded before fixes:
+
+| ID | Severity | Page | Evidence | Expected | Actual | Proposed batch fix |
+| --- | --- | --- | --- | --- | --- | --- |
+| DC-05.01 | Fail | Live TV | `livetv-fixture\01-initial.png` through `06-after-escape.png`, `contact-livetv.png`, and UIA snapshots for focused channels and the unsupported layer. | Live TV should use dense matte channel/program rows, a source-aware current-program preview, and a transient unsupported layer that follows the newer matte command language. Focus should be visible without relying on a bright complete perimeter frame. | Channel navigation works and Escape restores focus to `Kids Studio`, but channel rows still use a bright full focus frame. The right preview reads as a large empty graphite information panel, and the unsupported playback layer uses the older centered modal plus bright outlined Close target. | Keep the dense channel-list structure, but migrate row focus to the shared matte list treatment, redesign the current-program preview as a compact media-first panel, and move unsupported playback messaging to a shared matte transient layer. |
+| DC-05.02 | Concern | Music | `music-fixture\01-initial.png` through `07-back-album-or-artist.png`, `contact-music.png`, and UIA snapshots for Artist -> Album -> Song focus. | Music should preserve TV-readable density with list/column navigation where it is better than poster grids. Focus and empty/unsupported states should still follow the same matte visual system as the rest of the app. | The three-column browsing model is appropriate and keyboard paths work. Artist, album, and song focus restores correctly after the unsupported layer. Visual focus still uses bright complete outlines, the Now panel is sparse, and the unsupported layer shares the older modal style. | Preserve the three-column architecture, migrate list focus and the unsupported layer to shared matte styles, and tune the Now panel into a compact album/song context area instead of a static diagnostic panel. |
+| DC-05.03 | Fail | Photos | `photos-fixture\01-root.png` through `07-album-escape-root.png`, `contact-photos.png`, and UIA snapshots for album, photo, viewer, and focus restoration. | Photos should prioritize immersive artwork and minimal chrome. Root/album grids can be dense, but they should occupy the TV canvas with photo-appropriate media tiles rather than generic poster-library anatomy. Focus should avoid bright perimeter frames. | Album opening, photo navigation, viewer opening, and Escape restoration all work. The viewer is close to the intended minimal immersive direction. Root and album pages still look like generic poster grids: small vertical cards cluster on the left with a large unused right side, and focused cards use bright full frames. | Add a photo-specific visual recipe: larger landscape or square media tiles, stronger use of the available canvas, matte focus without a perimeter frame, and viewer styling kept minimal. Reuse Library mechanics only where they do not force movie-poster proportions. |
+| DC-05.04 | Concern | Guide / source destinations | `home-guide\01-guide.png` and `01-guide.uia.txt`. | The client should expose the full Emby destination family, including lower-frequency or server-defined surfaces, through a source-aware navigation model. If the current model is collapsed Guide only, the design docs and checklist should explicitly say that. | The collapsed left rail exposes Home, Search, Movies, Shows, Live TV, Collections, Playlists, Music, Photos, Favorites, Unwatched, and Settings. No explicit Source Hub or expanded More destination view was found in this fixture. Pressing the tested guide key path captured the collapsed rail and Home content rather than a separate source hub. | Product/design decision needed before implementation: either accept the collapsed Guide plus section More buttons as the current source model and update the docs, or add a Source Hub fixture/view for unpinned libraries and secondary routes. |
+
+- Decision:
+  - Treat Batch 05 as a secondary-media visual-system batch, not as a playback/native-feature batch.
+  - Fix Live TV and Music together around the shared matte list focus and shared unsupported/transient layer.
+  - Fix Photos with a photo-specific grid recipe instead of forcing the movie-poster card system.
+  - Resolve the Source Hub question before code changes: the current app has a complete collapsed destination rail, but not a distinct Source Hub surface.
+
+### 2026-07-08 - Design Conformance Batch 05 Secondary Media Surfaces Fix Rerun
+
+- App version: 0.1.0.220.
+- Scope: rerun Live TV, Music, Photos, and source-destination assumptions after secondary-media visual-system fixes.
+- Data source: DEBUG fixture routes only; no private server data, credentials, or personal media assets were written to the repository.
+- Evidence root: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch05-secondary-fix-220-20260708-040111`.
+- Contact sheets:
+  - Live TV: `contact-livetv.png`.
+  - Music: `contact-music.png`.
+  - Photos: `contact-photos.png`.
+- Keyboard-only validation:
+  - Signed and installed `NextGenEmby.App 0.1.0.220`.
+  - Live TV path: `Down`, `Down`, `Down`, `Enter`, `Escape`.
+  - Music path: `Down`, `Right`, `Right`, `Enter`, `Escape`, `Left`.
+  - Photos path: `Enter`, `Right`, `Right`, `Enter`, `Escape`, `Escape`.
+  - Fixture routes completed through `dev-command.json`; final result reported `completed / photos-fixture`.
+- Source-level contracts added before implementation:
+  - Live TV and Music list rows opt into shared matte button focus instead of system focus rings.
+  - Live TV and Music unsupported playback messages use a shared bottom transient matte panel.
+  - Photos use a photo-specific landscape tile recipe through `LibraryGridItem` dimensions instead of forcing poster-card proportions.
+
+Fix rerun findings:
+
+| ID | Status | Page | Evidence | Result | Residual risk |
+| --- | --- | --- | --- | --- | --- |
+| DC-05.01 | Pass with concern | Live TV | `contact-livetv.png`, `livetv-fixture\05-unsupported-layer.png`. | Channel focus now reads as a matte fill change without a bright complete perimeter frame. The current-program preview is compact and top-aligned instead of a tall empty graphite panel. Unsupported playback opens as a bottom transient matte panel and Escape returns to the invoking channel. | Preview content is still text-first because the fixture has channel logos and EPG text, not a real program artwork feed. Real Live TV servers should be checked for logo and program metadata density. |
+| DC-05.02 | Pass with concern | Music | `contact-music.png`, `music-fixture\05-unsupported-layer.png`. | The three-column artist/album/song model remains dense and TV-readable. Artist, album, and song focus use matte fill rather than the old complete focus frame. Unsupported audio playback uses the same transient panel and Escape restores song focus. | The Now panel is intentionally text-first. A richer album-art panel can be added later, but it should not reduce list density or turn music into a poster grid. |
+| DC-05.03 | Pass with concern | Photos | `contact-photos.png`, `photos-fixture\02-album-opened.png`, and `05-viewer-opened.png`. | Photos now use a landscape media-tile recipe with image-first artwork and metadata below. The viewer remains immersive and Escape restores to the photo, then the album root. | The fixture has only a few photos/albums, so the right side still has open canvas. That is acceptable for sparse folders, but real larger albums should be checked for wrap density. |
+| DC-05.04 | Concern | Guide / source destinations | Batch 05 baseline `home-guide\01-guide.png`; no source code changes in this fix. | The current product model remains the collapsed left Guide plus page-level section actions. This exposes the full pinned destination family without introducing a new Source Hub surface. | A distinct Source Hub may still be useful for unpinned server-defined libraries, but it should be designed as a product-model decision rather than slipped into this visual fix. |
+
+- Verification:
+  - Red path confirmed the new Live TV, Music, and Photos source contracts failed before implementation.
+  - Targeted source tests passed: `LiveTvPageSourceTests`, `MusicPageSourceTests`, and `PhotoViewerSourceTests`, 14 tests.
+  - Design source tests passed: 75 tests.
+  - Full Core test suite passed: 483 tests.
+  - Visual Studio MSBuild Debug x64 build passed with 0 warnings and 0 errors.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.220`.
+- Decision:
+  - Commit this batch as secondary-media visual-system alignment.
+  - Keep Source Hub as an explicit future product/navigation decision.
+  - Keep real Live TV stream playback, real audio playback, and real server artwork density out of this visual batch.
+
+### 2026-07-08 - Design Conformance Batch 06 Account, Settings, Login, And Recovery Baseline
+
+- App version: 0.1.0.220.
+- Scope: run Batch 06 before utility-surface visual fixes, covering Login, Settings, sign-out confirmation, and Search error recovery.
+- Data source: DEBUG fixture routes and empty-session utility routes only; no private server data, credentials, screenshots, or personal media assets were written to the repository.
+- Evidence root: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch06-utility-baseline-20260708-041330`.
+- Contact sheets:
+  - Login: `login\contact-login.png`.
+  - Settings: `settings\contact-settings.png`.
+  - Search error: `search-error\contact-search-error.png`.
+- Fixture routes:
+  - `login`.
+  - `settings`.
+  - `search-error`.
+- Keyboard-only validation:
+  - Closed the existing `Next Gen Xbox Emby` ApplicationFrameWindow before each installed-app route launch.
+  - Wrote `dev-command.json` into the app LocalState folder and launched through AppUserModelId `NextGenEmby.App_h8qjz0sr1sg4m!App`.
+  - Login path: `Tab`, `Tab`, `Tab`, `Enter`.
+  - Settings path: `Up`, `Enter`, `Escape`.
+  - Search error path: `Down`, `Down`, `Right`.
+  - Fixture routes completed and screenshots/UIA snapshots were captured into the evidence root.
+
+Findings recorded before fixes:
+
+| ID | Severity | Page | Evidence | Expected | Actual | Proposed batch fix |
+| --- | --- | --- | --- | --- | --- | --- |
+| DC-06.01 | Fail | Login | `login\contact-login.png` and UIA snapshots `01-initial.uia.txt` through `05-empty-submit-error.uia.txt`. | Login should be TV-accessible and visually aligned with the matte utility system: calm panel, readable form scale, neutral focus, and failed login returning to an editable target. | Keyboard navigation reaches the fields and empty submit returns focus to the editable form, but the page still looks like a developer form. Controls are tiny and left-biased on a large black canvas, the Connect button uses default command styling, and TextBox/PasswordBox focus relies on bright perimeter lines. | Introduce a shared utility form surface: centered/left-balanced matte panel with TV-scale fields, neutral form focus resources, `TvCommandButtonStyle` for Connect, and clearer empty/error status placement. |
+| DC-06.02 | Concern | Settings | `settings\contact-settings.png`, especially `01-initial.png` and `02-signout-focus.png`. | Settings should use shared typography, command focus, and panel surfaces. Diagnostics should be secondary and should not dominate the first viewport. | The account/playback/diagnostics structure is usable and already uses shared panels, but Sign out and checkbox focus still show old complete focus outlines. Diagnostics appears as a prominent first-screen panel instead of a secondary/support section. | Migrate settings buttons, checkbox, and combo-like utility controls to matte focus defaults. Reduce diagnostics visual priority or move it behind a secondary disclosure while keeping it reachable. |
+| DC-06.03 | Concern | Sign out confirmation | `settings\03-confirm-layer.png` and `settings\03-confirm-layer.uia.txt`. | Destructive action should be explicit, local, and safe by default. Danger color should appear only inside the confirmation context. | The confirmation copy and scoped danger button are appropriate, and Escape cancels. However the buttons inherit old focus visuals, so the confirmation still visually belongs to the older utility styling. | Keep the centered confirmation model and safe default, but use matte command focus for both actions. Keep red only on the final destructive button. |
+| DC-06.04 | Concern | Search error recovery | `search-error\contact-search-error.png` and UIA snapshots for initial, scope, recovery, and retry focus. | Error states should explain what happened and provide visible recovery controls without changing the app's visual language. | Recovery works: the page shows `Unable to search`, `Edit search`, and `Search again`, and focus can reach both actions. The search box, scope chips, and recovery buttons still use older border-heavy utility styling. | Apply the shared utility command/form focus recipe to Search input, scope chips, recent-term chips, and error recovery actions. Keep the centered recovery copy because it is clear and does not steal navigation. |
+
+- Decision:
+  - Treat Batch 06 as a utility-surface visual-system batch.
+  - Fix Login, Settings, and Search recovery together around a shared neutral matte form/command style instead of one-off page tweaks.
+  - Keep destructive sign-out red only inside the confirmation action.
+  - Keep diagnostics reachable but visually secondary.
+
+### 2026-07-08 - Design Conformance Batch 06 Account, Settings, Login, And Recovery Fix Rerun
+
+- App version: 0.1.0.222.
+- Scope: rerun Login, Settings, sign-out confirmation, and Search error recovery after shared matte utility form/command fixes.
+- Data source: DEBUG fixture routes and empty-session utility routes only; no private server data, credentials, screenshots, or personal media assets were written to the repository.
+- Evidence root: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch06-utility-fix-222-20260708-043420`.
+- Contact sheets:
+  - Login: `login\contact-login.png`.
+  - Settings: `settings\contact-settings.png`.
+  - Search error: `search-error\contact-search-error.png`.
+- Keyboard-only validation:
+  - Signed and installed `NextGenEmby.App 0.1.0.222`.
+  - Login path: `Tab`, `Tab`, `Tab`, `Enter`.
+  - Settings path: `Up`, `Enter`, `Escape`.
+  - Search error path: `Down`, `Down`, `Right`.
+  - Fixture routes completed through `dev-command.json`.
+- Source-level contracts added before implementation:
+  - Login uses shared matte utility form, field, and command styles, and Connect uses `MatteButtonFocusVisuals`.
+  - Settings uses shared utility command/danger styles, a lower-weight diagnostics panel, and matte focus helpers for sign-out confirmation actions.
+  - Search input, scope chips, recent terms, and error recovery actions use the same matte utility recipe; selected scope chips no longer use accent borders.
+
+Fix rerun findings:
+
+| ID | Status | Page | Evidence | Result | Residual risk |
+| --- | --- | --- | --- | --- | --- |
+| DC-06.01 | Pass with concern | Login | `login\contact-login.png`, especially `01-initial.png` and `05-empty-submit-error.png`. | Login now presents a stable matte utility panel with TV-scale fields and a neutral Connect action. Empty submit still returns focus to an editable field. | Native text-entry focus and software keyboard behavior should be checked on Xbox hardware. |
+| DC-06.02 | Pass with concern | Settings | `settings\contact-settings.png`, especially `01-initial.png` and `02-signout-focus.png`. | Settings keeps the simple account/playback/diagnostics structure, but command focus now uses matte fill instead of old bright perimeter focus. Diagnostics is visually lower weight. | Diagnostics remains visible in the first viewport for local/debug usefulness; a future production build may hide it behind a secondary disclosure. |
+| DC-06.03 | Pass | Sign out confirmation | `settings\03-confirm-layer.png`. | Confirmation remains explicit and safe by default. Red is scoped to the final destructive Sign out button, and focus is matte rather than a bright outline. | None for this visual slice. |
+| DC-06.04 | Pass with concern | Search error recovery | `search-error\contact-search-error.png`, especially `03-recovery-focus.png` and `04-search-again-focus.png`. | Recovery controls remain centered, readable, and reachable. Search input, scope chips, and retry/edit actions now use matte utility styling and no accent focus border. | Real offline/server failures should be rerun after hardware text input validation. |
+
+- Verification:
+  - Red path confirmed the new Login, Settings, and Search source contracts failed before implementation.
+  - Targeted source tests passed: `LoginAccessibilitySourceTests`, `SettingsPageSourceTests`, and `SearchAccessibilitySourceTests`, 12 tests.
+  - Design source tests passed: 78 tests.
+  - Visual Studio MSBuild Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.222_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.222`.
+- Decision:
+  - Commit this batch as utility-surface visual-system alignment.
+  - Keep Xbox hardware text-entry behavior, production diagnostics disclosure, and real offline-server recovery as follow-up validation rather than blockers for this visual-system slice.
+
+### 2026-07-08 - Design Conformance Batch 03 Details Secondary Interaction Follow-Up
+
+- App version: 0.1.0.222.
+- Scope: rerun the remaining Batch 03 below-fold interaction concern after later details/poster/focus fixes.
+- Data source: DEBUG `details-fixture`; no private server data or personal media assets.
+- Evidence root: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch07-details-interaction-baseline-20260708-044207`.
+- Keyboard-only validation:
+  - Closed the existing app frame, wrote `dev-command.json` with route `details-fixture`, and launched through AppUserModelId `NextGenEmby.App_h8qjz0sr1sg4m!App`.
+  - Pressed `Down` repeatedly from the default Details focus and captured screenshots plus UIA focused element names at every step.
+  - Pressed `Up` from the Cast & crew focused state to verify reverse movement.
+- Focus log:
+  - Initial: primary action button.
+  - `Down 1`: selected `4K SDR Direct` source.
+  - `Down 2`: `1080p fallback` source.
+  - `Down 3`: organize/action area.
+  - `Down 4`: More like this item `Midnight Signal`.
+  - `Down 5`: Explore facet `Browse Genre Sci-Fi`.
+  - `Down 6`: Cast & crew item `Maya Chen, Lena Ortiz`.
+  - `Up from Cast`: returned to Explore facet `Browse Genre Sci-Fi`.
+
+Follow-up findings:
+
+| ID | Status | Page | Evidence | Result | Residual risk |
+| --- | --- | --- | --- | --- | --- |
+| DC-03.06 | Pass with concern | Details below-fold vertical focus | `down-04.png`, `down-05.png`, `down-06.png`, and `focus-log.txt`. | The current route now moves predictably from More like this to Explore to Cast & crew, with all three sections visible and focused targets reachable by D-pad. Up from Cast returns to Explore. | Fixture cast/facet data is compact. Recheck with real Details items that have longer people names, more facets, and larger similar/cast rails. |
+| DC-03.08 | Concern | Details atmosphere crop while below fold | `down-04.png` through `down-06.png`. | The right-side atmosphere remains non-interactive and does not block reading/focus. | The fixture's large Logo crop appears in the lower-right atmosphere zone and can become visually loud below the first viewport. This is not an interaction blocker, but real backdrop/logo crops should be sampled during live-media validation. |
+
+- Decision:
+  - Mark the Batch 03 below-fold interaction concern as resolved for the deterministic fixture.
+  - Keep real-media metadata density and atmosphere crop behavior as future live-data validation, not as blockers for the current design-system pass.
+
+### 2026-07-08 - Design Conformance Batch 02 Missing Poster Fallback Rerun
+
+- App version: 0.1.0.224.
+- Scope: close the remaining Batch 02 no-artwork runtime gap by adding a deterministic missing-poster item to the movie-grid and search fixtures.
+- Data source: DEBUG `movies-fixture` and `search-fixture` only; no private server data, credentials, screenshots, or personal media assets were written to the repository.
+- Evidence root: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch02-missing-poster-fallback-224-20260708-050532`.
+- Keyboard-only validation:
+  - Closed the existing app frame, wrote `dev-command.json` with route `movies-fixture`, and launched through AppUserModelId `NextGenEmby.App_h8qjz0sr1sg4m!App`.
+  - Pressed `Right` from the first Movies grid item to focus `No Poster Signal`.
+  - Closed the app frame, wrote `dev-command.json` with route `search-fixture`, relaunched, then pressed `Down`, `Down`, `Down`, `Right` to focus the same missing-poster item in Search results.
+  - Both fixture routes reported `completed` in `dev-command-result.txt`; `dev-command.json` and `dev-command-result.txt` were removed after validation.
+- Screenshots:
+  - Movies selected no-art tile: `movies-01.png`.
+  - Search selected no-art result: `search-04.png`.
+  - Focus log: `focus-log.txt`.
+
+Follow-up findings:
+
+| ID | Status | Page | Evidence | Result | Residual risk |
+| --- | --- | --- | --- | --- | --- |
+| DC-02.04 | Pass | Movies and Search no-artwork fallback | `movies-01.png`, `search-04.png`, and `focus-log.txt`. | `No Poster Signal` renders as an intentional quiet fallback surface with the `N` initials, title/meta below artwork, and the shared matte selected backplate. It does not use generated abstract art, a bright focus frame, or a glass/shadow treatment. | Real Emby libraries can expose missing artwork through different tag/item-id combinations; re-run against live saved-session items when one is available. |
+
+- Verification:
+  - Red path confirmed `DevelopmentHomeFixtureTests.Create_Includes_Deterministic_Movie_Without_Artwork_For_Fallback_Validation` and `DevelopmentSearchFixtureTests.CreateItemsForScope_Includes_NoArtwork_Result_For_Fallback_Validation` failed before fixture implementation.
+  - Targeted fixture tests passed: `DevelopmentHomeFixtureTests` and `DevelopmentSearchFixtureTests`, 11 tests.
+  - Design/source plus fixture tests passed: 89 tests.
+  - Full Core test suite passed: 488 tests.
+  - Visual Studio MSBuild Debug x64 build passed, producing `NextGenEmby.App_0.1.0.224_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.224`.
+- Decision:
+  - Mark Batch 02 no-artwork runtime coverage as resolved for deterministic fixtures.
+  - Keep live-server missing-artwork variants as a future data-shape validation, not a blocker for the current visual-system pass.
+
+### 2026-07-08 - Design Conformance Batch 02 Movies Grid Density Follow-Up
+
+- App version: 0.1.0.225.
+- Scope: close the remaining Batch 02 movie-grid density concern by expanding `movies-fixture` from a single short row to a multi-row deterministic movie grid.
+- Data source: DEBUG `movies-fixture` only; no private server data, credentials, screenshots, or personal media assets were written to the repository.
+- Evidence root: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch02-movies-density-225-20260708-051355`.
+- Keyboard-only validation:
+  - Closed the existing app frame, wrote `dev-command.json` with route `movies-fixture`, and launched through AppUserModelId `NextGenEmby.App_h8qjz0sr1sg4m!App`.
+  - Captured the initial 15-item movie grid.
+  - Pressed `Right` to keep the deterministic missing-poster item reachable as the second card.
+  - Pressed `Down` to move from the first-row missing-poster item into the second row, then `Right` to verify second-row horizontal movement.
+  - The route reported `completed / movies-fixture`; `dev-command.json` and `dev-command-result.txt` were removed after validation.
+- Screenshots:
+  - Initial dense grid: `movies-00-initial.png`.
+  - Missing-poster focus remains second: `movies-01-no-art-focus.png`.
+  - Second-row focus: `movies-02-second-row.png`.
+  - Second-row right movement: `movies-03-second-row-right.png`.
+  - Focus log: `focus-log.txt`.
+
+Follow-up findings:
+
+| ID | Status | Page | Evidence | Result | Residual risk |
+| --- | --- | --- | --- | --- | --- |
+| DC-02.01 | Pass | Movies grid density and focus | `movies-00-initial.png`, `movies-02-second-row.png`, and `focus-log.txt`. | `movies-fixture` now exposes 15 deterministic movie cards, including the missing-poster card at index 2. The grid wraps to a second row, and keyboard focus can move down and across without returning to toolbar or collapsing into empty canvas. | Fixture artwork is still local generated QA art. Real-server poster density remains covered by live-data validation, not by this deterministic fixture. |
+
+- Verification:
+  - Red path confirmed `DevelopmentHomeFixtureTests.Create_Provides_Dense_Movies_Preview_For_Grid_Wrap_Validation` failed before implementation because the movie preview had only 6 items.
+  - Targeted Home fixture tests passed: 7 tests.
+  - Visual Studio MSBuild Debug x64 build passed, producing `NextGenEmby.App_0.1.0.225_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.225`.
+- Decision:
+  - Mark Batch 02 movie-grid deterministic density as resolved.
+  - Keep real-server poster variety and metadata length as future live-data validation.
+
+### 2026-07-08 - Design Conformance Batch 02 Option Sheet Label Constraint Follow-Up
+
+- App version: 0.1.0.226.
+- Scope: close the remaining Batch 02 Sort/Filter long-label concern by constraining option-sheet text to stable one-line ellipsis behavior.
+- Data source: DEBUG `movies-fixture` only; no private server data, credentials, screenshots, or personal media assets were written to the repository.
+- Evidence root: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch02-option-label-226-20260708-052315`.
+- Keyboard-only validation:
+  - Closed the existing app frame, wrote `dev-command.json` with route `movies-fixture`, and launched through AppUserModelId `NextGenEmby.App_h8qjz0sr1sg4m!App`.
+  - Pressed `Up` from the movie grid to focus Sort.
+  - Pressed `Enter` to open the Sort sheet.
+  - Pressed `Down` to move preview/focus to `Recently added`.
+  - Pressed `Escape` to close the sheet and return focus to Sort.
+- Screenshots:
+  - Sort focus: `movies-01-sort-focus.png`.
+  - Sort sheet initial: `movies-02-sort-sheet-initial.png`.
+  - Sort sheet after Down: `movies-03-sort-sheet-down.png`.
+  - Sheet closed: `movies-04-sort-sheet-closed.png`.
+  - Focus log: `focus-log.txt`.
+
+Follow-up findings:
+
+| ID | Status | Page | Evidence | Result | Residual risk |
+| --- | --- | --- | --- | --- | --- |
+| DC-02.02 | Pass | Library Sort/Filter sheets | `movies-02-sort-sheet-initial.png`, `movies-03-sort-sheet-down.png`, and `LibraryPageSourceTests.Library_Option_Sheet_Constrains_Long_Labels`. | The Sort sheet remains a grounded matte panel with fill-first option focus. The subtitle and option labels now have explicit one-line ellipsis constraints, so localized or server-derived long labels cannot resize the sheet or reintroduce hard-frame focus. | Real localized builds should still sample translated labels, but the layout contract now constrains their rendering. |
+
+- Verification:
+  - Red path confirmed `LibraryPageSourceTests.Library_Option_Sheet_Constrains_Long_Labels` failed before implementation because the subtitle and option rows lacked `MaxLines`.
+  - Targeted Library page source tests passed: 12 tests.
+  - Design source tests passed: 79 tests.
+  - Visual Studio MSBuild Debug x64 build passed, producing `NextGenEmby.App_0.1.0.226_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.226`.
+- Decision:
+  - Mark Batch 02 Sort/Filter option-sheet visual constraints as resolved for deterministic fixtures and source contracts.
+  - Keep full localization sampling as a later release-hardening activity rather than a current visual-system blocker.
+
+### 2026-07-08 - Design Conformance Batch 03 Details Stream Label Constraint Follow-Up
+
+- App version: 0.1.0.227.
+- Scope: close the remaining Batch 03 long source/audio/subtitle label concern by constraining Details stream text and adding deterministic long Emby labels to `details-fixture`.
+- Data source: DEBUG `details-fixture` only; no private server data, credentials, screenshots, or personal media assets were written to the repository.
+- Evidence root: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch03-details-stream-labels-227-20260708-053515`.
+- Keyboard-only validation:
+  - Closed the existing app frame, wrote `dev-command.json` with route `details-fixture`, and launched through AppUserModelId `NextGenEmby.App_h8qjz0sr1sg4m!App`.
+  - Captured the initial Details first viewport with long source/audio/subtitle fixture labels.
+  - Pressed `Down` to focus the first version/source option.
+  - Pressed `Down` again to focus the second version/source option and confirm scroll/focus remain stable.
+  - The route reported `completed / details-fixture`; screenshots and the route result were saved under the evidence root.
+- Screenshots:
+  - Details initial viewport: `01-details-initial.png`.
+  - First version focus: `02-details-first-version-focus.png`.
+  - Second version focus: `03-details-second-version-focus.png`.
+  - Route result: `route-result.txt`.
+
+Follow-up findings:
+
+| ID | Status | Page | Evidence | Result | Residual risk |
+| --- | --- | --- | --- | --- | --- |
+| DC-03.03 | Pass | Details source/audio/subtitle controls | `01-details-initial.png`, `02-details-first-version-focus.png`, `03-details-second-version-focus.png`, `MediaDetailsAccessibilitySourceTests.Details_Source_And_Stream_Text_Constrain_Long_Emby_Labels`, and `DevelopmentDetailsFixtureTests.Create_Includes_Long_Stream_Labels_For_Details_Overflow_Coverage`. | Long source names and stream labels now remain bounded to one-line ellipsis. The Details decision surface keeps stable card heights, muted source selection, and compact Emby playback vocabulary. | Real localized stream titles can still vary by server/plugin, but the page-level layout contract now prevents wrapping-driven density breaks. |
+
+- Verification:
+  - Red path confirmed `DevelopmentDetailsFixtureTests.Create_Includes_Long_Stream_Labels_For_Details_Overflow_Coverage` failed before fixture implementation because the fixture only used short stream labels.
+  - Red path confirmed `MediaDetailsAccessibilitySourceTests.Details_Source_And_Stream_Text_Constrain_Long_Emby_Labels` failed before implementation because Details summaries lacked explicit one-line ellipsis constraints.
+  - Targeted Details source and fixture tests passed: 14 tests.
+  - Full Core test suite passed: 492 tests.
+  - Visual Studio MSBuild Debug x64 build passed, producing `NextGenEmby.App_0.1.0.227_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.227`.
+- Decision:
+  - Mark Batch 03 audio/subtitle/source long-label handling as resolved for deterministic fixtures and source contracts.
+  - Keep live-server localization and plugin-generated stream titles as later release-hardening validation.
+
+### 2026-07-08 - Design Conformance Batch 06 Settings Diagnostics Disclosure Baseline
+
+- App version: 0.1.0.227.
+- Scope: rerun the remaining Batch 06 Settings diagnostics concern after later page fixes.
+- Data source: DEBUG `settings` route only; no private server data, credentials, screenshots, or personal media assets were written to the repository.
+- Evidence root: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch06-settings-diagnostics-baseline-227-20260708-054026`.
+- Keyboard-only validation:
+  - Closed the existing app frame, wrote `dev-command.json` with route `settings`, and launched through AppUserModelId `NextGenEmby.App_h8qjz0sr1sg4m!App`.
+  - Captured the initial Settings first viewport.
+  - Pressed `Up` to focus `Sign out`.
+  - Pressed `Enter` to open the sign-out confirmation and `Escape` to cancel.
+  - The route reported `completed / settings`.
+- Screenshots:
+  - Settings initial viewport: `01-settings-initial.png`.
+  - Sign out focus: `02-settings-signout-focus.png`.
+  - Sign-out confirmation: `03-settings-confirmation.png`.
+  - After cancel: `04-settings-after-cancel.png`.
+  - Route result: `route-result.txt`.
+
+Baseline findings:
+
+| ID | Severity | Page | Evidence | Expected | Actual | Proposed batch fix |
+| --- | --- | --- | --- | --- | --- | --- |
+| DC-06.02 | Concern | Settings diagnostics | `01-settings-initial.png` and `02-settings-signout-focus.png`. | Settings should make account and playback input the primary first-screen tasks; diagnostics should be reachable but secondary. | The matte visual style is aligned, but the full diagnostics panel and recent startup log are visible in the first viewport, giving the utility page a developer-console weight. | Keep a compact Diagnostics row in Settings, but move the full startup summary/log behind a controller-reachable matte disclosure action. |
+
+- Decision:
+  - Treat this as a Settings visual hierarchy fix, not a navigation model change.
+  - Keep diagnostics available for local/debug usefulness, but make detailed logs opt-in.
+
+### 2026-07-08 - Design Conformance Batch 06 Settings Diagnostics Disclosure Fix Rerun
+
+- App version: 0.1.0.228.
+- Scope: rerun the Settings diagnostics concern after moving detailed startup diagnostics behind a matte disclosure action.
+- Data source: DEBUG `settings` route only; no private server data, credentials, screenshots, or personal media assets were written to the repository.
+- Evidence root: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch06-settings-diagnostics-fix-228-20260708-054550`.
+- Keyboard-only validation:
+  - Signed and installed `NextGenEmby.App 0.1.0.228`; the first install attempt was blocked by the previous app process and succeeded after closing it.
+  - Closed the existing app frame, wrote `dev-command.json` with route `settings`, and launched through AppUserModelId `NextGenEmby.App_h8qjz0sr1sg4m!App`.
+  - Captured the initial Settings first viewport.
+  - Pressed `Down` from the playback-input checkbox to focus `Show details`.
+  - Pressed `Enter` to expand Diagnostics details.
+  - Pressed `Up`, `Up` to confirm the disclosure path does not trap focus and can return to Sign out.
+  - The route reported `completed / settings`.
+- Screenshots:
+  - Settings initial viewport: `01-settings-initial.png`.
+  - Diagnostics disclosure focus: `02-diagnostics-toggle-focus.png`.
+  - Diagnostics expanded: `03-diagnostics-expanded.png`.
+  - Sign out focus after disclosure path: `04-signout-focus-after-disclosure-path.png`.
+  - Route result: `route-result.txt`.
+- Source-level contract added before implementation:
+  - Settings diagnostics details must be hidden by default in `DiagnosticsDetailsPanel`.
+  - `DiagnosticsToggleButton` must be reachable through the same D-pad focus order as Sign out and Thumbstick seek preview.
+  - The Diagnostics disclosure action uses the shared matte utility command style and `MatteButtonFocusVisuals`.
+
+Fix rerun findings:
+
+| ID | Status | Page | Evidence | Result | Residual risk |
+| --- | --- | --- | --- | --- | --- |
+| DC-06.02 | Pass | Settings diagnostics | `01-settings-initial.png`, `02-diagnostics-toggle-focus.png`, `03-diagnostics-expanded.png`, and `SettingsPageSourceTests.Settings_Diagnostics_Details_Are_Behind_Controller_Reachable_Disclosure`. | Settings now keeps account and playback input as the first-screen tasks. Diagnostics remains visible as a compact status row, and full startup/log details are available only after focusing and opening `Show details`. The disclosure uses matte focus and stays in the normal controller path. | None for this local visual-system slice. Hardware text-entry validation remains tracked under Login/Search concerns. |
+
+- Verification:
+  - Red path confirmed `SettingsPageSourceTests.Settings_Diagnostics_Details_Are_Behind_Controller_Reachable_Disclosure` failed before implementation because Settings had no diagnostics disclosure control.
+  - Targeted Settings source tests passed: 3 tests.
+  - Full Core test suite passed: 493 tests.
+  - Visual Studio MSBuild Debug x64 build passed, producing `NextGenEmby.App_0.1.0.228_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.228`.
+- Decision:
+  - Mark Batch 06 Settings diagnostics hierarchy as resolved for deterministic local validation.
+  - Keep any future copy/export diagnostics work as a support feature, not a visual-system blocker.
+
+### 2026-07-08 - Design Conformance Batch 05 Photos Density Baseline
+
+- App version: 0.1.0.228.
+- Scope: rerun the remaining Batch 05 Photos density concern after later grid/focus fixes.
+- Data source: DEBUG `photos-fixture` only; no private server data, credentials, screenshots, or personal media assets were written to the repository.
+- Evidence root: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch05-photos-density-baseline-228-20260708-055036`.
+- Keyboard-only validation:
+  - Closed the existing app frame, wrote `dev-command.json` with route `photos-fixture`, and launched through AppUserModelId `NextGenEmby.App_h8qjz0sr1sg4m!App`.
+  - Captured the Photos root.
+  - Pressed `Enter` to open `Night Market`.
+  - Pressed `Right`, `Right` inside the album.
+  - Pressed `Escape` to return to the Photos root.
+  - The route reported `completed / photos-fixture`.
+- Screenshots:
+  - Photos root: `01-photos-root.png`.
+  - Album opened: `02-album-opened.png`.
+  - Album focus after two right moves: `04-album-right-2.png`.
+  - Return to root: `05-return-root.png`.
+  - Route result: `route-result.txt`.
+
+Baseline findings:
+
+| ID | Severity | Page | Evidence | Expected | Actual | Proposed batch fix |
+| --- | --- | --- | --- | --- | --- | --- |
+| DC-05.03 | Concern | Photos fixture density | `01-photos-root.png`, `02-album-opened.png`, and `04-album-right-2.png`. | Photos should prove both sparse-folder handling and denser album wrap behavior using the photo-specific landscape tile recipe. | The visual recipe remains aligned, but the deterministic fixture has only 3 root items and 4 album items, leaving a large unused right/lower canvas and no multi-row album evidence. | Expand `photos-fixture` with a denser album while preserving sparse root coverage; verify D-pad movement across row wrap and back recovery. |
+
+- Decision:
+  - Treat this as fixture coverage and QA evidence work, not a page-layout redesign.
+  - Keep the landscape photo tile recipe; add enough deterministic photo items to validate realistic album density.
+
+### 2026-07-08 - Design Conformance Batch 05 Photos Density Fix Rerun
+
+- App version: 0.1.0.229.
+- Scope: rerun Photos after expanding the deterministic nested album from 4 to 12 photo items.
+- Data source: DEBUG `photos-fixture` only; no private server data, credentials, screenshots, or personal media assets were written to the repository.
+- Evidence root: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch05-photos-density-fix-229-20260708-055637`.
+- Keyboard-only validation:
+  - Signed and installed `NextGenEmby.App 0.1.0.229`.
+  - Closed the existing app frame, wrote `dev-command.json` with route `photos-fixture`, and launched through AppUserModelId `NextGenEmby.App_h8qjz0sr1sg4m!App`.
+  - Captured the Photos root to keep sparse folder coverage.
+  - Pressed `Enter` to open `Night Market`.
+  - Pressed `Right`, `Right`, `Right` to move across the first album row.
+  - Pressed `Down`, `Down` to validate row movement inside the denser album.
+  - Pressed `Escape` to return to the Photos root.
+  - The route reported `completed / photos-fixture`.
+- Screenshots:
+  - Photos root: `01-photos-root.png`.
+  - Dense album opened: `02-album-opened-dense.png`.
+  - First row far-right focus: `03-first-row-far-right.png`.
+  - Second row focus: `04-second-row.png`.
+  - Additional Down movement: `05-third-row.png`.
+  - Return to root: `06-return-root.png`.
+  - Route result: `route-result.txt`.
+- Fixture contract added before implementation:
+  - `DevelopmentPhotosFixture.Create_Provides_Dense_Album_For_Photo_Grid_Wrap_Validation` requires the nested fixture album to contain at least 10 unique photo items and match `ChildCount`.
+
+Fix rerun findings:
+
+| ID | Status | Page | Evidence | Result | Residual risk |
+| --- | --- | --- | --- | --- | --- |
+| DC-05.03 | Pass | Photos fixture density | `02-album-opened-dense.png`, `04-second-row.png`, `06-return-root.png`, and `DevelopmentPhotosFixtureTests.Create_Provides_Dense_Album_For_Photo_Grid_Wrap_Validation`. | Photos now prove both sparse root folders and a denser nested album using the photo-specific landscape tile recipe. The 12-item album fills the canvas with multiple visible rows, focus remains matte, and Escape returns to the root anchor. | Real server photo libraries should still be sampled for actual image aspect-ratio variety, but deterministic density coverage is no longer sparse. |
+
+- Verification:
+  - Red path confirmed `DevelopmentPhotosFixtureTests.Create_Provides_Dense_Album_For_Photo_Grid_Wrap_Validation` failed before implementation because the nested album had only 4 photos.
+  - Targeted Photos fixture tests passed: 5 tests.
+  - Full Core test suite passed: 494 tests.
+  - Visual Studio MSBuild Debug x64 build passed, producing `NextGenEmby.App_0.1.0.229_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.229`.
+- Decision:
+  - Mark Batch 05 Photos deterministic density as resolved.
+  - Keep real-server photo aspect-ratio variety as later live-data validation, not as a blocker for the current visual-system slice.
+
+### 2026-07-08 - Design Conformance Batch 03 Details No-Art Atmosphere Baseline
+
+- App version: 0.1.0.229.
+- Scope: inspect the deterministic Details coverage for missing artwork fallback.
+- Data source: source inspection plus existing DEBUG `details-fixture`; no private server data, credentials, screenshots, or personal media assets were written to the repository.
+- Evidence:
+  - `details-fixture` renders an artwork-backed Details page using packaged QA poster/backdrop assets.
+  - `MediaDetailsPage.xaml` contains `DetailsAtmosphereFallback` using the app background brush and an atmosphere gradient layer.
+  - `ApplyDetailsAtmosphereArtwork` only proves the artwork path because `DevelopmentDetailsFixture.Create()` always assigns Primary and Backdrop image ids.
+
+Baseline findings:
+
+| ID | Severity | Page | Evidence | Expected | Actual | Proposed batch fix |
+| --- | --- | --- | --- | --- | --- | --- |
+| DC-03.01 | Concern | Details no-art atmosphere | Source inspection of `DevelopmentDetailsFixture.Create()`, `MediaDetailsPage.xaml`, and `ApplyDetailsAtmosphereArtwork`. | Details should prove that items without poster/backdrop art fall back to a matte black atmosphere instead of empty broken imagery or a fake placeholder. | The page has a fallback layer, but no deterministic `details` route creates a missing-art item, so the no-art state is not keyboard/screenshot-proven. | Add a `details-no-art-fixture` route that preserves playable sources and secondary rails while leaving the main item without Primary/Backdrop artwork, then verify the first viewport. |
+
+- Decision:
+  - Treat this as deterministic coverage for an already intended visual fallback, not a redesign of Details.
+  - Do not fake a placeholder image for no-art Details; the expected fallback is matte black atmosphere with the same content hierarchy.
+
+### 2026-07-08 - Design Conformance Batch 03 Details No-Art Atmosphere Fix Rerun
+
+- App version: 0.1.0.230.
+- Scope: validate the new deterministic no-art Details route.
+- Data source: DEBUG `details-no-art-fixture` only; no private server data, credentials, screenshots, or personal media assets were written to the repository.
+- Evidence root: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch03-details-no-art-fallback-230-20260708-061025`.
+- Keyboard-only validation:
+  - Signed and installed `NextGenEmby.App 0.1.0.230`.
+  - Closed the existing app frame, wrote `dev-command.json` with route `details-no-art-fixture`, and launched through AppUserModelId `NextGenEmby.App_h8qjz0sr1sg4m!App`.
+  - The route reported `completed / details-no-art-fixture`.
+  - Captured the Details no-art first viewport.
+  - Pressed `Down` once and captured a second screenshot to confirm the no-art page remained stable.
+- Screenshots:
+  - No-art Details first viewport: `01-details-no-art-initial.png`.
+  - No-art Details after one Down key: `02-details-no-art-down-1.png`.
+  - Route result: `route-result.txt`.
+- Fixture contract added before implementation:
+  - `DevelopmentDetailsFixtureTests.CreateWithoutArtwork_Leaves_Main_Item_Artwork_Empty_For_Fallback_Coverage` requires the main no-art item to omit Primary, Backdrop, and Thumb artwork ids/tags and artwork URI keys while preserving playable sources and similar items.
+  - `MediaDetailsAccessibilitySourceTests.Details_Fixture_Development_Route_Covers_No_Artwork_Atmosphere_Fallback` requires `details-no-art-fixture`, the no-art fixture kind, the matte fallback layer, and explicit atmosphere source clearing.
+
+Fix rerun findings:
+
+| ID | Status | Page | Evidence | Result | Residual risk |
+| --- | --- | --- | --- | --- | --- |
+| DC-03.01 | Pass | Details no-art atmosphere | `01-details-no-art-initial.png`, `02-details-no-art-down-1.png`, `route-result.txt`, and the two no-art Details fixture/source tests. | Details now has a deterministic missing-art route. The first viewport preserves title, metadata, actions, playable versions, audio/subtitle summaries, organize actions, and secondary rails while the right atmosphere zone falls back to matte black. No fake placeholder art or stale background image appears. | Real saved-session Details should still be sampled for server-specific missing-art records and backdrop quality, but deterministic no-art fallback is covered. |
+
+- Verification:
+  - Red path confirmed the targeted Details tests failed before implementation because `DevelopmentDetailsFixture.CreateWithoutArtwork()` and the `details-no-art-fixture` route did not exist.
+  - Targeted Details fixture/source tests passed: 16 tests.
+  - Full Core test suite passed: 496 tests.
+  - Visual Studio MSBuild Debug x64 build passed, producing `NextGenEmby.App_0.1.0.230_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.230`.
+- Decision:
+  - Mark Batch 03 Details no-art atmosphere fallback as resolved for deterministic local validation.
+  - Keep real-server missing-art sampling as live-data validation, not as a blocker for the current visual-system slice.
+
+### 2026-07-08 - Design Conformance Batch 01/02 QA Artwork Realism Baseline
+
+- App version: 0.1.0.230.
+- Scope: inspect the packaged QA artwork used by Home, Movies, Search, Details, Collections, Playlists, Live TV, Music, and Photos fixture routes.
+- Data source: local generated `Assets/QaHome` images only; no private server data, credentials, screenshots, or personal media assets were written to the repository.
+- Evidence:
+  - `qa-poster-01.png` uses a simple rounded character, flat abstract background shapes, and a dark lower title scrim.
+  - `qa-wide-01.png` uses abstract rounded slabs and a horizon strip, reading more like a generated test card than a movie/series still.
+  - `tools/Generate-HomeQaArtworkAssets.ps1` already avoids the rejected cyan/amber/red palette, but its subject matter still lacks movie-poster semantics.
+
+Baseline findings:
+
+| ID | Severity | Page | Evidence | Expected | Actual | Proposed batch fix |
+| --- | --- | --- | --- | --- | --- | --- |
+| DC-01.05 / DC-02.05 | Concern | Fixture artwork realism | `qa-poster-01.png`, `qa-wide-01.png`, and `Generate-HomeQaArtworkAssets.ps1`. | Fixture artwork should be fictional and copyright-safe while still feeling like real media covers: cinematic crop, subject/scene, title lockup, billing/detail marks, and varied genre mood. | The current assets are useful for layout but too icon-like and abstract, which can understate real poster density and overstate calm blank space. | Strengthen the local generator with cinematic poster/wide-scene drawing primitives and regenerate the packaged QAHome assets. |
+
+- Decision:
+  - Keep generated local QA artwork to avoid committing private media or copyrighted posters.
+  - Improve media realism enough for visual QA, without trying to make the generated images photorealistic.
+
+### 2026-07-08 - Design Conformance Batch 01/02 QA Artwork Realism Fix Rerun
+
+- App version: 0.1.0.231.
+- Scope: validate regenerated packaged QA artwork in Home and Movies fixture surfaces.
+- Data source: locally generated `Assets/QaHome` images and DEBUG fixture routes only; no private server data, credentials, screenshots, or personal media assets were written to the repository.
+- Evidence root: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch01-qa-artwork-realism-231-20260708-062233`.
+- Keyboard-only validation:
+  - Regenerated `qa-poster-01.png` through `qa-poster-14.png` and `qa-wide-01.png` through `qa-wide-14.png` from `tools/Generate-HomeQaArtworkAssets.ps1`.
+  - Signed and installed `NextGenEmby.App 0.1.0.231`.
+  - Closed the existing app frame, wrote `dev-command.json` with route `home-fixture`, and launched through AppUserModelId `NextGenEmby.App_h8qjz0sr1sg4m!App`.
+  - Closed the app frame, wrote `dev-command.json` with route `movies-fixture`, and relaunched through the same AppUserModelId.
+  - Both routes reported `completed` in their route result files.
+- Screenshots:
+  - Home fixture with regenerated wide artwork: `01-home-initial.png`.
+  - Movies fixture with regenerated poster artwork: `02-movies-initial.png`.
+  - Route results: `01-home-route-result.txt`, `02-movies-route-result.txt`.
+- Fixture contract added before implementation:
+  - `PosterGridVisualSourceTests.Qa_Artwork_Generator_Uses_Cinematic_Scene_Primitives_Instead_Of_Abstract_Test_Cards` requires cinematic poster scene primitives, cinematic wide scene primitives, a film billing block, atmosphere texture, and removal of the old `Watch-ready wide artwork` copy.
+
+Fix rerun findings:
+
+| ID | Status | Page | Evidence | Result | Residual risk |
+| --- | --- | --- | --- | --- | --- |
+| DC-01.05 / DC-02.05 | Pass with concern | QA artwork realism | `qa-poster-01.png`, `qa-wide-01.png`, `01-home-initial.png`, `02-movies-initial.png`, and `PosterGridVisualSourceTests.Qa_Artwork_Generator_Uses_Cinematic_Scene_Primitives_Instead_Of_Abstract_Test_Cards`. | Packaged QA artwork now reads more like fictional media artwork: cinematic silhouettes/scenes, local atmosphere texture, title lockups, and billing/detail marks. Home wide cards stay subdued, while Movies posters provide denser media-cover signals than the previous icon-like test cards. | The assets remain generated and not photorealistic. Real saved-session artwork still needs separate sampling for poster crop, brightness, and mixed server artwork quality. |
+
+- Verification:
+  - Red path confirmed `PosterGridVisualSourceTests.Qa_Artwork_Generator_Uses_Cinematic_Scene_Primitives_Instead_Of_Abstract_Test_Cards` failed before implementation because the generator lacked the cinematic scene primitives.
+  - Targeted poster/home/details fixture tests passed: 17 tests.
+  - Visual Studio MSBuild Debug x64 build passed, producing `NextGenEmby.App_0.1.0.231_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate and installed locally as `NextGenEmby.App 0.1.0.231`.
+- Decision:
+  - Treat the abstract-QA-art concern as improved enough for deterministic visual QA.
+  - Keep real server artwork sampling as a live-data validation item, not as a blocker for local fixture-based page work.
+
+### 2026-07-08 - Design Conformance Batch 05 Live TV Program Artwork Baseline
+
+- App version: 0.1.0.231.
+- Scope: inspect the Live TV current-program preview after the secondary-media matte fix.
+- Data source: source inspection and existing DEBUG `livetv-fixture`; no private server data, credentials, screenshots, or personal media assets were written to the repository.
+- Evidence:
+  - `EmbyLiveTvProgram` did not preserve program `ImageTags` or `BackdropImageTags`.
+  - `EmbyApiClient.GetLiveTvChannelsAsync` requested `CurrentProgram`, `Overview`, and `PrimaryImageAspectRatio`, but not program artwork fields.
+  - `DevelopmentLiveTvFixture` provided channel Primary artwork only; current programs had metadata but no artwork URI.
+  - `LiveTvPage` rendered the right Now preview as compact text-only content.
+
+Baseline findings:
+
+| ID | Severity | Page | Evidence | Expected | Actual | Proposed batch fix |
+| --- | --- | --- | --- | --- | --- | --- |
+| DC-05.01 | Concern | Live TV Now preview | Source inspection of `EmbyApiClient`, `EmbyLiveTvProgram`, `DevelopmentLiveTvFixture`, and `LiveTvPage`. | When Emby exposes artwork on the current program, the Now panel should use that image as media-first context while keeping a readable text fallback. | The page could not consume or prove current-program artwork, so the preview stayed text-first even in deterministic fixture data. | Preserve current-program image tags, add fixture program artwork, render a bounded artwork region above the Now text, and keep the no-art fallback text-first. |
+
+- Decision:
+  - Treat current-program artwork as optional Emby data, not a hard requirement for Live TV browsing.
+  - Add deterministic artwork coverage without attempting live stream playback or Emby transcoding.
+
+### 2026-07-08 - Design Conformance Batch 05 Live TV Program Artwork Fix Rerun
+
+- App version: 0.1.0.235.
+- Scope: verify the Live TV Now preview after adding current-program artwork support.
+- Data source: DEBUG `livetv-fixture` and packaged QA artwork only; no private server data, credentials, screenshots, or personal media assets were written to the repository.
+- Evidence root: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch05-livetv-program-artwork-235-20260708-064552`.
+- Keyboard-only validation:
+  - Signed and installed `NextGenEmby.App 0.1.0.235`.
+  - Closed the existing app frame, wrote `dev-command.json` with route `livetv-fixture`, and launched through AppUserModelId `NextGenEmby.App_h8qjz0sr1sg4m!App`.
+  - The route reported `completed / livetv-fixture`.
+  - Captured the initial Live TV screen with `101 News 24` focused and program artwork visible in the Now panel.
+  - Pressed `Down`; focus moved to `202 Cinema One`, and the Now panel updated to the second channel's artwork and program text.
+- Screenshots:
+  - Initial Live TV program artwork: `01-livetv-program-artwork-initial.png`.
+  - Second channel program artwork: `02-livetv-program-artwork-second-channel.png`.
+  - Route result: `route-result.txt`.
+- Fixture/API/source contracts added before implementation:
+  - `DevelopmentLiveTvFixtureTests.Create_Provides_Current_Program_Artwork_For_Media_First_Preview` requires fixture current programs to expose artwork URI coverage.
+  - `EmbyLiveTvTests.GetLiveTvChannelsAsync_Requests_Current_Program_And_Maps_Channel_Artwork` requires current-program artwork fields to be requested and mapped.
+  - `LiveTvPageSourceTests.LiveTv_Current_Program_Preview_Uses_Media_First_Artwork_When_Available` requires the bounded Now artwork frame, artwork-source fallback order, and no accidental `AppCardCornerRadius` dependency.
+
+Fix rerun findings:
+
+| ID | Status | Page | Evidence | Result | Residual risk |
+| --- | --- | --- | --- | --- | --- |
+| DC-05.01 | Pass with concern | Live TV Now preview | `01-livetv-program-artwork-initial.png`, `02-livetv-program-artwork-second-channel.png`, `route-result.txt`, and the Live TV fixture/API/source tests. | Current-program preview is now media-first when artwork exists, with a bounded image region and stable text below it. Channel list focus remains matte and dense, and no artwork state still falls back to text. | Real Live TV servers may expose no program artwork, portrait-biased art, stale channel logos, or provider-specific EPG shapes. Hardware/controller activation of the unsupported-playback layer should be re-run separately because the ad-hoc Enter screenshot was not conclusive. |
+
+- Verification:
+  - Red path confirmed the targeted Live TV fixture/API/source tests failed before implementation because program artwork was not modeled, requested, or rendered.
+  - Targeted Live TV tests passed: 12 tests.
+  - Full Core test suite passed: 499 tests.
+  - `git diff --check` passed with no whitespace errors.
+  - Private server URL, username, and password token scan returned no repository matches.
+  - Visual Studio MSBuild Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.235_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate, verified with `signtool verify /pa`, and installed locally as `NextGenEmby.App 0.1.0.235`.
+  - Intermediate installed-app reruns caught a missing XAML resource and a too-wide content layout before the final 0.1.0.235 screenshot pass.
+- Decision:
+  - Mark deterministic current-program artwork support as covered for Live TV browsing.
+  - Keep real EPG artwork sampling and hardware unsupported-playback activation as live-data/platform validation, not as blockers for this visual-system slice.
+
+### 2026-07-08 - Design Conformance Batch 05 Music Preview Artwork Fix Rerun
+
+- App version: 0.1.0.238.
+- Scope: verify the Music Preview column after adding optional selected-item artwork support without turning the Music page into a poster grid.
+- Data source: DEBUG `music-fixture` and packaged QA artwork only; no private server data, credentials, screenshots, or personal media assets were written to the repository.
+- Evidence root: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch05-music-preview-artwork-238-20260708-071340`.
+- Keyboard-only validation:
+  - Signed and installed `NextGenEmby.App 0.1.0.238`.
+  - Closed the existing app frame, wrote `dev-command.json` with route `music-fixture`, and launched through AppUserModelId `NextGenEmby.App_h8qjz0sr1sg4m!App`.
+  - The route reported `completed / music-fixture`.
+  - Captured the initial Music screen with `All music` focused; the Preview column stayed visible and correctly hid the artwork frame for the aggregate no-art row.
+  - Pressed `Down`; focus moved to `Kairos Collective`, and the Preview column showed a bounded artwork region above the artist title and metadata.
+- Screenshots:
+  - Initial no-art Preview fallback: `01-music-preview-artwork-initial.png`.
+  - Artist Preview artwork: `02-music-preview-artwork-artist-focus.png`.
+  - Route result: `route-result.txt`.
+- Fixture/source contracts added before implementation:
+  - `MusicPageSourceTests.Music_Preview_Uses_Artwork_Context_When_Item_Artwork_Is_Available` requires `PreviewArtworkFrame`, `PreviewArtworkImage`, source/fallback lookup, collapsed no-art state, and fixed column widths that keep Preview visible under the local display scale.
+
+Fix rerun findings:
+
+| ID | Status | Page | Evidence | Result | Residual risk |
+| --- | --- | --- | --- | --- | --- |
+| DC-05.02 | Pass with concern | Music Preview | `01-music-preview-artwork-initial.png`, `02-music-preview-artwork-artist-focus.png`, `route-result.txt`, and `MusicPageSourceTests`. | Music remains a dense list-first surface with Artist, Album, Song, and Preview columns. Preview now uses item artwork only when available and otherwise collapses the artwork frame instead of showing a placeholder. Intermediate 0.1.0.236 and 0.1.0.237 reruns caught that star columns and wider fixed columns pushed Preview offscreen under local display scaling; 0.1.0.238 tightened the columns. | Real music libraries may expose missing, tiny, square, or artist-biased imagery, and artist metadata varies by server. The Preview art treatment should be rechecked against a real music library before considering it fully platform-proven. |
+
+- Verification:
+  - Red path confirmed the targeted Music page source test failed before implementation because no Preview artwork frame existed.
+  - Red path later confirmed the fixed-width layout contract failed before the Music columns were tightened.
+  - Targeted `MusicPageSourceTests` passed: 7 tests.
+  - Visual Studio MSBuild Debug x64 build passed with 0 warnings and 0 errors, producing `NextGenEmby.App_0.1.0.238_x64_Debug.msix`.
+  - MSIX signed with the trusted `CN=NextGenEmby` certificate, verified with `signtool verify /pa`, and installed locally as `NextGenEmby.App 0.1.0.238`.
+  - Intermediate installed-app reruns caught the Preview column being pushed offscreen before the final 0.1.0.238 screenshot pass.
+- Decision:
+  - Keep Music list-first. Artwork is Preview context, not a new browsing model.
+  - Keep the no-art state quiet and text-first; do not add fake placeholders when Emby does not expose usable music imagery.
+
+### 2026-07-08 - Design Conformance Batch 07 Shell Guide Boundary Baseline
+
+- App version: 0.1.0.238.
+- Scope: verify the source Guide boundaries over Home, Search text entry, and Playback.
+- Data source: DEBUG `home-fixture`, `search-fixture`, and `playback-options-fixture`; no private server data, credentials, screenshots, or personal media assets were written to the repository.
+- Evidence root: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch07-source-guide-audit-0.1.0.238-20260708-072349`.
+- Keyboard-only validation:
+  - Launched `home-fixture`, pressed `M`, and captured the expanded Guide over Home.
+  - Launched `search-fixture`, pressed `M` while the Search box had focus, and captured the resulting Search state.
+  - Launched `playback-options-fixture`, pressed `M`, and captured the Playback More boundary.
+  - All three routes reported `completed` in their route result files.
+- Evidence:
+  - Home Guide screenshot and UIA: `01-home-guide-open.png`, `01-home-guide-open.uia.txt`.
+  - Search text-entry boundary screenshot and UIA: `02-search-guide-open.png`, `02-search-guide-open.uia.txt`.
+  - Playback menu boundary screenshot and UIA: `03-playback-menu-boundary.png`, `03-playback-menu-boundary.uia.txt`.
+
+Findings recorded before fixes:
+
+| ID | Severity | Page | Evidence | Expected | Actual | Proposed batch fix |
+| --- | --- | --- | --- | --- | --- | --- |
+| DC-07.01 | Pass | Home Guide | `01-home-guide-open.png` and `01-home-guide-open.uia.txt`. | `M` opens a matte left source Guide with Home focused, Search near the top, Settings pinned to the bottom, and content still visible. | The expanded Guide is 248px wide at the captured scale, Home is focused, fixed destinations Search through Unwatched are reachable, and Settings is pinned at the bottom. | No fix needed. |
+| DC-07.02 | Fail | Search Guide boundary | `02-search-guide-open.png` and `02-search-guide-open.uia.txt`. | The local keyboard/controller surrogate should open the Guide without changing query text when a text box has focus. | Pressing `M` inserted `m` into the Search query (`mAurora Protocol`) and left the Guide collapsed. This makes the keyboard surrogate diverge from real controller Menu behavior and pollutes the user's search. | Route the Menu surrogate before editable text input consumes it, or introduce an explicit non-text keyboard surrogate for controller Menu and update the automation contract. |
+| DC-07.03 | Pass | Playback Guide suppression | `03-playback-menu-boundary.png` and `03-playback-menu-boundary.uia.txt`. | Playback must suppress the app Guide; Menu belongs to the playback OSD / More menu while video is active. | No Home/Search/Movies Guide list appeared. The compact More menu remained focused on Source with Audio, Subtitles, and Info reachable. | No fix needed. |
+| DC-07.04 | Concern | Source breadth | `01-home-guide-open.uia.txt` and `MainPage.xaml`. | A complete Emby client needs an explicit source model for fixed destinations, unpinned libraries, and server-defined overflow. | The current implementation exposes all fixed app destinations as first-level Guide actions and has no More / Source Hub entity. This is acceptable for the current fixture family but still leaves unpinned/server-defined overflow as a future IA decision. | Keep current first-level fixed destinations for now; defer More / Source Hub until server-defined source overflow is implemented or real data proves first-level overload. |
+
+- Decision:
+  - Fix DC-07.02 in this batch because it is an interaction correctness issue and affects local keyboard/controller validation.
+  - Do not implement Source Hub in this batch. The current first-level Guide is acceptable for fixed destinations, and Source Hub should remain tied to real server-defined overflow rather than invented as decorative navigation.
+
+### 2026-07-08 - Design Conformance Batch 07 Shell Guide Boundary Fix Rerun
+
+- App version: 0.1.0.240.
+- Scope: rerun the Search text-entry Guide boundary after clarifying the local keyboard surrogate for controller Menu.
+- Data source: DEBUG `search-fixture`; no private server data, credentials, screenshots, or personal media assets were written to the repository.
+- Evidence root: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-batch07-search-menu-surrogates-0.1.0.240-20260708-074259`.
+- Keyboard-only validation:
+  - Launched `search-fixture` with the Search box focused.
+  - Pressed `Ctrl+M` as the non-text keyboard surrogate for controller Menu.
+  - Captured UIA after the Guide opened.
+- Evidence:
+  - `01-ctrl-m.uia.txt`.
+  - `01-ctrl-m.png`.
+
+Fix rerun findings:
+
+| ID | Status | Page | Evidence | Result | Residual risk |
+| --- | --- | --- | --- | --- | --- |
+| DC-07.02 | Pass | Search Guide boundary | `01-ctrl-m.uia.txt`. | `Ctrl+M` opened the expanded Guide, focused the Search guide item, and preserved the Search box value as `Aurora Protocol`. The bad `mAurora Protocol` state did not recur. | Plain `M` remains a literal text input when an editable field has focus. That is intentional for keyboard text entry and should not be used as the editable-field controller Menu surrogate. |
+
+- Verification:
+  - Targeted shell source tests passed after removing the ineffective CoreDispatcher interception experiment.
+  - The first attempted production-code interception did not stop TextBox text insertion, proving the issue is an automation-key conflict rather than a missing app route.
+- Decision:
+  - Update the checklist contract instead of blocking typed `m` in text fields. Use `M` on normal content surfaces and `Ctrl+M` while editable text has focus.
+  - Keep real controller `GamepadMenu` as the platform-faithful path for Xbox hardware validation.
+
+### 2026-07-08 - Design Conformance Batch 08 Saved Session Artwork Smoke Baseline
+
+- App version: 0.1.0.240.
+- Scope: sample real saved-session Home and Movies surfaces after the fixture-based page work, without committing private screenshots, server details, credentials, or personal media assets.
+- Data source: real saved Emby session created locally through the DEBUG login bridge; the temporary login file was removed after launch.
+- Evidence roots:
+  - Home: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-real-saved-home-0.1.0.240-20260708-074908`.
+  - Movies: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-real-saved-movies-0.1.0.240-20260708-075232`.
+- Keyboard-only / automation validation:
+  - Normal launch first landed on Login, so a temporary local DEBUG login file was used and then deleted.
+  - Captured Home immediately after login: `01-home-real.png`, `01-home-real.uia.txt`.
+  - Invoked `Refresh`, waited for rows to load, and captured settled Home: `03-home-real-settled.png`, `03-home-real-settled.uia.txt`.
+  - Launched saved-session `movies` route, captured initial Movies grid, sent `Right`, and captured the next focused card: `01-movies-real-initial.png`, `02-movies-real-right.png`.
+
+Findings recorded before fixes:
+
+| ID | Severity | Page | Evidence | Expected | Actual | Proposed batch fix |
+| --- | --- | --- | --- | --- | --- | --- |
+| DC-08.01 | Concern | Home saved session | `01-home-real.png`, `02-home-real-after-refresh.png`, `03-home-real-settled.png`. | Home should load into real media rows after saved login and keep the rail-first matte layout with real artwork. | The design direction holds after Refresh: real wide artwork, media-library rows, and Continue Watching use the target matte structure. However, the immediate post-login Home asked for Refresh and showed Loading before rows appeared. | Keep as a product/runtime follow-up: improve post-login automatic refresh or loading transition. Do not block visual-system adoption. |
+| DC-08.02 | Concern | Home Continue Watching composition | `03-home-real-settled.png`. | Feature strip and rails should reinforce browsing without obvious duplicate noise in the first viewport. | The top Continue Watching feature and first Continue Watching rail both show the same first resume item. It is visually acceptable but may feel redundant with populated real data. | Keep for now; revisit after more real saved-session samples and product decision on whether the top feature should mirror current focus, highlight a different item, or collapse when Continue Watching rail is immediately below. |
+| DC-08.03 | Pass | Movies selected poster focus | `01-movies-real-initial.png`, `02-movies-real-right.png`. | Real poster-grid focus should use integrated matte selected backplate, no bright complete perimeter frame, and metadata below artwork. | Real Movies grid matches the ordinary movie-card selected treatment, including after `Right`. Real portrait artwork and CJK titles remain readable. | No fix needed. |
+| DC-08.04 | Fail | Movies no-artwork fallback initials | `01-movies-real-initial.png` and `02-movies-real-right.png`. | Missing-poster fallback should use a meaningful media initial from the title and ignore leading punctuation, quotes, dots, and filename noise. | Missing-poster cards exposed punctuation as large fallback glyphs: a quoted title rendered `"` and extension-like entries can render `.`. | Replace per-page first-character fallback with a shared initial helper that skips punctuation and returns the first letter/digit/CJK character, falling back to `?` only when no useful character exists. |
+
+- Decision:
+  - Fix DC-08.04 now because it is small, deterministic, and directly surfaced by real saved-session artwork.
+  - Defer DC-08.01 and DC-08.02 as product/runtime concerns; they need broader saved-session sampling rather than a visual token change.
+
+### 2026-07-08 - Design Conformance Batch 08 Saved Session Artwork Smoke Fix Rerun
+
+- App version: 0.1.0.241.
+- Scope: rerun the saved-session Movies missing-poster fallback after replacing per-page first-character initials with a shared punctuation-skipping helper.
+- Data source: existing local saved Emby session; no credentials, server details, screenshots, or personal media assets were written to the repository.
+- Evidence root: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-real-saved-movies-fallback-0.1.0.241-20260708-080156`.
+- Verification before visual rerun:
+  - Red path: `PosterFallbackInitialsTests` failed before implementation because `NextGenEmby.Core.Media.PosterFallbackInitials` did not exist.
+  - Green path: `PosterFallbackInitialsTests` and `PosterGridVisualSourceTests` passed after adding the shared helper and wiring Library, Search, and Details secondary poster rails to it.
+
+Fix rerun findings:
+
+| ID | Status | Page | Evidence | Result | Residual risk |
+| --- | --- | --- | --- | --- | --- |
+| DC-08.04 | Pass | Movies no-artwork fallback initials | `01-movies-fallback-rerun.png`, `01-movies-fallback-rerun.uia.txt`, and `route-result.txt`. | Saved-session Movies opened successfully. UIA confirmed the quoted `Friends` title now exposes fallback `F` with no quote fallback, and the `.MP4` title now exposes fallback `M` with no dot fallback. | Real library may include titles whose first useful character is still not ideal because the source title itself is a raw filename; title cleanup is a metadata/product concern separate from fallback glyph selection. |
+
+### 2026-07-08 - Design Conformance Batch 09 Saved Session Details And Playback Handoff
+
+- App version: 0.1.0.241.
+- Scope: verify the real saved-session main chain from Movies to Details to Playback after the poster-grid and Details fixture work.
+- Data source: existing local saved Emby session; no credentials, server details, screenshots, or personal media assets were written to the repository.
+- Evidence roots:
+  - Details handoff: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-real-details-batch09-0.1.0.241-20260708-080925`.
+  - Playback handoff: `C:\Users\yqzzx\AppData\Local\Temp\ngxe-real-playback-settled-batch09-0.1.0.241-20260708-081524`.
+- Keyboard-only / automation validation:
+  - Launched saved-session `movies` through `dev-command.json`, moved `Right` to a poster-backed real movie, and pressed `Enter` to open Details.
+  - Captured Movies before open: `01-movies-before-open.png`, `01-movies-before-open.uia.txt`.
+  - Captured Details initial state and two `Down` movements: `02-details-initial.png`, `03-details-down-1.png`, `04-details-down-2.png`.
+  - Pressed `Escape` and captured return to Movies: `05-after-escape.png`.
+  - Repeated the route, pressed `Enter` on the Details Play action, waited until playback reached `Playing`, and captured `01-playback-settled.png`, `01-playback-settled.uia.txt`, plus `playback-diagnostics.log`.
+
+Findings recorded before fixes:
+
+| ID | Severity | Page | Evidence | Expected | Actual | Proposed batch fix |
+| --- | --- | --- | --- | --- | --- | --- |
+| DC-09.01 | Pass | Movies to Details | `01-movies-before-open.png`, `02-details-initial.png`, and UIA snapshots. | Real Movies card opens Details; Play is focused; source/version information is visible without breaking matte focus. | Details opened successfully, Play was the initial focus target, and source metadata was visible in the first viewport. | No fix needed. |
+| DC-09.02 | Concern | Details source/audio/subtitle decisions | `02-details-initial.uia.txt`, `03-details-down-1.uia.txt`, `04-details-down-2.uia.txt`. | Real Details should expose source, audio, subtitle decisions when alternatives exist, while summaries remain readable when there is only one choice. | Version, audio summary, subtitle summary, organize actions, facets, and cast rails were readable. This item had a single source/audio and no listed subtitles, so the run cannot prove real multi-choice selector behavior. | Keep fixture selector coverage as canonical for multi-choice behavior; add a real saved-session sample when a media item with multiple audio/subtitle choices is available. |
+| DC-09.03 | Concern | Details artwork atmosphere | `02-details-initial.png`. | Right-side media should act as atmosphere and not become a clear poster viewer. | The real item used a large dimmed poster crop on the right. It stayed non-interactive and dark, but visually reads close to a clear poster wall when no backdrop is available. | Defer until more real details samples exist; possible later adjustment is stronger dim/crop/blur for Primary-only atmosphere while preserving backdrop richness. |
+| DC-09.04 | Pass | Details to Playback | `01-playback-settled.png`, `01-playback-settled.uia.txt`, and `playback-diagnostics.log`. | Play should reach real playback and show compact OSD with source/audio/subtitle/more controls inside the strip. | The second playback run waited for `Playing`. The compact bottom OSD stayed intact and exposed source, audio, subtitles, transport, stop, and More. | No fix needed. |
+
+- Decision:
+  - No implementation change in this batch. The two concerns require broader real-media sampling rather than a single visual-token adjustment.
+  - Keep Batch 04 fixture playback as the deterministic OSD contract and Batch 09 real playback as saved-session smoke coverage.

@@ -3,46 +3,68 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     Background="{StaticResource AppBackgroundBrush}">
-    <Grid>
-        <Image
-            x:Name="BackdropImage"
-            Stretch="UniformToFill"
-            Opacity="0.35" />
-        <Border Background="{StaticResource AppDetailsBackdropWashBrush}" />
+    <Grid x:Name="DetailsRoot">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="3*" />
+            <ColumnDefinition Width="2*" />
+        </Grid.ColumnDefinitions>
 
-        <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <Border
+            x:Name="DetailsAtmosphereFallback"
+            Grid.ColumnSpan="2"
+            Background="{StaticResource AppBackgroundBrush}" />
+        <Grid
+            x:Name="DetailsAtmosphereZone"
+            Grid.ColumnSpan="2"
+            IsHitTestVisible="False">
+            <Image
+                x:Name="AtmosphereImage"
+                Stretch="UniformToFill"
+                Opacity="0.9" />
+            <Border>
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                        <GradientStop Color="#FA05070A" Offset="0" />
+                        <GradientStop Color="#E605070A" Offset="0.34" />
+                        <GradientStop Color="#7A05070A" Offset="0.62" />
+                        <GradientStop Color="#2005070A" Offset="1" />
+                    </LinearGradientBrush>
+                </Border.Background>
+            </Border>
+            <Border
+                x:Name="PrimaryAtmosphereWash"
+                Visibility="Collapsed">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                        <GradientStop Color="#C805070A" Offset="0" />
+                        <GradientStop Color="#A005070A" Offset="0.46" />
+                        <GradientStop Color="#4D05070A" Offset="0.76" />
+                        <GradientStop Color="#2405070A" Offset="1" />
+                    </LinearGradientBrush>
+                </Border.Background>
+            </Border>
+        </Grid>
+        <Border Grid.ColumnSpan="2">
+            <Border.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                    <GradientStop Color="#F805070A" Offset="0" />
+                    <GradientStop Color="#D905070A" Offset="0.42" />
+                    <GradientStop Color="#4D05070A" Offset="0.78" />
+                    <GradientStop Color="#1205070A" Offset="1" />
+                </LinearGradientBrush>
+            </Border.Background>
+        </Border>
+
+        <ScrollViewer
+            Grid.ColumnSpan="2"
+            Canvas.ZIndex="2"
+            VerticalScrollBarVisibility="Auto">
             <Grid
-                Margin="{StaticResource TvPageMargin}"
-                ColumnSpacing="{StaticResource TvDetailsColumnSpacing}">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-
-                <Border
-                    Width="{StaticResource TvDetailsPosterWidth}"
-                    Height="{StaticResource TvDetailsPosterHeight}"
-                    HorizontalAlignment="Left"
-                    VerticalAlignment="Top"
-                    Background="{StaticResource AppRaisedSurfaceBrush}"
-                    CornerRadius="8">
-                    <Grid>
-                        <Image
-                            x:Name="PosterImage"
-                            Stretch="UniformToFill" />
-                        <TextBlock
-                            x:Name="PosterFallbackBlock"
-                            Text="No image"
-                            FontSize="18"
-                            Foreground="{StaticResource AppMutedTextBrush}"
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center" />
-                    </Grid>
-                </Border>
-
+                Margin="{StaticResource TvDetailsContentMargin}">
                 <StackPanel
-                    Grid.Column="1"
+                    Width="{StaticResource TvDetailsContentColumnWidth}"
                     MaxWidth="{StaticResource TvDetailsContentMaxWidth}"
+                    HorizontalAlignment="Left"
                     Spacing="18">
                     <StackPanel Spacing="8">
                         <Image
@@ -56,7 +78,7 @@
                             ImageFailed="LogoImage_OnImageFailed" />
                         <TextBlock
                             x:Name="TitleBlock"
-                            FontSize="40"
+                            FontSize="48"
                             FontWeight="SemiBold"
                             TextWrapping="WrapWholeWords" />
                         <TextBlock
@@ -67,92 +89,36 @@
                     </StackPanel>
 
                     <StackPanel
-                        x:Name="DetailsActionPanel"
+                        x:Name="DetailsFactChipsPanel"
                         Orientation="Horizontal"
-                        Spacing="12">
-                        <Button
-                            x:Name="PlayButton"
-                            MinWidth="162"
-                            Height="54"
-                            Background="{StaticResource AppActionBrush}"
-                            BorderBrush="{StaticResource AppActionBrush}"
-                            Foreground="{StaticResource AppOnActionBrush}"
-                            Click="Play_OnClick"
-                            UseSystemFocusVisuals="True">
-                            <StackPanel Orientation="Horizontal" Spacing="12">
-                                <SymbolIcon Symbol="Play" />
-                                <TextBlock
-                                    x:Name="PlayButtonText"
-                                    Text="Play"
-                                    FontSize="18" />
-                            </StackPanel>
-                        </Button>
-                        <Button
-                            x:Name="RestartButton"
-                            MinWidth="144"
-                            Height="54"
-                            Click="Restart_OnClick"
-                            UseSystemFocusVisuals="True"
-                            Visibility="Collapsed">
-                            <StackPanel Orientation="Horizontal" Spacing="10">
-                                <SymbolIcon Symbol="Refresh" />
-                                <TextBlock Text="Restart" FontSize="18" />
-                            </StackPanel>
-                        </Button>
-                        <Button
-                            x:Name="FavoriteButton"
-                            MinWidth="176"
-                            Height="54"
-                            Click="Favorite_OnClick"
-                            UseSystemFocusVisuals="True">
-                            <StackPanel Orientation="Horizontal" Spacing="10">
-                                <SymbolIcon Symbol="Favorite" />
-                                <TextBlock
-                                    x:Name="FavoriteButtonText"
-                                    Text="Add favorite"
-                                    FontSize="18" />
-                            </StackPanel>
-                        </Button>
-                        <Button
-                            x:Name="WatchedButton"
-                            MinWidth="178"
-                            Height="54"
-                            Click="Watched_OnClick"
-                            UseSystemFocusVisuals="True">
-                            <StackPanel Orientation="Horizontal" Spacing="10">
-                                <SymbolIcon Symbol="View" />
-                                <TextBlock
-                                    x:Name="WatchedButtonText"
-                                    Text="Mark watched"
-                                    FontSize="18" />
-                            </StackPanel>
-                        </Button>
-                        <Button
-                            x:Name="RefreshButton"
-                            AutomationProperties.Name="Refresh"
-                            Click="Refresh_OnClick"
-                            Style="{StaticResource IconButtonStyle}"
-                            ToolTipService.ToolTip="Refresh"
-                            UseSystemFocusVisuals="True">
-                            <SymbolIcon Symbol="Refresh" />
-                        </Button>
-                    </StackPanel>
-
-                    <StackPanel
-                        x:Name="VersionsPanel"
-                        Spacing="8" />
+                        Spacing="8"
+                        MaxWidth="640"
+                        Visibility="Collapsed" />
 
                     <TextBlock
-                        x:Name="AudioSummaryBlock"
-                        FontSize="18"
-                        Foreground="{StaticResource AppMutedTextBrush}"
-                        TextWrapping="Wrap" />
+                        x:Name="OverviewBlock"
+                        FontSize="19"
+                        LineHeight="27"
+                        TextWrapping="WrapWholeWords"
+                        MaxLines="3"
+                        TextTrimming="CharacterEllipsis"
+                        MaxWidth="640" />
 
                     <TextBlock
-                        x:Name="SubtitleSummaryBlock"
-                        FontSize="18"
+                        x:Name="DetailsCreditsBlock"
+                        FontSize="17"
+                        LineHeight="24"
                         Foreground="{StaticResource AppMutedTextBrush}"
-                        TextWrapping="Wrap" />
+                        TextWrapping="WrapWholeWords"
+                        MaxLines="2"
+                        TextTrimming="CharacterEllipsis"
+                        MaxWidth="640"
+                        Visibility="Collapsed" />
+
+                    <Border
+                        x:Name="DetailsSecondaryContentSpacer"
+                        Height="1240"
+                        IsHitTestVisible="False" />
 
                     <StackPanel
                         x:Name="OrganizeSection"
@@ -173,9 +139,8 @@
                             <Button
                                 x:Name="AddToCollectionButton"
                                 MinWidth="214"
-                                Height="54"
                                 Click="AddToCollection_OnClick"
-                                UseSystemFocusVisuals="True">
+                                Style="{StaticResource TvDetailsActionButtonStyle}">
                                 <StackPanel Orientation="Horizontal" Spacing="10">
                                     <SymbolIcon Symbol="Add" />
                                     <TextBlock Text="Add to collection" FontSize="18" />
@@ -184,9 +149,8 @@
                             <Button
                                 x:Name="AddToPlaylistButton"
                                 MinWidth="194"
-                                Height="54"
                                 Click="AddToPlaylist_OnClick"
-                                UseSystemFocusVisuals="True">
+                                Style="{StaticResource TvDetailsActionButtonStyle}">
                                 <StackPanel Orientation="Horizontal" Spacing="10">
                                     <SymbolIcon Symbol="Add" />
                                     <TextBlock Text="Add to playlist" FontSize="18" />
@@ -228,6 +192,26 @@
                     </StackPanel>
 
                     <StackPanel
+                        x:Name="MetadataSection"
+                        Spacing="12"
+                        Visibility="Collapsed">
+                        <TextBlock
+                            Text="Explore"
+                            Style="{StaticResource TvSubsectionTitleTextStyle}" />
+                        <ScrollViewer
+                            HorizontalScrollBarVisibility="Hidden"
+                            VerticalScrollBarVisibility="Disabled"
+                            HorizontalScrollMode="Enabled"
+                            VerticalScrollMode="Disabled"
+                            ZoomMode="Disabled">
+                            <StackPanel
+                                x:Name="MetadataPanel"
+                                Orientation="Horizontal"
+                                Spacing="12" />
+                        </ScrollViewer>
+                    </StackPanel>
+
+                    <StackPanel
                         x:Name="PeopleSection"
                         Spacing="12"
                         Visibility="Collapsed">
@@ -248,23 +232,150 @@
                     </StackPanel>
 
                     <TextBlock
-                        x:Name="OverviewBlock"
-                        FontSize="20"
-                        LineHeight="28"
-                        TextWrapping="WrapWholeWords"
-                        MaxWidth="860" />
-
-                    <TextBlock
                         x:Name="StatusBlock"
                         FontSize="18"
                         Foreground="{StaticResource AppMutedTextBrush}"
                         TextWrapping="Wrap" />
+
+                    <Border
+                        x:Name="DetailsDecisionDockSpacer"
+                        Height="178"
+                        IsHitTestVisible="False" />
                 </StackPanel>
             </Grid>
         </ScrollViewer>
 
+        <Border
+            x:Name="DetailsDecisionDock"
+            Grid.ColumnSpan="2"
+            Canvas.ZIndex="3"
+            HorizontalAlignment="Left"
+            VerticalAlignment="Bottom"
+            MaxWidth="1120"
+            Margin="{StaticResource TvDetailsDecisionDockMargin}"
+            Background="{StaticResource AppTransparentBrush}"
+            BorderBrush="{StaticResource AppTransparentBrush}"
+            BorderThickness="0"
+            CornerRadius="8"
+            Padding="0">
+            <StackPanel Spacing="12">
+                <StackPanel
+                    x:Name="DetailsActionPanel"
+                    Orientation="Horizontal"
+                    Spacing="12">
+                    <Button
+                        x:Name="PlayButton"
+                        Click="Play_OnClick"
+                        Style="{StaticResource TvDetailsPrimaryActionButtonStyle}">
+                        <StackPanel Orientation="Horizontal" Spacing="12">
+                            <SymbolIcon Symbol="Play" />
+                            <TextBlock
+                                x:Name="PlayButtonText"
+                                Text="Play"
+                                FontSize="20" />
+                        </StackPanel>
+                    </Button>
+                    <Button
+                        x:Name="RestartButton"
+                        MinWidth="164"
+                        Click="Restart_OnClick"
+                        Style="{StaticResource TvDetailsActionButtonStyle}"
+                        Visibility="Collapsed">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <SymbolIcon Symbol="Refresh" />
+                            <TextBlock Text="Restart" FontSize="19" />
+                        </StackPanel>
+                    </Button>
+                    <Button
+                        x:Name="FavoriteButton"
+                        MinWidth="194"
+                        Click="Favorite_OnClick"
+                        Style="{StaticResource TvDetailsActionButtonStyle}">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <SymbolIcon Symbol="Favorite" />
+                            <TextBlock
+                                x:Name="FavoriteButtonText"
+                                Text="Add favorite"
+                                FontSize="19" />
+                        </StackPanel>
+                    </Button>
+                    <Button
+                        x:Name="WatchedButton"
+                        MinWidth="196"
+                        Click="Watched_OnClick"
+                        Style="{StaticResource TvDetailsActionButtonStyle}">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <SymbolIcon Symbol="View" />
+                            <TextBlock
+                                x:Name="WatchedButtonText"
+                                Text="Mark watched"
+                                FontSize="19" />
+                        </StackPanel>
+                    </Button>
+                    <Button
+                        x:Name="RefreshButton"
+                        AutomationProperties.Name="Refresh"
+                        Click="Refresh_OnClick"
+                        Style="{StaticResource TvDetailsIconActionButtonStyle}"
+                        ToolTipService.ToolTip="Refresh">
+                        <SymbolIcon Symbol="Refresh" />
+                    </Button>
+                </StackPanel>
+
+                <Grid
+                    x:Name="PlaybackDecisionChipsPanel"
+                    HorizontalAlignment="Left"
+                    ColumnSpacing="12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel
+                        x:Name="VersionsPanel"
+                        Orientation="Horizontal"
+                        Spacing="8" />
+                    <StackPanel
+                        Grid.Column="1"
+                        Orientation="Horizontal"
+                        Spacing="8">
+                        <Border
+                            x:Name="AudioDecisionChip"
+                            MinWidth="188"
+                            MaxWidth="240"
+                            Background="{StaticResource AppDetailsDecisionTileBrush}"
+                            CornerRadius="8"
+                            Padding="14,8">
+                            <TextBlock
+                                x:Name="AudioSummaryBlock"
+                                FontSize="16"
+                                Foreground="{StaticResource AppMutedTextBrush}"
+                                MaxLines="1"
+                                TextTrimming="CharacterEllipsis"
+                                TextWrapping="NoWrap" />
+                        </Border>
+                        <Border
+                            x:Name="SubtitleDecisionChip"
+                            MinWidth="188"
+                            MaxWidth="240"
+                            Background="{StaticResource AppDetailsDecisionTileBrush}"
+                            CornerRadius="8"
+                            Padding="14,8">
+                            <TextBlock
+                                x:Name="SubtitleSummaryBlock"
+                                FontSize="16"
+                                Foreground="{StaticResource AppMutedTextBrush}"
+                                MaxLines="1"
+                                TextTrimming="CharacterEllipsis"
+                                TextWrapping="NoWrap" />
+                        </Border>
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+        </Border>
+
         <Grid
             x:Name="AddToSheetRoot"
+            Grid.ColumnSpan="2"
             Canvas.ZIndex="20"
             Background="{StaticResource AppModalScrimBrush}"
             Visibility="Collapsed">

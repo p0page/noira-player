@@ -1,60 +1,41 @@
-# Visual System Preview Options
+# Visual System Preview Targets
 
-These are style-tile previews for the visual foundation only. They are not interaction specs and not implementation targets yet.
+This directory now keeps only the preview assets that are precise enough to guide visual implementation of the selected Artwork-Backed Matte Fluent direction.
 
-Use `contact-sheet.png` for side-by-side comparison.
+Development handoff:
 
-## A. Matte Cinema Fluent
+- `../DESIGN.md` is the source of truth for tokens, visual rules, artwork policy, focus behavior, accessibility, and fallback requirements.
+- `../design-handoff-2026-07-07.md` explains how to consume the design system during page development.
+- `../a3-visual-convergence-rules.md` defines the current screenshot-first convergence phase for the retained A3 render targets.
 
-Current `docs/DESIGN.md` direction.
+## Retained Native Render Targets
 
-- Dark matte Fluent shell.
-- Crisp controller focus and green primary action; the current `docs/DESIGN.md` tokens supersede the early preview hue if they differ.
-- Amber resume/progress.
-- Warm off-white text.
-- Strongest Xbox-compatible signal without using platform branding.
+- `A3-ideal-home-dashboard.png`: target mood for Home density, source-aware left Guide, rails, Continue Watching behavior, and artwork-led color.
+- `A3-ideal-library-poster-focus.png`: target mood for normal movie/library poster-grid focus. Use the integrated matte selected backplate around poster plus title/metadata as the selected-state reference. This does not replace the separate Continue Watching wide-card rules.
+- `A3-ideal-details-atmosphere.png`: target mood for Details composition: deterministic information/action column plus one right-side artwork atmosphere zone. The green play icon in this generated image is stronger than the final token rule allows; `DESIGN.md` still wins.
+- `A3-ideal-playback-osd-native-material.png`: target mood for playback OSD material over active video. It illustrates the desired native-material direction better than HTML can, but final blur strength, opacity, and compositor fallback must be tuned in Xbox/native implementation.
 
-Risk: green may feel too game-console-specific if the product should feel more neutral.
+These generated renders express the desired native feel, especially material, focus priority, TV density, and artwork atmosphere. They are AI-generated style targets, not implementation screenshots or pixel-perfect mocks. Do not copy generated-image mistakes, impossible spacing, or decorative details that do not hold up against `DESIGN.md`, real Emby data, or Xbox/native feasibility.
 
-## B. Warm Archive Cinema
+Use `../qa/a3-visual-convergence-checklist.md` when judging whether the current app is visually close enough to these targets. Passing keyboard routes or UIA checks is not enough during the A3 convergence phase.
 
-More personal-library and home-cinema oriented.
+## Removed Preview Lines
 
-- Warmer graphite and olive-black surfaces.
-- Ivory focus.
-- Brass progress and state accents.
-- More editorial and less platform-driven.
+Superseded A/B/C/D and A2 PNGs were removed from the worktree because they encouraged rejected behavior: bright focus frames, broad acrylic/glass usage, louder green, amber progress, warmer/yellower surfaces, and component-board compositions that do not match the final direction.
 
-Risk: can drift toward boutique cinema/archive if applied too warmly.
+If the design system is intentionally reopened later, recover those historical previews from git history instead of using this directory as a mixed option gallery.
 
-## C. Neutral Xbox Fluent
+## Current Direction Guardrails
 
-Closest to a native, restrained Xbox/Windows Fluent app.
-
-- Graphite surfaces.
-- White focus frame.
-- Green only for play.
-- Amber only for resume/progress.
-- Most utilitarian and least opinionated.
-
-Risk: can become generic unless artwork handling and spacing are excellent.
-
-## D. Poster Gallery Fluent
-
-Most artwork-led and least chrome-led.
-
-- Dark gallery wall feeling.
-- Ivory focus edge.
-- Small amber progress.
-- UI chrome recedes behind posters and backdrops.
-
-Risk: depends heavily on good artwork and may need stronger fallback rules.
-
-## Selection Guidance
-
-Choose based on the identity you want:
-
-- Pick A if the app should still feel clearly console-native and controller-first.
-- Pick B if it should feel like a personal archive and private cinema.
-- Pick C if you want maximum native-platform restraint.
-- Pick D if media artwork should dominate almost everything.
+- Real-artwork HTML previews are kept outside the repo when they use private library images. Do not commit private server URLs, credentials, screenshots, or downloaded media artwork.
+- Main pages stay matte graphite: no decorative blur, no bright edge frames, and no drop shadows on normal cards, search boxes, banners, or navigation rows.
+- Blur is allowed only when it samples meaningful media color behind it: active banner, focused item backdrop, poster field, or video frame.
+- Normal card text uses a soft black gradient/scrim, not default frosted glass.
+- Unfocused resume wide cards must not use blur/material. Their text protection is the black gradient only.
+- A focused wide card may upgrade only its low-height text/progress zone to subtle dark artwork-backed material, and that material must read as one continuous text-protection zone, not as a second hard container.
+- Continue Watching previews must use one wide-card anatomy per row. Prefer real wide artwork, but when only `Primary` exists, crop it directly into the wide card to preserve TV-row density.
+- Focus is borderless by default: scale, luminance, matte selected fill, and local dimming before any edge.
+- Green remains a sparse signal for play/confirm/progress, never a page mood.
+- Blur-backed regions must map to real Emby artwork candidates: `Backdrop`, `Thumb`, `Banner`, or sometimes `Primary`. No candidate means matte fallback.
+- Details pages use one right-side atmosphere zone. If no image exists, leave the page on black/matte canvas.
+- Playback pages use compact video-first OSD chrome: top-left title/status, bottom transport strip, subtitle protection, and lightweight menus for source/audio/subtitle/more.

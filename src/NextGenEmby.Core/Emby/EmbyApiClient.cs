@@ -12,7 +12,7 @@ namespace NextGenEmby.Core.Emby
 {
     public sealed class EmbyApiClient
     {
-        private const string ItemListFields = "Overview,ProductionYear,RunTimeTicks,PrimaryImageAspectRatio,ChildCount,UserData";
+        private const string ItemListFields = "Overview,ProductionYear,RunTimeTicks,PrimaryImageAspectRatio,ChildCount,UserData,Artists,AlbumArtists";
         private const string ImageTypeList = "Primary,Backdrop,Thumb,Banner,Logo";
 
         private readonly HttpClient _http;
@@ -140,9 +140,12 @@ namespace NextGenEmby.Core.Emby
 
         public async Task<IReadOnlyList<EmbyHomeSection>> GetHomeSectionsAsync(EmbySession session)
         {
+            var parameters = new List<string>();
+            AddImageQueryParameters(parameters);
+
             using var request = new HttpRequestMessage(
                 HttpMethod.Get,
-                $"Users/{EscapeUriComponent(session.UserId)}/HomeSections");
+                $"Users/{EscapeUriComponent(session.UserId)}/HomeSections?{string.Join("&", parameters)}");
             EmbyAuthorization.Apply(request, _options, session);
 
             using var response = await _http.SendAsync(request).ConfigureAwait(false);
@@ -174,6 +177,29 @@ namespace NextGenEmby.Core.Emby
             return (dto.Items ?? new List<ItemDto>()).Select(MapItem).ToList();
         }
 
+        public async Task<IReadOnlyList<EmbyMediaItem>> GetPlaylistItemsAsync(
+            EmbySession session,
+            string playlistId,
+            int limit)
+        {
+            var parameters = new List<string>();
+            AddQueryParameter(parameters, "UserId", session.UserId);
+            AddQueryParameter(parameters, "Limit", Math.Max(1, limit).ToString());
+            AddQueryParameter(parameters, "Fields", ItemListFields);
+            AddImageQueryParameters(parameters);
+
+            using var request = new HttpRequestMessage(
+                HttpMethod.Get,
+                $"Playlists/{EscapeUriComponent(playlistId)}/Items?{string.Join("&", parameters)}");
+            EmbyAuthorization.Apply(request, _options, session);
+
+            using var response = await _http.SendAsync(request).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+            var body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var dto = JsonSerializer.Deserialize<ItemListDto<ItemDto>>(body, _jsonOptions) ?? new ItemListDto<ItemDto>();
+            return (dto.Items ?? new List<ItemDto>()).Select(MapItem).ToList();
+        }
+
         public async Task<EmbyLiveTvInfo> GetLiveTvInfoAsync(EmbySession session)
         {
             using var request = new HttpRequestMessage(HttpMethod.Get, "LiveTv/Info");
@@ -196,7 +222,7 @@ namespace NextGenEmby.Core.Emby
         {
             var parameters = new List<string>();
             AddQueryParameter(parameters, "UserId", session.UserId);
-            AddQueryParameter(parameters, "Fields", "CurrentProgram,Overview,PrimaryImageAspectRatio");
+            AddQueryParameter(parameters, "Fields", "CurrentProgram,Overview,PrimaryImageAspectRatio,ImageTags,BackdropImageTags");
             AddQueryParameter(parameters, "Limit", Math.Max(1, limit).ToString());
             AddImageQueryParameters(parameters);
 
@@ -433,7 +459,10 @@ namespace NextGenEmby.Core.Emby
         public async Task<EmbyMediaItem> GetItemAsync(EmbySession session, string itemId)
         {
             var parameters = new List<string>();
-            AddQueryParameter(parameters, "Fields", "Overview,ProductionYear,RunTimeTicks,ChildCount,MediaSources,UserData,People");
+            AddQueryParameter(
+                parameters,
+                "Fields",
+                "Overview,ProductionYear,RunTimeTicks,ChildCount,MediaSources,UserData,People,Genres,Studios,Tags");
             AddImageQueryParameters(parameters);
 
             using var request = new HttpRequestMessage(
@@ -587,7 +616,11 @@ namespace NextGenEmby.Core.Emby
             AddQueryParameter(parameters, "SortOrder", query.SortOrder);
             AddQueryParameter(parameters, "Filters", query.Filters);
             AddQueryParameter(parameters, "GenreIds", query.GenreIds);
+            AddQueryParameter(parameters, "Genres", query.Genres);
             AddQueryParameter(parameters, "PersonIds", query.PersonIds);
+            AddQueryParameter(parameters, "StudioIds", query.StudioIds);
+            AddQueryParameter(parameters, "Studios", query.Studios);
+            AddQueryParameter(parameters, "Tags", query.Tags);
             AddQueryParameter(parameters, "ArtistIds", query.ArtistIds);
             AddQueryParameter(parameters, "AlbumArtistIds", query.AlbumArtistIds);
             AddQueryParameter(parameters, "Ids", query.Ids);
@@ -654,6 +687,9 @@ namespace NextGenEmby.Core.Emby
 
         private static EmbyHomeSection MapHomeSection(HomeSectionDto section)
         {
+            var imageTags = section.ImageTags;
+            var backdropImageTags = section.BackdropImageTags;
+
             return new EmbyHomeSection
             {
                 Id = section.Id ?? "",
@@ -663,6 +699,16 @@ namespace NextGenEmby.Core.Emby
                 CollectionType = section.CollectionType ?? "",
                 ViewType = section.ViewType ?? "",
                 ScrollDirection = section.ScrollDirection ?? "",
+                ThumbImageTag = imageTags != null && imageTags.TryGetValue("Thumb", out var thumb) ? thumb ?? "" : section.ParentThumbImageTag ?? "",
+                PrimaryImageTag = imageTags != null && imageTags.TryGetValue("Primary", out var primary) ? primary ?? "" : "",
+                BackdropImageTag = backdropImageTags != null && backdropImageTags.Count > 0 ? backdropImageTags[0] ?? "" : "",
+                BannerImageTag = imageTags != null && imageTags.TryGetValue("Banner", out var banner) ? banner ?? "" : "",
+                LogoImageTag = imageTags != null && imageTags.TryGetValue("Logo", out var logo) ? logo ?? "" : "",
+                ThumbImageItemId = section.ParentThumbItemId ?? "",
+                PrimaryImageItemId = section.PrimaryImageItemId ?? "",
+                BackdropImageItemId = section.ParentBackdropItemId ?? "",
+                BannerImageItemId = section.ParentBannerItemId ?? "",
+                LogoImageItemId = section.ParentLogoItemId ?? "",
                 ParentItem = section.ParentItem == null ? new EmbyMediaItem() : MapItem(section.ParentItem)
             };
         }
@@ -688,6 +734,8 @@ namespace NextGenEmby.Core.Emby
 
         private static EmbyLiveTvProgram MapLiveTvProgram(LiveTvProgramDto program)
         {
+            var imageTags = program.ImageTags;
+            var backdropImageTags = program.BackdropImageTags;
             return new EmbyLiveTvProgram
             {
                 Id = program.Id ?? "",
@@ -695,6 +743,10 @@ namespace NextGenEmby.Core.Emby
                 EpisodeTitle = program.EpisodeTitle ?? "",
                 Overview = program.Overview ?? "",
                 OfficialRating = program.OfficialRating ?? "",
+                PrimaryImageTag = imageTags != null && imageTags.TryGetValue("Primary", out var primary) ? primary ?? "" : "",
+                ThumbImageTag = imageTags != null && imageTags.TryGetValue("Thumb", out var thumb) ? thumb ?? "" : "",
+                BackdropImageTag = backdropImageTags != null && backdropImageTags.Count > 0 ? backdropImageTags[0] ?? "" : "",
+                BannerImageTag = imageTags != null && imageTags.TryGetValue("Banner", out var banner) ? banner ?? "" : "",
                 RunTimeTicks = program.RunTimeTicks,
                 StartDate = program.StartDate.GetValueOrDefault(),
                 EndDate = program.EndDate.GetValueOrDefault(),
@@ -737,8 +789,68 @@ namespace NextGenEmby.Core.Emby
                 ParentIndexNumber = item.ParentIndexNumber,
                 ChildCount = item.ChildCount,
                 UserData = MapUserData(userData),
+                AlbumArtist = item.AlbumArtist ?? "",
+                Artists = (item.Artists ?? new List<string>()).Select(artist => artist ?? "").ToList(),
+                ArtistItems = MapNamedReferences(item.ArtistItems),
+                AlbumArtists = MapNamedReferences(item.AlbumArtists),
+                GenreItems = MapNamedReferences(item.GenreItems),
+                StudioItems = MapNamedReferences(item.Studios),
+                TagItems = MapTagReferences(item.TagItems, item.Tags),
                 People = (item.People ?? new List<PersonDto>()).Select(MapPerson).ToList()
             };
+        }
+
+        private static IReadOnlyList<EmbyItemReference> MapNamedReferences(List<NameIdPairDto>? references)
+        {
+            return (references ?? new List<NameIdPairDto>())
+                .Select(reference => new EmbyItemReference
+                {
+                    Id = ReadJsonElementString(reference.Id),
+                    Name = reference.Name ?? ""
+                })
+                .ToList();
+        }
+
+        private static IReadOnlyList<EmbyItemReference> MapTagReferences(
+            List<NameIdPairDto>? tagItems,
+            List<string>? tags)
+        {
+            var mapped = MapNamedReferences(tagItems).ToList();
+            var existingNames = new HashSet<string>(
+                mapped
+                    .Select(tag => tag.Name)
+                    .Where(name => !string.IsNullOrWhiteSpace(name)),
+                StringComparer.OrdinalIgnoreCase);
+
+            foreach (var tag in tags ?? new List<string>())
+            {
+                if (string.IsNullOrWhiteSpace(tag) || existingNames.Contains(tag))
+                {
+                    continue;
+                }
+
+                mapped.Add(new EmbyItemReference
+                {
+                    Id = "",
+                    Name = tag
+                });
+                existingNames.Add(tag);
+            }
+
+            return mapped;
+        }
+
+        private static string ReadJsonElementString(JsonElement element)
+        {
+            switch (element.ValueKind)
+            {
+                case JsonValueKind.String:
+                    return element.GetString() ?? "";
+                case JsonValueKind.Number:
+                    return element.GetRawText();
+                default:
+                    return "";
+            }
         }
 
         private static EmbyUserData MapUserData(UserDataDto userData)
@@ -1013,6 +1125,14 @@ namespace NextGenEmby.Core.Emby
             public string CollectionType { get; set; } = "";
             public string ViewType { get; set; } = "";
             public string ScrollDirection { get; set; } = "";
+            public Dictionary<string, string> ImageTags { get; set; } = new Dictionary<string, string>();
+            public List<string> BackdropImageTags { get; set; } = new List<string>();
+            public string PrimaryImageItemId { get; set; } = "";
+            public string ParentBackdropItemId { get; set; } = "";
+            public string ParentThumbItemId { get; set; } = "";
+            public string ParentBannerItemId { get; set; } = "";
+            public string ParentLogoItemId { get; set; } = "";
+            public string ParentThumbImageTag { get; set; } = "";
             public ItemDto? ParentItem { get; set; }
         }
 
@@ -1049,6 +1169,8 @@ namespace NextGenEmby.Core.Emby
             public string EpisodeTitle { get; set; } = "";
             public string Overview { get; set; } = "";
             public string OfficialRating { get; set; } = "";
+            public Dictionary<string, string> ImageTags { get; set; } = new Dictionary<string, string>();
+            public List<string> BackdropImageTags { get; set; } = new List<string>();
             public long? RunTimeTicks { get; set; }
             public DateTimeOffset? StartDate { get; set; }
             public DateTimeOffset? EndDate { get; set; }
@@ -1082,7 +1204,21 @@ namespace NextGenEmby.Core.Emby
             public string ParentBannerItemId { get; set; } = "";
             public string ParentLogoItemId { get; set; } = "";
             public string ParentThumbImageTag { get; set; } = "";
+            public string AlbumArtist { get; set; } = "";
+            public List<string>? Artists { get; set; } = new List<string>();
+            public List<NameIdPairDto>? ArtistItems { get; set; } = new List<NameIdPairDto>();
+            public List<NameIdPairDto>? AlbumArtists { get; set; } = new List<NameIdPairDto>();
             public List<PersonDto> People { get; set; } = new List<PersonDto>();
+            public List<NameIdPairDto>? GenreItems { get; set; } = new List<NameIdPairDto>();
+            public List<NameIdPairDto>? Studios { get; set; } = new List<NameIdPairDto>();
+            public List<NameIdPairDto>? TagItems { get; set; } = new List<NameIdPairDto>();
+            public List<string>? Tags { get; set; } = new List<string>();
+        }
+
+        private sealed class NameIdPairDto
+        {
+            public JsonElement Id { get; set; }
+            public string Name { get; set; } = "";
         }
 
         private sealed class PersonDto

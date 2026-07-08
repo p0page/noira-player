@@ -25,7 +25,9 @@ public sealed class DevelopmentNavigationCommandTests
     }
 
     [Theory]
+    [InlineData("Login", "login")]
     [InlineData("LiveTv", "livetv")]
+    [InlineData("LiveTv-Fixture", "livetv-fixture")]
     [InlineData("Music", "music")]
     [InlineData("Photos", "photos")]
     [InlineData("Playlists", "playlists")]
@@ -33,6 +35,19 @@ public sealed class DevelopmentNavigationCommandTests
     [InlineData("Unwatched", "unwatched")]
     [InlineData("LiveTv-Unsupported", "livetv-unsupported")]
     [InlineData("Music-Unsupported", "music-unsupported")]
+    [InlineData("Music-Fixture", "music-fixture")]
+    [InlineData("Photos-Fixture", "photos-fixture")]
+    [InlineData("Collections-Fixture", "collections-fixture")]
+    [InlineData("Playlists-Fixture", "playlists-fixture")]
+    [InlineData("Movies-Fixture", "movies-fixture")]
+    [InlineData("Home-Fixture", "home-fixture")]
+    [InlineData("Search-Fixture", "search-fixture")]
+    [InlineData("Search-Error", "search-error")]
+    [InlineData("Details-Fixture", "details-fixture")]
+    [InlineData("Details-Real-Sample", "details-real-sample")]
+    [InlineData("Details-Real-Bright-Sample", "details-real-bright-sample")]
+    [InlineData("Details-Long-Source-Fixture", "details-long-source-fixture")]
+    [InlineData("Playback-Options-Fixture", "playback-options-fixture")]
     public void TryParseJson_Accepts_Guide_Routes(string route, string normalizedRoute)
     {
         var parsed = DevelopmentNavigationCommand.TryParseJson(

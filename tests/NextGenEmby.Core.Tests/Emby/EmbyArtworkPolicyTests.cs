@@ -218,6 +218,30 @@ public sealed class EmbyArtworkPolicyTests
     }
 
     [Fact]
+    public void SelectHomeSectionWideArtwork_Prefers_Section_Artwork_Before_Parent_Item()
+    {
+        var section = new EmbyHomeSection
+        {
+            Id = "sec-hot-movies",
+            Name = "Hot Movies",
+            ParentItem = new EmbyMediaItem
+            {
+                Id = "fallback-parent",
+                ThumbImageTag = "fallback-thumb",
+                ThumbImageItemId = "fallback-thumb-owner"
+            }
+        };
+        SetSectionString(section, "ThumbImageTag", "section-thumb");
+        SetSectionString(section, "ThumbImageItemId", "section-thumb-owner");
+
+        AssertCandidate(
+            "section-thumb-owner",
+            "Thumb",
+            900,
+            EmbyArtworkPolicy.SelectHomeSectionWideArtwork(section, 900));
+    }
+
+    [Fact]
     public void SelectItemWideArtwork_Prefers_Thumb_Then_Backdrop_Then_Banner_Then_Primary()
     {
         AssertCandidate(
@@ -292,5 +316,12 @@ public sealed class EmbyArtworkPolicyTests
         Assert.Equal(itemId, candidate.ItemId);
         Assert.Equal(imageType, candidate.ImageType);
         Assert.Equal(maxWidth, candidate.MaxWidth);
+    }
+
+    private static void SetSectionString(EmbyHomeSection section, string propertyName, string value)
+    {
+        var property = typeof(EmbyHomeSection).GetProperty(propertyName);
+        Assert.NotNull(property);
+        property!.SetValue(section, value);
     }
 }

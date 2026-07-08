@@ -44,6 +44,12 @@ namespace NextGenEmby.App.Views
                 return;
             }
 
+            if (!string.IsNullOrWhiteSpace(_request.DevelopmentImageUri))
+            {
+                PhotoImage.Source = new BitmapImage(new Uri(_request.DevelopmentImageUri));
+                return;
+            }
+
             var session = await _sessionStore.LoadAsync();
             if (session == null)
             {

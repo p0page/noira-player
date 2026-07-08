@@ -27,6 +27,20 @@ namespace NextGenEmby.Core.Emby
             return CreateSongsQuery(Normalize(albumId));
         }
 
+        public static EmbyItemsQuery CreateArtistAlbumsQuery(string? artistId)
+        {
+            var query = CreateAlbumsQuery();
+            query.AlbumArtistIds = Normalize(artistId);
+            return query;
+        }
+
+        public static EmbyItemsQuery CreateArtistSongsQuery(string? artistId)
+        {
+            var query = CreateSongsQuery("");
+            query.ArtistIds = Normalize(artistId);
+            return query;
+        }
+
         private static EmbyItemsQuery CreateSongsQuery(string parentId)
         {
             return new EmbyItemsQuery

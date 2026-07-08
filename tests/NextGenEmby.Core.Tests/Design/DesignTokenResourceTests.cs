@@ -18,12 +18,14 @@ public sealed class DesignTokenResourceTests
         ("AppRaisedSurfaceColor", "surface_raised"),
         ("AppChromeColor", "surface_overlay"),
         ("AppShellRailColor", "shell_rail"),
+        ("AppGuideFocusFillColor", "guide_focus_fill"),
         ("AppImmersiveScrimColor", "immersive_scrim"),
         ("AppImmersiveControlColor", "surface_overlay"),
         ("AppChromeHoverColor", "chrome_hover"),
         ("AppChromePressedColor", "chrome_pressed"),
         ("AppAccentColor", "focus"),
-        ("AppFocusSecondaryColor", "focus_secondary"),
+        ("AppFocusSecondaryColor", "focus_fill"),
+        ("AppFocusedCardFillColor", "card_focus_fill"),
         ("AppActionColor", "primary"),
         ("AppMutedTextColor", "text_muted"),
         ("AppTextColor", "text"),
@@ -39,9 +41,14 @@ public sealed class DesignTokenResourceTests
         ("AppHeroGradientStartColor", "hero_gradient_start"),
         ("AppHeroGradientMidColor", "scrim"),
         ("AppHeroGradientEndColor", "hero_gradient_end"),
+        ("AppLibraryArtworkWashColor", "library_artwork_wash"),
+        ("AppSectionArtworkWashColor", "section_artwork_wash"),
         ("AppArtworkDimColor", "artwork_dim"),
         ("AppHeroPosterDimColor", "hero_poster_dim"),
         ("AppDetailsBackdropWashColor", "surface_overlay"),
+        ("AppDetailsDecisionTileColor", "details_decision_tile"),
+        ("AppDetailsDecisionTileSelectedColor", "details_decision_tile_selected"),
+        ("AppDetailsDecisionTileFocusedColor", "details_decision_tile_focused"),
         ("AppModalScrimColor", "modal_scrim"),
         ("AppPlaybackCanvasColor", "canvas"),
         ("AppPlaybackOverlayColor", "surface_overlay"),
@@ -84,6 +91,134 @@ public sealed class DesignTokenResourceTests
                 $"App.xaml is missing {mapping.AppKey} for colors.{mapping.DesignKey}.");
             Assert.Equal(designColors[mapping.DesignKey], NormalizeColor(appColors[mapping.AppKey]));
         }
+    }
+
+    [Fact]
+    public void View_CodeBehind_Does_Not_Create_Page_Local_Raw_Color_Brushes()
+    {
+        var root = FindRepositoryRoot();
+        var viewsPath = Path.Combine(root, "src", "NextGenEmby.App", "Views");
+        var offenders = Directory
+            .EnumerateFiles(viewsPath, "*.xaml.cs", SearchOption.AllDirectories)
+            .SelectMany(path => File.ReadLines(path)
+                .Select((line, index) => new
+                {
+                    Path = path,
+                    LineNumber = index + 1,
+                    Line = line
+                }))
+            .Where(entry => entry.Line.Contains("new SolidColorBrush(Color.FromArgb", StringComparison.Ordinal))
+            .Select(entry => $"{Path.GetRelativePath(root, entry.Path)}:{entry.LineNumber}: {entry.Line.Trim()}")
+            .ToArray();
+
+        Assert.True(
+            offenders.Length == 0,
+            "View code-behind should consume App.xaml brushes instead of page-local raw colors:" +
+            Environment.NewLine +
+            string.Join(Environment.NewLine, offenders));
+    }
+
+    [Fact]
+    public void Home_Wide_Card_Artwork_Treatment_Uses_Theme_Resources()
+    {
+        var root = FindRepositoryRoot();
+        var appXaml = File.ReadAllText(Path.Combine(root, "src", "NextGenEmby.App", "App.xaml"));
+        var homeSource = File.ReadAllText(Path.Combine(root, "src", "NextGenEmby.App", "Views", "HomePage.xaml.cs"));
+
+        Assert.Contains("<x:Double x:Key=\"TvHomeLibraryArtworkOpacity\">", appXaml);
+        Assert.Contains("<x:Double x:Key=\"TvHomeSectionArtworkOpacity\">", appXaml);
+        Assert.Contains("<x:Double x:Key=\"TvHomeWideCardTextScrimHeight\">", appXaml);
+        Assert.Contains("GetDoubleResource(\"TvHomeLibraryArtworkOpacity\"", homeSource);
+        Assert.Contains("GetDoubleResource(\"TvHomeSectionArtworkOpacity\"", homeSource);
+        Assert.Contains("CreateHomeWideCardTextScrim()", homeSource);
+        Assert.Contains("LinearGradientBrush", homeSource);
+        Assert.Contains("AppTransparentColor", homeSource);
+        Assert.Contains("AppCardScrimColor", homeSource);
+        Assert.DoesNotContain("Opacity = 0.62", homeSource);
+        Assert.DoesNotContain("Opacity = 0.68", homeSource);
+    }
+
+    [Fact]
+    public void Home_Rail_Card_Metrics_And_Focus_Treatment_Use_Theme_Resources()
+    {
+        var root = FindRepositoryRoot();
+        var appXaml = File.ReadAllText(Path.Combine(root, "src", "NextGenEmby.App", "App.xaml"));
+        var homeXaml = File.ReadAllText(Path.Combine(root, "src", "NextGenEmby.App", "Views", "HomePage.xaml"));
+        var homeSource = File.ReadAllText(Path.Combine(root, "src", "NextGenEmby.App", "Views", "HomePage.xaml.cs"));
+
+        Assert.Contains("<x:Double x:Key=\"TvHomeWideCardWidth\">", appXaml);
+        Assert.Contains("<x:Double x:Key=\"TvHomeWideCardHeight\">", appXaml);
+        Assert.Contains("<x:Double x:Key=\"TvHomeRowPosterCardWidth\">", appXaml);
+        Assert.Contains("<x:Double x:Key=\"TvHomeRowPosterCardHeight\">", appXaml);
+        Assert.Contains("<x:Double x:Key=\"TvHomeWideCardTitleFontSize\">", appXaml);
+        Assert.Contains("<x:Double x:Key=\"TvHomeFocusedCardScale\">", appXaml);
+        Assert.Contains("Spacing=\"{StaticResource TvHomeSectionSpacing}\"", homeXaml);
+        Assert.Contains("Spacing=\"{StaticResource TvHomeRailHeaderSpacing}\"", homeXaml);
+        Assert.Contains("Width = GetDoubleResource(\"TvHomeWideCardWidth\"", homeSource);
+        Assert.Contains("Height = GetDoubleResource(\"TvHomeWideCardHeight\"", homeSource);
+        Assert.Contains("Width = GetDoubleResource(\"TvHomeRowPosterCardWidth\"", homeSource);
+        Assert.Contains("Height = GetDoubleResource(\"TvHomeRowPosterCardHeight\"", homeSource);
+        Assert.Contains("ApplyHomeCardFocusTreatment(button)", homeSource);
+        Assert.Contains("HomeCard_OnLostFocus", homeSource);
+        Assert.Contains("ScaleTransform", homeSource);
+        Assert.DoesNotContain("Width = 250", homeSource);
+        Assert.DoesNotContain("Width = 284", homeSource);
+        Assert.DoesNotContain("Height = 132", homeSource);
+        Assert.DoesNotContain("Width = 172", homeSource);
+        Assert.DoesNotContain("Height = 252", homeSource);
+        Assert.DoesNotContain("FontSize = 23", homeSource);
+    }
+
+    [Fact]
+    public void Home_Hero_Layout_Metrics_Use_Theme_Resources()
+    {
+        var root = FindRepositoryRoot();
+        var appXaml = File.ReadAllText(Path.Combine(root, "src", "NextGenEmby.App", "App.xaml"));
+        var homeXaml = File.ReadAllText(Path.Combine(root, "src", "NextGenEmby.App", "Views", "HomePage.xaml"));
+
+        Assert.Contains("<x:Double x:Key=\"TvHomeHeroHeight\">", appXaml);
+        Assert.Contains("<Thickness x:Key=\"TvHomeHeroPadding\">", appXaml);
+        Assert.Contains("<x:Double x:Key=\"TvHomeHeroColumnSpacing\">", appXaml);
+        Assert.Contains("<x:Double x:Key=\"TvHomeHeroPosterWidth\">", appXaml);
+        Assert.Contains("<x:Double x:Key=\"TvHomeHeroPosterHeight\">", appXaml);
+        Assert.Contains("<x:Double x:Key=\"TvHomeHeroTitleFontSize\">", appXaml);
+        Assert.Contains("<x:Double x:Key=\"TvHomeHeroLogoMaxWidth\">", appXaml);
+        Assert.Contains("<CornerRadius x:Key=\"TvHomeHeroCornerRadius\">", appXaml);
+        Assert.Contains("Height=\"{StaticResource TvHomeHeroHeight}\"", homeXaml);
+        Assert.Contains("Padding=\"{StaticResource TvHomeHeroPadding}\"", homeXaml);
+        Assert.Contains("ColumnSpacing=\"{StaticResource TvHomeHeroColumnSpacing}\"", homeXaml);
+        Assert.Contains("Width=\"{StaticResource TvHomeHeroPosterWidth}\"", homeXaml);
+        Assert.Contains("Height=\"{StaticResource TvHomeHeroPosterHeight}\"", homeXaml);
+        Assert.Contains("FontSize=\"{StaticResource TvHomeHeroTitleFontSize}\"", homeXaml);
+        Assert.Contains("MaxWidth=\"{StaticResource TvHomeHeroLogoMaxWidth}\"", homeXaml);
+        Assert.DoesNotContain("Height=\"246\"", homeXaml);
+        Assert.DoesNotContain("Padding=\"26,24,26,24\"", homeXaml);
+        Assert.DoesNotContain("FontSize=\"38\"", homeXaml);
+        Assert.DoesNotContain("Width=\"182\"", homeXaml);
+    }
+
+    [Fact]
+    public void A3_Home_And_Library_Primary_Chrome_Uses_Compact_Recessed_Tokens()
+    {
+        var root = FindRepositoryRoot();
+        var appXaml = File.ReadAllText(Path.Combine(root, "src", "NextGenEmby.App", "App.xaml"));
+        var homeXaml = File.ReadAllText(Path.Combine(root, "src", "NextGenEmby.App", "Views", "HomePage.xaml"));
+        var libraryXaml = File.ReadAllText(Path.Combine(root, "src", "NextGenEmby.App", "Views", "LibraryPage.xaml"));
+
+        Assert.Contains("<x:Double x:Key=\"TvHomeHeaderChromeOpacity\">0.56</x:Double>", appXaml);
+        Assert.Contains("x:Name=\"HomeChromeHeader\"", homeXaml);
+        Assert.Contains("Opacity=\"{StaticResource TvHomeHeaderChromeOpacity}\"", homeXaml);
+        Assert.Contains("x:Name=\"HomeChromeSubtitleBlock\"", homeXaml);
+        Assert.Contains("Visibility=\"Collapsed\"", SliceFrom(homeXaml, "x:Name=\"HomeChromeSubtitleBlock\"", "/>"));
+
+        Assert.Contains("<x:Double x:Key=\"TvLibraryToolbarButtonWidth\">168</x:Double>", appXaml);
+        Assert.Contains("<x:Double x:Key=\"TvLibraryToolbarButtonHeight\">44</x:Double>", appXaml);
+        Assert.Contains("<x:Double x:Key=\"TvLibraryToolbarSpacing\">10</x:Double>", appXaml);
+        Assert.Contains("<Style x:Key=\"TvLibraryToolbarButtonStyle\"", appXaml);
+        Assert.Contains("Spacing=\"{StaticResource TvLibraryToolbarSpacing}\"", libraryXaml);
+        Assert.Contains("Width=\"{StaticResource TvLibraryToolbarButtonWidth}\"", libraryXaml);
+        Assert.Contains("Style=\"{StaticResource TvLibraryToolbarButtonStyle}\"", libraryXaml);
+        Assert.DoesNotContain("Width=\"220\"", libraryXaml);
     }
 
     private static string FindRepositoryRoot()
@@ -161,5 +296,14 @@ public sealed class DesignTokenResourceTests
     private static string NormalizeColor(string color)
     {
         return color.Trim().ToUpperInvariant();
+    }
+
+    private static string SliceFrom(string source, string startMarker, string endMarker)
+    {
+        var start = source.IndexOf(startMarker, StringComparison.Ordinal);
+        Assert.True(start >= 0, "Start marker not found: " + startMarker);
+        var end = source.IndexOf(endMarker, start, StringComparison.Ordinal);
+        Assert.True(end > start, "End marker not found after start marker: " + endMarker);
+        return source.Substring(start, end - start);
     }
 }

@@ -39,3 +39,4 @@ tools/quality-run/private/
 .env
 .env.*
 !.env.example
+.codex-remote-attachments/

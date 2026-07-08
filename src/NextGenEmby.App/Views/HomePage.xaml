@@ -10,19 +10,26 @@
             VerticalScrollMode="Enabled"
             HorizontalScrollBarVisibility="Disabled"
             HorizontalScrollMode="Disabled">
-            <StackPanel Margin="{StaticResource TvPageMargin}" Spacing="22">
-                <Grid>
+            <StackPanel Margin="{StaticResource TvPageMargin}" Spacing="{StaticResource TvHomeSectionSpacing}">
+                <Grid
+                    x:Name="HomeChromeHeader"
+                    Opacity="{StaticResource TvHomeHeaderChromeOpacity}">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <StackPanel Spacing="4">
                         <TextBlock
+                            x:Name="HomeChromeTitleBlock"
                             Text="Home"
-                            Style="{StaticResource TvPageTitleTextStyle}" />
+                            FontSize="16"
+                            FontWeight="SemiBold"
+                            Foreground="{StaticResource AppMutedTextBrush}" />
                         <TextBlock
+                            x:Name="HomeChromeSubtitleBlock"
                             Text="Ready for the next thing"
-                            Style="{StaticResource TvMutedBodyTextStyle}" />
+                            Style="{StaticResource TvMutedBodyTextStyle}"
+                            Visibility="Collapsed" />
                     </StackPanel>
                     <Button
                         x:Name="RefreshButton"
@@ -31,19 +38,19 @@
                         HorizontalAlignment="Right"
                         VerticalAlignment="Center"
                         Click="Refresh_OnClick"
+                        Opacity="0.48"
                         Style="{StaticResource IconButtonStyle}"
                         ToolTipService.ToolTip="Refresh"
-                        UseSystemFocusVisuals="True">
+                        UseSystemFocusVisuals="False">
                         <SymbolIcon Symbol="Refresh" />
                     </Button>
                 </Grid>
 
                 <Border
-                    Height="246"
-                    Background="{StaticResource AppSurfaceBrush}"
-                    BorderBrush="{StaticResource AppHairlineBrush}"
-                    BorderThickness="1"
-                    CornerRadius="8">
+                    x:Name="HomeFeatureStrip"
+                    Height="{StaticResource TvHomeHeroHeight}"
+                    Background="{StaticResource AppTransparentBrush}"
+                    CornerRadius="{StaticResource TvHomeHeroCornerRadius}">
                     <Grid>
                         <Image
                             x:Name="HeroBackdropImage"
@@ -59,32 +66,25 @@
                                 </LinearGradientBrush>
                             </Border.Background>
                         </Border>
-                        <Border
-                            Width="4"
-                            Margin="0,24,0,24"
-                            HorizontalAlignment="Left"
-                            Background="{StaticResource AppAccentBrush}"
-                            CornerRadius="0,3,3,0" />
-
-                        <Grid Padding="26,24,26,24" ColumnSpacing="30">
+                        <Grid Padding="{StaticResource TvHomeHeroPadding}" ColumnSpacing="{StaticResource TvHomeHeroColumnSpacing}">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="182" />
+                                <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
 
                             <StackPanel
                                 Grid.Column="0"
                                 VerticalAlignment="Center"
-                                Spacing="12">
+                                Spacing="{StaticResource TvHomeHeroContentSpacing}">
                                 <TextBlock
                                     Text="Continue watching"
-                                    FontSize="17"
+                                    FontSize="{StaticResource TvHomeHeroEyebrowFontSize}"
                                     FontWeight="SemiBold"
-                                    Foreground="{StaticResource AppWarmBrush}" />
+                                    Foreground="{StaticResource AppMutedTextBrush}" />
                                 <Image
                                     x:Name="HeroLogoImage"
-                                    MaxWidth="430"
-                                    MaxHeight="82"
+                                    MaxWidth="{StaticResource TvHomeHeroLogoMaxWidth}"
+                                    MaxHeight="{StaticResource TvHomeHeroLogoMaxHeight}"
                                     HorizontalAlignment="Left"
                                     Stretch="Uniform"
                                     Visibility="Collapsed"
@@ -92,7 +92,7 @@
                                     ImageFailed="HeroLogoImage_OnImageFailed" />
                                 <TextBlock
                                     x:Name="HeroTitleBlock"
-                                    FontSize="38"
+                                    FontSize="{StaticResource TvHomeHeroTitleFontSize}"
                                     FontWeight="SemiBold"
                                     Foreground="{StaticResource AppTextBrush}"
                                     TextWrapping="WrapWholeWords"
@@ -100,7 +100,7 @@
                                     TextTrimming="CharacterEllipsis" />
                                 <TextBlock
                                     x:Name="HeroMetaBlock"
-                                    FontSize="18"
+                                    FontSize="{StaticResource TvHomeHeroMetaFontSize}"
                                     Foreground="{StaticResource AppMutedTextBrush}"
                                     TextWrapping="Wrap"
                                     MaxLines="2"
@@ -108,13 +108,14 @@
                                 <StackPanel Orientation="Horizontal" Spacing="14">
                                     <Button
                                         x:Name="HeroPlayButton"
+                                        AutomationProperties.Name="Play"
                                         MinWidth="142"
                                         Height="52"
                                         Background="{StaticResource AppActionBrush}"
                                         BorderBrush="{StaticResource AppActionBrush}"
                                         Foreground="{StaticResource AppOnActionBrush}"
                                         Click="HeroPlay_OnClick"
-                                        UseSystemFocusVisuals="True"
+                                        UseSystemFocusVisuals="False"
                                         XYFocusRight="{x:Bind HeroDetailsButton}">
                                         <StackPanel Orientation="Horizontal" Spacing="10">
                                             <SymbolIcon Symbol="Play" />
@@ -123,10 +124,11 @@
                                     </Button>
                                     <Button
                                         x:Name="HeroDetailsButton"
+                                        AutomationProperties.Name="Details"
                                         MinWidth="148"
                                         Height="52"
                                         Click="HeroDetails_OnClick"
-                                        UseSystemFocusVisuals="True"
+                                        UseSystemFocusVisuals="False"
                                         XYFocusLeft="{x:Bind HeroPlayButton}">
                                         <StackPanel Orientation="Horizontal" Spacing="10">
                                             <SymbolIcon Symbol="ContactInfo" />
@@ -138,14 +140,14 @@
 
                             <Border
                                 Grid.Column="1"
-                                Width="182"
-                                Height="232"
+                                Width="{StaticResource TvHomeHeroPosterWidth}"
+                                Height="{StaticResource TvHomeHeroPosterHeight}"
                                 HorizontalAlignment="Right"
                                 VerticalAlignment="Center"
                                 Background="{StaticResource AppRaisedSurfaceBrush}"
                                 BorderBrush="{StaticResource AppHairlineBrush}"
                                 BorderThickness="1"
-                                CornerRadius="7">
+                                CornerRadius="{StaticResource TvHomeHeroPosterCornerRadius}">
                                 <Grid>
                                     <Image
                                         x:Name="HeroPosterImage"
@@ -156,7 +158,7 @@
                                         Text="No artwork"
                                         HorizontalAlignment="Center"
                                         VerticalAlignment="Center"
-                                        FontSize="18"
+                                        FontSize="{StaticResource TvHomeHeroPosterFallbackFontSize}"
                                         Foreground="{StaticResource AppMutedTextBrush}" />
                                 </Grid>
                             </Border>
@@ -164,7 +166,7 @@
                     </Grid>
                 </Border>
 
-                <StackPanel Spacing="18">
+                <StackPanel Spacing="{StaticResource TvHomeRailHeaderSpacing}">
                     <TextBlock
                         Text="Media Libraries"
                         Style="{StaticResource TvSectionTitleTextStyle}" />
@@ -176,7 +178,26 @@
                         <StackPanel
                             x:Name="LibrariesPanel"
                             Orientation="Horizontal"
-                            Spacing="18" />
+                            Spacing="{StaticResource TvHomeRailCardSpacing}" />
+                    </ScrollViewer>
+                </StackPanel>
+
+                <StackPanel
+                    x:Name="HomeSectionsRail"
+                    Spacing="{StaticResource TvHomeRailHeaderSpacing}"
+                    Visibility="Collapsed">
+                    <TextBlock
+                        Text="Server sections"
+                        Style="{StaticResource TvSectionTitleTextStyle}" />
+                    <ScrollViewer
+                        HorizontalScrollBarVisibility="Hidden"
+                        HorizontalScrollMode="Enabled"
+                        VerticalScrollBarVisibility="Disabled"
+                        VerticalScrollMode="Disabled">
+                        <StackPanel
+                            x:Name="HomeSectionsPanel"
+                            Orientation="Horizontal"
+                            Spacing="{StaticResource TvHomeRailCardSpacing}" />
                     </ScrollViewer>
                 </StackPanel>
 
@@ -186,7 +207,7 @@
 
                 <StackPanel
                     x:Name="RowsPanel"
-                    Spacing="22" />
+                    Spacing="{StaticResource TvHomeRowSpacing}" />
             </StackPanel>
         </ScrollViewer>
     </Grid>

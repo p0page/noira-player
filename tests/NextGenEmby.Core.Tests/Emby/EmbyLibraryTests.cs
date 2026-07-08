@@ -97,7 +97,7 @@ public sealed class EmbyLibraryTests
         var request = handler.LastRequest!;
         Assert.Equal("/Users/user%201%2Fslash/Items/Latest", request.RequestUri!.AbsolutePath);
         Assert.Contains("IncludeItemTypes=Movie%2CSeries%2CEpisode", request.RequestUri.Query);
-        Assert.Contains("Fields=Overview%2CProductionYear%2CRunTimeTicks%2CPrimaryImageAspectRatio%2CChildCount%2CUserData", request.RequestUri.Query);
+        Assert.Contains("Fields=Overview%2CProductionYear%2CRunTimeTicks%2CPrimaryImageAspectRatio%2CChildCount%2CUserData%2CArtists%2CAlbumArtists", request.RequestUri.Query);
         Assert.Contains("Limit=50", request.RequestUri.Query);
         Assert.Contains("EnableImages=true", request.RequestUri.Query);
         Assert.Contains("EnableImageTypes=Primary%2CBackdrop%2CThumb%2CBanner%2CLogo", request.RequestUri.Query);
@@ -139,7 +139,7 @@ public sealed class EmbyLibraryTests
         Assert.Equal("/Users/user%201%2Fslash/Items/Resume", handler.LastRequest!.RequestUri!.AbsolutePath);
         Assert.Contains("IncludeItemTypes=Movie%2CEpisode", handler.LastRequest.RequestUri.Query);
         Assert.Contains("Limit=24", handler.LastRequest.RequestUri.Query);
-        Assert.Contains("Fields=Overview%2CProductionYear%2CRunTimeTicks%2CPrimaryImageAspectRatio%2CChildCount%2CUserData", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("Fields=Overview%2CProductionYear%2CRunTimeTicks%2CPrimaryImageAspectRatio%2CChildCount%2CUserData%2CArtists%2CAlbumArtists", handler.LastRequest.RequestUri.Query);
     }
 
     [Fact]
@@ -410,6 +410,72 @@ public sealed class EmbyLibraryTests
     }
 
     [Fact]
+    public async Task GetHomeSectionsAsync_Requests_Image_Metadata_For_Section_Artwork()
+    {
+        var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(HttpStatusCode.OK, "[]"));
+        using var http = new HttpClient(handler);
+        var client = CreateClient(http);
+
+        await client.GetHomeSectionsAsync(Session(userId: "user 1/slash"));
+
+        Assert.Equal("/Users/user%201%2Fslash/HomeSections", handler.LastRequest!.RequestUri!.AbsolutePath);
+        Assert.Contains("EnableImages=true", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("EnableImageTypes=Primary%2CBackdrop%2CThumb%2CBanner%2CLogo", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("ImageTypeLimit=1", handler.LastRequest.RequestUri.Query);
+    }
+
+    [Fact]
+    public async Task GetHomeSectionsAsync_Maps_Section_Owned_Wide_Artwork()
+    {
+        var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
+            HttpStatusCode.OK,
+            """
+            [
+              {
+                "Id": "sec-hot-movies",
+                "Name": "Hot Movies",
+                "CollectionType": "movies",
+                "ImageTags": {
+                  "Primary": "section-primary",
+                  "Thumb": "section-thumb",
+                  "Banner": "section-banner",
+                  "Logo": "section-logo"
+                },
+                "BackdropImageTags": [ "section-backdrop" ],
+                "PrimaryImageItemId": "section-primary-owner",
+                "ParentThumbItemId": "section-thumb-owner",
+                "ParentBackdropItemId": "section-backdrop-owner",
+                "ParentBannerItemId": "section-banner-owner",
+                "ParentLogoItemId": "section-logo-owner",
+                "ParentItem": {
+                  "Id": "fallback-parent",
+                  "Name": "Fallback Parent",
+                  "Type": "CollectionFolder",
+                  "ImageTags": { "Thumb": "fallback-thumb" },
+                  "ParentThumbItemId": "fallback-thumb-owner"
+                }
+              }
+            ]
+            """));
+        using var http = new HttpClient(handler);
+        var client = CreateClient(http);
+
+        var section = Assert.Single(await client.GetHomeSectionsAsync(Session()));
+
+        AssertSectionString(section, "ThumbImageTag", "section-thumb");
+        AssertSectionString(section, "PrimaryImageTag", "section-primary");
+        AssertSectionString(section, "BackdropImageTag", "section-backdrop");
+        AssertSectionString(section, "BannerImageTag", "section-banner");
+        AssertSectionString(section, "LogoImageTag", "section-logo");
+        AssertSectionString(section, "ThumbImageItemId", "section-thumb-owner");
+        AssertSectionString(section, "PrimaryImageItemId", "section-primary-owner");
+        AssertSectionString(section, "BackdropImageItemId", "section-backdrop-owner");
+        AssertSectionString(section, "BannerImageItemId", "section-banner-owner");
+        AssertSectionString(section, "LogoImageItemId", "section-logo-owner");
+        Assert.Equal("fallback-thumb", section.ParentItem.ThumbImageTag);
+    }
+
+    [Fact]
     public async Task GetHomeSectionItemsAsync_Uses_Section_Items_Endpoint()
     {
         var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
@@ -439,7 +505,7 @@ public sealed class EmbyLibraryTests
         Assert.Equal("backdrop-tag", item.BackdropImageTag);
         Assert.Equal("/Users/user-1/Sections/sec%20hot%2Fmovies/Items", handler.LastRequest!.RequestUri!.AbsolutePath);
         Assert.Contains("Limit=18", handler.LastRequest.RequestUri.Query);
-        Assert.Contains("Fields=Overview%2CProductionYear%2CRunTimeTicks%2CPrimaryImageAspectRatio%2CChildCount%2CUserData", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("Fields=Overview%2CProductionYear%2CRunTimeTicks%2CPrimaryImageAspectRatio%2CChildCount%2CUserData%2CArtists%2CAlbumArtists", handler.LastRequest.RequestUri.Query);
     }
 
     [Fact]
@@ -579,6 +645,64 @@ public sealed class EmbyLibraryTests
     }
 
     [Fact]
+    public async Task GetItemsAsync_Requests_And_Maps_Music_Artists_For_Hierarchy()
+    {
+        var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
+            HttpStatusCode.OK,
+            """
+            {
+              "Items": [
+                {
+                  "Id": "song-1",
+                  "Name": "Opening Credits",
+                  "Type": "Audio",
+                  "Artists": [ "Kairos Collective", "" ],
+                  "ArtistItems": [
+                    { "Id": "artist-1", "Name": "Kairos Collective" }
+                  ],
+                  "AlbumArtist": "Kairos Collective",
+                  "AlbumArtists": [
+                    { "Id": "artist-1", "Name": "Kairos Collective" }
+                  ]
+                }
+              ],
+              "TotalRecordCount": 1
+            }
+            """));
+        using var http = new HttpClient(handler);
+        var client = CreateClient(http);
+
+        var items = await client.GetItemsAsync(Session(), new EmbyItemsQuery
+        {
+            IncludeItemTypes = "Audio",
+            Limit = 12
+        });
+
+        var item = Assert.Single(items);
+        Assert.Contains("Artists", handler.LastRequest!.RequestUri!.Query);
+        Assert.Contains("AlbumArtists", handler.LastRequest.RequestUri.Query);
+        Assert.Collection(
+            item.Artists,
+            artist => Assert.Equal("Kairos Collective", artist),
+            artist => Assert.Equal("", artist));
+        Assert.Collection(
+            item.ArtistItems,
+            artist =>
+            {
+                Assert.Equal("artist-1", artist.Id);
+                Assert.Equal("Kairos Collective", artist.Name);
+            });
+        Assert.Equal("Kairos Collective", item.AlbumArtist);
+        Assert.Collection(
+            item.AlbumArtists,
+            artist =>
+            {
+                Assert.Equal("artist-1", artist.Id);
+                Assert.Equal("Kairos Collective", artist.Name);
+            });
+    }
+
+    [Fact]
     public async Task GetItemsAsync_Builds_Extended_Library_Query_For_Tv_Media_Collections_And_Filters()
     {
         var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
@@ -623,6 +747,37 @@ public sealed class EmbyLibraryTests
         Assert.Contains("IsPlayed=false", handler.LastRequest.RequestUri.Query);
         Assert.Contains("IsFolder=false", handler.LastRequest.RequestUri.Query);
         Assert.Contains("Limit=25", handler.LastRequest.RequestUri.Query);
+    }
+
+    [Fact]
+    public async Task GetItemsAsync_Builds_Metadata_Facet_Query_Filters()
+    {
+        var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
+            HttpStatusCode.OK,
+            """
+            {
+              "Items": [],
+              "TotalRecordCount": 0
+            }
+            """));
+        using var http = new HttpClient(handler);
+        var client = CreateClient(http);
+
+        await client.GetItemsAsync(Session(), new EmbyItemsQuery
+        {
+            IncludeItemTypes = "Movie,Series,Episode",
+            Genres = "Sci-Fi|Drama",
+            StudioIds = "studio 1/slash",
+            Studios = "Terminus Pictures",
+            Tags = "Douban Top|HDR",
+            Limit = 12
+        });
+
+        Assert.Equal("/Users/user-1/Items", handler.LastRequest!.RequestUri!.AbsolutePath);
+        Assert.Contains("Genres=Sci-Fi%7CDrama", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("StudioIds=studio%201%2Fslash", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("Studios=Terminus%20Pictures", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("Tags=Douban%20Top%7CHDR", handler.LastRequest.RequestUri.Query);
     }
 
     [Fact]
@@ -680,6 +835,73 @@ public sealed class EmbyLibraryTests
     }
 
     [Fact]
+    public async Task GetItemAsync_Requests_And_Maps_Metadata_Facets_For_Details_Browse()
+    {
+        var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
+            HttpStatusCode.OK,
+            """
+            {
+              "Id": "movie-1",
+              "Name": "Movie One",
+              "Type": "Movie",
+              "GenreItems": [
+                { "Id": "genre-1", "Name": "Sci-Fi" },
+                { "Id": null, "Name": null }
+              ],
+              "Studios": [
+                { "Id": "studio-1", "Name": "Terminus Pictures" }
+              ],
+              "TagItems": [
+                { "Id": "tag-1", "Name": "Douban Top" }
+              ],
+              "Tags": [
+                "Festival Cut",
+                ""
+              ]
+            }
+            """));
+        using var http = new HttpClient(handler);
+        var client = CreateClient(http);
+
+        var item = await client.GetItemAsync(Session(), "movie-1");
+
+        Assert.Contains("Genres", handler.LastRequest!.RequestUri!.Query);
+        Assert.Contains("Studios", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("Tags", handler.LastRequest.RequestUri.Query);
+        Assert.Collection(
+            item.GenreItems,
+            facet =>
+            {
+                Assert.Equal("genre-1", facet.Id);
+                Assert.Equal("Sci-Fi", facet.Name);
+            },
+            facet =>
+            {
+                Assert.Equal("", facet.Id);
+                Assert.Equal("", facet.Name);
+            });
+        Assert.Collection(
+            item.StudioItems,
+            facet =>
+            {
+                Assert.Equal("studio-1", facet.Id);
+                Assert.Equal("Terminus Pictures", facet.Name);
+            });
+        Assert.Collection(
+            item.TagItems,
+            facet =>
+            {
+                Assert.Equal("tag-1", facet.Id);
+                Assert.Equal("Douban Top", facet.Name);
+            },
+            facet =>
+            {
+                Assert.Equal("", facet.Id);
+                Assert.Equal("Festival Cut", facet.Name);
+            });
+    }
+
+    [Fact]
     public async Task GetSimilarItemsAsync_Uses_Similar_Endpoint_And_Parses_Items()
     {
         var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
@@ -709,7 +931,7 @@ public sealed class EmbyLibraryTests
         Assert.Equal("/Items/movie%201%2Fslash/Similar", handler.LastRequest!.RequestUri!.AbsolutePath);
         Assert.Contains("UserId=user%201%2Fslash", handler.LastRequest.RequestUri.Query);
         Assert.Contains("Limit=18", handler.LastRequest.RequestUri.Query);
-        Assert.Contains("Fields=Overview%2CProductionYear%2CRunTimeTicks%2CPrimaryImageAspectRatio%2CChildCount%2CUserData", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("Fields=Overview%2CProductionYear%2CRunTimeTicks%2CPrimaryImageAspectRatio%2CChildCount%2CUserData%2CArtists%2CAlbumArtists", handler.LastRequest.RequestUri.Query);
         Assert.Contains("EnableImages=true", handler.LastRequest.RequestUri.Query);
     }
 
@@ -770,6 +992,47 @@ public sealed class EmbyLibraryTests
         Assert.Equal("/Collections/collection%201%2Fslash/Items", handler.LastRequest.RequestUri!.AbsolutePath);
         Assert.Contains("Ids=movie%201%2Fslash", handler.LastRequest.RequestUri.Query);
         Assert.Null(handler.LastRequest.Body);
+    }
+
+    [Fact]
+    public async Task GetPlaylistItemsAsync_Uses_Playlist_Items_Endpoint_And_Maps_Items()
+    {
+        var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
+            HttpStatusCode.OK,
+            """
+            {
+              "Items": [
+                {
+                  "Id": "episode-1",
+                  "Name": "Queued Episode",
+                  "Type": "Episode",
+                  "ImageTags": { "Primary": "primary-tag" },
+                  "BackdropImageTags": [ "backdrop-tag" ]
+                }
+              ],
+              "TotalRecordCount": 1
+            }
+            """));
+        using var http = new HttpClient(handler);
+        var client = CreateClient(http);
+
+        var items = await client.GetPlaylistItemsAsync(Session(userId: "user 1/slash"), "playlist 1/slash", 24);
+
+        var item = Assert.Single(items);
+        Assert.Equal("episode-1", item.Id);
+        Assert.Equal("Queued Episode", item.Name);
+        Assert.Equal("Episode", item.Type);
+        Assert.Equal("primary-tag", item.PrimaryImageTag);
+        Assert.Equal("backdrop-tag", item.BackdropImageTag);
+        Assert.Equal("/Playlists/playlist%201%2Fslash/Items", handler.LastRequest!.RequestUri!.AbsolutePath);
+        Assert.Contains("UserId=user%201%2Fslash", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("Limit=24", handler.LastRequest.RequestUri.Query);
+        Assert.Contains(
+            "Fields=Overview%2CProductionYear%2CRunTimeTicks%2CPrimaryImageAspectRatio%2CChildCount%2CUserData%2CArtists%2CAlbumArtists",
+            handler.LastRequest.RequestUri.Query);
+        Assert.Contains("EnableImages=true", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("EnableImageTypes=Primary%2CBackdrop%2CThumb%2CBanner%2CLogo", handler.LastRequest.RequestUri.Query);
+        Assert.Contains("ImageTypeLimit=1", handler.LastRequest.RequestUri.Query);
     }
 
     [Fact]
@@ -1039,6 +1302,13 @@ public sealed class EmbyLibraryTests
             600);
 
         Assert.Equal("http://emby.local:8096/Items/movie%201/Images/Primary%20Image?maxWidth=600&quality=90&api_key=token%2B123%2Fabc", url);
+    }
+
+    private static void AssertSectionString(EmbyHomeSection section, string propertyName, string expected)
+    {
+        var property = typeof(EmbyHomeSection).GetProperty(propertyName);
+        Assert.NotNull(property);
+        Assert.Equal(expected, property!.GetValue(section) as string);
     }
 
     private static EmbyApiClient CreateClient(HttpClient http) => new EmbyApiClient(http, new EmbyClientOptions

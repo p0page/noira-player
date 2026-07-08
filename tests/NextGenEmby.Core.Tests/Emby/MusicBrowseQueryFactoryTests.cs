@@ -52,4 +52,28 @@ public sealed class MusicBrowseQueryFactoryTests
         Assert.Equal("", query.ParentId);
         Assert.Equal("Audio", query.IncludeItemTypes);
     }
+
+    [Fact]
+    public void CreateArtistAlbumsQuery_Constrains_To_AlbumArtist()
+    {
+        var query = MusicBrowseQueryFactory.CreateArtistAlbumsQuery(" artist-1 ");
+
+        Assert.Equal("MusicAlbum", query.IncludeItemTypes);
+        Assert.Equal("artist-1", query.AlbumArtistIds);
+        Assert.Equal("", query.ArtistIds);
+        Assert.Equal("SortName", query.SortBy);
+        Assert.True(query.Recursive);
+    }
+
+    [Fact]
+    public void CreateArtistSongsQuery_Constrains_To_Artist()
+    {
+        var query = MusicBrowseQueryFactory.CreateArtistSongsQuery(" artist-1 ");
+
+        Assert.Equal("Audio", query.IncludeItemTypes);
+        Assert.Equal("artist-1", query.ArtistIds);
+        Assert.Equal("", query.AlbumArtistIds);
+        Assert.Equal("Artist,Album,SortName", query.SortBy);
+        Assert.True(query.Recursive);
+    }
 }

@@ -23,72 +23,188 @@
             Canvas.ZIndex="10"
             Visibility="Collapsed">
             <Border
+                x:Name="PlaybackStatusCapsule"
+                MaxWidth="{StaticResource TvPlaybackStatusCapsuleMaxWidth}"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Top"
+                Background="{StaticResource AppPlaybackOverlayBrush}"
+                CornerRadius="8"
+                Margin="{StaticResource TvPlaybackStatusCapsuleMargin}"
+                Padding="{StaticResource TvPlaybackStatusCapsulePadding}">
+                <StackPanel Spacing="4">
+                    <TextBlock
+                        x:Name="NowPlayingBlock"
+                        FontSize="22"
+                        FontWeight="SemiBold"
+                        Text="Now Playing"
+                        TextTrimming="CharacterEllipsis" />
+                    <TextBlock
+                        x:Name="StatusBlock"
+                        FontSize="15"
+                        Foreground="{StaticResource AppMutedTextBrush}"
+                        Text="Stopped"
+                        TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+            </Border>
+
+            <TextBlock
+                x:Name="SubtitleSafeSampleBlock"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Bottom"
+                Foreground="{StaticResource AppTextBrush}"
+                FontSize="24"
+                FontWeight="SemiBold"
+                Margin="{StaticResource TvPlaybackSubtitleSafeSampleMargin}"
+                Text="Subtitle sample stays above controls"
+                TextAlignment="Center"
+                Visibility="Collapsed" />
+
+            <Border
+                x:Name="ManualDebugPanel"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Bottom"
+                Background="{StaticResource AppSurfaceBrush}"
+                CornerRadius="8"
+                Margin="{StaticResource TvPlaybackSubtitleSafeSampleMargin}"
+                Padding="14"
+                Visibility="Collapsed">
+                <Grid ColumnSpacing="16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBox
+                        x:Name="StreamUrlBox"
+                        Header="Direct stream URL"
+                        PlaceholderText="http://server:8096/Videos/item/stream"
+                        KeyDown="StreamUrlBox_OnKeyDown"
+                        TextChanged="StreamUrlBox_OnTextChanged" />
+                    <Button
+                        x:Name="ManualStartButton"
+                        Grid.Column="1"
+                        AutomationProperties.Name="Play direct stream"
+                        MinWidth="112"
+                        VerticalAlignment="Bottom"
+                        Click="Start_OnClick"
+                        Style="{StaticResource TvPlaybackTransportButtonStyle}"
+                        ToolTipService.ToolTip="Play direct stream">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <SymbolIcon Symbol="Play" />
+                            <TextBlock Text="Play" />
+                        </StackPanel>
+                    </Button>
+                </Grid>
+            </Border>
+
+            <Border
+                x:Name="PlaybackTransportStrip"
+                HorizontalAlignment="Stretch"
                 VerticalAlignment="Bottom"
                 Background="{StaticResource AppPlaybackOverlayBrush}"
-                Padding="40,22">
-                <Grid RowSpacing="12">
+                CornerRadius="{StaticResource TvPlaybackTransportStripCornerRadius}"
+                Margin="{StaticResource TvPlaybackTransportStripMargin}"
+                Padding="{StaticResource TvPlaybackTransportStripPadding}">
+                <Grid RowSpacing="10">
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
 
-                    <Grid Grid.Row="0" ColumnSpacing="24">
+                    <Grid
+                        x:Name="PlaybackTimelineRow"
+                        Grid.Row="0"
+                        ColumnSpacing="18">
                         <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="78" />
                             <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="220" />
+                            <ColumnDefinition Width="92" />
                         </Grid.ColumnDefinitions>
-
-                        <StackPanel Spacing="8">
-                            <TextBlock
-                                x:Name="NowPlayingBlock"
-                                FontSize="24"
-                                FontWeight="SemiBold"
-                                Text="Now Playing"
-                                TextTrimming="CharacterEllipsis" />
-                            <Slider
-                                x:Name="ProgressSlider"
-                                IsEnabled="False"
-                                Maximum="1"
-                                Minimum="0"
-                                Value="0"
-                                ValueChanged="ProgressSlider_OnValueChanged" />
-                            <TextBlock
-                                x:Name="SeekPreviewBlock"
-                                Foreground="{StaticResource AppMutedTextBrush}"
-                                FontSize="16"
-                                TextTrimming="CharacterEllipsis"
-                                Visibility="Collapsed" />
-                        </StackPanel>
-
-                        <StackPanel Grid.Column="1" VerticalAlignment="Bottom" Spacing="4">
-                            <TextBlock
-                                Text="State"
-                                FontSize="12"
-                                Foreground="{StaticResource AppMutedTextBrush}" />
-                            <TextBlock
-                                x:Name="StatusBlock"
-                                FontSize="18"
-                                FontWeight="SemiBold"
-                                Text="Stopped"
-                                TextTrimming="CharacterEllipsis" />
-                        </StackPanel>
+                        <TextBlock
+                            x:Name="CurrentTimeBlock"
+                            VerticalAlignment="Center"
+                            FontSize="15"
+                            Foreground="{StaticResource AppMutedTextBrush}"
+                            Text="0:00" />
+                        <Slider
+                            x:Name="ProgressSlider"
+                            Grid.Column="1"
+                            IsEnabled="False"
+                            Maximum="1"
+                            Minimum="0"
+                            Value="0"
+                            ValueChanged="ProgressSlider_OnValueChanged" />
+                        <TextBlock
+                            x:Name="DurationBlock"
+                            Grid.Column="2"
+                            VerticalAlignment="Center"
+                            HorizontalAlignment="Right"
+                            FontSize="15"
+                            Foreground="{StaticResource AppMutedTextBrush}"
+                            Text="0:00" />
                     </Grid>
 
-                    <ScrollViewer
-                        Grid.Row="1"
-                        HorizontalScrollBarVisibility="Auto"
-                        HorizontalScrollMode="Enabled"
-                        VerticalScrollBarVisibility="Disabled"
-                        VerticalScrollMode="Disabled">
-                        <StackPanel Orientation="Horizontal" Spacing="10">
+                    <TextBlock
+                        x:Name="SeekPreviewBlock"
+                        Grid.Row="0"
+                        Grid.ColumnSpan="3"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Bottom"
+                        Foreground="{StaticResource AppMutedTextBrush}"
+                        FontSize="15"
+                        TextTrimming="CharacterEllipsis"
+                        Visibility="Collapsed" />
+
+                    <Grid Grid.Row="1" ColumnSpacing="18">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel
+                            x:Name="PlaybackCapabilityChipsPanel"
+                            Orientation="Horizontal"
+                            Spacing="8"
+                            VerticalAlignment="Center">
+                            <Border
+                                MinWidth="{StaticResource TvPlaybackTransportChipMinWidth}"
+                                Background="{StaticResource AppChromeBrush}"
+                                CornerRadius="6"
+                                Padding="14,8">
+                                <TextBlock
+                                    x:Name="SourceChipBlock"
+                                    FontSize="14"
+                                    FontWeight="SemiBold"
+                                    Text="Source"
+                                    TextTrimming="CharacterEllipsis" />
+                            </Border>
+                            <Border
+                                MinWidth="{StaticResource TvPlaybackTransportChipMinWidth}"
+                                Background="{StaticResource AppChromeBrush}"
+                                CornerRadius="6"
+                                Padding="14,8">
+                                <TextBlock
+                                    x:Name="AudioChipBlock"
+                                    FontSize="14"
+                                    Foreground="{StaticResource AppMutedTextBrush}"
+                                    Text="Audio"
+                                    TextTrimming="CharacterEllipsis" />
+                            </Border>
+                        </StackPanel>
+
+                        <StackPanel
+                            x:Name="TransportControlsPanel"
+                            Grid.Column="1"
+                            Orientation="Horizontal"
+                            Spacing="8"
+                            VerticalAlignment="Center">
                             <Button
                                 x:Name="PauseButton"
                                 AutomationProperties.Name="Pause"
-                                MinWidth="122"
                                 Click="Pause_OnClick"
+                                Style="{StaticResource TvPlaybackPrimaryTransportButtonStyle}"
                                 ToolTipService.ToolTip="Pause playback">
-                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
                                     <SymbolIcon Symbol="Pause" />
                                     <TextBlock Text="Pause" />
                                 </StackPanel>
@@ -97,10 +213,10 @@
                             <Button
                                 x:Name="ResumeButton"
                                 AutomationProperties.Name="Resume"
-                                MinWidth="132"
                                 Click="Resume_OnClick"
+                                Style="{StaticResource TvPlaybackPrimaryTransportButtonStyle}"
                                 ToolTipService.ToolTip="Resume playback">
-                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
                                     <SymbolIcon Symbol="Play" />
                                     <TextBlock Text="Resume" />
                                 </StackPanel>
@@ -109,10 +225,10 @@
                             <Button
                                 x:Name="SeekBackButton"
                                 AutomationProperties.Name="Seek back 10 seconds"
-                                MinWidth="96"
                                 Click="SeekBack_OnClick"
+                                Style="{StaticResource TvPlaybackTransportButtonStyle}"
                                 ToolTipService.ToolTip="Seek backward ten seconds">
-                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
                                     <SymbolIcon Symbol="Back" />
                                     <TextBlock Text="10s" />
                                 </StackPanel>
@@ -121,85 +237,77 @@
                             <Button
                                 x:Name="SeekForwardButton"
                                 AutomationProperties.Name="Seek forward 30 seconds"
-                                MinWidth="96"
                                 Click="SeekForward_OnClick"
+                                Style="{StaticResource TvPlaybackTransportButtonStyle}"
                                 ToolTipService.ToolTip="Seek forward thirty seconds">
-                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
                                     <SymbolIcon Symbol="Forward" />
                                     <TextBlock Text="30s" />
                                 </StackPanel>
                             </Button>
-
-                            <Button
-                                x:Name="MoreButton"
-                                AutomationProperties.Name="More"
-                                MinWidth="112"
-                                Click="More_OnClick"
-                                ToolTipService.ToolTip="More playback controls">
-                                <StackPanel Orientation="Horizontal" Spacing="10">
-                                    <SymbolIcon Symbol="More" />
-                                    <TextBlock Text="More" />
-                                </StackPanel>
-                            </Button>
-
                             <Button
                                 x:Name="StopButton"
                                 AutomationProperties.Name="Stop"
-                                MinWidth="112"
                                 Click="Stop_OnClick"
+                                Style="{StaticResource TvPlaybackTransportButtonStyle}"
                                 ToolTipService.ToolTip="Stop playback">
-                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
                                     <SymbolIcon Symbol="Stop" />
                                     <TextBlock Text="Stop" />
                                 </StackPanel>
                             </Button>
                         </StackPanel>
-                    </ScrollViewer>
 
-                    <Border
-                        x:Name="ManualDebugPanel"
-                        Grid.Row="2"
-                        Background="{StaticResource AppSurfaceBrush}"
-                        Padding="14"
-                        Visibility="Collapsed">
-                        <Grid ColumnSpacing="16">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <TextBox
-                                x:Name="StreamUrlBox"
-                                Header="Direct stream URL"
-                                PlaceholderText="http://server:8096/Videos/item/stream"
-                                KeyDown="StreamUrlBox_OnKeyDown"
-                                TextChanged="StreamUrlBox_OnTextChanged" />
+                        <StackPanel
+                            Grid.Column="2"
+                            Orientation="Horizontal"
+                            Spacing="8"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center">
+                            <Border
+                                MinWidth="{StaticResource TvPlaybackTransportChipMinWidth}"
+                                Background="{StaticResource AppChromeBrush}"
+                                CornerRadius="6"
+                                Padding="14,8">
+                                <TextBlock
+                                    x:Name="SubtitleChipBlock"
+                                    FontSize="14"
+                                    Foreground="{StaticResource AppMutedTextBrush}"
+                                    Text="Subtitles"
+                                    TextTrimming="CharacterEllipsis" />
+                            </Border>
+
                             <Button
-                                x:Name="ManualStartButton"
-                                Grid.Column="1"
-                                AutomationProperties.Name="Play direct stream"
-                                MinWidth="112"
-                                VerticalAlignment="Bottom"
-                                Click="Start_OnClick"
-                                ToolTipService.ToolTip="Play direct stream">
-                                <StackPanel Orientation="Horizontal" Spacing="10">
-                                    <SymbolIcon Symbol="Play" />
-                                    <TextBlock Text="Play" />
+                                x:Name="MoreButton"
+                                AutomationProperties.Name="More"
+                                Click="More_OnClick"
+                                Style="{StaticResource TvPlaybackTransportButtonStyle}"
+                                ToolTipService.ToolTip="More playback controls">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <SymbolIcon Symbol="More" />
+                                    <TextBlock Text="More" />
                                 </StackPanel>
                             </Button>
-                        </Grid>
-                    </Border>
+                        </StackPanel>
+                    </Grid>
                 </Grid>
             </Border>
 
             <Border
                 x:Name="MoreDrawer"
-                Width="370"
+                Width="{StaticResource TvPlaybackMoreMenuWidth}"
+                MaxHeight="{StaticResource TvPlaybackMoreMenuMaxHeight}"
                 HorizontalAlignment="Right"
+                VerticalAlignment="Bottom"
                 Background="{StaticResource AppPlaybackDrawerBrush}"
-                Padding="22"
+                CornerRadius="8"
+                Margin="{StaticResource TvPlaybackMoreMenuMargin}"
+                Padding="{StaticResource TvPlaybackMoreMenuPadding}"
                 Visibility="Collapsed">
                 <ScrollViewer>
-                    <StackPanel Spacing="14">
+                    <StackPanel
+                        x:Name="MoreMenuPanel"
+                        Spacing="14">
                         <TextBlock
                             Text="Playback Options"
                             FontSize="22"
@@ -210,27 +318,31 @@
                             AutomationProperties.Name="Source"
                             HorizontalAlignment="Stretch"
                             Header="Source"
-                            Style="{StaticResource TvComboBoxStyle}"
+                            ProcessKeyboardAccelerators="MoreDrawerComboBox_OnProcessKeyboardAccelerators"
+                            Style="{StaticResource TvPlaybackOptionComboBoxStyle}"
                             SelectionChanged="SourceBox_OnSelectionChanged" />
                         <ComboBox
                             x:Name="AudioStreamBox"
                             AutomationProperties.Name="Audio"
                             HorizontalAlignment="Stretch"
                             Header="Audio"
-                            Style="{StaticResource TvComboBoxStyle}"
+                            ProcessKeyboardAccelerators="MoreDrawerComboBox_OnProcessKeyboardAccelerators"
+                            Style="{StaticResource TvPlaybackOptionComboBoxStyle}"
                             SelectionChanged="AudioStreamBox_OnSelectionChanged" />
                         <ComboBox
                             x:Name="SubtitleStreamBox"
                             AutomationProperties.Name="Subtitles"
                             HorizontalAlignment="Stretch"
                             Header="Subtitles"
-                            Style="{StaticResource TvComboBoxStyle}"
+                            ProcessKeyboardAccelerators="MoreDrawerComboBox_OnProcessKeyboardAccelerators"
+                            Style="{StaticResource TvPlaybackOptionComboBoxStyle}"
                             SelectionChanged="SubtitleStreamBox_OnSelectionChanged" />
                         <Button
                             x:Name="InfoButton"
                             AutomationProperties.Name="Info"
                             HorizontalAlignment="Stretch"
                             Click="Info_OnClick"
+                            Style="{StaticResource TvPlaybackMoreMenuButtonStyle}"
                             ToolTipService.ToolTip="Show playback information">
                             <StackPanel Orientation="Horizontal" Spacing="10">
                                 <SymbolIcon Symbol="Help" />

@@ -78,6 +78,18 @@ namespace NextGenEmby.Core.Playback
             return moreVisible && !seekPreviewActive;
         }
 
+        public static bool ShouldRouteMoreDrawerComboBoxDirectionalInput(
+            bool moreVisible,
+            bool seekPreviewActive,
+            bool comboBoxOpen,
+            bool verticalNavigation)
+        {
+            return moreVisible &&
+                !seekPreviewActive &&
+                !comboBoxOpen &&
+                verticalNavigation;
+        }
+
         public static bool ShouldRouteHandledShortcutInput(
             PlaybackOverlayShortcut shortcut,
             bool seekPreviewActive,
