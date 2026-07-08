@@ -131,6 +131,11 @@ $commands = @(
         -Command 'powershell' `
         -Arguments @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', 'tools\quality-run\Export-AppQualityRunReports.tests.ps1')
     New-CommandPlan `
+        -Name 'write-app-quality-run-command-test' `
+        -Description 'Verify plan-runs quality-run dev commands can be written to App LocalState for App-hosted capture.' `
+        -Command 'powershell' `
+        -Arguments @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', 'tools\quality-run\Write-AppQualityRunCommand.tests.ps1')
+    New-CommandPlan `
         -Name 'native-helper-test' `
         -Description 'Compile and run the standalone native playback quality metrics helper test.' `
         -Command 'cmd' `

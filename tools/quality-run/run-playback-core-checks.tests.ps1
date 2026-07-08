@@ -123,6 +123,10 @@ if (-not ($plan.commands | Where-Object { $_.name -eq 'export-app-quality-run-re
     throw 'Expected export-app-quality-run-reports-test command in playback-core validation plan.'
 }
 
+if (-not ($plan.commands | Where-Object { $_.name -eq 'write-app-quality-run-command-test' })) {
+    throw 'Expected write-app-quality-run-command-test command in playback-core validation plan.'
+}
+
 if (-not ($plan.commands | Where-Object { $_.name -eq 'native-display-refresh-test' })) {
     throw 'Expected native-display-refresh-test command in playback-core validation plan.'
 }

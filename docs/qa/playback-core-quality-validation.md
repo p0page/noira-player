@@ -155,6 +155,14 @@ dotnet run --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQ
 
 DEBUG App 现在有一个最小 App-hosted capture 入口：`plan-runs` 生成的 `devCommand.route = quality-run` 可以写入 App LocalFolder 的 `dev-command.json`。App 会走普通 item playback 路径，在 `durationSeconds` 指定的采样窗口内主动执行 pause、resume、seek、stop，然后把标准 `PlaybackQualityRunResult` envelope 写到 App LocalFolder 的 `quality-run/captured/<runId>.json`。例如 `runId = local/foo` 会写成 `quality-run/captured/local/foo.json`。如果打开媒体或播放命令阶段失败，App 会在同一路径写入标准 error envelope，而不是只留下缺失 report。这一步仍是 App-hosted 软件采集，不验证 Xbox/HDMI/display 输出；报告中的 display/color/frame timing/A/V sync 只代表当前 native/App 软件层暴露的指标。
 
+在 Windows 本机把 run plan 中的某个 `quality-run` dev command 写入最新安装的 App LocalState：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\quality-run\Write-AppQualityRunCommand.ps1 -RunPlanPath baseline-run-plan.json -CaseId '<case-id>' -SummaryPath docs\qa\private\quality-run-command-summary.local.json
+```
+
+该脚本只写入 `dev-command.json`，不启动 App、不执行播放，也不生成 captured report。它的作用是把 `plan-runs` 输出和 DEBUG App-hosted capture 入口连接起来，减少人工复制 JSON 的误差。`CaseId` 可省略，此时脚本会选择第一个带 `devCommand` 的 case。真实私有 `itemId`、`mediaSourceId` 和 summary 应保存在 ignored/private 路径中。
+
 在 Windows 本机导出 App LocalFolder 中的 captured reports：
 
 ```powershell
