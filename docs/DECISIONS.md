@@ -1,5 +1,15 @@
 # 技术决策
 
+## 2026-07-08: App-free native evidence provider 身份进入 playbackEvidence 判断
+
+决策：`analyze-report-set` 的 native/software playback evidence 判断从单一 `native-winrt:*` 扩展为 provider catalog：`native-winrt:*`、`native-headless:*` 和 `native-win32-harness:*`。这些 provider 会让集合级 `playbackEvidence.scope = native-software`、`status = available`、`canEvaluateNativePlayback = true`，前提是 report-set 没有混入 core-probe/source-only/skip-only 证据。
+
+原因：下一阶段目标是摆脱 UWP App 启动、打包、部署和 UI，转向 App-free native/software playback harness。如果 analyzer 只承认 `native-winrt:*`，后续独立 headless 或 Win32 harness 即使产出同等结构的 runtime metrics，也会被误判为证据不足。
+
+影响：CLI smoke 覆盖了 `native-headless:returned-snapshot` 的 imported report-set 分析路径。`evaluate-candidate` 仍复用 `playbackEvidence.canEvaluateNativePlayback`，因此未来 App-free harness 产出的 report-set 可以进入候选比较门禁。
+
+边界：这只是 evidence provider 身份分类，不实现 harness，不打开 native playback graph，不改变阈值、expected behavior、report-set validation 或播放行为。`native-headless:*` 不得用于包装 source-only、core-probe 或外部播放器报告；只有真实 App-free harness 采集到的软件播放证据才应使用该身份。
+
 ## 2026-07-08: candidate evaluation 要求 native/App 软件播放证据
 
 决策：`evaluate-candidate` 在 report-analysis gate 之后新增 `baseline-playback-evidence` 和 `candidate-playback-evidence`。两个 gate 复用 `ReportAnalysisSummary.PlaybackEvidence.CanEvaluateNativePlayback` 作为唯一判据；任一侧没有 native/App 软件播放证据时，candidate evaluation 停在对应 gate，顶层 blockers 写入 `baseline-playback-evidence.insufficient` 或 `candidate-playback-evidence.insufficient`，并跳过 suite comparison。

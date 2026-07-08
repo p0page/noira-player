@@ -104,6 +104,8 @@ try {
     $nativeHarnessImportedSummaryPath = Join-Path $tempRoot 'native-harness-imported-summary.json'
     $nativeHarnessImportedValidationPath = Join-Path $tempRoot 'native-harness-imported-validation.json'
     $nativeHarnessImportedAnalysisPath = Join-Path $tempRoot 'native-harness-imported-analysis.json'
+    $nativeHeadlessImportedDir = Join-Path $tempRoot 'native-headless-imported-report-set'
+    $nativeHeadlessAnalysisPath = Join-Path $tempRoot 'native-headless-analysis.json'
     $nativeHarnessMissingCapturedDir = Join-Path $tempRoot 'native-harness-missing-captured-report-set'
     $nativeHarnessMissingImportDir = Join-Path $tempRoot 'native-harness-missing-import-report-set'
     $nativeHarnessMissingImportSummaryPath = Join-Path $tempRoot 'native-harness-missing-import-summary.json'
@@ -1379,6 +1381,35 @@ try {
         $nativeHarnessImportedAnalysis.playbackEvidence.status -ne 'available' -or
         $nativeHarnessImportedAnalysis.playbackEvidence.canEvaluateNativePlayback -ne $true) {
         throw 'Expected imported native harness analyze-report-set summary to mark native software playback evidence as available.'
+    }
+
+    New-Item -ItemType Directory -Path (Join-Path $nativeHeadlessImportedDir 'local') | Out-Null
+    $nativeHeadlessReport = Get-Content -Raw -LiteralPath $nativeHarnessImportedReportPath | ConvertFrom-Json
+    $nativeHeadlessReport.report.runtimeMetrics.providerStatus = 'native-headless:returned-snapshot'
+    $nativeHeadlessReport.modelAnalysis.runtimeMetrics.providerStatus = 'native-headless:returned-snapshot'
+    $nativeHeadlessReport | ConvertTo-Json -Depth 30 |
+        Set-Content -LiteralPath (Join-Path $nativeHeadlessImportedDir 'local\native-harness-sdr-smoke.json') -Encoding UTF8
+
+    Push-Location $repoRoot
+    try {
+        dotnet $cliDll `
+            analyze-report-set `
+            --reports-dir $nativeHeadlessImportedDir `
+            --output $nativeHeadlessAnalysisPath
+        if ($LASTEXITCODE -ne 0) {
+            throw 'playback quality CLI analyze-report-set native-headless import returned a non-zero exit code.'
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    $nativeHeadlessAnalysis = Get-Content -Raw -LiteralPath $nativeHeadlessAnalysisPath | ConvertFrom-Json
+    if ($nativeHeadlessAnalysis.playbackEvidence.scope -ne 'native-software' -or
+        $nativeHeadlessAnalysis.playbackEvidence.status -ne 'available' -or
+        $nativeHeadlessAnalysis.playbackEvidence.canEvaluateNativePlayback -ne $true -or
+        -not ($nativeHeadlessAnalysis.evidenceSources -contains 'native-headless:returned-snapshot')) {
+        throw 'Expected native-headless runtime evidence to be recognized as App-free native software playback evidence.'
     }
 
     New-Item -ItemType Directory -Path $nativeHarnessMissingCapturedDir | Out-Null

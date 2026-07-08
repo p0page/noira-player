@@ -2,6 +2,12 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-08 更新：App-free native evidence provider 身份进入 playbackEvidence 判断
+
+`analyze-report-set` 的 `playbackEvidence` 判断现在不再只识别 `native-winrt:*`，也会把 `native-headless:*` 和 `native-win32-harness:*` 视为 native/software playback evidence provider。CLI smoke 新增了 `native-headless:returned-snapshot` 变体，确认这类 App-free provider 会输出 `playbackEvidence.scope = native-software`、`status = available` 和 `canEvaluateNativePlayback = true`。
+
+边界：这是 evidence classification 变更，不打开媒体、不运行 native graph、不解码、不渲染，也不证明 HDR、颜色、帧率或 A/V sync 正确。`native-headless:*` 只有在后续真实 App-free harness 写入 captured report 时才代表对应软件播放证据；不能用 source-only、core-probe 或外部工具报告冒充该 provider。
+
 ## 2026-07-08 更新：公开 direct-uri case 可进入 App-hosted quality-run
 
 `plan-runs` 现在会为 HTTP/HTTPS `direct-uri` case 生成 `devCommand.route = quality-run`，并把 manifest `uri` 写入 `devCommand.streamUrl`。DEBUG App 的 `quality-run` 路径现在也接受 `itemId` 或 `streamUrl` 二选一：有 `itemId` 时继续走 Emby item playback；只有 `streamUrl` 时走 direct stream native playback，并复用同一套 App-hosted pause/resume/seek/stop 采集和 `quality-run/captured/<runId>.json` 报告写入路径。

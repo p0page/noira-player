@@ -2523,7 +2523,7 @@ internal static class Program
     private static void AddReportAnalysisPlaybackEvidence(
         ReportAnalysisSummary summary)
     {
-        var hasNative = HasEvidenceSourcePrefix(summary, "native-winrt:");
+        var hasNative = HasNativeSoftwarePlaybackEvidence(summary);
         var hasCoreProbe = HasEvidenceSourcePrefix(summary, "core-probe:");
         var hasSourceOnly = summary.EvidenceSources.Contains("source-only");
 
@@ -2536,7 +2536,7 @@ internal static class Program
             summary.PlaybackEvidence.CanEvaluateOrchestration = true;
             AddUnique(
                 summary.PlaybackEvidence.Reasons,
-                "native-winrt runtime metrics provider evidence is present");
+                "native software runtime metrics provider evidence is present");
             return;
         }
 
@@ -2585,6 +2585,14 @@ internal static class Program
                 summary.PlaybackEvidence.Reasons,
                 "report set contains mixed playback evidence sources");
         }
+    }
+
+    private static bool HasNativeSoftwarePlaybackEvidence(
+        ReportAnalysisSummary summary)
+    {
+        return HasEvidenceSourcePrefix(summary, "native-winrt:") ||
+            HasEvidenceSourcePrefix(summary, "native-headless:") ||
+            HasEvidenceSourcePrefix(summary, "native-win32-harness:");
     }
 
     private static bool HasEvidenceSourcePrefix(
