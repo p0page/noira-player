@@ -561,3 +561,13 @@
 影响：`run-native-headless-harness-smoke-test.ps1` 增加 A/V report 的 immediate seek evidence 断言；`PlaybackQualityRunComparator` 现在会把 `position.seekPositionErrorMs` 放进 candidate comparison 的 matched signals，并按 lower-is-better 记录 `timeline` improvement/regression。以 `playback-core-tuning-video-clock-61fecb3.local` 为 baseline，新 candidate `playback-core-tuning-seek-evidence-working.local` 在同一 41-case manifest 下为 `accept-candidate`，9 个 timeline improvement，0 regression。
 
 边界：这是评测证据语义修正，不改变播放器 seek 行为、不改变 stable case expected、不降低阈值，也不证明真实设备上的 seek 体验已经完整正确。后续如果要评价 seek 后播放稳定性，应新增独立信号，而不是复用 seek landing error。
+
+# 2026-07-08: runtime timing/sync/buffering telemetry 进入 candidate comparison matched signals
+
+决策：`PlaybackQualityRunComparator` 在 baseline 和 candidate 都包含 runtime playback evidence 时，把 frame timing、A/V sync 和 buffering telemetry 暴露到 `coverage.matchedSignals`。这些信号包括 render interval P50/P95/P99、max frame gap、video ahead waits、audio/video clocks、drift percentiles、submitted/queued audio buffers 和 starvation counters。
+
+原因：第二轮 Core 调优的消费对象是模型。模型不能只知道 report-set 层面“有 evidence”，还需要在逐 case comparison 中看到同一 manifest 下 candidate 是否保留了 timing、sync、buffering 这些目标能力证据。否则含音轨 native-headless/Emby case 的关键证据仍要人工展开单个 report 才能确认，容易漏掉回归或缺证据。
+
+影响：`local/native-headless-av-smoke` comparison 现在同时暴露 frame pacing jitter、buffering、A/V sync、seek/timeline、track/subtitle 和 color/DXGI matched signals。重新比较 `playback-core-tuning-video-clock-61fecb3.local` 与 `playback-core-tuning-seek-evidence-16ba684.local` 后仍为 41 case 可比、`accept-candidate`、9 improvement、0 regression、0 mixed。
+
+边界：这些 runtime telemetry 在没有显式 threshold 或 failure delta 时只证明 evidence 可比，不自动解释成 improvement 或 regression，避免短样本采样噪音驱动 candidate 接受/拒绝。真正的播放策略调优仍需要同一 manifest 下的明确前后差异或失败阈值。

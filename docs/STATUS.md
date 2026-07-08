@@ -418,3 +418,17 @@ manifest validation、report-set validation、single comparison、comparison sui
 已生成 ignored candidate：`docs/qa/private/candidates/playback-core-tuning-seek-evidence-working.local/`，以已接受的 `playback-core-tuning-video-clock-61fecb3.local` 作为 baseline 做同 manifest 对比。结果：41 个 case 可比，`accept-candidate` / `keep-candidate`，9 个 `timeline` improvement，0 regression，0 mixed。`local/native-headless-av-smoke` 的 seek error 从 `1500.000ms` 降为 `0.000ms`，同时 A/V sync、audio track、subtitle track 和 DXGI matched signals 仍保留。
 
 边界：这是评测器/native-headless helper 的证据修正，不是播放器 Core/native 播放策略优化。它让后续模型不会被错误 timeline evidence 带偏；下一步仍应继续聚焦真实含音轨样本的 frame pacing jitter、A/V sync、buffering 与更长样本稳定性。
+
+# 2026-07-08 更新：runtime playback evidence 进入 candidate comparison
+
+本轮继续补齐第二轮调优所需的 comparison evidence。此前逐 case comparison 已能看到 check、seek/timeline 和 track/subtitle 证据，但真实含音轨 native-headless A/V case 中的 frame pacing jitter、buffering 和更完整 A/V sync runtime telemetry 仍主要停留在 report 本体，未进入 comparison 的 `coverage.matchedSignals`。
+
+本轮改动：
+
+- `PlaybackQualityRunComparator` 在 baseline 和 candidate 都有 runtime playback evidence 时，把 timing、sync 和 buffering 信号写入 matched signals。
+- 新增覆盖信号包括 `timing.renderIntervalMsP95/P99/maxFrameGapMs/videoAheadWaitCount`、`sync.audioClockTicks/videoPositionTicks/audioVideoDriftMsP50/P95/P99/Max`、`buffers.submittedAudioFrames/queuedAudioBuffers/videoStarvedPasses/audioStarvedPasses`。
+- 这些无阈值 runtime telemetry 只作为 comparison evidence 暴露，不因为一次采样波动自动制造 improvement/regression；candidate 是否可采纳仍由 checks、明确派生 delta 和既有 gate 判断。
+
+重新用同一 41-case manifest 对比 `playback-core-tuning-video-clock-61fecb3.local` 与 `playback-core-tuning-seek-evidence-16ba684.local`，输出 ignored comparison：`docs/qa/private/comparisons/playback-core-tuning-runtime-evidence-working.local/`。结果仍为 `accept-candidate` / `keep-candidate`，41 case 可比，9 improved，0 regression，0 mixed，strong confidence 41/41。`local/native-headless-av-smoke` 的 matched signals 已同时包含 frame pacing jitter、buffering、A/V sync、seek/timeline、track/subtitle 和 color/DXGI 证据。
+
+边界：这是 comparison artifact 的模型可消费性增强，不改变播放器行为、不改变 evaluator 阈值、不放宽样本预期，也不把 jitter 数值本身解释为已优化。下一步才适合基于这些完整 comparison signals 判断是否需要实际调优含音轨播放的 frame pacing 或采样窗口。

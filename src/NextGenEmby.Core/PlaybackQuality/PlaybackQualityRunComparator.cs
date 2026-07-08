@@ -200,6 +200,7 @@ namespace NextGenEmby.Core.PlaybackQuality
             AddUnmatchedCandidateSignals(comparison, candidate, matchedKeys);
             AddFramePacingSeverityDeltas(comparison, baseline, candidate);
             AddSeekTimelineEvidenceDeltas(comparison, baseline, candidate);
+            AddRuntimePlaybackEvidenceSignals(comparison, baseline, candidate);
             AddTrackAndSubtitleEvidenceDeltas(comparison, baseline, candidate);
 
             if (comparison.Improvements.Count > 0 && comparison.Regressions.Count > 0)
@@ -1150,6 +1151,87 @@ namespace NextGenEmby.Core.PlaybackQuality
                 Status = "observed",
                 Actual = actual.ToString("0.000", CultureInfo.InvariantCulture)
             };
+        }
+
+        private static void AddRuntimePlaybackEvidenceSignals(
+            PlaybackQualityRunComparison comparison,
+            PlaybackQualityReport baseline,
+            PlaybackQualityReport candidate)
+        {
+            if (!HasRuntimePlaybackEvidence(baseline) ||
+                !HasRuntimePlaybackEvidence(candidate))
+            {
+                return;
+            }
+
+            if (HasTimingEvidence(baseline) && HasTimingEvidence(candidate))
+            {
+                AddUnique(comparison.Coverage.MatchedSignals, "timing.renderIntervalMsP50");
+                AddUnique(comparison.Coverage.MatchedSignals, "timing.renderIntervalMsP95");
+                AddUnique(comparison.Coverage.MatchedSignals, "timing.renderIntervalMsP99");
+                AddUnique(comparison.Coverage.MatchedSignals, "timing.maxFrameGapMs");
+                AddUnique(comparison.Coverage.MatchedSignals, "timing.expectedFrameDurationMs");
+                AddUnique(comparison.Coverage.MatchedSignals, "timing.framePacingSourceFrameRate");
+                AddUnique(comparison.Coverage.MatchedSignals, "timing.videoAheadWaitCount");
+                AddUnique(comparison.Coverage.MatchedSignals, "timing.droppedVideoFrames");
+                AddUnique(comparison.Coverage.MatchedSignals, "timing.seekPrerollDroppedFrames");
+            }
+
+            if (HasSyncEvidence(baseline) && HasSyncEvidence(candidate))
+            {
+                AddUnique(comparison.Coverage.MatchedSignals, "sync.audioClockTicks");
+                AddUnique(comparison.Coverage.MatchedSignals, "sync.videoPositionTicks");
+                AddUnique(comparison.Coverage.MatchedSignals, "sync.audioVideoDriftMsP50");
+                AddUnique(comparison.Coverage.MatchedSignals, "sync.audioVideoDriftMsP95");
+                AddUnique(comparison.Coverage.MatchedSignals, "sync.audioVideoDriftMsP99");
+                AddUnique(comparison.Coverage.MatchedSignals, "sync.audioVideoDriftMsMax");
+            }
+
+            if (HasBufferingEvidence(baseline) && HasBufferingEvidence(candidate))
+            {
+                AddUnique(comparison.Coverage.MatchedSignals, "buffers.submittedAudioFrames");
+                AddUnique(comparison.Coverage.MatchedSignals, "buffers.queuedAudioBuffers");
+                AddUnique(comparison.Coverage.MatchedSignals, "buffers.videoStarvedPasses");
+                AddUnique(comparison.Coverage.MatchedSignals, "buffers.audioStarvedPasses");
+            }
+        }
+
+        private static bool HasRuntimePlaybackEvidence(PlaybackQualityReport report)
+        {
+            return report.RuntimeMetrics.HasPlaybackSample ||
+                HasTimingEvidence(report) ||
+                HasSyncEvidence(report) ||
+                HasBufferingEvidence(report);
+        }
+
+        private static bool HasTimingEvidence(PlaybackQualityReport report)
+        {
+            return report.Timing.RenderedVideoFrames > 0 ||
+                report.Timing.DecodedVideoFrames > 0 ||
+                report.Timing.RenderIntervalMsP50 > 0 ||
+                report.Timing.RenderIntervalMsP95 > 0 ||
+                report.Timing.RenderIntervalMsP99 > 0 ||
+                report.Timing.MaxFrameGapMs > 0 ||
+                report.Timing.ExpectedFrameDurationMs > 0 ||
+                report.Timing.FramePacingSourceFrameRate > 0;
+        }
+
+        private static bool HasSyncEvidence(PlaybackQualityReport report)
+        {
+            return report.Sync.AudioClockTicks > 0 ||
+                report.Sync.VideoPositionTicks > 0 ||
+                report.Sync.AudioVideoDriftMsP50 > 0 ||
+                report.Sync.AudioVideoDriftMsP95 > 0 ||
+                report.Sync.AudioVideoDriftMsP99 > 0 ||
+                report.Sync.AudioVideoDriftMsMax > 0;
+        }
+
+        private static bool HasBufferingEvidence(PlaybackQualityReport report)
+        {
+            return report.Buffers.SubmittedAudioFrames > 0 ||
+                report.Buffers.QueuedAudioBuffers > 0 ||
+                report.Buffers.VideoStarvedPasses > 0 ||
+                report.Buffers.AudioStarvedPasses > 0;
         }
 
         private static bool HasTrackComparisonEvidence(PlaybackQualityReport report)

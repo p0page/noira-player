@@ -394,6 +394,35 @@ public sealed class PlaybackQualityRunComparatorTests
     }
 
     [Fact]
+    public void Compare_Reports_Includes_Timing_Buffering_And_Sync_Evidence_Signals()
+    {
+        var baseline = CreateReport(
+            "baseline",
+            Check("RenderedVideoFrames", "pass", "frame-pacing", "timing.renderedVideoFrames", "1", "46"));
+        AddRuntimePlaybackEvidence(baseline);
+
+        var candidate = CreateReport(
+            "candidate",
+            Check("RenderedVideoFrames", "pass", "frame-pacing", "timing.renderedVideoFrames", "1", "46"));
+        AddRuntimePlaybackEvidence(candidate);
+
+        var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
+
+        Assert.Contains("timing.renderIntervalMsP95", comparison.Coverage.MatchedSignals);
+        Assert.Contains("timing.renderIntervalMsP99", comparison.Coverage.MatchedSignals);
+        Assert.Contains("timing.maxFrameGapMs", comparison.Coverage.MatchedSignals);
+        Assert.Contains("timing.videoAheadWaitCount", comparison.Coverage.MatchedSignals);
+        Assert.Contains("sync.audioClockTicks", comparison.Coverage.MatchedSignals);
+        Assert.Contains("sync.videoPositionTicks", comparison.Coverage.MatchedSignals);
+        Assert.Contains("sync.audioVideoDriftMsP95", comparison.Coverage.MatchedSignals);
+        Assert.Contains("buffers.submittedAudioFrames", comparison.Coverage.MatchedSignals);
+        Assert.Contains("buffers.queuedAudioBuffers", comparison.Coverage.MatchedSignals);
+        Assert.Contains("buffers.videoStarvedPasses", comparison.Coverage.MatchedSignals);
+        Assert.Contains("buffers.audioStarvedPasses", comparison.Coverage.MatchedSignals);
+        Assert.Empty(comparison.Regressions);
+    }
+
+    [Fact]
     public void Compare_Reports_PartialConfidence_When_Signals_Are_Unmatched()
     {
         var baseline = CreateReport(
@@ -686,6 +715,21 @@ public sealed class PlaybackQualityRunComparatorTests
             IsDefault = false,
             IsForced = false
         });
+    }
+
+    private static void AddRuntimePlaybackEvidence(PlaybackQualityReport report)
+    {
+        report.Timing.RenderIntervalMsP95 = 47.0;
+        report.Timing.RenderIntervalMsP99 = 48.0;
+        report.Timing.MaxFrameGapMs = 48.0;
+        report.Timing.VideoAheadWaitCount = 52;
+        report.Sync.AudioClockTicks = 15100000;
+        report.Sync.VideoPositionTicks = 15000000;
+        report.Sync.AudioVideoDriftMsP95 = 10.0;
+        report.Buffers.SubmittedAudioFrames = 82;
+        report.Buffers.QueuedAudioBuffers = 12;
+        report.Buffers.VideoStarvedPasses = 0;
+        report.Buffers.AudioStarvedPasses = 0;
     }
 
     private static PlaybackQualityCheck Check(
