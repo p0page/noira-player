@@ -249,6 +249,7 @@ manifest validation、report-set validation、single comparison、comparison sui
 
 ## 当前缺口
 
+- 当前 readiness audit 见 `docs/qa/playback-quality-v0.1-readiness-audit.md`。结论是：v0.1 裁判框架和证据门禁已经基本成型，但尚不能宣称完成，因为还没有可复现的 native/App 软件播放 report-set 作为真实 playback evidence baseline。
 - 轨道切换目前主要是发现/选择状态证据，尚未证明切换后的 native 播放行为完整正确。
 - 字幕 v0.1 只验证识别、选择和关闭状态，不验证最终视觉渲染正确性。
 - duration 和服务端明确返回的 chapters 已能从 Emby playback-info 的 media source 进入播放质量报告；这只覆盖章节元数据识别，不覆盖章节 UI、章节跳转或按章节 seek 行为。
