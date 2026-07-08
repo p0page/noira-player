@@ -1,4 +1,14 @@
 ﻿# 技术决策
+## 2026-07-08: App 开发期使用 XAML Hot Reload 与 loose file deploy
+
+决策：Noira UWP App 的 Debug 构建显式设置 `<DisableXbfLineInfo>False</DisableXbfLineInfo>` 和 `<UseDotNetNativeToolchain>false</UseDotNetNativeToolchain>`，以保留 Visual Studio XAML Hot Reload 所需信息。新增 `tools/Register-NoiraLooseApp.ps1` 作为本机 loose file deploy 入口：默认 clean/build 后从 `bin\<Platform>\<Configuration>\AppxManifest.xml` 注册 loose layout，`-ValidateOnly` 用于脚本和布局验证。
+
+原因：当前 App/XAML 迭代成本过高，每次小改都完整打包会拖慢交互和视觉修复。Microsoft 支持 UWP/Xbox 的 loose file registration，但它是开发期快速验证手段，不应替代最终包验证。
+
+影响：开发者可用 Visual Studio F5 做 Hot Reload，用 loose registration 快速启动本机 Debug layout；远程 Xbox 可通过网络共享配合 Device Portal 或 `WinAppDeployCmd registerfiles` 注册 loose layout。脚本默认 clean 输出目录，降低改名后旧二进制残留导致误判的概率。
+
+边界：该决策不改变播放器 core/native 行为、不改变播放质量评测规则、不证明真实 Xbox/HDR/HDMI 输出正确。最终验证、分发和质量结论仍以正常 MSIX 包、真机检查和 playback-quality report-set 为准。
+
 ## 2026-07-08: 文档入口和历史记录边界集中到 docs/README.md
 
 决策：新增 `docs/README.md` 作为文档入口，集中说明当前权威文档、冻结评测结果、历史 plan/log 和 latest-wins 规则。历史 plan、handoff、smoke log 和 QA run log 可以保留旧项目名、旧路径和旧命令；当前执行前必须优先核对 `docs/README.md` 指向的活文档和现有代码路径。

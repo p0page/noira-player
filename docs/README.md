@@ -19,6 +19,7 @@
 | 播放评测契约 | `docs/qa/software-playback-quality-metric-contract.md` | JSON 报告、failure 分类、model analysis 和 candidate gate 契约。 |
 | 播放评测运行 | `docs/qa/playback-core-quality-validation.md` | 本地运行 playback quality 工具链的命令和范围。 |
 | 样本规范 | `docs/qa/playback-quality-reference-corpus.md`、`docs/qa/private/README.md`、`docs/qa/public-test-media-catalog.md` | 公开/私有/本地样本维护规范。 |
+| 开发调试 | `docs/development-workflow.md` | XAML Hot Reload、本机 loose file deploy 和 Xbox/远程 loose registration 边界。 |
 | 设计系统 | `docs/DESIGN.md` | Noira 当前视觉系统、token、组件和页面规则。 |
 | 视觉收敛 | `docs/a3-visual-convergence-rules.md`、`docs/qa/a3-visual-convergence-checklist.md` | A3 阶段视觉目标和截图验收。 |
 | 交互 QA | `docs/qa/emby-tv-client-operation-matrix.md`、`docs/qa/design-conformance-checklist.md` | 当前 TV 客户端交互覆盖和设计验收。 |

@@ -10,6 +10,12 @@
 
 文档整理已经建立 `docs/README.md` 作为入口，明确当前权威文档、冻结评测结果、历史 plan/log 的边界。`docs/qa/baselines/` 当前保持冻结，未在本轮整理中改动。
 
+## 2026-07-08 更新：开发调试流程补齐 Hot Reload 和 loose deploy
+
+UWP App 的 Debug x64/x86 构建已显式保留 XAML Hot Reload 所需的 XBF line info，并禁用 Debug 下的 .NET Native toolchain。新增 `tools/Register-NoiraLooseApp.ps1`，用于 clean/build 后注册本机 Debug loose layout，也支持 `-ValidateOnly` 只验证 `AppxManifest.xml` 和注册参数，不改变系统包注册状态。
+
+文档状态：`docs/development-workflow.md` 记录 Visual Studio F5 Hot Reload、本机 loose file deploy、Xbox/远程 loose registration 的使用边界；`README.md` 和 `docs/README.md` 已指向该流程。该流程只用于缩短 App/XAML 开发迭代，不改变 playback-quality report-set、core/native 评测规则或最终 MSIX/真机验证要求。
+
 ## 2026-07-08 更新：wait reason evidence 已拆分，A/V jitter 定位更明确
 
 本轮只做 instrumentation/testability，不改变播放策略。`videoAheadWaitCount` 保持为兼容用总计数，同时新增 `audioAheadWaitCount` 与 `videoClockWaitCount`，用于区分 pending video frame 是在等待音频时钟追赶，还是在等待软件 video clock pacing。`PlaybackGraph`、native metrics snapshot、Core report mapper、analyzer、signal catalog、required-signal policy、headless parser、comparison matched signals 和 native-headless smoke 均已接入该拆分。

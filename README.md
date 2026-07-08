@@ -60,6 +60,15 @@ Run core tests:
 dotnet test tests\NoiraPlayer.Core.Tests\NoiraPlayer.Core.Tests.csproj -v minimal
 ```
 
+Register the Debug x64 loose layout for faster local app iteration:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\Register-NoiraLooseApp.ps1 `
+  -Configuration Debug `
+  -Platform x64 `
+  -Launch
+```
+
 Start with `docs/README.md` for the current documentation map, source-of-truth
 rules, and validation notes.
 
