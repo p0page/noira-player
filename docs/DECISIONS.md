@@ -630,3 +630,13 @@
 影响：实验代码回退，不改变当前播放器 Core/native 行为。该结果保留为下一步设计低开销高精度 wait primitive 的证据：方向上应继续围绕 audio target / oversleep，而不是继续调整固定 sleep 常量。
 
 边界：不要把本轮诊断改善解释为已采纳优化。除非后续补齐 CPU/调度开销证据，或引入可证明低开销的等待 primitive，并再次通过同 manifest baseline/candidate comparison，否则该策略不进入主线。
+
+# 2026-07-08: high-resolution waitable timer 作为低开销 audio target wait primitive 保留
+
+决策：保留 `38ae764` 引入的 `RenderLoopWaiter` 候选实现。它在 `ShouldWaitForAudio` 路径按 `AudioAheadWaitDuration` 计算下一轮 render loop 的目标等待时间，并优先使用 Windows high-resolution waitable timer；不可用时退回普通 waitable timer，再退回 `sleep_for`。这替代了上一轮不采纳的 yield-based precise wait，避免 busy/yield loop。
+
+原因：同一 41-case manifest 对比 `playback-core-tuning-audio-wait-target-evidence-41case-8e13b26.local` 与 `playback-core-tuning-highres-wait-41case-38ae764.local` 的结果为 41/41 可比、baseline/candidate validation 均通过、`manifest.sameCaseIds = true`、`decision = no-change`、0 improved、0 regressed、0 mixed、41 strong confidence。目标 A/V case 的诊断信号改善：`renderIntervalMsP95` 约 `47.5ms -> 41.0ms`，`audioAheadWaitDurationMsP95` 约 `31.3ms -> 27.7ms`，`audioAheadWaitOversleepMsP95` 约 `16.9ms -> 7.6ms`；`audioVideoDriftMsP95` 保持 `10ms`，音轨/字幕、buffering、seek/timeline 和 color/DXGI matched signals 均保留。
+
+影响：该实现作为低开销等待 primitive 进入当前 Core/native 主线，但不把本轮结果声明为播放质量 improvement。当前 evaluator 仍把这些 timing/oversleep 信号作为 matched diagnostic evidence，suite 决策仍为 `no-change`。后续调优可以基于该 primitive 继续补齐 CPU/调度开销、wait reason 或更长 A/V 样本证据。
+
+边界：该结论只来自 native-headless 纯软件短样本，不证明 Xbox/HDMI 输出、真实显示刷新、HDR 观感或长时间播放稳定性。`videoAheadWaitCount` 从 51 增加到 71，`audioVideoDriftMsP50` 从约 3.3ms 增至 6.7ms，虽然 P95 未退化，但仍属于剩余风险；后续不能仅凭本轮结果声称流畅度已改善。

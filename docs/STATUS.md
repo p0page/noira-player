@@ -496,3 +496,18 @@ manifest validation、report-set validation、single comparison、comparison sui
 目标 A/V case 的诊断信号有改善：`renderIntervalMsP95` 约 `47.5ms -> 38.0ms`，`audioAheadWaitOversleepMsP50/P95/Max` 约 `5.2/16.9/17.8ms -> 0.1/6.8/6.8ms`，`audioVideoDriftMsP95` 保持 `10ms`，submitted/queued audio 未下降。但 evaluator 当前只把这些信号作为 matched diagnostic evidence，不自动判定 improvement。
 
 结论：该候选证明“按 audio target 等待”方向比继续调固定 sleep 常量更有希望，但暂不采纳。原因是 suite 决策仍为 `no-change`，且 yield-based precise wait 可能引入 CPU 成本，当前评测器还没有 CPU/调度开销证据。实验代码已回退；下一步应优先补充 wait reason / CPU 或低开销高精度 wait primitive，再做同 manifest candidate comparison。
+
+# 2026-07-08 更新：high-resolution waitable timer 候选已进入主线，但仅作为 no-regression 低开销 primitive
+
+本轮把上一轮 yield-based precise wait 改成低开销 waitable timer 候选：新增 `RenderLoopWaiter`，在 audio-ahead gating 时按 `AudioAheadWaitDuration` 使用 high-resolution waitable timer 等待目标时间；不可用时自动回退普通 waitable timer 或 `sleep_for`。该改动已提交为 `38ae764 chore: add high resolution render loop wait candidate`。
+
+已重新生成 commit 绑定的 41-case candidate：`docs/qa/private/candidates/playback-core-tuning-highres-wait-41case-38ae764.local/`。同 manifest 对比输出：`docs/qa/private/comparisons/playback-core-tuning-highres-wait-41case-38ae764.local/`。对比基线为 `playback-core-tuning-audio-wait-target-evidence-41case-8e13b26.local`。
+
+评测结果：41/41 case 可比，baseline/candidate validation 均通过，`manifest.sameCaseIds = true`，`decision = no-change`，0 improved，0 regressed，0 mixed，41 strong confidence。`local/native-headless-av-smoke` 的关键诊断信号为：
+
+- render P50/P95/P99：`31.6/47.5/47.6ms -> 33.7/41.0/41.7ms`。
+- audio-ahead wait P50/P95/P99：`15.6/31.3/40.0ms -> 20.3/27.7/30.7ms`。
+- audio-ahead oversleep P50/P95/P99：`5.2/16.9/17.8ms -> 0.6/7.6/14.3ms`。
+- A/V drift P95 保持 `10ms`；submitted/queued audio 为 `81/11 -> 82/12`；track/subtitle、seek/timeline、buffering 和 color/DXGI matched signals 均保留。
+
+当前结论：该候选可以保留为低开销等待 primitive，但不能宣称播放器质量已提升。原因是 suite 仍为 `no-change`，且还没有 CPU/调度开销、长样本稳定性或真实设备输出证据。剩余风险是 `videoAheadWaitCount` 增加 `51 -> 71`，`audioVideoDriftMsP50` 从约 `3.3ms` 增至 `6.7ms`；后续应补齐 wait reason / CPU evidence 或更长 A/V 样本，再决定是否把 audio-ahead oversleep 纳入明确 improvement/regression 规则。
