@@ -27,6 +27,20 @@ namespace winrt::NextGenEmby::Native::implementation
                 framePositionTicks > audioPositionTicks + VideoAheadToleranceTicks;
         }
 
+        static constexpr std::chrono::microseconds AudioAheadWaitDuration(
+            int64_t framePositionTicks,
+            int64_t audioPositionTicks,
+            bool hasQueuedAudio) noexcept
+        {
+            if (!ShouldWaitForAudio(framePositionTicks, audioPositionTicks, hasQueuedAudio))
+            {
+                return std::chrono::microseconds(0);
+            }
+
+            return std::chrono::microseconds(
+                (framePositionTicks - audioPositionTicks - VideoAheadToleranceTicks) / 10);
+        }
+
         static constexpr bool ShouldDropLateFrame(
             int64_t framePositionTicks,
             int64_t audioPositionTicks,

@@ -84,6 +84,7 @@ function New-CommandPlan(
 $vcvars = 'C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat'
 $nativeHelperCommand = '"' + $vcvars + '" >nul && cl /nologo /std:c++20 /EHsc /I src\NextGenEmby.Native /Fo:C:\tmp\PlaybackQualityMetricsTests.obj tests\NextGenEmby.Native.Tests\PlaybackQualityMetricsTests.cpp /Fe:C:\tmp\PlaybackQualityMetricsTests.exe && C:\tmp\PlaybackQualityMetricsTests.exe'
 $nativeFramePacingCommand = '"' + $vcvars + '" >nul && cl /nologo /std:c++20 /EHsc /I src\NextGenEmby.Native /Fo:C:\tmp\FramePacingTests.obj tests\NextGenEmby.Native.Tests\FramePacingTests.cpp /Fe:C:\tmp\FramePacingTests.exe && C:\tmp\FramePacingTests.exe'
+$nativeRenderLoopWaiterCommand = '"' + $vcvars + '" >nul && cl /nologo /std:c++20 /EHsc /I src\NextGenEmby.Native /Fo:C:\tmp\RenderLoopWaiterTests.obj tests\NextGenEmby.Native.Tests\RenderLoopWaiterTests.cpp /Fe:C:\tmp\RenderLoopWaiterTests.exe && C:\tmp\RenderLoopWaiterTests.exe'
 $nativeDisplayRefreshCommand = '"' + $vcvars + '" >nul && cl /nologo /std:c++20 /EHsc /I src\NextGenEmby.Native /Fo:C:\tmp\DisplayRefreshRatePolicyTests.obj tests\NextGenEmby.Native.Tests\DisplayRefreshRatePolicyTests.cpp /Fe:C:\tmp\DisplayRefreshRatePolicyTests.exe && C:\tmp\DisplayRefreshRatePolicyTests.exe'
 $nativeDisplayRefreshSnapshotCommand = '"' + $vcvars + '" >nul && cl /nologo /std:c++20 /EHsc /I src\NextGenEmby.Native /Fo:C:\tmp\HdrDisplayRefreshRateSnapshotTests.obj tests\NextGenEmby.Native.Tests\HdrDisplayRefreshRateSnapshotTests.cpp /Fe:C:\tmp\HdrDisplayRefreshRateSnapshotTests.exe && C:\tmp\HdrDisplayRefreshRateSnapshotTests.exe'
 $nativeDxOffscreenCommand = '"' + $vcvars + '" >nul && if not exist C:\tmp\nextgenemby-native-dx-offscreen mkdir C:\tmp\nextgenemby-native-dx-offscreen && cl /nologo /std:c++20 /EHsc /DWIN32_LEAN_AND_MEAN /DWINRT_LEAN_AND_MEAN /I src\NextGenEmby.Native /I src\NextGenEmby.Native\packages\FFmpegInteropX.FFmpegUWP.5.1.100\include /Fo:C:\tmp\nextgenemby-native-dx-offscreen\ tests\NextGenEmby.Native.Tests\DxDeviceResourcesOffscreenTests.cpp src\NextGenEmby.Native\DxDeviceResources.cpp src\NextGenEmby.Native\Media\DxgiColorSpaceMapper.cpp src\NextGenEmby.Native\Media\HdrToneMappingPass.cpp src\NextGenEmby.Native\NativePlaybackDiagnostics.cpp /Fe:C:\tmp\DxDeviceResourcesOffscreenTests.exe d3d11.lib dxgi.lib d2d1.lib dwrite.lib d3dcompiler.lib windowsapp.lib && C:\tmp\DxDeviceResourcesOffscreenTests.exe'
@@ -161,6 +162,11 @@ $commands = @(
         -Description 'Compile and run the standalone native frame pacing policy test.' `
         -Command 'cmd' `
         -Arguments @('/c', $nativeFramePacingCommand)
+    New-CommandPlan `
+        -Name 'native-render-loop-waiter-test' `
+        -Description 'Compile and run the standalone native render loop wait helper test.' `
+        -Command 'cmd' `
+        -Arguments @('/c', $nativeRenderLoopWaiterCommand)
     New-CommandPlan `
         -Name 'native-display-refresh-test' `
         -Description 'Compile and run the standalone native display refresh cadence policy test.' `

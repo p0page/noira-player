@@ -5,6 +5,7 @@
 #include "DxDeviceResources.h"
 #include "FfmpegMediaSource.h"
 #include "PlaybackQualityMetrics.h"
+#include "RenderLoopWaiter.h"
 #include "SubtitleDecoder.h"
 #include "SubtitleRenderer.h"
 #include "VideoDecoder.h"
@@ -131,6 +132,9 @@ namespace winrt::NextGenEmby::Native::implementation
         std::chrono::steady_clock::time_point m_lastRenderedFrameAt{};
         std::optional<std::chrono::steady_clock::time_point> m_audioAheadWaitStartedAt;
         std::optional<double> m_audioAheadWaitTargetMs;
+        std::chrono::steady_clock::duration m_nextRenderLoopWait{std::chrono::milliseconds(5)};
+        bool m_nextRenderLoopWaitUseTimer{false};
+        RenderLoopWaiter m_renderLoopWaiter;
         std::chrono::steady_clock::time_point m_videoClockStartedAt{};
         int64_t m_videoClockStartPositionTicks{0};
         std::thread m_renderThread;

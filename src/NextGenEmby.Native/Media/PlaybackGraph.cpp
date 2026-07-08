@@ -331,6 +331,9 @@ namespace winrt::NextGenEmby::Native::implementation
                 }
             }
 
+            auto renderLoopWait = std::chrono::steady_clock::duration{PlaybackFramePacing::RenderLoopWait()};
+            auto renderLoopWaitUseTimer = false;
+
             try
             {
                 bool reachedEnd = false;
@@ -352,6 +355,11 @@ namespace winrt::NextGenEmby::Native::implementation
                         m_stopRenderLoop = true;
                         reachedEnd = true;
                     }
+
+                    renderLoopWait = m_nextRenderLoopWait;
+                    renderLoopWaitUseTimer = m_nextRenderLoopWaitUseTimer;
+                    m_nextRenderLoopWait = PlaybackFramePacing::RenderLoopWait();
+                    m_nextRenderLoopWaitUseTimer = false;
                 }
 
                 if (reachedEnd)
@@ -394,7 +402,14 @@ namespace winrt::NextGenEmby::Native::implementation
                 return;
             }
 
-            std::this_thread::sleep_for(PlaybackFramePacing::RenderLoopWait());
+            if (renderLoopWaitUseTimer)
+            {
+                m_renderLoopWaiter.WaitFor(renderLoopWait);
+            }
+            else
+            {
+                std::this_thread::sleep_for(renderLoopWait);
+            }
         }
     }
 
@@ -476,6 +491,12 @@ namespace winrt::NextGenEmby::Native::implementation
                                 frame.PositionTicks - *audioPosition - PlaybackFramePacing::VideoAheadToleranceTicks) /
                                 10000.0);
                     }
+
+                    m_nextRenderLoopWait = PlaybackFramePacing::AudioAheadWaitDuration(
+                        frame.PositionTicks,
+                        *audioPosition,
+                        hasQueuedAudio);
+                    m_nextRenderLoopWaitUseTimer = m_nextRenderLoopWait > std::chrono::steady_clock::duration::zero();
 
                     ++m_videoAheadWaitCount;
                     ++m_qualityMetrics.VideoAheadWaitCount;

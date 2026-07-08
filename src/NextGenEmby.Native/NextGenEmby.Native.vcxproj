@@ -110,6 +110,7 @@
     <ClInclude Include="Media\HttpMediaInput.h" />
     <ClInclude Include="Media\PlaybackGraph.h" />
     <ClInclude Include="Media\PlaybackQualityMetrics.h" />
+    <ClInclude Include="Media\RenderLoopWaiter.h" />
     <ClInclude Include="Media\SubtitleDecoder.h" />
     <ClInclude Include="Media\SubtitleRenderer.h" />
     <ClInclude Include="Media\VideoDecoder.h" />
