@@ -470,6 +470,11 @@ namespace winrt::NextGenEmby::Native::implementation
                     if (!m_audioAheadWaitStartedAt)
                     {
                         m_audioAheadWaitStartedAt = std::chrono::steady_clock::now();
+                        m_audioAheadWaitTargetMs = (std::max)(
+                            0.0,
+                            static_cast<double>(
+                                frame.PositionTicks - *audioPosition - PlaybackFramePacing::VideoAheadToleranceTicks) /
+                                10000.0);
                     }
 
                     ++m_videoAheadWaitCount;
@@ -646,6 +651,7 @@ namespace winrt::NextGenEmby::Native::implementation
     void PlaybackGraph::ResetAudioAheadWait() noexcept
     {
         m_audioAheadWaitStartedAt.reset();
+        m_audioAheadWaitTargetMs.reset();
     }
 
     void PlaybackGraph::RecordAudioAheadWaitIfNeeded() noexcept
@@ -658,7 +664,7 @@ namespace winrt::NextGenEmby::Native::implementation
         auto now = std::chrono::steady_clock::now();
         auto durationMs = std::chrono::duration<double, std::milli>(
             now - *m_audioAheadWaitStartedAt).count();
-        m_qualityMetrics.RecordAudioAheadWaitDurationMs(durationMs);
+        m_qualityMetrics.RecordAudioAheadWaitMs(durationMs, m_audioAheadWaitTargetMs.value_or(0.0));
         ResetAudioAheadWait();
     }
 

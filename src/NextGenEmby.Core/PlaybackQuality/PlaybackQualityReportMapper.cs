@@ -50,6 +50,14 @@ namespace NextGenEmby.Core.PlaybackQuality
             report.Timing.AudioAheadWaitDurationMsP95 = metrics.AudioAheadWaitDurationMsP95;
             report.Timing.AudioAheadWaitDurationMsP99 = metrics.AudioAheadWaitDurationMsP99;
             report.Timing.AudioAheadWaitDurationMsMax = metrics.AudioAheadWaitDurationMsMax;
+            report.Timing.AudioAheadWaitTargetMsP50 = metrics.AudioAheadWaitTargetMsP50;
+            report.Timing.AudioAheadWaitTargetMsP95 = metrics.AudioAheadWaitTargetMsP95;
+            report.Timing.AudioAheadWaitTargetMsP99 = metrics.AudioAheadWaitTargetMsP99;
+            report.Timing.AudioAheadWaitTargetMsMax = metrics.AudioAheadWaitTargetMsMax;
+            report.Timing.AudioAheadWaitOversleepMsP50 = metrics.AudioAheadWaitOversleepMsP50;
+            report.Timing.AudioAheadWaitOversleepMsP95 = metrics.AudioAheadWaitOversleepMsP95;
+            report.Timing.AudioAheadWaitOversleepMsP99 = metrics.AudioAheadWaitOversleepMsP99;
+            report.Timing.AudioAheadWaitOversleepMsMax = metrics.AudioAheadWaitOversleepMsMax;
             report.Timing.FramePacingSourceFrameRate = metrics.FramePacingSourceFrameRate;
             report.Timing.LateFrameDropToleranceMs = metrics.LateFrameDropToleranceMs;
 

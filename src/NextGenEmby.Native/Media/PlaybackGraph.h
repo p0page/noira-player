@@ -130,6 +130,7 @@ namespace winrt::NextGenEmby::Native::implementation
         std::chrono::steady_clock::time_point m_lastRuntimeStatsLog{};
         std::chrono::steady_clock::time_point m_lastRenderedFrameAt{};
         std::optional<std::chrono::steady_clock::time_point> m_audioAheadWaitStartedAt;
+        std::optional<double> m_audioAheadWaitTargetMs;
         std::chrono::steady_clock::time_point m_videoClockStartedAt{};
         int64_t m_videoClockStartPositionTicks{0};
         std::thread m_renderThread;

@@ -26,6 +26,14 @@ namespace NextGenEmby.Core.PlaybackQuality
         public double AudioAheadWaitDurationMsP95 { get; set; }
         public double AudioAheadWaitDurationMsP99 { get; set; }
         public double AudioAheadWaitDurationMsMax { get; set; }
+        public double AudioAheadWaitTargetMsP50 { get; set; }
+        public double AudioAheadWaitTargetMsP95 { get; set; }
+        public double AudioAheadWaitTargetMsP99 { get; set; }
+        public double AudioAheadWaitTargetMsMax { get; set; }
+        public double AudioAheadWaitOversleepMsP50 { get; set; }
+        public double AudioAheadWaitOversleepMsP95 { get; set; }
+        public double AudioAheadWaitOversleepMsP99 { get; set; }
+        public double AudioAheadWaitOversleepMsMax { get; set; }
         public double FramePacingSourceFrameRate { get; set; }
         public double LateFrameDropToleranceMs { get; set; }
         public double AudioVideoDriftMsP50 { get; set; }

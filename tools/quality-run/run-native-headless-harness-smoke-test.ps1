@@ -584,6 +584,16 @@ if ($nativeAvReport.report.timing.audioAheadWaitDurationMsP95 -le 0 -or
     throw 'Expected native helper A/V report to include audio-ahead wait duration evidence.'
 }
 
+if ($nativeAvReport.report.timing.audioAheadWaitTargetMsP95 -le 0 -or
+    $nativeAvReport.report.timing.audioAheadWaitTargetMsMax -le 0) {
+    throw 'Expected native helper A/V report to include audio-ahead wait target evidence.'
+}
+
+if ($nativeAvReport.report.timing.audioAheadWaitOversleepMsP95 -le 0 -or
+    $nativeAvReport.report.timing.audioAheadWaitOversleepMsMax -le 0) {
+    throw 'Expected native helper A/V report to include audio-ahead wait oversleep evidence.'
+}
+
 if ($nativeAvReport.report.sync.audioClockTicks -le 0 -or
     $nativeAvReport.report.sync.videoPositionTicks -le 0 -or
     $nativeAvReport.report.sync.audioVideoDriftMsP95 -le 0) {

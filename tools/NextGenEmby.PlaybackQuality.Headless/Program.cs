@@ -291,6 +291,14 @@ internal static class NativeHeadlessHarness
         metrics.AudioAheadWaitDurationMsP95 = GetDouble(values, "audioAheadWaitDurationMsP95");
         metrics.AudioAheadWaitDurationMsP99 = GetDouble(values, "audioAheadWaitDurationMsP99");
         metrics.AudioAheadWaitDurationMsMax = GetDouble(values, "audioAheadWaitDurationMsMax");
+        metrics.AudioAheadWaitTargetMsP50 = GetDouble(values, "audioAheadWaitTargetMsP50");
+        metrics.AudioAheadWaitTargetMsP95 = GetDouble(values, "audioAheadWaitTargetMsP95");
+        metrics.AudioAheadWaitTargetMsP99 = GetDouble(values, "audioAheadWaitTargetMsP99");
+        metrics.AudioAheadWaitTargetMsMax = GetDouble(values, "audioAheadWaitTargetMsMax");
+        metrics.AudioAheadWaitOversleepMsP50 = GetDouble(values, "audioAheadWaitOversleepMsP50");
+        metrics.AudioAheadWaitOversleepMsP95 = GetDouble(values, "audioAheadWaitOversleepMsP95");
+        metrics.AudioAheadWaitOversleepMsP99 = GetDouble(values, "audioAheadWaitOversleepMsP99");
+        metrics.AudioAheadWaitOversleepMsMax = GetDouble(values, "audioAheadWaitOversleepMsMax");
         metrics.FramePacingSourceFrameRate = GetDouble(values, "framePacingSourceFrameRate");
         metrics.LateFrameDropToleranceMs = GetDouble(values, "lateFrameDropToleranceMs");
         metrics.AudioVideoDriftMsP50 = GetDouble(values, "audioVideoDriftMsP50");

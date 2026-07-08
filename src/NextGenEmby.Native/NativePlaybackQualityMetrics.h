@@ -80,6 +80,30 @@ namespace winrt::NextGenEmby::Native::implementation
         double AudioAheadWaitDurationMsMax() const noexcept { return m_audioAheadWaitDurationMsMax; }
         void AudioAheadWaitDurationMsMax(double value) noexcept { m_audioAheadWaitDurationMsMax = value; }
 
+        double AudioAheadWaitTargetMsP50() const noexcept { return m_audioAheadWaitTargetMsP50; }
+        void AudioAheadWaitTargetMsP50(double value) noexcept { m_audioAheadWaitTargetMsP50 = value; }
+
+        double AudioAheadWaitTargetMsP95() const noexcept { return m_audioAheadWaitTargetMsP95; }
+        void AudioAheadWaitTargetMsP95(double value) noexcept { m_audioAheadWaitTargetMsP95 = value; }
+
+        double AudioAheadWaitTargetMsP99() const noexcept { return m_audioAheadWaitTargetMsP99; }
+        void AudioAheadWaitTargetMsP99(double value) noexcept { m_audioAheadWaitTargetMsP99 = value; }
+
+        double AudioAheadWaitTargetMsMax() const noexcept { return m_audioAheadWaitTargetMsMax; }
+        void AudioAheadWaitTargetMsMax(double value) noexcept { m_audioAheadWaitTargetMsMax = value; }
+
+        double AudioAheadWaitOversleepMsP50() const noexcept { return m_audioAheadWaitOversleepMsP50; }
+        void AudioAheadWaitOversleepMsP50(double value) noexcept { m_audioAheadWaitOversleepMsP50 = value; }
+
+        double AudioAheadWaitOversleepMsP95() const noexcept { return m_audioAheadWaitOversleepMsP95; }
+        void AudioAheadWaitOversleepMsP95(double value) noexcept { m_audioAheadWaitOversleepMsP95 = value; }
+
+        double AudioAheadWaitOversleepMsP99() const noexcept { return m_audioAheadWaitOversleepMsP99; }
+        void AudioAheadWaitOversleepMsP99(double value) noexcept { m_audioAheadWaitOversleepMsP99 = value; }
+
+        double AudioAheadWaitOversleepMsMax() const noexcept { return m_audioAheadWaitOversleepMsMax; }
+        void AudioAheadWaitOversleepMsMax(double value) noexcept { m_audioAheadWaitOversleepMsMax = value; }
+
         double FramePacingSourceFrameRate() const noexcept { return m_framePacingSourceFrameRate; }
         void FramePacingSourceFrameRate(double value) noexcept { m_framePacingSourceFrameRate = value; }
 
@@ -123,6 +147,14 @@ namespace winrt::NextGenEmby::Native::implementation
         double m_audioAheadWaitDurationMsP95{0.0};
         double m_audioAheadWaitDurationMsP99{0.0};
         double m_audioAheadWaitDurationMsMax{0.0};
+        double m_audioAheadWaitTargetMsP50{0.0};
+        double m_audioAheadWaitTargetMsP95{0.0};
+        double m_audioAheadWaitTargetMsP99{0.0};
+        double m_audioAheadWaitTargetMsMax{0.0};
+        double m_audioAheadWaitOversleepMsP50{0.0};
+        double m_audioAheadWaitOversleepMsP95{0.0};
+        double m_audioAheadWaitOversleepMsP99{0.0};
+        double m_audioAheadWaitOversleepMsMax{0.0};
         double m_framePacingSourceFrameRate{0.0};
         double m_lateFrameDropToleranceMs{0.0};
         double m_audioVideoDriftMsP50{0.0};

@@ -34,6 +34,14 @@ namespace winrt::NextGenEmby::Native::implementation
         double AudioAheadWaitDurationMsP95{0.0};
         double AudioAheadWaitDurationMsP99{0.0};
         double AudioAheadWaitDurationMsMax{0.0};
+        double AudioAheadWaitTargetMsP50{0.0};
+        double AudioAheadWaitTargetMsP95{0.0};
+        double AudioAheadWaitTargetMsP99{0.0};
+        double AudioAheadWaitTargetMsMax{0.0};
+        double AudioAheadWaitOversleepMsP50{0.0};
+        double AudioAheadWaitOversleepMsP95{0.0};
+        double AudioAheadWaitOversleepMsP99{0.0};
+        double AudioAheadWaitOversleepMsMax{0.0};
         double FramePacingSourceFrameRate{0.0};
         double LateFrameDropToleranceMs{0.0};
         double AudioVideoDriftMsP50{0.0};
@@ -140,7 +148,20 @@ namespace winrt::NextGenEmby::Native::implementation
 
         void RecordAudioAheadWaitDurationMs(double value) noexcept
         {
-            m_audioAheadWaitDurations.Add(value);
+            RecordAudioAheadWaitMs(value, 0.0);
+        }
+
+        void RecordAudioAheadWaitMs(double durationMs, double targetMs) noexcept
+        {
+            if (targetMs < 0.0)
+            {
+                targetMs = 0.0;
+            }
+
+            auto oversleepMs = durationMs > targetMs ? durationMs - targetMs : 0.0;
+            m_audioAheadWaitDurations.Add(durationMs);
+            m_audioAheadWaitTargets.Add(targetMs);
+            m_audioAheadWaitOversleeps.Add(oversleepMs);
         }
 
         void RecordAudioVideoDriftTicks(int64_t driftTicks) noexcept
@@ -175,6 +196,14 @@ namespace winrt::NextGenEmby::Native::implementation
             snapshot.AudioAheadWaitDurationMsP95 = m_audioAheadWaitDurations.Percentile(95);
             snapshot.AudioAheadWaitDurationMsP99 = m_audioAheadWaitDurations.Percentile(99);
             snapshot.AudioAheadWaitDurationMsMax = m_audioAheadWaitDurations.Max();
+            snapshot.AudioAheadWaitTargetMsP50 = m_audioAheadWaitTargets.Percentile(50);
+            snapshot.AudioAheadWaitTargetMsP95 = m_audioAheadWaitTargets.Percentile(95);
+            snapshot.AudioAheadWaitTargetMsP99 = m_audioAheadWaitTargets.Percentile(99);
+            snapshot.AudioAheadWaitTargetMsMax = m_audioAheadWaitTargets.Max();
+            snapshot.AudioAheadWaitOversleepMsP50 = m_audioAheadWaitOversleeps.Percentile(50);
+            snapshot.AudioAheadWaitOversleepMsP95 = m_audioAheadWaitOversleeps.Percentile(95);
+            snapshot.AudioAheadWaitOversleepMsP99 = m_audioAheadWaitOversleeps.Percentile(99);
+            snapshot.AudioAheadWaitOversleepMsMax = m_audioAheadWaitOversleeps.Max();
             snapshot.FramePacingSourceFrameRate = FramePacingSourceFrameRate;
             snapshot.LateFrameDropToleranceMs = LateFrameDropToleranceMs;
             snapshot.AudioVideoDriftMsP50 = m_audioVideoDriftMs.Percentile(50);
@@ -188,6 +217,8 @@ namespace winrt::NextGenEmby::Native::implementation
         PlaybackQualityHistogram m_renderIntervals;
         PlaybackQualityHistogram m_presentDurations;
         PlaybackQualityHistogram m_audioAheadWaitDurations;
+        PlaybackQualityHistogram m_audioAheadWaitTargets;
+        PlaybackQualityHistogram m_audioAheadWaitOversleeps;
         PlaybackQualityHistogram m_audioVideoDriftMs;
     };
 }

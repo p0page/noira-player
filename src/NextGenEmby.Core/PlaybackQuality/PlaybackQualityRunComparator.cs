@@ -1177,6 +1177,14 @@ namespace NextGenEmby.Core.PlaybackQuality
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitDurationMsP95");
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitDurationMsP99");
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitDurationMsMax");
+                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitTargetMsP50");
+                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitTargetMsP95");
+                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitTargetMsP99");
+                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitTargetMsMax");
+                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitOversleepMsP50");
+                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitOversleepMsP95");
+                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitOversleepMsP99");
+                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitOversleepMsMax");
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.maxFrameGapMs");
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.expectedFrameDurationMs");
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.framePacingSourceFrameRate");
@@ -1227,6 +1235,14 @@ namespace NextGenEmby.Core.PlaybackQuality
                 report.Timing.AudioAheadWaitDurationMsP95 > 0 ||
                 report.Timing.AudioAheadWaitDurationMsP99 > 0 ||
                 report.Timing.AudioAheadWaitDurationMsMax > 0 ||
+                report.Timing.AudioAheadWaitTargetMsP50 > 0 ||
+                report.Timing.AudioAheadWaitTargetMsP95 > 0 ||
+                report.Timing.AudioAheadWaitTargetMsP99 > 0 ||
+                report.Timing.AudioAheadWaitTargetMsMax > 0 ||
+                report.Timing.AudioAheadWaitOversleepMsP50 > 0 ||
+                report.Timing.AudioAheadWaitOversleepMsP95 > 0 ||
+                report.Timing.AudioAheadWaitOversleepMsP99 > 0 ||
+                report.Timing.AudioAheadWaitOversleepMsMax > 0 ||
                 report.Timing.MaxFrameGapMs > 0 ||
                 report.Timing.ExpectedFrameDurationMs > 0 ||
                 report.Timing.FramePacingSourceFrameRate > 0;

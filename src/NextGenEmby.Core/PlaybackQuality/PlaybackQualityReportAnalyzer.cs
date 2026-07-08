@@ -2465,6 +2465,46 @@ namespace NextGenEmby.Core.PlaybackQuality
                 AddUnique(analysis.EvidenceSignals, "timing.audioAheadWaitDurationMsMax");
             }
 
+            if (report.Timing.AudioAheadWaitTargetMsP50 > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.audioAheadWaitTargetMsP50");
+            }
+
+            if (report.Timing.AudioAheadWaitTargetMsP95 > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.audioAheadWaitTargetMsP95");
+            }
+
+            if (report.Timing.AudioAheadWaitTargetMsP99 > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.audioAheadWaitTargetMsP99");
+            }
+
+            if (report.Timing.AudioAheadWaitTargetMsMax > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.audioAheadWaitTargetMsMax");
+            }
+
+            if (report.Timing.AudioAheadWaitOversleepMsP50 > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.audioAheadWaitOversleepMsP50");
+            }
+
+            if (report.Timing.AudioAheadWaitOversleepMsP95 > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.audioAheadWaitOversleepMsP95");
+            }
+
+            if (report.Timing.AudioAheadWaitOversleepMsP99 > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.audioAheadWaitOversleepMsP99");
+            }
+
+            if (report.Timing.AudioAheadWaitOversleepMsMax > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.audioAheadWaitOversleepMsMax");
+            }
+
             if (report.Timing.ExpectedFrameDurationMs <= 0)
             {
                 return;
