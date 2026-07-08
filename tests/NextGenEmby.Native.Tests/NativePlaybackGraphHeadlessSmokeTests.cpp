@@ -130,9 +130,10 @@ int wmain(int argc, wchar_t** argv)
         std::this_thread::sleep_for(100ms);
         graph.Resume();
         graph.Seek(SeekTargetPositionTicks);
+        auto seekSnapshot = graph.QualityMetricsSnapshot();
         std::this_thread::sleep_for(sampleWindow - halfWindow);
 
-        auto seekSnapshot = graph.QualityMetricsSnapshot();
+        auto postSeekPlaybackSnapshot = graph.QualityMetricsSnapshot();
         auto source = graph.VideoSourceSnapshot();
         auto tracks = graph.SourceTrackSnapshots();
         auto displayRefreshRateHz = source
@@ -153,6 +154,7 @@ int wmain(int argc, wchar_t** argv)
             << " audioClockTicks=" << playbackSnapshot.AudioClockTicks
             << " videoPositionTicks=" << playbackSnapshot.VideoPositionTicks
             << " seekActualPositionTicks=" << seekSnapshot.VideoPositionTicks
+            << " postSeekPlaybackPositionTicks=" << postSeekPlaybackSnapshot.VideoPositionTicks
             << " renderIntervalMsP50=" << playbackSnapshot.RenderIntervalMsP50
             << " renderIntervalMsP95=" << playbackSnapshot.RenderIntervalMsP95
             << " renderIntervalMsP99=" << playbackSnapshot.RenderIntervalMsP99

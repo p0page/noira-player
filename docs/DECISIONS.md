@@ -551,3 +551,13 @@
 影响：`playback-core-tuning-video-clock-61fecb3.local` 重新对比后仍为 `accept-candidate`，41 个 comparison、5 个 improvement、0 regression、0 mixed；comparison JSON 中已出现 `tracks.subtitleTrackCount`、`tracks.isSubtitleDisabled`、`tracks.audio.codec`、`tracks.subtitles.codec` 等 matched signals。
 
 边界：这是 comparison evidence 补齐，不改变样本预期、不放宽 stable 标准、不改变播放器行为，也不把轨道变化自动解释成改善。轨道/字幕证据变化默认需要模型审查，避免播放策略调优意外改变源发现或选择状态。
+
+# 2026-07-08: seek/timeline comparison 使用 seek landing 证据，不使用 post-seek 播放位置
+
+决策：native-headless helper 在执行 `Seek(0)` 后必须立即采样 seek landing position，并用该值写入 `seekActualPositionTicks`。如果后续继续播放以观察 seek 后稳定性，该后续播放 position 不能再作为 `position.actualPositionTicks` 或 `position.seekPositionErrorMs` 的来源。
+
+原因：`position.seekPositionErrorMs` 的语义是“seek 落点相对目标位置的误差”，不是“seek 后又播放一段时间后的当前进度”。此前 helper 在 seek 后继续播放 1.5 秒再采样，导致 `seekTargetPositionTicks = 0` 但 `actualPositionTicks = 15000000`，模型会把正常的 post-seek playback progress 误判成 timeline/seek 缺陷。
+
+影响：`run-native-headless-harness-smoke-test.ps1` 增加 A/V report 的 immediate seek evidence 断言；`PlaybackQualityRunComparator` 现在会把 `position.seekPositionErrorMs` 放进 candidate comparison 的 matched signals，并按 lower-is-better 记录 `timeline` improvement/regression。以 `playback-core-tuning-video-clock-61fecb3.local` 为 baseline，新 candidate `playback-core-tuning-seek-evidence-working.local` 在同一 41-case manifest 下为 `accept-candidate`，9 个 timeline improvement，0 regression。
+
+边界：这是评测证据语义修正，不改变播放器 seek 行为、不改变 stable case expected、不降低阈值，也不证明真实设备上的 seek 体验已经完整正确。后续如果要评价 seek 后播放稳定性，应新增独立信号，而不是复用 seek landing error。

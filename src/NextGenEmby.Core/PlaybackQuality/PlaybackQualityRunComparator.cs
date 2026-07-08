@@ -199,6 +199,7 @@ namespace NextGenEmby.Core.PlaybackQuality
             AddCandidateOnlyFailures(comparison, candidate, baselineByKey, matchedKeys);
             AddUnmatchedCandidateSignals(comparison, candidate, matchedKeys);
             AddFramePacingSeverityDeltas(comparison, baseline, candidate);
+            AddSeekTimelineEvidenceDeltas(comparison, baseline, candidate);
             AddTrackAndSubtitleEvidenceDeltas(comparison, baseline, candidate);
 
             if (comparison.Improvements.Count > 0 && comparison.Regressions.Count > 0)
@@ -1076,6 +1077,79 @@ namespace NextGenEmby.Core.PlaybackQuality
             CompareTrackListEvidence(comparison, "tracks.subtitles.isExternal", "subtitles", baseline.Tracks.Subtitles, candidate.Tracks.Subtitles, track => FormatBool(track.IsExternal));
             CompareTrackListEvidence(comparison, "tracks.subtitles.isDefault", "subtitles", baseline.Tracks.Subtitles, candidate.Tracks.Subtitles, track => FormatNullableBool(track.IsDefault));
             CompareTrackListEvidence(comparison, "tracks.subtitles.isForced", "subtitles", baseline.Tracks.Subtitles, candidate.Tracks.Subtitles, track => FormatNullableBool(track.IsForced));
+        }
+
+        private static void AddSeekTimelineEvidenceDeltas(
+            PlaybackQualityRunComparison comparison,
+            PlaybackQualityReport baseline,
+            PlaybackQualityReport candidate)
+        {
+            var baselineError = ResolveSeekPositionErrorMs(baseline.Position);
+            var candidateError = ResolveSeekPositionErrorMs(candidate.Position);
+            if (!baselineError.HasValue || !candidateError.HasValue)
+            {
+                return;
+            }
+
+            AddUnique(comparison.Coverage.MatchedSignals, "position.seekPositionErrorMs");
+            var numericDelta = candidateError.Value - baselineError.Value;
+            if (Math.Abs(numericDelta) <= DerivedSignalEpsilon)
+            {
+                return;
+            }
+
+            var baselineCheck = CreateTimelineCheck("position.seekPositionErrorMs", baselineError.Value);
+            var candidateCheck = CreateTimelineCheck("position.seekPositionErrorMs", candidateError.Value);
+            if (numericDelta < 0)
+            {
+                comparison.Improvements.Add(CreateDelta(
+                    baselineCheck,
+                    candidateCheck,
+                    "decreased",
+                    numericDelta));
+                AddUnique(comparison.Optimization.FailureAreas, "timeline");
+            }
+            else
+            {
+                comparison.Regressions.Add(CreateDelta(
+                    baselineCheck,
+                    candidateCheck,
+                    "increased",
+                    numericDelta));
+                AddUnique(comparison.NewFailureAreas, "timeline");
+            }
+        }
+
+        private static double? ResolveSeekPositionErrorMs(PlaybackQualityPosition position)
+        {
+            if (position.SeekPositionErrorMs.HasValue)
+            {
+                return Math.Abs(position.SeekPositionErrorMs.Value);
+            }
+
+            if (position.SeekTargetPositionTicks.HasValue &&
+                position.ActualPositionTicks.HasValue)
+            {
+                return Math.Abs(
+                    position.ActualPositionTicks.Value -
+                    position.SeekTargetPositionTicks.Value) / 10000.0;
+            }
+
+            return null;
+        }
+
+        private static PlaybackQualityCheck CreateTimelineCheck(
+            string signal,
+            double actual)
+        {
+            return new PlaybackQualityCheck
+            {
+                Name = signal,
+                Signal = signal,
+                FailureArea = "timeline",
+                Status = "observed",
+                Actual = actual.ToString("0.000", CultureInfo.InvariantCulture)
+            };
         }
 
         private static bool HasTrackComparisonEvidence(PlaybackQualityReport report)

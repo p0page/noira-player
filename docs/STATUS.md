@@ -404,3 +404,17 @@ manifest validation、report-set validation、single comparison、comparison sui
 - `local/native-headless-sdr-24`：16.191ms -> 47.665ms。
 
 边界：这是纯软件 native-headless 证据，不证明 Xbox HDMI 输出、HDR InfoFrame、显示器 EOTF 或真实影视素材观感。30fps case 目前落在可接受区间内但仍偏慢，后续应继续用同一 baseline/candidate 机制观察真实 A/V case、含音轨 case、网络媒体和更长样本，不应直接扩大结论。
+
+# 2026-07-08 更新：第二轮调优先修正 seek/timeline 证据语义
+
+本轮进入第二轮纯软件 Core 调优时，先对已接受 candidate 中的真实 native-headless A/V 样本做 root-cause 检查。发现 `local/native-headless-av-smoke` 的 `position.seekTargetPositionTicks = 0`，但 `actualPositionTicks = 15000000`。该现象不是 native `PlaybackGraph.Seek(0)` 失败，而是 native helper 在 `Seek(0)` 之后继续播放剩余 1.5 秒，再把 post-seek playback position 当作 seek landing 写入 `seekActualPositionTicks`。
+
+本轮改动：
+
+- `NativePlaybackGraphHeadlessSmokeTests.cpp` 在 `graph.Seek(0)` 后立即采样 `QualityMetricsSnapshot()`，用立即采样值写入 `seekActualPositionTicks`；继续播放后的 position 仅作为 helper stdout 的 `postSeekPlaybackPositionTicks` 调试信号输出，不再污染 seek landing evidence。
+- `run-native-headless-harness-smoke-test.ps1` 增加 A/V materialized report 的 seek evidence 断言，避免该语义回退。
+- `PlaybackQualityRunComparator` 增加 `position.seekPositionErrorMs` 的 timeline comparison。baseline/candidate 都有 seek error 证据时，comparison 会把该信号写入 `coverage.matchedSignals`，并按 lower-is-better 记录 timeline improvement/regression。
+
+已生成 ignored candidate：`docs/qa/private/candidates/playback-core-tuning-seek-evidence-working.local/`，以已接受的 `playback-core-tuning-video-clock-61fecb3.local` 作为 baseline 做同 manifest 对比。结果：41 个 case 可比，`accept-candidate` / `keep-candidate`，9 个 `timeline` improvement，0 regression，0 mixed。`local/native-headless-av-smoke` 的 seek error 从 `1500.000ms` 降为 `0.000ms`，同时 A/V sync、audio track、subtitle track 和 DXGI matched signals 仍保留。
+
+边界：这是评测器/native-headless helper 的证据修正，不是播放器 Core/native 播放策略优化。它让后续模型不会被错误 timeline evidence 带偏；下一步仍应继续聚焦真实含音轨样本的 frame pacing jitter、A/V sync、buffering 与更长样本稳定性。

@@ -947,6 +947,10 @@ if ($nativeAvMaterializedReport.report.tracks.audioTrackCount -lt 1 -or
     throw 'Expected materialized native helper A/V report to preserve audio/subtitle track and A/V sync evidence.'
 }
 
+if ($nativeAvMaterializedReport.report.position.seekPositionErrorMs -gt 250.0) {
+    throw 'Expected materialized native helper A/V report to capture immediate seek position evidence.'
+}
+
 foreach ($matrixItem in $nativeMatrixReports) {
     $materializedPath = Get-QualityReportPath -Root $nativeMaterializedDir -CaseId $matrixItem.CaseId
     if (-not (Test-Path -LiteralPath $materializedPath)) {

@@ -364,6 +364,36 @@ public sealed class PlaybackQualityRunComparatorTests
     }
 
     [Fact]
+    public void Compare_Reports_Improves_When_Seek_Position_Error_Decreases()
+    {
+        var baseline = CreateReport(
+            "baseline",
+            Check("RenderedVideoFrames", "pass", "frame-pacing", "timing.renderedVideoFrames", "1", "46"));
+        baseline.Position.SeekTargetPositionTicks = 0;
+        baseline.Position.ActualPositionTicks = 15000000;
+        baseline.Position.SeekPositionErrorMs = 1500;
+
+        var candidate = CreateReport(
+            "candidate",
+            Check("RenderedVideoFrames", "pass", "frame-pacing", "timing.renderedVideoFrames", "1", "46"));
+        candidate.Position.SeekTargetPositionTicks = 0;
+        candidate.Position.ActualPositionTicks = 0;
+        candidate.Position.SeekPositionErrorMs = 0;
+
+        var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
+
+        Assert.Equal("improved", comparison.Result);
+        Assert.Contains("position.seekPositionErrorMs", comparison.Coverage.MatchedSignals);
+        Assert.Contains("timeline", comparison.Optimization.FailureAreas);
+        Assert.Contains(comparison.Improvements, delta =>
+            delta.Signal == "position.seekPositionErrorMs" &&
+            delta.FailureArea == "timeline" &&
+            delta.Direction == "decreased" &&
+            delta.BaselineActual == "1500.000" &&
+            delta.CandidateActual == "0.000");
+    }
+
+    [Fact]
     public void Compare_Reports_PartialConfidence_When_Signals_Are_Unmatched()
     {
         var baseline = CreateReport(
