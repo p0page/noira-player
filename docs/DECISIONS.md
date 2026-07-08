@@ -640,3 +640,18 @@
 影响：该实现作为低开销等待 primitive 进入当前 Core/native 主线，但不把本轮结果声明为播放质量 improvement。当前 evaluator 仍把这些 timing/oversleep 信号作为 matched diagnostic evidence，suite 决策仍为 `no-change`。后续调优可以基于该 primitive 继续补齐 CPU/调度开销、wait reason 或更长 A/V 样本证据。
 
 边界：该结论只来自 native-headless 纯软件短样本，不证明 Xbox/HDMI 输出、真实显示刷新、HDR 观感或长时间播放稳定性。`videoAheadWaitCount` 从 51 增加到 71，`audioVideoDriftMsP50` 从约 3.3ms 增至 6.7ms，虽然 P95 未退化，但仍属于剩余风险；后续不能仅凭本轮结果声称流畅度已改善。
+
+# 2026-07-08: native helper process-cost 作为 wait/scheduling 调优证据
+
+决策：native-headless helper report 需要记录 helper 进程级别的 wall-clock、CPU time 和 CPU utilization ratio，并作为 `runtimeMetrics.processWallClockMs`、`runtimeMetrics.processCpuTimeMs`、`runtimeMetrics.processCpuUtilizationRatio` 进入 report schema、model analysis evidence signals、required signal policy 和 candidate comparison。
+
+原因：前几轮 wait/scheduling 调优已经能观察到 render interval、audio-ahead target 和 oversleep 的变化，但仍缺少 CPU/调度开销证据。尤其是 yield-based precise wait 和 high-resolution waitable timer 这类候选，不能只看 frame pacing 诊断信号，还必须知道是否引入明显 CPU 成本。
+
+实现边界：
+
+- `tools/NextGenEmby.PlaybackQuality.Headless` 在 helper 进程退出后读取 `Stopwatch.Elapsed` 和 `Process.TotalProcessorTime`，计算 `cpu / wall-clock`。
+- process-cost 信号只在数值大于 0 时进入 `modelAnalysis.evidenceSignals`。
+- comparator 只有在 baseline 和 candidate 都有 process-cost 证据时才把这些信号加入 matched signals，避免把旧 schema baseline 的缺失字段误解为改善或退化。
+- 该变更不改变播放器行为、播放策略、evaluator 阈值、case expected behavior 或 pass/fail 规则。
+
+当前 `b292019` 与 `38ae764` 的 41-case comparison 结果为 `decision = no-change`。由于 `38ae764` baseline 没有 process-cost 字段，本轮不能给出 CPU 成本前后结论；下一轮以 `b292019` 之后的 report-set 为 baseline 时，才可以比较 process-cost 是否发生变化。

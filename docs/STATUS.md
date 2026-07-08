@@ -511,3 +511,23 @@ manifest validation、report-set validation、single comparison、comparison sui
 - A/V drift P95 保持 `10ms`；submitted/queued audio 为 `81/11 -> 82/12`；track/subtitle、seek/timeline、buffering 和 color/DXGI matched signals 均保留。
 
 当前结论：该候选可以保留为低开销等待 primitive，但不能宣称播放器质量已提升。原因是 suite 仍为 `no-change`，且还没有 CPU/调度开销、长样本稳定性或真实设备输出证据。剩余风险是 `videoAheadWaitCount` 增加 `51 -> 71`，`audioVideoDriftMsP50` 从约 `3.3ms` 增至 `6.7ms`；后续应补齐 wait reason / CPU evidence 或更长 A/V 样本，再决定是否把 audio-ahead oversleep 纳入明确 improvement/regression 规则。
+
+# 2026-07-08 更新：native helper process-cost 证据已进入 41-case report-set
+
+本轮在 `b292019 chore: expose native helper process cost evidence` 后，重新用已接受的 41-case manifest 生成了 candidate：
+
+- candidate：`docs/qa/private/candidates/playback-core-tuning-process-cost-evidence-41case-b292019.local/`
+- comparison：`docs/qa/private/comparisons/playback-core-tuning-process-cost-evidence-41case-b292019.local/`
+- baseline：`docs/qa/private/candidates/playback-core-tuning-highres-wait-41case-38ae764.local/`
+- 结果：41/41 case 可比，candidate validation 通过，`manifest.sameCaseIds = true`，`decision = no-change`，0 improved / 0 regressed / 0 mixed / 41 unchanged，strong confidence 41/41。
+
+关键 A/V native-headless 样本 `local/native-headless-av-smoke` 中，candidate 已输出新的 process-cost 证据：
+
+- `runtimeMetrics.processWallClockMs = 3476.8989`
+- `runtimeMetrics.processCpuTimeMs = 562.5`
+- `runtimeMetrics.processCpuUtilizationRatio = 0.16178209840959137`
+- `modelAnalysis.evidenceSignals` 已包含 `runtimeMetrics.processWallClockMs`、`runtimeMetrics.processCpuTimeMs` 和 `runtimeMetrics.processCpuUtilizationRatio`。
+
+对比中的播放质量结论保持保守：这次改动是 instrumentation/testability 增强，不是播放策略优化。`local/native-headless-av-smoke` 的 render interval、A/V drift、audio-ahead wait、buffering、seek/timeline、track/subtitle 和 color/DXGI 证据保持可比，但 suite 仍然判定 `no-change`。
+
+重要边界：旧 baseline `38ae764` 没有 process-cost 字段，因此本轮不能判断 high-resolution waitable timer 的 CPU 成本是否改善或退化；它只能证明新的证据链已经可用。下一轮如果要评价 CPU/process-cost 变化，应以 `b292019` 生成的 candidate 作为带 process-cost schema 的新 baseline，再生成后续 candidate 做同 manifest 对比。
