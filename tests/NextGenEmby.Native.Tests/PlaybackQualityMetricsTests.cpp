@@ -24,6 +24,9 @@ int main()
     metrics.DecodedVideoFrames = 4;
     metrics.RenderedVideoFrames = 3;
     metrics.DroppedVideoFrames = 1;
+    metrics.VideoAheadWaitCount = 7;
+    metrics.AudioAheadWaitCount = 5;
+    metrics.VideoClockWaitCount = 2;
     metrics.VideoStarvedPasses = 2;
     metrics.AudioStarvedPasses = 1;
     metrics.AudioClockTicks = 2'000'000;
@@ -37,6 +40,9 @@ int main()
     assert(snapshot.DecodedVideoFrames == 4);
     assert(snapshot.RenderedVideoFrames == 3);
     assert(snapshot.DroppedVideoFrames == 1);
+    assert(snapshot.VideoAheadWaitCount == 7);
+    assert(snapshot.AudioAheadWaitCount == 5);
+    assert(snapshot.VideoClockWaitCount == 2);
     assert(snapshot.VideoStarvedPasses == 2);
     assert(snapshot.AudioStarvedPasses == 1);
     assert(snapshot.RenderIntervalMsP50 >= 41.0);
@@ -64,6 +70,9 @@ int main()
     metrics.Reset();
     snapshot = metrics.Snapshot();
     assert(snapshot.RenderPasses == 0);
+    assert(snapshot.VideoAheadWaitCount == 0);
+    assert(snapshot.AudioAheadWaitCount == 0);
+    assert(snapshot.VideoClockWaitCount == 0);
     assert(snapshot.MaxFrameGapMs == 0.0);
     assert(snapshot.PresentDurationMsMax == 0.0);
     assert(snapshot.AudioAheadWaitDurationMsMax == 0.0);

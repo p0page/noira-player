@@ -44,6 +44,8 @@ namespace NextGenEmby.Core.PlaybackQuality
                 metrics.DroppedVideoFrames > 0 ||
                 metrics.SeekPrerollDroppedFrames > 0 ||
                 metrics.VideoAheadWaitCount > 0 ||
+                metrics.AudioAheadWaitCount > 0 ||
+                metrics.VideoClockWaitCount > 0 ||
                 metrics.VideoStarvedPasses > 0 ||
                 metrics.AudioStarvedPasses > 0 ||
                 metrics.QueuedAudioBuffers > 0 ||

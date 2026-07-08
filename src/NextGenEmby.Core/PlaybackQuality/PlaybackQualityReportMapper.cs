@@ -38,6 +38,8 @@ namespace NextGenEmby.Core.PlaybackQuality
             report.Timing.DroppedVideoFrames = metrics.DroppedVideoFrames;
             report.Timing.SeekPrerollDroppedFrames = metrics.SeekPrerollDroppedFrames;
             report.Timing.VideoAheadWaitCount = metrics.VideoAheadWaitCount;
+            report.Timing.AudioAheadWaitCount = metrics.AudioAheadWaitCount;
+            report.Timing.VideoClockWaitCount = metrics.VideoClockWaitCount;
             report.Timing.RenderIntervalMsP50 = metrics.RenderIntervalMsP50;
             report.Timing.RenderIntervalMsP95 = metrics.RenderIntervalMsP95;
             report.Timing.RenderIntervalMsP99 = metrics.RenderIntervalMsP99;

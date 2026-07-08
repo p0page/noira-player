@@ -9,6 +9,8 @@ namespace NextGenEmby.Core.PlaybackQuality
         public ulong DroppedVideoFrames { get; set; }
         public ulong SeekPrerollDroppedFrames { get; set; }
         public ulong VideoAheadWaitCount { get; set; }
+        public ulong AudioAheadWaitCount { get; set; }
+        public ulong VideoClockWaitCount { get; set; }
         public ulong VideoStarvedPasses { get; set; }
         public ulong AudioStarvedPasses { get; set; }
         public ulong QueuedAudioBuffers { get; set; }

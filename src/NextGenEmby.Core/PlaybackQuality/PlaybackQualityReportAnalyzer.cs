@@ -2526,6 +2526,13 @@ namespace NextGenEmby.Core.PlaybackQuality
                 AddUnique(analysis.EvidenceSignals, "timing.audioAheadWaitOversleepMsMax");
             }
 
+            if (report.Timing.VideoAheadWaitCount > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.videoAheadWaitCount");
+                AddUnique(analysis.EvidenceSignals, "timing.audioAheadWaitCount");
+                AddUnique(analysis.EvidenceSignals, "timing.videoClockWaitCount");
+            }
+
             if (report.Timing.ExpectedFrameDurationMs <= 0)
             {
                 return;

@@ -299,6 +299,8 @@ internal static class NativeHeadlessHarness
         metrics.DroppedVideoFrames = GetUInt64(values, "droppedVideoFrames");
         metrics.SeekPrerollDroppedFrames = GetUInt64(values, "seekPrerollDroppedFrames");
         metrics.VideoAheadWaitCount = GetUInt64(values, "videoAheadWaitCount");
+        metrics.AudioAheadWaitCount = GetUInt64(values, "audioAheadWaitCount");
+        metrics.VideoClockWaitCount = GetUInt64(values, "videoClockWaitCount");
         metrics.VideoStarvedPasses = GetUInt64(values, "videoStarvedPasses");
         metrics.AudioStarvedPasses = GetUInt64(values, "audioStarvedPasses");
         metrics.AudioClockTicks = GetInt64(values, "audioClockTicks");

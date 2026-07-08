@@ -124,6 +124,8 @@ namespace winrt::NextGenEmby::Native::implementation
         uint64_t m_droppedVideoFrameCount{0};
         uint64_t m_seekPrerollDroppedVideoFrameCount{0};
         uint64_t m_videoAheadWaitCount{0};
+        uint64_t m_audioAheadWaitCount{0};
+        uint64_t m_videoClockWaitCount{0};
         uint64_t m_videoStarvedPassCount{0};
         uint64_t m_audioStarvedPassCount{0};
         PlaybackQualityMetrics m_qualityMetrics;

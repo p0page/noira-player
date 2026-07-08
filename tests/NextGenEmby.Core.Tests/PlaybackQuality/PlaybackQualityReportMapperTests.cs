@@ -71,6 +71,8 @@ public sealed class PlaybackQualityReportMapperTests
             DroppedVideoFrames = 3,
             SeekPrerollDroppedFrames = 2,
             VideoAheadWaitCount = 7,
+            AudioAheadWaitCount = 5,
+            VideoClockWaitCount = 2,
             VideoStarvedPasses = 4,
             AudioStarvedPasses = 1,
             QueuedAudioBuffers = 12,
@@ -112,6 +114,8 @@ public sealed class PlaybackQualityReportMapperTests
         Assert.Equal(3UL, report.Timing.DroppedVideoFrames);
         Assert.Equal(2UL, report.Timing.SeekPrerollDroppedFrames);
         Assert.Equal(7UL, report.Timing.VideoAheadWaitCount);
+        Assert.Equal(5UL, report.Timing.AudioAheadWaitCount);
+        Assert.Equal(2UL, report.Timing.VideoClockWaitCount);
         Assert.Equal(41.7, report.Timing.RenderIntervalMsP50);
         Assert.Equal(45.2, report.Timing.RenderIntervalMsP95);
         Assert.Equal(80.0, report.Timing.RenderIntervalMsP99);

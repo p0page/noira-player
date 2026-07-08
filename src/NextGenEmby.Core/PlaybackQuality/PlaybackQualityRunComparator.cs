@@ -1189,6 +1189,8 @@ namespace NextGenEmby.Core.PlaybackQuality
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.expectedFrameDurationMs");
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.framePacingSourceFrameRate");
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.videoAheadWaitCount");
+                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitCount");
+                AddUnique(comparison.Coverage.MatchedSignals, "timing.videoClockWaitCount");
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.droppedVideoFrames");
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.seekPrerollDroppedFrames");
             }
@@ -1250,6 +1252,8 @@ namespace NextGenEmby.Core.PlaybackQuality
                 report.Timing.AudioAheadWaitOversleepMsP95 > 0 ||
                 report.Timing.AudioAheadWaitOversleepMsP99 > 0 ||
                 report.Timing.AudioAheadWaitOversleepMsMax > 0 ||
+                report.Timing.AudioAheadWaitCount > 0 ||
+                report.Timing.VideoClockWaitCount > 0 ||
                 report.Timing.MaxFrameGapMs > 0 ||
                 report.Timing.ExpectedFrameDurationMs > 0 ||
                 report.Timing.FramePacingSourceFrameRate > 0;

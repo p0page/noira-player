@@ -1289,9 +1289,15 @@ public sealed class PlaybackQualityReportAnalyzerTests
         report.Timing.AudioAheadWaitOversleepMsP95 = 11.0;
         report.Timing.AudioAheadWaitOversleepMsP99 = 15.0;
         report.Timing.AudioAheadWaitOversleepMsMax = 19.0;
+        report.Timing.VideoAheadWaitCount = 7;
+        report.Timing.AudioAheadWaitCount = 5;
+        report.Timing.VideoClockWaitCount = 2;
 
         var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
 
+        Assert.Contains("timing.videoAheadWaitCount", analysis.EvidenceSignals);
+        Assert.Contains("timing.audioAheadWaitCount", analysis.EvidenceSignals);
+        Assert.Contains("timing.videoClockWaitCount", analysis.EvidenceSignals);
         Assert.Contains("timing.audioAheadWaitDurationMsP50", analysis.EvidenceSignals);
         Assert.Contains("timing.audioAheadWaitDurationMsP95", analysis.EvidenceSignals);
         Assert.Contains("timing.audioAheadWaitDurationMsP99", analysis.EvidenceSignals);
@@ -1304,6 +1310,21 @@ public sealed class PlaybackQualityReportAnalyzerTests
         Assert.Contains("timing.audioAheadWaitOversleepMsP95", analysis.EvidenceSignals);
         Assert.Contains("timing.audioAheadWaitOversleepMsP99", analysis.EvidenceSignals);
         Assert.Contains("timing.audioAheadWaitOversleepMsMax", analysis.EvidenceSignals);
+    }
+
+    [Fact]
+    public void Analyze_Reports_Zero_Wait_Reason_Count_As_Timing_Evidence_When_Total_Wait_Exists()
+    {
+        var report = CreateOptimizationReadyFailure();
+        report.Timing.VideoAheadWaitCount = 5;
+        report.Timing.AudioAheadWaitCount = 5;
+        report.Timing.VideoClockWaitCount = 0;
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Contains("timing.videoAheadWaitCount", analysis.EvidenceSignals);
+        Assert.Contains("timing.audioAheadWaitCount", analysis.EvidenceSignals);
+        Assert.Contains("timing.videoClockWaitCount", analysis.EvidenceSignals);
     }
 
     [Fact]

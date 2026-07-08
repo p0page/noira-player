@@ -17,6 +17,8 @@ namespace winrt::NextGenEmby::Native::implementation
         uint64_t DroppedVideoFrames{0};
         uint64_t SeekPrerollDroppedFrames{0};
         uint64_t VideoAheadWaitCount{0};
+        uint64_t AudioAheadWaitCount{0};
+        uint64_t VideoClockWaitCount{0};
         uint64_t VideoStarvedPasses{0};
         uint64_t AudioStarvedPasses{0};
         uint64_t QueuedAudioBuffers{0};
@@ -123,6 +125,8 @@ namespace winrt::NextGenEmby::Native::implementation
         uint64_t DroppedVideoFrames{0};
         uint64_t SeekPrerollDroppedFrames{0};
         uint64_t VideoAheadWaitCount{0};
+        uint64_t AudioAheadWaitCount{0};
+        uint64_t VideoClockWaitCount{0};
         uint64_t VideoStarvedPasses{0};
         uint64_t AudioStarvedPasses{0};
         uint64_t QueuedAudioBuffers{0};
@@ -179,6 +183,8 @@ namespace winrt::NextGenEmby::Native::implementation
             snapshot.DroppedVideoFrames = DroppedVideoFrames;
             snapshot.SeekPrerollDroppedFrames = SeekPrerollDroppedFrames;
             snapshot.VideoAheadWaitCount = VideoAheadWaitCount;
+            snapshot.AudioAheadWaitCount = AudioAheadWaitCount;
+            snapshot.VideoClockWaitCount = VideoClockWaitCount;
             snapshot.VideoStarvedPasses = VideoStarvedPasses;
             snapshot.AudioStarvedPasses = AudioStarvedPasses;
             snapshot.QueuedAudioBuffers = QueuedAudioBuffers;

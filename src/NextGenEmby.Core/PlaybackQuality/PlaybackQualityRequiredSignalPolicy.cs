@@ -480,6 +480,13 @@ namespace NextGenEmby.Core.PlaybackQuality
                     return report.Timing.RenderIntervalMsP95 > 0;
                 case "timing.renderIntervalMsP99":
                     return report.Timing.RenderIntervalMsP99 > 0;
+                case "timing.videoAheadWaitCount":
+                case "timing.audioAheadWaitCount":
+                case "timing.videoClockWaitCount":
+                    return presentSignals != null ||
+                        report.Timing.VideoAheadWaitCount > 0 ||
+                        report.Timing.AudioAheadWaitCount > 0 ||
+                        report.Timing.VideoClockWaitCount > 0;
                 case "sync.audioVideoDriftMsP95":
                     return presentSignals != null || report.Sync.AudioVideoDriftMsP95 > 0;
                 case "buffers.videoStarvedPasses":
@@ -595,7 +602,10 @@ namespace NextGenEmby.Core.PlaybackQuality
             return report.Timing.RenderPasses > 0 ||
                 report.Timing.DecodedVideoFrames > 0 ||
                 report.Timing.RenderedVideoFrames > 0 ||
-                report.Timing.DroppedVideoFrames > 0;
+                report.Timing.DroppedVideoFrames > 0 ||
+                report.Timing.VideoAheadWaitCount > 0 ||
+                report.Timing.AudioAheadWaitCount > 0 ||
+                report.Timing.VideoClockWaitCount > 0;
         }
 
         private static bool HasTrackEvidence(PlaybackQualityReport report)

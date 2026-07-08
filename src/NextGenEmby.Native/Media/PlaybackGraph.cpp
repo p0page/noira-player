@@ -499,7 +499,9 @@ namespace winrt::NextGenEmby::Native::implementation
                     m_nextRenderLoopWaitUseTimer = m_nextRenderLoopWait > std::chrono::steady_clock::duration::zero();
 
                     ++m_videoAheadWaitCount;
+                    ++m_audioAheadWaitCount;
                     ++m_qualityMetrics.VideoAheadWaitCount;
+                    ++m_qualityMetrics.AudioAheadWaitCount;
                     LogRuntimeStatsIfDue();
                     return true;
                 }
@@ -528,7 +530,9 @@ namespace winrt::NextGenEmby::Native::implementation
                 if (ShouldWaitForVideoClock(frame))
                 {
                     ++m_videoAheadWaitCount;
+                    ++m_videoClockWaitCount;
                     ++m_qualityMetrics.VideoAheadWaitCount;
+                    ++m_qualityMetrics.VideoClockWaitCount;
                     LogRuntimeStatsIfDue();
                     return true;
                 }
@@ -653,6 +657,8 @@ namespace winrt::NextGenEmby::Native::implementation
         m_submittedAudioFrameCount = 0;
         m_droppedVideoFrameCount = 0;
         m_videoAheadWaitCount = 0;
+        m_audioAheadWaitCount = 0;
+        m_videoClockWaitCount = 0;
         m_videoStarvedPassCount = 0;
         m_audioStarvedPassCount = 0;
         m_seekPrerollDroppedVideoFrameCount = 0;
@@ -752,6 +758,8 @@ namespace winrt::NextGenEmby::Native::implementation
             L" seekPrerollDropped=" + std::to_wstring(m_seekPrerollDroppedVideoFrameCount) +
             L" seekPrerollTarget=" + (m_videoPrerollTargetTicks ? std::to_wstring(*m_videoPrerollTargetTicks) : std::wstring(L"none")) +
             L" videoAheadWait=" + std::to_wstring(m_videoAheadWaitCount) +
+            L" audioAheadWait=" + std::to_wstring(m_audioAheadWaitCount) +
+            L" videoClockWait=" + std::to_wstring(m_videoClockWaitCount) +
             L" videoStarved=" + std::to_wstring(m_videoStarvedPassCount) +
             L" audioStarved=" + std::to_wstring(m_audioStarvedPassCount));
     }

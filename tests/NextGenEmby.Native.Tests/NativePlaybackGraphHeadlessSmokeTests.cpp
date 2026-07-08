@@ -149,6 +149,8 @@ int wmain(int argc, wchar_t** argv)
             << " droppedVideoFrames=" << playbackSnapshot.DroppedVideoFrames
             << " seekPrerollDroppedFrames=" << playbackSnapshot.SeekPrerollDroppedFrames
             << " videoAheadWaitCount=" << playbackSnapshot.VideoAheadWaitCount
+            << " audioAheadWaitCount=" << playbackSnapshot.AudioAheadWaitCount
+            << " videoClockWaitCount=" << playbackSnapshot.VideoClockWaitCount
             << " videoStarvedPasses=" << playbackSnapshot.VideoStarvedPasses
             << " audioStarvedPasses=" << playbackSnapshot.AudioStarvedPasses
             << " audioClockTicks=" << playbackSnapshot.AudioClockTicks

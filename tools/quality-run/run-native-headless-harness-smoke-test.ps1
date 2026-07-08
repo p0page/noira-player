@@ -594,6 +594,12 @@ if ($nativeAvReport.report.timing.audioAheadWaitOversleepMsP95 -le 0 -or
     throw 'Expected native helper A/V report to include audio-ahead wait oversleep evidence.'
 }
 
+if ($nativeAvReport.report.timing.audioAheadWaitCount -le 0 -or
+    $nativeAvReport.report.timing.videoClockWaitCount -lt 0 -or
+    $nativeAvReport.report.timing.videoAheadWaitCount -lt $nativeAvReport.report.timing.audioAheadWaitCount) {
+    throw 'Expected native helper A/V report to include split wait reason counters.'
+}
+
 if ($nativeAvReport.report.runtimeMetrics.processWallClockMs -le 0 -or
     $nativeAvReport.report.runtimeMetrics.processCpuTimeMs -le 0 -or
     $nativeAvReport.report.runtimeMetrics.processCpuUtilizationRatio -le 0) {
@@ -647,6 +653,8 @@ foreach ($matrixItem in $nativeMatrixReports) {
 
     if ($matrixItem.Report.report.timing.droppedVideoFrames -lt 0 -or
         $matrixItem.Report.report.timing.videoAheadWaitCount -lt 0 -or
+        $matrixItem.Report.report.timing.audioAheadWaitCount -lt 0 -or
+        $matrixItem.Report.report.timing.videoClockWaitCount -lt 0 -or
         $matrixItem.Report.report.buffers.videoStarvedPasses -lt 0 -or
         $matrixItem.Report.report.buffers.audioStarvedPasses -lt 0) {
         throw "Expected $($matrixItem.CaseId) to include non-negative dropped/wait/starvation counters."
@@ -980,6 +988,12 @@ if ($nativeAvMaterializedReport.report.tracks.audioTrackCount -lt 1 -or
 
 if ($nativeAvMaterializedReport.report.position.seekPositionErrorMs -gt 250.0) {
     throw 'Expected materialized native helper A/V report to capture immediate seek position evidence.'
+}
+
+if (-not ($nativeAvMaterializedReport.modelAnalysis.evidenceSignals -contains 'timing.videoAheadWaitCount') -or
+    -not ($nativeAvMaterializedReport.modelAnalysis.evidenceSignals -contains 'timing.audioAheadWaitCount') -or
+    -not ($nativeAvMaterializedReport.modelAnalysis.evidenceSignals -contains 'timing.videoClockWaitCount')) {
+    throw 'Expected materialized native helper A/V report to expose split wait reason signals, including zero-valued video-clock wait evidence.'
 }
 
 foreach ($matrixItem in $nativeMatrixReports) {

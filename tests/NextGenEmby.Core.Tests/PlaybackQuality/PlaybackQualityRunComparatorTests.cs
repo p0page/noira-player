@@ -420,6 +420,8 @@ public sealed class PlaybackQualityRunComparatorTests
         Assert.Contains("timing.audioAheadWaitOversleepMsMax", comparison.Coverage.MatchedSignals);
         Assert.Contains("timing.maxFrameGapMs", comparison.Coverage.MatchedSignals);
         Assert.Contains("timing.videoAheadWaitCount", comparison.Coverage.MatchedSignals);
+        Assert.Contains("timing.audioAheadWaitCount", comparison.Coverage.MatchedSignals);
+        Assert.Contains("timing.videoClockWaitCount", comparison.Coverage.MatchedSignals);
         Assert.Contains("sync.audioClockTicks", comparison.Coverage.MatchedSignals);
         Assert.Contains("sync.videoPositionTicks", comparison.Coverage.MatchedSignals);
         Assert.Contains("sync.audioVideoDriftMsP95", comparison.Coverage.MatchedSignals);
@@ -742,6 +744,8 @@ public sealed class PlaybackQualityRunComparatorTests
         report.Timing.AudioAheadWaitOversleepMsMax = 19.0;
         report.Timing.MaxFrameGapMs = 48.0;
         report.Timing.VideoAheadWaitCount = 52;
+        report.Timing.AudioAheadWaitCount = 50;
+        report.Timing.VideoClockWaitCount = 2;
         report.Sync.AudioClockTicks = 15100000;
         report.Sync.VideoPositionTicks = 15000000;
         report.Sync.AudioVideoDriftMsP95 = 10.0;
