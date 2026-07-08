@@ -44,6 +44,7 @@ colors:
   hero_poster_dim: "#1A000000"
   details_decision_tile: "#B810161C"
   details_decision_tile_selected: "#B8202832"
+  details_decision_tile_focused: "#D8202832"
   modal_scrim: "#CC05070A"
   playback_drawer: "#F010161C"
   button_disabled_background: "#4D10161C"
@@ -230,7 +231,7 @@ Reference links reviewed for this pass:
 - **Overlay `#D910161C`:** dark overlay panel over artwork or video when blur is unavailable or undesirable.
 - **Artwork blur surface `#D910161C`:** dark translucent material used only when a real poster, banner, backdrop, or video frame sits underneath and contributes color. It must never be used over plain graphite canvas.
 - **Artwork blur tint `#33080D12`:** optional cool dark tint over the sampled artwork before blur. Use it to stabilize contrast, not to create a colored wash.
-- **Details decision tile `#B810161C` and selected `#B8202832`:** lower-alpha graphite material for Details Play-adjacent decisions, source/audio/subtitle chips, and similar artwork-backed controls. Use it to reduce UWP button-frame weight over atmosphere; do not use it as a generic panel background on plain canvas.
+- **Details decision tile `#B810161C`, selected `#B8202832`, and focused `#D8202832`:** lower-alpha graphite material for Details Play-adjacent decisions, source/audio/subtitle chips, and similar artwork-backed controls. Use the focused value as a local luminance lift for controller focus instead of the global card focus fill, so the Details decision island stays matte over artwork. Use these tokens to reduce UWP button-frame weight over atmosphere; do not use them as generic panel backgrounds on plain canvas.
 - **Hairline `#2E3944`:** dividers and inactive card borders. Hairlines support structure; they must not become the focus language.
 - **Guide focus fill `#33202832`:** quiet current-route and guide-navigation fill for the shell rail. It is deliberately darker than full content focus so the rail remains available without competing with media artwork.
 - **Text `#EEF3F6`:** cool off-white primary text. It keeps the interface precise and slightly technological without blue glow.

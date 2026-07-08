@@ -657,8 +657,10 @@ public sealed class MediaDetailsAccessibilitySourceTests
 
         Assert.Contains("<Color x:Key=\"AppDetailsDecisionTileColor\">#B810161C</Color>", appXaml);
         Assert.Contains("<Color x:Key=\"AppDetailsDecisionTileSelectedColor\">#B8202832</Color>", appXaml);
+        Assert.Contains("<Color x:Key=\"AppDetailsDecisionTileFocusedColor\">#D8202832</Color>", appXaml);
         Assert.Contains("<SolidColorBrush x:Key=\"AppDetailsDecisionTileBrush\" Color=\"{StaticResource AppDetailsDecisionTileColor}\" />", appXaml);
         Assert.Contains("<SolidColorBrush x:Key=\"AppDetailsDecisionTileSelectedBrush\" Color=\"{StaticResource AppDetailsDecisionTileSelectedColor}\" />", appXaml);
+        Assert.Contains("<SolidColorBrush x:Key=\"AppDetailsDecisionTileFocusedBrush\" Color=\"{StaticResource AppDetailsDecisionTileFocusedColor}\" />", appXaml);
 
         var primaryActionStyle = SliceFrom(appXaml, "x:Key=\"TvDetailsPrimaryActionButtonStyle\"", "</Style>");
         Assert.Contains("<Setter Property=\"BorderBrush\" Value=\"{StaticResource AppTransparentBrush}\" />", primaryActionStyle);
@@ -688,10 +690,18 @@ public sealed class MediaDetailsAccessibilitySourceTests
         Assert.DoesNotContain("button.BorderBrush = BrushResource(\"AppActionBrush\");", lostFocus);
         Assert.DoesNotContain("button.Background = BrushResource(\"AppChromeBrush\");", lostFocus);
 
+        var commandFocus = SliceFrom(detailsSource, "private void DetailsCommandButton_OnGotFocus", "private void DetailsCommandButton_OnLostFocus");
+        Assert.Contains("button.Background = BrushResource(\"AppDetailsDecisionTileFocusedBrush\");", commandFocus);
+        Assert.DoesNotContain("AppFocusedCardFillBrush", commandFocus);
+
         var sourceState = SliceFrom(detailsSource, "private void ApplySourceButtonState", "private void SourceButton_OnGotFocus");
         Assert.Contains("isSelected ? \"AppDetailsDecisionTileSelectedBrush\" : \"AppDetailsDecisionTileBrush\"", sourceState);
         Assert.DoesNotContain("AppChromePressedBrush", sourceState);
         Assert.DoesNotContain("AppChromeBrush", sourceState);
+
+        var sourceFocus = SliceFrom(detailsSource, "private void SourceButton_OnGotFocus", "private void SourceButton_OnLostFocus");
+        Assert.Contains("button.Background = BrushResource(\"AppDetailsDecisionTileFocusedBrush\");", sourceFocus);
+        Assert.DoesNotContain("AppFocusedCardFillBrush", sourceFocus);
     }
 
     [Fact]

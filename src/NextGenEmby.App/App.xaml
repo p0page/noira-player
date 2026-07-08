@@ -50,6 +50,7 @@
             <Color x:Key="AppDetailsBackdropWashColor">#D910161C</Color>
             <Color x:Key="AppDetailsDecisionTileColor">#B810161C</Color>
             <Color x:Key="AppDetailsDecisionTileSelectedColor">#B8202832</Color>
+            <Color x:Key="AppDetailsDecisionTileFocusedColor">#D8202832</Color>
             <Color x:Key="AppModalScrimColor">#CC05070A</Color>
             <Color x:Key="AppPlaybackCanvasColor">#05070A</Color>
             <Color x:Key="AppPlaybackOverlayColor">#D910161C</Color>
@@ -96,6 +97,7 @@
             <SolidColorBrush x:Key="AppDetailsBackdropWashBrush" Color="{StaticResource AppDetailsBackdropWashColor}" />
             <SolidColorBrush x:Key="AppDetailsDecisionTileBrush" Color="{StaticResource AppDetailsDecisionTileColor}" />
             <SolidColorBrush x:Key="AppDetailsDecisionTileSelectedBrush" Color="{StaticResource AppDetailsDecisionTileSelectedColor}" />
+            <SolidColorBrush x:Key="AppDetailsDecisionTileFocusedBrush" Color="{StaticResource AppDetailsDecisionTileFocusedColor}" />
             <SolidColorBrush x:Key="AppModalScrimBrush" Color="{StaticResource AppModalScrimColor}" />
             <SolidColorBrush x:Key="AppPlaybackCanvasBrush" Color="{StaticResource AppPlaybackCanvasColor}" />
             <SolidColorBrush x:Key="AppPlaybackOverlayBrush" Color="{StaticResource AppPlaybackOverlayColor}" />

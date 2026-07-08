@@ -87,7 +87,7 @@ namespace NextGenEmby.App.Views
                 return;
             }
 
-            button.Background = BrushResource("AppFocusedCardFillBrush");
+            button.Background = BrushResource("AppDetailsDecisionTileFocusedBrush");
             button.BorderBrush = BrushResource("AppTransparentBrush");
             button.Foreground = BrushResource("AppTextBrush");
         }
@@ -3080,7 +3080,7 @@ namespace NextGenEmby.App.Views
                 return;
             }
 
-            button.Background = BrushResource("AppFocusedCardFillBrush");
+            button.Background = BrushResource("AppDetailsDecisionTileFocusedBrush");
             button.BorderBrush = BrushResource("AppTransparentBrush");
             button.StartBringIntoView(new BringIntoViewOptions
             {

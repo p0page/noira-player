@@ -120,7 +120,7 @@ Goal: move Details toward full-screen artwork atmosphere.
 | --- | --- | --- | --- | --- |
 | A3-04.01 | Details fixture, `details-primary-only-fixture`, and `details-real-sample` | The page reads as one atmospheric canvas, not left form plus right poster. | Concern | Fixture artwork validates repeatable structure only; it is too abstract/dark to prove final atmosphere. Local-only real Emby artwork shows the right side can carry color and subject matter while the left scrim protects text. The primary-only fixture proves cropped `Primary` can become dim atmosphere instead of a second poster viewer, and the no-art fixture now proves the black/matte fallback without fake placeholder art. Needs more real samples across bright artwork and varied metadata/source cases before Pass. |
 | A3-04.02 | Details fixture and `details-real-sample` | Title, metadata, badges, overview, and credits sit in a left information column with strong hierarchy. | Concern | The reading band now uses `TvDetailsContentMargin` `56,156,56,48`, `TvDetailsContentColumnWidth`/`MaxWidth` `680`, and an overview max width of `640` with three-line ellipsis, moving the content below the page-header zone so it reads more like a cinematic information band. The latest facts pass adds a passive first-viewport fact row and compact director/genre text, so Details no longer reads as only a title plus overview. Remaining gap: facts/credits are structurally useful but need broader real-artwork and localization stress before Pass. |
-| A3-04.03 | Details fixture, `details-primary-only-fixture`, and `details-real-sample` | Play/source/audio/subtitle/actions form a bottom decision island close to A3. | Concern | The dock is bottom-anchored by layout instead of runtime top calculations, so DPI-aware screenshots show it in the first viewport. The 0.1.0.261 local pass made the dock outer shell transparent, the 0.1.0.262 local pass reduced source/audio/subtitle from detailed parameters to compact decision summaries, and the 0.1.0.269 local pass moved the dock to `TvDetailsDecisionDockMargin` `56,0,56,112` so it no longer reads as a bottom-edge toolbar. The 0.1.0.273 local pass moved non-primary actions and source/audio/subtitle chips to lower-alpha `AppDetailsDecisionTileBrush` material and removed default hairline button frames. Remaining gap: focus-state feel, bright artwork, long source labels, and real controller use still need stress before Pass. |
+| A3-04.03 | Details fixture, `details-long-source-fixture`, `details-primary-only-fixture`, and `details-real-sample` | Play/source/audio/subtitle/actions form a bottom decision island close to A3. | Concern | The dock is bottom-anchored by layout instead of runtime top calculations, so DPI-aware screenshots show it in the first viewport. The 0.1.0.261 local pass made the dock outer shell transparent, the 0.1.0.262 local pass reduced source/audio/subtitle from detailed parameters to compact decision summaries, and the 0.1.0.269 local pass moved the dock to `TvDetailsDecisionDockMargin` `56,0,56,112` so it no longer reads as a bottom-edge toolbar. The 0.1.0.273 local pass moved non-primary actions and source/audio/subtitle chips to lower-alpha `AppDetailsDecisionTileBrush` material and removed default hairline button frames. The 0.1.0.274 local pass split long source/audio/subtitle labels into `details-long-source-fixture`, keeping the standard fixture as a clean visual baseline while proving long labels stay one-line and do not resize the low decision area. The 0.1.0.275 local pass added a Details-specific focused decision tile fill so focused Play/source decisions no longer reuse the brighter global card-focus material. Remaining gap: bright artwork and real controller traversal still need stress before Pass. |
 | A3-04.04 | Details no-art fixture | No image falls back to black/matte without fake poster, gradient, or generated placeholder. | Pass | `details-no-art-fixture` captures as a quiet black/matte atmosphere with the normal left information and low decision areas. It does not synthesize poster art, gradient art, title watermarks, or a no-art panel. |
 | A3-04.05 | `details-primary-only-fixture` and real Details items | Primary-only atmosphere is dim/cropped enough to avoid becoming a separate poster viewer. | Concern | `details-primary-only-fixture` provides deterministic primary-only coverage without private assets, and `details-real-sample` runs against local saved-session artwork without committing screenshots/assets. Latest fixture review shows the right side remains atmosphere rather than a clear duplicate poster. Latest real sample uses actual artwork and confirms the source/audio/subtitle dock can populate from live data, but this is still not enough to accept broad real-world coverage. |
 
@@ -396,7 +396,59 @@ Findings recorded before fixes:
 
 Decision:
 
-- Pass this local no-art fallback gate. Details as a whole remains `Concern` because bright real artwork, focused decision states, long source labels, and controller-driven routes still need stress-review.
+- Pass this local no-art fallback gate. Details as a whole remains `Concern` because bright real artwork, focused decision states, and controller-driven routes still need stress-review.
+
+### 2026-07-08 - A3 Details Long Source Fixture Split
+
+App version: `0.1.0.274` local validation package; repository manifest should remain restored after validation.
+
+Scope:
+
+- Batch: A3-04 Details Atmosphere
+- Routes: `details-fixture`, `details-long-source-fixture`, `details-real-sample`
+- Evidence root: `%TEMP%\ngxe-a3-details-long-source-20260708-1913`
+- Data source: deterministic fixture split plus saved-session local-only real artwork; no private artwork, screenshots, tokens, server URLs, or credentials should be committed.
+
+Screenshots reviewed:
+
+- Current: `details-fixture-baseline.png`, `details-long-source-fixture.png`, `details-real-sample-local-only.png`
+- Target: `docs/design-previews/A3-ideal-details-atmosphere.png`
+
+Findings recorded before fixes:
+
+| ID | Severity | Screenshot | Expected A3 quality | Actual | Proposed visual fix |
+| --- | --- | --- | --- | --- | --- |
+| A3-04.03 | Concern | `details-long-source-fixture.png` | Long Emby source/audio/subtitle labels remain readable fallbacks without turning the first viewport into a technical table. | Long audio and subtitle summaries stay inside low-alpha decision tiles with one-line ellipsis. The low decision area does not resize or pull attention away from the artwork atmosphere. | Keep long labels in the dedicated `details-long-source-fixture` stress route. Keep `details-fixture` as the clean baseline for A3 composition screenshots. |
+
+Decision:
+
+- Treat long source/audio/subtitle label coverage as structurally handled by the dedicated route. A3-04 remains `Concern` because focused/selected decision states, bright real artwork, and controller-driven visual review still need stress before Pass.
+
+### 2026-07-08 - A3 Details Focused Decision Material Pass
+
+App version: `0.1.0.275` local validation package; repository manifest should remain restored after validation.
+
+Scope:
+
+- Batch: A3-04 Details Atmosphere
+- Routes: `details-fixture`, `details-real-sample`
+- Evidence root: `%TEMP%\ngxe-a3-details-focused-material-20260708-1930`
+- Data source: deterministic fixture plus saved-session local-only real artwork; no private artwork, screenshots, tokens, server URLs, or credentials should be committed.
+
+Screenshots reviewed:
+
+- Current: `details-fixture-focused-material.png`, `details-real-sample-local-only-focused-material.png`
+- Target: `docs/design-previews/A3-ideal-details-atmosphere.png`
+
+Findings recorded before fixes:
+
+| ID | Severity | Screenshot | Expected A3 quality | Actual | Proposed visual fix |
+| --- | --- | --- | --- | --- | --- |
+| A3-04.03 | Concern | `details-fixture-focused-material.png`, `details-real-sample-local-only-focused-material.png` | Focused Details decisions should be readable from ten feet without becoming a bright UWP control layer over the artwork. | The focused Play/Resume action previously reused the global card-focus fill, which was visually heavier than the surrounding low-alpha decision tiles. | Add `details_decision_tile_focused` / `AppDetailsDecisionTileFocusedBrush` and use it for Details action/source focus so focus is a local graphite luminance lift, not a generic card overlay. |
+
+Decision:
+
+- Continue visual fix. Focused Details action/source material is now closer to the matte cinema rule and remains borderless over fixture and local real artwork. A3-04 remains `Concern` because bright real artwork and controller-driven traversal across source/audio/subtitle decisions still need stress before Pass.
 
 ```md
 ### YYYY-MM-DD - A3 Batch NN
