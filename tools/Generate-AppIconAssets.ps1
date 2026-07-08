@@ -1,5 +1,5 @@
-param(
-    [string]$AssetsPath = "src\NextGenEmby.App\Assets"
+﻿param(
+    [string]$AssetsPath = "src\NoiraPlayer.App\Assets"
 )
 
 $ErrorActionPreference = "Stop"

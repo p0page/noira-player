@@ -1,4 +1,4 @@
-param(
+﻿param(
     [string]$PublicManifestPath = '',
     [string[]]$PrivateManifestPath = @(),
     [string[]]$AdditionalManifestPath = @(),
@@ -7,7 +7,7 @@ param(
     [switch]$SkipNativeHeadless,
     [string]$OutputRoot = '',
     [switch]$Clean,
-    [string]$PlayerCoreVersion = 'NextGenEmby.Core',
+    [string]$PlayerCoreVersion = 'NoiraPlayer.Core',
     [string]$BuildConfiguration = 'Debug',
     [string]$SourceRevision = ''
 )
@@ -16,7 +16,7 @@ $ErrorActionPreference = 'Stop'
 $global:LASTEXITCODE = 0
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
-$cliProject = Join-Path $repoRoot 'tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj'
+$cliProject = Join-Path $repoRoot 'tools\NoiraPlayer.PlaybackQuality.Cli\NoiraPlayer.PlaybackQuality.Cli.csproj'
 $mergeScript = Join-Path $repoRoot 'tools\quality-run\Merge-ReferenceManifests.ps1'
 $nativeHeadlessScript = Join-Path $repoRoot 'tools\quality-run\run-native-headless-harness-smoke-test.ps1'
 $nativeSmokeRoot = Join-Path $repoRoot 'artifacts\quality-run\native-headless-smoke'

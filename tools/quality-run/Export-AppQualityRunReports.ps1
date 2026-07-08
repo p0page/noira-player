@@ -1,6 +1,6 @@
-param(
+﻿param(
     [string]$PackagesRoot = (Join-Path $env:LOCALAPPDATA 'Packages'),
-    [string]$PackageNamePrefix = 'NextGenEmby.App_',
+    [string]$PackageNamePrefix = 'NoiraPlayer.App_',
     [Parameter(Mandatory = $true)]
     [string]$OutputDirectory,
     [string]$SummaryPath = ''

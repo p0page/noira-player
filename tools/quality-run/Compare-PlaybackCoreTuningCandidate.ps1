@@ -1,4 +1,4 @@
-param(
+﻿param(
     [string]$BaselineRoot = '',
     [Parameter(Mandatory = $true)]
     [string]$CandidateRoot,
@@ -15,7 +15,7 @@ $ErrorActionPreference = 'Stop'
 $global:LASTEXITCODE = 0
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
-$cliProject = Join-Path $repoRoot 'tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj'
+$cliProject = Join-Path $repoRoot 'tools\NoiraPlayer.PlaybackQuality.Cli\NoiraPlayer.PlaybackQuality.Cli.csproj'
 
 if ([string]::IsNullOrWhiteSpace($BaselineRoot)) {
     $BaselineRoot = Join-Path $repoRoot 'docs\qa\private\baselines\playback-core-tuning-baseline.local'

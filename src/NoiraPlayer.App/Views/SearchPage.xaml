@@ -1,0 +1,195 @@
+﻿<Page
+    x:Class="NoiraPlayer.App.Views.SearchPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Background="{StaticResource AppBackgroundBrush}">
+    <Grid Background="{StaticResource AppBackgroundBrush}">
+        <Grid Margin="{StaticResource TvPageMargin}" RowSpacing="16">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <StackPanel Grid.Row="0" Spacing="4">
+                <TextBlock
+                    Text="Search"
+                    Style="{StaticResource TvPageTitleTextStyle}" />
+                <TextBlock
+                    Text="Across libraries"
+                    Style="{StaticResource TvMutedBodyTextStyle}" />
+            </StackPanel>
+
+            <Border
+                Grid.Row="1"
+                Background="{StaticResource AppSurfaceBrush}"
+                BorderBrush="{StaticResource AppTransparentBrush}"
+                BorderThickness="1"
+                CornerRadius="8"
+                Padding="18">
+                <Grid ColumnSpacing="14">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBox
+                        x:Name="SearchBox"
+                        AutomationProperties.Name="Search title"
+                        PlaceholderText="Title, person, playlist, music"
+                        Style="{StaticResource TvUtilityFieldTextBoxStyle}" />
+                    <Button
+                        x:Name="SearchActionButton"
+                        Grid.Column="1"
+                        MinWidth="146"
+                        Click="Search_OnClick"
+                        Style="{StaticResource TvUtilityCommandButtonStyle}">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <SymbolIcon Symbol="Find" />
+                            <TextBlock Text="Search" />
+                        </StackPanel>
+                    </Button>
+                </Grid>
+            </Border>
+
+            <ScrollViewer
+                Grid.Row="2"
+                HorizontalScrollBarVisibility="Hidden"
+                HorizontalScrollMode="Enabled"
+                VerticalScrollBarVisibility="Disabled"
+                VerticalScrollMode="Disabled">
+                <StackPanel
+                    x:Name="ScopesPanel"
+                    Orientation="Horizontal"
+                    Spacing="12" />
+            </ScrollViewer>
+
+            <TextBlock
+                x:Name="StatusBlock"
+                Grid.Row="4"
+                Style="{StaticResource TvStatusTextStyle}"
+                Text="Enter a search." />
+
+            <StackPanel
+                x:Name="RecentSearchesPanel"
+                Grid.Row="3"
+                Spacing="8"
+                Visibility="Collapsed">
+                <TextBlock
+                    Text="Recent searches"
+                    Style="{StaticResource TvOptionLabelTextStyle}" />
+                <ScrollViewer
+                    HorizontalScrollBarVisibility="Hidden"
+                    HorizontalScrollMode="Enabled"
+                    VerticalScrollBarVisibility="Disabled"
+                    VerticalScrollMode="Disabled">
+                    <StackPanel
+                        x:Name="RecentSearchTermsPanel"
+                        Orientation="Horizontal"
+                        Spacing="10" />
+                </ScrollViewer>
+            </StackPanel>
+
+            <Grid Grid.Row="5">
+                <GridView
+                    x:Name="ResultsGrid"
+                    ContainerContentChanging="ResultsGrid_OnContainerContentChanging"
+                    IsItemClickEnabled="True"
+                    ItemClick="ResultsGrid_OnItemClick"
+                    SelectionMode="None"
+                    ItemContainerStyle="{StaticResource TvPosterGridItemStyle}"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch">
+                    <GridView.ItemTemplate>
+                        <DataTemplate>
+                            <Grid
+                                x:Name="PosterCardRoot"
+                                Width="{StaticResource TvPosterCardWidth}"
+                                Height="{StaticResource TvPosterCardHeight}"
+                                Background="{StaticResource AppTransparentBrush}"
+                                RenderTransformOrigin="0.5,0.5">
+                                <Border
+                                    x:Name="PosterSelectedBackplate"
+                                    Background="{StaticResource TvPosterSelectedBackplateBrush}"
+                                    CornerRadius="{StaticResource TvPosterCardCornerRadius}"
+                                    Opacity="0" />
+                                <StackPanel
+                                    Margin="{StaticResource TvPosterSelectedBackplatePadding}"
+                                    Spacing="8">
+                                    <Grid
+                                        x:Name="PosterArtworkFrame"
+                                        Width="{StaticResource TvPosterArtworkWidth}"
+                                        Height="{StaticResource TvPosterArtworkHeight}">
+                                        <Border
+                                            Background="{StaticResource AppRaisedSurfaceBrush}"
+                                            CornerRadius="{StaticResource TvPosterCardCornerRadius}" />
+                                        <TextBlock
+                                            Text="{Binding Initials}"
+                                            Style="{StaticResource TvPosterFallbackInitialsTextStyle}" />
+                                        <Image
+                                            Source="{Binding ImageSource}"
+                                            Stretch="UniformToFill" />
+                                        <Border
+                                            x:Name="PosterArtworkDim"
+                                            Background="{StaticResource AppArtworkDimBrush}"
+                                            Opacity="0.18" />
+                                    </Grid>
+                                    <StackPanel
+                                        x:Name="PosterMetadataPanel"
+                                        Height="{StaticResource TvPosterMetadataHeight}"
+                                        Spacing="4">
+                                        <TextBlock
+                                            Text="{Binding Title}"
+                                            Style="{StaticResource TvPosterCardTitleTextStyle}" />
+                                        <TextBlock
+                                            Text="{Binding Meta}"
+                                            Style="{StaticResource TvPosterCardMetaTextStyle}" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Grid>
+                        </DataTemplate>
+                    </GridView.ItemTemplate>
+                    <GridView.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <ItemsWrapGrid Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </GridView.ItemsPanel>
+                </GridView>
+
+                <StackPanel
+                    x:Name="EmptyStatePanel"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    MaxWidth="560"
+                    Spacing="18"
+                    Visibility="Collapsed">
+                    <TextBlock
+                        x:Name="EmptyTitleBlock"
+                        Style="{StaticResource TvEmptyStateTitleTextStyle}"
+                        Text="No results" />
+                    <TextBlock
+                        x:Name="EmptyBodyBlock"
+                        Style="{StaticResource TvEmptyStateBodyTextStyle}"
+                        Text="Try a different title, person, playlist, or song." />
+                    <StackPanel
+                        HorizontalAlignment="Center"
+                        Orientation="Horizontal"
+                        Spacing="14">
+                        <Button
+                            x:Name="EmptyEditButton"
+                            Click="EmptyEdit_OnClick"
+                            Content="Edit search"
+                            Style="{StaticResource TvUtilityCommandButtonStyle}" />
+                        <Button
+                            x:Name="EmptyRetryButton"
+                            Click="EmptyRetry_OnClick"
+                            Content="Search again"
+                            Style="{StaticResource TvUtilityCommandButtonStyle}" />
+                    </StackPanel>
+                </StackPanel>
+            </Grid>
+        </Grid>
+    </Grid>
+</Page>

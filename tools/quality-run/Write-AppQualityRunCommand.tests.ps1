@@ -1,10 +1,10 @@
-$ErrorActionPreference = 'Stop'
+﻿$ErrorActionPreference = 'Stop'
 
 $scriptPath = Join-Path $PSScriptRoot 'Write-AppQualityRunCommand.ps1'
 $testRoot = Join-Path ([System.IO.Path]::GetTempPath()) ('write-app-quality-run-command-test-' + [guid]::NewGuid().ToString('N'))
 $packagesRoot = Join-Path $testRoot 'Packages'
-$olderPackageRoot = Join-Path $packagesRoot 'NextGenEmby.App_oldpublisher'
-$packageRoot = Join-Path $packagesRoot 'NextGenEmby.App_testpublisher'
+$olderPackageRoot = Join-Path $packagesRoot 'NoiraPlayer.App_oldpublisher'
+$packageRoot = Join-Path $packagesRoot 'NoiraPlayer.App_testpublisher'
 $runPlanPath = Join-Path $testRoot 'run-plan.json'
 $summaryPath = Join-Path $testRoot 'summary.json'
 

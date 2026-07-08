@@ -1,4 +1,4 @@
-param(
+﻿param(
     [string]$ServerUrl = $env:NEXTGENEMBY_QA_SERVER_URL,
     [string]$UserName = $env:NEXTGENEMBY_QA_USERNAME,
     [string]$Password = $env:NEXTGENEMBY_QA_PASSWORD,
@@ -618,7 +618,7 @@ function New-ReferenceManifest([object[]]$Items) {
 }
 
 function New-EmbyAuthorizationHeader([string]$UserId) {
-    $identity = 'Client="Next Gen Xbox Emby QA", Device="Codex", DeviceId="nextgen-emby-qa", Version="0.1.0"'
+    $identity = 'Client="Noira QA", Device="Codex", DeviceId="noira-player-qa", Version="0.1.0"'
     if ([string]::IsNullOrWhiteSpace($UserId)) {
         return 'Emby ' + $identity
     }

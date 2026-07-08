@@ -1,4 +1,4 @@
-$ErrorActionPreference = 'Stop'
+﻿$ErrorActionPreference = 'Stop'
 
 $scriptPath = Join-Path $PSScriptRoot 'run-playback-core-checks.ps1'
 $planJson = & $scriptPath -PlanOnly
@@ -12,39 +12,39 @@ if ($plan.scope -ne 'playback-core') {
     throw 'Expected playback-core validation scope.'
 }
 
-if (-not ($plan.includedRoots -contains 'src/NextGenEmby.Core')) {
-    throw 'Expected src/NextGenEmby.Core in playback-core included roots.'
+if (-not ($plan.includedRoots -contains 'src/NoiraPlayer.Core')) {
+    throw 'Expected src/NoiraPlayer.Core in playback-core included roots.'
 }
 
-if (-not ($plan.includedRoots -contains 'src/NextGenEmby.Native')) {
-    throw 'Expected src/NextGenEmby.Native in playback-core included roots.'
+if (-not ($plan.includedRoots -contains 'src/NoiraPlayer.Native')) {
+    throw 'Expected src/NoiraPlayer.Native in playback-core included roots.'
 }
 
-if (-not ($plan.includedRoots -contains 'tools/NextGenEmby.PlaybackQuality.Cli')) {
+if (-not ($plan.includedRoots -contains 'tools/NoiraPlayer.PlaybackQuality.Cli')) {
     throw 'Expected playback quality CLI in playback-core included roots.'
 }
 
-if (-not ($plan.includedRoots -contains 'tools/NextGenEmby.PlaybackQuality.Headless')) {
+if (-not ($plan.includedRoots -contains 'tools/NoiraPlayer.PlaybackQuality.Headless')) {
     throw 'Expected playback quality headless harness in playback-core included roots.'
 }
 
-if (-not ($plan.excludedRoots -contains 'src/NextGenEmby.App')) {
-    throw 'Expected src/NextGenEmby.App in playback-core excluded roots.'
+if (-not ($plan.excludedRoots -contains 'src/NoiraPlayer.App')) {
+    throw 'Expected src/NoiraPlayer.App in playback-core excluded roots.'
 }
 
 if (-not $plan.appDiffGuard -or $plan.appDiffGuard.status -ne 'active') {
     throw 'Expected active App diff guard in playback-core validation plan.'
 }
 
-if (-not ($plan.appDiffGuard.protectedRoots -contains 'src/NextGenEmby.App')) {
-    throw 'Expected App diff guard to protect src/NextGenEmby.App.'
+if (-not ($plan.appDiffGuard.protectedRoots -contains 'src/NoiraPlayer.App')) {
+    throw 'Expected App diff guard to protect src/NoiraPlayer.App.'
 }
 
 $expectedAllowedAppInstrumentationPaths = @(
-    'src/NextGenEmby.App/Playback/WinRtNativePlaybackEngine.cs',
-    'src/NextGenEmby.App/Navigation/PlaybackLaunchRequest.cs',
-    'src/NextGenEmby.App/MainPage.xaml.cs',
-    'src/NextGenEmby.App/Views/PlaybackPage.xaml.cs'
+    'src/NoiraPlayer.App/Playback/WinRtNativePlaybackEngine.cs',
+    'src/NoiraPlayer.App/Navigation/PlaybackLaunchRequest.cs',
+    'src/NoiraPlayer.App/MainPage.xaml.cs',
+    'src/NoiraPlayer.App/Views/PlaybackPage.xaml.cs'
 )
 
 foreach ($expectedPath in $expectedAllowedAppInstrumentationPaths) {
@@ -59,9 +59,9 @@ foreach ($allowedPath in $plan.appDiffGuard.allowedPaths) {
     }
 }
 
-if ($plan.appDiffGuard.allowedPaths -contains 'src/NextGenEmby.App/Views/PlaybackPage.xaml' -or
-    $plan.appDiffGuard.allowedPaths -contains 'src/NextGenEmby.App/NextGenEmby.App.csproj' -or
-    $plan.appDiffGuard.allowedPaths -contains 'src/NextGenEmby.App/Package.appxmanifest') {
+if ($plan.appDiffGuard.allowedPaths -contains 'src/NoiraPlayer.App/Views/PlaybackPage.xaml' -or
+    $plan.appDiffGuard.allowedPaths -contains 'src/NoiraPlayer.App/NoiraPlayer.App.csproj' -or
+    $plan.appDiffGuard.allowedPaths -contains 'src/NoiraPlayer.App/Package.appxmanifest') {
     throw 'App diff guard must not allow App XAML, project, package, or packaging changes.'
 }
 
@@ -74,7 +74,7 @@ if ($plan.coreTestFilter -notmatch 'PlaybackQuality' -or $plan.coreTestFilter -n
 }
 
 $serializedCommands = $plan.commands | ConvertTo-Json -Depth 6
-if ($serializedCommands -match 'NextGenEmby\.App|AppPackages|msix|NextGenEmby\.App\.csproj') {
+if ($serializedCommands -match 'NoiraPlayer\.App|AppPackages|msix|NoiraPlayer\.App\.csproj') {
     throw 'Playback-core validation plan must not build or package the App project.'
 }
 

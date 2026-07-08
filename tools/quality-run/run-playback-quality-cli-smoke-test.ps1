@@ -1,7 +1,7 @@
 ﻿$ErrorActionPreference = 'Stop'
 
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot '..\..')
-$cliDll = Join-Path $repoRoot 'tools\NextGenEmby.PlaybackQuality.Cli\bin\Debug\net9.0\NextGenEmby.PlaybackQuality.Cli.dll'
+$cliDll = Join-Path $repoRoot 'tools\NoiraPlayer.PlaybackQuality.Cli\bin\Debug\net9.0\NoiraPlayer.PlaybackQuality.Cli.dll'
 $tempRoot = Join-Path ([System.IO.Path]::GetTempPath()) ('playback-quality-cli-' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $tempRoot | Out-Null
 
@@ -430,7 +430,7 @@ try {
         ($_.caseIds -contains 'candidate') -and
         ($_.signals -contains 'timing.maxFrameGapMs') -and
         ($_.blockers -contains 'missingEvidence') -and
-        ($_.codeTargets -contains 'src/NextGenEmby.Native/Media/FramePacing.h')
+        ($_.codeTargets -contains 'src/NoiraPlayer.Native/Media/FramePacing.h')
     })) {
         throw 'Expected analyze-report-set output to expose ranked next action context.'
     }
@@ -2050,7 +2050,7 @@ try {
         $_.signal -eq 'display.refreshRateHz' -and
         $_.failureArea -eq 'frame-pacing' -and
         $_.failureClass -eq 'insufficient instrumentation' -and
-        ($_.codeTargets -contains 'src/NextGenEmby.Native/Media/FramePacing.h')
+        ($_.codeTargets -contains 'src/NoiraPlayer.Native/Media/FramePacing.h')
     })) {
         throw 'Expected playback quality CLI validate-report-set missing telemetry output to include triaged display refresh evidence and failure class.'
     }
@@ -2210,7 +2210,7 @@ try {
         throw 'Expected playback quality CLI optimization action to accept candidate.'
     }
 
-    if (-not ($comparison.codeTargets -contains 'src/NextGenEmby.Native/Media/FramePacing.h')) {
+    if (-not ($comparison.codeTargets -contains 'src/NoiraPlayer.Native/Media/FramePacing.h')) {
         throw 'Expected playback quality CLI comparison output to include frame-pacing code target.'
     }
 
@@ -2221,7 +2221,7 @@ try {
         $_.failureArea -eq 'frame-pacing' -and
         ($_.caseIds -contains 'candidate') -and
         ($_.signals -contains 'timing.maxFrameGapMs') -and
-        ($_.codeTargets -contains 'src/NextGenEmby.Native/Media/FramePacing.h')
+        ($_.codeTargets -contains 'src/NoiraPlayer.Native/Media/FramePacing.h')
     })) {
         throw 'Expected playback quality CLI comparison output to include ranked next action context.'
     }
@@ -3396,7 +3396,7 @@ try {
         $narrowCoverageGateNextActions[0].risk -ne 'high' -or
         -not ($narrowCoverageGateNextActions[0].signals -contains 'sdr-smoke') -or
         -not ($narrowCoverageGateNextActions[0].blockers -contains 'manifest-coverage.incomplete') -or
-        -not ($narrowCoverageGateNextActions[0].codeTargets -contains 'src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs')) {
+        -not ($narrowCoverageGateNextActions[0].codeTargets -contains 'src/NoiraPlayer.Core/PlaybackQuality/PlaybackQualityReportMapper.cs')) {
         throw 'Expected incomplete manifest coverage active gate to expose ranked next action.'
     }
 
@@ -3851,7 +3851,7 @@ try {
         throw 'Expected invalid evaluate-candidate candidate report-set gate to include mismatched source signal.'
     }
 
-    if (-not ($invalidCandidateGate.codeTargets -contains 'src/NextGenEmby.Core/Playback/HdrPlaybackProfileClassifier.cs')) {
+    if (-not ($invalidCandidateGate.codeTargets -contains 'src/NoiraPlayer.Core/Playback/HdrPlaybackProfileClassifier.cs')) {
         throw 'Expected invalid evaluate-candidate candidate report-set gate to include source classification code target.'
     }
 
@@ -4007,7 +4007,7 @@ try {
           "sample.status"
         ],
         "codeTargets": [
-          "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs"
+          "src/NoiraPlayer.Core/PlaybackQuality/PlaybackQualityReportComposer.cs"
         ]
       }
     ],
@@ -4227,7 +4227,7 @@ try {
           "source.hdrKind"
         ],
         "codeTargets": [
-          "src/NextGenEmby.Core/Playback/HdrPlaybackProfileClassifier.cs"
+          "src/NoiraPlayer.Core/Playback/HdrPlaybackProfileClassifier.cs"
         ]
       }
     ],
@@ -4288,7 +4288,7 @@ try {
         throw 'Expected blocked report-analysis active gate to point at blocked candidate report-analysis gate.'
     }
 
-    if (-not ($blockedAnalysisEvaluation.activeGate.codeTargets -contains 'src/NextGenEmby.Core/Playback/HdrPlaybackProfileClassifier.cs')) {
+    if (-not ($blockedAnalysisEvaluation.activeGate.codeTargets -contains 'src/NoiraPlayer.Core/Playback/HdrPlaybackProfileClassifier.cs')) {
         throw 'Expected blocked report-analysis active gate to include source classification code target.'
     }
 
@@ -4319,7 +4319,7 @@ try {
         throw 'Expected blocked report-analysis summary case to include model analysis blocker signal.'
     }
 
-    if (-not ($blockedAnalysisCase.codeTargets -contains 'src/NextGenEmby.Core/Playback/HdrPlaybackProfileClassifier.cs')) {
+    if (-not ($blockedAnalysisCase.codeTargets -contains 'src/NoiraPlayer.Core/Playback/HdrPlaybackProfileClassifier.cs')) {
         throw 'Expected blocked report-analysis summary case to include source classification code target.'
     }
 
@@ -4350,7 +4350,7 @@ try {
         throw 'Expected candidate report-analysis gate to include affected case id.'
     }
 
-    if (-not ($blockedAnalysisGate.codeTargets -contains 'src/NextGenEmby.Core/Playback/HdrPlaybackProfileClassifier.cs')) {
+    if (-not ($blockedAnalysisGate.codeTargets -contains 'src/NoiraPlayer.Core/Playback/HdrPlaybackProfileClassifier.cs')) {
         throw 'Expected candidate report-analysis gate to include source classification code target.'
     }
 

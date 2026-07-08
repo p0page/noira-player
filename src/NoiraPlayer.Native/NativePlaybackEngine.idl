@@ -1,0 +1,115 @@
+﻿namespace NoiraPlayer.Native
+{
+    enum NativePlaybackState
+    {
+        NativePlaybackState_Stopped = 0,
+        NativePlaybackState_Opening = 1,
+        NativePlaybackState_Buffering = 2,
+        NativePlaybackState_Playing = 3,
+        NativePlaybackState_Paused = 4,
+        NativePlaybackState_Failed = 5
+    };
+
+    enum NativeHdrStatus
+    {
+        NativeHdrStatus_Unknown = 0,
+        NativeHdrStatus_Unsupported = 1,
+        NativeHdrStatus_Off = 2,
+        NativeHdrStatus_On = 3,
+        NativeHdrStatus_Failed = 4
+    };
+
+    runtimeclass NativePlaybackOpenRequest
+    {
+        NativePlaybackOpenRequest();
+        String ItemId;
+        String MediaSourceId;
+        String DirectStreamUrl;
+        Int64 StartPositionTicks;
+        Int32 AudioStreamIndex;
+        Boolean HasAudioStreamIndex;
+        Int32 SubtitleStreamIndex;
+        Boolean HasSubtitleStreamIndex;
+        Double VideoFrameRate;
+    }
+
+    runtimeclass NativePlaybackStatus
+    {
+        NativePlaybackStatus();
+        NativeHdrStatus HdrStatus;
+        Boolean IsHdrDisplayAvailable;
+        Boolean IsHdrOutputActive;
+        Double RefreshRateHz;
+        String Message;
+        String SwapChainFormat;
+        String SwapChainColorSpace;
+        Boolean IsTenBitSwapChain;
+        Boolean IsVideoProcessorColorSpaceValidated;
+        String VideoProcessorInputColorSpace;
+        String VideoProcessorOutputColorSpace;
+        String VideoProcessorConversionStatus;
+    }
+
+    runtimeclass NativePlaybackQualityMetrics
+    {
+        NativePlaybackQualityMetrics();
+        UInt64 RenderPasses;
+        UInt64 DecodedVideoFrames;
+        UInt64 RenderedVideoFrames;
+        UInt64 SubmittedAudioFrames;
+        UInt64 DroppedVideoFrames;
+        UInt64 SeekPrerollDroppedFrames;
+        UInt64 VideoAheadWaitCount;
+        UInt64 VideoStarvedPasses;
+        UInt64 AudioStarvedPasses;
+        UInt64 QueuedAudioBuffers;
+        Int64 AudioClockTicks;
+        Int64 VideoPositionTicks;
+        Double RenderIntervalMsP50;
+        Double RenderIntervalMsP95;
+        Double RenderIntervalMsP99;
+        Double MaxFrameGapMs;
+        Double PresentDurationMsP50;
+        Double PresentDurationMsP95;
+        Double PresentDurationMsP99;
+        Double PresentDurationMsMax;
+        Double AudioAheadWaitDurationMsP50;
+        Double AudioAheadWaitDurationMsP95;
+        Double AudioAheadWaitDurationMsP99;
+        Double AudioAheadWaitDurationMsMax;
+        Double AudioAheadWaitTargetMsP50;
+        Double AudioAheadWaitTargetMsP95;
+        Double AudioAheadWaitTargetMsP99;
+        Double AudioAheadWaitTargetMsMax;
+        Double AudioAheadWaitOversleepMsP50;
+        Double AudioAheadWaitOversleepMsP95;
+        Double AudioAheadWaitOversleepMsP99;
+        Double AudioAheadWaitOversleepMsMax;
+        Double FramePacingSourceFrameRate;
+        Double LateFrameDropToleranceMs;
+        Double AudioVideoDriftMsP50;
+        Double AudioVideoDriftMsP95;
+        Double AudioVideoDriftMsP99;
+        Double AudioVideoDriftMsMax;
+    }
+
+    delegate void NativePlaybackStateChangedHandler(NativePlaybackState state, String message);
+
+    runtimeclass NativePlaybackEngine
+    {
+        NativePlaybackEngine();
+        event NativePlaybackStateChangedHandler StateChanged;
+        void AttachSurface(Windows.UI.Xaml.Controls.SwapChainPanel panel);
+        Int64 CurrentPositionTicks();
+        NativePlaybackStatus DisplayStatus();
+        NativePlaybackQualityMetrics QualityMetrics();
+        Windows.Foundation.IAsyncAction OpenAsync(NativePlaybackOpenRequest request);
+        Windows.Foundation.IAsyncAction PauseAsync();
+        Windows.Foundation.IAsyncAction ResumeAsync();
+        Windows.Foundation.IAsyncAction SeekAsync(Int64 positionTicks);
+        Windows.Foundation.IAsyncAction StopAsync();
+        Windows.Foundation.IAsyncAction SwitchAudioStreamAsync(Int32 audioStreamIndex);
+        Windows.Foundation.IAsyncAction SwitchSubtitleStreamAsync(Int32 subtitleStreamIndex);
+        Windows.Foundation.IAsyncAction DisableSubtitlesAsync();
+    }
+}

@@ -1,9 +1,9 @@
-$ErrorActionPreference = 'Stop'
+﻿$ErrorActionPreference = 'Stop'
 
 $scriptPath = Join-Path $PSScriptRoot 'Export-AppQualityRunReports.ps1'
 $testRoot = Join-Path ([System.IO.Path]::GetTempPath()) ('export-app-quality-run-test-' + [guid]::NewGuid().ToString('N'))
 $packagesRoot = Join-Path $testRoot 'Packages'
-$packageRoot = Join-Path $packagesRoot 'NextGenEmby.App_testpublisher'
+$packageRoot = Join-Path $packagesRoot 'NoiraPlayer.App_testpublisher'
 $capturedRoot = Join-Path $packageRoot 'LocalState\quality-run\captured'
 $outputRoot = Join-Path $testRoot 'exported'
 

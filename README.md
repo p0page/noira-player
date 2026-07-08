@@ -1,4 +1,4 @@
-# Noira
+﻿# Noira
 
 Noira is an open-source TV media player for Emby-compatible personal media
 servers, built for Xbox and Windows.
@@ -29,9 +29,9 @@ before a stable release.
 ## Repository Layout
 
 ```text
-src/NextGenEmby.App      UWP app, XAML views, app services, storage
-src/NextGenEmby.Core     Emby API models, policies, testable core logic
-src/NextGenEmby.Native   C++/WinRT native playback engine
+src/NoiraPlayer.App      UWP app, XAML views, app services, storage
+src/NoiraPlayer.Core     Emby API models, policies, testable core logic
+src/NoiraPlayer.Native   C++/WinRT native playback engine
 tests/                   Automated tests
 docs/                    Design notes, dependency notes, QA notes, plans
 tools/                   Local helper scripts
@@ -51,13 +51,13 @@ Build the app:
 
 ```powershell
 & 'C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe' `
-  NextGenXboxEmby.sln /restore /p:Configuration=Debug /p:Platform=x64
+  NoiraPlayer.sln /restore /p:Configuration=Debug /p:Platform=x64
 ```
 
 Run core tests:
 
 ```powershell
-dotnet test tests\NextGenEmby.Core.Tests\NextGenEmby.Core.Tests.csproj -v minimal
+dotnet test tests\NoiraPlayer.Core.Tests\NoiraPlayer.Core.Tests.csproj -v minimal
 ```
 
 More implementation and validation notes are in `docs/`.

@@ -1,4 +1,4 @@
-$ErrorActionPreference = 'Stop'
+﻿$ErrorActionPreference = 'Stop'
 
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot '..\..')
 $scriptPath = Join-Path $PSScriptRoot 'Merge-ReferenceManifests.ps1'
@@ -102,7 +102,7 @@ try {
     Push-Location $repoRoot
     try {
         dotnet run `
-            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
+            --project tools\NoiraPlayer.PlaybackQuality.Cli\NoiraPlayer.PlaybackQuality.Cli.csproj `
             -- validate-manifest `
             --manifest $mergedPath `
             --output $validationPath

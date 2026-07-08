@@ -1,0 +1,267 @@
+﻿<Page
+    x:Class="NoiraPlayer.App.Views.LibraryPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Background="{StaticResource AppBackgroundBrush}">
+    <Grid Background="{StaticResource AppBackgroundBrush}">
+        <Grid Margin="{StaticResource TvPageMargin}" RowSpacing="14">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <Grid Grid.Row="0" ColumnSpacing="24">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Spacing="4">
+                    <TextBlock
+                        x:Name="TitleBlock"
+                        Style="{StaticResource TvPageTitleTextStyle}"
+                        Text="Library"
+                        TextTrimming="CharacterEllipsis" />
+                    <TextBlock
+                        x:Name="StatusBlock"
+                        Style="{StaticResource TvMutedBodyTextStyle}" />
+                </StackPanel>
+
+                <Button
+                    x:Name="RefreshButton"
+                    Grid.Column="1"
+                    AutomationProperties.Name="Refresh"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Center"
+                    Click="Refresh_OnClick"
+                    Opacity="0.48"
+                    Style="{StaticResource IconButtonStyle}"
+                    ToolTipService.ToolTip="Refresh"
+                    UseSystemFocusVisuals="False">
+                    <SymbolIcon Symbol="Refresh" />
+                </Button>
+            </Grid>
+
+            <StackPanel
+                x:Name="OptionsPanel"
+                Grid.Row="1"
+                Orientation="Horizontal"
+                Spacing="{StaticResource TvLibraryToolbarSpacing}">
+                <StackPanel Width="{StaticResource TvLibraryToolbarButtonWidth}" Spacing="0">
+                    <TextBlock
+                        Style="{StaticResource TvOptionLabelTextStyle}"
+                        Text="Sort"
+                        Visibility="Collapsed" />
+                    <Button
+                        x:Name="SortButton"
+                        AutomationProperties.Name="Sort"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Stretch"
+                        Click="SortButton_OnClick"
+                        Style="{StaticResource TvLibraryToolbarButtonStyle}">
+                        <Grid ColumnSpacing="8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock
+                                x:Name="SortValueBlock"
+                                VerticalAlignment="Center"
+                                Text="Title"
+                                TextTrimming="CharacterEllipsis" />
+                            <SymbolIcon
+                                Grid.Column="1"
+                                Symbol="Sort"
+                                VerticalAlignment="Center" />
+                        </Grid>
+                    </Button>
+                </StackPanel>
+
+                <StackPanel Width="{StaticResource TvLibraryToolbarButtonWidth}" Spacing="0">
+                    <TextBlock
+                        Style="{StaticResource TvOptionLabelTextStyle}"
+                        Text="Filter"
+                        Visibility="Collapsed" />
+                    <Button
+                        x:Name="FilterButton"
+                        AutomationProperties.Name="Filter"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Stretch"
+                        Click="FilterButton_OnClick"
+                        Style="{StaticResource TvLibraryToolbarButtonStyle}">
+                        <Grid ColumnSpacing="8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock
+                                x:Name="FilterValueBlock"
+                                VerticalAlignment="Center"
+                                Text="All"
+                                TextTrimming="CharacterEllipsis" />
+                            <SymbolIcon
+                                Grid.Column="1"
+                                Symbol="Filter"
+                                VerticalAlignment="Center" />
+                        </Grid>
+                    </Button>
+                </StackPanel>
+            </StackPanel>
+
+            <Grid Grid.Row="2">
+                <GridView
+                    x:Name="ItemsGrid"
+                    ContainerContentChanging="ItemsGrid_OnContainerContentChanging"
+                    IsItemClickEnabled="True"
+                    ItemClick="ItemsGrid_OnItemClick"
+                    SelectionMode="None"
+                    ItemContainerStyle="{StaticResource TvPosterGridItemStyle}"
+                    Margin="0,8,0,0"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch">
+                    <GridView.ItemTemplate>
+                        <DataTemplate>
+                            <Grid
+                                x:Name="PosterCardRoot"
+                                Width="{Binding CardWidth}"
+                                Height="{Binding CardHeight}"
+                                Background="{StaticResource AppTransparentBrush}"
+                                RenderTransformOrigin="0.5,0.5">
+                                <Grid.Resources>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="{StaticResource AppTextBrush}" />
+                                    </Style>
+                                </Grid.Resources>
+                                <Border
+                                    x:Name="PosterSelectedBackplate"
+                                    Background="{StaticResource TvPosterSelectedBackplateBrush}"
+                                    CornerRadius="{StaticResource TvPosterCardCornerRadius}"
+                                    Opacity="0" />
+                                <StackPanel
+                                    Margin="{StaticResource TvPosterSelectedBackplatePadding}"
+                                    Spacing="8">
+                                    <Grid
+                                        x:Name="PosterArtworkFrame"
+                                        Width="{Binding ArtworkWidth}"
+                                        Height="{Binding ArtworkHeight}">
+                                        <Border
+                                            Background="{StaticResource AppRaisedSurfaceBrush}"
+                                            CornerRadius="{StaticResource TvPosterCardCornerRadius}" />
+                                        <TextBlock
+                                            Text="{Binding Initials}"
+                                            Style="{StaticResource TvPosterFallbackInitialsTextStyle}" />
+                                        <Image
+                                            Source="{Binding ImageSource}"
+                                            Stretch="UniformToFill" />
+                                        <Border
+                                            x:Name="PosterArtworkDim"
+                                            Background="{StaticResource AppArtworkDimBrush}"
+                                            Opacity="0.18" />
+                                    </Grid>
+                                    <StackPanel
+                                        x:Name="PosterMetadataPanel"
+                                        Height="{Binding MetadataHeight}"
+                                        Spacing="4">
+                                        <TextBlock
+                                            Text="{Binding Title}"
+                                            Style="{StaticResource TvPosterCardTitleTextStyle}" />
+                                        <TextBlock
+                                            Text="{Binding Meta}"
+                                            Style="{StaticResource TvPosterCardMetaTextStyle}" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Grid>
+                        </DataTemplate>
+                    </GridView.ItemTemplate>
+                    <GridView.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <ItemsWrapGrid
+                                Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </GridView.ItemsPanel>
+                </GridView>
+
+                <StackPanel
+                    x:Name="EmptyStatePanel"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    MaxWidth="560"
+                    Spacing="18"
+                    Visibility="Collapsed">
+                    <TextBlock
+                        x:Name="EmptyTitleBlock"
+                        Style="{StaticResource TvEmptyStateTitleTextStyle}"
+                        Text="No items found" />
+                    <TextBlock
+                        x:Name="EmptyBodyBlock"
+                        Style="{StaticResource TvEmptyStateBodyTextStyle}"
+                        Text="Try another filter or refresh this library." />
+                    <StackPanel
+                        HorizontalAlignment="Center"
+                        Orientation="Horizontal"
+                        Spacing="14">
+                        <Button
+                            x:Name="ClearFiltersButton"
+                            Click="ClearFilters_OnClick"
+                            Content="Clear filters" />
+                        <Button
+                            x:Name="EmptyRetryButton"
+                            Click="Refresh_OnClick"
+                            Content="Retry" />
+                    </StackPanel>
+                </StackPanel>
+            </Grid>
+        </Grid>
+
+        <Grid
+            x:Name="OptionSheetRoot"
+            Canvas.ZIndex="20"
+            Background="{StaticResource AppModalScrimBrush}"
+            Visibility="Collapsed">
+            <Grid Margin="{StaticResource TvPageMargin}">
+                <Border
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Top"
+                    Width="{StaticResource TvLibraryOptionSheetWidth}"
+                    MaxHeight="{StaticResource TvLibraryOptionSheetMaxHeight}"
+                    Margin="{StaticResource TvLibraryOptionSheetMargin}"
+                    Background="{StaticResource AppSurfaceBrush}"
+                    BorderBrush="{StaticResource AppHairlineBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="{StaticResource TvLibraryOptionSheetPadding}">
+                    <Grid RowSpacing="16">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <StackPanel Spacing="4">
+                            <TextBlock
+                                x:Name="OptionSheetTitleBlock"
+                                FontSize="30"
+                                FontWeight="SemiBold"
+                                Text="Sort" />
+                            <TextBlock
+                                x:Name="OptionSheetSubtitleBlock"
+                                FontSize="16"
+                                Foreground="{StaticResource AppMutedTextBrush}"
+                                MaxLines="1"
+                                TextTrimming="CharacterEllipsis"
+                                Text="Choose an option" />
+                        </StackPanel>
+
+                        <ScrollViewer
+                            Grid.Row="1"
+                            VerticalScrollBarVisibility="Hidden"
+                            VerticalScrollMode="Enabled">
+                            <StackPanel
+                                x:Name="OptionSheetOptionsPanel"
+                                Spacing="10" />
+                        </ScrollViewer>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Grid>
+    </Grid>
+</Page>

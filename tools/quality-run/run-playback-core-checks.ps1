@@ -1,4 +1,4 @@
-param(
+﻿param(
     [switch]$PlanOnly,
     [switch]$SkipNativeBuild,
     [string]$AppDiffBase = '94adec5'
@@ -7,12 +7,12 @@ param(
 $ErrorActionPreference = 'Stop'
 
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot '..\..')
-$protectedAppRoots = @('src/NextGenEmby.App')
+$protectedAppRoots = @('src/NoiraPlayer.App')
 $allowedAppInstrumentationPaths = @(
-    'src/NextGenEmby.App/Playback/WinRtNativePlaybackEngine.cs',
-    'src/NextGenEmby.App/Navigation/PlaybackLaunchRequest.cs',
-    'src/NextGenEmby.App/MainPage.xaml.cs',
-    'src/NextGenEmby.App/Views/PlaybackPage.xaml.cs'
+    'src/NoiraPlayer.App/Playback/WinRtNativePlaybackEngine.cs',
+    'src/NoiraPlayer.App/Navigation/PlaybackLaunchRequest.cs',
+    'src/NoiraPlayer.App/MainPage.xaml.cs',
+    'src/NoiraPlayer.App/Views/PlaybackPage.xaml.cs'
 )
 $coreTestFilter = 'FullyQualifiedName~PlaybackQuality|FullyQualifiedName~Playback|FullyQualifiedName~EmbyProgress'
 
@@ -82,14 +82,14 @@ function New-CommandPlan(
 }
 
 $vcvars = 'C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat'
-$nativeHelperCommand = '"' + $vcvars + '" >nul && cl /nologo /std:c++20 /EHsc /I src\NextGenEmby.Native /Fo:C:\tmp\PlaybackQualityMetricsTests.obj tests\NextGenEmby.Native.Tests\PlaybackQualityMetricsTests.cpp /Fe:C:\tmp\PlaybackQualityMetricsTests.exe && C:\tmp\PlaybackQualityMetricsTests.exe'
-$nativeFramePacingCommand = '"' + $vcvars + '" >nul && cl /nologo /std:c++20 /EHsc /I src\NextGenEmby.Native /Fo:C:\tmp\FramePacingTests.obj tests\NextGenEmby.Native.Tests\FramePacingTests.cpp /Fe:C:\tmp\FramePacingTests.exe && C:\tmp\FramePacingTests.exe'
-$nativeRenderLoopWaiterCommand = '"' + $vcvars + '" >nul && cl /nologo /std:c++20 /EHsc /I src\NextGenEmby.Native /Fo:C:\tmp\RenderLoopWaiterTests.obj tests\NextGenEmby.Native.Tests\RenderLoopWaiterTests.cpp /Fe:C:\tmp\RenderLoopWaiterTests.exe && C:\tmp\RenderLoopWaiterTests.exe'
-$nativeDisplayRefreshCommand = '"' + $vcvars + '" >nul && cl /nologo /std:c++20 /EHsc /I src\NextGenEmby.Native /Fo:C:\tmp\DisplayRefreshRatePolicyTests.obj tests\NextGenEmby.Native.Tests\DisplayRefreshRatePolicyTests.cpp /Fe:C:\tmp\DisplayRefreshRatePolicyTests.exe && C:\tmp\DisplayRefreshRatePolicyTests.exe'
-$nativeDisplayRefreshSnapshotCommand = '"' + $vcvars + '" >nul && cl /nologo /std:c++20 /EHsc /I src\NextGenEmby.Native /Fo:C:\tmp\HdrDisplayRefreshRateSnapshotTests.obj tests\NextGenEmby.Native.Tests\HdrDisplayRefreshRateSnapshotTests.cpp /Fe:C:\tmp\HdrDisplayRefreshRateSnapshotTests.exe && C:\tmp\HdrDisplayRefreshRateSnapshotTests.exe'
-$nativeDxOffscreenCommand = '"' + $vcvars + '" >nul && if not exist C:\tmp\nextgenemby-native-dx-offscreen mkdir C:\tmp\nextgenemby-native-dx-offscreen && cl /nologo /std:c++20 /EHsc /DWIN32_LEAN_AND_MEAN /DWINRT_LEAN_AND_MEAN /I src\NextGenEmby.Native /I src\NextGenEmby.Native\packages\FFmpegInteropX.FFmpegUWP.5.1.100\include /Fo:C:\tmp\nextgenemby-native-dx-offscreen\ tests\NextGenEmby.Native.Tests\DxDeviceResourcesOffscreenTests.cpp src\NextGenEmby.Native\DxDeviceResources.cpp src\NextGenEmby.Native\Media\DxgiColorSpaceMapper.cpp src\NextGenEmby.Native\Media\HdrToneMappingPass.cpp src\NextGenEmby.Native\NativePlaybackDiagnostics.cpp /Fe:C:\tmp\DxDeviceResourcesOffscreenTests.exe d3d11.lib dxgi.lib d2d1.lib dwrite.lib d3dcompiler.lib windowsapp.lib && C:\tmp\DxDeviceResourcesOffscreenTests.exe'
-$nativeRestoreCommand = '"' + $vcvars + '" >nul && msbuild src\NextGenEmby.Native\NextGenEmby.Native.vcxproj /t:Restore /p:RestorePackagesConfig=true /p:Configuration=Debug /p:Platform=x64 /v:minimal'
-$nativeBuildCommand = '"' + $vcvars + '" >nul && msbuild src\NextGenEmby.Native\NextGenEmby.Native.vcxproj /p:Configuration=Debug /p:Platform=x64 /m /v:minimal'
+$nativeHelperCommand = '"' + $vcvars + '" >nul && cl /nologo /std:c++20 /EHsc /I src\NoiraPlayer.Native /Fo:C:\tmp\PlaybackQualityMetricsTests.obj tests\NoiraPlayer.Native.Tests\PlaybackQualityMetricsTests.cpp /Fe:C:\tmp\PlaybackQualityMetricsTests.exe && C:\tmp\PlaybackQualityMetricsTests.exe'
+$nativeFramePacingCommand = '"' + $vcvars + '" >nul && cl /nologo /std:c++20 /EHsc /I src\NoiraPlayer.Native /Fo:C:\tmp\FramePacingTests.obj tests\NoiraPlayer.Native.Tests\FramePacingTests.cpp /Fe:C:\tmp\FramePacingTests.exe && C:\tmp\FramePacingTests.exe'
+$nativeRenderLoopWaiterCommand = '"' + $vcvars + '" >nul && cl /nologo /std:c++20 /EHsc /I src\NoiraPlayer.Native /Fo:C:\tmp\RenderLoopWaiterTests.obj tests\NoiraPlayer.Native.Tests\RenderLoopWaiterTests.cpp /Fe:C:\tmp\RenderLoopWaiterTests.exe && C:\tmp\RenderLoopWaiterTests.exe'
+$nativeDisplayRefreshCommand = '"' + $vcvars + '" >nul && cl /nologo /std:c++20 /EHsc /I src\NoiraPlayer.Native /Fo:C:\tmp\DisplayRefreshRatePolicyTests.obj tests\NoiraPlayer.Native.Tests\DisplayRefreshRatePolicyTests.cpp /Fe:C:\tmp\DisplayRefreshRatePolicyTests.exe && C:\tmp\DisplayRefreshRatePolicyTests.exe'
+$nativeDisplayRefreshSnapshotCommand = '"' + $vcvars + '" >nul && cl /nologo /std:c++20 /EHsc /I src\NoiraPlayer.Native /Fo:C:\tmp\HdrDisplayRefreshRateSnapshotTests.obj tests\NoiraPlayer.Native.Tests\HdrDisplayRefreshRateSnapshotTests.cpp /Fe:C:\tmp\HdrDisplayRefreshRateSnapshotTests.exe && C:\tmp\HdrDisplayRefreshRateSnapshotTests.exe'
+$nativeDxOffscreenCommand = '"' + $vcvars + '" >nul && if not exist C:\tmp\noiraplayer-native-dx-offscreen mkdir C:\tmp\noiraplayer-native-dx-offscreen && cl /nologo /std:c++20 /EHsc /DWIN32_LEAN_AND_MEAN /DWINRT_LEAN_AND_MEAN /I src\NoiraPlayer.Native /I src\NoiraPlayer.Native\packages\FFmpegInteropX.FFmpegUWP.5.1.100\include /Fo:C:\tmp\noiraplayer-native-dx-offscreen\ tests\NoiraPlayer.Native.Tests\DxDeviceResourcesOffscreenTests.cpp src\NoiraPlayer.Native\DxDeviceResources.cpp src\NoiraPlayer.Native\Media\DxgiColorSpaceMapper.cpp src\NoiraPlayer.Native\Media\HdrToneMappingPass.cpp src\NoiraPlayer.Native\NativePlaybackDiagnostics.cpp /Fe:C:\tmp\DxDeviceResourcesOffscreenTests.exe d3d11.lib dxgi.lib d2d1.lib dwrite.lib d3dcompiler.lib windowsapp.lib && C:\tmp\DxDeviceResourcesOffscreenTests.exe'
+$nativeRestoreCommand = '"' + $vcvars + '" >nul && msbuild src\NoiraPlayer.Native\NoiraPlayer.Native.vcxproj /t:Restore /p:RestorePackagesConfig=true /p:Configuration=Debug /p:Platform=x64 /v:minimal'
+$nativeBuildCommand = '"' + $vcvars + '" >nul && msbuild src\NoiraPlayer.Native\NoiraPlayer.Native.vcxproj /p:Configuration=Debug /p:Platform=x64 /m /v:minimal'
 
 $commands = @(
     New-CommandPlan `
@@ -101,12 +101,12 @@ $commands = @(
         -Name 'playback-core-tests' `
         -Description 'Run playback-related Core tests without building the UWP App package or unrelated interaction policies.' `
         -Command 'dotnet' `
-        -Arguments @('test', 'tests\NextGenEmby.Core.Tests\NextGenEmby.Core.Tests.csproj', '--filter', $coreTestFilter, '-v', 'minimal')
+        -Arguments @('test', 'tests\NoiraPlayer.Core.Tests\NoiraPlayer.Core.Tests.csproj', '--filter', $coreTestFilter, '-v', 'minimal')
     New-CommandPlan `
         -Name 'playback-quality-cli-build' `
         -Description 'Build the App-free playback quality comparison CLI used by model optimization loops.' `
         -Command 'dotnet' `
-        -Arguments @('build', 'tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj', '-v', 'minimal')
+        -Arguments @('build', 'tools\NoiraPlayer.PlaybackQuality.Cli\NoiraPlayer.PlaybackQuality.Cli.csproj', '-v', 'minimal')
     New-CommandPlan `
         -Name 'playback-quality-cli-smoke-test' `
         -Description 'Run an App-free JSON baseline/candidate comparison smoke test through the playback quality CLI.' `
@@ -200,16 +200,16 @@ if (-not $SkipNativeBuild) {
 $summary = [pscustomobject]@{
     scope = 'playback-core'
     includedRoots = @(
-        'src/NextGenEmby.Core',
-        'src/NextGenEmby.Native',
-        'tests/NextGenEmby.Core.Tests',
-        'tests/NextGenEmby.Native.Tests',
-        'tools/NextGenEmby.PlaybackQuality.Cli',
-        'tools/NextGenEmby.PlaybackQuality.Headless',
+        'src/NoiraPlayer.Core',
+        'src/NoiraPlayer.Native',
+        'tests/NoiraPlayer.Core.Tests',
+        'tests/NoiraPlayer.Native.Tests',
+        'tools/NoiraPlayer.PlaybackQuality.Cli',
+        'tools/NoiraPlayer.PlaybackQuality.Headless',
         'tools/quality-run'
     )
-    excludedRoots = @('src/NextGenEmby.App')
-    excludes = @('NextGenEmby.App.csproj', 'AppPackages', 'MSIX packaging')
+    excludedRoots = @('src/NoiraPlayer.App')
+    excludes = @('NoiraPlayer.App.csproj', 'AppPackages', 'MSIX packaging')
     coreTestFilter = $coreTestFilter
     appDiffGuard = [pscustomobject]@{
         status = 'active'

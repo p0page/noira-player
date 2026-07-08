@@ -1,4 +1,4 @@
-param(
+﻿param(
     [string]$PlayerCoreVersion = 'smoke-core',
     [string]$SourceRevision = 'smoke-native-headless-real-revision',
     [string]$ImportSourceRevision = 'smoke-native-headless-import-revision',
@@ -197,29 +197,29 @@ function Build-NativePlaybackGraphHelper {
     }
 
     New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
-    $ffmpegPackage = Join-Path $repoRoot 'src\NextGenEmby.Native\packages\FFmpegInteropX.FFmpegUWP.5.1.100'
+    $ffmpegPackage = Join-Path $repoRoot 'src\NoiraPlayer.Native\packages\FFmpegInteropX.FFmpegUWP.5.1.100'
     Copy-Item -Path (Join-Path $ffmpegPackage 'runtimes\win10-x64\native\*.dll') -Destination $OutputDirectory -Force
     Copy-Item -LiteralPath (Get-AppRuntimePath) -Destination $OutputDirectory -Force
 
-    $include = '/I src\NextGenEmby.Native /I src\NextGenEmby.Native\packages\FFmpegInteropX.FFmpegUWP.5.1.100\include'
+    $include = '/I src\NoiraPlayer.Native /I src\NoiraPlayer.Native\packages\FFmpegInteropX.FFmpegUWP.5.1.100\include'
     $sources = @(
-        'tests\NextGenEmby.Native.Tests\NativePlaybackGraphHeadlessSmokeTests.cpp',
-        'src\NextGenEmby.Native\DxDeviceResources.cpp',
-        'src\NextGenEmby.Native\NativePlaybackDiagnostics.cpp',
-        'src\NextGenEmby.Native\Media\DxgiColorSpaceMapper.cpp',
-        'src\NextGenEmby.Native\Media\HdrToneMappingPass.cpp',
-        'src\NextGenEmby.Native\Media\HttpMediaInput.cpp',
-        'src\NextGenEmby.Native\Media\FfmpegMediaSource.cpp',
-        'src\NextGenEmby.Native\Media\VideoDecoder.cpp',
-        'src\NextGenEmby.Native\Media\AudioDecoder.cpp',
-        'src\NextGenEmby.Native\Media\AudioRenderer.cpp',
-        'src\NextGenEmby.Native\Media\VideoRenderer.cpp',
-        'src\NextGenEmby.Native\Media\SubtitleDecoder.cpp',
-        'src\NextGenEmby.Native\Media\SubtitleRenderer.cpp',
-        'src\NextGenEmby.Native\Media\PlaybackGraph.cpp'
+        'tests\NoiraPlayer.Native.Tests\NativePlaybackGraphHeadlessSmokeTests.cpp',
+        'src\NoiraPlayer.Native\DxDeviceResources.cpp',
+        'src\NoiraPlayer.Native\NativePlaybackDiagnostics.cpp',
+        'src\NoiraPlayer.Native\Media\DxgiColorSpaceMapper.cpp',
+        'src\NoiraPlayer.Native\Media\HdrToneMappingPass.cpp',
+        'src\NoiraPlayer.Native\Media\HttpMediaInput.cpp',
+        'src\NoiraPlayer.Native\Media\FfmpegMediaSource.cpp',
+        'src\NoiraPlayer.Native\Media\VideoDecoder.cpp',
+        'src\NoiraPlayer.Native\Media\AudioDecoder.cpp',
+        'src\NoiraPlayer.Native\Media\AudioRenderer.cpp',
+        'src\NoiraPlayer.Native\Media\VideoRenderer.cpp',
+        'src\NoiraPlayer.Native\Media\SubtitleDecoder.cpp',
+        'src\NoiraPlayer.Native\Media\SubtitleRenderer.cpp',
+        'src\NoiraPlayer.Native\Media\PlaybackGraph.cpp'
     ) -join ' '
     $libs = 'd3d11.lib dxgi.lib d2d1.lib dwrite.lib d3dcompiler.lib xaudio2.lib windowsapp.lib avcodec.lib avformat.lib avutil.lib swresample.lib swscale.lib'
-    $libPath = 'src\NextGenEmby.Native\packages\FFmpegInteropX.FFmpegUWP.5.1.100\runtimes\win10-x64\native'
+    $libPath = 'src\NoiraPlayer.Native\packages\FFmpegInteropX.FFmpegUWP.5.1.100\runtimes\win10-x64\native'
     $helperExe = Join-Path $OutputDirectory 'NativePlaybackGraphHeadlessSmokeTests.exe'
     $command = '"' + $vcvars + '" >nul && cl /nologo /std:c++20 /EHsc /DWIN32_LEAN_AND_MEAN /DWINRT_LEAN_AND_MEAN ' + $include + ' /Fo:"' + $OutputDirectory + '\\" ' + $sources + ' /Fe:"' + $helperExe + '" /link /LIBPATH:"' + $libPath + '" ' + $libs
 
@@ -248,7 +248,7 @@ function Invoke-NativeHeadlessHelperCase {
 
     $exitCode = 1
     for ($attempt = 1; $attempt -le 3; $attempt++) {
-        dotnet run --project (Join-Path $repoRoot 'tools\NextGenEmby.PlaybackQuality.Headless\NextGenEmby.PlaybackQuality.Headless.csproj') -- `
+        dotnet run --project (Join-Path $repoRoot 'tools\NoiraPlayer.PlaybackQuality.Headless\NoiraPlayer.PlaybackQuality.Headless.csproj') -- `
             --case-id $CaseId `
             --stream-url $StreamUrl `
             --duration-seconds $DurationSeconds `
@@ -315,7 +315,7 @@ if (Test-Path $smokeRoot) {
 
 New-Item -ItemType Directory -Path $smokeRoot | Out-Null
 
-dotnet run --project (Join-Path $repoRoot 'tools\NextGenEmby.PlaybackQuality.Headless\NextGenEmby.PlaybackQuality.Headless.csproj') -- `
+dotnet run --project (Join-Path $repoRoot 'tools\NoiraPlayer.PlaybackQuality.Headless\NoiraPlayer.PlaybackQuality.Headless.csproj') -- `
     --case-id jellyfin/sdr-hevc-main10-1080p60-3m `
     --stream-url $sampleUrl `
     --duration-seconds 5 `
@@ -372,7 +372,7 @@ if ($report.report.result -eq 'skip') {
         throw "Headless harness must now report the exact native linkage blocker, not the initial command-shape limitation."
     }
 
-    if (-not ($report.report.limitations -contains 'native-headless: current NextGenEmby.Native build is a Windows Store C++/WinRT component with public playback entrypoints bound to UWP projection')) {
+    if (-not ($report.report.limitations -contains 'native-headless: current NoiraPlayer.Native build is a Windows Store C++/WinRT component with public playback entrypoints bound to UWP projection')) {
         throw "Expected explicit native-headless WinRT linkage limitation."
     }
 
@@ -414,7 +414,7 @@ if ($report.report.result -eq 'skip') {
 }
 "@ | Set-Content -LiteralPath $manifestPath -Encoding UTF8
 
-dotnet run --project (Join-Path $repoRoot 'tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj') -- `
+dotnet run --project (Join-Path $repoRoot 'tools\NoiraPlayer.PlaybackQuality.Cli\NoiraPlayer.PlaybackQuality.Cli.csproj') -- `
     materialize-native-harness-report-set `
     --manifest $manifestPath `
     --captured-reports-dir $capturedDir `
@@ -432,7 +432,7 @@ if (-not (Test-Path $materializedReportPath)) {
     throw "Expected materialized native-headless report at $materializedReportPath."
 }
 
-dotnet run --project (Join-Path $repoRoot 'tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj') -- `
+dotnet run --project (Join-Path $repoRoot 'tools\NoiraPlayer.PlaybackQuality.Cli\NoiraPlayer.PlaybackQuality.Cli.csproj') -- `
     validate-report-set `
     --manifest $manifestPath `
     --reports-dir $materializedDir `
@@ -446,7 +446,7 @@ if ($validation.isValid -ne $true -or $validation.matchedCaseCount -ne 1) {
     throw 'Expected materialized native-headless validation to match the captured case.'
 }
 
-dotnet run --project (Join-Path $repoRoot 'tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj') -- `
+dotnet run --project (Join-Path $repoRoot 'tools\NoiraPlayer.PlaybackQuality.Cli\NoiraPlayer.PlaybackQuality.Cli.csproj') -- `
     analyze-report-set `
     --reports-dir $materializedDir `
     --output $analysisPath
@@ -459,7 +459,7 @@ if ($analysis.playbackEvidence.canEvaluateNativePlayback -ne $false) {
     throw 'Skip-only native-headless blocker report must not be treated as native playback evidence.'
 }
 
-if (-not ($analysis.limitations -contains 'native-headless: current NextGenEmby.Native build is a Windows Store C++/WinRT component with public playback entrypoints bound to UWP projection')) {
+if (-not ($analysis.limitations -contains 'native-headless: current NoiraPlayer.Native build is a Windows Store C++/WinRT component with public playback entrypoints bound to UWP projection')) {
     throw 'Expected analyze-report-set summary to preserve native-headless linkage limitation.'
 }
 
@@ -480,7 +480,7 @@ $nativeHdr1060SampleUrl = New-NativePlaybackHdr10Sample -Name 'native-headless-h
 
 $nativeHelperExitCode = 1
 for ($attempt = 1; $attempt -le 3; $attempt++) {
-    dotnet run --project (Join-Path $repoRoot 'tools\NextGenEmby.PlaybackQuality.Headless\NextGenEmby.PlaybackQuality.Headless.csproj') -- `
+    dotnet run --project (Join-Path $repoRoot 'tools\NoiraPlayer.PlaybackQuality.Headless\NoiraPlayer.PlaybackQuality.Headless.csproj') -- `
         --case-id $nativeCaseId `
         --stream-url $nativeSampleUrl `
         --duration-seconds 3 `
@@ -538,7 +538,7 @@ if (-not ($nativeReport.report.limitations -contains 'native-headless: display r
 
 $nativeAvHelperExitCode = 1
 for ($attempt = 1; $attempt -le 3; $attempt++) {
-    dotnet run --project (Join-Path $repoRoot 'tools\NextGenEmby.PlaybackQuality.Headless\NextGenEmby.PlaybackQuality.Headless.csproj') -- `
+    dotnet run --project (Join-Path $repoRoot 'tools\NoiraPlayer.PlaybackQuality.Headless\NoiraPlayer.PlaybackQuality.Headless.csproj') -- `
         --case-id $nativeAvCaseId `
         --stream-url $nativeAvSampleUrl `
         --duration-seconds 3 `
@@ -938,7 +938,7 @@ foreach ($hdr10CaseId in $nativeHdr10CaseIds) {
 }
 "@ | Set-Content -LiteralPath $nativeManifestPath -Encoding UTF8
 
-dotnet run --project (Join-Path $repoRoot 'tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj') -- `
+dotnet run --project (Join-Path $repoRoot 'tools\NoiraPlayer.PlaybackQuality.Cli\NoiraPlayer.PlaybackQuality.Cli.csproj') -- `
     materialize-native-harness-report-set `
     --manifest $nativeManifestPath `
     --captured-reports-dir $nativeCapturedDir `
@@ -1021,7 +1021,7 @@ foreach ($matrixItem in $nativeMatrixReports) {
     }
 }
 
-dotnet run --project (Join-Path $repoRoot 'tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj') -- `
+dotnet run --project (Join-Path $repoRoot 'tools\NoiraPlayer.PlaybackQuality.Cli\NoiraPlayer.PlaybackQuality.Cli.csproj') -- `
     validate-report-set `
     --manifest $nativeManifestPath `
     --reports-dir $nativeMaterializedDir `
@@ -1030,7 +1030,7 @@ if ($LASTEXITCODE -ne 0) {
     throw 'Expected materialized native helper report-set to pass validation.'
 }
 
-dotnet run --project (Join-Path $repoRoot 'tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj') -- `
+dotnet run --project (Join-Path $repoRoot 'tools\NoiraPlayer.PlaybackQuality.Cli\NoiraPlayer.PlaybackQuality.Cli.csproj') -- `
     analyze-report-set `
     --reports-dir $nativeMaterializedDir `
     --output $nativeAnalysisPath

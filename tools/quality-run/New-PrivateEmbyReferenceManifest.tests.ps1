@@ -1,4 +1,4 @@
-$ErrorActionPreference = 'Stop'
+﻿$ErrorActionPreference = 'Stop'
 
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot '..\..')
 $scriptPath = Join-Path $PSScriptRoot 'New-PrivateEmbyReferenceManifest.ps1'
@@ -265,7 +265,7 @@ try {
         }
 
         dotnet run `
-            --project tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj `
+            --project tools\NoiraPlayer.PlaybackQuality.Cli\NoiraPlayer.PlaybackQuality.Cli.csproj `
             --no-build `
             -- validate-manifest `
             --manifest $outputPath `
