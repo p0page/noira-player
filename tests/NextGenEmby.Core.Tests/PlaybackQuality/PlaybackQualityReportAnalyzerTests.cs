@@ -1239,6 +1239,23 @@ public sealed class PlaybackQualityReportAnalyzerTests
     }
 
     [Fact]
+    public void Analyze_Reports_Present_Duration_Timing_Evidence()
+    {
+        var report = CreateOptimizationReadyFailure();
+        report.Timing.PresentDurationMsP50 = 2.0;
+        report.Timing.PresentDurationMsP95 = 16.7;
+        report.Timing.PresentDurationMsP99 = 33.4;
+        report.Timing.PresentDurationMsMax = 50.1;
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Contains("timing.presentDurationMsP50", analysis.EvidenceSignals);
+        Assert.Contains("timing.presentDurationMsP95", analysis.EvidenceSignals);
+        Assert.Contains("timing.presentDurationMsP99", analysis.EvidenceSignals);
+        Assert.Contains("timing.presentDurationMsMax", analysis.EvidenceSignals);
+    }
+
+    [Fact]
     public void Analyze_Reports_Missing_Frame_Pacing_Policy_When_Frame_Pacing_Fails()
     {
         var report = CreateOptimizationReadyFailure();

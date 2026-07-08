@@ -1169,6 +1169,10 @@ namespace NextGenEmby.Core.PlaybackQuality
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.renderIntervalMsP50");
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.renderIntervalMsP95");
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.renderIntervalMsP99");
+                AddUnique(comparison.Coverage.MatchedSignals, "timing.presentDurationMsP50");
+                AddUnique(comparison.Coverage.MatchedSignals, "timing.presentDurationMsP95");
+                AddUnique(comparison.Coverage.MatchedSignals, "timing.presentDurationMsP99");
+                AddUnique(comparison.Coverage.MatchedSignals, "timing.presentDurationMsMax");
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.maxFrameGapMs");
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.expectedFrameDurationMs");
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.framePacingSourceFrameRate");
@@ -1211,6 +1215,10 @@ namespace NextGenEmby.Core.PlaybackQuality
                 report.Timing.RenderIntervalMsP50 > 0 ||
                 report.Timing.RenderIntervalMsP95 > 0 ||
                 report.Timing.RenderIntervalMsP99 > 0 ||
+                report.Timing.PresentDurationMsP50 > 0 ||
+                report.Timing.PresentDurationMsP95 > 0 ||
+                report.Timing.PresentDurationMsP99 > 0 ||
+                report.Timing.PresentDurationMsMax > 0 ||
                 report.Timing.MaxFrameGapMs > 0 ||
                 report.Timing.ExpectedFrameDurationMs > 0 ||
                 report.Timing.FramePacingSourceFrameRate > 0;

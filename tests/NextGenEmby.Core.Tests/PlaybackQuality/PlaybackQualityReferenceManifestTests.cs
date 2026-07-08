@@ -163,6 +163,18 @@ public sealed class PlaybackQualityReferenceManifestTests
     }
 
     [Fact]
+    public void SignalCatalog_Includes_Present_Duration_Timing_Evidence()
+    {
+        var reportSignals = new HashSet<string>(
+            PlaybackQualitySignalCatalog.ReportSignals.Select(signal => signal.Signal));
+
+        Assert.Contains("timing.presentDurationMsP50", reportSignals);
+        Assert.Contains("timing.presentDurationMsP95", reportSignals);
+        Assert.Contains("timing.presentDurationMsP99", reportSignals);
+        Assert.Contains("timing.presentDurationMsMax", reportSignals);
+    }
+
+    [Fact]
     public void RequiredSignals_Include_Source_Color_Metadata_When_Expected()
     {
         var referenceCase = CreateCase(

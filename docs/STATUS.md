@@ -432,3 +432,13 @@ manifest validation、report-set validation、single comparison、comparison sui
 重新用同一 41-case manifest 对比 `playback-core-tuning-video-clock-61fecb3.local` 与 `playback-core-tuning-seek-evidence-16ba684.local`，输出 ignored comparison：`docs/qa/private/comparisons/playback-core-tuning-runtime-evidence-working.local/`。结果仍为 `accept-candidate` / `keep-candidate`，41 case 可比，9 improved，0 regression，0 mixed，strong confidence 41/41。`local/native-headless-av-smoke` 的 matched signals 已同时包含 frame pacing jitter、buffering、A/V sync、seek/timeline、track/subtitle 和 color/DXGI 证据。
 
 边界：这是 comparison artifact 的模型可消费性增强，不改变播放器行为、不改变 evaluator 阈值、不放宽样本预期，也不把 jitter 数值本身解释为已优化。下一步才适合基于这些完整 comparison signals 判断是否需要实际调优含音轨播放的 frame pacing 或采样窗口。
+
+# 2026-07-08 更新：Present duration 证据补齐，jitter 初步定位到 Present 前
+
+本轮在已接受的 `playback-core-tuning-seek-evidence-16ba684.local` 之后补齐 `DxDeviceResources.Present()` 调用耗时证据。新增 `timing.presentDurationMsP50/P95/P99/Max`，并让该信号进入 signal catalog、单报告 `modelAnalysis.evidenceSignals`、native-headless smoke 断言和 candidate comparison `coverage.matchedSignals`。
+
+已用上一轮 accepted candidate 的 41-case core manifest 生成新的 ignored candidate：`docs/qa/private/candidates/playback-core-tuning-present-duration-41case-working.local/`。同 manifest 对比输出为 `docs/qa/private/comparisons/playback-core-tuning-present-duration-41case-working.local/`：41/41 case 可比，candidate validation 通过，`decision = no-change`，0 improvement，0 regression，0 mixed，41 个 strong confidence。
+
+关键证据：`local/native-headless-av-smoke` 的 `timing.renderIntervalMsP95` 约为 47ms，但 `timing.presentDurationMsP95` 约为 0.07ms，说明当前 native-headless A/V jitter 主要不在 swapchain Present/vsync blocking 内，而更可能发生在 Present 前的 render loop、audio-clock gating、decode 或等待路径。
+
+边界：这是诊断证据增强，不是播放策略优化。该 candidate 不应被标记为 accepted quality improvement；下一轮应继续沿同一 41-case manifest，聚焦 Present 前的调度/等待路径，优先补足或调整能解释 `videoAheadWaitCount`、render interval 和 A/V drift 关系的证据或小步策略。

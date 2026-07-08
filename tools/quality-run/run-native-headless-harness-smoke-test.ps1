@@ -297,6 +297,11 @@ function Assert-NativeDisplayRefreshEvidence {
         $Report.report.timing.lateFrameDropToleranceMs -le 0) {
         throw "Expected $CaseId to include frame interval and drop-threshold evidence."
     }
+
+    if ($Report.report.timing.presentDurationMsP95 -le 0 -or
+        $Report.report.timing.presentDurationMsMax -le 0) {
+        throw "Expected $CaseId to include swapchain Present duration evidence."
+    }
 }
 
 if (Test-Path $smokeRoot) {
@@ -567,6 +572,11 @@ if ($nativeAvReport.report.tracks.subtitleTrackCount -lt 1 -or
 
 if ($nativeAvReport.report.buffers.submittedAudioFrames -le 0) {
     throw 'Expected native helper A/V report to include submitted audio frames.'
+}
+
+if ($nativeAvReport.report.timing.presentDurationMsP95 -le 0 -or
+    $nativeAvReport.report.timing.presentDurationMsMax -le 0) {
+    throw 'Expected native helper A/V report to include swapchain Present duration evidence.'
 }
 
 if ($nativeAvReport.report.sync.audioClockTicks -le 0 -or

@@ -571,3 +571,13 @@
 影响：`local/native-headless-av-smoke` comparison 现在同时暴露 frame pacing jitter、buffering、A/V sync、seek/timeline、track/subtitle 和 color/DXGI matched signals。重新比较 `playback-core-tuning-video-clock-61fecb3.local` 与 `playback-core-tuning-seek-evidence-16ba684.local` 后仍为 41 case 可比、`accept-candidate`、9 improvement、0 regression、0 mixed。
 
 边界：这些 runtime telemetry 在没有显式 threshold 或 failure delta 时只证明 evidence 可比，不自动解释成 improvement 或 regression，避免短样本采样噪音驱动 candidate 接受/拒绝。真正的播放策略调优仍需要同一 manifest 下的明确前后差异或失败阈值。
+
+# 2026-07-08: Present duration 作为 swapchain/vsync blocking evidence
+
+决策：native/headless 播放质量报告新增 `timing.presentDurationMsP50/P95/P99/Max`，记录 `DxDeviceResources.Present()` 调用耗时。该信号进入 signal catalog、单报告 `modelAnalysis.evidenceSignals`、native-headless smoke 断言和 candidate comparison `coverage.matchedSignals`。
+
+原因：第二轮 Core 调优需要区分 frame pacing jitter 是来自解码/调度/render loop，还是来自 swapchain `Present()`/vsync blocking。此前只有 render interval 和 max frame gap，模型无法判断等待发生在 Present 前还是 Present 内部。
+
+影响：后续同 manifest baseline/candidate 对比会在逐 case matched signals 中暴露 Present duration evidence。它能辅助解释 cadence、frame pacing 和 A/V sync 异常，但不改变现有 pass/fail 阈值。
+
+边界：`presentDurationMs*` 当前只作为诊断 evidence，不自动解释成 improvement 或 regression；短样本中的数值波动不能单独驱动 candidate 接受或拒绝。
