@@ -1,5 +1,25 @@
 # 技术决策
 
+## 2026-07-08: native color evidence 必须来自 helper/source snapshot 与 DXGI runtime observation
+
+决策：App-free native helper 的颜色证据分两层采集：source raw color metadata 来自 FFmpeg 打开的实际流 snapshot，DXGI input/output 与 conversion status 来自 `DxDeviceResources` 在渲染路径中的 runtime observation。`PlaybackQuality.Headless` 只负责解析 helper 输出并写入标准 report，不从 manifest expected、文件名、case id 或预分类结果倒填 actual color evidence。
+
+原因：HDR/DV/SDR 判断最容易被文件名和预期值带偏。评测系统的职责是暴露 native playback 当前实际看到了什么、映射到了什么 DXGI color space、是否完成了 video processor conversion validation，而不是让报告看起来符合预期。本地 stable SDR 样本也必须在 bitstream 中真实写入 bt709 metadata；本轮选择 ffmpeg `setparams`，因为直接输出侧 color flags 在当前环境下只写出了 matrix，primaries/transfer 会变成 unknown。
+
+影响：`NativePlaybackGraphHeadlessSmokeTests.exe` 现在输出 `sourceVideoRange/sourceColorPrimaries/sourceColorTransfer/sourceColorSpace` 和 `dxgiInput/dxgiOutput/conversionStatus/isVideoProcessorColorSpaceValidated`；C# headless harness 会把它们映射到 `report.source` 与 `report.colorPipeline`。stable native smoke 会失败在真实字段缺失，而不是靠 manifest expected 通过。
+
+边界：`ObserveVideoColorMapping` 是 instrumentation hook，不改变 HDR、tone mapping、frame pacing、A/V sync 或渲染策略。当前只验证本地 SDR bt709 样本的软件链路；HDR10/HLG/DV、真实显示输出和更复杂色彩转换仍需要后续 evidence。
+
+## 2026-07-08: 无音轨样本不能产生 A/V sync evidence
+
+决策：当 report 的轨道发现明确显示有视频但没有音轨时，`PlaybackQualityReportAnalyzer` 将 `modelAnalysis.avSync.status` 标记为 `not-applicable`，不再把单独的视频位置或全 0 drift counters 输出为 `sync.*` evidence signals。native-headless smoke 固化该约束：本地 video-only SDR 样本的集合级 `capabilityCoverage.av-sync` 不能是 `evidence-present`。
+
+原因：A/V sync 需要音频时钟和视频时钟之间的关系。video-only 样本可以验证加载、解码、渲染、seek、frame timing 和 color pipeline，但不能评价音画同步。把 `audioClockTicks = 0`、`videoPositionTicks > 0` 或全 0 drift 当成同步证据，会误导模型把“没有音轨”理解为“同步良好”。
+
+影响：真实带音轨 report 仍会按已有 `sync.audioClockTicks`、`sync.videoPositionTicks` 和 `sync.audioVideoDriftMs*` 进入 A/V sync analysis；没有轨道发现信息的历史 fixture 也保持兼容。只有明确 video-only 的 report 会被标记为不适用，集合级 coverage 变成 `not-observed`。
+
+边界：这只是评测器证据归类修正，不改变播放器、native graph、音频渲染、frame pacing 或 A/V sync 策略。后续仍需要带音轨 stable/challenge 样本来建立真正的 A/V sync evidence。
+
 ## 2026-07-08: App-free native helper 作为第一条真实软件播放采集路径
 
 决策：`tools/NextGenEmby.PlaybackQuality.Headless` 保留默认 skip/blocker 模式，同时新增 `--native-helper-exe`。当传入 native helper exe 时，C# harness 负责调用 helper、解析 key=value metrics、组合 `PlaybackDescriptor`、`PlaybackQualityLifecycle`、`PlaybackQualityPosition` 和 `native-headless:returned-snapshot` metrics provider，再输出标准 `PlaybackQualityRunResult`。`run-native-headless-harness-smoke-test.ps1` 负责在本机编译 helper、补齐 FFmpegInteropX UWP DLL 与 `vcruntime140_app.dll`，并用本地生成的声明样本跑完整 captured import / validate / analyze 链路；默认 skip/blocker 路径仍保留公开 Jellyfin direct-uri 作为命令契约输入。
@@ -8,7 +28,7 @@
 
 影响：`native-headless` report 现在有两种明确语义：没有 helper 时是结构化 skip，不得算作 playback evidence；传入 helper 且成功返回 snapshot 时是 App-free native/software playback evidence，`analyze-report-set` 会把集合级 `playbackEvidence.canEvaluateNativePlayback` 判为 `true`。helper 会从 FFmpeg 实际 source snapshot 输出 codec、尺寸、帧率和 HDR kind，不能从 manifest expected 或文件名倒填 actual。
 
-边界：这仍是纯软件层证据，不验证 HDMI InfoFrame、电视 EOTF、真实 HDR 亮度或主观观感。当前 helper 还没有暴露完整 DXGI input/output color space、display refresh snapshot、真实音轨/字幕轨发现和更稳定的 A/V sync 证据，因此 report 可以进入评测链路，但优化播放 core 前仍应先补齐这些 instrumentation。
+边界：这仍是纯软件层证据，不验证 HDMI InfoFrame、电视 EOTF、真实 HDR 亮度或主观观感。当前 helper 已经暴露首个 SDR 样本的 DXGI input/output color space，但还没有覆盖 HDR/DV 复杂样本、display refresh snapshot、真实音轨/字幕轨发现和更稳定的 A/V sync 证据，因此 report 可以进入评测链路，但优化播放 core 前仍应继续补齐这些 instrumentation。
 
 ## 2026-07-08: App-free surface blocker 收窄为 graph host/lifecycle blocker
 

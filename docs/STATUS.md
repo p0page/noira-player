@@ -2,13 +2,27 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-08 更新：native-headless 首个 color pipeline instrumentation 已进入 report
+
+App-free native helper 现在会从 FFmpeg source snapshot 输出 `source.videoRange`、`source.colorPrimaries`、`source.colorTransfer` 和 `source.colorSpace`，并从 `DxDeviceResources` 输出 `colorPipeline.dxgiInput`、`colorPipeline.dxgiOutput`、`colorPipeline.conversionStatus` 与 `isVideoProcessorColorSpaceValidated`。这些字段已经进入 `PlaybackQuality.Headless` 生成的 `PlaybackQualityRunResult`，并被 `materialize-native-harness-report-set -> validate-report-set -> analyze-report-set` 消费。
+
+`run-native-headless-harness-smoke-test.ps1` 的 stable 本地样本改为用 ffmpeg `setparams=range=tv:color_primaries=bt709:color_trc=bt709:colorspace=bt709` 写入真实 bitstream metadata，避免用 manifest expected 或文件名冒充 actual source evidence。最新 native smoke 对本地 SDR 样本验证到 `bt709` source metadata、`YCBCR_STUDIO_G22_LEFT_P709` input、`RGB_FULL_G22_NONE_P709` output 和 video processor conversion validation。
+
+边界：这仍然只是首个 SDR 软件证据切片，不验证 HDMI/显示器输出，也不代表 HDR10/HLG/DV、tone mapping、A/V sync 或 frame pacing 已优化。后续仍需补齐更复杂样本、display refresh、轨道/字幕发现、A/V sync 采样和 HDR color pipeline 的同等 evidence。
+
+## 2026-07-08 更新：video-only 样本不再被误判为 A/V sync 证据
+
+`PlaybackQualityReportAnalyzer` 现在会在轨道发现明确显示有视频但没有音轨时，把 `modelAnalysis.avSync.status` 标记为 `not-applicable`，并且不再输出 `sync.*` evidence signals。`analyze-report-set` 因此会把本地 video-only native SDR smoke 的 `av-sync` capability 标记为 `not-observed`，而不是 `evidence-present`。
+
+边界：这不是 A/V sync 优化，也不证明当前播放器同步更好；它只是修正评测器的证据归类，避免把“没有音轨可同步”误读成“音画同步良好”。真正的 A/V sync 评测仍需要带音轨样本和有效 audio/video clock drift evidence。
+
 ## 2026-07-08 更新：App-free native-headless helper 已产生真实 native/software playback evidence
 
 `tools/NextGenEmby.PlaybackQuality.Headless` 现在支持 `--native-helper-exe`。传入由 smoke 编译出的 `NativePlaybackGraphHeadlessSmokeTests.exe` 时，headless harness 会在不启动、不打包、不部署 UWP App 的情况下调用 native helper，打开本地生成的声明样本，执行最小生命周期 `load/play/pause/resume/seek/stop`，解析 native metrics，并输出标准 `PlaybackQualityRunResult`。
 
 `tools/quality-run/run-native-headless-harness-smoke-test.ps1` 已覆盖两条路径：不传 helper 时继续输出结构化 `native-headless.native-link-blocked` skip，传 helper 时编译/运行 App-free native `PlaybackGraph` helper，生成 captured report，再走 `materialize-native-harness-report-set -> validate-report-set -> analyze-report-set`。最新 smoke 中 `analyze-report-set` 识别到 `evidenceSources = ["native-headless:returned-snapshot"]`，`playbackEvidence.scope = native-software`，`canEvaluateNativePlayback = true`。
 
-当前真实 helper report 仍会诚实暴露缺口：它能采集 decoded/rendered frames、render intervals、source codec/width/height/frameRate、生命周期和 runtime metrics provider；但仍缺 `colorPipeline.dxgiInput`、`display.refreshRateHz` 等更深 instrumentation，且不验证 HDMI/显示器/HDR 观感。该 report 可作为软件播放证据进入评测链路，但还不能作为“颜色、HDR、帧率或 A/V sync 已优化”的证明。
+当前真实 helper report 仍会诚实暴露缺口：它能采集 decoded/rendered frames、render intervals、source codec/width/height/frameRate、首个 SDR source color metadata、DXGI input/output color space、生命周期和 runtime metrics provider；但仍缺 `display.refreshRateHz`、更复杂 HDR/DV 样本、真实轨道/字幕发现和更完整 A/V sync instrumentation，且不验证 HDMI/显示器/HDR 观感。该 report 可作为软件播放证据进入评测链路，但还不能作为“颜色、HDR、帧率或 A/V sync 已优化”的证明。
 
 文档化运行命令：单项 smoke 使用 `powershell -NoProfile -ExecutionPolicy Bypass -File tools\quality-run\run-native-headless-harness-smoke-test.ps1`；本阶段完整门禁使用 `powershell -NoProfile -ExecutionPolicy Bypass -File tools\quality-run\run-playback-core-checks.ps1`。stable smoke 使用本地生成样本来避免公网波动；公开 Jellyfin direct-uri 已作为 challenge 手动验证过，可真实打开并被 materialize / validate / analyze 消费，但不放进稳定门禁。
 

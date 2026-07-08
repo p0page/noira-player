@@ -904,6 +904,39 @@ public sealed class PlaybackQualityReportAnalyzerTests
         Assert.Contains("sync.audioVideoDriftMsMax", analysis.AvSync.Signals);
     }
 
+    [Fact]
+    public void Analyze_Does_Not_Treat_Video_Only_Position_As_AvSync_Evidence()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "video-only-sync",
+            Result = "pass",
+            Tracks = new PlaybackQualityTracks
+            {
+                VideoTrackCount = 1,
+                AudioTrackCount = 0
+            },
+            Sync = new PlaybackQualitySync
+            {
+                AudioClockTicks = 0,
+                VideoPositionTicks = 2_000_000,
+                AudioVideoDriftMsP50 = 0,
+                AudioVideoDriftMsP95 = 0,
+                AudioVideoDriftMsP99 = 0,
+                AudioVideoDriftMsMax = 0
+            }
+        };
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Equal("not-applicable", analysis.AvSync.Status);
+        Assert.Contains("No audio track was discovered; A/V sync cannot be evaluated.", analysis.AvSync.Reason);
+        Assert.DoesNotContain("sync.audioClockTicks", analysis.AvSync.Signals);
+        Assert.DoesNotContain("sync.videoPositionTicks", analysis.AvSync.Signals);
+        Assert.DoesNotContain("sync.audioClockTicks", analysis.EvidenceSignals);
+        Assert.DoesNotContain("sync.videoPositionTicks", analysis.EvidenceSignals);
+    }
+
     [Theory]
     [InlineData(2_000_000, 2_010_000, 10_000, 1.0, "video-ahead")]
     [InlineData(2_010_000, 2_000_000, -10_000, -1.0, "audio-ahead")]

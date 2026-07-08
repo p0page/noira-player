@@ -831,6 +831,19 @@ namespace winrt::NextGenEmby::Native::implementation
         return SUCCEEDED(m_swapChain->Present(1, 0));
     }
 
+    void DxDeviceResources::ObserveVideoColorMapping(
+        VideoColorMetadata const& colorMetadata,
+        bool outputHdr10)
+    {
+        auto mapping = MapVideoColorSpace(colorMetadata, outputHdr10);
+        SetVideoProcessorConversionStatus(
+            mapping.InputColorSpace,
+            mapping.OutputColorSpace,
+            mapping.IsSupported
+                ? L"mapped-without-video-processor"
+                : L"unsupported-mapping");
+    }
+
     bool DxDeviceResources::HasRenderTarget() const noexcept
     {
         return m_swapChain != nullptr;

@@ -113,7 +113,7 @@ internal static class NativeHeadlessHarness
         }
 
         var descriptor = CreateDescriptor(options.StreamUrl, helper.Source);
-        var diagnostics = new NativeHeadlessDiagnostics();
+        var diagnostics = new NativeHeadlessDiagnostics(helper.Color);
         var provider = new NativeHeadlessMetricsProvider(helper.Metrics);
         var lifecycle = new PlaybackQualityLifecycle();
         AddLifecycleEvent(lifecycle, "load", "completed", 0);
@@ -151,7 +151,7 @@ internal static class NativeHeadlessHarness
             "native-headless: helper executed App-free native PlaybackGraph with an offscreen DirectX composition swapchain");
         AddLimitation(
             runResult,
-            "native-headless: source codec/color/track metadata is limited to what this first helper exposes");
+            "native-headless: source and DXGI color metadata comes from native helper snapshots; HDMI/display output is not verified");
         AddLimitation(
             runResult,
             "native-headless: timing metrics are captured before the seek operation; seek outcome is reported as separate position evidence");
@@ -205,7 +205,13 @@ internal static class NativeHeadlessHarness
                 FirstNonEmpty(stderr.Trim(), stdout.Trim(), "Native helper exited with code " + process.ExitCode + "."));
         }
 
-        if (!TryParseMetrics(stdout, out var metrics, out var source, out var seekActualPositionTicks, out var parseError))
+        if (!TryParseMetrics(
+            stdout,
+            out var metrics,
+            out var source,
+            out var color,
+            out var seekActualPositionTicks,
+            out var parseError))
         {
             return NativeHeadlessHelperResult.Failed(parseError);
         }
@@ -213,6 +219,7 @@ internal static class NativeHeadlessHarness
         return NativeHeadlessHelperResult.Succeeded(
             metrics,
             source,
+            color,
             startedAt.Elapsed.TotalMilliseconds,
             seekActualPositionTicks);
     }
@@ -221,11 +228,13 @@ internal static class NativeHeadlessHarness
         string stdout,
         out PlaybackQualityMetricsSnapshot metrics,
         out NativeHeadlessSourceInfo source,
+        out NativeHeadlessColorInfo color,
         out long seekActualPositionTicks,
         out string error)
     {
         metrics = new PlaybackQualityMetricsSnapshot();
         source = new NativeHeadlessSourceInfo();
+        color = new NativeHeadlessColorInfo();
         seekActualPositionTicks = 0;
         error = "";
 
@@ -279,7 +288,18 @@ internal static class NativeHeadlessHarness
             Width = GetInt32(values, "sourceWidth"),
             Height = GetInt32(values, "sourceHeight"),
             FrameRate = GetDouble(values, "sourceFrameRate"),
-            HdrKind = GetString(values, "sourceHdrKind")
+            HdrKind = GetString(values, "sourceHdrKind"),
+            VideoRange = GetString(values, "sourceVideoRange"),
+            ColorPrimaries = GetString(values, "sourceColorPrimaries"),
+            ColorTransfer = GetString(values, "sourceColorTransfer"),
+            ColorSpace = GetString(values, "sourceColorSpace")
+        };
+        color = new NativeHeadlessColorInfo
+        {
+            DxgiInput = GetString(values, "dxgiInput"),
+            DxgiOutput = GetString(values, "dxgiOutput"),
+            ConversionStatus = GetString(values, "conversionStatus"),
+            IsVideoProcessorColorSpaceValidated = GetInt32(values, "isVideoProcessorColorSpaceValidated") != 0
         };
         return true;
     }
@@ -384,17 +404,29 @@ internal static class NativeHeadlessHarness
             Index = 0,
             Kind = EmbyStreamKind.Video,
             Codec = sourceInfo.Codec,
+            VideoRange = sourceInfo.VideoRange,
+            ColorPrimaries = sourceInfo.ColorPrimaries,
+            ColorTransfer = sourceInfo.ColorTransfer,
+            ColorSpace = sourceInfo.ColorSpace,
             RealFrameRate = sourceInfo.FrameRate,
             AverageFrameRate = sourceInfo.FrameRate
         });
 
         source.HdrProfile.Codec = sourceInfo.Codec;
+        source.HdrProfile.VideoRange = sourceInfo.VideoRange;
+        source.HdrProfile.ColorPrimaries = sourceInfo.ColorPrimaries;
+        source.HdrProfile.ColorTransfer = sourceInfo.ColorTransfer;
+        source.HdrProfile.ColorSpace = sourceInfo.ColorSpace;
         if (string.Equals(sourceInfo.HdrKind, "Hdr10", StringComparison.OrdinalIgnoreCase))
         {
             source.HdrProfile = new HdrPlaybackProfile
             {
                 Kind = HdrPlaybackKind.Hdr10,
-                Codec = sourceInfo.Codec
+                Codec = sourceInfo.Codec,
+                VideoRange = sourceInfo.VideoRange,
+                ColorPrimaries = sourceInfo.ColorPrimaries,
+                ColorTransfer = sourceInfo.ColorTransfer,
+                ColorSpace = sourceInfo.ColorSpace
             };
         }
         else if (string.Equals(sourceInfo.HdrKind, "Hlg", StringComparison.OrdinalIgnoreCase))
@@ -402,7 +434,11 @@ internal static class NativeHeadlessHarness
             source.HdrProfile = new HdrPlaybackProfile
             {
                 Kind = HdrPlaybackKind.Hlg,
-                Codec = sourceInfo.Codec
+                Codec = sourceInfo.Codec,
+                VideoRange = sourceInfo.VideoRange,
+                ColorPrimaries = sourceInfo.ColorPrimaries,
+                ColorTransfer = sourceInfo.ColorTransfer,
+                ColorSpace = sourceInfo.ColorSpace
             };
         }
 
@@ -621,6 +657,7 @@ internal sealed class NativeHeadlessHelperResult
         int exitCode,
         PlaybackQualityMetricsSnapshot metrics,
         NativeHeadlessSourceInfo source,
+        NativeHeadlessColorInfo color,
         double startupDurationMs,
         long seekActualPositionTicks,
         string errorMessage)
@@ -628,6 +665,7 @@ internal sealed class NativeHeadlessHelperResult
         ExitCode = exitCode;
         Metrics = metrics;
         Source = source;
+        Color = color;
         StartupDurationMs = startupDurationMs;
         SeekActualPositionTicks = seekActualPositionTicks;
         ErrorMessage = errorMessage;
@@ -639,6 +677,8 @@ internal sealed class NativeHeadlessHelperResult
 
     public NativeHeadlessSourceInfo Source { get; }
 
+    public NativeHeadlessColorInfo Color { get; }
+
     public double StartupDurationMs { get; }
 
     public long SeekActualPositionTicks { get; }
@@ -648,10 +688,11 @@ internal sealed class NativeHeadlessHelperResult
     public static NativeHeadlessHelperResult Succeeded(
         PlaybackQualityMetricsSnapshot metrics,
         NativeHeadlessSourceInfo source,
+        NativeHeadlessColorInfo color,
         double startupDurationMs,
         long seekActualPositionTicks)
     {
-        return new NativeHeadlessHelperResult(0, metrics, source, startupDurationMs, seekActualPositionTicks, "");
+        return new NativeHeadlessHelperResult(0, metrics, source, color, startupDurationMs, seekActualPositionTicks, "");
     }
 
     public static NativeHeadlessHelperResult Failed(string errorMessage)
@@ -660,6 +701,7 @@ internal sealed class NativeHeadlessHelperResult
             1,
             new PlaybackQualityMetricsSnapshot(),
             new NativeHeadlessSourceInfo(),
+            new NativeHeadlessColorInfo(),
             0,
             0,
             errorMessage);
@@ -677,6 +719,25 @@ internal sealed class NativeHeadlessSourceInfo
     public double FrameRate { get; set; }
 
     public string HdrKind { get; set; } = "";
+
+    public string VideoRange { get; set; } = "";
+
+    public string ColorPrimaries { get; set; } = "";
+
+    public string ColorTransfer { get; set; } = "";
+
+    public string ColorSpace { get; set; } = "";
+}
+
+internal sealed class NativeHeadlessColorInfo
+{
+    public string DxgiInput { get; set; } = "";
+
+    public string DxgiOutput { get; set; } = "";
+
+    public string ConversionStatus { get; set; } = "";
+
+    public bool IsVideoProcessorColorSpaceValidated { get; set; }
 }
 
 internal sealed class NativeHeadlessMetricsProvider :
@@ -701,15 +762,9 @@ internal sealed class NativeHeadlessMetricsProvider :
 
 internal sealed class NativeHeadlessDiagnostics : IPlaybackBackendDiagnostics
 {
-    public PlaybackBackendCapabilities Capabilities { get; } =
-        new PlaybackBackendCapabilities(
-            PlaybackBackendFeature.DirectPlayHttp |
-            PlaybackBackendFeature.Hevc |
-            PlaybackBackendFeature.HevcMain10 |
-            PlaybackBackendFeature.NativeAudioOutput);
-
-    public PlaybackDisplayStatus DisplayStatus { get; } =
-        new PlaybackDisplayStatus(
+    public NativeHeadlessDiagnostics(NativeHeadlessColorInfo color)
+    {
+        DisplayStatus = new PlaybackDisplayStatus(
             HdrOutputStatus.Off,
             isHdrDisplayAvailable: false,
             isHdrOutputActive: false,
@@ -717,9 +772,21 @@ internal sealed class NativeHeadlessDiagnostics : IPlaybackBackendDiagnostics
             swapChainFormat: "DXGI_FORMAT_B8G8R8A8_UNORM",
             swapChainColorSpace: "DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709",
             isTenBitSwapChain: false,
-            isVideoProcessorColorSpaceValidated: false,
-            videoProcessorInputColorSpace: "",
-            videoProcessorOutputColorSpace: "",
-            videoProcessorConversionStatus: "native-headless helper does not yet expose color conversion validation",
+            isVideoProcessorColorSpaceValidated: color.IsVideoProcessorColorSpaceValidated,
+            videoProcessorInputColorSpace: color.DxgiInput,
+            videoProcessorOutputColorSpace: color.DxgiOutput,
+            videoProcessorConversionStatus: string.IsNullOrWhiteSpace(color.ConversionStatus)
+                ? "missing-native-helper-conversion-status"
+                : color.ConversionStatus,
             refreshRateHz: 0);
+    }
+
+    public PlaybackBackendCapabilities Capabilities { get; } =
+        new PlaybackBackendCapabilities(
+            PlaybackBackendFeature.DirectPlayHttp |
+            PlaybackBackendFeature.Hevc |
+            PlaybackBackendFeature.HevcMain10 |
+            PlaybackBackendFeature.NativeAudioOutput);
+
+    public PlaybackDisplayStatus DisplayStatus { get; }
 }

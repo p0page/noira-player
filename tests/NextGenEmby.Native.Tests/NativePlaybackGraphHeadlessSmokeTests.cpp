@@ -49,6 +49,53 @@ namespace
 
         return options;
     }
+
+    char const* FormatDxgiColorSpace(DXGI_COLOR_SPACE_TYPE colorSpace)
+    {
+        switch (colorSpace)
+        {
+        case DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709:
+            return "RGB_FULL_G22_NONE_P709";
+        case DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020:
+            return "RGB_FULL_G2084_NONE_P2020";
+        case DXGI_COLOR_SPACE_RGB_STUDIO_G2084_NONE_P2020:
+            return "RGB_STUDIO_G2084_NONE_P2020";
+        case DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P2020:
+            return "RGB_FULL_G22_NONE_P2020";
+        case DXGI_COLOR_SPACE_RGB_STUDIO_G22_NONE_P2020:
+            return "RGB_STUDIO_G22_NONE_P2020";
+        case DXGI_COLOR_SPACE_RGB_STUDIO_G22_NONE_P709:
+            return "RGB_STUDIO_G22_NONE_P709";
+        case DXGI_COLOR_SPACE_YCBCR_STUDIO_G2084_LEFT_P2020:
+            return "YCBCR_STUDIO_G2084_LEFT_P2020";
+        case DXGI_COLOR_SPACE_YCBCR_STUDIO_G2084_TOPLEFT_P2020:
+            return "YCBCR_STUDIO_G2084_TOPLEFT_P2020";
+        case DXGI_COLOR_SPACE_YCBCR_STUDIO_GHLG_TOPLEFT_P2020:
+            return "YCBCR_STUDIO_GHLG_TOPLEFT_P2020";
+        case DXGI_COLOR_SPACE_YCBCR_FULL_GHLG_TOPLEFT_P2020:
+            return "YCBCR_FULL_GHLG_TOPLEFT_P2020";
+        case DXGI_COLOR_SPACE_YCBCR_STUDIO_G22_LEFT_P2020:
+            return "YCBCR_STUDIO_G22_LEFT_P2020";
+        case DXGI_COLOR_SPACE_YCBCR_FULL_G22_LEFT_P2020:
+            return "YCBCR_FULL_G22_LEFT_P2020";
+        case DXGI_COLOR_SPACE_YCBCR_STUDIO_G22_TOPLEFT_P2020:
+            return "YCBCR_STUDIO_G22_TOPLEFT_P2020";
+        case DXGI_COLOR_SPACE_YCBCR_STUDIO_G22_LEFT_P601:
+            return "YCBCR_STUDIO_G22_LEFT_P601";
+        case DXGI_COLOR_SPACE_YCBCR_FULL_G22_LEFT_P601:
+            return "YCBCR_FULL_G22_LEFT_P601";
+        case DXGI_COLOR_SPACE_YCBCR_FULL_G22_NONE_P709_X601:
+            return "YCBCR_FULL_G22_NONE_P709_X601";
+        case DXGI_COLOR_SPACE_YCBCR_STUDIO_G22_LEFT_P709:
+            return "YCBCR_STUDIO_G22_LEFT_P709";
+        case DXGI_COLOR_SPACE_YCBCR_FULL_G22_LEFT_P709:
+            return "YCBCR_FULL_G22_LEFT_P709";
+        case DXGI_COLOR_SPACE_CUSTOM:
+            return "CUSTOM";
+        default:
+            return "UNKNOWN";
+        }
+    }
 }
 
 int wmain(int argc, wchar_t** argv)
@@ -115,6 +162,14 @@ int wmain(int argc, wchar_t** argv)
             << " sourceHeight=" << (source ? source->Height : 0)
             << " sourceFrameRate=" << (source ? source->FrameRate : 0.0)
             << " sourceHdrKind=" << (source ? source->HdrKind : "")
+            << " sourceVideoRange=" << (source ? source->VideoRange : "")
+            << " sourceColorPrimaries=" << (source ? source->ColorPrimaries : "")
+            << " sourceColorTransfer=" << (source ? source->ColorTransfer : "")
+            << " sourceColorSpace=" << (source ? source->ColorSpace : "")
+            << " dxgiInput=" << FormatDxgiColorSpace(resources.LastVideoProcessorInputColorSpace())
+            << " dxgiOutput=" << FormatDxgiColorSpace(resources.LastVideoProcessorOutputColorSpace())
+            << " conversionStatus=" << winrt::to_string(winrt::hstring(resources.LastVideoProcessorConversionStatus()))
+            << " isVideoProcessorColorSpaceValidated=" << (resources.LastVideoProcessorConversionWasValidated() ? 1 : 0)
             << std::endl;
 
         assert(playbackSnapshot.DecodedVideoFrames > 1);

@@ -42,6 +42,7 @@ namespace winrt::NextGenEmby::Native::implementation
         bool DrawTextOverlay(std::wstring const& text);
         bool ClearToBlack();
         bool Present();
+        void ObserveVideoColorMapping(VideoColorMetadata const& colorMetadata, bool outputHdr10);
         bool HasRenderTarget() const noexcept;
         ID3D11Device* Device() const noexcept;
         ID3D11DeviceContext* Context() const noexcept;

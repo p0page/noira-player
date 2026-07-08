@@ -32,6 +32,7 @@ namespace winrt::NextGenEmby::Native::implementation
         }
 
         m_currentHdrKind = outputHdr10 ? VideoHdrKind::Hdr10 : VideoHdrKind::None;
+        m_deviceResources.ObserveVideoColorMapping(frame.ColorMetadata, outputHdr10);
 
         auto rendered = false;
         if (frame.Texture)

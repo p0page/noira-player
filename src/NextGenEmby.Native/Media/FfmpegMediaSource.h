@@ -22,6 +22,10 @@ namespace winrt::NextGenEmby::Native::implementation
         uint32_t Height{0};
         double FrameRate{0.0};
         std::string HdrKind;
+        std::string VideoRange;
+        std::string ColorPrimaries;
+        std::string ColorTransfer;
+        std::string ColorSpace;
     };
 
     class FfmpegMediaSource

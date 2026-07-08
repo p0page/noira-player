@@ -37,6 +37,7 @@ function New-NativePlaybackSample {
         -f lavfi `
         -i testsrc2=size=320x180:rate=30 `
         -t 3 `
+        -vf "setparams=range=tv:color_primaries=bt709:color_trc=bt709:colorspace=bt709" `
         -pix_fmt yuv420p `
         -c:v libx264 `
         -g 1 `
@@ -322,6 +323,19 @@ if ($nativeReport.report.timing.renderedVideoFrames -le 0) {
     throw 'Expected native helper report to include rendered video frames.'
 }
 
+if ($nativeReport.report.source.videoRange -ne 'SDR' -or
+    $nativeReport.report.source.colorPrimaries -ne 'bt709' -or
+    $nativeReport.report.source.colorTransfer -ne 'bt709' -or
+    $nativeReport.report.source.colorSpace -ne 'bt709') {
+    throw 'Expected native helper report to include parsed source color metadata.'
+}
+
+if ($nativeReport.report.colorPipeline.dxgiInput -ne 'YCBCR_STUDIO_G22_LEFT_P709' -or
+    $nativeReport.report.colorPipeline.dxgiOutput -ne 'RGB_FULL_G22_NONE_P709' -or
+    $nativeReport.report.colorPipeline.conversionStatus -eq 'native-headless helper does not yet expose color conversion validation') {
+    throw 'Expected native helper report to include native DXGI color pipeline instrumentation.'
+}
+
 @"
 {
   "schemaVersion": 1,
@@ -341,7 +355,13 @@ if ($nativeReport.report.timing.renderedVideoFrames -le 0) {
         "width": 320,
         "height": 180,
         "frameRate": 30.0,
+        "videoRange": "SDR",
+        "colorPrimaries": "bt709",
+        "colorTransfer": "bt709",
+        "colorSpace": "bt709",
         "hdrKind": "Sdr",
+        "dxgiInput": "YCBCR_STUDIO_G22_LEFT_P709",
+        "dxgiOutput": "RGB_FULL_G22_NONE_P709",
         "isDirectPlayable": true,
         "minRenderedVideoFrames": 1
       }
@@ -368,6 +388,11 @@ if (-not (Test-Path $nativeMaterializedReportPath)) {
     throw "Expected materialized native helper report at $nativeMaterializedReportPath."
 }
 
+$nativeMaterializedReport = Get-Content -LiteralPath $nativeMaterializedReportPath -Raw | ConvertFrom-Json
+if ($nativeMaterializedReport.modelAnalysis.avSync.status -ne 'not-applicable') {
+    throw 'Expected video-only native helper report to mark A/V sync as not-applicable.'
+}
+
 dotnet run --project (Join-Path $repoRoot 'tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj') -- `
     validate-report-set `
     --manifest $nativeManifestPath `
@@ -388,6 +413,11 @@ if ($LASTEXITCODE -ne 0) {
 $nativeAnalysis = Get-Content -LiteralPath $nativeAnalysisPath -Raw | ConvertFrom-Json
 if ($nativeAnalysis.playbackEvidence.canEvaluateNativePlayback -ne $true) {
     throw 'Expected native helper report to be treated as App-free native software playback evidence.'
+}
+
+$nativeAvSyncCoverage = $nativeAnalysis.capabilityCoverage | Where-Object { $_.capability -eq 'av-sync' } | Select-Object -First 1
+if ($null -eq $nativeAvSyncCoverage -or $nativeAvSyncCoverage.status -eq 'evidence-present') {
+    throw 'Expected video-only native helper report not to claim A/V sync capability evidence.'
 }
 
 Write-Host 'native-headless-harness smoke ok'

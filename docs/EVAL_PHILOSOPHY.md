@@ -12,6 +12,8 @@
 6. JSON 报告必须优先服务模型消费，失败要能定位到 case、signal、failure area、failure class 和下一步调查方向。
 7. 纯软件评测不能声称证明真实显示设备输出、HDMI InfoFrame、面板 EOTF 或肉眼颜色准确性。
 8. 播放行为优化和评测规则修改应拆开记录；如果必须同轮发生，需要明确说明边界和前后证据。
+9. source color、DXGI color space 和 conversion status 必须来自采集器实际观察到的字段；不得从 manifest expected、文件名、case id 或预分类结果倒填 actual evidence。
+10. 无音轨样本不能评价 A/V sync；它最多证明视频链路或 frame timing，不得输出同步良好的结论。
 
 ## v0.1 裁判边界
 

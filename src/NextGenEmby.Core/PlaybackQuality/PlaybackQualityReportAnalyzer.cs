@@ -1017,6 +1017,13 @@ namespace NextGenEmby.Core.PlaybackQuality
                 AudioVideoDriftMsMax = report.Sync.AudioVideoDriftMsMax
             };
 
+            if (HasKnownVideoOnlyTrackLayout(report))
+            {
+                sync.Status = "not-applicable";
+                sync.Reason = "No audio track was discovered; A/V sync cannot be evaluated.";
+                return sync;
+            }
+
             var hasClockEvidence = sync.AudioClockTicks != 0 || sync.VideoPositionTicks != 0;
             var hasClockPair = sync.AudioClockTicks != 0 && sync.VideoPositionTicks != 0;
             var hasDriftEvidence =
@@ -1075,6 +1082,13 @@ namespace NextGenEmby.Core.PlaybackQuality
             sync.Status = "synced";
             sync.Reason = "A/V sync telemetry is available and no sync threshold failed.";
             return sync;
+        }
+
+        private static bool HasKnownVideoOnlyTrackLayout(PlaybackQualityReport report)
+        {
+            var videoTrackCount = CountOrListCount(report.Tracks.VideoTrackCount, report.Tracks.Video);
+            var audioTrackCount = CountOrListCount(report.Tracks.AudioTrackCount, report.Tracks.Audio);
+            return videoTrackCount > 0 && audioTrackCount == 0;
         }
 
         private static string ClassifyAvSyncDriftDirection(long clockDeltaTicks)

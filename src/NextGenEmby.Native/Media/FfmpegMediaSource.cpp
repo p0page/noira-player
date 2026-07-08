@@ -78,6 +78,76 @@ namespace
         }
     }
 
+    std::string MapVideoRange(
+        AVColorTransferCharacteristic transfer,
+        AVColorRange range)
+    {
+        switch (transfer)
+        {
+        case AVCOL_TRC_SMPTE2084:
+            return "HDR10";
+        case AVCOL_TRC_ARIB_STD_B67:
+            return "HLG";
+        default:
+            return range == AVCOL_RANGE_JPEG ? "PC" : "SDR";
+        }
+    }
+
+    std::string MapColorPrimaries(AVColorPrimaries primaries)
+    {
+        switch (primaries)
+        {
+        case AVCOL_PRI_BT709:
+            return "bt709";
+        case AVCOL_PRI_BT2020:
+            return "bt2020";
+        case AVCOL_PRI_SMPTE170M:
+            return "smpte170m";
+        case AVCOL_PRI_SMPTE240M:
+            return "smpte240m";
+        default:
+            return "";
+        }
+    }
+
+    std::string MapColorTransfer(AVColorTransferCharacteristic transfer)
+    {
+        switch (transfer)
+        {
+        case AVCOL_TRC_BT709:
+            return "bt709";
+        case AVCOL_TRC_SMPTE2084:
+            return "smpte2084";
+        case AVCOL_TRC_ARIB_STD_B67:
+            return "arib-std-b67";
+        case AVCOL_TRC_SMPTE170M:
+            return "smpte170m";
+        case AVCOL_TRC_IEC61966_2_1:
+            return "iec61966-2-1";
+        default:
+            return "";
+        }
+    }
+
+    std::string MapColorSpace(AVColorSpace colorSpace)
+    {
+        switch (colorSpace)
+        {
+        case AVCOL_SPC_BT709:
+            return "bt709";
+        case AVCOL_SPC_BT2020_NCL:
+            return "bt2020nc";
+        case AVCOL_SPC_BT2020_CL:
+            return "bt2020c";
+        case AVCOL_SPC_SMPTE170M:
+            return "smpte170m";
+        case AVCOL_SPC_SMPTE240M:
+            return "smpte240m";
+        default:
+            return "";
+        }
+    }
+
     int HexValue(char value)
     {
         if (value >= '0' && value <= '9')
@@ -312,6 +382,10 @@ namespace winrt::NextGenEmby::Native::implementation
         snapshot.Height = codecpar->height > 0 ? static_cast<uint32_t>(codecpar->height) : 0;
         snapshot.FrameRate = SelectFrameRate(stream);
         snapshot.HdrKind = MapHdrKind(codecpar->color_trc);
+        snapshot.VideoRange = MapVideoRange(codecpar->color_trc, codecpar->color_range);
+        snapshot.ColorPrimaries = MapColorPrimaries(codecpar->color_primaries);
+        snapshot.ColorTransfer = MapColorTransfer(codecpar->color_trc);
+        snapshot.ColorSpace = MapColorSpace(codecpar->color_space);
         return snapshot;
     }
 
