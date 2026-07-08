@@ -538,6 +538,6 @@
 
 原因：frame-ratio 信号不是单纯 lower-is-better。对于低帧率内容，被过快渲染时 ratio 会显著低于 1；candidate 增大并靠近 1 是改善，而不是回退。此前 lower-is-better 规则会把这类正确变化误判为 mixed/regression。
 
-影响：`playback-core-tuning-video-clock-candidate.local` 在同一 manifest 对比下从可疑 mixed 变成可采纳候选：`accept-candidate`，5 个 improvement，0 regression。
+影响：提交绑定候选 `playback-core-tuning-video-clock-61fecb3.local` 在同一 manifest 对比下为可采纳候选：`accept-candidate`，5 个 improvement，0 regression。该候选使用归档 baseline 的 `core-reference-manifest.local.json` 作为固定输入，避免当前私有 manifest 变化影响同 manifest 比较。
 
 边界：该规则只改变 candidate comparison 对派生 frame-ratio 的解释，不放宽 stable case expected behavior，也不删除任何失败。单报告 evaluator 仍独立输出 pass/fail checks。

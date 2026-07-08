@@ -392,14 +392,14 @@ manifest validation、report-set validation、single comparison、comparison sui
 - `PlaybackQualityRunComparator` 对 frame-ratio 派生信号改为按可接受区间 `0.75..1.5` 判断，而不是简单 lower-is-better，避免把“从过快接近目标帧时长”误判成回退。
 - native harness captured report 导入和 compare 路径会在有 manifest expected 时按当前 evaluator 规则重新评估，避免历史 raw/stale checks 干扰同一 manifest 的 candidate 比较。
 
-已用同一 manifest 生成 candidate：`docs/qa/private/candidates/playback-core-tuning-video-clock-candidate.local/`，并输出 ignored 对比：`docs/qa/private/comparisons/playback-core-tuning-video-clock-candidate.local/`。
+已用同一 manifest 生成提交绑定 candidate：`docs/qa/private/candidates/playback-core-tuning-video-clock-61fecb3.local/`，`sourceRevision = 61fecb3`，并输出 ignored 对比：`docs/qa/private/comparisons/playback-core-tuning-video-clock-61fecb3.local/`。该 candidate 使用归档 baseline 的 `core-reference-manifest.local.json` 作为固定输入，避免当前私有 manifest 变化破坏可比性。
 
 对比结论：41 个 case 全部可比，`accept-candidate` / `keep-candidate`，5 个 `frame-pacing` improvement，0 regression，0 mixed。改善集中在 video-only native-headless case：
 
-- `local/native-headless-hdr10-23976`：`RenderIntervalMsP95` 16.752ms -> 48.022ms。
-- `local/native-headless-hdr10-24`：16.780ms -> 47.558ms。
-- `local/native-headless-hdr10-30`：17.068ms -> 47.074ms。
-- `local/native-headless-sdr-23976`：16.308ms -> 48.086ms。
-- `local/native-headless-sdr-24`：16.191ms -> 48.057ms。
+- `local/native-headless-hdr10-23976`：`RenderIntervalMsP95` 16.752ms -> 48.101ms。
+- `local/native-headless-hdr10-24`：16.780ms -> 48.596ms。
+- `local/native-headless-hdr10-30`：17.068ms -> 46.731ms。
+- `local/native-headless-sdr-23976`：16.308ms -> 47.449ms。
+- `local/native-headless-sdr-24`：16.191ms -> 47.665ms。
 
 边界：这是纯软件 native-headless 证据，不证明 Xbox HDMI 输出、HDR InfoFrame、显示器 EOTF 或真实影视素材观感。30fps case 目前落在可接受区间内但仍偏慢，后续应继续用同一 baseline/candidate 机制观察真实 A/V case、含音轨 case、网络媒体和更长样本，不应直接扩大结论。
