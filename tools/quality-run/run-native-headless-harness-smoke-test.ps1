@@ -17,10 +17,13 @@ $analysisPath = Join-Path $smokeRoot 'analysis.json'
 $nativeAnalysisPath = Join-Path $smokeRoot 'native-analysis.json'
 $reportPath = Join-Path $capturedDir 'jellyfin\sdr-hevc-main10-1080p60-3m.json'
 $nativeReportPath = Join-Path $nativeCapturedDir 'local\native-headless-sdr-smoke.json'
+$nativeAvReportPath = Join-Path $nativeCapturedDir 'local\native-headless-av-smoke.json'
 $materializedReportPath = Join-Path $materializedDir 'jellyfin\sdr-hevc-main10-1080p60-3m.json'
 $nativeMaterializedReportPath = Join-Path $nativeMaterializedDir 'local\native-headless-sdr-smoke.json'
+$nativeAvMaterializedReportPath = Join-Path $nativeMaterializedDir 'local\native-headless-av-smoke.json'
 $sampleUrl = 'https://repo.jellyfin.org/test-videos/SDR/HEVC%2010bit/Test%20Jellyfin%201080p%20HEVC%2010bit%203M.mp4'
 $nativeCaseId = 'local/native-headless-sdr-smoke'
+$nativeAvCaseId = 'local/native-headless-av-smoke'
 
 function New-NativePlaybackSample {
     $sampleDirectory = Join-Path $smokeRoot 'samples'
@@ -46,6 +49,40 @@ function New-NativePlaybackSample {
         $samplePath
     if ($LASTEXITCODE -ne 0) {
         throw 'Failed to generate native-headless local playback sample.'
+    }
+
+    return ([System.Uri](Resolve-Path $samplePath).Path).AbsoluteUri
+}
+
+function New-NativePlaybackAvSample {
+    $sampleDirectory = Join-Path $smokeRoot 'samples'
+    New-Item -ItemType Directory -Path $sampleDirectory -Force | Out-Null
+    $samplePath = Join-Path $sampleDirectory 'native-headless-av-smoke.mp4'
+    $ffmpeg = 'C:\Program Files\FFmpeg\bin\ffmpeg.exe'
+    if (-not (Test-Path -LiteralPath $ffmpeg)) {
+        throw "ffmpeg.exe was not found at $ffmpeg."
+    }
+
+    & $ffmpeg `
+        -y `
+        -loglevel error `
+        -f lavfi `
+        -i testsrc2=size=320x180:rate=30 `
+        -f lavfi `
+        -i sine=frequency=1000:sample_rate=48000 `
+        -t 3 `
+        -vf "setparams=range=tv:color_primaries=bt709:color_trc=bt709:colorspace=bt709" `
+        -pix_fmt yuv420p `
+        -c:v libx264 `
+        -g 1 `
+        -bf 0 `
+        -c:a aac `
+        -b:a 128k `
+        -shortest `
+        -movflags +faststart `
+        $samplePath
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Failed to generate native-headless local A/V playback sample.'
     }
 
     return ([System.Uri](Resolve-Path $samplePath).Path).AbsoluteUri
@@ -285,6 +322,7 @@ if (-not ($analysis.limitations -contains 'native-headless: offscreen DirectX co
 
 $nativeHelperExe = Build-NativePlaybackGraphHelper -OutputDirectory $nativeHelperRoot
 $nativeSampleUrl = New-NativePlaybackSample
+$nativeAvSampleUrl = New-NativePlaybackAvSample
 
 $nativeHelperExitCode = 1
 for ($attempt = 1; $attempt -le 3; $attempt++) {
@@ -336,6 +374,45 @@ if ($nativeReport.report.colorPipeline.dxgiInput -ne 'YCBCR_STUDIO_G22_LEFT_P709
     throw 'Expected native helper report to include native DXGI color pipeline instrumentation.'
 }
 
+$nativeAvHelperExitCode = 1
+for ($attempt = 1; $attempt -le 3; $attempt++) {
+    dotnet run --project (Join-Path $repoRoot 'tools\NextGenEmby.PlaybackQuality.Headless\NextGenEmby.PlaybackQuality.Headless.csproj') -- `
+        --case-id $nativeAvCaseId `
+        --stream-url $nativeAvSampleUrl `
+        --duration-seconds 3 `
+        --reports-dir $nativeCapturedDir `
+        --native-helper-exe $nativeHelperExe
+    $nativeAvHelperExitCode = $LASTEXITCODE
+    if ($nativeAvHelperExitCode -eq 0) {
+        break
+    }
+
+    Start-Sleep -Seconds 2
+}
+
+if ($nativeAvHelperExitCode -ne 0) {
+    throw 'Expected native-headless harness to run the App-free native helper for the A/V sample.'
+}
+
+if (-not (Test-Path $nativeAvReportPath)) {
+    throw "Expected native helper A/V captured report at $nativeAvReportPath."
+}
+
+$nativeAvReport = Get-Content -LiteralPath $nativeAvReportPath -Raw | ConvertFrom-Json
+if ($nativeAvReport.report.tracks.audioTrackCount -lt 1) {
+    throw 'Expected native helper A/V report to include discovered audio tracks.'
+}
+
+if ($nativeAvReport.report.buffers.submittedAudioFrames -le 0) {
+    throw 'Expected native helper A/V report to include submitted audio frames.'
+}
+
+if ($nativeAvReport.report.sync.audioClockTicks -le 0 -or
+    $nativeAvReport.report.sync.videoPositionTicks -le 0 -or
+    $nativeAvReport.report.sync.audioVideoDriftMsP95 -le 0) {
+    throw 'Expected native helper A/V report to include native A/V sync telemetry.'
+}
+
 @"
 {
   "schemaVersion": 1,
@@ -365,6 +442,34 @@ if ($nativeReport.report.colorPipeline.dxgiInput -ne 'YCBCR_STUDIO_G22_LEFT_P709
         "isDirectPlayable": true,
         "minRenderedVideoFrames": 1
       }
+    },
+    {
+      "caseId": "$nativeAvCaseId",
+      "category": "challenge",
+      "severity": "high",
+      "stability": "stable",
+      "uri": "$nativeAvSampleUrl",
+      "purpose": [
+        "audio-switch",
+        "av-sync",
+        "buffering"
+      ],
+      "expected": {
+        "codec": "h264",
+        "width": 320,
+        "height": 180,
+        "frameRate": 30.0,
+        "videoRange": "SDR",
+        "colorPrimaries": "bt709",
+        "colorTransfer": "bt709",
+        "colorSpace": "bt709",
+        "hdrKind": "Sdr",
+        "dxgiInput": "YCBCR_STUDIO_G22_LEFT_P709",
+        "dxgiOutput": "RGB_FULL_G22_NONE_P709",
+        "isDirectPlayable": true,
+        "minRenderedVideoFrames": 1,
+        "maxAudioVideoDriftMsP95": 80.0
+      }
     }
   ]
 }
@@ -388,9 +493,19 @@ if (-not (Test-Path $nativeMaterializedReportPath)) {
     throw "Expected materialized native helper report at $nativeMaterializedReportPath."
 }
 
+if (-not (Test-Path $nativeAvMaterializedReportPath)) {
+    throw "Expected materialized native helper A/V report at $nativeAvMaterializedReportPath."
+}
+
 $nativeMaterializedReport = Get-Content -LiteralPath $nativeMaterializedReportPath -Raw | ConvertFrom-Json
 if ($nativeMaterializedReport.modelAnalysis.avSync.status -ne 'not-applicable') {
     throw 'Expected video-only native helper report to mark A/V sync as not-applicable.'
+}
+
+$nativeAvMaterializedReport = Get-Content -LiteralPath $nativeAvMaterializedReportPath -Raw | ConvertFrom-Json
+if ($nativeAvMaterializedReport.report.tracks.audioTrackCount -lt 1 -or
+    $nativeAvMaterializedReport.modelAnalysis.avSync.status -ne 'synced') {
+    throw 'Expected materialized native helper A/V report to preserve audio track and A/V sync evidence.'
 }
 
 dotnet run --project (Join-Path $repoRoot 'tools\NextGenEmby.PlaybackQuality.Cli\NextGenEmby.PlaybackQuality.Cli.csproj') -- `
@@ -416,8 +531,8 @@ if ($nativeAnalysis.playbackEvidence.canEvaluateNativePlayback -ne $true) {
 }
 
 $nativeAvSyncCoverage = $nativeAnalysis.capabilityCoverage | Where-Object { $_.capability -eq 'av-sync' } | Select-Object -First 1
-if ($null -eq $nativeAvSyncCoverage -or $nativeAvSyncCoverage.status -eq 'evidence-present') {
-    throw 'Expected video-only native helper report not to claim A/V sync capability evidence.'
+if ($null -eq $nativeAvSyncCoverage -or $nativeAvSyncCoverage.status -ne 'evidence-present') {
+    throw 'Expected native helper A/V report to claim A/V sync capability evidence.'
 }
 
 Write-Host 'native-headless-harness smoke ok'

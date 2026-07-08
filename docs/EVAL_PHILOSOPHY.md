@@ -14,6 +14,7 @@
 8. 播放行为优化和评测规则修改应拆开记录；如果必须同轮发生，需要明确说明边界和前后证据。
 9. source color、DXGI color space 和 conversion status 必须来自采集器实际观察到的字段；不得从 manifest expected、文件名、case id 或预分类结果倒填 actual evidence。
 10. 无音轨样本不能评价 A/V sync；它最多证明视频链路或 frame timing，不得输出同步良好的结论。
+11. track/subtitle evidence 必须来自实际 stream discovery 或明确的播放器状态；不得用单条 fallback video stream 掩盖音轨、字幕轨或选择状态缺失。
 
 ## v0.1 裁判边界
 

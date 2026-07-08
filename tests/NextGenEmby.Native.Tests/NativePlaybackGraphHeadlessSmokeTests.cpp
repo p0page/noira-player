@@ -132,6 +132,7 @@ int wmain(int argc, wchar_t** argv)
 
         auto seekSnapshot = graph.QualityMetricsSnapshot();
         auto source = graph.VideoSourceSnapshot();
+        auto tracks = graph.SourceTrackSnapshots();
         graph.Stop();
 
         std::cout << "decodedVideoFrames=" << playbackSnapshot.DecodedVideoFrames
@@ -170,7 +171,24 @@ int wmain(int argc, wchar_t** argv)
             << " dxgiOutput=" << FormatDxgiColorSpace(resources.LastVideoProcessorOutputColorSpace())
             << " conversionStatus=" << winrt::to_string(winrt::hstring(resources.LastVideoProcessorConversionStatus()))
             << " isVideoProcessorColorSpaceValidated=" << (resources.LastVideoProcessorConversionWasValidated() ? 1 : 0)
-            << std::endl;
+            << " sourceTrackCount=" << tracks.size();
+
+        for (auto index = size_t{0}; index < tracks.size(); ++index)
+        {
+            auto const& track = tracks[index];
+            std::cout << " track" << index << "Index=" << track.StreamIndex
+                << " track" << index << "Kind=" << track.Kind
+                << " track" << index << "Codec=" << track.Codec
+                << " track" << index << "Language=" << track.Language
+                << " track" << index << "ChannelLayout=" << track.ChannelLayout
+                << " track" << index << "Channels=" << track.Channels
+                << " track" << index << "IsDefault=" << (track.IsDefault ? 1 : 0)
+                << " track" << index << "IsForced=" << (track.IsForced ? 1 : 0)
+                << " track" << index << "RealFrameRate=" << track.RealFrameRate
+                << " track" << index << "AverageFrameRate=" << track.AverageFrameRate;
+        }
+
+        std::cout << std::endl;
 
         assert(playbackSnapshot.DecodedVideoFrames > 1);
         assert(playbackSnapshot.RenderedVideoFrames > 1);

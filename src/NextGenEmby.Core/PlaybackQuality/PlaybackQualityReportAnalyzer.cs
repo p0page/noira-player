@@ -2388,6 +2388,11 @@ namespace NextGenEmby.Core.PlaybackQuality
                 AddUnique(analysis.EvidenceSignals, signal);
             }
 
+            foreach (var signal in analysis.Buffering.Signals)
+            {
+                AddUnique(analysis.EvidenceSignals, signal);
+            }
+
             if (report.Position.RequestedStartPositionTicks.HasValue)
             {
                 AddUnique(analysis.EvidenceSignals, "position.requestedStartPositionTicks");

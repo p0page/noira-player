@@ -294,6 +294,7 @@ internal static class NativeHeadlessHarness
             ColorTransfer = GetString(values, "sourceColorTransfer"),
             ColorSpace = GetString(values, "sourceColorSpace")
         };
+        source.Tracks.AddRange(ParseNativeTracks(values));
         color = new NativeHeadlessColorInfo
         {
             DxgiInput = GetString(values, "dxgiInput"),
@@ -302,6 +303,38 @@ internal static class NativeHeadlessHarness
             IsVideoProcessorColorSpaceValidated = GetInt32(values, "isVideoProcessorColorSpaceValidated") != 0
         };
         return true;
+    }
+
+    private static List<NativeHeadlessTrackInfo> ParseNativeTracks(
+        Dictionary<string, string> values)
+    {
+        var tracks = new List<NativeHeadlessTrackInfo>();
+        var count = GetInt32(values, "sourceTrackCount");
+        for (var index = 0; index < count; index++)
+        {
+            var prefix = "track" + index.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            var kind = GetString(values, prefix + "Kind");
+            if (string.IsNullOrWhiteSpace(kind))
+            {
+                continue;
+            }
+
+            tracks.Add(new NativeHeadlessTrackInfo
+            {
+                Index = GetInt32(values, prefix + "Index"),
+                Kind = kind,
+                Codec = GetString(values, prefix + "Codec"),
+                Language = GetString(values, prefix + "Language"),
+                ChannelLayout = GetString(values, prefix + "ChannelLayout"),
+                Channels = GetInt32(values, prefix + "Channels"),
+                IsDefault = GetInt32(values, prefix + "IsDefault") != 0,
+                IsForced = GetInt32(values, prefix + "IsForced") != 0,
+                RealFrameRate = GetDouble(values, prefix + "RealFrameRate"),
+                AverageFrameRate = GetDouble(values, prefix + "AverageFrameRate")
+            });
+        }
+
+        return tracks;
     }
 
     private static bool TryGetUInt64(
@@ -399,18 +432,57 @@ internal static class NativeHeadlessHarness
             VideoFrameRate = sourceInfo.FrameRate,
             HdrProfile = HdrPlaybackProfile.Sdr()
         };
-        source.Streams.Add(new EmbyMediaStream
+        if (sourceInfo.Tracks.Count > 0)
         {
-            Index = 0,
-            Kind = EmbyStreamKind.Video,
-            Codec = sourceInfo.Codec,
-            VideoRange = sourceInfo.VideoRange,
-            ColorPrimaries = sourceInfo.ColorPrimaries,
-            ColorTransfer = sourceInfo.ColorTransfer,
-            ColorSpace = sourceInfo.ColorSpace,
-            RealFrameRate = sourceInfo.FrameRate,
-            AverageFrameRate = sourceInfo.FrameRate
-        });
+            foreach (var track in sourceInfo.Tracks)
+            {
+                var streamKind = MapStreamKind(track.Kind);
+                if (!streamKind.HasValue)
+                {
+                    continue;
+                }
+
+                source.Streams.Add(new EmbyMediaStream
+                {
+                    Index = track.Index,
+                    Kind = streamKind.Value,
+                    Codec = track.Codec,
+                    Language = track.Language,
+                    ChannelLayout = track.ChannelLayout,
+                    Channels = track.Channels,
+                    IsDefault = track.IsDefault,
+                    IsForced = track.IsForced,
+                    VideoRange = streamKind.Value == EmbyStreamKind.Video ? sourceInfo.VideoRange : "",
+                    ColorPrimaries = streamKind.Value == EmbyStreamKind.Video ? sourceInfo.ColorPrimaries : "",
+                    ColorTransfer = streamKind.Value == EmbyStreamKind.Video ? sourceInfo.ColorTransfer : "",
+                    ColorSpace = streamKind.Value == EmbyStreamKind.Video ? sourceInfo.ColorSpace : "",
+                    RealFrameRate = track.RealFrameRate,
+                    AverageFrameRate = track.AverageFrameRate
+                });
+            }
+        }
+
+        if (source.Streams.Count == 0)
+        {
+            source.Streams.Add(new EmbyMediaStream
+            {
+                Index = 0,
+                Kind = EmbyStreamKind.Video,
+                Codec = sourceInfo.Codec,
+                VideoRange = sourceInfo.VideoRange,
+                ColorPrimaries = sourceInfo.ColorPrimaries,
+                ColorTransfer = sourceInfo.ColorTransfer,
+                ColorSpace = sourceInfo.ColorSpace,
+                RealFrameRate = sourceInfo.FrameRate,
+                AverageFrameRate = sourceInfo.FrameRate
+            });
+        }
+
+        var selectedVideo = source.VideoStreams.FirstOrDefault();
+        if (selectedVideo != null && string.IsNullOrWhiteSpace(selectedVideo.Codec))
+        {
+            selectedVideo.Codec = sourceInfo.Codec;
+        }
 
         source.HdrProfile.Codec = sourceInfo.Codec;
         source.HdrProfile.VideoRange = sourceInfo.VideoRange;
@@ -442,13 +514,34 @@ internal static class NativeHeadlessHarness
             };
         }
 
+        var selectedAudioStreamIndex = source.AudioStreams.FirstOrDefault()?.Index;
         return new PlaybackDescriptor(
             itemId: "",
             mediaSource: source,
             availableSources: new[] { source },
             startPositionTicks: 0,
-            audioStreamIndex: null,
+            audioStreamIndex: selectedAudioStreamIndex,
             subtitleStreamIndex: null);
+    }
+
+    private static EmbyStreamKind? MapStreamKind(string kind)
+    {
+        if (string.Equals(kind, "Video", StringComparison.OrdinalIgnoreCase))
+        {
+            return EmbyStreamKind.Video;
+        }
+
+        if (string.Equals(kind, "Audio", StringComparison.OrdinalIgnoreCase))
+        {
+            return EmbyStreamKind.Audio;
+        }
+
+        if (string.Equals(kind, "Subtitle", StringComparison.OrdinalIgnoreCase))
+        {
+            return EmbyStreamKind.Subtitle;
+        }
+
+        return null;
     }
 
     private static void AddLifecycleEvent(
@@ -727,6 +820,32 @@ internal sealed class NativeHeadlessSourceInfo
     public string ColorTransfer { get; set; } = "";
 
     public string ColorSpace { get; set; } = "";
+
+    public List<NativeHeadlessTrackInfo> Tracks { get; } =
+        new List<NativeHeadlessTrackInfo>();
+}
+
+internal sealed class NativeHeadlessTrackInfo
+{
+    public int Index { get; set; }
+
+    public string Kind { get; set; } = "";
+
+    public string Codec { get; set; } = "";
+
+    public string Language { get; set; } = "";
+
+    public string ChannelLayout { get; set; } = "";
+
+    public int Channels { get; set; }
+
+    public bool IsDefault { get; set; }
+
+    public bool IsForced { get; set; }
+
+    public double RealFrameRate { get; set; }
+
+    public double AverageFrameRate { get; set; }
 }
 
 internal sealed class NativeHeadlessColorInfo

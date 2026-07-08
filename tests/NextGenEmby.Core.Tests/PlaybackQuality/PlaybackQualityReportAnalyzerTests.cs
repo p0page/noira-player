@@ -813,6 +813,8 @@ public sealed class PlaybackQualityReportAnalyzerTests
         Assert.Contains("buffers.queuedAudioBuffers", analysis.Buffering.Signals);
         Assert.Contains("buffers.videoStarvedPasses", analysis.Buffering.Signals);
         Assert.Contains("buffers.audioStarvedPasses", analysis.Buffering.Signals);
+        Assert.Contains("buffers.submittedAudioFrames", analysis.EvidenceSignals);
+        Assert.Contains("buffers.queuedAudioBuffers", analysis.EvidenceSignals);
     }
 
     [Fact]

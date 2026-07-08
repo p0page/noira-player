@@ -6,6 +6,7 @@
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <vector>
 #include <winrt/Windows.Foundation.h>
 
 struct AVFormatContext;
@@ -28,6 +29,20 @@ namespace winrt::NextGenEmby::Native::implementation
         std::string ColorSpace;
     };
 
+    struct FfmpegStreamSnapshot
+    {
+        int32_t StreamIndex{-1};
+        std::string Kind;
+        std::string Codec;
+        std::string Language;
+        std::string ChannelLayout;
+        int32_t Channels{0};
+        bool IsDefault{false};
+        bool IsForced{false};
+        double RealFrameRate{0.0};
+        double AverageFrameRate{0.0};
+    };
+
     class FfmpegMediaSource
     {
     public:
@@ -38,6 +53,7 @@ namespace winrt::NextGenEmby::Native::implementation
         int32_t FindRequiredStream(int mediaType, int32_t selectedStreamIndex) const;
         AVStream* Stream(int32_t streamIndex) const;
         std::optional<FfmpegVideoStreamSnapshot> BestVideoStreamSnapshot() const;
+        std::vector<FfmpegStreamSnapshot> StreamSnapshots() const;
         void RegisterStream(int32_t streamIndex);
         void UnregisterStream(int32_t streamIndex) noexcept;
         bool TryReadPacket(int32_t streamIndex, AVPacket* packet);

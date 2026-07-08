@@ -76,6 +76,7 @@ namespace winrt::NextGenEmby::Native::implementation
         int64_t CurrentPositionTicks() const noexcept;
         PlaybackQualityMetricsSnapshot QualityMetricsSnapshot() const noexcept;
         std::optional<FfmpegVideoStreamSnapshot> VideoSourceSnapshot() const;
+        std::vector<FfmpegStreamSnapshot> SourceTrackSnapshots() const;
 
     private:
         void StartRenderLoop();

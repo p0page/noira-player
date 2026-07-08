@@ -13,6 +13,8 @@ extern "C"
 #include <libavcodec/codec_id.h>
 #include <libavcodec/packet.h>
 #include <libavformat/avformat.h>
+#include <libavutil/channel_layout.h>
+#include <libavutil/dict.h>
 #include <libavutil/avutil.h>
 #include <libavutil/error.h>
 }
@@ -146,6 +148,61 @@ namespace
         default:
             return "";
         }
+    }
+
+    std::string GetCodecName(AVCodecID codecId)
+    {
+        return codecId == AV_CODEC_ID_NONE ? "" : avcodec_get_name(codecId);
+    }
+
+    std::string MapStreamKind(AVMediaType mediaType)
+    {
+        switch (mediaType)
+        {
+        case AVMEDIA_TYPE_VIDEO:
+            return "Video";
+        case AVMEDIA_TYPE_AUDIO:
+            return "Audio";
+        case AVMEDIA_TYPE_SUBTITLE:
+            return "Subtitle";
+        default:
+            return "";
+        }
+    }
+
+    std::string GetMetadataValue(AVDictionary* metadata, char const* key)
+    {
+        auto entry = av_dict_get(metadata, key, nullptr, 0);
+        return entry != nullptr && entry->value != nullptr
+            ? entry->value
+            : "";
+    }
+
+    int32_t GetAudioChannelCount(AVCodecParameters const* codecpar)
+    {
+        if (codecpar == nullptr || codecpar->codec_type != AVMEDIA_TYPE_AUDIO)
+        {
+            return 0;
+        }
+
+        return codecpar->ch_layout.nb_channels > 0
+            ? codecpar->ch_layout.nb_channels
+            : 0;
+    }
+
+    std::string GetAudioChannelLayout(AVCodecParameters const* codecpar)
+    {
+        if (codecpar == nullptr ||
+            codecpar->codec_type != AVMEDIA_TYPE_AUDIO ||
+            codecpar->ch_layout.nb_channels <= 0)
+        {
+            return "";
+        }
+
+        char buffer[128]{};
+        return av_channel_layout_describe(&codecpar->ch_layout, buffer, sizeof(buffer)) >= 0
+            ? buffer
+            : "";
     }
 
     int HexValue(char value)
@@ -375,9 +432,7 @@ namespace winrt::NextGenEmby::Native::implementation
         auto codecpar = stream->codecpar;
         FfmpegVideoStreamSnapshot snapshot{};
         snapshot.StreamIndex = streamIndex.value();
-        snapshot.Codec = codecpar->codec_id == AV_CODEC_ID_NONE
-            ? ""
-            : avcodec_get_name(codecpar->codec_id);
+        snapshot.Codec = GetCodecName(codecpar->codec_id);
         snapshot.Width = codecpar->width > 0 ? static_cast<uint32_t>(codecpar->width) : 0;
         snapshot.Height = codecpar->height > 0 ? static_cast<uint32_t>(codecpar->height) : 0;
         snapshot.FrameRate = SelectFrameRate(stream);
@@ -387,6 +442,50 @@ namespace winrt::NextGenEmby::Native::implementation
         snapshot.ColorTransfer = MapColorTransfer(codecpar->color_trc);
         snapshot.ColorSpace = MapColorSpace(codecpar->color_space);
         return snapshot;
+    }
+
+    std::vector<FfmpegStreamSnapshot> FfmpegMediaSource::StreamSnapshots() const
+    {
+        std::vector<FfmpegStreamSnapshot> snapshots;
+        if (!m_open || m_formatContext == nullptr)
+        {
+            return snapshots;
+        }
+
+        for (auto streamIndex = uint32_t{0}; streamIndex < m_formatContext->nb_streams; ++streamIndex)
+        {
+            auto stream = m_formatContext->streams[streamIndex];
+            auto codecpar = stream == nullptr ? nullptr : stream->codecpar;
+            if (stream == nullptr || codecpar == nullptr)
+            {
+                continue;
+            }
+
+            auto kind = MapStreamKind(codecpar->codec_type);
+            if (kind.empty())
+            {
+                continue;
+            }
+
+            FfmpegStreamSnapshot snapshot{};
+            snapshot.StreamIndex = static_cast<int32_t>(streamIndex);
+            snapshot.Kind = kind;
+            snapshot.Codec = GetCodecName(codecpar->codec_id);
+            snapshot.Language = GetMetadataValue(stream->metadata, "language");
+            snapshot.ChannelLayout = GetAudioChannelLayout(codecpar);
+            snapshot.Channels = GetAudioChannelCount(codecpar);
+            snapshot.IsDefault = (stream->disposition & AV_DISPOSITION_DEFAULT) != 0;
+            snapshot.IsForced = (stream->disposition & AV_DISPOSITION_FORCED) != 0;
+            if (codecpar->codec_type == AVMEDIA_TYPE_VIDEO)
+            {
+                snapshot.RealFrameRate = ToFrameRate(stream->r_frame_rate);
+                snapshot.AverageFrameRate = ToFrameRate(stream->avg_frame_rate);
+            }
+
+            snapshots.push_back(std::move(snapshot));
+        }
+
+        return snapshots;
     }
 
     void FfmpegMediaSource::RegisterStream(int32_t streamIndex)

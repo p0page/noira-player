@@ -280,6 +280,12 @@ namespace winrt::NextGenEmby::Native::implementation
         return m_mediaSource.BestVideoStreamSnapshot();
     }
 
+    std::vector<FfmpegStreamSnapshot> PlaybackGraph::SourceTrackSnapshots() const
+    {
+        std::lock_guard lock(m_graphMutex);
+        return m_mediaSource.StreamSnapshots();
+    }
+
     void PlaybackGraph::StartRenderLoop()
     {
         m_stopRenderLoop = false;

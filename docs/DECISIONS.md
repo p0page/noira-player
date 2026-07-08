@@ -20,6 +20,16 @@
 
 边界：这只是评测器证据归类修正，不改变播放器、native graph、音频渲染、frame pacing 或 A/V sync 策略。后续仍需要带音轨 stable/challenge 样本来建立真正的 A/V sync evidence。
 
+## 2026-07-08: native stream snapshot 作为 tracks/A-V sync evidence 的入口
+
+决策：`FfmpegMediaSource` 新增 stream snapshot，枚举实际 FFmpeg stream 的 index、kind、codec、language、channel layout、channels、default/forced 和视频帧率；`PlaybackGraph` 只读暴露该 snapshot；native helper 将其输出为 `sourceTrackCount` 与 `trackN*` key-value；`PlaybackQuality.Headless` 再映射为 `EmbyMediaStream` 进入标准 report。
+
+原因：之前 headless report 只从 best video snapshot 构造一个 video stream，导致真实音轨即使已经被 native graph 解码并提交到 audio renderer，也不会进入 `tracks.audioTrackCount`、`selectedAudioStreamIndex` 或 A/V sync required signal。评测系统需要从 native source snapshot 采集轨道发现证据，而不是由 C# harness 假设只有一条视频轨。
+
+影响：native-headless smoke 新增 `local/native-headless-av-smoke` challenge case，使用本地生成的 bt709 SDR + AAC 样本。该 case 现在能在 captured/materialized/validated/analyzed 链路中保留 audio track、submitted audio frames、queued audio buffers、audio/video clock ticks 与 drift percentile。`capabilityCoverage.av-sync` 和 `capabilityCoverage.buffering` 因此可以基于真实 native/software report 标记为 `evidence-present`。
+
+边界：stream snapshot 是采集证据，不改变源选择、音轨选择、字幕选择、解码、渲染、同步或缓冲策略。当前 challenge 只覆盖一条 AAC 音轨；多音轨切换、字幕样本和字幕渲染仍需后续 case。
+
 ## 2026-07-08: App-free native helper 作为第一条真实软件播放采集路径
 
 决策：`tools/NextGenEmby.PlaybackQuality.Headless` 保留默认 skip/blocker 模式，同时新增 `--native-helper-exe`。当传入 native helper exe 时，C# harness 负责调用 helper、解析 key=value metrics、组合 `PlaybackDescriptor`、`PlaybackQualityLifecycle`、`PlaybackQualityPosition` 和 `native-headless:returned-snapshot` metrics provider，再输出标准 `PlaybackQualityRunResult`。`run-native-headless-harness-smoke-test.ps1` 负责在本机编译 helper、补齐 FFmpegInteropX UWP DLL 与 `vcruntime140_app.dll`，并用本地生成的声明样本跑完整 captured import / validate / analyze 链路；默认 skip/blocker 路径仍保留公开 Jellyfin direct-uri 作为命令契约输入。

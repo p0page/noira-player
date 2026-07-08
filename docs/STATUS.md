@@ -16,6 +16,14 @@ App-free native helper 现在会从 FFmpeg source snapshot 输出 `source.videoR
 
 边界：这不是 A/V sync 优化，也不证明当前播放器同步更好；它只是修正评测器的证据归类，避免把“没有音轨可同步”误读成“音画同步良好”。真正的 A/V sync 评测仍需要带音轨样本和有效 audio/video clock drift evidence。
 
+## 2026-07-08 更新：native-headless challenge 已覆盖音轨、buffering 和 A/V sync 软件证据
+
+`FfmpegMediaSource` 现在会输出 video/audio/subtitle stream snapshots，`PlaybackGraph` 暴露这些 snapshots，native helper stdout 使用 `sourceTrackCount` 和 `trackN*` 字段传给 `PlaybackQuality.Headless`。headless harness 会把这些 native stream snapshots 映射成 `EmbyMediaStream`，因此 report 能保留 `tracks.audioTrackCount`、`tracks.selectedAudioStreamIndex`、音频 codec、channel layout、channels、default/forced 等证据。
+
+`run-native-headless-harness-smoke-test.ps1` 现在包含第二个本地生成 case：`local/native-headless-av-smoke`，category 为 `challenge`。该样本包含 bt709 SDR 视频和 AAC 音轨，native helper 会实际打开 PlaybackGraph，采集 submitted audio frames、queued audio buffers、audio/video clock ticks 和 drift percentile。最新 report-set 中 `tracks`、`buffering`、`av-sync` 和 `color` capability 都能从 native/software evidence 得到消费。
+
+边界：这仍然不是播放策略优化，也不验证硬件输出。A/V sync evidence 来自软件 clock/drift 采样，不能代表外部 HDMI/显示设备测量；subtitle 当前只覆盖发现通道，仍没有带字幕样本证明真实 subtitle decode/render。
+
 ## 2026-07-08 更新：App-free native-headless helper 已产生真实 native/software playback evidence
 
 `tools/NextGenEmby.PlaybackQuality.Headless` 现在支持 `--native-helper-exe`。传入由 smoke 编译出的 `NativePlaybackGraphHeadlessSmokeTests.exe` 时，headless harness 会在不启动、不打包、不部署 UWP App 的情况下调用 native helper，打开本地生成的声明样本，执行最小生命周期 `load/play/pause/resume/seek/stop`，解析 native metrics，并输出标准 `PlaybackQualityRunResult`。
