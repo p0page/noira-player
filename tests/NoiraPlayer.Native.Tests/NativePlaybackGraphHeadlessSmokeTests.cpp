@@ -163,6 +163,9 @@ int wmain(int argc, wchar_t** argv)
             << " renderIntervalMsP95=" << playbackSnapshot.RenderIntervalMsP95
             << " renderIntervalMsP99=" << playbackSnapshot.RenderIntervalMsP99
             << " maxFrameGapMs=" << playbackSnapshot.MaxFrameGapMs
+            << " renderIntervalSampleCount=" << playbackSnapshot.RenderIntervalSampleCount
+            << " renderIntervalOverExpected2MsCount=" << playbackSnapshot.RenderIntervalOverExpected2MsCount
+            << " renderIntervalOverExpected4MsCount=" << playbackSnapshot.RenderIntervalOverExpected4MsCount
             << " presentDurationMsP50=" << playbackSnapshot.PresentDurationMsP50
             << " presentDurationMsP95=" << playbackSnapshot.PresentDurationMsP95
             << " presentDurationMsP99=" << playbackSnapshot.PresentDurationMsP99

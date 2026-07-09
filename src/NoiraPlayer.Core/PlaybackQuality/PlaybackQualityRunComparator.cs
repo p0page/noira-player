@@ -1189,6 +1189,9 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitOversleepMsP99");
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitOversleepMsMax");
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.maxFrameGapMs");
+                AddUnique(comparison.Coverage.MatchedSignals, "timing.renderIntervalSampleCount");
+                AddUnique(comparison.Coverage.MatchedSignals, "timing.renderIntervalOverExpected2MsCount");
+                AddUnique(comparison.Coverage.MatchedSignals, "timing.renderIntervalOverExpected4MsCount");
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.expectedFrameDurationMs");
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.framePacingSourceFrameRate");
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.hardwareDecodedVideoFrames");

@@ -199,6 +199,9 @@ namespace winrt::NoiraPlayer::Native::implementation
         metrics.RenderIntervalMsP95(snapshot.RenderIntervalMsP95);
         metrics.RenderIntervalMsP99(snapshot.RenderIntervalMsP99);
         metrics.MaxFrameGapMs(snapshot.MaxFrameGapMs);
+        metrics.RenderIntervalSampleCount(snapshot.RenderIntervalSampleCount);
+        metrics.RenderIntervalOverExpected2MsCount(snapshot.RenderIntervalOverExpected2MsCount);
+        metrics.RenderIntervalOverExpected4MsCount(snapshot.RenderIntervalOverExpected4MsCount);
         metrics.PresentDurationMsP50(snapshot.PresentDurationMsP50);
         metrics.PresentDurationMsP95(snapshot.PresentDurationMsP95);
         metrics.PresentDurationMsP99(snapshot.PresentDurationMsP99);

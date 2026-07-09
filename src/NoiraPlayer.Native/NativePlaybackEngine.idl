@@ -73,6 +73,9 @@
         Double RenderIntervalMsP95;
         Double RenderIntervalMsP99;
         Double MaxFrameGapMs;
+        UInt64 RenderIntervalSampleCount;
+        UInt64 RenderIntervalOverExpected2MsCount;
+        UInt64 RenderIntervalOverExpected4MsCount;
         Double PresentDurationMsP50;
         Double PresentDurationMsP95;
         Double PresentDurationMsP99;

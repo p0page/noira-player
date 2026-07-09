@@ -314,6 +314,9 @@ internal static class NativeHeadlessHarness
         metrics.RenderIntervalMsP95 = GetDouble(values, "renderIntervalMsP95");
         metrics.RenderIntervalMsP99 = GetDouble(values, "renderIntervalMsP99");
         metrics.MaxFrameGapMs = GetDouble(values, "maxFrameGapMs");
+        metrics.RenderIntervalSampleCount = GetUInt64(values, "renderIntervalSampleCount");
+        metrics.RenderIntervalOverExpected2MsCount = GetUInt64(values, "renderIntervalOverExpected2MsCount");
+        metrics.RenderIntervalOverExpected4MsCount = GetUInt64(values, "renderIntervalOverExpected4MsCount");
         metrics.PresentDurationMsP50 = GetDouble(values, "presentDurationMsP50");
         metrics.PresentDurationMsP95 = GetDouble(values, "presentDurationMsP95");
         metrics.PresentDurationMsP99 = GetDouble(values, "presentDurationMsP99");

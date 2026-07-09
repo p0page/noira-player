@@ -68,6 +68,15 @@ namespace winrt::NoiraPlayer::Native::implementation
         double MaxFrameGapMs() const noexcept { return m_maxFrameGapMs; }
         void MaxFrameGapMs(double value) noexcept { m_maxFrameGapMs = value; }
 
+        uint64_t RenderIntervalSampleCount() const noexcept { return m_renderIntervalSampleCount; }
+        void RenderIntervalSampleCount(uint64_t value) noexcept { m_renderIntervalSampleCount = value; }
+
+        uint64_t RenderIntervalOverExpected2MsCount() const noexcept { return m_renderIntervalOverExpected2MsCount; }
+        void RenderIntervalOverExpected2MsCount(uint64_t value) noexcept { m_renderIntervalOverExpected2MsCount = value; }
+
+        uint64_t RenderIntervalOverExpected4MsCount() const noexcept { return m_renderIntervalOverExpected4MsCount; }
+        void RenderIntervalOverExpected4MsCount(uint64_t value) noexcept { m_renderIntervalOverExpected4MsCount = value; }
+
         double PresentDurationMsP50() const noexcept { return m_presentDurationMsP50; }
         void PresentDurationMsP50(double value) noexcept { m_presentDurationMsP50 = value; }
 
@@ -155,6 +164,9 @@ namespace winrt::NoiraPlayer::Native::implementation
         double m_renderIntervalMsP95{0.0};
         double m_renderIntervalMsP99{0.0};
         double m_maxFrameGapMs{0.0};
+        uint64_t m_renderIntervalSampleCount{0};
+        uint64_t m_renderIntervalOverExpected2MsCount{0};
+        uint64_t m_renderIntervalOverExpected4MsCount{0};
         double m_presentDurationMsP50{0.0};
         double m_presentDurationMsP95{0.0};
         double m_presentDurationMsP99{0.0};

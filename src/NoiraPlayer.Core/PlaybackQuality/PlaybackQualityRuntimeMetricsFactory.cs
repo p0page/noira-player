@@ -55,6 +55,9 @@
                 metrics.RenderIntervalMsP95 > 0 ||
                 metrics.RenderIntervalMsP99 > 0 ||
                 metrics.MaxFrameGapMs > 0 ||
+                metrics.RenderIntervalSampleCount > 0 ||
+                metrics.RenderIntervalOverExpected2MsCount > 0 ||
+                metrics.RenderIntervalOverExpected4MsCount > 0 ||
                 metrics.PresentDurationMsP50 > 0 ||
                 metrics.PresentDurationMsP95 > 0 ||
                 metrics.PresentDurationMsP99 > 0 ||
