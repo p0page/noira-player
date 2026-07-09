@@ -205,6 +205,9 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 new PlaybackQualitySignalDescriptor("framePacing.renderIntervalP95FrameRatio", "model"),
                 new PlaybackQualitySignalDescriptor("framePacing.renderIntervalP99FrameRatio", "model"),
                 new PlaybackQualitySignalDescriptor("framePacing.maxFrameGapFrameRatio", "model"),
+                new PlaybackQualitySignalDescriptor("framePacing.renderIntervalP95ExpectedErrorMs", "model"),
+                new PlaybackQualitySignalDescriptor("framePacing.renderIntervalP99ExpectedErrorMs", "model"),
+                new PlaybackQualitySignalDescriptor("framePacing.maxFrameGapExpectedErrorMs", "model"),
                 new PlaybackQualitySignalDescriptor("framePacing.droppedVideoFramePercent", "model"),
                 new PlaybackQualitySignalDescriptor("framePacing.lateFrameDropToleranceFrameRatio", "model")
             };

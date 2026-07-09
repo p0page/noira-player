@@ -436,6 +436,46 @@ public sealed class PlaybackQualityRunComparatorTests
     }
 
     [Fact]
+    public void Compare_Reports_Improves_When_Runtime_Frame_Pacing_Approaches_Expected_Duration()
+    {
+        var baseline = CreateReport(
+            "baseline",
+            Check("RenderedVideoFrames", "pass", "frame-pacing", "timing.renderedVideoFrames", "1", "46"));
+        baseline.Timing.ExpectedFrameDurationMs = 41.708;
+        baseline.Timing.RenderIntervalMsP95 = 48.098;
+        baseline.Timing.RenderIntervalMsP99 = 48.111;
+        baseline.Timing.MaxFrameGapMs = 48.111;
+
+        var candidate = CreateReport(
+            "candidate",
+            Check("RenderedVideoFrames", "pass", "frame-pacing", "timing.renderedVideoFrames", "1", "46"));
+        candidate.Timing.ExpectedFrameDurationMs = 41.708;
+        candidate.Timing.RenderIntervalMsP95 = 42.098;
+        candidate.Timing.RenderIntervalMsP99 = 42.101;
+        candidate.Timing.MaxFrameGapMs = 42.101;
+
+        var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
+
+        Assert.Equal("improved", comparison.Result);
+        Assert.Equal("keep-candidate", comparison.Decision);
+        Assert.Contains("frame-pacing", comparison.Optimization.FailureAreas);
+        Assert.Contains("timing.expectedFrameDurationMs", comparison.Coverage.MatchedSignals);
+        Assert.Contains(comparison.Improvements, delta =>
+            delta.Signal == "framePacing.renderIntervalP95ExpectedErrorMs" &&
+            delta.FailureArea == "frame-pacing" &&
+            delta.Direction == "decreased" &&
+            delta.BaselineActual == "6.39" &&
+            delta.CandidateActual == "0.39");
+        Assert.Contains(comparison.Improvements, delta =>
+            delta.Signal == "framePacing.renderIntervalP99ExpectedErrorMs" &&
+            delta.Direction == "decreased");
+        Assert.Contains(comparison.Improvements, delta =>
+            delta.Signal == "framePacing.maxFrameGapExpectedErrorMs" &&
+            delta.Direction == "decreased");
+        Assert.Empty(comparison.Regressions);
+    }
+
+    [Fact]
     public void Compare_Reports_PartialConfidence_When_Signals_Are_Unmatched()
     {
         var baseline = CreateReport(

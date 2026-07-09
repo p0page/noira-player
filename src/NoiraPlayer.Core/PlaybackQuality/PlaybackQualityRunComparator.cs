@@ -107,6 +107,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
     public static class PlaybackQualityRunComparator
     {
         private const double DerivedSignalEpsilon = 0.0001;
+        private const double MinimumFramePacingExpectedErrorDeltaMs = 2.0;
         private const double MinimumAcceptableFrameRatio = 0.75;
         private const double MaximumAcceptableFrameRatio = 1.5;
 
@@ -1394,7 +1395,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
             PlaybackQualityReport baseline,
             PlaybackQualityReport candidate)
         {
-            if (!IsFramePacingComparison(comparison))
+            if (!IsFramePacingComparison(comparison) &&
+                !HasComparableExpectedFramePacingEvidence(baseline, candidate))
             {
                 return;
             }
@@ -1420,6 +1422,27 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 baselineAnalysis.FramePacing.MaxFrameGapFrameRatio,
                 candidateAnalysis.FramePacing.MaxFrameGapFrameRatio,
                 requirePositive: true);
+            CompareFramePacingExpectedError(
+                comparison,
+                "framePacing.renderIntervalP95ExpectedErrorMs",
+                baseline.Timing.RenderIntervalMsP95,
+                candidate.Timing.RenderIntervalMsP95,
+                baseline.Timing.ExpectedFrameDurationMs,
+                candidate.Timing.ExpectedFrameDurationMs);
+            CompareFramePacingExpectedError(
+                comparison,
+                "framePacing.renderIntervalP99ExpectedErrorMs",
+                baseline.Timing.RenderIntervalMsP99,
+                candidate.Timing.RenderIntervalMsP99,
+                baseline.Timing.ExpectedFrameDurationMs,
+                candidate.Timing.ExpectedFrameDurationMs);
+            CompareFramePacingExpectedError(
+                comparison,
+                "framePacing.maxFrameGapExpectedErrorMs",
+                baseline.Timing.MaxFrameGapMs,
+                candidate.Timing.MaxFrameGapMs,
+                baseline.Timing.ExpectedFrameDurationMs,
+                candidate.Timing.ExpectedFrameDurationMs);
             CompareDerivedPolicyChange(
                 comparison,
                 "framePacing.lateFrameDropToleranceFrameRatio",
@@ -1471,6 +1494,20 @@ namespace NoiraPlayer.Core.PlaybackQuality
             return comparison.PersistingFailureAreas.Contains("frame-pacing") ||
                 comparison.ResolvedFailureAreas.Contains("frame-pacing") ||
                 comparison.NewFailureAreas.Contains("frame-pacing");
+        }
+
+        private static bool HasComparableExpectedFramePacingEvidence(
+            PlaybackQualityReport baseline,
+            PlaybackQualityReport candidate)
+        {
+            return baseline.Timing.ExpectedFrameDurationMs > 0 &&
+                candidate.Timing.ExpectedFrameDurationMs > 0 &&
+                Math.Abs(
+                    baseline.Timing.ExpectedFrameDurationMs -
+                    candidate.Timing.ExpectedFrameDurationMs) <= DerivedSignalEpsilon &&
+                ((baseline.Timing.RenderIntervalMsP95 > 0 && candidate.Timing.RenderIntervalMsP95 > 0) ||
+                    (baseline.Timing.RenderIntervalMsP99 > 0 && candidate.Timing.RenderIntervalMsP99 > 0) ||
+                    (baseline.Timing.MaxFrameGapMs > 0 && candidate.Timing.MaxFrameGapMs > 0));
         }
 
         private static bool HasObservedFrameCount(PlaybackQualityReport report)
@@ -1544,6 +1581,55 @@ namespace NoiraPlayer.Core.PlaybackQuality
                     CreateDerivedCheck(signal, candidateActual),
                     numericDelta < 0 ? "decreased" : "increased",
                     numericDelta));
+            }
+        }
+
+        private static void CompareFramePacingExpectedError(
+            PlaybackQualityRunComparison comparison,
+            string signal,
+            double baselineActual,
+            double candidateActual,
+            double baselineExpectedFrameDurationMs,
+            double candidateExpectedFrameDurationMs)
+        {
+            if (baselineActual <= 0 ||
+                candidateActual <= 0 ||
+                baselineExpectedFrameDurationMs <= 0 ||
+                candidateExpectedFrameDurationMs <= 0 ||
+                Math.Abs(baselineExpectedFrameDurationMs - candidateExpectedFrameDurationMs) > DerivedSignalEpsilon)
+            {
+                return;
+            }
+
+            AddUnique(comparison.Coverage.MatchedSignals, signal);
+
+            var baselineError = Math.Abs(baselineActual - baselineExpectedFrameDurationMs);
+            var candidateError = Math.Abs(candidateActual - candidateExpectedFrameDurationMs);
+            var numericDelta = candidateError - baselineError;
+            if (Math.Abs(numericDelta) < MinimumFramePacingExpectedErrorDeltaMs)
+            {
+                return;
+            }
+
+            var baselineCheck = CreateDerivedCheck(signal, baselineError);
+            var candidateCheck = CreateDerivedCheck(signal, candidateError);
+            if (numericDelta < 0)
+            {
+                comparison.Improvements.Add(CreateDelta(
+                    baselineCheck,
+                    candidateCheck,
+                    "decreased",
+                    numericDelta));
+                AddUnique(comparison.Optimization.FailureAreas, "frame-pacing");
+            }
+            else
+            {
+                comparison.Regressions.Add(CreateDelta(
+                    baselineCheck,
+                    candidateCheck,
+                    "increased",
+                    numericDelta));
+                AddUnique(comparison.NewFailureAreas, "frame-pacing");
             }
         }
 
