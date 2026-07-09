@@ -9,6 +9,8 @@
 
 边界：该决策只治理 UI 开发数据源，不改变播放 core/native 策略，不替代 playback-quality report-set，也不证明 UI 交互已经完成。若需要可重复视觉/交互测试，应先把真实样本规范化到本地 manifest，而不是恢复 mock fixture。
 
+当前权威说明：`docs/qa/ui-development-data-sources.md`。历史文档中的 fixture route 表述只保留为历史证据，不得作为新开发入口。
+
 ## 2026-07-08: App 开发期使用 XAML Hot Reload 与 loose file deploy
 
 决策：Noira UWP App 的 Debug 构建显式设置 `<DisableXbfLineInfo>False</DisableXbfLineInfo>` 和 `<UseDotNetNativeToolchain>false</UseDotNetNativeToolchain>`，以保留 Visual Studio XAML Hot Reload 所需信息。新增 `tools/Register-NoiraLooseApp.ps1` 作为本机 loose file deploy 入口：默认 clean/build 后从 `bin\<Platform>\<Configuration>\AppxManifest.xml` 注册 loose layout，`-ValidateOnly` 用于脚本和布局验证。

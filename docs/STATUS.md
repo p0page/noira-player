@@ -8,6 +8,8 @@
 
 新增 `tools/Write-AppUiSampleCommand.ps1`，用于从 ignored 的 `docs/qa/private/ui-real-samples.local.json` 选择一个真实 UI 样本，并写入当前 Noira UWP 包的 `LocalState\dev-command.json`。仓库只提交 `docs/qa/private/ui-real-samples.template.json` 和规范；真实 Emby `itemId`、`mediaSourceId`、标题、私有 URL 和账号信息不得提交。
 
+`docs/qa/ui-development-data-sources.md` 是 UI 开发数据源的权威规则。历史文档中的 fixture route 只代表当时验证记录，不作为当前开发入口。
+
 边界：这是 UI 开发数据源治理，不是播放 core 优化，也不改变 playback-quality manifest/report-set 规则。需要可复现 UI 样本时，应维护本地私有 manifest，而不是恢复 mock fixture route。
 
 ## 2026-07-08 更新：项目已改名为 Noira / NoiraPlayer

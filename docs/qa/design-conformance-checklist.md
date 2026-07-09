@@ -4,7 +4,7 @@ Date: 2026-07-07
 
 This checklist turns `docs/DESIGN.md` and the A3 render targets into an executable review path. The operation matrix proves the client can perform Emby tasks; this file proves those tasks still look and feel like the agreed Xbox/TV design system while they are performed with keyboard/controller input.
 
-Current data-source rule as of 2026-07-09: new UI validation should use private real samples from `docs/qa/private/ui-real-samples.local.json` via `tools/Write-AppUiSampleCommand.ps1`. Historical fixture-route notes and screenshots in this file remain trace evidence only; do not treat `*-fixture` or `details-real-*` as current development routes.
+Current data-source rule as of 2026-07-09: `docs/qa/ui-development-data-sources.md` is authoritative. New UI validation should use private real samples from `docs/qa/private/ui-real-samples.local.json` via `tools/Write-AppUiSampleCommand.ps1`. Historical fixture-route notes and screenshots in this file remain trace evidence only; do not treat `*-fixture` or `details-real-*` as current development routes.
 
 ## Source Of Truth
 
@@ -23,8 +23,8 @@ Current data-source rule as of 2026-07-09: new UI validation should use private 
 - Do not repair one checklist item at a time while the batch is still running.
 - After a batch, group findings by shared cause, make a unified fix plan, implement that batch, then rerun the same batch.
 - Use keyboard-only app input: arrows, `Enter`/`Space`, `Escape`, `M`, and any documented surrogate keys. When focus is inside editable text, use `Ctrl+M` as the local keyboard surrogate for controller Menu so the test does not type a literal `m` into the field.
-- Prefer deterministic DEBUG fixture routes when the visual state needs repeatable evidence.
-- Use real saved-session artwork when available for stress testing, but never commit private screenshots, credentials, server URLs, or downloaded personal media assets.
+- Prefer private real UI samples when the visual state needs repeatable evidence.
+- Use real saved-session artwork and metadata for stress testing, but never commit private screenshots, credentials, server URLs, item IDs, media source IDs, stream URLs, or downloaded personal media assets.
 - Record screenshots or text snapshots for every `Concern`, `Fail`, or `Blocked` result.
 
 ## Automation Ladder
@@ -33,8 +33,8 @@ Use the most precise and repeatable validation layer that can answer the questio
 
 1. Core policy/unit tests for deterministic input decisions, selection state, route parsing, artwork choice, and text/status rules.
 2. Source-level design contract tests for XAML resources, DEBUG routes, automation names, token usage, and absence of page-local visual drift.
-3. Installed app DEBUG fixture routes for realistic focus movement, layout, screenshots, and controller-keyboard behavior without requiring a live server.
-4. Installed app saved-session routes for real Emby artwork, real library shapes, playback progress, and server-specific metadata variations.
+3. Installed app private real sample routes for realistic focus movement, layout, screenshots, and controller-keyboard behavior against real Emby data.
+4. Installed app saved-session routes for broader real Emby artwork, real library shapes, playback progress, and server-specific metadata variations.
 5. Computer Use or manual Windows automation only when the app surface must be visually inspected or no lower-level automation can observe the issue.
 
 When a lower layer fails, fix that first before spending time on a slower visual pass. When a lower layer passes but the screen still feels wrong, record the visual finding in the batch log and treat it as a design-system issue rather than a test gap.
@@ -263,7 +263,7 @@ Scope:
 
 - Batch:
 - Build/install source:
-- Data source: fixture / saved session / local fake server / other
+- Data source: private real sample / saved session / local fake server / other
 
 Keyboard-only validation:
 

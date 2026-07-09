@@ -33,7 +33,7 @@ docs/qa/private/
 
 ## UI 真实样本 Manifest
 
-UI 开发不再使用 `*-fixture` 或 `details-real-*` route。需要打开真实 Emby 条目时，在 ignored 的 `ui-real-samples.local.json` 中维护样本列表，然后写入 app 的 `dev-command.json`。
+UI 开发数据源的权威规则见 `docs/qa/ui-development-data-sources.md`。当前规则是：不再使用 `*-fixture` 或 `details-real-*` route。需要打开真实 Emby 条目时，在 ignored 的 `ui-real-samples.local.json` 中维护样本列表，然后写入 app 的 `dev-command.json`。
 
 从模板复制：
 
