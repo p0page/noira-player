@@ -1,15 +1,15 @@
 ﻿# 技术决策
-## 2026-07-09: 正等待时间必须至少等待 1ms
+## 2026-07-09: audio-ahead 正等待时间必须至少等待 1ms
 
-决策：`PlaybackFramePacing` 中 audio-ahead 和 video-clock 的 wait duration 统一经过 `PositiveWaitDurationTicks`。当剩余等待时间 `<= 0` 时仍返回 `0us`；当剩余等待时间为正但小于 `1ms` 时，夹到 `1ms`；大于等于 `1ms` 时按原始 ticks 转换为 microseconds。
+决策：`PlaybackFramePacing::AudioAheadWaitDuration` 经过 `PositiveAudioWaitDurationTicks`。当剩余等待时间 `<= 0` 时仍返回 `0us`；当剩余等待时间为正但小于 `1ms` 时，夹到 `1ms`；大于等于 `1ms` 时按原始 ticks 转换为 microseconds。`VideoClockWaitDuration` 不使用该下限，继续按原始 ticks 直接转换。
 
-原因：native 调度实验暴露了一个边界问题：如果剩余等待时间很小但为正，`remainingTicks / 10` 可能截断成 `0us`。这会让 render loop 在逻辑上“需要等待”的情况下实际不等待，导致 wait count 和 CPU 调度行为被忙等污染，也会干扰后续候选对 frame pacing/oversleep 的判断。
+原因：native 调度实验暴露了一个边界问题：audio-ahead 剩余等待时间很小但为正时，`remainingTicks / 10` 可能截断成 `0us`。这会让 render loop 在逻辑上“需要等待”的情况下实际不等待，导致 wait count 和 CPU 调度行为被忙等污染，也会干扰后续候选对 frame pacing/oversleep 的判断。
 
-影响：该改动只约束 positive wait 的最小实际等待，不改变 `VideoAheadToleranceTicks`、drop tolerance、audio-ahead/video-clock 判定条件、评测阈值或样本预期。54-case comparison 结果为 `decision = no-change`、risk `low`、0 improved、0 regressed、0 mixed、54 unchanged。
+影响：该改动只约束 audio-ahead positive wait 的最小实际等待，不改变 `VideoAheadToleranceTicks`、drop tolerance、video-clock pacing、评测阈值或样本预期。54-case comparison 结果为 `decision = keep-candidate`、`action = accept-candidate`、risk `low`、1 improved、0 regressed、0 mixed、53 unchanged。
 
-不采纳项：adaptive audio tolerance 实验被拒绝。它改善了 frame pacing expected-error 诊断信号，但把 `audioAheadWaitOversleepMsP95` 拉高到 material regression 区间，suite 返回 `split-candidate`。后续不能把该 tolerance 改动重新混入本保护项。
+不采纳项：adaptive audio tolerance 实验被拒绝。它改善了 frame pacing expected-error 诊断信号，但把 `audioAheadWaitOversleepMsP95` 拉高到 material regression 区间，suite 返回 `split-candidate`。同时用于 audio-ahead 和 video-clock 的 positive wait floor 也被拒绝；commit-bound rerun 显示 video-clock floor 会让无音轨 24/60fps native-headless cadence case 回退。
 
-边界：这是 no-regression 稳定性保护，不是质量提升声明。是否改善真实播放流畅度、A/V sync 或设备输出，需要后续以同一 manifest baseline/candidate 证据单独证明。
+边界：这是 audio-ahead 稳定性保护和低风险候选，不是普遍质量提升声明。是否改善真实播放流畅度、A/V sync 或设备输出，需要后续以同一 manifest baseline/candidate 证据单独证明。
 
 ## 2026-07-09: audio-ahead oversleep comparison 以 P95 为决策门禁
 
