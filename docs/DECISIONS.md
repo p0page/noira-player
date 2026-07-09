@@ -1,4 +1,16 @@
 ﻿# 技术决策
+## 2026-07-09: 不采纳 positive-wait clamp，先处理 60fps cadence 单次采样不稳定性
+
+决策：不保留 `92e82e0` 的 audio/video positive wait clamp，也不保留 `dc2bf33` 的 audio-only positive wait clamp。当前 Core/native 主线回到 positive-wait clamp 之前的行为；后续调度候选必须再次从 accepted baseline 生成同 manifest baseline/candidate comparison。
+
+原因：两版候选都无法通过 commit-bound 54-case gate。`92e82e0` 被无音轨 native-headless cadence case 拒绝；`dc2bf33` 虽然 working comparison 为 `keep-candidate`，但 commit-bound comparison 因 `local/native-headless-hdr10-60` 的 `framePacing.renderIntervalP99ExpectedErrorMs` 和 `maxFrameGapExpectedErrorMs` 回退而被拒绝。由于 gate 结论是 reject，不能把候选留作 accepted Core 优化。
+
+补充证据：对当前 helper 重复采样显示，60fps native-headless 短样本的 P99/max gap 有明显单次波动。`hdr10-60` 五次 P99 为 `23.0687ms`、`21.0002ms`、`24.2723ms`、`21.7227ms`、`21.0617ms`；`sdr-60` 五次 P99 为 `26.4203ms`、`20.0507ms`、`21.6333ms`、`21.2512ms`、`21.1417ms`。在当前 `2ms` materiality 下，这种波动会让无关 candidate 随机触发 frame-pacing regression。
+
+影响：不要为了通过当前候选而放宽阈值、删除 case 或降低 expected behavior。下一步应先为 native-headless cadence 建立重复采样/稳定性归因机制，再继续尝试 wait scheduling 或 frame pacing Core 调整。
+
+边界：这不是否定 `framePacing.*ExpectedErrorMs` 规则；它说明单次 3 秒 native-headless 60fps 样本不足以单独作为强拒绝证据。`761800c` video-clock target wait 仍是此前已接受的 Core 候选。
+
 ## 2026-07-09: audio-ahead oversleep comparison 以 P95 为决策门禁
 
 决策：`PlaybackQualityRunComparator` 对 `timing.audioAheadWaitOversleepMsP95` 增加 lower-is-better 判定；baseline/candidate 都有正数证据且差异达到 `2ms` 时，oversleep 降低记为 `frame-pacing` improvement，oversleep 升高记为 regression。`timing.audioAheadWaitOversleepMsP99` 不单独作为硬门禁，只在 `P95` 已经达到 material threshold 且方向一致时作为补充 delta 输出。

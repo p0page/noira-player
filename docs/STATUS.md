@@ -2,6 +2,14 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-09 更新：positive-wait clamp 候选不采纳，60fps native-headless cadence 需要重复采样
+
+本轮尝试了两个小步 native wait 调度候选，均未作为当前 Core 行为保留。第一版把正等待下限同时用于 audio-ahead 和 video-clock，提交为 `92e82e0`，commit-bound 54-case comparison 结果为 `reject-candidate`，回退集中在无音轨 native-headless 60/24fps cadence case。第二版收窄为仅 audio-ahead positive wait clamp，提交为 `dc2bf33`；working comparison 曾得到 `keep-candidate`、1 improved、0 regressed，但 commit-bound comparison 结果为 `reject-candidate`，目标 case 为 `local/native-headless-hdr10-60`。两笔候选已通过 revert 回退，当前主线不保留 positive-wait clamp 行为。
+
+本轮没有放宽 comparison 规则或样本预期。相反，按照 commit-bound comparison 的 gate 结论拒绝候选，并补充了重复采样证据：使用当前 native helper 对 `hdr10-60`、`sdr-60`、`av-30` 各跑 5 次，结果写入 ignored artifact `artifacts/quality-run/repeat-cadence-dc2bf33/repeat-summary.json`。关键观测是 60fps native-headless 短样本的 P99/max gap 波动本身足以跨过当前 2ms materiality：`hdr10-60` P99 在 `21.0002ms..24.2723ms` 间波动，`sdr-60` P99 在 `20.0507ms..26.4203ms` 间波动；相比 expected `16.6667ms`，单次采样可能随机生成 frame-pacing regression。
+
+当前结论：positive-wait clamp 不能作为 accepted Core 优化进入新基线；后续要继续调 frame pacing 时，必须先让 native-headless 60fps cadence comparison 支持重复采样、稳定性标记或独立 flake 归因，否则模型会被单次短样本尾部峰值带偏。该结论不影响此前已接受的 `761800c` video-clock target wait 和 `5ef58d6` expected-error comparison 规则。
+
 ## 2026-07-09 更新：audio-ahead oversleep 进入 comparison 判定
 
 本轮不提交播放器 core/native 行为变化，只补齐 comparison 裁判规则：`PlaybackQualityRunComparator` 现在会比较 `timing.audioAheadWaitOversleepMsP95`，当 baseline/candidate 都有正数证据且变化达到 `2ms` 时，oversleep 降低记为 `frame-pacing` improvement，oversleep 升高记为 regression。`P99` 只在 `P95` 已经达到 material threshold 且方向一致时作为补充 delta 进入 comparison；单独的短样本 P99/max 抖动仍保留为 matched signal，不直接否决 candidate。
