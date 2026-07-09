@@ -10,7 +10,7 @@
 
 同时补回旧 worktree 尚未进入 main 的证据修复：reference case 的 `forceSdrOutput` 现在会进入 `PlaybackQualityReportRequest` 和最终 report；`tools/NoiraPlayer.PlaybackQuality.Headless` 新增 `--force-sdr-output`，native-headless smoke 会断言 `colorPipeline.forceSdrOutput`；`PlaybackQualityReportAnalyzer` 不再把“已显式上报的 `timing.renderedVideoFrames = 0`”误判为 missing evidence，而是保留为零帧失败/样本不足证据。
 
-已用 ignored 私有 combined manifest 生成 commit-bound 54-case candidate：`docs/qa/private/candidates/playback-core-tuning-main-ffmpeg812-force-sdr-evidence-e2024d8.local/`。结果：54/54 report-set validation 通过，native-headless included，analysis `decision = no-change`、`risk = low`、`canEvaluateNativePlayback = true`。同旧 54-case baseline `playback-core-tuning-noira-main-private54-a89d4ae.local` 对比输出 `docs/qa/private/comparisons/playback-core-tuning-main-ffmpeg812-force-sdr-evidence-e2024d8.local/`，结果为 54/54 可比、`manifest.sameCaseIds = true`、0 improved、0 regressed、0 mixed、54 unchanged、strong confidence 54/54。
+已用 ignored 私有 combined manifest 生成 code commit 绑定的 54-case candidate：`docs/qa/private/candidates/playback-core-tuning-main-ffmpeg812-force-sdr-evidence-790caeb.local/`。结果：54/54 report-set validation 通过，native-headless included，analysis `decision = no-change`、`risk = low`、`canEvaluateNativePlayback = true`。同旧 54-case baseline `playback-core-tuning-noira-main-private54-a89d4ae.local` 对比输出 `docs/qa/private/comparisons/playback-core-tuning-main-ffmpeg812-force-sdr-evidence-790caeb.local/`，结果为 54/54 可比、`manifest.sameCaseIds = true`、0 improved、0 regressed、0 mixed、54 unchanged、strong confidence 54/54。
 
 边界：本轮是新 main/FFmpeg 8.1.2 基线恢复和 evidence 修复，不是播放策略调优。对比结论 `no-change` 不应解释为画质、HDR、A/V sync 或 frame pacing 提升；它只说明当前修复没有在 54-case 软件评测中引入可见回归，并让 force-SDR 与 zero-render 证据可被模型正确消费。
 
