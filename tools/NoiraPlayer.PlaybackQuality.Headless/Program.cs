@@ -333,6 +333,10 @@ internal static class NativeHeadlessHarness
         metrics.AudioAheadWaitOversleepMsP95 = GetDouble(values, "audioAheadWaitOversleepMsP95");
         metrics.AudioAheadWaitOversleepMsP99 = GetDouble(values, "audioAheadWaitOversleepMsP99");
         metrics.AudioAheadWaitOversleepMsMax = GetDouble(values, "audioAheadWaitOversleepMsMax");
+        metrics.AudioAheadWaitFinalDeltaAbsMsP50 = GetDouble(values, "audioAheadWaitFinalDeltaAbsMsP50");
+        metrics.AudioAheadWaitFinalDeltaAbsMsP95 = GetDouble(values, "audioAheadWaitFinalDeltaAbsMsP95");
+        metrics.AudioAheadWaitFinalDeltaAbsMsP99 = GetDouble(values, "audioAheadWaitFinalDeltaAbsMsP99");
+        metrics.AudioAheadWaitFinalDeltaAbsMsMax = GetDouble(values, "audioAheadWaitFinalDeltaAbsMsMax");
         metrics.FramePacingSourceFrameRate = GetDouble(values, "framePacingSourceFrameRate");
         metrics.LateFrameDropToleranceMs = GetDouble(values, "lateFrameDropToleranceMs");
         metrics.AudioVideoDriftMsP50 = GetDouble(values, "audioVideoDriftMsP50");

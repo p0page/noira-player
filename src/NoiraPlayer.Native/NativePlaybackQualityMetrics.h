@@ -125,6 +125,18 @@ namespace winrt::NoiraPlayer::Native::implementation
         double AudioAheadWaitOversleepMsMax() const noexcept { return m_audioAheadWaitOversleepMsMax; }
         void AudioAheadWaitOversleepMsMax(double value) noexcept { m_audioAheadWaitOversleepMsMax = value; }
 
+        double AudioAheadWaitFinalDeltaAbsMsP50() const noexcept { return m_audioAheadWaitFinalDeltaAbsMsP50; }
+        void AudioAheadWaitFinalDeltaAbsMsP50(double value) noexcept { m_audioAheadWaitFinalDeltaAbsMsP50 = value; }
+
+        double AudioAheadWaitFinalDeltaAbsMsP95() const noexcept { return m_audioAheadWaitFinalDeltaAbsMsP95; }
+        void AudioAheadWaitFinalDeltaAbsMsP95(double value) noexcept { m_audioAheadWaitFinalDeltaAbsMsP95 = value; }
+
+        double AudioAheadWaitFinalDeltaAbsMsP99() const noexcept { return m_audioAheadWaitFinalDeltaAbsMsP99; }
+        void AudioAheadWaitFinalDeltaAbsMsP99(double value) noexcept { m_audioAheadWaitFinalDeltaAbsMsP99 = value; }
+
+        double AudioAheadWaitFinalDeltaAbsMsMax() const noexcept { return m_audioAheadWaitFinalDeltaAbsMsMax; }
+        void AudioAheadWaitFinalDeltaAbsMsMax(double value) noexcept { m_audioAheadWaitFinalDeltaAbsMsMax = value; }
+
         double FramePacingSourceFrameRate() const noexcept { return m_framePacingSourceFrameRate; }
         void FramePacingSourceFrameRate(double value) noexcept { m_framePacingSourceFrameRate = value; }
 
@@ -183,6 +195,10 @@ namespace winrt::NoiraPlayer::Native::implementation
         double m_audioAheadWaitOversleepMsP95{0.0};
         double m_audioAheadWaitOversleepMsP99{0.0};
         double m_audioAheadWaitOversleepMsMax{0.0};
+        double m_audioAheadWaitFinalDeltaAbsMsP50{0.0};
+        double m_audioAheadWaitFinalDeltaAbsMsP95{0.0};
+        double m_audioAheadWaitFinalDeltaAbsMsP99{0.0};
+        double m_audioAheadWaitFinalDeltaAbsMsMax{0.0};
         double m_framePacingSourceFrameRate{0.0};
         double m_lateFrameDropToleranceMs{0.0};
         double m_audioVideoDriftMsP50{0.0};

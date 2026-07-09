@@ -1188,6 +1188,10 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitOversleepMsP95");
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitOversleepMsP99");
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitOversleepMsMax");
+                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitFinalDeltaAbsMsP50");
+                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitFinalDeltaAbsMsP95");
+                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitFinalDeltaAbsMsP99");
+                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitFinalDeltaAbsMsMax");
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.maxFrameGapMs");
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.renderIntervalSampleCount");
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.renderIntervalOverExpected2MsCount");
@@ -1260,6 +1264,10 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 report.Timing.AudioAheadWaitOversleepMsP95 > 0 ||
                 report.Timing.AudioAheadWaitOversleepMsP99 > 0 ||
                 report.Timing.AudioAheadWaitOversleepMsMax > 0 ||
+                report.Timing.AudioAheadWaitFinalDeltaAbsMsP50 > 0 ||
+                report.Timing.AudioAheadWaitFinalDeltaAbsMsP95 > 0 ||
+                report.Timing.AudioAheadWaitFinalDeltaAbsMsP99 > 0 ||
+                report.Timing.AudioAheadWaitFinalDeltaAbsMsMax > 0 ||
                 report.Timing.AudioAheadWaitCount > 0 ||
                 report.Timing.VideoClockWaitCount > 0 ||
                 report.Timing.MaxFrameGapMs > 0 ||

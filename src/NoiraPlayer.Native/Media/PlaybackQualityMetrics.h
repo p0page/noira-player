@@ -49,6 +49,10 @@ namespace winrt::NoiraPlayer::Native::implementation
         double AudioAheadWaitOversleepMsP95{0.0};
         double AudioAheadWaitOversleepMsP99{0.0};
         double AudioAheadWaitOversleepMsMax{0.0};
+        double AudioAheadWaitFinalDeltaAbsMsP50{0.0};
+        double AudioAheadWaitFinalDeltaAbsMsP95{0.0};
+        double AudioAheadWaitFinalDeltaAbsMsP99{0.0};
+        double AudioAheadWaitFinalDeltaAbsMsMax{0.0};
         double FramePacingSourceFrameRate{0.0};
         double LateFrameDropToleranceMs{0.0};
         double AudioVideoDriftMsP50{0.0};
@@ -178,10 +182,10 @@ namespace winrt::NoiraPlayer::Native::implementation
 
         void RecordAudioAheadWaitDurationMs(double value) noexcept
         {
-            RecordAudioAheadWaitMs(value, 0.0);
+            RecordAudioAheadWaitMs(value, 0.0, 0.0);
         }
 
-        void RecordAudioAheadWaitMs(double durationMs, double targetMs) noexcept
+        void RecordAudioAheadWaitMs(double durationMs, double targetMs, double finalDeltaMs) noexcept
         {
             if (targetMs < 0.0)
             {
@@ -192,6 +196,7 @@ namespace winrt::NoiraPlayer::Native::implementation
             m_audioAheadWaitDurations.Add(durationMs);
             m_audioAheadWaitTargets.Add(targetMs);
             m_audioAheadWaitOversleeps.Add(oversleepMs);
+            m_audioAheadWaitFinalDeltaAbsMs.Add(finalDeltaMs);
         }
 
         void RecordAudioVideoDriftTicks(int64_t driftTicks) noexcept
@@ -247,6 +252,10 @@ namespace winrt::NoiraPlayer::Native::implementation
             snapshot.AudioAheadWaitOversleepMsP95 = m_audioAheadWaitOversleeps.Percentile(95);
             snapshot.AudioAheadWaitOversleepMsP99 = m_audioAheadWaitOversleeps.Percentile(99);
             snapshot.AudioAheadWaitOversleepMsMax = m_audioAheadWaitOversleeps.Max();
+            snapshot.AudioAheadWaitFinalDeltaAbsMsP50 = m_audioAheadWaitFinalDeltaAbsMs.Percentile(50);
+            snapshot.AudioAheadWaitFinalDeltaAbsMsP95 = m_audioAheadWaitFinalDeltaAbsMs.Percentile(95);
+            snapshot.AudioAheadWaitFinalDeltaAbsMsP99 = m_audioAheadWaitFinalDeltaAbsMs.Percentile(99);
+            snapshot.AudioAheadWaitFinalDeltaAbsMsMax = m_audioAheadWaitFinalDeltaAbsMs.Max();
             snapshot.FramePacingSourceFrameRate = FramePacingSourceFrameRate;
             snapshot.LateFrameDropToleranceMs = LateFrameDropToleranceMs;
             snapshot.AudioVideoDriftMsP50 = m_audioVideoDriftMs.Percentile(50);
@@ -262,6 +271,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         PlaybackQualityHistogram m_audioAheadWaitDurations;
         PlaybackQualityHistogram m_audioAheadWaitTargets;
         PlaybackQualityHistogram m_audioAheadWaitOversleeps;
+        PlaybackQualityHistogram m_audioAheadWaitFinalDeltaAbsMs;
         PlaybackQualityHistogram m_audioVideoDriftMs;
     };
 }

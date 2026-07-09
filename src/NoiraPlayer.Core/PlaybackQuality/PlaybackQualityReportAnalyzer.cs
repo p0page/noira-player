@@ -2543,6 +2543,26 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 AddUnique(analysis.EvidenceSignals, "timing.audioAheadWaitOversleepMsMax");
             }
 
+            if (report.Timing.AudioAheadWaitFinalDeltaAbsMsP50 > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.audioAheadWaitFinalDeltaAbsMsP50");
+            }
+
+            if (report.Timing.AudioAheadWaitFinalDeltaAbsMsP95 > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.audioAheadWaitFinalDeltaAbsMsP95");
+            }
+
+            if (report.Timing.AudioAheadWaitFinalDeltaAbsMsP99 > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.audioAheadWaitFinalDeltaAbsMsP99");
+            }
+
+            if (report.Timing.AudioAheadWaitFinalDeltaAbsMsMax > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.audioAheadWaitFinalDeltaAbsMsMax");
+            }
+
             if (report.Timing.VideoAheadWaitCount > 0)
             {
                 AddUnique(analysis.EvidenceSignals, "timing.videoAheadWaitCount");

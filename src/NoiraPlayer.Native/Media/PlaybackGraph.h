@@ -89,7 +89,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         void ResetRuntimeStats() noexcept;
         void ResetVideoClock() noexcept;
         void ResetAudioAheadWait() noexcept;
-        void RecordAudioAheadWaitIfNeeded() noexcept;
+        void RecordAudioAheadWaitIfNeeded(int64_t finalDeltaTicks) noexcept;
         void ApplyFramePacingPolicyMetrics() noexcept;
         void SetVideoPrerollTarget(int64_t targetTicks) noexcept;
         bool ShouldWaitForVideoClock(DecodedVideoFrame const& frame);

@@ -1326,6 +1326,10 @@ public sealed class PlaybackQualityReportAnalyzerTests
         report.Timing.AudioAheadWaitOversleepMsP95 = 11.0;
         report.Timing.AudioAheadWaitOversleepMsP99 = 15.0;
         report.Timing.AudioAheadWaitOversleepMsMax = 19.0;
+        report.Timing.AudioAheadWaitFinalDeltaAbsMsP50 = 100.0;
+        report.Timing.AudioAheadWaitFinalDeltaAbsMsP95 = 105.0;
+        report.Timing.AudioAheadWaitFinalDeltaAbsMsP99 = 110.0;
+        report.Timing.AudioAheadWaitFinalDeltaAbsMsMax = 120.0;
         report.Timing.VideoAheadWaitCount = 7;
         report.Timing.AudioAheadWaitCount = 5;
         report.Timing.VideoClockWaitCount = 2;
@@ -1347,6 +1351,10 @@ public sealed class PlaybackQualityReportAnalyzerTests
         Assert.Contains("timing.audioAheadWaitOversleepMsP95", analysis.EvidenceSignals);
         Assert.Contains("timing.audioAheadWaitOversleepMsP99", analysis.EvidenceSignals);
         Assert.Contains("timing.audioAheadWaitOversleepMsMax", analysis.EvidenceSignals);
+        Assert.Contains("timing.audioAheadWaitFinalDeltaAbsMsP50", analysis.EvidenceSignals);
+        Assert.Contains("timing.audioAheadWaitFinalDeltaAbsMsP95", analysis.EvidenceSignals);
+        Assert.Contains("timing.audioAheadWaitFinalDeltaAbsMsP99", analysis.EvidenceSignals);
+        Assert.Contains("timing.audioAheadWaitFinalDeltaAbsMsMax", analysis.EvidenceSignals);
     }
 
     [Fact]

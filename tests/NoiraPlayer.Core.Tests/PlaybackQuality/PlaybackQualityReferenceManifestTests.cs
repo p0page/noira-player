@@ -192,6 +192,10 @@ public sealed class PlaybackQualityReferenceManifestTests
         Assert.Contains("timing.audioAheadWaitOversleepMsP95", reportSignals);
         Assert.Contains("timing.audioAheadWaitOversleepMsP99", reportSignals);
         Assert.Contains("timing.audioAheadWaitOversleepMsMax", reportSignals);
+        Assert.Contains("timing.audioAheadWaitFinalDeltaAbsMsP50", reportSignals);
+        Assert.Contains("timing.audioAheadWaitFinalDeltaAbsMsP95", reportSignals);
+        Assert.Contains("timing.audioAheadWaitFinalDeltaAbsMsP99", reportSignals);
+        Assert.Contains("timing.audioAheadWaitFinalDeltaAbsMsMax", reportSignals);
         Assert.Contains("timing.videoAheadWaitCount", reportSignals);
         Assert.Contains("timing.audioAheadWaitCount", reportSignals);
         Assert.Contains("timing.videoClockWaitCount", reportSignals);

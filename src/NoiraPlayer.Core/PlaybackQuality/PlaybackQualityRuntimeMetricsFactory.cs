@@ -74,6 +74,10 @@
                 metrics.AudioAheadWaitOversleepMsP95 > 0 ||
                 metrics.AudioAheadWaitOversleepMsP99 > 0 ||
                 metrics.AudioAheadWaitOversleepMsMax > 0 ||
+                metrics.AudioAheadWaitFinalDeltaAbsMsP50 > 0 ||
+                metrics.AudioAheadWaitFinalDeltaAbsMsP95 > 0 ||
+                metrics.AudioAheadWaitFinalDeltaAbsMsP99 > 0 ||
+                metrics.AudioAheadWaitFinalDeltaAbsMsMax > 0 ||
                 metrics.FramePacingSourceFrameRate > 0 ||
                 metrics.LateFrameDropToleranceMs > 0 ||
                 metrics.AudioVideoDriftMsP50 > 0 ||

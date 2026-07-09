@@ -65,6 +65,10 @@ namespace NoiraPlayer.Core.PlaybackQuality
             report.Timing.AudioAheadWaitOversleepMsP95 = metrics.AudioAheadWaitOversleepMsP95;
             report.Timing.AudioAheadWaitOversleepMsP99 = metrics.AudioAheadWaitOversleepMsP99;
             report.Timing.AudioAheadWaitOversleepMsMax = metrics.AudioAheadWaitOversleepMsMax;
+            report.Timing.AudioAheadWaitFinalDeltaAbsMsP50 = metrics.AudioAheadWaitFinalDeltaAbsMsP50;
+            report.Timing.AudioAheadWaitFinalDeltaAbsMsP95 = metrics.AudioAheadWaitFinalDeltaAbsMsP95;
+            report.Timing.AudioAheadWaitFinalDeltaAbsMsP99 = metrics.AudioAheadWaitFinalDeltaAbsMsP99;
+            report.Timing.AudioAheadWaitFinalDeltaAbsMsMax = metrics.AudioAheadWaitFinalDeltaAbsMsMax;
             report.Timing.FramePacingSourceFrameRate = metrics.FramePacingSourceFrameRate;
             report.Timing.LateFrameDropToleranceMs = metrics.LateFrameDropToleranceMs;
 

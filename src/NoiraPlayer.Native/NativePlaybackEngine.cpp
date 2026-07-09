@@ -218,6 +218,10 @@ namespace winrt::NoiraPlayer::Native::implementation
         metrics.AudioAheadWaitOversleepMsP95(snapshot.AudioAheadWaitOversleepMsP95);
         metrics.AudioAheadWaitOversleepMsP99(snapshot.AudioAheadWaitOversleepMsP99);
         metrics.AudioAheadWaitOversleepMsMax(snapshot.AudioAheadWaitOversleepMsMax);
+        metrics.AudioAheadWaitFinalDeltaAbsMsP50(snapshot.AudioAheadWaitFinalDeltaAbsMsP50);
+        metrics.AudioAheadWaitFinalDeltaAbsMsP95(snapshot.AudioAheadWaitFinalDeltaAbsMsP95);
+        metrics.AudioAheadWaitFinalDeltaAbsMsP99(snapshot.AudioAheadWaitFinalDeltaAbsMsP99);
+        metrics.AudioAheadWaitFinalDeltaAbsMsMax(snapshot.AudioAheadWaitFinalDeltaAbsMsMax);
         metrics.FramePacingSourceFrameRate(snapshot.FramePacingSourceFrameRate);
         metrics.LateFrameDropToleranceMs(snapshot.LateFrameDropToleranceMs);
         metrics.AudioVideoDriftMsP50(snapshot.AudioVideoDriftMsP50);

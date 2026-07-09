@@ -480,6 +480,14 @@ namespace NoiraPlayer.Core.PlaybackQuality
                     return report.Timing.RenderIntervalMsP95 > 0;
                 case "timing.renderIntervalMsP99":
                     return report.Timing.RenderIntervalMsP99 > 0;
+                case "timing.audioAheadWaitFinalDeltaAbsMsP50":
+                    return presentSignals != null || report.Timing.AudioAheadWaitFinalDeltaAbsMsP50 > 0;
+                case "timing.audioAheadWaitFinalDeltaAbsMsP95":
+                    return presentSignals != null || report.Timing.AudioAheadWaitFinalDeltaAbsMsP95 > 0;
+                case "timing.audioAheadWaitFinalDeltaAbsMsP99":
+                    return presentSignals != null || report.Timing.AudioAheadWaitFinalDeltaAbsMsP99 > 0;
+                case "timing.audioAheadWaitFinalDeltaAbsMsMax":
+                    return presentSignals != null || report.Timing.AudioAheadWaitFinalDeltaAbsMsMax > 0;
                 case "timing.videoAheadWaitCount":
                 case "timing.audioAheadWaitCount":
                 case "timing.videoClockWaitCount":
@@ -605,7 +613,11 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 report.Timing.DroppedVideoFrames > 0 ||
                 report.Timing.VideoAheadWaitCount > 0 ||
                 report.Timing.AudioAheadWaitCount > 0 ||
-                report.Timing.VideoClockWaitCount > 0;
+                report.Timing.VideoClockWaitCount > 0 ||
+                report.Timing.AudioAheadWaitFinalDeltaAbsMsP50 > 0 ||
+                report.Timing.AudioAheadWaitFinalDeltaAbsMsP95 > 0 ||
+                report.Timing.AudioAheadWaitFinalDeltaAbsMsP99 > 0 ||
+                report.Timing.AudioAheadWaitFinalDeltaAbsMsMax > 0;
         }
 
         private static bool HasTrackEvidence(PlaybackQualityReport report)

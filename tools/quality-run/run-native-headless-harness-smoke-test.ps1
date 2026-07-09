@@ -606,6 +606,11 @@ if ($nativeAvReport.report.timing.audioAheadWaitOversleepMsP95 -le 0 -or
     throw 'Expected native helper A/V report to include audio-ahead wait oversleep evidence.'
 }
 
+if ($nativeAvReport.report.timing.audioAheadWaitFinalDeltaAbsMsP95 -le 0 -or
+    $nativeAvReport.report.timing.audioAheadWaitFinalDeltaAbsMsMax -le 0) {
+    throw 'Expected native helper A/V report to include audio-ahead wait final delta evidence.'
+}
+
 if ($nativeAvReport.report.timing.audioAheadWaitCount -le 0 -or
     $nativeAvReport.report.timing.videoClockWaitCount -lt 0 -or
     $nativeAvReport.report.timing.videoAheadWaitCount -lt $nativeAvReport.report.timing.audioAheadWaitCount) {

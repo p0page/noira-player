@@ -182,6 +182,10 @@ int wmain(int argc, wchar_t** argv)
             << " audioAheadWaitOversleepMsP95=" << playbackSnapshot.AudioAheadWaitOversleepMsP95
             << " audioAheadWaitOversleepMsP99=" << playbackSnapshot.AudioAheadWaitOversleepMsP99
             << " audioAheadWaitOversleepMsMax=" << playbackSnapshot.AudioAheadWaitOversleepMsMax
+            << " audioAheadWaitFinalDeltaAbsMsP50=" << playbackSnapshot.AudioAheadWaitFinalDeltaAbsMsP50
+            << " audioAheadWaitFinalDeltaAbsMsP95=" << playbackSnapshot.AudioAheadWaitFinalDeltaAbsMsP95
+            << " audioAheadWaitFinalDeltaAbsMsP99=" << playbackSnapshot.AudioAheadWaitFinalDeltaAbsMsP99
+            << " audioAheadWaitFinalDeltaAbsMsMax=" << playbackSnapshot.AudioAheadWaitFinalDeltaAbsMsMax
             << " framePacingSourceFrameRate=" << playbackSnapshot.FramePacingSourceFrameRate
             << " lateFrameDropToleranceMs=" << playbackSnapshot.LateFrameDropToleranceMs
             << " audioVideoDriftMsP50=" << playbackSnapshot.AudioVideoDriftMsP50

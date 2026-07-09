@@ -515,7 +515,7 @@ namespace winrt::NoiraPlayer::Native::implementation
                     return true;
                 }
 
-                RecordAudioAheadWaitIfNeeded();
+                RecordAudioAheadWaitIfNeeded(frame.PositionTicks - *audioPosition);
                 if (PlaybackFramePacing::ShouldDropLateFrame(
                     frame.PositionTicks,
                     *audioPosition,
@@ -690,7 +690,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         m_audioAheadWaitTargetMs.reset();
     }
 
-    void PlaybackGraph::RecordAudioAheadWaitIfNeeded() noexcept
+    void PlaybackGraph::RecordAudioAheadWaitIfNeeded(int64_t finalDeltaTicks) noexcept
     {
         if (!m_audioAheadWaitStartedAt)
         {
@@ -700,7 +700,11 @@ namespace winrt::NoiraPlayer::Native::implementation
         auto now = std::chrono::steady_clock::now();
         auto durationMs = std::chrono::duration<double, std::milli>(
             now - *m_audioAheadWaitStartedAt).count();
-        m_qualityMetrics.RecordAudioAheadWaitMs(durationMs, m_audioAheadWaitTargetMs.value_or(0.0));
+        auto finalDeltaMs = static_cast<double>(finalDeltaTicks) / 10000.0;
+        m_qualityMetrics.RecordAudioAheadWaitMs(
+            durationMs,
+            m_audioAheadWaitTargetMs.value_or(0.0),
+            finalDeltaMs);
         ResetAudioAheadWait();
     }
 

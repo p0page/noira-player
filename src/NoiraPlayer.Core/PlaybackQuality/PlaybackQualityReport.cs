@@ -235,6 +235,10 @@ namespace NoiraPlayer.Core.PlaybackQuality
         public double AudioAheadWaitOversleepMsP95 { get; set; }
         public double AudioAheadWaitOversleepMsP99 { get; set; }
         public double AudioAheadWaitOversleepMsMax { get; set; }
+        public double AudioAheadWaitFinalDeltaAbsMsP50 { get; set; }
+        public double AudioAheadWaitFinalDeltaAbsMsP95 { get; set; }
+        public double AudioAheadWaitFinalDeltaAbsMsP99 { get; set; }
+        public double AudioAheadWaitFinalDeltaAbsMsMax { get; set; }
         public double FramePacingSourceFrameRate { get; set; }
         public double LateFrameDropToleranceMs { get; set; }
     }
