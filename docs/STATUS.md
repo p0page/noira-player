@@ -2,6 +2,16 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-10 更新：20ms audio-ahead tolerance 候选不采纳
+
+本轮在 `d687248` evidence baseline 之后尝试了一个小步 native 策略候选：只把含音轨路径的 audio-ahead tolerance 从 10ms 放宽到 20ms，video-only software clock tolerance 保持 10ms。TDD 先更新 `FramePacingTests.cpp`，确认现有 10ms 策略红灯；实现后 targeted native frame pacing test、native-headless smoke 和完整 `run-playback-core-checks.ps1` 均通过。
+
+working 54-case comparison 曾显示 `keep-candidate / accept-candidate`，但 commit-bound candidate `docs\qa\private\candidates\playback-core-tuning-audio-ahead-tolerance-54case-e8cef30.local\` 与 `playback-core-tuning-decode-mode-evidence-54case-d687248.local` 对比后被拒绝：`docs\qa\private\comparisons\playback-core-tuning-audio-ahead-tolerance-54case-e8cef30.local\` 结论为 `reject-candidate`、risk `high`、54/54 可比、0 improved、2 regressed、0 mixed、52 unchanged，blocker 为 `suite.regression`，目标区域 `frame-pacing`。
+
+两个回归 case 是 `local/native-headless-av-smoke` 和 `local/native-headless-hdr10-60`。A/V case 从 baseline P95/P99/max `40.433/46.2755/46.2755ms` 变为 candidate `45.3174/52.3268/52.3268ms`，`audioAheadWaitCount` 从 `67` 增至 `75`，`audioVideoDriftMsP95` 从 `10ms` 增至 `20ms`。HDR10-60 无音轨 case 不应受该策略直接影响，回归更像已知 60fps native-headless 短样本波动，但 A/V case 本身也回归，因此不能采纳。
+
+已通过 `12bea45 Revert "chore: loosen audio ahead pacing tolerance"` 回退该策略。当前 Core/native 行为不包含 20ms audio-ahead tolerance。后续不要继续通过简单放宽 audio-ahead tolerance 解决 A/V smoke jitter；下一步更适合做 repeated/longer A/V sampling 或补充 per-wait final clock delta 证据，再寻找更稳定的 scheduling 策略。
+
 ## 2026-07-09 更新：native decode-mode evidence 已进入 report
 
 本轮在合并后的 `905241d` 工程基线上补齐了一项诊断证据：native playback metrics 现在会拆分记录 `hardwareDecodedVideoFrames` 与 `softwareDecodedVideoFrames`，并通过 native-headless helper、Core report mapper、report analyzer、signal catalog、candidate comparison matched signals 和 App WinRT quality metrics bridge 暴露给评测系统。同时补齐 App WinRT bridge 中此前未暴露的 `audioAheadWaitCount` 与 `videoClockWaitCount`，让 App-hosted quality-run 与 native-headless 在 wait reason evidence 上保持一致。

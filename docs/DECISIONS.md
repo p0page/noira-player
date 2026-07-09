@@ -1,5 +1,15 @@
 ﻿# 技术决策
 
+## 2026-07-10: 不采纳 20ms audio-ahead tolerance
+
+决策：不保留 `e8cef30` 的 20ms audio-ahead tolerance 策略；该提交已通过 `12bea45` 回退。当前 audio-ahead gating 继续使用原有 10ms tolerance，video-clock tolerance 也保持 10ms。
+
+原因：working comparison 曾显示目标 A/V case 的 P99/max expected-error 改善，但 commit-bound 54-case comparison 结论为 `reject-candidate`。`local/native-headless-av-smoke` 出现真实目标回归：render P95/P99/max 从 `40.433/46.2755/46.2755ms` 升到 `45.3174/52.3268/52.3268ms`，`audioAheadWaitCount` 从 `67` 升到 `75`，drift P95 从 `10ms` 升到 `20ms`。`local/native-headless-hdr10-60` 也触发 frame-pacing regression，虽可能受已知 60fps 短样本波动影响，但 A/V case 已足够拒绝该候选。
+
+影响：后续不要把“放宽 audio-ahead tolerance 到 20ms”当作已验证优化，也不要用 working comparison 覆盖 commit-bound rejection。继续优化 A/V smoke 时，应优先做重复采样、长样本或更细的 per-wait clock delta evidence，再提出更稳定的 scheduling 策略。
+
+边界：该拒绝不改变 evaluator 阈值、不删除 case、不否定 `d687248` decode-mode evidence baseline。它只说明简单放宽 audio-ahead tolerance 不是当前可采纳策略。
+
 ## 2026-07-09: native decode-mode 必须作为实际 runtime evidence 暴露
 
 决策：native playback metrics 增加 `hardwareDecodedVideoFrames` 与 `softwareDecodedVideoFrames`，由 `PlaybackGraph` 在成功取得 decoded frame 后根据 frame 是否携带 D3D texture 计数。该证据通过 native-headless helper、Core report、analyzer、signal catalog、comparison matched signals 和 App WinRT quality metrics bridge 暴露；App WinRT bridge 同步补齐 `audioAheadWaitCount` 与 `videoClockWaitCount`。
