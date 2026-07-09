@@ -2,6 +2,14 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-10 更新：当前 accepted 行为的 native cadence 重复采样已补充
+
+在回退 20ms audio-ahead tolerance 后，已对当前 accepted HEAD `f96aaa8` 运行 3 次 native-headless smoke 并归档到 `docs\qa\private\repeats\playback-core-tuning-current-f96aaa8-native-repeat.local\`。共 27 个 report，`cadence-stability-summary.local.json` 显示 9 个 native case group 中 8 个 stable、1 个 unstable，minimum samples 为 3，materiality 为 `2ms`。
+
+稳定组包括 `local/native-headless-av-smoke`、SDR 23.976/24/60/smoke 和 HDR10 23.976/24/30。A/V smoke 的 expected-error spread 为 P95 `1.1565ms`、P99 `0.4749ms`，说明当前 accepted 行为下该 3 秒 A/V smoke 在本轮采样中没有跨过 `2ms` materiality；这进一步支持不要继续沿 audio-ahead tolerance 方向调参。
+
+唯一 unstable group 是 `local/native-headless-hdr10-60`，P95 expected-error spread 为 `2.8259ms`，P99 spread `0.9622ms`。该样本无音轨、`audioAheadWaitCount = 0`，因此问题不应归到 A/V sync 或 audio-ahead gating。下一步 frame pacing 调优应优先面向 60fps/HDR10 native-headless cadence 的 render scheduling / display cadence 证据，而不是继续改含音轨 A/V 策略。
+
 ## 2026-07-10 更新：20ms audio-ahead tolerance 候选不采纳
 
 本轮在 `d687248` evidence baseline 之后尝试了一个小步 native 策略候选：只把含音轨路径的 audio-ahead tolerance 从 10ms 放宽到 20ms，video-only software clock tolerance 保持 10ms。TDD 先更新 `FramePacingTests.cpp`，确认现有 10ms 策略红灯；实现后 targeted native frame pacing test、native-headless smoke 和完整 `run-playback-core-checks.ps1` 均通过。
