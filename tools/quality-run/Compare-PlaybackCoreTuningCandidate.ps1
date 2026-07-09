@@ -173,6 +173,68 @@ function Read-CadenceStabilityReference(
     }
 }
 
+function Find-CadenceStabilityGroup(
+    [object]$CadenceStability,
+    [string]$CaseGroupId
+) {
+    $normalizedCaseGroupId = Normalize-String $CaseGroupId
+    if ([string]::IsNullOrWhiteSpace($normalizedCaseGroupId)) {
+        return $null
+    }
+
+    foreach ($group in @($CadenceStability.groups)) {
+        if ((Normalize-String $group.caseGroupId) -eq $normalizedCaseGroupId) {
+            return $group
+        }
+    }
+
+    return $null
+}
+
+function New-CadenceStabilityAttribution(
+    [object]$BaselineCadenceStability,
+    [object]$CandidateCadenceStability,
+    [string[]]$TargetCaseIds
+) {
+    $normalizedTargetCaseIds = @($TargetCaseIds |
+        ForEach-Object { Normalize-String $_ } |
+        Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+        Sort-Object -Unique)
+    $baselineUnstableCaseGroupIds = @($BaselineCadenceStability.unstableCaseGroupIds |
+        ForEach-Object { Normalize-String $_ } |
+        Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+        Sort-Object -Unique)
+    $candidateUnstableCaseGroupIds = @($CandidateCadenceStability.unstableCaseGroupIds |
+        ForEach-Object { Normalize-String $_ } |
+        Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+        Sort-Object -Unique)
+    $baselineUnstableTargetCaseIds = @($normalizedTargetCaseIds |
+        Where-Object { $baselineUnstableCaseGroupIds -contains $_ })
+    $candidateUnstableTargetCaseIds = @($normalizedTargetCaseIds |
+        Where-Object { $candidateUnstableCaseGroupIds -contains $_ })
+
+    $targetCaseStability = @($normalizedTargetCaseIds | ForEach-Object {
+        $baselineGroup = Find-CadenceStabilityGroup $BaselineCadenceStability $_
+        $candidateGroup = Find-CadenceStabilityGroup $CandidateCadenceStability $_
+        [pscustomobject][ordered]@{
+            caseId = $_
+            baselineStability = if ($null -eq $baselineGroup) { '' } else { Normalize-String $baselineGroup.stability }
+            candidateStability = if ($null -eq $candidateGroup) { '' } else { Normalize-String $candidateGroup.stability }
+            baselineUnstableSignals = if ($null -eq $baselineGroup) { @() } else { @($baselineGroup.unstableSignals) }
+            candidateUnstableSignals = if ($null -eq $candidateGroup) { @() } else { @($candidateGroup.unstableSignals) }
+        }
+    })
+
+    [pscustomobject][ordered]@{
+        targetCaseIds = $normalizedTargetCaseIds
+        baselineUnstableCaseGroupIds = $baselineUnstableCaseGroupIds
+        candidateUnstableCaseGroupIds = $candidateUnstableCaseGroupIds
+        baselineUnstableTargetCaseIds = $baselineUnstableTargetCaseIds
+        candidateUnstableTargetCaseIds = $candidateUnstableTargetCaseIds
+        targetCaseStability = $targetCaseStability
+    }
+}
+
 $resolvedBaselineRoot = Resolve-RepoPath $BaselineRoot
 $resolvedCandidateRoot = Resolve-RepoPath $CandidateRoot
 $resolvedOutputRoot = Resolve-RepoPath $OutputRoot
@@ -309,6 +371,10 @@ $candidateAnalysis = Read-JsonFile $candidateAnalysisPath
 $evaluation = Read-JsonFile $evaluationPath
 
 $suite = $evaluation.suite
+$cadenceStabilityAttribution = New-CadenceStabilityAttribution `
+    -BaselineCadenceStability $baselineCadenceStability `
+    -CandidateCadenceStability $candidateCadenceStability `
+    -TargetCaseIds @($suite.targetCaseIds)
 $summary = [pscustomobject][ordered]@{
     schemaVersion = 1
     kind = 'playback-core-tuning-candidate-comparison'
@@ -375,6 +441,7 @@ $summary = [pscustomobject][ordered]@{
     cadenceStability = [pscustomobject][ordered]@{
         baseline = $baselineCadenceStability
         candidate = $candidateCadenceStability
+        attribution = $cadenceStabilityAttribution
     }
     paths = [pscustomobject][ordered]@{
         baselineValidationPath = $baselineValidationPath

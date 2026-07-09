@@ -1,5 +1,15 @@
 ﻿# 技术决策
 
+## 2026-07-10: render outlier evidence 保留为诊断增强，不作为播放质量优化采纳
+
+决策：保留 `timing.renderIntervalSampleCount`、`timing.renderIntervalOverExpected2MsCount`、`timing.renderIntervalOverExpected4MsCount` 这组 render interval outlier 证据，并保留 `Compare-PlaybackCoreTuningCandidate.ps1` 的 `cadenceStability.attribution` 输出。但 `0c40e63` 不标记为 accepted playback-quality improvement；它只是 evidence/schema 与模型消费能力增强。
+
+原因：`0c40e63` 相对 `c129249` 的 54-case comparison 为 `reject-candidate`，唯一 regression 是 `local/native-headless-av-smoke` 的 audio-ahead oversleep P95/P99 上升。重复采样进一步显示 target case 在 baseline repeat 中 stable、在 candidate repeat 中 unstable。因此不能把本轮拒绝解释为纯 HDR10-60 已知噪声，也不能因为改动主要是 telemetry 就忽略 gate。
+
+影响：后续模型可以直接从 comparison summary 读取 target case 是否命中 baseline/candidate unstable group，不必手工交叉查询 repeat artifact。该归因只解释证据可信度，不覆盖 `evaluation.decision`，不放宽阈值，不删除 case，也不把 unstable case 自动 quarantine。
+
+边界：render outlier 计数必须在 `Snapshot()` 阶段从已记录 histogram 派生，不能在每帧采样热路径里做额外阈值计算。后续 Core/native 策略调优仍必须生成同 manifest baseline/candidate comparison，并在被 single-run native tail spike 阻断时附带 repeat stability evidence。
+
 ## 2026-07-10: 不采纳 20ms audio-ahead tolerance
 
 决策：不保留 `e8cef30` 的 20ms audio-ahead tolerance 策略；该提交已通过 `12bea45` 回退。当前 audio-ahead gating 继续使用原有 10ms tolerance，video-clock tolerance 也保持 10ms。

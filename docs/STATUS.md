@@ -2,6 +2,20 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-10 更新：render outlier 证据已补齐，但本轮不是可采纳的播放质量优化
+
+本轮在 `c129249` accepted render-loop timer 基线之后补齐了 native render interval outlier 证据：report 现在会输出 `timing.renderIntervalSampleCount`、`timing.renderIntervalOverExpected2MsCount` 和 `timing.renderIntervalOverExpected4MsCount`，用于区分“P95/P99 常态 cadence”与“少量 max-frame-gap 尾部尖峰”。第一次实现曾在 `RecordRenderIntervalMs` 热路径内计数；随后已修正为只在 `Snapshot()` 阶段按 histogram 和 source frame rate 计算，避免每帧记录时做额外阈值判断。
+
+提交链路：`868d2ba tools: expose render interval outlier evidence` 增加字段透传、report/schema/analyzer/comparison matched signals 和 App WinRT bridge；`0c40e63 tools: compute render outlier evidence off hot path` 把 outlier 计算移出采样热路径。完整 `tools\quality-run\run-playback-core-checks.ps1` 已通过，覆盖 Core 434 个播放相关测试、CLI smoke、native-headless smoke、manifest/report/comparison 脚本测试、native helper/frame pacing/render loop/display refresh/offscreen tests 和 native Debug x64 build。
+
+已基于 `0c40e63` 生成 54-case candidate：`docs\qa\private\candidates\playback-core-tuning-render-outlier-evidence-54case-0c40e63.local\`，validation 通过，54/54 report matched，native-headless included。与 `c129249` accepted baseline 的 comparison 输出为 `docs\qa\private\comparisons\playback-core-tuning-render-outlier-evidence-54case-0c40e63.local\`，结论为 `reject-candidate`、0 improved、1 regressed、53 unchanged，唯一目标 case 是 `local/native-headless-av-smoke`。阻断信号是 `timing.audioAheadWaitOversleepMsP95/P99`，从约 `3.9499/4.1270ms` 增至 `7.1612/7.4722ms`。
+
+为避免把单次 native-headless 抖动误判为确定 Core 行为，已对 `0c40e63` 跑 3 次 native repeat 并归档到 `docs\qa\private\repeats\playback-core-tuning-render-outlier-evidence-0c40e63-native-repeat.local\`。结果为 27 个 report、9 个 native group 中 7 个 stable、2 个 unstable：`local/native-headless-av-smoke` 和 `local/native-headless-hdr10-60`。对照 `c129249` repeat，baseline 是 8/9 stable，且 A/V smoke 在 baseline repeat 中 stable；因此本轮不能把 reject 简单归为“已知 HDR10-60 噪声”，A/V smoke 尾部稳定性仍需要单独处理。
+
+`Compare-PlaybackCoreTuningCandidate.ps1` 现在会在 `cadenceStability.attribution` 中输出 target case 与 baseline/candidate repeat stability 的交集。本轮 artifact 明确显示 target case `local/native-headless-av-smoke` 在 baseline repeat 中 stable、在 candidate repeat 中 unstable。该归因不改变 suite gate，也不放宽阈值；它只让模型在看到 reject 时能直接判断“这是目标 case 的 repeat instability”，避免继续盲目围绕单次 P99/max 打补丁。
+
+当前结论：render outlier 证据和 stability attribution 可以作为诊断/评测能力保留，但 `0c40e63` 不应标记为播放质量优化成功。下一步如果继续调 Core，应优先处理 A/V smoke 的 wait scheduling / audio-clock gating 尾部稳定性，或者先建立更长/重复 A/V 样本的基线；不要因为这轮只加了 evidence 字段，就忽略 comparison 的 reject 结论。
+
 ## 2026-07-10 更新：当前 accepted 行为的 native cadence 重复采样已补充
 
 在回退 20ms audio-ahead tolerance 后，已对当前 accepted HEAD `f96aaa8` 运行 3 次 native-headless smoke 并归档到 `docs\qa\private\repeats\playback-core-tuning-current-f96aaa8-native-repeat.local\`。共 27 个 report，`cadence-stability-summary.local.json` 显示 9 个 native case group 中 8 个 stable、1 个 unstable，minimum samples 为 3，materiality 为 `2ms`。

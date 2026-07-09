@@ -112,6 +112,11 @@ try {
         throw 'Expected comparison summary to preserve candidate cadence stability evidence.'
     }
 
+    if ($null -eq $summary.cadenceStability.attribution -or
+        -not ($summary.cadenceStability.attribution.candidateUnstableCaseGroupIds -contains 'local/native-headless-hdr10-60')) {
+        throw 'Expected comparison summary to expose cadence stability attribution for model consumers.'
+    }
+
     if ($summary.paths.candidateCadenceStabilityPath -ne $candidateCadenceStabilityPath) {
         throw 'Expected comparison summary paths to include candidate cadence stability path.'
     }
