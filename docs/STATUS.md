@@ -745,3 +745,5 @@ manifest validation、report-set validation、single comparison、comparison sui
 关键指标：`local/native-headless-hdr10-60` 的 render P95/P99 expected error 从约 `3.1662/4.4410ms` 降到 `0.4094/1.2259ms`；`local/native-headless-sdr-60` 从约 `3.6700/4.3778ms` 降到 `0.4238/0.4950ms`。`local/native-headless-av-smoke` 的 audio-ahead oversleep P95/P99 从约 `7.5806/14.3632ms` 降到 `3.9499/4.1270ms`，但它的 render P95/P99 没有作为 improvement 记录，因此不能宣称 A/V smoke 整体流畅度已经改善。
 
 验证：策略实现按 TDD 添加 native frame pacing test，先红灯失败，再实现通过；`tools/quality-run/run-playback-core-checks.ps1` 已通过。边界：这是纯软件 native-headless 证据，不证明真实 Xbox/HDMI 输出或主观观感已经改善；下一步应优先做重复采样确认 `c129249` 的稳定性，再继续新的播放策略候选。
+
+已完成 `c129249` 的 3 次 native-headless 重复采样，产物为 `docs/qa/private/repeats/playback-core-tuning-default-render-loop-timer-c129249-native-repeat.local/`。结果：27/27 sample 可用，9 个 native group 中 8 个 stable，唯一 unstable group 是 `local/native-headless-hdr10-60`。该 case 的 P95/P99 expected-error spread 已很小，分别约 `0.0541ms` 和 `0.3106ms`；不稳定信号来自一次 max-frame-gap outlier，max-gap expected-error spread 约 `2.8572ms`。因此当前结论是：`c129249` 明显改善 60fps cadence 的常态 P95/P99，但仍不能宣称完全消除偶发 max-frame-gap outlier。

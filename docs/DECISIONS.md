@@ -869,3 +869,5 @@
 原因：60fps video-only native-headless case 的 P95/P99 frame interval error 形态符合默认 `sleep_for(5ms)` 在 Windows 上被粗粒度唤醒放大的特征。把默认 wait 纳入同一个低开销 timer primitive 后，同一 54-case manifest 比较显示 HDR10-60 和 SDR60 的 frame pacing error 明显下降，且无 suite-level regression。
 
 边界：该策略不针对某个 case、codec 或 HDR/SDR 分支；它是 render loop 等待 primitive 的统一化。A/V smoke 只证明 audio-ahead oversleep 改善，不能据此声称整体 A/V sync 或主观流畅度已解决。后续如果发现 CPU 成本或真实设备调度问题，应以同 manifest comparison 和 process-cost evidence 重新评估。
+
+重复采样补充：`c129249` 保留为 accepted candidate，但稳定性结论需保守表述。3 次 native-headless repeat 中 8/9 group stable，`local/native-headless-hdr10-60` 仍因一次 max-frame-gap outlier 被判 unstable；P95/P99 cadence 已稳定。因此后续候选应优先区分 percentile cadence 与 rare max-gap outlier，避免因为单次 max-gap 尾部值误判整个 cadence 策略。
