@@ -100,12 +100,24 @@ namespace NoiraPlayer.App
 
         private static void WriteStartupDiagnostic(string message)
         {
+            var line = DateTimeOffset.Now.ToString("O") + " " + (message ?? "") + Environment.NewLine;
+            TryAppendStartupDiagnostic(Path.Combine(Path.GetTempPath(), "NoiraPlayer-startup-diagnostics.log"), line);
+
             try
             {
                 var path = Path.Combine(ApplicationData.Current.LocalFolder.Path, "startup-diagnostics.log");
-                File.AppendAllText(
-                    path,
-                    DateTimeOffset.Now.ToString("O") + " " + (message ?? "") + Environment.NewLine);
+                TryAppendStartupDiagnostic(path, line);
+            }
+            catch
+            {
+            }
+        }
+
+        private static void TryAppendStartupDiagnostic(string path, string line)
+        {
+            try
+            {
+                File.AppendAllText(path, line);
             }
             catch
             {
