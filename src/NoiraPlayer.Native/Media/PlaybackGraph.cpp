@@ -708,10 +708,20 @@ namespace winrt::NoiraPlayer::Native::implementation
 
         auto elapsedTicks = static_cast<int64_t>(
             std::chrono::duration<double>(now - m_videoClockStartedAt).count() * 10000000.0);
-        return PlaybackFramePacing::ShouldWaitForVideoClock(
+        auto shouldWait = PlaybackFramePacing::ShouldWaitForVideoClock(
             frame.PositionTicks,
             m_videoClockStartPositionTicks,
             elapsedTicks);
+        if (shouldWait)
+        {
+            m_nextRenderLoopWait = PlaybackFramePacing::VideoClockWaitDuration(
+                frame.PositionTicks,
+                m_videoClockStartPositionTicks,
+                elapsedTicks);
+            m_nextRenderLoopWaitUseTimer = m_nextRenderLoopWait > std::chrono::steady_clock::duration::zero();
+        }
+
+        return shouldWait;
     }
 
     void PlaybackGraph::ApplyFramePacingPolicyMetrics() noexcept

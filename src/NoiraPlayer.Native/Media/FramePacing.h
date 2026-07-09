@@ -82,5 +82,19 @@ namespace winrt::NoiraPlayer::Native::implementation
             return framePositionTicks > clockStartPositionTicks &&
                 framePositionTicks - clockStartPositionTicks > clockElapsedTicks + VideoAheadToleranceTicks;
         }
+
+        static constexpr std::chrono::microseconds VideoClockWaitDuration(
+            int64_t framePositionTicks,
+            int64_t clockStartPositionTicks,
+            int64_t clockElapsedTicks) noexcept
+        {
+            if (!ShouldWaitForVideoClock(framePositionTicks, clockStartPositionTicks, clockElapsedTicks))
+            {
+                return std::chrono::microseconds(0);
+            }
+
+            return std::chrono::microseconds(
+                (framePositionTicks - clockStartPositionTicks - clockElapsedTicks - VideoAheadToleranceTicks) / 10);
+        }
     };
 }
