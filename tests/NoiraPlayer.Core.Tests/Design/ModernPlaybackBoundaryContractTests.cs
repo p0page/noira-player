@@ -96,7 +96,9 @@ public sealed class ModernPlaybackBoundaryContractTests
         var parts = new string[segments.Length + 1];
         parts[0] = FindRepositoryRoot();
         Array.Copy(segments, 0, parts, 1, segments.Length);
-        return File.ReadAllText(Path.Combine(parts));
+        return File.ReadAllText(Path.Combine(parts))
+            .Replace("\r\n", "\n", StringComparison.Ordinal)
+            .Replace("\r", "\n", StringComparison.Ordinal);
     }
 
     private static string FindRepositoryRoot()
