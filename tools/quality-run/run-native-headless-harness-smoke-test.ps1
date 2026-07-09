@@ -40,6 +40,7 @@ $nativeHdr1030CaseId = 'local/native-headless-hdr10-30'
 $nativeHdr1060CaseId = 'local/native-headless-hdr10-60'
 $nativeCadenceDurationSeconds = 5
 $nativeAvDurationSeconds = 3
+$nativeAvMinimumRenderedVideoFrames = 40
 
 function Get-QualityReportPath {
     param(
@@ -751,7 +752,7 @@ foreach ($hdr10CaseId in $nativeHdr10CaseIds) {
         "dxgiInput": "YCBCR_STUDIO_G22_LEFT_P709",
         "dxgiOutput": "RGB_FULL_G22_NONE_P709",
         "isDirectPlayable": true,
-        "minRenderedVideoFrames": 1,
+        "minRenderedVideoFrames": $nativeAvMinimumRenderedVideoFrames,
         "maxAudioVideoDriftMsP95": 80.0
       }
     },
@@ -1005,6 +1006,10 @@ if ($nativeAvMaterializedReport.report.tracks.audioTrackCount -lt 1 -or
 
 if ($nativeAvMaterializedReport.report.position.seekPositionErrorMs -gt 250.0) {
     throw 'Expected materialized native helper A/V report to capture immediate seek position evidence.'
+}
+
+if ($nativeAvMaterializedReport.report.expected.minRenderedVideoFrames -lt $nativeAvMinimumRenderedVideoFrames) {
+    throw "Expected materialized native helper A/V manifest to require at least $nativeAvMinimumRenderedVideoFrames rendered frames."
 }
 
 if (-not ($nativeAvMaterializedReport.modelAnalysis.evidenceSignals -contains 'timing.videoAheadWaitCount') -or

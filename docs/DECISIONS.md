@@ -1,5 +1,15 @@
 ﻿# 技术决策
 
+## 2026-07-10: native A/V smoke 使用 40 帧最低渲染阈值
+
+决策：`local/native-headless-av-smoke` 的 manifest 不再使用占位式 `minRenderedVideoFrames = 1`，改为 `40`，并由 `run-native-headless-harness-smoke-test.ps1` 断言 materialized report 保留该期望。
+
+原因：该样本文件实际为 `2.5s / 75` 帧，但 native helper 在 3 秒测试窗口的一半处采集主播放快照；因此正常报告约 `46` 个 rendered frames，对应约 `1.5s` 的 30fps 播放窗口。`1` 帧阈值无法发现严重欠帧或渲染链路近似失效的问题，作为 stable/challenge A/V 裁判过弱。`40` 帧保留少量调度余量，同时能阻止明显欠帧候选被误判为 pass。
+
+影响：后续播放 core/native 候选如果让 A/V smoke 主播放窗口严重欠帧，会在同一 manifest 下暴露为失败或回归。该决策不修改播放 core，不声称 cadence、A/V sync 或颜色质量改善，只提高评测器对 A/V smoke 的最低样本量要求。
+
+边界：该阈值绑定当前 native helper 的“半窗口主播放快照”设计；如果后续 helper 改为全窗口采样、移除中途 seek，或样本帧率/时长变化，阈值必须随 manifest 语义一起重新评估，不能静默沿用。
+
 ## 2026-07-10: audio-ahead final delta 作为证据字段保留，不作为评分阈值
 
 决策：保留 `timing.audioAheadWaitFinalDeltaAbsMsP50/P95/P99/Max` 作为 native/Core/app quality report 的诊断证据，并让 repeat stability summary 与 candidate comparison 透传 `audioAheadWaitFinalDeltaAbsP95/P99SpreadMs`。该字段只解释 audio-ahead wait episode 结束时的残余 A/V delta 绝对值，不新增通过/失败阈值。`PlaybackQualityRunComparator` 在 baseline/candidate 都带有 finalDeltaAbs 证据时，要求 oversleep 的 improvement/regression 必须由 finalDeltaAbs 同方向显著变化佐证；否则 oversleep 只作为 matched evidence 保留。

@@ -2,6 +2,14 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-10 更新：native A/V smoke 最低渲染帧阈值已收紧
+
+本轮继续基于已合入 main 的当前调优分支工作。排查 `local/native-headless-av-smoke` 时确认：生成样本因字幕 `-shortest` 实际为 `2.5s / 75` 帧，但 native helper 的主播放快照是在 3 秒窗口的一半处采集，因此 report 中约 `46` 个 rendered frames 对 30fps 的 `1.5s` 捕获窗口是合理结果，不是“2.5 秒只渲染 46 帧”的播放 core 欠帧。
+
+同时发现该 A/V case 的 manifest 仍只要求 `minRenderedVideoFrames = 1`，作为稳定裁判过弱。已把 A/V smoke 的最低渲染帧期望提高到 `40`，并在 smoke 脚本中断言 materialized report 必须保留该阈值。TDD 验证先在旧阈值下红灯失败，改为 `40` 后同一 `run-native-headless-harness-smoke-test.ps1` 绿灯通过；当前样本实际 `renderedVideoFrames = 46`、`decodedVideoFrames = 47`、`observedSampleDurationMs = 1533.33`、A/V sync 为 `synced`。
+
+当前结论：本轮没有改变播放 core 行为，只修正 native A/V smoke 的评测强度。后续候选如果导致该 case 严重欠帧，将不再因为 `minRenderedVideoFrames = 1` 而被误判为可接受。
+
 ## 2026-07-10 更新：audio-ahead final delta 证据已补齐，当前 A/V instability 不是最终对齐漂移
 
 本轮在当前 main 口径上确认 `main` 已合入当前调优分支，并提交 `2998f61 tools: expose audio wait final delta evidence`。新增 `timing.audioAheadWaitFinalDeltaAbsMsP50/P95/P99/Max`，从 native `PlaybackGraph` 的 audio-ahead wait episode 结束点采集残余 A/V delta 绝对值，并贯通 native-headless stdout、Core report、analyzer evidence signals、signal catalog、comparison matched signals、WinRT quality metrics bridge 和 app quality-run clone。
