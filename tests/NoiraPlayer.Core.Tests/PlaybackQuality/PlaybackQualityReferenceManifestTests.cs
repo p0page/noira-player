@@ -198,6 +198,16 @@ public sealed class PlaybackQualityReferenceManifestTests
     }
 
     [Fact]
+    public void SignalCatalog_Includes_Decode_Mode_Timing_Evidence()
+    {
+        var reportSignals = new HashSet<string>(
+            PlaybackQualitySignalCatalog.ReportSignals.Select(signal => signal.Signal));
+
+        Assert.Contains("timing.hardwareDecodedVideoFrames", reportSignals);
+        Assert.Contains("timing.softwareDecodedVideoFrames", reportSignals);
+    }
+
+    [Fact]
     public void SignalCatalog_Includes_Runtime_Process_Cost_Evidence()
     {
         var reportSignals = new HashSet<string>(

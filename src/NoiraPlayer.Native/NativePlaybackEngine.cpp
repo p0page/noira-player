@@ -181,11 +181,15 @@ namespace winrt::NoiraPlayer::Native::implementation
         auto metrics = winrt::make<NativePlaybackQualityMetrics>();
         metrics.RenderPasses(snapshot.RenderPasses);
         metrics.DecodedVideoFrames(snapshot.DecodedVideoFrames);
+        metrics.HardwareDecodedVideoFrames(snapshot.HardwareDecodedVideoFrames);
+        metrics.SoftwareDecodedVideoFrames(snapshot.SoftwareDecodedVideoFrames);
         metrics.RenderedVideoFrames(snapshot.RenderedVideoFrames);
         metrics.SubmittedAudioFrames(snapshot.SubmittedAudioFrames);
         metrics.DroppedVideoFrames(snapshot.DroppedVideoFrames);
         metrics.SeekPrerollDroppedFrames(snapshot.SeekPrerollDroppedFrames);
         metrics.VideoAheadWaitCount(snapshot.VideoAheadWaitCount);
+        metrics.AudioAheadWaitCount(snapshot.AudioAheadWaitCount);
+        metrics.VideoClockWaitCount(snapshot.VideoClockWaitCount);
         metrics.VideoStarvedPasses(snapshot.VideoStarvedPasses);
         metrics.AudioStarvedPasses(snapshot.AudioStarvedPasses);
         metrics.QueuedAudioBuffers(snapshot.QueuedAudioBuffers);

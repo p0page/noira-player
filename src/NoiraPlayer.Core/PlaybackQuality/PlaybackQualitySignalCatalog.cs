@@ -145,6 +145,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 new PlaybackQualityReportSignalDescriptor("tracks.subtitles.isDefault", "tracks.subtitles", "isDefault"),
                 new PlaybackQualityReportSignalDescriptor("tracks.subtitles.isForced", "tracks.subtitles", "isForced"),
                 new PlaybackQualityReportSignalDescriptor("timing.renderedVideoFrames", "timing", "renderedVideoFrames"),
+                new PlaybackQualityReportSignalDescriptor("timing.hardwareDecodedVideoFrames", "timing", "hardwareDecodedVideoFrames"),
+                new PlaybackQualityReportSignalDescriptor("timing.softwareDecodedVideoFrames", "timing", "softwareDecodedVideoFrames"),
                 new PlaybackQualityReportSignalDescriptor("timing.droppedVideoFrames", "timing", "droppedVideoFrames"),
                 new PlaybackQualityReportSignalDescriptor("timing.expectedFrameDurationMs", "timing", "expectedFrameDurationMs"),
                 new PlaybackQualityReportSignalDescriptor("timing.maxFrameGapMs", "timing", "maxFrameGapMs"),

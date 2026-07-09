@@ -1,5 +1,15 @@
 ﻿# 技术决策
 
+## 2026-07-09: native decode-mode 必须作为实际 runtime evidence 暴露
+
+决策：native playback metrics 增加 `hardwareDecodedVideoFrames` 与 `softwareDecodedVideoFrames`，由 `PlaybackGraph` 在成功取得 decoded frame 后根据 frame 是否携带 D3D texture 计数。该证据通过 native-headless helper、Core report、analyzer、signal catalog、comparison matched signals 和 App WinRT quality metrics bridge 暴露；App WinRT bridge 同步补齐 `audioAheadWaitCount` 与 `videoClockWaitCount`。
+
+原因：合并 VS2026 / FFmpeg 8.1.2 后，当前基线的 native-headless A/V smoke 与 HDR10-60 出现尾部 frame pacing stability 风险。没有 decode-mode 证据时，模型无法区分问题是否来自软件解码 fallback、硬解路径下的 render scheduling、clock gating 或采样噪声。decode-mode 计数可以把“是否软解”从猜测变成 report 中可消费的 runtime evidence。
+
+影响：后续调优 report-set 可以直接看到硬解/软解帧数，不需要从文件名、manifest expected、codec 名称或人工观察推断。当前 smoke 抽样显示 `sdr-smoke` 与 `av-smoke` 都是硬解路径，因此这些 case 的尾部 gap 诊断应优先看 scheduling/cadence，而不是先假设软解性能不足。
+
+边界：decode-mode 是诊断证据，不是新的 pass/fail 规则；本决策不改变解码策略、不切换硬解偏好、不放宽 comparison threshold、不修改样本 expected behavior，也不证明真实 Xbox/HDMI/HDR 输出正确。
+
 ## 2026-07-09: main 合并后以 905241d 作为新的播放 Core 调优基线
 
 决策：`main` 的 VS2026 / .NET 10 / native `v145` / FFmpeg 8.1.2 构建链更新合入后，后续播放 Core 调优以 `905241d` 生成的 `playback-core-tuning-main-modern-54case-905241d.local` 作为当前工程基线。旧的 pre-merge 54-case baseline 继续保留为迁移诊断材料，但不再作为后续候选是否可采纳的主要比较对象。

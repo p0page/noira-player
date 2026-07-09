@@ -12,6 +12,8 @@ namespace winrt::NoiraPlayer::Native::implementation
     {
         uint64_t RenderPasses{0};
         uint64_t DecodedVideoFrames{0};
+        uint64_t HardwareDecodedVideoFrames{0};
+        uint64_t SoftwareDecodedVideoFrames{0};
         uint64_t RenderedVideoFrames{0};
         uint64_t SubmittedAudioFrames{0};
         uint64_t DroppedVideoFrames{0};
@@ -120,6 +122,8 @@ namespace winrt::NoiraPlayer::Native::implementation
     public:
         uint64_t RenderPasses{0};
         uint64_t DecodedVideoFrames{0};
+        uint64_t HardwareDecodedVideoFrames{0};
+        uint64_t SoftwareDecodedVideoFrames{0};
         uint64_t RenderedVideoFrames{0};
         uint64_t SubmittedAudioFrames{0};
         uint64_t DroppedVideoFrames{0};
@@ -178,6 +182,8 @@ namespace winrt::NoiraPlayer::Native::implementation
             PlaybackQualityMetricsSnapshot snapshot{};
             snapshot.RenderPasses = RenderPasses;
             snapshot.DecodedVideoFrames = DecodedVideoFrames;
+            snapshot.HardwareDecodedVideoFrames = HardwareDecodedVideoFrames;
+            snapshot.SoftwareDecodedVideoFrames = SoftwareDecodedVideoFrames;
             snapshot.RenderedVideoFrames = RenderedVideoFrames;
             snapshot.SubmittedAudioFrames = SubmittedAudioFrames;
             snapshot.DroppedVideoFrames = DroppedVideoFrames;

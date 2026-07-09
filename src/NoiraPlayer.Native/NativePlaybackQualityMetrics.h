@@ -14,6 +14,12 @@ namespace winrt::NoiraPlayer::Native::implementation
         uint64_t DecodedVideoFrames() const noexcept { return m_decodedVideoFrames; }
         void DecodedVideoFrames(uint64_t value) noexcept { m_decodedVideoFrames = value; }
 
+        uint64_t HardwareDecodedVideoFrames() const noexcept { return m_hardwareDecodedVideoFrames; }
+        void HardwareDecodedVideoFrames(uint64_t value) noexcept { m_hardwareDecodedVideoFrames = value; }
+
+        uint64_t SoftwareDecodedVideoFrames() const noexcept { return m_softwareDecodedVideoFrames; }
+        void SoftwareDecodedVideoFrames(uint64_t value) noexcept { m_softwareDecodedVideoFrames = value; }
+
         uint64_t RenderedVideoFrames() const noexcept { return m_renderedVideoFrames; }
         void RenderedVideoFrames(uint64_t value) noexcept { m_renderedVideoFrames = value; }
 
@@ -28,6 +34,12 @@ namespace winrt::NoiraPlayer::Native::implementation
 
         uint64_t VideoAheadWaitCount() const noexcept { return m_videoAheadWaitCount; }
         void VideoAheadWaitCount(uint64_t value) noexcept { m_videoAheadWaitCount = value; }
+
+        uint64_t AudioAheadWaitCount() const noexcept { return m_audioAheadWaitCount; }
+        void AudioAheadWaitCount(uint64_t value) noexcept { m_audioAheadWaitCount = value; }
+
+        uint64_t VideoClockWaitCount() const noexcept { return m_videoClockWaitCount; }
+        void VideoClockWaitCount(uint64_t value) noexcept { m_videoClockWaitCount = value; }
 
         uint64_t VideoStarvedPasses() const noexcept { return m_videoStarvedPasses; }
         void VideoStarvedPasses(uint64_t value) noexcept { m_videoStarvedPasses = value; }
@@ -125,11 +137,15 @@ namespace winrt::NoiraPlayer::Native::implementation
     private:
         uint64_t m_renderPasses{0};
         uint64_t m_decodedVideoFrames{0};
+        uint64_t m_hardwareDecodedVideoFrames{0};
+        uint64_t m_softwareDecodedVideoFrames{0};
         uint64_t m_renderedVideoFrames{0};
         uint64_t m_submittedAudioFrames{0};
         uint64_t m_droppedVideoFrames{0};
         uint64_t m_seekPrerollDroppedFrames{0};
         uint64_t m_videoAheadWaitCount{0};
+        uint64_t m_audioAheadWaitCount{0};
+        uint64_t m_videoClockWaitCount{0};
         uint64_t m_videoStarvedPasses{0};
         uint64_t m_audioStarvedPasses{0};
         uint64_t m_queuedAudioBuffers{0};

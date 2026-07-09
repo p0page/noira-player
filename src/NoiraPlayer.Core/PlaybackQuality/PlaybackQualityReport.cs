@@ -203,6 +203,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
     {
         public ulong RenderPasses { get; set; }
         public ulong DecodedVideoFrames { get; set; }
+        public ulong HardwareDecodedVideoFrames { get; set; }
+        public ulong SoftwareDecodedVideoFrames { get; set; }
         public ulong RenderedVideoFrames { get; set; }
         public ulong DroppedVideoFrames { get; set; }
         public ulong SeekPrerollDroppedFrames { get; set; }

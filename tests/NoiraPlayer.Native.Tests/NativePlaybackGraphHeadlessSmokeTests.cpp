@@ -142,6 +142,8 @@ int wmain(int argc, wchar_t** argv)
         graph.Stop();
 
         std::cout << "decodedVideoFrames=" << playbackSnapshot.DecodedVideoFrames
+            << " hardwareDecodedVideoFrames=" << playbackSnapshot.HardwareDecodedVideoFrames
+            << " softwareDecodedVideoFrames=" << playbackSnapshot.SoftwareDecodedVideoFrames
             << " renderedVideoFrames=" << playbackSnapshot.RenderedVideoFrames
             << " renderPasses=" << playbackSnapshot.RenderPasses
             << " submittedAudioFrames=" << playbackSnapshot.SubmittedAudioFrames

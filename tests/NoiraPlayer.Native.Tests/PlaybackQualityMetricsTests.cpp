@@ -22,6 +22,8 @@ int main()
 
     metrics.RenderPasses = 10;
     metrics.DecodedVideoFrames = 4;
+    metrics.HardwareDecodedVideoFrames = 3;
+    metrics.SoftwareDecodedVideoFrames = 1;
     metrics.RenderedVideoFrames = 3;
     metrics.DroppedVideoFrames = 1;
     metrics.VideoAheadWaitCount = 7;
@@ -38,6 +40,8 @@ int main()
 
     assert(snapshot.RenderPasses == 10);
     assert(snapshot.DecodedVideoFrames == 4);
+    assert(snapshot.HardwareDecodedVideoFrames == 3);
+    assert(snapshot.SoftwareDecodedVideoFrames == 1);
     assert(snapshot.RenderedVideoFrames == 3);
     assert(snapshot.DroppedVideoFrames == 1);
     assert(snapshot.VideoAheadWaitCount == 7);
@@ -70,6 +74,8 @@ int main()
     metrics.Reset();
     snapshot = metrics.Snapshot();
     assert(snapshot.RenderPasses == 0);
+    assert(snapshot.HardwareDecodedVideoFrames == 0);
+    assert(snapshot.SoftwareDecodedVideoFrames == 0);
     assert(snapshot.VideoAheadWaitCount == 0);
     assert(snapshot.AudioAheadWaitCount == 0);
     assert(snapshot.VideoClockWaitCount == 0);

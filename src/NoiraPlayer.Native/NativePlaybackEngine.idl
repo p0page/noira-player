@@ -55,11 +55,15 @@
         NativePlaybackQualityMetrics();
         UInt64 RenderPasses;
         UInt64 DecodedVideoFrames;
+        UInt64 HardwareDecodedVideoFrames;
+        UInt64 SoftwareDecodedVideoFrames;
         UInt64 RenderedVideoFrames;
         UInt64 SubmittedAudioFrames;
         UInt64 DroppedVideoFrames;
         UInt64 SeekPrerollDroppedFrames;
         UInt64 VideoAheadWaitCount;
+        UInt64 AudioAheadWaitCount;
+        UInt64 VideoClockWaitCount;
         UInt64 VideoStarvedPasses;
         UInt64 AudioStarvedPasses;
         UInt64 QueuedAudioBuffers;

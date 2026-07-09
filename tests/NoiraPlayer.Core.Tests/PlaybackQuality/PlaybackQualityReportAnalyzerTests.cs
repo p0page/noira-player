@@ -1297,6 +1297,20 @@ public sealed class PlaybackQualityReportAnalyzerTests
     }
 
     [Fact]
+    public void Analyze_Reports_Decode_Mode_Timing_Evidence()
+    {
+        var report = CreateOptimizationReadyFailure();
+        report.Timing.DecodedVideoFrames = 120;
+        report.Timing.HardwareDecodedVideoFrames = 120;
+        report.Timing.SoftwareDecodedVideoFrames = 0;
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Contains("timing.hardwareDecodedVideoFrames", analysis.EvidenceSignals);
+        Assert.Contains("timing.softwareDecodedVideoFrames", analysis.EvidenceSignals);
+    }
+
+    [Fact]
     public void Analyze_Reports_Audio_Ahead_Wait_Duration_Timing_Evidence()
     {
         var report = CreateOptimizationReadyFailure();

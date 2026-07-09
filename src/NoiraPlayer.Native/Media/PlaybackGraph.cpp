@@ -449,6 +449,14 @@ namespace winrt::NoiraPlayer::Native::implementation
                 m_pendingVideoFrame = std::move(*frame);
                 ++m_decodedVideoFrameCount;
                 ++m_qualityMetrics.DecodedVideoFrames;
+                if (m_pendingVideoFrame->Texture.Get() != nullptr)
+                {
+                    ++m_qualityMetrics.HardwareDecodedVideoFrames;
+                }
+                else
+                {
+                    ++m_qualityMetrics.SoftwareDecodedVideoFrames;
+                }
             }
 
             auto const& frame = *m_pendingVideoFrame;

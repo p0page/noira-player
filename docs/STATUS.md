@@ -2,6 +2,16 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-09 更新：native decode-mode evidence 已进入 report
+
+本轮在合并后的 `905241d` 工程基线上补齐了一项诊断证据：native playback metrics 现在会拆分记录 `hardwareDecodedVideoFrames` 与 `softwareDecodedVideoFrames`，并通过 native-headless helper、Core report mapper、report analyzer、signal catalog、candidate comparison matched signals 和 App WinRT quality metrics bridge 暴露给评测系统。同时补齐 App WinRT bridge 中此前未暴露的 `audioAheadWaitCount` 与 `videoClockWaitCount`，让 App-hosted quality-run 与 native-headless 在 wait reason evidence 上保持一致。
+
+这次改动不改变解码、渲染、A/V sync、wait scheduling、HDR/color 或样本预期，只解决“模型无法判断当前 native report 是硬解路径还是软解路径”的证据缺口。TDD 先覆盖 Core report mapper、native metrics snapshot、WinRT bridge contract、signal catalog/analyzer 和 native-headless smoke 输出，再实现字段透传。
+
+验证结果：`dotnet test tests\NoiraPlayer.Core.Tests\NoiraPlayer.Core.Tests.csproj --filter "FullyQualifiedName~PlaybackQualityReportMapperTests|FullyQualifiedName~NativeQualityMetricsBridgeContractTests|FullyQualifiedName~PlaybackQualityReferenceManifestTests|FullyQualifiedName~PlaybackQualityReportAnalyzerTests"` 通过 125/125；native `PlaybackQualityMetricsTests.cpp` 通过；`run-native-headless-harness-smoke-test.ps1` 通过；完整 `powershell -NoProfile -ExecutionPolicy Bypass -File tools\quality-run\run-playback-core-checks.ps1` 通过，覆盖 Core 434 个播放相关测试、CLI smoke、native-headless smoke、manifest/report-set 脚本测试、cadence stability 工具测试、native helper/frame pacing/render loop/display refresh/offscreen tests 和 native Debug x64 build。
+
+本地 headless smoke 抽样显示当前两个 smoke case 都走硬解路径：`local/native-headless-sdr-smoke` 与 `local/native-headless-av-smoke` 均为 `decodedVideoFrames = 47`、`hardwareDecodedVideoFrames = 47`、`softwareDecodedVideoFrames = 0`。因此合并后观察到的 A/V smoke 尾部 frame gap 问题，不应优先归因为软解 fallback；下一步调优更应继续集中在 clock/render scheduling、display cadence 和采样稳定性。
+
 ## 2026-07-09 更新：已合并 main 的 VS2026 / FFmpeg 更新，调优基线迁移到 905241d
 
 本轮已将 `main` 的构建链和依赖更新合入当前播放 Core 调优分支，merge commit 为 `67fc96e`。合入内容包括 VS2026 / MSBuild 18、.NET 10 现代 UWP、native `v145` toolset、Windows SDK `10.0.26100.0`、C++20、`Microsoft.Windows.CppWinRT 3.0.260520.1`，以及当前 `FFmpegInteropX.UWP.FFmpeg.8.1.2` 依赖链路。

@@ -2450,6 +2450,12 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 AddUnique(analysis.EvidenceSignals, "timing.framePacingSourceFrameRate");
             }
 
+            if (report.Timing.DecodedVideoFrames > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.hardwareDecodedVideoFrames");
+                AddUnique(analysis.EvidenceSignals, "timing.softwareDecodedVideoFrames");
+            }
+
             if (report.Timing.PresentDurationMsP50 > 0)
             {
                 AddUnique(analysis.EvidenceSignals, "timing.presentDurationMsP50");

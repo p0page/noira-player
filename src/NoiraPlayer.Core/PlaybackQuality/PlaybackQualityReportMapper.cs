@@ -34,6 +34,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
         {
             report.Timing.RenderPasses = metrics.RenderPasses;
             report.Timing.DecodedVideoFrames = metrics.DecodedVideoFrames;
+            report.Timing.HardwareDecodedVideoFrames = metrics.HardwareDecodedVideoFrames;
+            report.Timing.SoftwareDecodedVideoFrames = metrics.SoftwareDecodedVideoFrames;
             report.Timing.RenderedVideoFrames = metrics.RenderedVideoFrames;
             report.Timing.DroppedVideoFrames = metrics.DroppedVideoFrames;
             report.Timing.SeekPrerollDroppedFrames = metrics.SeekPrerollDroppedFrames;

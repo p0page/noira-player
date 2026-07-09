@@ -292,6 +292,8 @@ internal static class NativeHeadlessHarness
         }
 
         metrics.DecodedVideoFrames = decodedVideoFrames;
+        metrics.HardwareDecodedVideoFrames = GetUInt64(values, "hardwareDecodedVideoFrames");
+        metrics.SoftwareDecodedVideoFrames = GetUInt64(values, "softwareDecodedVideoFrames");
         metrics.RenderedVideoFrames = renderedVideoFrames;
         metrics.RenderPasses = GetUInt64(values, "renderPasses");
         metrics.SubmittedAudioFrames = GetUInt64(values, "submittedAudioFrames");

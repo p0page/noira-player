@@ -512,6 +512,11 @@ if ($nativeReport.report.timing.decodedVideoFrames -le 0) {
     throw 'Expected native helper report to include decoded video frames.'
 }
 
+if (($nativeReport.report.timing.hardwareDecodedVideoFrames + $nativeReport.report.timing.softwareDecodedVideoFrames) -ne
+    $nativeReport.report.timing.decodedVideoFrames) {
+    throw 'Expected native helper report to split decoded frames into hardware/software decode-mode counts.'
+}
+
 if ($nativeReport.report.timing.renderedVideoFrames -le 0) {
     throw 'Expected native helper report to include rendered video frames.'
 }
@@ -999,6 +1004,11 @@ if (-not ($nativeAvMaterializedReport.modelAnalysis.evidenceSignals -contains 't
     -not ($nativeAvMaterializedReport.modelAnalysis.evidenceSignals -contains 'timing.audioAheadWaitCount') -or
     -not ($nativeAvMaterializedReport.modelAnalysis.evidenceSignals -contains 'timing.videoClockWaitCount')) {
     throw 'Expected materialized native helper A/V report to expose split wait reason signals, including zero-valued video-clock wait evidence.'
+}
+
+if (-not ($nativeAvMaterializedReport.modelAnalysis.evidenceSignals -contains 'timing.hardwareDecodedVideoFrames') -or
+    -not ($nativeAvMaterializedReport.modelAnalysis.evidenceSignals -contains 'timing.softwareDecodedVideoFrames')) {
+    throw 'Expected materialized native helper A/V report to expose hardware/software decode-mode evidence.'
 }
 
 foreach ($matrixItem in $nativeMatrixReports) {

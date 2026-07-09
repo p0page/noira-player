@@ -81,6 +81,8 @@ public sealed class PlaybackQualityReportMapperTests
         {
             RenderPasses = 100,
             DecodedVideoFrames = 95,
+            HardwareDecodedVideoFrames = 70,
+            SoftwareDecodedVideoFrames = 25,
             RenderedVideoFrames = 90,
             SubmittedAudioFrames = 88,
             DroppedVideoFrames = 3,
@@ -125,6 +127,8 @@ public sealed class PlaybackQualityReportMapperTests
 
         Assert.Equal(100UL, report.Timing.RenderPasses);
         Assert.Equal(95UL, report.Timing.DecodedVideoFrames);
+        Assert.Equal(70UL, report.Timing.HardwareDecodedVideoFrames);
+        Assert.Equal(25UL, report.Timing.SoftwareDecodedVideoFrames);
         Assert.Equal(90UL, report.Timing.RenderedVideoFrames);
         Assert.Equal(3UL, report.Timing.DroppedVideoFrames);
         Assert.Equal(2UL, report.Timing.SeekPrerollDroppedFrames);
