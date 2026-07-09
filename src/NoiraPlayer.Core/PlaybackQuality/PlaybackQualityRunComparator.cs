@@ -1305,6 +1305,11 @@ namespace NoiraPlayer.Core.PlaybackQuality
             PlaybackQualityReport baseline,
             PlaybackQualityReport candidate)
         {
+            if (!AudioAheadFinalDeltaCorroboratesOversleepDelta(baseline, candidate))
+            {
+                return;
+            }
+
             var p95Delta = CompareAudioAheadWaitOversleep(
                 comparison,
                 "timing.audioAheadWaitOversleepMsP95",
@@ -1323,6 +1328,56 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 baseline.Timing.AudioAheadWaitOversleepMsP99,
                 candidate.Timing.AudioAheadWaitOversleepMsP99,
                 requiredDirection);
+        }
+
+        private static bool AudioAheadFinalDeltaCorroboratesOversleepDelta(
+            PlaybackQualityReport baseline,
+            PlaybackQualityReport candidate)
+        {
+            var oversleepDelta = candidate.Timing.AudioAheadWaitOversleepMsP95 -
+                baseline.Timing.AudioAheadWaitOversleepMsP95;
+            if (Math.Abs(oversleepDelta) < MinimumAudioAheadWaitOversleepDeltaMs)
+            {
+                return true;
+            }
+
+            var hasFinalDeltaEvidence =
+                baseline.Timing.AudioAheadWaitFinalDeltaAbsMsP95 > 0 &&
+                candidate.Timing.AudioAheadWaitFinalDeltaAbsMsP95 > 0;
+            if (!hasFinalDeltaEvidence)
+            {
+                return true;
+            }
+
+            var requiredDirection = oversleepDelta < 0 ? -1 : 1;
+            return AudioAheadFinalDeltaMovesMaterially(
+                    baseline.Timing.AudioAheadWaitFinalDeltaAbsMsP95,
+                    candidate.Timing.AudioAheadWaitFinalDeltaAbsMsP95,
+                    requiredDirection) ||
+                AudioAheadFinalDeltaMovesMaterially(
+                    baseline.Timing.AudioAheadWaitFinalDeltaAbsMsP99,
+                    candidate.Timing.AudioAheadWaitFinalDeltaAbsMsP99,
+                    requiredDirection);
+        }
+
+        private static bool AudioAheadFinalDeltaMovesMaterially(
+            double baselineActual,
+            double candidateActual,
+            int requiredDirection)
+        {
+            if (baselineActual <= 0 || candidateActual <= 0)
+            {
+                return false;
+            }
+
+            var numericDelta = candidateActual - baselineActual;
+            if (Math.Abs(numericDelta) < MinimumAudioAheadWaitOversleepDeltaMs)
+            {
+                return false;
+            }
+
+            var direction = numericDelta < 0 ? -1 : 1;
+            return direction == requiredDirection;
         }
 
         private static double? CompareAudioAheadWaitOversleep(

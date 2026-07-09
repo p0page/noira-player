@@ -485,12 +485,16 @@ public sealed class PlaybackQualityRunComparatorTests
             Check("RenderedVideoFrames", "pass", "frame-pacing", "timing.renderedVideoFrames", "1", "46"));
         baseline.Timing.AudioAheadWaitOversleepMsP95 = 7.9336;
         baseline.Timing.AudioAheadWaitOversleepMsP99 = 10.787;
+        baseline.Timing.AudioAheadWaitFinalDeltaAbsMsP95 = 10.0;
+        baseline.Timing.AudioAheadWaitFinalDeltaAbsMsP99 = 10.0;
 
         var candidate = CreateReport(
             "candidate",
             Check("RenderedVideoFrames", "pass", "frame-pacing", "timing.renderedVideoFrames", "1", "46"));
         candidate.Timing.AudioAheadWaitOversleepMsP95 = 10.07;
         candidate.Timing.AudioAheadWaitOversleepMsP99 = 16.73;
+        candidate.Timing.AudioAheadWaitFinalDeltaAbsMsP95 = 13.0;
+        candidate.Timing.AudioAheadWaitFinalDeltaAbsMsP99 = 16.0;
 
         var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
 
@@ -506,6 +510,35 @@ public sealed class PlaybackQualityRunComparatorTests
         Assert.Contains(comparison.Regressions, delta =>
             delta.Signal == "timing.audioAheadWaitOversleepMsP99" &&
             delta.Direction == "increased");
+        Assert.Empty(comparison.Improvements);
+    }
+
+    [Fact]
+    public void Compare_Does_Not_Reject_When_Audio_Ahead_Oversleep_Increases_But_Final_Delta_Is_Stable()
+    {
+        var baseline = CreateReport(
+            "baseline",
+            Check("RenderedVideoFrames", "pass", "frame-pacing", "timing.renderedVideoFrames", "1", "46"));
+        baseline.Timing.AudioAheadWaitOversleepMsP95 = 7.9336;
+        baseline.Timing.AudioAheadWaitOversleepMsP99 = 10.787;
+        baseline.Timing.AudioAheadWaitFinalDeltaAbsMsP95 = 10.0;
+        baseline.Timing.AudioAheadWaitFinalDeltaAbsMsP99 = 10.0;
+
+        var candidate = CreateReport(
+            "candidate",
+            Check("RenderedVideoFrames", "pass", "frame-pacing", "timing.renderedVideoFrames", "1", "46"));
+        candidate.Timing.AudioAheadWaitOversleepMsP95 = 10.07;
+        candidate.Timing.AudioAheadWaitOversleepMsP99 = 16.73;
+        candidate.Timing.AudioAheadWaitFinalDeltaAbsMsP95 = 10.0;
+        candidate.Timing.AudioAheadWaitFinalDeltaAbsMsP99 = 10.0;
+
+        var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
+
+        Assert.Equal("unchanged", comparison.Result);
+        Assert.Equal("no-change", comparison.Decision);
+        Assert.Contains("timing.audioAheadWaitOversleepMsP95", comparison.Coverage.MatchedSignals);
+        Assert.Contains("timing.audioAheadWaitFinalDeltaAbsMsP95", comparison.Coverage.MatchedSignals);
+        Assert.Empty(comparison.Regressions);
         Assert.Empty(comparison.Improvements);
     }
 

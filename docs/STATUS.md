@@ -12,6 +12,8 @@
 
 当前结论：A/V smoke 的当前问题不应优先解释为“等待结束后最终 A/V 对齐漂移”，更像 wait scheduling / render interval tail / audio clock sampling 粒度导致的尾部稳定性问题。下一步继续调优时，应基于同一 repeat/comparison 流程尝试结构性 scheduling 方案，避免继续做 5ms cap、1-2ms early-wake、20ms tolerance 这类已拒绝的简单参数调参。
 
+基于该证据，`PlaybackQualityRunComparator` 已调整 audio-ahead oversleep 的判定语义：在 baseline/candidate 都带有 finalDeltaAbs 证据时，`timing.audioAheadWaitOversleepMsP95/P99` 只有在 finalDeltaAbs 同方向发生显著变化时才进入 improvement/regression；如果 finalDeltaAbs 稳定，oversleep 只作为 matched evidence 保留。这避免模型因为 timer/clock sampling 尾部波动而误采纳或误拒绝 Core 候选。
+
 ## 2026-07-10 更新：当前 main 口径已迁移到 24-case，audio-ahead early-wake 候选不采纳
 
 本轮确认 `main` 已经是当前分支祖先，`git merge --ff-only main` 结果为 already up to date。由于主线样本/私有 manifest 已调整，当前可复现口径从旧 54-case 变为 24-case：15 个 core/private case 加 9 个 native-headless case。已基于当前 accepted HEAD `b6307e2` 生成同口径 baseline：`docs\qa\private\candidates\playback-core-tuning-b6307e2-24case.local\`，validation 通过，24/24 report matched，native-headless included。

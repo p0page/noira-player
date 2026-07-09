@@ -308,6 +308,8 @@ The suite summary is conservative: any regression blocks acceptance, weak eviden
 
 当 `Compare-PlaybackCoreTuningCandidate.ps1` 传入 `-BaselineCadenceStabilityPath` 或 `-CandidateCadenceStabilityPath` 时，`comparison-summary.local.json` 会保留原始 `cadenceStability.baseline` / `cadenceStability.candidate` 摘要，并额外输出 `cadenceStability.attribution`。该 attribution 会列出 suite target case IDs、baseline/candidate unstable case group IDs、target case 与 unstable group 的交集，以及每个 target case 的 baseline/candidate stability 和 unstable signals。稳定性 group 还会保留 frame expected-error spread、`timing.audioAheadWaitOversleepMsP95/P99` spread、`timing.audioAheadWaitFinalDeltaAbsMsP95/P99` spread 和 `sync.audioVideoDriftMsP95/P99` spread。模型应把它当作解释证据：它可以说明某个 reject 是否命中了重复采样不稳定的目标 case，以及该不稳定来自 frame pacing、audio-ahead oversleep、audio-ahead final delta 还是 A/V drift；但它不覆盖 `evaluation.decision`，不自动放行 candidate，也不改变 stable case 阈值。
 
+在单个 baseline/candidate report comparison 内，`timing.audioAheadWaitOversleepMsP95/P99` 不应单独决定候选胜负。若 baseline 和 candidate 都包含 `timing.audioAheadWaitFinalDeltaAbsMsP95/P99`，oversleep 的 improvement/regression 必须由 final delta 同方向显著变化佐证；final delta 稳定时，oversleep 仍保留为 matched evidence，但不新增 regression/improvement。
+
 ## Model-Facing Output
 
 Playback quality reports are optimized for model/agent consumption:
