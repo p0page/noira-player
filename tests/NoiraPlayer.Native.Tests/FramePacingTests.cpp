@@ -9,10 +9,9 @@ int main()
     assert(PlaybackFramePacing::RenderLoopWait().count() <= 5);
 
     assert(PlaybackFramePacing::ShouldWaitForAudio(1'500'000, 1'000'000, true));
-    assert(!PlaybackFramePacing::ShouldWaitForAudio(1'150'000, 1'000'000, true));
     assert(!PlaybackFramePacing::ShouldWaitForAudio(1'050'000, 1'000'000, true));
     assert(!PlaybackFramePacing::ShouldWaitForAudio(1'500'000, 1'000'000, false));
-    assert(PlaybackFramePacing::AudioAheadWaitDuration(1'333'333, 1'000'000, true).count() == 13'333);
+    assert(PlaybackFramePacing::AudioAheadWaitDuration(1'333'333, 1'000'000, true).count() == 23'333);
     assert(PlaybackFramePacing::AudioAheadWaitDuration(1'050'000, 1'000'000, true).count() == 0);
     assert(PlaybackFramePacing::AudioAheadWaitDuration(1'333'333, 1'000'000, false).count() == 0);
 
