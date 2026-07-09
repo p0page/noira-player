@@ -2,6 +2,16 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-10 更新：audio-ahead final delta 证据已补齐，当前 A/V instability 不是最终对齐漂移
+
+本轮在当前 main 口径上确认 `main` 已合入当前调优分支，并提交 `2998f61 tools: expose audio wait final delta evidence`。新增 `timing.audioAheadWaitFinalDeltaAbsMsP50/P95/P99/Max`，从 native `PlaybackGraph` 的 audio-ahead wait episode 结束点采集残余 A/V delta 绝对值，并贯通 native-headless stdout、Core report、analyzer evidence signals、signal catalog、comparison matched signals、WinRT quality metrics bridge 和 app quality-run clone。
+
+完整 `tools\quality-run\run-playback-core-checks.ps1` 已通过，覆盖 Core 434 个播放相关测试、CLI smoke、native-headless smoke、manifest/report/comparison 脚本测试、native helper/frame pacing/render loop/display refresh/offscreen tests 和 native Debug x64 build。native-headless A/V smoke 的新字段已实际产出：单次样本中 finalDeltaAbs P95/P99/Max 均约 `10ms`。
+
+随后对 `2998f61` 跑了 3 次 native-headless repeat，归档到 `docs\qa\private\repeats\playback-core-tuning-final-delta-2998f61-native-repeat.local\`。更新后的 `Measure-PlaybackCadenceStability.ps1` 现在会聚合 `timing.audioAheadWaitFinalDeltaAbsMsP95/P99` spread，并让 `Compare-PlaybackCoreTuningCandidate.ps1` 透传这些字段。repeat 结果显示 `local/native-headless-av-smoke` 仍为 unstable，但 finalDeltaAbs P95/P99 spread 为 `0ms`，A/V drift P95/P99 spread 也为 `0ms`；不稳定信号来自 frame P99/max gap spread 与 `timing.audioAheadWaitOversleepMsP95/P99` spread。
+
+当前结论：A/V smoke 的当前问题不应优先解释为“等待结束后最终 A/V 对齐漂移”，更像 wait scheduling / render interval tail / audio clock sampling 粒度导致的尾部稳定性问题。下一步继续调优时，应基于同一 repeat/comparison 流程尝试结构性 scheduling 方案，避免继续做 5ms cap、1-2ms early-wake、20ms tolerance 这类已拒绝的简单参数调参。
+
 ## 2026-07-10 更新：当前 main 口径已迁移到 24-case，audio-ahead early-wake 候选不采纳
 
 本轮确认 `main` 已经是当前分支祖先，`git merge --ff-only main` 结果为 already up to date。由于主线样本/私有 manifest 已调整，当前可复现口径从旧 54-case 变为 24-case：15 个 core/private case 加 9 个 native-headless case。已基于当前 accepted HEAD `b6307e2` 生成同口径 baseline：`docs\qa\private\candidates\playback-core-tuning-b6307e2-24case.local\`，validation 通过，24/24 report matched，native-headless included。

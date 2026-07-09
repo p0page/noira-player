@@ -15,6 +15,8 @@ function Write-TestReport {
         [int]$RenderedFrames,
         [double]$AudioAheadWaitOversleepP95 = 0,
         [double]$AudioAheadWaitOversleepP99 = 0,
+        [double]$AudioAheadWaitFinalDeltaAbsP95 = 0,
+        [double]$AudioAheadWaitFinalDeltaAbsP99 = 0,
         [double]$AudioVideoDriftP95 = 0,
         [double]$AudioVideoDriftP99 = 0
     )
@@ -39,6 +41,8 @@ function Write-TestReport {
                 maxFrameGapMs = $MaxFrameGap
                 audioAheadWaitOversleepMsP95 = $AudioAheadWaitOversleepP95
                 audioAheadWaitOversleepMsP99 = $AudioAheadWaitOversleepP99
+                audioAheadWaitFinalDeltaAbsMsP95 = $AudioAheadWaitFinalDeltaAbsP95
+                audioAheadWaitFinalDeltaAbsMsP99 = $AudioAheadWaitFinalDeltaAbsP99
             }
             sync = [pscustomobject][ordered]@{
                 audioVideoDriftMsP95 = $AudioVideoDriftP95
@@ -85,21 +89,27 @@ try {
         -RenderP95 39.3 `
         -RenderP99 40.1 `
         -MaxFrameGap 40.1 `
-        -RenderedFrames 46
+        -RenderedFrames 46 `
+        -AudioAheadWaitFinalDeltaAbsP95 10.0 `
+        -AudioAheadWaitFinalDeltaAbsP99 10.0
     Write-TestReport `
         -CaseId 'local/native-headless-av-smoke-repeat-2' `
         -ExpectedFrameDurationMs 33.3333 `
         -RenderP95 39.7 `
         -RenderP99 40.8 `
         -MaxFrameGap 40.8 `
-        -RenderedFrames 46
+        -RenderedFrames 46 `
+        -AudioAheadWaitFinalDeltaAbsP95 10.0 `
+        -AudioAheadWaitFinalDeltaAbsP99 10.0
     Write-TestReport `
         -CaseId 'local/native-headless-av-smoke-repeat-3' `
         -ExpectedFrameDurationMs 33.3333 `
         -RenderP95 39.5 `
         -RenderP99 40.4 `
         -MaxFrameGap 40.4 `
-        -RenderedFrames 46
+        -RenderedFrames 46 `
+        -AudioAheadWaitFinalDeltaAbsP95 10.0 `
+        -AudioAheadWaitFinalDeltaAbsP99 10.0
 
     Write-TestReport `
         -CaseId 'local/native-headless-av-oversleep-repeat-1' `
@@ -110,6 +120,8 @@ try {
         -RenderedFrames 46 `
         -AudioAheadWaitOversleepP95 4.0 `
         -AudioAheadWaitOversleepP99 7.0 `
+        -AudioAheadWaitFinalDeltaAbsP95 10.0 `
+        -AudioAheadWaitFinalDeltaAbsP99 10.0 `
         -AudioVideoDriftP95 10.0 `
         -AudioVideoDriftP99 12.0
     Write-TestReport `
@@ -121,6 +133,8 @@ try {
         -RenderedFrames 46 `
         -AudioAheadWaitOversleepP95 7.2 `
         -AudioAheadWaitOversleepP99 11.0 `
+        -AudioAheadWaitFinalDeltaAbsP95 13.5 `
+        -AudioAheadWaitFinalDeltaAbsP99 13.5 `
         -AudioVideoDriftP95 10.0 `
         -AudioVideoDriftP99 12.0
     Write-TestReport `
@@ -132,6 +146,8 @@ try {
         -RenderedFrames 46 `
         -AudioAheadWaitOversleepP95 4.1 `
         -AudioAheadWaitOversleepP99 7.4 `
+        -AudioAheadWaitFinalDeltaAbsP95 10.2 `
+        -AudioAheadWaitFinalDeltaAbsP99 10.2 `
         -AudioVideoDriftP95 10.0 `
         -AudioVideoDriftP99 12.0
 
@@ -187,6 +203,11 @@ try {
     if ($oversleepUnstable.audioAheadWaitOversleepP95SpreadMs -lt 3.0 -or
         -not ($oversleepUnstable.unstableSignals -contains 'timing.audioAheadWaitOversleepMsP95')) {
         throw 'Expected A/V oversleep group to expose audio-ahead oversleep spread signals.'
+    }
+
+    if ($oversleepUnstable.audioAheadWaitFinalDeltaAbsP95SpreadMs -lt 3.0 -or
+        -not ($oversleepUnstable.unstableSignals -contains 'timing.audioAheadWaitFinalDeltaAbsMsP95')) {
+        throw 'Expected A/V oversleep group to expose audio-ahead final delta spread signals.'
     }
 
     Write-Output 'measure-playback-cadence-stability tests ok'

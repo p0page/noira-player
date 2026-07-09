@@ -49,10 +49,12 @@ try {
       "renderIntervalP99ExpectedErrorSpreadMs": 3.2,
       "maxFrameGapExpectedErrorSpreadMs": 3.2,
       "audioAheadWaitOversleepP95SpreadMs": 4.4,
+      "audioAheadWaitFinalDeltaAbsP95SpreadMs": 5.5,
       "unstableSignals": [
         "framePacing.renderIntervalP99ExpectedErrorMs",
         "framePacing.maxFrameGapExpectedErrorMs",
-        "timing.audioAheadWaitOversleepMsP95"
+        "timing.audioAheadWaitOversleepMsP95",
+        "timing.audioAheadWaitFinalDeltaAbsMsP95"
       ]
     }
   ]
@@ -124,6 +126,10 @@ try {
         Select-Object -First 1
     if ($candidateCadenceGroup.audioAheadWaitOversleepP95SpreadMs -ne 4.4) {
         throw 'Expected comparison summary to preserve A/V oversleep stability spread evidence.'
+    }
+
+    if ($candidateCadenceGroup.audioAheadWaitFinalDeltaAbsP95SpreadMs -ne 5.5) {
+        throw 'Expected comparison summary to preserve A/V final delta stability spread evidence.'
     }
 
     if ($summary.paths.candidateCadenceStabilityPath -ne $candidateCadenceStabilityPath) {

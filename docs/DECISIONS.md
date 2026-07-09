@@ -1,5 +1,15 @@
 ﻿# 技术决策
 
+## 2026-07-10: audio-ahead final delta 作为证据字段保留，不作为评分阈值
+
+决策：保留 `timing.audioAheadWaitFinalDeltaAbsMsP50/P95/P99/Max` 作为 native/Core/app quality report 的诊断证据，并让 repeat stability summary 与 candidate comparison 透传 `audioAheadWaitFinalDeltaAbsP95/P99SpreadMs`。该字段只解释 audio-ahead wait episode 结束时的残余 A/V delta 绝对值，不新增通过/失败阈值，也不改变 candidate acceptance 规则。
+
+原因：此前 audio-ahead wait cap / early-wake / tolerance 候选都容易把单次 frame tail 或 oversleep 波动误判为策略效果。新 repeat 证据显示当前 A/V smoke 的 finalDeltaAbs P95/P99 spread 为 `0ms`，而 instability 来自 frame P99/max 和 oversleep P95/P99 spread。因此模型应优先区分“最终对齐残差稳定”和“等待/渲染尾部不稳定”，而不是继续盲调 audio wait 常量。
+
+影响：后续比较报告可以直接携带 finalDeltaAbs stability 证据，模型不需要逐个打开 native report 才能判断 audio-ahead wait 结束点是否稳定。若未来 finalDeltaAbs spread 变大，应调查 audio clock sampling、wait loop 退出条件和 render scheduling；若 finalDeltaAbs 稳定而 frame tail 不稳定，应避免把问题归咎于最终 A/V drift。
+
+边界：该决策不宣称播放质量改善，不放宽 stable case 标准，不把 finalDeltaAbs 当作单独 pass/fail 门槛。它只是补齐模型调优所需的证据维度。
+
 ## 2026-07-10: 不采纳 audio-ahead wait cap / early-wake 调参候选
 
 决策：不保留 5ms audio-ahead wait cap、2ms early-wake 或 1ms early-wake 候选。当前 accepted Core 行为继续使用 `b6307e2` 的 audio-ahead wait 计算；本轮所有候选源码已撤回，只保留 ignored/private report artifacts 作为后续模型避免重复尝试的证据。

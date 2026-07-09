@@ -182,6 +182,8 @@ The matching optional `expected.hdrPlaybackStrategy`, `expected.isHdr`, `expecte
 `expectedFrameDurationMs` is derived from `source.frameRate` as `1000 / frameRate` when a usable frame rate exists. It lets the model compare frame gaps and render interval percentiles against the source cadence instead of reading them as isolated numbers.
 
 `audioVideoDriftMsP95` is the p95 absolute difference between video frame PTS and XAudio-derived clock at render decision time. When `expected.maxAudioVideoDriftMsP95` is supplied, the drift metric must be present and positive; a default zero value is treated as missing evidence and an A/V sync failure.
+
+`audioAheadWaitFinalDeltaAbsMsP50/P95/P99/Max` is the absolute residual A/V delta recorded when an audio-ahead wait episode exits and the pending video frame is no longer beyond the audio-ahead tolerance. It is diagnostic evidence for model loops, not a standalone pass/fail threshold. Stable final-delta spread with unstable render interval spread points away from final A/V alignment drift and toward wait scheduling, timer oversleep, render interval tail, or audio clock sampling behavior.
 `modelAnalysis.avSync.clockDeltaMs` 和 `driftDirection` 只在同一份报告里同时存在非零 `audioClockTicks` 与 `videoPositionTicks` 时生成；如果缺少任一 clock 端，方向保持 `unknown`，模型应先补采集证据，不要根据绝对漂移值猜测领先方向。
 
 `actualHdrOutput` is derived from native display status and swapchain state. It is not a direct HDMI analyzer reading.

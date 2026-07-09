@@ -156,6 +156,8 @@ function Read-CadenceStabilityReference(
             maxFrameGapExpectedErrorSpreadMs = $_.maxFrameGapExpectedErrorSpreadMs
             audioAheadWaitOversleepP95SpreadMs = $_.audioAheadWaitOversleepP95SpreadMs
             audioAheadWaitOversleepP99SpreadMs = $_.audioAheadWaitOversleepP99SpreadMs
+            audioAheadWaitFinalDeltaAbsP95SpreadMs = $_.audioAheadWaitFinalDeltaAbsP95SpreadMs
+            audioAheadWaitFinalDeltaAbsP99SpreadMs = $_.audioAheadWaitFinalDeltaAbsP99SpreadMs
             audioVideoDriftP95SpreadMs = $_.audioVideoDriftP95SpreadMs
             audioVideoDriftP99SpreadMs = $_.audioVideoDriftP99SpreadMs
             unstableSignals = @($_.unstableSignals)
