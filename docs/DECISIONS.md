@@ -859,3 +859,5 @@
 原因：3 秒 video-only 60fps 样本对 P95/P99 尾部分位数过敏，容易把短样本采样噪音误判为 cadence 不稳定。5 秒样本提高了 HDR10-60/SDR60 这类 cadence-only case 的统计稳定性。A/V smoke 的主要问题来自 audio-clock gating / wait scheduling，其不稳定性不应通过延长所有样本或放宽阈值被掩盖。
 
 影响：这是评测 harness 可靠性调整，不改变播放器行为、stable case expected behavior、candidate acceptance 规则或 evaluator 阈值。后续基线如果包含 native-headless cadence case，应把样本时长变化视为 eval baseline migration，而不是 Core 调优收益。
+
+决策补充：`cda19d2` 生成的 54-case report-set 是 5 秒 cadence 样本迁移后的新调优基线。旧 3 秒 cadence baseline 与新 5 秒 cadence report-set 的 comparison 即使输出 `reject-candidate`，也只能作为迁移审计结果，不能用来判断播放器 Core 策略退化。后续策略候选必须优先和 `playback-core-tuning-native-cadence-5s-54case-cda19d2.local` 做同 manifest 比较。

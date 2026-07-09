@@ -731,3 +731,7 @@ manifest validation、report-set validation、single comparison、comparison sui
 边界：这不是播放质量优化，也不证明真实 Xbox/HDMI 输出、HDR 颜色、A/V sync 或主观流畅度改善。A/V smoke 在同一轮 3 次重复采样中仍是不稳定项，P95 spread 约 `2.4487ms`、P99 spread 约 `1.1301ms`，因此它仍是后续 wait scheduling / A/V gating 调优的独立证据目标。
 
 验证：`tools/quality-run/run-playback-core-checks.ps1` 已通过，覆盖 Core tests、quality CLI、native-headless smoke、manifest/report/comparison 测试、native helper tests 和 native build。
+
+提交 `cda19d2` 后已生成新的 commit-bound 54-case report-set：`docs/qa/private/candidates/playback-core-tuning-native-cadence-5s-54case-cda19d2.local/`，validation 通过，包含 54 个 report，native-headless included。与旧 3 秒 cadence baseline `playback-core-tuning-decode-mode-evidence-54case-d687248.local` 的迁移对比输出为 `docs/qa/private/comparisons/playback-core-tuning-native-cadence-5s-54case-cda19d2.local/`，结果为 `reject-candidate`：`local/native-headless-av-smoke` improved，`local/native-headless-hdr10-60` regressed。
+
+该 reject 不作为 Core 播放策略退化结论。原因是 video-only cadence 样本时长从 3 秒改为 5 秒，旧 report-set 与新 report-set 的 P95/P99 tail statistics 不再适合作为同一策略候选的门禁比较。后续真实 Core 调优应以 `playback-core-tuning-native-cadence-5s-54case-cda19d2.local` 作为新的迁移基线。
