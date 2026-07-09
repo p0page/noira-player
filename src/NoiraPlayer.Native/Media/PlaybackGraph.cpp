@@ -496,7 +496,7 @@ namespace winrt::NoiraPlayer::Native::implementation
                         m_audioAheadWaitTargetMs = (std::max)(
                             0.0,
                             static_cast<double>(
-                                frame.PositionTicks - *audioPosition - PlaybackFramePacing::VideoAheadToleranceTicks) /
+                                frame.PositionTicks - *audioPosition - PlaybackFramePacing::AudioAheadToleranceTicks) /
                                 10000.0);
                     }
 
