@@ -41,35 +41,8 @@ public sealed class SearchAccessibilitySourceTests
         Assert.Contains("\"Check the server connection, then try again.\"", searchPageSource);
         Assert.Contains("showRetry: true", searchPageSource);
         Assert.Contains("Navigation\\SearchDevelopmentNavigationRequest.cs", projectSource);
-        Assert.Contains("RecentTerms = recentTerms ?? new string[0]", requestSource);
+        Assert.DoesNotContain("RecentTerms", requestSource);
         Assert.DoesNotContain("_developmentRequest.RecentTerms.Count > 0", searchPageSource);
-    }
-
-    [Fact]
-    public void Search_Fixture_Development_Route_Renders_Results_And_Keeps_Scopes_Visible()
-    {
-        var root = FindRepositoryRoot();
-        var mainPageSource = File.ReadAllText(Path.Combine(
-            root,
-            "src",
-            "NoiraPlayer.App",
-            "MainPage.xaml.cs"));
-        var searchPageSource = File.ReadAllText(Path.Combine(
-            root,
-            "src",
-            "NoiraPlayer.App",
-            "Views",
-            "SearchPage.xaml.cs"));
-
-        Assert.Contains("case \"search-fixture\"", mainPageSource);
-        Assert.Contains("UseFixtureResults", searchPageSource);
-        Assert.Contains("RenderDevelopmentSearchFixtureResults(", searchPageSource);
-        Assert.Contains("DevelopmentSearchFixture.CreateItemsForScope", searchPageSource);
-        Assert.Contains("DevelopmentSearchFixture.CreateArtworkUris()", searchPageSource);
-        Assert.Contains("CreateDevelopmentArtworkImageSource(item)", searchPageSource);
-        Assert.Contains("ScopeButton_OnGotFocus", searchPageSource);
-        Assert.Contains("StartBringIntoView(new BringIntoViewOptions", searchPageSource);
-        Assert.Contains("recentTerms: new[]", mainPageSource);
     }
 
     [Fact]
@@ -166,7 +139,8 @@ public sealed class SearchAccessibilitySourceTests
         Assert.Contains("RecentTerm_OnClick", searchPageSource);
         Assert.Contains("FocusFirstRecentTerm", searchPageSource);
         Assert.Contains("MoveRecentTermFocus", searchPageSource);
-        Assert.Contains("SearchRecentTermsPolicy.Add", searchPageSource);
+        Assert.Contains("_recentSearchTermStore.Load()", searchPageSource);
+        Assert.Contains("_recentSearchTermStore.Add(term)", searchPageSource);
         Assert.Contains("RecentSearchesPanel", searchPageXaml);
         Assert.Contains("RecentSearchTermsPanel", searchPageXaml);
         Assert.Contains("Storage\\RecentSearchTermStore.cs", projectSource);

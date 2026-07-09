@@ -7,32 +7,6 @@ namespace NoiraPlayer.Core.Tests.Design;
 public sealed class PhotoViewerSourceTests
 {
     [Fact]
-    public void Photos_Fixture_Development_Route_Renders_Positive_Library_State()
-    {
-        var mainPageSource = ReadAppSource("MainPage.xaml.cs");
-
-        Assert.Contains("case \"photos-fixture\"", mainPageSource);
-        Assert.Contains("DevelopmentPhotosFixture.Create()", mainPageSource);
-        Assert.Contains("\"Photo,Folder\"", mainPageSource);
-        Assert.Contains("new LibraryNavigationQuery(mediaTypes: \"Photo\", requireItemTypeMatch: true)", mainPageSource);
-        Assert.Contains("fixture.Items", mainPageSource);
-        Assert.Contains("fixture.ArtworkUris", mainPageSource);
-    }
-
-    [Fact]
-    public void Photo_Viewer_Uses_Development_Image_Uri_Before_Session_Load()
-    {
-        var source = ReadAppSource("Views", "PhotoViewerPage.xaml.cs");
-        var developmentUriIndex = source.IndexOf("DevelopmentImageUri", StringComparison.Ordinal);
-        var sessionLoadIndex = source.IndexOf("_sessionStore.LoadAsync()", StringComparison.Ordinal);
-
-        Assert.True(developmentUriIndex >= 0, "PhotoViewerPage should inspect DevelopmentImageUri.");
-        Assert.True(sessionLoadIndex >= 0, "PhotoViewerPage should still support session-backed photos.");
-        Assert.True(developmentUriIndex < sessionLoadIndex, "DevelopmentImageUri should be used before session loading.");
-        Assert.Contains("new BitmapImage(new Uri(_request.DevelopmentImageUri))", source);
-    }
-
-    [Fact]
     public void Photos_Library_Uses_Photo_Specific_Grid_Recipe()
     {
         var appXaml = ReadAppSource("App.xaml");

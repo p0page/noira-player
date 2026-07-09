@@ -1,4 +1,14 @@
 ﻿# 技术决策
+## 2026-07-09: UI 开发样本使用私有真实 manifest，不再维护 mock fixture route
+
+决策：废弃 `*-fixture`、`details-real-sample` 和 `details-real-bright-sample` route，移除 App/Core 中的 mock fixture 数据链路。UI 开发需要稳定跳转真实页面时，使用 ignored 的 `docs/qa/private/ui-real-samples.local.json` 维护真实 Emby 样本，再通过 `tools/Write-AppUiSampleCommand.ps1` 写入 `LocalState\dev-command.json`。
+
+原因：fixture route 不能反映真实 Emby 数据、真实 artwork、真实 source/audio/subtitle 密度和真实页面状态，继续维护会让 UI 开发在错误数据上收敛。`details-real-*` 自动挑样也把“从服务器选择哪部片”写进代码路径，且容易诱导依赖标题、亮度采样或本机状态；更合适的边界是由本地私有 manifest 明确列出样本。
+
+影响：App active code 只保留真实 route：`home`、`movies`、`tv`、`search`、`details`、`photo`、`playback`、`quality-run` 等。`details`、`photo`、`playback` 必须由 dev-command 提供真实 `itemId`；`quality-run` 必须提供 `itemId` 或 `streamUrl`。仓库可提交模板和脚本测试，但不得提交真实 `itemId`、`mediaSourceId`、私服 URL、账号或私有截图。
+
+边界：该决策只治理 UI 开发数据源，不改变播放 core/native 策略，不替代 playback-quality report-set，也不证明 UI 交互已经完成。若需要可重复视觉/交互测试，应先把真实样本规范化到本地 manifest，而不是恢复 mock fixture。
+
 ## 2026-07-08: App 开发期使用 XAML Hot Reload 与 loose file deploy
 
 决策：Noira UWP App 的 Debug 构建显式设置 `<DisableXbfLineInfo>False</DisableXbfLineInfo>` 和 `<UseDotNetNativeToolchain>false</UseDotNetNativeToolchain>`，以保留 Visual Studio XAML Hot Reload 所需信息。新增 `tools/Register-NoiraLooseApp.ps1` 作为本机 loose file deploy 入口：默认 clean/build 后从 `bin\<Platform>\<Configuration>\AppxManifest.xml` 注册 loose layout，`-ValidateOnly` 用于脚本和布局验证。

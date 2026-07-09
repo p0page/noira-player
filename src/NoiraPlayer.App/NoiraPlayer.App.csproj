@@ -82,7 +82,6 @@
     <Compile Include="MainPage.xaml.cs">
       <DependentUpon>MainPage.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Navigation\HomeDevelopmentFixtureNavigationRequest.cs" />
     <Compile Include="Navigation\ITvContentFocusTarget.cs" />
     <Compile Include="Navigation\LibraryNavigationRequest.cs" />
     <Compile Include="Navigation\LiveTvNavigationRequest.cs" />
@@ -90,7 +89,6 @@
     <Compile Include="Navigation\MusicNavigationRequest.cs" />
     <Compile Include="Navigation\PhotoViewerNavigationRequest.cs" />
     <Compile Include="Navigation\PlaybackLaunchRequest.cs" />
-    <Compile Include="Navigation\PlaybackOptionsFixtureNavigationRequest.cs" />
     <Compile Include="Navigation\SearchDevelopmentNavigationRequest.cs" />
     <Compile Include="Playback\SystemMediaPlaybackBackend.cs" />
     <Compile Include="Playback\WinRtNativePlaybackEngine.cs" />

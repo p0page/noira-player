@@ -7,21 +7,6 @@ namespace NoiraPlayer.Core.Tests.Design;
 public sealed class LiveTvPageSourceTests
 {
     [Fact]
-    public void LiveTv_Fixture_Development_Route_Renders_Positive_Channel_Browse_State()
-    {
-        var mainPageSource = ReadAppSource("MainPage.xaml.cs");
-        var requestSource = ReadAppSource("Navigation", "LiveTvNavigationRequest.cs");
-        var liveTvPageSource = ReadAppSource("Views", "LiveTvPage.xaml.cs");
-
-        Assert.Contains("case \"livetv-fixture\"", mainPageSource);
-        Assert.Contains("UseDevelopmentFixture", requestSource);
-        Assert.Contains("RenderDevelopmentLiveTvFixture()", liveTvPageSource);
-        Assert.Contains("DevelopmentLiveTvFixture.Create()", liveTvPageSource);
-        Assert.Contains("CreateDevelopmentChannelLogoFrame(", liveTvPageSource);
-        Assert.Contains("\"Fixture Live TV guide\"", liveTvPageSource);
-    }
-
-    [Fact]
     public void LiveTv_Unsupported_Layer_Dismissal_Restores_Invoking_Channel_Focus()
     {
         var liveTvPageSource = ReadAppSource("Views", "LiveTvPage.xaml.cs");
@@ -30,15 +15,6 @@ public sealed class LiveTvPageSourceTests
         Assert.Contains("_unsupportedReturnFocusTarget = sender as Button;", liveTvPageSource);
         Assert.Contains("FocusUnsupportedReturnTarget()", liveTvPageSource);
         Assert.Contains("_unsupportedReturnFocusTarget.Focus(FocusState.Keyboard)", liveTvPageSource);
-    }
-
-    [Fact]
-    public void LiveTv_Fixture_Channel_Artwork_Uses_Packaged_Qa_Uris()
-    {
-        var liveTvPageSource = ReadAppSource("Views", "LiveTvPage.xaml.cs");
-
-        Assert.Contains("DevelopmentLiveTvFixture.ArtworkKey(channel.Id, \"Primary\")", liveTvPageSource);
-        Assert.Contains("new BitmapImage(new Uri(imageUri))", liveTvPageSource);
     }
 
     [Fact]
@@ -58,7 +34,6 @@ public sealed class LiveTvPageSourceTests
         Assert.DoesNotContain("AppCardCornerRadius", liveTvXaml);
         Assert.Contains("UpdatePreviewArtwork(channel)", liveTvPageSource);
         Assert.Contains("CreateProgramArtworkImageSource(channel)", liveTvPageSource);
-        Assert.Contains("DevelopmentLiveTvFixture.ArtworkKey(program.Id, \"Thumb\")", liveTvPageSource);
         Assert.Contains("_liveProgramArtworkUris[channel.Id] = client.GetImageUrl(session, program.Id,", liveTvPageSource);
         Assert.Contains("PreviewArtworkFrame.Visibility = Visibility.Collapsed", liveTvPageSource);
     }

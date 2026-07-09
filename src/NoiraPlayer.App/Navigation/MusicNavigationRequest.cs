@@ -2,14 +2,12 @@
 {
     internal sealed class MusicNavigationRequest
     {
-        public MusicNavigationRequest(string unsupportedSongName = "", bool useDevelopmentFixture = false)
+        public MusicNavigationRequest(string unsupportedSongName = "")
         {
             UnsupportedSongName = unsupportedSongName ?? "";
-            UseDevelopmentFixture = useDevelopmentFixture;
         }
 
         public string UnsupportedSongName { get; }
 
-        public bool UseDevelopmentFixture { get; }
     }
 }

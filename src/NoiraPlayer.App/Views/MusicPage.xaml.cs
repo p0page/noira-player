@@ -6,9 +6,6 @@ using System.Threading.Tasks;
 using NoiraPlayer.App.Navigation;
 using NoiraPlayer.App.Services;
 using NoiraPlayer.App.Storage;
-#if DEBUG
-using NoiraPlayer.Core.Diagnostics;
-#endif
 using NoiraPlayer.Core.Emby;
 using NoiraPlayer.Core.Input;
 using Windows.System;
@@ -43,12 +40,6 @@ namespace NoiraPlayer.App.Views
             new Dictionary<string, string>(StringComparer.Ordinal);
         private int _loadGeneration;
         private bool _isUnloaded;
-#if DEBUG
-        private const int DevelopmentMusicFocusRetryCount = 6;
-        private DevelopmentMusicFixtureSnapshot? _developmentMusicFixture;
-        private int _developmentMusicFocusGeneration;
-#endif
-
         public MusicPage()
         {
             InitializeComponent();
@@ -70,14 +61,6 @@ namespace NoiraPlayer.App.Views
         private async void MusicPage_OnLoaded(object sender, RoutedEventArgs e)
         {
             Loaded -= MusicPage_OnLoaded;
-#if DEBUG
-            if (_request != null && _request.UseDevelopmentFixture)
-            {
-                RenderDevelopmentMusicFixture();
-                FocusDevelopmentDefaultContentAsync();
-                return;
-            }
-#endif
             if (_request != null && !string.IsNullOrWhiteSpace(_request.UnsupportedSongName))
             {
                 PrepareBrowseOnlyPreview();
@@ -127,31 +110,11 @@ namespace NoiraPlayer.App.Views
 
         private async void RefreshButton_OnClick(object sender, RoutedEventArgs e)
         {
-#if DEBUG
-            if (_request != null && _request.UseDevelopmentFixture)
-            {
-                RenderDevelopmentMusicFixture();
-                FocusDevelopmentDefaultContentAsync();
-                return;
-            }
-#endif
             await LoadMusicAsync();
         }
 
         private async void AllSongsButton_OnClick(object sender, RoutedEventArgs e)
         {
-#if DEBUG
-            if (_request != null && _request.UseDevelopmentFixture && _developmentMusicFixture != null)
-            {
-                RenderDevelopmentSongs(_developmentMusicFixture.Songs, "Songs", showAllSongsButton: false);
-                if (_firstSongButton != null)
-                {
-                    _firstSongButton.Focus(FocusState.Keyboard);
-                }
-
-                return;
-            }
-#endif
             await LoadAllSongsAsync(focusSongs: true);
         }
 
@@ -555,238 +518,6 @@ namespace NoiraPlayer.App.Views
             AddInlineEmpty(SongsPanel, message);
         }
 
-#if DEBUG
-        private void RenderDevelopmentMusicFixture()
-        {
-            _loadGeneration++;
-            var fixture = DevelopmentMusicFixture.Create();
-            _developmentMusicFixture = fixture;
-            ResetMusicSurface();
-            SetLoadingState(isLoading: false);
-            StatusBlock.Text = "Fixture music library";
-            _loadedAlbums = fixture.Albums;
-            _loadedSongs = fixture.Songs;
-            RenderDevelopmentArtists(fixture.Artists, fixture.Albums.Count, fixture.Songs.Count);
-            RenderDevelopmentAlbums(fixture.Albums);
-            RenderDevelopmentSongs(fixture.Songs, "Songs", showAllSongsButton: false);
-        }
-
-        private void RenderDevelopmentArtists(
-            IReadOnlyList<EmbyMediaItem> artists,
-            int albumCount,
-            int songCount)
-        {
-            ArtistsPanel.Children.Clear();
-            _artistButtons.Clear();
-            _firstArtistButton = null;
-            ArtistsCountBlock.Text = artists.Count == 1 ? "1 artist" : artists.Count + " artists";
-
-            var browseItems = new List<EmbyMediaItem> { CreateAllMusicItem(albumCount, songCount) };
-            browseItems.AddRange(artists);
-
-            foreach (var artist in browseItems)
-            {
-                var button = CreateDevelopmentMusicButton(
-                    artist,
-                    "Artist " + CreateItemName(artist),
-                    CreateArtistSecondaryLine(artist),
-                    DoubleResource("TvCompactArtworkSize", 56));
-                button.Tag = artist;
-                button.GotFocus += (sender, args) =>
-                {
-                    _activeArtistButton = button;
-                    UpdatePreview(artist, IsAllMusicArtist(artist) ? "Music" : "Artist");
-                };
-                button.Click += ArtistButton_OnClick;
-
-                if (_firstArtistButton == null)
-                {
-                    _firstArtistButton = button;
-                    _activeArtistButton = button;
-                    UpdatePreview(artist, "Music");
-                }
-
-                ArtistsPanel.Children.Add(button);
-                _artistButtons.Add(button);
-            }
-        }
-
-        private void RenderDevelopmentAlbums(IReadOnlyList<EmbyMediaItem> albums)
-        {
-            AlbumsPanel.Children.Clear();
-            _albumButtons.Clear();
-            _firstAlbumButton = null;
-            AlbumsCountBlock.Text = albums.Count == 1 ? "1 album" : albums.Count + " albums";
-
-            if (albums.Count == 0)
-            {
-                AddInlineEmpty(AlbumsPanel, "No fixture albums.");
-                return;
-            }
-
-            foreach (var album in albums)
-            {
-                var button = CreateDevelopmentMusicButton(
-                    album,
-                    "Album " + CreateItemName(album),
-                    CreateAlbumSecondaryLine(album),
-                    DoubleResource("TvListArtworkSize", 76));
-                button.Tag = album;
-                button.GotFocus += (sender, args) => UpdatePreview(album, "Album");
-                button.Click += AlbumButton_OnClick;
-
-                if (_firstAlbumButton == null)
-                {
-                    _firstAlbumButton = button;
-                    UpdatePreview(album, "Album");
-                }
-
-                AlbumsPanel.Children.Add(button);
-                _albumButtons.Add(button);
-            }
-        }
-
-        private void RenderDevelopmentSongs(
-            IReadOnlyList<EmbyMediaItem> songs,
-            string title,
-            bool showAllSongsButton)
-        {
-            SongsPanel.Children.Clear();
-            _songButtons.Clear();
-            _firstSongButton = null;
-            SongsTitleBlock.Text = title;
-            SongsCountBlock.Text = songs.Count == 1 ? "1 song" : songs.Count + " songs";
-            AllSongsButton.Visibility = showAllSongsButton ? Visibility.Visible : Visibility.Collapsed;
-
-            if (songs.Count == 0)
-            {
-                RenderSongsEmpty("No fixture songs.");
-                return;
-            }
-
-            foreach (var song in songs)
-            {
-                var button = CreateDevelopmentMusicButton(
-                    song,
-                    "Song " + CreateItemName(song),
-                    CreateSongSecondaryLine(song),
-                    DoubleResource("TvCompactArtworkSize", 64));
-                button.Tag = song;
-                button.GotFocus += (sender, args) => UpdatePreview(song, "Song");
-                button.Click += SongButton_OnClick;
-
-                if (_firstSongButton == null)
-                {
-                    _firstSongButton = button;
-                    if (_firstAlbumButton == null)
-                    {
-                        UpdatePreview(song, "Song");
-                    }
-                }
-
-                SongsPanel.Children.Add(button);
-                _songButtons.Add(button);
-            }
-        }
-
-        private void RenderDevelopmentAlbumSongs(EmbyMediaItem album)
-        {
-            if (_developmentMusicFixture == null)
-            {
-                return;
-            }
-
-            var songs = _developmentMusicFixture.Songs
-                .Where(song => string.Equals(song.ParentId, album.Id, StringComparison.Ordinal))
-                .ToList();
-            RenderDevelopmentSongs(songs, CreateItemName(album), showAllSongsButton: true);
-            if (_firstSongButton != null)
-            {
-                _firstSongButton.Focus(FocusState.Keyboard);
-            }
-            else
-            {
-                AllSongsButton.Focus(FocusState.Keyboard);
-            }
-        }
-
-        private Button CreateDevelopmentMusicButton(
-            EmbyMediaItem item,
-            string automationName,
-            string secondaryLine,
-            double artworkSize)
-        {
-            var button = new Button
-            {
-                Style = (Style)Application.Current.Resources["TvListButtonStyle"],
-                Content = CreateMusicButtonContent(
-                    CreateDevelopmentArtworkFrame(item, artworkSize),
-                    item,
-                    secondaryLine,
-                    artworkSize)
-            };
-            MatteButtonFocusVisuals.PrepareListButton(button);
-            AutomationProperties.SetName(button, automationName);
-            return button;
-        }
-
-        private Border CreateDevelopmentArtworkFrame(EmbyMediaItem item, double artworkSize)
-        {
-            var frame = new Border
-            {
-                Width = artworkSize,
-                Height = artworkSize,
-                Background = BrushResource("AppRaisedSurfaceBrush"),
-                BorderBrush = BrushResource("AppHairlineBrush"),
-                BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(6)
-            };
-
-            if (_developmentMusicFixture != null &&
-                _developmentMusicFixture.ArtworkUris.TryGetValue(
-                    DevelopmentMusicFixture.ArtworkKey(item.Id, "Primary"),
-                    out var imageUri) &&
-                !string.IsNullOrWhiteSpace(imageUri))
-            {
-                frame.Child = new Image
-                {
-                    Stretch = Stretch.UniformToFill,
-                    Source = new BitmapImage(new Uri(imageUri))
-                };
-                return frame;
-            }
-
-            frame.Child = new SymbolIcon
-            {
-                Symbol = Symbol.MusicInfo,
-                Foreground = BrushResource("AppMutedTextBrush"),
-                HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center
-            };
-            return frame;
-        }
-
-        private async void FocusDevelopmentDefaultContentAsync()
-        {
-            var focusGeneration = ++_developmentMusicFocusGeneration;
-            for (var attempt = 0; attempt < DevelopmentMusicFocusRetryCount; attempt++)
-            {
-                await Dispatcher.RunAsync(CoreDispatcherPriority.Low, () =>
-                {
-                    if (!_isUnloaded &&
-                        _request != null &&
-                        _request.UseDevelopmentFixture &&
-                        focusGeneration == _developmentMusicFocusGeneration)
-                    {
-                        FocusDefaultContent();
-                    }
-                });
-
-                await Task.Delay(120);
-            }
-        }
-#endif
-
         private Button CreateMusicButton(
             EmbySession session,
             EmbyApiClient client,
@@ -932,13 +663,6 @@ namespace NoiraPlayer.App.Views
             var album = button == null ? null : button.Tag as EmbyMediaItem;
             if (album != null)
             {
-#if DEBUG
-                if (_request != null && _request.UseDevelopmentFixture)
-                {
-                    RenderDevelopmentAlbumSongs(album);
-                    return;
-                }
-#endif
                 await LoadAlbumSongsAsync(album);
             }
         }
@@ -953,13 +677,6 @@ namespace NoiraPlayer.App.Views
             }
 
             _activeArtistButton = button;
-#if DEBUG
-            if (_request != null && _request.UseDevelopmentFixture)
-            {
-                RenderDevelopmentArtistMusic(artist);
-                return;
-            }
-#endif
             await RenderArtistMusicAsync(artist);
         }
 
@@ -986,21 +703,6 @@ namespace NoiraPlayer.App.Views
                 FocusFirstMusicResult();
             }
         }
-
-#if DEBUG
-        private void RenderDevelopmentArtistMusic(EmbyMediaItem artist)
-        {
-            var albums = FilterByArtist(_loadedAlbums, artist);
-            var songs = FilterByArtist(_loadedSongs, artist);
-            var title = IsAllMusicArtist(artist) ? "Songs" : CreateItemName(artist);
-            RenderDevelopmentAlbums(albums);
-            RenderDevelopmentSongs(songs, title, showAllSongsButton: !IsAllMusicArtist(artist));
-            StatusBlock.Text = IsAllMusicArtist(artist)
-                ? CreateMusicStatus(albums.Count, songs.Count)
-                : CreateArtistStatus(artist, albums.Count, songs.Count);
-            FocusFirstMusicResult();
-        }
-#endif
 
         private void FocusFirstMusicResult()
         {
@@ -1236,23 +938,6 @@ namespace NoiraPlayer.App.Views
             {
                 return null;
             }
-
-#if DEBUG
-            if (_developmentMusicFixture != null)
-            {
-                string imageUri;
-                if ((_developmentMusicFixture.ArtworkUris.TryGetValue(
-                        DevelopmentMusicFixture.ArtworkKey(item.Id, "Primary"),
-                        out imageUri) ||
-                    _developmentMusicFixture.ArtworkUris.TryGetValue(
-                        DevelopmentMusicFixture.ArtworkKey(item.Id, "Thumb"),
-                        out imageUri)) &&
-                    !string.IsNullOrWhiteSpace(imageUri))
-                {
-                    return new BitmapImage(new Uri(imageUri));
-                }
-            }
-#endif
 
             return _musicArtworkUris.TryGetValue(item.Id, out var uri) &&
                 !string.IsNullOrWhiteSpace(uri)

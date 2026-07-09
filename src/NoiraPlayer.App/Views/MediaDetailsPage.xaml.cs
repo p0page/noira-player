@@ -48,16 +48,6 @@ namespace NoiraPlayer.App.Views
         private bool _isUnloaded;
         private int _loadGeneration;
         private string _restoreMetadataFacetKey = "";
-#if DEBUG
-        private const int DevelopmentDetailsFocusRetryCount = 6;
-        private bool _usesDevelopmentDetailsFixture;
-        private int _developmentDetailsFocusGeneration;
-        private MediaDetailsDevelopmentFixtureKind _developmentDetailsFixtureKind =
-            MediaDetailsDevelopmentFixtureKind.Standard;
-        private IReadOnlyDictionary<string, string> _developmentDetailsArtworkUris =
-            new Dictionary<string, string>(StringComparer.Ordinal);
-#endif
-
         public MediaDetailsPage()
         {
             InitializeComponent();
@@ -137,11 +127,6 @@ namespace NoiraPlayer.App.Views
             }
 
             var loadGeneration = BeginLoad();
-#if DEBUG
-            _usesDevelopmentDetailsFixture = false;
-            _developmentDetailsFixtureKind = MediaDetailsDevelopmentFixtureKind.Standard;
-            _developmentDetailsArtworkUris = new Dictionary<string, string>(StringComparer.Ordinal);
-#endif
 
             var item = e.Parameter as EmbyMediaItem;
             if (item != null)
@@ -155,14 +140,6 @@ namespace NoiraPlayer.App.Views
             var request = e.Parameter as MediaDetailsNavigationRequest;
             if (request != null)
             {
-#if DEBUG
-                if (request.UseDevelopmentFixture)
-                {
-                    _developmentDetailsFixtureKind = request.DevelopmentFixtureKind;
-                    RenderDevelopmentDetailsFixture(loadGeneration);
-                    return;
-                }
-#endif
                 _item = new EmbyMediaItem
                 {
                     Id = request.ItemId,
@@ -790,202 +767,6 @@ namespace NoiraPlayer.App.Views
             PrimaryAtmosphereWash.Visibility = Visibility.Collapsed;
         }
 
-#if DEBUG
-        private void RenderDevelopmentDetailsFixture(int loadGeneration)
-        {
-            if (!CanApplyLoad(loadGeneration))
-            {
-                return;
-            }
-
-            var fixture = CreateDevelopmentDetailsFixture();
-            _usesDevelopmentDetailsFixture = true;
-            _developmentDetailsArtworkUris = fixture.ArtworkUris;
-            _item = fixture.Item;
-
-            RenderItem();
-            ApplyDetailsAtmosphereArtwork(fixture.Item);
-
-            _mediaSources = fixture.MediaSources;
-            _selectedMediaSourceId = ResolveSelectedPlaybackMediaSourceId();
-            RenderPlaybackInfo();
-
-            _organizeAncestors = fixture.OrganizeAncestors;
-            _collectionTargets = fixture.CollectionTargets;
-            _playlistTargets = fixture.PlaylistTargets;
-            RenderOrganizeSection();
-            RenderDevelopmentSecondaryRails(fixture);
-
-            StatusBlock.Text = "Fixture details loaded.";
-            if (string.IsNullOrWhiteSpace(_restoreMetadataFacetKey))
-            {
-                FocusDevelopmentDefaultContentAsync();
-            }
-        }
-
-        private async void FocusDevelopmentDefaultContentAsync()
-        {
-            var focusGeneration = ++_developmentDetailsFocusGeneration;
-            for (var attempt = 0; attempt < DevelopmentDetailsFocusRetryCount; attempt++)
-            {
-                await Dispatcher.RunAsync(CoreDispatcherPriority.Low, () =>
-                {
-                    if (ShouldApplyDevelopmentDefaultFocus(focusGeneration))
-                    {
-                        FocusDefaultContent();
-                    }
-                });
-
-                await Task.Delay(120);
-            }
-        }
-
-        private bool ShouldApplyDevelopmentDefaultFocus(int focusGeneration)
-        {
-            return !_isUnloaded &&
-                _usesDevelopmentDetailsFixture &&
-                focusGeneration == _developmentDetailsFocusGeneration &&
-                string.IsNullOrWhiteSpace(_restoreMetadataFacetKey);
-        }
-
-        private void CancelDevelopmentDefaultFocusRetry()
-        {
-            _developmentDetailsFocusGeneration++;
-        }
-
-        private DevelopmentDetailsFixtureSnapshot CreateDevelopmentDetailsFixture()
-        {
-            switch (_developmentDetailsFixtureKind)
-            {
-                case MediaDetailsDevelopmentFixtureKind.NoArtwork:
-                    return DevelopmentDetailsFixture.CreateWithoutArtwork();
-
-                case MediaDetailsDevelopmentFixtureKind.PrimaryOnlyArtwork:
-                    return DevelopmentDetailsFixture.CreateWithPrimaryOnlyArtwork();
-
-                case MediaDetailsDevelopmentFixtureKind.LongSourceLabels:
-                    return DevelopmentDetailsFixture.CreateWithLongSourceLabels();
-
-                default:
-                    return DevelopmentDetailsFixture.Create();
-            }
-        }
-
-        private void ApplyDetailsAtmosphereArtwork(EmbyMediaItem item)
-        {
-            AtmosphereImage.Source = null;
-            ResetDetailsAtmosphereTreatment();
-            var atmosphereArtwork = EmbyArtworkPolicy.SelectHeroArtwork(item, 1920);
-            if (atmosphereArtwork == null)
-            {
-                return;
-            }
-
-            var atmosphereSource = CreateDevelopmentArtworkImageSource(
-                atmosphereArtwork.ItemId,
-                atmosphereArtwork.ImageType);
-            if (atmosphereSource != null)
-            {
-                AtmosphereImage.Source = atmosphereSource;
-                ApplyDetailsAtmosphereTreatment(atmosphereArtwork.ImageType);
-            }
-        }
-
-        private void RenderDevelopmentSecondaryRails(DevelopmentDetailsFixtureSnapshot fixture)
-        {
-            SimilarItemsPanel.Children.Clear();
-            foreach (var item in fixture.SimilarItems.Take(12))
-            {
-                SimilarItemsPanel.Children.Add(CreateDevelopmentSimilarItemButton(item));
-            }
-
-            SimilarSection.Visibility = SimilarItemsPanel.Children.Count == 0
-                ? Visibility.Collapsed
-                : Visibility.Visible;
-
-            PeoplePanel.Children.Clear();
-            foreach (var person in fixture.Item.People.Take(18))
-            {
-                PeoplePanel.Children.Add(CreateDevelopmentPersonButton(person));
-            }
-
-            PeopleSection.Visibility = PeoplePanel.Children.Count == 0
-                ? Visibility.Collapsed
-                : Visibility.Visible;
-        }
-
-        private BitmapImage? CreateDevelopmentArtworkImageSource(string itemId, string imageType)
-        {
-            var key = DevelopmentDetailsFixture.ArtworkKey(itemId, imageType);
-            if (!_developmentDetailsArtworkUris.TryGetValue(key, out var uri) ||
-                string.IsNullOrWhiteSpace(uri))
-            {
-                return null;
-            }
-
-            return new BitmapImage(new Uri(uri));
-        }
-
-        private ImageBrush? CreateDevelopmentArtworkBrush(EmbyMediaItem item, string imageType)
-        {
-            var itemId = ResolveArtworkItemId(item, imageType);
-            var imageSource = CreateDevelopmentArtworkImageSource(itemId, imageType);
-            if (imageSource == null)
-            {
-                return null;
-            }
-
-            return new ImageBrush
-            {
-                ImageSource = imageSource,
-                Stretch = Stretch.UniformToFill
-            };
-        }
-
-        private ImageBrush? CreateDevelopmentArtworkBrush(EmbyPerson person)
-        {
-            var imageSource = CreateDevelopmentArtworkImageSource(person.Id, "Primary");
-            if (imageSource == null)
-            {
-                return null;
-            }
-
-            return new ImageBrush
-            {
-                ImageSource = imageSource,
-                Stretch = Stretch.UniformToFill
-            };
-        }
-
-        private static string ResolveArtworkItemId(EmbyMediaItem item, string imageType)
-        {
-            if (item == null)
-            {
-                return "";
-            }
-
-            if (string.Equals(imageType, "Thumb", StringComparison.OrdinalIgnoreCase) &&
-                !string.IsNullOrWhiteSpace(item.ThumbImageItemId))
-            {
-                return item.ThumbImageItemId;
-            }
-
-            if (string.Equals(imageType, "Backdrop", StringComparison.OrdinalIgnoreCase) &&
-                !string.IsNullOrWhiteSpace(item.BackdropImageItemId))
-            {
-                return item.BackdropImageItemId;
-            }
-
-            if (string.Equals(imageType, "Primary", StringComparison.OrdinalIgnoreCase) &&
-                !string.IsNullOrWhiteSpace(item.PrimaryImageItemId))
-            {
-                return item.PrimaryImageItemId;
-            }
-
-            return item.Id;
-        }
-#endif
-
         private void Play_OnClick(object sender, RoutedEventArgs e)
         {
             if (_item == null || string.IsNullOrWhiteSpace(_item.Id))
@@ -1022,16 +803,6 @@ namespace NoiraPlayer.App.Views
             }
 
             var current = item.UserData != null && item.UserData.IsFavorite;
-#if DEBUG
-            if (_usesDevelopmentDetailsFixture)
-            {
-                ApplyDevelopmentFixtureUserDataToggle(
-                    userData => MediaDetailsUserDataTogglePolicy.ToggleFavorite(userData),
-                    !current ? "Fixture favorite added." : "Fixture favorite removed.",
-                    FavoriteButton);
-                return;
-            }
-#endif
             await UpdateUserDataAsync(
                 async (client, session) => await client.SetFavoriteAsync(session, item.Id, !current),
                 !current ? "Added to favorites." : "Removed from favorites.",
@@ -1047,16 +818,6 @@ namespace NoiraPlayer.App.Views
             }
 
             var current = item.UserData != null && item.UserData.Played;
-#if DEBUG
-            if (_usesDevelopmentDetailsFixture)
-            {
-                ApplyDevelopmentFixtureUserDataToggle(
-                    userData => MediaDetailsUserDataTogglePolicy.TogglePlayed(userData),
-                    !current ? "Fixture marked watched." : "Fixture marked unwatched.",
-                    WatchedButton);
-                return;
-            }
-#endif
             await UpdateUserDataAsync(
                 async (client, session) => await client.SetPlayedAsync(session, item.Id, !current),
                 !current ? "Marked watched." : "Marked unwatched.",
@@ -1065,13 +826,6 @@ namespace NoiraPlayer.App.Views
 
         private async void Refresh_OnClick(object sender, RoutedEventArgs e)
         {
-#if DEBUG
-            if (_usesDevelopmentDetailsFixture)
-            {
-                RenderDevelopmentDetailsFixture(BeginLoad());
-                return;
-            }
-#endif
             var itemId = _item == null ? "" : _item.Id;
             var itemName = _item == null ? "" : _item.Name;
             await LoadDetailsAsync(itemId, itemName, BeginLoad());
@@ -1095,14 +849,6 @@ namespace NoiraPlayer.App.Views
             {
                 return;
             }
-
-#if DEBUG
-            if (_usesDevelopmentDetailsFixture)
-            {
-                OpenDevelopmentAddToSheet(sheetKind);
-                return;
-            }
-#endif
 
             var loadGeneration = ++_addToSheetLoadGeneration;
             _activeAddToSheet = sheetKind;
@@ -1166,53 +912,6 @@ namespace NoiraPlayer.App.Views
                 }
             }
         }
-
-#if DEBUG
-        private void OpenDevelopmentAddToSheet(DetailsAddToSheetKind sheetKind)
-        {
-            _addToSheetLoadGeneration++;
-            _activeAddToSheet = sheetKind;
-            _addToSheetSession = null;
-            _addToSheetPreviewIndex = 0;
-            _addToSheetConfirming = false;
-            _addToSheetReturnFocus = FocusManager.GetFocusedElement();
-
-            AddToSheetTitleBlock.Text = sheetKind == DetailsAddToSheetKind.Collection
-                ? "Add to collection"
-                : "Add to playlist";
-            AddToSheetRoot.Visibility = Visibility.Visible;
-            AddToSheetSubtitleBlock.Text = GetActiveAddToTargets().Count == 0
-                ? "No fixture destinations found."
-                : "Choose a fixture destination";
-            RenderAddToSheetOptions();
-            FocusAddToSheetOption(_addToSheetPreviewIndex);
-        }
-
-        private void ConfirmDevelopmentAddToSheet()
-        {
-            var item = _item;
-            var targets = GetActiveAddToTargets();
-            if (item == null || string.IsNullOrWhiteSpace(item.Id) || targets.Count == 0)
-            {
-                CloseAddToSheet(restoreFocus: true);
-                return;
-            }
-
-            var target = targets[Math.Max(0, Math.Min(_addToSheetPreviewIndex, targets.Count - 1))];
-            if (string.IsNullOrWhiteSpace(target.Id))
-            {
-                CloseAddToSheet(restoreFocus: true);
-                return;
-            }
-
-            AddAncestorIfMissing(target);
-            RenderOrganizeSection();
-            StatusBlock.Text = _activeAddToSheet == DetailsAddToSheetKind.Collection
-                ? "Added to fixture collection: " + CreateDisplayName(target)
-                : "Added to fixture playlist: " + CreateDisplayName(target);
-            CloseAddToSheet(restoreFocus: true);
-        }
-#endif
 
         private static async Task<IReadOnlyList<EmbyMediaItem>> LoadAddToTargetsAsync(
             EmbyApiClient client,
@@ -1316,14 +1015,6 @@ namespace NoiraPlayer.App.Views
             {
                 return;
             }
-
-#if DEBUG
-            if (_usesDevelopmentDetailsFixture)
-            {
-                ConfirmDevelopmentAddToSheet();
-                return;
-            }
-#endif
 
             var item = _item;
             var targets = GetActiveAddToTargets();
@@ -2038,89 +1729,6 @@ namespace NoiraPlayer.App.Views
             EpisodesPanel.Children.Add(button);
         }
 
-#if DEBUG
-        private Button CreateDevelopmentSimilarItemButton(EmbyMediaItem item)
-        {
-            var artworkBrush = CreateDevelopmentArtworkBrush(item, "Primary");
-            return CreateSecondaryPosterRailButton(
-                item,
-                artworkBrush,
-                string.IsNullOrWhiteSpace(item.Name) ? item.Id : item.Name,
-                CreateMeta(item));
-        }
-
-        private Button CreateDevelopmentPersonButton(EmbyPerson person)
-        {
-            var button = new Button
-            {
-                Width = 154,
-                Height = 154,
-                MinWidth = 154,
-                MinHeight = 154,
-                Padding = new Thickness(0),
-                Tag = person,
-                HorizontalContentAlignment = HorizontalAlignment.Stretch,
-                VerticalContentAlignment = VerticalAlignment.Stretch,
-                UseSystemFocusVisuals = false,
-                IsEnabled = !string.IsNullOrWhiteSpace(person.Id)
-            };
-            AutomationProperties.SetName(button, CreatePersonAutomationName(person));
-            button.Click += Person_OnClick;
-            button.GotFocus += SecondaryRailButton_OnGotFocus;
-            button.LostFocus += SecondaryRailButton_OnLostFocus;
-
-            var root = new Grid
-            {
-                Background = (Brush)Application.Current.Resources["AppRaisedSurfaceBrush"]
-            };
-
-            var artworkBrush = CreateDevelopmentArtworkBrush(person);
-            if (artworkBrush != null)
-            {
-                root.Background = artworkBrush;
-            }
-
-            root.Children.Add(CreateRailCardBorder());
-            root.Children.Add(CreateSecondaryRailTextScrim(person.Name, CreatePersonRole(person)));
-
-            button.Content = root;
-            return button;
-        }
-
-        private static Border CreateSecondaryRailTextScrim(string title, string meta)
-        {
-            return new Border
-            {
-                Background = (Brush)Application.Current.Resources["AppCardScrimBrush"],
-                VerticalAlignment = VerticalAlignment.Bottom,
-                Padding = new Thickness(10, 8, 10, 8),
-                Child = new StackPanel
-                {
-                    Spacing = 3,
-                    Children =
-                    {
-                        new TextBlock
-                        {
-                            Text = title ?? "",
-                            FontSize = 15,
-                            FontWeight = Windows.UI.Text.FontWeights.SemiBold,
-                            TextTrimming = TextTrimming.CharacterEllipsis,
-                            MaxLines = 2
-                        },
-                        new TextBlock
-                        {
-                            Text = meta ?? "",
-                            FontSize = 12,
-                            Foreground = (Brush)Application.Current.Resources["AppMutedTextBrush"],
-                            TextTrimming = TextTrimming.CharacterEllipsis,
-                            MaxLines = 1
-                        }
-                    }
-                }
-            };
-        }
-#endif
-
         private Button CreateSimilarItemButton(EmbySession session, EmbyApiClient client, EmbyMediaItem item)
         {
             ImageBrush? artworkBrush = null;
@@ -2396,14 +2004,6 @@ namespace NoiraPlayer.App.Views
             };
 
             var artwork = EmbyArtworkPolicy.SelectItemWideArtwork(target, 360);
-#if DEBUG
-            var developmentArtworkBrush = CreateDevelopmentArtworkBrush(target, "Thumb");
-            if (developmentArtworkBrush != null)
-            {
-                frame.Background = developmentArtworkBrush;
-                return frame;
-            }
-#endif
             if (artwork != null && _addToSheetSession != null)
             {
                 frame.Background = new ImageBrush
@@ -2567,9 +2167,6 @@ namespace NoiraPlayer.App.Views
             }
 
             QueueMetadataFacetRestore(facet);
-#if DEBUG
-            CancelDevelopmentDefaultFocusRetry();
-#endif
             var request = new LibraryNavigationRequest(
                 CreateMetadataFacetLibraryTitle(facet),
                 "",
@@ -2577,13 +2174,6 @@ namespace NoiraPlayer.App.Views
                 "",
                 "",
                 CreateMetadataFacetQuery(facet));
-#if DEBUG
-            if (_usesDevelopmentDetailsFixture)
-            {
-                var fixture = DevelopmentLibraryOrganizationFixture.Create();
-                request = request.WithDevelopmentFixture(fixture.Items, fixture.ArtworkUris);
-            }
-#endif
 
             Frame.Navigate(typeof(LibraryPage), request);
         }
@@ -2896,26 +2486,6 @@ namespace NoiraPlayer.App.Views
 
             _item.UserData = userData ?? new EmbyUserData();
         }
-
-#if DEBUG
-        private void ApplyDevelopmentFixtureUserDataToggle(
-            Func<EmbyUserData, EmbyUserData> mutation,
-            string successMessage,
-            Button restoreFocusButton)
-        {
-            var item = _item;
-            if (item == null || string.IsNullOrWhiteSpace(item.Id))
-            {
-                return;
-            }
-
-            var current = item.UserData ?? new EmbyUserData();
-            ApplyUserData(mutation(current));
-            UpdateActionButtons();
-            StatusBlock.Text = successMessage;
-            restoreFocusButton.Focus(FocusState.Programmatic);
-        }
-#endif
 
         private void SetUserDataButtonsEnabled(bool isEnabled)
         {

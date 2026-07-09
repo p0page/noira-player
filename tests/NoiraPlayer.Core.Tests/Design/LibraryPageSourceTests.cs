@@ -7,46 +7,6 @@ namespace NoiraPlayer.Core.Tests.Design;
 public sealed class LibraryPageSourceTests
 {
     [Fact]
-    public void Library_Navigation_Request_Can_Carry_Development_Fixture_Items()
-    {
-        var source = File.ReadAllText(Path.Combine(
-            FindRepositoryRoot(),
-            "src",
-            "NoiraPlayer.App",
-            "Navigation",
-            "LibraryNavigationRequest.cs"));
-
-        Assert.Contains("WithDevelopmentFixture", source);
-        Assert.Contains("DevelopmentItems", source);
-        Assert.Contains("DevelopmentArtworkUris", source);
-    }
-
-    [Fact]
-    public void Library_Page_Renders_Development_Fixture_Items_Without_Session()
-    {
-        var source = File.ReadAllText(Path.Combine(
-            FindRepositoryRoot(),
-            "src",
-            "NoiraPlayer.App",
-            "Views",
-            "LibraryPage.xaml.cs"));
-
-        Assert.Contains("request.DevelopmentItems.Count > 0", source);
-        Assert.Contains("CreateDevelopmentGridItems", source);
-        Assert.Contains("DevelopmentHomeFixture.ArtworkKey", source);
-    }
-
-    [Fact]
-    public void Library_Page_Filters_Development_Items_By_Parent_For_Nested_Folders()
-    {
-        var source = ReadAppSource("Views", "LibraryPage.xaml.cs");
-
-        Assert.Contains("SelectDevelopmentItemsForRequest", source);
-        Assert.Contains("item.ParentId", source);
-        Assert.Contains("request.ParentId", source);
-    }
-
-    [Fact]
     public void Library_Page_Opens_Folders_As_Nested_Libraries()
     {
         var source = ReadAppSource("Views", "LibraryPage.xaml.cs");
@@ -157,17 +117,6 @@ public sealed class LibraryPageSourceTests
     }
 
     [Fact]
-    public void Library_Page_Passes_Development_Photo_Uri_To_Photo_Viewer()
-    {
-        var source = ReadAppSource("Views", "LibraryPage.xaml.cs");
-        var requestSource = ReadAppSource("Navigation", "PhotoViewerNavigationRequest.cs");
-
-        Assert.Contains("ResolveDevelopmentPhotoUri", source);
-        Assert.Contains("new PhotoViewerNavigationRequest(item.Id, itemName, developmentImageUri)", source);
-        Assert.Contains("DevelopmentImageUri", requestSource);
-    }
-
-    [Fact]
     public void Library_Page_Restores_Focus_To_Activated_Item_When_Returning_From_Child_Page()
     {
         var source = ReadAppSource("Views", "LibraryPage.xaml.cs");
@@ -179,22 +128,6 @@ public sealed class LibraryPageSourceTests
         Assert.Contains("FocusPreferredItemAsync(loadGeneration, preferredFocusItemId)", source);
         Assert.Contains("FocusItemByIdNow(preferredFocusItemId, FocusState.Keyboard)", source);
         Assert.Contains("FindGridItemIndexById", source);
-    }
-
-    [Fact]
-    public void MainPage_Provides_Positive_Collections_And_Playlists_Fixture_Routes()
-    {
-        var source = File.ReadAllText(Path.Combine(
-            FindRepositoryRoot(),
-            "src",
-            "NoiraPlayer.App",
-            "MainPage.xaml.cs"));
-
-        Assert.Contains("case \"collections-fixture\":", source);
-        Assert.Contains("case \"playlists-fixture\":", source);
-        Assert.Contains("DevelopmentLibraryOrganizationFixture.Create()", source);
-        Assert.Contains("fixture.Items", source);
-        Assert.Contains("fixture.ArtworkUris", source);
     }
 
     private static string ReadAppSource(params string[] segments)

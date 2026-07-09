@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Http;
 using System.Threading.Tasks;
 using NoiraPlayer.Core.Diagnostics;
 using NoiraPlayer.Core.Emby;
@@ -11,9 +8,7 @@ using NoiraPlayer.App.Navigation;
 using NoiraPlayer.App.Services;
 using NoiraPlayer.App.Storage;
 using NoiraPlayer.App.Views;
-using Windows.Graphics.Imaging;
 using Windows.Storage;
-using Windows.Storage.Streams;
 using Windows.UI.Core;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
@@ -779,7 +774,7 @@ namespace NoiraPlayer.App
 
                 await WriteDevelopmentCommandResultAsync("running", command.Route);
                 await PlaybackDiagnosticsLog.WriteLineAsync("DevelopmentCommand running route=" + command.Route);
-                await RunDevelopmentCommandAsync(command);
+                RunDevelopmentCommand(command);
                 await file.DeleteAsync(StorageDeleteOption.PermanentDelete);
                 await PlaybackDiagnosticsLog.WriteLineAsync("DevelopmentCommand completed route=" + command.Route);
                 await WriteDevelopmentCommandResultAsync("completed", command.Route);
@@ -806,16 +801,12 @@ namespace NoiraPlayer.App
             }
         }
 
-        private async Task RunDevelopmentCommandAsync(DevelopmentNavigationCommand command)
+        private void RunDevelopmentCommand(DevelopmentNavigationCommand command)
         {
             switch (command.Route)
             {
                 case "home":
                     NavigateHome(replaceHistory: false);
-                    return;
-
-                case "home-fixture":
-                    NavigateTo(typeof(HomePage), new HomeDevelopmentFixtureNavigationRequest());
                     return;
 
                 case "login":
@@ -826,10 +817,6 @@ namespace NoiraPlayer.App
                     NavigateLibrary(new LibraryNavigationRequest("Movies", "movies", "Movie"));
                     return;
 
-                case "movies-fixture":
-                    NavigateLibrary(CreateMoviesFixtureNavigationRequest());
-                    return;
-
                 case "tv":
                     NavigateLibrary(new LibraryNavigationRequest("TV Shows", "tvshows", "Series"));
                     return;
@@ -838,26 +825,12 @@ namespace NoiraPlayer.App
                     NavigateTo(typeof(LiveTvPage));
                     return;
 
-                case "livetv-fixture":
-                    NavigateTo(typeof(LiveTvPage), new LiveTvNavigationRequest(useDevelopmentFixture: true));
-                    return;
-
                 case "livetv-unsupported":
                     NavigateTo(typeof(LiveTvPage), new LiveTvNavigationRequest("Sample Channel"));
                     return;
 
                 case "search":
                     NavigateSearch();
-                    return;
-
-                case "search-fixture":
-                    NavigateTo(
-                        typeof(SearchPage),
-                        new SearchDevelopmentNavigationRequest(
-                            "Aurora Protocol",
-                            simulateError: false,
-                            useFixtureResults: true,
-                            recentTerms: new[] { "Friends", "Aurora Protocol", "News 24" }));
                     return;
 
                 case "search-error":
@@ -870,10 +843,6 @@ namespace NoiraPlayer.App
 
                 case "music":
                     NavigateTo(typeof(MusicPage));
-                    return;
-
-                case "music-fixture":
-                    NavigateTo(typeof(MusicPage), new MusicNavigationRequest(useDevelopmentFixture: true));
                     return;
 
                 case "music-unsupported":
@@ -890,32 +859,6 @@ namespace NoiraPlayer.App
                         new LibraryNavigationQuery(mediaTypes: "Photo", requireItemTypeMatch: true)));
                     return;
 
-                case "photos-fixture":
-                    var fixture = DevelopmentPhotosFixture.Create();
-                    NavigateLibrary(new LibraryNavigationRequest(
-                        "Photos",
-                        "photos",
-                        "Photo,Folder",
-                        "",
-                        "",
-                        new LibraryNavigationQuery(mediaTypes: "Photo", requireItemTypeMatch: true),
-                        fixture.Items,
-                        fixture.ArtworkUris));
-                    return;
-
-                case "collections-fixture":
-                    var collectionsFixture = DevelopmentLibraryOrganizationFixture.Create();
-                    NavigateLibrary(new LibraryNavigationRequest(
-                        "Collections",
-                        "boxsets",
-                        "BoxSet",
-                        "",
-                        "",
-                        new LibraryNavigationQuery(isFolder: false, requireItemTypeMatch: true),
-                        collectionsFixture.Items,
-                        collectionsFixture.ArtworkUris));
-                    return;
-
                 case "playlists":
                     NavigateLibrary(new LibraryNavigationRequest(
                         "Playlists",
@@ -924,19 +867,6 @@ namespace NoiraPlayer.App
                         "",
                         "",
                         new LibraryNavigationQuery(isFolder: false, requireItemTypeMatch: true)));
-                    return;
-
-                case "playlists-fixture":
-                    var playlistsFixture = DevelopmentLibraryOrganizationFixture.Create();
-                    NavigateLibrary(new LibraryNavigationRequest(
-                        "Playlists",
-                        "playlists",
-                        "Playlist",
-                        "",
-                        "",
-                        new LibraryNavigationQuery(isFolder: false, requireItemTypeMatch: true),
-                        playlistsFixture.Items,
-                        playlistsFixture.ArtworkUris));
                     return;
 
                 case "favorites":
@@ -963,53 +893,6 @@ namespace NoiraPlayer.App
                     NavigateTo(typeof(MediaDetailsPage), new MediaDetailsNavigationRequest(command.ItemId, command.ItemName));
                     return;
 
-                case "details-fixture":
-                    NavigateTo(
-                        typeof(MediaDetailsPage),
-                        new MediaDetailsNavigationRequest(
-                            "fixture-detail-aurora",
-                            "Aurora Protocol",
-                            useDevelopmentFixture: true));
-                    return;
-
-                case "details-real-sample":
-                    await NavigateToRealDetailsSampleAsync(DevelopmentRealDetailsSampleMode.FirstSupported);
-                    return;
-
-                case "details-real-bright-sample":
-                    await NavigateToRealDetailsSampleAsync(DevelopmentRealDetailsSampleMode.BrightestArtwork);
-                    return;
-
-                case "details-no-art-fixture":
-                    NavigateTo(
-                        typeof(MediaDetailsPage),
-                        new MediaDetailsNavigationRequest(
-                            "fixture-detail-no-art",
-                            "No Artwork Signal",
-                            useDevelopmentFixture: true,
-                            developmentFixtureKind: MediaDetailsDevelopmentFixtureKind.NoArtwork));
-                    return;
-
-                case "details-primary-only-fixture":
-                    NavigateTo(
-                        typeof(MediaDetailsPage),
-                        new MediaDetailsNavigationRequest(
-                            "fixture-detail-primary-only",
-                            "Poster Only Signal",
-                            useDevelopmentFixture: true,
-                            developmentFixtureKind: MediaDetailsDevelopmentFixtureKind.PrimaryOnlyArtwork));
-                    return;
-
-                case "details-long-source-fixture":
-                    NavigateTo(
-                        typeof(MediaDetailsPage),
-                        new MediaDetailsNavigationRequest(
-                            "fixture-detail-long-source",
-                            "Long Source Signal",
-                            useDevelopmentFixture: true,
-                            developmentFixtureKind: MediaDetailsDevelopmentFixtureKind.LongSourceLabels));
-                    return;
-
                 case "photo":
                     NavigateTo(typeof(PhotoViewerPage), new PhotoViewerNavigationRequest(command.ItemId, command.ItemName));
                     return;
@@ -1018,10 +901,6 @@ namespace NoiraPlayer.App
                     NavigateTo(
                         typeof(PlaybackPage),
                         new ManualDirectStreamLaunchOptions(command.StreamUrl, command.AutoStart));
-                    return;
-
-                case "playback-options-fixture":
-                    NavigateTo(typeof(PlaybackPage), new PlaybackOptionsFixtureNavigationRequest());
                     return;
 
                 case "playback":
@@ -1051,158 +930,6 @@ namespace NoiraPlayer.App
                             streamUrl: command.StreamUrl));
                     return;
             }
-        }
-
-        private async Task NavigateToRealDetailsSampleAsync(DevelopmentRealDetailsSampleMode sampleMode)
-        {
-            var session = await _sessionStore.LoadAsync();
-            if (session == null)
-            {
-                throw new InvalidOperationException("No saved session is available for details-real-sample.");
-            }
-
-            using (var http = new HttpClient())
-            {
-                var client = EmbyClientFactory.Create(http, session);
-                var items = await client.GetItemsAsync(session, new EmbyItemsQuery
-                {
-                    IncludeItemTypes = "Movie",
-                    Limit = sampleMode == DevelopmentRealDetailsSampleMode.BrightestArtwork ? 60 : 24,
-                    Recursive = true,
-                    SortBy = "DateCreated",
-                    SortOrder = "Descending"
-                }) ?? Array.Empty<EmbyMediaItem>();
-                var sample = await SelectRealArtworkDetailsSampleAsync(http, client, session, items, sampleMode);
-                if (sample == null)
-                {
-                    throw new InvalidOperationException("No real movie item with supported artwork is available for details-real-sample.");
-                }
-
-                NavigateTo(typeof(MediaDetailsPage), new MediaDetailsNavigationRequest(sample.Id, sample.Name));
-            }
-        }
-
-        private static async Task<EmbyMediaItem?> SelectRealArtworkDetailsSampleAsync(
-            HttpClient http,
-            EmbyApiClient client,
-            EmbySession session,
-            IReadOnlyList<EmbyMediaItem> items,
-            DevelopmentRealDetailsSampleMode sampleMode)
-        {
-            if (sampleMode != DevelopmentRealDetailsSampleMode.BrightestArtwork)
-            {
-                return DevelopmentRealDetailsSampleSelector.SelectFirstSupported(items);
-            }
-
-            var brightnessScores = new Dictionary<string, double>(StringComparer.Ordinal);
-            foreach (var item in items ?? Array.Empty<EmbyMediaItem>())
-            {
-                var score = await TryMeasureRealArtworkBrightnessAsync(http, client, session, item);
-                if (score.HasValue && !string.IsNullOrWhiteSpace(item.Id))
-                {
-                    brightnessScores[item.Id] = score.Value;
-                }
-            }
-
-            return DevelopmentRealDetailsSampleSelector.SelectBrightestSupported(items, brightnessScores);
-        }
-
-        private static async Task<double?> TryMeasureRealArtworkBrightnessAsync(
-            HttpClient http,
-            EmbyApiClient client,
-            EmbySession session,
-            EmbyMediaItem item)
-        {
-            var artwork = EmbyArtworkPolicy.SelectHeroArtwork(item, 320);
-            if (artwork == null)
-            {
-                return null;
-            }
-
-            try
-            {
-                var imageUrl = client.GetImageUrl(session, artwork.ItemId, artwork.ImageType, 320);
-                var bytes = await http.GetByteArrayAsync(imageUrl);
-                if (bytes == null || bytes.Length == 0)
-                {
-                    return null;
-                }
-
-                using (var stream = new InMemoryRandomAccessStream())
-                {
-                    using (var writer = new DataWriter(stream))
-                    {
-                        writer.WriteBytes(bytes);
-                        await writer.StoreAsync();
-                        await writer.FlushAsync();
-                        writer.DetachStream();
-                    }
-
-                    stream.Seek(0);
-                    var decoder = await BitmapDecoder.CreateAsync(stream);
-                    var scale = Math.Min(
-                        1d,
-                        96d / Math.Max(1d, Math.Max(decoder.PixelWidth, decoder.PixelHeight)));
-                    var transform = new BitmapTransform
-                    {
-                        ScaledWidth = (uint)Math.Max(1, (int)Math.Round(decoder.PixelWidth * scale)),
-                        ScaledHeight = (uint)Math.Max(1, (int)Math.Round(decoder.PixelHeight * scale))
-                    };
-                    var pixels = await decoder.GetPixelDataAsync(
-                        BitmapPixelFormat.Bgra8,
-                        BitmapAlphaMode.Premultiplied,
-                        transform,
-                        ExifOrientationMode.IgnoreExifOrientation,
-                        ColorManagementMode.DoNotColorManage);
-
-                    return CalculateAverageLuma(pixels.DetachPixelData());
-                }
-            }
-            catch
-            {
-                return null;
-            }
-        }
-
-        private static double CalculateAverageLuma(byte[] bgraPixels)
-        {
-            if (bgraPixels == null || bgraPixels.Length < 4)
-            {
-                return 0d;
-            }
-
-            var total = 0d;
-            var count = 0;
-            for (var index = 0; index + 3 < bgraPixels.Length; index += 4)
-            {
-                var blue = bgraPixels[index];
-                var green = bgraPixels[index + 1];
-                var red = bgraPixels[index + 2];
-                total += (red * 0.2126d) + (green * 0.7152d) + (blue * 0.0722d);
-                count++;
-            }
-
-            return count == 0 ? 0d : total / count / 255d;
-        }
-
-        private static LibraryNavigationRequest CreateMoviesFixtureNavigationRequest()
-        {
-            var fixture = DevelopmentHomeFixture.Create();
-            IReadOnlyList<EmbyMediaItem> items;
-            if (!fixture.LibraryPreviews.TryGetValue("qa-library-movies", out items))
-            {
-                items = fixture.LatestItems;
-            }
-
-            return new LibraryNavigationRequest(
-                "Movies",
-                "movies",
-                "Movie",
-                "",
-                "",
-                new LibraryNavigationQuery(requireItemTypeMatch: true),
-                items,
-                fixture.ArtworkUris);
         }
 #endif
 

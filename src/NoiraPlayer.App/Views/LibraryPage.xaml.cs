@@ -380,21 +380,6 @@ namespace NoiraPlayer.App.Views
 
             try
             {
-#if DEBUG
-                if (request.DevelopmentItems.Count > 0)
-                {
-                    focusFirstItem = RenderItems(
-                        CreateDevelopmentGridItems(
-                            ApplyItemTypeGuard(
-                                request,
-                                SelectDevelopmentItemsForRequest(request)),
-                            request.DevelopmentArtworkUris,
-                            IsPhotoSurfaceRequest(_request)),
-                        loadGeneration);
-                    focusFallback = !focusFirstItem;
-                    return;
-                }
-#endif
                 var session = await _sessionStore.LoadAsync();
                 if (!CanApplyLoad(loadGeneration))
                 {
@@ -583,134 +568,6 @@ namespace NoiraPlayer.App.Views
             return gridItems;
         }
 
-#if DEBUG
-        private static IReadOnlyList<EmbyMediaItem> SelectDevelopmentItemsForRequest(LibraryNavigationRequest request)
-        {
-            if (request.DevelopmentItems.Count == 0)
-            {
-                return request.DevelopmentItems;
-            }
-
-            if (HasMetadataFacetQuery(request.Query))
-            {
-                return request.DevelopmentItems
-                    .Where(item => MatchesMetadataFacetQuery(item, request.Query))
-                    .ToList();
-            }
-
-            var parentId = request.ParentId ?? "";
-            var hasParentMetadata = false;
-            foreach (var item in request.DevelopmentItems)
-            {
-                if (!string.IsNullOrWhiteSpace(item.ParentId))
-                {
-                    hasParentMetadata = true;
-                    break;
-                }
-            }
-
-            if (!hasParentMetadata && string.IsNullOrWhiteSpace(parentId))
-            {
-                return request.DevelopmentItems;
-            }
-
-            var filteredItems = new List<EmbyMediaItem>();
-            foreach (var item in request.DevelopmentItems)
-            {
-                if (string.Equals(item.ParentId ?? "", parentId, StringComparison.Ordinal))
-                {
-                    filteredItems.Add(item);
-                }
-            }
-
-            return filteredItems;
-        }
-
-        private static bool HasMetadataFacetQuery(LibraryNavigationQuery query)
-        {
-            return query != null &&
-                (!string.IsNullOrWhiteSpace(query.GenreIds) ||
-                    !string.IsNullOrWhiteSpace(query.Genres) ||
-                    !string.IsNullOrWhiteSpace(query.StudioIds) ||
-                    !string.IsNullOrWhiteSpace(query.Studios) ||
-                    !string.IsNullOrWhiteSpace(query.Tags));
-        }
-
-        private static bool MatchesMetadataFacetQuery(EmbyMediaItem item, LibraryNavigationQuery query)
-        {
-            return MatchesReferenceIds(item.GenreItems, query.GenreIds) &&
-                MatchesReferenceNames(item.GenreItems, query.Genres) &&
-                MatchesReferenceIds(item.StudioItems, query.StudioIds) &&
-                MatchesReferenceNames(item.StudioItems, query.Studios) &&
-                MatchesReferenceNames(item.TagItems, query.Tags);
-        }
-
-        private static bool MatchesReferenceIds(IReadOnlyList<EmbyItemReference> references, string query)
-        {
-            if (string.IsNullOrWhiteSpace(query))
-            {
-                return true;
-            }
-
-            var queryIds = SplitFacetQuery(query);
-            return references != null &&
-                references.Any(reference => queryIds.Contains(reference.Id ?? ""));
-        }
-
-        private static bool MatchesReferenceNames(IReadOnlyList<EmbyItemReference> references, string query)
-        {
-            if (string.IsNullOrWhiteSpace(query))
-            {
-                return true;
-            }
-
-            var queryNames = SplitFacetQuery(query);
-            return references != null &&
-                references.Any(reference => queryNames.Contains(reference.Name ?? ""));
-        }
-
-        private static HashSet<string> SplitFacetQuery(string query)
-        {
-            return new HashSet<string>(
-                (query ?? "")
-                    .Split(new[] { ',', '|' }, StringSplitOptions.RemoveEmptyEntries)
-                    .Select(value => value.Trim())
-                    .Where(value => !string.IsNullOrWhiteSpace(value)),
-                StringComparer.OrdinalIgnoreCase);
-        }
-
-        private static IReadOnlyList<LibraryGridItem> CreateDevelopmentGridItems(
-            IReadOnlyList<EmbyMediaItem> items,
-            IReadOnlyDictionary<string, string> artworkUris,
-            bool usePhotoRecipe)
-        {
-            var gridItems = new List<LibraryGridItem>();
-            if (items == null)
-            {
-                return gridItems;
-            }
-
-            foreach (var item in items)
-            {
-                BitmapImage? imageSource = null;
-                var candidate = EmbyArtworkPolicy.SelectPosterArtwork(item, 420);
-                if (candidate != null &&
-                    artworkUris != null &&
-                    artworkUris.TryGetValue(
-                        DevelopmentHomeFixture.ArtworkKey(candidate.ItemId, candidate.ImageType),
-                        out var uri) &&
-                    !string.IsNullOrWhiteSpace(uri))
-                {
-                    imageSource = new BitmapImage(new Uri(uri));
-                }
-
-                gridItems.Add(new LibraryGridItem(item, imageSource, usePhotoRecipe));
-            }
-
-            return gridItems;
-        }
-#endif
-
         private void ItemsGrid_OnItemClick(object sender, ItemClickEventArgs e)
         {
             var gridItem = e.ClickedItem as LibraryGridItem;
@@ -745,8 +602,7 @@ namespace NoiraPlayer.App.Views
             var route = LibraryItemActivationPolicy.ChooseRoute(item.Type);
             if (route == LibraryItemActivationRoute.PhotoViewer)
             {
-                var developmentImageUri = ResolveDevelopmentPhotoUri(item);
-                Frame.Navigate(typeof(PhotoViewerPage), new PhotoViewerNavigationRequest(item.Id, itemName, developmentImageUri));
+                Frame.Navigate(typeof(PhotoViewerPage), new PhotoViewerNavigationRequest(item.Id, itemName));
                 return;
             }
 
@@ -771,8 +627,6 @@ namespace NoiraPlayer.App.Views
                     item.Id,
                     "",
                     LibraryNavigationQuery.Empty,
-                    null,
-                    null,
                     item.Type);
             }
 
@@ -783,8 +637,6 @@ namespace NoiraPlayer.App.Views
                 item.Id,
                 "",
                 IsOrganizationContainer(item.Type) ? LibraryNavigationQuery.Empty : request.Query,
-                request.DevelopmentItems,
-                request.DevelopmentArtworkUris,
                 item.Type);
         }
 
@@ -792,27 +644,6 @@ namespace NoiraPlayer.App.Views
         {
             return string.Equals(itemType, "BoxSet", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(itemType, "Playlist", StringComparison.OrdinalIgnoreCase);
-        }
-
-        private string ResolveDevelopmentPhotoUri(EmbyMediaItem item)
-        {
-            var request = _request;
-            if (request == null || request.DevelopmentArtworkUris.Count == 0)
-            {
-                return "";
-            }
-
-            var candidate = EmbyArtworkPolicy.SelectPosterArtwork(item, 1920);
-            if (candidate == null)
-            {
-                return "";
-            }
-
-            return request.DevelopmentArtworkUris.TryGetValue(
-                DevelopmentHomeFixture.ArtworkKey(candidate.ItemId, candidate.ImageType),
-                out var uri)
-                ? uri
-                : "";
         }
 
         private async Task FocusPreferredItemAsync(int loadGeneration, string preferredFocusItemId)

@@ -2,16 +2,12 @@
 {
     internal sealed class LiveTvNavigationRequest
     {
-        public LiveTvNavigationRequest(
-            string unsupportedChannelName = "",
-            bool useDevelopmentFixture = false)
+        public LiveTvNavigationRequest(string unsupportedChannelName = "")
         {
             UnsupportedChannelName = unsupportedChannelName ?? "";
-            UseDevelopmentFixture = useDevelopmentFixture;
         }
 
         public string UnsupportedChannelName { get; }
 
-        public bool UseDevelopmentFixture { get; }
     }
 }

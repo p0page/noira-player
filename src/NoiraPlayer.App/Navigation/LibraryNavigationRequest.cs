@@ -28,8 +28,6 @@ namespace NoiraPlayer.App.Navigation
             string parentId,
             string sectionId,
             LibraryNavigationQuery query,
-            IReadOnlyList<EmbyMediaItem>? developmentItems = null,
-            IReadOnlyDictionary<string, string>? developmentArtworkUris = null,
             string containerItemType = "")
         {
             Title = title ?? "";
@@ -39,8 +37,6 @@ namespace NoiraPlayer.App.Navigation
             SectionId = sectionId ?? "";
             ContainerItemType = containerItemType ?? "";
             Query = query ?? LibraryNavigationQuery.Empty;
-            DevelopmentItems = developmentItems ?? Array.Empty<EmbyMediaItem>();
-            DevelopmentArtworkUris = developmentArtworkUris ?? new Dictionary<string, string>();
         }
 
         public string Title { get; }
@@ -57,31 +53,12 @@ namespace NoiraPlayer.App.Navigation
 
         public LibraryNavigationQuery Query { get; }
 
-        public IReadOnlyList<EmbyMediaItem> DevelopmentItems { get; }
-
-        public IReadOnlyDictionary<string, string> DevelopmentArtworkUris { get; }
-
         public string RestoreFocusItemId { get; set; } = "";
 
         public bool IsMovies => CollectionType == "movies";
 
         public bool IsTv => CollectionType == "tvshows";
 
-        public LibraryNavigationRequest WithDevelopmentFixture(
-            IReadOnlyList<EmbyMediaItem> items,
-            IReadOnlyDictionary<string, string> artworkUris)
-        {
-            return new LibraryNavigationRequest(
-                Title,
-                CollectionType,
-                IncludeItemTypes,
-                ParentId,
-                SectionId,
-                Query,
-                items,
-                artworkUris,
-                ContainerItemType);
-        }
     }
 
     public sealed class LibraryNavigationQuery

@@ -4,6 +4,8 @@ Date: 2026-07-07
 
 This checklist turns `docs/DESIGN.md` and the A3 render targets into an executable review path. The operation matrix proves the client can perform Emby tasks; this file proves those tasks still look and feel like the agreed Xbox/TV design system while they are performed with keyboard/controller input.
 
+Current data-source rule as of 2026-07-09: new UI validation should use private real samples from `docs/qa/private/ui-real-samples.local.json` via `tools/Write-AppUiSampleCommand.ps1`. Historical fixture-route notes and screenshots in this file remain trace evidence only; do not treat `*-fixture` or `details-real-*` as current development routes.
+
 ## Source Of Truth
 
 - `docs/DESIGN.md`: authoritative visual rules, token rules, artwork feasibility, and QA gates.

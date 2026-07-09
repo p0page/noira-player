@@ -112,32 +112,17 @@ namespace NoiraPlayer.Core.Diagnostics
             switch (route)
             {
                 case "home":
-                case "home-fixture":
                 case "login":
                 case "movies":
-                case "movies-fixture":
                 case "tv":
                 case "search":
-                case "search-fixture":
                 case "search-error":
-                case "details-fixture":
-                case "details-real-sample":
-                case "details-real-bright-sample":
-                case "details-no-art-fixture":
-                case "details-primary-only-fixture":
-                case "details-long-source-fixture":
-                case "playback-options-fixture":
                 case "settings":
                 case "livetv":
-                case "livetv-fixture":
                 case "livetv-unsupported":
                 case "music":
                 case "music-unsupported":
-                case "music-fixture":
                 case "photos":
-                case "photos-fixture":
-                case "collections-fixture":
-                case "playlists-fixture":
                 case "playlists":
                 case "favorites":
                 case "unwatched":

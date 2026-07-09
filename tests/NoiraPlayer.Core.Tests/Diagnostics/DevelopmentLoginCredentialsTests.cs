@@ -11,7 +11,7 @@ public sealed class DevelopmentLoginCredentialsTests
         var json = """
         {
           "serverUrl": "https://emby.example:443/",
-          "username": "fixture-user",
+          "username": "sample-user",
           "password": "secret"
         }
         """;
@@ -25,7 +25,7 @@ public sealed class DevelopmentLoginCredentialsTests
         Assert.Equal("", error);
         Assert.NotNull(credentials);
         Assert.Equal("https://emby.example:443", credentials!.ServerUrl);
-        Assert.Equal("fixture-user", credentials.UserName);
+        Assert.Equal("sample-user", credentials.UserName);
         Assert.Equal("secret", credentials.Password);
     }
 
@@ -38,7 +38,7 @@ public sealed class DevelopmentLoginCredentialsTests
         var json = $$"""
         {
           "serverUrl": "https://emby.example:443",
-          "username": "fixture-user",
+          "username": "sample-user",
           "password": "secret",
           "{{propertyName}}": "{{value}}"
         }

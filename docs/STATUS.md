@@ -2,6 +2,14 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-09 更新：App UI 开发入口从 fixture route 切到私有真实样本 manifest
+
+当前 `*-fixture`、`details-real-sample` 和 `details-real-bright-sample` 开发 route 已退役。App active code 不再携带 mock fixture 数据链路；Home、Library、Details、Search、Live TV、Music、PhotoViewer 和 Playback 的开发入口均回到真实会话、真实 `itemId` 或真实 direct stream。
+
+新增 `tools/Write-AppUiSampleCommand.ps1`，用于从 ignored 的 `docs/qa/private/ui-real-samples.local.json` 选择一个真实 UI 样本，并写入当前 Noira UWP 包的 `LocalState\dev-command.json`。仓库只提交 `docs/qa/private/ui-real-samples.template.json` 和规范；真实 Emby `itemId`、`mediaSourceId`、标题、私有 URL 和账号信息不得提交。
+
+边界：这是 UI 开发数据源治理，不是播放 core 优化，也不改变 playback-quality manifest/report-set 规则。需要可复现 UI 样本时，应维护本地私有 manifest，而不是恢复 mock fixture route。
+
 ## 2026-07-08 更新：项目已改名为 Noira / NoiraPlayer
 
 当前普通开发分支已从 worktree 模式迁回 `codex/playback-core-quality-isolated`，并合并 `origin/main`。项目代码、solution、App/Core/Native/test/tool 项目已改名为 `NoiraPlayer.*`，用户可见品牌为 `Noira`。环境变量前缀也已改为 `NOIRAPLAYER_*`。

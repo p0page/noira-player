@@ -7,200 +7,6 @@ namespace NoiraPlayer.Core.Tests.Design;
 public sealed class MediaDetailsAccessibilitySourceTests
 {
     [Fact]
-    public void Details_Fixture_Development_Route_Renders_Below_Fold_Content_And_Add_To_Sheets()
-    {
-        var root = FindRepositoryRoot();
-        var mainPageSource = File.ReadAllText(Path.Combine(
-            root,
-            "src",
-            "NoiraPlayer.App",
-            "MainPage.xaml.cs"));
-        var requestSource = File.ReadAllText(Path.Combine(
-            root,
-            "src",
-            "NoiraPlayer.App",
-            "Navigation",
-            "MediaDetailsNavigationRequest.cs"));
-        var detailsPageSource = File.ReadAllText(Path.Combine(
-            root,
-            "src",
-            "NoiraPlayer.App",
-            "Views",
-            "MediaDetailsPage.xaml.cs"));
-
-        Assert.Contains("case \"details-fixture\"", mainPageSource);
-        Assert.Contains("UseDevelopmentFixture", requestSource);
-        Assert.Contains("RenderDevelopmentDetailsFixture(", detailsPageSource);
-        Assert.Contains("DevelopmentDetailsFixture.Create()", detailsPageSource);
-        Assert.Contains("CreateDevelopmentArtworkBrush", detailsPageSource);
-        Assert.Contains("OpenDevelopmentAddToSheet(", detailsPageSource);
-        Assert.Contains("ConfirmDevelopmentAddToSheet()", detailsPageSource);
-        Assert.Contains("FocusDevelopmentDefaultContentAsync()", detailsPageSource);
-        Assert.Contains("pageType == typeof(MediaDetailsPage)", mainPageSource);
-        Assert.Contains("ShellContentMode.MediaDetails", mainPageSource);
-    }
-
-    [Fact]
-    public void Details_Real_Sample_Development_Route_Uses_Saved_Session_And_Real_Artwork()
-    {
-        var root = FindRepositoryRoot();
-        var mainPageSource = File.ReadAllText(Path.Combine(
-            root,
-            "src",
-            "NoiraPlayer.App",
-            "MainPage.xaml.cs"));
-
-        Assert.Contains("await RunDevelopmentCommandAsync(command);", mainPageSource);
-        Assert.Contains("private async Task RunDevelopmentCommandAsync(DevelopmentNavigationCommand command)", mainPageSource);
-        Assert.Contains("case \"details-real-sample\":", mainPageSource);
-        Assert.Contains("case \"details-real-bright-sample\":", mainPageSource);
-        Assert.Contains("await NavigateToRealDetailsSampleAsync(DevelopmentRealDetailsSampleMode.FirstSupported);", mainPageSource);
-        Assert.Contains("await NavigateToRealDetailsSampleAsync(DevelopmentRealDetailsSampleMode.BrightestArtwork);", mainPageSource);
-        Assert.Contains("private async Task NavigateToRealDetailsSampleAsync(DevelopmentRealDetailsSampleMode sampleMode)", mainPageSource);
-        Assert.Contains("await _sessionStore.LoadAsync()", mainPageSource);
-        Assert.Contains("IncludeItemTypes = \"Movie\"", mainPageSource);
-        Assert.Contains("Limit = sampleMode == DevelopmentRealDetailsSampleMode.BrightestArtwork ? 60 : 24", mainPageSource);
-        Assert.Contains("DevelopmentRealDetailsSampleSelector.SelectFirstSupported(items)", mainPageSource);
-        Assert.Contains("DevelopmentRealDetailsSampleSelector.SelectBrightestSupported(items, brightnessScores)", mainPageSource);
-        Assert.Contains("TryMeasureRealArtworkBrightnessAsync(", mainPageSource);
-        var realSampleBlock = SliceFrom(
-            mainPageSource,
-            "private async Task NavigateToRealDetailsSampleAsync(DevelopmentRealDetailsSampleMode sampleMode)",
-            "private static LibraryNavigationRequest CreateMoviesFixtureNavigationRequest()");
-        Assert.Contains("BitmapDecoder.CreateAsync", realSampleBlock);
-        Assert.Contains("new InMemoryRandomAccessStream()", realSampleBlock);
-        Assert.DoesNotContain("CreateFileAsync", realSampleBlock);
-        Assert.DoesNotContain("FileIO.WriteBytesAsync", realSampleBlock);
-    }
-
-    [Fact]
-    public void Details_Fixture_Development_Route_Covers_No_Artwork_Atmosphere_Fallback()
-    {
-        var root = FindRepositoryRoot();
-        var mainPageSource = File.ReadAllText(Path.Combine(
-            root,
-            "src",
-            "NoiraPlayer.App",
-            "MainPage.xaml.cs"));
-        var requestSource = File.ReadAllText(Path.Combine(
-            root,
-            "src",
-            "NoiraPlayer.App",
-            "Navigation",
-            "MediaDetailsNavigationRequest.cs"));
-        var commandSource = File.ReadAllText(Path.Combine(
-            root,
-            "src",
-            "NoiraPlayer.Core",
-            "Diagnostics",
-            "DevelopmentNavigationCommand.cs"));
-        var detailsXaml = File.ReadAllText(Path.Combine(
-            root,
-            "src",
-            "NoiraPlayer.App",
-            "Views",
-            "MediaDetailsPage.xaml"));
-        var detailsPageSource = File.ReadAllText(Path.Combine(
-            root,
-            "src",
-            "NoiraPlayer.App",
-            "Views",
-            "MediaDetailsPage.xaml.cs"));
-
-        Assert.Contains("case \"details-no-art-fixture\"", mainPageSource);
-        Assert.Contains("details-no-art-fixture", commandSource);
-        Assert.Contains("MediaDetailsDevelopmentFixtureKind", requestSource);
-        Assert.Contains("MediaDetailsDevelopmentFixtureKind.NoArtwork", mainPageSource);
-        Assert.Contains("DevelopmentDetailsFixture.CreateWithoutArtwork()", detailsPageSource);
-        Assert.Contains("DetailsAtmosphereFallback", detailsXaml);
-        Assert.Contains("AtmosphereImage.Source = null", detailsPageSource);
-    }
-
-    [Fact]
-    public void Details_Fixture_Development_Route_Covers_Primary_Only_Atmosphere_Treatment()
-    {
-        var root = FindRepositoryRoot();
-        var mainPageSource = File.ReadAllText(Path.Combine(
-            root,
-            "src",
-            "NoiraPlayer.App",
-            "MainPage.xaml.cs"));
-        var requestSource = File.ReadAllText(Path.Combine(
-            root,
-            "src",
-            "NoiraPlayer.App",
-            "Navigation",
-            "MediaDetailsNavigationRequest.cs"));
-        var commandSource = File.ReadAllText(Path.Combine(
-            root,
-            "src",
-            "NoiraPlayer.Core",
-            "Diagnostics",
-            "DevelopmentNavigationCommand.cs"));
-        var detailsXaml = File.ReadAllText(Path.Combine(
-            root,
-            "src",
-            "NoiraPlayer.App",
-            "Views",
-            "MediaDetailsPage.xaml"));
-        var detailsPageSource = File.ReadAllText(Path.Combine(
-            root,
-            "src",
-            "NoiraPlayer.App",
-            "Views",
-            "MediaDetailsPage.xaml.cs"));
-
-        Assert.Contains("case \"details-primary-only-fixture\"", mainPageSource);
-        Assert.Contains("details-primary-only-fixture", commandSource);
-        Assert.Contains("PrimaryOnlyArtwork", requestSource);
-        Assert.Contains("DevelopmentDetailsFixture.CreateWithPrimaryOnlyArtwork()", detailsPageSource);
-        Assert.Contains("x:Name=\"PrimaryAtmosphereWash\"", detailsXaml);
-        Assert.Contains("ApplyDetailsAtmosphereTreatment(", detailsPageSource);
-        Assert.Contains("DetailsPrimaryOnlyAtmosphereOpacity", detailsPageSource);
-        Assert.Contains("private const double DetailsPrimaryOnlyAtmosphereOpacity = 0.58;", detailsPageSource);
-        Assert.Contains("PrimaryAtmosphereWash.Visibility = Visibility.Visible", detailsPageSource);
-        Assert.Contains("PrimaryAtmosphereWash.Visibility = Visibility.Collapsed", detailsPageSource);
-        var primaryWash = SliceFrom(detailsXaml, "x:Name=\"PrimaryAtmosphereWash\"", "</Border>");
-        Assert.Contains("#2405070A", primaryWash);
-        Assert.DoesNotContain("#8C05070A", primaryWash);
-    }
-
-    [Fact]
-    public void Details_Fixture_Development_Route_Covers_Long_Source_Label_Stress()
-    {
-        var root = FindRepositoryRoot();
-        var mainPageSource = File.ReadAllText(Path.Combine(
-            root,
-            "src",
-            "NoiraPlayer.App",
-            "MainPage.xaml.cs"));
-        var requestSource = File.ReadAllText(Path.Combine(
-            root,
-            "src",
-            "NoiraPlayer.App",
-            "Navigation",
-            "MediaDetailsNavigationRequest.cs"));
-        var commandSource = File.ReadAllText(Path.Combine(
-            root,
-            "src",
-            "NoiraPlayer.Core",
-            "Diagnostics",
-            "DevelopmentNavigationCommand.cs"));
-        var detailsPageSource = File.ReadAllText(Path.Combine(
-            root,
-            "src",
-            "NoiraPlayer.App",
-            "Views",
-            "MediaDetailsPage.xaml.cs"));
-
-        Assert.Contains("case \"details-long-source-fixture\"", mainPageSource);
-        Assert.Contains("details-long-source-fixture", commandSource);
-        Assert.Contains("LongSourceLabels", requestSource);
-        Assert.Contains("MediaDetailsDevelopmentFixtureKind.LongSourceLabels", mainPageSource);
-        Assert.Contains("DevelopmentDetailsFixture.CreateWithLongSourceLabels()", detailsPageSource);
-    }
-
-    [Fact]
     public void Details_Selected_Version_State_Does_Not_ReUse_Focus_Border_Color()
     {
         var root = FindRepositoryRoot();
@@ -214,25 +20,6 @@ public sealed class MediaDetailsAccessibilitySourceTests
         Assert.DoesNotContain("SourceSelectionMarker", detailsPageSource);
         Assert.DoesNotContain("isSelected ? \"AppAccentBrush\" : \"AppHairlineBrush\"", detailsPageSource);
         Assert.Contains("button.BorderBrush = (Brush)Application.Current.Resources[\"AppTransparentBrush\"];", detailsPageSource);
-    }
-
-    [Fact]
-    public void Details_Fixture_User_Data_Toggles_Use_Local_State_Instead_Of_Live_Api()
-    {
-        var root = FindRepositoryRoot();
-        var detailsPageSource = File.ReadAllText(Path.Combine(
-            root,
-            "src",
-            "NoiraPlayer.App",
-            "Views",
-            "MediaDetailsPage.xaml.cs"));
-
-        Assert.Contains("ApplyDevelopmentFixtureUserDataToggle(", detailsPageSource);
-        Assert.Contains("MediaDetailsUserDataTogglePolicy.ToggleFavorite", detailsPageSource);
-        Assert.Contains("MediaDetailsUserDataTogglePolicy.TogglePlayed", detailsPageSource);
-        Assert.Contains("if (_usesDevelopmentDetailsFixture)", detailsPageSource);
-        Assert.Contains("Fixture favorite added.", detailsPageSource);
-        Assert.Contains("Fixture marked watched.", detailsPageSource);
     }
 
     [Fact]
@@ -274,39 +61,6 @@ public sealed class MediaDetailsAccessibilitySourceTests
         Assert.Contains("Genres", requestSource);
         Assert.Contains("StudioIds", requestSource);
         Assert.Contains("Tags", requestSource);
-    }
-
-    [Fact]
-    public void Details_Fixture_Default_Focus_Uses_Low_Priority_Retry()
-    {
-        var root = FindRepositoryRoot();
-        var detailsPageSource = File.ReadAllText(Path.Combine(
-            root,
-            "src",
-            "NoiraPlayer.App",
-            "Views",
-            "MediaDetailsPage.xaml.cs"));
-
-        Assert.Contains("DevelopmentDetailsFocusRetryCount", detailsPageSource);
-        Assert.Contains("CoreDispatcherPriority.Low", detailsPageSource);
-        Assert.Contains("Task.Delay(120)", detailsPageSource);
-        Assert.Contains("FocusDefaultContent();", detailsPageSource);
-        Assert.DoesNotContain("CoreDispatcherPriority.Normal", detailsPageSource);
-    }
-
-    [Fact]
-    public void Details_Fixture_Default_Focus_Does_Not_Override_Metadata_Restore()
-    {
-        var root = FindRepositoryRoot();
-        var detailsPageSource = File.ReadAllText(Path.Combine(
-            root,
-            "src",
-            "NoiraPlayer.App",
-            "Views",
-            "MediaDetailsPage.xaml.cs"));
-
-        Assert.Contains("ShouldApplyDevelopmentDefaultFocus(focusGeneration)", detailsPageSource);
-        Assert.Contains("string.IsNullOrWhiteSpace(_restoreMetadataFacetKey)", detailsPageSource);
     }
 
     [Fact]
@@ -353,7 +107,9 @@ public sealed class MediaDetailsAccessibilitySourceTests
         Assert.Contains("DetailsAtmosphereZone", detailsXaml);
         Assert.Contains("AtmosphereImage", detailsXaml);
         Assert.Contains("DetailsAtmosphereFallback", detailsXaml);
-        Assert.Contains("ApplyDetailsAtmosphereArtwork", detailsSource);
+        Assert.Contains("EmbyArtworkPolicy.SelectHeroArtwork(item, 1920)", detailsSource);
+        Assert.Contains("AtmosphereImage.Source = new BitmapImage", detailsSource);
+        Assert.Contains("ApplyDetailsAtmosphereTreatment(atmosphereArtwork.ImageType)", detailsSource);
         Assert.DoesNotContain("x:Name=\"PosterImage\"", detailsXaml);
         Assert.DoesNotContain("x:Name=\"PosterFallbackBlock\"", detailsXaml);
         Assert.DoesNotContain("PosterImage.Source", detailsSource);

@@ -4,6 +4,8 @@ Date: 2026-07-07
 
 This matrix tracks the user operations that a complete couch-first Emby client must support. It complements `emby-tv-client-keyboard-checklist.md`: the checklist is the executable route script, while this matrix records product coverage, verification evidence, and the next missing work.
 
+Current data-source rule as of 2026-07-09: use private real UI samples via `docs/qa/private/ui-real-samples.local.json` and `tools/Write-AppUiSampleCommand.ps1` for new App validation. Historical fixture-route evidence remains for traceability only.
+
 Status values:
 
 - `Verified`: keyboard-only local validation exists in the checklist run log.

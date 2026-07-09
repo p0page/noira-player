@@ -20,7 +20,9 @@
 ```text
 docs/qa/private/
   reference-manifest.template.json
+  ui-real-samples.template.json
   emby-reference-manifest.local.json
+  ui-real-samples.local.json
   title-reference-manifest.local.json
   combined-reference-manifest.local.json
   combined-run-plan.local.json
@@ -28,6 +30,26 @@ docs/qa/private/
 ```
 
 仓库只保存模板和规范。真实本地 manifest 与报告保持 ignored。
+
+## UI 真实样本 Manifest
+
+UI 开发不再使用 `*-fixture` 或 `details-real-*` route。需要打开真实 Emby 条目时，在 ignored 的 `ui-real-samples.local.json` 中维护样本列表，然后写入 app 的 `dev-command.json`。
+
+从模板复制：
+
+```powershell
+Copy-Item docs\qa\private\ui-real-samples.template.json docs\qa\private\ui-real-samples.local.json
+```
+
+写入当前安装包的 LocalState：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\Write-AppUiSampleCommand.ps1 -ManifestPath docs\qa\private\ui-real-samples.local.json -SampleId 'movies/example-details'
+```
+
+支持的 UI route 只包括真实页面入口，例如 `home`、`movies`、`tv`、`search`、`details`、`photo`、`playback`、`quality-run`。`details`、`photo`、`playback` 必须提供真实 `itemId`；`quality-run` 必须提供 `itemId` 或 `streamUrl`。
+
+`itemId`、`mediaSourceId`、私有标题、私有 stream URL 和任何服务器信息只能出现在 ignored 的 `ui-real-samples.local.json` 中，不得写入模板、文档示例或测试。
 
 ## Manifest 格式
 

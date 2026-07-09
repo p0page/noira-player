@@ -42,12 +42,6 @@ namespace NoiraPlayer.App.Views
         private int _loadGeneration;
         private bool _hasRenderedHomeContent;
         private bool _isLoadingHome;
-#if DEBUG
-        private HomeDevelopmentFixtureNavigationRequest? _developmentFixtureRequest;
-        private IReadOnlyDictionary<string, string> _developmentArtworkUris =
-            new Dictionary<string, string>(StringComparer.Ordinal);
-#endif
-
         public HomePage()
         {
             InitializeComponent();
@@ -63,20 +57,6 @@ namespace NoiraPlayer.App.Views
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
             base.OnNavigatedTo(e);
-#if DEBUG
-            var nextFixtureRequest = e.Parameter as HomeDevelopmentFixtureNavigationRequest;
-            if (_developmentFixtureRequest != nextFixtureRequest)
-            {
-                _hasRenderedHomeContent = false;
-                _lastHomeFocusTarget = null;
-            }
-
-            _developmentFixtureRequest = nextFixtureRequest;
-            if (_developmentFixtureRequest == null)
-            {
-                _developmentArtworkUris = new Dictionary<string, string>(StringComparer.Ordinal);
-            }
-#endif
         }
 
         private async void HomePage_OnLoaded(object sender, RoutedEventArgs e)
@@ -686,13 +666,6 @@ namespace NoiraPlayer.App.Views
 
             try
             {
-#if DEBUG
-                if (_developmentFixtureRequest != null)
-                {
-                    RenderDevelopmentFixtureHome();
-                    return;
-                }
-#endif
                 var session = await _sessionStore.LoadAsync();
                 if (!CanApplyLoad(loadGeneration))
                 {
@@ -797,41 +770,6 @@ namespace NoiraPlayer.App.Views
                 }
             }
         }
-
-#if DEBUG
-        private void RenderDevelopmentFixtureHome()
-        {
-            var fixture = DevelopmentHomeFixture.Create();
-            _client = null;
-            _session = null;
-            _developmentArtworkUris = fixture.ArtworkUris;
-
-            var configuredRows = fixture.ConfiguredRows
-                .Select(row => new HomeSectionRow(row.Section, row.Items))
-                .ToList();
-
-            var popularRows = fixture.PopularRows
-                .Select(row => new LibraryContentRow(
-                    row.Title,
-                    row.Items,
-                    CreateLibraryRequest(
-                        row.Title,
-                        row.CollectionType,
-                        row.ParentId,
-                        row.SectionId)))
-                .ToList();
-
-            RenderHome(
-                fixture.ContinueItems,
-                fixture.NextUpItems,
-                fixture.LatestItems,
-                fixture.LibraryViews,
-                fixture.LibraryPreviews,
-                configuredRows,
-                popularRows,
-                isSupplementalRender: false);
-        }
-#endif
 
         private void RenderHome(
             IReadOnlyList<EmbyMediaItem> continueItems,
@@ -1184,12 +1122,6 @@ namespace NoiraPlayer.App.Views
         private Button CreateHomeSectionButton(HomeSectionRow row)
         {
             var request = CreateLibraryRequest(row.Title, row.CollectionType, "", row.SectionId);
-#if DEBUG
-            if (_developmentFixtureRequest != null)
-            {
-                request = request.WithDevelopmentFixture(row.Items, _developmentArtworkUris);
-            }
-#endif
             var cardCornerRadius = GetCornerRadiusResource("TvHomeWideCardCornerRadius", 8);
             var button = new Button
             {
@@ -1931,16 +1863,6 @@ namespace NoiraPlayer.App.Views
             {
                 return null;
             }
-
-#if DEBUG
-            string developmentUri;
-            if (_developmentArtworkUris.TryGetValue(
-                DevelopmentHomeFixture.ArtworkKey(candidate.ItemId, candidate.ImageType),
-                out developmentUri))
-            {
-                return developmentUri;
-            }
-#endif
 
             if (_client == null || _session == null)
             {

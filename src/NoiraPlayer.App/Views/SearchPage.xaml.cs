@@ -37,10 +37,7 @@ namespace NoiraPlayer.App.Views
         private int _searchGeneration;
         private string _selectedScopeKey = "all";
 #if DEBUG
-        private static readonly IReadOnlyDictionary<string, string> DevelopmentSearchArtworkUris =
-            DevelopmentSearchFixture.CreateArtworkUris();
         private SearchDevelopmentNavigationRequest? _developmentRequest;
-        private IReadOnlyList<string>? _developmentRecentTerms;
 #endif
 
         public SearchPage()
@@ -85,13 +82,6 @@ namespace NoiraPlayer.App.Views
             {
                 SearchBox.Text = _developmentRequest.Term;
                 RenderDevelopmentSearchError();
-                return;
-            }
-
-            if (_developmentRequest != null && _developmentRequest.UseFixtureResults)
-            {
-                SearchBox.Text = _developmentRequest.Term;
-                RenderDevelopmentSearchFixtureResults(SearchCompletionFocusTarget.SearchBox);
                 return;
             }
 #endif
@@ -288,12 +278,6 @@ namespace NoiraPlayer.App.Views
                 RenderDevelopmentSearchError();
                 return;
             }
-
-            if (_developmentRequest != null && _developmentRequest.UseFixtureResults)
-            {
-                RenderDevelopmentSearchFixtureResults(completionFocusTarget);
-                return;
-            }
 #endif
 
             StatusBlock.Text = "Searching " + scope.Label + "...";
@@ -391,39 +375,6 @@ namespace NoiraPlayer.App.Views
                 "Check the server connection, then try again.",
                 showRetry: true);
             SearchBox.Focus(FocusState.Programmatic);
-        }
-
-        private void RenderDevelopmentSearchFixtureResults(SearchCompletionFocusTarget completionFocusTarget)
-        {
-            _isNavigatingToDetails = false;
-            var scope = EmbySearchScopePolicy.GetScope(_selectedScopeKey);
-            var items = DevelopmentSearchFixture.CreateItemsForScope(scope.Key);
-            var cards = CreateDevelopmentResultCards(items);
-            RenderResults(scope, cards, completionFocusTarget);
-        }
-
-        private static IReadOnlyList<SearchResultCard> CreateDevelopmentResultCards(
-            IReadOnlyList<EmbyMediaItem> items)
-        {
-            var cards = new List<SearchResultCard>();
-            foreach (var item in items)
-            {
-                cards.Add(new SearchResultCard(item, CreateDevelopmentArtworkImageSource(item)));
-            }
-
-            return cards;
-        }
-
-        private static BitmapImage? CreateDevelopmentArtworkImageSource(EmbyMediaItem item)
-        {
-            var key = DevelopmentSearchFixture.ArtworkKey(item.Id, "Primary");
-            if (!DevelopmentSearchArtworkUris.TryGetValue(key, out var uri) ||
-                string.IsNullOrWhiteSpace(uri))
-            {
-                return null;
-            }
-
-            return new BitmapImage(new Uri(uri));
         }
 #endif
 
@@ -527,28 +478,11 @@ namespace NoiraPlayer.App.Views
 
         private IReadOnlyList<string> LoadRecentTerms()
         {
-#if DEBUG
-            if (_developmentRequest != null)
-            {
-                return _developmentRecentTerms ??
-                    (_developmentRecentTerms = SearchRecentTermsPolicy.Add(
-                        _developmentRequest.RecentTerms,
-                        ""));
-            }
-#endif
             return _recentSearchTermStore.Load();
         }
 
         private void SaveRecentSearchTerm(string term)
         {
-#if DEBUG
-            if (_developmentRequest != null)
-            {
-                _developmentRecentTerms = SearchRecentTermsPolicy.Add(LoadRecentTerms(), term);
-                RenderRecentTerms();
-                return;
-            }
-#endif
             _recentSearchTermStore.Add(term);
             RenderRecentTerms();
         }

@@ -158,9 +158,9 @@ During A3 Visual Convergence:
 - Compare each implementation screenshot directly against the matching A3 target.
 - Judge visual closeness by intent and system coherence, not by pixel-level reproduction of AI-rendered details.
 - Use UIA only to confirm route state, not visual quality.
-- Prefer deterministic fixture routes for repeatable structural work: layout, spacing, focus treatment, text fallback, and regression safety.
-- Do not treat fixture artwork as final visual truth. Mock/QA images are often too abstract, too dark, or too evenly composed to prove cinematic atmosphere.
-- Use real saved-session artwork for local visual stress tests before accepting a primary page. `details-real-sample` is the Details-page local route for this kind of check: it uses the app's saved session, selects a real movie with supported Emby artwork, and must not commit screenshots, downloaded images, tokens, server URLs, or item-specific private data. `details-real-bright-sample` is the matching bright-artwork stress route; it samples small artwork downloads in memory to select a high-luma local item, then navigates to Details without persisting private images or credentials.
+- Use private real UI samples for repeatable structural work: layout, spacing, focus treatment, text fallback, artwork density, source labels, and regression safety.
+- Do not reintroduce `*-fixture`, `details-real-sample`, or `details-real-bright-sample` routes. They were retired because mock data and automatic local picking do not represent real Emby browsing conditions reliably.
+- Maintain local-only samples in `docs/qa/private/ui-real-samples.local.json` and write them to `dev-command.json` with `tools/Write-AppUiSampleCommand.ps1`. Never commit screenshots, downloaded artwork, tokens, server URLs, private item IDs, media source IDs, or credentials.
 - Record all visual findings before fixing within a batch.
 - Do not accept a page because it is functionally navigable if it still reads as desktop UWP.
 

@@ -73,14 +73,6 @@ namespace NoiraPlayer.App.Views
         private ManualDirectStreamInitialFocusTarget? _pendingManualDirectStreamFocusTarget;
         private int _pendingManualDirectStreamFocusAttempts;
         private bool _manualDirectStreamPageLoaded;
-#if DEBUG
-        private bool _usesDevelopmentPlaybackOptionsFixture;
-        private IReadOnlyList<EmbyMediaSource> _developmentPlaybackSources = Array.Empty<EmbyMediaSource>();
-        private string _developmentPlaybackMediaSourceId = "";
-        private int? _developmentPlaybackAudioStreamIndex;
-        private int? _developmentPlaybackSubtitleStreamIndex;
-#endif
-
         public PlaybackPage()
         {
             InitializeComponent();
@@ -138,12 +130,6 @@ namespace NoiraPlayer.App.Views
             TrySignalNativeSurfaceReady();
             AttachNativeSurface();
             ApplyPendingManualDirectStreamInitialFocus();
-#if DEBUG
-            if (_usesDevelopmentPlaybackOptionsFixture)
-            {
-                FocusDevelopmentPlaybackOptionsDefaultAsync();
-            }
-#endif
         }
 
         private void NativeSurface_OnSizeChanged(object sender, SizeChangedEventArgs e)
@@ -224,20 +210,6 @@ namespace NoiraPlayer.App.Views
         {
             base.OnNavigatedTo(e);
             _launchRequest = e.Parameter as PlaybackLaunchRequest;
-#if DEBUG
-            _usesDevelopmentPlaybackOptionsFixture = false;
-            _developmentPlaybackSources = Array.Empty<EmbyMediaSource>();
-            _developmentPlaybackMediaSourceId = "";
-            _developmentPlaybackAudioStreamIndex = null;
-            _developmentPlaybackSubtitleStreamIndex = null;
-            SubtitleSafeSampleBlock.Visibility = Visibility.Collapsed;
-
-            if (e.Parameter is PlaybackOptionsFixtureNavigationRequest)
-            {
-                RenderDevelopmentPlaybackOptionsFixture();
-                return;
-            }
-#endif
             var manualLaunchOptions = e.Parameter as ManualDirectStreamLaunchOptions;
             PlaybackDiagnosticsLog.WriteLine(
                 "Playback navigated launch=" + (_launchRequest != null) +
@@ -1000,14 +972,6 @@ namespace NoiraPlayer.App.Views
                 return;
             }
 
-#if DEBUG
-            if (_usesDevelopmentPlaybackOptionsFixture)
-            {
-                SelectDevelopmentMediaSource(option);
-                return;
-            }
-#endif
-
             await RunPlaybackCommandAsync(async () =>
             {
                 await _orchestrator.SwitchMediaSourceAsync(option.Id);
@@ -1029,14 +993,6 @@ namespace NoiraPlayer.App.Views
                 return;
             }
 
-#if DEBUG
-            if (_usesDevelopmentPlaybackOptionsFixture)
-            {
-                SelectDevelopmentAudioStream(option);
-                return;
-            }
-#endif
-
             await RunPlaybackCommandAsync(async () =>
             {
                 await _orchestrator.SwitchAudioStreamAsync(option.StreamIndex);
@@ -1057,14 +1013,6 @@ namespace NoiraPlayer.App.Views
             {
                 return;
             }
-
-#if DEBUG
-            if (_usesDevelopmentPlaybackOptionsFixture)
-            {
-                SelectDevelopmentSubtitleStream(option);
-                return;
-            }
-#endif
 
             await RunPlaybackCommandAsync(async () =>
             {
@@ -1601,161 +1549,7 @@ namespace NoiraPlayer.App.Views
             }
         }
 
-        private void RenderDevelopmentPlaybackOptionsFixture()
-        {
-            var fixture = DevelopmentPlaybackOptionsFixture.Create();
-            _usesDevelopmentPlaybackOptionsFixture = true;
-            _developmentPlaybackSources = fixture.MediaSources;
-            _developmentPlaybackMediaSourceId = fixture.DefaultMediaSourceId;
-            _developmentPlaybackAudioStreamIndex = fixture.DefaultAudioStreamIndex;
-            _developmentPlaybackSubtitleStreamIndex = fixture.DefaultSubtitleStreamIndex;
-            _currentItemName = fixture.ItemName;
-            _lastPositionTicks = fixture.StartPositionTicks;
-            _durationTicks = fixture.RuntimeTicks;
-            _hasPlaybackContext = true;
-
-            ManualDebugPanel.Visibility = Visibility.Collapsed;
-            SubtitleSafeSampleBlock.Visibility = Visibility.Visible;
-            StreamUrlBox.Text = "";
-            StreamUrlBox.IsEnabled = false;
-            NowPlayingBlock.Text = fixture.ItemName;
-            RenderDevelopmentPlaybackOptions();
-            UpdateStatus(CorePlaybackState.Playing, "Fixture options ready");
-            UpdateProgressSlider();
-            UpdateControlStates();
-            ShowOverlay(showMore: true);
-            FocusDevelopmentPlaybackOptionsDefaultAsync();
-        }
-
-        private void RenderDevelopmentPlaybackOptions()
-        {
-            _updatingStreamControls = true;
-            try
-            {
-                SourceBox.Items.Clear();
-                AudioStreamBox.Items.Clear();
-                SubtitleStreamBox.Items.Clear();
-
-                foreach (var source in _developmentPlaybackSources)
-                {
-                    var option = new SourceOption(source.Id, CreateSourceLabel(source));
-                    SourceBox.Items.Add(option);
-                    if (string.Equals(source.Id, _developmentPlaybackMediaSourceId, StringComparison.Ordinal))
-                    {
-                        SourceBox.SelectedItem = option;
-                    }
-                }
-
-                var selectedSource = GetDevelopmentPlaybackSource();
-                if (selectedSource != null)
-                {
-                    var defaultAudio = new StreamOption(null, "Default");
-                    AudioStreamBox.Items.Add(defaultAudio);
-                    AudioStreamBox.SelectedItem = defaultAudio;
-                    foreach (var stream in selectedSource.AudioStreams)
-                    {
-                        var option = new StreamOption(stream.Index, CreateStreamLabel(stream));
-                        AudioStreamBox.Items.Add(option);
-                        if (_developmentPlaybackAudioStreamIndex == stream.Index)
-                        {
-                            AudioStreamBox.SelectedItem = option;
-                        }
-                    }
-
-                    var offSubtitle = new StreamOption(null, "Off");
-                    SubtitleStreamBox.Items.Add(offSubtitle);
-                    SubtitleStreamBox.SelectedItem = offSubtitle;
-                    foreach (var stream in selectedSource.SubtitleStreams)
-                    {
-                        var option = new StreamOption(stream.Index, CreateStreamLabel(stream));
-                        SubtitleStreamBox.Items.Add(option);
-                        if (_developmentPlaybackSubtitleStreamIndex == stream.Index)
-                        {
-                            SubtitleStreamBox.SelectedItem = option;
-                        }
-                    }
-                }
-
-                UpdateStreamControlStates();
-            }
-            finally
-            {
-                _updatingStreamControls = false;
-            }
-        }
-
-        private void SelectDevelopmentMediaSource(SourceOption option)
-        {
-            _developmentPlaybackMediaSourceId = option.Id;
-            var selectedSource = GetDevelopmentPlaybackSource();
-            _developmentPlaybackAudioStreamIndex = GetFirstStreamIndex(selectedSource, EmbyStreamKind.Audio);
-            _developmentPlaybackSubtitleStreamIndex = GetFirstStreamIndex(selectedSource, EmbyStreamKind.Subtitle);
-            RenderDevelopmentPlaybackOptions();
-            UpdateStatus(CorePlaybackState.Playing, "Source: " + option.Label);
-            UpdatePlaybackOptionChips();
-            if (_infoVisible)
-            {
-                UpdateInfo();
-            }
-        }
-
-        private void SelectDevelopmentAudioStream(StreamOption option)
-        {
-            _developmentPlaybackAudioStreamIndex = option.StreamIndex;
-            UpdateStatus(CorePlaybackState.Playing, "Audio: " + option.Label);
-            UpdatePlaybackOptionChips();
-            if (_infoVisible)
-            {
-                UpdateInfo();
-            }
-        }
-
-        private void SelectDevelopmentSubtitleStream(StreamOption option)
-        {
-            _developmentPlaybackSubtitleStreamIndex = option.StreamIndex;
-            UpdateStatus(CorePlaybackState.Playing, "Subtitles: " + option.Label);
-            UpdatePlaybackOptionChips();
-            if (_infoVisible)
-            {
-                UpdateInfo();
-            }
-        }
-
-        private EmbyMediaSource? GetDevelopmentPlaybackSource()
-        {
-            return _developmentPlaybackSources.FirstOrDefault(source =>
-                string.Equals(source.Id, _developmentPlaybackMediaSourceId, StringComparison.Ordinal)) ??
-                _developmentPlaybackSources.FirstOrDefault();
-        }
-
-        private static int? GetFirstStreamIndex(EmbyMediaSource? source, EmbyStreamKind kind)
-        {
-            if (source == null)
-            {
-                return null;
-            }
-
-            var stream = source.Streams.FirstOrDefault(candidate => candidate.Kind == kind);
-            return stream == null ? (int?)null : stream.Index;
-        }
-
-        private void FocusDevelopmentPlaybackOptionsDefaultAsync()
-        {
-            _ = Dispatcher.RunAsync(CoreDispatcherPriority.Low, () =>
-            {
-                if (!_usesDevelopmentPlaybackOptionsFixture || !_moreVisible)
-                {
-                    return;
-                }
-
-                var target = PlaybackMoreDrawerFocusPolicy.GetDefaultTarget(
-                    SourceBox.IsEnabled,
-                    AudioStreamBox.IsEnabled,
-                    SubtitleStreamBox.IsEnabled);
-                FocusMoreDrawerTarget(target);
-            });
-        }
-#endif
+        #endif
 
 #if DEBUG
         private static IReadOnlyList<EmbyMediaSource> ApplyForcedSdrOutputForDiagnostics(IReadOnlyList<EmbyMediaSource> sources)
@@ -2083,15 +1877,6 @@ namespace NoiraPlayer.App.Views
 
         private void UpdateStreamControlStates()
         {
-#if DEBUG
-            if (_usesDevelopmentPlaybackOptionsFixture)
-            {
-                SourceBox.IsEnabled = SourceBox.Items.Count > 1;
-                AudioStreamBox.IsEnabled = AudioStreamBox.Items.Count > 1;
-                SubtitleStreamBox.IsEnabled = SubtitleStreamBox.Items.Count > 1;
-                return;
-            }
-#endif
             var state = _orchestrator.State;
             var hasActivePlayback = _hasPlaybackContext &&
                 state != CorePlaybackState.Failed &&
@@ -2874,9 +2659,6 @@ namespace NoiraPlayer.App.Views
             return PlaybackOverlayInputPolicy.ShouldKeepOverlayPinned(
                 _moreVisible,
                 _seekPreview.IsActive,
-#if DEBUG
-                _usesDevelopmentPlaybackOptionsFixture ||
-#endif
                 _launchRequest == null && ManualDebugPanel.Visibility == Visibility.Visible,
                 IsPlaybackOpeningOrBusy(),
                 PlaybackNeedsAttention());
@@ -2894,22 +2676,6 @@ namespace NoiraPlayer.App.Views
 
         private void UpdateControlStates()
         {
-#if DEBUG
-            if (_usesDevelopmentPlaybackOptionsFixture)
-            {
-                ManualStartButton.IsEnabled = false;
-                PauseButton.IsEnabled = true;
-                ResumeButton.IsEnabled = false;
-                StopButton.IsEnabled = true;
-                SeekBackButton.IsEnabled = true;
-                SeekForwardButton.IsEnabled = true;
-                ProgressSlider.IsEnabled = true;
-                MoreButton.IsEnabled = true;
-                InfoButton.IsEnabled = true;
-                UpdatePlaybackOptionChips();
-                return;
-            }
-#endif
             var state = _orchestrator.State;
             var hasActivePlayback = _hasPlaybackContext &&
                 state != CorePlaybackState.Failed &&
@@ -2942,22 +2708,6 @@ namespace NoiraPlayer.App.Views
 
         private void UpdateInfo()
         {
-#if DEBUG
-            if (_usesDevelopmentPlaybackOptionsFixture)
-            {
-                var fixtureSource = GetDevelopmentPlaybackSource();
-                var fixturePosition = TimeSpan.FromTicks(GetCurrentPositionTicks());
-                InfoBlock.Text =
-                    "State: Playing" + Environment.NewLine +
-                    "Item: " + _currentItemName + Environment.NewLine +
-                    "Source: " + (fixtureSource == null ? "" : fixtureSource.Name) + Environment.NewLine +
-                    "Audio: " + (fixtureSource == null ? "Default" : CreateSelectedStreamLabel(fixtureSource, _developmentPlaybackAudioStreamIndex, EmbyStreamKind.Audio, "Default")) + Environment.NewLine +
-                    "Subtitles: " + (fixtureSource == null ? "Off" : CreateSelectedStreamLabel(fixtureSource, _developmentPlaybackSubtitleStreamIndex, EmbyStreamKind.Subtitle, "Off")) + Environment.NewLine +
-                    "Position: " + FormatPosition(fixturePosition) + Environment.NewLine +
-                    "Fixture: playback options";
-                return;
-            }
-#endif
             var descriptor = _orchestrator.CurrentDescriptor;
             var source = descriptor?.MediaSource;
             var position = TimeSpan.FromTicks(GetCurrentPositionTicks());
@@ -2985,20 +2735,6 @@ namespace NoiraPlayer.App.Views
 
         private void UpdatePlaybackOptionChips()
         {
-#if DEBUG
-            if (_usesDevelopmentPlaybackOptionsFixture)
-            {
-                var fixtureSource = GetDevelopmentPlaybackSource();
-                SourceChipBlock.Text = fixtureSource == null ? "Source" : fixtureSource.Name;
-                AudioChipBlock.Text = fixtureSource == null
-                    ? "Audio"
-                    : CreateSelectedStreamLabel(fixtureSource, _developmentPlaybackAudioStreamIndex, EmbyStreamKind.Audio, "Default");
-                SubtitleChipBlock.Text = fixtureSource == null
-                    ? "Subtitles"
-                    : CreateSelectedStreamLabel(fixtureSource, _developmentPlaybackSubtitleStreamIndex, EmbyStreamKind.Subtitle, "Off");
-                return;
-            }
-#endif
             var descriptor = _orchestrator.CurrentDescriptor;
             var source = descriptor?.MediaSource;
             if (descriptor == null || source == null)

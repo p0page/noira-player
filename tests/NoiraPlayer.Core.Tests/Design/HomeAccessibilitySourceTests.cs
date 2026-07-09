@@ -142,20 +142,7 @@ public sealed class HomeAccessibilitySourceTests
     }
 
     [Fact]
-    public void Home_Fixture_Section_Requests_Carry_Development_Items_To_Library()
-    {
-        var source = File.ReadAllText(Path.Combine(
-            FindRepositoryRoot(),
-            "src",
-            "NoiraPlayer.App",
-            "Views",
-            "HomePage.xaml.cs"));
-
-        Assert.Contains(".WithDevelopmentFixture(row.Items, _developmentArtworkUris)", source);
-    }
-
-    [Fact]
-    public void Home_Fixture_Artwork_Does_Not_Require_Live_Client_Session()
+    public void Home_Server_Section_Artwork_Does_Not_Use_Obsolete_Development_State()
     {
         var source = File.ReadAllText(Path.Combine(
             FindRepositoryRoot(),

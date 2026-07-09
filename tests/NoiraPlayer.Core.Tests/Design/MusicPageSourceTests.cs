@@ -7,37 +7,6 @@ namespace NoiraPlayer.Core.Tests.Design;
 public sealed class MusicPageSourceTests
 {
     [Fact]
-    public void Music_Fixture_Development_Route_Renders_Positive_Browse_State()
-    {
-        var root = FindRepositoryRoot();
-        var mainPageSource = File.ReadAllText(Path.Combine(
-            root,
-            "src",
-            "NoiraPlayer.App",
-            "MainPage.xaml.cs"));
-        var requestSource = File.ReadAllText(Path.Combine(
-            root,
-            "src",
-            "NoiraPlayer.App",
-            "Navigation",
-            "MusicNavigationRequest.cs"));
-        var musicPageSource = File.ReadAllText(Path.Combine(
-            root,
-            "src",
-            "NoiraPlayer.App",
-            "Views",
-            "MusicPage.xaml.cs"));
-
-        Assert.Contains("case \"music-fixture\"", mainPageSource);
-        Assert.Contains("UseDevelopmentFixture", requestSource);
-        Assert.Contains("RenderDevelopmentMusicFixture()", musicPageSource);
-        Assert.Contains("DevelopmentMusicFixture.Create()", musicPageSource);
-        Assert.Contains("CreateDevelopmentArtworkFrame(", musicPageSource);
-        Assert.Contains("FocusDevelopmentDefaultContentAsync()", musicPageSource);
-        Assert.Contains("\"Fixture music library\"", musicPageSource);
-    }
-
-    [Fact]
     public void Music_Page_Renders_Artist_Hierarchy_For_Tv_Browsing()
     {
         var root = FindRepositoryRoot();
@@ -179,7 +148,6 @@ public sealed class MusicPageSourceTests
         Assert.Contains("UpdatePreviewArtwork(item)", musicPageSource);
         Assert.Contains("ClearPreviewArtwork()", musicPageSource);
         Assert.Contains("CreatePreviewArtworkImageSource(item)", musicPageSource);
-        Assert.Contains("DevelopmentMusicFixture.ArtworkKey(item.Id, \"Primary\")", musicPageSource);
         Assert.Contains("_musicArtworkUris[item.Id] = imageUri.AbsoluteUri", musicPageSource);
         Assert.Contains("PreviewArtworkFrame.Visibility = Visibility.Collapsed", musicPageSource);
     }

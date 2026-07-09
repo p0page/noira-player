@@ -63,14 +63,14 @@ public sealed class PosterGridVisualSourceTests
     }
 
     [Fact]
-    public void Development_Routes_Include_Deterministic_Movies_Fixture()
+    public void Development_Routes_Do_Not_Include_Deterministic_Movies_Route()
     {
         var navigationSource = ReadCoreSource("Diagnostics", "DevelopmentNavigationCommand.cs");
         var mainPageSource = ReadAppSource("MainPage.xaml.cs");
 
-        Assert.Contains("case \"movies-fixture\":", navigationSource);
-        Assert.Contains("case \"movies-fixture\":", mainPageSource);
-        Assert.Contains("CreateMoviesFixtureNavigationRequest", mainPageSource);
+        Assert.DoesNotContain("movies-fixture", navigationSource);
+        Assert.DoesNotContain("movies-fixture", mainPageSource);
+        Assert.DoesNotContain("CreateMoviesFixtureNavigationRequest", mainPageSource);
     }
 
     private static string ReadAppSource(params string[] segments)
