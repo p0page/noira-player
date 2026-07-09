@@ -43,6 +43,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 Metrics = metrics,
                 Startup = startup,
                 Expected = CloneExpected(referenceCase.Expected),
+                ForceSdrOutput = referenceCase.ForceSdrOutput,
                 UseDefaultExpectedWhenMissing = false
             };
         }

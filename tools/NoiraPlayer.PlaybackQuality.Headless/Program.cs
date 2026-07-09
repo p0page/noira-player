@@ -31,7 +31,7 @@ internal static class NativeHeadlessHarness
             itemId: "",
             mediaSourceId: "",
             startPositionTicks: 0,
-            forceSdrOutput: false,
+            forceSdrOutput: options.ForceSdrOutput,
             expected: new PlaybackQualityExpected(),
             uri: options.StreamUrl,
             category: "stable",
@@ -713,6 +713,7 @@ internal sealed class NativeHeadlessHarnessOptions
     public int DurationSeconds { get; private set; } = 5;
     public string ReportsDir { get; private set; } = "";
     public string NativeHelperExe { get; private set; } = "";
+    public bool ForceSdrOutput { get; private set; }
 
     public static bool TryParse(
         string[] args,
@@ -729,6 +730,12 @@ internal sealed class NativeHeadlessHarnessOptions
             {
                 error = "Unexpected argument '" + name + "'.";
                 return false;
+            }
+
+            if (name == "--force-sdr-output")
+            {
+                options.ForceSdrOutput = true;
+                continue;
             }
 
             if (index + 1 >= args.Length)

@@ -484,6 +484,7 @@ for ($attempt = 1; $attempt -le 3; $attempt++) {
         --case-id $nativeCaseId `
         --stream-url $nativeSampleUrl `
         --duration-seconds 3 `
+        --force-sdr-output `
         --reports-dir $nativeCapturedDir `
         --native-helper-exe $nativeHelperExe
     $nativeHelperExitCode = $LASTEXITCODE
@@ -513,6 +514,10 @@ if ($nativeReport.report.timing.decodedVideoFrames -le 0) {
 
 if ($nativeReport.report.timing.renderedVideoFrames -le 0) {
     throw 'Expected native helper report to include rendered video frames.'
+}
+
+if ($nativeReport.report.colorPipeline.forceSdrOutput -ne $true) {
+    throw 'Expected native-headless --force-sdr-output to populate colorPipeline.forceSdrOutput evidence.'
 }
 
 if ($nativeReport.report.source.videoRange -ne 'SDR' -or

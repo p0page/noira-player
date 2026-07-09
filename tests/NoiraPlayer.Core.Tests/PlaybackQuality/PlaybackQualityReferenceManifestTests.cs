@@ -526,6 +526,35 @@ public sealed class PlaybackQualityReferenceManifestTests
     }
 
     [Fact]
+    public void ReferenceCase_ReportRequest_Preserves_ForceSdrOutput_Evidence()
+    {
+        var referenceCase = CreateCase(
+            "netflix/chimera-4k-2398-hdr-pq-force-sdr",
+            tier: 2,
+            purpose: "hdr-force-sdr");
+        referenceCase.ForceSdrOutput = true;
+        var descriptor = CreateDescriptor(
+            codec: "hevc",
+            width: 3840,
+            height: 2160,
+            frameRate: 23.976,
+            hdrKind: HdrPlaybackKind.Hdr10);
+
+        var request = PlaybackQualityReferenceCaseReportRequestFactory.CreateRequest(
+            referenceCase,
+            descriptor);
+        var result = PlaybackQualityReportComposer.Compose(request);
+
+        Assert.True(result.Report.ColorPipeline.ForceSdrOutput);
+        Assert.Contains(
+            "colorPipeline.forceSdrOutput",
+            result.ModelAnalysis.ColorPipeline.Signals);
+        Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(
+            result.Report,
+            "colorPipeline.forceSdrOutput"));
+    }
+
+    [Fact]
     public void ValidateReportSet_Accepts_One_Matching_Report_Per_Reference_Case()
     {
         var manifest = new PlaybackQualityReferenceManifest();

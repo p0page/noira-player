@@ -1,4 +1,34 @@
 ﻿# 技术决策
+## 2026-07-09: main/Noira/FFmpeg 8.1.2 后播放 Core 门禁必须以当前 main 为默认 diff base
+
+决策：`tools\quality-run\run-playback-core-checks.ps1` 的默认 `AppDiffBase` 改为 `origin/main`，不再使用旧的 pre-Noira 固定提交 `94adec5`。脚本计划测试会阻止默认 base 回退到该旧提交。
+
+原因：项目已改名为 Noira / NoiraPlayer，并且 FFmpeg 8.1.2 升级已经合入 main。继续用旧提交作为默认 base，会让干净 main worktree 被 App diff guard 误判为包含大量 App 改名/资源变化，导致文档化默认命令无法运行。
+
+影响：从 main 新建的 playback-core worktree 可以直接运行 `run-playback-core-checks.ps1`。分支上的 App 改动仍会通过 `origin/main...HEAD` 被 guard 检出；允许列表仍只限 DEBUG quality-run/native metrics 接线文件。
+
+边界：这是评测门禁基线修复，不放宽 App-free 边界，不允许 UI/XAML/project/package 改动进入播放 Core 调优阶段。
+
+## 2026-07-09: native restore 必须先于 native-headless smoke
+
+决策：`run-playback-core-checks.ps1` 中 `native-restore` 提前到 `native-headless-harness-smoke-test` 和后续 native compile checks 之前执行。
+
+原因：新 worktree 不会自动带上 ignored 的 `src\NoiraPlayer.Native\packages` 目录。FFmpeg 8.1.2 native-headless smoke 需要从 NuGet package 目录复制 DLL 并链接 import libs；如果 restore 排在 smoke 之后，干净 worktree 会失败在缺 package 目录，而不是失败在真正的播放 Core 问题。
+
+影响：完整门禁现在能在干净 main worktree 中先 restore `FFmpegInteropX.UWP.FFmpeg.8.1.2`，再运行 native-headless helper、native tests 和 native Debug x64 build。
+
+边界：这不改变播放器行为、FFmpeg 版本、评测阈值或样本预期；只是修正门禁前置依赖顺序。
+
+## 2026-07-09: force-SDR 和显式零渲染帧必须作为可消费 evidence
+
+决策：reference case 的 `forceSdrOutput` 必须从 manifest/reference case 传入 `PlaybackQualityReportRequest` 并写入 `report.colorPipeline.forceSdrOutput`；native-headless CLI 新增 `--force-sdr-output`，smoke 覆盖该入口。`PlaybackQualityReportAnalyzer` 只有在 `timing.renderedVideoFrames` signal 未出现时，才把零渲染帧归为 missing evidence；如果 collector 明确上报了 `0`，它应作为失败/样本不足证据保留。
+
+原因：force-SDR 是颜色管线评测的重要 expected/runtime 证据，不能只存在于 manifest 或 plan 里。零渲染帧同样不是天然“缺证据”：例如 seek/timeline 后 native helper 明确上报 rendered frames 为 0 时，模型需要看到这是播放输出失败或样本不足，而不是被 missing-evidence blocker 掩盖。
+
+影响：54-case candidate 中 public、native-headless 和 private Emby force-SDR case 都能输出 `colorPipeline.forceSdrOutput` signal。显式 zero-render report 不再产生 `missingEvidence: timing.renderedVideoFrames`，但仍会保留 `sample.insufficient` 等真实失败信号。
+
+边界：这仍是评测 evidence 语义修正，不是 HDR tone mapping、SDR conversion、frame pacing 或 seek 行为优化。播放器能力是否提升必须继续用同一 manifest baseline/candidate 对比证明。
+
 ## 2026-07-09: UI 开发样本使用私有真实 manifest，不再维护 mock fixture route
 
 决策：废弃 `*-fixture`、`details-real-sample` 和 `details-real-bright-sample` route，移除 App/Core 中的 mock fixture 数据链路。UI 开发需要稳定跳转真实页面时，使用 ignored 的 `docs/qa/private/ui-real-samples.local.json` 维护真实 Emby 样本，再通过 `tools/Write-AppUiSampleCommand.ps1` 写入 `LocalState\dev-command.json`。

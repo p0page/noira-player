@@ -1076,6 +1076,29 @@ public sealed class PlaybackQualityReportAnalyzerTests
     }
 
     [Fact]
+    public void Analyze_Treats_Explicit_Zero_Rendered_Frames_As_Evidence_Not_Missing()
+    {
+        var report = CreateOptimizationReadyFailure();
+        report.Timing.RenderedVideoFrames = 0;
+        report.Sync.AudioVideoDriftMsP95 = 0;
+        report.Buffers.QueuedAudioBuffers = 0;
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(
+            report,
+            new[]
+            {
+                "timing.renderedVideoFrames",
+                "sync.audioVideoDriftMsP95",
+                "buffers.queuedAudioBuffers"
+            });
+
+        Assert.Equal("insufficient", analysis.Sample.Status);
+        Assert.Contains("sample.insufficient", analysis.OptimizationGate.Blockers);
+        Assert.DoesNotContain("timing.renderedVideoFrames", analysis.MissingEvidence);
+        Assert.DoesNotContain("missingEvidence", analysis.OptimizationGate.Blockers);
+    }
+
+    [Fact]
     public void Analyze_Blocks_Playback_Core_Optimization_When_Required_Evidence_Is_Missing()
     {
         var report = CreateOptimizationReadyFailure();

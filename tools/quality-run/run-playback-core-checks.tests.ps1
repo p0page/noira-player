@@ -36,6 +36,14 @@ if (-not $plan.appDiffGuard -or $plan.appDiffGuard.status -ne 'active') {
     throw 'Expected active App diff guard in playback-core validation plan.'
 }
 
+if ($plan.appDiffGuard.baseRef -eq '94adec5') {
+    throw 'App diff guard default base must not use the stale pre-Noira rename commit.'
+}
+
+if ($plan.appDiffGuard.baseRef -ne 'origin/main') {
+    throw ('Expected App diff guard default baseRef to be origin/main, got: ' + $plan.appDiffGuard.baseRef)
+}
+
 if (-not ($plan.appDiffGuard.protectedRoots -contains 'src/NoiraPlayer.App')) {
     throw 'Expected App diff guard to protect src/NoiraPlayer.App.'
 }
@@ -163,6 +171,11 @@ $nativeRestoreIndex = [array]::IndexOf($plan.commands.name, 'native-restore')
 $nativeBuildIndex = [array]::IndexOf($plan.commands.name, 'native-build')
 if ($nativeBuildIndex -ge 0 -and $nativeRestoreIndex -gt $nativeBuildIndex) {
     throw 'Expected native-restore to run before native-build.'
+}
+
+$nativeHeadlessSmokeIndex = [array]::IndexOf($plan.commands.name, 'native-headless-harness-smoke-test')
+if ($nativeHeadlessSmokeIndex -ge 0 -and $nativeRestoreIndex -gt $nativeHeadlessSmokeIndex) {
+    throw 'Expected native-restore to run before native-headless-harness-smoke-test because the smoke copies FFmpeg package DLLs.'
 }
 
 Write-Output 'playback-core-checks plan ok'

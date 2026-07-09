@@ -1,7 +1,7 @@
 ﻿param(
     [switch]$PlanOnly,
     [switch]$SkipNativeBuild,
-    [string]$AppDiffBase = '94adec5'
+    [string]$AppDiffBase = 'origin/main'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -113,6 +113,11 @@ $commands = @(
         -Command 'powershell' `
         -Arguments @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', 'tools\quality-run\run-playback-quality-cli-smoke-test.ps1')
     New-CommandPlan `
+        -Name 'native-restore' `
+        -Description 'Restore native packages.config dependencies required by the native playback project.' `
+        -Command 'cmd' `
+        -Arguments @('/c', $nativeRestoreCommand)
+    New-CommandPlan `
         -Name 'native-headless-harness-smoke-test' `
         -Description 'Run the App-free native-headless skip path and real native helper captured report smoke test.' `
         -Command 'powershell' `
@@ -182,11 +187,6 @@ $commands = @(
         -Description 'Compile and run the native DirectX offscreen composition swapchain test.' `
         -Command 'cmd' `
         -Arguments @('/c', $nativeDxOffscreenCommand)
-    New-CommandPlan `
-        -Name 'native-restore' `
-        -Description 'Restore native packages.config dependencies required by the native playback project.' `
-        -Command 'cmd' `
-        -Arguments @('/c', $nativeRestoreCommand)
 )
 
 if (-not $SkipNativeBuild) {

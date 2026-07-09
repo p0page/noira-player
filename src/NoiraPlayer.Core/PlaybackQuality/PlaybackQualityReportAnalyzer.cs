@@ -1870,7 +1870,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 analysis.MissingEvidence.Add("source.frameRate");
             }
 
-            if (report.Timing.RenderedVideoFrames == 0)
+            if (report.Timing.RenderedVideoFrames == 0 &&
+                !signalPresence.Has("timing.renderedVideoFrames"))
             {
                 analysis.MissingEvidence.Add("timing.renderedVideoFrames");
             }

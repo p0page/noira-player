@@ -27,6 +27,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
 
         public PlaybackQualityExpected? Expected { get; set; }
 
+        public bool ForceSdrOutput { get; set; }
+
         public bool UseDefaultExpectedWhenMissing { get; set; }
     }
 
@@ -111,6 +113,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
             {
                 PlaybackQualityReportMapper.ApplyMetrics(report, request.Metrics);
             }
+
+            report.ColorPipeline.ForceSdrOutput = request.ForceSdrOutput;
 
             if (request.RuntimeMetrics != null)
             {
