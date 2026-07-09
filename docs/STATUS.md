@@ -12,6 +12,8 @@
 
 本地 headless smoke 抽样显示当前两个 smoke case 都走硬解路径：`local/native-headless-sdr-smoke` 与 `local/native-headless-av-smoke` 均为 `decodedVideoFrames = 47`、`hardwareDecodedVideoFrames = 47`、`softwareDecodedVideoFrames = 0`。因此合并后观察到的 A/V smoke 尾部 frame gap 问题，不应优先归因为软解 fallback；下一步调优更应继续集中在 clock/render scheduling、display cadence 和采样稳定性。
 
+已基于提交 `d687248` 生成同 54-case manifest 的 candidate：`docs\qa\private\candidates\playback-core-tuning-decode-mode-evidence-54case-d687248.local\`，validation 通过，54/54 report matched，native-headless included。与新工程基线 `playback-core-tuning-main-modern-54case-905241d.local` 的 comparison 输出在 `docs\qa\private\comparisons\playback-core-tuning-decode-mode-evidence-54case-d687248.local\`，结论为 `keep-candidate / accept-candidate`、risk `low`、54/54 可比、2 improved、0 regressed、0 mixed、52 unchanged。当前 evidence hook 可作为后续调优基线的一部分保留。
+
 ## 2026-07-09 更新：已合并 main 的 VS2026 / FFmpeg 更新，调优基线迁移到 905241d
 
 本轮已将 `main` 的构建链和依赖更新合入当前播放 Core 调优分支，merge commit 为 `67fc96e`。合入内容包括 VS2026 / MSBuild 18、.NET 10 现代 UWP、native `v145` toolset、Windows SDK `10.0.26100.0`、C++20、`Microsoft.Windows.CppWinRT 3.0.260520.1`，以及当前 `FFmpegInteropX.UWP.FFmpeg.8.1.2` 依赖链路。
