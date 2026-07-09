@@ -332,7 +332,7 @@ namespace winrt::NoiraPlayer::Native::implementation
             }
 
             auto renderLoopWait = std::chrono::steady_clock::duration{PlaybackFramePacing::RenderLoopWait()};
-            auto renderLoopWaitUseTimer = false;
+            auto renderLoopWaitUseTimer = PlaybackFramePacing::ShouldUseRenderLoopTimer(renderLoopWait);
 
             try
             {
@@ -359,7 +359,8 @@ namespace winrt::NoiraPlayer::Native::implementation
                     renderLoopWait = m_nextRenderLoopWait;
                     renderLoopWaitUseTimer = m_nextRenderLoopWaitUseTimer;
                     m_nextRenderLoopWait = PlaybackFramePacing::RenderLoopWait();
-                    m_nextRenderLoopWaitUseTimer = false;
+                    m_nextRenderLoopWaitUseTimer =
+                        PlaybackFramePacing::ShouldUseRenderLoopTimer(m_nextRenderLoopWait);
                 }
 
                 if (reachedEnd)
