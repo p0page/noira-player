@@ -7,6 +7,7 @@ $tempRoot = Join-Path ([System.IO.Path]::GetTempPath()) ('playback-core-tuning-c
 $baselineRoot = Join-Path $tempRoot 'baseline'
 $candidateRoot = Join-Path $tempRoot 'candidate'
 $comparisonRoot = Join-Path $tempRoot 'comparison'
+$candidateCadenceStabilityPath = Join-Path $tempRoot 'candidate-cadence-stability.local.json'
 
 try {
     powershell -NoProfile -ExecutionPolicy Bypass -File $baselineScriptPath `
@@ -27,10 +28,40 @@ try {
         throw 'New-PlaybackCoreTuningBaseline.ps1 returned a non-zero exit code for candidate.'
     }
 
+    @'
+{
+  "schemaVersion": 1,
+  "kind": "playback-cadence-stability-summary",
+  "minimumSamples": 3,
+  "materialityMs": 2.0,
+  "totalGroupCount": 1,
+  "stableGroupCount": 0,
+  "unstableGroupCount": 1,
+  "insufficientSampleGroupCount": 0,
+  "unstableCaseGroupIds": [
+    "local/native-headless-hdr10-60"
+  ],
+  "groups": [
+    {
+      "caseGroupId": "local/native-headless-hdr10-60",
+      "stability": "unstable",
+      "sampleCount": 3,
+      "renderIntervalP99ExpectedErrorSpreadMs": 3.2,
+      "maxFrameGapExpectedErrorSpreadMs": 3.2,
+      "unstableSignals": [
+        "framePacing.renderIntervalP99ExpectedErrorMs",
+        "framePacing.maxFrameGapExpectedErrorMs"
+      ]
+    }
+  ]
+}
+'@ | Set-Content -LiteralPath $candidateCadenceStabilityPath -Encoding UTF8
+
     powershell -NoProfile -ExecutionPolicy Bypass -File $comparisonScriptPath `
         -BaselineRoot $baselineRoot `
         -CandidateRoot $candidateRoot `
-        -OutputRoot $comparisonRoot
+        -OutputRoot $comparisonRoot `
+        -CandidateCadenceStabilityPath $candidateCadenceStabilityPath
     $comparisonExitCode = $LASTEXITCODE
     if ($comparisonExitCode -ne 2) {
         throw ('Expected public-only core-probe comparison to exit 2 for insufficient native playback evidence, actual: ' + $comparisonExitCode)
@@ -73,6 +104,16 @@ try {
 
     if ($summary.evaluation.activeGateStatus -ne 'blocked' -or $summary.evaluation.blockerCount -lt 1) {
         throw 'Expected candidate evaluation active gate to be blocked by insufficient evidence.'
+    }
+
+    if ($summary.cadenceStability.candidate.present -ne $true -or
+        $summary.cadenceStability.candidate.unstableGroupCount -ne 1 -or
+        -not ($summary.cadenceStability.candidate.unstableCaseGroupIds -contains 'local/native-headless-hdr10-60')) {
+        throw 'Expected comparison summary to preserve candidate cadence stability evidence.'
+    }
+
+    if ($summary.paths.candidateCadenceStabilityPath -ne $candidateCadenceStabilityPath) {
+        throw 'Expected comparison summary paths to include candidate cadence stability path.'
     }
 
     $evaluation = Get-Content -Raw -LiteralPath $evaluationPath | ConvertFrom-Json

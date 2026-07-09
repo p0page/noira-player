@@ -10,6 +10,8 @@
 
 已用新脚本重新聚合上一轮真实重复采样 artifact：`artifacts/quality-run/repeat-cadence-dc2bf33/cadence-stability-summary.local.json`。结果显示 3/3 group 都是 `unstable`：`local/repeat-av-30` 的 P99 expected-error spread 为 `2.4364ms`，`local/repeat-hdr10-60` 为 `3.2721ms`，`local/repeat-sdr-60` 为 `6.3696ms`。这说明不只是 60fps 无音轨 case，当前 3 秒 native-headless A/V smoke 的尾部 cadence 也可能跨过 `2ms` materiality；后续 Core 调优前应先把重复采样结果作为候选解释证据纳入报告集。
 
+`Compare-PlaybackCoreTuningCandidate.ps1` 现在支持 `-BaselineCadenceStabilityPath` 和 `-CandidateCadenceStabilityPath`，会把 stability summary 摘要写入 `comparison-summary.local.json` 的 `cadenceStability` 节点，同时记录到 `paths`。这让每次 Core 候选对比可以同时暴露 suite gate 结论和重复采样稳定性解释，不需要模型再手动查找额外 artifact。
+
 ## 2026-07-09 更新：positive-wait clamp 候选不采纳，60fps native-headless cadence 需要重复采样
 
 本轮尝试了两个小步 native wait 调度候选，均未作为当前 Core 行为保留。第一版把正等待下限同时用于 audio-ahead 和 video-clock，提交为 `92e82e0`，commit-bound 54-case comparison 结果为 `reject-candidate`，回退集中在无音轨 native-headless 60/24fps cadence case。第二版收窄为仅 audio-ahead positive wait clamp，提交为 `dc2bf33`；working comparison 曾得到 `keep-candidate`、1 improved、0 regressed，但 commit-bound comparison 结果为 `reject-candidate`，目标 case 为 `local/native-headless-hdr10-60`。两笔候选已通过 revert 回退，当前主线不保留 positive-wait clamp 行为。

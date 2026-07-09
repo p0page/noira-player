@@ -7,6 +7,8 @@
     [ValidateSet('relative-path', 'run-id')]
     [string]$MatchBy = 'run-id',
     [string]$PreviousComparisonsDir = '',
+    [string]$BaselineCadenceStabilityPath = '',
+    [string]$CandidateCadenceStabilityPath = '',
     [int]$StallThreshold = 3,
     [switch]$Clean
 )
@@ -121,6 +123,56 @@ function Compare-ManifestCaseIds(
     }
 }
 
+function Read-CadenceStabilityReference(
+    [string]$Path,
+    [string]$Description
+) {
+    $resolvedPath = Resolve-RepoPath $Path
+    if ([string]::IsNullOrWhiteSpace($resolvedPath)) {
+        return [pscustomobject][ordered]@{
+            present = $false
+            path = ''
+            kind = ''
+            minimumSamples = 0
+            materialityMs = 0
+            totalGroupCount = 0
+            stableGroupCount = 0
+            unstableGroupCount = 0
+            insufficientSampleGroupCount = 0
+            unstableCaseGroupIds = @()
+            groups = @()
+        }
+    }
+
+    Assert-PathExists $resolvedPath $Description
+    $summary = Read-JsonFile $resolvedPath
+    $groups = @($summary.groups | ForEach-Object {
+        [pscustomobject][ordered]@{
+            caseGroupId = Normalize-String $_.caseGroupId
+            stability = Normalize-String $_.stability
+            sampleCount = [int]$_.sampleCount
+            renderIntervalP95ExpectedErrorSpreadMs = $_.renderIntervalP95ExpectedErrorSpreadMs
+            renderIntervalP99ExpectedErrorSpreadMs = $_.renderIntervalP99ExpectedErrorSpreadMs
+            maxFrameGapExpectedErrorSpreadMs = $_.maxFrameGapExpectedErrorSpreadMs
+            unstableSignals = @($_.unstableSignals)
+        }
+    })
+
+    [pscustomobject][ordered]@{
+        present = $true
+        path = $resolvedPath
+        kind = Normalize-String $summary.kind
+        minimumSamples = [int]$summary.minimumSamples
+        materialityMs = [double]$summary.materialityMs
+        totalGroupCount = [int]$summary.totalGroupCount
+        stableGroupCount = [int]$summary.stableGroupCount
+        unstableGroupCount = [int]$summary.unstableGroupCount
+        insufficientSampleGroupCount = [int]$summary.insufficientSampleGroupCount
+        unstableCaseGroupIds = @($summary.unstableCaseGroupIds)
+        groups = $groups
+    }
+}
+
 $resolvedBaselineRoot = Resolve-RepoPath $BaselineRoot
 $resolvedCandidateRoot = Resolve-RepoPath $CandidateRoot
 $resolvedOutputRoot = Resolve-RepoPath $OutputRoot
@@ -163,6 +215,12 @@ New-Item -ItemType Directory -Path $summariesDir -Force | Out-Null
 New-Item -ItemType Directory -Path $comparisonsDir -Force | Out-Null
 
 $manifestComparison = Compare-ManifestCaseIds $resolvedManifestPath $candidateManifestPath
+$baselineCadenceStability = Read-CadenceStabilityReference `
+    -Path $BaselineCadenceStabilityPath `
+    -Description 'Baseline cadence stability summary'
+$candidateCadenceStability = Read-CadenceStabilityReference `
+    -Path $CandidateCadenceStabilityPath `
+    -Description 'Candidate cadence stability summary'
 
 $null = Invoke-Checked dotnet @(
     'run',
@@ -314,6 +372,10 @@ $summary = [pscustomobject][ordered]@{
         targetCaseIds = @($suite.targetCaseIds)
         blockers = @($evaluation.blockers)
     }
+    cadenceStability = [pscustomobject][ordered]@{
+        baseline = $baselineCadenceStability
+        candidate = $candidateCadenceStability
+    }
     paths = [pscustomobject][ordered]@{
         baselineValidationPath = $baselineValidationPath
         candidateValidationPath = $candidateValidationPath
@@ -321,10 +383,12 @@ $summary = [pscustomobject][ordered]@{
         candidateAnalysisPath = $candidateAnalysisPath
         evaluationPath = $evaluationPath
         comparisonsDir = $comparisonsDir
+        baselineCadenceStabilityPath = $baselineCadenceStability.path
+        candidateCadenceStabilityPath = $candidateCadenceStability.path
     }
 }
 
-$summary | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $summaryPath -Encoding UTF8
+$summary | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $summaryPath -Encoding UTF8
 Write-Output ('wrote playback Core tuning candidate comparison: ' + $summaryPath)
 Write-Output ('evaluation.action: ' + $summary.evaluation.action)
 Write-Output ('evaluation.decision: ' + $summary.evaluation.decision)

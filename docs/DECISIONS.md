@@ -7,6 +7,8 @@
 
 影响：后续 wait scheduling / frame pacing Core 候选仍必须生成同 manifest baseline/candidate comparison；如果 comparison 结果被少数 native-headless cadence case 阻断，应附带 cadence stability summary 解释它是稳定回退、混合结果还是采样不稳定。是否调整 comparator 的 gate，需要单独 TDD 和同一历史 artifact 回放验证，不能静默修改阈值。
 
+补充：`Compare-PlaybackCoreTuningCandidate.ps1` 可以通过显式参数附带 baseline/candidate cadence stability summary。comparison summary 中的 `cadenceStability` 只提供解释证据；`evaluation.decision`、`evaluation.action`、improved/regressed/mixed counts 仍来自原始 suite gate。
+
 边界：重复采样 summary 不是新的 pass 规则，也不是删除或 quarantine case 的依据。它只解决“模型需要更完备信息识别问题”的消费层缺口。
 
 ## 2026-07-09: 不采纳 positive-wait clamp，先处理 60fps cadence 单次采样不稳定性
