@@ -14,6 +14,7 @@ int main()
     assert(PlaybackFramePacing::AudioAheadWaitDuration(1'333'333, 1'000'000, true).count() == 23'333);
     assert(PlaybackFramePacing::AudioAheadWaitDuration(1'050'000, 1'000'000, true).count() == 0);
     assert(PlaybackFramePacing::AudioAheadWaitDuration(1'333'333, 1'000'000, false).count() == 0);
+    assert(PlaybackFramePacing::AudioAheadWaitDuration(1'100'001, 1'000'000, true).count() == 1'000);
 
     assert(PlaybackFramePacing::ShouldDropLateFrame(1'000'000, 2'100'001, true));
     assert(!PlaybackFramePacing::ShouldDropLateFrame(1'000'000, 1'800'000, true));
@@ -31,6 +32,7 @@ int main()
     assert(PlaybackFramePacing::ShouldWaitForVideoClock(1'000'000, 0, 800'000));
     assert(!PlaybackFramePacing::ShouldWaitForVideoClock(1'000'000, 0, 950'000));
     assert(!PlaybackFramePacing::ShouldWaitForVideoClock(0, 0, 0));
+    assert(PlaybackFramePacing::VideoClockWaitDuration(100'001, 0, 0).count() == 1'000);
     assert(PlaybackFramePacing::VideoClockWaitDuration(1'000'000, 0, 800'000).count() == 10'000);
     assert(PlaybackFramePacing::VideoClockWaitDuration(1'000'000, 0, 950'000).count() == 0);
     assert(PlaybackFramePacing::VideoClockWaitDuration(0, 0, 0).count() == 0);

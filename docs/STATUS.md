@@ -2,6 +2,18 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-09 更新：positive wait 下限作为 no-regression 保护保留
+
+本轮继续沿 54-case accepted baseline 做一个小步 native 调度实验。先尝试了 adaptive audio tolerance：它让 `local/native-headless-av-smoke` 的 `framePacing.renderIntervalP99ExpectedErrorMs` 和 `maxFrameGapExpectedErrorMs` 从 `9.206967ms` 降到 `6.303667ms`，但同时把 `timing.audioAheadWaitOversleepMsP95` 从 `7.9336ms` 拉高到 `10.1142ms`。comparison 结果为 `split-candidate`、1 mixed、53 unchanged、blocker `suite.mixed-results`，因此不采纳该策略。
+
+拆分后只保留一个低风险保护：当 audio-ahead 或 video-clock 的计算等待时间为正但小于 `1ms` 时，`PlaybackFramePacing` 将其夹到 `1ms`，避免 `(remainingTicks / 10)` 截断成 `0us` 后让 render loop 忙等。该改动不调整 tolerance、drop 策略、评测规则或样本 expected behavior。
+
+已生成 ignored 54-case candidate：`docs/qa/private/candidates/playback-core-tuning-min-positive-wait-54case-working.local/`，并与 accepted baseline `playback-core-tuning-video-clock-wait-54case-761800c.local/` 对比。结果：54/54 可比、`manifest.sameCaseIds = true`、`decision = no-change`、risk `low`、0 improved、0 regressed、0 mixed、54 unchanged、strong confidence 54/54。
+
+完整验证命令 `powershell -NoProfile -ExecutionPolicy Bypass -File tools\quality-run\run-playback-core-checks.ps1` 已通过，覆盖 407 个播放相关 Core 测试、CLI smoke、native-headless smoke、manifest/report-set 脚本测试、native helper/frame pacing/render loop/display refresh/offscreen tests 和 native Debug x64 build。
+
+边界：这是防止小正等待退化为零等待的稳定性保护，不是播放质量 improvement。当前没有证据表明它改善了 HDR、A/V sync、frame pacing 或真实设备体验；它的价值是降低后续 wait scheduling 调优时出现 busy loop 的风险。
+
 ## 2026-07-09 更新：audio-ahead oversleep 进入 comparison 判定
 
 本轮不提交播放器 core/native 行为变化，只补齐 comparison 裁判规则：`PlaybackQualityRunComparator` 现在会比较 `timing.audioAheadWaitOversleepMsP95`，当 baseline/candidate 都有正数证据且变化达到 `2ms` 时，oversleep 降低记为 `frame-pacing` improvement，oversleep 升高记为 regression。`P99` 只在 `P95` 已经达到 material threshold 且方向一致时作为补充 delta 进入 comparison；单独的短样本 P99/max 抖动仍保留为 matched signal，不直接否决 candidate。
