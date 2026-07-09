@@ -1,4 +1,14 @@
 ﻿# 技术决策
+## 2026-07-09: frame pacing comparison 按 expected-duration error 判定改善
+
+决策：baseline/candidate 都有 `timing.expectedFrameDurationMs` 和 runtime frame pacing telemetry 时，comparison 增加三个派生信号：`framePacing.renderIntervalP95ExpectedErrorMs`、`framePacing.renderIntervalP99ExpectedErrorMs`、`framePacing.maxFrameGapExpectedErrorMs`。这些信号用 `abs(actual - expectedFrameDurationMs)` 表示离目标帧时长的误差；误差降低是 improvement，误差升高是 regression。
+
+原因：frame pacing 不是 lower-is-better。23.976/24fps 内容的理想 render interval 约 41.7ms，60fps 内容约 16.7ms；过慢和过快都可能是问题。上一轮 video-clock target wait 把多个 native-headless case 从 47-48ms 拉回 42ms 左右，但旧 evaluator 只把这些 runtime telemetry 当作 matched diagnostic signals，无法自动判定候选是否可采纳。
+
+影响：`playback-core-tuning-video-clock-expected-error-54case-5ef58d6.local` 对同一 54-case baseline/candidate reports 重新比较后，suite 从 `no-change` 变为 `keep-candidate / accept-candidate`，8 improved、0 regressed、0 mixed。per-case comparison 会暴露 expected-error derived signals，模型不需要再从 P95/P99 原始值手工推断。
+
+边界：该规则只在 baseline/candidate expected frame duration 一致且 telemetry 为正时生效；误差变化小于 `2ms` 视为短样本波动，不产生 improvement/regression。它不降低 stable case 标准，不改变样本 expected behavior，也不证明真实 Xbox/HDMI/display refresh 输出正确。
+
 ## 2026-07-09: video-clock pacing 使用目标剩余时间等待
 
 决策：无音轨路径中的 software video-clock wait 不再使用默认 5ms render loop sleep。`PlaybackFramePacing` 新增 `VideoClockWaitDuration`，按 `framePosition - clockStartPosition - elapsed - VideoAheadTolerance` 计算剩余等待时间；`PlaybackGraph::ShouldWaitForVideoClock` 在需要等待时把该 duration 写入 `m_nextRenderLoopWait`，并使用现有 `RenderLoopWaiter`。

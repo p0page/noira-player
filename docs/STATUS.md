@@ -2,6 +2,18 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-09 更新：frame pacing expected-error 进入 comparison 判定
+
+已提交 `5ef58d6 tools: score frame pacing expected error`。本轮不改变播放器 core/native 行为，只补齐 comparison 规则：当 baseline/candidate 都有 `timing.expectedFrameDurationMs` 和 runtime frame pacing telemetry 时，比较 `renderIntervalMsP95/P99/maxFrameGapMs` 相对 expected frame duration 的绝对误差，而不是把 frame interval 简单当作 lower-is-better。
+
+规则边界：baseline/candidate 的 expected frame duration 必须一致且为正；误差变化小于 `2ms` 时视为短样本波动，不产生 improvement/regression；达到 materiality threshold 后，误差降低记为 `frame-pacing` improvement，误差升高记为 regression。新增 derived signals：`framePacing.renderIntervalP95ExpectedErrorMs`、`framePacing.renderIntervalP99ExpectedErrorMs`、`framePacing.maxFrameGapExpectedErrorMs`。
+
+TDD 记录：新增 comparator 测试先红灯，当前实现把 `48.098ms -> 42.098ms` 这类“更接近 41.708ms expected”的 runtime cadence 改善判为 `unchanged`；实现后 targeted `PlaybackQualityRunComparatorTests` 通过。完整验证命令 `powershell -NoProfile -ExecutionPolicy Bypass -File tools\quality-run\run-playback-core-checks.ps1` 已通过，覆盖 405 个播放相关 Core 测试、CLI smoke、native-headless smoke、manifest/report-set 脚本测试、native helper/frame pacing/render loop/display refresh/offscreen tests 和 native Debug x64 build。
+
+已用同一 54-case baseline/candidate reports 重新生成 evaluator commit 绑定的 comparison：`docs/qa/private/comparisons/playback-core-tuning-video-clock-expected-error-54case-5ef58d6.local/`。结果：54/54 可比、`manifest.sameCaseIds = true`、baseline/candidate validation 均通过、suite `decision = keep-candidate`、`action = accept-candidate`、risk `low`、8 improved、0 regressed、0 mixed、46 unchanged、strong confidence 54/54。
+
+关键结论：上一笔 `761800c` 的 video-clock target wait 候选现在不再只依赖人工读 P95/P99；模型可从 comparison 中直接看到 8 个无音轨 native-headless cadence/color case 的 expected-error improvement，以及 A/V smoke 因变化未达到 2ms materiality threshold 保持 unchanged。剩余风险是该规则仍只覆盖软件 runtime evidence，不验证真实 Xbox/HDMI/display refresh，也不评价硬件端 HDR 输出。
+
 ## 2026-07-09 更新：video-clock target wait 改善 native-headless 无音轨 cadence
 
 已提交 `761800c chore: use target wait for video clock pacing`。本轮只做一个小步 native 策略调整：当 `PlaybackGraph` 在无音轨路径等待 software video clock 时，不再退回默认 5ms render loop sleep，而是按 `PlaybackFramePacing::VideoClockWaitDuration` 计算剩余等待时间，并复用现有 high-resolution `RenderLoopWaiter`。
