@@ -108,6 +108,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
     {
         private const double DerivedSignalEpsilon = 0.0001;
         private const double MinimumFramePacingExpectedErrorDeltaMs = 2.0;
+        private const double MinimumAudioAheadWaitOversleepDeltaMs = 2.0;
         private const double MinimumAcceptableFrameRatio = 0.75;
         private const double MaximumAcceptableFrameRatio = 1.5;
 
@@ -202,6 +203,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
             AddFramePacingSeverityDeltas(comparison, baseline, candidate);
             AddSeekTimelineEvidenceDeltas(comparison, baseline, candidate);
             AddRuntimePlaybackEvidenceSignals(comparison, baseline, candidate);
+            AddAudioAheadWaitOversleepDeltas(comparison, baseline, candidate);
             AddTrackAndSubtitleEvidenceDeltas(comparison, baseline, candidate);
 
             if (comparison.Improvements.Count > 0 && comparison.Regressions.Count > 0)
@@ -1283,6 +1285,81 @@ namespace NoiraPlayer.Core.PlaybackQuality
             return report.RuntimeMetrics.ProcessWallClockMs > 0 ||
                 report.RuntimeMetrics.ProcessCpuTimeMs > 0 ||
                 report.RuntimeMetrics.ProcessCpuUtilizationRatio > 0;
+        }
+
+        private static void AddAudioAheadWaitOversleepDeltas(
+            PlaybackQualityRunComparison comparison,
+            PlaybackQualityReport baseline,
+            PlaybackQualityReport candidate)
+        {
+            var p95Delta = CompareAudioAheadWaitOversleep(
+                comparison,
+                "timing.audioAheadWaitOversleepMsP95",
+                baseline.Timing.AudioAheadWaitOversleepMsP95,
+                candidate.Timing.AudioAheadWaitOversleepMsP95);
+
+            if (!p95Delta.HasValue)
+            {
+                return;
+            }
+
+            var requiredDirection = p95Delta.Value < 0 ? -1 : 1;
+            CompareAudioAheadWaitOversleep(
+                comparison,
+                "timing.audioAheadWaitOversleepMsP99",
+                baseline.Timing.AudioAheadWaitOversleepMsP99,
+                candidate.Timing.AudioAheadWaitOversleepMsP99,
+                requiredDirection);
+        }
+
+        private static double? CompareAudioAheadWaitOversleep(
+            PlaybackQualityRunComparison comparison,
+            string signal,
+            double baselineActual,
+            double candidateActual,
+            int? requiredDirection = null)
+        {
+            if (baselineActual <= 0 || candidateActual <= 0)
+            {
+                return null;
+            }
+
+            AddUnique(comparison.Coverage.MatchedSignals, signal);
+
+            var numericDelta = candidateActual - baselineActual;
+            if (Math.Abs(numericDelta) < MinimumAudioAheadWaitOversleepDeltaMs)
+            {
+                return null;
+            }
+
+            var direction = numericDelta < 0 ? -1 : 1;
+            if (requiredDirection.HasValue && direction != requiredDirection.Value)
+            {
+                return null;
+            }
+
+            var baselineCheck = CreateDerivedCheck(signal, baselineActual);
+            var candidateCheck = CreateDerivedCheck(signal, candidateActual);
+            if (numericDelta < 0)
+            {
+                comparison.Improvements.Add(CreateDelta(
+                    baselineCheck,
+                    candidateCheck,
+                    "decreased",
+                    numericDelta));
+                AddUnique(comparison.Optimization.FailureAreas, "frame-pacing");
+            }
+            else
+            {
+                comparison.Regressions.Add(CreateDelta(
+                    baselineCheck,
+                    candidateCheck,
+                    "increased",
+                    numericDelta));
+                AddUnique(comparison.NewFailureAreas, "frame-pacing");
+            }
+
+            return numericDelta;
         }
 
         private static bool HasTrackComparisonEvidence(PlaybackQualityReport report)

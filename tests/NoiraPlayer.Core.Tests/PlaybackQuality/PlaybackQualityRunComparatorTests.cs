@@ -476,6 +476,62 @@ public sealed class PlaybackQualityRunComparatorTests
     }
 
     [Fact]
+    public void Compare_Reports_Regresses_When_Audio_Ahead_Oversleep_Increases_Materially()
+    {
+        var baseline = CreateReport(
+            "baseline",
+            Check("RenderedVideoFrames", "pass", "frame-pacing", "timing.renderedVideoFrames", "1", "46"));
+        baseline.Timing.AudioAheadWaitOversleepMsP95 = 7.9336;
+        baseline.Timing.AudioAheadWaitOversleepMsP99 = 10.787;
+
+        var candidate = CreateReport(
+            "candidate",
+            Check("RenderedVideoFrames", "pass", "frame-pacing", "timing.renderedVideoFrames", "1", "46"));
+        candidate.Timing.AudioAheadWaitOversleepMsP95 = 10.07;
+        candidate.Timing.AudioAheadWaitOversleepMsP99 = 16.73;
+
+        var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
+
+        Assert.Equal("regressed", comparison.Result);
+        Assert.Equal("reject-candidate", comparison.Decision);
+        Assert.Contains("frame-pacing", comparison.NewFailureAreas);
+        Assert.Contains(comparison.Regressions, delta =>
+            delta.Signal == "timing.audioAheadWaitOversleepMsP95" &&
+            delta.FailureArea == "frame-pacing" &&
+            delta.Direction == "increased" &&
+            delta.BaselineActual == "7.9336" &&
+            delta.CandidateActual == "10.07");
+        Assert.Contains(comparison.Regressions, delta =>
+            delta.Signal == "timing.audioAheadWaitOversleepMsP99" &&
+            delta.Direction == "increased");
+        Assert.Empty(comparison.Improvements);
+    }
+
+    [Fact]
+    public void Compare_Does_Not_Reject_When_Only_Audio_Ahead_Oversleep_P99_Increases()
+    {
+        var baseline = CreateReport(
+            "baseline",
+            Check("RenderedVideoFrames", "pass", "frame-pacing", "timing.renderedVideoFrames", "1", "46"));
+        baseline.Timing.AudioAheadWaitOversleepMsP95 = 7.5337;
+        baseline.Timing.AudioAheadWaitOversleepMsP99 = 7.7653;
+
+        var candidate = CreateReport(
+            "candidate",
+            Check("RenderedVideoFrames", "pass", "frame-pacing", "timing.renderedVideoFrames", "1", "46"));
+        candidate.Timing.AudioAheadWaitOversleepMsP95 = 7.9336;
+        candidate.Timing.AudioAheadWaitOversleepMsP99 = 10.787;
+
+        var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
+
+        Assert.Equal("unchanged", comparison.Result);
+        Assert.Equal("no-change", comparison.Decision);
+        Assert.Contains("timing.audioAheadWaitOversleepMsP95", comparison.Coverage.MatchedSignals);
+        Assert.Contains("timing.audioAheadWaitOversleepMsP99", comparison.Coverage.MatchedSignals);
+        Assert.Empty(comparison.Regressions);
+    }
+
+    [Fact]
     public void Compare_Reports_PartialConfidence_When_Signals_Are_Unmatched()
     {
         var baseline = CreateReport(

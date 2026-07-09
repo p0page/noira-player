@@ -1,4 +1,14 @@
 ﻿# 技术决策
+## 2026-07-09: audio-ahead oversleep comparison 以 P95 为决策门禁
+
+决策：`PlaybackQualityRunComparator` 对 `timing.audioAheadWaitOversleepMsP95` 增加 lower-is-better 判定；baseline/candidate 都有正数证据且差异达到 `2ms` 时，oversleep 降低记为 `frame-pacing` improvement，oversleep 升高记为 regression。`timing.audioAheadWaitOversleepMsP99` 不单独作为硬门禁，只在 `P95` 已经达到 material threshold 且方向一致时作为补充 delta 输出。
+
+原因：当前 native-headless A/V smoke 是短样本，`P99` 很容易接近 max，单独一次尾部抖动不应直接否决整个 candidate。P95 更适合作为 v0.1 自动裁判的可操作门禁；P99 仍作为 matched signal 和同方向补充 delta 暴露给模型，避免完全丢失尾部风险。
+
+影响：未提交的 precise-tail wait 实验会被新规则识别为 regression，因为它让 `audioAheadWaitOversleepMsP95` 从 `7.9336ms` 升到 `10.07ms`，并同时拉高 P99。已接受的 54-case video-clock target wait candidate 中，`local/native-headless-av-smoke` 只有 P99 从 `7.7653ms` 升到 `10.787ms`，P95 只从 `7.5337ms` 升到 `7.9336ms`，因此保持 `unchanged`，suite 仍为 `keep-candidate / accept-candidate`。
+
+边界：该规则不改变播放行为、不放宽样本 expected behavior，也不把 oversleep P95 的任何小幅波动解释为质量变化。后续如果引入更长样本或重复采样，可以再把 P99/max 从诊断信号升级为更严格门禁。
+
 ## 2026-07-09: frame pacing comparison 按 expected-duration error 判定改善
 
 决策：baseline/candidate 都有 `timing.expectedFrameDurationMs` 和 runtime frame pacing telemetry 时，comparison 增加三个派生信号：`framePacing.renderIntervalP95ExpectedErrorMs`、`framePacing.renderIntervalP99ExpectedErrorMs`、`framePacing.maxFrameGapExpectedErrorMs`。这些信号用 `abs(actual - expectedFrameDurationMs)` 表示离目标帧时长的误差；误差降低是 improvement，误差升高是 regression。
