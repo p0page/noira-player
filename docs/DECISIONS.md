@@ -1,4 +1,14 @@
 ﻿# 技术决策
+## 2026-07-09: 不采纳 precise audio tail wait 候选
+
+决策：不保留本轮 precise audio tail wait 候选。该候选给 `RenderLoopWaiter` 增加 timer + `yield` 尾段等待，并仅接入 audio-ahead gating；comparison 结果为 `reject-candidate`，因此当前 Core/native 主线保持原有 `RenderLoopWaiter.WaitFor` 行为。
+
+原因：同一 54-case manifest 对比显示，候选虽然让部分 video-only native-headless case 的 frame pacing expected-error 改善，但目标含音轨 A/V case `local/native-headless-av-smoke` 出现强回归：`framePacing.renderIntervalP99ExpectedErrorMs` 与 `framePacing.maxFrameGapExpectedErrorMs` 均增加 `2.1038ms`。当前目标优先级是含音轨 A/V sync 与 frame pacing，不能用 video-only 改善换取 A/V case 尾部 gap 回退。
+
+影响：不要继续沿“尾段 spin/yield”方向做细粒度调参，除非先有重复采样或更长样本证明当前回归是采样噪声。后续 wait scheduling 候选仍必须以同 manifest baseline/candidate comparison 为准，并同时检查 oversleep、render P95/P99/max gap、A/V drift、buffering、track/subtitle 和 process-cost evidence。
+
+边界：这是一次被拒绝的小步策略实验，不改变评测阈值、样本预期或 accepted Core 行为。ignored artifact 保留在 `playback-core-tuning-precise-audio-tail-54case-working.local`，用于后续模型避免重复尝试同一路线。
+
 ## 2026-07-09: cadence 重复采样结果作为候选解释证据，不直接改写 comparison 规则
 
 决策：新增 `Measure-PlaybackCadenceStability.ps1` 作为 repeated report 聚合工具。它按 case group 汇总 `framePacing.renderIntervalP95ExpectedErrorMs`、`framePacing.renderIntervalP99ExpectedErrorMs` 和 `framePacing.maxFrameGapExpectedErrorMs` 的 spread，并标记 `stable`、`unstable` 或 `insufficient-samples`。该工具先作为诊断证据使用，不直接覆盖 `evaluate-candidate` 的 suite gate。

@@ -2,6 +2,18 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-09 更新：第二轮 54-case baseline 已重建，precise audio tail 候选拒绝
+
+当前新 worktree 和 sibling worktree 中没有保留旧 41-case ignored artifact；为了避免依赖缺失本地产物，本轮用当前 main/Noira/FFmpeg 8.1.2 状态下已存在的 `docs/qa/private/combined-core-reference-manifest.local.json` 重建 54-case 调优基线：`docs/qa/private/candidates/playback-core-tuning-round2-baseline-54case-a0e72c6.local/`。结果为 54/54 report-set validation 通过，native-headless included，analysis `decision = no-change`、risk `low`、`canEvaluateNativePlayback = true`。
+
+目标 A/V native-headless case `local/native-headless-av-smoke` 的 baseline 证据显示问题仍集中在 audio-clock gating / wait scheduling：30fps expected frame duration `33.333ms`，render P50/P95/P99 `33.3276/39.8287/40.6644ms`，audio-ahead wait P50/P95/P99 `23.8121/33.6223/34.0229ms`，audio-ahead oversleep P50/P95/P99 `0.4546/7.5068/7.7553ms`，A/V drift P95 `10ms`，audio/video starvation 均为 `0`。
+
+本轮按 TDD 尝试了一个未提交的 precise audio tail 候选：先给 `RenderLoopWaiterTests.cpp` 增加 `WaitForPrecise(2ms)` 期望并确认红灯失败于缺少 API；随后实现 timer 等大头、`yield` 等 750us 尾段，并只让 audio-ahead wait 使用该路径，video-clock wait 保持不变。targeted `RenderLoopWaiterTests`、`FramePacingTests` 和 native-headless smoke 均通过。
+
+随后生成 candidate：`docs/qa/private/candidates/playback-core-tuning-precise-audio-tail-54case-working.local/`，并与新 baseline 输出 comparison：`docs/qa/private/comparisons/playback-core-tuning-precise-audio-tail-54case-working.local/`。suite 结论为 `reject-candidate` / `reject-candidate`，54/54 可比，4 improved、1 regressed、0 mixed、49 unchanged，blocker 为 `suite.regression`。唯一硬回归是目标 A/V case：`framePacing.renderIntervalP99ExpectedErrorMs` 和 `framePacing.maxFrameGapExpectedErrorMs` 从 `7.331067ms` 增至 `9.434867ms`，delta `+2.1038ms`。
+
+结论：precise audio tail 不能作为当前播放策略保留；代码已回退，当前 Core/native 行为不包含该候选。该实验说明单纯在 audio-ahead wait 尾段 yield 可能降低部分 oversleep 分位，但会放大目标 A/V case 的尾部 frame pacing gap。下一步不应继续围绕尾段 spin/yield 调参，应优先做重复采样/更长 A/V 样本，或寻找能同时降低 oversleep 与 P99/max gap 的更明确调度机制。
+
 ## 2026-07-09 更新：cadence 重复采样 summary 已工具化
 
 新增 `tools/quality-run/Measure-PlaybackCadenceStability.ps1` 和对应脚本测试，用于消费一批 repeated playback report JSON，按 case group 聚合 `framePacing.*ExpectedErrorMs` 的 min/max/spread，并输出机器可读 `playback-cadence-stability-summary`。该工具只做 flake/stability 归因，不改变 `PlaybackQualityRunComparator` 的 accept/reject 规则，也不放宽任何 stable/challenge case 的 expected behavior。
