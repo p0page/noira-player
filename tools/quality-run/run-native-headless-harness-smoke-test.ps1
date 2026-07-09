@@ -197,11 +197,11 @@ function Build-NativePlaybackGraphHelper {
     }
 
     New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
-    $ffmpegPackage = Join-Path $repoRoot 'src\NoiraPlayer.Native\packages\FFmpegInteropX.FFmpegUWP.5.1.100'
-    Copy-Item -Path (Join-Path $ffmpegPackage 'runtimes\win10-x64\native\*.dll') -Destination $OutputDirectory -Force
+    $ffmpegPackage = Join-Path $repoRoot 'src\NoiraPlayer.Native\packages\FFmpegInteropX.UWP.FFmpeg.8.1.2'
+    Copy-Item -Path (Join-Path $ffmpegPackage 'runtimes\win-x64\native\*.dll') -Destination $OutputDirectory -Force
     Copy-Item -LiteralPath (Get-AppRuntimePath) -Destination $OutputDirectory -Force
 
-    $include = '/I src\NoiraPlayer.Native /I src\NoiraPlayer.Native\packages\FFmpegInteropX.FFmpegUWP.5.1.100\include'
+    $include = '/I src\NoiraPlayer.Native /I src\NoiraPlayer.Native\packages\FFmpegInteropX.UWP.FFmpeg.8.1.2\include'
     $sources = @(
         'tests\NoiraPlayer.Native.Tests\NativePlaybackGraphHeadlessSmokeTests.cpp',
         'src\NoiraPlayer.Native\DxDeviceResources.cpp',
@@ -219,7 +219,7 @@ function Build-NativePlaybackGraphHelper {
         'src\NoiraPlayer.Native\Media\PlaybackGraph.cpp'
     ) -join ' '
     $libs = 'd3d11.lib dxgi.lib d2d1.lib dwrite.lib d3dcompiler.lib xaudio2.lib windowsapp.lib avcodec.lib avformat.lib avutil.lib swresample.lib swscale.lib'
-    $libPath = 'src\NoiraPlayer.Native\packages\FFmpegInteropX.FFmpegUWP.5.1.100\runtimes\win10-x64\native'
+    $libPath = 'src\NoiraPlayer.Native\packages\FFmpegInteropX.UWP.FFmpeg.8.1.2\runtimes\win-x64\native'
     $helperExe = Join-Path $OutputDirectory 'NativePlaybackGraphHeadlessSmokeTests.exe'
     $command = '"' + $vcvars + '" >nul && cl /nologo /std:c++20 /EHsc /DWIN32_LEAN_AND_MEAN /DWINRT_LEAN_AND_MEAN ' + $include + ' /Fo:"' + $OutputDirectory + '\\" ' + $sources + ' /Fe:"' + $helperExe + '" /link /LIBPATH:"' + $libPath + '" ' + $libs
 

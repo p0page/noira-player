@@ -856,9 +856,25 @@ namespace winrt::NoiraPlayer::Native::implementation
             return;
         }
 
+#if LIBAVFORMAT_VERSION_MAJOR >= 62
+        if (stream->codecpar == nullptr)
+        {
+            return;
+        }
+
+        auto sideData = av_packet_side_data_get(
+            stream->codecpar->coded_side_data,
+            stream->codecpar->nb_coded_side_data,
+            AV_PKT_DATA_DOVI_CONF);
+        ApplyDolbyVisionConfigurationSideData(
+            sideData == nullptr ? nullptr : sideData->data,
+            sideData == nullptr ? 0 : sideData->size,
+            L"stream");
+#else
         size_t sideDataSize = 0;
         auto sideData = av_stream_get_side_data(stream, AV_PKT_DATA_DOVI_CONF, &sideDataSize);
         ApplyDolbyVisionConfigurationSideData(sideData, sideDataSize, L"stream");
+#endif
     }
 
     void VideoDecoder::InspectDolbyVisionPacketSideData(AVPacket const* packet)

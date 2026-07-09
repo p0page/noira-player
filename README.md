@@ -75,7 +75,7 @@ rules, and validation notes.
 ## Third-Party Software
 
 Noira uses third-party open-source components. In particular, native playback
-uses FFmpeg libraries through `FFmpegInteropX.FFmpegUWP` version `5.1.100`.
+uses FFmpeg libraries through `FFmpegInteropX.UWP.FFmpeg` version `8.1.2`.
 
 Project source code is licensed under the MIT License. Third-party components
 remain under their own licenses. See `NOTICE.md` for attribution, FFmpeg
