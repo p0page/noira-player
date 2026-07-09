@@ -38,6 +38,8 @@ $nativeHdr1023976CaseId = 'local/native-headless-hdr10-23976'
 $nativeHdr1024CaseId = 'local/native-headless-hdr10-24'
 $nativeHdr1030CaseId = 'local/native-headless-hdr10-30'
 $nativeHdr1060CaseId = 'local/native-headless-hdr10-60'
+$nativeCadenceDurationSeconds = 5
+$nativeAvDurationSeconds = 3
 
 function Get-QualityReportPath {
     param(
@@ -72,7 +74,7 @@ function New-NativePlaybackSdrSample {
         -loglevel error `
         -f lavfi `
         -i "testsrc2=size=320x180:rate=$Rate" `
-        -t 3 `
+        -t $nativeCadenceDurationSeconds `
         -vf "setparams=range=tv:color_primaries=bt709:color_trc=bt709:colorspace=bt709" `
         -pix_fmt yuv420p `
         -c:v libx264 `
@@ -106,7 +108,7 @@ function New-NativePlaybackHdr10Sample {
         -loglevel error `
         -f lavfi `
         -i "testsrc2=size=320x180:rate=$Rate" `
-        -t 3 `
+        -t $nativeCadenceDurationSeconds `
         -vf "format=yuv420p10le,setparams=range=tv:color_primaries=bt2020:color_trc=smpte2084:colorspace=bt2020nc" `
         -pix_fmt yuv420p10le `
         -c:v libx265 `
@@ -148,7 +150,7 @@ Native headless subtitle smoke
         -map 0:v:0 `
         -map 1:a:0 `
         -map 2:s:0 `
-        -t 3 `
+        -t $nativeAvDurationSeconds `
         -vf "setparams=range=tv:color_primaries=bt709:color_trc=bt709:colorspace=bt709" `
         -pix_fmt yuv420p `
         -c:v libx264 `
@@ -243,7 +245,7 @@ function Invoke-NativeHeadlessHelperCase {
         [string]$StreamUrl,
         [string]$ReportsDir,
         [string]$NativeHelperExe,
-        [int]$DurationSeconds = 3
+        [int]$DurationSeconds = $script:nativeCadenceDurationSeconds
     )
 
     $exitCode = 1
@@ -483,7 +485,7 @@ for ($attempt = 1; $attempt -le 3; $attempt++) {
     dotnet run --project (Join-Path $repoRoot 'tools\NoiraPlayer.PlaybackQuality.Headless\NoiraPlayer.PlaybackQuality.Headless.csproj') -- `
         --case-id $nativeCaseId `
         --stream-url $nativeSampleUrl `
-        --duration-seconds 3 `
+        --duration-seconds $nativeCadenceDurationSeconds `
         --force-sdr-output `
         --reports-dir $nativeCapturedDir `
         --native-helper-exe $nativeHelperExe
@@ -551,7 +553,7 @@ for ($attempt = 1; $attempt -le 3; $attempt++) {
     dotnet run --project (Join-Path $repoRoot 'tools\NoiraPlayer.PlaybackQuality.Headless\NoiraPlayer.PlaybackQuality.Headless.csproj') -- `
         --case-id $nativeAvCaseId `
         --stream-url $nativeAvSampleUrl `
-        --duration-seconds 3 `
+        --duration-seconds $nativeAvDurationSeconds `
         --reports-dir $nativeCapturedDir `
         --native-helper-exe $nativeHelperExe
     $nativeAvHelperExitCode = $LASTEXITCODE

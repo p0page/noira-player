@@ -851,3 +851,11 @@
 影响：保留该实验的 candidate/comparison 产物作为反证，不保留代码行为。后续 wait/scheduling 调优不能仅靠固定 prewake margin 继续试参；需要更稳定的重复采样、长样本证据，或更明确地同时改善 render interval、oversleep、A/V drift 和 process cost 的策略。
 
 边界：这不是降低 stable eval 标准，也不是删除测试；相反，本轮因为 commit-bound 同 manifest comparison 不支持采纳而回退了策略代码。
+
+# 2026-07-09: video-only native cadence 样本使用 5 秒，A/V smoke 保持 3 秒
+
+决策：native-headless harness 中的 video-only SDR/HDR cadence 样本统一使用 5 秒；含音频/字幕的 `local/native-headless-av-smoke` 继续使用 3 秒，并通过脚本测试固定这两个显式时长。
+
+原因：3 秒 video-only 60fps 样本对 P95/P99 尾部分位数过敏，容易把短样本采样噪音误判为 cadence 不稳定。5 秒样本提高了 HDR10-60/SDR60 这类 cadence-only case 的统计稳定性。A/V smoke 的主要问题来自 audio-clock gating / wait scheduling，其不稳定性不应通过延长所有样本或放宽阈值被掩盖。
+
+影响：这是评测 harness 可靠性调整，不改变播放器行为、stable case expected behavior、candidate acceptance 规则或 evaluator 阈值。后续基线如果包含 native-headless cadence case，应把样本时长变化视为 eval baseline migration，而不是 Core 调优收益。

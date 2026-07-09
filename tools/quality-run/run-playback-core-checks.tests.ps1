@@ -123,6 +123,16 @@ if (-not ($plan.commands | Where-Object { $_.name -eq 'native-headless-harness-s
     throw 'Expected native-headless-harness-smoke-test command in playback-core validation plan.'
 }
 
+$nativeHeadlessSmokeScriptPath = Join-Path $PSScriptRoot 'run-native-headless-harness-smoke-test.ps1'
+$nativeHeadlessSmokeScript = Get-Content -Raw -LiteralPath $nativeHeadlessSmokeScriptPath
+if ($nativeHeadlessSmokeScript -notmatch '\$nativeCadenceDurationSeconds\s*=\s*5') {
+    throw 'Expected native-headless cadence samples to use an explicit 5-second duration to reduce short-sample percentile instability.'
+}
+
+if ($nativeHeadlessSmokeScript -notmatch '\$nativeAvDurationSeconds\s*=\s*3') {
+    throw 'Expected native-headless A/V smoke to keep its explicit 3-second duration separate from cadence-only sample tuning.'
+}
+
 if (-not ($plan.commands | Where-Object { $_.name -eq 'private-emby-reference-manifest-test' })) {
     throw 'Expected private-emby-reference-manifest-test command in playback-core validation plan.'
 }

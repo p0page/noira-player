@@ -721,3 +721,13 @@ manifest validation、report-set validation、single comparison、comparison sui
 - submitted/queued audio 保持 `82/12`
 
 结论：该候选降低了 oversleep 和进程 CPU ratio，但没有稳定改善 render P95/P99，且增加了 audio-ahead wait 次数。因此不作为 accepted candidate 保留；`aa2eddc` 的代码改动已回退。后续不要继续靠固定 prewake margin 调参，应优先补充更稳定的多次采样/长样本证据，或设计能同时降低 oversleep 与 render interval 的更明确调度策略。
+
+# 2026-07-09 更新：native video-only cadence 样本改为 5 秒，A/V smoke 仍保持 3 秒
+
+本轮只调整评测 harness 的样本策略，不改变播放器 Core/native 行为：`run-native-headless-harness-smoke-test.ps1` 中 video-only SDR/HDR cadence 样本改为 5 秒，`local/native-headless-av-smoke` 继续保持 3 秒。对应脚本测试已加入 `run-playback-core-checks.tests.ps1`，防止后续把 cadence-only 样本和 A/V smoke 样本时长再次混在一起。
+
+原因：上一轮 accepted 当前基线 `f96aaa8` 的 3 次重复采样显示，9 个 native case 中 8 个稳定，唯一不稳定的是 `local/native-headless-hdr10-60`。该 case 是 60fps video-only HDR cadence 短样本，3 秒样本对 P95/P99 尾部分位数过于敏感。工作区验证把 video-only cadence 样本延长到 5 秒后，重复采样产物 `docs/qa/private/repeats/playback-core-tuning-native-5s-cadence-av3-working-repeat.local/` 显示 HDR10-60 变为稳定：P95 spread 约 `0.5131ms`，P99 spread 约 `0.4566ms`。
+
+边界：这不是播放质量优化，也不证明真实 Xbox/HDMI 输出、HDR 颜色、A/V sync 或主观流畅度改善。A/V smoke 在同一轮 3 次重复采样中仍是不稳定项，P95 spread 约 `2.4487ms`、P99 spread 约 `1.1301ms`，因此它仍是后续 wait scheduling / A/V gating 调优的独立证据目标。
+
+验证：`tools/quality-run/run-playback-core-checks.ps1` 已通过，覆盖 Core tests、quality CLI、native-headless smoke、manifest/report/comparison 测试、native helper tests 和 native build。
