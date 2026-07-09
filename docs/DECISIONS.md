@@ -1,5 +1,15 @@
 ﻿# 技术决策
 
+## 2026-07-10: 不采纳 audio-ahead wait cap / early-wake 调参候选
+
+决策：不保留 5ms audio-ahead wait cap、2ms early-wake 或 1ms early-wake 候选。当前 accepted Core 行为继续使用 `b6307e2` 的 audio-ahead wait 计算；本轮所有候选源码已撤回，只保留 ignored/private report artifacts 作为后续模型避免重复尝试的证据。
+
+原因：当前主线样本口径已经变为 24-case，不能继续用旧 54-case artifact 做严格候选判定。基于 `b6307e2` 24-case baseline 对比后，5ms cap 直接回归 A/V smoke，`audioAheadWaitCount` 从 `53` 增到 `243`。2ms early-wake 为 `split-candidate`：video-only HDR10-60 单次 improved 但无法归因，A/V smoke 的 instability 转移到 audio oversleep P95/P99。1ms early-wake 仍为 `split-candidate`，A/V smoke 同时出现 P99/max gap 和 oversleep P95/P99 回归。重复采样进一步显示 baseline 与 candidate 都存在 A/V smoke instability，但 candidate 没有消除目标风险，只改变了不稳定信号形态。
+
+影响：后续不要继续通过“缩短单次 audio wait”或“提前 1-2ms 醒来”这类参数调参尝试修复 A/V smoke。下一步应先补 per-wait 级证据，或调查 render scheduling / audio clock gating 的结构问题。候选比较必须继续使用当前 manifest 口径生成同源 baseline/candidate report-set，并在 native tail case 上附带 repeat stability。
+
+边界：该决策不修改 evaluator 阈值、不删除 case、不把 A/V smoke 或 HDR10-60 quarantine，也不声称当前 Core 已改善。它只拒绝本轮三个策略候选，并把当前 24-case baseline 作为后续调优的新比较起点。
+
 ## 2026-07-10: render outlier evidence 保留为诊断增强，不作为播放质量优化采纳
 
 决策：保留 `timing.renderIntervalSampleCount`、`timing.renderIntervalOverExpected2MsCount`、`timing.renderIntervalOverExpected4MsCount` 这组 render interval outlier 证据，并保留 `Compare-PlaybackCoreTuningCandidate.ps1` 的 `cadenceStability.attribution` 输出。但 `0c40e63` 不标记为 accepted playback-quality improvement；它只是 evidence/schema 与模型消费能力增强。

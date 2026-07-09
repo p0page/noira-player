@@ -2,6 +2,16 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-10 更新：当前 main 口径已迁移到 24-case，audio-ahead early-wake 候选不采纳
+
+本轮确认 `main` 已经是当前分支祖先，`git merge --ff-only main` 结果为 already up to date。由于主线样本/私有 manifest 已调整，当前可复现口径从旧 54-case 变为 24-case：15 个 core/private case 加 9 个 native-headless case。已基于当前 accepted HEAD `b6307e2` 生成同口径 baseline：`docs\qa\private\candidates\playback-core-tuning-b6307e2-24case.local\`，validation 通过，24/24 report matched，native-headless included。
+
+尝试过三个未采纳的小步 audio-ahead wait 候选，源码均已撤回。5ms cap 候选会把 `local/native-headless-av-smoke` 的 `audioAheadWaitCount` 从 `53` 增到 `243`，并让 render P99/max gap 回归，直接 `reject-candidate`。2ms early-wake 候选结论为 `split-candidate`：`local/native-headless-hdr10-60` 单次 improved，但该 case 没有 audio wait，因此改善不能归因于候选；目标 A/V smoke 则从 frame tail instability 转为 `timing.audioAheadWaitOversleepMsP95/P99` instability。1ms early-wake 候选仍为 `split-candidate`，A/V smoke 的 P95 render 改善被 P99/max gap 和 audio oversleep P95/P99 回归抵消。
+
+为排除单次 native-headless 抖动，已对 `b6307e2` baseline 和 2ms early-wake candidate 各跑 3 次 native repeat。baseline repeat 归档到 `docs\qa\private\repeats\playback-core-tuning-b6307e2-native-repeat.local\`，A/V smoke 与 HDR10-60 都是 unstable：A/V 主要是 frame P99/max spread，HDR10-60 是 max-frame-gap spread。2ms early-wake repeat 归档到 `docs\qa\private\repeats\playback-core-tuning-audio-ahead-early-wake-native-repeat.local\`，HDR10-60 变为 stable，但 A/V smoke 仍 unstable，且 unstable signals 变成 frame P95 加 audio oversleep P95/P99。带 stability attribution 的 comparison 仍是 `split-candidate`，因此不能采纳该策略。
+
+当前结论：不要继续沿 5ms cap、1-2ms early-wake 或简单 audio wait 参数调参。下一步如果继续处理 A/V smoke，应先补更细的 per-wait evidence，例如每次 wait 的 initial gap、planned wait、actual wait、final audio delta、是否跨过 render interval tail，而不是继续只看 episode-level P95/P99；或者转向 render scheduling 结构问题，研究为什么 2.5s/30fps A/V 样本只稳定渲染约 46 帧。
+
 ## 2026-07-10 更新：render outlier 证据已补齐，但本轮不是可采纳的播放质量优化
 
 本轮在 `c129249` accepted render-loop timer 基线之后补齐了 native render interval outlier 证据：report 现在会输出 `timing.renderIntervalSampleCount`、`timing.renderIntervalOverExpected2MsCount` 和 `timing.renderIntervalOverExpected4MsCount`，用于区分“P95/P99 常态 cadence”与“少量 max-frame-gap 尾部尖峰”。第一次实现曾在 `RecordRenderIntervalMs` 热路径内计数；随后已修正为只在 `Snapshot()` 阶段按 histogram 和 source frame rate 计算，避免每帧记录时做额外阈值判断。
