@@ -1,4 +1,25 @@
 ﻿# 技术决策
+
+## 2026-07-09: main 合并后以 905241d 作为新的播放 Core 调优基线
+
+决策：`main` 的 VS2026 / .NET 10 / native `v145` / FFmpeg 8.1.2 构建链更新合入后，后续播放 Core 调优以 `905241d` 生成的 `playback-core-tuning-main-modern-54case-905241d.local` 作为当前工程基线。旧的 pre-merge 54-case baseline 继续保留为迁移诊断材料，但不再作为后续候选是否可采纳的主要比较对象。
+
+原因：新旧基线 comparison 结果为 `reject-candidate`，阻断点是 `local/native-headless-av-smoke` 和 `local/native-headless-hdr10-60` 的 frame-pacing 回归；重复采样进一步显示新 `905241d` 基线在这两个 native-headless group 上存在 cadence stability 风险。这是合并主线后的基线状态，不是某个后续 Core 调优候选造成的回归。继续用旧 baseline 作为主判据会把工具链/依赖迁移风险混进后续策略调优结论。
+
+影响：后续所有 wait scheduling、frame pacing、A/V sync、buffering、seek/timeline、track/subtitle 和 color/DXGI 调整，都必须先从 `905241d` baseline 生成同 manifest candidate comparison。若需要解释与合并前状态的差异，可以单独引用 old-vs-new migration comparison 和 cadence stability summary，但不能把旧 baseline 的 `reject-candidate` 结论当成新候选的直接拒绝原因。
+
+边界：该决策不放宽评测阈值、不删除失败 case、不声称播放质量提升。`905241d` 只是新的工作起点；当前已知风险是 native-headless A/V smoke 与 HDR10-60 的尾部 frame pacing stability 弱于旧基线，下一步调优应优先定位并改善这两个目标。
+
+## 2026-07-09: 播放 Core 门禁 native restore/build 必须使用现代 MSBuild
+
+决策：`tools\quality-run\run-playback-core-checks.ps1` 的 native restore/build 阶段通过 `tools\NoiraModernToolchain.ps1` 解析 MSBuild，不再依赖 VS2022 `vcvars64.bat` 或 PATH 上的旧 `msbuild`。
+
+原因：`main` 已切到 VS2026/MSBuild 18 和 native `v145` toolset。继续用 VS2022/MSBuild 17 会失败在 `MSB8020: 找不到 v145`，这不是播放 Core 问题，而是门禁脚本还停在旧构建链。
+
+影响：干净 worktree 可以用文档化命令运行完整播放 Core gate，native restore/build 与 App 现代构建入口保持一致。脚本测试会阻止该阶段回退到 VS2022 工具链。
+
+边界：这是构建门禁修复，不改变播放器行为、FFmpeg 版本、评测规则或样本预期。
+
 ## 2026-07-09: 不采纳 precise audio tail wait 候选
 
 决策：不保留本轮 precise audio tail wait 候选。该候选给 `RenderLoopWaiter` 增加 timer + `yield` 尾段等待，并仅接入 audio-ahead gating；comparison 结果为 `reject-candidate`，因此当前 Core/native 主线保持原有 `RenderLoopWaiter.WaitFor` 行为。

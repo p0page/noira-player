@@ -2,6 +2,18 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-09 更新：已合并 main 的 VS2026 / FFmpeg 更新，调优基线迁移到 905241d
+
+本轮已将 `main` 的构建链和依赖更新合入当前播放 Core 调优分支，merge commit 为 `67fc96e`。合入内容包括 VS2026 / MSBuild 18、.NET 10 现代 UWP、native `v145` toolset、Windows SDK `10.0.26100.0`、C++20、`Microsoft.Windows.CppWinRT 3.0.260520.1`，以及当前 `FFmpegInteropX.UWP.FFmpeg.8.1.2` 依赖链路。
+
+合并后发现 `tools\quality-run\run-playback-core-checks.ps1` 的 native restore/build 仍硬编码 VS2022 `vcvars64.bat` 和旧 `msbuild`，在 `v145` toolset 下失败。已提交 `905241d tools: use modern msbuild for native core gate`，让 native restore/build 通过 `tools\NoiraModernToolchain.ps1` 解析现代 MSBuild。完整门禁 `powershell -NoProfile -ExecutionPolicy Bypass -File tools\quality-run\run-playback-core-checks.ps1` 已通过，覆盖 Core tests、CLI smoke、native-headless smoke、manifest/report-set 脚本测试、cadence stability 工具测试、native helper/frame pacing/render loop/display refresh/offscreen tests 和 native Debug x64 build。
+
+已基于合并后的 `905241d` 生成新的 54-case report-set：`docs\qa\private\candidates\playback-core-tuning-main-modern-54case-905241d.local\`。report-set validation 通过，54/54 report matched，native-headless included。与合并前 54-case baseline `playback-core-tuning-round2-baseline-54case-a0e72c6.local` 对比时，suite 结论为 `reject-candidate`：4 improved、2 regressed、48 unchanged，blocker 为 `suite.regression`，目标区域为 `frame-pacing`。两个回归 case 是 `local/native-headless-av-smoke` 和 `local/native-headless-hdr10-60`。
+
+重复采样显示这不是某个新调优补丁的结论，而是 main/工具链/FFmpeg 合并后的基线迁移风险。旧 baseline 的 3 次重复采样中 `local/native-headless-av-smoke` 和 `local/native-headless-hdr10-60` 为 stable；新 `905241d` 的 3 次 native-headless 重复采样中，这两个 group 均为 unstable：`local/native-headless-av-smoke` 的 P95/P99/max expected-error spread 为 `2.2868ms/3.8023ms/3.8023ms`，`local/native-headless-hdr10-60` 的 P99/max spread 为 `2.3287ms`。单次 comparison 中 A/V smoke 的 P99/max `52.7209ms` 未在 3 次重复采样中复现，但新基线的尾部 cadence 稳定性确实弱于旧基线。
+
+当前结论：`905241d` 是后续继续调优必须面对的新工程基线，但不能把它解释为一次已接受的播放质量优化。后续 candidate 应以 `playback-core-tuning-main-modern-54case-905241d.local` 作为新 baseline 做同 manifest 对比；旧的 pre-merge baseline 只用于迁移诊断，不再作为后续候选是否可采纳的主要参照。下一步应优先定位合并后 native-headless A/V smoke 与 HDR10-60 cadence 不稳定的来源，再做小步 Core/native 调整。
+
 ## 2026-07-09 更新：VS2026 / .NET 10 / Native AOT 已成为本地主构建链路
 
 当前仓库主入口已切到 VS2026 / MSBuild 18 / .NET 10 现代 UWP 路径：`NoiraPlayer.sln` 包含 `NoiraPlayer.App.Modern.csproj`、Core、Native、Core tests、playback-quality CLI/headless 工具；旧 solution、旧 UAP app project 和旧 loose deploy helper 已从 active tree 移除。Core、测试和 playback-quality 工具均直接 target `net10.0`，UWP app target 为 `net10.0-windows10.0.26100.0`，`Package.appxmanifest` 保持 `Windows.Universal`、`MinVersion=10.0.19041.0`、`MaxVersionTested=10.0.26100.0`。
