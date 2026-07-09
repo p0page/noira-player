@@ -198,7 +198,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 case HdrOutputStatus.Off:
                     return "Sdr";
                 case HdrOutputStatus.Unsupported:
-                    return "Unsupported";
+                    return "Sdr";
                 case HdrOutputStatus.Failed:
                     return "Failed";
                 default:

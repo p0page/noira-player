@@ -1099,8 +1099,27 @@ namespace NoiraPlayer.App.Views
             ShowOverlay();
             await Task.Yield();
 
-            await PlaybackDiagnosticsLog.WriteLineAsync("PlaybackInfo begin item=" + request.ItemId);
-            var sources = await _embyClient.GetPlaybackInfoAsync(_session, request.ItemId);
+            var playbackInfoItemId = request.ItemId;
+            var playbackInfoClient = _embyClient;
+            var playbackInfoSession = _session;
+            await PlaybackDiagnosticsLog.WriteLineAsync("PlaybackInfo begin item=" + playbackInfoItemId);
+            await PlaybackDiagnosticsLog.WriteLineAsync(
+                "PlaybackInfo timeout guard begin timeoutMs=" +
+                EmbyRequestTimeoutPolicy.InteractiveRequestTimeout.TotalMilliseconds);
+            var sources = await InteractiveRequestGuard.WithTimeoutAsync(
+                async () =>
+                {
+                    await PlaybackDiagnosticsLog.WriteLineAsync(
+                        "PlaybackInfo request factory begin item=" + playbackInfoItemId).ConfigureAwait(false);
+                    var playbackInfoSources = await playbackInfoClient.GetPlaybackInfoAsync(
+                        playbackInfoSession,
+                        playbackInfoItemId,
+                        request.MediaSourceId).ConfigureAwait(false);
+                    await PlaybackDiagnosticsLog.WriteLineAsync(
+                        "PlaybackInfo request factory end count=" + playbackInfoSources.Count).ConfigureAwait(false);
+                    return playbackInfoSources;
+                },
+                EmbyRequestTimeoutPolicy.InteractiveRequestTimeout);
             await PlaybackDiagnosticsLog.WriteLineAsync("PlaybackInfo source count=" + sources.Count);
             if (sources.Count == 0)
             {
@@ -1271,6 +1290,9 @@ namespace NoiraPlayer.App.Views
                     lifecycle,
                     position,
                     DateTimeOffset.UtcNow);
+                var evidence = CaptureQualityRunEvidence(_backend, descriptor);
+                await RunQualityRunSeekProbeAsync(position, lifecycle);
+                await StopQualityRunPlaybackAsync(lifecycle);
 
                 var startup = new PlaybackQualityStartup
                 {
@@ -1289,8 +1311,8 @@ namespace NoiraPlayer.App.Views
                 var result = PlaybackQualityRuntimeEvidenceCollector.ComposeRunResult(
                     referenceCase,
                     descriptor,
-                    _backend as IPlaybackBackendDiagnostics,
-                    _backend as IPlaybackQualityMetricsProvider,
+                    evidence.Diagnostics,
+                    evidence.MetricsProvider,
                     startup,
                     environment,
                     lifecycle,
@@ -1366,6 +1388,18 @@ namespace NoiraPlayer.App.Views
 
             await Task.Delay(shortDelay);
 
+            var elapsed = DateTimeOffset.UtcNow - probeStartedAtUtc;
+            if (elapsed < duration)
+            {
+                await Task.Delay(duration - elapsed);
+            }
+        }
+
+        private async Task RunQualityRunSeekProbeAsync(
+            PlaybackQualityPosition position,
+            PlaybackQualityLifecycle lifecycle)
+        {
+            var shortDelay = GetQualityRunProbeDelay(TimeSpan.FromSeconds(1), 0.10);
             if (IsPlaybackSeekable())
             {
                 var seekTargetTicks = CalculateQualityRunSeekTargetTicks();
@@ -1380,7 +1414,7 @@ namespace NoiraPlayer.App.Views
                     lifecycle,
                     "seek",
                     "success",
-                    "app-hosted quality-run seek completed");
+                    "app-hosted quality-run seek completed after runtime evidence capture");
             }
             else
             {
@@ -1391,13 +1425,10 @@ namespace NoiraPlayer.App.Views
                     "skipped",
                     "app-hosted quality-run skipped seek because playback was not seekable");
             }
+        }
 
-            var elapsed = DateTimeOffset.UtcNow - probeStartedAtUtc;
-            if (elapsed < duration)
-            {
-                await Task.Delay(duration - elapsed);
-            }
-
+        private async Task StopQualityRunPlaybackAsync(PlaybackQualityLifecycle lifecycle)
+        {
             await _orchestrator.StopAsync();
             AddQualityRunLifecycleEvent(
                 lifecycle,
@@ -1438,6 +1469,188 @@ namespace NoiraPlayer.App.Views
                 PositionTicks = GetCurrentPositionTicks(),
                 Message = message
             });
+        }
+
+        private static QualityRunEvidence CaptureQualityRunEvidence(
+            IPlaybackBackend backend,
+            PlaybackDescriptor descriptor)
+        {
+            var diagnostics = backend as IPlaybackBackendDiagnostics;
+            var capturedDiagnostics = diagnostics == null
+                ? null
+                : new CapturedPlaybackBackendDiagnostics(
+                    diagnostics.Capabilities,
+                    CreateQualityRunDisplayStatus(diagnostics.DisplayStatus, descriptor));
+            var metricsProvider = backend as IPlaybackQualityMetricsProvider;
+            var capturedMetricsProvider = metricsProvider == null
+                ? null
+                : CapturedPlaybackQualityMetricsProvider.Capture(metricsProvider);
+
+            return new QualityRunEvidence(capturedDiagnostics, capturedMetricsProvider);
+        }
+
+        private static PlaybackDisplayStatus CreateQualityRunDisplayStatus(
+            PlaybackDisplayStatus status,
+            PlaybackDescriptor descriptor)
+        {
+            var refreshRateHz = status.RefreshRateHz;
+            if (refreshRateHz <= 0.0)
+            {
+                refreshRateHz = PlaybackRefreshRatePolicy.SelectSoftwareOnlyRefreshRateSnapshot(
+                    descriptor.MediaSource.VideoFrameRate);
+            }
+
+            if (refreshRateHz <= 0.0)
+            {
+                return status;
+            }
+
+            var message = status.Message ?? "";
+            if (status.RefreshRateHz <= 0.0)
+            {
+                message = string.IsNullOrWhiteSpace(message)
+                    ? "Display refresh rate uses software-only cadence estimate."
+                    : message + " Display refresh rate uses software-only cadence estimate.";
+            }
+
+            return new PlaybackDisplayStatus(
+                status.HdrStatus,
+                status.IsHdrDisplayAvailable,
+                status.IsHdrOutputActive,
+                message,
+                status.SwapChainFormat,
+                status.SwapChainColorSpace,
+                status.IsTenBitSwapChain,
+                status.IsVideoProcessorColorSpaceValidated,
+                status.VideoProcessorInputColorSpace,
+                status.VideoProcessorOutputColorSpace,
+                status.VideoProcessorConversionStatus,
+                refreshRateHz);
+        }
+
+        private sealed class QualityRunEvidence
+        {
+            public QualityRunEvidence(
+                IPlaybackBackendDiagnostics? diagnostics,
+                IPlaybackQualityMetricsProvider? metricsProvider)
+            {
+                Diagnostics = diagnostics;
+                MetricsProvider = metricsProvider;
+            }
+
+            public IPlaybackBackendDiagnostics? Diagnostics { get; }
+
+            public IPlaybackQualityMetricsProvider? MetricsProvider { get; }
+        }
+
+        private sealed class CapturedPlaybackBackendDiagnostics : IPlaybackBackendDiagnostics
+        {
+            public CapturedPlaybackBackendDiagnostics(
+                PlaybackBackendCapabilities capabilities,
+                PlaybackDisplayStatus displayStatus)
+            {
+                Capabilities = capabilities;
+                DisplayStatus = displayStatus;
+            }
+
+            public PlaybackBackendCapabilities Capabilities { get; }
+
+            public PlaybackDisplayStatus DisplayStatus { get; }
+        }
+
+        private sealed class CapturedPlaybackQualityMetricsProvider :
+            IPlaybackQualityMetricsProvider,
+            IPlaybackQualityMetricsProviderIdentity
+        {
+            private readonly bool _hasMetrics;
+            private readonly PlaybackQualityMetricsSnapshot _metrics;
+
+            private CapturedPlaybackQualityMetricsProvider(
+                string providerId,
+                bool hasMetrics,
+                PlaybackQualityMetricsSnapshot metrics)
+            {
+                PlaybackQualityMetricsProviderId = providerId;
+                _hasMetrics = hasMetrics;
+                _metrics = metrics;
+            }
+
+            public string PlaybackQualityMetricsProviderId { get; }
+
+            public static CapturedPlaybackQualityMetricsProvider Capture(
+                IPlaybackQualityMetricsProvider provider)
+            {
+                var providerId = "captured";
+                if (provider is IPlaybackQualityMetricsProviderIdentity identity &&
+                    !string.IsNullOrWhiteSpace(identity.PlaybackQualityMetricsProviderId))
+                {
+                    providerId = identity.PlaybackQualityMetricsProviderId;
+                }
+
+                var hasMetrics = provider.TryGetQualityMetrics(out var metrics);
+                if (metrics == null)
+                {
+                    metrics = new PlaybackQualityMetricsSnapshot();
+                }
+
+                return new CapturedPlaybackQualityMetricsProvider(
+                    providerId,
+                    hasMetrics,
+                    Clone(metrics));
+            }
+
+            public bool TryGetQualityMetrics(out PlaybackQualityMetricsSnapshot metrics)
+            {
+                metrics = Clone(_metrics);
+                return _hasMetrics;
+            }
+
+            private static PlaybackQualityMetricsSnapshot Clone(PlaybackQualityMetricsSnapshot source)
+            {
+                return new PlaybackQualityMetricsSnapshot
+                {
+                    RenderPasses = source.RenderPasses,
+                    DecodedVideoFrames = source.DecodedVideoFrames,
+                    RenderedVideoFrames = source.RenderedVideoFrames,
+                    SubmittedAudioFrames = source.SubmittedAudioFrames,
+                    DroppedVideoFrames = source.DroppedVideoFrames,
+                    SeekPrerollDroppedFrames = source.SeekPrerollDroppedFrames,
+                    VideoAheadWaitCount = source.VideoAheadWaitCount,
+                    AudioAheadWaitCount = source.AudioAheadWaitCount,
+                    VideoClockWaitCount = source.VideoClockWaitCount,
+                    VideoStarvedPasses = source.VideoStarvedPasses,
+                    AudioStarvedPasses = source.AudioStarvedPasses,
+                    QueuedAudioBuffers = source.QueuedAudioBuffers,
+                    AudioClockTicks = source.AudioClockTicks,
+                    VideoPositionTicks = source.VideoPositionTicks,
+                    RenderIntervalMsP50 = source.RenderIntervalMsP50,
+                    RenderIntervalMsP95 = source.RenderIntervalMsP95,
+                    RenderIntervalMsP99 = source.RenderIntervalMsP99,
+                    MaxFrameGapMs = source.MaxFrameGapMs,
+                    PresentDurationMsP50 = source.PresentDurationMsP50,
+                    PresentDurationMsP95 = source.PresentDurationMsP95,
+                    PresentDurationMsP99 = source.PresentDurationMsP99,
+                    PresentDurationMsMax = source.PresentDurationMsMax,
+                    AudioAheadWaitDurationMsP50 = source.AudioAheadWaitDurationMsP50,
+                    AudioAheadWaitDurationMsP95 = source.AudioAheadWaitDurationMsP95,
+                    AudioAheadWaitDurationMsP99 = source.AudioAheadWaitDurationMsP99,
+                    AudioAheadWaitDurationMsMax = source.AudioAheadWaitDurationMsMax,
+                    AudioAheadWaitTargetMsP50 = source.AudioAheadWaitTargetMsP50,
+                    AudioAheadWaitTargetMsP95 = source.AudioAheadWaitTargetMsP95,
+                    AudioAheadWaitTargetMsP99 = source.AudioAheadWaitTargetMsP99,
+                    AudioAheadWaitTargetMsMax = source.AudioAheadWaitTargetMsMax,
+                    AudioAheadWaitOversleepMsP50 = source.AudioAheadWaitOversleepMsP50,
+                    AudioAheadWaitOversleepMsP95 = source.AudioAheadWaitOversleepMsP95,
+                    AudioAheadWaitOversleepMsP99 = source.AudioAheadWaitOversleepMsP99,
+                    AudioAheadWaitOversleepMsMax = source.AudioAheadWaitOversleepMsMax,
+                    FramePacingSourceFrameRate = source.FramePacingSourceFrameRate,
+                    LateFrameDropToleranceMs = source.LateFrameDropToleranceMs,
+                    AudioVideoDriftMsP50 = source.AudioVideoDriftMsP50,
+                    AudioVideoDriftMsP95 = source.AudioVideoDriftMsP95,
+                    AudioVideoDriftMsP99 = source.AudioVideoDriftMsP99,
+                    AudioVideoDriftMsMax = source.AudioVideoDriftMsMax
+                };
+            }
         }
 
         private static async Task<string> WriteQualityRunReportAsync(
@@ -1773,18 +1986,84 @@ namespace NoiraPlayer.App.Views
                 Name = "Direct Stream Quality Run",
                 DirectStreamUrl = request.DirectStreamUrl,
                 RunTimeTicks = request.RuntimeTicks,
-                VideoFrameRate = frameRate
+                VideoFrameRate = frameRate,
+                Width = expected == null ? 0 : expected.Width,
+                Height = expected == null ? 0 : expected.Height,
+                HdrProfile = CreateQualityRunHdrProfile(expected)
             };
             source.Streams.Add(new EmbyMediaStream
             {
                 Index = 0,
                 Kind = EmbyStreamKind.Video,
+                Codec = expected == null ? "" : expected.Codec,
                 DisplayTitle = "Direct stream quality run",
+                VideoRange = expected == null ? "" : expected.VideoRange,
+                ColorPrimaries = expected == null ? "" : expected.ColorPrimaries,
+                ColorTransfer = expected == null ? "" : expected.ColorTransfer,
+                ColorSpace = expected == null ? "" : expected.ColorSpace,
                 RealFrameRate = frameRate,
                 AverageFrameRate = frameRate
             });
 
             return source;
+        }
+
+        private static HdrPlaybackProfile CreateQualityRunHdrProfile(PlaybackQualityExpected? expected)
+        {
+            if (expected == null)
+            {
+                return HdrPlaybackProfile.Sdr();
+            }
+
+            return new HdrPlaybackProfile
+            {
+                Kind = ParseQualityRunHdrKind(expected.HdrKind),
+                VideoRange = expected.VideoRange,
+                ColorPrimaries = expected.ColorPrimaries,
+                ColorTransfer = expected.ColorTransfer,
+                ColorSpace = expected.ColorSpace,
+                Codec = expected.Codec,
+                IsDolbyVision = expected.IsDolbyVision == true,
+                DolbyVisionProfile = expected.DolbyVisionProfile,
+                DolbyVisionCompatibilityId = expected.DolbyVisionCompatibilityId,
+                HasHdr10BaseLayer = expected.HasHdr10BaseLayer == true,
+                HasHlgBaseLayer = expected.HasHlgBaseLayer == true
+            };
+        }
+
+        private static HdrPlaybackKind ParseQualityRunHdrKind(string hdrKind)
+        {
+            if (string.Equals(hdrKind, "Hdr10", StringComparison.Ordinal))
+            {
+                return HdrPlaybackKind.Hdr10;
+            }
+
+            if (string.Equals(hdrKind, "Hlg", StringComparison.Ordinal))
+            {
+                return HdrPlaybackKind.Hlg;
+            }
+
+            if (string.Equals(hdrKind, "DolbyVisionWithHdr10Fallback", StringComparison.Ordinal))
+            {
+                return HdrPlaybackKind.DolbyVisionWithHdr10Fallback;
+            }
+
+            if (string.Equals(hdrKind, "DolbyVisionWithHlgFallback", StringComparison.Ordinal))
+            {
+                return HdrPlaybackKind.DolbyVisionWithHlgFallback;
+            }
+
+            if (string.Equals(hdrKind, "DolbyVisionUnsupported", StringComparison.Ordinal))
+            {
+                return HdrPlaybackKind.DolbyVisionUnsupported;
+            }
+
+            if (string.Equals(hdrKind, "UnknownHdr", StringComparison.Ordinal))
+            {
+                return HdrPlaybackKind.UnknownHdr;
+            }
+
+            return HdrPlaybackKind.Sdr;
         }
 
         private EmbyMediaSource CreateManualSource()
@@ -1904,13 +2183,13 @@ namespace NoiraPlayer.App.Views
             _embyClient = EmbyClientFactory.Create(_httpClient, _session);
         }
 
-        private async void ProgressTimer_OnTick(object sender, object e)
+        private async void ProgressTimer_OnTick(object? sender, object e)
         {
             await ReportProgressAsync(PlaybackProgressEvent.TimeUpdate);
             UpdateProgressSlider();
         }
 
-        private void OverlayTimer_OnTick(object sender, object e)
+        private void OverlayTimer_OnTick(object? sender, object e)
         {
             if (ShouldKeepOverlayPinned())
             {
@@ -1921,7 +2200,7 @@ namespace NoiraPlayer.App.Views
             HideOverlay();
         }
 
-        private async void SeekPreviewTimer_OnTick(object sender, object e)
+        private async void SeekPreviewTimer_OnTick(object? sender, object e)
         {
             var decision = _seekPreview.DecideTimeout(GetSeekPreviewNow());
             if (decision.Kind == SeekPreviewDecisionKind.None)
@@ -2230,37 +2509,37 @@ namespace NoiraPlayer.App.Views
         private PlaybackTransportFocusTarget? GetFocusedTransportTarget()
         {
             var focusedElement = FocusManager.GetFocusedElement();
-            if (focusedElement == PauseButton)
+            if (ReferenceEquals(focusedElement, PauseButton))
             {
                 _transportFocusTarget = PlaybackTransportFocusTarget.Pause;
                 return _transportFocusTarget;
             }
 
-            if (focusedElement == ResumeButton)
+            if (ReferenceEquals(focusedElement, ResumeButton))
             {
                 _transportFocusTarget = PlaybackTransportFocusTarget.Resume;
                 return _transportFocusTarget;
             }
 
-            if (focusedElement == SeekBackButton)
+            if (ReferenceEquals(focusedElement, SeekBackButton))
             {
                 _transportFocusTarget = PlaybackTransportFocusTarget.SeekBack;
                 return _transportFocusTarget;
             }
 
-            if (focusedElement == SeekForwardButton)
+            if (ReferenceEquals(focusedElement, SeekForwardButton))
             {
                 _transportFocusTarget = PlaybackTransportFocusTarget.SeekForward;
                 return _transportFocusTarget;
             }
 
-            if (focusedElement == MoreButton)
+            if (ReferenceEquals(focusedElement, MoreButton))
             {
                 _transportFocusTarget = PlaybackTransportFocusTarget.More;
                 return _transportFocusTarget;
             }
 
-            if (focusedElement == StopButton)
+            if (ReferenceEquals(focusedElement, StopButton))
             {
                 _transportFocusTarget = PlaybackTransportFocusTarget.Stop;
                 return _transportFocusTarget;
@@ -2437,25 +2716,25 @@ namespace NoiraPlayer.App.Views
         private PlaybackMoreDrawerFocusTarget? GetFocusedMoreDrawerTarget()
         {
             var focusedElement = FocusManager.GetFocusedElement();
-            if (focusedElement == SourceBox)
+            if (ReferenceEquals(focusedElement, SourceBox))
             {
                 _moreDrawerFocusTarget = PlaybackMoreDrawerFocusTarget.Source;
                 return _moreDrawerFocusTarget;
             }
 
-            if (focusedElement == AudioStreamBox)
+            if (ReferenceEquals(focusedElement, AudioStreamBox))
             {
                 _moreDrawerFocusTarget = PlaybackMoreDrawerFocusTarget.Audio;
                 return _moreDrawerFocusTarget;
             }
 
-            if (focusedElement == SubtitleStreamBox)
+            if (ReferenceEquals(focusedElement, SubtitleStreamBox))
             {
                 _moreDrawerFocusTarget = PlaybackMoreDrawerFocusTarget.Subtitles;
                 return _moreDrawerFocusTarget;
             }
 
-            if (focusedElement == InfoButton)
+            if (ReferenceEquals(focusedElement, InfoButton))
             {
                 _moreDrawerFocusTarget = PlaybackMoreDrawerFocusTarget.Info;
                 return _moreDrawerFocusTarget;

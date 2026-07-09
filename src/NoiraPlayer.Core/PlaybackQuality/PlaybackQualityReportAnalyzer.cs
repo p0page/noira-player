@@ -1936,7 +1936,9 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 }
             }
 
-            if (report.Expected != null &&
+            var avSyncApplies = !HasKnownVideoOnlyTrackLayout(report);
+            if (avSyncApplies &&
+                report.Expected != null &&
                 report.Expected.MaxAudioVideoDriftMsP95.HasValue &&
                 report.Sync.AudioVideoDriftMsP95 <= 0 &&
                 !signalPresence.Has("sync.audioVideoDriftMsP95"))
@@ -1944,7 +1946,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 analysis.MissingEvidence.Add("sync.audioVideoDriftMsP95");
             }
 
-            if (report.Sync.AudioVideoDriftMsP95 <= 0 &&
+            if (avSyncApplies &&
+                report.Sync.AudioVideoDriftMsP95 <= 0 &&
                 report.Timing.RenderedVideoFrames == 0 &&
                 !signalPresence.Has("sync.audioVideoDriftMsP95"))
             {

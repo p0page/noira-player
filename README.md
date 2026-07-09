@@ -42,28 +42,57 @@ tools/                   Local helper scripts
 Recommended environment:
 
 - Windows 10/11
-- Visual Studio 2022 with UWP and C++ workloads
-- Windows SDK 10.0.22621.0 or compatible
-- .NET SDK for the test project
+- Visual Studio 2026 with UWP and C++ workloads for the modern .NET path
+- Windows SDK 10.0.26100.0 or compatible
+- .NET SDK 10 for the modern .NET path and test project
 - NuGet package restore enabled
 
-Build the app:
+Run the default modern check. This builds/tests the modern path, publishes the
+Native AOT UWP app, registers it locally, launches it, and captures a page
+screenshot. The primary solution is `NoiraPlayer.sln`, and it is the VS2026
+modern solution entry:
 
 ```powershell
-& 'C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe' `
-  NoiraPlayer.sln /restore /p:Configuration=Debug /p:Platform=x64
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\Build-Noira.ps1 -Target Check -Configuration Debug -Platform x64
 ```
 
-Run core tests:
+Modern publish treats Native AOT/trimming warnings as blockers: any `IL2xxx`
+or `IL3xxx` warning fails the publish gate while AOT is enabled.
+
+Run the modern Release gate before treating a change as production-shape:
 
 ```powershell
-dotnet test tests\NoiraPlayer.Core.Tests\NoiraPlayer.Core.Tests.csproj -v minimal
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\Build-Noira.ps1 -Target Check -Configuration Release -Platform x64
+```
+
+Run the modern playback-quality smoke after changes that touch playback,
+Native AOT app-hosted capture, or native media diagnostics. The default smoke
+requires source matching and captured runtime playback samples; use
+`tools\Test-NoiraModernPlaybackQuality.ps1 -RequireQualityPass` for strict
+threshold enforcement on a stable corpus:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\Build-Noira.ps1 -Target PlaybackCheck -Configuration Debug -Platform x64
+```
+
+The primary local readiness gate for merging or cutting over the modern path is
+the modern-only cutover gate. It runs modern Debug and Release checks plus
+strict playback-quality, and intentionally does not run the legacy build:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\Build-Noira.ps1 -Target CutoverCheck -Platform x64
+```
+
+Build only, without registering or launching:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\Build-Noira.ps1 -Target Build -Configuration Debug -Platform x64
 ```
 
 Register the Debug x64 loose layout for faster local app iteration:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File tools\Register-NoiraLooseApp.ps1 `
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\Register-NoiraModernUwp.ps1 `
   -Configuration Debug `
   -Platform x64 `
   -Launch

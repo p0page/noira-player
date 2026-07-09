@@ -2204,7 +2204,7 @@ namespace NoiraPlayer.App.Views
 
             lock (s_pendingMetadataFacetRestoreGate)
             {
-                string restoreKey;
+                string? restoreKey;
                 if (!s_pendingMetadataFacetRestoreKeys.TryGetValue(itemId, out restoreKey))
                 {
                     return "";

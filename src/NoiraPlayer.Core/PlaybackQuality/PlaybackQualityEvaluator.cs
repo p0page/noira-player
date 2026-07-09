@@ -87,14 +87,17 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 "timing.renderIntervalMsP99",
                 "frame-pacing");
             CheckMinimumRenderCadence(report, expected);
-            CheckMeasuredMax(
-                report,
-                "AudioVideoDriftMsP95",
-                report.Sync.AudioVideoDriftMsP95,
-                expected.MaxAudioVideoDriftMsP95,
-                "MaxAudioVideoDriftMsP95",
-                "sync.audioVideoDriftMsP95",
-                "av-sync");
+            if (!HasKnownVideoOnlyTrackLayout(report))
+            {
+                CheckMeasuredMax(
+                    report,
+                    "AudioVideoDriftMsP95",
+                    report.Sync.AudioVideoDriftMsP95,
+                    expected.MaxAudioVideoDriftMsP95,
+                    "MaxAudioVideoDriftMsP95",
+                    "sync.audioVideoDriftMsP95",
+                    "av-sync");
+            }
             CheckMax(
                 report,
                 "VideoStarvedPasses",
@@ -1048,6 +1051,18 @@ namespace NoiraPlayer.Core.PlaybackQuality
             {
                 report.Analysis.RelevantSignals.Add(signal);
             }
+        }
+
+        private static bool HasKnownVideoOnlyTrackLayout(PlaybackQualityReport report)
+        {
+            var videoTrackCount = report.Tracks.VideoTrackCount > 0
+                ? report.Tracks.VideoTrackCount
+                : report.Tracks.Video.Count;
+            var audioTrackCount = report.Tracks.AudioTrackCount > 0
+                ? report.Tracks.AudioTrackCount
+                : report.Tracks.Audio.Count;
+
+            return videoTrackCount > 0 && audioTrackCount == 0;
         }
 
         private static string Format(double value)

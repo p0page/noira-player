@@ -1,0 +1,9 @@
+<Project>
+  <Import Project="$(MSBuildThisFileDirectory)..\..\Directory.Build.props" Condition="Exists('$(MSBuildThisFileDirectory)..\..\Directory.Build.props')" />
+
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'NoiraPlayer.App.Modern'">
+    <BaseOutputPath>bin\Modern\</BaseOutputPath>
+    <BaseIntermediateOutputPath>obj\Modern\</BaseIntermediateOutputPath>
+    <DefaultItemExcludes>$(DefaultItemExcludes);$(MSBuildProjectDirectory)\bin\**;$(MSBuildProjectDirectory)\obj\**</DefaultItemExcludes>
+  </PropertyGroup>
+</Project>

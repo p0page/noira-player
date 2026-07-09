@@ -105,7 +105,7 @@
 生成命令：
 
 ```powershell
-& 'C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe' src\NoiraPlayer.App\NoiraPlayer.App.csproj /restore /p:Configuration=Debug /p:Platform=x64 /p:AppxBundle=Never
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\Build-Noira.ps1 -Target Build -Configuration Debug -Platform x64
 ```
 
 预期输出目录：

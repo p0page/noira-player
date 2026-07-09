@@ -55,7 +55,8 @@ namespace NoiraPlayer.App.Playback
                     status.IsVideoProcessorColorSpaceValidated,
                     status.VideoProcessorInputColorSpace ?? "",
                     status.VideoProcessorOutputColorSpace ?? "",
-                    status.VideoProcessorConversionStatus ?? "");
+                    status.VideoProcessorConversionStatus ?? "",
+                    status.RefreshRateHz);
             }
         }
 
@@ -256,6 +257,7 @@ namespace NoiraPlayer.App.Playback
                 " vpIn=" + status.VideoProcessorInputColorSpace +
                 " vpOut=" + status.VideoProcessorOutputColorSpace +
                 " vpStatus=" + status.VideoProcessorConversionStatus +
+                " refresh=" + status.RefreshRateHz +
                 " msg=" + status.Message;
         }
 

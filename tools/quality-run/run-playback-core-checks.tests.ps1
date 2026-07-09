@@ -68,7 +68,7 @@ foreach ($allowedPath in $plan.appDiffGuard.allowedPaths) {
 }
 
 if ($plan.appDiffGuard.allowedPaths -contains 'src/NoiraPlayer.App/Views/PlaybackPage.xaml' -or
-    $plan.appDiffGuard.allowedPaths -contains 'src/NoiraPlayer.App/NoiraPlayer.App.csproj' -or
+    $plan.appDiffGuard.allowedPaths -contains 'src/NoiraPlayer.App/NoiraPlayer.App.Modern.csproj' -or
     $plan.appDiffGuard.allowedPaths -contains 'src/NoiraPlayer.App/Package.appxmanifest') {
     throw 'App diff guard must not allow App XAML, project, package, or packaging changes.'
 }

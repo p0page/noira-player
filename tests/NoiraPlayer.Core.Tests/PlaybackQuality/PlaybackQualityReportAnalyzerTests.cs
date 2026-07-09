@@ -1700,6 +1700,40 @@ public sealed class PlaybackQualityReportAnalyzerTests
     }
 
     [Fact]
+    public void Analyze_Does_Not_Report_Missing_Audio_Video_Drift_When_Source_Is_Video_Only()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "video-only-missing-av-drift",
+            Result = "pass",
+            Expected = new PlaybackQualityExpected
+            {
+                MaxAudioVideoDriftMsP95 = 40
+            },
+            Tracks = new PlaybackQualityTracks
+            {
+                VideoTrackCount = 1,
+                AudioTrackCount = 0
+            },
+            Timing = new PlaybackQualityTiming
+            {
+                RenderedVideoFrames = 240
+            },
+            Sync = new PlaybackQualitySync
+            {
+                VideoPositionTicks = 2_000_000,
+                AudioVideoDriftMsP95 = 0
+            }
+        };
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Equal("not-applicable", analysis.AvSync.Status);
+        Assert.DoesNotContain("sync.audioVideoDriftMsP95", analysis.MissingEvidence);
+        Assert.DoesNotContain("sync.audioVideoDriftMsP95", analysis.EvidenceSignals);
+    }
+
+    [Fact]
     public void Analyze_Reports_Missing_Color_Pipeline_Evidence_When_Color_Expectations_Are_Set()
     {
         var report = new PlaybackQualityReport

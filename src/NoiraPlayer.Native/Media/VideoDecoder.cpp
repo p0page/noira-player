@@ -559,9 +559,15 @@ namespace
         AVCodecContext* codecContext,
         AVFrame* frame,
         AVStream const* stream,
-        std::optional<winrt::NoiraPlayer::Native::implementation::DolbyVisionConfiguration> const& doviConfiguration)
+        std::optional<winrt::NoiraPlayer::Native::implementation::DolbyVisionConfiguration> const& doviConfiguration,
+        int* receiveResultOut = nullptr)
     {
         auto receiveResult = avcodec_receive_frame(codecContext, frame);
+        if (receiveResultOut != nullptr)
+        {
+            *receiveResultOut = receiveResult;
+        }
+
         if (receiveResult == 0)
         {
             auto decodedFrame = CreateDecodedVideoFrame(frame, stream, doviConfiguration);
@@ -749,13 +755,23 @@ namespace winrt::NoiraPlayer::Native::implementation
 
                 if (sendResult == AVERROR(EAGAIN))
                 {
+                    auto receiveResult = 0;
                     auto drainedFrame = TryReceiveFrame(
                         m_codecContext,
                         frame.get(),
                         videoStream,
-                        m_dolbyVisionConfiguration);
+                        m_dolbyVisionConfiguration,
+                        &receiveResult);
                     if (!drainedFrame)
                     {
+                        auto diagnostic = CreatePacketDiagnostic(
+                            L"VideoDecoder.SendPacket eagain no-frame",
+                            sendResult,
+                            packet.get(),
+                            m_videoStreamIndex,
+                            m_codecContext);
+                        diagnostic += L" receiveResult=" + std::to_wstring(receiveResult);
+                        AppendNativePlaybackDiagnostic(diagnostic);
                         av_packet_unref(packet.get());
                         throw winrt::hresult_error(
                             E_FAIL,
@@ -769,6 +785,7 @@ namespace winrt::NoiraPlayer::Native::implementation
 
                     continue;
                 }
+
                 AppendNativePlaybackDiagnostic(CreatePacketDiagnostic(
                     L"VideoDecoder.SendPacket failed",
                     sendResult,

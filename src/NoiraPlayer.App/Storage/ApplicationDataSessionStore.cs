@@ -70,7 +70,7 @@ namespace NoiraPlayer.App.Storage
 
         private string ReadString(string key)
         {
-            object value;
+            object? value;
             return _settings.Values.TryGetValue(key, out value) && value != null
                 ? value.ToString() ?? ""
                 : "";

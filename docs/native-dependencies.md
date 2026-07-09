@@ -37,6 +37,16 @@ MSBuild 接入方式：
 - 该 targets 会自动加入 `include` 路径、`runtimes\win-$(PlatformTarget)\native` lib 路径、FFmpeg linker inputs，并把对应架构 DLL 加入 copy-local。
 - Debug x64 构建应使用 `runtimes\win-x64\native`，并把 `avcodec-62.dll`、`avdevice-62.dll`、`avfilter-11.dll`、`avformat-62.dll`、`avutil-60.dll`、`swresample-6.dll`、`swscale-9.dll` 复制到 native 输出目录。
 
+## C++/WinRT
+
+当前采用 NuGet 包 `Microsoft.Windows.CppWinRT`，版本固定为 `3.0.260520.1`。该包为 UWP C++/WinRT native component 生成 WinRT 投影支持文件，并通过 `build\native` props/targets 接入 `NoiraPlayer.Native.vcxproj`。
+
+MSBuild 接入方式：
+
+- `src/NoiraPlayer.Native/packages.config` 固定 `Microsoft.Windows.CppWinRT` 版本。
+- `src/NoiraPlayer.Native/NoiraPlayer.Native.vcxproj` 导入 `packages\Microsoft.Windows.CppWinRT.3.0.260520.1\build\native\Microsoft.Windows.CppWinRT.props` 和对应 targets。
+- VS2026 native build 使用 C++20，设置 `CppWinRTEnableLegacyCoroutines=false`，并通过 `/utf-8` 避免生成头在非 UTF-8 本地 code page 下出现 C4819 警告。
+
 仓库策略：
 
 - 不提交 `src/NoiraPlayer.Native/packages/` 下还原出来的 NuGet 二进制。

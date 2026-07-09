@@ -48,6 +48,22 @@ public sealed class PlaybackRefreshRatePolicyTests
         Assert.False(PlaybackRefreshRatePolicy.IsBetterRefreshRateForVideo(59.94006, 23.976024, 23.976));
     }
 
+    [Theory]
+    [InlineData(23.976, 23.976024)]
+    [InlineData(24.0, 24.0)]
+    [InlineData(30.0, 60.0)]
+    [InlineData(60.0, 60.0)]
+    [InlineData(0.0, 0.0)]
+    public void SelectSoftwareOnlyRefreshRateSnapshot_Matches_Native_Headless_Policy(
+        double videoFrameRate,
+        double expectedRefreshRate)
+    {
+        Assert.Equal(
+            expectedRefreshRate,
+            PlaybackRefreshRatePolicy.SelectSoftwareOnlyRefreshRateSnapshot(videoFrameRate),
+            precision: 6);
+    }
+
     [Fact]
     public void AssessCadence_Reports_Kodi_Style_Clock_Speed_Adjustment()
     {

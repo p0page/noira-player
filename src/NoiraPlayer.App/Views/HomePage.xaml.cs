@@ -9,6 +9,7 @@ using NoiraPlayer.App.Storage;
 using NoiraPlayer.Core.Diagnostics;
 using NoiraPlayer.Core.Emby;
 using NoiraPlayer.Core.Input;
+using Windows.Storage;
 using Windows.UI.Core;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Automation;
@@ -23,6 +24,7 @@ namespace NoiraPlayer.App.Views
 {
     public sealed partial class HomePage : Page, ITvContentFocusTarget
     {
+        private const string HomePageEvidenceFileName = "home-page-evidence.json";
         private const string HomeCardFocusChromeElementName = "FocusChrome";
         private readonly ApplicationDataSessionStore _sessionStore = new ApplicationDataSessionStore();
         private EmbySession? _session;
@@ -686,7 +688,7 @@ namespace NoiraPlayer.App.Views
                     var continueItemsTask = TryLoadListAsync(() => client.GetResumeItemsAsync(session, 24));
                     var nextUpItemsTask = TryLoadListAsync(() => client.GetNextUpItemsAsync(session, 24));
                     var latestItemsTask = TryLoadListAsync(() => client.GetLatestItemsAsync(session));
-                    var libraryViewsTask = TryLoadListAsync(() => client.GetUserViewsAsync(session));
+                    var libraryViewsTask = TryLoadRequiredListAsync(() => client.GetUserViewsAsync(session));
                     await Task.WhenAll(continueItemsTask, nextUpItemsTask, latestItemsTask, libraryViewsTask);
 
                     if (!CanApplyLoad(loadGeneration))
@@ -816,6 +818,14 @@ namespace NoiraPlayer.App.Views
                     ? "Choose a library below, or refresh Home."
                     : "No playable items found.";
                 CompleteHomeRenderFocus(focusBehavior, previousFocusTarget);
+                _ = WriteHomePageEvidenceAsync(
+                    isSupplementalRender,
+                    heroAvailable: false,
+                    continueItems,
+                    nextUpItems,
+                    latestItems,
+                    libraryViews,
+                    libraryPreviews);
                 return;
             }
 
@@ -846,7 +856,7 @@ namespace NoiraPlayer.App.Views
 
             foreach (var view in libraryViews)
             {
-                IReadOnlyList<EmbyMediaItem> previewItems;
+                IReadOnlyList<EmbyMediaItem>? previewItems;
                 if (string.IsNullOrWhiteSpace(view.Id) ||
                     !libraryPreviews.TryGetValue(view.Id, out previewItems) ||
                     previewItems.Count == 0)
@@ -859,6 +869,14 @@ namespace NoiraPlayer.App.Views
 
             AddUniqueRow(renderedRowTitles, "Latest", latestItems, null);
             CompleteHomeRenderFocus(focusBehavior, previousFocusTarget);
+            _ = WriteHomePageEvidenceAsync(
+                isSupplementalRender,
+                heroAvailable: true,
+                continueItems,
+                nextUpItems,
+                latestItems,
+                libraryViews,
+                libraryPreviews);
         }
 
         private void CompleteHomeRenderFocus(
@@ -986,7 +1004,7 @@ namespace NoiraPlayer.App.Views
                     continue;
                 }
 
-                IReadOnlyList<EmbyMediaItem> previewItems;
+                IReadOnlyList<EmbyMediaItem>? previewItems;
                 libraryPreviews.TryGetValue(view.Id, out previewItems);
                 var button = CreateLibraryButton(view, previewItems ?? Array.Empty<EmbyMediaItem>());
                 LibrariesPanel.Children.Add(button);
@@ -1696,8 +1714,24 @@ namespace NoiraPlayer.App.Views
             try
             {
                 return await InteractiveRequestGuard.TryGetListOrEmptyAsync(
-                    load(),
-                    EmbyRequestTimeoutPolicy.InteractiveRequestTimeout);
+                    load,
+                    EmbyRequestTimeoutPolicy.InteractiveRequestTimeout,
+                    EmbyRequestTimeoutPolicy.InteractiveRequestMaxAttempts);
+            }
+            catch
+            {
+                return Array.Empty<T>();
+            }
+        }
+
+        private async Task<IReadOnlyList<T>> TryLoadRequiredListAsync<T>(Func<Task<IReadOnlyList<T>>> load)
+        {
+            try
+            {
+                return await InteractiveRequestGuard.TryGetRequiredListOrEmptyAsync(
+                    load,
+                    EmbyRequestTimeoutPolicy.InteractiveRequestTimeout,
+                    EmbyRequestTimeoutPolicy.RequiredInteractiveRequestMaxAttempts);
             }
             catch
             {
@@ -2161,6 +2195,103 @@ namespace NoiraPlayer.App.Views
             }
 
             return meta;
+        }
+
+        private async Task WriteHomePageEvidenceAsync(
+            bool isSupplementalRender,
+            bool heroAvailable,
+            IReadOnlyList<EmbyMediaItem>? continueItems,
+            IReadOnlyList<EmbyMediaItem>? nextUpItems,
+            IReadOnlyList<EmbyMediaItem>? latestItems,
+            IReadOnlyList<EmbyLibraryView>? libraryViews,
+            IReadOnlyDictionary<string, IReadOnlyList<EmbyMediaItem>>? libraryPreviews)
+        {
+            try
+            {
+                var libraryCount = libraryViews == null ? 0 : libraryViews.Count;
+                var libraryWithIdCount = 0;
+                var libraryPreviewCount = 0;
+                var libraryPreviewMissingCount = 0;
+
+                if (libraryViews != null)
+                {
+                    foreach (var libraryView in libraryViews)
+                    {
+                        if (string.IsNullOrWhiteSpace(libraryView.Id))
+                        {
+                            continue;
+                        }
+
+                        libraryWithIdCount++;
+                        IReadOnlyList<EmbyMediaItem>? previewItems;
+                        if (libraryPreviews != null &&
+                            libraryPreviews.TryGetValue(libraryView.Id, out previewItems) &&
+                            previewItems.Count > 0)
+                        {
+                            libraryPreviewCount++;
+                        }
+                        else if (isSupplementalRender)
+                        {
+                            libraryPreviewMissingCount++;
+                        }
+                    }
+                }
+
+                var previewEvidenceStatus = isSupplementalRender
+                    ? CreatePreviewEvidenceStatus(libraryWithIdCount, libraryPreviewCount, libraryPreviewMissingCount)
+                    : "not-requested";
+
+                var evidence = new Windows.Data.Json.JsonObject();
+                evidence.SetNamedValue("schemaVersion", Windows.Data.Json.JsonValue.CreateNumberValue(1));
+                evidence.SetNamedValue("page", Windows.Data.Json.JsonValue.CreateStringValue("Home"));
+                evidence.SetNamedValue(
+                    "renderStage",
+                    Windows.Data.Json.JsonValue.CreateStringValue(isSupplementalRender ? "supplemental" : "initial"));
+                evidence.SetNamedValue("renderedAtUtc", Windows.Data.Json.JsonValue.CreateStringValue(DateTimeOffset.UtcNow.ToString("O")));
+                evidence.SetNamedValue("heroAvailable", Windows.Data.Json.JsonValue.CreateBooleanValue(heroAvailable));
+                evidence.SetNamedValue("libraryCount", Windows.Data.Json.JsonValue.CreateNumberValue(libraryCount));
+                evidence.SetNamedValue("libraryWithIdCount", Windows.Data.Json.JsonValue.CreateNumberValue(libraryWithIdCount));
+                evidence.SetNamedValue("libraryPreviewCount", Windows.Data.Json.JsonValue.CreateNumberValue(libraryPreviewCount));
+                evidence.SetNamedValue("libraryPreviewMissingCount", Windows.Data.Json.JsonValue.CreateNumberValue(libraryPreviewMissingCount));
+                evidence.SetNamedValue("previewEvidenceStatus", Windows.Data.Json.JsonValue.CreateStringValue(previewEvidenceStatus));
+                evidence.SetNamedValue("homeSectionCount", Windows.Data.Json.JsonValue.CreateNumberValue(_sectionButtons.Count));
+                evidence.SetNamedValue("rowCount", Windows.Data.Json.JsonValue.CreateNumberValue(_rowFirstButtons.Count));
+                evidence.SetNamedValue("continueItemCount", Windows.Data.Json.JsonValue.CreateNumberValue(continueItems == null ? 0 : continueItems.Count));
+                evidence.SetNamedValue("nextUpItemCount", Windows.Data.Json.JsonValue.CreateNumberValue(nextUpItems == null ? 0 : nextUpItems.Count));
+                evidence.SetNamedValue("latestItemCount", Windows.Data.Json.JsonValue.CreateNumberValue(latestItems == null ? 0 : latestItems.Count));
+                evidence.SetNamedValue(
+                    "interactiveRequestMaxAttempts",
+                    Windows.Data.Json.JsonValue.CreateNumberValue(EmbyRequestTimeoutPolicy.InteractiveRequestMaxAttempts));
+                evidence.SetNamedValue(
+                    "requiredInteractiveRequestMaxAttempts",
+                    Windows.Data.Json.JsonValue.CreateNumberValue(EmbyRequestTimeoutPolicy.RequiredInteractiveRequestMaxAttempts));
+
+                var file = await ApplicationData.Current.LocalFolder.CreateFileAsync(
+                    HomePageEvidenceFileName,
+                    CreationCollisionOption.ReplaceExisting);
+                await FileIO.WriteTextAsync(file, evidence.Stringify());
+            }
+            catch
+            {
+            }
+        }
+
+        private static string CreatePreviewEvidenceStatus(
+            int libraryWithIdCount,
+            int libraryPreviewCount,
+            int libraryPreviewMissingCount)
+        {
+            if (libraryWithIdCount == 0)
+            {
+                return "not-applicable";
+            }
+
+            if (libraryPreviewMissingCount == 0)
+            {
+                return "complete";
+            }
+
+            return libraryPreviewCount > 0 ? "partial" : "missing";
         }
 
         private enum HomeRowVisualKind
