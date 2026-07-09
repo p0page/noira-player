@@ -1,4 +1,4 @@
-# Notices
+﻿# Notices
 
 This file records third-party software notices for Noira and release-time
 compliance notes. It is not legal advice.
@@ -19,7 +19,7 @@ Package role:
 
 - Provides FFmpeg DLLs, import libraries, headers, and license files for
   Windows 10 UWP apps.
-- Used by `src/NextGenEmby.Native` for demuxing, decoding, audio conversion,
+- Used by `src/NoiraPlayer.Native` for demuxing, decoding, audio conversion,
   subtitle decoding, and media metadata extraction.
 - The project links to FFmpeg through DLLs such as `avcodec-59.dll`,
   `avformat-59.dll`, `avutil-57.dll`, `swresample-4.dll`, and `swscale-6.dll`.

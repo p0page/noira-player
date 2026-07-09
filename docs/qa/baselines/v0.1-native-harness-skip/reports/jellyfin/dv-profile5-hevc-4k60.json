@@ -1,0 +1,480 @@
+{
+  "schemaVersion": 1,
+  "evaluationVersion": "playback-quality-v0.1",
+  "caseMetadata": {
+    "caseId": "jellyfin/dv-profile5-hevc-4k60",
+    "category": "challenge",
+    "severity": "medium",
+    "stability": "stable"
+  },
+  "report": {
+    "schemaVersion": 1,
+    "metricVersion": "software-quality-v1",
+    "runId": "jellyfin/dv-profile5-hevc-4k60",
+    "result": "skip",
+    "failureReasons": [
+      "native-harness.not-implemented: Native playback harness is not implemented in this software-only evaluator yet."
+    ],
+    "analysis": {
+      "primaryFailureArea": "evidence-collection",
+      "suggestedNextAction": "Review the structured skip reason before interpreting missing playback telemetry.",
+      "relevantSignals": [
+        "skip.code",
+        "skip.reason",
+        "skip.operation",
+        "skip.failureClass",
+        "skip.failureArea",
+        "skip.isExpected",
+        "skip.isRetriable",
+        "lifecycle.skip"
+      ],
+      "ignoredSignals": []
+    },
+    "checks": [
+      {
+        "name": "PlaybackQualitySkipped",
+        "signal": "skip.reason",
+        "status": "skip",
+        "failureArea": "evidence-collection",
+        "failureClass": "insufficient instrumentation",
+        "expected": "reference case evaluated or explicitly skipped",
+        "actual": "native-harness.not-implemented",
+        "message": "native-harness.not-implemented: Native playback harness is not implemented in this software-only evaluator yet."
+      }
+    ],
+    "environment": {
+      "collectorVersion": "materialize-native-harness-report-set-v1",
+      "playerCoreVersion": "NextGenEmby.Core",
+      "sourceRevision": "working-tree-runtime-metrics-gate-v0.1",
+      "buildConfiguration": "Debug"
+    },
+    "limitations": [
+      "software-only: does not verify actual HDMI InfoFrame output",
+      "software-only: does not verify display panel EOTF, luminance, or color accuracy",
+      "software-only: does not detect TV-side tone mapping",
+      "internal-timing: frame intervals are measured in the player, not by an external photodiode or HDMI capture device",
+      "native-harness: native playback graph was not opened by this command",
+      "native-harness: report is a standard skip envelope for the missing real native collector"
+    ],
+    "expected": {
+      "codec": "hevc",
+      "width": 3840,
+      "height": 2160,
+      "frameRate": 60,
+      "hdrKind": "DolbyVisionUnsupported",
+      "videoRange": "Dolby Vision",
+      "colorPrimaries": "",
+      "colorTransfer": "",
+      "colorSpace": "",
+      "hdrPlaybackStrategy": "Dolby Vision unsupported",
+      "isHdr": true,
+      "isDirectPlayable": false,
+      "isDolbyVision": true,
+      "dolbyVisionProfile": 5,
+      "dolbyVisionCompatibilityId": null,
+      "hasHdr10BaseLayer": false,
+      "hasHlgBaseLayer": false,
+      "hdrOutput": "",
+      "dxgiInput": "",
+      "dxgiOutput": "",
+      "maxStartupDurationMs": 3000,
+      "minRenderedVideoFrames": null,
+      "maxDroppedFrames": null,
+      "maxFrameGapMs": null,
+      "maxRenderIntervalMsP95": null,
+      "maxRenderIntervalMsP99": null,
+      "maxAudioVideoDriftMsP95": null,
+      "maxSeekPositionErrorMs": null,
+      "maxVideoStarvedPasses": null,
+      "maxAudioStarvedPasses": null,
+      "requireValidatedConversion": true,
+      "requireMatchedDisplayRefreshRate": false
+    },
+    "source": {
+      "itemId": "",
+      "mediaSourceId": "",
+      "hasDirectStreamUrl": false,
+      "directStreamProtocol": "",
+      "container": "",
+      "bitrate": 0,
+      "durationTicks": 0,
+      "codec": "",
+      "width": 0,
+      "height": 0,
+      "frameRate": 0,
+      "videoRange": "",
+      "colorPrimaries": "",
+      "colorTransfer": "",
+      "colorSpace": "",
+      "hasChapterMetadata": false,
+      "chapters": [],
+      "hdrKind": "",
+      "hdrPlaybackStrategy": "",
+      "isHdr": false,
+      "isDirectPlayable": false,
+      "isDolbyVision": false,
+      "dolbyVisionProfile": null,
+      "dolbyVisionCompatibilityId": null,
+      "hasHdr10BaseLayer": false,
+      "hasHlgBaseLayer": false,
+      "audioCodec": ""
+    },
+    "startup": {
+      "commandReceivedAt": "",
+      "playbackStartedAt": "",
+      "startupDurationMs": 0
+    },
+    "lifecycle": {
+      "events": [
+        {
+          "operation": "materialize-native-harness",
+          "status": "skipped",
+          "state": "",
+          "positionTicks": null,
+          "message": "Native playback harness is not implemented in this software-only evaluator yet."
+        }
+      ]
+    },
+    "position": {
+      "requestedStartPositionTicks": null,
+      "seekTargetPositionTicks": null,
+      "actualPositionTicks": null,
+      "seekPositionErrorMs": null
+    },
+    "tracks": {
+      "videoTrackCount": 0,
+      "audioTrackCount": 0,
+      "subtitleTrackCount": 0,
+      "selectedVideoStreamIndex": null,
+      "selectedAudioStreamIndex": null,
+      "selectedSubtitleStreamIndex": null,
+      "isSubtitleDisabled": true,
+      "video": [],
+      "audio": [],
+      "subtitles": []
+    },
+    "error": {
+      "code": "",
+      "message": "",
+      "operation": "",
+      "exceptionType": "",
+      "failureClass": "",
+      "failureArea": "error-handling",
+      "isTerminal": false,
+      "isRetriable": false
+    },
+    "skip": {
+      "code": "native-harness.not-implemented",
+      "reason": "Native playback harness is not implemented in this software-only evaluator yet.",
+      "operation": "materialize-native-harness",
+      "failureClass": "insufficient instrumentation",
+      "failureArea": "evidence-collection",
+      "isExpected": true,
+      "isRetriable": true
+    },
+    "runtimeMetrics": {
+      "status": "unknown",
+      "providerStatus": "unknown",
+      "reason": "",
+      "hasSnapshot": false,
+      "hasPlaybackSample": false
+    },
+    "timing": {
+      "renderPasses": 0,
+      "decodedVideoFrames": 0,
+      "renderedVideoFrames": 0,
+      "droppedVideoFrames": 0,
+      "seekPrerollDroppedFrames": 0,
+      "videoAheadWaitCount": 0,
+      "expectedFrameDurationMs": 0,
+      "renderIntervalMsP50": 0,
+      "renderIntervalMsP95": 0,
+      "renderIntervalMsP99": 0,
+      "maxFrameGapMs": 0,
+      "framePacingSourceFrameRate": 0,
+      "lateFrameDropToleranceMs": 0
+    },
+    "sync": {
+      "audioClockTicks": 0,
+      "videoPositionTicks": 0,
+      "audioVideoDriftMsP50": 0,
+      "audioVideoDriftMsP95": 0,
+      "audioVideoDriftMsP99": 0,
+      "audioVideoDriftMsMax": 0
+    },
+    "buffers": {
+      "submittedAudioFrames": 0,
+      "queuedAudioBuffers": 0,
+      "videoStarvedPasses": 0,
+      "audioStarvedPasses": 0
+    },
+    "colorPipeline": {
+      "actualHdrOutput": "",
+      "swapChainFormat": "",
+      "swapChainColorSpace": "",
+      "isTenBitSwapChain": false,
+      "dxgiInput": "",
+      "dxgiOutput": "",
+      "conversionStatus": "",
+      "isVideoProcessorColorSpaceValidated": false,
+      "forceSdrOutput": false
+    },
+    "display": {
+      "hdrStatus": "",
+      "isHdrDisplayAvailable": false,
+      "isHdrOutputActive": false,
+      "refreshRateHz": 0,
+      "message": ""
+    }
+  },
+  "modelAnalysis": {
+    "analyzerVersion": 5,
+    "runId": "jellyfin/dv-profile5-hevc-4k60",
+    "result": "skip",
+    "expectedBehavior": "Reference case was evaluated or explicitly skipped with a structured reason.",
+    "actualBehavior": "materialize-native-harness skipped with native-harness.not-implemented: Native playback harness is not implemented in this software-only evaluator yet.",
+    "primaryFailureArea": "evidence-collection",
+    "primaryFailureClass": "insufficient instrumentation",
+    "suggestedNextAction": "Review the structured skip reason before interpreting missing playback telemetry.",
+    "startup": {
+      "status": "missing-evidence",
+      "reason": "Startup timing telemetry is missing.",
+      "commandReceivedAt": "",
+      "playbackStartedAt": "",
+      "startupDurationMs": 0,
+      "signals": [],
+      "failedSignals": []
+    },
+    "lifecycle": {
+      "status": "observed",
+      "reason": "Playback lifecycle telemetry captured required operations.",
+      "operations": [
+        "materialize-native-harness"
+      ],
+      "signals": [
+        "lifecycle.materialize-native-harness"
+      ],
+      "missingOperations": []
+    },
+    "environment": {
+      "collectorVersion": "materialize-native-harness-report-set-v1",
+      "playerCoreVersion": "NextGenEmby.Core",
+      "sourceRevision": "working-tree-runtime-metrics-gate-v0.1",
+      "buildConfiguration": "Debug",
+      "signals": [
+        "environment.collectorVersion",
+        "environment.playerCoreVersion",
+        "environment.sourceRevision",
+        "environment.buildConfiguration"
+      ]
+    },
+    "source": {
+      "status": "missing-evidence",
+      "reason": "Source codec, frame rate, and HDR kind are missing.",
+      "hasDirectStreamUrl": false,
+      "directStreamProtocol": "",
+      "container": "",
+      "bitrate": 0,
+      "durationTicks": 0,
+      "codec": "",
+      "width": 0,
+      "height": 0,
+      "frameRate": 0,
+      "videoRange": "",
+      "colorPrimaries": "",
+      "colorTransfer": "",
+      "colorSpace": "",
+      "hasChapterMetadata": false,
+      "chapterCount": null,
+      "chapters": [],
+      "hdrKind": "",
+      "hdrPlaybackStrategy": "",
+      "isHdr": false,
+      "isDirectPlayable": false,
+      "isDolbyVision": false,
+      "dolbyVisionProfile": null,
+      "dolbyVisionCompatibilityId": null,
+      "hasHdr10BaseLayer": false,
+      "hasHlgBaseLayer": false,
+      "signals": [],
+      "mismatchedSignals": []
+    },
+    "tracks": {
+      "status": "missing-evidence",
+      "reason": "Track discovery telemetry is missing.",
+      "videoTrackCount": 0,
+      "audioTrackCount": 0,
+      "subtitleTrackCount": 0,
+      "selectedVideoStreamIndex": null,
+      "selectedAudioStreamIndex": null,
+      "selectedSubtitleStreamIndex": null,
+      "isSubtitleDisabled": true,
+      "signals": [],
+      "missingSignals": [
+        "tracks.videoTrackCount",
+        "tracks.audioTrackCount",
+        "tracks.subtitleTrackCount"
+      ]
+    },
+    "error": {
+      "code": "",
+      "message": "",
+      "operation": "",
+      "exceptionType": "",
+      "failureClass": "",
+      "failureArea": "error-handling",
+      "isTerminal": false,
+      "isRetriable": false
+    },
+    "skip": {
+      "code": "native-harness.not-implemented",
+      "reason": "Native playback harness is not implemented in this software-only evaluator yet.",
+      "operation": "materialize-native-harness",
+      "failureClass": "insufficient instrumentation",
+      "failureArea": "evidence-collection",
+      "isExpected": true,
+      "isRetriable": true
+    },
+    "runtimeMetrics": {
+      "status": "unknown",
+      "providerStatus": "unknown",
+      "reason": "",
+      "hasSnapshot": false,
+      "hasPlaybackSample": false,
+      "signals": []
+    },
+    "colorPipeline": {
+      "status": "missing-evidence",
+      "reason": "Color pipeline telemetry is missing.",
+      "actualHdrOutput": "",
+      "swapChainFormat": "",
+      "swapChainColorSpace": "",
+      "isTenBitSwapChain": false,
+      "dxgiInput": "",
+      "dxgiOutput": "",
+      "conversionStatus": "",
+      "isVideoProcessorColorSpaceValidated": false,
+      "forceSdrOutput": false,
+      "signals": [],
+      "mismatchedSignals": []
+    },
+    "buffering": {
+      "status": "missing-evidence",
+      "reason": "Buffering and starvation telemetry is missing.",
+      "submittedAudioFrames": 0,
+      "queuedAudioBuffers": 0,
+      "videoStarvedPasses": 0,
+      "audioStarvedPasses": 0,
+      "signals": [],
+      "failedSignals": []
+    },
+    "avSync": {
+      "status": "missing-evidence",
+      "reason": "A/V sync telemetry is missing.",
+      "audioClockTicks": 0,
+      "videoPositionTicks": 0,
+      "clockDeltaTicks": 0,
+      "clockDeltaMs": 0,
+      "driftDirection": "unknown",
+      "audioVideoDriftMsP50": 0,
+      "audioVideoDriftMsP95": 0,
+      "audioVideoDriftMsP99": 0,
+      "audioVideoDriftMsMax": 0,
+      "signals": [],
+      "failedSignals": []
+    },
+    "sample": {
+      "status": "insufficient",
+      "renderedVideoFrames": 0,
+      "minRenderedVideoFrames": null,
+      "additionalRenderedFramesRequired": 0,
+      "observedSampleDurationMs": 0,
+      "minimumSampleDurationMs": 0,
+      "reason": "No rendered video frames were captured; collect a real playback sample before optimizing playback core."
+    },
+    "cadence": {
+      "status": "unsupported-source",
+      "sourceFrameRate": 0,
+      "displayRefreshRateHz": 0,
+      "bestMultiplier": 0,
+      "bestTargetRefreshRateHz": 0,
+      "refreshDeltaHz": 0,
+      "toleranceHz": 0.15,
+      "clockSpeedMultiplier": 1,
+      "clockSpeedAdjustmentPercent": 0,
+      "isClockSpeedAdjustmentRequired": false,
+      "isFractionalCadence": false,
+      "reason": "Source frame rate is not usable for cadence assessment.",
+      "signals": []
+    },
+    "optimizationGate": {
+      "status": "not-needed",
+      "canOptimizePlaybackCore": false,
+      "blockers": [
+        "result.skip"
+      ],
+      "blockerSignals": [],
+      "targetFailureAreas": []
+    },
+    "framePacing": {
+      "pattern": "not-applicable",
+      "expectedFrameDurationMs": 0,
+      "renderIntervalP95FrameRatio": 0,
+      "renderIntervalP99FrameRatio": 0,
+      "maxFrameGapFrameRatio": 0,
+      "droppedVideoFramePercent": 0,
+      "lateFrameDropToleranceMs": 0,
+      "lateFrameDropToleranceFrameRatio": 0,
+      "reasons": [],
+      "signals": []
+    },
+    "triageSteps": [],
+    "failureReasons": [
+      "native-harness.not-implemented: Native playback harness is not implemented in this software-only evaluator yet."
+    ],
+    "failedChecks": [],
+    "failureClasses": [
+      "insufficient instrumentation"
+    ],
+    "failureAreas": [
+      "evidence-collection"
+    ],
+    "investigationHints": [
+      {
+        "failureArea": "evidence-collection",
+        "suggestedAction": "Collect missing telemetry before optimizing playback behavior; absent evidence is treated separately from a real playback failure.",
+        "codeTargets": [
+          "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+          "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+          "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
+          "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+        ],
+        "signals": []
+      }
+    ],
+    "evidenceSignals": [
+      "skip.reason",
+      "skip.code",
+      "skip.operation",
+      "skip.failureClass",
+      "skip.failureArea",
+      "skip.isExpected",
+      "skip.isRetriable",
+      "lifecycle.skip",
+      "environment.collectorVersion",
+      "environment.playerCoreVersion",
+      "environment.sourceRevision",
+      "environment.buildConfiguration",
+      "lifecycle.materialize-native-harness"
+    ],
+    "missingEvidence": [],
+    "limitations": [
+      "software-only: does not verify actual HDMI InfoFrame output",
+      "software-only: does not verify display panel EOTF, luminance, or color accuracy",
+      "software-only: does not detect TV-side tone mapping",
+      "internal-timing: frame intervals are measured in the player, not by an external photodiode or HDMI capture device",
+      "native-harness: native playback graph was not opened by this command",
+      "native-harness: report is a standard skip envelope for the missing real native collector"
+    ]
+  }
+}

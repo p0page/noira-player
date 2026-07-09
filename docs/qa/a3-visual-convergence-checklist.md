@@ -4,6 +4,8 @@ Date: 2026-07-08
 
 This checklist is the visual acceptance gate for the A3 Visual Convergence phase. It is intentionally stricter than the existing design-conformance checklist: functional navigation can pass while this checklist fails.
 
+Older run log entries in this file may mention retired fixture routes. Treat those entries as historical evidence only; new runs must follow `docs/qa/ui-development-data-sources.md`.
+
 ## Source Targets
 
 - `docs/a3-visual-convergence-rules.md`
@@ -18,8 +20,9 @@ This checklist is the visual acceptance gate for the A3 Visual Convergence phase
 - Judge screenshots first. UIA, unit tests, and keyboard scripts only prove the right route is visible.
 - Treat A3 images as AI-generated style targets, not exact mocks. Do not copy visible generation mistakes, impossible spacing, or details that conflict with `docs/DESIGN.md`.
 - Do not fix interaction issues during an A3 visual batch unless they block capture.
-- Use deterministic fixture routes when comparing composition, density, focus treatment, and regression safety.
-- Treat fixture/mock artwork as limited evidence. It cannot by itself prove artwork atmosphere, poster-wall realism, or playback mood.
+- Follow `docs/qa/ui-development-data-sources.md` for current UI data-source rules.
+- Use private real UI samples when comparing composition, density, focus treatment, and regression safety.
+- Treat historical fixture/mock artwork as trace evidence only. It cannot by itself prove artwork atmosphere, poster-wall realism, or playback mood.
 - Use real saved-session artwork as local stress evidence before accepting Home, Library, Details, or Playback visuals. Never commit those screenshots or media assets.
 - On Windows desktop, capture installed-app screenshots with a DPI-aware process. A non-DPI-aware capture can crop only the upper-left portion of a high-DPI UWP window and produce false visual failures.
 - Record all visual findings before implementing a batch.
@@ -56,10 +59,10 @@ Goal: document how the current implementation differs from the four A3 targets b
 
 | ID | Route | Target | Checks | Result | Notes |
 | --- | --- | --- | --- | --- | --- |
-| A3-00.01 | Home fixture or saved-session Home | `A3-ideal-home-dashboard.png` | Identify desktop chrome, hero/dashboard weight, rail density, artwork dominance, guide treatment. | Concern | The 0.1.0.277 saved-session capture dims the Home title/header and proves real rows can populate the first viewport, but Home still reads as a sparse top hero plus rows rather than the denser A3 media dashboard. |
-| A3-00.02 | Movies fixture or saved-session Movies | `A3-ideal-library-poster-focus.png` | Identify toolbar weight, poster density, focused poster treatment, text/meta spacing, fallback-card tone. | Concern | The 0.1.0.277 saved-session capture proves real poster density and no-art cases are visible, but the page title/count/toolbar and focused fallback tile still read more like a functional UWP poster grid than the A3 poster-wall target. |
+| A3-00.01 | Home private real sample or saved-session Home | `A3-ideal-home-dashboard.png` | Identify desktop chrome, hero/dashboard weight, rail density, artwork dominance, guide treatment. | Concern | The 0.1.0.277 saved-session capture dims the Home title/header and proves real rows can populate the first viewport, but Home still reads as a sparse top hero plus rows rather than the denser A3 media dashboard. |
+| A3-00.02 | Movies private real sample or saved-session Movies | `A3-ideal-library-poster-focus.png` | Identify toolbar weight, poster density, focused poster treatment, text/meta spacing, fallback-card tone. | Concern | The 0.1.0.277 saved-session capture proves real poster density and no-art cases are visible, but the page title/count/toolbar and focused fallback tile still read more like a functional UWP poster grid than the A3 poster-wall target. |
 | A3-00.03 | Details fixture and one real Details item | `A3-ideal-details-atmosphere.png` | Identify split-panel drift, action-row placement, atmosphere quality, poster-only fallback behavior. | Concern | Details now uses a page-spanning atmosphere layer and a low decision dock. Fixture capture validates structure; local-only real Emby samples validate that real artwork can carry the right side of the canvas. Latest passes fixed a false non-DPI-aware screenshot crop, made the decision dock viewport-visible through layout anchoring, reduced source/version chrome to the current source summary, narrowed/lowered the reading band, removed the dock's single large outer panel, and collapsed source/audio/subtitle decisions into lighter single-line chips. Remaining gap: the action row and source chip still read slightly more tool-like than A3. |
-| A3-00.04 | Playback fixture or visual playback route | `A3-ideal-playback-osd-native-material.png` | Identify whether the video/artwork field exists, OSD material quality, subtitle clearance, top status weight. | Blocked | Playback fixture is useful as a route smoke test, but currently captures a mostly black video field and cannot validate native material, subtitle clearance, or artwork/video-led mood. |
+| A3-00.04 | Playback private real sample or visual playback route | `A3-ideal-playback-osd-native-material.png` | Identify whether the video/artwork field exists, OSD material quality, subtitle clearance, top status weight. | Blocked | Historical playback fixture captures were useful as route smoke tests, but mostly black video fields cannot validate native material, subtitle clearance, or artwork/video-led mood. |
 
 Acceptance:
 
@@ -73,7 +76,7 @@ Goal: make every page start from the right dark-room base.
 
 | ID | Route | Checks | Result | Notes |
 | --- | --- | --- | --- | --- |
-| A3-01.01 | Any fixture route | Desktop/window chrome is hidden, customized, or excluded from visual acceptance. | Pass | Desktop verification now uses dark title-bar chrome, so screenshots are no longer dominated by a white Windows frame. |
+| A3-01.01 | Any current app route | Desktop/window chrome is hidden, customized, or excluded from visual acceptance. | Pass | Desktop verification now uses dark title-bar chrome, so screenshots are no longer dominated by a white Windows frame. |
 | A3-01.02 | Home and Library | Left Guide is visually quiet and does not compete with media. | Concern | The collapsed icon rail is quieter than the original side menu, but selected icon surfaces still carry enough weight to be visible in the first read. Keep it, but do not let active-route chrome become the visual anchor. |
 | A3-01.03 | Home and Library | Page title/toolbar weight is reduced enough that media is first read. | Concern | The Home header now recedes, but Movies still starts with a large title/count/toolbar group and Home still reserves a sparse hero band. Media is stronger than before, not yet first read across both pages. |
 | A3-01.04 | All primary pages | Background, raised surfaces, buttons, and fields share the same cool graphite family. | Not Run | Avoid blue/purple sci-fi drift and yellow warmth. |
@@ -118,11 +121,11 @@ Goal: move Details toward full-screen artwork atmosphere.
 
 | ID | Route | Checks | Result | Notes |
 | --- | --- | --- | --- | --- |
-| A3-04.01 | Details fixture, `details-primary-only-fixture`, `details-real-sample`, and `details-real-bright-sample` | The page reads as one atmospheric canvas, not left form plus right poster. | Concern | Fixture artwork validates repeatable structure only; it is too abstract/dark to prove final atmosphere. Local-only real Emby artwork shows the right side can carry color and subject matter while the left scrim protects text. The 0.1.0.276 bright-artwork route deliberately selected a high-luma real item and confirmed that even a pale/right-heavy source remains atmosphere behind the protected reading column. The primary-only fixture proves cropped `Primary` can become dim atmosphere instead of a second poster viewer, and the no-art fixture now proves the black/matte fallback without fake placeholder art. Needs more real samples across varied metadata/source cases before Pass. |
-| A3-04.02 | Details fixture and `details-real-sample` | Title, metadata, badges, overview, and credits sit in a left information column with strong hierarchy. | Concern | The reading band now uses `TvDetailsContentMargin` `56,156,56,48`, `TvDetailsContentColumnWidth`/`MaxWidth` `680`, and an overview max width of `640` with three-line ellipsis, moving the content below the page-header zone so it reads more like a cinematic information band. The latest facts pass adds a passive first-viewport fact row and compact director/genre text, so Details no longer reads as only a title plus overview. Remaining gap: facts/credits are structurally useful but need broader real-artwork and localization stress before Pass. |
-| A3-04.03 | Details fixture, `details-long-source-fixture`, `details-primary-only-fixture`, `details-real-sample`, and `details-real-bright-sample` | Play/source/audio/subtitle/actions form a bottom decision island close to A3. | Concern | The dock is bottom-anchored by layout instead of runtime top calculations, so DPI-aware screenshots show it in the first viewport. The 0.1.0.261 local pass made the dock outer shell transparent, the 0.1.0.262 local pass reduced source/audio/subtitle from detailed parameters to compact decision summaries, and the 0.1.0.269 local pass moved the dock to `TvDetailsDecisionDockMargin` `56,0,56,112` so it no longer reads as a bottom-edge toolbar. The 0.1.0.273 local pass moved non-primary actions and source/audio/subtitle chips to lower-alpha `AppDetailsDecisionTileBrush` material and removed default hairline button frames. The 0.1.0.274 local pass split long source/audio/subtitle labels into `details-long-source-fixture`, keeping the standard fixture as a clean visual baseline while proving long labels stay one-line and do not resize the low decision area. The 0.1.0.275 local pass added a Details-specific focused decision tile fill so focused Play/source decisions no longer reuse the brighter global card-focus material. The 0.1.0.276 bright-artwork pass confirms the low decision island remains readable over a pale/high-luma real background. The 0.1.0.278 pass collapsed source/audio/subtitle decisions into single-line material summaries, reducing the data-table feel over both fixture and real artwork. Remaining gap: action-row scale, source text length, and real controller traversal still need stress before Pass. |
-| A3-04.04 | Details no-art fixture | No image falls back to black/matte without fake poster, gradient, or generated placeholder. | Pass | `details-no-art-fixture` captures as a quiet black/matte atmosphere with the normal left information and low decision areas. It does not synthesize poster art, gradient art, title watermarks, or a no-art panel. |
-| A3-04.05 | `details-primary-only-fixture`, `details-real-sample`, and `details-real-bright-sample` | Primary-only atmosphere is dim/cropped enough to avoid becoming a separate poster viewer. | Concern | `details-primary-only-fixture` provides deterministic primary-only coverage without private assets, and both real routes run against local saved-session artwork without committing screenshots/assets. Latest fixture review shows the right side remains atmosphere rather than a clear duplicate poster. The 0.1.0.276 bright sample selected a pale real item and showed the crop/wash can handle high-luma poster-derived atmosphere, but this is still not enough to accept broad real-world coverage. |
+| A3-04.01 | Details private real samples | The page reads as one atmospheric canvas, not left form plus right poster. | Concern | Historical fixture artwork validated repeatable structure only; it is too abstract/dark to prove final atmosphere. Local-only real Emby artwork shows the right side can carry color and subject matter while the left scrim protects text. Needs more real samples across varied metadata/source cases before Pass. |
+| A3-04.02 | Details private real samples | Title, metadata, badges, overview, and credits sit in a left information column with strong hierarchy. | Concern | The reading band now uses `TvDetailsContentMargin` `56,156,56,48`, `TvDetailsContentColumnWidth`/`MaxWidth` `680`, and an overview max width of `640` with three-line ellipsis, moving the content below the page-header zone so it reads more like a cinematic information band. The latest facts pass adds a passive first-viewport fact row and compact director/genre text, so Details no longer reads as only a title plus overview. Remaining gap: facts/credits are structurally useful but need broader real-artwork and localization stress before Pass. |
+| A3-04.03 | Details private real samples with varied source/audio/subtitle density | Play/source/audio/subtitle/actions form a bottom decision island close to A3. | Concern | The dock is bottom-anchored by layout instead of runtime top calculations, so DPI-aware screenshots show it in the first viewport. Historical fixture passes helped reduce source/audio/subtitle from detailed parameters to compact decision summaries and remove heavy button frames. Current acceptance must use private real samples for long source labels, multi-audio, subtitle-rich, no-art, primary-only, and bright-artwork cases. Remaining gap: action-row scale, source text length, and real controller traversal still need stress before Pass. |
+| A3-04.04 | Details private real sample with no usable artwork | No image falls back to black/matte without fake poster, gradient, or generated placeholder. | Pass | Historical no-art fixture captures showed the intended black/matte fallback. Current validation should repeat this against a real item with missing Primary/Backdrop/Thumb artwork. |
+| A3-04.05 | Details private real samples with primary-only or bright artwork | Primary-only atmosphere is dim/cropped enough to avoid becoming a separate poster viewer. | Concern | Historical primary-only and bright-artwork routes indicated the crop/wash direction can work, but broad acceptance now requires private real samples without committing screenshots/assets. |
 
 Acceptance:
 
@@ -134,7 +137,7 @@ Goal: move Playback OSD toward video-first native material.
 
 | ID | Route | Checks | Result | Notes |
 | --- | --- | --- | --- | --- |
-| A3-05.01 | Playback visual fixture or real playback | The video/artwork field dominates the viewport and is not captured as plain black unless evaluating fallback. | Not Run | Add deterministic visual fixture if needed. |
+| A3-05.01 | Playback private real sample or real playback | The video/artwork field dominates the viewport and is not captured as plain black unless evaluating fallback. | Not Run | Use a private real sample with visible video or artwork-backed playback evidence. |
 | A3-05.02 | OSD visible | Bottom strip reads as floating material over video/artwork, with internal breathing room. | Not Run | No cramped edge contact. |
 | A3-05.03 | OSD visible | Top-left title/status capsule is compact and secondary. | Not Run | It must not become a page card. |
 | A3-05.04 | OSD visible | Subtitles remain clear and above the strip. | Not Run | Material must not overpower captions. |
@@ -573,7 +576,7 @@ Scope:
 - Batch:
 - Routes:
 - Evidence root:
-- Data source: fixture / saved session / visual playback fixture
+- Data source: private real sample / saved session / real playback sample / other
 
 Screenshots reviewed:
 

@@ -1,4 +1,4 @@
-# 原生播放冒烟测试
+﻿# 原生播放冒烟测试
 
 日期：2026-07-05
 
@@ -63,7 +63,7 @@
 - Core 单元测试通过：123 个通过，0 个失败，0 个跳过。
 - Debug x64 MSIX 已确认包含 FFmpeg runtime DLL。
 - Windows 本机已完成 MSIX 签名、开发人员模式开启、`Add-AppDevPackage.ps1` 安装和首次启动。
-- 当前已确认应用窗口能打开，窗口标题为 `Next Gen Xbox Emby`。
+- 当前已确认应用窗口能打开，窗口标题为 `Noira`。
 - 已在 Windows 本机使用真实 Emby 服务器完成 Login -> Home -> 媒体详情 -> Playback 冒烟；首页最新条目、PlaybackInfo、媒体源选择器、播放页状态均正常。
 - 已验证真实条目 `第 40 集` 的 4K HEVC/AAC 直连源可以出画面并播放；同一条目的 1080p AVC/AAC 源切换后仍有画面；暂停、恢复、停止可用。
 - 这次修复了“有声音没画面”：`SwapChainPanel` 之前在页面尚未布局时附着，原生层可能创建 `1x1` swapchain；现在播放前会等待原生表面加载，并把零尺寸兜底改为 1280x720。
@@ -75,11 +75,11 @@
 - HDR10 源启动时电视侧出现 HDR 切换黑屏，native 日志显示 `RequestSetCurrentDisplayModeAsync HDR get success`。
 - HDR10 源 native status 显示 `hdr=On active=True`、`R10G10B10A2_UNORM`、`RGB_FULL_G2084_NONE_P2020`。
 - HDR 源播放后切换到 SDR 源，native 日志显示 `RequestSetCurrentDisplayModeAsync SDR get success`，最终 `hdr=Off active=False`、`RGB_FULL_G22_NONE_P709`。
-- Debug x64 v39 MSIX 已成功部署到 Xbox Device Portal，且确认启动的是 `NextGenEmby.App_0.1.0.39_x64__h8qjz0sr1sg4m`。
+- Debug x64 v39 MSIX 已成功部署到 Xbox Device Portal，且确认启动的是 `NoiraPlayer.App_0.1.0.39_x64__h8qjz0sr1sg4m`。
 - HDR10 源 `4K / 19 Mbps, HEVC - HDR10` 实测最终状态为 `hdr=On active=True`、`swap=R10G10B10A2_UNORM`、`color=RGB_FULL_G2084_NONE_P2020`、`vpIn=YCBCR_STUDIO_G2084_TOPLEFT_P2020`、`vpOut=RGB_FULL_G2084_NONE_P2020`、`vpStatus=validated`。
 - SDR 源 `4K / 18 Mbps, HEVC` 实测最终状态为 `hdr=Off active=False`、`color=RGB_FULL_G22_NONE_P709`、`vpIn=YCBCR_STUDIO_G22_LEFT_P709`、`vpOut=RGB_FULL_G22_NONE_P709`、`vpStatus=validated`。
 - v39 仍不能宣称完整 Kodi 等价：HDR -> SDR tone mapping、DV fallback 真源、更多音轨/字幕/帧率组合仍按 `docs/kodi-color-pipeline-comparison.md` 继续补齐。
-- Debug x64 v41 MSIX 已成功部署到 Xbox Device Portal，且确认启动的是 `NextGenEmby.App_0.1.0.41_x64__h8qjz0sr1sg4m`。
+- Debug x64 v41 MSIX 已成功部署到 Xbox Device Portal，且确认启动的是 `NoiraPlayer.App_0.1.0.41_x64__h8qjz0sr1sg4m`。
 - HDR10 源 `4K / 19 Mbps, HEVC - HDR10` 正常 HDR 输出回归通过：最终 `hdr=On active=True`、`color=RGB_FULL_G2084_NONE_P2020`、`vpIn=YCBCR_STUDIO_G2084_TOPLEFT_P2020`、`vpOut=RGB_FULL_G2084_NONE_P2020`、`vpStatus=validated`，日志为 `C:\tmp\nextgen-v41-hdr-normal-diagnostics.log`。
 - HDR10 源强制 SDR 输出诊断通过：最终 `hdr=Off active=False`、`color=RGB_FULL_G22_NONE_P709`、`vpIn=YCBCR_STUDIO_G22_TOPLEFT_P2020`、`vpOut=RGB_FULL_G22_NONE_P709`、`vpStatus=validated;tone-mapped-hable`，日志为 `C:\tmp\nextgen-v41-hdr-force-sdr-tone-mapping-diagnostics.log`。
 - SDR 源 `4K / 18 Mbps, HEVC` 回归通过：最终 `hdr=Off active=False`、`color=RGB_FULL_G22_NONE_P709`、`vpIn=YCBCR_STUDIO_G22_LEFT_P709`、`vpOut=RGB_FULL_G22_NONE_P709`、`vpStatus=validated`，日志为 `C:\tmp\nextgen-v41-sdr-diagnostics.log`。
@@ -105,13 +105,13 @@
 生成命令：
 
 ```powershell
-& 'C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe' src\NextGenEmby.App\NextGenEmby.App.csproj /restore /p:Configuration=Debug /p:Platform=x64 /p:AppxBundle=Never
+& 'C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe' src\NoiraPlayer.App\NoiraPlayer.App.csproj /restore /p:Configuration=Debug /p:Platform=x64 /p:AppxBundle=Never
 ```
 
 预期输出目录：
 
 ```text
-src\NextGenEmby.App\AppPackages\NextGenEmby.App_<version>_x64_Debug_Test
+src\NoiraPlayer.App\AppPackages\NoiraPlayer.App_<version>_x64_Debug_Test
 ```
 
 ## 待你实机填写

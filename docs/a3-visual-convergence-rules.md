@@ -11,7 +11,7 @@ This document defines the next development phase after the initial design-system
 - `docs/design-previews/A3-ideal-details-atmosphere.png`
 - `docs/design-previews/A3-ideal-playback-osd-native-material.png`
 - `docs/DESIGN.md`
-- Current installed-app screenshots from the saved-session and fixture QA batches.
+- Current installed-app screenshots from saved-session, private real sample, and historical fixture QA batches.
 - Focus/navigation research from the Xbox/UWP/TV client follow-up: mature TV apps use a system focus model, focus scopes, and navigation graphs instead of per-route key patches.
 
 ## Phase Objective
@@ -128,7 +128,7 @@ Target: `A3-ideal-playback-osd-native-material.png`
 
 Current gap:
 
-- Current desktop captures often show black playback and a conventional control strip. This is acceptable for smoke testing but not for visual acceptance. Playback visual acceptance needs video/artwork-backed evidence or a deterministic visual fixture that simulates the video field.
+- Current desktop captures often show black playback and a conventional control strip. This is acceptable for smoke testing but not for visual acceptance. Playback visual acceptance needs video/artwork-backed evidence from a real sample.
 
 ### Secondary Pages
 
@@ -158,9 +158,9 @@ During A3 Visual Convergence:
 - Compare each implementation screenshot directly against the matching A3 target.
 - Judge visual closeness by intent and system coherence, not by pixel-level reproduction of AI-rendered details.
 - Use UIA only to confirm route state, not visual quality.
-- Prefer deterministic fixture routes for repeatable structural work: layout, spacing, focus treatment, text fallback, and regression safety.
-- Do not treat fixture artwork as final visual truth. Mock/QA images are often too abstract, too dark, or too evenly composed to prove cinematic atmosphere.
-- Use real saved-session artwork for local visual stress tests before accepting a primary page. `details-real-sample` is the Details-page local route for this kind of check: it uses the app's saved session, selects a real movie with supported Emby artwork, and must not commit screenshots, downloaded images, tokens, server URLs, or item-specific private data. `details-real-bright-sample` is the matching bright-artwork stress route; it samples small artwork downloads in memory to select a high-luma local item, then navigates to Details without persisting private images or credentials.
+- Follow `docs/qa/ui-development-data-sources.md` for UI data-source policy.
+- Use private real UI samples for repeatable structural work: layout, spacing, focus treatment, text fallback, artwork density, source labels, and regression safety.
+- Do not reintroduce `*-fixture`, `details-real-sample`, or `details-real-bright-sample` routes.
 - Record all visual findings before fixing within a batch.
 - Do not accept a page because it is functionally navigable if it still reads as desktop UWP.
 

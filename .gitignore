@@ -5,6 +5,7 @@ bin/
 obj/
 packages/
 TestResults/
+artifacts/
 *.user
 *.suo
 *.userosscache
@@ -13,7 +14,7 @@ AppPackages/
 BundleArtifacts/
 Package.StoreAssociation.xml
 Generated Files/
-NextGenE.*/
+NoiraPla.*/
 Win32/
 x64/
 ARM/
@@ -25,4 +26,17 @@ ARM64/
 dlldata.c
 .research/
 .superpowers/
+
+# Local-only playback QA credentials, manifests, and captured private reports.
+docs/qa/private/*
+!docs/qa/private/README.md
+!docs/qa/private/*.template.json
+docs/qa/private/reports/
+tools/quality-run/private/
+*.private.json
+*.local.json
+*.secrets.json
+.env
+.env.*
+!.env.example
 .codex-remote-attachments/

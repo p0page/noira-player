@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "samples": [
+    {
+      "sampleId": "movies/example-details",
+      "purpose": "Real movie details page smoke sample",
+      "route": "details",
+      "itemId": "<private-emby-item-id>",
+      "itemName": "<optional display name>"
+    },
+    {
+      "sampleId": "playback/example-multi-track",
+      "purpose": "Real playback sample with source/audio/subtitle controls",
+      "route": "playback",
+      "itemId": "<private-emby-item-id>",
+      "mediaSourceId": "<optional-private-media-source-id>",
+      "startPositionTicks": 0,
+      "expected": {
+        "notes": "Describe the UI condition to inspect without committing private server data."
+      }
+    }
+  ]
+}

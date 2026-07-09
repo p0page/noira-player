@@ -1,0 +1,819 @@
+{
+  "schemaVersion": 1,
+  "evaluationVersion": "playback-quality-v0.1",
+  "caseMetadata": {
+    "caseId": "jellyfin/dv-profile5-hevc-4k60",
+    "category": "challenge",
+    "severity": "medium",
+    "stability": "stable"
+  },
+  "report": {
+    "schemaVersion": 1,
+    "metricVersion": "software-quality-v1",
+    "runId": "jellyfin/dv-profile5-hevc-4k60",
+    "result": "unsupported",
+    "failureReasons": [],
+    "analysis": {
+      "primaryFailureArea": "unsupported-source",
+      "suggestedNextAction": "Source is expected to be unsupported; preserve source classification evidence and skip playback-quality thresholds.",
+      "relevantSignals": [],
+      "ignoredSignals": []
+    },
+    "checks": [
+      {
+        "name": "ExpectedCodec",
+        "signal": "source.codec",
+        "status": "pass",
+        "failureArea": "unsupported-source",
+        "failureClass": "",
+        "expected": "hevc",
+        "actual": "hevc",
+        "message": "source.codec matched expected hevc."
+      },
+      {
+        "name": "ExpectedWidth",
+        "signal": "source.width",
+        "status": "pass",
+        "failureArea": "unsupported-source",
+        "failureClass": "",
+        "expected": "3840",
+        "actual": "3840",
+        "message": "source.width matched expected 3840."
+      },
+      {
+        "name": "ExpectedHeight",
+        "signal": "source.height",
+        "status": "pass",
+        "failureArea": "unsupported-source",
+        "failureClass": "",
+        "expected": "2160",
+        "actual": "2160",
+        "message": "source.height matched expected 2160."
+      },
+      {
+        "name": "ExpectedHdrKind",
+        "signal": "source.hdrKind",
+        "status": "pass",
+        "failureArea": "unsupported-source",
+        "failureClass": "",
+        "expected": "DolbyVisionUnsupported",
+        "actual": "DolbyVisionUnsupported",
+        "message": "source.hdrKind matched expected DolbyVisionUnsupported."
+      },
+      {
+        "name": "ExpectedVideoRange",
+        "signal": "source.videoRange",
+        "status": "pass",
+        "failureArea": "unsupported-source",
+        "failureClass": "",
+        "expected": "Dolby Vision",
+        "actual": "Dolby Vision",
+        "message": "source.videoRange matched expected Dolby Vision."
+      },
+      {
+        "name": "ExpectedHdrPlaybackStrategy",
+        "signal": "source.hdrPlaybackStrategy",
+        "status": "pass",
+        "failureArea": "unsupported-source",
+        "failureClass": "",
+        "expected": "Dolby Vision unsupported",
+        "actual": "Dolby Vision unsupported",
+        "message": "source.hdrPlaybackStrategy matched expected Dolby Vision unsupported."
+      },
+      {
+        "name": "ExpectedIsHdr",
+        "signal": "source.isHdr",
+        "status": "pass",
+        "failureArea": "unsupported-source",
+        "failureClass": "",
+        "expected": "True",
+        "actual": "True",
+        "message": "source.isHdr matched expected True."
+      },
+      {
+        "name": "ExpectedIsDirectPlayable",
+        "signal": "source.isDirectPlayable",
+        "status": "pass",
+        "failureArea": "unsupported-source",
+        "failureClass": "",
+        "expected": "False",
+        "actual": "False",
+        "message": "source.isDirectPlayable matched expected False."
+      },
+      {
+        "name": "ExpectedIsDolbyVision",
+        "signal": "source.isDolbyVision",
+        "status": "pass",
+        "failureArea": "unsupported-source",
+        "failureClass": "",
+        "expected": "True",
+        "actual": "True",
+        "message": "source.isDolbyVision matched expected True."
+      },
+      {
+        "name": "ExpectedDolbyVisionProfile",
+        "signal": "source.dolbyVisionProfile",
+        "status": "pass",
+        "failureArea": "unsupported-source",
+        "failureClass": "",
+        "expected": "5",
+        "actual": "5",
+        "message": "source.dolbyVisionProfile matched expected 5."
+      },
+      {
+        "name": "ExpectedHasHdr10BaseLayer",
+        "signal": "source.hasHdr10BaseLayer",
+        "status": "pass",
+        "failureArea": "unsupported-source",
+        "failureClass": "",
+        "expected": "False",
+        "actual": "False",
+        "message": "source.hasHdr10BaseLayer matched expected False."
+      },
+      {
+        "name": "ExpectedHasHlgBaseLayer",
+        "signal": "source.hasHlgBaseLayer",
+        "status": "pass",
+        "failureArea": "unsupported-source",
+        "failureClass": "",
+        "expected": "False",
+        "actual": "False",
+        "message": "source.hasHlgBaseLayer matched expected False."
+      },
+      {
+        "name": "ExpectedFrameRate",
+        "signal": "source.frameRate",
+        "status": "pass",
+        "failureArea": "unsupported-source",
+        "failureClass": "",
+        "expected": "60.000",
+        "actual": "60.000",
+        "message": "Source frame rate matched expected FrameRate 60.000."
+      },
+      {
+        "name": "StartupDurationMs",
+        "signal": "startup.startupDurationMs",
+        "status": "pass",
+        "failureArea": "startup",
+        "failureClass": "",
+        "expected": "3000.000",
+        "actual": "250.000",
+        "message": "StartupDurationMs is within MaxStartupDurationMs."
+      }
+    ],
+    "environment": {
+      "collectorVersion": "materialize-core-probe-report-set-v1",
+      "playerCoreVersion": "NextGenEmby.Core",
+      "sourceRevision": "working-tree-runtime-metrics-gate-v0.1",
+      "buildConfiguration": "Debug"
+    },
+    "limitations": [
+      "software-only: does not verify actual HDMI InfoFrame output",
+      "software-only: does not verify display panel EOTF, luminance, or color accuracy",
+      "software-only: does not detect TV-side tone mapping",
+      "internal-timing: frame intervals are measured in the player, not by an external photodiode or HDMI capture device",
+      "core-probe: PlaybackOrchestrator lifecycle was executed with an in-process diagnostic backend",
+      "core-probe: native playback graph, decoder, renderer, network I/O, and HDMI output were not opened",
+      "core-probe: startup, display, timing, buffering, and A/V sync values are deterministic probe telemetry"
+    ],
+    "expected": {
+      "codec": "hevc",
+      "width": 3840,
+      "height": 2160,
+      "frameRate": 60,
+      "hdrKind": "DolbyVisionUnsupported",
+      "videoRange": "Dolby Vision",
+      "colorPrimaries": "",
+      "colorTransfer": "",
+      "colorSpace": "",
+      "hdrPlaybackStrategy": "Dolby Vision unsupported",
+      "isHdr": true,
+      "isDirectPlayable": false,
+      "isDolbyVision": true,
+      "dolbyVisionProfile": 5,
+      "dolbyVisionCompatibilityId": null,
+      "hasHdr10BaseLayer": false,
+      "hasHlgBaseLayer": false,
+      "hdrOutput": "",
+      "dxgiInput": "",
+      "dxgiOutput": "",
+      "maxStartupDurationMs": 3000,
+      "minRenderedVideoFrames": null,
+      "maxDroppedFrames": null,
+      "maxFrameGapMs": null,
+      "maxRenderIntervalMsP95": null,
+      "maxRenderIntervalMsP99": null,
+      "maxAudioVideoDriftMsP95": null,
+      "maxSeekPositionErrorMs": null,
+      "maxVideoStarvedPasses": null,
+      "maxAudioStarvedPasses": null,
+      "requireValidatedConversion": true,
+      "requireMatchedDisplayRefreshRate": false
+    },
+    "source": {
+      "itemId": "jellyfin/dv-profile5-hevc-4k60",
+      "mediaSourceId": "jellyfin/dv-profile5-hevc-4k60",
+      "hasDirectStreamUrl": true,
+      "directStreamProtocol": "https",
+      "container": "",
+      "bitrate": 0,
+      "durationTicks": 0,
+      "codec": "hevc",
+      "width": 3840,
+      "height": 2160,
+      "frameRate": 60,
+      "videoRange": "Dolby Vision",
+      "colorPrimaries": "",
+      "colorTransfer": "",
+      "colorSpace": "",
+      "hasChapterMetadata": false,
+      "chapters": [],
+      "hdrKind": "DolbyVisionUnsupported",
+      "hdrPlaybackStrategy": "Dolby Vision unsupported",
+      "isHdr": true,
+      "isDirectPlayable": false,
+      "isDolbyVision": true,
+      "dolbyVisionProfile": 5,
+      "dolbyVisionCompatibilityId": null,
+      "hasHdr10BaseLayer": false,
+      "hasHlgBaseLayer": false,
+      "audioCodec": "eac3"
+    },
+    "startup": {
+      "commandReceivedAt": "2026-01-01T00:00:00.000Z",
+      "playbackStartedAt": "2026-01-01T00:00:00.250Z",
+      "startupDurationMs": 250
+    },
+    "lifecycle": {
+      "events": [
+        {
+          "operation": "load",
+          "status": "observed",
+          "state": "Playing",
+          "positionTicks": 0,
+          "message": "core-probe selected source and created playback descriptor"
+        },
+        {
+          "operation": "play",
+          "status": "observed",
+          "state": "Playing",
+          "positionTicks": 0,
+          "message": "core-probe started playback"
+        },
+        {
+          "operation": "pause",
+          "status": "observed",
+          "state": "Paused",
+          "positionTicks": 0,
+          "message": "core-probe paused playback"
+        },
+        {
+          "operation": "resume",
+          "status": "observed",
+          "state": "Playing",
+          "positionTicks": 0,
+          "message": "core-probe resumed playback"
+        },
+        {
+          "operation": "stop",
+          "status": "observed",
+          "state": "Stopped",
+          "positionTicks": 0,
+          "message": "core-probe stopped playback"
+        }
+      ]
+    },
+    "position": {
+      "requestedStartPositionTicks": 0,
+      "seekTargetPositionTicks": 0,
+      "actualPositionTicks": 0,
+      "seekPositionErrorMs": 0
+    },
+    "tracks": {
+      "videoTrackCount": 1,
+      "audioTrackCount": 2,
+      "subtitleTrackCount": 0,
+      "selectedVideoStreamIndex": 0,
+      "selectedAudioStreamIndex": null,
+      "selectedSubtitleStreamIndex": null,
+      "isSubtitleDisabled": true,
+      "video": [
+        {
+          "index": 0,
+          "kind": "Video",
+          "codec": "hevc",
+          "language": "",
+          "channelLayout": "",
+          "channels": 0,
+          "displayTitle": "",
+          "isExternal": false,
+          "isDefault": true,
+          "isForced": false,
+          "realFrameRate": 60,
+          "averageFrameRate": 60
+        }
+      ],
+      "audio": [
+        {
+          "index": 1,
+          "kind": "Audio",
+          "codec": "eac3",
+          "language": "eng",
+          "channelLayout": "5.1",
+          "channels": 6,
+          "displayTitle": "English 5.1",
+          "isExternal": false,
+          "isDefault": true,
+          "isForced": false,
+          "realFrameRate": 0,
+          "averageFrameRate": 0
+        },
+        {
+          "index": 2,
+          "kind": "Audio",
+          "codec": "aac",
+          "language": "jpn",
+          "channelLayout": "2.0",
+          "channels": 2,
+          "displayTitle": "Japanese Stereo",
+          "isExternal": false,
+          "isDefault": false,
+          "isForced": false,
+          "realFrameRate": 0,
+          "averageFrameRate": 0
+        }
+      ],
+      "subtitles": []
+    },
+    "error": {
+      "code": "",
+      "message": "",
+      "operation": "",
+      "exceptionType": "",
+      "failureClass": "",
+      "failureArea": "error-handling",
+      "isTerminal": false,
+      "isRetriable": false
+    },
+    "skip": {
+      "code": "",
+      "reason": "",
+      "operation": "",
+      "failureClass": "",
+      "failureArea": "evidence-collection",
+      "isExpected": false,
+      "isRetriable": false
+    },
+    "runtimeMetrics": {
+      "status": "captured",
+      "providerStatus": "core-probe:returned-snapshot",
+      "reason": "Runtime metrics snapshot contains playback sample evidence.",
+      "hasSnapshot": true,
+      "hasPlaybackSample": true
+    },
+    "timing": {
+      "renderPasses": 240,
+      "decodedVideoFrames": 240,
+      "renderedVideoFrames": 240,
+      "droppedVideoFrames": 0,
+      "seekPrerollDroppedFrames": 0,
+      "videoAheadWaitCount": 0,
+      "expectedFrameDurationMs": 16.666666666666668,
+      "renderIntervalMsP50": 16.666666666666668,
+      "renderIntervalMsP95": 16.833333333333336,
+      "renderIntervalMsP99": 17,
+      "maxFrameGapMs": 17.500000000000004,
+      "framePacingSourceFrameRate": 60,
+      "lateFrameDropToleranceMs": 41.66666666666667
+    },
+    "sync": {
+      "audioClockTicks": 0,
+      "videoPositionTicks": 0,
+      "audioVideoDriftMsP50": 3,
+      "audioVideoDriftMsP95": 5,
+      "audioVideoDriftMsP99": 8,
+      "audioVideoDriftMsMax": 12
+    },
+    "buffers": {
+      "submittedAudioFrames": 240,
+      "queuedAudioBuffers": 4,
+      "videoStarvedPasses": 0,
+      "audioStarvedPasses": 0
+    },
+    "colorPipeline": {
+      "actualHdrOutput": "Unknown",
+      "swapChainFormat": "B8G8R8A8_UNORM",
+      "swapChainColorSpace": "",
+      "isTenBitSwapChain": false,
+      "dxgiInput": "",
+      "dxgiOutput": "",
+      "conversionStatus": "",
+      "isVideoProcessorColorSpaceValidated": false,
+      "forceSdrOutput": false
+    },
+    "display": {
+      "hdrStatus": "Unknown",
+      "isHdrDisplayAvailable": true,
+      "isHdrOutputActive": false,
+      "refreshRateHz": 60,
+      "message": "core-probe synthetic display status"
+    }
+  },
+  "modelAnalysis": {
+    "analyzerVersion": 5,
+    "runId": "jellyfin/dv-profile5-hevc-4k60",
+    "result": "unsupported",
+    "expectedBehavior": "Unsupported sources are identified without entering playback-quality tuning.",
+    "actualBehavior": "Report result was unsupported.",
+    "primaryFailureArea": "unsupported-source",
+    "primaryFailureClass": "none",
+    "suggestedNextAction": "Source is expected to be unsupported; preserve source classification evidence and skip playback-quality thresholds.",
+    "startup": {
+      "status": "ready",
+      "reason": "Startup telemetry is available and no startup threshold failed.",
+      "commandReceivedAt": "2026-01-01T00:00:00.000Z",
+      "playbackStartedAt": "2026-01-01T00:00:00.250Z",
+      "startupDurationMs": 250,
+      "signals": [
+        "startup.commandReceivedAt",
+        "startup.playbackStartedAt",
+        "startup.startupDurationMs"
+      ],
+      "failedSignals": []
+    },
+    "lifecycle": {
+      "status": "observed",
+      "reason": "Playback lifecycle telemetry captured required operations.",
+      "operations": [
+        "load",
+        "play",
+        "pause",
+        "resume",
+        "stop"
+      ],
+      "signals": [
+        "lifecycle.load",
+        "lifecycle.play",
+        "lifecycle.pause",
+        "lifecycle.resume",
+        "lifecycle.stop"
+      ],
+      "missingOperations": []
+    },
+    "environment": {
+      "collectorVersion": "materialize-core-probe-report-set-v1",
+      "playerCoreVersion": "NextGenEmby.Core",
+      "sourceRevision": "working-tree-runtime-metrics-gate-v0.1",
+      "buildConfiguration": "Debug",
+      "signals": [
+        "environment.collectorVersion",
+        "environment.playerCoreVersion",
+        "environment.sourceRevision",
+        "environment.buildConfiguration"
+      ]
+    },
+    "source": {
+      "status": "unsupported",
+      "reason": "Parsed source is not directly playable by the current Core HDR policy.",
+      "hasDirectStreamUrl": true,
+      "directStreamProtocol": "https",
+      "container": "",
+      "bitrate": 0,
+      "durationTicks": 0,
+      "codec": "hevc",
+      "width": 3840,
+      "height": 2160,
+      "frameRate": 60,
+      "videoRange": "Dolby Vision",
+      "colorPrimaries": "",
+      "colorTransfer": "",
+      "colorSpace": "",
+      "hasChapterMetadata": false,
+      "chapterCount": null,
+      "chapters": [],
+      "hdrKind": "DolbyVisionUnsupported",
+      "hdrPlaybackStrategy": "Dolby Vision unsupported",
+      "isHdr": true,
+      "isDirectPlayable": false,
+      "isDolbyVision": true,
+      "dolbyVisionProfile": 5,
+      "dolbyVisionCompatibilityId": null,
+      "hasHdr10BaseLayer": false,
+      "hasHlgBaseLayer": false,
+      "signals": [
+        "source.codec",
+        "source.hasDirectStreamUrl",
+        "source.directStreamProtocol",
+        "source.width",
+        "source.height",
+        "source.frameRate",
+        "source.videoRange",
+        "source.hdrKind",
+        "source.hdrPlaybackStrategy",
+        "source.isHdr",
+        "source.isDirectPlayable",
+        "source.isDolbyVision",
+        "source.hasHdr10BaseLayer",
+        "source.hasHlgBaseLayer",
+        "source.dolbyVisionProfile"
+      ],
+      "mismatchedSignals": []
+    },
+    "tracks": {
+      "status": "ready",
+      "reason": "Video and audio track discovery telemetry is available; no subtitle track was reported.",
+      "videoTrackCount": 1,
+      "audioTrackCount": 2,
+      "subtitleTrackCount": 0,
+      "selectedVideoStreamIndex": 0,
+      "selectedAudioStreamIndex": null,
+      "selectedSubtitleStreamIndex": null,
+      "isSubtitleDisabled": true,
+      "signals": [
+        "tracks.videoTrackCount",
+        "tracks.audioTrackCount",
+        "tracks.subtitleTrackCount",
+        "tracks.selectedVideoStreamIndex",
+        "tracks.isSubtitleDisabled",
+        "tracks.video.index",
+        "tracks.video.codec",
+        "tracks.video.isExternal",
+        "tracks.video.isDefault",
+        "tracks.video.isForced",
+        "tracks.video.realFrameRate",
+        "tracks.video.averageFrameRate",
+        "tracks.audio.index",
+        "tracks.audio.codec",
+        "tracks.audio.language",
+        "tracks.audio.displayTitle",
+        "tracks.audio.isExternal",
+        "tracks.audio.isDefault",
+        "tracks.audio.isForced",
+        "tracks.audio.channelLayout",
+        "tracks.audio.channels"
+      ],
+      "missingSignals": []
+    },
+    "error": {
+      "code": "",
+      "message": "",
+      "operation": "",
+      "exceptionType": "",
+      "failureClass": "",
+      "failureArea": "error-handling",
+      "isTerminal": false,
+      "isRetriable": false
+    },
+    "skip": {
+      "code": "",
+      "reason": "",
+      "operation": "",
+      "failureClass": "",
+      "failureArea": "evidence-collection",
+      "isExpected": false,
+      "isRetriable": false
+    },
+    "runtimeMetrics": {
+      "status": "captured",
+      "providerStatus": "core-probe:returned-snapshot",
+      "reason": "Runtime metrics snapshot contains playback sample evidence.",
+      "hasSnapshot": true,
+      "hasPlaybackSample": true,
+      "signals": [
+        "runtimeMetrics.status",
+        "runtimeMetrics.providerStatus",
+        "runtimeMetrics.reason",
+        "runtimeMetrics.hasSnapshot",
+        "runtimeMetrics.hasPlaybackSample"
+      ]
+    },
+    "colorPipeline": {
+      "status": "matched",
+      "reason": "Color pipeline telemetry is available and has no color-pipeline mismatches.",
+      "actualHdrOutput": "Unknown",
+      "swapChainFormat": "B8G8R8A8_UNORM",
+      "swapChainColorSpace": "",
+      "isTenBitSwapChain": false,
+      "dxgiInput": "",
+      "dxgiOutput": "",
+      "conversionStatus": "",
+      "isVideoProcessorColorSpaceValidated": false,
+      "forceSdrOutput": false,
+      "signals": [
+        "colorPipeline.actualHdrOutput",
+        "colorPipeline.swapChainFormat"
+      ],
+      "mismatchedSignals": []
+    },
+    "buffering": {
+      "status": "stable",
+      "reason": "Buffering telemetry is available and no starvation failures were reported.",
+      "submittedAudioFrames": 240,
+      "queuedAudioBuffers": 4,
+      "videoStarvedPasses": 0,
+      "audioStarvedPasses": 0,
+      "signals": [
+        "buffers.submittedAudioFrames",
+        "buffers.queuedAudioBuffers",
+        "buffers.videoStarvedPasses",
+        "buffers.audioStarvedPasses"
+      ],
+      "failedSignals": []
+    },
+    "avSync": {
+      "status": "synced",
+      "reason": "A/V sync telemetry is available and no sync threshold failed.",
+      "audioClockTicks": 0,
+      "videoPositionTicks": 0,
+      "clockDeltaTicks": 0,
+      "clockDeltaMs": 0,
+      "driftDirection": "unknown",
+      "audioVideoDriftMsP50": 3,
+      "audioVideoDriftMsP95": 5,
+      "audioVideoDriftMsP99": 8,
+      "audioVideoDriftMsMax": 12,
+      "signals": [
+        "sync.audioVideoDriftMsP50",
+        "sync.audioVideoDriftMsP95",
+        "sync.audioVideoDriftMsP99",
+        "sync.audioVideoDriftMsMax"
+      ],
+      "failedSignals": []
+    },
+    "sample": {
+      "status": "sufficient",
+      "renderedVideoFrames": 240,
+      "minRenderedVideoFrames": null,
+      "additionalRenderedFramesRequired": 0,
+      "observedSampleDurationMs": 4000,
+      "minimumSampleDurationMs": 0,
+      "reason": "Rendered video frames were captured; no minimum rendered frame expectation was supplied."
+    },
+    "cadence": {
+      "status": "matched",
+      "sourceFrameRate": 60,
+      "displayRefreshRateHz": 60,
+      "bestMultiplier": 1,
+      "bestTargetRefreshRateHz": 60,
+      "refreshDeltaHz": 0,
+      "toleranceHz": 0.15,
+      "clockSpeedMultiplier": 1,
+      "clockSpeedAdjustmentPercent": 0,
+      "isClockSpeedAdjustmentRequired": false,
+      "isFractionalCadence": false,
+      "reason": "Display refresh rate matches source cadence.",
+      "signals": [
+        "source.frameRate",
+        "display.refreshRateHz"
+      ]
+    },
+    "optimizationGate": {
+      "status": "not-needed",
+      "canOptimizePlaybackCore": false,
+      "blockers": [
+        "result.unsupported"
+      ],
+      "blockerSignals": [],
+      "targetFailureAreas": []
+    },
+    "framePacing": {
+      "pattern": "not-applicable",
+      "expectedFrameDurationMs": 16.666666666666668,
+      "renderIntervalP95FrameRatio": 1.01,
+      "renderIntervalP99FrameRatio": 1.02,
+      "maxFrameGapFrameRatio": 1.05,
+      "droppedVideoFramePercent": 0,
+      "lateFrameDropToleranceMs": 41.66666666666667,
+      "lateFrameDropToleranceFrameRatio": 2.5,
+      "reasons": [],
+      "signals": []
+    },
+    "triageSteps": [
+      {
+        "rank": 1,
+        "kind": "failure",
+        "failureArea": "unsupported-source",
+        "suggestedAction": "Verify media source selection, codec support, HDR/Dolby Vision classification, and fallback policy before tuning playback timing.",
+        "signals": [
+          "source.codec",
+          "source.frameRate",
+          "source.hdrKind",
+          "source.hdrPlaybackStrategy",
+          "source.isHdr",
+          "source.isDirectPlayable",
+          "source.isDolbyVision",
+          "source.dolbyVisionProfile",
+          "source.dolbyVisionCompatibilityId",
+          "source.hasHdr10BaseLayer",
+          "source.hasHlgBaseLayer"
+        ],
+        "codeTargets": [
+          "src/NextGenEmby.Core/Playback/PlaybackOrchestrator.cs",
+          "src/NextGenEmby.Core/Playback/HdrPlaybackProfileClassifier.cs",
+          "src/NextGenEmby.Core/Emby"
+        ]
+      }
+    ],
+    "failureReasons": [],
+    "failedChecks": [],
+    "failureClasses": [],
+    "failureAreas": [],
+    "investigationHints": [
+      {
+        "failureArea": "unsupported-source",
+        "suggestedAction": "Verify media source selection, codec support, HDR/Dolby Vision classification, and fallback policy before tuning playback timing.",
+        "codeTargets": [
+          "src/NextGenEmby.Core/Playback/PlaybackOrchestrator.cs",
+          "src/NextGenEmby.Core/Playback/HdrPlaybackProfileClassifier.cs",
+          "src/NextGenEmby.Core/Emby"
+        ],
+        "signals": [
+          "source.codec",
+          "source.frameRate",
+          "source.hdrKind",
+          "source.hdrPlaybackStrategy",
+          "source.isHdr",
+          "source.isDirectPlayable",
+          "source.isDolbyVision",
+          "source.dolbyVisionProfile",
+          "source.dolbyVisionCompatibilityId",
+          "source.hasHdr10BaseLayer",
+          "source.hasHlgBaseLayer"
+        ]
+      }
+    ],
+    "evidenceSignals": [
+      "source.codec",
+      "source.width",
+      "source.height",
+      "source.hdrKind",
+      "source.videoRange",
+      "source.hdrPlaybackStrategy",
+      "source.isHdr",
+      "source.isDirectPlayable",
+      "source.isDolbyVision",
+      "source.dolbyVisionProfile",
+      "source.hasHdr10BaseLayer",
+      "source.hasHlgBaseLayer",
+      "source.frameRate",
+      "startup.startupDurationMs",
+      "environment.collectorVersion",
+      "environment.playerCoreVersion",
+      "environment.sourceRevision",
+      "environment.buildConfiguration",
+      "source.hasDirectStreamUrl",
+      "source.directStreamProtocol",
+      "sync.audioVideoDriftMsP50",
+      "sync.audioVideoDriftMsP95",
+      "sync.audioVideoDriftMsP99",
+      "sync.audioVideoDriftMsMax",
+      "tracks.videoTrackCount",
+      "tracks.audioTrackCount",
+      "tracks.subtitleTrackCount",
+      "tracks.selectedVideoStreamIndex",
+      "tracks.isSubtitleDisabled",
+      "tracks.video.index",
+      "tracks.video.codec",
+      "tracks.video.isExternal",
+      "tracks.video.isDefault",
+      "tracks.video.isForced",
+      "tracks.video.realFrameRate",
+      "tracks.video.averageFrameRate",
+      "tracks.audio.index",
+      "tracks.audio.codec",
+      "tracks.audio.language",
+      "tracks.audio.displayTitle",
+      "tracks.audio.isExternal",
+      "tracks.audio.isDefault",
+      "tracks.audio.isForced",
+      "tracks.audio.channelLayout",
+      "tracks.audio.channels",
+      "lifecycle.load",
+      "lifecycle.play",
+      "lifecycle.pause",
+      "lifecycle.resume",
+      "lifecycle.stop",
+      "runtimeMetrics.status",
+      "runtimeMetrics.providerStatus",
+      "runtimeMetrics.reason",
+      "runtimeMetrics.hasSnapshot",
+      "runtimeMetrics.hasPlaybackSample",
+      "position.requestedStartPositionTicks",
+      "position.seekTargetPositionTicks",
+      "position.actualPositionTicks",
+      "position.seekPositionErrorMs",
+      "timing.lateFrameDropToleranceMs",
+      "timing.framePacingSourceFrameRate"
+    ],
+    "missingEvidence": [],
+    "limitations": [
+      "software-only: does not verify actual HDMI InfoFrame output",
+      "software-only: does not verify display panel EOTF, luminance, or color accuracy",
+      "software-only: does not detect TV-side tone mapping",
+      "internal-timing: frame intervals are measured in the player, not by an external photodiode or HDMI capture device",
+      "core-probe: PlaybackOrchestrator lifecycle was executed with an in-process diagnostic backend",
+      "core-probe: native playback graph, decoder, renderer, network I/O, and HDMI output were not opened",
+      "core-probe: startup, display, timing, buffering, and A/V sync values are deterministic probe telemetry"
+    ]
+  }
+}

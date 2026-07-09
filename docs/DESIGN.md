@@ -1,6 +1,6 @@
----
+﻿---
 version: "alpha"
-name: "Next Gen Xbox Emby - Artwork-Backed Matte Fluent"
+name: "Noira - Artwork-Backed Matte Fluent"
 description: "A dark Xbox/TV visual system for a personal Emby library, built on cool graphite matte chrome, artwork-backed blur only when real media color sits behind it, borderless controller focus, and sparse green signal color without retro-futurist glow."
 colors:
   primary: "#252D35"
@@ -154,7 +154,7 @@ components:
 
 ## Overview
 
-Artwork-Backed Matte Fluent is the visual language for Next Gen Xbox Emby. It keeps the Xbox dark-room feel and Fluent Design discipline, borrows the content-led restraint of Apple TV where it helps, and rejects the older "technology UI" vocabulary: neon cyan portals, glass prisms, glowing rings, fake holograms, perspective beams, and busy blue-black sci-fi dashboards.
+Artwork-Backed Matte Fluent is the visual language for Noira. It keeps the Xbox dark-room feel and Fluent Design discipline, borrows the content-led restraint of Apple TV where it helps, and rejects the older "technology UI" vocabulary: neon cyan portals, glass prisms, glowing rings, fake holograms, perspective beams, and busy blue-black sci-fi dashboards.
 
 The interface should feel like a calm media device in a dark room: cool graphite matte chrome, precise controller state, real artwork carrying the color, and no decorative glass layer on empty graphite. Blur is allowed only when it is backed by real media color: a focused banner, movie poster, backdrop, or video frame. Outside artwork and exceptional warning/error/danger states, normal chrome should stay grayscale with sparse muted green signals.
 
@@ -789,7 +789,7 @@ Suggested migration mapping:
 
 Known implementation drift to resolve later:
 
-- `src/NextGenEmby.App/App.xaml` and `tools/Generate-AppIconAssets.ps1` now map their shared color tokens to this document's palette. Page-level usage may still need migration where controls treat those legacy resource names as large action fills or old focus frames.
+- `src/NoiraPlayer.App/App.xaml` and `tools/Generate-AppIconAssets.ps1` now map their shared color tokens to this document's palette. Page-level usage may still need migration where controls treat those legacy resource names as large action fills or old focus frames.
 - `SystemControlFocusVisualPrimaryBrush` now follows the neutral focus family. Future work should still validate accessibility/high-visibility focus on Xbox hardware.
 - Existing XAML may still use `BorderBrush`, `UseSystemFocusVisuals`, and current action/warm brushes for focus and state. That is expected until an implementation pass migrates visual resources; new work should not extend the old color language.
 - Existing surface resources may still imply acrylic-like panels. Future work should replace generic acrylic with `artwork_blur_surface` only where an active poster/banner/video sits behind it.

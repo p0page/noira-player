@@ -1,0 +1,911 @@
+{
+  "schemaVersion": 1,
+  "evaluationVersion": "playback-quality-v0.1",
+  "caseMetadata": {
+    "caseId": "local/chimera-23976-hdr10-cadence",
+    "category": "challenge",
+    "severity": "high",
+    "stability": "unknown"
+  },
+  "report": {
+    "schemaVersion": 1,
+    "metricVersion": "software-quality-v1",
+    "runId": "local/chimera-23976-hdr10-cadence",
+    "result": "pass",
+    "failureReasons": [],
+    "analysis": {
+      "primaryFailureArea": "none",
+      "suggestedNextAction": "No failing thresholds.",
+      "relevantSignals": [],
+      "ignoredSignals": []
+    },
+    "checks": [
+      {
+        "name": "ExpectedCodec",
+        "signal": "source.codec",
+        "status": "pass",
+        "failureArea": "unsupported-source",
+        "failureClass": "",
+        "expected": "hevc",
+        "actual": "hevc",
+        "message": "source.codec matched expected hevc."
+      },
+      {
+        "name": "ExpectedWidth",
+        "signal": "source.width",
+        "status": "pass",
+        "failureArea": "unsupported-source",
+        "failureClass": "",
+        "expected": "3840",
+        "actual": "3840",
+        "message": "source.width matched expected 3840."
+      },
+      {
+        "name": "ExpectedHeight",
+        "signal": "source.height",
+        "status": "pass",
+        "failureArea": "unsupported-source",
+        "failureClass": "",
+        "expected": "2160",
+        "actual": "2160",
+        "message": "source.height matched expected 2160."
+      },
+      {
+        "name": "ExpectedHdrKind",
+        "signal": "source.hdrKind",
+        "status": "pass",
+        "failureArea": "unsupported-source",
+        "failureClass": "",
+        "expected": "Hdr10",
+        "actual": "Hdr10",
+        "message": "source.hdrKind matched expected Hdr10."
+      },
+      {
+        "name": "ExpectedVideoRange",
+        "signal": "source.videoRange",
+        "status": "pass",
+        "failureArea": "unsupported-source",
+        "failureClass": "",
+        "expected": "HDR10",
+        "actual": "HDR10",
+        "message": "source.videoRange matched expected HDR10."
+      },
+      {
+        "name": "ExpectedColorPrimaries",
+        "signal": "source.colorPrimaries",
+        "status": "pass",
+        "failureArea": "unsupported-source",
+        "failureClass": "",
+        "expected": "bt2020",
+        "actual": "bt2020",
+        "message": "source.colorPrimaries matched expected bt2020."
+      },
+      {
+        "name": "ExpectedColorTransfer",
+        "signal": "source.colorTransfer",
+        "status": "pass",
+        "failureArea": "unsupported-source",
+        "failureClass": "",
+        "expected": "smpte2084",
+        "actual": "smpte2084",
+        "message": "source.colorTransfer matched expected smpte2084."
+      },
+      {
+        "name": "ExpectedColorSpace",
+        "signal": "source.colorSpace",
+        "status": "pass",
+        "failureArea": "unsupported-source",
+        "failureClass": "",
+        "expected": "bt2020nc",
+        "actual": "bt2020nc",
+        "message": "source.colorSpace matched expected bt2020nc."
+      },
+      {
+        "name": "ExpectedIsHdr",
+        "signal": "source.isHdr",
+        "status": "pass",
+        "failureArea": "unsupported-source",
+        "failureClass": "",
+        "expected": "True",
+        "actual": "True",
+        "message": "source.isHdr matched expected True."
+      },
+      {
+        "name": "ExpectedIsDirectPlayable",
+        "signal": "source.isDirectPlayable",
+        "status": "pass",
+        "failureArea": "unsupported-source",
+        "failureClass": "",
+        "expected": "True",
+        "actual": "True",
+        "message": "source.isDirectPlayable matched expected True."
+      },
+      {
+        "name": "ExpectedFrameRate",
+        "signal": "source.frameRate",
+        "status": "pass",
+        "failureArea": "unsupported-source",
+        "failureClass": "",
+        "expected": "23.976",
+        "actual": "23.976",
+        "message": "Source frame rate matched expected FrameRate 23.976."
+      },
+      {
+        "name": "StartupDurationMs",
+        "signal": "startup.startupDurationMs",
+        "status": "pass",
+        "failureArea": "startup",
+        "failureClass": "",
+        "expected": "7000.000",
+        "actual": "250.000",
+        "message": "StartupDurationMs is within MaxStartupDurationMs."
+      },
+      {
+        "name": "MaxFrameGapMs",
+        "signal": "timing.maxFrameGapMs",
+        "status": "pass",
+        "failureArea": "frame-pacing",
+        "failureClass": "",
+        "expected": "104.300",
+        "actual": "43.794",
+        "message": "MaxFrameGapMs is within MaxFrameGapMs."
+      },
+      {
+        "name": "RenderIntervalMsP95",
+        "signal": "timing.renderIntervalMsP95",
+        "status": "pass",
+        "failureArea": "frame-pacing",
+        "failureClass": "",
+        "expected": "52.100",
+        "actual": "41.680",
+        "message": "RenderIntervalMsP95 is within MaxRenderIntervalMsP95."
+      },
+      {
+        "name": "RenderIntervalMsP99",
+        "signal": "timing.renderIntervalMsP99",
+        "status": "pass",
+        "failureArea": "frame-pacing",
+        "failureClass": "",
+        "expected": "83.400",
+        "actual": "42.543",
+        "message": "RenderIntervalMsP99 is within MaxRenderIntervalMsP99."
+      },
+      {
+        "name": "AudioVideoDriftMsP95",
+        "signal": "sync.audioVideoDriftMsP95",
+        "status": "pass",
+        "failureArea": "av-sync",
+        "failureClass": "",
+        "expected": "80.000",
+        "actual": "5.000",
+        "message": "AudioVideoDriftMsP95 is within MaxAudioVideoDriftMsP95."
+      },
+      {
+        "name": "VideoStarvedPasses",
+        "signal": "buffers.videoStarvedPasses",
+        "status": "pass",
+        "failureArea": "buffering",
+        "failureClass": "",
+        "expected": "0",
+        "actual": "0",
+        "message": "VideoStarvedPasses is within MaxVideoStarvedPasses."
+      },
+      {
+        "name": "AudioStarvedPasses",
+        "signal": "buffers.audioStarvedPasses",
+        "status": "pass",
+        "failureArea": "buffering",
+        "failureClass": "",
+        "expected": "0",
+        "actual": "0",
+        "message": "AudioStarvedPasses is within MaxAudioStarvedPasses."
+      },
+      {
+        "name": "ActualHdrOutput",
+        "signal": "colorPipeline.actualHdrOutput",
+        "status": "pass",
+        "failureArea": "color-pipeline",
+        "failureClass": "",
+        "expected": "Hdr10",
+        "actual": "Hdr10",
+        "message": "ActualHdrOutput matched expected Hdr10."
+      },
+      {
+        "name": "DxgiInput",
+        "signal": "colorPipeline.dxgiInput",
+        "status": "pass",
+        "failureArea": "color-pipeline",
+        "failureClass": "",
+        "expected": "YCBCR_STUDIO_G2084_TOPLEFT_P2020",
+        "actual": "YCBCR_STUDIO_G2084_TOPLEFT_P2020",
+        "message": "DxgiInput matched expected YCBCR_STUDIO_G2084_TOPLEFT_P2020."
+      },
+      {
+        "name": "DxgiOutput",
+        "signal": "colorPipeline.dxgiOutput",
+        "status": "pass",
+        "failureArea": "color-pipeline",
+        "failureClass": "",
+        "expected": "RGB_FULL_G2084_NONE_P2020",
+        "actual": "RGB_FULL_G2084_NONE_P2020",
+        "message": "DxgiOutput matched expected RGB_FULL_G2084_NONE_P2020."
+      },
+      {
+        "name": "IsTenBitSwapChain",
+        "signal": "colorPipeline.isTenBitSwapChain",
+        "status": "pass",
+        "failureArea": "color-pipeline",
+        "failureClass": "",
+        "expected": "True",
+        "actual": "True",
+        "message": "IsTenBitSwapChain matched expected True."
+      },
+      {
+        "name": "DisplayRefreshRateHz",
+        "signal": "display.refreshRateHz",
+        "status": "pass",
+        "failureArea": "frame-pacing",
+        "failureClass": "",
+        "expected": "matched to source.frameRate 23.976",
+        "actual": "59.940",
+        "message": "DisplayRefreshRateHz matches source frame rate."
+      },
+      {
+        "name": "ConversionStatus",
+        "signal": "colorPipeline.conversionStatus",
+        "status": "pass",
+        "failureArea": "color-pipeline",
+        "failureClass": "",
+        "expected": "validated",
+        "actual": "validated",
+        "message": "ConversionStatus is validated."
+      }
+    ],
+    "environment": {
+      "collectorVersion": "materialize-core-probe-report-set-v1",
+      "playerCoreVersion": "NextGenEmby.Core",
+      "sourceRevision": "working-tree-runtime-metrics-gate-v0.1",
+      "buildConfiguration": "Debug"
+    },
+    "limitations": [
+      "software-only: does not verify actual HDMI InfoFrame output",
+      "software-only: does not verify display panel EOTF, luminance, or color accuracy",
+      "software-only: does not detect TV-side tone mapping",
+      "internal-timing: frame intervals are measured in the player, not by an external photodiode or HDMI capture device",
+      "core-probe: PlaybackOrchestrator lifecycle was executed with an in-process diagnostic backend",
+      "core-probe: native playback graph, decoder, renderer, network I/O, and HDMI output were not opened",
+      "core-probe: startup, display, timing, buffering, and A/V sync values are deterministic probe telemetry"
+    ],
+    "expected": {
+      "codec": "hevc",
+      "width": 3840,
+      "height": 2160,
+      "frameRate": 23.976,
+      "hdrKind": "Hdr10",
+      "videoRange": "HDR10",
+      "colorPrimaries": "bt2020",
+      "colorTransfer": "smpte2084",
+      "colorSpace": "bt2020nc",
+      "hdrPlaybackStrategy": "",
+      "isHdr": true,
+      "isDirectPlayable": true,
+      "isDolbyVision": null,
+      "dolbyVisionProfile": null,
+      "dolbyVisionCompatibilityId": null,
+      "hasHdr10BaseLayer": null,
+      "hasHlgBaseLayer": null,
+      "hdrOutput": "Hdr10",
+      "dxgiInput": "YCBCR_STUDIO_G2084_TOPLEFT_P2020",
+      "dxgiOutput": "RGB_FULL_G2084_NONE_P2020",
+      "maxStartupDurationMs": 7000,
+      "minRenderedVideoFrames": null,
+      "maxDroppedFrames": null,
+      "maxFrameGapMs": 104.3,
+      "maxRenderIntervalMsP95": 52.1,
+      "maxRenderIntervalMsP99": 83.4,
+      "maxAudioVideoDriftMsP95": 80,
+      "maxSeekPositionErrorMs": null,
+      "maxVideoStarvedPasses": 0,
+      "maxAudioStarvedPasses": 0,
+      "requireValidatedConversion": true,
+      "requireMatchedDisplayRefreshRate": true
+    },
+    "source": {
+      "itemId": "quality-case-chimera-23976-hdr10",
+      "mediaSourceId": "quality-source-chimera-23976-hdr10",
+      "hasDirectStreamUrl": true,
+      "directStreamProtocol": "emby",
+      "container": "",
+      "bitrate": 0,
+      "durationTicks": 0,
+      "codec": "hevc",
+      "width": 3840,
+      "height": 2160,
+      "frameRate": 23.976,
+      "videoRange": "HDR10",
+      "colorPrimaries": "bt2020",
+      "colorTransfer": "smpte2084",
+      "colorSpace": "bt2020nc",
+      "hasChapterMetadata": false,
+      "chapters": [],
+      "hdrKind": "Hdr10",
+      "hdrPlaybackStrategy": "HDR10",
+      "isHdr": true,
+      "isDirectPlayable": true,
+      "isDolbyVision": false,
+      "dolbyVisionProfile": null,
+      "dolbyVisionCompatibilityId": null,
+      "hasHdr10BaseLayer": false,
+      "hasHlgBaseLayer": false,
+      "audioCodec": "eac3"
+    },
+    "startup": {
+      "commandReceivedAt": "2026-01-01T00:00:00.000Z",
+      "playbackStartedAt": "2026-01-01T00:00:00.250Z",
+      "startupDurationMs": 250
+    },
+    "lifecycle": {
+      "events": [
+        {
+          "operation": "load",
+          "status": "observed",
+          "state": "Playing",
+          "positionTicks": 0,
+          "message": "core-probe selected source and created playback descriptor"
+        },
+        {
+          "operation": "play",
+          "status": "observed",
+          "state": "Playing",
+          "positionTicks": 0,
+          "message": "core-probe started playback"
+        },
+        {
+          "operation": "pause",
+          "status": "observed",
+          "state": "Paused",
+          "positionTicks": 0,
+          "message": "core-probe paused playback"
+        },
+        {
+          "operation": "resume",
+          "status": "observed",
+          "state": "Playing",
+          "positionTicks": 0,
+          "message": "core-probe resumed playback"
+        },
+        {
+          "operation": "stop",
+          "status": "observed",
+          "state": "Stopped",
+          "positionTicks": 0,
+          "message": "core-probe stopped playback"
+        }
+      ]
+    },
+    "position": {
+      "requestedStartPositionTicks": 0,
+      "seekTargetPositionTicks": 0,
+      "actualPositionTicks": 0,
+      "seekPositionErrorMs": 0
+    },
+    "tracks": {
+      "videoTrackCount": 1,
+      "audioTrackCount": 2,
+      "subtitleTrackCount": 0,
+      "selectedVideoStreamIndex": 0,
+      "selectedAudioStreamIndex": null,
+      "selectedSubtitleStreamIndex": null,
+      "isSubtitleDisabled": true,
+      "video": [
+        {
+          "index": 0,
+          "kind": "Video",
+          "codec": "hevc",
+          "language": "",
+          "channelLayout": "",
+          "channels": 0,
+          "displayTitle": "",
+          "isExternal": false,
+          "isDefault": true,
+          "isForced": false,
+          "realFrameRate": 23.976,
+          "averageFrameRate": 23.976
+        }
+      ],
+      "audio": [
+        {
+          "index": 1,
+          "kind": "Audio",
+          "codec": "eac3",
+          "language": "eng",
+          "channelLayout": "5.1",
+          "channels": 6,
+          "displayTitle": "English 5.1",
+          "isExternal": false,
+          "isDefault": true,
+          "isForced": false,
+          "realFrameRate": 0,
+          "averageFrameRate": 0
+        },
+        {
+          "index": 2,
+          "kind": "Audio",
+          "codec": "aac",
+          "language": "jpn",
+          "channelLayout": "2.0",
+          "channels": 2,
+          "displayTitle": "Japanese Stereo",
+          "isExternal": false,
+          "isDefault": false,
+          "isForced": false,
+          "realFrameRate": 0,
+          "averageFrameRate": 0
+        }
+      ],
+      "subtitles": []
+    },
+    "error": {
+      "code": "",
+      "message": "",
+      "operation": "",
+      "exceptionType": "",
+      "failureClass": "",
+      "failureArea": "error-handling",
+      "isTerminal": false,
+      "isRetriable": false
+    },
+    "skip": {
+      "code": "",
+      "reason": "",
+      "operation": "",
+      "failureClass": "",
+      "failureArea": "evidence-collection",
+      "isExpected": false,
+      "isRetriable": false
+    },
+    "runtimeMetrics": {
+      "status": "captured",
+      "providerStatus": "core-probe:returned-snapshot",
+      "reason": "Runtime metrics snapshot contains playback sample evidence.",
+      "hasSnapshot": true,
+      "hasPlaybackSample": true
+    },
+    "timing": {
+      "renderPasses": 240,
+      "decodedVideoFrames": 240,
+      "renderedVideoFrames": 240,
+      "droppedVideoFrames": 0,
+      "seekPrerollDroppedFrames": 0,
+      "videoAheadWaitCount": 0,
+      "expectedFrameDurationMs": 41.70837504170838,
+      "renderIntervalMsP50": 41.70837504170838,
+      "renderIntervalMsP95": 41.68000000000001,
+      "renderIntervalMsP99": 42.54254254254255,
+      "maxFrameGapMs": 43.7937937937938,
+      "framePacingSourceFrameRate": 23.976,
+      "lateFrameDropToleranceMs": 104.27093760427096
+    },
+    "sync": {
+      "audioClockTicks": 0,
+      "videoPositionTicks": 0,
+      "audioVideoDriftMsP50": 3,
+      "audioVideoDriftMsP95": 5,
+      "audioVideoDriftMsP99": 8,
+      "audioVideoDriftMsMax": 12
+    },
+    "buffers": {
+      "submittedAudioFrames": 240,
+      "queuedAudioBuffers": 4,
+      "videoStarvedPasses": 0,
+      "audioStarvedPasses": 0
+    },
+    "colorPipeline": {
+      "actualHdrOutput": "Hdr10",
+      "swapChainFormat": "R10G10B10A2_UNORM",
+      "swapChainColorSpace": "RGB_FULL_G2084_NONE_P2020",
+      "isTenBitSwapChain": true,
+      "dxgiInput": "YCBCR_STUDIO_G2084_TOPLEFT_P2020",
+      "dxgiOutput": "RGB_FULL_G2084_NONE_P2020",
+      "conversionStatus": "validated",
+      "isVideoProcessorColorSpaceValidated": true,
+      "forceSdrOutput": false
+    },
+    "display": {
+      "hdrStatus": "On",
+      "isHdrDisplayAvailable": true,
+      "isHdrOutputActive": true,
+      "refreshRateHz": 59.94,
+      "message": "core-probe synthetic display status"
+    }
+  },
+  "modelAnalysis": {
+    "analyzerVersion": 5,
+    "runId": "local/chimera-23976-hdr10-cadence",
+    "result": "pass",
+    "expectedBehavior": "Playback quality checks passed.",
+    "actualBehavior": "Playback quality checks passed.",
+    "primaryFailureArea": "none",
+    "primaryFailureClass": "none",
+    "suggestedNextAction": "No failing thresholds.",
+    "startup": {
+      "status": "ready",
+      "reason": "Startup telemetry is available and no startup threshold failed.",
+      "commandReceivedAt": "2026-01-01T00:00:00.000Z",
+      "playbackStartedAt": "2026-01-01T00:00:00.250Z",
+      "startupDurationMs": 250,
+      "signals": [
+        "startup.commandReceivedAt",
+        "startup.playbackStartedAt",
+        "startup.startupDurationMs"
+      ],
+      "failedSignals": []
+    },
+    "lifecycle": {
+      "status": "partial",
+      "reason": "Playback lifecycle telemetry is present but incomplete.",
+      "operations": [
+        "load",
+        "play",
+        "pause",
+        "resume",
+        "stop"
+      ],
+      "signals": [
+        "lifecycle.load",
+        "lifecycle.play",
+        "lifecycle.pause",
+        "lifecycle.resume",
+        "lifecycle.stop"
+      ],
+      "missingOperations": [
+        "seek"
+      ]
+    },
+    "environment": {
+      "collectorVersion": "materialize-core-probe-report-set-v1",
+      "playerCoreVersion": "NextGenEmby.Core",
+      "sourceRevision": "working-tree-runtime-metrics-gate-v0.1",
+      "buildConfiguration": "Debug",
+      "signals": [
+        "environment.collectorVersion",
+        "environment.playerCoreVersion",
+        "environment.sourceRevision",
+        "environment.buildConfiguration"
+      ]
+    },
+    "source": {
+      "status": "matched",
+      "reason": "Parsed source metadata is available and has no unsupported-source mismatches.",
+      "hasDirectStreamUrl": true,
+      "directStreamProtocol": "emby",
+      "container": "",
+      "bitrate": 0,
+      "durationTicks": 0,
+      "codec": "hevc",
+      "width": 3840,
+      "height": 2160,
+      "frameRate": 23.976,
+      "videoRange": "HDR10",
+      "colorPrimaries": "bt2020",
+      "colorTransfer": "smpte2084",
+      "colorSpace": "bt2020nc",
+      "hasChapterMetadata": false,
+      "chapterCount": null,
+      "chapters": [],
+      "hdrKind": "Hdr10",
+      "hdrPlaybackStrategy": "HDR10",
+      "isHdr": true,
+      "isDirectPlayable": true,
+      "isDolbyVision": false,
+      "dolbyVisionProfile": null,
+      "dolbyVisionCompatibilityId": null,
+      "hasHdr10BaseLayer": false,
+      "hasHlgBaseLayer": false,
+      "signals": [
+        "source.codec",
+        "source.hasDirectStreamUrl",
+        "source.directStreamProtocol",
+        "source.width",
+        "source.height",
+        "source.frameRate",
+        "source.videoRange",
+        "source.colorPrimaries",
+        "source.colorTransfer",
+        "source.colorSpace",
+        "source.hdrKind",
+        "source.hdrPlaybackStrategy",
+        "source.isHdr",
+        "source.isDirectPlayable",
+        "source.isDolbyVision",
+        "source.hasHdr10BaseLayer",
+        "source.hasHlgBaseLayer"
+      ],
+      "mismatchedSignals": []
+    },
+    "tracks": {
+      "status": "ready",
+      "reason": "Video and audio track discovery telemetry is available; no subtitle track was reported.",
+      "videoTrackCount": 1,
+      "audioTrackCount": 2,
+      "subtitleTrackCount": 0,
+      "selectedVideoStreamIndex": 0,
+      "selectedAudioStreamIndex": null,
+      "selectedSubtitleStreamIndex": null,
+      "isSubtitleDisabled": true,
+      "signals": [
+        "tracks.videoTrackCount",
+        "tracks.audioTrackCount",
+        "tracks.subtitleTrackCount",
+        "tracks.selectedVideoStreamIndex",
+        "tracks.isSubtitleDisabled",
+        "tracks.video.index",
+        "tracks.video.codec",
+        "tracks.video.isExternal",
+        "tracks.video.isDefault",
+        "tracks.video.isForced",
+        "tracks.video.realFrameRate",
+        "tracks.video.averageFrameRate",
+        "tracks.audio.index",
+        "tracks.audio.codec",
+        "tracks.audio.language",
+        "tracks.audio.displayTitle",
+        "tracks.audio.isExternal",
+        "tracks.audio.isDefault",
+        "tracks.audio.isForced",
+        "tracks.audio.channelLayout",
+        "tracks.audio.channels"
+      ],
+      "missingSignals": []
+    },
+    "error": {
+      "code": "",
+      "message": "",
+      "operation": "",
+      "exceptionType": "",
+      "failureClass": "",
+      "failureArea": "error-handling",
+      "isTerminal": false,
+      "isRetriable": false
+    },
+    "skip": {
+      "code": "",
+      "reason": "",
+      "operation": "",
+      "failureClass": "",
+      "failureArea": "evidence-collection",
+      "isExpected": false,
+      "isRetriable": false
+    },
+    "runtimeMetrics": {
+      "status": "captured",
+      "providerStatus": "core-probe:returned-snapshot",
+      "reason": "Runtime metrics snapshot contains playback sample evidence.",
+      "hasSnapshot": true,
+      "hasPlaybackSample": true,
+      "signals": [
+        "runtimeMetrics.status",
+        "runtimeMetrics.providerStatus",
+        "runtimeMetrics.reason",
+        "runtimeMetrics.hasSnapshot",
+        "runtimeMetrics.hasPlaybackSample"
+      ]
+    },
+    "colorPipeline": {
+      "status": "matched",
+      "reason": "Color pipeline telemetry is available and has no color-pipeline mismatches.",
+      "actualHdrOutput": "Hdr10",
+      "swapChainFormat": "R10G10B10A2_UNORM",
+      "swapChainColorSpace": "RGB_FULL_G2084_NONE_P2020",
+      "isTenBitSwapChain": true,
+      "dxgiInput": "YCBCR_STUDIO_G2084_TOPLEFT_P2020",
+      "dxgiOutput": "RGB_FULL_G2084_NONE_P2020",
+      "conversionStatus": "validated",
+      "isVideoProcessorColorSpaceValidated": true,
+      "forceSdrOutput": false,
+      "signals": [
+        "colorPipeline.actualHdrOutput",
+        "colorPipeline.swapChainFormat",
+        "colorPipeline.swapChainColorSpace",
+        "colorPipeline.isTenBitSwapChain",
+        "colorPipeline.dxgiInput",
+        "colorPipeline.dxgiOutput",
+        "colorPipeline.conversionStatus",
+        "colorPipeline.isVideoProcessorColorSpaceValidated"
+      ],
+      "mismatchedSignals": []
+    },
+    "buffering": {
+      "status": "stable",
+      "reason": "Buffering telemetry is available and no starvation failures were reported.",
+      "submittedAudioFrames": 240,
+      "queuedAudioBuffers": 4,
+      "videoStarvedPasses": 0,
+      "audioStarvedPasses": 0,
+      "signals": [
+        "buffers.submittedAudioFrames",
+        "buffers.queuedAudioBuffers",
+        "buffers.videoStarvedPasses",
+        "buffers.audioStarvedPasses"
+      ],
+      "failedSignals": []
+    },
+    "avSync": {
+      "status": "synced",
+      "reason": "A/V sync telemetry is available and no sync threshold failed.",
+      "audioClockTicks": 0,
+      "videoPositionTicks": 0,
+      "clockDeltaTicks": 0,
+      "clockDeltaMs": 0,
+      "driftDirection": "unknown",
+      "audioVideoDriftMsP50": 3,
+      "audioVideoDriftMsP95": 5,
+      "audioVideoDriftMsP99": 8,
+      "audioVideoDriftMsMax": 12,
+      "signals": [
+        "sync.audioVideoDriftMsP50",
+        "sync.audioVideoDriftMsP95",
+        "sync.audioVideoDriftMsP99",
+        "sync.audioVideoDriftMsMax"
+      ],
+      "failedSignals": []
+    },
+    "sample": {
+      "status": "sufficient",
+      "renderedVideoFrames": 240,
+      "minRenderedVideoFrames": null,
+      "additionalRenderedFramesRequired": 0,
+      "observedSampleDurationMs": 10010.01001001001,
+      "minimumSampleDurationMs": 0,
+      "reason": "Rendered video frames were captured; no minimum rendered frame expectation was supplied."
+    },
+    "cadence": {
+      "status": "matched",
+      "sourceFrameRate": 23.976,
+      "displayRefreshRateHz": 59.94,
+      "bestMultiplier": 2.5,
+      "bestTargetRefreshRateHz": 59.94,
+      "refreshDeltaHz": 0,
+      "toleranceHz": 0.15,
+      "clockSpeedMultiplier": 1,
+      "clockSpeedAdjustmentPercent": 0,
+      "isClockSpeedAdjustmentRequired": false,
+      "isFractionalCadence": true,
+      "reason": "Display refresh rate matches source cadence with fractional cadence pulldown.",
+      "signals": [
+        "source.frameRate",
+        "display.refreshRateHz",
+        "cadence.isFractionalCadence"
+      ]
+    },
+    "optimizationGate": {
+      "status": "not-needed",
+      "canOptimizePlaybackCore": false,
+      "blockers": [
+        "result.pass"
+      ],
+      "blockerSignals": [],
+      "targetFailureAreas": []
+    },
+    "framePacing": {
+      "pattern": "not-applicable",
+      "expectedFrameDurationMs": 41.70837504170838,
+      "renderIntervalP95FrameRatio": 0.99931968,
+      "renderIntervalP99FrameRatio": 1.02,
+      "maxFrameGapFrameRatio": 1.05,
+      "droppedVideoFramePercent": 0,
+      "lateFrameDropToleranceMs": 104.27093760427096,
+      "lateFrameDropToleranceFrameRatio": 2.5,
+      "reasons": [],
+      "signals": []
+    },
+    "triageSteps": [],
+    "failureReasons": [],
+    "failedChecks": [],
+    "failureClasses": [],
+    "failureAreas": [],
+    "investigationHints": [
+      {
+        "failureArea": "evidence-collection",
+        "suggestedAction": "Collect missing telemetry before optimizing playback behavior; absent evidence is treated separately from a real playback failure.",
+        "codeTargets": [
+          "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
+          "src/NextGenEmby.Core/PlaybackQuality/PlaybackQualityReportComposer.cs",
+          "src/NextGenEmby.Native/NativePlaybackQualityMetrics.cpp",
+          "src/NextGenEmby.Native/Media/PlaybackGraph.cpp"
+        ],
+        "signals": [
+          "lifecycle.seek"
+        ]
+      }
+    ],
+    "evidenceSignals": [
+      "source.codec",
+      "source.width",
+      "source.height",
+      "source.hdrKind",
+      "source.videoRange",
+      "source.colorPrimaries",
+      "source.colorTransfer",
+      "source.colorSpace",
+      "source.isHdr",
+      "source.isDirectPlayable",
+      "source.frameRate",
+      "startup.startupDurationMs",
+      "timing.maxFrameGapMs",
+      "timing.renderIntervalMsP95",
+      "timing.renderIntervalMsP99",
+      "sync.audioVideoDriftMsP95",
+      "buffers.videoStarvedPasses",
+      "buffers.audioStarvedPasses",
+      "colorPipeline.actualHdrOutput",
+      "colorPipeline.dxgiInput",
+      "colorPipeline.dxgiOutput",
+      "colorPipeline.isTenBitSwapChain",
+      "display.refreshRateHz",
+      "colorPipeline.conversionStatus",
+      "environment.collectorVersion",
+      "environment.playerCoreVersion",
+      "environment.sourceRevision",
+      "environment.buildConfiguration",
+      "source.hasDirectStreamUrl",
+      "source.directStreamProtocol",
+      "source.hdrPlaybackStrategy",
+      "source.isDolbyVision",
+      "source.hasHdr10BaseLayer",
+      "source.hasHlgBaseLayer",
+      "sync.audioVideoDriftMsP50",
+      "sync.audioVideoDriftMsP99",
+      "sync.audioVideoDriftMsMax",
+      "tracks.videoTrackCount",
+      "tracks.audioTrackCount",
+      "tracks.subtitleTrackCount",
+      "tracks.selectedVideoStreamIndex",
+      "tracks.isSubtitleDisabled",
+      "tracks.video.index",
+      "tracks.video.codec",
+      "tracks.video.isExternal",
+      "tracks.video.isDefault",
+      "tracks.video.isForced",
+      "tracks.video.realFrameRate",
+      "tracks.video.averageFrameRate",
+      "tracks.audio.index",
+      "tracks.audio.codec",
+      "tracks.audio.language",
+      "tracks.audio.displayTitle",
+      "tracks.audio.isExternal",
+      "tracks.audio.isDefault",
+      "tracks.audio.isForced",
+      "tracks.audio.channelLayout",
+      "tracks.audio.channels",
+      "lifecycle.load",
+      "lifecycle.play",
+      "lifecycle.pause",
+      "lifecycle.resume",
+      "lifecycle.stop",
+      "runtimeMetrics.status",
+      "runtimeMetrics.providerStatus",
+      "runtimeMetrics.reason",
+      "runtimeMetrics.hasSnapshot",
+      "runtimeMetrics.hasPlaybackSample",
+      "position.requestedStartPositionTicks",
+      "position.seekTargetPositionTicks",
+      "position.actualPositionTicks",
+      "position.seekPositionErrorMs",
+      "timing.lateFrameDropToleranceMs",
+      "timing.framePacingSourceFrameRate"
+    ],
+    "missingEvidence": [
+      "lifecycle.seek"
+    ],
+    "limitations": [
+      "software-only: does not verify actual HDMI InfoFrame output",
+      "software-only: does not verify display panel EOTF, luminance, or color accuracy",
+      "software-only: does not detect TV-side tone mapping",
+      "internal-timing: frame intervals are measured in the player, not by an external photodiode or HDMI capture device",
+      "core-probe: PlaybackOrchestrator lifecycle was executed with an in-process diagnostic backend",
+      "core-probe: native playback graph, decoder, renderer, network I/O, and HDMI output were not opened",
+      "core-probe: startup, display, timing, buffering, and A/V sync values are deterministic probe telemetry"
+    ]
+  }
+}
