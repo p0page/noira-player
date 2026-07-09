@@ -1,5 +1,15 @@
 ﻿# 技术决策
 
+## 2026-07-10: 不采纳 audio-ahead half-frame wait cap
+
+决策：不保留“按源帧率把 audio-ahead 单次 wait 限制为最多半帧”的候选。当前 Core/native 行为继续使用原有 `PlaybackFramePacing::AudioAheadWaitDuration(framePositionTicks, audioPositionTicks, hasQueuedAudio)` 计算，不新增 frame-rate-aware audio wait cap。
+
+原因：该候选的目标是把一次长 audio-ahead sleep 拆成更频繁的音频时钟 polling，理论上降低 waitable timer oversleep。但 24-case comparison 输出 `split-candidate / high risk`：`local/native-headless-av-smoke` 的 P95 frame-pacing expected-error 改善约 `-2.9274ms`，同时 P99/max expected-error 回归约 `+2.2549ms`。3 次 candidate native repeat 进一步显示目标 A/V smoke 仍 unstable，且 P99/max spread 从 baseline 约 `4.04ms` 扩大到约 `6.7486ms`，audioAheadWaitOversleep P99 spread 从约 `4.1725ms` 扩大到约 `7.0819ms`。这说明该候选没有解决目标 A/V tail instability，只是改变了 wait/catch-up 分布。
+
+影响：后续不要重复尝试“按半帧 cap audio-ahead wait”作为 A/V smoke jitter 修复。若继续处理该问题，应补更直接的 per-wait 证据，或设计能同时降低 P95、P99/max、audio oversleep spread 且不增加 catch-up volatility 的结构性 scheduling 策略。
+
+边界：该拒绝不改变评测阈值、不删除 case、不否定 `907e8d0` 的短间隔证据字段。candidate/baseline/repeat artifact 仅作为 ignored/private 诊断材料保留；源码已回退。
+
 ## 2026-07-10: render short-interval evidence 作为诊断字段保留，不作为评分阈值
 
 决策：保留 `timing.renderIntervalMsP05`、`timing.minFrameGapMs`、`timing.renderIntervalUnderExpected2MsCount` 和 `timing.renderIntervalUnderExpected4MsCount` 作为 native/Core/app quality report 的诊断证据。该字段组只解释 render interval 分布的短间隔侧和 catch-up 迹象，不新增通过/失败阈值，也不加入 manifest required signals。

@@ -16,6 +16,8 @@
 
 `local/native-headless-av-smoke` 的 A/V drift P95/P99 spread 与 finalDeltaAbs P95/P99 spread 均为 `0ms`，但 render P95/P99/max spread 分别约 `3.3244/4.04/4.04ms`，audioAheadWaitOversleep P95/P99 spread 约 `6.316/4.1725ms`，同时 P05/min 短间隔 spread 也明显存在。当前解释是：A/V 最终对齐稳定，但 wait scheduling 与 render catch-up pattern 不稳定；下一步应针对这类结构性证据设计 candidate，而不是再做单纯 audio wait 常量调参。`hdr10-60` 与 `sdr-60` 的 P95 基本稳定，主要是 P99/max 或单个 max-frame-gap outlier；它们更适合作为 render-loop/outlier 统计问题处理。
 
+基于该证据尝试过一个未采纳候选：按源帧率把 audio-ahead 单次 wait 限制为最多半帧，以减少一次长 sleep 的 timer oversleep。TDD 先给 `PlaybackFramePacing::AudioAheadWaitDuration(..., videoFrameRate)` 增加红灯测试，实现后 targeted native frame pacing test 与 native-headless smoke 通过；随后生成 24-case candidate `docs\qa\private\candidates\playback-core-tuning-audio-half-frame-wait-24case-working.local\`，并与 `907e8d0` baseline 对比。comparison 为 `split-candidate / high risk`：A/V smoke 的 P95 expected-error 改善约 `-2.9274ms`，但 P99/max expected-error 回归约 `+2.2549ms`；HDR10-60 单次改善。进一步 3 次 candidate repeat `docs\qa\private\repeats\playback-core-tuning-audio-half-frame-wait-working-native-repeat.local\` 显示目标 A/V smoke 仍 unstable，且 P99/max spread 从 baseline 约 `4.04ms` 扩大到约 `6.7486ms`，audioAheadWaitOversleep P99 spread 也从约 `4.1725ms` 扩大到约 `7.0819ms`。源码已回退；不要把半帧 audio wait cap 当作 accepted 优化。
+
 ## 2026-07-10 更新：native A/V smoke 最低渲染帧阈值已收紧
 
 本轮继续基于已合入 main 的当前调优分支工作。排查 `local/native-headless-av-smoke` 时确认：生成样本因字幕 `-shortest` 实际为 `2.5s / 75` 帧，但 native helper 的主播放快照是在 3 秒窗口的一半处采集，因此 report 中约 `46` 个 rendered frames 对 30fps 的 `1.5s` 捕获窗口是合理结果，不是“2.5 秒只渲染 46 帧”的播放 core 欠帧。
