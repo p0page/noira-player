@@ -27,12 +27,16 @@ namespace winrt::NoiraPlayer::Native::implementation
         int64_t AudioClockTicks{0};
         int64_t VideoPositionTicks{0};
         double RenderIntervalMsP50{0.0};
+        double RenderIntervalMsP05{0.0};
         double RenderIntervalMsP95{0.0};
         double RenderIntervalMsP99{0.0};
+        double MinFrameGapMs{0.0};
         double MaxFrameGapMs{0.0};
         uint64_t RenderIntervalSampleCount{0};
         uint64_t RenderIntervalOverExpected2MsCount{0};
         uint64_t RenderIntervalOverExpected4MsCount{0};
+        uint64_t RenderIntervalUnderExpected2MsCount{0};
+        uint64_t RenderIntervalUnderExpected4MsCount{0};
         double PresentDurationMsP50{0.0};
         double PresentDurationMsP95{0.0};
         double PresentDurationMsP99{0.0};
@@ -69,6 +73,7 @@ namespace winrt::NoiraPlayer::Native::implementation
             m_count = 0;
             m_replaceIndex = 0;
             m_max = 0.0;
+            m_min = 0.0;
             m_values.fill(0.0);
         }
 
@@ -79,7 +84,17 @@ namespace winrt::NoiraPlayer::Native::implementation
                 value = -value;
             }
 
-            m_max = (std::max)(m_max, value);
+            if (m_count == 0)
+            {
+                m_min = value;
+                m_max = value;
+            }
+            else
+            {
+                m_min = (std::min)(m_min, value);
+                m_max = (std::max)(m_max, value);
+            }
+
             if (m_count < m_values.size())
             {
                 m_values[m_count] = value;
@@ -117,6 +132,11 @@ namespace winrt::NoiraPlayer::Native::implementation
             return m_max;
         }
 
+        double Min() const noexcept
+        {
+            return m_min;
+        }
+
         size_t Count() const noexcept
         {
             return m_count;
@@ -136,11 +156,26 @@ namespace winrt::NoiraPlayer::Native::implementation
             return count;
         }
 
+        uint64_t CountLessThan(double threshold) const noexcept
+        {
+            auto count = uint64_t{0};
+            for (auto index = size_t{0}; index < m_count; ++index)
+            {
+                if (m_values[index] < threshold)
+                {
+                    ++count;
+                }
+            }
+
+            return count;
+        }
+
     private:
         std::array<double, 512> m_values{};
         size_t m_count{0};
         size_t m_replaceIndex{0};
         double m_max{0.0};
+        double m_min{0.0};
     };
 
     class PlaybackQualityMetrics
@@ -223,9 +258,11 @@ namespace winrt::NoiraPlayer::Native::implementation
             snapshot.QueuedAudioBuffers = QueuedAudioBuffers;
             snapshot.AudioClockTicks = AudioClockTicks;
             snapshot.VideoPositionTicks = VideoPositionTicks;
+            snapshot.RenderIntervalMsP05 = m_renderIntervals.Percentile(5);
             snapshot.RenderIntervalMsP50 = m_renderIntervals.Percentile(50);
             snapshot.RenderIntervalMsP95 = m_renderIntervals.Percentile(95);
             snapshot.RenderIntervalMsP99 = m_renderIntervals.Percentile(99);
+            snapshot.MinFrameGapMs = m_renderIntervals.Min();
             snapshot.MaxFrameGapMs = m_renderIntervals.Max();
             snapshot.RenderIntervalSampleCount = static_cast<uint64_t>(m_renderIntervals.Count());
             if (FramePacingSourceFrameRate > 0.0)
@@ -235,6 +272,10 @@ namespace winrt::NoiraPlayer::Native::implementation
                     m_renderIntervals.CountGreaterThan(expectedFrameDurationMs + 2.0);
                 snapshot.RenderIntervalOverExpected4MsCount =
                     m_renderIntervals.CountGreaterThan(expectedFrameDurationMs + 4.0);
+                snapshot.RenderIntervalUnderExpected2MsCount =
+                    m_renderIntervals.CountLessThan(expectedFrameDurationMs - 2.0);
+                snapshot.RenderIntervalUnderExpected4MsCount =
+                    m_renderIntervals.CountLessThan(expectedFrameDurationMs - 4.0);
             }
             snapshot.PresentDurationMsP50 = m_presentDurations.Percentile(50);
             snapshot.PresentDurationMsP95 = m_presentDurations.Percentile(95);

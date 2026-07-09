@@ -69,13 +69,17 @@
         UInt64 QueuedAudioBuffers;
         Int64 AudioClockTicks;
         Int64 VideoPositionTicks;
+        Double RenderIntervalMsP05;
         Double RenderIntervalMsP50;
         Double RenderIntervalMsP95;
         Double RenderIntervalMsP99;
+        Double MinFrameGapMs;
         Double MaxFrameGapMs;
         UInt64 RenderIntervalSampleCount;
         UInt64 RenderIntervalOverExpected2MsCount;
         UInt64 RenderIntervalOverExpected4MsCount;
+        UInt64 RenderIntervalUnderExpected2MsCount;
+        UInt64 RenderIntervalUnderExpected4MsCount;
         Double PresentDurationMsP50;
         Double PresentDurationMsP95;
         Double PresentDurationMsP99;

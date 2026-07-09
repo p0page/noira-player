@@ -8,6 +8,7 @@ using winrt::NoiraPlayer::Native::implementation::PlaybackQualityMetricsSnapshot
 int main()
 {
     PlaybackQualityMetrics metrics;
+    metrics.RecordRenderIntervalMs(10.0);
     metrics.RecordRenderIntervalMs(41.0);
     metrics.RecordRenderIntervalMs(42.0);
     metrics.RecordRenderIntervalMs(100.0);
@@ -52,9 +53,13 @@ int main()
     assert(snapshot.RenderIntervalMsP50 >= 41.0);
     assert(snapshot.RenderIntervalMsP95 >= 100.0);
     assert(snapshot.MaxFrameGapMs == 100.0);
-    assert(snapshot.RenderIntervalSampleCount == 3);
+    assert(snapshot.RenderIntervalMsP05 <= 10.0);
+    assert(snapshot.MinFrameGapMs == 10.0);
+    assert(snapshot.RenderIntervalSampleCount == 4);
     assert(snapshot.RenderIntervalOverExpected2MsCount == 3);
     assert(snapshot.RenderIntervalOverExpected4MsCount == 3);
+    assert(snapshot.RenderIntervalUnderExpected2MsCount == 1);
+    assert(snapshot.RenderIntervalUnderExpected4MsCount == 1);
     assert(snapshot.PresentDurationMsP50 >= 2.0);
     assert(snapshot.PresentDurationMsP95 >= 34.0);
     assert(snapshot.PresentDurationMsMax == 34.0);
@@ -86,9 +91,12 @@ int main()
     assert(snapshot.AudioAheadWaitCount == 0);
     assert(snapshot.VideoClockWaitCount == 0);
     assert(snapshot.MaxFrameGapMs == 0.0);
+    assert(snapshot.MinFrameGapMs == 0.0);
     assert(snapshot.RenderIntervalSampleCount == 0);
     assert(snapshot.RenderIntervalOverExpected2MsCount == 0);
     assert(snapshot.RenderIntervalOverExpected4MsCount == 0);
+    assert(snapshot.RenderIntervalUnderExpected2MsCount == 0);
+    assert(snapshot.RenderIntervalUnderExpected4MsCount == 0);
     assert(snapshot.PresentDurationMsMax == 0.0);
     assert(snapshot.AudioAheadWaitDurationMsMax == 0.0);
     assert(snapshot.AudioAheadWaitTargetMsMax == 0.0);

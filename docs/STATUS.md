@@ -2,6 +2,16 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-10 更新：render short-interval / catch-up 证据已补齐
+
+本轮在合并 main 后的当前调优分支上继续工作，补齐了 render interval 的短间隔侧证据：`timing.renderIntervalMsP05`、`timing.minFrameGapMs`、`timing.renderIntervalUnderExpected2MsCount` 和 `timing.renderIntervalUnderExpected4MsCount`。这些字段从 native render interval histogram 在 `Snapshot()` 阶段派生，并贯通 native-headless stdout、Core report、analyzer evidence signals、candidate comparison matched signals、cadence stability summary、WinRT bridge 和 app quality-run clone。
+
+该改动不改变播放 core/native 调度行为，也不新增 pass/fail 阈值。它的作用是让模型判断 P99/max frame gap 尾部是否伴随短间隔补偿：如果长间隔后存在 P05/min 明显低于 expected frame duration，问题可能是 catch-up / pacing compensation；如果只有长间隔而没有短间隔补偿，则更像真实欠帧或持续卡顿。
+
+当前 targeted 验证已经覆盖 native histogram、Core mapper/analyzer/comparator、WinRT bridge contract、cadence stability 工具和 native-headless smoke；完整 `tools\quality-run\run-playback-core-checks.ps1` 也已通过，覆盖 435 个 Core tests、CLI smoke、native-headless smoke、manifest/report/comparison 脚本测试、native helper/frame pacing/render loop/display refresh/offscreen tests 和 native Debug x64 build。单次 native-headless smoke 抽样中，`local/native-headless-av-smoke` 的 30fps render P05/min 约为 `26.06/25.91ms`，P99/max 约为 `43.08/43.08ms`，under-expected 计数存在，说明尾部长间隔同时伴随短间隔补偿；`local/native-headless-hdr10-60` 的 P05/min 约为 `15.19/14.73ms`，max 约为 `21.22ms`，短帧补偿较轻。
+
+同时修正了 `Measure-PlaybackCadenceStability.ps1` 的旧报告兼容性：旧 report 缺少 P05/min 时，short-interval spread 必须保持 `null`，不能被 PowerShell 数组转换误当成 `0ms`。后续调优应先用当前提交重新跑 native repeat，再根据同一 manifest 的 baseline/candidate comparison 判断是否需要调整 render scheduling 或 audio-clock gating。
+
 ## 2026-07-10 更新：native A/V smoke 最低渲染帧阈值已收紧
 
 本轮继续基于已合入 main 的当前调优分支工作。排查 `local/native-headless-av-smoke` 时确认：生成样本因字幕 `-shortest` 实际为 `2.5s / 75` 帧，但 native helper 的主播放快照是在 3 秒窗口的一半处采集，因此 report 中约 `46` 个 rendered frames 对 30fps 的 `1.5s` 捕获窗口是合理结果，不是“2.5 秒只渲染 46 帧”的播放 core 欠帧。

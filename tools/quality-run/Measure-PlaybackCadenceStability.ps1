@@ -58,8 +58,15 @@ function Get-CaseGroupId([string]$CaseId, [string]$Pattern) {
     return $normalized
 }
 
-function Get-SpreadStats([double[]]$Values) {
-    $usable = @($Values | Where-Object { $null -ne $_ })
+function Get-SpreadStats([object[]]$Values) {
+    $usable = @()
+    foreach ($value in $Values) {
+        $numericValue = Get-DoubleValue $value
+        if ($null -ne $numericValue) {
+            $usable += $numericValue
+        }
+    }
+
     if ($usable.Count -eq 0) {
         return [pscustomobject][ordered]@{
             min = $null
@@ -126,8 +133,10 @@ foreach ($file in $reportFiles) {
     }
 
     $expectedFrameDurationMs = Get-DoubleValue $timing.expectedFrameDurationMs
+    $renderIntervalMsP05 = Get-DoubleValue $timing.renderIntervalMsP05
     $renderIntervalMsP95 = Get-DoubleValue $timing.renderIntervalMsP95
     $renderIntervalMsP99 = Get-DoubleValue $timing.renderIntervalMsP99
+    $minFrameGapMs = Get-DoubleValue $timing.minFrameGapMs
     $maxFrameGapMs = Get-DoubleValue $timing.maxFrameGapMs
     $audioAheadWaitOversleepP95 = Get-DoubleValue $timing.audioAheadWaitOversleepMsP95
     $audioAheadWaitOversleepP99 = Get-DoubleValue $timing.audioAheadWaitOversleepMsP99
@@ -150,12 +159,18 @@ foreach ($file in $reportFiles) {
         result = Normalize-String $json.report.result
         renderedVideoFrames = Get-IntValue $timing.renderedVideoFrames
         expectedFrameDurationMs = [math]::Round($expectedFrameDurationMs, 6)
+        renderIntervalMsP05 = if ($null -eq $renderIntervalMsP05) { $null } else { [math]::Round($renderIntervalMsP05, 6) }
         renderIntervalMsP95 = [math]::Round($renderIntervalMsP95, 6)
         renderIntervalMsP99 = [math]::Round($renderIntervalMsP99, 6)
+        minFrameGapMs = if ($null -eq $minFrameGapMs) { $null } else { [math]::Round($minFrameGapMs, 6) }
         maxFrameGapMs = [math]::Round($maxFrameGapMs, 6)
+        renderIntervalP05ExpectedErrorMs = if ($null -eq $renderIntervalMsP05) { $null } else { [math]::Round([math]::Abs($renderIntervalMsP05 - $expectedFrameDurationMs), 6) }
         renderIntervalP95ExpectedErrorMs = [math]::Round([math]::Abs($renderIntervalMsP95 - $expectedFrameDurationMs), 6)
         renderIntervalP99ExpectedErrorMs = [math]::Round([math]::Abs($renderIntervalMsP99 - $expectedFrameDurationMs), 6)
+        minFrameGapExpectedErrorMs = if ($null -eq $minFrameGapMs) { $null } else { [math]::Round([math]::Abs($minFrameGapMs - $expectedFrameDurationMs), 6) }
         maxFrameGapExpectedErrorMs = [math]::Round([math]::Abs($maxFrameGapMs - $expectedFrameDurationMs), 6)
+        renderIntervalUnderExpected2MsCount = Get-IntValue $timing.renderIntervalUnderExpected2MsCount
+        renderIntervalUnderExpected4MsCount = Get-IntValue $timing.renderIntervalUnderExpected4MsCount
         audioAheadWaitOversleepMsP95 = if ($null -eq $audioAheadWaitOversleepP95) { $null } else { [math]::Round($audioAheadWaitOversleepP95, 6) }
         audioAheadWaitOversleepMsP99 = if ($null -eq $audioAheadWaitOversleepP99) { $null } else { [math]::Round($audioAheadWaitOversleepP99, 6) }
         audioAheadWaitFinalDeltaAbsMsP95 = if ($null -eq $audioAheadWaitFinalDeltaAbsP95) { $null } else { [math]::Round($audioAheadWaitFinalDeltaAbsP95, 6) }
@@ -172,8 +187,10 @@ if ($samples.Count -eq 0) {
 $groups = @()
 foreach ($group in ($samples | Group-Object -Property caseGroupId | Sort-Object Name)) {
     $groupSamples = @($group.Group | Sort-Object caseId)
+    $p05Stats = Get-SpreadStats @($groupSamples | ForEach-Object { $_.renderIntervalP05ExpectedErrorMs })
     $p95Stats = Get-SpreadStats @($groupSamples | ForEach-Object { [double]$_.renderIntervalP95ExpectedErrorMs })
     $p99Stats = Get-SpreadStats @($groupSamples | ForEach-Object { [double]$_.renderIntervalP99ExpectedErrorMs })
+    $minGapStats = Get-SpreadStats @($groupSamples | ForEach-Object { $_.minFrameGapExpectedErrorMs })
     $maxGapStats = Get-SpreadStats @($groupSamples | ForEach-Object { [double]$_.maxFrameGapExpectedErrorMs })
     $audioAheadWaitOversleepP95Stats = Get-SpreadStats @($groupSamples | ForEach-Object { $_.audioAheadWaitOversleepMsP95 })
     $audioAheadWaitOversleepP99Stats = Get-SpreadStats @($groupSamples | ForEach-Object { $_.audioAheadWaitOversleepMsP99 })
@@ -207,12 +224,18 @@ foreach ($group in ($samples | Group-Object -Property caseGroupId | Sort-Object 
         stability = $stability
         sampleCount = $groupSamples.Count
         materialityMs = $MaterialityMs
+        renderIntervalP05ExpectedErrorMinMs = $p05Stats.min
+        renderIntervalP05ExpectedErrorMaxMs = $p05Stats.max
+        renderIntervalP05ExpectedErrorSpreadMs = $p05Stats.spread
         renderIntervalP95ExpectedErrorMinMs = $p95Stats.min
         renderIntervalP95ExpectedErrorMaxMs = $p95Stats.max
         renderIntervalP95ExpectedErrorSpreadMs = $p95Stats.spread
         renderIntervalP99ExpectedErrorMinMs = $p99Stats.min
         renderIntervalP99ExpectedErrorMaxMs = $p99Stats.max
         renderIntervalP99ExpectedErrorSpreadMs = $p99Stats.spread
+        minFrameGapExpectedErrorMinMs = $minGapStats.min
+        minFrameGapExpectedErrorMaxMs = $minGapStats.max
+        minFrameGapExpectedErrorSpreadMs = $minGapStats.spread
         maxFrameGapExpectedErrorMinMs = $maxGapStats.min
         maxFrameGapExpectedErrorMaxMs = $maxGapStats.max
         maxFrameGapExpectedErrorSpreadMs = $maxGapStats.spread

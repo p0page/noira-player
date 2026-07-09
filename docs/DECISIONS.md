@@ -1,5 +1,15 @@
 ﻿# 技术决策
 
+## 2026-07-10: render short-interval evidence 作为诊断字段保留，不作为评分阈值
+
+决策：保留 `timing.renderIntervalMsP05`、`timing.minFrameGapMs`、`timing.renderIntervalUnderExpected2MsCount` 和 `timing.renderIntervalUnderExpected4MsCount` 作为 native/Core/app quality report 的诊断证据。该字段组只解释 render interval 分布的短间隔侧和 catch-up 迹象，不新增通过/失败阈值，也不加入 manifest required signals。
+
+原因：此前只看 P95/P99/max 与 over-expected 计数时，模型能看到长尾 frame gap，但无法判断后续是否通过短间隔补偿。成熟播放器调优通常不会针对单个文件写补丁，而是先把 “long gap 是否伴随 catch-up”、“是否有 starvation”、“是否有 A/V drift” 这些证据拆清楚，再调整通用 scheduling 策略。短间隔证据让后续调优能区分真实持续卡顿、短样本尾部波动和可恢复的 pacing compensation。
+
+影响：native-headless、app-hosted quality-run、cadence repeat summary 和 candidate comparison 都可以携带 P05/min/under-count 证据。`Measure-PlaybackCadenceStability.ps1` 必须把旧 report 中缺失的短间隔字段视为 unknown/null，不能把缺失值转换成 `0ms`。后续候选如果只改善 max gap 但破坏短间隔补偿，或只改变 P05/min 而不改善 P95/P99/max、A/V sync 和 buffering，不应被自动解释为播放质量提升。
+
+边界：这些字段不证明外部显示器/HDMI 输出正确，不改变 frame pacing gate，不放宽 stable case 标准，不修改播放 core/native 行为。若未来要把短间隔纳入正式评分，必须另起决策并用历史 report 回放验证。
+
 ## 2026-07-10: native A/V smoke 使用 40 帧最低渲染阈值
 
 决策：`local/native-headless-av-smoke` 的 manifest 不再使用占位式 `minRenderedVideoFrames = 1`，改为 `40`，并由 `run-native-headless-harness-smoke-test.ps1` 断言 materialized report 保留该期望。

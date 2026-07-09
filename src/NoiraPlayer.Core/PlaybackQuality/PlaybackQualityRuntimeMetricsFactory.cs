@@ -51,13 +51,17 @@
                 metrics.QueuedAudioBuffers > 0 ||
                 metrics.AudioClockTicks != 0 ||
                 metrics.VideoPositionTicks != 0 ||
+                metrics.RenderIntervalMsP05 > 0 ||
                 metrics.RenderIntervalMsP50 > 0 ||
                 metrics.RenderIntervalMsP95 > 0 ||
                 metrics.RenderIntervalMsP99 > 0 ||
+                metrics.MinFrameGapMs > 0 ||
                 metrics.MaxFrameGapMs > 0 ||
                 metrics.RenderIntervalSampleCount > 0 ||
                 metrics.RenderIntervalOverExpected2MsCount > 0 ||
                 metrics.RenderIntervalOverExpected4MsCount > 0 ||
+                metrics.RenderIntervalUnderExpected2MsCount > 0 ||
+                metrics.RenderIntervalUnderExpected4MsCount > 0 ||
                 metrics.PresentDurationMsP50 > 0 ||
                 metrics.PresentDurationMsP95 > 0 ||
                 metrics.PresentDurationMsP99 > 0 ||

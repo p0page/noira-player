@@ -195,13 +195,17 @@ namespace winrt::NoiraPlayer::Native::implementation
         metrics.QueuedAudioBuffers(snapshot.QueuedAudioBuffers);
         metrics.AudioClockTicks(snapshot.AudioClockTicks);
         metrics.VideoPositionTicks(snapshot.VideoPositionTicks);
+        metrics.RenderIntervalMsP05(snapshot.RenderIntervalMsP05);
         metrics.RenderIntervalMsP50(snapshot.RenderIntervalMsP50);
         metrics.RenderIntervalMsP95(snapshot.RenderIntervalMsP95);
         metrics.RenderIntervalMsP99(snapshot.RenderIntervalMsP99);
+        metrics.MinFrameGapMs(snapshot.MinFrameGapMs);
         metrics.MaxFrameGapMs(snapshot.MaxFrameGapMs);
         metrics.RenderIntervalSampleCount(snapshot.RenderIntervalSampleCount);
         metrics.RenderIntervalOverExpected2MsCount(snapshot.RenderIntervalOverExpected2MsCount);
         metrics.RenderIntervalOverExpected4MsCount(snapshot.RenderIntervalOverExpected4MsCount);
+        metrics.RenderIntervalUnderExpected2MsCount(snapshot.RenderIntervalUnderExpected2MsCount);
+        metrics.RenderIntervalUnderExpected4MsCount(snapshot.RenderIntervalUnderExpected4MsCount);
         metrics.PresentDurationMsP50(snapshot.PresentDurationMsP50);
         metrics.PresentDurationMsP95(snapshot.PresentDurationMsP95);
         metrics.PresentDurationMsP99(snapshot.PresentDurationMsP99);

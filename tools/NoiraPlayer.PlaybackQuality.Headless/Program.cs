@@ -310,13 +310,17 @@ internal static class NativeHeadlessHarness
         seekActualPositionTicks = values.ContainsKey("seekActualPositionTicks")
             ? GetInt64(values, "seekActualPositionTicks")
             : metrics.VideoPositionTicks;
+        metrics.RenderIntervalMsP05 = GetDouble(values, "renderIntervalMsP05");
         metrics.RenderIntervalMsP50 = GetDouble(values, "renderIntervalMsP50");
         metrics.RenderIntervalMsP95 = GetDouble(values, "renderIntervalMsP95");
         metrics.RenderIntervalMsP99 = GetDouble(values, "renderIntervalMsP99");
+        metrics.MinFrameGapMs = GetDouble(values, "minFrameGapMs");
         metrics.MaxFrameGapMs = GetDouble(values, "maxFrameGapMs");
         metrics.RenderIntervalSampleCount = GetUInt64(values, "renderIntervalSampleCount");
         metrics.RenderIntervalOverExpected2MsCount = GetUInt64(values, "renderIntervalOverExpected2MsCount");
         metrics.RenderIntervalOverExpected4MsCount = GetUInt64(values, "renderIntervalOverExpected4MsCount");
+        metrics.RenderIntervalUnderExpected2MsCount = GetUInt64(values, "renderIntervalUnderExpected2MsCount");
+        metrics.RenderIntervalUnderExpected4MsCount = GetUInt64(values, "renderIntervalUnderExpected4MsCount");
         metrics.PresentDurationMsP50 = GetDouble(values, "presentDurationMsP50");
         metrics.PresentDurationMsP95 = GetDouble(values, "presentDurationMsP95");
         metrics.PresentDurationMsP99 = GetDouble(values, "presentDurationMsP99");

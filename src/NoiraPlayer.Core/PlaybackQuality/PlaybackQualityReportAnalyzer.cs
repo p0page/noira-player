@@ -2455,6 +2455,14 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 AddUnique(analysis.EvidenceSignals, "timing.renderIntervalSampleCount");
                 AddUnique(analysis.EvidenceSignals, "timing.renderIntervalOverExpected2MsCount");
                 AddUnique(analysis.EvidenceSignals, "timing.renderIntervalOverExpected4MsCount");
+                if (report.Timing.RenderIntervalMsP05 > 0 &&
+                    report.Timing.MinFrameGapMs > 0)
+                {
+                    AddUnique(analysis.EvidenceSignals, "timing.renderIntervalMsP05");
+                    AddUnique(analysis.EvidenceSignals, "timing.minFrameGapMs");
+                    AddUnique(analysis.EvidenceSignals, "timing.renderIntervalUnderExpected2MsCount");
+                    AddUnique(analysis.EvidenceSignals, "timing.renderIntervalUnderExpected4MsCount");
+                }
             }
 
             if (report.Timing.DecodedVideoFrames > 0)

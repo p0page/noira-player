@@ -151,8 +151,10 @@ function Read-CadenceStabilityReference(
             caseGroupId = Normalize-String $_.caseGroupId
             stability = Normalize-String $_.stability
             sampleCount = [int]$_.sampleCount
+            renderIntervalP05ExpectedErrorSpreadMs = $_.renderIntervalP05ExpectedErrorSpreadMs
             renderIntervalP95ExpectedErrorSpreadMs = $_.renderIntervalP95ExpectedErrorSpreadMs
             renderIntervalP99ExpectedErrorSpreadMs = $_.renderIntervalP99ExpectedErrorSpreadMs
+            minFrameGapExpectedErrorSpreadMs = $_.minFrameGapExpectedErrorSpreadMs
             maxFrameGapExpectedErrorSpreadMs = $_.maxFrameGapExpectedErrorSpreadMs
             audioAheadWaitOversleepP95SpreadMs = $_.audioAheadWaitOversleepP95SpreadMs
             audioAheadWaitOversleepP99SpreadMs = $_.audioAheadWaitOversleepP99SpreadMs

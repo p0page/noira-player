@@ -297,6 +297,8 @@ function Assert-NativeDisplayRefreshEvidence {
 
     if ($Report.report.timing.renderIntervalMsP95 -le 0 -or
         $Report.report.timing.maxFrameGapMs -le 0 -or
+        $Report.report.timing.renderIntervalMsP05 -le 0 -or
+        $Report.report.timing.minFrameGapMs -le 0 -or
         $Report.report.timing.lateFrameDropToleranceMs -le 0) {
         throw "Expected $CaseId to include frame interval and drop-threshold evidence."
     }
@@ -590,6 +592,13 @@ if ($nativeAvReport.report.buffers.submittedAudioFrames -le 0) {
 if ($nativeAvReport.report.timing.presentDurationMsP95 -le 0 -or
     $nativeAvReport.report.timing.presentDurationMsMax -le 0) {
     throw 'Expected native helper A/V report to include swapchain Present duration evidence.'
+}
+
+if ($nativeAvReport.report.timing.renderIntervalMsP05 -le 0 -or
+    $nativeAvReport.report.timing.minFrameGapMs -le 0 -or
+    $nativeAvReport.report.timing.renderIntervalUnderExpected2MsCount -lt 0 -or
+    $nativeAvReport.report.timing.renderIntervalUnderExpected4MsCount -lt 0) {
+    throw 'Expected native helper A/V report to include render short-interval compensation evidence.'
 }
 
 if ($nativeAvReport.report.timing.audioAheadWaitDurationMsP95 -le 0 -or
@@ -1016,6 +1025,13 @@ if (-not ($nativeAvMaterializedReport.modelAnalysis.evidenceSignals -contains 't
     -not ($nativeAvMaterializedReport.modelAnalysis.evidenceSignals -contains 'timing.audioAheadWaitCount') -or
     -not ($nativeAvMaterializedReport.modelAnalysis.evidenceSignals -contains 'timing.videoClockWaitCount')) {
     throw 'Expected materialized native helper A/V report to expose split wait reason signals, including zero-valued video-clock wait evidence.'
+}
+
+if (-not ($nativeAvMaterializedReport.modelAnalysis.evidenceSignals -contains 'timing.renderIntervalMsP05') -or
+    -not ($nativeAvMaterializedReport.modelAnalysis.evidenceSignals -contains 'timing.minFrameGapMs') -or
+    -not ($nativeAvMaterializedReport.modelAnalysis.evidenceSignals -contains 'timing.renderIntervalUnderExpected2MsCount') -or
+    -not ($nativeAvMaterializedReport.modelAnalysis.evidenceSignals -contains 'timing.renderIntervalUnderExpected4MsCount')) {
+    throw 'Expected materialized native helper A/V report to expose short-interval compensation evidence signals.'
 }
 
 if (-not ($nativeAvMaterializedReport.modelAnalysis.evidenceSignals -contains 'timing.hardwareDecodedVideoFrames') -or

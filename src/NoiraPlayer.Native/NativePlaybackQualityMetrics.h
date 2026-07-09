@@ -56,6 +56,9 @@ namespace winrt::NoiraPlayer::Native::implementation
         int64_t VideoPositionTicks() const noexcept { return m_videoPositionTicks; }
         void VideoPositionTicks(int64_t value) noexcept { m_videoPositionTicks = value; }
 
+        double RenderIntervalMsP05() const noexcept { return m_renderIntervalMsP05; }
+        void RenderIntervalMsP05(double value) noexcept { m_renderIntervalMsP05 = value; }
+
         double RenderIntervalMsP50() const noexcept { return m_renderIntervalMsP50; }
         void RenderIntervalMsP50(double value) noexcept { m_renderIntervalMsP50 = value; }
 
@@ -64,6 +67,9 @@ namespace winrt::NoiraPlayer::Native::implementation
 
         double RenderIntervalMsP99() const noexcept { return m_renderIntervalMsP99; }
         void RenderIntervalMsP99(double value) noexcept { m_renderIntervalMsP99 = value; }
+
+        double MinFrameGapMs() const noexcept { return m_minFrameGapMs; }
+        void MinFrameGapMs(double value) noexcept { m_minFrameGapMs = value; }
 
         double MaxFrameGapMs() const noexcept { return m_maxFrameGapMs; }
         void MaxFrameGapMs(double value) noexcept { m_maxFrameGapMs = value; }
@@ -76,6 +82,12 @@ namespace winrt::NoiraPlayer::Native::implementation
 
         uint64_t RenderIntervalOverExpected4MsCount() const noexcept { return m_renderIntervalOverExpected4MsCount; }
         void RenderIntervalOverExpected4MsCount(uint64_t value) noexcept { m_renderIntervalOverExpected4MsCount = value; }
+
+        uint64_t RenderIntervalUnderExpected2MsCount() const noexcept { return m_renderIntervalUnderExpected2MsCount; }
+        void RenderIntervalUnderExpected2MsCount(uint64_t value) noexcept { m_renderIntervalUnderExpected2MsCount = value; }
+
+        uint64_t RenderIntervalUnderExpected4MsCount() const noexcept { return m_renderIntervalUnderExpected4MsCount; }
+        void RenderIntervalUnderExpected4MsCount(uint64_t value) noexcept { m_renderIntervalUnderExpected4MsCount = value; }
 
         double PresentDurationMsP50() const noexcept { return m_presentDurationMsP50; }
         void PresentDurationMsP50(double value) noexcept { m_presentDurationMsP50 = value; }
@@ -172,13 +184,17 @@ namespace winrt::NoiraPlayer::Native::implementation
         uint64_t m_queuedAudioBuffers{0};
         int64_t m_audioClockTicks{0};
         int64_t m_videoPositionTicks{0};
+        double m_renderIntervalMsP05{0.0};
         double m_renderIntervalMsP50{0.0};
         double m_renderIntervalMsP95{0.0};
         double m_renderIntervalMsP99{0.0};
+        double m_minFrameGapMs{0.0};
         double m_maxFrameGapMs{0.0};
         uint64_t m_renderIntervalSampleCount{0};
         uint64_t m_renderIntervalOverExpected2MsCount{0};
         uint64_t m_renderIntervalOverExpected4MsCount{0};
+        uint64_t m_renderIntervalUnderExpected2MsCount{0};
+        uint64_t m_renderIntervalUnderExpected4MsCount{0};
         double m_presentDurationMsP50{0.0};
         double m_presentDurationMsP95{0.0};
         double m_presentDurationMsP99{0.0};

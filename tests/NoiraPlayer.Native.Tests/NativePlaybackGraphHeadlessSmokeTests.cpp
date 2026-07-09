@@ -159,13 +159,17 @@ int wmain(int argc, wchar_t** argv)
             << " videoPositionTicks=" << playbackSnapshot.VideoPositionTicks
             << " seekActualPositionTicks=" << seekSnapshot.VideoPositionTicks
             << " postSeekPlaybackPositionTicks=" << postSeekPlaybackSnapshot.VideoPositionTicks
+            << " renderIntervalMsP05=" << playbackSnapshot.RenderIntervalMsP05
             << " renderIntervalMsP50=" << playbackSnapshot.RenderIntervalMsP50
             << " renderIntervalMsP95=" << playbackSnapshot.RenderIntervalMsP95
             << " renderIntervalMsP99=" << playbackSnapshot.RenderIntervalMsP99
+            << " minFrameGapMs=" << playbackSnapshot.MinFrameGapMs
             << " maxFrameGapMs=" << playbackSnapshot.MaxFrameGapMs
             << " renderIntervalSampleCount=" << playbackSnapshot.RenderIntervalSampleCount
             << " renderIntervalOverExpected2MsCount=" << playbackSnapshot.RenderIntervalOverExpected2MsCount
             << " renderIntervalOverExpected4MsCount=" << playbackSnapshot.RenderIntervalOverExpected4MsCount
+            << " renderIntervalUnderExpected2MsCount=" << playbackSnapshot.RenderIntervalUnderExpected2MsCount
+            << " renderIntervalUnderExpected4MsCount=" << playbackSnapshot.RenderIntervalUnderExpected4MsCount
             << " presentDurationMsP50=" << playbackSnapshot.PresentDurationMsP50
             << " presentDurationMsP95=" << playbackSnapshot.PresentDurationMsP95
             << " presentDurationMsP99=" << playbackSnapshot.PresentDurationMsP99

@@ -9,8 +9,10 @@ function Write-TestReport {
     param(
         [string]$CaseId,
         [double]$ExpectedFrameDurationMs,
+        [double]$RenderP05,
         [double]$RenderP95,
         [double]$RenderP99,
+        [double]$MinFrameGap,
         [double]$MaxFrameGap,
         [int]$RenderedFrames,
         [double]$AudioAheadWaitOversleepP95 = 0,
@@ -18,7 +20,8 @@ function Write-TestReport {
         [double]$AudioAheadWaitFinalDeltaAbsP95 = 0,
         [double]$AudioAheadWaitFinalDeltaAbsP99 = 0,
         [double]$AudioVideoDriftP95 = 0,
-        [double]$AudioVideoDriftP99 = 0
+        [double]$AudioVideoDriftP99 = 0,
+        [switch]$OmitShortIntervalEvidence
     )
 
     $relativePath = $CaseId.Replace('/', [System.IO.Path]::DirectorySeparatorChar) + '.json'
@@ -51,6 +54,13 @@ function Write-TestReport {
         }
     }
 
+    if (-not $OmitShortIntervalEvidence) {
+        $report.report.timing | Add-Member -NotePropertyName renderIntervalMsP05 -NotePropertyValue $RenderP05
+        $report.report.timing | Add-Member -NotePropertyName minFrameGapMs -NotePropertyValue $MinFrameGap
+        $report.report.timing | Add-Member -NotePropertyName renderIntervalUnderExpected2MsCount -NotePropertyValue 2
+        $report.report.timing | Add-Member -NotePropertyName renderIntervalUnderExpected4MsCount -NotePropertyValue 1
+    }
+
     $report | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $path -Encoding UTF8
 }
 
@@ -64,30 +74,38 @@ try {
     Write-TestReport `
         -CaseId 'local/native-headless-hdr10-60-repeat-1' `
         -ExpectedFrameDurationMs 16.6667 `
+        -RenderP05 15.9 `
         -RenderP95 19.7 `
         -RenderP99 21.0 `
+        -MinFrameGap 15.6 `
         -MaxFrameGap 21.0 `
         -RenderedFrames 93
     Write-TestReport `
         -CaseId 'local/native-headless-hdr10-60-repeat-2' `
         -ExpectedFrameDurationMs 16.6667 `
+        -RenderP05 13.4 `
         -RenderP95 20.2 `
         -RenderP99 24.3 `
+        -MinFrameGap 13.0 `
         -MaxFrameGap 24.3 `
         -RenderedFrames 93
     Write-TestReport `
         -CaseId 'local/native-headless-hdr10-60-repeat-3' `
         -ExpectedFrameDurationMs 16.6667 `
+        -RenderP05 16.1 `
         -RenderP95 19.5 `
         -RenderP99 21.7 `
+        -MinFrameGap 15.8 `
         -MaxFrameGap 21.7 `
         -RenderedFrames 94
 
     Write-TestReport `
         -CaseId 'local/native-headless-av-smoke-repeat-1' `
         -ExpectedFrameDurationMs 33.3333 `
+        -RenderP05 27.0 `
         -RenderP95 39.3 `
         -RenderP99 40.1 `
+        -MinFrameGap 26.8 `
         -MaxFrameGap 40.1 `
         -RenderedFrames 46 `
         -AudioAheadWaitFinalDeltaAbsP95 10.0 `
@@ -95,8 +113,10 @@ try {
     Write-TestReport `
         -CaseId 'local/native-headless-av-smoke-repeat-2' `
         -ExpectedFrameDurationMs 33.3333 `
+        -RenderP05 26.9 `
         -RenderP95 39.7 `
         -RenderP99 40.8 `
+        -MinFrameGap 26.7 `
         -MaxFrameGap 40.8 `
         -RenderedFrames 46 `
         -AudioAheadWaitFinalDeltaAbsP95 10.0 `
@@ -104,8 +124,10 @@ try {
     Write-TestReport `
         -CaseId 'local/native-headless-av-smoke-repeat-3' `
         -ExpectedFrameDurationMs 33.3333 `
+        -RenderP05 27.1 `
         -RenderP95 39.5 `
         -RenderP99 40.4 `
+        -MinFrameGap 26.9 `
         -MaxFrameGap 40.4 `
         -RenderedFrames 46 `
         -AudioAheadWaitFinalDeltaAbsP95 10.0 `
@@ -114,8 +136,10 @@ try {
     Write-TestReport `
         -CaseId 'local/native-headless-av-oversleep-repeat-1' `
         -ExpectedFrameDurationMs 33.3333 `
+        -RenderP05 27.0 `
         -RenderP95 39.3 `
         -RenderP99 40.1 `
+        -MinFrameGap 26.8 `
         -MaxFrameGap 40.1 `
         -RenderedFrames 46 `
         -AudioAheadWaitOversleepP95 4.0 `
@@ -127,8 +151,10 @@ try {
     Write-TestReport `
         -CaseId 'local/native-headless-av-oversleep-repeat-2' `
         -ExpectedFrameDurationMs 33.3333 `
+        -RenderP05 24.0 `
         -RenderP95 39.4 `
         -RenderP99 40.2 `
+        -MinFrameGap 23.8 `
         -MaxFrameGap 40.2 `
         -RenderedFrames 46 `
         -AudioAheadWaitOversleepP95 7.2 `
@@ -140,8 +166,10 @@ try {
     Write-TestReport `
         -CaseId 'local/native-headless-av-oversleep-repeat-3' `
         -ExpectedFrameDurationMs 33.3333 `
+        -RenderP05 27.2 `
         -RenderP95 39.5 `
         -RenderP99 40.3 `
+        -MinFrameGap 26.9 `
         -MaxFrameGap 40.3 `
         -RenderedFrames 46 `
         -AudioAheadWaitOversleepP95 4.1 `
@@ -150,6 +178,31 @@ try {
         -AudioAheadWaitFinalDeltaAbsP99 10.2 `
         -AudioVideoDriftP95 10.0 `
         -AudioVideoDriftP99 12.0
+
+    Write-TestReport `
+        -CaseId 'local/native-headless-old-report-repeat-1' `
+        -ExpectedFrameDurationMs 16.6667 `
+        -RenderP95 17.0 `
+        -RenderP99 17.2 `
+        -MaxFrameGap 17.2 `
+        -RenderedFrames 94 `
+        -OmitShortIntervalEvidence
+    Write-TestReport `
+        -CaseId 'local/native-headless-old-report-repeat-2' `
+        -ExpectedFrameDurationMs 16.6667 `
+        -RenderP95 17.1 `
+        -RenderP99 17.3 `
+        -MaxFrameGap 17.3 `
+        -RenderedFrames 94 `
+        -OmitShortIntervalEvidence
+    Write-TestReport `
+        -CaseId 'local/native-headless-old-report-repeat-3' `
+        -ExpectedFrameDurationMs 16.6667 `
+        -RenderP95 17.2 `
+        -RenderP99 17.4 `
+        -MaxFrameGap 17.4 `
+        -RenderedFrames 94 `
+        -OmitShortIntervalEvidence
 
     & $scriptPath `
         -ReportsRoot $reportsRoot `
@@ -165,8 +218,8 @@ try {
         throw 'Expected cadence stability summary schema and kind.'
     }
 
-    if ($summary.totalGroupCount -ne 3 -or $summary.unstableGroupCount -ne 2) {
-        throw 'Expected two unstable groups and three total groups.'
+    if ($summary.totalGroupCount -ne 4 -or $summary.unstableGroupCount -ne 2) {
+        throw 'Expected two unstable groups and four total groups.'
     }
 
     $unstable = $summary.groups |
@@ -178,6 +231,8 @@ try {
 
     if ($unstable.renderIntervalP99ExpectedErrorSpreadMs -lt 3.0 -or
         $unstable.maxFrameGapExpectedErrorSpreadMs -lt 3.0 -or
+        $unstable.renderIntervalP05ExpectedErrorSpreadMs -lt 2.0 -or
+        $unstable.minFrameGapExpectedErrorSpreadMs -lt 2.0 -or
         -not ($unstable.unstableSignals -contains 'framePacing.renderIntervalP99ExpectedErrorMs')) {
         throw 'Expected unstable group to expose expected-error spread signals.'
     }
@@ -191,6 +246,18 @@ try {
 
     if ($stable.renderIntervalP99ExpectedErrorSpreadMs -ge 2.0) {
         throw 'Expected stable group P99 expected-error spread to stay below materiality.'
+    }
+
+    $oldReportGroup = $summary.groups |
+        Where-Object { $_.caseGroupId -eq 'local/native-headless-old-report' } |
+        Select-Object -First 1
+    if ($null -eq $oldReportGroup -or $oldReportGroup.stability -ne 'stable') {
+        throw 'Expected old report group without short-interval evidence to remain stable.'
+    }
+
+    if ($null -ne $oldReportGroup.renderIntervalP05ExpectedErrorSpreadMs -or
+        $null -ne $oldReportGroup.minFrameGapExpectedErrorSpreadMs) {
+        throw 'Expected old reports without short-interval evidence to keep short-interval spread fields null.'
     }
 
     $oversleepUnstable = $summary.groups |

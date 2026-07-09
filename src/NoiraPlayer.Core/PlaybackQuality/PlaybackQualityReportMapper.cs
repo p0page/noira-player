@@ -42,13 +42,17 @@ namespace NoiraPlayer.Core.PlaybackQuality
             report.Timing.VideoAheadWaitCount = metrics.VideoAheadWaitCount;
             report.Timing.AudioAheadWaitCount = metrics.AudioAheadWaitCount;
             report.Timing.VideoClockWaitCount = metrics.VideoClockWaitCount;
+            report.Timing.RenderIntervalMsP05 = metrics.RenderIntervalMsP05;
             report.Timing.RenderIntervalMsP50 = metrics.RenderIntervalMsP50;
             report.Timing.RenderIntervalMsP95 = metrics.RenderIntervalMsP95;
             report.Timing.RenderIntervalMsP99 = metrics.RenderIntervalMsP99;
+            report.Timing.MinFrameGapMs = metrics.MinFrameGapMs;
             report.Timing.MaxFrameGapMs = metrics.MaxFrameGapMs;
             report.Timing.RenderIntervalSampleCount = metrics.RenderIntervalSampleCount;
             report.Timing.RenderIntervalOverExpected2MsCount = metrics.RenderIntervalOverExpected2MsCount;
             report.Timing.RenderIntervalOverExpected4MsCount = metrics.RenderIntervalOverExpected4MsCount;
+            report.Timing.RenderIntervalUnderExpected2MsCount = metrics.RenderIntervalUnderExpected2MsCount;
+            report.Timing.RenderIntervalUnderExpected4MsCount = metrics.RenderIntervalUnderExpected4MsCount;
             report.Timing.PresentDurationMsP50 = metrics.PresentDurationMsP50;
             report.Timing.PresentDurationMsP95 = metrics.PresentDurationMsP95;
             report.Timing.PresentDurationMsP99 = metrics.PresentDurationMsP99;

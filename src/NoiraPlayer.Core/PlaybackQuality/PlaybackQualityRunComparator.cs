@@ -1196,6 +1196,13 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.renderIntervalSampleCount");
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.renderIntervalOverExpected2MsCount");
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.renderIntervalOverExpected4MsCount");
+                if (HasShortIntervalEvidence(baseline) && HasShortIntervalEvidence(candidate))
+                {
+                    AddUnique(comparison.Coverage.MatchedSignals, "timing.renderIntervalMsP05");
+                    AddUnique(comparison.Coverage.MatchedSignals, "timing.minFrameGapMs");
+                    AddUnique(comparison.Coverage.MatchedSignals, "timing.renderIntervalUnderExpected2MsCount");
+                    AddUnique(comparison.Coverage.MatchedSignals, "timing.renderIntervalUnderExpected4MsCount");
+                }
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.expectedFrameDurationMs");
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.framePacingSourceFrameRate");
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.hardwareDecodedVideoFrames");
@@ -1241,10 +1248,17 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 HasBufferingEvidence(report);
         }
 
+        private static bool HasShortIntervalEvidence(PlaybackQualityReport report)
+        {
+            return report.Timing.RenderIntervalMsP05 > 0 ||
+                report.Timing.MinFrameGapMs > 0;
+        }
+
         private static bool HasTimingEvidence(PlaybackQualityReport report)
         {
             return report.Timing.RenderedVideoFrames > 0 ||
                 report.Timing.DecodedVideoFrames > 0 ||
+                report.Timing.RenderIntervalMsP05 > 0 ||
                 report.Timing.RenderIntervalMsP50 > 0 ||
                 report.Timing.RenderIntervalMsP95 > 0 ||
                 report.Timing.RenderIntervalMsP99 > 0 ||
@@ -1270,6 +1284,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 report.Timing.AudioAheadWaitFinalDeltaAbsMsMax > 0 ||
                 report.Timing.AudioAheadWaitCount > 0 ||
                 report.Timing.VideoClockWaitCount > 0 ||
+                report.Timing.MinFrameGapMs > 0 ||
                 report.Timing.MaxFrameGapMs > 0 ||
                 report.Timing.ExpectedFrameDurationMs > 0 ||
                 report.Timing.FramePacingSourceFrameRate > 0;

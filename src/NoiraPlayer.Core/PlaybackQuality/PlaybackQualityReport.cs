@@ -212,13 +212,17 @@ namespace NoiraPlayer.Core.PlaybackQuality
         public ulong AudioAheadWaitCount { get; set; }
         public ulong VideoClockWaitCount { get; set; }
         public double ExpectedFrameDurationMs { get; set; }
+        public double RenderIntervalMsP05 { get; set; }
         public double RenderIntervalMsP50 { get; set; }
         public double RenderIntervalMsP95 { get; set; }
         public double RenderIntervalMsP99 { get; set; }
+        public double MinFrameGapMs { get; set; }
         public double MaxFrameGapMs { get; set; }
         public ulong RenderIntervalSampleCount { get; set; }
         public ulong RenderIntervalOverExpected2MsCount { get; set; }
         public ulong RenderIntervalOverExpected4MsCount { get; set; }
+        public ulong RenderIntervalUnderExpected2MsCount { get; set; }
+        public ulong RenderIntervalUnderExpected4MsCount { get; set; }
         public double PresentDurationMsP50 { get; set; }
         public double PresentDurationMsP95 { get; set; }
         public double PresentDurationMsP99 { get; set; }

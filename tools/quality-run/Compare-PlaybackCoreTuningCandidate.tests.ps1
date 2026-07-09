@@ -46,7 +46,9 @@ try {
       "caseGroupId": "local/native-headless-hdr10-60",
       "stability": "unstable",
       "sampleCount": 3,
+      "renderIntervalP05ExpectedErrorSpreadMs": 2.1,
       "renderIntervalP99ExpectedErrorSpreadMs": 3.2,
+      "minFrameGapExpectedErrorSpreadMs": 2.3,
       "maxFrameGapExpectedErrorSpreadMs": 3.2,
       "audioAheadWaitOversleepP95SpreadMs": 4.4,
       "audioAheadWaitFinalDeltaAbsP95SpreadMs": 5.5,
@@ -130,6 +132,11 @@ try {
 
     if ($candidateCadenceGroup.audioAheadWaitFinalDeltaAbsP95SpreadMs -ne 5.5) {
         throw 'Expected comparison summary to preserve A/V final delta stability spread evidence.'
+    }
+
+    if ($candidateCadenceGroup.renderIntervalP05ExpectedErrorSpreadMs -ne 2.1 -or
+        $candidateCadenceGroup.minFrameGapExpectedErrorSpreadMs -ne 2.3) {
+        throw 'Expected comparison summary to preserve short-interval stability spread evidence.'
     }
 
     if ($summary.paths.candidateCadenceStabilityPath -ne $candidateCadenceStabilityPath) {
