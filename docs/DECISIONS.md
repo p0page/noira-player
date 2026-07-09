@@ -1,4 +1,14 @@
 ﻿# 技术决策
+## 2026-07-09: cadence 重复采样结果作为候选解释证据，不直接改写 comparison 规则
+
+决策：新增 `Measure-PlaybackCadenceStability.ps1` 作为 repeated report 聚合工具。它按 case group 汇总 `framePacing.renderIntervalP95ExpectedErrorMs`、`framePacing.renderIntervalP99ExpectedErrorMs` 和 `framePacing.maxFrameGapExpectedErrorMs` 的 spread，并标记 `stable`、`unstable` 或 `insufficient-samples`。该工具先作为诊断证据使用，不直接覆盖 `evaluate-candidate` 的 suite gate。
+
+原因：当前 native-headless 3 秒短样本存在可重复观察到的单次尾部波动。直接把重复采样工具接成自动放行逻辑，会变相降低 existing comparison gate；但完全没有稳定性归因，又会让模型把无关 candidate 的随机 P99/max spike 当成 Core regression。独立 summary 能让模型看到“候选本身的对比结果”和“该 case 当前采样稳定性”两层证据。
+
+影响：后续 wait scheduling / frame pacing Core 候选仍必须生成同 manifest baseline/candidate comparison；如果 comparison 结果被少数 native-headless cadence case 阻断，应附带 cadence stability summary 解释它是稳定回退、混合结果还是采样不稳定。是否调整 comparator 的 gate，需要单独 TDD 和同一历史 artifact 回放验证，不能静默修改阈值。
+
+边界：重复采样 summary 不是新的 pass 规则，也不是删除或 quarantine case 的依据。它只解决“模型需要更完备信息识别问题”的消费层缺口。
+
 ## 2026-07-09: 不采纳 positive-wait clamp，先处理 60fps cadence 单次采样不稳定性
 
 决策：不保留 `92e82e0` 的 audio/video positive wait clamp，也不保留 `dc2bf33` 的 audio-only positive wait clamp。当前 Core/native 主线回到 positive-wait clamp 之前的行为；后续调度候选必须再次从 accepted baseline 生成同 manifest baseline/candidate comparison。

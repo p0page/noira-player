@@ -2,6 +2,14 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-09 更新：cadence 重复采样 summary 已工具化
+
+新增 `tools/quality-run/Measure-PlaybackCadenceStability.ps1` 和对应脚本测试，用于消费一批 repeated playback report JSON，按 case group 聚合 `framePacing.*ExpectedErrorMs` 的 min/max/spread，并输出机器可读 `playback-cadence-stability-summary`。该工具只做 flake/stability 归因，不改变 `PlaybackQualityRunComparator` 的 accept/reject 规则，也不放宽任何 stable/challenge case 的 expected behavior。
+
+该脚本已接入 `run-playback-core-checks.ps1` 的 `playback-cadence-stability-test` 门禁。测试覆盖两个 group：一个 P99/max expected-error spread 超过 `2ms` 的不稳定组，以及一个低于 materiality 的稳定组，确保 summary 能给模型明确的 `stable` / `unstable` / `insufficient-samples` 归类和 `unstableSignals`。
+
+已用新脚本重新聚合上一轮真实重复采样 artifact：`artifacts/quality-run/repeat-cadence-dc2bf33/cadence-stability-summary.local.json`。结果显示 3/3 group 都是 `unstable`：`local/repeat-av-30` 的 P99 expected-error spread 为 `2.4364ms`，`local/repeat-hdr10-60` 为 `3.2721ms`，`local/repeat-sdr-60` 为 `6.3696ms`。这说明不只是 60fps 无音轨 case，当前 3 秒 native-headless A/V smoke 的尾部 cadence 也可能跨过 `2ms` materiality；后续 Core 调优前应先把重复采样结果作为候选解释证据纳入报告集。
+
 ## 2026-07-09 更新：positive-wait clamp 候选不采纳，60fps native-headless cadence 需要重复采样
 
 本轮尝试了两个小步 native wait 调度候选，均未作为当前 Core 行为保留。第一版把正等待下限同时用于 audio-ahead 和 video-clock，提交为 `92e82e0`，commit-bound 54-case comparison 结果为 `reject-candidate`，回退集中在无音轨 native-headless 60/24fps cadence case。第二版收窄为仅 audio-ahead positive wait clamp，提交为 `dc2bf33`；working comparison 曾得到 `keep-candidate`、1 improved、0 regressed，但 commit-bound comparison 结果为 `reject-candidate`，目标 case 为 `local/native-headless-hdr10-60`。两笔候选已通过 revert 回退，当前主线不保留 positive-wait clamp 行为。

@@ -143,6 +143,10 @@ if (-not ($plan.commands | Where-Object { $_.name -eq 'playback-core-tuning-cand
     throw 'Expected playback-core-tuning-candidate-comparison-test command in playback-core validation plan.'
 }
 
+if (-not ($plan.commands | Where-Object { $_.name -eq 'playback-cadence-stability-test' })) {
+    throw 'Expected playback-cadence-stability-test command in playback-core validation plan.'
+}
+
 if (-not ($plan.commands | Where-Object { $_.name -eq 'export-app-quality-run-reports-test' })) {
     throw 'Expected export-app-quality-run-reports-test command in playback-core validation plan.'
 }

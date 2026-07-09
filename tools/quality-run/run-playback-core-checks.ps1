@@ -148,6 +148,11 @@ $commands = @(
         -Command 'powershell' `
         -Arguments @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', 'tools\quality-run\Compare-PlaybackCoreTuningCandidate.tests.ps1')
     New-CommandPlan `
+        -Name 'playback-cadence-stability-test' `
+        -Description 'Verify repeated cadence report samples can be summarized for flake attribution without changing comparison thresholds.' `
+        -Command 'powershell' `
+        -Arguments @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', 'tools\quality-run\Measure-PlaybackCadenceStability.tests.ps1')
+    New-CommandPlan `
         -Name 'export-app-quality-run-reports-test' `
         -Description 'Verify App-hosted quality-run captured reports can be exported from LocalState while preserving report-set relative paths.' `
         -Command 'powershell' `
