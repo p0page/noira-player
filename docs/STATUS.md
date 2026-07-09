@@ -735,3 +735,13 @@ manifest validation、report-set validation、single comparison、comparison sui
 提交 `cda19d2` 后已生成新的 commit-bound 54-case report-set：`docs/qa/private/candidates/playback-core-tuning-native-cadence-5s-54case-cda19d2.local/`，validation 通过，包含 54 个 report，native-headless included。与旧 3 秒 cadence baseline `playback-core-tuning-decode-mode-evidence-54case-d687248.local` 的迁移对比输出为 `docs/qa/private/comparisons/playback-core-tuning-native-cadence-5s-54case-cda19d2.local/`，结果为 `reject-candidate`：`local/native-headless-av-smoke` improved，`local/native-headless-hdr10-60` regressed。
 
 该 reject 不作为 Core 播放策略退化结论。原因是 video-only cadence 样本时长从 3 秒改为 5 秒，旧 report-set 与新 report-set 的 P95/P99 tail statistics 不再适合作为同一策略候选的门禁比较。后续真实 Core 调优应以 `playback-core-tuning-native-cadence-5s-54case-cda19d2.local` 作为新的迁移基线。
+
+# 2026-07-09 更新：default render-loop wait 改用 high-resolution timer，60fps cadence 改善
+
+本轮基于新 5 秒 cadence 基线 `playback-core-tuning-native-cadence-5s-54case-cda19d2.local` 做了一个通用 native 调度策略候选：默认 render-loop 5ms wait 不再走 `std::this_thread::sleep_for`，而是和 audio/video-clock wait 一样通过 `RenderLoopWaiter` 使用 high-resolution waitable timer。该改动已提交为 `c129249 chore: use timer for default render loop wait`。
+
+已生成 commit-bound candidate：`docs/qa/private/candidates/playback-core-tuning-default-render-loop-timer-54case-c129249.local/`，comparison 输出为 `docs/qa/private/comparisons/playback-core-tuning-default-render-loop-timer-54case-c129249.local/`。结果：54/54 case 可比，validation 通过，`decision = keep-candidate`，`action = accept-candidate`，3 improved、0 regressed、0 mixed、51 unchanged，strong confidence 54/54。
+
+关键指标：`local/native-headless-hdr10-60` 的 render P95/P99 expected error 从约 `3.1662/4.4410ms` 降到 `0.4094/1.2259ms`；`local/native-headless-sdr-60` 从约 `3.6700/4.3778ms` 降到 `0.4238/0.4950ms`。`local/native-headless-av-smoke` 的 audio-ahead oversleep P95/P99 从约 `7.5806/14.3632ms` 降到 `3.9499/4.1270ms`，但它的 render P95/P99 没有作为 improvement 记录，因此不能宣称 A/V smoke 整体流畅度已经改善。
+
+验证：策略实现按 TDD 添加 native frame pacing test，先红灯失败，再实现通过；`tools/quality-run/run-playback-core-checks.ps1` 已通过。边界：这是纯软件 native-headless 证据，不证明真实 Xbox/HDMI 输出或主观观感已经改善；下一步应优先做重复采样确认 `c129249` 的稳定性，再继续新的播放策略候选。

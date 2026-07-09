@@ -861,3 +861,11 @@
 影响：这是评测 harness 可靠性调整，不改变播放器行为、stable case expected behavior、candidate acceptance 规则或 evaluator 阈值。后续基线如果包含 native-headless cadence case，应把样本时长变化视为 eval baseline migration，而不是 Core 调优收益。
 
 决策补充：`cda19d2` 生成的 54-case report-set 是 5 秒 cadence 样本迁移后的新调优基线。旧 3 秒 cadence baseline 与新 5 秒 cadence report-set 的 comparison 即使输出 `reject-candidate`，也只能作为迁移审计结果，不能用来判断播放器 Core 策略退化。后续策略候选必须优先和 `playback-core-tuning-native-cadence-5s-54case-cda19d2.local` 做同 manifest 比较。
+
+# 2026-07-09: default render-loop wait 使用 RenderLoopWaiter
+
+决策：默认 render-loop wait 也使用 `RenderLoopWaiter`，不再只让 audio-ahead/video-clock 等待走 high-resolution waitable timer。`PlaybackFramePacing::ShouldUseRenderLoopTimer` 作为统一策略入口，当前对正数 delay 返回 true。
+
+原因：60fps video-only native-headless case 的 P95/P99 frame interval error 形态符合默认 `sleep_for(5ms)` 在 Windows 上被粗粒度唤醒放大的特征。把默认 wait 纳入同一个低开销 timer primitive 后，同一 54-case manifest 比较显示 HDR10-60 和 SDR60 的 frame pacing error 明显下降，且无 suite-level regression。
+
+边界：该策略不针对某个 case、codec 或 HDR/SDR 分支；它是 render loop 等待 primitive 的统一化。A/V smoke 只证明 audio-ahead oversleep 改善，不能据此声称整体 A/V sync 或主观流畅度已解决。后续如果发现 CPU 成本或真实设备调度问题，应以同 manifest comparison 和 process-cost evidence 重新评估。
