@@ -1,4 +1,14 @@
 ﻿# 技术决策
+## 2026-07-09: video-clock pacing 使用目标剩余时间等待
+
+决策：无音轨路径中的 software video-clock wait 不再使用默认 5ms render loop sleep。`PlaybackFramePacing` 新增 `VideoClockWaitDuration`，按 `framePosition - clockStartPosition - elapsed - VideoAheadTolerance` 计算剩余等待时间；`PlaybackGraph::ShouldWaitForVideoClock` 在需要等待时把该 duration 写入 `m_nextRenderLoopWait`，并使用现有 `RenderLoopWaiter`。
+
+原因：54-case baseline 中无音轨 native-headless cadence case 的 `videoClockWaitCount` 为主要等待原因，23.976/24fps 样本的 render P95/P99 约 48ms，30fps HDR 样本约 47ms，明显像固定 5ms 轮询造成的 oversleep。audio-ahead 分支已经使用 target duration + high-resolution waiter；video-clock 分支继续固定 sleep 会让低帧率和 60fps 无音轨样本产生不必要的 frame pacing jitter。
+
+影响：commit-bound comparison `playback-core-tuning-video-clock-wait-54case-761800c.local` 中，8 个无音轨 native-headless cadence/color case 的 render P95/P99/max gap 全部向 expected frame duration 收敛；suite 仍为 `decision = no-change`，因为当前 evaluator 不自动把 runtime frame pacing telemetry 判为 improvement/regression。该策略作为低风险 native pacing 修正保留。
+
+边界：不改变 `VideoAheadToleranceTicks`、drop tolerance、audio-ahead gating、A/V sync 规则、样本 expected behavior 或 evaluator 阈值。A/V smoke 基本持平，不能据此宣称音画同步改善；该结论也不代表真实 Xbox/HDMI/display refresh 已验证。
+
 ## 2026-07-09: main/Noira/FFmpeg 8.1.2 后播放 Core 门禁必须以当前 main 为默认 diff base
 
 决策：`tools\quality-run\run-playback-core-checks.ps1` 的默认 `AppDiffBase` 改为 `origin/main`，不再使用旧的 pre-Noira 固定提交 `94adec5`。脚本计划测试会阻止默认 base 回退到该旧提交。

@@ -2,6 +2,18 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-09 更新：video-clock target wait 改善 native-headless 无音轨 cadence
+
+已提交 `761800c chore: use target wait for video clock pacing`。本轮只做一个小步 native 策略调整：当 `PlaybackGraph` 在无音轨路径等待 software video clock 时，不再退回默认 5ms render loop sleep，而是按 `PlaybackFramePacing::VideoClockWaitDuration` 计算剩余等待时间，并复用现有 high-resolution `RenderLoopWaiter`。
+
+TDD 记录：先在 `FramePacingTests.cpp` 增加 `VideoClockWaitDuration` 期望，确认当前实现红灯失败于缺少 API；实现后 targeted native frame pacing test 和 render loop waiter test 通过。完整验证命令 `powershell -NoProfile -ExecutionPolicy Bypass -File tools\quality-run\run-playback-core-checks.ps1` 已通过，覆盖 404 个播放相关 Core 测试、CLI smoke、native-headless smoke、manifest/report-set 脚本测试、native helper/frame pacing/render loop/display refresh/offscreen tests 和 native Debug x64 build。
+
+已生成 commit-bound 54-case candidate：`docs/qa/private/candidates/playback-core-tuning-video-clock-wait-54case-761800c.local/`，并与当前 accepted baseline `playback-core-tuning-main-ffmpeg812-force-sdr-evidence-790caeb.local/` 输出 comparison：`docs/qa/private/comparisons/playback-core-tuning-video-clock-wait-54case-761800c.local/`。结果：54/54 可比、`manifest.sameCaseIds = true`、candidate validation 通过、suite `decision = no-change`、0 improved、0 regressed、0 mixed、54 unchanged、strong confidence 54/54。
+
+关键 runtime 证据：8 个无音轨 native-headless cadence/color case 的 `renderIntervalMsP95/P99/maxFrameGapMs` 全部向 expected frame duration 收敛。典型样本：`local/native-headless-sdr-23976` P95 `48.098ms -> 42.098ms`，P99 `48.111ms -> 42.101ms`；`local/native-headless-sdr-60` P95 `30.024ms -> 20.413ms`，P99 `32.539ms -> 20.917ms`；`local/native-headless-hdr10-30` P95 `47.183ms -> 33.670ms`，P99 `47.613ms -> 33.753ms`。A/V smoke 未使用 video-clock path，整体基本持平：P95 `41.031ms -> 39.577ms`，P99 `41.385ms -> 42.540ms`，process CPU ratio `0.175 -> 0.131`。
+
+边界：当前 evaluator 仍把 frame pacing runtime telemetry 作为 matched diagnostic signals，不自动判定 improvement/regression，因此 suite 结论保持 `no-change`。本轮可采纳为低风险 native video-clock pacing 策略，但不能宣称真实 Xbox/HDMI 输出、HDR 显示、A/V sync 或主观流畅度已经改善。下一步更适合补齐 frame pacing comparison 规则，按“相对 expected frame duration 的误差”而不是单纯 lower-is-better 来机器判定改善/退化。
+
 ## 2026-07-09 更新：基于 main/Noira/FFmpeg 8.1.2 重建播放 Core 评测基线
 
 已从 `main` 新建 worktree `codex/playback-core-quality-main-brand-ffmpeg-v2`。当前 main 头为 `d027ed1 merge: FFmpeg 8.1.2 UWP package upgrade`，项目名和品牌名已切到 Noira / NoiraPlayer，native NuGet 包为 `FFmpegInteropX.UWP.FFmpeg.8.1.2`。
