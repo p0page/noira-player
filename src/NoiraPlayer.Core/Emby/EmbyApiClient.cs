@@ -5,46 +5,40 @@ using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 using System.Threading.Tasks;
 using NoiraPlayer.Core.Playback;
 
 namespace NoiraPlayer.Core.Emby
 {
-    public sealed class EmbyApiClient
+    public sealed partial class EmbyApiClient
     {
         private const string ItemListFields = "Overview,ProductionYear,RunTimeTicks,PrimaryImageAspectRatio,ChildCount,UserData,Artists,AlbumArtists";
         private const string ImageTypeList = "Primary,Backdrop,Thumb,Banner,Logo";
 
         private readonly HttpClient _http;
         private readonly EmbyClientOptions _options;
-        private readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions
-        {
-            PropertyNameCaseInsensitive = true
-        };
-        private readonly JsonSerializerOptions _writeJsonOptions = new JsonSerializerOptions
-        {
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-        };
 
         public EmbyApiClient(HttpClient http, EmbyClientOptions options)
         {
             _http = http;
             _options = options;
             _http.BaseAddress = new Uri(options.ServerUrl.TrimEnd('/') + "/");
-            _writeJsonOptions.Converters.Add(new JsonStringEnumConverter());
         }
 
         public async Task<EmbySession> AuthenticateAsync(string username, string password)
         {
             using var request = new HttpRequestMessage(HttpMethod.Post, "Users/AuthenticateByName");
             EmbyAuthorization.Apply(request, _options);
-            var json = JsonSerializer.Serialize(new { Username = username, Pw = password });
+            var json = JsonSerializer.Serialize(
+                new AuthRequestDto { Username = username, Pw = password },
+                EmbyApiJsonContext.Default.AuthRequestDto);
             request.Content = new StringContent(json, Encoding.UTF8, "application/json");
 
             using var response = await _http.SendAsync(request).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
             var body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-            var dto = JsonSerializer.Deserialize<AuthResponseDto>(body, _jsonOptions)
+            var dto = JsonSerializer.Deserialize(body, EmbyApiJsonContext.Default.AuthResponseDto)
                 ?? throw new InvalidOperationException("Emby authentication response was empty.");
 
             return new EmbySession
@@ -72,7 +66,7 @@ namespace NoiraPlayer.Core.Emby
             using var response = await _http.SendAsync(request).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
             var body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-            var dto = JsonSerializer.Deserialize<List<ItemDto>>(body, _jsonOptions) ?? new List<ItemDto>();
+            var dto = JsonSerializer.Deserialize(body, EmbyApiJsonContext.Default.ItemDtoList) ?? new List<ItemDto>();
             return dto.Select(MapItem).ToList();
         }
 
@@ -97,7 +91,7 @@ namespace NoiraPlayer.Core.Emby
             using var response = await _http.SendAsync(request).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
             var body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-            var dto = JsonSerializer.Deserialize<List<ItemDto>>(body, _jsonOptions) ?? new List<ItemDto>();
+            var dto = JsonSerializer.Deserialize(body, EmbyApiJsonContext.Default.ItemDtoList) ?? new List<ItemDto>();
             return dto.Select(MapItem).ToList();
         }
 
@@ -117,7 +111,7 @@ namespace NoiraPlayer.Core.Emby
             using var response = await _http.SendAsync(request).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
             var body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-            var dto = JsonSerializer.Deserialize<ItemListDto<ItemDto>>(body, _jsonOptions) ?? new ItemListDto<ItemDto>();
+            var dto = JsonSerializer.Deserialize(body, EmbyApiJsonContext.Default.ItemDtoItemList) ?? new ItemListDto<ItemDto>();
             return (dto.Items ?? new List<ItemDto>()).Select(MapItem).ToList();
         }
 
@@ -134,7 +128,7 @@ namespace NoiraPlayer.Core.Emby
             using var response = await _http.SendAsync(request).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
             var body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-            var dto = JsonSerializer.Deserialize<ItemListDto<ViewDto>>(body, _jsonOptions) ?? new ItemListDto<ViewDto>();
+            var dto = JsonSerializer.Deserialize(body, EmbyApiJsonContext.Default.ViewDtoItemList) ?? new ItemListDto<ViewDto>();
             return (dto.Items ?? new List<ViewDto>()).Select(MapView).ToList();
         }
 
@@ -151,7 +145,7 @@ namespace NoiraPlayer.Core.Emby
             using var response = await _http.SendAsync(request).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
             var body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-            var dto = JsonSerializer.Deserialize<List<HomeSectionDto>>(body, _jsonOptions) ?? new List<HomeSectionDto>();
+            var dto = JsonSerializer.Deserialize(body, EmbyApiJsonContext.Default.HomeSectionDtoList) ?? new List<HomeSectionDto>();
             return dto.Select(MapHomeSection).ToList();
         }
 
@@ -173,7 +167,7 @@ namespace NoiraPlayer.Core.Emby
             using var response = await _http.SendAsync(request).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
             var body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-            var dto = JsonSerializer.Deserialize<ItemListDto<ItemDto>>(body, _jsonOptions) ?? new ItemListDto<ItemDto>();
+            var dto = JsonSerializer.Deserialize(body, EmbyApiJsonContext.Default.ItemDtoItemList) ?? new ItemListDto<ItemDto>();
             return (dto.Items ?? new List<ItemDto>()).Select(MapItem).ToList();
         }
 
@@ -196,7 +190,7 @@ namespace NoiraPlayer.Core.Emby
             using var response = await _http.SendAsync(request).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
             var body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-            var dto = JsonSerializer.Deserialize<ItemListDto<ItemDto>>(body, _jsonOptions) ?? new ItemListDto<ItemDto>();
+            var dto = JsonSerializer.Deserialize(body, EmbyApiJsonContext.Default.ItemDtoItemList) ?? new ItemListDto<ItemDto>();
             return (dto.Items ?? new List<ItemDto>()).Select(MapItem).ToList();
         }
 
@@ -208,7 +202,7 @@ namespace NoiraPlayer.Core.Emby
             using var response = await _http.SendAsync(request).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
             var body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-            var dto = JsonSerializer.Deserialize<LiveTvInfoDto>(body, _jsonOptions) ?? new LiveTvInfoDto();
+            var dto = JsonSerializer.Deserialize(body, EmbyApiJsonContext.Default.LiveTvInfoDto) ?? new LiveTvInfoDto();
             return new EmbyLiveTvInfo
             {
                 IsEnabled = dto.IsEnabled,
@@ -234,7 +228,7 @@ namespace NoiraPlayer.Core.Emby
             using var response = await _http.SendAsync(request).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
             var body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-            var dto = JsonSerializer.Deserialize<ItemListDto<LiveTvChannelDto>>(body, _jsonOptions) ?? new ItemListDto<LiveTvChannelDto>();
+            var dto = JsonSerializer.Deserialize(body, EmbyApiJsonContext.Default.LiveTvChannelDtoItemList) ?? new ItemListDto<LiveTvChannelDto>();
             return (dto.Items ?? new List<LiveTvChannelDto>()).Select(MapLiveTvChannel).ToList();
         }
 
@@ -257,7 +251,7 @@ namespace NoiraPlayer.Core.Emby
             using var response = await _http.SendAsync(request).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
             var body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-            var dto = JsonSerializer.Deserialize<ItemListDto<LiveTvProgramDto>>(body, _jsonOptions) ?? new ItemListDto<LiveTvProgramDto>();
+            var dto = JsonSerializer.Deserialize(body, EmbyApiJsonContext.Default.LiveTvProgramDtoItemList) ?? new ItemListDto<LiveTvProgramDto>();
             return (dto.Items ?? new List<LiveTvProgramDto>()).Select(MapLiveTvProgram).ToList();
         }
 
@@ -277,7 +271,7 @@ namespace NoiraPlayer.Core.Emby
             using var response = await _http.SendAsync(request).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
             var body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-            var dto = JsonSerializer.Deserialize<ItemListDto<ItemDto>>(body, _jsonOptions) ?? new ItemListDto<ItemDto>();
+            var dto = JsonSerializer.Deserialize(body, EmbyApiJsonContext.Default.ItemDtoItemList) ?? new ItemListDto<ItemDto>();
             return (dto.Items ?? new List<ItemDto>()).Select(MapItem).ToList();
         }
 
@@ -314,7 +308,7 @@ namespace NoiraPlayer.Core.Emby
             using var response = await _http.SendAsync(request).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
             var body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-            var dto = JsonSerializer.Deserialize<ItemListDto<ItemDto>>(body, _jsonOptions) ?? new ItemListDto<ItemDto>();
+            var dto = JsonSerializer.Deserialize(body, EmbyApiJsonContext.Default.ItemDtoItemList) ?? new ItemListDto<ItemDto>();
             return (dto.Items ?? new List<ItemDto>()).Select(MapItem).ToList();
         }
 
@@ -339,7 +333,7 @@ namespace NoiraPlayer.Core.Emby
             using var response = await _http.SendAsync(request).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
             var body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-            var dto = JsonSerializer.Deserialize<ItemListDto<ItemDto>>(body, _jsonOptions) ?? new ItemListDto<ItemDto>();
+            var dto = JsonSerializer.Deserialize(body, EmbyApiJsonContext.Default.ItemDtoItemList) ?? new ItemListDto<ItemDto>();
             return (dto.Items ?? new List<ItemDto>()).Select(MapItem).ToList();
         }
 
@@ -356,7 +350,7 @@ namespace NoiraPlayer.Core.Emby
             using var response = await _http.SendAsync(request).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
             var body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-            var dto = JsonSerializer.Deserialize<ItemListDto<ItemDto>>(body, _jsonOptions) ?? new ItemListDto<ItemDto>();
+            var dto = JsonSerializer.Deserialize(body, EmbyApiJsonContext.Default.ItemDtoItemList) ?? new ItemListDto<ItemDto>();
             return (dto.Items ?? new List<ItemDto>()).Select(MapItem).ToList();
         }
 
@@ -379,7 +373,7 @@ namespace NoiraPlayer.Core.Emby
             using var response = await _http.SendAsync(request).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
             var body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-            var dto = JsonSerializer.Deserialize<ItemListDto<ItemDto>>(body, _jsonOptions) ?? new ItemListDto<ItemDto>();
+            var dto = JsonSerializer.Deserialize(body, EmbyApiJsonContext.Default.ItemDtoItemList) ?? new ItemListDto<ItemDto>();
             return (dto.Items ?? new List<ItemDto>()).Select(MapItem).ToList();
         }
 
@@ -398,7 +392,7 @@ namespace NoiraPlayer.Core.Emby
             using var response = await _http.SendAsync(request).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
             var body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-            var dto = JsonSerializer.Deserialize<List<ItemDto>>(body, _jsonOptions) ?? new List<ItemDto>();
+            var dto = JsonSerializer.Deserialize(body, EmbyApiJsonContext.Default.ItemDtoList) ?? new List<ItemDto>();
             return dto.Select(MapItem).ToList();
         }
 
@@ -436,7 +430,7 @@ namespace NoiraPlayer.Core.Emby
             using var response = await _http.SendAsync(request).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
             var body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-            var dto = JsonSerializer.Deserialize<AddToPlaylistResultDto>(body, _jsonOptions) ?? new AddToPlaylistResultDto();
+            var dto = JsonSerializer.Deserialize(body, EmbyApiJsonContext.Default.AddToPlaylistResultDto) ?? new AddToPlaylistResultDto();
             return new EmbyAddToPlaylistResult
             {
                 Id = dto.Id ?? "",
@@ -473,7 +467,7 @@ namespace NoiraPlayer.Core.Emby
             using var response = await _http.SendAsync(request).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
             var body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-            var dto = JsonSerializer.Deserialize<ItemDto>(body, _jsonOptions)
+            var dto = JsonSerializer.Deserialize(body, EmbyApiJsonContext.Default.ItemDto)
                 ?? throw new InvalidOperationException("Emby item response was empty.");
             return MapItem(dto);
         }
@@ -494,17 +488,24 @@ namespace NoiraPlayer.Core.Emby
             return SendUserDataMutationAsync(session, path);
         }
 
-        public async Task<IReadOnlyList<EmbyMediaSource>> GetPlaybackInfoAsync(EmbySession session, string itemId)
+        public async Task<IReadOnlyList<EmbyMediaSource>> GetPlaybackInfoAsync(
+            EmbySession session,
+            string itemId,
+            string mediaSourceId = "")
         {
+            var parameters = new List<string>();
+            AddQueryParameter(parameters, "UserId", session.UserId);
+            AddQueryParameter(parameters, "MediaSourceId", mediaSourceId);
+
             using var request = new HttpRequestMessage(
                 HttpMethod.Get,
-                $"Items/{EscapeUriComponent(itemId)}/PlaybackInfo?UserId={EscapeUriComponent(session.UserId)}");
+                $"Items/{EscapeUriComponent(itemId)}/PlaybackInfo?{string.Join("&", parameters)}");
             EmbyAuthorization.Apply(request, _options, session);
 
             using var response = await _http.SendAsync(request).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
             var body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-            var dto = JsonSerializer.Deserialize<PlaybackInfoDto>(body, _jsonOptions) ?? new PlaybackInfoDto();
+            var dto = JsonSerializer.Deserialize(body, EmbyApiJsonContext.Default.PlaybackInfoDto) ?? new PlaybackInfoDto();
             var mediaSources = dto.MediaSources ?? new List<MediaSourceDto>();
             return mediaSources.Select(source => MapMediaSource(session, itemId, dto.PlaySessionId, source)).ToList();
         }
@@ -571,7 +572,7 @@ namespace NoiraPlayer.Core.Emby
                 return new EmbyUserData();
             }
 
-            var dto = JsonSerializer.Deserialize<UserDataDto>(body, _jsonOptions) ?? new UserDataDto();
+            var dto = JsonSerializer.Deserialize(body, EmbyApiJsonContext.Default.UserDataDto) ?? new UserDataDto();
             return MapUserData(dto);
         }
 
@@ -593,11 +594,25 @@ namespace NoiraPlayer.Core.Emby
             }
         }
 
-        private async Task PostJsonAsync(EmbySession session, string path, object body)
+        private Task PostJsonAsync(EmbySession session, string path, PlaybackProgressRequest body)
+        {
+            return PostJsonAsync(session, path, body, EmbyApiJsonContext.Default.PlaybackProgressRequest);
+        }
+
+        private Task PostJsonAsync(EmbySession session, string path, PlaybackSessionRequest body)
+        {
+            return PostJsonAsync(session, path, body, EmbyApiJsonContext.Default.PlaybackSessionRequest);
+        }
+
+        private async Task PostJsonAsync<TBody>(
+            EmbySession session,
+            string path,
+            TBody body,
+            JsonTypeInfo<TBody> jsonTypeInfo)
         {
             using var request = new HttpRequestMessage(HttpMethod.Post, path);
             EmbyAuthorization.Apply(request, _options, session);
-            var json = JsonSerializer.Serialize(body, _writeJsonOptions);
+            var json = JsonSerializer.Serialize(body, jsonTypeInfo);
             request.Content = new StringContent(json, Encoding.UTF8, "application/json");
 
             using var response = await _http.SendAsync(request).ConfigureAwait(false);
@@ -1033,8 +1048,7 @@ namespace NoiraPlayer.Core.Emby
 
         private static string ResolveDirectStreamUrl(EmbySession session, string directStreamUrl)
         {
-            Uri uri;
-            if (Uri.TryCreate(directStreamUrl, UriKind.Absolute, out uri))
+            if (Uri.TryCreate(directStreamUrl, UriKind.Absolute, out _))
             {
                 return directStreamUrl;
             }
@@ -1081,6 +1095,37 @@ namespace NoiraPlayer.Core.Emby
         private static string EscapeUriComponent(string value)
         {
             return Uri.EscapeDataString(value);
+        }
+
+        [JsonSourceGenerationOptions(
+            PropertyNameCaseInsensitive = true,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+            UseStringEnumConverter = true)]
+        [JsonSerializable(typeof(AuthRequestDto))]
+        [JsonSerializable(typeof(AuthResponseDto))]
+        [JsonSerializable(typeof(List<ItemDto>), TypeInfoPropertyName = "ItemDtoList")]
+        [JsonSerializable(typeof(ItemListDto<ItemDto>), TypeInfoPropertyName = "ItemDtoItemList")]
+        [JsonSerializable(typeof(ItemListDto<ViewDto>), TypeInfoPropertyName = "ViewDtoItemList")]
+        [JsonSerializable(typeof(List<HomeSectionDto>), TypeInfoPropertyName = "HomeSectionDtoList")]
+        [JsonSerializable(typeof(LiveTvInfoDto))]
+        [JsonSerializable(typeof(ItemListDto<LiveTvChannelDto>), TypeInfoPropertyName = "LiveTvChannelDtoItemList")]
+        [JsonSerializable(typeof(ItemListDto<LiveTvProgramDto>), TypeInfoPropertyName = "LiveTvProgramDtoItemList")]
+        [JsonSerializable(typeof(AddToPlaylistResultDto))]
+        [JsonSerializable(typeof(ItemDto))]
+        [JsonSerializable(typeof(PlaybackInfoDto))]
+        [JsonSerializable(typeof(UserDataDto))]
+        [JsonSerializable(typeof(PlaybackProgressRequest))]
+        [JsonSerializable(typeof(PlaybackSessionRequest))]
+        [JsonSerializable(typeof(PlaybackProgressEvent))]
+        [JsonSerializable(typeof(PlaybackPlayMethod))]
+        private sealed partial class EmbyApiJsonContext : JsonSerializerContext
+        {
+        }
+
+        private sealed class AuthRequestDto
+        {
+            public string Username { get; set; } = "";
+            public string Pw { get; set; } = "";
         }
 
         private sealed class AuthResponseDto

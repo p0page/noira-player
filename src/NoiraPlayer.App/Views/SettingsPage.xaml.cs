@@ -116,7 +116,7 @@ namespace NoiraPlayer.App.Views
 
         private void NavigateLoginAfterSignOut()
         {
-            if (Frame == null || Frame.Content != this)
+            if (Frame == null || !ReferenceEquals(Frame.Content, this))
             {
                 return;
             }

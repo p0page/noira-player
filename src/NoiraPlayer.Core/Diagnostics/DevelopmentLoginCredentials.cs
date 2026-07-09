@@ -5,11 +5,6 @@ namespace NoiraPlayer.Core.Diagnostics
 {
     public sealed class DevelopmentLoginCredentials
     {
-        private static readonly JsonSerializerOptions JsonOptions = new JsonSerializerOptions
-        {
-            PropertyNameCaseInsensitive = true
-        };
-
         public string ServerUrl { get; set; } = "";
         public string UserName { get; set; } = "";
         public string Password { get; set; } = "";
@@ -25,7 +20,9 @@ namespace NoiraPlayer.Core.Diagnostics
             DevelopmentLoginCredentials? parsed;
             try
             {
-                parsed = JsonSerializer.Deserialize<DevelopmentLoginCredentials>(json, JsonOptions);
+                parsed = JsonSerializer.Deserialize(
+                    json,
+                    DevelopmentDiagnosticsJsonContext.Default.DevelopmentLoginCredentials);
             }
             catch (JsonException)
             {

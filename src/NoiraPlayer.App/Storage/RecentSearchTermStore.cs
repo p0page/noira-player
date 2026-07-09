@@ -22,7 +22,7 @@ namespace NoiraPlayer.App.Storage
 
         public IReadOnlyList<string> Load()
         {
-            object value;
+            object? value;
             return _settings.Values.TryGetValue(RecentSearchTermsKey, out value) && value != null
                 ? SearchRecentTermsPolicy.FromStoredValue(value.ToString())
                 : SearchRecentTermsPolicy.FromStoredValue("");

@@ -20,7 +20,7 @@ namespace NoiraPlayer.App.Storage
 
         public string GetOrCreate()
         {
-            object value;
+            object? value;
             if (_settings.Values.TryGetValue(DeviceIdKey, out value) && value != null)
             {
                 var existingDeviceId = value.ToString();

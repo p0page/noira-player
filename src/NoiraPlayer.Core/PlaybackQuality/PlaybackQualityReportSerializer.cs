@@ -1,45 +1,37 @@
 ﻿using System.Text.Json;
-using System.Text.Json.Serialization;
 
 namespace NoiraPlayer.Core.PlaybackQuality
 {
     public static class PlaybackQualityReportSerializer
     {
-        private static readonly JsonSerializerOptions Options = new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            PreferredObjectCreationHandling = JsonObjectCreationHandling.Populate,
-            WriteIndented = true
-        };
-
         public static string Serialize(PlaybackQualityReport report)
         {
-            return JsonSerializer.Serialize(report, Options);
+            return JsonSerializer.Serialize(report, PlaybackQualityJsonContext.Default.PlaybackQualityReport);
         }
 
         public static string Serialize(PlaybackQualityModelAnalysis analysis)
         {
-            return JsonSerializer.Serialize(analysis, Options);
+            return JsonSerializer.Serialize(analysis, PlaybackQualityJsonContext.Default.PlaybackQualityModelAnalysis);
         }
 
         public static string Serialize(PlaybackQualityRunResult result)
         {
-            return JsonSerializer.Serialize(result, Options);
+            return JsonSerializer.Serialize(result, PlaybackQualityJsonContext.Default.PlaybackQualityRunResult);
         }
 
         public static string Serialize(PlaybackQualityRunComparison comparison)
         {
-            return JsonSerializer.Serialize(comparison, Options);
+            return JsonSerializer.Serialize(comparison, PlaybackQualityJsonContext.Default.PlaybackQualityRunComparison);
         }
 
         public static string Serialize(PlaybackQualityComparisonSuite suite)
         {
-            return JsonSerializer.Serialize(suite, Options);
+            return JsonSerializer.Serialize(suite, PlaybackQualityJsonContext.Default.PlaybackQualityComparisonSuite);
         }
 
         public static PlaybackQualityReport Deserialize(string json)
         {
-            return JsonSerializer.Deserialize<PlaybackQualityReport>(json, Options) ??
+            return JsonSerializer.Deserialize(json, PlaybackQualityJsonContext.Default.PlaybackQualityReport) ??
                 new PlaybackQualityReport();
         }
     }

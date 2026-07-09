@@ -32,7 +32,7 @@ The command validates:
 
 The command deliberately excludes:
 
-- `NoiraPlayer.App.csproj`;
+- UWP App project files;
 - XAML interaction work;
 - unrelated Core interaction/focus policy tests;
 - App package generation;

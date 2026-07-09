@@ -26,13 +26,14 @@ public sealed class IconAssetContractTests
         var root = FindRepositoryRoot();
         var assetRoot = Path.Combine(root, "src", "NoiraPlayer.App", "Assets");
         var manifest = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.App", "Package.appxmanifest"));
-        var project = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.App", "NoiraPlayer.App.csproj"));
+        var modernProject = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.App", "NoiraPlayer.App.Modern.csproj"));
+
+        Assert.Contains("<ApplicationManifest>Package.appxmanifest</ApplicationManifest>", modernProject, StringComparison.Ordinal);
 
         foreach (var asset in RequiredAssets)
         {
             var relativePath = "Assets\\" + asset.FileName;
             Assert.Contains(relativePath, manifest, StringComparison.Ordinal);
-            Assert.Contains(relativePath, project, StringComparison.Ordinal);
 
             var size = ReadPngSize(Path.Combine(assetRoot, asset.FileName));
             Assert.Equal((asset.Width, asset.Height), size);

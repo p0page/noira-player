@@ -4,6 +4,7 @@
 #include "../NativePlaybackDiagnostics.h"
 
 #include <cctype>
+#include <chrono>
 #include <string>
 
 #pragma warning(push)
@@ -22,6 +23,14 @@ extern "C"
 
 namespace
 {
+    using SteadyClock = std::chrono::steady_clock;
+
+    int64_t ElapsedMilliseconds(SteadyClock::time_point startedAt) noexcept
+    {
+        return std::chrono::duration_cast<std::chrono::milliseconds>(
+            SteadyClock::now() - startedAt).count();
+    }
+
     std::string GetFfmpegErrorMessage(int errorCode)
     {
         char buffer[AV_ERROR_MAX_STRING_SIZE]{};
@@ -283,17 +292,47 @@ namespace winrt::NoiraPlayer::Native::implementation
         try
         {
             auto source = ConvertFileUriToLocalPath(winrt::to_string(url));
+            auto openInputStartedAt = SteadyClock::now();
+            AppendNativePlaybackDiagnostic(
+                L"FfmpegMediaSource.Open avformat_open_input begin sourceLength=" +
+                std::to_wstring(source.size()));
             auto result = avformat_open_input(&formatContext, source.c_str(), nullptr, nullptr);
             if (result < 0)
             {
+                AppendNativePlaybackDiagnostic(
+                    L"FfmpegMediaSource.Open avformat_open_input failed result=" +
+                    std::to_wstring(result) +
+                    L" durationMs=" +
+                    std::to_wstring(ElapsedMilliseconds(openInputStartedAt)));
                 throw CreateFfmpegError("avformat_open_input", result);
             }
 
+            AppendNativePlaybackDiagnostic(
+                L"FfmpegMediaSource.Open avformat_open_input end result=0 durationMs=" +
+                std::to_wstring(ElapsedMilliseconds(openInputStartedAt)));
+
+            auto streamInfoStartedAt = SteadyClock::now();
+            AppendNativePlaybackDiagnostic(
+                L"FfmpegMediaSource.Open avformat_find_stream_info begin streamCountBefore=" +
+                std::to_wstring(formatContext == nullptr ? 0 : formatContext->nb_streams));
             result = avformat_find_stream_info(formatContext, nullptr);
             if (result < 0)
             {
+                AppendNativePlaybackDiagnostic(
+                    L"FfmpegMediaSource.Open avformat_find_stream_info failed result=" +
+                    std::to_wstring(result) +
+                    L" durationMs=" +
+                    std::to_wstring(ElapsedMilliseconds(streamInfoStartedAt)) +
+                    L" streamCountAfter=" +
+                    std::to_wstring(formatContext == nullptr ? 0 : formatContext->nb_streams));
                 throw CreateFfmpegError("avformat_find_stream_info", result);
             }
+
+            AppendNativePlaybackDiagnostic(
+                L"FfmpegMediaSource.Open avformat_find_stream_info end result=0 durationMs=" +
+                std::to_wstring(ElapsedMilliseconds(streamInfoStartedAt)) +
+                L" streamCountAfter=" +
+                std::to_wstring(formatContext == nullptr ? 0 : formatContext->nb_streams));
 
             auto formatName = formatContext->iformat != nullptr && formatContext->iformat->name != nullptr
                 ? winrt::to_hstring(formatContext->iformat->name)

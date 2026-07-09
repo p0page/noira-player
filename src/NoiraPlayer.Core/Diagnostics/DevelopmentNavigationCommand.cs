@@ -7,11 +7,6 @@ namespace NoiraPlayer.Core.Diagnostics
 {
     public sealed class DevelopmentNavigationCommand
     {
-        private static readonly JsonSerializerOptions JsonOptions = new JsonSerializerOptions
-        {
-            PropertyNameCaseInsensitive = true
-        };
-
         public string Route { get; set; } = "";
         public string ItemId { get; set; } = "";
         public string ItemName { get; set; } = "";
@@ -35,7 +30,9 @@ namespace NoiraPlayer.Core.Diagnostics
             DevelopmentNavigationCommand? parsed;
             try
             {
-                parsed = JsonSerializer.Deserialize<DevelopmentNavigationCommand>(json, JsonOptions);
+                parsed = JsonSerializer.Deserialize(
+                    json,
+                    DevelopmentDiagnosticsJsonContext.Default.DevelopmentNavigationCommand);
             }
             catch (JsonException)
             {

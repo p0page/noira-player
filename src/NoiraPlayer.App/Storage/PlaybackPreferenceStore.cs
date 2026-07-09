@@ -20,7 +20,7 @@ namespace NoiraPlayer.App.Storage
 
         public bool IsThumbstickSeekPreviewEnabled()
         {
-            object value;
+            object? value;
             if (!_settings.Values.TryGetValue(ThumbstickSeekPreviewEnabledKey, out value) || value == null)
             {
                 return true;

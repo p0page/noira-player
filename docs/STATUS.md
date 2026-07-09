@@ -2,6 +2,18 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-09 更新：VS2026 / .NET 10 / Native AOT 已成为本地主构建链路
+
+当前仓库主入口已切到 VS2026 / MSBuild 18 / .NET 10 现代 UWP 路径：`NoiraPlayer.sln` 包含 `NoiraPlayer.App.Modern.csproj`、Core、Native、Core tests、playback-quality CLI/headless 工具；旧 solution、旧 UAP app project 和旧 loose deploy helper 已从 active tree 移除。Core、测试和 playback-quality 工具均直接 target `net10.0`，UWP app target 为 `net10.0-windows10.0.26100.0`，`Package.appxmanifest` 保持 `Windows.Universal`、`MinVersion=10.0.19041.0`、`MaxVersionTested=10.0.26100.0`。
+
+Native C++/WinRT 项目已切到 VS2026 C++ toolset `v145`、Windows SDK `10.0.26100.0`、C++20，并显式关闭 legacy C++/WinRT coroutine `/await` 路径和 C++/CX `/ZW`。`Microsoft.Windows.CppWinRT` 已升级到 `3.0.260520.1`，native 编译选项包含 `/utf-8` 以避免 VS2026 生成头在本地 code page 下产生 C4819 警告。`FFmpegInteropX.UWP.FFmpeg` 已确认当前为 `8.1.2`，仍通过 UWP native 依赖链路进入 AppContainer/MSIX 布局。
+
+当前本地验证命令以 `tools\Build-Noira.ps1` 为准：Debug build、Debug/Release page gate、strict playback-quality 和现代 cutover gate 均已通过。最新完整 `CutoverCheck` 报告为 `docs\qa\private\modern-final-local-cutover-check-rerun.local.json`，结果记录 Debug/Release Home 均达到 `semanticEvidenceStatus=ready`、`renderStage=supplemental`、`libraryCount=21`、`rowCount=16`，strict playback-quality 为 `pass`，`sourceStatus=matched`，`runtimeMetricsStatus=captured`，`hasPlaybackSample=true`，`startupDurationMs=2520.2707`，`playbackAttemptCount=1`。
+
+收口过程中曾观察到 public direct-uri smoke 的 `startup.startupDurationMs` 波动：一次 captured report 为 `9283.799ms > 5000ms`，native diagnostics 显示主要耗时来自远端 FFmpeg open/demux（例如 `avformat_open_input=6138ms`、`avformat_find_stream_info=2404ms`）。随后 direct strict `Test-NoiraModernPlaybackQuality.ps1 -SkipBuild` 复跑通过，`startupDurationMs=2877.0173ms`；最新完整 `CutoverCheck` 也已通过，`startupDurationMs=2520.2707ms`。因此该风险被记录为远端 direct-uri startup gate 波动，不是 VS2026/.NET/Native AOT 构建、注册、启动或页面进入失败。
+
+边界：Xbox 真机部署、启动、登录和播放验证仍是下一阶段事项；当前阶段只证明本机 desktop UWP/MSIX/AppContainer 路径、真实登录后 Home 页面、app-hosted playback-quality 和现代工具链闭环。已知 4K HEVC D3D11VA double-EAGAIN decoder 策略问题归播放优化 worktree，不作为 .NET/VS2026 迁移 blocker。
+
 ## 2026-07-09 更新：App UI 开发入口从 fixture route 切到私有真实样本 manifest
 
 当前 `*-fixture`、`details-real-sample` 和 `details-real-bright-sample` 开发 route 已退役。App active code 不再携带 mock fixture 数据链路；Home、Library、Details、Search、Live TV、Music、PhotoViewer 和 Playback 的开发入口均回到真实会话、真实 `itemId` 或真实 direct stream。

@@ -10,6 +10,20 @@ namespace NoiraPlayer.Core.PlaybackQuality
         public const double FractionalCadencePenalty = 0.1;
 
         private static readonly double[] SupportedRatios = { 1.0, 2.0, 2.5, 3.0, 4.0, 5.0 };
+        private static readonly double[] RefreshRateCandidates =
+        {
+            23.976024,
+            24.0,
+            25.0,
+            29.97003,
+            30.0,
+            50.0,
+            59.94006,
+            60.0,
+            100.0,
+            119.88012,
+            120.0
+        };
 
         public static bool HasUsableVideoFrameRate(double videoFrameRate)
         {
@@ -102,6 +116,28 @@ namespace NoiraPlayer.Core.PlaybackQuality
         {
             return RefreshWeight(candidateRefreshRate, videoFrameRate) <
                 RefreshWeight(selectedRefreshRate, videoFrameRate);
+        }
+
+        public static double SelectSoftwareOnlyRefreshRateSnapshot(double videoFrameRate)
+        {
+            if (!HasUsableVideoFrameRate(videoFrameRate))
+            {
+                return 0.0;
+            }
+
+            var selectedRefreshRate = 0.0;
+            foreach (var candidate in RefreshRateCandidates)
+            {
+                if (selectedRefreshRate <= 0.0 ||
+                    IsBetterRefreshRateForVideo(candidate, selectedRefreshRate, videoFrameRate))
+                {
+                    selectedRefreshRate = candidate;
+                }
+            }
+
+            return MatchesVideoFrameRate(selectedRefreshRate, videoFrameRate)
+                ? selectedRefreshRate
+                : 0.0;
         }
 
         public static double RefreshWeight(double displayRefreshRate, double videoFrameRate)

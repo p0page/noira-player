@@ -1,62 +1,98 @@
-# Noira 开发调试流程
+# Noira Development Workflow
 
-本文记录当前推荐的本地开发调试方式。它只覆盖开发期流程，不替代最终 MSIX 打包、签名、真机或 Xbox 验证。
+This document records the current local development and verification workflow.
+It does not replace final MSIX packaging, signing, Xbox hardware validation, or
+release qualification.
+
+## Modern .NET / VS2026 Default Entry
+
+The repository build entry point is the modern .NET / VS2026 path. It defaults
+to `NoiraPlayer.sln`, the SDK-style UWP app project, Native AOT publish, local
+registration, app launch, and page evidence capture. The modern path requires
+.NET SDK 10; `tools\Build-Noira.ps1` checks `dotnet --list-sdks` before running
+modern targets.
+
+Run the default Debug gate:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\Build-Noira.ps1 -Target Check -Configuration Debug -Platform x64
+```
+
+Run the Release gate before treating a change as production-shaped:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\Build-Noira.ps1 -Target Check -Configuration Release -Platform x64
+```
+
+Run the playback-quality smoke after changes touching playback, Native AOT
+app-hosted capture, or native media diagnostics:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\Build-Noira.ps1 -Target PlaybackCheck -Configuration Debug -Platform x64
+```
+
+The primary local readiness gate for merging or cutting over the modern path is
+the modern-only cutover gate. It runs modern Debug and Release checks plus
+strict playback-quality:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\Build-Noira.ps1 -Target CutoverCheck -Platform x64
+```
+
+Build only, without registering or launching:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\Build-Noira.ps1 -Target Build -Configuration Debug -Platform x64
+```
 
 ## XAML Hot Reload
 
-推荐路径是在 Visual Studio 2022 中使用 `Debug|x64` F5 启动 `NoiraPlayer.App`。UWP XAML Hot Reload 依赖 Debug 构建中的 XBF line info；项目文件已在 Debug x64/x86 显式设置：
+XAML Hot Reload is a local iteration aid only, not a readiness gate. The modern
+readiness path remains `Build-Noira.ps1 -Target Check` or
+`Build-Noira.ps1 -Target CutoverCheck`.
 
-```xml
-<UseDotNetNativeToolchain>false</UseDotNetNativeToolchain>
-<DisableXbfLineInfo>False</DisableXbfLineInfo>
-```
+## Local Loose File Deploy
 
-限制：
-
-- 新增 XAML 文件、C# 类型、资源字典结构变化通常仍需要停止并重新启动。
-- attach 到已经运行的进程时，Visual Studio 不一定自动设置 XAML 诊断环境变量；优先使用 F5。
-- 不要用 Release/.NET Native 构建判断 Hot Reload 是否正常。
-
-## 本机 Loose File Deploy
-
-Loose file deploy 用未打包的 `bin\<Platform>\<Configuration>\AppxManifest.xml` 注册应用，适合快速验证 XAML、资源和静态文件改动。默认命令会先 clean/build，避免旧包名或旧二进制残留在 layout 中：
+Use the modern Native AOT loose AppX registration helper for fast local app
+iteration:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File tools\Register-NoiraLooseApp.ps1 `
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\Register-NoiraModernUwp.ps1 `
   -Configuration Debug `
   -Platform x64 `
   -Launch
 ```
 
-只验证 loose layout 是否存在且 manifest 可解析，不注册系统包：
+Validate an existing modern loose layout without registering it:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File tools\Register-NoiraLooseApp.ps1 `
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\Register-NoiraModernUwp.ps1 `
   -Configuration Debug `
   -Platform x64 `
   -SkipBuild `
   -ValidateOnly
 ```
 
-常用参数：
+Common parameters:
 
-- `-SkipBuild`：复用现有 `bin\<Platform>\<Configuration>` layout。
-- `-SkipClean`：构建前不清理输出目录；只有确认没有旧 layout 残留时才使用。
-- `-Launch`：注册后通过 `shell:AppsFolder` 启动应用。
-- `-MsBuildPath`：显式指定 Visual Studio MSBuild 路径。
+- `-SkipBuild`: reuse the current modern publish output.
+- `-Launch`: start the app through `shell:AppsFolder` after registration.
+- `-MsBuildPath`: explicitly pass the VS2026 MSBuild path.
 
-## Xbox / 远程 Loose File Deploy
+## Xbox / Remote Loose File Deploy
 
-Microsoft 支持 Xbox 上的 loose file registration，但它适合开发期快速验证，不适合最终验证或分发。推荐边界：
+Xbox hardware validation is deferred to the next phase. Until then, local
+desktop UWP/MSIX/AppContainer validation is required for each substantial
+migration step. When Xbox hardware is available, validate package identity,
+input, display/HDR behavior, audio, native playback, and playback-quality
+capture on the device before closing the migration goal.
 
-1. 先在本机生成干净的 `Debug|x64` loose layout。
-2. 将 `src\NoiraPlayer.App\bin\x64\Debug\` 放到 Xbox 可访问的网络共享。
-3. 通过 Xbox Device Portal 的 Apps Manager 使用 Register from Network Share，或使用 `WinAppDeployCmd registerfiles` 指向该共享路径。
+## Current Tradeoffs
 
-最终确认 HDR、显示刷新、音频、输入和包身份问题时，仍应使用正常 MSIX 包部署。
-
-## 当前取舍
-
-- Hot Reload 用于缩短 XAML/样式迭代时间。
-- Loose deploy 用于减少完整 MSIX 打包等待，但不作为发布或质量结论依据。
-- 播放 core/native 的可复现评测仍走 `tools\quality-run\run-playback-core-checks.ps1` 和 playback-quality report-set，不因 App 开发流程改变评测规则。
+- Loose deploy shortens local iteration, but is not a release or quality
+  conclusion by itself.
+- Native AOT and trimming warnings remain blockers for the modern production
+  path.
+- Playback strategy changes remain separate from .NET/VS2026 modernization;
+  use playback-quality reports to classify failures before changing playback
+  policy in this branch.

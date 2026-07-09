@@ -59,6 +59,21 @@ public sealed class PlaybackQualityReportMapperTests
     }
 
     [Fact]
+    public void ApplyDisplayStatus_Maps_Sdr_Output_When_Hdr_Is_Unsupported()
+    {
+        var report = new PlaybackQualityReport();
+        var status = new PlaybackDisplayStatus(
+            HdrOutputStatus.Unsupported,
+            isHdrDisplayAvailable: false,
+            isHdrOutputActive: false);
+
+        PlaybackQualityReportMapper.ApplyDisplayStatus(report, status);
+
+        Assert.Equal("Unsupported", report.Display.HdrStatus);
+        Assert.Equal("Sdr", report.ColorPipeline.ActualHdrOutput);
+    }
+
+    [Fact]
     public void ApplyMetrics_Copies_Timing_Sync_And_Buffer_Signals()
     {
         var report = new PlaybackQualityReport();

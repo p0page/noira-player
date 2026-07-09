@@ -209,7 +209,7 @@ $summary = [pscustomobject]@{
         'tools/quality-run'
     )
     excludedRoots = @('src/NoiraPlayer.App')
-    excludes = @('NoiraPlayer.App.csproj', 'AppPackages', 'MSIX packaging')
+    excludes = @('UWP App project files', 'AppPackages', 'MSIX packaging')
     coreTestFilter = $coreTestFilter
     appDiffGuard = [pscustomobject]@{
         status = 'active'

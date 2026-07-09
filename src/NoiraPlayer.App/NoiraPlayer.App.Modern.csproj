@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.19041.0</TargetPlatformMinVersion>
+    <RootNamespace>NoiraPlayer.App</RootNamespace>
+    <AssemblyName>NoiraPlayer.App</AssemblyName>
+    <DefaultLanguage>en-US</DefaultLanguage>
+    <Nullable>enable</Nullable>
+    <NoiraPlatformCompatibility>UWP-MSIX-AppContainer-Xbox</NoiraPlatformCompatibility>
+    <Platform Condition="'$(Platform)' == ''">x64</Platform>
+    <PlatformTarget Condition="'$(PlatformTarget)' == '' and '$(Platform)' == 'x64'">x64</PlatformTarget>
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == '' and '$(Platform)' == 'x64'">win-x64</RuntimeIdentifier>
+    <UseUwp>true</UseUwp>
+    <EnableMsixTooling>true</EnableMsixTooling>
+    <PublishAot>true</PublishAot>
+    <DisableRuntimeMarshalling>true</DisableRuntimeMarshalling>
+    <Platforms>x64</Platforms>
+    <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
+    <PublishProfile>win-$(Platform).modern.pubxml</PublishProfile>
+    <ApplicationManifest>Package.appxmanifest</ApplicationManifest>
+    <CsWinRTIncludes>NoiraPlayer.Native</CsWinRTIncludes>
+    <CsWinRTGeneratedFilesDir>$(BaseIntermediateOutputPath)$(Platform)\$(Configuration)\$(TargetFramework)\Generated\CsWinRT\</CsWinRTGeneratedFilesDir>
+    <ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>None</ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.UI.Xaml" Version="2.8.7" />
+    <PackageReference Include="Microsoft.Windows.CsWinRT" Version="2.2.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NoiraPlayer.Core\NoiraPlayer.Core.csproj" />
+    <ProjectReference Include="..\NoiraPlayer.Native\NoiraPlayer.Native.vcxproj" />
+  </ItemGroup>
+</Project>

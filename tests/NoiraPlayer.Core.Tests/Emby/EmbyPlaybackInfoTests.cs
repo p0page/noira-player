@@ -407,6 +407,36 @@ public sealed class EmbyPlaybackInfoTests
     }
 
     [Fact]
+    public async Task GetPlaybackInfoAsync_Adds_MediaSourceId_When_Provided()
+    {
+        var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
+            HttpStatusCode.OK,
+            """
+            {
+              "MediaSources": [
+                {
+                  "Id": "source 4k/atmos",
+                  "Name": "Escaped Source",
+                  "MediaStreams": []
+                }
+              ]
+            }
+            """));
+        using var http = new HttpClient(handler);
+        var client = CreateClient(http);
+
+        await client.GetPlaybackInfoAsync(
+            Session(serverUrl: "http://emby.local:8096/", userId: "user 1/slash"),
+            "movie 1/slash",
+            "source 4k/atmos");
+
+        Assert.Equal("/Items/movie%201%2Fslash/PlaybackInfo", handler.LastRequest!.RequestUri!.AbsolutePath);
+        Assert.Equal(
+            "?UserId=user%201%2Fslash&MediaSourceId=source%204k%2Fatmos",
+            handler.LastRequest.RequestUri.Query);
+    }
+
+    [Fact]
     public async Task GetPlaybackInfoAsync_Maps_Null_MediaStreams_And_Missing_Optional_Fields()
     {
         var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(

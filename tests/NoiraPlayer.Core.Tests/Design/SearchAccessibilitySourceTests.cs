@@ -21,17 +21,8 @@ public sealed class SearchAccessibilitySourceTests
             "NoiraPlayer.App",
             "Views",
             "SearchPage.xaml.cs"));
-        var projectSource = File.ReadAllText(Path.Combine(
-            root,
-            "src",
-            "NoiraPlayer.App",
-            "NoiraPlayer.App.csproj"));
-        var requestSource = File.ReadAllText(Path.Combine(
-            root,
-            "src",
-            "NoiraPlayer.App",
-            "Navigation",
-            "SearchDevelopmentNavigationRequest.cs"));
+        var requestPath = Path.Combine(root, "src", "NoiraPlayer.App", "Navigation", "SearchDevelopmentNavigationRequest.cs");
+        var requestSource = File.ReadAllText(requestPath);
 
         Assert.Contains("case \"search-error\"", mainPageSource);
         Assert.Contains("SearchDevelopmentNavigationRequest", mainPageSource);
@@ -40,7 +31,7 @@ public sealed class SearchAccessibilitySourceTests
         Assert.Contains("\"Unable to search\"", searchPageSource);
         Assert.Contains("\"Check the server connection, then try again.\"", searchPageSource);
         Assert.Contains("showRetry: true", searchPageSource);
-        Assert.Contains("Navigation\\SearchDevelopmentNavigationRequest.cs", projectSource);
+        Assert.True(File.Exists(requestPath), "The SDK-style modern app project should include this source file implicitly.");
         Assert.DoesNotContain("RecentTerms", requestSource);
         Assert.DoesNotContain("_developmentRequest.RecentTerms.Count > 0", searchPageSource);
     }
@@ -128,11 +119,7 @@ public sealed class SearchAccessibilitySourceTests
             "NoiraPlayer.App",
             "Views",
             "SearchPage.xaml"));
-        var projectSource = File.ReadAllText(Path.Combine(
-            root,
-            "src",
-            "NoiraPlayer.App",
-            "NoiraPlayer.App.csproj"));
+        var recentTermsPath = Path.Combine(root, "src", "NoiraPlayer.App", "Storage", "RecentSearchTermStore.cs");
 
         Assert.Contains("RecentSearchTermStore", searchPageSource);
         Assert.Contains("RenderRecentTerms()", searchPageSource);
@@ -143,7 +130,7 @@ public sealed class SearchAccessibilitySourceTests
         Assert.Contains("_recentSearchTermStore.Add(term)", searchPageSource);
         Assert.Contains("RecentSearchesPanel", searchPageXaml);
         Assert.Contains("RecentSearchTermsPanel", searchPageXaml);
-        Assert.Contains("Storage\\RecentSearchTermStore.cs", projectSource);
+        Assert.True(File.Exists(recentTermsPath), "The SDK-style modern app project should include this source file implicitly.");
     }
 
     [Fact]

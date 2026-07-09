@@ -1,7 +1,7 @@
 ﻿$ErrorActionPreference = 'Stop'
 
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot '..\..')
-$cliDll = Join-Path $repoRoot 'tools\NoiraPlayer.PlaybackQuality.Cli\bin\Debug\net9.0\NoiraPlayer.PlaybackQuality.Cli.dll'
+$cliDll = Join-Path $repoRoot 'tools\NoiraPlayer.PlaybackQuality.Cli\bin\Debug\net10.0\NoiraPlayer.PlaybackQuality.Cli.dll'
 $tempRoot = Join-Path ([System.IO.Path]::GetTempPath()) ('playback-quality-cli-' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $tempRoot | Out-Null
 

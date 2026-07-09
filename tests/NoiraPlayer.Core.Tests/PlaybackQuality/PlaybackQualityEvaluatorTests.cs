@@ -708,6 +708,41 @@ public sealed class PlaybackQualityEvaluatorTests
     }
 
     [Fact]
+    public void Evaluate_Skips_Audio_Video_Drift_Threshold_When_Source_Is_Video_Only()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "video-only-av-drift",
+            Expected = new PlaybackQualityExpected
+            {
+                MaxAudioVideoDriftMsP95 = 40,
+                RequireValidatedConversion = false
+            },
+            Tracks = new PlaybackQualityTracks
+            {
+                VideoTrackCount = 1,
+                AudioTrackCount = 0
+            },
+            Timing = new PlaybackQualityTiming
+            {
+                RenderedVideoFrames = 240
+            },
+            Sync = new PlaybackQualitySync
+            {
+                AudioVideoDriftMsP95 = 0
+            }
+        };
+
+        PlaybackQualityEvaluator.Evaluate(report);
+
+        Assert.Equal("pass", report.Result);
+        Assert.Empty(report.FailureReasons);
+        Assert.Equal("none", report.Analysis.PrimaryFailureArea);
+        Assert.DoesNotContain(report.Checks, check => check.Name == "AudioVideoDriftMsP95");
+        Assert.DoesNotContain("sync.audioVideoDriftMsP95", report.Analysis.RelevantSignals);
+    }
+
+    [Fact]
     public void Evaluate_Fails_When_Seek_Position_Error_Exceeds_Threshold()
     {
         var report = new PlaybackQualityReport

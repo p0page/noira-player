@@ -193,7 +193,7 @@ namespace NoiraPlayer.App.Views
 
         private void NavigateHome()
         {
-            if (Frame == null || Frame.Content != this)
+            if (Frame == null || !ReferenceEquals(Frame.Content, this))
             {
                 PlaybackDiagnosticsLog.WriteLine("LoginPage.NavigateHome skipped because page is no longer active");
                 return;
