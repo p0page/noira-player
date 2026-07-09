@@ -9,7 +9,6 @@ namespace winrt::NoiraPlayer::Native::implementation
     {
     public:
         static constexpr int64_t VideoAheadToleranceTicks = 100000;
-        static constexpr int64_t MinimumPositiveWaitTicks = 10000;
         static constexpr int64_t VideoDropToleranceTicks = 1000000;
         static constexpr int64_t MinimumFrameRateAdaptiveDropToleranceTicks = 400000;
         static constexpr double LateFrameDropFrameTolerance = 2.5;
@@ -38,8 +37,8 @@ namespace winrt::NoiraPlayer::Native::implementation
                 return std::chrono::microseconds(0);
             }
 
-            return PositiveWaitDurationTicks(
-                framePositionTicks - audioPositionTicks - VideoAheadToleranceTicks);
+            return std::chrono::microseconds(
+                (framePositionTicks - audioPositionTicks - VideoAheadToleranceTicks) / 10);
         }
 
         static constexpr bool ShouldDropLateFrame(
@@ -94,23 +93,8 @@ namespace winrt::NoiraPlayer::Native::implementation
                 return std::chrono::microseconds(0);
             }
 
-            return PositiveWaitDurationTicks(
-                framePositionTicks - clockStartPositionTicks - clockElapsedTicks - VideoAheadToleranceTicks);
-        }
-
-    private:
-        static constexpr std::chrono::microseconds PositiveWaitDurationTicks(
-            int64_t remainingTicks) noexcept
-        {
-            if (remainingTicks <= 0)
-            {
-                return std::chrono::microseconds(0);
-            }
-
-            auto clampedTicks = remainingTicks < MinimumPositiveWaitTicks
-                ? MinimumPositiveWaitTicks
-                : remainingTicks;
-            return std::chrono::microseconds(clampedTicks / 10);
+            return std::chrono::microseconds(
+                (framePositionTicks - clockStartPositionTicks - clockElapsedTicks - VideoAheadToleranceTicks) / 10);
         }
     };
 }
