@@ -154,6 +154,10 @@ function Read-CadenceStabilityReference(
             renderIntervalP95ExpectedErrorSpreadMs = $_.renderIntervalP95ExpectedErrorSpreadMs
             renderIntervalP99ExpectedErrorSpreadMs = $_.renderIntervalP99ExpectedErrorSpreadMs
             maxFrameGapExpectedErrorSpreadMs = $_.maxFrameGapExpectedErrorSpreadMs
+            audioAheadWaitOversleepP95SpreadMs = $_.audioAheadWaitOversleepP95SpreadMs
+            audioAheadWaitOversleepP99SpreadMs = $_.audioAheadWaitOversleepP99SpreadMs
+            audioVideoDriftP95SpreadMs = $_.audioVideoDriftP95SpreadMs
+            audioVideoDriftP99SpreadMs = $_.audioVideoDriftP99SpreadMs
             unstableSignals = @($_.unstableSignals)
         }
     })
@@ -191,6 +195,14 @@ function Find-CadenceStabilityGroup(
     return $null
 }
 
+function Copy-StringArray([object]$Values) {
+    $items = @($Values |
+        ForEach-Object { Normalize-String $_ } |
+        Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+
+    return ,([object[]]$items)
+}
+
 function New-CadenceStabilityAttribution(
     [object]$BaselineCadenceStability,
     [object]$CandidateCadenceStability,
@@ -220,8 +232,8 @@ function New-CadenceStabilityAttribution(
             caseId = $_
             baselineStability = if ($null -eq $baselineGroup) { '' } else { Normalize-String $baselineGroup.stability }
             candidateStability = if ($null -eq $candidateGroup) { '' } else { Normalize-String $candidateGroup.stability }
-            baselineUnstableSignals = if ($null -eq $baselineGroup) { @() } else { @($baselineGroup.unstableSignals) }
-            candidateUnstableSignals = if ($null -eq $candidateGroup) { @() } else { @($candidateGroup.unstableSignals) }
+            baselineUnstableSignals = if ($null -eq $baselineGroup) { Copy-StringArray @() } else { Copy-StringArray $baselineGroup.unstableSignals }
+            candidateUnstableSignals = if ($null -eq $candidateGroup) { Copy-StringArray @() } else { Copy-StringArray $candidateGroup.unstableSignals }
         }
     })
 

@@ -120,6 +120,7 @@ foreach ($file in $reportFiles) {
     }
 
     $timing = $json.report.timing
+    $sync = $json.report.sync
     if ($null -eq $timing) {
         continue
     }
@@ -128,6 +129,10 @@ foreach ($file in $reportFiles) {
     $renderIntervalMsP95 = Get-DoubleValue $timing.renderIntervalMsP95
     $renderIntervalMsP99 = Get-DoubleValue $timing.renderIntervalMsP99
     $maxFrameGapMs = Get-DoubleValue $timing.maxFrameGapMs
+    $audioAheadWaitOversleepP95 = Get-DoubleValue $timing.audioAheadWaitOversleepMsP95
+    $audioAheadWaitOversleepP99 = Get-DoubleValue $timing.audioAheadWaitOversleepMsP99
+    $audioVideoDriftP95 = Get-DoubleValue $sync.audioVideoDriftMsP95
+    $audioVideoDriftP99 = Get-DoubleValue $sync.audioVideoDriftMsP99
     if ($null -eq $expectedFrameDurationMs -or
         $expectedFrameDurationMs -le 0 -or
         $null -eq $renderIntervalMsP95 -or
@@ -149,6 +154,10 @@ foreach ($file in $reportFiles) {
         renderIntervalP95ExpectedErrorMs = [math]::Round([math]::Abs($renderIntervalMsP95 - $expectedFrameDurationMs), 6)
         renderIntervalP99ExpectedErrorMs = [math]::Round([math]::Abs($renderIntervalMsP99 - $expectedFrameDurationMs), 6)
         maxFrameGapExpectedErrorMs = [math]::Round([math]::Abs($maxFrameGapMs - $expectedFrameDurationMs), 6)
+        audioAheadWaitOversleepMsP95 = if ($null -eq $audioAheadWaitOversleepP95) { $null } else { [math]::Round($audioAheadWaitOversleepP95, 6) }
+        audioAheadWaitOversleepMsP99 = if ($null -eq $audioAheadWaitOversleepP99) { $null } else { [math]::Round($audioAheadWaitOversleepP99, 6) }
+        audioVideoDriftMsP95 = if ($null -eq $audioVideoDriftP95) { $null } else { [math]::Round($audioVideoDriftP95, 6) }
+        audioVideoDriftMsP99 = if ($null -eq $audioVideoDriftP99) { $null } else { [math]::Round($audioVideoDriftP99, 6) }
     }
 }
 
@@ -162,11 +171,19 @@ foreach ($group in ($samples | Group-Object -Property caseGroupId | Sort-Object 
     $p95Stats = Get-SpreadStats @($groupSamples | ForEach-Object { [double]$_.renderIntervalP95ExpectedErrorMs })
     $p99Stats = Get-SpreadStats @($groupSamples | ForEach-Object { [double]$_.renderIntervalP99ExpectedErrorMs })
     $maxGapStats = Get-SpreadStats @($groupSamples | ForEach-Object { [double]$_.maxFrameGapExpectedErrorMs })
+    $audioAheadWaitOversleepP95Stats = Get-SpreadStats @($groupSamples | ForEach-Object { $_.audioAheadWaitOversleepMsP95 })
+    $audioAheadWaitOversleepP99Stats = Get-SpreadStats @($groupSamples | ForEach-Object { $_.audioAheadWaitOversleepMsP99 })
+    $audioVideoDriftP95Stats = Get-SpreadStats @($groupSamples | ForEach-Object { $_.audioVideoDriftMsP95 })
+    $audioVideoDriftP99Stats = Get-SpreadStats @($groupSamples | ForEach-Object { $_.audioVideoDriftMsP99 })
 
     $unstableSignals = @(
         New-SignalIfUnstable -Signal 'framePacing.renderIntervalP95ExpectedErrorMs' -Stats $p95Stats -Threshold $MaterialityMs
         New-SignalIfUnstable -Signal 'framePacing.renderIntervalP99ExpectedErrorMs' -Stats $p99Stats -Threshold $MaterialityMs
         New-SignalIfUnstable -Signal 'framePacing.maxFrameGapExpectedErrorMs' -Stats $maxGapStats -Threshold $MaterialityMs
+        New-SignalIfUnstable -Signal 'timing.audioAheadWaitOversleepMsP95' -Stats $audioAheadWaitOversleepP95Stats -Threshold $MaterialityMs
+        New-SignalIfUnstable -Signal 'timing.audioAheadWaitOversleepMsP99' -Stats $audioAheadWaitOversleepP99Stats -Threshold $MaterialityMs
+        New-SignalIfUnstable -Signal 'sync.audioVideoDriftMsP95' -Stats $audioVideoDriftP95Stats -Threshold $MaterialityMs
+        New-SignalIfUnstable -Signal 'sync.audioVideoDriftMsP99' -Stats $audioVideoDriftP99Stats -Threshold $MaterialityMs
     ) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
 
     $stability = 'stable'
@@ -191,6 +208,18 @@ foreach ($group in ($samples | Group-Object -Property caseGroupId | Sort-Object 
         maxFrameGapExpectedErrorMinMs = $maxGapStats.min
         maxFrameGapExpectedErrorMaxMs = $maxGapStats.max
         maxFrameGapExpectedErrorSpreadMs = $maxGapStats.spread
+        audioAheadWaitOversleepP95MinMs = $audioAheadWaitOversleepP95Stats.min
+        audioAheadWaitOversleepP95MaxMs = $audioAheadWaitOversleepP95Stats.max
+        audioAheadWaitOversleepP95SpreadMs = $audioAheadWaitOversleepP95Stats.spread
+        audioAheadWaitOversleepP99MinMs = $audioAheadWaitOversleepP99Stats.min
+        audioAheadWaitOversleepP99MaxMs = $audioAheadWaitOversleepP99Stats.max
+        audioAheadWaitOversleepP99SpreadMs = $audioAheadWaitOversleepP99Stats.spread
+        audioVideoDriftP95MinMs = $audioVideoDriftP95Stats.min
+        audioVideoDriftP95MaxMs = $audioVideoDriftP95Stats.max
+        audioVideoDriftP95SpreadMs = $audioVideoDriftP95Stats.spread
+        audioVideoDriftP99MinMs = $audioVideoDriftP99Stats.min
+        audioVideoDriftP99MaxMs = $audioVideoDriftP99Stats.max
+        audioVideoDriftP99SpreadMs = $audioVideoDriftP99Stats.spread
         unstableSignals = @($unstableSignals)
         samples = @($groupSamples)
     }

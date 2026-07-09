@@ -48,9 +48,11 @@ try {
       "sampleCount": 3,
       "renderIntervalP99ExpectedErrorSpreadMs": 3.2,
       "maxFrameGapExpectedErrorSpreadMs": 3.2,
+      "audioAheadWaitOversleepP95SpreadMs": 4.4,
       "unstableSignals": [
         "framePacing.renderIntervalP99ExpectedErrorMs",
-        "framePacing.maxFrameGapExpectedErrorMs"
+        "framePacing.maxFrameGapExpectedErrorMs",
+        "timing.audioAheadWaitOversleepMsP95"
       ]
     }
   ]
@@ -115,6 +117,13 @@ try {
     if ($null -eq $summary.cadenceStability.attribution -or
         -not ($summary.cadenceStability.attribution.candidateUnstableCaseGroupIds -contains 'local/native-headless-hdr10-60')) {
         throw 'Expected comparison summary to expose cadence stability attribution for model consumers.'
+    }
+
+    $candidateCadenceGroup = $summary.cadenceStability.candidate.groups |
+        Where-Object { $_.caseGroupId -eq 'local/native-headless-hdr10-60' } |
+        Select-Object -First 1
+    if ($candidateCadenceGroup.audioAheadWaitOversleepP95SpreadMs -ne 4.4) {
+        throw 'Expected comparison summary to preserve A/V oversleep stability spread evidence.'
     }
 
     if ($summary.paths.candidateCadenceStabilityPath -ne $candidateCadenceStabilityPath) {

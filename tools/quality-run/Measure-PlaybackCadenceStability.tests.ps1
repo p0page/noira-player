@@ -12,7 +12,11 @@ function Write-TestReport {
         [double]$RenderP95,
         [double]$RenderP99,
         [double]$MaxFrameGap,
-        [int]$RenderedFrames
+        [int]$RenderedFrames,
+        [double]$AudioAheadWaitOversleepP95 = 0,
+        [double]$AudioAheadWaitOversleepP99 = 0,
+        [double]$AudioVideoDriftP95 = 0,
+        [double]$AudioVideoDriftP99 = 0
     )
 
     $relativePath = $CaseId.Replace('/', [System.IO.Path]::DirectorySeparatorChar) + '.json'
@@ -33,6 +37,12 @@ function Write-TestReport {
                 renderIntervalMsP95 = $RenderP95
                 renderIntervalMsP99 = $RenderP99
                 maxFrameGapMs = $MaxFrameGap
+                audioAheadWaitOversleepMsP95 = $AudioAheadWaitOversleepP95
+                audioAheadWaitOversleepMsP99 = $AudioAheadWaitOversleepP99
+            }
+            sync = [pscustomobject][ordered]@{
+                audioVideoDriftMsP95 = $AudioVideoDriftP95
+                audioVideoDriftMsP99 = $AudioVideoDriftP99
             }
         }
     }
@@ -91,6 +101,40 @@ try {
         -MaxFrameGap 40.4 `
         -RenderedFrames 46
 
+    Write-TestReport `
+        -CaseId 'local/native-headless-av-oversleep-repeat-1' `
+        -ExpectedFrameDurationMs 33.3333 `
+        -RenderP95 39.3 `
+        -RenderP99 40.1 `
+        -MaxFrameGap 40.1 `
+        -RenderedFrames 46 `
+        -AudioAheadWaitOversleepP95 4.0 `
+        -AudioAheadWaitOversleepP99 7.0 `
+        -AudioVideoDriftP95 10.0 `
+        -AudioVideoDriftP99 12.0
+    Write-TestReport `
+        -CaseId 'local/native-headless-av-oversleep-repeat-2' `
+        -ExpectedFrameDurationMs 33.3333 `
+        -RenderP95 39.4 `
+        -RenderP99 40.2 `
+        -MaxFrameGap 40.2 `
+        -RenderedFrames 46 `
+        -AudioAheadWaitOversleepP95 7.2 `
+        -AudioAheadWaitOversleepP99 11.0 `
+        -AudioVideoDriftP95 10.0 `
+        -AudioVideoDriftP99 12.0
+    Write-TestReport `
+        -CaseId 'local/native-headless-av-oversleep-repeat-3' `
+        -ExpectedFrameDurationMs 33.3333 `
+        -RenderP95 39.5 `
+        -RenderP99 40.3 `
+        -MaxFrameGap 40.3 `
+        -RenderedFrames 46 `
+        -AudioAheadWaitOversleepP95 4.1 `
+        -AudioAheadWaitOversleepP99 7.4 `
+        -AudioVideoDriftP95 10.0 `
+        -AudioVideoDriftP99 12.0
+
     & $scriptPath `
         -ReportsRoot $reportsRoot `
         -OutputPath $summaryPath `
@@ -105,8 +149,8 @@ try {
         throw 'Expected cadence stability summary schema and kind.'
     }
 
-    if ($summary.totalGroupCount -ne 2 -or $summary.unstableGroupCount -ne 1) {
-        throw 'Expected one unstable group and two total groups.'
+    if ($summary.totalGroupCount -ne 3 -or $summary.unstableGroupCount -ne 2) {
+        throw 'Expected two unstable groups and three total groups.'
     }
 
     $unstable = $summary.groups |
@@ -131,6 +175,18 @@ try {
 
     if ($stable.renderIntervalP99ExpectedErrorSpreadMs -ge 2.0) {
         throw 'Expected stable group P99 expected-error spread to stay below materiality.'
+    }
+
+    $oversleepUnstable = $summary.groups |
+        Where-Object { $_.caseGroupId -eq 'local/native-headless-av-oversleep' } |
+        Select-Object -First 1
+    if ($null -eq $oversleepUnstable -or $oversleepUnstable.stability -ne 'unstable') {
+        throw 'Expected repeated A/V oversleep case group to be marked unstable.'
+    }
+
+    if ($oversleepUnstable.audioAheadWaitOversleepP95SpreadMs -lt 3.0 -or
+        -not ($oversleepUnstable.unstableSignals -contains 'timing.audioAheadWaitOversleepMsP95')) {
+        throw 'Expected A/V oversleep group to expose audio-ahead oversleep spread signals.'
     }
 
     Write-Output 'measure-playback-cadence-stability tests ok'

@@ -306,7 +306,7 @@ Missing or extra files fail the command so the model does not optimize from an i
 
 The suite summary is conservative: any regression blocks acceptance, weak evidence requires more comparable reports, and partial evidence requires unmatched-signal review.
 
-当 `Compare-PlaybackCoreTuningCandidate.ps1` 传入 `-BaselineCadenceStabilityPath` 或 `-CandidateCadenceStabilityPath` 时，`comparison-summary.local.json` 会保留原始 `cadenceStability.baseline` / `cadenceStability.candidate` 摘要，并额外输出 `cadenceStability.attribution`。该 attribution 会列出 suite target case IDs、baseline/candidate unstable case group IDs、target case 与 unstable group 的交集，以及每个 target case 的 baseline/candidate stability 和 unstable signals。模型应把它当作解释证据：它可以说明某个 reject 是否命中了重复采样不稳定的目标 case，但不覆盖 `evaluation.decision`，不自动放行 candidate，也不改变 stable case 阈值。
+当 `Compare-PlaybackCoreTuningCandidate.ps1` 传入 `-BaselineCadenceStabilityPath` 或 `-CandidateCadenceStabilityPath` 时，`comparison-summary.local.json` 会保留原始 `cadenceStability.baseline` / `cadenceStability.candidate` 摘要，并额外输出 `cadenceStability.attribution`。该 attribution 会列出 suite target case IDs、baseline/candidate unstable case group IDs、target case 与 unstable group 的交集，以及每个 target case 的 baseline/candidate stability 和 unstable signals。稳定性 group 还会保留 frame expected-error spread、`timing.audioAheadWaitOversleepMsP95/P99` spread 和 `sync.audioVideoDriftMsP95/P99` spread。模型应把它当作解释证据：它可以说明某个 reject 是否命中了重复采样不稳定的目标 case，以及该不稳定来自 frame pacing、audio-ahead oversleep 还是 A/V drift；但它不覆盖 `evaluation.decision`，不自动放行 candidate，也不改变 stable case 阈值。
 
 ## Model-Facing Output
 
