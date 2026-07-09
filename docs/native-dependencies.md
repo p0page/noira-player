@@ -1,6 +1,6 @@
 ﻿# 原生依赖记录
 
-日期：2026-07-05
+日期：2026-07-09
 
 ## FFmpeg
 
@@ -11,11 +11,11 @@
 - 解码 HEVC Main / Main10，并在后续阶段接入 D3D11VA 硬件解码。
 - 提取 HDR10 metadata，交给 DXGI swapchain 和视频渲染器。
 
-当前先采用 NuGet 包 `FFmpegInteropX.FFmpegUWP`，版本固定为 `5.1.100`。这个包面向 Windows 10 UWP app，包含 FFmpeg 5.1.1 UWP 构建产物、头文件、lib、运行时 DLL 和 license 文件。NuGet 页面显示它兼容 `native` / `UAP 10.0`，包 license expression 为 `LGPL-2.1-or-later AND Zlib AND MIT`，最后更新时间为 2022-09-24。
+当前先采用 NuGet 包 `FFmpegInteropX.UWP.FFmpeg`，版本固定为 `8.1.2`。这个包面向 UWP app，包含 FFmpeg 8.1.2 UWP 构建产物、头文件、lib、运行时 DLL 和 license 文件。NuGet 页面显示它兼容 `native` / `UAP 10.0`，包 license expression 为 `LGPL-2.1-or-later AND Zlib AND MIT`。
 
 来源：
 
-- `FFmpegInteropX.FFmpegUWP` NuGet: <https://www.nuget.org/packages/FFmpegInteropX.FFmpegUWP/>
+- `FFmpegInteropX.UWP.FFmpeg` NuGet: <https://www.nuget.org/packages/FFmpegInteropX.UWP.FFmpeg/>
 - `FFmpegInteropX.Desktop.FFmpeg` README / release notes: <https://www.nuget.org/packages/FFmpegInteropX.Desktop.FFmpeg/>
 - FFmpeg 官方 MSVC 构建说明：<https://ffmpeg.org/platform.html>
 
@@ -32,10 +32,10 @@
 
 MSBuild 接入方式：
 
-- `src/NoiraPlayer.Native/packages.config` 固定 `FFmpegInteropX.FFmpegUWP` 版本。
-- `src/NoiraPlayer.Native/NoiraPlayer.Native.vcxproj` 导入 `packages\FFmpegInteropX.FFmpegUWP.5.1.100\build\native\FFmpegInteropX.FFmpegUWP.targets`。
-- 该 targets 会自动加入 `include` 路径、`runtimes\win10-$(PlatformTarget)\native` lib 路径、FFmpeg linker inputs，并把对应架构 DLL 加入 copy-local。
-- Debug x64 构建已确认使用 `runtimes\win10-x64\native`，并把 `avcodec-59.dll`、`avdevice-59.dll`、`avfilter-8.dll`、`avformat-59.dll`、`avutil-57.dll`、`swresample-4.dll`、`swscale-6.dll` 复制到 native 输出目录。
+- `src/NoiraPlayer.Native/packages.config` 固定 `FFmpegInteropX.UWP.FFmpeg` 版本。
+- `src/NoiraPlayer.Native/NoiraPlayer.Native.vcxproj` 导入 `packages\FFmpegInteropX.UWP.FFmpeg.8.1.2\build\native\FFmpegInteropX.UWP.FFmpeg.targets`。
+- 该 targets 会自动加入 `include` 路径、`runtimes\win-$(PlatformTarget)\native` lib 路径、FFmpeg linker inputs，并把对应架构 DLL 加入 copy-local。
+- Debug x64 构建应使用 `runtimes\win-x64\native`，并把 `avcodec-62.dll`、`avdevice-62.dll`、`avfilter-11.dll`、`avformat-62.dll`、`avutil-60.dll`、`swresample-6.dll`、`swscale-9.dll` 复制到 native 输出目录。
 
 仓库策略：
 

@@ -13,7 +13,7 @@ remain under their own licenses.
 ## FFmpeg
 
 Noira uses FFmpeg libraries through the NuGet package
-`FFmpegInteropX.FFmpegUWP` version `5.1.100`.
+`FFmpegInteropX.UWP.FFmpeg` version `8.1.2`.
 
 Package role:
 
@@ -21,8 +21,8 @@ Package role:
   Windows 10 UWP apps.
 - Used by `src/NoiraPlayer.Native` for demuxing, decoding, audio conversion,
   subtitle decoding, and media metadata extraction.
-- The project links to FFmpeg through DLLs such as `avcodec-59.dll`,
-  `avformat-59.dll`, `avutil-57.dll`, `swresample-4.dll`, and `swscale-6.dll`.
+- The project links to FFmpeg through DLLs such as `avcodec-62.dll`,
+  `avformat-62.dll`, `avutil-60.dll`, `swresample-6.dll`, and `swscale-9.dll`.
 
 License information from the package metadata:
 
@@ -43,7 +43,7 @@ References:
 
 - FFmpeg legal page: https://www.ffmpeg.org/legal.html
 - FFmpeg source license file: https://github.com/FFmpeg/FFmpeg/blob/master/LICENSE.md
-- NuGet package: https://www.nuget.org/packages/FFmpegInteropX.FFmpegUWP/5.1.100
+- NuGet package: https://www.nuget.org/packages/FFmpegInteropX.UWP.FFmpeg/8.1.2
 
 Before publishing binary builds, verify and preserve FFmpeg compliance:
 

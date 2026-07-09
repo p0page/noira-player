@@ -68,7 +68,7 @@ namespace NoiraPlayer.Core.Diagnostics
                 ["qa-library-tv"] = shows.Take(5).ToList(),
                 ["qa-library-douban"] = movies.Skip(1).Take(5).ToList(),
                 ["qa-library-netflix"] = shows.Skip(1).Take(4).ToList(),
-                ["qa-library-anime"] = shows.Reverse().Take(4).ToList(),
+                ["qa-library-anime"] = shows.AsEnumerable().Reverse().Take(4).ToList(),
                 ["qa-library-docs"] = documentaries.Take(3).ToList()
             };
 
