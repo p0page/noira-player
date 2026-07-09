@@ -171,6 +171,24 @@ if (-not ($plan.commands | Where-Object { $_.name -eq 'native-restore' })) {
     throw 'Expected native-restore command before native-build in playback-core validation plan.'
 }
 
+$nativeRestore = $plan.commands | Where-Object { $_.name -eq 'native-restore' } | Select-Object -First 1
+$nativeBuild = $plan.commands | Where-Object { $_.name -eq 'native-build' } | Select-Object -First 1
+foreach ($nativeProjectCommand in @($nativeRestore, $nativeBuild)) {
+    if ($null -eq $nativeProjectCommand) {
+        continue
+    }
+
+    $serializedNativeProjectCommand = $nativeProjectCommand | ConvertTo-Json -Depth 6
+    if ($serializedNativeProjectCommand -match 'Visual Studio\\2022|vcvars64\.bat') {
+        throw 'Native project restore/build must not rely on VS2022 vcvars after the VS2026/v145 toolchain cutover.'
+    }
+
+    if ($serializedNativeProjectCommand -notmatch 'NoiraModernToolchain\.ps1' -or
+        $serializedNativeProjectCommand -notmatch 'Resolve-ModernMsBuildPath') {
+        throw 'Native project restore/build must resolve MSBuild through NoiraModernToolchain.ps1.'
+    }
+}
+
 $nativeRestoreIndex = [array]::IndexOf($plan.commands.name, 'native-restore')
 $nativeBuildIndex = [array]::IndexOf($plan.commands.name, 'native-build')
 if ($nativeBuildIndex -ge 0 -and $nativeRestoreIndex -gt $nativeBuildIndex) {
