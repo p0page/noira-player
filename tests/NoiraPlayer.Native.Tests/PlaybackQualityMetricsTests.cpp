@@ -8,7 +8,6 @@ using winrt::NoiraPlayer::Native::implementation::PlaybackQualityMetricsSnapshot
 int main()
 {
     PlaybackQualityMetrics metrics;
-    metrics.FramePacingSourceFrameRate = 60.0;
     metrics.RecordRenderIntervalMs(41.0);
     metrics.RecordRenderIntervalMs(42.0);
     metrics.RecordRenderIntervalMs(100.0);
@@ -34,6 +33,7 @@ int main()
     metrics.AudioStarvedPasses = 1;
     metrics.AudioClockTicks = 2'000'000;
     metrics.VideoPositionTicks = 1'800'000;
+    metrics.FramePacingSourceFrameRate = 60.0;
     metrics.LateFrameDropToleranceMs = 41.6667;
 
     PlaybackQualityMetricsSnapshot snapshot = metrics.Snapshot();

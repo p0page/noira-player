@@ -118,6 +118,20 @@ namespace winrt::NoiraPlayer::Native::implementation
             return m_count;
         }
 
+        uint64_t CountGreaterThan(double threshold) const noexcept
+        {
+            auto count = uint64_t{0};
+            for (auto index = size_t{0}; index < m_count; ++index)
+            {
+                if (m_values[index] > threshold)
+                {
+                    ++count;
+                }
+            }
+
+            return count;
+        }
+
     private:
         std::array<double, 512> m_values{};
         size_t m_count{0};
@@ -155,21 +169,6 @@ namespace winrt::NoiraPlayer::Native::implementation
         void RecordRenderIntervalMs(double value) noexcept
         {
             m_renderIntervals.Add(value);
-            if (FramePacingSourceFrameRate <= 0.0)
-            {
-                return;
-            }
-
-            const auto expectedFrameDurationMs = 1000.0 / FramePacingSourceFrameRate;
-            if (value > expectedFrameDurationMs + 2.0)
-            {
-                ++m_renderIntervalOverExpected2MsCount;
-            }
-
-            if (value > expectedFrameDurationMs + 4.0)
-            {
-                ++m_renderIntervalOverExpected4MsCount;
-            }
         }
 
         void RecordPresentDurationMs(double value) noexcept
@@ -224,8 +223,14 @@ namespace winrt::NoiraPlayer::Native::implementation
             snapshot.RenderIntervalMsP99 = m_renderIntervals.Percentile(99);
             snapshot.MaxFrameGapMs = m_renderIntervals.Max();
             snapshot.RenderIntervalSampleCount = static_cast<uint64_t>(m_renderIntervals.Count());
-            snapshot.RenderIntervalOverExpected2MsCount = m_renderIntervalOverExpected2MsCount;
-            snapshot.RenderIntervalOverExpected4MsCount = m_renderIntervalOverExpected4MsCount;
+            if (FramePacingSourceFrameRate > 0.0)
+            {
+                const auto expectedFrameDurationMs = 1000.0 / FramePacingSourceFrameRate;
+                snapshot.RenderIntervalOverExpected2MsCount =
+                    m_renderIntervals.CountGreaterThan(expectedFrameDurationMs + 2.0);
+                snapshot.RenderIntervalOverExpected4MsCount =
+                    m_renderIntervals.CountGreaterThan(expectedFrameDurationMs + 4.0);
+            }
             snapshot.PresentDurationMsP50 = m_presentDurations.Percentile(50);
             snapshot.PresentDurationMsP95 = m_presentDurations.Percentile(95);
             snapshot.PresentDurationMsP99 = m_presentDurations.Percentile(99);
@@ -253,8 +258,6 @@ namespace winrt::NoiraPlayer::Native::implementation
 
     private:
         PlaybackQualityHistogram m_renderIntervals;
-        uint64_t m_renderIntervalOverExpected2MsCount{0};
-        uint64_t m_renderIntervalOverExpected4MsCount{0};
         PlaybackQualityHistogram m_presentDurations;
         PlaybackQualityHistogram m_audioAheadWaitDurations;
         PlaybackQualityHistogram m_audioAheadWaitTargets;
