@@ -12,6 +12,10 @@
 
 同时修正了 `Measure-PlaybackCadenceStability.ps1` 的旧报告兼容性：旧 report 缺少 P05/min 时，short-interval spread 必须保持 `null`，不能被 PowerShell 数组转换误当成 `0ms`。后续调优应先用当前提交重新跑 native repeat，再根据同一 manifest 的 baseline/candidate comparison 判断是否需要调整 render scheduling 或 audio-clock gating。
 
+提交 `907e8d0` 后，已生成当前 24-case baseline：`docs\qa\private\baselines\playback-core-tuning-short-interval-907e8d0-24case.local\`，validation 通过，24 个 report，native-headless included，analysis 为 `no-change / low risk`，playback evidence 为 `partial` 且可评估 native software playback。随后完成 3 次 native repeat：`docs\qa\private\repeats\playback-core-tuning-short-interval-907e8d0-native-repeat.local\`。repeat summary 显示 9 个 native group 中 6 个 stable、3 个 unstable：`local/native-headless-av-smoke`、`local/native-headless-hdr10-60`、`local/native-headless-sdr-60`。
+
+`local/native-headless-av-smoke` 的 A/V drift P95/P99 spread 与 finalDeltaAbs P95/P99 spread 均为 `0ms`，但 render P95/P99/max spread 分别约 `3.3244/4.04/4.04ms`，audioAheadWaitOversleep P95/P99 spread 约 `6.316/4.1725ms`，同时 P05/min 短间隔 spread 也明显存在。当前解释是：A/V 最终对齐稳定，但 wait scheduling 与 render catch-up pattern 不稳定；下一步应针对这类结构性证据设计 candidate，而不是再做单纯 audio wait 常量调参。`hdr10-60` 与 `sdr-60` 的 P95 基本稳定，主要是 P99/max 或单个 max-frame-gap outlier；它们更适合作为 render-loop/outlier 统计问题处理。
+
 ## 2026-07-10 更新：native A/V smoke 最低渲染帧阈值已收紧
 
 本轮继续基于已合入 main 的当前调优分支工作。排查 `local/native-headless-av-smoke` 时确认：生成样本因字幕 `-shortest` 实际为 `2.5s / 75` 帧，但 native helper 的主播放快照是在 3 秒窗口的一半处采集，因此 report 中约 `46` 个 rendered frames 对 30fps 的 `1.5s` 捕获窗口是合理结果，不是“2.5 秒只渲染 46 帧”的播放 core 欠帧。
