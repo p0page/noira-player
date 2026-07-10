@@ -105,6 +105,18 @@
         Double AudioAheadWaitPassesPerEpisodeP95;
         Double AudioAheadWaitPassesPerEpisodeP99;
         Double AudioAheadWaitPassesPerEpisodeMax;
+        Double AudioAheadWaitPassDurationMsP50;
+        Double AudioAheadWaitPassDurationMsP95;
+        Double AudioAheadWaitPassDurationMsP99;
+        Double AudioAheadWaitPassDurationMsMax;
+        Double AudioAheadWaitPassTargetMsP50;
+        Double AudioAheadWaitPassTargetMsP95;
+        Double AudioAheadWaitPassTargetMsP99;
+        Double AudioAheadWaitPassTargetMsMax;
+        Double AudioAheadWaitPassOversleepMsP50;
+        Double AudioAheadWaitPassOversleepMsP95;
+        Double AudioAheadWaitPassOversleepMsP99;
+        Double AudioAheadWaitPassOversleepMsMax;
         Double FramePacingSourceFrameRate;
         Double LateFrameDropToleranceMs;
         Double AudioVideoDriftMsP50;

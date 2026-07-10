@@ -26,6 +26,13 @@ namespace winrt::NoiraPlayer::Native::implementation
         Failed
     };
 
+    enum class RenderLoopWaitReason
+    {
+        Default,
+        AudioAhead,
+        VideoClock
+    };
+
     using PlaybackGraphStateChangedHandler = std::function<void(PlaybackGraphState state, winrt::hstring const& message)>;
     using PlaybackGraphHdrOutputChangedHandler = std::function<bool(bool desiredHdrOutput, double preferredRefreshRate)>;
 
@@ -137,6 +144,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         uint64_t m_audioAheadWaitPassCount{0};
         std::chrono::steady_clock::duration m_nextRenderLoopWait{std::chrono::milliseconds(5)};
         bool m_nextRenderLoopWaitUseTimer{false};
+        RenderLoopWaitReason m_nextRenderLoopWaitReason{RenderLoopWaitReason::Default};
         RenderLoopWaiter m_renderLoopWaiter;
         std::chrono::steady_clock::time_point m_videoClockStartedAt{};
         int64_t m_videoClockStartPositionTicks{0};

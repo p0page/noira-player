@@ -128,6 +128,18 @@ public sealed class PlaybackQualityReportMapperTests
             AudioAheadWaitPassesPerEpisodeP95 = 2.0,
             AudioAheadWaitPassesPerEpisodeP99 = 3.0,
             AudioAheadWaitPassesPerEpisodeMax = 4.0,
+            AudioAheadWaitPassDurationMsP50 = 7.1,
+            AudioAheadWaitPassDurationMsP95 = 12.2,
+            AudioAheadWaitPassDurationMsP99 = 18.3,
+            AudioAheadWaitPassDurationMsMax = 24.4,
+            AudioAheadWaitPassTargetMsP50 = 5.1,
+            AudioAheadWaitPassTargetMsP95 = 8.2,
+            AudioAheadWaitPassTargetMsP99 = 9.3,
+            AudioAheadWaitPassTargetMsMax = 10.4,
+            AudioAheadWaitPassOversleepMsP50 = 2.0,
+            AudioAheadWaitPassOversleepMsP95 = 4.0,
+            AudioAheadWaitPassOversleepMsP99 = 9.0,
+            AudioAheadWaitPassOversleepMsMax = 14.0,
             FramePacingSourceFrameRate = 60.0,
             LateFrameDropToleranceMs = 41.6667,
             AudioVideoDriftMsP50 = 12.0,
@@ -181,6 +193,18 @@ public sealed class PlaybackQualityReportMapperTests
         Assert.Equal(2.0, report.Timing.AudioAheadWaitPassesPerEpisodeP95);
         Assert.Equal(3.0, report.Timing.AudioAheadWaitPassesPerEpisodeP99);
         Assert.Equal(4.0, report.Timing.AudioAheadWaitPassesPerEpisodeMax);
+        Assert.Equal(7.1, report.Timing.AudioAheadWaitPassDurationMsP50);
+        Assert.Equal(12.2, report.Timing.AudioAheadWaitPassDurationMsP95);
+        Assert.Equal(18.3, report.Timing.AudioAheadWaitPassDurationMsP99);
+        Assert.Equal(24.4, report.Timing.AudioAheadWaitPassDurationMsMax);
+        Assert.Equal(5.1, report.Timing.AudioAheadWaitPassTargetMsP50);
+        Assert.Equal(8.2, report.Timing.AudioAheadWaitPassTargetMsP95);
+        Assert.Equal(9.3, report.Timing.AudioAheadWaitPassTargetMsP99);
+        Assert.Equal(10.4, report.Timing.AudioAheadWaitPassTargetMsMax);
+        Assert.Equal(2.0, report.Timing.AudioAheadWaitPassOversleepMsP50);
+        Assert.Equal(4.0, report.Timing.AudioAheadWaitPassOversleepMsP95);
+        Assert.Equal(9.0, report.Timing.AudioAheadWaitPassOversleepMsP99);
+        Assert.Equal(14.0, report.Timing.AudioAheadWaitPassOversleepMsMax);
         Assert.Equal(60.0, report.Timing.FramePacingSourceFrameRate);
         Assert.Equal(41.6667, report.Timing.LateFrameDropToleranceMs);
         Assert.Equal(123456, report.Sync.AudioClockTicks);

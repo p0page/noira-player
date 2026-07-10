@@ -1330,6 +1330,18 @@ public sealed class PlaybackQualityReportAnalyzerTests
         report.Timing.AudioAheadWaitFinalDeltaAbsMsP95 = 105.0;
         report.Timing.AudioAheadWaitFinalDeltaAbsMsP99 = 110.0;
         report.Timing.AudioAheadWaitFinalDeltaAbsMsMax = 120.0;
+        report.Timing.AudioAheadWaitPassDurationMsP50 = 7.0;
+        report.Timing.AudioAheadWaitPassDurationMsP95 = 12.0;
+        report.Timing.AudioAheadWaitPassDurationMsP99 = 16.0;
+        report.Timing.AudioAheadWaitPassDurationMsMax = 18.0;
+        report.Timing.AudioAheadWaitPassTargetMsP50 = 3.0;
+        report.Timing.AudioAheadWaitPassTargetMsP95 = 4.0;
+        report.Timing.AudioAheadWaitPassTargetMsP99 = 5.0;
+        report.Timing.AudioAheadWaitPassTargetMsMax = 6.0;
+        report.Timing.AudioAheadWaitPassOversleepMsP50 = 4.0;
+        report.Timing.AudioAheadWaitPassOversleepMsP95 = 8.0;
+        report.Timing.AudioAheadWaitPassOversleepMsP99 = 11.0;
+        report.Timing.AudioAheadWaitPassOversleepMsMax = 12.0;
         report.Timing.VideoAheadWaitCount = 7;
         report.Timing.AudioAheadWaitCount = 5;
         report.Timing.VideoClockWaitCount = 2;
@@ -1355,6 +1367,18 @@ public sealed class PlaybackQualityReportAnalyzerTests
         Assert.Contains("timing.audioAheadWaitFinalDeltaAbsMsP95", analysis.EvidenceSignals);
         Assert.Contains("timing.audioAheadWaitFinalDeltaAbsMsP99", analysis.EvidenceSignals);
         Assert.Contains("timing.audioAheadWaitFinalDeltaAbsMsMax", analysis.EvidenceSignals);
+        Assert.Contains("timing.audioAheadWaitPassDurationMsP50", analysis.EvidenceSignals);
+        Assert.Contains("timing.audioAheadWaitPassDurationMsP95", analysis.EvidenceSignals);
+        Assert.Contains("timing.audioAheadWaitPassDurationMsP99", analysis.EvidenceSignals);
+        Assert.Contains("timing.audioAheadWaitPassDurationMsMax", analysis.EvidenceSignals);
+        Assert.Contains("timing.audioAheadWaitPassTargetMsP50", analysis.EvidenceSignals);
+        Assert.Contains("timing.audioAheadWaitPassTargetMsP95", analysis.EvidenceSignals);
+        Assert.Contains("timing.audioAheadWaitPassTargetMsP99", analysis.EvidenceSignals);
+        Assert.Contains("timing.audioAheadWaitPassTargetMsMax", analysis.EvidenceSignals);
+        Assert.Contains("timing.audioAheadWaitPassOversleepMsP50", analysis.EvidenceSignals);
+        Assert.Contains("timing.audioAheadWaitPassOversleepMsP95", analysis.EvidenceSignals);
+        Assert.Contains("timing.audioAheadWaitPassOversleepMsP99", analysis.EvidenceSignals);
+        Assert.Contains("timing.audioAheadWaitPassOversleepMsMax", analysis.EvidenceSignals);
     }
 
     [Fact]

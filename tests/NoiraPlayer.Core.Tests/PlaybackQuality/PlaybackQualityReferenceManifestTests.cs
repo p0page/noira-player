@@ -1576,6 +1576,12 @@ public sealed class PlaybackQualityReferenceManifestTests
                 SubtitleTrackCount = 1,
                 SelectedAudioStreamIndex = 2,
                 IsSubtitleDisabled = true
+            },
+            Timing = new PlaybackQualityTiming
+            {
+                AudioAheadWaitPassDurationMsP95 = 12.0,
+                AudioAheadWaitPassTargetMsP95 = 4.0,
+                AudioAheadWaitPassOversleepMsP95 = 8.0
             }
         };
         report.Tracks.Video.Add(new PlaybackQualityTrack
@@ -1635,6 +1641,9 @@ public sealed class PlaybackQualityReferenceManifestTests
         Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "tracks.subtitles.isExternal"));
         Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "tracks.subtitles.isDefault"));
         Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "tracks.subtitles.isForced"));
+        Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "timing.audioAheadWaitPassDurationMsP95"));
+        Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "timing.audioAheadWaitPassTargetMsP95"));
+        Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "timing.audioAheadWaitPassOversleepMsP95"));
         Assert.False(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "tracks.selectedSubtitleStreamIndex"));
     }
 

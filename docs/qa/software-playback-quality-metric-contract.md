@@ -189,6 +189,8 @@ The matching optional `expected.hdrPlaybackStrategy`, `expected.isHdr`, `expecte
 
 `audioAheadWaitEpisodeCount` is the number of completed audio-ahead wait episodes recorded during the sample. `audioAheadWaitPassesPerEpisodeP50/P95/P99/Max` describes how many wait passes were needed inside each completed episode. These fields are diagnostic evidence only: they help distinguish more frequent audio-ahead episodes from the same episodes being split into shorter polling passes. They must be interpreted with `audioAheadWaitCount`, oversleep, final-delta, A/V drift, buffering, and render interval tail evidence; pass count changes alone must not accept or reject a Core candidate.
 
+`audioAheadWaitPassDurationMsP50/P95/P99/Max`, `audioAheadWaitPassTargetMsP50/P95/P99/Max`, and `audioAheadWaitPassOversleepMsP50/P95/P99/Max` describe completed audio-ahead wait passes. Duration is the actual elapsed wait, target is the requested wait duration, and oversleep is actual minus target. These fields are model-facing diagnostic and stability evidence; they explain whether a wait strategy is oversleeping, polling more often, or changing pass duration. They are not standalone v0.1 decision signals, and older reports may omit them. Missing values must remain unknown/null in repeat summaries rather than being converted to `0ms`. Interpret them together with episode count, passes per episode, final-delta, A/V drift, buffering, and render interval tail evidence.
+
 `modelAnalysis.avSync.clockDeltaMs` 和 `driftDirection` 只在同一份报告里同时存在非零 `audioClockTicks` 与 `videoPositionTicks` 时生成；如果缺少任一 clock 端，方向保持 `unknown`，模型应先补采集证据，不要根据绝对漂移值猜测领先方向。
 
 `actualHdrOutput` is derived from native display status and swapchain state. It is not a direct HDMI analyzer reading.

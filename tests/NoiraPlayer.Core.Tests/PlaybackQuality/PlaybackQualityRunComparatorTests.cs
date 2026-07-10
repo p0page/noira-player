@@ -420,6 +420,12 @@ public sealed class PlaybackQualityRunComparatorTests
         Assert.Contains("timing.audioAheadWaitOversleepMsMax", comparison.Coverage.MatchedSignals);
         Assert.Contains("timing.audioAheadWaitFinalDeltaAbsMsP95", comparison.Coverage.MatchedSignals);
         Assert.Contains("timing.audioAheadWaitFinalDeltaAbsMsMax", comparison.Coverage.MatchedSignals);
+        Assert.Contains("timing.audioAheadWaitPassDurationMsP95", comparison.Coverage.MatchedSignals);
+        Assert.Contains("timing.audioAheadWaitPassDurationMsMax", comparison.Coverage.MatchedSignals);
+        Assert.Contains("timing.audioAheadWaitPassTargetMsP95", comparison.Coverage.MatchedSignals);
+        Assert.Contains("timing.audioAheadWaitPassTargetMsMax", comparison.Coverage.MatchedSignals);
+        Assert.Contains("timing.audioAheadWaitPassOversleepMsP95", comparison.Coverage.MatchedSignals);
+        Assert.Contains("timing.audioAheadWaitPassOversleepMsMax", comparison.Coverage.MatchedSignals);
         Assert.Contains("timing.maxFrameGapMs", comparison.Coverage.MatchedSignals);
         Assert.Contains("timing.videoAheadWaitCount", comparison.Coverage.MatchedSignals);
         Assert.Contains("timing.audioAheadWaitCount", comparison.Coverage.MatchedSignals);
@@ -875,6 +881,12 @@ public sealed class PlaybackQualityRunComparatorTests
         report.Timing.AudioAheadWaitOversleepMsMax = 19.0;
         report.Timing.AudioAheadWaitFinalDeltaAbsMsP95 = 105.0;
         report.Timing.AudioAheadWaitFinalDeltaAbsMsMax = 120.0;
+        report.Timing.AudioAheadWaitPassDurationMsP95 = 12.0;
+        report.Timing.AudioAheadWaitPassDurationMsMax = 17.0;
+        report.Timing.AudioAheadWaitPassTargetMsP95 = 4.0;
+        report.Timing.AudioAheadWaitPassTargetMsMax = 6.0;
+        report.Timing.AudioAheadWaitPassOversleepMsP95 = 8.0;
+        report.Timing.AudioAheadWaitPassOversleepMsMax = 11.0;
         report.Timing.MaxFrameGapMs = 48.0;
         report.Timing.VideoAheadWaitCount = 52;
         report.Timing.AudioAheadWaitCount = 50;

@@ -38,6 +38,24 @@ public sealed class NativePlaybackGraphDecouplingContractTests
         Assert.Contains("if (rendered && presented)", graphSource, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void PlaybackGraph_Audio_Ahead_Wait_Pass_Metrics_Do_Not_Take_A_Second_Graph_Lock_After_Wait()
+    {
+        var root = FindRepositoryRoot();
+        var graphSource = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Native", "Media", "PlaybackGraph.cpp"));
+        var normalizedSource = graphSource.Replace("\r\n", "\n", StringComparison.Ordinal);
+
+        Assert.Contains("auto completedRenderLoopWaitReason = RenderLoopWaitReason::Default;", graphSource, StringComparison.Ordinal);
+        Assert.Contains(
+            "m_qualityMetrics.RecordAudioAheadWaitPassMs(completedRenderLoopWaitDurationMs, completedRenderLoopWaitTargetMs);",
+            graphSource,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "std::lock_guard lock(m_graphMutex);\n                m_qualityMetrics.RecordAudioAheadWaitPassMs(durationMs, targetMs);",
+            normalizedSource,
+            StringComparison.Ordinal);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

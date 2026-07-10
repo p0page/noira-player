@@ -164,6 +164,42 @@ namespace winrt::NoiraPlayer::Native::implementation
         double AudioAheadWaitPassesPerEpisodeMax() const noexcept { return m_audioAheadWaitPassesPerEpisodeMax; }
         void AudioAheadWaitPassesPerEpisodeMax(double value) noexcept { m_audioAheadWaitPassesPerEpisodeMax = value; }
 
+        double AudioAheadWaitPassDurationMsP50() const noexcept { return m_audioAheadWaitPassDurationMsP50; }
+        void AudioAheadWaitPassDurationMsP50(double value) noexcept { m_audioAheadWaitPassDurationMsP50 = value; }
+
+        double AudioAheadWaitPassDurationMsP95() const noexcept { return m_audioAheadWaitPassDurationMsP95; }
+        void AudioAheadWaitPassDurationMsP95(double value) noexcept { m_audioAheadWaitPassDurationMsP95 = value; }
+
+        double AudioAheadWaitPassDurationMsP99() const noexcept { return m_audioAheadWaitPassDurationMsP99; }
+        void AudioAheadWaitPassDurationMsP99(double value) noexcept { m_audioAheadWaitPassDurationMsP99 = value; }
+
+        double AudioAheadWaitPassDurationMsMax() const noexcept { return m_audioAheadWaitPassDurationMsMax; }
+        void AudioAheadWaitPassDurationMsMax(double value) noexcept { m_audioAheadWaitPassDurationMsMax = value; }
+
+        double AudioAheadWaitPassTargetMsP50() const noexcept { return m_audioAheadWaitPassTargetMsP50; }
+        void AudioAheadWaitPassTargetMsP50(double value) noexcept { m_audioAheadWaitPassTargetMsP50 = value; }
+
+        double AudioAheadWaitPassTargetMsP95() const noexcept { return m_audioAheadWaitPassTargetMsP95; }
+        void AudioAheadWaitPassTargetMsP95(double value) noexcept { m_audioAheadWaitPassTargetMsP95 = value; }
+
+        double AudioAheadWaitPassTargetMsP99() const noexcept { return m_audioAheadWaitPassTargetMsP99; }
+        void AudioAheadWaitPassTargetMsP99(double value) noexcept { m_audioAheadWaitPassTargetMsP99 = value; }
+
+        double AudioAheadWaitPassTargetMsMax() const noexcept { return m_audioAheadWaitPassTargetMsMax; }
+        void AudioAheadWaitPassTargetMsMax(double value) noexcept { m_audioAheadWaitPassTargetMsMax = value; }
+
+        double AudioAheadWaitPassOversleepMsP50() const noexcept { return m_audioAheadWaitPassOversleepMsP50; }
+        void AudioAheadWaitPassOversleepMsP50(double value) noexcept { m_audioAheadWaitPassOversleepMsP50 = value; }
+
+        double AudioAheadWaitPassOversleepMsP95() const noexcept { return m_audioAheadWaitPassOversleepMsP95; }
+        void AudioAheadWaitPassOversleepMsP95(double value) noexcept { m_audioAheadWaitPassOversleepMsP95 = value; }
+
+        double AudioAheadWaitPassOversleepMsP99() const noexcept { return m_audioAheadWaitPassOversleepMsP99; }
+        void AudioAheadWaitPassOversleepMsP99(double value) noexcept { m_audioAheadWaitPassOversleepMsP99 = value; }
+
+        double AudioAheadWaitPassOversleepMsMax() const noexcept { return m_audioAheadWaitPassOversleepMsMax; }
+        void AudioAheadWaitPassOversleepMsMax(double value) noexcept { m_audioAheadWaitPassOversleepMsMax = value; }
+
         double FramePacingSourceFrameRate() const noexcept { return m_framePacingSourceFrameRate; }
         void FramePacingSourceFrameRate(double value) noexcept { m_framePacingSourceFrameRate = value; }
 
@@ -235,6 +271,18 @@ namespace winrt::NoiraPlayer::Native::implementation
         double m_audioAheadWaitPassesPerEpisodeP95{0.0};
         double m_audioAheadWaitPassesPerEpisodeP99{0.0};
         double m_audioAheadWaitPassesPerEpisodeMax{0.0};
+        double m_audioAheadWaitPassDurationMsP50{0.0};
+        double m_audioAheadWaitPassDurationMsP95{0.0};
+        double m_audioAheadWaitPassDurationMsP99{0.0};
+        double m_audioAheadWaitPassDurationMsMax{0.0};
+        double m_audioAheadWaitPassTargetMsP50{0.0};
+        double m_audioAheadWaitPassTargetMsP95{0.0};
+        double m_audioAheadWaitPassTargetMsP99{0.0};
+        double m_audioAheadWaitPassTargetMsMax{0.0};
+        double m_audioAheadWaitPassOversleepMsP50{0.0};
+        double m_audioAheadWaitPassOversleepMsP95{0.0};
+        double m_audioAheadWaitPassOversleepMsP99{0.0};
+        double m_audioAheadWaitPassOversleepMsMax{0.0};
         double m_framePacingSourceFrameRate{0.0};
         double m_lateFrameDropToleranceMs{0.0};
         double m_audioVideoDriftMsP50{0.0};

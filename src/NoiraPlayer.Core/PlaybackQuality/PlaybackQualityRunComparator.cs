@@ -1197,6 +1197,18 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitPassesPerEpisodeP95");
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitPassesPerEpisodeP99");
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitPassesPerEpisodeMax");
+                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitPassDurationMsP50");
+                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitPassDurationMsP95");
+                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitPassDurationMsP99");
+                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitPassDurationMsMax");
+                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitPassTargetMsP50");
+                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitPassTargetMsP95");
+                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitPassTargetMsP99");
+                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitPassTargetMsMax");
+                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitPassOversleepMsP50");
+                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitPassOversleepMsP95");
+                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitPassOversleepMsP99");
+                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitPassOversleepMsMax");
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.maxFrameGapMs");
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.renderIntervalSampleCount");
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.renderIntervalOverExpected2MsCount");
@@ -1292,6 +1304,18 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 report.Timing.AudioAheadWaitPassesPerEpisodeP95 > 0 ||
                 report.Timing.AudioAheadWaitPassesPerEpisodeP99 > 0 ||
                 report.Timing.AudioAheadWaitPassesPerEpisodeMax > 0 ||
+                report.Timing.AudioAheadWaitPassDurationMsP50 > 0 ||
+                report.Timing.AudioAheadWaitPassDurationMsP95 > 0 ||
+                report.Timing.AudioAheadWaitPassDurationMsP99 > 0 ||
+                report.Timing.AudioAheadWaitPassDurationMsMax > 0 ||
+                report.Timing.AudioAheadWaitPassTargetMsP50 > 0 ||
+                report.Timing.AudioAheadWaitPassTargetMsP95 > 0 ||
+                report.Timing.AudioAheadWaitPassTargetMsP99 > 0 ||
+                report.Timing.AudioAheadWaitPassTargetMsMax > 0 ||
+                report.Timing.AudioAheadWaitPassOversleepMsP50 > 0 ||
+                report.Timing.AudioAheadWaitPassOversleepMsP95 > 0 ||
+                report.Timing.AudioAheadWaitPassOversleepMsP99 > 0 ||
+                report.Timing.AudioAheadWaitPassOversleepMsMax > 0 ||
                 report.Timing.AudioAheadWaitCount > 0 ||
                 report.Timing.VideoClockWaitCount > 0 ||
                 report.Timing.MinFrameGapMs > 0 ||

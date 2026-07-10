@@ -488,6 +488,30 @@ namespace NoiraPlayer.Core.PlaybackQuality
                     return presentSignals != null || report.Timing.AudioAheadWaitFinalDeltaAbsMsP99 > 0;
                 case "timing.audioAheadWaitFinalDeltaAbsMsMax":
                     return presentSignals != null || report.Timing.AudioAheadWaitFinalDeltaAbsMsMax > 0;
+                case "timing.audioAheadWaitPassDurationMsP50":
+                    return presentSignals != null || report.Timing.AudioAheadWaitPassDurationMsP50 > 0;
+                case "timing.audioAheadWaitPassDurationMsP95":
+                    return presentSignals != null || report.Timing.AudioAheadWaitPassDurationMsP95 > 0;
+                case "timing.audioAheadWaitPassDurationMsP99":
+                    return presentSignals != null || report.Timing.AudioAheadWaitPassDurationMsP99 > 0;
+                case "timing.audioAheadWaitPassDurationMsMax":
+                    return presentSignals != null || report.Timing.AudioAheadWaitPassDurationMsMax > 0;
+                case "timing.audioAheadWaitPassTargetMsP50":
+                    return presentSignals != null || report.Timing.AudioAheadWaitPassTargetMsP50 > 0;
+                case "timing.audioAheadWaitPassTargetMsP95":
+                    return presentSignals != null || report.Timing.AudioAheadWaitPassTargetMsP95 > 0;
+                case "timing.audioAheadWaitPassTargetMsP99":
+                    return presentSignals != null || report.Timing.AudioAheadWaitPassTargetMsP99 > 0;
+                case "timing.audioAheadWaitPassTargetMsMax":
+                    return presentSignals != null || report.Timing.AudioAheadWaitPassTargetMsMax > 0;
+                case "timing.audioAheadWaitPassOversleepMsP50":
+                    return presentSignals != null || report.Timing.AudioAheadWaitPassOversleepMsP50 > 0;
+                case "timing.audioAheadWaitPassOversleepMsP95":
+                    return presentSignals != null || report.Timing.AudioAheadWaitPassOversleepMsP95 > 0;
+                case "timing.audioAheadWaitPassOversleepMsP99":
+                    return presentSignals != null || report.Timing.AudioAheadWaitPassOversleepMsP99 > 0;
+                case "timing.audioAheadWaitPassOversleepMsMax":
+                    return presentSignals != null || report.Timing.AudioAheadWaitPassOversleepMsMax > 0;
                 case "timing.videoAheadWaitCount":
                 case "timing.audioAheadWaitCount":
                 case "timing.videoClockWaitCount":
@@ -617,7 +641,19 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 report.Timing.AudioAheadWaitFinalDeltaAbsMsP50 > 0 ||
                 report.Timing.AudioAheadWaitFinalDeltaAbsMsP95 > 0 ||
                 report.Timing.AudioAheadWaitFinalDeltaAbsMsP99 > 0 ||
-                report.Timing.AudioAheadWaitFinalDeltaAbsMsMax > 0;
+                report.Timing.AudioAheadWaitFinalDeltaAbsMsMax > 0 ||
+                report.Timing.AudioAheadWaitPassDurationMsP50 > 0 ||
+                report.Timing.AudioAheadWaitPassDurationMsP95 > 0 ||
+                report.Timing.AudioAheadWaitPassDurationMsP99 > 0 ||
+                report.Timing.AudioAheadWaitPassDurationMsMax > 0 ||
+                report.Timing.AudioAheadWaitPassTargetMsP50 > 0 ||
+                report.Timing.AudioAheadWaitPassTargetMsP95 > 0 ||
+                report.Timing.AudioAheadWaitPassTargetMsP99 > 0 ||
+                report.Timing.AudioAheadWaitPassTargetMsMax > 0 ||
+                report.Timing.AudioAheadWaitPassOversleepMsP50 > 0 ||
+                report.Timing.AudioAheadWaitPassOversleepMsP95 > 0 ||
+                report.Timing.AudioAheadWaitPassOversleepMsP99 > 0 ||
+                report.Timing.AudioAheadWaitPassOversleepMsMax > 0;
         }
 
         private static bool HasTrackEvidence(PlaybackQualityReport report)

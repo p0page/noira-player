@@ -2596,6 +2596,66 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 AddUnique(analysis.EvidenceSignals, "timing.audioAheadWaitPassesPerEpisodeMax");
             }
 
+            if (report.Timing.AudioAheadWaitPassDurationMsP50 > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.audioAheadWaitPassDurationMsP50");
+            }
+
+            if (report.Timing.AudioAheadWaitPassDurationMsP95 > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.audioAheadWaitPassDurationMsP95");
+            }
+
+            if (report.Timing.AudioAheadWaitPassDurationMsP99 > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.audioAheadWaitPassDurationMsP99");
+            }
+
+            if (report.Timing.AudioAheadWaitPassDurationMsMax > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.audioAheadWaitPassDurationMsMax");
+            }
+
+            if (report.Timing.AudioAheadWaitPassTargetMsP50 > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.audioAheadWaitPassTargetMsP50");
+            }
+
+            if (report.Timing.AudioAheadWaitPassTargetMsP95 > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.audioAheadWaitPassTargetMsP95");
+            }
+
+            if (report.Timing.AudioAheadWaitPassTargetMsP99 > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.audioAheadWaitPassTargetMsP99");
+            }
+
+            if (report.Timing.AudioAheadWaitPassTargetMsMax > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.audioAheadWaitPassTargetMsMax");
+            }
+
+            if (report.Timing.AudioAheadWaitPassOversleepMsP50 > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.audioAheadWaitPassOversleepMsP50");
+            }
+
+            if (report.Timing.AudioAheadWaitPassOversleepMsP95 > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.audioAheadWaitPassOversleepMsP95");
+            }
+
+            if (report.Timing.AudioAheadWaitPassOversleepMsP99 > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.audioAheadWaitPassOversleepMsP99");
+            }
+
+            if (report.Timing.AudioAheadWaitPassOversleepMsMax > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.audioAheadWaitPassOversleepMsMax");
+            }
+
             if (report.Timing.VideoAheadWaitCount > 0)
             {
                 AddUnique(analysis.EvidenceSignals, "timing.videoAheadWaitCount");

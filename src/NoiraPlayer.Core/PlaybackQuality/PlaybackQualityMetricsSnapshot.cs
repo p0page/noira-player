@@ -54,6 +54,18 @@
         public double AudioAheadWaitPassesPerEpisodeP95 { get; set; }
         public double AudioAheadWaitPassesPerEpisodeP99 { get; set; }
         public double AudioAheadWaitPassesPerEpisodeMax { get; set; }
+        public double AudioAheadWaitPassDurationMsP50 { get; set; }
+        public double AudioAheadWaitPassDurationMsP95 { get; set; }
+        public double AudioAheadWaitPassDurationMsP99 { get; set; }
+        public double AudioAheadWaitPassDurationMsMax { get; set; }
+        public double AudioAheadWaitPassTargetMsP50 { get; set; }
+        public double AudioAheadWaitPassTargetMsP95 { get; set; }
+        public double AudioAheadWaitPassTargetMsP99 { get; set; }
+        public double AudioAheadWaitPassTargetMsMax { get; set; }
+        public double AudioAheadWaitPassOversleepMsP50 { get; set; }
+        public double AudioAheadWaitPassOversleepMsP95 { get; set; }
+        public double AudioAheadWaitPassOversleepMsP99 { get; set; }
+        public double AudioAheadWaitPassOversleepMsMax { get; set; }
         public double FramePacingSourceFrameRate { get; set; }
         public double LateFrameDropToleranceMs { get; set; }
         public double AudioVideoDriftMsP50 { get; set; }

@@ -78,6 +78,18 @@ namespace NoiraPlayer.Core.PlaybackQuality
             report.Timing.AudioAheadWaitPassesPerEpisodeP95 = metrics.AudioAheadWaitPassesPerEpisodeP95;
             report.Timing.AudioAheadWaitPassesPerEpisodeP99 = metrics.AudioAheadWaitPassesPerEpisodeP99;
             report.Timing.AudioAheadWaitPassesPerEpisodeMax = metrics.AudioAheadWaitPassesPerEpisodeMax;
+            report.Timing.AudioAheadWaitPassDurationMsP50 = metrics.AudioAheadWaitPassDurationMsP50;
+            report.Timing.AudioAheadWaitPassDurationMsP95 = metrics.AudioAheadWaitPassDurationMsP95;
+            report.Timing.AudioAheadWaitPassDurationMsP99 = metrics.AudioAheadWaitPassDurationMsP99;
+            report.Timing.AudioAheadWaitPassDurationMsMax = metrics.AudioAheadWaitPassDurationMsMax;
+            report.Timing.AudioAheadWaitPassTargetMsP50 = metrics.AudioAheadWaitPassTargetMsP50;
+            report.Timing.AudioAheadWaitPassTargetMsP95 = metrics.AudioAheadWaitPassTargetMsP95;
+            report.Timing.AudioAheadWaitPassTargetMsP99 = metrics.AudioAheadWaitPassTargetMsP99;
+            report.Timing.AudioAheadWaitPassTargetMsMax = metrics.AudioAheadWaitPassTargetMsMax;
+            report.Timing.AudioAheadWaitPassOversleepMsP50 = metrics.AudioAheadWaitPassOversleepMsP50;
+            report.Timing.AudioAheadWaitPassOversleepMsP95 = metrics.AudioAheadWaitPassOversleepMsP95;
+            report.Timing.AudioAheadWaitPassOversleepMsP99 = metrics.AudioAheadWaitPassOversleepMsP99;
+            report.Timing.AudioAheadWaitPassOversleepMsMax = metrics.AudioAheadWaitPassOversleepMsMax;
             report.Timing.FramePacingSourceFrameRate = metrics.FramePacingSourceFrameRate;
             report.Timing.LateFrameDropToleranceMs = metrics.LateFrameDropToleranceMs;
 

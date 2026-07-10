@@ -316,6 +316,10 @@ namespace winrt::NoiraPlayer::Native::implementation
 
     void PlaybackGraph::RenderLoop() noexcept
     {
+        auto completedRenderLoopWaitReason = RenderLoopWaitReason::Default;
+        auto completedRenderLoopWaitDurationMs = 0.0;
+        auto completedRenderLoopWaitTargetMs = 0.0;
+
         while (true)
         {
             {
@@ -325,6 +329,14 @@ namespace winrt::NoiraPlayer::Native::implementation
                     return m_stopRenderLoop || (m_open && !m_paused);
                 });
 
+                if (completedRenderLoopWaitReason == RenderLoopWaitReason::AudioAhead)
+                {
+                    m_qualityMetrics.RecordAudioAheadWaitPassMs(completedRenderLoopWaitDurationMs, completedRenderLoopWaitTargetMs);
+                    completedRenderLoopWaitReason = RenderLoopWaitReason::Default;
+                    completedRenderLoopWaitDurationMs = 0.0;
+                    completedRenderLoopWaitTargetMs = 0.0;
+                }
+
                 if (m_stopRenderLoop)
                 {
                     return;
@@ -333,6 +345,7 @@ namespace winrt::NoiraPlayer::Native::implementation
 
             auto renderLoopWait = std::chrono::steady_clock::duration{PlaybackFramePacing::RenderLoopWait()};
             auto renderLoopWaitUseTimer = PlaybackFramePacing::ShouldUseRenderLoopTimer(renderLoopWait);
+            auto renderLoopWaitReason = RenderLoopWaitReason::Default;
 
             try
             {
@@ -358,9 +371,11 @@ namespace winrt::NoiraPlayer::Native::implementation
 
                     renderLoopWait = m_nextRenderLoopWait;
                     renderLoopWaitUseTimer = m_nextRenderLoopWaitUseTimer;
+                    renderLoopWaitReason = m_nextRenderLoopWaitReason;
                     m_nextRenderLoopWait = PlaybackFramePacing::RenderLoopWait();
                     m_nextRenderLoopWaitUseTimer =
                         PlaybackFramePacing::ShouldUseRenderLoopTimer(m_nextRenderLoopWait);
+                    m_nextRenderLoopWaitReason = RenderLoopWaitReason::Default;
                 }
 
                 if (reachedEnd)
@@ -403,6 +418,7 @@ namespace winrt::NoiraPlayer::Native::implementation
                 return;
             }
 
+            auto waitStartedAt = std::chrono::steady_clock::now();
             if (renderLoopWaitUseTimer)
             {
                 m_renderLoopWaiter.WaitFor(renderLoopWait);
@@ -410,6 +426,15 @@ namespace winrt::NoiraPlayer::Native::implementation
             else
             {
                 std::this_thread::sleep_for(renderLoopWait);
+            }
+
+            if (renderLoopWaitReason == RenderLoopWaitReason::AudioAhead)
+            {
+                auto waitEndedAt = std::chrono::steady_clock::now();
+                completedRenderLoopWaitDurationMs = std::chrono::duration<double, std::milli>(
+                    waitEndedAt - waitStartedAt).count();
+                completedRenderLoopWaitTargetMs = std::chrono::duration<double, std::milli>(renderLoopWait).count();
+                completedRenderLoopWaitReason = RenderLoopWaitReason::AudioAhead;
             }
         }
     }
@@ -506,6 +531,7 @@ namespace winrt::NoiraPlayer::Native::implementation
                         *audioPosition,
                         hasQueuedAudio);
                     m_nextRenderLoopWaitUseTimer = m_nextRenderLoopWait > std::chrono::steady_clock::duration::zero();
+                    m_nextRenderLoopWaitReason = RenderLoopWaitReason::AudioAhead;
                     ++m_audioAheadWaitPassCount;
 
                     ++m_videoAheadWaitCount;
@@ -675,6 +701,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         m_qualityMetrics.Reset();
         m_lastRuntimeStatsLog = {};
         m_lastRenderedFrameAt = {};
+        m_nextRenderLoopWaitReason = RenderLoopWaitReason::Default;
         ResetAudioAheadWait();
         ResetVideoClock();
     }
@@ -735,6 +762,7 @@ namespace winrt::NoiraPlayer::Native::implementation
                 m_videoClockStartPositionTicks,
                 elapsedTicks);
             m_nextRenderLoopWaitUseTimer = m_nextRenderLoopWait > std::chrono::steady_clock::duration::zero();
+            m_nextRenderLoopWaitReason = RenderLoopWaitReason::VideoClock;
         }
 
         return shouldWait;

@@ -62,6 +62,18 @@ namespace winrt::NoiraPlayer::Native::implementation
         double AudioAheadWaitPassesPerEpisodeP95{0.0};
         double AudioAheadWaitPassesPerEpisodeP99{0.0};
         double AudioAheadWaitPassesPerEpisodeMax{0.0};
+        double AudioAheadWaitPassDurationMsP50{0.0};
+        double AudioAheadWaitPassDurationMsP95{0.0};
+        double AudioAheadWaitPassDurationMsP99{0.0};
+        double AudioAheadWaitPassDurationMsMax{0.0};
+        double AudioAheadWaitPassTargetMsP50{0.0};
+        double AudioAheadWaitPassTargetMsP95{0.0};
+        double AudioAheadWaitPassTargetMsP99{0.0};
+        double AudioAheadWaitPassTargetMsMax{0.0};
+        double AudioAheadWaitPassOversleepMsP50{0.0};
+        double AudioAheadWaitPassOversleepMsP95{0.0};
+        double AudioAheadWaitPassOversleepMsP99{0.0};
+        double AudioAheadWaitPassOversleepMsMax{0.0};
         double FramePacingSourceFrameRate{0.0};
         double LateFrameDropToleranceMs{0.0};
         double AudioVideoDriftMsP50{0.0};
@@ -254,6 +266,24 @@ namespace winrt::NoiraPlayer::Native::implementation
             m_audioAheadWaitPassesPerEpisode.Add(static_cast<double>(passCount));
         }
 
+        void RecordAudioAheadWaitPassMs(double durationMs, double targetMs) noexcept
+        {
+            if (durationMs < 0.0)
+            {
+                durationMs = 0.0;
+            }
+
+            if (targetMs < 0.0)
+            {
+                targetMs = 0.0;
+            }
+
+            auto oversleepMs = durationMs > targetMs ? durationMs - targetMs : 0.0;
+            m_audioAheadWaitPassDurations.Add(durationMs);
+            m_audioAheadWaitPassTargets.Add(targetMs);
+            m_audioAheadWaitPassOversleeps.Add(oversleepMs);
+        }
+
         void RecordAudioVideoDriftTicks(int64_t driftTicks) noexcept
         {
             m_audioVideoDriftMs.Add(static_cast<double>(driftTicks) / 10000.0);
@@ -322,6 +352,18 @@ namespace winrt::NoiraPlayer::Native::implementation
             snapshot.AudioAheadWaitPassesPerEpisodeP95 = m_audioAheadWaitPassesPerEpisode.Percentile(95);
             snapshot.AudioAheadWaitPassesPerEpisodeP99 = m_audioAheadWaitPassesPerEpisode.Percentile(99);
             snapshot.AudioAheadWaitPassesPerEpisodeMax = m_audioAheadWaitPassesPerEpisode.Max();
+            snapshot.AudioAheadWaitPassDurationMsP50 = m_audioAheadWaitPassDurations.Percentile(50);
+            snapshot.AudioAheadWaitPassDurationMsP95 = m_audioAheadWaitPassDurations.Percentile(95);
+            snapshot.AudioAheadWaitPassDurationMsP99 = m_audioAheadWaitPassDurations.Percentile(99);
+            snapshot.AudioAheadWaitPassDurationMsMax = m_audioAheadWaitPassDurations.Max();
+            snapshot.AudioAheadWaitPassTargetMsP50 = m_audioAheadWaitPassTargets.Percentile(50);
+            snapshot.AudioAheadWaitPassTargetMsP95 = m_audioAheadWaitPassTargets.Percentile(95);
+            snapshot.AudioAheadWaitPassTargetMsP99 = m_audioAheadWaitPassTargets.Percentile(99);
+            snapshot.AudioAheadWaitPassTargetMsMax = m_audioAheadWaitPassTargets.Max();
+            snapshot.AudioAheadWaitPassOversleepMsP50 = m_audioAheadWaitPassOversleeps.Percentile(50);
+            snapshot.AudioAheadWaitPassOversleepMsP95 = m_audioAheadWaitPassOversleeps.Percentile(95);
+            snapshot.AudioAheadWaitPassOversleepMsP99 = m_audioAheadWaitPassOversleeps.Percentile(99);
+            snapshot.AudioAheadWaitPassOversleepMsMax = m_audioAheadWaitPassOversleeps.Max();
             snapshot.FramePacingSourceFrameRate = FramePacingSourceFrameRate;
             snapshot.LateFrameDropToleranceMs = LateFrameDropToleranceMs;
             snapshot.AudioVideoDriftMsP50 = m_audioVideoDriftMs.Percentile(50);
@@ -339,6 +381,9 @@ namespace winrt::NoiraPlayer::Native::implementation
         PlaybackQualityHistogram m_audioAheadWaitOversleeps;
         PlaybackQualityHistogram m_audioAheadWaitFinalDeltaAbsMs;
         PlaybackQualityHistogram m_audioAheadWaitPassesPerEpisode;
+        PlaybackQualityHistogram m_audioAheadWaitPassDurations;
+        PlaybackQualityHistogram m_audioAheadWaitPassTargets;
+        PlaybackQualityHistogram m_audioAheadWaitPassOversleeps;
         PlaybackQualityHistogram m_audioVideoDriftMs;
     };
 }

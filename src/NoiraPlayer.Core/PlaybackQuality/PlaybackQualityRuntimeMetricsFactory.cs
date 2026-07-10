@@ -87,6 +87,18 @@
                 metrics.AudioAheadWaitPassesPerEpisodeP95 > 0 ||
                 metrics.AudioAheadWaitPassesPerEpisodeP99 > 0 ||
                 metrics.AudioAheadWaitPassesPerEpisodeMax > 0 ||
+                metrics.AudioAheadWaitPassDurationMsP50 > 0 ||
+                metrics.AudioAheadWaitPassDurationMsP95 > 0 ||
+                metrics.AudioAheadWaitPassDurationMsP99 > 0 ||
+                metrics.AudioAheadWaitPassDurationMsMax > 0 ||
+                metrics.AudioAheadWaitPassTargetMsP50 > 0 ||
+                metrics.AudioAheadWaitPassTargetMsP95 > 0 ||
+                metrics.AudioAheadWaitPassTargetMsP99 > 0 ||
+                metrics.AudioAheadWaitPassTargetMsMax > 0 ||
+                metrics.AudioAheadWaitPassOversleepMsP50 > 0 ||
+                metrics.AudioAheadWaitPassOversleepMsP95 > 0 ||
+                metrics.AudioAheadWaitPassOversleepMsP99 > 0 ||
+                metrics.AudioAheadWaitPassOversleepMsMax > 0 ||
                 metrics.FramePacingSourceFrameRate > 0 ||
                 metrics.LateFrameDropToleranceMs > 0 ||
                 metrics.AudioVideoDriftMsP50 > 0 ||

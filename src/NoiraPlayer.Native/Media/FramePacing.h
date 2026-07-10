@@ -12,6 +12,10 @@ namespace winrt::NoiraPlayer::Native::implementation
         static constexpr int64_t VideoDropToleranceTicks = 1000000;
         static constexpr int64_t MinimumFrameRateAdaptiveDropToleranceTicks = 400000;
         static constexpr double LateFrameDropFrameTolerance = 2.5;
+        static constexpr std::chrono::milliseconds MaxVideoClockWait() noexcept
+        {
+            return std::chrono::milliseconds(10);
+        }
 
         static constexpr std::chrono::milliseconds RenderLoopWait() noexcept
         {
@@ -98,8 +102,10 @@ namespace winrt::NoiraPlayer::Native::implementation
                 return std::chrono::microseconds(0);
             }
 
-            return std::chrono::microseconds(
+            auto delay = std::chrono::microseconds(
                 (framePositionTicks - clockStartPositionTicks - clockElapsedTicks - VideoAheadToleranceTicks) / 10);
+            auto maxDelay = std::chrono::duration_cast<std::chrono::microseconds>(MaxVideoClockWait());
+            return delay < maxDelay ? delay : maxDelay;
         }
     };
 }

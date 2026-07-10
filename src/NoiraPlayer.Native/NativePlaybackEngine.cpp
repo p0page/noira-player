@@ -231,6 +231,18 @@ namespace winrt::NoiraPlayer::Native::implementation
         metrics.AudioAheadWaitPassesPerEpisodeP95(snapshot.AudioAheadWaitPassesPerEpisodeP95);
         metrics.AudioAheadWaitPassesPerEpisodeP99(snapshot.AudioAheadWaitPassesPerEpisodeP99);
         metrics.AudioAheadWaitPassesPerEpisodeMax(snapshot.AudioAheadWaitPassesPerEpisodeMax);
+        metrics.AudioAheadWaitPassDurationMsP50(snapshot.AudioAheadWaitPassDurationMsP50);
+        metrics.AudioAheadWaitPassDurationMsP95(snapshot.AudioAheadWaitPassDurationMsP95);
+        metrics.AudioAheadWaitPassDurationMsP99(snapshot.AudioAheadWaitPassDurationMsP99);
+        metrics.AudioAheadWaitPassDurationMsMax(snapshot.AudioAheadWaitPassDurationMsMax);
+        metrics.AudioAheadWaitPassTargetMsP50(snapshot.AudioAheadWaitPassTargetMsP50);
+        metrics.AudioAheadWaitPassTargetMsP95(snapshot.AudioAheadWaitPassTargetMsP95);
+        metrics.AudioAheadWaitPassTargetMsP99(snapshot.AudioAheadWaitPassTargetMsP99);
+        metrics.AudioAheadWaitPassTargetMsMax(snapshot.AudioAheadWaitPassTargetMsMax);
+        metrics.AudioAheadWaitPassOversleepMsP50(snapshot.AudioAheadWaitPassOversleepMsP50);
+        metrics.AudioAheadWaitPassOversleepMsP95(snapshot.AudioAheadWaitPassOversleepMsP95);
+        metrics.AudioAheadWaitPassOversleepMsP99(snapshot.AudioAheadWaitPassOversleepMsP99);
+        metrics.AudioAheadWaitPassOversleepMsMax(snapshot.AudioAheadWaitPassOversleepMsMax);
         metrics.FramePacingSourceFrameRate(snapshot.FramePacingSourceFrameRate);
         metrics.LateFrameDropToleranceMs(snapshot.LateFrameDropToleranceMs);
         metrics.AudioVideoDriftMsP50(snapshot.AudioVideoDriftMsP50);

@@ -2,6 +2,18 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-10 更新：main 合并后的 video-clock wait cap 候选已通过 24-case gate
+
+本轮重新核对当前 worktree：`main` 已经是当前分支祖先，没有未解决 merge conflict；合并 main 后的品牌、构建链和 FFmpeg 依赖更新已经包含在当前分支口径内。被打断前尝试过的 audio-ahead wait cap 已撤回，当前保留的行为改动只限于无音轨 software video-clock wait：`PlaybackFramePacing::VideoClockWaitDuration` 最长等待限制为 `10ms`，audio-ahead wait 仍使用原策略。
+
+已用当前代码重新生成 24-case candidate：`docs\qa\private\candidates\playback-core-tuning-video-clock-wait-cap-after-main-merge-24case.local\`。report-set validation 通过，24/24 report matched，native-headless included。与 `907e8d0` baseline `docs\qa\private\baselines\playback-core-tuning-short-interval-907e8d0-24case.local\` 对比输出到 `docs\qa\private\comparisons\playback-core-tuning-video-clock-wait-cap-after-main-merge-24case-with-repeat.local\`，suite 结论为 `accept-candidate / keep-candidate`、risk `low`、1 improved、0 regressed、0 mixed、23 unchanged。
+
+唯一 improved case 是 `local/native-headless-hdr10-60`：`framePacing.renderIntervalP99ExpectedErrorMs` 从 `3.456633ms` 降到 `0.443133ms`，`framePacing.maxFrameGapExpectedErrorMs` 从 `4.507933ms` 降到 `0.495233ms`。这与限制单次 video-clock wait、减少 60fps video-only cadence 尾部 overshoot 的预期一致。
+
+仍需保留的风险：native repeat summary `docs\qa\private\repeats\playback-core-tuning-video-clock-wait-cap-native-repeat.local\summaries\cadence-stability-summary.local.json` 显示 9 个 native group 中 7 个 stable、2 个 unstable，unstable group 仍为 `local/native-headless-av-smoke` 与 `local/native-headless-hdr10-60`。因此本轮可以说 video-clock wait cap 候选按当前 24-case gate 可采纳，但不能说 native cadence 稳定性已经完全解决。最新 smoke 抽样中 `local/native-headless-av-smoke` 的 render P95/P99 仍约 `39.6368/39.804ms`，目标帧长为 `33.333ms`；后续仍应围绕 A/V smoke 的 wait scheduling、oversleep 和 render catch-up 继续诊断。
+
+验证：原生 `FramePacingTests.cpp` 通过，`run-native-headless-harness-smoke-test.ps1` 通过，`git diff --check` 通过；完整 `powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\quality-run\run-playback-core-checks.ps1` 也已通过，覆盖 Core 436 个测试、CLI smoke、native-headless smoke、manifest/report/comparison 脚本测试、native helper/frame pacing/render loop/display refresh/offscreen tests 和 native Debug x64 build。
+
 ## 2026-07-10 更新：audio-ahead wait episode/pass 诊断证据已接入
 
 本轮确认当前调优分支已经包含 `main`，无需再次 merge；主线构建链、依赖库和 FFmpeg 升级内容已在当前分支口径内。随后继续基于 24-case manifest 做播放 Core 诊断能力增强，新增 `timing.audioAheadWaitEpisodeCount`、`timing.audioAheadWaitPassesPerEpisodeP50/P95/P99/Max`。这些字段从 native `PlaybackGraph` 的 audio-ahead wait episode 采集，并贯通 native metrics、native-headless stdout、Core report、analyzer evidence signals、signal catalog、candidate comparison matched signals、WinRT bridge 和 app quality-run clone。

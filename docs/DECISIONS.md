@@ -1,5 +1,15 @@
 ﻿# 技术决策
 
+## 2026-07-10: video-clock wait cap 作为当前 24-case 可采纳候选保留
+
+决策：无音轨 software video-clock wait 继续使用目标剩余时间等待，但单次 `PlaybackFramePacing::VideoClockWaitDuration` 返回值限制为最多 `10ms`。该限制只作用于 video-clock wait 路径；audio-ahead wait 不加 cap，不采用此前实验过的 audio wait 10ms cap。
+
+原因：合并 main 后重新生成的 24-case candidate `playback-core-tuning-video-clock-wait-cap-after-main-merge-24case.local` 与 `907e8d0` baseline 对比后，suite 输出 `accept-candidate / keep-candidate`：1 improved、0 regressed、23 unchanged。改进 case 为 `local/native-headless-hdr10-60`，P99 render interval expected-error 从 `3.456633ms` 降到 `0.443133ms`，max frame gap expected-error 从 `4.507933ms` 降到 `0.495233ms`。这说明限制单次 video-clock wait 能降低 60fps video-only 短样本的尾部 overshoot，而没有在当前 24-case gate 中引入回归。
+
+影响：后续播放 Core 调优可以把该 video-clock cap 作为当前 accepted 行为的一部分继续推进。若再调整 video-clock pacing，应继续使用同 manifest baseline/candidate comparison，并附带 native repeat stability；不能只看一次 smoke 的 P99/max。
+
+边界：该决策不解决 A/V smoke 的残留 frame-pacing 尾部问题，也不证明真实 Xbox/HDMI/HDR 输出完全正确。native repeat 中 `local/native-headless-av-smoke` 和 `local/native-headless-hdr10-60` 仍可出现不稳定，因此后续仍需把 repeat stability 作为解释证据。audio-ahead wait cap 实验已拒绝，不应混入该 accepted 候选。
+
 ## 2026-07-10: audio-ahead wait episode/pass evidence 作为诊断字段保留
 
 决策：保留 `timing.audioAheadWaitEpisodeCount` 与 `timing.audioAheadWaitPassesPerEpisodeP50/P95/P99/Max` 作为 native/Core/app quality report 的诊断证据。该字段组只描述 audio-ahead wait episode 的数量和每个 episode 内被拆成多少 wait pass，不改变 `PlaybackFramePacing` 策略，不新增 pass/fail 阈值，也不把单次 report 中的 pass 数变化直接解释为播放质量改善或回退。

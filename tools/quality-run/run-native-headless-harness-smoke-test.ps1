@@ -627,6 +627,12 @@ if ($nativeAvReport.report.timing.audioAheadWaitEpisodeCount -le 0 -or
     throw 'Expected native helper A/V report to include audio-ahead wait episode/pass evidence.'
 }
 
+if ($nativeAvReport.report.timing.audioAheadWaitPassDurationMsP95 -le 0 -or
+    $nativeAvReport.report.timing.audioAheadWaitPassTargetMsP95 -le 0 -or
+    $nativeAvReport.report.timing.audioAheadWaitPassOversleepMsP95 -le 0) {
+    throw 'Expected native helper A/V report to include audio-ahead wait pass duration/target/oversleep evidence.'
+}
+
 if ($nativeAvReport.report.timing.audioAheadWaitCount -le 0 -or
     $nativeAvReport.report.timing.videoClockWaitCount -lt 0 -or
     $nativeAvReport.report.timing.videoAheadWaitCount -lt $nativeAvReport.report.timing.audioAheadWaitCount) {
@@ -1044,6 +1050,12 @@ if (-not ($nativeAvMaterializedReport.modelAnalysis.evidenceSignals -contains 't
     -not ($nativeAvMaterializedReport.modelAnalysis.evidenceSignals -contains 'timing.audioAheadWaitPassesPerEpisodeP95') -or
     -not ($nativeAvMaterializedReport.modelAnalysis.evidenceSignals -contains 'timing.audioAheadWaitPassesPerEpisodeMax')) {
     throw 'Expected materialized native helper A/V report to expose audio-ahead episode/pass evidence signals.'
+}
+
+if (-not ($nativeAvMaterializedReport.modelAnalysis.evidenceSignals -contains 'timing.audioAheadWaitPassDurationMsP95') -or
+    -not ($nativeAvMaterializedReport.modelAnalysis.evidenceSignals -contains 'timing.audioAheadWaitPassTargetMsP95') -or
+    -not ($nativeAvMaterializedReport.modelAnalysis.evidenceSignals -contains 'timing.audioAheadWaitPassOversleepMsP95')) {
+    throw 'Expected materialized native helper A/V report to expose audio-ahead pass duration/target/oversleep evidence signals.'
 }
 
 if (-not ($nativeAvMaterializedReport.modelAnalysis.evidenceSignals -contains 'timing.hardwareDecodedVideoFrames') -or

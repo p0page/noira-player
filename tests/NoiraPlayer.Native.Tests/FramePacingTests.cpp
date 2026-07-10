@@ -33,6 +33,7 @@ int main()
     assert(!PlaybackFramePacing::ShouldWaitForVideoClock(1'000'000, 0, 950'000));
     assert(!PlaybackFramePacing::ShouldWaitForVideoClock(0, 0, 0));
     assert(PlaybackFramePacing::VideoClockWaitDuration(1'000'000, 0, 800'000).count() == 10'000);
+    assert(PlaybackFramePacing::VideoClockWaitDuration(2'000'000, 0, 0).count() == 10'000);
     assert(PlaybackFramePacing::VideoClockWaitDuration(1'000'000, 0, 950'000).count() == 0);
     assert(PlaybackFramePacing::VideoClockWaitDuration(0, 0, 0).count() == 0);
 }

@@ -19,6 +19,12 @@ function Write-TestReport {
         [double]$AudioAheadWaitOversleepP99 = 0,
         [double]$AudioAheadWaitFinalDeltaAbsP95 = 0,
         [double]$AudioAheadWaitFinalDeltaAbsP99 = 0,
+        [double]$AudioAheadWaitPassDurationP95 = 0,
+        [double]$AudioAheadWaitPassDurationP99 = 0,
+        [double]$AudioAheadWaitPassTargetP95 = 0,
+        [double]$AudioAheadWaitPassTargetP99 = 0,
+        [double]$AudioAheadWaitPassOversleepP95 = 0,
+        [double]$AudioAheadWaitPassOversleepP99 = 0,
         [double]$AudioVideoDriftP95 = 0,
         [double]$AudioVideoDriftP99 = 0,
         [switch]$OmitShortIntervalEvidence
@@ -46,6 +52,12 @@ function Write-TestReport {
                 audioAheadWaitOversleepMsP99 = $AudioAheadWaitOversleepP99
                 audioAheadWaitFinalDeltaAbsMsP95 = $AudioAheadWaitFinalDeltaAbsP95
                 audioAheadWaitFinalDeltaAbsMsP99 = $AudioAheadWaitFinalDeltaAbsP99
+                audioAheadWaitPassDurationMsP95 = $AudioAheadWaitPassDurationP95
+                audioAheadWaitPassDurationMsP99 = $AudioAheadWaitPassDurationP99
+                audioAheadWaitPassTargetMsP95 = $AudioAheadWaitPassTargetP95
+                audioAheadWaitPassTargetMsP99 = $AudioAheadWaitPassTargetP99
+                audioAheadWaitPassOversleepMsP95 = $AudioAheadWaitPassOversleepP95
+                audioAheadWaitPassOversleepMsP99 = $AudioAheadWaitPassOversleepP99
             }
             sync = [pscustomobject][ordered]@{
                 audioVideoDriftMsP95 = $AudioVideoDriftP95
@@ -146,6 +158,12 @@ try {
         -AudioAheadWaitOversleepP99 7.0 `
         -AudioAheadWaitFinalDeltaAbsP95 10.0 `
         -AudioAheadWaitFinalDeltaAbsP99 10.0 `
+        -AudioAheadWaitPassDurationP95 33.8 `
+        -AudioAheadWaitPassDurationP99 34.0 `
+        -AudioAheadWaitPassTargetP95 33.3 `
+        -AudioAheadWaitPassTargetP99 33.3 `
+        -AudioAheadWaitPassOversleepP95 0.5 `
+        -AudioAheadWaitPassOversleepP99 0.7 `
         -AudioVideoDriftP95 10.0 `
         -AudioVideoDriftP99 12.0
     Write-TestReport `
@@ -161,6 +179,12 @@ try {
         -AudioAheadWaitOversleepP99 11.0 `
         -AudioAheadWaitFinalDeltaAbsP95 13.5 `
         -AudioAheadWaitFinalDeltaAbsP99 13.5 `
+        -AudioAheadWaitPassDurationP95 39.2 `
+        -AudioAheadWaitPassDurationP99 43.0 `
+        -AudioAheadWaitPassTargetP95 33.3 `
+        -AudioAheadWaitPassTargetP99 33.3 `
+        -AudioAheadWaitPassOversleepP95 5.9 `
+        -AudioAheadWaitPassOversleepP99 9.7 `
         -AudioVideoDriftP95 10.0 `
         -AudioVideoDriftP99 12.0
     Write-TestReport `
@@ -176,6 +200,12 @@ try {
         -AudioAheadWaitOversleepP99 7.4 `
         -AudioAheadWaitFinalDeltaAbsP95 10.2 `
         -AudioAheadWaitFinalDeltaAbsP99 10.2 `
+        -AudioAheadWaitPassDurationP95 34.0 `
+        -AudioAheadWaitPassDurationP99 34.2 `
+        -AudioAheadWaitPassTargetP95 33.3 `
+        -AudioAheadWaitPassTargetP99 33.3 `
+        -AudioAheadWaitPassOversleepP95 0.7 `
+        -AudioAheadWaitPassOversleepP99 0.9 `
         -AudioVideoDriftP95 10.0 `
         -AudioVideoDriftP99 12.0
 
@@ -275,6 +305,16 @@ try {
     if ($oversleepUnstable.audioAheadWaitFinalDeltaAbsP95SpreadMs -lt 3.0 -or
         -not ($oversleepUnstable.unstableSignals -contains 'timing.audioAheadWaitFinalDeltaAbsMsP95')) {
         throw 'Expected A/V oversleep group to expose audio-ahead final delta spread signals.'
+    }
+
+    if ($oversleepUnstable.audioAheadWaitPassOversleepP95SpreadMs -lt 5.0 -or
+        -not ($oversleepUnstable.unstableSignals -contains 'timing.audioAheadWaitPassOversleepMsP95')) {
+        throw 'Expected A/V oversleep group to expose per-pass audio-ahead oversleep spread signals.'
+    }
+
+    if ($oversleepUnstable.audioAheadWaitPassDurationP95SpreadMs -lt 5.0 -or
+        $oversleepUnstable.audioAheadWaitPassTargetP95SpreadMs -ne 0) {
+        throw 'Expected per-pass duration spread to separate actual wait duration from stable wait target.'
     }
 
     Write-Output 'measure-playback-cadence-stability tests ok'
