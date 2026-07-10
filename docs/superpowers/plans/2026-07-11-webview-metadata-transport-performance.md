@@ -102,11 +102,11 @@ Do not include the private endpoint or identity in the plan.
 - Produces: `EmbyMetadataTransport.GetAsync(Uri, EmbyClientOptions, EmbySession, CancellationToken) -> Task<EmbyMetadataResponse>`.
 - Produces: `EmbyMetadataResponse` fields `StatusCode`, `ReasonPhrase`, `Body`, `NetworkDurationMilliseconds`, and `BodyLengthBytes`.
 
-- [ ] **Step 1: Add failing lifecycle and request tests**
+- [x] **Step 1: Add failing lifecycle and request tests**
 
 Tests must send two sequential requests through one transport and assert request count, GET method, URL, Accept header, Emby authorization, token, status/body passthrough, positive/non-negative timing, and that the injected handler remains usable until the owning transport is disposed.
 
-- [ ] **Step 2: Run the focused tests and observe RED**
+- [x] **Step 2: Run the focused tests and observe RED**
 
 ```powershell
 dotnet test tests\NoiraPlayer.Core.Tests\NoiraPlayer.Core.Tests.csproj --filter FullyQualifiedName~EmbyMetadataTransportTests -v minimal
@@ -114,7 +114,7 @@ dotnet test tests\NoiraPlayer.Core.Tests\NoiraPlayer.Core.Tests.csproj --filter 
 
 Expected: compilation failure because `EmbyMetadataTransport` and `EmbyMetadataResponse` do not exist.
 
-- [ ] **Step 3: Implement the minimal transport**
+- [x] **Step 3: Implement the minimal transport**
 
 The default client configuration must follow this shape:
 
@@ -140,7 +140,7 @@ var client = new HttpClient(handler)
 
 `GetAsync` must create a new request, apply per-request headers, call `SendAsync` with `ResponseHeadersRead`, read the body with cancellation, and return status rather than calling `EnsureSuccessStatusCode`.
 
-- [ ] **Step 4: Run focused and complete Core tests**
+- [x] **Step 4: Run focused and complete Core tests**
 
 ```powershell
 dotnet test tests\NoiraPlayer.Core.Tests\NoiraPlayer.Core.Tests.csproj --filter FullyQualifiedName~EmbyMetadataTransportTests -v minimal
@@ -157,21 +157,21 @@ dotnet test tests\NoiraPlayer.Core.Tests\NoiraPlayer.Core.Tests.csproj -v minima
 - Consumes: `EmbyMetadataTransport.CreateDefault` and `GetAsync`.
 - Extends native `emby.get` result with `timing.networkMs` and `timing.bodyBytes`.
 
-- [ ] **Step 1: Add failing source-contract assertions**
+- [x] **Step 1: Add failing source-contract assertions**
 
 Assert that the bridge owns `_metadataTransport`, calls `EmbyMetadataTransport.CreateDefault`, calls `_metadataTransport.GetAsync`, includes timing fields, and no longer contains `using var http = new HttpClient` or direct `http.SendAsync`.
 
-- [ ] **Step 2: Run the design test and observe RED**
+- [x] **Step 2: Run the design test and observe RED**
 
 ```powershell
 dotnet test tests\NoiraPlayer.Core.Tests\NoiraPlayer.Core.Tests.csproj --filter Modern_App_Primary_Shell_Is_WebView2_Hosted_React_Vite_Surface -v minimal
 ```
 
-- [ ] **Step 3: Inject and reuse one transport**
+- [x] **Step 3: Inject and reuse one transport**
 
 The bridge constructors must create or accept one transport. `GetEmbyAsync` keeps all existing session/path validation, builds the saved-server absolute URI, delegates the request, and serializes only status/body/timing into the existing response contract.
 
-- [ ] **Step 4: Re-run focused Core tests**
+- [x] **Step 4: Re-run focused Core tests**
 
 Run the Task 2 transport tests and the modern UWP source-contract test.
 
@@ -187,25 +187,25 @@ Run the Task 2 transport tests and the modern UWP source-contract test.
 - Produces: one `BridgeState` per `WebViewHost`, stored in a `WeakMap`, with one message listener and a pending request map.
 - Extends `NativeEmbyGetResult` with optional `timing: { networkMs: number; bodyBytes: number }`.
 
-- [ ] **Step 1: Add failing listener and timing tests**
+- [x] **Step 1: Add failing listener and timing tests**
 
 Two requests through the same fake WebView host must attach one listener, route responses by ID, remove completed/expired pending entries, and preserve timeout rejection. Native transport tests must assert the four synthetic diagnostic headers and confirm direct HTTP responses are returned untouched.
 
-- [ ] **Step 2: Run targeted Vitest and observe RED**
+- [x] **Step 2: Run targeted Vitest and observe RED**
 
 ```powershell
 npm test -- --run src/bridge.test.ts src/transport.test.ts
 ```
 
-- [ ] **Step 3: Implement the per-host pending registry**
+- [x] **Step 3: Implement the per-host pending registry**
 
 Create the request ID and timeout as before, but store resolve/reject/timeout in one host state. The single listener removes the matching pending entry before resolving or rejecting.
 
-- [ ] **Step 4: Add native timing response headers**
+- [x] **Step 4: Add native timing response headers**
 
 Measure bridge round-trip with `performance.now()` when available and `Date.now()` otherwise. Do not add URL or identity headers.
 
-- [ ] **Step 5: Run all web verification**
+- [x] **Step 5: Run all web verification**
 
 ```powershell
 npm test -- --run
@@ -223,11 +223,11 @@ npm run build
 - Consumes environment variables `NOIRAPLAYER_QA_SERVER_URL`, `NOIRAPLAYER_QA_USERNAME`, and `NOIRAPLAYER_QA_PASSWORD`, or an in-memory `PSCredential`.
 - Produces sanitized JSON schema `noira.hybrid-transport-probe.v1` on stdout or an optional ignored `*.local.json` path.
 
-- [ ] **Step 1: Write a failing PowerShell contract test**
+- [x] **Step 1: Write a failing PowerShell contract test**
 
 The test must assert required-secret failure, rejection of non-HTTPS URLs unless explicitly allowed, no secret values in output/errors, deterministic percentile calculation, CORS classification, and sanitized JSON field allowlisting.
 
-- [ ] **Step 2: Run the script test and observe RED**
+- [x] **Step 2: Run the script test and observe RED**
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-NoiraHybridTransport.tests.ps1
@@ -235,15 +235,15 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-NoiraHybridTransp
 
 Expected: failure because the probe script does not exist.
 
-- [ ] **Step 3: Implement CORS and authenticated benchmark modes**
+- [x] **Step 3: Implement CORS and authenticated benchmark modes**
 
 Authenticate in memory, select a bounded user Views/Items endpoint without emitting IDs, alternate shared-client and new-client requests, discard warm-up, calculate min/p50/p95/max, and emit only allowlisted metrics. Dispose every temporary client and clear plaintext password variables in `finally`.
 
-- [ ] **Step 4: Run the script tests**
+- [x] **Step 4: Run the script tests**
 
 Re-run the PowerShell contract test with only synthetic/local fixtures; no real secrets are used by the committed test.
 
-- [ ] **Step 5: Run the real private probe ephemerally**
+- [x] **Step 5: Run the real private probe ephemerally**
 
 Set credentials only in a transient PowerShell process, write any detailed result to `docs/qa/private/hybrid-transport-probe.local.json`, clear environment variables, and summarize only sanitized metrics in the tracked QA record.
 
@@ -256,7 +256,7 @@ Set credentials only in a transient PowerShell process, write any detailed resul
 - Consumes the optimized transport and probe output.
 - Produces repeatable automated, packaged, interaction, CORS, and performance evidence.
 
-- [ ] **Step 1: Run all automated checks fresh**
+- [x] **Step 1: Run all automated checks fresh**
 
 ```powershell
 npm test -- --run
@@ -267,7 +267,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools\Write-WebViewDevServer
 powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-NoiraHybridTransport.tests.ps1
 ```
 
-- [ ] **Step 2: Build and register Debug x64 NativeAOT**
+- [x] **Step 2: Build and register Debug x64 NativeAOT**
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File tools\Build-Noira.ps1 -Target Build -Configuration Debug -Platform x64
@@ -282,13 +282,15 @@ Launch the package, bootstrap or log in using the private credentials without pe
 
 Confirm the first browser network failure switches the React client once, subsequent metadata requests use native mode, and native timing headers contain finite non-negative values.
 
-- [ ] **Step 5: Update QA evidence without private data**
+- [x] **Step 5: Update QA evidence without private data**
 
 Record test counts, build/package identity, CORS classification, sanitized p50/p95 ratios, functional flow, and remaining Xbox hardware limitations.
 
-- [ ] **Step 6: Run secret and diff checks**
+- [x] **Step 6: Run secret and diff checks**
 
 Search changed tracked files for the supplied private values plus token-like fields, inspect `git diff --check`, verify `git status --short`, and commit only after the scan is clean.
+
+Execution note: the final package was built, registered, launched, and read back at the React Libraries surface with a saved native session, packaged assets, no Vite override, and a non-empty private button set. Fresh automated item-detail and playback traversal, plus live inspection of the synthetic timing headers, remain unchecked because Windows Computer Use repeatedly reported the UWP frame as minimized after its required activation/rehydration retry. The immediately preceding package's complete native playback proof remains in `docs/qa/webview-react-vite-spike.md`; this pass did not modify `PlaybackPage` or the playback core.
 
 ## Deferred Work
 

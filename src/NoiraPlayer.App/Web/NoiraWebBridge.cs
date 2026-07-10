@@ -1,7 +1,5 @@
 using System;
 using System.Globalization;
-using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -17,15 +15,24 @@ namespace NoiraPlayer.App.Web
     internal sealed class NoiraWebBridge
     {
         private readonly ISessionStore _sessionStore;
+        private readonly EmbyMetadataTransport _metadataTransport;
 
         public NoiraWebBridge()
-            : this(new ApplicationDataSessionStore())
+            : this(new ApplicationDataSessionStore(), EmbyMetadataTransport.CreateDefault())
         {
         }
 
         internal NoiraWebBridge(ISessionStore sessionStore)
+            : this(sessionStore, EmbyMetadataTransport.CreateDefault())
+        {
+        }
+
+        internal NoiraWebBridge(
+            ISessionStore sessionStore,
+            EmbyMetadataTransport metadataTransport)
         {
             _sessionStore = sessionStore ?? throw new ArgumentNullException(nameof(sessionStore));
+            _metadataTransport = metadataTransport ?? throw new ArgumentNullException(nameof(metadataTransport));
         }
 
         public async Task<NoiraWebBridgeResult> HandleAsync(
@@ -135,22 +142,17 @@ namespace NoiraPlayer.App.Web
                 return Result(Error(id, "invalid-emby-path", "The requested Emby path is not allowed."));
             }
 
-            using var http = new HttpClient
-            {
-                Timeout = EmbyRequestTimeoutPolicy.InteractiveRequestTimeout
-            };
-            using var request = new HttpRequestMessage(
-                HttpMethod.Get,
-                session.ServerUrl.TrimEnd('/') + "/" + path);
-            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-            EmbyAuthorization.Apply(request, EmbyClientFactory.CreateOptions(session), session);
-
-            using var response = await http.SendAsync(request);
-            var body = await response.Content.ReadAsStringAsync();
+            var response = await _metadataTransport.GetAsync(
+                new Uri(session.ServerUrl.TrimEnd('/') + "/" + path),
+                EmbyClientFactory.CreateOptions(session),
+                session);
             var resultJson =
-                "{\"status\":" + ((int)response.StatusCode).ToString(CultureInfo.InvariantCulture) + "," +
-                "\"statusText\":" + Quote(response.ReasonPhrase ?? "") + "," +
-                "\"body\":" + Quote(body) + "}";
+                "{\"status\":" + response.StatusCode.ToString(CultureInfo.InvariantCulture) + "," +
+                "\"statusText\":" + Quote(response.ReasonPhrase) + "," +
+                "\"body\":" + Quote(response.Body) + "," +
+                "\"timing\":{" +
+                "\"networkMs\":" + response.NetworkDurationMilliseconds.ToString("0.###", CultureInfo.InvariantCulture) + "," +
+                "\"bodyBytes\":" + response.BodyLengthBytes.ToString(CultureInfo.InvariantCulture) + "}}";
             return Result(Ok(id, resultJson));
         }
 

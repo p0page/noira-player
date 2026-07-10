@@ -18,6 +18,10 @@ public sealed class TestHttpMessageHandler : HttpMessageHandler
 
     public TestHttpRequestSnapshot? LastRequest { get; private set; }
 
+    public int RequestCount { get; private set; }
+
+    public bool IsDisposed { get; private set; }
+
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         var body = request.Content is null
@@ -25,7 +29,14 @@ public sealed class TestHttpMessageHandler : HttpMessageHandler
             : await request.Content.ReadAsStringAsync().ConfigureAwait(false);
 
         LastRequest = TestHttpRequestSnapshot.From(request, body);
+        RequestCount++;
         return _handler(request);
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        IsDisposed = true;
+        base.Dispose(disposing);
     }
 
     public static HttpResponseMessage Json(HttpStatusCode statusCode, string json)
@@ -44,6 +55,7 @@ public sealed class TestHttpRequestSnapshot
         Uri? requestUri,
         string? authorizationScheme,
         string? authorizationParameter,
+        string? acceptMediaType,
         string? contentTypeMediaType,
         string? contentTypeCharSet,
         string? embyToken,
@@ -53,6 +65,7 @@ public sealed class TestHttpRequestSnapshot
         RequestUri = requestUri;
         AuthorizationScheme = authorizationScheme;
         AuthorizationParameter = authorizationParameter;
+        AcceptMediaType = acceptMediaType;
         ContentTypeMediaType = contentTypeMediaType;
         ContentTypeCharSet = contentTypeCharSet;
         EmbyToken = embyToken;
@@ -63,6 +76,7 @@ public sealed class TestHttpRequestSnapshot
     public Uri? RequestUri { get; }
     public string? AuthorizationScheme { get; }
     public string? AuthorizationParameter { get; }
+    public string? AcceptMediaType { get; }
     public string? ContentTypeMediaType { get; }
     public string? ContentTypeCharSet { get; }
     public string? EmbyToken { get; }
@@ -79,6 +93,7 @@ public sealed class TestHttpRequestSnapshot
             request.RequestUri,
             request.Headers.Authorization?.Scheme,
             request.Headers.Authorization?.Parameter,
+            request.Headers.Accept.SingleOrDefault()?.MediaType,
             request.Content?.Headers.ContentType?.MediaType,
             request.Content?.Headers.ContentType?.CharSet,
             embyToken,

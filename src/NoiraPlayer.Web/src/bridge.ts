@@ -40,6 +40,18 @@ interface BridgeRequestOptions {
   timeoutMs?: number;
 }
 
+interface PendingBridgeRequest {
+  resolve(value: unknown): void;
+  reject(reason?: unknown): void;
+  timeout: ReturnType<typeof setTimeout>;
+}
+
+interface BridgeState {
+  pending: Map<string, PendingBridgeRequest>;
+}
+
+const bridgeStates = new WeakMap<WebViewHost, BridgeState>();
+
 declare global {
   interface Window {
     chrome?: {
@@ -80,40 +92,58 @@ export async function requestBridge<TResult = unknown, TPayload = unknown>(
 
   const request = createBridgeRequest(type, payload);
   const timeoutMs = options.timeoutMs ?? 20000;
+  const state = getBridgeState(webview);
   return await new Promise<TResult>((resolve, reject) => {
-    let completed = false;
-    const onMessage = (event: WebViewMessageEvent) => {
-      if (completed) {
-        return;
-      }
-
-      if (event.data.id !== request.id) {
-        return;
-      }
-
-      completed = true;
-      clearTimeout(timeout);
-      webview.removeEventListener?.('message', onMessage);
-      if (event.data.ok) {
-        resolve(event.data.result as TResult);
-      } else {
-        reject(new Error(event.data.error.message));
-      }
-    };
-
     const timeout = setTimeout(() => {
-      if (completed) {
+      if (!state.pending.delete(request.id)) {
         return;
       }
 
-      completed = true;
-      webview.removeEventListener?.('message', onMessage);
       reject(new Error('Timed out waiting for native WebView2 response.'));
     }, timeoutMs);
 
-    webview.addEventListener?.('message', onMessage);
-    webview.postMessage(request);
+    state.pending.set(request.id, {
+      resolve: (value) => resolve(value as TResult),
+      reject,
+      timeout,
+    });
+
+    try {
+      webview.postMessage(request);
+    } catch (cause) {
+      clearTimeout(timeout);
+      state.pending.delete(request.id);
+      reject(cause);
+    }
   });
+}
+
+function getBridgeState(webview: WebViewHost): BridgeState {
+  const existing = bridgeStates.get(webview);
+  if (existing) {
+    return existing;
+  }
+
+  const state: BridgeState = {
+    pending: new Map(),
+  };
+  webview.addEventListener?.('message', (event) => {
+    const response = event.data;
+    const pending = state.pending.get(response.id);
+    if (!pending) {
+      return;
+    }
+
+    state.pending.delete(response.id);
+    clearTimeout(pending.timeout);
+    if (response.ok) {
+      pending.resolve(response.result);
+    } else {
+      pending.reject(new Error(response.error.message));
+    }
+  });
+  bridgeStates.set(webview, state);
+  return state;
 }
 
 function createRequestId(): string {

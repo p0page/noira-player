@@ -11,12 +11,17 @@ interface NativeEmbyGetResult {
   status: number;
   statusText: string;
   body: string;
+  timing?: {
+    networkMs: number;
+    bodyBytes: number;
+  };
 }
 
 interface EmbyFetchTransportOptions {
   directFetch?: FetchLike;
   bridgeRequest?: BridgeRequestLike;
   canUseNativeBridge?: () => boolean;
+  now?: () => number;
 }
 
 export function createEmbyFetchTransport(
@@ -28,6 +33,7 @@ export function createEmbyFetchTransport(
     options.bridgeRequest ??
     ((type, payload) => requestBridge<NativeEmbyGetResult>(type, payload));
   const canUseNativeBridge = options.canUseNativeBridge ?? isWebViewBridgeAvailable;
+  const now = options.now ?? monotonicNow;
   const serverBase = new URL(session.serverUrl.trim().replace(/\/+$/, '') + '/');
   let nativeMode = false;
 
@@ -52,13 +58,30 @@ export function createEmbyFetchTransport(
       }
     }
 
+    const bridgeStartedAt = now();
     const result = await bridgeRequest('emby.get', { path });
+    const bridgeDurationMs = Math.max(0, now() - bridgeStartedAt);
+    const bodyBytes = result.timing?.bodyBytes ?? new TextEncoder().encode(result.body).byteLength;
     return new Response(result.body, {
       status: result.status,
       statusText: result.statusText,
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Noira-Transport': 'native',
+        'X-Noira-Network-Ms': formatMetric(result.timing?.networkMs ?? 0),
+        'X-Noira-Bridge-Ms': formatMetric(bridgeDurationMs),
+        'X-Noira-Body-Bytes': formatMetric(bodyBytes),
+      },
     });
   };
+}
+
+function monotonicNow(): number {
+  return typeof performance !== 'undefined' ? performance.now() : Date.now();
+}
+
+function formatMetric(value: number): string {
+  return Number.isFinite(value) ? String(Math.max(0, value)) : '0';
 }
 
 function createNativePath(serverBase: URL, input: RequestInfo | URL): string {

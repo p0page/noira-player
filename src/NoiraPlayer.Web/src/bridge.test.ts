@@ -64,6 +64,41 @@ describe('bridge', () => {
     );
   });
 
+  it('uses one listener per WebView host and routes concurrent responses by request id', async () => {
+    let messageHandler: ((event: { data: unknown }) => void) | undefined;
+    const addEventListener = vi.fn(
+      (_type: 'message', handler: (event: { data: unknown }) => void) => {
+        messageHandler = handler;
+      },
+    );
+    const postMessage = vi.fn();
+    (globalThis as { window?: unknown }).window = {
+      chrome: {
+        webview: {
+          addEventListener,
+          removeEventListener: vi.fn(),
+          postMessage,
+        },
+      },
+    };
+
+    const firstPromise = requestBridge<{ value: string }>('auth.bootstrap');
+    const secondPromise = requestBridge<{ value: string }>('auth.bootstrap');
+    const firstRequest = postMessage.mock.calls[0][0] as { id: string };
+    const secondRequest = postMessage.mock.calls[1][0] as { id: string };
+
+    expect(addEventListener).toHaveBeenCalledOnce();
+    messageHandler?.({
+      data: { id: secondRequest.id, ok: true, result: { value: 'second' } },
+    });
+    messageHandler?.({
+      data: { id: firstRequest.id, ok: true, result: { value: 'first' } },
+    });
+
+    await expect(firstPromise).resolves.toEqual({ value: 'first' });
+    await expect(secondPromise).resolves.toEqual({ value: 'second' });
+  });
+
   it('models playback as a native launch request in browser fallback mode', async () => {
     const result = await requestBridge('playback.nativePlayItem', {
       itemId: 'sample-movie',
