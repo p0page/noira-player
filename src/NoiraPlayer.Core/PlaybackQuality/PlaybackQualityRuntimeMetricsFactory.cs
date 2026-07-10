@@ -82,6 +82,11 @@
                 metrics.AudioAheadWaitFinalDeltaAbsMsP95 > 0 ||
                 metrics.AudioAheadWaitFinalDeltaAbsMsP99 > 0 ||
                 metrics.AudioAheadWaitFinalDeltaAbsMsMax > 0 ||
+                metrics.AudioAheadWaitEpisodeCount > 0 ||
+                metrics.AudioAheadWaitPassesPerEpisodeP50 > 0 ||
+                metrics.AudioAheadWaitPassesPerEpisodeP95 > 0 ||
+                metrics.AudioAheadWaitPassesPerEpisodeP99 > 0 ||
+                metrics.AudioAheadWaitPassesPerEpisodeMax > 0 ||
                 metrics.FramePacingSourceFrameRate > 0 ||
                 metrics.LateFrameDropToleranceMs > 0 ||
                 metrics.AudioVideoDriftMsP50 > 0 ||

@@ -15,9 +15,9 @@ int main()
     metrics.RecordPresentDurationMs(2.0);
     metrics.RecordPresentDurationMs(17.0);
     metrics.RecordPresentDurationMs(34.0);
-    metrics.RecordAudioAheadWaitMs(4.0, 1.0, 100.0);
-    metrics.RecordAudioAheadWaitMs(12.0, 3.0, 80.0);
-    metrics.RecordAudioAheadWaitMs(24.0, 8.0, 50.0);
+    metrics.RecordAudioAheadWaitMs(4.0, 1.0, 100.0, 1);
+    metrics.RecordAudioAheadWaitMs(12.0, 3.0, 80.0, 2);
+    metrics.RecordAudioAheadWaitMs(24.0, 8.0, 50.0, 3);
     metrics.RecordAudioVideoDriftTicks(200000);
     metrics.RecordAudioVideoDriftTicks(-400000);
 
@@ -75,6 +75,10 @@ int main()
     assert(snapshot.AudioAheadWaitFinalDeltaAbsMsP50 >= 50.0);
     assert(snapshot.AudioAheadWaitFinalDeltaAbsMsP95 >= 100.0);
     assert(snapshot.AudioAheadWaitFinalDeltaAbsMsMax == 100.0);
+    assert(snapshot.AudioAheadWaitEpisodeCount == 3);
+    assert(snapshot.AudioAheadWaitPassesPerEpisodeP50 >= 1.0);
+    assert(snapshot.AudioAheadWaitPassesPerEpisodeP95 >= 3.0);
+    assert(snapshot.AudioAheadWaitPassesPerEpisodeMax == 3.0);
     assert(snapshot.AudioVideoDriftMsP95 >= 40.0);
     assert(snapshot.AudioVideoDriftMsMax >= 40.0);
     assert(snapshot.AudioClockTicks == 2'000'000);
@@ -102,6 +106,8 @@ int main()
     assert(snapshot.AudioAheadWaitTargetMsMax == 0.0);
     assert(snapshot.AudioAheadWaitOversleepMsMax == 0.0);
     assert(snapshot.AudioAheadWaitFinalDeltaAbsMsMax == 0.0);
+    assert(snapshot.AudioAheadWaitEpisodeCount == 0);
+    assert(snapshot.AudioAheadWaitPassesPerEpisodeMax == 0.0);
     assert(snapshot.AudioVideoDriftMsMax == 0.0);
     assert(snapshot.FramePacingSourceFrameRate == 0.0);
     assert(snapshot.LateFrameDropToleranceMs == 0.0);

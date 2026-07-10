@@ -57,6 +57,11 @@ namespace winrt::NoiraPlayer::Native::implementation
         double AudioAheadWaitFinalDeltaAbsMsP95{0.0};
         double AudioAheadWaitFinalDeltaAbsMsP99{0.0};
         double AudioAheadWaitFinalDeltaAbsMsMax{0.0};
+        uint64_t AudioAheadWaitEpisodeCount{0};
+        double AudioAheadWaitPassesPerEpisodeP50{0.0};
+        double AudioAheadWaitPassesPerEpisodeP95{0.0};
+        double AudioAheadWaitPassesPerEpisodeP99{0.0};
+        double AudioAheadWaitPassesPerEpisodeMax{0.0};
         double FramePacingSourceFrameRate{0.0};
         double LateFrameDropToleranceMs{0.0};
         double AudioVideoDriftMsP50{0.0};
@@ -220,11 +225,25 @@ namespace winrt::NoiraPlayer::Native::implementation
             RecordAudioAheadWaitMs(value, 0.0, 0.0);
         }
 
-        void RecordAudioAheadWaitMs(double durationMs, double targetMs, double finalDeltaMs) noexcept
+        void RecordAudioAheadWaitMs(
+            double durationMs,
+            double targetMs,
+            double finalDeltaMs,
+            uint64_t passCount = 1) noexcept
         {
             if (targetMs < 0.0)
             {
                 targetMs = 0.0;
+            }
+
+            if (finalDeltaMs < 0.0)
+            {
+                finalDeltaMs = -finalDeltaMs;
+            }
+
+            if (passCount == 0)
+            {
+                passCount = 1;
             }
 
             auto oversleepMs = durationMs > targetMs ? durationMs - targetMs : 0.0;
@@ -232,6 +251,7 @@ namespace winrt::NoiraPlayer::Native::implementation
             m_audioAheadWaitTargets.Add(targetMs);
             m_audioAheadWaitOversleeps.Add(oversleepMs);
             m_audioAheadWaitFinalDeltaAbsMs.Add(finalDeltaMs);
+            m_audioAheadWaitPassesPerEpisode.Add(static_cast<double>(passCount));
         }
 
         void RecordAudioVideoDriftTicks(int64_t driftTicks) noexcept
@@ -297,6 +317,11 @@ namespace winrt::NoiraPlayer::Native::implementation
             snapshot.AudioAheadWaitFinalDeltaAbsMsP95 = m_audioAheadWaitFinalDeltaAbsMs.Percentile(95);
             snapshot.AudioAheadWaitFinalDeltaAbsMsP99 = m_audioAheadWaitFinalDeltaAbsMs.Percentile(99);
             snapshot.AudioAheadWaitFinalDeltaAbsMsMax = m_audioAheadWaitFinalDeltaAbsMs.Max();
+            snapshot.AudioAheadWaitEpisodeCount = static_cast<uint64_t>(m_audioAheadWaitPassesPerEpisode.Count());
+            snapshot.AudioAheadWaitPassesPerEpisodeP50 = m_audioAheadWaitPassesPerEpisode.Percentile(50);
+            snapshot.AudioAheadWaitPassesPerEpisodeP95 = m_audioAheadWaitPassesPerEpisode.Percentile(95);
+            snapshot.AudioAheadWaitPassesPerEpisodeP99 = m_audioAheadWaitPassesPerEpisode.Percentile(99);
+            snapshot.AudioAheadWaitPassesPerEpisodeMax = m_audioAheadWaitPassesPerEpisode.Max();
             snapshot.FramePacingSourceFrameRate = FramePacingSourceFrameRate;
             snapshot.LateFrameDropToleranceMs = LateFrameDropToleranceMs;
             snapshot.AudioVideoDriftMsP50 = m_audioVideoDriftMs.Percentile(50);
@@ -313,6 +338,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         PlaybackQualityHistogram m_audioAheadWaitTargets;
         PlaybackQualityHistogram m_audioAheadWaitOversleeps;
         PlaybackQualityHistogram m_audioAheadWaitFinalDeltaAbsMs;
+        PlaybackQualityHistogram m_audioAheadWaitPassesPerEpisode;
         PlaybackQualityHistogram m_audioVideoDriftMs;
     };
 }

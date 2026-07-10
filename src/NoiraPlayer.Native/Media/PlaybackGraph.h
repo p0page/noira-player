@@ -134,6 +134,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         std::chrono::steady_clock::time_point m_lastRenderedFrameAt{};
         std::optional<std::chrono::steady_clock::time_point> m_audioAheadWaitStartedAt;
         std::optional<double> m_audioAheadWaitTargetMs;
+        uint64_t m_audioAheadWaitPassCount{0};
         std::chrono::steady_clock::duration m_nextRenderLoopWait{std::chrono::milliseconds(5)};
         bool m_nextRenderLoopWaitUseTimer{false};
         RenderLoopWaiter m_renderLoopWaiter;

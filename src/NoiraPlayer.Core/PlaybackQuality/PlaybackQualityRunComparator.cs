@@ -1192,6 +1192,11 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitFinalDeltaAbsMsP95");
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitFinalDeltaAbsMsP99");
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitFinalDeltaAbsMsMax");
+                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitEpisodeCount");
+                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitPassesPerEpisodeP50");
+                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitPassesPerEpisodeP95");
+                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitPassesPerEpisodeP99");
+                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitPassesPerEpisodeMax");
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.maxFrameGapMs");
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.renderIntervalSampleCount");
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.renderIntervalOverExpected2MsCount");
@@ -1282,6 +1287,11 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 report.Timing.AudioAheadWaitFinalDeltaAbsMsP95 > 0 ||
                 report.Timing.AudioAheadWaitFinalDeltaAbsMsP99 > 0 ||
                 report.Timing.AudioAheadWaitFinalDeltaAbsMsMax > 0 ||
+                report.Timing.AudioAheadWaitEpisodeCount > 0 ||
+                report.Timing.AudioAheadWaitPassesPerEpisodeP50 > 0 ||
+                report.Timing.AudioAheadWaitPassesPerEpisodeP95 > 0 ||
+                report.Timing.AudioAheadWaitPassesPerEpisodeP99 > 0 ||
+                report.Timing.AudioAheadWaitPassesPerEpisodeMax > 0 ||
                 report.Timing.AudioAheadWaitCount > 0 ||
                 report.Timing.VideoClockWaitCount > 0 ||
                 report.Timing.MinFrameGapMs > 0 ||

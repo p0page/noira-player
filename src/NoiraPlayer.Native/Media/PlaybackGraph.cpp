@@ -506,6 +506,7 @@ namespace winrt::NoiraPlayer::Native::implementation
                         *audioPosition,
                         hasQueuedAudio);
                     m_nextRenderLoopWaitUseTimer = m_nextRenderLoopWait > std::chrono::steady_clock::duration::zero();
+                    ++m_audioAheadWaitPassCount;
 
                     ++m_videoAheadWaitCount;
                     ++m_audioAheadWaitCount;
@@ -688,6 +689,7 @@ namespace winrt::NoiraPlayer::Native::implementation
     {
         m_audioAheadWaitStartedAt.reset();
         m_audioAheadWaitTargetMs.reset();
+        m_audioAheadWaitPassCount = 0;
     }
 
     void PlaybackGraph::RecordAudioAheadWaitIfNeeded(int64_t finalDeltaTicks) noexcept
@@ -704,7 +706,8 @@ namespace winrt::NoiraPlayer::Native::implementation
         m_qualityMetrics.RecordAudioAheadWaitMs(
             durationMs,
             m_audioAheadWaitTargetMs.value_or(0.0),
-            finalDeltaMs);
+            finalDeltaMs,
+            m_audioAheadWaitPassCount);
         ResetAudioAheadWait();
     }
 

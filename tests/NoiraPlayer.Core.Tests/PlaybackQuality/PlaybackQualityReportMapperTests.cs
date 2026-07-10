@@ -123,6 +123,11 @@ public sealed class PlaybackQualityReportMapperTests
             AudioAheadWaitFinalDeltaAbsMsP95 = 105.0,
             AudioAheadWaitFinalDeltaAbsMsP99 = 110.0,
             AudioAheadWaitFinalDeltaAbsMsMax = 120.0,
+            AudioAheadWaitEpisodeCount = 3,
+            AudioAheadWaitPassesPerEpisodeP50 = 1.0,
+            AudioAheadWaitPassesPerEpisodeP95 = 2.0,
+            AudioAheadWaitPassesPerEpisodeP99 = 3.0,
+            AudioAheadWaitPassesPerEpisodeMax = 4.0,
             FramePacingSourceFrameRate = 60.0,
             LateFrameDropToleranceMs = 41.6667,
             AudioVideoDriftMsP50 = 12.0,
@@ -171,6 +176,11 @@ public sealed class PlaybackQualityReportMapperTests
         Assert.Equal(105.0, report.Timing.AudioAheadWaitFinalDeltaAbsMsP95);
         Assert.Equal(110.0, report.Timing.AudioAheadWaitFinalDeltaAbsMsP99);
         Assert.Equal(120.0, report.Timing.AudioAheadWaitFinalDeltaAbsMsMax);
+        Assert.Equal(3UL, report.Timing.AudioAheadWaitEpisodeCount);
+        Assert.Equal(1.0, report.Timing.AudioAheadWaitPassesPerEpisodeP50);
+        Assert.Equal(2.0, report.Timing.AudioAheadWaitPassesPerEpisodeP95);
+        Assert.Equal(3.0, report.Timing.AudioAheadWaitPassesPerEpisodeP99);
+        Assert.Equal(4.0, report.Timing.AudioAheadWaitPassesPerEpisodeMax);
         Assert.Equal(60.0, report.Timing.FramePacingSourceFrameRate);
         Assert.Equal(41.6667, report.Timing.LateFrameDropToleranceMs);
         Assert.Equal(123456, report.Sync.AudioClockTicks);

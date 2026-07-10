@@ -2,6 +2,18 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-10 更新：audio-ahead wait episode/pass 诊断证据已接入
+
+本轮确认当前调优分支已经包含 `main`，无需再次 merge；主线构建链、依赖库和 FFmpeg 升级内容已在当前分支口径内。随后继续基于 24-case manifest 做播放 Core 诊断能力增强，新增 `timing.audioAheadWaitEpisodeCount`、`timing.audioAheadWaitPassesPerEpisodeP50/P95/P99/Max`。这些字段从 native `PlaybackGraph` 的 audio-ahead wait episode 采集，并贯通 native metrics、native-headless stdout、Core report、analyzer evidence signals、signal catalog、candidate comparison matched signals、WinRT bridge 和 app quality-run clone。
+
+该改动不改变播放策略、不修改 wait 时长、不放宽任何 stable/challenge 规则。目标是让模型区分“wait pass 数增加但 episode 数稳定”与“真正出现更多 audio-ahead 等待 episode”。这对解释此前被拒绝的 half-frame wait cap 很关键：那个候选把单次等待拆得更碎，但没有降低 A/V smoke 的 P99/max instability。
+
+验证：完整 `powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\quality-run\run-playback-core-checks.ps1` 已通过，覆盖 435 个 Core tests、CLI smoke、native-headless smoke、manifest/report/comparison 脚本测试、native helper/frame pacing/render loop/display refresh/offscreen tests 和 native Debug x64 build。生成 24-case candidate `docs\qa\private\candidates\playback-core-tuning-audio-wait-episode-evidence-24case-working.local\`，validation 通过，24 个 report，native-headless included。
+
+与 `907e8d0` baseline 的 comparison 输出为 `docs\qa\private\comparisons\playback-core-tuning-audio-wait-episode-evidence-24case-with-repeat.local\`，suite 仍为 `reject-candidate`：`local/native-headless-av-smoke` 单次 frame-pacing 回退，`local/native-headless-hdr10-60` 单次改善。因为本轮没有行为改动，该结果不能作为性能优化结论。已补 3 次 native repeat：`docs\qa\private\repeats\playback-core-tuning-audio-wait-episode-evidence-working-native-repeat.local\`，27 个 report 中 8/9 native group stable，唯一 unstable 仍是 `local/native-headless-av-smoke`。
+
+repeat attribution 显示：baseline 的 target unstable group 是 `local/native-headless-av-smoke` 与 `local/native-headless-hdr10-60`，candidate 中只剩 `local/native-headless-av-smoke` unstable。A/V smoke 的 finalDeltaAbs P95/P99 spread 与 A/V drift P95/P99 spread 仍为 `0ms`，但 render P99/max spread 约 `3.0481ms`，audioAheadWaitOversleep P95/P99 spread 约 `6.7386/6.7004ms`。当前结论：这次是可保留的诊断字段增强，不是可采纳的播放质量优化；下一步应围绕 A/V smoke 的 wait episode/pass 分布、oversleep 与 render tail 关系设计更细的 per-wait evidence 或结构性 scheduling 候选。
+
 ## 2026-07-10 更新：render short-interval / catch-up 证据已补齐
 
 本轮在合并 main 后的当前调优分支上继续工作，补齐了 render interval 的短间隔侧证据：`timing.renderIntervalMsP05`、`timing.minFrameGapMs`、`timing.renderIntervalUnderExpected2MsCount` 和 `timing.renderIntervalUnderExpected4MsCount`。这些字段从 native render interval histogram 在 `Snapshot()` 阶段派生，并贯通 native-headless stdout、Core report、analyzer evidence signals、candidate comparison matched signals、cadence stability summary、WinRT bridge 和 app quality-run clone。

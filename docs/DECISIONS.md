@@ -1,5 +1,15 @@
 ﻿# 技术决策
 
+## 2026-07-10: audio-ahead wait episode/pass evidence 作为诊断字段保留
+
+决策：保留 `timing.audioAheadWaitEpisodeCount` 与 `timing.audioAheadWaitPassesPerEpisodeP50/P95/P99/Max` 作为 native/Core/app quality report 的诊断证据。该字段组只描述 audio-ahead wait episode 的数量和每个 episode 内被拆成多少 wait pass，不改变 `PlaybackFramePacing` 策略，不新增 pass/fail 阈值，也不把单次 report 中的 pass 数变化直接解释为播放质量改善或回退。
+
+原因：此前 half-frame wait cap 候选会增加 wait polling 频率，但旧报告只能看到 `audioAheadWaitCount` 变多，无法判断是 episode 数变多还是每个 episode 被拆成更多 pass。新的 episode/pass 证据让模型能解释“等待被拆碎”与“实际遇到更多 audio-ahead 情况”之间的区别。当前 24-case comparison 因 native-headless 单次 frame-pacing 波动仍输出 `reject-candidate`，但 3 次 repeat 显示本轮候选没有引入新的行为策略，A/V smoke 的 finalDeltaAbs 与 A/V drift spread 仍为 `0ms`，不稳定集中在 render P99/max 与 audio wait oversleep spread。
+
+影响：后续 A/V smoke 调优应优先同时查看 `audioAheadWaitCount`、`audioAheadWaitEpisodeCount`、`audioAheadWaitPassesPerEpisode*`、oversleep、finalDeltaAbs、A/V drift 和 render interval tail。若一个候选只是增加 pass 数而没有降低 oversleep spread、frame P99/max、buffering 或 A/V drift，不应采纳。若 episode 数增加，则应调查 audio clock sampling、wait loop 退出条件、queued audio 状态和 render scheduling，而不是继续做简单常量调参。
+
+边界：该决策不改变 evaluator gate，不把 repeat attribution 变成自动放行条件，不宣称播放效果改善，不证明真实 Xbox/HDMI 输出质量。candidate/baseline/repeat artifact 仅作为 ignored/private 诊断材料保留。
+
 ## 2026-07-10: 不采纳 audio-ahead half-frame wait cap
 
 决策：不保留“按源帧率把 audio-ahead 单次 wait 限制为最多半帧”的候选。当前 Core/native 行为继续使用原有 `PlaybackFramePacing::AudioAheadWaitDuration(framePositionTicks, audioPositionTicks, hasQueuedAudio)` 计算，不新增 frame-rate-aware audio wait cap。

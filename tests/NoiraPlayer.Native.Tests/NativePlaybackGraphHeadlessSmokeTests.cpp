@@ -190,6 +190,11 @@ int wmain(int argc, wchar_t** argv)
             << " audioAheadWaitFinalDeltaAbsMsP95=" << playbackSnapshot.AudioAheadWaitFinalDeltaAbsMsP95
             << " audioAheadWaitFinalDeltaAbsMsP99=" << playbackSnapshot.AudioAheadWaitFinalDeltaAbsMsP99
             << " audioAheadWaitFinalDeltaAbsMsMax=" << playbackSnapshot.AudioAheadWaitFinalDeltaAbsMsMax
+            << " audioAheadWaitEpisodeCount=" << playbackSnapshot.AudioAheadWaitEpisodeCount
+            << " audioAheadWaitPassesPerEpisodeP50=" << playbackSnapshot.AudioAheadWaitPassesPerEpisodeP50
+            << " audioAheadWaitPassesPerEpisodeP95=" << playbackSnapshot.AudioAheadWaitPassesPerEpisodeP95
+            << " audioAheadWaitPassesPerEpisodeP99=" << playbackSnapshot.AudioAheadWaitPassesPerEpisodeP99
+            << " audioAheadWaitPassesPerEpisodeMax=" << playbackSnapshot.AudioAheadWaitPassesPerEpisodeMax
             << " framePacingSourceFrameRate=" << playbackSnapshot.FramePacingSourceFrameRate
             << " lateFrameDropToleranceMs=" << playbackSnapshot.LateFrameDropToleranceMs
             << " audioVideoDriftMsP50=" << playbackSnapshot.AudioVideoDriftMsP50

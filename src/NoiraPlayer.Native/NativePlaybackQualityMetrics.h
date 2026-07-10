@@ -149,6 +149,21 @@ namespace winrt::NoiraPlayer::Native::implementation
         double AudioAheadWaitFinalDeltaAbsMsMax() const noexcept { return m_audioAheadWaitFinalDeltaAbsMsMax; }
         void AudioAheadWaitFinalDeltaAbsMsMax(double value) noexcept { m_audioAheadWaitFinalDeltaAbsMsMax = value; }
 
+        uint64_t AudioAheadWaitEpisodeCount() const noexcept { return m_audioAheadWaitEpisodeCount; }
+        void AudioAheadWaitEpisodeCount(uint64_t value) noexcept { m_audioAheadWaitEpisodeCount = value; }
+
+        double AudioAheadWaitPassesPerEpisodeP50() const noexcept { return m_audioAheadWaitPassesPerEpisodeP50; }
+        void AudioAheadWaitPassesPerEpisodeP50(double value) noexcept { m_audioAheadWaitPassesPerEpisodeP50 = value; }
+
+        double AudioAheadWaitPassesPerEpisodeP95() const noexcept { return m_audioAheadWaitPassesPerEpisodeP95; }
+        void AudioAheadWaitPassesPerEpisodeP95(double value) noexcept { m_audioAheadWaitPassesPerEpisodeP95 = value; }
+
+        double AudioAheadWaitPassesPerEpisodeP99() const noexcept { return m_audioAheadWaitPassesPerEpisodeP99; }
+        void AudioAheadWaitPassesPerEpisodeP99(double value) noexcept { m_audioAheadWaitPassesPerEpisodeP99 = value; }
+
+        double AudioAheadWaitPassesPerEpisodeMax() const noexcept { return m_audioAheadWaitPassesPerEpisodeMax; }
+        void AudioAheadWaitPassesPerEpisodeMax(double value) noexcept { m_audioAheadWaitPassesPerEpisodeMax = value; }
+
         double FramePacingSourceFrameRate() const noexcept { return m_framePacingSourceFrameRate; }
         void FramePacingSourceFrameRate(double value) noexcept { m_framePacingSourceFrameRate = value; }
 
@@ -215,6 +230,11 @@ namespace winrt::NoiraPlayer::Native::implementation
         double m_audioAheadWaitFinalDeltaAbsMsP95{0.0};
         double m_audioAheadWaitFinalDeltaAbsMsP99{0.0};
         double m_audioAheadWaitFinalDeltaAbsMsMax{0.0};
+        uint64_t m_audioAheadWaitEpisodeCount{0};
+        double m_audioAheadWaitPassesPerEpisodeP50{0.0};
+        double m_audioAheadWaitPassesPerEpisodeP95{0.0};
+        double m_audioAheadWaitPassesPerEpisodeP99{0.0};
+        double m_audioAheadWaitPassesPerEpisodeMax{0.0};
         double m_framePacingSourceFrameRate{0.0};
         double m_lateFrameDropToleranceMs{0.0};
         double m_audioVideoDriftMsP50{0.0};
