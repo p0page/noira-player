@@ -2,6 +2,16 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-10 更新：3ms audio render-start lead 候选已通过 24-case gate
+
+本轮在 `render-after-wait` 诊断基线之后做了一个小步播放策略调整：audio-ahead gating 保留原有 `10ms` A/V 容忍区间，但额外给渲染启动预留 `3ms` lead。也就是说 native 不再等到视频帧只领先音频 `10ms` 才返回 render loop，而是在 `13ms` 边界开始让渲染链路工作；`audioAheadWaitTargetMs` 与实际 wait duration 现在使用同一个 `PlaybackFramePacing::AudioAheadWaitDuration` 计算，避免指标和策略不一致。此前尝试过的 `5ms` lead 候选为 `split-candidate / high risk`，没有保留。
+
+候选 24-case report-set 已生成到 `docs\qa\private\candidates\playback-core-tuning-audio-render-lead-3ms-24case-working.local\`。带 repeat attribution 的 comparison 输出为 `docs\qa\private\comparisons\playback-core-tuning-audio-render-lead-3ms-24case-with-repeat.local\`，suite 结论为 `accept-candidate / keep-candidate`、risk `low`、24/24 strong confidence、2 improved、0 regressed、0 mixed、22 unchanged，manifest case IDs 完全一致。改进 case 为：`local/native-headless-av-smoke` 的 `framePacing.renderIntervalP95ExpectedErrorMs` 从 `6.239667ms` 降到 `4.027867ms`；`local/native-headless-hdr10-60` 的 `framePacing.maxFrameGapExpectedErrorMs` 从 `3.547333ms` 降到 `0.549033ms`。
+
+已补 3 次 candidate repeat：`docs\qa\private\repeats\playback-core-tuning-audio-render-lead-3ms-native-repeat.local\`。旧基线 repeat 为 9 个 native group 中 7 stable、2 unstable，unstable 是 `local/native-headless-av-smoke` 与 `local/native-headless-hdr10-60`；candidate repeat 为 22 个 group 中 21 stable、1 unstable，只剩 `local/native-headless-av-smoke`。A/V smoke 的 P95 常态区间相对旧基线下降：render P95 expected-error 从旧基线约 `6.24-6.67ms` 降到 candidate 约 `3.57-5.07ms`；A/V drift P95/P99 spread 与 finalDeltaAbs P95/P99 spread 仍为 `0ms`。但该 case 仍不能宣称完全解决：candidate repeat 的 A/V P99/max frame gap spread 约 `5.6844ms`，且 unstable signals 包含 `framePacing.renderIntervalP99ExpectedErrorMs`、`framePacing.maxFrameGapExpectedErrorMs`、`timing.audioAheadWaitOversleepMsP95/P99` 与 `timing.renderIntervalAfterAudioAheadWaitMsP99/Max`。
+
+验证：TDD 先让 `FramePacingTests.cpp` 暴露 3ms lead 边界，再实现通过；native-headless smoke 通过；3 次 repeat 每轮 24-case validation 均通过；带 repeat attribution 的 candidate comparison 通过；完整 `tools\quality-run\run-playback-core-checks.ps1` 已通过，覆盖 438 个 Core tests、CLI smoke、native-headless smoke、manifest/report/comparison 脚本测试、native helper/frame pacing/render loop/display refresh/offscreen tests 和 native Debug x64 build。下一步不应继续盲调 1-5ms 常量，而应处理 A/V smoke 残留的 P99/max tail 与 audio-ahead 后 render interval 波动。
+
 ## 2026-07-10 更新：render interval 已按 preceding wait reason 分桶
 
 本轮在当前 `34a625b` accepted baseline 之后只补诊断证据，不改变播放策略、不放宽评测规则。新增 `timing.renderIntervalAfterAudioAheadWaitSampleCount`、`timing.renderIntervalAfterAudioAheadWaitMsP95/P99/Max`、`timing.renderIntervalAfterNonAudioWaitSampleCount`、`timing.renderIntervalAfterNonAudioWaitMsP95/P99/Max`，用于把每个 render interval 归因到它之前完成的 render-loop wait reason。字段已贯通 native metrics、WinRT metrics、native-headless stdout、Core report、analyzer evidenceSignals、signal catalog、required signal policy、comparison matchedSignals、app quality-run clone 和 cadence stability summary。

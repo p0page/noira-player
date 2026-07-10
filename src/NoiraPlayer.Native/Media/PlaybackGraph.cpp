@@ -520,20 +520,18 @@ namespace winrt::NoiraPlayer::Native::implementation
                     *audioPosition,
                     hasQueuedAudio))
                 {
-                    if (!m_audioAheadWaitStartedAt)
-                    {
-                        m_audioAheadWaitStartedAt = std::chrono::steady_clock::now();
-                        m_audioAheadWaitTargetMs = (std::max)(
-                            0.0,
-                            static_cast<double>(
-                                frame.PositionTicks - *audioPosition - PlaybackFramePacing::VideoAheadToleranceTicks) /
-                                10000.0);
-                    }
-
-                    m_nextRenderLoopWait = PlaybackFramePacing::AudioAheadWaitDuration(
+                    auto audioAheadWaitDuration = PlaybackFramePacing::AudioAheadWaitDuration(
                         frame.PositionTicks,
                         *audioPosition,
                         hasQueuedAudio);
+                    if (!m_audioAheadWaitStartedAt)
+                    {
+                        m_audioAheadWaitStartedAt = std::chrono::steady_clock::now();
+                        m_audioAheadWaitTargetMs =
+                            std::chrono::duration<double, std::milli>(audioAheadWaitDuration).count();
+                    }
+
+                    m_nextRenderLoopWait = audioAheadWaitDuration;
                     m_nextRenderLoopWaitUseTimer = m_nextRenderLoopWait > std::chrono::steady_clock::duration::zero();
                     m_nextRenderLoopWaitReason = RenderLoopWaitReason::AudioAhead;
                     ++m_audioAheadWaitPassCount;

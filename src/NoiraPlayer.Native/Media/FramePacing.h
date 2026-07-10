@@ -9,6 +9,7 @@ namespace winrt::NoiraPlayer::Native::implementation
     {
     public:
         static constexpr int64_t VideoAheadToleranceTicks = 100000;
+        static constexpr int64_t AudioAheadRenderStartLeadTicks = 30000;
         static constexpr int64_t VideoDropToleranceTicks = 1000000;
         static constexpr int64_t MinimumFrameRateAdaptiveDropToleranceTicks = 400000;
         static constexpr double LateFrameDropFrameTolerance = 2.5;
@@ -33,7 +34,7 @@ namespace winrt::NoiraPlayer::Native::implementation
             bool hasQueuedAudio) noexcept
         {
             return hasQueuedAudio &&
-                framePositionTicks > audioPositionTicks + VideoAheadToleranceTicks;
+                framePositionTicks > audioPositionTicks + VideoAheadToleranceTicks + AudioAheadRenderStartLeadTicks;
         }
 
         static constexpr std::chrono::microseconds AudioAheadWaitDuration(
@@ -47,7 +48,7 @@ namespace winrt::NoiraPlayer::Native::implementation
             }
 
             return std::chrono::microseconds(
-                (framePositionTicks - audioPositionTicks - VideoAheadToleranceTicks) / 10);
+                (framePositionTicks - audioPositionTicks - VideoAheadToleranceTicks - AudioAheadRenderStartLeadTicks) / 10);
         }
 
         static constexpr bool ShouldDropLateFrame(

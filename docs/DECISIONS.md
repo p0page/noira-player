@@ -1,5 +1,15 @@
 ﻿# 技术决策
 
+## 2026-07-10: 3ms audio render-start lead 作为当前 24-case 可采纳候选保留
+
+决策：在 audio-ahead gating 中保留原有 `PlaybackFramePacing::VideoAheadToleranceTicks = 100000`，并新增 `PlaybackFramePacing::AudioAheadRenderStartLeadTicks = 30000`。`ShouldWaitForAudio` 与 `AudioAheadWaitDuration` 都使用同一个 `10ms + 3ms` 边界；`PlaybackGraph` 的 `audioAheadWaitTargetMs` 也改为直接记录同一个 wait duration。当前不采纳 `5ms` lead，也不恢复此前被拒绝的 audio wait cap / early-wake / half-frame wait cap。
+
+原因：`render-after-wait` 证据显示 A/V smoke 的长 render interval 与 preceding audio-ahead wait 直接相关。3ms lead 的目标不是扩大 A/V 同步容忍到一个新阈值，而是给 render/present/scheduler 成本留出启动空间。当前 24-case comparison 输出 `accept-candidate / keep-candidate`、2 improved、0 regression：A/V smoke 的 P95 render expected-error 下降，HDR10-60 的 max frame gap expected-error 下降；A/V drift 与 finalDeltaAbs repeat spread 仍为 `0ms`。
+
+影响：后续播放 Core 调优可以把 3ms render-start lead 作为当前 accepted 行为继续推进。比较候选时必须继续同时看 single-run suite、native repeat stability、A/V drift/finalDelta、audio-ahead wait pass/episode、render interval after audio-ahead wait、buffering、seek/timeline、tracks/subtitles 和 color/DXGI evidence。
+
+边界：该决策不宣称 A/V smoke 完全稳定。candidate repeat 仍显示 A/V P99/max tail 不稳定，且 unstable signals 包含 audio-ahead 后 render interval P99/Max 与 episode-level oversleep。后续不能因为本轮 24-case gate 通过而放宽评测规则，也不能继续把 1-5ms 常量试验当成主要方向；下一步应处理残留 tail volatility。
+
 ## 2026-07-10: render interval preceding-wait 分桶作为 A/V 调度诊断证据保留
 
 决策：保留 `timing.renderIntervalAfterAudioAheadWait*` 与 `timing.renderIntervalAfterNonAudioWait*` 字段，按每个 render interval 之前完成的 render-loop wait reason 分桶。该字段组只作为诊断 evidence，不改变 `PlaybackFramePacing` 策略，不新增 pass/fail 阈值，不作为播放质量 improvement 自动判定依据。
