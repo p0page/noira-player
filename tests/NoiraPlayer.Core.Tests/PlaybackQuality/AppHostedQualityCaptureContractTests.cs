@@ -12,14 +12,27 @@ public sealed class AppHostedQualityCaptureContractTests
     {
         var root = FindRepositoryRoot();
         var mainPage = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.App", "MainPage.xaml.cs"));
+        var webBridge = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.App", "Web", "NoiraWebBridge.cs"));
         var launchRequest = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.App", "Navigation", "PlaybackLaunchRequest.cs"));
         var playbackPage = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.App", "Views", "PlaybackPage.xaml.cs"));
 
-        Assert.Contains("case \"quality-run\":", mainPage, StringComparison.Ordinal);
-        Assert.Contains("qualityRunId: command.RunId", mainPage, StringComparison.Ordinal);
-        Assert.Contains("qualityExpected: command.Expected", mainPage, StringComparison.Ordinal);
-        Assert.Contains("qualityRunDurationSeconds: command.DurationSeconds", mainPage, StringComparison.Ordinal);
-        Assert.Contains("streamUrl: command.StreamUrl", mainPage, StringComparison.Ordinal);
+        Assert.Contains("PostWebMessageAsJson", mainPage, StringComparison.Ordinal);
+        Assert.Contains("case \"playback.nativePlayItem\":", webBridge, StringComparison.Ordinal);
+        Assert.Contains("Frame.Navigate(", mainPage, StringComparison.Ordinal);
+        Assert.Contains("typeof(PlaybackPage)", mainPage, StringComparison.Ordinal);
+        Assert.Contains("new PlaybackLaunchRequest(", webBridge, StringComparison.Ordinal);
+        Assert.Contains("ReadPayloadString(root, \"itemId\", \"\")", webBridge, StringComparison.Ordinal);
+        Assert.Contains("ReadPayloadString(root, \"itemName\", \"\")", webBridge, StringComparison.Ordinal);
+        Assert.Contains("ReadPayloadLong(root, \"startPositionTicks\", 0)", webBridge, StringComparison.Ordinal);
+        Assert.Contains("ReadPayloadString(root, \"mediaSourceId\", \"\")", webBridge, StringComparison.Ordinal);
+        Assert.Contains("ReadPayloadLong(root, \"runtimeTicks\", 0)", webBridge, StringComparison.Ordinal);
+        Assert.DoesNotContain("playback.getDirectStream", webBridge, StringComparison.Ordinal);
+        Assert.DoesNotContain("<video", File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Web", "src", "App.tsx")), StringComparison.Ordinal);
+        Assert.DoesNotContain("case \"quality-run\":", mainPage, StringComparison.Ordinal);
+        Assert.DoesNotContain("qualityRunId: command.RunId", mainPage, StringComparison.Ordinal);
+        Assert.DoesNotContain("qualityExpected: command.Expected", mainPage, StringComparison.Ordinal);
+        Assert.DoesNotContain("qualityRunDurationSeconds: command.DurationSeconds", mainPage, StringComparison.Ordinal);
+        Assert.DoesNotContain("streamUrl: command.StreamUrl", mainPage, StringComparison.Ordinal);
 
         Assert.Contains("public string QualityRunId { get; }", launchRequest, StringComparison.Ordinal);
         Assert.Contains("public string DirectStreamUrl { get; }", launchRequest, StringComparison.Ordinal);

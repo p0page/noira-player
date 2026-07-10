@@ -4,7 +4,7 @@
 
 **Goal:** Deliver a packaged WebView2 React spike that reuses native Emby login/session storage and native `PlaybackPage`, while React directly fetches real catalog data and supports Vite HMR.
 
-**Architecture:** Native exposes only auth bootstrap/login/logout and native playback launch. React keeps bootstrap credentials in memory and uses a small typed Emby `fetch` client for views, item lists, and details. Debug startup may resolve a Vite URL from LocalState; packaged assets remain the fallback.
+**Architecture:** Native exposes auth bootstrap/login/logout, a user-scoped JSON GET fallback, and native playback launch. React keeps bootstrap credentials in memory and uses a small typed Emby client for views, item lists, and details; it tries browser fetch first and switches once to native GET only when browser networking fails. Debug startup may resolve a Vite URL from LocalState; packaged assets remain the fallback.
 
 **Tech Stack:** UWP/WinUI 2 WebView2, .NET 10, React 19.2.7, Vite 8.1.4, TypeScript 7.0.2, Vitest 4.1.10.
 
@@ -13,7 +13,7 @@
 - Work only in `C:\Users\yqzzx\Documents\Next Gen Xbox Emby\.worktrees\webview-react-vite-spike` on `codex/webview-react-vite-spike`.
 - Preserve `ApplicationDataSessionStore`, `LoginViewModel`, `EmbyApiClient`, `PlaybackLaunchRequest`, and `PlaybackPage` as the proven native boundaries.
 - Keep the Emby token in React memory only; never use browser persistence or logs.
-- React performs catalog `fetch` directly. Do not add native `home.load`, `items.list`, or `item.get` handlers.
+- React owns catalog endpoints and DTO mapping. Do not add native `home.load`, `items.list`, or `item.get` handlers; `emby.get` may proxy only saved-user Views/Items JSON GET after a browser network failure.
 - Playback is native only. Do not add `<video>`, `playback.getDirectStream`, or a web player.
 - Bridge messages are accepted only from the resolved packaged or Vite origin.
 - WebView bridge failures are visible errors; never silently use mock data inside WebView2.
@@ -46,7 +46,7 @@
 
 **Interfaces:**
 - Consumes: `EmbyAuthorization.CreateHeaderValue`, `LoginViewModel`, `ApplicationDataSessionStore`, and `PlaybackLaunchRequest`.
-- Produces: bridge commands `auth.bootstrap`, `auth.login`, `auth.logout`, and `playback.nativePlayItem`.
+- Produces: bridge commands `auth.bootstrap`, `auth.login`, `auth.logout`, `emby.get`, and `playback.nativePlayItem`.
 
 - [ ] Add failing source-contract tests for the four-command allowlist, real session/login dependencies, async dispatch, exact-origin validation, and absence of catalog/web-player commands.
 - [ ] Run the targeted design tests and confirm the new assertions fail.
@@ -76,6 +76,8 @@
 - Modify: `src/NoiraPlayer.Web/src/bridge.ts`
 - Modify: `src/NoiraPlayer.Web/src/bridge.test.ts`
 - Modify: `src/NoiraPlayer.Web/src/App.tsx`
+- Create: `src/NoiraPlayer.Web/src/transport.ts`
+- Create: `src/NoiraPlayer.Web/src/transport.test.ts`
 
 **Interfaces:**
 - Consumes: `auth.bootstrap/login/logout`, `EmbyWebClient`, and `playback.nativePlayItem`.
@@ -84,7 +86,8 @@
 - [ ] Add failing bridge tests proving WebView timeout rejects by default and bootstrap mock data is browser-only.
 - [ ] Run the bridge test and confirm the timeout expectation fails against the current fallback behavior.
 - [ ] Restrict bridge command types and change WebView timeout behavior.
-- [ ] Replace native catalog commands in `App` with direct `EmbyWebClient` calls and wrap every async UI action in loading/error handling.
+- [ ] Replace native semantic catalog commands in `App` with `EmbyWebClient` calls and wrap every async UI action in loading/error handling.
+- [ ] Add a direct-first transport that switches once to `emby.get` after browser `TypeError`, without falling back on normal HTTP error responses.
 - [ ] Run web tests, typecheck, and production build.
 
 ### Task 5: Debug Vite Source Resolver

@@ -22,7 +22,18 @@
     <CsWinRTIncludes>NoiraPlayer.Native</CsWinRTIncludes>
     <CsWinRTGeneratedFilesDir>$(BaseIntermediateOutputPath)$(Platform)\$(Configuration)\$(TargetFramework)\Generated\CsWinRT\</CsWinRTGeneratedFilesDir>
     <ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>None</ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>
+    <NoiraBuildWebClient Condition="'$(NoiraBuildWebClient)' == ''">true</NoiraBuildWebClient>
+    <NoiraWebClientDirectory>$(MSBuildProjectDirectory)\..\NoiraPlayer.Web\</NoiraWebClientDirectory>
   </PropertyGroup>
+
+  <ItemGroup>
+    <NoiraWebClientInput Include="..\NoiraPlayer.Web\package.json" />
+    <NoiraWebClientInput Include="..\NoiraPlayer.Web\package-lock.json" />
+    <NoiraWebClientInput Include="..\NoiraPlayer.Web\index.html" />
+    <NoiraWebClientInput Include="..\NoiraPlayer.Web\tsconfig.json" />
+    <NoiraWebClientInput Include="..\NoiraPlayer.Web\vite.config.ts" />
+    <NoiraWebClientInput Include="..\NoiraPlayer.Web\src\**\*" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.UI.Xaml" Version="2.8.7" />
@@ -33,4 +44,27 @@
     <ProjectReference Include="..\NoiraPlayer.Core\NoiraPlayer.Core.csproj" />
     <ProjectReference Include="..\NoiraPlayer.Native\NoiraPlayer.Native.vcxproj" />
   </ItemGroup>
+
+  <Target
+    Name="BuildNoiraWebClient"
+    Condition="'$(NoiraBuildWebClient)' == 'true' and Exists('$(NoiraWebClientDirectory)package.json')"
+    Inputs="@(NoiraWebClientInput)"
+    Outputs="$(NoiraWebClientDirectory)dist\index.html">
+    <Exec WorkingDirectory="$(NoiraWebClientDirectory)" Command="npm ci" Condition="!Exists('$(NoiraWebClientDirectory)node_modules\.package-lock.json')" />
+    <Exec WorkingDirectory="$(NoiraWebClientDirectory)" Command="npm run build" />
+  </Target>
+
+  <Target
+    Name="IncludeNoiraWebClientDist"
+    BeforeTargets="AssignTargetPaths"
+    DependsOnTargets="BuildNoiraWebClient"
+    Condition="'$(NoiraBuildWebClient)' == 'true' and Exists('$(NoiraWebClientDirectory)dist\index.html')">
+    <ItemGroup>
+      <NoiraWebClientDist Include="$(NoiraWebClientDirectory)dist\**\*" />
+      <Content Include="@(NoiraWebClientDist)">
+        <Link>WebCode\%(NoiraWebClientDist.RecursiveDir)%(NoiraWebClientDist.Filename)%(NoiraWebClientDist.Extension)</Link>
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </Content>
+    </ItemGroup>
+  </Target>
 </Project>

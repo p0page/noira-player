@@ -54,6 +54,119 @@ public sealed class ModernUwpSolutionContractTests
     }
 
     [Fact]
+    public void Modern_App_Primary_Shell_Is_WebView2_Hosted_React_Vite_Surface()
+    {
+        var modernProject = ReadRepositoryFile("src", "NoiraPlayer.App", "NoiraPlayer.App.Modern.csproj");
+        var mainPageXaml = ReadRepositoryFile("src", "NoiraPlayer.App", "MainPage.xaml");
+        var mainPageSource = ReadRepositoryFile("src", "NoiraPlayer.App", "MainPage.xaml.cs");
+        var nativeBridgeSource = ReadRepositoryFile("src", "NoiraPlayer.App", "Web", "NoiraWebBridge.cs");
+        var sourceResolver = ReadRepositoryFile("src", "NoiraPlayer.App", "Web", "WebViewSourceResolver.cs");
+        var webAppSource = ReadRepositoryFile("src", "NoiraPlayer.Web", "src", "App.tsx");
+        var webBridgeSource = ReadRepositoryFile("src", "NoiraPlayer.Web", "src", "bridge.ts");
+        var webStyles = ReadRepositoryFile("src", "NoiraPlayer.Web", "src", "styles.css");
+
+        Assert.Contains("xmlns:muxc=\"using:Microsoft.UI.Xaml.Controls\"", mainPageXaml, StringComparison.Ordinal);
+        Assert.Contains("<muxc:WebView2", mainPageXaml, StringComparison.Ordinal);
+        Assert.Contains("x:Name=\"ShellWebView\"", mainPageXaml, StringComparison.Ordinal);
+        Assert.Contains("EnsureCoreWebView2Async()", mainPageSource, StringComparison.Ordinal);
+        Assert.Contains("SetVirtualHostNameToFolderMapping(", mainPageSource, StringComparison.Ordinal);
+        Assert.Contains("\"app.noira.local\"", mainPageSource, StringComparison.Ordinal);
+        Assert.Contains("\"WebCode\"", mainPageSource, StringComparison.Ordinal);
+        Assert.Contains("CoreWebView2HostResourceAccessKind.Deny", mainPageSource, StringComparison.Ordinal);
+        Assert.Contains("AreDefaultContextMenusEnabled = false", mainPageSource, StringComparison.Ordinal);
+        Assert.Contains("IsStatusBarEnabled = false", mainPageSource, StringComparison.Ordinal);
+        Assert.Contains("IsPasswordAutosaveEnabled = false", mainPageSource, StringComparison.Ordinal);
+        Assert.Contains("IsGeneralAutofillEnabled = false", mainPageSource, StringComparison.Ordinal);
+        Assert.Contains("new Uri(PackagedWebAppUrl)", mainPageSource, StringComparison.Ordinal);
+        Assert.Contains("await WebViewSourceResolver.ResolveAsync", mainPageSource, StringComparison.Ordinal);
+        Assert.Contains("webview-dev-url.txt", sourceResolver, StringComparison.Ordinal);
+        Assert.Contains("#if DEBUG", sourceResolver, StringComparison.Ordinal);
+        Assert.Contains("ApplicationData.Current.LocalFolder.TryGetItemAsync", sourceResolver, StringComparison.Ordinal);
+        Assert.Contains("FileIO.ReadTextAsync", sourceResolver, StringComparison.Ordinal);
+        Assert.Contains("Uri.TryCreate", sourceResolver, StringComparison.Ordinal);
+        Assert.Contains("Uri.UriSchemeHttp", sourceResolver, StringComparison.Ordinal);
+        Assert.Contains("Uri.UriSchemeHttps", sourceResolver, StringComparison.Ordinal);
+        Assert.Contains("return packagedSource;", sourceResolver, StringComparison.Ordinal);
+        Assert.Contains("WebMessageReceived += ShellWebView_OnWebMessageReceived", mainPageSource, StringComparison.Ordinal);
+        Assert.Contains("PostWebMessageAsJson", mainPageSource, StringComparison.Ordinal);
+        Assert.Contains("new NoiraWebBridge()", mainPageSource, StringComparison.Ordinal);
+        Assert.Contains("await _webBridge.HandleAsync", mainPageSource, StringComparison.Ordinal);
+        Assert.Contains("args.Source", mainPageSource, StringComparison.Ordinal);
+        Assert.Contains("case \"auth.bootstrap\":", nativeBridgeSource, StringComparison.Ordinal);
+        Assert.Contains("case \"auth.login\":", nativeBridgeSource, StringComparison.Ordinal);
+        Assert.Contains("case \"auth.logout\":", nativeBridgeSource, StringComparison.Ordinal);
+        Assert.Contains("case \"emby.get\":", nativeBridgeSource, StringComparison.Ordinal);
+        Assert.Contains("case \"playback.nativePlayItem\":", nativeBridgeSource, StringComparison.Ordinal);
+        Assert.Contains("new LoginViewModel(_sessionStore)", nativeBridgeSource, StringComparison.Ordinal);
+        Assert.Contains("new ApplicationDataSessionStore()", nativeBridgeSource, StringComparison.Ordinal);
+        Assert.Contains("EmbyAuthorization.CreateHeaderValue", nativeBridgeSource, StringComparison.Ordinal);
+        Assert.Contains("EmbyAuthorization.Apply", nativeBridgeSource, StringComparison.Ordinal);
+        Assert.Contains("HttpMethod.Get", nativeBridgeSource, StringComparison.Ordinal);
+        Assert.Contains("UriKind.Relative", nativeBridgeSource, StringComparison.Ordinal);
+        Assert.Contains("Users/", nativeBridgeSource, StringComparison.Ordinal);
+        Assert.Contains("/Views", nativeBridgeSource, StringComparison.Ordinal);
+        Assert.Contains("/Items", nativeBridgeSource, StringComparison.Ordinal);
+        Assert.Contains("IsAllowedSource", nativeBridgeSource, StringComparison.Ordinal);
+        Assert.Contains("UriComponents.SchemeAndServer", nativeBridgeSource, StringComparison.Ordinal);
+        Assert.Contains("var responseId = \"\";", nativeBridgeSource, StringComparison.Ordinal);
+        Assert.Contains("return Result(Error(responseId, \"bridge-failed\"", nativeBridgeSource, StringComparison.Ordinal);
+        Assert.Contains("Frame.Navigate(", mainPageSource, StringComparison.Ordinal);
+        Assert.Contains("typeof(PlaybackPage)", mainPageSource, StringComparison.Ordinal);
+        Assert.Contains("new PlaybackLaunchRequest(", nativeBridgeSource, StringComparison.Ordinal);
+        Assert.Contains("ReadPayloadLong(root, \"startPositionTicks\", 0)", nativeBridgeSource, StringComparison.Ordinal);
+        Assert.Contains("ReadPayloadString(root, \"mediaSourceId\", \"\")", nativeBridgeSource, StringComparison.Ordinal);
+        Assert.Contains("ReadPayloadLong(root, \"runtimeTicks\", 0)", nativeBridgeSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("CreateDemoBridgeResponse", mainPageSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("DemoItemsJson", nativeBridgeSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("case \"session.get\":", nativeBridgeSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("case \"home.load\":", nativeBridgeSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("case \"items.list\":", nativeBridgeSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("case \"item.get\":", nativeBridgeSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("playback.getDirectStream", nativeBridgeSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("interactive-examples.mdn.mozilla.net", mainPageSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("Windows.UI.Xaml.Controls.WebView", mainPageXaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("JsonSerializer.Serialize", mainPageSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ContentFrame", mainPageXaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("ContentFrame", mainPageSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("GuideRail", mainPageXaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("RegisterGuideButtonFocusHandlers", mainPageSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("NavigateLogin()", mainPageSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("NavigateTo(typeof(", mainPageSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("<video", webAppSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("DirectStreamResult", webAppSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("directStreamUrl", webAppSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("Play in WebView", webAppSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("Native fallback", webAppSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("playback.getDirectStream", webAppSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("playback.getDirectStream", webBridgeSource, StringComparison.Ordinal);
+        Assert.Contains("playback.nativePlayItem", webAppSource, StringComparison.Ordinal);
+        Assert.Contains("new EmbyWebClient", webAppSource, StringComparison.Ordinal);
+        Assert.Contains("createEmbyFetchTransport", webAppSource, StringComparison.Ordinal);
+        Assert.Contains("setClient(nextClient)", webAppSource, StringComparison.Ordinal);
+        Assert.Contains("'auth.bootstrap'", webAppSource, StringComparison.Ordinal);
+        Assert.Contains("client.getViews()", webAppSource, StringComparison.Ordinal);
+        Assert.Contains("client.getItems(", webAppSource, StringComparison.Ordinal);
+        Assert.Contains("client.getItem(", webAppSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("'session.get'", webAppSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("'home.load'", webAppSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("'items.list'", webAppSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("'item.get'", webAppSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("'home.load'", webBridgeSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("'items.list'", webBridgeSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("'item.get'", webBridgeSource, StringComparison.Ordinal);
+        Assert.Contains("li button img", webStyles, StringComparison.Ordinal);
+        Assert.Contains("width: 96px;", webStyles, StringComparison.Ordinal);
+        Assert.Contains("height: 96px;", webStyles, StringComparison.Ordinal);
+        Assert.Contains("object-fit: cover;", webStyles, StringComparison.Ordinal);
+        Assert.DoesNotContain("video {", webStyles, StringComparison.Ordinal);
+
+        Assert.Contains("NoiraPlayer.Web", modernProject, StringComparison.Ordinal);
+        Assert.Contains("BuildNoiraWebClient", modernProject, StringComparison.Ordinal);
+        Assert.Contains("<NoiraWebClientDist Include=\"$(NoiraWebClientDirectory)dist\\**\\*\" />", modernProject, StringComparison.Ordinal);
+        Assert.Contains("WebCode\\%(NoiraWebClientDist.RecursiveDir)%(NoiraWebClientDist.Filename)%(NoiraWebClientDist.Extension)", modernProject, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Native_Project_Uses_VS2026_Cpp_Toolset_And_Modern_Windows_Sdk()
     {
         var nativeProject = ReadRepositoryFile("src", "NoiraPlayer.Native", "NoiraPlayer.Native.vcxproj");

@@ -1,0 +1,71 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #05070a;
+  color: #eef3f6;
+  font-family: system-ui, sans-serif;
+}
+
+main {
+  min-height: 100vh;
+  padding: 32px;
+}
+
+header,
+section,
+form {
+  display: grid;
+  gap: 16px;
+}
+
+form {
+  max-width: 520px;
+}
+
+label {
+  display: grid;
+  gap: 6px;
+}
+
+input,
+button {
+  min-height: 44px;
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+ul {
+  display: grid;
+  gap: 10px;
+  max-width: 720px;
+  padding: 0;
+  list-style: none;
+}
+
+li button {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+li button img {
+  width: 96px;
+  height: 96px;
+  object-fit: cover;
+}
+
+section > img {
+  width: min(240px, 100%);
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+}

@@ -10,16 +10,17 @@ The spike must prove four things on a packaged Windows build: real Emby login, d
 
 Native owns durable credentials and playback. `ApplicationDataSessionStore` remains the only durable session store and keeps the access token in `PasswordVault`. `LoginViewModel` and `EmbyApiClient.AuthenticateAsync` remain the login implementation. `PlaybackPage` remains the complete playback surface and continues to own playback source, audio stream, subtitle stream, transport, progress, and native media behavior.
 
-React owns catalog data after bootstrap. It keeps the current access token only in JavaScript memory and calls Emby directly with `fetch`. It never writes credentials to `localStorage`, `sessionStorage`, IndexedDB, cache storage, files, or logs. A page reload asks native for a new in-memory bootstrap from `PasswordVault`.
+React owns catalog URLs, response DTOs, and view models after bootstrap. It keeps the current access token only in JavaScript memory and tries Emby directly with `fetch`. It never writes credentials to `localStorage`, `sessionStorage`, IndexedDB, cache storage, files, or logs. A page reload asks native for a new in-memory bootstrap from `PasswordVault`.
 
 The native bridge is intentionally narrow:
 
 - `auth.bootstrap` loads the saved session and returns the runtime Emby request identity.
 - `auth.login` reuses the historical native login path, saves the session, and returns the same bootstrap shape.
 - `auth.logout` clears the native session.
+- `emby.get` is a CORS fallback for JSON GET requests. It accepts only relative Views/Items paths for the saved user and always targets the saved server.
 - `playback.nativePlayItem` creates `PlaybackLaunchRequest` and navigates to `PlaybackPage`.
 
-Catalog commands such as `home.load`, `items.list`, and `item.get` do not exist in the native bridge. WebView `<video>` playback and direct-stream URL commands do not exist.
+Semantic catalog commands such as `home.load`, `items.list`, and `item.get` do not exist in the native bridge; React still owns endpoint construction and response mapping. WebView `<video>` playback and direct-stream URL commands do not exist.
 
 ## Bootstrap Contract
 
@@ -47,9 +48,10 @@ React sends `Authorization`, `X-Emby-Token`, and `Accept: application/json` on E
 2. Without a session, React shows the login form.
 3. `auth.login` authenticates and persists in native code, then returns bootstrap data.
 4. React calls `/Users/{userId}/Views` directly and renders the returned libraries.
-5. Selecting a library calls `/Users/{userId}/Items` with playable video types and the fields required by the minimal list/details/playback launch flow.
-6. Selecting an item calls `/Users/{userId}/Items/{itemId}` directly.
-7. Play posts only item identity and resume/source hints to native, which navigates to `PlaybackPage`.
+5. If browser `fetch` throws a network `TypeError`, the transport switches once to `emby.get`; subsequent JSON GET requests avoid repeated failed preflights while preserving the same React endpoint and DTO code.
+6. Selecting a library calls `/Users/{userId}/Items` with playable video types and the fields required by the minimal list/details/playback launch flow.
+7. Selecting an item calls `/Users/{userId}/Items/{itemId}` through the selected transport.
+8. Play posts only item identity and resume/source hints to native, which navigates to `PlaybackPage`.
 
 All transitions have explicit loading and error states. WebView bridge timeouts are errors; they never fall back to demo data inside WebView2. Browser-only mocks remain available when running the React application outside WebView2 for frontend development.
 
@@ -57,7 +59,7 @@ All transitions have explicit loading and error states. WebView bridge timeouts 
 
 Packaged UI loads from `https://app.noira.local/index.html` through `SetVirtualHostNameToFolderMapping`. Debug builds may read `webview-dev-url.txt` from package LocalState and load an explicit HTTP or HTTPS Vite URL. Native accepts bridge messages only from the exact origin of the resolved page source.
 
-Direct Emby `fetch` is the feasibility gate. Browser requests use WebView2's Edge network stack and therefore obey CORS, preflight, certificate, private-network, cookie, and origin rules. A browser failure is shown with enough information to distinguish HTTP status, timeout, and CORS/network failure. The spike does not silently route catalog traffic through native. If a real Emby server blocks the WebView origin, that result is recorded before deciding whether to configure Emby CORS or add a narrowly scoped native gateway.
+Direct Emby `fetch` is the first transport. Browser requests use WebView2's Edge network stack and therefore obey CORS, preflight, certificate, private-network, cookie, and origin rules. The real test server was reachable over HTTPS, but returned no `Access-Control-Allow-Origin` header and returned HTTP 404 to an OPTIONS preflight requesting `authorization,x-emby-token`. The implemented fallback is therefore explicit and narrow: only browser network failures in WebView2 enable native JSON GET, only the saved server can be reached, and only the saved user's `/Views`, `/Items`, and `/Items/{id}` paths are accepted. HTTP responses such as 401 remain browser responses and do not trigger fallback.
 
 ## Hot Reload
 
@@ -68,7 +70,7 @@ Vite listens on `0.0.0.0:5173`. A helper writes the selected dev URL into the in
 - Invalid bridge JSON, unknown commands, missing playback IDs, and disallowed origins return stable bridge errors.
 - Login failures preserve the native login status message without exposing credentials.
 - A 401/403 from Emby returns the UI to an actionable authentication error; it does not manufacture catalog data.
-- Network/CORS failures keep the user on the current screen with retry or logout available.
+- Network/CORS failures use the narrow native GET fallback when available; otherwise they keep the user on the current screen with retry or logout available.
 - Navigation to `PlaybackPage` occurs only after native has validated the item ID.
 
 ## Acceptance Criteria
@@ -76,7 +78,7 @@ Vite listens on `0.0.0.0:5173`. A helper writes the selected dev URL into the in
 - The packaged app boots directly into the WebView shell; no historical native catalog page is created.
 - Existing saved login state bootstraps React after reload without browser persistence.
 - A real login uses the existing native authentication and `PasswordVault` store.
-- React directly loads real Emby libraries, items, and item details.
+- React owns and loads real Emby libraries, items, and item details, using direct fetch when CORS permits and the narrow native GET transport when it does not.
 - Play navigates to the existing native `PlaybackPage`; source/audio/subtitle controls remain native.
 - No HTML `<video>` or web direct-stream bridge path exists.
 - Vite edits appear in the running WebView without rebuilding the UWP app.
@@ -86,5 +88,5 @@ Vite listens on `0.0.0.0:5173`. A helper writes the selected dev URL into the in
 ## Deferred Decisions
 
 - A production remotely hosted UI is not part of this spike.
-- Native catalog proxying is not added unless direct browser requests fail against the real server and the failure is documented.
+- Broader native HTTP proxying and write methods are not part of this spike; the fallback remains GET-only and user-scoped.
 - Xbox hardware verification is separate from the local Windows packaging proof when no Xbox device is connected.

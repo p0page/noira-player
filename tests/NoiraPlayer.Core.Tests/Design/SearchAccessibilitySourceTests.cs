@@ -24,8 +24,8 @@ public sealed class SearchAccessibilitySourceTests
         var requestPath = Path.Combine(root, "src", "NoiraPlayer.App", "Navigation", "SearchDevelopmentNavigationRequest.cs");
         var requestSource = File.ReadAllText(requestPath);
 
-        Assert.Contains("case \"search-error\"", mainPageSource);
-        Assert.Contains("SearchDevelopmentNavigationRequest", mainPageSource);
+        Assert.DoesNotContain("case \"search-error\"", mainPageSource);
+        Assert.DoesNotContain("SearchDevelopmentNavigationRequest", mainPageSource);
         Assert.Contains("SearchDevelopmentNavigationRequest", searchPageSource);
         Assert.Contains("RenderDevelopmentSearchError()", searchPageSource);
         Assert.Contains("\"Unable to search\"", searchPageSource);
