@@ -512,6 +512,26 @@ namespace NoiraPlayer.Core.PlaybackQuality
                     return presentSignals != null || report.Timing.AudioAheadWaitPassOversleepMsP99 > 0;
                 case "timing.audioAheadWaitPassOversleepMsMax":
                     return presentSignals != null || report.Timing.AudioAheadWaitPassOversleepMsMax > 0;
+                case "timing.renderIntervalAfterAudioAheadWaitSampleCount":
+                    return presentSignals != null ||
+                        report.Timing.RenderIntervalAfterAudioAheadWaitSampleCount > 0 ||
+                        report.Timing.RenderIntervalAfterNonAudioWaitSampleCount > 0;
+                case "timing.renderIntervalAfterAudioAheadWaitMsP95":
+                    return presentSignals != null || report.Timing.RenderIntervalAfterAudioAheadWaitMsP95 > 0;
+                case "timing.renderIntervalAfterAudioAheadWaitMsP99":
+                    return presentSignals != null || report.Timing.RenderIntervalAfterAudioAheadWaitMsP99 > 0;
+                case "timing.renderIntervalAfterAudioAheadWaitMsMax":
+                    return presentSignals != null || report.Timing.RenderIntervalAfterAudioAheadWaitMsMax > 0;
+                case "timing.renderIntervalAfterNonAudioWaitSampleCount":
+                    return presentSignals != null ||
+                        report.Timing.RenderIntervalAfterAudioAheadWaitSampleCount > 0 ||
+                        report.Timing.RenderIntervalAfterNonAudioWaitSampleCount > 0;
+                case "timing.renderIntervalAfterNonAudioWaitMsP95":
+                    return presentSignals != null || report.Timing.RenderIntervalAfterNonAudioWaitMsP95 > 0;
+                case "timing.renderIntervalAfterNonAudioWaitMsP99":
+                    return presentSignals != null || report.Timing.RenderIntervalAfterNonAudioWaitMsP99 > 0;
+                case "timing.renderIntervalAfterNonAudioWaitMsMax":
+                    return presentSignals != null || report.Timing.RenderIntervalAfterNonAudioWaitMsMax > 0;
                 case "timing.videoAheadWaitCount":
                 case "timing.audioAheadWaitCount":
                 case "timing.videoClockWaitCount":
@@ -653,7 +673,15 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 report.Timing.AudioAheadWaitPassOversleepMsP50 > 0 ||
                 report.Timing.AudioAheadWaitPassOversleepMsP95 > 0 ||
                 report.Timing.AudioAheadWaitPassOversleepMsP99 > 0 ||
-                report.Timing.AudioAheadWaitPassOversleepMsMax > 0;
+                report.Timing.AudioAheadWaitPassOversleepMsMax > 0 ||
+                report.Timing.RenderIntervalAfterAudioAheadWaitSampleCount > 0 ||
+                report.Timing.RenderIntervalAfterAudioAheadWaitMsP95 > 0 ||
+                report.Timing.RenderIntervalAfterAudioAheadWaitMsP99 > 0 ||
+                report.Timing.RenderIntervalAfterAudioAheadWaitMsMax > 0 ||
+                report.Timing.RenderIntervalAfterNonAudioWaitSampleCount > 0 ||
+                report.Timing.RenderIntervalAfterNonAudioWaitMsP95 > 0 ||
+                report.Timing.RenderIntervalAfterNonAudioWaitMsP99 > 0 ||
+                report.Timing.RenderIntervalAfterNonAudioWaitMsMax > 0;
         }
 
         private static bool HasTrackEvidence(PlaybackQualityReport report)

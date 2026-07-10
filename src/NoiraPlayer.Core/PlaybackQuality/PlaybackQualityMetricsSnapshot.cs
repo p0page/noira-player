@@ -29,6 +29,14 @@
         public ulong RenderIntervalOverExpected4MsCount { get; set; }
         public ulong RenderIntervalUnderExpected2MsCount { get; set; }
         public ulong RenderIntervalUnderExpected4MsCount { get; set; }
+        public ulong RenderIntervalAfterAudioAheadWaitSampleCount { get; set; }
+        public double RenderIntervalAfterAudioAheadWaitMsP95 { get; set; }
+        public double RenderIntervalAfterAudioAheadWaitMsP99 { get; set; }
+        public double RenderIntervalAfterAudioAheadWaitMsMax { get; set; }
+        public ulong RenderIntervalAfterNonAudioWaitSampleCount { get; set; }
+        public double RenderIntervalAfterNonAudioWaitMsP95 { get; set; }
+        public double RenderIntervalAfterNonAudioWaitMsP99 { get; set; }
+        public double RenderIntervalAfterNonAudioWaitMsMax { get; set; }
         public double PresentDurationMsP50 { get; set; }
         public double PresentDurationMsP95 { get; set; }
         public double PresentDurationMsP99 { get; set; }

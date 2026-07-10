@@ -145,6 +145,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         std::chrono::steady_clock::duration m_nextRenderLoopWait{std::chrono::milliseconds(5)};
         bool m_nextRenderLoopWaitUseTimer{false};
         RenderLoopWaitReason m_nextRenderLoopWaitReason{RenderLoopWaitReason::Default};
+        RenderLoopWaitReason m_lastCompletedRenderLoopWaitReason{RenderLoopWaitReason::Default};
         RenderLoopWaiter m_renderLoopWaiter;
         std::chrono::steady_clock::time_point m_videoClockStartedAt{};
         int64_t m_videoClockStartPositionTicks{0};

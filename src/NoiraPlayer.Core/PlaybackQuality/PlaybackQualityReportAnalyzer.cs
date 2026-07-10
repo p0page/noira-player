@@ -2656,6 +2656,43 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 AddUnique(analysis.EvidenceSignals, "timing.audioAheadWaitPassOversleepMsMax");
             }
 
+            if (report.Timing.RenderIntervalAfterAudioAheadWaitSampleCount > 0 ||
+                report.Timing.RenderIntervalAfterNonAudioWaitSampleCount > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.renderIntervalAfterAudioAheadWaitSampleCount");
+                AddUnique(analysis.EvidenceSignals, "timing.renderIntervalAfterNonAudioWaitSampleCount");
+            }
+
+            if (report.Timing.RenderIntervalAfterAudioAheadWaitMsP95 > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.renderIntervalAfterAudioAheadWaitMsP95");
+            }
+
+            if (report.Timing.RenderIntervalAfterAudioAheadWaitMsP99 > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.renderIntervalAfterAudioAheadWaitMsP99");
+            }
+
+            if (report.Timing.RenderIntervalAfterAudioAheadWaitMsMax > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.renderIntervalAfterAudioAheadWaitMsMax");
+            }
+
+            if (report.Timing.RenderIntervalAfterNonAudioWaitMsP95 > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.renderIntervalAfterNonAudioWaitMsP95");
+            }
+
+            if (report.Timing.RenderIntervalAfterNonAudioWaitMsP99 > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.renderIntervalAfterNonAudioWaitMsP99");
+            }
+
+            if (report.Timing.RenderIntervalAfterNonAudioWaitMsMax > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.renderIntervalAfterNonAudioWaitMsMax");
+            }
+
             if (report.Timing.VideoAheadWaitCount > 0)
             {
                 AddUnique(analysis.EvidenceSignals, "timing.videoAheadWaitCount");

@@ -1,5 +1,15 @@
 ﻿# 技术决策
 
+## 2026-07-10: render interval preceding-wait 分桶作为 A/V 调度诊断证据保留
+
+决策：保留 `timing.renderIntervalAfterAudioAheadWait*` 与 `timing.renderIntervalAfterNonAudioWait*` 字段，按每个 render interval 之前完成的 render-loop wait reason 分桶。该字段组只作为诊断 evidence，不改变 `PlaybackFramePacing` 策略，不新增 pass/fail 阈值，不作为播放质量 improvement 自动判定依据。
+
+原因：当前 A/V smoke 的长短帧模式不能再只靠 render P95/P99、audio-ahead wait oversleep 或 final delta 判断。新 evidence 显示，A/V case 的 render interval P95/P99/max 与 audio-ahead preceding wait 直接重合，non-audio 分桶为 0；同时 repeat 中新分桶 P95/P99 spread 小于 1ms，说明这组证据比旧 episode-level oversleep 更稳定、更适合指导下一轮调度候选。
+
+影响：后续模型可以直接判断长 render interval 是跟 audio-ahead gating、video-clock wait 还是其它 render-loop wait 相邻，而不是靠人工交叉推断。若后续候选要改善 A/V smoke，应优先让 `renderIntervalAfterAudioAheadWaitMsP95/P99/Max` 下降，并同时保持 A/V drift、final delta、buffering、track/subtitle、seek/timeline 和 color/DXGI evidence 不退化。
+
+边界：本决策不宣称流畅度改善，不证明 Xbox/HDMI/HDR 输出质量，也不允许为通过测试而降低阈值。当前 artifacts 的 suite 决策仍为 `no-change`；它们证明证据链更完整，而不是证明播放策略已优化。
+
 ## 2026-07-10: video-clock wait cap 作为当前 24-case 可采纳候选保留
 
 决策：无音轨 software video-clock wait 继续使用目标剩余时间等待，但单次 `PlaybackFramePacing::VideoClockWaitDuration` 返回值限制为最多 `10ms`。该限制只作用于 video-clock wait 路径；audio-ahead wait 不加 cap，不采用此前实验过的 audio wait 10ms cap。

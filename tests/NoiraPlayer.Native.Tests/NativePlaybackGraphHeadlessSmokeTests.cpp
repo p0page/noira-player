@@ -170,6 +170,14 @@ int wmain(int argc, wchar_t** argv)
             << " renderIntervalOverExpected4MsCount=" << playbackSnapshot.RenderIntervalOverExpected4MsCount
             << " renderIntervalUnderExpected2MsCount=" << playbackSnapshot.RenderIntervalUnderExpected2MsCount
             << " renderIntervalUnderExpected4MsCount=" << playbackSnapshot.RenderIntervalUnderExpected4MsCount
+            << " renderIntervalAfterAudioAheadWaitSampleCount=" << playbackSnapshot.RenderIntervalAfterAudioAheadWaitSampleCount
+            << " renderIntervalAfterAudioAheadWaitMsP95=" << playbackSnapshot.RenderIntervalAfterAudioAheadWaitMsP95
+            << " renderIntervalAfterAudioAheadWaitMsP99=" << playbackSnapshot.RenderIntervalAfterAudioAheadWaitMsP99
+            << " renderIntervalAfterAudioAheadWaitMsMax=" << playbackSnapshot.RenderIntervalAfterAudioAheadWaitMsMax
+            << " renderIntervalAfterNonAudioWaitSampleCount=" << playbackSnapshot.RenderIntervalAfterNonAudioWaitSampleCount
+            << " renderIntervalAfterNonAudioWaitMsP95=" << playbackSnapshot.RenderIntervalAfterNonAudioWaitMsP95
+            << " renderIntervalAfterNonAudioWaitMsP99=" << playbackSnapshot.RenderIntervalAfterNonAudioWaitMsP99
+            << " renderIntervalAfterNonAudioWaitMsMax=" << playbackSnapshot.RenderIntervalAfterNonAudioWaitMsMax
             << " presentDurationMsP50=" << playbackSnapshot.PresentDurationMsP50
             << " presentDurationMsP95=" << playbackSnapshot.PresentDurationMsP95
             << " presentDurationMsP99=" << playbackSnapshot.PresentDurationMsP99

@@ -1058,6 +1058,12 @@ if (-not ($nativeAvMaterializedReport.modelAnalysis.evidenceSignals -contains 't
     throw 'Expected materialized native helper A/V report to expose audio-ahead pass duration/target/oversleep evidence signals.'
 }
 
+if (-not ($nativeAvMaterializedReport.modelAnalysis.evidenceSignals -contains 'timing.renderIntervalAfterAudioAheadWaitSampleCount') -or
+    -not ($nativeAvMaterializedReport.modelAnalysis.evidenceSignals -contains 'timing.renderIntervalAfterAudioAheadWaitMsP95') -or
+    -not ($nativeAvMaterializedReport.modelAnalysis.evidenceSignals -contains 'timing.renderIntervalAfterNonAudioWaitSampleCount')) {
+    throw 'Expected materialized native helper A/V report to expose render-interval buckets grouped by the preceding wait reason.'
+}
+
 if (-not ($nativeAvMaterializedReport.modelAnalysis.evidenceSignals -contains 'timing.hardwareDecodedVideoFrames') -or
     -not ($nativeAvMaterializedReport.modelAnalysis.evidenceSignals -contains 'timing.softwareDecodedVideoFrames')) {
     throw 'Expected materialized native helper A/V report to expose hardware/software decode-mode evidence.'

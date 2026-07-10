@@ -62,6 +62,14 @@
                 metrics.RenderIntervalOverExpected4MsCount > 0 ||
                 metrics.RenderIntervalUnderExpected2MsCount > 0 ||
                 metrics.RenderIntervalUnderExpected4MsCount > 0 ||
+                metrics.RenderIntervalAfterAudioAheadWaitSampleCount > 0 ||
+                metrics.RenderIntervalAfterAudioAheadWaitMsP95 > 0 ||
+                metrics.RenderIntervalAfterAudioAheadWaitMsP99 > 0 ||
+                metrics.RenderIntervalAfterAudioAheadWaitMsMax > 0 ||
+                metrics.RenderIntervalAfterNonAudioWaitSampleCount > 0 ||
+                metrics.RenderIntervalAfterNonAudioWaitMsP95 > 0 ||
+                metrics.RenderIntervalAfterNonAudioWaitMsP99 > 0 ||
+                metrics.RenderIntervalAfterNonAudioWaitMsMax > 0 ||
                 metrics.PresentDurationMsP50 > 0 ||
                 metrics.PresentDurationMsP95 > 0 ||
                 metrics.PresentDurationMsP99 > 0 ||

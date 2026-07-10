@@ -103,6 +103,14 @@ public sealed class PlaybackQualityReportMapperTests
             MaxFrameGapMs = 120.0,
             RenderIntervalUnderExpected2MsCount = 6,
             RenderIntervalUnderExpected4MsCount = 4,
+            RenderIntervalAfterAudioAheadWaitSampleCount = 2,
+            RenderIntervalAfterAudioAheadWaitMsP95 = 43.0,
+            RenderIntervalAfterAudioAheadWaitMsP99 = 44.0,
+            RenderIntervalAfterAudioAheadWaitMsMax = 45.0,
+            RenderIntervalAfterNonAudioWaitSampleCount = 3,
+            RenderIntervalAfterNonAudioWaitMsP95 = 34.0,
+            RenderIntervalAfterNonAudioWaitMsP99 = 35.0,
+            RenderIntervalAfterNonAudioWaitMsMax = 36.0,
             PresentDurationMsP50 = 2.0,
             PresentDurationMsP95 = 16.7,
             PresentDurationMsP99 = 33.4,
@@ -168,6 +176,14 @@ public sealed class PlaybackQualityReportMapperTests
         Assert.Equal(120.0, report.Timing.MaxFrameGapMs);
         Assert.Equal(6UL, report.Timing.RenderIntervalUnderExpected2MsCount);
         Assert.Equal(4UL, report.Timing.RenderIntervalUnderExpected4MsCount);
+        Assert.Equal(2UL, report.Timing.RenderIntervalAfterAudioAheadWaitSampleCount);
+        Assert.Equal(43.0, report.Timing.RenderIntervalAfterAudioAheadWaitMsP95);
+        Assert.Equal(44.0, report.Timing.RenderIntervalAfterAudioAheadWaitMsP99);
+        Assert.Equal(45.0, report.Timing.RenderIntervalAfterAudioAheadWaitMsMax);
+        Assert.Equal(3UL, report.Timing.RenderIntervalAfterNonAudioWaitSampleCount);
+        Assert.Equal(34.0, report.Timing.RenderIntervalAfterNonAudioWaitMsP95);
+        Assert.Equal(35.0, report.Timing.RenderIntervalAfterNonAudioWaitMsP99);
+        Assert.Equal(36.0, report.Timing.RenderIntervalAfterNonAudioWaitMsMax);
         Assert.Equal(2.0, report.Timing.PresentDurationMsP50);
         Assert.Equal(16.7, report.Timing.PresentDurationMsP95);
         Assert.Equal(33.4, report.Timing.PresentDurationMsP99);

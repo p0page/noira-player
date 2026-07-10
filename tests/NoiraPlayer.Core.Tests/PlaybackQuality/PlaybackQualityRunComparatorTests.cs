@@ -426,6 +426,12 @@ public sealed class PlaybackQualityRunComparatorTests
         Assert.Contains("timing.audioAheadWaitPassTargetMsMax", comparison.Coverage.MatchedSignals);
         Assert.Contains("timing.audioAheadWaitPassOversleepMsP95", comparison.Coverage.MatchedSignals);
         Assert.Contains("timing.audioAheadWaitPassOversleepMsMax", comparison.Coverage.MatchedSignals);
+        Assert.Contains("timing.renderIntervalAfterAudioAheadWaitSampleCount", comparison.Coverage.MatchedSignals);
+        Assert.Contains("timing.renderIntervalAfterAudioAheadWaitMsP95", comparison.Coverage.MatchedSignals);
+        Assert.Contains("timing.renderIntervalAfterAudioAheadWaitMsMax", comparison.Coverage.MatchedSignals);
+        Assert.Contains("timing.renderIntervalAfterNonAudioWaitSampleCount", comparison.Coverage.MatchedSignals);
+        Assert.Contains("timing.renderIntervalAfterNonAudioWaitMsP95", comparison.Coverage.MatchedSignals);
+        Assert.Contains("timing.renderIntervalAfterNonAudioWaitMsMax", comparison.Coverage.MatchedSignals);
         Assert.Contains("timing.maxFrameGapMs", comparison.Coverage.MatchedSignals);
         Assert.Contains("timing.videoAheadWaitCount", comparison.Coverage.MatchedSignals);
         Assert.Contains("timing.audioAheadWaitCount", comparison.Coverage.MatchedSignals);
@@ -887,6 +893,12 @@ public sealed class PlaybackQualityRunComparatorTests
         report.Timing.AudioAheadWaitPassTargetMsMax = 6.0;
         report.Timing.AudioAheadWaitPassOversleepMsP95 = 8.0;
         report.Timing.AudioAheadWaitPassOversleepMsMax = 11.0;
+        report.Timing.RenderIntervalAfterAudioAheadWaitSampleCount = 2;
+        report.Timing.RenderIntervalAfterAudioAheadWaitMsP95 = 43.0;
+        report.Timing.RenderIntervalAfterAudioAheadWaitMsMax = 45.0;
+        report.Timing.RenderIntervalAfterNonAudioWaitSampleCount = 3;
+        report.Timing.RenderIntervalAfterNonAudioWaitMsP95 = 34.0;
+        report.Timing.RenderIntervalAfterNonAudioWaitMsMax = 36.0;
         report.Timing.MaxFrameGapMs = 48.0;
         report.Timing.VideoAheadWaitCount = 52;
         report.Timing.AudioAheadWaitCount = 50;

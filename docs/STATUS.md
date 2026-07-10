@@ -2,6 +2,16 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-10 更新：render interval 已按 preceding wait reason 分桶
+
+本轮在当前 `34a625b` accepted baseline 之后只补诊断证据，不改变播放策略、不放宽评测规则。新增 `timing.renderIntervalAfterAudioAheadWaitSampleCount`、`timing.renderIntervalAfterAudioAheadWaitMsP95/P99/Max`、`timing.renderIntervalAfterNonAudioWaitSampleCount`、`timing.renderIntervalAfterNonAudioWaitMsP95/P99/Max`，用于把每个 render interval 归因到它之前完成的 render-loop wait reason。字段已贯通 native metrics、WinRT metrics、native-headless stdout、Core report、analyzer evidenceSignals、signal catalog、required signal policy、comparison matchedSignals、app quality-run clone 和 cadence stability summary。
+
+关键结论：`local/native-headless-av-smoke` 的长 render interval 后验上几乎完全绑定到 preceding audio-ahead wait。candidate 单次 24-case report-set `docs\qa\private\candidates\playback-core-tuning-render-after-wait-evidence-working-24case.local\` validation 通过，24 reports，native-headless included；与 accepted baseline `docs\qa\private\baselines\playback-core-tuning-video-clock-wait-cap-34a625b-24case.local\` 对比输出到 `docs\qa\private\comparisons\playback-core-tuning-render-after-wait-evidence-vs-34a625b.local\`，结果为 `no-change`，24/24 same case，0 regression。A/V case 中 audio-ahead 分桶约 `45-46` 个样本，P95 约 `39.6-40.0ms`，P99/max 约 `39.7-40.2ms`；non-audio 分桶三次 repeat 均为 `0` 个样本。
+
+已生成 candidate native repeat：`docs\qa\private\repeats\playback-core-tuning-render-after-wait-evidence-working-native-repeat.local\`。repeat summary 显示 9 个 native group 中 7 个 stable、2 个 unstable，unstable 仍为 `local/native-headless-av-smoke` 与 `local/native-headless-hdr10-60`。A/V group 的新分桶证据本身稳定：audio-ahead bucket P95 spread `0.4302ms`，P99 spread `0.503ms`，sample count spread `1`，non-audio bucket sample count spread `0`。该 group 被判 unstable 的原因仍是旧的 episode-level `timing.audioAheadWaitOversleepMsP95/P99` 波动，不是新分桶字段。
+
+验证：新增字段的 Core mapper/analyzer/comparator/bridge targeted tests 通过，native `PlaybackQualityMetricsTests.cpp` 通过，`NativePlaybackGraphDecouplingContractTests` 通过，`run-native-headless-harness-smoke-test.ps1` 通过，`Measure-PlaybackCadenceStability.tests.ps1` 通过。下一步可以基于该证据设计真正的 audio-ahead wait scheduling 候选，但不能把本轮记录为播放质量优化。
+
 ## 2026-07-10 更新：main 合并后的 video-clock wait cap 候选已通过 24-case gate
 
 本轮重新核对当前 worktree：`main` 已经是当前分支祖先，没有未解决 merge conflict；合并 main 后的品牌、构建链和 FFmpeg 依赖更新已经包含在当前分支口径内。被打断前尝试过的 audio-ahead wait cap 已撤回，当前保留的行为改动只限于无音轨 software video-clock wait：`PlaybackFramePacing::VideoClockWaitDuration` 最长等待限制为 `10ms`，audio-ahead wait 仍使用原策略。

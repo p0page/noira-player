@@ -321,6 +321,14 @@ internal static class NativeHeadlessHarness
         metrics.RenderIntervalOverExpected4MsCount = GetUInt64(values, "renderIntervalOverExpected4MsCount");
         metrics.RenderIntervalUnderExpected2MsCount = GetUInt64(values, "renderIntervalUnderExpected2MsCount");
         metrics.RenderIntervalUnderExpected4MsCount = GetUInt64(values, "renderIntervalUnderExpected4MsCount");
+        metrics.RenderIntervalAfterAudioAheadWaitSampleCount = GetUInt64(values, "renderIntervalAfterAudioAheadWaitSampleCount");
+        metrics.RenderIntervalAfterAudioAheadWaitMsP95 = GetDouble(values, "renderIntervalAfterAudioAheadWaitMsP95");
+        metrics.RenderIntervalAfterAudioAheadWaitMsP99 = GetDouble(values, "renderIntervalAfterAudioAheadWaitMsP99");
+        metrics.RenderIntervalAfterAudioAheadWaitMsMax = GetDouble(values, "renderIntervalAfterAudioAheadWaitMsMax");
+        metrics.RenderIntervalAfterNonAudioWaitSampleCount = GetUInt64(values, "renderIntervalAfterNonAudioWaitSampleCount");
+        metrics.RenderIntervalAfterNonAudioWaitMsP95 = GetDouble(values, "renderIntervalAfterNonAudioWaitMsP95");
+        metrics.RenderIntervalAfterNonAudioWaitMsP99 = GetDouble(values, "renderIntervalAfterNonAudioWaitMsP99");
+        metrics.RenderIntervalAfterNonAudioWaitMsMax = GetDouble(values, "renderIntervalAfterNonAudioWaitMsMax");
         metrics.PresentDurationMsP50 = GetDouble(values, "presentDurationMsP50");
         metrics.PresentDurationMsP95 = GetDouble(values, "presentDurationMsP95");
         metrics.PresentDurationMsP99 = GetDouble(values, "presentDurationMsP99");

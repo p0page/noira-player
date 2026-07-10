@@ -1209,6 +1209,14 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitPassOversleepMsP95");
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitPassOversleepMsP99");
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitPassOversleepMsMax");
+                AddUnique(comparison.Coverage.MatchedSignals, "timing.renderIntervalAfterAudioAheadWaitSampleCount");
+                AddUnique(comparison.Coverage.MatchedSignals, "timing.renderIntervalAfterAudioAheadWaitMsP95");
+                AddUnique(comparison.Coverage.MatchedSignals, "timing.renderIntervalAfterAudioAheadWaitMsP99");
+                AddUnique(comparison.Coverage.MatchedSignals, "timing.renderIntervalAfterAudioAheadWaitMsMax");
+                AddUnique(comparison.Coverage.MatchedSignals, "timing.renderIntervalAfterNonAudioWaitSampleCount");
+                AddUnique(comparison.Coverage.MatchedSignals, "timing.renderIntervalAfterNonAudioWaitMsP95");
+                AddUnique(comparison.Coverage.MatchedSignals, "timing.renderIntervalAfterNonAudioWaitMsP99");
+                AddUnique(comparison.Coverage.MatchedSignals, "timing.renderIntervalAfterNonAudioWaitMsMax");
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.maxFrameGapMs");
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.renderIntervalSampleCount");
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.renderIntervalOverExpected2MsCount");
@@ -1316,6 +1324,14 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 report.Timing.AudioAheadWaitPassOversleepMsP95 > 0 ||
                 report.Timing.AudioAheadWaitPassOversleepMsP99 > 0 ||
                 report.Timing.AudioAheadWaitPassOversleepMsMax > 0 ||
+                report.Timing.RenderIntervalAfterAudioAheadWaitSampleCount > 0 ||
+                report.Timing.RenderIntervalAfterAudioAheadWaitMsP95 > 0 ||
+                report.Timing.RenderIntervalAfterAudioAheadWaitMsP99 > 0 ||
+                report.Timing.RenderIntervalAfterAudioAheadWaitMsMax > 0 ||
+                report.Timing.RenderIntervalAfterNonAudioWaitSampleCount > 0 ||
+                report.Timing.RenderIntervalAfterNonAudioWaitMsP95 > 0 ||
+                report.Timing.RenderIntervalAfterNonAudioWaitMsP99 > 0 ||
+                report.Timing.RenderIntervalAfterNonAudioWaitMsMax > 0 ||
                 report.Timing.AudioAheadWaitCount > 0 ||
                 report.Timing.VideoClockWaitCount > 0 ||
                 report.Timing.MinFrameGapMs > 0 ||

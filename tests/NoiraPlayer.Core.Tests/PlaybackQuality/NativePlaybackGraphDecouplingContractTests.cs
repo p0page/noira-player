@@ -56,6 +56,19 @@ public sealed class NativePlaybackGraphDecouplingContractTests
             StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void PlaybackGraph_Groups_Render_Intervals_By_Preceding_Audio_Ahead_Wait()
+    {
+        var root = FindRepositoryRoot();
+        var graphHeader = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Native", "Media", "PlaybackGraph.h"));
+        var graphSource = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Native", "Media", "PlaybackGraph.cpp"));
+
+        Assert.Contains("RenderLoopWaitReason m_lastCompletedRenderLoopWaitReason", graphHeader, StringComparison.Ordinal);
+        Assert.Contains("m_lastCompletedRenderLoopWaitReason = completedRenderLoopWaitReason;", graphSource, StringComparison.Ordinal);
+        Assert.Contains("m_qualityMetrics.RecordRenderIntervalAfterAudioAheadWaitMs(elapsed);", graphSource, StringComparison.Ordinal);
+        Assert.Contains("m_qualityMetrics.RecordRenderIntervalAfterNonAudioWaitMs(elapsed);", graphSource, StringComparison.Ordinal);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

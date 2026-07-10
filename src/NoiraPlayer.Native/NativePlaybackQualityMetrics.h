@@ -89,6 +89,30 @@ namespace winrt::NoiraPlayer::Native::implementation
         uint64_t RenderIntervalUnderExpected4MsCount() const noexcept { return m_renderIntervalUnderExpected4MsCount; }
         void RenderIntervalUnderExpected4MsCount(uint64_t value) noexcept { m_renderIntervalUnderExpected4MsCount = value; }
 
+        uint64_t RenderIntervalAfterAudioAheadWaitSampleCount() const noexcept { return m_renderIntervalAfterAudioAheadWaitSampleCount; }
+        void RenderIntervalAfterAudioAheadWaitSampleCount(uint64_t value) noexcept { m_renderIntervalAfterAudioAheadWaitSampleCount = value; }
+
+        double RenderIntervalAfterAudioAheadWaitMsP95() const noexcept { return m_renderIntervalAfterAudioAheadWaitMsP95; }
+        void RenderIntervalAfterAudioAheadWaitMsP95(double value) noexcept { m_renderIntervalAfterAudioAheadWaitMsP95 = value; }
+
+        double RenderIntervalAfterAudioAheadWaitMsP99() const noexcept { return m_renderIntervalAfterAudioAheadWaitMsP99; }
+        void RenderIntervalAfterAudioAheadWaitMsP99(double value) noexcept { m_renderIntervalAfterAudioAheadWaitMsP99 = value; }
+
+        double RenderIntervalAfterAudioAheadWaitMsMax() const noexcept { return m_renderIntervalAfterAudioAheadWaitMsMax; }
+        void RenderIntervalAfterAudioAheadWaitMsMax(double value) noexcept { m_renderIntervalAfterAudioAheadWaitMsMax = value; }
+
+        uint64_t RenderIntervalAfterNonAudioWaitSampleCount() const noexcept { return m_renderIntervalAfterNonAudioWaitSampleCount; }
+        void RenderIntervalAfterNonAudioWaitSampleCount(uint64_t value) noexcept { m_renderIntervalAfterNonAudioWaitSampleCount = value; }
+
+        double RenderIntervalAfterNonAudioWaitMsP95() const noexcept { return m_renderIntervalAfterNonAudioWaitMsP95; }
+        void RenderIntervalAfterNonAudioWaitMsP95(double value) noexcept { m_renderIntervalAfterNonAudioWaitMsP95 = value; }
+
+        double RenderIntervalAfterNonAudioWaitMsP99() const noexcept { return m_renderIntervalAfterNonAudioWaitMsP99; }
+        void RenderIntervalAfterNonAudioWaitMsP99(double value) noexcept { m_renderIntervalAfterNonAudioWaitMsP99 = value; }
+
+        double RenderIntervalAfterNonAudioWaitMsMax() const noexcept { return m_renderIntervalAfterNonAudioWaitMsMax; }
+        void RenderIntervalAfterNonAudioWaitMsMax(double value) noexcept { m_renderIntervalAfterNonAudioWaitMsMax = value; }
+
         double PresentDurationMsP50() const noexcept { return m_presentDurationMsP50; }
         void PresentDurationMsP50(double value) noexcept { m_presentDurationMsP50 = value; }
 
@@ -246,6 +270,14 @@ namespace winrt::NoiraPlayer::Native::implementation
         uint64_t m_renderIntervalOverExpected4MsCount{0};
         uint64_t m_renderIntervalUnderExpected2MsCount{0};
         uint64_t m_renderIntervalUnderExpected4MsCount{0};
+        uint64_t m_renderIntervalAfterAudioAheadWaitSampleCount{0};
+        double m_renderIntervalAfterAudioAheadWaitMsP95{0.0};
+        double m_renderIntervalAfterAudioAheadWaitMsP99{0.0};
+        double m_renderIntervalAfterAudioAheadWaitMsMax{0.0};
+        uint64_t m_renderIntervalAfterNonAudioWaitSampleCount{0};
+        double m_renderIntervalAfterNonAudioWaitMsP95{0.0};
+        double m_renderIntervalAfterNonAudioWaitMsP99{0.0};
+        double m_renderIntervalAfterNonAudioWaitMsMax{0.0};
         double m_presentDurationMsP50{0.0};
         double m_presentDurationMsP95{0.0};
         double m_presentDurationMsP99{0.0};

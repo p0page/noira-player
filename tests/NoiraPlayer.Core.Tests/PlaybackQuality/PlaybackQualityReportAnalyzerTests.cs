@@ -1342,6 +1342,14 @@ public sealed class PlaybackQualityReportAnalyzerTests
         report.Timing.AudioAheadWaitPassOversleepMsP95 = 8.0;
         report.Timing.AudioAheadWaitPassOversleepMsP99 = 11.0;
         report.Timing.AudioAheadWaitPassOversleepMsMax = 12.0;
+        report.Timing.RenderIntervalAfterAudioAheadWaitSampleCount = 2;
+        report.Timing.RenderIntervalAfterAudioAheadWaitMsP95 = 43.0;
+        report.Timing.RenderIntervalAfterAudioAheadWaitMsP99 = 44.0;
+        report.Timing.RenderIntervalAfterAudioAheadWaitMsMax = 45.0;
+        report.Timing.RenderIntervalAfterNonAudioWaitSampleCount = 3;
+        report.Timing.RenderIntervalAfterNonAudioWaitMsP95 = 34.0;
+        report.Timing.RenderIntervalAfterNonAudioWaitMsP99 = 35.0;
+        report.Timing.RenderIntervalAfterNonAudioWaitMsMax = 36.0;
         report.Timing.VideoAheadWaitCount = 7;
         report.Timing.AudioAheadWaitCount = 5;
         report.Timing.VideoClockWaitCount = 2;
@@ -1379,6 +1387,14 @@ public sealed class PlaybackQualityReportAnalyzerTests
         Assert.Contains("timing.audioAheadWaitPassOversleepMsP95", analysis.EvidenceSignals);
         Assert.Contains("timing.audioAheadWaitPassOversleepMsP99", analysis.EvidenceSignals);
         Assert.Contains("timing.audioAheadWaitPassOversleepMsMax", analysis.EvidenceSignals);
+        Assert.Contains("timing.renderIntervalAfterAudioAheadWaitSampleCount", analysis.EvidenceSignals);
+        Assert.Contains("timing.renderIntervalAfterAudioAheadWaitMsP95", analysis.EvidenceSignals);
+        Assert.Contains("timing.renderIntervalAfterAudioAheadWaitMsP99", analysis.EvidenceSignals);
+        Assert.Contains("timing.renderIntervalAfterAudioAheadWaitMsMax", analysis.EvidenceSignals);
+        Assert.Contains("timing.renderIntervalAfterNonAudioWaitSampleCount", analysis.EvidenceSignals);
+        Assert.Contains("timing.renderIntervalAfterNonAudioWaitMsP95", analysis.EvidenceSignals);
+        Assert.Contains("timing.renderIntervalAfterNonAudioWaitMsP99", analysis.EvidenceSignals);
+        Assert.Contains("timing.renderIntervalAfterNonAudioWaitMsMax", analysis.EvidenceSignals);
     }
 
     [Fact]
@@ -1394,6 +1410,22 @@ public sealed class PlaybackQualityReportAnalyzerTests
         Assert.Contains("timing.videoAheadWaitCount", analysis.EvidenceSignals);
         Assert.Contains("timing.audioAheadWaitCount", analysis.EvidenceSignals);
         Assert.Contains("timing.videoClockWaitCount", analysis.EvidenceSignals);
+    }
+
+    [Fact]
+    public void Analyze_Reports_Zero_Render_Bucket_Count_When_Paired_Bucket_Has_Samples()
+    {
+        var report = CreateOptimizationReadyFailure();
+        report.Timing.RenderIntervalAfterAudioAheadWaitSampleCount = 45;
+        report.Timing.RenderIntervalAfterAudioAheadWaitMsP95 = 39.7;
+        report.Timing.RenderIntervalAfterNonAudioWaitSampleCount = 0;
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Contains("timing.renderIntervalAfterAudioAheadWaitSampleCount", analysis.EvidenceSignals);
+        Assert.Contains("timing.renderIntervalAfterAudioAheadWaitMsP95", analysis.EvidenceSignals);
+        Assert.Contains("timing.renderIntervalAfterNonAudioWaitSampleCount", analysis.EvidenceSignals);
+        Assert.DoesNotContain("timing.renderIntervalAfterNonAudioWaitMsP95", analysis.EvidenceSignals);
     }
 
     [Fact]

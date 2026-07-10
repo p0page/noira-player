@@ -148,6 +148,14 @@ foreach ($file in $reportFiles) {
     $audioAheadWaitPassTargetP99 = Get-DoubleValue $timing.audioAheadWaitPassTargetMsP99
     $audioAheadWaitPassOversleepP95 = Get-DoubleValue $timing.audioAheadWaitPassOversleepMsP95
     $audioAheadWaitPassOversleepP99 = Get-DoubleValue $timing.audioAheadWaitPassOversleepMsP99
+    $renderAfterAudioAheadSampleCount = Get-DoubleValue $timing.renderIntervalAfterAudioAheadWaitSampleCount
+    $renderAfterAudioAheadP95 = Get-DoubleValue $timing.renderIntervalAfterAudioAheadWaitMsP95
+    $renderAfterAudioAheadP99 = Get-DoubleValue $timing.renderIntervalAfterAudioAheadWaitMsP99
+    $renderAfterAudioAheadMax = Get-DoubleValue $timing.renderIntervalAfterAudioAheadWaitMsMax
+    $renderAfterNonAudioSampleCount = Get-DoubleValue $timing.renderIntervalAfterNonAudioWaitSampleCount
+    $renderAfterNonAudioP95 = Get-DoubleValue $timing.renderIntervalAfterNonAudioWaitMsP95
+    $renderAfterNonAudioP99 = Get-DoubleValue $timing.renderIntervalAfterNonAudioWaitMsP99
+    $renderAfterNonAudioMax = Get-DoubleValue $timing.renderIntervalAfterNonAudioWaitMsMax
     $audioVideoDriftP95 = Get-DoubleValue $sync.audioVideoDriftMsP95
     $audioVideoDriftP99 = Get-DoubleValue $sync.audioVideoDriftMsP99
     if ($null -eq $expectedFrameDurationMs -or
@@ -187,6 +195,14 @@ foreach ($file in $reportFiles) {
         audioAheadWaitPassTargetMsP99 = if ($null -eq $audioAheadWaitPassTargetP99) { $null } else { [math]::Round($audioAheadWaitPassTargetP99, 6) }
         audioAheadWaitPassOversleepMsP95 = if ($null -eq $audioAheadWaitPassOversleepP95) { $null } else { [math]::Round($audioAheadWaitPassOversleepP95, 6) }
         audioAheadWaitPassOversleepMsP99 = if ($null -eq $audioAheadWaitPassOversleepP99) { $null } else { [math]::Round($audioAheadWaitPassOversleepP99, 6) }
+        renderIntervalAfterAudioAheadWaitSampleCount = if ($null -eq $renderAfterAudioAheadSampleCount) { $null } else { [math]::Round($renderAfterAudioAheadSampleCount, 6) }
+        renderIntervalAfterAudioAheadWaitMsP95 = if ($null -eq $renderAfterAudioAheadP95) { $null } else { [math]::Round($renderAfterAudioAheadP95, 6) }
+        renderIntervalAfterAudioAheadWaitMsP99 = if ($null -eq $renderAfterAudioAheadP99) { $null } else { [math]::Round($renderAfterAudioAheadP99, 6) }
+        renderIntervalAfterAudioAheadWaitMsMax = if ($null -eq $renderAfterAudioAheadMax) { $null } else { [math]::Round($renderAfterAudioAheadMax, 6) }
+        renderIntervalAfterNonAudioWaitSampleCount = if ($null -eq $renderAfterNonAudioSampleCount) { $null } else { [math]::Round($renderAfterNonAudioSampleCount, 6) }
+        renderIntervalAfterNonAudioWaitMsP95 = if ($null -eq $renderAfterNonAudioP95) { $null } else { [math]::Round($renderAfterNonAudioP95, 6) }
+        renderIntervalAfterNonAudioWaitMsP99 = if ($null -eq $renderAfterNonAudioP99) { $null } else { [math]::Round($renderAfterNonAudioP99, 6) }
+        renderIntervalAfterNonAudioWaitMsMax = if ($null -eq $renderAfterNonAudioMax) { $null } else { [math]::Round($renderAfterNonAudioMax, 6) }
         audioVideoDriftMsP95 = if ($null -eq $audioVideoDriftP95) { $null } else { [math]::Round($audioVideoDriftP95, 6) }
         audioVideoDriftMsP99 = if ($null -eq $audioVideoDriftP99) { $null } else { [math]::Round($audioVideoDriftP99, 6) }
     }
@@ -214,6 +230,14 @@ foreach ($group in ($samples | Group-Object -Property caseGroupId | Sort-Object 
     $audioAheadWaitPassTargetP99Stats = Get-SpreadStats @($groupSamples | ForEach-Object { $_.audioAheadWaitPassTargetMsP99 })
     $audioAheadWaitPassOversleepP95Stats = Get-SpreadStats @($groupSamples | ForEach-Object { $_.audioAheadWaitPassOversleepMsP95 })
     $audioAheadWaitPassOversleepP99Stats = Get-SpreadStats @($groupSamples | ForEach-Object { $_.audioAheadWaitPassOversleepMsP99 })
+    $renderAfterAudioAheadSampleCountStats = Get-SpreadStats @($groupSamples | ForEach-Object { $_.renderIntervalAfterAudioAheadWaitSampleCount })
+    $renderAfterAudioAheadP95Stats = Get-SpreadStats @($groupSamples | ForEach-Object { $_.renderIntervalAfterAudioAheadWaitMsP95 })
+    $renderAfterAudioAheadP99Stats = Get-SpreadStats @($groupSamples | ForEach-Object { $_.renderIntervalAfterAudioAheadWaitMsP99 })
+    $renderAfterAudioAheadMaxStats = Get-SpreadStats @($groupSamples | ForEach-Object { $_.renderIntervalAfterAudioAheadWaitMsMax })
+    $renderAfterNonAudioSampleCountStats = Get-SpreadStats @($groupSamples | ForEach-Object { $_.renderIntervalAfterNonAudioWaitSampleCount })
+    $renderAfterNonAudioP95Stats = Get-SpreadStats @($groupSamples | ForEach-Object { $_.renderIntervalAfterNonAudioWaitMsP95 })
+    $renderAfterNonAudioP99Stats = Get-SpreadStats @($groupSamples | ForEach-Object { $_.renderIntervalAfterNonAudioWaitMsP99 })
+    $renderAfterNonAudioMaxStats = Get-SpreadStats @($groupSamples | ForEach-Object { $_.renderIntervalAfterNonAudioWaitMsMax })
     $audioVideoDriftP95Stats = Get-SpreadStats @($groupSamples | ForEach-Object { $_.audioVideoDriftMsP95 })
     $audioVideoDriftP99Stats = Get-SpreadStats @($groupSamples | ForEach-Object { $_.audioVideoDriftMsP99 })
 
@@ -227,6 +251,12 @@ foreach ($group in ($samples | Group-Object -Property caseGroupId | Sort-Object 
         New-SignalIfUnstable -Signal 'timing.audioAheadWaitFinalDeltaAbsMsP99' -Stats $audioAheadWaitFinalDeltaAbsP99Stats -Threshold $MaterialityMs
         New-SignalIfUnstable -Signal 'timing.audioAheadWaitPassOversleepMsP95' -Stats $audioAheadWaitPassOversleepP95Stats -Threshold $MaterialityMs
         New-SignalIfUnstable -Signal 'timing.audioAheadWaitPassOversleepMsP99' -Stats $audioAheadWaitPassOversleepP99Stats -Threshold $MaterialityMs
+        New-SignalIfUnstable -Signal 'timing.renderIntervalAfterAudioAheadWaitMsP95' -Stats $renderAfterAudioAheadP95Stats -Threshold $MaterialityMs
+        New-SignalIfUnstable -Signal 'timing.renderIntervalAfterAudioAheadWaitMsP99' -Stats $renderAfterAudioAheadP99Stats -Threshold $MaterialityMs
+        New-SignalIfUnstable -Signal 'timing.renderIntervalAfterAudioAheadWaitMsMax' -Stats $renderAfterAudioAheadMaxStats -Threshold $MaterialityMs
+        New-SignalIfUnstable -Signal 'timing.renderIntervalAfterNonAudioWaitMsP95' -Stats $renderAfterNonAudioP95Stats -Threshold $MaterialityMs
+        New-SignalIfUnstable -Signal 'timing.renderIntervalAfterNonAudioWaitMsP99' -Stats $renderAfterNonAudioP99Stats -Threshold $MaterialityMs
+        New-SignalIfUnstable -Signal 'timing.renderIntervalAfterNonAudioWaitMsMax' -Stats $renderAfterNonAudioMaxStats -Threshold $MaterialityMs
         New-SignalIfUnstable -Signal 'sync.audioVideoDriftMsP95' -Stats $audioVideoDriftP95Stats -Threshold $MaterialityMs
         New-SignalIfUnstable -Signal 'sync.audioVideoDriftMsP99' -Stats $audioVideoDriftP99Stats -Threshold $MaterialityMs
     ) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
@@ -289,6 +319,30 @@ foreach ($group in ($samples | Group-Object -Property caseGroupId | Sort-Object 
         audioAheadWaitPassOversleepP99MinMs = $audioAheadWaitPassOversleepP99Stats.min
         audioAheadWaitPassOversleepP99MaxMs = $audioAheadWaitPassOversleepP99Stats.max
         audioAheadWaitPassOversleepP99SpreadMs = $audioAheadWaitPassOversleepP99Stats.spread
+        renderIntervalAfterAudioAheadWaitSampleCountMin = $renderAfterAudioAheadSampleCountStats.min
+        renderIntervalAfterAudioAheadWaitSampleCountMax = $renderAfterAudioAheadSampleCountStats.max
+        renderIntervalAfterAudioAheadWaitSampleCountSpread = $renderAfterAudioAheadSampleCountStats.spread
+        renderIntervalAfterAudioAheadWaitP95MinMs = $renderAfterAudioAheadP95Stats.min
+        renderIntervalAfterAudioAheadWaitP95MaxMs = $renderAfterAudioAheadP95Stats.max
+        renderIntervalAfterAudioAheadWaitP95SpreadMs = $renderAfterAudioAheadP95Stats.spread
+        renderIntervalAfterAudioAheadWaitP99MinMs = $renderAfterAudioAheadP99Stats.min
+        renderIntervalAfterAudioAheadWaitP99MaxMs = $renderAfterAudioAheadP99Stats.max
+        renderIntervalAfterAudioAheadWaitP99SpreadMs = $renderAfterAudioAheadP99Stats.spread
+        renderIntervalAfterAudioAheadWaitMaxMinMs = $renderAfterAudioAheadMaxStats.min
+        renderIntervalAfterAudioAheadWaitMaxMaxMs = $renderAfterAudioAheadMaxStats.max
+        renderIntervalAfterAudioAheadWaitMaxSpreadMs = $renderAfterAudioAheadMaxStats.spread
+        renderIntervalAfterNonAudioWaitSampleCountMin = $renderAfterNonAudioSampleCountStats.min
+        renderIntervalAfterNonAudioWaitSampleCountMax = $renderAfterNonAudioSampleCountStats.max
+        renderIntervalAfterNonAudioWaitSampleCountSpread = $renderAfterNonAudioSampleCountStats.spread
+        renderIntervalAfterNonAudioWaitP95MinMs = $renderAfterNonAudioP95Stats.min
+        renderIntervalAfterNonAudioWaitP95MaxMs = $renderAfterNonAudioP95Stats.max
+        renderIntervalAfterNonAudioWaitP95SpreadMs = $renderAfterNonAudioP95Stats.spread
+        renderIntervalAfterNonAudioWaitP99MinMs = $renderAfterNonAudioP99Stats.min
+        renderIntervalAfterNonAudioWaitP99MaxMs = $renderAfterNonAudioP99Stats.max
+        renderIntervalAfterNonAudioWaitP99SpreadMs = $renderAfterNonAudioP99Stats.spread
+        renderIntervalAfterNonAudioWaitMaxMinMs = $renderAfterNonAudioMaxStats.min
+        renderIntervalAfterNonAudioWaitMaxMaxMs = $renderAfterNonAudioMaxStats.max
+        renderIntervalAfterNonAudioWaitMaxSpreadMs = $renderAfterNonAudioMaxStats.spread
         audioVideoDriftP95MinMs = $audioVideoDriftP95Stats.min
         audioVideoDriftP95MaxMs = $audioVideoDriftP95Stats.max
         audioVideoDriftP95SpreadMs = $audioVideoDriftP95Stats.spread

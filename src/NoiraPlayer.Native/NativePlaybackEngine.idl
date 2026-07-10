@@ -80,6 +80,14 @@
         UInt64 RenderIntervalOverExpected4MsCount;
         UInt64 RenderIntervalUnderExpected2MsCount;
         UInt64 RenderIntervalUnderExpected4MsCount;
+        UInt64 RenderIntervalAfterAudioAheadWaitSampleCount;
+        Double RenderIntervalAfterAudioAheadWaitMsP95;
+        Double RenderIntervalAfterAudioAheadWaitMsP99;
+        Double RenderIntervalAfterAudioAheadWaitMsMax;
+        UInt64 RenderIntervalAfterNonAudioWaitSampleCount;
+        Double RenderIntervalAfterNonAudioWaitMsP95;
+        Double RenderIntervalAfterNonAudioWaitMsP99;
+        Double RenderIntervalAfterNonAudioWaitMsMax;
         Double PresentDurationMsP50;
         Double PresentDurationMsP95;
         Double PresentDurationMsP99;

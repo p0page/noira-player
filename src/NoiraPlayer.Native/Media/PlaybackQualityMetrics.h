@@ -37,6 +37,14 @@ namespace winrt::NoiraPlayer::Native::implementation
         uint64_t RenderIntervalOverExpected4MsCount{0};
         uint64_t RenderIntervalUnderExpected2MsCount{0};
         uint64_t RenderIntervalUnderExpected4MsCount{0};
+        uint64_t RenderIntervalAfterAudioAheadWaitSampleCount{0};
+        double RenderIntervalAfterAudioAheadWaitMsP95{0.0};
+        double RenderIntervalAfterAudioAheadWaitMsP99{0.0};
+        double RenderIntervalAfterAudioAheadWaitMsMax{0.0};
+        uint64_t RenderIntervalAfterNonAudioWaitSampleCount{0};
+        double RenderIntervalAfterNonAudioWaitMsP95{0.0};
+        double RenderIntervalAfterNonAudioWaitMsP99{0.0};
+        double RenderIntervalAfterNonAudioWaitMsMax{0.0};
         double PresentDurationMsP50{0.0};
         double PresentDurationMsP95{0.0};
         double PresentDurationMsP99{0.0};
@@ -227,6 +235,16 @@ namespace winrt::NoiraPlayer::Native::implementation
             m_renderIntervals.Add(value);
         }
 
+        void RecordRenderIntervalAfterAudioAheadWaitMs(double value) noexcept
+        {
+            m_renderIntervalsAfterAudioAheadWait.Add(value);
+        }
+
+        void RecordRenderIntervalAfterNonAudioWaitMs(double value) noexcept
+        {
+            m_renderIntervalsAfterNonAudioWait.Add(value);
+        }
+
         void RecordPresentDurationMs(double value) noexcept
         {
             m_presentDurations.Add(value);
@@ -327,6 +345,22 @@ namespace winrt::NoiraPlayer::Native::implementation
                 snapshot.RenderIntervalUnderExpected4MsCount =
                     m_renderIntervals.CountLessThan(expectedFrameDurationMs - 4.0);
             }
+            snapshot.RenderIntervalAfterAudioAheadWaitSampleCount =
+                static_cast<uint64_t>(m_renderIntervalsAfterAudioAheadWait.Count());
+            snapshot.RenderIntervalAfterAudioAheadWaitMsP95 =
+                m_renderIntervalsAfterAudioAheadWait.Percentile(95);
+            snapshot.RenderIntervalAfterAudioAheadWaitMsP99 =
+                m_renderIntervalsAfterAudioAheadWait.Percentile(99);
+            snapshot.RenderIntervalAfterAudioAheadWaitMsMax =
+                m_renderIntervalsAfterAudioAheadWait.Max();
+            snapshot.RenderIntervalAfterNonAudioWaitSampleCount =
+                static_cast<uint64_t>(m_renderIntervalsAfterNonAudioWait.Count());
+            snapshot.RenderIntervalAfterNonAudioWaitMsP95 =
+                m_renderIntervalsAfterNonAudioWait.Percentile(95);
+            snapshot.RenderIntervalAfterNonAudioWaitMsP99 =
+                m_renderIntervalsAfterNonAudioWait.Percentile(99);
+            snapshot.RenderIntervalAfterNonAudioWaitMsMax =
+                m_renderIntervalsAfterNonAudioWait.Max();
             snapshot.PresentDurationMsP50 = m_presentDurations.Percentile(50);
             snapshot.PresentDurationMsP95 = m_presentDurations.Percentile(95);
             snapshot.PresentDurationMsP99 = m_presentDurations.Percentile(99);
@@ -375,6 +409,8 @@ namespace winrt::NoiraPlayer::Native::implementation
 
     private:
         PlaybackQualityHistogram m_renderIntervals;
+        PlaybackQualityHistogram m_renderIntervalsAfterAudioAheadWait;
+        PlaybackQualityHistogram m_renderIntervalsAfterNonAudioWait;
         PlaybackQualityHistogram m_presentDurations;
         PlaybackQualityHistogram m_audioAheadWaitDurations;
         PlaybackQualityHistogram m_audioAheadWaitTargets;
