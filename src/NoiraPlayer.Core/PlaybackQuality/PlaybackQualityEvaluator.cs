@@ -187,6 +187,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 });
             }
 
+            CheckFailedLifecycleOperations(report);
             AssignFailureClasses(report);
             report.Result = report.FailureReasons.Count == 0 ? "pass" : "fail";
             if (report.Result == "pass")
@@ -198,6 +199,50 @@ namespace NoiraPlayer.Core.PlaybackQuality
 
             AssignFailureAnalysis(report);
         }
+
+        private static void CheckFailedLifecycleOperations(PlaybackQualityReport report)
+        {
+            foreach (var lifecycleEvent in report.Lifecycle.Events)
+            {
+                if (!string.Equals(
+                        lifecycleEvent.Status,
+                        "failed",
+                        System.StringComparison.Ordinal) &&
+                    !string.Equals(
+                        lifecycleEvent.Status,
+                        "error",
+                        System.StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                var signal = "lifecycle." + lifecycleEvent.Operation;
+                var message = string.IsNullOrWhiteSpace(lifecycleEvent.Message)
+                    ? "Lifecycle operation " + lifecycleEvent.Operation +
+                        " reported " + lifecycleEvent.Status + "."
+                    : lifecycleEvent.Message;
+                report.FailureReasons.Add(message);
+                report.Checks.Add(new PlaybackQualityCheck
+                {
+                    Name = "LifecycleOperation",
+                    Signal = signal,
+                    Status = "fail",
+                    FailureArea = GetLifecycleFailureArea(lifecycleEvent.Operation),
+                    Expected = "completed",
+                    Actual = lifecycleEvent.Status,
+                    Message = message
+                });
+                AddRelevantSignal(report, signal);
+            }
+        }
+
+        private static string GetLifecycleFailureArea(string operation) => operation switch
+        {
+            "audio-switch" => "tracks",
+            "subtitle-switch" or "subtitle-off" => "subtitles",
+            "seek" => "timeline",
+            _ => "playback-lifecycle"
+        };
 
         private static void CheckExpectedSourceMetadata(
             PlaybackQualityReport report,

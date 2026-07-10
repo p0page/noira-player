@@ -945,6 +945,125 @@ public sealed class PlaybackQualityEvaluatorTests
     }
 
     [Fact]
+    public void Evaluate_Fails_When_Subtitle_Switch_Lifecycle_Operation_Fails()
+    {
+        const string message = "no subtitle cue was rendered after switching";
+        var report = new PlaybackQualityReport
+        {
+            RunId = "subtitle-switch-failed",
+            Expected = new PlaybackQualityExpected
+            {
+                RequireValidatedConversion = false
+            }
+        };
+        report.Lifecycle.Events.Add(new PlaybackQualityLifecycleEvent
+        {
+            Operation = "subtitle-switch",
+            Status = "failed",
+            PositionTicks = 30_000_000,
+            Message = message
+        });
+
+        PlaybackQualityEvaluator.Evaluate(report);
+
+        Assert.Equal("fail", report.Result);
+        Assert.Contains(message, report.FailureReasons);
+        Assert.Contains("lifecycle.subtitle-switch", report.Analysis.RelevantSignals);
+        Assert.Contains(report.Checks, check =>
+            check.Signal == "lifecycle.subtitle-switch" &&
+            check.Status == "fail" &&
+            check.FailureArea == "subtitles" &&
+            check.Message == message);
+    }
+
+    [Theory]
+    [InlineData("audio-switch", "tracks")]
+    [InlineData("seek", "timeline")]
+    [InlineData("pause", "playback-lifecycle")]
+    public void Evaluate_Maps_Failed_Lifecycle_Operation_To_Failure_Area(
+        string operation,
+        string failureArea)
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = operation + "-failed",
+            Expected = new PlaybackQualityExpected
+            {
+                RequireValidatedConversion = false
+            }
+        };
+        report.Lifecycle.Events.Add(new PlaybackQualityLifecycleEvent
+        {
+            Operation = operation,
+            Status = "failed",
+            Message = operation + " failed"
+        });
+
+        PlaybackQualityEvaluator.Evaluate(report);
+
+        Assert.Equal("fail", report.Result);
+        Assert.Contains(report.Checks, check =>
+            check.Signal == "lifecycle." + operation &&
+            check.Status == "fail" &&
+            check.FailureArea == failureArea);
+    }
+
+    [Fact]
+    public void Evaluate_Uses_Stable_Default_Message_When_Lifecycle_Error_Has_No_Message()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "subtitle-off-error",
+            Expected = new PlaybackQualityExpected
+            {
+                RequireValidatedConversion = false
+            }
+        };
+        report.Lifecycle.Events.Add(new PlaybackQualityLifecycleEvent
+        {
+            Operation = "subtitle-off",
+            Status = "error"
+        });
+
+        PlaybackQualityEvaluator.Evaluate(report);
+
+        const string message = "Lifecycle operation subtitle-off reported error.";
+        Assert.Equal("fail", report.Result);
+        Assert.Contains(message, report.FailureReasons);
+        Assert.Contains(report.Checks, check =>
+            check.Signal == "lifecycle.subtitle-off" &&
+            check.Status == "fail" &&
+            check.FailureArea == "subtitles" &&
+            check.Message == message);
+    }
+
+    [Theory]
+    [InlineData("completed")]
+    [InlineData("skipped")]
+    public void Evaluate_Does_Not_Fail_For_Non_Failing_Lifecycle_Status(string status)
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "seek-" + status,
+            Expected = new PlaybackQualityExpected
+            {
+                RequireValidatedConversion = false
+            }
+        };
+        report.Lifecycle.Events.Add(new PlaybackQualityLifecycleEvent
+        {
+            Operation = "seek",
+            Status = status,
+            Message = "seek " + status
+        });
+
+        PlaybackQualityEvaluator.Evaluate(report);
+
+        Assert.Equal("pass", report.Result);
+        Assert.DoesNotContain(report.Checks, check => check.Signal == "lifecycle.seek");
+    }
+
+    [Fact]
     public void Serializer_RoundTrips_Report_With_CamelCase_Names()
     {
         var report = new PlaybackQualityReport
