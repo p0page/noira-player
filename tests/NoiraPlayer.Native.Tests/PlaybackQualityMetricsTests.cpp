@@ -19,12 +19,21 @@ int main()
     metrics.RecordPresentDurationMs(2.0);
     metrics.RecordPresentDurationMs(17.0);
     metrics.RecordPresentDurationMs(34.0);
-    metrics.RecordAudioAheadWaitMs(4.0, 1.0, 100.0, 1);
-    metrics.RecordAudioAheadWaitMs(12.0, 3.0, 80.0, 2);
-    metrics.RecordAudioAheadWaitMs(24.0, 8.0, 50.0, 3);
+    metrics.RecordAudioAheadWaitMs(4.0, 1.0, 3.0, 100.0, 1);
+    metrics.RecordAudioAheadWaitMs(12.0, 3.0, 9.0, 80.0, 2);
+    metrics.RecordAudioAheadWaitMs(24.0, 8.0, 16.0, 50.0, 3);
     metrics.RecordAudioAheadWaitPassMs(5.0, 4.0);
     metrics.RecordAudioAheadWaitPassMs(11.0, 6.0);
     metrics.RecordAudioAheadWaitPassMs(20.0, 8.0);
+
+    PlaybackQualityMetrics episodeMetrics;
+    auto episodeOversleepMs = episodeMetrics.RecordAudioAheadWaitPassMs(5.0, 10.0);
+    episodeOversleepMs += episodeMetrics.RecordAudioAheadWaitPassMs(7.0, 5.0);
+    assert(episodeOversleepMs == 2.0);
+
+    PlaybackQualityMetrics explicitOversleepMetrics;
+    explicitOversleepMetrics.RecordAudioAheadWaitMs(20.0, 10.0, 7.0, 0.0, 1);
+    assert(explicitOversleepMetrics.Snapshot().AudioAheadWaitOversleepMsMax == 7.0);
     metrics.RecordAudioVideoDriftTicks(200000);
     metrics.RecordAudioVideoDriftTicks(-400000);
 

@@ -851,3 +851,19 @@ manifest validation、report-set validation、single comparison、comparison sui
 验证：策略实现按 TDD 添加 native frame pacing test，先红灯失败，再实现通过；`tools/quality-run/run-playback-core-checks.ps1` 已通过。边界：这是纯软件 native-headless 证据，不证明真实 Xbox/HDMI 输出或主观观感已经改善；下一步应优先做重复采样确认 `c129249` 的稳定性，再继续新的播放策略候选。
 
 已完成 `c129249` 的 3 次 native-headless 重复采样，产物为 `docs/qa/private/repeats/playback-core-tuning-default-render-loop-timer-c129249-native-repeat.local/`。结果：27/27 sample 可用，9 个 native group 中 8 个 stable，唯一 unstable group 是 `local/native-headless-hdr10-60`。该 case 的 P95/P99 expected-error spread 已很小，分别约 `0.0541ms` 和 `0.3106ms`；不稳定信号来自一次 max-frame-gap outlier，max-gap expected-error spread 约 `2.8572ms`。因此当前结论是：`c129249` 明显改善 60fps cadence 的常态 P95/P99，但仍不能宣称完全消除偶发 max-frame-gap outlier。
+
+# 2026-07-11 更新：audio-ahead episode oversleep 语义修正完成同期控制验证
+
+本轮以已接受的 `94108ae`（`playback: add audio render start lead`）为基线，调查 24-case native-headless-inclusive repeat 中的 A/V 不稳定。原 commit-bound baseline 共 22 个可重复 group，20 个稳定、2 个不稳定：`local/native-headless-av-smoke` 与 `local/native-headless-hdr10-60`。A/V drift 和 final delta 的 spread 为 `0ms`，异常主要集中在 episode oversleep 与 frame-pacing 尾部。
+
+旧指标使用 `max(episode wall duration - first pass target, 0)`，会混入后续合法 wait、audio-clock stall/量化和 render-loop overhead。最终实现改为 `sum(max(actual pass wait - requested pass wait, 0))`，并累计全部 requested pass target。`RecordAudioAheadWaitPassMs` 返回已计算的正 oversleep，Graph 仅在当前 episode generation 内累加；Seek/reset 后晚到的旧 wait completion 不再污染新 episode。等待策略、容差与丢帧策略未改变。
+
+报告现在显式写入 `timing.audioAheadWaitOversleepSemantics=sum-positive-pass-oversleep-v2`；旧报告缺省为 `episode-wall-minus-first-target-v1`。比较器遇到跨语义数据时不比较 episode target 或 oversleep 数值，只把真实存在相关证据的 case 标为 partial/unmatched；没有相关样本的其他 case 保持 strong。对应单元测试按 TDD 先失败后通过。
+
+最终正式候选与三轮 repeat 均使用同一 24-case manifest，24/24 校验有效并包含 9 个 native-headless case。versioned repeat 为 21/22 stable：HDR10-60 本轮稳定，唯一不稳定的是 A/V smoke；其 frame P95/P99/max-gap spread 为 `2.0331/4.9483/4.9483ms`，新语义 oversleep P95/P99 spread 为 `2.4227/2.1727ms`，A/V drift 与 final delta P95 spread 仍为 `0ms`。
+
+为排除采样窗口漂移，使用未修改的 `94108ae` 在同一时段重新运行三轮控制组。控制组仍为 20/22 stable，且同样只有 A/V 与 HDR10-60 不稳定；A/V frame P95/P99/max-gap spread 为 `2.3786/6.3443/6.3443ms`，HDR10-60 P99/max-gap spread 为 `2.5682/3.0533ms`。这证明正式 comparison 中的尾部尖峰不是该 metrics-only 候选独有。
+
+同期逐轮 comparison 归档于 `docs/qa/private/comparisons/playback-core-tuning-audio-pass-oversleep-versioned-current-window-control.local/`：三轮分别为 `1 improved + 23 unchanged`、`1 improved + 23 unchanged`、`24 unchanged`，均为 0 regression；统一因为 A/V oversleep 语义不同而输出 `review-unmatched-signals`。正式旧 baseline comparison 的 `reject-candidate` 仍保留，目标 case 是 A/V 与 HDR10-60，不修改 manifest、expected、threshold、materiality 或 acceptance rule。
+
+采纳结论：保留实现作为 metrics-semantics 修正，不标记为 accepted playback-quality improvement。当前剩余风险是 Windows 短样本中的 A/V frame P99/max-gap 尾部噪声，以及尚未单独报告的 episode loop overhead；下一轮播放策略候选必须以新语义报告为新基线，不能再跨语义比较 oversleep。

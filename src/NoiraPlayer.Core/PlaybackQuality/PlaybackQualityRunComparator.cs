@@ -1180,14 +1180,19 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitDurationMsP95");
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitDurationMsP99");
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitDurationMsMax");
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitTargetMsP50");
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitTargetMsP95");
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitTargetMsP99");
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitTargetMsMax");
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitOversleepMsP50");
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitOversleepMsP95");
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitOversleepMsP99");
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitOversleepMsMax");
+                if (HasComparableAudioAheadWaitEpisodeSemantics(baseline, candidate) ||
+                    (!HasAudioAheadWaitEpisodeMetricEvidence(baseline) &&
+                     !HasAudioAheadWaitEpisodeMetricEvidence(candidate)))
+                {
+                    AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitTargetMsP50");
+                    AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitTargetMsP95");
+                    AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitTargetMsP99");
+                    AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitTargetMsMax");
+                    AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitOversleepMsP50");
+                    AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitOversleepMsP95");
+                    AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitOversleepMsP99");
+                    AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitOversleepMsMax");
+                }
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitFinalDeltaAbsMsP50");
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitFinalDeltaAbsMsP95");
                 AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitFinalDeltaAbsMsP99");
@@ -1370,6 +1375,46 @@ namespace NoiraPlayer.Core.PlaybackQuality
             PlaybackQualityReport baseline,
             PlaybackQualityReport candidate)
         {
+            if (!HasComparableAudioAheadWaitEpisodeSemantics(baseline, candidate))
+            {
+                if (!HasAudioAheadWaitEpisodeMetricEvidence(baseline) &&
+                    !HasAudioAheadWaitEpisodeMetricEvidence(candidate))
+                {
+                    return;
+                }
+
+                var baselineSemantics = NormalizeAudioAheadWaitOversleepSemantics(
+                    baseline.Timing.AudioAheadWaitOversleepSemantics);
+                var candidateSemantics = NormalizeAudioAheadWaitOversleepSemantics(
+                    candidate.Timing.AudioAheadWaitOversleepSemantics);
+                if (HasAudioAheadWaitTargetEvidence(baseline) ||
+                    HasAudioAheadWaitTargetEvidence(candidate))
+                {
+                    AddUnique(
+                        comparison.Coverage.UnmatchedBaselineSignals,
+                        "timing.audioAheadWaitTargetMs@" + baselineSemantics);
+                    AddUnique(
+                        comparison.Coverage.UnmatchedCandidateSignals,
+                        "timing.audioAheadWaitTargetMs@" + candidateSemantics);
+                }
+
+                if (HasAudioAheadWaitOversleepEvidence(baseline) ||
+                    HasAudioAheadWaitOversleepEvidence(candidate))
+                {
+                    AddUnique(
+                        comparison.Coverage.UnmatchedBaselineSignals,
+                        "timing.audioAheadWaitOversleepMs@" + baselineSemantics);
+                    AddUnique(
+                        comparison.Coverage.UnmatchedCandidateSignals,
+                        "timing.audioAheadWaitOversleepMs@" + candidateSemantics);
+                }
+
+                AddUnique(
+                    comparison.Limitations,
+                    "audio-ahead episode metric semantics differ; target and oversleep deltas were not compared");
+                return;
+            }
+
             if (!AudioAheadFinalDeltaCorroboratesOversleepDelta(baseline, candidate))
             {
                 return;
@@ -1393,6 +1438,45 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 baseline.Timing.AudioAheadWaitOversleepMsP99,
                 candidate.Timing.AudioAheadWaitOversleepMsP99,
                 requiredDirection);
+        }
+
+        private static bool HasComparableAudioAheadWaitEpisodeSemantics(
+            PlaybackQualityReport baseline,
+            PlaybackQualityReport candidate)
+        {
+            return string.Equals(
+                NormalizeAudioAheadWaitOversleepSemantics(
+                    baseline.Timing.AudioAheadWaitOversleepSemantics),
+                NormalizeAudioAheadWaitOversleepSemantics(
+                    candidate.Timing.AudioAheadWaitOversleepSemantics),
+                StringComparison.Ordinal);
+        }
+
+        private static bool HasAudioAheadWaitEpisodeMetricEvidence(PlaybackQualityReport report)
+        {
+            return HasAudioAheadWaitTargetEvidence(report) ||
+                HasAudioAheadWaitOversleepEvidence(report);
+        }
+
+        private static bool HasAudioAheadWaitTargetEvidence(PlaybackQualityReport report)
+        {
+            return report.Timing.AudioAheadWaitTargetMsP50 > 0 ||
+                report.Timing.AudioAheadWaitTargetMsP95 > 0 ||
+                report.Timing.AudioAheadWaitTargetMsP99 > 0 ||
+                report.Timing.AudioAheadWaitTargetMsMax > 0;
+        }
+
+        private static bool HasAudioAheadWaitOversleepEvidence(PlaybackQualityReport report)
+        {
+            return report.Timing.AudioAheadWaitOversleepMsP50 > 0 ||
+                report.Timing.AudioAheadWaitOversleepMsP95 > 0 ||
+                report.Timing.AudioAheadWaitOversleepMsP99 > 0 ||
+                report.Timing.AudioAheadWaitOversleepMsMax > 0;
+        }
+
+        private static string NormalizeAudioAheadWaitOversleepSemantics(string value)
+        {
+            return string.IsNullOrWhiteSpace(value) ? "unspecified" : value.Trim();
         }
 
         private static bool AudioAheadFinalDeltaCorroboratesOversleepDelta(

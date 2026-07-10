@@ -73,6 +73,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
             report.Timing.AudioAheadWaitTargetMsP95 = metrics.AudioAheadWaitTargetMsP95;
             report.Timing.AudioAheadWaitTargetMsP99 = metrics.AudioAheadWaitTargetMsP99;
             report.Timing.AudioAheadWaitTargetMsMax = metrics.AudioAheadWaitTargetMsMax;
+            report.Timing.AudioAheadWaitOversleepSemantics = metrics.AudioAheadWaitOversleepSemantics;
             report.Timing.AudioAheadWaitOversleepMsP50 = metrics.AudioAheadWaitOversleepMsP50;
             report.Timing.AudioAheadWaitOversleepMsP95 = metrics.AudioAheadWaitOversleepMsP95;
             report.Timing.AudioAheadWaitOversleepMsP99 = metrics.AudioAheadWaitOversleepMsP99;

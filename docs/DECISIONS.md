@@ -971,3 +971,15 @@
 边界：该策略不针对某个 case、codec 或 HDR/SDR 分支；它是 render loop 等待 primitive 的统一化。A/V smoke 只证明 audio-ahead oversleep 改善，不能据此声称整体 A/V sync 或主观流畅度已解决。后续如果发现 CPU 成本或真实设备调度问题，应以同 manifest comparison 和 process-cost evidence 重新评估。
 
 重复采样补充：`c129249` 保留为 accepted candidate，但稳定性结论需保守表述。3 次 native-headless repeat 中 8/9 group stable，`local/native-headless-hdr10-60` 仍因一次 max-frame-gap outlier 被判 unstable；P95/P99 cadence 已稳定。因此后续候选应优先区分 percentile cadence 与 rare max-gap outlier，避免因为单次 max-gap 尾部值误判整个 cadence 策略。
+
+# 2026-07-11: episode oversleep 是各 pass 正 oversleep 之和，并显式版本化语义
+
+决策：episode 级 `audioAheadWaitTargetMs` 累计全部 requested pass target；episode 级 `audioAheadWaitOversleepMs` 定义为 `sum(max(actualPassMs - requestedPassMs, 0))`。不再从 episode wall duration 与 target 的差值推导 oversleep。
+
+原因：只比较 episode duration 与 first target 会混入后续合法 wait、audio-clock stall/量化和 loop overhead；改成 `max(duration - sum(target), 0)` 又会让某次提前唤醒抵消后续正 oversleep。逐 pass 先截断负值、再按 episode 求和，才能表达 wait primitive 实际超出每次请求的总量。
+
+实现边界：`PlaybackQualityMetrics::RecordAudioAheadWaitPassMs` 继续记录 pass histogram，同时返回已经计算出的正 oversleep；`PlaybackGraph` 只在 active episode 内累加返回值。调度 wait 时捕获 episode generation，reset 时递增 generation；Seek/reset 后才完成的旧 wait 只有 generation 仍匹配时才可写入 pass histogram、episode oversleep 和 completed-wait reason。显式五参数 `RecordAudioAheadWaitMs` 防止旧调用静默错绑参数。实际 wait、timer primitive、A/V tolerance、drop policy 均未改变。
+
+评测兼容性：报告新增 `timing.audioAheadWaitOversleepSemantics`。旧报告缺省为 `episode-wall-minus-first-target-v1`，新报告写入 `sum-positive-pass-oversleep-v2`。由于 target 也从 first pass 改为全部 pass 之和，比较器只在语义一致时比较 episode target 与 oversleep；语义不一致且至少一侧存在相关证据时，将两组信号标为 unmatched、把 confidence 降为 partial，并保留其他播放信号比较。这样不会把指标定义变化伪装成播放质量 improvement；无相关证据的 case 不受影响。
+
+证据与采纳：正式候选相对旧 commit-bound baseline 仍因 A/V 与 HDR10-60 的单次 frame-pacing 尾部值显示 `reject-candidate`，该结果未被隐藏。同期重新运行的旧 `94108ae` 控制组同样只有 20/22 stable，且不稳定 case 仍是 A/V 与 HDR10-60；versioned candidate 为 21/22 stable，仅 A/V 不稳定。三组同期逐轮 comparison 分别为 `1 improved + 23 unchanged`、`1 improved + 23 unchanged`、`24 unchanged`，均为 0 regression；统一因 A/V oversleep 语义不同而要求 `review-unmatched-signals`。因此保留该实现作为 metrics-semantics 修正，不声称播放质量提升。episode wall duration 中除实际 wait 之外的 loop overhead 仍未单独报告，后续若新增必须使用独立信号。

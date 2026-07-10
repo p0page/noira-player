@@ -18,6 +18,27 @@ int main()
     assert(PlaybackFramePacing::AudioAheadWaitDuration(1'050'000, 1'000'000, true).count() == 0);
     assert(PlaybackFramePacing::AudioAheadWaitDuration(1'130'000, 1'000'000, true).count() == 0);
     assert(PlaybackFramePacing::AudioAheadWaitDuration(1'333'333, 1'000'000, false).count() == 0);
+    assert(PlaybackFramePacing::AccumulateAudioAheadWaitTargetMs(0.0, std::chrono::microseconds(20'000)) == 20.0);
+    assert(PlaybackFramePacing::AccumulateAudioAheadWaitTargetMs(20.0, std::chrono::microseconds(5'500)) == 25.5);
+    assert(PlaybackFramePacing::AccumulateAudioAheadWaitTargetMs(-1.0, std::chrono::microseconds(5'000)) == 5.0);
+    assert(PlaybackFramePacing::AccumulateAudioAheadWaitTargetMs(20.0, std::chrono::microseconds(0)) == 20.0);
+    assert(PlaybackFramePacing::AccumulateAudioAheadWaitTargetMs(20.0, std::chrono::microseconds(-5'000)) == 20.0);
+
+    auto completedEpisodeGeneration = uint64_t{7};
+    auto currentEpisodeGeneration = completedEpisodeGeneration;
+    assert(PlaybackFramePacing::ShouldRecordAudioAheadWaitPass(
+        completedEpisodeGeneration,
+        currentEpisodeGeneration,
+        true));
+    ++currentEpisodeGeneration;
+    assert(!PlaybackFramePacing::ShouldRecordAudioAheadWaitPass(
+        completedEpisodeGeneration,
+        currentEpisodeGeneration,
+        true));
+    assert(!PlaybackFramePacing::ShouldRecordAudioAheadWaitPass(
+        currentEpisodeGeneration,
+        currentEpisodeGeneration,
+        false));
 
     assert(PlaybackFramePacing::ShouldDropLateFrame(1'000'000, 2'100'001, true));
     assert(!PlaybackFramePacing::ShouldDropLateFrame(1'000'000, 1'800'000, true));

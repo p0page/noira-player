@@ -123,6 +123,7 @@ public sealed class PlaybackQualityReportMapperTests
             AudioAheadWaitTargetMsP95 = 4.2,
             AudioAheadWaitTargetMsP99 = 5.3,
             AudioAheadWaitTargetMsMax = 6.4,
+            AudioAheadWaitOversleepSemantics = "sum-positive-pass-oversleep-v2",
             AudioAheadWaitOversleepMsP50 = 4.0,
             AudioAheadWaitOversleepMsP95 = 11.0,
             AudioAheadWaitOversleepMsP99 = 15.0,
@@ -196,6 +197,7 @@ public sealed class PlaybackQualityReportMapperTests
         Assert.Equal(4.2, report.Timing.AudioAheadWaitTargetMsP95);
         Assert.Equal(5.3, report.Timing.AudioAheadWaitTargetMsP99);
         Assert.Equal(6.4, report.Timing.AudioAheadWaitTargetMsMax);
+        Assert.Equal("sum-positive-pass-oversleep-v2", report.Timing.AudioAheadWaitOversleepSemantics);
         Assert.Equal(4.0, report.Timing.AudioAheadWaitOversleepMsP50);
         Assert.Equal(11.0, report.Timing.AudioAheadWaitOversleepMsP95);
         Assert.Equal(15.0, report.Timing.AudioAheadWaitOversleepMsP99);

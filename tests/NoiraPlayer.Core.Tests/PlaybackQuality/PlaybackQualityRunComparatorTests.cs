@@ -579,6 +579,82 @@ public sealed class PlaybackQualityRunComparatorTests
     }
 
     [Fact]
+    public void Compare_Does_Not_Compare_Audio_Ahead_Oversleep_Across_Semantics()
+    {
+        var baseline = CreateReport(
+            "baseline",
+            Check("RenderedVideoFrames", "pass", "frame-pacing", "timing.renderedVideoFrames", "1", "46"));
+        baseline.Timing.AudioAheadWaitOversleepSemantics = "episode-wall-minus-first-target-v1";
+        baseline.Timing.AudioAheadWaitTargetMsP95 = 10.0;
+        baseline.Timing.AudioAheadWaitTargetMsP99 = 10.0;
+        baseline.Timing.AudioAheadWaitOversleepMsP95 = 12.0;
+        baseline.Timing.AudioAheadWaitOversleepMsP99 = 15.0;
+        baseline.Timing.AudioAheadWaitFinalDeltaAbsMsP95 = 10.0;
+        baseline.Timing.AudioAheadWaitFinalDeltaAbsMsP99 = 10.0;
+
+        var candidate = CreateReport(
+            "candidate",
+            Check("RenderedVideoFrames", "pass", "frame-pacing", "timing.renderedVideoFrames", "1", "46"));
+        candidate.Timing.AudioAheadWaitOversleepSemantics = "sum-positive-pass-oversleep-v2";
+        candidate.Timing.AudioAheadWaitTargetMsP95 = 25.0;
+        candidate.Timing.AudioAheadWaitTargetMsP99 = 30.0;
+        candidate.Timing.AudioAheadWaitOversleepMsP95 = 3.0;
+        candidate.Timing.AudioAheadWaitOversleepMsP99 = 5.0;
+        candidate.Timing.AudioAheadWaitFinalDeltaAbsMsP95 = 7.0;
+        candidate.Timing.AudioAheadWaitFinalDeltaAbsMsP99 = 7.0;
+
+        var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
+
+        Assert.Equal("unchanged", comparison.Result);
+        Assert.Equal("no-change", comparison.Decision);
+        Assert.Equal("partial", comparison.Confidence.Level);
+        Assert.DoesNotContain(comparison.Improvements, delta =>
+            delta.Signal.StartsWith("timing.audioAheadWaitOversleepMs"));
+        Assert.DoesNotContain(comparison.Regressions, delta =>
+            delta.Signal.StartsWith("timing.audioAheadWaitOversleepMs"));
+        Assert.DoesNotContain("timing.audioAheadWaitTargetMsP95", comparison.Coverage.MatchedSignals);
+        Assert.DoesNotContain("timing.audioAheadWaitOversleepMsP95", comparison.Coverage.MatchedSignals);
+        Assert.Contains(
+            "timing.audioAheadWaitTargetMs@episode-wall-minus-first-target-v1",
+            comparison.Coverage.UnmatchedBaselineSignals);
+        Assert.Contains(
+            "timing.audioAheadWaitTargetMs@sum-positive-pass-oversleep-v2",
+            comparison.Coverage.UnmatchedCandidateSignals);
+        Assert.Contains(
+            "timing.audioAheadWaitOversleepMs@episode-wall-minus-first-target-v1",
+            comparison.Coverage.UnmatchedBaselineSignals);
+        Assert.Contains(
+            "timing.audioAheadWaitOversleepMs@sum-positive-pass-oversleep-v2",
+            comparison.Coverage.UnmatchedCandidateSignals);
+        Assert.Contains(comparison.Limitations, limitation =>
+            limitation.Contains("audio-ahead episode metric semantics differ"));
+    }
+
+    [Fact]
+    public void Compare_Ignores_Oversleep_Semantics_When_Neither_Report_Has_Oversleep_Evidence()
+    {
+        var baseline = CreateReport(
+            "baseline",
+            Check("RenderedVideoFrames", "pass", "frame-pacing", "timing.renderedVideoFrames", "1", "46"));
+        baseline.Timing.AudioAheadWaitOversleepSemantics = "episode-wall-minus-first-target-v1";
+        baseline.Timing.RenderedVideoFrames = 46;
+
+        var candidate = CreateReport(
+            "candidate",
+            Check("RenderedVideoFrames", "pass", "frame-pacing", "timing.renderedVideoFrames", "1", "46"));
+        candidate.Timing.AudioAheadWaitOversleepSemantics = "sum-positive-pass-oversleep-v2";
+        candidate.Timing.RenderedVideoFrames = 46;
+
+        var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
+
+        Assert.Equal("strong", comparison.Confidence.Level);
+        Assert.Empty(comparison.Coverage.UnmatchedBaselineSignals);
+        Assert.Empty(comparison.Coverage.UnmatchedCandidateSignals);
+        Assert.DoesNotContain(comparison.Limitations, limitation =>
+            limitation.Contains("audio-ahead episode metric semantics differ"));
+    }
+
+    [Fact]
     public void Compare_Reports_PartialConfidence_When_Signals_Are_Unmatched()
     {
         var baseline = CreateReport(

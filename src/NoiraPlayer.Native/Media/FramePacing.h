@@ -51,6 +51,27 @@ namespace winrt::NoiraPlayer::Native::implementation
                 (framePositionTicks - audioPositionTicks - VideoAheadToleranceTicks - AudioAheadRenderStartLeadTicks) / 10);
         }
 
+        static constexpr double AccumulateAudioAheadWaitTargetMs(
+            double accumulatedTargetMs,
+            std::chrono::microseconds waitDuration) noexcept
+        {
+            auto clampedAccumulatedTargetMs = accumulatedTargetMs > 0.0
+                ? accumulatedTargetMs
+                : 0.0;
+            auto waitTargetMs = waitDuration.count() > 0
+                ? static_cast<double>(waitDuration.count()) / 1000.0
+                : 0.0;
+            return clampedAccumulatedTargetMs + waitTargetMs;
+        }
+
+        static constexpr bool ShouldRecordAudioAheadWaitPass(
+            uint64_t completedEpisodeGeneration,
+            uint64_t currentEpisodeGeneration,
+            bool episodeActive) noexcept
+        {
+            return episodeActive && completedEpisodeGeneration == currentEpisodeGeneration;
+        }
+
         static constexpr bool ShouldDropLateFrame(
             int64_t framePositionTicks,
             int64_t audioPositionTicks,

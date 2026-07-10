@@ -243,6 +243,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
         public double AudioAheadWaitTargetMsP95 { get; set; }
         public double AudioAheadWaitTargetMsP99 { get; set; }
         public double AudioAheadWaitTargetMsMax { get; set; }
+        public string AudioAheadWaitOversleepSemantics { get; set; } =
+            "episode-wall-minus-first-target-v1";
         public double AudioAheadWaitOversleepMsP50 { get; set; }
         public double AudioAheadWaitOversleepMsP95 { get; set; }
         public double AudioAheadWaitOversleepMsP99 { get; set; }

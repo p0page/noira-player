@@ -49,6 +49,8 @@
         public double AudioAheadWaitTargetMsP95 { get; set; }
         public double AudioAheadWaitTargetMsP99 { get; set; }
         public double AudioAheadWaitTargetMsMax { get; set; }
+        public string AudioAheadWaitOversleepSemantics { get; set; } =
+            "sum-positive-pass-oversleep-v2";
         public double AudioAheadWaitOversleepMsP50 { get; set; }
         public double AudioAheadWaitOversleepMsP95 { get; set; }
         public double AudioAheadWaitOversleepMsP99 { get; set; }

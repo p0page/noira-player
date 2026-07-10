@@ -252,18 +252,24 @@ namespace winrt::NoiraPlayer::Native::implementation
 
         void RecordAudioAheadWaitDurationMs(double value) noexcept
         {
-            RecordAudioAheadWaitMs(value, 0.0, 0.0);
+            RecordAudioAheadWaitMs(value, 0.0, value, 0.0, 1);
         }
 
         void RecordAudioAheadWaitMs(
             double durationMs,
             double targetMs,
+            double oversleepMs,
             double finalDeltaMs,
-            uint64_t passCount = 1) noexcept
+            uint64_t passCount) noexcept
         {
             if (targetMs < 0.0)
             {
                 targetMs = 0.0;
+            }
+
+            if (oversleepMs < 0.0)
+            {
+                oversleepMs = 0.0;
             }
 
             if (finalDeltaMs < 0.0)
@@ -276,7 +282,6 @@ namespace winrt::NoiraPlayer::Native::implementation
                 passCount = 1;
             }
 
-            auto oversleepMs = durationMs > targetMs ? durationMs - targetMs : 0.0;
             m_audioAheadWaitDurations.Add(durationMs);
             m_audioAheadWaitTargets.Add(targetMs);
             m_audioAheadWaitOversleeps.Add(oversleepMs);
@@ -284,7 +289,7 @@ namespace winrt::NoiraPlayer::Native::implementation
             m_audioAheadWaitPassesPerEpisode.Add(static_cast<double>(passCount));
         }
 
-        void RecordAudioAheadWaitPassMs(double durationMs, double targetMs) noexcept
+        double RecordAudioAheadWaitPassMs(double durationMs, double targetMs) noexcept
         {
             if (durationMs < 0.0)
             {
@@ -300,6 +305,7 @@ namespace winrt::NoiraPlayer::Native::implementation
             m_audioAheadWaitPassDurations.Add(durationMs);
             m_audioAheadWaitPassTargets.Add(targetMs);
             m_audioAheadWaitPassOversleeps.Add(oversleepMs);
+            return oversleepMs;
         }
 
         void RecordAudioVideoDriftTicks(int64_t driftTicks) noexcept
