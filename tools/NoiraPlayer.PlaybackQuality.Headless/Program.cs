@@ -344,7 +344,7 @@ internal static class NativeHeadlessHarness
             Status = status,
             SourceLocatorHash = options.SourceLocatorHash,
             OpenedSourceHash = sourceOpenAttempted
-                ? PlaybackQualitySourceFingerprint.Compute(options.StreamUrl)
+                ? PlaybackQualitySourceFingerprint.ComputeOpenedSource(options.StreamUrl)
                 : "",
             StartedAtUtc = startedAt.ToString("O"),
             DurationMs = Math.Max(0, (DateTimeOffset.UtcNow - startedAt).TotalMilliseconds),
