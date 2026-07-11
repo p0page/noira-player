@@ -4,9 +4,10 @@ import type {
   ReactNode,
   RefObject,
 } from 'react';
-import { useEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   useFocusNavigationPolicy,
+  useNoiraFocusRegistry,
   useNoiraFocusScope,
 } from './FocusProvider';
 
@@ -46,33 +47,42 @@ interface NoiraFocusableRegistration<Element extends HTMLElement> {
   ref: RefObject<Element>;
 }
 
-export function Focusable({
-  children,
-  className,
-  disabled,
-  focusKey,
-  onSelect,
-  type = 'button',
-  ...buttonProps
-}: FocusableProps) {
+export function Focusable(props: FocusableProps) {
+  const { disabled, focusKey } = props;
   const policy = useFocusNavigationPolicy();
+  const registry = useNoiraFocusRegistry();
   const scope = useNoiraFocusScope();
+  const ownerRef = useRef<object | null>(null);
+  if (ownerRef.current === null) {
+    ownerRef.current = {};
+  }
+  const owner = ownerRef.current;
   const mountedIdentityRef = useRef({
     controller: scope.controller,
     focusKey,
   });
   const mountedIdentity = mountedIdentityRef.current;
-  const registration = useNoiraFocusable<HTMLButtonElement>({
-    focusKey: mountedIdentity.focusKey,
-    focusable: !disabled,
-    onEnter: onSelect,
-    onFocus: () => policy.remember(scope.scopeKey, focusKey, scope.orderedKeys),
-  });
+  const [ownershipReady, setOwnershipReady] = useState(false);
 
-  useEffect(
-    () => mountedIdentity.controller.registerChild(mountedIdentity.focusKey, !disabled),
-    [mountedIdentity.controller, mountedIdentity.focusKey],
-  );
+  useLayoutEffect(() => {
+    const release = registry.claimFocusKey(mountedIdentity.focusKey, owner);
+    let unregisterChild: (() => void) | null = null;
+    try {
+      unregisterChild = mountedIdentity.controller.registerChild(
+        mountedIdentity.focusKey,
+        !disabled,
+      );
+    } catch (error) {
+      release();
+      throw error;
+    }
+
+    setOwnershipReady(true);
+    return () => {
+      unregisterChild?.();
+      release();
+    };
+  }, [mountedIdentity.controller, mountedIdentity.focusKey, owner, registry]);
 
   useEffect(() => {
     mountedIdentity.controller.setChildEnabled(mountedIdentity.focusKey, !disabled);
@@ -93,6 +103,34 @@ export function Focusable({
       `Focusable focusKey "${focusKey}" must be present in FocusScope "${scope.scopeKey}" orderedKeys.`,
     );
   }
+
+  return ownershipReady ? (
+    <FocusableButton
+      {...props}
+      focusKey={mountedIdentity.focusKey}
+      onEngineFocus={() =>
+        policy.remember(scope.scopeKey, focusKey, scope.orderedKeys)
+      }
+    />
+  ) : null;
+}
+
+function FocusableButton({
+  children,
+  className,
+  disabled,
+  focusKey,
+  onEngineFocus,
+  onSelect,
+  type = 'button',
+  ...buttonProps
+}: FocusableProps & { onEngineFocus: () => void }) {
+  const registration = useNoiraFocusable<HTMLButtonElement>({
+    focusKey,
+    focusable: !disabled,
+    onEnter: onSelect,
+    onFocus: onEngineFocus,
+  });
 
   return (
     <button

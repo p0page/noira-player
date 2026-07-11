@@ -10,8 +10,8 @@ import {
   updateAllLayouts,
 } from '@noriginmedia/norigin-spatial-navigation';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { StrictMode } from 'react';
-import type { ComponentProps } from 'react';
+import { Component, StrictMode } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Focusable } from './Focusable';
 import {
@@ -344,6 +344,173 @@ describe('Noira focus component contract', () => {
   });
 });
 
+describe('global focus-key ownership', () => {
+  it('rejects the second child owner before Norigin can replace the first registration', async () => {
+    const collisionErrors: Error[] = [];
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const sharedFocusKey = 'duplicate-child-focus-anonymous';
+    const renderTree = (showCollision: boolean) => (
+      <FocusProvider>
+        <FocusScope
+          scopeKey="duplicate-child-first-scope-anonymous"
+          orderedKeys={[sharedFocusKey]}
+        >
+          <Focusable focusKey={sharedFocusKey} onSelect={() => undefined}>
+            First child owner
+          </Focusable>
+        </FocusScope>
+        <CollisionErrorBoundary onError={(error) => collisionErrors.push(error)}>
+          {showCollision ? (
+            <FocusScope
+              scopeKey="duplicate-child-second-scope-anonymous"
+              orderedKeys={[sharedFocusKey]}
+            >
+              <Focusable focusKey={sharedFocusKey} onSelect={() => undefined}>
+                Second child owner
+              </Focusable>
+            </FocusScope>
+          ) : null}
+        </CollisionErrorBoundary>
+      </FocusProvider>
+    );
+    const view = render(renderTree(false));
+    const firstButton = screen.getByRole('button', { name: 'First child owner' });
+
+    await waitFor(() => {
+      expect(spatialNavigation.focusableComponents[sharedFocusKey]?.parentFocusKey)
+        .toBe('duplicate-child-first-scope-anonymous');
+    });
+    const addFocusable = vi.spyOn(SpatialNavigation, 'addFocusable');
+
+    view.rerender(renderTree(true));
+
+    await expectFocusOwnershipCollision(collisionErrors, sharedFocusKey);
+    expect(screen.queryByRole('button', { name: 'Second child owner' })).toBeNull();
+    await waitFor(() => {
+      expect(spatialNavigation.focusableComponents[sharedFocusKey]?.focusable).toBe(true);
+      expect(spatialNavigation.focusableComponents[sharedFocusKey]?.parentFocusKey)
+        .toBe('duplicate-child-first-scope-anonymous');
+    });
+    expect(
+      addFocusable.mock.calls.some(
+        ([registration]) =>
+          registration.focusKey === sharedFocusKey &&
+          registration.parentFocusKey === 'duplicate-child-second-scope-anonymous',
+      ),
+    ).toBe(false);
+
+    await updateLayoutsAndFocus(sharedFocusKey);
+    expect(document.activeElement).toBe(firstButton);
+  });
+
+  it('rejects a second scope owner before Norigin can replace the first scope', async () => {
+    const collisionErrors: Error[] = [];
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const sharedScopeKey = 'duplicate-scope-key-anonymous';
+    const renderTree = (showCollision: boolean) => (
+      <FocusProvider>
+        <FocusScope
+          scopeKey={sharedScopeKey}
+          orderedKeys={['duplicate-scope-first-focus-anonymous']}
+        >
+          <Focusable
+            focusKey="duplicate-scope-first-focus-anonymous"
+            onSelect={() => undefined}
+          >
+            First scope owner
+          </Focusable>
+        </FocusScope>
+        <CollisionErrorBoundary onError={(error) => collisionErrors.push(error)}>
+          {showCollision ? (
+            <FocusScope
+              scopeKey={sharedScopeKey}
+              orderedKeys={['duplicate-scope-second-focus-anonymous']}
+            >
+              <Focusable
+                focusKey="duplicate-scope-second-focus-anonymous"
+                onSelect={() => undefined}
+              >
+                Second scope owner
+              </Focusable>
+            </FocusScope>
+          ) : null}
+        </CollisionErrorBoundary>
+      </FocusProvider>
+    );
+    const view = render(renderTree(false));
+
+    await waitFor(() => {
+      expect(spatialNavigation.focusableComponents[sharedScopeKey]?.focusable).toBe(true);
+    });
+
+    view.rerender(renderTree(true));
+
+    await expectFocusOwnershipCollision(collisionErrors, sharedScopeKey);
+    await waitFor(() => {
+      expect(doesFocusableExist(sharedScopeKey)).toBe(true);
+      expect(
+        spatialNavigation.focusableComponents['duplicate-scope-first-focus-anonymous']
+          ?.parentFocusKey,
+      ).toBe(sharedScopeKey);
+    });
+
+    await updateLayoutsAndFocus('duplicate-scope-first-focus-anonymous');
+    expect(document.activeElement).toBe(
+      screen.getByRole('button', { name: 'First scope owner' }),
+    );
+  });
+
+  it('rejects a scope key that is already owned by a child', async () => {
+    const collisionErrors: Error[] = [];
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const sharedFocusKey = 'child-scope-collision-anonymous';
+    const renderTree = (showCollision: boolean) => (
+      <FocusProvider>
+        <FocusScope
+          scopeKey="child-scope-owner-anonymous"
+          orderedKeys={[sharedFocusKey]}
+        >
+          <Focusable focusKey={sharedFocusKey} onSelect={() => undefined}>
+            Child key owner
+          </Focusable>
+        </FocusScope>
+        <CollisionErrorBoundary onError={(error) => collisionErrors.push(error)}>
+          {showCollision ? (
+            <FocusScope
+              scopeKey={sharedFocusKey}
+              orderedKeys={['child-scope-collision-nested-focus-anonymous']}
+            >
+              <Focusable
+                focusKey="child-scope-collision-nested-focus-anonymous"
+                onSelect={() => undefined}
+              >
+                Colliding scope child
+              </Focusable>
+            </FocusScope>
+          ) : null}
+        </CollisionErrorBoundary>
+      </FocusProvider>
+    );
+    const view = render(renderTree(false));
+
+    await waitFor(() => {
+      expect(spatialNavigation.focusableComponents[sharedFocusKey]?.parentFocusKey)
+        .toBe('child-scope-owner-anonymous');
+    });
+
+    view.rerender(renderTree(true));
+
+    await expectFocusOwnershipCollision(collisionErrors, sharedFocusKey);
+    await waitFor(() => {
+      expect(spatialNavigation.focusableComponents[sharedFocusKey]?.parentFocusKey)
+        .toBe('child-scope-owner-anonymous');
+      expect(
+        doesFocusableExist('child-scope-collision-nested-focus-anonymous'),
+      ).toBe(false);
+    });
+  });
+});
+
 describe('adapter-owned focus lifecycle', () => {
   it('repairs a naturally unmounted focused child within the same scope', async () => {
     const policy = createFocusNavigationPolicy();
@@ -591,6 +758,66 @@ describe('consumable scope focus requests', () => {
     rerender(renderTree(2));
     await expectEngineFocus('restore-epoch-target-anonymous', 'Epoch target');
   });
+
+  it('does not replay a consumed restore request when its scope remounts', async () => {
+    const renderTree = (
+      showRestoreScope: boolean,
+      restoreRequestId: string,
+    ) => (
+      <FocusProvider>
+        {showRestoreScope ? (
+          <FocusScope
+            scopeKey="remount-restore-scope-anonymous"
+            orderedKeys={['remount-restore-target-anonymous']}
+            restoreFocusKey="remount-restore-target-anonymous"
+            restoreRequestId={restoreRequestId}
+          >
+            <Focusable
+              focusKey="remount-restore-target-anonymous"
+              onSelect={() => undefined}
+            >
+              Remount restore target
+            </Focusable>
+          </FocusScope>
+        ) : null}
+        <FocusScope
+          scopeKey="remount-current-scope-anonymous"
+          orderedKeys={['remount-current-focus-anonymous']}
+        >
+          <Focusable focusKey="remount-current-focus-anonymous" onSelect={() => undefined}>
+            Remount current target
+          </Focusable>
+        </FocusScope>
+      </FocusProvider>
+    );
+    const view = render(renderTree(true, 'session-a:restore-event-1'));
+
+    await expectEngineFocus(
+      'remount-restore-target-anonymous',
+      'Remount restore target',
+    );
+    await updateLayoutsAndFocus('remount-current-focus-anonymous');
+    await expectEngineFocus(
+      'remount-current-focus-anonymous',
+      'Remount current target',
+    );
+
+    view.rerender(renderTree(false, 'session-a:restore-event-1'));
+    await settleFocusWork();
+    view.rerender(renderTree(true, 'session-a:restore-event-1'));
+    await settleFocusWork();
+
+    expect(getCurrentFocusKey()).toBe('remount-current-focus-anonymous');
+    expect(document.activeElement).toBe(
+      screen.getByRole('button', { name: 'Remount current target' }),
+    );
+
+    view.rerender(renderTree(true, 'session-a:restore-event-2'));
+    await expectEngineFocus(
+      'remount-restore-target-anonymous',
+      'Remount restore target',
+    );
+  });
 });
 
 describe('real Norigin navigation through Noira scopes', () => {
@@ -741,6 +968,36 @@ function CaptureScope({
 }) {
   onCapture(useNoiraFocusScope());
   return null;
+}
+
+class CollisionErrorBoundary extends Component<
+  { children: ReactNode; onError: (error: Error) => void },
+  { failed: boolean }
+> {
+  state = { failed: false };
+
+  static getDerivedStateFromError(): { failed: boolean } {
+    return { failed: true };
+  }
+
+  componentDidCatch(error: Error): void {
+    this.props.onError(error);
+  }
+
+  render(): ReactNode {
+    return this.state.failed ? null : this.props.children;
+  }
+}
+
+async function expectFocusOwnershipCollision(
+  errors: Error[],
+  focusKey: string,
+): Promise<void> {
+  await waitFor(() => {
+    expect(errors.map((error) => error.message)).toContain(
+      `Norigin focusKey "${focusKey}" already has a mounted Noira owner.`,
+    );
+  });
 }
 
 function expectRenderError(action: () => void, message: string): void {

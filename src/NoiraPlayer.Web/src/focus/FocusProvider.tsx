@@ -48,11 +48,19 @@ export interface NoiraFocusScopeState {
   scopeKey: string;
 }
 
+interface NoiraFocusRestoreRequest {
+  requestId: number | string | undefined;
+  requestedFocusKey: string;
+  scopeKey: string;
+  targetFocusKey: string;
+}
+
 export interface NoiraFocusRegistry {
+  claimFocusKey(focusKey: string, owner: object): () => void;
   hasValidCurrentTarget(): boolean;
   registerScope(controller: NoiraFocusScopeController): () => void;
   requestInitialFocus(focusKey: string): void;
-  requestRestoreFocus(focusKey: string): void;
+  requestRestoreFocus(request: NoiraFocusRestoreRequest): void;
 }
 
 const FocusPolicyContext = createContext<FocusNavigationPolicy | null>(null);
@@ -170,7 +178,12 @@ class NoiraFocusScopeControllerImpl implements NoiraFocusScopeController {
     }
 
     this.children.set(focusKey, enabled);
-    this.notify('added', focusKey);
+    try {
+      this.notify('added', focusKey);
+    } catch (error) {
+      this.children.delete(focusKey);
+      throw error;
+    }
     let registered = true;
 
     return () => {
@@ -222,7 +235,18 @@ class NoiraFocusScopeControllerImpl implements NoiraFocusScopeController {
 
 class NoiraFocusRegistryImpl implements NoiraFocusRegistry {
   private policy: FocusNavigationPolicy;
-  private readonly scopes = new Map<string, NoiraFocusScopeController>();
+  private readonly consumedRestoreRequests = new Map<
+    string,
+    { focusKey: string; requestId: number | string | undefined }
+  >();
+  private readonly focusKeyOwners = new Map<
+    string,
+    { claimCount: number; owner: object }
+  >();
+  private readonly scopes = new Map<
+    string,
+    { controller: NoiraFocusScopeController; registrationCount: number }
+  >();
   private focusQueue: Promise<void> = Promise.resolve();
   private focusOperation = 0;
   private explicitRequestVersion = 0;
@@ -239,6 +263,38 @@ class NoiraFocusRegistryImpl implements NoiraFocusRegistry {
     this.policy = policy;
   }
 
+  claimFocusKey(focusKey: string, owner: object): () => void {
+    assertNonBlankKey(focusKey, 'focusKey');
+    const existing = this.focusKeyOwners.get(focusKey);
+    if (existing && existing.owner !== owner) {
+      throw new Error(
+        `Norigin focusKey "${focusKey}" already has a mounted Noira owner.`,
+      );
+    }
+
+    const ownership = existing ?? { claimCount: 0, owner };
+    ownership.claimCount += 1;
+    this.focusKeyOwners.set(focusKey, ownership);
+    let claimed = true;
+
+    return () => {
+      if (!claimed) {
+        return;
+      }
+
+      claimed = false;
+      const current = this.focusKeyOwners.get(focusKey);
+      if (!current || current.owner !== owner) {
+        return;
+      }
+
+      current.claimCount -= 1;
+      if (current.claimCount === 0) {
+        this.focusKeyOwners.delete(focusKey);
+      }
+    };
+  }
+
   hasValidCurrentTarget(): boolean {
     const currentFocusKey = getCurrentFocusKey();
     return (
@@ -251,14 +307,18 @@ class NoiraFocusRegistryImpl implements NoiraFocusRegistry {
 
   registerScope(controller: NoiraFocusScopeController): () => void {
     const existing = this.scopes.get(controller.scopeKey);
-    if (existing && existing !== controller) {
+    if (existing && existing.controller !== controller) {
       throw new Error(`FocusScope scopeKey "${controller.scopeKey}" is already mounted.`);
     }
 
-    this.scopes.set(controller.scopeKey, controller);
-    controller.attachRegistry((change, focusKey) => {
-      this.onScopeRegistrationChanged(controller, change, focusKey);
-    });
+    const registration = existing ?? { controller, registrationCount: 0 };
+    registration.registrationCount += 1;
+    this.scopes.set(controller.scopeKey, registration);
+    if (!existing) {
+      controller.attachRegistry((change, focusKey) => {
+        this.onScopeRegistrationChanged(controller, change, focusKey);
+      });
+    }
     let registered = true;
 
     return () => {
@@ -267,9 +327,17 @@ class NoiraFocusRegistryImpl implements NoiraFocusRegistry {
       }
 
       registered = false;
-      if (this.scopes.get(controller.scopeKey) === controller) {
-        this.scopes.delete(controller.scopeKey);
+      const current = this.scopes.get(controller.scopeKey);
+      if (!current || current.controller !== controller) {
+        return;
       }
+
+      current.registrationCount -= 1;
+      if (current.registrationCount > 0) {
+        return;
+      }
+
+      this.scopes.delete(controller.scopeKey);
       controller.attachRegistry(null);
       this.scheduleRepair(controller.scopeKey);
     };
@@ -292,11 +360,23 @@ class NoiraFocusRegistryImpl implements NoiraFocusRegistry {
     });
   }
 
-  requestRestoreFocus(focusKey: string): void {
+  requestRestoreFocus({
+    requestId,
+    requestedFocusKey,
+    scopeKey,
+    targetFocusKey,
+  }: NoiraFocusRestoreRequest): void {
+    if (
+      !this.isEnabledTarget(targetFocusKey) ||
+      !this.consumeRestoreRequest(scopeKey, requestedFocusKey, requestId)
+    ) {
+      return;
+    }
+
     this.explicitRequestVersion += 1;
     const operation = ++this.focusOperation;
     this.pendingExplicitOperation = operation;
-    this.enqueueFocus(operation, focusKey, true, () => {
+    this.enqueueFocus(operation, targetFocusKey, true, () => {
       if (this.pendingExplicitOperation === operation) {
         this.pendingExplicitOperation = null;
       }
@@ -335,7 +415,7 @@ class NoiraFocusRegistryImpl implements NoiraFocusRegistry {
   }
 
   private findScopeKey(focusKey: string): string | null {
-    for (const [scopeKey, controller] of this.scopes) {
+    for (const [scopeKey, { controller }] of this.scopes) {
       if (controller.getEnabledKeys().includes(focusKey)) {
         return scopeKey;
       }
@@ -398,14 +478,14 @@ class NoiraFocusRegistryImpl implements NoiraFocusRegistry {
     if (originScopeKey) {
       const originScope = this.scopes.get(originScopeKey);
       const sameScopeTarget = originScope
-        ? this.resolveScopeTarget(originScope)
+        ? this.resolveScopeTarget(originScope.controller)
         : null;
       if (sameScopeTarget) {
         return sameScopeTarget;
       }
     }
 
-    for (const [scopeKey, controller] of this.scopes) {
+    for (const [scopeKey, { controller }] of this.scopes) {
       if (scopeKey === originScopeKey) {
         continue;
       }
@@ -425,7 +505,36 @@ class NoiraFocusRegistryImpl implements NoiraFocusRegistry {
       ? this.policy.resolve(controller.scopeKey, enabledKeys)
       : null;
   }
+
+  private consumeRestoreRequest(
+    scopeKey: string,
+    focusKey: string,
+    requestId: number | string | undefined,
+  ): boolean {
+    const previous = this.consumedRestoreRequests.get(scopeKey);
+    if (
+      previous?.focusKey === focusKey &&
+      Object.is(previous.requestId, requestId)
+    ) {
+      this.consumedRestoreRequests.delete(scopeKey);
+      this.consumedRestoreRequests.set(scopeKey, previous);
+      return false;
+    }
+
+    this.consumedRestoreRequests.delete(scopeKey);
+    this.consumedRestoreRequests.set(scopeKey, { focusKey, requestId });
+    if (this.consumedRestoreRequests.size > MAX_CONSUMED_RESTORE_SCOPES) {
+      const oldestScopeKey = this.consumedRestoreRequests.keys().next().value;
+      if (typeof oldestScopeKey === 'string') {
+        this.consumedRestoreRequests.delete(oldestScopeKey);
+      }
+    }
+
+    return true;
+  }
 }
+
+const MAX_CONSUMED_RESTORE_SCOPES = 256;
 
 function ensureSpatialNavigationInitialized(): void {
   if (spatialNavigationInitialized) {

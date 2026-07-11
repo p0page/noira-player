@@ -4,6 +4,7 @@ import {
   useLayoutEffect,
   useMemo,
   useRef,
+  useState,
   useSyncExternalStore,
 } from 'react';
 import type { ReactNode } from 'react';
@@ -13,7 +14,10 @@ import {
   useFocusNavigationPolicy,
   useNoiraFocusRegistry,
 } from './FocusProvider';
-import type { NoiraFocusScopeController } from './FocusProvider';
+import type {
+  NoiraFocusScopeController,
+  NoiraFocusScopeState,
+} from './FocusProvider';
 import {
   useNoiraFocusable,
   type NoiraFocusDirection,
@@ -31,13 +35,9 @@ export interface FocusScopeProps {
   orderedKeys: readonly string[];
   preferredFocusKey?: string;
   restoreFocusKey?: string;
+  /** Unique event identity for the Provider lifetime; include a session nonce, never a list index. */
   restoreRequestId?: FocusRestoreRequestId;
   scopeKey: string;
-}
-
-interface ConsumedRestoreRequest {
-  focusKey: string;
-  requestId: FocusRestoreRequestId | undefined;
 }
 
 export function FocusScope({
@@ -54,11 +54,17 @@ export function FocusScope({
   const policy = useFocusNavigationPolicy();
   const registry = useNoiraFocusRegistry();
   const mountedScopeKeyRef = useRef(scopeKey);
+  const ownerRef = useRef<object | null>(null);
+  if (ownerRef.current === null) {
+    ownerRef.current = {};
+  }
+  const owner = ownerRef.current;
   const controllerRef = useRef<NoiraFocusScopeController | null>(null);
   if (controllerRef.current === null) {
     controllerRef.current = createNoiraFocusScopeController(scopeKey, orderedKeys);
   }
   const controller = controllerRef.current;
+  const [ownershipReady, setOwnershipReady] = useState(false);
 
   useSyncExternalStore(
     controller.subscribe,
@@ -74,27 +80,32 @@ export function FocusScope({
     preferredFocusKey,
     defaultFocusKey,
   );
-  const registration = useNoiraFocusable<HTMLDivElement>({
-    boundaryDirections,
-    focusKey: mountedScopeKeyRef.current,
-    focusable: enabledKeys.length > 0,
-    preferredFocusKey: preferredEntryKey ?? undefined,
-  });
   const scopeState = useMemo(
     () => ({ controller, orderedKeys, scopeKey: mountedScopeKeyRef.current }),
     [controller, orderedKeys],
   );
   const initialRequestConsumedRef = useRef(false);
-  const consumedRestoreRequestRef = useRef<ConsumedRestoreRequest | null>(null);
 
   useLayoutEffect(() => {
     controller.setOrderedKeys(orderedKeys);
   }, [controller, orderedKeys]);
 
-  useEffect(
-    () => registry.registerScope(controller),
-    [controller, registry],
-  );
+  useLayoutEffect(() => {
+    const release = registry.claimFocusKey(mountedScopeKeyRef.current, owner);
+    let unregisterScope: (() => void) | null = null;
+    try {
+      unregisterScope = registry.registerScope(controller);
+    } catch (error) {
+      release();
+      throw error;
+    }
+
+    setOwnershipReady(true);
+    return () => {
+      unregisterScope?.();
+      release();
+    };
+  }, [controller, owner, registry]);
 
   useEffect(() => {
     if (enabledKeys.length === 0) {
@@ -102,24 +113,17 @@ export function FocusScope({
     }
 
     if (restoreFocusKey !== undefined) {
-      const consumedRequest = consumedRestoreRequestRef.current;
-      const alreadyConsumed =
-        consumedRequest?.focusKey === restoreFocusKey &&
-        Object.is(consumedRequest.requestId, restoreRequestId);
-      if (alreadyConsumed) {
-        return;
-      }
-
       const target = enabledKeys.includes(restoreFocusKey)
         ? restoreFocusKey
         : policy.resolve(mountedScopeKeyRef.current, enabledKeys);
-      consumedRestoreRequestRef.current = {
-        focusKey: restoreFocusKey,
-        requestId: restoreRequestId,
-      };
       initialRequestConsumedRef.current = true;
       if (target) {
-        registry.requestRestoreFocus(target);
+        registry.requestRestoreFocus({
+          requestId: restoreRequestId,
+          requestedFocusKey: restoreFocusKey,
+          scopeKey: mountedScopeKeyRef.current,
+          targetFocusKey: target,
+        });
       }
       return;
     }
@@ -153,6 +157,44 @@ export function FocusScope({
       'FocusScope scopeKey cannot change after mount. Remount with a new React key.',
     );
   }
+
+  return ownershipReady ? (
+    <FocusScopeRegistration
+      boundaryDirections={boundaryDirections}
+      className={className}
+      enabledKeys={enabledKeys}
+      preferredEntryKey={preferredEntryKey}
+      scopeKey={mountedScopeKeyRef.current}
+      scopeState={scopeState}
+    >
+      {children}
+    </FocusScopeRegistration>
+  ) : null;
+}
+
+function FocusScopeRegistration({
+  boundaryDirections,
+  children,
+  className,
+  enabledKeys,
+  preferredEntryKey,
+  scopeKey,
+  scopeState,
+}: {
+  boundaryDirections?: readonly FocusDirection[];
+  children: ReactNode;
+  className?: string;
+  enabledKeys: readonly string[];
+  preferredEntryKey: string | null;
+  scopeKey: string;
+  scopeState: NoiraFocusScopeState;
+}) {
+  const registration = useNoiraFocusable<HTMLDivElement>({
+    boundaryDirections,
+    focusKey: scopeKey,
+    focusable: enabledKeys.length > 0,
+    preferredFocusKey: preferredEntryKey ?? undefined,
+  });
 
   return (
     <NoiraFocusScopeContext.Provider value={scopeState}>
