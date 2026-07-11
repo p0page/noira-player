@@ -81,13 +81,8 @@ export function getHomeRowScopeKey(rowKey: string): string {
 }
 
 function createCardEntries(row: HomeRow): CardEntry[] {
-  const occurrenceByItem = new Map<string, number>();
-
   return row.items.map((item) => {
     const itemKind = isLibraryView(item) ? 'library' : 'media';
-    const itemIdentity = `${itemKind}:${item.id}`;
-    const occurrence = occurrenceByItem.get(itemIdentity) ?? 0;
-    occurrenceByItem.set(itemIdentity, occurrence + 1);
 
     return {
       focusKey: [
@@ -95,11 +90,33 @@ function createCardEntries(row: HomeRow): CardEntry[] {
         encodeFocusSegment(row.key),
         itemKind,
         encodeFocusSegment(item.id),
-        String(occurrence),
       ].join(':'),
       item,
     };
   });
+}
+
+export function normalizeHomeRow(row: HomeRow): HomeRow | null {
+  const key = row.key.trim();
+  if (!key) {
+    return null;
+  }
+
+  const seenItems = new Set<string>();
+  const items: MediaCardItem[] = [];
+  for (const item of row.items) {
+    const id = item.id.trim();
+    const itemKind = isLibraryView(item) ? 'library' : 'media';
+    const identity = `${itemKind}:${id}`;
+    if (!id || seenItems.has(identity)) {
+      continue;
+    }
+
+    seenItems.add(identity);
+    items.push({ ...item, id });
+  }
+
+  return { ...row, key, items };
 }
 
 function resolveVariant(row: HomeRow): MediaCardVariant {

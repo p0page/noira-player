@@ -39,7 +39,7 @@ export function Guide({
   const [expanded, setExpanded] = useState(false);
   const visibleLibraries = useMemo(() => deduplicateLibraries(libraries), [libraries]);
   const libraryEntries = visibleLibraries.map((library) => ({
-    focusKey: `guide:library:${encodeURIComponent(library.id.trim())}`,
+    focusKey: `guide:library:${encodeURIComponent(library.id)}`,
     library,
   }));
   const orderedKeys = [
@@ -56,7 +56,9 @@ export function Guide({
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLElement>) {
-    if (event.key !== 'Escape' || !expanded) {
+    const exitsToContent =
+      event.key === 'Escape' || (event.key === 'ArrowRight' && returnTarget !== null);
+    if (!expanded || !exitsToContent) {
       return;
     }
 
@@ -146,7 +148,7 @@ function deduplicateLibraries(libraries: readonly LibraryView[]): LibraryView[] 
     }
 
     seenIds.add(id);
-    result.push(library);
+    result.push({ ...library, id });
   }
 
   return result;

@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { loadHomeCatalog, loadLibraryLatestRows } from './homeCatalog';
+import {
+  loadHomeCatalog,
+  loadLibraryLatestCatalog,
+  loadLibraryLatestRows,
+} from './homeCatalog';
 import type { HomeCatalogClient } from './homeCatalog';
 import type { LatestItemsOptions, LibraryView, MediaItem } from '../types';
 
@@ -197,6 +201,85 @@ describe('loadHomeCatalog', () => {
 });
 
 describe('loadLibraryLatestRows', () => {
+  it('reports rejected library rows separately from successful empty results', async () => {
+    const getLatestItems = vi.fn((options: LatestItemsOptions = {}) => {
+      if (options.parentId === 'anonymous-library-a') {
+        return Promise.resolve([
+          {
+            id: 'anonymous-item-a',
+            name: 'Anonymous item A',
+            type: 'Movie',
+            artwork: {},
+          },
+        ]);
+      }
+      if (options.parentId === 'anonymous-library-b') {
+        return Promise.resolve([]);
+      }
+
+      return Promise.reject(new Error('anonymous supplemental failure'));
+    });
+    const client: HomeCatalogClient = {
+      getResumeItems: async () => [],
+      getNextUpItems: async () => [],
+      getViews: async () => [],
+      getLatestItems,
+    };
+
+    await expect(
+      loadLibraryLatestCatalog(client, [
+        {
+          id: '  anonymous-library-a  ',
+          name: 'Anonymous A',
+          collectionType: 'movies',
+        },
+        {
+          id: 'anonymous-library-a',
+          name: 'Anonymous duplicate A',
+          collectionType: 'tvshows',
+        },
+        {
+          id: ' ',
+          name: 'Anonymous blank',
+          collectionType: 'movies',
+        },
+        {
+          id: 'anonymous-library-b',
+          name: 'Anonymous B',
+          collectionType: 'tvshows',
+        },
+        {
+          id: 'anonymous-library-c',
+          name: 'Anonymous C',
+          collectionType: 'music',
+        },
+      ]),
+    ).resolves.toEqual({
+      rows: [
+        {
+          key: 'latest:anonymous-library-a',
+          title: 'Latest in Anonymous A',
+          kind: 'latest',
+          items: [
+            {
+              id: 'anonymous-item-a',
+              name: 'Anonymous item A',
+              type: 'Movie',
+              artwork: {},
+            },
+          ],
+        },
+      ],
+      failedRowKeys: ['latest:anonymous-library-c'],
+    });
+
+    expect(getLatestItems.mock.calls.map(([options]) => options?.parentId)).toEqual([
+      'anonymous-library-a',
+      'anonymous-library-b',
+      'anonymous-library-c',
+    ]);
+  });
+
   it('starts every valid library request together, then preserves input order while omitting empty and failed rows', async () => {
     const libraries = [
       anonymousLibrary('anonymous-library-a', 'Anonymous A', 'movies'),

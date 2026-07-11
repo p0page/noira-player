@@ -14,6 +14,11 @@ export interface HomeCatalog {
   failedKinds: HomeRowKind[];
 }
 
+export interface LibraryLatestCatalog {
+  rows: HomeRow[];
+  failedRowKeys: string[];
+}
+
 export interface HomeCatalogClient {
   getResumeItems(limit: number): Promise<MediaItem[]>;
   getNextUpItems(limit: number): Promise<MediaItem[]>;
@@ -94,6 +99,14 @@ export async function loadLibraryLatestRows(
   client: HomeCatalogClient,
   libraries: readonly LibraryView[],
 ): Promise<HomeRow[]> {
+  const catalog = await loadLibraryLatestCatalog(client, libraries);
+  return catalog.rows;
+}
+
+export async function loadLibraryLatestCatalog(
+  client: HomeCatalogClient,
+  libraries: readonly LibraryView[],
+): Promise<LibraryLatestCatalog> {
   const snapshots: LibrarySnapshot[] = libraries.map(({ id, name, collectionType }) => ({
     id: id.trim(),
     name,
@@ -125,13 +138,18 @@ export async function loadLibraryLatestRows(
 
   const results = await Promise.allSettled(loads.map((load) => load.request));
   const rows: HomeRow[] = [];
+  const failedRowKeys: string[] = [];
   for (let index = 0; index < loads.length; index += 1) {
     const result = results[index];
-    if (result.status !== 'fulfilled' || result.value.length === 0) {
+    const library = loads[index].library;
+    if (result.status === 'rejected') {
+      failedRowKeys.push(`latest:${library.id}`);
+      continue;
+    }
+    if (result.value.length === 0) {
       continue;
     }
 
-    const library = loads[index].library;
     rows.push({
       key: `latest:${library.id}`,
       title: `Latest in ${library.name}`,
@@ -140,7 +158,7 @@ export async function loadLibraryLatestRows(
     });
   }
 
-  return rows;
+  return { rows, failedRowKeys };
 }
 
 function getLatestItemTypes(collectionType: string): string | undefined {

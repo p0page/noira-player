@@ -1,4 +1,5 @@
 import { ImageOff } from 'lucide-react';
+import { useState } from 'react';
 import type { LibraryView, MediaItem } from '../types';
 import { Focusable } from '../focus/Focusable';
 
@@ -37,11 +38,9 @@ export function MediaCard({
       <span className="media-card__visual">
         <span className="media-card__artwork" data-media-artwork>
           {imageUrl ? (
-            <img src={imageUrl} alt="" loading="lazy" />
+            <ArtworkImage key={imageUrl} imageUrl={imageUrl} />
           ) : (
-            <span className="media-card__fallback" aria-hidden="true">
-              <ImageOff size={28} strokeWidth={1.7} />
-            </span>
+            <ArtworkFallback />
           )}
           {progress !== null ? (
             <span
@@ -62,6 +61,23 @@ export function MediaCard({
         </span>
       </span>
     </Focusable>
+  );
+}
+
+function ArtworkImage({ imageUrl }: { imageUrl: string }) {
+  const [failed, setFailed] = useState(false);
+  return failed ? (
+    <ArtworkFallback />
+  ) : (
+    <img src={imageUrl} alt="" loading="lazy" onError={() => setFailed(true)} />
+  );
+}
+
+function ArtworkFallback() {
+  return (
+    <span className="media-card__fallback" aria-hidden="true">
+      <ImageOff size={28} strokeWidth={1.7} />
+    </span>
   );
 }
 

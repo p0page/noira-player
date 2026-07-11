@@ -3,10 +3,11 @@ import type { FormEvent } from 'react';
 import { requestBridge } from './bridge';
 import {
   loadHomeCatalog,
-  loadLibraryLatestRows,
+  loadLibraryLatestCatalog,
   type HomeCatalog,
   type HomeRow,
   type HomeRowKind,
+  type LibraryLatestCatalog,
 } from './catalog/homeCatalog';
 import { EmbyRequestError, EmbyWebClient } from './emby';
 import { useFocusNavigationPolicy } from './focus/FocusProvider';
@@ -144,15 +145,24 @@ export function App() {
     setError(describeCatalogFailures(catalog));
     setBusy(false);
 
-    const supplementalRows = await loadLibraryLatestRows(
+    const libraries = extractLibraries(coreRows);
+    const supplementalCatalog = await loadLibraryLatestCatalog(
       nextClient,
-      extractLibraries(coreRows),
+      libraries,
     );
     if (!isCurrentOperation(generation)) {
       return;
     }
 
+    const supplementalRows = resolveSupplementalRows(
+      libraries,
+      supplementalCatalog,
+      homeRowsRef.current.filter(isSupplementalRow),
+    );
     replaceHomeRows(mergeRows(coreRows, supplementalRows));
+    setError(
+      describeCatalogFailures(catalog, supplementalCatalog.failedRowKeys.length),
+    );
   }
 
   async function reloadHome() {
@@ -279,7 +289,6 @@ export function App() {
 
     logoutPendingRef.current = true;
     const generation = beginOperation();
-    focusPolicy.clear();
     setBusy(true);
     setError('');
     try {
@@ -288,6 +297,7 @@ export function App() {
         return;
       }
 
+      focusPolicy.clear();
       resetAuthenticatedState();
       setView('login');
     } catch (cause) {
@@ -379,6 +389,7 @@ export function App() {
 
       {view === 'home' ? (
         <HomePage
+          busy={busy}
           rows={homeRows}
           onHome={() => void reloadHome()}
           onLogout={() => void logout()}
@@ -519,15 +530,49 @@ function extractLibraries(rows: readonly HomeRow[]): LibraryView[] {
       }
 
       seenIds.add(id);
-      libraries.push(item);
+      libraries.push({ ...item, id });
     }
   }
 
   return libraries;
 }
 
-function describeCatalogFailures(catalog: HomeCatalog): string {
-  if (catalog.failedKinds.length === 0) {
+function resolveSupplementalRows(
+  libraries: readonly LibraryView[],
+  catalog: LibraryLatestCatalog,
+  previousRows: readonly HomeRow[],
+): HomeRow[] {
+  const nextRowsByKey = new Map(catalog.rows.map((row) => [row.key.trim(), row]));
+  const previousRowsByKey = new Map(
+    previousRows.map((row) => [row.key.trim(), row]),
+  );
+  const failedRowKeys = new Set(catalog.failedRowKeys.map((key) => key.trim()));
+  const result: HomeRow[] = [];
+
+  for (const library of libraries) {
+    const key = `latest:${library.id}`;
+    const nextRow = nextRowsByKey.get(key);
+    if (nextRow) {
+      result.push(nextRow);
+      continue;
+    }
+
+    if (failedRowKeys.has(key)) {
+      const previousRow = previousRowsByKey.get(key);
+      if (previousRow) {
+        result.push(previousRow);
+      }
+    }
+  }
+
+  return result;
+}
+
+function describeCatalogFailures(
+  catalog: HomeCatalog,
+  supplementalFailureCount = 0,
+): string {
+  if (catalog.failedKinds.length === 0 && supplementalFailureCount === 0) {
     return '';
   }
 

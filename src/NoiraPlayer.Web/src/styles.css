@@ -64,6 +64,7 @@ body,
 #root {
   min-width: 100%;
   min-height: 100%;
+  scroll-padding-block: var(--tv-safe);
 }
 
 html {
@@ -240,12 +241,25 @@ h2 {
 .guide {
   position: fixed;
   z-index: 30;
-  inset: 0 auto 0 0;
+  top: 0;
+  bottom: 0;
+  left: var(--tv-safe);
   width: var(--guide-collapsed);
-  overflow: hidden;
+  overflow: visible;
   border-inline-end: 1px solid var(--hairline);
   background: var(--shell-rail);
   transition: width 160ms ease, background-color 120ms ease;
+}
+
+.guide::before {
+  position: absolute;
+  top: 0;
+  right: 100%;
+  bottom: 0;
+  width: var(--tv-safe);
+  background: inherit;
+  content: "";
+  pointer-events: none;
 }
 
 .guide--expanded {
@@ -259,6 +273,7 @@ h2 {
   width: 100%;
   height: 100%;
   padding: var(--tv-safe) var(--space-sm);
+  overflow: hidden;
 }
 
 .guide__destinations {
@@ -352,8 +367,8 @@ h2 {
 
 .home-page {
   min-height: 100vh;
-  padding: var(--tv-safe) 0 var(--tv-safe)
-    calc(var(--guide-collapsed) + var(--tv-safe));
+  margin-left: calc(var(--tv-safe) + var(--guide-collapsed));
+  padding: var(--tv-safe) 0;
   overflow-x: hidden;
   background: var(--canvas);
 }
@@ -378,7 +393,11 @@ h2 {
   color: var(--text-muted);
 }
 
-.media-row,
+.media-row {
+  min-width: 0;
+  scroll-margin-block: var(--tv-safe);
+}
+
 .media-row > section {
   min-width: 0;
 }
@@ -417,6 +436,7 @@ h2 {
   background: var(--transparent);
   color: var(--text);
   text-align: left;
+  scroll-margin-block: var(--tv-safe);
 }
 
 .media-card[data-card-variant="wide"] {

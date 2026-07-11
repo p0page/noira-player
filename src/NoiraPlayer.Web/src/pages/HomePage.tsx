@@ -3,12 +3,16 @@ import type { FocusEvent } from 'react';
 import type { HomeRow } from '../catalog/homeCatalog';
 import { Guide } from '../components/Guide';
 import { isLibraryView } from '../components/MediaCard';
-import { getHomeRowScopeKey, MediaRow } from '../components/MediaRow';
+import {
+  getHomeRowScopeKey,
+  MediaRow,
+  normalizeHomeRow,
+} from '../components/MediaRow';
 import type { FocusTarget } from '../navigation/routes';
 import type { LibraryView, MediaItem } from '../types';
 
 export interface HomePageProps {
-  disabled?: boolean;
+  busy?: boolean;
   onHome: () => void;
   onLogout: () => void;
   onOpenLibrary: (library: LibraryView) => void;
@@ -25,7 +29,7 @@ const restoreRequestFallbackTimestamp = Date.now().toString(36);
 let restoreRequestFallbackCounter = 0;
 
 export function HomePage({
-  disabled,
+  busy = false,
   onHome,
   onLogout,
   onOpenLibrary,
@@ -33,7 +37,7 @@ export function HomePage({
   rows,
 }: HomePageProps) {
   const visibleRows = useMemo(() => getVisibleRows(rows), [rows]);
-  const libraries = useMemo(() => getLibraries(visibleRows), [visibleRows]);
+  const libraries = useMemo(() => getLibraries(rows), [rows]);
   const [returnTarget, setReturnTarget] = useState<FocusTarget | null>(null);
   const [restoreRequest, setRestoreRequest] = useState<RestoreRequest | null>(null);
 
@@ -69,7 +73,6 @@ export function HomePage({
       <Guide
         activeRoute={{ kind: 'home' }}
         defaultFocus={visibleRows.length === 0}
-        disabled={disabled}
         libraries={libraries}
         returnTarget={returnTarget}
         onHome={onHome}
@@ -78,7 +81,11 @@ export function HomePage({
         onRestoreFocus={restoreContentFocus}
       />
 
-      <main className="home-page" onFocusCapture={handleContentFocus}>
+      <main
+        aria-busy={busy || undefined}
+        className="home-page"
+        onFocusCapture={handleContentFocus}
+      >
         <header className="home-page__header">
           <h1>Home</h1>
         </header>
@@ -90,7 +97,6 @@ export function HomePage({
               <MediaRow
                 key={row.key}
                 defaultFocus={index === 0}
-                disabled={disabled}
                 onOpenLibrary={onOpenLibrary}
                 onOpenMedia={onOpenMedia}
                 restoreFocusKey={
@@ -124,20 +130,23 @@ function getVisibleRows(rows: readonly HomeRow[]): HomeRow[] {
   const visibleRows: HomeRow[] = [];
 
   for (const row of rows) {
-    const key = row.key.trim();
-    if (!key || row.items.length === 0 || seenKeys.has(key)) {
+    const normalizedRow = normalizeHomeRow(row);
+    if (
+      !normalizedRow ||
+      normalizedRow.items.length === 0 ||
+      seenKeys.has(normalizedRow.key)
+    ) {
       continue;
     }
 
-    seenKeys.add(key);
-    visibleRows.push(row);
+    seenKeys.add(normalizedRow.key);
+    visibleRows.push(normalizedRow);
   }
 
   return visibleRows;
 }
 
 function getLibraries(rows: readonly HomeRow[]): LibraryView[] {
-  const seenIds = new Set<string>();
   const libraries: LibraryView[] = [];
 
   for (const row of rows) {
@@ -150,12 +159,6 @@ function getLibraries(rows: readonly HomeRow[]): LibraryView[] {
         continue;
       }
 
-      const id = item.id.trim();
-      if (!id || seenIds.has(id)) {
-        continue;
-      }
-
-      seenIds.add(id);
       libraries.push(item);
     }
   }

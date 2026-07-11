@@ -114,6 +114,74 @@ describe('HomePage', () => {
     expect(card.getAttribute('data-card-variant')).toBe('wide');
   });
 
+  it('replaces a failed image with the matte fallback and retries when its URL changes', () => {
+    const view = render(
+      <FocusProvider>
+        <HomePage
+          rows={[
+            {
+              key: 'image-row-anonymous',
+              title: 'Image row anonymous',
+              kind: 'latest',
+              items: [
+                {
+                  id: 'image-item-anonymous',
+                  name: 'Image item anonymous',
+                  type: 'Movie',
+                  artwork: { primary: '/anonymous-one.jpg' },
+                },
+              ],
+            },
+          ]}
+          onHome={() => undefined}
+          onLogout={() => undefined}
+          onOpenLibrary={() => undefined}
+          onOpenMedia={() => undefined}
+        />
+      </FocusProvider>,
+    );
+
+    const card = screen.getByRole('button', { name: 'Open Image item anonymous' });
+    const firstImage = card.querySelector('img');
+    expect(firstImage?.getAttribute('src')).toBe('/anonymous-one.jpg');
+    fireEvent.error(firstImage as HTMLImageElement);
+    expect(card.querySelector('img')).toBeNull();
+    expect(card.querySelector('.media-card__fallback')).not.toBeNull();
+
+    view.rerender(
+      <FocusProvider>
+        <HomePage
+          rows={[
+            {
+              key: 'image-row-anonymous',
+              title: 'Image row anonymous',
+              kind: 'latest',
+              items: [
+                {
+                  id: 'image-item-anonymous',
+                  name: 'Image item anonymous',
+                  type: 'Movie',
+                  artwork: { primary: '/anonymous-two.jpg' },
+                },
+              ],
+            },
+          ]}
+          onHome={() => undefined}
+          onLogout={() => undefined}
+          onOpenLibrary={() => undefined}
+          onOpenMedia={() => undefined}
+        />
+      </FocusProvider>,
+    );
+
+    expect(
+      screen
+        .getByRole('button', { name: 'Open Image item anonymous' })
+        .querySelector('img')
+        ?.getAttribute('src'),
+    ).toBe('/anonymous-two.jpg');
+  });
+
   it('omits empty rows and defaults an empty Home page to the Guide', async () => {
     render(
       <FocusProvider>
@@ -123,7 +191,14 @@ describe('HomePage', () => {
               key: 'omitted-anonymous',
               title: 'Omitted anonymous row',
               kind: 'nextUp',
-              items: [],
+              items: [
+                {
+                  id: '   ',
+                  name: 'Invalid anonymous item',
+                  type: 'Movie',
+                  artwork: {},
+                },
+              ],
             },
           ]}
           onHome={() => undefined}
@@ -138,6 +213,102 @@ describe('HomePage', () => {
     await waitFor(() => {
       expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Home' }));
     });
+  });
+
+  it('normalizes blank and colliding item identities before focus and callbacks', () => {
+    const onOpenLibrary = vi.fn();
+    const onOpenMedia = vi.fn();
+
+    render(
+      <FocusProvider>
+        <HomePage
+          rows={[
+            {
+              key: 'normalized-media-row-anonymous',
+              title: 'Normalized media row anonymous',
+              kind: 'latest',
+              items: [
+                {
+                  id: '  shared-anonymous-id  ',
+                  name: 'Original media anonymous',
+                  type: 'Movie',
+                  artwork: {},
+                },
+                {
+                  id: 'shared-anonymous-id',
+                  name: 'Duplicate media anonymous',
+                  type: 'Movie',
+                  artwork: {},
+                },
+                {
+                  id: ' ',
+                  name: 'Blank media anonymous',
+                  type: 'Movie',
+                  artwork: {},
+                },
+              ],
+            },
+            {
+              key: 'normalized-library-row-anonymous',
+              title: 'Normalized library row anonymous',
+              kind: 'libraries',
+              items: [
+                {
+                  id: '  shared-anonymous-id  ',
+                  name: 'Original library anonymous',
+                  collectionType: 'movies',
+                },
+                {
+                  id: 'shared-anonymous-id',
+                  name: 'Duplicate library anonymous',
+                  collectionType: 'tvshows',
+                },
+                {
+                  id: '\t',
+                  name: 'Blank library anonymous',
+                  collectionType: 'music',
+                },
+              ],
+            },
+          ]}
+          onHome={() => undefined}
+          onLogout={() => undefined}
+          onOpenLibrary={onOpenLibrary}
+          onOpenMedia={onOpenMedia}
+        />
+      </FocusProvider>,
+    );
+
+    const mediaCard = screen.getByRole('button', {
+      name: 'Open Original media anonymous',
+    });
+    const libraryCard = screen.getByRole('button', {
+      name: 'Open Original library anonymous',
+    });
+    const guide = screen.getByRole('navigation', { name: 'Guide' });
+    const guideLibrary = within(guide).getByRole('button', {
+      name: 'Original library anonymous',
+    });
+
+    expect(screen.queryByText('Duplicate media anonymous')).toBeNull();
+    expect(screen.queryByText('Blank media anonymous')).toBeNull();
+    expect(screen.queryByText('Duplicate library anonymous')).toBeNull();
+    expect(screen.queryByText('Blank library anonymous')).toBeNull();
+    expect(mediaCard.getAttribute('data-item-id')).toBe('shared-anonymous-id');
+    expect(libraryCard.getAttribute('data-item-id')).toBe('shared-anonymous-id');
+    expect(mediaCard.getAttribute('data-focus-key')).not.toBe(
+      libraryCard.getAttribute('data-focus-key'),
+    );
+
+    fireEvent.click(mediaCard);
+    fireEvent.click(guideLibrary);
+
+    expect(onOpenMedia).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'shared-anonymous-id' }),
+    );
+    expect(onOpenLibrary).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'shared-anonymous-id' }),
+    );
   });
 
   it('preserves row-scoped card keys, DOM identity, and focus when supplemental rows append', async () => {
@@ -259,11 +430,17 @@ describe('HomePage', () => {
     const guideScope = getScopeElement('home-guide');
     const rowScope = getScopeElement('home-row:geometry-row-anonymous');
 
-    mockRect(guideScope, 0, 0, 72, 420);
-    mockRect(home, 0, 0, 72, 52);
-    mockRect(logout, 0, 320, 72, 52);
-    mockRect(rowScope, 280, 0, 600, 240);
-    mockRect(card, 300, 0, 240, 135);
+    mockRectResolver(guideScope, () =>
+      createRect(56, 0, guide.getAttribute('aria-expanded') === 'true' ? 248 : 72, 420),
+    );
+    mockRectResolver(home, () =>
+      createRect(64, 0, guide.getAttribute('aria-expanded') === 'true' ? 232 : 56, 52),
+    );
+    mockRectResolver(logout, () =>
+      createRect(64, 320, guide.getAttribute('aria-expanded') === 'true' ? 232 : 56, 52),
+    );
+    mockRect(rowScope, 128, 0, 600, 240);
+    mockRect(card, 136, 0, 240, 135);
 
     await updateLayoutsAndFocus(card.getAttribute('data-focus-key') as string);
     expect(document.activeElement).toBe(card);
@@ -274,9 +451,12 @@ describe('HomePage', () => {
       expect(document.activeElement).toBe(home);
       expect(guide.getAttribute('aria-expanded')).toBe('true');
     });
+    expect(guideScope.getBoundingClientRect()).toMatchObject({ left: 56, width: 248 });
+    expect(home.getBoundingClientRect().left).toBeGreaterThanOrEqual(64);
+    expect(rowScope.getBoundingClientRect().left).toBe(128);
 
     await waitForThrottleWindow();
-    dispatchKey(window, 'ArrowRight', 39);
+    dispatchKey(home, 'ArrowRight', 39);
     await waitFor(() => {
       expect(document.activeElement).toBe(card);
       expect(guide.getAttribute('aria-expanded')).toBe('false');
@@ -338,11 +518,33 @@ describe('HomePage', () => {
     const firstCard = screen.getByRole('button', { name: 'Open Remount item anonymous' });
     const firstHome = screen.getByRole('button', { name: 'Home' });
     const firstLogout = screen.getByRole('button', { name: 'Log out' });
-    mockRect(getScopeElement('home-guide'), 0, 0, 72, 420);
-    mockRect(firstHome, 0, 0, 72, 52);
-    mockRect(firstLogout, 0, 320, 72, 52);
-    mockRect(getScopeElement('home-row:remount-row-anonymous'), 280, 0, 600, 240);
-    mockRect(firstCard, 300, 0, 240, 135);
+    const firstGuide = screen.getByRole('navigation', { name: 'Guide' });
+    mockRectResolver(getScopeElement('home-guide'), () =>
+      createRect(
+        56,
+        0,
+        firstGuide.getAttribute('aria-expanded') === 'true' ? 248 : 72,
+        420,
+      ),
+    );
+    mockRectResolver(firstHome, () =>
+      createRect(
+        64,
+        0,
+        firstGuide.getAttribute('aria-expanded') === 'true' ? 232 : 56,
+        52,
+      ),
+    );
+    mockRectResolver(firstLogout, () =>
+      createRect(
+        64,
+        320,
+        firstGuide.getAttribute('aria-expanded') === 'true' ? 232 : 56,
+        52,
+      ),
+    );
+    mockRect(getScopeElement('home-row:remount-row-anonymous'), 128, 0, 600, 240);
+    mockRect(firstCard, 136, 0, 240, 135);
 
     await updateLayoutsAndFocus(firstCard.getAttribute('data-focus-key') as string);
     await waitForThrottleWindow();
@@ -388,12 +590,34 @@ describe('HomePage', () => {
     });
     const remountedHome = screen.getByRole('button', { name: 'Home' });
     const remountedLogout = screen.getByRole('button', { name: 'Log out' });
+    const remountedGuide = screen.getByRole('navigation', { name: 'Guide' });
     expect(remountedCard).not.toBe(firstCard);
-    mockRect(getScopeElement('home-guide'), 0, 0, 72, 420);
-    mockRect(remountedHome, 0, 0, 72, 52);
-    mockRect(remountedLogout, 0, 320, 72, 52);
-    mockRect(getScopeElement('home-row:remount-row-anonymous'), 280, 0, 600, 240);
-    mockRect(remountedCard, 300, 0, 240, 135);
+    mockRectResolver(getScopeElement('home-guide'), () =>
+      createRect(
+        56,
+        0,
+        remountedGuide.getAttribute('aria-expanded') === 'true' ? 248 : 72,
+        420,
+      ),
+    );
+    mockRectResolver(remountedHome, () =>
+      createRect(
+        64,
+        0,
+        remountedGuide.getAttribute('aria-expanded') === 'true' ? 232 : 56,
+        52,
+      ),
+    );
+    mockRectResolver(remountedLogout, () =>
+      createRect(
+        64,
+        320,
+        remountedGuide.getAttribute('aria-expanded') === 'true' ? 232 : 56,
+        52,
+      ),
+    );
+    mockRect(getScopeElement('home-row:remount-row-anonymous'), 128, 0, 600, 240);
+    mockRect(remountedCard, 136, 0, 240, 135);
 
     await updateLayoutsAndFocus(remountedCard.getAttribute('data-focus-key') as string);
     await waitForThrottleWindow();
@@ -480,6 +704,36 @@ describe('HomePage', () => {
       /\b(?:navigateByDirection|setFocus|useFocusable)\b/,
     );
   });
+
+  it('keeps focused Home targets inside the TV safe area by CSS contract', async () => {
+    const { readFileSync } = await vi.importActual<{
+      readFileSync(path: string, encoding: 'utf8'): string;
+    }>('node:fs');
+    const { resolve } = await vi.importActual<{
+      resolve(...paths: string[]): string;
+    }>('node:path');
+    const { cwd } = await vi.importActual<{ cwd(): string }>('node:process');
+    const stylesSource = readFileSync(resolve(cwd(), 'src/styles.css'), 'utf8');
+
+    expect(stylesSource).toMatch(
+      /html,\s*body,\s*#root\s*{[^}]*scroll-padding-block:\s*var\(--tv-safe\)/s,
+    );
+    expect(stylesSource).toMatch(
+      /\.media-row\s*{[^}]*scroll-margin-block:\s*var\(--tv-safe\)/s,
+    );
+    expect(stylesSource).toMatch(
+      /\.media-card\s*{[^}]*scroll-margin-block:\s*var\(--tv-safe\)/s,
+    );
+    expect(stylesSource).toMatch(
+      /\.guide\s*{[^}]*left:\s*var\(--tv-safe\)[^}]*width:\s*var\(--guide-collapsed\)/s,
+    );
+    expect(stylesSource).toMatch(
+      /\.guide::before\s*{[^}]*right:\s*100%[^}]*width:\s*var\(--tv-safe\)[^}]*pointer-events:\s*none/s,
+    );
+    expect(stylesSource).toMatch(
+      /\.home-page\s*{[^}]*margin-left:\s*calc\(var\(--tv-safe\) \+ var\(--guide-collapsed\)\)/s,
+    );
+  });
 });
 
 function getScopeElement(scopeKey: string): HTMLElement {
@@ -500,7 +754,23 @@ function mockRect(
   width: number,
   height: number,
 ): void {
-  vi.spyOn(element, 'getBoundingClientRect').mockReturnValue({
+  mockRectResolver(element, () => createRect(left, top, width, height));
+}
+
+function mockRectResolver(
+  element: HTMLElement,
+  resolve: () => DOMRect,
+): void {
+  vi.spyOn(element, 'getBoundingClientRect').mockImplementation(resolve);
+}
+
+function createRect(
+  left: number,
+  top: number,
+  width: number,
+  height: number,
+): DOMRect {
+  return {
     bottom: top + height,
     height,
     left,
@@ -510,7 +780,7 @@ function mockRect(
     width,
     x: left,
     y: top,
-  });
+  };
 }
 
 async function updateLayoutsAndFocus(focusKey: string): Promise<void> {
