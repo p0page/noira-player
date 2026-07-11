@@ -904,6 +904,49 @@ public sealed class PlaybackQualityRunComparatorTests
     }
 
     [Fact]
+    public void Compare_SubtitleSwitch_Uses_Scenario_Outcome_And_Ignores_Frame_Pacing_Noise()
+    {
+        var baseline = CreateReport(
+            "baseline",
+            Check("LifecycleOperation", "fail", "subtitles", "lifecycle.subtitle-switch", "completed", "failed"),
+            Check("ConversionStatus", "pass", "color-pipeline", "colorPipeline.conversionStatus", "validated", "validated"));
+        baseline.Execution.Scenario = PlaybackQualityExecutionScenario.SubtitleSwitch;
+        baseline.Lifecycle.Events.Add(new PlaybackQualityLifecycleEvent
+        {
+            Operation = "subtitle-switch",
+            Status = "failed"
+        });
+        baseline.Timing.ExpectedFrameDurationMs = 41.7;
+        baseline.Timing.RenderIntervalMsP99 = 42.0;
+        baseline.Timing.MaxFrameGapMs = 43.0;
+        baseline.Timing.RenderedVideoFrames = 100;
+
+        var candidate = CreateReport(
+            "candidate",
+            Check("ConversionStatus", "pass", "color-pipeline", "colorPipeline.conversionStatus", "validated", "validated"));
+        candidate.Execution.Scenario = PlaybackQualityExecutionScenario.SubtitleSwitch;
+        candidate.Lifecycle.Events.Add(new PlaybackQualityLifecycleEvent
+        {
+            Operation = "subtitle-switch",
+            Status = "completed"
+        });
+        candidate.Timing.ExpectedFrameDurationMs = 41.7;
+        candidate.Timing.RenderIntervalMsP99 = 70.0;
+        candidate.Timing.MaxFrameGapMs = 80.0;
+        candidate.Timing.RenderedVideoFrames = 100;
+
+        var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
+
+        Assert.Equal("improved", comparison.Result);
+        Assert.Contains("subtitles", comparison.ResolvedFailureAreas);
+        Assert.Contains(comparison.Improvements, delta =>
+            delta.Signal == "lifecycle.subtitle-switch" &&
+            delta.Direction == "resolved");
+        Assert.DoesNotContain(comparison.Regressions, delta =>
+            delta.Signal.StartsWith("framePacing.", System.StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void Compare_Reports_Insufficient_When_Source_Locator_Hashes_Differ()
     {
         var baseline = CreateReport(

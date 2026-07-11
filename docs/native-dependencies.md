@@ -72,7 +72,7 @@ MSBuild 接入方式：
 - 当前音频路径已经能把 FFmpeg audio frame 转成 PCM 并提交给 XAudio2；视频 render cadence 已有第一版音频时钟等待/丢帧策略，但阈值、画面观感和听音效果还没有实机验证。
 - `SubtitleDecoder` 已能打开 FFmpeg subtitle stream，使用 `avcodec_decode_subtitle2` 解码已排队字幕 packet，并把 `SUBTITLE_TEXT` / `SUBTITLE_ASS` 规范化成文本 cue；为了不让字幕链路单独向前扫 demux，当前只消费 `FfmpegMediaSource::TryReadQueuedPacket` 暴露的已排队 packet。
 - `SubtitleRenderer` 已持有 `DxDeviceResources` 并能把文本 cue 绘制到 swapchain backbuffer；`DxDeviceResources` 通过 Direct2D/DirectWrite 画白字和阴影，播放图会在视频帧和字幕都写入 backbuffer 后统一 `Present()`。
-- 当前字幕路径还没有 PGS/bitmap 图形字幕、完整 ASS 样式渲染、外置字幕 URL 下载或字幕 offset；ASS 目前只做基础字段剥离、换行和 override tag 去除。
+- 当前字幕路径已支持 FFmpeg PGS/bitmap cue 的 palette/indexed pixel 解码与 Direct2D 合成；完整 ASS 样式渲染、外置字幕 URL 下载和字幕 offset 仍未实现，ASS 目前只做基础字段剥离、换行和 override tag 去除。
 - `VideoDecoder` 会在失败路径和 `Close()` 中释放 FFmpeg context；`PlaybackGraph.Open` 失败时会回滚已打开的边界状态。
 - 当前还没有实机验证 video processor 对 FFmpeg D3D11VA frame 的呈现效果，也还没有补齐 BT.2020/PQ video processor 色彩空间设置和 tone mapping 策略。
-- 下一步继续做 Local Machine / Xbox 冒烟、A/V sync 阈值校准、P010/NV12 颜色链路、真实字幕样本和 PGS/ASS 完整渲染策略。
+- 下一步继续做 Xbox 上的 PGS/HDR 合成验证、A/V sync 阈值校准、P010/NV12 颜色链路，以及 ASS 完整样式和外置字幕策略。

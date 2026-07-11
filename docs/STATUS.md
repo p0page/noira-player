@@ -1024,3 +1024,20 @@ native 不再在 `VideoDecoder::Open` 成功、失败或 seek 后丢弃已经从
 评测器同时修正了两处自我误导：lifecycle failure 会沿用检查中已经确定的 tracks/subtitles/timeline/playback-lifecycle，而不再落入 unknown；普通 playback 不再被无条件要求 pause/resume，只有观察到其中一个操作时才要求成对证据，正式 pause-resume case 仍由 manifest required-signal policy 强制。最终 analysis confidence 为 strong 23/23、blocked 0、decision `no-change`、risk low。
 
 验证：Core tests `857/857`、CLI smoke、parser 负向契约、完整 native-headless smoke、网络断线恢复、公开/私有 manifest runner 与 strict report-set validation 均通过。完整 Windows UWP App x64 Debug 已通过 `tools/Build-Noira.ps1 -Target Build`，生成 `NoiraPlayer.Native.dll` 与 `NoiraPlayer.App.dll`。本轮仍不声称 Xbox/HDMI 颜色输出已被软件评测证明；下一步应针对保留下来的字幕切流失败做同 manifest 的小步 candidate 调优。
+# 2026-07-12 更新：PGS 位图字幕与单场景评测闭环完成
+
+本轮修复了评测器无法真实覆盖 PGS 字幕切换的问题，并用同一私有 Emby manifest、同一匿名 case、同一媒体源完成旧 Core 与候选 Core 对照。manifest SHA-256 为 `8BBFA43688791988A5702D623A058BD57714BCBABDC748194463B50E25F3C10F`；账号、密码、直链和报告仍只保存在 ignored/local 路径，没有进入仓库。
+
+播放器侧新增 FFmpeg `SUBTITLE_BITMAP` 解码与 PGS indexed palette 转 premultiplied BGRA，保留字幕画布坐标，并通过 Direct2D 合成到视频 backbuffer。旧 Core 基线完整打开源、demux、decoder 和 native graph，发现 5 条字幕轨并选中索引 3，但 cue render count 为 `0->0`，结果 `fail`、failure area `subtitles`。候选 `872d517` 在同一 case 上 cue render count 为 `0->1`、渲染 38 帧，结果 `pass`，没有 missing evidence。
+
+评测契约同时完成以下修正：
+
+- 每个 case 必须显式声明 `playback`、`timeline`、`audio-switch`、`subtitle-switch` 或 `pause-resume`；多个主动执行意图会被 manifest validator 拒绝。
+- audio 与 subtitle 切换不再由合并的 `interactions` 场景执行；runner 和 helper 只执行 case 指定的一个动作。
+- helper 非零退出且 stdout 无法解析时优先保留 stderr/runtime 根因，不再被二次解析错误覆盖。
+- `openedSourceHash` 对 Emby 临时直链忽略已确认的 `PlaySessionId`，但保留 host、path、`MediaSourceId` 等稳定身份。两次对照现在既有相同 `sourceLocatorHash`，也有相同 `openedSourceHash`。
+- comparator 对 audio/subtitle interaction 使用对应 lifecycle 结果，只有普通 `playback` case 才比较 frame-pacing 派生指标。最终真实 comparison 为 `comparable / improved / keep-candidate`，改进信号为 `lifecycle.subtitle-switch: resolved`，无回归。
+
+验证：完整 `run-playback-core-checks.ps1` 的 32 个阶段全部通过，包含 510 个定向 Core 测试、native-headless 真解码/渲染、网络恢复、独立音轨/字幕切换、PGS bitmap、DX offscreen 和 native build。最新 comparator/hash 修正完成后，全量 Core 测试 872/872、playback-quality CLI smoke 和完整 Modern UWP Debug x64 App 构建再次通过。
+
+边界：当前只证明 Windows 软件链路能解码并合成该 PGS cue，不证明 Xbox HDR backbuffer 上的字幕 reference white、色彩或性能完全正确；完整 ASS 样式、外置字幕和 subtitle offset 仍未实现。

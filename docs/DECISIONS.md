@@ -1136,3 +1136,20 @@ runner 进程非零退出与 report-set 无效不是同一概念。真实 player
 决策：evaluator 已为 lifecycle failed/error check 写入的 failure area 是后续模型分析的首要归因，tracks、subtitles、timeline 和 playback-lifecycle 不得再次折叠为 unknown。代码目标目录和 investigation hint 必须覆盖这些区域，使模型可以直接定位音轨、字幕或状态机实现。
 
 普通 playback 报告只要求 load/play/stop；当 pause 或 resume 任一操作已经出现时，analyzer 才要求另一半配对。是否要求一个 case 完整执行 pause/resume，仍由 manifest purpose 与 `pauseSeconds` 的 required-signal policy 决定。analyzer 不得脱离 case 语义给所有报告制造 pause/resume 缺失证据，也不得因为两者都缺失而放过明确声明的 pause-resume case。
+# 2026-07-12: executable case 必须显式单场景，PGS 由真实 bitmap cue 证明
+
+决策：正式 executable case 必须显式声明唯一 `executionRequirement.scenario`。允许值为 `playback`、`timeline`、`audio-switch`、`subtitle-switch`、`pause-resume`；purpose 或 pause 配置表达多个主动执行意图时直接判 manifest 无效。此前以 `interactions` 同时执行音轨、两次字幕切换和 subtitle-off 的决策已被本条替代，不得继续生成新的合并交互报告。
+
+原因：合并交互会让一次失败无法归因，也会让不同字幕轨在同一时间点没有 cue 时产生假失败。音轨切换只证明目标音轨选中、位置推进和音频提交继续；字幕切换只证明暂停状态下目标轨选中、恢复后位置推进且真实 cue overlay render count 增加。固定 sleep 改为有上限的条件等待，交互后重新采样 native metrics。
+
+PGS 实现遵循 FFmpeg subtitle bitmap 结构：保留 rect 坐标、palette 和 indexed pixels，转换为 premultiplied BGRA 后按字幕源画布映射到 contained video 区域。文本字幕与 bitmap 字幕共用 cue 生命周期，但不伪造文本。实现原则参考 Kodi、mpv 和 VLC 的 FFmpeg bitmap subtitle 路径；本项目只提取必要的数据与时序策略，不复制其完整字幕架构。
+
+证据：同一匿名私有 PGS case 的旧 Core 基线和候选都完成 source open、demux、decoder、native graph 与 playback sample。旧 Core cue count `0->0`、结果 fail；候选 cue count `0->1`、结果 pass。评测规则、manifest 和 expected 未放宽。
+
+# 2026-07-12: opened source identity 排除会话参数，interaction comparison 按场景归因
+
+决策：`sourceLocatorHash` 继续对 manifest locator 原文哈希；`openedSourceHash` 对 HTTP(S) 实际打开源建立稳定身份，并忽略已确认不代表媒体身份的 Emby `PlaySessionId`。host、port、path 和其余稳定 query（包括 `MediaSourceId`）仍参与哈希。不得直接取消 opened-source 一致性门禁。
+
+原因：Emby 每次 PlaybackInfo 产生不同 `PlaySessionId`，对完整临时 URL 哈希会把同一媒体误判为不同源。真实对照证明两次 URL 的 host/path/query names 相同，仅完整 URL 因 session value 不同。规范化后 baseline/candidate 的 locator 与 opened-source hash 均一致，comparator 可进入真正的质量比较。
+
+interaction case 的决策信号按 scenario 限定：audio/subtitle switch 比较对应 lifecycle outcome 与轨道证据；frame-pacing 派生指标仅由普通 `playback` case 负责。短时交互窗口中的调度尾值不能覆盖明确的字幕 fail→pass。真实 PGS comparison 因此输出 `comparable / improved / keep-candidate`，resolved failure area 为 `subtitles`，且无 frame-pacing 假回归。

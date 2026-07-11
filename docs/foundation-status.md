@@ -39,7 +39,7 @@
 - 托管 `PlaybackOrchestrator` 已能在 backend 支持时原地切换音轨/字幕；`NativeDirectXPlaybackBackend`、UWP wrapper 和 C++/WinRT runtime 已接通音轨切换、字幕切换和禁用字幕的控制面。
 - Native 音轨切换已能关闭旧 audio decoder/source voice、释放旧音轨 packet queue，并在当前位置重开目标音轨的 FFmpeg decoder 和 XAudio2 source voice。
 - `AudioRenderer` 已接入 XAudio2 engine / mastering voice 生命周期，播放打开时会创建音频设备并在 start/pause/resume/stop 时控制 engine；seek 时会清空旧 source buffer 并重置音频时钟基准。
-- `SubtitleDecoder` 已接入 FFmpeg subtitle stream 的文本 cue 解码边界，能从共享 demux 中取已排队字幕 packet，并把 `SUBTITLE_TEXT` / `SUBTITLE_ASS` 文本 cue 喂给 DirectWrite overlay；PGS/bitmap 字幕、完整 ASS 样式和外置字幕 URL 尚未接入。
+- `SubtitleDecoder` 已接入 FFmpeg subtitle stream，能从共享 demux 中取已排队字幕 packet；`SUBTITLE_TEXT` / `SUBTITLE_ASS` 文本 cue 进入 DirectWrite overlay，PGS/bitmap cue 会转换为 premultiplied BGRA 并由 Direct2D 合成。完整 ASS 样式和外置字幕 URL 尚未接入。
 - Debug x64 MSIX 测试包已生成：`src\NextGenEmby.App\AppPackages\NextGenEmby.App_<version>_x64_Debug_Test\NextGenEmby.App_<version>_x64_Debug.msix`，包内已确认包含 FFmpeg 运行时 DLL。
 - Windows 本机已完成 Debug x64 MSIX 侧载验证：使用 `CN=NextGenEmby` 临时开发证书签名，导入本机级 `LocalMachine\Root` / `LocalMachine\TrustedPeople`，开启 `AllowDevelopmentWithoutDevLicense` 和 `AllowAllTrustedApps`，并通过 `Add-AppDevPackage.ps1` 安装成功。
 - Windows 本机已能启动应用：`shell:AppsFolder\NextGenEmby.App_h8qjz0sr1sg4m!App` 可打开窗口，`ApplicationFrameHost` 窗口标题为 `Next Gen Xbox Emby`，`NextGenEmby.App` 进程存在。
@@ -157,7 +157,7 @@ MSIX 本机侧载还额外需要签名和开发人员模式。当前本机已用
 - 还没有部署到 Xbox 硬件。
 - HDR10 输出、电视 HDR 模式切换、HDR 停止后的 SDR 恢复、Xbox 上 HEVC Main10/D3D11VA/P010/NV12 性能仍需 Xbox 实机验证。
 - A/V sync 阈值还需要更长样本校准；当前只做了 Windows 本机短时播放、切源、暂停、恢复、停止冒烟。
-- 多音轨真实样本、真实字幕样本、PGS/bitmap 字幕、完整 ASS 样式和外置字幕 URL 尚未验证。
+- 多音轨与 PGS 私有真实样本已通过 Windows native-headless 验证；Xbox HDR 字幕合成、完整 ASS 样式和外置字幕 URL 尚未验证。
 - start/progress/stop HTTP 上报已发送，但当前测试服务器的 session 回读接口未完成确认；服务端播放记录效果仍需在 Emby 管理端或可用 session API 中复核。
 
 ## 原生播放硬件验证

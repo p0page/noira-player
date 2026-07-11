@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 
 namespace NoiraPlayer.Core.PlaybackQuality
 {
@@ -268,6 +269,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 candidateSignals);
             AddAudioAheadWaitOversleepDeltas(comparison, baseline, candidate);
             AddTrackAndSubtitleEvidenceDeltas(comparison, baseline, candidate);
+            AddInteractionScenarioOutcomeDelta(comparison, baseline, candidate);
 
             if (comparison.Improvements.Count > 0 && comparison.Regressions.Count > 0)
             {
@@ -1938,6 +1940,14 @@ namespace NoiraPlayer.Core.PlaybackQuality
             bool hasBaselineSignalPresence,
             bool hasCandidateSignalPresence)
         {
+            if (!string.Equals(
+                    baseline.Execution?.Scenario,
+                    PlaybackQualityExecutionScenario.Playback,
+                    StringComparison.Ordinal))
+            {
+                return;
+            }
+
             if (!IsFramePacingComparison(comparison) &&
                 !HasComparableExpectedFramePacingEvidence(baseline, candidate))
             {
@@ -2094,6 +2104,62 @@ namespace NoiraPlayer.Core.PlaybackQuality
                     baselineAnalysis.FramePacing.DroppedVideoFramePercent,
                     candidateAnalysis.FramePacing.DroppedVideoFramePercent,
                     requirePositive: false);
+            }
+        }
+
+        private static void AddInteractionScenarioOutcomeDelta(
+            PlaybackQualityRunComparison comparison,
+            PlaybackQualityReport baseline,
+            PlaybackQualityReport candidate)
+        {
+            var scenario = baseline.Execution?.Scenario ?? "";
+            var failureArea = scenario switch
+            {
+                PlaybackQualityExecutionScenario.AudioSwitch => "tracks",
+                PlaybackQualityExecutionScenario.SubtitleSwitch => "subtitles",
+                _ => ""
+            };
+            if (string.IsNullOrWhiteSpace(failureArea))
+            {
+                return;
+            }
+
+            var baselineEvent = baseline.Lifecycle.Events.LastOrDefault(item =>
+                string.Equals(item.Operation, scenario, StringComparison.Ordinal));
+            var candidateEvent = candidate.Lifecycle.Events.LastOrDefault(item =>
+                string.Equals(item.Operation, scenario, StringComparison.Ordinal));
+            if (baselineEvent == null || candidateEvent == null)
+            {
+                return;
+            }
+
+            var signal = "lifecycle." + scenario;
+            AddUnique(comparison.Coverage.MatchedSignals, signal);
+            if (string.Equals(baselineEvent.Status, candidateEvent.Status, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            var baselineCheck = CreateEvidenceCheck(signal, failureArea, baselineEvent.Status);
+            var candidateCheck = CreateEvidenceCheck(signal, failureArea, candidateEvent.Status);
+            if (baselineEvent.Status == "failed" && candidateEvent.Status == "completed")
+            {
+                comparison.Improvements.Add(CreateDelta(
+                    baselineCheck,
+                    candidateCheck,
+                    "resolved",
+                    0));
+                AddUnique(comparison.ResolvedFailureAreas, failureArea);
+                AddUnique(comparison.Optimization.FailureAreas, failureArea);
+            }
+            else if (baselineEvent.Status == "completed" && candidateEvent.Status == "failed")
+            {
+                comparison.Regressions.Add(CreateDelta(
+                    baselineCheck,
+                    candidateCheck,
+                    "regressed",
+                    0));
+                AddUnique(comparison.NewFailureAreas, failureArea);
             }
         }
 

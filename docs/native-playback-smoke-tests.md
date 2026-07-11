@@ -54,7 +54,7 @@
 - Swapchain 现在优先创建 `R10G10B10A2_UNORM`，失败时回退 `B8G8R8A8_UNORM`；播放页 Info 会显示实际格式和 color space。
 - Dolby Vision 不做 DV 输出；Profile 8.1/HLG 兼容源按 HDR10/HLG fallback 处理，Profile 5 按不支持直放处理。
 - 当前已有后台 render loop，并会根据 XAudio2 音频时钟暂存早到的视频帧、丢弃明显落后的视频帧；阈值和观感仍需实机校准。
-- 当前 `CurrentPositionTicks()` 已优先使用 XAudio2 `SamplesPlayed` 推导的初步音频时钟，seek 会清空旧音频 buffer；subtitle decoder 已能把 FFmpeg 文本/ASS 字幕 cue 接到 DirectWrite 文本叠加出口，但还没有真实字幕样本、PGS 图形字幕或完整 ASS 样式验证。
+- 当前 `CurrentPositionTicks()` 已优先使用 XAudio2 `SamplesPlayed` 推导的初步音频时钟，seek 会清空旧音频 buffer；subtitle decoder 已能处理 FFmpeg 文本/ASS cue 和 PGS bitmap cue，私有 PGS case 已在 Windows native-headless 中证明真实 overlay render count 增加，但 Xbox HDR 合成和完整 ASS 样式仍未验证。
 - 当前 Playback 页既保留手动 URL 测试入口，也能从 Home 页经媒体详情页拿到真实 Emby itemId、自动拉 PlaybackInfo 并开播；媒体源、音轨、字幕选择器已接到 orchestrator；start/progress/stop 上报已接到 Emby session API，但还没有实机确认服务器端播放记录效果。
 
 ## Windows 本机冒烟记录
