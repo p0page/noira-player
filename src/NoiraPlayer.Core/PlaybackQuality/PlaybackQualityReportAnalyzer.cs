@@ -2740,20 +2740,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
             }
 
             analysis.EvidenceSignals.RemoveAll(signal =>
-                IsReportSignal(signal) && !signalPresence.Has(signal));
-        }
-
-        private static bool IsReportSignal(string signal)
-        {
-            foreach (var descriptor in PlaybackQualitySignalCatalog.ReportSignals)
-            {
-                if (string.Equals(descriptor.Signal, signal, StringComparison.Ordinal))
-                {
-                    return true;
-                }
-            }
-
-            return false;
+                PlaybackQualitySignalCatalog.IsReportSignal(signal) &&
+                !signalPresence.Has(signal));
         }
 
         private static PlaybackQualityCheck CloneCheck(PlaybackQualityCheck check)

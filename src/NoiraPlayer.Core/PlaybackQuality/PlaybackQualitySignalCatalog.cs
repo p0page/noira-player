@@ -259,6 +259,22 @@ namespace NoiraPlayer.Core.PlaybackQuality
 
         public static IReadOnlyList<PlaybackQualitySignalDescriptor> KnownSignals => KnownSignalList;
 
+        public static bool IsReportSignal(string signal)
+        {
+            foreach (var descriptor in ReportSignalList)
+            {
+                if (string.Equals(
+                    descriptor.Signal,
+                    signal,
+                    System.StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         private static IReadOnlyList<PlaybackQualitySignalDescriptor> CreateKnownSignals()
         {
             var signals = new List<PlaybackQualitySignalDescriptor>();

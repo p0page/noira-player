@@ -1329,11 +1329,11 @@ internal static class Program
 
         AddLifecyclePresentSignals(signals, reportElement);
         AddTrackPresentSignals(signals, reportElement);
-        AddCheckPresentSignals(signals, reportElement);
+        AddCheckOnlyPresentSignals(signals, reportElement);
         return signals;
     }
 
-    private static void AddCheckPresentSignals(
+    private static void AddCheckOnlyPresentSignals(
         List<string> signals,
         JsonElement reportElement)
     {
@@ -1351,7 +1351,8 @@ internal static class Program
                 signalElement.ValueKind == JsonValueKind.String)
             {
                 var signal = signalElement.GetString();
-                if (!string.IsNullOrWhiteSpace(signal))
+                if (!string.IsNullOrWhiteSpace(signal) &&
+                    !PlaybackQualitySignalCatalog.IsReportSignal(signal))
                 {
                     AddUnique(signals, signal);
                 }

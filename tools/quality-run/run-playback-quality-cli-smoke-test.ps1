@@ -161,7 +161,8 @@ try {
     "renderedVideoFrames": 240,
     "expectedFrameDurationMs": 41.708,
     "framePacingSourceFrameRate": 23.976,
-    "lateFrameDropToleranceMs": 104.271
+    "lateFrameDropToleranceMs": 104.271,
+    "maxFrameGapMs": 180.0
   },
   "checks": [
     {
@@ -210,7 +211,8 @@ try {
     "renderedVideoFrames": 240,
     "expectedFrameDurationMs": 41.708,
     "framePacingSourceFrameRate": 23.976,
-    "lateFrameDropToleranceMs": 104.271
+    "lateFrameDropToleranceMs": 104.271,
+    "maxFrameGapMs": 120.0
   },
   "checks": [
     {
@@ -251,16 +253,70 @@ try {
     $presenceBaseline = Get-Content -Raw -LiteralPath $baselinePath | ConvertFrom-Json
     $presenceCandidate = Get-Content -Raw -LiteralPath $candidatePath | ConvertFrom-Json
     foreach ($presenceReport in @($presenceBaseline, $presenceCandidate)) {
+        $presenceReport | Add-Member -NotePropertyName sync -NotePropertyValue ([pscustomobject]@{}) -Force
+        $presenceReport | Add-Member -NotePropertyName buffers -NotePropertyValue ([pscustomobject]@{}) -Force
         $presenceReport.timing | Add-Member -NotePropertyName decodedVideoFrames -NotePropertyValue 120 -Force
         $presenceReport.timing | Add-Member -NotePropertyName hardwareDecodedVideoFrames -NotePropertyValue 120 -Force
         $presenceReport.timing | Add-Member -NotePropertyName softwareDecodedVideoFrames -NotePropertyValue 0 -Force
         $presenceReport.timing | Add-Member -NotePropertyName audioAheadWaitPassDurationMsP95 -NotePropertyValue 8.0 -Force
         $presenceReport.timing | Add-Member -NotePropertyName audioAheadWaitFinalDeltaAbsMsP95 -NotePropertyValue 12.0 -Force
+        $presenceReport.sync | Add-Member -NotePropertyName audioVideoDriftMsP95 -NotePropertyValue 40.0 -Force
+        $presenceReport.buffers | Add-Member -NotePropertyName queuedAudioBuffers -NotePropertyValue 2 -Force
+    }
+    $presenceBaseline.checks += [pscustomobject]@{
+        name = 'HardwareDecodedVideoFrames'
+        signal = 'timing.hardwareDecodedVideoFrames'
+        status = 'fail'
+        failureArea = 'frame-pacing'
+        expected = '240'
+        actual = '120'
+    }
+    $presenceCandidate.checks += [pscustomobject]@{
+        name = 'HardwareDecodedVideoFrames'
+        signal = 'timing.hardwareDecodedVideoFrames'
+        status = 'fail'
+        failureArea = 'frame-pacing'
+        expected = '240'
+        actual = '60'
+    }
+    $presenceBaseline.checks += [pscustomobject]@{
+        name = 'AudioVideoDriftMsP95'
+        signal = 'sync.audioVideoDriftMsP95'
+        status = 'fail'
+        failureArea = 'av-sync'
+        expected = '20.0'
+        actual = '40.0'
+    }
+    $presenceCandidate.checks += [pscustomobject]@{
+        name = 'AudioVideoDriftMsP95'
+        signal = 'sync.audioVideoDriftMsP95'
+        status = 'fail'
+        failureArea = 'av-sync'
+        expected = '20.0'
+        actual = '10.0'
+    }
+    $presenceBaseline.checks += [pscustomobject]@{
+        name = 'QueuedAudioBuffers'
+        signal = 'buffers.queuedAudioBuffers'
+        status = 'fail'
+        failureArea = 'buffering'
+        expected = '2'
+        actual = '2'
+    }
+    $presenceCandidate.checks += [pscustomobject]@{
+        name = 'QueuedAudioBuffers'
+        signal = 'buffers.queuedAudioBuffers'
+        status = 'fail'
+        failureArea = 'buffering'
+        expected = '2'
+        actual = '5'
     }
     $presenceCandidate.timing.PSObject.Properties.Remove('hardwareDecodedVideoFrames')
     $presenceCandidate.timing.PSObject.Properties.Remove('softwareDecodedVideoFrames')
     $presenceCandidate.timing.PSObject.Properties.Remove('audioAheadWaitPassDurationMsP95')
     $presenceCandidate.timing.PSObject.Properties.Remove('audioAheadWaitFinalDeltaAbsMsP95')
+    $presenceCandidate.sync.PSObject.Properties.Remove('audioVideoDriftMsP95')
+    $presenceCandidate.buffers.PSObject.Properties.Remove('queuedAudioBuffers')
     $presenceBaseline | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $presenceBaselinePath -Encoding UTF8
     $presenceCandidate | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $presenceCandidatePath -Encoding UTF8
 
@@ -2279,7 +2335,9 @@ try {
         'timing.hardwareDecodedVideoFrames',
         'timing.softwareDecodedVideoFrames',
         'timing.audioAheadWaitPassDurationMsP95',
-        'timing.audioAheadWaitFinalDeltaAbsMsP95'
+        'timing.audioAheadWaitFinalDeltaAbsMsP95',
+        'sync.audioVideoDriftMsP95',
+        'buffers.queuedAudioBuffers'
     )
     foreach ($signal in $baselineOnlySignals) {
         if ($presenceComparison.coverage.matchedSignals -contains $signal -or

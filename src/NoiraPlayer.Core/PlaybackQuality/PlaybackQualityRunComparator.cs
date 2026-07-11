@@ -165,6 +165,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
             };
             comparison.Coverage.BaselineCheckCount = baseline.Checks.Count;
             comparison.Coverage.CandidateCheckCount = candidate.Checks.Count;
+            var hasBaselineSignalPresence = baselinePresentSignals != null;
+            var hasCandidateSignalPresence = candidatePresentSignals != null;
             var baselineSignals = CreateComparisonSignalSet(baseline, baselinePresentSignals);
             var candidateSignals = CreateComparisonSignalSet(candidate, candidatePresentSignals);
             comparison.Comparability = AssessComparability(baseline, candidate);
@@ -186,12 +188,26 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 return FinalizeComparison(comparison, context);
             }
 
-            var candidateByKey = CreateCheckMap(candidate);
-            var baselineByKey = CreateCheckMap(baseline);
+            var candidateByKey = CreateCheckMap(
+                candidate,
+                candidateSignals,
+                hasCandidateSignalPresence);
+            var baselineByKey = CreateCheckMap(
+                baseline,
+                baselineSignals,
+                hasBaselineSignalPresence);
             var matchedKeys = new List<string>();
             var matchedChecks = 0;
             foreach (var baselineCheck in baseline.Checks)
             {
+                if (!IsCheckSupportedBySignalPresence(
+                    baselineCheck,
+                    baselineSignals,
+                    hasBaselineSignalPresence))
+                {
+                    continue;
+                }
+
                 var key = GetCheckKey(baselineCheck);
                 if (string.IsNullOrWhiteSpace(key) || !candidateByKey.ContainsKey(key))
                 {
@@ -206,7 +222,12 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 TrackFailureArea(comparison, baselineCheck, candidateByKey[key]);
             }
 
-            AddUnmatchedBaselineSignals(comparison, baseline, matchedKeys);
+            AddUnmatchedBaselineSignals(
+                comparison,
+                baseline,
+                matchedKeys,
+                baselineSignals,
+                hasBaselineSignalPresence);
 
             if (matchedChecks == 0)
             {
@@ -215,8 +236,21 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 return FinalizeComparison(comparison, context);
             }
 
-            AddCandidateOnlyFailures(comparison, candidate, baselineByKey, matchedKeys);
-            AddUnmatchedCandidateSignals(comparison, candidate, matchedKeys);
+            AddCandidateOnlyFailures(
+                comparison,
+                candidate,
+                baselineByKey,
+                matchedKeys,
+                baselineSignals,
+                candidateSignals,
+                hasBaselineSignalPresence,
+                hasCandidateSignalPresence);
+            AddUnmatchedCandidateSignals(
+                comparison,
+                candidate,
+                matchedKeys,
+                candidateSignals,
+                hasCandidateSignalPresence);
             AddFramePacingSeverityDeltas(comparison, baseline, candidate);
             AddSeekTimelineEvidenceDeltas(comparison, baseline, candidate);
             AddRuntimePlaybackEvidenceSignals(
@@ -348,10 +382,20 @@ namespace NoiraPlayer.Core.PlaybackQuality
         private static void AddUnmatchedBaselineSignals(
             PlaybackQualityRunComparison comparison,
             PlaybackQualityReport baseline,
-            List<string> matchedKeys)
+            List<string> matchedKeys,
+            HashSet<string> baselineSignals,
+            bool hasBaselineSignalPresence)
         {
             foreach (var baselineCheck in baseline.Checks)
             {
+                if (!IsCheckSupportedBySignalPresence(
+                    baselineCheck,
+                    baselineSignals,
+                    hasBaselineSignalPresence))
+                {
+                    continue;
+                }
+
                 var key = GetCheckKey(baselineCheck);
                 if (!string.IsNullOrWhiteSpace(key) && !matchedKeys.Contains(key))
                 {
@@ -363,10 +407,20 @@ namespace NoiraPlayer.Core.PlaybackQuality
         private static void AddUnmatchedCandidateSignals(
             PlaybackQualityRunComparison comparison,
             PlaybackQualityReport candidate,
-            List<string> matchedKeys)
+            List<string> matchedKeys,
+            HashSet<string> candidateSignals,
+            bool hasCandidateSignalPresence)
         {
             foreach (var candidateCheck in candidate.Checks)
             {
+                if (!IsCheckSupportedBySignalPresence(
+                    candidateCheck,
+                    candidateSignals,
+                    hasCandidateSignalPresence))
+                {
+                    continue;
+                }
+
                 var key = GetCheckKey(candidateCheck);
                 if (!string.IsNullOrWhiteSpace(key) && !matchedKeys.Contains(key))
                 {
@@ -950,15 +1004,30 @@ namespace NoiraPlayer.Core.PlaybackQuality
             PlaybackQualityRunComparison comparison,
             PlaybackQualityReport candidate,
             Dictionary<string, PlaybackQualityCheck> baselineByKey,
-            List<string> matchedKeys)
+            List<string> matchedKeys,
+            HashSet<string> baselineSignals,
+            HashSet<string> candidateSignals,
+            bool hasBaselineSignalPresence,
+            bool hasCandidateSignalPresence)
         {
             foreach (var candidateCheck in candidate.Checks)
             {
+                if (!IsCheckSupportedBySignalPresence(
+                    candidateCheck,
+                    candidateSignals,
+                    hasCandidateSignalPresence))
+                {
+                    continue;
+                }
+
                 var key = GetCheckKey(candidateCheck);
                 if (string.IsNullOrWhiteSpace(key) ||
                     baselineByKey.ContainsKey(key) ||
                     matchedKeys.Contains(key) ||
-                    candidateCheck.Status != "fail")
+                    candidateCheck.Status != "fail" ||
+                    (hasBaselineSignalPresence &&
+                        PlaybackQualitySignalCatalog.IsReportSignal(key) &&
+                        !baselineSignals.Contains(key)))
                 {
                     continue;
                 }
@@ -969,11 +1038,21 @@ namespace NoiraPlayer.Core.PlaybackQuality
         }
 
         private static Dictionary<string, PlaybackQualityCheck> CreateCheckMap(
-            PlaybackQualityReport report)
+            PlaybackQualityReport report,
+            HashSet<string> presentSignals,
+            bool hasSignalPresence)
         {
             var map = new Dictionary<string, PlaybackQualityCheck>();
             foreach (var check in report.Checks)
             {
+                if (!IsCheckSupportedBySignalPresence(
+                    check,
+                    presentSignals,
+                    hasSignalPresence))
+                {
+                    continue;
+                }
+
                 var key = GetCheckKey(check);
                 if (!string.IsNullOrWhiteSpace(key) && !map.ContainsKey(key))
                 {
@@ -982,6 +1061,17 @@ namespace NoiraPlayer.Core.PlaybackQuality
             }
 
             return map;
+        }
+
+        private static bool IsCheckSupportedBySignalPresence(
+            PlaybackQualityCheck check,
+            HashSet<string> presentSignals,
+            bool hasSignalPresence)
+        {
+            var signal = GetCheckKey(check);
+            return !hasSignalPresence ||
+                !PlaybackQualitySignalCatalog.IsReportSignal(signal) ||
+                presentSignals.Contains(signal);
         }
 
         private static void CompareCheck(
