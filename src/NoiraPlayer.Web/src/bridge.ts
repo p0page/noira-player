@@ -82,7 +82,7 @@ export async function requestBridge<TResult = unknown, TPayload = unknown>(
   options: BridgeRequestOptions = {},
 ): Promise<TResult> {
   if (!isWebViewBridgeAvailable()) {
-    return getBrowserMockResponse(type, payload) as TResult;
+    throw new Error('Noira catalog requires the WebView2 host.');
   }
 
   const webview = window.chrome?.webview;
@@ -152,43 +152,4 @@ function createRequestId(): string {
   }
 
   return 'request-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2);
-}
-
-function getBrowserMockResponse(type: BridgeCommandType, payload: unknown): unknown {
-  switch (type) {
-    case 'auth.bootstrap':
-      return { session: null };
-
-    case 'auth.login':
-      const serverUrl = getPayloadValue(payload, 'serverUrl') || 'https://emby.local';
-      const userName = getPayloadValue(payload, 'username') || 'Demo User';
-      return {
-        session: {
-          serverUrl,
-          userId: 'browser-user',
-          userName,
-          accessToken: 'browser-mock-token',
-          authorization:
-            'Emby UserId="browser-user", Client="Noira", Device="Browser", DeviceId="browser", Version="0.1.0"',
-        },
-      };
-
-    case 'auth.logout':
-      return { signedOut: true };
-
-    case 'emby.get':
-      return { status: 501, statusText: 'Browser mock unavailable', body: '{}' };
-
-    case 'playback.nativePlayItem':
-      return { started: true, surface: 'native' };
-  }
-}
-
-function getPayloadValue(payload: unknown, key: string): string {
-  if (payload && typeof payload === 'object' && key in payload) {
-    const value = (payload as Record<string, unknown>)[key];
-    return typeof value === 'string' ? value : '';
-  }
-
-  return '';
 }

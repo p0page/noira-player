@@ -19,12 +19,10 @@ describe('bridge', () => {
     expect(isWebViewBridgeAvailable()).toBe(false);
   });
 
-  it('returns browser mock data outside UWP', async () => {
-    const session = await requestBridge('auth.bootstrap');
-
-    expect(session).toEqual({
-      session: null,
-    });
+  it('rejects requests outside WebView2 instead of fabricating app data', async () => {
+    await expect(requestBridge('auth.bootstrap')).rejects.toThrow(
+      'Noira catalog requires the WebView2 host.',
+    );
   });
 
   it('rejects instead of fabricating data when WebView2 has no native response', async () => {
@@ -99,18 +97,9 @@ describe('bridge', () => {
     await expect(secondPromise).resolves.toEqual({ value: 'second' });
   });
 
-  it('models playback as a native launch request in browser fallback mode', async () => {
-    const result = await requestBridge('playback.nativePlayItem', {
-      itemId: 'sample-movie',
-      itemName: 'Sample Movie',
-      startPositionTicks: 42,
-      mediaSourceId: 'source-1',
-      runtimeTicks: 84,
-    });
-
-    expect(result).toEqual({
-      started: true,
-      surface: 'native',
-    });
+  it('never fabricates a successful native playback launch', async () => {
+    await expect(
+      requestBridge('playback.nativePlayItem', { itemId: 'anonymous-item' }),
+    ).rejects.toThrow('Noira catalog requires the WebView2 host.');
   });
 });
