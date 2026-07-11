@@ -119,6 +119,11 @@ $commands = @(
         -Command 'powershell' `
         -Arguments @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', 'tools\quality-run\run-playback-quality-cli-smoke-test.ps1')
     New-CommandPlan `
+        -Name 'playback-quality-manifest-runner-test' `
+        -Description 'Verify each selected stable/challenge manifest case invokes the native harness independently and preserves per-case reports after failures.' `
+        -Command 'powershell' `
+        -Arguments @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', 'tools\quality-run\Invoke-PlaybackQualityManifest.tests.ps1')
+    New-CommandPlan `
         -Name 'native-restore' `
         -Description 'Reuse complete global NuGet packages, then restore missing native packages.config dependencies.' `
         -Command 'powershell' `

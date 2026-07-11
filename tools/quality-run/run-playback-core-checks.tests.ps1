@@ -137,6 +137,10 @@ if (-not ($plan.commands | Where-Object { $_.name -eq 'native-headless-harness-s
     throw 'Expected native-headless-harness-smoke-test command in playback-core validation plan.'
 }
 
+if (-not ($plan.commands | Where-Object { $_.name -eq 'playback-quality-manifest-runner-test' })) {
+    throw 'Expected playback-quality-manifest-runner-test command in playback-core validation plan.'
+}
+
 if (-not ($plan.commands | Where-Object { $_.name -eq 'native-seek-presentation-test' })) {
     throw 'Expected native-seek-presentation-test command in playback-core validation plan.'
 }

@@ -78,11 +78,11 @@
 - Consumes: manifest v2 和 `--native-helper-exe`
 - Produces: 每个 selected case 一个 raw `PlaybackQualityRunResult`
 
-- [ ] 写失败测试：两个 direct URI case 必须产生两次不同 runner invocation，不能只生成计划。
-- [ ] 写失败测试：第一项失败后第二项仍执行，且两项各有报告。
+- [x] 写失败测试：两个 direct URI case 必须产生两次不同 runner invocation，不能只生成计划。
+- [x] 写失败测试：第一项失败后第二项仍执行，且两项各有报告。
 - [ ] 从现有 smoke script 提取 helper build/invoke 函数，不改变 native helper 行为。
-- [ ] 实现 manifest filter、逐 case 调度、无 fallback、summary 计数和非零退出规则。
-- [ ] 使用本地小样本运行 runner smoke。
+- [x] 实现 manifest filter、逐 case 调度、无 fallback、summary 计数和非零退出规则。
+- [x] 使用本地 SDR/HDR 小样本运行 runner，并通过 strict materialize/validate。
 - [ ] 提交 `feat: execute playback manifests with native runner`。
 
 ### Task 4: 支持 ignored 私有 Emby case 解析
