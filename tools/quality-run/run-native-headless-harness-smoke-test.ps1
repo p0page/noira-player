@@ -418,8 +418,80 @@ function New-NativeHeadlessParserFixtureOutput {
         hardwareDecodedVideoFrames = '2'
         softwareDecodedVideoFrames = '0'
         renderedVideoFrames = '2'
+        renderPasses = '3'
         submittedAudioFrames = '1'
+        queuedAudioBuffers = '1'
+        droppedVideoFrames = '0'
+        seekPrerollDroppedFrames = '0'
+        videoAheadWaitCount = '0'
+        audioAheadWaitCount = '0'
+        videoClockWaitCount = '0'
+        videoStarvedPasses = '0'
+        audioStarvedPasses = '0'
+        audioClockTicks = '4900000'
         videoPositionTicks = '5000000'
+        renderIntervalMsP05 = '30'
+        renderIntervalMsP50 = '33'
+        renderIntervalMsP95 = '34'
+        renderIntervalMsP99 = '35'
+        minFrameGapMs = '30'
+        maxFrameGapMs = '35'
+        renderIntervalSampleCount = '2'
+        renderIntervalOverExpected2MsCount = '1'
+        renderIntervalOverExpected4MsCount = '0'
+        renderIntervalUnderExpected2MsCount = '0'
+        renderIntervalUnderExpected4MsCount = '0'
+        renderIntervalAfterAudioAheadWaitSampleCount = '0'
+        renderIntervalAfterAudioAheadWaitMsP95 = '0'
+        renderIntervalAfterAudioAheadWaitMsP99 = '0'
+        renderIntervalAfterAudioAheadWaitMsMax = '0'
+        renderIntervalAfterNonAudioWaitSampleCount = '2'
+        renderIntervalAfterNonAudioWaitMsP95 = '34'
+        renderIntervalAfterNonAudioWaitMsP99 = '35'
+        renderIntervalAfterNonAudioWaitMsMax = '35'
+        presentDurationMsP50 = '0.1'
+        presentDurationMsP95 = '0.2'
+        presentDurationMsP99 = '0.3'
+        presentDurationMsMax = '0.4'
+        audioAheadWaitDurationMsP50 = '0'
+        audioAheadWaitDurationMsP95 = '0'
+        audioAheadWaitDurationMsP99 = '0'
+        audioAheadWaitDurationMsMax = '0'
+        audioAheadWaitTargetMsP50 = '0'
+        audioAheadWaitTargetMsP95 = '0'
+        audioAheadWaitTargetMsP99 = '0'
+        audioAheadWaitTargetMsMax = '0'
+        audioAheadWaitOversleepMsP50 = '0'
+        audioAheadWaitOversleepMsP95 = '0'
+        audioAheadWaitOversleepMsP99 = '0'
+        audioAheadWaitOversleepMsMax = '0'
+        audioAheadWaitFinalDeltaAbsMsP50 = '0'
+        audioAheadWaitFinalDeltaAbsMsP95 = '0'
+        audioAheadWaitFinalDeltaAbsMsP99 = '0'
+        audioAheadWaitFinalDeltaAbsMsMax = '0'
+        audioAheadWaitEpisodeCount = '0'
+        audioAheadWaitPassesPerEpisodeP50 = '0'
+        audioAheadWaitPassesPerEpisodeP95 = '0'
+        audioAheadWaitPassesPerEpisodeP99 = '0'
+        audioAheadWaitPassesPerEpisodeMax = '0'
+        audioAheadWaitPassDurationMsP50 = '0'
+        audioAheadWaitPassDurationMsP95 = '0'
+        audioAheadWaitPassDurationMsP99 = '0'
+        audioAheadWaitPassDurationMsMax = '0'
+        audioAheadWaitPassTargetMsP50 = '0'
+        audioAheadWaitPassTargetMsP95 = '0'
+        audioAheadWaitPassTargetMsP99 = '0'
+        audioAheadWaitPassTargetMsMax = '0'
+        audioAheadWaitPassOversleepMsP50 = '0'
+        audioAheadWaitPassOversleepMsP95 = '0'
+        audioAheadWaitPassOversleepMsP99 = '0'
+        audioAheadWaitPassOversleepMsMax = '0'
+        framePacingSourceFrameRate = '30'
+        lateFrameDropToleranceMs = '100'
+        audioVideoDriftMsP50 = '1'
+        audioVideoDriftMsP95 = '2'
+        audioVideoDriftMsP99 = '3'
+        audioVideoDriftMsMax = '4'
         sourceCodec = 'h264'
         sourceWidth = '320'
         sourceHeight = '180'
@@ -496,13 +568,15 @@ function Invoke-NativeHeadlessParserFixtureCase {
         --native-helper-exe $FixtureHelper.ExePath | ForEach-Object { Write-Host $_ }
     $exitCode = $LASTEXITCODE
     $reportPath = Get-QualityReportPath -Root $reportsDirectory -CaseId $caseId
-    if (-not (Test-Path -LiteralPath $reportPath)) {
-        throw "Expected parser fixture report at $reportPath."
+    $report = if (Test-Path -LiteralPath $reportPath) {
+        Get-Content -LiteralPath $reportPath -Raw | ConvertFrom-Json
+    } else {
+        $null
     }
 
     return [pscustomobject]@{
         ExitCode = $exitCode
-        Report = Get-Content -LiteralPath $reportPath -Raw | ConvertFrom-Json
+        Report = $report
     }
 }
 
@@ -594,6 +668,39 @@ function Assert-NativeHeadlessParserContracts {
                 seekActualPositionTicks = '-1'
                 postSeekPlaybackPositionTicks = '20000000'
             }
+        },
+        [pscustomobject]@{
+            Name = 'missing-dropped-video-frames'
+            ExpectedField = 'droppedVideoFrames'
+            Output = New-NativeHeadlessParserFixtureOutput -Omit @('droppedVideoFrames')
+        },
+        [pscustomobject]@{
+            Name = 'negative-video-starvation'
+            ExpectedField = 'videoStarvedPasses'
+            Output = New-NativeHeadlessParserFixtureOutput -Overrides @{
+                videoStarvedPasses = '-1'
+            }
+        },
+        [pscustomobject]@{
+            Name = 'invalid-audio-starvation'
+            ExpectedField = 'audioStarvedPasses'
+            Output = New-NativeHeadlessParserFixtureOutput -Overrides @{
+                audioStarvedPasses = 'invalid'
+            }
+        },
+        [pscustomobject]@{
+            Name = 'nan-av-drift'
+            ExpectedField = 'audioVideoDriftMsP95'
+            Output = New-NativeHeadlessParserFixtureOutput -Overrides @{
+                audioVideoDriftMsP95 = 'NaN'
+            }
+        },
+        [pscustomobject]@{
+            Name = 'infinite-present-percentile'
+            ExpectedField = 'presentDurationMsP95'
+            Output = New-NativeHeadlessParserFixtureOutput -Overrides @{
+                presentDurationMsP95 = 'Infinity'
+            }
         }
     )
 
@@ -610,7 +717,11 @@ function Assert-NativeHeadlessParserContracts {
             $result.Report.report.error.message -notmatch [regex]::Escape($negativeCase.ExpectedField) -or
             @($result.Report.report.lifecycle.events | Where-Object {
                 $_.operation -in @('audio-switch', 'subtitle-switch', 'subtitle-off', 'seek')
-            }).Count -ne 0) {
+            }).Count -ne 0 -or
+            @($result.Report.report.lifecycle.events | Where-Object {
+                $_.status -eq 'completed'
+            }).Count -ne 0 -or
+            $result.Report.report.runtimeMetrics.status -eq 'captured') {
             $failures.Add("Parser fixture '$($negativeCase.Name)' did not fail explicitly on $($negativeCase.ExpectedField).")
         }
     }

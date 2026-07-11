@@ -323,95 +323,15 @@ internal static class NativeHeadlessHarness
             values[token.Substring(0, separator)] = token.Substring(separator + 1);
         }
 
-        if (!TryGetUInt64(values, "decodedVideoFrames", out var decodedVideoFrames) ||
-            !TryGetUInt64(values, "renderedVideoFrames", out var renderedVideoFrames))
+        if (!TryPopulateRequiredNativeMetrics(values, metrics, out error))
         {
-            error = "Native helper did not return decoded/rendered frame metrics.";
             return false;
         }
 
-        metrics.DecodedVideoFrames = decodedVideoFrames;
-        metrics.HardwareDecodedVideoFrames = GetUInt64(values, "hardwareDecodedVideoFrames");
-        metrics.SoftwareDecodedVideoFrames = GetUInt64(values, "softwareDecodedVideoFrames");
-        metrics.RenderedVideoFrames = renderedVideoFrames;
-        metrics.RenderPasses = GetUInt64(values, "renderPasses");
-        metrics.SubmittedAudioFrames = GetUInt64(values, "submittedAudioFrames");
-        metrics.QueuedAudioBuffers = GetUInt64(values, "queuedAudioBuffers");
-        metrics.DroppedVideoFrames = GetUInt64(values, "droppedVideoFrames");
-        metrics.SeekPrerollDroppedFrames = GetUInt64(values, "seekPrerollDroppedFrames");
-        metrics.VideoAheadWaitCount = GetUInt64(values, "videoAheadWaitCount");
-        metrics.AudioAheadWaitCount = GetUInt64(values, "audioAheadWaitCount");
-        metrics.VideoClockWaitCount = GetUInt64(values, "videoClockWaitCount");
-        metrics.VideoStarvedPasses = GetUInt64(values, "videoStarvedPasses");
-        metrics.AudioStarvedPasses = GetUInt64(values, "audioStarvedPasses");
-        metrics.AudioClockTicks = GetInt64(values, "audioClockTicks");
-        metrics.VideoPositionTicks = GetInt64(values, "videoPositionTicks");
         if (!TryParseInteractionResults(values, out interactions, out error))
         {
             return false;
         }
-        metrics.RenderIntervalMsP05 = GetDouble(values, "renderIntervalMsP05");
-        metrics.RenderIntervalMsP50 = GetDouble(values, "renderIntervalMsP50");
-        metrics.RenderIntervalMsP95 = GetDouble(values, "renderIntervalMsP95");
-        metrics.RenderIntervalMsP99 = GetDouble(values, "renderIntervalMsP99");
-        metrics.MinFrameGapMs = GetDouble(values, "minFrameGapMs");
-        metrics.MaxFrameGapMs = GetDouble(values, "maxFrameGapMs");
-        metrics.RenderIntervalSampleCount = GetUInt64(values, "renderIntervalSampleCount");
-        metrics.RenderIntervalOverExpected2MsCount = GetUInt64(values, "renderIntervalOverExpected2MsCount");
-        metrics.RenderIntervalOverExpected4MsCount = GetUInt64(values, "renderIntervalOverExpected4MsCount");
-        metrics.RenderIntervalUnderExpected2MsCount = GetUInt64(values, "renderIntervalUnderExpected2MsCount");
-        metrics.RenderIntervalUnderExpected4MsCount = GetUInt64(values, "renderIntervalUnderExpected4MsCount");
-        metrics.RenderIntervalAfterAudioAheadWaitSampleCount = GetUInt64(values, "renderIntervalAfterAudioAheadWaitSampleCount");
-        metrics.RenderIntervalAfterAudioAheadWaitMsP95 = GetDouble(values, "renderIntervalAfterAudioAheadWaitMsP95");
-        metrics.RenderIntervalAfterAudioAheadWaitMsP99 = GetDouble(values, "renderIntervalAfterAudioAheadWaitMsP99");
-        metrics.RenderIntervalAfterAudioAheadWaitMsMax = GetDouble(values, "renderIntervalAfterAudioAheadWaitMsMax");
-        metrics.RenderIntervalAfterNonAudioWaitSampleCount = GetUInt64(values, "renderIntervalAfterNonAudioWaitSampleCount");
-        metrics.RenderIntervalAfterNonAudioWaitMsP95 = GetDouble(values, "renderIntervalAfterNonAudioWaitMsP95");
-        metrics.RenderIntervalAfterNonAudioWaitMsP99 = GetDouble(values, "renderIntervalAfterNonAudioWaitMsP99");
-        metrics.RenderIntervalAfterNonAudioWaitMsMax = GetDouble(values, "renderIntervalAfterNonAudioWaitMsMax");
-        metrics.PresentDurationMsP50 = GetDouble(values, "presentDurationMsP50");
-        metrics.PresentDurationMsP95 = GetDouble(values, "presentDurationMsP95");
-        metrics.PresentDurationMsP99 = GetDouble(values, "presentDurationMsP99");
-        metrics.PresentDurationMsMax = GetDouble(values, "presentDurationMsMax");
-        metrics.AudioAheadWaitDurationMsP50 = GetDouble(values, "audioAheadWaitDurationMsP50");
-        metrics.AudioAheadWaitDurationMsP95 = GetDouble(values, "audioAheadWaitDurationMsP95");
-        metrics.AudioAheadWaitDurationMsP99 = GetDouble(values, "audioAheadWaitDurationMsP99");
-        metrics.AudioAheadWaitDurationMsMax = GetDouble(values, "audioAheadWaitDurationMsMax");
-        metrics.AudioAheadWaitTargetMsP50 = GetDouble(values, "audioAheadWaitTargetMsP50");
-        metrics.AudioAheadWaitTargetMsP95 = GetDouble(values, "audioAheadWaitTargetMsP95");
-        metrics.AudioAheadWaitTargetMsP99 = GetDouble(values, "audioAheadWaitTargetMsP99");
-        metrics.AudioAheadWaitTargetMsMax = GetDouble(values, "audioAheadWaitTargetMsMax");
-        metrics.AudioAheadWaitOversleepMsP50 = GetDouble(values, "audioAheadWaitOversleepMsP50");
-        metrics.AudioAheadWaitOversleepMsP95 = GetDouble(values, "audioAheadWaitOversleepMsP95");
-        metrics.AudioAheadWaitOversleepMsP99 = GetDouble(values, "audioAheadWaitOversleepMsP99");
-        metrics.AudioAheadWaitOversleepMsMax = GetDouble(values, "audioAheadWaitOversleepMsMax");
-        metrics.AudioAheadWaitFinalDeltaAbsMsP50 = GetDouble(values, "audioAheadWaitFinalDeltaAbsMsP50");
-        metrics.AudioAheadWaitFinalDeltaAbsMsP95 = GetDouble(values, "audioAheadWaitFinalDeltaAbsMsP95");
-        metrics.AudioAheadWaitFinalDeltaAbsMsP99 = GetDouble(values, "audioAheadWaitFinalDeltaAbsMsP99");
-        metrics.AudioAheadWaitFinalDeltaAbsMsMax = GetDouble(values, "audioAheadWaitFinalDeltaAbsMsMax");
-        metrics.AudioAheadWaitEpisodeCount = GetUInt64(values, "audioAheadWaitEpisodeCount");
-        metrics.AudioAheadWaitPassesPerEpisodeP50 = GetDouble(values, "audioAheadWaitPassesPerEpisodeP50");
-        metrics.AudioAheadWaitPassesPerEpisodeP95 = GetDouble(values, "audioAheadWaitPassesPerEpisodeP95");
-        metrics.AudioAheadWaitPassesPerEpisodeP99 = GetDouble(values, "audioAheadWaitPassesPerEpisodeP99");
-        metrics.AudioAheadWaitPassesPerEpisodeMax = GetDouble(values, "audioAheadWaitPassesPerEpisodeMax");
-        metrics.AudioAheadWaitPassDurationMsP50 = GetDouble(values, "audioAheadWaitPassDurationMsP50");
-        metrics.AudioAheadWaitPassDurationMsP95 = GetDouble(values, "audioAheadWaitPassDurationMsP95");
-        metrics.AudioAheadWaitPassDurationMsP99 = GetDouble(values, "audioAheadWaitPassDurationMsP99");
-        metrics.AudioAheadWaitPassDurationMsMax = GetDouble(values, "audioAheadWaitPassDurationMsMax");
-        metrics.AudioAheadWaitPassTargetMsP50 = GetDouble(values, "audioAheadWaitPassTargetMsP50");
-        metrics.AudioAheadWaitPassTargetMsP95 = GetDouble(values, "audioAheadWaitPassTargetMsP95");
-        metrics.AudioAheadWaitPassTargetMsP99 = GetDouble(values, "audioAheadWaitPassTargetMsP99");
-        metrics.AudioAheadWaitPassTargetMsMax = GetDouble(values, "audioAheadWaitPassTargetMsMax");
-        metrics.AudioAheadWaitPassOversleepMsP50 = GetDouble(values, "audioAheadWaitPassOversleepMsP50");
-        metrics.AudioAheadWaitPassOversleepMsP95 = GetDouble(values, "audioAheadWaitPassOversleepMsP95");
-        metrics.AudioAheadWaitPassOversleepMsP99 = GetDouble(values, "audioAheadWaitPassOversleepMsP99");
-        metrics.AudioAheadWaitPassOversleepMsMax = GetDouble(values, "audioAheadWaitPassOversleepMsMax");
-        metrics.FramePacingSourceFrameRate = GetDouble(values, "framePacingSourceFrameRate");
-        metrics.LateFrameDropToleranceMs = GetDouble(values, "lateFrameDropToleranceMs");
-        metrics.AudioVideoDriftMsP50 = GetDouble(values, "audioVideoDriftMsP50");
-        metrics.AudioVideoDriftMsP95 = GetDouble(values, "audioVideoDriftMsP95");
-        metrics.AudioVideoDriftMsP99 = GetDouble(values, "audioVideoDriftMsP99");
-        metrics.AudioVideoDriftMsMax = GetDouble(values, "audioVideoDriftMsMax");
         source = new NativeHeadlessSourceInfo
         {
             Codec = GetString(values, "sourceCodec"),
@@ -500,6 +420,92 @@ internal static class NativeHeadlessHarness
             SelectedSubtitleStreamIndex = selectedSubtitle
         };
         return true;
+    }
+
+    private static bool TryPopulateRequiredNativeMetrics(
+        Dictionary<string, string> values,
+        PlaybackQualityMetricsSnapshot metrics,
+        out string error)
+    {
+        return
+            TrySetRequiredUInt64(values, "decodedVideoFrames", value => metrics.DecodedVideoFrames = value, out error) &&
+            TrySetRequiredUInt64(values, "hardwareDecodedVideoFrames", value => metrics.HardwareDecodedVideoFrames = value, out error) &&
+            TrySetRequiredUInt64(values, "softwareDecodedVideoFrames", value => metrics.SoftwareDecodedVideoFrames = value, out error) &&
+            TrySetRequiredUInt64(values, "renderedVideoFrames", value => metrics.RenderedVideoFrames = value, out error) &&
+            TrySetRequiredUInt64(values, "renderPasses", value => metrics.RenderPasses = value, out error) &&
+            TrySetRequiredUInt64(values, "submittedAudioFrames", value => metrics.SubmittedAudioFrames = value, out error) &&
+            TrySetRequiredUInt64(values, "queuedAudioBuffers", value => metrics.QueuedAudioBuffers = value, out error) &&
+            TrySetRequiredUInt64(values, "droppedVideoFrames", value => metrics.DroppedVideoFrames = value, out error) &&
+            TrySetRequiredUInt64(values, "seekPrerollDroppedFrames", value => metrics.SeekPrerollDroppedFrames = value, out error) &&
+            TrySetRequiredUInt64(values, "videoAheadWaitCount", value => metrics.VideoAheadWaitCount = value, out error) &&
+            TrySetRequiredUInt64(values, "audioAheadWaitCount", value => metrics.AudioAheadWaitCount = value, out error) &&
+            TrySetRequiredUInt64(values, "videoClockWaitCount", value => metrics.VideoClockWaitCount = value, out error) &&
+            TrySetRequiredUInt64(values, "videoStarvedPasses", value => metrics.VideoStarvedPasses = value, out error) &&
+            TrySetRequiredUInt64(values, "audioStarvedPasses", value => metrics.AudioStarvedPasses = value, out error) &&
+            TrySetRequiredNonNegativeInt64(values, "audioClockTicks", value => metrics.AudioClockTicks = value, out error) &&
+            TrySetRequiredNonNegativeInt64(values, "videoPositionTicks", value => metrics.VideoPositionTicks = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "renderIntervalMsP05", value => metrics.RenderIntervalMsP05 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "renderIntervalMsP50", value => metrics.RenderIntervalMsP50 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "renderIntervalMsP95", value => metrics.RenderIntervalMsP95 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "renderIntervalMsP99", value => metrics.RenderIntervalMsP99 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "minFrameGapMs", value => metrics.MinFrameGapMs = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "maxFrameGapMs", value => metrics.MaxFrameGapMs = value, out error) &&
+            TrySetRequiredUInt64(values, "renderIntervalSampleCount", value => metrics.RenderIntervalSampleCount = value, out error) &&
+            TrySetRequiredUInt64(values, "renderIntervalOverExpected2MsCount", value => metrics.RenderIntervalOverExpected2MsCount = value, out error) &&
+            TrySetRequiredUInt64(values, "renderIntervalOverExpected4MsCount", value => metrics.RenderIntervalOverExpected4MsCount = value, out error) &&
+            TrySetRequiredUInt64(values, "renderIntervalUnderExpected2MsCount", value => metrics.RenderIntervalUnderExpected2MsCount = value, out error) &&
+            TrySetRequiredUInt64(values, "renderIntervalUnderExpected4MsCount", value => metrics.RenderIntervalUnderExpected4MsCount = value, out error) &&
+            TrySetRequiredUInt64(values, "renderIntervalAfterAudioAheadWaitSampleCount", value => metrics.RenderIntervalAfterAudioAheadWaitSampleCount = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "renderIntervalAfterAudioAheadWaitMsP95", value => metrics.RenderIntervalAfterAudioAheadWaitMsP95 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "renderIntervalAfterAudioAheadWaitMsP99", value => metrics.RenderIntervalAfterAudioAheadWaitMsP99 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "renderIntervalAfterAudioAheadWaitMsMax", value => metrics.RenderIntervalAfterAudioAheadWaitMsMax = value, out error) &&
+            TrySetRequiredUInt64(values, "renderIntervalAfterNonAudioWaitSampleCount", value => metrics.RenderIntervalAfterNonAudioWaitSampleCount = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "renderIntervalAfterNonAudioWaitMsP95", value => metrics.RenderIntervalAfterNonAudioWaitMsP95 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "renderIntervalAfterNonAudioWaitMsP99", value => metrics.RenderIntervalAfterNonAudioWaitMsP99 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "renderIntervalAfterNonAudioWaitMsMax", value => metrics.RenderIntervalAfterNonAudioWaitMsMax = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "presentDurationMsP50", value => metrics.PresentDurationMsP50 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "presentDurationMsP95", value => metrics.PresentDurationMsP95 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "presentDurationMsP99", value => metrics.PresentDurationMsP99 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "presentDurationMsMax", value => metrics.PresentDurationMsMax = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "audioAheadWaitDurationMsP50", value => metrics.AudioAheadWaitDurationMsP50 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "audioAheadWaitDurationMsP95", value => metrics.AudioAheadWaitDurationMsP95 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "audioAheadWaitDurationMsP99", value => metrics.AudioAheadWaitDurationMsP99 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "audioAheadWaitDurationMsMax", value => metrics.AudioAheadWaitDurationMsMax = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "audioAheadWaitTargetMsP50", value => metrics.AudioAheadWaitTargetMsP50 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "audioAheadWaitTargetMsP95", value => metrics.AudioAheadWaitTargetMsP95 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "audioAheadWaitTargetMsP99", value => metrics.AudioAheadWaitTargetMsP99 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "audioAheadWaitTargetMsMax", value => metrics.AudioAheadWaitTargetMsMax = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "audioAheadWaitOversleepMsP50", value => metrics.AudioAheadWaitOversleepMsP50 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "audioAheadWaitOversleepMsP95", value => metrics.AudioAheadWaitOversleepMsP95 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "audioAheadWaitOversleepMsP99", value => metrics.AudioAheadWaitOversleepMsP99 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "audioAheadWaitOversleepMsMax", value => metrics.AudioAheadWaitOversleepMsMax = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "audioAheadWaitFinalDeltaAbsMsP50", value => metrics.AudioAheadWaitFinalDeltaAbsMsP50 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "audioAheadWaitFinalDeltaAbsMsP95", value => metrics.AudioAheadWaitFinalDeltaAbsMsP95 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "audioAheadWaitFinalDeltaAbsMsP99", value => metrics.AudioAheadWaitFinalDeltaAbsMsP99 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "audioAheadWaitFinalDeltaAbsMsMax", value => metrics.AudioAheadWaitFinalDeltaAbsMsMax = value, out error) &&
+            TrySetRequiredUInt64(values, "audioAheadWaitEpisodeCount", value => metrics.AudioAheadWaitEpisodeCount = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "audioAheadWaitPassesPerEpisodeP50", value => metrics.AudioAheadWaitPassesPerEpisodeP50 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "audioAheadWaitPassesPerEpisodeP95", value => metrics.AudioAheadWaitPassesPerEpisodeP95 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "audioAheadWaitPassesPerEpisodeP99", value => metrics.AudioAheadWaitPassesPerEpisodeP99 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "audioAheadWaitPassesPerEpisodeMax", value => metrics.AudioAheadWaitPassesPerEpisodeMax = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "audioAheadWaitPassDurationMsP50", value => metrics.AudioAheadWaitPassDurationMsP50 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "audioAheadWaitPassDurationMsP95", value => metrics.AudioAheadWaitPassDurationMsP95 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "audioAheadWaitPassDurationMsP99", value => metrics.AudioAheadWaitPassDurationMsP99 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "audioAheadWaitPassDurationMsMax", value => metrics.AudioAheadWaitPassDurationMsMax = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "audioAheadWaitPassTargetMsP50", value => metrics.AudioAheadWaitPassTargetMsP50 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "audioAheadWaitPassTargetMsP95", value => metrics.AudioAheadWaitPassTargetMsP95 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "audioAheadWaitPassTargetMsP99", value => metrics.AudioAheadWaitPassTargetMsP99 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "audioAheadWaitPassTargetMsMax", value => metrics.AudioAheadWaitPassTargetMsMax = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "audioAheadWaitPassOversleepMsP50", value => metrics.AudioAheadWaitPassOversleepMsP50 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "audioAheadWaitPassOversleepMsP95", value => metrics.AudioAheadWaitPassOversleepMsP95 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "audioAheadWaitPassOversleepMsP99", value => metrics.AudioAheadWaitPassOversleepMsP99 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "audioAheadWaitPassOversleepMsMax", value => metrics.AudioAheadWaitPassOversleepMsMax = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "framePacingSourceFrameRate", value => metrics.FramePacingSourceFrameRate = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "lateFrameDropToleranceMs", value => metrics.LateFrameDropToleranceMs = value, out error) &&
+            TrySetRequiredFiniteDouble(values, "audioVideoDriftMsP50", value => metrics.AudioVideoDriftMsP50 = value, out error) &&
+            TrySetRequiredFiniteDouble(values, "audioVideoDriftMsP95", value => metrics.AudioVideoDriftMsP95 = value, out error) &&
+            TrySetRequiredFiniteDouble(values, "audioVideoDriftMsP99", value => metrics.AudioVideoDriftMsP99 = value, out error) &&
+            TrySetRequiredFiniteDouble(values, "audioVideoDriftMsMax", value => metrics.AudioVideoDriftMsMax = value, out error);
     }
 
     private static bool TryParseAudioSwitchOutcome(
@@ -754,6 +760,90 @@ internal static class NativeHeadlessHarness
         if (!TryGetUInt64(values, key, out value))
         {
             error = "Native helper field '" + key + "' must be an unsigned integer.";
+            return false;
+        }
+
+        error = "";
+        return true;
+    }
+
+    private static bool TrySetRequiredUInt64(
+        Dictionary<string, string> values,
+        string key,
+        Action<ulong> setValue,
+        out string error)
+    {
+        if (!TryGetRequiredUInt64(values, key, out var value, out error))
+        {
+            return false;
+        }
+
+        setValue(value);
+        return true;
+    }
+
+    private static bool TrySetRequiredNonNegativeInt64(
+        Dictionary<string, string> values,
+        string key,
+        Action<long> setValue,
+        out string error)
+    {
+        if (!TryGetRequiredNonNegativeInt64(values, key, out var value, out error))
+        {
+            return false;
+        }
+
+        setValue(value);
+        return true;
+    }
+
+    private static bool TrySetRequiredNonNegativeDouble(
+        Dictionary<string, string> values,
+        string key,
+        Action<double> setValue,
+        out string error)
+    {
+        if (!TryGetRequiredFiniteDouble(values, key, out var value, out error) || value < 0)
+        {
+            error = "Native helper field '" + key + "' must be a finite non-negative number.";
+            return false;
+        }
+
+        setValue(value);
+        return true;
+    }
+
+    private static bool TrySetRequiredFiniteDouble(
+        Dictionary<string, string> values,
+        string key,
+        Action<double> setValue,
+        out string error)
+    {
+        if (!TryGetRequiredFiniteDouble(values, key, out var value, out error))
+        {
+            return false;
+        }
+
+        setValue(value);
+        return true;
+    }
+
+    private static bool TryGetRequiredFiniteDouble(
+        Dictionary<string, string> values,
+        string key,
+        out double value,
+        out string error)
+    {
+        value = 0;
+        if (!values.TryGetValue(key, out var raw) ||
+            !double.TryParse(
+                raw,
+                System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture,
+                out value) ||
+            !double.IsFinite(value))
+        {
+            error = "Native helper field '" + key + "' must be a finite number.";
             return false;
         }
 
