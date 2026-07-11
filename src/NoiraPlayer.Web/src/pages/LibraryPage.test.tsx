@@ -1179,6 +1179,83 @@ describe('LibraryPage focus and Back behavior', () => {
     );
   });
 
+  it('does not auto-page past a duplicate in-flight page after Guide cancels deep restore', async () => {
+    let resolveDuplicatePage!: (value: ItemPage) => void;
+    const duplicatePage = new Promise<ItemPage>((resolve) => {
+      resolveDuplicatePage = resolve;
+    });
+    const libraryId = 'cancel-duplicate-library-anonymous';
+    const firstPageItems = Array.from({ length: 50 }, (_, index) => ({
+      id: `cancel-duplicate-${String(index).padStart(2, '0')}-anonymous`,
+      name: `Cancel duplicate ${String(index).padStart(2, '0')} anonymous`,
+      type: 'Movie',
+      artwork: {},
+    }));
+    const getItemsPage = vi
+      .fn<EmbyWebClient['getItemsPage']>()
+      .mockResolvedValueOnce({
+        items: firstPageItems,
+        startIndex: 0,
+        totalRecordCount: 100,
+      })
+      .mockReturnValueOnce(duplicatePage);
+
+    render(
+      <FocusProvider>
+        <LibraryPage
+          client={{ getItemsPage }}
+          library={{
+            id: libraryId,
+            name: 'Cancel duplicate library anonymous',
+            collectionType: 'movies',
+          }}
+          libraries={[]}
+          restoreRequest={{
+            requestId: 'cancel-duplicate-request-anonymous',
+            target: {
+              scopeKey: getLibraryGridScopeKey(libraryId),
+              focusKey: getLibraryGridFocusKey(
+                libraryId,
+                'cancel-duplicate-99-anonymous',
+              ),
+            },
+          }}
+          routeOrigin={{
+            scopeKey: 'home-row:cancel-duplicate-anonymous',
+            focusKey: 'home-card:cancel-duplicate-anonymous',
+          }}
+          onAuthenticationRequired={() => undefined}
+          onBack={() => undefined}
+          onLogout={() => undefined}
+          onOpenLibrary={() => undefined}
+          onOpenMedia={() => undefined}
+        />
+      </FocusProvider>,
+    );
+
+    await screen.findByRole('button', {
+      name: 'Open Cancel duplicate 00 anonymous',
+    });
+    await waitFor(() => expect(getItemsPage).toHaveBeenCalledTimes(2));
+    const home = within(
+      screen.getByRole('navigation', { name: 'Guide' }),
+    ).getByRole('button', { name: 'Home' });
+    await updateLayoutsAndFocus('guide:home');
+    fireEvent.keyDown(home, { key: 'Shift' });
+
+    await act(async () => {
+      resolveDuplicatePage({
+        items: [firstPageItems[49]],
+        startIndex: 50,
+        totalRecordCount: 100,
+      });
+      await duplicatePage;
+      await Promise.resolve();
+    });
+
+    expect(getItemsPage).toHaveBeenCalledTimes(2);
+  });
+
   it('does not steal Guide focus after key navigation while page zero is pending', async () => {
     let resolvePageZero!: (value: ItemPage) => void;
     const pageZero = new Promise<ItemPage>((resolve) => {

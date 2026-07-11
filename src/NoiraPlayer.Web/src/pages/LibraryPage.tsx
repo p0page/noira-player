@@ -267,6 +267,9 @@ export function LibraryPage({
         context,
         mergedItems,
       );
+      const cancelledExternalSearch =
+        cancelledExternalRestoreRequestIdRef.current ===
+        externalRestoreRequest?.requestId;
       if (
         previousItems.length === 0 &&
         mergedItems.length > 0 &&
@@ -286,7 +289,8 @@ export function LibraryPage({
 
       continueWithoutFocus =
         !context.exhausted &&
-        (addedItemCount === 0 || searchesForExternalTarget);
+        (searchesForExternalTarget ||
+          (addedItemCount === 0 && !cancelledExternalSearch));
     } catch (cause) {
       if (!isCurrentContext(context)) {
         return;
