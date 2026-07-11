@@ -173,6 +173,25 @@ public sealed class NativePlaybackGraphDecouplingContractTests
     }
 
     [Fact]
+    public void Native_Dolby_Vision_Evidence_Survives_Unsupported_Open_And_Reaches_Headless_Report()
+    {
+        var root = FindRepositoryRoot();
+        var graphHeader = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Native", "Media", "PlaybackGraph.h"));
+        var graphSource = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Native", "Media", "PlaybackGraph.cpp"));
+        var decoderHeader = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Native", "Media", "VideoDecoder.h"));
+        var helperSource = File.ReadAllText(Path.Combine(root, "tests", "NoiraPlayer.Native.Tests", "NativePlaybackGraphHeadlessSmokeTests.cpp"));
+        var harnessSource = File.ReadAllText(Path.Combine(root, "tools", "NoiraPlayer.PlaybackQuality.Headless", "Program.cs"));
+
+        Assert.Contains("DolbyVisionConfigurationSnapshot() const noexcept", decoderHeader, StringComparison.Ordinal);
+        Assert.Contains("m_lastVideoSourceSnapshot", graphHeader, StringComparison.Ordinal);
+        Assert.Contains("EnrichVideoSourceSnapshot", graphSource, StringComparison.Ordinal);
+        Assert.Contains("unsupportedCode=dolby-vision-profile5-no-fallback", helperSource, StringComparison.Ordinal);
+        Assert.Contains("sourceDolbyVisionProfile=", helperSource, StringComparison.Ordinal);
+        Assert.Contains("TryParseUnsupportedSource", harnessSource, StringComparison.Ordinal);
+        Assert.Contains("PlaybackQualityExecutionStatus.Unsupported", harnessSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Native_Headless_Gate_Runs_A_Deterministic_Network_Reconnect_Case()
     {
         var root = FindRepositoryRoot();

@@ -573,6 +573,11 @@ int wmain(int argc, wchar_t** argv)
             << " sourceColorPrimaries=" << (source ? source->ColorPrimaries : "")
             << " sourceColorTransfer=" << (source ? source->ColorTransfer : "")
             << " sourceColorSpace=" << (source ? source->ColorSpace : "")
+            << " sourceIsDolbyVision=" << (source && source->IsDolbyVision ? 1 : 0)
+            << " sourceDolbyVisionProfile=" << (source ? source->DolbyVisionProfile : 0)
+            << " sourceDolbyVisionCompatibilityId=" << (source ? source->DolbyVisionCompatibilityId : 0)
+            << " sourceHasHdr10BaseLayer=" << (source && source->HasHdr10BaseLayer ? 1 : 0)
+            << " sourceHasHlgBaseLayer=" << (source && source->HasHlgBaseLayer ? 1 : 0)
             << " containerStartTimeTicks=" << timeline.ContainerStartTimeTicks
             << " videoStreamStartTimeTicks=" << timeline.StreamStartTimeTicks
             << " logicalDurationTicks=" << timeline.LogicalDurationTicks
@@ -618,9 +623,43 @@ int wmain(int argc, wchar_t** argv)
     }
     catch (winrt::hresult_error const& error)
     {
+        auto source = graph.VideoSourceSnapshot();
+        if (source &&
+            source->IsDolbyVision &&
+            source->DolbyVisionProfile == 5 &&
+            !source->HasHdr10BaseLayer &&
+            !source->HasHlgBaseLayer)
+        {
+            std::cout
+                << "unsupportedCode=dolby-vision-profile5-no-fallback"
+                << " sourceCodec=" << source->Codec
+                << " sourceWidth=" << source->Width
+                << " sourceHeight=" << source->Height
+                << " sourceFrameRate=" << source->FrameRate
+                << " sourceHdrKind=" << source->HdrKind
+                << " sourceVideoRange=" << source->VideoRange
+                << " sourceColorPrimaries=" << source->ColorPrimaries
+                << " sourceColorTransfer=" << source->ColorTransfer
+                << " sourceColorSpace=" << source->ColorSpace
+                << " sourceIsDolbyVision=1"
+                << " sourceDolbyVisionProfile=" << source->DolbyVisionProfile
+                << " sourceDolbyVisionCompatibilityId=" << source->DolbyVisionCompatibilityId
+                << " sourceHasHdr10BaseLayer=0"
+                << " sourceHasHlgBaseLayer=0"
+                << " containerStartTimeTicks=0"
+                << " videoStreamStartTimeTicks=0"
+                << " logicalDurationTicks=0"
+                << std::endl;
+        }
         std::wcerr << L"native playback graph smoke failed: " << error.message().c_str() << std::endl;
         graph.Stop();
-        return 2;
+        return source &&
+            source->IsDolbyVision &&
+            source->DolbyVisionProfile == 5 &&
+            !source->HasHdr10BaseLayer &&
+            !source->HasHlgBaseLayer
+            ? 3
+            : 2;
     }
     catch (std::exception const& error)
     {

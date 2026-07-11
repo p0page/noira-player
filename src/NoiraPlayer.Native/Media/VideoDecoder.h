@@ -55,6 +55,7 @@ namespace winrt::NoiraPlayer::Native::implementation
             ID3D11Device* d3dDevice,
             ID3D11DeviceContext* d3dContext);
         std::optional<DecodedVideoFrame> TryReadFrame();
+        std::optional<DolbyVisionConfiguration> DolbyVisionConfigurationSnapshot() const noexcept;
         void Seek(int64_t positionTicks);
         void Close() noexcept;
 

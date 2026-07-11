@@ -108,7 +108,7 @@ internal static class NativeHeadlessHarness
         var lateHelperFailure = helper.ExitCode != 0 && helper.HasTelemetry;
         var playbackStartedAt = DateTimeOffset.UtcNow;
 
-        if (helper.ExitCode != 0 && !helper.HasTelemetry)
+        if (helper.ExitCode != 0 && !helper.HasTelemetry && !helper.IsUnsupported)
         {
             var errorResult = PlaybackQualityRuntimeEvidenceCollector.ComposeErrorRunResult(
                 referenceCase,
@@ -150,7 +150,10 @@ internal static class NativeHeadlessHarness
         var provider = new NativeHeadlessMetricsProvider(helper.Metrics);
         var lifecycle = new PlaybackQualityLifecycle();
         AddLifecycleEvent(lifecycle, "load", "completed", 0);
-        AddLifecycleEvent(lifecycle, "play", "completed", 0);
+        if (!helper.IsUnsupported)
+        {
+            AddLifecycleEvent(lifecycle, "play", "completed", 0);
+        }
         if (helper.PauseResume.Attempted)
         {
             AddLifecycleEvent(
@@ -256,16 +259,22 @@ internal static class NativeHeadlessHarness
                 attemptId,
                 commandReceivedAt,
                 PlaybackQualityEvidenceLevel.NativePlayback,
-                lateHelperFailure
-                    ? PlaybackQualityExecutionStatus.Failed
-                    : PlaybackQualityExecutionStatus.Completed,
+                helper.IsUnsupported
+                    ? PlaybackQualityExecutionStatus.Unsupported
+                    : lateHelperFailure
+                        ? PlaybackQualityExecutionStatus.Failed
+                        : PlaybackQualityExecutionStatus.Completed,
                 sourceOpenAttempted: true,
                 sourceOpened: true,
-                nativeGraphOpened: true,
+                nativeGraphOpened: !helper.IsUnsupported,
                 demuxStarted: true,
-                decoderOpened: helper.Metrics.DecodedVideoFrames > 0,
+                decoderOpened: !helper.IsUnsupported && helper.Metrics.DecodedVideoFrames > 0,
                 playbackSampleObserved: helper.Metrics.DecodedVideoFrames > 0 &&
                     helper.Metrics.RenderedVideoFrames > 0));
+        if (helper.IsUnsupported && HasNoSourceClassificationExpectation(request.Expected))
+        {
+            request.Expected = PlaybackQualityExpectedFactory.CreateDefault(descriptor);
+        }
         if (request.RuntimeMetrics != null)
         {
             request.RuntimeMetrics.ProcessWallClockMs = helper.ProcessWallClockMs;
@@ -403,6 +412,18 @@ internal static class NativeHeadlessHarness
         var stdout = stdoutTask.GetAwaiter().GetResult();
         var stderr = stderrTask.GetAwaiter().GetResult();
         ArchiveHelperTranscript(reportPath, options.StreamUrl, stdout, stderr);
+
+        if (process.ExitCode != 0 &&
+            TryParseUnsupportedSource(stdout, out var unsupportedSource, out var unsupportedCode))
+        {
+            return NativeHeadlessHelperResult.Unsupported(
+                unsupportedSource,
+                unsupportedCode,
+                processWallClockMs,
+                processCpuTimeMs,
+                processCpuUtilizationRatio,
+                FirstNonEmpty(stderr.Trim(), "Native helper reported an unsupported source."));
+        }
 
         if (!TryParseMetrics(
             stdout,
@@ -562,10 +583,15 @@ internal static class NativeHeadlessHarness
             Height = GetInt32(values, "sourceHeight"),
             FrameRate = GetDouble(values, "sourceFrameRate"),
             HdrKind = GetString(values, "sourceHdrKind"),
-            VideoRange = GetString(values, "sourceVideoRange"),
+            VideoRange = DecodeSourceToken(GetString(values, "sourceVideoRange")),
             ColorPrimaries = GetString(values, "sourceColorPrimaries"),
             ColorTransfer = GetString(values, "sourceColorTransfer"),
             ColorSpace = GetString(values, "sourceColorSpace"),
+            IsDolbyVision = GetInt32(values, "sourceIsDolbyVision") != 0,
+            DolbyVisionProfile = GetInt32(values, "sourceDolbyVisionProfile"),
+            DolbyVisionCompatibilityId = GetInt32(values, "sourceDolbyVisionCompatibilityId"),
+            HasHdr10BaseLayer = GetInt32(values, "sourceHasHdr10BaseLayer") != 0,
+            HasHlgBaseLayer = GetInt32(values, "sourceHasHlgBaseLayer") != 0,
             ContainerStartTimeTicks = containerStartTimeTicks,
             VideoStreamStartTimeTicks = videoStreamStartTimeTicks,
             LogicalDurationTicks = logicalDurationTicks
@@ -744,6 +770,81 @@ internal static class NativeHeadlessHarness
             PlaybackFailed = playbackFailed != 0
         };
         return true;
+    }
+
+    private static bool TryParseUnsupportedSource(
+        string stdout,
+        out NativeHeadlessSourceInfo source,
+        out string unsupportedCode)
+    {
+        source = new NativeHeadlessSourceInfo();
+        unsupportedCode = "";
+        var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var token in stdout.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries))
+        {
+            var separator = token.IndexOf('=');
+            if (separator <= 0 || separator == token.Length - 1)
+            {
+                continue;
+            }
+
+            values[token.Substring(0, separator)] = token.Substring(separator + 1);
+        }
+
+        unsupportedCode = GetString(values, "unsupportedCode");
+        if (!string.Equals(
+                unsupportedCode,
+                "dolby-vision-profile5-no-fallback",
+                StringComparison.Ordinal) ||
+            GetInt32(values, "sourceIsDolbyVision") == 0 ||
+            GetInt32(values, "sourceDolbyVisionProfile") != 5)
+        {
+            return false;
+        }
+
+        source = new NativeHeadlessSourceInfo
+        {
+            Codec = GetString(values, "sourceCodec"),
+            Width = GetInt32(values, "sourceWidth"),
+            Height = GetInt32(values, "sourceHeight"),
+            FrameRate = GetDouble(values, "sourceFrameRate"),
+            HdrKind = GetString(values, "sourceHdrKind"),
+            VideoRange = DecodeSourceToken(GetString(values, "sourceVideoRange")),
+            ColorPrimaries = GetString(values, "sourceColorPrimaries"),
+            ColorTransfer = GetString(values, "sourceColorTransfer"),
+            ColorSpace = GetString(values, "sourceColorSpace"),
+            IsDolbyVision = true,
+            DolbyVisionProfile = 5,
+            DolbyVisionCompatibilityId = GetInt32(values, "sourceDolbyVisionCompatibilityId"),
+            HasHdr10BaseLayer = GetInt32(values, "sourceHasHdr10BaseLayer") != 0,
+            HasHlgBaseLayer = GetInt32(values, "sourceHasHlgBaseLayer") != 0,
+            ContainerStartTimeTicks = GetInt64(values, "containerStartTimeTicks"),
+            VideoStreamStartTimeTicks = GetInt64(values, "videoStreamStartTimeTicks"),
+            LogicalDurationTicks = GetInt64(values, "logicalDurationTicks")
+        };
+        return !string.IsNullOrWhiteSpace(source.Codec) &&
+            source.Width > 0 &&
+            source.Height > 0 &&
+            source.FrameRate > 0.0 &&
+            string.Equals(source.HdrKind, "DolbyVisionUnsupported", StringComparison.OrdinalIgnoreCase) &&
+            !source.HasHdr10BaseLayer &&
+            !source.HasHlgBaseLayer;
+    }
+
+    private static string DecodeSourceToken(string value)
+    {
+        return value.Replace('_', ' ');
+    }
+
+    private static bool HasNoSourceClassificationExpectation(PlaybackQualityExpected? expected)
+    {
+        return expected == null ||
+            (string.IsNullOrWhiteSpace(expected.HdrKind) &&
+                string.IsNullOrWhiteSpace(expected.HdrPlaybackStrategy) &&
+                !expected.IsDirectPlayable.HasValue &&
+                !expected.IsDolbyVision.HasValue &&
+                !expected.DolbyVisionProfile.HasValue &&
+                !expected.DolbyVisionCompatibilityId.HasValue);
     }
 
     private static bool TryPopulateRequiredNativeMetrics(
@@ -1442,6 +1543,28 @@ internal static class NativeHeadlessHarness
                 ColorSpace = sourceInfo.ColorSpace
             };
         }
+        else if (string.Equals(sourceInfo.HdrKind, "DolbyVisionUnsupported", StringComparison.OrdinalIgnoreCase))
+        {
+            source.HdrProfile.Kind = HdrPlaybackKind.DolbyVisionUnsupported;
+        }
+        else if (string.Equals(sourceInfo.HdrKind, "DolbyVisionWithHdr10Fallback", StringComparison.OrdinalIgnoreCase))
+        {
+            source.HdrProfile.Kind = HdrPlaybackKind.DolbyVisionWithHdr10Fallback;
+        }
+        else if (string.Equals(sourceInfo.HdrKind, "DolbyVisionWithHlgFallback", StringComparison.OrdinalIgnoreCase))
+        {
+            source.HdrProfile.Kind = HdrPlaybackKind.DolbyVisionWithHlgFallback;
+        }
+
+        source.HdrProfile.IsDolbyVision = sourceInfo.IsDolbyVision;
+        source.HdrProfile.DolbyVisionProfile = sourceInfo.IsDolbyVision
+            ? sourceInfo.DolbyVisionProfile
+            : null;
+        source.HdrProfile.DolbyVisionCompatibilityId = sourceInfo.IsDolbyVision
+            ? sourceInfo.DolbyVisionCompatibilityId
+            : null;
+        source.HdrProfile.HasHdr10BaseLayer = sourceInfo.HasHdr10BaseLayer;
+        source.HdrProfile.HasHlgBaseLayer = sourceInfo.HasHlgBaseLayer;
 
         selectedAudioStreamIndex ??= source.AudioStreams.FirstOrDefault()?.Index;
         return new PlaybackDescriptor(
@@ -1792,7 +1915,8 @@ internal sealed class NativeHeadlessHelperResult
         double processCpuTimeMs,
         double processCpuUtilizationRatio,
         NativeHeadlessInteractionResults interactions,
-        string errorMessage)
+        string errorMessage,
+        string unsupportedCode = "")
     {
         ExitCode = exitCode;
         Metrics = metrics;
@@ -1805,6 +1929,7 @@ internal sealed class NativeHeadlessHelperResult
         ProcessCpuUtilizationRatio = processCpuUtilizationRatio;
         Interactions = interactions;
         ErrorMessage = errorMessage;
+        UnsupportedCode = unsupportedCode;
         HasTelemetry = metrics.DecodedVideoFrames > 0 || metrics.RenderedVideoFrames > 0;
     }
 
@@ -1847,6 +1972,10 @@ internal sealed class NativeHeadlessHelperResult
     public string ErrorMessage { get; }
 
     public bool HasTelemetry { get; }
+
+    public string UnsupportedCode { get; }
+
+    public bool IsUnsupported => !string.IsNullOrWhiteSpace(UnsupportedCode);
 
     public static NativeHeadlessHelperResult Succeeded(
         PlaybackQualityMetricsSnapshot metrics,
@@ -1908,6 +2037,28 @@ internal sealed class NativeHeadlessHelperResult
             processCpuUtilizationRatio,
             interactions,
             errorMessage);
+    }
+
+    public static NativeHeadlessHelperResult Unsupported(
+        NativeHeadlessSourceInfo source,
+        string unsupportedCode,
+        double startupDurationMs,
+        double processCpuTimeMs,
+        double processCpuUtilizationRatio,
+        string errorMessage)
+    {
+        return new NativeHeadlessHelperResult(
+            3,
+            new PlaybackQualityMetricsSnapshot(),
+            source,
+            new NativeHeadlessColorInfo(),
+            new NativeHeadlessDisplayInfo(),
+            startupDurationMs,
+            processCpuTimeMs,
+            processCpuUtilizationRatio,
+            new NativeHeadlessInteractionResults(),
+            errorMessage,
+            unsupportedCode);
     }
 }
 
@@ -2035,6 +2186,16 @@ internal sealed class NativeHeadlessSourceInfo
     public string ColorTransfer { get; set; } = "";
 
     public string ColorSpace { get; set; } = "";
+
+    public bool IsDolbyVision { get; set; }
+
+    public int DolbyVisionProfile { get; set; }
+
+    public int DolbyVisionCompatibilityId { get; set; }
+
+    public bool HasHdr10BaseLayer { get; set; }
+
+    public bool HasHlgBaseLayer { get; set; }
 
     public long ContainerStartTimeTicks { get; set; }
 

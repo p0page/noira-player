@@ -49,6 +49,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         try
         {
             std::lock_guard lock(m_graphMutex);
+            m_lastVideoSourceSnapshot.reset();
             AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open lock acquired");
             AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open CreateDevice begin");
             m_deviceResources.CreateDevice();
@@ -57,6 +58,7 @@ namespace winrt::NoiraPlayer::Native::implementation
                 L"PlaybackGraph.Open MediaSource.Open begin urlLength=" +
                 std::to_wstring(request.DirectStreamUrl.size()));
             m_mediaSource.Open(request.DirectStreamUrl);
+            m_lastVideoSourceSnapshot = m_mediaSource.BestVideoStreamSnapshot();
             AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open MediaSource.Open end");
             AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open VideoDecoder.Open begin");
             m_videoDecoder.Open(
@@ -64,6 +66,10 @@ namespace winrt::NoiraPlayer::Native::implementation
                 0,
                 m_deviceResources.Device(),
                 m_deviceResources.Context());
+            if (m_lastVideoSourceSnapshot)
+            {
+                m_lastVideoSourceSnapshot = EnrichVideoSourceSnapshot(*m_lastVideoSourceSnapshot);
+            }
             AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open VideoDecoder.Open end");
             AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open AudioDecoder.Open begin");
             m_audioDecoder.Open(
@@ -132,6 +138,14 @@ namespace winrt::NoiraPlayer::Native::implementation
         }
         catch (...)
         {
+            {
+                std::lock_guard lock(m_graphMutex);
+                auto source = m_mediaSource.BestVideoStreamSnapshot();
+                if (source)
+                {
+                    m_lastVideoSourceSnapshot = EnrichVideoSourceSnapshot(*source);
+                }
+            }
             AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open exception begin Stop");
             Stop();
             AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open exception end Stop");
@@ -364,7 +378,47 @@ namespace winrt::NoiraPlayer::Native::implementation
     std::optional<FfmpegVideoStreamSnapshot> PlaybackGraph::VideoSourceSnapshot() const
     {
         std::lock_guard lock(m_graphMutex);
-        return m_mediaSource.BestVideoStreamSnapshot();
+        auto source = m_mediaSource.BestVideoStreamSnapshot();
+        if (source)
+        {
+            return EnrichVideoSourceSnapshot(*source);
+        }
+
+        return m_lastVideoSourceSnapshot;
+    }
+
+    FfmpegVideoStreamSnapshot PlaybackGraph::EnrichVideoSourceSnapshot(
+        FfmpegVideoStreamSnapshot snapshot) const noexcept
+    {
+        auto configuration = m_videoDecoder.DolbyVisionConfigurationSnapshot();
+        if (!configuration || !configuration->IsPresent)
+        {
+            return snapshot;
+        }
+
+        snapshot.IsDolbyVision = true;
+        snapshot.DolbyVisionProfile = configuration->Profile;
+        snapshot.DolbyVisionCompatibilityId = configuration->BaseLayerSignalCompatibilityId;
+        snapshot.HasHdr10BaseLayer = configuration->BaseLayerSignalCompatibilityId == 1;
+        snapshot.HasHlgBaseLayer = configuration->BaseLayerSignalCompatibilityId == 4;
+
+        if (snapshot.HasHdr10BaseLayer)
+        {
+            snapshot.HdrKind = "DolbyVisionWithHdr10Fallback";
+            snapshot.VideoRange = "HDR10_Dolby_Vision";
+        }
+        else if (snapshot.HasHlgBaseLayer)
+        {
+            snapshot.HdrKind = "DolbyVisionWithHlgFallback";
+            snapshot.VideoRange = "HLG_Dolby_Vision";
+        }
+        else
+        {
+            snapshot.HdrKind = "DolbyVisionUnsupported";
+            snapshot.VideoRange = "Dolby_Vision";
+        }
+
+        return snapshot;
     }
 
     std::vector<FfmpegStreamSnapshot> PlaybackGraph::SourceTrackSnapshots() const

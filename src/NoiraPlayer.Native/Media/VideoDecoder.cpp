@@ -685,6 +685,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         }
         catch (...)
         {
+            auto dolbyVisionConfiguration = m_dolbyVisionConfiguration;
             if (codecContext != nullptr)
             {
                 avcodec_free_context(&codecContext);
@@ -696,13 +697,18 @@ namespace winrt::NoiraPlayer::Native::implementation
             }
 
             Close();
+            m_dolbyVisionConfiguration = dolbyVisionConfiguration;
             throw;
         }
 
         m_positionTicks = 0;
-        m_dolbyVisionConfiguration.reset();
         m_decoderDraining = false;
         m_open = true;
+    }
+
+    std::optional<DolbyVisionConfiguration> VideoDecoder::DolbyVisionConfigurationSnapshot() const noexcept
+    {
+        return m_dolbyVisionConfiguration;
     }
 
     std::optional<DecodedVideoFrame> VideoDecoder::TryReadFrame()
@@ -941,7 +947,6 @@ namespace winrt::NoiraPlayer::Native::implementation
         {
             m_mediaSource->Seek(m_videoStreamIndex, positionTicks);
             avcodec_flush_buffers(m_codecContext);
-            m_dolbyVisionConfiguration.reset();
             m_decoderDraining = false;
         }
     }

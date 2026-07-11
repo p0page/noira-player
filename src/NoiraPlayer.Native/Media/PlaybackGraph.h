@@ -110,11 +110,13 @@ namespace winrt::NoiraPlayer::Native::implementation
         void EnsureHdrOutputForFrame(DecodedVideoFrame const& frame);
         void LogRuntimeStatsIfDue();
         void NotifyStateChanged(PlaybackGraphState state, winrt::hstring const& message) const noexcept;
+        FfmpegVideoStreamSnapshot EnrichVideoSourceSnapshot(FfmpegVideoStreamSnapshot snapshot) const noexcept;
 
         DxDeviceResources& m_deviceResources;
         PlaybackGraphStateChangedHandler m_graphStateChanged;
         PlaybackGraphHdrOutputChangedHandler m_hdrOutputChanged;
         FfmpegMediaSource m_mediaSource;
+        std::optional<FfmpegVideoStreamSnapshot> m_lastVideoSourceSnapshot;
         VideoDecoder m_videoDecoder;
         AudioDecoder m_audioDecoder;
         VideoRenderer m_videoRenderer;

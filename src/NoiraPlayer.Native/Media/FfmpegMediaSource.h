@@ -30,6 +30,11 @@ namespace winrt::NoiraPlayer::Native::implementation
         std::string ColorPrimaries;
         std::string ColorTransfer;
         std::string ColorSpace;
+        bool IsDolbyVision{false};
+        uint32_t DolbyVisionProfile{0};
+        uint32_t DolbyVisionCompatibilityId{0};
+        bool HasHdr10BaseLayer{false};
+        bool HasHlgBaseLayer{false};
     };
 
     struct FfmpegStreamSnapshot

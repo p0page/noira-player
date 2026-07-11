@@ -872,6 +872,30 @@ function Assert-NativeHeadlessParserContracts {
         -not $lateFailure.Report.report.execution.playbackSampleObserved) {
         $failures.Add('A non-zero helper exit after valid telemetry did not preserve decoded/rendered native playback evidence in the error report.')
     }
+
+    $unsupported = Invoke-NativeHeadlessParserFixtureCase `
+        -FixtureHelper $fixtureHelper `
+        -HeadlessDll $headlessDll `
+        -Root $Root `
+        -Name 'unsupported-dv-profile5' `
+        -HelperOutput ('unsupportedCode=dolby-vision-profile5-no-fallback ' +
+            'sourceCodec=hevc sourceWidth=3840 sourceHeight=2160 sourceFrameRate=60 ' +
+            'sourceHdrKind=DolbyVisionUnsupported sourceVideoRange=Dolby_Vision ' +
+            'sourceColorPrimaries=bt2020 sourceColorTransfer=smpte2084 sourceColorSpace=bt2020nc ' +
+            'sourceIsDolbyVision=1 sourceDolbyVisionProfile=5 ' +
+            'sourceDolbyVisionCompatibilityId=0 sourceHasHdr10BaseLayer=0 sourceHasHlgBaseLayer=0 ' +
+            'containerStartTimeTicks=0 videoStreamStartTimeTicks=0 logicalDurationTicks=299500000') `
+        -HelperExitCode 3
+    if ($unsupported.ExitCode -ne 0 -or
+        $unsupported.Report.report.result -ne 'unsupported' -or
+        $unsupported.Report.report.execution.status -ne 'unsupported' -or
+        $unsupported.Report.report.source.hdrKind -ne 'DolbyVisionUnsupported' -or
+        $unsupported.Report.report.source.dolbyVisionProfile -ne 5 -or
+        $unsupported.Report.report.source.isDirectPlayable -ne $false -or
+        -not $unsupported.Report.report.execution.sourceOpened -or
+        $unsupported.Report.report.execution.decoderOpened) {
+        $failures.Add('Structured Dolby Vision Profile 5 rejection was not preserved as attributable unsupported-source evidence.')
+    }
     $lateFailureStdoutPath = $lateFailure.ReportPath + '.helper.stdout.log'
     $lateFailureStderrPath = $lateFailure.ReportPath + '.helper.stderr.log'
     if (-not (Test-Path -LiteralPath $lateFailureStdoutPath) -or
