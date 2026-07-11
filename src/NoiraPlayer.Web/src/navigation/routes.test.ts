@@ -1,0 +1,363 @@
+import { describe, expect, it } from 'vitest';
+import { backRoute, pushRoute, replaceRoute } from './routes';
+import type { BrowseRoute, FocusTarget } from './routes';
+
+const homeRoute: BrowseRoute = { kind: 'home' };
+const libraryOrigin: FocusTarget = {
+  scopeKey: 'home-scope-anonymous',
+  focusKey: 'library-focus-anonymous',
+};
+const libraryRoute: BrowseRoute = {
+  kind: 'library',
+  libraryId: 'library-anonymous',
+  collectionType: 'movies',
+  origin: libraryOrigin,
+};
+const libraryDetailsRoute: BrowseRoute = {
+  kind: 'details',
+  itemId: 'item-library-anonymous',
+  origin: {
+    scopeKey: 'library-grid-anonymous',
+    focusKey: 'item-focus-anonymous',
+  },
+};
+const homeDetailsRoute: BrowseRoute = {
+  kind: 'details',
+  itemId: 'item-home-anonymous',
+  origin: {
+    scopeKey: 'home-row-anonymous',
+    focusKey: 'home-item-focus-anonymous',
+  },
+};
+
+describe('browse route history', () => {
+  it('pushes Home to library to details without mutating prior stacks', () => {
+    const homeStack = Object.freeze([homeRoute] as BrowseRoute[]);
+
+    const libraryStack = pushRoute(homeStack, libraryRoute);
+    const detailsStack = pushRoute(libraryStack, libraryDetailsRoute);
+
+    expect(homeStack).toEqual([homeRoute]);
+    expect(libraryStack).toEqual([homeRoute, libraryRoute]);
+    expect(detailsStack).toEqual([homeRoute, libraryRoute, libraryDetailsRoute]);
+    expect(libraryStack).not.toBe(homeStack);
+    expect(detailsStack).not.toBe(libraryStack);
+  });
+
+  it('deep snapshots existing and appended routes after a successful push', () => {
+    const callerLibrary = {
+      kind: 'library' as const,
+      libraryId: 'library-push-anonymous',
+      collectionType: 'movies',
+      origin: {
+        scopeKey: 'home-push-anonymous',
+        focusKey: 'library-push-focus-anonymous',
+      },
+    };
+    const callerDetails = {
+      kind: 'details' as const,
+      itemId: 'item-push-anonymous',
+      origin: {
+        scopeKey: 'library-push-grid-anonymous',
+        focusKey: 'item-push-focus-anonymous',
+      },
+    };
+
+    const history = pushRoute([{ kind: 'home' }, callerLibrary], callerDetails);
+
+    callerLibrary.libraryId = 'caller-mutated-library';
+    callerLibrary.origin.focusKey = 'caller-mutated-library-focus';
+    callerDetails.itemId = 'caller-mutated-item';
+    callerDetails.origin.scopeKey = 'caller-mutated-details-scope';
+
+    expect(history).toEqual([
+      { kind: 'home' },
+      {
+        kind: 'library',
+        libraryId: 'library-push-anonymous',
+        collectionType: 'movies',
+        origin: {
+          scopeKey: 'home-push-anonymous',
+          focusKey: 'library-push-focus-anonymous',
+        },
+      },
+      {
+        kind: 'details',
+        itemId: 'item-push-anonymous',
+        origin: {
+          scopeKey: 'library-push-grid-anonymous',
+          focusKey: 'item-push-focus-anonymous',
+        },
+      },
+    ]);
+  });
+
+  it('supports Home directly to details and initializes an empty history with Home', () => {
+    const emptyStack = Object.freeze([] as BrowseRoute[]);
+    const homeStack = pushRoute(emptyStack, homeRoute);
+
+    const detailsStack = pushRoute(homeStack, homeDetailsRoute);
+
+    expect(emptyStack).toEqual([]);
+    expect(homeStack).toEqual([homeRoute]);
+    expect(detailsStack).toEqual([homeRoute, homeDetailsRoute]);
+    expect(homeStack).not.toBe(emptyStack);
+    expect(detailsStack).not.toBe(homeStack);
+  });
+
+  it('returns copied no-op histories for illegal and repeated pushes', () => {
+    const cases: Array<{
+      stack: readonly BrowseRoute[];
+      next: BrowseRoute;
+    }> = [
+      { stack: Object.freeze([] as BrowseRoute[]), next: libraryRoute },
+      { stack: Object.freeze([homeRoute] as BrowseRoute[]), next: homeRoute },
+      {
+        stack: Object.freeze([homeRoute, libraryRoute] as BrowseRoute[]),
+        next: libraryRoute,
+      },
+      {
+        stack: Object.freeze([homeRoute, homeDetailsRoute] as BrowseRoute[]),
+        next: libraryRoute,
+      },
+    ];
+
+    for (const { stack, next } of cases) {
+      const result = pushRoute(stack, next);
+
+      expect(result).toEqual(stack);
+      expect(result).not.toBe(stack);
+    }
+  });
+
+  it('replaces only when the resulting route history is valid', () => {
+    const libraryStack = Object.freeze([homeRoute, libraryRoute] as BrowseRoute[]);
+    const directDetailsStack = replaceRoute(libraryStack, homeDetailsRoute);
+    const replacementDetails: BrowseRoute = {
+      kind: 'details',
+      itemId: 'item-replacement-anonymous',
+      origin: libraryDetailsRoute.origin,
+    };
+    const nestedDetailsStack = Object.freeze([
+      homeRoute,
+      libraryRoute,
+      libraryDetailsRoute,
+    ] as BrowseRoute[]);
+
+    const replacedNestedDetails = replaceRoute(nestedDetailsStack, replacementDetails);
+
+    expect(directDetailsStack).toEqual([homeRoute, homeDetailsRoute]);
+    expect(replacedNestedDetails).toEqual([homeRoute, libraryRoute, replacementDetails]);
+    expect(libraryStack).toEqual([homeRoute, libraryRoute]);
+    expect(nestedDetailsStack).toEqual([homeRoute, libraryRoute, libraryDetailsRoute]);
+  });
+
+  it('deep snapshots retained and replacement routes after a successful replace', () => {
+    const callerLibrary = {
+      kind: 'library' as const,
+      libraryId: 'library-replace-anonymous',
+      collectionType: 'tvshows',
+      origin: {
+        scopeKey: 'home-replace-anonymous',
+        focusKey: 'library-replace-focus-anonymous',
+      },
+    };
+    const currentDetails = {
+      kind: 'details' as const,
+      itemId: 'item-current-anonymous',
+      origin: {
+        scopeKey: 'library-replace-grid-anonymous',
+        focusKey: 'item-current-focus-anonymous',
+      },
+    };
+    const replacementDetails = {
+      kind: 'details' as const,
+      itemId: 'item-replacement-anonymous',
+      origin: {
+        scopeKey: 'library-replace-grid-anonymous',
+        focusKey: 'item-replacement-focus-anonymous',
+      },
+    };
+
+    const history = replaceRoute(
+      [{ kind: 'home' }, callerLibrary, currentDetails],
+      replacementDetails,
+    );
+
+    callerLibrary.collectionType = 'caller-mutated-collection';
+    callerLibrary.origin.scopeKey = 'caller-mutated-library-scope';
+    replacementDetails.itemId = 'caller-mutated-replacement';
+    replacementDetails.origin.focusKey = 'caller-mutated-replacement-focus';
+
+    expect(history).toEqual([
+      { kind: 'home' },
+      {
+        kind: 'library',
+        libraryId: 'library-replace-anonymous',
+        collectionType: 'tvshows',
+        origin: {
+          scopeKey: 'home-replace-anonymous',
+          focusKey: 'library-replace-focus-anonymous',
+        },
+      },
+      {
+        kind: 'details',
+        itemId: 'item-replacement-anonymous',
+        origin: {
+          scopeKey: 'library-replace-grid-anonymous',
+          focusKey: 'item-replacement-focus-anonymous',
+        },
+      },
+    ]);
+  });
+
+  it('returns copied no-op histories for illegal and repeated replacements', () => {
+    const homeStack = Object.freeze([homeRoute] as BrowseRoute[]);
+    const detailsStack = Object.freeze([homeRoute, homeDetailsRoute] as BrowseRoute[]);
+
+    const illegal = replaceRoute(homeStack, homeDetailsRoute);
+    const repeated = replaceRoute(detailsStack, { ...homeDetailsRoute });
+
+    expect(illegal).toEqual(homeStack);
+    expect(illegal).not.toBe(homeStack);
+    expect(repeated).toEqual(detailsStack);
+    expect(repeated).not.toBe(detailsStack);
+  });
+
+  it('backs through both details histories while preserving Home and empty roots', () => {
+    const nestedDetails = Object.freeze([
+      homeRoute,
+      libraryRoute,
+      libraryDetailsRoute,
+    ] as BrowseRoute[]);
+    const directDetails = Object.freeze([homeRoute, homeDetailsRoute] as BrowseRoute[]);
+    const home = Object.freeze([homeRoute] as BrowseRoute[]);
+    const empty = Object.freeze([] as BrowseRoute[]);
+
+    const fromNestedDetails = backRoute(nestedDetails);
+    const fromDirectDetails = backRoute(directDetails);
+    const fromHome = backRoute(home);
+    const fromEmpty = backRoute(empty);
+
+    expect(fromNestedDetails).toEqual([homeRoute, libraryRoute]);
+    expect(fromDirectDetails).toEqual([homeRoute]);
+    expect(fromHome).toEqual([homeRoute]);
+    expect(fromEmpty).toEqual([]);
+    expect(fromNestedDetails).not.toBe(nestedDetails);
+    expect(fromDirectDetails).not.toBe(directDetails);
+    expect(fromHome).not.toBe(home);
+    expect(fromEmpty).not.toBe(empty);
+  });
+
+  it('deep snapshots routes retained by Back', () => {
+    const callerLibrary = {
+      kind: 'library' as const,
+      libraryId: 'library-back-anonymous',
+      collectionType: 'movies',
+      origin: {
+        scopeKey: 'home-back-anonymous',
+        focusKey: 'library-back-focus-anonymous',
+      },
+    };
+    const callerDetails = {
+      kind: 'details' as const,
+      itemId: 'item-back-anonymous',
+      origin: {
+        scopeKey: 'library-back-grid-anonymous',
+        focusKey: 'item-back-focus-anonymous',
+      },
+    };
+
+    const history = backRoute([{ kind: 'home' }, callerLibrary, callerDetails]);
+
+    callerLibrary.libraryId = 'caller-mutated-library';
+    callerLibrary.origin.focusKey = 'caller-mutated-library-focus';
+
+    expect(history).toEqual([
+      { kind: 'home' },
+      {
+        kind: 'library',
+        libraryId: 'library-back-anonymous',
+        collectionType: 'movies',
+        origin: {
+          scopeKey: 'home-back-anonymous',
+          focusKey: 'library-back-focus-anonymous',
+        },
+      },
+    ]);
+  });
+
+  it('deep snapshots the current history for an illegal no-op', () => {
+    const callerDetails = {
+      kind: 'details' as const,
+      itemId: 'item-illegal-anonymous',
+      origin: {
+        scopeKey: 'home-illegal-row-anonymous',
+        focusKey: 'item-illegal-focus-anonymous',
+      },
+    };
+    const illegalLibrary = {
+      kind: 'library' as const,
+      libraryId: 'library-illegal-anonymous',
+      collectionType: 'movies',
+      origin: {
+        scopeKey: 'home-illegal-anonymous',
+        focusKey: 'library-illegal-focus-anonymous',
+      },
+    };
+
+    const history = pushRoute([{ kind: 'home' }, callerDetails], illegalLibrary);
+
+    callerDetails.itemId = 'caller-mutated-item';
+    callerDetails.origin.scopeKey = 'caller-mutated-details-scope';
+
+    expect(history).toEqual([
+      { kind: 'home' },
+      {
+        kind: 'details',
+        itemId: 'item-illegal-anonymous',
+        origin: {
+          scopeKey: 'home-illegal-row-anonymous',
+          focusKey: 'item-illegal-focus-anonymous',
+        },
+      },
+    ]);
+  });
+
+  it('deep snapshots the current history for a repeated no-op', () => {
+    const callerDetails = {
+      kind: 'details' as const,
+      itemId: 'item-repeated-anonymous',
+      origin: {
+        scopeKey: 'home-repeated-row-anonymous',
+        focusKey: 'item-repeated-focus-anonymous',
+      },
+    };
+    const repeatedDetails = {
+      kind: 'details' as const,
+      itemId: 'item-repeated-anonymous',
+      origin: {
+        scopeKey: 'home-repeated-row-anonymous',
+        focusKey: 'item-repeated-focus-anonymous',
+      },
+    };
+
+    const history = replaceRoute([{ kind: 'home' }, callerDetails], repeatedDetails);
+
+    callerDetails.itemId = 'caller-mutated-item';
+    callerDetails.origin.focusKey = 'caller-mutated-focus';
+    repeatedDetails.origin.scopeKey = 'caller-mutated-repeated-scope';
+
+    expect(history).toEqual([
+      { kind: 'home' },
+      {
+        kind: 'details',
+        itemId: 'item-repeated-anonymous',
+        origin: {
+          scopeKey: 'home-repeated-row-anonymous',
+          focusKey: 'item-repeated-focus-anonymous',
+        },
+      },
+    ]);
+  });
+});
