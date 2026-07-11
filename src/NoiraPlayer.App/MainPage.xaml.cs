@@ -7,6 +7,7 @@ using NoiraPlayer.App.Web;
 using NoiraPlayer.App.Views;
 using NoiraPlayer.Core.Diagnostics;
 using Windows.Storage;
+using Windows.UI.Core;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Navigation;
@@ -126,9 +127,14 @@ namespace NoiraPlayer.App
             PlaybackPage.TeardownCompleted += PlaybackPage_OnTeardownCompleted;
             try
             {
-                _playbackNavigationPending = Frame.Navigate(
-                    typeof(PlaybackPage),
-                    result.PlaybackRequest);
+                await Dispatcher.RunAsync(
+                    CoreDispatcherPriority.Normal,
+                    () =>
+                    {
+                        _playbackNavigationPending = Frame.Navigate(
+                            typeof(PlaybackPage),
+                            result.PlaybackRequest);
+                    });
             }
             catch (Exception ex)
             {

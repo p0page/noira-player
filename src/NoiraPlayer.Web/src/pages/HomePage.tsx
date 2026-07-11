@@ -40,6 +40,9 @@ export function HomePage({
   const visibleRows = useMemo(() => getVisibleRows(rows), [rows]);
   const libraries = useMemo(() => getLibraries(rows), [rows]);
   const [returnTarget, setReturnTarget] = useState<FocusTarget | null>(null);
+  const [preferredRowTargets, setPreferredRowTargets] = useState<
+    Readonly<Record<string, string>>
+  >({});
   const [guideRestoreRequest, setGuideRestoreRequest] =
     useState<FocusRestoreRequest | null>(null);
   const restoreRequest = guideRestoreRequest ?? externalRestoreRequest ?? null;
@@ -57,6 +60,10 @@ export function HomePage({
     }
 
     const nextTarget = { focusKey, scopeKey };
+    const card = event.target.closest<HTMLElement>('.media-card[data-focus-key]');
+    if (card) {
+      setPreferredRowTargets(resolveNearestRowTargets(card));
+    }
     setReturnTarget((current) =>
       current?.focusKey === focusKey && current.scopeKey === scopeKey
         ? current
@@ -105,6 +112,7 @@ export function HomePage({
                 defaultFocus={index === 0}
                 onOpenLibrary={onOpenLibrary}
                 onOpenMedia={onOpenMedia}
+                preferredFocusKey={preferredRowTargets[scopeKey]}
                 restoreFocusKey={
                   restoreRequest?.target.scopeKey === scopeKey
                     ? restoreRequest.target.focusKey
@@ -129,6 +137,46 @@ export function HomePage({
       </main>
     </div>
   );
+}
+
+function resolveNearestRowTargets(origin: HTMLElement): Readonly<Record<string, string>> {
+  const originRect = origin.getBoundingClientRect();
+  const originCenterX = originRect.left + originRect.width / 2;
+  const targets: Record<string, string> = {};
+
+  for (const scope of document.querySelectorAll<HTMLElement>(
+    '[data-focus-scope^="home-row:"]',
+  )) {
+    const scopeKey = scope.dataset.focusScope;
+    if (!scopeKey) {
+      continue;
+    }
+
+    let nearestKey: string | undefined;
+    let nearestDistance = Number.POSITIVE_INFINITY;
+    for (const candidate of scope.querySelectorAll<HTMLElement>(
+      '.media-card[data-focus-key]',
+    )) {
+      const candidateKey = candidate.dataset.focusKey;
+      if (!candidateKey) {
+        continue;
+      }
+
+      const candidateRect = candidate.getBoundingClientRect();
+      const candidateCenterX = candidateRect.left + candidateRect.width / 2;
+      const distance = Math.abs(candidateCenterX - originCenterX);
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearestKey = candidateKey;
+      }
+    }
+
+    if (nearestKey) {
+      targets[scopeKey] = nearestKey;
+    }
+  }
+
+  return targets;
 }
 
 function getVisibleRows(rows: readonly HomeRow[]): HomeRow[] {

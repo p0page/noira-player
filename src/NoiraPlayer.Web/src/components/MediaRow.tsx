@@ -14,6 +14,7 @@ export interface MediaRowProps {
   disabled?: boolean;
   onOpenLibrary: (library: LibraryView, origin: FocusTarget) => void;
   onOpenMedia: (item: MediaItem, origin: FocusTarget) => void;
+  preferredFocusKey?: string;
   restoreFocusKey?: string;
   restoreRequestId?: number | string;
   row: HomeRow;
@@ -29,6 +30,7 @@ export function MediaRow({
   disabled,
   onOpenLibrary,
   onOpenMedia,
+  preferredFocusKey,
   restoreFocusKey,
   restoreRequestId,
   row,
@@ -48,6 +50,7 @@ export function MediaRow({
       className="media-row"
       defaultFocusKey={defaultFocus ? orderedKeys[0] : undefined}
       orderedKeys={orderedKeys}
+      preferredFocusKey={preferredFocusKey}
       restoreFocusKey={restoreFocusKey}
       restoreRequestId={restoreRequestId}
       scopeKey={scopeKey}

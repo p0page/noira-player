@@ -405,6 +405,67 @@ describe('HomePage', () => {
     expect(supplementalCard.getAttribute('data-focus-key')).not.toBe(coreFocusKey);
   });
 
+  it('preserves the nearest screen column across different card widths and row scroll positions', async () => {
+    render(
+      <FocusProvider>
+        <HomePage
+          rows={[
+            {
+              key: 'column-row-one-anonymous',
+              title: 'Column row one anonymous',
+              kind: 'resume',
+              items: Array.from({ length: 3 }, (_, index) => ({
+                id: `column-one-${index}-anonymous`,
+                name: `Column one ${index} anonymous`,
+                type: 'Movie',
+                artwork: {},
+              })),
+            },
+            {
+              key: 'column-row-two-anonymous',
+              title: 'Column row two anonymous',
+              kind: 'latest',
+              items: Array.from({ length: 3 }, (_, index) => ({
+                id: `column-two-${index}-anonymous`,
+                name: `Column two ${index} anonymous`,
+                type: 'Movie',
+                artwork: {},
+              })),
+            },
+          ]}
+          onHome={() => undefined}
+          onLogout={() => undefined}
+          onOpenLibrary={() => undefined}
+          onOpenMedia={() => undefined}
+        />
+      </FocusProvider>,
+    );
+
+    const firstRow = Array.from({ length: 3 }, (_, index) =>
+      screen.getByRole('button', { name: `Open Column one ${index} anonymous` }),
+    );
+    const secondRow = Array.from({ length: 3 }, (_, index) =>
+      screen.getByRole('button', { name: `Open Column two ${index} anonymous` }),
+    );
+    mockRect(getScopeElement('home-row:column-row-one-anonymous'), 128, 0, 760, 170);
+    mockRect(getScopeElement('home-row:column-row-two-anonymous'), 128, 220, 760, 170);
+    firstRow.forEach((card, index) => mockRect(card, 136 + index * 250, 20, 230, 130));
+    secondRow.forEach((card, index) => mockRect(card, 30 + index * 175, 240, 100, 130));
+
+    await updateLayoutsAndFocus(
+      firstRow[1].getAttribute('data-focus-key') as string,
+    );
+    await waitForThrottleWindow();
+    dispatchKey(window, 'ArrowDown', 40);
+
+    await waitFor(() => expect(document.activeElement).toBe(secondRow[2]));
+
+    await waitForThrottleWindow();
+    dispatchKey(window, 'ArrowUp', 38);
+
+    await waitFor(() => expect(document.activeElement).toBe(firstRow[1]));
+  });
+
   it('enters the Guide from the first card and restores that exact target by Right or Escape', async () => {
     render(
       <FocusProvider>
