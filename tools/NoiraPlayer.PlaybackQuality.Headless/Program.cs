@@ -18,7 +18,7 @@ return result.ExitCode;
 internal static class NativeHeadlessHarness
 {
     private const string CollectorVersion = "native-headless-harness-v0.1";
-    private const long NativeHelperSeekTargetPositionTicks = 0;
+    private const long NativeHelperSeekTargetPositionTicks = 10_000_000;
     private const string NativeWinRtLinkageLimitation =
         "native-headless: current NoiraPlayer.Native build is a Windows Store C++/WinRT component with public playback entrypoints bound to UWP projection";
     private const string NativeGraphHostLimitation =
@@ -112,7 +112,11 @@ internal static class NativeHeadlessHarness
             return new NativeHeadlessHarnessResult(reportPath, 1);
         }
 
-        var descriptor = CreateDescriptor(options.StreamUrl, helper.Source);
+        var descriptor = CreateDescriptor(
+            options.StreamUrl,
+            helper.Source,
+            helper.SelectedAudioStreamIndex,
+            helper.SelectedSubtitleStreamIndex);
         var diagnostics = new NativeHeadlessDiagnostics(helper.Color, helper.Display);
         var provider = new NativeHeadlessMetricsProvider(helper.Metrics);
         var lifecycle = new PlaybackQualityLifecycle();
@@ -120,8 +124,43 @@ internal static class NativeHeadlessHarness
         AddLifecycleEvent(lifecycle, "play", "completed", 0);
         AddLifecycleEvent(lifecycle, "pause", "completed", helper.Metrics.VideoPositionTicks);
         AddLifecycleEvent(lifecycle, "resume", "completed", helper.Metrics.VideoPositionTicks);
-        AddLifecycleEvent(lifecycle, "seek", "completed", helper.SeekActualPositionTicks);
-        AddLifecycleEvent(lifecycle, "stop", "completed", helper.SeekActualPositionTicks);
+        if (helper.AudioSwitch.Attempted)
+        {
+            AddLifecycleEvent(
+                lifecycle,
+                "audio-switch",
+                helper.AudioSwitch.Status,
+                helper.AudioSwitch.PositionAfterTicks,
+                $"stream index {helper.AudioSwitch.StreamIndex}; position " +
+                    $"{helper.AudioSwitch.PositionBeforeTicks}->{helper.AudioSwitch.PositionAfterTicks}; " +
+                    $"submitted audio frames {helper.AudioSwitch.SubmittedFramesBefore}->{helper.AudioSwitch.SubmittedFramesAfter}");
+        }
+
+        AddSubtitleSwitchLifecycleEvent(lifecycle, helper.SubtitleSwitch1);
+        AddSubtitleSwitchLifecycleEvent(lifecycle, helper.SubtitleSwitch2);
+        if (helper.SubtitleOff.Attempted)
+        {
+            AddLifecycleEvent(
+                lifecycle,
+                "subtitle-off",
+                helper.SubtitleOff.Status,
+                null,
+                "selected subtitle stream index " +
+                    FormatStreamIndex(helper.SubtitleOff.SelectedStreamIndex));
+        }
+
+        if (helper.Seek.Attempted)
+        {
+            AddLifecycleEvent(
+                lifecycle,
+                "seek",
+                helper.Seek.Status,
+                helper.Seek.ActualPositionTicks,
+                $"target {helper.Seek.TargetPositionTicks}; immediate {helper.Seek.ActualPositionTicks}; " +
+                    $"post-seek {helper.Seek.PostSeekPlaybackPositionTicks}");
+        }
+
+        AddLifecycleEvent(lifecycle, "stop", "completed", helper.Seek.PostSeekPlaybackPositionTicks);
 
         var request = PlaybackQualityRuntimeEvidenceCollector.CreateRequest(
             referenceCase,
@@ -139,10 +178,10 @@ internal static class NativeHeadlessHarness
             new PlaybackQualityPosition
             {
                 RequestedStartPositionTicks = 0,
-                SeekTargetPositionTicks = NativeHelperSeekTargetPositionTicks,
-                ActualPositionTicks = helper.SeekActualPositionTicks,
-                SeekPositionErrorMs = helper.SeekActualPositionTicks >= NativeHelperSeekTargetPositionTicks
-                    ? Math.Abs(helper.SeekActualPositionTicks - NativeHelperSeekTargetPositionTicks) / 10000.0
+                SeekTargetPositionTicks = helper.Seek.TargetPositionTicks,
+                ActualPositionTicks = helper.Seek.ActualPositionTicks,
+                SeekPositionErrorMs = helper.Seek.Attempted
+                    ? Math.Abs(helper.Seek.ActualPositionTicks - helper.Seek.TargetPositionTicks) / 10000.0
                     : null
             });
         if (request.RuntimeMetrics != null)
@@ -227,7 +266,7 @@ internal static class NativeHeadlessHarness
             out var source,
             out var color,
             out var display,
-            out var seekActualPositionTicks,
+            out var interactions,
             out var parseError))
         {
             return NativeHeadlessHelperResult.Failed(parseError);
@@ -241,7 +280,7 @@ internal static class NativeHeadlessHarness
             processWallClockMs,
             processCpuTimeMs,
             processCpuUtilizationRatio,
-            seekActualPositionTicks);
+            interactions);
     }
 
     private static double TryGetProcessCpuTimeMs(Process process)
@@ -262,14 +301,14 @@ internal static class NativeHeadlessHarness
         out NativeHeadlessSourceInfo source,
         out NativeHeadlessColorInfo color,
         out NativeHeadlessDisplayInfo display,
-        out long seekActualPositionTicks,
+        out NativeHeadlessInteractionResults interactions,
         out string error)
     {
         metrics = new PlaybackQualityMetricsSnapshot();
         source = new NativeHeadlessSourceInfo();
         color = new NativeHeadlessColorInfo();
         display = new NativeHeadlessDisplayInfo();
-        seekActualPositionTicks = 0;
+        interactions = new NativeHeadlessInteractionResults();
         error = "";
 
         var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -307,9 +346,44 @@ internal static class NativeHeadlessHarness
         metrics.AudioStarvedPasses = GetUInt64(values, "audioStarvedPasses");
         metrics.AudioClockTicks = GetInt64(values, "audioClockTicks");
         metrics.VideoPositionTicks = GetInt64(values, "videoPositionTicks");
-        seekActualPositionTicks = values.ContainsKey("seekActualPositionTicks")
-            ? GetInt64(values, "seekActualPositionTicks")
-            : metrics.VideoPositionTicks;
+        if (!TryGetInt64(values, "seekTargetPositionTicks", out var seekTargetPositionTicks) ||
+            seekTargetPositionTicks != NativeHelperSeekTargetPositionTicks)
+        {
+            error = "Native helper did not return the required non-zero seek target.";
+            return false;
+        }
+
+        interactions = new NativeHeadlessInteractionResults
+        {
+            AudioSwitch = new NativeHeadlessAudioSwitchOutcome
+            {
+                Attempted = GetInt32(values, "audioSwitchAttempted") != 0,
+                Status = GetString(values, "audioSwitchStatus"),
+                StreamIndex = GetInt32(values, "audioSwitchStreamIndex"),
+                PositionBeforeTicks = GetInt64(values, "audioSwitchPositionBeforeTicks"),
+                PositionAfterTicks = GetInt64(values, "audioSwitchPositionAfterTicks"),
+                SubmittedFramesBefore = GetUInt64(values, "audioSwitchSubmittedFramesBefore"),
+                SubmittedFramesAfter = GetUInt64(values, "audioSwitchSubmittedFramesAfter")
+            },
+            SubtitleSwitch1 = ParseSubtitleSwitchOutcome(values, "subtitleSwitch1"),
+            SubtitleSwitch2 = ParseSubtitleSwitchOutcome(values, "subtitleSwitch2"),
+            SubtitleOff = new NativeHeadlessSubtitleOffOutcome
+            {
+                Attempted = GetInt32(values, "subtitleOffAttempted") != 0,
+                Status = GetString(values, "subtitleOffStatus"),
+                SelectedStreamIndex = GetNullableStreamIndex(values, "subtitleOffSelectedStreamIndex")
+            },
+            Seek = new NativeHeadlessSeekOutcome
+            {
+                Attempted = GetInt32(values, "seekAttempted") != 0,
+                Status = GetString(values, "seekStatus"),
+                TargetPositionTicks = seekTargetPositionTicks,
+                ActualPositionTicks = GetInt64(values, "seekActualPositionTicks"),
+                PostSeekPlaybackPositionTicks = GetInt64(values, "postSeekPlaybackPositionTicks")
+            },
+            SelectedAudioStreamIndex = GetNullableStreamIndex(values, "selectedAudioStreamIndex"),
+            SelectedSubtitleStreamIndex = GetNullableStreamIndex(values, "selectedSubtitleStreamIndex")
+        };
         metrics.RenderIntervalMsP05 = GetDouble(values, "renderIntervalMsP05");
         metrics.RenderIntervalMsP50 = GetDouble(values, "renderIntervalMsP50");
         metrics.RenderIntervalMsP95 = GetDouble(values, "renderIntervalMsP95");
@@ -432,6 +506,20 @@ internal static class NativeHeadlessHarness
         return tracks;
     }
 
+    private static NativeHeadlessSubtitleSwitchOutcome ParseSubtitleSwitchOutcome(
+        Dictionary<string, string> values,
+        string prefix)
+    {
+        return new NativeHeadlessSubtitleSwitchOutcome
+        {
+            Attempted = GetInt32(values, prefix + "Attempted") != 0,
+            Status = GetString(values, prefix + "Status"),
+            StreamIndex = GetInt32(values, prefix + "StreamIndex"),
+            CueCountBefore = GetUInt64(values, prefix + "CueCountBefore"),
+            CueCountAfter = GetUInt64(values, prefix + "CueCountAfter")
+        };
+    }
+
     private static bool TryGetUInt64(
         Dictionary<string, string> values,
         string key,
@@ -451,14 +539,21 @@ internal static class NativeHeadlessHarness
             : 0;
     }
 
+    private static bool TryGetInt64(
+        Dictionary<string, string> values,
+        string key,
+        out long value)
+    {
+        value = 0;
+        return values.TryGetValue(key, out var raw) &&
+            long.TryParse(raw, out value);
+    }
+
     private static long GetInt64(
         Dictionary<string, string> values,
         string key)
     {
-        return values.TryGetValue(key, out var raw) &&
-            long.TryParse(raw, out var value)
-                ? value
-                : 0;
+        return TryGetInt64(values, key, out var value) ? value : 0;
     }
 
     private static int GetInt32(
@@ -469,6 +564,17 @@ internal static class NativeHeadlessHarness
             int.TryParse(raw, out var value)
                 ? value
                 : 0;
+    }
+
+    private static int? GetNullableStreamIndex(
+        Dictionary<string, string> values,
+        string key)
+    {
+        return values.TryGetValue(key, out var raw) &&
+            int.TryParse(raw, out var streamIndex) &&
+            streamIndex >= 0
+                ? streamIndex
+                : null;
     }
 
     private static string GetString(
@@ -514,7 +620,9 @@ internal static class NativeHeadlessHarness
 
     private static PlaybackDescriptor CreateDescriptor(
         string streamUrl,
-        NativeHeadlessSourceInfo sourceInfo)
+        NativeHeadlessSourceInfo sourceInfo,
+        int? selectedAudioStreamIndex,
+        int? selectedSubtitleStreamIndex)
     {
         var source = new EmbyMediaSource
         {
@@ -609,7 +717,7 @@ internal static class NativeHeadlessHarness
             };
         }
 
-        var selectedAudioStreamIndex = source.AudioStreams.FirstOrDefault()?.Index;
+        selectedAudioStreamIndex ??= source.AudioStreams.FirstOrDefault()?.Index;
         return new PlaybackDescriptor(
             itemId: "",
             mediaSource: source,
@@ -643,14 +751,39 @@ internal static class NativeHeadlessHarness
         PlaybackQualityLifecycle lifecycle,
         string operation,
         string status,
-        long? positionTicks)
+        long? positionTicks,
+        string message = "")
     {
         lifecycle.Events.Add(new PlaybackQualityLifecycleEvent
         {
             Operation = operation,
             Status = status,
-            PositionTicks = positionTicks
+            PositionTicks = positionTicks,
+            Message = message
         });
+    }
+
+    private static void AddSubtitleSwitchLifecycleEvent(
+        PlaybackQualityLifecycle lifecycle,
+        NativeHeadlessSubtitleSwitchOutcome outcome)
+    {
+        if (!outcome.Attempted)
+        {
+            return;
+        }
+
+        AddLifecycleEvent(
+            lifecycle,
+            "subtitle-switch",
+            outcome.Status,
+            null,
+            $"subtitle stream index {outcome.StreamIndex}; cue overlay render count " +
+                $"{outcome.CueCountBefore}->{outcome.CueCountAfter}");
+    }
+
+    private static string FormatStreamIndex(int? streamIndex)
+    {
+        return streamIndex?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "none";
     }
 
     private static void AddLimitation(
@@ -857,7 +990,7 @@ internal sealed class NativeHeadlessHelperResult
         double startupDurationMs,
         double processCpuTimeMs,
         double processCpuUtilizationRatio,
-        long seekActualPositionTicks,
+        NativeHeadlessInteractionResults interactions,
         string errorMessage)
     {
         ExitCode = exitCode;
@@ -869,7 +1002,7 @@ internal sealed class NativeHeadlessHelperResult
         ProcessWallClockMs = startupDurationMs;
         ProcessCpuTimeMs = processCpuTimeMs;
         ProcessCpuUtilizationRatio = processCpuUtilizationRatio;
-        SeekActualPositionTicks = seekActualPositionTicks;
+        Interactions = interactions;
         ErrorMessage = errorMessage;
     }
 
@@ -891,7 +1024,21 @@ internal sealed class NativeHeadlessHelperResult
 
     public double ProcessCpuUtilizationRatio { get; }
 
-    public long SeekActualPositionTicks { get; }
+    public NativeHeadlessInteractionResults Interactions { get; }
+
+    public NativeHeadlessAudioSwitchOutcome AudioSwitch => Interactions.AudioSwitch;
+
+    public NativeHeadlessSubtitleSwitchOutcome SubtitleSwitch1 => Interactions.SubtitleSwitch1;
+
+    public NativeHeadlessSubtitleSwitchOutcome SubtitleSwitch2 => Interactions.SubtitleSwitch2;
+
+    public NativeHeadlessSubtitleOffOutcome SubtitleOff => Interactions.SubtitleOff;
+
+    public NativeHeadlessSeekOutcome Seek => Interactions.Seek;
+
+    public int? SelectedAudioStreamIndex => Interactions.SelectedAudioStreamIndex;
+
+    public int? SelectedSubtitleStreamIndex => Interactions.SelectedSubtitleStreamIndex;
 
     public string ErrorMessage { get; }
 
@@ -903,7 +1050,7 @@ internal sealed class NativeHeadlessHelperResult
         double startupDurationMs,
         double processCpuTimeMs,
         double processCpuUtilizationRatio,
-        long seekActualPositionTicks)
+        NativeHeadlessInteractionResults interactions)
     {
         return new NativeHeadlessHelperResult(
             0,
@@ -914,7 +1061,7 @@ internal sealed class NativeHeadlessHelperResult
             startupDurationMs,
             processCpuTimeMs,
             processCpuUtilizationRatio,
-            seekActualPositionTicks,
+            interactions,
             "");
     }
 
@@ -929,9 +1076,83 @@ internal sealed class NativeHeadlessHelperResult
             0,
             0,
             0,
-            0,
+            new NativeHeadlessInteractionResults(),
             errorMessage);
     }
+}
+
+internal sealed class NativeHeadlessInteractionResults
+{
+    public NativeHeadlessAudioSwitchOutcome AudioSwitch { get; set; } =
+        new NativeHeadlessAudioSwitchOutcome();
+
+    public NativeHeadlessSubtitleSwitchOutcome SubtitleSwitch1 { get; set; } =
+        new NativeHeadlessSubtitleSwitchOutcome();
+
+    public NativeHeadlessSubtitleSwitchOutcome SubtitleSwitch2 { get; set; } =
+        new NativeHeadlessSubtitleSwitchOutcome();
+
+    public NativeHeadlessSubtitleOffOutcome SubtitleOff { get; set; } =
+        new NativeHeadlessSubtitleOffOutcome();
+
+    public NativeHeadlessSeekOutcome Seek { get; set; } =
+        new NativeHeadlessSeekOutcome();
+
+    public int? SelectedAudioStreamIndex { get; set; }
+
+    public int? SelectedSubtitleStreamIndex { get; set; }
+}
+
+internal sealed class NativeHeadlessAudioSwitchOutcome
+{
+    public bool Attempted { get; set; }
+
+    public string Status { get; set; } = "";
+
+    public int StreamIndex { get; set; } = -1;
+
+    public long PositionBeforeTicks { get; set; }
+
+    public long PositionAfterTicks { get; set; }
+
+    public ulong SubmittedFramesBefore { get; set; }
+
+    public ulong SubmittedFramesAfter { get; set; }
+}
+
+internal sealed class NativeHeadlessSubtitleSwitchOutcome
+{
+    public bool Attempted { get; set; }
+
+    public string Status { get; set; } = "";
+
+    public int StreamIndex { get; set; } = -1;
+
+    public ulong CueCountBefore { get; set; }
+
+    public ulong CueCountAfter { get; set; }
+}
+
+internal sealed class NativeHeadlessSubtitleOffOutcome
+{
+    public bool Attempted { get; set; }
+
+    public string Status { get; set; } = "";
+
+    public int? SelectedStreamIndex { get; set; }
+}
+
+internal sealed class NativeHeadlessSeekOutcome
+{
+    public bool Attempted { get; set; }
+
+    public string Status { get; set; } = "";
+
+    public long TargetPositionTicks { get; set; }
+
+    public long ActualPositionTicks { get; set; }
+
+    public long PostSeekPlaybackPositionTicks { get; set; }
 }
 
 internal sealed class NativeHeadlessSourceInfo

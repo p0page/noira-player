@@ -3,8 +3,10 @@
 #include <cstdlib>
 #include <cwchar>
 #include <iostream>
+#include <optional>
 #include <string>
 #include <thread>
+#include <vector>
 
 #include <winrt/base.h>
 
@@ -20,7 +22,7 @@ using winrt::NoiraPlayer::Native::implementation::PlaybackGraphOpenRequest;
 
 namespace
 {
-    constexpr int64_t SeekTargetPositionTicks = 0;
+    constexpr int64_t SeekTargetPositionTicks = 10'000'000;
     constexpr wchar_t const* DefaultStreamUrl =
         L"https://repo.jellyfin.org/test-videos/SDR/HEVC%2010bit/Test%20Jellyfin%201080p%20HEVC%2010bit%203M.mp4";
 
@@ -28,6 +30,42 @@ namespace
     {
         std::wstring StreamUrl{DefaultStreamUrl};
         int DurationSeconds{3};
+    };
+
+    struct AudioSwitchOutcome
+    {
+        bool Attempted{false};
+        std::string Status{"not-attempted"};
+        int32_t StreamIndex{-1};
+        int64_t PositionBeforeTicks{0};
+        int64_t PositionAfterTicks{0};
+        uint64_t SubmittedFramesBefore{0};
+        uint64_t SubmittedFramesAfter{0};
+    };
+
+    struct SubtitleSwitchOutcome
+    {
+        bool Attempted{false};
+        std::string Status{"not-attempted"};
+        int32_t StreamIndex{-1};
+        uint64_t CueCountBefore{0};
+        uint64_t CueCountAfter{0};
+    };
+
+    struct SubtitleOffOutcome
+    {
+        bool Attempted{false};
+        std::string Status{"not-attempted"};
+        int32_t SelectedStreamIndex{-1};
+    };
+
+    struct SeekOutcome
+    {
+        bool Attempted{false};
+        std::string Status{"not-attempted"};
+        int64_t TargetPositionTicks{SeekTargetPositionTicks};
+        int64_t ActualPositionTicks{0};
+        int64_t PostSeekPlaybackPositionTicks{0};
     };
 
     Options ParseOptions(int argc, wchar_t** argv)
@@ -125,17 +163,143 @@ int wmain(int argc, wchar_t** argv)
 
         std::this_thread::sleep_for(halfWindow);
         auto playbackSnapshot = graph.QualityMetricsSnapshot();
+        auto source = graph.VideoSourceSnapshot();
+        auto tracks = graph.SourceTrackSnapshots();
+
+        std::vector<int32_t> audioStreamIndexes;
+        std::vector<int32_t> subtitleStreamIndexes;
+        std::optional<int32_t> selectedAudioStreamIndex;
+        for (auto const& track : tracks)
+        {
+            if (track.Kind == "Audio")
+            {
+                audioStreamIndexes.push_back(track.StreamIndex);
+                if (!selectedAudioStreamIndex.has_value() && track.IsDefault)
+                {
+                    selectedAudioStreamIndex = track.StreamIndex;
+                }
+            }
+            else if (track.Kind == "Subtitle")
+            {
+                subtitleStreamIndexes.push_back(track.StreamIndex);
+            }
+        }
+
+        if (!selectedAudioStreamIndex.has_value() && !audioStreamIndexes.empty())
+        {
+            selectedAudioStreamIndex = audioStreamIndexes.front();
+        }
 
         graph.Pause();
         std::this_thread::sleep_for(100ms);
         graph.Resume();
-        graph.Seek(SeekTargetPositionTicks);
-        auto seekSnapshot = graph.QualityMetricsSnapshot();
+
+        AudioSwitchOutcome audioSwitch;
+        if (audioStreamIndexes.size() >= 2)
+        {
+            audioSwitch.Attempted = true;
+            audioSwitch.StreamIndex = audioStreamIndexes[1];
+            audioSwitch.PositionBeforeTicks = graph.CurrentPositionTicks();
+            audioSwitch.SubmittedFramesBefore = graph.QualityMetricsSnapshot().SubmittedAudioFrames;
+            try
+            {
+                graph.SwitchAudioStream(audioSwitch.StreamIndex);
+                selectedAudioStreamIndex = audioSwitch.StreamIndex;
+                std::this_thread::sleep_for(500ms);
+                audioSwitch.PositionAfterTicks = graph.CurrentPositionTicks();
+                audioSwitch.SubmittedFramesAfter = graph.QualityMetricsSnapshot().SubmittedAudioFrames;
+                audioSwitch.Status =
+                    audioSwitch.PositionAfterTicks > audioSwitch.PositionBeforeTicks &&
+                    audioSwitch.SubmittedFramesAfter > audioSwitch.SubmittedFramesBefore
+                        ? "completed"
+                        : "failed";
+            }
+            catch (...)
+            {
+                audioSwitch.PositionAfterTicks = graph.CurrentPositionTicks();
+                audioSwitch.SubmittedFramesAfter = graph.QualityMetricsSnapshot().SubmittedAudioFrames;
+                audioSwitch.Status = "failed";
+            }
+        }
+
+        auto runSubtitleSwitch = [&graph](int32_t streamIndex)
+        {
+            SubtitleSwitchOutcome outcome;
+            outcome.Attempted = true;
+            outcome.StreamIndex = streamIndex;
+            outcome.CueCountBefore = graph.SubtitleCueRenderCount();
+            try
+            {
+                graph.SwitchSubtitleStream(streamIndex);
+                std::this_thread::sleep_for(500ms);
+                outcome.CueCountAfter = graph.SubtitleCueRenderCount();
+                outcome.Status = outcome.CueCountAfter > outcome.CueCountBefore
+                    ? "completed"
+                    : "failed";
+            }
+            catch (...)
+            {
+                outcome.CueCountAfter = graph.SubtitleCueRenderCount();
+                outcome.Status = "failed";
+            }
+
+            return outcome;
+        };
+
+        SubtitleSwitchOutcome subtitleSwitch1;
+        SubtitleSwitchOutcome subtitleSwitch2;
+        if (!subtitleStreamIndexes.empty())
+        {
+            subtitleSwitch1 = runSubtitleSwitch(subtitleStreamIndexes[0]);
+        }
+
+        if (subtitleStreamIndexes.size() >= 2)
+        {
+            subtitleSwitch2 = runSubtitleSwitch(subtitleStreamIndexes[1]);
+        }
+
+        SubtitleOffOutcome subtitleOff;
+        if (!subtitleStreamIndexes.empty())
+        {
+            subtitleOff.Attempted = true;
+            try
+            {
+                graph.SwitchSubtitleStream(std::nullopt);
+                auto selectedSubtitleStreamIndex = graph.SelectedSubtitleStreamIndex();
+                subtitleOff.SelectedStreamIndex = selectedSubtitleStreamIndex.value_or(-1);
+                subtitleOff.Status = selectedSubtitleStreamIndex.has_value()
+                    ? "failed"
+                    : "completed";
+            }
+            catch (...)
+            {
+                subtitleOff.SelectedStreamIndex = graph.SelectedSubtitleStreamIndex().value_or(-1);
+                subtitleOff.Status = "failed";
+            }
+        }
+
+        SeekOutcome seek;
+        seek.Attempted = true;
+        auto seekCallCompleted = false;
+        try
+        {
+            graph.Seek(seek.TargetPositionTicks);
+            seek.ActualPositionTicks = graph.QualityMetricsSnapshot().VideoPositionTicks;
+            seekCallCompleted = true;
+        }
+        catch (...)
+        {
+            seek.ActualPositionTicks = graph.QualityMetricsSnapshot().VideoPositionTicks;
+        }
+
         std::this_thread::sleep_for(sampleWindow - halfWindow);
 
         auto postSeekPlaybackSnapshot = graph.QualityMetricsSnapshot();
-        auto source = graph.VideoSourceSnapshot();
-        auto tracks = graph.SourceTrackSnapshots();
+        seek.PostSeekPlaybackPositionTicks = postSeekPlaybackSnapshot.VideoPositionTicks;
+        seek.Status = seekCallCompleted &&
+            seek.PostSeekPlaybackPositionTicks > seek.ActualPositionTicks
+                ? "completed"
+                : "failed";
         auto displayRefreshRateHz = source
             ? HdrDisplayRefreshRatePolicy::SelectSoftwareOnlyRefreshRateSnapshot(source->FrameRate)
             : 0.0;
@@ -159,8 +323,31 @@ int wmain(int argc, wchar_t** argv)
             << " audioStarvedPasses=" << playbackSnapshot.AudioStarvedPasses
             << " audioClockTicks=" << playbackSnapshot.AudioClockTicks
             << " videoPositionTicks=" << playbackSnapshot.VideoPositionTicks
-            << " seekActualPositionTicks=" << seekSnapshot.VideoPositionTicks
-            << " postSeekPlaybackPositionTicks=" << postSeekPlaybackSnapshot.VideoPositionTicks
+            << " audioSwitchAttempted=" << (audioSwitch.Attempted ? 1 : 0)
+            << " audioSwitchStatus=" << audioSwitch.Status
+            << " audioSwitchStreamIndex=" << audioSwitch.StreamIndex
+            << " audioSwitchPositionBeforeTicks=" << audioSwitch.PositionBeforeTicks
+            << " audioSwitchPositionAfterTicks=" << audioSwitch.PositionAfterTicks
+            << " audioSwitchSubmittedFramesBefore=" << audioSwitch.SubmittedFramesBefore
+            << " audioSwitchSubmittedFramesAfter=" << audioSwitch.SubmittedFramesAfter
+            << " subtitleSwitch1Attempted=" << (subtitleSwitch1.Attempted ? 1 : 0)
+            << " subtitleSwitch1Status=" << subtitleSwitch1.Status
+            << " subtitleSwitch1StreamIndex=" << subtitleSwitch1.StreamIndex
+            << " subtitleSwitch1CueCountBefore=" << subtitleSwitch1.CueCountBefore
+            << " subtitleSwitch1CueCountAfter=" << subtitleSwitch1.CueCountAfter
+            << " subtitleSwitch2Attempted=" << (subtitleSwitch2.Attempted ? 1 : 0)
+            << " subtitleSwitch2Status=" << subtitleSwitch2.Status
+            << " subtitleSwitch2StreamIndex=" << subtitleSwitch2.StreamIndex
+            << " subtitleSwitch2CueCountBefore=" << subtitleSwitch2.CueCountBefore
+            << " subtitleSwitch2CueCountAfter=" << subtitleSwitch2.CueCountAfter
+            << " subtitleOffAttempted=" << (subtitleOff.Attempted ? 1 : 0)
+            << " subtitleOffStatus=" << subtitleOff.Status
+            << " subtitleOffSelectedStreamIndex=" << subtitleOff.SelectedStreamIndex
+            << " seekAttempted=" << (seek.Attempted ? 1 : 0)
+            << " seekStatus=" << seek.Status
+            << " seekTargetPositionTicks=" << seek.TargetPositionTicks
+            << " seekActualPositionTicks=" << seek.ActualPositionTicks
+            << " postSeekPlaybackPositionTicks=" << seek.PostSeekPlaybackPositionTicks
             << " renderIntervalMsP05=" << playbackSnapshot.RenderIntervalMsP05
             << " renderIntervalMsP50=" << playbackSnapshot.RenderIntervalMsP50
             << " renderIntervalMsP95=" << playbackSnapshot.RenderIntervalMsP95
@@ -240,6 +427,7 @@ int wmain(int argc, wchar_t** argv)
             << " displayRefreshPolicy=software-only-cadence-policy"
             << " sourceTrackCount=" << tracks.size()
             << " subtitleCueRenderCount=" << subtitleCueRenderCount
+            << " selectedAudioStreamIndex=" << selectedAudioStreamIndex.value_or(-1)
             << " selectedSubtitleStreamIndex=" << selectedSubtitleStreamIndex.value_or(-1);
 
         for (auto index = size_t{0}; index < tracks.size(); ++index)

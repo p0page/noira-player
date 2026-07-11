@@ -40,6 +40,7 @@ $nativeHdr1030CaseId = 'local/native-headless-hdr10-30'
 $nativeHdr1060CaseId = 'local/native-headless-hdr10-60'
 $nativeCadenceDurationSeconds = 5
 $nativeAvDurationSeconds = 3
+$nativeAvSampleDurationSeconds = 6
 $nativeAvMinimumRenderedVideoFrames = 40
 
 function Get-QualityReportPath {
@@ -128,13 +129,20 @@ function New-NativePlaybackAvSample {
     $sampleDirectory = Join-Path $smokeRoot 'samples'
     New-Item -ItemType Directory -Path $sampleDirectory -Force | Out-Null
     $samplePath = Join-Path $sampleDirectory 'native-headless-av-smoke.mp4'
-    $subtitlePath = Join-Path $sampleDirectory 'native-headless-av-smoke.srt'
+    $subtitle1Path = Join-Path $sampleDirectory 'native-headless-av-smoke-eng.srt'
+    $subtitle2Path = Join-Path $sampleDirectory 'native-headless-av-smoke-spa.srt'
     @"
 1
-00:00:00,000 --> 00:00:02,500
-Native headless subtitle smoke
+00:00:00,000 --> 00:00:06,000
+Native headless English subtitle smoke
 
-"@ | Set-Content -LiteralPath $subtitlePath -Encoding UTF8
+"@ | Set-Content -LiteralPath $subtitle1Path -Encoding UTF8
+    @"
+1
+00:00:00,000 --> 00:00:06,000
+Native headless Spanish subtitle smoke
+
+"@ | Set-Content -LiteralPath $subtitle2Path -Encoding UTF8
     $ffmpeg = 'C:\Program Files\FFmpeg\bin\ffmpeg.exe'
     if (-not (Test-Path -LiteralPath $ffmpeg)) {
         throw "ffmpeg.exe was not found at $ffmpeg."
@@ -147,11 +155,16 @@ Native headless subtitle smoke
         -i testsrc2=size=320x180:rate=30 `
         -f lavfi `
         -i sine=frequency=1000:sample_rate=48000 `
-        -i $subtitlePath `
+        -f lavfi `
+        -i sine=frequency=500:sample_rate=48000 `
+        -i $subtitle1Path `
+        -i $subtitle2Path `
         -map 0:v:0 `
         -map 1:a:0 `
-        -map 2:s:0 `
-        -t $nativeAvDurationSeconds `
+        -map 2:a:0 `
+        -map 3:s:0 `
+        -map 4:s:0 `
+        -t $nativeAvSampleDurationSeconds `
         -vf "setparams=range=tv:color_primaries=bt709:color_trc=bt709:colorspace=bt709" `
         -pix_fmt yuv420p `
         -c:v libx264 `
@@ -160,8 +173,14 @@ Native headless subtitle smoke
         -c:a aac `
         -b:a 128k `
         -c:s mov_text `
+        -metadata:s:a:0 language=eng `
+        -metadata:s:a:1 language=jpn `
         -metadata:s:s:0 language=eng `
-        -shortest `
+        -metadata:s:s:1 language=spa `
+        -disposition:a:0 default `
+        -disposition:a:1 0 `
+        -disposition:s:0 default `
+        -disposition:s:1 0 `
         -movflags +faststart `
         $samplePath
     if ($LASTEXITCODE -ne 0) {
@@ -169,6 +188,47 @@ Native headless subtitle smoke
     }
 
     return ([System.Uri](Resolve-Path $samplePath).Path).AbsoluteUri
+}
+
+function Assert-NativePlaybackAvSample {
+    param([string]$SampleUrl)
+
+    $ffprobe = 'C:\Program Files\FFmpeg\bin\ffprobe.exe'
+    if (-not (Test-Path -LiteralPath $ffprobe)) {
+        throw "ffprobe.exe was not found at $ffprobe."
+    }
+
+    $samplePath = ([System.Uri]$SampleUrl).LocalPath
+    $probeJson = & $ffprobe `
+        -v error `
+        -show_entries 'format=duration:stream=index,codec_type:stream_tags=language:stream_disposition=default' `
+        -of json `
+        $samplePath
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Failed to inspect native-headless local A/V playback sample.'
+    }
+
+    $probe = $probeJson | ConvertFrom-Json
+    $videoStreams = @($probe.streams | Where-Object { $_.codec_type -eq 'video' })
+    $audioStreams = @($probe.streams | Where-Object { $_.codec_type -eq 'audio' })
+    $subtitleStreams = @($probe.streams | Where-Object { $_.codec_type -eq 'subtitle' })
+    if ([Math]::Abs(([double]$probe.format.duration) - $nativeAvSampleDurationSeconds) -gt 0.001 -or
+        $videoStreams.Count -ne 1 -or
+        $audioStreams.Count -ne 2 -or
+        $subtitleStreams.Count -ne 2) {
+        throw 'Expected the native-headless A/V sample to be exactly 6 seconds with 1 video, 2 audio, and 2 subtitle streams.'
+    }
+
+    if ($audioStreams[0].tags.language -ne 'eng' -or
+        $audioStreams[0].disposition.default -ne 1 -or
+        $audioStreams[1].tags.language -ne 'jpn' -or
+        $audioStreams[1].disposition.default -ne 0 -or
+        $subtitleStreams[0].tags.language -ne 'eng' -or
+        $subtitleStreams[0].disposition.default -ne 1 -or
+        $subtitleStreams[1].tags.language -ne 'spa' -or
+        $subtitleStreams[1].disposition.default -ne 0) {
+        throw 'Expected the native-headless A/V sample to preserve audio/subtitle language and default dispositions.'
+    }
 }
 
 function Get-AppRuntimePath {
@@ -475,6 +535,7 @@ if (-not ($analysis.limitations -contains 'native-headless: offscreen DirectX co
 $nativeHelperExe = Build-NativePlaybackGraphHelper -OutputDirectory $nativeHelperRoot
 $nativeSampleUrl = New-NativePlaybackSample
 $nativeAvSampleUrl = New-NativePlaybackAvSample
+Assert-NativePlaybackAvSample -SampleUrl $nativeAvSampleUrl
 $nativeSdr23976SampleUrl = New-NativePlaybackSdrSample -Name 'native-headless-sdr-23976' -Rate '24000/1001'
 $nativeSdr24SampleUrl = New-NativePlaybackSdrSample -Name 'native-headless-sdr-24' -Rate '24'
 $nativeSdr60SampleUrl = New-NativePlaybackSdrSample -Name 'native-headless-sdr-60' -Rate '60'
@@ -576,13 +637,60 @@ if (-not (Test-Path $nativeAvReportPath)) {
 }
 
 $nativeAvReport = Get-Content -LiteralPath $nativeAvReportPath -Raw | ConvertFrom-Json
-if ($nativeAvReport.report.tracks.audioTrackCount -lt 1) {
-    throw 'Expected native helper A/V report to include discovered audio tracks.'
+if ($nativeAvReport.report.tracks.audioTrackCount -ne 2 -or
+    $nativeAvReport.report.tracks.audio.Count -ne 2) {
+    throw 'Expected native helper A/V report to include exactly two discovered audio tracks.'
 }
 
-if ($nativeAvReport.report.tracks.subtitleTrackCount -lt 1 -or
-    $nativeAvReport.report.tracks.subtitles.Count -lt 1) {
-    throw 'Expected native helper A/V report to include discovered subtitle tracks.'
+if ($nativeAvReport.report.tracks.subtitleTrackCount -ne 2 -or
+    $nativeAvReport.report.tracks.subtitles.Count -ne 2) {
+    throw 'Expected native helper A/V report to include exactly two discovered subtitle tracks.'
+}
+
+if ($nativeAvReport.report.position.seekTargetPositionTicks -ne 10000000) {
+    throw 'Expected native helper A/V report to seek to the non-zero 1 second target.'
+}
+
+$nativeAvLifecycleEvents = @($nativeAvReport.report.lifecycle.events)
+$audioSwitchEvents = @($nativeAvLifecycleEvents | Where-Object { $_.operation -eq 'audio-switch' })
+if ($audioSwitchEvents.Count -ne 1 -or
+    $audioSwitchEvents[0].status -ne 'completed' -or
+    [string]::IsNullOrWhiteSpace($audioSwitchEvents[0].message)) {
+    throw 'Expected one completed audio-switch lifecycle event with real interaction evidence.'
+}
+
+$subtitleSwitchEvents = @($nativeAvLifecycleEvents | Where-Object { $_.operation -eq 'subtitle-switch' })
+if ($subtitleSwitchEvents.Count -ne 2 -or
+    @($subtitleSwitchEvents | Where-Object { $_.status -eq 'failed' }).Count -lt 1 -or
+    @($subtitleSwitchEvents | Where-Object { $_.status -notin @('completed', 'failed') }).Count -ne 0 -or
+    @($subtitleSwitchEvents | Where-Object { [string]::IsNullOrWhiteSpace($_.message) }).Count -ne 0) {
+    throw 'Expected two honestly mapped subtitle-switch events with at least one failed cue-render outcome.'
+}
+
+$subtitleOffEvents = @($nativeAvLifecycleEvents | Where-Object { $_.operation -eq 'subtitle-off' })
+if ($subtitleOffEvents.Count -ne 1 -or
+    $subtitleOffEvents[0].status -ne 'completed' -or
+    [string]::IsNullOrWhiteSpace($subtitleOffEvents[0].message)) {
+    throw 'Expected one completed subtitle-off lifecycle event with final selection evidence.'
+}
+
+$seekEvents = @($nativeAvLifecycleEvents | Where-Object { $_.operation -eq 'seek' })
+if ($seekEvents.Count -ne 1 -or
+    $seekEvents[0].status -ne 'completed' -or
+    [string]::IsNullOrWhiteSpace($seekEvents[0].message)) {
+    throw 'Expected one completed non-zero seek lifecycle event with landing evidence.'
+}
+
+if ($nativeAvReport.report.tracks.selectedAudioStreamIndex -ne $nativeAvReport.report.tracks.audio[1].index -or
+    $null -ne $nativeAvReport.report.tracks.selectedSubtitleStreamIndex -or
+    $nativeAvReport.report.tracks.isSubtitleDisabled -ne $true) {
+    throw 'Expected final selected tracks to match the switched audio track and disabled subtitles.'
+}
+
+if ($nativeAvReport.report.result -ne 'fail' -or
+    @($nativeAvReport.report.failureReasons | Where-Object { $_ -match 'subtitle|cue' }).Count -lt 1 -or
+    -not [string]::IsNullOrWhiteSpace($nativeAvReport.report.error.code)) {
+    throw 'Expected the old Core A/V case to fail honestly on subtitle cue rendering, not evidence collection.'
 }
 
 if ($nativeAvReport.report.buffers.submittedAudioFrames -le 0) {
@@ -1019,10 +1127,18 @@ if ($nativeMaterializedReport.modelAnalysis.missingEvidence -contains 'display.r
 }
 
 $nativeAvMaterializedReport = Get-Content -LiteralPath $nativeAvMaterializedReportPath -Raw | ConvertFrom-Json
-if ($nativeAvMaterializedReport.report.tracks.audioTrackCount -lt 1 -or
-    $nativeAvMaterializedReport.report.tracks.subtitleTrackCount -lt 1 -or
+if ($nativeAvMaterializedReport.report.tracks.audioTrackCount -ne 2 -or
+    $nativeAvMaterializedReport.report.tracks.subtitleTrackCount -ne 2 -or
     $nativeAvMaterializedReport.modelAnalysis.avSync.status -ne 'synced') {
     throw 'Expected materialized native helper A/V report to preserve audio/subtitle track and A/V sync evidence.'
+}
+
+if ($nativeAvMaterializedReport.report.result -ne 'fail' -or
+    $nativeAvMaterializedReport.modelAnalysis.result -ne 'fail' -or
+    -not ($nativeAvMaterializedReport.modelAnalysis.failureAreas -contains 'subtitles') -or
+    @($nativeAvMaterializedReport.report.failureReasons | Where-Object { $_ -match 'subtitle.*cue overlay' }).Count -lt 1 -or
+    -not [string]::IsNullOrWhiteSpace($nativeAvMaterializedReport.report.error.code)) {
+    throw 'Expected materialized A/V report to preserve the old Core subtitle cue-overlay failure without an evidence-collection error.'
 }
 
 if ($nativeAvMaterializedReport.report.position.seekPositionErrorMs -gt 250.0) {
