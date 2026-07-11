@@ -624,8 +624,10 @@ namespace winrt::NoiraPlayer::Native::implementation
                 m_videoPrerollTargetTicks.reset();
             }
 
+            auto hasAudioClock = false;
             if (auto audioPosition = m_audioRenderer.CurrentPositionTicks())
             {
+                hasAudioClock = true;
                 ResetVideoClock();
                 auto hasQueuedAudio = m_audioRenderer.QueuedBufferCount() > 0;
                 if (PlaybackFramePacing::ShouldWaitForAudio(
@@ -734,6 +736,9 @@ namespace winrt::NoiraPlayer::Native::implementation
                 m_lastRenderedFrameAt = renderedAt;
                 ++m_renderedVideoFrameCount;
                 ++m_qualityMetrics.RenderedVideoFrames;
+                m_nextRenderLoopWait = PlaybackFramePacing::PostPresentRenderLoopWait(hasAudioClock);
+                m_nextRenderLoopWaitUseTimer =
+                    PlaybackFramePacing::ShouldUseRenderLoopTimer(m_nextRenderLoopWait);
                 m_seekPresentationTracker.RecordPresentedFrame(
                     m_seekPresentationTracker.CurrentGeneration(),
                     m_renderedVideoFrameCount,

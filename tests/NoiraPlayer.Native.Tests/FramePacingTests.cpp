@@ -8,6 +8,8 @@ int main()
 {
     assert(PlaybackFramePacing::RenderLoopWait().count() <= 5);
     assert(PlaybackFramePacing::ShouldUseRenderLoopTimer(PlaybackFramePacing::RenderLoopWait()));
+    assert(PlaybackFramePacing::PostPresentRenderLoopWait(true).count() == 0);
+    assert(PlaybackFramePacing::PostPresentRenderLoopWait(false) == PlaybackFramePacing::RenderLoopWait());
 
     assert(PlaybackFramePacing::ShouldWaitForAudio(1'500'000, 1'000'000, true));
     assert(!PlaybackFramePacing::ShouldWaitForAudio(1'050'000, 1'000'000, true));
