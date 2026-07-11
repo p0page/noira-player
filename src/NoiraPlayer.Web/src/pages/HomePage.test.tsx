@@ -307,6 +307,107 @@ describe('HomePage', () => {
     });
   });
 
+  it('restores the same target after Home remounts under the same Provider', async () => {
+    const view = render(
+      <FocusProvider>
+        <HomePage
+          key="first-home-mount-anonymous"
+          rows={[
+            {
+              key: 'remount-row-anonymous',
+              title: 'Remount row anonymous',
+              kind: 'resume',
+              items: [
+                {
+                  id: 'remount-item-anonymous',
+                  name: 'Remount item anonymous',
+                  type: 'Episode',
+                  artwork: {},
+                },
+              ],
+            },
+          ]}
+          onHome={() => undefined}
+          onLogout={() => undefined}
+          onOpenLibrary={() => undefined}
+          onOpenMedia={() => undefined}
+        />
+      </FocusProvider>,
+    );
+
+    const firstCard = screen.getByRole('button', { name: 'Open Remount item anonymous' });
+    const firstHome = screen.getByRole('button', { name: 'Home' });
+    const firstLogout = screen.getByRole('button', { name: 'Log out' });
+    mockRect(getScopeElement('home-guide'), 0, 0, 72, 420);
+    mockRect(firstHome, 0, 0, 72, 52);
+    mockRect(firstLogout, 0, 320, 72, 52);
+    mockRect(getScopeElement('home-row:remount-row-anonymous'), 280, 0, 600, 240);
+    mockRect(firstCard, 300, 0, 240, 135);
+
+    await updateLayoutsAndFocus(firstCard.getAttribute('data-focus-key') as string);
+    await waitForThrottleWindow();
+    dispatchKey(window, 'ArrowLeft', 37);
+    await waitFor(() => {
+      expect(document.activeElement).toBe(firstHome);
+    });
+
+    dispatchKey(firstHome, 'Escape', 27);
+    await waitFor(() => {
+      expect(document.activeElement).toBe(firstCard);
+    });
+
+    view.rerender(
+      <FocusProvider>
+        <HomePage
+          key="second-home-mount-anonymous"
+          rows={[
+            {
+              key: 'remount-row-anonymous',
+              title: 'Remount row anonymous',
+              kind: 'resume',
+              items: [
+                {
+                  id: 'remount-item-anonymous',
+                  name: 'Remount item anonymous',
+                  type: 'Episode',
+                  artwork: {},
+                },
+              ],
+            },
+          ]}
+          onHome={() => undefined}
+          onLogout={() => undefined}
+          onOpenLibrary={() => undefined}
+          onOpenMedia={() => undefined}
+        />
+      </FocusProvider>,
+    );
+
+    const remountedCard = screen.getByRole('button', {
+      name: 'Open Remount item anonymous',
+    });
+    const remountedHome = screen.getByRole('button', { name: 'Home' });
+    const remountedLogout = screen.getByRole('button', { name: 'Log out' });
+    expect(remountedCard).not.toBe(firstCard);
+    mockRect(getScopeElement('home-guide'), 0, 0, 72, 420);
+    mockRect(remountedHome, 0, 0, 72, 52);
+    mockRect(remountedLogout, 0, 320, 72, 52);
+    mockRect(getScopeElement('home-row:remount-row-anonymous'), 280, 0, 600, 240);
+    mockRect(remountedCard, 300, 0, 240, 135);
+
+    await updateLayoutsAndFocus(remountedCard.getAttribute('data-focus-key') as string);
+    await waitForThrottleWindow();
+    dispatchKey(window, 'ArrowLeft', 37);
+    await waitFor(() => {
+      expect(document.activeElement).toBe(remountedHome);
+    });
+
+    dispatchKey(remountedHome, 'Escape', 27);
+    await waitFor(() => {
+      expect(document.activeElement).toBe(remountedCard);
+    });
+  });
+
   it('wires Home, real library, media, and logout selections to callbacks', () => {
     const onHome = vi.fn();
     const onLogout = vi.fn();

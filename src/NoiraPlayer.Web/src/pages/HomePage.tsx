@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { FocusEvent } from 'react';
 import type { HomeRow } from '../catalog/homeCatalog';
 import { Guide } from '../components/Guide';
@@ -17,9 +17,12 @@ export interface HomePageProps {
 }
 
 interface RestoreRequest {
-  requestId: number;
+  requestId: string;
   target: FocusTarget;
 }
+
+const restoreRequestFallbackTimestamp = Date.now().toString(36);
+let restoreRequestFallbackCounter = 0;
 
 export function HomePage({
   disabled,
@@ -33,7 +36,6 @@ export function HomePage({
   const libraries = useMemo(() => getLibraries(visibleRows), [visibleRows]);
   const [returnTarget, setReturnTarget] = useState<FocusTarget | null>(null);
   const [restoreRequest, setRestoreRequest] = useState<RestoreRequest | null>(null);
-  const restoreRequestIdRef = useRef(0);
 
   function handleContentFocus(event: FocusEvent<HTMLElement>) {
     if (!(event.target instanceof HTMLElement)) {
@@ -56,9 +58,8 @@ export function HomePage({
   }
 
   function restoreContentFocus(target: FocusTarget) {
-    restoreRequestIdRef.current += 1;
     setRestoreRequest({
-      requestId: restoreRequestIdRef.current,
+      requestId: createRestoreRequestId(),
       target,
     });
   }
@@ -160,4 +161,13 @@ function getLibraries(rows: readonly HomeRow[]): LibraryView[] {
   }
 
   return libraries;
+}
+
+function createRestoreRequestId(): string {
+  if (typeof globalThis.crypto?.randomUUID === 'function') {
+    return globalThis.crypto.randomUUID();
+  }
+
+  restoreRequestFallbackCounter += 1;
+  return `${restoreRequestFallbackTimestamp}:${restoreRequestFallbackCounter.toString(36)}`;
 }
