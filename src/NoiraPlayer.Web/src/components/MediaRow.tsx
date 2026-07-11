@@ -1,5 +1,6 @@
 import { FocusScope } from '../focus/FocusScope';
 import type { HomeRow } from '../catalog/homeCatalog';
+import type { FocusTarget } from '../navigation/routes';
 import type { LibraryView, MediaItem } from '../types';
 import {
   isLibraryView,
@@ -11,8 +12,8 @@ import {
 export interface MediaRowProps {
   defaultFocus?: boolean;
   disabled?: boolean;
-  onOpenLibrary: (library: LibraryView) => void;
-  onOpenMedia: (item: MediaItem) => void;
+  onOpenLibrary: (library: LibraryView, origin: FocusTarget) => void;
+  onOpenMedia: (item: MediaItem, origin: FocusTarget) => void;
   restoreFocusKey?: string;
   restoreRequestId?: number | string;
   row: HomeRow;
@@ -61,10 +62,11 @@ export function MediaRow({
               focusKey={focusKey}
               item={item}
               onSelect={() => {
+                const origin = { focusKey, scopeKey };
                 if (isLibraryView(item)) {
-                  onOpenLibrary(item);
+                  onOpenLibrary(item, origin);
                 } else {
-                  onOpenMedia(item);
+                  onOpenMedia(item, origin);
                 }
               }}
               variant={variant}

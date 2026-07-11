@@ -1,13 +1,20 @@
 import { useMemo, useState } from 'react';
 import type { FocusEvent } from 'react';
 import type { HomeRow } from '../catalog/homeCatalog';
-import { Guide } from '../components/Guide';
+import {
+  getGuideLibraryFocusTarget,
+  Guide,
+} from '../components/Guide';
 import { isLibraryView } from '../components/MediaCard';
 import {
   getHomeRowScopeKey,
   MediaRow,
   normalizeHomeRow,
 } from '../components/MediaRow';
+import {
+  createFocusRestoreRequest,
+  type FocusRestoreRequest,
+} from '../navigation/focusRequests';
 import type { FocusTarget } from '../navigation/routes';
 import type { LibraryView, MediaItem } from '../types';
 
@@ -15,18 +22,11 @@ export interface HomePageProps {
   busy?: boolean;
   onHome: () => void;
   onLogout: () => void;
-  onOpenLibrary: (library: LibraryView) => void;
-  onOpenMedia: (item: MediaItem) => void;
+  onOpenLibrary: (library: LibraryView, origin: FocusTarget) => void;
+  onOpenMedia: (item: MediaItem, origin: FocusTarget) => void;
+  restoreRequest?: FocusRestoreRequest | null;
   rows: readonly HomeRow[];
 }
-
-interface RestoreRequest {
-  requestId: string;
-  target: FocusTarget;
-}
-
-const restoreRequestFallbackTimestamp = Date.now().toString(36);
-let restoreRequestFallbackCounter = 0;
 
 export function HomePage({
   busy = false,
@@ -34,12 +34,15 @@ export function HomePage({
   onLogout,
   onOpenLibrary,
   onOpenMedia,
+  restoreRequest: externalRestoreRequest,
   rows,
 }: HomePageProps) {
   const visibleRows = useMemo(() => getVisibleRows(rows), [rows]);
   const libraries = useMemo(() => getLibraries(rows), [rows]);
   const [returnTarget, setReturnTarget] = useState<FocusTarget | null>(null);
-  const [restoreRequest, setRestoreRequest] = useState<RestoreRequest | null>(null);
+  const [guideRestoreRequest, setGuideRestoreRequest] =
+    useState<FocusRestoreRequest | null>(null);
+  const restoreRequest = guideRestoreRequest ?? externalRestoreRequest ?? null;
 
   function handleContentFocus(event: FocusEvent<HTMLElement>) {
     if (!(event.target instanceof HTMLElement)) {
@@ -62,10 +65,7 @@ export function HomePage({
   }
 
   function restoreContentFocus(target: FocusTarget) {
-    setRestoreRequest({
-      requestId: createRestoreRequestId(),
-      target,
-    });
+    setGuideRestoreRequest(createFocusRestoreRequest(target));
   }
 
   return (
@@ -76,9 +76,15 @@ export function HomePage({
         libraries={libraries}
         returnTarget={returnTarget}
         onHome={onHome}
-        onLibrary={onOpenLibrary}
+        onLibrary={(library) =>
+          onOpenLibrary(
+            library,
+            returnTarget ?? getGuideLibraryFocusTarget(library.id),
+          )
+        }
         onLogout={onLogout}
         onRestoreFocus={restoreContentFocus}
+        restoreRequest={restoreRequest}
       />
 
       <main
@@ -164,13 +170,4 @@ function getLibraries(rows: readonly HomeRow[]): LibraryView[] {
   }
 
   return libraries;
-}
-
-function createRestoreRequestId(): string {
-  if (typeof globalThis.crypto?.randomUUID === 'function') {
-    return globalThis.crypto.randomUUID();
-  }
-
-  restoreRequestFallbackCounter += 1;
-  return `${restoreRequestFallbackTimestamp}:${restoreRequestFallbackCounter.toString(36)}`;
 }

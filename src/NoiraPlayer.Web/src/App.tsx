@@ -11,7 +11,19 @@ import {
 } from './catalog/homeCatalog';
 import { EmbyRequestError, EmbyWebClient } from './emby';
 import { useFocusNavigationPolicy } from './focus/FocusProvider';
+import {
+  createFocusRestoreRequest,
+  type FocusRestoreRequest,
+} from './navigation/focusRequests';
+import {
+  backRoute,
+  pushRoute,
+  replaceRoute,
+  type BrowseRoute,
+  type FocusTarget,
+} from './navigation/routes';
 import { HomePage } from './pages/HomePage';
+import { LibraryPage } from './pages/LibraryPage';
 import { createEmbyFetchTransport } from './transport';
 import type {
   BootstrapResult,
@@ -20,8 +32,7 @@ import type {
   SessionBootstrap,
 } from './types';
 
-type View = 'loading' | 'login' | 'home' | 'items' | 'details';
-type DetailsOrigin = 'home' | 'items';
+type AuthState = 'loading' | 'login' | 'browse';
 
 const coreRowOrder: readonly { key: string; kind: HomeRowKind }[] = [
   { key: 'resume', kind: 'resume' },
@@ -32,13 +43,16 @@ const coreRowOrder: readonly { key: string; kind: HomeRowKind }[] = [
 
 export function App() {
   const focusPolicy = useFocusNavigationPolicy();
-  const [view, setView] = useState<View>('loading');
+  const [authState, setAuthState] = useState<AuthState>('loading');
   const [client, setClient] = useState<EmbyWebClient | null>(null);
   const [homeRows, setHomeRows] = useState<HomeRow[]>([]);
-  const [items, setItems] = useState<MediaItem[]>([]);
+  const [routeStack, setRouteStack] = useState<readonly BrowseRoute[]>([
+    { kind: 'home' },
+  ]);
   const [activeLibrary, setActiveLibrary] = useState<LibraryView | null>(null);
   const [selectedItem, setSelectedItem] = useState<MediaItem | null>(null);
-  const [detailsOrigin, setDetailsOrigin] = useState<DetailsOrigin>('home');
+  const [restoreRequest, setRestoreRequest] =
+    useState<FocusRestoreRequest | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const bootstrapStartedRef = useRef(false);
@@ -46,6 +60,10 @@ export function App() {
   const operationGenerationRef = useRef(0);
   const logoutPendingRef = useRef(false);
   const homeRowsRef = useRef<readonly HomeRow[]>([]);
+  const currentRoute: BrowseRoute = routeStack[routeStack.length - 1] ?? {
+    kind: 'home',
+  };
+  const libraries = extractLibraries(homeRows);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -63,7 +81,7 @@ export function App() {
     const generation = beginOperation();
     setBusy(true);
     setError('');
-    setView('loading');
+    setAuthState('loading');
 
     try {
       const result = await requestBridge<BootstrapResult>('auth.bootstrap');
@@ -73,7 +91,7 @@ export function App() {
 
       if (!result.session) {
         resetAuthenticatedState();
-        setView('login');
+        setAuthState('login');
         return;
       }
 
@@ -138,10 +156,11 @@ export function App() {
     const coreRows = resolveCoreRows(catalog, homeRowsRef.current);
     const retainedSupplementalRows = homeRowsRef.current.filter(isSupplementalRow);
     replaceHomeRows(mergeRows(coreRows, retainedSupplementalRows));
-    setItems([]);
+    setRouteStack([{ kind: 'home' }]);
     setActiveLibrary(null);
     setSelectedItem(null);
-    setView('home');
+    setRestoreRequest(null);
+    setAuthState('browse');
     setError(describeCatalogFailures(catalog));
     setBusy(false);
 
@@ -170,7 +189,7 @@ export function App() {
       return;
     }
     if (!client) {
-      setView('login');
+      setAuthState('login');
       return;
     }
 
@@ -190,28 +209,78 @@ export function App() {
     }
   }
 
-  async function loadItems(library: LibraryView) {
+  function openLibrary(library: LibraryView, origin: FocusTarget) {
     if (logoutPendingRef.current) {
       return;
     }
     if (!client) {
-      setView('login');
+      setAuthState('login');
       return;
     }
 
+    const normalizedLibrary = {
+      ...library,
+      id: library.id.trim(),
+      collectionType: library.collectionType.trim(),
+    };
+    const libraryOrigin =
+      currentRoute.kind === 'library' ? currentRoute.origin : origin;
+    const nextRoute: BrowseRoute = {
+      kind: 'library',
+      libraryId: normalizedLibrary.id,
+      collectionType: normalizedLibrary.collectionType,
+      origin: libraryOrigin,
+    };
+    const nextStack =
+      currentRoute.kind === 'home'
+        ? pushRoute(routeStack, nextRoute)
+        : currentRoute.kind === 'library'
+          ? replaceRoute(routeStack, nextRoute)
+          : routeStack;
+    if (nextStack === routeStack) {
+      return;
+    }
+
+    beginOperation();
+    setBusy(false);
+    setError('');
+    setActiveLibrary(normalizedLibrary);
+    setSelectedItem(null);
+    setRestoreRequest(null);
+    setRouteStack(nextStack);
+  }
+
+  async function loadDetails(itemId: string, origin: FocusTarget) {
+    if (logoutPendingRef.current) {
+      return;
+    }
+    if (!client) {
+      setAuthState('login');
+      return;
+    }
+
+    const sourceStack = routeStack;
     const generation = beginOperation();
     setBusy(true);
     setError('');
     try {
-      const nextItems = await client.getItems(library.id);
+      const item = await client.getItem(itemId);
       if (!isCurrentOperation(generation)) {
         return;
       }
 
-      setItems(nextItems);
-      setActiveLibrary(library);
-      setSelectedItem(null);
-      setView('items');
+      const nextStack = pushRoute(sourceStack, {
+        kind: 'details',
+        itemId: item.id,
+        origin,
+      });
+      if (nextStack === sourceStack) {
+        return;
+      }
+
+      setSelectedItem(item);
+      setRestoreRequest(null);
+      setRouteStack(nextStack);
     } catch (cause) {
       if (isCurrentOperation(generation)) {
         setError(describeError(cause));
@@ -223,35 +292,25 @@ export function App() {
     }
   }
 
-  async function loadDetails(itemId: string, origin: DetailsOrigin) {
-    if (logoutPendingRef.current) {
-      return;
-    }
-    if (!client) {
-      setView('login');
+  function browseBack() {
+    const decision = focusPolicy.decideBack(routeStack);
+    if (decision.kind !== 'navigate') {
       return;
     }
 
-    const generation = beginOperation();
-    setBusy(true);
+    const nextStack = backRoute(routeStack);
+    if (nextStack === routeStack) {
+      return;
+    }
+
+    beginOperation();
+    setBusy(false);
     setError('');
-    try {
-      const item = await client.getItem(itemId);
-      if (!isCurrentOperation(generation)) {
-        return;
-      }
-
-      setSelectedItem(item);
-      setDetailsOrigin(origin);
-      setView('details');
-    } catch (cause) {
-      if (isCurrentOperation(generation)) {
-        setError(describeError(cause));
-      }
-    } finally {
-      if (isCurrentOperation(generation)) {
-        setBusy(false);
-      }
+    setRestoreRequest(createFocusRestoreRequest(decision.restoreTarget));
+    setRouteStack(nextStack);
+    setSelectedItem(null);
+    if (decision.route.kind === 'home') {
+      setActiveLibrary(null);
     }
   }
 
@@ -299,7 +358,7 @@ export function App() {
 
       focusPolicy.clear();
       resetAuthenticatedState();
-      setView('login');
+      setAuthState('login');
     } catch (cause) {
       if (isCurrentOperation(generation)) {
         setError(describeError(cause));
@@ -330,10 +389,10 @@ export function App() {
   function resetAuthenticatedState() {
     setClient(null);
     replaceHomeRows([]);
-    setItems([]);
+    setRouteStack([{ kind: 'home' }]);
     setActiveLibrary(null);
     setSelectedItem(null);
-    setDetailsOrigin('home');
+    setRestoreRequest(null);
   }
 
   return (
@@ -345,7 +404,7 @@ export function App() {
         </div>
       ) : null}
 
-      {view === 'loading' ? (
+      {authState === 'loading' ? (
         <main className="app-page app-page--centered">
           <section className="status-view" aria-labelledby="loading-title">
             <h1 id="loading-title">Noira</h1>
@@ -359,7 +418,7 @@ export function App() {
         </main>
       ) : null}
 
-      {view === 'login' ? (
+      {authState === 'login' ? (
         <main className="app-page app-page--centered">
           <form className="login-form" onSubmit={login}>
             <h1>Noira</h1>
@@ -387,52 +446,42 @@ export function App() {
         </main>
       ) : null}
 
-      {view === 'home' ? (
+      {authState === 'browse' && currentRoute.kind === 'home' ? (
         <HomePage
           busy={busy}
+          restoreRequest={restoreRequest}
           rows={homeRows}
           onHome={() => void reloadHome()}
           onLogout={() => void logout()}
-          onOpenLibrary={(library) => void loadItems(library)}
-          onOpenMedia={(item) => void loadDetails(item.id, 'home')}
+          onOpenLibrary={openLibrary}
+          onOpenMedia={(item, origin) => void loadDetails(item.id, origin)}
         />
       ) : null}
 
-      {view === 'items' ? (
-        <main className="app-page legacy-page">
-          <header className="legacy-page__header">
-            <button type="button" disabled={busy} onClick={() => setView('home')}>
-              Back
-            </button>
-            <h1>{activeLibrary?.name || 'Items'}</h1>
-          </header>
-          {items.length === 0 ? <p>No playable videos were returned.</p> : null}
-          <ul className="legacy-media-list">
-            {items.map((item) => (
-              <li key={item.id}>
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => void loadDetails(item.id, 'items')}
-                >
-                  {item.imageUrl ? <img src={item.imageUrl} alt="" /> : null}
-                  <span>
-                    <strong>{item.name}</strong>
-                    <small>{item.type}</small>
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </main>
+      {authState === 'browse' &&
+      currentRoute.kind === 'library' &&
+      client &&
+      activeLibrary ? (
+        <LibraryPage
+          busy={busy}
+          client={client}
+          library={activeLibrary}
+          libraries={libraries}
+          restoreRequest={restoreRequest}
+          routeOrigin={currentRoute.origin}
+          onBack={() => browseBack()}
+          onLogout={() => void logout()}
+          onOpenLibrary={(library) => openLibrary(library, currentRoute.origin)}
+          onOpenMedia={(item, origin) => void loadDetails(item.id, origin)}
+        />
       ) : null}
 
-      {view === 'details' && selectedItem ? (
+      {authState === 'browse' && currentRoute.kind === 'details' && selectedItem ? (
         <main className="app-page legacy-page legacy-details">
           <button
             type="button"
             disabled={busy}
-            onClick={() => setView(detailsOrigin)}
+            onClick={() => browseBack()}
           >
             Back
           </button>

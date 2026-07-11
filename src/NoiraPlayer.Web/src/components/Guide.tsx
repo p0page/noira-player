@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import type { FocusEvent, KeyboardEvent } from 'react';
 import { Focusable } from '../focus/Focusable';
 import { FocusScope } from '../focus/FocusScope';
+import type { FocusRestoreRequest } from '../navigation/focusRequests';
 import type { FocusTarget } from '../navigation/routes';
 import type { LibraryView } from '../types';
 
@@ -19,8 +20,11 @@ export interface GuideProps {
   onLibrary: (library: LibraryView) => void;
   onLogout: () => void;
   onRestoreFocus: (target: FocusTarget) => void;
+  restoreRequest?: FocusRestoreRequest | null;
   returnTarget: FocusTarget | null;
 }
+
+export const guideScopeKey = 'home-guide';
 
 const homeFocusKey = 'guide:home';
 const logoutFocusKey = 'guide:logout';
@@ -34,12 +38,13 @@ export function Guide({
   onLibrary,
   onLogout,
   onRestoreFocus,
+  restoreRequest,
   returnTarget,
 }: GuideProps) {
   const [expanded, setExpanded] = useState(false);
   const visibleLibraries = useMemo(() => deduplicateLibraries(libraries), [libraries]);
   const libraryEntries = visibleLibraries.map((library) => ({
-    focusKey: `guide:library:${encodeURIComponent(library.id)}`,
+    focusKey: getGuideLibraryFocusTarget(library.id).focusKey,
     library,
   }));
   const orderedKeys = [
@@ -84,7 +89,17 @@ export function Guide({
         className="guide__scope"
         defaultFocusKey={defaultFocus ? homeFocusKey : undefined}
         orderedKeys={orderedKeys}
-        scopeKey="home-guide"
+        restoreFocusKey={
+          restoreRequest?.target.scopeKey === guideScopeKey
+            ? restoreRequest.target.focusKey
+            : undefined
+        }
+        restoreRequestId={
+          restoreRequest?.target.scopeKey === guideScopeKey
+            ? restoreRequest.requestId
+            : undefined
+        }
+        scopeKey={guideScopeKey}
       >
         <div className="guide__destinations">
           <Focusable
@@ -135,6 +150,13 @@ export function Guide({
       </FocusScope>
     </aside>
   );
+}
+
+export function getGuideLibraryFocusTarget(libraryId: string): FocusTarget {
+  return {
+    scopeKey: guideScopeKey,
+    focusKey: `guide:library:${encodeURIComponent(libraryId.trim())}`,
+  };
 }
 
 function deduplicateLibraries(libraries: readonly LibraryView[]): LibraryView[] {

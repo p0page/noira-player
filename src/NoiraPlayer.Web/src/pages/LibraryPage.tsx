@@ -1,0 +1,506 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
+import type { FocusEvent, KeyboardEvent } from 'react';
+import { Guide } from '../components/Guide';
+import { MediaCard } from '../components/MediaCard';
+import type { EmbyWebClient } from '../emby';
+import { FocusScope } from '../focus/FocusScope';
+import {
+  createFocusRestoreRequest,
+  type FocusRestoreRequest,
+} from '../navigation/focusRequests';
+import type { FocusTarget } from '../navigation/routes';
+import type { ItemPage, LibraryView, MediaItem } from '../types';
+
+export type LibraryPageClient = Pick<EmbyWebClient, 'getItemsPage'>;
+
+export interface LibraryPageProps {
+  busy?: boolean;
+  client: LibraryPageClient;
+  library: LibraryView;
+  libraries: readonly LibraryView[];
+  onBack: (origin: FocusTarget) => void;
+  onLogout: () => void;
+  onOpenLibrary: (library: LibraryView) => void;
+  onOpenMedia: (item: MediaItem, origin: FocusTarget) => void;
+  restoreRequest?: FocusRestoreRequest | null;
+  routeOrigin: FocusTarget;
+}
+
+interface LibraryLoadContext {
+  active: boolean;
+  client: LibraryPageClient;
+  collectionType: string;
+  exhausted: boolean;
+  identity: string;
+  inFlightStart: number | null;
+  libraryId: string;
+  nextStart: number;
+  started: boolean;
+}
+
+interface LibraryEntry {
+  focusKey: string;
+  item: MediaItem;
+}
+
+type LoadStatus = 'error' | 'loading' | 'ready';
+
+const libraryPageSize = 50;
+
+export function LibraryPage({
+  busy = false,
+  client,
+  library,
+  libraries,
+  onBack,
+  onLogout,
+  onOpenLibrary,
+  onOpenMedia,
+  restoreRequest: externalRestoreRequest,
+  routeOrigin,
+}: LibraryPageProps) {
+  const identity = createLibraryIdentity(library);
+  const [renderedIdentity, setRenderedIdentity] = useState('');
+  const [items, setItems] = useState<MediaItem[]>([]);
+  const [loadStatus, setLoadStatus] = useState<LoadStatus>('loading');
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [loadError, setLoadError] = useState('');
+  const [returnTarget, setReturnTarget] = useState<FocusTarget | null>(null);
+  const [guideRestoreRequest, setGuideRestoreRequest] =
+    useState<FocusRestoreRequest | null>(null);
+  const [initialRestoreRequest, setInitialRestoreRequest] =
+    useState<FocusRestoreRequest | null>(null);
+  const contextRef = useRef<LibraryLoadContext | null>(null);
+  const itemsRef = useRef<readonly MediaItem[]>([]);
+  const gridRef = useRef<HTMLDivElement | null>(null);
+  const visibleItems = renderedIdentity === identity ? items : [];
+  const entries = useMemo(
+    () => createLibraryEntries(library.id, visibleItems),
+    [library.id, visibleItems],
+  );
+  const scopeKey = getLibraryGridScopeKey(library.id);
+  const orderedKeys = entries.map(({ focusKey }) => focusKey);
+  const restoreRequest =
+    guideRestoreRequest ?? externalRestoreRequest ?? initialRestoreRequest;
+  const currentLoadSettled =
+    renderedIdentity === identity && loadStatus !== 'loading';
+
+  useEffect(() => {
+    const previous = contextRef.current;
+    const reusesContext =
+      previous !== null &&
+      previous.client === client &&
+      previous.identity === identity;
+    const context = reusesContext
+      ? previous
+      : {
+          active: true,
+          client,
+          collectionType: library.collectionType,
+          exhausted: false,
+          identity,
+          inFlightStart: null,
+          libraryId: library.id,
+          nextStart: 0,
+          started: false,
+        };
+
+    if (!reusesContext) {
+      if (previous) {
+        previous.active = false;
+      }
+      contextRef.current = context;
+      itemsRef.current = [];
+      setRenderedIdentity(identity);
+      setItems([]);
+      setLoadStatus('loading');
+      setLoadingMore(false);
+      setLoadError('');
+      setReturnTarget(null);
+      setGuideRestoreRequest(null);
+      setInitialRestoreRequest(null);
+    }
+
+    context.active = true;
+    if (!context.started) {
+      context.started = true;
+      void requestPage(context, 0);
+    }
+
+    return () => {
+      context.active = false;
+    };
+  }, [client, identity, library.collectionType, library.id]);
+
+  async function requestPage(
+    context: LibraryLoadContext,
+    startIndex: number,
+  ): Promise<void> {
+    if (
+      !isCurrentContext(context) ||
+      context.exhausted ||
+      context.inFlightStart !== null
+    ) {
+      return;
+    }
+
+    context.inFlightStart = startIndex;
+    if (startIndex === 0) {
+      setLoadStatus('loading');
+    } else {
+      setLoadingMore(true);
+    }
+
+    let continueWithoutFocus = false;
+    try {
+      const page = await context.client.getItemsPage(
+        context.libraryId,
+        startIndex,
+        libraryPageSize,
+        { collectionType: context.collectionType },
+      );
+      if (!isCurrentContext(context)) {
+        return;
+      }
+
+      const previousItems = itemsRef.current;
+      const mergedItems = appendUniqueItems(previousItems, page.items);
+      const addedItemCount = mergedItems.length - previousItems.length;
+      itemsRef.current = mergedItems;
+      setItems(mergedItems);
+
+      const returnedItemCount = page.items.length;
+      const pageStartIndex = normalizePageStart(page, startIndex);
+      const nextStart = pageStartIndex + returnedItemCount;
+      const totalRecordCount = normalizeTotalRecordCount(
+        page.totalRecordCount,
+        nextStart,
+      );
+      context.nextStart = nextStart;
+      context.exhausted =
+        returnedItemCount === 0 ||
+        nextStart <= startIndex ||
+        nextStart >= totalRecordCount;
+      setLoadStatus('ready');
+      setLoadError('');
+
+      if (previousItems.length === 0 && mergedItems.length > 0) {
+        setInitialRestoreRequest(
+          createFocusRestoreRequest({
+            scopeKey: getLibraryGridScopeKey(context.libraryId),
+            focusKey: getLibraryGridFocusKey(
+              context.libraryId,
+              mergedItems[0].id,
+            ),
+          }),
+        );
+      }
+
+      continueWithoutFocus = addedItemCount === 0 && !context.exhausted;
+    } catch {
+      if (!isCurrentContext(context)) {
+        return;
+      }
+
+      context.exhausted = true;
+      setLoadStatus('error');
+      setLoadError('Unable to load this library from Emby.');
+    } finally {
+      if (context.inFlightStart === startIndex) {
+        context.inFlightStart = null;
+      }
+      if (isCurrentContext(context)) {
+        setLoadingMore(false);
+      }
+    }
+
+    if (continueWithoutFocus && isCurrentContext(context)) {
+      queueMicrotask(() => {
+        if (isCurrentContext(context)) {
+          void requestPage(context, context.nextStart);
+        }
+      });
+    }
+  }
+
+  function isCurrentContext(context: LibraryLoadContext): boolean {
+    return context.active && contextRef.current === context;
+  }
+
+  function requestNextPage() {
+    const context = contextRef.current;
+    if (!context || !isCurrentContext(context)) {
+      return;
+    }
+
+    void requestPage(context, context.nextStart);
+  }
+
+  function handleContentFocus(event: FocusEvent<HTMLElement>) {
+    if (!(event.target instanceof HTMLElement)) {
+      return;
+    }
+
+    const card = event.target.closest<HTMLElement>('.media-card[data-focus-key]');
+    const itemContainer = card?.closest<HTMLElement>('[data-library-grid-index]');
+    const focusKey = card?.dataset.focusKey;
+    const itemIndex = Number(itemContainer?.dataset.libraryGridIndex);
+    if (!card || !focusKey || !Number.isSafeInteger(itemIndex) || itemIndex < 0) {
+      return;
+    }
+
+    const target = { focusKey, scopeKey };
+    setReturnTarget((current) =>
+      current?.focusKey === focusKey && current.scopeKey === scopeKey
+        ? current
+        : target,
+    );
+    card.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+
+    const grid = gridRef.current;
+    if (
+      grid &&
+      isInFinalVisualRows(itemIndex, entries.length, getVisualColumnCount(grid))
+    ) {
+      requestNextPage();
+    }
+  }
+
+  function handleContentKeyDown(event: KeyboardEvent<HTMLElement>) {
+    if (
+      event.key !== 'Escape' ||
+      !(event.target instanceof HTMLElement) ||
+      !event.target.closest('.media-card[data-focus-key]')
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    onBack(routeOrigin);
+  }
+
+  function restoreGridFocus(target: FocusTarget) {
+    setGuideRestoreRequest(createFocusRestoreRequest(target));
+  }
+
+  return (
+    <div className="tv-shell">
+      <Guide
+        activeRoute={{ kind: 'library', libraryId: library.id }}
+        defaultFocus={entries.length === 0}
+        libraries={libraries}
+        returnTarget={returnTarget}
+        restoreRequest={restoreRequest}
+        onHome={() => onBack(routeOrigin)}
+        onLibrary={(destination) => {
+          if (destination.id === library.id) {
+            if (returnTarget) {
+              restoreGridFocus(returnTarget);
+            }
+            return;
+          }
+
+          onOpenLibrary(destination);
+        }}
+        onLogout={onLogout}
+        onRestoreFocus={restoreGridFocus}
+      />
+
+      <main
+        aria-busy={busy || loadStatus === 'loading' || loadingMore || undefined}
+        className="library-page"
+        onFocusCapture={handleContentFocus}
+        onKeyDownCapture={handleContentKeyDown}
+      >
+        <header className="library-page__header">
+          <h1>{library.name}</h1>
+        </header>
+
+        {entries.length > 0 ? (
+          <div ref={gridRef} className="library-page__grid-shell" data-library-grid>
+            <FocusScope
+              key={scopeKey}
+              boundaryDirections={['right', 'down']}
+              className="library-page__grid"
+              defaultFocusKey={orderedKeys[0]}
+              orderedKeys={orderedKeys}
+              restoreFocusKey={
+                restoreRequest?.target.scopeKey === scopeKey
+                  ? restoreRequest.target.focusKey
+                  : undefined
+              }
+              restoreRequestId={
+                restoreRequest?.target.scopeKey === scopeKey
+                  ? restoreRequest.requestId
+                  : undefined
+              }
+              scopeKey={scopeKey}
+            >
+              {entries.map(({ focusKey, item }, index) => (
+                <div
+                  key={focusKey}
+                  className="library-page__item"
+                  data-library-grid-index={index}
+                >
+                  <MediaCard
+                    focusKey={focusKey}
+                    item={item}
+                    onSelect={() =>
+                      onOpenMedia(item, { focusKey, scopeKey })
+                    }
+                    variant="poster"
+                  />
+                </div>
+              ))}
+            </FocusScope>
+          </div>
+        ) : null}
+
+        {loadStatus === 'loading' && renderedIdentity === identity ? (
+          <p className="library-page__status" role="status">
+            Loading library...
+          </p>
+        ) : null}
+        {loadError && renderedIdentity === identity ? (
+          <p className="library-page__status" role="alert">
+            {loadError}
+          </p>
+        ) : null}
+        {currentLoadSettled && entries.length === 0 && !loadError ? (
+          <p className="library-page__status" role="status">
+            No media available in {library.name}.
+          </p>
+        ) : null}
+        {loadingMore ? (
+          <p className="library-page__loading-more" aria-live="polite">
+            Loading more...
+          </p>
+        ) : null}
+      </main>
+    </div>
+  );
+}
+
+export function getLibraryGridScopeKey(libraryId: string): string {
+  return `library-grid:${encodeFocusSegment(libraryId)}`;
+}
+
+export function getLibraryGridFocusKey(
+  libraryId: string,
+  itemId: string,
+): string {
+  return [
+    'library-card',
+    encodeFocusSegment(libraryId),
+    'media',
+    encodeFocusSegment(itemId),
+  ].join(':');
+}
+
+function createLibraryEntries(
+  libraryId: string,
+  items: readonly MediaItem[],
+): LibraryEntry[] {
+  return items.map((item) => ({
+    focusKey: getLibraryGridFocusKey(libraryId, item.id),
+    item,
+  }));
+}
+
+function appendUniqueItems(
+  existing: readonly MediaItem[],
+  incoming: readonly MediaItem[],
+): MediaItem[] {
+  const result = [...existing];
+  const seenIds = new Set(existing.map(({ id }) => id));
+  for (const item of incoming) {
+    const id = item.id.trim();
+    if (!id || seenIds.has(id)) {
+      continue;
+    }
+
+    seenIds.add(id);
+    result.push({ ...item, id });
+  }
+
+  return result;
+}
+
+function normalizePageStart(page: ItemPage, requestedStart: number): number {
+  return Number.isSafeInteger(page.startIndex) && page.startIndex >= 0
+    ? page.startIndex
+    : requestedStart;
+}
+
+function normalizeTotalRecordCount(total: number, minimum: number): number {
+  return Number.isSafeInteger(total) && total >= 0
+    ? Math.max(total, minimum)
+    : minimum;
+}
+
+function isInFinalVisualRows(
+  itemIndex: number,
+  itemCount: number,
+  columnCount: number,
+): boolean {
+  const columns = Math.max(1, columnCount);
+  const rowCount = Math.ceil(itemCount / columns);
+  const itemRow = Math.floor(itemIndex / columns);
+  return itemRow >= Math.max(0, rowCount - 2);
+}
+
+function getVisualColumnCount(grid: HTMLElement): number {
+  const cards = Array.from(
+    grid.querySelectorAll<HTMLElement>(
+      '[data-library-grid-index] .media-card[data-focus-key]',
+    ),
+  );
+  const firstRect = cards[0]?.getBoundingClientRect();
+  if (firstRect && firstRect.width > 0 && firstRect.height > 0) {
+    const rowTolerance = Math.max(2, firstRect.height * 0.05);
+    let columns = 0;
+    for (const card of cards) {
+      const rect = card.getBoundingClientRect();
+      if (
+        rect.width <= 0 ||
+        rect.height <= 0 ||
+        Math.abs(rect.top - firstRect.top) > rowTolerance
+      ) {
+        break;
+      }
+      columns += 1;
+    }
+
+    if (columns > 0) {
+      return columns;
+    }
+  }
+
+  const styles = getComputedStyle(grid);
+  const gridWidth = grid.getBoundingClientRect().width;
+  const cardWidth = parseCssPixels(
+    styles.getPropertyValue('--library-grid-card-width'),
+  );
+  const columnGap = parseCssPixels(
+    styles.getPropertyValue('--library-grid-column-gap'),
+  );
+  if (gridWidth > 0 && cardWidth > 0) {
+    return Math.max(1, Math.floor((gridWidth + columnGap) / (cardWidth + columnGap)));
+  }
+
+  return 1;
+}
+
+function parseCssPixels(value: string): number {
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
+}
+
+function createLibraryIdentity(library: LibraryView): string {
+  return `${library.id.trim()}\u0000${library.collectionType.trim()}`;
+}
+
+function encodeFocusSegment(value: string): string {
+  return encodeURIComponent(value.trim() || 'anonymous');
+}

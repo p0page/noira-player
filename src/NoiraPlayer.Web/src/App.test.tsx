@@ -19,7 +19,9 @@ import {
 } from './catalog/homeCatalog';
 import { FocusProvider } from './focus/FocusProvider';
 import { createFocusNavigationPolicy } from './focus/focusPolicy';
+import { createEmbyFetchTransport } from './transport';
 import { App } from './App';
+import appSource from './App.tsx?raw';
 
 vi.mock('./bridge', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./bridge')>();
@@ -35,6 +37,14 @@ vi.mock('./catalog/homeCatalog', async (importOriginal) => {
     ...actual,
     loadHomeCatalog: vi.fn(),
     loadLibraryLatestCatalog: vi.fn(),
+  };
+});
+
+vi.mock('./transport', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./transport')>();
+  return {
+    ...actual,
+    createEmbyFetchTransport: vi.fn(),
   };
 });
 
@@ -530,6 +540,387 @@ describe('App Home orchestration', () => {
     });
 
     expect(vi.mocked(loadHomeCatalog)).not.toHaveBeenCalled();
+  });
+});
+
+describe('App browse route integration', () => {
+  it('uses the shared route graph and policy Back decision without a parallel details origin', () => {
+    expect(appSource).toMatch(/\bpushRoute\b/);
+    expect(appSource).toMatch(/\breplaceRoute\b/);
+    expect(appSource).toMatch(/\bbackRoute\b/);
+    expect(appSource).toMatch(/\.decideBack\(/);
+    expect(appSource).not.toMatch(/\bDetailsOrigin\b|\bdetailsOrigin\b/);
+  });
+
+  it('backs Home to library to legacy details with exact source restoration through the real client', async () => {
+    vi.mocked(requestBridge).mockResolvedValue({
+      session: {
+        serverUrl: 'https://anonymous.invalid',
+        userId: 'anonymous-user',
+        userName: 'Anonymous User',
+        accessToken: 'anonymous-token',
+        authorization: 'Anonymous authorization',
+      },
+    });
+    vi.mocked(loadHomeCatalog).mockResolvedValue({
+      rows: [
+        {
+          key: 'libraries',
+          title: 'Route libraries anonymous',
+          kind: 'libraries',
+          items: [
+            {
+              id: 'route-library-anonymous',
+              name: 'Route library anonymous',
+              collectionType: 'movies',
+            },
+          ],
+        },
+      ],
+      failedKinds: [],
+    });
+    vi.mocked(loadLibraryLatestCatalog).mockResolvedValue({
+      rows: [],
+      failedRowKeys: [],
+    });
+    const transport = vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(
+        typeof input === 'string' || input instanceof URL
+          ? String(input)
+          : input.url,
+      );
+      if (url.pathname.endsWith('/Items/route-library-item-anonymous')) {
+        return new Response(
+          JSON.stringify({
+            Id: 'route-library-item-anonymous',
+            Name: 'Route library details anonymous',
+            Type: 'Movie',
+            Overview: 'Route library overview anonymous',
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+
+      if (
+        url.pathname.endsWith('/Items') &&
+        url.searchParams.get('ParentId') === 'route-library-anonymous'
+      ) {
+        return new Response(
+          JSON.stringify({
+            Items: [
+              {
+                Id: 'route-library-item-anonymous',
+                Name: 'Route library item anonymous',
+                Type: 'Movie',
+              },
+            ],
+            StartIndex: 0,
+            TotalRecordCount: 1,
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+
+      throw new Error(`Unexpected anonymous route request: ${url.pathname}`);
+    });
+    vi.mocked(createEmbyFetchTransport).mockReturnValue(transport);
+
+    render(
+      <FocusProvider>
+        <App />
+      </FocusProvider>,
+    );
+
+    const homeLibrary = await screen.findByRole('button', {
+      name: 'Open Route library anonymous',
+    });
+    fireEvent.click(homeLibrary);
+
+    const gridItem = await screen.findByRole('button', {
+      name: 'Open Route library item anonymous',
+    });
+    expect(
+      screen.getByRole('button', { name: 'Route library anonymous' })
+        .getAttribute('aria-current'),
+    ).toBe('page');
+    fireEvent.click(gridItem);
+
+    await screen.findByRole('heading', {
+      name: 'Route library details anonymous',
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+
+    const restoredGridItem = await screen.findByRole('button', {
+      name: 'Open Route library item anonymous',
+    });
+    await waitFor(() => expect(document.activeElement).toBe(restoredGridItem));
+    fireEvent.keyDown(restoredGridItem, { key: 'Escape' });
+
+    const restoredHomeLibrary = await screen.findByRole('button', {
+      name: 'Open Route library anonymous',
+    });
+    await waitFor(() => expect(document.activeElement).toBe(restoredHomeLibrary));
+    expect(restoredHomeLibrary).not.toBe(homeLibrary);
+
+    const pageRequests = transport.mock.calls
+      .map(([input]) =>
+        new URL(
+          typeof input === 'string' || input instanceof URL
+            ? String(input)
+            : input.url,
+        ),
+      )
+      .filter((url) => url.searchParams.has('StartIndex'));
+    expect(pageRequests).toHaveLength(2);
+    expect(pageRequests[0].searchParams.get('StartIndex')).toBe('0');
+    expect(pageRequests[0].searchParams.get('Limit')).toBe('50');
+    expect(pageRequests[0].searchParams.get('ParentId')).toBe(
+      'route-library-anonymous',
+    );
+  });
+
+  it('backs direct Home details to the exact originating row card', async () => {
+    vi.mocked(requestBridge).mockResolvedValue({
+      session: {
+        serverUrl: 'https://anonymous.invalid',
+        userId: 'anonymous-user',
+        userName: 'Anonymous User',
+        accessToken: 'anonymous-token',
+        authorization: 'Anonymous authorization',
+      },
+    });
+    vi.mocked(loadHomeCatalog).mockResolvedValue({
+      rows: [
+        {
+          key: 'latest',
+          title: 'Direct details row anonymous',
+          kind: 'latest',
+          items: [
+            {
+              id: 'direct-details-item-anonymous',
+              name: 'Direct details item anonymous',
+              type: 'Movie',
+              artwork: {},
+            },
+          ],
+        },
+      ],
+      failedKinds: [],
+    });
+    vi.mocked(loadLibraryLatestCatalog).mockResolvedValue({
+      rows: [],
+      failedRowKeys: [],
+    });
+    const transport = vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(
+        typeof input === 'string' || input instanceof URL
+          ? String(input)
+          : input.url,
+      );
+      if (url.pathname.endsWith('/Items/direct-details-item-anonymous')) {
+        return new Response(
+          JSON.stringify({
+            Id: 'direct-details-item-anonymous',
+            Name: 'Direct details result anonymous',
+            Type: 'Movie',
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+
+      throw new Error(`Unexpected anonymous direct request: ${url.pathname}`);
+    });
+    vi.mocked(createEmbyFetchTransport).mockReturnValue(transport);
+
+    render(
+      <FocusProvider>
+        <App />
+      </FocusProvider>,
+    );
+
+    const source = await screen.findByRole('button', {
+      name: 'Open Direct details item anonymous',
+    });
+    fireEvent.click(source);
+    await screen.findByRole('heading', { name: 'Direct details result anonymous' });
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+
+    const restored = await screen.findByRole('button', {
+      name: 'Open Direct details item anonymous',
+    });
+    await waitFor(() => expect(document.activeElement).toBe(restored));
+    expect(restored).not.toBe(source);
+  });
+
+  it('clears superseded Home busy state when a library route wins', async () => {
+    let resolveStaleHome!: (value: HomeCatalog) => void;
+    const staleHome = new Promise<HomeCatalog>((resolve) => {
+      resolveStaleHome = resolve;
+    });
+    vi.mocked(requestBridge).mockResolvedValue({
+      session: {
+        serverUrl: 'https://anonymous.invalid',
+        userId: 'anonymous-user',
+        userName: 'Anonymous User',
+        accessToken: 'anonymous-token',
+        authorization: 'Anonymous authorization',
+      },
+    });
+    vi.mocked(loadHomeCatalog)
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            key: 'libraries',
+            title: 'Busy libraries anonymous',
+            kind: 'libraries',
+            items: [
+              {
+                id: 'busy-route-library-anonymous',
+                name: 'Busy route library anonymous',
+                collectionType: 'movies',
+              },
+            ],
+          },
+        ],
+        failedKinds: [],
+      })
+      .mockReturnValueOnce(staleHome);
+    vi.mocked(loadLibraryLatestCatalog).mockResolvedValue({
+      rows: [],
+      failedRowKeys: [],
+    });
+    vi.mocked(createEmbyFetchTransport).mockReturnValue(
+      vi.fn(async () =>
+        new Response(
+          JSON.stringify({ Items: [], StartIndex: 0, TotalRecordCount: 0 }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        ),
+      ),
+    );
+
+    render(
+      <FocusProvider>
+        <App />
+      </FocusProvider>,
+    );
+
+    const library = await screen.findByRole('button', {
+      name: 'Open Busy route library anonymous',
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Home' }));
+    expect(screen.getByText('Working...')).toBeTruthy();
+    fireEvent.click(library);
+
+    await screen.findByRole('heading', { name: 'Busy route library anonymous' });
+    await waitFor(() => expect(screen.queryByText('Working...')).toBeNull());
+
+    await act(async () => {
+      resolveStaleHome({ rows: [], failedKinds: [] });
+      await staleHome;
+    });
+    expect(screen.getByRole('heading', { name: 'Busy route library anonymous' })).toBeTruthy();
+  });
+
+  it('clears pending Details busy state when Library Escape wins Back', async () => {
+    let resolveDetails!: (value: Response) => void;
+    const pendingDetails = new Promise<Response>((resolve) => {
+      resolveDetails = resolve;
+    });
+    vi.mocked(requestBridge).mockResolvedValue({
+      session: {
+        serverUrl: 'https://anonymous.invalid',
+        userId: 'anonymous-user',
+        userName: 'Anonymous User',
+        accessToken: 'anonymous-token',
+        authorization: 'Anonymous authorization',
+      },
+    });
+    vi.mocked(loadHomeCatalog).mockResolvedValue({
+      rows: [
+        {
+          key: 'libraries',
+          title: 'Pending details libraries anonymous',
+          kind: 'libraries',
+          items: [
+            {
+              id: 'pending-details-library-anonymous',
+              name: 'Pending details library anonymous',
+              collectionType: 'movies',
+            },
+          ],
+        },
+      ],
+      failedKinds: [],
+    });
+    vi.mocked(loadLibraryLatestCatalog).mockResolvedValue({
+      rows: [],
+      failedRowKeys: [],
+    });
+    vi.mocked(createEmbyFetchTransport).mockReturnValue(
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = new URL(
+          typeof input === 'string' || input instanceof URL
+            ? String(input)
+            : input.url,
+        );
+        if (url.pathname.endsWith('/Items/pending-details-item-anonymous')) {
+          return pendingDetails;
+        }
+
+        return new Response(
+          JSON.stringify({
+            Items: [
+              {
+                Id: 'pending-details-item-anonymous',
+                Name: 'Pending details item anonymous',
+                Type: 'Movie',
+              },
+            ],
+            StartIndex: 0,
+            TotalRecordCount: 1,
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }),
+    );
+
+    render(
+      <FocusProvider>
+        <App />
+      </FocusProvider>,
+    );
+
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: 'Open Pending details library anonymous',
+      }),
+    );
+    const item = await screen.findByRole('button', {
+      name: 'Open Pending details item anonymous',
+    });
+    fireEvent.click(item);
+    expect(screen.getByText('Working...')).toBeTruthy();
+    fireEvent.keyDown(item, { key: 'Escape' });
+
+    await screen.findByRole('button', {
+      name: 'Open Pending details library anonymous',
+    });
+    await waitFor(() => expect(screen.queryByText('Working...')).toBeNull());
+
+    await act(async () => {
+      resolveDetails(
+        new Response(
+          JSON.stringify({
+            Id: 'pending-details-item-anonymous',
+            Name: 'Stale pending details anonymous',
+            Type: 'Movie',
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        ),
+      );
+      await pendingDetails;
+    });
+    expect(screen.queryByText('Stale pending details anonymous')).toBeNull();
   });
 });
 

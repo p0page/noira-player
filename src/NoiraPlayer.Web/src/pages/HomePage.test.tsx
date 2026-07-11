@@ -305,9 +305,18 @@ describe('HomePage', () => {
 
     expect(onOpenMedia).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'shared-anonymous-id' }),
+      {
+        scopeKey: 'home-row:normalized-media-row-anonymous',
+        focusKey:
+          'home-card:normalized-media-row-anonymous:media:shared-anonymous-id',
+      },
     );
     expect(onOpenLibrary).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'shared-anonymous-id' }),
+      {
+        scopeKey: 'home-guide',
+        focusKey: 'guide:library:shared-anonymous-id',
+      },
     );
   });
 
@@ -632,6 +641,117 @@ describe('HomePage', () => {
     });
   });
 
+  it('accepts external restore requests for exact Home-card and Guide origins', async () => {
+    const view = render(
+      <FocusProvider>
+        <HomePage
+          key="external-home-card-anonymous"
+          restoreRequest={{
+            requestId: 'external-home-card-event-anonymous',
+            target: {
+              scopeKey: 'home-row:external-row-anonymous',
+              focusKey:
+                'home-card:external-row-anonymous:media:external-b-anonymous',
+            },
+          }}
+          rows={[
+            {
+              key: 'external-row-anonymous',
+              title: 'External row anonymous',
+              kind: 'latest',
+              items: [
+                {
+                  id: 'external-a-anonymous',
+                  name: 'External A anonymous',
+                  type: 'Movie',
+                  artwork: {},
+                },
+                {
+                  id: 'external-b-anonymous',
+                  name: 'External B anonymous',
+                  type: 'Movie',
+                  artwork: {},
+                },
+              ],
+            },
+            {
+              key: 'external-libraries-anonymous',
+              title: 'External libraries anonymous',
+              kind: 'libraries',
+              items: [
+                {
+                  id: 'external-library-anonymous',
+                  name: 'External library anonymous',
+                  collectionType: 'movies',
+                },
+              ],
+            },
+          ]}
+          onHome={() => undefined}
+          onLogout={() => undefined}
+          onOpenLibrary={() => undefined}
+          onOpenMedia={() => undefined}
+        />
+      </FocusProvider>,
+    );
+
+    const card = await screen.findByRole('button', {
+      name: 'Open External B anonymous',
+    });
+    await waitFor(() => expect(document.activeElement).toBe(card));
+
+    view.rerender(
+      <FocusProvider>
+        <HomePage
+          key="external-guide-anonymous"
+          restoreRequest={{
+            requestId: 'external-guide-event-anonymous',
+            target: {
+              scopeKey: 'home-guide',
+              focusKey: 'guide:library:external-library-anonymous',
+            },
+          }}
+          rows={[
+            {
+              key: 'external-row-anonymous',
+              title: 'External row anonymous',
+              kind: 'latest',
+              items: [
+                {
+                  id: 'external-a-anonymous',
+                  name: 'External A anonymous',
+                  type: 'Movie',
+                  artwork: {},
+                },
+              ],
+            },
+            {
+              key: 'external-libraries-anonymous',
+              title: 'External libraries anonymous',
+              kind: 'libraries',
+              items: [
+                {
+                  id: 'external-library-anonymous',
+                  name: 'External library anonymous',
+                  collectionType: 'movies',
+                },
+              ],
+            },
+          ]}
+          onHome={() => undefined}
+          onLogout={() => undefined}
+          onOpenLibrary={() => undefined}
+          onOpenMedia={() => undefined}
+        />
+      </FocusProvider>,
+    );
+
+    const guideLibrary = screen.getByRole('button', {
+      name: 'External library anonymous',
+    });
+    await waitFor(() => expect(document.activeElement).toBe(guideLibrary));
+  });
+
   it('wires Home, real library, media, and logout selections to callbacks', () => {
     const onHome = vi.fn();
     const onLogout = vi.fn();
@@ -691,11 +811,80 @@ describe('HomePage', () => {
     expect(onHome).toHaveBeenCalledTimes(1);
     expect(onOpenLibrary).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'library-item-anonymous' }),
+      {
+        scopeKey: 'home-guide',
+        focusKey: 'guide:library:library-item-anonymous',
+      },
     );
     expect(onOpenMedia).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'media-item-anonymous' }),
+      {
+        scopeKey: 'home-row:media-row-anonymous',
+        focusKey: 'home-card:media-row-anonymous:media:media-item-anonymous',
+      },
     );
     expect(onLogout).toHaveBeenCalledTimes(1);
+  });
+
+  it('uses the pre-Guide content target when a Guide library is selected', async () => {
+    const onOpenLibrary = vi.fn();
+
+    render(
+      <FocusProvider>
+        <HomePage
+          rows={[
+            {
+              key: 'guide-origin-media-row-anonymous',
+              title: 'Guide origin media row anonymous',
+              kind: 'latest',
+              items: [
+                {
+                  id: 'guide-origin-media-anonymous',
+                  name: 'Guide origin media anonymous',
+                  type: 'Movie',
+                  artwork: {},
+                },
+              ],
+            },
+            {
+              key: 'guide-origin-library-row-anonymous',
+              title: 'Guide origin library row anonymous',
+              kind: 'libraries',
+              items: [
+                {
+                  id: 'guide-origin-library-anonymous',
+                  name: 'Guide origin library anonymous',
+                  collectionType: 'movies',
+                },
+              ],
+            },
+          ]}
+          onHome={() => undefined}
+          onLogout={() => undefined}
+          onOpenLibrary={onOpenLibrary}
+          onOpenMedia={() => undefined}
+        />
+      </FocusProvider>,
+    );
+
+    const media = screen.getByRole('button', {
+      name: 'Open Guide origin media anonymous',
+    });
+    await act(async () => {
+      media.focus();
+    });
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Guide origin library anonymous' }),
+    );
+
+    expect(onOpenLibrary).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'guide-origin-library-anonymous' }),
+      {
+        scopeKey: 'home-row:guide-origin-media-row-anonymous',
+        focusKey:
+          'home-card:guide-origin-media-row-anonymous:media:guide-origin-media-anonymous',
+      },
+    );
   });
 
   it('keeps page code on the Noira focus API boundary', () => {
