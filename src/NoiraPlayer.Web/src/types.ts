@@ -17,13 +17,43 @@ export interface LibraryView {
   imageUrl?: string;
 }
 
+export interface MediaArtwork {
+  primary?: string;
+  thumb?: string;
+  banner?: string;
+  backdrop?: string;
+}
+
 export interface MediaItem {
   id: string;
   name: string;
   type: string;
+  productionYear?: number;
+  seriesName?: string;
+  indexNumber?: number;
+  parentIndexNumber?: number;
   overview?: string;
-  imageUrl?: string;
+  runtimeTicks?: number;
   startPositionTicks?: number;
   mediaSourceId?: string;
-  runtimeTicks?: number;
+  artwork: MediaArtwork;
+  // Temporary App.tsx compatibility; Task 8 consumes artwork directly.
+  imageUrl?: string;
+}
+
+export interface ItemPage {
+  items: MediaItem[];
+  startIndex: number;
+  totalRecordCount: number;
+}
+
+export interface LibraryItemsOptions {
+  collectionType?: string;
+  includeItemTypes?: string;
+}
+
+export interface LatestItemsOptions {
+  parentId?: string;
+  includeItemTypes?: string;
+  limit?: number;
 }
