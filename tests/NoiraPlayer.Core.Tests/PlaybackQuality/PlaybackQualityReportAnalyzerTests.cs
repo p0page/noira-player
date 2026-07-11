@@ -8,6 +8,39 @@ namespace NoiraPlayer.Core.Tests.PlaybackQuality;
 public sealed class PlaybackQualityReportAnalyzerTests
 {
     [Fact]
+    public void Analyze_Does_Not_Require_Pause_Resume_For_Ordinary_Playback()
+    {
+        var report = new PlaybackQualityReport { Result = "pass" };
+        report.Lifecycle.Events.Add(new PlaybackQualityLifecycleEvent { Operation = "load", Status = "completed" });
+        report.Lifecycle.Events.Add(new PlaybackQualityLifecycleEvent { Operation = "play", Status = "completed" });
+        report.Lifecycle.Events.Add(new PlaybackQualityLifecycleEvent { Operation = "stop", Status = "completed" });
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Equal("observed", analysis.Lifecycle.Status);
+        Assert.DoesNotContain("pause", analysis.Lifecycle.MissingOperations);
+        Assert.DoesNotContain("resume", analysis.Lifecycle.MissingOperations);
+        Assert.DoesNotContain("lifecycle.pause", analysis.MissingEvidence);
+        Assert.DoesNotContain("lifecycle.resume", analysis.MissingEvidence);
+    }
+
+    [Fact]
+    public void Analyze_Requires_Paired_Resume_When_Pause_Was_Observed()
+    {
+        var report = new PlaybackQualityReport { Result = "fail" };
+        report.Lifecycle.Events.Add(new PlaybackQualityLifecycleEvent { Operation = "load", Status = "completed" });
+        report.Lifecycle.Events.Add(new PlaybackQualityLifecycleEvent { Operation = "play", Status = "completed" });
+        report.Lifecycle.Events.Add(new PlaybackQualityLifecycleEvent { Operation = "pause", Status = "completed" });
+        report.Lifecycle.Events.Add(new PlaybackQualityLifecycleEvent { Operation = "stop", Status = "completed" });
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Equal("partial", analysis.Lifecycle.Status);
+        Assert.Contains("resume", analysis.Lifecycle.MissingOperations);
+        Assert.Contains("lifecycle.resume", analysis.MissingEvidence);
+    }
+
+    [Fact]
     public void Analyze_Emits_Current_Analyzer_Version()
     {
         var report = new PlaybackQualityReport

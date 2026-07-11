@@ -866,8 +866,12 @@ namespace NoiraPlayer.Core.PlaybackQuality
 
             AddMissingLifecycleOperation(lifecycle, "load");
             AddMissingLifecycleOperation(lifecycle, "play");
-            AddMissingLifecycleOperation(lifecycle, "pause");
-            AddMissingLifecycleOperation(lifecycle, "resume");
+            if (lifecycle.Operations.Contains("pause") ||
+                lifecycle.Operations.Contains("resume"))
+            {
+                AddMissingLifecycleOperation(lifecycle, "pause");
+                AddMissingLifecycleOperation(lifecycle, "resume");
+            }
             AddMissingLifecycleOperation(lifecycle, "stop");
             if (report.Position.SeekTargetPositionTicks.HasValue)
             {
