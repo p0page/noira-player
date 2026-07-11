@@ -360,6 +360,17 @@ describe('browse route validation', () => {
     expect(isValidBrowseRouteStack([homeRoute, validDetails])).toBe(true);
   });
 
+  it('does not call a caller-owned every override while validating', () => {
+    const routeStack = [homeRoute];
+    Object.defineProperty(routeStack, 'every', {
+      value: () => {
+        throw new Error('caller-owned every must not run');
+      },
+    });
+
+    expect(isValidBrowseRouteStack(routeStack)).toBe(true);
+  });
+
   it.each([
     ['non-array', null],
     ['library root', [validLibrary]],
@@ -430,5 +441,143 @@ describe('browse route validation', () => {
     expect(backRoute(malformedStack)).toBe(malformedStack);
     expect(pushRoute(validStack, invalidRoute)).toBe(validStack);
     expect(replaceRoute(validStack, invalidRoute)).toBe(validStack);
+  });
+});
+
+describe('atomic browse route normalization', () => {
+  it('uses the first route-property snapshot when later reads become blank', () => {
+    const homeStack = Object.freeze([homeRoute] as BrowseRoute[]);
+    const reads = { kind: 0, itemId: 0, origin: 0 };
+    const statefulDetails = Object.defineProperties({}, {
+      kind: {
+        enumerable: true,
+        get: () => {
+          reads.kind += 1;
+          return 'details';
+        },
+      },
+      itemId: {
+        enumerable: true,
+        get: () => {
+          reads.itemId += 1;
+          return reads.itemId === 1 ? 'atomic-item-anonymous' : ' ';
+        },
+      },
+      origin: {
+        enumerable: true,
+        get: () => {
+          reads.origin += 1;
+          return {
+            scopeKey: 'atomic-route-scope-anonymous',
+            focusKey: 'atomic-route-focus-anonymous',
+          };
+        },
+      },
+    }) as unknown as BrowseRoute;
+
+    const history = pushRoute(homeStack, statefulDetails);
+
+    expect(history).toEqual([
+      homeRoute,
+      {
+        kind: 'details',
+        itemId: 'atomic-item-anonymous',
+        origin: {
+          scopeKey: 'atomic-route-scope-anonymous',
+          focusKey: 'atomic-route-focus-anonymous',
+        },
+      },
+    ]);
+    expect(history).not.toBe(homeStack);
+    expect(reads).toEqual({ kind: 1, itemId: 1, origin: 1 });
+    expect(Object.getOwnPropertyDescriptor(history[1], 'itemId')?.get).toBeUndefined();
+  });
+
+  it('reads nested FocusTarget getters once when later reads throw', () => {
+    const homeStack = Object.freeze([homeRoute] as BrowseRoute[]);
+    const reads = { scopeKey: 0, focusKey: 0 };
+    const statefulTarget = Object.defineProperties({}, {
+      scopeKey: {
+        enumerable: true,
+        get: () => {
+          reads.scopeKey += 1;
+          if (reads.scopeKey > 1) {
+            throw new Error('scopeKey was read more than once');
+          }
+          return 'atomic-target-scope-anonymous';
+        },
+      },
+      focusKey: {
+        enumerable: true,
+        get: () => {
+          reads.focusKey += 1;
+          if (reads.focusKey > 1) {
+            throw new Error('focusKey was read more than once');
+          }
+          return 'atomic-target-focus-anonymous';
+        },
+      },
+    });
+    const statefulDetails = {
+      kind: 'details',
+      itemId: 'atomic-target-item-anonymous',
+      origin: statefulTarget,
+    } as unknown as BrowseRoute;
+
+    const history = pushRoute(homeStack, statefulDetails);
+
+    expect(history).toEqual([
+      homeRoute,
+      {
+        kind: 'details',
+        itemId: 'atomic-target-item-anonymous',
+        origin: {
+          scopeKey: 'atomic-target-scope-anonymous',
+          focusKey: 'atomic-target-focus-anonymous',
+        },
+      },
+    ]);
+    expect(reads).toEqual({ scopeKey: 1, focusKey: 1 });
+  });
+
+  it('reads each route-stack index once before returning a successful Back snapshot', () => {
+    const routeStack = [homeRoute, libraryRoute, libraryDetailsRoute];
+    let libraryIndexReads = 0;
+    Object.defineProperty(routeStack, 1, {
+      configurable: true,
+      enumerable: true,
+      get: () => {
+        libraryIndexReads += 1;
+        if (libraryIndexReads > 1) {
+          throw new Error('route stack index was read more than once');
+        }
+        return libraryRoute;
+      },
+    });
+
+    let history: readonly BrowseRoute[] | undefined;
+    expect(() => {
+      history = backRoute(routeStack);
+    }).not.toThrow();
+
+    expect(history).toEqual([homeRoute, libraryRoute]);
+    expect(libraryIndexReads).toBe(1);
+  });
+
+  it('fails closed when a getter throws on its first normalization read', () => {
+    const homeStack = Object.freeze([homeRoute] as BrowseRoute[]);
+    const throwingRoute = Object.defineProperty({}, 'kind', {
+      get: () => {
+        throw new Error('first route read failed');
+      },
+    }) as unknown as BrowseRoute;
+
+    let history: readonly BrowseRoute[] | undefined;
+    expect(() => {
+      history = pushRoute(homeStack, throwingRoute);
+    }).not.toThrow();
+
+    expect(history).toBe(homeStack);
+    expect(isValidBrowseRouteStack([throwingRoute])).toBe(false);
   });
 });

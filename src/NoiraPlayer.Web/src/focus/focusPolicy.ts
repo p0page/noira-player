@@ -1,6 +1,6 @@
 import {
-  isValidBrowseRouteStack,
-  isValidFocusTarget,
+  normalizeBrowseRouteStack,
+  normalizeFocusTarget,
 } from '../navigation/routes';
 import type { BrowseRoute, FocusTarget } from '../navigation/routes';
 
@@ -107,31 +107,33 @@ class InMemoryFocusNavigationPolicy implements FocusNavigationPolicy {
     transientLayer?: TransientLayer,
   ): BackDecision {
     if (transientLayer !== undefined) {
-      if (!isValidTransientLayer(transientLayer)) {
+      const transientSnapshot = normalizeTransientLayer(transientLayer);
+      if (!transientSnapshot) {
         return { kind: 'nativeBack' };
       }
 
       return {
         kind: 'closeTransient',
-        layer: transientLayer.kind,
-        restoreTarget: cloneTarget(transientLayer.returnTarget),
+        layer: transientSnapshot.kind,
+        restoreTarget: transientSnapshot.returnTarget,
       };
     }
 
-    if (!isValidBrowseRouteStack(routeStack)) {
+    const stackSnapshot = normalizeBrowseRouteStack(routeStack);
+    if (!stackSnapshot) {
       return { kind: 'nativeBack' };
     }
 
-    const currentRoute = routeStack[routeStack.length - 1];
-    const previousRoute = routeStack[routeStack.length - 2];
+    const currentRoute = stackSnapshot[stackSnapshot.length - 1];
+    const previousRoute = stackSnapshot[stackSnapshot.length - 2];
     if (!currentRoute || currentRoute.kind === 'home' || !previousRoute) {
       return { kind: 'nativeBack' };
     }
 
     return {
       kind: 'navigate',
-      route: cloneRoute(previousRoute),
-      restoreTarget: cloneTarget(currentRoute.origin),
+      route: previousRoute,
+      restoreTarget: currentRoute.origin,
     };
   }
 
@@ -185,6 +187,10 @@ class InMemoryFocusNavigationPolicy implements FocusNavigationPolicy {
         if (stateToDeliver !== this.paused) {
           this.paused = stateToDeliver;
           for (const listener of [...this.pauseListeners]) {
+            if (!this.pauseListeners.has(listener)) {
+              continue;
+            }
+
             try {
               listener(stateToDeliver);
             } catch (error) {
@@ -213,42 +219,22 @@ export function createFocusNavigationPolicy(): FocusNavigationPolicy {
   return new InMemoryFocusNavigationPolicy();
 }
 
-function cloneTarget(target: FocusTarget): FocusTarget {
-  return {
-    scopeKey: target.scopeKey,
-    focusKey: target.focusKey,
-  };
-}
-
-function cloneRoute(route: BrowseRoute): BrowseRoute {
-  switch (route.kind) {
-    case 'home':
-      return { kind: 'home' };
-    case 'library':
-      return {
-        kind: 'library',
-        libraryId: route.libraryId,
-        collectionType: route.collectionType,
-        origin: cloneTarget(route.origin),
-      };
-    case 'details':
-      return {
-        kind: 'details',
-        itemId: route.itemId,
-        origin: cloneTarget(route.origin),
-      };
-  }
-}
-
-function isValidTransientLayer(candidate: unknown): candidate is TransientLayer {
+function normalizeTransientLayer(candidate: unknown): TransientLayer | null {
   try {
-    return (
-      isRecord(candidate) &&
-      (candidate.kind === 'guide' || candidate.kind === 'overlay') &&
-      isValidFocusTarget(candidate.returnTarget)
-    );
+    if (!isRecord(candidate)) {
+      return null;
+    }
+
+    const kind = candidate.kind;
+    const returnTargetCandidate = candidate.returnTarget;
+    if (kind !== 'guide' && kind !== 'overlay') {
+      return null;
+    }
+
+    const returnTarget = normalizeFocusTarget(returnTargetCandidate);
+    return returnTarget ? { kind, returnTarget } : null;
   } catch {
-    return false;
+    return null;
   }
 }
 

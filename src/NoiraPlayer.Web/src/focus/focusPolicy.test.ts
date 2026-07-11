@@ -294,6 +294,98 @@ describe('Back policy', () => {
     });
   });
 
+  it('normalizes transient and target getters once before returning plain data', () => {
+    const policy = createFocusNavigationPolicy();
+    const reads = {
+      kind: 0,
+      returnTarget: 0,
+      scopeKey: 0,
+      focusKey: 0,
+    };
+    const statefulTarget = Object.defineProperties({}, {
+      scopeKey: {
+        enumerable: true,
+        get: () => {
+          reads.scopeKey += 1;
+          return reads.scopeKey === 1 ? 'atomic-transient-scope-anonymous' : ' ';
+        },
+      },
+      focusKey: {
+        enumerable: true,
+        get: () => {
+          reads.focusKey += 1;
+          if (reads.focusKey > 1) {
+            throw new Error('transient focusKey was read more than once');
+          }
+          return 'atomic-transient-focus-anonymous';
+        },
+      },
+    });
+    const statefulTransient = Object.defineProperties({}, {
+      kind: {
+        enumerable: true,
+        get: () => {
+          reads.kind += 1;
+          return reads.kind === 1 ? 'guide' : 'unknown';
+        },
+      },
+      returnTarget: {
+        enumerable: true,
+        get: () => {
+          reads.returnTarget += 1;
+          if (reads.returnTarget > 1) {
+            throw new Error('returnTarget was read more than once');
+          }
+          return statefulTarget;
+        },
+      },
+    }) as unknown as TransientLayer;
+
+    let decision: ReturnType<typeof policy.decideBack> | undefined;
+    expect(() => {
+      decision = policy.decideBack([homeRoute], statefulTransient);
+    }).not.toThrow();
+
+    expect(decision).toEqual({
+      kind: 'closeTransient',
+      layer: 'guide',
+      restoreTarget: {
+        scopeKey: 'atomic-transient-scope-anonymous',
+        focusKey: 'atomic-transient-focus-anonymous',
+      },
+    });
+    expect(reads).toEqual({ kind: 1, returnTarget: 1, scopeKey: 1, focusKey: 1 });
+  });
+
+  it('uses one normalized route-stack snapshot during Back decisions', () => {
+    const policy = createFocusNavigationPolicy();
+    const routeStack = [homeRoute, libraryRoute, libraryDetailsRoute];
+    let detailsIndexReads = 0;
+    Object.defineProperty(routeStack, 2, {
+      configurable: true,
+      enumerable: true,
+      get: () => {
+        detailsIndexReads += 1;
+        if (detailsIndexReads > 1) {
+          throw new Error('details route index was read more than once');
+        }
+        return libraryDetailsRoute;
+      },
+    });
+
+    let decision: ReturnType<typeof policy.decideBack> | undefined;
+    expect(() => {
+      decision = policy.decideBack(routeStack);
+    }).not.toThrow();
+
+    expect(decision).toEqual({
+      kind: 'navigate',
+      route: libraryRoute,
+      restoreTarget: libraryItemTarget,
+    });
+    expect(detailsIndexReads).toBe(1);
+  });
+
   it.each([
     {
       kind: 'guide',
@@ -513,6 +605,37 @@ describe('focus pause state', () => {
     expect(thrown).toBe(firstError);
     expect(laterStates).toEqual([false, true, false]);
     expect(policy.isPaused()).toBe(false);
+  });
+
+  it('skips a subscription removed before its turn in the same broadcast', () => {
+    const policy = createFocusNavigationPolicy();
+    const earlierStates: boolean[] = [];
+    const laterStates: boolean[] = [];
+    const trailingStates: boolean[] = [];
+    let unsubscribeLater: () => void = () => undefined;
+
+    policy.subscribePause((paused) => {
+      earlierStates.push(paused);
+      if (paused) {
+        unsubscribeLater();
+      }
+    });
+    unsubscribeLater = policy.subscribePause((paused) => {
+      laterStates.push(paused);
+      if (paused) {
+        policy.resume();
+      }
+    });
+    policy.subscribePause((paused) => {
+      trailingStates.push(paused);
+    });
+
+    policy.pause();
+
+    expect(earlierStates).toEqual([false, true]);
+    expect(laterStates).toEqual([false]);
+    expect(trailingStates).toEqual([false, true]);
+    expect(policy.isPaused()).toBe(true);
   });
 
   it('removes a subscription when its immediate callback throws', () => {

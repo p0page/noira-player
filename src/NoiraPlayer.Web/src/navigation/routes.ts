@@ -21,149 +21,186 @@ export function pushRoute(
   routeStack: readonly BrowseRoute[],
   route: BrowseRoute,
 ): readonly BrowseRoute[] {
-  if (!isValidBrowseRouteStack(routeStack) || !isValidBrowseRoute(route)) {
+  const stackSnapshot = normalizeBrowseRouteStack(routeStack);
+  const routeSnapshot = normalizeBrowseRoute(route);
+  if (!stackSnapshot || !routeSnapshot) {
     return routeStack;
   }
 
-  const currentRoute = routeStack[routeStack.length - 1];
-  if (currentRoute && routesEqual(currentRoute, route)) {
+  const currentRoute = stackSnapshot[stackSnapshot.length - 1];
+  if (currentRoute && routesEqual(currentRoute, routeSnapshot)) {
     return routeStack;
   }
 
-  const candidate = [...routeStack, route];
-  return isValidBrowseRouteStack(candidate) ? cloneStack(candidate) : routeStack;
+  const candidate = appendRoute(stackSnapshot, routeSnapshot);
+  return hasSupportedRouteOrder(candidate) ? candidate : routeStack;
 }
 
 export function replaceRoute(
   routeStack: readonly BrowseRoute[],
   route: BrowseRoute,
 ): readonly BrowseRoute[] {
-  if (!isValidBrowseRouteStack(routeStack) || !isValidBrowseRoute(route)) {
+  const stackSnapshot = normalizeBrowseRouteStack(routeStack);
+  const routeSnapshot = normalizeBrowseRoute(route);
+  if (!stackSnapshot || !routeSnapshot) {
     return routeStack;
   }
 
-  const currentRoute = routeStack[routeStack.length - 1];
-  if (currentRoute && routesEqual(currentRoute, route)) {
+  const currentRoute = stackSnapshot[stackSnapshot.length - 1];
+  if (currentRoute && routesEqual(currentRoute, routeSnapshot)) {
     return routeStack;
   }
 
-  const candidate = currentRoute
-    ? [...routeStack.slice(0, -1), route]
-    : [route];
-  return isValidBrowseRouteStack(candidate) ? cloneStack(candidate) : routeStack;
+  const retainedLength = currentRoute ? stackSnapshot.length - 1 : 0;
+  const candidate = new Array<BrowseRoute>(retainedLength + 1);
+  for (let index = 0; index < retainedLength; index += 1) {
+    candidate[index] = stackSnapshot[index];
+  }
+  candidate[retainedLength] = routeSnapshot;
+
+  return hasSupportedRouteOrder(candidate) ? candidate : routeStack;
 }
 
 export function backRoute(routeStack: readonly BrowseRoute[]): readonly BrowseRoute[] {
-  if (!isValidBrowseRouteStack(routeStack) || routeStack.length <= 1) {
+  const stackSnapshot = normalizeBrowseRouteStack(routeStack);
+  if (!stackSnapshot || stackSnapshot.length <= 1) {
     return routeStack;
   }
 
-  return cloneStack(routeStack.slice(0, -1));
+  const previousStack = new Array<BrowseRoute>(stackSnapshot.length - 1);
+  for (let index = 0; index < previousStack.length; index += 1) {
+    previousStack[index] = stackSnapshot[index];
+  }
+  return previousStack;
 }
 
 export function isValidFocusTarget(candidate: unknown): candidate is FocusTarget {
-  try {
-    return (
-      isRecord(candidate) &&
-      isNonBlankString(candidate.scopeKey) &&
-      isNonBlankString(candidate.focusKey)
-    );
-  } catch {
-    return false;
-  }
+  return normalizeFocusTarget(candidate) !== null;
 }
 
 export function isValidBrowseRouteStack(
   candidate: unknown,
 ): candidate is readonly BrowseRoute[] {
-  try {
-    if (!Array.isArray(candidate) || !candidate.every(isValidBrowseRoute)) {
-      return false;
-    }
-
-    if (candidate.length === 0) {
-      return true;
-    }
-
-    if (candidate[0].kind !== 'home') {
-      return false;
-    }
-
-    if (candidate.length === 1) {
-      return true;
-    }
-
-    const secondRoute = candidate[1];
-    if (candidate.length === 2) {
-      return secondRoute.kind === 'library' || secondRoute.kind === 'details';
-    }
-
-    return (
-      candidate.length === 3 &&
-      secondRoute.kind === 'library' &&
-      candidate[2].kind === 'details'
-    );
-  } catch {
-    return false;
-  }
+  return normalizeBrowseRouteStack(candidate) !== null;
 }
 
-function cloneTarget(target: FocusTarget): FocusTarget {
-  return {
-    scopeKey: target.scopeKey,
-    focusKey: target.focusKey,
-  };
-}
-
-function cloneRoute(route: BrowseRoute): BrowseRoute {
-  switch (route.kind) {
-    case 'home':
-      return { kind: 'home' };
-    case 'library':
-      return {
-        kind: 'library',
-        libraryId: route.libraryId,
-        collectionType: route.collectionType,
-        origin: cloneTarget(route.origin),
-      };
-    case 'details':
-      return {
-        kind: 'details',
-        itemId: route.itemId,
-        origin: cloneTarget(route.origin),
-      };
-  }
-}
-
-function cloneStack(routeStack: readonly BrowseRoute[]): readonly BrowseRoute[] {
-  return routeStack.map(cloneRoute);
-}
-
-function isValidBrowseRoute(candidate: unknown): candidate is BrowseRoute {
+export function normalizeFocusTarget(candidate: unknown): FocusTarget | null {
   try {
     if (!isRecord(candidate)) {
-      return false;
+      return null;
     }
 
-    switch (candidate.kind) {
+    const scopeKey = candidate.scopeKey;
+    const focusKey = candidate.focusKey;
+    if (!isNonBlankString(scopeKey) || !isNonBlankString(focusKey)) {
+      return null;
+    }
+
+    return { scopeKey, focusKey };
+  } catch {
+    return null;
+  }
+}
+
+export function normalizeBrowseRouteStack(
+  candidate: unknown,
+): readonly BrowseRoute[] | null {
+  try {
+    if (!Array.isArray(candidate)) {
+      return null;
+    }
+
+    const length = candidate.length;
+    const snapshot = new Array<BrowseRoute>(length);
+    for (let index = 0; index < length; index += 1) {
+      const routeCandidate = candidate[index];
+      const routeSnapshot = normalizeBrowseRoute(routeCandidate);
+      if (!routeSnapshot) {
+        return null;
+      }
+      snapshot[index] = routeSnapshot;
+    }
+
+    return hasSupportedRouteOrder(snapshot) ? snapshot : null;
+  } catch {
+    return null;
+  }
+}
+
+function normalizeBrowseRoute(candidate: unknown): BrowseRoute | null {
+  try {
+    if (!isRecord(candidate)) {
+      return null;
+    }
+
+    const kind = candidate.kind;
+    switch (kind) {
       case 'home':
-        return true;
-      case 'library':
-        return (
-          isNonBlankString(candidate.libraryId) &&
-          isNonBlankString(candidate.collectionType) &&
-          isValidFocusTarget(candidate.origin)
-        );
-      case 'details':
-        return (
-          isNonBlankString(candidate.itemId) && isValidFocusTarget(candidate.origin)
-        );
+        return { kind };
+      case 'library': {
+        const libraryId = candidate.libraryId;
+        const collectionType = candidate.collectionType;
+        const originCandidate = candidate.origin;
+        if (!isNonBlankString(libraryId) || !isNonBlankString(collectionType)) {
+          return null;
+        }
+
+        const origin = normalizeFocusTarget(originCandidate);
+        return origin ? { kind, libraryId, collectionType, origin } : null;
+      }
+      case 'details': {
+        const itemId = candidate.itemId;
+        const originCandidate = candidate.origin;
+        if (!isNonBlankString(itemId)) {
+          return null;
+        }
+
+        const origin = normalizeFocusTarget(originCandidate);
+        return origin ? { kind, itemId, origin } : null;
+      }
       default:
-        return false;
+        return null;
     }
   } catch {
+    return null;
+  }
+}
+
+function appendRoute(
+  routeStack: readonly BrowseRoute[],
+  route: BrowseRoute,
+): BrowseRoute[] {
+  const candidate = new Array<BrowseRoute>(routeStack.length + 1);
+  for (let index = 0; index < routeStack.length; index += 1) {
+    candidate[index] = routeStack[index];
+  }
+  candidate[routeStack.length] = route;
+  return candidate;
+}
+
+function hasSupportedRouteOrder(routeStack: readonly BrowseRoute[]): boolean {
+  if (routeStack.length === 0) {
+    return true;
+  }
+
+  if (routeStack[0].kind !== 'home') {
     return false;
   }
+
+  if (routeStack.length === 1) {
+    return true;
+  }
+
+  const secondRoute = routeStack[1];
+  if (routeStack.length === 2) {
+    return secondRoute.kind === 'library' || secondRoute.kind === 'details';
+  }
+
+  return (
+    routeStack.length === 3 &&
+    secondRoute.kind === 'library' &&
+    routeStack[2].kind === 'details'
+  );
 }
 
 function routesEqual(left: BrowseRoute, right: BrowseRoute): boolean {
