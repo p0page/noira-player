@@ -114,6 +114,7 @@ foreach ($case in $selectedCases) {
     $streamUrl = $sourceLocator
     $reportPath = Get-PlaybackQualityReportPath -ReportsDir $ReportsDir -CaseId $currentCaseId
     $startedAt = [DateTimeOffset]::UtcNow
+    $sourceResolutionAttemptCount = 0
 
     if ($sourceLocator.StartsWith('emby://', [System.StringComparison]::OrdinalIgnoreCase)) {
         $resolvedSource = Resolve-PlaybackQualityEmbySource `
@@ -121,6 +122,7 @@ foreach ($case in $selectedCases) {
             -MediaSourceId ([string]$case.mediaSourceId) `
             -ResolverProjectPath $SourceResolverProjectPath `
             -ResolverScriptPath $SourceResolverScriptPath
+        $sourceResolutionAttemptCount = [int]$resolvedSource.AttemptCount
         if ($resolvedSource.Succeeded) {
             $streamUrl = $resolvedSource.StreamUrl
             $resolvedSourceCount++
@@ -139,6 +141,7 @@ foreach ($case in $selectedCases) {
                 reportPresent = (Test-Path -LiteralPath $reportPath)
                 durationMs = 0
                 errorCode = $resolvedSource.ErrorCode
+                sourceResolutionAttemptCount = $sourceResolutionAttemptCount
             })
             continue
         }
@@ -151,6 +154,7 @@ foreach ($case in $selectedCases) {
             exitCode = $null
             reportPresent = (Test-Path -LiteralPath $reportPath)
             durationMs = 0
+            sourceResolutionAttemptCount = $sourceResolutionAttemptCount
         })
         continue
     }
@@ -200,6 +204,7 @@ foreach ($case in $selectedCases) {
         exitCode = $exitCode
         reportPresent = $reportPresent
         durationMs = [Math]::Max(0, ([DateTimeOffset]::UtcNow - $startedAt).TotalMilliseconds)
+        sourceResolutionAttemptCount = $sourceResolutionAttemptCount
     })
 }
 

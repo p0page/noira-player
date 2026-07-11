@@ -471,7 +471,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
             foreach (var purpose in RequiredCoreEvaluationPurposes)
             {
                 AddUnique(validation.Coverage.RequiredPurposes, purpose);
-                if (validation.Purposes.Contains(purpose))
+                if (HasExecutablePurpose(validation.Cases, purpose))
                 {
                     AddUnique(validation.Coverage.CoveredPurposes, purpose);
                 }
@@ -498,6 +498,22 @@ namespace NoiraPlayer.Core.PlaybackQuality
             AddUnique(
                 validation.Coverage.Reasons,
                 "reference manifest is missing required playback quality purposes");
+        }
+
+        private static bool HasExecutablePurpose(
+            IReadOnlyList<PlaybackQualityReferenceCase> cases,
+            string purpose)
+        {
+            foreach (var referenceCase in cases)
+            {
+                if (NormalizeCaseCategory(referenceCase.Category) != "quarantine" &&
+                    referenceCase.Purpose.Contains(purpose))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static void AddError(

@@ -3,9 +3,9 @@
   "cases": [
     {
       "caseId": "w3c/ui-freeze-regression-sintel",
-      "category": "stable",
+      "category": "quarantine",
       "severity": "critical",
-      "stability": "stable",
+      "stability": "unknown",
       "uri": "https://media.w3.org/2010/05/sintel/trailer.mp4",
       "tier": 1,
       "purpose": [
@@ -36,10 +36,7 @@
       "tier": 1,
       "purpose": [
         "sdr-smoke",
-        "av-sync",
-        "tracks",
-        "subtitles",
-        "end-of-stream"
+        "frame-pacing"
       ],
       "expected": {
         "codec": "hevc",
@@ -49,7 +46,6 @@
         "hdrKind": "Sdr",
         "videoRange": "SDR",
         "colorPrimaries": "bt709",
-        "colorTransfer": "bt709",
         "colorSpace": "bt709",
         "isHdr": false,
         "isDirectPlayable": true,
@@ -57,7 +53,6 @@
         "dxgiInput": "YCBCR_STUDIO_G22_LEFT_P709",
         "dxgiOutput": "RGB_FULL_G22_NONE_P709",
         "maxStartupDurationMs": 5000.0,
-        "maxAudioVideoDriftMsP95": 80.0,
         "maxVideoStarvedPasses": 0,
         "maxAudioStarvedPasses": 0,
         "requireValidatedConversion": true,
@@ -231,7 +226,7 @@
     },
     {
       "caseId": "local/chimera-23976-hdr10-cadence",
-      "category": "challenge",
+      "category": "quarantine",
       "severity": "high",
       "stability": "unknown",
       "uri": "emby://quality-cases/chimera-23976-hdr10",
@@ -270,7 +265,7 @@
     },
     {
       "caseId": "local/sdr-resume-seek-timeline",
-      "category": "stable",
+      "category": "quarantine",
       "severity": "high",
       "stability": "unknown",
       "uri": "emby://quality-cases/sdr-resume-seek-timeline",
@@ -306,7 +301,7 @@
     },
     {
       "caseId": "local/missing-file-error-handling",
-      "category": "stable",
+      "category": "quarantine",
       "severity": "medium",
       "stability": "stable",
       "uri": "emby://quality-cases/missing-file-error-handling",

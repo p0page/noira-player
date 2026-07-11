@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Text;
 using NoiraPlayer.Core.Emby;
 using NoiraPlayer.Core.PlaybackQuality;
@@ -6,6 +7,7 @@ namespace NoiraPlayer.PlaybackQuality.Runner;
 
 internal static class Program
 {
+    private const string CollectorVersion = "native-manifest-runner-v0.1";
     private const string ServerUrlVariable = "NOIRAPLAYER_QA_SERVER_URL";
     private const string UsernameVariable = "NOIRAPLAYER_QA_USERNAME";
     private const string PasswordVariable = "NOIRAPLAYER_QA_PASSWORD";
@@ -123,10 +125,11 @@ internal static class Program
                     Operation = "resolve-emby-source",
                     ExceptionType = "source-resolution",
                     FailureClass = PlaybackQualityFailureClassification.ExternalServiceOrProtocolIssue,
-                    FailureArea = "source-resolution",
+                    FailureArea = "unsupported-source",
                     IsTerminal = true,
                     IsRetriable = true
                 },
+                CreateEnvironment(),
                 execution: new PlaybackQualityExecutionEvidence
                 {
                     AttemptId = Guid.NewGuid().ToString("N"),
@@ -163,6 +166,34 @@ internal static class Program
         {
             return Fail("error-report-write-failed");
         }
+    }
+
+    private static PlaybackQualityEnvironment CreateEnvironment()
+    {
+        var assembly = typeof(PlaybackQualityRuntimeEvidenceCollector).Assembly;
+        var informationalVersion = assembly
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
+            .InformationalVersion ?? "";
+        var revision = Environment.GetEnvironmentVariable("NOIRAPLAYER_SOURCE_REVISION") ?? "";
+        if (string.IsNullOrWhiteSpace(revision))
+        {
+            var separator = informationalVersion.LastIndexOf('+');
+            revision = separator >= 0 && separator + 1 < informationalVersion.Length
+                ? informationalVersion[(separator + 1)..]
+                : "unknown-source-revision";
+        }
+
+        return new PlaybackQualityEnvironment
+        {
+            CollectorVersion = CollectorVersion,
+            PlayerCoreVersion = assembly.GetName().Version?.ToString() ?? informationalVersion,
+            SourceRevision = revision,
+#if DEBUG
+            BuildConfiguration = "Debug"
+#else
+            BuildConfiguration = "Release"
+#endif
+        };
     }
 
     private static string SanitizeErrorCode(string value)

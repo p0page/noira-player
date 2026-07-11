@@ -1383,13 +1383,12 @@ $nativeNonZeroTimelineReport = Invoke-NativeHeadlessHelperCase `
     -NativeHelperExe $nativeHelperExe `
     -DurationSeconds 3 `
     -Scenario timeline
-$timelinePause = @($nativeNonZeroTimelineReport.report.lifecycle.events | Where-Object operation -eq 'pause') |
-    Select-Object -First 1
-if ($nativeNonZeroTimelineReport.report.source.containerStartTimeTicks -lt 10000000 -or
+$timelinePauseCount = @($nativeNonZeroTimelineReport.report.lifecycle.events |
+    Where-Object operation -eq 'pause').Count
+if ($timelinePauseCount -ne 0 -or
+    $nativeNonZeroTimelineReport.report.source.containerStartTimeTicks -lt 10000000 -or
     $nativeNonZeroTimelineReport.report.source.videoStreamStartTimeTicks -le $nativeNonZeroTimelineReport.report.source.containerStartTimeTicks -or
     [Math]::Abs($nativeNonZeroTimelineReport.report.source.durationTicks - 60000000) -gt 10000 -or
-    $timelinePause.positionTicks -lt 10000000 -or
-    $timelinePause.positionTicks -gt 25000000 -or
     $nativeNonZeroTimelineReport.report.position.seekDemuxTargetTicks -ne
         ($nativeNonZeroTimelineReport.report.position.seekTargetPositionTicks +
             $nativeNonZeroTimelineReport.report.source.containerStartTimeTicks) -or
@@ -1409,11 +1408,10 @@ $nativeResumeSeekTimelineReport = Invoke-NativeHeadlessHelperCase `
     -DurationSeconds 3 `
     -StartPositionTicks 20000000 `
     -Scenario timeline
-$resumePause = @($nativeResumeSeekTimelineReport.report.lifecycle.events | Where-Object operation -eq 'pause') |
-    Select-Object -First 1
-if ($nativeResumeSeekTimelineReport.report.position.requestedStartPositionTicks -ne 20000000 -or
-    $resumePause.positionTicks -lt 30000000 -or
-    $resumePause.positionTicks -gt 45000000 -or
+$resumePauseCount = @($nativeResumeSeekTimelineReport.report.lifecycle.events |
+    Where-Object operation -eq 'pause').Count
+if ($resumePauseCount -ne 0 -or
+    $nativeResumeSeekTimelineReport.report.position.requestedStartPositionTicks -ne 20000000 -or
     $nativeResumeSeekTimelineReport.report.position.seekTargetPositionTicks -ne 30000000 -or
     $nativeResumeSeekTimelineReport.report.position.seekDemuxTargetTicks -ne 44000000 -or
     $nativeResumeSeekTimelineReport.report.position.seekPositionErrorMs -gt 100.0 -or

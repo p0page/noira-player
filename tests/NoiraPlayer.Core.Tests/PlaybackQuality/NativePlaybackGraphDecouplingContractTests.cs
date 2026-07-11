@@ -150,6 +150,29 @@ public sealed class NativePlaybackGraphDecouplingContractTests
     }
 
     [Fact]
+    public void Native_Headless_Report_Does_Not_Invent_Pause_Resume_Lifecycle()
+    {
+        var root = FindRepositoryRoot();
+        var harnessSource = File.ReadAllText(Path.Combine(
+            root,
+            "tools",
+            "NoiraPlayer.PlaybackQuality.Headless",
+            "Program.cs"));
+        var helperAttemptGuard = "if (helper.PauseResume.Attempted)";
+        var guardIndex = harnessSource.IndexOf(helperAttemptGuard, StringComparison.Ordinal);
+        var pauseEventIndex = harnessSource.IndexOf(
+            "AddLifecycleEvent(\n                lifecycle,\n                \"pause\"",
+            StringComparison.Ordinal);
+        var resumeEventIndex = harnessSource.IndexOf(
+            "AddLifecycleEvent(\n                lifecycle,\n                \"resume\"",
+            StringComparison.Ordinal);
+
+        Assert.True(guardIndex >= 0, "Headless lifecycle must be guarded by actual pause/resume evidence.");
+        Assert.True(pauseEventIndex > guardIndex, "Pause lifecycle must be emitted only after the attempt guard.");
+        Assert.True(resumeEventIndex > pauseEventIndex, "Resume lifecycle must be emitted only after the attempt guard.");
+    }
+
+    [Fact]
     public void Native_Headless_Gate_Runs_A_Deterministic_Network_Reconnect_Case()
     {
         var root = FindRepositoryRoot();

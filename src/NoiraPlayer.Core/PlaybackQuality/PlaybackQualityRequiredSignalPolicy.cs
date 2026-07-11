@@ -63,9 +63,13 @@ namespace NoiraPlayer.Core.PlaybackQuality
 
             AddUnique(requiredSignals, "lifecycle.load");
             AddUnique(requiredSignals, "lifecycle.play");
-            AddUnique(requiredSignals, "lifecycle.pause");
-            AddUnique(requiredSignals, "lifecycle.resume");
             AddUnique(requiredSignals, "lifecycle.stop");
+
+            if (referenceCase.PauseSeconds > 0 || HasPurpose(referenceCase, "pause-resume"))
+            {
+                AddUnique(requiredSignals, "lifecycle.pause");
+                AddUnique(requiredSignals, "lifecycle.resume");
+            }
 
             if (HasPurpose(referenceCase, "end-of-stream"))
             {

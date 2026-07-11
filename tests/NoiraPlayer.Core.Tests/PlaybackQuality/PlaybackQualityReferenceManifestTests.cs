@@ -137,6 +137,21 @@ public sealed class PlaybackQualityReferenceManifestTests
     }
 
     [Fact]
+    public void Validate_Does_Not_Count_Quarantine_Cases_As_Executable_Coverage()
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        var quarantineCase = CreateCase("coverage/quarantine-only", 1, "end-of-stream");
+        quarantineCase.Category = "quarantine";
+        manifest.Cases.Add(quarantineCase);
+
+        var result = PlaybackQualityReferenceManifestValidator.Validate(manifest);
+
+        Assert.Equal("incomplete", result.Coverage.Status);
+        Assert.Contains("end-of-stream", result.Coverage.MissingPurposes);
+        Assert.DoesNotContain("end-of-stream", result.Coverage.CoveredPurposes);
+    }
+
+    [Fact]
     public void RequiredSignals_Include_NonSensitive_Direct_Stream_Locator_Evidence()
     {
         var referenceCase = CreateCase(
@@ -2212,6 +2227,26 @@ public sealed class PlaybackQualityReferenceManifestTests
             decoderOpened: true,
             playbackSampleObserved: true);
         return report;
+    }
+
+    [Fact]
+    public void RequiredSignalPolicy_Requires_Pause_And_Resume_Only_For_Pause_Resume_Cases()
+    {
+        var playbackCase = CreateCase("lifecycle/playback", 1, "sdr-smoke");
+        var playbackSignals = PlaybackQualityRequiredSignalPolicy.CreateRequiredSignals(playbackCase);
+
+        Assert.Contains("lifecycle.load", playbackSignals);
+        Assert.Contains("lifecycle.play", playbackSignals);
+        Assert.Contains("lifecycle.stop", playbackSignals);
+        Assert.DoesNotContain("lifecycle.pause", playbackSignals);
+        Assert.DoesNotContain("lifecycle.resume", playbackSignals);
+
+        var pauseResumeCase = CreateCase("lifecycle/pause-resume", 1, "pause-resume");
+        pauseResumeCase.PauseSeconds = 30;
+        var pauseResumeSignals = PlaybackQualityRequiredSignalPolicy.CreateRequiredSignals(pauseResumeCase);
+
+        Assert.Contains("lifecycle.pause", pauseResumeSignals);
+        Assert.Contains("lifecycle.resume", pauseResumeSignals);
     }
 
     private static void AddNativeExecutionEvidence(

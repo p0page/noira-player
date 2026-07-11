@@ -15,6 +15,7 @@ try {
     $invocationLog = Join-Path $tempRoot 'invocations.txt'
     $fakeHarness = Join-Path $tempRoot 'fake-harness.ps1'
     $fakeResolver = Join-Path $tempRoot 'fake-resolver.ps1'
+    $resolverState = Join-Path $tempRoot 'resolver-state.txt'
     $fakeHelper = Join-Path $tempRoot 'fake-helper.exe'
     Set-Content -LiteralPath $fakeHelper -Value '' -Encoding ASCII
 
@@ -161,6 +162,19 @@ $itemId = if ($itemIdIndex -ge 0 -and $itemIdIndex + 1 -lt $Arguments.Count) {
 } else {
     ''
 }
+$statePath = $env:NOIRAPLAYER_MANIFEST_RESOLVER_TEST_STATE
+if ($itemId -eq 'private-item') {
+    $priorAttempts = if (Test-Path -LiteralPath $statePath) {
+        @(Get-Content -LiteralPath $statePath).Count
+    } else {
+        0
+    }
+    Add-Content -LiteralPath $statePath -Value $itemId
+    if ($priorAttempts -eq 0) {
+        Write-Error 'resolver-error:transient-request-failed'
+        exit 2
+    }
+}
 if ($itemId -eq 'missing-item') {
     Write-Error 'resolver-error:media-source-not-found'
     exit 2
@@ -172,6 +186,7 @@ exit 0
 '@ | Set-Content -LiteralPath $fakeResolver -Encoding UTF8
 
     $env:NOIRAPLAYER_MANIFEST_RUNNER_TEST_LOG = $invocationLog
+    $env:NOIRAPLAYER_MANIFEST_RESOLVER_TEST_STATE = $resolverState
     & powershell -NoProfile -ExecutionPolicy Bypass -File $runner `
         -ManifestPath $manifestPath `
         -ReportsDir $reportsDir `
@@ -208,9 +223,14 @@ exit 0
     $unresolvedReport = Get-Content -LiteralPath $unresolvedReportPath -Raw -Encoding UTF8 | ConvertFrom-Json
     if ($unresolvedReport.report.result -ne 'error' -or
         $unresolvedReport.report.error.code -ne 'manifest-runner.source-resolution-failed' -or
+        $unresolvedReport.report.error.failureArea -ne 'unsupported-source' -or
         $unresolvedReport.report.execution.evidenceLevel -ne 'orchestration' -or
-        $unresolvedReport.report.execution.sourceOpenAttempted) {
-        throw 'Unresolved Emby source must produce a structured orchestration error report without claiming a source-open attempt.'
+        $unresolvedReport.report.execution.sourceOpenAttempted -or
+        [string]::IsNullOrWhiteSpace($unresolvedReport.report.environment.collectorVersion) -or
+        [string]::IsNullOrWhiteSpace($unresolvedReport.report.environment.playerCoreVersion) -or
+        [string]::IsNullOrWhiteSpace($unresolvedReport.report.environment.sourceRevision) -or
+        [string]::IsNullOrWhiteSpace($unresolvedReport.report.environment.buildConfiguration)) {
+        throw 'Unresolved Emby source must produce an attributable structured orchestration error without claiming a source-open attempt.'
     }
 
     $summary = Get-Content -LiteralPath $summaryPath -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -222,6 +242,12 @@ exit 0
         $summary.resolvedSourceCount -ne 1 -or
         $summary.missingReportCount -ne 0) {
         throw 'Manifest runner summary did not preserve selected/attempted/report/failure counts.'
+    }
+    $resolvedAttempt = @($summary.attempts | Where-Object caseId -eq 'runner/emby-resolved')[0]
+    $unresolvedAttempt = @($summary.attempts | Where-Object caseId -eq 'runner/emby-unresolved')[0]
+    if ($resolvedAttempt.sourceResolutionAttemptCount -ne 2 -or
+        $unresolvedAttempt.sourceResolutionAttemptCount -ne 3) {
+        throw 'Manifest runner must preserve bounded source-resolution retry evidence.'
     }
 
     $summaryText = Get-Content -LiteralPath $summaryPath -Raw -Encoding UTF8
@@ -251,6 +277,7 @@ exit 0
 }
 finally {
     Remove-Item Env:NOIRAPLAYER_MANIFEST_RUNNER_TEST_LOG -ErrorAction SilentlyContinue
+    Remove-Item Env:NOIRAPLAYER_MANIFEST_RESOLVER_TEST_STATE -ErrorAction SilentlyContinue
     if (Test-Path -LiteralPath $tempRoot) {
         Remove-Item -LiteralPath $tempRoot -Recurse -Force
     }

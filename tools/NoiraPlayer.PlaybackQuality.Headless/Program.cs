@@ -151,29 +151,24 @@ internal static class NativeHeadlessHarness
         var lifecycle = new PlaybackQualityLifecycle();
         AddLifecycleEvent(lifecycle, "load", "completed", 0);
         AddLifecycleEvent(lifecycle, "play", "completed", 0);
-        AddLifecycleEvent(
-            lifecycle,
-            "pause",
-            "completed",
-            helper.PauseResume.Attempted
-                ? helper.PauseResume.PositionBeforePauseTicks
-                : helper.Metrics.VideoPositionTicks,
-            helper.PauseResume.Attempted
-                ? $"duration {helper.PauseResume.DurationSeconds} seconds"
-                : "");
-        AddLifecycleEvent(
-            lifecycle,
-            "resume",
-            helper.PauseResume.Attempted ? helper.PauseResume.Status : "completed",
-            helper.PauseResume.Attempted
-                ? helper.PauseResume.PositionAfterResumeTicks
-                : helper.Metrics.VideoPositionTicks,
-            helper.PauseResume.Attempted
-                ? $"position {helper.PauseResume.PositionBeforePauseTicks}->{helper.PauseResume.PositionAfterResumeTicks}; " +
+        if (helper.PauseResume.Attempted)
+        {
+            AddLifecycleEvent(
+                lifecycle,
+                "pause",
+                "completed",
+                helper.PauseResume.PositionBeforePauseTicks,
+                $"duration {helper.PauseResume.DurationSeconds} seconds");
+            AddLifecycleEvent(
+                lifecycle,
+                "resume",
+                helper.PauseResume.Status,
+                helper.PauseResume.PositionAfterResumeTicks,
+                $"position {helper.PauseResume.PositionBeforePauseTicks}->{helper.PauseResume.PositionAfterResumeTicks}; " +
                     $"decoded {helper.PauseResume.PostResumeDecodedVideoFrames}; " +
                     $"rendered {helper.PauseResume.PostResumeRenderedVideoFrames}; " +
-                    $"playback failed {helper.PauseResume.PlaybackFailed}"
-                : "");
+                    $"playback failed {helper.PauseResume.PlaybackFailed}");
+        }
         if (helper.AudioSwitch.Attempted)
         {
             AddLifecycleEvent(

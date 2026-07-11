@@ -83,40 +83,74 @@ function Resolve-PlaybackQualityEmbySource {
         '--item-id', $ItemId,
         '--media-source-id', $MediaSourceId
     )
-    if (-not [string]::IsNullOrWhiteSpace($ResolverScriptPath)) {
-        $output = @(& powershell -NoProfile -ExecutionPolicy Bypass -File $ResolverScriptPath @resolverArguments)
-    }
-    else {
-        $output = @(& dotnet run --project $ResolverProjectPath --no-restore -- resolve-emby-source @resolverArguments)
-    }
-    $exitCode = $LASTEXITCODE
-    if ($exitCode -ne 0) {
-        return [pscustomobject]@{ Succeeded = $false; StreamUrl = ''; ErrorCode = 'resolver-failed' }
-    }
-
     $prefix = 'resolved-source-base64:'
-    $encoded = @($output | Where-Object { ([string]$_).StartsWith($prefix, [System.StringComparison]::Ordinal) }) |
-        Select-Object -Last 1
-    if ([string]::IsNullOrWhiteSpace([string]$encoded)) {
-        return [pscustomobject]@{ Succeeded = $false; StreamUrl = ''; ErrorCode = 'resolver-output-missing' }
+    $lastErrorCode = 'resolver-failed'
+    for ($attempt = 1; $attempt -le 3; $attempt++) {
+        $previousErrorActionPreference = $ErrorActionPreference
+        $ErrorActionPreference = 'Continue'
+        try {
+            if (-not [string]::IsNullOrWhiteSpace($ResolverScriptPath)) {
+                $output = @(& powershell -NoProfile -ExecutionPolicy Bypass -File $ResolverScriptPath @resolverArguments 2>&1)
+            }
+            else {
+                $output = @(& dotnet run --project $ResolverProjectPath --no-restore -- resolve-emby-source @resolverArguments 2>&1)
+            }
+            $exitCode = $LASTEXITCODE
+        }
+        finally {
+            $ErrorActionPreference = $previousErrorActionPreference
+        }
+        if ($exitCode -eq 0) {
+            $encoded = @($output | Where-Object { ([string]$_).StartsWith($prefix, [System.StringComparison]::Ordinal) }) |
+                Select-Object -Last 1
+            if (-not [string]::IsNullOrWhiteSpace([string]$encoded)) {
+                try {
+                    $streamUrl = [System.Text.Encoding]::UTF8.GetString(
+                        [Convert]::FromBase64String(([string]$encoded).Substring($prefix.Length)))
+                    $parsedUri = $null
+                    if ([Uri]::TryCreate($streamUrl, [UriKind]::Absolute, [ref]$parsedUri) -and
+                        ($streamUrl.StartsWith('http://', [StringComparison]::OrdinalIgnoreCase) -or
+                            $streamUrl.StartsWith('https://', [StringComparison]::OrdinalIgnoreCase))) {
+                        return [pscustomobject]@{
+                            Succeeded = $true
+                            StreamUrl = $streamUrl
+                            ErrorCode = ''
+                            AttemptCount = $attempt
+                        }
+                    }
+                    $lastErrorCode = 'resolver-url-invalid'
+                }
+                catch {
+                    $lastErrorCode = 'resolver-output-invalid'
+                }
+            }
+            else {
+                $lastErrorCode = 'resolver-output-missing'
+            }
+        }
+        else {
+            $resolverError = @($output | ForEach-Object { [string]$_ } |
+                Select-String -Pattern 'resolver-error:([A-Za-z0-9._-]+)' -AllMatches |
+                ForEach-Object { $_.Matches } |
+                ForEach-Object { $_.Groups[1].Value }) | Select-Object -Last 1
+            $lastErrorCode = if ([string]::IsNullOrWhiteSpace([string]$resolverError)) {
+                'resolver-failed'
+            } else {
+                [string]$resolverError
+            }
+        }
+
+        if ($attempt -lt 3) {
+            Start-Sleep -Milliseconds (250 * $attempt)
+        }
     }
 
-    try {
-        $streamUrl = [System.Text.Encoding]::UTF8.GetString(
-            [Convert]::FromBase64String(([string]$encoded).Substring($prefix.Length)))
+    return [pscustomobject]@{
+        Succeeded = $false
+        StreamUrl = ''
+        ErrorCode = $lastErrorCode
+        AttemptCount = 3
     }
-    catch {
-        return [pscustomobject]@{ Succeeded = $false; StreamUrl = ''; ErrorCode = 'resolver-output-invalid' }
-    }
-
-    $parsedUri = $null
-    if (-not [Uri]::TryCreate($streamUrl, [UriKind]::Absolute, [ref]$parsedUri) -or
-        -not ($streamUrl.StartsWith('http://', [StringComparison]::OrdinalIgnoreCase) -or
-            $streamUrl.StartsWith('https://', [StringComparison]::OrdinalIgnoreCase))) {
-        return [pscustomobject]@{ Succeeded = $false; StreamUrl = ''; ErrorCode = 'resolver-url-invalid' }
-    }
-
-    return [pscustomobject]@{ Succeeded = $true; StreamUrl = $streamUrl; ErrorCode = '' }
 }
 
 function Write-PlaybackQualitySourceResolutionError {

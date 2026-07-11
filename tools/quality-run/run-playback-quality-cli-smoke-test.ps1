@@ -1254,6 +1254,15 @@ try {
     $archivedCoreProbeManifest.cases = @($archivedCoreProbeManifest.cases | Where-Object {
         $_.caseId -ne 'w3c/ui-freeze-regression-sintel'
     })
+    $archivedCoreProbeManifest.cases[0].purpose = @(
+        @($archivedCoreProbeManifest.cases[0].purpose) +
+        @(
+            'sdr-smoke', 'hdr-output', 'hdr-force-sdr', 'dv-reject', 'dv-fallback',
+            'cadence-23.976', 'frame-pacing', 'av-sync', 'buffering', 'timeline',
+            'tracks', 'subtitles', 'end-of-stream', 'error-handling'
+        ) |
+            Select-Object -Unique
+    )
     $archivedCoreProbeManifest | ConvertTo-Json -Depth 100 |
         Set-Content -LiteralPath $archivedCoreProbeManifestPath -Encoding UTF8
 
@@ -4972,9 +4981,9 @@ try {
         throw 'Expected example reference manifest to include the public/core reference case set.'
     }
 
-    if ($exampleManifestValidation.coverage.status -ne 'ready' -or
-        $exampleManifestValidation.coverage.isCoreEvaluationReady -ne $true) {
-        throw 'Expected example reference manifest coverage to be ready for Core evaluation.'
+    if ($exampleManifestValidation.coverage.status -ne 'incomplete' -or
+        $exampleManifestValidation.coverage.isCoreEvaluationReady -ne $false) {
+        throw 'Expected the public example manifest to remain incomplete until executable lifecycle and track fixtures are supplied.'
     }
 
     $requiredPurposes = @(
@@ -4993,9 +5002,19 @@ try {
         'end-of-stream',
         'error-handling'
     )
+    $expectedMissingPurposes = @(
+        'cadence-23.976',
+        'av-sync',
+        'timeline',
+        'tracks',
+        'subtitles',
+        'end-of-stream',
+        'error-handling'
+    )
     foreach ($purpose in $requiredPurposes) {
-        if (-not ($exampleManifestValidation.coverage.coveredPurposes -contains $purpose)) {
-            throw ('Expected example reference manifest to cover purpose: ' + $purpose)
+        $isMissing = $expectedMissingPurposes -contains $purpose
+        if ($isMissing -ne ($exampleManifestValidation.coverage.missingPurposes -contains $purpose)) {
+            throw ('Unexpected public example manifest coverage for purpose: ' + $purpose)
         }
     }
 
@@ -5146,25 +5165,15 @@ try {
         $_.stability -eq 'stable' -and
         ($_.requiredSignals -contains 'lifecycle.load') -and
         ($_.requiredSignals -contains 'lifecycle.play') -and
-        ($_.requiredSignals -contains 'lifecycle.pause') -and
-        ($_.requiredSignals -contains 'lifecycle.resume') -and
+        -not ($_.requiredSignals -contains 'lifecycle.pause') -and
+        -not ($_.requiredSignals -contains 'lifecycle.resume') -and
         ($_.requiredSignals -contains 'lifecycle.stop') -and
-        ($_.requiredSignals -contains 'tracks.videoTrackCount') -and
-        ($_.requiredSignals -contains 'tracks.audioTrackCount') -and
-        ($_.requiredSignals -contains 'tracks.subtitleTrackCount') -and
-        ($_.requiredSignals -contains 'tracks.video.isExternal') -and
-        ($_.requiredSignals -contains 'tracks.video.isDefault') -and
-        ($_.requiredSignals -contains 'tracks.video.isForced') -and
-        ($_.requiredSignals -contains 'tracks.audio.isExternal') -and
-        ($_.requiredSignals -contains 'tracks.audio.channels') -and
-        ($_.requiredSignals -contains 'tracks.audio.isDefault') -and
-        ($_.requiredSignals -contains 'tracks.audio.isForced') -and
-        ($_.requiredSignals -contains 'tracks.subtitles.isExternal') -and
-        ($_.requiredSignals -contains 'tracks.subtitles.isDefault') -and
-        ($_.requiredSignals -contains 'tracks.subtitles.isForced') -and
-        ($_.requiredSignals -contains 'tracks.isSubtitleDisabled')
+        ($_.requiredSignals -contains 'timing.renderedVideoFrames') -and
+        ($_.requiredSignals -contains 'timing.framePacingSourceFrameRate') -and
+        -not ($_.requiredSignals -contains 'tracks.audioTrackCount') -and
+        -not ($_.requiredSignals -contains 'tracks.subtitleTrackCount')
     })) {
-        throw 'Expected example reference run plan to schedule SDR track/subtitle required signals.'
+        throw 'Expected the public SDR video-only case to require only evidence it can actually provide.'
     }
 
     Write-Output 'playback-quality-cli smoke ok'
