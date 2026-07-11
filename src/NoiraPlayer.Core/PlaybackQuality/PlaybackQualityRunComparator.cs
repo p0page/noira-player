@@ -251,7 +251,14 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 matchedKeys,
                 candidateSignals,
                 hasCandidateSignalPresence);
-            AddFramePacingSeverityDeltas(comparison, baseline, candidate);
+            AddFramePacingSeverityDeltas(
+                comparison,
+                baseline,
+                candidate,
+                baselineSignals,
+                candidateSignals,
+                hasBaselineSignalPresence,
+                hasCandidateSignalPresence);
             AddSeekTimelineEvidenceDeltas(comparison, baseline, candidate);
             AddRuntimePlaybackEvidenceSignals(
                 comparison,
@@ -1654,7 +1661,11 @@ namespace NoiraPlayer.Core.PlaybackQuality
         private static void AddFramePacingSeverityDeltas(
             PlaybackQualityRunComparison comparison,
             PlaybackQualityReport baseline,
-            PlaybackQualityReport candidate)
+            PlaybackQualityReport candidate,
+            HashSet<string> baselineSignals,
+            HashSet<string> candidateSignals,
+            bool hasBaselineSignalPresence,
+            bool hasCandidateSignalPresence)
         {
             if (!IsFramePacingComparison(comparison) &&
                 !HasComparableExpectedFramePacingEvidence(baseline, candidate))
@@ -1665,52 +1676,146 @@ namespace NoiraPlayer.Core.PlaybackQuality
             var baselineAnalysis = PlaybackQualityReportAnalyzer.Analyze(baseline);
             var candidateAnalysis = PlaybackQualityReportAnalyzer.Analyze(candidate);
 
-            CompareDerivedFrameRatio(
+            if (HasComparableDerivedInputs(
                 comparison,
                 "framePacing.renderIntervalP95FrameRatio",
-                baselineAnalysis.FramePacing.RenderIntervalP95FrameRatio,
-                candidateAnalysis.FramePacing.RenderIntervalP95FrameRatio,
-                requirePositive: true);
-            CompareDerivedFrameRatio(
+                baselineSignals,
+                candidateSignals,
+                hasBaselineSignalPresence,
+                hasCandidateSignalPresence,
+                "timing.expectedFrameDurationMs",
+                "timing.renderIntervalMsP95"))
+            {
+                CompareDerivedFrameRatio(
+                    comparison,
+                    "framePacing.renderIntervalP95FrameRatio",
+                    baselineAnalysis.FramePacing.RenderIntervalP95FrameRatio,
+                    candidateAnalysis.FramePacing.RenderIntervalP95FrameRatio,
+                    requirePositive: true);
+            }
+
+            if (HasComparableDerivedInputs(
                 comparison,
                 "framePacing.renderIntervalP99FrameRatio",
-                baselineAnalysis.FramePacing.RenderIntervalP99FrameRatio,
-                candidateAnalysis.FramePacing.RenderIntervalP99FrameRatio,
-                requirePositive: true);
-            CompareDerivedFrameRatio(
+                baselineSignals,
+                candidateSignals,
+                hasBaselineSignalPresence,
+                hasCandidateSignalPresence,
+                "timing.expectedFrameDurationMs",
+                "timing.renderIntervalMsP99"))
+            {
+                CompareDerivedFrameRatio(
+                    comparison,
+                    "framePacing.renderIntervalP99FrameRatio",
+                    baselineAnalysis.FramePacing.RenderIntervalP99FrameRatio,
+                    candidateAnalysis.FramePacing.RenderIntervalP99FrameRatio,
+                    requirePositive: true);
+            }
+
+            if (HasComparableDerivedInputs(
                 comparison,
                 "framePacing.maxFrameGapFrameRatio",
-                baselineAnalysis.FramePacing.MaxFrameGapFrameRatio,
-                candidateAnalysis.FramePacing.MaxFrameGapFrameRatio,
-                requirePositive: true);
-            CompareFramePacingExpectedError(
+                baselineSignals,
+                candidateSignals,
+                hasBaselineSignalPresence,
+                hasCandidateSignalPresence,
+                "timing.expectedFrameDurationMs",
+                "timing.maxFrameGapMs"))
+            {
+                CompareDerivedFrameRatio(
+                    comparison,
+                    "framePacing.maxFrameGapFrameRatio",
+                    baselineAnalysis.FramePacing.MaxFrameGapFrameRatio,
+                    candidateAnalysis.FramePacing.MaxFrameGapFrameRatio,
+                    requirePositive: true);
+            }
+
+            if (HasComparableDerivedInputs(
                 comparison,
                 "framePacing.renderIntervalP95ExpectedErrorMs",
-                baseline.Timing.RenderIntervalMsP95,
-                candidate.Timing.RenderIntervalMsP95,
-                baseline.Timing.ExpectedFrameDurationMs,
-                candidate.Timing.ExpectedFrameDurationMs);
-            CompareFramePacingExpectedError(
+                baselineSignals,
+                candidateSignals,
+                hasBaselineSignalPresence,
+                hasCandidateSignalPresence,
+                "timing.expectedFrameDurationMs",
+                "timing.renderIntervalMsP95"))
+            {
+                CompareFramePacingExpectedError(
+                    comparison,
+                    "framePacing.renderIntervalP95ExpectedErrorMs",
+                    baseline.Timing.RenderIntervalMsP95,
+                    candidate.Timing.RenderIntervalMsP95,
+                    baseline.Timing.ExpectedFrameDurationMs,
+                    candidate.Timing.ExpectedFrameDurationMs);
+            }
+
+            if (HasComparableDerivedInputs(
                 comparison,
                 "framePacing.renderIntervalP99ExpectedErrorMs",
-                baseline.Timing.RenderIntervalMsP99,
-                candidate.Timing.RenderIntervalMsP99,
-                baseline.Timing.ExpectedFrameDurationMs,
-                candidate.Timing.ExpectedFrameDurationMs);
-            CompareFramePacingExpectedError(
+                baselineSignals,
+                candidateSignals,
+                hasBaselineSignalPresence,
+                hasCandidateSignalPresence,
+                "timing.expectedFrameDurationMs",
+                "timing.renderIntervalMsP99"))
+            {
+                CompareFramePacingExpectedError(
+                    comparison,
+                    "framePacing.renderIntervalP99ExpectedErrorMs",
+                    baseline.Timing.RenderIntervalMsP99,
+                    candidate.Timing.RenderIntervalMsP99,
+                    baseline.Timing.ExpectedFrameDurationMs,
+                    candidate.Timing.ExpectedFrameDurationMs);
+            }
+
+            if (HasComparableDerivedInputs(
                 comparison,
                 "framePacing.maxFrameGapExpectedErrorMs",
-                baseline.Timing.MaxFrameGapMs,
-                candidate.Timing.MaxFrameGapMs,
-                baseline.Timing.ExpectedFrameDurationMs,
-                candidate.Timing.ExpectedFrameDurationMs);
-            CompareDerivedPolicyChange(
+                baselineSignals,
+                candidateSignals,
+                hasBaselineSignalPresence,
+                hasCandidateSignalPresence,
+                "timing.expectedFrameDurationMs",
+                "timing.maxFrameGapMs"))
+            {
+                CompareFramePacingExpectedError(
+                    comparison,
+                    "framePacing.maxFrameGapExpectedErrorMs",
+                    baseline.Timing.MaxFrameGapMs,
+                    candidate.Timing.MaxFrameGapMs,
+                    baseline.Timing.ExpectedFrameDurationMs,
+                    candidate.Timing.ExpectedFrameDurationMs);
+            }
+
+            if (HasComparableDerivedInputs(
                 comparison,
                 "framePacing.lateFrameDropToleranceFrameRatio",
-                baselineAnalysis.FramePacing.LateFrameDropToleranceFrameRatio,
-                candidateAnalysis.FramePacing.LateFrameDropToleranceFrameRatio,
-                requirePositive: true);
-            if (HasObservedFrameCount(baseline) && HasObservedFrameCount(candidate))
+                baselineSignals,
+                candidateSignals,
+                hasBaselineSignalPresence,
+                hasCandidateSignalPresence,
+                "timing.expectedFrameDurationMs",
+                "timing.lateFrameDropToleranceMs"))
+            {
+                CompareDerivedPolicyChange(
+                    comparison,
+                    "framePacing.lateFrameDropToleranceFrameRatio",
+                    baselineAnalysis.FramePacing.LateFrameDropToleranceFrameRatio,
+                    candidateAnalysis.FramePacing.LateFrameDropToleranceFrameRatio,
+                    requirePositive: true);
+            }
+
+            if (HasComparableDerivedInputs(
+                    comparison,
+                    "framePacing.droppedVideoFramePercent",
+                    baselineSignals,
+                    candidateSignals,
+                    hasBaselineSignalPresence,
+                    hasCandidateSignalPresence,
+                    "timing.renderedVideoFrames",
+                    "timing.droppedVideoFrames") &&
+                HasObservedFrameCount(baseline) &&
+                HasObservedFrameCount(candidate))
             {
                 CompareDerivedLowerIsBetter(
                     comparison,
@@ -1843,6 +1948,46 @@ namespace NoiraPlayer.Core.PlaybackQuality
                     numericDelta < 0 ? "decreased" : "increased",
                     numericDelta));
             }
+        }
+
+        private static bool HasComparableDerivedInputs(
+            PlaybackQualityRunComparison comparison,
+            string derivedSignal,
+            HashSet<string> baselineSignals,
+            HashSet<string> candidateSignals,
+            bool hasBaselineSignalPresence,
+            bool hasCandidateSignalPresence,
+            params string[] requiredSignals)
+        {
+            var baselinePresent = !hasBaselineSignalPresence ||
+                ContainsAllSignals(baselineSignals, requiredSignals);
+            var candidatePresent = !hasCandidateSignalPresence ||
+                ContainsAllSignals(candidateSignals, requiredSignals);
+            if (baselinePresent && !candidatePresent)
+            {
+                AddUnique(comparison.Coverage.UnmatchedBaselineSignals, derivedSignal);
+            }
+            else if (!baselinePresent && candidatePresent)
+            {
+                AddUnique(comparison.Coverage.UnmatchedCandidateSignals, derivedSignal);
+            }
+
+            return baselinePresent && candidatePresent;
+        }
+
+        private static bool ContainsAllSignals(
+            HashSet<string> presentSignals,
+            IReadOnlyList<string> requiredSignals)
+        {
+            foreach (var signal in requiredSignals)
+            {
+                if (!presentSignals.Contains(signal))
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         private static void CompareFramePacingExpectedError(

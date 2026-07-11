@@ -258,6 +258,7 @@ try {
         $presenceReport.timing | Add-Member -NotePropertyName decodedVideoFrames -NotePropertyValue 120 -Force
         $presenceReport.timing | Add-Member -NotePropertyName hardwareDecodedVideoFrames -NotePropertyValue 120 -Force
         $presenceReport.timing | Add-Member -NotePropertyName softwareDecodedVideoFrames -NotePropertyValue 0 -Force
+        $presenceReport.timing | Add-Member -NotePropertyName droppedVideoFrames -NotePropertyValue 12 -Force
         $presenceReport.timing | Add-Member -NotePropertyName audioAheadWaitPassDurationMsP95 -NotePropertyValue 8.0 -Force
         $presenceReport.timing | Add-Member -NotePropertyName audioAheadWaitFinalDeltaAbsMsP95 -NotePropertyValue 12.0 -Force
         $presenceReport.sync | Add-Member -NotePropertyName audioVideoDriftMsP95 -NotePropertyValue 40.0 -Force
@@ -278,6 +279,22 @@ try {
         failureArea = 'frame-pacing'
         expected = '240'
         actual = '60'
+    }
+    $presenceBaseline.checks += [pscustomobject]@{
+        name = 'DroppedVideoFrames'
+        signal = 'timing.droppedVideoFrames'
+        status = 'fail'
+        failureArea = 'frame-pacing'
+        expected = '4'
+        actual = '12'
+    }
+    $presenceCandidate.checks += [pscustomobject]@{
+        name = 'DroppedVideoFrames'
+        signal = 'timing.droppedVideoFrames'
+        status = 'pass'
+        failureArea = 'frame-pacing'
+        expected = '4'
+        actual = '2'
     }
     $presenceBaseline.checks += [pscustomobject]@{
         name = 'AudioVideoDriftMsP95'
@@ -313,6 +330,7 @@ try {
     }
     $presenceCandidate.timing.PSObject.Properties.Remove('hardwareDecodedVideoFrames')
     $presenceCandidate.timing.PSObject.Properties.Remove('softwareDecodedVideoFrames')
+    $presenceCandidate.timing.PSObject.Properties.Remove('droppedVideoFrames')
     $presenceCandidate.timing.PSObject.Properties.Remove('audioAheadWaitPassDurationMsP95')
     $presenceCandidate.timing.PSObject.Properties.Remove('audioAheadWaitFinalDeltaAbsMsP95')
     $presenceCandidate.sync.PSObject.Properties.Remove('audioVideoDriftMsP95')
@@ -2334,6 +2352,8 @@ try {
     $baselineOnlySignals = @(
         'timing.hardwareDecodedVideoFrames',
         'timing.softwareDecodedVideoFrames',
+        'timing.droppedVideoFrames',
+        'framePacing.droppedVideoFramePercent',
         'timing.audioAheadWaitPassDurationMsP95',
         'timing.audioAheadWaitFinalDeltaAbsMsP95',
         'sync.audioVideoDriftMsP95',
