@@ -186,6 +186,11 @@ public sealed class ModernUwpSolutionContractTests
         Assert.Contains("BuildNoiraWebClient", modernProject, StringComparison.Ordinal);
         Assert.Contains("<NoiraWebClientDist Include=\"$(NoiraWebClientDirectory)dist\\**\\*\" />", modernProject, StringComparison.Ordinal);
         Assert.Contains("WebCode\\%(NoiraWebClientDist.RecursiveDir)%(NoiraWebClientDist.Filename)%(NoiraWebClientDist.Extension)", modernProject, StringComparison.Ordinal);
+        Assert.Contains("Condition=\"'$(NoiraBuildWebClient)' == 'true'\">", modernProject, StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "Condition=\"'$(NoiraBuildWebClient)' == 'true' and Exists('$(NoiraWebClientDirectory)dist\\index.html')\"",
+            modernProject,
+            StringComparison.Ordinal);
     }
 
     [Fact]

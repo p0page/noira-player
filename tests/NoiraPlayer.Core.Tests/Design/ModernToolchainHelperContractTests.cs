@@ -33,6 +33,7 @@ public sealed class ModernToolchainHelperContractTests
 
         Assert.Contains("Assert-DotNetSdkSupportsModernNet", registerScript, StringComparison.Ordinal);
         Assert.Contains("Resolve-ModernMsBuildPath $MsBuildPath", registerScript, StringComparison.Ordinal);
+        Assert.Contains("'WebCode\\index.html'", registerScript, StringComparison.Ordinal);
         Assert.DoesNotContain(@"C:\Program\MSBuild\Current\Bin\MSBuild.exe", registerScript, StringComparison.Ordinal);
     }
 

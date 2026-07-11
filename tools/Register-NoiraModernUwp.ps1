@@ -195,7 +195,12 @@ if (-not (Test-Path -LiteralPath $executablePath)) {
     throw "Manifest executable not found in staged layout: $executablePath"
 }
 
-foreach ($requiredFile in @('NoiraPlayer.Native.dll', 'NoiraPlayer.Native.winmd', 'resources.pri', 'avcodec-62.dll')) {
+foreach ($requiredFile in @(
+        'NoiraPlayer.Native.dll',
+        'NoiraPlayer.Native.winmd',
+        'resources.pri',
+        'avcodec-62.dll',
+        'WebCode\index.html')) {
     $requiredPath = Join-Path $LayoutDirectory $requiredFile
     if (-not (Test-Path -LiteralPath $requiredPath)) {
         throw "Required staged package file not found: $requiredPath"

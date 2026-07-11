@@ -2,6 +2,14 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-11 更新：播放修复已完成完整 App 构建与 App-hosted 实播
+
+提交 `061be2c` 之后不再只以 App-free helper 作为结论。本轮从干净 Native/App 输出重新执行 Debug x64 Native AOT Publish，修复了现代 App 项目在 `BuildNoiraWebClient` 执行前检查 `dist/index.html`、导致 `WebCode` 被静默漏出 AppX recipe 的目标顺序错误；注册脚本现在也强制验证 `WebCode\index.html`。修复后的完整 AppX layout 包含 Web、Core、Native、FFmpeg 和 AOT executable，重新注册后成功启动、恢复本地 Emby 会话并加载真实媒体库。
+
+完整 App 实播中，“一战再战”的 `1080p / 15 Mbps, HEVC + DDP7.1` 源持续推进超过 1 分钟；“哈姆奈特”的 `4K / 24 Mbps, HEVC - HDR + TrueHD7.1` 源从 0 开始持续推进。后者日志中音频与视频时钟按墙钟速度推进且长期保持在毫秒级附近，多次真实出现 video send/receive 双 `EAGAIN`，均在第 1 次有界重试恢复，没有进入 `Failed`，因此主体慢放和立即崩溃问题已在 App-hosted 路径得到验证。
+
+剩余风险：哈姆奈特实播中观察到一次约 6 秒没有新视频呈现、随后丢弃积压视频帧追上仍在推进的音频时钟。当前证据更接近网络/供帧瞬时停顿，而不是旧的 TrueHD 主时钟极慢；仍需作为独立 buffering/cadence case 采集，不应被本轮结论掩盖。本轮验证是 Windows App-hosted，仍不替代 Xbox/HDMI 实机验证。
+
 ## 2026-07-11 更新：合并 main 后修复真实 HEVC/TrueHD 慢放与双 EAGAIN
 
 当前调优分支已通过合并提交 `3427469` 纳入本地 `main` 的 FFmpeg 8.1.2、VS2026/.NET 10、WebView hybrid 和 UI 线程修复。合并只在 `NativePlaybackGraphDecouplingContractTests.cs` 产生冲突，最终保留两边契约，11 个相关测试通过。对比确认 `VideoDecoder.cpp` 在合并前两侧完全一致，因此本次故障不是当前调优分支已经修复而 `main` 遗漏；两边都包含相同的致命双 `EAGAIN` 分支。

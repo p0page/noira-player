@@ -1,5 +1,11 @@
 ﻿# 技术决策
 
+## 2026-07-11：播放 Core 修复必须经过完整 App-hosted 构建与实播
+
+决策：App-free native evidence 继续作为快速、可重复的 Core 门禁，但播放修复在宣称完成前必须再通过完整 App 的 Web/Core/Native/FFmpeg/Native AOT Publish、AppX layout 验证、注册启动和真实 App-hosted 播放。AppX layout 必须显式验证 `WebCode\index.html`，防止构建成功但 WebView 资源缺失的假阳性。
+
+原因：本轮干净构建发现 `IncludeNoiraWebClientDist` 在其 build dependency 运行前检查输出文件，导致 Web 资源被静默排除；此前增量产物掩盖了问题。只有完整 App 启动才暴露 `SetVirtualHostNameToFolderMapping` 的路径错误。修正后，两个私有 HEVC case 已通过完整 App 播放，且 4K HDR/TrueHD case 实际触发并恢复双 `EAGAIN`。App-free 与 App-hosted 两层证据不能互相替代。
+
 ## 2026-07-11：真实解码失败优先于既有 cadence 调优，评测门禁不得吞掉 render-thread failure
 
 决策：在 FFmpeg 8.1.2 基线上保留三项通用播放修复：缺失音频 PTS 从当前 open/seek 锚点按输出 samples 连续合成；小于 20ms 的 PCM 帧合并后提交 XAudio；FFmpeg 硬解码 send/receive 同时 EAGAIN 时保留同一 packet 并做最多 4 次有界恢复。恢复不是无限轮询，任何进展都重置计数，超过上限继续失败并记录 packet、codec、硬解状态和重试次数。

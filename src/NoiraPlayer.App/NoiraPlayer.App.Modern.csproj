@@ -60,7 +60,7 @@
     Name="IncludeNoiraWebClientDist"
     BeforeTargets="AssignTargetPaths"
     DependsOnTargets="BuildNoiraWebClient"
-    Condition="'$(NoiraBuildWebClient)' == 'true' and Exists('$(NoiraWebClientDirectory)dist\index.html')">
+    Condition="'$(NoiraBuildWebClient)' == 'true'">
     <ItemGroup>
       <NoiraWebClientDist Include="$(NoiraWebClientDirectory)dist\**\*" />
       <Content Include="@(NoiraWebClientDist)">

@@ -20,23 +20,28 @@ public sealed class NativeFfmpegDiagnosticsContractTests
     }
 
     [Fact]
-    public void Native_Video_Decoder_Logs_Packet_Context_Before_Drain_Failure()
+    public void Native_Video_Decoder_Logs_Packet_Context_During_Bounded_Eagain_Recovery()
     {
         var source = ReadNativeSource("Media", "VideoDecoder.cpp");
         var failureMessageIndex = source.IndexOf(
-            "FFmpeg decoder could not accept a packet and produced no frame while draining.",
+            "FFmpeg video decoder made no progress after bounded packet recovery.",
             StringComparison.Ordinal);
-        var diagnosticIndex = source.IndexOf(
-            "VideoDecoder.SendPacket eagain no-frame",
+        var retryDiagnosticIndex = source.IndexOf(
+            "VideoDecoder.SendPacket eagain retry",
+            StringComparison.Ordinal);
+        var exhaustedDiagnosticIndex = source.IndexOf(
+            "VideoDecoder.SendPacket eagain exhausted",
             StringComparison.Ordinal);
 
-        Assert.True(diagnosticIndex >= 0, "decoder drain failures must log packet context first.");
-        Assert.True(failureMessageIndex >= 0, "decoder drain failure message must remain searchable.");
+        Assert.True(retryDiagnosticIndex >= 0, "decoder recovery attempts must log packet context.");
+        Assert.True(exhaustedDiagnosticIndex > retryDiagnosticIndex, "retry exhaustion must have a distinct diagnostic.");
+        Assert.True(failureMessageIndex >= 0, "bounded recovery failure message must remain searchable.");
         Assert.True(
-            diagnosticIndex < failureMessageIndex,
-            "decoder drain diagnostic must be emitted before the failure is raised.");
+            exhaustedDiagnosticIndex < failureMessageIndex,
+            "decoder exhaustion diagnostic must be emitted before the failure is raised.");
         Assert.Contains("CreatePacketDiagnostic(", source, StringComparison.Ordinal);
         Assert.Contains("receiveResult=", source, StringComparison.Ordinal);
+        Assert.Contains("maxRetries=", source, StringComparison.Ordinal);
     }
 
     [Fact]
