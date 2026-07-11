@@ -118,10 +118,43 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 RunId = referenceCase.CaseId ?? "",
                 Expected = CloneExpected(referenceCase.Expected),
                 Environment = MergeEnvironment(environment),
-                Execution = PlaybackQualityExecutionEvidenceFactory.Clone(execution),
-                Result = "error",
-                Error = CloneError(error)
+                Execution = PlaybackQualityExecutionEvidenceFactory.Clone(execution)
             };
+            return ComposeErrorRunResult(referenceCase, error, report);
+        }
+
+        public static PlaybackQualityRunResult ComposeErrorRunResult(
+            PlaybackQualityReferenceCase referenceCase,
+            PlaybackQualityError error,
+            PlaybackQualityReportRequest capturedEvidence)
+        {
+            if (referenceCase == null)
+            {
+                throw new ArgumentNullException(nameof(referenceCase));
+            }
+
+            if (error == null)
+            {
+                throw new ArgumentNullException(nameof(error));
+            }
+
+            if (capturedEvidence == null)
+            {
+                throw new ArgumentNullException(nameof(capturedEvidence));
+            }
+
+            var report = PlaybackQualityReportComposer.Compose(capturedEvidence).Report;
+            report.RunId = referenceCase.CaseId ?? "";
+            return ComposeErrorRunResult(referenceCase, error, report);
+        }
+
+        private static PlaybackQualityRunResult ComposeErrorRunResult(
+            PlaybackQualityReferenceCase referenceCase,
+            PlaybackQualityError error,
+            PlaybackQualityReport report)
+        {
+            report.Result = "error";
+            report.Error = CloneError(error);
             report.Error.FailureArea = string.IsNullOrWhiteSpace(report.Error.FailureArea)
                 ? "error-handling"
                 : report.Error.FailureArea;

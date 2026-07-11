@@ -1076,3 +1076,13 @@ comparison 边界：24/24 comparable，1 improved、0 regressed、0 mixed、23 u
 执行证据：长暂停 helper 必须返回与普通播放相同的完整 source/decode/render/timing 证据，并额外返回暂停时长、暂停前后位置、恢复后的 decoded/rendered 帧数、播放失败标志和恢复状态。正式 case 只执行 pause/resume，不再继续音轨、字幕或 seek 操作，以保持单一归因。`pauseSeconds` 是版本化 manifest 字段，canonical validator 限制为 `0..900`。
 
 门禁：确定性故障服务器必须观察到第二个非零 Range 请求；raw report 必须为 native-playback/completed，暂停后位置和帧数必须前进；materialized report-set 必须通过 strict structure/execution validation。缺少任一证据都不能由 probe、expected、stdout 文本或默认值补成 pass。
+
+# 2026-07-11: 私有 Emby 解析与失败证据必须保持一一对应
+
+决策：ignored 私有 Emby manifest 使用匿名 `emby://` locator 和 `itemId/mediaSourceId`，运行时由独立 runner 复用 Core `EmbyApiClient` 解析 exact media source。凭据只允许通过 `NOIRAPLAYER_QA_SERVER_URL/USERNAME/PASSWORD` 进入进程环境；direct stream URL 不得写入 manifest、summary、报告、文档或仓库日志，持久化关联只使用 SHA-256。
+
+resolver 失败不能 `continue` 后留下缺失报告，也不能回退到 probe。每个选中 case 都必须有一份标准报告：解析失败报告为 `result=error`、`evidenceLevel=orchestration`、`sourceOpenAttempted=false`，strict validator 仍因达不到 native-playback 要求而拒绝它。这样“报告完整”不等于“真实播放通过”。
+
+native helper 的非零退出不再先于 stdout 解析。当 stdout 已满足完整 telemetry contract 时，报告必须同时保留已观察到的 source/decode/render/runtime/lifecycle 证据和终态 error；只有无法解析完整证据时才使用零遥测的 helper-failed envelope。晚期播放失败归类为 player-core bug，源解析失败归类为 external service/protocol issue；两者不得混成 insufficient instrumentation。
+
+私有 HDR case 在 Windows offscreen runner 中可以证明源识别、硬解码、帧生成和软件 color/DXGI snapshot，但不能证明 Xbox/HDMI HDR 输出。相关输出差异保留为失败和 limitation，不通过放宽 expected 消除；设备输出结论必须由后续 App-hosted/设备证据支撑。

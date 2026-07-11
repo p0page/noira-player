@@ -595,6 +595,10 @@ using System.IO;
 
 var outputPath = Path.Combine(AppContext.BaseDirectory, "fixture-output.txt");
 Console.Write(File.ReadAllText(outputPath));
+var exitCodePath = Path.Combine(AppContext.BaseDirectory, "fixture-exit-code.txt");
+return File.Exists(exitCodePath) && int.TryParse(File.ReadAllText(exitCodePath), out var exitCode)
+    ? exitCode
+    : 0;
 '@ | Set-Content -LiteralPath (Join-Path $projectDirectory 'Program.cs') -Encoding UTF8
 
     dotnet build $projectPath --nologo -v quiet -o $outputDirectory
@@ -605,6 +609,7 @@ Console.Write(File.ReadAllText(outputPath));
     return [pscustomobject]@{
         ExePath = Join-Path $outputDirectory 'NativeHeadlessParserFixture.exe'
         OutputPath = Join-Path $outputDirectory 'fixture-output.txt'
+        ExitCodePath = Join-Path $outputDirectory 'fixture-exit-code.txt'
     }
 }
 
@@ -771,10 +776,12 @@ function Invoke-NativeHeadlessParserFixtureCase {
         [string]$HeadlessDll,
         [string]$Root,
         [string]$Name,
-        [string]$HelperOutput
+        [string]$HelperOutput,
+        [int]$HelperExitCode = 0
     )
 
     Set-Content -LiteralPath $FixtureHelper.OutputPath -Value $HelperOutput -Encoding UTF8
+    Set-Content -LiteralPath $FixtureHelper.ExitCodePath -Value ([string]$HelperExitCode) -Encoding ASCII
     $reportsDirectory = Join-Path $Root 'reports'
     $caseId = 'local/native-headless-parser-' + $Name
     $fixtureStreamUrl = ([System.Uri](Join-Path $Root 'fixture.mp4')).AbsoluteUri
@@ -833,6 +840,24 @@ function Assert-NativeHeadlessParserContracts {
         $_.operation -in @('audio-switch', 'subtitle-switch', 'seek')
     }).Count -ne 0) {
         $failures.Add('attempted=false fixture operations unexpectedly produced lifecycle events.')
+    }
+
+    $lateFailure = Invoke-NativeHeadlessParserFixtureCase `
+        -FixtureHelper $fixtureHelper `
+        -HeadlessDll $headlessDll `
+        -Root $Root `
+        -Name 'late-helper-failure' `
+        -HelperOutput (New-NativeHeadlessParserFixtureOutput) `
+        -HelperExitCode 9
+    if ($lateFailure.ExitCode -ne 1 -or
+        $lateFailure.Report.report.result -ne 'error' -or
+        $lateFailure.Report.report.error.code -ne 'native-headless.helper-failed' -or
+        $lateFailure.Report.report.timing.decodedVideoFrames -ne 2 -or
+        $lateFailure.Report.report.timing.renderedVideoFrames -ne 2 -or
+        -not $lateFailure.Report.report.execution.sourceOpened -or
+        -not $lateFailure.Report.report.execution.demuxStarted -or
+        -not $lateFailure.Report.report.execution.playbackSampleObserved) {
+        $failures.Add('A non-zero helper exit after valid telemetry did not preserve decoded/rendered native playback evidence in the error report.')
     }
 
     $audioSwitchOutput = New-NativeHeadlessParserFixtureOutput -Overrides @{

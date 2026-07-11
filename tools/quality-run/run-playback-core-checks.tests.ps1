@@ -42,6 +42,10 @@ if (-not ($plan.includedRoots -contains 'tools/NoiraPlayer.PlaybackQuality.Headl
     throw 'Expected playback quality headless harness in playback-core included roots.'
 }
 
+if (-not ($plan.includedRoots -contains 'tools/NoiraPlayer.PlaybackQuality.Runner')) {
+    throw 'Expected private source resolver runner in playback-core included roots.'
+}
+
 if (-not ($plan.excludedRoots -contains 'src/NoiraPlayer.App')) {
     throw 'Expected src/NoiraPlayer.App in playback-core excluded roots.'
 }
@@ -139,6 +143,10 @@ if (-not ($plan.commands | Where-Object { $_.name -eq 'native-headless-harness-s
 
 if (-not ($plan.commands | Where-Object { $_.name -eq 'playback-quality-manifest-runner-test' })) {
     throw 'Expected playback-quality-manifest-runner-test command in playback-core validation plan.'
+}
+
+if (-not ($plan.commands | Where-Object { $_.name -eq 'playback-quality-runner-build' })) {
+    throw 'Expected playback-quality-runner-build command in playback-core validation plan.'
 }
 
 if (-not ($plan.commands | Where-Object { $_.name -eq 'native-seek-presentation-test' })) {

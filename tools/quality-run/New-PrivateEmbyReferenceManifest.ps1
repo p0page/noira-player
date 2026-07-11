@@ -311,6 +311,17 @@ function New-Expected(
     }
 
     $videoRange = Normalize-String $VideoStream.VideoRange
+    if ($videoRange.Equals('SDR', [StringComparison]::OrdinalIgnoreCase)) {
+        if ($HdrProfile.kind -eq 'Hdr10') {
+            $videoRange = 'HDR10'
+        }
+        elseif ($HdrProfile.kind -eq 'Hlg') {
+            $videoRange = 'HLG'
+        }
+        elseif ($HdrProfile.kind -eq 'DolbyVisionWithHdr10Fallback') {
+            $videoRange = 'HDR10 Dolby Vision'
+        }
+    }
     $colorPrimaries = Normalize-String $VideoStream.ColorPrimaries
     $colorTransfer = Normalize-String $VideoStream.ColorTransfer
     $colorSpace = Normalize-String $VideoStream.ColorSpace

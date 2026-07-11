@@ -5,10 +5,13 @@ param(
     [string]$SummaryPath = '',
     [string]$HeadlessProjectPath = '',
     [string]$CliProjectPath = '',
+    [string]$SourceResolverProjectPath = '',
+    [string]$SourceResolverScriptPath = '',
     [string]$HarnessScriptPath = '',
     [string[]]$CaseId = @(),
     [string[]]$Category = @('stable', 'challenge'),
-    [int]$DurationSeconds = 10
+    [int]$DurationSeconds = 10,
+    [int]$AttemptTimeoutSeconds = 60
 )
 
 $ErrorActionPreference = 'Stop'
@@ -28,6 +31,11 @@ if ([string]::IsNullOrWhiteSpace($CliProjectPath)) {
         'tools\NoiraPlayer.PlaybackQuality.Cli\NoiraPlayer.PlaybackQuality.Cli.csproj'
 }
 
+if ([string]::IsNullOrWhiteSpace($SourceResolverProjectPath)) {
+    $SourceResolverProjectPath = Join-Path $repoRoot `
+        'tools\NoiraPlayer.PlaybackQuality.Runner\NoiraPlayer.PlaybackQuality.Runner.csproj'
+}
+
 if ([string]::IsNullOrWhiteSpace($SummaryPath)) {
     $SummaryPath = Join-Path $ReportsDir 'manifest-run-summary.json'
 }
@@ -45,8 +53,16 @@ if (-not [string]::IsNullOrWhiteSpace($HarnessScriptPath) -and
     throw ('Harness script was not found: ' + $HarnessScriptPath)
 }
 
+if (-not [string]::IsNullOrWhiteSpace($SourceResolverScriptPath) -and
+    -not (Test-Path -LiteralPath $SourceResolverScriptPath)) {
+    throw ('Source resolver script was not found: ' + $SourceResolverScriptPath)
+}
+
 if ($DurationSeconds -le 0) {
     throw 'DurationSeconds must be positive.'
+}
+if ($AttemptTimeoutSeconds -lt $DurationSeconds -or $AttemptTimeoutSeconds -gt 1800) {
+    throw 'AttemptTimeoutSeconds must be at least DurationSeconds and no greater than 1800.'
 }
 
 $manifestValidationPath = $SummaryPath + '.manifest-validation.json'
@@ -90,12 +106,43 @@ $selectedCases = @($manifest.cases | Where-Object {
 
 New-Item -ItemType Directory -Path $ReportsDir -Force | Out-Null
 $attempts = [System.Collections.Generic.List[object]]::new()
+$resolvedSourceCount = 0
 
 foreach ($case in $selectedCases) {
     $currentCaseId = ([string]$case.caseId).Trim()
-    $streamUrl = ([string]$case.uri).Trim()
+    $sourceLocator = ([string]$case.uri).Trim()
+    $streamUrl = $sourceLocator
     $reportPath = Get-PlaybackQualityReportPath -ReportsDir $ReportsDir -CaseId $currentCaseId
     $startedAt = [DateTimeOffset]::UtcNow
+
+    if ($sourceLocator.StartsWith('emby://', [System.StringComparison]::OrdinalIgnoreCase)) {
+        $resolvedSource = Resolve-PlaybackQualityEmbySource `
+            -ItemId ([string]$case.itemId) `
+            -MediaSourceId ([string]$case.mediaSourceId) `
+            -ResolverProjectPath $SourceResolverProjectPath `
+            -ResolverScriptPath $SourceResolverScriptPath
+        if ($resolvedSource.Succeeded) {
+            $streamUrl = $resolvedSource.StreamUrl
+            $resolvedSourceCount++
+        }
+        else {
+            $errorReportExitCode = Write-PlaybackQualitySourceResolutionError `
+                -CaseId $currentCaseId `
+                -SourceLocator $sourceLocator `
+                -ReportsDir $ReportsDir `
+                -ErrorCode $resolvedSource.ErrorCode `
+                -ResolverProjectPath $SourceResolverProjectPath
+            $attempts.Add([pscustomobject]@{
+                caseId = $currentCaseId
+                status = 'unresolved-source'
+                exitCode = $errorReportExitCode
+                reportPresent = (Test-Path -LiteralPath $reportPath)
+                durationMs = 0
+                errorCode = $resolvedSource.ErrorCode
+            })
+            continue
+        }
+    }
 
     if ([string]::IsNullOrWhiteSpace($streamUrl)) {
         $attempts.Add([pscustomobject]@{
@@ -108,7 +155,7 @@ foreach ($case in $selectedCases) {
         continue
     }
 
-    $locatorHash = Get-PlaybackQualitySourceFingerprint -Locator $streamUrl
+    $locatorHash = Get-PlaybackQualitySourceFingerprint -Locator $sourceLocator
     $pauseSeconds = if ($null -eq $case.pauseSeconds) { 0 } else { [int]$case.pauseSeconds }
     if ($pauseSeconds -lt 0 -or $pauseSeconds -gt 900) {
         throw ('pauseSeconds must be between 0 and 900 for case ' + $currentCaseId)
@@ -123,6 +170,7 @@ foreach ($case in $selectedCases) {
         -HarnessScriptPath $HarnessScriptPath `
         -DurationSeconds $DurationSeconds `
         -PauseSeconds $pauseSeconds `
+        -TimeoutSeconds $AttemptTimeoutSeconds `
         -ForceSdrOutput ([bool]$case.forceSdrOutput)
     $reportPresent = Test-Path -LiteralPath $reportPath
     $attempts.Add([pscustomobject]@{
@@ -146,6 +194,7 @@ $summary = [ordered]@{
     completedAttemptCount = @($attempts | Where-Object { $_.status -eq 'completed' }).Count
     failedAttemptCount = $failedAttemptCount
     unresolvedSourceCount = $unresolvedSourceCount
+    resolvedSourceCount = $resolvedSourceCount
     reportCount = $reportCount
     missingReportCount = $missingReportCount
     attempts = @($attempts)

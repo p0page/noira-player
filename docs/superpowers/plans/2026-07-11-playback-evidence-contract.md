@@ -99,12 +99,12 @@
 - Consumes: manifest `itemId/mediaSourceId`
 - Produces: 仅在进程内存在的 direct stream URL，以及报告中的匿名 source hashes
 
-- [ ] 写失败测试：Emby locator 缺凭据时生成结构化 error，不回退到 probe。
-- [ ] 写失败测试：指定 mediaSourceId 必须解析到对应 source，输出不得包含 token/URL。
-- [ ] 复用 `EmbyApiClient.AuthenticateAsync/GetPlaybackInfoAsync`，不复制 URL 组装规则。
-- [ ] 把 direct stream URL 通过进程参数传给 headless，仅持久化 hash。
-- [ ] 用脱敏 fixture 完成自动测试，再用 ignored 私有 manifest 实跑。
-- [ ] 提交 `feat: resolve private Emby playback cases`。
+- [x] 写失败测试：Emby locator 缺凭据时生成结构化 error，不回退到 probe。
+- [x] 写失败测试：指定 mediaSourceId 必须解析到对应 source，输出不得包含 token/URL。
+- [x] 复用 `EmbyApiClient.AuthenticateAsync/GetPlaybackInfoAsync`，不复制 URL 组装规则。
+- [x] 把 direct stream URL 通过进程参数传给 headless，仅持久化 hash。
+- [x] 用脱敏 fixture 完成自动测试，再用 ignored 私有 manifest 实跑。
+- [x] 提交 `feat: resolve private Emby playback cases`。
 
 ### Task 5: 替换正式 baseline 编排并隔离 probe
 

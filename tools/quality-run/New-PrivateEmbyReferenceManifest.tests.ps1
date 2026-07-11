@@ -54,11 +54,11 @@ try {
           "MediaStreams": [
             {
               "Type": "Video",
-              "Codec": "dvhe.08.01",
+              "Codec": "hevc",
               "Width": 1920,
               "Height": 1080,
               "RealFrameRate": 60.0,
-              "VideoRange": "HDR10",
+              "VideoRange": "SDR",
               "ColorPrimaries": "bt2020",
               "ColorTransfer": "smpte2084",
               "ColorSpace": "bt2020nc"
@@ -325,6 +325,15 @@ try {
             $_.expected.isDirectPlayable -eq $false
     })) {
         throw 'Generated manifest should include a DV Profile 5 reject case from stream metadata.'
+    }
+
+    if (-not ($manifest.cases | Where-Object {
+        $_.caseId -eq 'private-emby/hdr10-movie/hdr10-source/hdr-output' -and
+        $_.expected.hdrKind -eq 'Hdr10' -and
+        $_.expected.videoRange -eq 'HDR10' -and
+        $_.expected.colorTransfer -eq 'smpte2084'
+    })) {
+        throw 'PQ/BT.2020 sources must normalize a contradictory SDR VideoRange to HDR10.'
     }
 
     if (-not ($manifest.cases | Where-Object {

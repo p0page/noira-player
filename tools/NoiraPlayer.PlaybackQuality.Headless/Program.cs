@@ -103,11 +103,12 @@ internal static class NativeHeadlessHarness
         var commandReceivedAt = DateTimeOffset.UtcNow;
         var attemptId = Guid.NewGuid().ToString("N");
         var helper = RunHelperProcess(options);
+        var lateHelperFailure = helper.ExitCode != 0 && helper.HasTelemetry;
         var playbackStartedAt = DateTimeOffset.UtcNow;
         var reportPath = GetReportPath(options.ReportsDir, options.CaseId);
         Directory.CreateDirectory(Path.GetDirectoryName(reportPath) ?? options.ReportsDir);
 
-        if (helper.ExitCode != 0)
+        if (helper.ExitCode != 0 && !helper.HasTelemetry)
         {
             var errorResult = PlaybackQualityRuntimeEvidenceCollector.ComposeErrorRunResult(
                 referenceCase,
@@ -247,7 +248,9 @@ internal static class NativeHeadlessHarness
                 attemptId,
                 commandReceivedAt,
                 PlaybackQualityEvidenceLevel.NativePlayback,
-                PlaybackQualityExecutionStatus.Completed,
+                lateHelperFailure
+                    ? PlaybackQualityExecutionStatus.Failed
+                    : PlaybackQualityExecutionStatus.Completed,
                 sourceOpenAttempted: true,
                 sourceOpened: true,
                 nativeGraphOpened: true,
@@ -262,7 +265,22 @@ internal static class NativeHeadlessHarness
             request.RuntimeMetrics.ProcessCpuUtilizationRatio = helper.ProcessCpuUtilizationRatio;
         }
 
-        var runResult = PlaybackQualityReportComposer.Compose(request);
+        var runResult = lateHelperFailure
+            ? PlaybackQualityRuntimeEvidenceCollector.ComposeErrorRunResult(
+                referenceCase,
+                new PlaybackQualityError
+                {
+                    Code = "native-headless.helper-failed",
+                    Message = helper.ErrorMessage,
+                    Operation = "native-headless-playback",
+                    ExceptionType = "native-helper-exit",
+                    FailureClass = PlaybackQualityFailureClassification.PlayerCoreBug,
+                    FailureArea = "playback-runtime",
+                    IsTerminal = true,
+                    IsRetriable = true
+                },
+                request)
+            : PlaybackQualityReportComposer.Compose(request);
 
         AddLimitation(
             runResult,
@@ -278,7 +296,7 @@ internal static class NativeHeadlessHarness
             "native-headless: timing metrics are captured before the seek operation; seek outcome is reported as separate position evidence");
 
         File.WriteAllText(reportPath, PlaybackQualityReportSerializer.Serialize(runResult));
-        return new NativeHeadlessHarnessResult(reportPath, 0);
+        return new NativeHeadlessHarnessResult(reportPath, lateHelperFailure ? 1 : 0);
     }
 
     private static PlaybackQualityExecutionEvidence CreateExecutionEvidence(
@@ -337,7 +355,7 @@ internal static class NativeHeadlessHarness
         process.Start();
         var stdoutTask = process.StandardOutput.ReadToEndAsync();
         var stderrTask = process.StandardError.ReadToEndAsync();
-        var exited = process.WaitForExit(Math.Max(15, options.DurationSeconds + 15) * 1000);
+        var exited = process.WaitForExit(options.TimeoutSeconds * 1000);
         startedAt.Stop();
         var processWallClockMs = startedAt.Elapsed.TotalMilliseconds;
         var processCpuTimeMs = TryGetProcessCpuTimeMs(process);
@@ -362,12 +380,6 @@ internal static class NativeHeadlessHarness
         var stdout = stdoutTask.GetAwaiter().GetResult();
         var stderr = stderrTask.GetAwaiter().GetResult();
 
-        if (process.ExitCode != 0)
-        {
-            return NativeHeadlessHelperResult.Failed(
-                FirstNonEmpty(stderr.Trim(), stdout.Trim(), "Native helper exited with code " + process.ExitCode + "."));
-        }
-
         if (!TryParseMetrics(
             stdout,
             out var metrics,
@@ -378,6 +390,20 @@ internal static class NativeHeadlessHarness
             out var parseError))
         {
             return NativeHeadlessHelperResult.Failed(parseError);
+        }
+
+        if (process.ExitCode != 0)
+        {
+            return NativeHeadlessHelperResult.FailedWithTelemetry(
+                metrics,
+                source,
+                color,
+                display,
+                processWallClockMs,
+                processCpuTimeMs,
+                processCpuUtilizationRatio,
+                interactions,
+                FirstNonEmpty(stderr.Trim(), "Native helper exited with code " + process.ExitCode + "."));
         }
 
         if (options.PauseSeconds > 0 &&
@@ -1501,6 +1527,7 @@ internal sealed class NativeHeadlessHarnessOptions
     public string NativeHelperExe { get; private set; } = "";
     public bool ForceSdrOutput { get; private set; }
     public int PauseSeconds { get; private set; }
+    public int TimeoutSeconds { get; private set; } = 60;
 
     public static bool TryParse(
         string[] args,
@@ -1561,6 +1588,15 @@ internal sealed class NativeHeadlessHarnessOptions
 
                     options.PauseSeconds = pauseSeconds;
                     break;
+                case "--timeout-seconds":
+                    if (!int.TryParse(value, out var timeoutSeconds) || timeoutSeconds <= 0 || timeoutSeconds > 1800)
+                    {
+                        error = "--timeout-seconds must be between 1 and 1800.";
+                        return false;
+                    }
+
+                    options.TimeoutSeconds = timeoutSeconds;
+                    break;
                 case "--reports-dir":
                     options.ReportsDir = value.Trim();
                     break;
@@ -1589,6 +1625,12 @@ internal sealed class NativeHeadlessHarnessOptions
         if (string.IsNullOrWhiteSpace(options.ReportsDir))
         {
             error = "--reports-dir is required.";
+            return false;
+        }
+
+        if (options.TimeoutSeconds < options.DurationSeconds + options.PauseSeconds)
+        {
+            error = "--timeout-seconds must cover duration-seconds plus pause-seconds.";
             return false;
         }
 
@@ -1645,6 +1687,7 @@ internal sealed class NativeHeadlessHelperResult
         ProcessCpuUtilizationRatio = processCpuUtilizationRatio;
         Interactions = interactions;
         ErrorMessage = errorMessage;
+        HasTelemetry = metrics.DecodedVideoFrames > 0 || metrics.RenderedVideoFrames > 0;
     }
 
     public int ExitCode { get; }
@@ -1685,6 +1728,8 @@ internal sealed class NativeHeadlessHelperResult
 
     public string ErrorMessage { get; }
 
+    public bool HasTelemetry { get; }
+
     public static NativeHeadlessHelperResult Succeeded(
         PlaybackQualityMetricsSnapshot metrics,
         NativeHeadlessSourceInfo source,
@@ -1720,6 +1765,30 @@ internal sealed class NativeHeadlessHelperResult
             0,
             0,
             new NativeHeadlessInteractionResults(),
+            errorMessage);
+    }
+
+    public static NativeHeadlessHelperResult FailedWithTelemetry(
+        PlaybackQualityMetricsSnapshot metrics,
+        NativeHeadlessSourceInfo source,
+        NativeHeadlessColorInfo color,
+        NativeHeadlessDisplayInfo display,
+        double startupDurationMs,
+        double processCpuTimeMs,
+        double processCpuUtilizationRatio,
+        NativeHeadlessInteractionResults interactions,
+        string errorMessage)
+    {
+        return new NativeHeadlessHelperResult(
+            1,
+            metrics,
+            source,
+            color,
+            display,
+            startupDurationMs,
+            processCpuTimeMs,
+            processCpuUtilizationRatio,
+            interactions,
             errorMessage);
     }
 }

@@ -974,3 +974,15 @@ native helper 的长暂停模式现在继续输出完整 source、decoded/render
 本轮正式验证结果：runner `selected=1 / attempted=1 / reports=1 / failed=0`；strict validation 的 structure/execution 均有效，execution coverage 为 opened/decoded/rendered/completed 各 1，且故障服务器观察到 `request=2`。全量 Core tests 为 `840/840`，逐 case runner tests、门禁计划测试和完整 native-headless smoke 均通过。
 
 边界：该 case 证明当前纯软件 native 链路可在确定性 HTTP 断线和暂停后继续播放，不证明任意真实服务器、长达数分钟的暂停、Xbox 网络栈或 App 后台生命周期都已覆盖。私有 Emby 长暂停 case 仍需在 source resolver 完成后加入同一正式流程。
+
+# 2026-07-11 更新：私有 Emby case 已真实进入 native runner
+
+新增独立 `NoiraPlayer.PlaybackQuality.Runner`，从进程环境读取私有 Emby 服务器凭据，复用 `EmbyApiClient.AuthenticateAsync/GetPlaybackInfoAsync` 按 `itemId/mediaSourceId` 解析 direct stream URL。URL 只在 runner 与 headless 子进程内存和参数中存在；manifest、summary 与报告只保存 `emby://` locator、匿名 SHA-256 关联和脱敏错误码。仓库中没有提交服务器地址、账号、密码、真实 direct URL、item ID 或 media source ID；本地 manifest/report-set 继续位于已忽略的 `docs/qa/private`。
+
+已用 ignored manifest 真实执行“一战再战”和“哈姆奈特”的代表性 HDR 源。两者都通过运行时解析打开远端媒体，进入 HEVC 硬件解码并生成 strict validator 可匹配的 native-playback report；观察到的代表性证据分别约为 `decoded 62 / rendered 61`，不是 probe 或 expected 物化。两份 playback report 均诚实为 `FAIL`：当前暴露字幕切换、部分音轨切换、远端启动耗时和离屏 color/DXGI 预期差异；离屏 Windows runner 的 SDR output 不能解释为 Xbox HDR 输出失败。
+
+resolver 失败现在也必须生成标准 `error` report，execution level 为 `orchestration`、`sourceOpenAttempted=false`，因此报告可追踪但仍不能满足 stable/challenge 的 native-playback strict gate。manifest runner 回归结果为 `selected 4 / reports 4 / unresolved 1 / missing 0`，并保持整体非零退出。
+
+修复了另一处证据丢失：native helper 已经输出完整 source/decode/render 遥测后再非零退出时，headless 不再把它重写成“从未打开源”。parser fixture 现在验证同一报告同时保留 `result=error`、`decoded/rendered > 0`、`sourceOpened=true`、`demuxStarted=true` 和 `playbackSampleObserved=true`，用于区分启动失败与播放中途失败。
+
+Task 4 的 Core `483/483`、CLI smoke、manifest/resolver、私有 manifest、parser contract 和完整 native-headless smoke 均已通过。统一 `run-playback-core-checks.ps1` 已继续执行到 Task 5，并按预期在 legacy `New-PlaybackCoreTuningBaseline.ps1` 使用 core-probe 填充 stable/challenge case 后被 strict validator 拒绝；这不是 resolver/native runner 回归。下一步进入正式 baseline 编排替换，彻底停止用 core-probe 填充播放 case。真实 App 中出现的 EAGAIN、暂停恢复 I/O error、timeline/seek 异常仍需在同一 evidence contract 下沉淀为回归 case，最终再做完整 App 编译与代表性 App-hosted 复核。

@@ -114,6 +114,11 @@ $commands = @(
         -Command 'dotnet' `
         -Arguments @('build', 'tools\NoiraPlayer.PlaybackQuality.Cli\NoiraPlayer.PlaybackQuality.Cli.csproj', '-v', 'minimal')
     New-CommandPlan `
+        -Name 'playback-quality-runner-build' `
+        -Description 'Build the secret-safe private Emby source resolver used by the native manifest runner.' `
+        -Command 'dotnet' `
+        -Arguments @('build', 'tools\NoiraPlayer.PlaybackQuality.Runner\NoiraPlayer.PlaybackQuality.Runner.csproj', '-v', 'minimal')
+    New-CommandPlan `
         -Name 'playback-quality-cli-smoke-test' `
         -Description 'Run an App-free JSON baseline/candidate comparison smoke test through the playback quality CLI.' `
         -Command 'powershell' `
@@ -247,6 +252,7 @@ $summary = [pscustomobject]@{
         'tests/NoiraPlayer.Native.Tests',
         'tools/NoiraPlayer.PlaybackQuality.Cli',
         'tools/NoiraPlayer.PlaybackQuality.Headless',
+        'tools/NoiraPlayer.PlaybackQuality.Runner',
         'tools/quality-run'
     )
     excludedRoots = @('src/NoiraPlayer.App')

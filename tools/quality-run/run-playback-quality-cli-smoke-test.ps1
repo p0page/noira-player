@@ -5,6 +5,57 @@ $cliDll = Join-Path $repoRoot 'tools\NoiraPlayer.PlaybackQuality.Cli\bin\Debug\n
 $tempRoot = Join-Path ([System.IO.Path]::GetTempPath()) ('playback-quality-cli-' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $tempRoot | Out-Null
 
+function Set-SmokeNativeExecutionEvidence {
+    param(
+        [Parameter(Mandatory = $true)][string]$Path,
+        [Parameter(Mandatory = $true)][string]$Locator,
+        [Parameter(Mandatory = $true)][string]$AttemptId,
+        [Parameter(Mandatory = $true)][string]$Status,
+        [bool]$SourceOpened,
+        [bool]$PlaybackSampleObserved
+    )
+
+    $report = Get-Content -Raw -LiteralPath $Path | ConvertFrom-Json
+    $sha256 = [System.Security.Cryptography.SHA256]::Create()
+    try {
+        $hashBytes = $sha256.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($Locator))
+        $fingerprint = 'sha256:' + ([System.BitConverter]::ToString($hashBytes).Replace('-', '').ToLowerInvariant())
+    }
+    finally {
+        $sha256.Dispose()
+    }
+
+    $payload = if ($null -ne $report.PSObject.Properties['report']) {
+        $report.report
+    } else {
+        $report
+    }
+    $payload | Add-Member -NotePropertyName execution -NotePropertyValue ([pscustomobject]@{
+        attemptId = $AttemptId
+        runner = 'native-headless'
+        evidenceLevel = 'native-playback'
+        status = $Status
+        sourceLocatorHash = $fingerprint
+        openedSourceHash = $(if ($SourceOpened) { $fingerprint } else { '' })
+        startedAtUtc = '2026-07-08T00:00:00.0000000+00:00'
+        durationMs = 1000.0
+        sourceOpenAttempted = $true
+        sourceOpened = $SourceOpened
+        nativeGraphOpened = $SourceOpened
+        demuxStarted = $SourceOpened
+        decoderOpened = $PlaybackSampleObserved
+        playbackSampleObserved = $PlaybackSampleObserved
+    }) -Force
+
+    if ($PlaybackSampleObserved -and $null -ne $payload.timing -and
+        $null -eq $payload.timing.PSObject.Properties['decodedVideoFrames']) {
+        $decodedFrames = [Math]::Max(1, [int64]$payload.timing.renderedVideoFrames)
+        $payload.timing | Add-Member -NotePropertyName decodedVideoFrames -NotePropertyValue $decodedFrames
+    }
+
+    $report | ConvertTo-Json -Depth 100 | Set-Content -LiteralPath $Path -Encoding UTF8
+}
+
 try {
     $baselinePath = Join-Path $tempRoot 'baseline.json'
     $candidatePath = Join-Path $tempRoot 'candidate.json'
@@ -1109,8 +1160,8 @@ try {
             --manifest $coreProbeManifestPath `
             --reports-dir $coreProbeDir `
             --output $coreProbeValidationPath
-        if ($LASTEXITCODE -ne 0) {
-            throw 'Expected materialized core probe report-set to pass validation.'
+        if ($LASTEXITCODE -ne 2) {
+            throw 'Expected strict report-set validation to reject orchestration-only core-probe evidence.'
         }
     }
     finally {
@@ -1118,9 +1169,18 @@ try {
     }
 
     $coreProbeValidation = Get-Content -Raw -LiteralPath $coreProbeValidationPath | ConvertFrom-Json
-    if ($coreProbeValidation.isValid -ne $true -or
-        $coreProbeValidation.matchedCaseCount -ne 1) {
-        throw 'Expected materialized core probe validation to match every case.'
+    if ($coreProbeValidation.isValid -ne $false -or
+        $coreProbeValidation.structureValid -ne $true -or
+        $coreProbeValidation.executionValid -ne $false -or
+        $coreProbeValidation.matchedCaseCount -ne 0 -or
+        $coreProbeValidation.cases[0].status -ne 'mismatch' -or
+        -not ($coreProbeValidation.errors | Where-Object {
+            $_.code -eq 'report.execution.evidence-level.insufficient' -and
+            $_.signal -eq 'execution.evidenceLevel' -and
+            $_.expected -eq 'native-playback' -and
+            $_.actual -eq 'orchestration'
+        })) {
+        throw 'Expected evaluator self-test probe to remain structurally readable while failing the native playback evidence gate.'
     }
 
     Push-Location $repoRoot
@@ -1183,10 +1243,11 @@ try {
     }
 
     $coreProbeCandidateEvaluation = Get-Content -Raw -LiteralPath $coreProbeCandidateEvaluationPath | ConvertFrom-Json
-    if ($coreProbeCandidateEvaluation.activeGate.name -ne 'baseline-playback-evidence' -or
+    if ($coreProbeCandidateEvaluation.activeGate.name -ne 'baseline-report-set' -or
         $coreProbeCandidateEvaluation.activeGate.status -ne 'blocked' -or
-        -not ($coreProbeCandidateEvaluation.activeGate.blockers -contains 'baseline-playback-evidence.insufficient')) {
-        throw ('Expected core-probe candidate evaluation to block at baseline playback evidence gate. Actual: ' +
+        -not ($coreProbeCandidateEvaluation.activeGate.blockers -contains 'baseline-report-set.invalid') -or
+        -not ($coreProbeCandidateEvaluation.activeGate.signals -contains 'execution.evidenceLevel')) {
+        throw ('Expected core-probe candidate evaluation to block at baseline report-set execution evidence gate. Actual: ' +
             ($coreProbeCandidateEvaluation.activeGate | ConvertTo-Json -Depth 8 -Compress))
     }
 
@@ -1293,8 +1354,8 @@ try {
             --manifest $nativeHarnessManifestPath `
             --reports-dir $nativeHarnessDir `
             --output $nativeHarnessValidationPath
-        if ($LASTEXITCODE -ne 0) {
-            throw 'Expected materialized native harness skip report-set to pass validation.'
+        if ($LASTEXITCODE -ne 2) {
+            throw 'Expected strict report-set validation to reject the non-executing native harness skip.'
         }
     }
     finally {
@@ -1302,9 +1363,14 @@ try {
     }
 
     $nativeHarnessValidation = Get-Content -Raw -LiteralPath $nativeHarnessValidationPath | ConvertFrom-Json
-    if ($nativeHarnessValidation.isValid -ne $true -or
-        $nativeHarnessValidation.matchedCaseCount -ne 1) {
-        throw 'Expected materialized native harness validation to match every case.'
+    if ($nativeHarnessValidation.isValid -ne $false -or
+        $nativeHarnessValidation.structureValid -ne $true -or
+        $nativeHarnessValidation.executionValid -ne $false -or
+        $nativeHarnessValidation.matchedCaseCount -ne 0 -or
+        -not ($nativeHarnessValidation.errors | Where-Object {
+            $_.signal -eq 'execution.evidenceLevel'
+        })) {
+        throw 'Expected native harness self-test skip to remain structurally readable while failing execution coverage.'
     }
 
     $nativeHarnessCapturedReportDir = Join-Path $nativeHarnessCapturedDir 'local'
@@ -1314,6 +1380,22 @@ try {
   "runId": "local/native-harness-sdr-smoke",
   "metricVersion": "software-quality-v1",
   "result": "pass",
+  "execution": {
+    "attemptId": "smoke-native-captured-attempt",
+    "runner": "native-headless",
+    "evidenceLevel": "native-playback",
+    "status": "completed",
+    "sourceLocatorHash": "sha256:5073a766f7c829219a03780802afc5037a5b56f172f64ff87b162fc01ffdec69",
+    "openedSourceHash": "sha256:5073a766f7c829219a03780802afc5037a5b56f172f64ff87b162fc01ffdec69",
+    "startedAtUtc": "2026-07-08T00:00:00.0000000+00:00",
+    "durationMs": 12000.0,
+    "sourceOpenAttempted": true,
+    "sourceOpened": true,
+    "nativeGraphOpened": true,
+    "demuxStarted": true,
+    "decoderOpened": true,
+    "playbackSampleObserved": true
+  },
   "environment": {
     "collectorVersion": "app-native-harness-v0",
     "playerCoreVersion": "captured-core",
@@ -1353,6 +1435,7 @@ try {
     "hasPlaybackSample": true
   },
   "timing": {
+    "decodedVideoFrames": 241,
     "renderedVideoFrames": 240,
     "droppedVideoFrames": 0,
     "expectedFrameDurationMs": 16.667,
@@ -1566,6 +1649,22 @@ try {
     "requireValidatedConversion": false,
     "requireMatchedDisplayRefreshRate": true
   },
+  "execution": {
+    "attemptId": "raw-cadence-baseline-attempt",
+    "runner": "native-headless",
+    "evidenceLevel": "native-playback",
+    "status": "completed",
+    "sourceLocatorHash": "sha256:a583a300e4b10ff6e8942470c73eca9cd9407eaed9e2deea38754cfeba8962e6",
+    "openedSourceHash": "sha256:a583a300e4b10ff6e8942470c73eca9cd9407eaed9e2deea38754cfeba8962e6",
+    "startedAtUtc": "2026-07-08T00:00:00.0000000+00:00",
+    "durationMs": 3000.0,
+    "sourceOpenAttempted": true,
+    "sourceOpened": true,
+    "nativeGraphOpened": true,
+    "demuxStarted": true,
+    "decoderOpened": true,
+    "playbackSampleObserved": true
+  },
   "environment": {
     "collectorVersion": "native-headless-harness-v0.1",
     "playerCoreVersion": "smoke-core",
@@ -1610,6 +1709,7 @@ try {
     "hasPlaybackSample": true
   },
   "timing": {
+    "decodedVideoFrames": 73,
     "renderedVideoFrames": 72,
     "expectedFrameDurationMs": 41.667,
     "renderIntervalMsP95": 16.7,
@@ -1656,6 +1756,22 @@ try {
     "requireValidatedConversion": false,
     "requireMatchedDisplayRefreshRate": true
   },
+  "execution": {
+    "attemptId": "raw-cadence-candidate-attempt",
+    "runner": "native-headless",
+    "evidenceLevel": "native-playback",
+    "status": "completed",
+    "sourceLocatorHash": "sha256:a583a300e4b10ff6e8942470c73eca9cd9407eaed9e2deea38754cfeba8962e6",
+    "openedSourceHash": "sha256:a583a300e4b10ff6e8942470c73eca9cd9407eaed9e2deea38754cfeba8962e6",
+    "startedAtUtc": "2026-07-08T00:00:00.0000000+00:00",
+    "durationMs": 1500.0,
+    "sourceOpenAttempted": true,
+    "sourceOpened": true,
+    "nativeGraphOpened": true,
+    "demuxStarted": true,
+    "decoderOpened": true,
+    "playbackSampleObserved": true
+  },
   "environment": {
     "collectorVersion": "native-headless-harness-v0.1",
     "playerCoreVersion": "smoke-core",
@@ -1700,6 +1816,7 @@ try {
     "hasPlaybackSample": true
   },
   "timing": {
+    "decodedVideoFrames": 37,
     "renderedVideoFrames": 36,
     "expectedFrameDurationMs": 41.667,
     "renderIntervalMsP95": 48.0,
@@ -1919,6 +2036,22 @@ try {
   "runId": "netflix/chimera-4k-2398-hdr-pq",
   "metricVersion": "software-quality-v1",
   "result": "pass",
+  "execution": {
+    "attemptId": "report-set-hdr-attempt",
+    "runner": "native-headless",
+    "evidenceLevel": "native-playback",
+    "status": "completed",
+    "sourceLocatorHash": "sha256:6d6dcdf267881094dc407e3b909ee6f37e3da9a9606c4e112c244ed053d978f3",
+    "openedSourceHash": "sha256:6d6dcdf267881094dc407e3b909ee6f37e3da9a9606c4e112c244ed053d978f3",
+    "startedAtUtc": "2026-07-08T00:00:00.0000000+00:00",
+    "durationMs": 60000.0,
+    "sourceOpenAttempted": true,
+    "sourceOpened": true,
+    "nativeGraphOpened": true,
+    "demuxStarted": true,
+    "decoderOpened": true,
+    "playbackSampleObserved": true
+  },
   "environment": {
     "playerCoreVersion": "smoke-core",
     "sourceRevision": "smoke-report-set-revision",
@@ -1943,6 +2076,7 @@ try {
     ]
   },
   "timing": {
+    "decodedVideoFrames": 1441,
     "renderedVideoFrames": 1440,
     "expectedFrameDurationMs": 41.708,
     "maxFrameGapMs": 48.0,
@@ -1969,6 +2103,22 @@ try {
   "runId": "jellyfin/dv-profile5-hevc-4k",
   "metricVersion": "software-quality-v1",
   "result": "unsupported",
+  "execution": {
+    "attemptId": "report-set-dv-attempt",
+    "runner": "native-headless",
+    "evidenceLevel": "native-playback",
+    "status": "unsupported",
+    "sourceLocatorHash": "sha256:6ff500115e21a7d612e1d98387f7a2eab7777ef97cfa0ab39cd96ac3ffce69a1",
+    "openedSourceHash": "sha256:6ff500115e21a7d612e1d98387f7a2eab7777ef97cfa0ab39cd96ac3ffce69a1",
+    "startedAtUtc": "2026-07-08T00:00:00.0000000+00:00",
+    "durationMs": 500.0,
+    "sourceOpenAttempted": true,
+    "sourceOpened": true,
+    "nativeGraphOpened": true,
+    "demuxStarted": true,
+    "decoderOpened": false,
+    "playbackSampleObserved": false
+  },
   "environment": {
     "playerCoreVersion": "smoke-core",
     "sourceRevision": "smoke-report-set-revision",
@@ -1993,6 +2143,22 @@ try {
   "runId": "local/missing-file-error-handling",
   "metricVersion": "software-quality-v1",
   "result": "error",
+  "execution": {
+    "attemptId": "report-set-missing-file-attempt",
+    "runner": "native-headless",
+    "evidenceLevel": "native-playback",
+    "status": "failed",
+    "sourceLocatorHash": "sha256:4e0e8c8b6060256c02a67f8a9734a5c3d1c90c983fbdae10451f840ef9ed1cff",
+    "openedSourceHash": "",
+    "startedAtUtc": "2026-07-08T00:00:00.0000000+00:00",
+    "durationMs": 10.0,
+    "sourceOpenAttempted": true,
+    "sourceOpened": false,
+    "nativeGraphOpened": false,
+    "demuxStarted": false,
+    "decoderOpened": false,
+    "playbackSampleObserved": false
+  },
   "environment": {
     "playerCoreVersion": "smoke-core",
     "sourceRevision": "smoke-report-set-revision",
@@ -2188,6 +2354,22 @@ try {
   "runId": "jellyfin/zero-starvation-buffering",
   "metricVersion": "software-quality-v1",
   "result": "pass",
+  "execution": {
+    "attemptId": "zero-counter-native-attempt",
+    "runner": "native-headless",
+    "evidenceLevel": "native-playback",
+    "status": "completed",
+    "sourceLocatorHash": "sha256:42369d6a58bde4131352982fddaefd4a639b1e9487e8db91eefc5f314782de13",
+    "openedSourceHash": "sha256:42369d6a58bde4131352982fddaefd4a639b1e9487e8db91eefc5f314782de13",
+    "startedAtUtc": "2026-07-08T00:00:00.0000000+00:00",
+    "durationMs": 1000.0,
+    "sourceOpenAttempted": true,
+    "sourceOpened": true,
+    "nativeGraphOpened": true,
+    "demuxStarted": true,
+    "decoderOpened": true,
+    "playbackSampleObserved": true
+  },
   "environment": {
     "playerCoreVersion": "smoke-core",
     "sourceRevision": "smoke-zero-counter-revision",
@@ -2214,6 +2396,10 @@ try {
   "buffers": {
     "videoStarvedPasses": 0,
     "audioStarvedPasses": 0
+  },
+  "timing": {
+    "decodedVideoFrames": 1,
+    "renderedVideoFrames": 1
   },
   "runtimeMetrics": {
     "status": "captured",
@@ -2984,6 +3170,35 @@ try {
   ]
 }
 '@ | Set-Content -LiteralPath (Join-Path $runIdCandidateDir 'error-candidate.json') -Encoding UTF8
+
+    Set-SmokeNativeExecutionEvidence `
+        -Path (Join-Path $runIdBaselineDir 'baseline-a.json') `
+        -Locator 'https://example.invalid/item-1/source-1.mp4' `
+        -AttemptId 'candidate-eval-item-baseline' `
+        -Status 'completed' `
+        -SourceOpened $true `
+        -PlaybackSampleObserved $true
+    Set-SmokeNativeExecutionEvidence `
+        -Path (Join-Path $runIdCandidateDir 'candidate-renamed.json') `
+        -Locator 'https://example.invalid/item-1/source-1.mp4' `
+        -AttemptId 'candidate-eval-item-candidate' `
+        -Status 'completed' `
+        -SourceOpened $true `
+        -PlaybackSampleObserved $true
+    Set-SmokeNativeExecutionEvidence `
+        -Path (Join-Path $runIdBaselineDir 'error-baseline.json') `
+        -Locator 'https://example.invalid/errors/missing-file.mp4' `
+        -AttemptId 'candidate-eval-error-baseline' `
+        -Status 'failed' `
+        -SourceOpened $false `
+        -PlaybackSampleObserved $false
+    Set-SmokeNativeExecutionEvidence `
+        -Path (Join-Path $runIdCandidateDir 'error-candidate.json') `
+        -Locator 'https://example.invalid/errors/missing-file.mp4' `
+        -AttemptId 'candidate-eval-error-candidate' `
+        -Status 'failed' `
+        -SourceOpened $false `
+        -PlaybackSampleObserved $false
 
     Push-Location $repoRoot
     try {
@@ -3825,6 +4040,20 @@ try {
   "modelAnalysis": {}
 }
 '@ | Set-Content -LiteralPath (Join-Path $candidateEvaluationEmptyAnalysisCandidateDir 'candidate-empty-analysis.json') -Encoding UTF8
+    Set-SmokeNativeExecutionEvidence `
+        -Path (Join-Path $candidateEvaluationEmptyAnalysisBaselineDir 'baseline-empty-analysis.json') `
+        -Locator 'https://example.invalid/item-1/source-1.mp4' `
+        -AttemptId 'empty-analysis-baseline-attempt' `
+        -Status 'completed' `
+        -SourceOpened $true `
+        -PlaybackSampleObserved $true
+    Set-SmokeNativeExecutionEvidence `
+        -Path (Join-Path $candidateEvaluationEmptyAnalysisCandidateDir 'candidate-empty-analysis.json') `
+        -Locator 'https://example.invalid/item-1/source-1.mp4' `
+        -AttemptId 'empty-analysis-candidate-attempt' `
+        -Status 'completed' `
+        -SourceOpened $true `
+        -PlaybackSampleObserved $true
     Copy-Item -LiteralPath (Join-Path $runIdBaselineDir 'error-baseline.json') -Destination (Join-Path $candidateEvaluationEmptyAnalysisBaselineDir 'error-baseline.json')
     Copy-Item -LiteralPath (Join-Path $runIdCandidateDir 'error-candidate.json') -Destination (Join-Path $candidateEvaluationEmptyAnalysisCandidateDir 'error-candidate.json')
 
@@ -4186,6 +4415,13 @@ try {
   }
 }
 '@ | Set-Content -LiteralPath (Join-Path $baselineEvaluationBlockedAnalysisBaselineDir 'baseline-blocked-analysis.json') -Encoding UTF8
+    Set-SmokeNativeExecutionEvidence `
+        -Path (Join-Path $baselineEvaluationBlockedAnalysisBaselineDir 'baseline-blocked-analysis.json') `
+        -Locator 'https://example.invalid/item-1/source-1.mp4' `
+        -AttemptId 'blocked-analysis-baseline-attempt' `
+        -Status 'completed' `
+        -SourceOpened $true `
+        -PlaybackSampleObserved $true
     Copy-Item -LiteralPath (Join-Path $runIdBaselineDir 'error-baseline.json') -Destination (Join-Path $baselineEvaluationBlockedAnalysisBaselineDir 'error-baseline.json')
 
     Push-Location $repoRoot
@@ -4406,6 +4642,13 @@ try {
   }
 }
 '@ | Set-Content -LiteralPath (Join-Path $candidateEvaluationBlockedAnalysisCandidateDir 'candidate-blocked-analysis.json') -Encoding UTF8
+    Set-SmokeNativeExecutionEvidence `
+        -Path (Join-Path $candidateEvaluationBlockedAnalysisCandidateDir 'candidate-blocked-analysis.json') `
+        -Locator 'https://example.invalid/item-1/source-1.mp4' `
+        -AttemptId 'blocked-analysis-candidate-attempt' `
+        -Status 'completed' `
+        -SourceOpened $true `
+        -PlaybackSampleObserved $true
     Copy-Item -LiteralPath (Join-Path $runIdCandidateDir 'error-candidate.json') -Destination (Join-Path $candidateEvaluationBlockedAnalysisCandidateDir 'error-candidate.json')
 
     Push-Location $repoRoot
