@@ -102,6 +102,7 @@ namespace winrt::NoiraPlayer::Native::implementation
 
             m_url = request.DirectStreamUrl;
             m_positionTicks = startPositionTicks;
+            m_positionSnapshotTicks.store(startPositionTicks, std::memory_order_relaxed);
             auto sourceVideo = m_mediaSource.BestVideoStreamSnapshot();
             m_preferredVideoFrameRate = request.VideoFrameRate > 0.0
                 ? request.VideoFrameRate
@@ -169,6 +170,7 @@ namespace winrt::NoiraPlayer::Native::implementation
 
         std::lock_guard lock(m_graphMutex);
         m_positionTicks = positionTicks;
+        m_positionSnapshotTicks.store(positionTicks, std::memory_order_relaxed);
         m_pendingVideoFrame.reset();
         ResetRuntimeStats();
         ApplyFramePacingPolicyMetrics();
@@ -197,6 +199,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         m_pendingVideoFrame.reset();
         m_url.clear();
         m_positionTicks = 0;
+        m_positionSnapshotTicks.store(0, std::memory_order_relaxed);
         m_open = false;
         m_paused = false;
         m_stopRenderLoop = false;
@@ -254,13 +257,7 @@ namespace winrt::NoiraPlayer::Native::implementation
 
     int64_t PlaybackGraph::CurrentPositionTicks() const noexcept
     {
-        std::lock_guard lock(m_graphMutex);
-        if (auto audioPosition = m_audioRenderer.CurrentPositionTicks())
-        {
-            return *audioPosition;
-        }
-
-        return m_positionTicks;
+        return m_positionSnapshotTicks.load(std::memory_order_relaxed);
     }
 
     PlaybackQualityMetricsSnapshot PlaybackGraph::QualityMetricsSnapshot() const noexcept
@@ -301,6 +298,7 @@ namespace winrt::NoiraPlayer::Native::implementation
 
     void PlaybackGraph::StopRenderLoop() noexcept
     {
+        m_mediaSource.Interrupt();
         {
             std::lock_guard lock(m_graphMutex);
             m_stopRenderLoop = true;
@@ -473,8 +471,10 @@ namespace winrt::NoiraPlayer::Native::implementation
                 m_videoPrerollTargetTicks.reset();
             }
 
-            if (auto audioPosition = m_audioRenderer.CurrentPositionTicks())
+            auto audioPosition = m_audioRenderer.CurrentPositionTicks();
+            if (audioPosition)
             {
+                m_positionSnapshotTicks.store(*audioPosition, std::memory_order_relaxed);
                 ResetVideoClock();
                 auto hasQueuedAudio = m_audioRenderer.QueuedBufferCount() > 0;
                 if (PlaybackFramePacing::ShouldWaitForAudio(
@@ -541,6 +541,10 @@ namespace winrt::NoiraPlayer::Native::implementation
             EnsureHdrOutputForFrame(frame);
             auto rendered = m_videoRenderer.Render(frame, m_hdrOutputActive);
             m_positionTicks = frame.PositionTicks;
+            if (!audioPosition)
+            {
+                m_positionSnapshotTicks.store(frame.PositionTicks, std::memory_order_relaxed);
+            }
             UpdateSubtitleCue();
             auto presentStartedAt = std::chrono::steady_clock::now();
             auto presented = m_deviceResources.Present();

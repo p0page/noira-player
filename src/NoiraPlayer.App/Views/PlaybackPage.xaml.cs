@@ -386,10 +386,6 @@ namespace NoiraPlayer.App.Views
             ShowOverlay(true);
         }
 
-        private void Page_OnKeyDown(object sender, KeyRoutedEventArgs e)
-        {
-        }
-
         private async void PlaybackPage_OnCoreWindowKeyDown(CoreWindow sender, Windows.UI.Core.KeyEventArgs args)
         {
             if (ShouldIgnoreMoreDrawerComboBoxDirectionalReplay(args.VirtualKey))
@@ -404,16 +400,6 @@ namespace NoiraPlayer.App.Views
             }
 
             args.Handled = await HandlePlaybackKeyAsync(args.VirtualKey, IsPreviewModifierDown(sender)) || args.Handled;
-        }
-
-        private async void PlaybackPage_OnHandledKeyDown(object sender, KeyRoutedEventArgs e)
-        {
-            if (e.Handled)
-            {
-                return;
-            }
-
-            e.Handled = await HandlePlaybackKeyAsync(e.Key, IsPreviewModifierDown(Window.Current.CoreWindow));
         }
 
         private async Task<bool> HandlePlaybackKeyAsync(VirtualKey key, bool previewModifierDown)
@@ -730,7 +716,8 @@ namespace NoiraPlayer.App.Views
                     shortcut.Value,
                     _seekPreview.IsActive,
                     _moreVisible,
-                    IsAnyMoreDrawerComboBoxOpen());
+                    IsAnyMoreDrawerComboBoxOpen(),
+                    _overlayVisible);
         }
 
         private bool ShouldProcessMoreDrawerDirectionalKey(VirtualKey key)
@@ -785,8 +772,19 @@ namespace NoiraPlayer.App.Views
 
         private async void Page_OnPointerPressed(object sender, PointerRoutedEventArgs e)
         {
-            await ApplyOverlayInputActionAsync(
-                PlaybackOverlayInputPolicy.Decide(PlaybackOverlayShortcut.Pointer, _seekPreview.IsActive, _moreVisible, _overlayVisible, ShouldBackExitPlaybackPage()));
+            var action = PlaybackOverlayInputPolicy.Decide(
+                PlaybackOverlayShortcut.Pointer,
+                _seekPreview.IsActive,
+                _moreVisible,
+                _overlayVisible,
+                ShouldBackExitPlaybackPage());
+            if (action == PlaybackOverlayInputAction.None)
+            {
+                RestartOverlayTimerIfNeeded();
+                return;
+            }
+
+            await ApplyOverlayInputActionAsync(action);
         }
 
         private static PlaybackOverlayShortcut? TryMapDesktopShortcut(VirtualKey key)
@@ -851,7 +849,11 @@ namespace NoiraPlayer.App.Views
                     return;
 
                 case PlaybackOverlayInputAction.ActivateFocusedControl:
-                    TryActivateFocusedMoreControl();
+                    if (!TryActivateFocusedMoreControl())
+                    {
+                        await ActivateFocusedTransportControlAsync();
+                    }
+
                     return;
             }
         }

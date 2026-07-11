@@ -22,6 +22,8 @@
     <CsWinRTIncludes>NoiraPlayer.Native</CsWinRTIncludes>
     <CsWinRTGeneratedFilesDir>$(BaseIntermediateOutputPath)$(Platform)\$(Configuration)\$(TargetFramework)\Generated\CsWinRT\</CsWinRTGeneratedFilesDir>
     <ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>None</ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>
+    <!-- .NET 10 NativeAOT reference tracking can deadlock when ILC optimization is disabled. -->
+    <Optimize>true</Optimize>
     <NoiraBuildWebClient Condition="'$(NoiraBuildWebClient)' == ''">true</NoiraBuildWebClient>
     <NoiraWebClientDirectory>$(MSBuildProjectDirectory)\..\NoiraPlayer.Web\</NoiraWebClientDirectory>
   </PropertyGroup>

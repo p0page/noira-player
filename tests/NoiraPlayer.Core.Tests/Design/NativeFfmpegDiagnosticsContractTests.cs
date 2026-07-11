@@ -39,6 +39,20 @@ public sealed class NativeFfmpegDiagnosticsContractTests
         Assert.Contains("receiveResult=", source, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Native_Ffmpeg_Blocking_Io_Has_A_Deadline_And_Can_Be_Interrupted_By_Stop()
+    {
+        var header = ReadNativeSource("Media", "FfmpegMediaSource.h");
+        var source = ReadNativeSource("Media", "FfmpegMediaSource.cpp");
+        var graphSource = ReadNativeSource("Media", "PlaybackGraph.cpp");
+
+        Assert.Contains("void Interrupt() noexcept;", header, StringComparison.Ordinal);
+        Assert.Contains("std::atomic<bool> m_interruptRequested", header, StringComparison.Ordinal);
+        Assert.Contains("interrupt_callback.callback", source, StringComparison.Ordinal);
+        Assert.Contains("BeginBlockingIo", source, StringComparison.Ordinal);
+        Assert.Contains("m_mediaSource.Interrupt();", graphSource, StringComparison.Ordinal);
+    }
+
     private static string ReadNativeSource(params string[] segments)
     {
         var parts = new string[segments.Length + 3];

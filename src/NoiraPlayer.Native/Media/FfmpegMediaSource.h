@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include <atomic>
 #include <cstdint>
 #include <deque>
 #include <optional>
@@ -48,6 +49,7 @@ namespace winrt::NoiraPlayer::Native::implementation
     public:
         void Open(winrt::hstring const& url);
         void Close() noexcept;
+        void Interrupt() noexcept;
 
         std::optional<int32_t> TryFindStream(int mediaType, int32_t selectedStreamIndex) const;
         int32_t FindRequiredStream(int mediaType, int32_t selectedStreamIndex) const;
@@ -61,6 +63,8 @@ namespace winrt::NoiraPlayer::Native::implementation
         void Seek(int32_t streamIndex, int64_t timestamp);
 
     private:
+        static int InterruptCallback(void* opaque) noexcept;
+        void BeginBlockingIo(int64_t timeoutMilliseconds) noexcept;
         void ClearPacketQueues() noexcept;
         bool TryTakeQueuedPacket(int32_t streamIndex, AVPacket* packet);
         bool ShouldQueueStream(int32_t streamIndex) const;
@@ -71,6 +75,8 @@ namespace winrt::NoiraPlayer::Native::implementation
         std::unordered_set<int32_t> m_activeStreams;
         std::unordered_map<int32_t, std::deque<AVPacket*>> m_packetQueues;
         uint32_t m_avformatVersion{0};
+        std::atomic<bool> m_interruptRequested{false};
+        std::atomic<int64_t> m_ioDeadlineNanoseconds{0};
         bool m_open{false};
     };
 }

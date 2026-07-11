@@ -2,6 +2,30 @@
   "schemaVersion": 1,
   "cases": [
     {
+      "caseId": "w3c/ui-freeze-regression-sintel",
+      "category": "stable",
+      "severity": "critical",
+      "stability": "stable",
+      "uri": "https://media.w3.org/2010/05/sintel/trailer.mp4",
+      "tier": 1,
+      "purpose": [
+        "ui-responsiveness",
+        "end-of-stream"
+      ],
+      "expected": {
+        "codec": "h264",
+        "width": 854,
+        "height": 480,
+        "frameRate": 24.0,
+        "hdrKind": "Sdr",
+        "isHdr": false,
+        "isDirectPlayable": true,
+        "hdrOutput": "Sdr",
+        "requireValidatedConversion": true,
+        "requireMatchedDisplayRefreshRate": false
+      }
+    },
+    {
       "caseId": "jellyfin/sdr-hevc-main10-1080p60-3m",
       "category": "stable",
       "severity": "high",

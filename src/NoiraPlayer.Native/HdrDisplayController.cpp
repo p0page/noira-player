@@ -267,6 +267,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         AppendNativePlaybackDiagnostic(L"HdrDisplayController.Probe begin");
         HdrDisplaySnapshot snapshot;
         auto advancedHdrActive = false;
+        m_hdmi = nullptr;
 
         auto info = DisplayInformation::GetForCurrentView();
         AppendNativePlaybackDiagnostic(info != nullptr
@@ -297,11 +298,12 @@ namespace winrt::NoiraPlayer::Native::implementation
                 snapshot.Message = L"HdmiDisplayInformation is unavailable.";
             }
             AppendNativePlaybackDiagnostic(L"HdrDisplayController.Probe HdmiDisplayInformation unavailable");
-            return snapshot;
+            return Remember(snapshot);
         }
 
         AppendNativePlaybackDiagnostic(L"HdrDisplayController.Probe GetForCurrentView begin");
         auto hdmi = HdmiDisplayInformation::GetForCurrentView();
+        m_hdmi = hdmi;
         AppendNativePlaybackDiagnostic(hdmi != nullptr
             ? L"HdrDisplayController.Probe GetForCurrentView end available"
             : L"HdrDisplayController.Probe GetForCurrentView end null");
@@ -312,7 +314,7 @@ namespace winrt::NoiraPlayer::Native::implementation
                 snapshot.Status = NoiraPlayer::Native::NativeHdrStatus::NativeHdrStatus_Unsupported;
                 snapshot.Message = L"No HDMI display information is available.";
             }
-            return snapshot;
+            return Remember(snapshot);
         }
 
         AppendNativePlaybackDiagnostic(L"HdrDisplayController.Probe GetCurrentDisplayMode begin");
@@ -323,7 +325,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         CaptureRefreshRate(snapshot, current);
         if (advancedHdrActive)
         {
-            return snapshot;
+            return Remember(snapshot);
         }
 
         snapshot.IsHdrDisplayAvailable =
@@ -336,21 +338,14 @@ namespace winrt::NoiraPlayer::Native::implementation
         AppendNativePlaybackDiagnostic(snapshot.IsHdrDisplayAvailable
             ? L"HdrDisplayController.Probe end hdr display available"
             : L"HdrDisplayController.Probe end hdr display unavailable");
-        return snapshot;
+        return Remember(snapshot);
     }
 
     HdrDisplaySnapshot HdrDisplayController::EnterHdr10(double videoFrameRate)
     {
         AppendNativePlaybackDiagnostic(L"HdrDisplayController.EnterHdr10 begin");
-        auto current = Probe();
-        if (!m_hasInitialState)
-        {
-            m_hasInitialState = true;
-            m_initialHdrActive = current.IsHdrOutputActive;
-            AppendNativePlaybackDiagnostic(current.IsHdrOutputActive
-                ? L"HdrDisplayController.EnterHdr10 initial active true"
-                : L"HdrDisplayController.EnterHdr10 initial active false");
-        }
+        auto current = m_lastSnapshot;
+        CaptureInitialStateIfNeeded(current);
 
         if (current.IsHdrOutputActive)
         {
@@ -368,6 +363,7 @@ namespace winrt::NoiraPlayer::Native::implementation
     HdrDisplaySnapshot HdrDisplayController::LeaveHdr10()
     {
         AppendNativePlaybackDiagnostic(L"HdrDisplayController.LeaveHdr10 begin");
+        CaptureInitialStateIfNeeded(m_lastSnapshot);
         return Apply(false, 0.0);
     }
 
@@ -376,7 +372,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         AppendNativePlaybackDiagnostic(L"HdrDisplayController.RestoreInitialState begin");
         if (!m_hasInitialState)
         {
-            return Probe();
+            return m_lastSnapshot;
         }
 
         return Apply(m_initialHdrActive, m_initialRefreshRate);
@@ -394,19 +390,15 @@ namespace winrt::NoiraPlayer::Native::implementation
             snapshot.Status = NoiraPlayer::Native::NativeHdrStatus::NativeHdrStatus_Unsupported;
             snapshot.Message = L"HdmiDisplayInformation is unavailable.";
             AppendNativePlaybackDiagnostic(L"HdrDisplayController.Apply HdmiDisplayInformation unavailable");
-            return snapshot;
+            return Remember(snapshot);
         }
 
-        AppendNativePlaybackDiagnostic(L"HdrDisplayController.Apply GetForCurrentView begin");
-        auto hdmi = HdmiDisplayInformation::GetForCurrentView();
-        AppendNativePlaybackDiagnostic(hdmi != nullptr
-            ? L"HdrDisplayController.Apply GetForCurrentView end available"
-            : L"HdrDisplayController.Apply GetForCurrentView end null");
+        auto hdmi = m_hdmi;
         if (hdmi == nullptr)
         {
             snapshot.Status = NoiraPlayer::Native::NativeHdrStatus::NativeHdrStatus_Unsupported;
             snapshot.Message = L"No HDMI display information is available.";
-            return snapshot;
+            return Remember(snapshot);
         }
 
         AppendNativePlaybackDiagnostic(L"HdrDisplayController.Apply GetCurrentDisplayMode begin");
@@ -418,7 +410,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         {
             snapshot.Status = NoiraPlayer::Native::NativeHdrStatus::NativeHdrStatus_Failed;
             snapshot.Message = L"Current HDMI display mode is unavailable.";
-            return snapshot;
+            return Remember(snapshot);
         }
 
         CaptureRefreshRate(snapshot, mode);
@@ -443,7 +435,7 @@ namespace winrt::NoiraPlayer::Native::implementation
                     ? L"No matching BT.2020 HDMI display mode is available for HDR10."
                     : L"No matching SDR HDMI display mode is available.";
                 AppendNativePlaybackDiagnostic(L"HdrDisplayController.Apply no matching mode");
-                return snapshot;
+                return Remember(snapshot);
             }
         }
 
@@ -463,7 +455,7 @@ namespace winrt::NoiraPlayer::Native::implementation
             CaptureRefreshRate(snapshot, mode);
             snapshot.Status = NoiraPlayer::Native::NativeHdrStatus::NativeHdrStatus_Failed;
             snapshot.Message = enableHdr ? L"Failed to enter HDR10 display mode." : L"Failed to restore SDR display mode.";
-            return snapshot;
+            return Remember(snapshot);
         }
 
         CaptureRefreshRate(snapshot, targetMode);
@@ -475,6 +467,27 @@ namespace winrt::NoiraPlayer::Native::implementation
         AppendNativePlaybackDiagnostic(enableHdr
             ? L"HdrDisplayController.Apply enable end active"
             : L"HdrDisplayController.Apply disable end inactive");
+        return Remember(snapshot);
+    }
+
+    HdrDisplaySnapshot HdrDisplayController::Remember(HdrDisplaySnapshot const& snapshot)
+    {
+        m_lastSnapshot = snapshot;
         return snapshot;
+    }
+
+    void HdrDisplayController::CaptureInitialStateIfNeeded(HdrDisplaySnapshot const& snapshot)
+    {
+        if (m_hasInitialState)
+        {
+            return;
+        }
+
+        m_hasInitialState = true;
+        m_initialHdrActive = snapshot.IsHdrOutputActive;
+        m_initialRefreshRate = snapshot.RefreshRateHz;
+        AppendNativePlaybackDiagnostic(snapshot.IsHdrOutputActive
+            ? L"HdrDisplayController initial HDR state active"
+            : L"HdrDisplayController initial HDR state inactive");
     }
 }

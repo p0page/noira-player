@@ -1,8 +1,12 @@
 using System;
 using System.Threading.Tasks;
 using Microsoft.Web.WebView2.Core;
+using NoiraPlayer.App.Navigation;
+using NoiraPlayer.App.Services;
 using NoiraPlayer.App.Web;
 using NoiraPlayer.App.Views;
+using NoiraPlayer.Core.Diagnostics;
+using Windows.Storage;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 
@@ -10,6 +14,9 @@ namespace NoiraPlayer.App
 {
     public sealed partial class MainPage : Page
     {
+#if DEBUG
+        private const string DevelopmentCommandFileName = "dev-command.json";
+#endif
         private const string PackagedWebAppHostName = "app.noira.local";
         private const string PackagedWebAppFolderName = "WebCode";
         private const string PackagedWebAppUrl = "https://app.noira.local/index.html";
@@ -59,6 +66,13 @@ namespace NoiraPlayer.App
                 CoreWebView2HostResourceAccessKind.Deny);
             core.WebMessageReceived += ShellWebView_OnWebMessageReceived;
 
+#if DEBUG
+            if (await TryRunDevelopmentPlaybackCommandAsync())
+            {
+                return;
+            }
+#endif
+
             _webAppSource = await WebViewSourceResolver.ResolveAsync(new Uri(PackagedWebAppUrl));
             ShellWebView.Source = _webAppSource;
             ShellWebView.Focus(FocusState.Programmatic);
@@ -79,5 +93,41 @@ namespace NoiraPlayer.App
                 Frame.Navigate(typeof(PlaybackPage), result.PlaybackRequest);
             }
         }
+
+#if DEBUG
+        private async Task<bool> TryRunDevelopmentPlaybackCommandAsync()
+        {
+            try
+            {
+                var item = await ApplicationData.Current.LocalFolder.TryGetItemAsync(DevelopmentCommandFileName);
+                var file = item as StorageFile;
+                if (file == null)
+                {
+                    return false;
+                }
+
+                var json = await FileIO.ReadTextAsync(file);
+                if (!DevelopmentNavigationCommand.TryParseJson(json, out var command, out _) ||
+                    command == null ||
+                    command.Route != "quality-run" ||
+                    string.IsNullOrWhiteSpace(command.StreamUrl))
+                {
+                    return false;
+                }
+
+                await file.DeleteAsync(StorageDeleteOption.PermanentDelete);
+                Frame.Navigate(
+                    typeof(PlaybackPage),
+                    PlaybackLaunchRequest.FromDevelopmentQualityRun(command, DateTimeOffset.UtcNow));
+                return true;
+            }
+            catch (Exception ex)
+            {
+                PlaybackDiagnosticsLog.WriteLine(
+                    "Development playback command failed " + ex.GetType().FullName + " " + ex.Message);
+                return false;
+            }
+        }
+#endif
     }
 }

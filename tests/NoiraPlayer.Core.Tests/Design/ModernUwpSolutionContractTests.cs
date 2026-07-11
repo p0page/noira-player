@@ -54,6 +54,16 @@ public sealed class ModernUwpSolutionContractTests
     }
 
     [Fact]
+    public void Modern_NativeAot_App_Always_Uses_Compiler_Optimizations()
+    {
+        var modernProject = ReadRepositoryFile("src", "NoiraPlayer.App", "NoiraPlayer.App.Modern.csproj");
+
+        Assert.Contains("<PublishAot>true</PublishAot>", modernProject, StringComparison.Ordinal);
+        Assert.Contains("<Optimize>true</Optimize>", modernProject, StringComparison.Ordinal);
+        Assert.DoesNotContain("<Optimize>false</Optimize>", modernProject, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Modern_App_Primary_Shell_Is_WebView2_Hosted_React_Vite_Surface()
     {
         var modernProject = ReadRepositoryFile("src", "NoiraPlayer.App", "NoiraPlayer.App.Modern.csproj");

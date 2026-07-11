@@ -1,10 +1,35 @@
 ﻿using System;
+using NoiraPlayer.Core.Diagnostics;
 using NoiraPlayer.Core.PlaybackQuality;
 
 namespace NoiraPlayer.App.Navigation
 {
     internal sealed class PlaybackLaunchRequest
     {
+#if DEBUG
+        public static PlaybackLaunchRequest FromDevelopmentQualityRun(
+            DevelopmentNavigationCommand command,
+            DateTimeOffset commandReceivedAtUtc)
+        {
+            if (command == null)
+            {
+                throw new ArgumentNullException(nameof(command));
+            }
+
+            return new PlaybackLaunchRequest(
+                command.ItemId,
+                command.ItemName,
+                command.StartPositionTicks,
+                command.MediaSourceId,
+                forceSdrOutput: command.ForceSdrOutput,
+                qualityRunId: command.RunId,
+                qualityRunDurationSeconds: command.DurationSeconds,
+                qualityExpected: command.Expected,
+                qualityCommandReceivedAtUtc: commandReceivedAtUtc,
+                streamUrl: command.StreamUrl);
+        }
+#endif
+
         public PlaybackLaunchRequest(
             string itemId,
             string itemName = "",

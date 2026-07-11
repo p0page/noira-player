@@ -223,6 +223,7 @@ namespace winrt::NoiraPlayer::Native::implementation
     winrt::Windows::Foundation::IAsyncAction NativePlaybackEngine::OpenAsync(
         NoiraPlayer::Native::NativePlaybackOpenRequest request)
     {
+        auto lifetime = get_strong();
         try
         {
             AppendNativePlaybackDiagnostic(L"NativePlaybackEngine.OpenAsync enter");
@@ -230,6 +231,7 @@ namespace winrt::NoiraPlayer::Native::implementation
             auto videoFrameRate = graphRequest.VideoFrameRate;
             AppendNativePlaybackDiagnostic(L"NativePlaybackEngine.OpenAsync request videoFrameRate=" + std::to_wstring(videoFrameRate));
             UpdateDisplayStatus(m_hdr.Probe());
+            co_await winrt::resume_background();
 
             AppendNativePlaybackDiagnostic(L"NativePlaybackEngine.OpenAsync graph Open begin");
             m_graph->Open(graphRequest);
@@ -260,6 +262,8 @@ namespace winrt::NoiraPlayer::Native::implementation
 
     winrt::Windows::Foundation::IAsyncAction NativePlaybackEngine::PauseAsync()
     {
+        auto lifetime = get_strong();
+        co_await winrt::resume_background();
         try
         {
             m_graph->Pause();
@@ -279,6 +283,8 @@ namespace winrt::NoiraPlayer::Native::implementation
 
     winrt::Windows::Foundation::IAsyncAction NativePlaybackEngine::ResumeAsync()
     {
+        auto lifetime = get_strong();
+        co_await winrt::resume_background();
         try
         {
             m_graph->Resume();
@@ -298,6 +304,8 @@ namespace winrt::NoiraPlayer::Native::implementation
 
     winrt::Windows::Foundation::IAsyncAction NativePlaybackEngine::SeekAsync(int64_t positionTicks)
     {
+        auto lifetime = get_strong();
+        co_await winrt::resume_background();
         try
         {
             m_graph->Seek(positionTicks);
@@ -317,6 +325,8 @@ namespace winrt::NoiraPlayer::Native::implementation
 
     winrt::Windows::Foundation::IAsyncAction NativePlaybackEngine::StopAsync()
     {
+        auto lifetime = get_strong();
+        co_await winrt::resume_background();
         try
         {
             m_graph->Stop();
@@ -341,6 +351,8 @@ namespace winrt::NoiraPlayer::Native::implementation
 
     winrt::Windows::Foundation::IAsyncAction NativePlaybackEngine::SwitchAudioStreamAsync(int32_t audioStreamIndex)
     {
+        auto lifetime = get_strong();
+        co_await winrt::resume_background();
         try
         {
             m_graph->SwitchAudioStream(audioStreamIndex);
@@ -359,6 +371,8 @@ namespace winrt::NoiraPlayer::Native::implementation
 
     winrt::Windows::Foundation::IAsyncAction NativePlaybackEngine::SwitchSubtitleStreamAsync(int32_t subtitleStreamIndex)
     {
+        auto lifetime = get_strong();
+        co_await winrt::resume_background();
         try
         {
             m_graph->SwitchSubtitleStream(subtitleStreamIndex);
@@ -377,6 +391,8 @@ namespace winrt::NoiraPlayer::Native::implementation
 
     winrt::Windows::Foundation::IAsyncAction NativePlaybackEngine::DisableSubtitlesAsync()
     {
+        auto lifetime = get_strong();
+        co_await winrt::resume_background();
         try
         {
             m_graph->SwitchSubtitleStream(std::nullopt);
