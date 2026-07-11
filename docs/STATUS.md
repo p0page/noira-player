@@ -867,3 +867,13 @@ manifest validation、report-set validation、single comparison、comparison sui
 同期逐轮 comparison 归档于 `docs/qa/private/comparisons/playback-core-tuning-audio-pass-oversleep-versioned-current-window-control.local/`：三轮分别为 `1 improved + 23 unchanged`、`1 improved + 23 unchanged`、`24 unchanged`，均为 0 regression；统一因为 A/V oversleep 语义不同而输出 `review-unmatched-signals`。正式旧 baseline comparison 的 `reject-candidate` 仍保留，目标 case 是 A/V 与 HDR10-60，不修改 manifest、expected、threshold、materiality 或 acceptance rule。
 
 采纳结论：保留实现作为 metrics-semantics 修正，不标记为 accepted playback-quality improvement。当前剩余风险是 Windows 短样本中的 A/V frame P99/max-gap 尾部噪声，以及尚未单独报告的 episode loop overhead；下一轮播放策略候选必须以新语义报告为新基线，不能再跨语义比较 oversleep。
+
+# 2026-07-11 更新：native interaction evidence 固定为新的 24-case baseline 口径
+
+`local/native-headless-av-smoke` 已从仅发现轨道的样本升级为真实交互样本：两个音轨、两个嵌入字幕轨、字幕关闭与 `1s` seek 都会进入 lifecycle evidence。cadence、A/V 与 buffering 指标仍取自交互前 snapshot；这些新增 interaction 不把后续状态混入既有播放采样窗口。
+
+lifecycle 的 `failed`/`error` 现在是 evaluator 的正式失败，而不是被折叠为 harness 成功或缺失证据。parser 对缺失或非法的 interaction stdout 严格报告 `evidence-collection` failure；反之，完整 report 中诚实记录的字幕失败仍属于可采集、可评估的播放证据。
+
+当前旧 Core 行为下，两次 embedded subtitle switch 的 cue count 都是 `0->0`，因此 A/V case 的两次 subtitle-switch 都失败，case result 为 `fail`、failure area 为 `subtitles`，且没有 `evidence-collection` error。它是下一步验证 current-position demux resync 假设的基线，不是已修复的字幕能力。
+
+由于 manifest 已把 A/V case 的交互语义改为上述真实操作，旧 baseline 不可直接用于播放器播放质量改善比较；需要在 evidence-only docs commit 的 clean HEAD 上重新生成包含默认公开 manifest、私有 Emby manifest 与 native-headless 样本的 24-case baseline。本轮不改变 Core/native 播放策略、App/UI、manifest expected、阈值或 case ID，也不把 baseline 迁移描述为播放质量改善。

@@ -983,3 +983,13 @@
 评测兼容性：报告新增 `timing.audioAheadWaitOversleepSemantics`。旧报告缺省为 `episode-wall-minus-first-target-v1`，新报告写入 `sum-positive-pass-oversleep-v2`。由于 target 也从 first pass 改为全部 pass 之和，比较器只在语义一致时比较 episode target 与 oversleep；语义不一致且至少一侧存在相关证据时，将两组信号标为 unmatched、把 confidence 降为 partial，并保留其他播放信号比较。这样不会把指标定义变化伪装成播放质量 improvement；无相关证据的 case 不受影响。
 
 证据与采纳：正式候选相对旧 commit-bound baseline 仍因 A/V 与 HDR10-60 的单次 frame-pacing 尾部值显示 `reject-candidate`，该结果未被隐藏。同期重新运行的旧 `94108ae` 控制组同样只有 20/22 stable，且不稳定 case 仍是 A/V 与 HDR10-60；versioned candidate 为 21/22 stable，仅 A/V 不稳定。三组同期逐轮 comparison 分别为 `1 improved + 23 unchanged`、`1 improved + 23 unchanged`、`24 unchanged`，均为 0 regression；统一因 A/V oversleep 语义不同而要求 `review-unmatched-signals`。因此保留该实现作为 metrics-semantics 修正，不声称播放质量提升。episode wall duration 中除实际 wait 之外的 loop overhead 仍未单独报告，后续若新增必须使用独立信号。
+
+# 2026-07-11: native interaction evidence 使用独立的 commit-bound baseline
+
+决策：把 `local/native-headless-av-smoke` 的两个音轨、两个嵌入字幕轨、字幕关闭和 `1s` seek 固定为正式 interaction evidence；cadence、A/V 与 buffering 继续使用交互前 snapshot。lifecycle `failed`/`error` 由 evaluator 作为正式 failure 处理，parser 对缺失或非法 interaction stdout 严格归类为 `evidence-collection` failure。完整 report 中的旧 Core 字幕失败不是 evidence-collection failure。
+
+原因：旧 Core 在两次 embedded subtitle switch 后都报告 cue count `0->0`，所以 A/V case 的两次 subtitle-switch 仍为 `failed`，case result 为 `fail`、failure area 为 `subtitles`。这为下一步 current-position demux resync 提供未修复的、可重复的基线；不应以伪造 cue 或放宽评测标准掩盖它。
+
+设计依据：采用 Kodi 的行为对照原则，而非 Kodi 等价声明。嵌入字幕在播放中切换后，demux 可能已经丢弃当前位置的 cue；正确的候选方向是在 current position 回 seek，让 demux 重新读取该 cue。是否达到同等行为只能由后续实现与同一评测证据证明。
+
+基线规则：interaction manifest 语义变化后，旧 baseline 不再是播放器质量改善的直接比较对象。必须在仅包含本次 evidence-only 文档的 clean commit 上，用默认公开 manifest、ignored 私有 Emby manifest 和 native-headless 样本生成新的 24-case baseline。该迁移不修改播放器策略、App/UI、manifest expected、阈值或 case ID，也不构成播放质量改善声明。
