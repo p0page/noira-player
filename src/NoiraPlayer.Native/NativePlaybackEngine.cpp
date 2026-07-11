@@ -210,6 +210,11 @@ namespace winrt::NoiraPlayer::Native::implementation
         metrics.RenderIntervalAfterAudioAheadWaitMsP95(snapshot.RenderIntervalAfterAudioAheadWaitMsP95);
         metrics.RenderIntervalAfterAudioAheadWaitMsP99(snapshot.RenderIntervalAfterAudioAheadWaitMsP99);
         metrics.RenderIntervalAfterAudioAheadWaitMsMax(snapshot.RenderIntervalAfterAudioAheadWaitMsMax);
+        metrics.AudioAheadWaitEndToPresentSampleCount(snapshot.AudioAheadWaitEndToPresentSampleCount);
+        metrics.AudioAheadWaitEndToPresentMsP50(snapshot.AudioAheadWaitEndToPresentMsP50);
+        metrics.AudioAheadWaitEndToPresentMsP95(snapshot.AudioAheadWaitEndToPresentMsP95);
+        metrics.AudioAheadWaitEndToPresentMsP99(snapshot.AudioAheadWaitEndToPresentMsP99);
+        metrics.AudioAheadWaitEndToPresentMsMax(snapshot.AudioAheadWaitEndToPresentMsMax);
         metrics.RenderIntervalAfterNonAudioWaitSampleCount(snapshot.RenderIntervalAfterNonAudioWaitSampleCount);
         metrics.RenderIntervalAfterNonAudioWaitMsP95(snapshot.RenderIntervalAfterNonAudioWaitMsP95);
         metrics.RenderIntervalAfterNonAudioWaitMsP99(snapshot.RenderIntervalAfterNonAudioWaitMsP99);

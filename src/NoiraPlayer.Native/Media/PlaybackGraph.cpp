@@ -407,6 +407,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         auto completedRenderLoopWaitDurationMs = 0.0;
         auto completedRenderLoopWaitTargetMs = 0.0;
         auto completedAudioAheadWaitGeneration = uint64_t{0};
+        std::optional<std::chrono::steady_clock::time_point> completedAudioAheadWaitEndedAt;
 
         while (true)
         {
@@ -428,6 +429,9 @@ namespace winrt::NoiraPlayer::Native::implementation
                 {
                     m_lastCompletedRenderLoopWaitReason = RenderLoopWaitReason::Default;
                 }
+                m_lastAudioAheadWaitEndedAt = completedAudioAheadWaitIsCurrent
+                    ? completedAudioAheadWaitEndedAt
+                    : std::nullopt;
                 if (completedAudioAheadWaitIsCurrent)
                 {
                     auto passOversleepMs =
@@ -439,6 +443,7 @@ namespace winrt::NoiraPlayer::Native::implementation
                 completedRenderLoopWaitDurationMs = 0.0;
                 completedRenderLoopWaitTargetMs = 0.0;
                 completedAudioAheadWaitGeneration = 0;
+                completedAudioAheadWaitEndedAt.reset();
 
                 if (m_stopRenderLoop)
                 {
@@ -546,6 +551,7 @@ namespace winrt::NoiraPlayer::Native::implementation
                     waitEndedAt - waitStartedAt).count();
                 completedRenderLoopWaitTargetMs = std::chrono::duration<double, std::milli>(renderLoopWait).count();
                 completedAudioAheadWaitGeneration = audioAheadWaitGeneration;
+                completedAudioAheadWaitEndedAt = waitEndedAt;
             }
         }
     }
@@ -717,6 +723,14 @@ namespace winrt::NoiraPlayer::Native::implementation
                     }
                 }
 
+                if (m_lastAudioAheadWaitEndedAt)
+                {
+                    auto endToPresentMs = std::chrono::duration<double, std::milli>(
+                        renderedAt - *m_lastAudioAheadWaitEndedAt).count();
+                    m_qualityMetrics.RecordAudioAheadWaitEndToPresentMs(endToPresentMs);
+                    m_lastAudioAheadWaitEndedAt.reset();
+                }
+
                 m_lastRenderedFrameAt = renderedAt;
                 ++m_renderedVideoFrameCount;
                 ++m_qualityMetrics.RenderedVideoFrames;
@@ -831,6 +845,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         m_lastRenderedFrameAt = {};
         m_nextRenderLoopWaitReason = RenderLoopWaitReason::Default;
         m_lastCompletedRenderLoopWaitReason = RenderLoopWaitReason::Default;
+        m_lastAudioAheadWaitEndedAt.reset();
         ResetAudioAheadWait();
         ResetVideoClock();
     }

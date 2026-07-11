@@ -66,6 +66,11 @@
                 metrics.RenderIntervalAfterAudioAheadWaitMsP95 > 0 ||
                 metrics.RenderIntervalAfterAudioAheadWaitMsP99 > 0 ||
                 metrics.RenderIntervalAfterAudioAheadWaitMsMax > 0 ||
+                metrics.AudioAheadWaitEndToPresentSampleCount > 0 ||
+                metrics.AudioAheadWaitEndToPresentMsP50 > 0 ||
+                metrics.AudioAheadWaitEndToPresentMsP95 > 0 ||
+                metrics.AudioAheadWaitEndToPresentMsP99 > 0 ||
+                metrics.AudioAheadWaitEndToPresentMsMax > 0 ||
                 metrics.RenderIntervalAfterNonAudioWaitSampleCount > 0 ||
                 metrics.RenderIntervalAfterNonAudioWaitMsP95 > 0 ||
                 metrics.RenderIntervalAfterNonAudioWaitMsP99 > 0 ||

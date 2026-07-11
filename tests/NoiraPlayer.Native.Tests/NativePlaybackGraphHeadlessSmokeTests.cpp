@@ -419,6 +419,11 @@ int wmain(int argc, wchar_t** argv)
             << " renderIntervalAfterAudioAheadWaitMsP95=" << playbackSnapshot.RenderIntervalAfterAudioAheadWaitMsP95
             << " renderIntervalAfterAudioAheadWaitMsP99=" << playbackSnapshot.RenderIntervalAfterAudioAheadWaitMsP99
             << " renderIntervalAfterAudioAheadWaitMsMax=" << playbackSnapshot.RenderIntervalAfterAudioAheadWaitMsMax
+            << " audioAheadWaitEndToPresentSampleCount=" << playbackSnapshot.AudioAheadWaitEndToPresentSampleCount
+            << " audioAheadWaitEndToPresentMsP50=" << playbackSnapshot.AudioAheadWaitEndToPresentMsP50
+            << " audioAheadWaitEndToPresentMsP95=" << playbackSnapshot.AudioAheadWaitEndToPresentMsP95
+            << " audioAheadWaitEndToPresentMsP99=" << playbackSnapshot.AudioAheadWaitEndToPresentMsP99
+            << " audioAheadWaitEndToPresentMsMax=" << playbackSnapshot.AudioAheadWaitEndToPresentMsMax
             << " renderIntervalAfterNonAudioWaitSampleCount=" << playbackSnapshot.RenderIntervalAfterNonAudioWaitSampleCount
             << " renderIntervalAfterNonAudioWaitMsP95=" << playbackSnapshot.RenderIntervalAfterNonAudioWaitMsP95
             << " renderIntervalAfterNonAudioWaitMsP99=" << playbackSnapshot.RenderIntervalAfterNonAudioWaitMsP99

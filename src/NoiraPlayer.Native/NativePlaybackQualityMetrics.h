@@ -101,6 +101,21 @@ namespace winrt::NoiraPlayer::Native::implementation
         double RenderIntervalAfterAudioAheadWaitMsMax() const noexcept { return m_renderIntervalAfterAudioAheadWaitMsMax; }
         void RenderIntervalAfterAudioAheadWaitMsMax(double value) noexcept { m_renderIntervalAfterAudioAheadWaitMsMax = value; }
 
+        uint64_t AudioAheadWaitEndToPresentSampleCount() const noexcept { return m_audioAheadWaitEndToPresentSampleCount; }
+        void AudioAheadWaitEndToPresentSampleCount(uint64_t value) noexcept { m_audioAheadWaitEndToPresentSampleCount = value; }
+
+        double AudioAheadWaitEndToPresentMsP50() const noexcept { return m_audioAheadWaitEndToPresentMsP50; }
+        void AudioAheadWaitEndToPresentMsP50(double value) noexcept { m_audioAheadWaitEndToPresentMsP50 = value; }
+
+        double AudioAheadWaitEndToPresentMsP95() const noexcept { return m_audioAheadWaitEndToPresentMsP95; }
+        void AudioAheadWaitEndToPresentMsP95(double value) noexcept { m_audioAheadWaitEndToPresentMsP95 = value; }
+
+        double AudioAheadWaitEndToPresentMsP99() const noexcept { return m_audioAheadWaitEndToPresentMsP99; }
+        void AudioAheadWaitEndToPresentMsP99(double value) noexcept { m_audioAheadWaitEndToPresentMsP99 = value; }
+
+        double AudioAheadWaitEndToPresentMsMax() const noexcept { return m_audioAheadWaitEndToPresentMsMax; }
+        void AudioAheadWaitEndToPresentMsMax(double value) noexcept { m_audioAheadWaitEndToPresentMsMax = value; }
+
         uint64_t RenderIntervalAfterNonAudioWaitSampleCount() const noexcept { return m_renderIntervalAfterNonAudioWaitSampleCount; }
         void RenderIntervalAfterNonAudioWaitSampleCount(uint64_t value) noexcept { m_renderIntervalAfterNonAudioWaitSampleCount = value; }
 
@@ -274,6 +289,11 @@ namespace winrt::NoiraPlayer::Native::implementation
         double m_renderIntervalAfterAudioAheadWaitMsP95{0.0};
         double m_renderIntervalAfterAudioAheadWaitMsP99{0.0};
         double m_renderIntervalAfterAudioAheadWaitMsMax{0.0};
+        uint64_t m_audioAheadWaitEndToPresentSampleCount{0};
+        double m_audioAheadWaitEndToPresentMsP50{0.0};
+        double m_audioAheadWaitEndToPresentMsP95{0.0};
+        double m_audioAheadWaitEndToPresentMsP99{0.0};
+        double m_audioAheadWaitEndToPresentMsMax{0.0};
         uint64_t m_renderIntervalAfterNonAudioWaitSampleCount{0};
         double m_renderIntervalAfterNonAudioWaitMsP95{0.0};
         double m_renderIntervalAfterNonAudioWaitMsP99{0.0};

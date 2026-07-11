@@ -1178,6 +1178,24 @@ public sealed class PlaybackQualityReportAnalyzerTests
     }
 
     [Fact]
+    public void Runtime_Metrics_Factory_Treats_Audio_Ahead_Wait_End_To_Present_As_Playback_Evidence()
+    {
+        var runtimeMetrics = PlaybackQualityRuntimeMetricsFactory.FromSnapshot(
+            new PlaybackQualityMetricsSnapshot
+            {
+                AudioAheadWaitEndToPresentSampleCount = 1,
+                AudioAheadWaitEndToPresentMsP50 = 2.0,
+                AudioAheadWaitEndToPresentMsP95 = 3.0,
+                AudioAheadWaitEndToPresentMsP99 = 4.0,
+                AudioAheadWaitEndToPresentMsMax = 5.0
+            },
+            "returned-snapshot");
+
+        Assert.Equal("captured", runtimeMetrics.Status);
+        Assert.True(runtimeMetrics.HasPlaybackSample);
+    }
+
+    [Fact]
     public void Analyze_Targets_Highest_Priority_Failure_Area_When_Frame_Pacing_Also_Fails()
     {
         var report = CreateOptimizationReadyFailure();
@@ -1370,6 +1388,11 @@ public sealed class PlaybackQualityReportAnalyzerTests
         report.Timing.RenderIntervalAfterAudioAheadWaitMsP95 = 43.0;
         report.Timing.RenderIntervalAfterAudioAheadWaitMsP99 = 44.0;
         report.Timing.RenderIntervalAfterAudioAheadWaitMsMax = 45.0;
+        report.Timing.AudioAheadWaitEndToPresentSampleCount = 2;
+        report.Timing.AudioAheadWaitEndToPresentMsP50 = 2.0;
+        report.Timing.AudioAheadWaitEndToPresentMsP95 = 3.0;
+        report.Timing.AudioAheadWaitEndToPresentMsP99 = 4.0;
+        report.Timing.AudioAheadWaitEndToPresentMsMax = 5.0;
         report.Timing.RenderIntervalAfterNonAudioWaitSampleCount = 3;
         report.Timing.RenderIntervalAfterNonAudioWaitMsP95 = 34.0;
         report.Timing.RenderIntervalAfterNonAudioWaitMsP99 = 35.0;
@@ -1415,6 +1438,11 @@ public sealed class PlaybackQualityReportAnalyzerTests
         Assert.Contains("timing.renderIntervalAfterAudioAheadWaitMsP95", analysis.EvidenceSignals);
         Assert.Contains("timing.renderIntervalAfterAudioAheadWaitMsP99", analysis.EvidenceSignals);
         Assert.Contains("timing.renderIntervalAfterAudioAheadWaitMsMax", analysis.EvidenceSignals);
+        Assert.Contains("timing.audioAheadWaitEndToPresentSampleCount", analysis.EvidenceSignals);
+        Assert.Contains("timing.audioAheadWaitEndToPresentMsP50", analysis.EvidenceSignals);
+        Assert.Contains("timing.audioAheadWaitEndToPresentMsP95", analysis.EvidenceSignals);
+        Assert.Contains("timing.audioAheadWaitEndToPresentMsP99", analysis.EvidenceSignals);
+        Assert.Contains("timing.audioAheadWaitEndToPresentMsMax", analysis.EvidenceSignals);
         Assert.Contains("timing.renderIntervalAfterNonAudioWaitSampleCount", analysis.EvidenceSignals);
         Assert.Contains("timing.renderIntervalAfterNonAudioWaitMsP95", analysis.EvidenceSignals);
         Assert.Contains("timing.renderIntervalAfterNonAudioWaitMsP99", analysis.EvidenceSignals);
@@ -1450,6 +1478,19 @@ public sealed class PlaybackQualityReportAnalyzerTests
         Assert.Contains("timing.renderIntervalAfterAudioAheadWaitMsP95", analysis.EvidenceSignals);
         Assert.Contains("timing.renderIntervalAfterNonAudioWaitSampleCount", analysis.EvidenceSignals);
         Assert.DoesNotContain("timing.renderIntervalAfterNonAudioWaitMsP95", analysis.EvidenceSignals);
+    }
+
+    [Fact]
+    public void Analyze_Reports_Zero_End_To_Present_Count_When_Audio_Ahead_Waits_Exist()
+    {
+        var report = CreateOptimizationReadyFailure();
+        report.Timing.AudioAheadWaitCount = 5;
+        report.Timing.AudioAheadWaitEndToPresentSampleCount = 0;
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Contains("timing.audioAheadWaitEndToPresentSampleCount", analysis.EvidenceSignals);
+        Assert.DoesNotContain("timing.audioAheadWaitEndToPresentMsP95", analysis.EvidenceSignals);
     }
 
     [Fact]

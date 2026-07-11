@@ -2702,6 +2702,32 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 AddUnique(analysis.EvidenceSignals, "timing.renderIntervalAfterAudioAheadWaitMsMax");
             }
 
+            if (report.Timing.AudioAheadWaitCount > 0 ||
+                report.Timing.AudioAheadWaitEndToPresentSampleCount > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.audioAheadWaitEndToPresentSampleCount");
+            }
+
+            if (report.Timing.AudioAheadWaitEndToPresentMsP50 > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.audioAheadWaitEndToPresentMsP50");
+            }
+
+            if (report.Timing.AudioAheadWaitEndToPresentMsP95 > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.audioAheadWaitEndToPresentMsP95");
+            }
+
+            if (report.Timing.AudioAheadWaitEndToPresentMsP99 > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.audioAheadWaitEndToPresentMsP99");
+            }
+
+            if (report.Timing.AudioAheadWaitEndToPresentMsMax > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.audioAheadWaitEndToPresentMsMax");
+            }
+
             if (report.Timing.RenderIntervalAfterNonAudioWaitMsP95 > 0)
             {
                 AddUnique(analysis.EvidenceSignals, "timing.renderIntervalAfterNonAudioWaitMsP95");

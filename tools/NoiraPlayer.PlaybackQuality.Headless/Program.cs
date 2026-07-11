@@ -486,6 +486,11 @@ internal static class NativeHeadlessHarness
             TrySetRequiredNonNegativeDouble(values, "renderIntervalAfterAudioAheadWaitMsP95", value => metrics.RenderIntervalAfterAudioAheadWaitMsP95 = value, out error) &&
             TrySetRequiredNonNegativeDouble(values, "renderIntervalAfterAudioAheadWaitMsP99", value => metrics.RenderIntervalAfterAudioAheadWaitMsP99 = value, out error) &&
             TrySetRequiredNonNegativeDouble(values, "renderIntervalAfterAudioAheadWaitMsMax", value => metrics.RenderIntervalAfterAudioAheadWaitMsMax = value, out error) &&
+            TrySetRequiredUInt64(values, "audioAheadWaitEndToPresentSampleCount", value => metrics.AudioAheadWaitEndToPresentSampleCount = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "audioAheadWaitEndToPresentMsP50", value => metrics.AudioAheadWaitEndToPresentMsP50 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "audioAheadWaitEndToPresentMsP95", value => metrics.AudioAheadWaitEndToPresentMsP95 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "audioAheadWaitEndToPresentMsP99", value => metrics.AudioAheadWaitEndToPresentMsP99 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "audioAheadWaitEndToPresentMsMax", value => metrics.AudioAheadWaitEndToPresentMsMax = value, out error) &&
             TrySetRequiredUInt64(values, "renderIntervalAfterNonAudioWaitSampleCount", value => metrics.RenderIntervalAfterNonAudioWaitSampleCount = value, out error) &&
             TrySetRequiredNonNegativeDouble(values, "renderIntervalAfterNonAudioWaitMsP95", value => metrics.RenderIntervalAfterNonAudioWaitMsP95 = value, out error) &&
             TrySetRequiredNonNegativeDouble(values, "renderIntervalAfterNonAudioWaitMsP99", value => metrics.RenderIntervalAfterNonAudioWaitMsP99 = value, out error) &&

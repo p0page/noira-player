@@ -29,13 +29,19 @@ function Write-TestReport {
         [double]$RenderAfterAudioAheadP95 = 0,
         [double]$RenderAfterAudioAheadP99 = 0,
         [double]$RenderAfterAudioAheadMax = 0,
+        [int]$AudioAheadWaitEndToPresentSampleCount = 0,
+        [double]$AudioAheadWaitEndToPresentP50 = 0,
+        [double]$AudioAheadWaitEndToPresentP95 = 0,
+        [double]$AudioAheadWaitEndToPresentP99 = 0,
+        [double]$AudioAheadWaitEndToPresentMax = 0,
         [int]$RenderAfterNonAudioSampleCount = 0,
         [double]$RenderAfterNonAudioP95 = 0,
         [double]$RenderAfterNonAudioP99 = 0,
         [double]$RenderAfterNonAudioMax = 0,
         [double]$AudioVideoDriftP95 = 0,
         [double]$AudioVideoDriftP99 = 0,
-        [switch]$OmitShortIntervalEvidence
+        [switch]$OmitShortIntervalEvidence,
+        [switch]$OmitAudioAheadWaitEndToPresentEvidence
     )
 
     $relativePath = $CaseId.Replace('/', [System.IO.Path]::DirectorySeparatorChar) + '.json'
@@ -70,6 +76,11 @@ function Write-TestReport {
                 renderIntervalAfterAudioAheadWaitMsP95 = $RenderAfterAudioAheadP95
                 renderIntervalAfterAudioAheadWaitMsP99 = $RenderAfterAudioAheadP99
                 renderIntervalAfterAudioAheadWaitMsMax = $RenderAfterAudioAheadMax
+                audioAheadWaitEndToPresentSampleCount = $AudioAheadWaitEndToPresentSampleCount
+                audioAheadWaitEndToPresentMsP50 = $AudioAheadWaitEndToPresentP50
+                audioAheadWaitEndToPresentMsP95 = $AudioAheadWaitEndToPresentP95
+                audioAheadWaitEndToPresentMsP99 = $AudioAheadWaitEndToPresentP99
+                audioAheadWaitEndToPresentMsMax = $AudioAheadWaitEndToPresentMax
                 renderIntervalAfterNonAudioWaitSampleCount = $RenderAfterNonAudioSampleCount
                 renderIntervalAfterNonAudioWaitMsP95 = $RenderAfterNonAudioP95
                 renderIntervalAfterNonAudioWaitMsP99 = $RenderAfterNonAudioP99
@@ -87,6 +98,16 @@ function Write-TestReport {
         $report.report.timing | Add-Member -NotePropertyName minFrameGapMs -NotePropertyValue $MinFrameGap
         $report.report.timing | Add-Member -NotePropertyName renderIntervalUnderExpected2MsCount -NotePropertyValue 2
         $report.report.timing | Add-Member -NotePropertyName renderIntervalUnderExpected4MsCount -NotePropertyValue 1
+    }
+
+    if ($OmitAudioAheadWaitEndToPresentEvidence) {
+        @(
+            'audioAheadWaitEndToPresentSampleCount',
+            'audioAheadWaitEndToPresentMsP50',
+            'audioAheadWaitEndToPresentMsP95',
+            'audioAheadWaitEndToPresentMsP99',
+            'audioAheadWaitEndToPresentMsMax'
+        ) | ForEach-Object { $report.report.timing.PSObject.Properties.Remove($_) }
     }
 
     $report | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $path -Encoding UTF8
@@ -142,6 +163,11 @@ try {
         -RenderAfterAudioAheadP95 39.3 `
         -RenderAfterAudioAheadP99 40.1 `
         -RenderAfterAudioAheadMax 40.1 `
+        -AudioAheadWaitEndToPresentSampleCount 45 `
+        -AudioAheadWaitEndToPresentP50 2.0 `
+        -AudioAheadWaitEndToPresentP95 3.0 `
+        -AudioAheadWaitEndToPresentP99 4.0 `
+        -AudioAheadWaitEndToPresentMax 4.0 `
         -RenderAfterNonAudioSampleCount 0
     Write-TestReport `
         -CaseId 'local/native-headless-av-smoke-repeat-2' `
@@ -158,6 +184,11 @@ try {
         -RenderAfterAudioAheadP95 39.7 `
         -RenderAfterAudioAheadP99 40.8 `
         -RenderAfterAudioAheadMax 40.8 `
+        -AudioAheadWaitEndToPresentSampleCount 45 `
+        -AudioAheadWaitEndToPresentP50 2.1 `
+        -AudioAheadWaitEndToPresentP95 3.4 `
+        -AudioAheadWaitEndToPresentP99 4.3 `
+        -AudioAheadWaitEndToPresentMax 4.3 `
         -RenderAfterNonAudioSampleCount 0
     Write-TestReport `
         -CaseId 'local/native-headless-av-smoke-repeat-3' `
@@ -174,6 +205,11 @@ try {
         -RenderAfterAudioAheadP95 39.5 `
         -RenderAfterAudioAheadP99 40.4 `
         -RenderAfterAudioAheadMax 40.4 `
+        -AudioAheadWaitEndToPresentSampleCount 45 `
+        -AudioAheadWaitEndToPresentP50 2.0 `
+        -AudioAheadWaitEndToPresentP95 3.2 `
+        -AudioAheadWaitEndToPresentP99 4.1 `
+        -AudioAheadWaitEndToPresentMax 4.1 `
         -RenderAfterNonAudioSampleCount 0
 
     Write-TestReport `
@@ -199,6 +235,11 @@ try {
         -RenderAfterAudioAheadP95 39.3 `
         -RenderAfterAudioAheadP99 40.1 `
         -RenderAfterAudioAheadMax 40.1 `
+        -AudioAheadWaitEndToPresentSampleCount 45 `
+        -AudioAheadWaitEndToPresentP50 2.0 `
+        -AudioAheadWaitEndToPresentP95 3.0 `
+        -AudioAheadWaitEndToPresentP99 4.0 `
+        -AudioAheadWaitEndToPresentMax 4.0 `
         -RenderAfterNonAudioSampleCount 0 `
         -AudioVideoDriftP95 10.0 `
         -AudioVideoDriftP99 12.0
@@ -225,6 +266,11 @@ try {
         -RenderAfterAudioAheadP95 43.2 `
         -RenderAfterAudioAheadP99 45.0 `
         -RenderAfterAudioAheadMax 45.0 `
+        -AudioAheadWaitEndToPresentSampleCount 45 `
+        -AudioAheadWaitEndToPresentP50 2.5 `
+        -AudioAheadWaitEndToPresentP95 7.0 `
+        -AudioAheadWaitEndToPresentP99 8.0 `
+        -AudioAheadWaitEndToPresentMax 8.0 `
         -RenderAfterNonAudioSampleCount 0 `
         -AudioVideoDriftP95 10.0 `
         -AudioVideoDriftP99 12.0
@@ -251,6 +297,11 @@ try {
         -RenderAfterAudioAheadP95 39.5 `
         -RenderAfterAudioAheadP99 40.3 `
         -RenderAfterAudioAheadMax 40.3 `
+        -AudioAheadWaitEndToPresentSampleCount 45 `
+        -AudioAheadWaitEndToPresentP50 2.1 `
+        -AudioAheadWaitEndToPresentP95 3.2 `
+        -AudioAheadWaitEndToPresentP99 4.2 `
+        -AudioAheadWaitEndToPresentMax 4.2 `
         -RenderAfterNonAudioSampleCount 0 `
         -AudioVideoDriftP95 10.0 `
         -AudioVideoDriftP99 12.0
@@ -262,7 +313,8 @@ try {
         -RenderP99 17.2 `
         -MaxFrameGap 17.2 `
         -RenderedFrames 94 `
-        -OmitShortIntervalEvidence
+        -OmitShortIntervalEvidence `
+        -OmitAudioAheadWaitEndToPresentEvidence
     Write-TestReport `
         -CaseId 'local/native-headless-old-report-repeat-2' `
         -ExpectedFrameDurationMs 16.6667 `
@@ -270,7 +322,8 @@ try {
         -RenderP99 17.3 `
         -MaxFrameGap 17.3 `
         -RenderedFrames 94 `
-        -OmitShortIntervalEvidence
+        -OmitShortIntervalEvidence `
+        -OmitAudioAheadWaitEndToPresentEvidence
     Write-TestReport `
         -CaseId 'local/native-headless-old-report-repeat-3' `
         -ExpectedFrameDurationMs 16.6667 `
@@ -278,7 +331,8 @@ try {
         -RenderP99 17.4 `
         -MaxFrameGap 17.4 `
         -RenderedFrames 94 `
-        -OmitShortIntervalEvidence
+        -OmitShortIntervalEvidence `
+        -OmitAudioAheadWaitEndToPresentEvidence
 
     & $scriptPath `
         -ReportsRoot $reportsRoot `
@@ -326,6 +380,8 @@ try {
 
     if ($stable.renderIntervalAfterAudioAheadWaitP95SpreadMs -ge 1.0 -or
         $stable.renderIntervalAfterAudioAheadWaitSampleCountSpread -ne 0 -or
+        $stable.audioAheadWaitEndToPresentP95SpreadMs -ge 1.0 -or
+        $stable.audioAheadWaitEndToPresentSampleCountSpread -ne 0 -or
         $stable.renderIntervalAfterNonAudioWaitSampleCountMax -ne 0) {
         throw 'Expected stable A/V group to expose stable render-after-audio-ahead bucket evidence and zero non-audio bucket count.'
     }
@@ -338,8 +394,10 @@ try {
     }
 
     if ($null -ne $oldReportGroup.renderIntervalP05ExpectedErrorSpreadMs -or
-        $null -ne $oldReportGroup.minFrameGapExpectedErrorSpreadMs) {
-        throw 'Expected old reports without short-interval evidence to keep short-interval spread fields null.'
+        $null -ne $oldReportGroup.minFrameGapExpectedErrorSpreadMs -or
+        $null -ne $oldReportGroup.audioAheadWaitEndToPresentP95SpreadMs -or
+        $null -ne $oldReportGroup.audioAheadWaitEndToPresentSampleCountSpread) {
+        throw 'Expected old reports without newer timing evidence to keep corresponding spread fields null.'
     }
 
     $oversleepUnstable = $summary.groups |
@@ -372,6 +430,11 @@ try {
     if ($oversleepUnstable.renderIntervalAfterAudioAheadWaitP95SpreadMs -lt 3.0 -or
         -not ($oversleepUnstable.unstableSignals -contains 'timing.renderIntervalAfterAudioAheadWaitMsP95')) {
         throw 'Expected unstable group to expose render interval after audio-ahead wait spread.'
+    }
+
+    if ($oversleepUnstable.audioAheadWaitEndToPresentP95SpreadMs -lt 3.0 -or
+        -not ($oversleepUnstable.unstableSignals -contains 'timing.audioAheadWaitEndToPresentMsP95')) {
+        throw 'Expected unstable group to expose audio-ahead wait end-to-present spread.'
     }
 
     Write-Output 'measure-playback-cadence-stability tests ok'

@@ -191,6 +191,11 @@ if (-not ($plan.commands | Where-Object { $_.name -eq 'native-restore' })) {
 
 $nativeRestore = $plan.commands | Where-Object { $_.name -eq 'native-restore' } | Select-Object -First 1
 $nativeBuild = $plan.commands | Where-Object { $_.name -eq 'native-build' } | Select-Object -First 1
+$serializedNativeRestore = $nativeRestore | ConvertTo-Json -Depth 6
+if ($serializedNativeRestore -notmatch 'Restore-NativePackages\.ps1') {
+    throw 'Native restore must reuse complete global NuGet packages before attempting a network restore.'
+}
+
 foreach ($nativeProjectCommand in @($nativeRestore, $nativeBuild)) {
     if ($null -eq $nativeProjectCommand) {
         continue
@@ -201,8 +206,9 @@ foreach ($nativeProjectCommand in @($nativeRestore, $nativeBuild)) {
         throw 'Native project restore/build must not rely on VS2022 vcvars after the VS2026/v145 toolchain cutover.'
     }
 
-    if ($serializedNativeProjectCommand -notmatch 'NoiraModernToolchain\.ps1' -or
-        $serializedNativeProjectCommand -notmatch 'Resolve-ModernMsBuildPath') {
+    if ($nativeProjectCommand.name -eq 'native-build' -and
+        ($serializedNativeProjectCommand -notmatch 'NoiraModernToolchain\.ps1' -or
+            $serializedNativeProjectCommand -notmatch 'Resolve-ModernMsBuildPath')) {
         throw 'Native project restore/build must resolve MSBuild through NoiraModernToolchain.ps1.'
     }
 }

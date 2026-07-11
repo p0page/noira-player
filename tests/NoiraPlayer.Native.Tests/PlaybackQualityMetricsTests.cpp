@@ -14,6 +14,9 @@ int main()
     metrics.RecordRenderIntervalMs(100.0);
     metrics.RecordRenderIntervalAfterAudioAheadWaitMs(39.0);
     metrics.RecordRenderIntervalAfterAudioAheadWaitMs(43.0);
+    metrics.RecordAudioAheadWaitEndToPresentMs(2.0);
+    metrics.RecordAudioAheadWaitEndToPresentMs(7.0);
+    metrics.RecordAudioAheadWaitEndToPresentMs(14.0);
     metrics.RecordRenderIntervalAfterNonAudioWaitMs(26.0);
     metrics.RecordRenderIntervalAfterNonAudioWaitMs(34.0);
     metrics.RecordPresentDurationMs(2.0);
@@ -79,6 +82,11 @@ int main()
     assert(snapshot.RenderIntervalAfterAudioAheadWaitSampleCount == 2);
     assert(snapshot.RenderIntervalAfterAudioAheadWaitMsP95 >= 43.0);
     assert(snapshot.RenderIntervalAfterAudioAheadWaitMsMax == 43.0);
+    assert(snapshot.AudioAheadWaitEndToPresentSampleCount == 3);
+    assert(snapshot.AudioAheadWaitEndToPresentMsP50 >= 7.0);
+    assert(snapshot.AudioAheadWaitEndToPresentMsP95 >= 14.0);
+    assert(snapshot.AudioAheadWaitEndToPresentMsP99 >= 14.0);
+    assert(snapshot.AudioAheadWaitEndToPresentMsMax == 14.0);
     assert(snapshot.RenderIntervalAfterNonAudioWaitSampleCount == 2);
     assert(snapshot.RenderIntervalAfterNonAudioWaitMsP95 >= 34.0);
     assert(snapshot.RenderIntervalAfterNonAudioWaitMsMax == 34.0);
@@ -134,6 +142,8 @@ int main()
     assert(snapshot.RenderIntervalUnderExpected4MsCount == 0);
     assert(snapshot.RenderIntervalAfterAudioAheadWaitSampleCount == 0);
     assert(snapshot.RenderIntervalAfterAudioAheadWaitMsMax == 0.0);
+    assert(snapshot.AudioAheadWaitEndToPresentSampleCount == 0);
+    assert(snapshot.AudioAheadWaitEndToPresentMsMax == 0.0);
     assert(snapshot.RenderIntervalAfterNonAudioWaitSampleCount == 0);
     assert(snapshot.RenderIntervalAfterNonAudioWaitMsMax == 0.0);
     assert(snapshot.PresentDurationMsMax == 0.0);

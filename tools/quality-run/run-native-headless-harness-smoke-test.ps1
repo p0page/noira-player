@@ -250,6 +250,38 @@ function Get-AppRuntimePath {
     throw 'Could not locate vcruntime140_app.dll required by the FFmpegInteropX UWP native DLLs.'
 }
 
+function Resolve-NativeFfmpegPackagePath {
+    $packagesConfigPath = Join-Path $repoRoot 'src\NoiraPlayer.Native\packages.config'
+    [xml]$packagesConfig = Get-Content -LiteralPath $packagesConfigPath -Raw
+    $package = @($packagesConfig.packages.package) |
+        Where-Object { $_.id -eq 'FFmpegInteropX.UWP.FFmpeg' } |
+        Select-Object -First 1
+    if ($null -eq $package -or [string]::IsNullOrWhiteSpace([string]$package.version)) {
+        throw 'FFmpegInteropX.UWP.FFmpeg is not declared in Native packages.config.'
+    }
+
+    $version = [string]$package.version
+    $globalPackagesRoot = if ([string]::IsNullOrWhiteSpace($env:NUGET_PACKAGES)) {
+        Join-Path ([Environment]::GetFolderPath('UserProfile')) '.nuget\packages'
+    }
+    else {
+        $env:NUGET_PACKAGES
+    }
+    $candidates = @(
+        (Join-Path $repoRoot "src\NoiraPlayer.Native\packages\FFmpegInteropX.UWP.FFmpeg.$version"),
+        (Join-Path $globalPackagesRoot "ffmpeginteropx.uwp.ffmpeg\$version")
+    )
+
+    foreach ($candidate in $candidates) {
+        if ((Test-Path -LiteralPath (Join-Path $candidate 'include\libavcodec\avcodec.h')) -and
+            (Test-Path -LiteralPath (Join-Path $candidate 'runtimes\win-x64\native\avcodec.lib'))) {
+            return (Resolve-Path -LiteralPath $candidate).Path
+        }
+    }
+
+    throw ('Could not locate FFmpegInteropX.UWP.FFmpeg ' + $version + ' in repo-local or global NuGet package roots.')
+}
+
 function Build-NativePlaybackGraphHelper {
     param(
         [string]$OutputDirectory
@@ -261,11 +293,11 @@ function Build-NativePlaybackGraphHelper {
     }
 
     New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
-    $ffmpegPackage = Join-Path $repoRoot 'src\NoiraPlayer.Native\packages\FFmpegInteropX.UWP.FFmpeg.8.1.2'
+    $ffmpegPackage = Resolve-NativeFfmpegPackagePath
     Copy-Item -Path (Join-Path $ffmpegPackage 'runtimes\win-x64\native\*.dll') -Destination $OutputDirectory -Force
     Copy-Item -LiteralPath (Get-AppRuntimePath) -Destination $OutputDirectory -Force
 
-    $include = '/I src\NoiraPlayer.Native /I src\NoiraPlayer.Native\packages\FFmpegInteropX.UWP.FFmpeg.8.1.2\include'
+    $include = '/I src\NoiraPlayer.Native /I "' + (Join-Path $ffmpegPackage 'include') + '"'
     $sources = @(
         'tests\NoiraPlayer.Native.Tests\NativePlaybackGraphHeadlessSmokeTests.cpp',
         'src\NoiraPlayer.Native\DxDeviceResources.cpp',
@@ -283,7 +315,7 @@ function Build-NativePlaybackGraphHelper {
         'src\NoiraPlayer.Native\Media\PlaybackGraph.cpp'
     ) -join ' '
     $libs = 'd3d11.lib dxgi.lib d2d1.lib dwrite.lib d3dcompiler.lib xaudio2.lib windowsapp.lib avcodec.lib avformat.lib avutil.lib swresample.lib swscale.lib'
-    $libPath = 'src\NoiraPlayer.Native\packages\FFmpegInteropX.UWP.FFmpeg.8.1.2\runtimes\win-x64\native'
+    $libPath = Join-Path $ffmpegPackage 'runtimes\win-x64\native'
     $helperExe = Join-Path $OutputDirectory 'NativePlaybackGraphHeadlessSmokeTests.exe'
     $command = '"' + $vcvars + '" >nul && cl /nologo /std:c++20 /EHsc /DWIN32_LEAN_AND_MEAN /DWINRT_LEAN_AND_MEAN ' + $include + ' /Fo:"' + $OutputDirectory + '\\" ' + $sources + ' /Fe:"' + $helperExe + '" /link /LIBPATH:"' + $libPath + '" ' + $libs
 
@@ -445,6 +477,11 @@ function New-NativeHeadlessParserFixtureOutput {
         renderIntervalAfterAudioAheadWaitMsP95 = '0'
         renderIntervalAfterAudioAheadWaitMsP99 = '0'
         renderIntervalAfterAudioAheadWaitMsMax = '0'
+        audioAheadWaitEndToPresentSampleCount = '0'
+        audioAheadWaitEndToPresentMsP50 = '0'
+        audioAheadWaitEndToPresentMsP95 = '0'
+        audioAheadWaitEndToPresentMsP99 = '0'
+        audioAheadWaitEndToPresentMsMax = '0'
         renderIntervalAfterNonAudioWaitSampleCount = '2'
         renderIntervalAfterNonAudioWaitMsP95 = '34'
         renderIntervalAfterNonAudioWaitMsP99 = '35'
@@ -737,6 +774,18 @@ function Assert-NativeHeadlessParserContracts {
             Name = 'missing-dropped-video-frames'
             ExpectedField = 'droppedVideoFrames'
             Output = New-NativeHeadlessParserFixtureOutput -Omit @('droppedVideoFrames')
+        },
+        [pscustomobject]@{
+            Name = 'missing-audio-ahead-end-to-present-count'
+            ExpectedField = 'audioAheadWaitEndToPresentSampleCount'
+            Output = New-NativeHeadlessParserFixtureOutput -Omit @('audioAheadWaitEndToPresentSampleCount')
+        },
+        [pscustomobject]@{
+            Name = 'nan-audio-ahead-end-to-present-p95'
+            ExpectedField = 'audioAheadWaitEndToPresentMsP95'
+            Output = New-NativeHeadlessParserFixtureOutput -Overrides @{
+                audioAheadWaitEndToPresentMsP95 = 'NaN'
+            }
         },
         [pscustomobject]@{
             Name = 'negative-video-starvation'
@@ -1738,6 +1787,16 @@ if (-not ($nativeAvMaterializedReport.modelAnalysis.evidenceSignals -contains 't
     -not ($nativeAvMaterializedReport.modelAnalysis.evidenceSignals -contains 'timing.renderIntervalAfterAudioAheadWaitMsP95') -or
     -not ($nativeAvMaterializedReport.modelAnalysis.evidenceSignals -contains 'timing.renderIntervalAfterNonAudioWaitSampleCount')) {
     throw 'Expected materialized native helper A/V report to expose render-interval buckets grouped by the preceding wait reason.'
+}
+
+if (-not ($nativeAvMaterializedReport.modelAnalysis.evidenceSignals -contains 'timing.audioAheadWaitEndToPresentSampleCount') -or
+    -not ($nativeAvMaterializedReport.modelAnalysis.evidenceSignals -contains 'timing.audioAheadWaitEndToPresentMsP50') -or
+    -not ($nativeAvMaterializedReport.modelAnalysis.evidenceSignals -contains 'timing.audioAheadWaitEndToPresentMsP95') -or
+    -not ($nativeAvMaterializedReport.modelAnalysis.evidenceSignals -contains 'timing.audioAheadWaitEndToPresentMsP99') -or
+    -not ($nativeAvMaterializedReport.modelAnalysis.evidenceSignals -contains 'timing.audioAheadWaitEndToPresentMsMax') -or
+    $nativeAvMaterializedReport.report.timing.audioAheadWaitEndToPresentSampleCount -le 0 -or
+    $nativeAvMaterializedReport.report.timing.audioAheadWaitEndToPresentMsP95 -le 0) {
+    throw 'Expected materialized native helper A/V report to expose non-zero audio-ahead wait end-to-present evidence.'
 }
 
 if (-not ($nativeAvMaterializedReport.modelAnalysis.evidenceSignals -contains 'timing.hardwareDecodedVideoFrames') -or

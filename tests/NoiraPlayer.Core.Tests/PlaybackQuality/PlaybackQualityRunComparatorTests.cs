@@ -429,6 +429,11 @@ public sealed class PlaybackQualityRunComparatorTests
         Assert.Contains("timing.renderIntervalAfterAudioAheadWaitSampleCount", comparison.Coverage.MatchedSignals);
         Assert.Contains("timing.renderIntervalAfterAudioAheadWaitMsP95", comparison.Coverage.MatchedSignals);
         Assert.Contains("timing.renderIntervalAfterAudioAheadWaitMsMax", comparison.Coverage.MatchedSignals);
+        Assert.Contains("timing.audioAheadWaitEndToPresentSampleCount", comparison.Coverage.MatchedSignals);
+        Assert.Contains("timing.audioAheadWaitEndToPresentMsP50", comparison.Coverage.MatchedSignals);
+        Assert.Contains("timing.audioAheadWaitEndToPresentMsP95", comparison.Coverage.MatchedSignals);
+        Assert.Contains("timing.audioAheadWaitEndToPresentMsP99", comparison.Coverage.MatchedSignals);
+        Assert.Contains("timing.audioAheadWaitEndToPresentMsMax", comparison.Coverage.MatchedSignals);
         Assert.Contains("timing.renderIntervalAfterNonAudioWaitSampleCount", comparison.Coverage.MatchedSignals);
         Assert.Contains("timing.renderIntervalAfterNonAudioWaitMsP95", comparison.Coverage.MatchedSignals);
         Assert.Contains("timing.renderIntervalAfterNonAudioWaitMsMax", comparison.Coverage.MatchedSignals);
@@ -972,6 +977,11 @@ public sealed class PlaybackQualityRunComparatorTests
         report.Timing.RenderIntervalAfterAudioAheadWaitSampleCount = 2;
         report.Timing.RenderIntervalAfterAudioAheadWaitMsP95 = 43.0;
         report.Timing.RenderIntervalAfterAudioAheadWaitMsMax = 45.0;
+        report.Timing.AudioAheadWaitEndToPresentSampleCount = 2;
+        report.Timing.AudioAheadWaitEndToPresentMsP50 = 2.0;
+        report.Timing.AudioAheadWaitEndToPresentMsP95 = 3.0;
+        report.Timing.AudioAheadWaitEndToPresentMsP99 = 4.0;
+        report.Timing.AudioAheadWaitEndToPresentMsMax = 5.0;
         report.Timing.RenderIntervalAfterNonAudioWaitSampleCount = 3;
         report.Timing.RenderIntervalAfterNonAudioWaitMsP95 = 34.0;
         report.Timing.RenderIntervalAfterNonAudioWaitMsMax = 36.0;

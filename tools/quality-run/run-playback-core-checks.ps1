@@ -8,6 +8,7 @@ $ErrorActionPreference = 'Stop'
 
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot '..\..')
 $modernToolchainScriptPath = Join-Path $repoRoot 'tools\NoiraModernToolchain.ps1'
+$nativeRestoreScriptPath = Join-Path $PSScriptRoot 'Restore-NativePackages.ps1'
 $protectedAppRoots = @('src/NoiraPlayer.App')
 $allowedAppInstrumentationPaths = @(
     'src/NoiraPlayer.App/Playback/WinRtNativePlaybackEngine.cs',
@@ -91,7 +92,6 @@ $nativeSubtitleSwitchTransactionCommand = '"' + $vcvars + '" >nul && cl /nologo 
 $nativeDisplayRefreshCommand = '"' + $vcvars + '" >nul && cl /nologo /std:c++20 /EHsc /I src\NoiraPlayer.Native /Fo:C:\tmp\DisplayRefreshRatePolicyTests.obj tests\NoiraPlayer.Native.Tests\DisplayRefreshRatePolicyTests.cpp /Fe:C:\tmp\DisplayRefreshRatePolicyTests.exe && C:\tmp\DisplayRefreshRatePolicyTests.exe'
 $nativeDisplayRefreshSnapshotCommand = '"' + $vcvars + '" >nul && cl /nologo /std:c++20 /EHsc /I src\NoiraPlayer.Native /Fo:C:\tmp\HdrDisplayRefreshRateSnapshotTests.obj tests\NoiraPlayer.Native.Tests\HdrDisplayRefreshRateSnapshotTests.cpp /Fe:C:\tmp\HdrDisplayRefreshRateSnapshotTests.exe && C:\tmp\HdrDisplayRefreshRateSnapshotTests.exe'
 $nativeDxOffscreenCommand = '"' + $vcvars + '" >nul && if not exist C:\tmp\noiraplayer-native-dx-offscreen mkdir C:\tmp\noiraplayer-native-dx-offscreen && cl /nologo /std:c++20 /EHsc /DWIN32_LEAN_AND_MEAN /DWINRT_LEAN_AND_MEAN /I src\NoiraPlayer.Native /I src\NoiraPlayer.Native\packages\FFmpegInteropX.UWP.FFmpeg.8.1.2\include /Fo:C:\tmp\noiraplayer-native-dx-offscreen\ tests\NoiraPlayer.Native.Tests\DxDeviceResourcesOffscreenTests.cpp src\NoiraPlayer.Native\DxDeviceResources.cpp src\NoiraPlayer.Native\Media\DxgiColorSpaceMapper.cpp src\NoiraPlayer.Native\Media\HdrToneMappingPass.cpp src\NoiraPlayer.Native\NativePlaybackDiagnostics.cpp /Fe:C:\tmp\DxDeviceResourcesOffscreenTests.exe d3d11.lib dxgi.lib d2d1.lib dwrite.lib d3dcompiler.lib windowsapp.lib && C:\tmp\DxDeviceResourcesOffscreenTests.exe'
-$nativeRestoreCommand = "& { . '$modernToolchainScriptPath'; `$msbuild = Resolve-ModernMsBuildPath ''; & `$msbuild 'src\NoiraPlayer.Native\NoiraPlayer.Native.vcxproj' '/t:Restore' '/p:RestorePackagesConfig=true' '/p:Configuration=Debug' '/p:Platform=x64' '/v:minimal'; exit `$LASTEXITCODE }"
 $nativeBuildCommand = "& { . '$modernToolchainScriptPath'; `$msbuild = Resolve-ModernMsBuildPath ''; & `$msbuild 'src\NoiraPlayer.Native\NoiraPlayer.Native.vcxproj' '/p:Configuration=Debug' '/p:Platform=x64' '/m' '/v:minimal'; exit `$LASTEXITCODE }"
 
 $commands = @(
@@ -117,9 +117,9 @@ $commands = @(
         -Arguments @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', 'tools\quality-run\run-playback-quality-cli-smoke-test.ps1')
     New-CommandPlan `
         -Name 'native-restore' `
-        -Description 'Restore native packages.config dependencies required by the native playback project.' `
+        -Description 'Reuse complete global NuGet packages, then restore missing native packages.config dependencies.' `
         -Command 'powershell' `
-        -Arguments @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', $nativeRestoreCommand)
+        -Arguments @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $nativeRestoreScriptPath)
     New-CommandPlan `
         -Name 'native-headless-harness-smoke-test' `
         -Description 'Run the App-free native-headless skip path and real native helper captured report smoke test.' `

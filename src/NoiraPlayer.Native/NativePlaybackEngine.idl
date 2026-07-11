@@ -84,6 +84,11 @@
         Double RenderIntervalAfterAudioAheadWaitMsP95;
         Double RenderIntervalAfterAudioAheadWaitMsP99;
         Double RenderIntervalAfterAudioAheadWaitMsMax;
+        UInt64 AudioAheadWaitEndToPresentSampleCount;
+        Double AudioAheadWaitEndToPresentMsP50;
+        Double AudioAheadWaitEndToPresentMsP95;
+        Double AudioAheadWaitEndToPresentMsP99;
+        Double AudioAheadWaitEndToPresentMsMax;
         UInt64 RenderIntervalAfterNonAudioWaitSampleCount;
         Double RenderIntervalAfterNonAudioWaitMsP95;
         Double RenderIntervalAfterNonAudioWaitMsP99;

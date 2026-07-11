@@ -522,6 +522,16 @@ namespace NoiraPlayer.Core.PlaybackQuality
                     return presentSignals != null || report.Timing.RenderIntervalAfterAudioAheadWaitMsP99 > 0;
                 case "timing.renderIntervalAfterAudioAheadWaitMsMax":
                     return presentSignals != null || report.Timing.RenderIntervalAfterAudioAheadWaitMsMax > 0;
+                case "timing.audioAheadWaitEndToPresentSampleCount":
+                    return presentSignals != null || report.Timing.AudioAheadWaitEndToPresentSampleCount > 0;
+                case "timing.audioAheadWaitEndToPresentMsP50":
+                    return presentSignals != null || report.Timing.AudioAheadWaitEndToPresentMsP50 > 0;
+                case "timing.audioAheadWaitEndToPresentMsP95":
+                    return presentSignals != null || report.Timing.AudioAheadWaitEndToPresentMsP95 > 0;
+                case "timing.audioAheadWaitEndToPresentMsP99":
+                    return presentSignals != null || report.Timing.AudioAheadWaitEndToPresentMsP99 > 0;
+                case "timing.audioAheadWaitEndToPresentMsMax":
+                    return presentSignals != null || report.Timing.AudioAheadWaitEndToPresentMsMax > 0;
                 case "timing.renderIntervalAfterNonAudioWaitSampleCount":
                     return presentSignals != null ||
                         report.Timing.RenderIntervalAfterAudioAheadWaitSampleCount > 0 ||
@@ -678,6 +688,11 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 report.Timing.RenderIntervalAfterAudioAheadWaitMsP95 > 0 ||
                 report.Timing.RenderIntervalAfterAudioAheadWaitMsP99 > 0 ||
                 report.Timing.RenderIntervalAfterAudioAheadWaitMsMax > 0 ||
+                report.Timing.AudioAheadWaitEndToPresentSampleCount > 0 ||
+                report.Timing.AudioAheadWaitEndToPresentMsP50 > 0 ||
+                report.Timing.AudioAheadWaitEndToPresentMsP95 > 0 ||
+                report.Timing.AudioAheadWaitEndToPresentMsP99 > 0 ||
+                report.Timing.AudioAheadWaitEndToPresentMsMax > 0 ||
                 report.Timing.RenderIntervalAfterNonAudioWaitSampleCount > 0 ||
                 report.Timing.RenderIntervalAfterNonAudioWaitMsP95 > 0 ||
                 report.Timing.RenderIntervalAfterNonAudioWaitMsP99 > 0 ||

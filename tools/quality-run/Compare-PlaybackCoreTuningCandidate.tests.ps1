@@ -52,11 +52,15 @@ try {
       "maxFrameGapExpectedErrorSpreadMs": 3.2,
       "audioAheadWaitOversleepP95SpreadMs": 4.4,
       "audioAheadWaitFinalDeltaAbsP95SpreadMs": 5.5,
+      "audioAheadWaitEndToPresentSampleCountSpread": 1.0,
+      "audioAheadWaitEndToPresentP95SpreadMs": 6.6,
+      "audioAheadWaitEndToPresentP99SpreadMs": 7.7,
       "unstableSignals": [
         "framePacing.renderIntervalP99ExpectedErrorMs",
         "framePacing.maxFrameGapExpectedErrorMs",
         "timing.audioAheadWaitOversleepMsP95",
-        "timing.audioAheadWaitFinalDeltaAbsMsP95"
+        "timing.audioAheadWaitFinalDeltaAbsMsP95",
+        "timing.audioAheadWaitEndToPresentMsP95"
       ]
     }
   ]
@@ -132,6 +136,12 @@ try {
 
     if ($candidateCadenceGroup.audioAheadWaitFinalDeltaAbsP95SpreadMs -ne 5.5) {
         throw 'Expected comparison summary to preserve A/V final delta stability spread evidence.'
+    }
+
+    if ($candidateCadenceGroup.audioAheadWaitEndToPresentSampleCountSpread -ne 1.0 -or
+        $candidateCadenceGroup.audioAheadWaitEndToPresentP95SpreadMs -ne 6.6 -or
+        $candidateCadenceGroup.audioAheadWaitEndToPresentP99SpreadMs -ne 7.7) {
+        throw 'Expected comparison summary to preserve audio-ahead wait end-to-present stability evidence.'
     }
 
     if ($candidateCadenceGroup.renderIntervalP05ExpectedErrorSpreadMs -ne 2.1 -or

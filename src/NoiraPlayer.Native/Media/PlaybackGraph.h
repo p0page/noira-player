@@ -155,6 +155,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         bool m_nextRenderLoopWaitUseTimer{false};
         RenderLoopWaitReason m_nextRenderLoopWaitReason{RenderLoopWaitReason::Default};
         RenderLoopWaitReason m_lastCompletedRenderLoopWaitReason{RenderLoopWaitReason::Default};
+        std::optional<std::chrono::steady_clock::time_point> m_lastAudioAheadWaitEndedAt;
         RenderLoopWaiter m_renderLoopWaiter;
         std::chrono::steady_clock::time_point m_videoClockStartedAt{};
         int64_t m_videoClockStartPositionTicks{0};
