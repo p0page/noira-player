@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { backRoute, pushRoute, replaceRoute } from './routes';
+import {
+  backRoute,
+  isValidBrowseRouteStack,
+  pushRoute,
+  replaceRoute,
+} from './routes';
 import type { BrowseRoute, FocusTarget } from './routes';
 
 const homeRoute: BrowseRoute = { kind: 'home' };
@@ -105,7 +110,7 @@ describe('browse route history', () => {
     expect(detailsStack).not.toBe(homeStack);
   });
 
-  it('returns copied no-op histories for illegal and repeated pushes', () => {
+  it('returns the original history reference for illegal and repeated pushes', () => {
     const cases: Array<{
       stack: readonly BrowseRoute[];
       next: BrowseRoute;
@@ -125,8 +130,7 @@ describe('browse route history', () => {
     for (const { stack, next } of cases) {
       const result = pushRoute(stack, next);
 
-      expect(result).toEqual(stack);
-      expect(result).not.toBe(stack);
+      expect(result).toBe(stack);
     }
   });
 
@@ -211,17 +215,15 @@ describe('browse route history', () => {
     ]);
   });
 
-  it('returns copied no-op histories for illegal and repeated replacements', () => {
+  it('returns the original history reference for illegal and repeated replacements', () => {
     const homeStack = Object.freeze([homeRoute] as BrowseRoute[]);
     const detailsStack = Object.freeze([homeRoute, homeDetailsRoute] as BrowseRoute[]);
 
     const illegal = replaceRoute(homeStack, homeDetailsRoute);
     const repeated = replaceRoute(detailsStack, { ...homeDetailsRoute });
 
-    expect(illegal).toEqual(homeStack);
-    expect(illegal).not.toBe(homeStack);
-    expect(repeated).toEqual(detailsStack);
-    expect(repeated).not.toBe(detailsStack);
+    expect(illegal).toBe(homeStack);
+    expect(repeated).toBe(detailsStack);
   });
 
   it('backs through both details histories while preserving Home and empty roots', () => {
@@ -241,12 +243,10 @@ describe('browse route history', () => {
 
     expect(fromNestedDetails).toEqual([homeRoute, libraryRoute]);
     expect(fromDirectDetails).toEqual([homeRoute]);
-    expect(fromHome).toEqual([homeRoute]);
-    expect(fromEmpty).toEqual([]);
+    expect(fromHome).toBe(home);
+    expect(fromEmpty).toBe(empty);
     expect(fromNestedDetails).not.toBe(nestedDetails);
     expect(fromDirectDetails).not.toBe(directDetails);
-    expect(fromHome).not.toBe(home);
-    expect(fromEmpty).not.toBe(empty);
   });
 
   it('deep snapshots routes retained by Back', () => {
@@ -287,7 +287,7 @@ describe('browse route history', () => {
     ]);
   });
 
-  it('deep snapshots the current history for an illegal no-op', () => {
+  it('preserves the exact current history for an illegal no-op', () => {
     const callerDetails = {
       kind: 'details' as const,
       itemId: 'item-illegal-anonymous',
@@ -306,25 +306,12 @@ describe('browse route history', () => {
       },
     };
 
-    const history = pushRoute([{ kind: 'home' }, callerDetails], illegalLibrary);
+    const currentHistory = Object.freeze([{ kind: 'home' }, callerDetails] as const);
 
-    callerDetails.itemId = 'caller-mutated-item';
-    callerDetails.origin.scopeKey = 'caller-mutated-details-scope';
-
-    expect(history).toEqual([
-      { kind: 'home' },
-      {
-        kind: 'details',
-        itemId: 'item-illegal-anonymous',
-        origin: {
-          scopeKey: 'home-illegal-row-anonymous',
-          focusKey: 'item-illegal-focus-anonymous',
-        },
-      },
-    ]);
+    expect(pushRoute(currentHistory, illegalLibrary)).toBe(currentHistory);
   });
 
-  it('deep snapshots the current history for a repeated no-op', () => {
+  it('preserves the exact current history for a repeated no-op', () => {
     const callerDetails = {
       kind: 'details' as const,
       itemId: 'item-repeated-anonymous',
@@ -342,22 +329,106 @@ describe('browse route history', () => {
       },
     };
 
-    const history = replaceRoute([{ kind: 'home' }, callerDetails], repeatedDetails);
+    const currentHistory = Object.freeze([{ kind: 'home' }, callerDetails] as const);
 
-    callerDetails.itemId = 'caller-mutated-item';
-    callerDetails.origin.focusKey = 'caller-mutated-focus';
-    repeatedDetails.origin.scopeKey = 'caller-mutated-repeated-scope';
+    expect(replaceRoute(currentHistory, repeatedDetails)).toBe(currentHistory);
+  });
+});
 
-    expect(history).toEqual([
-      { kind: 'home' },
-      {
-        kind: 'details',
-        itemId: 'item-repeated-anonymous',
-        origin: {
-          scopeKey: 'home-repeated-row-anonymous',
-          focusKey: 'item-repeated-focus-anonymous',
-        },
-      },
-    ]);
+describe('browse route validation', () => {
+  const validOrigin: FocusTarget = {
+    scopeKey: 'validation-scope-anonymous',
+    focusKey: 'validation-focus-anonymous',
+  };
+  const validLibrary: BrowseRoute = {
+    kind: 'library',
+    libraryId: 'validation-library-anonymous',
+    collectionType: 'movies',
+    origin: validOrigin,
+  };
+  const validDetails: BrowseRoute = {
+    kind: 'details',
+    itemId: 'validation-item-anonymous',
+    origin: validOrigin,
+  };
+
+  it('accepts the empty bootstrap state and four supported history shapes', () => {
+    expect(isValidBrowseRouteStack([])).toBe(true);
+    expect(isValidBrowseRouteStack([homeRoute])).toBe(true);
+    expect(isValidBrowseRouteStack([homeRoute, validLibrary])).toBe(true);
+    expect(isValidBrowseRouteStack([homeRoute, validLibrary, validDetails])).toBe(true);
+    expect(isValidBrowseRouteStack([homeRoute, validDetails])).toBe(true);
+  });
+
+  it.each([
+    ['non-array', null],
+    ['library root', [validLibrary]],
+    ['second Home', [homeRoute, homeRoute]],
+    ['Details then Details', [homeRoute, validDetails, validDetails]],
+    ['library then library', [homeRoute, validLibrary, validLibrary]],
+    ['too deep', [homeRoute, validLibrary, validDetails, validDetails]],
+  ])('rejects malformed route order: %s', (_label, candidate) => {
+    expect(isValidBrowseRouteStack(candidate)).toBe(false);
+  });
+
+  it.each([
+    [
+      'blank libraryId',
+      [
+        homeRoute,
+        { ...validLibrary, libraryId: '   ' },
+      ],
+    ],
+    [
+      'blank collectionType',
+      [
+        homeRoute,
+        { ...validLibrary, collectionType: '' },
+      ],
+    ],
+    [
+      'blank itemId',
+      [
+        homeRoute,
+        { ...validDetails, itemId: '\t' },
+      ],
+    ],
+    [
+      'blank origin scope',
+      [
+        homeRoute,
+        { ...validDetails, origin: { ...validOrigin, scopeKey: ' ' } },
+      ],
+    ],
+    [
+      'blank origin focus',
+      [
+        homeRoute,
+        { ...validDetails, origin: { ...validOrigin, focusKey: '' } },
+      ],
+    ],
+    ['missing origin', [homeRoute, { kind: 'details', itemId: 'missing-origin' }]],
+    ['unknown kind', [homeRoute, { kind: 'unknown' }]],
+  ])('rejects runtime-invalid route data: %s', (_label, candidate) => {
+    expect(isValidBrowseRouteStack(candidate)).toBe(false);
+  });
+
+  it('makes every route operation fail closed on malformed stacks and routes', () => {
+    const malformedStack = Object.freeze([
+      homeRoute,
+      homeRoute,
+    ]) as unknown as readonly BrowseRoute[];
+    const validStack = Object.freeze([homeRoute] as BrowseRoute[]);
+    const invalidRoute = {
+      kind: 'details',
+      itemId: '',
+      origin: validOrigin,
+    } as unknown as BrowseRoute;
+
+    expect(pushRoute(malformedStack, validDetails)).toBe(malformedStack);
+    expect(replaceRoute(malformedStack, validDetails)).toBe(malformedStack);
+    expect(backRoute(malformedStack)).toBe(malformedStack);
+    expect(pushRoute(validStack, invalidRoute)).toBe(validStack);
+    expect(replaceRoute(validStack, invalidRoute)).toBe(validStack);
   });
 });

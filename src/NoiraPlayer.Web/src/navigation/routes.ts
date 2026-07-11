@@ -20,36 +20,92 @@ export type BrowseRoute =
 export function pushRoute(
   routeStack: readonly BrowseRoute[],
   route: BrowseRoute,
-): BrowseRoute[] {
-  const currentStack = cloneStack(routeStack);
-  const currentRoute = currentStack[currentStack.length - 1];
-  if (currentRoute && routesEqual(currentRoute, route)) {
-    return currentStack;
+): readonly BrowseRoute[] {
+  if (!isValidBrowseRouteStack(routeStack) || !isValidBrowseRoute(route)) {
+    return routeStack;
   }
 
-  const candidate = [...currentStack, cloneRoute(route)];
-  return isSupportedRouteStack(candidate) ? candidate : currentStack;
+  const currentRoute = routeStack[routeStack.length - 1];
+  if (currentRoute && routesEqual(currentRoute, route)) {
+    return routeStack;
+  }
+
+  const candidate = [...routeStack, route];
+  return isValidBrowseRouteStack(candidate) ? cloneStack(candidate) : routeStack;
 }
 
 export function replaceRoute(
   routeStack: readonly BrowseRoute[],
   route: BrowseRoute,
-): BrowseRoute[] {
-  const currentStack = cloneStack(routeStack);
-  const currentRoute = currentStack[currentStack.length - 1];
+): readonly BrowseRoute[] {
+  if (!isValidBrowseRouteStack(routeStack) || !isValidBrowseRoute(route)) {
+    return routeStack;
+  }
+
+  const currentRoute = routeStack[routeStack.length - 1];
   if (currentRoute && routesEqual(currentRoute, route)) {
-    return currentStack;
+    return routeStack;
   }
 
   const candidate = currentRoute
-    ? [...currentStack.slice(0, -1), cloneRoute(route)]
-    : [cloneRoute(route)];
-  return isSupportedRouteStack(candidate) ? candidate : currentStack;
+    ? [...routeStack.slice(0, -1), route]
+    : [route];
+  return isValidBrowseRouteStack(candidate) ? cloneStack(candidate) : routeStack;
 }
 
-export function backRoute(routeStack: readonly BrowseRoute[]): BrowseRoute[] {
-  const currentStack = cloneStack(routeStack);
-  return currentStack.length > 1 ? currentStack.slice(0, -1) : currentStack;
+export function backRoute(routeStack: readonly BrowseRoute[]): readonly BrowseRoute[] {
+  if (!isValidBrowseRouteStack(routeStack) || routeStack.length <= 1) {
+    return routeStack;
+  }
+
+  return cloneStack(routeStack.slice(0, -1));
+}
+
+export function isValidFocusTarget(candidate: unknown): candidate is FocusTarget {
+  try {
+    return (
+      isRecord(candidate) &&
+      isNonBlankString(candidate.scopeKey) &&
+      isNonBlankString(candidate.focusKey)
+    );
+  } catch {
+    return false;
+  }
+}
+
+export function isValidBrowseRouteStack(
+  candidate: unknown,
+): candidate is readonly BrowseRoute[] {
+  try {
+    if (!Array.isArray(candidate) || !candidate.every(isValidBrowseRoute)) {
+      return false;
+    }
+
+    if (candidate.length === 0) {
+      return true;
+    }
+
+    if (candidate[0].kind !== 'home') {
+      return false;
+    }
+
+    if (candidate.length === 1) {
+      return true;
+    }
+
+    const secondRoute = candidate[1];
+    if (candidate.length === 2) {
+      return secondRoute.kind === 'library' || secondRoute.kind === 'details';
+    }
+
+    return (
+      candidate.length === 3 &&
+      secondRoute.kind === 'library' &&
+      candidate[2].kind === 'details'
+    );
+  } catch {
+    return false;
+  }
 }
 
 function cloneTarget(target: FocusTarget): FocusTarget {
@@ -79,33 +135,35 @@ function cloneRoute(route: BrowseRoute): BrowseRoute {
   }
 }
 
-function cloneStack(routeStack: readonly BrowseRoute[]): BrowseRoute[] {
+function cloneStack(routeStack: readonly BrowseRoute[]): readonly BrowseRoute[] {
   return routeStack.map(cloneRoute);
 }
 
-function isSupportedRouteStack(routeStack: readonly BrowseRoute[]): boolean {
-  if (routeStack.length === 0) {
-    return true;
-  }
+function isValidBrowseRoute(candidate: unknown): candidate is BrowseRoute {
+  try {
+    if (!isRecord(candidate)) {
+      return false;
+    }
 
-  if (routeStack[0].kind !== 'home') {
+    switch (candidate.kind) {
+      case 'home':
+        return true;
+      case 'library':
+        return (
+          isNonBlankString(candidate.libraryId) &&
+          isNonBlankString(candidate.collectionType) &&
+          isValidFocusTarget(candidate.origin)
+        );
+      case 'details':
+        return (
+          isNonBlankString(candidate.itemId) && isValidFocusTarget(candidate.origin)
+        );
+      default:
+        return false;
+    }
+  } catch {
     return false;
   }
-
-  if (routeStack.length === 1) {
-    return true;
-  }
-
-  const secondRoute = routeStack[1];
-  if (routeStack.length === 2) {
-    return secondRoute.kind === 'library' || secondRoute.kind === 'details';
-  }
-
-  return (
-    routeStack.length === 3 &&
-    secondRoute.kind === 'library' &&
-    routeStack[2].kind === 'details'
-  );
 }
 
 function routesEqual(left: BrowseRoute, right: BrowseRoute): boolean {
@@ -134,4 +192,12 @@ function routesEqual(left: BrowseRoute, right: BrowseRoute): boolean {
 
 function targetsEqual(left: FocusTarget, right: FocusTarget): boolean {
   return left.scopeKey === right.scopeKey && left.focusKey === right.focusKey;
+}
+
+function isRecord(candidate: unknown): candidate is Record<string, unknown> {
+  return typeof candidate === 'object' && candidate !== null && !Array.isArray(candidate);
+}
+
+function isNonBlankString(candidate: unknown): candidate is string {
+  return typeof candidate === 'string' && candidate.trim().length > 0;
 }

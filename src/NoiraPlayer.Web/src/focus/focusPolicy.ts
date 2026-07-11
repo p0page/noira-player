@@ -1,3 +1,7 @@
+import {
+  isValidBrowseRouteStack,
+  isValidFocusTarget,
+} from '../navigation/routes';
 import type { BrowseRoute, FocusTarget } from '../navigation/routes';
 
 export interface TransientLayer {
@@ -16,6 +20,7 @@ export type BackDecision =
 
 export interface FocusNavigationPolicy {
   remember(scopeKey: string, focusKey: string, orderedKeys: readonly string[]): void;
+  clear(): void;
   resolve(scopeKey: string, availableKeys: readonly string[]): string | null;
   resolveInitial(availableKeys: readonly string[], defaultKey?: string): string | null;
   decideBack(
@@ -30,7 +35,6 @@ export interface FocusNavigationPolicy {
 
 interface FocusSnapshot {
   focusKey: string;
-  orderedKeys: readonly string[];
   index: number;
 }
 
@@ -40,18 +44,31 @@ class InMemoryFocusNavigationPolicy implements FocusNavigationPolicy {
   private readonly snapshots = new Map<string, FocusSnapshot>();
   private readonly pauseListeners = new Set<PauseListener>();
   private paused = false;
+  private pauseDeliveryActive = false;
+  private queuedPauseState: boolean | null = null;
 
   remember(scopeKey: string, focusKey: string, orderedKeys: readonly string[]): void {
-    const orderedKeysSnapshot = [...orderedKeys];
+    assertNonBlankKey(scopeKey, 'scopeKey');
+    assertNonBlankKey(focusKey, 'focusKey');
+    const orderedKeysSnapshot = snapshotKeys(orderedKeys, 'orderedKeys');
+    const rememberedIndex = orderedKeysSnapshot.indexOf(focusKey);
+    if (rememberedIndex < 0) {
+      throw new RangeError('focusKey must be present in orderedKeys.');
+    }
+
     this.snapshots.set(scopeKey, {
       focusKey,
-      orderedKeys: orderedKeysSnapshot,
-      index: orderedKeysSnapshot.indexOf(focusKey),
+      index: rememberedIndex,
     });
   }
 
+  clear(): void {
+    this.snapshots.clear();
+  }
+
   resolve(scopeKey: string, availableKeys: readonly string[]): string | null {
-    const availableKeysSnapshot = [...availableKeys];
+    assertNonBlankKey(scopeKey, 'scopeKey');
+    const availableKeysSnapshot = snapshotKeys(availableKeys, 'availableKeys');
     if (availableKeysSnapshot.length === 0) {
       return null;
     }
@@ -74,9 +91,12 @@ class InMemoryFocusNavigationPolicy implements FocusNavigationPolicy {
   }
 
   resolveInitial(availableKeys: readonly string[], defaultKey?: string): string | null {
-    const availableKeysSnapshot = [...availableKeys];
-    if (defaultKey !== undefined && availableKeysSnapshot.includes(defaultKey)) {
-      return defaultKey;
+    const availableKeysSnapshot = snapshotKeys(availableKeys, 'availableKeys');
+    if (defaultKey !== undefined) {
+      assertNonBlankKey(defaultKey, 'defaultKey');
+      if (availableKeysSnapshot.includes(defaultKey)) {
+        return defaultKey;
+      }
     }
 
     return availableKeysSnapshot[0] ?? null;
@@ -86,12 +106,20 @@ class InMemoryFocusNavigationPolicy implements FocusNavigationPolicy {
     routeStack: readonly BrowseRoute[],
     transientLayer?: TransientLayer,
   ): BackDecision {
-    if (transientLayer) {
+    if (transientLayer !== undefined) {
+      if (!isValidTransientLayer(transientLayer)) {
+        return { kind: 'nativeBack' };
+      }
+
       return {
         kind: 'closeTransient',
         layer: transientLayer.kind,
         restoreTarget: cloneTarget(transientLayer.returnTarget),
       };
+    }
+
+    if (!isValidBrowseRouteStack(routeStack)) {
+      return { kind: 'nativeBack' };
     }
 
     const currentRoute = routeStack[routeStack.length - 1];
@@ -122,7 +150,12 @@ class InMemoryFocusNavigationPolicy implements FocusNavigationPolicy {
   subscribePause(listener: PauseListener): () => void {
     const subscription = (paused: boolean) => listener(paused);
     this.pauseListeners.add(subscription);
-    listener(this.paused);
+    try {
+      subscription(this.paused);
+    } catch (error) {
+      this.pauseListeners.delete(subscription);
+      throw error;
+    }
 
     return () => {
       this.pauseListeners.delete(subscription);
@@ -130,13 +163,48 @@ class InMemoryFocusNavigationPolicy implements FocusNavigationPolicy {
   }
 
   private setPaused(paused: boolean): void {
+    if (this.pauseDeliveryActive) {
+      this.queuedPauseState = paused;
+      return;
+    }
+
     if (this.paused === paused) {
       return;
     }
 
-    this.paused = paused;
-    for (const listener of [...this.pauseListeners]) {
-      listener(paused);
+    let nextState: boolean | null = paused;
+    let firstError: unknown;
+    let hasError = false;
+    this.pauseDeliveryActive = true;
+
+    try {
+      while (nextState !== null) {
+        const stateToDeliver = nextState;
+        this.queuedPauseState = null;
+
+        if (stateToDeliver !== this.paused) {
+          this.paused = stateToDeliver;
+          for (const listener of [...this.pauseListeners]) {
+            try {
+              listener(stateToDeliver);
+            } catch (error) {
+              if (!hasError) {
+                firstError = error;
+                hasError = true;
+              }
+            }
+          }
+        }
+
+        nextState = this.queuedPauseState;
+      }
+    } finally {
+      this.pauseDeliveryActive = false;
+      this.queuedPauseState = null;
+    }
+
+    if (hasError) {
+      throw firstError;
     }
   }
 }
@@ -170,4 +238,42 @@ function cloneRoute(route: BrowseRoute): BrowseRoute {
         origin: cloneTarget(route.origin),
       };
   }
+}
+
+function isValidTransientLayer(candidate: unknown): candidate is TransientLayer {
+  try {
+    return (
+      isRecord(candidate) &&
+      (candidate.kind === 'guide' || candidate.kind === 'overlay') &&
+      isValidFocusTarget(candidate.returnTarget)
+    );
+  } catch {
+    return false;
+  }
+}
+
+function snapshotKeys(
+  keys: readonly string[],
+  label: 'availableKeys' | 'orderedKeys',
+): string[] {
+  const snapshot = [...keys];
+  if (snapshot.some((key) => typeof key !== 'string' || key.trim().length === 0)) {
+    throw new Error(`${label} must contain only non-blank keys.`);
+  }
+
+  if (new Set(snapshot).size !== snapshot.length) {
+    throw new Error(`${label} must contain unique keys.`);
+  }
+
+  return snapshot;
+}
+
+function assertNonBlankKey(candidate: unknown, label: string): asserts candidate is string {
+  if (typeof candidate !== 'string' || candidate.trim().length === 0) {
+    throw new Error(`${label} must be a non-blank string.`);
+  }
+}
+
+function isRecord(candidate: unknown): candidate is Record<string, unknown> {
+  return typeof candidate === 'object' && candidate !== null && !Array.isArray(candidate);
 }
