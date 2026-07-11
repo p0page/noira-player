@@ -91,6 +91,9 @@ $nativeSeekPresentationCommand = '"' + $vcvars + '" >nul && cl /nologo /std:c++2
 $nativeSubtitleSwitchTransactionCommand = '"' + $vcvars + '" >nul && cl /nologo /std:c++20 /EHsc /I src\NoiraPlayer.Native /Fo:C:\tmp\SubtitleSwitchTransactionTests.obj tests\NoiraPlayer.Native.Tests\SubtitleSwitchTransactionTests.cpp /Fe:C:\tmp\SubtitleSwitchTransactionTests.exe && C:\tmp\SubtitleSwitchTransactionTests.exe'
 $nativeDisplayRefreshCommand = '"' + $vcvars + '" >nul && cl /nologo /std:c++20 /EHsc /I src\NoiraPlayer.Native /Fo:C:\tmp\DisplayRefreshRatePolicyTests.obj tests\NoiraPlayer.Native.Tests\DisplayRefreshRatePolicyTests.cpp /Fe:C:\tmp\DisplayRefreshRatePolicyTests.exe && C:\tmp\DisplayRefreshRatePolicyTests.exe'
 $nativeDisplayRefreshSnapshotCommand = '"' + $vcvars + '" >nul && cl /nologo /std:c++20 /EHsc /I src\NoiraPlayer.Native /Fo:C:\tmp\HdrDisplayRefreshRateSnapshotTests.obj tests\NoiraPlayer.Native.Tests\HdrDisplayRefreshRateSnapshotTests.cpp /Fe:C:\tmp\HdrDisplayRefreshRateSnapshotTests.exe && C:\tmp\HdrDisplayRefreshRateSnapshotTests.exe'
+$nativeAudioFrameTimelineCommand = '"' + $vcvars + '" >nul && cl /nologo /std:c++20 /EHsc /I src\NoiraPlayer.Native /Fo:C:\tmp\AudioFrameTimelineTests.obj tests\NoiraPlayer.Native.Tests\AudioFrameTimelineTests.cpp /Fe:C:\tmp\AudioFrameTimelineTests.exe && C:\tmp\AudioFrameTimelineTests.exe'
+$nativeAudioBufferAccumulatorCommand = '"' + $vcvars + '" >nul && cl /nologo /std:c++20 /EHsc /I src\NoiraPlayer.Native /Fo:C:\tmp\AudioBufferAccumulatorTests.obj tests\NoiraPlayer.Native.Tests\AudioBufferAccumulatorTests.cpp /Fe:C:\tmp\AudioBufferAccumulatorTests.exe && C:\tmp\AudioBufferAccumulatorTests.exe'
+$nativeDecoderEagainRecoveryCommand = '"' + $vcvars + '" >nul && cl /nologo /std:c++20 /EHsc /I src\NoiraPlayer.Native /Fo:C:\tmp\DecoderEagainRecoveryTests.obj tests\NoiraPlayer.Native.Tests\DecoderEagainRecoveryTests.cpp /Fe:C:\tmp\DecoderEagainRecoveryTests.exe && C:\tmp\DecoderEagainRecoveryTests.exe'
 $nativeDxOffscreenCommand = '"' + $vcvars + '" >nul && if not exist C:\tmp\noiraplayer-native-dx-offscreen mkdir C:\tmp\noiraplayer-native-dx-offscreen && cl /nologo /std:c++20 /EHsc /DWIN32_LEAN_AND_MEAN /DWINRT_LEAN_AND_MEAN /I src\NoiraPlayer.Native /I src\NoiraPlayer.Native\packages\FFmpegInteropX.UWP.FFmpeg.8.1.2\include /Fo:C:\tmp\noiraplayer-native-dx-offscreen\ tests\NoiraPlayer.Native.Tests\DxDeviceResourcesOffscreenTests.cpp src\NoiraPlayer.Native\DxDeviceResources.cpp src\NoiraPlayer.Native\Media\DxgiColorSpaceMapper.cpp src\NoiraPlayer.Native\Media\HdrToneMappingPass.cpp src\NoiraPlayer.Native\NativePlaybackDiagnostics.cpp /Fe:C:\tmp\DxDeviceResourcesOffscreenTests.exe d3d11.lib dxgi.lib d2d1.lib dwrite.lib d3dcompiler.lib windowsapp.lib && C:\tmp\DxDeviceResourcesOffscreenTests.exe'
 $nativeBuildCommand = "& { . '$modernToolchainScriptPath'; `$msbuild = Resolve-ModernMsBuildPath ''; & `$msbuild 'src\NoiraPlayer.Native\NoiraPlayer.Native.vcxproj' '/p:Configuration=Debug' '/p:Platform=x64' '/m' '/v:minimal'; exit `$LASTEXITCODE }"
 
@@ -200,6 +203,21 @@ $commands = @(
         -Description 'Compile and run the standalone native display refresh snapshot normalization test.' `
         -Command 'cmd' `
         -Arguments @('/c', $nativeDisplayRefreshSnapshotCommand)
+    New-CommandPlan `
+        -Name 'native-audio-frame-timeline-test' `
+        -Description 'Verify missing audio timestamps continue from the seek anchor and advance by rendered samples.' `
+        -Command 'cmd' `
+        -Arguments @('/c', $nativeAudioFrameTimelineCommand)
+    New-CommandPlan `
+        -Name 'native-audio-buffer-accumulator-test' `
+        -Description 'Verify small decoded audio frames are coalesced into stable XAudio buffers without losing the timeline anchor.' `
+        -Command 'cmd' `
+        -Arguments @('/c', $nativeAudioBufferAccumulatorCommand)
+    New-CommandPlan `
+        -Name 'native-decoder-eagain-recovery-test' `
+        -Description 'Verify simultaneous decoder EAGAIN recovery is bounded and resets only after progress.' `
+        -Command 'cmd' `
+        -Arguments @('/c', $nativeDecoderEagainRecoveryCommand)
     New-CommandPlan `
         -Name 'native-dx-offscreen-test' `
         -Description 'Compile and run the native DirectX offscreen composition swapchain test.' `

@@ -796,6 +796,7 @@ namespace winrt::NoiraPlayer::Native::implementation
             auto frame = m_audioDecoder.TryReadFrame();
             if (!frame)
             {
+                m_audioRenderer.DrainPendingFrame();
                 break;
             }
 

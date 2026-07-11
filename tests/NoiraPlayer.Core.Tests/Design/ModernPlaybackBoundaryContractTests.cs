@@ -57,7 +57,7 @@ public sealed class ModernPlaybackBoundaryContractTests
     }
 
     [Fact]
-    public void Native_Double_Eagain_Path_Remains_Diagnostics_Only()
+    public void Native_Double_Eagain_Path_Retains_The_Packet_And_Bounds_Recovery()
     {
         var source = ReadRepositoryFile(
             "src",
@@ -69,15 +69,20 @@ public sealed class ModernPlaybackBoundaryContractTests
             "if (sendResult == AVERROR(EAGAIN))",
             "AppendNativePlaybackDiagnostic(CreatePacketDiagnostic(\n                    L\"VideoDecoder.SendPacket failed\"");
 
-        var diagnosticIndex = block.IndexOf("VideoDecoder.SendPacket eagain no-frame", StringComparison.Ordinal);
+        var retryIndex = block.IndexOf("VideoDecoder.SendPacket eagain retry", StringComparison.Ordinal);
+        var continueIndex = block.IndexOf("continue;", retryIndex, StringComparison.Ordinal);
+        var exhaustedIndex = block.IndexOf("VideoDecoder.SendPacket eagain exhausted", StringComparison.Ordinal);
         var throwIndex = block.IndexOf("throw winrt::hresult_error(", StringComparison.Ordinal);
         var failureMessageIndex = block.IndexOf(
-            "FFmpeg decoder could not accept a packet and produced no frame while draining.",
+            "FFmpeg video decoder made no progress after bounded packet recovery.",
             StringComparison.Ordinal);
 
-        Assert.True(diagnosticIndex >= 0, "double-EAGAIN path must emit searchable native diagnostics.");
-        Assert.True(throwIndex > diagnosticIndex, "double-EAGAIN path must still fail after diagnostics.");
-        Assert.True(failureMessageIndex > throwIndex, "double-EAGAIN failure message must remain on the thrown error.");
+        Assert.Contains("DecoderEagainRecovery doubleEagainRecovery", source, StringComparison.Ordinal);
+        Assert.True(retryIndex >= 0, "double-EAGAIN recovery must emit searchable retry diagnostics.");
+        Assert.True(continueIndex > retryIndex, "the same packet must be retried while recovery remains bounded.");
+        Assert.True(exhaustedIndex > continueIndex, "retry exhaustion must remain distinguishable from recovery.");
+        Assert.True(throwIndex > exhaustedIndex, "exhausted double-EAGAIN recovery must still fail.");
+        Assert.True(failureMessageIndex > throwIndex, "the bounded-recovery failure message must remain on the thrown error.");
     }
 
     private static string SliceFrom(string source, string start, string end)

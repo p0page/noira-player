@@ -3,9 +3,23 @@
 $scriptPath = Join-Path $PSScriptRoot 'run-playback-core-checks.ps1'
 $planJson = & $scriptPath -PlanOnly
 $plan = $planJson | ConvertFrom-Json
+$nativeHarnessSource = Get-Content -Raw -LiteralPath (Join-Path $PSScriptRoot 'run-native-headless-harness-smoke-test.ps1')
+
+if ($nativeHarnessSource -match 'for \(\$attempt = 1; \$attempt -le 3; \$attempt\+\+\)') {
+    throw 'Native headless playback failures must not be hidden by an unreported whole-case retry loop.'
+}
 
 if (-not $plan.commands -or $plan.commands.Count -lt 2) {
     throw 'Expected at least two playback-core validation commands.'
+}
+
+foreach ($requiredNativeRegression in @(
+    'native-audio-frame-timeline-test',
+    'native-audio-buffer-accumulator-test',
+    'native-decoder-eagain-recovery-test')) {
+    if (-not ($plan.commands | Where-Object name -eq $requiredNativeRegression)) {
+        throw ('Expected playback-core plan to include ' + $requiredNativeRegression + '.')
+    }
 }
 
 if ($plan.scope -ne 'playback-core') {

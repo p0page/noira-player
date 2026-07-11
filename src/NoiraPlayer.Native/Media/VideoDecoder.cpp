@@ -1,5 +1,6 @@
 ﻿#include "pch.h"
 #include "VideoDecoder.h"
+#include "DecoderEagainRecovery.h"
 #include "DolbyVisionConfiguration.h"
 #include "FfmpegMediaSource.h"
 #include "../NativePlaybackDiagnostics.h"
@@ -744,11 +745,13 @@ namespace winrt::NoiraPlayer::Native::implementation
             InspectDolbyVisionPacketSideData(packet.get());
 
             std::optional<DecodedVideoFrame> pendingFrame;
+            DecoderEagainRecovery doubleEagainRecovery;
             while (true)
             {
                 auto sendResult = avcodec_send_packet(m_codecContext, packet.get());
                 if (sendResult == 0)
                 {
+                    doubleEagainRecovery.RecordProgress();
                     av_packet_unref(packet.get());
                     break;
                 }
@@ -764,20 +767,38 @@ namespace winrt::NoiraPlayer::Native::implementation
                         &receiveResult);
                     if (!drainedFrame)
                     {
+                        if (receiveResult == AVERROR(EAGAIN) && doubleEagainRecovery.TryRecover())
+                        {
+                            auto diagnostic = CreatePacketDiagnostic(
+                                L"VideoDecoder.SendPacket eagain retry",
+                                sendResult,
+                                packet.get(),
+                                m_videoStreamIndex,
+                                m_codecContext);
+                            diagnostic += L" receiveResult=" + std::to_wstring(receiveResult) +
+                                L" retry=" + std::to_wstring(doubleEagainRecovery.ConsecutiveRetryCount()) +
+                                L" maxRetries=" + std::to_wstring(DecoderEagainRecovery::MaxConsecutiveRetries);
+                            AppendNativePlaybackDiagnostic(diagnostic);
+                            continue;
+                        }
+
                         auto diagnostic = CreatePacketDiagnostic(
-                            L"VideoDecoder.SendPacket eagain no-frame",
+                            L"VideoDecoder.SendPacket eagain exhausted",
                             sendResult,
                             packet.get(),
                             m_videoStreamIndex,
                             m_codecContext);
-                        diagnostic += L" receiveResult=" + std::to_wstring(receiveResult);
+                        diagnostic += L" receiveResult=" + std::to_wstring(receiveResult) +
+                            L" retry=" + std::to_wstring(doubleEagainRecovery.ConsecutiveRetryCount()) +
+                            L" maxRetries=" + std::to_wstring(DecoderEagainRecovery::MaxConsecutiveRetries);
                         AppendNativePlaybackDiagnostic(diagnostic);
                         av_packet_unref(packet.get());
                         throw winrt::hresult_error(
                             E_FAIL,
-                            L"FFmpeg decoder could not accept a packet and produced no frame while draining.");
+                            L"FFmpeg video decoder made no progress after bounded packet recovery.");
                     }
 
+                    doubleEagainRecovery.RecordProgress();
                     if (!pendingFrame)
                     {
                         pendingFrame = drainedFrame;

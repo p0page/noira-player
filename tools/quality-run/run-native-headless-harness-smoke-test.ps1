@@ -342,21 +342,13 @@ function Invoke-NativeHeadlessHelperCase {
         [int]$DurationSeconds = $script:nativeCadenceDurationSeconds
     )
 
-    $exitCode = 1
-    for ($attempt = 1; $attempt -le 3; $attempt++) {
-        dotnet run --project (Join-Path $repoRoot 'tools\NoiraPlayer.PlaybackQuality.Headless\NoiraPlayer.PlaybackQuality.Headless.csproj') -- `
-            --case-id $CaseId `
-            --stream-url $StreamUrl `
-            --duration-seconds $DurationSeconds `
-            --reports-dir $ReportsDir `
-            --native-helper-exe $NativeHelperExe
-        $exitCode = $LASTEXITCODE
-        if ($exitCode -eq 0) {
-            break
-        }
-
-        Start-Sleep -Seconds 2
-    }
+    dotnet run --project (Join-Path $repoRoot 'tools\NoiraPlayer.PlaybackQuality.Headless\NoiraPlayer.PlaybackQuality.Headless.csproj') -- `
+        --case-id $CaseId `
+        --stream-url $StreamUrl `
+        --duration-seconds $DurationSeconds `
+        --reports-dir $ReportsDir `
+        --native-helper-exe $NativeHelperExe
+    $exitCode = $LASTEXITCODE
 
     if ($exitCode -ne 0) {
         throw "Expected native-headless harness to run the App-free native helper for $CaseId."
@@ -1120,22 +1112,14 @@ $nativeHdr1024SampleUrl = New-NativePlaybackHdr10Sample -Name 'native-headless-h
 $nativeHdr1030SampleUrl = New-NativePlaybackHdr10Sample -Name 'native-headless-hdr10-30' -Rate '30'
 $nativeHdr1060SampleUrl = New-NativePlaybackHdr10Sample -Name 'native-headless-hdr10-60' -Rate '60'
 
-$nativeHelperExitCode = 1
-for ($attempt = 1; $attempt -le 3; $attempt++) {
-    dotnet run --project (Join-Path $repoRoot 'tools\NoiraPlayer.PlaybackQuality.Headless\NoiraPlayer.PlaybackQuality.Headless.csproj') -- `
-        --case-id $nativeCaseId `
-        --stream-url $nativeSampleUrl `
-        --duration-seconds $nativeCadenceDurationSeconds `
-        --force-sdr-output `
-        --reports-dir $nativeCapturedDir `
-        --native-helper-exe $nativeHelperExe
-    $nativeHelperExitCode = $LASTEXITCODE
-    if ($nativeHelperExitCode -eq 0) {
-        break
-    }
-
-    Start-Sleep -Seconds 2
-}
+dotnet run --project (Join-Path $repoRoot 'tools\NoiraPlayer.PlaybackQuality.Headless\NoiraPlayer.PlaybackQuality.Headless.csproj') -- `
+    --case-id $nativeCaseId `
+    --stream-url $nativeSampleUrl `
+    --duration-seconds $nativeCadenceDurationSeconds `
+    --force-sdr-output `
+    --reports-dir $nativeCapturedDir `
+    --native-helper-exe $nativeHelperExe
+$nativeHelperExitCode = $LASTEXITCODE
 
 if ($nativeHelperExitCode -ne 0) {
     throw 'Expected native-headless harness to run the App-free native helper.'
@@ -1188,21 +1172,13 @@ if (-not ($nativeReport.report.limitations -contains 'native-headless: display r
     throw 'Expected native helper report to disclose that display refresh is software policy evidence, not HDMI output verification.'
 }
 
-$nativeAvHelperExitCode = 1
-for ($attempt = 1; $attempt -le 3; $attempt++) {
-    dotnet run --project (Join-Path $repoRoot 'tools\NoiraPlayer.PlaybackQuality.Headless\NoiraPlayer.PlaybackQuality.Headless.csproj') -- `
-        --case-id $nativeAvCaseId `
-        --stream-url $nativeAvSampleUrl `
-        --duration-seconds $nativeAvDurationSeconds `
-        --reports-dir $nativeCapturedDir `
-        --native-helper-exe $nativeHelperExe
-    $nativeAvHelperExitCode = $LASTEXITCODE
-    if ($nativeAvHelperExitCode -eq 0) {
-        break
-    }
-
-    Start-Sleep -Seconds 2
-}
+dotnet run --project (Join-Path $repoRoot 'tools\NoiraPlayer.PlaybackQuality.Headless\NoiraPlayer.PlaybackQuality.Headless.csproj') -- `
+    --case-id $nativeAvCaseId `
+    --stream-url $nativeAvSampleUrl `
+    --duration-seconds $nativeAvDurationSeconds `
+    --reports-dir $nativeCapturedDir `
+    --native-helper-exe $nativeHelperExe
+$nativeAvHelperExitCode = $LASTEXITCODE
 
 if ($nativeAvHelperExitCode -ne 0) {
     throw 'Expected native-headless harness to run the App-free native helper for the A/V sample.'

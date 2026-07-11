@@ -98,6 +98,7 @@ try {
     $coreProbeAnalysisPath = Join-Path $tempRoot 'core-probe-analysis.json'
     $coreProbeCandidateEvaluationPath = Join-Path $tempRoot 'core-probe-candidate-evaluation.json'
     $coreProbeCandidateEvaluationComparisonsDir = Join-Path $tempRoot 'core-probe-candidate-evaluation-comparisons'
+    $archivedCoreProbeManifestPath = Join-Path $tempRoot 'archived-core-probe-reference-manifest.json'
     $archivedCoreProbeReportsDir = Join-Path $repoRoot 'docs\qa\baselines\v0.1-core-probe\reports'
     $nativeHarnessManifestPath = Join-Path $tempRoot 'native-harness-reference-manifest.json'
     $nativeHarnessDir = Join-Path $tempRoot 'native-harness-report-set'
@@ -1156,11 +1157,18 @@ try {
         throw 'Expected core-probe analyze-report-set summary to mark playback evidence as orchestration-only.'
     }
 
+    $archivedCoreProbeManifest = Get-Content -Raw -LiteralPath $exampleManifestPath | ConvertFrom-Json
+    $archivedCoreProbeManifest.cases = @($archivedCoreProbeManifest.cases | Where-Object {
+        $_.caseId -ne 'w3c/ui-freeze-regression-sintel'
+    })
+    $archivedCoreProbeManifest | ConvertTo-Json -Depth 100 |
+        Set-Content -LiteralPath $archivedCoreProbeManifestPath -Encoding UTF8
+
     Push-Location $repoRoot
     try {
         dotnet $cliDll `
             evaluate-candidate `
-            --manifest $exampleManifestPath `
+            --manifest $archivedCoreProbeManifestPath `
             --baseline-dir $archivedCoreProbeReportsDir `
             --candidate-dir $archivedCoreProbeReportsDir `
             --match-by run-id `
@@ -1178,7 +1186,8 @@ try {
     if ($coreProbeCandidateEvaluation.activeGate.name -ne 'baseline-playback-evidence' -or
         $coreProbeCandidateEvaluation.activeGate.status -ne 'blocked' -or
         -not ($coreProbeCandidateEvaluation.activeGate.blockers -contains 'baseline-playback-evidence.insufficient')) {
-        throw 'Expected core-probe candidate evaluation to block at baseline playback evidence gate.'
+        throw ('Expected core-probe candidate evaluation to block at baseline playback evidence gate. Actual: ' +
+            ($coreProbeCandidateEvaluation.activeGate | ConvertTo-Json -Depth 8 -Compress))
     }
 
     if (Test-Path -LiteralPath $coreProbeCandidateEvaluationComparisonsDir) {

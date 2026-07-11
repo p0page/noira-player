@@ -148,6 +148,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         }
 
         std::lock_guard lock(m_bufferMutex);
+        m_audioBufferAccumulator.Reset();
         m_submittedBuffers.clear();
         ResetClock();
     }
@@ -159,7 +160,47 @@ namespace winrt::NoiraPlayer::Native::implementation
             return false;
         }
 
-        auto pcmBuffer = std::make_shared<std::vector<uint8_t>>(frame.PcmData);
+        std::optional<AccumulatedAudioBuffer> accumulatedBuffer;
+        {
+            std::lock_guard lock(m_bufferMutex);
+            if (m_submittedBuffers.size() >= MaxSubmittedAudioBuffers)
+            {
+                return false;
+            }
+
+            accumulatedBuffer = m_audioBufferAccumulator.Append(
+                frame.PcmData,
+                frame.SampleCount,
+                frame.PositionTicks);
+        }
+
+        return !accumulatedBuffer || SubmitAccumulatedBuffer(std::move(*accumulatedBuffer));
+    }
+
+    bool AudioRenderer::DrainPendingFrame()
+    {
+        if (!m_open || m_sourceVoice == nullptr)
+        {
+            return false;
+        }
+
+        std::optional<AccumulatedAudioBuffer> accumulatedBuffer;
+        {
+            std::lock_guard lock(m_bufferMutex);
+            if (m_submittedBuffers.size() >= MaxSubmittedAudioBuffers)
+            {
+                return false;
+            }
+
+            accumulatedBuffer = m_audioBufferAccumulator.Drain();
+        }
+
+        return !accumulatedBuffer || SubmitAccumulatedBuffer(std::move(*accumulatedBuffer));
+    }
+
+    bool AudioRenderer::SubmitAccumulatedBuffer(AccumulatedAudioBuffer buffer)
+    {
+        auto pcmBuffer = std::make_shared<std::vector<uint8_t>>(std::move(buffer.PcmData));
         auto establishedClockBase = false;
         {
             std::lock_guard lock(m_bufferMutex);
@@ -168,9 +209,9 @@ namespace winrt::NoiraPlayer::Native::implementation
                 return false;
             }
 
-            if (!m_hasClockBase && frame.SampleCount > 0)
+            if (!m_hasClockBase && buffer.SampleCount > 0)
             {
-                m_clockBasePositionTicks = frame.PositionTicks;
+                m_clockBasePositionTicks = buffer.PositionTicks;
                 m_clockBaseSamplesPlayed = CurrentSamplesPlayed();
                 m_hasClockBase = true;
                 establishedClockBase = true;
@@ -264,6 +305,7 @@ namespace winrt::NoiraPlayer::Native::implementation
 
         {
             std::lock_guard lock(m_bufferMutex);
+            m_audioBufferAccumulator.Reset();
             m_submittedBuffers.clear();
             ResetClock();
         }

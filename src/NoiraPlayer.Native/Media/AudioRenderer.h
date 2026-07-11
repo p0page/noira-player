@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include "AudioBufferAccumulator.h"
 #include "AudioDecoder.h"
 
 #include <deque>
@@ -24,6 +25,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         void SwitchStream(int32_t audioStreamIndex);
         void Flush() noexcept;
         bool SubmitFrame(DecodedAudioFrame const& frame);
+        bool DrainPendingFrame();
         size_t QueuedBufferCount() const;
         std::optional<int64_t> CurrentPositionTicks() const noexcept;
         std::optional<int32_t> SelectedStreamIndex() const noexcept;
@@ -49,6 +51,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         void CloseAudioDevice() noexcept;
         void OnBufferEnd(void* context) noexcept;
         void ResetClock() noexcept;
+        bool SubmitAccumulatedBuffer(AccumulatedAudioBuffer buffer);
         uint64_t CurrentSamplesPlayed() const noexcept;
         static WAVEFORMATEX CreateSourceVoiceFormat() noexcept;
 
@@ -57,6 +60,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         IXAudio2MasteringVoice* m_masteringVoice{nullptr};
         IXAudio2SourceVoice* m_sourceVoice{nullptr};
         mutable std::mutex m_bufferMutex;
+        AudioBufferAccumulator m_audioBufferAccumulator;
         std::deque<std::shared_ptr<std::vector<uint8_t>>> m_submittedBuffers;
         int64_t m_clockBasePositionTicks{0};
         uint64_t m_clockBaseSamplesPlayed{0};

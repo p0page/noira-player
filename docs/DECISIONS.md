@@ -1,5 +1,15 @@
 ﻿# 技术决策
 
+## 2026-07-11：真实解码失败优先于既有 cadence 调优，评测门禁不得吞掉 render-thread failure
+
+决策：在 FFmpeg 8.1.2 基线上保留三项通用播放修复：缺失音频 PTS 从当前 open/seek 锚点按输出 samples 连续合成；小于 20ms 的 PCM 帧合并后提交 XAudio；FFmpeg 硬解码 send/receive 同时 EAGAIN 时保留同一 packet 并做最多 4 次有界恢复。恢复不是无限轮询，任何进展都重置计数，超过上限继续失败并记录 packet、codec、硬解状态和重试次数。
+
+原因：私有 Emby 证据分别稳定复现了 TrueHD 小帧 + 缺失 PTS 导致的极慢主时钟，以及 4K HEVC D3D11VA 双 EAGAIN 导致的 render-thread 终止。修复后的同源 App-free native 运行恢复到正确的 23.976/25fps 量级、低 A/V drift 和持续媒体推进。FFmpeg 8 官方契约认为 send/receive 同时 EAGAIN 是无效状态；本项目的有界恢复只用于兼容实际 D3D11VA 行为，不把它解释为正常无限等待，也不在本轮静默切换软件解码。
+
+评测决策：native helper 必须订阅 `PlaybackGraphState::Failed` 并以非零退出暴露 render-thread 异常；稳定门禁不得用未记录的整段三次重试把失败改成通过。TrueHD 小帧时间线、buffer 合并和 EAGAIN 上限必须由独立 native 测试覆盖。网络抖动应在 report 中归类为环境/flaky，而不是隐藏。
+
+边界：当前证明的是 Windows App-free native 软件链路和私有 Emby 源，不证明 Xbox/HDMI/HDR 外部输出。私有服务器身份、token、item/source 标识和直链不得进入仓库。现有一次音轨/字幕切换及一次 seek 失败不归入本次主体解码修复，后续需独立 case 和报告处理。
+
 ## 2026-07-11: 不采纳 post-present audio deadline 合并候选
 
 决策：将提交 `3419ea7` 的“有音频时钟时成功 present 后跳过固定 `5ms` render-loop wait”判为 `mixed / reject`，不作为新的 accepted playback Core baseline。源码恢复到 `486c969` 的播放行为；候选提交、24-case report、三轮 repeat 和 comparison 保留用于追溯。

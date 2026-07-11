@@ -21,6 +21,8 @@
         "isHdr": false,
         "isDirectPlayable": true,
         "hdrOutput": "Sdr",
+        "dxgiInput": "YCBCR_STUDIO_G22_LEFT_P709",
+        "dxgiOutput": "RGB_FULL_G22_NONE_P709",
         "requireValidatedConversion": true,
         "requireMatchedDisplayRefreshRate": false
       }

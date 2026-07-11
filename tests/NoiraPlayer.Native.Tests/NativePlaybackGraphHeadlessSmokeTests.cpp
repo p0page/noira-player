@@ -1,4 +1,5 @@
 ﻿#include <cassert>
+#include <atomic>
 #include <chrono>
 #include <cstdlib>
 #include <cwchar>
@@ -153,7 +154,16 @@ int wmain(int argc, wchar_t** argv)
     resources.CreateSwapChain(1280, 720, false);
     assert(resources.HasRenderTarget());
 
-    PlaybackGraph graph(resources);
+    std::atomic<bool> playbackFailed{false};
+    PlaybackGraph graph(
+        resources,
+        [&playbackFailed](auto state, winrt::hstring const&)
+        {
+            if (state == winrt::NoiraPlayer::Native::implementation::PlaybackGraphState::Failed)
+            {
+                playbackFailed.store(true, std::memory_order_relaxed);
+            }
+        });
     PlaybackGraphOpenRequest request{};
     request.DirectStreamUrl = options.StreamUrl;
 
@@ -487,6 +497,7 @@ int wmain(int argc, wchar_t** argv)
             << " displayRefreshRateHz=" << displayRefreshRateHz
             << " displayRefreshPolicy=software-only-cadence-policy"
             << " sourceTrackCount=" << tracks.size()
+            << " playbackFailed=" << (playbackFailed.load(std::memory_order_relaxed) ? 1 : 0)
             << " subtitleCueRenderCount=" << subtitleCueRenderCount
             << " selectedAudioStreamIndex=" << selectedAudioStreamIndex.value_or(-1)
             << " selectedSubtitleStreamIndex=" << selectedSubtitleStreamIndex.value_or(-1);
@@ -510,7 +521,7 @@ int wmain(int argc, wchar_t** argv)
 
         assert(playbackSnapshot.DecodedVideoFrames > 1);
         assert(playbackSnapshot.RenderedVideoFrames > 1);
-        return 0;
+        return playbackFailed.load(std::memory_order_relaxed) ? 2 : 0;
     }
     catch (winrt::hresult_error const& error)
     {

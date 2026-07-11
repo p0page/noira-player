@@ -2,6 +2,16 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-11 更新：合并 main 后修复真实 HEVC/TrueHD 慢放与双 EAGAIN
+
+当前调优分支已通过合并提交 `3427469` 纳入本地 `main` 的 FFmpeg 8.1.2、VS2026/.NET 10、WebView hybrid 和 UI 线程修复。合并只在 `NativePlaybackGraphDecouplingContractTests.cs` 产生冲突，最终保留两边契约，11 个相关测试通过。对比确认 `VideoDecoder.cpp` 在合并前两侧完全一致，因此本次故障不是当前调优分支已经修复而 `main` 遗漏；两边都包含相同的致命双 `EAGAIN` 分支。
+
+本机真实日志确认了两个独立根因。哈姆奈特从非零位置恢复时，TrueHD 解码帧可能缺少时间戳且每帧只有约 40 samples；旧代码把缺失时间戳重置为 0，并让每个小帧占用一个 XAudio buffer，导致视频已到约 2.5 秒而音频主时钟每约 2.4 秒只推进 10ms。现在 `AudioFrameTimeline` 从 seek 锚点连续合成缺失时间戳，`AudioBufferAccumulator` 把小帧合并到至少 20ms 后提交，并在 flush/stop/流尾正确清理或排出。候选 App-free 实播的 23.976fps render interval P50 约 `41.9ms`，A/V drift P95 `13ms`，不再复现极慢推进。
+
+另一个确定性 4K HEVC/EAC3 私有源会在 16 帧、媒体位置约 0.642 秒时触发 D3D11VA `avcodec_send_packet(EAGAIN)` 与 `avcodec_receive_frame(EAGAIN)` 同时发生。现在视频和音频解码器都保留原包并做最多 4 次有界恢复，任何送包或收帧进展都会清零计数，耗尽仍以明确诊断失败。相同源从 helper 退出 2、`playbackFailed=1` 变为退出 0、125 rendered frames、媒体位置约 5.002 秒；随后三轮重复均为 126 decoded / 125 rendered / `playbackFailed=0`。一次重复的交互 seek 仍失败，应作为单独的交互/网络 case，不覆盖主体播放结论。
+
+本次也确认此前评测器不足以充当真实解码回归门禁：主要 native case 使用 320x180、3–6 秒、AAC/H.264 或简单生成媒体；公开 HEVC manifest 很多只做计划/报告形状验证；helper 未订阅 render-thread failure；整段最多三次重试会隐藏首轮失败。现在 helper 把 `PlaybackGraphState::Failed` 转成 `playbackFailed=1` 和非零退出，native smoke 不再静默整段重试，三个纯 native 测试已进入统一 Core 检查计划。仍需后续把私有 Emby case 的媒体推进率、最低帧数和恢复计数正式写入本地 manifest/report-set，而不是只依赖人工命令输出。
+
 ## 2026-07-11 更新：post-present audio deadline 合并候选判为 mixed，不采纳
 
 在 `486c969` evidence baseline 上，候选 `3419ea7` 尝试合并成功 A/V present 后的固定 `5ms` render-loop wait 与下一帧 audio-aware wait：当前帧具有音频时钟时，成功 present 后立即进入下一轮检查；无音频时钟和失败路径保持原有 `5ms` 等待。完整 App-free gate 通过，覆盖 457 个 Core tests、CLI/headless/质量工具测试、native helper/frame-pacing/render-loop/seek/subtitle/display/offscreen 测试和 Native Debug x64 build。

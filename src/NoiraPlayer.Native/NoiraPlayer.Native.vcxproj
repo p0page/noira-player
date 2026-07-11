@@ -102,7 +102,10 @@
     <ClInclude Include="HdrDisplayController.h" />
     <ClInclude Include="HdrDisplayRefreshRateSnapshot.h" />
     <ClInclude Include="HdrDisplayRefreshRatePolicy.h" />
+    <ClInclude Include="Media\AudioBufferAccumulator.h" />
     <ClInclude Include="Media\AudioDecoder.h" />
+    <ClInclude Include="Media\AudioFrameTimeline.h" />
+    <ClInclude Include="Media\DecoderEagainRecovery.h" />
     <ClInclude Include="Media\AudioRenderer.h" />
     <ClInclude Include="Media\DolbyVisionConfiguration.h" />
     <ClInclude Include="Media\DxgiColorSpaceMapper.h" />
