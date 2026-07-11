@@ -11,6 +11,9 @@ namespace NoiraPlayer.Core.PlaybackQuality
     [JsonSerializable(typeof(PlaybackQualityRunResult))]
     [JsonSerializable(typeof(PlaybackQualityRunComparison))]
     [JsonSerializable(typeof(PlaybackQualityComparisonSuite))]
+    [JsonSerializable(typeof(PlaybackQualityExecutionEvidence))]
+    [JsonSerializable(typeof(PlaybackQualityExecutionRequirement))]
+    [JsonSerializable(typeof(PlaybackQualityExecutionCoverage))]
     internal sealed partial class PlaybackQualityJsonContext : JsonSerializerContext
     {
     }

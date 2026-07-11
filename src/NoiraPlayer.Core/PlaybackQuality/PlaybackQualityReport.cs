@@ -13,6 +13,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
         public PlaybackQualityAnalysis Analysis { get; set; } = new PlaybackQualityAnalysis();
         public List<PlaybackQualityCheck> Checks { get; } = new List<PlaybackQualityCheck>();
         public PlaybackQualityEnvironment Environment { get; set; } = new PlaybackQualityEnvironment();
+        public PlaybackQualityExecutionEvidence Execution { get; set; } =
+            new PlaybackQualityExecutionEvidence();
         public List<string> Limitations { get; } = new List<string>
         {
             "software-only: does not verify actual HDMI InfoFrame output",

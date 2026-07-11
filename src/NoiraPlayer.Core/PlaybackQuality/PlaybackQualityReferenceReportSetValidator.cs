@@ -9,13 +9,20 @@ namespace NoiraPlayer.Core.PlaybackQuality
         public string EvaluationVersion { get; set; } =
             PlaybackQualityRunResult.CurrentEvaluationVersion;
 
-        public bool IsValid => Errors.Count == 0;
+        public bool StructureValid { get; set; } = true;
+
+        public bool ExecutionValid { get; set; } = true;
+
+        public bool IsValid => StructureValid && ExecutionValid && Errors.Count == 0;
 
         public int ExpectedCaseCount { get; set; }
 
         public int ReportCount { get; set; }
 
         public int MatchedCaseCount { get; set; }
+
+        public PlaybackQualityExecutionCoverage ExecutionCoverage { get; set; } =
+            new PlaybackQualityExecutionCoverage();
 
         public List<PlaybackQualityReferenceReportCaseStatus> Cases { get; } =
             new List<PlaybackQualityReferenceReportCaseStatus>();
@@ -150,6 +157,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
             }
 
             validation.ExpectedCaseCount = manifest.Cases.Count;
+            validation.ExecutionCoverage.DeclaredCaseCount = manifest.Cases.Count;
             validation.ReportCount = entryList.Count;
             var reportsByRunId = BuildReportMap(validation, entryList);
             ValidateManifestCases(validation, manifest, reportsByRunId);
@@ -204,10 +212,27 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 var caseId = referenceCase.CaseId ?? "";
                 if (!reportsByRunId.TryGetValue(caseId, out var reports) || reports.Count == 0)
                 {
+                    var category = NormalizeCaseCategory(referenceCase.Category);
+                    if (string.Equals(category, "quarantine", StringComparison.Ordinal))
+                    {
+                        validation.ExecutionCoverage.QuarantineMissingCaseCount++;
+                        validation.Cases.Add(new PlaybackQualityReferenceReportCaseStatus
+                        {
+                            CaseId = caseId,
+                            Category = category,
+                            Severity = NormalizeCaseSeverity(referenceCase.Severity),
+                            Stability = NormalizeCaseStability(referenceCase.Stability),
+                            Status = "quarantine-missing"
+                        });
+                        continue;
+                    }
+
+                    validation.ExecutionCoverage.MissingCaseCount++;
+
                     validation.Cases.Add(new PlaybackQualityReferenceReportCaseStatus
                     {
                         CaseId = caseId,
-                        Category = NormalizeCaseCategory(referenceCase.Category),
+                        Category = category,
                         Severity = NormalizeCaseSeverity(referenceCase.Severity),
                         Stability = NormalizeCaseStability(referenceCase.Stability),
                         Status = "missing"
@@ -226,6 +251,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
 
                 var entry = reports[0];
                 var report = entry.Report;
+                RecordExecutionCoverage(validation.ExecutionCoverage, report);
                 var status = new PlaybackQualityReferenceReportCaseStatus
                 {
                     CaseId = caseId,
@@ -252,6 +278,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
 
                 ValidateReportResult(validation, status, report);
                 ValidateReportEnvironment(validation, status, report);
+                ValidateExecutionEvidence(validation, status, referenceCase, report);
                 ValidateFailureClasses(validation, status, report);
                 ValidateFailureAreas(validation, status, report);
 
@@ -306,6 +333,230 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 status,
                 "environment.sourceRevision",
                 environment.SourceRevision);
+        }
+
+        private static void ValidateExecutionEvidence(
+            PlaybackQualityReferenceReportSetValidation validation,
+            PlaybackQualityReferenceReportCaseStatus status,
+            PlaybackQualityReferenceCase referenceCase,
+            PlaybackQualityReport report)
+        {
+            var requiredLevel = referenceCase.ExecutionRequirement?.MinimumEvidenceLevel ??
+                PlaybackQualityEvidenceLevel.NativePlayback;
+            var execution = report.Execution ?? new PlaybackQualityExecutionEvidence();
+            var actualLevel = execution.EvidenceLevel ?? "";
+            if (!PlaybackQualityEvidenceLevel.MeetsMinimum(actualLevel, requiredLevel))
+            {
+                AddExecutionError(
+                    validation,
+                    status,
+                    "report.execution.evidence-level.insufficient",
+                    "execution.evidenceLevel",
+                    requiredLevel,
+                    string.IsNullOrWhiteSpace(actualLevel) ? "missing" : actualLevel,
+                    "Playback quality report does not meet the reference case execution evidence requirement.");
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(execution.AttemptId))
+            {
+                AddExecutionError(validation, status, "report.execution.attempt-id.missing", "execution.attemptId", "present", "missing", "Playback quality report is missing execution attempt identity.");
+            }
+
+            if (string.IsNullOrWhiteSpace(execution.Runner))
+            {
+                AddExecutionError(validation, status, "report.execution.runner.missing", "execution.runner", "present", "missing", "Playback quality report is missing execution runner identity.");
+            }
+
+            if (!PlaybackQualityExecutionStatus.IsKnown(execution.Status))
+            {
+                AddExecutionError(validation, status, "report.execution.status.invalid", "execution.status", "known execution status", string.IsNullOrWhiteSpace(execution.Status) ? "missing" : execution.Status, "Playback quality report contains an unknown execution status.");
+            }
+
+            ValidateExecutionStatusForResult(validation, status, referenceCase, report.Result, execution.Status);
+
+            if (!DateTimeOffset.TryParse(
+                    execution.StartedAtUtc,
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    System.Globalization.DateTimeStyles.RoundtripKind,
+                    out var startedAt) ||
+                startedAt.Offset != TimeSpan.Zero)
+            {
+                AddExecutionError(validation, status, "report.execution.started-at.invalid", "execution.startedAtUtc", "UTC timestamp", string.IsNullOrWhiteSpace(execution.StartedAtUtc) ? "missing" : execution.StartedAtUtc, "Playback quality execution start time is missing or is not a UTC timestamp.");
+            }
+
+            if (!double.IsFinite(execution.DurationMs) || execution.DurationMs < 0)
+            {
+                AddExecutionError(validation, status, "report.execution.duration.invalid", "execution.durationMs", "finite value greater than or equal to zero", execution.DurationMs.ToString(System.Globalization.CultureInfo.InvariantCulture), "Playback quality execution duration is invalid.");
+            }
+
+            var expectedLocatorHash = PlaybackQualitySourceFingerprint.Compute(referenceCase.Uri);
+            if (!string.Equals(execution.SourceLocatorHash, expectedLocatorHash, StringComparison.Ordinal))
+            {
+                AddExecutionError(validation, status, "report.execution.source-locator-hash.mismatch", "execution.sourceLocatorHash", expectedLocatorHash, string.IsNullOrWhiteSpace(execution.SourceLocatorHash) ? "missing" : execution.SourceLocatorHash, "Playback quality report execution source does not match the reference case locator.");
+            }
+
+            if (!execution.SourceOpenAttempted)
+            {
+                AddExecutionError(validation, status, "report.execution.source-open-attempt.missing", "execution.sourceOpenAttempted", "true", "false", "Native playback evidence does not show a source-open attempt.");
+            }
+
+            if (execution.SourceOpened && string.IsNullOrWhiteSpace(execution.OpenedSourceHash))
+            {
+                AddExecutionError(validation, status, "report.execution.opened-source-hash.missing", "execution.openedSourceHash", "present when sourceOpened is true", "missing", "Opened media source identity is missing from native playback evidence.");
+            }
+
+            if (!RequiresCompletedPlaybackSample(report.Result))
+            {
+                return;
+            }
+
+            RequireExecutionStage(validation, status, execution.SourceOpened, "report.execution.source-opened.missing", "execution.sourceOpened", "Completed playback result did not open the media source.");
+            RequireExecutionStage(validation, status, execution.NativeGraphOpened, "report.execution.native-graph-opened.missing", "execution.nativeGraphOpened", "Completed playback result did not open the native playback graph.");
+            RequireExecutionStage(validation, status, execution.DemuxStarted, "report.execution.demux-started.missing", "execution.demuxStarted", "Completed playback result did not start demuxing.");
+            RequireExecutionStage(validation, status, execution.DecoderOpened, "report.execution.decoder-opened.missing", "execution.decoderOpened", "Completed playback result did not open a decoder.");
+            RequireExecutionStage(validation, status, execution.PlaybackSampleObserved, "report.execution.playback-sample.missing", "execution.playbackSampleObserved", "Completed playback result is missing an observed playback sample.");
+            RequireExecutionStage(validation, status, report.RuntimeMetrics?.HasPlaybackSample == true, "report.execution.runtime-playback-sample.missing", "runtimeMetrics.hasPlaybackSample", "Runtime metrics do not confirm the claimed playback sample.");
+            RequireExecutionStage(validation, status, report.Timing?.DecodedVideoFrames > 0, "report.execution.decoded-frame.missing", "timing.decodedVideoFrames", "Completed video playback result has no decoded frame evidence.");
+            RequireExecutionStage(validation, status, report.Timing?.RenderedVideoFrames > 0, "report.execution.rendered-frame.missing", "timing.renderedVideoFrames", "Completed video playback result has no rendered frame evidence.");
+        }
+
+        private static void ValidateExecutionStatusForResult(
+            PlaybackQualityReferenceReportSetValidation validation,
+            PlaybackQualityReferenceReportCaseStatus status,
+            PlaybackQualityReferenceCase referenceCase,
+            string result,
+            string executionStatus)
+        {
+            if (string.Equals(result, PlaybackQualityReportResult.Skip, StringComparison.Ordinal) &&
+                !string.Equals(NormalizeCaseCategory(referenceCase.Category), "quarantine", StringComparison.Ordinal))
+            {
+                AddExecutionError(
+                    validation,
+                    status,
+                    "report.execution.stable-skip.not-allowed",
+                    "execution.status",
+                    "completed, failed, unsupported, cancelled, timed-out",
+                    executionStatus,
+                    "Stable and challenge playback cases cannot satisfy execution coverage with a skip result.");
+                return;
+            }
+
+            string expectedStatus;
+            var matches = false;
+            switch (result)
+            {
+                case PlaybackQualityReportResult.Pass:
+                case PlaybackQualityReportResult.Fail:
+                    expectedStatus = PlaybackQualityExecutionStatus.Completed;
+                    matches = executionStatus == PlaybackQualityExecutionStatus.Completed;
+                    break;
+                case PlaybackQualityReportResult.Error:
+                    expectedStatus = "failed, timed-out, cancelled";
+                    matches = executionStatus == PlaybackQualityExecutionStatus.Failed ||
+                        executionStatus == PlaybackQualityExecutionStatus.TimedOut ||
+                        executionStatus == PlaybackQualityExecutionStatus.Cancelled;
+                    break;
+                case PlaybackQualityReportResult.Unsupported:
+                    expectedStatus = PlaybackQualityExecutionStatus.Unsupported;
+                    matches = executionStatus == PlaybackQualityExecutionStatus.Unsupported;
+                    break;
+                case PlaybackQualityReportResult.Skip:
+                    expectedStatus = PlaybackQualityExecutionStatus.Skipped;
+                    matches = executionStatus == PlaybackQualityExecutionStatus.Skipped;
+                    break;
+                default:
+                    return;
+            }
+
+            if (!matches)
+            {
+                AddExecutionError(
+                    validation,
+                    status,
+                    "report.execution.status-result.mismatch",
+                    "execution.status",
+                    expectedStatus,
+                    executionStatus,
+                    "Playback quality result and execution status do not describe the same outcome.");
+            }
+        }
+
+        private static void RequireExecutionStage(
+            PlaybackQualityReferenceReportSetValidation validation,
+            PlaybackQualityReferenceReportCaseStatus status,
+            bool observed,
+            string code,
+            string signal,
+            string message)
+        {
+            if (!observed)
+            {
+                AddExecutionError(validation, status, code, signal, "true", "false", message);
+            }
+        }
+
+        private static void AddExecutionError(
+            PlaybackQualityReferenceReportSetValidation validation,
+            PlaybackQualityReferenceReportCaseStatus status,
+            string code,
+            string signal,
+            string expected,
+            string actual,
+            string message)
+        {
+            AddUnique(status.Signals, signal);
+            AddError(validation, code, status.CaseId, status.ReportRunId, signal, expected, actual, message);
+        }
+
+        private static void RecordExecutionCoverage(
+            PlaybackQualityExecutionCoverage coverage,
+            PlaybackQualityReport report)
+        {
+            var execution = report.Execution ?? new PlaybackQualityExecutionEvidence();
+            if (execution.SourceOpenAttempted && !string.IsNullOrWhiteSpace(execution.AttemptId))
+            {
+                coverage.AttemptedCaseCount++;
+            }
+
+            if (execution.SourceOpened)
+            {
+                coverage.OpenedCaseCount++;
+            }
+
+            if (report.Timing?.DecodedVideoFrames > 0)
+            {
+                coverage.DecodedCaseCount++;
+            }
+
+            if (report.Timing?.RenderedVideoFrames > 0)
+            {
+                coverage.RenderedCaseCount++;
+            }
+
+            switch (execution.Status)
+            {
+                case PlaybackQualityExecutionStatus.Completed:
+                    coverage.CompletedCaseCount++;
+                    break;
+                case PlaybackQualityExecutionStatus.Unsupported:
+                    coverage.UnsupportedCaseCount++;
+                    break;
+                case PlaybackQualityExecutionStatus.Skipped:
+                    coverage.SkippedCaseCount++;
+                    break;
+                case PlaybackQualityExecutionStatus.Failed:
+                case PlaybackQualityExecutionStatus.Cancelled:
+                case PlaybackQualityExecutionStatus.TimedOut:
+                    coverage.FailedCaseCount++;
+                    break;
+            }
+        }
+
+        private static bool RequiresCompletedPlaybackSample(string result)
+        {
+            return string.Equals(result, PlaybackQualityReportResult.Pass, StringComparison.Ordinal) ||
+                string.Equals(result, PlaybackQualityReportResult.Fail, StringComparison.Ordinal);
         }
 
         private static void ValidateRequiredEnvironmentSignal(
@@ -806,12 +1057,22 @@ namespace NoiraPlayer.Core.PlaybackQuality
             }
 
             validation.Errors.Add(error);
+            if (code.StartsWith("report.execution.", StringComparison.Ordinal) ||
+                string.Equals(code, "report.missing", StringComparison.Ordinal))
+            {
+                validation.ExecutionValid = false;
+            }
+            else
+            {
+                validation.StructureValid = false;
+            }
         }
 
         private static string ClassifyReportSetFailure(string code, string signal)
         {
             if (string.Equals(code, "report.requiredSignal.missing", StringComparison.Ordinal) ||
-                string.Equals(code, "report.environment.missing", StringComparison.Ordinal))
+                string.Equals(code, "report.environment.missing", StringComparison.Ordinal) ||
+                code.StartsWith("report.execution.", StringComparison.Ordinal))
             {
                 return PlaybackQualityFailureClassification.InsufficientInstrumentation;
             }

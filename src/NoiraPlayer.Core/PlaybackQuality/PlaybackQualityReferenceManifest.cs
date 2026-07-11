@@ -36,6 +36,9 @@ namespace NoiraPlayer.Core.PlaybackQuality
 
         public PlaybackQualityExpected Expected { get; set; } =
             new PlaybackQualityExpected();
+
+        public PlaybackQualityExecutionRequirement ExecutionRequirement { get; set; } =
+            new PlaybackQualityExecutionRequirement();
     }
 
     public sealed class PlaybackQualityReferenceManifestValidation
@@ -267,6 +270,17 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 }
             }
 
+            var minimumEvidenceLevel = referenceCase.ExecutionRequirement?.MinimumEvidenceLevel ?? "";
+            if (!PlaybackQualityEvidenceLevel.IsKnown(minimumEvidenceLevel))
+            {
+                AddError(
+                    validation,
+                    "case.execution.minimum-evidence-level.invalid",
+                    caseId,
+                    "executionRequirement.minimumEvidenceLevel",
+                    "Playback quality reference case requires a known minimum execution evidence level.");
+            }
+
             ValidateExpected(validation, caseId, referenceCase.Expected);
         }
 
@@ -285,6 +299,10 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 StartPositionTicks = source.StartPositionTicks,
                 ForceSdrOutput = source.ForceSdrOutput,
                 Tier = source.Tier,
+                ExecutionRequirement = new PlaybackQualityExecutionRequirement
+                {
+                    MinimumEvidenceLevel = source.ExecutionRequirement?.MinimumEvidenceLevel ?? ""
+                },
                 Expected = CloneExpected(source.Expected)
             };
 

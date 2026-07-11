@@ -610,6 +610,439 @@ public sealed class PlaybackQualityReferenceManifestTests
     }
 
     [Fact]
+    public void ValidateReportSet_Rejects_CoreProbe_Report_For_Native_Playback_Case()
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        var referenceCase = CreateCase(
+            "jellyfin/hdr10-hevc-main10-4k60-50m",
+            tier: 2,
+            purpose: "hdr-output");
+        manifest.Cases.Add(referenceCase);
+        var report = CreateReport(
+            referenceCase.CaseId,
+            codec: "hevc",
+            width: 3840,
+            height: 2160,
+            frameRate: 23.976,
+            hdrKind: "Hdr10");
+        AddCapturedRuntimeMetrics(report);
+        report.RuntimeMetrics.ProviderStatus = "core-probe:returned-snapshot";
+        report.ColorPipeline.ConversionStatus = "validated";
+        report.Execution.EvidenceLevel = PlaybackQualityEvidenceLevel.Orchestration;
+
+        var validation = PlaybackQualityReferenceReportSetValidator.Validate(
+            manifest,
+            new[] { report });
+
+        Assert.False(validation.IsValid);
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.execution.evidence-level.insufficient" &&
+            error.CaseId == referenceCase.CaseId &&
+            error.Signal == "execution.evidenceLevel");
+    }
+
+    [Fact]
+    public void ValidateReportSet_Rejects_Native_Playback_Report_Without_Attempt_Identity()
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        var referenceCase = CreateCase(
+            "jellyfin/native-without-attempt",
+            tier: 1,
+            purpose: "sdr-smoke");
+        manifest.Cases.Add(referenceCase);
+        var report = CreateReport(
+            referenceCase.CaseId,
+            codec: "hevc",
+            width: 3840,
+            height: 2160,
+            frameRate: 23.976,
+            hdrKind: "Hdr10");
+        AddCapturedRuntimeMetrics(report);
+        report.ColorPipeline.ConversionStatus = "validated";
+        report.Execution.AttemptId = "";
+        report.Execution.EvidenceLevel = PlaybackQualityEvidenceLevel.NativePlayback;
+
+        var validation = PlaybackQualityReferenceReportSetValidator.Validate(
+            manifest,
+            new[] { report });
+
+        Assert.False(validation.IsValid);
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.execution.attempt-id.missing" &&
+            error.CaseId == referenceCase.CaseId &&
+            error.Signal == "execution.attemptId");
+    }
+
+    [Fact]
+    public void ValidateReportSet_Rejects_Pass_Without_Observed_Playback_Sample()
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        var referenceCase = CreateCase(
+            "jellyfin/native-without-playback-sample",
+            tier: 1,
+            purpose: "sdr-smoke");
+        manifest.Cases.Add(referenceCase);
+        var report = CreateReport(
+            referenceCase.CaseId,
+            codec: "hevc",
+            width: 3840,
+            height: 2160,
+            frameRate: 23.976,
+            hdrKind: "Hdr10");
+        AddCapturedRuntimeMetrics(report);
+        report.ColorPipeline.ConversionStatus = "validated";
+        report.Execution.AttemptId = "attempt-without-sample";
+        report.Execution.EvidenceLevel = PlaybackQualityEvidenceLevel.NativePlayback;
+        report.Execution.SourceOpenAttempted = true;
+        report.Execution.SourceOpened = true;
+        report.Execution.NativeGraphOpened = true;
+        report.Execution.DemuxStarted = true;
+        report.Execution.DecoderOpened = true;
+        report.Execution.PlaybackSampleObserved = false;
+
+        var validation = PlaybackQualityReferenceReportSetValidator.Validate(
+            manifest,
+            new[] { report });
+
+        Assert.False(validation.IsValid);
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.execution.playback-sample.missing" &&
+            error.CaseId == referenceCase.CaseId &&
+            error.Signal == "execution.playbackSampleObserved");
+    }
+
+    [Fact]
+    public void ValidateReportSet_Rejects_Source_Locator_Hash_From_Different_Case()
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        var referenceCase = CreateCase(
+            "jellyfin/native-wrong-source",
+            tier: 1,
+            purpose: "sdr-smoke");
+        manifest.Cases.Add(referenceCase);
+        var report = CreateReport(
+            referenceCase.CaseId,
+            codec: "hevc",
+            width: 3840,
+            height: 2160,
+            frameRate: 23.976,
+            hdrKind: "Hdr10");
+        AddCapturedRuntimeMetrics(report);
+        report.ColorPipeline.ConversionStatus = "validated";
+        report.Execution.AttemptId = "attempt-wrong-source";
+        report.Execution.EvidenceLevel = PlaybackQualityEvidenceLevel.NativePlayback;
+        report.Execution.SourceLocatorHash = "sha256:not-the-manifest-locator";
+        report.Execution.SourceOpenAttempted = true;
+        report.Execution.SourceOpened = true;
+        report.Execution.NativeGraphOpened = true;
+        report.Execution.DemuxStarted = true;
+        report.Execution.DecoderOpened = true;
+        report.Execution.PlaybackSampleObserved = true;
+
+        var validation = PlaybackQualityReferenceReportSetValidator.Validate(
+            manifest,
+            new[] { report });
+
+        Assert.False(validation.IsValid);
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.execution.source-locator-hash.mismatch" &&
+            error.CaseId == referenceCase.CaseId &&
+            error.Signal == "execution.sourceLocatorHash");
+    }
+
+    [Fact]
+    public void ValidateReportSet_Rejects_Pass_Without_Opened_Decoder()
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        var referenceCase = CreateCase(
+            "jellyfin/native-without-decoder",
+            tier: 1,
+            purpose: "sdr-smoke");
+        manifest.Cases.Add(referenceCase);
+        var report = CreateReport(
+            referenceCase.CaseId,
+            codec: "hevc",
+            width: 3840,
+            height: 2160,
+            frameRate: 23.976,
+            hdrKind: "Hdr10");
+        AddCapturedRuntimeMetrics(report);
+        report.Timing.DecodedVideoFrames = 240;
+        report.Timing.RenderedVideoFrames = 240;
+        report.ColorPipeline.ConversionStatus = "validated";
+        report.Execution = new PlaybackQualityExecutionEvidence
+        {
+            AttemptId = "attempt-without-decoder",
+            Runner = "native-headless",
+            EvidenceLevel = PlaybackQualityEvidenceLevel.NativePlayback,
+            Status = "completed",
+            SourceLocatorHash = PlaybackQualitySourceFingerprint.Compute(referenceCase.Uri),
+            OpenedSourceHash = "sha256:opened-source",
+            StartedAtUtc = "2026-07-11T00:00:00Z",
+            DurationMs = 5000,
+            SourceOpenAttempted = true,
+            SourceOpened = true,
+            NativeGraphOpened = true,
+            DemuxStarted = true,
+            DecoderOpened = false,
+            PlaybackSampleObserved = true
+        };
+
+        var validation = PlaybackQualityReferenceReportSetValidator.Validate(
+            manifest,
+            new[] { report });
+
+        Assert.False(validation.IsValid);
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.execution.decoder-opened.missing" &&
+            error.CaseId == referenceCase.CaseId &&
+            error.Signal == "execution.decoderOpened");
+    }
+
+    [Fact]
+    public void ValidateReportSet_Allows_Missing_Quarantine_Case_Without_Counting_It_As_Matched()
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        var referenceCase = CreateCase(
+            "quarantine/flaky-network-source",
+            tier: 4,
+            purpose: "buffering");
+        referenceCase.Category = "quarantine";
+        referenceCase.Stability = "flaky";
+        manifest.Cases.Add(referenceCase);
+
+        var validation = PlaybackQualityReferenceReportSetValidator.Validate(
+            manifest,
+            new PlaybackQualityReport[0]);
+
+        Assert.True(validation.IsValid);
+        Assert.Equal(0, validation.MatchedCaseCount);
+        Assert.Contains(validation.Cases, item =>
+            item.CaseId == referenceCase.CaseId &&
+            item.Status == "quarantine-missing");
+    }
+
+    [Fact]
+    public void ValidateReportSet_Rejects_Incomplete_Native_Execution_Metadata()
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        var referenceCase = CreateCase(
+            "jellyfin/incomplete-execution-metadata",
+            tier: 1,
+            purpose: "sdr-smoke");
+        manifest.Cases.Add(referenceCase);
+        var report = CreateReport(
+            referenceCase.CaseId,
+            codec: "hevc",
+            width: 3840,
+            height: 2160,
+            frameRate: 23.976,
+            hdrKind: "Hdr10");
+        AddCapturedRuntimeMetrics(report);
+        report.ColorPipeline.ConversionStatus = "validated";
+        report.Execution.Runner = "";
+        report.Execution.Status = "mystery";
+        report.Execution.OpenedSourceHash = "";
+        report.Execution.StartedAtUtc = "not-a-time";
+        report.Execution.DurationMs = -1;
+
+        var validation = PlaybackQualityReferenceReportSetValidator.Validate(
+            manifest,
+            new[] { report });
+
+        Assert.False(validation.IsValid);
+        Assert.False(validation.ExecutionValid);
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.execution.runner.missing");
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.execution.status.invalid");
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.execution.opened-source-hash.missing");
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.execution.started-at.invalid");
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.execution.duration.invalid");
+    }
+
+    [Fact]
+    public void ValidateReportSet_Rejects_Playback_Sample_Claim_Without_Runtime_And_Frame_Evidence()
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        var referenceCase = CreateCase(
+            "jellyfin/unconfirmed-playback-sample",
+            tier: 1,
+            purpose: "sdr-smoke");
+        manifest.Cases.Add(referenceCase);
+        var report = CreateReport(
+            referenceCase.CaseId,
+            codec: "hevc",
+            width: 3840,
+            height: 2160,
+            frameRate: 23.976,
+            hdrKind: "Hdr10");
+        report.ColorPipeline.ConversionStatus = "validated";
+        report.RuntimeMetrics = PlaybackQualityRuntimeMetricsFactory.Unavailable(
+            "native-headless:no-snapshot");
+        report.Timing.DecodedVideoFrames = 0;
+        report.Timing.RenderedVideoFrames = 0;
+
+        var validation = PlaybackQualityReferenceReportSetValidator.Validate(
+            manifest,
+            new[] { report });
+
+        Assert.False(validation.IsValid);
+        Assert.False(validation.ExecutionValid);
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.execution.runtime-playback-sample.missing");
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.execution.decoded-frame.missing");
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.execution.rendered-frame.missing");
+    }
+
+    [Fact]
+    public void ValidateReportSet_Reports_Execution_Coverage_Without_Counting_Quarantine_Missing()
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        var completedCase = CreateCase("coverage/completed", 1, "sdr-smoke");
+        var failedCase = CreateCase("coverage/failed", 1, "error-handling");
+        var missingCase = CreateCase("coverage/missing", 1, "tracks");
+        var quarantineCase = CreateCase("coverage/quarantine", 4, "buffering");
+        quarantineCase.Category = "quarantine";
+        quarantineCase.Stability = "flaky";
+        manifest.Cases.Add(completedCase);
+        manifest.Cases.Add(failedCase);
+        manifest.Cases.Add(missingCase);
+        manifest.Cases.Add(quarantineCase);
+
+        var completedReport = CreateReport(
+            completedCase.CaseId,
+            "hevc",
+            3840,
+            2160,
+            23.976,
+            "Hdr10");
+        AddCapturedRuntimeMetrics(completedReport);
+        completedReport.ColorPipeline.ConversionStatus = "validated";
+        var failedReport = new PlaybackQualityReport
+        {
+            RunId = failedCase.CaseId,
+            Result = PlaybackQualityReportResult.Error,
+            Error = new PlaybackQualityError
+            {
+                Code = "source.open.failed",
+                Message = "The media source could not be opened.",
+                FailureClass = "environment issue",
+                FailureArea = "error-handling"
+            }
+        };
+        AddTestEnvironment(failedReport);
+        AddNativeExecutionEvidence(
+            failedReport,
+            failedCase,
+            "failed",
+            sourceOpened: false,
+            decoderOpened: false,
+            playbackSampleObserved: false);
+
+        var validation = PlaybackQualityReferenceReportSetValidator.Validate(
+            manifest,
+            new[] { completedReport, failedReport });
+
+        Assert.False(validation.IsValid);
+        Assert.Equal(4, validation.ExecutionCoverage.DeclaredCaseCount);
+        Assert.Equal(2, validation.ExecutionCoverage.AttemptedCaseCount);
+        Assert.Equal(1, validation.ExecutionCoverage.OpenedCaseCount);
+        Assert.Equal(1, validation.ExecutionCoverage.DecodedCaseCount);
+        Assert.Equal(1, validation.ExecutionCoverage.RenderedCaseCount);
+        Assert.Equal(1, validation.ExecutionCoverage.CompletedCaseCount);
+        Assert.Equal(1, validation.ExecutionCoverage.FailedCaseCount);
+        Assert.Equal(0, validation.ExecutionCoverage.UnsupportedCaseCount);
+        Assert.Equal(0, validation.ExecutionCoverage.SkippedCaseCount);
+        Assert.Equal(1, validation.ExecutionCoverage.MissingCaseCount);
+        Assert.Equal(1, validation.ExecutionCoverage.QuarantineMissingCaseCount);
+    }
+
+    [Fact]
+    public void ValidateReportSet_Rejects_Stable_Skip_Even_When_A_Runner_Claims_Native_Evidence()
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        var referenceCase = CreateCase("native-harness/claimed-native-skip", 1, "frame-pacing");
+        manifest.Cases.Add(referenceCase);
+        var report = CreateReport(referenceCase.CaseId, "hevc", 3840, 2160, 23.976, "Hdr10");
+        report.Result = PlaybackQualityReportResult.Skip;
+        report.Execution.Status = PlaybackQualityExecutionStatus.Skipped;
+        report.Execution.SourceOpened = false;
+        report.Execution.NativeGraphOpened = false;
+        report.Execution.DemuxStarted = false;
+        report.Execution.DecoderOpened = false;
+        report.Execution.PlaybackSampleObserved = false;
+
+        var validation = PlaybackQualityReferenceReportSetValidator.Validate(
+            manifest,
+            new[] { report });
+
+        Assert.False(validation.IsValid);
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.execution.stable-skip.not-allowed");
+    }
+
+    [Theory]
+    [InlineData(PlaybackQualityReportResult.Pass, PlaybackQualityExecutionStatus.Failed, PlaybackQualityExecutionStatus.Completed)]
+    [InlineData(PlaybackQualityReportResult.Error, PlaybackQualityExecutionStatus.Completed, "failed, timed-out, cancelled")]
+    [InlineData(PlaybackQualityReportResult.Unsupported, PlaybackQualityExecutionStatus.Completed, PlaybackQualityExecutionStatus.Unsupported)]
+    public void ValidateReportSet_Rejects_Result_And_Execution_Status_Mismatch(
+        string result,
+        string executionStatus,
+        string expectedStatus)
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        var referenceCase = CreateCase("execution/status-mismatch-" + result, 1, "error-handling");
+        manifest.Cases.Add(referenceCase);
+        var report = CreateReport(referenceCase.CaseId, "hevc", 3840, 2160, 23.976, "Hdr10");
+        AddCapturedRuntimeMetrics(report);
+        report.ColorPipeline.ConversionStatus = "validated";
+        report.Result = result;
+        report.Execution.Status = executionStatus;
+        if (result != PlaybackQualityReportResult.Pass)
+        {
+            report.Error = new PlaybackQualityError
+            {
+                Code = "execution.status-mismatch",
+                Message = "Execution status does not match result.",
+                FailureClass = "evaluation harness bug",
+                FailureArea = "error-handling"
+            };
+        }
+
+        var validation = PlaybackQualityReferenceReportSetValidator.Validate(
+            manifest,
+            new[] { report });
+
+        Assert.False(validation.IsValid);
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.execution.status-result.mismatch" &&
+            error.Expected == expectedStatus &&
+            error.Actual == executionStatus);
+    }
+
+    [Fact]
+    public void ValidateManifest_Rejects_Unknown_Minimum_Execution_Evidence_Level()
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        var referenceCase = CreateCase("manifest/unknown-evidence-level", 1, "sdr-smoke");
+        referenceCase.ExecutionRequirement.MinimumEvidenceLevel = "native-ish";
+        manifest.Cases.Add(referenceCase);
+
+        var validation = PlaybackQualityReferenceManifestValidator.Validate(manifest);
+
+        Assert.False(validation.IsValid);
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "case.execution.minimum-evidence-level.invalid" &&
+            error.CaseId == referenceCase.CaseId);
+    }
+
+    [Fact]
     public void ValidateReportSet_Rejects_Unknown_Report_Result()
     {
         var manifest = new PlaybackQualityReferenceManifest();
@@ -737,6 +1170,13 @@ public sealed class PlaybackQualityReferenceManifestTests
             Message = "The media file was not found."
         });
         AddTestEnvironment(report);
+        AddNativeExecutionEvidence(
+            report,
+            referenceCase,
+            status: "failed",
+            sourceOpened: false,
+            decoderOpened: false,
+            playbackSampleObserved: false);
 
         var validation = PlaybackQualityReferenceReportSetValidator.Validate(
             manifest,
@@ -826,7 +1266,7 @@ public sealed class PlaybackQualityReferenceManifestTests
     }
 
     [Fact]
-    public void ValidateReportSet_Accepts_Skip_Report_Without_Playback_Metadata()
+    public void ValidateReportSet_Rejects_Stable_Skip_Report_Without_Native_Attempt()
     {
         var manifest = new PlaybackQualityReferenceManifest();
         var referenceCase = CreateCase(
@@ -852,9 +1292,11 @@ public sealed class PlaybackQualityReferenceManifestTests
             manifest,
             new[] { result.Report });
 
-        Assert.True(validation.IsValid);
-        Assert.Equal(1, validation.MatchedCaseCount);
-        Assert.Empty(validation.Errors);
+        Assert.False(validation.IsValid);
+        Assert.Equal(0, validation.MatchedCaseCount);
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.execution.evidence-level.insufficient" &&
+            error.CaseId == referenceCase.CaseId);
     }
 
     [Fact]
@@ -1738,7 +2180,47 @@ public sealed class PlaybackQualityReferenceManifestTests
             }
         };
         AddObservedLifecycle(report);
+        AddNativeExecutionEvidence(
+            report,
+            new PlaybackQualityReferenceCase
+            {
+                CaseId = runId,
+                Uri = "https://example.invalid/" + runId + ".mp4"
+            },
+            status: "completed",
+            sourceOpened: true,
+            decoderOpened: true,
+            playbackSampleObserved: true);
         return report;
+    }
+
+    private static void AddNativeExecutionEvidence(
+        PlaybackQualityReport report,
+        PlaybackQualityReferenceCase referenceCase,
+        string status,
+        bool sourceOpened,
+        bool decoderOpened,
+        bool playbackSampleObserved)
+    {
+        report.Execution = new PlaybackQualityExecutionEvidence
+        {
+            AttemptId = "attempt-" + referenceCase.CaseId.Replace('/', '-'),
+            Runner = "native-headless",
+            EvidenceLevel = PlaybackQualityEvidenceLevel.NativePlayback,
+            Status = status,
+            SourceLocatorHash = PlaybackQualitySourceFingerprint.Compute(referenceCase.Uri),
+            OpenedSourceHash = sourceOpened
+                ? PlaybackQualitySourceFingerprint.Compute(referenceCase.Uri)
+                : "",
+            StartedAtUtc = "2026-07-11T00:00:00Z",
+            DurationMs = 5000,
+            SourceOpenAttempted = true,
+            SourceOpened = sourceOpened,
+            NativeGraphOpened = sourceOpened,
+            DemuxStarted = sourceOpened,
+            DecoderOpened = decoderOpened,
+            PlaybackSampleObserved = playbackSampleObserved
+        };
     }
 
     private static void AddObservedLifecycle(PlaybackQualityReport report)
@@ -1762,9 +2244,12 @@ public sealed class PlaybackQualityReferenceManifestTests
         report.RuntimeMetrics = PlaybackQualityRuntimeMetricsFactory.FromSnapshot(
             new PlaybackQualityMetricsSnapshot
             {
+                DecodedVideoFrames = 240,
                 RenderedVideoFrames = 240
             },
             "test-provider:returned-snapshot");
+        report.Timing.DecodedVideoFrames = 240;
+        report.Timing.RenderedVideoFrames = 240;
         report.RuntimeMetrics.ProcessWallClockMs = 5123.4;
         report.RuntimeMetrics.ProcessCpuTimeMs = 245.6;
         report.RuntimeMetrics.ProcessCpuUtilizationRatio = 0.048;
