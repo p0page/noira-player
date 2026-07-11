@@ -27,8 +27,8 @@ $script:IconTokens = @{
     Hairline = New-IconColor 46 57 68
     Focus = New-IconColor 238 243 246
     Play = New-IconColor 37 45 53
-    PlayCut = New-IconColor 120 185 133
-    Progress = New-IconColor 93 143 104
+    PlayCut = New-IconColor 139 124 246
+    Progress = New-IconColor 139 124 246
     Text = New-IconColor 238 243 246
     MutedText = New-IconColor 169 179 186
 }

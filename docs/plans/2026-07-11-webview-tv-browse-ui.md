@@ -27,7 +27,7 @@ npm run typecheck --prefix src\NoiraPlayer.Web
 dotnet test tests\NoiraPlayer.Core.Tests\NoiraPlayer.Core.Tests.csproj -v minimal
 ```
 
-Expected: Web 15/15 and Core 820/820 pass.
+Expected: Web 15/15 and Core 821/821 pass.
 
 **Step 2: Add the approved ignore boundary**
 
