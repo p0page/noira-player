@@ -12,6 +12,8 @@
 
 人工因果审计结论为 `mixed / reject`：候选用更差且更偏离 `33.333ms` 目标的 P95 换取较窄的 P99 尾部，且自动 improved 信号来自未命中代码路径的 video-only case，不足以采纳。评测规则、manifest 和 expected 均未修改。后续不应基于该候选继续叠加调参；需要回到 `486c969` 行为，进一步解释为何去掉 post-present `5ms` 后 render pass/audio-ahead wait pass 明显增多，并寻找同时改善 P95 与 P99 的 deadline/clock scheduling 方案。
 
+后续预筛又排除了两个方向。Kodi Win10/Xbox 共用 DXGI 路径会调用 `IDXGIDevice1::SetMaximumFrameLatency(1)`，但当前 offscreen composition device 在未改代码时已读回 `1`，且 headless `Present` P95 约 `0.06ms`、不承担真实 compositor VSync 阻塞，因此额外设置在当前软件闭环中没有行为差异。另一个未提交的 XAudio processing-pass 事件唤醒候选保留原 timer deadline，但允许音频处理量子提前唤醒；单次 A/V 预筛即把 audio wait pass 从 baseline 约 `112` 增到 `415`、passes-per-episode P50/P95 增到 `5/22`、render P95 变为 `40.1589ms`，因此未晋升为 24-case candidate，源码已撤回。
+
 ## 2026-07-11 更新：audio-ahead wait 返回到成功 present 的分段证据已闭环
 
 提交 `486c969` 新增 `timing.audioAheadWaitEndToPresentSampleCount` 与 `timing.audioAheadWaitEndToPresentMsP50/P95/P99/Max`。采样从当前 generation 的 audio-ahead wait 返回开始，到下一次成功 `Render + Present` 完成为止；不包含 wait 本身，但包含 graph mutex 重新取得、decode/audio refill、clock 检查、字幕/渲染与 Present。字段已贯通 native、WinRT、Core report/analyzer/comparator、native-headless 严格 parser、repeat stability 和 App quality-run clone。旧报告缺字段时 repeat summary 保持 null，不会被补成 `0ms`。

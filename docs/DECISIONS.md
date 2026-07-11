@@ -10,6 +10,8 @@ matched signals 与边界：baseline/candidate 的 A/V comparison 为 strong/com
 
 影响：后续候选必须从已接受的 `486c969` 行为继续，不得在 `3419ea7` 上叠加优化。下一轮优先调查跳过固定等待后 render pass/audio-ahead wait pass 明显增多以及短轮询对 cadence 分布的影响，候选需同时改善目标 A/V case 的 P95 和 P99/max，不能只把波动压窄到一个更差的绝对区间。
 
+补充排除：不新增 `SetMaximumFrameLatency(1)` 候选，因为当前 composition device 在实现前已经读回一帧上限，纯软件报告不会产生可归因差异。不保留 XAudio processing-pass 事件唤醒候选；它在单次 A/V smoke 中把 audio wait 拆成 `415` 次、passes-per-episode P50/P95 增到 `5/22`，render P95 达 `40.1589ms`。该结果与此前 wait cap/early-wake 候选一样，只增加轮询并改变等待分布，没有同时改善主体和尾部 cadence，因此在 full manifest 前停止。
+
 ## 2026-07-11: 保留 audio-ahead wait end-to-present 诊断证据
 
 决策：保留提交 `486c969` 的 `timing.audioAheadWaitEndToPresentSampleCount` 与 `timing.audioAheadWaitEndToPresentMsP50/P95/P99/Max`，作为 audio-ahead wait 返回到下一次成功 `Render + Present` 的分段诊断与 repeat stability 证据。它不新增 pass/fail 阈值，也不是 v0.1 自动采纳信号。
