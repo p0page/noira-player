@@ -18,7 +18,11 @@ import type { EmbyWebClient } from '../emby';
 import { FocusProvider } from '../focus/FocusProvider';
 import { createFocusNavigationPolicy } from '../focus/focusPolicy';
 import type { ItemPage } from '../types';
-import { LibraryPage } from './LibraryPage';
+import {
+  getLibraryGridFocusKey,
+  getLibraryGridScopeKey,
+  LibraryPage,
+} from './LibraryPage';
 import libraryPageSource from './LibraryPage.tsx?raw';
 
 afterEach(() => {
@@ -63,6 +67,7 @@ describe('LibraryPage paging', () => {
             scopeKey: 'home-row:page-zero-anonymous',
             focusKey: 'home-card:page-zero-anonymous',
           }}
+          onAuthenticationRequired={() => undefined}
           onBack={() => undefined}
           onLogout={() => undefined}
           onOpenLibrary={() => undefined}
@@ -147,6 +152,7 @@ describe('LibraryPage paging', () => {
             scopeKey: 'home-row:append-anonymous',
             focusKey: 'home-card:append-anonymous',
           }}
+          onAuthenticationRequired={() => undefined}
           onBack={() => undefined}
           onLogout={() => undefined}
           onOpenLibrary={() => undefined}
@@ -270,6 +276,7 @@ describe('LibraryPage paging', () => {
             scopeKey: 'home-row:stale-anonymous',
             focusKey: 'home-card:stale-anonymous',
           }}
+          onAuthenticationRequired={() => undefined}
           onBack={() => undefined}
           onLogout={() => undefined}
           onOpenLibrary={() => undefined}
@@ -304,6 +311,7 @@ describe('LibraryPage paging', () => {
             scopeKey: 'home-row:stale-anonymous',
             focusKey: 'home-card:stale-anonymous',
           }}
+          onAuthenticationRequired={() => undefined}
           onBack={() => undefined}
           onLogout={() => undefined}
           onOpenLibrary={() => undefined}
@@ -381,6 +389,7 @@ describe('LibraryPage paging', () => {
             scopeKey: 'home-row:unmount-anonymous',
             focusKey: 'home-card:unmount-anonymous',
           }}
+          onAuthenticationRequired={() => undefined}
           onBack={() => undefined}
           onLogout={() => undefined}
           onOpenLibrary={() => undefined}
@@ -466,6 +475,7 @@ describe('LibraryPage paging', () => {
             scopeKey: 'home-row:prefetch-anonymous',
             focusKey: 'home-card:prefetch-anonymous',
           }}
+          onAuthenticationRequired={() => undefined}
           onBack={() => undefined}
           onLogout={() => undefined}
           onOpenLibrary={() => undefined}
@@ -502,6 +512,189 @@ describe('LibraryPage paging', () => {
       resolveNext({ items: [], startIndex: 13, totalRecordCount: 20 });
       await pendingNext;
     });
+  });
+
+  it('retries the exact failed page zero through a focusable recovery command', async () => {
+    const getItemsPage = vi
+      .fn<EmbyWebClient['getItemsPage']>()
+      .mockRejectedValueOnce(new Error('Page zero failure anonymous'))
+      .mockResolvedValueOnce({
+        items: [
+          {
+            id: 'retry-page-zero-item-anonymous',
+            name: 'Retry page zero item anonymous',
+            type: 'Movie',
+            artwork: {},
+          },
+        ],
+        startIndex: 0,
+        totalRecordCount: 1,
+      });
+
+    render(
+      <FocusProvider>
+        <LibraryPage
+          client={{ getItemsPage }}
+          library={{
+            id: 'retry-page-zero-library-anonymous',
+            name: 'Retry page zero library anonymous',
+            collectionType: 'movies',
+          }}
+          libraries={[
+            {
+              id: 'retry-page-zero-library-anonymous',
+              name: 'Retry page zero library anonymous',
+              collectionType: 'movies',
+            },
+          ]}
+          routeOrigin={{
+            scopeKey: 'home-row:retry-page-zero-anonymous',
+            focusKey: 'home-card:retry-page-zero-anonymous',
+          }}
+          onAuthenticationRequired={() => undefined}
+          onBack={() => undefined}
+          onLogout={() => undefined}
+          onOpenLibrary={() => undefined}
+          onOpenMedia={() => undefined}
+        />
+      </FocusProvider>,
+    );
+
+    expect((await screen.findByRole('alert')).textContent).toBe(
+      'Unable to load this library from Emby.',
+    );
+    const retry = screen.getByRole('button', { name: 'Retry loading library' });
+    expect(retry.closest('[data-focus-scope]')).toBeTruthy();
+    const guideHome = within(
+      screen.getByRole('navigation', { name: 'Guide' }),
+    ).getByRole('button', { name: 'Home' });
+    await waitFor(() =>
+      expect([guideHome, retry]).toContain(document.activeElement),
+    );
+    expect(getItemsPage).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(retry);
+    await screen.findByRole('button', {
+      name: 'Open Retry page zero item anonymous',
+    });
+
+    expect(getItemsPage).toHaveBeenCalledTimes(2);
+    expect(getItemsPage.mock.calls[1]).toEqual([
+      'retry-page-zero-library-anonymous',
+      0,
+      50,
+      { collectionType: 'movies' },
+    ]);
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('keeps pagination cards and moves Down to Retry for the exact failed page', async () => {
+    const getItemsPage = vi
+      .fn<EmbyWebClient['getItemsPage']>()
+      .mockResolvedValueOnce({
+        items: Array.from({ length: 4 }, (_, index) => ({
+          id: `retry-page-item-${index}-anonymous`,
+          name: `Retry page item ${index} anonymous`,
+          type: 'Movie',
+          artwork: {},
+        })),
+        startIndex: 0,
+        totalRecordCount: 6,
+      })
+      .mockRejectedValueOnce(new Error('Pagination failure anonymous'))
+      .mockResolvedValueOnce({
+        items: [
+          {
+            id: 'retry-page-item-4-anonymous',
+            name: 'Retry page item 4 anonymous',
+            type: 'Movie',
+            artwork: {},
+          },
+          {
+            id: 'retry-page-item-5-anonymous',
+            name: 'Retry page item 5 anonymous',
+            type: 'Movie',
+            artwork: {},
+          },
+        ],
+        startIndex: 4,
+        totalRecordCount: 6,
+      });
+    const libraryId = 'retry-page-library-anonymous';
+
+    render(
+      <FocusProvider>
+        <LibraryPage
+          client={{ getItemsPage }}
+          library={{
+            id: libraryId,
+            name: 'Retry page library anonymous',
+            collectionType: 'movies',
+          }}
+          libraries={[
+            {
+              id: libraryId,
+              name: 'Retry page library anonymous',
+              collectionType: 'movies',
+            },
+          ]}
+          routeOrigin={{
+            scopeKey: 'home-row:retry-page-anonymous',
+            focusKey: 'home-card:retry-page-anonymous',
+          }}
+          onAuthenticationRequired={() => undefined}
+          onBack={() => undefined}
+          onLogout={() => undefined}
+          onOpenLibrary={() => undefined}
+          onOpenMedia={() => undefined}
+        />
+      </FocusProvider>,
+    );
+
+    const cards = await screen.findAllByRole('button', {
+      name: /Open Retry page item/,
+    });
+    await updateLayoutsAndFocus(
+      cards[3].getAttribute('data-focus-key') as string,
+    );
+    expect((await screen.findByRole('alert')).textContent).toBe(
+      'Unable to load this library from Emby.',
+    );
+    expect(cards[0].isConnected).toBe(true);
+    expect(cards[3].isConnected).toBe(true);
+    expect(getItemsPage).toHaveBeenCalledTimes(2);
+
+    const retry = screen.getByRole('button', { name: 'Retry loading library' });
+    const retryScope = retry.closest<HTMLElement>('[data-focus-scope]');
+    if (!retryScope) {
+      throw new Error('Retry focus scope was not rendered.');
+    }
+    mockRect(getScopeElement(getLibraryGridScopeKey(libraryId)), 128, 0, 600, 220);
+    cards.forEach((card, index) => {
+      mockRect(card, 128 + index * 150, 100, 140, 100);
+    });
+    mockRect(retryScope, 128, 280, 220, 64);
+    mockRect(retry, 128, 280, 220, 64);
+    await updateLayoutsAndFocus(
+      cards[3].getAttribute('data-focus-key') as string,
+    );
+    await waitForThrottleWindow();
+    dispatchKey(cards[3], 'ArrowDown', 40);
+    await waitFor(() => expect(document.activeElement).toBe(retry));
+
+    fireEvent.click(retry);
+    await screen.findByRole('button', {
+      name: 'Open Retry page item 5 anonymous',
+    });
+
+    expect(getItemsPage).toHaveBeenCalledTimes(3);
+    expect(getItemsPage.mock.calls[2]).toEqual([
+      libraryId,
+      4,
+      50,
+      { collectionType: 'movies' },
+    ]);
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 });
 
@@ -544,6 +737,7 @@ describe('LibraryPage focus and Back behavior', () => {
             scopeKey: 'home-row:geometry-library-anonymous',
             focusKey: 'home-card:geometry-library-anonymous',
           }}
+          onAuthenticationRequired={() => undefined}
           onBack={() => undefined}
           onLogout={() => undefined}
           onOpenLibrary={() => undefined}
@@ -664,6 +858,7 @@ describe('LibraryPage focus and Back behavior', () => {
             scopeKey: 'home-row:escape-anonymous',
             focusKey: 'home-card:escape-anonymous',
           }}
+          onAuthenticationRequired={() => undefined}
           onBack={onBack}
           onLogout={() => undefined}
           onOpenLibrary={() => undefined}
@@ -738,6 +933,7 @@ describe('LibraryPage focus and Back behavior', () => {
           scopeKey: 'home-row:restore-library-anonymous',
           focusKey: 'home-card:restore-library-anonymous',
         }}
+        onAuthenticationRequired={() => undefined}
         onBack={() => undefined}
         onLogout={() => undefined}
         onOpenLibrary={() => undefined}
@@ -789,6 +985,292 @@ describe('LibraryPage focus and Back behavior', () => {
     expect(screen.queryByText('Restore B anonymous')).toBeNull();
   });
 
+  it('loads sequential pages before restoring an exact item after index 49', async () => {
+    let resolveDeepPage!: (value: ItemPage) => void;
+    const deepPage = new Promise<ItemPage>((resolve) => {
+      resolveDeepPage = resolve;
+    });
+    const getItemsPage = vi
+      .fn<EmbyWebClient['getItemsPage']>()
+      .mockResolvedValueOnce({
+        items: Array.from({ length: 50 }, (_, index) => ({
+          id: `deep-exact-${String(index).padStart(2, '0')}-anonymous`,
+          name: `Deep exact ${String(index).padStart(2, '0')} anonymous`,
+          type: 'Movie',
+          artwork: {},
+        })),
+        startIndex: 0,
+        totalRecordCount: 51,
+      })
+      .mockReturnValueOnce(deepPage);
+    const scopeKey = getLibraryGridScopeKey('deep-exact-library-anonymous');
+    const focusKey = getLibraryGridFocusKey(
+      'deep-exact-library-anonymous',
+      'deep-exact-50-anonymous',
+    );
+
+    render(
+      <FocusProvider>
+        <LibraryPage
+          client={{ getItemsPage }}
+          library={{
+            id: 'deep-exact-library-anonymous',
+            name: 'Deep exact library anonymous',
+            collectionType: 'movies',
+          }}
+          libraries={[
+            {
+              id: 'deep-exact-library-anonymous',
+              name: 'Deep exact library anonymous',
+              collectionType: 'movies',
+            },
+          ]}
+          restoreRequest={{
+            requestId: 'deep-exact-original-request-anonymous',
+            target: { scopeKey, focusKey },
+          }}
+          routeOrigin={{
+            scopeKey: 'home-row:deep-exact-anonymous',
+            focusKey: 'home-card:deep-exact-anonymous',
+          }}
+          onAuthenticationRequired={() => undefined}
+          onBack={() => undefined}
+          onLogout={() => undefined}
+          onOpenLibrary={() => undefined}
+          onOpenMedia={() => undefined}
+        />
+      </FocusProvider>,
+    );
+
+    const firstPageCard = await screen.findByRole('button', {
+      name: 'Open Deep exact 00 anonymous',
+    });
+    await waitFor(() => expect(getItemsPage).toHaveBeenCalledTimes(2));
+    expect(getItemsPage.mock.calls[1]?.[1]).toBe(50);
+    expect(document.activeElement).not.toBe(firstPageCard);
+    expect(screen.queryByText('Deep exact 50 anonymous')).toBeNull();
+
+    await act(async () => {
+      resolveDeepPage({
+        items: [
+          {
+            id: 'deep-exact-50-anonymous',
+            name: 'Deep exact 50 anonymous',
+            type: 'Movie',
+            artwork: {},
+          },
+        ],
+        startIndex: 50,
+        totalRecordCount: 51,
+      });
+      await deepPage;
+    });
+
+    const restored = await screen.findByRole('button', {
+      name: 'Open Deep exact 50 anonymous',
+    });
+    await waitFor(() => expect(document.activeElement).toBe(restored));
+  });
+
+  it('does not steal Guide focus after key navigation while page zero is pending', async () => {
+    let resolvePageZero!: (value: ItemPage) => void;
+    const pageZero = new Promise<ItemPage>((resolve) => {
+      resolvePageZero = resolve;
+    });
+    const getItemsPage = vi
+      .fn<EmbyWebClient['getItemsPage']>()
+      .mockReturnValue(pageZero);
+
+    render(
+      <FocusProvider>
+        <LibraryPage
+          client={{ getItemsPage }}
+          library={{
+            id: 'pending-guide-library-anonymous',
+            name: 'Pending guide library anonymous',
+            collectionType: 'movies',
+          }}
+          libraries={[
+            {
+              id: 'pending-guide-library-anonymous',
+              name: 'Pending guide library anonymous',
+              collectionType: 'movies',
+            },
+          ]}
+          routeOrigin={{
+            scopeKey: 'home-row:pending-guide-anonymous',
+            focusKey: 'home-card:pending-guide-anonymous',
+          }}
+          onAuthenticationRequired={() => undefined}
+          onBack={() => undefined}
+          onLogout={() => undefined}
+          onOpenLibrary={() => undefined}
+          onOpenMedia={() => undefined}
+        />
+      </FocusProvider>,
+    );
+
+    const guide = screen.getByRole('navigation', { name: 'Guide' });
+    const home = within(guide).getByRole('button', { name: 'Home' });
+    const libraryDestination = within(guide).getByRole('button', {
+      name: 'Pending guide library anonymous',
+    });
+    const logout = within(guide).getByRole('button', { name: 'Log out' });
+    await waitFor(() => expect(document.activeElement).toBe(home));
+    mockRect(getScopeElement('home-guide'), 0, 0, 128, 320);
+    mockRect(home, 0, 0, 120, 64);
+    mockRect(libraryDestination, 0, 80, 120, 64);
+    mockRect(logout, 0, 240, 120, 64);
+
+    await act(async () => {
+      await updateAllLayouts();
+    });
+    await waitForThrottleWindow();
+    dispatchKey(home, 'ArrowDown', 40);
+    await waitFor(() =>
+      expect(document.activeElement).toBe(libraryDestination),
+    );
+
+    await act(async () => {
+      resolvePageZero({
+        items: [
+          {
+            id: 'pending-guide-item-anonymous',
+            name: 'Pending guide item anonymous',
+            type: 'Movie',
+            artwork: {},
+          },
+        ],
+        startIndex: 0,
+        totalRecordCount: 1,
+      });
+      await pageZero;
+    });
+
+    await screen.findByRole('button', {
+      name: 'Open Pending guide item anonymous',
+    });
+    await waitFor(() =>
+      expect(document.activeElement).toBe(libraryDestination),
+    );
+  });
+
+  it('waits for exhaustion before resolving a removed item after index 49', async () => {
+    let resolveFinalPage!: (value: ItemPage) => void;
+    const finalPage = new Promise<ItemPage>((resolve) => {
+      resolveFinalPage = resolve;
+    });
+    const getItemsPage = vi
+      .fn<EmbyWebClient['getItemsPage']>()
+      .mockResolvedValueOnce({
+        items: Array.from({ length: 50 }, (_, index) => ({
+          id: `deep-removed-${String(index).padStart(2, '0')}-anonymous`,
+          name: `Deep removed ${String(index).padStart(2, '0')} anonymous`,
+          type: 'Movie',
+          artwork: {},
+        })),
+        startIndex: 0,
+        totalRecordCount: 54,
+      })
+      .mockReturnValueOnce(finalPage);
+    const policy = createFocusNavigationPolicy();
+    const scopeKey = getLibraryGridScopeKey('deep-removed-library-anonymous');
+    const targetFocusKey = getLibraryGridFocusKey(
+      'deep-removed-library-anonymous',
+      'deep-removed-52-anonymous',
+    );
+    policy.remember(
+      scopeKey,
+      targetFocusKey,
+      Array.from({ length: 55 }, (_, index) =>
+        getLibraryGridFocusKey(
+          'deep-removed-library-anonymous',
+          `deep-removed-${String(index).padStart(2, '0')}-anonymous`,
+        ),
+      ),
+    );
+
+    render(
+      <FocusProvider policy={policy}>
+        <LibraryPage
+          client={{ getItemsPage }}
+          library={{
+            id: 'deep-removed-library-anonymous',
+            name: 'Deep removed library anonymous',
+            collectionType: 'movies',
+          }}
+          libraries={[
+            {
+              id: 'deep-removed-library-anonymous',
+              name: 'Deep removed library anonymous',
+              collectionType: 'movies',
+            },
+          ]}
+          restoreRequest={{
+            requestId: 'deep-removed-original-request-anonymous',
+            target: { scopeKey, focusKey: targetFocusKey },
+          }}
+          routeOrigin={{
+            scopeKey: 'home-row:deep-removed-anonymous',
+            focusKey: 'home-card:deep-removed-anonymous',
+          }}
+          onAuthenticationRequired={() => undefined}
+          onBack={() => undefined}
+          onLogout={() => undefined}
+          onOpenLibrary={() => undefined}
+          onOpenMedia={() => undefined}
+        />
+      </FocusProvider>,
+    );
+
+    const firstPageCard = await screen.findByRole('button', {
+      name: 'Open Deep removed 00 anonymous',
+    });
+    await waitFor(() => expect(getItemsPage).toHaveBeenCalledTimes(2));
+    expect(document.activeElement).not.toBe(firstPageCard);
+    expect(screen.queryByText('Deep removed 53 anonymous')).toBeNull();
+
+    await act(async () => {
+      resolveFinalPage({
+        items: [
+          {
+            id: 'deep-removed-50-anonymous',
+            name: 'Deep removed 50 anonymous',
+            type: 'Movie',
+            artwork: {},
+          },
+          {
+            id: 'deep-removed-51-anonymous',
+            name: 'Deep removed 51 anonymous',
+            type: 'Movie',
+            artwork: {},
+          },
+          {
+            id: 'deep-removed-53-anonymous',
+            name: 'Deep removed 53 anonymous',
+            type: 'Movie',
+            artwork: {},
+          },
+          {
+            id: 'deep-removed-54-anonymous',
+            name: 'Deep removed 54 anonymous',
+            type: 'Movie',
+            artwork: {},
+          },
+        ],
+        startIndex: 50,
+        totalRecordCount: 54,
+      });
+      await finalPage;
+    });
+
+    const fallback = await screen.findByRole('button', {
+      name: 'Open Deep removed 53 anonymous',
+    });
+    await waitFor(() => expect(document.activeElement).toBe(fallback));
+    expect(screen.queryByText('Deep removed 52 anonymous')).toBeNull();
+  });
+
   it('keeps empty normalized results reachable through the real Guide', async () => {
     const getItemsPage = vi
       .fn<EmbyWebClient['getItemsPage']>()
@@ -825,6 +1307,7 @@ describe('LibraryPage focus and Back behavior', () => {
             scopeKey: 'home-row:empty-library-anonymous',
             focusKey: 'home-card:empty-library-anonymous',
           }}
+          onAuthenticationRequired={() => undefined}
           onBack={() => undefined}
           onLogout={() => undefined}
           onOpenLibrary={() => undefined}

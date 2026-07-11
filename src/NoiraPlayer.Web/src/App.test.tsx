@@ -552,6 +552,143 @@ describe('App browse route integration', () => {
     expect(appSource).not.toMatch(/\bDetailsOrigin\b|\bdetailsOrigin\b/);
   });
 
+  it.each([401, 403])(
+    'returns to login and clears browse focus state when a library page receives %s',
+    async (status) => {
+      vi.mocked(requestBridge).mockResolvedValue({
+        session: {
+          serverUrl: 'https://anonymous.invalid',
+          userId: 'anonymous-user',
+          userName: 'Anonymous User',
+          accessToken: 'anonymous-token',
+          authorization: 'Anonymous authorization',
+        },
+      });
+      vi.mocked(loadHomeCatalog).mockResolvedValue({
+        rows: [
+          {
+            key: 'libraries',
+            title: 'Expired libraries anonymous',
+            kind: 'libraries',
+            items: [
+              {
+                id: 'expired-library-anonymous',
+                name: 'Expired library anonymous',
+                collectionType: 'movies',
+              },
+            ],
+          },
+        ],
+        failedKinds: [],
+      });
+      vi.mocked(loadLibraryLatestCatalog).mockResolvedValue({
+        rows: [],
+        failedRowKeys: [],
+      });
+      const statusText = status === 401 ? 'Unauthorized' : 'Forbidden';
+      vi.mocked(createEmbyFetchTransport).mockReturnValue(
+        vi.fn(async () => new Response(null, { status, statusText })),
+      );
+      const policy = createFocusNavigationPolicy();
+      const clear = vi.spyOn(policy, 'clear');
+
+      render(
+        <FocusProvider policy={policy}>
+          <App />
+        </FocusProvider>,
+      );
+
+      fireEvent.click(
+        await screen.findByRole('button', {
+          name: 'Open Expired library anonymous',
+        }),
+      );
+
+      await screen.findByRole('textbox', { name: 'Server URL' });
+      expect(clear).toHaveBeenCalledTimes(1);
+      expect(screen.queryByText('Expired library anonymous')).toBeNull();
+      expect(screen.queryByRole('alert')).toBeNull();
+      expect(document.body.textContent).not.toContain(String(status));
+      expect(document.body.textContent).not.toContain(statusText);
+    },
+  );
+
+  it('opens a mapped blank collection type as mixed through the real client', async () => {
+    vi.mocked(requestBridge).mockResolvedValue({
+      session: {
+        serverUrl: 'https://anonymous.invalid',
+        userId: 'anonymous-user',
+        userName: 'Anonymous User',
+        accessToken: 'anonymous-token',
+        authorization: 'Anonymous authorization',
+      },
+    });
+    vi.mocked(loadHomeCatalog).mockResolvedValue({
+      rows: [
+        {
+          key: 'libraries',
+          title: 'Mapped libraries anonymous',
+          kind: 'libraries',
+          items: [
+            {
+              id: 'mapped-mixed-library-anonymous',
+              name: 'Mapped mixed library anonymous',
+              collectionType: '   ',
+            },
+          ],
+        },
+      ],
+      failedKinds: [],
+    });
+    vi.mocked(loadLibraryLatestCatalog).mockResolvedValue({
+      rows: [],
+      failedRowKeys: [],
+    });
+    const transport = vi.fn(async (_input: RequestInfo | URL) =>
+      new Response(
+        JSON.stringify({
+          Items: [
+            {
+              Id: 'mapped-mixed-item-anonymous',
+              Name: 'Mapped mixed item anonymous',
+              Type: 'Video',
+            },
+          ],
+          StartIndex: 0,
+          TotalRecordCount: 1,
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      ),
+    );
+    vi.mocked(createEmbyFetchTransport).mockReturnValue(transport);
+
+    render(
+      <FocusProvider>
+        <App />
+      </FocusProvider>,
+    );
+
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: 'Open Mapped mixed library anonymous',
+      }),
+    );
+
+    await screen.findByRole('heading', {
+      name: 'Mapped mixed library anonymous',
+    });
+    await screen.findByRole('button', {
+      name: 'Open Mapped mixed item anonymous',
+    });
+    const requestUrl = new URL(String(transport.mock.calls[0]?.[0]));
+    expect(requestUrl.searchParams.get('ParentId')).toBe(
+      'mapped-mixed-library-anonymous',
+    );
+    expect(requestUrl.searchParams.get('IncludeItemTypes')).toBe(
+      'Movie,Series,Episode,Video,MusicVideo,BoxSet,Playlist,MusicAlbum,Audio,Photo',
+    );
+  });
+
   it('backs Home to library to legacy details with exact source restoration through the real client', async () => {
     vi.mocked(requestBridge).mockResolvedValue({
       session: {

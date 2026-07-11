@@ -17,6 +17,7 @@ export interface GuideProps {
   disabled?: boolean;
   libraries: readonly LibraryView[];
   onHome: () => void;
+  onKeyInteraction?: () => void;
   onLibrary: (library: LibraryView) => void;
   onLogout: () => void;
   onRestoreFocus: (target: FocusTarget) => void;
@@ -35,6 +36,7 @@ export function Guide({
   disabled,
   libraries,
   onHome,
+  onKeyInteraction,
   onLibrary,
   onLogout,
   onRestoreFocus,
@@ -61,6 +63,7 @@ export function Guide({
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLElement>) {
+    onKeyInteraction?.();
     const exitsToContent =
       event.key === 'Escape' || (event.key === 'ArrowRight' && returnTarget !== null);
     if (!expanded || !exitsToContent) {

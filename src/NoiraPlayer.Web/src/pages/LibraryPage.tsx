@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FocusEvent, KeyboardEvent } from 'react';
 import { Guide } from '../components/Guide';
 import { MediaCard } from '../components/MediaCard';
-import type { EmbyWebClient } from '../emby';
+import { EmbyRequestError, type EmbyWebClient } from '../emby';
+import { Focusable } from '../focus/Focusable';
 import { FocusScope } from '../focus/FocusScope';
 import {
   createFocusRestoreRequest,
@@ -18,6 +19,7 @@ export interface LibraryPageProps {
   client: LibraryPageClient;
   library: LibraryView;
   libraries: readonly LibraryView[];
+  onAuthenticationRequired: () => void;
   onBack: (origin: FocusTarget) => void;
   onLogout: () => void;
   onOpenLibrary: (library: LibraryView) => void;
@@ -31,6 +33,7 @@ interface LibraryLoadContext {
   client: LibraryPageClient;
   collectionType: string;
   exhausted: boolean;
+  failedStart: number | null;
   identity: string;
   inFlightStart: number | null;
   libraryId: string;
@@ -43,6 +46,11 @@ interface LibraryEntry {
   item: MediaItem;
 }
 
+interface ExternalRestoreCompletion {
+  committedItemCount: number;
+  requestId: string;
+}
+
 type LoadStatus = 'error' | 'loading' | 'ready';
 
 const libraryPageSize = 50;
@@ -52,6 +60,7 @@ export function LibraryPage({
   client,
   library,
   libraries,
+  onAuthenticationRequired,
   onBack,
   onLogout,
   onOpenLibrary,
@@ -65,6 +74,10 @@ export function LibraryPage({
   const [loadStatus, setLoadStatus] = useState<LoadStatus>('loading');
   const [loadingMore, setLoadingMore] = useState(false);
   const [loadError, setLoadError] = useState('');
+  const [externalRestoreCompletion, setExternalRestoreCompletion] =
+    useState<ExternalRestoreCompletion | null>(null);
+  const [releasedExternalRestoreRequestId, setReleasedExternalRestoreRequestId] =
+    useState<string | null>(null);
   const [returnTarget, setReturnTarget] = useState<FocusTarget | null>(null);
   const [guideRestoreRequest, setGuideRestoreRequest] =
     useState<FocusRestoreRequest | null>(null);
@@ -72,6 +85,7 @@ export function LibraryPage({
     useState<FocusRestoreRequest | null>(null);
   const contextRef = useRef<LibraryLoadContext | null>(null);
   const itemsRef = useRef<readonly MediaItem[]>([]);
+  const guideInteractionRef = useRef(false);
   const gridRef = useRef<HTMLDivElement | null>(null);
   const visibleItems = renderedIdentity === identity ? items : [];
   const entries = useMemo(
@@ -79,11 +93,34 @@ export function LibraryPage({
     [library.id, visibleItems],
   );
   const scopeKey = getLibraryGridScopeKey(library.id);
+  const recoveryScopeKey = getLibraryRecoveryScopeKey(library.id);
+  const retryFocusKey = getLibraryRetryFocusKey(library.id);
   const orderedKeys = entries.map(({ focusKey }) => focusKey);
+  const externalRestoreIsReleased =
+    externalRestoreRequest !== null &&
+    externalRestoreRequest !== undefined &&
+    releasedExternalRestoreRequestId === externalRestoreRequest.requestId;
+  const defersExternalRestore =
+    externalRestoreRequest?.target.scopeKey === scopeKey &&
+    !externalRestoreIsReleased;
   const restoreRequest =
-    guideRestoreRequest ?? externalRestoreRequest ?? initialRestoreRequest;
+    guideRestoreRequest ??
+    (defersExternalRestore
+      ? null
+      : externalRestoreRequest ?? initialRestoreRequest);
   const currentLoadSettled =
     renderedIdentity === identity && loadStatus !== 'loading';
+
+  useEffect(() => {
+    if (
+      externalRestoreRequest &&
+      externalRestoreCompletion?.requestId ===
+        externalRestoreRequest.requestId &&
+      entries.length >= externalRestoreCompletion.committedItemCount
+    ) {
+      setReleasedExternalRestoreRequestId(externalRestoreRequest.requestId);
+    }
+  }, [entries.length, externalRestoreCompletion, externalRestoreRequest]);
 
   useEffect(() => {
     const previous = contextRef.current;
@@ -98,6 +135,7 @@ export function LibraryPage({
           client,
           collectionType: library.collectionType,
           exhausted: false,
+          failedStart: null,
           identity,
           inFlightStart: null,
           libraryId: library.id,
@@ -111,11 +149,14 @@ export function LibraryPage({
       }
       contextRef.current = context;
       itemsRef.current = [];
+      guideInteractionRef.current = false;
       setRenderedIdentity(identity);
       setItems([]);
       setLoadStatus('loading');
       setLoadingMore(false);
       setLoadError('');
+      setExternalRestoreCompletion(null);
+      setReleasedExternalRestoreRequestId(null);
       setReturnTarget(null);
       setGuideRestoreRequest(null);
       setInitialRestoreRequest(null);
@@ -181,10 +222,39 @@ export function LibraryPage({
         returnedItemCount === 0 ||
         nextStart <= startIndex ||
         nextStart >= totalRecordCount;
+      context.failedStart = null;
       setLoadStatus('ready');
       setLoadError('');
 
-      if (previousItems.length === 0 && mergedItems.length > 0) {
+      const pendingExternalRestoreRequest = externalRestoreRequest;
+      const externalTargetFound = pendingExternalRestoreRequest
+        ? mergedItems.some(
+            ({ id }) =>
+              getLibraryGridFocusKey(context.libraryId, id) ===
+              pendingExternalRestoreRequest.target.focusKey,
+          )
+        : false;
+      if (
+        pendingExternalRestoreRequest &&
+        externalRestoreTargetsContext(context) &&
+        (externalTargetFound || context.exhausted)
+      ) {
+        setExternalRestoreCompletion({
+          committedItemCount: mergedItems.length,
+          requestId: pendingExternalRestoreRequest.requestId,
+        });
+      }
+
+      const searchesForExternalTarget = isSearchingForExternalTarget(
+        context,
+        mergedItems,
+      );
+      if (
+        previousItems.length === 0 &&
+        mergedItems.length > 0 &&
+        !guideInteractionRef.current &&
+        !externalRestoreTargetsContext(context)
+      ) {
         setInitialRestoreRequest(
           createFocusRestoreRequest({
             scopeKey: getLibraryGridScopeKey(context.libraryId),
@@ -196,13 +266,23 @@ export function LibraryPage({
         );
       }
 
-      continueWithoutFocus = addedItemCount === 0 && !context.exhausted;
-    } catch {
+      continueWithoutFocus =
+        !context.exhausted &&
+        (addedItemCount === 0 || searchesForExternalTarget);
+    } catch (cause) {
       if (!isCurrentContext(context)) {
         return;
       }
 
-      context.exhausted = true;
+      if (
+        cause instanceof EmbyRequestError &&
+        (cause.status === 401 || cause.status === 403)
+      ) {
+        onAuthenticationRequired();
+        return;
+      }
+
+      context.failedStart = startIndex;
       setLoadStatus('error');
       setLoadError('Unable to load this library from Emby.');
     } finally {
@@ -227,13 +307,61 @@ export function LibraryPage({
     return context.active && contextRef.current === context;
   }
 
+  function externalRestoreTargetsContext(
+    context: LibraryLoadContext,
+  ): boolean {
+    return (
+      externalRestoreRequest?.target.scopeKey ===
+      getLibraryGridScopeKey(context.libraryId)
+    );
+  }
+
+  function isSearchingForExternalTarget(
+    context: LibraryLoadContext,
+    availableItems: readonly MediaItem[],
+  ): boolean {
+    if (!externalRestoreTargetsContext(context) || context.exhausted) {
+      return false;
+    }
+
+    const targetFocusKey = externalRestoreRequest?.target.focusKey;
+    return (
+      targetFocusKey !== undefined &&
+      !availableItems.some(
+        ({ id }) =>
+          getLibraryGridFocusKey(context.libraryId, id) === targetFocusKey,
+      )
+    );
+  }
+
   function requestNextPage() {
     const context = contextRef.current;
-    if (!context || !isCurrentContext(context)) {
+    if (
+      !context ||
+      !isCurrentContext(context) ||
+      context.failedStart !== null
+    ) {
       return;
     }
 
     void requestPage(context, context.nextStart);
+  }
+
+  function retryFailedPage() {
+    const context = contextRef.current;
+    if (
+      !context ||
+      !isCurrentContext(context) ||
+      context.failedStart === null ||
+      context.inFlightStart !== null
+    ) {
+      return;
+    }
+
+    const failedStart = context.failedStart;
+    context.failedStart = null;
+    setLoadError('');
+    void requestPage(context, failedStart);
   }
 
   function handleContentFocus(event: FocusEvent<HTMLElement>) {
@@ -288,11 +416,14 @@ export function LibraryPage({
     <div className="tv-shell">
       <Guide
         activeRoute={{ kind: 'library', libraryId: library.id }}
-        defaultFocus={entries.length === 0}
+        defaultFocus={entries.length === 0 && !loadError}
         libraries={libraries}
         returnTarget={returnTarget}
         restoreRequest={restoreRequest}
         onHome={() => onBack(routeOrigin)}
+        onKeyInteraction={() => {
+          guideInteractionRef.current = true;
+        }}
         onLibrary={(destination) => {
           if (destination.id === library.id) {
             if (returnTarget) {
@@ -321,7 +452,7 @@ export function LibraryPage({
           <div ref={gridRef} className="library-page__grid-shell" data-library-grid>
             <FocusScope
               key={scopeKey}
-              boundaryDirections={['right', 'down']}
+              boundaryDirections={loadError ? ['right'] : ['right', 'down']}
               className="library-page__grid"
               defaultFocusKey={orderedKeys[0]}
               orderedKeys={orderedKeys}
@@ -363,9 +494,26 @@ export function LibraryPage({
           </p>
         ) : null}
         {loadError && renderedIdentity === identity ? (
-          <p className="library-page__status" role="alert">
-            {loadError}
-          </p>
+          <div className="library-page__recovery">
+            <p className="library-page__status" role="alert">
+              {loadError}
+            </p>
+            <FocusScope
+              className="library-page__recovery-scope"
+              defaultFocusKey={retryFocusKey}
+              orderedKeys={[retryFocusKey]}
+              scopeKey={recoveryScopeKey}
+            >
+              <Focusable
+                aria-label="Retry loading library"
+                className="library-page__retry"
+                focusKey={retryFocusKey}
+                onSelect={retryFailedPage}
+              >
+                Retry
+              </Focusable>
+            </FocusScope>
+          </div>
         ) : null}
         {currentLoadSettled && entries.length === 0 && !loadError ? (
           <p className="library-page__status" role="status">
@@ -499,6 +647,14 @@ function parseCssPixels(value: string): number {
 
 function createLibraryIdentity(library: LibraryView): string {
   return `${library.id.trim()}\u0000${library.collectionType.trim()}`;
+}
+
+function getLibraryRecoveryScopeKey(libraryId: string): string {
+  return `library-recovery:${encodeFocusSegment(libraryId)}`;
+}
+
+function getLibraryRetryFocusKey(libraryId: string): string {
+  return `library-retry:${encodeFocusSegment(libraryId)}`;
 }
 
 function encodeFocusSegment(value: string): string {

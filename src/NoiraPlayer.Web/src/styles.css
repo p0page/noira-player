@@ -452,6 +452,27 @@ h2 {
   color: var(--error);
 }
 
+.library-page__recovery {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-md);
+  margin-top: var(--space-lg);
+}
+
+.library-page__recovery .library-page__status {
+  margin: 0;
+}
+
+.library-page__recovery-scope {
+  width: max-content;
+}
+
+.library-page__retry {
+  min-width: 120px;
+  padding: 0 20px;
+}
+
 .library-page__loading-more {
   margin: var(--space-md) 0 0;
   color: var(--text-subtle);

@@ -221,7 +221,7 @@ export function App() {
     const normalizedLibrary = {
       ...library,
       id: library.id.trim(),
-      collectionType: library.collectionType.trim(),
+      collectionType: library.collectionType.trim() || 'mixed',
     };
     const libraryOrigin =
       currentRoute.kind === 'library' ? currentRoute.origin : origin;
@@ -371,6 +371,21 @@ export function App() {
     }
   }
 
+  function requireAuthentication() {
+    beginOperation();
+    window.setTimeout(() => {
+      if (!mountedRef.current) {
+        return;
+      }
+
+      focusPolicy.clear();
+      resetAuthenticatedState();
+      setBusy(false);
+      setError('');
+      setAuthState('login');
+    }, 0);
+  }
+
   function beginOperation(): number {
     operationGenerationRef.current += 1;
     return operationGenerationRef.current;
@@ -467,6 +482,7 @@ export function App() {
           client={client}
           library={activeLibrary}
           libraries={libraries}
+          onAuthenticationRequired={requireAuthentication}
           restoreRequest={restoreRequest}
           routeOrigin={currentRoute.origin}
           onBack={() => browseBack()}
