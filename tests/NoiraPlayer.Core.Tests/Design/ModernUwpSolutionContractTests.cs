@@ -124,10 +124,8 @@ public sealed class ModernUwpSolutionContractTests
         Assert.Contains("PooledConnectionLifetime", metadataTransportSource, StringComparison.Ordinal);
         Assert.Contains("PooledConnectionIdleTimeout", metadataTransportSource, StringComparison.Ordinal);
         Assert.Contains("HttpCompletionOption.ResponseHeadersRead", metadataTransportSource, StringComparison.Ordinal);
-        Assert.Contains("UriKind.Relative", nativeBridgeSource, StringComparison.Ordinal);
-        Assert.Contains("Users/", nativeBridgeSource, StringComparison.Ordinal);
-        Assert.Contains("/Views", nativeBridgeSource, StringComparison.Ordinal);
-        Assert.Contains("/Items", nativeBridgeSource, StringComparison.Ordinal);
+        Assert.Contains("EmbyWebPathPolicy.IsAllowed(session, path)", nativeBridgeSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("private static bool IsAllowedEmbyPath", nativeBridgeSource, StringComparison.Ordinal);
         Assert.Contains("IsAllowedSource", nativeBridgeSource, StringComparison.Ordinal);
         Assert.Contains("UriComponents.SchemeAndServer", nativeBridgeSource, StringComparison.Ordinal);
         Assert.Contains("var responseId = \"\";", nativeBridgeSource, StringComparison.Ordinal);
