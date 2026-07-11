@@ -1,5 +1,15 @@
 ﻿# 技术决策
 
+## 2026-07-11: 限定采纳字幕当前点重同步，旧字幕报告由严格证据报告取代
+
+决策：保留 `PlaybackGraph` 的事务化字幕切换和当前播放点 demux 重定位，并把提交 `6b936f98e948d5a9bc055e955b4045d5e94880f3` 作为这项行为的当前 accepted candidate。提交 `32a974dbb081766f3807185b4b019de540f664d9` 是仅移除当前点重同步的隔离控制组。此前 `27a7c1d` / `fcd194a` 的 baseline/candidate/repeat/comparison 因 seek 落点曾回显请求值、缺失指标可能被默认成零、字段 presence 可能被 checks 反向补全而被取代，不再用于采纳判断。
+
+证据：新控制组、候选和三轮候选 repeat 均使用同一 24-case 口径并通过 24/24 validation。15 个 Core/Emby case 的 URI 与 expected 完全一致；9 个 native case 的 expected 一致，URI 的 worktree 前缀不同，但对应媒体文件 SHA-256 全部一致。控制组 A/V case 的两次字幕切换为 `failed 0 -> 0`，候选和三轮 repeat 均为 `completed` 且 cue 数持续增长；四次候选运行的真实音轨选择、暂停字幕切换、字幕关闭和非零 seek 均完成，seek 后首个成功呈现帧误差均为 `0ms`，没有 evidence-collection error。
+
+比较结论：自动 comparison 为 24 unchanged、0 improved、0 regressed、0 mixed，23 strong、1 partial，并要求 `review-unmatched-signals`。唯一 unmatched signal 是控制组侧的 `lifecycle.subtitle-switch` 失败检查；候选通过后该失败检查不存在。该结果不允许记录成自动 evaluator 判定的 improvement。本次限定采纳来自对 raw lifecycle、case result、媒体哈希和三轮重复的人工审计，并明确记录为“目标字幕行为改善、自动分类 unchanged”。
+
+边界：本决策不放宽 manifest、expected、阈值或比较规则，也不把 2 个预期 missing-file error 和 1 个 unsupported case 改成 pass。candidate repeat 为 21/22 stable，`local/native-headless-av-smoke` 的 render P99/max 与 audio-ahead 后 render interval P99/max 仍不稳定；A/V drift 和 final delta 虽保持稳定，也不足以证明 frame pacing 或 A/V sync 已经解决。后续调度优化必须另建同 manifest baseline/candidate/repeat，不得把本字幕修复的通过证据复用为 cadence 改善证据。
+
 ## 2026-07-10: 3ms audio render-start lead 作为当前 24-case 可采纳候选保留
 
 决策：在 audio-ahead gating 中保留原有 `PlaybackFramePacing::VideoAheadToleranceTicks = 100000`，并新增 `PlaybackFramePacing::AudioAheadRenderStartLeadTicks = 30000`。`ShouldWaitForAudio` 与 `AudioAheadWaitDuration` 都使用同一个 `10ms + 3ms` 边界；`PlaybackGraph` 的 `audioAheadWaitTargetMs` 也改为直接记录同一个 wait duration。当前不采纳 `5ms` lead，也不恢复此前被拒绝的 audio wait cap / early-wake / half-frame wait cap。

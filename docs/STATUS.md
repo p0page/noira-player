@@ -2,6 +2,20 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-11 更新：字幕当前点重同步已用严格证据协议重新验证
+
+本轮废弃此前基于 `27a7c1d` / `fcd194a` 生成的字幕重同步采纳证据，并在修正 seek 落点、native 指标必填校验、原始字段 presence、真实音轨选择观测和字幕切换事务恢复后重新生成报告。旧 report-set 仍可用于追溯，但不得再作为当前采纳依据。
+
+新的 no-resync 控制组为提交 `32a974dbb081766f3807185b4b019de540f664d9`，报告位于 `docs\qa\private\baselines\playback-core-tuning-no-resync-control-32a974d-24case.local\`；当前候选为提交 `6b936f98e948d5a9bc055e955b4045d5e94880f3`，报告、三轮重复和 comparison 分别位于 `docs\qa\private\candidates\playback-core-tuning-trustworthy-subtitle-resync-6b936f9-24case.local\`、`docs\qa\private\repeats\playback-core-tuning-trustworthy-subtitle-resync-6b936f9-native-repeat.local\` 和 `docs\qa\private\comparisons\playback-core-tuning-trustworthy-subtitle-resync-6b936f9-24case.local\`。这些目录均为 ignored/private artifact，不进入仓库。
+
+控制组、候选和三轮重复都通过 24/24 report-set validation；15 个 Core/Emby case 的 manifest 完全相同，9 个 native case 的 expected 完全相同，生成媒体的 SHA-256 逐项一致。native URI 仅因 worktree 绝对路径不同而不同。控制组结果为 20 pass、1 fail、2 expected error、1 unsupported；候选及三轮重复均为 21 pass、0 fail、2 expected error、1 unsupported，且没有 evidence-collection error。
+
+目标 A/V case 中，控制组两次字幕切换均为 `failed`，cue 数保持 `0 -> 0`；候选和三轮重复的两次切换均为 `completed`，每次 cue 数都增长。四次候选运行的音轨切换、暂停状态下字幕切换、字幕关闭和非零 seek 均完成；seek 的实际位置来自 seek 后首个成功呈现帧，四次误差均为 `0ms`。因此当前点 demux 重定位可以限定采纳为嵌入字幕切换修复。
+
+自动 comparison 为 24 unchanged、0 regressed、0 mixed，并输出 `review-unmatched-signals / medium risk`。原因是控制组的两个失败 `lifecycle.subtitle-switch` check 在候选 pass report 中消失，形成预期的 baseline-only unmatched signal；自动裁判没有把“失败检查消失”直接算作 improvement。人工审计只依据 raw lifecycle、case result、相同媒体哈希和三轮重复作限定采纳，不覆盖该自动结论，也不修改评测规则。
+
+候选 repeat 的 22 个可聚合 group 中 21 stable、1 unstable。唯一 unstable group 仍是 `local/native-headless-av-smoke`：A/V drift P95/P99 与 audio-ahead final delta P95/P99 spread 均为 `0ms`，但 render P99/max expected-error spread 为 `9.3927ms`，不稳定信号集中在 audio-ahead wait 之后的 render interval P99/max。因此本轮不宣称 frame pacing、A/V sync、buffering、HDR 或设备输出已经解决；下一轮应针对该调度尾部设计独立的小步候选。
+
 ## 2026-07-10 更新：3ms audio render-start lead 候选已通过 24-case gate
 
 本轮在 `render-after-wait` 诊断基线之后做了一个小步播放策略调整：audio-ahead gating 保留原有 `10ms` A/V 容忍区间，但额外给渲染启动预留 `3ms` lead。也就是说 native 不再等到视频帧只领先音频 `10ms` 才返回 render loop，而是在 `13ms` 边界开始让渲染链路工作；`audioAheadWaitTargetMs` 与实际 wait duration 现在使用同一个 `PlaybackFramePacing::AudioAheadWaitDuration` 计算，避免指标和策略不一致。此前尝试过的 `5ms` lead 候选为 `split-candidate / high risk`，没有保留。
