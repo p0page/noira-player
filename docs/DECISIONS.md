@@ -993,3 +993,15 @@
 设计依据：采用 Kodi 的行为对照原则，而非 Kodi 等价声明。嵌入字幕在播放中切换后，demux 可能已经丢弃当前位置的 cue；正确的候选方向是在 current position 回 seek，让 demux 重新读取该 cue。是否达到同等行为只能由后续实现与同一评测证据证明。
 
 基线规则：interaction manifest 语义变化后，旧 baseline 不再是播放器质量改善的直接比较对象。必须在仅包含本次 evidence-only 文档的 clean commit 上，用默认公开 manifest、ignored 私有 Emby manifest 和 native-headless 样本生成新的 24-case baseline。该迁移不修改播放器策略、App/UI、manifest expected、阈值或 case ID，也不构成播放质量改善声明。
+
+# 2026-07-11: 限定采纳 embedded subtitle current-cue switch，保留 comparison review 边界
+
+决策：限定采纳 `fcd194a10e643edc6249330746fe893802bc018a` 的 embedded subtitle current-cue switch 修复。该采纳只覆盖播放中切换内嵌字幕后，通过 current-position demux resync 重新取得当前 cue 的行为；不把它扩展为 frame pacing、整体 A/V sync、HDR/color、真实设备输出或 Xbox 播放质量结论。
+
+证据：commit-bound baseline `docs/qa/private/baselines/playback-core-tuning-native-interactions-27a7c1d-24case.local/` 对应 `27a7c1de80c188074d7c55d4ed53ec2f19290a19`，candidate、三轮 repeat 与 comparison 分别位于 `docs/qa/private/candidates/playback-core-tuning-subtitle-resync-fcd194a-24case.local/`、`docs/qa/private/repeats/playback-core-tuning-subtitle-resync-fcd194a-native-repeat.local/` 和 `docs/qa/private/comparisons/playback-core-tuning-subtitle-resync-fcd194a-24case.local/`。candidate 与每轮 repeat 都从 baseline 保存的同一 core manifest 生成，使用 `-NoPrivateManifest` 并包含 native-headless。baseline/candidate 均为 24/24 valid；按 case ID 索引后的 expected 递归深比较和 source URI 完整字符串比较全等。
+
+目标行为：baseline A/V case 的两次字幕切换均为 `failed`、cue `0->0`，case/model 为 `fail`；candidate 为 `completed 0->16`、`completed 16->32`，case/model 为 `pass`。三轮 repeat 的两次 cue 增长分别为 `0->16, 16->31`、`0->16, 16->32`、`0->15, 15->30`，且 audio switch、subtitle off、seek 均 completed，seek error 均为 `0ms`，没有 failure 或 evidence-collection error。因此目标修复不是单次偶然通过。
+
+comparison 边界：24/24 comparable，1 improved、0 regressed、0 mixed、23 unchanged，23 strong、1 partial。A/V 有 123 个 matched signals；唯一 unmatched 是 baseline 侧 `lifecycle.subtitle-switch`，因为 baseline 的两个失败检查在 candidate pass report 中不再存在。自动 decision/action 为 `review-unmatched-signals`、risk `medium`，active gate 因 `suite.partial-evidence` 为 `blocked`，所以本决策不声称自动 evaluator 已输出 `accept-candidate`。人工审查以目标 raw lifecycle、case/model result 和三轮 repeat 补足这一个预期 unmatched 后，才作上述限定采纳。
+
+风险：candidate repeat 为 17/22 stable，5 个 unstable groups 均涉及 frame-pacing 尾部信号；唯一 suite improvement 的 HDR10-60 也属于 candidate repeat unstable target。A/V 的 drift P95/P99 与 final delta P95/P99 spread 均为 `0ms`，buffer starvation 与 seek 没有退化，但这些只说明本轮未观察到对应 regression，不足以证明这些领域已改善。后续 frame pacing、A/V sync 或设备端结论必须另做同 manifest、可重复且目标稳定的验证。
