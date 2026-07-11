@@ -31,6 +31,7 @@ namespace
     {
         std::wstring StreamUrl{DefaultStreamUrl};
         int DurationSeconds{3};
+        int PauseSeconds{0};
     };
 
     struct AudioSwitchOutcome
@@ -90,6 +91,14 @@ namespace
                 if (parsed > 0 && parsed < 120)
                 {
                     options.DurationSeconds = static_cast<int>(parsed);
+                }
+            }
+            else if (std::wcscmp(argv[index], L"--pause-seconds") == 0 && index + 1 < argc)
+            {
+                auto parsed = std::wcstol(argv[++index], nullptr, 10);
+                if (parsed >= 0 && parsed <= 900)
+                {
+                    options.PauseSeconds = static_cast<int>(parsed);
                 }
             }
         }
@@ -197,9 +206,35 @@ int wmain(int argc, wchar_t** argv)
             }
         }
 
+        auto positionBeforePauseTicks = graph.CurrentPositionTicks();
+        auto decodedVideoFramesBeforePause = playbackSnapshot.DecodedVideoFrames;
         graph.Pause();
-        std::this_thread::sleep_for(100ms);
+        auto pauseDuration = options.PauseSeconds > 0
+            ? std::chrono::milliseconds(options.PauseSeconds * 1000)
+            : 100ms;
+        std::this_thread::sleep_for(pauseDuration);
         graph.Resume();
+
+        if (options.PauseSeconds > 0)
+        {
+            std::this_thread::sleep_for(sampleWindow);
+            auto postResumeSnapshot = graph.QualityMetricsSnapshot();
+            auto positionAfterResumeTicks = graph.CurrentPositionTicks();
+            auto failed = playbackFailed.load(std::memory_order_relaxed);
+            auto recovered = !failed &&
+                positionAfterResumeTicks > positionBeforePauseTicks &&
+                postResumeSnapshot.DecodedVideoFrames > decodedVideoFramesBeforePause;
+            graph.Stop();
+
+            std::cout << "pauseDurationSeconds=" << options.PauseSeconds
+                << " positionBeforePauseTicks=" << positionBeforePauseTicks
+                << " positionAfterResumeTicks=" << positionAfterResumeTicks
+                << " postResumeDecodedVideoFrames=" << postResumeSnapshot.DecodedVideoFrames
+                << " playbackFailed=" << (failed ? 1 : 0)
+                << " pauseResumeStatus=" << (recovered ? "completed" : "failed")
+                << std::endl;
+            return recovered ? 0 : 2;
+        }
 
         AudioSwitchOutcome audioSwitch;
         if (audioStreamIndexes.size() >= 2)
@@ -498,6 +533,7 @@ int wmain(int argc, wchar_t** argv)
             << " displayRefreshPolicy=software-only-cadence-policy"
             << " sourceTrackCount=" << tracks.size()
             << " playbackFailed=" << (playbackFailed.load(std::memory_order_relaxed) ? 1 : 0)
+            << " pauseDurationSeconds=" << options.PauseSeconds
             << " subtitleCueRenderCount=" << subtitleCueRenderCount
             << " selectedAudioStreamIndex=" << selectedAudioStreamIndex.value_or(-1)
             << " selectedSubtitleStreamIndex=" << selectedSubtitleStreamIndex.value_or(-1);

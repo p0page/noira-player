@@ -3,6 +3,7 @@
 #include "HttpMediaInput.h"
 #include "../NativePlaybackDiagnostics.h"
 
+#include <algorithm>
 #include <cctype>
 #include <chrono>
 #include <string>
@@ -279,6 +280,40 @@ namespace
 
         return decoded;
     }
+
+    bool IsHttpSource(std::string const& source)
+    {
+        if (source.size() < 7)
+        {
+            return false;
+        }
+
+        auto hasPrefix = [&source](char const* prefix)
+        {
+            auto prefixLength = std::char_traits<char>::length(prefix);
+            return source.size() >= prefixLength &&
+                std::equal(
+                    prefix,
+                    prefix + prefixLength,
+                    source.begin(),
+                    [](char expected, char actual)
+                    {
+                        return std::tolower(static_cast<unsigned char>(expected)) ==
+                            std::tolower(static_cast<unsigned char>(actual));
+                    });
+        };
+
+        return hasPrefix("http://") || hasPrefix("https://");
+    }
+
+    void SetFfmpegOption(AVDictionary** options, char const* name, char const* value)
+    {
+        auto result = av_dict_set(options, name, value, 0);
+        if (result < 0)
+        {
+            throw CreateFfmpegError("av_dict_set", result);
+        }
+    }
 }
 
 namespace winrt::NoiraPlayer::Native::implementation
@@ -305,15 +340,28 @@ namespace winrt::NoiraPlayer::Native::implementation
 
         formatContext->interrupt_callback.callback = &FfmpegMediaSource::InterruptCallback;
         formatContext->interrupt_callback.opaque = this;
+        AVDictionary* openOptions = nullptr;
         try
         {
             auto source = ConvertFileUriToLocalPath(winrt::to_string(url));
+            if (IsHttpSource(source))
+            {
+                SetFfmpegOption(&openOptions, "reconnect", "1");
+                SetFfmpegOption(&openOptions, "reconnect_on_network_error", "1");
+                SetFfmpegOption(&openOptions, "reconnect_max_retries", "3");
+                SetFfmpegOption(&openOptions, "reconnect_delay_max", "2");
+                SetFfmpegOption(&openOptions, "reconnect_delay_total_max", "6");
+                AppendNativePlaybackDiagnostic(
+                    L"FfmpegMediaSource.Open HTTP reconnect policy retries=3 delayMaxSeconds=2 delayTotalMaxSeconds=6");
+            }
+
             auto openInputStartedAt = SteadyClock::now();
             AppendNativePlaybackDiagnostic(
                 L"FfmpegMediaSource.Open avformat_open_input begin sourceLength=" +
                 std::to_wstring(source.size()));
             BeginBlockingIo(OpenTimeoutMilliseconds);
-            auto result = avformat_open_input(&formatContext, source.c_str(), nullptr, nullptr);
+            auto result = avformat_open_input(&formatContext, source.c_str(), nullptr, &openOptions);
+            av_dict_free(&openOptions);
             if (result < 0)
             {
                 AppendNativePlaybackDiagnostic(
@@ -384,6 +432,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         }
         catch (...)
         {
+            av_dict_free(&openOptions);
             if (formatContext != nullptr)
             {
                 avformat_close_input(&formatContext);

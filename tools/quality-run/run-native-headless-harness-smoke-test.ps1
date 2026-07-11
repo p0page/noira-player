@@ -333,6 +333,114 @@ function Build-NativePlaybackGraphHelper {
     return $helperExe
 }
 
+function Assert-NativeNetworkReconnectRecovery {
+    param(
+        [string]$NativeHelperExe,
+        [string]$SampleUrl
+    )
+
+    $samplePath = ([System.Uri]$SampleUrl).LocalPath
+    $sample = Get-Item -LiteralPath $samplePath
+    $cutAfterBytes = [Math]::Max(65536, [int64]($sample.Length / 3))
+    $portProbe = [System.Net.Sockets.TcpListener]::new(
+        [System.Net.IPAddress]::Loopback,
+        0)
+    $portProbe.Start()
+    $port = ([System.Net.IPEndPoint]$portProbe.LocalEndpoint).Port
+    $portProbe.Stop()
+
+    $serverScript = Join-Path $PSScriptRoot 'Start-FaultingRangeMediaServer.ps1'
+    $serverStdout = Join-Path $smokeRoot 'network-reconnect-server.out.log'
+    $serverStderr = Join-Path $smokeRoot 'network-reconnect-server.err.log'
+    Remove-Item -LiteralPath $serverStdout, $serverStderr -Force -ErrorAction SilentlyContinue
+    $server = Start-Process powershell `
+        -ArgumentList @(
+            '-NoProfile',
+            '-ExecutionPolicy',
+            'Bypass',
+            '-File',
+            ('"' + $serverScript + '"'),
+            '-FilePath',
+            ('"' + $samplePath + '"'),
+            '-Port',
+            $port,
+            '-CutAfterBytes',
+            $cutAfterBytes,
+            '-DelayPerChunkMilliseconds',
+            20) `
+        -WindowStyle Hidden `
+        -PassThru `
+        -RedirectStandardOutput $serverStdout `
+        -RedirectStandardError $serverStderr
+
+    try {
+        $ready = $false
+        for ($attempt = 0; $attempt -lt 50; $attempt++) {
+            if ($server.HasExited) {
+                break
+            }
+
+            $readyOutput = if (Test-Path -LiteralPath $serverStdout) {
+                Get-Content -LiteralPath $serverStdout -Raw | Out-String
+            }
+            else {
+                ''
+            }
+            if (-not [string]::IsNullOrWhiteSpace($readyOutput) -and
+                $readyOutput -match 'faultServerReady') {
+                $ready = $true
+                break
+            }
+
+            Start-Sleep -Milliseconds 100
+        }
+
+        if (-not $ready) {
+            throw 'Deterministic network reconnect server did not become ready.'
+        }
+
+        $helperStdout = Join-Path $smokeRoot 'network-reconnect-helper.out.log'
+        $helperStderr = Join-Path $smokeRoot 'network-reconnect-helper.err.log'
+        Remove-Item -LiteralPath $helperStdout, $helperStderr -Force -ErrorAction SilentlyContinue
+        $helper = Start-Process $NativeHelperExe `
+            -ArgumentList @(
+                '--stream-url',
+                ("http://127.0.0.1:{0}/media.mp4" -f $port),
+                '--duration-seconds',
+                3,
+                '--pause-seconds',
+                1) `
+            -WindowStyle Hidden `
+            -Wait `
+            -PassThru `
+            -RedirectStandardOutput $helperStdout `
+            -RedirectStandardError $helperStderr
+        $helperExitCode = $helper.ExitCode
+        $helperOutput =
+            ((Get-Content -LiteralPath $helperStdout -Raw | Out-String) +
+                (Get-Content -LiteralPath $helperStderr -Raw | Out-String))
+        Start-Sleep -Milliseconds 500
+        $serverOutput = Get-Content -LiteralPath $serverStdout -Raw
+
+        if ($helperExitCode -ne 0 -or
+            -not $helperOutput.Contains('pauseResumeStatus=completed') -or
+            -not $helperOutput.Contains('playbackFailed=0')) {
+            throw "Expected native helper to recover from the forced HTTP disconnect.`n$helperOutput"
+        }
+
+        if (-not [regex]::IsMatch($serverOutput, 'request=2 rangeStart=[1-9][0-9]*')) {
+            throw "Expected forced disconnect recovery to issue a ranged second request.`n$serverOutput"
+        }
+
+        Write-Output 'native network reconnect smoke passed: pauseResumeStatus=completed request=2'
+    }
+    finally {
+        if (-not $server.HasExited) {
+            Stop-Process -Id $server.Id -Force
+        }
+    }
+}
+
 function Invoke-NativeHeadlessHelperCase {
     param(
         [string]$CaseId,
@@ -1104,6 +1212,7 @@ $nativeHelperExe = Build-NativePlaybackGraphHelper -OutputDirectory $nativeHelpe
 $nativeSampleUrl = New-NativePlaybackSample
 $nativeAvSampleUrl = New-NativePlaybackAvSample
 Assert-NativePlaybackAvSample -SampleUrl $nativeAvSampleUrl
+Assert-NativeNetworkReconnectRecovery -NativeHelperExe $nativeHelperExe -SampleUrl $nativeAvSampleUrl
 $nativeSdr23976SampleUrl = New-NativePlaybackSdrSample -Name 'native-headless-sdr-23976' -Rate '24000/1001'
 $nativeSdr24SampleUrl = New-NativePlaybackSdrSample -Name 'native-headless-sdr-24' -Rate '24'
 $nativeSdr60SampleUrl = New-NativePlaybackSdrSample -Name 'native-headless-sdr-60' -Rate '60'

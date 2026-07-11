@@ -128,6 +128,46 @@ public sealed class NativePlaybackGraphDecouplingContractTests
     }
 
     [Fact]
+    public void Native_Headless_Helper_Can_Hold_A_Network_Pause_For_Resume_Recovery_Testing()
+    {
+        var root = FindRepositoryRoot();
+        var helperSource = File.ReadAllText(Path.Combine(
+            root,
+            "tests",
+            "NoiraPlayer.Native.Tests",
+            "NativePlaybackGraphHeadlessSmokeTests.cpp"));
+
+        Assert.Contains("--pause-seconds", helperSource, StringComparison.Ordinal);
+        Assert.Contains("options.PauseSeconds", helperSource, StringComparison.Ordinal);
+        Assert.Contains("pauseDurationSeconds=", helperSource, StringComparison.Ordinal);
+        Assert.Contains("pauseResumeStatus=", helperSource, StringComparison.Ordinal);
+        Assert.Contains("positionBeforePauseTicks=", helperSource, StringComparison.Ordinal);
+        Assert.Contains("positionAfterResumeTicks=", helperSource, StringComparison.Ordinal);
+        Assert.Contains("postResumeDecodedVideoFrames=", helperSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Native_Headless_Gate_Runs_A_Deterministic_Network_Reconnect_Case()
+    {
+        var root = FindRepositoryRoot();
+        var gateSource = File.ReadAllText(Path.Combine(
+            root,
+            "tools",
+            "quality-run",
+            "run-native-headless-harness-smoke-test.ps1"));
+
+        Assert.True(File.Exists(Path.Combine(
+            root,
+            "tools",
+            "quality-run",
+            "Start-FaultingRangeMediaServer.ps1")));
+        Assert.Contains("Assert-NativeNetworkReconnectRecovery", gateSource, StringComparison.Ordinal);
+        Assert.Contains("Start-FaultingRangeMediaServer.ps1", gateSource, StringComparison.Ordinal);
+        Assert.Contains("pauseResumeStatus=completed", gateSource, StringComparison.Ordinal);
+        Assert.Contains("request=2", gateSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void PlaybackGraph_Audio_Ahead_Wait_Pass_Metrics_Do_Not_Take_A_Second_Graph_Lock_After_Wait()
     {
         var root = FindRepositoryRoot();
