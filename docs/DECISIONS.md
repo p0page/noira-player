@@ -1,5 +1,15 @@
 ﻿# 技术决策
 
+## 2026-07-11: 不采纳 post-present audio deadline 合并候选
+
+决策：将提交 `3419ea7` 的“有音频时钟时成功 present 后跳过固定 `5ms` render-loop wait”判为 `mixed / reject`，不作为新的 accepted playback Core baseline。源码恢复到 `486c969` 的播放行为；候选提交、24-case report、三轮 repeat 和 comparison 保留用于追溯。
+
+原因：自动 suite 虽输出 `accept-candidate`，但唯一 improved case `local/native-headless-hdr10-60` 是不具备音频时钟的 video-only 路径，候选逻辑对它没有行为影响，因此不具备因果可信度。实际命中候选路径的 A/V smoke 三轮 render P95 从 baseline `37.2281-38.9675ms` 变为 candidate `39.7261-40.4073ms`，稳定地远离 `33.333ms` 目标；P99/max 从 `38.4134-48.2608ms` 收窄到 `39.9364-40.6431ms`，repeat 稳定性从 21/22 提高到 22/22。这个结果是主体 cadence 回退与尾部稳定改善并存，不能因自动分类为 unchanged 而记作纯改善。
+
+matched signals 与边界：baseline/candidate 的 A/V comparison 为 strong/comparable，timing、sync、buffer、seek/timeline、track/subtitle 和 color/DXGI 信号完整匹配。A/V drift P95/P99、audio-ahead final delta P95/P99 均保持 `10ms`，starvation 为 `0`，seek 误差为 `0ms`，轨道/字幕生命周期和 SDR DXGI conversion evidence 未退化；这些只能证明没有发现伴随回退，不能抵消 P95 cadence 回退。评测阈值、manifest、expected 和 evaluator 规则均不修改。
+
+影响：后续候选必须从已接受的 `486c969` 行为继续，不得在 `3419ea7` 上叠加优化。下一轮优先调查跳过固定等待后 render pass/audio-ahead wait pass 明显增多以及短轮询对 cadence 分布的影响，候选需同时改善目标 A/V case 的 P95 和 P99/max，不能只把波动压窄到一个更差的绝对区间。
+
 ## 2026-07-11: 保留 audio-ahead wait end-to-present 诊断证据
 
 决策：保留提交 `486c969` 的 `timing.audioAheadWaitEndToPresentSampleCount` 与 `timing.audioAheadWaitEndToPresentMsP50/P95/P99/Max`，作为 audio-ahead wait 返回到下一次成功 `Render + Present` 的分段诊断与 repeat stability 证据。它不新增 pass/fail 阈值，也不是 v0.1 自动采纳信号。

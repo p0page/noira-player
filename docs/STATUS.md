@@ -2,6 +2,16 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-11 更新：post-present audio deadline 合并候选判为 mixed，不采纳
+
+在 `486c969` evidence baseline 上，候选 `3419ea7` 尝试合并成功 A/V present 后的固定 `5ms` render-loop wait 与下一帧 audio-aware wait：当前帧具有音频时钟时，成功 present 后立即进入下一轮检查；无音频时钟和失败路径保持原有 `5ms` 等待。完整 App-free gate 通过，覆盖 457 个 Core tests、CLI/headless/质量工具测试、native helper/frame-pacing/render-loop/seek/subtitle/display/offscreen 测试和 Native Debug x64 build。
+
+同一 24-case manifest 的正式 candidate 和三轮 repeat 均通过 `24/24` validation，分别位于 `docs\qa\private\candidates\playback-core-tuning-coalesced-audio-deadline-3419ea7-24case.local\` 与 `docs\qa\private\repeats\playback-core-tuning-coalesced-audio-deadline-3419ea7-native-repeat.local\`；comparison 位于 `docs\qa\private\comparisons\playback-core-tuning-coalesced-audio-deadline-3419ea7-vs-486c969.local\`。自动 suite 输出 `1 improved / 0 regressed / 0 mixed / 23 unchanged` 和 `accept-candidate`，唯一 improved case 是 `local/native-headless-hdr10-60`。该 case 没有音频时钟，候选分支不会执行，因而这项改善不能与代码改动建立因果关系，只能视为采样波动。
+
+真正命中候选路径的 `local/native-headless-av-smoke` 被自动分类为 unchanged，但三轮 repeat 显示 mixed 结果：render P95 从 baseline 的 `37.2281-38.9675ms` 上升到 candidate 的 `39.7261-40.4073ms`，常态 cadence 持续变差；P99/max 则从 `38.4134-48.2608ms` 收窄到 `39.9364-40.6431ms`，candidate 的 22 个 group 也从 baseline 的 21 stable / 1 unstable 变为 22 stable。A/V drift P95/P99 均保持 `10ms`，audio-ahead final delta P95/P99 保持 `10ms`，video/audio starvation 保持 `0`；seek 误差仍为 `0ms`，音轨切换、暂停/播放中字幕切换及字幕关闭均完成，color/DXGI 证据保持一致。end-to-present 仍低于 `0.65ms`，没有把尾部转移到 render/Present 阶段。
+
+人工因果审计结论为 `mixed / reject`：候选用更差且更偏离 `33.333ms` 目标的 P95 换取较窄的 P99 尾部，且自动 improved 信号来自未命中代码路径的 video-only case，不足以采纳。评测规则、manifest 和 expected 均未修改。后续不应基于该候选继续叠加调参；需要回到 `486c969` 行为，进一步解释为何去掉 post-present `5ms` 后 render pass/audio-ahead wait pass 明显增多，并寻找同时改善 P95 与 P99 的 deadline/clock scheduling 方案。
+
 ## 2026-07-11 更新：audio-ahead wait 返回到成功 present 的分段证据已闭环
 
 提交 `486c969` 新增 `timing.audioAheadWaitEndToPresentSampleCount` 与 `timing.audioAheadWaitEndToPresentMsP50/P95/P99/Max`。采样从当前 generation 的 audio-ahead wait 返回开始，到下一次成功 `Render + Present` 完成为止；不包含 wait 本身，但包含 graph mutex 重新取得、decode/audio refill、clock 检查、字幕/渲染与 Present。字段已贯通 native、WinRT、Core report/analyzer/comparator、native-headless 严格 parser、repeat stability 和 App quality-run clone。旧报告缺字段时 repeat summary 保持 null，不会被补成 `0ms`。
