@@ -57,7 +57,7 @@ Horizontal rows stop at their right edge. Left from their first item opens the G
 Back priority is:
 
 1. close the expanded Guide or active Web overlay;
-2. return from details to its source library item;
+2. return from details to its source Home-row or library-grid item;
 3. return from a library to its Home source target;
 4. hand Home-level back to the native host.
 
@@ -77,7 +77,7 @@ A small typed navigation store replaces the current single `View` string. Routes
 
 - `home`;
 - `library` with its source identifier and Home origin focus key;
-- `details` with its item identifier and library origin focus key.
+- `details` with its item identifier and source-route focus target.
 
 Navigation and focus history stay in memory. Credentials, catalog payloads, media identifiers, and focus snapshots are not persisted to browser storage.
 
@@ -126,7 +126,7 @@ The automated and manual validation matrix covers:
 - Guide open, traverse, close, and focus restoration;
 - horizontal row edges and nearest-column vertical movement;
 - library grid edges, scrolling, and target visibility;
-- Home to library to details traversal and exact Back restoration;
+- Home to details and Home to library to details traversal with exact Back restoration;
 - details to native playback and return-to-Play restoration;
 - refresh, removed target, empty row, image failure, partial request failure, and expired session;
 - 1920 by 1080, 1280 by 720, and 960 by 540 logical layout checks;

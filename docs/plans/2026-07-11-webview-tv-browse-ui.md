@@ -306,24 +306,53 @@ Use these contracts:
 ```typescript
 export type BrowseRoute =
   | { kind: 'home' }
-  | { kind: 'library'; libraryId: string; originFocusKey: string }
-  | { kind: 'details'; itemId: string; libraryId: string; originFocusKey: string };
+  | {
+      kind: 'library';
+      libraryId: string;
+      collectionType: string;
+      origin: FocusTarget;
+    }
+  | { kind: 'details'; itemId: string; origin: FocusTarget };
+
+export interface FocusTarget {
+  scopeKey: string;
+  focusKey: string;
+}
+
+export interface TransientLayer {
+  kind: 'guide' | 'overlay';
+  returnTarget: FocusTarget;
+}
 
 export type BackDecision =
-  | { kind: 'closeGuide' }
-  | { kind: 'navigate'; route: BrowseRoute; restoreFocusKey: string }
+  | {
+      kind: 'closeTransient';
+      layer: TransientLayer['kind'];
+      restoreTarget: FocusTarget;
+    }
+  | { kind: 'navigate'; route: BrowseRoute; restoreTarget: FocusTarget }
   | { kind: 'nativeBack' };
 
 export interface FocusNavigationPolicy {
-  remember(scopeKey: string, focusKey: string): void;
-  resolve(scopeKey: string, availableKeys: readonly string[], defaultKey?: string): string | null;
-  decideBack(routeStack: readonly BrowseRoute[], guideOpen: boolean): BackDecision;
+  remember(scopeKey: string, focusKey: string, orderedKeys: readonly string[]): void;
+  resolve(scopeKey: string, availableKeys: readonly string[]): string | null;
+  resolveInitial(availableKeys: readonly string[], defaultKey?: string): string | null;
+  decideBack(
+    routeStack: readonly BrowseRoute[],
+    transientLayer?: TransientLayer,
+  ): BackDecision;
   pause(): void;
   resume(): void;
+  isPaused(): boolean;
+  subscribePause(listener: (paused: boolean) => void): () => void;
 }
 ```
 
-Cover Home to library to details, exact Back restoration, Guide-before-route priority, default focus order, per-scope last focus, and nearest/scope-default fallback after removal.
+Cover Home to library to details, Home directly to details, exact Back restoration, transient-layer-before-route priority, default focus order, per-scope last focus, and nearest/scope-default fallback after removal. `decideBack` must not mutate the supplied route stack.
+
+`remember` stores a snapshot of the target's ordered scope and index. `resolve` first restores an exact surviving key, then the key now occupying the remembered index (or the preceding last key), then the first available key in that scope. If the originating scope is now empty, the caller uses `resolveInitial` on page-root keys to choose an available page default and then the first page target. This preserves the approved nearest, scope-first, page-default order.
+
+The route stack determines where Details returns, so a Details route does not carry a mandatory library ID. This supports both Home-media-to-Details and Library-item-to-Details without parallel route types. Route origins and transient layers carry a `FocusTarget`, not a bare key, so refresh removal can resolve the correct Home row or library-grid scope.
 
 **Step 2: Run RED**
 
@@ -335,7 +364,7 @@ Expected: missing modules.
 
 **Step 3: Implement in-memory stores only**
 
-Do not use browser storage, query strings, media titles, or debug logging. Page code must not import Norigin types through this contract.
+Do not use browser storage, query strings, media titles, or debug logging. Page code must not import Norigin types through this contract. Pause changes are synchronous, idempotent, and observable through `subscribePause`; Task 7 remains the sole adapter that translates them to the Norigin runtime.
 
 **Step 4: Run GREEN and commit**
 
@@ -357,7 +386,7 @@ git commit -m "feat: add global browse focus policy"
 
 **Step 1: Write jsdom component tests**
 
-Start the test with `// @vitest-environment jsdom`. Verify a `Focusable` renders a real button with the supplied stable key, calls `HTMLElement.focus()`, reports focus to Noira policy, invokes `onSelect` on Enter, and does not expose Norigin methods in page props. Add one three-element geometry test that dispatches ArrowRight and observes DOM focus move right.
+Start the test with `// @vitest-environment jsdom`. Verify a `Focusable` renders a real button with the supplied stable key, calls `HTMLElement.focus()`, reports focus plus its ordered scope to Noira policy, invokes `onSelect` on Enter, and does not expose Norigin methods in page props. Add one three-element geometry test that dispatches ArrowRight and observes DOM focus move right. Cover boundary trapping, focused-child unmount, StrictMode effect replay, and synchronous policy pause/resume propagation to the engine.
 
 **Step 2: Run RED**
 
@@ -377,12 +406,13 @@ init({
   layoutAdapter: GetBoundingClientRectAdapter,
   throttle: 100,
   throttleKeypresses: true,
+  focusOnPresetKey: false,
   debug: false,
   visualDebug: false,
 });
 ```
 
-`FocusScope` owns `FocusContext.Provider`, preferred child, last-focused-child behavior, and optional boundaries. `Focusable` is the only component that calls `useFocusable`. Wrap the app in `FocusProvider` from `main.tsx`.
+`FocusScope` owns `FocusContext.Provider`, Noira's explicit preferred target, ordered keys, and optional boundaries. Set Norigin `saveLastFocusedChild: false` and `autoRestoreFocus: false`; Noira policy is the only restore owner. `Focusable` is the only component that calls `useFocusable`. `FocusProvider` subscribes to Noira pause state and calls Norigin `pause()` / `resume()` immediately. Initialize the singleton once and do not destroy it during React StrictMode effect replay. Wrap the app in `FocusProvider` from `main.tsx`.
 
 **Step 4: Run GREEN and commit**
 
@@ -476,13 +506,16 @@ git commit -m "feat: add focus-safe media library grid"
 - Create: `src/NoiraPlayer.Web/src/pages/DetailsPage.tsx`
 - Create: `src/NoiraPlayer.Web/src/pages/DetailsPage.test.tsx`
 - Modify: `src/NoiraPlayer.Web/src/App.tsx`
+- Modify: `src/NoiraPlayer.Web/src/bridge.ts`
+- Modify: `src/NoiraPlayer.Web/src/bridge.test.ts`
+- Modify: `src/NoiraPlayer.Web/src/focus/FocusProvider.tsx`
 - Modify: `src/NoiraPlayer.Web/src/styles.css`
 - Modify: `src/NoiraPlayer.App/MainPage.xaml.cs`
 - Modify: `tests/NoiraPlayer.Core.Tests/Design/ModernUwpSolutionContractTests.cs`
 
 **Step 1: Write failing details tests**
 
-Verify Play/Resume default DOM focus, exact native playback payload, Backdrop/Thumb/Banner/Primary atmosphere order, graphite no-art fallback, Escape restoration to the library origin, and policy pause before native playback. Add a source-contract expectation that `MainPage` uses `NavigationCacheMode.Required` so normal playback Back returns to the same WebView DOM and in-memory focus state.
+Verify Play/Resume default DOM focus, exact native playback payload, Backdrop/Thumb/Banner/Primary atmosphere order, graphite no-art fallback, Escape restoration to either its Home-row or library-grid source target, and policy pause before native playback. Verify a rejected playback bridge request resumes Web input immediately. Add a source-contract expectation that `MainPage` uses `NavigationCacheMode.Required` and posts a typed lifecycle-resume event when the cached Web page is navigated back to; the Web bridge routes that event to `FocusProvider`, which resumes the policy and restores Details Play/Resume.
 
 **Step 2: Run RED**
 
@@ -495,13 +528,13 @@ Expected: missing page and cache contract.
 
 **Step 3: Implement details and playback handoff**
 
-Render deterministic left content and one right atmosphere zone. Keep Play/Resume first and do not render unavailable placeholder actions. Remember details focus and pause Web navigation before `playback.nativePlayItem`. Set this in `MainPage` constructor:
+Render deterministic left content and one right atmosphere zone. Keep Play/Resume first and do not render unavailable placeholder actions. Remember details focus and pause Web navigation before `playback.nativePlayItem`; resume immediately if launch fails. Extend the bridge with a typed host lifecycle event that is separate from the request/response pending map. Set this in `MainPage` constructor:
 
 ```csharp
 NavigationCacheMode = NavigationCacheMode.Required;
 ```
 
-This preserves the same WebView for normal Frame navigation into and back from playback. Keep Xbox memory pressure as an explicit hardware validation risk.
+This preserves the same WebView for normal Frame navigation into and back from playback. On native return, emit the lifecycle event only after CoreWebView2 is ready. Keep Xbox memory pressure as an explicit hardware validation risk.
 
 **Step 4: Run GREEN and commit**
 
@@ -510,7 +543,7 @@ npm test --prefix src\NoiraPlayer.Web -- src/pages/DetailsPage.test.tsx
 dotnet test tests\NoiraPlayer.Core.Tests\NoiraPlayer.Core.Tests.csproj --filter FullyQualifiedName~Modern_App_Primary_Shell_Is_WebView2_Hosted_React_Vite_Surface -v minimal
 npm test --prefix src\NoiraPlayer.Web
 npm run typecheck --prefix src\NoiraPlayer.Web
-git add src/NoiraPlayer.Web/src/App.tsx src/NoiraPlayer.Web/src/pages/DetailsPage.tsx src/NoiraPlayer.Web/src/pages/DetailsPage.test.tsx src/NoiraPlayer.Web/src/styles.css src/NoiraPlayer.App/MainPage.xaml.cs tests/NoiraPlayer.Core.Tests/Design/ModernUwpSolutionContractTests.cs
+git add src/NoiraPlayer.Web/src/App.tsx src/NoiraPlayer.Web/src/bridge.ts src/NoiraPlayer.Web/src/bridge.test.ts src/NoiraPlayer.Web/src/focus/FocusProvider.tsx src/NoiraPlayer.Web/src/pages/DetailsPage.tsx src/NoiraPlayer.Web/src/pages/DetailsPage.test.tsx src/NoiraPlayer.Web/src/styles.css src/NoiraPlayer.App/MainPage.xaml.cs tests/NoiraPlayer.Core.Tests/Design/ModernUwpSolutionContractTests.cs
 git commit -m "feat: add artwork-backed details handoff"
 ```
 
