@@ -2,6 +2,16 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-11 更新：render thread above-normal 候选不采纳
+
+在字幕重同步 accepted baseline 之后，本轮针对 `local/native-headless-av-smoke` 的 audio-ahead 后 render P99/max 尾部尝试了线程级调度候选。Kodi 固定提交 `f0232910490189b97717bc5d309aec2e5751d6d3` 的 Windows 层支持 `THREAD_PRIORITY_ABOVE_NORMAL`，DXVA 路径还会临时提升进程优先级；本项目选择了更窄的 `RenderThreadPriorityScope`，仅在 `PlaybackGraph::RenderLoop` 生命周期内提升当前线程并在退出时恢复。候选提交为隔离分支上的 `4ecb74441baf67cdf61aa784fea4321b7e4766d8`，未合入 accepted 主线。
+
+候选 report-set、三轮 repeat 和 comparison 分别位于 `docs\qa\private\candidates\playback-core-tuning-render-thread-priority-4ecb744-24case.local\`、`docs\qa\private\repeats\playback-core-tuning-render-thread-priority-4ecb744-native-repeat.local\` 和 `docs\qa\private\comparisons\playback-core-tuning-render-thread-priority-4ecb744-24case.local\`。每轮均通过 24/24 validation。自动 comparison 为 24 unchanged、0 improved、0 regressed、0 mixed，24 strong confidence、`no-change / low risk`。
+
+repeat 证据不支持采纳：baseline 与 candidate 都是 21/22 stable，唯一 unstable group 都是 A/V smoke；candidate 的 render P99/max expected-error spread 为 `9.4009ms`，没有改善 baseline 的 `9.3927ms`，render P95 spread 反而从 `0.8821ms` 扩大到 `5.2124ms`，audio-ahead episode oversleep P99 spread 从 `0.5482ms` 扩大到 `3.8839ms`。A/V drift、final delta、seek、字幕和 starvation 没有退化，但目标 tail volatility 未改善且波动面扩大，因此拒绝候选。
+
+正式候选前还筛掉了一个未提交的音频游标插值预实验：它把 audio-ahead pass P95 从约 13 次降到 2 次，但把原始 A/V drift 从 `10ms` 提高到 `16.67ms`，本质上形成额外提前呈现。该试验未进入 full manifest，不得当作可采纳候选。下一步应先补 wait 返回到实际 present 之间的分段延迟证据，区分 OS 恢复延迟、graph mutex/CPU 工作和 audio cursor 量化，而不是继续调整 lead、wait cap、游标外推或线程优先级。
+
 ## 2026-07-11 更新：字幕当前点重同步已用严格证据协议重新验证
 
 本轮废弃此前基于 `27a7c1d` / `fcd194a` 生成的字幕重同步采纳证据，并在修正 seek 落点、native 指标必填校验、原始字段 presence、真实音轨选择观测和字幕切换事务恢复后重新生成报告。旧 report-set 仍可用于追溯，但不得再作为当前采纳依据。

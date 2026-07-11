@@ -1,5 +1,13 @@
 ﻿# 技术决策
 
+## 2026-07-11: 不采纳 render thread above-normal 候选
+
+决策：不把隔离分支提交 `4ecb74441baf67cdf61aa784fea4321b7e4766d8` 合入 accepted 播放 Core。该候选用 RAII 将 `PlaybackGraph::RenderLoop` 临时提升到 `THREAD_PRIORITY_ABOVE_NORMAL`，并保证已有更高优先级不被降低、线程退出后恢复原值。实现参考 Kodi Windows 线程优先级映射和 DXVA 提升调度优先级的原则，但采用线程级而非进程级影响范围。
+
+原因：同一 24-case baseline/candidate comparison 为 24 unchanged、0 regression、24 strong confidence，三轮 repeat 也没有让目标 A/V group 从 unstable 变为 stable。candidate 的 render P99/max spread `9.4009ms` 与 baseline `9.3927ms` 基本相同，render P95 spread 从 `0.8821ms` 扩大到 `5.2124ms`，episode oversleep P99 spread 从 `0.5482ms` 扩大到 `3.8839ms`。这说明提升 render thread 优先级没有解决目标尾部，且增加了常态区间波动；自动 `no-change` 不能被解释成可采纳。
+
+边界：候选报告、三轮 repeat 和 comparison 作为 ignored/private 诊断证据保留，源码只留在隔离分支。此前未提交的音频游标插值预实验也不晋升为候选：虽然减少了短 wait pass，却把 raw A/V drift 从 `10ms` 推高到 `16.67ms`。后续不要重复线程优先级、音频游标外推或简单 lead/cap 调参；应先测量 wait 返回到 present 的恢复/工作分段，再提出结构性调度候选。
+
 ## 2026-07-11: 限定采纳字幕当前点重同步，旧字幕报告由严格证据报告取代
 
 决策：保留 `PlaybackGraph` 的事务化字幕切换和当前播放点 demux 重定位，并把提交 `6b936f98e948d5a9bc055e955b4045d5e94880f3` 作为这项行为的当前 accepted candidate。提交 `32a974dbb081766f3807185b4b019de540f664d9` 是仅移除当前点重同步的隔离控制组。此前 `27a7c1d` / `fcd194a` 的 baseline/candidate/repeat/comparison 因 seek 落点曾回显请求值、缺失指标可能被默认成零、字段 presence 可能被 checks 反向补全而被取代，不再用于采纳判断。
