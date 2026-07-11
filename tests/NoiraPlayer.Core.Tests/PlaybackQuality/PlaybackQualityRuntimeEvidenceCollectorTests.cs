@@ -8,6 +8,91 @@ namespace NoiraPlayer.Core.Tests.PlaybackQuality;
 public sealed class PlaybackQualityRuntimeEvidenceCollectorTests
 {
     [Fact]
+    public void ComposeRunResult_Preserves_Explicit_Native_Execution_Evidence()
+    {
+        var referenceCase = new PlaybackQualityReferenceCase
+        {
+            CaseId = "local/execution-evidence",
+            Uri = "https://example.invalid/execution-evidence.mp4"
+        };
+        referenceCase.Purpose.Add("sdr-smoke");
+        var execution = CreateExecutionEvidence(
+            referenceCase,
+            PlaybackQualityEvidenceLevel.NativePlayback,
+            PlaybackQualityExecutionStatus.Completed);
+
+        var result = PlaybackQualityRuntimeEvidenceCollector.ComposeRunResult(
+            referenceCase,
+            CreateDescriptor(),
+            execution: execution);
+
+        Assert.NotSame(execution, result.Report.Execution);
+        Assert.Equal(execution.AttemptId, result.Report.Execution.AttemptId);
+        Assert.Equal("native-headless", result.Report.Execution.Runner);
+        Assert.Equal(PlaybackQualityEvidenceLevel.NativePlayback, result.Report.Execution.EvidenceLevel);
+        Assert.True(result.Report.Execution.SourceOpenAttempted);
+        Assert.True(result.Report.Execution.PlaybackSampleObserved);
+    }
+
+    [Fact]
+    public void ComposeErrorAndSkipRunResult_Preserve_Explicit_Execution_Attempts()
+    {
+        var referenceCase = new PlaybackQualityReferenceCase
+        {
+            CaseId = "local/execution-outcomes",
+            Uri = "https://example.invalid/execution-outcomes.mp4"
+        };
+        referenceCase.Purpose.Add("error-handling");
+        var failedExecution = CreateExecutionEvidence(
+            referenceCase,
+            PlaybackQualityEvidenceLevel.NativePlayback,
+            PlaybackQualityExecutionStatus.Failed);
+        failedExecution.SourceOpened = false;
+        failedExecution.NativeGraphOpened = false;
+        failedExecution.DemuxStarted = false;
+        failedExecution.DecoderOpened = false;
+        failedExecution.PlaybackSampleObserved = false;
+        failedExecution.OpenedSourceHash = "";
+
+        var errorResult = PlaybackQualityRuntimeEvidenceCollector.ComposeErrorRunResult(
+            referenceCase,
+            new PlaybackQualityError
+            {
+                Code = "source.open.failed",
+                Message = "Source open failed.",
+                FailureClass = PlaybackQualityFailureClassification.EnvironmentIssue,
+                FailureArea = "error-handling"
+            },
+            execution: failedExecution);
+        var skippedExecution = CreateExecutionEvidence(
+            referenceCase,
+            PlaybackQualityEvidenceLevel.Orchestration,
+            PlaybackQualityExecutionStatus.Skipped);
+        skippedExecution.SourceOpenAttempted = false;
+        skippedExecution.SourceOpened = false;
+        skippedExecution.NativeGraphOpened = false;
+        skippedExecution.DemuxStarted = false;
+        skippedExecution.DecoderOpened = false;
+        skippedExecution.PlaybackSampleObserved = false;
+        skippedExecution.OpenedSourceHash = "";
+        var skipResult = PlaybackQualityRuntimeEvidenceCollector.ComposeSkipRunResult(
+            referenceCase,
+            new PlaybackQualitySkip
+            {
+                Code = "runner.not-available",
+                Reason = "Runner is unavailable.",
+                FailureClass = PlaybackQualityFailureClassification.InsufficientInstrumentation,
+                FailureArea = "evidence-collection"
+            },
+            execution: skippedExecution);
+
+        Assert.Equal(PlaybackQualityExecutionStatus.Failed, errorResult.Report.Execution.Status);
+        Assert.True(errorResult.Report.Execution.SourceOpenAttempted);
+        Assert.Equal(PlaybackQualityExecutionStatus.Skipped, skipResult.Report.Execution.Status);
+        Assert.Equal(PlaybackQualityEvidenceLevel.Orchestration, skipResult.Report.Execution.EvidenceLevel);
+    }
+
+    [Fact]
     public void ComposeSkipRunResult_Reports_Structured_Skip_Without_Playback_Telemetry_Noise()
     {
         var referenceCase = new PlaybackQualityReferenceCase
@@ -406,6 +491,30 @@ public sealed class PlaybackQualityRuntimeEvidenceCollectorTests
             new[] { source },
             startPositionTicks: 0,
             audioStreamIndex: 1);
+    }
+
+    private static PlaybackQualityExecutionEvidence CreateExecutionEvidence(
+        PlaybackQualityReferenceCase referenceCase,
+        string evidenceLevel,
+        string status)
+    {
+        return new PlaybackQualityExecutionEvidence
+        {
+            AttemptId = "attempt-1",
+            Runner = "native-headless",
+            EvidenceLevel = evidenceLevel,
+            Status = status,
+            SourceLocatorHash = PlaybackQualitySourceFingerprint.Compute(referenceCase.Uri),
+            OpenedSourceHash = PlaybackQualitySourceFingerprint.Compute(referenceCase.Uri),
+            StartedAtUtc = "2026-07-11T00:00:00Z",
+            DurationMs = 5000,
+            SourceOpenAttempted = true,
+            SourceOpened = true,
+            NativeGraphOpened = true,
+            DemuxStarted = true,
+            DecoderOpened = true,
+            PlaybackSampleObserved = true
+        };
     }
 
     private sealed class RuntimeEvidenceBackend :

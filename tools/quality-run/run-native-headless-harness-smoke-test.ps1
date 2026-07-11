@@ -1136,6 +1136,9 @@ if ($report.report.result -eq 'skip') {
       "severity": "high",
       "stability": "stable",
       "uri": "$sampleUrl",
+      "executionRequirement": {
+        "minimumEvidenceLevel": "native-playback"
+      },
       "purpose": [
         "sdr-smoke",
         "frame-pacing"
@@ -1178,13 +1181,16 @@ dotnet run --project (Join-Path $repoRoot 'tools\NoiraPlayer.PlaybackQuality.Cli
     --manifest $manifestPath `
     --reports-dir $materializedDir `
     --output $validationPath
-if ($LASTEXITCODE -ne 0) {
-    throw 'Expected materialized native-headless report-set to pass validation.'
+if ($LASTEXITCODE -eq 0) {
+    throw 'A stable native-playback case must not accept an orchestration-only skip report.'
 }
 
 $validation = Get-Content -LiteralPath $validationPath -Raw | ConvertFrom-Json
-if ($validation.isValid -ne $true -or $validation.matchedCaseCount -ne 1) {
-    throw 'Expected materialized native-headless validation to match the captured case.'
+if ($validation.isValid -ne $false -or
+    $validation.executionValid -ne $false -or
+    $validation.matchedCaseCount -ne 0 -or
+    -not (@($validation.errors.code) -contains 'report.execution.evidence-level.insufficient')) {
+    throw 'Expected strict validation to reject the orchestration-only stable skip report.'
 }
 
 dotnet run --project (Join-Path $repoRoot 'tools\NoiraPlayer.PlaybackQuality.Cli\NoiraPlayer.PlaybackQuality.Cli.csproj') -- `
@@ -1239,6 +1245,21 @@ if (-not (Test-Path $nativeReportPath)) {
 }
 
 $nativeReport = Get-Content -LiteralPath $nativeReportPath -Raw | ConvertFrom-Json
+if ([string]::IsNullOrWhiteSpace($nativeReport.report.execution.attemptId) -or
+    $nativeReport.report.execution.runner -ne 'native-headless' -or
+    $nativeReport.report.execution.evidenceLevel -ne 'native-playback' -or
+    $nativeReport.report.execution.status -ne 'completed' -or
+    [string]::IsNullOrWhiteSpace($nativeReport.report.execution.sourceLocatorHash) -or
+    [string]::IsNullOrWhiteSpace($nativeReport.report.execution.openedSourceHash) -or
+    $nativeReport.report.execution.sourceOpenAttempted -ne $true -or
+    $nativeReport.report.execution.sourceOpened -ne $true -or
+    $nativeReport.report.execution.nativeGraphOpened -ne $true -or
+    $nativeReport.report.execution.demuxStarted -ne $true -or
+    $nativeReport.report.execution.decoderOpened -ne $true -or
+    $nativeReport.report.execution.playbackSampleObserved -ne $true) {
+    throw 'Expected native helper report to carry complete native-playback execution provenance.'
+}
+
 if ($nativeReport.report.runtimeMetrics.providerStatus -ne 'native-headless:returned-snapshot') {
     throw 'Expected native helper report to carry native-headless runtime metrics evidence.'
 }

@@ -57,12 +57,12 @@
 - Consumes: Task 1 execution DTO
 - Produces: `orchestration`、`native-playback`、`app-hosted` execution evidence
 
-- [ ] 写失败测试：core-probe 报告必须标记 orchestration 且所有媒体执行阶段为 false。
-- [ ] 写失败测试：native helper 成功报告必须带 source hash、native graph/demux/decoder/sample evidence。
-- [ ] 写失败测试：native helper 非零退出仍必须保留 attempt 和 failed execution evidence。
-- [ ] 实现 producer 映射，不从 expected 推断执行状态。
-- [ ] 运行 Core 和 native-headless parser/smoke tests。
-- [ ] 提交 `feat: capture playback execution provenance`。
+- [x] 写失败测试：core-probe 报告必须标记 orchestration 且所有媒体执行阶段为 false。
+- [x] 写失败测试：native helper 成功报告必须带 source hash、native graph/demux/decoder/sample evidence。
+- [x] 写失败测试：native helper 非零退出仍必须保留 attempt 和 failed execution evidence。
+- [x] 实现 producer 映射，不从 expected 推断执行状态。
+- [x] 运行 Core 和 native-headless parser/smoke tests，并编译 Modern App x64 Debug。
+- [x] 提交 `feat: capture playback execution provenance`。
 
 ### Task 3: 建立逐 case 的 manifest native runner
 

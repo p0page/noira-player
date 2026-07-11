@@ -74,6 +74,36 @@ namespace NoiraPlayer.Core.PlaybackQuality
         public bool PlaybackSampleObserved { get; set; }
     }
 
+    public static class PlaybackQualityExecutionEvidenceFactory
+    {
+        public static PlaybackQualityExecutionEvidence Clone(
+            PlaybackQualityExecutionEvidence? source)
+        {
+            if (source == null)
+            {
+                return new PlaybackQualityExecutionEvidence();
+            }
+
+            return new PlaybackQualityExecutionEvidence
+            {
+                AttemptId = source.AttemptId,
+                Runner = source.Runner,
+                EvidenceLevel = source.EvidenceLevel,
+                Status = source.Status,
+                SourceLocatorHash = source.SourceLocatorHash,
+                OpenedSourceHash = source.OpenedSourceHash,
+                StartedAtUtc = source.StartedAtUtc,
+                DurationMs = source.DurationMs,
+                SourceOpenAttempted = source.SourceOpenAttempted,
+                SourceOpened = source.SourceOpened,
+                NativeGraphOpened = source.NativeGraphOpened,
+                DemuxStarted = source.DemuxStarted,
+                DecoderOpened = source.DecoderOpened,
+                PlaybackSampleObserved = source.PlaybackSampleObserved
+            };
+        }
+    }
+
     public sealed class PlaybackQualityExecutionCoverage
     {
         public int DeclaredCaseCount { get; set; }

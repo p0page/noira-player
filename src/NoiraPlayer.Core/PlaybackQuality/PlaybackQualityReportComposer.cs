@@ -25,6 +25,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
 
         public PlaybackQualityEnvironment? Environment { get; set; }
 
+        public PlaybackQualityExecutionEvidence? Execution { get; set; }
+
         public PlaybackQualityExpected? Expected { get; set; }
 
         public bool ForceSdrOutput { get; set; }
@@ -96,7 +98,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
             var report = new PlaybackQualityReport
             {
                 RunId = request.RunId ?? "",
-                Expected = expected
+                Expected = expected,
+                Execution = PlaybackQualityExecutionEvidenceFactory.Clone(request.Execution)
             };
 
             if (request.Descriptor != null)

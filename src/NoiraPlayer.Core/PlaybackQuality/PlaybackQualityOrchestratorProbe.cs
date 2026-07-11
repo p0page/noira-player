@@ -19,6 +19,9 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 throw new ArgumentNullException(nameof(referenceCase));
             }
 
+            var executionStartedAt = DateTimeOffset.UtcNow;
+            var attemptId = Guid.NewGuid().ToString("N");
+
             if (HasPurpose(referenceCase, "error-handling"))
             {
                 var errorResult = PlaybackQualityRuntimeEvidenceCollector.ComposeErrorRunResult(
@@ -34,7 +37,12 @@ namespace NoiraPlayer.Core.PlaybackQuality
                         IsTerminal = true,
                         IsRetriable = false
                     },
-                    environment);
+                    environment,
+                    CreateProbeExecution(
+                        referenceCase,
+                        attemptId,
+                        executionStartedAt,
+                        PlaybackQualityExecutionStatus.Failed));
                 AddProbeLimitations(errorResult.Report.Limitations);
                 return new PlaybackQualityRunResult(
                     errorResult.Report,
@@ -161,7 +169,12 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 backend,
                 backend,
                 CreateStartup(),
-                environment);
+                environment,
+                execution: CreateProbeExecution(
+                    referenceCase,
+                    attemptId,
+                    executionStartedAt,
+                    PlaybackQualityExecutionStatus.Completed));
             request.Lifecycle = lifecycle;
 
             var composed = PlaybackQualityReportComposer.Compose(request);
@@ -181,6 +194,30 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 report,
                 PlaybackQualityReportAnalyzer.Analyze(report),
                 composed.CaseMetadata);
+        }
+
+        private static PlaybackQualityExecutionEvidence CreateProbeExecution(
+            PlaybackQualityReferenceCase referenceCase,
+            string attemptId,
+            DateTimeOffset startedAt,
+            string status)
+        {
+            return new PlaybackQualityExecutionEvidence
+            {
+                AttemptId = attemptId,
+                Runner = "core-probe",
+                EvidenceLevel = PlaybackQualityEvidenceLevel.Orchestration,
+                Status = status,
+                SourceLocatorHash = PlaybackQualitySourceFingerprint.Compute(referenceCase.Uri),
+                StartedAtUtc = startedAt.ToString("O"),
+                DurationMs = Math.Max(0, (DateTimeOffset.UtcNow - startedAt).TotalMilliseconds),
+                SourceOpenAttempted = false,
+                SourceOpened = false,
+                NativeGraphOpened = false,
+                DemuxStarted = false,
+                DecoderOpened = false,
+                PlaybackSampleObserved = false
+            };
         }
 
         private static EmbyMediaSource CreateMediaSource(

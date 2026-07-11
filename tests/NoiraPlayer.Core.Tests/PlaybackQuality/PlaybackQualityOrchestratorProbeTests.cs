@@ -83,6 +83,19 @@ public sealed class PlaybackQualityOrchestratorProbeTests
         Assert.Equal(0, result.Report.Position.SeekPositionErrorMs);
         Assert.True(result.Report.Startup.StartupDurationMs > 0);
         Assert.Equal("core-probe:returned-snapshot", result.Report.RuntimeMetrics.ProviderStatus);
+        Assert.False(string.IsNullOrWhiteSpace(result.Report.Execution.AttemptId));
+        Assert.Equal("core-probe", result.Report.Execution.Runner);
+        Assert.Equal(PlaybackQualityEvidenceLevel.Orchestration, result.Report.Execution.EvidenceLevel);
+        Assert.Equal(PlaybackQualityExecutionStatus.Completed, result.Report.Execution.Status);
+        Assert.Equal(
+            PlaybackQualitySourceFingerprint.Compute(referenceCase.Uri),
+            result.Report.Execution.SourceLocatorHash);
+        Assert.False(result.Report.Execution.SourceOpenAttempted);
+        Assert.False(result.Report.Execution.SourceOpened);
+        Assert.False(result.Report.Execution.NativeGraphOpened);
+        Assert.False(result.Report.Execution.DemuxStarted);
+        Assert.False(result.Report.Execution.DecoderOpened);
+        Assert.False(result.Report.Execution.PlaybackSampleObserved);
         Assert.Equal("core-probe:returned-snapshot", result.ModelAnalysis.RuntimeMetrics.ProviderStatus);
         Assert.True(result.Report.Timing.RenderedVideoFrames >= 120);
         Assert.Equal(1, result.Report.Tracks.VideoTrackCount);

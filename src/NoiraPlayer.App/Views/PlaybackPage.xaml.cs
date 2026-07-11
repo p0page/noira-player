@@ -1309,6 +1309,12 @@ namespace NoiraPlayer.App.Views
                     PlayerCoreVersion = "NoiraPlayer.Core",
                     BuildConfiguration = "Debug"
                 };
+                var execution = CreateAppHostedExecutionEvidence(
+                    referenceCase,
+                    request.QualityCommandReceivedAtUtc,
+                    PlaybackQualityExecutionStatus.Completed,
+                    sourceOpened: true,
+                    evidence.MetricsProvider);
 
                 var result = PlaybackQualityRuntimeEvidenceCollector.ComposeRunResult(
                     referenceCase,
@@ -1318,7 +1324,8 @@ namespace NoiraPlayer.App.Views
                     startup,
                     environment,
                     lifecycle,
-                    position);
+                    position,
+                    execution);
                 var relativePath = await WriteQualityRunReportAsync(request.QualityRunId, result);
                 await WriteQualityRunCommandResultAsync("captured", relativePath);
                 await PlaybackDiagnosticsLog.WriteLineAsync(
@@ -1753,7 +1760,13 @@ namespace NoiraPlayer.App.Views
                         CollectorVersion = "app-hosted-quality-run-v0.1",
                         PlayerCoreVersion = "NoiraPlayer.Core",
                         BuildConfiguration = "Debug"
-                    });
+                    },
+                    CreateAppHostedExecutionEvidence(
+                        referenceCase,
+                        request.QualityCommandReceivedAtUtc,
+                        PlaybackQualityExecutionStatus.Failed,
+                        _orchestrator.CurrentDescriptor != null,
+                        metricsProvider: null));
                 var relativePath = await WriteQualityRunReportAsync(request.QualityRunId, result);
                 await WriteQualityRunCommandResultAsync("capture-error", relativePath);
             }
@@ -1765,6 +1778,48 @@ namespace NoiraPlayer.App.Views
                     " " +
                     writeException.Message);
             }
+        }
+
+        private static PlaybackQualityExecutionEvidence CreateAppHostedExecutionEvidence(
+            PlaybackQualityReferenceCase referenceCase,
+            DateTimeOffset startedAt,
+            string status,
+            bool sourceOpened,
+            IPlaybackQualityMetricsProvider? metricsProvider)
+        {
+            var decodedVideoFrames = 0UL;
+            var renderedVideoFrames = 0UL;
+            if (metricsProvider != null &&
+                metricsProvider.TryGetQualityMetrics(out var metrics) &&
+                metrics != null)
+            {
+                decodedVideoFrames = metrics.DecodedVideoFrames;
+                renderedVideoFrames = metrics.RenderedVideoFrames;
+            }
+
+            var decoderOpened = decodedVideoFrames > 0;
+            var playbackSampleObserved = decoderOpened && renderedVideoFrames > 0;
+            var locatorHash = PlaybackQualitySourceFingerprint.Compute(referenceCase.Uri);
+            var sourceOpenAttempted =
+                status == PlaybackQualityExecutionStatus.Completed || sourceOpened;
+
+            return new PlaybackQualityExecutionEvidence
+            {
+                AttemptId = Guid.NewGuid().ToString("N"),
+                Runner = "app-hosted",
+                EvidenceLevel = PlaybackQualityEvidenceLevel.AppHosted,
+                Status = status,
+                SourceLocatorHash = locatorHash,
+                OpenedSourceHash = sourceOpened ? locatorHash : "",
+                StartedAtUtc = startedAt.ToString("O"),
+                DurationMs = Math.Max(0, (DateTimeOffset.UtcNow - startedAt).TotalMilliseconds),
+                SourceOpenAttempted = sourceOpenAttempted,
+                SourceOpened = sourceOpened,
+                NativeGraphOpened = sourceOpened,
+                DemuxStarted = sourceOpened,
+                DecoderOpened = decoderOpened,
+                PlaybackSampleObserved = playbackSampleObserved
+            };
         }
 
         private static async Task<StorageFolder> EnsureQualityRunFolderPathAsync(

@@ -13,7 +13,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
             PlaybackQualityStartup? startup = null,
             PlaybackQualityEnvironment? environment = null,
             PlaybackQualityLifecycle? lifecycle = null,
-            PlaybackQualityPosition? position = null)
+            PlaybackQualityPosition? position = null,
+            PlaybackQualityExecutionEvidence? execution = null)
         {
             if (referenceCase == null)
             {
@@ -55,6 +56,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
             request.Lifecycle = lifecycle;
             request.Position = position;
             request.Environment = environment;
+            request.Execution = execution;
             return request;
         }
 
@@ -79,7 +81,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
             PlaybackQualityStartup? startup = null,
             PlaybackQualityEnvironment? environment = null,
             PlaybackQualityLifecycle? lifecycle = null,
-            PlaybackQualityPosition? position = null)
+            PlaybackQualityPosition? position = null,
+            PlaybackQualityExecutionEvidence? execution = null)
         {
             return PlaybackQualityReportComposer.Compose(
                 CreateRequest(
@@ -90,13 +93,15 @@ namespace NoiraPlayer.Core.PlaybackQuality
                     startup,
                     environment,
                     lifecycle,
-                    position));
+                    position,
+                    execution));
         }
 
         public static PlaybackQualityRunResult ComposeErrorRunResult(
             PlaybackQualityReferenceCase referenceCase,
             PlaybackQualityError error,
-            PlaybackQualityEnvironment? environment = null)
+            PlaybackQualityEnvironment? environment = null,
+            PlaybackQualityExecutionEvidence? execution = null)
         {
             if (referenceCase == null)
             {
@@ -113,6 +118,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 RunId = referenceCase.CaseId ?? "",
                 Expected = CloneExpected(referenceCase.Expected),
                 Environment = MergeEnvironment(environment),
+                Execution = PlaybackQualityExecutionEvidenceFactory.Clone(execution),
                 Result = "error",
                 Error = CloneError(error)
             };
@@ -165,7 +171,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
         public static PlaybackQualityRunResult ComposeSkipRunResult(
             PlaybackQualityReferenceCase referenceCase,
             PlaybackQualitySkip skip,
-            PlaybackQualityEnvironment? environment = null)
+            PlaybackQualityEnvironment? environment = null,
+            PlaybackQualityExecutionEvidence? execution = null)
         {
             if (referenceCase == null)
             {
@@ -182,6 +189,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 RunId = referenceCase.CaseId ?? "",
                 Expected = CloneExpected(referenceCase.Expected),
                 Environment = MergeEnvironment(environment),
+                Execution = PlaybackQualityExecutionEvidenceFactory.Clone(execution),
                 Result = "skip",
                 Skip = CloneSkip(skip)
             };

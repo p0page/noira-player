@@ -26,6 +26,8 @@ internal static class NativeHeadlessHarness
 
     public static NativeHeadlessHarnessResult Run(NativeHeadlessHarnessOptions options)
     {
+        var executionStartedAt = DateTimeOffset.UtcNow;
+        var attemptId = Guid.NewGuid().ToString("N");
         var referenceCase = PlaybackQualityCaptureReferenceCaseFactory.Create(
             options.CaseId,
             itemId: "",
@@ -63,7 +65,19 @@ internal static class NativeHeadlessHarness
                 PlayerCoreVersion = GetPlayerCoreVersion(),
                 SourceRevision = GetSourceRevision(),
                 BuildConfiguration = GetBuildConfiguration()
-            });
+            },
+            CreateExecutionEvidence(
+                options,
+                attemptId,
+                executionStartedAt,
+                PlaybackQualityEvidenceLevel.Orchestration,
+                PlaybackQualityExecutionStatus.Skipped,
+                sourceOpenAttempted: false,
+                sourceOpened: false,
+                nativeGraphOpened: false,
+                demuxStarted: false,
+                decoderOpened: false,
+                playbackSampleObserved: false));
 
         if (!runResult.Report.Limitations.Contains(NativeWinRtLinkageLimitation))
         {
@@ -87,6 +101,7 @@ internal static class NativeHeadlessHarness
         PlaybackQualityReferenceCase referenceCase)
     {
         var commandReceivedAt = DateTimeOffset.UtcNow;
+        var attemptId = Guid.NewGuid().ToString("N");
         var helper = RunHelperProcess(options);
         var playbackStartedAt = DateTimeOffset.UtcNow;
         var reportPath = GetReportPath(options.ReportsDir, options.CaseId);
@@ -107,7 +122,19 @@ internal static class NativeHeadlessHarness
                     IsTerminal = true,
                     IsRetriable = true
                 },
-                CreateEnvironment());
+                CreateEnvironment(),
+                CreateExecutionEvidence(
+                    options,
+                    attemptId,
+                    commandReceivedAt,
+                    PlaybackQualityEvidenceLevel.NativePlayback,
+                    PlaybackQualityExecutionStatus.Failed,
+                    sourceOpenAttempted: true,
+                    sourceOpened: false,
+                    nativeGraphOpened: false,
+                    demuxStarted: false,
+                    decoderOpened: false,
+                    playbackSampleObserved: false));
             File.WriteAllText(reportPath, PlaybackQualityReportSerializer.Serialize(errorResult));
             return new NativeHeadlessHarnessResult(reportPath, 1);
         }
@@ -183,7 +210,20 @@ internal static class NativeHeadlessHarness
                 SeekPositionErrorMs = helper.Seek.Attempted && helper.Seek.ActualPositionTicks.HasValue
                     ? Math.Abs(helper.Seek.ActualPositionTicks.Value - helper.Seek.TargetPositionTicks) / 10000.0
                     : null
-            });
+            },
+            CreateExecutionEvidence(
+                options,
+                attemptId,
+                commandReceivedAt,
+                PlaybackQualityEvidenceLevel.NativePlayback,
+                PlaybackQualityExecutionStatus.Completed,
+                sourceOpenAttempted: true,
+                sourceOpened: true,
+                nativeGraphOpened: true,
+                demuxStarted: true,
+                decoderOpened: helper.Metrics.DecodedVideoFrames > 0,
+                playbackSampleObserved: helper.Metrics.DecodedVideoFrames > 0 &&
+                    helper.Metrics.RenderedVideoFrames > 0));
         if (request.RuntimeMetrics != null)
         {
             request.RuntimeMetrics.ProcessWallClockMs = helper.ProcessWallClockMs;
@@ -208,6 +248,40 @@ internal static class NativeHeadlessHarness
 
         File.WriteAllText(reportPath, PlaybackQualityReportSerializer.Serialize(runResult));
         return new NativeHeadlessHarnessResult(reportPath, 0);
+    }
+
+    private static PlaybackQualityExecutionEvidence CreateExecutionEvidence(
+        NativeHeadlessHarnessOptions options,
+        string attemptId,
+        DateTimeOffset startedAt,
+        string evidenceLevel,
+        string status,
+        bool sourceOpenAttempted,
+        bool sourceOpened,
+        bool nativeGraphOpened,
+        bool demuxStarted,
+        bool decoderOpened,
+        bool playbackSampleObserved)
+    {
+        return new PlaybackQualityExecutionEvidence
+        {
+            AttemptId = attemptId,
+            Runner = "native-headless",
+            EvidenceLevel = evidenceLevel,
+            Status = status,
+            SourceLocatorHash = options.SourceLocatorHash,
+            OpenedSourceHash = sourceOpenAttempted
+                ? PlaybackQualitySourceFingerprint.Compute(options.StreamUrl)
+                : "",
+            StartedAtUtc = startedAt.ToString("O"),
+            DurationMs = Math.Max(0, (DateTimeOffset.UtcNow - startedAt).TotalMilliseconds),
+            SourceOpenAttempted = sourceOpenAttempted,
+            SourceOpened = sourceOpened,
+            NativeGraphOpened = nativeGraphOpened,
+            DemuxStarted = demuxStarted,
+            DecoderOpened = decoderOpened,
+            PlaybackSampleObserved = playbackSampleObserved
+        };
     }
 
     private static NativeHeadlessHelperResult RunHelperProcess(NativeHeadlessHarnessOptions options)
@@ -1307,6 +1381,7 @@ internal sealed class NativeHeadlessHarnessOptions
 {
     public string CaseId { get; private set; } = "";
     public string StreamUrl { get; private set; } = "";
+    public string SourceLocatorHash { get; private set; } = "";
     public int DurationSeconds { get; private set; } = 5;
     public string ReportsDir { get; private set; } = "";
     public string NativeHelperExe { get; private set; } = "";
@@ -1350,6 +1425,9 @@ internal sealed class NativeHeadlessHarnessOptions
                 case "--stream-url":
                     options.StreamUrl = value.Trim();
                     break;
+                case "--source-locator-hash":
+                    options.SourceLocatorHash = value.Trim();
+                    break;
                 case "--duration-seconds":
                     if (!int.TryParse(value, out var durationSeconds) || durationSeconds <= 0)
                     {
@@ -1387,6 +1465,19 @@ internal sealed class NativeHeadlessHarnessOptions
         if (string.IsNullOrWhiteSpace(options.ReportsDir))
         {
             error = "--reports-dir is required.";
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(options.SourceLocatorHash))
+        {
+            options.SourceLocatorHash = PlaybackQualitySourceFingerprint.Compute(options.StreamUrl);
+        }
+        else if (!System.Text.RegularExpressions.Regex.IsMatch(
+            options.SourceLocatorHash,
+            "^sha256:[0-9a-f]{64}$",
+            System.Text.RegularExpressions.RegexOptions.CultureInvariant))
+        {
+            error = "--source-locator-hash must be a lowercase SHA-256 fingerprint.";
             return false;
         }
 
