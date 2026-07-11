@@ -36,6 +36,7 @@ export interface NoiraFocusScopeController {
   attachRegistry(listener: ScopeRegistrationListener | null): void;
   getEnabledKeys(orderedKeys?: readonly string[]): readonly string[];
   getSnapshot(): number;
+  hasFocusKey(focusKey: string): boolean;
   registerChild(focusKey: string, enabled: boolean): () => void;
   setChildEnabled(focusKey: string, enabled: boolean): void;
   setOrderedKeys(orderedKeys: readonly string[]): void;
@@ -56,6 +57,7 @@ interface NoiraFocusRestoreRequest {
 }
 
 export interface NoiraFocusRegistry {
+  canHandoffDomFocus(focusKey: string, owner: object): boolean;
   claimFocusKey(focusKey: string, owner: object): () => void;
   hasValidCurrentTarget(): boolean;
   registerScope(controller: NoiraFocusScopeController): () => void;
@@ -169,6 +171,10 @@ class NoiraFocusScopeControllerImpl implements NoiraFocusScopeController {
 
   getSnapshot = (): number => this.version;
 
+  hasFocusKey(focusKey: string): boolean {
+    return this.children.has(focusKey) || this.orderedKeys.includes(focusKey);
+  }
+
   registerChild(focusKey: string, enabled: boolean): () => void {
     assertNonBlankKey(focusKey, 'focusKey');
     if (this.children.has(focusKey)) {
@@ -251,6 +257,7 @@ class NoiraFocusRegistryImpl implements NoiraFocusRegistry {
   private focusOperation = 0;
   private explicitRequestVersion = 0;
   private initialRequestPending = false;
+  private pendingExplicitFocusKey: string | null = null;
   private pendingExplicitOperation: number | null = null;
   private repairOriginScopeKey: string | null = null;
   private repairScheduled = false;
@@ -261,6 +268,18 @@ class NoiraFocusRegistryImpl implements NoiraFocusRegistry {
 
   setPolicy(policy: FocusNavigationPolicy): void {
     this.policy = policy;
+  }
+
+  canHandoffDomFocus(focusKey: string, owner: object): boolean {
+    const ownership = this.focusKeyOwners.get(focusKey);
+    return (
+      ownership?.owner === owner &&
+      getCurrentFocusKey() === focusKey &&
+      doesFocusableExist(focusKey) &&
+      this.isEnabledTarget(focusKey) &&
+      (this.pendingExplicitOperation === null ||
+        this.pendingExplicitFocusKey === focusKey)
+    );
   }
 
   claimFocusKey(focusKey: string, owner: object): () => void {
@@ -337,9 +356,16 @@ class NoiraFocusRegistryImpl implements NoiraFocusRegistry {
         return;
       }
 
+      const currentFocusKey = getCurrentFocusKey();
+      const shouldRepair = this.scopeContainsFocusKey(
+        controller,
+        currentFocusKey,
+      );
       this.scopes.delete(controller.scopeKey);
       controller.attachRegistry(null);
-      this.scheduleRepair(controller.scopeKey);
+      if (shouldRepair) {
+        this.scheduleRepair(controller.scopeKey);
+      }
     };
   }
 
@@ -375,9 +401,11 @@ class NoiraFocusRegistryImpl implements NoiraFocusRegistry {
 
     this.explicitRequestVersion += 1;
     const operation = ++this.focusOperation;
+    this.pendingExplicitFocusKey = targetFocusKey;
     this.pendingExplicitOperation = operation;
     this.enqueueFocus(operation, targetFocusKey, true, () => {
       if (this.pendingExplicitOperation === operation) {
+        this.pendingExplicitFocusKey = null;
         this.pendingExplicitOperation = null;
       }
     });
@@ -436,9 +464,46 @@ class NoiraFocusRegistryImpl implements NoiraFocusRegistry {
       return;
     }
 
-    if (focusKey === getCurrentFocusKey() || !this.hasValidCurrentTarget()) {
-      this.scheduleRepair(controller.scopeKey);
+    const currentFocusKey = getCurrentFocusKey();
+    if (!currentFocusKey) {
+      return;
     }
+
+    const currentBelongsToScope =
+      this.scopeContainsFocusKey(controller, currentFocusKey) ||
+      focusKey === currentFocusKey;
+    if (
+      !currentBelongsToScope ||
+      this.isValidControllerTarget(controller, currentFocusKey)
+    ) {
+      return;
+    }
+
+    this.scheduleRepair(controller.scopeKey);
+  }
+
+  private scopeContainsFocusKey(
+    controller: NoiraFocusScopeController,
+    focusKey: string | null,
+  ): boolean {
+    return (
+      typeof focusKey === 'string' &&
+      focusKey.length > 0 &&
+      (focusKey === controller.scopeKey || controller.hasFocusKey(focusKey))
+    );
+  }
+
+  private isValidControllerTarget(
+    controller: NoiraFocusScopeController,
+    focusKey: string | null,
+  ): boolean {
+    if (!focusKey || !doesFocusableExist(focusKey)) {
+      return false;
+    }
+
+    return focusKey === controller.scopeKey
+      ? controller.getEnabledKeys().length > 0
+      : controller.getEnabledKeys().includes(focusKey);
   }
 
   private scheduleRepair(originScopeKey: string | null = null): void {

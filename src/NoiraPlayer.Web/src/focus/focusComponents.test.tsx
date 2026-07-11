@@ -26,6 +26,7 @@ import { createFocusNavigationPolicy } from './focusPolicy';
 type SpatialNavigationInternals = {
   debug: boolean;
   enabled: boolean;
+  focusKey: string;
   focusableComponents: Record<
     string,
     {
@@ -94,6 +95,36 @@ describe('FocusProvider', () => {
       spatialNavigation.focusableComponents['strict-focus-anonymous']
         ?.parentFocusKey,
     ).toBe('strict-scope-anonymous');
+  });
+
+  it('preserves a later pending default through StrictMode registration replay', async () => {
+    spatialNavigation.focusKey = '';
+
+    render(
+      <StrictMode>
+        <FocusProvider>
+          <FocusScope
+            scopeKey="strict-guide-scope-anonymous"
+            orderedKeys={['strict-guide-focus-anonymous']}
+          >
+            <Focusable focusKey="strict-guide-focus-anonymous" onSelect={() => undefined}>
+              Strict guide
+            </Focusable>
+          </FocusScope>
+          <FocusScope
+            scopeKey="strict-media-scope-anonymous"
+            orderedKeys={['strict-media-focus-anonymous']}
+            defaultFocusKey="strict-media-focus-anonymous"
+          >
+            <Focusable focusKey="strict-media-focus-anonymous" onSelect={() => undefined}>
+              Strict media
+            </Focusable>
+          </FocusScope>
+        </FocusProvider>
+      </StrictMode>,
+    );
+
+    await expectEngineFocus('strict-media-focus-anonymous', 'Strict media');
   });
 
   it('propagates policy pause and resume synchronously to the real engine', async () => {
@@ -380,6 +411,8 @@ describe('global focus-key ownership', () => {
       expect(spatialNavigation.focusableComponents[sharedFocusKey]?.parentFocusKey)
         .toBe('duplicate-child-first-scope-anonymous');
     });
+    await updateLayoutsAndFocus(sharedFocusKey);
+    expect(document.activeElement).toBe(firstButton);
     const addFocusable = vi.spyOn(SpatialNavigation, 'addFocusable');
 
     view.rerender(renderTree(true));
@@ -398,8 +431,6 @@ describe('global focus-key ownership', () => {
           registration.parentFocusKey === 'duplicate-child-second-scope-anonymous',
       ),
     ).toBe(false);
-
-    await updateLayoutsAndFocus(sharedFocusKey);
     expect(document.activeElement).toBe(firstButton);
   });
 
@@ -508,6 +539,181 @@ describe('global focus-key ownership', () => {
         doesFocusableExist('child-scope-collision-nested-focus-anonymous'),
       ).toBe(false);
     });
+  });
+});
+
+describe('focused owner handoff', () => {
+  it('restores DOM focus to a keyed-remounted child with the same engine key', async () => {
+    const policy = createFocusNavigationPolicy();
+    const remember = vi.spyOn(policy, 'remember');
+    const focusKey = 'child-handoff-focus-anonymous';
+    const renderTree = (instance: number) => (
+      <FocusProvider policy={policy}>
+        <FocusScope
+          scopeKey="child-handoff-scope-anonymous"
+          orderedKeys={[focusKey]}
+          defaultFocusKey={focusKey}
+        >
+          <Focusable key={instance} focusKey={focusKey} onSelect={() => undefined}>
+            Child handoff {instance}
+          </Focusable>
+        </FocusScope>
+      </FocusProvider>
+    );
+    const view = render(renderTree(1));
+    const originalButton = screen.getByRole('button', { name: 'Child handoff 1' });
+
+    await expectEngineFocus(focusKey, 'Child handoff 1');
+    remember.mockClear();
+
+    view.rerender(renderTree(2));
+    const replacementButton = screen.getByRole('button', { name: 'Child handoff 2' });
+    expect(replacementButton).not.toBe(originalButton);
+
+    await expectEngineFocus(focusKey, 'Child handoff 2');
+    expect(remember).not.toHaveBeenCalled();
+  });
+
+  it('restores DOM focus when a whole scope remounts with stable engine identities', async () => {
+    const focusKey = 'scope-handoff-focus-anonymous';
+    const renderTree = (instance: number) => (
+      <FocusProvider>
+        <FocusScope
+          key={instance}
+          scopeKey="scope-handoff-scope-anonymous"
+          orderedKeys={[focusKey]}
+          defaultFocusKey={focusKey}
+        >
+          <Focusable focusKey={focusKey} onSelect={() => undefined}>
+            Scope handoff {instance}
+          </Focusable>
+        </FocusScope>
+      </FocusProvider>
+    );
+    const view = render(renderTree(1));
+    const originalButton = screen.getByRole('button', { name: 'Scope handoff 1' });
+
+    await expectEngineFocus(focusKey, 'Scope handoff 1');
+
+    view.rerender(renderTree(2));
+    const replacementButton = screen.getByRole('button', { name: 'Scope handoff 2' });
+    expect(replacementButton).not.toBe(originalButton);
+
+    await expectEngineFocus(focusKey, 'Scope handoff 2');
+  });
+
+  it('does not restore a remounted child when its key is no longer current', async () => {
+    const sourceKey = 'noncurrent-handoff-source-anonymous';
+    const destinationKey = 'noncurrent-handoff-destination-anonymous';
+    const renderTree = (instance: number) => (
+      <FocusProvider>
+        <FocusScope
+          scopeKey="noncurrent-handoff-scope-anonymous"
+          orderedKeys={[sourceKey, destinationKey]}
+          defaultFocusKey={sourceKey}
+        >
+          <Focusable key={instance} focusKey={sourceKey} onSelect={() => undefined}>
+            Noncurrent source {instance}
+          </Focusable>
+          <Focusable focusKey={destinationKey} onSelect={() => undefined}>
+            Noncurrent destination
+          </Focusable>
+        </FocusScope>
+      </FocusProvider>
+    );
+    const view = render(renderTree(1));
+
+    await expectEngineFocus(sourceKey, 'Noncurrent source 1');
+    await updateLayoutsAndFocus(destinationKey);
+    const destination = screen.getByRole('button', {
+      name: 'Noncurrent destination',
+    });
+    const focusTargets: EventTarget[] = [];
+    const onFocusIn = (event: FocusEvent) => focusTargets.push(event.target!);
+    document.addEventListener('focusin', onFocusIn);
+
+    try {
+      view.rerender(renderTree(2));
+      const replacement = screen.getByRole('button', { name: 'Noncurrent source 2' });
+      await settleFocusWork();
+
+      expect(getCurrentFocusKey()).toBe(destinationKey);
+      expect(document.activeElement).toBe(destination);
+      expect(focusTargets).not.toContain(replacement);
+    } finally {
+      document.removeEventListener('focusin', onFocusIn);
+    }
+  });
+
+  it('does not restore a keyed-remounted child that is disabled', async () => {
+    const focusKey = 'disabled-handoff-focus-anonymous';
+    const renderTree = (instance: number, disabled: boolean) => (
+      <FocusProvider>
+        <FocusScope
+          scopeKey="disabled-handoff-scope-anonymous"
+          orderedKeys={[focusKey]}
+          defaultFocusKey={focusKey}
+        >
+          <Focusable
+            key={instance}
+            disabled={disabled}
+            focusKey={focusKey}
+            onSelect={() => undefined}
+          >
+            Disabled handoff {instance}
+          </Focusable>
+        </FocusScope>
+      </FocusProvider>
+    );
+    const view = render(renderTree(1, false));
+
+    await expectEngineFocus(focusKey, 'Disabled handoff 1');
+    view.rerender(renderTree(2, true));
+    const replacement = screen.getByRole('button', { name: 'Disabled handoff 2' });
+    await settleFocusWork();
+
+    expect(getCurrentFocusKey()).toBe(focusKey);
+    expect((replacement as HTMLButtonElement).disabled).toBe(true);
+    expect(document.activeElement).toBe(document.body);
+  });
+
+  it('does not restore a stale key over a newer explicit restore request', async () => {
+    const sourceKey = 'explicit-handoff-source-anonymous';
+    const destinationKey = 'explicit-handoff-destination-anonymous';
+    const renderTree = (instance: number, restoreRequestId?: string) => (
+      <FocusProvider>
+        <FocusScope
+          scopeKey="explicit-handoff-scope-anonymous"
+          orderedKeys={[sourceKey, destinationKey]}
+          defaultFocusKey={sourceKey}
+          restoreFocusKey={restoreRequestId ? destinationKey : undefined}
+          restoreRequestId={restoreRequestId}
+        >
+          <Focusable key={instance} focusKey={sourceKey} onSelect={() => undefined}>
+            Explicit source {instance}
+          </Focusable>
+          <Focusable focusKey={destinationKey} onSelect={() => undefined}>
+            Explicit destination
+          </Focusable>
+        </FocusScope>
+      </FocusProvider>
+    );
+    const view = render(renderTree(1));
+
+    await expectEngineFocus(sourceKey, 'Explicit source 1');
+    const focusTargets: EventTarget[] = [];
+    const onFocusIn = (event: FocusEvent) => focusTargets.push(event.target!);
+    document.addEventListener('focusin', onFocusIn);
+
+    try {
+      view.rerender(renderTree(2, 'session-a:explicit-handoff-1'));
+      const replacement = screen.getByRole('button', { name: 'Explicit source 2' });
+
+      await expectEngineFocus(destinationKey, 'Explicit destination');
+      expect(focusTargets).not.toContain(replacement);
+    } finally {
+      document.removeEventListener('focusin', onFocusIn);
+    }
   });
 });
 

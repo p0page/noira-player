@@ -10,6 +10,7 @@ import {
   useNoiraFocusRegistry,
   useNoiraFocusScope,
 } from './FocusProvider';
+import type { NoiraFocusRegistry } from './FocusProvider';
 
 export type NoiraFocusDirection = 'down' | 'left' | 'right' | 'up';
 
@@ -111,6 +112,8 @@ export function Focusable(props: FocusableProps) {
       onEngineFocus={() =>
         policy.remember(scope.scopeKey, focusKey, scope.orderedKeys)
       }
+      owner={owner}
+      registry={registry}
     />
   ) : null;
 }
@@ -122,15 +125,46 @@ function FocusableButton({
   focusKey,
   onEngineFocus,
   onSelect,
+  owner,
+  registry,
   type = 'button',
   ...buttonProps
-}: FocusableProps & { onEngineFocus: () => void }) {
+}: FocusableProps & {
+  onEngineFocus: () => void;
+  owner: object;
+  registry: NoiraFocusRegistry;
+}) {
   const registration = useNoiraFocusable<HTMLButtonElement>({
     focusKey,
     focusable: !disabled,
     onEnter: onSelect,
     onFocus: onEngineFocus,
   });
+
+  useEffect(() => {
+    if (disabled) {
+      return;
+    }
+
+    let cancelled = false;
+    queueMicrotask(() => {
+      const node = registration.ref.current;
+      if (
+        cancelled ||
+        !node ||
+        document.activeElement === node ||
+        !registry.canHandoffDomFocus(focusKey, owner)
+      ) {
+        return;
+      }
+
+      node.focus();
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [disabled, focusKey, owner, registration.ref, registry]);
 
   return (
     <button
