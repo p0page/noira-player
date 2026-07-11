@@ -13,8 +13,9 @@ public sealed class LoginAccessibilitySourceTests
         var mainPageSource = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.App", "MainPage.xaml.cs"));
         var loginPageSource = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.App", "Views", "LoginPage.xaml.cs"));
 
-        Assert.Contains("pageType == typeof(LoginPage)", mainPageSource);
-        Assert.Contains("ShellContentMode.Login", mainPageSource);
+        Assert.DoesNotContain("pageType == typeof(LoginPage)", mainPageSource);
+        Assert.DoesNotContain("ShellContentMode.Login", mainPageSource);
+        Assert.DoesNotContain("NavigateLogin()", mainPageSource);
         Assert.Contains("Page, ITvContentFocusTarget", loginPageSource);
         Assert.Contains("public bool FocusDefaultContent()", loginPageSource);
         Assert.Contains("FocusFailedLoginField();", loginPageSource);

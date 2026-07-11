@@ -24,6 +24,14 @@ extern "C"
 namespace
 {
     using SteadyClock = std::chrono::steady_clock;
+    constexpr int64_t OpenTimeoutMilliseconds = 30'000;
+    constexpr int64_t ReadTimeoutMilliseconds = 20'000;
+
+    int64_t SteadyClockNanoseconds() noexcept
+    {
+        return std::chrono::duration_cast<std::chrono::nanoseconds>(
+            SteadyClock::now().time_since_epoch()).count();
+    }
 
     int64_t ElapsedMilliseconds(SteadyClock::time_point startedAt) noexcept
     {
@@ -281,6 +289,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         input.Open(url);
 
         Close();
+        m_interruptRequested.store(false, std::memory_order_release);
 
         auto networkResult = avformat_network_init();
         if (networkResult < 0)
@@ -288,7 +297,14 @@ namespace winrt::NoiraPlayer::Native::implementation
             throw CreateFfmpegError("avformat_network_init", networkResult);
         }
 
-        AVFormatContext* formatContext = nullptr;
+        AVFormatContext* formatContext = avformat_alloc_context();
+        if (formatContext == nullptr)
+        {
+            throw winrt::hresult_error(E_OUTOFMEMORY, L"Could not allocate FFmpeg format context.");
+        }
+
+        formatContext->interrupt_callback.callback = &FfmpegMediaSource::InterruptCallback;
+        formatContext->interrupt_callback.opaque = this;
         try
         {
             auto source = ConvertFileUriToLocalPath(winrt::to_string(url));
@@ -296,6 +312,7 @@ namespace winrt::NoiraPlayer::Native::implementation
             AppendNativePlaybackDiagnostic(
                 L"FfmpegMediaSource.Open avformat_open_input begin sourceLength=" +
                 std::to_wstring(source.size()));
+            BeginBlockingIo(OpenTimeoutMilliseconds);
             auto result = avformat_open_input(&formatContext, source.c_str(), nullptr, nullptr);
             if (result < 0)
             {
@@ -315,6 +332,7 @@ namespace winrt::NoiraPlayer::Native::implementation
             AppendNativePlaybackDiagnostic(
                 L"FfmpegMediaSource.Open avformat_find_stream_info begin streamCountBefore=" +
                 std::to_wstring(formatContext == nullptr ? 0 : formatContext->nb_streams));
+            BeginBlockingIo(OpenTimeoutMilliseconds);
             result = avformat_find_stream_info(formatContext, nullptr);
             if (result < 0)
             {
@@ -382,6 +400,7 @@ namespace winrt::NoiraPlayer::Native::implementation
 
     void FfmpegMediaSource::Close() noexcept
     {
+        Interrupt();
         ClearPacketQueues();
         m_activeStreams.clear();
 
@@ -392,7 +411,39 @@ namespace winrt::NoiraPlayer::Native::implementation
 
         m_url.clear();
         m_avformatVersion = 0;
+        m_ioDeadlineNanoseconds.store(0, std::memory_order_release);
         m_open = false;
+    }
+
+    void FfmpegMediaSource::Interrupt() noexcept
+    {
+        m_interruptRequested.store(true, std::memory_order_release);
+    }
+
+    int FfmpegMediaSource::InterruptCallback(void* opaque) noexcept
+    {
+        auto source = static_cast<FfmpegMediaSource*>(opaque);
+        if (source == nullptr)
+        {
+            return 0;
+        }
+
+        if (source->m_interruptRequested.load(std::memory_order_acquire))
+        {
+            return 1;
+        }
+
+        auto deadline = source->m_ioDeadlineNanoseconds.load(std::memory_order_acquire);
+        return deadline > 0 && SteadyClockNanoseconds() >= deadline ? 1 : 0;
+    }
+
+    void FfmpegMediaSource::BeginBlockingIo(int64_t timeoutMilliseconds) noexcept
+    {
+        auto timeout = std::chrono::duration_cast<std::chrono::nanoseconds>(
+            std::chrono::milliseconds((std::max<int64_t>)(1, timeoutMilliseconds))).count();
+        m_ioDeadlineNanoseconds.store(
+            SteadyClockNanoseconds() + timeout,
+            std::memory_order_release);
     }
 
     std::optional<int32_t> FfmpegMediaSource::TryFindStream(
@@ -576,8 +627,15 @@ namespace winrt::NoiraPlayer::Native::implementation
         try
         {
             int readResult = 0;
-            while ((readResult = av_read_frame(m_formatContext, scratchPacket)) >= 0)
+            while (true)
             {
+                BeginBlockingIo(ReadTimeoutMilliseconds);
+                readResult = av_read_frame(m_formatContext, scratchPacket);
+                if (readResult < 0)
+                {
+                    break;
+                }
+
                 if (scratchPacket->stream_index == streamIndex)
                 {
                     av_packet_move_ref(packet, scratchPacket);
@@ -626,6 +684,7 @@ namespace winrt::NoiraPlayer::Native::implementation
             return;
         }
 
+        BeginBlockingIo(ReadTimeoutMilliseconds);
         auto result = av_seek_frame(m_formatContext, streamIndex, timestamp, AVSEEK_FLAG_BACKWARD);
         if (result < 0)
         {

@@ -12,6 +12,10 @@ namespace NoiraPlayer.App
 {
     public sealed partial class App : Application
     {
+#if DEBUG
+        private UiThreadResponsivenessWatchdog? _uiResponsivenessWatchdog;
+#endif
+
         public App()
         {
             UnhandledException += App_OnUnhandledException;
@@ -62,6 +66,15 @@ namespace NoiraPlayer.App
                 }
 
                 Window.Current.Activate();
+#if DEBUG
+                if (_uiResponsivenessWatchdog == null)
+                {
+                    _uiResponsivenessWatchdog = new UiThreadResponsivenessWatchdog(
+                        Window.Current.Dispatcher,
+                        Path.Combine(ApplicationData.Current.LocalFolder.Path, UiThreadResponsivenessWatchdog.FileName));
+                    _uiResponsivenessWatchdog.Start();
+                }
+#endif
                 WriteStartupDiagnostic("App.OnLaunched completed");
             }
             catch (Exception ex)

@@ -39,6 +39,34 @@ public sealed class NativePlaybackGraphDecouplingContractTests
     }
 
     [Fact]
+    public void Native_Playback_Commands_Leave_The_Calling_Apartment_Before_Graph_Work()
+    {
+        var root = FindRepositoryRoot();
+        var engineSource = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Native", "NativePlaybackEngine.cpp"));
+        var methodNames = new[]
+        {
+            "OpenAsync",
+            "PauseAsync",
+            "ResumeAsync",
+            "SeekAsync",
+            "StopAsync",
+            "SwitchAudioStreamAsync",
+            "SwitchSubtitleStreamAsync",
+            "DisableSubtitlesAsync"
+        };
+
+        foreach (var methodName in methodNames)
+        {
+            var body = ReadMethodBody(engineSource, "NativePlaybackEngine::" + methodName);
+            var resumeIndex = body.IndexOf("co_await winrt::resume_background();", StringComparison.Ordinal);
+            var graphCallIndex = body.IndexOf("m_graph->", StringComparison.Ordinal);
+
+            Assert.True(resumeIndex >= 0, methodName + " must explicitly leave the UI apartment.");
+            Assert.True(graphCallIndex > resumeIndex, methodName + " must leave the UI apartment before graph work.");
+        }
+    }
+
+    [Fact]
     public void Native_Seek_Evidence_Uses_First_Presented_Frame_From_Current_Generation()
     {
         var root = FindRepositoryRoot();
@@ -141,6 +169,76 @@ public sealed class NativePlaybackGraphDecouplingContractTests
         Assert.Contains("completedAudioAheadWaitEndedAt = waitEndedAt;", graphSource, StringComparison.Ordinal);
         Assert.Contains("m_qualityMetrics.RecordAudioAheadWaitEndToPresentMs(endToPresentMs);", graphSource, StringComparison.Ordinal);
         Assert.Contains("m_lastAudioAheadWaitEndedAt.reset();", graphSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Playback_Position_Read_Uses_A_Lock_Free_Snapshot()
+    {
+        var root = FindRepositoryRoot();
+        var graphHeader = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Native", "Media", "PlaybackGraph.h"));
+        var graphSource = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Native", "Media", "PlaybackGraph.cpp"));
+        var body = ReadMethodBody(graphSource, "PlaybackGraph::CurrentPositionTicks");
+
+        Assert.Contains("#include <atomic>", graphHeader, StringComparison.Ordinal);
+        Assert.Contains("std::atomic<int64_t> m_positionSnapshotTicks", graphHeader, StringComparison.Ordinal);
+        Assert.Contains("m_positionSnapshotTicks.load", body, StringComparison.Ordinal);
+        Assert.DoesNotContain("m_graphMutex", body, StringComparison.Ordinal);
+        Assert.DoesNotContain("m_audioRenderer", body, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void View_Bound_Display_Lookup_Is_Separated_From_Background_Mode_Changes()
+    {
+        var root = FindRepositoryRoot();
+        var engineSource = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Native", "NativePlaybackEngine.cpp"));
+        var hdrHeader = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Native", "HdrDisplayController.h"));
+        var hdrSource = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Native", "HdrDisplayController.cpp"));
+        var probeBody = ReadMethodBody(hdrSource, "HdrDisplayController::Probe");
+        var enterBody = ReadMethodBody(hdrSource, "HdrDisplayController::EnterHdr10");
+        var applyBody = ReadMethodBody(hdrSource, "HdrDisplayController::Apply");
+        var restoreBody = ReadMethodBody(hdrSource, "HdrDisplayController::RestoreInitialState");
+        var stopBody = ReadMethodBody(engineSource, "NativePlaybackEngine::StopAsync");
+
+        Assert.Contains("HdmiDisplayInformation m_hdmi", hdrHeader, StringComparison.Ordinal);
+        Assert.Contains("DisplayInformation::GetForCurrentView()", probeBody, StringComparison.Ordinal);
+        Assert.Contains("HdmiDisplayInformation::GetForCurrentView()", probeBody, StringComparison.Ordinal);
+        Assert.Contains("m_hdmi = hdmi;", probeBody, StringComparison.Ordinal);
+        Assert.Contains("auto hdmi = m_hdmi;", applyBody, StringComparison.Ordinal);
+        Assert.DoesNotContain("GetForCurrentView", applyBody, StringComparison.Ordinal);
+        Assert.DoesNotContain("Probe()", enterBody, StringComparison.Ordinal);
+        Assert.DoesNotContain("Probe()", restoreBody, StringComparison.Ordinal);
+
+        var resumeBackgroundIndex = stopBody.IndexOf("co_await winrt::resume_background();", StringComparison.Ordinal);
+        var restoreDisplayIndex = stopBody.IndexOf("m_hdr.RestoreInitialState()", StringComparison.Ordinal);
+        Assert.True(restoreDisplayIndex > resumeBackgroundIndex, "Display restoration must use the cached agile HDMI object off the UI apartment.");
+    }
+
+    private static string ReadMethodBody(string source, string methodName)
+    {
+        var signatureIndex = source.IndexOf(methodName, StringComparison.Ordinal);
+        Assert.True(signatureIndex >= 0, "Method was not found: " + methodName);
+
+        var openBraceIndex = source.IndexOf('{', signatureIndex);
+        Assert.True(openBraceIndex >= 0, "Method body was not found: " + methodName);
+
+        var depth = 0;
+        for (var index = openBraceIndex; index < source.Length; index++)
+        {
+            if (source[index] == '{')
+            {
+                depth++;
+            }
+            else if (source[index] == '}')
+            {
+                depth--;
+                if (depth == 0)
+                {
+                    return source.Substring(openBraceIndex, index - openBraceIndex + 1);
+                }
+            }
+        }
+
+        throw new InvalidDataException("Method body was not terminated: " + methodName);
     }
 
     private static string FindRepositoryRoot()

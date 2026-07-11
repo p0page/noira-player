@@ -38,7 +38,7 @@
                         return PlaybackOverlayInputAction.ConfirmSeekPreview;
                     }
 
-                    return moreVisible
+                    return moreVisible || overlayVisible
                         ? PlaybackOverlayInputAction.ActivateFocusedControl
                         : PlaybackOverlayInputAction.ShowOverlay;
 
@@ -64,7 +64,9 @@
                     return PlaybackOverlayInputAction.ShowMore;
 
                 case PlaybackOverlayShortcut.Pointer:
-                    return PlaybackOverlayInputAction.ShowOverlay;
+                    return overlayVisible
+                        ? PlaybackOverlayInputAction.None
+                        : PlaybackOverlayInputAction.ShowOverlay;
 
                 default:
                     return PlaybackOverlayInputAction.None;
@@ -94,7 +96,8 @@
             PlaybackOverlayShortcut shortcut,
             bool seekPreviewActive,
             bool moreVisible,
-            bool moreDrawerComboBoxOpen)
+            bool moreDrawerComboBoxOpen,
+            bool overlayVisible = false)
         {
             if (moreDrawerComboBoxOpen)
             {
@@ -105,6 +108,11 @@
             {
                 return shortcut == PlaybackOverlayShortcut.Accept ||
                     shortcut == PlaybackOverlayShortcut.Cancel;
+            }
+
+            if (overlayVisible && !moreVisible && shortcut == PlaybackOverlayShortcut.Accept)
+            {
+                return true;
             }
 
             return moreVisible && shortcut == PlaybackOverlayShortcut.Cancel;

@@ -5,7 +5,6 @@
     Background="{StaticResource AppPlaybackCanvasBrush}">
     <Grid
         Background="{StaticResource AppPlaybackCanvasBrush}"
-        KeyDown="Page_OnKeyDown"
         PointerPressed="Page_OnPointerPressed">
         <MediaPlayerElement
             x:Name="PlayerElement"

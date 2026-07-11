@@ -18,11 +18,12 @@ public sealed class ShellGuideAccessibilitySourceTests
         Assert.Contains("guide_focus_fill:", design);
         Assert.Contains("AppGuideFocusFillColor", appXaml);
         Assert.Contains("AppGuideFocusFillBrush", appXaml);
-        Assert.Contains("<Setter Property=\"UseSystemFocusVisuals\" Value=\"False\" />", mainPageXaml);
-        Assert.Contains("button.Background = (Brush)resources[isActive ? \"AppGuideFocusFillBrush\" : \"AppTransparentBrush\"];", mainPageSource);
-        Assert.Contains("button.BorderBrush = (Brush)resources[\"AppTransparentBrush\"];", mainPageSource);
+        Assert.Contains("<muxc:WebView2", mainPageXaml);
+        Assert.DoesNotContain("GuideRail", mainPageXaml);
+        Assert.DoesNotContain("GuideRail", mainPageSource);
+        Assert.DoesNotContain("GuideButtonStyle", mainPageXaml);
+        Assert.DoesNotContain("RegisterGuideButtonFocusHandlers", mainPageSource);
         Assert.DoesNotContain("AppGuideActiveBorderBrush", mainPageSource);
-        Assert.DoesNotContain("button.BorderBrush = (Brush)resources[isActive ? \"AppAccentBrush\" : \"AppTransparentBrush\"];", mainPageSource);
     }
 
     private static string FindRepositoryRoot()

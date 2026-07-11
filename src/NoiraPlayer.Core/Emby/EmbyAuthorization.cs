@@ -3,23 +3,34 @@ using System.Net.Http.Headers;
 
 namespace NoiraPlayer.Core.Emby
 {
-    internal static class EmbyAuthorization
+    public static class EmbyAuthorization
     {
+        public static string CreateHeaderValue(EmbyClientOptions options, EmbySession? session = null)
+        {
+            return "Emby " + CreateHeaderParameter(options, session);
+        }
+
         public static void Apply(HttpRequestMessage request, EmbyClientOptions options, EmbySession? session = null)
         {
-            var userId = session?.UserId;
             var accessToken = session?.AccessToken;
-            var value = string.IsNullOrWhiteSpace(userId)
-                ? FormatClientIdentity(options)
-                : $"UserId=\"{userId}\", {FormatClientIdentity(options)}";
 
-            request.Headers.Authorization = new AuthenticationHeaderValue("Emby", value);
+            request.Headers.Authorization = new AuthenticationHeaderValue(
+                "Emby",
+                CreateHeaderParameter(options, session));
             request.Headers.Remove("X-Emby-Token");
 
             if (!string.IsNullOrWhiteSpace(accessToken))
             {
                 request.Headers.Add("X-Emby-Token", accessToken);
             }
+        }
+
+        private static string CreateHeaderParameter(EmbyClientOptions options, EmbySession? session)
+        {
+            var userId = session?.UserId;
+            return string.IsNullOrWhiteSpace(userId)
+                ? FormatClientIdentity(options)
+                : $"UserId=\"{userId}\", {FormatClientIdentity(options)}";
         }
 
         private static string FormatClientIdentity(EmbyClientOptions options)

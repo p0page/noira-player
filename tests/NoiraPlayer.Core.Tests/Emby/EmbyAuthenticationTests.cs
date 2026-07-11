@@ -10,6 +10,29 @@ namespace NoiraPlayer.Core.Tests.Emby;
 public sealed class EmbyAuthenticationTests
 {
     [Fact]
+    public void CreateHeaderValue_Uses_The_Same_Authenticated_Identity_The_Web_Client_Needs()
+    {
+        var options = new EmbyClientOptions
+        {
+            ClientName = "Noira",
+            ClientVersion = "0.1.0",
+            DeviceName = "Xbox",
+            DeviceId = "device-42"
+        };
+        var session = new EmbySession
+        {
+            UserId = "user-7",
+            AccessToken = "token-123"
+        };
+
+        var value = EmbyAuthorization.CreateHeaderValue(options, session);
+
+        Assert.Equal(
+            "Emby UserId=\"user-7\", Client=\"Noira\", Device=\"Xbox\", DeviceId=\"device-42\", Version=\"0.1.0\"",
+            value);
+    }
+
+    [Fact]
     public async Task AuthenticateAsync_Posts_Credentials_And_Returns_Session()
     {
         var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(

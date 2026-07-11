@@ -13,6 +13,7 @@
 #include "VideoRenderer.h"
 
 #include <chrono>
+#include <atomic>
 #include <condition_variable>
 #include <functional>
 #include <mutex>
@@ -122,6 +123,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         std::optional<DecodedVideoFrame> m_pendingVideoFrame;
         winrt::hstring m_url;
         int64_t m_positionTicks{0};
+        std::atomic<int64_t> m_positionSnapshotTicks{0};
         double m_preferredVideoFrameRate{0.0};
         bool m_hasSeenVideoFrameColor{false};
         bool m_requestedHdrOutput{false};

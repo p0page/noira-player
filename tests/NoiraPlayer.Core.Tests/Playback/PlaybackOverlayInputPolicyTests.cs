@@ -46,6 +46,22 @@ public sealed class PlaybackOverlayInputPolicyTests
     }
 
     [Fact]
+    public void Accept_Activates_Focused_Transport_Control_When_Overlay_Is_Open()
+    {
+        var action = PlaybackOverlayInputPolicy.Decide(PlaybackOverlayShortcut.Accept, seekPreviewActive: false, moreVisible: false, overlayVisible: true);
+
+        Assert.Equal(PlaybackOverlayInputAction.ActivateFocusedControl, action);
+    }
+
+    [Fact]
+    public void Pointer_Does_Not_Refocus_An_Already_Visible_Overlay()
+    {
+        var action = PlaybackOverlayInputPolicy.Decide(PlaybackOverlayShortcut.Pointer, seekPreviewActive: false, moreVisible: false, overlayVisible: true);
+
+        Assert.Equal(PlaybackOverlayInputAction.None, action);
+    }
+
+    [Fact]
     public void Focused_Controls_Handle_Navigation_When_More_Drawer_Is_Open()
     {
         Assert.True(PlaybackOverlayInputPolicy.ShouldRouteFocusedControlInput(moreVisible: true, seekPreviewActive: false));
@@ -107,6 +123,19 @@ public sealed class PlaybackOverlayInputPolicyTests
             moreDrawerComboBoxOpen: false);
 
         Assert.False(shouldRoute);
+    }
+
+    [Fact]
+    public void Handled_Accept_Routes_To_Transport_When_Overlay_Is_Visible()
+    {
+        var shouldRoute = PlaybackOverlayInputPolicy.ShouldRouteHandledShortcutInput(
+            PlaybackOverlayShortcut.Accept,
+            seekPreviewActive: false,
+            moreVisible: false,
+            moreDrawerComboBoxOpen: false,
+            overlayVisible: true);
+
+        Assert.True(shouldRoute);
     }
 
     [Fact]

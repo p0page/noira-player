@@ -40,3 +40,5 @@ tools/quality-run/private/
 .env.*
 !.env.example
 .codex-remote-attachments/
+src/NoiraPlayer.Web/node_modules/
+src/NoiraPlayer.Web/dist/
