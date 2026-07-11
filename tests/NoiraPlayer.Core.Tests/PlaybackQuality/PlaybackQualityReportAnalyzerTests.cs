@@ -1311,6 +1311,30 @@ public sealed class PlaybackQualityReportAnalyzerTests
     }
 
     [Fact]
+    public void Analyze_Does_Not_Infer_Missing_Timing_Fields_From_Other_Metrics()
+    {
+        var report = CreateOptimizationReadyFailure();
+        report.Timing.DecodedVideoFrames = 120;
+        report.Timing.HardwareDecodedVideoFrames = 120;
+        report.Timing.SoftwareDecodedVideoFrames = 0;
+        report.Timing.AudioAheadWaitPassDurationMsP95 = 8.0;
+        report.Timing.AudioAheadWaitFinalDeltaAbsMsP95 = 12.0;
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(
+            report,
+            new[]
+            {
+                "timing.renderedVideoFrames",
+                "timing.decodedVideoFrames"
+            });
+
+        Assert.DoesNotContain("timing.hardwareDecodedVideoFrames", analysis.EvidenceSignals);
+        Assert.DoesNotContain("timing.softwareDecodedVideoFrames", analysis.EvidenceSignals);
+        Assert.DoesNotContain("timing.audioAheadWaitPassDurationMsP95", analysis.EvidenceSignals);
+        Assert.DoesNotContain("timing.audioAheadWaitFinalDeltaAbsMsP95", analysis.EvidenceSignals);
+    }
+
+    [Fact]
     public void Analyze_Reports_Audio_Ahead_Wait_Duration_Timing_Evidence()
     {
         var report = CreateOptimizationReadyFailure();

@@ -127,6 +127,21 @@ namespace NoiraPlayer.Core.PlaybackQuality
             PlaybackQualityReport candidate,
             PlaybackQualityComparisonContext context)
         {
+            return Compare(
+                baseline,
+                candidate,
+                baselinePresentSignals: null,
+                candidatePresentSignals: null,
+                context);
+        }
+
+        public static PlaybackQualityRunComparison Compare(
+            PlaybackQualityReport baseline,
+            PlaybackQualityReport candidate,
+            IEnumerable<string>? baselinePresentSignals,
+            IEnumerable<string>? candidatePresentSignals,
+            PlaybackQualityComparisonContext context)
+        {
             if (baseline == null)
             {
                 throw new ArgumentNullException(nameof(baseline));
@@ -150,6 +165,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
             };
             comparison.Coverage.BaselineCheckCount = baseline.Checks.Count;
             comparison.Coverage.CandidateCheckCount = candidate.Checks.Count;
+            var baselineSignals = CreateComparisonSignalSet(baseline, baselinePresentSignals);
+            var candidateSignals = CreateComparisonSignalSet(candidate, candidatePresentSignals);
             comparison.Comparability = AssessComparability(baseline, candidate);
             if (comparison.Comparability.Status == "incompatible")
             {
@@ -202,7 +219,12 @@ namespace NoiraPlayer.Core.PlaybackQuality
             AddUnmatchedCandidateSignals(comparison, candidate, matchedKeys);
             AddFramePacingSeverityDeltas(comparison, baseline, candidate);
             AddSeekTimelineEvidenceDeltas(comparison, baseline, candidate);
-            AddRuntimePlaybackEvidenceSignals(comparison, baseline, candidate);
+            AddRuntimePlaybackEvidenceSignals(
+                comparison,
+                baseline,
+                candidate,
+                baselineSignals,
+                candidateSignals);
             AddAudioAheadWaitOversleepDeltas(comparison, baseline, candidate);
             AddTrackAndSubtitleEvidenceDeltas(comparison, baseline, candidate);
 
@@ -1159,215 +1181,70 @@ namespace NoiraPlayer.Core.PlaybackQuality
         private static void AddRuntimePlaybackEvidenceSignals(
             PlaybackQualityRunComparison comparison,
             PlaybackQualityReport baseline,
-            PlaybackQualityReport candidate)
+            PlaybackQualityReport candidate,
+            HashSet<string> baselineSignals,
+            HashSet<string> candidateSignals)
         {
-            if (!HasRuntimePlaybackEvidence(baseline) ||
-                !HasRuntimePlaybackEvidence(candidate))
+            var hasComparableEpisodeSemantics =
+                HasComparableAudioAheadWaitEpisodeSemantics(baseline, candidate);
+            foreach (var descriptor in PlaybackQualitySignalCatalog.ReportSignals)
             {
-                return;
-            }
-
-            if (HasTimingEvidence(baseline) && HasTimingEvidence(candidate))
-            {
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.renderIntervalMsP50");
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.renderIntervalMsP95");
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.renderIntervalMsP99");
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.presentDurationMsP50");
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.presentDurationMsP95");
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.presentDurationMsP99");
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.presentDurationMsMax");
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitDurationMsP50");
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitDurationMsP95");
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitDurationMsP99");
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitDurationMsMax");
-                if (HasComparableAudioAheadWaitEpisodeSemantics(baseline, candidate) ||
-                    (!HasAudioAheadWaitEpisodeMetricEvidence(baseline) &&
-                     !HasAudioAheadWaitEpisodeMetricEvidence(candidate)))
+                var signal = descriptor.Signal;
+                if (!IsRuntimePlaybackSignal(signal) ||
+                    (!hasComparableEpisodeSemantics && IsEpisodeSemanticSignal(signal)))
                 {
-                    AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitTargetMsP50");
-                    AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitTargetMsP95");
-                    AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitTargetMsP99");
-                    AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitTargetMsMax");
-                    AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitOversleepMsP50");
-                    AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitOversleepMsP95");
-                    AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitOversleepMsP99");
-                    AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitOversleepMsMax");
+                    continue;
                 }
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitFinalDeltaAbsMsP50");
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitFinalDeltaAbsMsP95");
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitFinalDeltaAbsMsP99");
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitFinalDeltaAbsMsMax");
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitEpisodeCount");
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitPassesPerEpisodeP50");
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitPassesPerEpisodeP95");
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitPassesPerEpisodeP99");
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitPassesPerEpisodeMax");
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitPassDurationMsP50");
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitPassDurationMsP95");
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitPassDurationMsP99");
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitPassDurationMsMax");
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitPassTargetMsP50");
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitPassTargetMsP95");
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitPassTargetMsP99");
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitPassTargetMsMax");
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitPassOversleepMsP50");
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitPassOversleepMsP95");
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitPassOversleepMsP99");
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitPassOversleepMsMax");
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.renderIntervalAfterAudioAheadWaitSampleCount");
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.renderIntervalAfterAudioAheadWaitMsP95");
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.renderIntervalAfterAudioAheadWaitMsP99");
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.renderIntervalAfterAudioAheadWaitMsMax");
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.renderIntervalAfterNonAudioWaitSampleCount");
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.renderIntervalAfterNonAudioWaitMsP95");
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.renderIntervalAfterNonAudioWaitMsP99");
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.renderIntervalAfterNonAudioWaitMsMax");
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.maxFrameGapMs");
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.renderIntervalSampleCount");
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.renderIntervalOverExpected2MsCount");
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.renderIntervalOverExpected4MsCount");
-                if (HasShortIntervalEvidence(baseline) && HasShortIntervalEvidence(candidate))
-                {
-                    AddUnique(comparison.Coverage.MatchedSignals, "timing.renderIntervalMsP05");
-                    AddUnique(comparison.Coverage.MatchedSignals, "timing.minFrameGapMs");
-                    AddUnique(comparison.Coverage.MatchedSignals, "timing.renderIntervalUnderExpected2MsCount");
-                    AddUnique(comparison.Coverage.MatchedSignals, "timing.renderIntervalUnderExpected4MsCount");
-                }
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.expectedFrameDurationMs");
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.framePacingSourceFrameRate");
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.hardwareDecodedVideoFrames");
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.softwareDecodedVideoFrames");
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.videoAheadWaitCount");
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.audioAheadWaitCount");
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.videoClockWaitCount");
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.droppedVideoFrames");
-                AddUnique(comparison.Coverage.MatchedSignals, "timing.seekPrerollDroppedFrames");
-            }
 
-            if (HasSyncEvidence(baseline) && HasSyncEvidence(candidate))
+                AddSignalPresenceCoverage(
+                    comparison,
+                    signal,
+                    baselineSignals.Contains(signal),
+                    candidateSignals.Contains(signal));
+            }
+        }
+
+        private static HashSet<string> CreateComparisonSignalSet(
+            PlaybackQualityReport report,
+            IEnumerable<string>? presentSignals)
+        {
+            return new HashSet<string>(
+                presentSignals ?? PlaybackQualityReportAnalyzer.Analyze(report).EvidenceSignals,
+                StringComparer.Ordinal);
+        }
+
+        private static bool IsRuntimePlaybackSignal(string signal)
+        {
+            return signal.StartsWith("timing.", StringComparison.Ordinal) ||
+                signal.StartsWith("sync.", StringComparison.Ordinal) ||
+                signal.StartsWith("buffers.", StringComparison.Ordinal) ||
+                signal.StartsWith("runtimeMetrics.", StringComparison.Ordinal);
+        }
+
+        private static bool IsEpisodeSemanticSignal(string signal)
+        {
+            return signal.StartsWith("timing.audioAheadWaitTargetMs", StringComparison.Ordinal) ||
+                signal.StartsWith("timing.audioAheadWaitOversleepMs", StringComparison.Ordinal);
+        }
+
+        private static void AddSignalPresenceCoverage(
+            PlaybackQualityRunComparison comparison,
+            string signal,
+            bool baselinePresent,
+            bool candidatePresent)
+        {
+            if (baselinePresent && candidatePresent)
             {
-                AddUnique(comparison.Coverage.MatchedSignals, "sync.audioClockTicks");
-                AddUnique(comparison.Coverage.MatchedSignals, "sync.videoPositionTicks");
-                AddUnique(comparison.Coverage.MatchedSignals, "sync.audioVideoDriftMsP50");
-                AddUnique(comparison.Coverage.MatchedSignals, "sync.audioVideoDriftMsP95");
-                AddUnique(comparison.Coverage.MatchedSignals, "sync.audioVideoDriftMsP99");
-                AddUnique(comparison.Coverage.MatchedSignals, "sync.audioVideoDriftMsMax");
+                AddUnique(comparison.Coverage.MatchedSignals, signal);
             }
-
-            if (HasBufferingEvidence(baseline) && HasBufferingEvidence(candidate))
+            else if (baselinePresent)
             {
-                AddUnique(comparison.Coverage.MatchedSignals, "buffers.submittedAudioFrames");
-                AddUnique(comparison.Coverage.MatchedSignals, "buffers.queuedAudioBuffers");
-                AddUnique(comparison.Coverage.MatchedSignals, "buffers.videoStarvedPasses");
-                AddUnique(comparison.Coverage.MatchedSignals, "buffers.audioStarvedPasses");
+                AddUnique(comparison.Coverage.UnmatchedBaselineSignals, signal);
             }
-
-            if (HasProcessCostEvidence(baseline) && HasProcessCostEvidence(candidate))
+            else if (candidatePresent)
             {
-                AddUnique(comparison.Coverage.MatchedSignals, "runtimeMetrics.processWallClockMs");
-                AddUnique(comparison.Coverage.MatchedSignals, "runtimeMetrics.processCpuTimeMs");
-                AddUnique(comparison.Coverage.MatchedSignals, "runtimeMetrics.processCpuUtilizationRatio");
+                AddUnique(comparison.Coverage.UnmatchedCandidateSignals, signal);
             }
-        }
-
-        private static bool HasRuntimePlaybackEvidence(PlaybackQualityReport report)
-        {
-            return report.RuntimeMetrics.HasPlaybackSample ||
-                HasTimingEvidence(report) ||
-                HasSyncEvidence(report) ||
-                HasBufferingEvidence(report);
-        }
-
-        private static bool HasShortIntervalEvidence(PlaybackQualityReport report)
-        {
-            return report.Timing.RenderIntervalMsP05 > 0 ||
-                report.Timing.MinFrameGapMs > 0;
-        }
-
-        private static bool HasTimingEvidence(PlaybackQualityReport report)
-        {
-            return report.Timing.RenderedVideoFrames > 0 ||
-                report.Timing.DecodedVideoFrames > 0 ||
-                report.Timing.RenderIntervalMsP05 > 0 ||
-                report.Timing.RenderIntervalMsP50 > 0 ||
-                report.Timing.RenderIntervalMsP95 > 0 ||
-                report.Timing.RenderIntervalMsP99 > 0 ||
-                report.Timing.PresentDurationMsP50 > 0 ||
-                report.Timing.PresentDurationMsP95 > 0 ||
-                report.Timing.PresentDurationMsP99 > 0 ||
-                report.Timing.PresentDurationMsMax > 0 ||
-                report.Timing.AudioAheadWaitDurationMsP50 > 0 ||
-                report.Timing.AudioAheadWaitDurationMsP95 > 0 ||
-                report.Timing.AudioAheadWaitDurationMsP99 > 0 ||
-                report.Timing.AudioAheadWaitDurationMsMax > 0 ||
-                report.Timing.AudioAheadWaitTargetMsP50 > 0 ||
-                report.Timing.AudioAheadWaitTargetMsP95 > 0 ||
-                report.Timing.AudioAheadWaitTargetMsP99 > 0 ||
-                report.Timing.AudioAheadWaitTargetMsMax > 0 ||
-                report.Timing.AudioAheadWaitOversleepMsP50 > 0 ||
-                report.Timing.AudioAheadWaitOversleepMsP95 > 0 ||
-                report.Timing.AudioAheadWaitOversleepMsP99 > 0 ||
-                report.Timing.AudioAheadWaitOversleepMsMax > 0 ||
-                report.Timing.AudioAheadWaitFinalDeltaAbsMsP50 > 0 ||
-                report.Timing.AudioAheadWaitFinalDeltaAbsMsP95 > 0 ||
-                report.Timing.AudioAheadWaitFinalDeltaAbsMsP99 > 0 ||
-                report.Timing.AudioAheadWaitFinalDeltaAbsMsMax > 0 ||
-                report.Timing.AudioAheadWaitEpisodeCount > 0 ||
-                report.Timing.AudioAheadWaitPassesPerEpisodeP50 > 0 ||
-                report.Timing.AudioAheadWaitPassesPerEpisodeP95 > 0 ||
-                report.Timing.AudioAheadWaitPassesPerEpisodeP99 > 0 ||
-                report.Timing.AudioAheadWaitPassesPerEpisodeMax > 0 ||
-                report.Timing.AudioAheadWaitPassDurationMsP50 > 0 ||
-                report.Timing.AudioAheadWaitPassDurationMsP95 > 0 ||
-                report.Timing.AudioAheadWaitPassDurationMsP99 > 0 ||
-                report.Timing.AudioAheadWaitPassDurationMsMax > 0 ||
-                report.Timing.AudioAheadWaitPassTargetMsP50 > 0 ||
-                report.Timing.AudioAheadWaitPassTargetMsP95 > 0 ||
-                report.Timing.AudioAheadWaitPassTargetMsP99 > 0 ||
-                report.Timing.AudioAheadWaitPassTargetMsMax > 0 ||
-                report.Timing.AudioAheadWaitPassOversleepMsP50 > 0 ||
-                report.Timing.AudioAheadWaitPassOversleepMsP95 > 0 ||
-                report.Timing.AudioAheadWaitPassOversleepMsP99 > 0 ||
-                report.Timing.AudioAheadWaitPassOversleepMsMax > 0 ||
-                report.Timing.RenderIntervalAfterAudioAheadWaitSampleCount > 0 ||
-                report.Timing.RenderIntervalAfterAudioAheadWaitMsP95 > 0 ||
-                report.Timing.RenderIntervalAfterAudioAheadWaitMsP99 > 0 ||
-                report.Timing.RenderIntervalAfterAudioAheadWaitMsMax > 0 ||
-                report.Timing.RenderIntervalAfterNonAudioWaitSampleCount > 0 ||
-                report.Timing.RenderIntervalAfterNonAudioWaitMsP95 > 0 ||
-                report.Timing.RenderIntervalAfterNonAudioWaitMsP99 > 0 ||
-                report.Timing.RenderIntervalAfterNonAudioWaitMsMax > 0 ||
-                report.Timing.AudioAheadWaitCount > 0 ||
-                report.Timing.VideoClockWaitCount > 0 ||
-                report.Timing.MinFrameGapMs > 0 ||
-                report.Timing.MaxFrameGapMs > 0 ||
-                report.Timing.ExpectedFrameDurationMs > 0 ||
-                report.Timing.FramePacingSourceFrameRate > 0;
-        }
-
-        private static bool HasSyncEvidence(PlaybackQualityReport report)
-        {
-            return report.Sync.AudioClockTicks > 0 ||
-                report.Sync.VideoPositionTicks > 0 ||
-                report.Sync.AudioVideoDriftMsP50 > 0 ||
-                report.Sync.AudioVideoDriftMsP95 > 0 ||
-                report.Sync.AudioVideoDriftMsP99 > 0 ||
-                report.Sync.AudioVideoDriftMsMax > 0;
-        }
-
-        private static bool HasBufferingEvidence(PlaybackQualityReport report)
-        {
-            return report.Buffers.SubmittedAudioFrames > 0 ||
-                report.Buffers.QueuedAudioBuffers > 0 ||
-                report.Buffers.VideoStarvedPasses > 0 ||
-                report.Buffers.AudioStarvedPasses > 0;
-        }
-
-        private static bool HasProcessCostEvidence(PlaybackQualityReport report)
-        {
-            return report.RuntimeMetrics.ProcessWallClockMs > 0 ||
-                report.RuntimeMetrics.ProcessCpuTimeMs > 0 ||
-                report.RuntimeMetrics.ProcessCpuUtilizationRatio > 0;
         }
 
         private static void AddAudioAheadWaitOversleepDeltas(

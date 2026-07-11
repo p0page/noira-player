@@ -29,6 +29,10 @@ try {
     $noMatchedCandidatePath = Join-Path $tempRoot 'candidate-no-matched-signals.json'
     $noMatchedOutputPath = Join-Path $tempRoot 'comparison-no-matched-signals.json'
     $envelopeOutputPath = Join-Path $tempRoot 'comparison-envelope.json'
+    $presenceBaselinePath = Join-Path $tempRoot 'baseline-presence.json'
+    $presenceCandidatePath = Join-Path $tempRoot 'candidate-presence.json'
+    $presenceComparisonPath = Join-Path $tempRoot 'comparison-presence.json'
+    $presenceAnalysisPath = Join-Path $tempRoot 'analysis-presence.json'
     $suitePath = Join-Path $tempRoot 'suite.json'
     $baselineDir = Join-Path $tempRoot 'baseline-suite'
     $candidateDir = Join-Path $tempRoot 'candidate-suite'
@@ -243,6 +247,22 @@ try {
   "modelAnalysis": {}
 }
 "@ | Set-Content -LiteralPath $candidateEnvelopePath -Encoding UTF8
+
+    $presenceBaseline = Get-Content -Raw -LiteralPath $baselinePath | ConvertFrom-Json
+    $presenceCandidate = Get-Content -Raw -LiteralPath $candidatePath | ConvertFrom-Json
+    foreach ($presenceReport in @($presenceBaseline, $presenceCandidate)) {
+        $presenceReport.timing | Add-Member -NotePropertyName decodedVideoFrames -NotePropertyValue 120 -Force
+        $presenceReport.timing | Add-Member -NotePropertyName hardwareDecodedVideoFrames -NotePropertyValue 120 -Force
+        $presenceReport.timing | Add-Member -NotePropertyName softwareDecodedVideoFrames -NotePropertyValue 0 -Force
+        $presenceReport.timing | Add-Member -NotePropertyName audioAheadWaitPassDurationMsP95 -NotePropertyValue 8.0 -Force
+        $presenceReport.timing | Add-Member -NotePropertyName audioAheadWaitFinalDeltaAbsMsP95 -NotePropertyValue 12.0 -Force
+    }
+    $presenceCandidate.timing.PSObject.Properties.Remove('hardwareDecodedVideoFrames')
+    $presenceCandidate.timing.PSObject.Properties.Remove('softwareDecodedVideoFrames')
+    $presenceCandidate.timing.PSObject.Properties.Remove('audioAheadWaitPassDurationMsP95')
+    $presenceCandidate.timing.PSObject.Properties.Remove('audioAheadWaitFinalDeltaAbsMsP95')
+    $presenceBaseline | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $presenceBaselinePath -Encoding UTF8
+    $presenceCandidate | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $presenceCandidatePath -Encoding UTF8
 
     Push-Location $repoRoot
     try {
@@ -2228,6 +2248,60 @@ try {
 
     if (-not ($comparison.improvements | Where-Object { $_.signal -eq 'timing.maxFrameGapMs' })) {
         throw 'Expected playback quality CLI comparison to include timing.maxFrameGapMs improvement.'
+    }
+
+    Push-Location $repoRoot
+    try {
+        dotnet $cliDll `
+            compare `
+            --baseline $presenceBaselinePath `
+            --candidate $presenceCandidatePath `
+            --output $presenceComparisonPath
+        if ($LASTEXITCODE -ne 0) {
+            throw 'playback quality CLI presence comparison returned a non-zero exit code.'
+        }
+
+        dotnet $cliDll `
+            analyze-report `
+            --report $presenceCandidatePath `
+            --output $presenceAnalysisPath
+        if ($LASTEXITCODE -ne 0) {
+            throw 'playback quality CLI presence analysis returned a non-zero exit code.'
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    $presenceComparison = Get-Content -Raw -LiteralPath $presenceComparisonPath | ConvertFrom-Json
+    $presenceAnalysis = Get-Content -Raw -LiteralPath $presenceAnalysisPath | ConvertFrom-Json
+    $baselineOnlySignals = @(
+        'timing.hardwareDecodedVideoFrames',
+        'timing.softwareDecodedVideoFrames',
+        'timing.audioAheadWaitPassDurationMsP95',
+        'timing.audioAheadWaitFinalDeltaAbsMsP95'
+    )
+    foreach ($signal in $baselineOnlySignals) {
+        if ($presenceComparison.coverage.matchedSignals -contains $signal -or
+            -not ($presenceComparison.coverage.unmatchedBaselineSignals -contains $signal) -or
+            $presenceComparison.improvements.signal -contains $signal -or
+            $presenceComparison.regressions.signal -contains $signal) {
+            throw ("Expected presence comparison to classify $signal as baseline-only evidence without a quality delta. " +
+                "matched=$($presenceComparison.coverage.matchedSignals -contains $signal) " +
+                "baselineOnly=$($presenceComparison.coverage.unmatchedBaselineSignals -contains $signal) " +
+                "improvement=$($presenceComparison.improvements.signal -contains $signal) " +
+                "regression=$($presenceComparison.regressions.signal -contains $signal)")
+        }
+    }
+
+    if ($presenceComparison.confidence.level -ne 'partial' -or
+        -not ($presenceComparison.confidence.reasons -contains 'unmatched comparison signals are present')) {
+        throw 'Expected one-sided runtime signal presence to lower comparison confidence.'
+    }
+
+    if ($presenceAnalysis.evidenceSignals -contains 'timing.hardwareDecodedVideoFrames' -or
+        $presenceAnalysis.evidenceSignals -contains 'timing.softwareDecodedVideoFrames') {
+        throw 'Expected analyzer not to infer missing decode-mode counters from decodedVideoFrames.'
     }
 
     $incompatibleCandidate = Get-Content -Raw -LiteralPath $candidatePath | ConvertFrom-Json

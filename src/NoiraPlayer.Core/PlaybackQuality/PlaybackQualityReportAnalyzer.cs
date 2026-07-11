@@ -1,5 +1,7 @@
 ﻿using System.Collections.Generic;
 
+using System;
+
 namespace NoiraPlayer.Core.PlaybackQuality
 {
     public sealed class PlaybackQualityModelAnalysis
@@ -324,6 +326,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
             analysis.AvSync = AssessAvSync(report);
             analysis.Cadence = AssessCadence(report);
             AddDerivedEvidence(analysis, report);
+            RemoveAbsentCapturedReportSignals(analysis, signalPresence);
             AddMissingEvidence(analysis, report, signalPresence);
             analysis.OptimizationGate = AssessOptimizationGate(analysis);
             analysis.FramePacing = ClassifyFramePacing(analysis, report);
@@ -2465,7 +2468,28 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 }
             }
 
-            if (report.Timing.DecodedVideoFrames > 0)
+            if (report.Timing.RenderIntervalMsP50 > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.renderIntervalMsP50");
+            }
+
+            if (report.Timing.RenderIntervalMsP95 > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.renderIntervalMsP95");
+            }
+
+            if (report.Timing.RenderIntervalMsP99 > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.renderIntervalMsP99");
+            }
+
+            if (report.Timing.MaxFrameGapMs > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.maxFrameGapMs");
+            }
+
+            if (report.Timing.HardwareDecodedVideoFrames > 0 ||
+                report.Timing.SoftwareDecodedVideoFrames > 0)
             {
                 AddUnique(analysis.EvidenceSignals, "timing.hardwareDecodedVideoFrames");
                 AddUnique(analysis.EvidenceSignals, "timing.softwareDecodedVideoFrames");
@@ -2700,19 +2724,36 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 AddUnique(analysis.EvidenceSignals, "timing.videoClockWaitCount");
             }
 
-            if (report.Timing.ExpectedFrameDurationMs <= 0)
+            if (report.Timing.ExpectedFrameDurationMs > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.expectedFrameDurationMs");
+            }
+        }
+
+        private static void RemoveAbsentCapturedReportSignals(
+            PlaybackQualityModelAnalysis analysis,
+            PlaybackQualitySignalPresence signalPresence)
+        {
+            if (!signalPresence.HasCapturedSignals)
             {
                 return;
             }
 
-            foreach (var check in report.Checks)
+            analysis.EvidenceSignals.RemoveAll(signal =>
+                IsReportSignal(signal) && !signalPresence.Has(signal));
+        }
+
+        private static bool IsReportSignal(string signal)
+        {
+            foreach (var descriptor in PlaybackQualitySignalCatalog.ReportSignals)
             {
-                if (check.Status == "fail" && check.FailureArea == "frame-pacing")
+                if (string.Equals(descriptor.Signal, signal, StringComparison.Ordinal))
                 {
-                    AddUnique(analysis.EvidenceSignals, "timing.expectedFrameDurationMs");
-                    return;
+                    return true;
                 }
             }
+
+            return false;
         }
 
         private static PlaybackQualityCheck CloneCheck(PlaybackQualityCheck check)

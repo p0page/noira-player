@@ -104,8 +104,8 @@ internal static class Program
     private static int RunCompare(string[] args)
     {
         var options = ParseCompareOptions(args);
-        var baseline = ReadPlaybackQualityReportForCurrentEvaluation(options.BaselinePath);
-        var candidate = ReadPlaybackQualityReportForCurrentEvaluation(options.CandidatePath);
+        var baseline = ReadPlaybackQualityReportEnvelopeForCurrentEvaluation(options.BaselinePath);
+        var candidate = ReadPlaybackQualityReportEnvelopeForCurrentEvaluation(options.CandidatePath);
         var context = new PlaybackQualityComparisonContext
         {
             StallComparisonCountThreshold = options.StallComparisonCountThreshold
@@ -116,7 +116,12 @@ internal static class Program
             context.PreviousComparisons.Add(ReadJson<PlaybackQualityRunComparison>(previousPath));
         }
 
-        var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate, context);
+        var comparison = PlaybackQualityRunComparator.Compare(
+            baseline.Report,
+            candidate.Report,
+            baseline.PresentSignals,
+            candidate.PresentSignals,
+            context);
         WriteJson(comparison, options.OutputPath);
         return 0;
     }
@@ -213,15 +218,20 @@ internal static class Program
 
         foreach (var pair in reportPairs)
         {
-            var baseline = ReadPlaybackQualityReportForCurrentEvaluation(pair.BaselinePath);
-            var candidate = ReadPlaybackQualityReportForCurrentEvaluation(pair.CandidatePath);
+            var baseline = ReadPlaybackQualityReportEnvelopeForCurrentEvaluation(pair.BaselinePath);
+            var candidate = ReadPlaybackQualityReportEnvelopeForCurrentEvaluation(pair.CandidatePath);
             var context = new PlaybackQualityComparisonContext
             {
                 StallComparisonCountThreshold = options.StallComparisonCountThreshold
             };
             AddPreviousComparisonIfPresent(options, pair, context);
 
-            var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate, context);
+            var comparison = PlaybackQualityRunComparator.Compare(
+                baseline.Report,
+                candidate.Report,
+                baseline.PresentSignals,
+                candidate.PresentSignals,
+                context);
             comparison.CaseId = pair.CaseId;
             comparisons.Add(comparison);
 
@@ -1126,6 +1136,14 @@ internal static class Program
         return report;
     }
 
+    private static PlaybackQualityReportEnvelope ReadPlaybackQualityReportEnvelopeForCurrentEvaluation(
+        string path)
+    {
+        var envelope = ReadPlaybackQualityReportEnvelope(path, Path.GetFileName(path));
+        EvaluateReportWithCurrentRules(envelope.Report);
+        return envelope;
+    }
+
     private static PlaybackQualityReportEnvelope ReadPlaybackQualityReportEnvelope(
         string path,
         string relativePath)
@@ -1311,7 +1329,34 @@ internal static class Program
 
         AddLifecyclePresentSignals(signals, reportElement);
         AddTrackPresentSignals(signals, reportElement);
+        AddCheckPresentSignals(signals, reportElement);
         return signals;
+    }
+
+    private static void AddCheckPresentSignals(
+        List<string> signals,
+        JsonElement reportElement)
+    {
+        if (reportElement.ValueKind != JsonValueKind.Object ||
+            !TryGetPropertyIgnoreCase(reportElement, "checks", out var checks) ||
+            checks.ValueKind != JsonValueKind.Array)
+        {
+            return;
+        }
+
+        foreach (var item in checks.EnumerateArray())
+        {
+            if (item.ValueKind == JsonValueKind.Object &&
+                TryGetPropertyIgnoreCase(item, "signal", out var signalElement) &&
+                signalElement.ValueKind == JsonValueKind.String)
+            {
+                var signal = signalElement.GetString();
+                if (!string.IsNullOrWhiteSpace(signal))
+                {
+                    AddUnique(signals, signal);
+                }
+            }
+        }
     }
 
     private static void AddLifecyclePresentSignals(
