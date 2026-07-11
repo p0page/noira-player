@@ -101,7 +101,7 @@ Expected: PASS。
 
 **Interfaces:**
 - Produces: `uint64_t PlaybackGraph::SubtitleCueRenderCount() const noexcept`
-- Produces: `std::optional<int32_t> PlaybackGraph::SelectedSubtitleStreamIndex() const noexcept`
+- Produces: `std::optional<int32_t> PlaybackGraph::SelectedSubtitleStreamIndex() const noexcept`，只转发 renderer 已有选择状态，不在 Graph 复制第二份 selected index。
 - Internal: `bool SubtitleRenderer::RenderAt(int64_t positionTicks)`，只有 `DrawTextOverlay` 成功时返回 true。
 
 - [ ] **Step 1: 先让 helper 引用尚不存在的 hook**
@@ -120,7 +120,7 @@ Expected: helper 编译失败，指出两个 API 尚不存在。
 
 - [ ] **Step 3: 实现最小 hook**
 
-让 `SubtitleRenderer::RenderAt` 在 cue 有效时返回 `m_deviceResources.DrawTextOverlay(m_textCue)`，其余路径返回 false。`PlaybackGraph::UpdateSubtitleCue` 在返回 true 时递增 `m_subtitleCueRenderCount`；在 open/stop/runtime reset 时归零。`SwitchSubtitleStream` 更新 `m_selectedSubtitleStreamIndex`，disable 时清空。
+让 `SubtitleRenderer::RenderAt` 在 cue 有效时返回 `m_deviceResources.DrawTextOverlay(m_textCue)`，其余路径返回 false；新增只读 `SelectedStreamIndex()` 返回 renderer 已有的 `m_selectedSubtitleStreamIndex`。`PlaybackGraph::UpdateSubtitleCue` 在 `RenderAt` 返回 true 时递增 `m_subtitleCueRenderCount`；在 open/stop/runtime reset 时归零。`PlaybackGraph::SelectedSubtitleStreamIndex()` 在持锁后转发 renderer getter，不新增重复选择状态。
 
 两个 getter 必须持有 `m_graphMutex`，不得暴露可写状态。
 
