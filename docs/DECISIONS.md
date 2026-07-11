@@ -1124,3 +1124,15 @@ runner 进程非零退出与 report-set 无效不是同一概念。真实 player
 正式 manifest case 只选择一个执行场景：`timeline` 只执行 seek，`interactions` 只执行音轨/字幕操作，`pause-resume` 只执行暂停恢复，其他为普通 `playback`。场景由版本化 purpose 和 pause 配置确定。禁止为了复用一次播放，把 seek、字幕、音轨和网络恢复混进同一 attempt 后再把任一失败归因给整个 case。
 
 影响：过去把 track/subtitle/seek 混在 A/V helper 中生成的报告与新单场景报告不具备行为等价性，不得作为直接 baseline/candidate。新的私有 timeline case 已证明 0 个无关 interaction、1 个 seek lifecycle，并独立通过。
+
+# 2026-07-12: Dolby Vision 分类以实际 FFmpeg side data 为准，失败路径也必须保留源证据
+
+决策：native 解析到的 Dolby Vision configuration 是源分类的事实依据，不能在 decoder open 完成、失败清理或 seek 时无条件清空。Profile 5 无兼容 base layer 时必须输出结构化 unsupported 证据；Profile 8 compatibility ID 1/4 分别归类为 HDR10/HLG fallback。文件名、case ID、Emby display title 和预分类只能表达预期，不能覆盖实际流侧证据。
+
+失败边界：媒体源已打开且 FFmpeg 已解析出明确不支持的 DV 配置，不属于 helper failure 或 insufficient instrumentation。报告应为 native-playback evidence、source opened、demux started、decoder unopened、execution unsupported，并保留匿名 source 关联。只有源打开本身失败且没有格式证据时，才进入网络/环境或 helper error 路径。
+
+# 2026-07-12: lifecycle 分析必须复用已归因 failure area，pause/resume 证据按场景要求
+
+决策：evaluator 已为 lifecycle failed/error check 写入的 failure area 是后续模型分析的首要归因，tracks、subtitles、timeline 和 playback-lifecycle 不得再次折叠为 unknown。代码目标目录和 investigation hint 必须覆盖这些区域，使模型可以直接定位音轨、字幕或状态机实现。
+
+普通 playback 报告只要求 load/play/stop；当 pause 或 resume 任一操作已经出现时，analyzer 才要求另一半配对。是否要求一个 case 完整执行 pause/resume，仍由 manifest purpose 与 `pauseSeconds` 的 required-signal policy 决定。analyzer 不得脱离 case 语义给所有报告制造 pause/resume 缺失证据，也不得因为两者都缺失而放过明确声明的 pause-resume case。
