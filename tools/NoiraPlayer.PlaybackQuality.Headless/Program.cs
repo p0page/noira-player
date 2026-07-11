@@ -346,44 +346,10 @@ internal static class NativeHeadlessHarness
         metrics.AudioStarvedPasses = GetUInt64(values, "audioStarvedPasses");
         metrics.AudioClockTicks = GetInt64(values, "audioClockTicks");
         metrics.VideoPositionTicks = GetInt64(values, "videoPositionTicks");
-        if (!TryGetInt64(values, "seekTargetPositionTicks", out var seekTargetPositionTicks) ||
-            seekTargetPositionTicks != NativeHelperSeekTargetPositionTicks)
+        if (!TryParseInteractionResults(values, out interactions, out error))
         {
-            error = "Native helper did not return the required non-zero seek target.";
             return false;
         }
-
-        interactions = new NativeHeadlessInteractionResults
-        {
-            AudioSwitch = new NativeHeadlessAudioSwitchOutcome
-            {
-                Attempted = GetInt32(values, "audioSwitchAttempted") != 0,
-                Status = GetString(values, "audioSwitchStatus"),
-                StreamIndex = GetInt32(values, "audioSwitchStreamIndex"),
-                PositionBeforeTicks = GetInt64(values, "audioSwitchPositionBeforeTicks"),
-                PositionAfterTicks = GetInt64(values, "audioSwitchPositionAfterTicks"),
-                SubmittedFramesBefore = GetUInt64(values, "audioSwitchSubmittedFramesBefore"),
-                SubmittedFramesAfter = GetUInt64(values, "audioSwitchSubmittedFramesAfter")
-            },
-            SubtitleSwitch1 = ParseSubtitleSwitchOutcome(values, "subtitleSwitch1"),
-            SubtitleSwitch2 = ParseSubtitleSwitchOutcome(values, "subtitleSwitch2"),
-            SubtitleOff = new NativeHeadlessSubtitleOffOutcome
-            {
-                Attempted = GetInt32(values, "subtitleOffAttempted") != 0,
-                Status = GetString(values, "subtitleOffStatus"),
-                SelectedStreamIndex = GetNullableStreamIndex(values, "subtitleOffSelectedStreamIndex")
-            },
-            Seek = new NativeHeadlessSeekOutcome
-            {
-                Attempted = GetInt32(values, "seekAttempted") != 0,
-                Status = GetString(values, "seekStatus"),
-                TargetPositionTicks = seekTargetPositionTicks,
-                ActualPositionTicks = GetInt64(values, "seekActualPositionTicks"),
-                PostSeekPlaybackPositionTicks = GetInt64(values, "postSeekPlaybackPositionTicks")
-            },
-            SelectedAudioStreamIndex = GetNullableStreamIndex(values, "selectedAudioStreamIndex"),
-            SelectedSubtitleStreamIndex = GetNullableStreamIndex(values, "selectedSubtitleStreamIndex")
-        };
         metrics.RenderIntervalMsP05 = GetDouble(values, "renderIntervalMsP05");
         metrics.RenderIntervalMsP50 = GetDouble(values, "renderIntervalMsP50");
         metrics.RenderIntervalMsP95 = GetDouble(values, "renderIntervalMsP95");
@@ -506,18 +472,272 @@ internal static class NativeHeadlessHarness
         return tracks;
     }
 
-    private static NativeHeadlessSubtitleSwitchOutcome ParseSubtitleSwitchOutcome(
+    private static bool TryParseInteractionResults(
         Dictionary<string, string> values,
-        string prefix)
+        out NativeHeadlessInteractionResults interactions,
+        out string error)
     {
-        return new NativeHeadlessSubtitleSwitchOutcome
+        interactions = new NativeHeadlessInteractionResults();
+        if (!TryParseAudioSwitchOutcome(values, out var audioSwitch, out error) ||
+            !TryParseSubtitleSwitchOutcome(values, "subtitleSwitch1", out var subtitleSwitch1, out error) ||
+            !TryParseSubtitleSwitchOutcome(values, "subtitleSwitch2", out var subtitleSwitch2, out error) ||
+            !TryParseSubtitleOffOutcome(values, out var subtitleOff, out error) ||
+            !TryParseSeekOutcome(values, out var seek, out error) ||
+            !TryGetRequiredNullableStreamIndex(values, "selectedAudioStreamIndex", out var selectedAudio, out error) ||
+            !TryGetRequiredNullableStreamIndex(values, "selectedSubtitleStreamIndex", out var selectedSubtitle, out error))
         {
-            Attempted = GetInt32(values, prefix + "Attempted") != 0,
-            Status = GetString(values, prefix + "Status"),
-            StreamIndex = GetInt32(values, prefix + "StreamIndex"),
-            CueCountBefore = GetUInt64(values, prefix + "CueCountBefore"),
-            CueCountAfter = GetUInt64(values, prefix + "CueCountAfter")
+            return false;
+        }
+
+        interactions = new NativeHeadlessInteractionResults
+        {
+            AudioSwitch = audioSwitch,
+            SubtitleSwitch1 = subtitleSwitch1,
+            SubtitleSwitch2 = subtitleSwitch2,
+            SubtitleOff = subtitleOff,
+            Seek = seek,
+            SelectedAudioStreamIndex = selectedAudio,
+            SelectedSubtitleStreamIndex = selectedSubtitle
         };
+        return true;
+    }
+
+    private static bool TryParseAudioSwitchOutcome(
+        Dictionary<string, string> values,
+        out NativeHeadlessAudioSwitchOutcome outcome,
+        out string error)
+    {
+        outcome = new NativeHeadlessAudioSwitchOutcome();
+        if (!TryGetAttempted(values, "audioSwitchAttempted", out var attempted, out error))
+        {
+            return false;
+        }
+
+        outcome.Attempted = attempted;
+        if (!attempted)
+        {
+            return true;
+        }
+
+        if (!TryGetInteractionStatus(values, "audioSwitchStatus", out var status, out error) ||
+            !TryGetRequiredNonNegativeInt32(values, "audioSwitchStreamIndex", out var streamIndex, out error) ||
+            !TryGetRequiredInt64(values, "audioSwitchPositionBeforeTicks", out var positionBefore, out error) ||
+            !TryGetRequiredInt64(values, "audioSwitchPositionAfterTicks", out var positionAfter, out error) ||
+            !TryGetRequiredUInt64(values, "audioSwitchSubmittedFramesBefore", out var framesBefore, out error) ||
+            !TryGetRequiredUInt64(values, "audioSwitchSubmittedFramesAfter", out var framesAfter, out error))
+        {
+            return false;
+        }
+
+        outcome.Status = status;
+        outcome.StreamIndex = streamIndex;
+        outcome.PositionBeforeTicks = positionBefore;
+        outcome.PositionAfterTicks = positionAfter;
+        outcome.SubmittedFramesBefore = framesBefore;
+        outcome.SubmittedFramesAfter = framesAfter;
+        return true;
+    }
+
+    private static bool TryParseSubtitleSwitchOutcome(
+        Dictionary<string, string> values,
+        string prefix,
+        out NativeHeadlessSubtitleSwitchOutcome outcome,
+        out string error)
+    {
+        outcome = new NativeHeadlessSubtitleSwitchOutcome();
+        if (!TryGetAttempted(values, prefix + "Attempted", out var attempted, out error))
+        {
+            return false;
+        }
+
+        outcome.Attempted = attempted;
+        if (!attempted)
+        {
+            return true;
+        }
+
+        if (!TryGetInteractionStatus(values, prefix + "Status", out var status, out error) ||
+            !TryGetRequiredNonNegativeInt32(values, prefix + "StreamIndex", out var streamIndex, out error) ||
+            !TryGetRequiredUInt64(values, prefix + "CueCountBefore", out var cueCountBefore, out error) ||
+            !TryGetRequiredUInt64(values, prefix + "CueCountAfter", out var cueCountAfter, out error))
+        {
+            return false;
+        }
+
+        outcome.Status = status;
+        outcome.StreamIndex = streamIndex;
+        outcome.CueCountBefore = cueCountBefore;
+        outcome.CueCountAfter = cueCountAfter;
+        return true;
+    }
+
+    private static bool TryParseSubtitleOffOutcome(
+        Dictionary<string, string> values,
+        out NativeHeadlessSubtitleOffOutcome outcome,
+        out string error)
+    {
+        outcome = new NativeHeadlessSubtitleOffOutcome();
+        if (!TryGetAttempted(values, "subtitleOffAttempted", out var attempted, out error))
+        {
+            return false;
+        }
+
+        outcome.Attempted = attempted;
+        if (!attempted)
+        {
+            return true;
+        }
+
+        if (!TryGetInteractionStatus(values, "subtitleOffStatus", out var status, out error) ||
+            !TryGetRequiredNullableStreamIndex(values, "subtitleOffSelectedStreamIndex", out var selectedStreamIndex, out error))
+        {
+            return false;
+        }
+
+        outcome.Status = status;
+        outcome.SelectedStreamIndex = selectedStreamIndex;
+        return true;
+    }
+
+    private static bool TryParseSeekOutcome(
+        Dictionary<string, string> values,
+        out NativeHeadlessSeekOutcome outcome,
+        out string error)
+    {
+        outcome = new NativeHeadlessSeekOutcome();
+        if (!TryGetAttempted(values, "seekAttempted", out var attempted, out error))
+        {
+            return false;
+        }
+
+        outcome.Attempted = attempted;
+        if (!attempted)
+        {
+            return true;
+        }
+
+        if (!TryGetInteractionStatus(values, "seekStatus", out var status, out error) ||
+            !TryGetRequiredInt64(values, "seekTargetPositionTicks", out var targetPosition, out error) ||
+            !TryGetRequiredInt64(values, "seekActualPositionTicks", out var actualPosition, out error) ||
+            !TryGetRequiredInt64(values, "postSeekPlaybackPositionTicks", out var postSeekPosition, out error))
+        {
+            return false;
+        }
+
+        if (targetPosition != NativeHelperSeekTargetPositionTicks)
+        {
+            error = "Native helper field 'seekTargetPositionTicks' must equal 10000000.";
+            return false;
+        }
+
+        outcome.Status = status;
+        outcome.TargetPositionTicks = targetPosition;
+        outcome.ActualPositionTicks = actualPosition;
+        outcome.PostSeekPlaybackPositionTicks = postSeekPosition;
+        return true;
+    }
+
+    private static bool TryGetAttempted(
+        Dictionary<string, string> values,
+        string key,
+        out bool attempted,
+        out string error)
+    {
+        attempted = false;
+        if (!values.TryGetValue(key, out var raw) || (raw != "0" && raw != "1"))
+        {
+            error = "Native helper field '" + key + "' must be present as 0 or 1.";
+            return false;
+        }
+
+        attempted = raw == "1";
+        error = "";
+        return true;
+    }
+
+    private static bool TryGetInteractionStatus(
+        Dictionary<string, string> values,
+        string key,
+        out string status,
+        out string error)
+    {
+        status = "";
+        if (!values.TryGetValue(key, out var raw) || (raw != "completed" && raw != "failed"))
+        {
+            error = "Native helper field '" + key + "' must be completed or failed for an attempted operation.";
+            return false;
+        }
+
+        status = raw;
+        error = "";
+        return true;
+    }
+
+    private static bool TryGetRequiredNonNegativeInt32(
+        Dictionary<string, string> values,
+        string key,
+        out int value,
+        out string error)
+    {
+        value = 0;
+        if (!values.TryGetValue(key, out var raw) || !int.TryParse(raw, out value) || value < 0)
+        {
+            error = "Native helper field '" + key + "' must be a non-negative integer.";
+            return false;
+        }
+
+        error = "";
+        return true;
+    }
+
+    private static bool TryGetRequiredInt64(
+        Dictionary<string, string> values,
+        string key,
+        out long value,
+        out string error)
+    {
+        if (!TryGetInt64(values, key, out value))
+        {
+            error = "Native helper field '" + key + "' must be a signed integer.";
+            return false;
+        }
+
+        error = "";
+        return true;
+    }
+
+    private static bool TryGetRequiredUInt64(
+        Dictionary<string, string> values,
+        string key,
+        out ulong value,
+        out string error)
+    {
+        if (!TryGetUInt64(values, key, out value))
+        {
+            error = "Native helper field '" + key + "' must be an unsigned integer.";
+            return false;
+        }
+
+        error = "";
+        return true;
+    }
+
+    private static bool TryGetRequiredNullableStreamIndex(
+        Dictionary<string, string> values,
+        string key,
+        out int? streamIndex,
+        out string error)
+    {
+        streamIndex = null;
+        if (!values.TryGetValue(key, out var raw) || !int.TryParse(raw, out var parsed) || parsed < -1)
+        {
+            error = "Native helper field '" + key + "' must be -1 or a non-negative integer.";
+            return false;
+        }
+
+        streamIndex = parsed >= 0 ? parsed : null;
+        error = "";
+        return true;
     }
 
     private static bool TryGetUInt64(
@@ -564,17 +784,6 @@ internal static class NativeHeadlessHarness
             int.TryParse(raw, out var value)
                 ? value
                 : 0;
-    }
-
-    private static int? GetNullableStreamIndex(
-        Dictionary<string, string> values,
-        string key)
-    {
-        return values.TryGetValue(key, out var raw) &&
-            int.TryParse(raw, out var streamIndex) &&
-            streamIndex >= 0
-                ? streamIndex
-                : null;
     }
 
     private static string GetString(
@@ -724,7 +933,7 @@ internal static class NativeHeadlessHarness
             availableSources: new[] { source },
             startPositionTicks: 0,
             audioStreamIndex: selectedAudioStreamIndex,
-            subtitleStreamIndex: null);
+            subtitleStreamIndex: selectedSubtitleStreamIndex);
     }
 
     private static EmbyStreamKind? MapStreamKind(string kind)

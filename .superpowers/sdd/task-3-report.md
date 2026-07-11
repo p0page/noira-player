@@ -210,3 +210,159 @@ PASS: no whitespace errors. Git printed only line-ending conversion notices.
 
 The independent commit hash is returned in the task completion response because
 this report is part of that commit.
+
+## Independent Review Fix: selected subtitles and strict interaction parsing
+
+An independent review of commit `e0bb07e` found two valid issues:
+
+1. `CreateDescriptor` accepted the helper's final selected subtitle index but
+   passed `null` to `PlaybackDescriptor`, falsely reporting disabled subtitles
+   if subtitle-off failed.
+2. Interaction parsing used permissive getters, so missing or malformed
+   attempted/status/stream/position/frame/cue evidence became false zero or
+   empty values and could enter lifecycle telemetry.
+
+### Review-Fix RED
+
+A focused parser/selection fixture was added to the owned smoke script before
+changing `Program.cs`. It builds a minimal helper executable at runtime and
+feeds deterministic key/value output through the real headless process and
+report composer.
+
+Command:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\quality-run\run-native-headless-harness-smoke-test.ps1 -ParserContractOnly
+```
+
+Result: expected exit code `1`. The single run reproduced all review findings:
+
+```text
+Native-headless parser contract failures:
+- Final selected subtitle stream 4 was not preserved after a failed subtitle-off interaction.
+- Parser fixture 'missing-audio-position' did not fail explicitly on audioSwitchPositionAfterTicks.
+- Parser fixture 'invalid-subtitle-cue' did not fail explicitly on subtitleSwitch1CueCountAfter.
+- Parser fixture 'invalid-attempted' did not fail explicitly on subtitleSwitch2Attempted.
+- Parser fixture 'invalid-status' did not fail explicitly on seekStatus.
+```
+
+### Isolated Descriptor Fix
+
+`CreateDescriptor` now passes `selectedSubtitleStreamIndex` to the
+`PlaybackDescriptor` constructor. Before changing parser behavior, the focused
+fixture was rerun. It remained RED with exit code `1`, but the final-selection
+failure disappeared and only the four parser failures remained. This isolated
+the descriptor correction from the parser correction.
+
+The final selection fixture now records:
+
+- subtitle-off lifecycle: `failed`
+- selected subtitle stream: `4`
+- `isSubtitleDisabled`: `false`
+- unrelated operations with `attempted=0`: no interaction lifecycle events
+
+### Strict Parser Fix
+
+The interaction parser now applies these rules without changing general
+runtime-metric parsing:
+
+- Every audio switch, two subtitle switches, subtitle-off, and seek attempted
+  field must be present as exactly `0` or `1`.
+- If attempted is `true`, status must be exactly `completed` or `failed`.
+- Attempted audio switches require a non-negative stream index, both signed
+  positions, and both unsigned submitted-frame counts.
+- Attempted subtitle switches require a non-negative stream index and both
+  unsigned cue counts.
+- Attempted subtitle-off requires an explicit selected index represented by
+  `-1` or a non-negative integer.
+- Attempted seek requires target, immediate, and post-seek positions; the target
+  remains exactly `10,000,000` ticks.
+- Final selected audio and subtitle indexes must both be explicitly present as
+  `-1` or a non-negative integer.
+- Attempted-false operations do not require irrelevant operation fields and do
+  not generate lifecycle events.
+
+Malformed interaction evidence follows the existing helper parse-error path:
+the harness exits `1`, writes `native-headless.helper-failed` with failure area
+`evidence-collection`, and emits no audio/subtitle/seek interaction lifecycle.
+The existing `native-headless-open:error` error lifecycle remains intact.
+
+### Review-Fix GREEN
+
+Focused fixture:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\quality-run\run-native-headless-harness-smoke-test.ps1 -ParserContractOnly
+```
+
+PASS: exit `0` with:
+
+```text
+native-headless-parser contracts ok
+native-headless-parser contract smoke ok
+```
+
+The four malformed fixture reports identify the exact rejected fields:
+
+- `audioSwitchPositionAfterTicks`: missing signed integer
+- `subtitleSwitch1CueCountAfter`: invalid unsigned integer
+- `subtitleSwitch2Attempted`: invalid attempted value `2`
+- `seekStatus`: invalid status `observed`
+
+Each report has `error.code=native-headless.helper-failed`,
+`error.failureArea=evidence-collection`, and no interaction lifecycle.
+
+Full native-headless smoke:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\quality-run\run-native-headless-harness-smoke-test.ps1
+```
+
+PASS: exit `0`, `native-headless-harness smoke ok`.
+
+The real A/V report retained the expected old-Core shape:
+
+- audio switch, subtitle-off, and one-second seek: `completed`
+- both subtitle switches: `failed`, cue overlay count `0->0`
+- selected audio stream: `2`
+- subtitles disabled after successful subtitle-off
+- seek target/error: `10,000,000` ticks / `0ms`
+- report result: `fail`, with empty evidence-collection error code
+
+Additional verification:
+
+```powershell
+dotnet build .\tools\NoiraPlayer.PlaybackQuality.Headless\NoiraPlayer.PlaybackQuality.Headless.csproj --no-restore -v minimal
+```
+
+PASS: 0 warnings, 0 errors.
+
+```powershell
+dotnet test .\tests\NoiraPlayer.Core.Tests\NoiraPlayer.Core.Tests.csproj --no-restore --filter "FullyQualifiedName~PlaybackQualityEvaluatorTests" -v minimal
+```
+
+PASS: 31 passed, 0 failed, 0 skipped.
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\quality-run\run-playback-core-checks.tests.ps1
+```
+
+PASS: `playback-core-checks plan ok`.
+
+```powershell
+git diff --check
+```
+
+PASS: no whitespace errors; only existing line-ending conversion notices were
+printed.
+
+### Review-Fix Scope And Concerns
+
+- Modified only `Program.cs`, the owned smoke script, and this report. No C++
+  helper change was needed.
+- No Native Core, SubtitleRenderer, App/UI, manifest, threshold, or general docs
+  file was changed.
+- The expected old-Core subtitle cue-overlay failure and existing Windows SDK
+  generated-header `C4002` warning remain the only concerns.
+- The independent fix commit hash is returned in the completion response because
+  this report is part of that commit.

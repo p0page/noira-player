@@ -2,7 +2,8 @@
     [string]$PlayerCoreVersion = 'smoke-core',
     [string]$SourceRevision = 'smoke-native-headless-real-revision',
     [string]$ImportSourceRevision = 'smoke-native-headless-import-revision',
-    [string]$BuildConfiguration = 'Debug'
+    [string]$BuildConfiguration = 'Debug',
+    [switch]$ParserContractOnly
 )
 
 $ErrorActionPreference = 'Stop'
@@ -369,6 +370,248 @@ function Assert-NativeDisplayRefreshEvidence {
     }
 }
 
+function Build-NativeHeadlessParserFixtureHelper {
+    param([string]$Root)
+
+    $projectDirectory = Join-Path $Root 'helper-project'
+    $outputDirectory = Join-Path $Root 'helper-bin'
+    New-Item -ItemType Directory -Path $projectDirectory -Force | Out-Null
+    New-Item -ItemType Directory -Path $outputDirectory -Force | Out-Null
+    $projectPath = Join-Path $projectDirectory 'NativeHeadlessParserFixture.csproj'
+    @'
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>NativeHeadlessParserFixture</AssemblyName>
+    <UseAppHost>true</UseAppHost>
+  </PropertyGroup>
+</Project>
+'@ | Set-Content -LiteralPath $projectPath -Encoding UTF8
+    @'
+using System;
+using System.IO;
+
+var outputPath = Path.Combine(AppContext.BaseDirectory, "fixture-output.txt");
+Console.Write(File.ReadAllText(outputPath));
+'@ | Set-Content -LiteralPath (Join-Path $projectDirectory 'Program.cs') -Encoding UTF8
+
+    dotnet build $projectPath --nologo -v quiet -o $outputDirectory
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Failed to build native-headless parser fixture helper.'
+    }
+
+    return [pscustomobject]@{
+        ExePath = Join-Path $outputDirectory 'NativeHeadlessParserFixture.exe'
+        OutputPath = Join-Path $outputDirectory 'fixture-output.txt'
+    }
+}
+
+function New-NativeHeadlessParserFixtureOutput {
+    param(
+        [hashtable]$Overrides = @{},
+        [string[]]$Omit = @()
+    )
+
+    $values = [ordered]@{
+        decodedVideoFrames = '2'
+        hardwareDecodedVideoFrames = '2'
+        softwareDecodedVideoFrames = '0'
+        renderedVideoFrames = '2'
+        submittedAudioFrames = '1'
+        videoPositionTicks = '5000000'
+        sourceCodec = 'h264'
+        sourceWidth = '320'
+        sourceHeight = '180'
+        sourceFrameRate = '30'
+        sourceHdrKind = 'Sdr'
+        sourceVideoRange = 'SDR'
+        sourceColorPrimaries = 'bt709'
+        sourceColorTransfer = 'bt709'
+        sourceColorSpace = 'bt709'
+        displayRefreshRateHz = '60'
+        displayRefreshPolicy = 'software-only-cadence-policy'
+        sourceTrackCount = '4'
+        track0Index = '0'
+        track0Kind = 'Video'
+        track0Codec = 'h264'
+        track0Language = 'und'
+        track0IsDefault = '1'
+        track1Index = '1'
+        track1Kind = 'Audio'
+        track1Codec = 'aac'
+        track1Language = 'eng'
+        track1Channels = '1'
+        track1IsDefault = '1'
+        track2Index = '2'
+        track2Kind = 'Audio'
+        track2Codec = 'aac'
+        track2Language = 'jpn'
+        track2Channels = '1'
+        track2IsDefault = '0'
+        track3Index = '4'
+        track3Kind = 'Subtitle'
+        track3Codec = 'mov_text'
+        track3Language = 'spa'
+        track3IsDefault = '0'
+        audioSwitchAttempted = '0'
+        subtitleSwitch1Attempted = '0'
+        subtitleSwitch2Attempted = '0'
+        subtitleOffAttempted = '0'
+        seekAttempted = '0'
+        seekTargetPositionTicks = '10000000'
+        selectedAudioStreamIndex = '1'
+        selectedSubtitleStreamIndex = '-1'
+    }
+
+    foreach ($key in $Overrides.Keys) {
+        $values[$key] = [string]$Overrides[$key]
+    }
+
+    foreach ($key in $Omit) {
+        $values.Remove($key)
+    }
+
+    return (($values.GetEnumerator() | ForEach-Object { "$($_.Key)=$($_.Value)" }) -join ' ')
+}
+
+function Invoke-NativeHeadlessParserFixtureCase {
+    param(
+        [object]$FixtureHelper,
+        [string]$HeadlessDll,
+        [string]$Root,
+        [string]$Name,
+        [string]$HelperOutput
+    )
+
+    Set-Content -LiteralPath $FixtureHelper.OutputPath -Value $HelperOutput -Encoding UTF8
+    $reportsDirectory = Join-Path $Root 'reports'
+    $caseId = 'local/native-headless-parser-' + $Name
+    $fixtureStreamUrl = ([System.Uri](Join-Path $Root 'fixture.mp4')).AbsoluteUri
+    & dotnet $HeadlessDll `
+        --case-id $caseId `
+        --stream-url $fixtureStreamUrl `
+        --duration-seconds 1 `
+        --reports-dir $reportsDirectory `
+        --native-helper-exe $FixtureHelper.ExePath | ForEach-Object { Write-Host $_ }
+    $exitCode = $LASTEXITCODE
+    $reportPath = Get-QualityReportPath -Root $reportsDirectory -CaseId $caseId
+    if (-not (Test-Path -LiteralPath $reportPath)) {
+        throw "Expected parser fixture report at $reportPath."
+    }
+
+    return [pscustomobject]@{
+        ExitCode = $exitCode
+        Report = Get-Content -LiteralPath $reportPath -Raw | ConvertFrom-Json
+    }
+}
+
+function Assert-NativeHeadlessParserContracts {
+    param([string]$Root)
+
+    $headlessProject = Join-Path $repoRoot 'tools\NoiraPlayer.PlaybackQuality.Headless\NoiraPlayer.PlaybackQuality.Headless.csproj'
+    dotnet build $headlessProject --nologo -v quiet
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Failed to build native-headless harness for parser contract fixtures.'
+    }
+
+    $headlessDll = Join-Path $repoRoot 'tools\NoiraPlayer.PlaybackQuality.Headless\bin\Debug\net10.0\NoiraPlayer.PlaybackQuality.Headless.dll'
+    $fixtureHelper = Build-NativeHeadlessParserFixtureHelper -Root $Root
+    $failures = [System.Collections.Generic.List[string]]::new()
+
+    $selectionOutput = New-NativeHeadlessParserFixtureOutput -Overrides @{
+        subtitleOffAttempted = '1'
+        subtitleOffStatus = 'failed'
+        subtitleOffSelectedStreamIndex = '4'
+        selectedSubtitleStreamIndex = '4'
+    }
+    $selection = Invoke-NativeHeadlessParserFixtureCase `
+        -FixtureHelper $fixtureHelper `
+        -HeadlessDll $headlessDll `
+        -Root $Root `
+        -Name 'final-subtitle-selection' `
+        -HelperOutput $selectionOutput
+    if ($selection.ExitCode -ne 0 -or
+        $selection.Report.report.tracks.selectedSubtitleStreamIndex -ne 4 -or
+        $selection.Report.report.tracks.isSubtitleDisabled -ne $false) {
+        $failures.Add('Final selected subtitle stream 4 was not preserved after a failed subtitle-off interaction.')
+    }
+
+    if (@($selection.Report.report.lifecycle.events | Where-Object {
+        $_.operation -in @('audio-switch', 'subtitle-switch', 'seek')
+    }).Count -ne 0) {
+        $failures.Add('attempted=false fixture operations unexpectedly produced lifecycle events.')
+    }
+
+    $negativeCases = @(
+        [pscustomobject]@{
+            Name = 'missing-audio-position'
+            ExpectedField = 'audioSwitchPositionAfterTicks'
+            Output = New-NativeHeadlessParserFixtureOutput -Overrides @{
+                audioSwitchAttempted = '1'
+                audioSwitchStatus = 'completed'
+                audioSwitchStreamIndex = '2'
+                audioSwitchPositionBeforeTicks = '1000000'
+                audioSwitchSubmittedFramesBefore = '1'
+                audioSwitchSubmittedFramesAfter = '2'
+                selectedAudioStreamIndex = '2'
+            } -Omit @('audioSwitchPositionAfterTicks')
+        },
+        [pscustomobject]@{
+            Name = 'invalid-subtitle-cue'
+            ExpectedField = 'subtitleSwitch1CueCountAfter'
+            Output = New-NativeHeadlessParserFixtureOutput -Overrides @{
+                subtitleSwitch1Attempted = '1'
+                subtitleSwitch1Status = 'completed'
+                subtitleSwitch1StreamIndex = '4'
+                subtitleSwitch1CueCountBefore = '0'
+                subtitleSwitch1CueCountAfter = 'invalid'
+            }
+        },
+        [pscustomobject]@{
+            Name = 'invalid-attempted'
+            ExpectedField = 'subtitleSwitch2Attempted'
+            Output = New-NativeHeadlessParserFixtureOutput -Overrides @{
+                subtitleSwitch2Attempted = '2'
+            }
+        },
+        [pscustomobject]@{
+            Name = 'invalid-status'
+            ExpectedField = 'seekStatus'
+            Output = New-NativeHeadlessParserFixtureOutput -Overrides @{
+                seekAttempted = '1'
+                seekStatus = 'observed'
+                seekActualPositionTicks = '10000000'
+                postSeekPlaybackPositionTicks = '20000000'
+            }
+        }
+    )
+
+    foreach ($negativeCase in $negativeCases) {
+        $result = Invoke-NativeHeadlessParserFixtureCase `
+            -FixtureHelper $fixtureHelper `
+            -HeadlessDll $headlessDll `
+            -Root $Root `
+            -Name $negativeCase.Name `
+            -HelperOutput $negativeCase.Output
+        if ($result.ExitCode -ne 1 -or
+            $result.Report.report.error.code -ne 'native-headless.helper-failed' -or
+            $result.Report.report.error.failureArea -ne 'evidence-collection' -or
+            $result.Report.report.error.message -notmatch [regex]::Escape($negativeCase.ExpectedField) -or
+            @($result.Report.report.lifecycle.events | Where-Object {
+                $_.operation -in @('audio-switch', 'subtitle-switch', 'subtitle-off', 'seek')
+            }).Count -ne 0) {
+            $failures.Add("Parser fixture '$($negativeCase.Name)' did not fail explicitly on $($negativeCase.ExpectedField).")
+        }
+    }
+
+    if ($failures.Count -gt 0) {
+        throw ("Native-headless parser contract failures:`n- " + ($failures -join "`n- "))
+    }
+
+    Write-Host 'native-headless-parser contracts ok'
+}
+
 if (Test-Path $smokeRoot) {
     $resolvedSmokeRoot = (Resolve-Path $smokeRoot).Path
     if (-not $resolvedSmokeRoot.StartsWith($repoRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
@@ -379,6 +622,12 @@ if (Test-Path $smokeRoot) {
 }
 
 New-Item -ItemType Directory -Path $smokeRoot | Out-Null
+
+Assert-NativeHeadlessParserContracts -Root (Join-Path $smokeRoot 'parser-fixtures')
+if ($ParserContractOnly) {
+    Write-Host 'native-headless-parser contract smoke ok'
+    exit 0
+}
 
 dotnet run --project (Join-Path $repoRoot 'tools\NoiraPlayer.PlaybackQuality.Headless\NoiraPlayer.PlaybackQuality.Headless.csproj') -- `
     --case-id jellyfin/sdr-hevc-main10-1080p60-3m `
