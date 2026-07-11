@@ -125,11 +125,21 @@ dotnet run --project tools\NoiraPlayer.PlaybackQuality.Cli\NoiraPlayer.PlaybackQ
 
 `requiredSignals` 是模型采集前的 case 级 telemetry checklist。它会根据 `expected` 和 `purpose` 自动列出必须出现在报告里的信号，例如 `source.codec`、`source.hasDirectStreamUrl`、`source.directStreamProtocol`、`source.container`、`source.bitrate`、`source.durationTicks`、`source.hdrKind`、`colorPipeline.actualHdrOutput`、`display.hdrStatus`、`colorPipeline.swapChainFormat`、`colorPipeline.swapChainColorSpace`、`display.refreshRateHz`、`position.seekTargetPositionTicks`、`position.actualPositionTicks`、`position.seekPositionErrorMs`、`tracks.videoTrackCount`、`tracks.audioTrackCount`、`tracks.subtitleTrackCount`、`tracks.video.isExternal`、`tracks.video.isDefault`、`tracks.video.isForced`、`tracks.audio.isExternal`、`tracks.audio.channels`、`tracks.audio.isDefault`、`tracks.audio.isForced`、`tracks.subtitles.isExternal`、`tracks.subtitles.isDefault`、`tracks.subtitles.isForced`、`tracks.isSubtitleDisabled`、`timing.framePacingSourceFrameRate`、`sync.audioVideoDriftMsP95`、`buffers.videoStarvedPasses`。`source.directStreamProtocol` 只能记录 scheme/protocol，不能记录完整 URL、query string、token 或私有服务地址；`tracks.audio.channels` 只能来自明确采集到的声道数，不能从 layout/title 推断。HDR10 输出还会要求 `colorPipeline.isTenBitSwapChain`；如果采集到的值是 `false`，evaluator 会把它判为 `color-pipeline` 失败，避免模型只凭推断的 `actualHdrOutput` 优化颜色管线。timeline/seek case 或 `expected.maxSeekPositionErrorMs` 会要求 position telemetry；tracks/subtitles case 会要求轨道发现、音频声道数、external/default/forced 标记和字幕关闭状态 telemetry；如果报告缺这些信号，应先补采集或让 `analyze-report` 明确标记 missing evidence，不要直接根据窄证据修改播放 Core。
 
+## Generate A Formal Playback Baseline
+
+正式 baseline 使用同一 manifest 逐 case 调用 native runner，再执行 strict validate/analyze：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\quality-run\New-PlaybackCoreTuningBaseline.ps1 -PrivateManifestPath docs\qa\private\emby-reference-manifest.local.json -OutputRoot docs\qa\private\baselines\playback-core-tuning-baseline.local -Clean
+```
+
+默认流程先运行 native-headless smoke 以构建 helper 和本地 cadence/HDR 样本，再让公开与私有 core manifest 的每个 stable/challenge case 进入 `Invoke-PlaybackQualityManifest.ps1`。某个 case 可以诚实产生 `fail`、`error` 或 `unsupported`，只要报告完整且 execution 与源可归因，baseline 仍可生成；缺报告、空选择、源解析只有 orchestration 证据或 strict validation 失败都会终止命令。`-SkipNativeHeadless` 只跳过附加的本地生成样本，不跳过 core manifest 播放，此时必须显式提供 `-NativeHelperExe`。
+
 章节 metadata 不作为所有 case 的硬性 required signal。若服务端在 playback-info media source 中返回 chapters，报告和 `metadata-duration` capability coverage 会暴露 `source.hasChapterMetadata`、`source.chapterCount`、`source.chapters.startPositionTicks`、`source.chapters.name` 和 `source.chapters.imageTag` 证据；缺失 chapters 字段、明确空数组和有章节明细需要分开解释。这些信号只证明章节 metadata 已进入报告，不证明章节 UI、章节跳转或按章节 seek 行为。
 
-## Materialize Source-Only Baseline
+## Materialize Source-Only Evaluator Fixture
 
-如果还没有 App/native 播放采集器，可以先物化一个 source-only baseline report set：
+如果需要检查 manifest、envelope 和 analyzer 自身，可以物化一个 source-only evaluator fixture：
 
 ```powershell
 dotnet run --project tools\NoiraPlayer.PlaybackQuality.Cli\NoiraPlayer.PlaybackQuality.Cli.csproj -- materialize-baseline-report-set --manifest docs\qa\playback-quality-reference-manifest.example.json --reports-dir docs\qa\baselines\v0.1-source-only\reports --source-revision <git-sha> --player-core-version <core-version> --build-configuration Debug --output docs\qa\baselines\v0.1-source-only\materialized-baseline-summary.json
@@ -137,7 +147,7 @@ dotnet run --project tools\NoiraPlayer.PlaybackQuality.Cli\NoiraPlayer.PlaybackQ
 
 该命令不会打开媒体，也不会声称播放成功。它只把 reference case 转成当前 Core 可消费的 `PlaybackQualityRunResult` envelope，写入 `report.runId = caseId` 的标准路径，在顶层 `caseMetadata` 保留 case 分类/严重度/稳定性，并显式加入 `source-only: playback execution was not run by this command` limitation。后续仍必须运行 `validate-report-set` 和 `analyze-report-set`；缺失的 lifecycle、display、timing、buffering、sync、startup、seek telemetry 应被报告为 `insufficient instrumentation`，而不是播放器 core bug。
 
-这一步的用途是建立可版本化 baseline artifact，并证明评测链路能完整覆盖 manifest。它不能替代真正的播放采集；当 App/native 采集器可用后，应使用真实采集的 envelope 替换 source-only baseline。
+这一步只用于 evaluator self-test 和历史迁移审计，不能进入正式 baseline/candidate。当前 strict playback validation 会因 execution evidence 不足拒绝它；不得把旧版 validation 结果继续解释为播放器证据。
 
 ## Materialize Native Harness Gap Report Set
 
@@ -151,7 +161,7 @@ dotnet run --project tools\NoiraPlayer.PlaybackQuality.Cli\NoiraPlayer.PlaybackQ
 
 该命令不会打开 native playback graph，不会解码真实媒体，也不会伪造 timing、buffering、A/V sync、display 或 color 指标。它为每个 manifest case 写入 `report.result = skip`、`skip.code = native-harness.not-implemented`、`skip.failureClass = insufficient instrumentation` 和 `skip.failureArea = evidence-collection`，并通过 `lifecycle.events[].status = skipped` 暴露 `lifecycle.skip` 证据。
 
-这类 report-set 的用途是把“真实 native 采集器还没实现”这个缺口变成可验证 artifact。它可以通过 `validate-report-set`，但不能用于播放质量优化、before/after 采纳决策、真实帧率判断、A/V sync 判断或 HDR/SDR 色彩正确性判断。自动化模型看到这类报告时，下一步应补 native harness 或把真实 App/native 指标接入报告链路，而不是修改播放器行为。
+这类 report-set 的用途是把“真实 native 采集器还没实现”变成 evaluator self-test artifact。stable/challenge skip 在当前 strict playback validation 中必须失败，不能用于播放质量优化、before/after 采纳决策、真实帧率判断、A/V sync 判断或 HDR/SDR 色彩正确性判断。自动化模型看到这类报告时，下一步应补 native harness 或真实 App/native 指标，而不是修改播放器行为。
 
 DEBUG App 现在有一个最小 App-hosted capture 入口：`plan-runs` 生成的 `devCommand.route = quality-run` 可以写入 App LocalFolder 的 `dev-command.json`。App 会根据 command 选择 Emby item playback 或 HTTP/HTTPS direct stream playback，在 `durationSeconds` 指定的采样窗口内主动执行 pause、resume、seek、stop，然后把标准 `PlaybackQualityRunResult` envelope 写到 App LocalFolder 的 `quality-run/captured/<runId>.json`。例如 `runId = local/foo` 会写成 `quality-run/captured/local/foo.json`。如果打开媒体或播放命令阶段失败，App 会在同一路径写入标准 error envelope，而不是只留下缺失 report。这一步仍是 App-hosted 软件采集，不验证 Xbox/HDMI/display 输出；报告中的 display/color/frame timing/A/V sync 只代表当前 native/App 软件层暴露的指标。
 
@@ -352,12 +362,12 @@ var result = PlaybackQualityRuntimeEvidenceCollector.ComposeErrorRunResult(
 
 当 `analyze-report-set` 看到一个或多个 `result = skip` 报告时，集合级 summary 会输出 `skippedReportCount`，并把 `action` / `decision` 设为 `collect-comparable-evidence`、`risk = high`、`confidence.level = weak`。`targetFailureAreas` 和 rank-1 `nextActions[0].failureArea` 应指向 `evidence-collection`。这表示 report 结构有效，但当前样本集没有产生可用于播放 Core 优化的真实播放证据。
 
-# Materialize Core Probe Report Set
+# Materialize Evaluator Self-Test Report Set
 
-`materialize-core-probe-report-set` 是 v0.1 的第一条非 source-only、App-free、hardware-free core 评测路径：
+`materialize-evaluator-self-test-report-set` 驱动 deterministic core-probe，用于验证 evaluator 的 orchestration、required-signal、报告和分析规则：
 
 ```powershell
-dotnet run --project tools\NoiraPlayer.PlaybackQuality.Cli\NoiraPlayer.PlaybackQuality.Cli.csproj -- materialize-core-probe-report-set --manifest docs\qa\playback-quality-reference-manifest.example.json --reports-dir docs\qa\baselines\v0.1-core-probe\reports --source-revision <git-sha-or-working-tree-id> --player-core-version NoiraPlayer.Core --build-configuration Debug --output docs\qa\baselines\v0.1-core-probe\materialized-core-probe-summary.json
+dotnet run --project tools\NoiraPlayer.PlaybackQuality.Cli\NoiraPlayer.PlaybackQuality.Cli.csproj -- materialize-evaluator-self-test-report-set --manifest docs\qa\playback-quality-reference-manifest.example.json --reports-dir docs\qa\baselines\v0.1-core-probe\reports --source-revision <git-sha-or-working-tree-id> --player-core-version NoiraPlayer.Core --build-configuration Debug --output docs\qa\baselines\v0.1-core-probe\materialized-core-probe-summary.json
 dotnet run --project tools\NoiraPlayer.PlaybackQuality.Cli\NoiraPlayer.PlaybackQuality.Cli.csproj -- validate-report-set --manifest docs\qa\playback-quality-reference-manifest.example.json --reports-dir docs\qa\baselines\v0.1-core-probe\reports --output docs\qa\baselines\v0.1-core-probe\report-set-validation.json
 dotnet run --project tools\NoiraPlayer.PlaybackQuality.Cli\NoiraPlayer.PlaybackQuality.Cli.csproj -- analyze-report-set --reports-dir docs\qa\baselines\v0.1-core-probe\reports --output docs\qa\baselines\v0.1-core-probe\report-analysis-summary.json
 ```
@@ -375,7 +385,7 @@ dotnet run --project tools\NoiraPlayer.PlaybackQuality.Cli\NoiraPlayer.PlaybackQ
 
 因此，core-probe 结果可以证明评测链路、required signals、orchestrator 生命周期和模型报告结构已经闭合；不能证明真实播放质量。进入播放器优化前，仍需要 native graph 或真实媒体软件采集器提供真实 decoder/render/buffer/frame timing/A-V sync/color telemetry。
 
-当前归档在 `docs/qa/baselines/v0.1-core-probe/`。该 report-set 覆盖 example manifest 的 9 个 case，`validate-report-set` 为 `isValid = true`。Dolby Vision Profile 5 case 预期输出 `status = unsupported` 和 `primaryFailureArea = unsupported-source`，不应要求 color conversion telemetry；`local/missing-file-error-handling` 预期输出 `result = error` 和 `failureArea = error-handling`。
+当前历史归档在 `docs/qa/baselines/v0.1-core-probe/`。其中保存的 `isValid = true` 来自 execution contract 引入前的旧 evaluator，只能用于迁移审计；按当前 strict validator 应因 `execution.evidenceLevel = orchestration` 被拒绝，不能作为播放器 baseline。
 
 ## Runtime Evidence Collector
 

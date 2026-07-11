@@ -986,3 +986,13 @@ resolver 失败现在也必须生成标准 `error` report，execution level 为 
 修复了另一处证据丢失：native helper 已经输出完整 source/decode/render 遥测后再非零退出时，headless 不再把它重写成“从未打开源”。parser fixture 现在验证同一报告同时保留 `result=error`、`decoded/rendered > 0`、`sourceOpened=true`、`demuxStarted=true` 和 `playbackSampleObserved=true`，用于区分启动失败与播放中途失败。
 
 Task 4 的 Core `483/483`、CLI smoke、manifest/resolver、私有 manifest、parser contract 和完整 native-headless smoke 均已通过。统一 `run-playback-core-checks.ps1` 已继续执行到 Task 5，并按预期在 legacy `New-PlaybackCoreTuningBaseline.ps1` 使用 core-probe 填充 stable/challenge case 后被 strict validator 拒绝；这不是 resolver/native runner 回归。下一步进入正式 baseline 编排替换，彻底停止用 core-probe 填充播放 case。真实 App 中出现的 EAGAIN、暂停恢复 I/O error、timeline/seek 异常仍需在同一 evidence contract 下沉淀为回归 case，最终再做完整 App 编译与代表性 App-hosted 复核。
+
+# 2026-07-11 更新：正式 baseline 已停止使用 core-probe
+
+`New-PlaybackCoreTuningBaseline.ps1` 不再调用 `materialize-core-probe-report-set`。公开、私有和 additional manifest 合并后，所有选中的 stable/challenge case 都先进入 `Invoke-PlaybackQualityManifest.ps1`；baseline 保存 runner summary，并要求 `selectedCaseCount > 0`、`reportCount == selectedCaseCount`、`missingReportCount == 0`，再进行 unified manifest 的 strict validate/analyze。
+
+`-SkipNativeHeadless` 现在只跳过附加的本地生成 cadence/HDR 样本，不跳过 core manifest 播放；使用该开关时必须显式传入 native helper。正常模式会先运行 native-headless smoke，复用其构建的 helper，并继续追加已 strict-valid 的本地 native report-set。
+
+manifest runner 因真实播放 `fail/error` 非零退出时，只要每个 case 都留下完整报告，baseline 会继续交给 strict validator 裁决，并在 summary 中保留 failed attempt warning。缺报告测试确认 `selected 1 / reports 0 / missing 1` 必须终止；一个真实 native execution error report 则可形成 `1/1` strict-valid baseline。播放器失败因此可评测，评测器缺证据不可放行。
+
+CLI 新增 `materialize-evaluator-self-test-report-set` 作为 deterministic core-probe 的明确入口，旧命令仅保留兼容。source-only、core-probe 和未执行 skip 归为 evaluator self-test；当前 strict playback gate 必须拒绝。Task 5 定向验证为 baseline tests 通过、CLI build/smoke 通过、Core `483/483`。下一步是 Task 6：阻止不同 execution level、locator 或 opened source 的 baseline/candidate 产生 improvement/regression。

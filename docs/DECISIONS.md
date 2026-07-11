@@ -1086,3 +1086,11 @@ resolver 失败不能 `continue` 后留下缺失报告，也不能回退到 prob
 native helper 的非零退出不再先于 stdout 解析。当 stdout 已满足完整 telemetry contract 时，报告必须同时保留已观察到的 source/decode/render/runtime/lifecycle 证据和终态 error；只有无法解析完整证据时才使用零遥测的 helper-failed envelope。晚期播放失败归类为 player-core bug，源解析失败归类为 external service/protocol issue；两者不得混成 insufficient instrumentation。
 
 私有 HDR case 在 Windows offscreen runner 中可以证明源识别、硬解码、帧生成和软件 color/DXGI snapshot，但不能证明 Xbox/HDMI HDR 输出。相关输出差异保留为失败和 limitation，不通过放宽 expected 消除；设备输出结论必须由后续 App-hosted/设备证据支撑。
+
+# 2026-07-11: 正式 baseline 只消费真实逐 case playback report
+
+决策：`New-PlaybackCoreTuningBaseline.ps1` 的 core manifest 必须通过 native manifest runner 逐 case 执行，禁止再用 source-only、core-probe、expected 或 skip materializer 填满 reports 目录。`materialize-evaluator-self-test-report-set` 保留 deterministic core-probe，但只能测试 evaluator 自身；其 orchestration evidence 在 strict playback validation 中必须失败。
+
+runner 进程非零退出与 report-set 无效不是同一概念。真实 player error、timeout 或 unsupported 可以导致单次 attempt 非零，但只要每个声明 case 有标准、可归因报告，baseline 应继续 strict validation，让失败成为可分析事实。空选择、缺报告或 report 数量不等于 selected 数量属于 harness 完整性失败，必须立即终止；resolver error 虽有结构化报告，但因只有 orchestration evidence 会在 strict validation 阶段终止。
+
+`-SkipNativeHeadless` 只控制是否追加本地生成样本，不能关闭 core manifest 的真实执行。默认流程先运行完整 native smoke 来产生 helper 和本地 report-set；显式跳过时调用方必须提供 helper。该语义避免测试或快速路径静默退回 probe。

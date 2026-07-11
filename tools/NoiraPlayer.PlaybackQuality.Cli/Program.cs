@@ -47,7 +47,8 @@ internal static class Program
                 return RunMaterializeBaselineReportSet(args);
             }
 
-            if (string.Equals(args[0], "materialize-core-probe-report-set", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(args[0], "materialize-evaluator-self-test-report-set", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(args[0], "materialize-core-probe-report-set", StringComparison.OrdinalIgnoreCase))
             {
                 return RunMaterializeCoreProbeReportSet(args);
             }
@@ -530,7 +531,7 @@ internal static class Program
     private static MaterializeBaselineReportSetOptions ParseMaterializeCoreProbeReportSetOptions(
         string[] args)
     {
-        return ParseMaterializeReportSetOptions(args, "materialize-core-probe-report-set");
+        return ParseMaterializeReportSetOptions(args, args[0]);
     }
 
     private static MaterializeBaselineReportSetOptions ParseMaterializeNativeHarnessReportSetOptions(
@@ -3566,7 +3567,7 @@ internal static class Program
         writer.WriteLine("  playback-quality analyze-report --report <report.json> [--output <analysis.json>]");
         writer.WriteLine("  playback-quality materialize-run-result --report <report.json> [--output <run-result.json>]");
         writer.WriteLine("  playback-quality materialize-baseline-report-set --manifest <reference-manifest.json> --reports-dir <reports-dir> [--collector-version <version>] [--player-core-version <version>] [--source-revision <revision>] [--build-configuration <config>] [--output <summary.json>]");
-        writer.WriteLine("  playback-quality materialize-core-probe-report-set --manifest <reference-manifest.json> --reports-dir <reports-dir> [--collector-version <version>] [--player-core-version <version>] [--source-revision <revision>] [--build-configuration <config>] [--output <summary.json>]");
+        writer.WriteLine("  playback-quality materialize-evaluator-self-test-report-set --manifest <reference-manifest.json> --reports-dir <reports-dir> [--collector-version <version>] [--player-core-version <version>] [--source-revision <revision>] [--build-configuration <config>] [--output <summary.json>]");
         writer.WriteLine("  playback-quality materialize-native-harness-report-set --manifest <reference-manifest.json> [--captured-reports-dir <captured-reports-dir>] --reports-dir <reports-dir> [--collector-version <version>] [--player-core-version <version>] [--source-revision <revision>] [--build-configuration <config>] [--output <summary.json>]");
         writer.WriteLine("  playback-quality analyze-report-set --reports-dir <reports-dir> [--output <analysis-summary.json>]");
         writer.WriteLine("  playback-quality compare --baseline <report.json> --candidate <report.json> [--previous <comparison.json>...] [--stall-threshold <n>] [--output <comparison.json>]");

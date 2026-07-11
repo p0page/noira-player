@@ -1082,7 +1082,7 @@ try {
     Push-Location $repoRoot
     try {
         dotnet $cliDll `
-            materialize-core-probe-report-set `
+            materialize-evaluator-self-test-report-set `
             --manifest $coreProbeManifestPath `
             --reports-dir $coreProbeDir `
             --source-revision smoke-core-probe-revision `
@@ -1090,7 +1090,7 @@ try {
             --build-configuration Debug `
             --output $coreProbeSummaryPath
         if ($LASTEXITCODE -ne 0) {
-            throw 'playback quality CLI materialize-core-probe-report-set returned a non-zero exit code.'
+            throw 'playback quality CLI materialize-evaluator-self-test-report-set returned a non-zero exit code.'
         }
     }
     finally {
@@ -1101,16 +1101,16 @@ try {
     if ($coreProbeSummary.schemaVersion -ne 1 -or
         $coreProbeSummary.caseCount -ne 1 -or
         $coreProbeSummary.reportsDirectory -ne $coreProbeDir) {
-        throw 'Expected materialize-core-probe-report-set summary to describe generated reports.'
+        throw 'Expected evaluator self-test report-set summary to describe generated reports.'
     }
 
     if (-not ($coreProbeSummary.limitations -contains 'core-probe: native playback graph, decoder, renderer, network I/O, and HDMI output were not opened')) {
-        throw 'Expected materialize-core-probe-report-set summary to expose core-probe limitation.'
+        throw 'Expected evaluator self-test report-set summary to expose core-probe limitation.'
     }
 
     $coreProbeReportPath = Join-Path $coreProbeDir 'local\core-probe-sdr-timeline-tracks.json'
     if (-not (Test-Path -LiteralPath $coreProbeReportPath)) {
-        throw 'Expected materialize-core-probe-report-set to write run-id based report path.'
+        throw 'Expected evaluator self-test report-set to write run-id based report path.'
     }
 
     $coreProbeReport = Get-Content -Raw -LiteralPath $coreProbeReportPath | ConvertFrom-Json
@@ -1123,7 +1123,7 @@ try {
         $coreProbeReport.report.tracks.selectedAudioStreamIndex -ne 1 -or
         $coreProbeReport.report.tracks.selectedSubtitleStreamIndex -ne 3 -or
         $coreProbeReport.report.environment.sourceRevision -ne 'smoke-core-probe-revision') {
-        throw 'Expected materialize-core-probe-report-set to write a model-consumable core probe envelope.'
+        throw 'Expected evaluator self-test report-set to write a model-consumable core probe envelope.'
     }
 
     if (-not ($coreProbeReport.report.limitations -contains 'core-probe: native playback graph, decoder, renderer, network I/O, and HDMI output were not opened')) {

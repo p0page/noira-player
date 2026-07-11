@@ -9,7 +9,12 @@
     [switch]$Clean,
     [string]$PlayerCoreVersion = 'NoiraPlayer.Core',
     [string]$BuildConfiguration = 'Debug',
-    [string]$SourceRevision = ''
+    [string]$SourceRevision = '',
+    [string]$NativeHelperExe = '',
+    [string]$ManifestRunnerHarnessScriptPath = '',
+    [string]$SourceResolverScriptPath = '',
+    [int]$DurationSeconds = 10,
+    [int]$AttemptTimeoutSeconds = 60
 )
 
 $ErrorActionPreference = 'Stop'
@@ -18,10 +23,12 @@ $global:LASTEXITCODE = 0
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 $cliProject = Join-Path $repoRoot 'tools\NoiraPlayer.PlaybackQuality.Cli\NoiraPlayer.PlaybackQuality.Cli.csproj'
 $mergeScript = Join-Path $repoRoot 'tools\quality-run\Merge-ReferenceManifests.ps1'
+$manifestRunnerScript = Join-Path $repoRoot 'tools\quality-run\Invoke-PlaybackQualityManifest.ps1'
 $nativeHeadlessScript = Join-Path $repoRoot 'tools\quality-run\run-native-headless-harness-smoke-test.ps1'
 $nativeSmokeRoot = Join-Path $repoRoot 'artifacts\quality-run\native-headless-smoke'
 $nativeManifestPath = Join-Path $nativeSmokeRoot 'native-manifest.json'
 $nativeMaterializedDir = Join-Path $nativeSmokeRoot 'native-materialized'
+$generatedNativeHelperExe = Join-Path $nativeSmokeRoot 'native-helper\NativePlaybackGraphHeadlessSmokeTests.exe'
 
 if ([string]::IsNullOrWhiteSpace($PublicManifestPath)) {
     $PublicManifestPath = Join-Path $repoRoot 'docs\qa\playback-quality-reference-manifest.example.json'
@@ -157,7 +164,7 @@ $reportsDir = Join-Path $resolvedOutputRoot 'reports'
 $summariesDir = Join-Path $resolvedOutputRoot 'summaries'
 $coreManifestPath = Join-Path $manifestsDir 'core-reference-manifest.local.json'
 $unifiedManifestPath = Join-Path $manifestsDir 'unified-reference-manifest.local.json'
-$coreSummaryPath = Join-Path $summariesDir 'core-probe-materialized-summary.local.json'
+$manifestRunSummaryPath = Join-Path $summariesDir 'manifest-run-summary.local.json'
 $validationPath = Join-Path $summariesDir 'report-set-validation.local.json'
 $analysisPath = Join-Path $summariesDir 'report-analysis-summary.local.json'
 $runPlanPath = Join-Path $summariesDir 'run-plan.local.json'
@@ -204,28 +211,6 @@ Invoke-Checked powershell @(
 )
 
 $baselineSourceRevision = Get-SourceRevision
-Invoke-Checked dotnet @(
-    'run',
-    '--project',
-    $cliProject,
-    '--',
-    'materialize-core-probe-report-set',
-    '--manifest',
-    $coreManifestPath,
-    '--reports-dir',
-    $reportsDir,
-    '--source-revision',
-    $baselineSourceRevision,
-    '--player-core-version',
-    $PlayerCoreVersion,
-    '--build-configuration',
-    $BuildConfiguration,
-    '--output',
-    $coreSummaryPath
-)
-
-$finalManifestInputs = [System.Collections.Generic.List[string]]::new()
-$finalManifestInputs.Add($coreManifestPath)
 $nativeIncluded = $false
 if (-not $SkipNativeHeadless) {
     Invoke-Checked powershell @(
@@ -242,6 +227,77 @@ if (-not $SkipNativeHeadless) {
         $BuildConfiguration
     )
 
+    if ([string]::IsNullOrWhiteSpace($NativeHelperExe)) {
+        $NativeHelperExe = $generatedNativeHelperExe
+    }
+}
+else {
+    $warnings.Add('native-headless local generated samples were skipped by -SkipNativeHeadless')
+}
+
+$resolvedNativeHelperExe = Resolve-RepoPath $NativeHelperExe
+if ([string]::IsNullOrWhiteSpace($resolvedNativeHelperExe) -or
+    -not (Test-Path -LiteralPath $resolvedNativeHelperExe)) {
+    throw 'A native helper executable is required to execute every baseline manifest case.'
+}
+$resolvedNativeHelperExe = (Resolve-Path -LiteralPath $resolvedNativeHelperExe).Path
+
+$manifestRunnerArguments = @(
+    '-NoProfile',
+    '-ExecutionPolicy',
+    'Bypass',
+    '-File',
+    $manifestRunnerScript,
+    '-ManifestPath',
+    $coreManifestPath,
+    '-ReportsDir',
+    $reportsDir,
+    '-NativeHelperExe',
+    $resolvedNativeHelperExe,
+    '-SummaryPath',
+    $manifestRunSummaryPath,
+    '-DurationSeconds',
+    ([string]$DurationSeconds),
+    '-AttemptTimeoutSeconds',
+    ([string]$AttemptTimeoutSeconds)
+)
+if (-not [string]::IsNullOrWhiteSpace($ManifestRunnerHarnessScriptPath)) {
+    $manifestRunnerArguments += @(
+        '-HarnessScriptPath',
+        (Resolve-RepoPath $ManifestRunnerHarnessScriptPath)
+    )
+}
+if (-not [string]::IsNullOrWhiteSpace($SourceResolverScriptPath)) {
+    $manifestRunnerArguments += @(
+        '-SourceResolverScriptPath',
+        (Resolve-RepoPath $SourceResolverScriptPath)
+    )
+}
+
+Write-Host ('running=powershell ' + ($manifestRunnerArguments -join ' '))
+& powershell @manifestRunnerArguments
+$manifestRunnerExitCode = $LASTEXITCODE
+if (-not (Test-Path -LiteralPath $manifestRunSummaryPath)) {
+    throw 'Native manifest runner did not write its execution summary.'
+}
+$manifestRunSummary = Read-JsonFile $manifestRunSummaryPath
+if ([int]$manifestRunSummary.selectedCaseCount -le 0) {
+    throw 'Native manifest runner selected no stable/challenge playback cases.'
+}
+if ([int]$manifestRunSummary.missingReportCount -ne 0 -or
+    [int]$manifestRunSummary.reportCount -ne [int]$manifestRunSummary.selectedCaseCount) {
+    throw ('Native manifest runner did not produce one report per selected case. selected=' +
+        $manifestRunSummary.selectedCaseCount + '; reports=' + $manifestRunSummary.reportCount +
+        '; missing=' + $manifestRunSummary.missingReportCount)
+}
+if ($manifestRunnerExitCode -ne 0) {
+    $warnings.Add('manifest runner captured non-success playback outcomes; strict report validation remains authoritative')
+}
+
+$finalManifestInputs = [System.Collections.Generic.List[string]]::new()
+$finalManifestInputs.Add($coreManifestPath)
+if (-not $SkipNativeHeadless) {
+
     if (-not (Test-Path -LiteralPath $nativeManifestPath)) {
         throw ('Native-headless manifest was not produced: ' + $nativeManifestPath)
     }
@@ -253,9 +309,6 @@ if (-not $SkipNativeHeadless) {
     $finalManifestInputs.Add((Resolve-Path -LiteralPath $nativeManifestPath).Path)
     Copy-DirectoryContents $nativeMaterializedDir $reportsDir
     $nativeIncluded = $true
-}
-else {
-    $warnings.Add('native-headless local generated samples were skipped by -SkipNativeHeadless')
 }
 
 Invoke-Checked powershell @(
@@ -328,6 +381,16 @@ $summary = [pscustomobject][ordered]@{
         $_.IndexOf('\docs\qa\private\', [System.StringComparison]::OrdinalIgnoreCase) -ge 0
     })
     additionalManifestPaths = @($AdditionalManifestPath)
+    coreExecution = [pscustomobject][ordered]@{
+        runner = 'native-manifest-runner-v0.1'
+        summaryPath = $manifestRunSummaryPath
+        selectedCaseCount = [int]$manifestRunSummary.selectedCaseCount
+        attemptedCaseCount = [int]$manifestRunSummary.attemptedCaseCount
+        reportCount = [int]$manifestRunSummary.reportCount
+        failedAttemptCount = [int]$manifestRunSummary.failedAttemptCount
+        unresolvedSourceCount = [int]$manifestRunSummary.unresolvedSourceCount
+        missingReportCount = [int]$manifestRunSummary.missingReportCount
+    }
     nativeHeadless = [pscustomobject][ordered]@{
         included = $nativeIncluded
         manifestPath = if ($nativeIncluded) { $nativeManifestPath } else { '' }

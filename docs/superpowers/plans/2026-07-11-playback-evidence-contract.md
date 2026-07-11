@@ -120,12 +120,12 @@
 - Consumes: Task 3/4 manifest runner report-set
 - Produces: strict v2 baseline；独立 evaluator-self-test probe report-set
 
-- [ ] 写失败测试：baseline 脚本不得调用 `materialize-core-probe-report-set` 填充播放 case。
-- [ ] 写失败测试：缺任一 stable/challenge raw report 时 baseline 失败。
-- [ ] 改为调用 manifest runner，再 strict validate/analyze。
-- [ ] 将 probe smoke 和归档说明迁为 evaluator-self-test。
-- [ ] 运行 baseline 脚本测试和 CLI smoke。
-- [ ] 提交 `fix: require real playback in tuning baselines`。
+- [x] 写失败测试：baseline 脚本不得调用 `materialize-core-probe-report-set` 填充播放 case。
+- [x] 写失败测试：缺任一 stable/challenge raw report 时 baseline 失败。
+- [x] 改为调用 manifest runner，再 strict validate/analyze。
+- [x] 将 probe smoke 和归档说明迁为 evaluator-self-test。
+- [x] 运行 baseline 脚本测试和 CLI smoke。
+- [x] 提交 `fix: require real playback in tuning baselines`。
 
 ### Task 6: 阻止跨证据、跨源 candidate 比较
 
