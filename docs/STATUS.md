@@ -2,6 +2,16 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-11 更新：audio-ahead wait 返回到成功 present 的分段证据已闭环
+
+提交 `486c969` 新增 `timing.audioAheadWaitEndToPresentSampleCount` 与 `timing.audioAheadWaitEndToPresentMsP50/P95/P99/Max`。采样从当前 generation 的 audio-ahead wait 返回开始，到下一次成功 `Render + Present` 完成为止；不包含 wait 本身，但包含 graph mutex 重新取得、decode/audio refill、clock 检查、字幕/渲染与 Present。字段已贯通 native、WinRT、Core report/analyzer/comparator、native-headless 严格 parser、repeat stability 和 App quality-run clone。旧报告缺字段时 repeat summary 保持 null，不会被补成 `0ms`。
+
+同一 24-case manifest 的首轮 report-set 和三轮 repeat 均通过 24/24 validation，分别位于 `docs\qa\private\candidates\playback-core-tuning-post-audio-wait-evidence-486c969-24case.local\` 与 `docs\qa\private\repeats\playback-core-tuning-post-audio-wait-evidence-486c969-native-repeat.local\`。repeat 为 22 个 group 中 21 stable、1 unstable，唯一不稳定项仍是 `local/native-headless-av-smoke`。该 case 的 end-to-present P95 仅为 `0.4756-0.5202ms`，spread `0.0446ms`；P99/max 为 `0.5008-0.6418ms`，spread `0.141ms`。与此同时 render P99/max expected-error spread 仍为 `9.8474ms`，不稳定信号仍集中在 render interval 与 audio-ahead 后 render interval P99/max。
+
+这说明当前尾部不在 wait 返回后的 mutex、decode refill、字幕、render 或 Present 阶段。A/V case 的 episode wait target P95 约 `30.3-31.3ms`，episode wait duration P95 约 `31.3-32.7ms`，而成功 present 后 render loop 还会先执行固定 `5ms` 默认等待，再为下一帧计算精确 audio-ahead wait。下一项小步结构性候选应合并这两个定时阶段：成功 A/V present 后立即检查下一帧并直接安排 audio-aware deadline，避免继续做 lead、线程优先级或音频游标外推常量试验。
+
+与旧 `6b936f9` 报告的自动 comparison 为 0 improved、2 regressed、22 unchanged、24 partial confidence，并输出 `reject-candidate`。两个单次 regression 是 A/V smoke 与 HDR10-60 的 cadence 波动；新增字段全部为 candidate-only signal。由于 `486c969` 不改变播放策略，且三轮 repeat 仍显示同一个已知 A/V unstable group，该自动结果不能解释为行为回退或质量改善，只能说明旧报告不具备新字段且单次 timing 不适合采纳判断。完整 `run-playback-core-checks.ps1` 已通过，覆盖 456 个 Core tests、native-headless、评测脚本、原生 helper/offscreen tests 和 Native Debug x64 build。
+
 ## 2026-07-11 更新：render thread above-normal 候选不采纳
 
 在字幕重同步 accepted baseline 之后，本轮针对 `local/native-headless-av-smoke` 的 audio-ahead 后 render P99/max 尾部尝试了线程级调度候选。Kodi 固定提交 `f0232910490189b97717bc5d309aec2e5751d6d3` 的 Windows 层支持 `THREAD_PRIORITY_ABOVE_NORMAL`，DXVA 路径还会临时提升进程优先级；本项目选择了更窄的 `RenderThreadPriorityScope`，仅在 `PlaybackGraph::RenderLoop` 生命周期内提升当前线程并在退出时恢复。候选提交为隔离分支上的 `4ecb74441baf67cdf61aa784fea4321b7e4766d8`，未合入 accepted 主线。

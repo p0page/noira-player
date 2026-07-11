@@ -1,5 +1,15 @@
 ﻿# 技术决策
 
+## 2026-07-11: 保留 audio-ahead wait end-to-present 诊断证据
+
+决策：保留提交 `486c969` 的 `timing.audioAheadWaitEndToPresentSampleCount` 与 `timing.audioAheadWaitEndToPresentMsP50/P95/P99/Max`，作为 audio-ahead wait 返回到下一次成功 `Render + Present` 的分段诊断与 repeat stability 证据。它不新增 pass/fail 阈值，也不是 v0.1 自动采纳信号。
+
+原因：同一 24-case manifest 的三轮 repeat 中，A/V smoke 的 end-to-present P95 spread 仅 `0.0446ms`，P99/max spread 仅 `0.141ms`，绝对值始终低于 `0.65ms`；同一 case 的 render P99/max expected-error spread 仍为 `9.8474ms`。因此当前 frame pacing 尾部主要发生在 wait 及其之前的调度阶段，不在 wait 返回后的 graph mutex、decode refill、字幕/render 或 Present 阶段。
+
+影响：下一项候选应验证成功 A/V present 后固定 `5ms` 默认 render-loop wait 与随后 audio-aware wait 的合并，减少一次独立 timer 阶段并更早计算下一帧 deadline。不得据此恢复已拒绝的线程优先级、游标外推、half-frame cap 或继续盲调 1-5ms lead。
+
+边界：旧 `6b936f9` 报告没有新字段，与 `486c969` 的自动 comparison 因 candidate-only signals 和单次 cadence 波动输出 2 regressed/22 unchanged、`reject-candidate`。该结果不证明 evidence-only 代码引入播放回退；也不能覆盖自动裁判。`486c969` 只作为新的证据基线，后续行为候选必须使用其同 manifest baseline/repeat 重新比较。
+
 ## 2026-07-11: 不采纳 render thread above-normal 候选
 
 决策：不把隔离分支提交 `4ecb74441baf67cdf61aa784fea4321b7e4766d8` 合入 accepted 播放 Core。该候选用 RAII 将 `PlaybackGraph::RenderLoop` 临时提升到 `THREAD_PRIORITY_ABOVE_NORMAL`，并保证已有更高优先级不被降低、线程退出后恢复原值。实现参考 Kodi Windows 线程优先级映射和 DXVA 提升调度优先级的原则，但采用线程级而非进程级影响范围。
