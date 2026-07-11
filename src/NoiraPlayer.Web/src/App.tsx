@@ -1,54 +1,103 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import type { FormEvent } from 'react';
 import { requestBridge } from './bridge';
+import {
+  loadHomeCatalog,
+  loadLibraryLatestRows,
+  type HomeCatalog,
+  type HomeRow,
+  type HomeRowKind,
+} from './catalog/homeCatalog';
 import { EmbyRequestError, EmbyWebClient } from './emby';
+import { useFocusNavigationPolicy } from './focus/FocusProvider';
+import { HomePage } from './pages/HomePage';
 import { createEmbyFetchTransport } from './transport';
-import type { BootstrapResult, LibraryView, MediaItem, SessionBootstrap } from './types';
+import type {
+  BootstrapResult,
+  LibraryView,
+  MediaItem,
+  SessionBootstrap,
+} from './types';
 
 type View = 'loading' | 'login' | 'home' | 'items' | 'details';
+type DetailsOrigin = 'home' | 'items';
+
+const coreRowOrder: readonly { key: string; kind: HomeRowKind }[] = [
+  { key: 'resume', kind: 'resume' },
+  { key: 'nextUp', kind: 'nextUp' },
+  { key: 'libraries', kind: 'libraries' },
+  { key: 'latest', kind: 'latest' },
+];
 
 export function App() {
+  const focusPolicy = useFocusNavigationPolicy();
   const [view, setView] = useState<View>('loading');
-  const [session, setSession] = useState<SessionBootstrap | null>(null);
   const [client, setClient] = useState<EmbyWebClient | null>(null);
-  const [libraries, setLibraries] = useState<LibraryView[]>([]);
+  const [homeRows, setHomeRows] = useState<HomeRow[]>([]);
   const [items, setItems] = useState<MediaItem[]>([]);
+  const [activeLibrary, setActiveLibrary] = useState<LibraryView | null>(null);
   const [selectedItem, setSelectedItem] = useState<MediaItem | null>(null);
+  const [detailsOrigin, setDetailsOrigin] = useState<DetailsOrigin>('home');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const bootstrapStartedRef = useRef(false);
+  const mountedRef = useRef(false);
+  const operationGenerationRef = useRef(0);
+  const logoutPendingRef = useRef(false);
+  const homeRowsRef = useRef<readonly HomeRow[]>([]);
 
   useEffect(() => {
-    void bootstrap();
+    mountedRef.current = true;
+    if (!bootstrapStartedRef.current) {
+      bootstrapStartedRef.current = true;
+      void bootstrap();
+    }
+
+    return () => {
+      mountedRef.current = false;
+    };
   }, []);
 
   async function bootstrap() {
+    const generation = beginOperation();
     setBusy(true);
     setError('');
     setView('loading');
+
     try {
       const result = await requestBridge<BootstrapResult>('auth.bootstrap');
+      if (!isCurrentOperation(generation)) {
+        return;
+      }
+
       if (!result.session) {
-        setSession(null);
+        resetAuthenticatedState();
         setView('login');
         return;
       }
 
       const nextClient = createClient(result.session);
-      setSession(result.session);
       setClient(nextClient);
-      await loadHome(nextClient);
+      await loadHome(nextClient, generation);
     } catch (cause) {
-      setError(describeError(cause));
+      if (isCurrentOperation(generation)) {
+        setError(describeError(cause));
+      }
     } finally {
-      setBusy(false);
+      if (isCurrentOperation(generation)) {
+        setBusy(false);
+      }
     }
   }
 
   async function login(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    const generation = beginOperation();
     setBusy(true);
     setError('');
+
     try {
-      const data = new FormData(event.currentTarget);
       const result = await requestBridge<BootstrapResult>(
         'auth.login',
         {
@@ -58,86 +107,150 @@ export function App() {
         },
         { timeoutMs: 45000 },
       );
+      if (!isCurrentOperation(generation)) {
+        return;
+      }
       if (!result.session) {
         throw new Error('Native login completed without a saved Emby session.');
       }
 
       const nextClient = createClient(result.session);
-      setSession(result.session);
       setClient(nextClient);
-      await loadHome(nextClient);
+      await loadHome(nextClient, generation);
     } catch (cause) {
-      setError(describeError(cause));
+      if (isCurrentOperation(generation)) {
+        setError(describeError(cause));
+      }
     } finally {
-      setBusy(false);
+      if (isCurrentOperation(generation)) {
+        setBusy(false);
+      }
     }
   }
 
-  async function loadHome(client: EmbyWebClient) {
-    const nextLibraries = await client.getViews();
-    setLibraries(nextLibraries);
+  async function loadHome(nextClient: EmbyWebClient, generation: number) {
+    const catalog = await loadHomeCatalog(nextClient);
+    if (!isCurrentOperation(generation)) {
+      return;
+    }
+
+    const coreRows = resolveCoreRows(catalog, homeRowsRef.current);
+    const retainedSupplementalRows = homeRowsRef.current.filter(isSupplementalRow);
+    replaceHomeRows(mergeRows(coreRows, retainedSupplementalRows));
     setItems([]);
+    setActiveLibrary(null);
     setSelectedItem(null);
     setView('home');
+    setError(describeCatalogFailures(catalog));
+    setBusy(false);
+
+    const supplementalRows = await loadLibraryLatestRows(
+      nextClient,
+      extractLibraries(coreRows),
+    );
+    if (!isCurrentOperation(generation)) {
+      return;
+    }
+
+    replaceHomeRows(mergeRows(coreRows, supplementalRows));
   }
 
   async function reloadHome() {
+    if (logoutPendingRef.current) {
+      return;
+    }
     if (!client) {
       setView('login');
       return;
     }
 
+    const generation = beginOperation();
     setBusy(true);
     setError('');
     try {
-      await loadHome(client);
+      await loadHome(client, generation);
     } catch (cause) {
-      setError(describeError(cause));
+      if (isCurrentOperation(generation)) {
+        setError(describeError(cause));
+      }
     } finally {
-      setBusy(false);
+      if (isCurrentOperation(generation)) {
+        setBusy(false);
+      }
     }
   }
 
-  async function loadItems(libraryId: string) {
+  async function loadItems(library: LibraryView) {
+    if (logoutPendingRef.current) {
+      return;
+    }
     if (!client) {
       setView('login');
       return;
     }
 
+    const generation = beginOperation();
     setBusy(true);
     setError('');
     try {
-      const nextItems = await client.getItems(libraryId);
+      const nextItems = await client.getItems(library.id);
+      if (!isCurrentOperation(generation)) {
+        return;
+      }
+
       setItems(nextItems);
+      setActiveLibrary(library);
       setSelectedItem(null);
       setView('items');
     } catch (cause) {
-      setError(describeError(cause));
+      if (isCurrentOperation(generation)) {
+        setError(describeError(cause));
+      }
     } finally {
-      setBusy(false);
+      if (isCurrentOperation(generation)) {
+        setBusy(false);
+      }
     }
   }
 
-  async function loadDetails(itemId: string) {
+  async function loadDetails(itemId: string, origin: DetailsOrigin) {
+    if (logoutPendingRef.current) {
+      return;
+    }
     if (!client) {
       setView('login');
       return;
     }
 
+    const generation = beginOperation();
     setBusy(true);
     setError('');
     try {
       const item = await client.getItem(itemId);
+      if (!isCurrentOperation(generation)) {
+        return;
+      }
+
       setSelectedItem(item);
+      setDetailsOrigin(origin);
       setView('details');
     } catch (cause) {
-      setError(describeError(cause));
+      if (isCurrentOperation(generation)) {
+        setError(describeError(cause));
+      }
     } finally {
-      setBusy(false);
+      if (isCurrentOperation(generation)) {
+        setBusy(false);
+      }
     }
   }
 
   async function playNatively(item: MediaItem) {
+    if (logoutPendingRef.current) {
+      return;
+    }
+
+    const generation = beginOperation();
     setBusy(true);
     setError('');
     try {
@@ -149,139 +262,278 @@ export function App() {
         runtimeTicks: item.runtimeTicks || 0,
       });
     } catch (cause) {
-      setError(describeError(cause));
+      if (isCurrentOperation(generation)) {
+        setError(describeError(cause));
+      }
     } finally {
-      setBusy(false);
+      if (isCurrentOperation(generation)) {
+        setBusy(false);
+      }
     }
   }
 
   async function logout() {
+    if (logoutPendingRef.current) {
+      return;
+    }
+
+    logoutPendingRef.current = true;
+    const generation = beginOperation();
+    focusPolicy.clear();
     setBusy(true);
     setError('');
     try {
       await requestBridge('auth.logout');
-      setSession(null);
-      setClient(null);
-      setLibraries([]);
-      setItems([]);
-      setSelectedItem(null);
+      if (!isCurrentOperation(generation)) {
+        return;
+      }
+
+      resetAuthenticatedState();
       setView('login');
     } catch (cause) {
-      setError(describeError(cause));
+      if (isCurrentOperation(generation)) {
+        setError(describeError(cause));
+      }
     } finally {
-      setBusy(false);
+      logoutPendingRef.current = false;
+      if (isCurrentOperation(generation)) {
+        setBusy(false);
+      }
     }
   }
 
-  return (
-    <main>
-      <header>
-        <h1>Noira</h1>
-        {session ? (
-          <p>
-            {session.userName || session.userId} @ {session.serverUrl}
-          </p>
-        ) : null}
-      </header>
+  function beginOperation(): number {
+    operationGenerationRef.current += 1;
+    return operationGenerationRef.current;
+  }
 
-      {error ? <p role="alert">{error}</p> : null}
-      {busy ? <p aria-live="polite">Working...</p> : null}
+  function isCurrentOperation(generation: number): boolean {
+    return mountedRef.current && operationGenerationRef.current === generation;
+  }
+
+  function replaceHomeRows(rows: readonly HomeRow[]) {
+    const snapshot = [...rows];
+    homeRowsRef.current = snapshot;
+    setHomeRows(snapshot);
+  }
+
+  function resetAuthenticatedState() {
+    setClient(null);
+    replaceHomeRows([]);
+    setItems([]);
+    setActiveLibrary(null);
+    setSelectedItem(null);
+    setDetailsOrigin('home');
+  }
+
+  return (
+    <div className="app-root">
+      {error || busy ? (
+        <div className="app-notices">
+          {error ? <p role="alert">{error}</p> : null}
+          {busy ? <p aria-live="polite">Working...</p> : null}
+        </div>
+      ) : null}
 
       {view === 'loading' ? (
-        <section>
-          <p>Loading session...</p>
-          {error ? (
-            <button type="button" disabled={busy} onClick={() => void bootstrap()}>
-              Retry
-            </button>
-          ) : null}
-        </section>
+        <main className="app-page app-page--centered">
+          <section className="status-view" aria-labelledby="loading-title">
+            <h1 id="loading-title">Noira</h1>
+            <p>Loading session...</p>
+            {error ? (
+              <button type="button" disabled={busy} onClick={() => void bootstrap()}>
+                Retry
+              </button>
+            ) : null}
+          </section>
+        </main>
       ) : null}
 
       {view === 'login' ? (
-        <form onSubmit={login}>
-          <label>
-            Server URL
-            <input name="serverUrl" type="url" placeholder="https://emby.example" required />
-          </label>
-          <label>
-            Username
-            <input name="username" autoComplete="username" required />
-          </label>
-          <label>
-            Password
-            <input name="password" type="password" autoComplete="current-password" required />
-          </label>
-          <button type="submit" disabled={busy}>
-            Log in
-          </button>
-        </form>
+        <main className="app-page app-page--centered">
+          <form className="login-form" onSubmit={login}>
+            <h1>Noira</h1>
+            <label>
+              Server URL
+              <input name="serverUrl" type="url" required />
+            </label>
+            <label>
+              Username
+              <input name="username" autoComplete="username" required />
+            </label>
+            <label>
+              Password
+              <input
+                name="password"
+                type="password"
+                autoComplete="current-password"
+                required
+              />
+            </label>
+            <button type="submit" disabled={busy}>
+              Log in
+            </button>
+          </form>
+        </main>
       ) : null}
 
       {view === 'home' ? (
-        <section>
-          <button type="button" disabled={busy} onClick={() => void logout()}>
-            Log out
-          </button>
-          <button type="button" disabled={busy} onClick={() => void reloadHome()}>
-            Refresh
-          </button>
-          <h2>Libraries</h2>
-          {libraries.length === 0 ? <p>No video libraries were returned.</p> : null}
-          <ul>
-            {libraries.map((library) => (
-              <li key={library.id}>
-                <button type="button" disabled={busy} onClick={() => void loadItems(library.id)}>
-                  {library.imageUrl ? <img src={library.imageUrl} alt="" /> : null}
-                  {library.name}
-                  {library.collectionType ? ` (${library.collectionType})` : ''}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
+        <HomePage
+          rows={homeRows}
+          onHome={() => void reloadHome()}
+          onLogout={() => void logout()}
+          onOpenLibrary={(library) => void loadItems(library)}
+          onOpenMedia={(item) => void loadDetails(item.id, 'home')}
+        />
       ) : null}
 
       {view === 'items' ? (
-        <section>
-          <button type="button" disabled={busy} onClick={() => void reloadHome()}>
-            Back
-          </button>
-          <h2>Items</h2>
+        <main className="app-page legacy-page">
+          <header className="legacy-page__header">
+            <button type="button" disabled={busy} onClick={() => setView('home')}>
+              Back
+            </button>
+            <h1>{activeLibrary?.name || 'Items'}</h1>
+          </header>
           {items.length === 0 ? <p>No playable videos were returned.</p> : null}
-          <ul>
+          <ul className="legacy-media-list">
             {items.map((item) => (
               <li key={item.id}>
-                <button type="button" disabled={busy} onClick={() => void loadDetails(item.id)}>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void loadDetails(item.id, 'items')}
+                >
                   {item.imageUrl ? <img src={item.imageUrl} alt="" /> : null}
-                  {item.name} ({item.type})
+                  <span>
+                    <strong>{item.name}</strong>
+                    <small>{item.type}</small>
+                  </span>
                 </button>
               </li>
             ))}
           </ul>
-        </section>
+        </main>
       ) : null}
 
       {view === 'details' && selectedItem ? (
-        <section>
-          <button type="button" disabled={busy} onClick={() => setView('items')}>
+        <main className="app-page legacy-page legacy-details">
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => setView(detailsOrigin)}
+          >
             Back
           </button>
-          <h2>{selectedItem.name}</h2>
-          {selectedItem.imageUrl ? <img src={selectedItem.imageUrl} alt="" /> : null}
-          <p>{selectedItem.type}</p>
-          {selectedItem.overview ? <p>{selectedItem.overview}</p> : null}
-          <button type="button" disabled={busy} onClick={() => void playNatively(selectedItem)}>
-            Play
-          </button>
-        </section>
+          <section>
+            <h1>{selectedItem.name}</h1>
+            {selectedItem.imageUrl ? <img src={selectedItem.imageUrl} alt="" /> : null}
+            <p>{selectedItem.type}</p>
+            {selectedItem.overview ? <p>{selectedItem.overview}</p> : null}
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void playNatively(selectedItem)}
+            >
+              Play
+            </button>
+          </section>
+        </main>
       ) : null}
-    </main>
+    </div>
   );
 }
 
 function createClient(session: SessionBootstrap): EmbyWebClient {
   return new EmbyWebClient(session, createEmbyFetchTransport(session));
+}
+
+function resolveCoreRows(
+  catalog: HomeCatalog,
+  previousRows: readonly HomeRow[],
+): HomeRow[] {
+  const nextRowsByKey = new Map(catalog.rows.map((row) => [row.key, row]));
+  const previousRowsByKey = new Map(previousRows.map((row) => [row.key, row]));
+  const failedKinds = new Set(catalog.failedKinds);
+  const result: HomeRow[] = [];
+
+  for (const identity of coreRowOrder) {
+    const nextRow = nextRowsByKey.get(identity.key);
+    if (nextRow) {
+      result.push(nextRow);
+      continue;
+    }
+
+    if (failedKinds.has(identity.kind)) {
+      const previousRow = previousRowsByKey.get(identity.key);
+      if (previousRow) {
+        result.push(previousRow);
+      }
+    }
+  }
+
+  return result;
+}
+
+function mergeRows(
+  primaryRows: readonly HomeRow[],
+  appendedRows: readonly HomeRow[],
+): HomeRow[] {
+  const seenKeys = new Set<string>();
+  const result: HomeRow[] = [];
+
+  for (const row of [...primaryRows, ...appendedRows]) {
+    const key = row.key.trim();
+    if (!key || row.items.length === 0 || seenKeys.has(key)) {
+      continue;
+    }
+
+    seenKeys.add(key);
+    result.push(row);
+  }
+
+  return result;
+}
+
+function isSupplementalRow(row: HomeRow): boolean {
+  return row.key.startsWith('latest:');
+}
+
+function extractLibraries(rows: readonly HomeRow[]): LibraryView[] {
+  const seenIds = new Set<string>();
+  const libraries: LibraryView[] = [];
+
+  for (const row of rows) {
+    if (row.kind !== 'libraries') {
+      continue;
+    }
+
+    for (const item of row.items) {
+      if (!('collectionType' in item)) {
+        continue;
+      }
+
+      const id = item.id.trim();
+      if (!id || seenIds.has(id)) {
+        continue;
+      }
+
+      seenIds.add(id);
+      libraries.push(item);
+    }
+  }
+
+  return libraries;
+}
+
+function describeCatalogFailures(catalog: HomeCatalog): string {
+  if (catalog.failedKinds.length === 0) {
+    return '';
+  }
+
+  return catalog.failedKinds.length === coreRowOrder.length
+    ? 'Unable to load Home from Emby.'
+    : 'Some Home rows could not be loaded.';
 }
 
 function describeError(cause: unknown): string {
