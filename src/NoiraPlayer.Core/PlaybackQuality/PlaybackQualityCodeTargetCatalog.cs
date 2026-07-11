@@ -65,6 +65,27 @@ namespace NoiraPlayer.Core.PlaybackQuality
             "src/NoiraPlayer.Core/PlaybackQuality/PlaybackRefreshRatePolicy.cs"
         };
 
+        private static readonly string[] TrackTargets =
+        {
+            "src/NoiraPlayer.Native/Media/AudioDecoder.cpp",
+            "src/NoiraPlayer.Native/Media/AudioRenderer.cpp",
+            "src/NoiraPlayer.Native/Media/PlaybackGraph.cpp"
+        };
+
+        private static readonly string[] SubtitleTargets =
+        {
+            "src/NoiraPlayer.Native/Media/SubtitleDecoder.cpp",
+            "src/NoiraPlayer.Native/Media/SubtitleRenderer.cpp",
+            "src/NoiraPlayer.Native/Media/PlaybackGraph.cpp"
+        };
+
+        private static readonly string[] PlaybackLifecycleTargets =
+        {
+            "src/NoiraPlayer.Core/Playback/PlaybackOrchestrator.cs",
+            "src/NoiraPlayer.Native/NativePlaybackEngine.cpp",
+            "src/NoiraPlayer.Native/Media/PlaybackGraph.cpp"
+        };
+
         private static readonly string[] EvidenceCollectionTargets =
         {
             "src/NoiraPlayer.Core/PlaybackQuality/PlaybackQualityReportMapper.cs",
@@ -94,6 +115,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
             "metadata",
             "tracks",
             "subtitles",
+            "playback-lifecycle",
             "reporting",
             "unknown"
         };
@@ -139,6 +161,12 @@ namespace NoiraPlayer.Core.PlaybackQuality
                     return AvSyncTargets;
                 case "frame-pacing":
                     return FramePacingTargets;
+                case "tracks":
+                    return TrackTargets;
+                case "subtitles":
+                    return SubtitleTargets;
+                case "playback-lifecycle":
+                    return PlaybackLifecycleTargets;
                 case "evidence-collection":
                     return EvidenceCollectionTargets;
                 case "unknown":
@@ -200,6 +228,22 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 string.Equals(signal, "display.hdrStatus", System.StringComparison.Ordinal))
             {
                 return "color-pipeline";
+            }
+
+            if (string.Equals(signal, "lifecycle.audio-switch", System.StringComparison.Ordinal))
+            {
+                return "tracks";
+            }
+
+            if (string.Equals(signal, "lifecycle.subtitle-switch", System.StringComparison.Ordinal) ||
+                string.Equals(signal, "lifecycle.subtitle-off", System.StringComparison.Ordinal))
+            {
+                return "subtitles";
+            }
+
+            if (StartsWithSignal(signal, "lifecycle."))
+            {
+                return "playback-lifecycle";
             }
 
             return "evidence-collection";

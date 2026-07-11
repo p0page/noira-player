@@ -62,4 +62,18 @@ public sealed class PlaybackQualityCodeTargetCatalogTests
 
         Assert.Contains("src/NoiraPlayer.Core/PlaybackQuality/PlaybackQualityReportMapper.cs", targets);
     }
+
+    [Theory]
+    [InlineData("lifecycle.audio-switch", "tracks")]
+    [InlineData("lifecycle.subtitle-switch", "subtitles")]
+    [InlineData("lifecycle.pause", "playback-lifecycle")]
+    public void GetFailureAreaForSignal_Maps_Lifecycle_Operations(
+        string signal,
+        string expectedArea)
+    {
+        Assert.Equal(expectedArea, PlaybackQualityCodeTargetCatalog.GetFailureAreaForSignal(signal));
+        Assert.NotEqual(
+            PlaybackQualityCodeTargetCatalog.GetForFailureArea("unknown"),
+            PlaybackQualityCodeTargetCatalog.GetForFailureArea(expectedArea));
+    }
 }

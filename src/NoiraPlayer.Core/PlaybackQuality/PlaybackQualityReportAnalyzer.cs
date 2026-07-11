@@ -1523,6 +1523,9 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 "startup",
                 "buffering",
                 "timeline",
+                "tracks",
+                "subtitles",
+                "playback-lifecycle",
                 "av-sync",
                 "frame-pacing",
                 "unknown"
@@ -1825,6 +1828,9 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 "startup",
                 "buffering",
                 "timeline",
+                "tracks",
+                "subtitles",
+                "playback-lifecycle",
                 "av-sync",
                 "frame-pacing",
                 "unknown"
@@ -2299,6 +2305,43 @@ namespace NoiraPlayer.Core.PlaybackQuality
                             "position.actualPositionTicks",
                             "position.seekPositionErrorMs",
                             "sync.videoPositionTicks"
+                        });
+                case "tracks":
+                    return NewHint(
+                        area,
+                        "Inspect selected audio stream state, decoder replacement, renderer queue continuity, and post-switch position progress.",
+                        PlaybackQualityCodeTargetCatalog.GetForFailureArea(area),
+                        new[]
+                        {
+                            "lifecycle.audio-switch",
+                            "tracks.selectedAudioStreamIndex",
+                            "buffers.submittedAudioFrames",
+                            "sync.videoPositionTicks"
+                        });
+                case "subtitles":
+                    return NewHint(
+                        area,
+                        "Inspect subtitle stream selection, decoder flush, cue timing, overlay presentation, and post-switch playback progress.",
+                        PlaybackQualityCodeTargetCatalog.GetForFailureArea(area),
+                        new[]
+                        {
+                            "lifecycle.subtitle-switch",
+                            "lifecycle.subtitle-off",
+                            "tracks.selectedSubtitleStreamIndex",
+                            "tracks.subtitleTrackCount"
+                        });
+                case "playback-lifecycle":
+                    return NewHint(
+                        area,
+                        "Inspect pause, resume, stop, and recovery state transitions together with post-operation playback progress.",
+                        PlaybackQualityCodeTargetCatalog.GetForFailureArea(area),
+                        new[]
+                        {
+                            "lifecycle.load",
+                            "lifecycle.play",
+                            "lifecycle.pause",
+                            "lifecycle.resume",
+                            "lifecycle.stop"
                         });
                 case "av-sync":
                     return NewHint(

@@ -37,6 +37,7 @@ public sealed class PlaybackQualityEvaluatorTests
         PlaybackQualityEvaluator.Evaluate(report);
 
         Assert.Equal("fail", report.Result);
+        Assert.Equal("tracks", report.Analysis.PrimaryFailureArea);
         Assert.Contains(message, report.FailureReasons);
         Assert.Contains(report.Checks, check =>
             check.Signal == "lifecycle.audio-switch" &&
@@ -1093,6 +1094,7 @@ public sealed class PlaybackQualityEvaluatorTests
         PlaybackQualityEvaluator.Evaluate(report);
 
         Assert.Equal("fail", report.Result);
+        Assert.Equal("subtitles", report.Analysis.PrimaryFailureArea);
         Assert.Contains(message, report.FailureReasons);
         Assert.Contains("lifecycle.subtitle-switch", report.Analysis.RelevantSignals);
         Assert.Contains(report.Checks, check =>
@@ -1128,6 +1130,7 @@ public sealed class PlaybackQualityEvaluatorTests
         PlaybackQualityEvaluator.Evaluate(report);
 
         Assert.Equal("fail", report.Result);
+        Assert.Equal(failureArea, report.Analysis.PrimaryFailureArea);
         Assert.Contains(report.Checks, check =>
             check.Signal == "lifecycle." + operation &&
             check.Status == "fail" &&

@@ -999,6 +999,26 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 return;
             }
 
+            foreach (var check in report.Checks)
+            {
+                if (check.Status != "fail" ||
+                    check.Name != "LifecycleOperation" ||
+                    string.IsNullOrWhiteSpace(check.FailureArea))
+                {
+                    continue;
+                }
+
+                report.Analysis.PrimaryFailureArea = check.FailureArea;
+                report.Analysis.SuggestedNextAction = check.FailureArea switch
+                {
+                    "tracks" => "Inspect audio track selection and decoder/renderer switch continuity.",
+                    "subtitles" => "Inspect subtitle stream switching, cue decode timing, and overlay presentation.",
+                    "timeline" => "Inspect seek/resume timeline state and playback position reporting.",
+                    _ => "Inspect playback lifecycle state transitions and post-operation progress."
+                };
+                return;
+            }
+
             report.Analysis.PrimaryFailureArea = "unknown";
             report.Analysis.SuggestedNextAction = "Inspect raw metrics and failure reasons.";
         }
