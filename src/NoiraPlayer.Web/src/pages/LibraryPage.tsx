@@ -78,6 +78,10 @@ export function LibraryPage({
     useState<ExternalRestoreCompletion | null>(null);
   const [releasedExternalRestoreRequestId, setReleasedExternalRestoreRequestId] =
     useState<string | null>(null);
+  const [
+    cancelledExternalRestoreRequestId,
+    setCancelledExternalRestoreRequestId,
+  ] = useState<string | null>(null);
   const [returnTarget, setReturnTarget] = useState<FocusTarget | null>(null);
   const [guideRestoreRequest, setGuideRestoreRequest] =
     useState<FocusRestoreRequest | null>(null);
@@ -86,6 +90,7 @@ export function LibraryPage({
   const contextRef = useRef<LibraryLoadContext | null>(null);
   const itemsRef = useRef<readonly MediaItem[]>([]);
   const guideInteractionRef = useRef(false);
+  const cancelledExternalRestoreRequestIdRef = useRef<string | null>(null);
   const gridRef = useRef<HTMLDivElement | null>(null);
   const visibleItems = renderedIdentity === identity ? items : [];
   const entries = useMemo(
@@ -100,12 +105,19 @@ export function LibraryPage({
     externalRestoreRequest !== null &&
     externalRestoreRequest !== undefined &&
     releasedExternalRestoreRequestId === externalRestoreRequest.requestId;
+  const externalRestoreIsCancelled =
+    externalRestoreRequest !== null &&
+    externalRestoreRequest !== undefined &&
+    cancelledExternalRestoreRequestId === externalRestoreRequest.requestId;
   const defersExternalRestore =
     externalRestoreRequest?.target.scopeKey === scopeKey &&
-    !externalRestoreIsReleased;
+    !externalRestoreIsReleased &&
+    !externalRestoreIsCancelled;
   const restoreRequest =
     guideRestoreRequest ??
-    (defersExternalRestore
+    (externalRestoreIsCancelled
+      ? initialRestoreRequest
+      : defersExternalRestore
       ? null
       : externalRestoreRequest ?? initialRestoreRequest);
   const currentLoadSettled =
@@ -114,6 +126,8 @@ export function LibraryPage({
   useEffect(() => {
     if (
       externalRestoreRequest &&
+      cancelledExternalRestoreRequestIdRef.current !==
+        externalRestoreRequest.requestId &&
       externalRestoreCompletion?.requestId ===
         externalRestoreRequest.requestId &&
       entries.length >= externalRestoreCompletion.committedItemCount
@@ -150,6 +164,7 @@ export function LibraryPage({
       contextRef.current = context;
       itemsRef.current = [];
       guideInteractionRef.current = false;
+      cancelledExternalRestoreRequestIdRef.current = null;
       setRenderedIdentity(identity);
       setItems([]);
       setLoadStatus('loading');
@@ -157,6 +172,7 @@ export function LibraryPage({
       setLoadError('');
       setExternalRestoreCompletion(null);
       setReleasedExternalRestoreRequestId(null);
+      setCancelledExternalRestoreRequestId(null);
       setReturnTarget(null);
       setGuideRestoreRequest(null);
       setInitialRestoreRequest(null);
@@ -236,6 +252,8 @@ export function LibraryPage({
         : false;
       if (
         pendingExternalRestoreRequest &&
+        cancelledExternalRestoreRequestIdRef.current !==
+          pendingExternalRestoreRequest.requestId &&
         externalRestoreTargetsContext(context) &&
         (externalTargetFound || context.exhausted)
       ) {
@@ -320,7 +338,12 @@ export function LibraryPage({
     context: LibraryLoadContext,
     availableItems: readonly MediaItem[],
   ): boolean {
-    if (!externalRestoreTargetsContext(context) || context.exhausted) {
+    if (
+      !externalRestoreTargetsContext(context) ||
+      context.exhausted ||
+      cancelledExternalRestoreRequestIdRef.current ===
+        externalRestoreRequest?.requestId
+    ) {
       return false;
     }
 
@@ -360,6 +383,9 @@ export function LibraryPage({
 
     const failedStart = context.failedStart;
     context.failedStart = null;
+    if (failedStart > 0 && returnTarget) {
+      setGuideRestoreRequest(createFocusRestoreRequest(returnTarget));
+    }
     setLoadError('');
     void requestPage(context, failedStart);
   }
@@ -423,6 +449,17 @@ export function LibraryPage({
         onHome={() => onBack(routeOrigin)}
         onKeyInteraction={() => {
           guideInteractionRef.current = true;
+          if (
+            externalRestoreRequest?.target.scopeKey === scopeKey &&
+            releasedExternalRestoreRequestId !==
+              externalRestoreRequest.requestId
+          ) {
+            cancelledExternalRestoreRequestIdRef.current =
+              externalRestoreRequest.requestId;
+            setCancelledExternalRestoreRequestId(
+              externalRestoreRequest.requestId,
+            );
+          }
         }}
         onLibrary={(destination) => {
           if (destination.id === library.id) {

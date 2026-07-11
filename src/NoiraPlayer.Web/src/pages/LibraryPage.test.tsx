@@ -686,6 +686,7 @@ describe('LibraryPage paging', () => {
     await screen.findByRole('button', {
       name: 'Open Retry page item 5 anonymous',
     });
+    await waitFor(() => expect(document.activeElement).toBe(cards[3]));
 
     expect(getItemsPage).toHaveBeenCalledTimes(3);
     expect(getItemsPage.mock.calls[2]).toEqual([
@@ -1070,6 +1071,112 @@ describe('LibraryPage focus and Back behavior', () => {
       name: 'Open Deep exact 50 anonymous',
     });
     await waitFor(() => expect(document.activeElement).toBe(restored));
+  });
+
+  it('cancels a deferred deep restore after the user navigates in Guide', async () => {
+    let resolveDeepPage!: (value: ItemPage) => void;
+    const deepPage = new Promise<ItemPage>((resolve) => {
+      resolveDeepPage = resolve;
+    });
+    const libraryId = 'deep-guide-library-anonymous';
+    const getItemsPage = vi
+      .fn<EmbyWebClient['getItemsPage']>()
+      .mockResolvedValueOnce({
+        items: Array.from({ length: 50 }, (_, index) => ({
+          id: `deep-guide-${String(index).padStart(2, '0')}-anonymous`,
+          name: `Deep guide ${String(index).padStart(2, '0')} anonymous`,
+          type: 'Movie',
+          artwork: {},
+        })),
+        startIndex: 0,
+        totalRecordCount: 51,
+      })
+      .mockReturnValueOnce(deepPage);
+    const scopeKey = getLibraryGridScopeKey(libraryId);
+
+    render(
+      <FocusProvider>
+        <LibraryPage
+          client={{ getItemsPage }}
+          library={{
+            id: libraryId,
+            name: 'Deep guide library anonymous',
+            collectionType: 'movies',
+          }}
+          libraries={[
+            {
+              id: libraryId,
+              name: 'Deep guide library anonymous',
+              collectionType: 'movies',
+            },
+          ]}
+          restoreRequest={{
+            requestId: 'deep-guide-restore-request-anonymous',
+            target: {
+              scopeKey,
+              focusKey: getLibraryGridFocusKey(
+                libraryId,
+                'deep-guide-50-anonymous',
+              ),
+            },
+          }}
+          routeOrigin={{
+            scopeKey: 'home-row:deep-guide-anonymous',
+            focusKey: 'home-card:deep-guide-anonymous',
+          }}
+          onAuthenticationRequired={() => undefined}
+          onBack={() => undefined}
+          onLogout={() => undefined}
+          onOpenLibrary={() => undefined}
+          onOpenMedia={() => undefined}
+        />
+      </FocusProvider>,
+    );
+
+    await screen.findByRole('button', {
+      name: 'Open Deep guide 00 anonymous',
+    });
+    await waitFor(() => expect(getItemsPage).toHaveBeenCalledTimes(2));
+
+    const guide = screen.getByRole('navigation', { name: 'Guide' });
+    const home = within(guide).getByRole('button', { name: 'Home' });
+    const libraryDestination = within(guide).getByRole('button', {
+      name: 'Deep guide library anonymous',
+    });
+    const logout = within(guide).getByRole('button', { name: 'Log out' });
+    mockRect(getScopeElement('home-guide'), 0, 0, 128, 320);
+    mockRect(home, 0, 0, 120, 64);
+    mockRect(libraryDestination, 0, 80, 120, 64);
+    mockRect(logout, 0, 240, 120, 64);
+    await updateLayoutsAndFocus('guide:home');
+    await waitForThrottleWindow();
+    dispatchKey(home, 'ArrowDown', 40);
+    await waitFor(() =>
+      expect(document.activeElement).toBe(libraryDestination),
+    );
+
+    await act(async () => {
+      resolveDeepPage({
+        items: [
+          {
+            id: 'deep-guide-50-anonymous',
+            name: 'Deep guide 50 anonymous',
+            type: 'Movie',
+            artwork: {},
+          },
+        ],
+        startIndex: 50,
+        totalRecordCount: 51,
+      });
+      await deepPage;
+    });
+
+    await screen.findByRole('button', {
+      name: 'Open Deep guide 50 anonymous',
+    });
+    await waitFor(() =>
+      expect(document.activeElement).toBe(libraryDestination),
+    );
   });
 
   it('does not steal Guide focus after key navigation while page zero is pending', async () => {
