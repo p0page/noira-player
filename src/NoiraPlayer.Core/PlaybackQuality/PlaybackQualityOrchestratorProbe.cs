@@ -206,6 +206,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
             {
                 AttemptId = attemptId,
                 Runner = "core-probe",
+                Scenario = referenceCase.ExecutionRequirement.Scenario,
                 EvidenceLevel = PlaybackQualityEvidenceLevel.Orchestration,
                 Status = status,
                 SourceLocatorHash = PlaybackQualitySourceFingerprint.Compute(referenceCase.Uri),

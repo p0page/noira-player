@@ -879,7 +879,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         m_subtitleDecoder.PumpQueuedPackets();
         if (auto cue = m_subtitleDecoder.TryGetCueAt(m_positionTicks))
         {
-            m_subtitleRenderer.SetTextCue(cue->Text, cue->StartTicks, cue->EndTicks);
+            m_subtitleRenderer.SetCue(*cue);
         }
         else
         {

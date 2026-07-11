@@ -50,16 +50,37 @@ namespace NoiraPlayer.Core.PlaybackQuality
         }
     }
 
+    public static class PlaybackQualityExecutionScenario
+    {
+        public const string Playback = "playback";
+        public const string Timeline = "timeline";
+        public const string AudioSwitch = "audio-switch";
+        public const string SubtitleSwitch = "subtitle-switch";
+        public const string PauseResume = "pause-resume";
+
+        public static bool IsKnown(string value)
+        {
+            return value == Playback ||
+                value == Timeline ||
+                value == AudioSwitch ||
+                value == SubtitleSwitch ||
+                value == PauseResume;
+        }
+    }
+
     public sealed class PlaybackQualityExecutionRequirement
     {
         public string MinimumEvidenceLevel { get; set; } =
             PlaybackQualityEvidenceLevel.NativePlayback;
+
+        public string Scenario { get; set; } = PlaybackQualityExecutionScenario.Playback;
     }
 
     public sealed class PlaybackQualityExecutionEvidence
     {
         public string AttemptId { get; set; } = "";
         public string Runner { get; set; } = "";
+        public string Scenario { get; set; } = "";
         public string EvidenceLevel { get; set; } = "";
         public string Status { get; set; } = "";
         public string SourceLocatorHash { get; set; } = "";
@@ -88,6 +109,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
             {
                 AttemptId = source.AttemptId,
                 Runner = source.Runner,
+                Scenario = source.Scenario,
                 EvidenceLevel = source.EvidenceLevel,
                 Status = source.Status,
                 SourceLocatorHash = source.SourceLocatorHash,

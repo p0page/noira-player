@@ -293,7 +293,86 @@ namespace NoiraPlayer.Core.PlaybackQuality
                     "Playback quality reference case requires a known minimum execution evidence level.");
             }
 
+            var scenario = referenceCase.ExecutionRequirement?.Scenario ?? "";
+            var activeExecutionScenarios = GetActiveExecutionScenarios(referenceCase);
+            if (activeExecutionScenarios.Count > 1)
+            {
+                AddError(
+                    validation,
+                    "case.execution.scenario-intent.multiple",
+                    caseId,
+                    "purpose",
+                    "Playback quality reference case must declare at most one active execution intent.");
+            }
+
+            if (!PlaybackQualityExecutionScenario.IsKnown(scenario))
+            {
+                AddError(
+                    validation,
+                    "case.execution.scenario.invalid",
+                    caseId,
+                    "executionRequirement.scenario",
+                    "Playback quality reference execution scenario must be playback, timeline, audio-switch, subtitle-switch, or pause-resume.");
+            }
+            else
+            {
+                var intendedScenario = GetIntendedExecutionScenario(referenceCase);
+                if (scenario != intendedScenario)
+                {
+                    AddError(
+                        validation,
+                        "case.execution.scenario-intent.mismatch",
+                        caseId,
+                        "executionRequirement.scenario",
+                        "Playback quality reference execution scenario must match the case purpose and pause configuration.");
+                }
+            }
+
             ValidateExpected(validation, caseId, referenceCase.Expected);
+        }
+
+        private static IReadOnlyList<string> GetActiveExecutionScenarios(
+            PlaybackQualityReferenceCase referenceCase)
+        {
+            var scenarios = new List<string>();
+            if (referenceCase.PauseSeconds > 0 || referenceCase.Purpose.Contains("pause-resume"))
+            {
+                scenarios.Add(PlaybackQualityExecutionScenario.PauseResume);
+            }
+            if (referenceCase.Purpose.Contains("timeline"))
+            {
+                scenarios.Add(PlaybackQualityExecutionScenario.Timeline);
+            }
+            if (referenceCase.Purpose.Contains("audio-switch"))
+            {
+                scenarios.Add(PlaybackQualityExecutionScenario.AudioSwitch);
+            }
+            if (referenceCase.Purpose.Contains("subtitle-switch"))
+            {
+                scenarios.Add(PlaybackQualityExecutionScenario.SubtitleSwitch);
+            }
+            return scenarios;
+        }
+
+        private static string GetIntendedExecutionScenario(PlaybackQualityReferenceCase referenceCase)
+        {
+            if (referenceCase.PauseSeconds > 0 || referenceCase.Purpose.Contains("pause-resume"))
+            {
+                return PlaybackQualityExecutionScenario.PauseResume;
+            }
+            if (referenceCase.Purpose.Contains("timeline"))
+            {
+                return PlaybackQualityExecutionScenario.Timeline;
+            }
+            if (referenceCase.Purpose.Contains("audio-switch"))
+            {
+                return PlaybackQualityExecutionScenario.AudioSwitch;
+            }
+            if (referenceCase.Purpose.Contains("subtitle-switch"))
+            {
+                return PlaybackQualityExecutionScenario.SubtitleSwitch;
+            }
+            return PlaybackQualityExecutionScenario.Playback;
         }
 
         private static PlaybackQualityReferenceCase CloneCase(
@@ -314,7 +393,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 Tier = source.Tier,
                 ExecutionRequirement = new PlaybackQualityExecutionRequirement
                 {
-                    MinimumEvidenceLevel = source.ExecutionRequirement?.MinimumEvidenceLevel ?? ""
+                    MinimumEvidenceLevel = source.ExecutionRequirement?.MinimumEvidenceLevel ?? "",
+                    Scenario = source.ExecutionRequirement?.Scenario ?? ""
                 },
                 Expected = CloneExpected(source.Expected)
             };

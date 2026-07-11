@@ -34,7 +34,7 @@ function Invoke-NativeHeadlessHarnessCase {
         [int]$DurationSeconds = 10,
         [long]$StartPositionTicks = 0,
         [int]$PauseSeconds = 0,
-        [ValidateSet('playback', 'timeline', 'interactions', 'pause-resume')]
+        [ValidateSet('playback', 'timeline', 'audio-switch', 'subtitle-switch', 'pause-resume')]
         [string]$Scenario = 'playback',
         [int]$TimeoutSeconds = 60,
         [bool]$ForceSdrOutput = $false
@@ -159,6 +159,8 @@ function Write-PlaybackQualitySourceResolutionError {
         [Parameter(Mandatory = $true)][string]$SourceLocator,
         [Parameter(Mandatory = $true)][string]$ReportsDir,
         [Parameter(Mandatory = $true)][string]$ErrorCode,
+        [ValidateSet('playback', 'timeline', 'audio-switch', 'subtitle-switch', 'pause-resume')]
+        [string]$Scenario = 'playback',
         [Parameter(Mandatory = $true)][string]$ResolverProjectPath
     )
 
@@ -167,7 +169,8 @@ function Write-PlaybackQualitySourceResolutionError {
         --case-id $CaseId `
         --source-locator $SourceLocator `
         --reports-dir $ReportsDir `
-        --error-code $ErrorCode)
+        --error-code $ErrorCode `
+        --scenario $Scenario)
     $exitCode = $LASTEXITCODE
     $output | ForEach-Object { Write-Host $_ }
     return [int]$exitCode

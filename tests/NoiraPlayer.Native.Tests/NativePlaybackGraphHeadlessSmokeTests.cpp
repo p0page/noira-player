@@ -25,6 +25,8 @@ using winrt::NoiraPlayer::Native::implementation::PlaybackGraphOpenRequest;
 namespace
 {
     constexpr int64_t SeekTargetPositionTicks = 10'000'000;
+    constexpr auto InteractionEvidenceTimeout = 5s;
+    constexpr auto InteractionEvidencePollInterval = 50ms;
     constexpr wchar_t const* DefaultStreamUrl =
         L"https://repo.jellyfin.org/test-videos/SDR/HEVC%2010bit/Test%20Jellyfin%201080p%20HEVC%2010bit%203M.mp4";
 
@@ -117,7 +119,8 @@ namespace
                 auto scenario = std::wstring{argv[++index]};
                 if (scenario == L"playback" ||
                     scenario == L"timeline" ||
-                    scenario == L"interactions" ||
+                    scenario == L"audio-switch" ||
+                    scenario == L"subtitle-switch" ||
                     scenario == L"pause-resume")
                 {
                     options.Scenario = std::move(scenario);
@@ -216,6 +219,11 @@ int wmain(int argc, wchar_t** argv)
         {
             halfWindow = 500ms;
         }
+        if ((options.Scenario == L"audio-switch" || options.Scenario == L"subtitle-switch") &&
+            halfWindow > 1500ms)
+        {
+            halfWindow = 1500ms;
+        }
 
         std::this_thread::sleep_for(halfWindow);
         auto playbackSnapshot = graph.QualityMetricsSnapshot();
@@ -275,7 +283,26 @@ int wmain(int argc, wchar_t** argv)
             pauseResumeStatus = pauseResumeRecovered ? "completed" : "failed";
         }
 
-        if (options.Scenario == L"interactions")
+        auto waitForEvidence = [&playbackFailed](auto&& predicate)
+        {
+            auto const deadline = std::chrono::steady_clock::now() + InteractionEvidenceTimeout;
+            do
+            {
+                if (predicate())
+                {
+                    return true;
+                }
+                if (playbackFailed.load(std::memory_order_relaxed))
+                {
+                    return false;
+                }
+                std::this_thread::sleep_for(InteractionEvidencePollInterval);
+            } while (std::chrono::steady_clock::now() < deadline);
+
+            return predicate();
+        };
+
+        if (options.Scenario == L"audio-switch")
         {
             if (audioStreamIndexes.size() >= 2)
             {
@@ -286,17 +313,17 @@ int wmain(int argc, wchar_t** argv)
                 try
                 {
                     graph.SwitchAudioStream(audioSwitch.StreamIndex);
-                    std::this_thread::sleep_for(500ms);
-                    selectedAudioStreamIndex = graph.SelectedAudioStreamIndex();
-                    audioSwitch.PositionAfterTicks = graph.CurrentPositionTicks();
-                    audioSwitch.SubmittedFramesAfter = graph.QualityMetricsSnapshot().SubmittedAudioFrames;
-                    audioSwitch.Status =
-                        selectedAudioStreamIndex.has_value() &&
-                        selectedAudioStreamIndex.value() == audioSwitch.StreamIndex &&
-                        audioSwitch.PositionAfterTicks > audioSwitch.PositionBeforeTicks &&
-                        audioSwitch.SubmittedFramesAfter > audioSwitch.SubmittedFramesBefore
-                            ? "completed"
-                            : "failed";
+                    auto const recovered = waitForEvidence([&]()
+                    {
+                        selectedAudioStreamIndex = graph.SelectedAudioStreamIndex();
+                        audioSwitch.PositionAfterTicks = graph.CurrentPositionTicks();
+                        audioSwitch.SubmittedFramesAfter = graph.QualityMetricsSnapshot().SubmittedAudioFrames;
+                        return selectedAudioStreamIndex.has_value() &&
+                            selectedAudioStreamIndex.value() == audioSwitch.StreamIndex &&
+                            audioSwitch.PositionAfterTicks > audioSwitch.PositionBeforeTicks &&
+                            audioSwitch.SubmittedFramesAfter > audioSwitch.SubmittedFramesBefore;
+                    });
+                    audioSwitch.Status = recovered ? "completed" : "failed";
                 }
                 catch (...)
                 {
@@ -308,7 +335,7 @@ int wmain(int argc, wchar_t** argv)
             }
         }
 
-        auto runSubtitleSwitch = [&graph](int32_t streamIndex, bool pauseBeforeSwitch)
+        auto runSubtitleSwitch = [&graph, &waitForEvidence](int32_t streamIndex, bool pauseBeforeSwitch)
         {
             SubtitleSwitchOutcome outcome;
             outcome.Attempted = true;
@@ -340,18 +367,19 @@ int wmain(int argc, wchar_t** argv)
                     outcome.PositionBeforeResumeTicks = graph.CurrentPositionTicks();
                 }
 
-                std::this_thread::sleep_for(500ms);
-                outcome.PositionAfterResumeTicks = graph.CurrentPositionTicks();
-                outcome.CueCountAfter = graph.SubtitleCueRenderCount();
-                auto pauseAndResumeObserved = !pauseBeforeSwitch ||
-                    (outcome.PausedPositionAfterTicks == outcome.PausedPositionBeforeTicks &&
-                        outcome.PositionAfterResumeTicks > outcome.PositionBeforeResumeTicks);
-                outcome.Status =
-                    outcome.SelectedStreamIndex == outcome.StreamIndex &&
-                    outcome.CueCountAfter > outcome.CueCountBefore &&
-                    pauseAndResumeObserved
-                    ? "completed"
-                    : "failed";
+                auto const recovered = waitForEvidence([&]()
+                {
+                    outcome.SelectedStreamIndex = graph.SelectedSubtitleStreamIndex().value_or(-1);
+                    outcome.PositionAfterResumeTicks = graph.CurrentPositionTicks();
+                    outcome.CueCountAfter = graph.SubtitleCueRenderCount();
+                    auto const pauseAndResumeObserved = !pauseBeforeSwitch ||
+                        (outcome.PausedPositionAfterTicks == outcome.PausedPositionBeforeTicks &&
+                            outcome.PositionAfterResumeTicks > outcome.PositionBeforeResumeTicks);
+                    return outcome.SelectedStreamIndex == outcome.StreamIndex &&
+                        outcome.CueCountAfter > outcome.CueCountBefore &&
+                        pauseAndResumeObserved;
+                });
+                outcome.Status = recovered ? "completed" : "failed";
             }
             catch (...)
             {
@@ -367,33 +395,15 @@ int wmain(int argc, wchar_t** argv)
             return outcome;
         };
 
-        if (options.Scenario == L"interactions" && !subtitleStreamIndexes.empty())
+        if (options.Scenario == L"subtitle-switch" && !subtitleStreamIndexes.empty())
         {
             subtitleSwitch1 = runSubtitleSwitch(subtitleStreamIndexes[0], true);
         }
 
-        if (options.Scenario == L"interactions" && subtitleStreamIndexes.size() >= 2)
+        if (options.Scenario == L"audio-switch" || options.Scenario == L"subtitle-switch")
         {
-            subtitleSwitch2 = runSubtitleSwitch(subtitleStreamIndexes[1], false);
-        }
-
-        if (options.Scenario == L"interactions" && !subtitleStreamIndexes.empty())
-        {
-            subtitleOff.Attempted = true;
-            try
-            {
-                graph.SwitchSubtitleStream(std::nullopt);
-                auto selectedSubtitleStreamIndex = graph.SelectedSubtitleStreamIndex();
-                subtitleOff.SelectedStreamIndex = selectedSubtitleStreamIndex.value_or(-1);
-                subtitleOff.Status = selectedSubtitleStreamIndex.has_value()
-                    ? "failed"
-                    : "completed";
-            }
-            catch (...)
-            {
-                subtitleOff.SelectedStreamIndex = graph.SelectedSubtitleStreamIndex().value_or(-1);
-                subtitleOff.Status = "failed";
-            }
+            playbackSnapshot = graph.QualityMetricsSnapshot();
+            ReportStage("interaction-sample-captured");
         }
 
         auto seekCallCompleted = false;

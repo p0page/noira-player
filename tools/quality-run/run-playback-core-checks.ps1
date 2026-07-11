@@ -91,6 +91,7 @@ $nativeSeekPresentationCommand = '"' + $vcvars + '" >nul && cl /nologo /std:c++2
 $nativeMediaTimelineCommand = '"' + $vcvars + '" >nul && cl /nologo /std:c++20 /EHsc /I src\NoiraPlayer.Native /Fo:C:\tmp\MediaTimelineTests.obj tests\NoiraPlayer.Native.Tests\MediaTimelineTests.cpp /Fe:C:\tmp\MediaTimelineTests.exe && C:\tmp\MediaTimelineTests.exe'
 $nativeAudioFramePrerollCommand = '"' + $vcvars + '" >nul && cl /nologo /std:c++20 /EHsc /I src\NoiraPlayer.Native /Fo:C:\tmp\AudioFramePrerollTests.obj tests\NoiraPlayer.Native.Tests\AudioFramePrerollTests.cpp /Fe:C:\tmp\AudioFramePrerollTests.exe && C:\tmp\AudioFramePrerollTests.exe'
 $nativeSubtitleSwitchTransactionCommand = '"' + $vcvars + '" >nul && cl /nologo /std:c++20 /EHsc /I src\NoiraPlayer.Native /Fo:C:\tmp\SubtitleSwitchTransactionTests.obj tests\NoiraPlayer.Native.Tests\SubtitleSwitchTransactionTests.cpp /Fe:C:\tmp\SubtitleSwitchTransactionTests.exe && C:\tmp\SubtitleSwitchTransactionTests.exe'
+$nativeSubtitleBitmapCommand = '"' + $vcvars + '" >nul && cl /nologo /std:c++20 /EHsc /I src\NoiraPlayer.Native /Fo:C:\tmp\SubtitleBitmapTests.obj tests\NoiraPlayer.Native.Tests\SubtitleBitmapTests.cpp /Fe:C:\tmp\SubtitleBitmapTests.exe && C:\tmp\SubtitleBitmapTests.exe'
 $nativeDisplayRefreshCommand = '"' + $vcvars + '" >nul && cl /nologo /std:c++20 /EHsc /I src\NoiraPlayer.Native /Fo:C:\tmp\DisplayRefreshRatePolicyTests.obj tests\NoiraPlayer.Native.Tests\DisplayRefreshRatePolicyTests.cpp /Fe:C:\tmp\DisplayRefreshRatePolicyTests.exe && C:\tmp\DisplayRefreshRatePolicyTests.exe'
 $nativeDisplayRefreshSnapshotCommand = '"' + $vcvars + '" >nul && cl /nologo /std:c++20 /EHsc /I src\NoiraPlayer.Native /Fo:C:\tmp\HdrDisplayRefreshRateSnapshotTests.obj tests\NoiraPlayer.Native.Tests\HdrDisplayRefreshRateSnapshotTests.cpp /Fe:C:\tmp\HdrDisplayRefreshRateSnapshotTests.exe && C:\tmp\HdrDisplayRefreshRateSnapshotTests.exe'
 $nativeAudioFrameTimelineCommand = '"' + $vcvars + '" >nul && cl /nologo /std:c++20 /EHsc /I src\NoiraPlayer.Native /Fo:C:\tmp\AudioFrameTimelineTests.obj tests\NoiraPlayer.Native.Tests\AudioFrameTimelineTests.cpp /Fe:C:\tmp\AudioFrameTimelineTests.exe && C:\tmp\AudioFrameTimelineTests.exe'
@@ -215,6 +216,11 @@ $commands = @(
         -Description 'Compile and run fault-injected transactional subtitle switch recovery tests.' `
         -Command 'cmd' `
         -Arguments @('/c', $nativeSubtitleSwitchTransactionCommand)
+    New-CommandPlan `
+        -Name 'native-subtitle-bitmap-test' `
+        -Description 'Verify indexed FFmpeg bitmap subtitle palettes and source-canvas regions convert into premultiplied BGRA overlays.' `
+        -Command 'cmd' `
+        -Arguments @('/c', $nativeSubtitleBitmapCommand)
     New-CommandPlan `
         -Name 'native-display-refresh-test' `
         -Description 'Compile and run the standalone native display refresh cadence policy test.' `

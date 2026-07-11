@@ -26,12 +26,15 @@ $nativeAnalysisPath = Join-Path $smokeRoot 'native-analysis.json'
 $reportPath = Join-Path $capturedDir 'jellyfin\sdr-hevc-main10-1080p60-3m.json'
 $nativeReportPath = Join-Path $nativeCapturedDir 'local\native-headless-sdr-smoke.json'
 $nativeAvReportPath = Join-Path $nativeCapturedDir 'local\native-headless-av-smoke.json'
+$nativeSubtitleReportPath = Join-Path $nativeCapturedDir 'local\native-headless-subtitle-switch.json'
 $materializedReportPath = Join-Path $materializedDir 'jellyfin\sdr-hevc-main10-1080p60-3m.json'
 $nativeMaterializedReportPath = Join-Path $nativeMaterializedDir 'local\native-headless-sdr-smoke.json'
 $nativeAvMaterializedReportPath = Join-Path $nativeMaterializedDir 'local\native-headless-av-smoke.json'
+$nativeSubtitleMaterializedReportPath = Join-Path $nativeMaterializedDir 'local\native-headless-subtitle-switch.json'
 $sampleUrl = 'https://repo.jellyfin.org/test-videos/SDR/HEVC%2010bit/Test%20Jellyfin%201080p%20HEVC%2010bit%203M.mp4'
 $nativeCaseId = 'local/native-headless-sdr-smoke'
 $nativeAvCaseId = 'local/native-headless-av-smoke'
+$nativeSubtitleCaseId = 'local/native-headless-subtitle-switch'
 $nativeNonZeroTimelineCaseId = 'local/native-headless-nonzero-start-timeline'
 $nativeResumeSeekTimelineCaseId = 'local/native-headless-resume-seek-timeline'
 $nativeSdr23976CaseId = 'local/native-headless-sdr-23976'
@@ -423,6 +426,7 @@ function Assert-NativeNetworkReconnectRecovery {
                     pauseSeconds = 1
                     executionRequirement = [ordered]@{
                         minimumEvidenceLevel = 'native-playback'
+                        scenario = 'pause-resume'
                     }
                     purpose = @('buffering', 'pause-resume', 'network-recovery')
                     expected = [ordered]@{
@@ -520,7 +524,7 @@ function Invoke-NativeHeadlessHelperCase {
         [string]$NativeHelperExe,
         [int]$DurationSeconds = $script:nativeCadenceDurationSeconds,
         [long]$StartPositionTicks = 0,
-        [ValidateSet('playback', 'timeline', 'interactions')]
+        [ValidateSet('playback', 'timeline', 'audio-switch', 'subtitle-switch')]
         [string]$Scenario = 'playback'
     )
 
@@ -602,6 +606,11 @@ using System.IO;
 
 var outputPath = Path.Combine(AppContext.BaseDirectory, "fixture-output.txt");
 Console.Write(File.ReadAllText(outputPath));
+var errorPath = Path.Combine(AppContext.BaseDirectory, "fixture-error.txt");
+if (File.Exists(errorPath))
+{
+    Console.Error.Write(File.ReadAllText(errorPath));
+}
 var exitCodePath = Path.Combine(AppContext.BaseDirectory, "fixture-exit-code.txt");
 return File.Exists(exitCodePath) && int.TryParse(File.ReadAllText(exitCodePath), out var exitCode)
     ? exitCode
@@ -616,6 +625,7 @@ return File.Exists(exitCodePath) && int.TryParse(File.ReadAllText(exitCodePath),
     return [pscustomobject]@{
         ExePath = Join-Path $outputDirectory 'NativeHeadlessParserFixture.exe'
         OutputPath = Join-Path $outputDirectory 'fixture-output.txt'
+        ErrorPath = Join-Path $outputDirectory 'fixture-error.txt'
         ExitCodePath = Join-Path $outputDirectory 'fixture-exit-code.txt'
     }
 }
@@ -789,10 +799,12 @@ function Invoke-NativeHeadlessParserFixtureCase {
         [string]$Root,
         [string]$Name,
         [string]$HelperOutput,
+        [string]$HelperError = '',
         [int]$HelperExitCode = 0
     )
 
     Set-Content -LiteralPath $FixtureHelper.OutputPath -Value $HelperOutput -Encoding UTF8
+    Set-Content -LiteralPath $FixtureHelper.ErrorPath -Value $HelperError -Encoding UTF8
     Set-Content -LiteralPath $FixtureHelper.ExitCodePath -Value ([string]$HelperExitCode) -Encoding ASCII
     $reportsDirectory = Join-Path $Root 'reports'
     $caseId = 'local/native-headless-parser-' + $Name
@@ -871,6 +883,22 @@ function Assert-NativeHeadlessParserContracts {
         -not $lateFailure.Report.report.execution.demuxStarted -or
         -not $lateFailure.Report.report.execution.playbackSampleObserved) {
         $failures.Add('A non-zero helper exit after valid telemetry did not preserve decoded/rendered native playback evidence in the error report.')
+    }
+
+    $openFailureMessage = 'avformat_open_input failed: I/O error'
+    $openFailure = Invoke-NativeHeadlessParserFixtureCase `
+        -FixtureHelper $fixtureHelper `
+        -HeadlessDll $headlessDll `
+        -Root $Root `
+        -Name 'source-open-io-failure' `
+        -HelperOutput '' `
+        -HelperError $openFailureMessage `
+        -HelperExitCode 2
+    if ($openFailure.ExitCode -ne 1 -or
+        $openFailure.Report.report.result -ne 'error' -or
+        $openFailure.Report.report.error.message -notmatch [regex]::Escape($openFailureMessage) -or
+        $openFailure.Report.report.error.message -match 'decodedVideoFrames') {
+        $failures.Add('A helper source-open failure did not preserve stderr and was misreported as a telemetry parser error.')
     }
 
     $unsupported = Invoke-NativeHeadlessParserFixtureCase `
@@ -1535,7 +1563,7 @@ dotnet run --project (Join-Path $repoRoot 'tools\NoiraPlayer.PlaybackQuality.Hea
     --case-id $nativeAvCaseId `
     --stream-url $nativeAvSampleUrl `
     --duration-seconds $nativeAvDurationSeconds `
-    --scenario interactions `
+    --scenario audio-switch `
     --reports-dir $nativeCapturedDir `
     --native-helper-exe $nativeHelperExe
 $nativeAvHelperExitCode = $LASTEXITCODE
@@ -1549,13 +1577,28 @@ if (-not (Test-Path $nativeAvReportPath)) {
 }
 
 $nativeAvReport = Get-Content -LiteralPath $nativeAvReportPath -Raw | ConvertFrom-Json
+
+dotnet run --project (Join-Path $repoRoot 'tools\NoiraPlayer.PlaybackQuality.Headless\NoiraPlayer.PlaybackQuality.Headless.csproj') -- `
+    --case-id $nativeSubtitleCaseId `
+    --stream-url $nativeAvSampleUrl `
+    --duration-seconds $nativeAvDurationSeconds `
+    --scenario subtitle-switch `
+    --reports-dir $nativeCapturedDir `
+    --native-helper-exe $nativeHelperExe
+$nativeSubtitleHelperExitCode = $LASTEXITCODE
+
+if ($nativeSubtitleHelperExitCode -ne 0 -or -not (Test-Path $nativeSubtitleReportPath)) {
+    throw 'Expected native-headless harness to capture the independent subtitle-switch case.'
+}
+
+$nativeSubtitleReport = Get-Content -LiteralPath $nativeSubtitleReportPath -Raw | ConvertFrom-Json
 if ($nativeAvReport.report.tracks.audioTrackCount -ne 2 -or
     $nativeAvReport.report.tracks.audio.Count -ne 2) {
     throw 'Expected native helper A/V report to include exactly two discovered audio tracks.'
 }
 
-if ($nativeAvReport.report.tracks.subtitleTrackCount -ne 2 -or
-    $nativeAvReport.report.tracks.subtitles.Count -ne 2) {
+if ($nativeSubtitleReport.report.tracks.subtitleTrackCount -ne 2 -or
+    $nativeSubtitleReport.report.tracks.subtitles.Count -ne 2) {
     throw 'Expected native helper A/V report to include exactly two discovered subtitle tracks.'
 }
 
@@ -1572,11 +1615,12 @@ if ($audioSwitchEvents.Count -ne 1 -or
     throw 'Expected one completed audio-switch lifecycle event with real interaction evidence.'
 }
 
-$subtitleSwitchEvents = @($nativeAvLifecycleEvents | Where-Object { $_.operation -eq 'subtitle-switch' })
-if ($subtitleSwitchEvents.Count -ne 2 -or
+$nativeSubtitleLifecycleEvents = @($nativeSubtitleReport.report.lifecycle.events)
+$subtitleSwitchEvents = @($nativeSubtitleLifecycleEvents | Where-Object { $_.operation -eq 'subtitle-switch' })
+if ($subtitleSwitchEvents.Count -ne 1 -or
     @($subtitleSwitchEvents | Where-Object { $_.status -ne 'completed' }).Count -ne 0 -or
     @($subtitleSwitchEvents | Where-Object { [string]::IsNullOrWhiteSpace($_.message) }).Count -ne 0) {
-    throw 'Expected two completed subtitle-switch events with cue-render evidence.'
+    throw 'Expected one completed subtitle-switch event with cue-render evidence.'
 }
 
 foreach ($subtitleSwitchEvent in $subtitleSwitchEvents) {
@@ -1598,11 +1642,9 @@ if (-not $pausedSwitchMatch.Success -or
     throw 'Expected the first subtitle switch to remain paused, then resume with advancing playback.'
 }
 
-$subtitleOffEvents = @($nativeAvLifecycleEvents | Where-Object { $_.operation -eq 'subtitle-off' })
-if ($subtitleOffEvents.Count -ne 1 -or
-    $subtitleOffEvents[0].status -ne 'completed' -or
-    [string]::IsNullOrWhiteSpace($subtitleOffEvents[0].message)) {
-    throw 'Expected one completed subtitle-off lifecycle event with final selection evidence.'
+$subtitleOffEvents = @($nativeSubtitleLifecycleEvents | Where-Object { $_.operation -eq 'subtitle-off' })
+if ($subtitleOffEvents.Count -ne 0) {
+    throw 'Subtitle-switch case must not mix subtitle-off behavior into the same attempt.'
 }
 
 $seekEvents = @($nativeAvLifecycleEvents | Where-Object { $_.operation -eq 'seek' })
@@ -1611,23 +1653,26 @@ if ($seekEvents.Count -ne 0) {
 }
 
 if ($nativeAvReport.report.tracks.selectedAudioStreamIndex -ne $nativeAvReport.report.tracks.audio[1].index -or
-    $null -ne $nativeAvReport.report.tracks.selectedSubtitleStreamIndex -or
-    $nativeAvReport.report.tracks.isSubtitleDisabled -ne $true) {
-    throw 'Expected final selected tracks to match the switched audio track and disabled subtitles.'
+    $nativeSubtitleReport.report.tracks.selectedSubtitleStreamIndex -ne $nativeSubtitleReport.report.tracks.subtitles[0].index -or
+    $nativeSubtitleReport.report.tracks.isSubtitleDisabled -ne $false) {
+    throw 'Expected independent audio/subtitle reports to preserve their selected-track evidence.'
 }
 
-$subtitleFailures = @($nativeAvReport.report.checks | Where-Object {
+$subtitleFailures = @($nativeSubtitleReport.report.checks | Where-Object {
     $_.status -eq 'fail' -and $_.failureArea -eq 'subtitles'
 })
 $evidenceCollectionFailures = @($nativeAvReport.report.checks | Where-Object {
     $_.status -eq 'fail' -and $_.failureArea -eq 'evidence-collection'
 })
 if ($nativeAvReport.report.result -ne 'pass' -or
+    $nativeSubtitleReport.report.result -ne 'pass' -or
     @($nativeAvReport.report.failureReasons).Count -ne 0 -or
+    @($nativeSubtitleReport.report.failureReasons).Count -ne 0 -or
     $subtitleFailures.Count -ne 0 -or
     $evidenceCollectionFailures.Count -ne 0 -or
-    -not [string]::IsNullOrWhiteSpace($nativeAvReport.report.error.code)) {
-    throw 'Expected the fixed Core A/V case to pass without subtitle or evidence-collection failures.'
+    -not [string]::IsNullOrWhiteSpace($nativeAvReport.report.error.code) -or
+    -not [string]::IsNullOrWhiteSpace($nativeSubtitleReport.report.error.code)) {
+    throw 'Expected independent A/V and subtitle cases to pass without evidence-collection failures.'
 }
 
 if ($nativeAvReport.report.buffers.submittedAudioFrames -le 0) {
@@ -1799,11 +1844,15 @@ foreach ($hdr10CaseId in $nativeHdr10CaseIds) {
       "severity": "high",
       "stability": "stable",
       "uri": "$nativeAvSampleUrl",
+      "executionRequirement": {
+        "minimumEvidenceLevel": "native-playback",
+        "scenario": "audio-switch"
+      },
       "purpose": [
+        "tracks",
         "audio-switch",
         "av-sync",
-        "buffering",
-        "subtitles"
+        "buffering"
       ],
       "expected": {
         "codec": "h264",
@@ -1820,6 +1869,36 @@ foreach ($hdr10CaseId in $nativeHdr10CaseIds) {
         "isDirectPlayable": true,
         "minRenderedVideoFrames": $nativeAvMinimumRenderedVideoFrames,
         "maxAudioVideoDriftMsP95": 80.0
+      }
+    },
+    {
+      "caseId": "$nativeSubtitleCaseId",
+      "category": "challenge",
+      "severity": "high",
+      "stability": "stable",
+      "uri": "$nativeAvSampleUrl",
+      "executionRequirement": {
+        "minimumEvidenceLevel": "native-playback",
+        "scenario": "subtitle-switch"
+      },
+      "purpose": [
+        "subtitles",
+        "subtitle-switch"
+      ],
+      "expected": {
+        "codec": "h264",
+        "width": 320,
+        "height": 180,
+        "frameRate": 30.0,
+        "videoRange": "SDR",
+        "colorPrimaries": "bt709",
+        "colorTransfer": "bt709",
+        "colorSpace": "bt709",
+        "hdrKind": "Sdr",
+        "dxgiInput": "YCBCR_STUDIO_G22_LEFT_P709",
+        "dxgiOutput": "RGB_FULL_G22_NONE_P709",
+        "isDirectPlayable": true,
+        "minRenderedVideoFrames": 1
       }
     },
     {
@@ -2044,6 +2123,10 @@ if (-not (Test-Path $nativeAvMaterializedReportPath)) {
     throw "Expected materialized native helper A/V report at $nativeAvMaterializedReportPath."
 }
 
+if (-not (Test-Path $nativeSubtitleMaterializedReportPath)) {
+    throw "Expected materialized native helper subtitle report at $nativeSubtitleMaterializedReportPath."
+}
+
 $nativeMaterializedReport = Get-Content -LiteralPath $nativeMaterializedReportPath -Raw | ConvertFrom-Json
 if ($nativeMaterializedReport.report.environment.playerCoreVersion -ne $PlayerCoreVersion -or
     $nativeMaterializedReport.report.environment.sourceRevision -ne $SourceRevision -or
@@ -2064,25 +2147,29 @@ if ($nativeMaterializedReport.modelAnalysis.missingEvidence -contains 'display.r
 }
 
 $nativeAvMaterializedReport = Get-Content -LiteralPath $nativeAvMaterializedReportPath -Raw | ConvertFrom-Json
+$nativeSubtitleMaterializedReport = Get-Content -LiteralPath $nativeSubtitleMaterializedReportPath -Raw | ConvertFrom-Json
 if ($nativeAvMaterializedReport.report.tracks.audioTrackCount -ne 2 -or
-    $nativeAvMaterializedReport.report.tracks.subtitleTrackCount -ne 2 -or
     $nativeAvMaterializedReport.modelAnalysis.avSync.status -ne 'synced') {
-    throw 'Expected materialized native helper A/V report to preserve audio/subtitle track and A/V sync evidence.'
+    throw 'Expected materialized native helper A/V report to preserve audio-track and A/V sync evidence.'
 }
 
-$nativeAvMaterializedSubtitleFailures = @($nativeAvMaterializedReport.report.checks | Where-Object {
+$nativeAvMaterializedSubtitleFailures = @($nativeSubtitleMaterializedReport.report.checks | Where-Object {
     $_.status -eq 'fail' -and $_.failureArea -eq 'subtitles'
 })
 $nativeAvMaterializedEvidenceCollectionFailures = @($nativeAvMaterializedReport.report.checks | Where-Object {
     $_.status -eq 'fail' -and $_.failureArea -eq 'evidence-collection'
 })
 if ($nativeAvMaterializedReport.report.result -ne 'pass' -or
+    $nativeSubtitleMaterializedReport.report.result -ne 'pass' -or
     $nativeAvMaterializedReport.modelAnalysis.result -ne 'pass' -or
+    $nativeSubtitleMaterializedReport.modelAnalysis.result -ne 'pass' -or
     @($nativeAvMaterializedReport.report.failureReasons).Count -ne 0 -or
+    @($nativeSubtitleMaterializedReport.report.failureReasons).Count -ne 0 -or
     $nativeAvMaterializedSubtitleFailures.Count -ne 0 -or
     $nativeAvMaterializedEvidenceCollectionFailures.Count -ne 0 -or
-    -not [string]::IsNullOrWhiteSpace($nativeAvMaterializedReport.report.error.code)) {
-    throw 'Expected materialized A/V report to preserve the fixed Core subtitle success without an evidence-collection error.'
+    -not [string]::IsNullOrWhiteSpace($nativeAvMaterializedReport.report.error.code) -or
+    -not [string]::IsNullOrWhiteSpace($nativeSubtitleMaterializedReport.report.error.code)) {
+    throw 'Expected independent materialized A/V and subtitle reports to remain successful.'
 }
 
 if ($nativeAvMaterializedReport.report.position.seekPositionErrorMs -gt 250.0) {
@@ -2186,8 +2273,8 @@ if ($nativeAnalysis.playbackEvidence.canEvaluateNativePlayback -ne $true) {
     throw 'Expected native helper report to be treated as App-free native software playback evidence.'
 }
 
-if ($nativeAnalysis.totalReportCount -ne 9) {
-    throw 'Expected native helper report-set to include 9 reports: SDR 23.976/24/30/60, HDR10 23.976/24/30/60, and A/V challenge.'
+if ($nativeAnalysis.totalReportCount -ne 10) {
+    throw 'Expected native helper report-set to include 10 reports: SDR 23.976/24/30/60, HDR10 23.976/24/30/60, A/V, and subtitle-switch challenges.'
 }
 
 $nativeAvSyncCoverage = $nativeAnalysis.capabilityCoverage | Where-Object { $_.capability -eq 'av-sync' } | Select-Object -First 1

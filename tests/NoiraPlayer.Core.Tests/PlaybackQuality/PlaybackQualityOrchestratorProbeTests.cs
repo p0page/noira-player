@@ -86,6 +86,7 @@ public sealed class PlaybackQualityOrchestratorProbeTests
         Assert.False(string.IsNullOrWhiteSpace(result.Report.Execution.AttemptId));
         Assert.Equal("core-probe", result.Report.Execution.Runner);
         Assert.Equal(PlaybackQualityEvidenceLevel.Orchestration, result.Report.Execution.EvidenceLevel);
+        Assert.Equal(referenceCase.ExecutionRequirement.Scenario, result.Report.Execution.Scenario);
         Assert.Equal(PlaybackQualityExecutionStatus.Completed, result.Report.Execution.Status);
         Assert.Equal(
             PlaybackQualitySourceFingerprint.Compute(referenceCase.Uri),

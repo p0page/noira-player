@@ -339,6 +339,7 @@ try {
     if (-not ($manifest.cases | Where-Object {
         $_.caseId -eq 'private-emby/sdr-movie/sdr-source/timeline' -and
         ($_.purpose -contains 'timeline') -and
+        $_.executionRequirement.scenario -eq 'timeline' -and
         $_.startPositionTicks -eq 600000000 -and
         $_.expected.maxSeekPositionErrorMs -eq 500
     })) {

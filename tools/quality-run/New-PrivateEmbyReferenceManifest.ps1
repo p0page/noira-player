@@ -407,6 +407,10 @@ function New-ReferenceCase(
         mediaSourceId = $Candidate.MediaSourceId
         forceSdrOutput = $ForceSdrOutput
         tier = $Tier
+        executionRequirement = [pscustomobject][ordered]@{
+            minimumEvidenceLevel = 'native-playback'
+            scenario = $(if ($Purpose -contains 'timeline') { 'timeline' } else { 'playback' })
+        }
         purpose = @($Purpose)
         expected = $expected
     }
@@ -428,6 +432,10 @@ function New-ErrorHandlingReferenceCase {
         itemId = 'quality-case-missing-file-error-handling'
         mediaSourceId = 'quality-source-missing-file-error-handling'
         tier = 1
+        executionRequirement = [pscustomobject][ordered]@{
+            minimumEvidenceLevel = 'native-playback'
+            scenario = 'playback'
+        }
         purpose = @('error-handling')
         expected = [pscustomobject][ordered]@{
             codec = 'hevc'

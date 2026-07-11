@@ -884,6 +884,26 @@ public sealed class PlaybackQualityRunComparatorTests
     }
 
     [Fact]
+    public void Compare_Reports_Insufficient_When_Execution_Scenarios_Differ()
+    {
+        var baseline = CreateReport(
+            "baseline",
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "180.000"));
+        baseline.Execution.Scenario = PlaybackQualityExecutionScenario.AudioSwitch;
+        var candidate = CreateReport(
+            "candidate",
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "120.000"));
+        candidate.Execution.Scenario = PlaybackQualityExecutionScenario.SubtitleSwitch;
+
+        var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
+
+        Assert.Equal("insufficient-evidence", comparison.Result);
+        Assert.Empty(comparison.Improvements);
+        Assert.Empty(comparison.Regressions);
+        Assert.Contains("execution.scenario", comparison.Comparability.Signals);
+    }
+
+    [Fact]
     public void Compare_Reports_Insufficient_When_Source_Locator_Hashes_Differ()
     {
         var baseline = CreateReport(
@@ -1001,6 +1021,7 @@ public sealed class PlaybackQualityRunComparatorTests
         {
             AttemptId = "attempt-" + runId,
             Runner = "native-headless",
+            Scenario = PlaybackQualityExecutionScenario.Playback,
             EvidenceLevel = PlaybackQualityEvidenceLevel.NativePlayback,
             Status = PlaybackQualityExecutionStatus.Completed,
             SourceLocatorHash = "sha256:" + new string('a', 64),

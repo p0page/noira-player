@@ -463,6 +463,14 @@ namespace NoiraPlayer.Core.PlaybackQuality
             }
 
             if (!string.Equals(
+                    baselineExecution.Scenario,
+                    candidateExecution.Scenario,
+                    StringComparison.Ordinal))
+            {
+                AddIncompatibility(assessment, "execution.scenario");
+            }
+
+            if (!string.Equals(
                     baselineExecution.SourceLocatorHash,
                     candidateExecution.SourceLocatorHash,
                     StringComparison.Ordinal))
@@ -532,6 +540,11 @@ namespace NoiraPlayer.Core.PlaybackQuality
             if (string.IsNullOrWhiteSpace(execution.Runner))
             {
                 AddIncompatibility(assessment, "execution.runner");
+            }
+
+            if (!PlaybackQualityExecutionScenario.IsKnown(execution.Scenario))
+            {
+                AddIncompatibility(assessment, "execution.scenario");
             }
 
             if (!PlaybackQualityExecutionStatus.IsKnown(execution.Status))

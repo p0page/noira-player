@@ -368,6 +368,19 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 AddExecutionError(validation, status, "report.execution.runner.missing", "execution.runner", "present", "missing", "Playback quality report is missing execution runner identity.");
             }
 
+            var requiredScenario = referenceCase.ExecutionRequirement?.Scenario ?? "";
+            if (!string.Equals(execution.Scenario, requiredScenario, StringComparison.Ordinal))
+            {
+                AddExecutionError(
+                    validation,
+                    status,
+                    "report.execution.scenario.mismatch",
+                    "execution.scenario",
+                    requiredScenario,
+                    string.IsNullOrWhiteSpace(execution.Scenario) ? "missing" : execution.Scenario,
+                    "Playback quality report execution scenario does not match the reference case.");
+            }
+
             if (!PlaybackQualityExecutionStatus.IsKnown(execution.Status))
             {
                 AddExecutionError(validation, status, "report.execution.status.invalid", "execution.status", "known execution status", string.IsNullOrWhiteSpace(execution.Status) ? "missing" : execution.Status, "Playback quality report contains an unknown execution status.");

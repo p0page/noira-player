@@ -399,6 +399,7 @@ public sealed class PlaybackQualityComparisonSuiteTests
         {
             AttemptId = "attempt-" + runId,
             Runner = "native-headless",
+            Scenario = PlaybackQualityExecutionScenario.Playback,
             EvidenceLevel = PlaybackQualityEvidenceLevel.NativePlayback,
             Status = PlaybackQualityExecutionStatus.Completed,
             SourceLocatorHash = "sha256:" + new string('a', 64),

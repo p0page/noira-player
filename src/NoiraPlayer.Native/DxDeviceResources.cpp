@@ -774,6 +774,111 @@ namespace winrt::NoiraPlayer::Native::implementation
         return SUCCEEDED(d2dContext->EndDraw());
     }
 
+    bool DxDeviceResources::DrawSubtitleBitmapOverlay(SubtitleBitmapRegion const& region)
+    {
+        if (region.BgraPixels.empty() ||
+            region.Width == 0 ||
+            region.Height == 0 ||
+            region.Stride < region.Width * 4 ||
+            !m_swapChain ||
+            !m_device)
+        {
+            return false;
+        }
+
+        DXGI_SWAP_CHAIN_DESC1 swapChainDescription{};
+        if (FAILED(m_swapChain->GetDesc1(&swapChainDescription)))
+        {
+            return false;
+        }
+
+        Microsoft::WRL::ComPtr<IDXGISurface> surface;
+        if (FAILED(m_swapChain->GetBuffer(0, IID_PPV_ARGS(&surface))))
+        {
+            return false;
+        }
+
+        D2D1_FACTORY_OPTIONS factoryOptions{};
+        Microsoft::WRL::ComPtr<ID2D1Factory1> d2dFactory;
+        if (FAILED(D2D1CreateFactory(
+            D2D1_FACTORY_TYPE_SINGLE_THREADED,
+            factoryOptions,
+            d2dFactory.ReleaseAndGetAddressOf())))
+        {
+            return false;
+        }
+
+        Microsoft::WRL::ComPtr<IDXGIDevice> dxgiDevice;
+        if (FAILED(m_device.As(&dxgiDevice)))
+        {
+            return false;
+        }
+
+        Microsoft::WRL::ComPtr<ID2D1Device> d2dDevice;
+        if (FAILED(d2dFactory->CreateDevice(dxgiDevice.Get(), d2dDevice.ReleaseAndGetAddressOf())))
+        {
+            return false;
+        }
+
+        Microsoft::WRL::ComPtr<ID2D1DeviceContext> d2dContext;
+        if (FAILED(d2dDevice->CreateDeviceContext(
+            D2D1_DEVICE_CONTEXT_OPTIONS_NONE,
+            d2dContext.ReleaseAndGetAddressOf())))
+        {
+            return false;
+        }
+
+        D2D1_BITMAP_PROPERTIES1 targetProperties{};
+        targetProperties.pixelFormat = D2D1::PixelFormat(
+            swapChainDescription.Format,
+            D2D1_ALPHA_MODE_IGNORE);
+        targetProperties.dpiX = 96.0f;
+        targetProperties.dpiY = 96.0f;
+        targetProperties.bitmapOptions =
+            D2D1_BITMAP_OPTIONS_TARGET |
+            D2D1_BITMAP_OPTIONS_CANNOT_DRAW;
+
+        Microsoft::WRL::ComPtr<ID2D1Bitmap1> targetBitmap;
+        if (FAILED(d2dContext->CreateBitmapFromDxgiSurface(
+            surface.Get(),
+            &targetProperties,
+            targetBitmap.ReleaseAndGetAddressOf())))
+        {
+            return false;
+        }
+
+        D2D1_BITMAP_PROPERTIES1 sourceProperties{};
+        sourceProperties.pixelFormat = D2D1::PixelFormat(
+            DXGI_FORMAT_B8G8R8A8_UNORM,
+            D2D1_ALPHA_MODE_PREMULTIPLIED);
+        sourceProperties.dpiX = 96.0f;
+        sourceProperties.dpiY = 96.0f;
+
+        Microsoft::WRL::ComPtr<ID2D1Bitmap1> sourceBitmap;
+        if (FAILED(d2dContext->CreateBitmap(
+            D2D1::SizeU(region.Width, region.Height),
+            region.BgraPixels.data(),
+            region.Stride,
+            &sourceProperties,
+            sourceBitmap.ReleaseAndGetAddressOf())))
+        {
+            return false;
+        }
+
+        auto destination = MapSubtitleRegionToContainedVideo(
+            region,
+            swapChainDescription.Width,
+            swapChainDescription.Height);
+        d2dContext->SetTarget(targetBitmap.Get());
+        d2dContext->BeginDraw();
+        d2dContext->DrawBitmap(
+            sourceBitmap.Get(),
+            D2D1::RectF(destination.Left, destination.Top, destination.Right, destination.Bottom),
+            1.0f,
+            D2D1_BITMAP_INTERPOLATION_MODE_LINEAR);
+        return SUCCEEDED(d2dContext->EndDraw());
+    }
+
     bool DxDeviceResources::ClearToBlack()
     {
         return ClearBackBufferToBlack(true);

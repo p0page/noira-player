@@ -809,6 +809,7 @@ public sealed class PlaybackQualityReferenceManifestTests
         {
             AttemptId = "attempt-without-decoder",
             Runner = "native-headless",
+            Scenario = referenceCase.ExecutionRequirement.Scenario,
             EvidenceLevel = PlaybackQualityEvidenceLevel.NativePlayback,
             Status = "completed",
             SourceLocatorHash = PlaybackQualitySourceFingerprint.Compute(referenceCase.Uri),
@@ -1075,6 +1076,102 @@ public sealed class PlaybackQualityReferenceManifestTests
         Assert.Contains(validation.Errors, error =>
             error.Code == "case.execution.minimum-evidence-level.invalid" &&
             error.CaseId == referenceCase.CaseId);
+    }
+
+    [Fact]
+    public void ValidateManifest_Rejects_Unknown_Execution_Scenario()
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        var referenceCase = CreateCase("manifest/unknown-execution-scenario", 1, "sdr-smoke");
+        referenceCase.ExecutionRequirement.Scenario = "do-everything";
+        manifest.Cases.Add(referenceCase);
+
+        var validation = PlaybackQualityReferenceManifestValidator.Validate(manifest);
+
+        Assert.False(validation.IsValid);
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "case.execution.scenario.invalid" &&
+            error.CaseId == referenceCase.CaseId &&
+            error.Signal == "executionRequirement.scenario");
+    }
+
+    [Fact]
+    public void ValidateManifest_Preserves_Explicit_Execution_Scenario()
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        var referenceCase = CreateCase("manifest/subtitle-switch", 1, "subtitle-switch");
+        referenceCase.ExecutionRequirement.Scenario = "subtitle-switch";
+        manifest.Cases.Add(referenceCase);
+
+        var validation = PlaybackQualityReferenceManifestValidator.Validate(manifest);
+
+        Assert.True(validation.IsValid);
+        Assert.Equal("subtitle-switch", Assert.Single(validation.Cases).ExecutionRequirement.Scenario);
+    }
+
+    [Theory]
+    [InlineData("timeline", "playback", 0)]
+    [InlineData("audio-switch", "playback", 0)]
+    [InlineData("subtitle-switch", "playback", 0)]
+    [InlineData("pause-resume", "playback", 30)]
+    [InlineData("sdr-smoke", "pause-resume", 0)]
+    public void ValidateManifest_Rejects_Execution_Scenario_That_Does_Not_Match_Case_Intent(
+        string purpose,
+        string scenario,
+        int pauseSeconds)
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        var referenceCase = CreateCase("manifest/scenario-intent-mismatch", 1, purpose);
+        referenceCase.ExecutionRequirement.Scenario = scenario;
+        referenceCase.PauseSeconds = pauseSeconds;
+        manifest.Cases.Add(referenceCase);
+
+        var validation = PlaybackQualityReferenceManifestValidator.Validate(manifest);
+
+        Assert.False(validation.IsValid);
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "case.execution.scenario-intent.mismatch" &&
+            error.CaseId == referenceCase.CaseId);
+    }
+
+    [Fact]
+    public void ValidateManifest_Rejects_Multiple_Active_Execution_Intents()
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        var referenceCase = CreateCase("manifest/multiple-active-execution-intents", 1, "timeline");
+        referenceCase.Purpose.Add("subtitle-switch");
+        referenceCase.ExecutionRequirement.Scenario = PlaybackQualityExecutionScenario.Timeline;
+        manifest.Cases.Add(referenceCase);
+
+        var validation = PlaybackQualityReferenceManifestValidator.Validate(manifest);
+
+        Assert.False(validation.IsValid);
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "case.execution.scenario-intent.multiple" &&
+            error.CaseId == referenceCase.CaseId &&
+            error.Signal == "purpose");
+    }
+
+    [Fact]
+    public void ValidateReportSet_Rejects_Execution_Scenario_Mismatch()
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        var referenceCase = CreateCase("execution/subtitle-switch", 1, "subtitle-switch");
+        referenceCase.ExecutionRequirement.Scenario = PlaybackQualityExecutionScenario.SubtitleSwitch;
+        manifest.Cases.Add(referenceCase);
+        var report = CreateReport(referenceCase.CaseId, "hevc", 3840, 2160, 23.976, "Hdr10");
+        AddCapturedRuntimeMetrics(report);
+        report.ColorPipeline.ConversionStatus = "validated";
+        report.Execution.Scenario = PlaybackQualityExecutionScenario.Playback;
+
+        var validation = PlaybackQualityReferenceReportSetValidator.Validate(manifest, new[] { report });
+
+        Assert.False(validation.IsValid);
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.execution.scenario.mismatch" &&
+            error.CaseId == referenceCase.CaseId &&
+            error.Expected == PlaybackQualityExecutionScenario.SubtitleSwitch &&
+            error.Actual == PlaybackQualityExecutionScenario.Playback);
     }
 
     [Fact]
@@ -2147,6 +2244,14 @@ public sealed class PlaybackQualityReferenceManifestTests
         if (!string.IsNullOrWhiteSpace(purpose))
         {
             referenceCase.Purpose.Add(purpose);
+            referenceCase.ExecutionRequirement.Scenario = purpose switch
+            {
+                "timeline" => PlaybackQualityExecutionScenario.Timeline,
+                "audio-switch" => PlaybackQualityExecutionScenario.AudioSwitch,
+                "subtitle-switch" => PlaybackQualityExecutionScenario.SubtitleSwitch,
+                "pause-resume" => PlaybackQualityExecutionScenario.PauseResume,
+                _ => PlaybackQualityExecutionScenario.Playback
+            };
         }
 
         return referenceCase;
@@ -2261,6 +2366,7 @@ public sealed class PlaybackQualityReferenceManifestTests
         {
             AttemptId = "attempt-" + referenceCase.CaseId.Replace('/', '-'),
             Runner = "native-headless",
+            Scenario = referenceCase.ExecutionRequirement.Scenario,
             EvidenceLevel = PlaybackQualityEvidenceLevel.NativePlayback,
             Status = status,
             SourceLocatorHash = PlaybackQualitySourceFingerprint.Compute(referenceCase.Uri),

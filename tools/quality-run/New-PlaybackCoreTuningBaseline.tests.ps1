@@ -30,7 +30,7 @@ try {
       "severity": "high",
       "stability": "stable",
       "uri": "https://media.invalid/open-error.mp4",
-      "executionRequirement": { "minimumEvidenceLevel": "native-playback" },
+      "executionRequirement": { "minimumEvidenceLevel": "native-playback", "scenario": "playback" },
       "purpose": [ "error-handling" ],
       "expected": {
         "codec": "hevc",
@@ -66,6 +66,7 @@ $runId = if ($env:NOIRAPLAYER_BASELINE_TEST_MISMATCH_RUN_ID -eq '1') {
 }
 $reportsDir = Get-Value '--reports-dir'
 $locatorHash = Get-Value '--source-locator-hash'
+$scenario = Get-Value '--scenario'
 $reportPath = Join-Path $reportsDir ($caseId.Replace('/', [System.IO.Path]::DirectorySeparatorChar) + '.json')
 New-Item -ItemType Directory -Path (Split-Path -Parent $reportPath) -Force | Out-Null
 @{
@@ -90,6 +91,7 @@ New-Item -ItemType Directory -Path (Split-Path -Parent $reportPath) -Force | Out
         execution = @{
             attemptId = 'baseline-test-attempt'
             runner = 'native-headless'
+            scenario = $scenario
             evidenceLevel = 'native-playback'
             status = 'failed'
             sourceLocatorHash = $locatorHash

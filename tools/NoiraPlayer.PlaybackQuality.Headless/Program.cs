@@ -339,6 +339,7 @@ internal static class NativeHeadlessHarness
         {
             AttemptId = attemptId,
             Runner = "native-headless",
+            Scenario = options.Scenario,
             EvidenceLevel = evidenceLevel,
             Status = status,
             SourceLocatorHash = options.SourceLocatorHash,
@@ -434,6 +435,13 @@ internal static class NativeHeadlessHarness
             out var interactions,
             out var parseError))
         {
+            if (process.ExitCode != 0)
+            {
+                return NativeHeadlessHelperResult.Failed(
+                    FirstNonEmpty(
+                        stderr.Trim(),
+                        "Native helper exited with code " + process.ExitCode + " before returning playback telemetry."));
+            }
             return NativeHeadlessHelperResult.Failed(parseError);
         }
 
@@ -1814,10 +1822,11 @@ internal sealed class NativeHeadlessHarnessOptions
                 case "--scenario":
                     if (value != "playback" &&
                         value != "timeline" &&
-                        value != "interactions" &&
+                        value != "audio-switch" &&
+                        value != "subtitle-switch" &&
                         value != "pause-resume")
                     {
-                        error = "--scenario must be playback, timeline, interactions, or pause-resume.";
+                        error = "--scenario must be playback, timeline, audio-switch, subtitle-switch, or pause-resume.";
                         return false;
                     }
 

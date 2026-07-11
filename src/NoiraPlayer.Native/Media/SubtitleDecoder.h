@@ -1,11 +1,13 @@
 ﻿#pragma once
 
 #include "FfmpegMediaSource.h"
+#include "SubtitleBitmap.h"
 
 #include <cstdint>
 #include <deque>
 #include <optional>
 #include <string>
+#include <vector>
 
 struct AVCodecContext;
 
@@ -14,6 +16,7 @@ namespace winrt::NoiraPlayer::Native::implementation
     struct DecodedSubtitleCue
     {
         std::wstring Text;
+        std::vector<SubtitleBitmapRegion> BitmapRegions;
         int64_t StartTicks{0};
         int64_t EndTicks{0};
     };

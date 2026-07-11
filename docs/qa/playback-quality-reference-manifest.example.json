@@ -273,6 +273,10 @@
       "mediaSourceId": "quality-source-sdr-resume-seek-timeline",
       "startPositionTicks": 600000000,
       "tier": 2,
+      "executionRequirement": {
+        "minimumEvidenceLevel": "native-playback",
+        "scenario": "timeline"
+      },
       "purpose": [
         "timeline"
       ],

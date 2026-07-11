@@ -11,6 +11,8 @@ function Set-SmokeNativeExecutionEvidence {
         [Parameter(Mandatory = $true)][string]$Locator,
         [Parameter(Mandatory = $true)][string]$AttemptId,
         [Parameter(Mandatory = $true)][string]$Status,
+        [ValidateSet('playback', 'timeline', 'audio-switch', 'subtitle-switch', 'pause-resume')]
+        [string]$Scenario = 'playback',
         [bool]$SourceOpened,
         [bool]$PlaybackSampleObserved
     )
@@ -33,6 +35,7 @@ function Set-SmokeNativeExecutionEvidence {
     $payload | Add-Member -NotePropertyName execution -NotePropertyValue ([pscustomobject]@{
         attemptId = $AttemptId
         runner = 'native-headless'
+        scenario = $Scenario
         evidenceLevel = 'native-playback'
         status = $Status
         sourceLocatorHash = $fingerprint
@@ -1074,12 +1077,15 @@ try {
       "mediaSourceId": "quality-source-core-probe",
       "startPositionTicks": 600000000,
       "tier": 1,
+      "executionRequirement": {
+        "minimumEvidenceLevel": "native-playback",
+        "scenario": "timeline"
+      },
       "purpose": [
         "sdr-smoke",
         "timeline",
         "tracks",
-        "audio-switch",
-        "subtitle-switch",
+        "subtitles",
         "frame-pacing",
         "av-sync",
         "buffering"
@@ -1153,10 +1159,24 @@ try {
         $coreProbeReport.report.position.requestedStartPositionTicks -ne 600000000 -or
         $coreProbeReport.report.position.seekTargetPositionTicks -ne 900000000 -or
         $coreProbeReport.report.position.actualPositionTicks -ne 900000000 -or
-        $coreProbeReport.report.tracks.selectedAudioStreamIndex -ne 1 -or
-        $coreProbeReport.report.tracks.selectedSubtitleStreamIndex -ne 3 -or
+        $coreProbeReport.report.tracks.audioTrackCount -ne 2 -or
+        $coreProbeReport.report.tracks.subtitleTrackCount -ne 1 -or
+        $null -ne $coreProbeReport.report.tracks.selectedAudioStreamIndex -or
+        $null -ne $coreProbeReport.report.tracks.selectedSubtitleStreamIndex -or
         $coreProbeReport.report.environment.sourceRevision -ne 'smoke-core-probe-revision') {
-        throw 'Expected evaluator self-test report-set to write a model-consumable core probe envelope.'
+        throw ('Expected evaluator self-test report-set to write a model-consumable core probe envelope: ' +
+            ([ordered]@{
+                schemaVersion = $coreProbeReport.schemaVersion
+                caseId = $coreProbeReport.caseMetadata.caseId
+                result = $coreProbeReport.report.result
+                scenario = $coreProbeReport.report.execution.scenario
+                requestedStart = $coreProbeReport.report.position.requestedStartPositionTicks
+                seekTarget = $coreProbeReport.report.position.seekTargetPositionTicks
+                actualPosition = $coreProbeReport.report.position.actualPositionTicks
+                selectedAudio = $coreProbeReport.report.tracks.selectedAudioStreamIndex
+                selectedSubtitle = $coreProbeReport.report.tracks.selectedSubtitleStreamIndex
+                sourceRevision = $coreProbeReport.report.environment.sourceRevision
+            } | ConvertTo-Json -Compress))
     }
 
     if (-not ($coreProbeReport.report.limitations -contains 'core-probe: native playback graph, decoder, renderer, network I/O, and HDMI output were not opened')) {
@@ -1175,15 +1195,15 @@ try {
     }
 
     if (-not ($coreProbeReport.modelAnalysis.evidenceSignals -contains 'position.seekPositionErrorMs') -or
-        -not ($coreProbeReport.modelAnalysis.evidenceSignals -contains 'tracks.selectedAudioStreamIndex') -or
-        -not ($coreProbeReport.modelAnalysis.evidenceSignals -contains 'tracks.selectedSubtitleStreamIndex') -or
+        -not ($coreProbeReport.modelAnalysis.evidenceSignals -contains 'tracks.audioTrackCount') -or
+        -not ($coreProbeReport.modelAnalysis.evidenceSignals -contains 'tracks.subtitleTrackCount') -or
         -not ($coreProbeReport.modelAnalysis.evidenceSignals -contains 'lifecycle.load') -or
         -not ($coreProbeReport.modelAnalysis.evidenceSignals -contains 'lifecycle.play') -or
         -not ($coreProbeReport.modelAnalysis.evidenceSignals -contains 'lifecycle.pause') -or
         -not ($coreProbeReport.modelAnalysis.evidenceSignals -contains 'lifecycle.resume') -or
         -not ($coreProbeReport.modelAnalysis.evidenceSignals -contains 'lifecycle.seek') -or
         -not ($coreProbeReport.modelAnalysis.evidenceSignals -contains 'lifecycle.stop')) {
-        throw 'Expected core probe model analysis to expose lifecycle, timeline, and track-switch evidence signals.'
+        throw 'Expected core probe model analysis to expose lifecycle, timeline, and track evidence signals.'
     }
 
     Push-Location $repoRoot
@@ -1256,13 +1276,21 @@ try {
     })
     $archivedCoreProbeManifest.cases[0].purpose = @(
         @($archivedCoreProbeManifest.cases[0].purpose) +
-        @(
-            'sdr-smoke', 'hdr-output', 'hdr-force-sdr', 'dv-reject', 'dv-fallback',
-            'cadence-23.976', 'frame-pacing', 'av-sync', 'buffering', 'timeline',
-            'tracks', 'subtitles', 'end-of-stream', 'error-handling'
-        ) |
+        @('sdr-smoke', 'cadence-23.976', 'frame-pacing', 'av-sync', 'buffering', 'tracks', 'subtitles', 'end-of-stream') |
             Select-Object -Unique
     )
+    $archivedTimelineCase = @($archivedCoreProbeManifest.cases | Where-Object {
+        @($_.purpose) -contains 'timeline'
+    })[0]
+    $archivedTimelineCase.executionRequirement = [pscustomobject]@{
+        minimumEvidenceLevel = 'native-playback'
+        scenario = 'timeline'
+    }
+    $archivedTimelineCase.category = 'challenge'
+    $archivedErrorCase = @($archivedCoreProbeManifest.cases | Where-Object {
+        @($_.purpose) -contains 'error-handling'
+    })[0]
+    $archivedErrorCase.category = 'challenge'
     $archivedCoreProbeManifest | ConvertTo-Json -Depth 100 |
         Set-Content -LiteralPath $archivedCoreProbeManifestPath -Encoding UTF8
 
@@ -1425,6 +1453,7 @@ try {
   "execution": {
     "attemptId": "smoke-native-captured-attempt",
     "runner": "native-headless",
+    "scenario": "playback",
     "evidenceLevel": "native-playback",
     "status": "completed",
     "sourceLocatorHash": "sha256:5073a766f7c829219a03780802afc5037a5b56f172f64ff87b162fc01ffdec69",
@@ -1646,19 +1675,7 @@ try {
       "tier": 1,
       "purpose": [
         "sdr-smoke",
-        "hdr-output",
-        "hdr-force-sdr",
-        "dv-reject",
-        "dv-fallback",
-        "cadence-23.976",
         "frame-pacing",
-        "av-sync",
-        "buffering",
-        "timeline",
-        "tracks",
-        "subtitles",
-        "end-of-stream",
-        "error-handling",
         "cadence-24"
       ],
       "expected": {
@@ -1694,6 +1711,7 @@ try {
   "execution": {
     "attemptId": "raw-cadence-baseline-attempt",
     "runner": "native-headless",
+    "scenario": "playback",
     "evidenceLevel": "native-playback",
     "status": "completed",
     "sourceLocatorHash": "sha256:a583a300e4b10ff6e8942470c73eca9cd9407eaed9e2deea38754cfeba8962e6",
@@ -1801,6 +1819,7 @@ try {
   "execution": {
     "attemptId": "raw-cadence-candidate-attempt",
     "runner": "native-headless",
+    "scenario": "playback",
     "evidenceLevel": "native-playback",
     "status": "completed",
     "sourceLocatorHash": "sha256:a583a300e4b10ff6e8942470c73eca9cd9407eaed9e2deea38754cfeba8962e6",
@@ -1893,12 +1912,9 @@ try {
     Push-Location $repoRoot
     try {
         dotnet $cliDll `
-            evaluate-candidate `
-            --manifest $rawCadenceManifestPath `
-            --baseline-dir $rawCadenceBaselineDir `
-            --candidate-dir $rawCadenceCandidateDir `
-            --match-by run-id `
-            --comparisons-dir $rawCadenceComparisonsDir `
+            compare `
+            --baseline (Join-Path $rawCadenceBaselineDir 'local\native-raw-cadence-24.json') `
+            --candidate (Join-Path $rawCadenceCandidateDir 'local\native-raw-cadence-24.json') `
             --output $rawCadenceEvaluationPath
         if ($LASTEXITCODE -ne 0) {
             throw 'Expected raw native cadence candidate evaluation to pass.'
@@ -1909,8 +1925,8 @@ try {
     }
 
     $rawCadenceEvaluation = Get-Content -Raw -LiteralPath $rawCadenceEvaluationPath | ConvertFrom-Json
-    if ($rawCadenceEvaluation.suite.improvedCount -ne 1 -or
-        $rawCadenceEvaluation.suite.regressedCount -ne 0) {
+    if ($rawCadenceEvaluation.result -ne 'improved' -or
+        @($rawCadenceEvaluation.regressions).Count -ne 0) {
         throw 'Expected raw native cadence candidate evaluation to detect improvement from current evaluator rules.'
     }
 
@@ -2081,6 +2097,7 @@ try {
   "execution": {
     "attemptId": "report-set-hdr-attempt",
     "runner": "native-headless",
+    "scenario": "playback",
     "evidenceLevel": "native-playback",
     "status": "completed",
     "sourceLocatorHash": "sha256:6d6dcdf267881094dc407e3b909ee6f37e3da9a9606c4e112c244ed053d978f3",
@@ -2148,6 +2165,7 @@ try {
   "execution": {
     "attemptId": "report-set-dv-attempt",
     "runner": "native-headless",
+    "scenario": "playback",
     "evidenceLevel": "native-playback",
     "status": "unsupported",
     "sourceLocatorHash": "sha256:6ff500115e21a7d612e1d98387f7a2eab7777ef97cfa0ab39cd96ac3ffce69a1",
@@ -2188,6 +2206,7 @@ try {
   "execution": {
     "attemptId": "report-set-missing-file-attempt",
     "runner": "native-headless",
+    "scenario": "playback",
     "evidenceLevel": "native-playback",
     "status": "failed",
     "sourceLocatorHash": "sha256:4e0e8c8b6060256c02a67f8a9734a5c3d1c90c983fbdae10451f840ef9ed1cff",
@@ -2399,6 +2418,7 @@ try {
   "execution": {
     "attemptId": "zero-counter-native-attempt",
     "runner": "native-headless",
+    "scenario": "playback",
     "evidenceLevel": "native-playback",
     "status": "completed",
     "sourceLocatorHash": "sha256:42369d6a58bde4131352982fddaefd4a639b1e9487e8db91eefc5f314782de13",
@@ -3218,6 +3238,7 @@ try {
         -Locator 'https://example.invalid/item-1/source-1.mp4' `
         -AttemptId 'candidate-eval-item-baseline' `
         -Status 'completed' `
+        -Scenario 'timeline' `
         -SourceOpened $true `
         -PlaybackSampleObserved $true
     Set-SmokeNativeExecutionEvidence `
@@ -3225,6 +3246,7 @@ try {
         -Locator 'https://example.invalid/item-1/source-1.mp4' `
         -AttemptId 'candidate-eval-item-candidate' `
         -Status 'completed' `
+        -Scenario 'timeline' `
         -SourceOpened $true `
         -PlaybackSampleObserved $true
     Set-SmokeNativeExecutionEvidence `
@@ -3284,6 +3306,10 @@ try {
       "caseId": "item-1/source-1",
       "uri": "https://example.invalid/item-1/source-1.mp4",
       "tier": 2,
+      "executionRequirement": {
+        "minimumEvidenceLevel": "native-playback",
+        "scenario": "timeline"
+      },
       "purpose": [
         "sdr-smoke",
         "hdr-output",
@@ -4087,6 +4113,7 @@ try {
         -Locator 'https://example.invalid/item-1/source-1.mp4' `
         -AttemptId 'empty-analysis-baseline-attempt' `
         -Status 'completed' `
+        -Scenario 'timeline' `
         -SourceOpened $true `
         -PlaybackSampleObserved $true
     Set-SmokeNativeExecutionEvidence `
@@ -4094,6 +4121,7 @@ try {
         -Locator 'https://example.invalid/item-1/source-1.mp4' `
         -AttemptId 'empty-analysis-candidate-attempt' `
         -Status 'completed' `
+        -Scenario 'timeline' `
         -SourceOpened $true `
         -PlaybackSampleObserved $true
     Copy-Item -LiteralPath (Join-Path $runIdBaselineDir 'error-baseline.json') -Destination (Join-Path $candidateEvaluationEmptyAnalysisBaselineDir 'error-baseline.json')
@@ -4462,6 +4490,7 @@ try {
         -Locator 'https://example.invalid/item-1/source-1.mp4' `
         -AttemptId 'blocked-analysis-baseline-attempt' `
         -Status 'completed' `
+        -Scenario 'timeline' `
         -SourceOpened $true `
         -PlaybackSampleObserved $true
     Copy-Item -LiteralPath (Join-Path $runIdBaselineDir 'error-baseline.json') -Destination (Join-Path $baselineEvaluationBlockedAnalysisBaselineDir 'error-baseline.json')
@@ -4689,6 +4718,7 @@ try {
         -Locator 'https://example.invalid/item-1/source-1.mp4' `
         -AttemptId 'blocked-analysis-candidate-attempt' `
         -Status 'completed' `
+        -Scenario 'timeline' `
         -SourceOpened $true `
         -PlaybackSampleObserved $true
     Copy-Item -LiteralPath (Join-Path $runIdCandidateDir 'error-candidate.json') -Destination (Join-Path $candidateEvaluationBlockedAnalysisCandidateDir 'error-candidate.json')

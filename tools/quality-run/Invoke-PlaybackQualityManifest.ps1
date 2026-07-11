@@ -112,6 +112,10 @@ foreach ($case in $selectedCases) {
     $currentCaseId = ([string]$case.caseId).Trim()
     $sourceLocator = ([string]$case.uri).Trim()
     $streamUrl = $sourceLocator
+    $scenario = ([string]$case.executionRequirement.scenario).Trim().ToLowerInvariant()
+    if ([string]::IsNullOrWhiteSpace($scenario)) {
+        $scenario = 'playback'
+    }
     $reportPath = Get-PlaybackQualityReportPath -ReportsDir $ReportsDir -CaseId $currentCaseId
     $startedAt = [DateTimeOffset]::UtcNow
     $sourceResolutionAttemptCount = 0
@@ -133,6 +137,7 @@ foreach ($case in $selectedCases) {
                 -SourceLocator $sourceLocator `
                 -ReportsDir $ReportsDir `
                 -ErrorCode $resolvedSource.ErrorCode `
+                -Scenario $scenario `
                 -ResolverProjectPath $SourceResolverProjectPath
             $attempts.Add([pscustomobject]@{
                 caseId = $currentCaseId
@@ -162,21 +167,6 @@ foreach ($case in $selectedCases) {
     $locatorHash = Get-PlaybackQualitySourceFingerprint -Locator $sourceLocator
     $pauseSeconds = if ($null -eq $case.pauseSeconds) { 0 } else { [int]$case.pauseSeconds }
     $startPositionTicks = if ($null -eq $case.startPositionTicks) { 0 } else { [long]$case.startPositionTicks }
-    $purposes = @($case.purpose | ForEach-Object { ([string]$_).Trim().ToLowerInvariant() })
-    $scenario = if ($pauseSeconds -gt 0) {
-        'pause-resume'
-    }
-    elseif ($purposes -contains 'timeline') {
-        'timeline'
-    }
-    elseif (($purposes -contains 'tracks') -or
-        ($purposes -contains 'subtitles') -or
-        ($purposes -contains 'audio-switch')) {
-        'interactions'
-    }
-    else {
-        'playback'
-    }
     if ($pauseSeconds -lt 0 -or $pauseSeconds -gt 900) {
         throw ('pauseSeconds must be between 0 and 900 for case ' + $currentCaseId)
     }

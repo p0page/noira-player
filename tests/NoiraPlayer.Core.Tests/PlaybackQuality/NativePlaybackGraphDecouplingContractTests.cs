@@ -7,6 +7,20 @@ namespace NoiraPlayer.Core.Tests.PlaybackQuality;
 public sealed class NativePlaybackGraphDecouplingContractTests
 {
     [Fact]
+    public void Native_Subtitle_Path_Preserves_FFmpeg_Bitmap_Regions_Through_D2D_Overlay()
+    {
+        var root = FindRepositoryRoot();
+        var decoderSource = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Native", "Media", "SubtitleDecoder.cpp"));
+        var rendererSource = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Native", "Media", "SubtitleRenderer.cpp"));
+        var graphSource = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Native", "Media", "PlaybackGraph.cpp"));
+
+        Assert.Contains("SUBTITLE_BITMAP", decoderSource, StringComparison.Ordinal);
+        Assert.Contains("TryConvertIndexedSubtitleBitmap", decoderSource, StringComparison.Ordinal);
+        Assert.Contains("SetCue(*cue)", graphSource, StringComparison.Ordinal);
+        Assert.Contains("DrawSubtitleBitmapOverlay", rendererSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void PlaybackGraph_Open_Request_Is_Not_Bound_To_WinRt_RuntimeClass()
     {
         var root = FindRepositoryRoot();
@@ -120,7 +134,13 @@ public sealed class NativePlaybackGraphDecouplingContractTests
         Assert.DoesNotContain("m_audioRenderer.Pause()", switchSource, StringComparison.Ordinal);
         Assert.DoesNotContain("m_audioRenderer.Resume()", switchSource, StringComparison.Ordinal);
 
+        Assert.Contains("options.Scenario == L\"subtitle-switch\"", helperSource, StringComparison.Ordinal);
         Assert.Contains("runSubtitleSwitch(subtitleStreamIndexes[0], true)", helperSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("runSubtitleSwitch(subtitleStreamIndexes[1]", helperSource, StringComparison.Ordinal);
+        Assert.Contains("InteractionEvidenceTimeout", helperSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("options.Scenario == L\"interactions\"", helperSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("subtitleOff.Attempted = true;", helperSource, StringComparison.Ordinal);
+        Assert.Contains("ReportStage(\"interaction-sample-captured\")", helperSource, StringComparison.Ordinal);
         Assert.Contains("PausedPositionBeforeTicks", helperSource, StringComparison.Ordinal);
         Assert.Contains("PausedPositionAfterTicks", helperSource, StringComparison.Ordinal);
         Assert.Contains("PositionBeforeResumeTicks", helperSource, StringComparison.Ordinal);

@@ -30,7 +30,7 @@ try {
       "stability": "stable",
       "uri": "https://media.invalid/first.mp4",
       "pauseSeconds": 1,
-      "executionRequirement": { "minimumEvidenceLevel": "native-playback" },
+      "executionRequirement": { "minimumEvidenceLevel": "native-playback", "scenario": "pause-resume" },
       "purpose": [ "error-handling" ],
       "expected": {
         "codec": "h264",
@@ -48,7 +48,7 @@ try {
       "stability": "variable",
       "uri": "https://media.invalid/second.mp4",
       "startPositionTicks": 20000000,
-      "executionRequirement": { "minimumEvidenceLevel": "native-playback" },
+      "executionRequirement": { "minimumEvidenceLevel": "native-playback", "scenario": "timeline" },
       "purpose": [ "timeline" ],
       "expected": {
         "codec": "hevc",
@@ -67,8 +67,43 @@ try {
       "uri": "emby://items/private-item",
       "itemId": "private-item",
       "mediaSourceId": "private-source",
-      "executionRequirement": { "minimumEvidenceLevel": "native-playback" },
+      "executionRequirement": { "minimumEvidenceLevel": "native-playback", "scenario": "playback" },
       "purpose": [ "sdr-smoke" ],
+      "expected": {
+        "codec": "h264",
+        "width": 320,
+        "height": 180,
+        "frameRate": 30,
+        "hdrKind": "Sdr",
+        "isDirectPlayable": true
+      }
+    },
+    {
+      "caseId": "runner/audio-switch",
+      "category": "stable",
+      "severity": "high",
+      "stability": "stable",
+      "uri": "https://media.invalid/audio-switch.mp4",
+      "executionRequirement": { "minimumEvidenceLevel": "native-playback", "scenario": "audio-switch" },
+      "purpose": [ "tracks", "audio-switch" ],
+      "expected": {
+        "codec": "h264",
+        "width": 320,
+        "height": 180,
+        "frameRate": 30,
+        "hdrKind": "Sdr",
+        "isDirectPlayable": true
+      }
+    },
+    {
+      "caseId": "runner/subtitle-switch",
+      "category": "stable",
+      "severity": "high",
+      "stability": "stable",
+      "uri": "https://media.invalid/subtitle-switch.mp4",
+      "startPositionTicks": 600000000,
+      "executionRequirement": { "minimumEvidenceLevel": "native-playback", "scenario": "subtitle-switch" },
+      "purpose": [ "subtitles", "subtitle-switch" ],
       "expected": {
         "codec": "h264",
         "width": 320,
@@ -86,7 +121,7 @@ try {
       "uri": "emby://items/missing-item",
       "itemId": "missing-item",
       "mediaSourceId": "missing-source",
-      "executionRequirement": { "minimumEvidenceLevel": "native-playback" },
+      "executionRequirement": { "minimumEvidenceLevel": "native-playback", "scenario": "playback" },
       "purpose": [ "error-handling" ],
       "expected": {
         "codec": "h264",
@@ -103,7 +138,7 @@ try {
       "severity": "low",
       "stability": "flaky",
       "uri": "https://media.invalid/quarantine.mp4",
-      "executionRequirement": { "minimumEvidenceLevel": "native-playback" },
+      "executionRequirement": { "minimumEvidenceLevel": "native-playback", "scenario": "playback" },
       "purpose": [ "error-handling" ],
       "expected": {
         "codec": "h264",
@@ -201,10 +236,12 @@ exit 0
     }
 
     $invocations = @(Get-Content -LiteralPath $invocationLog -Encoding UTF8)
-    if ($invocations.Count -ne 3 -or
+    if ($invocations.Count -ne 5 -or
         $invocations[0] -ne 'runner/first-fails|pause=1|start=0|scenario=pause-resume' -or
         $invocations[1] -ne 'runner/second-runs|pause=|start=20000000|scenario=timeline' -or
-        $invocations[2] -ne 'runner/emby-resolved|pause=|start=0|scenario=playback') {
+        $invocations[2] -ne 'runner/emby-resolved|pause=|start=0|scenario=playback' -or
+        $invocations[3] -ne 'runner/audio-switch|pause=|start=0|scenario=audio-switch' -or
+        $invocations[4] -ne 'runner/subtitle-switch|pause=|start=600000000|scenario=subtitle-switch') {
         throw 'Manifest runner must invoke each selected stable/challenge case exactly once and preserve order.'
     }
 
@@ -212,6 +249,8 @@ exit 0
         'runner/first-fails',
         'runner/second-runs',
         'runner/emby-resolved',
+        'runner/audio-switch',
+        'runner/subtitle-switch',
         'runner/emby-unresolved')) {
         $reportPath = Join-Path $reportsDir ($caseId.Replace('/', [System.IO.Path]::DirectorySeparatorChar) + '.json')
         if (-not (Test-Path -LiteralPath $reportPath)) {
@@ -225,6 +264,7 @@ exit 0
         $unresolvedReport.report.error.code -ne 'manifest-runner.source-resolution-failed' -or
         $unresolvedReport.report.error.failureArea -ne 'unsupported-source' -or
         $unresolvedReport.report.execution.evidenceLevel -ne 'orchestration' -or
+        $unresolvedReport.report.execution.scenario -ne 'playback' -or
         $unresolvedReport.report.execution.sourceOpenAttempted -or
         [string]::IsNullOrWhiteSpace($unresolvedReport.report.environment.collectorVersion) -or
         [string]::IsNullOrWhiteSpace($unresolvedReport.report.environment.playerCoreVersion) -or
@@ -234,9 +274,9 @@ exit 0
     }
 
     $summary = Get-Content -LiteralPath $summaryPath -Raw -Encoding UTF8 | ConvertFrom-Json
-    if ($summary.selectedCaseCount -ne 4 -or
-        $summary.attemptedCaseCount -ne 3 -or
-        $summary.reportCount -ne 4 -or
+    if ($summary.selectedCaseCount -ne 6 -or
+        $summary.attemptedCaseCount -ne 5 -or
+        $summary.reportCount -ne 6 -or
         $summary.failedAttemptCount -ne 1 -or
         $summary.unresolvedSourceCount -ne 1 -or
         $summary.resolvedSourceCount -ne 1 -or

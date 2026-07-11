@@ -26,7 +26,7 @@ try {
       "severity": "high",
       "stability": "stable",
       "uri": "https://media.invalid/native-source-equivalence.mp4",
-      "executionRequirement": { "minimumEvidenceLevel": "native-playback" },
+      "executionRequirement": { "minimumEvidenceLevel": "native-playback", "scenario": "timeline" },
       "purpose": [
         "sdr-smoke", "hdr-output", "hdr-force-sdr", "dv-reject", "dv-fallback",
         "cadence-23.976", "frame-pacing", "av-sync", "buffering", "timeline",
@@ -60,6 +60,7 @@ function Get-Value([string]$Name) {
 $caseId = Get-Value '--case-id'
 $reportsDir = Get-Value '--reports-dir'
 $locatorHash = Get-Value '--source-locator-hash'
+$scenario = Get-Value '--scenario'
 $openedHash = $env:NOIRAPLAYER_COMPARISON_TEST_OPENED_HASH
 $sourceRevision = $env:NOIRAPLAYER_COMPARISON_TEST_REVISION
 $maxFrameGap = [double]$env:NOIRAPLAYER_COMPARISON_TEST_MAX_FRAME_GAP
@@ -84,6 +85,7 @@ $report = [ordered]@{
     execution = @{
         attemptId = 'attempt-' + $sourceRevision
         runner = 'native-headless'
+        scenario = $scenario
         evidenceLevel = 'native-playback'
         status = 'completed'
         sourceLocatorHash = $locatorHash

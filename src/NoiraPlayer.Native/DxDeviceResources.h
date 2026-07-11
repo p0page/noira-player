@@ -9,6 +9,7 @@
 
 #include "Media/DxgiColorSpaceMapper.h"
 #include "Media/HdrToneMappingPass.h"
+#include "Media/SubtitleBitmap.h"
 
 namespace winrt::NoiraPlayer::Native::implementation
 {
@@ -40,6 +41,7 @@ namespace winrt::NoiraPlayer::Native::implementation
             uint32_t displayHeight,
             uint32_t stride);
         bool DrawTextOverlay(std::wstring const& text);
+        bool DrawSubtitleBitmapOverlay(SubtitleBitmapRegion const& region);
         bool ClearToBlack();
         bool Present();
         void ObserveVideoColorMapping(VideoColorMetadata const& colorMetadata, bool outputHdr10);

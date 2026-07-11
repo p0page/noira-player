@@ -1807,6 +1807,7 @@ namespace NoiraPlayer.App.Views
             {
                 AttemptId = Guid.NewGuid().ToString("N"),
                 Runner = "app-hosted",
+                Scenario = referenceCase.ExecutionRequirement.Scenario,
                 EvidenceLevel = PlaybackQualityEvidenceLevel.AppHosted,
                 Status = status,
                 SourceLocatorHash = locatorHash,

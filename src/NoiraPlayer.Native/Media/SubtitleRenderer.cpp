@@ -19,6 +19,7 @@ namespace winrt::NoiraPlayer::Native::implementation
 
         m_selectedSubtitleStreamIndex = selectedSubtitleStreamIndex;
         m_textCue.clear();
+        m_bitmapRegions.clear();
         m_textCueStartTicks = 0;
         m_textCueEndTicks = 0;
         m_lastRenderedPositionTicks = 0;
@@ -29,6 +30,7 @@ namespace winrt::NoiraPlayer::Native::implementation
     {
         m_selectedSubtitleStreamIndex.reset();
         m_textCue.clear();
+        m_bitmapRegions.clear();
         m_textCueStartTicks = 0;
         m_textCueEndTicks = 0;
         m_lastRenderedPositionTicks = 0;
@@ -46,21 +48,23 @@ namespace winrt::NoiraPlayer::Native::implementation
         m_open = true;
     }
 
-    void SubtitleRenderer::SetTextCue(std::wstring text, int64_t startTicks, int64_t endTicks)
+    void SubtitleRenderer::SetCue(DecodedSubtitleCue cue)
     {
-        if (startTicks < 0 || endTicks < startTicks)
+        if (cue.StartTicks < 0 || cue.EndTicks < cue.StartTicks)
         {
             throw winrt::hresult_invalid_argument(L"Subtitle cue time range is invalid.");
         }
 
-        m_textCue = std::move(text);
-        m_textCueStartTicks = startTicks;
-        m_textCueEndTicks = endTicks;
+        m_textCue = std::move(cue.Text);
+        m_bitmapRegions = std::move(cue.BitmapRegions);
+        m_textCueStartTicks = cue.StartTicks;
+        m_textCueEndTicks = cue.EndTicks;
     }
 
     void SubtitleRenderer::ClearCue() noexcept
     {
         m_textCue.clear();
+        m_bitmapRegions.clear();
         m_textCueStartTicks = 0;
         m_textCueEndTicks = 0;
     }
@@ -75,11 +79,17 @@ namespace winrt::NoiraPlayer::Native::implementation
         if (m_open && m_selectedSubtitleStreamIndex.has_value())
         {
             m_lastRenderedPositionTicks = positionTicks;
-            if (!m_textCue.empty() &&
-                positionTicks >= m_textCueStartTicks &&
+            if (positionTicks >= m_textCueStartTicks &&
                 positionTicks <= m_textCueEndTicks)
             {
-                return m_deviceResources.DrawTextOverlay(m_textCue);
+                auto rendered = !m_textCue.empty() &&
+                    m_deviceResources.DrawTextOverlay(m_textCue);
+                for (auto const& region : m_bitmapRegions)
+                {
+                    rendered = m_deviceResources.DrawSubtitleBitmapOverlay(region) || rendered;
+                }
+
+                return rendered;
             }
         }
 

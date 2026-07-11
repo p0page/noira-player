@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #pragma warning(push)
 #pragma warning(disable : 4244 4819)
@@ -203,12 +204,13 @@ namespace
         return av_rescale_q(timestamp, stream->time_base, HundredNanosecondTimeBase);
     }
 
-    winrt::NoiraPlayer::Native::implementation::DecodedSubtitleCue CreateSubtitleCue(
+    std::optional<winrt::NoiraPlayer::Native::implementation::DecodedSubtitleCue> TryCreateSubtitleCue(
         AVPacket const* packet,
         AVSubtitle const& subtitle,
         AVStream const* stream,
-        std::wstring text)
+        AVCodecContext const* codecContext)
     {
+        using namespace winrt::NoiraPlayer::Native::implementation;
         auto baseTicks = GetPacketBaseTicks(packet, subtitle, stream);
         auto startTicks = baseTicks + static_cast<int64_t>(subtitle.start_display_time) * TicksPerMillisecond;
         auto endTicks = baseTicks + static_cast<int64_t>(subtitle.end_display_time) * TicksPerMillisecond;
@@ -225,7 +227,81 @@ namespace
             }
         }
 
-        return { std::move(text), startTicks, endTicks };
+        DecodedSubtitleCue cue;
+        cue.StartTicks = startTicks;
+        cue.EndTicks = endTicks;
+        if (auto text = TryCreateSubtitleText(subtitle))
+        {
+            cue.Text = std::move(*text);
+        }
+
+        auto canvasWidth = codecContext != nullptr && codecContext->width > 0
+            ? static_cast<uint32_t>(codecContext->width)
+            : stream->codecpar->width > 0
+                ? static_cast<uint32_t>(stream->codecpar->width)
+                : 0;
+        auto canvasHeight = codecContext != nullptr && codecContext->height > 0
+            ? static_cast<uint32_t>(codecContext->height)
+            : stream->codecpar->height > 0
+                ? static_cast<uint32_t>(stream->codecpar->height)
+                : 0;
+
+        for (auto index = 0u; index < subtitle.num_rects; ++index)
+        {
+            auto rect = subtitle.rects[index];
+            if (rect == nullptr || rect->w <= 0 || rect->h <= 0)
+            {
+                continue;
+            }
+
+            auto requiredCanvasWidth = rect->x >= 0
+                ? static_cast<uint32_t>(rect->x) + static_cast<uint32_t>(rect->w)
+                : static_cast<uint32_t>(rect->w);
+            auto requiredCanvasHeight = rect->y >= 0
+                ? static_cast<uint32_t>(rect->y) + static_cast<uint32_t>(rect->h)
+                : static_cast<uint32_t>(rect->h);
+            canvasWidth = (std::max)(canvasWidth, requiredCanvasWidth);
+            canvasHeight = (std::max)(canvasHeight, requiredCanvasHeight);
+        }
+
+        for (auto index = 0u; index < subtitle.num_rects; ++index)
+        {
+            auto rect = subtitle.rects[index];
+            if (rect == nullptr ||
+                rect->type != SUBTITLE_BITMAP ||
+                rect->data[0] == nullptr ||
+                rect->data[1] == nullptr ||
+                rect->w <= 0 ||
+                rect->h <= 0 ||
+                rect->linesize[0] < rect->w ||
+                rect->nb_colors <= 0)
+            {
+                continue;
+            }
+
+            auto bitmap = TryConvertIndexedSubtitleBitmap(
+                rect->data[0],
+                static_cast<uint32_t>(rect->linesize[0]),
+                reinterpret_cast<uint32_t const*>(rect->data[1]),
+                static_cast<uint32_t>(rect->nb_colors),
+                rect->x,
+                rect->y,
+                static_cast<uint32_t>(rect->w),
+                static_cast<uint32_t>(rect->h),
+                canvasWidth,
+                canvasHeight);
+            if (bitmap)
+            {
+                cue.BitmapRegions.push_back(std::move(*bitmap));
+            }
+        }
+
+        if (cue.Text.empty() && cue.BitmapRegions.empty())
+        {
+            return std::nullopt;
+        }
+
+        return cue;
     }
 }
 
@@ -332,9 +408,13 @@ namespace winrt::NoiraPlayer::Native::implementation
             {
                 try
                 {
-                    if (auto text = TryCreateSubtitleText(subtitle))
+                    if (auto cue = TryCreateSubtitleCue(
+                        packet.get(),
+                        subtitle,
+                        subtitleStream,
+                        m_codecContext))
                     {
-                        m_cues.push_back(CreateSubtitleCue(packet.get(), subtitle, subtitleStream, std::move(*text)));
+                        m_cues.push_back(std::move(*cue));
                     }
                 }
                 catch (...)

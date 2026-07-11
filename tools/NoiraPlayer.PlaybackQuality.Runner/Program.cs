@@ -99,7 +99,9 @@ internal static class Program
             !TryReadOption(args, "--reports-dir", out var reportsDir) ||
             string.IsNullOrWhiteSpace(reportsDir) ||
             !TryReadOption(args, "--error-code", out var errorCode) ||
-            string.IsNullOrWhiteSpace(errorCode))
+            string.IsNullOrWhiteSpace(errorCode) ||
+            !TryReadOption(args, "--scenario", out var scenario) ||
+            !PlaybackQualityExecutionScenario.IsKnown(scenario))
         {
             return Fail("error-report-options-invalid");
         }
@@ -115,6 +117,7 @@ internal static class Program
                 Severity = "high",
                 Stability = "stable"
             };
+            referenceCase.ExecutionRequirement.Scenario = scenario;
             referenceCase.Purpose.Add("error-handling");
             var runResult = PlaybackQualityRuntimeEvidenceCollector.ComposeErrorRunResult(
                 referenceCase,
@@ -134,6 +137,7 @@ internal static class Program
                 {
                     AttemptId = Guid.NewGuid().ToString("N"),
                     Runner = "native-manifest-runner",
+                    Scenario = scenario,
                     EvidenceLevel = PlaybackQualityEvidenceLevel.Orchestration,
                     Status = PlaybackQualityExecutionStatus.Failed,
                     SourceLocatorHash = PlaybackQualitySourceFingerprint.Compute(sourceLocator.Trim()),
