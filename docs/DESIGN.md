@@ -1,13 +1,13 @@
 ﻿---
 version: "alpha"
 name: "Noira - Artwork-Backed Matte Fluent"
-description: "A dark Xbox/TV visual system for a personal Emby library, built on cool graphite matte chrome, artwork-backed blur only when real media color sits behind it, borderless controller focus, and sparse green signal color without retro-futurist glow."
+description: "A dark Xbox/TV visual system for a personal Emby library, built on cool graphite matte chrome, artwork-backed blur only when real media color sits behind it, borderless controller focus, and sparse soft-violet signal color without retro-futurist glow."
 colors:
   primary: "#252D35"
   on_primary: "#EEF3F6"
-  play_accent: "#78B985"
-  secondary: "#5D8F68"
-  on_secondary: "#031006"
+  play_accent: "#8B7CF6"
+  secondary: "#8B7CF6"
+  on_secondary: "#05070A"
   tertiary: "#84909A"
   neutral: "#05070A"
   canvas: "#05070A"
@@ -23,7 +23,7 @@ colors:
   focus_fill: "#8068727A"
   card_focus_fill: "#4D68727A"
   high_visibility_focus_edge: "#66EEF3F6"
-  success: "#78B985"
+  success: "#8B7CF6"
   warning: "#D3A64A"
   error: "#D66A5F"
   danger: "#E05F5F"
@@ -156,7 +156,7 @@ components:
 
 Artwork-Backed Matte Fluent is the visual language for Noira. It keeps the Xbox dark-room feel and Fluent Design discipline, borrows the content-led restraint of Apple TV where it helps, and rejects the older "technology UI" vocabulary: neon cyan portals, glass prisms, glowing rings, fake holograms, perspective beams, and busy blue-black sci-fi dashboards.
 
-The interface should feel like a calm media device in a dark room: cool graphite matte chrome, precise controller state, real artwork carrying the color, and no decorative glass layer on empty graphite. Blur is allowed only when it is backed by real media color: a focused banner, movie poster, backdrop, or video frame. Outside artwork and exceptional warning/error/danger states, normal chrome should stay grayscale with sparse muted green signals.
+The interface should feel like a calm media device in a dark room: cool graphite matte chrome, precise controller state, real artwork carrying the color, and no decorative glass layer on empty graphite. Blur is allowed only when it is backed by real media color: a focused banner, movie poster, backdrop, or video frame. Outside artwork and exceptional warning/error/danger states, normal chrome should stay grayscale with sparse soft-violet signals.
 
 This document is visual-system first. It does not define API shape, playback behavior, or final page implementation. It does define the shell, density, and information-architecture constraints that materially affect visual design. When a page spec and this file overlap, this file is the source of truth for visual tone, tokens, density, chrome hierarchy, and visual anti-patterns.
 
@@ -184,7 +184,7 @@ Local design-skill references used for structure and quality gates:
 - `premium`: Apple-like precision and lifted content focus, used without copying Apple brand styling.
 - `power`: high-end dark restraint and near-monochrome chrome.
 - `glassmorphism`: used only as a negative constraint and for blur vocabulary; this system rejects decorative glass as a style.
-- `enterprise`, `contemporary`, and `futuristic`: cool system precision and technical clarity; their saturated blue/purple, sci-fi typography, and dashboard cues are rejected for this product.
+- `enterprise`, `contemporary`, and `futuristic`: cool system precision and technical clarity; their saturated blue/cyan washes, sci-fi typography, and dashboard cues are rejected for this product. Restrained soft violet is permitted only as the flat signal color defined by this system.
 - `stitch`: human-facing DESIGN.md companion structure.
 
 External TV references used as pattern inputs: Xbox app navigation/focus restraint, Apple TV/tvOS content-led pages, older iOS-style translucent materials over real content, Android TV focus-state clarity, Netflix TV discovery/navigation tradeoffs, Plex big-screen source navigation, Emby Android TV home composition, Jellyfin Android TV media sections, Infuse server-native list handling, Kodi/Estuary media-center breadth, and streaming TV app artwork-led layouts. These references inform principles and thresholds; this document is not a clone of any platform.
@@ -237,11 +237,11 @@ Reference links reviewed for this pass:
 - **Text `#EEF3F6`:** cool off-white primary text. It keeps the interface precise and slightly technological without blue glow.
 - **Muted text `#A9B3BA`:** metadata and secondary labels.
 - **Subtle text `#73818C`:** timestamps, disabled labels, and tertiary metadata.
-- **Primary action surface `#252D35`:** neutral Play, Resume, and primary command surface. It is not a green button.
-- **Play accent `#78B985`:** tiny play/confirm signal only: play glyph accent, micro tick, or small status dot. Never use it as a large fill.
+- **Primary action surface `#252D35`:** neutral Play, Resume, and primary command surface. It remains graphite by default; the medium-accent theme may opt Play/Resume into the flat soft-violet treatment described below.
+- **Play accent `#8B7CF6`:** soft-violet play/confirm signal: play glyph accent, micro tick, small status dot, or the flat Play/Resume fill in the medium-accent theme. Never turn it into a page wash, glow, or perimeter frame.
 - **Focus `#EEF3F6`, `focus_fill #8068727A`, `card_focus_fill #4D68727A`:** borderless focus state system. Luminance, scale, selected fill, and local dimming do the work. `card_focus_fill` is the translucent media-card overlay; do not treat these tokens as a perimeter-frame recipe.
 - **High-visibility focus edge `#66EEF3F6`:** accessibility fallback only, used when platform or user settings require a visible edge. It is not the default visual style.
-- **Secondary / progress `#5D8F68`:** muted green for active playback, current resume, focused watched-progress, and explicit watched/success state. It is darker and quieter than `play_accent`; ordinary passive progress can use neutral gray.
+- **Secondary / progress `#8B7CF6`:** soft violet for active playback, current resume, focused watched-progress, and explicit watched/success state. It currently shares the same base value as `play_accent`; the roles remain separate so future state variants can diverge without changing page semantics. Ordinary passive progress can use neutral gray.
 - **Tertiary `#84909A`:** steel-gray informational state only, such as diagnostics and neutral playback capability badges. It is gray, not blue accent color.
 - **Warning `#D3A64A`, error `#D66A5F`, and danger `#E05F5F`:** exceptional semantic state colors only. They are allowed for warnings, failed states, destructive confirmation, and critical alerts, but never for normal chrome, focus, navigation, playback progress, or decorative emphasis.
 
@@ -249,15 +249,15 @@ Derived runtime colors such as `shell_rail`, `chrome_hover`, `chrome_pressed`, `
 
 ### Usage Rules
 
-Use neutral cool graphite surfaces for at least 90 percent of persistent chrome. Let media artwork provide most saturated color. The only normal non-gray UI color is green, and it must remain a signal, not page mood.
+Use neutral cool graphite surfaces for at least 90 percent of persistent chrome. Let media artwork provide most saturated color. The only normal non-gray UI color is soft violet, and it must remain a signal, not page mood.
 
 Do not create blue or cyan as the default technology mood. Cool graphite, steel gray, exact spacing, and artwork-backed content color provide the technological feel. Cyan is not part of the default focus system.
 
 Never place saturated accents on top of saturated artwork without a dark scrim. A selected item over artwork should use scale, luminance, context dimming, and selected fill first. Do not add a visible edge unless it is a high-visibility accessibility fallback.
 
-Green budget: no large green buttons, green nav markers, green poster borders, green hero accents, green page washes, or green settings sliders. Use `play_accent` only as a micro-signal inside a neutral primary action or as a tiny success/confirm state. Use `secondary` for active playback, current resume, focused watched-progress, and explicit watched/success confirmation only. Passive history progress and unfocused poster progress should default to neutral gray so green stays a signal rather than page texture.
+Soft-violet budget: the medium-accent theme may use one flat soft-violet Play/Resume button and one short navigation indicator, but no violet poster borders, hero washes, page washes, generic selected fills, or settings sliders. Use `play_accent` for the primary playback action, a play glyph, or a tiny success/confirm state. Use `secondary` for active playback, current resume, focused watched-progress, and explicit watched/success confirmation only. Passive history progress and unfocused poster progress should default to neutral gray so violet stays a signal rather than page texture.
 
-No amber, red, cyan, purple, or blue as normal UI accents. Ratings, metadata badges, codec labels, route state, and ordinary status icons are grayscale by default. Warning, error, and danger are the only exceptions, and they must be local to the affected message, toast, badge, dialog, or destructive action.
+No amber, red, cyan, or blue as normal UI accents. Soft violet is the single default exception and is limited to the playback, progress, confirmation, and restrained current-route roles above. Ratings, metadata badges, codec labels, route state, and ordinary status icons are grayscale by default. Warning, error, and danger colors must stay local to the affected message, toast, badge, dialog, or destructive action.
 
 Contrast checks from the initial token set:
 
@@ -266,7 +266,7 @@ Contrast checks from the initial token set:
 - `text` on `surface`: must meet WCAG AA.
 - `primary` on `canvas`: surface contrast should be visible without reading as an accent block.
 - `focus` on `canvas`: must be visible from ten feet through combined fill, scale, luminance, and context dimming.
-- `secondary` on `canvas`: must be visible as playback/resume progress without becoming page color or a large green band.
+- `secondary` on `canvas`: must be visible as playback/resume progress without becoming page color or a large violet band.
 
 ## Typography
 
@@ -359,7 +359,7 @@ Native implementation should tune acrylic/blur strength, opacity, focus scale, a
 
 - no decorative blur over plain graphite;
 - no bright complete focus frame as the normal card focus;
-- no large green fills for normal actions or navigation;
+- no large soft-violet fills for generic actions or navigation;
 - artwork supplies most saturated color;
 - focused poster-grid cards can use an integrated matte selected backplate around poster plus title/metadata;
 - focused Continue Watching cards use the wide-card bottom information material rule, not the poster-grid selected backplate;
@@ -399,7 +399,7 @@ Navigation and command focus:
 Accessibility focus:
 
 - A high-visibility focus mode may add `high_visibility_focus_edge` or a larger fill delta.
-- The stronger mode must remain cool-neutral; it should not introduce cyan, neon green, or page-wide glow.
+- The stronger mode must remain cool-neutral; it should not introduce cyan, neon accents, or page-wide glow.
 - Reduced-motion mode must keep fill, luminance, and context dimming so focus remains understandable without scale animation.
 
 ## Theme Tokenization Status
@@ -454,9 +454,9 @@ New UI surfaces should follow this migration order:
 During implementation review, reject changes that introduce any of these visual drifts:
 
 - a new raw hex color in page XAML for normal chrome;
-- star, rating, codec, source, or route badges using yellow, red, blue, purple, or cyan outside exceptional warning/error/danger states;
+- star, rating, codec, source, or route badges using yellow, red, blue, cyan, or arbitrary purple outside the defined soft-violet playback/progress roles;
 - poster-card focus implemented primarily as a thick `BorderBrush`;
-- green used for active navigation, generic selected state, settings sliders, favorite/watched buttons, or page headers;
+- soft violet used for generic selected state, settings sliders, favorite/watched buttons, page headers, or navigation beyond one short current-route indicator;
 - blur applied to a whole page, plain graphite background, poster card, grid container, or button;
 - fallback artwork implemented as abstract gradients, generated noise, or decorative shapes.
 - a blur-backed design that does not name the Emby image candidate supplying the sampled background.
@@ -521,7 +521,7 @@ This file does not define page interaction, but it does define visual anatomy fo
 
 ### Buttons
 
-Primary buttons use neutral `primary` action surface with `on_primary` text. A Play or Resume button may include a tiny `play_accent` glyph, tick, or side mark, but the button itself is not green. Secondary buttons use `surface_raised` or `surface_overlay` depending on whether they sit on canvas or artwork. Buttons are 52px high by default, with 6px radius and a minimum readable label width.
+Primary buttons use neutral `primary` action surface with `on_primary` text by default. In the medium-accent theme, the single primary Play or Resume button may instead use a flat `secondary` fill with `on_secondary` text; it must have no highlight border, glow, gradient, bevel, or drop shadow. Secondary buttons use `surface_raised` or `surface_overlay` depending on whether they sit on canvas or artwork. Buttons are 52px high by default, with 6px radius and a minimum readable label width.
 
 Buttons may keep a clear matte rectangle because they are command targets. Do not copy that rectangle treatment onto poster focus. Media selection should feel like lifted content; command selection may feel like a focused control.
 
@@ -535,13 +535,13 @@ Visual states:
 
 ### Media Action Rows
 
-Details and playback-adjacent pages use a compact media action row rather than hiding primary state inside a menu. The first action is Play or Resume and uses the neutral `primary` action surface. Its play glyph or tiny side mark may use `play_accent`, but the button fill stays cool graphite. Adjacent actions such as Restart, Favorite, Watched, Refresh, stream selectors, and playlist or collection actions use secondary matte buttons.
+Details and playback-adjacent pages use a compact media action row rather than hiding primary state inside a menu. The first action is Play or Resume and uses either the neutral `primary` surface or the medium-accent theme's flat soft-violet `secondary` fill. Its play glyph or tiny side mark may use `play_accent`. Adjacent actions such as Restart, Favorite, Watched, Refresh, stream selectors, and playlist or collection actions use secondary matte graphite buttons.
 
 Visual rules:
 
 - Keep every action at the standard 52px TV target height.
 - Use icons plus short labels for actions that change item state.
-- Do not use green fills for any action. Do not use `play_accent` for Favorite, Watched, Refresh, neutral selectors, settings sliders, or navigation.
+- Do not use soft-violet fills for actions other than the single primary Play/Resume action in the medium-accent theme. Do not use `play_accent` for Favorite, Watched, Refresh, neutral selectors, or settings sliders; navigation may use only the short current-route indicator defined above.
 - Preserve stable button widths when labels change, such as Add favorite to Remove favorite.
 - The focus treatment remains neutral even when the focused action is Play or Resume.
 - If an action is unavailable, keep the rest of the row aligned; do not let hidden controls collapse the primary Play target.
@@ -578,10 +578,10 @@ Visual rules:
 - Do not use blur or frosted-glass material on every card by default. Repeated per-card blur creates visual noise, weakens focus hierarchy, and is expensive to render on TV/Xbox.
 - A focused wide card may upgrade its text zone from gradient/scrim to a very subtle dark artwork-backed material when the artwork underneath is meaningful and the platform can render it reliably. This is a readability and focus affordance, not decoration.
 - Focused poster-grid cards should prefer an integrated matte selected backplate, text lift, scale, and local dimming before using blur. For normal movie/library poster grids, the selected backplate may wrap the poster plus the title/metadata below it as one object, with 8px to 12px internal breathing room, a cool graphite fill, and a very low-contrast hairline only if needed for separation. This is a focused selection surface, not a bright frame and not a glass card.
-- The normal poster-grid selected state may show a small watched/progress marker inside the selected backplate when the item has relevant state. Use muted green only for active/current/watched state; do not make every passive rating or history indicator green.
+- The normal poster-grid selected state may show a small watched/progress marker inside the selected backplate when the item has relevant state. Use soft violet only for active/current/watched state; do not make every passive rating or history indicator violet.
 - Dense poster grids usually do not need blur on selection. If blur is used for a focused poster card, it must be subtle, attached to the selected backplate or metadata zone, backed by real poster pixels, and visually weaker than the artwork itself.
 - Any focused-card blur must be limited to the title/metadata zone, keep the layer dark, avoid bright rims, and degrade cleanly to a non-blurred translucent scrim.
-- Focused resume wide cards use this default state recipe: card scale `1.015` to `1.025`, artwork zoom `1.035` to `1.06`, slight artwork brightness lift, surrounding cards dimmed by luminance, integrated bottom information material, and muted green only for active/current progress. Do not add a bright perimeter frame, neon edge, or separate poster thumbnail to make focus readable.
+- Focused resume wide cards use this default state recipe: card scale `1.015` to `1.025`, artwork zoom `1.035` to `1.06`, slight artwork brightness lift, surrounding cards dimmed by luminance, integrated bottom information material, and soft violet only for active/current progress. Do not add a bright perimeter frame, neon edge, drop shadow, or separate poster thumbnail to make focus readable.
 - The focused information material should feel attached to the card, not like a nested floating card. It may sit over the normal bottom black gradient, but the two layers must read as one continuous text-protection zone: the gradient carries the image into darkness, and the material is a low-height local enhancement around the title/progress only. Do not use a hard rectangular glass box, do not raise the text zone to half the card, and do not add a visible perimeter edge. If blur is unavailable, keep the same low-height translucent scrim without blur.
 - Active, current-resume, or focused watched progress may use `secondary`, 3px to 5px high depending on card size. Passive unfocused history progress should use neutral gray.
 - Focus uses scale, brightness, context dimming, and optional selected backplate. Do not use a bright perimeter frame or drop shadow as the default card focus.
@@ -612,7 +612,7 @@ Rules:
 - Icons should be Fluent-compatible, simple, and stroke-based.
 - Do not use filled neon icons.
 - Do not use permanent bright borders around inactive nav.
-- Do not use green nav markers.
+- Navigation may use one short flat soft-violet current-route indicator, but never a violet perimeter frame, glow, or full-rail wash.
 - Expanded labels must align to the same grid as icon targets.
 - Search belongs as a first-class Guide/source action, Search page, and optional controller accelerator. Do not add a persistent long search field to normal Home, Library, Details, or playback-adjacent browsing pages.
 
@@ -628,7 +628,7 @@ Visual rules:
 - The bottom transport strip contains timeline/time labels, compact source/capability chips, centered seek/play controls, and right-side `Subtitles / Audio` plus `More` entries. Track, subtitle, source, and diagnostics choices open lightweight menus; they are not all flattened into the default OSD.
 - The OSD must preserve internal padding. Focused transport targets must sit fully inside the strip with visible top and bottom breathing room; do not let a 52px to 56px focused target touch or overflow the panel edge.
 - Subtitles sit above the transport strip. If the subtitle baseline collides with the strip or menu, move the OSD/menu before adding stronger blur, shadows, or decorative outlines.
-- Transport controls use neutral focus fill for the current controller target, neutral action surface for Play/Resume, tiny `play_accent` only inside the play glyph/confirm mark, and `secondary` for playback progress. Non-playback sliders such as brightness, audio, filters, or diagnostics stay neutral gray.
+- Transport controls use neutral focus fill for the current controller target, neutral action surface or the medium-accent theme's flat soft-violet fill for Play/Resume, `play_accent` for the play glyph/confirm mark, and `secondary` for playback progress. Non-playback sliders such as brightness, audio, filters, or diagnostics stay neutral gray.
 - Diagnostics use `mono` and `tertiary`, never the focus or play accent colors.
 
 ## Artwork
@@ -680,8 +680,8 @@ Future icon work should use this vocabulary instead:
 - matte rounded-square tile;
 - a quiet TV media shelf or library aperture;
 - one high-contrast controller focus affordance;
-- one neutral play/confirm surface with at most a tiny muted green play accent when scale allows;
-- one muted green progress base when scale allows;
+- one neutral play/confirm surface with at most a tiny soft-violet play accent when scale allows;
+- one soft-violet progress base when scale allows;
 - no cyan glow;
 - no official Emby, Xbox, Microsoft, or platform logos;
 - no film-strip cliche;
@@ -690,17 +690,17 @@ Future icon work should use this vocabulary instead:
 
 Current production icon direction:
 
-- **Player Lift Mark:** a matte cool-graphite tile with a compact playback viewport, a lifted neutral play surface, a tiny muted green play accent only if it remains legible, subtle subtitle/audio status marks, and one muted green progress base. It must not depend on the current product name, initials, or embedded text, because the brand name can change.
+- **Player Lift Mark:** a matte cool-graphite tile with a compact playback viewport, a lifted neutral play surface, a tiny soft-violet play accent only if it remains legible, subtle subtitle/audio status marks, and one soft-violet progress base. It must not depend on the current product name, initials, or embedded text, because the brand name can change.
 
-The production icon generator must map colors directly to this document's tokens: `canvas #05070A`, `surface #10161C`, `surface_raised #202832`, `hairline #2E3944`, `focus #EEF3F6`, `focus_fill #8068727A`, `play_accent #78B985`, `secondary/progress #5D8F68`, `text #EEF3F6`, and `text_muted #A9B3BA`. Raster assets should not introduce a separate palette.
+The production icon generator must map colors directly to this document's tokens: `canvas #05070A`, `surface #10161C`, `surface_raised #202832`, `hairline #2E3944`, `focus #EEF3F6`, `focus_fill #8068727A`, `play_accent #8B7CF6`, `secondary/progress #8B7CF6`, `text #EEF3F6`, and `text_muted #A9B3BA`. Raster assets should not introduce a separate palette.
 
 Superseded concepts aligned with the older system:
 
 - **Focus N Mark:** an abstract Next/Navigation `N` built from media-slab forms. It was readable as a brand mark, but depended too much on the current name.
-- **Player Status Aperture:** a matte dark tile with a compact playback viewport, one cyan controller-focus path, one green play/confirm core, and one flat amber progress base. It was the current production direction before the Artwork-Backed Matte Fluent pass, but its cyan/amber vocabulary no longer matches this document's token system.
-- **Player Focus Mark:** a compact playback viewport with a cyan controller-focus path, green play/confirm core, subtitle/audio status marks, and an amber progress base. It was brand-name independent, but its extra micro-status marks became too small and UI-screenshot-like at 44px.
-- **Cinema Shelf Mark:** a dark TV shelf with a left Guide rail, horizontal content rails, one focused media card, a green play surface, a cyan L-shaped focus edge, and an amber progress base. It was more product-specific than the portal concepts, but still read too much like a miniature UI screenshot at app-icon scale and carried too much old focus language.
-- **Matte Library Slat:** layered black media rectangles with one crisp focus edge and one green play/confirm surface.
+- **Player Status Aperture:** a matte dark tile with a compact playback viewport, one cyan controller-focus path, one colored play/confirm core, and one flat amber progress base. It was the current production direction before the Artwork-Backed Matte Fluent pass, but its cyan/amber vocabulary no longer matches this document's token system.
+- **Player Focus Mark:** a compact playback viewport with a cyan controller-focus path, colored play/confirm core, subtitle/audio status marks, and an amber progress base. It was brand-name independent, but its extra micro-status marks became too small and UI-screenshot-like at 44px.
+- **Cinema Shelf Mark:** a dark TV shelf with a left Guide rail, horizontal content rails, one focused media card, a colored play surface, a cyan L-shaped focus edge, and an amber progress base. It was more product-specific than the portal concepts, but still read too much like a miniature UI screenshot at app-icon scale and carried too much old focus language.
+- **Matte Library Slat:** layered black media rectangles with one crisp focus edge and one colored play/confirm surface.
 - **Screen Room Mark:** a dark screen shape with a subtle warm progress base.
 - **Quiet Play Aperture:** a flat negative-space play cutout inside a neutral media tile.
 
@@ -751,8 +751,8 @@ Do:
 - use semantic tokens instead of raw hex values;
 - let media artwork provide color and specificity;
 - keep focus unmistakable from ten feet through scale, fill, luminance, and context dimming;
-- keep green as a micro play/confirm signal rather than a button or brand fill;
-- keep green limited to play/confirm/progress signals;
+- keep soft violet as a restrained play/confirm signal, with a flat Play/Resume fill allowed only in the medium-accent theme;
+- keep soft violet limited to play/confirm/progress and the short current-route indicator;
 - preserve stable sizes during loading, focus, and error states;
 - use matte layers and controlled scrims;
 - use blur only when it samples meaningful artwork or video behind it;
@@ -762,8 +762,8 @@ Don't:
 
 - use cyan glow, portal rings, prism beams, or hologram language;
 - use blue-purple gradients as a default dark UI mood;
-- use large green fills, green settings sliders, green nav markers, or green poster focus;
-- use warm golden or colored washes that make the app read yellow, sepia, blue, purple, or brand-gradient;
+- use large violet fills, violet settings sliders, full navigation washes, or violet poster focus;
+- use warm golden or colored washes that make the app read yellow, sepia, blue, violet, or brand-gradient;
 - use bright complete focus frames as the default card focus;
 - use drop shadows or glossy highlight edges on normal page cards, navigation items, search boxes, or banners;
 - use blur over plain graphite, missing artwork, generated gradients, or abstract fallback art;
@@ -782,8 +782,8 @@ Existing tokens and assets should migrate visually in a later implementation pas
 Suggested migration mapping:
 
 - Current cyan `AppAccentColor #4EE7FF` should be retired from default focus. Map focus to `focus #EEF3F6`, `focus_fill #8068727A`, and `high_visibility_focus_edge #66EEF3F6` only for accessibility/high-contrast fallback.
-- Current green `AppActionColor #78E68B` should shrink to `play_accent #78B985` and appear only as a micro-signal.
-- Current warm `AppWarmColor #E4B84C` should be retired from default UI progress. Map progress to muted green `secondary/progress #5D8F68`.
+- Legacy `AppActionColor #78E68B` should be retired from the default palette. Map play/confirm emphasis to soft-violet `play_accent #8B7CF6`.
+- Current warm `AppWarmColor #E4B84C` should be retired from default UI progress. Map progress to soft-violet `secondary/progress #8B7CF6`.
 - Current surfaces stay in the same dark family but should shift toward the matte `canvas`, `surface`, and `surface_raised` roles.
 - Superseded generated app icon concepts were removed from the worktree. The production icon family is owned by `tools/Generate-AppIconAssets.ps1`.
 
@@ -803,15 +803,15 @@ Before accepting a visual implementation based on this file, verify:
 - The screen still reads as Xbox/TV dark Fluent, not a web dashboard.
 - No neon cyan glow, prism, portal beam, decorative particle, or generic sci-fi motif appears.
 - At least 90 percent of persistent chrome uses neutral cool graphite surfaces.
-- Normal UI color outside gray uses muted green only.
-- Green appears only as tiny Play/Resume accent, playback/resume/watched progress, or success confirmation, and never as a large fill.
+- Normal UI color outside gray uses soft violet only.
+- Soft violet appears only as the flat primary Play/Resume treatment in medium-accent mode, a tiny play/confirm accent, playback/resume/watched progress, restrained current-route indicator, or success confirmation, and never as a page-wide fill.
 - Warning, error, and danger colors appear only inside their exceptional local states.
-- Progress/resume uses muted green or neutral gray only; no amber progress remains.
+- Progress/resume uses soft violet or neutral gray only; no amber progress remains.
 - Focus is visible from ten feet on every actionable element without depending on a bright full outline.
 - Poster-card focus uses scale/luminance/context dimming first; command-button rectangles are not reused as poster focus frames.
 - Normal page cards, navigation rows, search boxes, and banners have no decorative drop shadow or highlit border.
 - Default browsing screens keep content rails primary, whether the left Guide is collapsed, hidden, or page-adaptive.
-- Guide-open visual QA includes Search, More / Source Hub, and the full Emby destination family without green nav markers or bright outlines.
+- Guide-open visual QA includes Search, More / Source Hub, and the full Emby destination family without perimeter nav frames, glow, or bright outlines; only the short flat soft-violet current-route indicator is allowed.
 - Home visual QA shows Continue Watching and Next Up as rails/lists, not single-item hero promos.
 - Blur appears only over meaningful active artwork/video and no more than one persistent artwork-backed blur region is visible at once.
 - Focus, loading, and labels do not resize cards, rows, or buttons.
