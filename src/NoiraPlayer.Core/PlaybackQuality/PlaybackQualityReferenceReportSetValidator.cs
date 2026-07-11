@@ -813,6 +813,14 @@ namespace NoiraPlayer.Core.PlaybackQuality
         {
             foreach (var signal in PlaybackQualityRequiredSignalPolicy.CreateRequiredSignals(referenceCase))
             {
+                if (PlaybackQualityRequiredSignalPolicy.RequiresNativePlaybackEvidence(signal) &&
+                    !PlaybackQualityEvidenceLevel.MeetsMinimum(
+                        entry.Report.Execution?.EvidenceLevel ?? "",
+                        PlaybackQualityEvidenceLevel.NativePlayback))
+                {
+                    continue;
+                }
+
                 if (status.Signals.Contains(signal) ||
                     PlaybackQualityRequiredSignalPolicy.HasReportSignal(
                         entry.Report,

@@ -373,6 +373,13 @@ namespace winrt::NoiraPlayer::Native::implementation
         return m_mediaSource.StreamSnapshots();
     }
 
+    FfmpegTimelineSnapshot PlaybackGraph::TimelineSnapshot() const
+    {
+        std::lock_guard lock(m_graphMutex);
+        auto video = m_mediaSource.BestVideoStreamSnapshot();
+        return m_mediaSource.TimelineSnapshot(video ? video->StreamIndex : -1);
+    }
+
     void PlaybackGraph::StartRenderLoop()
     {
         m_stopRenderLoop = false;

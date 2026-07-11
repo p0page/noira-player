@@ -157,8 +157,27 @@ foreach ($case in $selectedCases) {
 
     $locatorHash = Get-PlaybackQualitySourceFingerprint -Locator $sourceLocator
     $pauseSeconds = if ($null -eq $case.pauseSeconds) { 0 } else { [int]$case.pauseSeconds }
+    $startPositionTicks = if ($null -eq $case.startPositionTicks) { 0 } else { [long]$case.startPositionTicks }
+    $purposes = @($case.purpose | ForEach-Object { ([string]$_).Trim().ToLowerInvariant() })
+    $scenario = if ($pauseSeconds -gt 0) {
+        'pause-resume'
+    }
+    elseif ($purposes -contains 'timeline') {
+        'timeline'
+    }
+    elseif (($purposes -contains 'tracks') -or
+        ($purposes -contains 'subtitles') -or
+        ($purposes -contains 'audio-switch')) {
+        'interactions'
+    }
+    else {
+        'playback'
+    }
     if ($pauseSeconds -lt 0 -or $pauseSeconds -gt 900) {
         throw ('pauseSeconds must be between 0 and 900 for case ' + $currentCaseId)
+    }
+    if ($startPositionTicks -lt 0) {
+        throw ('startPositionTicks must be non-negative for case ' + $currentCaseId)
     }
     $exitCode = Invoke-NativeHeadlessHarnessCase `
         -CaseId $currentCaseId `
@@ -169,7 +188,9 @@ foreach ($case in $selectedCases) {
         -HeadlessProjectPath $HeadlessProjectPath `
         -HarnessScriptPath $HarnessScriptPath `
         -DurationSeconds $DurationSeconds `
+        -StartPositionTicks $startPositionTicks `
         -PauseSeconds $pauseSeconds `
+        -Scenario $scenario `
         -TimeoutSeconds $AttemptTimeoutSeconds `
         -ForceSdrOutput ([bool]$case.forceSdrOutput)
     $reportPresent = Test-Path -LiteralPath $reportPath

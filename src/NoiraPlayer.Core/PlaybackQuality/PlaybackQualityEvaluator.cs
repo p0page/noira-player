@@ -54,6 +54,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 return;
             }
 
+            CheckSeekEvidenceCompleteness(report);
             CheckSeekPositionError(report, expected);
             CheckMin(
                 report,
@@ -1062,6 +1063,110 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 "MaxSeekPositionErrorMs",
                 "position.seekPositionErrorMs",
                 "timeline");
+        }
+
+        private static void CheckSeekEvidenceCompleteness(PlaybackQualityReport report)
+        {
+            if (!report.Position.SeekTargetPositionTicks.HasValue ||
+                report.Execution == null ||
+                !PlaybackQualityEvidenceLevel.MeetsMinimum(
+                    report.Execution.EvidenceLevel,
+                    PlaybackQualityEvidenceLevel.NativePlayback))
+            {
+                return;
+            }
+
+            RequireTimelineEvidence(report, report.Source.DurationTicks > 0, "source.durationTicks");
+            RequireTimelineEvidence(report, report.Source.ContainerStartTimeTicks.HasValue, "source.containerStartTimeTicks");
+            RequireTimelineEvidence(report, report.Source.VideoStreamStartTimeTicks.HasValue, "source.videoStreamStartTimeTicks");
+            RequireTimelineEvidence(report, report.Position.SeekDemuxTargetTicks.HasValue, "position.seekDemuxTargetTicks");
+            RequireTimelineEvidence(report, report.Position.FirstPresentedPositionTicks.HasValue, "position.firstPresentedPositionTicks");
+            RequireTimelineEvidence(report, report.Position.PostSeekPositionTicks.HasValue, "position.postSeekPositionTicks");
+            RequireTimelineEvidence(report, report.Position.PostSeekAdvanced.HasValue, "position.postSeekAdvanced");
+
+            if (report.Source.ContainerStartTimeTicks.HasValue &&
+                report.Position.SeekDemuxTargetTicks.HasValue)
+            {
+                var origin = System.Math.Max(0, report.Source.ContainerStartTimeTicks.Value);
+                var target = System.Math.Max(0, report.Position.SeekTargetPositionTicks.Value);
+                var expectedDemuxTarget = target >= long.MaxValue - origin
+                    ? long.MaxValue
+                    : origin + target;
+                if (report.Position.SeekDemuxTargetTicks.Value != expectedDemuxTarget)
+                {
+                    AddTimelineEvidenceFailure(
+                        report,
+                        "position.seekDemuxTargetTicks",
+                        expectedDemuxTarget.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                        report.Position.SeekDemuxTargetTicks.Value.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                        PlaybackQualityFailureClassification.PlayerCoreBug);
+                }
+            }
+
+            if (report.Position.FirstPresentedPositionTicks.HasValue &&
+                report.Position.ActualPositionTicks.HasValue &&
+                report.Position.FirstPresentedPositionTicks.Value != report.Position.ActualPositionTicks.Value)
+            {
+                AddTimelineEvidenceFailure(
+                    report,
+                    "position.firstPresentedPositionTicks",
+                    report.Position.ActualPositionTicks.Value.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    report.Position.FirstPresentedPositionTicks.Value.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    PlaybackQualityFailureClassification.EvaluationHarnessBug);
+            }
+
+            if (report.Position.PostSeekAdvanced.HasValue &&
+                report.Position.FirstPresentedPositionTicks.HasValue &&
+                report.Position.PostSeekPositionTicks.HasValue &&
+                (!report.Position.PostSeekAdvanced.Value ||
+                    report.Position.PostSeekPositionTicks.Value <= report.Position.FirstPresentedPositionTicks.Value))
+            {
+                AddTimelineEvidenceFailure(
+                    report,
+                    "position.postSeekAdvanced",
+                    "true with post-seek position after first presented frame",
+                    report.Position.PostSeekAdvanced.Value.ToString(),
+                    PlaybackQualityFailureClassification.PlayerCoreBug);
+            }
+        }
+
+        private static void RequireTimelineEvidence(
+            PlaybackQualityReport report,
+            bool present,
+            string signal)
+        {
+            if (!present)
+            {
+                AddTimelineEvidenceFailure(
+                    report,
+                    signal,
+                    "observed native timeline evidence",
+                    "missing",
+                    PlaybackQualityFailureClassification.InsufficientInstrumentation);
+            }
+        }
+
+        private static void AddTimelineEvidenceFailure(
+            PlaybackQualityReport report,
+            string signal,
+            string expected,
+            string actual,
+            string failureClass)
+        {
+            var message = "Native seek evidence is incomplete or inconsistent for " + signal + ".";
+            report.FailureReasons.Add(message);
+            report.Checks.Add(new PlaybackQualityCheck
+            {
+                Name = "SeekTimelineEvidence",
+                Signal = signal,
+                Status = "fail",
+                FailureArea = "timeline",
+                FailureClass = failureClass,
+                Expected = expected,
+                Actual = actual,
+                Message = message
+            });
+            AddRelevantSignal(report, signal);
         }
 
         private static double? ResolveSeekPositionErrorMs(PlaybackQualityPosition position)

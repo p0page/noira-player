@@ -82,8 +82,15 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 HasPurpose(referenceCase, "seek"))
             {
                 AddUnique(requiredSignals, "lifecycle.seek");
+                AddUnique(requiredSignals, "source.durationTicks");
+                AddUnique(requiredSignals, "source.containerStartTimeTicks");
+                AddUnique(requiredSignals, "source.videoStreamStartTimeTicks");
                 AddUnique(requiredSignals, "position.seekTargetPositionTicks");
+                AddUnique(requiredSignals, "position.seekDemuxTargetTicks");
                 AddUnique(requiredSignals, "position.actualPositionTicks");
+                AddUnique(requiredSignals, "position.firstPresentedPositionTicks");
+                AddUnique(requiredSignals, "position.postSeekPositionTicks");
+                AddUnique(requiredSignals, "position.postSeekAdvanced");
                 AddUnique(requiredSignals, "position.seekPositionErrorMs");
             }
 
@@ -240,6 +247,23 @@ namespace NoiraPlayer.Core.PlaybackQuality
                     StringComparison.Ordinal));
         }
 
+        public static bool RequiresNativePlaybackEvidence(string signal)
+        {
+            switch (signal)
+            {
+                case "source.durationTicks":
+                case "source.containerStartTimeTicks":
+                case "source.videoStreamStartTimeTicks":
+                case "position.seekDemuxTargetTicks":
+                case "position.firstPresentedPositionTicks":
+                case "position.postSeekPositionTicks":
+                case "position.postSeekAdvanced":
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
         public static bool HasReportSignal(
             PlaybackQualityReport report,
             string signal)
@@ -322,6 +346,10 @@ namespace NoiraPlayer.Core.PlaybackQuality
                     return report.Source.Bitrate > 0;
                 case "source.durationTicks":
                     return report.Source.DurationTicks > 0;
+                case "source.containerStartTimeTicks":
+                    return report.Source.ContainerStartTimeTicks.HasValue;
+                case "source.videoStreamStartTimeTicks":
+                    return report.Source.VideoStreamStartTimeTicks.HasValue;
                 case "source.hasChapterMetadata":
                     return presentSignals != null ||
                         report.Source.HasChapterMetadata ||
@@ -399,8 +427,16 @@ namespace NoiraPlayer.Core.PlaybackQuality
                     return report.Position.RequestedStartPositionTicks.HasValue;
                 case "position.seekTargetPositionTicks":
                     return report.Position.SeekTargetPositionTicks.HasValue;
+                case "position.seekDemuxTargetTicks":
+                    return report.Position.SeekDemuxTargetTicks.HasValue;
                 case "position.actualPositionTicks":
                     return report.Position.ActualPositionTicks.HasValue;
+                case "position.firstPresentedPositionTicks":
+                    return report.Position.FirstPresentedPositionTicks.HasValue;
+                case "position.postSeekPositionTicks":
+                    return report.Position.PostSeekPositionTicks.HasValue;
+                case "position.postSeekAdvanced":
+                    return report.Position.PostSeekAdvanced.HasValue;
                 case "position.seekPositionErrorMs":
                     return report.Position.SeekPositionErrorMs.HasValue ||
                         (report.Position.SeekTargetPositionTicks.HasValue &&

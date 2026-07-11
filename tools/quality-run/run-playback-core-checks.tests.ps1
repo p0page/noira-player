@@ -14,6 +14,8 @@ if (-not $plan.commands -or $plan.commands.Count -lt 2) {
 }
 
 foreach ($requiredNativeRegression in @(
+    'native-media-timeline-test',
+    'native-audio-frame-preroll-test',
     'native-audio-frame-timeline-test',
     'native-audio-buffer-accumulator-test',
     'native-decoder-eagain-recovery-test')) {

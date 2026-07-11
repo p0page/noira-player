@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include "AudioFramePreroll.h"
 #include "AudioFrameTimeline.h"
 #include "FfmpegMediaSource.h"
 
@@ -51,6 +52,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         SwrContext* m_resampler{nullptr};
         int32_t m_audioStreamIndex{-1};
         int64_t m_positionTicks{0};
+        AudioFramePreroll m_preroll;
         AudioFrameTimeline m_timeline;
         bool m_decoderDraining{false};
         bool m_open{false};

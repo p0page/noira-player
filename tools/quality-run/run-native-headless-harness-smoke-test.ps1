@@ -32,6 +32,8 @@ $nativeAvMaterializedReportPath = Join-Path $nativeMaterializedDir 'local\native
 $sampleUrl = 'https://repo.jellyfin.org/test-videos/SDR/HEVC%2010bit/Test%20Jellyfin%201080p%20HEVC%2010bit%203M.mp4'
 $nativeCaseId = 'local/native-headless-sdr-smoke'
 $nativeAvCaseId = 'local/native-headless-av-smoke'
+$nativeNonZeroTimelineCaseId = 'local/native-headless-nonzero-start-timeline'
+$nativeResumeSeekTimelineCaseId = 'local/native-headless-resume-seek-timeline'
 $nativeSdr23976CaseId = 'local/native-headless-sdr-23976'
 $nativeSdr24CaseId = 'local/native-headless-sdr-24'
 $nativeSdr60CaseId = 'local/native-headless-sdr-60'
@@ -516,13 +518,18 @@ function Invoke-NativeHeadlessHelperCase {
         [string]$StreamUrl,
         [string]$ReportsDir,
         [string]$NativeHelperExe,
-        [int]$DurationSeconds = $script:nativeCadenceDurationSeconds
+        [int]$DurationSeconds = $script:nativeCadenceDurationSeconds,
+        [long]$StartPositionTicks = 0,
+        [ValidateSet('playback', 'timeline', 'interactions')]
+        [string]$Scenario = 'playback'
     )
 
     dotnet run --project (Join-Path $repoRoot 'tools\NoiraPlayer.PlaybackQuality.Headless\NoiraPlayer.PlaybackQuality.Headless.csproj') -- `
         --case-id $CaseId `
         --stream-url $StreamUrl `
         --duration-seconds $DurationSeconds `
+        --start-position-ticks $StartPositionTicks `
+        --scenario $Scenario `
         --reports-dir $ReportsDir `
         --native-helper-exe $NativeHelperExe
     $exitCode = $LASTEXITCODE
@@ -712,6 +719,9 @@ function New-NativeHeadlessParserFixtureOutput {
         sourceColorPrimaries = 'bt709'
         sourceColorTransfer = 'bt709'
         sourceColorSpace = 'bt709'
+        containerStartTimeTicks = '0'
+        videoStreamStartTimeTicks = '0'
+        logicalDurationTicks = '60000000'
         displayRefreshRateHz = '60'
         displayRefreshPolicy = 'software-only-cadence-policy'
         sourceTrackCount = '4'
@@ -755,6 +765,8 @@ function New-NativeHeadlessParserFixtureOutput {
         subtitleOffAttempted = '0'
         seekAttempted = '0'
         seekTargetPositionTicks = '10000000'
+        seekDemuxTargetTicks = '10000000'
+        postSeekAdvanced = '1'
         selectedAudioStreamIndex = '1'
         selectedSubtitleStreamIndex = '-1'
     }
@@ -802,6 +814,7 @@ function Invoke-NativeHeadlessParserFixtureCase {
     return [pscustomobject]@{
         ExitCode = $exitCode
         Report = $report
+        ReportPath = $reportPath
     }
 }
 
@@ -858,6 +871,13 @@ function Assert-NativeHeadlessParserContracts {
         -not $lateFailure.Report.report.execution.demuxStarted -or
         -not $lateFailure.Report.report.execution.playbackSampleObserved) {
         $failures.Add('A non-zero helper exit after valid telemetry did not preserve decoded/rendered native playback evidence in the error report.')
+    }
+    $lateFailureStdoutPath = $lateFailure.ReportPath + '.helper.stdout.log'
+    $lateFailureStderrPath = $lateFailure.ReportPath + '.helper.stderr.log'
+    if (-not (Test-Path -LiteralPath $lateFailureStdoutPath) -or
+        -not (Test-Path -LiteralPath $lateFailureStderrPath) -or
+        [string]::IsNullOrWhiteSpace((Get-Content -LiteralPath $lateFailureStdoutPath -Raw))) {
+        $failures.Add('Native helper stdout/stderr evidence was not archived next to the report.')
     }
 
     $audioSwitchOutput = New-NativeHeadlessParserFixtureOutput -Overrides @{
@@ -1279,6 +1299,48 @@ if ($LASTEXITCODE -eq 0) {
     throw 'A stable native-playback case must not accept an orchestration-only skip report.'
 }
 
+function New-NativePlaybackNonZeroStartSample {
+    $sampleDirectory = Join-Path $smokeRoot 'samples'
+    New-Item -ItemType Directory -Path $sampleDirectory -Force | Out-Null
+    $samplePath = Join-Path $sampleDirectory 'native-headless-nonzero-start.ts'
+    $ffmpeg = 'C:\Program Files\FFmpeg\bin\ffmpeg.exe'
+
+    & $ffmpeg `
+        -y `
+        -loglevel error `
+        -f lavfi `
+        -i 'testsrc2=size=320x180:rate=30:duration=6' `
+        -f lavfi `
+        -i 'sine=frequency=1000:sample_rate=48000:duration=6' `
+        -pix_fmt yuv420p `
+        -c:v libx264 `
+        -g 1 `
+        -bf 0 `
+        -c:a aac `
+        -f mpegts `
+        $samplePath
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Failed to generate the non-zero-start native timeline sample.'
+    }
+
+    $ffprobe = 'C:\Program Files\FFmpeg\bin\ffprobe.exe'
+    $probeJson = & $ffprobe `
+        -v error `
+        -show_entries 'format=start_time,duration:stream=index,codec_type,start_time,duration' `
+        -of json `
+        $samplePath
+    $probe = $probeJson | ConvertFrom-Json
+    $video = @($probe.streams | Where-Object codec_type -eq 'video') | Select-Object -First 1
+    if ($LASTEXITCODE -ne 0 -or
+        [double]$probe.format.start_time -lt 1.0 -or
+        [double]$video.start_time -le [double]$probe.format.start_time -or
+        [Math]::Abs([double]$video.duration - 6.0) -gt 0.001) {
+        throw 'Expected a deterministic six-second MPEG-TS sample with a non-zero container/stream start time.'
+    }
+
+    return ([System.Uri](Resolve-Path $samplePath).Path).AbsoluteUri
+}
+
 $validation = Get-Content -LiteralPath $validationPath -Raw | ConvertFrom-Json
 if ($validation.isValid -ne $false -or
     $validation.executionValid -ne $false -or
@@ -1311,8 +1373,53 @@ if (-not ($analysis.limitations -contains 'native-headless: offscreen DirectX co
 $nativeHelperExe = Build-NativePlaybackGraphHelper -OutputDirectory $nativeHelperRoot
 $nativeSampleUrl = New-NativePlaybackSample
 $nativeAvSampleUrl = New-NativePlaybackAvSample
+$nativeNonZeroTimelineSampleUrl = New-NativePlaybackNonZeroStartSample
 Assert-NativePlaybackAvSample -SampleUrl $nativeAvSampleUrl
 Assert-NativeNetworkReconnectRecovery -NativeHelperExe $nativeHelperExe -SampleUrl $nativeAvSampleUrl
+$nativeNonZeroTimelineReport = Invoke-NativeHeadlessHelperCase `
+    -CaseId $nativeNonZeroTimelineCaseId `
+    -StreamUrl $nativeNonZeroTimelineSampleUrl `
+    -ReportsDir $nativeCapturedDir `
+    -NativeHelperExe $nativeHelperExe `
+    -DurationSeconds 3 `
+    -Scenario timeline
+$timelinePause = @($nativeNonZeroTimelineReport.report.lifecycle.events | Where-Object operation -eq 'pause') |
+    Select-Object -First 1
+if ($nativeNonZeroTimelineReport.report.source.containerStartTimeTicks -lt 10000000 -or
+    $nativeNonZeroTimelineReport.report.source.videoStreamStartTimeTicks -le $nativeNonZeroTimelineReport.report.source.containerStartTimeTicks -or
+    [Math]::Abs($nativeNonZeroTimelineReport.report.source.durationTicks - 60000000) -gt 10000 -or
+    $timelinePause.positionTicks -lt 10000000 -or
+    $timelinePause.positionTicks -gt 25000000 -or
+    $nativeNonZeroTimelineReport.report.position.seekDemuxTargetTicks -ne
+        ($nativeNonZeroTimelineReport.report.position.seekTargetPositionTicks +
+            $nativeNonZeroTimelineReport.report.source.containerStartTimeTicks) -or
+    $nativeNonZeroTimelineReport.report.position.firstPresentedPositionTicks -ne
+        $nativeNonZeroTimelineReport.report.position.actualPositionTicks -or
+    $nativeNonZeroTimelineReport.report.position.seekPositionErrorMs -gt 100.0 -or
+    $nativeNonZeroTimelineReport.report.position.postSeekAdvanced -ne $true -or
+    $nativeNonZeroTimelineReport.report.position.postSeekPositionTicks -le
+        $nativeNonZeroTimelineReport.report.position.firstPresentedPositionTicks) {
+    throw 'Non-zero-start timeline evidence was not normalized or seek did not land and continue on the public timeline.'
+}
+$nativeResumeSeekTimelineReport = Invoke-NativeHeadlessHelperCase `
+    -CaseId $nativeResumeSeekTimelineCaseId `
+    -StreamUrl $nativeNonZeroTimelineSampleUrl `
+    -ReportsDir $nativeCapturedDir `
+    -NativeHelperExe $nativeHelperExe `
+    -DurationSeconds 3 `
+    -StartPositionTicks 20000000 `
+    -Scenario timeline
+$resumePause = @($nativeResumeSeekTimelineReport.report.lifecycle.events | Where-Object operation -eq 'pause') |
+    Select-Object -First 1
+if ($nativeResumeSeekTimelineReport.report.position.requestedStartPositionTicks -ne 20000000 -or
+    $resumePause.positionTicks -lt 30000000 -or
+    $resumePause.positionTicks -gt 45000000 -or
+    $nativeResumeSeekTimelineReport.report.position.seekTargetPositionTicks -ne 30000000 -or
+    $nativeResumeSeekTimelineReport.report.position.seekDemuxTargetTicks -ne 44000000 -or
+    $nativeResumeSeekTimelineReport.report.position.seekPositionErrorMs -gt 100.0 -or
+    $nativeResumeSeekTimelineReport.report.position.postSeekAdvanced -ne $true) {
+    throw 'Resume plus seek did not preserve the requested public timeline through native open, demux seek, presentation, and advancement.'
+}
 $nativeSdr23976SampleUrl = New-NativePlaybackSdrSample -Name 'native-headless-sdr-23976' -Rate '24000/1001'
 $nativeSdr24SampleUrl = New-NativePlaybackSdrSample -Name 'native-headless-sdr-24' -Rate '24'
 $nativeSdr60SampleUrl = New-NativePlaybackSdrSample -Name 'native-headless-sdr-60' -Rate '60'
@@ -1336,6 +1443,12 @@ if ($nativeHelperExitCode -ne 0) {
 
 if (-not (Test-Path $nativeReportPath)) {
     throw "Expected native helper captured report at $nativeReportPath."
+}
+$nativeHelperStderrPath = $nativeReportPath + '.helper.stderr.log'
+if (-not (Test-Path -LiteralPath $nativeHelperStderrPath) -or
+    -not (Select-String -LiteralPath $nativeHelperStderrPath -SimpleMatch 'helperStage=graph-open-completed' -Quiet) -or
+    -not (Select-String -LiteralPath $nativeHelperStderrPath -SimpleMatch 'helperStage=completed' -Quiet)) {
+    throw 'Expected native helper transcript to identify completed graph-open and helper stages.'
 }
 
 $nativeReport = Get-Content -LiteralPath $nativeReportPath -Raw | ConvertFrom-Json
@@ -1400,6 +1513,7 @@ dotnet run --project (Join-Path $repoRoot 'tools\NoiraPlayer.PlaybackQuality.Hea
     --case-id $nativeAvCaseId `
     --stream-url $nativeAvSampleUrl `
     --duration-seconds $nativeAvDurationSeconds `
+    --scenario interactions `
     --reports-dir $nativeCapturedDir `
     --native-helper-exe $nativeHelperExe
 $nativeAvHelperExitCode = $LASTEXITCODE
@@ -1423,8 +1537,9 @@ if ($nativeAvReport.report.tracks.subtitleTrackCount -ne 2 -or
     throw 'Expected native helper A/V report to include exactly two discovered subtitle tracks.'
 }
 
-if ($nativeAvReport.report.position.seekTargetPositionTicks -ne 10000000) {
-    throw 'Expected native helper A/V report to seek to the non-zero 1 second target.'
+if ($null -ne $nativeAvReport.report.position.seekTargetPositionTicks -or
+    @($nativeAvReport.report.lifecycle.events | Where-Object operation -eq 'seek').Count -ne 0) {
+    throw 'Interaction-only native helper case must not mix seek evidence into track/subtitle results.'
 }
 
 $nativeAvLifecycleEvents = @($nativeAvReport.report.lifecycle.events)
@@ -1469,10 +1584,8 @@ if ($subtitleOffEvents.Count -ne 1 -or
 }
 
 $seekEvents = @($nativeAvLifecycleEvents | Where-Object { $_.operation -eq 'seek' })
-if ($seekEvents.Count -ne 1 -or
-    $seekEvents[0].status -ne 'completed' -or
-    [string]::IsNullOrWhiteSpace($seekEvents[0].message)) {
-    throw 'Expected one completed non-zero seek lifecycle event with landing evidence.'
+if ($seekEvents.Count -ne 0) {
+    throw 'Interaction-only native helper case unexpectedly emitted a seek lifecycle event.'
 }
 
 if ($nativeAvReport.report.tracks.selectedAudioStreamIndex -ne $nativeAvReport.report.tracks.audio[1].index -or

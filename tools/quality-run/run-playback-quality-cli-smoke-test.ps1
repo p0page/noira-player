@@ -53,6 +53,24 @@ function Set-SmokeNativeExecutionEvidence {
         $payload.timing | Add-Member -NotePropertyName decodedVideoFrames -NotePropertyValue $decodedFrames
     }
 
+    if ($PlaybackSampleObserved -and
+        $null -ne $payload.position -and
+        $null -ne $payload.position.seekTargetPositionTicks) {
+        $seekTarget = [int64]$payload.position.seekTargetPositionTicks
+        $actualPosition = if ($null -ne $payload.position.actualPositionTicks) {
+            [int64]$payload.position.actualPositionTicks
+        } else {
+            $seekTarget
+        }
+        $payload.source | Add-Member -NotePropertyName durationTicks -NotePropertyValue ([int64]7200000000) -Force
+        $payload.source | Add-Member -NotePropertyName containerStartTimeTicks -NotePropertyValue ([int64]0) -Force
+        $payload.source | Add-Member -NotePropertyName videoStreamStartTimeTicks -NotePropertyValue ([int64]0) -Force
+        $payload.position | Add-Member -NotePropertyName seekDemuxTargetTicks -NotePropertyValue $seekTarget -Force
+        $payload.position | Add-Member -NotePropertyName firstPresentedPositionTicks -NotePropertyValue $actualPosition -Force
+        $payload.position | Add-Member -NotePropertyName postSeekPositionTicks -NotePropertyValue ($actualPosition + 10000000) -Force
+        $payload.position | Add-Member -NotePropertyName postSeekAdvanced -NotePropertyValue $true -Force
+    }
+
     $report | ConvertTo-Json -Depth 100 | Set-Content -LiteralPath $Path -Encoding UTF8
 }
 

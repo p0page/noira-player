@@ -1372,6 +1372,47 @@ namespace NoiraPlayer.Core.PlaybackQuality
             PlaybackQualityReport baseline,
             PlaybackQualityReport candidate)
         {
+            CompareOptionalTimelineEvidence(
+                comparison,
+                "source.containerStartTimeTicks",
+                baseline.Source.ContainerStartTimeTicks,
+                candidate.Source.ContainerStartTimeTicks);
+            CompareOptionalTimelineEvidence(
+                comparison,
+                "source.videoStreamStartTimeTicks",
+                baseline.Source.VideoStreamStartTimeTicks,
+                candidate.Source.VideoStreamStartTimeTicks);
+            CompareOptionalTimelineEvidence(
+                comparison,
+                "source.durationTicks",
+                baseline.Source.DurationTicks > 0 ? baseline.Source.DurationTicks : null,
+                candidate.Source.DurationTicks > 0 ? candidate.Source.DurationTicks : null);
+            CompareOptionalTimelineEvidence(
+                comparison,
+                "position.seekTargetPositionTicks",
+                baseline.Position.SeekTargetPositionTicks,
+                candidate.Position.SeekTargetPositionTicks);
+            CompareOptionalTimelineEvidence(
+                comparison,
+                "position.seekDemuxTargetTicks",
+                baseline.Position.SeekDemuxTargetTicks,
+                candidate.Position.SeekDemuxTargetTicks);
+            CompareOptionalTimelineEvidence(
+                comparison,
+                "position.firstPresentedPositionTicks",
+                baseline.Position.FirstPresentedPositionTicks,
+                candidate.Position.FirstPresentedPositionTicks);
+            CompareOptionalTimelineEvidence(
+                comparison,
+                "position.postSeekPositionTicks",
+                baseline.Position.PostSeekPositionTicks,
+                candidate.Position.PostSeekPositionTicks);
+            CompareOptionalTimelineEvidence(
+                comparison,
+                "position.postSeekAdvanced",
+                baseline.Position.PostSeekAdvanced,
+                candidate.Position.PostSeekAdvanced);
+
             var baselineError = ResolveSeekPositionErrorMs(baseline.Position);
             var candidateError = ResolveSeekPositionErrorMs(candidate.Position);
             if (!baselineError.HasValue || !candidateError.HasValue)
@@ -1405,6 +1446,58 @@ namespace NoiraPlayer.Core.PlaybackQuality
                     "increased",
                     numericDelta));
                 AddUnique(comparison.NewFailureAreas, "timeline");
+            }
+        }
+
+        private static void CompareOptionalTimelineEvidence(
+            PlaybackQualityRunComparison comparison,
+            string signal,
+            long? baseline,
+            long? candidate)
+        {
+            CompareOptionalTimelineEvidence(
+                comparison,
+                signal,
+                baseline.HasValue,
+                candidate.HasValue,
+                baseline?.ToString(CultureInfo.InvariantCulture) ?? "",
+                candidate?.ToString(CultureInfo.InvariantCulture) ?? "");
+        }
+
+        private static void CompareOptionalTimelineEvidence(
+            PlaybackQualityRunComparison comparison,
+            string signal,
+            bool? baseline,
+            bool? candidate)
+        {
+            CompareOptionalTimelineEvidence(
+                comparison,
+                signal,
+                baseline.HasValue,
+                candidate.HasValue,
+                baseline?.ToString() ?? "",
+                candidate?.ToString() ?? "");
+        }
+
+        private static void CompareOptionalTimelineEvidence(
+            PlaybackQualityRunComparison comparison,
+            string signal,
+            bool hasBaseline,
+            bool hasCandidate,
+            string baseline,
+            string candidate)
+        {
+            if (hasBaseline && hasCandidate)
+            {
+                CompareEvidenceValue(comparison, signal, "timeline", baseline, candidate);
+            }
+            else if (hasBaseline)
+            {
+                AddUnique(comparison.Coverage.UnmatchedBaselineSignals, signal);
+            }
+            else if (hasCandidate)
+            {
+                AddUnique(comparison.Coverage.UnmatchedCandidateSignals, signal);
             }
         }
 

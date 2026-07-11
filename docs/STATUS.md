@@ -993,6 +993,16 @@ resolver 失败现在也必须生成标准 `error` report，execution level 为 
 
 Task 4 的 Core `483/483`、CLI smoke、manifest/resolver、私有 manifest、parser contract 和完整 native-headless smoke 均已通过。统一 `run-playback-core-checks.ps1` 已继续执行到 Task 5，并按预期在 legacy `New-PlaybackCoreTuningBaseline.ps1` 使用 core-probe 填充 stable/challenge case 后被 strict validator 拒绝；这不是 resolver/native runner 回归。下一步进入正式 baseline 编排替换，彻底停止用 core-probe 填充播放 case。真实 App 中出现的 EAGAIN、暂停恢复 I/O error、timeline/seek 异常仍需在同一 evidence contract 下沉淀为回归 case，最终再做完整 App 编译与代表性 App-hosted 复核。
 
+# 2026-07-12 更新：timeline 归一化、音频预滚与单场景评测已完成真实私有复测
+
+native 时间线现在统一以容器 start time 为逻辑零点：解码帧位置先归一化，seek 时再把逻辑目标恢复为 demux 时间戳；duration 优先采用音视频流时长，再回退容器时长。实现对照了 Kodi `f0232910490189b97717bc5d309aec2e5751d6d3`、VLC `8e476d86cfbbb00833dfd9deb2f5324b074f3ca0` 和 mpv `e5486b96d7d06dd148337899bfdc46bf25101663` 的 start-time/seek 语义。确定性非零 start MPEG-TS 样本以及 resume+seek 样本均已进入 native smoke，报告会记录 container/stream origin、logical duration、demux target、first-presented landing 和 post-seek advancement。
+
+私有 Emby timeline case 暴露了独立的音频预滚 bug：从 60 秒启动时，demux 回退到约 54 秒关键帧，视频会丢弃目标前帧，但音频显式时间戳会覆盖 seek anchor，使音频主时钟回到 54 秒，最终出现 `decoded=142 / rendered=0`。新增 `AudioFramePreroll` 后，目标前的完整音频帧在 decoder 内部持续丢弃，跨越目标的首帧从目标位置发布；同一 case 复测为 `decoded=203 / rendered=61 / submittedAudio=89`，seek 后继续推进，A/V drift P95 曾观察为 `13ms`。
+
+评测器同时修复了两处会妨碍归因的问题。headless 现在会在每个报告旁保存经过 stream URL 脱敏的 helper stdout/stderr，超时和解析失败也必须保留；helper 还实时输出阶段标记，可区分 graph open、采样、seek 和 stop 阻塞。manifest runner 根据 case purpose 选择 `playback`、`timeline`、`interactions` 或 `pause-resume` 单一场景，timeline case 不再夹带音轨/字幕切换。隔离后的同一私有 timeline case 为 `pass`，execution completed，只有一个 seek lifecycle，0 个 audio/subtitle interaction；本次 seek first-presented error 为 `478ms`，低于既有 `500ms` 标准但余量很小，仍是后续调优风险。
+
+验证结果：统一 App-free gate 已覆盖 491 个 Core 测试、CLI/runner、manifest、native smoke、baseline/candidate 脚本、独立 C++ timeline/audio/EAGAIN/display/offscreen 回归和 Native Debug x64 build；完整 Windows UWP App x64 Debug 也已通过官方 `Build-Noira.ps1 -Target Build` 重新编译。上述软件结论仍不证明 Xbox/HDMI 输出；旧的混合 interaction+seek report-set 不应与新单场景报告直接比较。
+
 # 2026-07-11 更新：正式 baseline 已停止使用 core-probe
 
 `New-PlaybackCoreTuningBaseline.ps1` 不再调用 `materialize-core-probe-report-set`。公开、私有和 additional manifest 合并后，所有选中的 stable/challenge case 都先进入 `Invoke-PlaybackQualityManifest.ps1`；baseline 保存 runner summary，并要求 `selectedCaseCount > 0`、`reportCount == selectedCaseCount`、`missingReportCount == 0`，再进行 unified manifest 的 strict validate/analyze。

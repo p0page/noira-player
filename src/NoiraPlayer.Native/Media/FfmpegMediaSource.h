@@ -10,6 +10,8 @@
 #include <vector>
 #include <winrt/Windows.Foundation.h>
 
+#include "MediaTimeline.h"
+
 struct AVFormatContext;
 struct AVPacket;
 struct AVStream;
@@ -44,6 +46,14 @@ namespace winrt::NoiraPlayer::Native::implementation
         double AverageFrameRate{0.0};
     };
 
+    struct FfmpegTimelineSnapshot
+    {
+        int64_t ContainerStartTimeTicks{0};
+        int64_t StreamStartTimeTicks{0};
+        int64_t LogicalDurationTicks{0};
+        int64_t LastSeekDemuxTargetTicks{-1};
+    };
+
     class FfmpegMediaSource
     {
     public:
@@ -56,11 +66,13 @@ namespace winrt::NoiraPlayer::Native::implementation
         AVStream* Stream(int32_t streamIndex) const;
         std::optional<FfmpegVideoStreamSnapshot> BestVideoStreamSnapshot() const;
         std::vector<FfmpegStreamSnapshot> StreamSnapshots() const;
+        FfmpegTimelineSnapshot TimelineSnapshot(int32_t streamIndex) const;
+        int64_t NormalizeTimestampTicks(int64_t demuxTicks) const noexcept;
         void RegisterStream(int32_t streamIndex);
         void UnregisterStream(int32_t streamIndex) noexcept;
         bool TryReadPacket(int32_t streamIndex, AVPacket* packet);
         bool TryReadQueuedPacket(int32_t streamIndex, AVPacket* packet);
-        void Seek(int32_t streamIndex, int64_t timestamp);
+        void Seek(int32_t streamIndex, int64_t positionTicks);
 
     private:
         static int InterruptCallback(void* opaque) noexcept;
@@ -77,6 +89,8 @@ namespace winrt::NoiraPlayer::Native::implementation
         uint32_t m_avformatVersion{0};
         std::atomic<bool> m_interruptRequested{false};
         std::atomic<int64_t> m_ioDeadlineNanoseconds{0};
+        MediaTimeline m_timeline;
+        int64_t m_lastSeekDemuxTargetTicks{-1};
         bool m_open{false};
     };
 }

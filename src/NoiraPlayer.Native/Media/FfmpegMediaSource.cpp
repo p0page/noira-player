@@ -27,6 +27,7 @@ namespace
     using SteadyClock = std::chrono::steady_clock;
     constexpr int64_t OpenTimeoutMilliseconds = 30'000;
     constexpr int64_t ReadTimeoutMilliseconds = 20'000;
+    constexpr AVRational HundredNanosecondTimeBase{1, 10'000'000};
 
     int64_t SteadyClockNanoseconds() noexcept
     {
@@ -83,6 +84,45 @@ namespace
         }
 
         return ToFrameRate(stream->r_frame_rate);
+    }
+
+    int64_t RescaleToTicks(int64_t value, AVRational timeBase) noexcept
+    {
+        return value == AV_NOPTS_VALUE || !IsValidRational(timeBase)
+            ? 0
+            : av_rescale_q(value, timeBase, HundredNanosecondTimeBase);
+    }
+
+    int64_t SelectLogicalDurationTicks(AVFormatContext const* formatContext) noexcept
+    {
+        if (formatContext == nullptr)
+        {
+            return 0;
+        }
+
+        int64_t durationTicks = 0;
+        for (auto streamIndex = uint32_t{0}; streamIndex < formatContext->nb_streams; ++streamIndex)
+        {
+            auto stream = formatContext->streams[streamIndex];
+            auto codecParameters = stream == nullptr ? nullptr : stream->codecpar;
+            if (stream == nullptr || codecParameters == nullptr || stream->duration <= 0 ||
+                (codecParameters->codec_type != AVMEDIA_TYPE_AUDIO &&
+                    codecParameters->codec_type != AVMEDIA_TYPE_VIDEO))
+            {
+                continue;
+            }
+
+            durationTicks = (std::max)(
+                durationTicks,
+                RescaleToTicks(stream->duration, stream->time_base));
+        }
+
+        if (durationTicks == 0 && formatContext->duration > 0)
+        {
+            durationTicks = RescaleToTicks(formatContext->duration, AV_TIME_BASE_Q);
+        }
+
+        return durationTicks;
     }
 
     std::string MapHdrKind(AVColorTransferCharacteristic transfer)
@@ -406,8 +446,20 @@ namespace winrt::NoiraPlayer::Native::implementation
             AppendNativePlaybackDiagnostic(
                 L"FfmpegMediaSource.Open streamCount=" +
                 std::to_wstring(formatContext->nb_streams) +
-                L" format=" +
-                std::wstring(formatName));
+                    L" format=" +
+                    std::wstring(formatName));
+
+            auto containerStartTimeTicks = RescaleToTicks(
+                formatContext->start_time,
+                AV_TIME_BASE_Q);
+            auto logicalDurationTicks = SelectLogicalDurationTicks(formatContext);
+            m_timeline.Reset(containerStartTimeTicks, logicalDurationTicks);
+            m_lastSeekDemuxTargetTicks = -1;
+            AppendNativePlaybackDiagnostic(
+                L"FfmpegMediaSource.Timeline originTicks=" +
+                std::to_wstring(m_timeline.OriginTicks()) +
+                L" durationTicks=" +
+                std::to_wstring(m_timeline.DurationTicks()));
             for (auto streamIndex = uint32_t{0}; streamIndex < formatContext->nb_streams; ++streamIndex)
             {
                 auto stream = formatContext->streams[streamIndex];
@@ -461,6 +513,8 @@ namespace winrt::NoiraPlayer::Native::implementation
         m_url.clear();
         m_avformatVersion = 0;
         m_ioDeadlineNanoseconds.store(0, std::memory_order_release);
+        m_timeline.Reset();
+        m_lastSeekDemuxTargetTicks = -1;
         m_open = false;
     }
 
@@ -726,13 +780,41 @@ namespace winrt::NoiraPlayer::Native::implementation
         return TryTakeQueuedPacket(streamIndex, packet);
     }
 
-    void FfmpegMediaSource::Seek(int32_t streamIndex, int64_t timestamp)
+    FfmpegTimelineSnapshot FfmpegMediaSource::TimelineSnapshot(int32_t streamIndex) const
+    {
+        auto stream = Stream(streamIndex);
+        return FfmpegTimelineSnapshot
+        {
+            m_timeline.OriginTicks(),
+            stream == nullptr ? 0 : RescaleToTicks(stream->start_time, stream->time_base),
+            m_timeline.DurationTicks(),
+            m_lastSeekDemuxTargetTicks
+        };
+    }
+
+    int64_t FfmpegMediaSource::NormalizeTimestampTicks(int64_t demuxTicks) const noexcept
+    {
+        return m_timeline.ToLogicalTicks(demuxTicks);
+    }
+
+    void FfmpegMediaSource::Seek(int32_t streamIndex, int64_t positionTicks)
     {
         if (!m_open || m_formatContext == nullptr)
         {
             return;
         }
 
+        auto stream = Stream(streamIndex);
+        if (stream == nullptr)
+        {
+            throw winrt::hresult_invalid_argument(L"Seek stream index is invalid.");
+        }
+
+        m_lastSeekDemuxTargetTicks = m_timeline.ToDemuxTicks(positionTicks);
+        auto timestamp = av_rescale_q(
+            m_lastSeekDemuxTargetTicks,
+            HundredNanosecondTimeBase,
+            stream->time_base);
         BeginBlockingIo(ReadTimeoutMilliseconds);
         auto result = av_seek_frame(m_formatContext, streamIndex, timestamp, AVSEEK_FLAG_BACKWARD);
         if (result < 0)

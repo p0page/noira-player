@@ -19,6 +19,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
 
         public PlaybackQualityPosition? Position { get; set; }
 
+        public PlaybackQualitySourceTimeline? SourceTimeline { get; set; }
+
         public PlaybackQualityStartup? Startup { get; set; }
 
         public PlaybackQualityLifecycle? Lifecycle { get; set; }
@@ -105,6 +107,12 @@ namespace NoiraPlayer.Core.PlaybackQuality
             if (request.Descriptor != null)
             {
                 PlaybackQualityReportMapper.ApplySource(report, request.Descriptor);
+            }
+
+            if (request.SourceTimeline != null)
+            {
+                report.Source.ContainerStartTimeTicks = request.SourceTimeline.ContainerStartTimeTicks;
+                report.Source.VideoStreamStartTimeTicks = request.SourceTimeline.VideoStreamStartTimeTicks;
             }
 
             if (request.DisplayStatus != null)
@@ -206,7 +214,11 @@ namespace NoiraPlayer.Core.PlaybackQuality
             {
                 RequestedStartPositionTicks = source.RequestedStartPositionTicks,
                 SeekTargetPositionTicks = source.SeekTargetPositionTicks,
+                SeekDemuxTargetTicks = source.SeekDemuxTargetTicks,
                 ActualPositionTicks = source.ActualPositionTicks,
+                FirstPresentedPositionTicks = source.FirstPresentedPositionTicks,
+                PostSeekPositionTicks = source.PostSeekPositionTicks,
+                PostSeekAdvanced = source.PostSeekAdvanced,
                 SeekPositionErrorMs = source.SeekPositionErrorMs
             };
         }

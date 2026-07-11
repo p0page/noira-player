@@ -88,6 +88,8 @@ $nativeHelperCommand = '"' + $vcvars + '" >nul && cl /nologo /std:c++20 /EHsc /I
 $nativeFramePacingCommand = '"' + $vcvars + '" >nul && cl /nologo /std:c++20 /EHsc /I src\NoiraPlayer.Native /Fo:C:\tmp\FramePacingTests.obj tests\NoiraPlayer.Native.Tests\FramePacingTests.cpp /Fe:C:\tmp\FramePacingTests.exe && C:\tmp\FramePacingTests.exe'
 $nativeRenderLoopWaiterCommand = '"' + $vcvars + '" >nul && cl /nologo /std:c++20 /EHsc /I src\NoiraPlayer.Native /Fo:C:\tmp\RenderLoopWaiterTests.obj tests\NoiraPlayer.Native.Tests\RenderLoopWaiterTests.cpp /Fe:C:\tmp\RenderLoopWaiterTests.exe && C:\tmp\RenderLoopWaiterTests.exe'
 $nativeSeekPresentationCommand = '"' + $vcvars + '" >nul && cl /nologo /std:c++20 /EHsc /I src\NoiraPlayer.Native /Fo:C:\tmp\SeekPresentationTrackerTests.obj tests\NoiraPlayer.Native.Tests\SeekPresentationTrackerTests.cpp /Fe:C:\tmp\SeekPresentationTrackerTests.exe && C:\tmp\SeekPresentationTrackerTests.exe'
+$nativeMediaTimelineCommand = '"' + $vcvars + '" >nul && cl /nologo /std:c++20 /EHsc /I src\NoiraPlayer.Native /Fo:C:\tmp\MediaTimelineTests.obj tests\NoiraPlayer.Native.Tests\MediaTimelineTests.cpp /Fe:C:\tmp\MediaTimelineTests.exe && C:\tmp\MediaTimelineTests.exe'
+$nativeAudioFramePrerollCommand = '"' + $vcvars + '" >nul && cl /nologo /std:c++20 /EHsc /I src\NoiraPlayer.Native /Fo:C:\tmp\AudioFramePrerollTests.obj tests\NoiraPlayer.Native.Tests\AudioFramePrerollTests.cpp /Fe:C:\tmp\AudioFramePrerollTests.exe && C:\tmp\AudioFramePrerollTests.exe'
 $nativeSubtitleSwitchTransactionCommand = '"' + $vcvars + '" >nul && cl /nologo /std:c++20 /EHsc /I src\NoiraPlayer.Native /Fo:C:\tmp\SubtitleSwitchTransactionTests.obj tests\NoiraPlayer.Native.Tests\SubtitleSwitchTransactionTests.cpp /Fe:C:\tmp\SubtitleSwitchTransactionTests.exe && C:\tmp\SubtitleSwitchTransactionTests.exe'
 $nativeDisplayRefreshCommand = '"' + $vcvars + '" >nul && cl /nologo /std:c++20 /EHsc /I src\NoiraPlayer.Native /Fo:C:\tmp\DisplayRefreshRatePolicyTests.obj tests\NoiraPlayer.Native.Tests\DisplayRefreshRatePolicyTests.cpp /Fe:C:\tmp\DisplayRefreshRatePolicyTests.exe && C:\tmp\DisplayRefreshRatePolicyTests.exe'
 $nativeDisplayRefreshSnapshotCommand = '"' + $vcvars + '" >nul && cl /nologo /std:c++20 /EHsc /I src\NoiraPlayer.Native /Fo:C:\tmp\HdrDisplayRefreshRateSnapshotTests.obj tests\NoiraPlayer.Native.Tests\HdrDisplayRefreshRateSnapshotTests.cpp /Fe:C:\tmp\HdrDisplayRefreshRateSnapshotTests.exe && C:\tmp\HdrDisplayRefreshRateSnapshotTests.exe'
@@ -198,6 +200,16 @@ $commands = @(
         -Description 'Compile and run the standalone seek presented-frame generation evidence test.' `
         -Command 'cmd' `
         -Arguments @('/c', $nativeSeekPresentationCommand)
+    New-CommandPlan `
+        -Name 'native-media-timeline-test' `
+        -Description 'Verify demux timestamps are normalized to a zero-based public timeline and seek targets restore the demux origin.' `
+        -Command 'cmd' `
+        -Arguments @('/c', $nativeMediaTimelineCommand)
+    New-CommandPlan `
+        -Name 'native-audio-frame-preroll-test' `
+        -Description 'Verify audio frames before a start or seek target are dropped without publishing an earlier master-clock position.' `
+        -Command 'cmd' `
+        -Arguments @('/c', $nativeAudioFramePrerollCommand)
     New-CommandPlan `
         -Name 'native-subtitle-switch-transaction-test' `
         -Description 'Compile and run fault-injected transactional subtitle switch recovery tests.' `

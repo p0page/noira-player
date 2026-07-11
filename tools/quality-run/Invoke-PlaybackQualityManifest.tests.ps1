@@ -46,8 +46,9 @@ try {
       "severity": "medium",
       "stability": "variable",
       "uri": "https://media.invalid/second.mp4",
+      "startPositionTicks": 20000000,
       "executionRequirement": { "minimumEvidenceLevel": "native-playback" },
-      "purpose": [ "sdr-smoke" ],
+      "purpose": [ "timeline" ],
       "expected": {
         "codec": "hevc",
         "width": 3840,
@@ -132,7 +133,9 @@ $caseId = Get-Value '--case-id'
 $reportsDir = Get-Value '--reports-dir'
 $logPath = $env:NOIRAPLAYER_MANIFEST_RUNNER_TEST_LOG
 $pauseSeconds = Get-Value '--pause-seconds'
-Add-Content -LiteralPath $logPath -Value ($caseId + '|pause=' + $pauseSeconds) -Encoding UTF8
+$startPositionTicks = Get-Value '--start-position-ticks'
+$scenario = Get-Value '--scenario'
+Add-Content -LiteralPath $logPath -Value ($caseId + '|pause=' + $pauseSeconds + '|start=' + $startPositionTicks + '|scenario=' + $scenario) -Encoding UTF8
 
 $reportPath = Join-Path $reportsDir ($caseId.Replace('/', [System.IO.Path]::DirectorySeparatorChar) + '.json')
 New-Item -ItemType Directory -Path (Split-Path -Parent $reportPath) -Force | Out-Null
@@ -184,9 +187,9 @@ exit 0
 
     $invocations = @(Get-Content -LiteralPath $invocationLog -Encoding UTF8)
     if ($invocations.Count -ne 3 -or
-        $invocations[0] -ne 'runner/first-fails|pause=1' -or
-        $invocations[1] -ne 'runner/second-runs|pause=' -or
-        $invocations[2] -ne 'runner/emby-resolved|pause=') {
+        $invocations[0] -ne 'runner/first-fails|pause=1|start=0|scenario=pause-resume' -or
+        $invocations[1] -ne 'runner/second-runs|pause=|start=20000000|scenario=timeline' -or
+        $invocations[2] -ne 'runner/emby-resolved|pause=|start=0|scenario=playback') {
         throw 'Manifest runner must invoke each selected stable/challenge case exactly once and preserve order.'
     }
 

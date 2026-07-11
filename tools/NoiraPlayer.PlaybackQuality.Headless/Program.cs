@@ -18,7 +18,7 @@ return result.ExitCode;
 internal static class NativeHeadlessHarness
 {
     private const string CollectorVersion = "native-headless-harness-v0.1";
-    private const long NativeHelperSeekTargetPositionTicks = 10_000_000;
+    private const long NativeHelperSeekOffsetTicks = 10_000_000;
     private const string NativeWinRtLinkageLimitation =
         "native-headless: current NoiraPlayer.Native build is a Windows Store C++/WinRT component with public playback entrypoints bound to UWP projection";
     private const string NativeGraphHostLimitation =
@@ -32,7 +32,7 @@ internal static class NativeHeadlessHarness
             options.CaseId,
             itemId: "",
             mediaSourceId: "",
-            startPositionTicks: 0,
+            startPositionTicks: options.StartPositionTicks,
             forceSdrOutput: options.ForceSdrOutput,
             expected: new PlaybackQualityExpected(),
             uri: options.StreamUrl,
@@ -102,11 +102,11 @@ internal static class NativeHeadlessHarness
     {
         var commandReceivedAt = DateTimeOffset.UtcNow;
         var attemptId = Guid.NewGuid().ToString("N");
-        var helper = RunHelperProcess(options);
-        var lateHelperFailure = helper.ExitCode != 0 && helper.HasTelemetry;
-        var playbackStartedAt = DateTimeOffset.UtcNow;
         var reportPath = GetReportPath(options.ReportsDir, options.CaseId);
         Directory.CreateDirectory(Path.GetDirectoryName(reportPath) ?? options.ReportsDir);
+        var helper = RunHelperProcess(options, reportPath);
+        var lateHelperFailure = helper.ExitCode != 0 && helper.HasTelemetry;
+        var playbackStartedAt = DateTimeOffset.UtcNow;
 
         if (helper.ExitCode != 0 && !helper.HasTelemetry)
         {
@@ -144,7 +144,8 @@ internal static class NativeHeadlessHarness
             options.StreamUrl,
             helper.Source,
             helper.SelectedAudioStreamIndex,
-            helper.SelectedSubtitleStreamIndex);
+            helper.SelectedSubtitleStreamIndex,
+            options.StartPositionTicks);
         var diagnostics = new NativeHeadlessDiagnostics(helper.Color, helper.Display);
         var provider = new NativeHeadlessMetricsProvider(helper.Metrics);
         var lifecycle = new PlaybackQualityLifecycle();
@@ -232,12 +233,24 @@ internal static class NativeHeadlessHarness
             lifecycle,
             new PlaybackQualityPosition
             {
-                RequestedStartPositionTicks = 0,
+                RequestedStartPositionTicks = options.StartPositionTicks,
                 SeekTargetPositionTicks = helper.Seek.Attempted
                     ? helper.Seek.TargetPositionTicks
                     : null,
+                SeekDemuxTargetTicks = helper.Seek.Attempted
+                    ? helper.Seek.DemuxTargetTicks
+                    : null,
                 ActualPositionTicks = helper.Seek.Attempted
                     ? helper.Seek.ActualPositionTicks
+                    : null,
+                FirstPresentedPositionTicks = helper.Seek.Attempted
+                    ? helper.Seek.ActualPositionTicks
+                    : null,
+                PostSeekPositionTicks = helper.Seek.Attempted
+                    ? helper.Seek.PostSeekPlaybackPositionTicks
+                    : null,
+                PostSeekAdvanced = helper.Seek.Attempted
+                    ? helper.Seek.PostSeekAdvanced
                     : null,
                 SeekPositionErrorMs = helper.Seek.Attempted && helper.Seek.ActualPositionTicks.HasValue
                     ? Math.Abs(helper.Seek.ActualPositionTicks.Value - helper.Seek.TargetPositionTicks) / 10000.0
@@ -264,6 +277,12 @@ internal static class NativeHeadlessHarness
             request.RuntimeMetrics.ProcessCpuTimeMs = helper.ProcessCpuTimeMs;
             request.RuntimeMetrics.ProcessCpuUtilizationRatio = helper.ProcessCpuUtilizationRatio;
         }
+
+        request.SourceTimeline = new PlaybackQualitySourceTimeline
+        {
+            ContainerStartTimeTicks = helper.Source.ContainerStartTimeTicks,
+            VideoStreamStartTimeTicks = helper.Source.VideoStreamStartTimeTicks
+        };
 
         var runResult = lateHelperFailure
             ? PlaybackQualityRuntimeEvidenceCollector.ComposeErrorRunResult(
@@ -333,7 +352,9 @@ internal static class NativeHeadlessHarness
         };
     }
 
-    private static NativeHeadlessHelperResult RunHelperProcess(NativeHeadlessHarnessOptions options)
+    private static NativeHeadlessHelperResult RunHelperProcess(
+        NativeHeadlessHarnessOptions options,
+        string reportPath)
     {
         using var process = new Process();
         process.StartInfo = new ProcessStartInfo
@@ -341,6 +362,8 @@ internal static class NativeHeadlessHarness
             FileName = options.NativeHelperExe,
             Arguments = "--stream-url " + QuoteArgument(options.StreamUrl) +
                 " --duration-seconds " + options.DurationSeconds.ToString() +
+                " --start-position-ticks " + options.StartPositionTicks.ToString() +
+                " --scenario " + options.Scenario +
                 (options.PauseSeconds > 0
                     ? " --pause-seconds " + options.PauseSeconds.ToString()
                     : ""),
@@ -373,12 +396,18 @@ internal static class NativeHeadlessHarness
             {
             }
 
+            process.WaitForExit();
+            var timedOutStdout = stdoutTask.GetAwaiter().GetResult();
+            var timedOutStderr = stderrTask.GetAwaiter().GetResult();
+            ArchiveHelperTranscript(reportPath, options.StreamUrl, timedOutStdout, timedOutStderr);
+
             return NativeHeadlessHelperResult.Failed(
                 "Native helper timed out before returning playback metrics.");
         }
 
         var stdout = stdoutTask.GetAwaiter().GetResult();
         var stderr = stderrTask.GetAwaiter().GetResult();
+        ArchiveHelperTranscript(reportPath, options.StreamUrl, stdout, stderr);
 
         if (!TryParseMetrics(
             stdout,
@@ -415,6 +444,15 @@ internal static class NativeHeadlessHarness
                 "Native helper did not return completed pause/resume evidence for the requested duration.");
         }
 
+        var expectedSeekTarget = options.StartPositionTicks >= long.MaxValue - NativeHelperSeekOffsetTicks
+            ? long.MaxValue
+            : options.StartPositionTicks + NativeHelperSeekOffsetTicks;
+        if (interactions.Seek.Attempted && interactions.Seek.TargetPositionTicks != expectedSeekTarget)
+        {
+            return NativeHeadlessHelperResult.Failed(
+                "Native helper seek target did not equal requested start position plus the interaction seek offset.");
+        }
+
         return NativeHeadlessHelperResult.Succeeded(
             metrics,
             source,
@@ -424,6 +462,46 @@ internal static class NativeHeadlessHarness
             processCpuTimeMs,
             processCpuUtilizationRatio,
             interactions);
+    }
+
+    private static void ArchiveHelperTranscript(
+        string reportPath,
+        string streamUrl,
+        string stdout,
+        string stderr)
+    {
+        File.WriteAllText(
+            reportPath + ".helper.stdout.log",
+            SanitizeHelperTranscript(stdout, streamUrl));
+        File.WriteAllText(
+            reportPath + ".helper.stderr.log",
+            SanitizeHelperTranscript(stderr, streamUrl));
+    }
+
+    private static string SanitizeHelperTranscript(string transcript, string streamUrl)
+    {
+        if (string.IsNullOrEmpty(transcript) || string.IsNullOrEmpty(streamUrl))
+        {
+            return transcript;
+        }
+
+        var sanitized = transcript.Replace(
+            streamUrl,
+            "<redacted-stream-url>",
+            StringComparison.Ordinal);
+        try
+        {
+            var decodedStreamUrl = Uri.UnescapeDataString(streamUrl);
+            sanitized = sanitized.Replace(
+                decodedStreamUrl,
+                "<redacted-stream-url>",
+                StringComparison.Ordinal);
+        }
+        catch (UriFormatException)
+        {
+        }
+
+        return sanitized;
     }
 
     private static double TryGetProcessCpuTimeMs(Process process)
@@ -475,6 +553,13 @@ internal static class NativeHeadlessHarness
         {
             return false;
         }
+        if (!TryGetRequiredNonNegativeInt64(values, "containerStartTimeTicks", out var containerStartTimeTicks, out error) ||
+            !TryGetRequiredNonNegativeInt64(values, "videoStreamStartTimeTicks", out var videoStreamStartTimeTicks, out error) ||
+            !TryGetRequiredNonNegativeInt64(values, "logicalDurationTicks", out var logicalDurationTicks, out error))
+        {
+            return false;
+        }
+
         source = new NativeHeadlessSourceInfo
         {
             Codec = GetString(values, "sourceCodec"),
@@ -485,7 +570,10 @@ internal static class NativeHeadlessHarness
             VideoRange = GetString(values, "sourceVideoRange"),
             ColorPrimaries = GetString(values, "sourceColorPrimaries"),
             ColorTransfer = GetString(values, "sourceColorTransfer"),
-            ColorSpace = GetString(values, "sourceColorSpace")
+            ColorSpace = GetString(values, "sourceColorSpace"),
+            ContainerStartTimeTicks = containerStartTimeTicks,
+            VideoStreamStartTimeTicks = videoStreamStartTimeTicks,
+            LogicalDurationTicks = logicalDurationTicks
         };
         source.Tracks.AddRange(ParseNativeTracks(values));
         color = new NativeHeadlessColorInfo
@@ -923,15 +1011,11 @@ internal static class NativeHeadlessHarness
 
         if (!TryGetInteractionStatus(values, "seekStatus", out var status, out error) ||
             !TryGetRequiredNonNegativeInt64(values, "seekTargetPositionTicks", out var targetPosition, out error) ||
+            !TryGetRequiredNonNegativeInt64(values, "seekDemuxTargetTicks", out var demuxTarget, out error) ||
             !TryGetRequiredNullableNonNegativeInt64(values, "seekActualPositionTicks", out var actualPosition, out error) ||
-            !TryGetRequiredNonNegativeInt64(values, "postSeekPlaybackPositionTicks", out var postSeekPosition, out error))
+            !TryGetRequiredNonNegativeInt64(values, "postSeekPlaybackPositionTicks", out var postSeekPosition, out error) ||
+            !TryGetAttempted(values, "postSeekAdvanced", out var postSeekAdvanced, out error))
         {
-            return false;
-        }
-
-        if (targetPosition != NativeHelperSeekTargetPositionTicks)
-        {
-            error = "Native helper field 'seekTargetPositionTicks' must equal 10000000.";
             return false;
         }
 
@@ -941,10 +1025,18 @@ internal static class NativeHeadlessHarness
             return false;
         }
 
+        if (status == "completed" && !postSeekAdvanced)
+        {
+            error = "Native helper field 'postSeekAdvanced' must be 1 when seekStatus is completed.";
+            return false;
+        }
+
         outcome.Status = status;
         outcome.TargetPositionTicks = targetPosition;
+        outcome.DemuxTargetTicks = demuxTarget;
         outcome.ActualPositionTicks = actualPosition;
         outcome.PostSeekPlaybackPositionTicks = postSeekPosition;
+        outcome.PostSeekAdvanced = postSeekAdvanced;
         return true;
     }
 
@@ -1259,7 +1351,8 @@ internal static class NativeHeadlessHarness
         string streamUrl,
         NativeHeadlessSourceInfo sourceInfo,
         int? selectedAudioStreamIndex,
-        int? selectedSubtitleStreamIndex)
+        int? selectedSubtitleStreamIndex,
+        long startPositionTicks)
     {
         var source = new EmbyMediaSource
         {
@@ -1267,6 +1360,7 @@ internal static class NativeHeadlessHarness
             Name = "native-headless-direct-uri",
             DirectStreamUrl = streamUrl,
             Container = "mp4",
+            RunTimeTicks = sourceInfo.LogicalDurationTicks,
             Width = sourceInfo.Width,
             Height = sourceInfo.Height,
             VideoFrameRate = sourceInfo.FrameRate,
@@ -1359,7 +1453,7 @@ internal static class NativeHeadlessHarness
             itemId: "",
             mediaSource: source,
             availableSources: new[] { source },
-            startPositionTicks: 0,
+            startPositionTicks: startPositionTicks,
             audioStreamIndex: selectedAudioStreamIndex,
             subtitleStreamIndex: selectedSubtitleStreamIndex);
     }
@@ -1523,10 +1617,12 @@ internal sealed class NativeHeadlessHarnessOptions
     public string StreamUrl { get; private set; } = "";
     public string SourceLocatorHash { get; private set; } = "";
     public int DurationSeconds { get; private set; } = 5;
+    public long StartPositionTicks { get; private set; }
     public string ReportsDir { get; private set; } = "";
     public string NativeHelperExe { get; private set; } = "";
     public bool ForceSdrOutput { get; private set; }
     public int PauseSeconds { get; private set; }
+    public string Scenario { get; private set; } = "playback";
     public int TimeoutSeconds { get; private set; } = 60;
 
     public static bool TryParse(
@@ -1579,6 +1675,15 @@ internal sealed class NativeHeadlessHarnessOptions
 
                     options.DurationSeconds = durationSeconds;
                     break;
+                case "--start-position-ticks":
+                    if (!long.TryParse(value, out var startPositionTicks) || startPositionTicks < 0)
+                    {
+                        error = "--start-position-ticks must be a non-negative integer.";
+                        return false;
+                    }
+
+                    options.StartPositionTicks = startPositionTicks;
+                    break;
                 case "--pause-seconds":
                     if (!int.TryParse(value, out var pauseSeconds) || pauseSeconds <= 0 || pauseSeconds > 900)
                     {
@@ -1587,6 +1692,18 @@ internal sealed class NativeHeadlessHarnessOptions
                     }
 
                     options.PauseSeconds = pauseSeconds;
+                    break;
+                case "--scenario":
+                    if (value != "playback" &&
+                        value != "timeline" &&
+                        value != "interactions" &&
+                        value != "pause-resume")
+                    {
+                        error = "--scenario must be playback, timeline, interactions, or pause-resume.";
+                        return false;
+                    }
+
+                    options.Scenario = value;
                     break;
                 case "--timeout-seconds":
                     if (!int.TryParse(value, out var timeoutSeconds) || timeoutSeconds <= 0 || timeoutSeconds > 1800)
@@ -1631,6 +1748,12 @@ internal sealed class NativeHeadlessHarnessOptions
         if (options.TimeoutSeconds < options.DurationSeconds + options.PauseSeconds)
         {
             error = "--timeout-seconds must cover duration-seconds plus pause-seconds.";
+            return false;
+        }
+
+        if ((options.Scenario == "pause-resume") != (options.PauseSeconds > 0))
+        {
+            error = "--scenario pause-resume requires --pause-seconds, and pause-seconds requires the pause-resume scenario.";
             return false;
         }
 
@@ -1889,9 +2012,13 @@ internal sealed class NativeHeadlessSeekOutcome
 
     public long TargetPositionTicks { get; set; }
 
+    public long DemuxTargetTicks { get; set; }
+
     public long? ActualPositionTicks { get; set; }
 
     public long PostSeekPlaybackPositionTicks { get; set; }
+
+    public bool PostSeekAdvanced { get; set; }
 }
 
 internal sealed class NativeHeadlessSourceInfo
@@ -1913,6 +2040,12 @@ internal sealed class NativeHeadlessSourceInfo
     public string ColorTransfer { get; set; } = "";
 
     public string ColorSpace { get; set; } = "";
+
+    public long ContainerStartTimeTicks { get; set; }
+
+    public long VideoStreamStartTimeTicks { get; set; }
+
+    public long LogicalDurationTicks { get; set; }
 
     public List<NativeHeadlessTrackInfo> Tracks { get; } =
         new List<NativeHeadlessTrackInfo>();

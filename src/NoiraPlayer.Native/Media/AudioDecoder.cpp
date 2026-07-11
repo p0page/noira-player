@@ -209,6 +209,7 @@ namespace
         AVFrame const* frame,
         AVStream const* stream,
         SwrContext* resampler,
+        winrt::NoiraPlayer::Native::implementation::FfmpegMediaSource const& mediaSource,
         winrt::NoiraPlayer::Native::implementation::AudioFrameTimeline& timeline)
     {
         winrt::NoiraPlayer::Native::implementation::DecodedAudioFrame decodedFrame;
@@ -221,8 +222,13 @@ namespace
                 decodedFrame.PcmData.size() /
                 (OutputChannelCount * av_get_bytes_per_sample(OutputSampleFormat)));
         decodedFrame.Format = MapSampleFormat(OutputSampleFormat);
+        auto framePositionTicks = GetFramePositionTicks(frame, stream);
+        if (framePositionTicks)
+        {
+            framePositionTicks = mediaSource.NormalizeTimestampTicks(*framePositionTicks);
+        }
         decodedFrame.PositionTicks = timeline.Resolve(
-            GetFramePositionTicks(frame, stream),
+            framePositionTicks,
             decodedFrame.SampleCount,
             decodedFrame.SampleRate);
         return decodedFrame;
@@ -233,6 +239,7 @@ namespace
         AVFrame* frame,
         AVStream const* stream,
         SwrContext* resampler,
+        winrt::NoiraPlayer::Native::implementation::FfmpegMediaSource const& mediaSource,
         winrt::NoiraPlayer::Native::implementation::AudioFrameTimeline& timeline,
         int* receiveResultOut = nullptr)
     {
@@ -243,7 +250,12 @@ namespace
         }
         if (receiveResult == 0)
         {
-            auto decodedFrame = CreateDecodedAudioFrame(frame, stream, resampler, timeline);
+            auto decodedFrame = CreateDecodedAudioFrame(
+                frame,
+                stream,
+                resampler,
+                mediaSource,
+                timeline);
             av_frame_unref(frame);
             return decodedFrame;
         }
@@ -352,6 +364,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         }
 
         m_positionTicks = 0;
+        m_preroll.Reset(0);
         m_timeline.Reset(0);
         m_decoderDraining = false;
         m_open = true;
@@ -368,6 +381,8 @@ namespace winrt::NoiraPlayer::Native::implementation
             return std::nullopt;
         }
 
+        while (true)
+        {
         std::unique_ptr<AVPacket, AvPacketDeleter> packet(av_packet_alloc());
         std::unique_ptr<AVFrame, AvFrameDeleter> frame(av_frame_alloc());
         if (!packet || !frame)
@@ -377,24 +392,42 @@ namespace winrt::NoiraPlayer::Native::implementation
 
         auto audioStream = m_mediaSource->Stream(m_audioStreamIndex);
         auto publishFrame = [this](std::optional<DecodedAudioFrame> decodedFrame)
-            -> std::optional<DecodedAudioFrame>
+            -> std::pair<bool, std::optional<DecodedAudioFrame>>
         {
-            if (decodedFrame)
+            if (!decodedFrame)
             {
-                m_positionTicks = decodedFrame->PositionTicks;
+                return {false, std::nullopt};
             }
 
-            return decodedFrame;
+            auto acceptedPosition = m_preroll.Accept(
+                decodedFrame->PositionTicks,
+                decodedFrame->SampleCount,
+                decodedFrame->SampleRate);
+            if (!acceptedPosition)
+            {
+                return {true, std::nullopt};
+            }
+
+            decodedFrame->PositionTicks = *acceptedPosition;
+            m_positionTicks = decodedFrame->PositionTicks;
+            return {true, std::move(decodedFrame)};
         };
 
         if (m_decoderDraining)
         {
-            return publishFrame(TryReceiveFrame(
+            auto publication = publishFrame(TryReceiveFrame(
                 m_codecContext,
                 frame.get(),
                 audioStream,
                 m_resampler,
+                *m_mediaSource,
                 m_timeline));
+            if (publication.first && !publication.second)
+            {
+                continue;
+            }
+
+            return publication.second;
         }
 
         while (m_mediaSource->TryReadPacket(m_audioStreamIndex, packet.get()))
@@ -419,6 +452,7 @@ namespace winrt::NoiraPlayer::Native::implementation
                         frame.get(),
                         audioStream,
                         m_resampler,
+                        *m_mediaSource,
                         m_timeline,
                         &receiveResult);
                     if (!drainedFrame)
@@ -461,7 +495,13 @@ namespace winrt::NoiraPlayer::Native::implementation
 
             if (pendingFrame)
             {
-                return publishFrame(pendingFrame);
+                auto publication = publishFrame(std::move(pendingFrame));
+                if (publication.first && !publication.second)
+                {
+                    continue;
+                }
+
+                return publication.second;
             }
 
             auto decodedFrame = TryReceiveFrame(
@@ -469,10 +509,17 @@ namespace winrt::NoiraPlayer::Native::implementation
                 frame.get(),
                 audioStream,
                 m_resampler,
+                *m_mediaSource,
                 m_timeline);
             if (decodedFrame)
             {
-                return publishFrame(decodedFrame);
+                auto publication = publishFrame(std::move(decodedFrame));
+                if (publication.first && !publication.second)
+                {
+                    continue;
+                }
+
+                return publication.second;
             }
         }
 
@@ -483,12 +530,20 @@ namespace winrt::NoiraPlayer::Native::implementation
         }
 
         m_decoderDraining = true;
-        return publishFrame(TryReceiveFrame(
+        auto publication = publishFrame(TryReceiveFrame(
             m_codecContext,
             frame.get(),
             audioStream,
             m_resampler,
+            *m_mediaSource,
             m_timeline));
+        if (publication.first && !publication.second)
+        {
+            continue;
+        }
+
+        return publication.second;
+        }
     }
 
     void AudioDecoder::Flush(int64_t positionTicks)
@@ -499,6 +554,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         }
 
         m_positionTicks = positionTicks;
+        m_preroll.Reset(positionTicks);
         m_timeline.Reset(positionTicks);
         if (m_codecContext != nullptr)
         {
@@ -538,6 +594,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         m_mediaSource = nullptr;
         m_audioStreamIndex = -1;
         m_positionTicks = 0;
+        m_preroll.Reset(0);
         m_timeline.Reset(0);
         m_decoderDraining = false;
         m_open = false;

@@ -78,6 +78,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
         public string Container { get; set; } = "";
         public long Bitrate { get; set; }
         public long DurationTicks { get; set; }
+        public long? ContainerStartTimeTicks { get; set; }
+        public long? VideoStreamStartTimeTicks { get; set; }
         public string Codec { get; set; } = "";
         public int Width { get; set; }
         public int Height { get; set; }
@@ -1216,6 +1218,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 Container = report.Source.Container,
                 Bitrate = report.Source.Bitrate,
                 DurationTicks = report.Source.DurationTicks,
+                ContainerStartTimeTicks = report.Source.ContainerStartTimeTicks,
+                VideoStreamStartTimeTicks = report.Source.VideoStreamStartTimeTicks,
                 Codec = report.Source.Codec,
                 Width = report.Source.Width,
                 Height = report.Source.Height,
@@ -1396,6 +1400,16 @@ namespace NoiraPlayer.Core.PlaybackQuality
             if (source.DurationTicks > 0)
             {
                 AddUnique(source.Signals, "source.durationTicks");
+            }
+
+            if (source.ContainerStartTimeTicks.HasValue)
+            {
+                AddUnique(source.Signals, "source.containerStartTimeTicks");
+            }
+
+            if (source.VideoStreamStartTimeTicks.HasValue)
+            {
+                AddUnique(source.Signals, "source.videoStreamStartTimeTicks");
             }
 
             if (source.Width > 0)
@@ -1898,6 +1912,21 @@ namespace NoiraPlayer.Core.PlaybackQuality
                     !report.Position.ActualPositionTicks.HasValue))
             {
                 analysis.MissingEvidence.Add("position.seekPositionErrorMs");
+            }
+
+            if (report.Position.SeekTargetPositionTicks.HasValue &&
+                report.Execution != null &&
+                PlaybackQualityEvidenceLevel.MeetsMinimum(
+                    report.Execution.EvidenceLevel,
+                    PlaybackQualityEvidenceLevel.NativePlayback))
+            {
+                AddMissingTimelineEvidence(analysis, report.Source.DurationTicks > 0, "source.durationTicks");
+                AddMissingTimelineEvidence(analysis, report.Source.ContainerStartTimeTicks.HasValue, "source.containerStartTimeTicks");
+                AddMissingTimelineEvidence(analysis, report.Source.VideoStreamStartTimeTicks.HasValue, "source.videoStreamStartTimeTicks");
+                AddMissingTimelineEvidence(analysis, report.Position.SeekDemuxTargetTicks.HasValue, "position.seekDemuxTargetTicks");
+                AddMissingTimelineEvidence(analysis, report.Position.FirstPresentedPositionTicks.HasValue, "position.firstPresentedPositionTicks");
+                AddMissingTimelineEvidence(analysis, report.Position.PostSeekPositionTicks.HasValue, "position.postSeekPositionTicks");
+                AddMissingTimelineEvidence(analysis, report.Position.PostSeekAdvanced.HasValue, "position.postSeekAdvanced");
             }
 
             if (report.Expected != null &&
@@ -2431,9 +2460,29 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 AddUnique(analysis.EvidenceSignals, "position.seekTargetPositionTicks");
             }
 
+            if (report.Position.SeekDemuxTargetTicks.HasValue)
+            {
+                AddUnique(analysis.EvidenceSignals, "position.seekDemuxTargetTicks");
+            }
+
             if (report.Position.ActualPositionTicks.HasValue)
             {
                 AddUnique(analysis.EvidenceSignals, "position.actualPositionTicks");
+            }
+
+            if (report.Position.FirstPresentedPositionTicks.HasValue)
+            {
+                AddUnique(analysis.EvidenceSignals, "position.firstPresentedPositionTicks");
+            }
+
+            if (report.Position.PostSeekPositionTicks.HasValue)
+            {
+                AddUnique(analysis.EvidenceSignals, "position.postSeekPositionTicks");
+            }
+
+            if (report.Position.PostSeekAdvanced.HasValue)
+            {
+                AddUnique(analysis.EvidenceSignals, "position.postSeekAdvanced");
             }
 
             if (report.Position.SeekPositionErrorMs.HasValue ||
@@ -2783,6 +2832,17 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 Actual = check.Actual,
                 Message = check.Message
             };
+        }
+
+        private static void AddMissingTimelineEvidence(
+            PlaybackQualityModelAnalysis analysis,
+            bool present,
+            string signal)
+        {
+            if (!present)
+            {
+                AddUnique(analysis.MissingEvidence, signal);
+            }
         }
 
         private static void AddUnique(List<string> values, string value)

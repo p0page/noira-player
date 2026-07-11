@@ -725,6 +725,8 @@ namespace winrt::NoiraPlayer::Native::implementation
         {
             if (decodedFrame)
             {
+                decodedFrame->PositionTicks = m_mediaSource->NormalizeTimestampTicks(
+                    decodedFrame->PositionTicks);
                 m_positionTicks = decodedFrame->PositionTicks;
             }
 
@@ -937,9 +939,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         m_positionTicks = positionTicks;
         if (m_mediaSource != nullptr && m_codecContext != nullptr && m_videoStreamIndex >= 0)
         {
-            auto videoStream = m_mediaSource->Stream(m_videoStreamIndex);
-            auto timestamp = av_rescale_q(positionTicks, HundredNanosecondTimeBase, videoStream->time_base);
-            m_mediaSource->Seek(m_videoStreamIndex, timestamp);
+            m_mediaSource->Seek(m_videoStreamIndex, positionTicks);
             avcodec_flush_buffers(m_codecContext);
             m_dolbyVisionConfiguration.reset();
             m_decoderDraining = false;

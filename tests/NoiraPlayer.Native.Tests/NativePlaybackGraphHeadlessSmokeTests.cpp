@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <cwchar>
 #include <iostream>
+#include <limits>
 #include <optional>
 #include <string>
 #include <thread>
@@ -32,6 +33,8 @@ namespace
         std::wstring StreamUrl{DefaultStreamUrl};
         int DurationSeconds{3};
         int PauseSeconds{0};
+        int64_t StartPositionTicks{0};
+        std::wstring Scenario{L"playback"};
     };
 
     struct AudioSwitchOutcome
@@ -101,9 +104,33 @@ namespace
                     options.PauseSeconds = static_cast<int>(parsed);
                 }
             }
+            else if (std::wcscmp(argv[index], L"--start-position-ticks") == 0 && index + 1 < argc)
+            {
+                auto parsed = std::wcstoll(argv[++index], nullptr, 10);
+                if (parsed >= 0)
+                {
+                    options.StartPositionTicks = parsed;
+                }
+            }
+            else if (std::wcscmp(argv[index], L"--scenario") == 0 && index + 1 < argc)
+            {
+                auto scenario = std::wstring{argv[++index]};
+                if (scenario == L"playback" ||
+                    scenario == L"timeline" ||
+                    scenario == L"interactions" ||
+                    scenario == L"pause-resume")
+                {
+                    options.Scenario = std::move(scenario);
+                }
+            }
         }
 
         return options;
+    }
+
+    void ReportStage(char const* stage)
+    {
+        std::cerr << "helperStage=" << stage << std::endl;
     }
 
     char const* FormatDxgiColorSpace(DXGI_COLOR_SPACE_TYPE colorSpace)
@@ -157,6 +184,7 @@ namespace
 int wmain(int argc, wchar_t** argv)
 {
     auto options = ParseOptions(argc, argv);
+    ReportStage("started");
     winrt::init_apartment(winrt::apartment_type::multi_threaded);
 
     DxDeviceResources resources;
@@ -174,11 +202,14 @@ int wmain(int argc, wchar_t** argv)
             }
         });
     PlaybackGraphOpenRequest request{};
-    request.DirectStreamUrl = options.StreamUrl;
+        request.DirectStreamUrl = options.StreamUrl;
+        request.StartPositionTicks = options.StartPositionTicks;
 
     try
     {
+        ReportStage("graph-open-started");
         graph.Open(request);
+        ReportStage("graph-open-completed");
         auto sampleWindow = std::chrono::milliseconds(options.DurationSeconds * 1000);
         auto halfWindow = sampleWindow / 2;
         if (halfWindow < 500ms)
@@ -190,6 +221,7 @@ int wmain(int argc, wchar_t** argv)
         auto playbackSnapshot = graph.QualityMetricsSnapshot();
         auto source = graph.VideoSourceSnapshot();
         auto tracks = graph.SourceTrackSnapshots();
+        ReportStage("initial-sample-captured");
 
         std::vector<int32_t> audioStreamIndexes;
         std::vector<int32_t> subtitleStreamIndexes;
@@ -211,6 +243,10 @@ int wmain(int argc, wchar_t** argv)
         SubtitleSwitchOutcome subtitleSwitch2;
         SubtitleOffOutcome subtitleOff;
         SeekOutcome seek;
+        seek.TargetPositionTicks = options.StartPositionTicks >=
+            (std::numeric_limits<int64_t>::max)() - SeekTargetPositionTicks
+            ? (std::numeric_limits<int64_t>::max)()
+            : options.StartPositionTicks + SeekTargetPositionTicks;
 
         auto positionBeforePauseTicks = graph.CurrentPositionTicks();
         auto decodedVideoFramesBeforePause = playbackSnapshot.DecodedVideoFrames;
@@ -219,15 +255,13 @@ int wmain(int argc, wchar_t** argv)
         auto postResumeRenderedVideoFrames = playbackSnapshot.RenderedVideoFrames;
         auto pauseResumeStatus = std::string{"completed"};
         auto pauseResumeRecovered = true;
-        graph.Pause();
-        auto pauseDuration = options.PauseSeconds > 0
-            ? std::chrono::milliseconds(options.PauseSeconds * 1000)
-            : 100ms;
-        std::this_thread::sleep_for(pauseDuration);
-        graph.Resume();
-
-        if (options.PauseSeconds > 0)
+        if (options.Scenario == L"pause-resume")
         {
+            graph.Pause();
+            ReportStage("pause-started");
+            std::this_thread::sleep_for(std::chrono::milliseconds(options.PauseSeconds * 1000));
+            graph.Resume();
+            ReportStage("resume-completed");
             std::this_thread::sleep_for(sampleWindow);
             playbackSnapshot = graph.QualityMetricsSnapshot();
             positionAfterResumeTicks = graph.CurrentPositionTicks();
@@ -241,7 +275,7 @@ int wmain(int argc, wchar_t** argv)
             pauseResumeStatus = pauseResumeRecovered ? "completed" : "failed";
         }
 
-        if (options.PauseSeconds == 0)
+        if (options.Scenario == L"interactions")
         {
             if (audioStreamIndexes.size() >= 2)
             {
@@ -333,17 +367,17 @@ int wmain(int argc, wchar_t** argv)
             return outcome;
         };
 
-        if (options.PauseSeconds == 0 && !subtitleStreamIndexes.empty())
+        if (options.Scenario == L"interactions" && !subtitleStreamIndexes.empty())
         {
             subtitleSwitch1 = runSubtitleSwitch(subtitleStreamIndexes[0], true);
         }
 
-        if (options.PauseSeconds == 0 && subtitleStreamIndexes.size() >= 2)
+        if (options.Scenario == L"interactions" && subtitleStreamIndexes.size() >= 2)
         {
             subtitleSwitch2 = runSubtitleSwitch(subtitleStreamIndexes[1], false);
         }
 
-        if (options.PauseSeconds == 0 && !subtitleStreamIndexes.empty())
+        if (options.Scenario == L"interactions" && !subtitleStreamIndexes.empty())
         {
             subtitleOff.Attempted = true;
             try
@@ -365,8 +399,9 @@ int wmain(int argc, wchar_t** argv)
         auto seekCallCompleted = false;
         auto seekPresentationBefore = graph.SeekPresentationSnapshot();
         auto seekGeneration = seekPresentationBefore.Generation;
-        if (options.PauseSeconds == 0)
+        if (options.Scenario == L"timeline")
         {
+            ReportStage("seek-started");
             seek.Attempted = true;
             try
             {
@@ -394,13 +429,17 @@ int wmain(int argc, wchar_t** argv)
                 seek.PostSeekPlaybackPositionTicks > seek.ActualPositionTicks.value()
                     ? "completed"
                     : "failed";
+            ReportStage("seek-completed");
         }
         auto displayRefreshRateHz = source
             ? HdrDisplayRefreshRatePolicy::SelectSoftwareOnlyRefreshRateSnapshot(source->FrameRate)
             : 0.0;
         auto subtitleCueRenderCount = graph.SubtitleCueRenderCount();
         auto selectedSubtitleStreamIndex = graph.SelectedSubtitleStreamIndex();
+        auto timeline = graph.TimelineSnapshot();
+        ReportStage("graph-stop-started");
         graph.Stop();
+        ReportStage("graph-stop-completed");
 
         std::cout << "decodedVideoFrames=" << playbackSnapshot.DecodedVideoFrames
             << " hardwareDecodedVideoFrames=" << playbackSnapshot.HardwareDecodedVideoFrames
@@ -453,8 +492,11 @@ int wmain(int argc, wchar_t** argv)
             << " seekAttempted=" << (seek.Attempted ? 1 : 0)
             << " seekStatus=" << seek.Status
             << " seekTargetPositionTicks=" << seek.TargetPositionTicks
+            << " seekDemuxTargetTicks=" << timeline.LastSeekDemuxTargetTicks
             << " seekActualPositionTicks=" << seek.ActualPositionTicks.value_or(-1)
             << " postSeekPlaybackPositionTicks=" << seek.PostSeekPlaybackPositionTicks
+            << " postSeekAdvanced=" << (seek.ActualPositionTicks.has_value() &&
+                seek.PostSeekPlaybackPositionTicks > seek.ActualPositionTicks.value() ? 1 : 0)
             << " renderIntervalMsP05=" << playbackSnapshot.RenderIntervalMsP05
             << " renderIntervalMsP50=" << playbackSnapshot.RenderIntervalMsP50
             << " renderIntervalMsP95=" << playbackSnapshot.RenderIntervalMsP95
@@ -531,6 +573,9 @@ int wmain(int argc, wchar_t** argv)
             << " sourceColorPrimaries=" << (source ? source->ColorPrimaries : "")
             << " sourceColorTransfer=" << (source ? source->ColorTransfer : "")
             << " sourceColorSpace=" << (source ? source->ColorSpace : "")
+            << " containerStartTimeTicks=" << timeline.ContainerStartTimeTicks
+            << " videoStreamStartTimeTicks=" << timeline.StreamStartTimeTicks
+            << " logicalDurationTicks=" << timeline.LogicalDurationTicks
             << " dxgiInput=" << FormatDxgiColorSpace(resources.LastVideoProcessorInputColorSpace())
             << " dxgiOutput=" << FormatDxgiColorSpace(resources.LastVideoProcessorOutputColorSpace())
             << " conversionStatus=" << winrt::to_string(winrt::hstring(resources.LastVideoProcessorConversionStatus()))
@@ -565,6 +610,7 @@ int wmain(int argc, wchar_t** argv)
         }
 
         std::cout << std::endl;
+        ReportStage("completed");
 
         assert(playbackSnapshot.DecodedVideoFrames > 1);
         assert(playbackSnapshot.RenderedVideoFrames > 1);

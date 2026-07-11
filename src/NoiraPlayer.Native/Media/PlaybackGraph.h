@@ -91,6 +91,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         PlaybackQualityMetricsSnapshot QualityMetricsSnapshot() const noexcept;
         std::optional<FfmpegVideoStreamSnapshot> VideoSourceSnapshot() const;
         std::vector<FfmpegStreamSnapshot> SourceTrackSnapshots() const;
+        FfmpegTimelineSnapshot TimelineSnapshot() const;
 
     private:
         void StartRenderLoop();

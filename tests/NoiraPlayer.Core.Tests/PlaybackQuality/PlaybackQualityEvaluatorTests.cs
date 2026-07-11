@@ -837,6 +837,78 @@ public sealed class PlaybackQualityEvaluatorTests
     }
 
     [Fact]
+    public void Evaluate_Fails_When_Native_Seek_Evidence_Is_Incomplete()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "native-seek-missing-evidence",
+            Expected = new PlaybackQualityExpected
+            {
+                MaxSeekPositionErrorMs = 250,
+                RequireValidatedConversion = false
+            },
+            Execution = new PlaybackQualityExecutionEvidence
+            {
+                EvidenceLevel = PlaybackQualityEvidenceLevel.NativePlayback
+            },
+            Position = new PlaybackQualityPosition
+            {
+                SeekTargetPositionTicks = 10_000_000,
+                ActualPositionTicks = 10_000_000
+            }
+        };
+
+        PlaybackQualityEvaluator.Evaluate(report);
+
+        Assert.Equal("fail", report.Result);
+        Assert.Contains(report.Checks, check =>
+            check.Signal == "position.seekDemuxTargetTicks" &&
+            check.FailureClass == PlaybackQualityFailureClassification.InsufficientInstrumentation);
+        Assert.Contains(report.Checks, check => check.Signal == "position.firstPresentedPositionTicks");
+        Assert.Contains(report.Checks, check => check.Signal == "position.postSeekAdvanced");
+        Assert.Contains(report.Checks, check => check.Signal == "source.containerStartTimeTicks");
+    }
+
+    [Fact]
+    public void Evaluate_Passes_Complete_Normalized_Native_Seek_Evidence()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "native-seek-complete",
+            Expected = new PlaybackQualityExpected
+            {
+                MaxSeekPositionErrorMs = 100,
+                RequireValidatedConversion = false
+            },
+            Execution = new PlaybackQualityExecutionEvidence
+            {
+                EvidenceLevel = PlaybackQualityEvidenceLevel.NativePlayback
+            },
+            Source = new PlaybackQualitySource
+            {
+                DurationTicks = 60_000_000,
+                ContainerStartTimeTicks = 14_000_000,
+                VideoStreamStartTimeTicks = 14_213_333
+            },
+            Position = new PlaybackQualityPosition
+            {
+                SeekTargetPositionTicks = 10_000_000,
+                SeekDemuxTargetTicks = 24_000_000,
+                ActualPositionTicks = 10_213_333,
+                FirstPresentedPositionTicks = 10_213_333,
+                PostSeekPositionTicks = 20_000_000,
+                PostSeekAdvanced = true
+            }
+        };
+
+        PlaybackQualityEvaluator.Evaluate(report);
+
+        Assert.Equal("pass", report.Result);
+        Assert.Empty(report.FailureReasons);
+        Assert.Equal(21.3333, report.Position.SeekPositionErrorMs!.Value, 4);
+    }
+
+    [Fact]
     public void Evaluate_Fails_With_Missing_Color_Pipeline_Reasons_When_Color_Evidence_Is_Required()
     {
         var report = new PlaybackQualityReport

@@ -75,6 +75,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
         public string Container { get; set; } = "";
         public long Bitrate { get; set; }
         public long DurationTicks { get; set; }
+        public long? ContainerStartTimeTicks { get; set; }
+        public long? VideoStreamStartTimeTicks { get; set; }
         public string Codec { get; set; } = "";
         public int Width { get; set; }
         public int Height { get; set; }
@@ -144,8 +146,18 @@ namespace NoiraPlayer.Core.PlaybackQuality
     {
         public long? RequestedStartPositionTicks { get; set; }
         public long? SeekTargetPositionTicks { get; set; }
+        public long? SeekDemuxTargetTicks { get; set; }
         public long? ActualPositionTicks { get; set; }
+        public long? FirstPresentedPositionTicks { get; set; }
+        public long? PostSeekPositionTicks { get; set; }
+        public bool? PostSeekAdvanced { get; set; }
         public double? SeekPositionErrorMs { get; set; }
+    }
+
+    public sealed class PlaybackQualitySourceTimeline
+    {
+        public long? ContainerStartTimeTicks { get; set; }
+        public long? VideoStreamStartTimeTicks { get; set; }
     }
 
     public sealed class PlaybackQualityTracks

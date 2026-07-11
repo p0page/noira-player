@@ -32,7 +32,10 @@ function Invoke-NativeHeadlessHarnessCase {
         [Parameter(Mandatory = $true)][string]$HeadlessProjectPath,
         [string]$HarnessScriptPath = '',
         [int]$DurationSeconds = 10,
+        [long]$StartPositionTicks = 0,
         [int]$PauseSeconds = 0,
+        [ValidateSet('playback', 'timeline', 'interactions', 'pause-resume')]
+        [string]$Scenario = 'playback',
         [int]$TimeoutSeconds = 60,
         [bool]$ForceSdrOutput = $false
     )
@@ -42,6 +45,8 @@ function Invoke-NativeHeadlessHarnessCase {
         '--stream-url', $StreamUrl,
         '--source-locator-hash', $SourceLocatorHash,
         '--duration-seconds', ([string]$DurationSeconds),
+        '--start-position-ticks', ([string]$StartPositionTicks),
+        '--scenario', $Scenario,
         '--timeout-seconds', ([string]$TimeoutSeconds),
         '--reports-dir', $ReportsDir,
         '--native-helper-exe', $NativeHelperExe
