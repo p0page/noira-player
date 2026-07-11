@@ -143,15 +143,6 @@ public sealed class NativePlaybackGraphDecouplingContractTests
         Assert.Contains("m_lastAudioAheadWaitEndedAt.reset();", graphSource, StringComparison.Ordinal);
     }
 
-    [Fact]
-    public void PlaybackGraph_Computes_The_Next_Audio_Deadline_Immediately_After_Present()
-    {
-        var root = FindRepositoryRoot();
-        var graphSource = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Native", "Media", "PlaybackGraph.cpp"));
-
-        Assert.Contains("PlaybackFramePacing::PostPresentRenderLoopWait(hasAudioClock)", graphSource, StringComparison.Ordinal);
-    }
-
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
