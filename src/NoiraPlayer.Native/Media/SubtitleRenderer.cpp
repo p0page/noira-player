@@ -65,7 +65,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         m_textCueEndTicks = 0;
     }
 
-    void SubtitleRenderer::RenderAt(int64_t positionTicks)
+    bool SubtitleRenderer::RenderAt(int64_t positionTicks)
     {
         if (positionTicks < 0)
         {
@@ -79,8 +79,15 @@ namespace winrt::NoiraPlayer::Native::implementation
                 positionTicks >= m_textCueStartTicks &&
                 positionTicks <= m_textCueEndTicks)
             {
-                m_deviceResources.DrawTextOverlay(m_textCue);
+                return m_deviceResources.DrawTextOverlay(m_textCue);
             }
         }
+
+        return false;
+    }
+
+    std::optional<int32_t> SubtitleRenderer::SelectedStreamIndex() const noexcept
+    {
+        return m_selectedSubtitleStreamIndex;
     }
 }

@@ -17,7 +17,8 @@ namespace winrt::NoiraPlayer::Native::implementation
         void SwitchStream(int32_t subtitleStreamIndex);
         void SetTextCue(std::wstring text, int64_t startTicks, int64_t endTicks);
         void ClearCue() noexcept;
-        void RenderAt(int64_t positionTicks);
+        bool RenderAt(int64_t positionTicks);
+        std::optional<int32_t> SelectedStreamIndex() const noexcept;
 
     private:
         DxDeviceResources& m_deviceResources;

@@ -263,6 +263,18 @@ namespace winrt::NoiraPlayer::Native::implementation
         return m_positionTicks;
     }
 
+    uint64_t PlaybackGraph::SubtitleCueRenderCount() const noexcept
+    {
+        std::lock_guard lock(m_graphMutex);
+        return m_subtitleCueRenderCount;
+    }
+
+    std::optional<int32_t> PlaybackGraph::SelectedSubtitleStreamIndex() const noexcept
+    {
+        std::lock_guard lock(m_graphMutex);
+        return m_subtitleRenderer.SelectedStreamIndex();
+    }
+
     PlaybackQualityMetricsSnapshot PlaybackGraph::QualityMetricsSnapshot() const noexcept
     {
         std::lock_guard lock(m_graphMutex);
@@ -715,7 +727,10 @@ namespace winrt::NoiraPlayer::Native::implementation
             m_subtitleRenderer.ClearCue();
         }
 
-        m_subtitleRenderer.RenderAt(m_positionTicks);
+        if (m_subtitleRenderer.RenderAt(m_positionTicks))
+        {
+            ++m_subtitleCueRenderCount;
+        }
     }
 
     void PlaybackGraph::ResetRuntimeStats() noexcept
@@ -724,6 +739,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         m_renderedVideoFrameCount = 0;
         m_decodedVideoFrameCount = 0;
         m_submittedAudioFrameCount = 0;
+        m_subtitleCueRenderCount = 0;
         m_droppedVideoFrameCount = 0;
         m_videoAheadWaitCount = 0;
         m_audioAheadWaitCount = 0;

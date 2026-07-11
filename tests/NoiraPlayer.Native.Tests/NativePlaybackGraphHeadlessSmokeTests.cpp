@@ -139,6 +139,8 @@ int wmain(int argc, wchar_t** argv)
         auto displayRefreshRateHz = source
             ? HdrDisplayRefreshRatePolicy::SelectSoftwareOnlyRefreshRateSnapshot(source->FrameRate)
             : 0.0;
+        auto subtitleCueRenderCount = graph.SubtitleCueRenderCount();
+        auto selectedSubtitleStreamIndex = graph.SelectedSubtitleStreamIndex();
         graph.Stop();
 
         std::cout << "decodedVideoFrames=" << playbackSnapshot.DecodedVideoFrames
@@ -236,7 +238,9 @@ int wmain(int argc, wchar_t** argv)
             << " isVideoProcessorColorSpaceValidated=" << (resources.LastVideoProcessorConversionWasValidated() ? 1 : 0)
             << " displayRefreshRateHz=" << displayRefreshRateHz
             << " displayRefreshPolicy=software-only-cadence-policy"
-            << " sourceTrackCount=" << tracks.size();
+            << " sourceTrackCount=" << tracks.size()
+            << " subtitleCueRenderCount=" << subtitleCueRenderCount
+            << " selectedSubtitleStreamIndex=" << selectedSubtitleStreamIndex.value_or(-1);
 
         for (auto index = size_t{0}; index < tracks.size(); ++index)
         {
