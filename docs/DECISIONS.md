@@ -1,5 +1,13 @@
 ﻿# 技术决策
 
+## 2026-07-11：HTTP 播放断线采用 FFmpeg 有界协议重连并纳入确定性门禁
+
+决策：仅对 HTTP/HTTPS 输入向 `avformat_open_input` 传入 `reconnect=1`、`reconnect_on_network_error=1`、`reconnect_max_retries=3`、`reconnect_delay_max=2` 和 `reconnect_delay_total_max=6`。不启用无限重试，不把 EOF 强制解释为断线，也不改变本地文件路径；重连耗尽时继续以原始 FFmpeg 错误失败。
+
+原因：真实 App 在长暂停恢复后遇到闲置连接 I/O error，旧实现没有任何协议恢复。Kodi 允许将 reconnect 系列选项传给 FFmpeg，并在自己的 HTTP 层使用有限 watchdog；本项目直接采用 FFmpeg 8 已有协议能力，避免自行重写 demux、重新打开和时间线恢复状态机。最大次数和总延迟同时受限，防止网络故障把停止、返回或失败变成无界等待。
+
+评测决策：真实 App 网络故障必须沉淀为单一、可归因的软件回归场景。native-headless gate 现在使用本地生成媒体和 Range 服务器，在第一次响应中声明完整长度后强制断开；通过条件同时要求 helper 正常退出、`pauseResumeStatus=completed`、`playbackFailed=0`，并观察到具有非零 offset 的第二个请求。服务器、播放器和报告解析错误必须分别归类，不得以远端偶发未复现冒充通过。
+
 ## 2026-07-11：播放 Core 修复必须经过完整 App-hosted 构建与实播
 
 决策：App-free native evidence 继续作为快速、可重复的 Core 门禁，但播放修复在宣称完成前必须再通过完整 App 的 Web/Core/Native/FFmpeg/Native AOT Publish、AppX layout 验证、注册启动和真实 App-hosted 播放。AppX layout 必须显式验证 `WebCode\index.html`，防止构建成功但 WebView 资源缺失的假阳性。

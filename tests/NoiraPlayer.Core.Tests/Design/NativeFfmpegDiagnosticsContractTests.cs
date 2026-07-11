@@ -58,6 +58,22 @@ public sealed class NativeFfmpegDiagnosticsContractTests
         Assert.Contains("m_mediaSource.Interrupt();", graphSource, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Native_Http_Input_Enables_Bounded_Ffmpeg_Reconnect_For_Idle_Connection_Recovery()
+    {
+        var source = ReadNativeSource("Media", "FfmpegMediaSource.cpp");
+
+        Assert.Contains("IsHttpSource", source, StringComparison.Ordinal);
+        Assert.Contains("AVDictionary* openOptions", source, StringComparison.Ordinal);
+        Assert.Contains("\"reconnect\", \"1\"", source, StringComparison.Ordinal);
+        Assert.Contains("\"reconnect_on_network_error\", \"1\"", source, StringComparison.Ordinal);
+        Assert.Contains("\"reconnect_max_retries\", \"3\"", source, StringComparison.Ordinal);
+        Assert.Contains("\"reconnect_delay_max\", \"2\"", source, StringComparison.Ordinal);
+        Assert.Contains("\"reconnect_delay_total_max\", \"6\"", source, StringComparison.Ordinal);
+        Assert.Contains("avformat_open_input(&formatContext, source.c_str(), nullptr, &openOptions)", source, StringComparison.Ordinal);
+        Assert.Contains("av_dict_free(&openOptions);", source, StringComparison.Ordinal);
+    }
+
     private static string ReadNativeSource(params string[] segments)
     {
         var parts = new string[segments.Length + 3];

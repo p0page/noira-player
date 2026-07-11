@@ -2,6 +2,14 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-11 更新：长暂停后的 HTTP 断线已改为有界恢复
+
+完整 App 日志确认：播放约 15 秒后暂停约 5 分半，恢复 276ms 后 `av_read_frame` 返回 `I/O error`，旧播放器立即进入 `Failed`。当前 FFmpeg HTTP/HTTPS 输入已启用有界重连：最多 3 次，单次延迟不超过 2 秒、累计延迟不超过 6 秒；本地文件不受影响，耗尽后仍保留原始失败。
+
+本轮新增独立的 native 长暂停场景，并建立本地可控 Range 故障服务器。相同 30 秒 H.264/AAC 样本在 3,145,728 字节处强制 RST 时，`main` 旧 helper 出现 partial/corrupt packet、`playbackFailed=1`、退出 2；候选明确输出 FFmpeg `Will reconnect`，发起第二个 Range 请求，继续解码并以 `playbackFailed=0`、退出 0 完成。该故障注入现已接入 native-headless gate，整套脚本最终输出 `native network reconnect smoke passed` 与 `native-headless-harness smoke ok`。
+
+私有 Emby 同源验证中，候选在约 12.8 秒处暂停 360 秒，恢复后持续推进到约 42.8 秒并解码 1285 帧，没有进入 `Failed`。Core 全量测试通过，Debug x64 完整构建通过；Native AOT AppX layout 已重新生成、注册并启动为 `0.1.0.279`，运行路径指向当前修复 worktree。尚未在新 App UI 中再次等待 5 分半复跑同一人工操作，但 Core 断线恢复已有确定性旧版/候选软件证据，且完整 App 已携带并启动新 native DLL。
+
 ## 2026-07-11 更新：播放修复已完成完整 App 构建与 App-hosted 实播
 
 提交 `061be2c` 之后不再只以 App-free helper 作为结论。本轮从干净 Native/App 输出重新执行 Debug x64 Native AOT Publish，修复了现代 App 项目在 `BuildNoiraWebClient` 执行前检查 `dist/index.html`、导致 `WebCode` 被静默漏出 AppX recipe 的目标顺序错误；注册脚本现在也强制验证 `WebCode\index.html`。修复后的完整 AppX layout 包含 Web、Core、Native、FFmpeg 和 AOT executable，重新注册后成功启动、恢复本地 Emby 会话并加载真实媒体库。
