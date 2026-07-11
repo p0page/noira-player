@@ -1,4 +1,5 @@
 ﻿using NoiraPlayer.Core.PlaybackQuality;
+using System.Linq;
 using Xunit;
 
 namespace NoiraPlayer.Core.Tests.PlaybackQuality;
@@ -142,7 +143,7 @@ public sealed class PlaybackQualityComparisonSuiteTests
             Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "180.000"),
             Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "120.000"));
         var weak = PlaybackQualityRunComparator.Compare(
-            new PlaybackQualityReport { RunId = "baseline-missing" },
+            Report("baseline-missing"),
             Report("candidate", Check("RenderedVideoFrames", "fail", "frame-pacing", "timing.renderedVideoFrames", "120", "24")));
         weak.CaseId = "evidence/missing-baseline";
 
@@ -193,7 +194,7 @@ public sealed class PlaybackQualityComparisonSuiteTests
     public void Summarize_Emits_NextAction_For_Evidence_Blockers()
     {
         var weak = PlaybackQualityRunComparator.Compare(
-            new PlaybackQualityReport { RunId = "baseline-missing" },
+            Report("baseline-missing"),
             Report("candidate", Check("RenderedVideoFrames", "fail", "frame-pacing", "timing.renderedVideoFrames", "120", "24")));
         weak.CaseId = "evidence/missing-baseline";
 
@@ -350,6 +351,29 @@ public sealed class PlaybackQualityComparisonSuiteTests
         Assert.Contains("src/NoiraPlayer.Native/DxDeviceResources.cpp", suite.CodeTargets);
     }
 
+    [Fact]
+    public void Summarize_CollectsEvidence_When_Execution_Source_Is_Incompatible()
+    {
+        var baseline = Report(
+            "baseline",
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "180.000"));
+        var candidate = Report(
+            "candidate",
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "120.000"));
+        candidate.Execution.SourceLocatorHash = "sha256:" + new string('b', 64);
+        var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
+        comparison.CaseId = "execution/source-mismatch";
+
+        var suite = PlaybackQualityComparisonSuiteAggregator.Summarize(new[] { comparison });
+
+        Assert.Equal("collect-comparable-evidence", suite.Action);
+        Assert.Equal(1, suite.InsufficientEvidenceCount);
+        Assert.Equal(0, suite.ImprovedCount);
+        Assert.Contains("comparison.incompatible-inputs", suite.Blockers);
+        Assert.Contains("execution.sourceLocatorHash", suite.Signals);
+        Assert.Contains("execution/source-mismatch", suite.TargetCaseIds);
+    }
+
     private static PlaybackQualityRunComparison Compare(
         PlaybackQualityCheck baselineCheck,
         PlaybackQualityCheck candidateCheck)
@@ -371,10 +395,29 @@ public sealed class PlaybackQualityComparisonSuiteTests
         report.Source.MediaSourceId = "source-1";
         report.Source.FrameRate = 23.976;
         report.Source.HdrKind = "Sdr";
+        report.Execution = new PlaybackQualityExecutionEvidence
+        {
+            AttemptId = "attempt-" + runId,
+            Runner = "native-headless",
+            EvidenceLevel = PlaybackQualityEvidenceLevel.NativePlayback,
+            Status = PlaybackQualityExecutionStatus.Completed,
+            SourceLocatorHash = "sha256:" + new string('a', 64),
+            OpenedSourceHash = "sha256:" + new string('a', 64),
+            StartedAtUtc = "2026-07-11T00:00:00.0000000+00:00",
+            DurationMs = 1000,
+            SourceOpenAttempted = true,
+            SourceOpened = true,
+            NativeGraphOpened = true,
+            DemuxStarted = true,
+            DecoderOpened = true,
+            PlaybackSampleObserved = true
+        };
         foreach (var check in checks)
         {
             report.Checks.Add(check);
         }
+
+        report.Result = checks.Any(check => check.Status == "fail") ? "fail" : "pass";
 
         return report;
     }

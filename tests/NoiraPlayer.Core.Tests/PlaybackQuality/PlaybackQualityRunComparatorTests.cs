@@ -750,7 +750,7 @@ public sealed class PlaybackQualityRunComparatorTests
     [Fact]
     public void Compare_Reports_Insufficient_Evidence_When_Checks_Are_Missing()
     {
-        var baseline = new PlaybackQualityReport { RunId = "baseline" };
+        var baseline = CreateReport("baseline");
         var candidate = CreateReport(
             "candidate",
             Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "180.000"));
@@ -846,6 +846,98 @@ public sealed class PlaybackQualityRunComparatorTests
     }
 
     [Fact]
+    public void Compare_Reports_Insufficient_When_Execution_Evidence_Levels_Differ()
+    {
+        var baseline = CreateReport(
+            "baseline",
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "180.000"));
+        baseline.Execution.EvidenceLevel = PlaybackQualityEvidenceLevel.Orchestration;
+        var candidate = CreateReport(
+            "candidate",
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "120.000"));
+
+        var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
+
+        Assert.Equal("insufficient-evidence", comparison.Result);
+        Assert.Empty(comparison.Improvements);
+        Assert.Empty(comparison.Regressions);
+        Assert.Contains("execution.evidenceLevel", comparison.Comparability.Signals);
+    }
+
+    [Fact]
+    public void Compare_Reports_Insufficient_When_Execution_Runners_Differ()
+    {
+        var baseline = CreateReport(
+            "baseline",
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "180.000"));
+        var candidate = CreateReport(
+            "candidate",
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "120.000"));
+        candidate.Execution.Runner = "alternate-native-runner";
+
+        var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
+
+        Assert.Equal("insufficient-evidence", comparison.Result);
+        Assert.Empty(comparison.Improvements);
+        Assert.Empty(comparison.Regressions);
+        Assert.Contains("execution.runner", comparison.Comparability.Signals);
+    }
+
+    [Fact]
+    public void Compare_Reports_Insufficient_When_Source_Locator_Hashes_Differ()
+    {
+        var baseline = CreateReport(
+            "baseline",
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "180.000"));
+        var candidate = CreateReport(
+            "candidate",
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "120.000"));
+        candidate.Execution.SourceLocatorHash = "sha256:" + new string('b', 64);
+
+        var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
+
+        Assert.Equal("insufficient-evidence", comparison.Result);
+        Assert.Empty(comparison.Improvements);
+        Assert.Contains("execution.sourceLocatorHash", comparison.Comparability.Signals);
+    }
+
+    [Fact]
+    public void Compare_Reports_Insufficient_When_Completed_Execution_Is_Incomplete()
+    {
+        var baseline = CreateReport(
+            "baseline",
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "180.000"));
+        var candidate = CreateReport(
+            "candidate",
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "120.000"));
+        candidate.Execution.OpenedSourceHash = "";
+
+        var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
+
+        Assert.Equal("insufficient-evidence", comparison.Result);
+        Assert.Empty(comparison.Improvements);
+        Assert.Contains("execution.openedSourceHash", comparison.Comparability.Signals);
+    }
+
+    [Fact]
+    public void Compare_Reports_Insufficient_When_Opened_Source_Hashes_Differ()
+    {
+        var baseline = CreateReport(
+            "baseline",
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "180.000"));
+        var candidate = CreateReport(
+            "candidate",
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "120.000"));
+        candidate.Execution.OpenedSourceHash = "sha256:" + new string('c', 64);
+
+        var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
+
+        Assert.Equal("insufficient-evidence", comparison.Result);
+        Assert.Empty(comparison.Improvements);
+        Assert.Contains("execution.openedSourceHash", comparison.Comparability.Signals);
+    }
+
+    [Fact]
     public void Serializer_Writes_Run_Comparison_With_CamelCase_Field_Names()
     {
         var baseline = CreateReport(
@@ -905,6 +997,23 @@ public sealed class PlaybackQualityRunComparatorTests
         report.Environment.PlayerCoreVersion = "core-" + runId;
         report.Environment.SourceRevision = "revision-" + runId;
         report.Environment.BuildConfiguration = "Debug";
+        report.Execution = new PlaybackQualityExecutionEvidence
+        {
+            AttemptId = "attempt-" + runId,
+            Runner = "native-headless",
+            EvidenceLevel = PlaybackQualityEvidenceLevel.NativePlayback,
+            Status = PlaybackQualityExecutionStatus.Completed,
+            SourceLocatorHash = "sha256:" + new string('a', 64),
+            OpenedSourceHash = "sha256:" + new string('a', 64),
+            StartedAtUtc = "2026-07-11T00:00:00.0000000+00:00",
+            DurationMs = 1000,
+            SourceOpenAttempted = true,
+            SourceOpened = true,
+            NativeGraphOpened = true,
+            DemuxStarted = true,
+            DecoderOpened = true,
+            PlaybackSampleObserved = true
+        };
         foreach (var check in checks)
         {
             report.Checks.Add(check);

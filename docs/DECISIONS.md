@@ -1,5 +1,13 @@
 ﻿# 技术决策
 
+## 2026-07-11：候选比较必须先证明执行链路和实际媒体源等价
+
+决策：baseline/candidate 在进入指标比较前，必须同时具备完整的真实播放 execution evidence，并具有相同 evidence level、runner 与 `sourceLocatorHash`。若两侧均已打开源，还必须具有相同 `openedSourceHash`。完成态报告必须证明 source open、native graph、demux、decoder 和 playback sample 均发生；证据缺失、跨 orchestration/native 层级、跨 runner 或跨源时统一输出 `insufficient-evidence`，禁止产生 improvement/regression。
+
+原因：旧比较器只比较报告中的 source metadata 和 telemetry，无法证明两份数字来自同一个实际执行源，因此 probe、手工夹具或解析到不同 Emby source 的报告可能被误判成 Core 改善。locator hash 用于稳定关联同一测试意图，opened source hash 用于阻止重定向、动态解析或错误选源造成的实际媒体混比；二者只保存匿名摘要，不泄露私有 URL 或 token。
+
+边界：失败运行和成功运行可以在 locator 相同且各自 execution 与 result 自洽时比较，用于证明故障修复；不要求二者到达相同执行阶段。现有指标方向、阈值和采纳算法保持不变，本决策只增加比较前的真实性门禁。
+
 ## 2026-07-11：HTTP 播放断线采用 FFmpeg 有界协议重连并纳入确定性门禁
 
 决策：仅对 HTTP/HTTPS 输入向 `avformat_open_input` 传入 `reconnect=1`、`reconnect_on_network_error=1`、`reconnect_max_retries=3`、`reconnect_delay_max=2` 和 `reconnect_delay_total_max=6`。不启用无限重试，不把 EOF 强制解释为断线，也不改变本地文件路径；重连耗尽时继续以原始 FFmpeg 错误失败。

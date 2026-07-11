@@ -441,6 +441,45 @@ namespace NoiraPlayer.Core.PlaybackQuality
             PlaybackQualityReport candidate)
         {
             var assessment = new PlaybackQualityComparabilityAssessment();
+            ValidateExecutionEvidence(assessment, baseline);
+            ValidateExecutionEvidence(assessment, candidate);
+
+            var baselineExecution = baseline.Execution ?? new PlaybackQualityExecutionEvidence();
+            var candidateExecution = candidate.Execution ?? new PlaybackQualityExecutionEvidence();
+            if (!string.Equals(
+                    baselineExecution.EvidenceLevel,
+                    candidateExecution.EvidenceLevel,
+                    StringComparison.Ordinal))
+            {
+                AddIncompatibility(assessment, "execution.evidenceLevel");
+            }
+
+            if (!string.Equals(
+                    baselineExecution.Runner,
+                    candidateExecution.Runner,
+                    StringComparison.Ordinal))
+            {
+                AddIncompatibility(assessment, "execution.runner");
+            }
+
+            if (!string.Equals(
+                    baselineExecution.SourceLocatorHash,
+                    candidateExecution.SourceLocatorHash,
+                    StringComparison.Ordinal))
+            {
+                AddIncompatibility(assessment, "execution.sourceLocatorHash");
+            }
+
+            if (baselineExecution.SourceOpened &&
+                candidateExecution.SourceOpened &&
+                !string.Equals(
+                    baselineExecution.OpenedSourceHash,
+                    candidateExecution.OpenedSourceHash,
+                    StringComparison.Ordinal))
+            {
+                AddIncompatibility(assessment, "execution.openedSourceHash");
+            }
+
             AddMismatchIfBothPresent(
                 assessment,
                 "source.itemId",
@@ -470,6 +509,132 @@ namespace NoiraPlayer.Core.PlaybackQuality
             }
 
             return assessment;
+        }
+
+        private static void ValidateExecutionEvidence(
+            PlaybackQualityComparabilityAssessment assessment,
+            PlaybackQualityReport report)
+        {
+            var execution = report.Execution ?? new PlaybackQualityExecutionEvidence();
+            if (!PlaybackQualityEvidenceLevel.IsKnown(execution.EvidenceLevel) ||
+                !PlaybackQualityEvidenceLevel.MeetsMinimum(
+                    execution.EvidenceLevel,
+                    PlaybackQualityEvidenceLevel.NativePlayback))
+            {
+                AddIncompatibility(assessment, "execution.evidenceLevel");
+            }
+
+            if (string.IsNullOrWhiteSpace(execution.AttemptId))
+            {
+                AddIncompatibility(assessment, "execution.attemptId");
+            }
+
+            if (string.IsNullOrWhiteSpace(execution.Runner))
+            {
+                AddIncompatibility(assessment, "execution.runner");
+            }
+
+            if (!PlaybackQualityExecutionStatus.IsKnown(execution.Status))
+            {
+                AddIncompatibility(assessment, "execution.status");
+            }
+
+            if (!IsSha256Fingerprint(execution.SourceLocatorHash))
+            {
+                AddIncompatibility(assessment, "execution.sourceLocatorHash");
+            }
+
+            if (!DateTimeOffset.TryParse(
+                    execution.StartedAtUtc,
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.RoundtripKind,
+                    out var startedAt) ||
+                startedAt.Offset != TimeSpan.Zero)
+            {
+                AddIncompatibility(assessment, "execution.startedAtUtc");
+            }
+
+            if (!double.IsFinite(execution.DurationMs) || execution.DurationMs < 0)
+            {
+                AddIncompatibility(assessment, "execution.durationMs");
+            }
+
+            if (!execution.SourceOpenAttempted)
+            {
+                AddIncompatibility(assessment, "execution.sourceOpenAttempted");
+            }
+
+            if (execution.SourceOpened && !IsSha256Fingerprint(execution.OpenedSourceHash))
+            {
+                AddIncompatibility(assessment, "execution.openedSourceHash");
+            }
+
+            ValidateExecutionStatus(assessment, report.Result, execution.Status);
+            if (report.Result == PlaybackQualityReportResult.Pass ||
+                report.Result == PlaybackQualityReportResult.Fail)
+            {
+                RequireExecutionStage(assessment, execution.SourceOpened, "execution.sourceOpened");
+                RequireExecutionStage(assessment, execution.NativeGraphOpened, "execution.nativeGraphOpened");
+                RequireExecutionStage(assessment, execution.DemuxStarted, "execution.demuxStarted");
+                RequireExecutionStage(assessment, execution.DecoderOpened, "execution.decoderOpened");
+                RequireExecutionStage(assessment, execution.PlaybackSampleObserved, "execution.playbackSampleObserved");
+            }
+        }
+
+        private static void ValidateExecutionStatus(
+            PlaybackQualityComparabilityAssessment assessment,
+            string result,
+            string status)
+        {
+            var matches = result switch
+            {
+                PlaybackQualityReportResult.Pass or PlaybackQualityReportResult.Fail =>
+                    status == PlaybackQualityExecutionStatus.Completed,
+                PlaybackQualityReportResult.Error =>
+                    status == PlaybackQualityExecutionStatus.Failed ||
+                    status == PlaybackQualityExecutionStatus.TimedOut ||
+                    status == PlaybackQualityExecutionStatus.Cancelled,
+                PlaybackQualityReportResult.Unsupported =>
+                    status == PlaybackQualityExecutionStatus.Unsupported,
+                _ => false
+            };
+            if (!matches)
+            {
+                AddIncompatibility(assessment, "execution.status");
+            }
+        }
+
+        private static void RequireExecutionStage(
+            PlaybackQualityComparabilityAssessment assessment,
+            bool observed,
+            string signal)
+        {
+            if (!observed)
+            {
+                AddIncompatibility(assessment, signal);
+            }
+        }
+
+        private static bool IsSha256Fingerprint(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value) ||
+                value.Length != 71 ||
+                !value.StartsWith("sha256:", StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            for (var index = 7; index < value.Length; index++)
+            {
+                var character = value[index];
+                if (!((character >= '0' && character <= '9') ||
+                    (character >= 'a' && character <= 'f')))
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         private static void AddMismatchIfBothPresent(

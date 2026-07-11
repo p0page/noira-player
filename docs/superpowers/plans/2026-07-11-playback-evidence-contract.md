@@ -140,12 +140,12 @@
 - Consumes: baseline/candidate execution evidence
 - Produces: evidence/source mismatch 时 `insufficient-evidence`
 
-- [ ] 写失败测试：orchestration baseline 与 native candidate 不可比较。
-- [ ] 写失败测试：source locator/opened source hash 不同不可比较。
-- [ ] 写失败测试：任一侧 execution evidence 不完整不可产生 improvement/regression。
-- [ ] 实现 comparability gate，并保留现有指标比较算法。
-- [ ] 运行 comparator 和 candidate script tests。
-- [ ] 提交 `fix: compare only equivalent playback executions`。
+- [x] 写失败测试：orchestration baseline 与 native candidate 不可比较。
+- [x] 写失败测试：source locator/opened source hash 不同不可比较。
+- [x] 写失败测试：任一侧 execution evidence 不完整不可产生 improvement/regression。
+- [x] 实现 comparability gate，并保留现有指标比较算法。
+- [x] 运行 comparator 和 candidate script tests。
+- [x] 提交 `fix: compare only equivalent playback executions`。
 
 ### Task 7: 建立 timeline/seek 真实回归 case 并对照成熟播放器
 

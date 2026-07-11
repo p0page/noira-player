@@ -2,6 +2,12 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-11 更新：baseline/candidate 跨执行证据比较已被阻断
+
+`PlaybackQualityRunComparator` 现在先验证执行证据可比性，再计算任何改善或回退。两侧必须具有完整的真实播放 execution、相同 evidence level、相同 runner、相同匿名 source locator；若两侧均成功打开媒体，还必须具有相同 opened source hash。`completed` 的 pass/fail 报告还必须证明 source open、native graph、demux、decoder 和 playback sample 均真实发生。任一条件不满足时，比较固定输出 `insufficient-evidence`，不再让纸面 telemetry 变化产生 improvement/regression。
+
+CLI smoke、Core comparator/suite 测试和 candidate 编排测试已覆盖 orchestration/native 混比、locator 不同、实际打开源不同及执行证据不完整。candidate 脚本端到端测试还证明：即使候选的帧间隔数字明显更好，只要 opened source hash 不同，suite 仍必须拒绝采纳。正式 baseline 已在上一提交停止生成 core-probe actual；probe 仅保留为 evaluator self-test。
+
 ## 2026-07-11 更新：长暂停后的 HTTP 断线已改为有界恢复
 
 完整 App 日志确认：播放约 15 秒后暂停约 5 分半，恢复 276ms 后 `av_read_frame` 返回 `I/O error`，旧播放器立即进入 `Failed`。当前 FFmpeg HTTP/HTTPS 输入已启用有界重连：最多 3 次，单次延迟不超过 2 秒、累计延迟不超过 6 秒；本地文件不受影响，耗尽后仍保留原始失败。

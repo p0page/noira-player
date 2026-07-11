@@ -279,6 +279,21 @@ try {
 }
 '@ | Set-Content -LiteralPath $candidatePath -Encoding UTF8
 
+    Set-SmokeNativeExecutionEvidence `
+        -Path $baselinePath `
+        -Locator 'https://example.invalid/item-1/source-1.mp4' `
+        -AttemptId 'direct-compare-baseline-attempt' `
+        -Status 'completed' `
+        -SourceOpened $true `
+        -PlaybackSampleObserved $true
+    Set-SmokeNativeExecutionEvidence `
+        -Path $candidatePath `
+        -Locator 'https://example.invalid/item-1/source-1.mp4' `
+        -AttemptId 'direct-compare-candidate-attempt' `
+        -Status 'completed' `
+        -SourceOpened $true `
+        -PlaybackSampleObserved $true
+
     $baselineReportJson = Get-Content -Raw -LiteralPath $baselinePath
     $candidateReportJson = Get-Content -Raw -LiteralPath $candidatePath
 

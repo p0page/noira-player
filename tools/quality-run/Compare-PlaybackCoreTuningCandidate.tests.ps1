@@ -4,173 +4,237 @@ $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 $baselineScriptPath = Join-Path $repoRoot 'tools\quality-run\New-PlaybackCoreTuningBaseline.ps1'
 $comparisonScriptPath = Join-Path $repoRoot 'tools\quality-run\Compare-PlaybackCoreTuningCandidate.ps1'
 $tempRoot = Join-Path ([System.IO.Path]::GetTempPath()) ('playback-core-tuning-candidate-comparison-test-' + [Guid]::NewGuid().ToString('N'))
-$baselineRoot = Join-Path $tempRoot 'baseline'
-$candidateRoot = Join-Path $tempRoot 'candidate'
-$comparisonRoot = Join-Path $tempRoot 'comparison'
-$candidateCadenceStabilityPath = Join-Path $tempRoot 'candidate-cadence-stability.local.json'
 
 try {
-    powershell -NoProfile -ExecutionPolicy Bypass -File $baselineScriptPath `
-        -NoPrivateManifest `
-        -SkipNativeHeadless `
-        -OutputRoot $baselineRoot `
-        -SourceRevision 'baseline-test-revision'
-    if ($LASTEXITCODE -ne 0) {
-        throw 'New-PlaybackCoreTuningBaseline.ps1 returned a non-zero exit code for baseline.'
-    }
-
-    powershell -NoProfile -ExecutionPolicy Bypass -File $baselineScriptPath `
-        -NoPrivateManifest `
-        -SkipNativeHeadless `
-        -OutputRoot $candidateRoot `
-        -SourceRevision 'candidate-test-revision'
-    if ($LASTEXITCODE -ne 0) {
-        throw 'New-PlaybackCoreTuningBaseline.ps1 returned a non-zero exit code for candidate.'
-    }
+    New-Item -ItemType Directory -Path $tempRoot -Force | Out-Null
+    $manifestPath = Join-Path $tempRoot 'manifest.json'
+    $fakeHarness = Join-Path $tempRoot 'fake-harness.ps1'
+    $fakeHelper = Join-Path $tempRoot 'fake-helper.exe'
+    $baselineRoot = Join-Path $tempRoot 'baseline'
+    $candidateRoot = Join-Path $tempRoot 'candidate'
+    $comparisonRoot = Join-Path $tempRoot 'comparison'
+    $candidateCadenceStabilityPath = Join-Path $tempRoot 'candidate-cadence-stability.local.json'
+    Set-Content -LiteralPath $fakeHelper -Value '' -Encoding ASCII
 
     @'
 {
   "schemaVersion": 1,
-  "kind": "playback-cadence-stability-summary",
-  "minimumSamples": 3,
-  "materialityMs": 2.0,
-  "totalGroupCount": 1,
-  "stableGroupCount": 0,
-  "unstableGroupCount": 1,
-  "insufficientSampleGroupCount": 0,
-  "unstableCaseGroupIds": [
-    "local/native-headless-hdr10-60"
-  ],
-  "groups": [
+  "cases": [
     {
-      "caseGroupId": "local/native-headless-hdr10-60",
-      "stability": "unstable",
-      "sampleCount": 3,
-      "renderIntervalP05ExpectedErrorSpreadMs": 2.1,
-      "renderIntervalP99ExpectedErrorSpreadMs": 3.2,
-      "minFrameGapExpectedErrorSpreadMs": 2.3,
-      "maxFrameGapExpectedErrorSpreadMs": 3.2,
-      "audioAheadWaitOversleepP95SpreadMs": 4.4,
-      "audioAheadWaitFinalDeltaAbsP95SpreadMs": 5.5,
-      "audioAheadWaitEndToPresentSampleCountSpread": 1.0,
-      "audioAheadWaitEndToPresentP95SpreadMs": 6.6,
-      "audioAheadWaitEndToPresentP99SpreadMs": 7.7,
-      "unstableSignals": [
-        "framePacing.renderIntervalP99ExpectedErrorMs",
-        "framePacing.maxFrameGapExpectedErrorMs",
-        "timing.audioAheadWaitOversleepMsP95",
-        "timing.audioAheadWaitFinalDeltaAbsMsP95",
-        "timing.audioAheadWaitEndToPresentMsP95"
-      ]
+      "caseId": "comparison/native-source-equivalence",
+      "category": "stable",
+      "severity": "high",
+      "stability": "stable",
+      "uri": "https://media.invalid/native-source-equivalence.mp4",
+      "executionRequirement": { "minimumEvidenceLevel": "native-playback" },
+      "purpose": [
+        "sdr-smoke", "hdr-output", "hdr-force-sdr", "dv-reject", "dv-fallback",
+        "cadence-23.976", "frame-pacing", "av-sync", "buffering", "timeline",
+        "tracks", "subtitles", "end-of-stream", "error-handling", "cadence-24"
+      ],
+      "expected": {
+        "codec": "h264",
+        "width": 320,
+        "height": 180,
+        "frameRate": 24,
+        "hdrKind": "Sdr",
+        "isDirectPlayable": true,
+        "minRenderedVideoFrames": 1,
+        "requireValidatedConversion": false,
+        "requireMatchedDisplayRefreshRate": true
+      }
     }
   ]
 }
-'@ | Set-Content -LiteralPath $candidateCadenceStabilityPath -Encoding UTF8
+'@ | Set-Content -LiteralPath $manifestPath -Encoding UTF8
+
+    @'
+param([Parameter(ValueFromRemainingArguments = $true)][string[]]$Arguments)
+
+function Get-Value([string]$Name) {
+    $index = [Array]::IndexOf($Arguments, $Name)
+    if ($index -lt 0 -or $index + 1 -ge $Arguments.Count) { return '' }
+    return $Arguments[$index + 1]
+}
+
+$caseId = Get-Value '--case-id'
+$reportsDir = Get-Value '--reports-dir'
+$locatorHash = Get-Value '--source-locator-hash'
+$openedHash = $env:NOIRAPLAYER_COMPARISON_TEST_OPENED_HASH
+$sourceRevision = $env:NOIRAPLAYER_COMPARISON_TEST_REVISION
+$maxFrameGap = [double]$env:NOIRAPLAYER_COMPARISON_TEST_MAX_FRAME_GAP
+$reportPath = Join-Path $reportsDir ($caseId.Replace('/', [System.IO.Path]::DirectorySeparatorChar) + '.json')
+New-Item -ItemType Directory -Path (Split-Path -Parent $reportPath) -Force | Out-Null
+
+$report = [ordered]@{
+    runId = $caseId
+    metricVersion = 'software-quality-v1'
+    result = 'fail'
+    expected = @{
+        codec = 'h264'; width = 320; height = 180; frameRate = 24.0; hdrKind = 'Sdr'
+        minRenderedVideoFrames = 1; requireValidatedConversion = $false
+        requireMatchedDisplayRefreshRate = $true
+    }
+    environment = @{
+        collectorVersion = 'native-comparison-fixture-v1'
+        playerCoreVersion = 'comparison-test-core'
+        sourceRevision = $sourceRevision
+        buildConfiguration = 'Debug'
+    }
+    execution = @{
+        attemptId = 'attempt-' + $sourceRevision
+        runner = 'native-headless'
+        evidenceLevel = 'native-playback'
+        status = 'completed'
+        sourceLocatorHash = $locatorHash
+        openedSourceHash = $openedHash
+        startedAtUtc = '2026-07-11T00:00:00.0000000+00:00'
+        durationMs = 3000.0
+        sourceOpenAttempted = $true
+        sourceOpened = $true
+        nativeGraphOpened = $true
+        demuxStarted = $true
+        decoderOpened = $true
+        playbackSampleObserved = $true
+    }
+    source = @{
+        codec = 'h264'; hasDirectStreamUrl = $true; directStreamProtocol = 'https'
+        container = 'mp4'; bitrate = 1000000; durationTicks = 600000000
+        width = 320; height = 180; frameRate = 24.0; hdrKind = 'Sdr'; videoRange = 'SDR'
+        colorPrimaries = 'bt709'; colorTransfer = 'bt709'; colorSpace = 'bt709'
+        isHdr = $false; isDirectPlayable = $true; isDolbyVision = $false
+        hasHdr10BaseLayer = $false; hasHlgBaseLayer = $false
+    }
+    startup = @{
+        commandReceivedAt = '2026-07-11T00:00:00.0000000+00:00'
+        playbackStartedAt = '2026-07-11T00:00:00.3000000+00:00'
+        startupDurationMs = 300.0
+    }
+    lifecycle = @{
+        events = @(
+            @{ operation = 'load'; status = 'completed'; positionTicks = 0 },
+            @{ operation = 'play'; status = 'completed'; positionTicks = 0 },
+            @{ operation = 'pause'; status = 'completed'; positionTicks = 10000000 },
+            @{ operation = 'resume'; status = 'completed'; positionTicks = 10000000 },
+            @{ operation = 'seek'; status = 'completed'; positionTicks = 10000000 },
+            @{ operation = 'stop'; status = 'completed'; positionTicks = 30000000 },
+            @{ operation = 'error'; status = 'not-applicable'; positionTicks = 0 }
+        )
+    }
+    position = @{
+        requestedStartPositionTicks = 0; seekTargetPositionTicks = 10000000
+        actualPositionTicks = 10000000; seekPositionErrorMs = 0.0
+    }
+    tracks = @{
+        videoTrackCount = 1; audioTrackCount = 1; subtitleTrackCount = 1
+        selectedVideoStreamIndex = 0; selectedAudioStreamIndex = 1
+        selectedSubtitleStreamIndex = -1; isSubtitleDisabled = $true
+        video = @(@{ index = 0; kind = 'Video'; codec = 'h264'; language = 'und'; isExternal = $false; isDefault = $true; isForced = $false })
+        audio = @(@{ index = 1; kind = 'Audio'; codec = 'aac'; language = 'eng'; channels = 2; isExternal = $false; isDefault = $true; isForced = $false })
+        subtitles = @(@{ index = 2; kind = 'Subtitle'; codec = 'srt'; language = 'eng'; isExternal = $false; isDefault = $false; isForced = $false })
+    }
+    runtimeMetrics = @{
+        status = 'captured'; providerStatus = 'native-headless:returned-snapshot'
+        reason = 'comparison fixture'; hasSnapshot = $true; hasPlaybackSample = $true
+    }
+    timing = @{
+        decodedVideoFrames = 73; renderedVideoFrames = 72; expectedFrameDurationMs = 41.667
+        renderIntervalMsP95 = 42.0; renderIntervalMsP99 = 44.0; maxFrameGapMs = $maxFrameGap
+        framePacingSourceFrameRate = 24.0; lateFrameDropToleranceMs = 104.167
+    }
+    sync = @{ audioClockTicks = 30000000; videoPositionTicks = 30000000; audioVideoDriftMsP95 = 5.0 }
+    buffers = @{ submittedAudioFrames = 72; queuedAudioBuffers = 2; videoStarvedPasses = 0; audioStarvedPasses = 0 }
+    colorPipeline = @{
+        actualHdrOutput = 'Sdr'; dxgiInput = 'YCBCR_STUDIO_G22_LEFT_P709'
+        dxgiOutput = 'RGB_FULL_G22_NONE_P709'; swapChainFormat = 'B8G8R8A8_UNORM'
+        swapChainColorSpace = 'RGB_FULL_G22_NONE_P709'; conversionStatus = 'not-required'
+        isTenBitSwapChain = $false; forceSdrOutput = $false
+    }
+    display = @{ hdrStatus = 'Sdr'; isHdrDisplayAvailable = $false; isHdrOutputActive = $false; refreshRateHz = 24.0 }
+    error = @{
+        code = 'none'; message = 'no error'; operation = ''; exceptionType = ''
+        failureClass = 'insufficient instrumentation'; failureArea = 'error-handling'
+        isTerminal = $false; isRetriable = $false
+    }
+    checks = @(@{
+        name = 'MaxFrameGapMs'; signal = 'timing.maxFrameGapMs'; status = 'fail'
+        failureArea = 'frame-pacing'; expected = '105.000'; actual = $maxFrameGap.ToString('F3', [Globalization.CultureInfo]::InvariantCulture)
+    })
+}
+
+@{
+    schemaVersion = 1
+    evaluationVersion = 'playback-quality-v0.1'
+    caseMetadata = @{ caseId = $caseId; category = 'stable'; severity = 'high'; stability = 'stable' }
+    report = $report
+} | ConvertTo-Json -Depth 30 | Set-Content -LiteralPath $reportPath -Encoding UTF8
+exit 0
+'@ | Set-Content -LiteralPath $fakeHarness -Encoding UTF8
+
+    $env:NOIRAPLAYER_COMPARISON_TEST_OPENED_HASH = 'sha256:' + ('a' * 64)
+    $env:NOIRAPLAYER_COMPARISON_TEST_REVISION = 'baseline-test-revision'
+    $env:NOIRAPLAYER_COMPARISON_TEST_MAX_FRAME_GAP = '180'
+    powershell -NoProfile -ExecutionPolicy Bypass -File $baselineScriptPath `
+        -PublicManifestPath $manifestPath -NoPrivateManifest -SkipNativeHeadless `
+        -NativeHelperExe $fakeHelper -ManifestRunnerHarnessScriptPath $fakeHarness `
+        -DurationSeconds 1 -AttemptTimeoutSeconds 5 `
+        -OutputRoot $baselineRoot -SourceRevision 'baseline-test-revision'
+    if ($LASTEXITCODE -ne 0) { throw 'Failed to build strict-valid native baseline fixture.' }
+
+    $env:NOIRAPLAYER_COMPARISON_TEST_OPENED_HASH = 'sha256:' + ('b' * 64)
+    $env:NOIRAPLAYER_COMPARISON_TEST_REVISION = 'candidate-test-revision'
+    $env:NOIRAPLAYER_COMPARISON_TEST_MAX_FRAME_GAP = '120'
+    powershell -NoProfile -ExecutionPolicy Bypass -File $baselineScriptPath `
+        -PublicManifestPath $manifestPath -NoPrivateManifest -SkipNativeHeadless `
+        -NativeHelperExe $fakeHelper -ManifestRunnerHarnessScriptPath $fakeHarness `
+        -DurationSeconds 1 -AttemptTimeoutSeconds 5 `
+        -OutputRoot $candidateRoot -SourceRevision 'candidate-test-revision'
+    if ($LASTEXITCODE -ne 0) { throw 'Failed to build strict-valid native candidate fixture.' }
+
+    @{
+        schemaVersion = 1; kind = 'playback-cadence-stability-summary'
+        minimumSamples = 3; materialityMs = 2.0; totalGroupCount = 1
+        stableGroupCount = 0; unstableGroupCount = 1; insufficientSampleGroupCount = 0
+        unstableCaseGroupIds = @('comparison/native-source-equivalence')
+        groups = @(@{
+            caseGroupId = 'comparison/native-source-equivalence'; stability = 'unstable'; sampleCount = 3
+            renderIntervalP05ExpectedErrorSpreadMs = 2.1; renderIntervalP99ExpectedErrorSpreadMs = 3.2
+            minFrameGapExpectedErrorSpreadMs = 2.3; maxFrameGapExpectedErrorSpreadMs = 3.2
+            unstableSignals = @('framePacing.maxFrameGapExpectedErrorMs')
+        })
+    } | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $candidateCadenceStabilityPath -Encoding UTF8
 
     powershell -NoProfile -ExecutionPolicy Bypass -File $comparisonScriptPath `
-        -BaselineRoot $baselineRoot `
-        -CandidateRoot $candidateRoot `
-        -OutputRoot $comparisonRoot `
+        -BaselineRoot $baselineRoot -CandidateRoot $candidateRoot -OutputRoot $comparisonRoot `
         -CandidateCadenceStabilityPath $candidateCadenceStabilityPath
     $comparisonExitCode = $LASTEXITCODE
     if ($comparisonExitCode -ne 2) {
-        throw ('Expected public-only core-probe comparison to exit 2 for insufficient native playback evidence, actual: ' + $comparisonExitCode)
+        throw ('Expected opened-source mismatch comparison to exit 2, actual: ' + $comparisonExitCode)
     }
 
-    $summaryPath = Join-Path $comparisonRoot 'comparison-summary.local.json'
-    $evaluationPath = Join-Path $comparisonRoot 'summaries\candidate-evaluation.local.json'
-    $comparisonsDir = Join-Path $comparisonRoot 'comparisons'
-    foreach ($path in @($summaryPath, $evaluationPath, $comparisonsDir)) {
-        if (-not (Test-Path -LiteralPath $path)) {
-            throw ('Expected comparison artifact was not written: ' + $path)
-        }
+    $summary = Get-Content -Raw -LiteralPath (Join-Path $comparisonRoot 'comparison-summary.local.json') | ConvertFrom-Json
+    $evaluation = Get-Content -Raw -LiteralPath (Join-Path $comparisonRoot 'summaries\candidate-evaluation.local.json') | ConvertFrom-Json
+    if ($summary.baselineValidation.isValid -ne $true -or $summary.candidateValidation.isValid -ne $true) {
+        throw 'Expected both native fixture report sets to remain strict-valid before comparison.'
     }
-
-    $summary = Get-Content -Raw -LiteralPath $summaryPath | ConvertFrom-Json
-    if ($summary.kind -ne 'playback-core-tuning-candidate-comparison') {
-        throw 'Expected comparison summary kind.'
+    if ($evaluation.suite.totalComparisonCount -ne 1 -or
+        $evaluation.suite.insufficientEvidenceCount -ne 1 -or
+        $evaluation.suite.improvedCount -ne 0 -or
+        -not ($evaluation.suite.blockers -contains 'comparison.incompatible-inputs') -or
+        -not ($evaluation.suite.signals -contains 'execution.openedSourceHash')) {
+        throw 'Expected source-incompatible native reports to produce only insufficient comparison evidence.'
     }
-
-    if ($summary.manifestComparison.sameCaseIds -ne $true) {
-        throw 'Expected baseline and candidate manifests to have the same case IDs.'
-    }
-
-    if ($summary.baselineValidation.isValid -ne $true) {
-        throw 'Expected baseline report-set validation to be valid.'
-    }
-
-    if ($summary.candidateValidation.isValid -ne $true) {
-        throw 'Expected candidate report-set validation to be valid.'
-    }
-
-    if ($summary.evaluation.action -ne 'collect-comparable-evidence' -or
-        $summary.evaluation.decision -ne 'collect-comparable-evidence') {
-        throw 'Expected public-only core-probe candidate evaluation to request comparable native playback evidence.'
-    }
-
-    if ($summary.evaluation.totalComparisonCount -ne 0) {
-        throw 'Expected candidate evaluation to skip suite comparisons when native playback evidence is insufficient.'
-    }
-
-    if ($summary.evaluation.activeGateStatus -ne 'blocked' -or $summary.evaluation.blockerCount -lt 1) {
-        throw 'Expected candidate evaluation active gate to be blocked by insufficient evidence.'
-    }
-
     if ($summary.cadenceStability.candidate.present -ne $true -or
-        $summary.cadenceStability.candidate.unstableGroupCount -ne 1 -or
-        -not ($summary.cadenceStability.candidate.unstableCaseGroupIds -contains 'local/native-headless-hdr10-60')) {
+        -not ($summary.cadenceStability.candidate.unstableCaseGroupIds -contains 'comparison/native-source-equivalence')) {
         throw 'Expected comparison summary to preserve candidate cadence stability evidence.'
-    }
-
-    if ($null -eq $summary.cadenceStability.attribution -or
-        -not ($summary.cadenceStability.attribution.candidateUnstableCaseGroupIds -contains 'local/native-headless-hdr10-60')) {
-        throw 'Expected comparison summary to expose cadence stability attribution for model consumers.'
-    }
-
-    $candidateCadenceGroup = $summary.cadenceStability.candidate.groups |
-        Where-Object { $_.caseGroupId -eq 'local/native-headless-hdr10-60' } |
-        Select-Object -First 1
-    if ($candidateCadenceGroup.audioAheadWaitOversleepP95SpreadMs -ne 4.4) {
-        throw 'Expected comparison summary to preserve A/V oversleep stability spread evidence.'
-    }
-
-    if ($candidateCadenceGroup.audioAheadWaitFinalDeltaAbsP95SpreadMs -ne 5.5) {
-        throw 'Expected comparison summary to preserve A/V final delta stability spread evidence.'
-    }
-
-    if ($candidateCadenceGroup.audioAheadWaitEndToPresentSampleCountSpread -ne 1.0 -or
-        $candidateCadenceGroup.audioAheadWaitEndToPresentP95SpreadMs -ne 6.6 -or
-        $candidateCadenceGroup.audioAheadWaitEndToPresentP99SpreadMs -ne 7.7) {
-        throw 'Expected comparison summary to preserve audio-ahead wait end-to-present stability evidence.'
-    }
-
-    if ($candidateCadenceGroup.renderIntervalP05ExpectedErrorSpreadMs -ne 2.1 -or
-        $candidateCadenceGroup.minFrameGapExpectedErrorSpreadMs -ne 2.3) {
-        throw 'Expected comparison summary to preserve short-interval stability spread evidence.'
-    }
-
-    if ($summary.paths.candidateCadenceStabilityPath -ne $candidateCadenceStabilityPath) {
-        throw 'Expected comparison summary paths to include candidate cadence stability path.'
-    }
-
-    $evaluation = Get-Content -Raw -LiteralPath $evaluationPath | ConvertFrom-Json
-    if ($evaluation.schemaVersion -ne 1 -or $evaluation.evaluationVersion -ne 'playback-quality-v0.1') {
-        throw 'Expected candidate evaluation schema and version.'
-    }
-
-    if ($evaluation.baselineReportSetValidation.isValid -ne $true -or
-        $evaluation.candidateReportSetValidation.isValid -ne $true) {
-        throw 'Expected candidate evaluation report-set gates to be valid.'
-    }
-
-    if (-not ($evaluation.blockers -contains 'baseline-playback-evidence.insufficient') -or
-        -not ($evaluation.blockers -contains 'candidate-playback-evidence.insufficient')) {
-        throw 'Expected public-only core-probe comparison to preserve insufficient playback evidence blockers.'
     }
 
     Write-Output 'playback-core-tuning-candidate-comparison tests ok'
 }
 finally {
+    Remove-Item Env:NOIRAPLAYER_COMPARISON_TEST_OPENED_HASH -ErrorAction SilentlyContinue
+    Remove-Item Env:NOIRAPLAYER_COMPARISON_TEST_REVISION -ErrorAction SilentlyContinue
+    Remove-Item Env:NOIRAPLAYER_COMPARISON_TEST_MAX_FRAME_GAP -ErrorAction SilentlyContinue
     if (Test-Path -LiteralPath $tempRoot) {
         Remove-Item -LiteralPath $tempRoot -Recurse -Force
     }
