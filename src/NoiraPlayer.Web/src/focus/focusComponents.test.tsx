@@ -1,8 +1,11 @@
 // @vitest-environment jsdom
 
 import {
+  FocusContext,
   GetBoundingClientRectAdapter,
   SpatialNavigation,
+  doesFocusableExist,
+  getCurrentFocusKey,
   setFocus,
   updateAllLayouts,
 } from '@noriginmedia/norigin-spatial-navigation';
@@ -11,13 +14,25 @@ import { StrictMode } from 'react';
 import type { ComponentProps } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Focusable } from './Focusable';
-import { FocusProvider } from './FocusProvider';
+import {
+  FocusProvider,
+  NoiraFocusScopeContext,
+  useNoiraFocusScope,
+} from './FocusProvider';
+import type { NoiraFocusScopeState } from './FocusProvider';
 import { FocusScope } from './FocusScope';
 import { createFocusNavigationPolicy } from './focusPolicy';
 
 type SpatialNavigationInternals = {
   debug: boolean;
   enabled: boolean;
+  focusableComponents: Record<
+    string,
+    {
+      focusable: boolean;
+      parentFocusKey: string;
+    }
+  >;
   focusOnPresetKey: boolean;
   layoutAdapter: unknown;
   paused: boolean;
@@ -34,16 +49,32 @@ afterEach(() => {
 });
 
 describe('FocusProvider', () => {
-  it('initializes the real singleton once and keeps it alive through StrictMode replay', () => {
+  it('initializes once and keeps descendant registrations unique through StrictMode replay', async () => {
     const addEventListener = vi.spyOn(window, 'addEventListener');
 
     render(
       <StrictMode>
         <FocusProvider>
-          <span>content</span>
+          <FocusScope
+            scopeKey="strict-scope-anonymous"
+            orderedKeys={['strict-focus-anonymous']}
+            defaultFocusKey="strict-focus-anonymous"
+          >
+            <Focusable focusKey="strict-focus-anonymous" onSelect={() => undefined}>
+              Strict target
+            </Focusable>
+          </FocusScope>
         </FocusProvider>
       </StrictMode>,
     );
+
+    await waitFor(() => {
+      expect(getCurrentFocusKey()).toBe('strict-focus-anonymous');
+      expect(Object.keys(spatialNavigation.focusableComponents).sort()).toEqual([
+        'strict-focus-anonymous',
+        'strict-scope-anonymous',
+      ]);
+    });
 
     expect(
       addEventListener.mock.calls.filter(([eventName]) => eventName === 'keydown'),
@@ -59,6 +90,10 @@ describe('FocusProvider', () => {
     expect(spatialNavigation.focusOnPresetKey).toBe(false);
     expect(spatialNavigation.debug).toBe(false);
     expect(spatialNavigation.visualDebugger).toBeNull();
+    expect(
+      spatialNavigation.focusableComponents['strict-focus-anonymous']
+        ?.parentFocusKey,
+    ).toBe('strict-scope-anonymous');
   });
 
   it('propagates policy pause and resume synchronously to the real engine', async () => {
@@ -130,6 +165,104 @@ describe('Noira focus component contract', () => {
     ] = [true, true, true];
 
     expect(pagePropsStayNoiraOwned).toEqual([true, true, true]);
+  });
+
+  it('fails fast when a mounted Focusable focusKey changes', () => {
+    const renderTree = (focusKey: string) => (
+      <FocusProvider>
+        <FocusScope
+          scopeKey="immutable-focus-scope-anonymous"
+          orderedKeys={['immutable-focus-first-anonymous', 'immutable-focus-next-anonymous']}
+        >
+          <Focusable focusKey={focusKey} onSelect={() => undefined}>
+            Immutable focus
+          </Focusable>
+        </FocusScope>
+      </FocusProvider>
+    );
+    const view = render(renderTree('immutable-focus-first-anonymous'));
+
+    expectRenderError(
+      () => view.rerender(renderTree('immutable-focus-next-anonymous')),
+      'Focusable focusKey cannot change after mount. Remount with a new React key.',
+    );
+  });
+
+  it('fails fast when a mounted FocusScope scopeKey changes', () => {
+    const renderTree = (scopeKey: string) => (
+      <FocusProvider>
+        <FocusScope scopeKey={scopeKey} orderedKeys={[]}>
+          <div>Immutable scope</div>
+        </FocusScope>
+      </FocusProvider>
+    );
+    const view = render(renderTree('immutable-scope-first-anonymous'));
+
+    expectRenderError(
+      () => view.rerender(renderTree('immutable-scope-next-anonymous')),
+      'FocusScope scopeKey cannot change after mount. Remount with a new React key.',
+    );
+  });
+
+  it('fails fast when a mounted Focusable moves to another parent scope', () => {
+    let firstScope: NoiraFocusScopeState | null = null;
+    let secondScope: NoiraFocusScopeState | null = null;
+    const captureView = render(
+      <FocusProvider>
+        <FocusScope
+          scopeKey="captured-parent-first-anonymous"
+          orderedKeys={['immutable-parent-focus-anonymous']}
+        >
+          <CaptureScope onCapture={(scope) => { firstScope = scope; }} />
+        </FocusScope>
+        <FocusScope
+          scopeKey="captured-parent-second-anonymous"
+          orderedKeys={['immutable-parent-focus-anonymous']}
+        >
+          <CaptureScope onCapture={(scope) => { secondScope = scope; }} />
+        </FocusScope>
+      </FocusProvider>,
+    );
+    expect(firstScope).not.toBeNull();
+    expect(secondScope).not.toBeNull();
+    captureView.unmount();
+
+    const renderTree = (scope: NoiraFocusScopeState) => (
+      <FocusProvider>
+        <NoiraFocusScopeContext.Provider value={scope}>
+          <FocusContext.Provider value={scope.scopeKey}>
+            <Focusable focusKey="immutable-parent-focus-anonymous" onSelect={() => undefined}>
+              Immutable parent
+            </Focusable>
+          </FocusContext.Provider>
+        </NoiraFocusScopeContext.Provider>
+      </FocusProvider>
+    );
+    const view = render(renderTree(firstScope!));
+
+    expectRenderError(
+      () => view.rerender(renderTree(secondScope!)),
+      'Focusable parent FocusScope cannot change after mount. Remount with a new React key.',
+    );
+  });
+
+  it('rejects a Focusable key absent from its Scope orderedKeys', () => {
+    expectRenderError(
+      () =>
+        render(
+          <FocusProvider>
+            <FocusScope
+              scopeKey="missing-ordered-scope-anonymous"
+              orderedKeys={['present-ordered-focus-anonymous']}
+            >
+              <Focusable focusKey="missing-ordered-focus-anonymous" onSelect={() => undefined}>
+                Missing ordered key
+              </Focusable>
+            </FocusScope>
+          </FocusProvider>,
+        ),
+      'Focusable focusKey "missing-ordered-focus-anonymous" must be present in FocusScope "missing-ordered-scope-anonymous" orderedKeys.',
+    );
   });
 
   it('renders an accessible real button with a stable key and remembers its ordered scope', async () => {
@@ -211,6 +344,255 @@ describe('Noira focus component contract', () => {
   });
 });
 
+describe('adapter-owned focus lifecycle', () => {
+  it('repairs a naturally unmounted focused child within the same scope', async () => {
+    const policy = createFocusNavigationPolicy();
+    const renderTree = (showSecond: boolean) => (
+      <FocusProvider policy={policy}>
+        <FocusScope
+          scopeKey="natural-unmount-scope-anonymous"
+          orderedKeys={
+            showSecond
+              ? ['natural-first-anonymous', 'natural-second-anonymous']
+              : ['natural-first-anonymous']
+          }
+        >
+          <Focusable focusKey="natural-first-anonymous" onSelect={() => undefined}>
+            Natural first
+          </Focusable>
+          {showSecond ? (
+            <Focusable focusKey="natural-second-anonymous" onSelect={() => undefined}>
+              Natural second
+            </Focusable>
+          ) : null}
+        </FocusScope>
+      </FocusProvider>
+    );
+    const { rerender } = render(renderTree(true));
+
+    await updateLayoutsAndFocus('natural-second-anonymous');
+    await waitFor(() => {
+      expect(
+        policy.resolve('natural-unmount-scope-anonymous', [
+          'natural-first-anonymous',
+          'natural-second-anonymous',
+        ]),
+      ).toBe('natural-second-anonymous');
+    });
+
+    rerender(renderTree(false));
+
+    await expectEngineFocus('natural-first-anonymous', 'Natural first');
+  });
+
+  it('repairs a focused child that becomes disabled', async () => {
+    const policy = createFocusNavigationPolicy();
+    const renderTree = (disableSecond: boolean) => (
+      <FocusProvider policy={policy}>
+        <FocusScope
+          scopeKey="disable-scope-anonymous"
+          orderedKeys={['disable-first-anonymous', 'disable-second-anonymous']}
+        >
+          <Focusable focusKey="disable-first-anonymous" onSelect={() => undefined}>
+            Enabled fallback
+          </Focusable>
+          <Focusable
+            disabled={disableSecond}
+            focusKey="disable-second-anonymous"
+            onSelect={() => undefined}
+          >
+            Disabled target
+          </Focusable>
+        </FocusScope>
+      </FocusProvider>
+    );
+    const { rerender } = render(renderTree(false));
+
+    await updateLayoutsAndFocus('disable-second-anonymous');
+    await waitFor(() => {
+      expect(
+        policy.resolve('disable-scope-anonymous', [
+          'disable-first-anonymous',
+          'disable-second-anonymous',
+        ]),
+      ).toBe('disable-second-anonymous');
+    });
+
+    rerender(renderTree(true));
+
+    await expectEngineFocus('disable-first-anonymous', 'Enabled fallback');
+  });
+
+  it('leaves an empty active scope for the first enabled registered page scope', async () => {
+    const renderTree = (showOrigin: boolean) => (
+      <FocusProvider>
+        <FocusScope
+          scopeKey="empty-origin-scope-anonymous"
+          orderedKeys={showOrigin ? ['empty-origin-focus-anonymous'] : []}
+        >
+          {showOrigin ? (
+            <Focusable focusKey="empty-origin-focus-anonymous" onSelect={() => undefined}>
+              Empty origin
+            </Focusable>
+          ) : null}
+        </FocusScope>
+        <FocusScope scopeKey="empty-scope-anonymous" orderedKeys={[]}>
+          <div>Empty scope</div>
+        </FocusScope>
+        <FocusScope
+          scopeKey="disabled-scope-anonymous"
+          orderedKeys={['disabled-only-focus-anonymous']}
+        >
+          <Focusable
+            disabled
+            focusKey="disabled-only-focus-anonymous"
+            onSelect={() => undefined}
+          >
+            Disabled only
+          </Focusable>
+        </FocusScope>
+        <FocusScope
+          scopeKey="destination-scope-anonymous"
+          orderedKeys={['destination-focus-anonymous']}
+        >
+          <Focusable focusKey="destination-focus-anonymous" onSelect={() => undefined}>
+            Page destination
+          </Focusable>
+        </FocusScope>
+      </FocusProvider>
+    );
+    const { rerender } = render(renderTree(true));
+
+    await updateLayoutsAndFocus('empty-origin-focus-anonymous');
+    expect(getCurrentFocusKey()).toBe('empty-origin-focus-anonymous');
+
+    rerender(renderTree(false));
+
+    await expectEngineFocus('destination-focus-anonymous', 'Page destination');
+    expect(doesFocusableExist('empty-scope-anonymous')).toBe(true);
+    expect(doesFocusableExist('disabled-scope-anonymous')).toBe(true);
+    expect(
+      spatialNavigation.focusableComponents['empty-scope-anonymous']?.focusable,
+    ).toBe(false);
+    expect(
+      spatialNavigation.focusableComponents['disabled-scope-anonymous']?.focusable,
+    ).toBe(false);
+  });
+});
+
+describe('consumable scope focus requests', () => {
+  it.each(['default', 'preferred', 'restore'] as const)(
+    'does not let an appended missing %s target steal current focus',
+    async (requestKind) => {
+      const fallbackKey = `late-${requestKind}-fallback-anonymous`;
+      const lateKey = `late-${requestKind}-target-anonymous`;
+      const scopeKey = `late-${requestKind}-scope-anonymous`;
+      const requestProps =
+        requestKind === 'default'
+          ? { defaultFocusKey: lateKey }
+          : requestKind === 'preferred'
+            ? { preferredFocusKey: lateKey }
+            : { restoreFocusKey: lateKey };
+      const renderTree = (includeLateTarget: boolean) => (
+        <FocusProvider>
+          <FocusScope
+            {...requestProps}
+            scopeKey={scopeKey}
+            orderedKeys={includeLateTarget ? [fallbackKey, lateKey] : [fallbackKey]}
+          >
+            <Focusable focusKey={fallbackKey} onSelect={() => undefined}>
+              Late fallback
+            </Focusable>
+            {includeLateTarget ? (
+              <Focusable focusKey={lateKey} onSelect={() => undefined}>
+                Late target
+              </Focusable>
+            ) : null}
+          </FocusScope>
+        </FocusProvider>
+      );
+      const { rerender } = render(renderTree(false));
+
+      await expectEngineFocus(fallbackKey, 'Late fallback');
+
+      rerender(renderTree(true));
+      await settleFocusWork();
+
+      expect(getCurrentFocusKey()).toBe(fallbackKey);
+      expect(document.activeElement).toBe(
+        screen.getByRole('button', { name: 'Late fallback' }),
+      );
+    },
+  );
+
+  it('does not apply a newly mounted initial default over a valid registered target', async () => {
+    const renderTree = (showLateScope: boolean) => (
+      <FocusProvider>
+        <FocusScope
+          scopeKey="stable-current-scope-anonymous"
+          orderedKeys={['stable-current-focus-anonymous']}
+        >
+          <Focusable focusKey="stable-current-focus-anonymous" onSelect={() => undefined}>
+            Stable current
+          </Focusable>
+        </FocusScope>
+        {showLateScope ? (
+          <FocusScope
+            scopeKey="late-default-scope-anonymous"
+            orderedKeys={['late-default-focus-anonymous']}
+            defaultFocusKey="late-default-focus-anonymous"
+          >
+            <Focusable focusKey="late-default-focus-anonymous" onSelect={() => undefined}>
+              Late default
+            </Focusable>
+          </FocusScope>
+        ) : null}
+      </FocusProvider>
+    );
+    const { rerender } = render(renderTree(false));
+
+    await updateLayoutsAndFocus('stable-current-focus-anonymous');
+    await expectEngineFocus('stable-current-focus-anonymous', 'Stable current');
+
+    rerender(renderTree(true));
+    await settleFocusWork();
+
+    expect(getCurrentFocusKey()).toBe('stable-current-focus-anonymous');
+  });
+
+  it('restores the same target again when its request id changes', async () => {
+    const renderTree = (restoreRequestId: number) => (
+      <FocusProvider>
+        <FocusScope
+          scopeKey="restore-epoch-scope-anonymous"
+          orderedKeys={['restore-epoch-first-anonymous', 'restore-epoch-target-anonymous']}
+          restoreFocusKey="restore-epoch-target-anonymous"
+          restoreRequestId={restoreRequestId}
+        >
+          <Focusable focusKey="restore-epoch-first-anonymous" onSelect={() => undefined}>
+            Epoch first
+          </Focusable>
+          <Focusable focusKey="restore-epoch-target-anonymous" onSelect={() => undefined}>
+            Epoch target
+          </Focusable>
+        </FocusScope>
+      </FocusProvider>
+    );
+    const { rerender } = render(renderTree(1));
+
+    await expectEngineFocus('restore-epoch-target-anonymous', 'Epoch target');
+    await updateLayoutsAndFocus('restore-epoch-first-anonymous');
+    await expectEngineFocus('restore-epoch-first-anonymous', 'Epoch first');
+
+    rerender(renderTree(1));
+    await settleFocusWork();
+    expect(getCurrentFocusKey()).toBe('restore-epoch-first-anonymous');
+
+    rerender(renderTree(2));
+    await expectEngineFocus('restore-epoch-target-anonymous', 'Epoch target');
+  });
+});
+
 describe('real Norigin navigation through Noira scopes', () => {
   it('moves DOM focus right according to three-item geometry', async () => {
     render(
@@ -255,93 +637,129 @@ describe('real Norigin navigation through Noira scopes', () => {
     });
   });
 
-  it('traps navigation in a configured directional boundary', async () => {
+  it('treats an empty boundary direction list as trapping no directions', async () => {
     render(
       <FocusProvider>
         <FocusScope
-          scopeKey="boundary-scope-anonymous"
-          orderedKeys={['boundary-focus-anonymous']}
-          defaultFocusKey="boundary-focus-anonymous"
-          boundaryDirections={['right']}
+          scopeKey="open-boundary-scope-anonymous"
+          orderedKeys={['open-boundary-focus-anonymous']}
+          defaultFocusKey="open-boundary-focus-anonymous"
+          boundaryDirections={[]}
         >
-          <Focusable focusKey="boundary-focus-anonymous" onSelect={() => undefined}>
-            Inside boundary
+          <Focusable focusKey="open-boundary-focus-anonymous" onSelect={() => undefined}>
+            Open boundary
           </Focusable>
         </FocusScope>
         <FocusScope
-          scopeKey="outside-scope-anonymous"
-          orderedKeys={['outside-focus-anonymous']}
+          scopeKey="open-outside-scope-anonymous"
+          orderedKeys={['open-outside-focus-anonymous']}
         >
-          <Focusable focusKey="outside-focus-anonymous" onSelect={() => undefined}>
-            Outside boundary
+          <Focusable focusKey="open-outside-focus-anonymous" onSelect={() => undefined}>
+            Open outside
           </Focusable>
         </FocusScope>
       </FocusProvider>,
     );
 
-    const inside = screen.getByRole('button', { name: 'Inside boundary' });
-    const outside = screen.getByRole('button', { name: 'Outside boundary' });
-    const insideScope = getScopeElement('boundary-scope-anonymous');
-    const outsideScope = getScopeElement('outside-scope-anonymous');
+    const inside = screen.getByRole('button', { name: 'Open boundary' });
+    const outside = screen.getByRole('button', { name: 'Open outside' });
+    const insideScope = getScopeElement('open-boundary-scope-anonymous');
+    const outsideScope = getScopeElement('open-outside-scope-anonymous');
     mockRect(inside, 0, 0);
     mockRect(outside, 200, 0);
     mockRect(insideScope, 0, 0);
     mockRect(outsideScope, 200, 0);
 
-    await updateLayoutsAndFocus('boundary-focus-anonymous');
+    await updateLayoutsAndFocus('open-boundary-focus-anonymous');
     expect(document.activeElement).toBe(inside);
 
     await waitForThrottleWindow();
     dispatchKey(window, 'ArrowRight', 39);
 
-    await flushNavigationScheduler();
-    expect(document.activeElement).toBe(inside);
+    await waitFor(() => {
+      expect(document.activeElement).toBe(outside);
+    });
   });
 
-  it('uses Noira restore fallback when the focused child unmounts', async () => {
-    const policy = createFocusNavigationPolicy();
-
-    const renderTree = (orderedKeys: readonly string[]) => (
-      <FocusProvider policy={policy}>
+  it.each([
+    { direction: 'up', key: 'ArrowUp', keyCode: 38, outsideLeft: 100, outsideTop: 0 },
+    { direction: 'down', key: 'ArrowDown', keyCode: 40, outsideLeft: 100, outsideTop: 200 },
+    { direction: 'left', key: 'ArrowLeft', keyCode: 37, outsideLeft: 0, outsideTop: 100 },
+    { direction: 'right', key: 'ArrowRight', keyCode: 39, outsideLeft: 200, outsideTop: 100 },
+  ])('traps $direction when all boundary directions are configured', async ({
+    direction,
+    key,
+    keyCode,
+    outsideLeft,
+    outsideTop,
+  }) => {
+    const scopeKey = `closed-boundary-${direction}-scope-anonymous`;
+    const focusKey = `closed-boundary-${direction}-focus-anonymous`;
+    const outsideScopeKey = `closed-outside-${direction}-scope-anonymous`;
+    const outsideFocusKey = `closed-outside-${direction}-focus-anonymous`;
+    render(
+      <FocusProvider>
         <FocusScope
-          scopeKey="unmount-scope-anonymous"
-          orderedKeys={orderedKeys}
-          restoreFocusKey="unmount-removed-anonymous"
+          scopeKey={scopeKey}
+          orderedKeys={[focusKey]}
+          defaultFocusKey={focusKey}
+          boundaryDirections={['up', 'down', 'left', 'right']}
         >
-          <Focusable focusKey="unmount-first-anonymous" onSelect={() => undefined}>
-            Remaining item
+          <Focusable focusKey={focusKey} onSelect={() => undefined}>
+            Closed boundary
           </Focusable>
-          {orderedKeys.includes('unmount-removed-anonymous') ? (
-            <Focusable focusKey="unmount-removed-anonymous" onSelect={() => undefined}>
-              Removed item
-            </Focusable>
-          ) : null}
+        </FocusScope>
+        <FocusScope scopeKey={outsideScopeKey} orderedKeys={[outsideFocusKey]}>
+          <Focusable focusKey={outsideFocusKey} onSelect={() => undefined}>
+            Closed outside
+          </Focusable>
         </FocusScope>
       </FocusProvider>
     );
+    const inside = screen.getByRole('button', { name: 'Closed boundary' });
+    const outside = screen.getByRole('button', { name: 'Closed outside' });
+    mockRect(inside, 100, 100);
+    mockRect(outside, outsideLeft, outsideTop);
+    mockRect(getScopeElement(scopeKey), 100, 100);
+    mockRect(getScopeElement(outsideScopeKey), outsideLeft, outsideTop);
 
-    const { rerender } = render(
-      renderTree(['unmount-first-anonymous', 'unmount-removed-anonymous']),
-    );
+    await updateLayoutsAndFocus(focusKey);
+    expect(document.activeElement).toBe(inside);
 
-    await waitFor(() => {
-      expect(document.activeElement).toBe(
-        screen.getByRole('button', { name: 'Removed item' }),
-      );
-    });
+    await waitForThrottleWindow();
+    dispatchKey(window, key, keyCode);
 
-    rerender(renderTree(['unmount-first-anonymous']));
-
-    await waitFor(() => {
-      expect(document.activeElement).toBe(
-        screen.getByRole('button', { name: 'Remaining item' }),
-      );
-    });
-    expect(policy.resolve('unmount-scope-anonymous', ['unmount-first-anonymous'])).toBe(
-      'unmount-first-anonymous',
-    );
+    await flushNavigationScheduler();
+    expect(document.activeElement).toBe(inside);
   });
 });
+
+function CaptureScope({
+  onCapture,
+}: {
+  onCapture: (scope: NoiraFocusScopeState) => void;
+}) {
+  onCapture(useNoiraFocusScope());
+  return null;
+}
+
+function expectRenderError(action: () => void, message: string): void {
+  const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  try {
+    expect(action).toThrowError(message);
+  } finally {
+    consoleError.mockRestore();
+  }
+}
+
+async function expectEngineFocus(focusKey: string, accessibleName: string): Promise<void> {
+  await waitFor(() => {
+    expect(getCurrentFocusKey()).toBe(focusKey);
+    expect(document.activeElement).toBe(
+      screen.getByRole('button', { name: accessibleName }),
+    );
+  });
+}
 
 function mockRect(
   element: HTMLElement,
@@ -391,6 +809,11 @@ async function flushNavigationScheduler(): Promise<void> {
   await act(async () => {
     await new Promise((resolve) => window.setTimeout(resolve, 0));
   });
+}
+
+async function settleFocusWork(): Promise<void> {
+  await flushNavigationScheduler();
+  await flushNavigationScheduler();
 }
 
 function dispatchKey(target: Window | HTMLElement, key: string, keyCode: number): void {

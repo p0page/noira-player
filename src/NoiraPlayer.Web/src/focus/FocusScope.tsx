@@ -1,13 +1,19 @@
+import { FocusContext } from '@noriginmedia/norigin-spatial-navigation';
 import {
-  FocusContext,
-  setFocus,
-} from '@noriginmedia/norigin-spatial-navigation';
-import { useEffect, useMemo } from 'react';
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useSyncExternalStore,
+} from 'react';
 import type { ReactNode } from 'react';
 import {
   NoiraFocusScopeContext,
+  createNoiraFocusScopeController,
   useFocusNavigationPolicy,
+  useNoiraFocusRegistry,
 } from './FocusProvider';
+import type { NoiraFocusScopeController } from './FocusProvider';
 import {
   useNoiraFocusable,
   type NoiraFocusDirection,
@@ -15,6 +21,7 @@ import {
 import type { FocusNavigationPolicy } from './focusPolicy';
 
 export type FocusDirection = NoiraFocusDirection;
+export type FocusRestoreRequestId = number | string;
 
 export interface FocusScopeProps {
   boundaryDirections?: readonly FocusDirection[];
@@ -24,7 +31,13 @@ export interface FocusScopeProps {
   orderedKeys: readonly string[];
   preferredFocusKey?: string;
   restoreFocusKey?: string;
+  restoreRequestId?: FocusRestoreRequestId;
   scopeKey: string;
+}
+
+interface ConsumedRestoreRequest {
+  focusKey: string;
+  requestId: FocusRestoreRequestId | undefined;
 }
 
 export function FocusScope({
@@ -35,32 +48,111 @@ export function FocusScope({
   orderedKeys,
   preferredFocusKey,
   restoreFocusKey,
+  restoreRequestId,
   scopeKey,
 }: FocusScopeProps) {
   const policy = useFocusNavigationPolicy();
-  const requestedFocusKey = resolveRequestedFocusKey(
+  const registry = useNoiraFocusRegistry();
+  const mountedScopeKeyRef = useRef(scopeKey);
+  const controllerRef = useRef<NoiraFocusScopeController | null>(null);
+  if (controllerRef.current === null) {
+    controllerRef.current = createNoiraFocusScopeController(scopeKey, orderedKeys);
+  }
+  const controller = controllerRef.current;
+
+  useSyncExternalStore(
+    controller.subscribe,
+    controller.getSnapshot,
+    controller.getSnapshot,
+  );
+  const enabledKeys = controller.getEnabledKeys(orderedKeys);
+  const preferredEntryKey = resolvePreferredEntryKey(
     policy,
-    scopeKey,
-    orderedKeys,
+    mountedScopeKeyRef.current,
+    enabledKeys,
+    restoreFocusKey,
     preferredFocusKey,
     defaultFocusKey,
-    restoreFocusKey,
   );
   const registration = useNoiraFocusable<HTMLDivElement>({
     boundaryDirections,
-    focusKey: scopeKey,
-    preferredFocusKey: requestedFocusKey ?? undefined,
+    focusKey: mountedScopeKeyRef.current,
+    focusable: enabledKeys.length > 0,
+    preferredFocusKey: preferredEntryKey ?? undefined,
   });
   const scopeState = useMemo(
-    () => ({ orderedKeys, scopeKey }),
-    [orderedKeys, scopeKey],
+    () => ({ controller, orderedKeys, scopeKey: mountedScopeKeyRef.current }),
+    [controller, orderedKeys],
+  );
+  const initialRequestConsumedRef = useRef(false);
+  const consumedRestoreRequestRef = useRef<ConsumedRestoreRequest | null>(null);
+
+  useLayoutEffect(() => {
+    controller.setOrderedKeys(orderedKeys);
+  }, [controller, orderedKeys]);
+
+  useEffect(
+    () => registry.registerScope(controller),
+    [controller, registry],
   );
 
   useEffect(() => {
-    if (requestedFocusKey) {
-      void setFocus(registration.focusKey);
+    if (enabledKeys.length === 0) {
+      return;
     }
-  }, [registration.focusKey, requestedFocusKey]);
+
+    if (restoreFocusKey !== undefined) {
+      const consumedRequest = consumedRestoreRequestRef.current;
+      const alreadyConsumed =
+        consumedRequest?.focusKey === restoreFocusKey &&
+        Object.is(consumedRequest.requestId, restoreRequestId);
+      if (alreadyConsumed) {
+        return;
+      }
+
+      const target = enabledKeys.includes(restoreFocusKey)
+        ? restoreFocusKey
+        : policy.resolve(mountedScopeKeyRef.current, enabledKeys);
+      consumedRestoreRequestRef.current = {
+        focusKey: restoreFocusKey,
+        requestId: restoreRequestId,
+      };
+      initialRequestConsumedRef.current = true;
+      if (target) {
+        registry.requestRestoreFocus(target);
+      }
+      return;
+    }
+
+    if (
+      initialRequestConsumedRef.current ||
+      (preferredFocusKey === undefined && defaultFocusKey === undefined)
+    ) {
+      return;
+    }
+
+    initialRequestConsumedRef.current = true;
+    const target = enabledKeys.includes(preferredFocusKey ?? '')
+      ? preferredFocusKey ?? null
+      : policy.resolveInitial(enabledKeys, defaultFocusKey);
+    if (target) {
+      registry.requestInitialFocus(target);
+    }
+  }, [
+    defaultFocusKey,
+    enabledKeys,
+    policy,
+    preferredFocusKey,
+    registry,
+    restoreFocusKey,
+    restoreRequestId,
+  ]);
+
+  if (mountedScopeKeyRef.current !== scopeKey) {
+    throw new Error(
+      'FocusScope scopeKey cannot change after mount. Remount with a new React key.',
+    );
+  }
 
   return (
     <NoiraFocusScopeContext.Provider value={scopeState}>
@@ -77,33 +169,22 @@ export function FocusScope({
   );
 }
 
-function resolveRequestedFocusKey(
+function resolvePreferredEntryKey(
   policy: FocusNavigationPolicy,
   scopeKey: string,
-  orderedKeys: readonly string[],
+  enabledKeys: readonly string[],
+  restoreFocusKey?: string,
   preferredFocusKey?: string,
   defaultFocusKey?: string,
-  restoreFocusKey?: string,
 ): string | null {
-  if (restoreFocusKey !== undefined) {
-    if (orderedKeys.includes(restoreFocusKey)) {
-      return restoreFocusKey;
-    }
-
-    return policy.resolve(scopeKey, orderedKeys);
+  if (restoreFocusKey && enabledKeys.includes(restoreFocusKey)) {
+    return restoreFocusKey;
   }
-
-  if (preferredFocusKey !== undefined) {
-    if (orderedKeys.includes(preferredFocusKey)) {
-      return preferredFocusKey;
-    }
-
-    return policy.resolveInitial(orderedKeys, defaultFocusKey);
+  if (preferredFocusKey && enabledKeys.includes(preferredFocusKey)) {
+    return preferredFocusKey;
   }
-
-  if (defaultFocusKey !== undefined) {
-    return policy.resolveInitial(orderedKeys, defaultFocusKey);
+  if (defaultFocusKey && enabledKeys.includes(defaultFocusKey)) {
+    return defaultFocusKey;
   }
-
-  return null;
+  return enabledKeys.length > 0 ? policy.resolve(scopeKey, enabledKeys) : null;
 }

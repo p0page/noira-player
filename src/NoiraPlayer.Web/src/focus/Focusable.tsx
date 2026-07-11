@@ -4,6 +4,7 @@ import type {
   ReactNode,
   RefObject,
 } from 'react';
+import { useEffect, useRef } from 'react';
 import {
   useFocusNavigationPolicy,
   useNoiraFocusScope,
@@ -56,12 +57,42 @@ export function Focusable({
 }: FocusableProps) {
   const policy = useFocusNavigationPolicy();
   const scope = useNoiraFocusScope();
-  const registration = useNoiraFocusable<HTMLButtonElement>({
+  const mountedIdentityRef = useRef({
+    controller: scope.controller,
     focusKey,
+  });
+  const mountedIdentity = mountedIdentityRef.current;
+  const registration = useNoiraFocusable<HTMLButtonElement>({
+    focusKey: mountedIdentity.focusKey,
     focusable: !disabled,
     onEnter: onSelect,
     onFocus: () => policy.remember(scope.scopeKey, focusKey, scope.orderedKeys),
   });
+
+  useEffect(
+    () => mountedIdentity.controller.registerChild(mountedIdentity.focusKey, !disabled),
+    [mountedIdentity.controller, mountedIdentity.focusKey],
+  );
+
+  useEffect(() => {
+    mountedIdentity.controller.setChildEnabled(mountedIdentity.focusKey, !disabled);
+  }, [disabled, mountedIdentity.controller, mountedIdentity.focusKey]);
+
+  if (mountedIdentity.focusKey !== focusKey) {
+    throw new Error(
+      'Focusable focusKey cannot change after mount. Remount with a new React key.',
+    );
+  }
+  if (mountedIdentity.controller !== scope.controller) {
+    throw new Error(
+      'Focusable parent FocusScope cannot change after mount. Remount with a new React key.',
+    );
+  }
+  if (!scope.orderedKeys.includes(focusKey)) {
+    throw new Error(
+      `Focusable focusKey "${focusKey}" must be present in FocusScope "${scope.scopeKey}" orderedKeys.`,
+    );
+  }
 
   return (
     <button
