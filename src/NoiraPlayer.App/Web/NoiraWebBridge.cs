@@ -172,7 +172,11 @@ namespace NoiraPlayer.App.Web
                 ReadPayloadLong(root, "runtimeTicks", 0));
             return new NoiraWebBridgeResult(
                 Ok(id, "{\"started\":true,\"surface\":\"native\"}"),
-                request);
+                request,
+                Error(
+                    id,
+                    "playback-navigation-failed",
+                    "The native playback page could not be opened."));
         }
 
         private static string CreateBootstrapJson(EmbySession? session)

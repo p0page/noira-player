@@ -28,6 +28,8 @@ namespace NoiraPlayer.App.Views
 {
     public sealed partial class PlaybackPage : Page
     {
+        public static event EventHandler? TeardownCompleted;
+
         private const string DemoItemId = "manual-direct-stream";
         private static readonly bool UseNativePlaybackBackend = true;
         private static readonly TimeSpan SeekBackStep = TimeSpan.FromSeconds(10);
@@ -955,9 +957,16 @@ namespace NoiraPlayer.App.Views
             }
             finally
             {
-                _httpClient?.Dispose();
-                _disposableBackend?.Dispose();
-                await PlaybackDiagnosticsLog.WriteLineAsync("Playback page unloaded end");
+                try
+                {
+                    _httpClient?.Dispose();
+                    _disposableBackend?.Dispose();
+                    await PlaybackDiagnosticsLog.WriteLineAsync("Playback page unloaded end");
+                }
+                finally
+                {
+                    TeardownCompleted?.Invoke(this, EventArgs.Empty);
+                }
             }
         }
 

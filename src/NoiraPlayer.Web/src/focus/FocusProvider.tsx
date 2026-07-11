@@ -9,6 +9,7 @@ import {
 } from '@noriginmedia/norigin-spatial-navigation';
 import { createContext, useContext, useLayoutEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
+import { subscribeHostLifecycle } from '../bridge';
 import {
   createFocusNavigationPolicy,
   type FocusNavigationPolicy,
@@ -88,13 +89,23 @@ export function FocusProvider({ children, policy }: FocusProviderProps) {
     () => {
       ensureSpatialNavigationInitialized();
 
-      return focusPolicy.subscribePause((paused) => {
+      const unsubscribePause = focusPolicy.subscribePause((paused) => {
         if (paused) {
           pauseSpatialNavigation();
         } else {
           resumeSpatialNavigation();
         }
       });
+      const unsubscribeLifecycle = subscribeHostLifecycle((event) => {
+        if (event.event === 'playback-returned') {
+          focusPolicy.resume();
+        }
+      });
+
+      return () => {
+        unsubscribeLifecycle();
+        unsubscribePause();
+      };
     },
     [focusPolicy],
   );

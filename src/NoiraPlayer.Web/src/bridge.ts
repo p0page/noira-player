@@ -26,8 +26,15 @@ export type BridgeResponse<TResult = unknown> =
       };
     };
 
+export interface HostPlaybackReturnedEvent {
+  type: 'host.lifecycle';
+  event: 'playback-returned';
+}
+
+export type HostLifecycleEvent = HostPlaybackReturnedEvent;
+
 interface WebViewMessageEvent {
-  data: BridgeResponse;
+  data: unknown;
 }
 
 interface WebViewHost {
@@ -47,6 +54,7 @@ interface PendingBridgeRequest {
 }
 
 interface BridgeState {
+  lifecycleListeners: Set<(event: HostLifecycleEvent) => void>;
   pending: Map<string, PendingBridgeRequest>;
 }
 
@@ -118,6 +126,26 @@ export async function requestBridge<TResult = unknown, TPayload = unknown>(
   });
 }
 
+export function subscribeHostLifecycle(
+  listener: (event: HostLifecycleEvent) => void,
+): () => void {
+  const webview = typeof window !== 'undefined' ? window.chrome?.webview : undefined;
+  if (
+    !webview ||
+    typeof webview.postMessage !== 'function' ||
+    !webview.addEventListener ||
+    !webview.removeEventListener
+  ) {
+    return () => undefined;
+  }
+
+  const state = getBridgeState(webview);
+  state.lifecycleListeners.add(listener);
+  return () => {
+    state.lifecycleListeners.delete(listener);
+  };
+}
+
 function getBridgeState(webview: WebViewHost): BridgeState {
   const existing = bridgeStates.get(webview);
   if (existing) {
@@ -125,9 +153,21 @@ function getBridgeState(webview: WebViewHost): BridgeState {
   }
 
   const state: BridgeState = {
+    lifecycleListeners: new Set(),
     pending: new Map(),
   };
   webview.addEventListener?.('message', (event) => {
+    if (isHostLifecycleEvent(event.data)) {
+      for (const listener of [...state.lifecycleListeners]) {
+        listener(event.data);
+      }
+      return;
+    }
+
+    if (!isBridgeResponse(event.data)) {
+      return;
+    }
+
     const response = event.data;
     const pending = state.pending.get(response.id);
     if (!pending) {
@@ -144,6 +184,34 @@ function getBridgeState(webview: WebViewHost): BridgeState {
   });
   bridgeStates.set(webview, state);
   return state;
+}
+
+function isHostLifecycleEvent(value: unknown): value is HostLifecycleEvent {
+  return (
+    isRecord(value) &&
+    value.type === 'host.lifecycle' &&
+    value.event === 'playback-returned'
+  );
+}
+
+function isBridgeResponse(value: unknown): value is BridgeResponse {
+  if (!isRecord(value) || typeof value.id !== 'string' || typeof value.ok !== 'boolean') {
+    return false;
+  }
+
+  if (value.ok) {
+    return 'result' in value;
+  }
+
+  return (
+    isRecord(value.error) &&
+    typeof value.error.code === 'string' &&
+    typeof value.error.message === 'string'
+  );
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
 }
 
 function createRequestId(): string {

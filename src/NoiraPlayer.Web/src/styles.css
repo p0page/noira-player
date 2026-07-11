@@ -872,6 +872,33 @@ h2 {
   .media-row__track {
     padding-bottom: var(--space-sm);
   }
+
+  .details-page__content {
+    gap: var(--space-sm);
+  }
+
+  .details-page__header {
+    gap: 4px;
+  }
+
+  .details-page__header h1 {
+    display: -webkit-box;
+    overflow: hidden;
+    font-size: 32px;
+    line-height: 38px;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .details-page__overview {
+    font-size: 15px;
+    line-height: 21px;
+    -webkit-line-clamp: 3;
+  }
+
+  .details-page__play {
+    min-height: 44px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

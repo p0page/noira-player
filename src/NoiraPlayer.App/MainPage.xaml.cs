@@ -9,6 +9,7 @@ using NoiraPlayer.Core.Diagnostics;
 using Windows.Storage;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
+using Windows.UI.Xaml.Navigation;
 
 namespace NoiraPlayer.App
 {
@@ -20,14 +21,35 @@ namespace NoiraPlayer.App
         private const string PackagedWebAppHostName = "app.noira.local";
         private const string PackagedWebAppFolderName = "WebCode";
         private const string PackagedWebAppUrl = "https://app.noira.local/index.html";
+        private const string PlaybackReturnedMessage =
+            "{\"type\":\"host.lifecycle\",\"event\":\"playback-returned\"}";
+        private const int PlaybackReturnNotificationMaxAttempts = 5;
         private readonly NoiraWebBridge _webBridge = new NoiraWebBridge();
         private Uri _webAppSource = new Uri(PackagedWebAppUrl);
+        private bool _playbackLaunchInFlight;
+        private bool _playbackNavigationPending;
+        private bool _playbackReturnNotificationInFlight;
+        private bool _playbackReturnObserved;
+        private bool _playbackTeardownCompleted;
         private bool _webViewInitialized;
 
         public MainPage()
         {
             InitializeComponent();
+            NavigationCacheMode = NavigationCacheMode.Required;
             Loaded += MainPage_OnLoaded;
+        }
+
+        protected override void OnNavigatedTo(NavigationEventArgs e)
+        {
+            base.OnNavigatedTo(e);
+            if (!_playbackNavigationPending)
+            {
+                return;
+            }
+
+            _playbackReturnObserved = true;
+            TryPostPlaybackReturned();
         }
 
         public void NavigateHome()
@@ -37,8 +59,8 @@ namespace NoiraPlayer.App
 
         private async void MainPage_OnLoaded(object sender, RoutedEventArgs e)
         {
-            Loaded -= MainPage_OnLoaded;
             await InitializeWebViewAsync();
+            TryPostPlaybackReturned();
         }
 
         private async Task InitializeWebViewAsync()
@@ -86,11 +108,111 @@ namespace NoiraPlayer.App
                 args.Source,
                 _webAppSource,
                 args.WebMessageAsJson);
-            sender.PostWebMessageAsJson(result.ResponseJson);
-
-            if (result.PlaybackRequest != null)
+            if (result.PlaybackRequest == null)
             {
-                Frame.Navigate(typeof(PlaybackPage), result.PlaybackRequest);
+                sender.PostWebMessageAsJson(result.ResponseJson);
+                return;
+            }
+
+            if (_playbackLaunchInFlight || _playbackNavigationPending)
+            {
+                sender.PostWebMessageAsJson(result.PlaybackNavigationFailedResponseJson);
+                return;
+            }
+
+            _playbackLaunchInFlight = true;
+            _playbackReturnObserved = false;
+            _playbackTeardownCompleted = false;
+            PlaybackPage.TeardownCompleted += PlaybackPage_OnTeardownCompleted;
+            try
+            {
+                _playbackNavigationPending = Frame.Navigate(
+                    typeof(PlaybackPage),
+                    result.PlaybackRequest);
+            }
+            catch (Exception ex)
+            {
+                PlaybackDiagnosticsLog.WriteLine(
+                    "Native playback navigation failed " + ex.GetType().FullName + " " + ex.Message);
+                _playbackNavigationPending = false;
+            }
+            finally
+            {
+                _playbackLaunchInFlight = false;
+            }
+
+            if (!_playbackNavigationPending)
+            {
+                PlaybackPage.TeardownCompleted -= PlaybackPage_OnTeardownCompleted;
+            }
+
+            sender.PostWebMessageAsJson(
+                _playbackNavigationPending
+                    ? result.ResponseJson
+                    : result.PlaybackNavigationFailedResponseJson);
+        }
+
+        private void PlaybackPage_OnTeardownCompleted(object? sender, EventArgs e)
+        {
+            PlaybackPage.TeardownCompleted -= PlaybackPage_OnTeardownCompleted;
+            _playbackTeardownCompleted = true;
+            TryPostPlaybackReturned();
+        }
+
+        private async void TryPostPlaybackReturned()
+        {
+            if (
+                !_playbackNavigationPending ||
+                !_playbackReturnObserved ||
+                !_playbackTeardownCompleted ||
+                _playbackReturnNotificationInFlight)
+            {
+                return;
+            }
+
+            _playbackReturnNotificationInFlight = true;
+            try
+            {
+                for (
+                    var attempt = 0;
+                    attempt < PlaybackReturnNotificationMaxAttempts && _playbackNavigationPending;
+                    attempt++)
+                {
+                    try
+                    {
+                        await ShellWebView.EnsureCoreWebView2Async();
+                        var core = ShellWebView.CoreWebView2;
+                        if (core == null)
+                        {
+                            throw new InvalidOperationException(
+                                "CoreWebView2 is unavailable for playback return notification.");
+                        }
+
+                        core.PostWebMessageAsJson(PlaybackReturnedMessage);
+                        _playbackNavigationPending = false;
+                        _playbackReturnObserved = false;
+                        _playbackTeardownCompleted = false;
+                        ShellWebView.Focus(FocusState.Programmatic);
+                        return;
+                    }
+                    catch (Exception ex)
+                    {
+                        PlaybackDiagnosticsLog.WriteLine(
+                            "Playback return notification attempt " + (attempt + 1) + " failed " +
+                            ex.GetType().FullName + " " + ex.Message);
+                    }
+
+                    if (
+                        attempt + 1 < PlaybackReturnNotificationMaxAttempts &&
+                        _playbackNavigationPending)
+                    {
+                        await Task.Delay(TimeSpan.FromMilliseconds(100 * (1 << attempt)));
+                    }
+                }
+            }
+            finally
+            {
+                _playbackReturnNotificationInFlight = false;
             }
         }
 

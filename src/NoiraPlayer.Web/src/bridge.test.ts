@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createBridgeRequest, isWebViewBridgeAvailable, requestBridge } from './bridge';
+import {
+  createBridgeRequest,
+  isWebViewBridgeAvailable,
+  requestBridge,
+  subscribeHostLifecycle,
+} from './bridge';
 
 describe('bridge', () => {
   afterEach(() => {
@@ -95,6 +100,56 @@ describe('bridge', () => {
 
     await expect(firstPromise).resolves.toEqual({ value: 'first' });
     await expect(secondPromise).resolves.toEqual({ value: 'second' });
+  });
+
+  it('routes typed host lifecycle events outside the request pending map', async () => {
+    let messageHandler: ((event: { data: unknown }) => void) | undefined;
+    const postMessage = vi.fn();
+    (globalThis as { window?: unknown }).window = {
+      chrome: {
+        webview: {
+          addEventListener: vi.fn(
+            (_type: 'message', handler: (event: { data: unknown }) => void) => {
+              messageHandler = handler;
+            },
+          ),
+          removeEventListener: vi.fn(),
+          postMessage,
+        },
+      },
+    };
+    const lifecycleListener = vi.fn();
+    const unsubscribe = subscribeHostLifecycle(lifecycleListener);
+    const request = requestBridge<{ value: string }>('auth.bootstrap');
+    const requestId = (postMessage.mock.calls[0]?.[0] as { id: string }).id;
+
+    messageHandler?.({
+      data: { type: 'host.lifecycle', event: 'playback-returned' },
+    });
+    expect(lifecycleListener).toHaveBeenCalledOnce();
+    expect(lifecycleListener).toHaveBeenCalledWith({
+      type: 'host.lifecycle',
+      event: 'playback-returned',
+    });
+
+    messageHandler?.({
+      data: { id: requestId, ok: true, result: { value: 'response' } },
+    });
+    await expect(request).resolves.toEqual({ value: 'response' });
+
+    unsubscribe();
+    messageHandler?.({
+      data: { type: 'host.lifecycle', event: 'playback-returned' },
+    });
+    expect(lifecycleListener).toHaveBeenCalledOnce();
+  });
+
+  it('makes lifecycle subscription a no-op outside WebView2', () => {
+    const listener = vi.fn();
+    const unsubscribe = subscribeHostLifecycle(listener);
+
+    expect(() => unsubscribe()).not.toThrow();
+    expect(listener).not.toHaveBeenCalled();
   });
 
   it('never fabricates a successful native playback launch', async () => {

@@ -689,7 +689,7 @@ describe('App browse route integration', () => {
     );
   });
 
-  it('backs Home to library to legacy details with exact source restoration through the real client', async () => {
+  it('backs Home to library to Details with exact source restoration through the real client', async () => {
     vi.mocked(requestBridge).mockResolvedValue({
       session: {
         serverUrl: 'https://anonymous.invalid',
@@ -785,7 +785,9 @@ describe('App browse route integration', () => {
     await screen.findByRole('heading', {
       name: 'Route library details anonymous',
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Play' }), {
+      key: 'Escape',
+    });
 
     const restoredGridItem = await screen.findByRole('button', {
       name: 'Open Route library item anonymous',
@@ -880,7 +882,9 @@ describe('App browse route integration', () => {
     });
     fireEvent.click(source);
     await screen.findByRole('heading', { name: 'Direct details result anonymous' });
-    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Play' }), {
+      key: 'Escape',
+    });
 
     const restored = await screen.findByRole('button', {
       name: 'Open Direct details item anonymous',

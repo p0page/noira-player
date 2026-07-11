@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
-import { requestBridge } from './bridge';
+import { requestBridge, subscribeHostLifecycle } from './bridge';
 import {
   loadHomeCatalog,
   loadLibraryLatestCatalog,
@@ -23,6 +23,11 @@ import {
   type FocusTarget,
 } from './navigation/routes';
 import { HomePage } from './pages/HomePage';
+import {
+  DetailsPage,
+  getDetailsActionsScopeKey,
+  getDetailsPlayFocusKey,
+} from './pages/DetailsPage';
 import { LibraryPage } from './pages/LibraryPage';
 import { createEmbyFetchTransport } from './transport';
 import type {
@@ -59,6 +64,7 @@ export function App() {
   const mountedRef = useRef(false);
   const operationGenerationRef = useRef(0);
   const logoutPendingRef = useRef(false);
+  const playbackLaunchInFlightRef = useRef(false);
   const homeRowsRef = useRef<readonly HomeRow[]>([]);
   const currentRoute: BrowseRoute = routeStack[routeStack.length - 1] ?? {
     kind: 'home',
@@ -76,6 +82,27 @@ export function App() {
       mountedRef.current = false;
     };
   }, []);
+
+  useEffect(() => {
+    return subscribeHostLifecycle((event) => {
+      if (event.event !== 'playback-returned') {
+        return;
+      }
+
+      playbackLaunchInFlightRef.current = false;
+      if (currentRoute.kind !== 'details') {
+        return;
+      }
+
+      setBusy(false);
+      setRestoreRequest(
+        createFocusRestoreRequest({
+          scopeKey: getDetailsActionsScopeKey(),
+          focusKey: getDetailsPlayFocusKey(),
+        }),
+      );
+    });
+  }, [currentRoute.kind, currentRoute.kind === 'details' ? currentRoute.itemId : '']);
 
   async function bootstrap() {
     const generation = beginOperation();
@@ -315,24 +342,35 @@ export function App() {
   }
 
   async function playNatively(item: MediaItem) {
-    if (logoutPendingRef.current) {
+    if (logoutPendingRef.current || playbackLaunchInFlightRef.current) {
       return;
     }
 
+    playbackLaunchInFlightRef.current = true;
     const generation = beginOperation();
+    focusPolicy.pause();
     setBusy(true);
     setError('');
+    setRestoreRequest(null);
     try {
       await requestBridge('playback.nativePlayItem', {
         itemId: item.id,
         itemName: item.name,
-        startPositionTicks: item.startPositionTicks || 0,
-        mediaSourceId: item.mediaSourceId || '',
-        runtimeTicks: item.runtimeTicks || 0,
+        startPositionTicks: item.startPositionTicks ?? 0,
+        mediaSourceId: item.mediaSourceId ?? '',
+        runtimeTicks: item.runtimeTicks ?? 0,
       });
     } catch (cause) {
+      playbackLaunchInFlightRef.current = false;
+      focusPolicy.resume();
       if (isCurrentOperation(generation)) {
         setError(describeError(cause));
+        setRestoreRequest(
+          createFocusRestoreRequest({
+            scopeKey: getDetailsActionsScopeKey(),
+            focusKey: getDetailsPlayFocusKey(),
+          }),
+        );
       }
     } finally {
       if (isCurrentOperation(generation)) {
@@ -402,6 +440,7 @@ export function App() {
   }
 
   function resetAuthenticatedState() {
+    playbackLaunchInFlightRef.current = false;
     setClient(null);
     replaceHomeRows([]);
     setRouteStack([{ kind: 'home' }]);
@@ -493,28 +532,13 @@ export function App() {
       ) : null}
 
       {authState === 'browse' && currentRoute.kind === 'details' && selectedItem ? (
-        <main className="app-page legacy-page legacy-details">
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => browseBack()}
-          >
-            Back
-          </button>
-          <section>
-            <h1>{selectedItem.name}</h1>
-            {selectedItem.imageUrl ? <img src={selectedItem.imageUrl} alt="" /> : null}
-            <p>{selectedItem.type}</p>
-            {selectedItem.overview ? <p>{selectedItem.overview}</p> : null}
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => void playNatively(selectedItem)}
-            >
-              Play
-            </button>
-          </section>
-        </main>
+        <DetailsPage
+          busy={busy}
+          item={selectedItem}
+          restoreRequest={restoreRequest}
+          onBack={browseBack}
+          onPlay={(item) => void playNatively(item)}
+        />
       ) : null}
     </div>
   );

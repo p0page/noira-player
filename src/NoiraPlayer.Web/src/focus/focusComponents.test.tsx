@@ -46,6 +46,7 @@ const spatialNavigation = SpatialNavigation as unknown as SpatialNavigationInter
 
 afterEach(() => {
   cleanup();
+  Reflect.deleteProperty(window, 'chrome');
   vi.restoreAllMocks();
 });
 
@@ -95,6 +96,41 @@ describe('FocusProvider', () => {
       spatialNavigation.focusableComponents['strict-focus-anonymous']
         ?.parentFocusKey,
     ).toBe('strict-scope-anonymous');
+  });
+
+  it('resumes the global policy from a typed native playback return event', async () => {
+    let messageHandler: ((event: { data: unknown }) => void) | undefined;
+    Object.defineProperty(window, 'chrome', {
+      configurable: true,
+      value: {
+        webview: {
+          addEventListener: vi.fn(
+            (_type: 'message', handler: (event: { data: unknown }) => void) => {
+              messageHandler = handler;
+            },
+          ),
+          removeEventListener: vi.fn(),
+          postMessage: vi.fn(),
+        },
+      },
+    });
+    const policy = createFocusNavigationPolicy();
+
+    render(
+      <FocusProvider policy={policy}>
+        <p>Lifecycle child anonymous</p>
+      </FocusProvider>,
+    );
+    policy.pause();
+    expect(policy.isPaused()).toBe(true);
+
+    act(() => {
+      messageHandler?.({
+        data: { type: 'host.lifecycle', event: 'playback-returned' },
+      });
+    });
+
+    expect(policy.isPaused()).toBe(false);
   });
 
   it('preserves a later pending default through StrictMode registration replay', async () => {
