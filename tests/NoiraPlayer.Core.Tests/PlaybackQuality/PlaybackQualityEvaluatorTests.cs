@@ -23,6 +23,29 @@ public sealed class PlaybackQualityEvaluatorTests
     }
 
     [Fact]
+    public void Evaluate_Fails_When_No_Expected_Thresholds_And_Lifecycle_Operation_Fails()
+    {
+        const string message = "audio switch failed before threshold evaluation";
+        var report = new PlaybackQualityReport { RunId = "observed-audio-switch-failed" };
+        report.Lifecycle.Events.Add(new PlaybackQualityLifecycleEvent
+        {
+            Operation = "audio-switch",
+            Status = "failed",
+            Message = message
+        });
+
+        PlaybackQualityEvaluator.Evaluate(report);
+
+        Assert.Equal("fail", report.Result);
+        Assert.Contains(message, report.FailureReasons);
+        Assert.Contains(report.Checks, check =>
+            check.Signal == "lifecycle.audio-switch" &&
+            check.Status == "fail" &&
+            check.FailureArea == "tracks" &&
+            check.Message == message);
+    }
+
+    [Fact]
     public void Evaluate_Passes_When_Metrics_Match_Expected_Thresholds()
     {
         var report = new PlaybackQualityReport
@@ -458,6 +481,37 @@ public sealed class PlaybackQualityEvaluatorTests
             check.Status == "pass");
         Assert.DoesNotContain(report.Checks, check =>
             check.Signal == "colorPipeline.conversionStatus");
+    }
+
+    [Fact]
+    public void Evaluate_Fails_When_Expected_Unsupported_Source_Has_Failed_Lifecycle_Operation()
+    {
+        const string message = "seek failed for unsupported source";
+        var report = new PlaybackQualityReport
+        {
+            RunId = "unsupported-seek-failed",
+            Expected = new PlaybackQualityExpected
+            {
+                IsDirectPlayable = false,
+                RequireValidatedConversion = false
+            }
+        };
+        report.Lifecycle.Events.Add(new PlaybackQualityLifecycleEvent
+        {
+            Operation = "seek",
+            Status = "failed",
+            Message = message
+        });
+
+        PlaybackQualityEvaluator.Evaluate(report);
+
+        Assert.Equal("fail", report.Result);
+        Assert.Contains(message, report.FailureReasons);
+        Assert.Contains(report.Checks, check =>
+            check.Signal == "lifecycle.seek" &&
+            check.Status == "fail" &&
+            check.FailureArea == "timeline" &&
+            check.Message == message);
     }
 
     [Fact]

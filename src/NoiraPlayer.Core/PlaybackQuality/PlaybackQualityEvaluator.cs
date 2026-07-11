@@ -13,9 +13,18 @@ namespace NoiraPlayer.Core.PlaybackQuality
             report.FailureReasons.Clear();
             report.Checks.Clear();
             report.Analysis = new PlaybackQualityAnalysis();
+            CheckFailedLifecycleOperations(report);
 
             if (report.Expected == null)
             {
+                if (report.FailureReasons.Count != 0)
+                {
+                    AssignFailureClasses(report);
+                    report.Result = "fail";
+                    AssignFailureAnalysis(report);
+                    return;
+                }
+
                 report.Result = "observed";
                 report.Analysis.PrimaryFailureArea = "none";
                 report.Analysis.SuggestedNextAction = "No thresholds supplied; inspect raw metrics only.";
@@ -187,7 +196,6 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 });
             }
 
-            CheckFailedLifecycleOperations(report);
             AssignFailureClasses(report);
             report.Result = report.FailureReasons.Count == 0 ? "pass" : "fail";
             if (report.Result == "pass")
