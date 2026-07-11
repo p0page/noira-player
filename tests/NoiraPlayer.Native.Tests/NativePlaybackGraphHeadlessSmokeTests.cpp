@@ -64,7 +64,7 @@ namespace
         bool Attempted{false};
         std::string Status{"not-attempted"};
         int64_t TargetPositionTicks{SeekTargetPositionTicks};
-        int64_t ActualPositionTicks{0};
+        std::optional<int64_t> ActualPositionTicks;
         int64_t PostSeekPlaybackPositionTicks{0};
     };
 
@@ -281,23 +281,26 @@ int wmain(int argc, wchar_t** argv)
         SeekOutcome seek;
         seek.Attempted = true;
         auto seekCallCompleted = false;
+        auto seekPresentationBefore = graph.SeekPresentationSnapshot();
         try
         {
             graph.Seek(seek.TargetPositionTicks);
-            seek.ActualPositionTicks = graph.QualityMetricsSnapshot().VideoPositionTicks;
-            seekCallCompleted = true;
+            auto seekPresentation = graph.SeekPresentationSnapshot();
+            seek.ActualPositionTicks = seekPresentation.ActualPositionTicks;
+            seekCallCompleted =
+                seekPresentation.Generation > seekPresentationBefore.Generation &&
+                seekPresentation.ActualPositionTicks.has_value();
         }
         catch (...)
         {
-            seek.ActualPositionTicks = graph.QualityMetricsSnapshot().VideoPositionTicks;
         }
 
         std::this_thread::sleep_for(sampleWindow - halfWindow);
 
         auto postSeekPlaybackSnapshot = graph.QualityMetricsSnapshot();
         seek.PostSeekPlaybackPositionTicks = postSeekPlaybackSnapshot.VideoPositionTicks;
-        seek.Status = seekCallCompleted &&
-            seek.PostSeekPlaybackPositionTicks > seek.ActualPositionTicks
+        seek.Status = seekCallCompleted && seek.ActualPositionTicks.has_value() &&
+            seek.PostSeekPlaybackPositionTicks > seek.ActualPositionTicks.value()
                 ? "completed"
                 : "failed";
         auto displayRefreshRateHz = source
@@ -346,7 +349,7 @@ int wmain(int argc, wchar_t** argv)
             << " seekAttempted=" << (seek.Attempted ? 1 : 0)
             << " seekStatus=" << seek.Status
             << " seekTargetPositionTicks=" << seek.TargetPositionTicks
-            << " seekActualPositionTicks=" << seek.ActualPositionTicks
+            << " seekActualPositionTicks=" << seek.ActualPositionTicks.value_or(-1)
             << " postSeekPlaybackPositionTicks=" << seek.PostSeekPlaybackPositionTicks
             << " renderIntervalMsP05=" << playbackSnapshot.RenderIntervalMsP05
             << " renderIntervalMsP50=" << playbackSnapshot.RenderIntervalMsP50

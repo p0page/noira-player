@@ -156,7 +156,7 @@ internal static class NativeHeadlessHarness
                 "seek",
                 helper.Seek.Status,
                 helper.Seek.ActualPositionTicks,
-                $"target {helper.Seek.TargetPositionTicks}; immediate {helper.Seek.ActualPositionTicks}; " +
+                $"target {helper.Seek.TargetPositionTicks}; first presented {helper.Seek.ActualPositionTicks?.ToString() ?? "unavailable"}; " +
                     $"post-seek {helper.Seek.PostSeekPlaybackPositionTicks}");
         }
 
@@ -180,8 +180,8 @@ internal static class NativeHeadlessHarness
                 RequestedStartPositionTicks = 0,
                 SeekTargetPositionTicks = helper.Seek.TargetPositionTicks,
                 ActualPositionTicks = helper.Seek.ActualPositionTicks,
-                SeekPositionErrorMs = helper.Seek.Attempted
-                    ? Math.Abs(helper.Seek.ActualPositionTicks - helper.Seek.TargetPositionTicks) / 10000.0
+                SeekPositionErrorMs = helper.Seek.Attempted && helper.Seek.ActualPositionTicks.HasValue
+                    ? Math.Abs(helper.Seek.ActualPositionTicks.Value - helper.Seek.TargetPositionTicks) / 10000.0
                     : null
             });
         if (request.RuntimeMetrics != null)
@@ -617,9 +617,9 @@ internal static class NativeHeadlessHarness
         }
 
         if (!TryGetInteractionStatus(values, "seekStatus", out var status, out error) ||
-            !TryGetRequiredInt64(values, "seekTargetPositionTicks", out var targetPosition, out error) ||
-            !TryGetRequiredInt64(values, "seekActualPositionTicks", out var actualPosition, out error) ||
-            !TryGetRequiredInt64(values, "postSeekPlaybackPositionTicks", out var postSeekPosition, out error))
+            !TryGetRequiredNonNegativeInt64(values, "seekTargetPositionTicks", out var targetPosition, out error) ||
+            !TryGetRequiredNullableNonNegativeInt64(values, "seekActualPositionTicks", out var actualPosition, out error) ||
+            !TryGetRequiredNonNegativeInt64(values, "postSeekPlaybackPositionTicks", out var postSeekPosition, out error))
         {
             return false;
         }
@@ -627,6 +627,12 @@ internal static class NativeHeadlessHarness
         if (targetPosition != NativeHelperSeekTargetPositionTicks)
         {
             error = "Native helper field 'seekTargetPositionTicks' must equal 10000000.";
+            return false;
+        }
+
+        if (status == "completed" && !actualPosition.HasValue)
+        {
+            error = "Native helper field 'seekActualPositionTicks' must contain the first presented frame position when seekStatus is completed.";
             return false;
         }
 
@@ -702,6 +708,39 @@ internal static class NativeHeadlessHarness
             return false;
         }
 
+        error = "";
+        return true;
+    }
+
+    private static bool TryGetRequiredNonNegativeInt64(
+        Dictionary<string, string> values,
+        string key,
+        out long value,
+        out string error)
+    {
+        if (!TryGetRequiredInt64(values, key, out value, out error) || value < 0)
+        {
+            error = "Native helper field '" + key + "' must be a non-negative signed integer.";
+            return false;
+        }
+
+        return true;
+    }
+
+    private static bool TryGetRequiredNullableNonNegativeInt64(
+        Dictionary<string, string> values,
+        string key,
+        out long? value,
+        out string error)
+    {
+        value = null;
+        if (!values.TryGetValue(key, out var raw) || !long.TryParse(raw, out var parsed) || parsed < -1)
+        {
+            error = "Native helper field '" + key + "' must be -1 or a non-negative signed integer.";
+            return false;
+        }
+
+        value = parsed >= 0 ? parsed : null;
         error = "";
         return true;
     }
@@ -1359,7 +1398,7 @@ internal sealed class NativeHeadlessSeekOutcome
 
     public long TargetPositionTicks { get; set; }
 
-    public long ActualPositionTicks { get; set; }
+    public long? ActualPositionTicks { get; set; }
 
     public long PostSeekPlaybackPositionTicks { get; set; }
 }

@@ -123,6 +123,10 @@ if (-not ($plan.commands | Where-Object { $_.name -eq 'native-headless-harness-s
     throw 'Expected native-headless-harness-smoke-test command in playback-core validation plan.'
 }
 
+if (-not ($plan.commands | Where-Object { $_.name -eq 'native-seek-presentation-test' })) {
+    throw 'Expected native-seek-presentation-test command in playback-core validation plan.'
+}
+
 $nativeHeadlessSmokeScriptPath = Join-Path $PSScriptRoot 'run-native-headless-harness-smoke-test.ps1'
 $nativeHeadlessSmokeScript = Get-Content -Raw -LiteralPath $nativeHeadlessSmokeScriptPath
 if ($nativeHeadlessSmokeScript -notmatch '\$nativeCadenceDurationSeconds\s*=\s*5') {

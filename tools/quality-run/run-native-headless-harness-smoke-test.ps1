@@ -584,6 +584,16 @@ function Assert-NativeHeadlessParserContracts {
                 seekActualPositionTicks = '10000000'
                 postSeekPlaybackPositionTicks = '20000000'
             }
+        },
+        [pscustomobject]@{
+            Name = 'completed-seek-without-presented-frame'
+            ExpectedField = 'seekActualPositionTicks'
+            Output = New-NativeHeadlessParserFixtureOutput -Overrides @{
+                seekAttempted = '1'
+                seekStatus = 'completed'
+                seekActualPositionTicks = '-1'
+                postSeekPlaybackPositionTicks = '20000000'
+            }
         }
     )
 

@@ -6,6 +6,7 @@
 #include "FfmpegMediaSource.h"
 #include "PlaybackQualityMetrics.h"
 #include "RenderLoopWaiter.h"
+#include "SeekPresentationTracker.h"
 #include "SubtitleDecoder.h"
 #include "SubtitleRenderer.h"
 #include "VideoDecoder.h"
@@ -84,6 +85,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         int64_t CurrentPositionTicks() const noexcept;
         uint64_t SubtitleCueRenderCount() const noexcept;
         std::optional<int32_t> SelectedSubtitleStreamIndex() const noexcept;
+        SeekPresentationSnapshot SeekPresentationSnapshot() const noexcept;
         PlaybackQualityMetricsSnapshot QualityMetricsSnapshot() const noexcept;
         std::optional<FfmpegVideoStreamSnapshot> VideoSourceSnapshot() const;
         std::vector<FfmpegStreamSnapshot> SourceTrackSnapshots() const;
@@ -139,6 +141,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         uint64_t m_videoStarvedPassCount{0};
         uint64_t m_audioStarvedPassCount{0};
         PlaybackQualityMetrics m_qualityMetrics;
+        SeekPresentationTracker m_seekPresentationTracker;
         std::optional<int64_t> m_videoPrerollTargetTicks;
         std::chrono::steady_clock::time_point m_lastRuntimeStatsLog{};
         std::chrono::steady_clock::time_point m_lastRenderedFrameAt{};
