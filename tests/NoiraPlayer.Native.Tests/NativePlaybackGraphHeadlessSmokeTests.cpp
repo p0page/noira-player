@@ -206,8 +206,19 @@ int wmain(int argc, wchar_t** argv)
             }
         }
 
+        AudioSwitchOutcome audioSwitch;
+        SubtitleSwitchOutcome subtitleSwitch1;
+        SubtitleSwitchOutcome subtitleSwitch2;
+        SubtitleOffOutcome subtitleOff;
+        SeekOutcome seek;
+
         auto positionBeforePauseTicks = graph.CurrentPositionTicks();
         auto decodedVideoFramesBeforePause = playbackSnapshot.DecodedVideoFrames;
+        auto positionAfterResumeTicks = positionBeforePauseTicks;
+        auto postResumeDecodedVideoFrames = decodedVideoFramesBeforePause;
+        auto postResumeRenderedVideoFrames = playbackSnapshot.RenderedVideoFrames;
+        auto pauseResumeStatus = std::string{"completed"};
+        auto pauseResumeRecovered = true;
         graph.Pause();
         auto pauseDuration = options.PauseSeconds > 0
             ? std::chrono::milliseconds(options.PauseSeconds * 1000)
@@ -218,52 +229,48 @@ int wmain(int argc, wchar_t** argv)
         if (options.PauseSeconds > 0)
         {
             std::this_thread::sleep_for(sampleWindow);
-            auto postResumeSnapshot = graph.QualityMetricsSnapshot();
-            auto positionAfterResumeTicks = graph.CurrentPositionTicks();
+            playbackSnapshot = graph.QualityMetricsSnapshot();
+            positionAfterResumeTicks = graph.CurrentPositionTicks();
+            postResumeDecodedVideoFrames = playbackSnapshot.DecodedVideoFrames;
+            postResumeRenderedVideoFrames = playbackSnapshot.RenderedVideoFrames;
             auto failed = playbackFailed.load(std::memory_order_relaxed);
-            auto recovered = !failed &&
+            pauseResumeRecovered = !failed &&
                 positionAfterResumeTicks > positionBeforePauseTicks &&
-                postResumeSnapshot.DecodedVideoFrames > decodedVideoFramesBeforePause;
-            graph.Stop();
-
-            std::cout << "pauseDurationSeconds=" << options.PauseSeconds
-                << " positionBeforePauseTicks=" << positionBeforePauseTicks
-                << " positionAfterResumeTicks=" << positionAfterResumeTicks
-                << " postResumeDecodedVideoFrames=" << postResumeSnapshot.DecodedVideoFrames
-                << " playbackFailed=" << (failed ? 1 : 0)
-                << " pauseResumeStatus=" << (recovered ? "completed" : "failed")
-                << std::endl;
-            return recovered ? 0 : 2;
+                playbackSnapshot.DecodedVideoFrames > decodedVideoFramesBeforePause &&
+                playbackSnapshot.RenderedVideoFrames > 0;
+            pauseResumeStatus = pauseResumeRecovered ? "completed" : "failed";
         }
 
-        AudioSwitchOutcome audioSwitch;
-        if (audioStreamIndexes.size() >= 2)
+        if (options.PauseSeconds == 0)
         {
-            audioSwitch.Attempted = true;
-            audioSwitch.StreamIndex = audioStreamIndexes[1];
-            audioSwitch.PositionBeforeTicks = graph.CurrentPositionTicks();
-            audioSwitch.SubmittedFramesBefore = graph.QualityMetricsSnapshot().SubmittedAudioFrames;
-            try
+            if (audioStreamIndexes.size() >= 2)
             {
-                graph.SwitchAudioStream(audioSwitch.StreamIndex);
-                std::this_thread::sleep_for(500ms);
-                selectedAudioStreamIndex = graph.SelectedAudioStreamIndex();
-                audioSwitch.PositionAfterTicks = graph.CurrentPositionTicks();
-                audioSwitch.SubmittedFramesAfter = graph.QualityMetricsSnapshot().SubmittedAudioFrames;
-                audioSwitch.Status =
-                    selectedAudioStreamIndex.has_value() &&
-                    selectedAudioStreamIndex.value() == audioSwitch.StreamIndex &&
-                    audioSwitch.PositionAfterTicks > audioSwitch.PositionBeforeTicks &&
-                    audioSwitch.SubmittedFramesAfter > audioSwitch.SubmittedFramesBefore
-                        ? "completed"
-                        : "failed";
-            }
-            catch (...)
-            {
-                selectedAudioStreamIndex = graph.SelectedAudioStreamIndex();
-                audioSwitch.PositionAfterTicks = graph.CurrentPositionTicks();
-                audioSwitch.SubmittedFramesAfter = graph.QualityMetricsSnapshot().SubmittedAudioFrames;
-                audioSwitch.Status = "failed";
+                audioSwitch.Attempted = true;
+                audioSwitch.StreamIndex = audioStreamIndexes[1];
+                audioSwitch.PositionBeforeTicks = graph.CurrentPositionTicks();
+                audioSwitch.SubmittedFramesBefore = graph.QualityMetricsSnapshot().SubmittedAudioFrames;
+                try
+                {
+                    graph.SwitchAudioStream(audioSwitch.StreamIndex);
+                    std::this_thread::sleep_for(500ms);
+                    selectedAudioStreamIndex = graph.SelectedAudioStreamIndex();
+                    audioSwitch.PositionAfterTicks = graph.CurrentPositionTicks();
+                    audioSwitch.SubmittedFramesAfter = graph.QualityMetricsSnapshot().SubmittedAudioFrames;
+                    audioSwitch.Status =
+                        selectedAudioStreamIndex.has_value() &&
+                        selectedAudioStreamIndex.value() == audioSwitch.StreamIndex &&
+                        audioSwitch.PositionAfterTicks > audioSwitch.PositionBeforeTicks &&
+                        audioSwitch.SubmittedFramesAfter > audioSwitch.SubmittedFramesBefore
+                            ? "completed"
+                            : "failed";
+                }
+                catch (...)
+                {
+                    selectedAudioStreamIndex = graph.SelectedAudioStreamIndex();
+                    audioSwitch.PositionAfterTicks = graph.CurrentPositionTicks();
+                    audioSwitch.SubmittedFramesAfter = graph.QualityMetricsSnapshot().SubmittedAudioFrames;
+                    audioSwitch.Status = "failed";
+                }
             }
         }
 
@@ -326,20 +333,17 @@ int wmain(int argc, wchar_t** argv)
             return outcome;
         };
 
-        SubtitleSwitchOutcome subtitleSwitch1;
-        SubtitleSwitchOutcome subtitleSwitch2;
-        if (!subtitleStreamIndexes.empty())
+        if (options.PauseSeconds == 0 && !subtitleStreamIndexes.empty())
         {
             subtitleSwitch1 = runSubtitleSwitch(subtitleStreamIndexes[0], true);
         }
 
-        if (subtitleStreamIndexes.size() >= 2)
+        if (options.PauseSeconds == 0 && subtitleStreamIndexes.size() >= 2)
         {
             subtitleSwitch2 = runSubtitleSwitch(subtitleStreamIndexes[1], false);
         }
 
-        SubtitleOffOutcome subtitleOff;
-        if (!subtitleStreamIndexes.empty())
+        if (options.PauseSeconds == 0 && !subtitleStreamIndexes.empty())
         {
             subtitleOff.Attempted = true;
             try
@@ -358,37 +362,39 @@ int wmain(int argc, wchar_t** argv)
             }
         }
 
-        SeekOutcome seek;
-        seek.Attempted = true;
         auto seekCallCompleted = false;
         auto seekPresentationBefore = graph.SeekPresentationSnapshot();
         auto seekGeneration = seekPresentationBefore.Generation;
-        try
+        if (options.PauseSeconds == 0)
         {
-            graph.Seek(seek.TargetPositionTicks);
-            auto seekPresentation = graph.SeekPresentationSnapshot();
-            seek.ActualPositionTicks = seekPresentation.ActualPositionTicks;
-            seekGeneration = seekPresentation.Generation;
-            seekCallCompleted = seekPresentation.Generation > seekPresentationBefore.Generation;
-        }
-        catch (...)
-        {
-        }
+            seek.Attempted = true;
+            try
+            {
+                graph.Seek(seek.TargetPositionTicks);
+                auto seekPresentation = graph.SeekPresentationSnapshot();
+                seek.ActualPositionTicks = seekPresentation.ActualPositionTicks;
+                seekGeneration = seekPresentation.Generation;
+                seekCallCompleted = seekPresentation.Generation > seekPresentationBefore.Generation;
+            }
+            catch (...)
+            {
+            }
 
-        std::this_thread::sleep_for(sampleWindow - halfWindow);
+            std::this_thread::sleep_for(sampleWindow - halfWindow);
 
-        auto finalSeekPresentation = graph.SeekPresentationSnapshot();
-        if (seekCallCompleted && finalSeekPresentation.Generation == seekGeneration)
-        {
-            seek.ActualPositionTicks = finalSeekPresentation.ActualPositionTicks;
+            auto finalSeekPresentation = graph.SeekPresentationSnapshot();
+            if (seekCallCompleted && finalSeekPresentation.Generation == seekGeneration)
+            {
+                seek.ActualPositionTicks = finalSeekPresentation.ActualPositionTicks;
+            }
+
+            auto postSeekPlaybackSnapshot = graph.QualityMetricsSnapshot();
+            seek.PostSeekPlaybackPositionTicks = postSeekPlaybackSnapshot.VideoPositionTicks;
+            seek.Status = seekCallCompleted && seek.ActualPositionTicks.has_value() &&
+                seek.PostSeekPlaybackPositionTicks > seek.ActualPositionTicks.value()
+                    ? "completed"
+                    : "failed";
         }
-
-        auto postSeekPlaybackSnapshot = graph.QualityMetricsSnapshot();
-        seek.PostSeekPlaybackPositionTicks = postSeekPlaybackSnapshot.VideoPositionTicks;
-        seek.Status = seekCallCompleted && seek.ActualPositionTicks.has_value() &&
-            seek.PostSeekPlaybackPositionTicks > seek.ActualPositionTicks.value()
-                ? "completed"
-                : "failed";
         auto displayRefreshRateHz = source
             ? HdrDisplayRefreshRatePolicy::SelectSoftwareOnlyRefreshRateSnapshot(source->FrameRate)
             : 0.0;
@@ -534,6 +540,11 @@ int wmain(int argc, wchar_t** argv)
             << " sourceTrackCount=" << tracks.size()
             << " playbackFailed=" << (playbackFailed.load(std::memory_order_relaxed) ? 1 : 0)
             << " pauseDurationSeconds=" << options.PauseSeconds
+            << " positionBeforePauseTicks=" << positionBeforePauseTicks
+            << " positionAfterResumeTicks=" << positionAfterResumeTicks
+            << " postResumeDecodedVideoFrames=" << postResumeDecodedVideoFrames
+            << " postResumeRenderedVideoFrames=" << postResumeRenderedVideoFrames
+            << " pauseResumeStatus=" << pauseResumeStatus
             << " subtitleCueRenderCount=" << subtitleCueRenderCount
             << " selectedAudioStreamIndex=" << selectedAudioStreamIndex.value_or(-1)
             << " selectedSubtitleStreamIndex=" << selectedSubtitleStreamIndex.value_or(-1);
@@ -557,7 +568,7 @@ int wmain(int argc, wchar_t** argv)
 
         assert(playbackSnapshot.DecodedVideoFrames > 1);
         assert(playbackSnapshot.RenderedVideoFrames > 1);
-        return playbackFailed.load(std::memory_order_relaxed) ? 2 : 0;
+        return playbackFailed.load(std::memory_order_relaxed) || !pauseResumeRecovered ? 2 : 0;
     }
     catch (winrt::hresult_error const& error)
     {

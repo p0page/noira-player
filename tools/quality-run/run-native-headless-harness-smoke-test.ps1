@@ -399,40 +399,109 @@ function Assert-NativeNetworkReconnectRecovery {
             throw 'Deterministic network reconnect server did not become ready.'
         }
 
-        $helperStdout = Join-Path $smokeRoot 'network-reconnect-helper.out.log'
-        $helperStderr = Join-Path $smokeRoot 'network-reconnect-helper.err.log'
-        Remove-Item -LiteralPath $helperStdout, $helperStderr -Force -ErrorAction SilentlyContinue
-        $helper = Start-Process $NativeHelperExe `
-            -ArgumentList @(
-                '--stream-url',
-                ("http://127.0.0.1:{0}/media.mp4" -f $port),
-                '--duration-seconds',
-                3,
-                '--pause-seconds',
-                1) `
-            -WindowStyle Hidden `
-            -Wait `
-            -PassThru `
-            -RedirectStandardOutput $helperStdout `
-            -RedirectStandardError $helperStderr
-        $helperExitCode = $helper.ExitCode
-        $helperOutput =
-            ((Get-Content -LiteralPath $helperStdout -Raw | Out-String) +
-                (Get-Content -LiteralPath $helperStderr -Raw | Out-String))
+        $networkRoot = Join-Path $smokeRoot 'network-reconnect-formal'
+        $networkManifestPath = Join-Path $networkRoot 'manifest.json'
+        $networkReportsDir = Join-Path $networkRoot 'reports'
+        $networkMaterializedDir = Join-Path $networkRoot 'materialized'
+        $networkSummaryPath = Join-Path $networkRoot 'runner-summary.json'
+        $networkMaterializedSummaryPath = Join-Path $networkRoot 'materialized-summary.json'
+        $networkValidationPath = Join-Path $networkRoot 'validation.json'
+        $networkCaseId = 'local/network-reconnect-pause-resume'
+        $networkUrl = "http://127.0.0.1:{0}/media.mp4" -f $port
+        New-Item -ItemType Directory -Path $networkRoot -Force | Out-Null
+        [ordered]@{
+            schemaVersion = 1
+            cases = @(
+                [ordered]@{
+                    caseId = $networkCaseId
+                    category = 'stable'
+                    severity = 'critical'
+                    stability = 'stable'
+                    uri = $networkUrl
+                    pauseSeconds = 1
+                    executionRequirement = [ordered]@{
+                        minimumEvidenceLevel = 'native-playback'
+                    }
+                    purpose = @('buffering', 'pause-resume', 'network-recovery')
+                    expected = [ordered]@{
+                        codec = 'h264'
+                        width = 320
+                        height = 180
+                        frameRate = 30
+                        hdrKind = 'Sdr'
+                        isDirectPlayable = $true
+                        minRenderedVideoFrames = 10
+                    }
+                }
+            )
+        } | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $networkManifestPath -Encoding UTF8
+
+        & powershell -NoProfile -ExecutionPolicy Bypass `
+            -File (Join-Path $PSScriptRoot 'Invoke-PlaybackQualityManifest.ps1') `
+            -ManifestPath $networkManifestPath `
+            -ReportsDir $networkReportsDir `
+            -NativeHelperExe $NativeHelperExe `
+            -SummaryPath $networkSummaryPath `
+            -DurationSeconds 3
+        if ($LASTEXITCODE -ne 0) {
+            throw 'Expected formal network reconnect manifest runner to complete.'
+        }
+
+        $networkReportPath = Get-QualityReportPath -Root $networkReportsDir -CaseId $networkCaseId
+        $networkReport = Get-Content -LiteralPath $networkReportPath -Raw | ConvertFrom-Json
+        $pauseEvent = @($networkReport.report.lifecycle.events | Where-Object operation -eq 'pause') | Select-Object -First 1
+        $resumeEvent = @($networkReport.report.lifecycle.events | Where-Object operation -eq 'resume') | Select-Object -First 1
+        if ($networkReport.report.result -ne 'pass' -or
+            $networkReport.report.execution.status -ne 'completed' -or
+            $networkReport.report.execution.evidenceLevel -ne 'native-playback' -or
+            $networkReport.report.timing.decodedVideoFrames -le 0 -or
+            $networkReport.report.timing.renderedVideoFrames -le 0 -or
+            $pauseEvent.status -ne 'completed' -or
+            $resumeEvent.status -ne 'completed' -or
+            $resumeEvent.positionTicks -le $pauseEvent.positionTicks -or
+            $resumeEvent.message -notmatch 'playback failed False') {
+            throw 'Formal network reconnect report did not preserve complete pause/resume playback evidence.'
+        }
+
+        dotnet run --project (Join-Path $repoRoot 'tools\NoiraPlayer.PlaybackQuality.Cli\NoiraPlayer.PlaybackQuality.Cli.csproj') -- `
+            materialize-native-harness-report-set `
+            --manifest $networkManifestPath `
+            --captured-reports-dir $networkReportsDir `
+            --reports-dir $networkMaterializedDir `
+            --collector-version native-headless-harness-v0.1 `
+            --player-core-version NoiraPlayer.Core `
+            --source-revision network-reconnect-smoke `
+            --build-configuration Debug `
+            --output $networkMaterializedSummaryPath
+        if ($LASTEXITCODE -ne 0) {
+            throw 'Expected formal network reconnect report materialization to complete.'
+        }
+
+        dotnet run --project (Join-Path $repoRoot 'tools\NoiraPlayer.PlaybackQuality.Cli\NoiraPlayer.PlaybackQuality.Cli.csproj') -- `
+            validate-report-set `
+            --manifest $networkManifestPath `
+            --reports-dir $networkMaterializedDir `
+            --output $networkValidationPath
+        if ($LASTEXITCODE -ne 0) {
+            throw 'Expected formal network reconnect report-set to pass strict validation.'
+        }
+
+        $networkValidation = Get-Content -LiteralPath $networkValidationPath -Raw | ConvertFrom-Json
+        if ($networkValidation.isValid -ne $true -or
+            $networkValidation.executionValid -ne $true -or
+            $networkValidation.executionCoverage.completedCaseCount -ne 1 -or
+            $networkValidation.executionCoverage.renderedCaseCount -ne 1) {
+            throw 'Formal network reconnect strict validation did not count one completed/rendered case.'
+        }
+
         Start-Sleep -Milliseconds 500
         $serverOutput = Get-Content -LiteralPath $serverStdout -Raw
-
-        if ($helperExitCode -ne 0 -or
-            -not $helperOutput.Contains('pauseResumeStatus=completed') -or
-            -not $helperOutput.Contains('playbackFailed=0')) {
-            throw "Expected native helper to recover from the forced HTTP disconnect.`n$helperOutput"
-        }
 
         if (-not [regex]::IsMatch($serverOutput, 'request=2 rangeStart=[1-9][0-9]*')) {
             throw "Expected forced disconnect recovery to issue a ranged second request.`n$serverOutput"
         }
 
-        Write-Output 'native network reconnect smoke passed: pauseResumeStatus=completed request=2'
+        Write-Output 'native network reconnect formal case passed: strict=true request=2'
     }
     finally {
         if (-not $server.HasExited) {

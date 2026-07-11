@@ -32,6 +32,7 @@ function Invoke-NativeHeadlessHarnessCase {
         [Parameter(Mandatory = $true)][string]$HeadlessProjectPath,
         [string]$HarnessScriptPath = '',
         [int]$DurationSeconds = 10,
+        [int]$PauseSeconds = 0,
         [bool]$ForceSdrOutput = $false
     )
 
@@ -45,6 +46,9 @@ function Invoke-NativeHeadlessHarnessCase {
     )
     if ($ForceSdrOutput) {
         $harnessArguments += '--force-sdr-output'
+    }
+    if ($PauseSeconds -gt 0) {
+        $harnessArguments += @('--pause-seconds', ([string]$PauseSeconds))
     }
 
     if (-not [string]::IsNullOrWhiteSpace($HarnessScriptPath)) {

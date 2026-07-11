@@ -30,6 +30,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
 
         public bool ForceSdrOutput { get; set; }
 
+        public int PauseSeconds { get; set; }
+
         public int Tier { get; set; }
 
         public List<string> Purpose { get; } = new List<string>();
@@ -253,6 +255,16 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 AddUnique(validation.Tiers, referenceCase.Tier);
             }
 
+            if (referenceCase.PauseSeconds < 0 || referenceCase.PauseSeconds > 900)
+            {
+                AddError(
+                    validation,
+                    "case.pause-seconds.invalid",
+                    caseId,
+                    "pauseSeconds",
+                    "Playback quality reference pauseSeconds must be between 0 and 900.");
+            }
+
             if (referenceCase.Purpose.Count == 0)
             {
                 AddError(
@@ -298,6 +310,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 MediaSourceId = source.MediaSourceId,
                 StartPositionTicks = source.StartPositionTicks,
                 ForceSdrOutput = source.ForceSdrOutput,
+                PauseSeconds = source.PauseSeconds,
                 Tier = source.Tier,
                 ExecutionRequirement = new PlaybackQualityExecutionRequirement
                 {

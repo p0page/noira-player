@@ -27,6 +27,7 @@ try {
       "severity": "high",
       "stability": "stable",
       "uri": "https://media.invalid/first.mp4",
+      "pauseSeconds": 1,
       "executionRequirement": { "minimumEvidenceLevel": "native-playback" },
       "purpose": [ "error-handling" ],
       "expected": {
@@ -91,7 +92,8 @@ function Get-Value([string]$Name) {
 $caseId = Get-Value '--case-id'
 $reportsDir = Get-Value '--reports-dir'
 $logPath = $env:NOIRAPLAYER_MANIFEST_RUNNER_TEST_LOG
-Add-Content -LiteralPath $logPath -Value $caseId -Encoding UTF8
+$pauseSeconds = Get-Value '--pause-seconds'
+Add-Content -LiteralPath $logPath -Value ($caseId + '|pause=' + $pauseSeconds) -Encoding UTF8
 
 $reportPath = Join-Path $reportsDir ($caseId.Replace('/', [System.IO.Path]::DirectorySeparatorChar) + '.json')
 New-Item -ItemType Directory -Path (Split-Path -Parent $reportPath) -Force | Out-Null
@@ -124,8 +126,8 @@ exit 0
 
     $invocations = @(Get-Content -LiteralPath $invocationLog -Encoding UTF8)
     if ($invocations.Count -ne 2 -or
-        $invocations[0] -ne 'runner/first-fails' -or
-        $invocations[1] -ne 'runner/second-runs') {
+        $invocations[0] -ne 'runner/first-fails|pause=1' -or
+        $invocations[1] -ne 'runner/second-runs|pause=') {
         throw 'Manifest runner must invoke each selected stable/challenge case exactly once and preserve order.'
     }
 

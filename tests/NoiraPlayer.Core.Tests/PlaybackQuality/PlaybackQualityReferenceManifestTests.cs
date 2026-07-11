@@ -610,6 +610,26 @@ public sealed class PlaybackQualityReferenceManifestTests
     }
 
     [Fact]
+    public void Validate_Rejects_Pause_Duration_Outside_Native_Helper_Limit()
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        var referenceCase = CreateCase(
+            "pause/invalid-duration",
+            tier: 1,
+            purpose: "pause-resume");
+        referenceCase.PauseSeconds = 901;
+        manifest.Cases.Add(referenceCase);
+
+        var result = PlaybackQualityReferenceManifestValidator.Validate(manifest);
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, error =>
+            error.Code == "case.pause-seconds.invalid" &&
+            error.CaseId == referenceCase.CaseId &&
+            error.Signal == "pauseSeconds");
+    }
+
+    [Fact]
     public void ValidateReportSet_Rejects_CoreProbe_Report_For_Native_Playback_Case()
     {
         var manifest = new PlaybackQualityReferenceManifest();

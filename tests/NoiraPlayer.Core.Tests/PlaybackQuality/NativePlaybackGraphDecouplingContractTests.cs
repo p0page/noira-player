@@ -144,6 +144,9 @@ public sealed class NativePlaybackGraphDecouplingContractTests
         Assert.Contains("positionBeforePauseTicks=", helperSource, StringComparison.Ordinal);
         Assert.Contains("positionAfterResumeTicks=", helperSource, StringComparison.Ordinal);
         Assert.Contains("postResumeDecodedVideoFrames=", helperSource, StringComparison.Ordinal);
+        Assert.Contains("postResumeRenderedVideoFrames=", helperSource, StringComparison.Ordinal);
+        Assert.Contains("renderedVideoFrames=", helperSource, StringComparison.Ordinal);
+        Assert.Contains("sourceCodec=", helperSource, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -163,7 +166,10 @@ public sealed class NativePlaybackGraphDecouplingContractTests
             "Start-FaultingRangeMediaServer.ps1")));
         Assert.Contains("Assert-NativeNetworkReconnectRecovery", gateSource, StringComparison.Ordinal);
         Assert.Contains("Start-FaultingRangeMediaServer.ps1", gateSource, StringComparison.Ordinal);
-        Assert.Contains("pauseResumeStatus=completed", gateSource, StringComparison.Ordinal);
+        Assert.Contains("Invoke-PlaybackQualityManifest.ps1", gateSource, StringComparison.Ordinal);
+        Assert.Contains("pauseSeconds = 1", gateSource, StringComparison.Ordinal);
+        Assert.Contains("executionValid", gateSource, StringComparison.Ordinal);
+        Assert.Contains("strict validation", gateSource, StringComparison.Ordinal);
         Assert.Contains("request=2", gateSource, StringComparison.Ordinal);
     }
 

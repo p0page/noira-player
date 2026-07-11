@@ -1069,3 +1069,10 @@ matched signals 与边界：baseline/candidate 的 A/V comparison 为 strong/com
 comparison 边界：24/24 comparable，1 improved、0 regressed、0 mixed、23 unchanged，23 strong、1 partial。A/V 有 123 个 matched signals；唯一 unmatched 是 baseline 侧 `lifecycle.subtitle-switch`，因为 baseline 的两个失败检查在 candidate pass report 中不再存在。自动 decision/action 为 `review-unmatched-signals`、risk `medium`，active gate 因 `suite.partial-evidence` 为 `blocked`，所以本决策不声称自动 evaluator 已输出 `accept-candidate`。人工审查以目标 raw lifecycle、case/model result 和三轮 repeat 补足这一个预期 unmatched 后，才作上述限定采纳。
 
 风险：candidate repeat 为 17/22 stable，5 个 unstable groups 均涉及 frame-pacing 尾部信号；唯一 suite improvement 的 HDR10-60 也属于 candidate repeat unstable target。A/V 的 drift P95/P99 与 final delta P95/P99 spread 均为 `0ms`，buffer starvation 与 seek 没有退化，但这些只说明本轮未观察到对应 regression，不足以证明这些领域已改善。后续 frame pacing、A/V sync 或设备端结论必须另做同 manifest、可重复且目标稳定的验证。
+# 2026-07-11: 成功的网络恢复使用 pause-resume/network-recovery 语义
+
+决策：成功恢复的 HTTP 断线 case 使用 `buffering`、`pause-resume` 和 `network-recovery` purpose，不标记为 `error-handling`。`error-handling` 保留给实际产生 error envelope 的失败场景；成功恢复不得为了满足 required-signal policy 伪造 `error.code`、`error.message` 或 failed lifecycle。
+
+执行证据：长暂停 helper 必须返回与普通播放相同的完整 source/decode/render/timing 证据，并额外返回暂停时长、暂停前后位置、恢复后的 decoded/rendered 帧数、播放失败标志和恢复状态。正式 case 只执行 pause/resume，不再继续音轨、字幕或 seek 操作，以保持单一归因。`pauseSeconds` 是版本化 manifest 字段，canonical validator 限制为 `0..900`。
+
+门禁：确定性故障服务器必须观察到第二个非零 Range 请求；raw report 必须为 native-playback/completed，暂停后位置和帧数必须前进；materialized report-set 必须通过 strict structure/execution validation。缺少任一证据都不能由 probe、expected、stdout 文本或默认值补成 pass。

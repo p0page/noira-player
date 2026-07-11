@@ -149,8 +149,29 @@ internal static class NativeHeadlessHarness
         var lifecycle = new PlaybackQualityLifecycle();
         AddLifecycleEvent(lifecycle, "load", "completed", 0);
         AddLifecycleEvent(lifecycle, "play", "completed", 0);
-        AddLifecycleEvent(lifecycle, "pause", "completed", helper.Metrics.VideoPositionTicks);
-        AddLifecycleEvent(lifecycle, "resume", "completed", helper.Metrics.VideoPositionTicks);
+        AddLifecycleEvent(
+            lifecycle,
+            "pause",
+            "completed",
+            helper.PauseResume.Attempted
+                ? helper.PauseResume.PositionBeforePauseTicks
+                : helper.Metrics.VideoPositionTicks,
+            helper.PauseResume.Attempted
+                ? $"duration {helper.PauseResume.DurationSeconds} seconds"
+                : "");
+        AddLifecycleEvent(
+            lifecycle,
+            "resume",
+            helper.PauseResume.Attempted ? helper.PauseResume.Status : "completed",
+            helper.PauseResume.Attempted
+                ? helper.PauseResume.PositionAfterResumeTicks
+                : helper.Metrics.VideoPositionTicks,
+            helper.PauseResume.Attempted
+                ? $"position {helper.PauseResume.PositionBeforePauseTicks}->{helper.PauseResume.PositionAfterResumeTicks}; " +
+                    $"decoded {helper.PauseResume.PostResumeDecodedVideoFrames}; " +
+                    $"rendered {helper.PauseResume.PostResumeRenderedVideoFrames}; " +
+                    $"playback failed {helper.PauseResume.PlaybackFailed}"
+                : "");
         if (helper.AudioSwitch.Attempted)
         {
             AddLifecycleEvent(
@@ -187,7 +208,13 @@ internal static class NativeHeadlessHarness
                     $"post-seek {helper.Seek.PostSeekPlaybackPositionTicks}");
         }
 
-        AddLifecycleEvent(lifecycle, "stop", "completed", helper.Seek.PostSeekPlaybackPositionTicks);
+        AddLifecycleEvent(
+            lifecycle,
+            "stop",
+            "completed",
+            helper.Seek.Attempted
+                ? helper.Seek.PostSeekPlaybackPositionTicks
+                : helper.Metrics.VideoPositionTicks);
 
         var request = PlaybackQualityRuntimeEvidenceCollector.CreateRequest(
             referenceCase,
@@ -205,8 +232,12 @@ internal static class NativeHeadlessHarness
             new PlaybackQualityPosition
             {
                 RequestedStartPositionTicks = 0,
-                SeekTargetPositionTicks = helper.Seek.TargetPositionTicks,
-                ActualPositionTicks = helper.Seek.ActualPositionTicks,
+                SeekTargetPositionTicks = helper.Seek.Attempted
+                    ? helper.Seek.TargetPositionTicks
+                    : null,
+                ActualPositionTicks = helper.Seek.Attempted
+                    ? helper.Seek.ActualPositionTicks
+                    : null,
                 SeekPositionErrorMs = helper.Seek.Attempted && helper.Seek.ActualPositionTicks.HasValue
                     ? Math.Abs(helper.Seek.ActualPositionTicks.Value - helper.Seek.TargetPositionTicks) / 10000.0
                     : null
@@ -291,7 +322,10 @@ internal static class NativeHeadlessHarness
         {
             FileName = options.NativeHelperExe,
             Arguments = "--stream-url " + QuoteArgument(options.StreamUrl) +
-                " --duration-seconds " + options.DurationSeconds.ToString(),
+                " --duration-seconds " + options.DurationSeconds.ToString() +
+                (options.PauseSeconds > 0
+                    ? " --pause-seconds " + options.PauseSeconds.ToString()
+                    : ""),
             WorkingDirectory = Path.GetDirectoryName(options.NativeHelperExe) ?? "",
             RedirectStandardOutput = true,
             RedirectStandardError = true,
@@ -344,6 +378,15 @@ internal static class NativeHeadlessHarness
             out var parseError))
         {
             return NativeHeadlessHelperResult.Failed(parseError);
+        }
+
+        if (options.PauseSeconds > 0 &&
+            (!interactions.PauseResume.Attempted ||
+                interactions.PauseResume.DurationSeconds != options.PauseSeconds ||
+                interactions.PauseResume.Status != "completed"))
+        {
+            return NativeHeadlessHelperResult.Failed(
+                "Native helper did not return completed pause/resume evidence for the requested duration.");
         }
 
         return NativeHeadlessHelperResult.Succeeded(
@@ -472,7 +515,8 @@ internal static class NativeHeadlessHarness
         out string error)
     {
         interactions = new NativeHeadlessInteractionResults();
-        if (!TryParseAudioSwitchOutcome(values, out var audioSwitch, out error) ||
+        if (!TryParsePauseResumeOutcome(values, out var pauseResume, out error) ||
+            !TryParseAudioSwitchOutcome(values, out var audioSwitch, out error) ||
             !TryParseSubtitleSwitchOutcome(values, "subtitleSwitch1", out var subtitleSwitch1, out error) ||
             !TryParseSubtitleSwitchOutcome(values, "subtitleSwitch2", out var subtitleSwitch2, out error) ||
             !TryParseSubtitleOffOutcome(values, out var subtitleOff, out error) ||
@@ -512,6 +556,7 @@ internal static class NativeHeadlessHarness
 
         interactions = new NativeHeadlessInteractionResults
         {
+            PauseResume = pauseResume,
             AudioSwitch = audioSwitch,
             SubtitleSwitch1 = subtitleSwitch1,
             SubtitleSwitch2 = subtitleSwitch2,
@@ -519,6 +564,75 @@ internal static class NativeHeadlessHarness
             Seek = seek,
             SelectedAudioStreamIndex = selectedAudio,
             SelectedSubtitleStreamIndex = selectedSubtitle
+        };
+        return true;
+    }
+
+    private static bool TryParsePauseResumeOutcome(
+        Dictionary<string, string> values,
+        out NativeHeadlessPauseResumeOutcome outcome,
+        out string error)
+    {
+        outcome = new NativeHeadlessPauseResumeOutcome();
+        error = "";
+        if (!values.TryGetValue("pauseDurationSeconds", out var rawDuration))
+        {
+            return true;
+        }
+
+        if (!int.TryParse(rawDuration, out var durationSeconds) ||
+            durationSeconds < 0)
+        {
+            error = "Native helper field 'pauseDurationSeconds' must be a non-negative integer.";
+            return false;
+        }
+
+        if (durationSeconds == 0)
+        {
+            return true;
+        }
+
+        if (!TryGetInt64(values, "positionBeforePauseTicks", out var positionBeforePauseTicks) ||
+            positionBeforePauseTicks < 0 ||
+            !TryGetInt64(values, "positionAfterResumeTicks", out var positionAfterResumeTicks) ||
+            positionAfterResumeTicks < 0 ||
+            !TryGetUInt64(values, "postResumeDecodedVideoFrames", out var decodedVideoFrames) ||
+            !TryGetUInt64(values, "postResumeRenderedVideoFrames", out var renderedVideoFrames) ||
+            !values.TryGetValue("playbackFailed", out var rawPlaybackFailed) ||
+            !int.TryParse(rawPlaybackFailed, out var playbackFailed) ||
+            (playbackFailed != 0 && playbackFailed != 1))
+        {
+            error = "Native helper pause/resume evidence is incomplete or invalid.";
+            return false;
+        }
+
+        var status = GetString(values, "pauseResumeStatus");
+        if (status != "completed" && status != "failed")
+        {
+            error = "Native helper field 'pauseResumeStatus' must be completed or failed.";
+            return false;
+        }
+
+        if (status == "completed" &&
+            (positionAfterResumeTicks <= positionBeforePauseTicks ||
+                decodedVideoFrames == 0 ||
+                renderedVideoFrames == 0 ||
+                playbackFailed != 0))
+        {
+            error = "Completed native pause/resume evidence must advance position and preserve decoded/rendered playback.";
+            return false;
+        }
+
+        outcome = new NativeHeadlessPauseResumeOutcome
+        {
+            Attempted = true,
+            DurationSeconds = durationSeconds,
+            Status = status,
+            PositionBeforePauseTicks = positionBeforePauseTicks,
+            PositionAfterResumeTicks = positionAfterResumeTicks,
+            PostResumeDecodedVideoFrames = decodedVideoFrames,
+            PostResumeRenderedVideoFrames = renderedVideoFrames,
+            PlaybackFailed = playbackFailed != 0
         };
         return true;
     }
@@ -1386,6 +1500,7 @@ internal sealed class NativeHeadlessHarnessOptions
     public string ReportsDir { get; private set; } = "";
     public string NativeHelperExe { get; private set; } = "";
     public bool ForceSdrOutput { get; private set; }
+    public int PauseSeconds { get; private set; }
 
     public static bool TryParse(
         string[] args,
@@ -1436,6 +1551,15 @@ internal sealed class NativeHeadlessHarnessOptions
                     }
 
                     options.DurationSeconds = durationSeconds;
+                    break;
+                case "--pause-seconds":
+                    if (!int.TryParse(value, out var pauseSeconds) || pauseSeconds <= 0 || pauseSeconds > 900)
+                    {
+                        error = "--pause-seconds must be between 1 and 900.";
+                        return false;
+                    }
+
+                    options.PauseSeconds = pauseSeconds;
                     break;
                 case "--reports-dir":
                     options.ReportsDir = value.Trim();
@@ -1545,6 +1669,8 @@ internal sealed class NativeHeadlessHelperResult
 
     public NativeHeadlessAudioSwitchOutcome AudioSwitch => Interactions.AudioSwitch;
 
+    public NativeHeadlessPauseResumeOutcome PauseResume => Interactions.PauseResume;
+
     public NativeHeadlessSubtitleSwitchOutcome SubtitleSwitch1 => Interactions.SubtitleSwitch1;
 
     public NativeHeadlessSubtitleSwitchOutcome SubtitleSwitch2 => Interactions.SubtitleSwitch2;
@@ -1600,6 +1726,9 @@ internal sealed class NativeHeadlessHelperResult
 
 internal sealed class NativeHeadlessInteractionResults
 {
+    public NativeHeadlessPauseResumeOutcome PauseResume { get; set; } =
+        new NativeHeadlessPauseResumeOutcome();
+
     public NativeHeadlessAudioSwitchOutcome AudioSwitch { get; set; } =
         new NativeHeadlessAudioSwitchOutcome();
 
@@ -1618,6 +1747,18 @@ internal sealed class NativeHeadlessInteractionResults
     public int? SelectedAudioStreamIndex { get; set; }
 
     public int? SelectedSubtitleStreamIndex { get; set; }
+}
+
+internal sealed class NativeHeadlessPauseResumeOutcome
+{
+    public bool Attempted { get; set; }
+    public int DurationSeconds { get; set; }
+    public string Status { get; set; } = "";
+    public long PositionBeforePauseTicks { get; set; }
+    public long PositionAfterResumeTicks { get; set; }
+    public ulong PostResumeDecodedVideoFrames { get; set; }
+    public ulong PostResumeRenderedVideoFrames { get; set; }
+    public bool PlaybackFailed { get; set; }
 }
 
 internal sealed class NativeHeadlessAudioSwitchOutcome

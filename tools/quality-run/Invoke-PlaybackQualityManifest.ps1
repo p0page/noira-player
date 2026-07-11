@@ -109,6 +109,10 @@ foreach ($case in $selectedCases) {
     }
 
     $locatorHash = Get-PlaybackQualitySourceFingerprint -Locator $streamUrl
+    $pauseSeconds = if ($null -eq $case.pauseSeconds) { 0 } else { [int]$case.pauseSeconds }
+    if ($pauseSeconds -lt 0 -or $pauseSeconds -gt 900) {
+        throw ('pauseSeconds must be between 0 and 900 for case ' + $currentCaseId)
+    }
     $exitCode = Invoke-NativeHeadlessHarnessCase `
         -CaseId $currentCaseId `
         -StreamUrl $streamUrl `
@@ -118,6 +122,7 @@ foreach ($case in $selectedCases) {
         -HeadlessProjectPath $HeadlessProjectPath `
         -HarnessScriptPath $HarnessScriptPath `
         -DurationSeconds $DurationSeconds `
+        -PauseSeconds $pauseSeconds `
         -ForceSdrOutput ([bool]$case.forceSdrOutput)
     $reportPresent = Test-Path -LiteralPath $reportPath
     $attempts.Add([pscustomobject]@{
