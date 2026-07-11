@@ -70,6 +70,36 @@ public sealed class NativePlaybackGraphDecouplingContractTests
     }
 
     [Fact]
+    public void Native_Subtitle_Switch_Is_Transactional_And_Paused_Smoke_Requires_Resume_Progress()
+    {
+        var root = FindRepositoryRoot();
+        var subtitleDecoderHeader = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Native", "Media", "SubtitleDecoder.h"));
+        var graphSource = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Native", "Media", "PlaybackGraph.cpp"));
+        var helperSource = File.ReadAllText(Path.Combine(root, "tests", "NoiraPlayer.Native.Tests", "NativePlaybackGraphHeadlessSmokeTests.cpp"));
+        var methodStart = graphSource.IndexOf("void PlaybackGraph::SwitchSubtitleStream", StringComparison.Ordinal);
+        var methodEnd = graphSource.IndexOf("int64_t PlaybackGraph::CurrentPositionTicks", methodStart, StringComparison.Ordinal);
+
+        Assert.True(methodStart >= 0 && methodEnd > methodStart, "SwitchSubtitleStream source was not found.");
+        var switchSource = graphSource[methodStart..methodEnd];
+
+        Assert.Contains("std::optional<int32_t> SelectedStreamIndex() const noexcept;", subtitleDecoderHeader, StringComparison.Ordinal);
+        Assert.Contains("RunSubtitleSwitchTransaction(", switchSource, StringComparison.Ordinal);
+        Assert.Contains("SubtitleSwitchDisposition::Disabled", switchSource, StringComparison.Ordinal);
+        Assert.Contains("m_subtitleDecoder.SelectedStreamIndex()", switchSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("m_paused =", switchSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("m_audioRenderer.Start()", switchSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("m_audioRenderer.Stop()", switchSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("m_audioRenderer.Pause()", switchSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("m_audioRenderer.Resume()", switchSource, StringComparison.Ordinal);
+
+        Assert.Contains("runSubtitleSwitch(subtitleStreamIndexes[0], true)", helperSource, StringComparison.Ordinal);
+        Assert.Contains("PausedPositionBeforeTicks", helperSource, StringComparison.Ordinal);
+        Assert.Contains("PausedPositionAfterTicks", helperSource, StringComparison.Ordinal);
+        Assert.Contains("PositionBeforeResumeTicks", helperSource, StringComparison.Ordinal);
+        Assert.Contains("PositionAfterResumeTicks", helperSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void PlaybackGraph_Audio_Ahead_Wait_Pass_Metrics_Do_Not_Take_A_Second_Graph_Lock_After_Wait()
     {
         var root = FindRepositoryRoot();

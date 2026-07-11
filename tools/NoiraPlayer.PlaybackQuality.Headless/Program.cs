@@ -430,6 +430,12 @@ internal static class NativeHeadlessHarness
             }
         }
 
+        if (!ValidateSubtitleSwitchOutcome(subtitleSwitch1, "subtitleSwitch1", out error) ||
+            !ValidateSubtitleSwitchOutcome(subtitleSwitch2, "subtitleSwitch2", out error))
+        {
+            return false;
+        }
+
         interactions = new NativeHeadlessInteractionResults
         {
             AudioSwitch = audioSwitch,
@@ -586,7 +592,13 @@ internal static class NativeHeadlessHarness
         if (!TryGetInteractionStatus(values, prefix + "Status", out var status, out error) ||
             !TryGetRequiredNonNegativeInt32(values, prefix + "StreamIndex", out var streamIndex, out error) ||
             !TryGetRequiredUInt64(values, prefix + "CueCountBefore", out var cueCountBefore, out error) ||
-            !TryGetRequiredUInt64(values, prefix + "CueCountAfter", out var cueCountAfter, out error))
+            !TryGetRequiredUInt64(values, prefix + "CueCountAfter", out var cueCountAfter, out error) ||
+            !TryGetAttempted(values, prefix + "PausedSwitch", out var pausedSwitch, out error) ||
+            !TryGetRequiredNullableStreamIndex(values, prefix + "SelectedStreamIndex", out var selectedStreamIndex, out error) ||
+            !TryGetRequiredNonNegativeInt64(values, prefix + "PausedPositionBeforeTicks", out var pausedPositionBefore, out error) ||
+            !TryGetRequiredNonNegativeInt64(values, prefix + "PausedPositionAfterTicks", out var pausedPositionAfter, out error) ||
+            !TryGetRequiredNonNegativeInt64(values, prefix + "PositionBeforeResumeTicks", out var positionBeforeResume, out error) ||
+            !TryGetRequiredNonNegativeInt64(values, prefix + "PositionAfterResumeTicks", out var positionAfterResume, out error))
         {
             return false;
         }
@@ -595,6 +607,53 @@ internal static class NativeHeadlessHarness
         outcome.StreamIndex = streamIndex;
         outcome.CueCountBefore = cueCountBefore;
         outcome.CueCountAfter = cueCountAfter;
+        outcome.PausedSwitch = pausedSwitch;
+        outcome.SelectedStreamIndex = selectedStreamIndex;
+        outcome.PausedPositionBeforeTicks = pausedPositionBefore;
+        outcome.PausedPositionAfterTicks = pausedPositionAfter;
+        outcome.PositionBeforeResumeTicks = positionBeforeResume;
+        outcome.PositionAfterResumeTicks = positionAfterResume;
+        return true;
+    }
+
+    private static bool ValidateSubtitleSwitchOutcome(
+        NativeHeadlessSubtitleSwitchOutcome outcome,
+        string prefix,
+        out string error)
+    {
+        error = "";
+        if (!outcome.Attempted || outcome.Status != "completed")
+        {
+            return true;
+        }
+
+        if (!outcome.SelectedStreamIndex.HasValue ||
+            outcome.SelectedStreamIndex.Value != outcome.StreamIndex)
+        {
+            error = $"Native helper field '{prefix}SelectedStreamIndex' must equal {prefix}StreamIndex when {prefix}Status is completed.";
+            return false;
+        }
+
+        if (outcome.CueCountAfter <= outcome.CueCountBefore)
+        {
+            error = $"Native helper field '{prefix}CueCountAfter' must advance when {prefix}Status is completed.";
+            return false;
+        }
+
+        if (outcome.PausedSwitch &&
+            outcome.PausedPositionAfterTicks != outcome.PausedPositionBeforeTicks)
+        {
+            error = $"Native helper field '{prefix}PausedPositionAfterTicks' must remain unchanged while the completed subtitle switch is paused.";
+            return false;
+        }
+
+        if (outcome.PausedSwitch &&
+            outcome.PositionAfterResumeTicks <= outcome.PositionBeforeResumeTicks)
+        {
+            error = $"Native helper field '{prefix}PositionAfterResumeTicks' must advance after the completed paused subtitle switch resumes.";
+            return false;
+        }
+
         return true;
     }
 
@@ -1137,7 +1196,10 @@ internal static class NativeHeadlessHarness
             outcome.Status,
             null,
             $"subtitle stream index {outcome.StreamIndex}; cue overlay render count " +
-                $"{outcome.CueCountBefore}->{outcome.CueCountAfter}");
+                $"{outcome.CueCountBefore}->{outcome.CueCountAfter}; selected subtitle stream index " +
+                $"{FormatStreamIndex(outcome.SelectedStreamIndex)}; paused switch {(outcome.PausedSwitch ? 1 : 0)}; " +
+                $"paused position {outcome.PausedPositionBeforeTicks}->{outcome.PausedPositionAfterTicks}; " +
+                $"resumed position {outcome.PositionBeforeResumeTicks}->{outcome.PositionAfterResumeTicks}");
     }
 
     private static string FormatStreamIndex(int? streamIndex)
@@ -1490,6 +1552,18 @@ internal sealed class NativeHeadlessSubtitleSwitchOutcome
     public ulong CueCountBefore { get; set; }
 
     public ulong CueCountAfter { get; set; }
+
+    public bool PausedSwitch { get; set; }
+
+    public int? SelectedStreamIndex { get; set; }
+
+    public long PausedPositionBeforeTicks { get; set; }
+
+    public long PausedPositionAfterTicks { get; set; }
+
+    public long PositionBeforeResumeTicks { get; set; }
+
+    public long PositionAfterResumeTicks { get; set; }
 }
 
 internal sealed class NativeHeadlessSubtitleOffOutcome

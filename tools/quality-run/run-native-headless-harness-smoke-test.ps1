@@ -528,7 +528,19 @@ function New-NativeHeadlessParserFixtureOutput {
         track3IsDefault = '0'
         audioSwitchAttempted = '0'
         subtitleSwitch1Attempted = '0'
+        subtitleSwitch1PausedSwitch = '0'
+        subtitleSwitch1SelectedStreamIndex = '-1'
+        subtitleSwitch1PausedPositionBeforeTicks = '0'
+        subtitleSwitch1PausedPositionAfterTicks = '0'
+        subtitleSwitch1PositionBeforeResumeTicks = '0'
+        subtitleSwitch1PositionAfterResumeTicks = '0'
         subtitleSwitch2Attempted = '0'
+        subtitleSwitch2PausedSwitch = '0'
+        subtitleSwitch2SelectedStreamIndex = '-1'
+        subtitleSwitch2PausedPositionBeforeTicks = '0'
+        subtitleSwitch2PausedPositionAfterTicks = '0'
+        subtitleSwitch2PositionBeforeResumeTicks = '0'
+        subtitleSwitch2PositionAfterResumeTicks = '0'
         subtitleOffAttempted = '0'
         seekAttempted = '0'
         seekTargetPositionTicks = '10000000'
@@ -639,6 +651,34 @@ function Assert-NativeHeadlessParserContracts {
             $_.operation -eq 'audio-switch' -and $_.status -eq 'completed'
         })) {
         $failures.Add('Completed audio switch evidence was not preserved from the selected target and advancing playback counters.')
+    }
+
+    $pausedSubtitleOutput = New-NativeHeadlessParserFixtureOutput -Overrides @{
+        subtitleSwitch1Attempted = '1'
+        subtitleSwitch1Status = 'completed'
+        subtitleSwitch1StreamIndex = '4'
+        subtitleSwitch1CueCountBefore = '1'
+        subtitleSwitch1CueCountAfter = '2'
+        subtitleSwitch1PausedSwitch = '1'
+        subtitleSwitch1SelectedStreamIndex = '4'
+        subtitleSwitch1PausedPositionBeforeTicks = '1000000'
+        subtitleSwitch1PausedPositionAfterTicks = '1000000'
+        subtitleSwitch1PositionBeforeResumeTicks = '1000000'
+        subtitleSwitch1PositionAfterResumeTicks = '2000000'
+    }
+    $pausedSubtitle = Invoke-NativeHeadlessParserFixtureCase `
+        -FixtureHelper $fixtureHelper `
+        -HeadlessDll $headlessDll `
+        -Root $Root `
+        -Name 'completed-paused-subtitle-switch' `
+        -HelperOutput $pausedSubtitleOutput
+    $pausedSubtitleEvent = @($pausedSubtitle.Report.report.lifecycle.events | Where-Object {
+        $_.operation -eq 'subtitle-switch'
+    }) | Select-Object -First 1
+    if ($pausedSubtitle.ExitCode -ne 0 -or
+        $pausedSubtitleEvent.status -ne 'completed' -or
+        $pausedSubtitleEvent.message -notmatch 'paused position 1000000->1000000; resumed position 1000000->2000000') {
+        $failures.Add('Completed paused subtitle switch evidence did not preserve pause and resume progress observations.')
     }
 
     $negativeCases = @(
@@ -766,6 +806,57 @@ function Assert-NativeHeadlessParserContracts {
                 audioSwitchSubmittedFramesBefore = '1'
                 audioSwitchSubmittedFramesAfter = '1'
                 selectedAudioStreamIndex = '2'
+            }
+        },
+        [pscustomobject]@{
+            Name = 'completed-paused-subtitle-switch-with-wrong-selection'
+            ExpectedField = 'subtitleSwitch1SelectedStreamIndex'
+            Output = New-NativeHeadlessParserFixtureOutput -Overrides @{
+                subtitleSwitch1Attempted = '1'
+                subtitleSwitch1Status = 'completed'
+                subtitleSwitch1StreamIndex = '4'
+                subtitleSwitch1CueCountBefore = '1'
+                subtitleSwitch1CueCountAfter = '2'
+                subtitleSwitch1PausedSwitch = '1'
+                subtitleSwitch1SelectedStreamIndex = '5'
+                subtitleSwitch1PausedPositionBeforeTicks = '1000000'
+                subtitleSwitch1PausedPositionAfterTicks = '1000000'
+                subtitleSwitch1PositionBeforeResumeTicks = '1000000'
+                subtitleSwitch1PositionAfterResumeTicks = '2000000'
+            }
+        },
+        [pscustomobject]@{
+            Name = 'completed-paused-subtitle-switch-without-paused-state'
+            ExpectedField = 'subtitleSwitch1PausedPositionAfterTicks'
+            Output = New-NativeHeadlessParserFixtureOutput -Overrides @{
+                subtitleSwitch1Attempted = '1'
+                subtitleSwitch1Status = 'completed'
+                subtitleSwitch1StreamIndex = '4'
+                subtitleSwitch1CueCountBefore = '1'
+                subtitleSwitch1CueCountAfter = '2'
+                subtitleSwitch1PausedSwitch = '1'
+                subtitleSwitch1SelectedStreamIndex = '4'
+                subtitleSwitch1PausedPositionBeforeTicks = '1000000'
+                subtitleSwitch1PausedPositionAfterTicks = '1100000'
+                subtitleSwitch1PositionBeforeResumeTicks = '1100000'
+                subtitleSwitch1PositionAfterResumeTicks = '2000000'
+            }
+        },
+        [pscustomobject]@{
+            Name = 'completed-paused-subtitle-switch-without-resume-progress'
+            ExpectedField = 'subtitleSwitch1PositionAfterResumeTicks'
+            Output = New-NativeHeadlessParserFixtureOutput -Overrides @{
+                subtitleSwitch1Attempted = '1'
+                subtitleSwitch1Status = 'completed'
+                subtitleSwitch1StreamIndex = '4'
+                subtitleSwitch1CueCountBefore = '1'
+                subtitleSwitch1CueCountAfter = '2'
+                subtitleSwitch1PausedSwitch = '1'
+                subtitleSwitch1SelectedStreamIndex = '4'
+                subtitleSwitch1PausedPositionBeforeTicks = '1000000'
+                subtitleSwitch1PausedPositionAfterTicks = '1000000'
+                subtitleSwitch1PositionBeforeResumeTicks = '1000000'
+                subtitleSwitch1PositionAfterResumeTicks = '1000000'
             }
         }
     )
@@ -1105,11 +1196,20 @@ if ($subtitleSwitchEvents.Count -ne 2 -or
 foreach ($subtitleSwitchEvent in $subtitleSwitchEvents) {
     $cueCountMatch = [regex]::Match(
         $subtitleSwitchEvent.message,
-        '^subtitle stream index \d+; cue overlay render count (\d+)->(\d+)$')
+        '^subtitle stream index \d+; cue overlay render count (\d+)->(\d+);')
     if (-not $cueCountMatch.Success -or
         [uint64]$cueCountMatch.Groups[2].Value -le [uint64]$cueCountMatch.Groups[1].Value) {
         throw 'Expected each completed subtitle-switch event to report a real cue-render count increase.'
     }
+}
+
+$pausedSwitchMatch = [regex]::Match(
+    $subtitleSwitchEvents[0].message,
+    '; selected subtitle stream index \d+; paused switch 1; paused position (\d+)->(\d+); resumed position (\d+)->(\d+)$')
+if (-not $pausedSwitchMatch.Success -or
+    [int64]$pausedSwitchMatch.Groups[2].Value -ne [int64]$pausedSwitchMatch.Groups[1].Value -or
+    [int64]$pausedSwitchMatch.Groups[4].Value -le [int64]$pausedSwitchMatch.Groups[3].Value) {
+    throw 'Expected the first subtitle switch to remain paused, then resume with advancing playback.'
 }
 
 $subtitleOffEvents = @($nativeAvLifecycleEvents | Where-Object { $_.operation -eq 'subtitle-off' })

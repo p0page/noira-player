@@ -116,6 +116,7 @@
     <ClInclude Include="Media\SeekPresentationTracker.h" />
     <ClInclude Include="Media\SubtitleDecoder.h" />
     <ClInclude Include="Media\SubtitleRenderer.h" />
+    <ClInclude Include="Media\SubtitleSwitchTransaction.h" />
     <ClInclude Include="Media\VideoDecoder.h" />
     <ClInclude Include="Media\VideoRenderer.h" />
     <ClInclude Include="pch.h" />

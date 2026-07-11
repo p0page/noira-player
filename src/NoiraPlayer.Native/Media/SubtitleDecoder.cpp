@@ -411,4 +411,11 @@ namespace winrt::NoiraPlayer::Native::implementation
     {
         return m_open;
     }
+
+    std::optional<int32_t> SubtitleDecoder::SelectedStreamIndex() const noexcept
+    {
+        return m_open && m_subtitleStreamIndex >= 0
+            ? std::optional<int32_t>{m_subtitleStreamIndex}
+            : std::nullopt;
+    }
 }

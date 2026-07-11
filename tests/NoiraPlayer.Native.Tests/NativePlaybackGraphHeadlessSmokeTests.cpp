@@ -50,6 +50,12 @@ namespace
         int32_t StreamIndex{-1};
         uint64_t CueCountBefore{0};
         uint64_t CueCountAfter{0};
+        bool PausedSwitch{false};
+        int32_t SelectedStreamIndex{-1};
+        int64_t PausedPositionBeforeTicks{0};
+        int64_t PausedPositionAfterTicks{0};
+        int64_t PositionBeforeResumeTicks{0};
+        int64_t PositionAfterResumeTicks{0};
     };
 
     struct SubtitleOffOutcome
@@ -216,25 +222,60 @@ int wmain(int argc, wchar_t** argv)
             }
         }
 
-        auto runSubtitleSwitch = [&graph](int32_t streamIndex)
+        auto runSubtitleSwitch = [&graph](int32_t streamIndex, bool pauseBeforeSwitch)
         {
             SubtitleSwitchOutcome outcome;
             outcome.Attempted = true;
             outcome.StreamIndex = streamIndex;
+            outcome.PausedSwitch = pauseBeforeSwitch;
             outcome.CueCountBefore = graph.SubtitleCueRenderCount();
+            auto resumeAfterFailure = false;
             try
             {
+                if (pauseBeforeSwitch)
+                {
+                    graph.Pause();
+                    resumeAfterFailure = true;
+                }
+
                 graph.SwitchSubtitleStream(streamIndex);
+                outcome.SelectedStreamIndex = graph.SelectedSubtitleStreamIndex().value_or(-1);
+                if (pauseBeforeSwitch)
+                {
+                    outcome.PausedPositionBeforeTicks = graph.CurrentPositionTicks();
+                    std::this_thread::sleep_for(100ms);
+                    outcome.PausedPositionAfterTicks = graph.CurrentPositionTicks();
+                    outcome.PositionBeforeResumeTicks = outcome.PausedPositionAfterTicks;
+                    graph.Resume();
+                    resumeAfterFailure = false;
+                }
+                else
+                {
+                    outcome.PositionBeforeResumeTicks = graph.CurrentPositionTicks();
+                }
+
                 std::this_thread::sleep_for(500ms);
+                outcome.PositionAfterResumeTicks = graph.CurrentPositionTicks();
                 outcome.CueCountAfter = graph.SubtitleCueRenderCount();
-                outcome.Status = outcome.CueCountAfter > outcome.CueCountBefore
+                auto pauseAndResumeObserved = !pauseBeforeSwitch ||
+                    (outcome.PausedPositionAfterTicks == outcome.PausedPositionBeforeTicks &&
+                        outcome.PositionAfterResumeTicks > outcome.PositionBeforeResumeTicks);
+                outcome.Status =
+                    outcome.SelectedStreamIndex == outcome.StreamIndex &&
+                    outcome.CueCountAfter > outcome.CueCountBefore &&
+                    pauseAndResumeObserved
                     ? "completed"
                     : "failed";
             }
             catch (...)
             {
+                outcome.SelectedStreamIndex = graph.SelectedSubtitleStreamIndex().value_or(-1);
                 outcome.CueCountAfter = graph.SubtitleCueRenderCount();
                 outcome.Status = "failed";
+                if (resumeAfterFailure)
+                {
+                    graph.Resume();
+                }
             }
 
             return outcome;
@@ -244,12 +285,12 @@ int wmain(int argc, wchar_t** argv)
         SubtitleSwitchOutcome subtitleSwitch2;
         if (!subtitleStreamIndexes.empty())
         {
-            subtitleSwitch1 = runSubtitleSwitch(subtitleStreamIndexes[0]);
+            subtitleSwitch1 = runSubtitleSwitch(subtitleStreamIndexes[0], true);
         }
 
         if (subtitleStreamIndexes.size() >= 2)
         {
-            subtitleSwitch2 = runSubtitleSwitch(subtitleStreamIndexes[1]);
+            subtitleSwitch2 = runSubtitleSwitch(subtitleStreamIndexes[1], false);
         }
 
         SubtitleOffOutcome subtitleOff;
@@ -276,20 +317,26 @@ int wmain(int argc, wchar_t** argv)
         seek.Attempted = true;
         auto seekCallCompleted = false;
         auto seekPresentationBefore = graph.SeekPresentationSnapshot();
+        auto seekGeneration = seekPresentationBefore.Generation;
         try
         {
             graph.Seek(seek.TargetPositionTicks);
             auto seekPresentation = graph.SeekPresentationSnapshot();
             seek.ActualPositionTicks = seekPresentation.ActualPositionTicks;
-            seekCallCompleted =
-                seekPresentation.Generation > seekPresentationBefore.Generation &&
-                seekPresentation.ActualPositionTicks.has_value();
+            seekGeneration = seekPresentation.Generation;
+            seekCallCompleted = seekPresentation.Generation > seekPresentationBefore.Generation;
         }
         catch (...)
         {
         }
 
         std::this_thread::sleep_for(sampleWindow - halfWindow);
+
+        auto finalSeekPresentation = graph.SeekPresentationSnapshot();
+        if (seekCallCompleted && finalSeekPresentation.Generation == seekGeneration)
+        {
+            seek.ActualPositionTicks = finalSeekPresentation.ActualPositionTicks;
+        }
 
         auto postSeekPlaybackSnapshot = graph.QualityMetricsSnapshot();
         seek.PostSeekPlaybackPositionTicks = postSeekPlaybackSnapshot.VideoPositionTicks;
@@ -332,11 +379,23 @@ int wmain(int argc, wchar_t** argv)
             << " subtitleSwitch1StreamIndex=" << subtitleSwitch1.StreamIndex
             << " subtitleSwitch1CueCountBefore=" << subtitleSwitch1.CueCountBefore
             << " subtitleSwitch1CueCountAfter=" << subtitleSwitch1.CueCountAfter
+            << " subtitleSwitch1PausedSwitch=" << (subtitleSwitch1.PausedSwitch ? 1 : 0)
+            << " subtitleSwitch1SelectedStreamIndex=" << subtitleSwitch1.SelectedStreamIndex
+            << " subtitleSwitch1PausedPositionBeforeTicks=" << subtitleSwitch1.PausedPositionBeforeTicks
+            << " subtitleSwitch1PausedPositionAfterTicks=" << subtitleSwitch1.PausedPositionAfterTicks
+            << " subtitleSwitch1PositionBeforeResumeTicks=" << subtitleSwitch1.PositionBeforeResumeTicks
+            << " subtitleSwitch1PositionAfterResumeTicks=" << subtitleSwitch1.PositionAfterResumeTicks
             << " subtitleSwitch2Attempted=" << (subtitleSwitch2.Attempted ? 1 : 0)
             << " subtitleSwitch2Status=" << subtitleSwitch2.Status
             << " subtitleSwitch2StreamIndex=" << subtitleSwitch2.StreamIndex
             << " subtitleSwitch2CueCountBefore=" << subtitleSwitch2.CueCountBefore
             << " subtitleSwitch2CueCountAfter=" << subtitleSwitch2.CueCountAfter
+            << " subtitleSwitch2PausedSwitch=" << (subtitleSwitch2.PausedSwitch ? 1 : 0)
+            << " subtitleSwitch2SelectedStreamIndex=" << subtitleSwitch2.SelectedStreamIndex
+            << " subtitleSwitch2PausedPositionBeforeTicks=" << subtitleSwitch2.PausedPositionBeforeTicks
+            << " subtitleSwitch2PausedPositionAfterTicks=" << subtitleSwitch2.PausedPositionAfterTicks
+            << " subtitleSwitch2PositionBeforeResumeTicks=" << subtitleSwitch2.PositionBeforeResumeTicks
+            << " subtitleSwitch2PositionAfterResumeTicks=" << subtitleSwitch2.PositionAfterResumeTicks
             << " subtitleOffAttempted=" << (subtitleOff.Attempted ? 1 : 0)
             << " subtitleOffStatus=" << subtitleOff.Status
             << " subtitleOffSelectedStreamIndex=" << subtitleOff.SelectedStreamIndex

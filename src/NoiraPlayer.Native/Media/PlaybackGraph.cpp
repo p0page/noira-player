@@ -1,6 +1,7 @@
 ﻿#include "pch.h"
 #include "PlaybackGraph.h"
 #include "FramePacing.h"
+#include "SubtitleSwitchTransaction.h"
 #include "../NativePlaybackDiagnostics.h"
 
 #include <algorithm>
@@ -251,29 +252,67 @@ namespace winrt::NoiraPlayer::Native::implementation
             throw winrt::hresult_error(E_FAIL, L"Playback is not open.");
         }
 
-        if (subtitleStreamIndex.has_value())
+        auto previousSelection = m_subtitleRenderer.SelectedStreamIndex();
+        auto resumePositionTicks = m_positionTicks;
+        SubtitleSwitchOperations operations;
+        operations.DisableSelection = [this]
         {
             m_subtitleDecoder.Close();
             m_subtitleRenderer.Disable();
-            m_subtitleDecoder.Open(m_mediaSource, subtitleStreamIndex.value());
-
-            auto resumePositionTicks = m_positionTicks;
+        };
+        operations.OpenDecoder = [this](int32_t streamIndex)
+        {
+            m_subtitleDecoder.Open(m_mediaSource, streamIndex);
+        };
+        operations.SelectedDecoderStream = [this]
+        {
+            return m_subtitleDecoder.SelectedStreamIndex();
+        };
+        operations.SeekVideo = [this, resumePositionTicks]
+        {
             m_pendingVideoFrame.reset();
             ResetAudioAheadWait();
             ResetVideoClock();
             m_audioRenderer.Flush();
             m_videoDecoder.Seek(resumePositionTicks);
-            m_audioDecoder.Flush(resumePositionTicks);
-            m_subtitleDecoder.Flush();
-            SetVideoPrerollTarget(resumePositionTicks);
-            m_subtitleRenderer.SwitchStream(subtitleStreamIndex.value());
-            m_stateChanged.notify_all();
-        }
-        else
+        };
+        operations.FlushAudioDecoder = [this, resumePositionTicks]
         {
-            m_subtitleDecoder.Close();
-            m_subtitleRenderer.Disable();
+            m_audioDecoder.Flush(resumePositionTicks);
+        };
+        operations.FlushSubtitleDecoder = [this]
+        {
+            m_subtitleDecoder.Flush();
+        };
+        operations.SelectRenderer = [this, resumePositionTicks](int32_t streamIndex)
+        {
+            SetVideoPrerollTarget(resumePositionTicks);
+            m_subtitleRenderer.SwitchStream(streamIndex);
+        };
+
+        auto result = RunSubtitleSwitchTransaction(
+            previousSelection,
+            subtitleStreamIndex,
+            operations);
+        m_stateChanged.notify_all();
+        if (result.Disposition == SubtitleSwitchDisposition::Completed)
+        {
+            return;
         }
+
+        if (result.Disposition == SubtitleSwitchDisposition::RestoredPrevious)
+        {
+            std::rethrow_exception(result.SwitchFailure);
+        }
+
+        if (result.Disposition == SubtitleSwitchDisposition::Disabled)
+        {
+            throw winrt::hresult_error(
+                E_FAIL,
+                L"Subtitle switch failed and previous selection could not be restored; subtitles are disabled.");
+        }
+
+        throw winrt::hresult_error(E_UNEXPECTED, L"Subtitle switch returned an unknown result.");
     }
 
     int64_t PlaybackGraph::CurrentPositionTicks() const noexcept
