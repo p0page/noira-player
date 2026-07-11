@@ -59,6 +59,11 @@ if ($env:NOIRAPLAYER_BASELINE_TEST_OMIT_REPORT -eq '1') {
 }
 
 $caseId = Get-Value '--case-id'
+$runId = if ($env:NOIRAPLAYER_BASELINE_TEST_MISMATCH_RUN_ID -eq '1') {
+    'baseline/mismatched-run-id'
+} else {
+    $caseId
+}
 $reportsDir = Get-Value '--reports-dir'
 $locatorHash = Get-Value '--source-locator-hash'
 $reportPath = Join-Path $reportsDir ($caseId.Replace('/', [System.IO.Path]::DirectorySeparatorChar) + '.json')
@@ -73,7 +78,7 @@ New-Item -ItemType Directory -Path (Split-Path -Parent $reportPath) -Force | Out
         stability = 'stable'
     }
     report = @{
-        runId = $caseId
+        runId = $runId
         metricVersion = 'software-quality-v1'
         result = 'error'
         environment = @{
@@ -166,6 +171,37 @@ exit 1
         throw 'Expected summary to record only the skipped local generated native-headless samples.'
     }
 
+    $env:NOIRAPLAYER_BASELINE_TEST_MISMATCH_RUN_ID = '1'
+    $invalidOutputRoot = Join-Path $tempRoot 'invalid-report-set-output'
+    powershell -NoProfile -ExecutionPolicy Bypass -File $scriptPath `
+        -PublicManifestPath $manifestPath `
+        -NoPrivateManifest `
+        -SkipNativeHeadless `
+        -NativeHelperExe $fakeHelper `
+        -ManifestRunnerHarnessScriptPath $fakeHarness `
+        -DurationSeconds 1 `
+        -AttemptTimeoutSeconds 5 `
+        -OutputRoot $invalidOutputRoot 2>$null
+    if ($LASTEXITCODE -eq 0) {
+        throw 'Baseline must return non-zero when strict report-set validation fails.'
+    }
+    foreach ($path in @(
+        (Join-Path $invalidOutputRoot 'baseline-summary.local.json'),
+        (Join-Path $invalidOutputRoot 'summaries\report-set-validation.local.json'),
+        (Join-Path $invalidOutputRoot 'summaries\report-analysis-summary.local.json'),
+        (Join-Path $invalidOutputRoot 'summaries\run-plan.local.json'))) {
+        if (-not (Test-Path -LiteralPath $path)) {
+            throw ('Invalid baseline must still preserve model-facing diagnostics: ' + $path)
+        }
+    }
+    $invalidSummary = Get-Content -Raw -LiteralPath (
+        Join-Path $invalidOutputRoot 'baseline-summary.local.json') | ConvertFrom-Json
+    if ($invalidSummary.validation.isValid -ne $false -or
+        $invalidSummary.analysis.totalReportCount -ne 1) {
+        throw 'Invalid baseline summary must preserve strict validation and report analysis results.'
+    }
+    Remove-Item Env:NOIRAPLAYER_BASELINE_TEST_MISMATCH_RUN_ID -ErrorAction SilentlyContinue
+
     $env:NOIRAPLAYER_BASELINE_TEST_OMIT_REPORT = '1'
     $missingOutputRoot = Join-Path $tempRoot 'missing-report-output'
     $previousErrorActionPreference = $ErrorActionPreference
@@ -189,6 +225,7 @@ exit 1
 }
 finally {
     Remove-Item Env:NOIRAPLAYER_BASELINE_TEST_OMIT_REPORT -ErrorAction SilentlyContinue
+    Remove-Item Env:NOIRAPLAYER_BASELINE_TEST_MISMATCH_RUN_ID -ErrorAction SilentlyContinue
     if (Test-Path -LiteralPath $tempRoot) {
         Remove-Item -LiteralPath $tempRoot -Recurse -Force
     }

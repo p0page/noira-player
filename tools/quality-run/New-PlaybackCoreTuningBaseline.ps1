@@ -325,7 +325,7 @@ Invoke-Checked powershell @(
     'skip'
 )
 
-Invoke-Checked dotnet @(
+$validationArguments = @(
     'run',
     '--project',
     $cliProject,
@@ -338,6 +338,15 @@ Invoke-Checked dotnet @(
     '--output',
     $validationPath
 )
+Write-Host ('running=dotnet ' + ($validationArguments -join ' '))
+& dotnet @validationArguments
+$validationExitCode = $LASTEXITCODE
+if (-not (Test-Path -LiteralPath $validationPath)) {
+    throw 'Strict report-set validation did not write its result.'
+}
+if ($validationExitCode -ne 0) {
+    $warnings.Add('strict report-set validation failed; analysis and run plan were still generated')
+}
 
 Invoke-Checked dotnet @(
     'run',
@@ -424,3 +433,7 @@ Write-Output ('wrote playback Core tuning baseline: ' + $summaryPath)
 Write-Output ('reports: ' + $summary.analysis.totalReportCount)
 Write-Output ('validation.isValid: ' + $summary.validation.isValid)
 Write-Output ('nativeHeadless.included: ' + $summary.nativeHeadless.included)
+
+if ($validationExitCode -ne 0 -or -not [bool]$validation.isValid) {
+    exit 1
+}
