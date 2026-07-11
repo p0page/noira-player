@@ -26,6 +26,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         bool SubmitFrame(DecodedAudioFrame const& frame);
         size_t QueuedBufferCount() const;
         std::optional<int64_t> CurrentPositionTicks() const noexcept;
+        std::optional<int32_t> SelectedStreamIndex() const noexcept;
 
     private:
         class VoiceCallback final : public IXAudio2VoiceCallback

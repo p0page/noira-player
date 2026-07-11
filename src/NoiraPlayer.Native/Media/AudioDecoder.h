@@ -42,6 +42,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         void Flush(int64_t positionTicks);
         void Close() noexcept;
         bool IsOpen() const noexcept;
+        std::optional<int32_t> SelectedStreamIndex() const noexcept;
 
     private:
         FfmpegMediaSource* m_mediaSource{nullptr};

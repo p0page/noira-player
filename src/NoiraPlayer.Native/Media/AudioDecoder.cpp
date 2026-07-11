@@ -472,4 +472,11 @@ namespace winrt::NoiraPlayer::Native::implementation
     {
         return m_open;
     }
+
+    std::optional<int32_t> AudioDecoder::SelectedStreamIndex() const noexcept
+    {
+        return m_open && m_audioStreamIndex >= 0
+            ? std::optional<int32_t>{m_audioStreamIndex}
+            : std::nullopt;
+    }
 }

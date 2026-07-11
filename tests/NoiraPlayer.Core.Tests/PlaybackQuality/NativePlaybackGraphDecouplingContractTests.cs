@@ -54,6 +54,22 @@ public sealed class NativePlaybackGraphDecouplingContractTests
     }
 
     [Fact]
+    public void Native_Audio_Switch_Evidence_Uses_Graph_Selected_Stream_State()
+    {
+        var root = FindRepositoryRoot();
+        var audioRendererHeader = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Native", "Media", "AudioRenderer.h"));
+        var graphHeader = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Native", "Media", "PlaybackGraph.h"));
+        var graphSource = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Native", "Media", "PlaybackGraph.cpp"));
+        var helperSource = File.ReadAllText(Path.Combine(root, "tests", "NoiraPlayer.Native.Tests", "NativePlaybackGraphHeadlessSmokeTests.cpp"));
+
+        Assert.Contains("std::optional<int32_t> SelectedStreamIndex() const noexcept;", audioRendererHeader, StringComparison.Ordinal);
+        Assert.Contains("std::optional<int32_t> SelectedAudioStreamIndex() const noexcept;", graphHeader, StringComparison.Ordinal);
+        Assert.Contains("return m_audioRenderer.SelectedStreamIndex();", graphSource, StringComparison.Ordinal);
+        Assert.Contains("selectedAudioStreamIndex = graph.SelectedAudioStreamIndex();", helperSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("selectedAudioStreamIndex = audioSwitch.StreamIndex;", helperSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void PlaybackGraph_Audio_Ahead_Wait_Pass_Metrics_Do_Not_Take_A_Second_Graph_Lock_After_Wait()
     {
         var root = FindRepositoryRoot();

@@ -232,6 +232,13 @@ namespace winrt::NoiraPlayer::Native::implementation
         return m_clockBasePositionTicks + elapsedTicks;
     }
 
+    std::optional<int32_t> AudioRenderer::SelectedStreamIndex() const noexcept
+    {
+        return m_open && m_hasSelection
+            ? std::optional<int32_t>{m_selectedAudioStreamIndex}
+            : std::nullopt;
+    }
+
     void AudioRenderer::CloseAudioDevice() noexcept
     {
         if (m_sourceVoice != nullptr)

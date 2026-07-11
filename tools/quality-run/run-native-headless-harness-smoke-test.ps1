@@ -617,6 +617,30 @@ function Assert-NativeHeadlessParserContracts {
         $failures.Add('attempted=false fixture operations unexpectedly produced lifecycle events.')
     }
 
+    $audioSwitchOutput = New-NativeHeadlessParserFixtureOutput -Overrides @{
+        audioSwitchAttempted = '1'
+        audioSwitchStatus = 'completed'
+        audioSwitchStreamIndex = '2'
+        audioSwitchPositionBeforeTicks = '1000000'
+        audioSwitchPositionAfterTicks = '2000000'
+        audioSwitchSubmittedFramesBefore = '1'
+        audioSwitchSubmittedFramesAfter = '2'
+        selectedAudioStreamIndex = '2'
+    }
+    $audioSwitch = Invoke-NativeHeadlessParserFixtureCase `
+        -FixtureHelper $fixtureHelper `
+        -HeadlessDll $headlessDll `
+        -Root $Root `
+        -Name 'completed-audio-switch' `
+        -HelperOutput $audioSwitchOutput
+    if ($audioSwitch.ExitCode -ne 0 -or
+        $audioSwitch.Report.report.tracks.selectedAudioStreamIndex -ne 2 -or
+        -not ($audioSwitch.Report.report.lifecycle.events | Where-Object {
+            $_.operation -eq 'audio-switch' -and $_.status -eq 'completed'
+        })) {
+        $failures.Add('Completed audio switch evidence was not preserved from the selected target and advancing playback counters.')
+    }
+
     $negativeCases = @(
         [pscustomobject]@{
             Name = 'missing-audio-position'
@@ -700,6 +724,48 @@ function Assert-NativeHeadlessParserContracts {
             ExpectedField = 'presentDurationMsP95'
             Output = New-NativeHeadlessParserFixtureOutput -Overrides @{
                 presentDurationMsP95 = 'Infinity'
+            }
+        },
+        [pscustomobject]@{
+            Name = 'completed-audio-switch-with-wrong-selection'
+            ExpectedField = 'selectedAudioStreamIndex'
+            Output = New-NativeHeadlessParserFixtureOutput -Overrides @{
+                audioSwitchAttempted = '1'
+                audioSwitchStatus = 'completed'
+                audioSwitchStreamIndex = '2'
+                audioSwitchPositionBeforeTicks = '1000000'
+                audioSwitchPositionAfterTicks = '2000000'
+                audioSwitchSubmittedFramesBefore = '1'
+                audioSwitchSubmittedFramesAfter = '2'
+                selectedAudioStreamIndex = '1'
+            }
+        },
+        [pscustomobject]@{
+            Name = 'completed-audio-switch-without-position-progress'
+            ExpectedField = 'audioSwitchPositionAfterTicks'
+            Output = New-NativeHeadlessParserFixtureOutput -Overrides @{
+                audioSwitchAttempted = '1'
+                audioSwitchStatus = 'completed'
+                audioSwitchStreamIndex = '2'
+                audioSwitchPositionBeforeTicks = '1000000'
+                audioSwitchPositionAfterTicks = '1000000'
+                audioSwitchSubmittedFramesBefore = '1'
+                audioSwitchSubmittedFramesAfter = '2'
+                selectedAudioStreamIndex = '2'
+            }
+        },
+        [pscustomobject]@{
+            Name = 'completed-audio-switch-without-submitted-progress'
+            ExpectedField = 'audioSwitchSubmittedFramesAfter'
+            Output = New-NativeHeadlessParserFixtureOutput -Overrides @{
+                audioSwitchAttempted = '1'
+                audioSwitchStatus = 'completed'
+                audioSwitchStreamIndex = '2'
+                audioSwitchPositionBeforeTicks = '1000000'
+                audioSwitchPositionAfterTicks = '2000000'
+                audioSwitchSubmittedFramesBefore = '1'
+                audioSwitchSubmittedFramesAfter = '1'
+                selectedAudioStreamIndex = '2'
             }
         }
     )

@@ -168,26 +168,17 @@ int wmain(int argc, wchar_t** argv)
 
         std::vector<int32_t> audioStreamIndexes;
         std::vector<int32_t> subtitleStreamIndexes;
-        std::optional<int32_t> selectedAudioStreamIndex;
+        auto selectedAudioStreamIndex = graph.SelectedAudioStreamIndex();
         for (auto const& track : tracks)
         {
             if (track.Kind == "Audio")
             {
                 audioStreamIndexes.push_back(track.StreamIndex);
-                if (!selectedAudioStreamIndex.has_value() && track.IsDefault)
-                {
-                    selectedAudioStreamIndex = track.StreamIndex;
-                }
             }
             else if (track.Kind == "Subtitle")
             {
                 subtitleStreamIndexes.push_back(track.StreamIndex);
             }
-        }
-
-        if (!selectedAudioStreamIndex.has_value() && !audioStreamIndexes.empty())
-        {
-            selectedAudioStreamIndex = audioStreamIndexes.front();
         }
 
         graph.Pause();
@@ -204,11 +195,13 @@ int wmain(int argc, wchar_t** argv)
             try
             {
                 graph.SwitchAudioStream(audioSwitch.StreamIndex);
-                selectedAudioStreamIndex = audioSwitch.StreamIndex;
                 std::this_thread::sleep_for(500ms);
+                selectedAudioStreamIndex = graph.SelectedAudioStreamIndex();
                 audioSwitch.PositionAfterTicks = graph.CurrentPositionTicks();
                 audioSwitch.SubmittedFramesAfter = graph.QualityMetricsSnapshot().SubmittedAudioFrames;
                 audioSwitch.Status =
+                    selectedAudioStreamIndex.has_value() &&
+                    selectedAudioStreamIndex.value() == audioSwitch.StreamIndex &&
                     audioSwitch.PositionAfterTicks > audioSwitch.PositionBeforeTicks &&
                     audioSwitch.SubmittedFramesAfter > audioSwitch.SubmittedFramesBefore
                         ? "completed"
@@ -216,6 +209,7 @@ int wmain(int argc, wchar_t** argv)
             }
             catch (...)
             {
+                selectedAudioStreamIndex = graph.SelectedAudioStreamIndex();
                 audioSwitch.PositionAfterTicks = graph.CurrentPositionTicks();
                 audioSwitch.SubmittedFramesAfter = graph.QualityMetricsSnapshot().SubmittedAudioFrames;
                 audioSwitch.Status = "failed";

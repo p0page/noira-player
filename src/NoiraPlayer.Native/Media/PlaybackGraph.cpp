@@ -71,7 +71,10 @@ namespace winrt::NoiraPlayer::Native::implementation
                 request.HasAudioStreamIndex);
             AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open AudioDecoder.Open end");
             AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open AudioRenderer.Open begin");
-            m_audioRenderer.Open(request.AudioStreamIndex, request.HasAudioStreamIndex);
+            auto selectedAudioStreamIndex = m_audioDecoder.SelectedStreamIndex();
+            m_audioRenderer.Open(
+                selectedAudioStreamIndex.value_or(0),
+                selectedAudioStreamIndex.has_value());
             AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open AudioRenderer.Open end");
             auto subtitleStreamIndex = request.HasSubtitleStreamIndex
                 ? std::optional<int32_t>{request.SubtitleStreamIndex}
@@ -222,8 +225,16 @@ namespace winrt::NoiraPlayer::Native::implementation
         m_videoDecoder.Seek(m_positionTicks);
         SetVideoPrerollTarget(m_positionTicks);
         m_audioDecoder.Open(m_mediaSource, audioStreamIndex, true);
+        auto selectedAudioStreamIndex = m_audioDecoder.SelectedStreamIndex();
+        if (!selectedAudioStreamIndex.has_value() ||
+            selectedAudioStreamIndex.value() != audioStreamIndex)
+        {
+            m_audioDecoder.Close();
+            throw winrt::hresult_error(E_FAIL, L"Requested audio stream was not selected.");
+        }
+
         m_audioDecoder.Flush(m_positionTicks);
-        m_audioRenderer.Open(audioStreamIndex, true);
+        m_audioRenderer.Open(selectedAudioStreamIndex.value(), true);
         if (shouldResumeAudio)
         {
             m_audioRenderer.Start();
@@ -280,6 +291,12 @@ namespace winrt::NoiraPlayer::Native::implementation
     {
         std::lock_guard lock(m_graphMutex);
         return m_subtitleCueRenderCount;
+    }
+
+    std::optional<int32_t> PlaybackGraph::SelectedAudioStreamIndex() const noexcept
+    {
+        std::lock_guard lock(m_graphMutex);
+        return m_audioRenderer.SelectedStreamIndex();
     }
 
     std::optional<int32_t> PlaybackGraph::SelectedSubtitleStreamIndex() const noexcept

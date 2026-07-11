@@ -409,6 +409,27 @@ internal static class NativeHeadlessHarness
             return false;
         }
 
+        if (audioSwitch.Attempted && audioSwitch.Status == "completed")
+        {
+            if (!selectedAudio.HasValue || selectedAudio.Value != audioSwitch.StreamIndex)
+            {
+                error = "Native helper field 'selectedAudioStreamIndex' must equal audioSwitchStreamIndex when audioSwitchStatus is completed.";
+                return false;
+            }
+
+            if (audioSwitch.PositionAfterTicks <= audioSwitch.PositionBeforeTicks)
+            {
+                error = "Native helper field 'audioSwitchPositionAfterTicks' must advance when audioSwitchStatus is completed.";
+                return false;
+            }
+
+            if (audioSwitch.SubmittedFramesAfter <= audioSwitch.SubmittedFramesBefore)
+            {
+                error = "Native helper field 'audioSwitchSubmittedFramesAfter' must advance when audioSwitchStatus is completed.";
+                return false;
+            }
+        }
+
         interactions = new NativeHeadlessInteractionResults
         {
             AudioSwitch = audioSwitch,
