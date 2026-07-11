@@ -243,7 +243,18 @@ namespace winrt::NoiraPlayer::Native::implementation
             m_subtitleDecoder.Close();
             m_subtitleRenderer.Disable();
             m_subtitleDecoder.Open(m_mediaSource, subtitleStreamIndex.value());
+
+            auto resumePositionTicks = m_positionTicks;
+            m_pendingVideoFrame.reset();
+            ResetAudioAheadWait();
+            ResetVideoClock();
+            m_audioRenderer.Flush();
+            m_videoDecoder.Seek(resumePositionTicks);
+            m_audioDecoder.Flush(resumePositionTicks);
+            m_subtitleDecoder.Flush();
+            SetVideoPrerollTarget(resumePositionTicks);
             m_subtitleRenderer.SwitchStream(subtitleStreamIndex.value());
+            m_stateChanged.notify_all();
         }
         else
         {

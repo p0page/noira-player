@@ -910,10 +910,19 @@ if ($audioSwitchEvents.Count -ne 1 -or
 
 $subtitleSwitchEvents = @($nativeAvLifecycleEvents | Where-Object { $_.operation -eq 'subtitle-switch' })
 if ($subtitleSwitchEvents.Count -ne 2 -or
-    @($subtitleSwitchEvents | Where-Object { $_.status -eq 'failed' }).Count -lt 1 -or
-    @($subtitleSwitchEvents | Where-Object { $_.status -notin @('completed', 'failed') }).Count -ne 0 -or
+    @($subtitleSwitchEvents | Where-Object { $_.status -ne 'completed' }).Count -ne 0 -or
     @($subtitleSwitchEvents | Where-Object { [string]::IsNullOrWhiteSpace($_.message) }).Count -ne 0) {
-    throw 'Expected two honestly mapped subtitle-switch events with at least one failed cue-render outcome.'
+    throw 'Expected two completed subtitle-switch events with cue-render evidence.'
+}
+
+foreach ($subtitleSwitchEvent in $subtitleSwitchEvents) {
+    $cueCountMatch = [regex]::Match(
+        $subtitleSwitchEvent.message,
+        '^subtitle stream index \d+; cue overlay render count (\d+)->(\d+)$')
+    if (-not $cueCountMatch.Success -or
+        [uint64]$cueCountMatch.Groups[2].Value -le [uint64]$cueCountMatch.Groups[1].Value) {
+        throw 'Expected each completed subtitle-switch event to report a real cue-render count increase.'
+    }
 }
 
 $subtitleOffEvents = @($nativeAvLifecycleEvents | Where-Object { $_.operation -eq 'subtitle-off' })
@@ -936,10 +945,18 @@ if ($nativeAvReport.report.tracks.selectedAudioStreamIndex -ne $nativeAvReport.r
     throw 'Expected final selected tracks to match the switched audio track and disabled subtitles.'
 }
 
-if ($nativeAvReport.report.result -ne 'fail' -or
-    @($nativeAvReport.report.failureReasons | Where-Object { $_ -match 'subtitle|cue' }).Count -lt 1 -or
+$subtitleFailures = @($nativeAvReport.report.checks | Where-Object {
+    $_.status -eq 'fail' -and $_.failureArea -eq 'subtitles'
+})
+$evidenceCollectionFailures = @($nativeAvReport.report.checks | Where-Object {
+    $_.status -eq 'fail' -and $_.failureArea -eq 'evidence-collection'
+})
+if ($nativeAvReport.report.result -ne 'pass' -or
+    @($nativeAvReport.report.failureReasons).Count -ne 0 -or
+    $subtitleFailures.Count -ne 0 -or
+    $evidenceCollectionFailures.Count -ne 0 -or
     -not [string]::IsNullOrWhiteSpace($nativeAvReport.report.error.code)) {
-    throw 'Expected the old Core A/V case to fail honestly on subtitle cue rendering, not evidence collection.'
+    throw 'Expected the fixed Core A/V case to pass without subtitle or evidence-collection failures.'
 }
 
 if ($nativeAvReport.report.buffers.submittedAudioFrames -le 0) {
@@ -1382,12 +1399,19 @@ if ($nativeAvMaterializedReport.report.tracks.audioTrackCount -ne 2 -or
     throw 'Expected materialized native helper A/V report to preserve audio/subtitle track and A/V sync evidence.'
 }
 
-if ($nativeAvMaterializedReport.report.result -ne 'fail' -or
-    $nativeAvMaterializedReport.modelAnalysis.result -ne 'fail' -or
-    -not ($nativeAvMaterializedReport.modelAnalysis.failureAreas -contains 'subtitles') -or
-    @($nativeAvMaterializedReport.report.failureReasons | Where-Object { $_ -match 'subtitle.*cue overlay' }).Count -lt 1 -or
+$nativeAvMaterializedSubtitleFailures = @($nativeAvMaterializedReport.report.checks | Where-Object {
+    $_.status -eq 'fail' -and $_.failureArea -eq 'subtitles'
+})
+$nativeAvMaterializedEvidenceCollectionFailures = @($nativeAvMaterializedReport.report.checks | Where-Object {
+    $_.status -eq 'fail' -and $_.failureArea -eq 'evidence-collection'
+})
+if ($nativeAvMaterializedReport.report.result -ne 'pass' -or
+    $nativeAvMaterializedReport.modelAnalysis.result -ne 'pass' -or
+    @($nativeAvMaterializedReport.report.failureReasons).Count -ne 0 -or
+    $nativeAvMaterializedSubtitleFailures.Count -ne 0 -or
+    $nativeAvMaterializedEvidenceCollectionFailures.Count -ne 0 -or
     -not [string]::IsNullOrWhiteSpace($nativeAvMaterializedReport.report.error.code)) {
-    throw 'Expected materialized A/V report to preserve the old Core subtitle cue-overlay failure without an evidence-collection error.'
+    throw 'Expected materialized A/V report to preserve the fixed Core subtitle success without an evidence-collection error.'
 }
 
 if ($nativeAvMaterializedReport.report.position.seekPositionErrorMs -gt 250.0) {
