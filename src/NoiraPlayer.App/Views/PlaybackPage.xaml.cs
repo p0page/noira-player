@@ -1282,7 +1282,8 @@ namespace NoiraPlayer.App.Views
                     request.QualityRunId,
                     descriptor,
                     request.QualityExpected,
-                    request.QualityScenario);
+                    request.QualityScenario,
+                    uri: request.QualitySourceLocator);
                 var lifecycle = CreateQualityRunLifecycle(
                     request.StartPositionTicks,
                     GetCurrentPositionTicks(),
@@ -1309,6 +1310,7 @@ namespace NoiraPlayer.App.Views
                 {
                     CollectorVersion = "app-hosted-quality-run-v0.1",
                     PlayerCoreVersion = "NoiraPlayer.Core",
+                    SourceRevision = request.QualitySourceRevision,
                     BuildConfiguration = "Debug"
                 };
                 var execution = CreateAppHostedExecutionEvidence(
@@ -1987,7 +1989,7 @@ namespace NoiraPlayer.App.Views
                     request.ForceSdrOutput,
                     request.QualityExpected,
                     request.QualityScenario,
-                    uri: request.DirectStreamUrl);
+                    uri: request.QualitySourceLocator);
                 var result = PlaybackQualityRuntimeEvidenceCollector.ComposeErrorRunResult(
                     referenceCase,
                     new PlaybackQualityError
@@ -2005,6 +2007,7 @@ namespace NoiraPlayer.App.Views
                     {
                         CollectorVersion = "app-hosted-quality-run-v0.1",
                         PlayerCoreVersion = "NoiraPlayer.Core",
+                        SourceRevision = request.QualitySourceRevision,
                         BuildConfiguration = "Debug"
                     },
                     CreateAppHostedExecutionEvidence(

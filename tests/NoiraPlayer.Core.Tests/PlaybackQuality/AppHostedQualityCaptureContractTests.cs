@@ -42,6 +42,8 @@ public sealed class AppHostedQualityCaptureContractTests
         Assert.Contains("public string QualityScenario { get; }", launchRequest, StringComparison.Ordinal);
         Assert.Contains("public int QualityPauseSeconds { get; }", launchRequest, StringComparison.Ordinal);
         Assert.Contains("command.PauseSeconds", launchRequest, StringComparison.Ordinal);
+        Assert.Contains("command.SourceLocator", launchRequest, StringComparison.Ordinal);
+        Assert.Contains("command.SourceRevision", launchRequest, StringComparison.Ordinal);
         Assert.Contains("PlaybackQualityExpected?", launchRequest, StringComparison.Ordinal);
 
         Assert.Contains("StartLaunchRequestPlaybackAsync", playbackPage, StringComparison.Ordinal);
@@ -63,6 +65,8 @@ public sealed class AppHostedQualityCaptureContractTests
         Assert.Contains("SubmittedAudioFrames", playbackPage, StringComparison.Ordinal);
         Assert.Contains("RenderedVideoFrames", playbackPage, StringComparison.Ordinal);
         Assert.Contains("request.QualityPauseSeconds", playbackPage, StringComparison.Ordinal);
+        Assert.Contains("request.QualitySourceLocator", playbackPage, StringComparison.Ordinal);
+        Assert.Contains("request.QualitySourceRevision", playbackPage, StringComparison.Ordinal);
         Assert.Contains("requestedPauseSeconds=", playbackPage, StringComparison.Ordinal);
         Assert.Contains("_orchestrator.PauseAsync()", playbackPage, StringComparison.Ordinal);
         Assert.Contains("_orchestrator.ResumeAsync()", playbackPage, StringComparison.Ordinal);

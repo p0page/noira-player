@@ -679,6 +679,9 @@ internal static class Program
                         ReadValue(args, ref index, arg),
                         System.Globalization.CultureInfo.InvariantCulture);
                     break;
+                case "--source-revision":
+                    options.SourceRevision = ReadValue(args, ref index, arg).Trim();
+                    break;
                 case "--purpose":
                     options.Purposes.Add(ReadValue(args, ref index, arg));
                     break;
@@ -2076,6 +2079,7 @@ internal static class Program
         var plan = new PlaybackQualityRunPlan
         {
             DurationSeconds = options.DurationSeconds,
+            SourceRevision = options.SourceRevision,
             ReportsDirectory = options.ReportsDirectory,
             ManifestValidation = validation,
             Filters = CreateRunPlanFilters(options)
@@ -2123,6 +2127,7 @@ internal static class Program
                 Tier = referenceCase.Tier,
                 DurationSeconds = options.DurationSeconds,
                 PauseSeconds = referenceCase.PauseSeconds,
+                SourceRevision = options.SourceRevision,
                 CaptureMode = hasEmbyItem ? "emby-item" : "direct-uri",
                 ReportRelativePath = relativePath,
                 ReportPath = string.IsNullOrWhiteSpace(options.ReportsDirectory)
@@ -2135,7 +2140,8 @@ internal static class Program
             {
                 planCase.DevCommand = CreateQualityRunCommand(
                     referenceCase,
-                    options.DurationSeconds);
+                    options.DurationSeconds,
+                    options.SourceRevision);
             }
 
             foreach (var purpose in referenceCase.Purpose)
@@ -2207,7 +2213,8 @@ internal static class Program
 
     private static DevelopmentNavigationCommand CreateQualityRunCommand(
         PlaybackQualityReferenceCase referenceCase,
-        int durationSeconds)
+        int durationSeconds,
+        string sourceRevision)
     {
         return new DevelopmentNavigationCommand
         {
@@ -2221,6 +2228,8 @@ internal static class Program
             Scenario = referenceCase.ExecutionRequirement.Scenario,
             DurationSeconds = durationSeconds,
             PauseSeconds = referenceCase.PauseSeconds,
+            SourceLocator = referenceCase.Uri,
+            SourceRevision = sourceRevision,
             Expected = CloneExpected(referenceCase.Expected)
         };
     }
@@ -3579,7 +3588,7 @@ internal static class Program
         writer.WriteLine("  playback-quality compare-suite --baseline-dir <reports-dir> --candidate-dir <reports-dir> [--match-by relative-path|run-id] [--previous-comparisons-dir <comparison-dir>] [--comparisons-dir <comparison-dir>] [--stall-threshold <n>] [--output <suite.json>]");
         writer.WriteLine("  playback-quality validate-manifest --manifest <reference-manifest.json> [--output <validation.json>]");
         writer.WriteLine("  playback-quality validate-report-set --manifest <reference-manifest.json> --reports-dir <reports-dir> [--output <validation.json>]");
-        writer.WriteLine("  playback-quality plan-runs --manifest <reference-manifest.json> [--reports-dir <reports-dir>] [--duration <seconds>] [--purpose <purpose>...] [--max-tier <0-4>] [--output <run-plan.json>]");
+        writer.WriteLine("  playback-quality plan-runs --manifest <reference-manifest.json> [--reports-dir <reports-dir>] [--duration <seconds>] [--source-revision <revision>] [--purpose <purpose>...] [--max-tier <0-4>] [--output <run-plan.json>]");
         writer.WriteLine("  playback-quality evaluate-candidate --manifest <reference-manifest.json> --baseline-dir <reports-dir> --candidate-dir <reports-dir> [--match-by relative-path|run-id] [--previous-comparisons-dir <comparison-dir>] [--comparisons-dir <comparison-dir>] [--stall-threshold <n>] [--output <evaluation.json>]");
     }
 
@@ -3654,6 +3663,7 @@ internal static class Program
         public string ManifestPath { get; set; } = "";
         public string ReportsDirectory { get; set; } = "";
         public string OutputPath { get; set; } = "";
+        public string SourceRevision { get; set; } = "";
         public int DurationSeconds { get; set; } = 30;
         public int? MaxTier { get; set; }
         public List<string> Purposes { get; } = new List<string>();
@@ -3968,6 +3978,7 @@ internal static class Program
             PlaybackQualityRunResult.CurrentEvaluationVersion;
         public int CaseCount { get; set; }
         public int DurationSeconds { get; set; }
+        public string SourceRevision { get; set; } = "";
         public string ReportsDirectory { get; set; } = "";
         public PlaybackQualityRunPlanFilters Filters { get; set; } =
             new PlaybackQualityRunPlanFilters();
@@ -3997,6 +4008,7 @@ internal static class Program
         public List<string> Purpose { get; } = new List<string>();
         public int DurationSeconds { get; set; }
         public int PauseSeconds { get; set; }
+        public string SourceRevision { get; set; } = "";
         public string CaptureMode { get; set; } = "";
         public string ReportRelativePath { get; set; } = "";
         public string ReportPath { get; set; } = "";

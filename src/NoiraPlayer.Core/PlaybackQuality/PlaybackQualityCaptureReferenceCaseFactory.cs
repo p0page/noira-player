@@ -12,7 +12,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
             string scenario = PlaybackQualityExecutionScenario.Playback,
             string category = "stable",
             string severity = "medium",
-            string stability = "stable")
+            string stability = "stable",
+            string uri = "")
         {
             if (descriptor == null)
             {
@@ -26,7 +27,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 Category = NormalizeOrDefault(category, "stable"),
                 Severity = NormalizeOrDefault(severity, "medium"),
                 Stability = NormalizeOrDefault(stability, "stable"),
-                Uri = source.DirectStreamUrl ?? "",
+                Uri = string.IsNullOrWhiteSpace(uri) ? source.DirectStreamUrl ?? "" : uri.Trim(),
                 ItemId = descriptor.ItemId,
                 MediaSourceId = source.Id ?? "",
                 StartPositionTicks = descriptor.StartPositionTicks,

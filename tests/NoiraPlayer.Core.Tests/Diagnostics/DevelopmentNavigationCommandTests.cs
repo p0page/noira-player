@@ -167,6 +167,8 @@ public sealed class DevelopmentNavigationCommandTests
           "startPositionTicks": 123,
           "durationSeconds": 60,
           "pauseSeconds": 12,
+          "sourceLocator": " emby://items/677521 ",
+          "sourceRevision": " revision-123 ",
           "forceSdrOutput": true,
           "expected": {
             "frameRate": 23.976,
@@ -197,6 +199,8 @@ public sealed class DevelopmentNavigationCommandTests
         Assert.Equal(123, command.StartPositionTicks);
         Assert.Equal(60, command.DurationSeconds);
         Assert.Equal(12, command.PauseSeconds);
+        Assert.Equal("emby://items/677521", command.SourceLocator);
+        Assert.Equal("revision-123", command.SourceRevision);
         Assert.True(command.ForceSdrOutput);
         Assert.NotNull(command.Expected);
         Assert.Equal("Hdr10", command.Expected!.HdrOutput);

@@ -190,6 +190,18 @@ if ([string]::IsNullOrWhiteSpace($appUserModelId)) {
     throw 'Registered modern package did not report an appUserModelId.'
 }
 
+$sourceRevision = (& git -C $repoRoot rev-parse HEAD).Trim()
+if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($sourceRevision)) {
+    throw 'Unable to resolve source revision for App-hosted playback evidence.'
+}
+$workingTreeStatus = @(& git -C $repoRoot status --porcelain --untracked-files=no)
+if ($LASTEXITCODE -ne 0) {
+    throw 'Unable to inspect working tree state for App-hosted playback evidence.'
+}
+if ($workingTreeStatus.Count -gt 0) {
+    $sourceRevision += '-dirty'
+}
+
 $planArguments = @(
     'run',
     '--project',
@@ -204,6 +216,8 @@ $planArguments = @(
     $ReportsDirectory,
     '--duration',
     $DurationSeconds.ToString([System.Globalization.CultureInfo]::InvariantCulture),
+    '--source-revision',
+    $sourceRevision,
     '--max-tier',
     $MaxTier.ToString([System.Globalization.CultureInfo]::InvariantCulture),
     '--output',

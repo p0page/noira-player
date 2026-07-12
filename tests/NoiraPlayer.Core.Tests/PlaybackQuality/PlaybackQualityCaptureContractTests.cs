@@ -77,6 +77,18 @@ public sealed class PlaybackQualityCaptureContractTests
     }
 
     [Fact]
+    public void CreateReferenceCase_Preserves_Manifest_Source_Locator()
+    {
+        var referenceCase = PlaybackQualityCaptureReferenceCaseFactory.Create(
+            "private/item/pause-resume",
+            CreateDescriptor(),
+            expected: null,
+            uri: "emby://items/item-1");
+
+        Assert.Equal("emby://items/item-1", referenceCase.Uri);
+    }
+
+    [Fact]
     public void CreateReferenceCase_For_Failed_Launch_Preserves_Command_Evidence()
     {
         var referenceCase = PlaybackQualityCaptureReferenceCaseFactory.Create(

@@ -44,6 +44,6 @@
 ## 后续状态与风险
 
 - 本轮没有在 Xbox 上重新验证显示输出；HDR 实机结论沿用此前阶段，不由这批软件报告替代。
-- `pauseSeconds` 已贯通 manifest、run plan、dev-command、App launch request 和 PlaybackPage。私有 SDR case 完成 10 秒 App-hosted 暂停，报告明确记录 `requestedPauseSeconds=10`：暂停期 position 保持 18.7 秒，恢复后前进至 19.9 秒，rendered frames 从 46 增长到 49，最终 decoded/rendered frames 为 491/490；未出现 I/O error，本次完整 case 为 `pass`。前一次相同 case 因 7093.3592 ms 冷启动略超 7000 ms 阈值而为 `fail`，作为启动波动证据保留。
+- `pauseSeconds` 已贯通 manifest、run plan、dev-command、App launch request 和 PlaybackPage。私有 SDR case 完成 10 秒 App-hosted 暂停，报告明确记录 `requestedPauseSeconds=10`：暂停期 position 保持 18.7 秒，恢复后前进至 19.9 秒，rendered frames 从 46 增长到 49，最终 decoded/rendered frames 为 491/490；未出现 I/O error，该次完整 case 为 `pass`。后续重采已同时携带 build revision 和 manifest locator hash，并通过 strict report-set validation（matched 1、errors 0）；该次因 9426.5105 ms 冷启动超过 7000 ms 阈值而为 `fail`。7093.3592 ms 的前次 startup fail 也继续保留，启动波动不与暂停恢复结果混判。
 - 《哈姆奈特》23.976 的帧间隔仍有可量化的优化空间，不能因 case 当前为 `pass` 而忽略。
 - App 冷启动超过既定阈值，需要单独归因网络、PlaybackInfo、demux probe 与宿主启动耗时，不能混入交互成功判定。

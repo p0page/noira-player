@@ -19,6 +19,8 @@ namespace NoiraPlayer.Core.Diagnostics
         public string Scenario { get; set; } = "";
         public int DurationSeconds { get; set; } = 10;
         public int PauseSeconds { get; set; }
+        public string SourceLocator { get; set; } = "";
+        public string SourceRevision { get; set; } = "";
         public PlaybackQualityExpected? Expected { get; set; }
 
         public static bool TryParseJson(
@@ -55,6 +57,8 @@ namespace NoiraPlayer.Core.Diagnostics
             parsed.StreamUrl = Normalize(parsed.StreamUrl);
             parsed.RunId = Normalize(parsed.RunId);
             parsed.Scenario = Normalize(parsed.Scenario).ToLowerInvariant();
+            parsed.SourceLocator = Normalize(parsed.SourceLocator);
+            parsed.SourceRevision = Normalize(parsed.SourceRevision);
             parsed.StartPositionTicks = Math.Max(0, parsed.StartPositionTicks);
 
             if (string.IsNullOrWhiteSpace(parsed.RunId))

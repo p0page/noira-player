@@ -26,6 +26,8 @@ namespace NoiraPlayer.App.Navigation
                 qualityScenario: command.Scenario,
                 qualityRunDurationSeconds: command.DurationSeconds,
                 qualityPauseSeconds: command.PauseSeconds,
+                qualitySourceLocator: command.SourceLocator,
+                qualitySourceRevision: command.SourceRevision,
                 qualityExpected: command.Expected,
                 qualityCommandReceivedAtUtc: commandReceivedAtUtc,
                 streamUrl: command.StreamUrl);
@@ -43,6 +45,8 @@ namespace NoiraPlayer.App.Navigation
             string qualityScenario = PlaybackQualityExecutionScenario.Playback,
             int qualityRunDurationSeconds = 0,
             int qualityPauseSeconds = 0,
+            string qualitySourceLocator = "",
+            string qualitySourceRevision = "",
             PlaybackQualityExpected? qualityExpected = null,
             DateTimeOffset? qualityCommandReceivedAtUtc = null,
             string streamUrl = "")
@@ -66,6 +70,12 @@ namespace NoiraPlayer.App.Navigation
             }
             QualityRunDurationSeconds = qualityRunDurationSeconds < 10 ? 10 : qualityRunDurationSeconds;
             QualityPauseSeconds = Math.Max(0, Math.Min(900, qualityPauseSeconds));
+            QualitySourceLocator = string.IsNullOrWhiteSpace(qualitySourceLocator)
+                ? ""
+                : qualitySourceLocator.Trim();
+            QualitySourceRevision = string.IsNullOrWhiteSpace(qualitySourceRevision)
+                ? ""
+                : qualitySourceRevision.Trim();
             QualityExpected = qualityExpected;
             QualityCommandReceivedAtUtc = qualityCommandReceivedAtUtc ?? DateTimeOffset.UtcNow;
         }
@@ -91,6 +101,10 @@ namespace NoiraPlayer.App.Navigation
         public int QualityRunDurationSeconds { get; }
 
         public int QualityPauseSeconds { get; }
+
+        public string QualitySourceLocator { get; }
+
+        public string QualitySourceRevision { get; }
 
         public PlaybackQualityExpected? QualityExpected { get; }
 

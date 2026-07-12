@@ -2069,6 +2069,7 @@ try {
             --manifest $embyRunPlanManifestPath `
             --reports-dir captured-emby `
             --duration 45 `
+            --source-revision smoke-app-source-revision `
             --output $embyRunPlanPath
         if ($LASTEXITCODE -ne 0) {
             throw 'playback quality CLI plan-runs returned a non-zero exit code for Emby item manifest.'
@@ -2088,8 +2089,11 @@ try {
         $_.devCommand.runId -eq 'emby/007-hdr10' -and
         $_.scenario -eq 'pause-resume' -and
         $_.pauseSeconds -eq 12 -and
+        $_.sourceRevision -eq 'smoke-app-source-revision' -and
         $_.devCommand.scenario -eq 'pause-resume' -and
         $_.devCommand.pauseSeconds -eq 12 -and
+        $_.devCommand.sourceLocator -eq 'emby://items/item-007' -and
+        $_.devCommand.sourceRevision -eq 'smoke-app-source-revision' -and
         $_.devCommand.durationSeconds -eq 45 -and
         $_.devCommand.startPositionTicks -eq 123 -and
         $_.devCommand.forceSdrOutput -eq $true -and
