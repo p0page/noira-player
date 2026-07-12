@@ -20,6 +20,18 @@ public sealed class NativeFfmpegDiagnosticsContractTests
     }
 
     [Fact]
+    public void Native_Ffmpeg_Open_Preserves_Blocking_Substep_Durations_As_Structured_Evidence()
+    {
+        var header = ReadNativeSource("Media", "FfmpegMediaSource.h");
+        var source = ReadNativeSource("Media", "FfmpegMediaSource.cpp");
+
+        Assert.Contains("struct FfmpegOpenTimingSnapshot", header, StringComparison.Ordinal);
+        Assert.Contains("FfmpegOpenTimingSnapshot OpenTimingSnapshot() const noexcept;", header, StringComparison.Ordinal);
+        Assert.Contains("m_openTiming.OpenInputDurationMs", source, StringComparison.Ordinal);
+        Assert.Contains("m_openTiming.StreamInfoDurationMs", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Native_Video_Decoder_Logs_Packet_Context_During_Bounded_Eagain_Recovery()
     {
         var source = ReadNativeSource("Media", "VideoDecoder.cpp");

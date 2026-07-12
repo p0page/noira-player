@@ -65,6 +65,15 @@ namespace winrt::NoiraPlayer::Native::implementation
         int64_t VideoPositionTicks() const noexcept { return m_videoPositionTicks; }
         void VideoPositionTicks(int64_t value) noexcept { m_videoPositionTicks = value; }
 
+        double NativeGraphOpenDurationMs() const noexcept { return m_nativeGraphOpenDurationMs; }
+        void NativeGraphOpenDurationMs(double value) noexcept { m_nativeGraphOpenDurationMs = value; }
+
+        double FfmpegOpenInputDurationMs() const noexcept { return m_ffmpegOpenInputDurationMs; }
+        void FfmpegOpenInputDurationMs(double value) noexcept { m_ffmpegOpenInputDurationMs = value; }
+
+        double FfmpegStreamInfoDurationMs() const noexcept { return m_ffmpegStreamInfoDurationMs; }
+        void FfmpegStreamInfoDurationMs(double value) noexcept { m_ffmpegStreamInfoDurationMs = value; }
+
         double RenderIntervalMsP05() const noexcept { return m_renderIntervalMsP05; }
         void RenderIntervalMsP05(double value) noexcept { m_renderIntervalMsP05 = value; }
 
@@ -286,6 +295,9 @@ namespace winrt::NoiraPlayer::Native::implementation
         uint64_t m_queuedAudioBuffers{0};
         int64_t m_audioClockTicks{0};
         int64_t m_videoPositionTicks{0};
+        double m_nativeGraphOpenDurationMs{0.0};
+        double m_ffmpegOpenInputDurationMs{0.0};
+        double m_ffmpegStreamInfoDurationMs{0.0};
         double m_renderIntervalMsP05{0.0};
         double m_renderIntervalMsP50{0.0};
         double m_renderIntervalMsP95{0.0};

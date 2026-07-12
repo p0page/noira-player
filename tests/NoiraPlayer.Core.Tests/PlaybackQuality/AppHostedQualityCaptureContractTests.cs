@@ -162,6 +162,34 @@ public sealed class AppHostedQualityCaptureContractTests
     }
 
     [Fact]
+    public void Debug_Quality_Run_Frozen_Metrics_Preserve_Native_Open_Timing()
+    {
+        var root = FindRepositoryRoot();
+        var playbackPage = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.App", "Views", "PlaybackPage.xaml.cs"));
+
+        Assert.Contains(
+            "NativeGraphOpenDurationMs = source.NativeGraphOpenDurationMs",
+            playbackPage,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "FfmpegOpenInputDurationMs = source.FfmpegOpenInputDurationMs",
+            playbackPage,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "FfmpegStreamInfoDurationMs = source.FfmpegStreamInfoDurationMs",
+            playbackPage,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "HardwareDecodedVideoFrames = source.HardwareDecodedVideoFrames",
+            playbackPage,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "SoftwareDecodedVideoFrames = source.SoftwareDecodedVideoFrames",
+            playbackPage,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Debug_Quality_Run_Direct_Stream_Source_Projects_Expected_Metadata()
     {
         var root = FindRepositoryRoot();

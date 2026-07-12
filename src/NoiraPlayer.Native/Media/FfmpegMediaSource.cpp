@@ -364,6 +364,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         input.Open(url);
 
         Close();
+        m_openTiming = {};
         m_interruptRequested.store(false, std::memory_order_release);
 
         auto networkResult = avformat_network_init();
@@ -412,9 +413,10 @@ namespace winrt::NoiraPlayer::Native::implementation
                 throw CreateFfmpegError("avformat_open_input", result);
             }
 
+            m_openTiming.OpenInputDurationMs = static_cast<double>(ElapsedMilliseconds(openInputStartedAt));
             AppendNativePlaybackDiagnostic(
                 L"FfmpegMediaSource.Open avformat_open_input end result=0 durationMs=" +
-                std::to_wstring(ElapsedMilliseconds(openInputStartedAt)));
+                std::to_wstring(m_openTiming.OpenInputDurationMs));
 
             auto streamInfoStartedAt = SteadyClock::now();
             AppendNativePlaybackDiagnostic(
@@ -434,9 +436,10 @@ namespace winrt::NoiraPlayer::Native::implementation
                 throw CreateFfmpegError("avformat_find_stream_info", result);
             }
 
+            m_openTiming.StreamInfoDurationMs = static_cast<double>(ElapsedMilliseconds(streamInfoStartedAt));
             AppendNativePlaybackDiagnostic(
                 L"FfmpegMediaSource.Open avformat_find_stream_info end result=0 durationMs=" +
-                std::to_wstring(ElapsedMilliseconds(streamInfoStartedAt)) +
+                std::to_wstring(m_openTiming.StreamInfoDurationMs) +
                 L" streamCountAfter=" +
                 std::to_wstring(formatContext == nullptr ? 0 : formatContext->nb_streams));
 
@@ -497,6 +500,11 @@ namespace winrt::NoiraPlayer::Native::implementation
         m_url = url;
         m_avformatVersion = static_cast<uint32_t>(avformat_version());
         m_open = true;
+    }
+
+    FfmpegOpenTimingSnapshot FfmpegMediaSource::OpenTimingSnapshot() const noexcept
+    {
+        return m_openTiming;
     }
 
     void FfmpegMediaSource::Close() noexcept

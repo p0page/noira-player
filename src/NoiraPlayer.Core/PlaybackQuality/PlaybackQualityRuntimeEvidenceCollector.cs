@@ -46,6 +46,11 @@ namespace NoiraPlayer.Core.PlaybackQuality
                     ComposeProviderStatus(provider, "returned-false"));
             }
 
+            if (metrics != null && startup != null)
+            {
+                PlaybackQualityStartupEvidence.EnrichNativeOpenBreakdown(startup, metrics);
+            }
+
             var request = PlaybackQualityReferenceCaseReportRequestFactory.CreateRequest(
                 referenceCase,
                 descriptor,

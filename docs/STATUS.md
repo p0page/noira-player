@@ -2,6 +2,12 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-12 更新：native open 已拆为可归因子阶段
+
+`native.open` 现在保留为只计一次的父阶段，内部结构化记录 FFmpeg `open_input`、`find_stream_info`、native decoder/renderer/首帧初始化和 host dispatch overhead。模型分析会分别输出主导子项、子项合计、未归因和重叠时长；App-hosted 冻结 snapshot 同时补齐此前遗漏的硬解/软解帧计数。三个原生计时值已贯通 FfmpegMediaSource、PlaybackGraph metrics、WinRT IDL/runtimeclass、App provider 和 Core report，不再依赖人工解析日志。
+
+真实私有 Emby 长暂停 case 的一次采样总启动 10497ms，因超过既有 7000ms 标准而诚实 `fail`。其中 `native.open=8939.509ms`，子项为 `open_input=3987ms`、`find_stream_info=4726ms`、native 初始化/首帧 108ms、host dispatch 119ms，子项缺口和重叠均为 0。硬解帧 494、软解帧 0；播放阶段 max gap 67ms、render P95 48.3ms、A/V drift P95 13ms。证据表明启动波动主要在 FFmpeg 网络打开和流探测，不应通过调整解码或帧节奏策略解决。
+
 ## 2026-07-12 更新：App 启动已分段归因，暂停不再污染帧节奏
 
 App-hosted 报告新增可扩展的 `startup.stages`，当前覆盖 App/会话准备、Emby PlaybackInfo、源选择、native surface、native open 调度和 native open。模型分析同时输出主导阶段、已归因耗时和未归因耗时。真实私有 Emby 长暂停 case 中，总启动 5393ms 被完整归因，未归因 0ms；主导项为 `native.open=4209ms`，PlaybackInfo 为 658ms。复跑时 `native.open=3332ms`，原生日志进一步显示其中 FFmpeg `avformat_open_input=2843ms`、`avformat_find_stream_info=266ms`，剩余约 223ms 为 decoder、renderer、首帧和线程启动。

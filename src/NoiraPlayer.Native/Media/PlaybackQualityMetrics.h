@@ -54,6 +54,9 @@ namespace winrt::NoiraPlayer::Native::implementation
         uint64_t QueuedAudioBuffers{0};
         int64_t AudioClockTicks{0};
         int64_t VideoPositionTicks{0};
+        double NativeGraphOpenDurationMs{0.0};
+        double FfmpegOpenInputDurationMs{0.0};
+        double FfmpegStreamInfoDurationMs{0.0};
         double RenderIntervalMsP50{0.0};
         double RenderIntervalMsP05{0.0};
         double RenderIntervalMsP95{0.0};
@@ -255,6 +258,9 @@ namespace winrt::NoiraPlayer::Native::implementation
         uint64_t QueuedAudioBuffers{0};
         int64_t AudioClockTicks{0};
         int64_t VideoPositionTicks{0};
+        double NativeGraphOpenDurationMs{0.0};
+        double FfmpegOpenInputDurationMs{0.0};
+        double FfmpegStreamInfoDurationMs{0.0};
         double FramePacingSourceFrameRate{0.0};
         double LateFrameDropToleranceMs{0.0};
 
@@ -370,6 +376,9 @@ namespace winrt::NoiraPlayer::Native::implementation
             snapshot.QueuedAudioBuffers = QueuedAudioBuffers;
             snapshot.AudioClockTicks = AudioClockTicks;
             snapshot.VideoPositionTicks = VideoPositionTicks;
+            snapshot.NativeGraphOpenDurationMs = NativeGraphOpenDurationMs;
+            snapshot.FfmpegOpenInputDurationMs = FfmpegOpenInputDurationMs;
+            snapshot.FfmpegStreamInfoDurationMs = FfmpegStreamInfoDurationMs;
             snapshot.RenderIntervalMsP05 = m_renderIntervals.Percentile(5);
             snapshot.RenderIntervalMsP50 = m_renderIntervals.Percentile(50);
             snapshot.RenderIntervalMsP95 = m_renderIntervals.Percentile(95);

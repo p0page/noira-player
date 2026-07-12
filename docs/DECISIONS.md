@@ -1,5 +1,13 @@
 ﻿# 技术决策
 
+## 2026-07-12：启动子阶段作为诊断证据，不单独放宽或新增通过标准
+
+决策：保留 `startup.startupDurationMs` 作为既有启动门禁；`startup.stages` 和 `native.open.components` 用于定位耗时来源，父阶段只计一次，子项单独报告归因合计、缺口和重叠。FFmpeg `open_input`、`find_stream_info`、native 初始化/首帧和 host dispatch 必须来自真实 native metrics，禁止从 manifest expected 或日志文本猜测后冒充结构化证据。
+
+原因：真实 App 多次采样证明总启动会在约 4-10 秒间波动，慢点主要位于远端 `open_input` 和 `find_stream_info`，而 decoder/renderer/首帧通常只占约百毫秒。只看总耗时无法指导模型选择正确代码目标；把子项直接设为通过标准又会在样本不足时制造脆弱阈值。
+
+边界：后续可以研究 FFmpeg probe/analyze 参数，但任何调整都必须在同一 manifest 下同时验证媒体加载、duration/timeline、音轨字幕发现、seek 和播放稳定性。不得为缩短启动而接受轨道缺失、时长错误或格式支持回退。
+
 ## 2026-07-11：候选比较必须先证明执行链路和实际媒体源等价
 
 决策：baseline/candidate 在进入指标比较前，必须同时具备完整的真实播放 execution evidence，并具有相同 evidence level、runner 与 `sourceLocatorHash`。若两侧均已打开源，还必须具有相同 `openedSourceHash`。完成态报告必须证明 source open、native graph、demux、decoder 和 playback sample 均发生；证据缺失、跨 orchestration/native 层级、跨 runner 或跨源时统一输出 `insufficient-evidence`，禁止产生 improvement/regression。

@@ -1975,6 +1975,8 @@ namespace NoiraPlayer.App.Views
                 {
                     RenderPasses = source.RenderPasses,
                     DecodedVideoFrames = source.DecodedVideoFrames,
+                    HardwareDecodedVideoFrames = source.HardwareDecodedVideoFrames,
+                    SoftwareDecodedVideoFrames = source.SoftwareDecodedVideoFrames,
                     RenderedVideoFrames = source.RenderedVideoFrames,
                     SubmittedAudioFrames = source.SubmittedAudioFrames,
                     SubtitleDecodedCueCount = source.SubtitleDecodedCueCount,
@@ -1990,6 +1992,9 @@ namespace NoiraPlayer.App.Views
                     QueuedAudioBuffers = source.QueuedAudioBuffers,
                     AudioClockTicks = source.AudioClockTicks,
                     VideoPositionTicks = source.VideoPositionTicks,
+                    NativeGraphOpenDurationMs = source.NativeGraphOpenDurationMs,
+                    FfmpegOpenInputDurationMs = source.FfmpegOpenInputDurationMs,
+                    FfmpegStreamInfoDurationMs = source.FfmpegStreamInfoDurationMs,
                     RenderIntervalMsP05 = source.RenderIntervalMsP05,
                     RenderIntervalMsP50 = source.RenderIntervalMsP50,
                     RenderIntervalMsP95 = source.RenderIntervalMsP95,

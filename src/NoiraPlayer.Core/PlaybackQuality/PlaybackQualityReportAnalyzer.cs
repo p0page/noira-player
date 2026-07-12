@@ -61,6 +61,19 @@ namespace NoiraPlayer.Core.PlaybackQuality
     {
         public string Name { get; set; } = "";
         public double DurationMs { get; set; }
+        public string DominantComponent { get; set; } = "";
+        public double DominantComponentDurationMs { get; set; }
+        public double ComponentAttributedDurationMs { get; set; }
+        public double ComponentUnattributedDurationMs { get; set; }
+        public double ComponentOverAttributedDurationMs { get; set; }
+        public List<PlaybackQualityStartupComponentAssessment> Components { get; } =
+            new List<PlaybackQualityStartupComponentAssessment>();
+    }
+
+    public sealed class PlaybackQualityStartupComponentAssessment
+    {
+        public string Name { get; set; } = "";
+        public double DurationMs { get; set; }
     }
 
     public sealed class PlaybackQualityLifecycleAssessment
@@ -795,11 +808,41 @@ namespace NoiraPlayer.Core.PlaybackQuality
 
             foreach (var stage in report.Startup.Stages)
             {
-                startup.Stages.Add(new PlaybackQualityStartupStageAssessment
+                var stageAssessment = new PlaybackQualityStartupStageAssessment
                 {
                     Name = stage.Name,
                     DurationMs = stage.DurationMs
-                });
+                };
+                foreach (var component in stage.Components)
+                {
+                    stageAssessment.Components.Add(new PlaybackQualityStartupComponentAssessment
+                    {
+                        Name = component.Name,
+                        DurationMs = component.DurationMs
+                    });
+                    stageAssessment.ComponentAttributedDurationMs += Math.Max(0, component.DurationMs);
+                    if (!string.IsNullOrWhiteSpace(stage.Name) &&
+                        !string.IsNullOrWhiteSpace(component.Name) &&
+                        component.DurationMs >= 0)
+                    {
+                        AddUnique(
+                            startup.Signals,
+                            "startup.stage." + stage.Name + ".component." + component.Name + ".durationMs");
+                    }
+
+                    if (component.DurationMs > stageAssessment.DominantComponentDurationMs)
+                    {
+                        stageAssessment.DominantComponent = component.Name;
+                        stageAssessment.DominantComponentDurationMs = component.DurationMs;
+                    }
+                }
+                stageAssessment.ComponentUnattributedDurationMs = Math.Max(
+                    0,
+                    stage.DurationMs - stageAssessment.ComponentAttributedDurationMs);
+                stageAssessment.ComponentOverAttributedDurationMs = Math.Max(
+                    0,
+                    stageAssessment.ComponentAttributedDurationMs - stage.DurationMs);
+                startup.Stages.Add(stageAssessment);
                 startup.AttributedDurationMs += Math.Max(0, stage.DurationMs);
                 if (!string.IsNullOrWhiteSpace(stage.Name) && stage.DurationMs >= 0)
                 {

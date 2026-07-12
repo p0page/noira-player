@@ -123,6 +123,14 @@ namespace NoiraPlayer.Core.PlaybackQuality
         public string StartedAt { get; set; } = "";
         public string CompletedAt { get; set; } = "";
         public double DurationMs { get; set; }
+        public List<PlaybackQualityStartupComponent> Components { get; } =
+            new List<PlaybackQualityStartupComponent>();
+    }
+
+    public sealed class PlaybackQualityStartupComponent
+    {
+        public string Name { get; set; } = "";
+        public double DurationMs { get; set; }
     }
 
     public sealed class PlaybackQualityLifecycle

@@ -53,3 +53,5 @@
 App-hosted 报告现在以 `startup.stages` 保存连续、可归因的启动时间线，并在模型分析中输出 `dominantStage`、`attributedDurationMs` 和 `unattributedDurationMs`。真实私有 Emby case 的一次采样为：总启动 5393ms，`app.prepare=505ms`、`emby.playback-info=658ms`、`app.source-selection=11ms`、`app.native-surface=5ms`、`app.open-dispatch=6ms`、`native.open=4209ms`，未归因 0ms。第二次采样总启动 4385ms，其中 `native.open=3332ms`；对应原生日志显示 `avformat_open_input=2843ms`、`avformat_find_stream_info=266ms`，剩余约 223ms。
 
 同一 10 秒暂停场景的旧统计把主动暂停记录为 `maxFrameGapMs=10054ms`。修复后，pause/resume 会断开相邻 present 的统计连续性，但保留暂停前后的已有样本。完整 App 复跑中，render interval 样本量从 492 变为 488，P50/P95/P99 从 41.49/48.21/51.11ms 变为 41.62/47.88/50.90ms，最大间隔降为 53.00ms；暂停期 position 保持不变，恢复后 position 和 rendered frames 继续增长，报告仍为 `pass`。因此该变化修复的是评测证据污染，不是通过删除历史样本美化结果。
+
+`native.open` 已进一步拆为结构化 components。一次真实 App 采样中，总启动 10497ms、`native.open=8939.509ms`；其内部 `ffmpeg.open-input=3987ms`、`ffmpeg.find-stream-info=4726ms`、`native.initialize-first-frame=108ms`、`host.dispatch-overhead=119ms`，子项合计与父阶段完全一致。该次报告因总启动超过 7000ms 而 `fail`，但播放阶段仍观察到硬件解码 494 帧、软件解码 0 帧、max frame gap 67ms 和 A/V drift P95 13ms。由此可将启动慢归因到 FFmpeg 网络打开/流探测，而不是把它混入解码、帧节奏或暂停恢复问题。

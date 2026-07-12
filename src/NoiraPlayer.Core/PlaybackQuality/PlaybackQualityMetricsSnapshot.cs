@@ -21,6 +21,9 @@
         public ulong QueuedAudioBuffers { get; set; }
         public long AudioClockTicks { get; set; }
         public long VideoPositionTicks { get; set; }
+        public double NativeGraphOpenDurationMs { get; set; }
+        public double FfmpegOpenInputDurationMs { get; set; }
+        public double FfmpegStreamInfoDurationMs { get; set; }
         public double RenderIntervalMsP05 { get; set; }
         public double RenderIntervalMsP50 { get; set; }
         public double RenderIntervalMsP95 { get; set; }

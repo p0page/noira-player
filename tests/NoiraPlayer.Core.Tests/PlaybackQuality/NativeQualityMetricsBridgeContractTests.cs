@@ -29,6 +29,25 @@ public sealed class NativeQualityMetricsBridgeContractTests
         }
     }
 
+    [Fact]
+    public void Native_Open_Timing_Metrics_Cross_The_Cpp_WinRt_And_Core_Boundaries()
+    {
+        var root = FindRepositoryRoot();
+        var nativeMetrics = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Native", "Media", "PlaybackQualityMetrics.h"));
+        var runtimeMetrics = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Native", "NativePlaybackQualityMetrics.h"));
+        var idl = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Native", "NativePlaybackEngine.idl"));
+        var nativeEngine = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Native", "NativePlaybackEngine.cpp"));
+
+        foreach (var property in NativeOpenTimingProperties)
+        {
+            Assert.Contains("double " + property + "{0.0};", nativeMetrics, StringComparison.Ordinal);
+            Assert.Contains("Double " + property + ";", idl, StringComparison.Ordinal);
+            Assert.Contains("metrics." + property + "(snapshot." + property + ");", nativeEngine, StringComparison.Ordinal);
+            Assert.Contains("double " + property + "() const noexcept", runtimeMetrics, StringComparison.Ordinal);
+            Assert.Contains("void " + property + "(double value) noexcept", runtimeMetrics, StringComparison.Ordinal);
+        }
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
@@ -64,6 +83,9 @@ public sealed class NativeQualityMetricsBridgeContractTests
         "QueuedAudioBuffers",
         "AudioClockTicks",
         "VideoPositionTicks",
+        "NativeGraphOpenDurationMs",
+        "FfmpegOpenInputDurationMs",
+        "FfmpegStreamInfoDurationMs",
         "RenderIntervalMsP05",
         "RenderIntervalMsP50",
         "RenderIntervalMsP95",
@@ -131,5 +153,12 @@ public sealed class NativeQualityMetricsBridgeContractTests
         "AudioVideoDriftMsP95",
         "AudioVideoDriftMsP99",
         "AudioVideoDriftMsMax",
+    };
+
+    private static readonly IReadOnlyList<string> NativeOpenTimingProperties = new[]
+    {
+        "NativeGraphOpenDurationMs",
+        "FfmpegOpenInputDurationMs",
+        "FfmpegStreamInfoDurationMs",
     };
 }

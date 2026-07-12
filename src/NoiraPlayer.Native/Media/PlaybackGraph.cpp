@@ -36,6 +36,7 @@ namespace winrt::NoiraPlayer::Native::implementation
 
     void PlaybackGraph::Open(PlaybackGraphOpenRequest const& request)
     {
+        auto graphOpenStartedAt = std::chrono::steady_clock::now();
         AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open enter");
         if (request.DirectStreamUrl.empty())
         {
@@ -123,6 +124,9 @@ namespace winrt::NoiraPlayer::Native::implementation
             m_open = true;
             m_paused = false;
             ResetRuntimeStats();
+            auto ffmpegOpenTiming = m_mediaSource.OpenTimingSnapshot();
+            m_qualityMetrics.FfmpegOpenInputDurationMs = ffmpegOpenTiming.OpenInputDurationMs;
+            m_qualityMetrics.FfmpegStreamInfoDurationMs = ffmpegOpenTiming.StreamInfoDurationMs;
             ApplyFramePacingPolicyMetrics();
             AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open RenderNextFrame begin");
             auto renderedFirstFrame = RenderNextFrame();
@@ -135,6 +139,9 @@ namespace winrt::NoiraPlayer::Native::implementation
             AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open AudioRenderer.Start begin");
             m_audioRenderer.Start();
             AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open AudioRenderer.Start end");
+            m_qualityMetrics.NativeGraphOpenDurationMs =
+                std::chrono::duration<double, std::milli>(
+                    std::chrono::steady_clock::now() - graphOpenStartedAt).count();
         }
         catch (...)
         {

@@ -66,6 +66,9 @@ int main()
     metrics.AudioStarvedPasses = 1;
     metrics.AudioClockTicks = 2'000'000;
     metrics.VideoPositionTicks = 1'800'000;
+    metrics.NativeGraphOpenDurationMs = 5000.0;
+    metrics.FfmpegOpenInputDurationMs = 4000.0;
+    metrics.FfmpegStreamInfoDurationMs = 500.0;
     metrics.FramePacingSourceFrameRate = 60.0;
     metrics.LateFrameDropToleranceMs = 41.6667;
 
@@ -135,6 +138,9 @@ int main()
     assert(snapshot.AudioVideoDriftMsMax >= 40.0);
     assert(snapshot.AudioClockTicks == 2'000'000);
     assert(snapshot.VideoPositionTicks == 1'800'000);
+    assert(snapshot.NativeGraphOpenDurationMs == 5000.0);
+    assert(snapshot.FfmpegOpenInputDurationMs == 4000.0);
+    assert(snapshot.FfmpegStreamInfoDurationMs == 500.0);
     assert(snapshot.FramePacingSourceFrameRate == 60.0);
     assert(snapshot.LateFrameDropToleranceMs > 41.0);
 
@@ -172,6 +178,9 @@ int main()
     assert(snapshot.AudioVideoDriftMsMax == 0.0);
     assert(snapshot.FramePacingSourceFrameRate == 0.0);
     assert(snapshot.LateFrameDropToleranceMs == 0.0);
+    assert(snapshot.NativeGraphOpenDurationMs == 0.0);
+    assert(snapshot.FfmpegOpenInputDurationMs == 0.0);
+    assert(snapshot.FfmpegStreamInfoDurationMs == 0.0);
 
     return 0;
 }

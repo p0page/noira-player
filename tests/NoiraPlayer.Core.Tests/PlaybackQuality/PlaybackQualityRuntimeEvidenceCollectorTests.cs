@@ -293,18 +293,24 @@ public sealed class PlaybackQualityRuntimeEvidenceCollectorTests
 
         var descriptor = CreateDescriptor();
         var backend = new RuntimeEvidenceBackend();
+        var startup = new PlaybackQualityStartup
+        {
+            CommandReceivedAt = "2026-07-07T00:00:00.000Z",
+            PlaybackStartedAt = "2026-07-07T00:00:00.300Z",
+            StartupDurationMs = 300
+        };
+        startup.Stages.Add(new PlaybackQualityStartupStage
+        {
+            Name = "native.open",
+            DurationMs = 300
+        });
 
         var result = PlaybackQualityRuntimeEvidenceCollector.ComposeRunResult(
             referenceCase,
             descriptor,
             backend,
             backend,
-            new PlaybackQualityStartup
-            {
-                CommandReceivedAt = "2026-07-07T00:00:00.000Z",
-                PlaybackStartedAt = "2026-07-07T00:00:00.300Z",
-                StartupDurationMs = 300
-            },
+            startup,
             new PlaybackQualityEnvironment
             {
                 CollectorVersion = "runtime-evidence-test",
@@ -332,6 +338,11 @@ public sealed class PlaybackQualityRuntimeEvidenceCollectorTests
         Assert.Contains("sync.audioVideoDriftMsP95", result.ModelAnalysis.EvidenceSignals);
         Assert.Contains("buffers.videoStarvedPasses", result.ModelAnalysis.EvidenceSignals);
         Assert.Contains("colorPipeline.actualHdrOutput", result.ModelAnalysis.EvidenceSignals);
+        var nativeOpen = Assert.Single(result.Report.Startup.Stages, stage => stage.Name == "native.open");
+        Assert.Equal(4, nativeOpen.Components.Count);
+        Assert.Contains(
+            "startup.stage.native.open.component.ffmpeg.open-input.durationMs",
+            result.ModelAnalysis.Startup.Signals);
     }
 
     [Fact]
@@ -562,6 +573,9 @@ public sealed class PlaybackQualityRuntimeEvidenceCollectorTests
                 QueuedAudioBuffers = 4,
                 AudioClockTicks = 1_199_700_000,
                 VideoPositionTicks = 1_200_000_000,
+                NativeGraphOpenDurationMs = 280,
+                FfmpegOpenInputDurationMs = 200,
+                FfmpegStreamInfoDurationMs = 50,
                 RenderIntervalMsP50 = 41.708,
                 RenderIntervalMsP95 = 42.2,
                 RenderIntervalMsP99 = 48.0,

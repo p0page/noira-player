@@ -72,6 +72,9 @@
         UInt64 QueuedAudioBuffers;
         Int64 AudioClockTicks;
         Int64 VideoPositionTicks;
+        Double NativeGraphOpenDurationMs;
+        Double FfmpegOpenInputDurationMs;
+        Double FfmpegStreamInfoDurationMs;
         Double RenderIntervalMsP05;
         Double RenderIntervalMsP50;
         Double RenderIntervalMsP95;

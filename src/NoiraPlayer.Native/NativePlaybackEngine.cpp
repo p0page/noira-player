@@ -199,6 +199,9 @@ namespace winrt::NoiraPlayer::Native::implementation
         metrics.QueuedAudioBuffers(snapshot.QueuedAudioBuffers);
         metrics.AudioClockTicks(snapshot.AudioClockTicks);
         metrics.VideoPositionTicks(snapshot.VideoPositionTicks);
+        metrics.NativeGraphOpenDurationMs(snapshot.NativeGraphOpenDurationMs);
+        metrics.FfmpegOpenInputDurationMs(snapshot.FfmpegOpenInputDurationMs);
+        metrics.FfmpegStreamInfoDurationMs(snapshot.FfmpegStreamInfoDurationMs);
         metrics.RenderIntervalMsP05(snapshot.RenderIntervalMsP05);
         metrics.RenderIntervalMsP50(snapshot.RenderIntervalMsP50);
         metrics.RenderIntervalMsP95(snapshot.RenderIntervalMsP95);

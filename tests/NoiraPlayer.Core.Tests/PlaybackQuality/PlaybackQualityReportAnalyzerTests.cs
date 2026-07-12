@@ -1109,6 +1109,44 @@ public sealed class PlaybackQualityReportAnalyzerTests
     }
 
     [Fact]
+    public void Analyze_Summarizes_Native_Open_Components_For_Model()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "startup-component-summary",
+            Result = "pass",
+            Startup = new PlaybackQualityStartup { StartupDurationMs = 5000 }
+        };
+        var nativeOpen = new PlaybackQualityStartupStage
+        {
+            Name = "native.open",
+            DurationMs = 5000
+        };
+        nativeOpen.Components.Add(new PlaybackQualityStartupComponent
+        {
+            Name = "ffmpeg.open-input",
+            DurationMs = 4000
+        });
+        nativeOpen.Components.Add(new PlaybackQualityStartupComponent
+        {
+            Name = "native.initialize-first-frame",
+            DurationMs = 1000
+        });
+        report.Startup.Stages.Add(nativeOpen);
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        var stage = Assert.Single(analysis.Startup.Stages);
+        Assert.Equal("ffmpeg.open-input", stage.DominantComponent);
+        Assert.Equal(4000, stage.DominantComponentDurationMs);
+        Assert.Equal(5000, stage.ComponentAttributedDurationMs);
+        Assert.Equal(0, stage.ComponentUnattributedDurationMs);
+        Assert.Contains(
+            "startup.stage.native.open.component.ffmpeg.open-input.durationMs",
+            analysis.Startup.Signals);
+    }
+
+    [Fact]
     public void Analyze_Marks_Startup_Slow_From_Startup_Checks()
     {
         var report = new PlaybackQualityReport

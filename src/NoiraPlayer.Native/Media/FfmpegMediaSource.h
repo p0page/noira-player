@@ -59,6 +59,12 @@ namespace winrt::NoiraPlayer::Native::implementation
         int64_t LastSeekDemuxTargetTicks{-1};
     };
 
+    struct FfmpegOpenTimingSnapshot
+    {
+        double OpenInputDurationMs{0.0};
+        double StreamInfoDurationMs{0.0};
+    };
+
     class FfmpegMediaSource
     {
     public:
@@ -72,6 +78,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         std::optional<FfmpegVideoStreamSnapshot> BestVideoStreamSnapshot() const;
         std::vector<FfmpegStreamSnapshot> StreamSnapshots() const;
         FfmpegTimelineSnapshot TimelineSnapshot(int32_t streamIndex) const;
+        FfmpegOpenTimingSnapshot OpenTimingSnapshot() const noexcept;
         int64_t NormalizeTimestampTicks(int64_t demuxTicks) const noexcept;
         void RegisterStream(int32_t streamIndex);
         void UnregisterStream(int32_t streamIndex) noexcept;
@@ -96,6 +103,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         std::atomic<int64_t> m_ioDeadlineNanoseconds{0};
         MediaTimeline m_timeline;
         int64_t m_lastSeekDemuxTargetTicks{-1};
+        FfmpegOpenTimingSnapshot m_openTiming;
         bool m_open{false};
     };
 }
