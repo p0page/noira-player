@@ -175,6 +175,15 @@ public sealed class DevelopmentNavigationCommandTests
             "hdrOutput": "Hdr10",
             "dxgiInput": "YCBCR_STUDIO_G2084_TOPLEFT_P2020",
             "dxgiOutput": "RGB_FULL_G2084_NONE_P2020",
+            "sdrDisplayFallback": {
+              "hdrOutput": "Sdr",
+              "dxgiInputAnyOf": [
+                "YCBCR_STUDIO_G22_LEFT_P2020",
+                "YCBCR_STUDIO_G22_TOPLEFT_P2020"
+              ],
+              "dxgiOutput": "RGB_FULL_G22_NONE_P709",
+              "requiredConversionStatus": "tone-mapped-hable"
+            },
             "maxDroppedFrames": 1,
             "maxFrameGapMs": 105,
             "maxAudioVideoDriftMsP95": 40,
@@ -205,6 +214,9 @@ public sealed class DevelopmentNavigationCommandTests
         Assert.NotNull(command.Expected);
         Assert.Equal("Hdr10", command.Expected!.HdrOutput);
         Assert.Equal(23.976, command.Expected.FrameRate);
+        Assert.NotNull(command.Expected.SdrDisplayFallback);
+        Assert.Equal(2, command.Expected.SdrDisplayFallback!.DxgiInputAnyOf.Count);
+        Assert.Contains("YCBCR_STUDIO_G22_LEFT_P2020", command.Expected.SdrDisplayFallback.DxgiInputAnyOf);
     }
 
     [Theory]

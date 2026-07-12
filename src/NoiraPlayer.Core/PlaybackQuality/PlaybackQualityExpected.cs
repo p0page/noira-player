@@ -4,8 +4,14 @@ namespace NoiraPlayer.Core.PlaybackQuality
 {
     public sealed class PlaybackQualityColorExpected
     {
+        private List<string> _dxgiInputAnyOf = new List<string>();
+
         public string HdrOutput { get; set; } = "";
-        public List<string> DxgiInputAnyOf { get; } = new List<string>();
+        public List<string> DxgiInputAnyOf
+        {
+            get => _dxgiInputAnyOf;
+            set => _dxgiInputAnyOf = value ?? new List<string>();
+        }
         public string DxgiOutput { get; set; } = "";
         public bool? IsTenBitSwapChain { get; set; }
         public bool RequireValidatedConversion { get; set; } = true;
