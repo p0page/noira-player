@@ -28,7 +28,10 @@
 {
   "sdrDisplayFallback": {
     "hdrOutput": "Sdr",
-    "dxgiInput": "YCBCR_STUDIO_G22_TOPLEFT_P2020",
+    "dxgiInputAnyOf": [
+      "YCBCR_STUDIO_G22_LEFT_P2020",
+      "YCBCR_STUDIO_G22_TOPLEFT_P2020"
+    ],
     "dxgiOutput": "RGB_FULL_G22_NONE_P709",
     "isTenBitSwapChain": false,
     "requireValidatedConversion": true,
@@ -43,6 +46,8 @@
 2. `display.isHdrDisplayAvailable=false` 且主期望要求 HDR10 输出。
 
 fallback 对象不允许再嵌套 fallback，也不承载 codec、尺寸、帧率、生命周期或性能阈值；这些仍由主 expected 统一所有环境。
+
+`dxgiInputAnyOf` 是 manifest 明示的有限允许集合，不是模糊字符串匹配。Kodi 对齐的 native 路径会根据设备对 video-processor color space 的支持，在语义等价的 LEFT/TOPLEFT 色度定位中选择可用项；评测器只能接受集合中逐项精确匹配的值。
 
 ## 评估规则
 
