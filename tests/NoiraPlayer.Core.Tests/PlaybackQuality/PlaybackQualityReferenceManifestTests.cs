@@ -131,6 +131,27 @@ public sealed class PlaybackQualityReferenceManifestTests
         var requiredSignals = PlaybackQualityRequiredSignalPolicy.CreateRequiredSignals(referenceCase);
 
         Assert.Contains("interaction.recoveryDurationMs", requiredSignals);
+        Assert.Contains("interaction.operationDurationMs", requiredSignals);
+        Assert.Contains("interaction.positionDeltaTicks", requiredSignals);
+        Assert.Contains("interaction.submittedAudioFrameDelta", requiredSignals);
+    }
+
+    [Fact]
+    public void RequiredSignalPolicy_Separates_Subtitle_Playback_Recovery_From_Cue_Rendering()
+    {
+        var referenceCase = CreateCase(
+            "subtitles/subtitle-switch-recovery",
+            tier: 1,
+            purpose: "subtitle-switch");
+        referenceCase.ExecutionRequirement.Scenario = "subtitle-switch";
+        referenceCase.Expected.MaxInteractionRecoveryDurationMs = 2000;
+
+        var requiredSignals = PlaybackQualityRequiredSignalPolicy.CreateRequiredSignals(referenceCase);
+
+        Assert.Contains("interaction.recoveryDurationMs", requiredSignals);
+        Assert.Contains("interaction.cueRenderDurationMs", requiredSignals);
+        Assert.Contains("interaction.renderedVideoFrameDelta", requiredSignals);
+        Assert.Contains("interaction.subtitleCueRenderCountDelta", requiredSignals);
     }
 
     [Fact]

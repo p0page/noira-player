@@ -1308,12 +1308,20 @@ public sealed class PlaybackQualityEvaluatorTests
             Source = new PlaybackQualitySource { ItemId = "item-1", MediaSourceId = "source-1" },
             Interaction = new PlaybackQualityInteractionEvidence
             {
-                Scenario = "audio-switch",
+                Scenario = "subtitle-switch",
                 Attempted = true,
                 OperationDurationMs = 310,
-                RecoveryDurationMs = 5009,
+                LockWaitDurationMs = 250,
+                ExecutionDurationMs = 60,
+                QuiesceDurationMs = 10,
+                SeekDurationMs = 20,
+                DecoderOpenDurationMs = 20,
+                RendererOpenDurationMs = 10,
+                RecoveryDurationMs = 875,
+                CueRenderDurationMs = 5009,
                 PositionDeltaTicks = 710000,
-                SubmittedAudioFrameDelta = 24
+                RenderedVideoFrameDelta = 24,
+                SubtitleCueRenderCountDelta = 1
             }
         };
         report.Checks.Add(new PlaybackQualityCheck
@@ -1336,11 +1344,26 @@ public sealed class PlaybackQualityEvaluatorTests
         Assert.Contains("\"failureClass\"", json);
         Assert.Contains("\"limitations\"", json);
         Assert.Contains("\"interaction\"", json);
-        Assert.Contains("\"recoveryDurationMs\": 5009", json);
+        Assert.Contains("\"recoveryDurationMs\": 875", json);
+        Assert.Contains("\"lockWaitDurationMs\": 250", json);
+        Assert.Contains("\"executionDurationMs\": 60", json);
+        Assert.Contains("\"seekDurationMs\": 20", json);
+        Assert.Contains("\"decoderOpenDurationMs\": 20", json);
+        Assert.Contains("\"cueRenderDurationMs\": 5009", json);
+        Assert.Contains("\"renderedVideoFrameDelta\": 24", json);
+        Assert.Contains("\"subtitleCueRenderCountDelta\": 1", json);
         Assert.Equal("roundtrip", parsed.RunId);
         Assert.Equal("source-1", parsed.Source.MediaSourceId);
-        Assert.Equal("audio-switch", parsed.Interaction.Scenario);
-        Assert.Equal(5009, parsed.Interaction.RecoveryDurationMs);
-        Assert.Equal(24UL, parsed.Interaction.SubmittedAudioFrameDelta);
+        Assert.Equal("subtitle-switch", parsed.Interaction.Scenario);
+        Assert.Equal(875, parsed.Interaction.RecoveryDurationMs);
+        Assert.Equal(250, parsed.Interaction.LockWaitDurationMs);
+        Assert.Equal(60, parsed.Interaction.ExecutionDurationMs);
+        Assert.Equal(10, parsed.Interaction.QuiesceDurationMs);
+        Assert.Equal(20, parsed.Interaction.SeekDurationMs);
+        Assert.Equal(20, parsed.Interaction.DecoderOpenDurationMs);
+        Assert.Equal(10, parsed.Interaction.RendererOpenDurationMs);
+        Assert.Equal(5009, parsed.Interaction.CueRenderDurationMs);
+        Assert.Equal(24UL, parsed.Interaction.RenderedVideoFrameDelta);
+        Assert.Equal(1UL, parsed.Interaction.SubtitleCueRenderCountDelta);
     }
 }

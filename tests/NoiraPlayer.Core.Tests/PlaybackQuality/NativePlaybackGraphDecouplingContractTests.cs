@@ -130,7 +130,7 @@ public sealed class NativePlaybackGraphDecouplingContractTests
         var subtitleDecoderHeader = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Native", "Media", "SubtitleDecoder.h"));
         var graphSource = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Native", "Media", "PlaybackGraph.cpp"));
         var helperSource = File.ReadAllText(Path.Combine(root, "tests", "NoiraPlayer.Native.Tests", "NativePlaybackGraphHeadlessSmokeTests.cpp"));
-        var methodStart = graphSource.IndexOf("void PlaybackGraph::SwitchSubtitleStream", StringComparison.Ordinal);
+        var methodStart = graphSource.IndexOf("PlaybackGraphSwitchTiming PlaybackGraph::SwitchSubtitleStream", StringComparison.Ordinal);
         var methodEnd = graphSource.IndexOf("int64_t PlaybackGraph::CurrentPositionTicks", methodStart, StringComparison.Ordinal);
 
         Assert.True(methodStart >= 0 && methodEnd > methodStart, "SwitchSubtitleStream source was not found.");

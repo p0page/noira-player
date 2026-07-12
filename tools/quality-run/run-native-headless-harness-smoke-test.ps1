@@ -769,10 +769,25 @@ function New-NativeHeadlessParserFixtureOutput {
         track3IsDefault = '0'
         audioSwitchAttempted = '0'
         audioSwitchOperationDurationMs = '0'
+        audioSwitchLockWaitDurationMs = '0'
+        audioSwitchExecutionDurationMs = '0'
+        audioSwitchQuiesceDurationMs = '0'
+        audioSwitchSeekDurationMs = '0'
+        audioSwitchDecoderOpenDurationMs = '0'
+        audioSwitchRendererOpenDurationMs = '0'
         audioSwitchRecoveryDurationMs = '0'
         subtitleSwitch1Attempted = '0'
         subtitleSwitch1OperationDurationMs = '0'
+        subtitleSwitch1LockWaitDurationMs = '0'
+        subtitleSwitch1ExecutionDurationMs = '0'
+        subtitleSwitch1QuiesceDurationMs = '0'
+        subtitleSwitch1SeekDurationMs = '0'
+        subtitleSwitch1DecoderOpenDurationMs = '0'
+        subtitleSwitch1RendererOpenDurationMs = '0'
         subtitleSwitch1RecoveryDurationMs = '0'
+        subtitleSwitch1CueRenderDurationMs = '0'
+        subtitleSwitch1RenderedFramesBefore = '0'
+        subtitleSwitch1RenderedFramesAfter = '0'
         subtitleSwitch1PausedSwitch = '0'
         subtitleSwitch1SelectedStreamIndex = '-1'
         subtitleSwitch1PausedPositionBeforeTicks = '0'
@@ -781,7 +796,16 @@ function New-NativeHeadlessParserFixtureOutput {
         subtitleSwitch1PositionAfterResumeTicks = '0'
         subtitleSwitch2Attempted = '0'
         subtitleSwitch2OperationDurationMs = '0'
+        subtitleSwitch2LockWaitDurationMs = '0'
+        subtitleSwitch2ExecutionDurationMs = '0'
+        subtitleSwitch2QuiesceDurationMs = '0'
+        subtitleSwitch2SeekDurationMs = '0'
+        subtitleSwitch2DecoderOpenDurationMs = '0'
+        subtitleSwitch2RendererOpenDurationMs = '0'
         subtitleSwitch2RecoveryDurationMs = '0'
+        subtitleSwitch2CueRenderDurationMs = '0'
+        subtitleSwitch2RenderedFramesBefore = '0'
+        subtitleSwitch2RenderedFramesAfter = '0'
         subtitleSwitch2PausedSwitch = '0'
         subtitleSwitch2SelectedStreamIndex = '-1'
         subtitleSwitch2PausedPositionBeforeTicks = '0'
@@ -992,7 +1016,16 @@ function Assert-NativeHeadlessParserContracts {
         subtitleSwitch1PositionBeforeResumeTicks = '1000000'
         subtitleSwitch1PositionAfterResumeTicks = '2000000'
         subtitleSwitch1OperationDurationMs = '125'
+        subtitleSwitch1LockWaitDurationMs = '100'
+        subtitleSwitch1ExecutionDurationMs = '25'
+        subtitleSwitch1QuiesceDurationMs = '2'
+        subtitleSwitch1SeekDurationMs = '10'
+        subtitleSwitch1DecoderOpenDurationMs = '8'
+        subtitleSwitch1RendererOpenDurationMs = '5'
         subtitleSwitch1RecoveryDurationMs = '875'
+        subtitleSwitch1CueRenderDurationMs = '5009'
+        subtitleSwitch1RenderedFramesBefore = '10'
+        subtitleSwitch1RenderedFramesAfter = '34'
     }
     $pausedSubtitle = Invoke-NativeHeadlessParserFixtureCase `
         -FixtureHelper $fixtureHelper `
@@ -1007,7 +1040,16 @@ function Assert-NativeHeadlessParserContracts {
         $pausedSubtitleEvent.status -ne 'completed' -or
         $pausedSubtitle.Report.report.interaction.scenario -ne 'subtitle-switch' -or
         $pausedSubtitle.Report.report.interaction.operationDurationMs -ne 125 -or
+        $pausedSubtitle.Report.report.interaction.lockWaitDurationMs -ne 100 -or
+        $pausedSubtitle.Report.report.interaction.executionDurationMs -ne 25 -or
+        $pausedSubtitle.Report.report.interaction.quiesceDurationMs -ne 2 -or
+        $pausedSubtitle.Report.report.interaction.seekDurationMs -ne 10 -or
+        $pausedSubtitle.Report.report.interaction.decoderOpenDurationMs -ne 8 -or
+        $pausedSubtitle.Report.report.interaction.rendererOpenDurationMs -ne 5 -or
         $pausedSubtitle.Report.report.interaction.recoveryDurationMs -ne 875 -or
+        $pausedSubtitle.Report.report.interaction.cueRenderDurationMs -ne 5009 -or
+        $pausedSubtitle.Report.report.interaction.renderedVideoFrameDelta -ne 24 -or
+        $pausedSubtitle.Report.report.interaction.subtitleCueRenderCountDelta -ne 1 -or
         $pausedSubtitle.Report.report.interaction.positionDeltaTicks -ne 1000000 -or
         $pausedSubtitleEvent.message -notmatch 'paused position 1000000->1000000; resumed position 1000000->2000000') {
         $failures.Add('Completed paused subtitle switch evidence did not preserve pause and resume progress observations.')

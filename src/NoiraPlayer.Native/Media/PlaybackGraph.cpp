@@ -243,9 +243,14 @@ namespace winrt::NoiraPlayer::Native::implementation
         ResetRuntimeStats();
     }
 
-    void PlaybackGraph::SwitchAudioStream(int32_t audioStreamIndex)
+    PlaybackGraphSwitchTiming PlaybackGraph::SwitchAudioStream(int32_t audioStreamIndex)
     {
-        std::lock_guard lock(m_graphMutex);
+        auto const requestedAt = std::chrono::steady_clock::now();
+        std::unique_lock lock(m_graphMutex);
+        auto const acquiredAt = std::chrono::steady_clock::now();
+        PlaybackGraphSwitchTiming timing;
+        timing.LockWaitDurationMs =
+            std::chrono::duration<double, std::milli>(acquiredAt - requestedAt).count();
         if (!m_open)
         {
             throw winrt::hresult_error(E_FAIL, L"Playback is not open.");
@@ -256,8 +261,14 @@ namespace winrt::NoiraPlayer::Native::implementation
         m_audioDecoder.Close();
         m_pendingVideoFrame.reset();
         ResetAudioAheadWait();
+        auto const quiescedAt = std::chrono::steady_clock::now();
+        timing.QuiesceDurationMs =
+            std::chrono::duration<double, std::milli>(quiescedAt - acquiredAt).count();
         m_videoDecoder.Seek(m_positionTicks);
         SetVideoPrerollTarget(m_positionTicks);
+        auto const soughtAt = std::chrono::steady_clock::now();
+        timing.SeekDurationMs =
+            std::chrono::duration<double, std::milli>(soughtAt - quiescedAt).count();
         m_audioDecoder.Open(m_mediaSource, audioStreamIndex, true);
         auto selectedAudioStreamIndex = m_audioDecoder.SelectedStreamIndex();
         if (!selectedAudioStreamIndex.has_value() ||
@@ -268,6 +279,9 @@ namespace winrt::NoiraPlayer::Native::implementation
         }
 
         m_audioDecoder.Flush(m_positionTicks);
+        auto const decoderOpenedAt = std::chrono::steady_clock::now();
+        timing.DecoderOpenDurationMs =
+            std::chrono::duration<double, std::milli>(decoderOpenedAt - soughtAt).count();
         m_audioRenderer.Open(selectedAudioStreamIndex.value(), true);
         if (shouldResumeAudio)
         {
@@ -275,11 +289,22 @@ namespace winrt::NoiraPlayer::Native::implementation
         }
 
         m_stateChanged.notify_all();
+        auto const completedAt = std::chrono::steady_clock::now();
+        timing.RendererOpenDurationMs =
+            std::chrono::duration<double, std::milli>(completedAt - decoderOpenedAt).count();
+        timing.ExecutionDurationMs =
+            std::chrono::duration<double, std::milli>(completedAt - acquiredAt).count();
+        return timing;
     }
 
-    void PlaybackGraph::SwitchSubtitleStream(std::optional<int32_t> subtitleStreamIndex)
+    PlaybackGraphSwitchTiming PlaybackGraph::SwitchSubtitleStream(std::optional<int32_t> subtitleStreamIndex)
     {
-        std::lock_guard lock(m_graphMutex);
+        auto const requestedAt = std::chrono::steady_clock::now();
+        std::unique_lock lock(m_graphMutex);
+        auto const acquiredAt = std::chrono::steady_clock::now();
+        PlaybackGraphSwitchTiming timing;
+        timing.LockWaitDurationMs =
+            std::chrono::duration<double, std::milli>(acquiredAt - requestedAt).count();
         if (!m_open)
         {
             throw winrt::hresult_error(E_FAIL, L"Playback is not open.");
@@ -288,39 +313,57 @@ namespace winrt::NoiraPlayer::Native::implementation
         auto previousSelection = m_subtitleRenderer.SelectedStreamIndex();
         auto resumePositionTicks = m_positionTicks;
         SubtitleSwitchOperations operations;
-        operations.DisableSelection = [this]
+        operations.DisableSelection = [this, &timing]
         {
+            auto const startedAt = std::chrono::steady_clock::now();
             m_subtitleDecoder.Close();
             m_subtitleRenderer.Disable();
+            timing.QuiesceDurationMs += std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - startedAt).count();
         };
-        operations.OpenDecoder = [this](int32_t streamIndex)
+        operations.OpenDecoder = [this, &timing](int32_t streamIndex)
         {
+            auto const startedAt = std::chrono::steady_clock::now();
             m_subtitleDecoder.Open(m_mediaSource, streamIndex);
+            timing.DecoderOpenDurationMs += std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - startedAt).count();
         };
         operations.SelectedDecoderStream = [this]
         {
             return m_subtitleDecoder.SelectedStreamIndex();
         };
-        operations.SeekVideo = [this, resumePositionTicks]
+        operations.SeekVideo = [this, resumePositionTicks, &timing]
         {
+            auto const startedAt = std::chrono::steady_clock::now();
             m_pendingVideoFrame.reset();
             ResetAudioAheadWait();
             ResetVideoClock();
             m_audioRenderer.Flush();
             m_videoDecoder.Seek(resumePositionTicks);
+            timing.SeekDurationMs += std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - startedAt).count();
         };
-        operations.FlushAudioDecoder = [this, resumePositionTicks]
+        operations.FlushAudioDecoder = [this, resumePositionTicks, &timing]
         {
+            auto const startedAt = std::chrono::steady_clock::now();
             m_audioDecoder.Flush(resumePositionTicks);
+            timing.QuiesceDurationMs += std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - startedAt).count();
         };
-        operations.FlushSubtitleDecoder = [this]
+        operations.FlushSubtitleDecoder = [this, &timing]
         {
+            auto const startedAt = std::chrono::steady_clock::now();
             m_subtitleDecoder.Flush();
+            timing.QuiesceDurationMs += std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - startedAt).count();
         };
-        operations.SelectRenderer = [this, resumePositionTicks](int32_t streamIndex)
+        operations.SelectRenderer = [this, resumePositionTicks, &timing](int32_t streamIndex)
         {
+            auto const startedAt = std::chrono::steady_clock::now();
             SetVideoPrerollTarget(resumePositionTicks);
             m_subtitleRenderer.SwitchStream(streamIndex);
+            timing.RendererOpenDurationMs += std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - startedAt).count();
         };
 
         auto result = RunSubtitleSwitchTransaction(
@@ -330,7 +373,10 @@ namespace winrt::NoiraPlayer::Native::implementation
         m_stateChanged.notify_all();
         if (result.Disposition == SubtitleSwitchDisposition::Completed)
         {
-            return;
+            auto const completedAt = std::chrono::steady_clock::now();
+            timing.ExecutionDurationMs =
+                std::chrono::duration<double, std::milli>(completedAt - acquiredAt).count();
+            return timing;
         }
 
         if (result.Disposition == SubtitleSwitchDisposition::RestoredPrevious)

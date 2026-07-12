@@ -163,10 +163,18 @@ namespace NoiraPlayer.Core.PlaybackQuality
                     Scenario = request.Interaction.Scenario,
                     Attempted = request.Interaction.Attempted,
                     OperationDurationMs = request.Interaction.OperationDurationMs,
+                    LockWaitDurationMs = request.Interaction.LockWaitDurationMs,
+                    ExecutionDurationMs = request.Interaction.ExecutionDurationMs,
+                    QuiesceDurationMs = request.Interaction.QuiesceDurationMs,
+                    SeekDurationMs = request.Interaction.SeekDurationMs,
+                    DecoderOpenDurationMs = request.Interaction.DecoderOpenDurationMs,
+                    RendererOpenDurationMs = request.Interaction.RendererOpenDurationMs,
                     RecoveryDurationMs = request.Interaction.RecoveryDurationMs,
+                    CueRenderDurationMs = request.Interaction.CueRenderDurationMs,
                     PositionDeltaTicks = request.Interaction.PositionDeltaTicks,
                     SubmittedAudioFrameDelta = request.Interaction.SubmittedAudioFrameDelta,
-                    RenderedVideoFrameDelta = request.Interaction.RenderedVideoFrameDelta
+                    RenderedVideoFrameDelta = request.Interaction.RenderedVideoFrameDelta,
+                    SubtitleCueRenderCountDelta = request.Interaction.SubtitleCueRenderCountDelta
                 };
             }
 

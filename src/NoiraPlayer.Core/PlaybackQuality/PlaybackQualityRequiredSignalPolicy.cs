@@ -83,7 +83,31 @@ namespace NoiraPlayer.Core.PlaybackQuality
 
             if (expected.MaxInteractionRecoveryDurationMs.HasValue)
             {
+                AddUnique(requiredSignals, "interaction.operationDurationMs");
+                AddUnique(requiredSignals, "interaction.lockWaitDurationMs");
+                AddUnique(requiredSignals, "interaction.executionDurationMs");
+                AddUnique(requiredSignals, "interaction.quiesceDurationMs");
+                AddUnique(requiredSignals, "interaction.seekDurationMs");
+                AddUnique(requiredSignals, "interaction.decoderOpenDurationMs");
+                AddUnique(requiredSignals, "interaction.rendererOpenDurationMs");
                 AddUnique(requiredSignals, "interaction.recoveryDurationMs");
+                AddUnique(requiredSignals, "interaction.positionDeltaTicks");
+                if (string.Equals(
+                    referenceCase.ExecutionRequirement.Scenario,
+                    PlaybackQualityExecutionScenario.AudioSwitch,
+                    StringComparison.OrdinalIgnoreCase))
+                {
+                    AddUnique(requiredSignals, "interaction.submittedAudioFrameDelta");
+                }
+                else if (string.Equals(
+                    referenceCase.ExecutionRequirement.Scenario,
+                    PlaybackQualityExecutionScenario.SubtitleSwitch,
+                    StringComparison.OrdinalIgnoreCase))
+                {
+                    AddUnique(requiredSignals, "interaction.cueRenderDurationMs");
+                    AddUnique(requiredSignals, "interaction.renderedVideoFrameDelta");
+                    AddUnique(requiredSignals, "interaction.subtitleCueRenderCountDelta");
+                }
             }
 
             if (expected.MaxSeekPositionErrorMs.HasValue ||
@@ -413,6 +437,50 @@ namespace NoiraPlayer.Core.PlaybackQuality
                         report.Interaction.RecoveryDurationMs.HasValue &&
                         double.IsFinite(report.Interaction.RecoveryDurationMs.Value) &&
                         report.Interaction.RecoveryDurationMs.Value >= 0;
+                case "interaction.operationDurationMs":
+                    return report.Interaction.Attempted &&
+                        report.Interaction.OperationDurationMs.HasValue &&
+                        double.IsFinite(report.Interaction.OperationDurationMs.Value) &&
+                        report.Interaction.OperationDurationMs.Value >= 0;
+                case "interaction.lockWaitDurationMs":
+                    return report.Interaction.Attempted &&
+                        report.Interaction.LockWaitDurationMs.HasValue &&
+                        double.IsFinite(report.Interaction.LockWaitDurationMs.Value) &&
+                        report.Interaction.LockWaitDurationMs.Value >= 0;
+                case "interaction.executionDurationMs":
+                    return report.Interaction.Attempted &&
+                        report.Interaction.ExecutionDurationMs.HasValue &&
+                        double.IsFinite(report.Interaction.ExecutionDurationMs.Value) &&
+                        report.Interaction.ExecutionDurationMs.Value >= 0;
+                case "interaction.quiesceDurationMs":
+                    return HasFiniteNonNegative(report.Interaction.QuiesceDurationMs);
+                case "interaction.seekDurationMs":
+                    return HasFiniteNonNegative(report.Interaction.SeekDurationMs);
+                case "interaction.decoderOpenDurationMs":
+                    return HasFiniteNonNegative(report.Interaction.DecoderOpenDurationMs);
+                case "interaction.rendererOpenDurationMs":
+                    return HasFiniteNonNegative(report.Interaction.RendererOpenDurationMs);
+                case "interaction.cueRenderDurationMs":
+                    return report.Interaction.Attempted &&
+                        report.Interaction.CueRenderDurationMs.HasValue &&
+                        double.IsFinite(report.Interaction.CueRenderDurationMs.Value) &&
+                        report.Interaction.CueRenderDurationMs.Value >= 0;
+                case "interaction.positionDeltaTicks":
+                    return report.Interaction.Attempted &&
+                        report.Interaction.PositionDeltaTicks.HasValue &&
+                        report.Interaction.PositionDeltaTicks.Value > 0;
+                case "interaction.submittedAudioFrameDelta":
+                    return report.Interaction.Attempted &&
+                        report.Interaction.SubmittedAudioFrameDelta.HasValue &&
+                        report.Interaction.SubmittedAudioFrameDelta.Value > 0;
+                case "interaction.renderedVideoFrameDelta":
+                    return report.Interaction.Attempted &&
+                        report.Interaction.RenderedVideoFrameDelta.HasValue &&
+                        report.Interaction.RenderedVideoFrameDelta.Value > 0;
+                case "interaction.subtitleCueRenderCountDelta":
+                    return report.Interaction.Attempted &&
+                        report.Interaction.SubtitleCueRenderCountDelta.HasValue &&
+                        report.Interaction.SubtitleCueRenderCountDelta.Value > 0;
                 case "lifecycle.load":
                     return HasLifecycleOperation(report, "load");
                 case "lifecycle.play":
@@ -816,6 +884,11 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 report.Buffers.QueuedAudioBuffers > 0 ||
                 report.Buffers.VideoStarvedPasses > 0 ||
                 report.Buffers.AudioStarvedPasses > 0;
+        }
+
+        private static bool HasFiniteNonNegative(double? value)
+        {
+            return value.HasValue && double.IsFinite(value.Value) && value.Value >= 0;
         }
 
         private static void AddUnique(List<string> values, string value)

@@ -55,6 +55,16 @@ namespace winrt::NoiraPlayer::Native::implementation
         bool DesiredHdrOutput{false};
     };
 
+    struct PlaybackGraphSwitchTiming
+    {
+        double LockWaitDurationMs{0.0};
+        double ExecutionDurationMs{0.0};
+        double QuiesceDurationMs{0.0};
+        double SeekDurationMs{0.0};
+        double DecoderOpenDurationMs{0.0};
+        double RendererOpenDurationMs{0.0};
+    };
+
     inline HdrOutputDecision ResolveHdrOutputDecisionForFrame(
         bool hasSeenVideoFrameColor,
         bool previousDesiredHdrOutput,
@@ -81,8 +91,8 @@ namespace winrt::NoiraPlayer::Native::implementation
         void Resume();
         void Seek(int64_t positionTicks);
         void Stop() noexcept;
-        void SwitchAudioStream(int32_t audioStreamIndex);
-        void SwitchSubtitleStream(std::optional<int32_t> subtitleStreamIndex);
+        PlaybackGraphSwitchTiming SwitchAudioStream(int32_t audioStreamIndex);
+        PlaybackGraphSwitchTiming SwitchSubtitleStream(std::optional<int32_t> subtitleStreamIndex);
         int64_t CurrentPositionTicks() const noexcept;
         uint64_t SubtitleCueRenderCount() const noexcept;
         uint64_t SubtitleDecodedCueCount() const noexcept;

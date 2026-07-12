@@ -1107,3 +1107,13 @@ ignored v13 基线位于 `docs/qa/private/baselines/playback-evidence-v13-intera
 v12 只保留为引入恢复时延契约前的观察集。v12 与 v13 的 expected schema 不同，不得把两者直接比较为播放器质量改善或退化。完整 `run-playback-core-checks.ps1` 已全绿，包括 555 项定向 Core 测试、真实 native-headless、网络恢复、EAGAIN、seek/timeline、帧节奏、音轨字幕、色彩证据与 Native Debug x64 build。统一入口 `tools/Build-Noira.ps1 -Target Build -Configuration Debug -Platform x64` 也已完整编译 Core、Headless、Native 和 Modern App，生成 `NoiraPlayer.Native.dll` 与 `NoiraPlayer.App.dll`。
 
 质量门执行时发现候选对比测试仍生成旧版 timeline 夹具，缺少 source origin、demux target、first-presented、post-seek position 与 advancement，因而被当前 strict gate 正确拒绝。夹具已补齐真实 timeline 字段，评测规则和阈值没有放宽；独立候选对比测试及随后完整质量门均通过。
+
+# 2026-07-12 更新：交互恢复证据已拆分并定位到远端 seek
+
+v13 把字幕 cue 增长误写入 `interaction.renderedVideoFrameDelta`，并把“首个视频帧恢复”和“字幕 cue 出现”合并为同一个 recovery 条件。这会让模型无法区分播放恢复、字幕可见性和真实视频呈现。v14 契约现分别记录 `recoveryDurationMs`、`cueRenderDurationMs`、真实 `renderedVideoFrameDelta` 与 `subtitleCueRenderCountDelta`；subtitle completed 仍要求真实 cue，但 2000ms 播放恢复 SLO 只消费首个呈现、位置推进和目标轨选择。required-signal policy 同时强制 operation、lock wait、execution、分阶段耗时及场景对应的音频/视频/cue 增量，缺失字段不能通过。
+
+三轮同源私有复测中，audio-switch operation 为 `4523.46-5012.32ms`、recovery 为 `5459.14-6389.63ms`；PGS subtitle-switch operation 为 `1139.93-1306.46ms`、recovery 为 `4481.36-6281.40ms`。锁等待三轮均约为 0ms，推翻了“render loop 长时间持锁是主要瓶颈”的初始假设。进一步分段采样显示：audio-switch 的 `4087.65ms` execution 中 `4048.54ms` 在 video seek，decoder open 仅 `0.14ms`、renderer open `33.13ms`；subtitle-switch 的 `1349.12ms` execution 中 `1349.03ms` 在 video seek，其余阶段均低于 `0.05ms`。当前 Core 问题因此归因为切换未激活轨道时同步执行远端 `av_seek_frame`，不是 codec 或音频设备初始化。
+
+Kodi 本地源码同样在音轨切换后发送 accurate/backward seek；内嵌字幕切换也明确说明 demux 已领先并丢弃当前时段字幕包，因此重新 seek 读取。差异是 Kodi 通过 player messenger/demux 状态机处理，而本项目当前在 graph 切换调用内同步 seek。FFmpeg `multiple_requests=1` 作为单变量候选已用相同私有 case 实测，但该服务器/反代组合出现 `File ended prematurely`，两个 case 都没有有效播放样本；候选已撤销，失败报告保留在 ignored `docs/qa/private/candidates/http-persistent-v14-repeat-1.local/`，不得宣称改善。
+
+验证：完整 `run-playback-core-checks.ps1` 全绿，包含 556 项定向 Core 测试、parser 负向契约、真实 native-headless、网络恢复、独立 C++ 回归与 Native Debug x64 build；统一 `tools/Build-Noira.ps1 -Target Build -Configuration Debug -Platform x64` 也已重新编译完整 Modern App 并生成 `NoiraPlayer.App.dll`。本轮只增强证据并定位根因，没有宣称切流性能已经改善。

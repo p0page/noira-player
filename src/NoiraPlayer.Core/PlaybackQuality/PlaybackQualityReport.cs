@@ -156,10 +156,18 @@ namespace NoiraPlayer.Core.PlaybackQuality
         public string Scenario { get; set; } = "";
         public bool Attempted { get; set; }
         public double? OperationDurationMs { get; set; }
+        public double? LockWaitDurationMs { get; set; }
+        public double? ExecutionDurationMs { get; set; }
+        public double? QuiesceDurationMs { get; set; }
+        public double? SeekDurationMs { get; set; }
+        public double? DecoderOpenDurationMs { get; set; }
+        public double? RendererOpenDurationMs { get; set; }
         public double? RecoveryDurationMs { get; set; }
+        public double? CueRenderDurationMs { get; set; }
         public long? PositionDeltaTicks { get; set; }
         public ulong? SubmittedAudioFrameDelta { get; set; }
         public ulong? RenderedVideoFrameDelta { get; set; }
+        public ulong? SubtitleCueRenderCountDelta { get; set; }
     }
 
     public sealed class PlaybackQualityRuntimeMetrics

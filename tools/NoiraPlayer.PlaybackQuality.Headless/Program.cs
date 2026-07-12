@@ -379,6 +379,12 @@ internal static class NativeHeadlessHarness
                 Scenario = PlaybackQualityExecutionScenario.AudioSwitch,
                 Attempted = true,
                 OperationDurationMs = helper.AudioSwitch.OperationDurationMs,
+                LockWaitDurationMs = helper.AudioSwitch.LockWaitDurationMs,
+                ExecutionDurationMs = helper.AudioSwitch.ExecutionDurationMs,
+                QuiesceDurationMs = helper.AudioSwitch.QuiesceDurationMs,
+                SeekDurationMs = helper.AudioSwitch.SeekDurationMs,
+                DecoderOpenDurationMs = helper.AudioSwitch.DecoderOpenDurationMs,
+                RendererOpenDurationMs = helper.AudioSwitch.RendererOpenDurationMs,
                 RecoveryDurationMs = helper.AudioSwitch.RecoveryDurationMs,
                 PositionDeltaTicks = helper.AudioSwitch.PositionAfterTicks -
                     helper.AudioSwitch.PositionBeforeTicks,
@@ -400,10 +406,21 @@ internal static class NativeHeadlessHarness
                 Scenario = PlaybackQualityExecutionScenario.SubtitleSwitch,
                 Attempted = true,
                 OperationDurationMs = subtitleSwitch.OperationDurationMs,
+                LockWaitDurationMs = subtitleSwitch.LockWaitDurationMs,
+                ExecutionDurationMs = subtitleSwitch.ExecutionDurationMs,
+                QuiesceDurationMs = subtitleSwitch.QuiesceDurationMs,
+                SeekDurationMs = subtitleSwitch.SeekDurationMs,
+                DecoderOpenDurationMs = subtitleSwitch.DecoderOpenDurationMs,
+                RendererOpenDurationMs = subtitleSwitch.RendererOpenDurationMs,
                 RecoveryDurationMs = subtitleSwitch.RecoveryDurationMs,
+                CueRenderDurationMs = subtitleSwitch.CueRenderDurationMs,
                 PositionDeltaTicks = subtitleSwitch.PositionAfterResumeTicks -
                     subtitleSwitch.PositionBeforeResumeTicks,
-                RenderedVideoFrameDelta = subtitleSwitch.CueCountAfter >=
+                RenderedVideoFrameDelta = subtitleSwitch.RenderedFramesAfter >=
+                    subtitleSwitch.RenderedFramesBefore
+                        ? subtitleSwitch.RenderedFramesAfter - subtitleSwitch.RenderedFramesBefore
+                        : 0,
+                SubtitleCueRenderCountDelta = subtitleSwitch.CueCountAfter >=
                     subtitleSwitch.CueCountBefore
                         ? subtitleSwitch.CueCountAfter - subtitleSwitch.CueCountBefore
                         : 0
@@ -1026,6 +1043,12 @@ internal static class NativeHeadlessHarness
             !TryGetRequiredUInt64(values, "audioSwitchSubmittedFramesBefore", out var framesBefore, out error) ||
             !TryGetRequiredUInt64(values, "audioSwitchSubmittedFramesAfter", out var framesAfter, out error) ||
             !TryGetRequiredNonNegativeDouble(values, "audioSwitchOperationDurationMs", out var operationDurationMs, out error) ||
+            !TryGetRequiredNonNegativeDouble(values, "audioSwitchLockWaitDurationMs", out var lockWaitDurationMs, out error) ||
+            !TryGetRequiredNonNegativeDouble(values, "audioSwitchExecutionDurationMs", out var executionDurationMs, out error) ||
+            !TryGetRequiredNonNegativeDouble(values, "audioSwitchQuiesceDurationMs", out var quiesceDurationMs, out error) ||
+            !TryGetRequiredNonNegativeDouble(values, "audioSwitchSeekDurationMs", out var seekDurationMs, out error) ||
+            !TryGetRequiredNonNegativeDouble(values, "audioSwitchDecoderOpenDurationMs", out var decoderOpenDurationMs, out error) ||
+            !TryGetRequiredNonNegativeDouble(values, "audioSwitchRendererOpenDurationMs", out var rendererOpenDurationMs, out error) ||
             !TryGetRequiredNonNegativeDouble(values, "audioSwitchRecoveryDurationMs", out var recoveryDurationMs, out error))
         {
             return false;
@@ -1038,6 +1061,12 @@ internal static class NativeHeadlessHarness
         outcome.SubmittedFramesBefore = framesBefore;
         outcome.SubmittedFramesAfter = framesAfter;
         outcome.OperationDurationMs = operationDurationMs;
+        outcome.LockWaitDurationMs = lockWaitDurationMs;
+        outcome.ExecutionDurationMs = executionDurationMs;
+        outcome.QuiesceDurationMs = quiesceDurationMs;
+        outcome.SeekDurationMs = seekDurationMs;
+        outcome.DecoderOpenDurationMs = decoderOpenDurationMs;
+        outcome.RendererOpenDurationMs = rendererOpenDurationMs;
         outcome.RecoveryDurationMs = recoveryDurationMs;
         return true;
     }
@@ -1071,7 +1100,16 @@ internal static class NativeHeadlessHarness
             !TryGetRequiredNonNegativeInt64(values, prefix + "PositionBeforeResumeTicks", out var positionBeforeResume, out error) ||
             !TryGetRequiredNonNegativeInt64(values, prefix + "PositionAfterResumeTicks", out var positionAfterResume, out error) ||
             !TryGetRequiredNonNegativeDouble(values, prefix + "OperationDurationMs", out var operationDurationMs, out error) ||
-            !TryGetRequiredNonNegativeDouble(values, prefix + "RecoveryDurationMs", out var recoveryDurationMs, out error))
+            !TryGetRequiredNonNegativeDouble(values, prefix + "LockWaitDurationMs", out var lockWaitDurationMs, out error) ||
+            !TryGetRequiredNonNegativeDouble(values, prefix + "ExecutionDurationMs", out var executionDurationMs, out error) ||
+            !TryGetRequiredNonNegativeDouble(values, prefix + "QuiesceDurationMs", out var quiesceDurationMs, out error) ||
+            !TryGetRequiredNonNegativeDouble(values, prefix + "SeekDurationMs", out var seekDurationMs, out error) ||
+            !TryGetRequiredNonNegativeDouble(values, prefix + "DecoderOpenDurationMs", out var decoderOpenDurationMs, out error) ||
+            !TryGetRequiredNonNegativeDouble(values, prefix + "RendererOpenDurationMs", out var rendererOpenDurationMs, out error) ||
+            !TryGetRequiredNonNegativeDouble(values, prefix + "RecoveryDurationMs", out var recoveryDurationMs, out error) ||
+            !TryGetRequiredNonNegativeDouble(values, prefix + "CueRenderDurationMs", out var cueRenderDurationMs, out error) ||
+            !TryGetRequiredUInt64(values, prefix + "RenderedFramesBefore", out var renderedFramesBefore, out error) ||
+            !TryGetRequiredUInt64(values, prefix + "RenderedFramesAfter", out var renderedFramesAfter, out error))
         {
             return false;
         }
@@ -1087,7 +1125,16 @@ internal static class NativeHeadlessHarness
         outcome.PositionBeforeResumeTicks = positionBeforeResume;
         outcome.PositionAfterResumeTicks = positionAfterResume;
         outcome.OperationDurationMs = operationDurationMs;
+        outcome.LockWaitDurationMs = lockWaitDurationMs;
+        outcome.ExecutionDurationMs = executionDurationMs;
+        outcome.QuiesceDurationMs = quiesceDurationMs;
+        outcome.SeekDurationMs = seekDurationMs;
+        outcome.DecoderOpenDurationMs = decoderOpenDurationMs;
+        outcome.RendererOpenDurationMs = rendererOpenDurationMs;
         outcome.RecoveryDurationMs = recoveryDurationMs;
+        outcome.CueRenderDurationMs = cueRenderDurationMs;
+        outcome.RenderedFramesBefore = renderedFramesBefore;
+        outcome.RenderedFramesAfter = renderedFramesAfter;
         return true;
     }
 
@@ -1126,6 +1173,12 @@ internal static class NativeHeadlessHarness
             outcome.PositionAfterResumeTicks <= outcome.PositionBeforeResumeTicks)
         {
             error = $"Native helper field '{prefix}PositionAfterResumeTicks' must advance after the completed paused subtitle switch resumes.";
+            return false;
+        }
+
+        if (outcome.RenderedFramesAfter <= outcome.RenderedFramesBefore)
+        {
+            error = $"Native helper field '{prefix}RenderedFramesAfter' must advance when {prefix}Status is completed.";
             return false;
         }
 
@@ -2205,6 +2258,18 @@ internal sealed class NativeHeadlessAudioSwitchOutcome
 
     public double OperationDurationMs { get; set; }
 
+    public double LockWaitDurationMs { get; set; }
+
+    public double ExecutionDurationMs { get; set; }
+
+    public double QuiesceDurationMs { get; set; }
+
+    public double SeekDurationMs { get; set; }
+
+    public double DecoderOpenDurationMs { get; set; }
+
+    public double RendererOpenDurationMs { get; set; }
+
     public double RecoveryDurationMs { get; set; }
 }
 
@@ -2234,7 +2299,25 @@ internal sealed class NativeHeadlessSubtitleSwitchOutcome
 
     public double OperationDurationMs { get; set; }
 
+    public double LockWaitDurationMs { get; set; }
+
+    public double ExecutionDurationMs { get; set; }
+
+    public double QuiesceDurationMs { get; set; }
+
+    public double SeekDurationMs { get; set; }
+
+    public double DecoderOpenDurationMs { get; set; }
+
+    public double RendererOpenDurationMs { get; set; }
+
     public double RecoveryDurationMs { get; set; }
+
+    public double CueRenderDurationMs { get; set; }
+
+    public ulong RenderedFramesBefore { get; set; }
+
+    public ulong RenderedFramesAfter { get; set; }
 }
 
 internal sealed class NativeHeadlessSubtitleOffOutcome

@@ -49,6 +49,12 @@ namespace
         uint64_t SubmittedFramesBefore{0};
         uint64_t SubmittedFramesAfter{0};
         double OperationDurationMs{0.0};
+        double LockWaitDurationMs{0.0};
+        double ExecutionDurationMs{0.0};
+        double QuiesceDurationMs{0.0};
+        double SeekDurationMs{0.0};
+        double DecoderOpenDurationMs{0.0};
+        double RendererOpenDurationMs{0.0};
         double RecoveryDurationMs{0.0};
     };
 
@@ -65,8 +71,17 @@ namespace
         int64_t PausedPositionAfterTicks{0};
         int64_t PositionBeforeResumeTicks{0};
         int64_t PositionAfterResumeTicks{0};
+        uint64_t RenderedFramesBefore{0};
+        uint64_t RenderedFramesAfter{0};
         double OperationDurationMs{0.0};
+        double LockWaitDurationMs{0.0};
+        double ExecutionDurationMs{0.0};
+        double QuiesceDurationMs{0.0};
+        double SeekDurationMs{0.0};
+        double DecoderOpenDurationMs{0.0};
+        double RendererOpenDurationMs{0.0};
         double RecoveryDurationMs{0.0};
+        double CueRenderDurationMs{0.0};
     };
 
     struct SubtitleOffOutcome
@@ -317,7 +332,13 @@ int wmain(int argc, wchar_t** argv)
                 auto const interactionStartedAt = std::chrono::steady_clock::now();
                 try
                 {
-                    graph.SwitchAudioStream(audioSwitch.StreamIndex);
+                    auto const switchTiming = graph.SwitchAudioStream(audioSwitch.StreamIndex);
+                    audioSwitch.LockWaitDurationMs = switchTiming.LockWaitDurationMs;
+                    audioSwitch.ExecutionDurationMs = switchTiming.ExecutionDurationMs;
+                    audioSwitch.QuiesceDurationMs = switchTiming.QuiesceDurationMs;
+                    audioSwitch.SeekDurationMs = switchTiming.SeekDurationMs;
+                    audioSwitch.DecoderOpenDurationMs = switchTiming.DecoderOpenDurationMs;
+                    audioSwitch.RendererOpenDurationMs = switchTiming.RendererOpenDurationMs;
                     audioSwitch.OperationDurationMs =
                         std::chrono::duration<double, std::milli>(
                             std::chrono::steady_clock::now() - interactionStartedAt).count();
@@ -356,6 +377,7 @@ int wmain(int argc, wchar_t** argv)
             outcome.StreamIndex = streamIndex;
             outcome.PausedSwitch = pauseBeforeSwitch;
             outcome.CueCountBefore = graph.SubtitleCueRenderCount();
+            outcome.RenderedFramesBefore = graph.QualityMetricsSnapshot().RenderedVideoFrames;
             auto const interactionStartedAt = std::chrono::steady_clock::now();
             auto resumeAfterFailure = false;
             try
@@ -366,7 +388,13 @@ int wmain(int argc, wchar_t** argv)
                     resumeAfterFailure = true;
                 }
 
-                graph.SwitchSubtitleStream(streamIndex);
+                auto const switchTiming = graph.SwitchSubtitleStream(streamIndex);
+                outcome.LockWaitDurationMs = switchTiming.LockWaitDurationMs;
+                outcome.ExecutionDurationMs = switchTiming.ExecutionDurationMs;
+                outcome.QuiesceDurationMs = switchTiming.QuiesceDurationMs;
+                outcome.SeekDurationMs = switchTiming.SeekDurationMs;
+                outcome.DecoderOpenDurationMs = switchTiming.DecoderOpenDurationMs;
+                outcome.RendererOpenDurationMs = switchTiming.RendererOpenDurationMs;
                 outcome.OperationDurationMs =
                     std::chrono::duration<double, std::milli>(
                         std::chrono::steady_clock::now() - interactionStartedAt).count();
@@ -385,30 +413,40 @@ int wmain(int argc, wchar_t** argv)
                     outcome.PositionBeforeResumeTicks = graph.CurrentPositionTicks();
                 }
 
-                auto const recovered = waitForEvidence([&]()
+                auto const playbackRecovered = waitForEvidence([&]()
                 {
                     outcome.SelectedStreamIndex = graph.SelectedSubtitleStreamIndex().value_or(-1);
                     outcome.PositionAfterResumeTicks = graph.CurrentPositionTicks();
-                    outcome.CueCountAfter = graph.SubtitleCueRenderCount();
+                    outcome.RenderedFramesAfter = graph.QualityMetricsSnapshot().RenderedVideoFrames;
                     auto const pauseAndResumeObserved = !pauseBeforeSwitch ||
                         (outcome.PausedPositionAfterTicks == outcome.PausedPositionBeforeTicks &&
                             outcome.PositionAfterResumeTicks > outcome.PositionBeforeResumeTicks);
                     return outcome.SelectedStreamIndex == outcome.StreamIndex &&
-                        outcome.CueCountAfter > outcome.CueCountBefore &&
+                        outcome.RenderedFramesAfter > outcome.RenderedFramesBefore &&
                         pauseAndResumeObserved;
                 });
                 outcome.RecoveryDurationMs =
                     std::chrono::duration<double, std::milli>(
                         std::chrono::steady_clock::now() - interactionStartedAt).count();
-                outcome.Status = recovered ? "completed" : "failed";
+                auto const cueRendered = playbackRecovered && waitForEvidence([&]()
+                {
+                    outcome.CueCountAfter = graph.SubtitleCueRenderCount();
+                    return outcome.CueCountAfter > outcome.CueCountBefore;
+                });
+                outcome.CueRenderDurationMs =
+                    std::chrono::duration<double, std::milli>(
+                        std::chrono::steady_clock::now() - interactionStartedAt).count();
+                outcome.Status = playbackRecovered && cueRendered ? "completed" : "failed";
             }
             catch (...)
             {
                 outcome.RecoveryDurationMs =
                     std::chrono::duration<double, std::milli>(
                         std::chrono::steady_clock::now() - interactionStartedAt).count();
+                outcome.CueRenderDurationMs = outcome.RecoveryDurationMs;
                 outcome.SelectedStreamIndex = graph.SelectedSubtitleStreamIndex().value_or(-1);
                 outcome.CueCountAfter = graph.SubtitleCueRenderCount();
+                outcome.RenderedFramesAfter = graph.QualityMetricsSnapshot().RenderedVideoFrames;
                 outcome.Status = "failed";
                 if (resumeAfterFailure)
                 {
@@ -499,6 +537,12 @@ int wmain(int argc, wchar_t** argv)
             << " audioSwitchSubmittedFramesBefore=" << audioSwitch.SubmittedFramesBefore
             << " audioSwitchSubmittedFramesAfter=" << audioSwitch.SubmittedFramesAfter
             << " audioSwitchOperationDurationMs=" << audioSwitch.OperationDurationMs
+            << " audioSwitchLockWaitDurationMs=" << audioSwitch.LockWaitDurationMs
+            << " audioSwitchExecutionDurationMs=" << audioSwitch.ExecutionDurationMs
+            << " audioSwitchQuiesceDurationMs=" << audioSwitch.QuiesceDurationMs
+            << " audioSwitchSeekDurationMs=" << audioSwitch.SeekDurationMs
+            << " audioSwitchDecoderOpenDurationMs=" << audioSwitch.DecoderOpenDurationMs
+            << " audioSwitchRendererOpenDurationMs=" << audioSwitch.RendererOpenDurationMs
             << " audioSwitchRecoveryDurationMs=" << audioSwitch.RecoveryDurationMs
             << " subtitleSwitch1Attempted=" << (subtitleSwitch1.Attempted ? 1 : 0)
             << " subtitleSwitch1Status=" << subtitleSwitch1.Status
@@ -512,7 +556,16 @@ int wmain(int argc, wchar_t** argv)
             << " subtitleSwitch1PositionBeforeResumeTicks=" << subtitleSwitch1.PositionBeforeResumeTicks
             << " subtitleSwitch1PositionAfterResumeTicks=" << subtitleSwitch1.PositionAfterResumeTicks
             << " subtitleSwitch1OperationDurationMs=" << subtitleSwitch1.OperationDurationMs
+            << " subtitleSwitch1LockWaitDurationMs=" << subtitleSwitch1.LockWaitDurationMs
+            << " subtitleSwitch1ExecutionDurationMs=" << subtitleSwitch1.ExecutionDurationMs
+            << " subtitleSwitch1QuiesceDurationMs=" << subtitleSwitch1.QuiesceDurationMs
+            << " subtitleSwitch1SeekDurationMs=" << subtitleSwitch1.SeekDurationMs
+            << " subtitleSwitch1DecoderOpenDurationMs=" << subtitleSwitch1.DecoderOpenDurationMs
+            << " subtitleSwitch1RendererOpenDurationMs=" << subtitleSwitch1.RendererOpenDurationMs
             << " subtitleSwitch1RecoveryDurationMs=" << subtitleSwitch1.RecoveryDurationMs
+            << " subtitleSwitch1CueRenderDurationMs=" << subtitleSwitch1.CueRenderDurationMs
+            << " subtitleSwitch1RenderedFramesBefore=" << subtitleSwitch1.RenderedFramesBefore
+            << " subtitleSwitch1RenderedFramesAfter=" << subtitleSwitch1.RenderedFramesAfter
             << " subtitleSwitch2Attempted=" << (subtitleSwitch2.Attempted ? 1 : 0)
             << " subtitleSwitch2Status=" << subtitleSwitch2.Status
             << " subtitleSwitch2StreamIndex=" << subtitleSwitch2.StreamIndex
@@ -525,7 +578,16 @@ int wmain(int argc, wchar_t** argv)
             << " subtitleSwitch2PositionBeforeResumeTicks=" << subtitleSwitch2.PositionBeforeResumeTicks
             << " subtitleSwitch2PositionAfterResumeTicks=" << subtitleSwitch2.PositionAfterResumeTicks
             << " subtitleSwitch2OperationDurationMs=" << subtitleSwitch2.OperationDurationMs
+            << " subtitleSwitch2LockWaitDurationMs=" << subtitleSwitch2.LockWaitDurationMs
+            << " subtitleSwitch2ExecutionDurationMs=" << subtitleSwitch2.ExecutionDurationMs
+            << " subtitleSwitch2QuiesceDurationMs=" << subtitleSwitch2.QuiesceDurationMs
+            << " subtitleSwitch2SeekDurationMs=" << subtitleSwitch2.SeekDurationMs
+            << " subtitleSwitch2DecoderOpenDurationMs=" << subtitleSwitch2.DecoderOpenDurationMs
+            << " subtitleSwitch2RendererOpenDurationMs=" << subtitleSwitch2.RendererOpenDurationMs
             << " subtitleSwitch2RecoveryDurationMs=" << subtitleSwitch2.RecoveryDurationMs
+            << " subtitleSwitch2CueRenderDurationMs=" << subtitleSwitch2.CueRenderDurationMs
+            << " subtitleSwitch2RenderedFramesBefore=" << subtitleSwitch2.RenderedFramesBefore
+            << " subtitleSwitch2RenderedFramesAfter=" << subtitleSwitch2.RenderedFramesAfter
             << " subtitleOffAttempted=" << (subtitleOff.Attempted ? 1 : 0)
             << " subtitleOffStatus=" << subtitleOff.Status
             << " subtitleOffSelectedStreamIndex=" << subtitleOff.SelectedStreamIndex
