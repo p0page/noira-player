@@ -51,7 +51,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
 
     public sealed class PlaybackQualityRunResult
     {
-        public const string CurrentEvaluationVersion = "playback-quality-v0.2";
+        public const string CurrentEvaluationVersion = "playback-quality-v0.3";
 
         public PlaybackQualityRunResult(
             PlaybackQualityReport report,
@@ -250,7 +250,13 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 PostSeekAdvanced = source.PostSeekAdvanced,
                 SeekPositionErrorMs = source.SeekPositionErrorMs,
                 SeekOperationDurationMs = source.SeekOperationDurationMs,
-                SeekRecoveryDurationMs = source.SeekRecoveryDurationMs
+                SeekRecoveryDurationMs = source.SeekRecoveryDurationMs,
+                SeekPacketCacheEnabled = source.SeekPacketCacheEnabled,
+                SeekPacketCacheHit = source.SeekPacketCacheHit,
+                SeekPacketCachePacketCount = source.SeekPacketCachePacketCount,
+                SeekPacketCacheBytes = source.SeekPacketCacheBytes,
+                SeekPacketCacheWindowDurationTicks = source.SeekPacketCacheWindowDurationTicks,
+                SeekFallbackReason = source.SeekFallbackReason
             };
         }
 

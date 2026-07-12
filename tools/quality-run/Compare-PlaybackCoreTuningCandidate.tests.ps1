@@ -131,6 +131,9 @@ $report = [ordered]@{
         firstPresentedPositionTicks = 10000000; postSeekPositionTicks = 30000000
         postSeekAdvanced = $true; seekPositionErrorMs = 0.0
         seekOperationDurationMs = 120.0; seekRecoveryDurationMs = 150.0
+        seekPacketCacheEnabled = $false; seekPacketCacheHit = $false
+        seekPacketCachePacketCount = 0; seekPacketCacheBytes = 0
+        seekPacketCacheWindowDurationTicks = 0; seekFallbackReason = 'disabled'
     }
     tracks = @{
         videoTrackCount = 1; audioTrackCount = 1; subtitleTrackCount = 1
@@ -171,7 +174,7 @@ $report = [ordered]@{
 
 @{
     schemaVersion = 1
-    evaluationVersion = 'playback-quality-v0.2'
+    evaluationVersion = 'playback-quality-v0.3'
     caseMetadata = @{ caseId = $caseId; category = 'stable'; severity = 'high'; stability = 'stable' }
     report = $report
 } | ConvertTo-Json -Depth 30 | Set-Content -LiteralPath $reportPath -Encoding UTF8

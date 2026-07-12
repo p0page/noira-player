@@ -10,12 +10,18 @@ public sealed class PlaybackQualitySeekLatencyContractTests
     {
         Assert.NotNull(typeof(PlaybackQualityPosition).GetProperty("SeekOperationDurationMs"));
         Assert.NotNull(typeof(PlaybackQualityPosition).GetProperty("SeekRecoveryDurationMs"));
+        Assert.NotNull(typeof(PlaybackQualityPosition).GetProperty("SeekPacketCacheEnabled"));
+        Assert.NotNull(typeof(PlaybackQualityPosition).GetProperty("SeekPacketCacheHit"));
+        Assert.NotNull(typeof(PlaybackQualityPosition).GetProperty("SeekPacketCachePacketCount"));
+        Assert.NotNull(typeof(PlaybackQualityPosition).GetProperty("SeekPacketCacheBytes"));
+        Assert.NotNull(typeof(PlaybackQualityPosition).GetProperty("SeekPacketCacheWindowDurationTicks"));
+        Assert.NotNull(typeof(PlaybackQualityPosition).GetProperty("SeekFallbackReason"));
         Assert.NotNull(typeof(PlaybackQualityExpected).GetProperty("MaxSeekRecoveryDurationMs"));
     }
 
     [Fact]
     public void Seek_Latency_Contract_Uses_A_New_Evaluation_Version()
     {
-        Assert.Equal("playback-quality-v0.2", PlaybackQualityRunResult.CurrentEvaluationVersion);
+        Assert.Equal("playback-quality-v0.3", PlaybackQualityRunResult.CurrentEvaluationVersion);
     }
 }

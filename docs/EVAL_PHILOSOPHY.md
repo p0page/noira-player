@@ -2,6 +2,10 @@
 
 评测体系的第一职责是诚实暴露事实，不是让当前播放器显得更好。
 
+## 2026-07-13 补充原则
+
+seek cache 的开关、命中、包数、字节数、窗口和 fallback reason 属于解释 seek 结果的上下文证据，不是独立质量分数。cache hit 时必须以 `seekDemuxTargetTicks = -1` 证明没有发生 demux seek；cache miss 时必须保留具体 fallback reason。评测不得把“开启 cache”本身算作改善，也不得因 cache 容量自然波动自动判定回归。
+
 ## 原则
 
 1. 先收集证据，再优化播放器 core。

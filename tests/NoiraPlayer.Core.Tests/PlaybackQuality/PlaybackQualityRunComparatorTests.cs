@@ -853,17 +853,35 @@ public sealed class PlaybackQualityRunComparatorTests
             Check("SeekRecoveryDurationMs", "fail", "timeline", "position.seekRecoveryDurationMs", "2000", "5000"));
         baseline.Position.SeekOperationDurationMs = 4800;
         baseline.Position.SeekRecoveryDurationMs = 5000;
+        baseline.Position.SeekPacketCacheEnabled = false;
+        baseline.Position.SeekPacketCacheHit = false;
+        baseline.Position.SeekPacketCachePacketCount = 0;
+        baseline.Position.SeekPacketCacheBytes = 0;
+        baseline.Position.SeekPacketCacheWindowDurationTicks = 0;
+        baseline.Position.SeekFallbackReason = "disabled";
 
         var candidate = CreateReport(
             "candidate",
             Check("SeekRecoveryDurationMs", "pass", "timeline", "position.seekRecoveryDurationMs", "2000", "900"));
         candidate.Position.SeekOperationDurationMs = 800;
         candidate.Position.SeekRecoveryDurationMs = 900;
+        candidate.Position.SeekPacketCacheEnabled = true;
+        candidate.Position.SeekPacketCacheHit = true;
+        candidate.Position.SeekPacketCachePacketCount = 128;
+        candidate.Position.SeekPacketCacheBytes = 1048576;
+        candidate.Position.SeekPacketCacheWindowDurationTicks = 80000000;
+        candidate.Position.SeekFallbackReason = "none";
 
         var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
 
         Assert.Contains("position.seekOperationDurationMs", comparison.Coverage.MatchedSignals);
         Assert.Contains("position.seekRecoveryDurationMs", comparison.Coverage.MatchedSignals);
+        Assert.Contains("position.seekPacketCacheEnabled", comparison.Coverage.MatchedSignals);
+        Assert.Contains("position.seekPacketCacheHit", comparison.Coverage.MatchedSignals);
+        Assert.Contains("position.seekPacketCachePacketCount", comparison.Coverage.MatchedSignals);
+        Assert.Contains("position.seekPacketCacheBytes", comparison.Coverage.MatchedSignals);
+        Assert.Contains("position.seekPacketCacheWindowDurationTicks", comparison.Coverage.MatchedSignals);
+        Assert.Contains("position.seekFallbackReason", comparison.Coverage.MatchedSignals);
         Assert.Contains(comparison.Improvements, delta =>
             delta.Signal == "position.seekRecoveryDurationMs" &&
             delta.FailureArea == "timeline" &&

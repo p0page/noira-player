@@ -103,6 +103,18 @@ namespace winrt::NoiraPlayer::Native::implementation
         void SeekDemuxTargetTicks(int64_t value) noexcept { m_seekDemuxTargetTicks = value; }
         int64_t FirstPresentedPositionTicks() const noexcept { return m_firstPresentedPositionTicks; }
         void FirstPresentedPositionTicks(int64_t value) noexcept { m_firstPresentedPositionTicks = value; }
+        bool SeekPacketCacheEnabled() const noexcept { return m_seekPacketCacheEnabled; }
+        void SeekPacketCacheEnabled(bool value) noexcept { m_seekPacketCacheEnabled = value; }
+        bool SeekPacketCacheHit() const noexcept { return m_seekPacketCacheHit; }
+        void SeekPacketCacheHit(bool value) noexcept { m_seekPacketCacheHit = value; }
+        uint64_t SeekPacketCachePacketCount() const noexcept { return m_seekPacketCachePacketCount; }
+        void SeekPacketCachePacketCount(uint64_t value) noexcept { m_seekPacketCachePacketCount = value; }
+        uint64_t SeekPacketCacheBytes() const noexcept { return m_seekPacketCacheBytes; }
+        void SeekPacketCacheBytes(uint64_t value) noexcept { m_seekPacketCacheBytes = value; }
+        int64_t SeekPacketCacheWindowDurationTicks() const noexcept { return m_seekPacketCacheWindowDurationTicks; }
+        void SeekPacketCacheWindowDurationTicks(int64_t value) noexcept { m_seekPacketCacheWindowDurationTicks = value; }
+        winrt::hstring SeekFallbackReason() const { return m_seekFallbackReason; }
+        void SeekFallbackReason(winrt::hstring const& value) { m_seekFallbackReason = value; }
 
         double RenderIntervalMsP05() const noexcept { return m_renderIntervalMsP05; }
         void RenderIntervalMsP05(double value) noexcept { m_renderIntervalMsP05 = value; }
@@ -366,6 +378,12 @@ namespace winrt::NoiraPlayer::Native::implementation
         int64_t m_videoStreamStartTimeTicks{0};
         int64_t m_seekDemuxTargetTicks{-1};
         int64_t m_firstPresentedPositionTicks{-1};
+        bool m_seekPacketCacheEnabled{false};
+        bool m_seekPacketCacheHit{false};
+        uint64_t m_seekPacketCachePacketCount{0};
+        uint64_t m_seekPacketCacheBytes{0};
+        int64_t m_seekPacketCacheWindowDurationTicks{0};
+        winrt::hstring m_seekFallbackReason;
         double m_renderIntervalMsP05{0.0};
         double m_renderIntervalMsP50{0.0};
         double m_renderIntervalMsP95{0.0};

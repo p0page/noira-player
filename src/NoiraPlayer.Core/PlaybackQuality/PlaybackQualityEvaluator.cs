@@ -1162,9 +1162,16 @@ namespace NoiraPlayer.Core.PlaybackQuality
             RequireTimelineEvidence(report, report.Position.PostSeekAdvanced.HasValue, "position.postSeekAdvanced");
             RequireTimelineEvidence(report, report.Position.SeekOperationDurationMs.HasValue, "position.seekOperationDurationMs");
             RequireTimelineEvidence(report, report.Position.SeekRecoveryDurationMs.HasValue, "position.seekRecoveryDurationMs");
+            RequireTimelineEvidence(report, report.Position.SeekPacketCacheEnabled.HasValue, "position.seekPacketCacheEnabled");
+            RequireTimelineEvidence(report, report.Position.SeekPacketCacheHit.HasValue, "position.seekPacketCacheHit");
+            RequireTimelineEvidence(report, report.Position.SeekPacketCachePacketCount.HasValue, "position.seekPacketCachePacketCount");
+            RequireTimelineEvidence(report, report.Position.SeekPacketCacheBytes.HasValue, "position.seekPacketCacheBytes");
+            RequireTimelineEvidence(report, report.Position.SeekPacketCacheWindowDurationTicks.HasValue, "position.seekPacketCacheWindowDurationTicks");
+            RequireTimelineEvidence(report, !string.IsNullOrWhiteSpace(report.Position.SeekFallbackReason), "position.seekFallbackReason");
 
             if (report.Source.ContainerStartTimeTicks.HasValue &&
-                report.Position.SeekDemuxTargetTicks.HasValue)
+                report.Position.SeekDemuxTargetTicks.HasValue &&
+                report.Position.SeekPacketCacheHit != true)
             {
                 var origin = System.Math.Max(0, report.Source.ContainerStartTimeTicks.Value);
                 var target = System.Math.Max(0, report.Position.SeekTargetPositionTicks.Value);

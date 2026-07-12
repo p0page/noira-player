@@ -527,13 +527,6 @@ int wmain(int argc, wchar_t** argv)
                 seek.ActualPositionTicks = seekPresentation.ActualPositionTicks;
                 seekGeneration = seekPresentation.Generation;
                 seekCallCompleted = seekPresentation.Generation > seekPresentationBefore.Generation;
-                auto seekReplay = graph.LastSeekReplaySnapshot();
-                seek.PacketCacheEnabled = seekReplay.Enabled;
-                seek.PacketCacheHit = seekReplay.Hit;
-                seek.PacketCachePacketCount = seekReplay.PacketCount;
-                seek.PacketCacheBytes = seekReplay.Bytes;
-                seek.PacketCacheWindowDurationTicks = seekReplay.WindowDurationTicks;
-                seek.FallbackReason = seekReplay.FallbackReason;
                 if (seekCallCompleted && seek.ActualPositionTicks.has_value())
                 {
                     seek.RecoveryDurationMs =
@@ -547,6 +540,14 @@ int wmain(int argc, wchar_t** argv)
                     std::chrono::duration<double, std::milli>(
                         std::chrono::steady_clock::now() - seekStartedAt).count();
             }
+
+            auto seekReplay = graph.LastSeekReplaySnapshot();
+            seek.PacketCacheEnabled = seekReplay.Enabled;
+            seek.PacketCacheHit = seekReplay.Hit;
+            seek.PacketCachePacketCount = seekReplay.PacketCount;
+            seek.PacketCacheBytes = seekReplay.Bytes;
+            seek.PacketCacheWindowDurationTicks = seekReplay.WindowDurationTicks;
+            seek.FallbackReason = seekReplay.FallbackReason;
 
             std::this_thread::sleep_for(sampleWindow - halfWindow);
 

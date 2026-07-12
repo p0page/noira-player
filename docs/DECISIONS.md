@@ -1,5 +1,13 @@
 ﻿# 技术决策
 
+## 2026-07-13：会话内 seek cache 采用显式上下文证据并升级为 v0.3
+
+决策：timeline case 必须同时记录 `position.seekPacketCacheEnabled`、`position.seekPacketCacheHit`、`position.seekPacketCachePacketCount`、`position.seekPacketCacheBytes`、`position.seekPacketCacheWindowDurationTicks` 和 `position.seekFallbackReason`。cache hit 时没有发生 demux seek，`position.seekDemuxTargetTicks` 必须显式记录为 `-1`；cache miss 时仍须记录真实 demux target 和稳定 fallback reason。缺少任一字段不得通过当前 strict validation。
+
+比较语义：operation/recovery/landing 是结果指标；cache 开关、命中、容量和 fallback 是解释结果的上下文。comparator 必须暴露这些字段的 matched/unmatched 状态，但不能仅因 baseline 关闭、candidate 开启或缓存大小变化就自动判定改善或回归。
+
+版本决策：该 required-signal 与 `seekDemuxTargetTicks=-1` 语义将 evaluation version 从 `playback-quality-v0.2` 升级为 `playback-quality-v0.3`。历史 v0.1/v0.2 报告保持原值，不与 v0.3 baseline/candidate 混比。
+
 ## 2026-07-12：冷 resume 保留准确 seek，静态直播放不伪用服务端时间偏移
 
 决策：冷 resume 继续使用向后关键帧定位和目标前帧丢弃，不跳到目标后的关键帧，不删除准确预滚，也不放宽启动或 seek 标准。本项目 `static=true` 的 Emby 直播放 URL 不追加 `StartTimeTicks` 作为所谓优化；只有确认服务端实际返回从目标位置重建的转封装/转码流时，才能把服务端时间偏移作为独立候选评测。

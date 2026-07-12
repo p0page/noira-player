@@ -258,7 +258,25 @@ internal static class NativeHeadlessHarness
                     : null,
                 SeekRecoveryDurationMs = helper.Seek.Attempted
                     ? helper.Seek.RecoveryDurationMs
-                    : null
+                    : null,
+                SeekPacketCacheEnabled = helper.Seek.Attempted
+                    ? helper.Seek.PacketCacheEnabled
+                    : null,
+                SeekPacketCacheHit = helper.Seek.Attempted
+                    ? helper.Seek.PacketCacheHit
+                    : null,
+                SeekPacketCachePacketCount = helper.Seek.Attempted
+                    ? helper.Seek.PacketCachePacketCount
+                    : null,
+                SeekPacketCacheBytes = helper.Seek.Attempted
+                    ? helper.Seek.PacketCacheBytes
+                    : null,
+                SeekPacketCacheWindowDurationTicks = helper.Seek.Attempted
+                    ? helper.Seek.PacketCacheWindowDurationTicks
+                    : null,
+                SeekFallbackReason = helper.Seek.Attempted
+                    ? helper.Seek.FallbackReason
+                    : ""
             },
             CreateExecutionEvidence(
                 options,
@@ -503,7 +521,10 @@ internal static class NativeHeadlessHarness
                     "1",
                     StringComparison.Ordinal)
                         ? " --disable-switch-packet-cache"
-                        : ""),
+                        : "") +
+                (options.EnableSeekPacketCache
+                    ? " --enable-seek-packet-cache"
+                    : ""),
             WorkingDirectory = Path.GetDirectoryName(options.NativeHelperExe) ?? "",
             RedirectStandardOutput = true,
             RedirectStandardError = true,
@@ -1320,12 +1341,18 @@ internal static class NativeHeadlessHarness
 
         if (!TryGetInteractionStatus(values, "seekStatus", out var status, out error) ||
             !TryGetRequiredNonNegativeInt64(values, "seekTargetPositionTicks", out var targetPosition, out error) ||
-            !TryGetRequiredNonNegativeInt64(values, "seekDemuxTargetTicks", out var demuxTarget, out error) ||
+            !TryGetRequiredInt64AtLeastMinusOne(values, "seekDemuxTargetTicks", out var demuxTarget, out error) ||
             !TryGetRequiredNullableNonNegativeInt64(values, "seekActualPositionTicks", out var actualPosition, out error) ||
             !TryGetRequiredNonNegativeInt64(values, "postSeekPlaybackPositionTicks", out var postSeekPosition, out error) ||
             !TryGetAttempted(values, "postSeekAdvanced", out var postSeekAdvanced, out error) ||
             !TryGetRequiredNonNegativeDouble(values, "seekOperationDurationMs", out var operationDurationMs, out error) ||
-            !TryGetRequiredNonNegativeDouble(values, "seekRecoveryDurationMs", out var recoveryDurationMs, out error))
+            !TryGetRequiredNonNegativeDouble(values, "seekRecoveryDurationMs", out var recoveryDurationMs, out error) ||
+            !TryGetAttempted(values, "seekPacketCacheEnabled", out var packetCacheEnabled, out error) ||
+            !TryGetAttempted(values, "seekPacketCacheHit", out var packetCacheHit, out error) ||
+            !TryGetRequiredUInt64(values, "seekPacketCachePacketCount", out var packetCachePacketCount, out error) ||
+            !TryGetRequiredUInt64(values, "seekPacketCacheBytes", out var packetCacheBytes, out error) ||
+            !TryGetRequiredNonNegativeInt64(values, "seekPacketCacheWindowDurationTicks", out var packetCacheWindowDurationTicks, out error) ||
+            !TryGetRequiredNonEmptyString(values, "seekFallbackReason", out var fallbackReason, out error))
         {
             return false;
         }
@@ -1342,6 +1369,18 @@ internal static class NativeHeadlessHarness
             return false;
         }
 
+        if (packetCacheHit && (!packetCacheEnabled || demuxTarget != -1 || fallbackReason != "none"))
+        {
+            error = "Native helper seek packet-cache hit requires enabled=1, demux target -1, and fallback reason 'none'.";
+            return false;
+        }
+
+        if (!packetCacheHit && fallbackReason == "none")
+        {
+            error = "Native helper seek packet-cache miss must include a fallback reason.";
+            return false;
+        }
+
         outcome.Status = status;
         outcome.TargetPositionTicks = targetPosition;
         outcome.DemuxTargetTicks = demuxTarget;
@@ -1350,6 +1389,47 @@ internal static class NativeHeadlessHarness
         outcome.PostSeekAdvanced = postSeekAdvanced;
         outcome.OperationDurationMs = operationDurationMs;
         outcome.RecoveryDurationMs = recoveryDurationMs;
+        outcome.PacketCacheEnabled = packetCacheEnabled;
+        outcome.PacketCacheHit = packetCacheHit;
+        outcome.PacketCachePacketCount = packetCachePacketCount;
+        outcome.PacketCacheBytes = packetCacheBytes;
+        outcome.PacketCacheWindowDurationTicks = packetCacheWindowDurationTicks;
+        outcome.FallbackReason = fallbackReason;
+        return true;
+    }
+
+    private static bool TryGetRequiredInt64AtLeastMinusOne(
+        Dictionary<string, string> values,
+        string key,
+        out long value,
+        out string error)
+    {
+        value = -1;
+        if (!values.TryGetValue(key, out var raw) || !long.TryParse(raw, out value) || value < -1)
+        {
+            error = "Native helper field '" + key + "' must be -1 or a non-negative signed integer.";
+            return false;
+        }
+
+        error = "";
+        return true;
+    }
+
+    private static bool TryGetRequiredNonEmptyString(
+        Dictionary<string, string> values,
+        string key,
+        out string value,
+        out string error)
+    {
+        value = "";
+        if (!values.TryGetValue(key, out var raw) || string.IsNullOrWhiteSpace(raw))
+        {
+            error = "Native helper field '" + key + "' must be a non-empty string.";
+            return false;
+        }
+
+        value = raw;
+        error = "";
         return true;
     }
 
@@ -1973,6 +2053,7 @@ internal sealed class NativeHeadlessHarnessOptions
     public bool ForceSdrOutput { get; private set; }
     public int PauseSeconds { get; private set; }
     public string Scenario { get; private set; } = "playback";
+    public bool EnableSeekPacketCache { get; private set; }
     public int TimeoutSeconds { get; private set; } = 60;
 
     public static bool TryParse(
@@ -1995,6 +2076,12 @@ internal sealed class NativeHeadlessHarnessOptions
             if (name == "--force-sdr-output")
             {
                 options.ForceSdrOutput = true;
+                continue;
+            }
+
+            if (name == "--enable-seek-packet-cache")
+            {
+                options.EnableSeekPacketCache = true;
                 continue;
             }
 
@@ -2462,6 +2549,18 @@ internal sealed class NativeHeadlessSeekOutcome
     public double OperationDurationMs { get; set; }
 
     public double RecoveryDurationMs { get; set; }
+
+    public bool PacketCacheEnabled { get; set; }
+
+    public bool PacketCacheHit { get; set; }
+
+    public ulong PacketCachePacketCount { get; set; }
+
+    public ulong PacketCacheBytes { get; set; }
+
+    public long PacketCacheWindowDurationTicks { get; set; }
+
+    public string FallbackReason { get; set; } = "";
 }
 
 internal sealed class NativeHeadlessSourceInfo

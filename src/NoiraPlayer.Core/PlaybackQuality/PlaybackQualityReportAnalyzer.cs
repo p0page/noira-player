@@ -2033,6 +2033,12 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 AddMissingTimelineEvidence(analysis, report.Position.PostSeekAdvanced.HasValue, "position.postSeekAdvanced");
                 AddMissingTimelineEvidence(analysis, report.Position.SeekOperationDurationMs.HasValue, "position.seekOperationDurationMs");
                 AddMissingTimelineEvidence(analysis, report.Position.SeekRecoveryDurationMs.HasValue, "position.seekRecoveryDurationMs");
+                AddMissingTimelineEvidence(analysis, report.Position.SeekPacketCacheEnabled.HasValue, "position.seekPacketCacheEnabled");
+                AddMissingTimelineEvidence(analysis, report.Position.SeekPacketCacheHit.HasValue, "position.seekPacketCacheHit");
+                AddMissingTimelineEvidence(analysis, report.Position.SeekPacketCachePacketCount.HasValue, "position.seekPacketCachePacketCount");
+                AddMissingTimelineEvidence(analysis, report.Position.SeekPacketCacheBytes.HasValue, "position.seekPacketCacheBytes");
+                AddMissingTimelineEvidence(analysis, report.Position.SeekPacketCacheWindowDurationTicks.HasValue, "position.seekPacketCacheWindowDurationTicks");
+                AddMissingTimelineEvidence(analysis, !string.IsNullOrWhiteSpace(report.Position.SeekFallbackReason), "position.seekFallbackReason");
             }
 
             if (report.Expected != null &&
@@ -2643,6 +2649,36 @@ namespace NoiraPlayer.Core.PlaybackQuality
             if (report.Position.SeekRecoveryDurationMs.HasValue)
             {
                 AddUnique(analysis.EvidenceSignals, "position.seekRecoveryDurationMs");
+            }
+
+            if (report.Position.SeekPacketCacheEnabled.HasValue)
+            {
+                AddUnique(analysis.EvidenceSignals, "position.seekPacketCacheEnabled");
+            }
+
+            if (report.Position.SeekPacketCacheHit.HasValue)
+            {
+                AddUnique(analysis.EvidenceSignals, "position.seekPacketCacheHit");
+            }
+
+            if (report.Position.SeekPacketCachePacketCount.HasValue)
+            {
+                AddUnique(analysis.EvidenceSignals, "position.seekPacketCachePacketCount");
+            }
+
+            if (report.Position.SeekPacketCacheBytes.HasValue)
+            {
+                AddUnique(analysis.EvidenceSignals, "position.seekPacketCacheBytes");
+            }
+
+            if (report.Position.SeekPacketCacheWindowDurationTicks.HasValue)
+            {
+                AddUnique(analysis.EvidenceSignals, "position.seekPacketCacheWindowDurationTicks");
+            }
+
+            if (!string.IsNullOrWhiteSpace(report.Position.SeekFallbackReason))
+            {
+                AddUnique(analysis.EvidenceSignals, "position.seekFallbackReason");
             }
 
             if (report.Timing.LateFrameDropToleranceMs > 0)

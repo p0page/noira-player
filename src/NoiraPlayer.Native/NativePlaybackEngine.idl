@@ -86,6 +86,12 @@
         Int64 VideoStreamStartTimeTicks;
         Int64 SeekDemuxTargetTicks;
         Int64 FirstPresentedPositionTicks;
+        Boolean SeekPacketCacheEnabled;
+        Boolean SeekPacketCacheHit;
+        UInt64 SeekPacketCachePacketCount;
+        UInt64 SeekPacketCacheBytes;
+        Int64 SeekPacketCacheWindowDurationTicks;
+        String SeekFallbackReason;
         Double RenderIntervalMsP05;
         Double RenderIntervalMsP50;
         Double RenderIntervalMsP95;

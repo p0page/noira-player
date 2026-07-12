@@ -35,6 +35,12 @@
         public long? VideoStreamStartTimeTicks { get; set; }
         public long? SeekDemuxTargetTicks { get; set; }
         public long? FirstPresentedPositionTicks { get; set; }
+        public bool SeekPacketCacheEnabled { get; set; }
+        public bool SeekPacketCacheHit { get; set; }
+        public ulong SeekPacketCachePacketCount { get; set; }
+        public ulong SeekPacketCacheBytes { get; set; }
+        public long SeekPacketCacheWindowDurationTicks { get; set; }
+        public string SeekFallbackReason { get; set; } = "";
         public double RenderIntervalMsP05 { get; set; }
         public double RenderIntervalMsP50 { get; set; }
         public double RenderIntervalMsP95 { get; set; }

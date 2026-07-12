@@ -1456,6 +1456,36 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 "position.seekRecoveryDurationMs",
                 baseline.Position.SeekRecoveryDurationMs,
                 candidate.Position.SeekRecoveryDurationMs);
+            CompareOptionalTimelineContext(
+                comparison,
+                "position.seekPacketCacheEnabled",
+                baseline.Position.SeekPacketCacheEnabled.HasValue,
+                candidate.Position.SeekPacketCacheEnabled.HasValue);
+            CompareOptionalTimelineContext(
+                comparison,
+                "position.seekPacketCacheHit",
+                baseline.Position.SeekPacketCacheHit.HasValue,
+                candidate.Position.SeekPacketCacheHit.HasValue);
+            CompareOptionalTimelineContext(
+                comparison,
+                "position.seekPacketCachePacketCount",
+                baseline.Position.SeekPacketCachePacketCount.HasValue,
+                candidate.Position.SeekPacketCachePacketCount.HasValue);
+            CompareOptionalTimelineContext(
+                comparison,
+                "position.seekPacketCacheBytes",
+                baseline.Position.SeekPacketCacheBytes.HasValue,
+                candidate.Position.SeekPacketCacheBytes.HasValue);
+            CompareOptionalTimelineContext(
+                comparison,
+                "position.seekPacketCacheWindowDurationTicks",
+                baseline.Position.SeekPacketCacheWindowDurationTicks.HasValue,
+                candidate.Position.SeekPacketCacheWindowDurationTicks.HasValue);
+            CompareOptionalTimelineContext(
+                comparison,
+                "position.seekFallbackReason",
+                !string.IsNullOrWhiteSpace(baseline.Position.SeekFallbackReason),
+                !string.IsNullOrWhiteSpace(candidate.Position.SeekFallbackReason));
 
             var baselineError = ResolveSeekPositionErrorMs(baseline.Position);
             var candidateError = ResolveSeekPositionErrorMs(candidate.Position);
@@ -1506,6 +1536,26 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 candidate.HasValue,
                 baseline?.ToString(CultureInfo.InvariantCulture) ?? "",
                 candidate?.ToString(CultureInfo.InvariantCulture) ?? "");
+        }
+
+        private static void CompareOptionalTimelineContext(
+            PlaybackQualityRunComparison comparison,
+            string signal,
+            bool hasBaseline,
+            bool hasCandidate)
+        {
+            if (hasBaseline && hasCandidate)
+            {
+                AddUnique(comparison.Coverage.MatchedSignals, signal);
+            }
+            else if (hasBaseline)
+            {
+                AddUnique(comparison.Coverage.UnmatchedBaselineSignals, signal);
+            }
+            else if (hasCandidate)
+            {
+                AddUnique(comparison.Coverage.UnmatchedCandidateSignals, signal);
+            }
         }
 
         private static void CompareOptionalTimelineEvidence(

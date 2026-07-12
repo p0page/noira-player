@@ -201,6 +201,12 @@ namespace NoiraPlayer.Core.PlaybackQuality
         public double? SeekPositionErrorMs { get; set; }
         public double? SeekOperationDurationMs { get; set; }
         public double? SeekRecoveryDurationMs { get; set; }
+        public bool? SeekPacketCacheEnabled { get; set; }
+        public bool? SeekPacketCacheHit { get; set; }
+        public ulong? SeekPacketCachePacketCount { get; set; }
+        public ulong? SeekPacketCacheBytes { get; set; }
+        public long? SeekPacketCacheWindowDurationTicks { get; set; }
+        public string SeekFallbackReason { get; set; } = "";
     }
 
     public sealed class PlaybackQualitySourceTimeline

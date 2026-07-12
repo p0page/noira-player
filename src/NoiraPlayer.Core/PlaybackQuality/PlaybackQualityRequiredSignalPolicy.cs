@@ -134,6 +134,12 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 AddUnique(requiredSignals, "position.seekPositionErrorMs");
                 AddUnique(requiredSignals, "position.seekOperationDurationMs");
                 AddUnique(requiredSignals, "position.seekRecoveryDurationMs");
+                AddUnique(requiredSignals, "position.seekPacketCacheEnabled");
+                AddUnique(requiredSignals, "position.seekPacketCacheHit");
+                AddUnique(requiredSignals, "position.seekPacketCachePacketCount");
+                AddUnique(requiredSignals, "position.seekPacketCacheBytes");
+                AddUnique(requiredSignals, "position.seekPacketCacheWindowDurationTicks");
+                AddUnique(requiredSignals, "position.seekFallbackReason");
             }
 
             if (HasPurpose(referenceCase, "tracks") ||
@@ -553,6 +559,18 @@ namespace NoiraPlayer.Core.PlaybackQuality
                     return report.Position.SeekOperationDurationMs.HasValue;
                 case "position.seekRecoveryDurationMs":
                     return report.Position.SeekRecoveryDurationMs.HasValue;
+                case "position.seekPacketCacheEnabled":
+                    return report.Position.SeekPacketCacheEnabled.HasValue;
+                case "position.seekPacketCacheHit":
+                    return report.Position.SeekPacketCacheHit.HasValue;
+                case "position.seekPacketCachePacketCount":
+                    return report.Position.SeekPacketCachePacketCount.HasValue;
+                case "position.seekPacketCacheBytes":
+                    return report.Position.SeekPacketCacheBytes.HasValue;
+                case "position.seekPacketCacheWindowDurationTicks":
+                    return report.Position.SeekPacketCacheWindowDurationTicks.HasValue;
+                case "position.seekFallbackReason":
+                    return !string.IsNullOrWhiteSpace(report.Position.SeekFallbackReason);
                 case "tracks.videoTrackCount":
                     if (presentSignals != null)
                     {

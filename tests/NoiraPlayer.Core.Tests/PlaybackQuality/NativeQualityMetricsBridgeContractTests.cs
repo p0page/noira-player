@@ -22,6 +22,7 @@ public sealed class NativeQualityMetricsBridgeContractTests
         Assert.Contains("IPlaybackQualityMetricsProviderIdentity", source, StringComparison.Ordinal);
         Assert.Contains("PlaybackQualityMetricsProviderId => \"native-winrt\"", source, StringComparison.Ordinal);
         Assert.Contains("_engine.QualityMetrics()", source, StringComparison.Ordinal);
+        Assert.Contains("SeekFallbackReason = nativeMetrics.SeekFallbackReason", source, StringComparison.Ordinal);
 
         foreach (var property in RequiredMetricProperties)
         {
@@ -156,6 +157,11 @@ public sealed class NativeQualityMetricsBridgeContractTests
         "VideoStreamStartTimeTicks",
         "SeekDemuxTargetTicks",
         "FirstPresentedPositionTicks",
+        "SeekPacketCacheEnabled",
+        "SeekPacketCacheHit",
+        "SeekPacketCachePacketCount",
+        "SeekPacketCacheBytes",
+        "SeekPacketCacheWindowDurationTicks",
         "RenderIntervalMsP05",
         "RenderIntervalMsP50",
         "RenderIntervalMsP95",

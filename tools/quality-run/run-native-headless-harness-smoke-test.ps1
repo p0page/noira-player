@@ -843,6 +843,12 @@ function New-NativeHeadlessParserFixtureOutput {
         seekDemuxTargetTicks = '10000000'
         seekOperationDurationMs = '0'
         seekRecoveryDurationMs = '0'
+        seekPacketCacheEnabled = '0'
+        seekPacketCacheHit = '0'
+        seekPacketCachePacketCount = '0'
+        seekPacketCacheBytes = '0'
+        seekPacketCacheWindowDurationTicks = '0'
+        seekFallbackReason = 'disabled'
         postSeekAdvanced = '1'
         selectedAudioStreamIndex = '1'
         selectedSubtitleStreamIndex = '-1'
@@ -1063,9 +1069,16 @@ function Assert-NativeHeadlessParserContracts {
         seekAttempted = '1'
         seekStatus = 'completed'
         seekActualPositionTicks = '10000000'
+        seekDemuxTargetTicks = '-1'
         postSeekPlaybackPositionTicks = '20000000'
         seekOperationDurationMs = '4800.5'
         seekRecoveryDurationMs = '5100.25'
+        seekPacketCacheEnabled = '1'
+        seekPacketCacheHit = '1'
+        seekPacketCachePacketCount = '128'
+        seekPacketCacheBytes = '1048576'
+        seekPacketCacheWindowDurationTicks = '80000000'
+        seekFallbackReason = 'none'
     }
     $seek = Invoke-NativeHeadlessParserFixtureCase `
         -FixtureHelper $fixtureHelper `
@@ -1075,8 +1088,14 @@ function Assert-NativeHeadlessParserContracts {
         -HelperOutput $seekOutput
     if ($seek.ExitCode -ne 0 -or
         $seek.Report.report.position.seekOperationDurationMs -ne 4800.5 -or
-        $seek.Report.report.position.seekRecoveryDurationMs -ne 5100.25) {
-        $failures.Add('Completed seek did not preserve structured operation and first-presentation recovery durations.')
+        $seek.Report.report.position.seekRecoveryDurationMs -ne 5100.25 -or
+        -not $seek.Report.report.position.seekPacketCacheEnabled -or
+        -not $seek.Report.report.position.seekPacketCacheHit -or
+        $seek.Report.report.position.seekPacketCachePacketCount -ne 128 -or
+        $seek.Report.report.position.seekPacketCacheBytes -ne 1048576 -or
+        $seek.Report.report.position.seekPacketCacheWindowDurationTicks -ne 80000000 -or
+        $seek.Report.report.position.seekFallbackReason -ne 'none') {
+        $failures.Add('Completed seek did not preserve structured latency and packet-cache evidence.')
     }
 
     $pausedSubtitleOutput = New-NativeHeadlessParserFixtureOutput -Overrides @{
@@ -1239,6 +1258,48 @@ function Assert-NativeHeadlessParserContracts {
                 postSeekPlaybackPositionTicks = '20000000'
                 seekOperationDurationMs = '120'
             } -Omit @('seekRecoveryDurationMs')
+        },
+        [pscustomobject]@{
+            Name = 'completed-seek-without-cache-enabled'
+            ExpectedField = 'seekPacketCacheEnabled'
+            Output = New-NativeHeadlessParserFixtureOutput -Overrides @{
+                seekAttempted = '1'; seekStatus = 'completed'; seekActualPositionTicks = '10000000'; postSeekPlaybackPositionTicks = '20000000'
+            } -Omit @('seekPacketCacheEnabled')
+        },
+        [pscustomobject]@{
+            Name = 'completed-seek-without-cache-hit'
+            ExpectedField = 'seekPacketCacheHit'
+            Output = New-NativeHeadlessParserFixtureOutput -Overrides @{
+                seekAttempted = '1'; seekStatus = 'completed'; seekActualPositionTicks = '10000000'; postSeekPlaybackPositionTicks = '20000000'
+            } -Omit @('seekPacketCacheHit')
+        },
+        [pscustomobject]@{
+            Name = 'completed-seek-without-cache-packet-count'
+            ExpectedField = 'seekPacketCachePacketCount'
+            Output = New-NativeHeadlessParserFixtureOutput -Overrides @{
+                seekAttempted = '1'; seekStatus = 'completed'; seekActualPositionTicks = '10000000'; postSeekPlaybackPositionTicks = '20000000'
+            } -Omit @('seekPacketCachePacketCount')
+        },
+        [pscustomobject]@{
+            Name = 'completed-seek-without-cache-bytes'
+            ExpectedField = 'seekPacketCacheBytes'
+            Output = New-NativeHeadlessParserFixtureOutput -Overrides @{
+                seekAttempted = '1'; seekStatus = 'completed'; seekActualPositionTicks = '10000000'; postSeekPlaybackPositionTicks = '20000000'
+            } -Omit @('seekPacketCacheBytes')
+        },
+        [pscustomobject]@{
+            Name = 'completed-seek-without-cache-window'
+            ExpectedField = 'seekPacketCacheWindowDurationTicks'
+            Output = New-NativeHeadlessParserFixtureOutput -Overrides @{
+                seekAttempted = '1'; seekStatus = 'completed'; seekActualPositionTicks = '10000000'; postSeekPlaybackPositionTicks = '20000000'
+            } -Omit @('seekPacketCacheWindowDurationTicks')
+        },
+        [pscustomobject]@{
+            Name = 'completed-seek-without-fallback-reason'
+            ExpectedField = 'seekFallbackReason'
+            Output = New-NativeHeadlessParserFixtureOutput -Overrides @{
+                seekAttempted = '1'; seekStatus = 'completed'; seekActualPositionTicks = '10000000'; postSeekPlaybackPositionTicks = '20000000'
+            } -Omit @('seekFallbackReason')
         },
         [pscustomobject]@{
             Name = 'missing-dropped-video-frames'

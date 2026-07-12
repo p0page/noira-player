@@ -129,6 +129,12 @@ public sealed class AppHostedQualityCaptureContractTests
         Assert.Contains("EnrichQualityRunTimelineEvidence(position, evidence.MetricsProvider)", captureMethod, StringComparison.Ordinal);
         Assert.Contains("SeekDemuxTargetTicks = metrics.SeekDemuxTargetTicks", playbackPage, StringComparison.Ordinal);
         Assert.Contains("FirstPresentedPositionTicks = metrics.FirstPresentedPositionTicks", playbackPage, StringComparison.Ordinal);
+        Assert.Contains("SeekPacketCacheEnabled = metrics.SeekPacketCacheEnabled", playbackPage, StringComparison.Ordinal);
+        Assert.Contains("SeekPacketCacheHit = metrics.SeekPacketCacheHit", playbackPage, StringComparison.Ordinal);
+        Assert.Contains("SeekPacketCachePacketCount = metrics.SeekPacketCachePacketCount", playbackPage, StringComparison.Ordinal);
+        Assert.Contains("SeekPacketCacheBytes = metrics.SeekPacketCacheBytes", playbackPage, StringComparison.Ordinal);
+        Assert.Contains("SeekPacketCacheWindowDurationTicks = metrics.SeekPacketCacheWindowDurationTicks", playbackPage, StringComparison.Ordinal);
+        Assert.Contains("SeekFallbackReason =", playbackPage, StringComparison.Ordinal);
         Assert.Contains("PostSeekPositionTicks = metrics.VideoPositionTicks", playbackPage, StringComparison.Ordinal);
         Assert.Contains("PostSeekAdvanced =", playbackPage, StringComparison.Ordinal);
         Assert.Contains("evidence.Diagnostics", captureMethod, StringComparison.Ordinal);

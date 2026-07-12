@@ -2088,6 +2088,14 @@ namespace NoiraPlayer.App.Views
 
             position.SeekDemuxTargetTicks = metrics.SeekDemuxTargetTicks;
             position.FirstPresentedPositionTicks = metrics.FirstPresentedPositionTicks;
+            position.SeekPacketCacheEnabled = metrics.SeekPacketCacheEnabled;
+            position.SeekPacketCacheHit = metrics.SeekPacketCacheHit;
+            position.SeekPacketCachePacketCount = metrics.SeekPacketCachePacketCount;
+            position.SeekPacketCacheBytes = metrics.SeekPacketCacheBytes;
+            position.SeekPacketCacheWindowDurationTicks = metrics.SeekPacketCacheWindowDurationTicks;
+            position.SeekFallbackReason = string.IsNullOrWhiteSpace(metrics.SeekFallbackReason)
+                ? "none"
+                : metrics.SeekFallbackReason;
             if (metrics.FirstPresentedPositionTicks.HasValue)
             {
                 position.ActualPositionTicks = metrics.FirstPresentedPositionTicks;
@@ -2306,6 +2314,12 @@ namespace NoiraPlayer.App.Views
                     VideoStreamStartTimeTicks = source.VideoStreamStartTimeTicks,
                     SeekDemuxTargetTicks = source.SeekDemuxTargetTicks,
                     FirstPresentedPositionTicks = source.FirstPresentedPositionTicks,
+                    SeekPacketCacheEnabled = source.SeekPacketCacheEnabled,
+                    SeekPacketCacheHit = source.SeekPacketCacheHit,
+                    SeekPacketCachePacketCount = source.SeekPacketCachePacketCount,
+                    SeekPacketCacheBytes = source.SeekPacketCacheBytes,
+                    SeekPacketCacheWindowDurationTicks = source.SeekPacketCacheWindowDurationTicks,
+                    SeekFallbackReason = source.SeekFallbackReason,
                     RenderIntervalMsP05 = source.RenderIntervalMsP05,
                     RenderIntervalMsP50 = source.RenderIntervalMsP50,
                     RenderIntervalMsP95 = source.RenderIntervalMsP95,

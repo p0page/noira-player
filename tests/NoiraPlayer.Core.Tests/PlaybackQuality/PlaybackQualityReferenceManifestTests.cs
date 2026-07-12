@@ -2251,6 +2251,12 @@ public sealed class PlaybackQualityReferenceManifestTests
         Assert.Contains("position.seekPositionErrorMs", requiredSignals);
         Assert.Contains("position.seekOperationDurationMs", requiredSignals);
         Assert.Contains("position.seekRecoveryDurationMs", requiredSignals);
+        Assert.Contains("position.seekPacketCacheEnabled", requiredSignals);
+        Assert.Contains("position.seekPacketCacheHit", requiredSignals);
+        Assert.Contains("position.seekPacketCachePacketCount", requiredSignals);
+        Assert.Contains("position.seekPacketCacheBytes", requiredSignals);
+        Assert.Contains("position.seekPacketCacheWindowDurationTicks", requiredSignals);
+        Assert.Contains("position.seekFallbackReason", requiredSignals);
     }
 
     [Fact]

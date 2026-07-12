@@ -969,7 +969,13 @@ public sealed class PlaybackQualityEvaluatorTests
                 PostSeekPositionTicks = 20_000_000,
                 PostSeekAdvanced = true,
                 SeekOperationDurationMs = 120,
-                SeekRecoveryDurationMs = 150
+                SeekRecoveryDurationMs = 150,
+                SeekPacketCacheEnabled = false,
+                SeekPacketCacheHit = false,
+                SeekPacketCachePacketCount = 0,
+                SeekPacketCacheBytes = 0,
+                SeekPacketCacheWindowDurationTicks = 0,
+                SeekFallbackReason = "disabled"
             }
         };
 

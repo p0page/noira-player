@@ -1073,7 +1073,13 @@ public sealed class PlaybackQualityReportAnalyzerTests
             Position = new PlaybackQualityPosition
             {
                 SeekOperationDurationMs = 4800,
-                SeekRecoveryDurationMs = 5100
+                SeekRecoveryDurationMs = 5100,
+                SeekPacketCacheEnabled = true,
+                SeekPacketCacheHit = true,
+                SeekPacketCachePacketCount = 128,
+                SeekPacketCacheBytes = 1048576,
+                SeekPacketCacheWindowDurationTicks = 80000000,
+                SeekFallbackReason = "none"
             }
         };
 
@@ -1081,6 +1087,12 @@ public sealed class PlaybackQualityReportAnalyzerTests
 
         Assert.Contains("position.seekOperationDurationMs", analysis.EvidenceSignals);
         Assert.Contains("position.seekRecoveryDurationMs", analysis.EvidenceSignals);
+        Assert.Contains("position.seekPacketCacheEnabled", analysis.EvidenceSignals);
+        Assert.Contains("position.seekPacketCacheHit", analysis.EvidenceSignals);
+        Assert.Contains("position.seekPacketCachePacketCount", analysis.EvidenceSignals);
+        Assert.Contains("position.seekPacketCacheBytes", analysis.EvidenceSignals);
+        Assert.Contains("position.seekPacketCacheWindowDurationTicks", analysis.EvidenceSignals);
+        Assert.Contains("position.seekFallbackReason", analysis.EvidenceSignals);
     }
 
     [Fact]

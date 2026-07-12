@@ -213,6 +213,14 @@ namespace winrt::NoiraPlayer::Native::implementation
         metrics.VideoStreamStartTimeTicks(snapshot.VideoStreamStartTimeTicks);
         metrics.SeekDemuxTargetTicks(snapshot.SeekDemuxTargetTicks);
         metrics.FirstPresentedPositionTicks(snapshot.FirstPresentedPositionTicks);
+        auto seekReplay = m_graph->LastSeekReplaySnapshot();
+        metrics.SeekPacketCacheEnabled(seekReplay.Enabled);
+        metrics.SeekPacketCacheHit(seekReplay.Hit);
+        metrics.SeekPacketCachePacketCount(seekReplay.PacketCount);
+        metrics.SeekPacketCacheBytes(seekReplay.Bytes);
+        metrics.SeekPacketCacheWindowDurationTicks(seekReplay.WindowDurationTicks);
+        metrics.SeekFallbackReason(winrt::to_hstring(
+            seekReplay.FallbackReason.empty() ? "none" : seekReplay.FallbackReason));
         metrics.RenderIntervalMsP05(snapshot.RenderIntervalMsP05);
         metrics.RenderIntervalMsP50(snapshot.RenderIntervalMsP50);
         metrics.RenderIntervalMsP95(snapshot.RenderIntervalMsP95);
