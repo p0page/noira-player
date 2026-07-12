@@ -24,7 +24,9 @@
 - Create: `src/NoiraPlayer.Native/Media/FfmpegSeekReplayCache.h`
 - Create: `src/NoiraPlayer.Native/Media/FfmpegSeekReplayCache.cpp`
 - Create: `tests/NoiraPlayer.Native.Tests/FfmpegSeekReplayCacheTests.cpp`
-- Modify: `tests/NoiraPlayer.Native.Tests/NoiraPlayer.Native.Tests.vcxproj`
+- Modify: `src/NoiraPlayer.Native/NoiraPlayer.Native.vcxproj`
+- Modify: `src/NoiraPlayer.Native/NoiraPlayer.Native.vcxproj.filters`
+- Modify: `tools/quality-run/run-playback-core-checks.ps1`
 
 **Interfaces:**
 - Consumes: `AVPacket`, normalized packet position ticks, stream index, keyframe flag, active stream set。

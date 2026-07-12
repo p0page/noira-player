@@ -12,6 +12,7 @@
     <ClCompile Include="Media\AudioRenderer.cpp" />
     <ClCompile Include="Media\DxgiColorSpaceMapper.cpp" />
     <ClCompile Include="Media\FfmpegMediaSource.cpp" />
+    <ClCompile Include="Media\FfmpegSeekReplayCache.cpp" />
     <ClCompile Include="Media\HdrToneMappingPass.cpp" />
     <ClCompile Include="Media\HttpMediaInput.cpp" />
     <ClCompile Include="Media\PlaybackGraph.cpp" />
@@ -42,6 +43,7 @@
     <ClInclude Include="Media\DolbyVisionConfiguration.h" />
     <ClInclude Include="Media\DxgiColorSpaceMapper.h" />
     <ClInclude Include="Media\FfmpegMediaSource.h" />
+    <ClInclude Include="Media\FfmpegSeekReplayCache.h" />
     <ClInclude Include="Media\FramePacing.h" />
     <ClInclude Include="Media\HdrToneMappingPass.h" />
     <ClInclude Include="Media\HttpMediaInput.h" />

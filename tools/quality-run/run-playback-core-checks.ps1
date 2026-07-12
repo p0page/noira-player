@@ -97,6 +97,7 @@ $nativeDisplayRefreshSnapshotCommand = '"' + $vcvars + '" >nul && cl /nologo /st
 $nativeAudioFrameTimelineCommand = '"' + $vcvars + '" >nul && cl /nologo /std:c++20 /EHsc /I src\NoiraPlayer.Native /Fo:C:\tmp\AudioFrameTimelineTests.obj tests\NoiraPlayer.Native.Tests\AudioFrameTimelineTests.cpp /Fe:C:\tmp\AudioFrameTimelineTests.exe && C:\tmp\AudioFrameTimelineTests.exe'
 $nativeAudioBufferAccumulatorCommand = '"' + $vcvars + '" >nul && cl /nologo /std:c++20 /EHsc /I src\NoiraPlayer.Native /Fo:C:\tmp\AudioBufferAccumulatorTests.obj tests\NoiraPlayer.Native.Tests\AudioBufferAccumulatorTests.cpp /Fe:C:\tmp\AudioBufferAccumulatorTests.exe && C:\tmp\AudioBufferAccumulatorTests.exe'
 $nativeDecoderEagainRecoveryCommand = '"' + $vcvars + '" >nul && cl /nologo /std:c++20 /EHsc /I src\NoiraPlayer.Native /Fo:C:\tmp\DecoderEagainRecoveryTests.obj tests\NoiraPlayer.Native.Tests\DecoderEagainRecoveryTests.cpp /Fe:C:\tmp\DecoderEagainRecoveryTests.exe && C:\tmp\DecoderEagainRecoveryTests.exe'
+$nativeSeekReplayCacheCommand = '"' + $vcvars + '" >nul && if not exist C:\tmp\noiraplayer-seek-replay-cache mkdir C:\tmp\noiraplayer-seek-replay-cache && cl /nologo /std:c++20 /EHsc /I src\NoiraPlayer.Native /I src\NoiraPlayer.Native\packages\FFmpegInteropX.UWP.FFmpeg.8.1.2\include /Fo:C:\tmp\noiraplayer-seek-replay-cache\ tests\NoiraPlayer.Native.Tests\FfmpegSeekReplayCacheTests.cpp src\NoiraPlayer.Native\Media\FfmpegSeekReplayCache.cpp /Fe:C:\tmp\FfmpegSeekReplayCacheTests.exe /link /LIBPATH:src\NoiraPlayer.Native\packages\FFmpegInteropX.UWP.FFmpeg.8.1.2\runtimes\win-x64\native avcodec.lib avutil.lib && set PATH=%CD%\src\NoiraPlayer.Native\packages\FFmpegInteropX.UWP.FFmpeg.8.1.2\runtimes\win-x64\native;%PATH% && C:\tmp\FfmpegSeekReplayCacheTests.exe'
 $nativeDxOffscreenCommand = '"' + $vcvars + '" >nul && if not exist C:\tmp\noiraplayer-native-dx-offscreen mkdir C:\tmp\noiraplayer-native-dx-offscreen && cl /nologo /std:c++20 /EHsc /DWIN32_LEAN_AND_MEAN /DWINRT_LEAN_AND_MEAN /I src\NoiraPlayer.Native /I src\NoiraPlayer.Native\packages\FFmpegInteropX.UWP.FFmpeg.8.1.2\include /Fo:C:\tmp\noiraplayer-native-dx-offscreen\ tests\NoiraPlayer.Native.Tests\DxDeviceResourcesOffscreenTests.cpp src\NoiraPlayer.Native\DxDeviceResources.cpp src\NoiraPlayer.Native\Media\DxgiColorSpaceMapper.cpp src\NoiraPlayer.Native\Media\HdrToneMappingPass.cpp src\NoiraPlayer.Native\NativePlaybackDiagnostics.cpp /Fe:C:\tmp\DxDeviceResourcesOffscreenTests.exe d3d11.lib dxgi.lib d2d1.lib dwrite.lib d3dcompiler.lib windowsapp.lib && C:\tmp\DxDeviceResourcesOffscreenTests.exe'
 $nativeBuildCommand = "& { . '$modernToolchainScriptPath'; `$msbuild = Resolve-ModernMsBuildPath ''; & `$msbuild 'src\NoiraPlayer.Native\NoiraPlayer.Native.vcxproj' '/p:Configuration=Debug' '/p:Platform=x64' '/m' '/v:minimal'; exit `$LASTEXITCODE }"
 
@@ -246,6 +247,11 @@ $commands = @(
         -Description 'Verify simultaneous decoder EAGAIN recovery is bounded and resets only after progress.' `
         -Command 'cmd' `
         -Arguments @('/c', $nativeDecoderEagainRecoveryCommand)
+    New-CommandPlan `
+        -Name 'native-seek-replay-cache-test' `
+        -Description 'Verify bounded active-stream packet replay, keyframe coverage, pruning, order, and packet ownership.' `
+        -Command 'cmd' `
+        -Arguments @('/c', $nativeSeekReplayCacheCommand)
     New-CommandPlan `
         -Name 'native-dx-offscreen-test' `
         -Description 'Compile and run the native DirectX offscreen composition swapchain test.' `
