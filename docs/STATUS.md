@@ -1081,3 +1081,11 @@ native 不再在 `VideoDecoder::Open` 成功、失败或 seek 后丢弃已经从
 验证：完整 `run-playback-core-checks.ps1` 的 32 个阶段全部通过，包含 510 个定向 Core 测试、native-headless 真解码/渲染、网络恢复、独立音轨/字幕切换、PGS bitmap、DX offscreen 和 native build。最新 comparator/hash 修正完成后，全量 Core 测试 872/872、playback-quality CLI smoke 和完整 Modern UWP Debug x64 App 构建再次通过。
 
 边界：当前只证明 Windows 软件链路能解码并合成该 PGS cue，不证明 Xbox HDR backbuffer 上的字幕 reference white、色彩或性能完全正确；完整 ASS 样式、外置字幕和 subtitle offset 仍未实现。
+
+# 2026-07-12 更新：manifest expected 绑定后的 unsupported 语义已修正
+
+v11 首次把 manifest 的完整 `expected` 绑定到真实 native captured reports 后，严格校验暴露出 evaluator 顺序错误：DV Profile 5 已被实际流证据正确识别为 `unsupported`，却先因源探测耗时超过 `maxStartupDurationMs` 被重判为 `fail`，导致 execution status 与 report result 不一致。
+
+评估顺序现已修正：预期不支持的源仍必须通过生命周期和实际源分类校验，但不执行启动耗时、帧、色彩等可播放源质量阈值。回归测试覆盖“分类正确但探测超过 3 秒”的 DV P5；同一批 v11 captured reports 重新物化后为 24/24 matched、0 validation error，结果为 11 pass、12 fail、1 unsupported。
+
+剩余 12 个 fail 被原样保留：主要是远端启动耗时超限及 headless 环境的 HDR/DXGI 输出与 App/显示预期不一致，私有 timeline case 还包含 `520ms > 500ms` 的 seek 偏差。它们是后续区分播放器问题、环境边界和场景预期适用范围的输入，不构成本轮播放器质量改善。

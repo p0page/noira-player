@@ -35,7 +35,6 @@ namespace NoiraPlayer.Core.PlaybackQuality
             var expected = report.Expected;
             CheckExpectedSourceMetadata(report, expected);
             CheckExpectedFrameRate(report, expected);
-            CheckStartupDuration(report, expected);
 
             if (IsExpectedUnsupportedSource(expected))
             {
@@ -54,6 +53,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 return;
             }
 
+            CheckStartupDuration(report, expected);
             CheckSeekEvidenceCompleteness(report);
             CheckSeekPositionError(report, expected);
             CheckMin(

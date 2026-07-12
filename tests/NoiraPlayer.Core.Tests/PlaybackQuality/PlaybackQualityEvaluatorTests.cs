@@ -485,6 +485,44 @@ public sealed class PlaybackQualityEvaluatorTests
     }
 
     [Fact]
+    public void Evaluate_Does_Not_Apply_Startup_Threshold_To_Expected_Unsupported_Source()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "dv-profile5-unsupported-slow-probe",
+            Expected = new PlaybackQualityExpected
+            {
+                Codec = "hevc",
+                HdrKind = "DolbyVisionUnsupported",
+                HdrPlaybackStrategy = "Dolby Vision unsupported",
+                IsDirectPlayable = false,
+                IsDolbyVision = true,
+                DolbyVisionProfile = 5,
+                MaxStartupDurationMs = 3000
+            },
+            Source = new PlaybackQualitySource
+            {
+                Codec = "hevc",
+                HdrKind = "DolbyVisionUnsupported",
+                HdrPlaybackStrategy = "Dolby Vision unsupported",
+                IsDirectPlayable = false,
+                IsDolbyVision = true,
+                DolbyVisionProfile = 5
+            },
+            Startup = new PlaybackQualityStartup
+            {
+                StartupDurationMs = 3972
+            }
+        };
+
+        PlaybackQualityEvaluator.Evaluate(report);
+
+        Assert.Equal("unsupported", report.Result);
+        Assert.Empty(report.FailureReasons);
+        Assert.DoesNotContain(report.Checks, check => check.Name == "StartupDurationMs");
+    }
+
+    [Fact]
     public void Evaluate_Fails_When_Expected_Unsupported_Source_Has_Failed_Lifecycle_Operation()
     {
         const string message = "seek failed for unsupported source";
