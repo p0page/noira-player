@@ -1,5 +1,13 @@
 ﻿# 技术决策
 
+## 2026-07-12：冷 resume 保留准确 seek，静态直播放不伪用服务端时间偏移
+
+决策：冷 resume 继续使用向后关键帧定位和目标前帧丢弃，不跳到目标后的关键帧，不删除准确预滚，也不放宽启动或 seek 标准。本项目 `static=true` 的 Emby 直播放 URL 不追加 `StartTimeTicks` 作为所谓优化；只有确认服务端实际返回从目标位置重建的转封装/转码流时，才能把服务端时间偏移作为独立候选评测。
+
+原因：三轮同源 60 秒 resume 均读取 `971` 个包、`18.09 MiB`，远端 seek 为 `4754.5-4856.6ms`，后续 demux I/O 为 `2419.9-4603.6ms`，而 decode/control 仅约 `292ms`、present 仅 `36.10-45.91ms`。Kodi、VLC、mpv 都以 backward seek 配合目标前丢帧维持准确性；mpv packet cache 只对已经读取过的数据有效。Jellyfin 当前 `VideosController` 虽接收 `StartTimeTicks`，但静态分支直接返回原文件或 Range 流，只有 FFmpeg encoding 分支使用时间偏移。本项目 fallback URL 同样明确使用 `static=true`，不能把未消费的查询参数记作 Core 改善。
+
+边界：上述数据证明 Windows native 软件链路的耗时归因，不证明具体 Emby 服务器版本与 Jellyfin 实现完全相同，也不证明 Xbox/HDMI 行为。若未来评测服务端转封装、持久缓存或协议层优化，必须建立独立 manifest、记录实际响应/执行路径，并与当前静态直播放 baseline 分开比较。
+
 ## 2026-07-12：captured report 不能绕过 manifest expected 物化
 
 决策：native manifest runner 的输出只作为 captured evidence，不能直接进入正式 baseline。baseline 必须根据 runner summary 生成仅包含实际选中 case 的 executed manifest，再调用统一 materializer，把 manifest expected 绑定到 captured report 并使用当前 evaluator 重新计算 pass/fail。最终 unified manifest 保留 quarantine，但未执行 quarantine 不生成 skip 报告。
