@@ -93,15 +93,27 @@ public sealed class IconAssetContractTests
     }
 
     [Fact]
-    public void Icon_Assets_Preserve_Neutral_Focus_And_Green_Playback_Signals_At_All_Sizes()
+    public void Icon_Assets_Preserve_Neutral_Focus_And_Soft_Violet_Playback_Signals_At_All_Sizes()
     {
-        var assetRoot = Path.Combine(FindRepositoryRoot(), "src", "NoiraPlayer.App", "Assets");
+        var root = FindRepositoryRoot();
+        var assetRoot = Path.Combine(root, "src", "NoiraPlayer.App", "Assets");
+        var designColors = ReadDesignColors(Path.Combine(root, "docs", "DESIGN.md"));
+        var expectedSignal = ParseOpaqueRgb(designColors["secondary"]);
 
-        AssertIconSignals(Path.Combine(assetRoot, "Square44x44Logo.png"), 8, 46);
-        AssertIconSignals(Path.Combine(assetRoot, "StoreLogo.png"), 10, 56);
-        AssertIconSignals(Path.Combine(assetRoot, "Square150x150Logo.png"), 160, 620);
-        AssertIconSignals(Path.Combine(assetRoot, "Wide310x150Logo.png"), 140, 560);
-        AssertIconSignals(Path.Combine(assetRoot, "SplashScreen.png"), 420, 1760);
+        AssertIconSignals(Path.Combine(assetRoot, "Square44x44Logo.png"), 8, 46, expectedSignal);
+        AssertIconSignals(Path.Combine(assetRoot, "StoreLogo.png"), 10, 56, expectedSignal);
+        AssertIconSignals(Path.Combine(assetRoot, "Square150x150Logo.png"), 160, 620, expectedSignal);
+        AssertIconSignals(Path.Combine(assetRoot, "Wide310x150Logo.png"), 140, 520, expectedSignal);
+        AssertIconSignals(Path.Combine(assetRoot, "SplashScreen.png"), 420, 1760, expectedSignal);
+    }
+
+    [Fact]
+    public void Soft_Violet_Signal_Detector_Rejects_NonToken_Blue()
+    {
+        var expectedSignal = new RgbaPixel(139, 124, 246, 255);
+
+        Assert.True(IsExpectedSignalPixel(expectedSignal, expectedSignal));
+        Assert.False(IsExpectedSignalPixel(new RgbaPixel(80, 100, 200, 255), expectedSignal));
     }
 
     private static string FindRepositoryRoot()
@@ -193,19 +205,20 @@ public sealed class IconAssetContractTests
     private static void AssertIconSignals(
         string path,
         int minimumFocusPixels,
-        int minimumGreenPixels)
+        int minimumExactSignalPixels,
+        RgbaPixel expectedSignal)
     {
         var bitmap = ReadPngRgbaPixels(path);
 
         var focusPixels = bitmap.Pixels.Count(IsFocusPixel);
-        var greenPixels = bitmap.Pixels.Count(IsGreenSignalPixel);
+        var violetPixels = bitmap.Pixels.Count(color => IsExpectedSignalPixel(color, expectedSignal));
 
         Assert.True(
             focusPixels >= minimumFocusPixels,
             $"{Path.GetFileName(path)} should preserve the neutral focus signal; found {focusPixels} pixels.");
         Assert.True(
-            greenPixels >= minimumGreenPixels,
-            $"{Path.GetFileName(path)} should preserve muted green play/progress signals; found {greenPixels} pixels.");
+            violetPixels >= minimumExactSignalPixels,
+            $"{Path.GetFileName(path)} should preserve the exact design-token play/progress signal; found {violetPixels} pixels.");
     }
 
     private static bool IsFocusPixel(RgbaPixel color)
@@ -218,17 +231,19 @@ public sealed class IconAssetContractTests
             Math.Abs(color.G - color.B) < 24;
     }
 
-    private static bool IsGreenSignalPixel(RgbaPixel color)
+    private static bool IsExpectedSignalPixel(RgbaPixel color, RgbaPixel expectedSignal)
     {
-        return color.A > 180 &&
-            color.R >= 70 &&
-            color.R <= 135 &&
-            color.G >= 125 &&
-            color.G <= 200 &&
-            color.B >= 75 &&
-            color.B <= 150 &&
-            color.G - color.R >= 25 &&
-            color.G - color.B >= 5;
+        return color == expectedSignal;
+    }
+
+    private static RgbaPixel ParseOpaqueRgb(string color)
+    {
+        var value = OpaqueRgb(color).AsSpan(1);
+        return new RgbaPixel(
+            Convert.ToByte(value[..2].ToString(), 16),
+            Convert.ToByte(value.Slice(2, 2).ToString(), 16),
+            Convert.ToByte(value.Slice(4, 2).ToString(), 16),
+            255);
     }
 
     private static DecodedPng ReadPngRgbaPixels(string path)

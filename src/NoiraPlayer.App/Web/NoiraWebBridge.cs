@@ -137,7 +137,7 @@ namespace NoiraPlayer.App.Web
             }
 
             var path = ReadPayloadString(root, "path", "");
-            if (!IsAllowedEmbyPath(session, path))
+            if (!EmbyWebPathPolicy.IsAllowed(session, path))
             {
                 return Result(Error(id, "invalid-emby-path", "The requested Emby path is not allowed."));
             }
@@ -156,38 +156,6 @@ namespace NoiraPlayer.App.Web
             return Result(Ok(id, resultJson));
         }
 
-        private static bool IsAllowedEmbyPath(EmbySession session, string path)
-        {
-            if (string.IsNullOrWhiteSpace(path) ||
-                path.StartsWith("/", StringComparison.Ordinal) ||
-                path.IndexOf('\\') >= 0 ||
-                path.IndexOf('#') >= 0 ||
-                Uri.TryCreate(path, UriKind.Absolute, out _) ||
-                !Uri.TryCreate(path, UriKind.Relative, out _))
-            {
-                return false;
-            }
-
-            var queryIndex = path.IndexOf('?');
-            var pathWithoutQuery = queryIndex < 0 ? path : path.Substring(0, queryIndex);
-            var decodedPath = Uri.UnescapeDataString(pathWithoutQuery);
-            foreach (var segment in decodedPath.Split('/'))
-            {
-                if (string.Equals(segment, ".", StringComparison.Ordinal) ||
-                    string.Equals(segment, "..", StringComparison.Ordinal))
-                {
-                    return false;
-                }
-            }
-
-            var escapedUserId = Uri.EscapeDataString(session.UserId);
-            var viewsPath = "Users/" + escapedUserId + "/Views";
-            var itemsPath = "Users/" + escapedUserId + "/Items";
-            return string.Equals(pathWithoutQuery, viewsPath, StringComparison.Ordinal) ||
-                string.Equals(pathWithoutQuery, itemsPath, StringComparison.Ordinal) ||
-                pathWithoutQuery.StartsWith(itemsPath + "/", StringComparison.Ordinal);
-        }
-
         private static NoiraWebBridgeResult CreatePlaybackResult(string id, JsonElement root)
         {
             var itemId = ReadPayloadString(root, "itemId", "");
@@ -204,7 +172,11 @@ namespace NoiraPlayer.App.Web
                 ReadPayloadLong(root, "runtimeTicks", 0));
             return new NoiraWebBridgeResult(
                 Ok(id, "{\"started\":true,\"surface\":\"native\"}"),
-                request);
+                request,
+                Error(
+                    id,
+                    "playback-navigation-failed",
+                    "The native playback page could not be opened."));
         }
 
         private static string CreateBootstrapJson(EmbySession? session)
