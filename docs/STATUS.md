@@ -1089,3 +1089,9 @@ v11 首次把 manifest 的完整 `expected` 绑定到真实 native captured repo
 评估顺序现已修正：预期不支持的源仍必须通过生命周期和实际源分类校验，但不执行启动耗时、帧、色彩等可播放源质量阈值。回归测试覆盖“分类正确但探测超过 3 秒”的 DV P5；同一批 v11 captured reports 重新物化后为 24/24 matched、0 validation error，结果为 11 pass、12 fail、1 unsupported。
 
 剩余 12 个 fail 被原样保留：主要是远端启动耗时超限及 headless 环境的 HDR/DXGI 输出与 App/显示预期不一致，私有 timeline case 还包含 `520ms > 500ms` 的 seek 偏差。它们是后续区分播放器问题、环境边界和场景预期适用范围的输入，不构成本轮播放器质量改善。
+
+# 2026-07-12 更新：首套 evaluator-consistent v12 基线已建立
+
+commit-bound v12 位于 ignored 路径 `docs/qa/private/baselines/playback-evidence-v12-evaluator-consistent.local/`，绑定 revision `d44826c`。首轮 6 个公开 Jellyfin case 同时遇到 TLS EOF/I/O error，strict validator 因缺失真实源与播放证据正确拒绝报告集；仅重跑相同 6 个 case 后全部产生真实报告。最终 v12 为 24/24 matched、0 validation error、11 pass、12 fail、1 unsupported，且凭据/服务器地址/token 扫描 0 命中。首次失败和重试摘要均保留在 baseline provenance 中，没有静默覆盖环境故障。
+
+v12 同时揭示 interaction 评测缺口：私有 audio-switch 的生命周期虽为 completed，但实际 `maxFrameGapMs=5319.28`，75 帧解码仅 38 帧呈现；现有 typed contract 只要求目标音轨选中、position 和 submitted audio frames 各自增加，没有记录达到这些条件所需时间。实现计划已写入 `docs/superpowers/plans/2026-07-12-interaction-recovery-evidence.md`。下一步先补结构化 operation/recovery duration 和 manifest-owned threshold，再生成新的规则版本 baseline；不得把它与 v12 跨规则比较成播放质量改善。
