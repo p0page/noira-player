@@ -1924,6 +1924,7 @@ foreach ($hdr10CaseId in $nativeHdr10CaseIds) {
         "dxgiInput": "YCBCR_STUDIO_G22_LEFT_P709",
         "dxgiOutput": "RGB_FULL_G22_NONE_P709",
         "isDirectPlayable": true,
+        "maxInteractionRecoveryDurationMs": 2000,
         "minRenderedVideoFrames": $nativeAvMinimumRenderedVideoFrames,
         "maxAudioVideoDriftMsP95": 80.0
       }
@@ -1955,6 +1956,7 @@ foreach ($hdr10CaseId in $nativeHdr10CaseIds) {
         "dxgiInput": "YCBCR_STUDIO_G22_LEFT_P709",
         "dxgiOutput": "RGB_FULL_G22_NONE_P709",
         "isDirectPlayable": true,
+        "maxInteractionRecoveryDurationMs": 2000,
         "minRenderedVideoFrames": 1
       }
     },

@@ -396,6 +396,25 @@ function New-ReferenceCase(
     if ($MaxSeekPositionErrorMs -gt 0) {
         Add-Member -InputObject $expected -NotePropertyName 'maxSeekPositionErrorMs' -NotePropertyValue $MaxSeekPositionErrorMs -Force
     }
+    if (($Purpose -contains 'audio-switch') -or ($Purpose -contains 'subtitle-switch')) {
+        Add-Member -InputObject $expected `
+            -NotePropertyName 'maxInteractionRecoveryDurationMs' `
+            -NotePropertyValue 2000.0 `
+            -Force
+    }
+
+    $scenario = if ($Purpose -contains 'timeline') {
+        'timeline'
+    }
+    elseif ($Purpose -contains 'audio-switch') {
+        'audio-switch'
+    }
+    elseif ($Purpose -contains 'subtitle-switch') {
+        'subtitle-switch'
+    }
+    else {
+        'playback'
+    }
 
     $case = [ordered]@{
         caseId = ('private-emby/{0}/{1}/{2}' -f $Candidate.ItemId, $Candidate.MediaSourceId, $Suffix)
@@ -409,7 +428,7 @@ function New-ReferenceCase(
         tier = $Tier
         executionRequirement = [pscustomobject][ordered]@{
             minimumEvidenceLevel = 'native-playback'
-            scenario = $(if ($Purpose -contains 'timeline') { 'timeline' } else { 'playback' })
+            scenario = $scenario
         }
         purpose = @($Purpose)
         expected = $expected
@@ -587,6 +606,8 @@ function New-ReferenceManifest([object[]]$Items) {
     if ($null -ne $sdr) {
         $cases += New-ReferenceCase $sdr 'sdr-smoke' @('sdr-smoke', 'av-sync', 'tracks', 'subtitles', 'end-of-stream') 1 $false $false
         $cases += New-ReferenceCase $sdr 'timeline' @('timeline') 1 $false $false -StartPositionTicks 600000000 -MaxSeekPositionErrorMs 500.0
+        $cases += New-ReferenceCase $sdr 'audio-switch' @('tracks', 'audio-switch') 1 $false $false
+        $cases += New-ReferenceCase $sdr 'subtitle-switch' @('subtitles', 'subtitle-switch') 1 $false $false
     }
 
     $hdr10 = Select-FirstCandidate $candidates { $_.HdrProfile.kind -eq 'Hdr10' -and [int]$_.VideoStream.Width -le 1920 } { $_.Bitrate }

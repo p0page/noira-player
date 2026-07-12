@@ -286,6 +286,22 @@ try {
     }
 
     $manifest = $manifestText | ConvertFrom-Json
+    $audioSwitchCase = @($manifest.cases | Where-Object {
+        $_.executionRequirement.scenario -eq 'audio-switch'
+    }) | Select-Object -First 1
+    $subtitleSwitchCase = @($manifest.cases | Where-Object {
+        $_.executionRequirement.scenario -eq 'subtitle-switch'
+    }) | Select-Object -First 1
+    if ($null -eq $audioSwitchCase -or
+        $audioSwitchCase.expected.maxInteractionRecoveryDurationMs -ne 2000 -or
+        -not ($audioSwitchCase.purpose -contains 'audio-switch')) {
+        throw 'Generated private Emby manifest must include an audio-switch case with the versioned recovery SLO.'
+    }
+    if ($null -eq $subtitleSwitchCase -or
+        $subtitleSwitchCase.expected.maxInteractionRecoveryDurationMs -ne 2000 -or
+        -not ($subtitleSwitchCase.purpose -contains 'subtitle-switch')) {
+        throw 'Generated private Emby manifest must include a subtitle-switch case with the versioned recovery SLO.'
+    }
     $validation = Get-Content -Raw -LiteralPath $validationPath | ConvertFrom-Json
     if ($validation.coverage.status -ne 'ready' -or
         $validation.coverage.isCoreEvaluationReady -ne $true) {
