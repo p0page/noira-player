@@ -48,6 +48,40 @@ public sealed class NativeQualityMetricsBridgeContractTests
         }
     }
 
+    [Fact]
+    public void Native_Interaction_Timing_Metrics_Cross_The_Graph_WinRt_And_Core_Boundaries()
+    {
+        var root = FindRepositoryRoot();
+        var idl = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Native", "NativePlaybackEngine.idl"));
+        var runtimeMetrics = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Native", "NativePlaybackQualityMetrics.h"));
+        var nativeEngine = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Native", "NativePlaybackEngine.cpp"));
+
+        Assert.Contains("String LastInteractionScenario;", idl, StringComparison.Ordinal);
+        Assert.Contains("UInt64 LastInteractionSequence;", idl, StringComparison.Ordinal);
+        Assert.Contains("auto const timing = m_graph->SwitchAudioStream", nativeEngine, StringComparison.Ordinal);
+        Assert.Contains("auto const timing = m_graph->SwitchSubtitleStream", nativeEngine, StringComparison.Ordinal);
+        Assert.Contains("ResetLastInteractionTiming();", nativeEngine, StringComparison.Ordinal);
+
+        foreach (var property in NativeInteractionDoubleProperties)
+        {
+            Assert.Contains("Double " + property + ";", idl, StringComparison.Ordinal);
+            Assert.Contains("metrics." + property + "(interaction." + property[15..] + ");", nativeEngine, StringComparison.Ordinal);
+            Assert.Contains("double " + property + "() const noexcept", runtimeMetrics, StringComparison.Ordinal);
+        }
+
+        foreach (var property in NativeInteractionUInt64Properties)
+        {
+            Assert.Contains("UInt64 " + property + ";", idl, StringComparison.Ordinal);
+            Assert.Contains(property + " = nativeMetrics." + property, File.ReadAllText(Path.Combine(
+                root, "src", "NoiraPlayer.App", "Playback", "WinRtNativePlaybackEngine.cs")), StringComparison.Ordinal);
+        }
+
+        foreach (var property in NativeInteractionBooleanProperties)
+        {
+            Assert.Contains("Boolean " + property + ";", idl, StringComparison.Ordinal);
+        }
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
@@ -73,6 +107,7 @@ public sealed class NativeQualityMetricsBridgeContractTests
         "SoftwareDecodedVideoFrames",
         "RenderedVideoFrames",
         "SubmittedAudioFrames",
+        "SelectedAudioStreamIndex",
         "DroppedVideoFrames",
         "SeekPrerollDroppedFrames",
         "VideoAheadWaitCount",
@@ -157,6 +192,18 @@ public sealed class NativeQualityMetricsBridgeContractTests
         "AudioVideoDriftMsP95",
         "AudioVideoDriftMsP99",
         "AudioVideoDriftMsMax",
+        "LastInteractionSequence",
+        "LastInteractionLockWaitDurationMs",
+        "LastInteractionExecutionDurationMs",
+        "LastInteractionQuiesceDurationMs",
+        "LastInteractionSeekDurationMs",
+        "LastInteractionDecoderOpenDurationMs",
+        "LastInteractionRendererOpenDurationMs",
+        "LastInteractionPacketCacheHit",
+        "LastInteractionPacketCacheEnabled",
+        "LastInteractionPacketCachePacketCount",
+        "LastInteractionPacketCacheBytes",
+        "LastInteractionPacketCacheWindowDurationTicks",
     };
 
     private static readonly IReadOnlyList<string> NativeOpenTimingProperties = new[]
@@ -164,5 +211,28 @@ public sealed class NativeQualityMetricsBridgeContractTests
         "NativeGraphOpenDurationMs",
         "FfmpegOpenInputDurationMs",
         "FfmpegStreamInfoDurationMs",
+    };
+
+    private static readonly IReadOnlyList<string> NativeInteractionDoubleProperties = new[]
+    {
+        "LastInteractionLockWaitDurationMs",
+        "LastInteractionExecutionDurationMs",
+        "LastInteractionQuiesceDurationMs",
+        "LastInteractionSeekDurationMs",
+        "LastInteractionDecoderOpenDurationMs",
+        "LastInteractionRendererOpenDurationMs",
+    };
+
+    private static readonly IReadOnlyList<string> NativeInteractionUInt64Properties = new[]
+    {
+        "LastInteractionSequence",
+        "LastInteractionPacketCachePacketCount",
+        "LastInteractionPacketCacheBytes",
+    };
+
+    private static readonly IReadOnlyList<string> NativeInteractionBooleanProperties = new[]
+    {
+        "LastInteractionPacketCacheHit",
+        "LastInteractionPacketCacheEnabled",
     };
 }

@@ -26,6 +26,9 @@ namespace winrt::NoiraPlayer::Native::implementation
         uint64_t SubmittedAudioFrames() const noexcept { return m_submittedAudioFrames; }
         void SubmittedAudioFrames(uint64_t value) noexcept { m_submittedAudioFrames = value; }
 
+        int32_t SelectedAudioStreamIndex() const noexcept { return m_selectedAudioStreamIndex; }
+        void SelectedAudioStreamIndex(int32_t value) noexcept { m_selectedAudioStreamIndex = value; }
+
         uint64_t SubtitleDecodedCueCount() const noexcept { return m_subtitleDecodedCueCount; }
         void SubtitleDecodedCueCount(uint64_t value) noexcept { m_subtitleDecodedCueCount = value; }
 
@@ -284,6 +287,33 @@ namespace winrt::NoiraPlayer::Native::implementation
         double AudioVideoDriftMsMax() const noexcept { return m_audioVideoDriftMsMax; }
         void AudioVideoDriftMsMax(double value) noexcept { m_audioVideoDriftMsMax = value; }
 
+        winrt::hstring LastInteractionScenario() const { return m_lastInteractionScenario; }
+        void LastInteractionScenario(winrt::hstring const& value) { m_lastInteractionScenario = value; }
+        uint64_t LastInteractionSequence() const noexcept { return m_lastInteractionSequence; }
+        void LastInteractionSequence(uint64_t value) noexcept { m_lastInteractionSequence = value; }
+        double LastInteractionLockWaitDurationMs() const noexcept { return m_lastInteractionLockWaitDurationMs; }
+        void LastInteractionLockWaitDurationMs(double value) noexcept { m_lastInteractionLockWaitDurationMs = value; }
+        double LastInteractionExecutionDurationMs() const noexcept { return m_lastInteractionExecutionDurationMs; }
+        void LastInteractionExecutionDurationMs(double value) noexcept { m_lastInteractionExecutionDurationMs = value; }
+        double LastInteractionQuiesceDurationMs() const noexcept { return m_lastInteractionQuiesceDurationMs; }
+        void LastInteractionQuiesceDurationMs(double value) noexcept { m_lastInteractionQuiesceDurationMs = value; }
+        double LastInteractionSeekDurationMs() const noexcept { return m_lastInteractionSeekDurationMs; }
+        void LastInteractionSeekDurationMs(double value) noexcept { m_lastInteractionSeekDurationMs = value; }
+        double LastInteractionDecoderOpenDurationMs() const noexcept { return m_lastInteractionDecoderOpenDurationMs; }
+        void LastInteractionDecoderOpenDurationMs(double value) noexcept { m_lastInteractionDecoderOpenDurationMs = value; }
+        double LastInteractionRendererOpenDurationMs() const noexcept { return m_lastInteractionRendererOpenDurationMs; }
+        void LastInteractionRendererOpenDurationMs(double value) noexcept { m_lastInteractionRendererOpenDurationMs = value; }
+        bool LastInteractionPacketCacheHit() const noexcept { return m_lastInteractionPacketCacheHit; }
+        void LastInteractionPacketCacheHit(bool value) noexcept { m_lastInteractionPacketCacheHit = value; }
+        bool LastInteractionPacketCacheEnabled() const noexcept { return m_lastInteractionPacketCacheEnabled; }
+        void LastInteractionPacketCacheEnabled(bool value) noexcept { m_lastInteractionPacketCacheEnabled = value; }
+        uint64_t LastInteractionPacketCachePacketCount() const noexcept { return m_lastInteractionPacketCachePacketCount; }
+        void LastInteractionPacketCachePacketCount(uint64_t value) noexcept { m_lastInteractionPacketCachePacketCount = value; }
+        uint64_t LastInteractionPacketCacheBytes() const noexcept { return m_lastInteractionPacketCacheBytes; }
+        void LastInteractionPacketCacheBytes(uint64_t value) noexcept { m_lastInteractionPacketCacheBytes = value; }
+        int64_t LastInteractionPacketCacheWindowDurationTicks() const noexcept { return m_lastInteractionPacketCacheWindowDurationTicks; }
+        void LastInteractionPacketCacheWindowDurationTicks(int64_t value) noexcept { m_lastInteractionPacketCacheWindowDurationTicks = value; }
+
     private:
         uint64_t m_renderPasses{0};
         uint64_t m_decodedVideoFrames{0};
@@ -291,6 +321,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         uint64_t m_softwareDecodedVideoFrames{0};
         uint64_t m_renderedVideoFrames{0};
         uint64_t m_submittedAudioFrames{0};
+        int32_t m_selectedAudioStreamIndex{-1};
         uint64_t m_subtitleDecodedCueCount{0};
         uint64_t m_subtitleCueRenderCount{0};
         int32_t m_selectedSubtitleStreamIndex{-1};
@@ -378,6 +409,19 @@ namespace winrt::NoiraPlayer::Native::implementation
         double m_audioVideoDriftMsP95{0.0};
         double m_audioVideoDriftMsP99{0.0};
         double m_audioVideoDriftMsMax{0.0};
+        winrt::hstring m_lastInteractionScenario;
+        uint64_t m_lastInteractionSequence{0};
+        double m_lastInteractionLockWaitDurationMs{0.0};
+        double m_lastInteractionExecutionDurationMs{0.0};
+        double m_lastInteractionQuiesceDurationMs{0.0};
+        double m_lastInteractionSeekDurationMs{0.0};
+        double m_lastInteractionDecoderOpenDurationMs{0.0};
+        double m_lastInteractionRendererOpenDurationMs{0.0};
+        bool m_lastInteractionPacketCacheHit{false};
+        bool m_lastInteractionPacketCacheEnabled{false};
+        uint64_t m_lastInteractionPacketCachePacketCount{0};
+        uint64_t m_lastInteractionPacketCacheBytes{0};
+        int64_t m_lastInteractionPacketCacheWindowDurationTicks{0};
     };
 }
 

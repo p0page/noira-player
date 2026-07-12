@@ -8,6 +8,7 @@
         public ulong SoftwareDecodedVideoFrames { get; set; }
         public ulong RenderedVideoFrames { get; set; }
         public ulong SubmittedAudioFrames { get; set; }
+        public int SelectedAudioStreamIndex { get; set; } = -1;
         public ulong SubtitleDecodedCueCount { get; set; }
         public ulong SubtitleCueRenderCount { get; set; }
         public int SelectedSubtitleStreamIndex { get; set; } = -1;
@@ -97,5 +98,18 @@
         public double AudioVideoDriftMsP95 { get; set; }
         public double AudioVideoDriftMsP99 { get; set; }
         public double AudioVideoDriftMsMax { get; set; }
+        public string LastInteractionScenario { get; set; } = "";
+        public ulong LastInteractionSequence { get; set; }
+        public double LastInteractionLockWaitDurationMs { get; set; }
+        public double LastInteractionExecutionDurationMs { get; set; }
+        public double LastInteractionQuiesceDurationMs { get; set; }
+        public double LastInteractionSeekDurationMs { get; set; }
+        public double LastInteractionDecoderOpenDurationMs { get; set; }
+        public double LastInteractionRendererOpenDurationMs { get; set; }
+        public bool LastInteractionPacketCacheHit { get; set; }
+        public bool LastInteractionPacketCacheEnabled { get; set; }
+        public ulong LastInteractionPacketCachePacketCount { get; set; }
+        public ulong LastInteractionPacketCacheBytes { get; set; }
+        public long LastInteractionPacketCacheWindowDurationTicks { get; set; }
     }
 }

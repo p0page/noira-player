@@ -63,6 +63,7 @@ public sealed class AppHostedQualityCaptureContractTests
             playbackPage,
             StringComparison.Ordinal);
         Assert.Contains("SubmittedAudioFrames", playbackPage, StringComparison.Ordinal);
+        Assert.Contains("beforeMetrics.SelectedAudioStreamIndex", playbackPage, StringComparison.Ordinal);
         Assert.Contains("RenderedVideoFrames", playbackPage, StringComparison.Ordinal);
         Assert.Contains("request.QualityPauseSeconds", playbackPage, StringComparison.Ordinal);
         Assert.Contains("request.QualitySourceLocator", playbackPage, StringComparison.Ordinal);
@@ -75,6 +76,8 @@ public sealed class AppHostedQualityCaptureContractTests
         Assert.Contains("PlaybackQualityCaptureReferenceCaseFactory.Create", playbackPage, StringComparison.Ordinal);
         Assert.Contains("Scenario = referenceCase.ExecutionRequirement.Scenario", playbackPage, StringComparison.Ordinal);
         Assert.Contains("PlaybackQualityRuntimeEvidenceCollector.ComposeRunResult", playbackPage, StringComparison.Ordinal);
+        Assert.Contains("PlaybackQualityInteractionCapture.Create", playbackPage, StringComparison.Ordinal);
+        Assert.Contains("interaction", playbackPage, StringComparison.Ordinal);
         Assert.Contains("WriteQualityRunErrorReportAsync", playbackPage, StringComparison.Ordinal);
         Assert.Contains("PlaybackQualityRuntimeEvidenceCollector.ComposeErrorRunResult", playbackPage, StringComparison.Ordinal);
         Assert.Contains("PlaybackQualityCapturedReportPath.GetReportRelativePath", playbackPage, StringComparison.Ordinal);

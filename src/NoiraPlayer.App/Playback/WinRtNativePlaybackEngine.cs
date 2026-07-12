@@ -81,6 +81,7 @@ namespace NoiraPlayer.App.Playback
                     SoftwareDecodedVideoFrames = nativeMetrics.SoftwareDecodedVideoFrames,
                     RenderedVideoFrames = nativeMetrics.RenderedVideoFrames,
                     SubmittedAudioFrames = nativeMetrics.SubmittedAudioFrames,
+                    SelectedAudioStreamIndex = nativeMetrics.SelectedAudioStreamIndex,
                     SubtitleDecodedCueCount = nativeMetrics.SubtitleDecodedCueCount,
                     SubtitleCueRenderCount = nativeMetrics.SubtitleCueRenderCount,
                     SelectedSubtitleStreamIndex = nativeMetrics.SelectedSubtitleStreamIndex,
@@ -167,7 +168,20 @@ namespace NoiraPlayer.App.Playback
                     AudioVideoDriftMsP50 = nativeMetrics.AudioVideoDriftMsP50,
                     AudioVideoDriftMsP95 = nativeMetrics.AudioVideoDriftMsP95,
                     AudioVideoDriftMsP99 = nativeMetrics.AudioVideoDriftMsP99,
-                    AudioVideoDriftMsMax = nativeMetrics.AudioVideoDriftMsMax
+                    AudioVideoDriftMsMax = nativeMetrics.AudioVideoDriftMsMax,
+                    LastInteractionScenario = nativeMetrics.LastInteractionScenario ?? "",
+                    LastInteractionSequence = nativeMetrics.LastInteractionSequence,
+                    LastInteractionLockWaitDurationMs = nativeMetrics.LastInteractionLockWaitDurationMs,
+                    LastInteractionExecutionDurationMs = nativeMetrics.LastInteractionExecutionDurationMs,
+                    LastInteractionQuiesceDurationMs = nativeMetrics.LastInteractionQuiesceDurationMs,
+                    LastInteractionSeekDurationMs = nativeMetrics.LastInteractionSeekDurationMs,
+                    LastInteractionDecoderOpenDurationMs = nativeMetrics.LastInteractionDecoderOpenDurationMs,
+                    LastInteractionRendererOpenDurationMs = nativeMetrics.LastInteractionRendererOpenDurationMs,
+                    LastInteractionPacketCacheHit = nativeMetrics.LastInteractionPacketCacheHit,
+                    LastInteractionPacketCacheEnabled = nativeMetrics.LastInteractionPacketCacheEnabled,
+                    LastInteractionPacketCachePacketCount = nativeMetrics.LastInteractionPacketCachePacketCount,
+                    LastInteractionPacketCacheBytes = nativeMetrics.LastInteractionPacketCacheBytes,
+                    LastInteractionPacketCacheWindowDurationTicks = nativeMetrics.LastInteractionPacketCacheWindowDurationTicks
                 };
                 return true;
             }

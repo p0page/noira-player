@@ -59,6 +59,7 @@
         UInt64 SoftwareDecodedVideoFrames;
         UInt64 RenderedVideoFrames;
         UInt64 SubmittedAudioFrames;
+        Int32 SelectedAudioStreamIndex;
         UInt64 SubtitleDecodedCueCount;
         UInt64 SubtitleCueRenderCount;
         Int32 SelectedSubtitleStreamIndex;
@@ -146,6 +147,19 @@
         Double AudioVideoDriftMsP95;
         Double AudioVideoDriftMsP99;
         Double AudioVideoDriftMsMax;
+        String LastInteractionScenario;
+        UInt64 LastInteractionSequence;
+        Double LastInteractionLockWaitDurationMs;
+        Double LastInteractionExecutionDurationMs;
+        Double LastInteractionQuiesceDurationMs;
+        Double LastInteractionSeekDurationMs;
+        Double LastInteractionDecoderOpenDurationMs;
+        Double LastInteractionRendererOpenDurationMs;
+        Boolean LastInteractionPacketCacheHit;
+        Boolean LastInteractionPacketCacheEnabled;
+        UInt64 LastInteractionPacketCachePacketCount;
+        UInt64 LastInteractionPacketCacheBytes;
+        Int64 LastInteractionPacketCacheWindowDurationTicks;
     }
 
     delegate void NativePlaybackStateChangedHandler(NativePlaybackState state, String message);

@@ -14,7 +14,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
             PlaybackQualityEnvironment? environment = null,
             PlaybackQualityLifecycle? lifecycle = null,
             PlaybackQualityPosition? position = null,
-            PlaybackQualityExecutionEvidence? execution = null)
+            PlaybackQualityExecutionEvidence? execution = null,
+            PlaybackQualityInteractionEvidence? interaction = null)
         {
             if (referenceCase == null)
             {
@@ -62,6 +63,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
             request.Position = position;
             request.Environment = environment;
             request.Execution = execution;
+            request.Interaction = interaction;
             return request;
         }
 
@@ -87,7 +89,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
             PlaybackQualityEnvironment? environment = null,
             PlaybackQualityLifecycle? lifecycle = null,
             PlaybackQualityPosition? position = null,
-            PlaybackQualityExecutionEvidence? execution = null)
+            PlaybackQualityExecutionEvidence? execution = null,
+            PlaybackQualityInteractionEvidence? interaction = null)
         {
             return PlaybackQualityReportComposer.Compose(
                 CreateRequest(
@@ -99,7 +102,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
                     environment,
                     lifecycle,
                     position,
-                    execution));
+                    execution,
+                    interaction));
         }
 
         public static PlaybackQualityRunResult ComposeErrorRunResult(

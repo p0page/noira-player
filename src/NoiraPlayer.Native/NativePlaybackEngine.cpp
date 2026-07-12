@@ -185,6 +185,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         metrics.SoftwareDecodedVideoFrames(snapshot.SoftwareDecodedVideoFrames);
         metrics.RenderedVideoFrames(snapshot.RenderedVideoFrames);
         metrics.SubmittedAudioFrames(snapshot.SubmittedAudioFrames);
+        metrics.SelectedAudioStreamIndex(m_graph->SelectedAudioStreamIndex().value_or(-1));
         metrics.SubtitleDecodedCueCount(m_graph->SubtitleDecodedCueCount());
         metrics.SubtitleCueRenderCount(m_graph->SubtitleCueRenderCount());
         metrics.SelectedSubtitleStreamIndex(
@@ -273,6 +274,21 @@ namespace winrt::NoiraPlayer::Native::implementation
         metrics.AudioVideoDriftMsP95(snapshot.AudioVideoDriftMsP95);
         metrics.AudioVideoDriftMsP99(snapshot.AudioVideoDriftMsP99);
         metrics.AudioVideoDriftMsMax(snapshot.AudioVideoDriftMsMax);
+        std::scoped_lock interactionLock(m_interactionTimingMutex);
+        auto const& interaction = m_lastInteractionTiming;
+        metrics.LastInteractionScenario(m_lastInteractionScenario);
+        metrics.LastInteractionSequence(m_lastInteractionSequence);
+        metrics.LastInteractionLockWaitDurationMs(interaction.LockWaitDurationMs);
+        metrics.LastInteractionExecutionDurationMs(interaction.ExecutionDurationMs);
+        metrics.LastInteractionQuiesceDurationMs(interaction.QuiesceDurationMs);
+        metrics.LastInteractionSeekDurationMs(interaction.SeekDurationMs);
+        metrics.LastInteractionDecoderOpenDurationMs(interaction.DecoderOpenDurationMs);
+        metrics.LastInteractionRendererOpenDurationMs(interaction.RendererOpenDurationMs);
+        metrics.LastInteractionPacketCacheHit(interaction.PacketCacheHit);
+        metrics.LastInteractionPacketCacheEnabled(interaction.PacketCacheEnabled);
+        metrics.LastInteractionPacketCachePacketCount(interaction.PacketCachePacketCount);
+        metrics.LastInteractionPacketCacheBytes(interaction.PacketCacheBytes);
+        metrics.LastInteractionPacketCacheWindowDurationTicks(interaction.PacketCacheWindowDurationTicks);
         return metrics;
     }
 
@@ -290,6 +306,7 @@ namespace winrt::NoiraPlayer::Native::implementation
             co_await winrt::resume_background();
 
             AppendNativePlaybackDiagnostic(L"NativePlaybackEngine.OpenAsync graph Open begin");
+            ResetLastInteractionTiming();
             m_graph->Open(graphRequest);
             AppendNativePlaybackDiagnostic(L"NativePlaybackEngine.OpenAsync graph Open end");
             m_positionTicks = m_graph->CurrentPositionTicks();
@@ -386,6 +403,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         try
         {
             m_graph->Stop();
+            ResetLastInteractionTiming();
             m_positionTicks = m_graph->CurrentPositionTicks();
 
             auto display = m_hdr.RestoreInitialState();
@@ -411,7 +429,8 @@ namespace winrt::NoiraPlayer::Native::implementation
         co_await winrt::resume_background();
         try
         {
-            m_graph->SwitchAudioStream(audioStreamIndex);
+            auto const timing = m_graph->SwitchAudioStream(audioStreamIndex);
+            StoreLastInteractionTiming(L"audio-switch", timing);
         }
         catch (winrt::hresult_error const& error)
         {
@@ -431,7 +450,8 @@ namespace winrt::NoiraPlayer::Native::implementation
         co_await winrt::resume_background();
         try
         {
-            m_graph->SwitchSubtitleStream(subtitleStreamIndex);
+            auto const timing = m_graph->SwitchSubtitleStream(subtitleStreamIndex);
+            StoreLastInteractionTiming(L"subtitle-switch", timing);
         }
         catch (winrt::hresult_error const& error)
         {
@@ -451,7 +471,8 @@ namespace winrt::NoiraPlayer::Native::implementation
         co_await winrt::resume_background();
         try
         {
-            m_graph->SwitchSubtitleStream(std::nullopt);
+            auto const timing = m_graph->SwitchSubtitleStream(std::nullopt);
+            StoreLastInteractionTiming(L"subtitle-switch", timing);
         }
         catch (winrt::hresult_error const& error)
         {
@@ -463,6 +484,24 @@ namespace winrt::NoiraPlayer::Native::implementation
         }
 
         co_return;
+    }
+
+    void NativePlaybackEngine::ResetLastInteractionTiming() noexcept
+    {
+        std::scoped_lock lock(m_interactionTimingMutex);
+        m_lastInteractionTiming = {};
+        m_lastInteractionScenario = L"";
+        m_lastInteractionSequence = 0;
+    }
+
+    void NativePlaybackEngine::StoreLastInteractionTiming(
+        winrt::hstring const& scenario,
+        PlaybackGraphSwitchTiming const& timing) noexcept
+    {
+        std::scoped_lock lock(m_interactionTimingMutex);
+        m_lastInteractionTiming = timing;
+        m_lastInteractionScenario = scenario;
+        ++m_lastInteractionSequence;
     }
 
     void NativePlaybackEngine::ApplySwapChainColorSpace(HdrDisplaySnapshot const& snapshot)

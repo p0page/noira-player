@@ -464,6 +464,55 @@ public sealed class PlaybackQualityRuntimeEvidenceCollectorTests
         Assert.DoesNotContain("position.seekPositionErrorMs", result.ModelAnalysis.MissingEvidence);
     }
 
+    [Fact]
+    public void ComposeRunResult_Preserves_AppHosted_Interaction_Evidence()
+    {
+        var referenceCase = new PlaybackQualityReferenceCase
+        {
+            CaseId = "local/app-audio-switch",
+            ExecutionRequirement = new PlaybackQualityExecutionRequirement
+            {
+                Scenario = PlaybackQualityExecutionScenario.AudioSwitch
+            },
+            Expected = new PlaybackQualityExpected
+            {
+                MaxInteractionRecoveryDurationMs = 2000
+            }
+        };
+        referenceCase.Purpose.Add("tracks");
+        var interaction = new PlaybackQualityInteractionEvidence
+        {
+            Scenario = PlaybackQualityExecutionScenario.AudioSwitch,
+            Attempted = true,
+            OperationDurationMs = 40,
+            LockWaitDurationMs = 0,
+            ExecutionDurationMs = 38,
+            QuiesceDurationMs = 0,
+            SeekDurationMs = 0,
+            DecoderOpenDurationMs = 0.1,
+            RendererOpenDurationMs = 1,
+            PacketCacheEnabled = true,
+            PacketCacheHit = true,
+            PacketCachePacketCount = 176,
+            PacketCacheBytes = 180224,
+            PacketCacheWindowDurationTicks = 18_660_000,
+            RecoveryDurationMs = 150,
+            PositionDeltaTicks = 2_000_000,
+            SubmittedAudioFrameDelta = 7,
+            RenderedVideoFrameDelta = 4,
+            SubtitleCueRenderCountDelta = 0
+        };
+
+        var result = PlaybackQualityRuntimeEvidenceCollector.ComposeRunResult(
+            referenceCase,
+            CreateDescriptor(),
+            interaction: interaction);
+
+        Assert.Equal(150, result.Report.Interaction.RecoveryDurationMs);
+        Assert.True(result.Report.Interaction.PacketCacheHit);
+        Assert.Equal(176UL, result.Report.Interaction.PacketCachePacketCount);
+    }
+
     private static PlaybackDescriptor CreateDescriptor()
     {
         var source = new EmbyMediaSource

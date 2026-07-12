@@ -7,6 +7,7 @@
 
 #include <exception>
 #include <memory>
+#include <mutex>
 
 namespace winrt::NoiraPlayer::Native::implementation
 {
@@ -39,6 +40,10 @@ namespace winrt::NoiraPlayer::Native::implementation
         void RaiseFailed(winrt::hresult_error const& error);
         void Raise(NoiraPlayer::Native::NativePlaybackState state, winrt::hstring const& message = L"");
         void UpdateDisplayStatus(HdrDisplaySnapshot const& snapshot);
+        void ResetLastInteractionTiming() noexcept;
+        void StoreLastInteractionTiming(
+            winrt::hstring const& scenario,
+            PlaybackGraphSwitchTiming const& timing) noexcept;
 
         winrt::event<NoiraPlayer::Native::NativePlaybackStateChangedHandler> m_stateChanged;
         DxDeviceResources m_dx;
@@ -46,6 +51,10 @@ namespace winrt::NoiraPlayer::Native::implementation
         HdrDisplayController m_hdr;
         int64_t m_positionTicks{0};
         NoiraPlayer::Native::NativePlaybackStatus m_displayStatus{nullptr};
+        mutable std::mutex m_interactionTimingMutex;
+        PlaybackGraphSwitchTiming m_lastInteractionTiming;
+        winrt::hstring m_lastInteractionScenario;
+        uint64_t m_lastInteractionSequence{0};
     };
 }
 

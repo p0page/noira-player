@@ -1217,3 +1217,13 @@ FFmpeg HTTP `multiple_requests=1` 在当前私有 Emby/反代链路产生 premat
 原因：Kodi 的切流 seek 依赖完整 player messenger/demux 状态机；当前项目直接在交互调用内同步远端 seek，三轮证据显示秒级停顿几乎全部来自该 I/O。把整个 Kodi 状态机搬入项目过重，而有界 packet cache 利用正常播放已经读取的数据，能保持单 demux reader 和现有 decoder/renderer 边界，并保留确定性回退。
 
 门禁：report 必须同时写出 cache enabled/hit、packet count、bytes、window、seek phase 及真实播放增量。测试可通过 `NOIRAPLAYER_QA_DISABLE_SWITCH_PACKET_CACHE=1` 在同一 revision 上关闭策略，形成可归因基线；该开关只允许测试使用，不能改变 manifest expected 或省略证据。真实三轮候选均命中、seek 为 0 且低于 2000ms SLO；一次慢基线的 PGS cue/position 证据不足被 strict validator 拒绝，证明操作返回本身仍不能冒充完成。
+
+# 2026-07-12: App-hosted 交互证据由 native phase 与 App recovery 组合
+
+决策：不修改现有 WinRT `IAsyncAction` 切流 API，也不解析日志。`NativePlaybackEngine` 保存 `PlaybackGraphSwitchTiming` 的最近一次 scenario-tagged、sequenced 快照，经 `NativePlaybackQualityMetrics` 和 Core snapshot 无损透传；App 用 `Stopwatch` 测 operation/recovery/cue，并用操作前后 runtime metrics 计算 delta，最终显式传给 report composer。
+
+一致性：open/stop 清空最近快照；after sequence 必须大于 before 且 scenario 必须相同，否则拒绝组合并留下 evidence failure。显式 `false`/`0` 依靠 sequence 区分于“未观测”。audio recovery 要求目标轨、position 和 submitted audio 前进；subtitle recovery 要求目标轨、position 和 rendered video 前进，cue render 单独计时。不得用 cue 替代视频恢复，也不得用最终 selected index 替代完整交互证据。
+
+音轨选择：App-hosted 场景必须使用 native graph 报告的 `SelectedAudioStreamIndex` 判断当前轨，descriptor 的 nullable preference 只能作为 native metrics 不可用时的回退。真实 App 已证明 null descriptor 不代表没有默认音轨；按它选目标会重复打开当前音轨并制造远端 seek。该规则是通用状态对齐，不是私有 case 补丁。
+
+边界：startup 质量与 interaction 质量独立。PGS App 报告可以同时拥有完整、达标的 interaction evidence 和超限 startup failure；不得为了让 case 总体 pass 而删除 startup 检查或放宽 7 秒阈值。

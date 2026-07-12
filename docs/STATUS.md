@@ -1125,3 +1125,13 @@ native demux 现在会为未激活的音轨和字幕轨保留滚动 packet cache
 同一私有 Emby manifest、同一当前 helper/schema 下完成了禁用与启用缓存各三轮实播。禁用时 audio-switch operation/recovery 为 `2241.46-3920.96ms / 2510.45-4483.36ms`，PGS subtitle-switch 为 `526.81-1864.12ms / 3818.88-9654.07ms`，主要耗时仍是远端 seek。启用时三轮 audio-switch 为 `38.71-40.73ms / 91.01-151.33ms`，PGS 为 `0.60-0.84ms / 157.50-182.40ms`；全部明确记录 `packetCacheEnabled=true`、`packetCacheHit=true`、`seekDurationMs=0`，并保留真实 position、audio、video 和 cue 增量。实际缓存规模稳定为音轨 `176 packets / 180224 bytes / 1.866s`、字幕 `26 packets / 418968 bytes / 1.043s`，远低于上限。
 
 三轮候选 report-set 均为 `2/2 matched`、0 validation error。慢基线前两轮结构有效；第三轮 PGS 虽返回操作结束，但 cue 为 `0->0` 且位置倒退，strict validator 因缺少 position/cue 必要证据正确拒绝为 `1/2 matched`。该样本保留为基线不稳定/证据不足，不能删除、补默认值或算作播放器通过。当前结果证明 Windows App-free native 交互策略改善；完整 Core gate、完整 App 编译和 App-hosted 代表性复核仍是本轮剩余门禁。
+
+# 2026-07-12 更新：切流候选完成完整 App-hosted 证据复核
+
+完整 App 的 `quality-run` 现在能把 native 最近一次切流 phase/cache 快照与 App 单调时钟观测组合为 v14 typed interaction evidence。WinRT metrics 新增 scenario/sequence、lock/execution/quiesce/seek/decoder/renderer、cache hit/size/window，并在 open/stop 清空；App 独立测量 operation、播放 recovery、字幕 cue duration 以及 position/audio/video/cue delta。lifecycle 文本和日志不参与字段生成。
+
+首轮 RED App 实播成功切流但 `interaction` 全空，strict evaluator 正确判为 insufficient instrumentation。桥接后第一次音轨实播又暴露场景错误：descriptor 的 audio index 为 null，而 native 实际已播放默认音轨 1，App 因而重复切到音轨 1并 cache miss，operation/recovery 为 `5006.50/6024.91ms`、seek `4962.11ms`。新增真实 `SelectedAudioStreamIndex` bridge 后，App 按 native 当前轨从 1 切到 2，不再针对具体 case 硬编码目标。
+
+最终 App-hosted audio-switch 为 pass：operation/recovery `46.01/154.91ms`、cache hit、seek `0ms`、缓存 `216 packets / 221184 bytes / 2.293s`，position/audio/video delta 为 `920000 / 30 / 1`。PGS subtitle-switch 的交互本身通过：operation/recovery/cue `0.42/346.51/346.51ms`、cache hit、seek `0ms`，position/video/cue delta 为 `3400000 / 1 / 1`；报告整体仍因冷启动 `37764.07ms > 7000ms` 为 fail，未放宽阈值。
+
+两份完整 App 报告已用 exact 两 case 私有 manifest 重新 materialize，strict structure/execution validation 为 `2/2 matched`、0 error。完整 Core gate 的 32 个阶段全部通过，包含 `562/562` Core 测试和约 240 秒 native-headless smoke；完整 Modern App Debug x64 build 也已生成最新 `NoiraPlayer.Native.dll` 与 `NoiraPlayer.App.dll`。私有凭据、case ID 和报告只保存在 ignored `docs/qa/private/app-hosted`。冷启动网络/stream-info 延迟应作为下一项独立 startup case 调查。

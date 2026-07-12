@@ -1407,7 +1407,7 @@ namespace NoiraPlayer.App.Views
                     GetCurrentPositionTicks(),
                     _orchestrator.State.ToString());
                 var position = CreateQualityRunPosition(request.StartPositionTicks);
-                await RunQualityRunScenarioAsync(
+                var interaction = await RunQualityRunScenarioAsync(
                     request,
                     descriptor,
                     lifecycle,
@@ -1441,7 +1441,8 @@ namespace NoiraPlayer.App.Views
                     environment,
                     lifecycle,
                     position,
-                    execution);
+                    execution,
+                    interaction);
                 if (result.Report.Execution.SourceOpened)
                 {
                     result.Report.Execution.OpenedSourceHash =
@@ -1498,7 +1499,7 @@ namespace NoiraPlayer.App.Views
             };
         }
 
-        private async Task RunQualityRunScenarioAsync(
+        private async Task<PlaybackQualityInteractionEvidence?> RunQualityRunScenarioAsync(
             PlaybackLaunchRequest request,
             PlaybackDescriptor descriptor,
             PlaybackQualityLifecycle lifecycle,
@@ -1508,6 +1509,7 @@ namespace NoiraPlayer.App.Views
             var duration = TimeSpan.FromSeconds(request.QualityRunDurationSeconds);
             var firstDelay = GetQualityRunProbeDelay(duration, 0.20);
             var shortDelay = GetQualityRunProbeDelay(duration, 0.05);
+            PlaybackQualityInteractionEvidence? interaction = null;
 
             switch (request.QualityScenario)
             {
@@ -1573,12 +1575,12 @@ namespace NoiraPlayer.App.Views
 
                 case PlaybackQualityExecutionScenario.AudioSwitch:
                     await Task.Delay(firstDelay);
-                    await RunQualityRunAudioSwitchScenarioAsync(descriptor, lifecycle);
+                    interaction = await RunQualityRunAudioSwitchScenarioAsync(descriptor, lifecycle);
                     break;
 
                 case PlaybackQualityExecutionScenario.SubtitleSwitch:
                     await Task.Delay(firstDelay);
-                    await RunQualityRunSubtitleSwitchScenarioAsync(descriptor, lifecycle);
+                    interaction = await RunQualityRunSubtitleSwitchScenarioAsync(descriptor, lifecycle);
                     break;
 
                 case PlaybackQualityExecutionScenario.Playback:
@@ -1594,14 +1596,22 @@ namespace NoiraPlayer.App.Views
             {
                 await Task.Delay(duration - elapsed);
             }
+
+            return interaction;
         }
 
-        private async Task RunQualityRunAudioSwitchScenarioAsync(
+        private async Task<PlaybackQualityInteractionEvidence?> RunQualityRunAudioSwitchScenarioAsync(
             PlaybackDescriptor descriptor,
             PlaybackQualityLifecycle lifecycle)
         {
+            var positionBeforeTicks = GetCurrentPositionTicks();
+            var hasBeforeMetrics = TryReadQualityRunMetrics(out var beforeMetrics);
+            beforeMetrics.VideoPositionTicks = positionBeforeTicks;
+            var selectedBefore = beforeMetrics.SelectedAudioStreamIndex >= 0
+                ? beforeMetrics.SelectedAudioStreamIndex
+                : descriptor.AudioStreamIndex.GetValueOrDefault(-1);
             var target = descriptor.MediaSource.AudioStreams.FirstOrDefault(
-                stream => stream.Index != descriptor.AudioStreamIndex);
+                stream => stream.Index != selectedBefore);
             if (target == null)
             {
                 AddQualityRunLifecycleEvent(
@@ -1609,27 +1619,27 @@ namespace NoiraPlayer.App.Views
                     "audio-switch",
                     "failed",
                     "app-hosted audio-switch scenario has no alternative audio stream");
-                return;
+                return null;
             }
 
-            var positionBeforeTicks = GetCurrentPositionTicks();
-            TryReadQualityRunInteractionMetrics(
-                out _,
-                out var submittedAudioFramesBefore);
+            var submittedAudioFramesBefore = beforeMetrics.SubmittedAudioFrames;
+            var stopwatch = Stopwatch.StartNew();
             await _orchestrator.SwitchAudioStreamAsync(target.Index);
+            var operationDurationMs = stopwatch.Elapsed.TotalMilliseconds;
             var timeoutAt = DateTimeOffset.UtcNow.AddSeconds(8);
             var selected = _orchestrator.CurrentDescriptor?.AudioStreamIndex ?? -1;
             var positionAfterTicks = GetCurrentPositionTicks();
             var submittedAudioFramesAfter = submittedAudioFramesBefore;
             var recovered = false;
+            var hasAfterMetrics = false;
+            var afterMetrics = new PlaybackQualityMetricsSnapshot();
             while (DateTimeOffset.UtcNow < timeoutAt)
             {
                 await Task.Delay(TimeSpan.FromMilliseconds(100));
                 selected = _orchestrator.CurrentDescriptor?.AudioStreamIndex ?? -1;
                 positionAfterTicks = GetCurrentPositionTicks();
-                TryReadQualityRunInteractionMetrics(
-                    out _,
-                    out submittedAudioFramesAfter);
+                hasAfterMetrics = TryReadQualityRunMetrics(out afterMetrics);
+                submittedAudioFramesAfter = afterMetrics.SubmittedAudioFrames;
                 recovered = PlaybackQualityInteractionEvidencePolicy.IsAudioSwitchRecovered(
                     target.Index,
                     selected,
@@ -1642,6 +1652,8 @@ namespace NoiraPlayer.App.Views
                     break;
                 }
             }
+            var recoveryDurationMs = stopwatch.Elapsed.TotalMilliseconds;
+            afterMetrics.VideoPositionTicks = positionAfterTicks;
             AddQualityRunLifecycleEvent(
                 lifecycle,
                 "audio-switch",
@@ -1651,6 +1663,17 @@ namespace NoiraPlayer.App.Views
                 " position=" + positionBeforeTicks + "->" + positionAfterTicks +
                 " submittedAudioFrames=" + submittedAudioFramesBefore +
                 "->" + submittedAudioFramesAfter);
+
+            return hasBeforeMetrics && hasAfterMetrics
+                ? CreateQualityRunInteractionEvidence(
+                    "audio-switch",
+                    operationDurationMs,
+                    recoveryDurationMs,
+                    null,
+                    beforeMetrics,
+                    afterMetrics,
+                    lifecycle)
+                : null;
         }
 
         private bool TryReadQualityRunInteractionMetrics(
@@ -1671,7 +1694,15 @@ namespace NoiraPlayer.App.Views
             return true;
         }
 
-        private async Task RunQualityRunSubtitleSwitchScenarioAsync(
+        private bool TryReadQualityRunMetrics(out PlaybackQualityMetricsSnapshot metrics)
+        {
+            metrics = new PlaybackQualityMetricsSnapshot();
+            return _backend is IPlaybackQualityMetricsProvider provider &&
+                provider.TryGetQualityMetrics(out metrics) &&
+                metrics != null;
+        }
+
+        private async Task<PlaybackQualityInteractionEvidence?> RunQualityRunSubtitleSwitchScenarioAsync(
             PlaybackDescriptor descriptor,
             PlaybackQualityLifecycle lifecycle)
         {
@@ -1684,7 +1715,7 @@ namespace NoiraPlayer.App.Views
                     "subtitle-switch",
                     "failed",
                     "app-hosted subtitle-switch scenario has no selectable subtitle stream");
-                return;
+                return null;
             }
 
             var baselineCueCount = ReadQualityRunSubtitleCueCount();
@@ -1695,7 +1726,12 @@ namespace NoiraPlayer.App.Views
                 "pause",
                 "success",
                 "app-hosted subtitle-switch scenario paused playback");
+            var positionBeforeTicks = GetCurrentPositionTicks();
+            var hasBeforeMetrics = TryReadQualityRunMetrics(out var beforeMetrics);
+            beforeMetrics.VideoPositionTicks = positionBeforeTicks;
+            var stopwatch = Stopwatch.StartNew();
             await _orchestrator.SwitchSubtitleStreamAsync(target.Index);
+            var operationDurationMs = stopwatch.Elapsed.TotalMilliseconds;
             await _orchestrator.ResumeAsync();
             AddQualityRunLifecycleEvent(
                 lifecycle,
@@ -1707,29 +1743,98 @@ namespace NoiraPlayer.App.Views
             var selectedIndex = -1;
             var decodedCueCount = baselineDecodedCueCount;
             var cueCount = baselineCueCount;
+            var positionAfterTicks = positionBeforeTicks;
+            var renderedVideoFramesAfter = beforeMetrics.RenderedVideoFrames;
+            var playbackRecovered = false;
+            double? recoveryDurationMs = null;
+            double? cueRenderDurationMs = null;
+            var hasAfterMetrics = false;
+            var afterMetrics = new PlaybackQualityMetricsSnapshot();
             while (DateTimeOffset.UtcNow < timeoutAt)
             {
                 await Task.Delay(TimeSpan.FromMilliseconds(100));
-                if (TryReadQualityRunSubtitleState(
+                var hasSubtitleState = TryReadQualityRunSubtitleState(
                         out selectedIndex,
                         out decodedCueCount,
-                        out cueCount) &&
+                        out cueCount);
+                hasAfterMetrics = TryReadQualityRunMetrics(out afterMetrics);
+                positionAfterTicks = GetCurrentPositionTicks();
+                renderedVideoFramesAfter = afterMetrics.RenderedVideoFrames;
+                if (!playbackRecovered &&
+                    selectedIndex == target.Index &&
+                    positionAfterTicks > positionBeforeTicks &&
+                    renderedVideoFramesAfter > beforeMetrics.RenderedVideoFrames)
+                {
+                    playbackRecovered = true;
+                    recoveryDurationMs = stopwatch.Elapsed.TotalMilliseconds;
+                }
+                if (!cueRenderDurationMs.HasValue &&
+                    hasSubtitleState &&
                     selectedIndex == target.Index &&
                     cueCount > baselineCueCount)
+                {
+                    cueRenderDurationMs = stopwatch.Elapsed.TotalMilliseconds;
+                }
+                if (playbackRecovered && cueRenderDurationMs.HasValue)
                 {
                     break;
                 }
             }
 
-            var succeeded = selectedIndex == target.Index && cueCount > baselineCueCount;
+            var succeeded = playbackRecovered && cueRenderDurationMs.HasValue;
+            afterMetrics.VideoPositionTicks = positionAfterTicks;
             AddQualityRunLifecycleEvent(
                 lifecycle,
                 "subtitle-switch",
                 succeeded ? "success" : "failed",
                 "app-hosted subtitle-switch target=" + target.Index +
                 " selected=" + selectedIndex +
+                " position=" + positionBeforeTicks + "->" + positionAfterTicks +
+                " renderedVideoFrames=" + beforeMetrics.RenderedVideoFrames + "->" + renderedVideoFramesAfter +
                 " decodedCueCount=" + baselineDecodedCueCount + "->" + decodedCueCount +
                 " cueRenderCount=" + baselineCueCount + "->" + cueCount);
+
+            return hasBeforeMetrics && hasAfterMetrics
+                ? CreateQualityRunInteractionEvidence(
+                    "subtitle-switch",
+                    operationDurationMs,
+                    recoveryDurationMs ?? stopwatch.Elapsed.TotalMilliseconds,
+                    cueRenderDurationMs,
+                    beforeMetrics,
+                    afterMetrics,
+                    lifecycle)
+                : null;
+        }
+
+        private static PlaybackQualityInteractionEvidence? CreateQualityRunInteractionEvidence(
+            string scenario,
+            double operationDurationMs,
+            double recoveryDurationMs,
+            double? cueRenderDurationMs,
+            PlaybackQualityMetricsSnapshot before,
+            PlaybackQualityMetricsSnapshot after,
+            PlaybackQualityLifecycle lifecycle)
+        {
+            try
+            {
+                return PlaybackQualityInteractionCapture.Create(
+                    scenario,
+                    operationDurationMs,
+                    recoveryDurationMs,
+                    cueRenderDurationMs,
+                    before,
+                    after);
+            }
+            catch (InvalidOperationException ex)
+            {
+                lifecycle.Events.Add(new PlaybackQualityLifecycleEvent
+                {
+                    Operation = scenario,
+                    Status = "failed",
+                    Message = "app-hosted interaction evidence rejected: " + ex.Message
+                });
+                return null;
+            }
         }
 
         private ulong ReadQualityRunSubtitleCueCount()
@@ -2014,6 +2119,7 @@ namespace NoiraPlayer.App.Views
                     SoftwareDecodedVideoFrames = source.SoftwareDecodedVideoFrames,
                     RenderedVideoFrames = source.RenderedVideoFrames,
                     SubmittedAudioFrames = source.SubmittedAudioFrames,
+                    SelectedAudioStreamIndex = source.SelectedAudioStreamIndex,
                     SubtitleDecodedCueCount = source.SubtitleDecodedCueCount,
                     SubtitleCueRenderCount = source.SubtitleCueRenderCount,
                     SelectedSubtitleStreamIndex = source.SelectedSubtitleStreamIndex,
@@ -2100,7 +2206,20 @@ namespace NoiraPlayer.App.Views
                     AudioVideoDriftMsP50 = source.AudioVideoDriftMsP50,
                     AudioVideoDriftMsP95 = source.AudioVideoDriftMsP95,
                     AudioVideoDriftMsP99 = source.AudioVideoDriftMsP99,
-                    AudioVideoDriftMsMax = source.AudioVideoDriftMsMax
+                    AudioVideoDriftMsMax = source.AudioVideoDriftMsMax,
+                    LastInteractionScenario = source.LastInteractionScenario,
+                    LastInteractionSequence = source.LastInteractionSequence,
+                    LastInteractionLockWaitDurationMs = source.LastInteractionLockWaitDurationMs,
+                    LastInteractionExecutionDurationMs = source.LastInteractionExecutionDurationMs,
+                    LastInteractionQuiesceDurationMs = source.LastInteractionQuiesceDurationMs,
+                    LastInteractionSeekDurationMs = source.LastInteractionSeekDurationMs,
+                    LastInteractionDecoderOpenDurationMs = source.LastInteractionDecoderOpenDurationMs,
+                    LastInteractionRendererOpenDurationMs = source.LastInteractionRendererOpenDurationMs,
+                    LastInteractionPacketCacheHit = source.LastInteractionPacketCacheHit,
+                    LastInteractionPacketCacheEnabled = source.LastInteractionPacketCacheEnabled,
+                    LastInteractionPacketCachePacketCount = source.LastInteractionPacketCachePacketCount,
+                    LastInteractionPacketCacheBytes = source.LastInteractionPacketCacheBytes,
+                    LastInteractionPacketCacheWindowDurationTicks = source.LastInteractionPacketCacheWindowDurationTicks
                 };
             }
         }
