@@ -1317,6 +1317,11 @@ public sealed class PlaybackQualityEvaluatorTests
                 SeekDurationMs = 20,
                 DecoderOpenDurationMs = 20,
                 RendererOpenDurationMs = 10,
+                PacketCacheHit = true,
+                PacketCacheEnabled = true,
+                PacketCachePacketCount = 120,
+                PacketCacheBytes = 524288,
+                PacketCacheWindowDurationTicks = 150000000,
                 RecoveryDurationMs = 875,
                 CueRenderDurationMs = 5009,
                 PositionDeltaTicks = 710000,
@@ -1349,6 +1354,9 @@ public sealed class PlaybackQualityEvaluatorTests
         Assert.Contains("\"executionDurationMs\": 60", json);
         Assert.Contains("\"seekDurationMs\": 20", json);
         Assert.Contains("\"decoderOpenDurationMs\": 20", json);
+        Assert.Contains("\"packetCacheHit\": true", json);
+        Assert.Contains("\"packetCacheEnabled\": true", json);
+        Assert.Contains("\"packetCachePacketCount\": 120", json);
         Assert.Contains("\"cueRenderDurationMs\": 5009", json);
         Assert.Contains("\"renderedVideoFrameDelta\": 24", json);
         Assert.Contains("\"subtitleCueRenderCountDelta\": 1", json);
@@ -1362,6 +1370,11 @@ public sealed class PlaybackQualityEvaluatorTests
         Assert.Equal(20, parsed.Interaction.SeekDurationMs);
         Assert.Equal(20, parsed.Interaction.DecoderOpenDurationMs);
         Assert.Equal(10, parsed.Interaction.RendererOpenDurationMs);
+        Assert.True(parsed.Interaction.PacketCacheHit);
+        Assert.True(parsed.Interaction.PacketCacheEnabled);
+        Assert.Equal(120UL, parsed.Interaction.PacketCachePacketCount);
+        Assert.Equal(524288UL, parsed.Interaction.PacketCacheBytes);
+        Assert.Equal(150000000, parsed.Interaction.PacketCacheWindowDurationTicks);
         Assert.Equal(5009, parsed.Interaction.CueRenderDurationMs);
         Assert.Equal(24UL, parsed.Interaction.RenderedVideoFrameDelta);
         Assert.Equal(1UL, parsed.Interaction.SubtitleCueRenderCountDelta);

@@ -1117,3 +1117,11 @@ v13 把字幕 cue 增长误写入 `interaction.renderedVideoFrameDelta`，并把
 Kodi 本地源码同样在音轨切换后发送 accurate/backward seek；内嵌字幕切换也明确说明 demux 已领先并丢弃当前时段字幕包，因此重新 seek 读取。差异是 Kodi 通过 player messenger/demux 状态机处理，而本项目当前在 graph 切换调用内同步 seek。FFmpeg `multiple_requests=1` 作为单变量候选已用相同私有 case 实测，但该服务器/反代组合出现 `File ended prematurely`，两个 case 都没有有效播放样本；候选已撤销，失败报告保留在 ignored `docs/qa/private/candidates/http-persistent-v14-repeat-1.local/`，不得宣称改善。
 
 验证：完整 `run-playback-core-checks.ps1` 全绿，包含 556 项定向 Core 测试、parser 负向契约、真实 native-headless、网络恢复、独立 C++ 回归与 Native Debug x64 build；统一 `tools/Build-Noira.ps1 -Target Build -Configuration Debug -Platform x64` 也已重新编译完整 Modern App 并生成 `NoiraPlayer.App.dll`。本轮只增强证据并定位根因，没有宣称切流性能已经改善。
+
+# 2026-07-12 更新：有界轨道包缓存消除远端切流同步 seek
+
+native demux 现在会为未激活的音轨和字幕轨保留滚动 packet cache；每条流最多 `4096` 包、`8 MiB`、`30s`。切换时只有缓存覆盖当前播放位置才允许复用；音轨还要求缓存跨过当前位置，字幕要求存在当前位置之前的历史包。覆盖不足或显式关闭缓存时，仍走原有 seek 路径，不把 cache miss 伪装成成功。
+
+同一私有 Emby manifest、同一当前 helper/schema 下完成了禁用与启用缓存各三轮实播。禁用时 audio-switch operation/recovery 为 `2241.46-3920.96ms / 2510.45-4483.36ms`，PGS subtitle-switch 为 `526.81-1864.12ms / 3818.88-9654.07ms`，主要耗时仍是远端 seek。启用时三轮 audio-switch 为 `38.71-40.73ms / 91.01-151.33ms`，PGS 为 `0.60-0.84ms / 157.50-182.40ms`；全部明确记录 `packetCacheEnabled=true`、`packetCacheHit=true`、`seekDurationMs=0`，并保留真实 position、audio、video 和 cue 增量。实际缓存规模稳定为音轨 `176 packets / 180224 bytes / 1.866s`、字幕 `26 packets / 418968 bytes / 1.043s`，远低于上限。
+
+三轮候选 report-set 均为 `2/2 matched`、0 validation error。慢基线前两轮结构有效；第三轮 PGS 虽返回操作结束，但 cue 为 `0->0` 且位置倒退，strict validator 因缺少 position/cue 必要证据正确拒绝为 `1/2 matched`。该样本保留为基线不稳定/证据不足，不能删除、补默认值或算作播放器通过。当前结果证明 Windows App-free native 交互策略改善；完整 Core gate、完整 App 编译和 App-hosted 代表性复核仍是本轮剩余门禁。

@@ -27,6 +27,10 @@ namespace
     using SteadyClock = std::chrono::steady_clock;
     constexpr int64_t OpenTimeoutMilliseconds = 30'000;
     constexpr int64_t ReadTimeoutMilliseconds = 20'000;
+    constexpr uint64_t MaxSwitchPacketCacheBytesPerStream = 8ULL * 1024ULL * 1024ULL;
+    constexpr size_t MaxSwitchPacketCachePacketsPerStream = 4096;
+    constexpr int64_t MaxSwitchPacketCacheDurationTicks = 30LL * 10'000'000LL;
+    constexpr int64_t SwitchPacketCoverageToleranceTicks = 250LL * 10'000LL;
     constexpr AVRational HundredNanosecondTimeBase{1, 10'000'000};
 
     int64_t SteadyClockNanoseconds() noexcept
@@ -512,6 +516,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         Interrupt();
         ClearPacketQueues();
         m_activeStreams.clear();
+        m_switchCacheStreams.clear();
 
         if (m_formatContext != nullptr)
         {
@@ -703,6 +708,11 @@ namespace winrt::NoiraPlayer::Native::implementation
     {
         m_activeStreams.erase(streamIndex);
 
+        if (m_switchCacheStreams.find(streamIndex) != m_switchCacheStreams.end())
+        {
+            return;
+        }
+
         auto packetQueue = m_packetQueues.find(streamIndex);
         if (packetQueue == m_packetQueues.end())
         {
@@ -715,6 +725,67 @@ namespace winrt::NoiraPlayer::Native::implementation
         }
 
         m_packetQueues.erase(packetQueue);
+        m_packetQueueBytes.erase(streamIndex);
+    }
+
+    void FfmpegMediaSource::ConfigureSwitchPacketCache(
+        std::vector<int32_t> const& streamIndexes)
+    {
+        m_switchCacheStreams.clear();
+        for (auto streamIndex : streamIndexes)
+        {
+            if (Stream(streamIndex) != nullptr)
+            {
+                m_switchCacheStreams.insert(streamIndex);
+            }
+        }
+    }
+
+    FfmpegSwitchPacketCacheSnapshot FfmpegMediaSource::SwitchPacketCacheSnapshot(
+        int32_t streamIndex,
+        int64_t positionTicks,
+        bool requirePacketAtOrAfter) const
+    {
+        FfmpegSwitchPacketCacheSnapshot snapshot;
+        auto queue = m_packetQueues.find(streamIndex);
+        if (queue == m_packetQueues.end() || queue->second.empty())
+        {
+            return snapshot;
+        }
+
+        snapshot.PacketCount = static_cast<uint64_t>(queue->second.size());
+        auto byteCount = m_packetQueueBytes.find(streamIndex);
+        snapshot.Bytes = byteCount == m_packetQueueBytes.end() ? 0 : byteCount->second;
+
+        std::optional<int64_t> earliest;
+        std::optional<int64_t> latest;
+        for (auto packet : queue->second)
+        {
+            auto packetPosition = PacketPositionTicks(packet);
+            if (!packetPosition.has_value())
+            {
+                continue;
+            }
+
+            earliest = !earliest.has_value()
+                ? packetPosition
+                : std::optional<int64_t>{(std::min)(earliest.value(), packetPosition.value())};
+            latest = !latest.has_value()
+                ? packetPosition
+                : std::optional<int64_t>{(std::max)(latest.value(), packetPosition.value())};
+        }
+
+        if (!earliest.has_value() || earliest.value() > positionTicks + SwitchPacketCoverageToleranceTicks)
+        {
+            return snapshot;
+        }
+
+        snapshot.WindowDurationTicks = latest.has_value()
+            ? (std::max<int64_t>)(0, latest.value() - earliest.value())
+            : 0;
+        snapshot.HasCoverage = !requirePacketAtOrAfter ||
+            (latest.has_value() && latest.value() + SwitchPacketCoverageToleranceTicks >= positionTicks);
+        return snapshot;
     }
 
     bool FfmpegMediaSource::TryReadPacket(int32_t streamIndex, AVPacket* packet)
@@ -844,6 +915,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         }
 
         m_packetQueues.clear();
+        m_packetQueueBytes.clear();
     }
 
     bool FfmpegMediaSource::TryTakeQueuedPacket(int32_t streamIndex, AVPacket* packet)
@@ -856,6 +928,14 @@ namespace winrt::NoiraPlayer::Native::implementation
 
         auto queuedPacket = packetQueue->second.front();
         packetQueue->second.pop_front();
+        auto queuedBytes = queuedPacket->size > 0 ? static_cast<uint64_t>(queuedPacket->size) : 0;
+        auto byteCount = m_packetQueueBytes.find(streamIndex);
+        if (byteCount != m_packetQueueBytes.end())
+        {
+            byteCount->second = byteCount->second > queuedBytes
+                ? byteCount->second - queuedBytes
+                : 0;
+        }
         av_packet_move_ref(packet, queuedPacket);
         av_packet_free(&queuedPacket);
         return true;
@@ -863,7 +943,8 @@ namespace winrt::NoiraPlayer::Native::implementation
 
     bool FfmpegMediaSource::ShouldQueueStream(int32_t streamIndex) const
     {
-        return m_activeStreams.find(streamIndex) != m_activeStreams.end();
+        return m_activeStreams.find(streamIndex) != m_activeStreams.end() ||
+            m_switchCacheStreams.find(streamIndex) != m_switchCacheStreams.end();
     }
 
     void FfmpegMediaSource::QueuePacket(AVPacket* packet)
@@ -876,5 +957,71 @@ namespace winrt::NoiraPlayer::Native::implementation
 
         av_packet_move_ref(queuedPacket, packet);
         m_packetQueues[queuedPacket->stream_index].push_back(queuedPacket);
+        if (queuedPacket->size > 0)
+        {
+            m_packetQueueBytes[queuedPacket->stream_index] +=
+                static_cast<uint64_t>(queuedPacket->size);
+        }
+        TrimSwitchPacketCache(queuedPacket->stream_index);
+    }
+
+    void FfmpegMediaSource::TrimSwitchPacketCache(int32_t streamIndex) noexcept
+    {
+        if (m_switchCacheStreams.find(streamIndex) == m_switchCacheStreams.end() ||
+            m_activeStreams.find(streamIndex) != m_activeStreams.end())
+        {
+            return;
+        }
+
+        auto queue = m_packetQueues.find(streamIndex);
+        if (queue == m_packetQueues.end())
+        {
+            return;
+        }
+
+        auto& packets = queue->second;
+        auto& bytes = m_packetQueueBytes[streamIndex];
+        while (!packets.empty())
+        {
+            auto frontPosition = PacketPositionTicks(packets.front());
+            auto backPosition = PacketPositionTicks(packets.back());
+            auto durationExceeded = frontPosition.has_value() && backPosition.has_value() &&
+                backPosition.value() - frontPosition.value() > MaxSwitchPacketCacheDurationTicks;
+            if (packets.size() <= MaxSwitchPacketCachePacketsPerStream &&
+                bytes <= MaxSwitchPacketCacheBytesPerStream &&
+                !durationExceeded)
+            {
+                break;
+            }
+
+            auto packet = packets.front();
+            packets.pop_front();
+            auto packetBytes = packet->size > 0 ? static_cast<uint64_t>(packet->size) : 0;
+            bytes = bytes > packetBytes ? bytes - packetBytes : 0;
+            av_packet_free(&packet);
+        }
+    }
+
+    std::optional<int64_t> FfmpegMediaSource::PacketPositionTicks(
+        AVPacket const* packet) const noexcept
+    {
+        if (packet == nullptr)
+        {
+            return std::nullopt;
+        }
+
+        auto stream = Stream(packet->stream_index);
+        if (stream == nullptr)
+        {
+            return std::nullopt;
+        }
+
+        auto timestamp = packet->pts != AV_NOPTS_VALUE ? packet->pts : packet->dts;
+        if (timestamp == AV_NOPTS_VALUE)
+        {
+            return std::nullopt;
+        }
+
+        return NormalizeTimestampTicks(RescaleToTicks(timestamp, stream->time_base));
     }
 }

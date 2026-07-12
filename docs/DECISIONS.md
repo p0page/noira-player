@@ -1209,3 +1209,11 @@ baseline 版本边界：新增交互恢复契约后的 v13 是后续 Core 策略
 交互 operation 必须同时报告 lock wait、锁内 execution、quiesce、seek、decoder open 和 renderer open 分段。三轮真实证据已证明锁等待约为 0ms，而绝大部分执行耗时来自远端 seek；后续优化必须针对 packet availability、demux/seek 调度或远端 I/O，不得通过缩短 cue 等待、放宽 2000ms SLO 或删除 seek 证明来制造改善。
 
 FFmpeg HTTP `multiple_requests=1` 在当前私有 Emby/反代链路产生 premature EOF，属于不兼容候选，已撤销。任何进一步 HTTP option 调优都必须一次只改变一个变量并以真实 playback report 验证；文档建议不能替代该服务器上的执行证据。
+
+# 2026-07-12: 未激活轨道使用有界 packet cache，命中不足回退 seek
+
+决策：正常 demux 前进时，同时缓存可切换音轨和字幕轨的压缩包。缓存按流限制为最多 `4096` 包、`8 MiB` 和 `30s`，淘汰最旧包；停止播放时全部释放。切换时必须基于 packet timestamp 证明缓存覆盖当前逻辑位置，才可跳过远端 `av_seek_frame`。音轨从缓存解码并沿用 audio preroll 丢弃当前位置之前的帧；字幕从当前位置之前的历史包恢复 cue。cache miss 必须回退原同步 seek，不得返回空队列或伪造切换完成。
+
+原因：Kodi 的切流 seek 依赖完整 player messenger/demux 状态机；当前项目直接在交互调用内同步远端 seek，三轮证据显示秒级停顿几乎全部来自该 I/O。把整个 Kodi 状态机搬入项目过重，而有界 packet cache 利用正常播放已经读取的数据，能保持单 demux reader 和现有 decoder/renderer 边界，并保留确定性回退。
+
+门禁：report 必须同时写出 cache enabled/hit、packet count、bytes、window、seek phase 及真实播放增量。测试可通过 `NOIRAPLAYER_QA_DISABLE_SWITCH_PACKET_CACHE=1` 在同一 revision 上关闭策略，形成可归因基线；该开关只允许测试使用，不能改变 manifest expected 或省略证据。真实三轮候选均命中、seek 为 0 且低于 2000ms SLO；一次慢基线的 PGS cue/position 证据不足被 strict validator 拒绝，证明操作返回本身仍不能冒充完成。

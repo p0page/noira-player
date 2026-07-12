@@ -385,6 +385,11 @@ internal static class NativeHeadlessHarness
                 SeekDurationMs = helper.AudioSwitch.SeekDurationMs,
                 DecoderOpenDurationMs = helper.AudioSwitch.DecoderOpenDurationMs,
                 RendererOpenDurationMs = helper.AudioSwitch.RendererOpenDurationMs,
+                PacketCacheHit = helper.AudioSwitch.PacketCacheHit,
+                PacketCacheEnabled = helper.AudioSwitch.PacketCacheEnabled,
+                PacketCachePacketCount = helper.AudioSwitch.PacketCachePacketCount,
+                PacketCacheBytes = helper.AudioSwitch.PacketCacheBytes,
+                PacketCacheWindowDurationTicks = helper.AudioSwitch.PacketCacheWindowDurationTicks,
                 RecoveryDurationMs = helper.AudioSwitch.RecoveryDurationMs,
                 PositionDeltaTicks = helper.AudioSwitch.PositionAfterTicks -
                     helper.AudioSwitch.PositionBeforeTicks,
@@ -412,6 +417,11 @@ internal static class NativeHeadlessHarness
                 SeekDurationMs = subtitleSwitch.SeekDurationMs,
                 DecoderOpenDurationMs = subtitleSwitch.DecoderOpenDurationMs,
                 RendererOpenDurationMs = subtitleSwitch.RendererOpenDurationMs,
+                PacketCacheHit = subtitleSwitch.PacketCacheHit,
+                PacketCacheEnabled = subtitleSwitch.PacketCacheEnabled,
+                PacketCachePacketCount = subtitleSwitch.PacketCachePacketCount,
+                PacketCacheBytes = subtitleSwitch.PacketCacheBytes,
+                PacketCacheWindowDurationTicks = subtitleSwitch.PacketCacheWindowDurationTicks,
                 RecoveryDurationMs = subtitleSwitch.RecoveryDurationMs,
                 CueRenderDurationMs = subtitleSwitch.CueRenderDurationMs,
                 PositionDeltaTicks = subtitleSwitch.PositionAfterResumeTicks -
@@ -444,7 +454,13 @@ internal static class NativeHeadlessHarness
                 " --scenario " + options.Scenario +
                 (options.PauseSeconds > 0
                     ? " --pause-seconds " + options.PauseSeconds.ToString()
-                    : ""),
+                    : "") +
+                (string.Equals(
+                    Environment.GetEnvironmentVariable("NOIRAPLAYER_QA_DISABLE_SWITCH_PACKET_CACHE"),
+                    "1",
+                    StringComparison.Ordinal)
+                        ? " --disable-switch-packet-cache"
+                        : ""),
             WorkingDirectory = Path.GetDirectoryName(options.NativeHelperExe) ?? "",
             RedirectStandardOutput = true,
             RedirectStandardError = true,
@@ -1049,6 +1065,11 @@ internal static class NativeHeadlessHarness
             !TryGetRequiredNonNegativeDouble(values, "audioSwitchSeekDurationMs", out var seekDurationMs, out error) ||
             !TryGetRequiredNonNegativeDouble(values, "audioSwitchDecoderOpenDurationMs", out var decoderOpenDurationMs, out error) ||
             !TryGetRequiredNonNegativeDouble(values, "audioSwitchRendererOpenDurationMs", out var rendererOpenDurationMs, out error) ||
+            !TryGetAttempted(values, "audioSwitchPacketCacheHit", out var packetCacheHit, out error) ||
+            !TryGetAttempted(values, "audioSwitchPacketCacheEnabled", out var packetCacheEnabled, out error) ||
+            !TryGetRequiredUInt64(values, "audioSwitchPacketCachePacketCount", out var packetCachePacketCount, out error) ||
+            !TryGetRequiredUInt64(values, "audioSwitchPacketCacheBytes", out var packetCacheBytes, out error) ||
+            !TryGetRequiredNonNegativeInt64(values, "audioSwitchPacketCacheWindowDurationTicks", out var packetCacheWindowDurationTicks, out error) ||
             !TryGetRequiredNonNegativeDouble(values, "audioSwitchRecoveryDurationMs", out var recoveryDurationMs, out error))
         {
             return false;
@@ -1067,6 +1088,11 @@ internal static class NativeHeadlessHarness
         outcome.SeekDurationMs = seekDurationMs;
         outcome.DecoderOpenDurationMs = decoderOpenDurationMs;
         outcome.RendererOpenDurationMs = rendererOpenDurationMs;
+        outcome.PacketCacheHit = packetCacheHit;
+        outcome.PacketCacheEnabled = packetCacheEnabled;
+        outcome.PacketCachePacketCount = packetCachePacketCount;
+        outcome.PacketCacheBytes = packetCacheBytes;
+        outcome.PacketCacheWindowDurationTicks = packetCacheWindowDurationTicks;
         outcome.RecoveryDurationMs = recoveryDurationMs;
         return true;
     }
@@ -1106,6 +1132,11 @@ internal static class NativeHeadlessHarness
             !TryGetRequiredNonNegativeDouble(values, prefix + "SeekDurationMs", out var seekDurationMs, out error) ||
             !TryGetRequiredNonNegativeDouble(values, prefix + "DecoderOpenDurationMs", out var decoderOpenDurationMs, out error) ||
             !TryGetRequiredNonNegativeDouble(values, prefix + "RendererOpenDurationMs", out var rendererOpenDurationMs, out error) ||
+            !TryGetAttempted(values, prefix + "PacketCacheHit", out var packetCacheHit, out error) ||
+            !TryGetAttempted(values, prefix + "PacketCacheEnabled", out var packetCacheEnabled, out error) ||
+            !TryGetRequiredUInt64(values, prefix + "PacketCachePacketCount", out var packetCachePacketCount, out error) ||
+            !TryGetRequiredUInt64(values, prefix + "PacketCacheBytes", out var packetCacheBytes, out error) ||
+            !TryGetRequiredNonNegativeInt64(values, prefix + "PacketCacheWindowDurationTicks", out var packetCacheWindowDurationTicks, out error) ||
             !TryGetRequiredNonNegativeDouble(values, prefix + "RecoveryDurationMs", out var recoveryDurationMs, out error) ||
             !TryGetRequiredNonNegativeDouble(values, prefix + "CueRenderDurationMs", out var cueRenderDurationMs, out error) ||
             !TryGetRequiredUInt64(values, prefix + "RenderedFramesBefore", out var renderedFramesBefore, out error) ||
@@ -1131,6 +1162,11 @@ internal static class NativeHeadlessHarness
         outcome.SeekDurationMs = seekDurationMs;
         outcome.DecoderOpenDurationMs = decoderOpenDurationMs;
         outcome.RendererOpenDurationMs = rendererOpenDurationMs;
+        outcome.PacketCacheHit = packetCacheHit;
+        outcome.PacketCacheEnabled = packetCacheEnabled;
+        outcome.PacketCachePacketCount = packetCachePacketCount;
+        outcome.PacketCacheBytes = packetCacheBytes;
+        outcome.PacketCacheWindowDurationTicks = packetCacheWindowDurationTicks;
         outcome.RecoveryDurationMs = recoveryDurationMs;
         outcome.CueRenderDurationMs = cueRenderDurationMs;
         outcome.RenderedFramesBefore = renderedFramesBefore;
@@ -2270,6 +2306,16 @@ internal sealed class NativeHeadlessAudioSwitchOutcome
 
     public double RendererOpenDurationMs { get; set; }
 
+    public bool PacketCacheHit { get; set; }
+
+    public bool PacketCacheEnabled { get; set; }
+
+    public ulong PacketCachePacketCount { get; set; }
+
+    public ulong PacketCacheBytes { get; set; }
+
+    public long PacketCacheWindowDurationTicks { get; set; }
+
     public double RecoveryDurationMs { get; set; }
 }
 
@@ -2310,6 +2356,16 @@ internal sealed class NativeHeadlessSubtitleSwitchOutcome
     public double DecoderOpenDurationMs { get; set; }
 
     public double RendererOpenDurationMs { get; set; }
+
+    public bool PacketCacheHit { get; set; }
+
+    public bool PacketCacheEnabled { get; set; }
+
+    public ulong PacketCachePacketCount { get; set; }
+
+    public ulong PacketCacheBytes { get; set; }
+
+    public long PacketCacheWindowDurationTicks { get; set; }
 
     public double RecoveryDurationMs { get; set; }
 

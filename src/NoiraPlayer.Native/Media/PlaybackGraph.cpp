@@ -60,6 +60,20 @@ namespace winrt::NoiraPlayer::Native::implementation
                 std::to_wstring(request.DirectStreamUrl.size()));
             m_mediaSource.Open(request.DirectStreamUrl);
             m_lastVideoSourceSnapshot = m_mediaSource.BestVideoStreamSnapshot();
+            auto sourceTracks = m_mediaSource.StreamSnapshots();
+            std::vector<int32_t> switchCacheStreams;
+            for (auto const& track : sourceTracks)
+            {
+                if (track.Kind == "Audio" || track.Kind == "Subtitle")
+                {
+                    switchCacheStreams.push_back(track.StreamIndex);
+                }
+            }
+            if (request.EnableSwitchPacketCache)
+            {
+                m_mediaSource.ConfigureSwitchPacketCache(switchCacheStreams);
+            }
+            m_switchPacketCacheEnabled = request.EnableSwitchPacketCache;
             AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open MediaSource.Open end");
             AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open VideoDecoder.Open begin");
             m_videoDecoder.Open(
@@ -236,6 +250,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         m_positionTicks = 0;
         m_positionSnapshotTicks.store(0, std::memory_order_relaxed);
         m_open = false;
+        m_switchPacketCacheEnabled = false;
         m_paused = false;
         m_stopRenderLoop = false;
         m_videoPrerollTargetTicks.reset();
@@ -249,6 +264,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         std::unique_lock lock(m_graphMutex);
         auto const acquiredAt = std::chrono::steady_clock::now();
         PlaybackGraphSwitchTiming timing;
+        timing.PacketCacheEnabled = m_switchPacketCacheEnabled;
         timing.LockWaitDurationMs =
             std::chrono::duration<double, std::milli>(acquiredAt - requestedAt).count();
         if (!m_open)
@@ -264,11 +280,25 @@ namespace winrt::NoiraPlayer::Native::implementation
         auto const quiescedAt = std::chrono::steady_clock::now();
         timing.QuiesceDurationMs =
             std::chrono::duration<double, std::milli>(quiescedAt - acquiredAt).count();
-        m_videoDecoder.Seek(m_positionTicks);
-        SetVideoPrerollTarget(m_positionTicks);
-        auto const soughtAt = std::chrono::steady_clock::now();
-        timing.SeekDurationMs =
-            std::chrono::duration<double, std::milli>(soughtAt - quiescedAt).count();
+        auto const packetCache = m_mediaSource.SwitchPacketCacheSnapshot(
+            audioStreamIndex,
+            m_positionTicks,
+            true);
+        auto const useSwitchPacketCache = packetCache.HasCoverage;
+        timing.PacketCacheHit = packetCache.HasCoverage;
+        timing.PacketCachePacketCount = packetCache.PacketCount;
+        timing.PacketCacheBytes = packetCache.Bytes;
+        timing.PacketCacheWindowDurationTicks = packetCache.WindowDurationTicks;
+        if (!useSwitchPacketCache)
+        {
+            auto const seekStartedAt = std::chrono::steady_clock::now();
+            m_videoDecoder.Seek(m_positionTicks);
+            SetVideoPrerollTarget(m_positionTicks);
+            timing.SeekDurationMs =
+                std::chrono::duration<double, std::milli>(
+                    std::chrono::steady_clock::now() - seekStartedAt).count();
+        }
+        auto const decoderStartedAt = std::chrono::steady_clock::now();
         m_audioDecoder.Open(m_mediaSource, audioStreamIndex, true);
         auto selectedAudioStreamIndex = m_audioDecoder.SelectedStreamIndex();
         if (!selectedAudioStreamIndex.has_value() ||
@@ -281,7 +311,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         m_audioDecoder.Flush(m_positionTicks);
         auto const decoderOpenedAt = std::chrono::steady_clock::now();
         timing.DecoderOpenDurationMs =
-            std::chrono::duration<double, std::milli>(decoderOpenedAt - soughtAt).count();
+            std::chrono::duration<double, std::milli>(decoderOpenedAt - decoderStartedAt).count();
         m_audioRenderer.Open(selectedAudioStreamIndex.value(), true);
         if (shouldResumeAudio)
         {
@@ -303,6 +333,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         std::unique_lock lock(m_graphMutex);
         auto const acquiredAt = std::chrono::steady_clock::now();
         PlaybackGraphSwitchTiming timing;
+        timing.PacketCacheEnabled = m_switchPacketCacheEnabled;
         timing.LockWaitDurationMs =
             std::chrono::duration<double, std::milli>(acquiredAt - requestedAt).count();
         if (!m_open)
@@ -312,6 +343,7 @@ namespace winrt::NoiraPlayer::Native::implementation
 
         auto previousSelection = m_subtitleRenderer.SelectedStreamIndex();
         auto resumePositionTicks = m_positionTicks;
+        auto useSwitchPacketCache = false;
         SubtitleSwitchOperations operations;
         operations.DisableSelection = [this, &timing]
         {
@@ -321,9 +353,18 @@ namespace winrt::NoiraPlayer::Native::implementation
             timing.QuiesceDurationMs += std::chrono::duration<double, std::milli>(
                 std::chrono::steady_clock::now() - startedAt).count();
         };
-        operations.OpenDecoder = [this, &timing](int32_t streamIndex)
+        operations.OpenDecoder = [this, resumePositionTicks, &timing, &useSwitchPacketCache](int32_t streamIndex)
         {
             auto const startedAt = std::chrono::steady_clock::now();
+            auto const packetCache = m_mediaSource.SwitchPacketCacheSnapshot(
+                streamIndex,
+                resumePositionTicks,
+                false);
+            useSwitchPacketCache = packetCache.HasCoverage;
+            timing.PacketCacheHit = packetCache.HasCoverage;
+            timing.PacketCachePacketCount = packetCache.PacketCount;
+            timing.PacketCacheBytes = packetCache.Bytes;
+            timing.PacketCacheWindowDurationTicks = packetCache.WindowDurationTicks;
             m_subtitleDecoder.Open(m_mediaSource, streamIndex);
             timing.DecoderOpenDurationMs += std::chrono::duration<double, std::milli>(
                 std::chrono::steady_clock::now() - startedAt).count();
@@ -332,8 +373,12 @@ namespace winrt::NoiraPlayer::Native::implementation
         {
             return m_subtitleDecoder.SelectedStreamIndex();
         };
-        operations.SeekVideo = [this, resumePositionTicks, &timing]
+        operations.SeekVideo = [this, resumePositionTicks, &timing, &useSwitchPacketCache]
         {
+            if (useSwitchPacketCache)
+            {
+                return;
+            }
             auto const startedAt = std::chrono::steady_clock::now();
             m_pendingVideoFrame.reset();
             ResetAudioAheadWait();
@@ -343,8 +388,12 @@ namespace winrt::NoiraPlayer::Native::implementation
             timing.SeekDurationMs += std::chrono::duration<double, std::milli>(
                 std::chrono::steady_clock::now() - startedAt).count();
         };
-        operations.FlushAudioDecoder = [this, resumePositionTicks, &timing]
+        operations.FlushAudioDecoder = [this, resumePositionTicks, &timing, &useSwitchPacketCache]
         {
+            if (useSwitchPacketCache)
+            {
+                return;
+            }
             auto const startedAt = std::chrono::steady_clock::now();
             m_audioDecoder.Flush(resumePositionTicks);
             timing.QuiesceDurationMs += std::chrono::duration<double, std::milli>(

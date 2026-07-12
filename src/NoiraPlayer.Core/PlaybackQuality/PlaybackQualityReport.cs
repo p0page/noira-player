@@ -162,6 +162,11 @@ namespace NoiraPlayer.Core.PlaybackQuality
         public double? SeekDurationMs { get; set; }
         public double? DecoderOpenDurationMs { get; set; }
         public double? RendererOpenDurationMs { get; set; }
+        public bool? PacketCacheHit { get; set; }
+        public bool? PacketCacheEnabled { get; set; }
+        public ulong? PacketCachePacketCount { get; set; }
+        public ulong? PacketCacheBytes { get; set; }
+        public long? PacketCacheWindowDurationTicks { get; set; }
         public double? RecoveryDurationMs { get; set; }
         public double? CueRenderDurationMs { get; set; }
         public long? PositionDeltaTicks { get; set; }

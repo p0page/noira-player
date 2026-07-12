@@ -65,6 +65,14 @@ namespace winrt::NoiraPlayer::Native::implementation
         double StreamInfoDurationMs{0.0};
     };
 
+    struct FfmpegSwitchPacketCacheSnapshot
+    {
+        bool HasCoverage{false};
+        uint64_t PacketCount{0};
+        uint64_t Bytes{0};
+        int64_t WindowDurationTicks{0};
+    };
+
     class FfmpegMediaSource
     {
     public:
@@ -82,6 +90,11 @@ namespace winrt::NoiraPlayer::Native::implementation
         int64_t NormalizeTimestampTicks(int64_t demuxTicks) const noexcept;
         void RegisterStream(int32_t streamIndex);
         void UnregisterStream(int32_t streamIndex) noexcept;
+        void ConfigureSwitchPacketCache(std::vector<int32_t> const& streamIndexes);
+        FfmpegSwitchPacketCacheSnapshot SwitchPacketCacheSnapshot(
+            int32_t streamIndex,
+            int64_t positionTicks,
+            bool requirePacketAtOrAfter) const;
         bool TryReadPacket(int32_t streamIndex, AVPacket* packet);
         bool TryReadQueuedPacket(int32_t streamIndex, AVPacket* packet);
         void Seek(int32_t streamIndex, int64_t positionTicks);
@@ -93,11 +106,15 @@ namespace winrt::NoiraPlayer::Native::implementation
         bool TryTakeQueuedPacket(int32_t streamIndex, AVPacket* packet);
         bool ShouldQueueStream(int32_t streamIndex) const;
         void QueuePacket(AVPacket* packet);
+        void TrimSwitchPacketCache(int32_t streamIndex) noexcept;
+        std::optional<int64_t> PacketPositionTicks(AVPacket const* packet) const noexcept;
 
         winrt::hstring m_url;
         AVFormatContext* m_formatContext{nullptr};
         std::unordered_set<int32_t> m_activeStreams;
+        std::unordered_set<int32_t> m_switchCacheStreams;
         std::unordered_map<int32_t, std::deque<AVPacket*>> m_packetQueues;
+        std::unordered_map<int32_t, uint64_t> m_packetQueueBytes;
         uint32_t m_avformatVersion{0};
         std::atomic<bool> m_interruptRequested{false};
         std::atomic<int64_t> m_ioDeadlineNanoseconds{0};

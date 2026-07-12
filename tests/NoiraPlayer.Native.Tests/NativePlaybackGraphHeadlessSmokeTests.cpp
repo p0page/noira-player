@@ -37,6 +37,7 @@ namespace
         int PauseSeconds{0};
         int64_t StartPositionTicks{0};
         std::wstring Scenario{L"playback"};
+        bool EnableSwitchPacketCache{true};
     };
 
     struct AudioSwitchOutcome
@@ -55,6 +56,11 @@ namespace
         double SeekDurationMs{0.0};
         double DecoderOpenDurationMs{0.0};
         double RendererOpenDurationMs{0.0};
+        bool PacketCacheHit{false};
+        bool PacketCacheEnabled{false};
+        uint64_t PacketCachePacketCount{0};
+        uint64_t PacketCacheBytes{0};
+        int64_t PacketCacheWindowDurationTicks{0};
         double RecoveryDurationMs{0.0};
     };
 
@@ -80,6 +86,11 @@ namespace
         double SeekDurationMs{0.0};
         double DecoderOpenDurationMs{0.0};
         double RendererOpenDurationMs{0.0};
+        bool PacketCacheHit{false};
+        bool PacketCacheEnabled{false};
+        uint64_t PacketCachePacketCount{0};
+        uint64_t PacketCacheBytes{0};
+        int64_t PacketCacheWindowDurationTicks{0};
         double RecoveryDurationMs{0.0};
         double CueRenderDurationMs{0.0};
     };
@@ -144,6 +155,10 @@ namespace
                 {
                     options.Scenario = std::move(scenario);
                 }
+            }
+            else if (std::wcscmp(argv[index], L"--disable-switch-packet-cache") == 0)
+            {
+                options.EnableSwitchPacketCache = false;
             }
         }
 
@@ -226,6 +241,7 @@ int wmain(int argc, wchar_t** argv)
     PlaybackGraphOpenRequest request{};
         request.DirectStreamUrl = options.StreamUrl;
         request.StartPositionTicks = options.StartPositionTicks;
+        request.EnableSwitchPacketCache = options.EnableSwitchPacketCache;
 
     try
     {
@@ -339,6 +355,11 @@ int wmain(int argc, wchar_t** argv)
                     audioSwitch.SeekDurationMs = switchTiming.SeekDurationMs;
                     audioSwitch.DecoderOpenDurationMs = switchTiming.DecoderOpenDurationMs;
                     audioSwitch.RendererOpenDurationMs = switchTiming.RendererOpenDurationMs;
+                    audioSwitch.PacketCacheHit = switchTiming.PacketCacheHit;
+                    audioSwitch.PacketCacheEnabled = switchTiming.PacketCacheEnabled;
+                    audioSwitch.PacketCachePacketCount = switchTiming.PacketCachePacketCount;
+                    audioSwitch.PacketCacheBytes = switchTiming.PacketCacheBytes;
+                    audioSwitch.PacketCacheWindowDurationTicks = switchTiming.PacketCacheWindowDurationTicks;
                     audioSwitch.OperationDurationMs =
                         std::chrono::duration<double, std::milli>(
                             std::chrono::steady_clock::now() - interactionStartedAt).count();
@@ -395,6 +416,11 @@ int wmain(int argc, wchar_t** argv)
                 outcome.SeekDurationMs = switchTiming.SeekDurationMs;
                 outcome.DecoderOpenDurationMs = switchTiming.DecoderOpenDurationMs;
                 outcome.RendererOpenDurationMs = switchTiming.RendererOpenDurationMs;
+                outcome.PacketCacheHit = switchTiming.PacketCacheHit;
+                outcome.PacketCacheEnabled = switchTiming.PacketCacheEnabled;
+                outcome.PacketCachePacketCount = switchTiming.PacketCachePacketCount;
+                outcome.PacketCacheBytes = switchTiming.PacketCacheBytes;
+                outcome.PacketCacheWindowDurationTicks = switchTiming.PacketCacheWindowDurationTicks;
                 outcome.OperationDurationMs =
                     std::chrono::duration<double, std::milli>(
                         std::chrono::steady_clock::now() - interactionStartedAt).count();
@@ -543,6 +569,11 @@ int wmain(int argc, wchar_t** argv)
             << " audioSwitchSeekDurationMs=" << audioSwitch.SeekDurationMs
             << " audioSwitchDecoderOpenDurationMs=" << audioSwitch.DecoderOpenDurationMs
             << " audioSwitchRendererOpenDurationMs=" << audioSwitch.RendererOpenDurationMs
+            << " audioSwitchPacketCacheHit=" << (audioSwitch.PacketCacheHit ? 1 : 0)
+            << " audioSwitchPacketCacheEnabled=" << (audioSwitch.PacketCacheEnabled ? 1 : 0)
+            << " audioSwitchPacketCachePacketCount=" << audioSwitch.PacketCachePacketCount
+            << " audioSwitchPacketCacheBytes=" << audioSwitch.PacketCacheBytes
+            << " audioSwitchPacketCacheWindowDurationTicks=" << audioSwitch.PacketCacheWindowDurationTicks
             << " audioSwitchRecoveryDurationMs=" << audioSwitch.RecoveryDurationMs
             << " subtitleSwitch1Attempted=" << (subtitleSwitch1.Attempted ? 1 : 0)
             << " subtitleSwitch1Status=" << subtitleSwitch1.Status
@@ -562,6 +593,11 @@ int wmain(int argc, wchar_t** argv)
             << " subtitleSwitch1SeekDurationMs=" << subtitleSwitch1.SeekDurationMs
             << " subtitleSwitch1DecoderOpenDurationMs=" << subtitleSwitch1.DecoderOpenDurationMs
             << " subtitleSwitch1RendererOpenDurationMs=" << subtitleSwitch1.RendererOpenDurationMs
+            << " subtitleSwitch1PacketCacheHit=" << (subtitleSwitch1.PacketCacheHit ? 1 : 0)
+            << " subtitleSwitch1PacketCacheEnabled=" << (subtitleSwitch1.PacketCacheEnabled ? 1 : 0)
+            << " subtitleSwitch1PacketCachePacketCount=" << subtitleSwitch1.PacketCachePacketCount
+            << " subtitleSwitch1PacketCacheBytes=" << subtitleSwitch1.PacketCacheBytes
+            << " subtitleSwitch1PacketCacheWindowDurationTicks=" << subtitleSwitch1.PacketCacheWindowDurationTicks
             << " subtitleSwitch1RecoveryDurationMs=" << subtitleSwitch1.RecoveryDurationMs
             << " subtitleSwitch1CueRenderDurationMs=" << subtitleSwitch1.CueRenderDurationMs
             << " subtitleSwitch1RenderedFramesBefore=" << subtitleSwitch1.RenderedFramesBefore
@@ -584,6 +620,11 @@ int wmain(int argc, wchar_t** argv)
             << " subtitleSwitch2SeekDurationMs=" << subtitleSwitch2.SeekDurationMs
             << " subtitleSwitch2DecoderOpenDurationMs=" << subtitleSwitch2.DecoderOpenDurationMs
             << " subtitleSwitch2RendererOpenDurationMs=" << subtitleSwitch2.RendererOpenDurationMs
+            << " subtitleSwitch2PacketCacheHit=" << (subtitleSwitch2.PacketCacheHit ? 1 : 0)
+            << " subtitleSwitch2PacketCacheEnabled=" << (subtitleSwitch2.PacketCacheEnabled ? 1 : 0)
+            << " subtitleSwitch2PacketCachePacketCount=" << subtitleSwitch2.PacketCachePacketCount
+            << " subtitleSwitch2PacketCacheBytes=" << subtitleSwitch2.PacketCacheBytes
+            << " subtitleSwitch2PacketCacheWindowDurationTicks=" << subtitleSwitch2.PacketCacheWindowDurationTicks
             << " subtitleSwitch2RecoveryDurationMs=" << subtitleSwitch2.RecoveryDurationMs
             << " subtitleSwitch2CueRenderDurationMs=" << subtitleSwitch2.CueRenderDurationMs
             << " subtitleSwitch2RenderedFramesBefore=" << subtitleSwitch2.RenderedFramesBefore

@@ -90,6 +90,11 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 AddUnique(requiredSignals, "interaction.seekDurationMs");
                 AddUnique(requiredSignals, "interaction.decoderOpenDurationMs");
                 AddUnique(requiredSignals, "interaction.rendererOpenDurationMs");
+                AddUnique(requiredSignals, "interaction.packetCacheHit");
+                AddUnique(requiredSignals, "interaction.packetCacheEnabled");
+                AddUnique(requiredSignals, "interaction.packetCachePacketCount");
+                AddUnique(requiredSignals, "interaction.packetCacheBytes");
+                AddUnique(requiredSignals, "interaction.packetCacheWindowDurationTicks");
                 AddUnique(requiredSignals, "interaction.recoveryDurationMs");
                 AddUnique(requiredSignals, "interaction.positionDeltaTicks");
                 if (string.Equals(
@@ -460,6 +465,18 @@ namespace NoiraPlayer.Core.PlaybackQuality
                     return HasFiniteNonNegative(report.Interaction.DecoderOpenDurationMs);
                 case "interaction.rendererOpenDurationMs":
                     return HasFiniteNonNegative(report.Interaction.RendererOpenDurationMs);
+                case "interaction.packetCacheHit":
+                    return report.Interaction.Attempted && report.Interaction.PacketCacheHit.HasValue;
+                case "interaction.packetCacheEnabled":
+                    return report.Interaction.Attempted && report.Interaction.PacketCacheEnabled.HasValue;
+                case "interaction.packetCachePacketCount":
+                    return report.Interaction.Attempted && report.Interaction.PacketCachePacketCount.HasValue;
+                case "interaction.packetCacheBytes":
+                    return report.Interaction.Attempted && report.Interaction.PacketCacheBytes.HasValue;
+                case "interaction.packetCacheWindowDurationTicks":
+                    return report.Interaction.Attempted &&
+                        report.Interaction.PacketCacheWindowDurationTicks.HasValue &&
+                        report.Interaction.PacketCacheWindowDurationTicks.Value >= 0;
                 case "interaction.cueRenderDurationMs":
                     return report.Interaction.Attempted &&
                         report.Interaction.CueRenderDurationMs.HasValue &&

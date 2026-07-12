@@ -47,6 +47,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         int32_t SubtitleStreamIndex{0};
         bool HasSubtitleStreamIndex{false};
         double VideoFrameRate{0.0};
+        bool EnableSwitchPacketCache{true};
     };
 
     struct HdrOutputDecision
@@ -63,6 +64,11 @@ namespace winrt::NoiraPlayer::Native::implementation
         double SeekDurationMs{0.0};
         double DecoderOpenDurationMs{0.0};
         double RendererOpenDurationMs{0.0};
+        bool PacketCacheHit{false};
+        bool PacketCacheEnabled{false};
+        uint64_t PacketCachePacketCount{0};
+        uint64_t PacketCacheBytes{0};
+        int64_t PacketCacheWindowDurationTicks{0};
     };
 
     inline HdrOutputDecision ResolveHdrOutputDecisionForFrame(
@@ -143,6 +149,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         bool m_requestedHdrOutput{false};
         bool m_hdrOutputActive{false};
         bool m_open{false};
+        bool m_switchPacketCacheEnabled{false};
         bool m_paused{false};
         bool m_stopRenderLoop{false};
         uint64_t m_renderPassCount{0};

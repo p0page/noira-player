@@ -775,6 +775,11 @@ function New-NativeHeadlessParserFixtureOutput {
         audioSwitchSeekDurationMs = '0'
         audioSwitchDecoderOpenDurationMs = '0'
         audioSwitchRendererOpenDurationMs = '0'
+        audioSwitchPacketCacheHit = '0'
+        audioSwitchPacketCacheEnabled = '1'
+        audioSwitchPacketCachePacketCount = '0'
+        audioSwitchPacketCacheBytes = '0'
+        audioSwitchPacketCacheWindowDurationTicks = '0'
         audioSwitchRecoveryDurationMs = '0'
         subtitleSwitch1Attempted = '0'
         subtitleSwitch1OperationDurationMs = '0'
@@ -784,6 +789,11 @@ function New-NativeHeadlessParserFixtureOutput {
         subtitleSwitch1SeekDurationMs = '0'
         subtitleSwitch1DecoderOpenDurationMs = '0'
         subtitleSwitch1RendererOpenDurationMs = '0'
+        subtitleSwitch1PacketCacheHit = '0'
+        subtitleSwitch1PacketCacheEnabled = '1'
+        subtitleSwitch1PacketCachePacketCount = '0'
+        subtitleSwitch1PacketCacheBytes = '0'
+        subtitleSwitch1PacketCacheWindowDurationTicks = '0'
         subtitleSwitch1RecoveryDurationMs = '0'
         subtitleSwitch1CueRenderDurationMs = '0'
         subtitleSwitch1RenderedFramesBefore = '0'
@@ -802,6 +812,11 @@ function New-NativeHeadlessParserFixtureOutput {
         subtitleSwitch2SeekDurationMs = '0'
         subtitleSwitch2DecoderOpenDurationMs = '0'
         subtitleSwitch2RendererOpenDurationMs = '0'
+        subtitleSwitch2PacketCacheHit = '0'
+        subtitleSwitch2PacketCacheEnabled = '1'
+        subtitleSwitch2PacketCachePacketCount = '0'
+        subtitleSwitch2PacketCacheBytes = '0'
+        subtitleSwitch2PacketCacheWindowDurationTicks = '0'
         subtitleSwitch2RecoveryDurationMs = '0'
         subtitleSwitch2CueRenderDurationMs = '0'
         subtitleSwitch2RenderedFramesBefore = '0'
@@ -1022,6 +1037,11 @@ function Assert-NativeHeadlessParserContracts {
         subtitleSwitch1SeekDurationMs = '10'
         subtitleSwitch1DecoderOpenDurationMs = '8'
         subtitleSwitch1RendererOpenDurationMs = '5'
+        subtitleSwitch1PacketCacheHit = '1'
+        subtitleSwitch1PacketCacheEnabled = '1'
+        subtitleSwitch1PacketCachePacketCount = '120'
+        subtitleSwitch1PacketCacheBytes = '524288'
+        subtitleSwitch1PacketCacheWindowDurationTicks = '150000000'
         subtitleSwitch1RecoveryDurationMs = '875'
         subtitleSwitch1CueRenderDurationMs = '5009'
         subtitleSwitch1RenderedFramesBefore = '10'
@@ -1046,6 +1066,10 @@ function Assert-NativeHeadlessParserContracts {
         $pausedSubtitle.Report.report.interaction.seekDurationMs -ne 10 -or
         $pausedSubtitle.Report.report.interaction.decoderOpenDurationMs -ne 8 -or
         $pausedSubtitle.Report.report.interaction.rendererOpenDurationMs -ne 5 -or
+        -not $pausedSubtitle.Report.report.interaction.packetCacheHit -or
+        $pausedSubtitle.Report.report.interaction.packetCachePacketCount -ne 120 -or
+        $pausedSubtitle.Report.report.interaction.packetCacheBytes -ne 524288 -or
+        $pausedSubtitle.Report.report.interaction.packetCacheWindowDurationTicks -ne 150000000 -or
         $pausedSubtitle.Report.report.interaction.recoveryDurationMs -ne 875 -or
         $pausedSubtitle.Report.report.interaction.cueRenderDurationMs -ne 5009 -or
         $pausedSubtitle.Report.report.interaction.renderedVideoFrameDelta -ne 24 -or
@@ -1713,12 +1737,32 @@ if ($audioSwitchEvents.Count -ne 1 -or
     throw 'Expected one completed audio-switch lifecycle event with real interaction evidence.'
 }
 
+if ($nativeAvReport.report.interaction.seekDurationMs -ne 0) {
+    throw 'Cached audio-switch case must not perform a demux/video seek.'
+}
+if (-not $nativeAvReport.report.interaction.packetCacheHit -or
+    $nativeAvReport.report.interaction.packetCachePacketCount -gt 4096 -or
+    $nativeAvReport.report.interaction.packetCacheBytes -gt 8388608 -or
+    $nativeAvReport.report.interaction.packetCacheWindowDurationTicks -gt 300000000) {
+    throw 'Audio switch packet cache evidence must prove a bounded cache hit.'
+}
+
 $nativeSubtitleLifecycleEvents = @($nativeSubtitleReport.report.lifecycle.events)
 $subtitleSwitchEvents = @($nativeSubtitleLifecycleEvents | Where-Object { $_.operation -eq 'subtitle-switch' })
 if ($subtitleSwitchEvents.Count -ne 1 -or
     @($subtitleSwitchEvents | Where-Object { $_.status -ne 'completed' }).Count -ne 0 -or
     @($subtitleSwitchEvents | Where-Object { [string]::IsNullOrWhiteSpace($_.message) }).Count -ne 0) {
     throw 'Expected one completed subtitle-switch event with cue-render evidence.'
+}
+
+if ($nativeSubtitleReport.report.interaction.seekDurationMs -ne 0) {
+    throw 'Cached subtitle-switch case must not perform a demux/video seek.'
+}
+if (-not $nativeSubtitleReport.report.interaction.packetCacheHit -or
+    $nativeSubtitleReport.report.interaction.packetCachePacketCount -gt 4096 -or
+    $nativeSubtitleReport.report.interaction.packetCacheBytes -gt 8388608 -or
+    $nativeSubtitleReport.report.interaction.packetCacheWindowDurationTicks -gt 300000000) {
+    throw 'Subtitle switch packet cache evidence must prove a bounded cache hit.'
 }
 
 foreach ($subtitleSwitchEvent in $subtitleSwitchEvents) {
