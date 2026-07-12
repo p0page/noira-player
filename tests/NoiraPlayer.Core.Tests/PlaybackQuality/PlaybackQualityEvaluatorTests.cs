@@ -1002,6 +1002,7 @@ public sealed class PlaybackQualityEvaluatorTests
 
         Assert.Equal("pass", report.Result);
         Assert.Equal("sdr-display-fallback", report.ColorPipeline.ExpectationProfile);
+        Assert.DoesNotContain(report.Checks, check => check.Name == "IsTenBitSwapChain");
         Assert.Contains(report.Checks, check =>
             check.Signal == "colorPipeline.expectationProfile" &&
             check.Actual == "sdr-display-fallback" &&
@@ -1094,7 +1095,6 @@ public sealed class PlaybackQualityEvaluatorTests
         {
             HdrOutput = "Sdr",
             DxgiOutput = "RGB_FULL_G22_NONE_P709",
-            IsTenBitSwapChain = false,
             RequireValidatedConversion = true,
             RequiredConversionStatus = "tone-mapped-hable"
         };

@@ -196,10 +196,10 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 expectedDxgiOutput,
                 "colorPipeline.dxgiOutput",
                 "color-pipeline");
-            CheckExpectedTenBitSwapChain(
-                report,
-                fallback?.IsTenBitSwapChain ??
-                    (PlaybackQualityColorExpectationPolicy.RequiresTenBitSwapChain(expected) ? true : null));
+            var expectedTenBitSwapChain = fallback != null
+                ? fallback.IsTenBitSwapChain
+                : PlaybackQualityColorExpectationPolicy.RequiresTenBitSwapChain(expected) ? true : null;
+            CheckExpectedTenBitSwapChain(report, expectedTenBitSwapChain);
             CheckMatchedRefreshRate(report, expected);
 
             var requireValidatedConversion =
