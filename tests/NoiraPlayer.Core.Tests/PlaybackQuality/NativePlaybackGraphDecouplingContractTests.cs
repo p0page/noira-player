@@ -282,6 +282,26 @@ public sealed class NativePlaybackGraphDecouplingContractTests
     }
 
     [Fact]
+    public void Native_Headless_Opened_Source_Hash_Uses_Observed_Media_Signature()
+    {
+        var root = FindRepositoryRoot();
+        var harnessSource = File.ReadAllText(Path.Combine(
+            root,
+            "tools",
+            "NoiraPlayer.PlaybackQuality.Headless",
+            "Program.cs"));
+
+        Assert.Contains(
+            "ComputeOpenedMediaSignature(runResult.Report)",
+            harnessSource,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "PlaybackQualitySourceFingerprint.ComputeOpenedSource(options.StreamUrl)",
+            harnessSource,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Native_Headless_Gate_Runs_A_Deterministic_Network_Reconnect_Case()
     {
         var root = FindRepositoryRoot();
@@ -303,6 +323,11 @@ public sealed class NativePlaybackGraphDecouplingContractTests
         Assert.Contains("executionValid", gateSource, StringComparison.Ordinal);
         Assert.Contains("strict validation", gateSource, StringComparison.Ordinal);
         Assert.Contains("request=2", gateSource, StringComparison.Ordinal);
+        Assert.Contains("local-fault://network-reconnect-pause-resume", gateSource, StringComparison.Ordinal);
+        Assert.Contains("-RuntimeSourceMapPath", gateSource, StringComparison.Ordinal);
+        Assert.Contains("networkReconnectManifestCase", gateSource, StringComparison.Ordinal);
+        Assert.Contains("networkReconnectCapturedReportPath", gateSource, StringComparison.Ordinal);
+        Assert.Contains("nativeMaterializedDir", gateSource, StringComparison.Ordinal);
     }
 
     [Fact]

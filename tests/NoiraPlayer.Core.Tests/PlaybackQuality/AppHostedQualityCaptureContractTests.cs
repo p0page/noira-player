@@ -125,6 +125,17 @@ public sealed class AppHostedQualityCaptureContractTests
         Assert.Contains("PostSeekAdvanced =", playbackPage, StringComparison.Ordinal);
         Assert.Contains("evidence.Diagnostics", captureMethod, StringComparison.Ordinal);
         Assert.Contains("evidence.MetricsProvider", captureMethod, StringComparison.Ordinal);
+        Assert.Contains("result.Report.Execution.OpenedSourceHash =", captureMethod, StringComparison.Ordinal);
+        Assert.Contains(
+            "PlaybackQualitySourceFingerprint.ComputeOpenedMediaSignature(result.Report)",
+            captureMethod,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "result.Report.Execution.OpenedSourceHashKind =",
+            captureMethod,
+            StringComparison.Ordinal);
+        Assert.Contains("OpenedSourceHash = \"\"", playbackPage, StringComparison.Ordinal);
+        Assert.DoesNotContain("OpenedSourceHash = sourceOpened ? locatorHash : \"\"", playbackPage, StringComparison.Ordinal);
     }
 
     [Fact]

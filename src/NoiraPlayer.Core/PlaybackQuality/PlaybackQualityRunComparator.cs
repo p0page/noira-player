@@ -483,6 +483,16 @@ namespace NoiraPlayer.Core.PlaybackQuality
             if (baselineExecution.SourceOpened &&
                 candidateExecution.SourceOpened &&
                 !string.Equals(
+                    baselineExecution.OpenedSourceHashKind,
+                    candidateExecution.OpenedSourceHashKind,
+                    StringComparison.Ordinal))
+            {
+                AddIncompatibility(assessment, "execution.openedSourceHashKind");
+            }
+
+            if (baselineExecution.SourceOpened &&
+                candidateExecution.SourceOpened &&
+                !string.Equals(
                     baselineExecution.OpenedSourceHash,
                     candidateExecution.OpenedSourceHash,
                     StringComparison.Ordinal))
@@ -582,6 +592,15 @@ namespace NoiraPlayer.Core.PlaybackQuality
             if (execution.SourceOpened && !IsSha256Fingerprint(execution.OpenedSourceHash))
             {
                 AddIncompatibility(assessment, "execution.openedSourceHash");
+            }
+
+            if (execution.SourceOpened &&
+                !string.Equals(
+                    execution.OpenedSourceHashKind,
+                    PlaybackQualitySourceFingerprint.OpenedMediaSignatureKind,
+                    StringComparison.Ordinal))
+            {
+                AddIncompatibility(assessment, "execution.openedSourceHashKind");
             }
 
             ValidateExecutionStatus(assessment, report.Result, execution.Status);

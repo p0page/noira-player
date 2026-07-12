@@ -85,6 +85,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
         public string Status { get; set; } = "";
         public string SourceLocatorHash { get; set; } = "";
         public string OpenedSourceHash { get; set; } = "";
+        public string OpenedSourceHashKind { get; set; } = "";
         public string StartedAtUtc { get; set; } = "";
         public double DurationMs { get; set; }
         public bool SourceOpenAttempted { get; set; }
@@ -114,6 +115,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 Status = source.Status,
                 SourceLocatorHash = source.SourceLocatorHash,
                 OpenedSourceHash = source.OpenedSourceHash,
+                OpenedSourceHashKind = source.OpenedSourceHashKind,
                 StartedAtUtc = source.StartedAtUtc,
                 DurationMs = source.DurationMs,
                 SourceOpenAttempted = source.SourceOpenAttempted,

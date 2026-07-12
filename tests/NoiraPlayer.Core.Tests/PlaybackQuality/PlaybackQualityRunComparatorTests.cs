@@ -1001,6 +1001,32 @@ public sealed class PlaybackQualityRunComparatorTests
     }
 
     [Fact]
+    public void Compare_Reports_Insufficient_When_Opened_Source_Hash_Kind_Is_Missing()
+    {
+        var baseline = CreateReport("baseline");
+        var candidate = CreateReport("candidate");
+        candidate.Execution.OpenedSourceHashKind = "";
+
+        var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
+
+        Assert.Equal("insufficient-evidence", comparison.Result);
+        Assert.Contains("execution.openedSourceHashKind", comparison.Comparability.Signals);
+    }
+
+    [Fact]
+    public void Compare_Reports_Insufficient_When_Opened_Source_Hash_Kinds_Differ()
+    {
+        var baseline = CreateReport("baseline");
+        var candidate = CreateReport("candidate");
+        candidate.Execution.OpenedSourceHashKind = "legacy-locator-hash";
+
+        var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
+
+        Assert.Equal("insufficient-evidence", comparison.Result);
+        Assert.Contains("execution.openedSourceHashKind", comparison.Comparability.Signals);
+    }
+
+    [Fact]
     public void Serializer_Writes_Run_Comparison_With_CamelCase_Field_Names()
     {
         var baseline = CreateReport(
@@ -1069,6 +1095,7 @@ public sealed class PlaybackQualityRunComparatorTests
             Status = PlaybackQualityExecutionStatus.Completed,
             SourceLocatorHash = "sha256:" + new string('a', 64),
             OpenedSourceHash = "sha256:" + new string('a', 64),
+            OpenedSourceHashKind = PlaybackQualitySourceFingerprint.OpenedMediaSignatureKind,
             StartedAtUtc = "2026-07-11T00:00:00.0000000+00:00",
             DurationMs = 1000,
             SourceOpenAttempted = true,

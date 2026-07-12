@@ -1,5 +1,13 @@
 ﻿# 技术决策
 
+## 2026-07-12：实际打开源身份必须来自观测媒体签名
+
+决策：`sourceLocatorHash` 只关联 manifest 中稳定的测试意图；`openedSourceHash` 必须在真实 native/App 播放采样后，根据实际解析到的媒体和轨道生成，并声明 `openedSourceHashKind=observed-media-signature-v1`。签名覆盖 container、duration、时间线起点、视频编码/尺寸/帧率、HDR/色彩元数据和排序后的音视频字幕轨，不包含 URL、token、item ID 或 media source ID。缺少类型、使用旧 URL 哈希语义或两侧类型不同的报告，strict validation 或 candidate comparison 必须输出无效/证据不足。
+
+原因：manifest locator、Emby 临时直链和真实打开媒体是三个不同概念。旧实现对 URL 去掉 `PlaySessionId` 后哈希，无法证明播放器实际解析了哪一份媒体，甚至会让 locator 与 opened identity 等价。类型字段用于阻止同为 `sha256:` 字符串但语义不同的旧新报告被静默比较。该变更会主动使旧 baseline 失效，必须用同一评测版本重新生成。
+
+运行时源决策：临时本地服务使用稳定逻辑 URI 写入 manifest，再由仅在运行时存在的 case-to-URL map 注入随机端口；locator hash 始终来自逻辑 URI，opened hash 始终来自实际媒体。确定性网络重连 case 现已进入统一 native manifest/materialized report-set，不能再只作为 gate 内部旁路检查。
+
 ## 2026-07-12：不采纳 Matroska 跳过 `find_stream_info`，seek 必须保留启动证据
 
 决策：不采纳“Matroska 头参数完整时跳过 `avformat_find_stream_info`”的启动候选，当前播放器继续执行 FFmpeg 完整流探测。启动优化不能只证明轨道数量不变，还必须在同一真实 manifest 下稳定通过 duration、timeline/seek、音轨、字幕、HDR 和持续出帧；任一核心链路退化或证据不足都应撤回候选。

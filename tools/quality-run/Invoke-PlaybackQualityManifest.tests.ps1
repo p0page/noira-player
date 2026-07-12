@@ -16,8 +16,11 @@ try {
     $fakeHarness = Join-Path $tempRoot 'fake-harness.ps1'
     $fakeResolver = Join-Path $tempRoot 'fake-resolver.ps1'
     $resolverState = Join-Path $tempRoot 'resolver-state.txt'
+    $runtimeSourceMapPath = Join-Path $tempRoot 'runtime-source-map.json'
     $fakeHelper = Join-Path $tempRoot 'fake-helper.exe'
     Set-Content -LiteralPath $fakeHelper -Value '' -Encoding ASCII
+    @{ 'runner/second-runs' = 'http://127.0.0.1:54321/runtime-media.mp4' } |
+        ConvertTo-Json | Set-Content -LiteralPath $runtimeSourceMapPath -Encoding UTF8
 
     @'
 {
@@ -171,7 +174,9 @@ $logPath = $env:NOIRAPLAYER_MANIFEST_RUNNER_TEST_LOG
 $pauseSeconds = Get-Value '--pause-seconds'
 $startPositionTicks = Get-Value '--start-position-ticks'
 $scenario = Get-Value '--scenario'
-Add-Content -LiteralPath $logPath -Value ($caseId + '|pause=' + $pauseSeconds + '|start=' + $startPositionTicks + '|scenario=' + $scenario) -Encoding UTF8
+$streamUrl = Get-Value '--stream-url'
+$locatorHash = Get-Value '--source-locator-hash'
+Add-Content -LiteralPath $logPath -Value ($caseId + '|pause=' + $pauseSeconds + '|start=' + $startPositionTicks + '|scenario=' + $scenario + '|stream=' + $streamUrl + '|locator=' + $locatorHash) -Encoding UTF8
 
 $reportPath = Join-Path $reportsDir ($caseId.Replace('/', [System.IO.Path]::DirectorySeparatorChar) + '.json')
 New-Item -ItemType Directory -Path (Split-Path -Parent $reportPath) -Force | Out-Null
@@ -228,6 +233,7 @@ exit 0
         -NativeHelperExe $fakeHelper `
         -HarnessScriptPath $fakeHarness `
         -SourceResolverScriptPath $fakeResolver `
+        -RuntimeSourceMapPath $runtimeSourceMapPath `
         -SummaryPath $summaryPath
     $runnerExitCode = $LASTEXITCODE
 
@@ -236,12 +242,21 @@ exit 0
     }
 
     $invocations = @(Get-Content -LiteralPath $invocationLog -Encoding UTF8)
+    $sha256 = [Security.Cryptography.SHA256]::Create()
+    try {
+        $locatorBytes = [Text.Encoding]::UTF8.GetBytes('https://media.invalid/second.mp4')
+        $locatorDigest = $sha256.ComputeHash($locatorBytes)
+        $secondLocatorHash = 'sha256:' + [BitConverter]::ToString($locatorDigest).Replace('-', '').ToLowerInvariant()
+    }
+    finally {
+        $sha256.Dispose()
+    }
     if ($invocations.Count -ne 5 -or
-        $invocations[0] -ne 'runner/first-fails|pause=1|start=0|scenario=pause-resume' -or
-        $invocations[1] -ne 'runner/second-runs|pause=|start=20000000|scenario=timeline' -or
-        $invocations[2] -ne 'runner/emby-resolved|pause=|start=0|scenario=playback' -or
-        $invocations[3] -ne 'runner/audio-switch|pause=|start=0|scenario=audio-switch' -or
-        $invocations[4] -ne 'runner/subtitle-switch|pause=|start=600000000|scenario=subtitle-switch') {
+        $invocations[1] -ne ('runner/second-runs|pause=|start=20000000|scenario=timeline|stream=http://127.0.0.1:54321/runtime-media.mp4|locator=' + $secondLocatorHash) -or
+        $invocations[0] -notmatch '^runner/first-fails\|pause=1\|start=0\|scenario=pause-resume\|' -or
+        $invocations[2] -notmatch '^runner/emby-resolved\|pause=\|start=0\|scenario=playback\|' -or
+        $invocations[3] -notmatch '^runner/audio-switch\|pause=\|start=0\|scenario=audio-switch\|' -or
+        $invocations[4] -notmatch '^runner/subtitle-switch\|pause=\|start=600000000\|scenario=subtitle-switch\|') {
         throw 'Manifest runner must invoke each selected stable/challenge case exactly once and preserve order.'
     }
 

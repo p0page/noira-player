@@ -16,6 +16,7 @@
 10. 无音轨样本不能评价 A/V sync；它最多证明视频链路或 frame timing，不得输出同步良好的结论。
 11. track/subtitle evidence 必须来自实际 stream discovery 或明确的播放器状态；不得用单条 fallback video stream 掩盖音轨、字幕轨或选择状态缺失。
 12. 正式 baseline/candidate 的每个 stable/challenge case 必须真实进入 native 或 App-hosted 播放链路并产生一一对应报告。source-only、core-probe、expected 物化和未执行 skip 只允许作为 evaluator self-test，strict playback gate 必须拒绝它们。
+13. `sourceLocatorHash` 只证明同一测试意图；`openedSourceHash` 必须来自真实播放后观测到的媒体结构并携带算法类型。URL、文件名、manifest expected、item/source ID 或 probe 结果都不能单独冒充实际打开媒体身份。哈希语义变化时必须重建 baseline，禁止跨版本静默比较。
 
 ## v0.1 裁判边界
 

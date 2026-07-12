@@ -419,6 +419,39 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 AddExecutionError(validation, status, "report.execution.opened-source-hash.missing", "execution.openedSourceHash", "present when sourceOpened is true", "missing", "Opened media source identity is missing from native playback evidence.");
             }
 
+            if (execution.SourceOpened &&
+                !string.IsNullOrWhiteSpace(execution.OpenedSourceHash) &&
+                string.Equals(
+                    execution.OpenedSourceHash,
+                    execution.SourceLocatorHash,
+                    StringComparison.Ordinal))
+            {
+                AddExecutionError(
+                    validation,
+                    status,
+                    "report.execution.opened-source-hash.aliases-locator",
+                    "execution.openedSourceHash",
+                    "observed media signature distinct from source locator hash",
+                    execution.OpenedSourceHash,
+                    "Opened media identity aliases the manifest locator and does not prove which media was parsed.");
+            }
+
+            if (execution.SourceOpened &&
+                !string.Equals(
+                    execution.OpenedSourceHashKind,
+                    PlaybackQualitySourceFingerprint.OpenedMediaSignatureKind,
+                    StringComparison.Ordinal))
+            {
+                AddExecutionError(
+                    validation,
+                    status,
+                    "report.execution.opened-source-hash-kind.invalid",
+                    "execution.openedSourceHashKind",
+                    PlaybackQualitySourceFingerprint.OpenedMediaSignatureKind,
+                    string.IsNullOrWhiteSpace(execution.OpenedSourceHashKind) ? "missing" : execution.OpenedSourceHashKind,
+                    "Opened media identity must declare the observed signature algorithm used by the native playback evidence.");
+            }
+
             if (!RequiresCompletedPlaybackSample(report.Result))
             {
                 return;

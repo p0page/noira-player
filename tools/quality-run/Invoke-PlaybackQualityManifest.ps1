@@ -7,6 +7,7 @@ param(
     [string]$CliProjectPath = '',
     [string]$SourceResolverProjectPath = '',
     [string]$SourceResolverScriptPath = '',
+    [string]$RuntimeSourceMapPath = '',
     [string]$HarnessScriptPath = '',
     [string[]]$CaseId = @(),
     [string[]]$Category = @('stable', 'challenge'),
@@ -58,6 +59,11 @@ if (-not [string]::IsNullOrWhiteSpace($SourceResolverScriptPath) -and
     throw ('Source resolver script was not found: ' + $SourceResolverScriptPath)
 }
 
+if (-not [string]::IsNullOrWhiteSpace($RuntimeSourceMapPath) -and
+    -not (Test-Path -LiteralPath $RuntimeSourceMapPath)) {
+    throw ('Runtime source map was not found: ' + $RuntimeSourceMapPath)
+}
+
 if ($DurationSeconds -le 0) {
     throw 'DurationSeconds must be positive.'
 }
@@ -79,6 +85,13 @@ if ($manifestValidationExitCode -ne 0) {
 $manifest = Get-Content -LiteralPath $ManifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
 if ($manifest.schemaVersion -ne 1) {
     throw ('Unsupported manifest schemaVersion: ' + $manifest.schemaVersion)
+}
+
+$runtimeSourceMap = if ([string]::IsNullOrWhiteSpace($RuntimeSourceMapPath)) {
+    $null
+}
+else {
+    Get-Content -LiteralPath $RuntimeSourceMapPath -Raw -Encoding UTF8 | ConvertFrom-Json
 }
 
 $categorySet = @{}
@@ -120,7 +133,19 @@ foreach ($case in $selectedCases) {
     $startedAt = [DateTimeOffset]::UtcNow
     $sourceResolutionAttemptCount = 0
 
-    if ($sourceLocator.StartsWith('emby://', [System.StringComparison]::OrdinalIgnoreCase)) {
+    $runtimeOverride = if ($null -eq $runtimeSourceMap) {
+        $null
+    }
+    else {
+        $runtimeSourceMap.PSObject.Properties[$currentCaseId]
+    }
+    if ($null -ne $runtimeOverride -and
+        -not [string]::IsNullOrWhiteSpace([string]$runtimeOverride.Value)) {
+        $streamUrl = ([string]$runtimeOverride.Value).Trim()
+    }
+
+    if ($null -eq $runtimeOverride -and
+        $sourceLocator.StartsWith('emby://', [System.StringComparison]::OrdinalIgnoreCase)) {
         $resolvedSource = Resolve-PlaybackQualityEmbySource `
             -ItemId ([string]$case.itemId) `
             -MediaSourceId ([string]$case.mediaSourceId) `

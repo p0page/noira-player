@@ -90,6 +90,7 @@ $report = [ordered]@{
         status = 'completed'
         sourceLocatorHash = $locatorHash
         openedSourceHash = $openedHash
+        openedSourceHashKind = 'observed-media-signature-v1'
         startedAtUtc = '2026-07-11T00:00:00.0000000+00:00'
         durationMs = 3000.0
         sourceOpenAttempted = $true

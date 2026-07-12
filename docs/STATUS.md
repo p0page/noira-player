@@ -2,6 +2,14 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-12 更新：实际媒体身份不再由 URL 冒充，网络恢复进入统一 native 基线
+
+评测器此前把 `openedSourceHash` 实际计算为去掉 `PlaySessionId` 后的 URL 哈希，因此它经常与 `sourceLocatorHash` 等价，不能证明 helper 真正打开了 manifest 声明的媒体。这是评测可信度缺陷，不是播放器优化成果。现在 native-headless 与 App-hosted 都在真实采样完成后，根据实际解析到的 container、duration、视频属性、色彩元数据和全部视频/音频/字幕轨生成 `observed-media-signature-v1`；execution 同时记录 `openedSourceHashKind`。strict validator 与 baseline/candidate comparator 会拒绝类型缺失、旧 URL 语义或类型不一致的报告，旧 baseline 必须重建，不能静默混比。
+
+确定性网络恢复 case 也从 gate 内部孤立检查提升为统一 native report-set 的正式 stable case。manifest 使用固定 `local-fault://network-reconnect-pause-resume` 关联测试意图，运行时 source map 才把它解析到随机 localhost 端口；临时端口不再改变 locator identity。最新统一集合为 11 个 case，strict validation 记录 completed 11、rendered 11，analysis 消费 11 份真实 native 报告。网络 case 实际观察到第二次非零 Range 请求、137 帧呈现、`result=pass`，且 locator hash 与 observed media hash 明确不同。
+
+验证：Core 全量 904/904；32 阶段 playback-core gate 全部通过；native-headless smoke 从构建 helper、真实播放、故障注入、materialize、strict validate 到 analyze 全链路通过；Debug x64 Native AOT/UWP Publish 成功且无 AOT/trimming blocker。下一步是在新身份语义下重建正式 baseline，并用代表性 App-hosted case 生成首份新格式报告；旧 baseline 不得用于候选改善结论。
+
 ## 2026-07-12 更新：拒绝 Matroska 跳过流探测候选，修复 seek 与导出证据丢失
 
 后续已补齐真实 App timeline 的 6 项 instrumentation。native metrics/WinRT/Core 现在贯通 container start、video stream start、demux seek target 和 seek 后首个实际呈现位置；App 在完整采样窗口结束、Stop 之前记录 post-seek position 与是否继续推进。同一“一战再战” full-probe case 最终得到：seek target 与 demux target 均为 `631000000` ticks，首帧 `633550000` ticks，seek error `255ms`，随后位置 `698610000` ticks，`postSeekAdvanced=true`，137 帧实际呈现。6 个 `SeekTimelineEvidence missing` 已全部消失，唯一失败为远端总启动 `20224.607ms > 7000ms`，timeline 与 startup 现在可以独立归因。

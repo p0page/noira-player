@@ -1442,6 +1442,13 @@ namespace NoiraPlayer.App.Views
                     lifecycle,
                     position,
                     execution);
+                if (result.Report.Execution.SourceOpened)
+                {
+                    result.Report.Execution.OpenedSourceHash =
+                        PlaybackQualitySourceFingerprint.ComputeOpenedMediaSignature(result.Report);
+                    result.Report.Execution.OpenedSourceHashKind =
+                        PlaybackQualitySourceFingerprint.OpenedMediaSignatureKind;
+                }
                 var relativePath = await WriteQualityRunReportAsync(request.QualityRunId, result);
                 await WriteQualityRunCommandResultAsync("captured", relativePath);
                 await PlaybackDiagnosticsLog.WriteLineAsync(
@@ -2208,7 +2215,7 @@ namespace NoiraPlayer.App.Views
                 EvidenceLevel = PlaybackQualityEvidenceLevel.AppHosted,
                 Status = status,
                 SourceLocatorHash = locatorHash,
-                OpenedSourceHash = sourceOpened ? locatorHash : "",
+                OpenedSourceHash = "",
                 StartedAtUtc = startedAt.ToString("O"),
                 DurationMs = Math.Max(0, (DateTimeOffset.UtcNow - startedAt).TotalMilliseconds),
                 SourceOpenAttempted = sourceOpenAttempted,

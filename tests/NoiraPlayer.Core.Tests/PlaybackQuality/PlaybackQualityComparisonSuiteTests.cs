@@ -404,6 +404,7 @@ public sealed class PlaybackQualityComparisonSuiteTests
             Status = PlaybackQualityExecutionStatus.Completed,
             SourceLocatorHash = "sha256:" + new string('a', 64),
             OpenedSourceHash = "sha256:" + new string('a', 64),
+            OpenedSourceHashKind = PlaybackQualitySourceFingerprint.OpenedMediaSignatureKind,
             StartedAtUtc = "2026-07-11T00:00:00.0000000+00:00",
             DurationMs = 1000,
             SourceOpenAttempted = true,

@@ -31,6 +31,7 @@ $materializedReportPath = Join-Path $materializedDir 'jellyfin\sdr-hevc-main10-1
 $nativeMaterializedReportPath = Join-Path $nativeMaterializedDir 'local\native-headless-sdr-smoke.json'
 $nativeAvMaterializedReportPath = Join-Path $nativeMaterializedDir 'local\native-headless-av-smoke.json'
 $nativeSubtitleMaterializedReportPath = Join-Path $nativeMaterializedDir 'local\native-headless-subtitle-switch.json'
+$nativeNetworkMaterializedReportPath = Join-Path $nativeMaterializedDir 'local\network-reconnect-pause-resume.json'
 $sampleUrl = 'https://repo.jellyfin.org/test-videos/SDR/HEVC%2010bit/Test%20Jellyfin%201080p%20HEVC%2010bit%203M.mp4'
 $nativeCaseId = 'local/native-headless-sdr-smoke'
 $nativeAvCaseId = 'local/native-headless-av-smoke'
@@ -411,8 +412,10 @@ function Assert-NativeNetworkReconnectRecovery {
         $networkSummaryPath = Join-Path $networkRoot 'runner-summary.json'
         $networkMaterializedSummaryPath = Join-Path $networkRoot 'materialized-summary.json'
         $networkValidationPath = Join-Path $networkRoot 'validation.json'
+        $networkRuntimeSourceMapPath = Join-Path $networkRoot 'runtime-source-map.json'
         $networkCaseId = 'local/network-reconnect-pause-resume'
         $networkUrl = "http://127.0.0.1:{0}/media.mp4" -f $port
+        $networkLocator = 'local-fault://network-reconnect-pause-resume'
         New-Item -ItemType Directory -Path $networkRoot -Force | Out-Null
         [ordered]@{
             schemaVersion = 1
@@ -422,7 +425,7 @@ function Assert-NativeNetworkReconnectRecovery {
                     category = 'stable'
                     severity = 'critical'
                     stability = 'stable'
-                    uri = $networkUrl
+                    uri = $networkLocator
                     pauseSeconds = 1
                     executionRequirement = [ordered]@{
                         minimumEvidenceLevel = 'native-playback'
@@ -441,12 +444,15 @@ function Assert-NativeNetworkReconnectRecovery {
                 }
             )
         } | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $networkManifestPath -Encoding UTF8
+        @{ $networkCaseId = $networkUrl } |
+            ConvertTo-Json | Set-Content -LiteralPath $networkRuntimeSourceMapPath -Encoding UTF8
 
         & powershell -NoProfile -ExecutionPolicy Bypass `
             -File (Join-Path $PSScriptRoot 'Invoke-PlaybackQualityManifest.ps1') `
             -ManifestPath $networkManifestPath `
             -ReportsDir $networkReportsDir `
             -NativeHelperExe $NativeHelperExe `
+            -RuntimeSourceMapPath $networkRuntimeSourceMapPath `
             -SummaryPath $networkSummaryPath `
             -DurationSeconds 3
         if ($LASTEXITCODE -ne 0) {
@@ -506,6 +512,10 @@ function Assert-NativeNetworkReconnectRecovery {
         if (-not [regex]::IsMatch($serverOutput, 'request=2 rangeStart=[1-9][0-9]*')) {
             throw "Expected forced disconnect recovery to issue a ranged second request.`n$serverOutput"
         }
+
+        $script:networkReconnectManifestCase =
+            (Get-Content -LiteralPath $networkManifestPath -Raw | ConvertFrom-Json).cases[0]
+        $script:networkReconnectCapturedReportPath = $networkReportPath
 
         Write-Output 'native network reconnect formal case passed: strict=true request=2'
     }
@@ -2110,6 +2120,20 @@ foreach ($hdr10CaseId in $nativeHdr10CaseIds) {
 }
 "@ | Set-Content -LiteralPath $nativeManifestPath -Encoding UTF8
 
+$nativeManifest = Get-Content -LiteralPath $nativeManifestPath -Raw | ConvertFrom-Json
+$nativeManifest.cases = @($nativeManifest.cases) + @($script:networkReconnectManifestCase)
+$nativeManifest | ConvertTo-Json -Depth 12 |
+    Set-Content -LiteralPath $nativeManifestPath -Encoding UTF8
+$nativeNetworkCapturedReportPath = Get-QualityReportPath `
+    -Root $nativeCapturedDir `
+    -CaseId $script:networkReconnectManifestCase.caseId
+New-Item -ItemType Directory -Path (Split-Path -Parent $nativeNetworkCapturedReportPath) -Force |
+    Out-Null
+Copy-Item `
+    -LiteralPath $script:networkReconnectCapturedReportPath `
+    -Destination $nativeNetworkCapturedReportPath `
+    -Force
+
 dotnet run --project (Join-Path $repoRoot 'tools\NoiraPlayer.PlaybackQuality.Cli\NoiraPlayer.PlaybackQuality.Cli.csproj') -- `
     materialize-native-harness-report-set `
     --manifest $nativeManifestPath `
@@ -2136,6 +2160,10 @@ if (-not (Test-Path $nativeSubtitleMaterializedReportPath)) {
     throw "Expected materialized native helper subtitle report at $nativeSubtitleMaterializedReportPath."
 }
 
+if (-not (Test-Path $nativeNetworkMaterializedReportPath)) {
+    throw "Expected materialized native network reconnect report at $nativeNetworkMaterializedReportPath."
+}
+
 $nativeMaterializedReport = Get-Content -LiteralPath $nativeMaterializedReportPath -Raw | ConvertFrom-Json
 if ($nativeMaterializedReport.report.environment.playerCoreVersion -ne $PlayerCoreVersion -or
     $nativeMaterializedReport.report.environment.sourceRevision -ne $SourceRevision -or
@@ -2157,6 +2185,14 @@ if ($nativeMaterializedReport.modelAnalysis.missingEvidence -contains 'display.r
 
 $nativeAvMaterializedReport = Get-Content -LiteralPath $nativeAvMaterializedReportPath -Raw | ConvertFrom-Json
 $nativeSubtitleMaterializedReport = Get-Content -LiteralPath $nativeSubtitleMaterializedReportPath -Raw | ConvertFrom-Json
+$nativeNetworkMaterializedReport = Get-Content -LiteralPath $nativeNetworkMaterializedReportPath -Raw | ConvertFrom-Json
+if ($nativeNetworkMaterializedReport.report.execution.openedSourceHashKind -ne 'observed-media-signature-v1' -or
+    $nativeNetworkMaterializedReport.report.execution.openedSourceHash -eq
+        $nativeNetworkMaterializedReport.report.execution.sourceLocatorHash -or
+    $nativeNetworkMaterializedReport.report.execution.status -ne 'completed' -or
+    $nativeNetworkMaterializedReport.report.timing.renderedVideoFrames -le 0) {
+    throw 'Expected unified network reconnect report to preserve observed media identity and completed native playback evidence.'
+}
 if ($nativeAvMaterializedReport.report.tracks.audioTrackCount -ne 2 -or
     $nativeAvMaterializedReport.modelAnalysis.avSync.status -ne 'synced') {
     throw 'Expected materialized native helper A/V report to preserve audio-track and A/V sync evidence.'
@@ -2282,8 +2318,8 @@ if ($nativeAnalysis.playbackEvidence.canEvaluateNativePlayback -ne $true) {
     throw 'Expected native helper report to be treated as App-free native software playback evidence.'
 }
 
-if ($nativeAnalysis.totalReportCount -ne 10) {
-    throw 'Expected native helper report-set to include 10 reports: SDR 23.976/24/30/60, HDR10 23.976/24/30/60, A/V, and subtitle-switch challenges.'
+if ($nativeAnalysis.totalReportCount -ne 11) {
+    throw 'Expected native helper report-set to include 11 reports: SDR 23.976/24/30/60, HDR10 23.976/24/30/60, A/V, subtitle-switch, and network-recovery.'
 }
 
 $nativeAvSyncCoverage = $nativeAnalysis.capabilityCoverage | Where-Object { $_.capability -eq 'av-sync' } | Select-Object -First 1

@@ -937,6 +937,7 @@ public sealed class PlaybackQualityReferenceManifestTests
         report.Execution.Runner = "";
         report.Execution.Status = "mystery";
         report.Execution.OpenedSourceHash = "";
+        report.Execution.OpenedSourceHashKind = "legacy-locator-hash";
         report.Execution.StartedAtUtc = "not-a-time";
         report.Execution.DurationMs = -1;
 
@@ -953,9 +954,29 @@ public sealed class PlaybackQualityReferenceManifestTests
         Assert.Contains(validation.Errors, error =>
             error.Code == "report.execution.opened-source-hash.missing");
         Assert.Contains(validation.Errors, error =>
+            error.Code == "report.execution.opened-source-hash-kind.invalid");
+        Assert.Contains(validation.Errors, error =>
             error.Code == "report.execution.started-at.invalid");
         Assert.Contains(validation.Errors, error =>
             error.Code == "report.execution.duration.invalid");
+    }
+
+    [Fact]
+    public void ValidateReportSet_Rejects_Opened_Source_Hash_That_Aliases_Locator()
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        var referenceCase = CreateCase("local/opened-source-alias", tier: 1, purpose: "sdr-smoke");
+        manifest.Cases.Add(referenceCase);
+        var report = CreateReport(referenceCase.CaseId, "h264", 320, 180, 30, "Sdr");
+        AddCapturedRuntimeMetrics(report);
+        report.ColorPipeline.ConversionStatus = "validated";
+        report.Execution.OpenedSourceHash = report.Execution.SourceLocatorHash;
+
+        var validation = PlaybackQualityReferenceReportSetValidator.Validate(manifest, new[] { report });
+
+        Assert.False(validation.IsValid);
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.execution.opened-source-hash.aliases-locator");
     }
 
     [Fact]
@@ -2452,7 +2473,10 @@ public sealed class PlaybackQualityReferenceManifestTests
             Status = status,
             SourceLocatorHash = PlaybackQualitySourceFingerprint.Compute(referenceCase.Uri),
             OpenedSourceHash = sourceOpened
-                ? PlaybackQualitySourceFingerprint.Compute(referenceCase.Uri)
+                ? "sha256:" + new string('b', 64)
+                : "",
+            OpenedSourceHashKind = sourceOpened
+                ? PlaybackQualitySourceFingerprint.OpenedMediaSignatureKind
                 : "",
             StartedAtUtc = "2026-07-11T00:00:00Z",
             DurationMs = 5000,

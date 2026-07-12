@@ -22,6 +22,9 @@ function Set-SmokeNativeExecutionEvidence {
     try {
         $hashBytes = $sha256.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($Locator))
         $fingerprint = 'sha256:' + ([System.BitConverter]::ToString($hashBytes).Replace('-', '').ToLowerInvariant())
+        $openedHashBytes = $sha256.ComputeHash(
+            [System.Text.Encoding]::UTF8.GetBytes('synthetic-observed-media-fixture:' + $Locator))
+        $openedFingerprint = 'sha256:' + ([System.BitConverter]::ToString($openedHashBytes).Replace('-', '').ToLowerInvariant())
     }
     finally {
         $sha256.Dispose()
@@ -39,7 +42,8 @@ function Set-SmokeNativeExecutionEvidence {
         evidenceLevel = 'native-playback'
         status = $Status
         sourceLocatorHash = $fingerprint
-        openedSourceHash = $(if ($SourceOpened) { $fingerprint } else { '' })
+        openedSourceHash = $(if ($SourceOpened) { $openedFingerprint } else { '' })
+        openedSourceHashKind = $(if ($SourceOpened) { 'observed-media-signature-v1' } else { '' })
         startedAtUtc = '2026-07-08T00:00:00.0000000+00:00'
         durationMs = 1000.0
         sourceOpenAttempted = $true
@@ -1461,7 +1465,8 @@ try {
     "evidenceLevel": "native-playback",
     "status": "completed",
     "sourceLocatorHash": "sha256:5073a766f7c829219a03780802afc5037a5b56f172f64ff87b162fc01ffdec69",
-    "openedSourceHash": "sha256:5073a766f7c829219a03780802afc5037a5b56f172f64ff87b162fc01ffdec69",
+    "openedSourceHash": "sha256:6073a766f7c829219a03780802afc5037a5b56f172f64ff87b162fc01ffdec69",
+    "openedSourceHashKind": "observed-media-signature-v1",
     "startedAtUtc": "2026-07-08T00:00:00.0000000+00:00",
     "durationMs": 12000.0,
     "sourceOpenAttempted": true,
@@ -1720,7 +1725,8 @@ try {
     "evidenceLevel": "native-playback",
     "status": "completed",
     "sourceLocatorHash": "sha256:a583a300e4b10ff6e8942470c73eca9cd9407eaed9e2deea38754cfeba8962e6",
-    "openedSourceHash": "sha256:a583a300e4b10ff6e8942470c73eca9cd9407eaed9e2deea38754cfeba8962e6",
+    "openedSourceHash": "sha256:b583a300e4b10ff6e8942470c73eca9cd9407eaed9e2deea38754cfeba8962e6",
+    "openedSourceHashKind": "observed-media-signature-v1",
     "startedAtUtc": "2026-07-08T00:00:00.0000000+00:00",
     "durationMs": 3000.0,
     "sourceOpenAttempted": true,
@@ -1828,7 +1834,8 @@ try {
     "evidenceLevel": "native-playback",
     "status": "completed",
     "sourceLocatorHash": "sha256:a583a300e4b10ff6e8942470c73eca9cd9407eaed9e2deea38754cfeba8962e6",
-    "openedSourceHash": "sha256:a583a300e4b10ff6e8942470c73eca9cd9407eaed9e2deea38754cfeba8962e6",
+    "openedSourceHash": "sha256:b583a300e4b10ff6e8942470c73eca9cd9407eaed9e2deea38754cfeba8962e6",
+    "openedSourceHashKind": "observed-media-signature-v1",
     "startedAtUtc": "2026-07-08T00:00:00.0000000+00:00",
     "durationMs": 1500.0,
     "sourceOpenAttempted": true,
@@ -2116,7 +2123,8 @@ try {
     "evidenceLevel": "native-playback",
     "status": "completed",
     "sourceLocatorHash": "sha256:6d6dcdf267881094dc407e3b909ee6f37e3da9a9606c4e112c244ed053d978f3",
-    "openedSourceHash": "sha256:6d6dcdf267881094dc407e3b909ee6f37e3da9a9606c4e112c244ed053d978f3",
+    "openedSourceHash": "sha256:7d6dcdf267881094dc407e3b909ee6f37e3da9a9606c4e112c244ed053d978f3",
+    "openedSourceHashKind": "observed-media-signature-v1",
     "startedAtUtc": "2026-07-08T00:00:00.0000000+00:00",
     "durationMs": 60000.0,
     "sourceOpenAttempted": true,
@@ -2184,7 +2192,8 @@ try {
     "evidenceLevel": "native-playback",
     "status": "unsupported",
     "sourceLocatorHash": "sha256:6ff500115e21a7d612e1d98387f7a2eab7777ef97cfa0ab39cd96ac3ffce69a1",
-    "openedSourceHash": "sha256:6ff500115e21a7d612e1d98387f7a2eab7777ef97cfa0ab39cd96ac3ffce69a1",
+    "openedSourceHash": "sha256:7ff500115e21a7d612e1d98387f7a2eab7777ef97cfa0ab39cd96ac3ffce69a1",
+    "openedSourceHashKind": "observed-media-signature-v1",
     "startedAtUtc": "2026-07-08T00:00:00.0000000+00:00",
     "durationMs": 500.0,
     "sourceOpenAttempted": true,
@@ -2438,7 +2447,8 @@ try {
     "evidenceLevel": "native-playback",
     "status": "completed",
     "sourceLocatorHash": "sha256:42369d6a58bde4131352982fddaefd4a639b1e9487e8db91eefc5f314782de13",
-    "openedSourceHash": "sha256:42369d6a58bde4131352982fddaefd4a639b1e9487e8db91eefc5f314782de13",
+    "openedSourceHash": "sha256:52369d6a58bde4131352982fddaefd4a639b1e9487e8db91eefc5f314782de13",
+    "openedSourceHashKind": "observed-media-signature-v1",
     "startedAtUtc": "2026-07-08T00:00:00.0000000+00:00",
     "durationMs": 1000.0,
     "sourceOpenAttempted": true,

@@ -310,6 +310,14 @@ internal static class NativeHeadlessHarness
                 request)
             : PlaybackQualityReportComposer.Compose(request);
 
+        if (runResult.Report.Execution.SourceOpened)
+        {
+            runResult.Report.Execution.OpenedSourceHash =
+                PlaybackQualitySourceFingerprint.ComputeOpenedMediaSignature(runResult.Report);
+            runResult.Report.Execution.OpenedSourceHashKind =
+                PlaybackQualitySourceFingerprint.OpenedMediaSignatureKind;
+        }
+
         AddLimitation(
             runResult,
             "native-headless: helper executed App-free native PlaybackGraph with an offscreen DirectX composition swapchain");
@@ -348,9 +356,7 @@ internal static class NativeHeadlessHarness
             EvidenceLevel = evidenceLevel,
             Status = status,
             SourceLocatorHash = options.SourceLocatorHash,
-            OpenedSourceHash = sourceOpenAttempted
-                ? PlaybackQualitySourceFingerprint.ComputeOpenedSource(options.StreamUrl)
-                : "",
+            OpenedSourceHash = "",
             StartedAtUtc = startedAt.ToString("O"),
             DurationMs = Math.Max(0, (DateTimeOffset.UtcNow - startedAt).TotalMilliseconds),
             SourceOpenAttempted = sourceOpenAttempted,
