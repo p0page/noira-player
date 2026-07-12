@@ -479,6 +479,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 HdrOutput = source.HdrOutput,
                 DxgiInput = source.DxgiInput,
                 DxgiOutput = source.DxgiOutput,
+                SdrDisplayFallback = PlaybackQualityColorExpected.Clone(source.SdrDisplayFallback),
                 MaxStartupDurationMs = source.MaxStartupDurationMs,
                 MaxInteractionRecoveryDurationMs = source.MaxInteractionRecoveryDurationMs,
                 MinRenderedVideoFrames = source.MinRenderedVideoFrames,
@@ -538,6 +539,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 AddExpectedMissing(validation, caseId, "hdrKind");
             }
 
+            ValidateSdrDisplayFallback(validation, caseId, expected.SdrDisplayFallback);
+
             if (expected.MaxInteractionRecoveryDurationMs.HasValue &&
                 (!double.IsFinite(expected.MaxInteractionRecoveryDurationMs.Value) ||
                     expected.MaxInteractionRecoveryDurationMs.Value <= 0))
@@ -584,6 +587,97 @@ namespace NoiraPlayer.Core.PlaybackQuality
                     "expected.maxSeekRecoveryDurationMs",
                     "Playback quality seek recovery threshold requires a timeline scenario.");
             }
+        }
+
+        private static void ValidateSdrDisplayFallback(
+            PlaybackQualityReferenceManifestValidation validation,
+            string caseId,
+            PlaybackQualityColorExpected? fallback)
+        {
+            if (fallback == null)
+            {
+                return;
+            }
+
+            ValidateFallbackRequiredString(validation, caseId, "hdrOutput", fallback.HdrOutput);
+            ValidateFallbackRequiredString(validation, caseId, "dxgiOutput", fallback.DxgiOutput);
+            ValidateFallbackRequiredString(
+                validation,
+                caseId,
+                "requiredConversionStatus",
+                fallback.RequiredConversionStatus);
+
+            if (!fallback.IsTenBitSwapChain.HasValue)
+            {
+                AddError(
+                    validation,
+                    "case.expected.sdrDisplayFallback.isTenBitSwapChain.missing",
+                    caseId,
+                    "expected.sdrDisplayFallback.isTenBitSwapChain",
+                    "Playback quality SDR display fallback requires isTenBitSwapChain.");
+            }
+
+            if (fallback.DxgiInputAnyOf.Count == 0)
+            {
+                AddError(
+                    validation,
+                    "case.expected.sdrDisplayFallback.dxgiInputAnyOf.missing",
+                    caseId,
+                    "expected.sdrDisplayFallback.dxgiInputAnyOf",
+                    "Playback quality SDR display fallback requires at least one DXGI input color space.");
+            }
+
+            var seen = new HashSet<string>(System.StringComparer.Ordinal);
+            foreach (var value in fallback.DxgiInputAnyOf)
+            {
+                if (string.IsNullOrWhiteSpace(value))
+                {
+                    AddError(
+                        validation,
+                        "case.expected.sdrDisplayFallback.dxgiInputAnyOf.empty",
+                        caseId,
+                        "expected.sdrDisplayFallback.dxgiInputAnyOf",
+                        "Playback quality SDR display fallback DXGI input values cannot be empty.");
+                }
+                else if (!seen.Add(value))
+                {
+                    AddError(
+                        validation,
+                        "case.expected.sdrDisplayFallback.dxgiInputAnyOf.duplicate",
+                        caseId,
+                        "expected.sdrDisplayFallback.dxgiInputAnyOf",
+                        "Playback quality SDR display fallback DXGI input values must be unique.");
+                }
+            }
+
+            if (fallback.RequiredConversionStatus.IndexOf(';') >= 0)
+            {
+                AddError(
+                    validation,
+                    "case.expected.sdrDisplayFallback.requiredConversionStatus.token.invalid",
+                    caseId,
+                    "expected.sdrDisplayFallback.requiredConversionStatus",
+                    "Playback quality SDR display fallback requires one exact conversion-status token.");
+            }
+        }
+
+        private static void ValidateFallbackRequiredString(
+            PlaybackQualityReferenceManifestValidation validation,
+            string caseId,
+            string field,
+            string value)
+        {
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                return;
+            }
+
+            AddError(
+                validation,
+                "case.expected.sdrDisplayFallback." + field + ".missing",
+                caseId,
+                "expected.sdrDisplayFallback." + field,
+                "Playback quality SDR display fallback requires " + field + ".");
         }
 
         private static void AddExpectedMissing(

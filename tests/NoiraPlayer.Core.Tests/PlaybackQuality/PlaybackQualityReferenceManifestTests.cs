@@ -10,6 +10,69 @@ namespace NoiraPlayer.Core.Tests.PlaybackQuality;
 public sealed class PlaybackQualityReferenceManifestTests
 {
     [Fact]
+    public void Validate_Accepts_Explicit_Sdr_Display_Fallback()
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        var referenceCase = CreateCase("hdr/environment-aware", tier: 2, purpose: "hdr-output");
+        referenceCase.Expected.SdrDisplayFallback = new PlaybackQualityColorExpected
+        {
+            HdrOutput = "Sdr",
+            DxgiOutput = "RGB_FULL_G22_NONE_P709",
+            IsTenBitSwapChain = false,
+            RequiredConversionStatus = "tone-mapped-hable"
+        };
+        referenceCase.Expected.SdrDisplayFallback.DxgiInputAnyOf.Add("YCBCR_STUDIO_G22_LEFT_P2020");
+        referenceCase.Expected.SdrDisplayFallback.DxgiInputAnyOf.Add("YCBCR_STUDIO_G22_TOPLEFT_P2020");
+        manifest.Cases.Add(referenceCase);
+
+        var result = PlaybackQualityReferenceManifestValidator.Validate(manifest);
+
+        Assert.True(result.IsValid);
+        Assert.Equal(2, result.Cases[0].Expected.SdrDisplayFallback!.DxgiInputAnyOf.Count);
+    }
+
+    [Fact]
+    public void Validate_Rejects_Incomplete_Sdr_Display_Fallback()
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        var referenceCase = CreateCase("hdr/incomplete-fallback", tier: 2, purpose: "hdr-output");
+        referenceCase.Expected.SdrDisplayFallback = new PlaybackQualityColorExpected();
+        manifest.Cases.Add(referenceCase);
+
+        var result = PlaybackQualityReferenceManifestValidator.Validate(manifest);
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, error =>
+            error.Code == "case.expected.sdrDisplayFallback.hdrOutput.missing");
+        Assert.Contains(result.Errors, error =>
+            error.Code == "case.expected.sdrDisplayFallback.dxgiInputAnyOf.missing");
+        Assert.Contains(result.Errors, error =>
+            error.Code == "case.expected.sdrDisplayFallback.requiredConversionStatus.missing");
+    }
+
+    [Fact]
+    public void Validate_Rejects_Duplicate_Sdr_Display_Fallback_Dxgi_Inputs()
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        var referenceCase = CreateCase("hdr/duplicate-fallback-input", tier: 2, purpose: "hdr-output");
+        referenceCase.Expected.SdrDisplayFallback = new PlaybackQualityColorExpected
+        {
+            HdrOutput = "Sdr",
+            DxgiOutput = "RGB_FULL_G22_NONE_P709",
+            RequiredConversionStatus = "tone-mapped-hable"
+        };
+        referenceCase.Expected.SdrDisplayFallback.DxgiInputAnyOf.Add("YCBCR_STUDIO_G22_LEFT_P2020");
+        referenceCase.Expected.SdrDisplayFallback.DxgiInputAnyOf.Add("YCBCR_STUDIO_G22_LEFT_P2020");
+        manifest.Cases.Add(referenceCase);
+
+        var result = PlaybackQualityReferenceManifestValidator.Validate(manifest);
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, error =>
+            error.Code == "case.expected.sdrDisplayFallback.dxgiInputAnyOf.duplicate");
+    }
+
+    [Fact]
     public void Validate_Accepts_Unique_Cases_With_Expected_Source_Metadata()
     {
         var manifest = new PlaybackQualityReferenceManifest

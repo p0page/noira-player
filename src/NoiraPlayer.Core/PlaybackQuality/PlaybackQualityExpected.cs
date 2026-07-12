@@ -1,5 +1,36 @@
-﻿namespace NoiraPlayer.Core.PlaybackQuality
+using System.Collections.Generic;
+
+namespace NoiraPlayer.Core.PlaybackQuality
 {
+    public sealed class PlaybackQualityColorExpected
+    {
+        public string HdrOutput { get; set; } = "";
+        public List<string> DxgiInputAnyOf { get; } = new List<string>();
+        public string DxgiOutput { get; set; } = "";
+        public bool? IsTenBitSwapChain { get; set; }
+        public bool RequireValidatedConversion { get; set; } = true;
+        public string RequiredConversionStatus { get; set; } = "";
+
+        internal static PlaybackQualityColorExpected? Clone(PlaybackQualityColorExpected? source)
+        {
+            if (source == null)
+            {
+                return null;
+            }
+
+            var clone = new PlaybackQualityColorExpected
+            {
+                HdrOutput = source.HdrOutput,
+                DxgiOutput = source.DxgiOutput,
+                IsTenBitSwapChain = source.IsTenBitSwapChain,
+                RequireValidatedConversion = source.RequireValidatedConversion,
+                RequiredConversionStatus = source.RequiredConversionStatus
+            };
+            clone.DxgiInputAnyOf.AddRange(source.DxgiInputAnyOf);
+            return clone;
+        }
+    }
+
     public sealed class PlaybackQualityExpected
     {
         public string Codec { get; set; } = "";
@@ -22,6 +53,7 @@
         public string HdrOutput { get; set; } = "";
         public string DxgiInput { get; set; } = "";
         public string DxgiOutput { get; set; } = "";
+        public PlaybackQualityColorExpected? SdrDisplayFallback { get; set; }
         public double? MaxStartupDurationMs { get; set; }
         public double? MaxInteractionRecoveryDurationMs { get; set; }
         public long? MinRenderedVideoFrames { get; set; }

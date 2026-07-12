@@ -345,6 +345,20 @@ function New-Expected(
         $expected.hasHlgBaseLayer = [bool]$HdrProfile.hasHlgBaseLayer
     }
 
+    if ($HdrProfile.isHdr -and $HdrProfile.isDirectPlayable) {
+        $expected.sdrDisplayFallback = [ordered]@{
+            hdrOutput = 'Sdr'
+            dxgiInputAnyOf = @(
+                'YCBCR_STUDIO_G22_LEFT_P2020',
+                'YCBCR_STUDIO_G22_TOPLEFT_P2020'
+            )
+            dxgiOutput = 'RGB_FULL_G22_NONE_P709'
+            isTenBitSwapChain = $false
+            requireValidatedConversion = $true
+            requiredConversionStatus = 'tone-mapped-hable'
+        }
+    }
+
     if ($RequireMatchedDisplayRefreshRate) {
         $expected.maxFrameGapMs = 104.3
         $expected.maxRenderIntervalMsP95 = 52.1
@@ -378,8 +392,8 @@ function New-ReferenceCase(
         'medium'
     }
     $stability = if ($Tier -ge 3) { 'variable' } else { 'stable' }
-    $hdrOutput = if ($ForceSdrOutput) { 'Sdr' } elseif ($Candidate.HdrProfile.isHdr) { 'Hdr10' } else { 'Sdr' }
-    $dxgiOutput = if ($ForceSdrOutput -or -not $Candidate.HdrProfile.isHdr) {
+    $hdrOutput = if ($Candidate.HdrProfile.isHdr) { 'Hdr10' } else { 'Sdr' }
+    $dxgiOutput = if (-not $Candidate.HdrProfile.isHdr) {
         'RGB_FULL_G22_NONE_P709'
     }
     else {

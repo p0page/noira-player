@@ -150,6 +150,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
     {
         public string Status { get; set; } = "unknown";
         public string Reason { get; set; } = "";
+        public string ExpectationProfile { get; set; } = "";
         public string ActualHdrOutput { get; set; } = "";
         public string SwapChainFormat { get; set; } = "";
         public string SwapChainColorSpace { get; set; } = "";
@@ -1217,6 +1218,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
         {
             var color = new PlaybackQualityColorPipelineAssessment
             {
+                ExpectationProfile = report.ColorPipeline.ExpectationProfile,
                 ActualHdrOutput = report.ColorPipeline.ActualHdrOutput,
                 SwapChainFormat = report.ColorPipeline.SwapChainFormat,
                 SwapChainColorSpace = report.ColorPipeline.SwapChainColorSpace,
@@ -1261,6 +1263,11 @@ namespace NoiraPlayer.Core.PlaybackQuality
 
         private static void AddColorPipelineSignals(PlaybackQualityColorPipelineAssessment color)
         {
+            if (!string.IsNullOrWhiteSpace(color.ExpectationProfile))
+            {
+                AddUnique(color.Signals, "colorPipeline.expectationProfile");
+            }
+
             if (!string.IsNullOrWhiteSpace(color.ActualHdrOutput))
             {
                 AddUnique(color.Signals, "colorPipeline.actualHdrOutput");
@@ -2110,6 +2117,13 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 string.IsNullOrWhiteSpace(report.ColorPipeline.ActualHdrOutput))
             {
                 analysis.MissingEvidence.Add("colorPipeline.actualHdrOutput");
+            }
+
+            if (report.Expected != null &&
+                !string.IsNullOrWhiteSpace(report.Expected.HdrOutput) &&
+                string.IsNullOrWhiteSpace(report.ColorPipeline.ExpectationProfile))
+            {
+                analysis.MissingEvidence.Add("colorPipeline.expectationProfile");
             }
 
             if (report.Expected != null &&

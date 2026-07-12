@@ -87,6 +87,17 @@
         "hdrOutput": "Hdr10",
         "dxgiInput": "YCBCR_STUDIO_G2084_TOPLEFT_P2020",
         "dxgiOutput": "RGB_FULL_G2084_NONE_P2020",
+        "sdrDisplayFallback": {
+          "hdrOutput": "Sdr",
+          "dxgiInputAnyOf": [
+            "YCBCR_STUDIO_G22_LEFT_P2020",
+            "YCBCR_STUDIO_G22_TOPLEFT_P2020"
+          ],
+          "dxgiOutput": "RGB_FULL_G22_NONE_P709",
+          "isTenBitSwapChain": false,
+          "requireValidatedConversion": true,
+          "requiredConversionStatus": "tone-mapped-hable"
+        },
         "maxStartupDurationMs": 5000.0,
         "maxVideoStarvedPasses": 0,
         "maxAudioStarvedPasses": 0,
@@ -118,9 +129,20 @@
         "colorSpace": "bt2020nc",
         "isHdr": true,
         "isDirectPlayable": true,
-        "hdrOutput": "Sdr",
+        "hdrOutput": "Hdr10",
         "dxgiInput": "YCBCR_STUDIO_G2084_TOPLEFT_P2020",
-        "dxgiOutput": "RGB_FULL_G22_NONE_P709",
+        "dxgiOutput": "RGB_FULL_G2084_NONE_P2020",
+        "sdrDisplayFallback": {
+          "hdrOutput": "Sdr",
+          "dxgiInputAnyOf": [
+            "YCBCR_STUDIO_G22_LEFT_P2020",
+            "YCBCR_STUDIO_G22_TOPLEFT_P2020"
+          ],
+          "dxgiOutput": "RGB_FULL_G22_NONE_P709",
+          "isTenBitSwapChain": false,
+          "requireValidatedConversion": true,
+          "requiredConversionStatus": "tone-mapped-hable"
+        },
         "maxStartupDurationMs": 5000.0,
         "maxVideoStarvedPasses": 0,
         "maxAudioStarvedPasses": 0,
@@ -154,6 +176,17 @@
         "hdrOutput": "Hdr10",
         "dxgiInput": "YCBCR_STUDIO_G2084_TOPLEFT_P2020",
         "dxgiOutput": "RGB_FULL_G2084_NONE_P2020",
+        "sdrDisplayFallback": {
+          "hdrOutput": "Sdr",
+          "dxgiInputAnyOf": [
+            "YCBCR_STUDIO_G22_LEFT_P2020",
+            "YCBCR_STUDIO_G22_TOPLEFT_P2020"
+          ],
+          "dxgiOutput": "RGB_FULL_G22_NONE_P709",
+          "isTenBitSwapChain": false,
+          "requireValidatedConversion": true,
+          "requiredConversionStatus": "tone-mapped-hable"
+        },
         "maxStartupDurationMs": 7000.0,
         "maxVideoStarvedPasses": 0,
         "maxAudioStarvedPasses": 0,
@@ -224,6 +257,17 @@
         "hdrOutput": "Hdr10",
         "dxgiInput": "YCBCR_STUDIO_G2084_TOPLEFT_P2020",
         "dxgiOutput": "RGB_FULL_G2084_NONE_P2020",
+        "sdrDisplayFallback": {
+          "hdrOutput": "Sdr",
+          "dxgiInputAnyOf": [
+            "YCBCR_STUDIO_G22_LEFT_P2020",
+            "YCBCR_STUDIO_G22_TOPLEFT_P2020"
+          ],
+          "dxgiOutput": "RGB_FULL_G22_NONE_P709",
+          "isTenBitSwapChain": false,
+          "requireValidatedConversion": true,
+          "requiredConversionStatus": "tone-mapped-hable"
+        },
         "maxStartupDurationMs": 7000.0,
         "maxVideoStarvedPasses": 0,
         "maxAudioStarvedPasses": 0,
@@ -260,6 +304,17 @@
         "hdrOutput": "Hdr10",
         "dxgiInput": "YCBCR_STUDIO_G2084_TOPLEFT_P2020",
         "dxgiOutput": "RGB_FULL_G2084_NONE_P2020",
+        "sdrDisplayFallback": {
+          "hdrOutput": "Sdr",
+          "dxgiInputAnyOf": [
+            "YCBCR_STUDIO_G22_LEFT_P2020",
+            "YCBCR_STUDIO_G22_TOPLEFT_P2020"
+          ],
+          "dxgiOutput": "RGB_FULL_G22_NONE_P709",
+          "isTenBitSwapChain": false,
+          "requireValidatedConversion": true,
+          "requiredConversionStatus": "tone-mapped-hable"
+        },
         "maxStartupDurationMs": 7000.0,
         "maxFrameGapMs": 104.3,
         "maxRenderIntervalMsP95": 52.1,

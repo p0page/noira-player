@@ -987,6 +987,133 @@ public sealed class PlaybackQualityEvaluatorTests
     }
 
     [Fact]
+    public void Evaluate_Uses_Explicit_Sdr_Fallback_When_Hdr_Display_Is_Unavailable()
+    {
+        var report = CreateEnvironmentAwareHdrReport();
+        report.Display.HdrStatus = "Off";
+        report.Display.IsHdrDisplayAvailable = false;
+        report.ColorPipeline.ActualHdrOutput = "Sdr";
+        report.ColorPipeline.DxgiInput = "YCBCR_STUDIO_G22_LEFT_P2020";
+        report.ColorPipeline.DxgiOutput = "RGB_FULL_G22_NONE_P709";
+        report.ColorPipeline.ConversionStatus = "validated;tone-mapped-hable";
+        report.ColorPipeline.IsTenBitSwapChain = false;
+
+        PlaybackQualityEvaluator.Evaluate(report);
+
+        Assert.Equal("pass", report.Result);
+        Assert.Equal("sdr-display-fallback", report.ColorPipeline.ExpectationProfile);
+        Assert.Contains(report.Checks, check =>
+            check.Signal == "colorPipeline.expectationProfile" &&
+            check.Actual == "sdr-display-fallback" &&
+            check.Status == "observed");
+    }
+
+    [Fact]
+    public void Evaluate_Uses_Primary_Color_Expectation_On_Hdr_Display()
+    {
+        var report = CreateEnvironmentAwareHdrReport();
+        report.Display.HdrStatus = "On";
+        report.Display.IsHdrDisplayAvailable = true;
+        report.ColorPipeline.ActualHdrOutput = "Hdr10";
+        report.ColorPipeline.DxgiInput = "YCBCR_STUDIO_G2084_TOPLEFT_P2020";
+        report.ColorPipeline.DxgiOutput = "RGB_FULL_G2084_NONE_P2020";
+        report.ColorPipeline.ConversionStatus = "validated";
+        report.ColorPipeline.IsTenBitSwapChain = true;
+
+        PlaybackQualityEvaluator.Evaluate(report);
+
+        Assert.Equal("pass", report.Result);
+        Assert.Equal("primary", report.ColorPipeline.ExpectationProfile);
+    }
+
+    [Fact]
+    public void Evaluate_Does_Not_Require_Hdr_Fallback_For_Forced_Sdr_Source()
+    {
+        var report = new PlaybackQualityReport
+        {
+            Expected = new PlaybackQualityExpected
+            {
+                HdrOutput = "Sdr",
+                DxgiInput = "YCBCR_STUDIO_G22_LEFT_P709",
+                DxgiOutput = "RGB_FULL_G22_NONE_P709",
+                RequireValidatedConversion = true
+            },
+            ColorPipeline = new PlaybackQualityColorPipeline
+            {
+                ForceSdrOutput = true,
+                ActualHdrOutput = "Sdr",
+                DxgiInput = "YCBCR_STUDIO_G22_LEFT_P709",
+                DxgiOutput = "RGB_FULL_G22_NONE_P709",
+                ConversionStatus = "validated"
+            }
+        };
+
+        PlaybackQualityEvaluator.Evaluate(report);
+
+        Assert.Equal("pass", report.Result);
+        Assert.Equal("primary", report.ColorPipeline.ExpectationProfile);
+    }
+
+    [Fact]
+    public void Evaluate_Fails_When_Sdr_Environment_Requires_Undeclared_Fallback()
+    {
+        var report = CreateEnvironmentAwareHdrReport();
+        report.Expected!.SdrDisplayFallback = null;
+        report.Display.HdrStatus = "Off";
+        report.ColorPipeline.ActualHdrOutput = "Sdr";
+
+        PlaybackQualityEvaluator.Evaluate(report);
+
+        Assert.Equal("fail", report.Result);
+        Assert.Contains(
+            "SDR display fallback is required but expected.sdrDisplayFallback is missing.",
+            report.FailureReasons);
+    }
+
+    [Fact]
+    public void Evaluate_Requires_Exact_Conversion_Status_Token_For_Sdr_Fallback()
+    {
+        var report = CreateEnvironmentAwareHdrReport();
+        report.Display.HdrStatus = "Off";
+        report.ColorPipeline.ActualHdrOutput = "Sdr";
+        report.ColorPipeline.DxgiInput = "YCBCR_STUDIO_G22_TOPLEFT_P2020";
+        report.ColorPipeline.DxgiOutput = "RGB_FULL_G22_NONE_P709";
+        report.ColorPipeline.ConversionStatus = "validated;requires-tone-mapping";
+
+        PlaybackQualityEvaluator.Evaluate(report);
+
+        Assert.Equal("fail", report.Result);
+        Assert.Contains(
+            "ConversionStatus requires tone-mapped-hable token tone-mapped-hable.",
+            report.FailureReasons);
+    }
+
+    private static PlaybackQualityReport CreateEnvironmentAwareHdrReport()
+    {
+        var fallback = new PlaybackQualityColorExpected
+        {
+            HdrOutput = "Sdr",
+            DxgiOutput = "RGB_FULL_G22_NONE_P709",
+            IsTenBitSwapChain = false,
+            RequireValidatedConversion = true,
+            RequiredConversionStatus = "tone-mapped-hable"
+        };
+        fallback.DxgiInputAnyOf.Add("YCBCR_STUDIO_G22_LEFT_P2020");
+        fallback.DxgiInputAnyOf.Add("YCBCR_STUDIO_G22_TOPLEFT_P2020");
+        return new PlaybackQualityReport
+        {
+            Expected = new PlaybackQualityExpected
+            {
+                HdrOutput = "Hdr10",
+                DxgiInput = "YCBCR_STUDIO_G2084_TOPLEFT_P2020",
+                DxgiOutput = "RGB_FULL_G2084_NONE_P2020",
+                RequireValidatedConversion = true,
+                SdrDisplayFallback = fallback
+            }
+        };
+    }
+
+    [Fact]
     public void Evaluate_Fails_With_Missing_Color_Pipeline_Reasons_When_Color_Evidence_Is_Required()
     {
         var report = new PlaybackQualityReport

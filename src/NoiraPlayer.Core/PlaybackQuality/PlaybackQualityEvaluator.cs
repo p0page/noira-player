@@ -126,31 +126,86 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 "MaxAudioStarvedPasses",
                 "buffers.audioStarvedPasses",
                 "buffering");
+            var fallbackRequired = RequiresSdrDisplayFallback(report, expected);
+            var fallback = fallbackRequired ? expected.SdrDisplayFallback : null;
+            report.ColorPipeline.ExpectationProfile = fallbackRequired
+                ? "sdr-display-fallback"
+                : "primary";
+            report.Checks.Add(new PlaybackQualityCheck
+            {
+                Name = "ColorExpectationProfile",
+                Signal = "colorPipeline.expectationProfile",
+                Status = "observed",
+                FailureArea = "color-pipeline",
+                Expected = "environment-selected",
+                Actual = report.ColorPipeline.ExpectationProfile,
+                Message = "Color expectation profile selected from explicit display evidence."
+            });
+
+            if (fallbackRequired && fallback == null)
+            {
+                const string message =
+                    "SDR display fallback is required but expected.sdrDisplayFallback is missing.";
+                report.FailureReasons.Add(message);
+                report.Checks.Add(new PlaybackQualityCheck
+                {
+                    Name = "SdrDisplayFallback",
+                    Signal = "expected.sdrDisplayFallback",
+                    Status = "fail",
+                    FailureArea = "evidence-collection",
+                    Expected = "declared",
+                    Actual = "missing",
+                    Message = message
+                });
+                AddRelevantSignal(report, "colorPipeline.expectationProfile");
+            }
+
+            var expectedHdrOutput = fallback?.HdrOutput ?? expected.HdrOutput;
+            var expectedDxgiOutput = fallback?.DxgiOutput ?? expected.DxgiOutput;
             CheckRequiredEquals(
                 report,
                 "ActualHdrOutput",
                 report.ColorPipeline.ActualHdrOutput,
-                expected.HdrOutput,
+                expectedHdrOutput,
                 "colorPipeline.actualHdrOutput",
                 "color-pipeline");
-            CheckRequiredEquals(
-                report,
-                "DxgiInput",
-                report.ColorPipeline.DxgiInput,
-                expected.DxgiInput,
-                "colorPipeline.dxgiInput",
-                "color-pipeline");
+            if (fallback != null)
+            {
+                CheckRequiredAnyOf(
+                    report,
+                    "DxgiInput",
+                    report.ColorPipeline.DxgiInput,
+                    fallback.DxgiInputAnyOf,
+                    "colorPipeline.dxgiInput",
+                    "color-pipeline");
+            }
+            else
+            {
+                CheckRequiredEquals(
+                    report,
+                    "DxgiInput",
+                    report.ColorPipeline.DxgiInput,
+                    expected.DxgiInput,
+                    "colorPipeline.dxgiInput",
+                    "color-pipeline");
+            }
             CheckRequiredEquals(
                 report,
                 "DxgiOutput",
                 report.ColorPipeline.DxgiOutput,
-                expected.DxgiOutput,
+                expectedDxgiOutput,
                 "colorPipeline.dxgiOutput",
                 "color-pipeline");
-            CheckExpectedTenBitSwapChain(report, expected);
+            CheckExpectedTenBitSwapChain(
+                report,
+                fallback?.IsTenBitSwapChain ??
+                    (PlaybackQualityColorExpectationPolicy.RequiresTenBitSwapChain(expected) ? true : null));
             CheckMatchedRefreshRate(report, expected);
 
-            if (expected.RequireValidatedConversion &&
+            var requireValidatedConversion =
+                fallback?.RequireValidatedConversion ?? expected.RequireValidatedConversion;
+            var requiredConversionToken = fallback?.RequiredConversionStatus ?? "";
+            if (requireValidatedConversion &&
                 string.IsNullOrWhiteSpace(report.ColorPipeline.ConversionStatus))
             {
                 var message = "ConversionStatus is missing for color-pipeline validation.";
@@ -167,11 +222,15 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 });
                 AddRelevantSignal(report, "colorPipeline.conversionStatus");
             }
-            else if (expected.RequireValidatedConversion &&
-                report.ColorPipeline.ConversionStatus != "validated" &&
-                report.ColorPipeline.ConversionStatus != "validated;tone-mapped-hable")
+            else if (requireValidatedConversion &&
+                !HasRequiredConversionStatus(
+                    report.ColorPipeline.ConversionStatus,
+                    requiredConversionToken))
             {
-                var message = "ConversionStatus " + report.ColorPipeline.ConversionStatus + " is not validated.";
+                var message = string.IsNullOrWhiteSpace(requiredConversionToken)
+                    ? "ConversionStatus " + report.ColorPipeline.ConversionStatus + " is not validated."
+                    : "ConversionStatus requires " + requiredConversionToken +
+                        " token " + requiredConversionToken + ".";
                 report.FailureReasons.Add(message);
                 report.Checks.Add(new PlaybackQualityCheck
                 {
@@ -179,13 +238,15 @@ namespace NoiraPlayer.Core.PlaybackQuality
                     Signal = "colorPipeline.conversionStatus",
                     Status = "fail",
                     FailureArea = "color-pipeline",
-                    Expected = "validated",
+                    Expected = string.IsNullOrWhiteSpace(requiredConversionToken)
+                        ? "validated"
+                        : requiredConversionToken,
                     Actual = report.ColorPipeline.ConversionStatus,
                     Message = message
                 });
                 AddRelevantSignal(report, "colorPipeline.conversionStatus");
             }
-            else if (expected.RequireValidatedConversion)
+            else if (requireValidatedConversion)
             {
                 report.Checks.Add(new PlaybackQualityCheck
                 {
@@ -193,7 +254,9 @@ namespace NoiraPlayer.Core.PlaybackQuality
                     Signal = "colorPipeline.conversionStatus",
                     Status = "pass",
                     FailureArea = "color-pipeline",
-                    Expected = "validated",
+                    Expected = string.IsNullOrWhiteSpace(requiredConversionToken)
+                        ? "validated"
+                        : requiredConversionToken,
                     Actual = report.ColorPipeline.ConversionStatus,
                     Message = "ConversionStatus is validated."
                 });
@@ -657,16 +720,16 @@ namespace NoiraPlayer.Core.PlaybackQuality
 
         private static void CheckExpectedTenBitSwapChain(
             PlaybackQualityReport report,
-            PlaybackQualityExpected expected)
+            bool? expected)
         {
-            if (!PlaybackQualityColorExpectationPolicy.RequiresTenBitSwapChain(expected))
+            if (!expected.HasValue)
             {
                 return;
             }
 
-            const string expectedText = "True";
+            var expectedText = expected.Value.ToString();
             var actualText = report.ColorPipeline.IsTenBitSwapChain.ToString();
-            var failed = !report.ColorPipeline.IsTenBitSwapChain;
+            var failed = report.ColorPipeline.IsTenBitSwapChain != expected.Value;
             var message = "IsTenBitSwapChain " + actualText + " did not match expected " + expectedText + ".";
             report.Checks.Add(new PlaybackQualityCheck
             {
@@ -942,6 +1005,61 @@ namespace NoiraPlayer.Core.PlaybackQuality
             CheckEquals(report, name, actual, expected, signal, failureArea);
         }
 
+        private static void CheckRequiredAnyOf(
+            PlaybackQualityReport report,
+            string name,
+            string actual,
+            System.Collections.Generic.IReadOnlyList<string> expected,
+            string signal,
+            string failureArea)
+        {
+            var expectedText = string.Join(" | ", expected);
+            if (string.IsNullOrWhiteSpace(actual))
+            {
+                var missingMessage = name + " is missing for " + failureArea + " validation.";
+                report.FailureReasons.Add(missingMessage);
+                report.Checks.Add(new PlaybackQualityCheck
+                {
+                    Name = name,
+                    Signal = signal,
+                    Status = "fail",
+                    FailureArea = failureArea,
+                    Expected = expectedText,
+                    Actual = "",
+                    Message = missingMessage
+                });
+                AddRelevantSignal(report, signal);
+                return;
+            }
+
+            var matched = false;
+            foreach (var value in expected)
+            {
+                if (string.Equals(actual, value, System.StringComparison.Ordinal))
+                {
+                    matched = true;
+                    break;
+                }
+            }
+
+            var message = name + " " + actual + " did not match any expected value: " + expectedText + ".";
+            report.Checks.Add(new PlaybackQualityCheck
+            {
+                Name = name,
+                Signal = signal,
+                Status = matched ? "pass" : "fail",
+                FailureArea = failureArea,
+                Expected = expectedText,
+                Actual = actual,
+                Message = matched ? name + " matched an allowed expected value." : message
+            });
+            if (!matched)
+            {
+                report.FailureReasons.Add(message);
+                AddRelevantSignal(report, signal);
+            }
+        }
+
         private static void CheckEquals(
             PlaybackQualityReport report,
             string name,
@@ -1214,6 +1332,40 @@ namespace NoiraPlayer.Core.PlaybackQuality
                     report.Position.PostSeekAdvanced.Value.ToString(),
                     PlaybackQualityFailureClassification.PlayerCoreBug);
             }
+        }
+
+        private static bool RequiresSdrDisplayFallback(
+            PlaybackQualityReport report,
+            PlaybackQualityExpected expected)
+        {
+            var primaryRequiresHdr =
+                string.Equals(expected.HdrOutput, "Hdr10", System.StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(expected.HdrOutput, "Hdr", System.StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(expected.HdrOutput, "Hlg", System.StringComparison.OrdinalIgnoreCase);
+
+            return primaryRequiresHdr &&
+                (report.ColorPipeline.ForceSdrOutput ||
+                (!string.IsNullOrWhiteSpace(report.Display.HdrStatus) &&
+                !report.Display.IsHdrDisplayAvailable &&
+                !report.Display.IsHdrOutputActive));
+        }
+
+        private static bool HasRequiredConversionStatus(string actual, string requiredToken)
+        {
+            if (string.IsNullOrWhiteSpace(requiredToken))
+            {
+                return actual == "validated" || actual == "validated;tone-mapped-hable";
+            }
+
+            foreach (var token in actual.Split(';'))
+            {
+                if (string.Equals(token, requiredToken, System.StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static void CheckSeekRecoveryDuration(

@@ -260,6 +260,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 new PlaybackQualityReportSignalDescriptor("buffers.queuedAudioBuffers", "buffers", "queuedAudioBuffers"),
                 new PlaybackQualityReportSignalDescriptor("buffers.videoStarvedPasses", "buffers", "videoStarvedPasses"),
                 new PlaybackQualityReportSignalDescriptor("buffers.audioStarvedPasses", "buffers", "audioStarvedPasses"),
+                new PlaybackQualityReportSignalDescriptor("colorPipeline.expectationProfile", "colorPipeline", "expectationProfile"),
                 new PlaybackQualityReportSignalDescriptor("colorPipeline.actualHdrOutput", "colorPipeline", "actualHdrOutput"),
                 new PlaybackQualityReportSignalDescriptor("colorPipeline.swapChainFormat", "colorPipeline", "swapChainFormat"),
                 new PlaybackQualityReportSignalDescriptor("colorPipeline.swapChainColorSpace", "colorPipeline", "swapChainColorSpace"),

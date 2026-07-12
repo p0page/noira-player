@@ -517,6 +517,11 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 candidate.Source.HdrKind);
             AddMismatchIfBothPresent(
                 assessment,
+                "colorPipeline.expectationProfile",
+                baseline.ColorPipeline.ExpectationProfile,
+                candidate.ColorPipeline.ExpectationProfile);
+            AddMismatchIfBothPresent(
+                assessment,
                 "metricVersion",
                 baseline.MetricVersion,
                 candidate.MetricVersion);

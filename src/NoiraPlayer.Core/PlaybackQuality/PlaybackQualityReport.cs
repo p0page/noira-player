@@ -370,6 +370,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
 
     public sealed class PlaybackQualityColorPipeline
     {
+        public string ExpectationProfile { get; set; } = "";
         public string ActualHdrOutput { get; set; } = "";
         public string SwapChainFormat { get; set; } = "";
         public string SwapChainColorSpace { get; set; } = "";

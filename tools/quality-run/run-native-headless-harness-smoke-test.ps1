@@ -2398,6 +2398,26 @@ foreach ($hdr10CaseId in $nativeHdr10CaseIds) {
 "@ | Set-Content -LiteralPath $nativeManifestPath -Encoding UTF8
 
 $nativeManifest = Get-Content -LiteralPath $nativeManifestPath -Raw | ConvertFrom-Json
+foreach ($nativeHdrCase in @($nativeManifest.cases | Where-Object { $_.expected.hdrKind -eq 'Hdr10' })) {
+    Add-Member -InputObject $nativeHdrCase.expected -NotePropertyName 'hdrOutput' `
+        -NotePropertyValue 'Hdr10' -Force
+    Add-Member -InputObject $nativeHdrCase.expected -NotePropertyName 'dxgiInput' `
+        -NotePropertyValue 'YCBCR_STUDIO_G2084_TOPLEFT_P2020' -Force
+    Add-Member -InputObject $nativeHdrCase.expected -NotePropertyName 'dxgiOutput' `
+        -NotePropertyValue 'RGB_FULL_G2084_NONE_P2020' -Force
+    Add-Member -InputObject $nativeHdrCase.expected -NotePropertyName 'sdrDisplayFallback' `
+        -NotePropertyValue ([ordered]@{
+            hdrOutput = 'Sdr'
+            dxgiInputAnyOf = @(
+                'YCBCR_STUDIO_G22_LEFT_P2020',
+                'YCBCR_STUDIO_G22_TOPLEFT_P2020'
+            )
+            dxgiOutput = 'RGB_FULL_G22_NONE_P709'
+            isTenBitSwapChain = $false
+            requireValidatedConversion = $true
+            requiredConversionStatus = 'tone-mapped-hable'
+        }) -Force
+}
 $nativeManifest.cases = @($nativeManifest.cases) + @($script:networkReconnectManifestCase)
 $nativeManifest | ConvertTo-Json -Depth 12 |
     Set-Content -LiteralPath $nativeManifestPath -Encoding UTF8

@@ -420,7 +420,10 @@ try {
     if (-not ($manifest.cases | Where-Object {
         $_.forceSdrOutput -eq $true -and
         $_.expected.hdrKind -eq 'Hdr10' -and
-        $_.expected.hdrOutput -eq 'Sdr' -and
+        $_.expected.hdrOutput -eq 'Hdr10' -and
+        $_.expected.sdrDisplayFallback.hdrOutput -eq 'Sdr' -and
+        ($_.expected.sdrDisplayFallback.dxgiInputAnyOf -contains 'YCBCR_STUDIO_G22_LEFT_P2020') -and
+        $_.expected.sdrDisplayFallback.requiredConversionStatus -eq 'tone-mapped-hable' -and
         $_.expected.videoRange -eq 'HDR10' -and
         $_.expected.colorPrimaries -eq 'bt2020' -and
         $_.expected.colorTransfer -eq 'smpte2084' -and

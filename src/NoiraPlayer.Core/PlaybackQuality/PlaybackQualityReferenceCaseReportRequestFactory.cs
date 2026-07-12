@@ -88,6 +88,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 HdrOutput = source.HdrOutput,
                 DxgiInput = source.DxgiInput,
                 DxgiOutput = source.DxgiOutput,
+                SdrDisplayFallback = PlaybackQualityColorExpected.Clone(source.SdrDisplayFallback),
                 MaxStartupDurationMs = source.MaxStartupDurationMs,
                 MaxInteractionRecoveryDurationMs = source.MaxInteractionRecoveryDurationMs,
                 MinRenderedVideoFrames = source.MinRenderedVideoFrames,

@@ -6,6 +6,33 @@ namespace NoiraPlayer.Core.Tests.PlaybackQuality;
 public sealed class PlaybackQualityRunComparatorTests
 {
     [Fact]
+    public void Compare_Rejects_Different_Color_Expectation_Profiles()
+    {
+        var baseline = CreateReport("baseline", Check(
+            "ColorExpectationProfile",
+            "observed",
+            "color-pipeline",
+            "colorPipeline.expectationProfile",
+            "environment-selected",
+            "primary"));
+        var candidate = CreateReport("candidate", Check(
+            "ColorExpectationProfile",
+            "observed",
+            "color-pipeline",
+            "colorPipeline.expectationProfile",
+            "environment-selected",
+            "sdr-display-fallback"));
+        baseline.ColorPipeline.ExpectationProfile = "primary";
+        candidate.ColorPipeline.ExpectationProfile = "sdr-display-fallback";
+
+        var result = PlaybackQualityRunComparator.Compare(baseline, candidate);
+
+        Assert.Equal("incompatible", result.Comparability.Status);
+        Assert.Contains("colorPipeline.expectationProfile", result.Comparability.Signals);
+        Assert.Equal("insufficient-evidence", result.Result);
+    }
+
+    [Fact]
     public void Compare_Reports_Improved_When_Failed_Numeric_Signal_Decreases()
     {
         var baseline = CreateReport(

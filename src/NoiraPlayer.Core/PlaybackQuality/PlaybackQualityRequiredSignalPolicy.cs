@@ -238,6 +238,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
             {
                 if (!IsExpectedUnsupportedSource(expected))
                 {
+                    AddUnique(requiredSignals, "colorPipeline.expectationProfile");
                     AddUnique(requiredSignals, "colorPipeline.actualHdrOutput");
                 }
             }
@@ -725,6 +726,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
                     }
 
                     return HasBufferEvidence(report);
+                case "colorPipeline.expectationProfile":
+                    return !string.IsNullOrWhiteSpace(report.ColorPipeline.ExpectationProfile);
                 case "colorPipeline.actualHdrOutput":
                     return !string.IsNullOrWhiteSpace(report.ColorPipeline.ActualHdrOutput);
                 case "colorPipeline.swapChainFormat":

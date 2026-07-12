@@ -22,6 +22,6 @@ public sealed class PlaybackQualitySeekLatencyContractTests
     [Fact]
     public void Seek_Latency_Contract_Uses_A_New_Evaluation_Version()
     {
-        Assert.Equal("playback-quality-v0.3", PlaybackQualityRunResult.CurrentEvaluationVersion);
+        Assert.Equal("playback-quality-v0.4", PlaybackQualityRunResult.CurrentEvaluationVersion);
     }
 }
