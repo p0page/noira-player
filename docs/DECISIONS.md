@@ -8,6 +8,16 @@
 
 边界：上述数据证明 Windows native 软件链路的耗时归因，不证明具体 Emby 服务器版本与 Jellyfin 实现完全相同，也不证明 Xbox/HDMI 行为。若未来评测服务端转封装、持久缓存或协议层优化，必须建立独立 manifest、记录实际响应/执行路径，并与当前静态直播放 baseline 分开比较。
 
+## 2026-07-12：timeline 必须同时报告 seek 落点与首帧恢复时延
+
+决策：所有真实 timeline case 必须结构化记录 `position.seekOperationDurationMs` 和 `position.seekRecoveryDurationMs`。前者从调用 seek 到调用返回，后者从发起 seek 到观察到首个 post-seek 呈现帧；`expected.maxSeekRecoveryDurationMs` 只允许用于 timeline 场景。缺少任一字段不得通过 strict validation，也不得从固定延迟、进度差或 lifecycle 文本推算。
+
+原因：三轮私有 Emby timeline 实播均通过 22ms 落点误差并继续推进，但旧报告没有 seek 耗时，因而无法区分瞬时跳转和数秒阻塞。native `PlaybackGraph::Seek` 当前同步执行远端 demux seek、准确预滚与首帧呈现，helper 可以直接测量真实边界；App-hosted 路径则在 `SeekAsync` 返回后条件等待 native first-presented evidence，不再使用固定延迟冒充恢复。
+
+影响：旧 timeline report-set 因缺少新增 required signals 不再可用于当前候选比较，必须在同一新契约下重建 baseline/candidate。该变更只增强裁判，不改变 seek 策略、准确性标准或播放器 Core 行为。
+
+版本决策：该 required-signal 与阈值变化将 evaluation version 从 `playback-quality-v0.1` 升级为 `playback-quality-v0.2`。历史 v0.1 报告和文档保持原值；当前 manifest validation、report-set validation、run plan、analysis、comparison 与 candidate evaluation 必须统一输出 v0.2，禁止跨版本比较。
+
 ## 2026-07-12：captured report 不能绕过 manifest expected 物化
 
 决策：native manifest runner 的输出只作为 captured evidence，不能直接进入正式 baseline。baseline 必须根据 runner summary 生成仅包含实际选中 case 的 executed manifest，再调用统一 materializer，把 manifest expected 绑定到 captured report 并使用当前 evaluator 重新计算 pass/fail。最终 unified manifest 保留 quarantine，但未执行 quarantine 不生成 skip 报告。

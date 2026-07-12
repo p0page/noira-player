@@ -2014,8 +2014,13 @@ namespace NoiraPlayer.App.Views
             {
                 var seekTargetTicks = CalculateQualityRunSeekTargetTicks();
                 position.SeekTargetPositionTicks = seekTargetTicks;
+                var seekStartedAt = Stopwatch.StartNew();
                 await _orchestrator.SeekAsync(seekTargetTicks);
-                await Task.Delay(shortDelay);
+                position.SeekOperationDurationMs = seekStartedAt.Elapsed.TotalMilliseconds;
+                if (await WaitForQualityRunSeekPresentationAsync(seekTargetTicks, shortDelay))
+                {
+                    position.SeekRecoveryDurationMs = seekStartedAt.Elapsed.TotalMilliseconds;
+                }
                 var actualPositionTicks = GetCurrentPositionTicks();
                 position.ActualPositionTicks = actualPositionTicks;
                 position.SeekPositionErrorMs =
@@ -2035,6 +2040,28 @@ namespace NoiraPlayer.App.Views
                     "skipped",
                     "app-hosted quality-run skipped seek because playback was not seekable");
             }
+        }
+
+        private async Task<bool> WaitForQualityRunSeekPresentationAsync(
+            long seekTargetTicks,
+            TimeSpan timeout)
+        {
+            var deadline = DateTimeOffset.UtcNow + timeout;
+            do
+            {
+                if (_backend is IPlaybackQualityMetricsProvider provider &&
+                    provider.TryGetQualityMetrics(out var metrics) &&
+                    metrics?.FirstPresentedPositionTicks is long firstPresentedPositionTicks &&
+                    Math.Abs(firstPresentedPositionTicks - seekTargetTicks) <= TimeSpan.FromSeconds(2).Ticks)
+                {
+                    return true;
+                }
+
+                await Task.Delay(TimeSpan.FromMilliseconds(25));
+            }
+            while (DateTimeOffset.UtcNow < deadline);
+
+            return false;
         }
 
         private async Task StopQualityRunPlaybackAsync(PlaybackQualityLifecycle lifecycle)

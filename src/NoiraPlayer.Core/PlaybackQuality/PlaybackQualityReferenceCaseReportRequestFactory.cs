@@ -97,6 +97,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 MaxRenderIntervalMsP99 = source.MaxRenderIntervalMsP99,
                 MaxAudioVideoDriftMsP95 = source.MaxAudioVideoDriftMsP95,
                 MaxSeekPositionErrorMs = source.MaxSeekPositionErrorMs,
+                MaxSeekRecoveryDurationMs = source.MaxSeekRecoveryDurationMs,
                 MaxVideoStarvedPasses = source.MaxVideoStarvedPasses,
                 MaxAudioStarvedPasses = source.MaxAudioStarvedPasses,
                 RequireValidatedConversion = source.RequireValidatedConversion,

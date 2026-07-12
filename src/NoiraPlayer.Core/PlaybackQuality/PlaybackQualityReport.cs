@@ -199,6 +199,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
         public long? PostSeekPositionTicks { get; set; }
         public bool? PostSeekAdvanced { get; set; }
         public double? SeekPositionErrorMs { get; set; }
+        public double? SeekOperationDurationMs { get; set; }
+        public double? SeekRecoveryDurationMs { get; set; }
     }
 
     public sealed class PlaybackQualitySourceTimeline

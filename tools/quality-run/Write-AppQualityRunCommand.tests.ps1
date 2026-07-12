@@ -1,4 +1,4 @@
-﻿$ErrorActionPreference = 'Stop'
+$ErrorActionPreference = 'Stop'
 
 $scriptPath = Join-Path $PSScriptRoot 'Write-AppQualityRunCommand.ps1'
 $testRoot = Join-Path ([System.IO.Path]::GetTempPath()) ('write-app-quality-run-command-test-' + [guid]::NewGuid().ToString('N'))
@@ -15,7 +15,7 @@ New-Item -ItemType Directory -Path (Join-Path $packageRoot 'LocalState') -Force 
 @'
 {
   "schemaVersion": 1,
-  "evaluationVersion": "playback-quality-v0.1",
+  "evaluationVersion": "playback-quality-v0.2",
   "cases": [
     {
       "caseId": "jellyfin/direct-uri-no-command",

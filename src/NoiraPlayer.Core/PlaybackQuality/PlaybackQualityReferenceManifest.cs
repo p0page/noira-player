@@ -488,6 +488,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 MaxRenderIntervalMsP99 = source.MaxRenderIntervalMsP99,
                 MaxAudioVideoDriftMsP95 = source.MaxAudioVideoDriftMsP95,
                 MaxSeekPositionErrorMs = source.MaxSeekPositionErrorMs,
+                MaxSeekRecoveryDurationMs = source.MaxSeekRecoveryDurationMs,
                 MaxVideoStarvedPasses = source.MaxVideoStarvedPasses,
                 MaxAudioStarvedPasses = source.MaxAudioStarvedPasses,
                 RequireValidatedConversion = source.RequireValidatedConversion,
@@ -559,6 +560,29 @@ namespace NoiraPlayer.Core.PlaybackQuality
                     caseId,
                     "expected.maxInteractionRecoveryDurationMs",
                     "Playback quality interaction recovery threshold requires an audio-switch or subtitle-switch scenario.");
+            }
+
+            if (expected.MaxSeekRecoveryDurationMs.HasValue &&
+                (!double.IsFinite(expected.MaxSeekRecoveryDurationMs.Value) ||
+                    expected.MaxSeekRecoveryDurationMs.Value <= 0))
+            {
+                AddError(
+                    validation,
+                    "case.expected.maxSeekRecoveryDurationMs.invalid",
+                    caseId,
+                    "expected.maxSeekRecoveryDurationMs",
+                    "Playback quality reference expected.maxSeekRecoveryDurationMs must be finite and positive.");
+            }
+
+            if (expected.MaxSeekRecoveryDurationMs.HasValue &&
+                scenario != PlaybackQualityExecutionScenario.Timeline)
+            {
+                AddError(
+                    validation,
+                    "case.expected.maxSeekRecoveryDurationMs.scenario.invalid",
+                    caseId,
+                    "expected.maxSeekRecoveryDurationMs",
+                    "Playback quality seek recovery threshold requires a timeline scenario.");
             }
         }
 

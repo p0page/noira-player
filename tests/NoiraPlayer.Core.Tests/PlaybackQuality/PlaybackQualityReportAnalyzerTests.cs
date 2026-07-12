@@ -1064,6 +1064,26 @@ public sealed class PlaybackQualityReportAnalyzerTests
     }
 
     [Fact]
+    public void Analyze_Emits_Structured_Seek_Latency_Evidence()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "seek-latency",
+            Result = "pass",
+            Position = new PlaybackQualityPosition
+            {
+                SeekOperationDurationMs = 4800,
+                SeekRecoveryDurationMs = 5100
+            }
+        };
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Contains("position.seekOperationDurationMs", analysis.EvidenceSignals);
+        Assert.Contains("position.seekRecoveryDurationMs", analysis.EvidenceSignals);
+    }
+
+    [Fact]
     public void Analyze_Summarizes_Startup_Stages_And_Dominant_Stage_For_Model()
     {
         var report = new PlaybackQualityReport

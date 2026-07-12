@@ -2031,6 +2031,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 AddMissingTimelineEvidence(analysis, report.Position.FirstPresentedPositionTicks.HasValue, "position.firstPresentedPositionTicks");
                 AddMissingTimelineEvidence(analysis, report.Position.PostSeekPositionTicks.HasValue, "position.postSeekPositionTicks");
                 AddMissingTimelineEvidence(analysis, report.Position.PostSeekAdvanced.HasValue, "position.postSeekAdvanced");
+                AddMissingTimelineEvidence(analysis, report.Position.SeekOperationDurationMs.HasValue, "position.seekOperationDurationMs");
+                AddMissingTimelineEvidence(analysis, report.Position.SeekRecoveryDurationMs.HasValue, "position.seekRecoveryDurationMs");
             }
 
             if (report.Expected != null &&
@@ -2631,6 +2633,16 @@ namespace NoiraPlayer.Core.PlaybackQuality
                     report.Position.ActualPositionTicks.HasValue))
             {
                 AddUnique(analysis.EvidenceSignals, "position.seekPositionErrorMs");
+            }
+
+            if (report.Position.SeekOperationDurationMs.HasValue)
+            {
+                AddUnique(analysis.EvidenceSignals, "position.seekOperationDurationMs");
+            }
+
+            if (report.Position.SeekRecoveryDurationMs.HasValue)
+            {
+                AddUnique(analysis.EvidenceSignals, "position.seekRecoveryDurationMs");
             }
 
             if (report.Timing.LateFrameDropToleranceMs > 0)

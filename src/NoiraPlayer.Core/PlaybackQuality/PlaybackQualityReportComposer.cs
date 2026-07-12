@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using NoiraPlayer.Core.Playback;
 
 namespace NoiraPlayer.Core.PlaybackQuality
@@ -51,7 +51,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
 
     public sealed class PlaybackQualityRunResult
     {
-        public const string CurrentEvaluationVersion = "playback-quality-v0.1";
+        public const string CurrentEvaluationVersion = "playback-quality-v0.2";
 
         public PlaybackQualityRunResult(
             PlaybackQualityReport report,
@@ -248,7 +248,9 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 FirstPresentedPositionTicks = source.FirstPresentedPositionTicks,
                 PostSeekPositionTicks = source.PostSeekPositionTicks,
                 PostSeekAdvanced = source.PostSeekAdvanced,
-                SeekPositionErrorMs = source.SeekPositionErrorMs
+                SeekPositionErrorMs = source.SeekPositionErrorMs,
+                SeekOperationDurationMs = source.SeekOperationDurationMs,
+                SeekRecoveryDurationMs = source.SeekRecoveryDurationMs
             };
         }
 

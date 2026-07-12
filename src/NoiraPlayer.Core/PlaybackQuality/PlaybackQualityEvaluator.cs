@@ -57,6 +57,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
             CheckInteractionRecoveryDuration(report, expected);
             CheckSeekEvidenceCompleteness(report);
             CheckSeekPositionError(report, expected);
+            CheckSeekRecoveryDuration(report, expected);
             CheckMin(
                 report,
                 "RenderedVideoFrames",
@@ -1159,6 +1160,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
             RequireTimelineEvidence(report, report.Position.FirstPresentedPositionTicks.HasValue, "position.firstPresentedPositionTicks");
             RequireTimelineEvidence(report, report.Position.PostSeekPositionTicks.HasValue, "position.postSeekPositionTicks");
             RequireTimelineEvidence(report, report.Position.PostSeekAdvanced.HasValue, "position.postSeekAdvanced");
+            RequireTimelineEvidence(report, report.Position.SeekOperationDurationMs.HasValue, "position.seekOperationDurationMs");
+            RequireTimelineEvidence(report, report.Position.SeekRecoveryDurationMs.HasValue, "position.seekRecoveryDurationMs");
 
             if (report.Source.ContainerStartTimeTicks.HasValue &&
                 report.Position.SeekDemuxTargetTicks.HasValue)
@@ -1204,6 +1207,25 @@ namespace NoiraPlayer.Core.PlaybackQuality
                     report.Position.PostSeekAdvanced.Value.ToString(),
                     PlaybackQualityFailureClassification.PlayerCoreBug);
             }
+        }
+
+        private static void CheckSeekRecoveryDuration(
+            PlaybackQualityReport report,
+            PlaybackQualityExpected expected)
+        {
+            if (!expected.MaxSeekRecoveryDurationMs.HasValue)
+            {
+                return;
+            }
+
+            CheckMeasuredMax(
+                report,
+                "SeekRecoveryDurationMs",
+                report.Position.SeekRecoveryDurationMs.GetValueOrDefault(),
+                expected.MaxSeekRecoveryDurationMs,
+                "MaxSeekRecoveryDurationMs",
+                "position.seekRecoveryDurationMs",
+                "timeline");
         }
 
         private static void RequireTimelineEvidence(

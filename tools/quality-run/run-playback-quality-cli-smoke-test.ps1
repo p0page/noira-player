@@ -1,4 +1,4 @@
-﻿$ErrorActionPreference = 'Stop'
+$ErrorActionPreference = 'Stop'
 
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot '..\..')
 $cliDll = Join-Path $repoRoot 'tools\NoiraPlayer.PlaybackQuality.Cli\bin\Debug\net10.0\NoiraPlayer.PlaybackQuality.Cli.dll'
@@ -76,6 +76,8 @@ function Set-SmokeNativeExecutionEvidence {
         $payload.position | Add-Member -NotePropertyName firstPresentedPositionTicks -NotePropertyValue $actualPosition -Force
         $payload.position | Add-Member -NotePropertyName postSeekPositionTicks -NotePropertyValue ($actualPosition + 10000000) -Force
         $payload.position | Add-Member -NotePropertyName postSeekAdvanced -NotePropertyValue $true -Force
+        $payload.position | Add-Member -NotePropertyName seekOperationDurationMs -NotePropertyValue 120.0 -Force
+        $payload.position | Add-Member -NotePropertyName seekRecoveryDurationMs -NotePropertyValue 150.0 -Force
     }
 
     $report | ConvertTo-Json -Depth 100 | Set-Content -LiteralPath $Path -Encoding UTF8
@@ -588,8 +590,8 @@ try {
         throw 'Expected analyze-report-set output schemaVersion 1.'
     }
 
-    if ($analysisSet.evaluationVersion -ne 'playback-quality-v0.1') {
-        throw 'Expected analyze-report-set output evaluationVersion playback-quality-v0.1.'
+    if ($analysisSet.evaluationVersion -ne 'playback-quality-v0.2') {
+        throw 'Expected analyze-report-set output evaluationVersion playback-quality-v0.2.'
     }
 
     if ($analysisSet.action -ne 'fix-report-analysis') {
@@ -894,8 +896,8 @@ try {
         throw 'Expected playback quality CLI plan-runs output schemaVersion 1.'
     }
 
-    if ($runPlan.evaluationVersion -ne 'playback-quality-v0.1') {
-        throw 'Expected playback quality CLI plan-runs output evaluationVersion playback-quality-v0.1.'
+    if ($runPlan.evaluationVersion -ne 'playback-quality-v0.2') {
+        throw 'Expected playback quality CLI plan-runs output evaluationVersion playback-quality-v0.2.'
     }
 
     if ($runPlan.caseCount -ne 3) {
@@ -945,7 +947,7 @@ try {
 
     $materializedBaselineSummary = Get-Content -Raw -LiteralPath $materializedBaselineSummaryPath | ConvertFrom-Json
     if ($materializedBaselineSummary.schemaVersion -ne 1 -or
-        $materializedBaselineSummary.evaluationVersion -ne 'playback-quality-v0.1' -or
+        $materializedBaselineSummary.evaluationVersion -ne 'playback-quality-v0.2' -or
         $materializedBaselineSummary.caseCount -ne 3 -or
         $materializedBaselineSummary.reportsDirectory -ne $materializedBaselineDir) {
         throw 'Expected materialize-baseline-report-set summary to describe generated reports.'
@@ -1230,7 +1232,7 @@ try {
 
     $coreProbeValidation = Get-Content -Raw -LiteralPath $coreProbeValidationPath | ConvertFrom-Json
     if ($coreProbeValidation.isValid -ne $false -or
-        $coreProbeValidation.structureValid -ne $true -or
+        $coreProbeValidation.structureValid -ne $false -or
         $coreProbeValidation.executionValid -ne $false -or
         $coreProbeValidation.matchedCaseCount -ne 0 -or
         $coreProbeValidation.cases[0].status -ne 'mismatch' -or
@@ -1239,8 +1241,16 @@ try {
             $_.signal -eq 'execution.evidenceLevel' -and
             $_.expected -eq 'native-playback' -and
             $_.actual -eq 'orchestration'
+        }) -or
+        -not ($coreProbeValidation.errors | Where-Object {
+            $_.code -eq 'report.requiredSignal.missing' -and
+            $_.signal -eq 'position.seekOperationDurationMs'
+        }) -or
+        -not ($coreProbeValidation.errors | Where-Object {
+            $_.code -eq 'report.requiredSignal.missing' -and
+            $_.signal -eq 'position.seekRecoveryDurationMs'
         })) {
-        throw 'Expected evaluator self-test probe to remain structurally readable while failing the native playback evidence gate.'
+        throw 'Expected evaluator self-test probe to fail both native execution and real seek-latency evidence gates.'
     }
 
     Push-Location $repoRoot
@@ -3402,8 +3412,8 @@ try {
         throw 'Expected playback quality CLI evaluate-candidate output schemaVersion 1.'
     }
 
-    if ($candidateEvaluation.evaluationVersion -ne 'playback-quality-v0.1') {
-        throw 'Expected playback quality CLI evaluate-candidate output evaluationVersion playback-quality-v0.1.'
+    if ($candidateEvaluation.evaluationVersion -ne 'playback-quality-v0.2') {
+        throw 'Expected playback quality CLI evaluate-candidate output evaluationVersion playback-quality-v0.2.'
     }
 
     if ($candidateEvaluation.action -ne 'accept-candidate') {

@@ -130,6 +130,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 AddUnique(requiredSignals, "position.postSeekPositionTicks");
                 AddUnique(requiredSignals, "position.postSeekAdvanced");
                 AddUnique(requiredSignals, "position.seekPositionErrorMs");
+                AddUnique(requiredSignals, "position.seekOperationDurationMs");
+                AddUnique(requiredSignals, "position.seekRecoveryDurationMs");
             }
 
             if (HasPurpose(referenceCase, "tracks") ||
@@ -545,6 +547,10 @@ namespace NoiraPlayer.Core.PlaybackQuality
                     return report.Position.SeekPositionErrorMs.HasValue ||
                         (report.Position.SeekTargetPositionTicks.HasValue &&
                             report.Position.ActualPositionTicks.HasValue);
+                case "position.seekOperationDurationMs":
+                    return report.Position.SeekOperationDurationMs.HasValue;
+                case "position.seekRecoveryDurationMs":
+                    return report.Position.SeekRecoveryDurationMs.HasValue;
                 case "tracks.videoTrackCount":
                     if (presentSignals != null)
                     {

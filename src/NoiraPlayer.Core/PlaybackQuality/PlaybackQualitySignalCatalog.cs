@@ -138,6 +138,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 new PlaybackQualityReportSignalDescriptor("position.postSeekPositionTicks", "position", "postSeekPositionTicks"),
                 new PlaybackQualityReportSignalDescriptor("position.postSeekAdvanced", "position", "postSeekAdvanced"),
                 new PlaybackQualityReportSignalDescriptor("position.seekPositionErrorMs", "position", "seekPositionErrorMs"),
+                new PlaybackQualityReportSignalDescriptor("position.seekOperationDurationMs", "position", "seekOperationDurationMs"),
+                new PlaybackQualityReportSignalDescriptor("position.seekRecoveryDurationMs", "position", "seekRecoveryDurationMs"),
                 new PlaybackQualityReportSignalDescriptor("tracks.videoTrackCount", "tracks", "videoTrackCount"),
                 new PlaybackQualityReportSignalDescriptor("tracks.audioTrackCount", "tracks", "audioTrackCount"),
                 new PlaybackQualityReportSignalDescriptor("tracks.subtitleTrackCount", "tracks", "subtitleTrackCount"),

@@ -876,6 +876,37 @@ public sealed class PlaybackQualityEvaluatorTests
     }
 
     [Fact]
+    public void Evaluate_Fails_When_Seek_Recovery_Exceeds_Threshold()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "seek-recovers-slowly",
+            Expected = new PlaybackQualityExpected
+            {
+                MaxSeekRecoveryDurationMs = 2000,
+                RequireValidatedConversion = false
+            },
+            Position = new PlaybackQualityPosition
+            {
+                SeekOperationDurationMs = 4800,
+                SeekRecoveryDurationMs = 5100
+            }
+        };
+
+        PlaybackQualityEvaluator.Evaluate(report);
+
+        Assert.Equal("fail", report.Result);
+        Assert.Contains(
+            "SeekRecoveryDurationMs 5100.000 exceeded MaxSeekRecoveryDurationMs 2000.000.",
+            report.FailureReasons);
+        Assert.Contains(report.Checks, check =>
+            check.Name == "SeekRecoveryDurationMs" &&
+            check.Signal == "position.seekRecoveryDurationMs" &&
+            check.Status == "fail" &&
+            check.FailureArea == "timeline");
+    }
+
+    [Fact]
     public void Evaluate_Fails_When_Native_Seek_Evidence_Is_Incomplete()
     {
         var report = new PlaybackQualityReport
@@ -936,7 +967,9 @@ public sealed class PlaybackQualityEvaluatorTests
                 ActualPositionTicks = 10_213_333,
                 FirstPresentedPositionTicks = 10_213_333,
                 PostSeekPositionTicks = 20_000_000,
-                PostSeekAdvanced = true
+                PostSeekAdvanced = true,
+                SeekOperationDurationMs = 120,
+                SeekRecoveryDurationMs = 150
             }
         };
 

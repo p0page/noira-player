@@ -31,6 +31,7 @@
         public double? MaxRenderIntervalMsP99 { get; set; }
         public double? MaxAudioVideoDriftMsP95 { get; set; }
         public double? MaxSeekPositionErrorMs { get; set; }
+        public double? MaxSeekRecoveryDurationMs { get; set; }
         public long? MaxVideoStarvedPasses { get; set; }
         public long? MaxAudioStarvedPasses { get; set; }
         public bool RequireValidatedConversion { get; set; } = true;

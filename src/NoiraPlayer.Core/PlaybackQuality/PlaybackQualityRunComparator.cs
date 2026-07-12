@@ -1446,6 +1446,16 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 "position.postSeekAdvanced",
                 baseline.Position.PostSeekAdvanced,
                 candidate.Position.PostSeekAdvanced);
+            CompareOptionalTimelineEvidence(
+                comparison,
+                "position.seekOperationDurationMs",
+                baseline.Position.SeekOperationDurationMs,
+                candidate.Position.SeekOperationDurationMs);
+            CompareOptionalTimelineEvidence(
+                comparison,
+                "position.seekRecoveryDurationMs",
+                baseline.Position.SeekRecoveryDurationMs,
+                candidate.Position.SeekRecoveryDurationMs);
 
             var baselineError = ResolveSeekPositionErrorMs(baseline.Position);
             var candidateError = ResolveSeekPositionErrorMs(candidate.Position);
@@ -1511,6 +1521,21 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 candidate.HasValue,
                 baseline?.ToString() ?? "",
                 candidate?.ToString() ?? "");
+        }
+
+        private static void CompareOptionalTimelineEvidence(
+            PlaybackQualityRunComparison comparison,
+            string signal,
+            double? baseline,
+            double? candidate)
+        {
+            CompareOptionalTimelineEvidence(
+                comparison,
+                signal,
+                baseline.HasValue,
+                candidate.HasValue,
+                baseline?.ToString("0.000", CultureInfo.InvariantCulture) ?? "",
+                candidate?.ToString("0.000", CultureInfo.InvariantCulture) ?? "");
         }
 
         private static void CompareOptionalTimelineEvidence(

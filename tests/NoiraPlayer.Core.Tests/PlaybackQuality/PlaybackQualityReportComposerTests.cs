@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using NoiraPlayer.Core.Emby;
 using NoiraPlayer.Core.Playback;
 using NoiraPlayer.Core.PlaybackQuality;
@@ -99,7 +99,7 @@ public sealed class PlaybackQualityReportComposerTests
         var json = PlaybackQualityReportSerializer.Serialize(result);
 
         Assert.Contains("\"schemaVersion\": 1", json);
-        Assert.Contains("\"evaluationVersion\": \"playback-quality-v0.1\"", json);
+        Assert.Contains("\"evaluationVersion\": \"playback-quality-v0.2\"", json);
         Assert.Contains("\"report\"", json);
         Assert.Contains("\"modelAnalysis\"", json);
         Assert.Contains("\"caseMetadata\"", json);

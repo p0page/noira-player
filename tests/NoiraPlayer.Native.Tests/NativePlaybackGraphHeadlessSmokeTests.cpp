@@ -109,6 +109,8 @@ namespace
         int64_t TargetPositionTicks{SeekTargetPositionTicks};
         std::optional<int64_t> ActualPositionTicks;
         int64_t PostSeekPlaybackPositionTicks{0};
+        double OperationDurationMs{0.0};
+        double RecoveryDurationMs{0.0};
     };
 
     Options ParseOptions(int argc, wchar_t** argv)
@@ -501,16 +503,30 @@ int wmain(int argc, wchar_t** argv)
         {
             ReportStage("seek-started");
             seek.Attempted = true;
+            auto const seekStartedAt = std::chrono::steady_clock::now();
             try
             {
                 graph.Seek(seek.TargetPositionTicks);
+                auto const seekCompletedAt = std::chrono::steady_clock::now();
+                seek.OperationDurationMs =
+                    std::chrono::duration<double, std::milli>(
+                        seekCompletedAt - seekStartedAt).count();
                 auto seekPresentation = graph.SeekPresentationSnapshot();
                 seek.ActualPositionTicks = seekPresentation.ActualPositionTicks;
                 seekGeneration = seekPresentation.Generation;
                 seekCallCompleted = seekPresentation.Generation > seekPresentationBefore.Generation;
+                if (seekCallCompleted && seek.ActualPositionTicks.has_value())
+                {
+                    seek.RecoveryDurationMs =
+                        std::chrono::duration<double, std::milli>(
+                            std::chrono::steady_clock::now() - seekStartedAt).count();
+                }
             }
             catch (...)
             {
+                seek.OperationDurationMs =
+                    std::chrono::duration<double, std::milli>(
+                        std::chrono::steady_clock::now() - seekStartedAt).count();
             }
 
             std::this_thread::sleep_for(sampleWindow - halfWindow);
@@ -637,6 +653,8 @@ int wmain(int argc, wchar_t** argv)
             << " seekTargetPositionTicks=" << seek.TargetPositionTicks
             << " seekDemuxTargetTicks=" << timeline.LastSeekDemuxTargetTicks
             << " seekActualPositionTicks=" << seek.ActualPositionTicks.value_or(-1)
+            << " seekOperationDurationMs=" << seek.OperationDurationMs
+            << " seekRecoveryDurationMs=" << seek.RecoveryDurationMs
             << " postSeekPlaybackPositionTicks=" << seek.PostSeekPlaybackPositionTicks
             << " postSeekAdvanced=" << (seek.ActualPositionTicks.has_value() &&
                 seek.PostSeekPlaybackPositionTicks > seek.ActualPositionTicks.value() ? 1 : 0)

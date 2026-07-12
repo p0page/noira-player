@@ -252,6 +252,12 @@ internal static class NativeHeadlessHarness
                     : null,
                 SeekPositionErrorMs = helper.Seek.Attempted && helper.Seek.ActualPositionTicks.HasValue
                     ? Math.Abs(helper.Seek.ActualPositionTicks.Value - helper.Seek.TargetPositionTicks) / 10000.0
+                    : null,
+                SeekOperationDurationMs = helper.Seek.Attempted
+                    ? helper.Seek.OperationDurationMs
+                    : null,
+                SeekRecoveryDurationMs = helper.Seek.Attempted
+                    ? helper.Seek.RecoveryDurationMs
                     : null
             },
             CreateExecutionEvidence(
@@ -1296,7 +1302,9 @@ internal static class NativeHeadlessHarness
             !TryGetRequiredNonNegativeInt64(values, "seekDemuxTargetTicks", out var demuxTarget, out error) ||
             !TryGetRequiredNullableNonNegativeInt64(values, "seekActualPositionTicks", out var actualPosition, out error) ||
             !TryGetRequiredNonNegativeInt64(values, "postSeekPlaybackPositionTicks", out var postSeekPosition, out error) ||
-            !TryGetAttempted(values, "postSeekAdvanced", out var postSeekAdvanced, out error))
+            !TryGetAttempted(values, "postSeekAdvanced", out var postSeekAdvanced, out error) ||
+            !TryGetRequiredNonNegativeDouble(values, "seekOperationDurationMs", out var operationDurationMs, out error) ||
+            !TryGetRequiredNonNegativeDouble(values, "seekRecoveryDurationMs", out var recoveryDurationMs, out error))
         {
             return false;
         }
@@ -1319,6 +1327,8 @@ internal static class NativeHeadlessHarness
         outcome.ActualPositionTicks = actualPosition;
         outcome.PostSeekPlaybackPositionTicks = postSeekPosition;
         outcome.PostSeekAdvanced = postSeekAdvanced;
+        outcome.OperationDurationMs = operationDurationMs;
+        outcome.RecoveryDurationMs = recoveryDurationMs;
         return true;
     }
 
@@ -2427,6 +2437,10 @@ internal sealed class NativeHeadlessSeekOutcome
     public long PostSeekPlaybackPositionTicks { get; set; }
 
     public bool PostSeekAdvanced { get; set; }
+
+    public double OperationDurationMs { get; set; }
+
+    public double RecoveryDurationMs { get; set; }
 }
 
 internal sealed class NativeHeadlessSourceInfo

@@ -130,6 +130,7 @@ $report = [ordered]@{
         seekDemuxTargetTicks = 10000000; actualPositionTicks = 10000000
         firstPresentedPositionTicks = 10000000; postSeekPositionTicks = 30000000
         postSeekAdvanced = $true; seekPositionErrorMs = 0.0
+        seekOperationDurationMs = 120.0; seekRecoveryDurationMs = 150.0
     }
     tracks = @{
         videoTrackCount = 1; audioTrackCount = 1; subtitleTrackCount = 1
@@ -170,7 +171,7 @@ $report = [ordered]@{
 
 @{
     schemaVersion = 1
-    evaluationVersion = 'playback-quality-v0.1'
+    evaluationVersion = 'playback-quality-v0.2'
     caseMetadata = @{ caseId = $caseId; category = 'stable'; severity = 'high'; stability = 'stable' }
     report = $report
 } | ConvertTo-Json -Depth 30 | Set-Content -LiteralPath $reportPath -Encoding UTF8

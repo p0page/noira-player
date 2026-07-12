@@ -98,6 +98,42 @@ public sealed class PlaybackQualityReferenceManifestTests
         Assert.True(result.IsValid);
     }
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(double.NaN)]
+    [InlineData(double.PositiveInfinity)]
+    public void Validate_Rejects_Invalid_Seek_Recovery_Threshold(double threshold)
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        var referenceCase = CreateCase("timeline/seek-recovery", tier: 1, purpose: "timeline");
+        referenceCase.ExecutionRequirement.Scenario = "timeline";
+        referenceCase.Expected.MaxSeekRecoveryDurationMs = threshold;
+        manifest.Cases.Add(referenceCase);
+
+        var result = PlaybackQualityReferenceManifestValidator.Validate(manifest);
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, error =>
+            error.Code == "case.expected.maxSeekRecoveryDurationMs.invalid" &&
+            error.CaseId == referenceCase.CaseId &&
+            error.Signal == "expected.maxSeekRecoveryDurationMs");
+    }
+
+    [Fact]
+    public void Validate_Accepts_Positive_Seek_Recovery_Threshold_For_Timeline_Case()
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        var referenceCase = CreateCase("timeline/seek-recovery", tier: 1, purpose: "timeline");
+        referenceCase.ExecutionRequirement.Scenario = "timeline";
+        referenceCase.Expected.MaxSeekRecoveryDurationMs = 2000;
+        manifest.Cases.Add(referenceCase);
+
+        var result = PlaybackQualityReferenceManifestValidator.Validate(manifest);
+
+        Assert.True(result.IsValid);
+    }
+
     [Fact]
     public void Validate_Rejects_Interaction_Recovery_Threshold_For_Playback_Case()
     {
@@ -2169,6 +2205,8 @@ public sealed class PlaybackQualityReferenceManifestTests
         Assert.Contains("position.seekTargetPositionTicks", requiredSignals);
         Assert.Contains("position.actualPositionTicks", requiredSignals);
         Assert.Contains("position.seekPositionErrorMs", requiredSignals);
+        Assert.Contains("position.seekOperationDurationMs", requiredSignals);
+        Assert.Contains("position.seekRecoveryDurationMs", requiredSignals);
     }
 
     [Fact]

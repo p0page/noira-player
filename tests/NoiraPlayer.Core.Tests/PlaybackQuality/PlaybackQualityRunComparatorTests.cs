@@ -846,6 +846,31 @@ public sealed class PlaybackQualityRunComparatorTests
     }
 
     [Fact]
+    public void Compare_Reports_Improves_When_Seek_Recovery_Duration_Decreases()
+    {
+        var baseline = CreateReport(
+            "baseline",
+            Check("SeekRecoveryDurationMs", "fail", "timeline", "position.seekRecoveryDurationMs", "2000", "5000"));
+        baseline.Position.SeekOperationDurationMs = 4800;
+        baseline.Position.SeekRecoveryDurationMs = 5000;
+
+        var candidate = CreateReport(
+            "candidate",
+            Check("SeekRecoveryDurationMs", "pass", "timeline", "position.seekRecoveryDurationMs", "2000", "900"));
+        candidate.Position.SeekOperationDurationMs = 800;
+        candidate.Position.SeekRecoveryDurationMs = 900;
+
+        var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
+
+        Assert.Contains("position.seekOperationDurationMs", comparison.Coverage.MatchedSignals);
+        Assert.Contains("position.seekRecoveryDurationMs", comparison.Coverage.MatchedSignals);
+        Assert.Contains(comparison.Improvements, delta =>
+            delta.Signal == "position.seekRecoveryDurationMs" &&
+            delta.FailureArea == "timeline" &&
+            delta.Direction == "resolved");
+    }
+
+    [Fact]
     public void Compare_Reports_Insufficient_When_Execution_Evidence_Levels_Differ()
     {
         var baseline = CreateReport(

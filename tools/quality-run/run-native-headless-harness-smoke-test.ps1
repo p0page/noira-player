@@ -840,6 +840,8 @@ function New-NativeHeadlessParserFixtureOutput {
         seekAttempted = '0'
         seekTargetPositionTicks = '10000000'
         seekDemuxTargetTicks = '10000000'
+        seekOperationDurationMs = '0'
+        seekRecoveryDurationMs = '0'
         postSeekAdvanced = '1'
         selectedAudioStreamIndex = '1'
         selectedSubtitleStreamIndex = '-1'
@@ -1027,6 +1029,26 @@ function Assert-NativeHeadlessParserContracts {
         $failures.Add('Completed audio switch evidence was not preserved from the selected target and advancing playback counters.')
     }
 
+    $seekOutput = New-NativeHeadlessParserFixtureOutput -Overrides @{
+        seekAttempted = '1'
+        seekStatus = 'completed'
+        seekActualPositionTicks = '10000000'
+        postSeekPlaybackPositionTicks = '20000000'
+        seekOperationDurationMs = '4800.5'
+        seekRecoveryDurationMs = '5100.25'
+    }
+    $seek = Invoke-NativeHeadlessParserFixtureCase `
+        -FixtureHelper $fixtureHelper `
+        -HeadlessDll $headlessDll `
+        -Root $Root `
+        -Name 'completed-seek-latency' `
+        -HelperOutput $seekOutput
+    if ($seek.ExitCode -ne 0 -or
+        $seek.Report.report.position.seekOperationDurationMs -ne 4800.5 -or
+        $seek.Report.report.position.seekRecoveryDurationMs -ne 5100.25) {
+        $failures.Add('Completed seek did not preserve structured operation and first-presentation recovery durations.')
+    }
+
     $pausedSubtitleOutput = New-NativeHeadlessParserFixtureOutput -Overrides @{
         subtitleSwitch1Attempted = '1'
         subtitleSwitch1Status = 'completed'
@@ -1165,6 +1187,28 @@ function Assert-NativeHeadlessParserContracts {
                 seekActualPositionTicks = '-1'
                 postSeekPlaybackPositionTicks = '20000000'
             }
+        },
+        [pscustomobject]@{
+            Name = 'completed-seek-without-operation-duration'
+            ExpectedField = 'seekOperationDurationMs'
+            Output = New-NativeHeadlessParserFixtureOutput -Overrides @{
+                seekAttempted = '1'
+                seekStatus = 'completed'
+                seekActualPositionTicks = '10000000'
+                postSeekPlaybackPositionTicks = '20000000'
+                seekRecoveryDurationMs = '150'
+            } -Omit @('seekOperationDurationMs')
+        },
+        [pscustomobject]@{
+            Name = 'completed-seek-without-recovery-duration'
+            ExpectedField = 'seekRecoveryDurationMs'
+            Output = New-NativeHeadlessParserFixtureOutput -Overrides @{
+                seekAttempted = '1'
+                seekStatus = 'completed'
+                seekActualPositionTicks = '10000000'
+                postSeekPlaybackPositionTicks = '20000000'
+                seekOperationDurationMs = '120'
+            } -Omit @('seekRecoveryDurationMs')
         },
         [pscustomobject]@{
             Name = 'missing-dropped-video-frames'
