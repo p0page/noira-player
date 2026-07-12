@@ -161,10 +161,13 @@ if ((Test-Path -LiteralPath $resolvedOutputRoot) -and $Clean) {
 
 $manifestsDir = Join-Path $resolvedOutputRoot 'manifests'
 $reportsDir = Join-Path $resolvedOutputRoot 'reports'
+$capturedReportsDir = Join-Path $resolvedOutputRoot 'captured-reports'
 $summariesDir = Join-Path $resolvedOutputRoot 'summaries'
 $coreManifestPath = Join-Path $manifestsDir 'core-reference-manifest.local.json'
+$executedCoreManifestPath = Join-Path $manifestsDir 'executed-core-manifest.local.json'
 $unifiedManifestPath = Join-Path $manifestsDir 'unified-reference-manifest.local.json'
 $manifestRunSummaryPath = Join-Path $summariesDir 'manifest-run-summary.local.json'
+$coreMaterializedSummaryPath = Join-Path $summariesDir 'core-materialized-summary.local.json'
 $validationPath = Join-Path $summariesDir 'report-set-validation.local.json'
 $analysisPath = Join-Path $summariesDir 'report-analysis-summary.local.json'
 $runPlanPath = Join-Path $summariesDir 'run-plan.local.json'
@@ -172,6 +175,7 @@ $summaryPath = Join-Path $resolvedOutputRoot 'baseline-summary.local.json'
 
 New-Item -ItemType Directory -Path $manifestsDir -Force | Out-Null
 New-Item -ItemType Directory -Path $reportsDir -Force | Out-Null
+New-Item -ItemType Directory -Path $capturedReportsDir -Force | Out-Null
 New-Item -ItemType Directory -Path $summariesDir -Force | Out-Null
 
 $warnings = [System.Collections.Generic.List[string]]::new()
@@ -251,7 +255,7 @@ $manifestRunnerArguments = @(
     '-ManifestPath',
     $coreManifestPath,
     '-ReportsDir',
-    $reportsDir,
+    $capturedReportsDir,
     '-NativeHelperExe',
     $resolvedNativeHelperExe,
     '-SummaryPath',
@@ -293,6 +297,48 @@ if ([int]$manifestRunSummary.missingReportCount -ne 0 -or
 if ($manifestRunnerExitCode -ne 0) {
     $warnings.Add('manifest runner captured non-success playback outcomes; strict report validation remains authoritative')
 }
+
+$selectedCaseIds = @($manifestRunSummary.attempts | ForEach-Object { [string]$_.caseId })
+$selectedCaseIdSet = @{}
+foreach ($selectedCaseId in $selectedCaseIds) {
+    $selectedCaseIdSet[$selectedCaseId] = $true
+}
+$coreManifest = Read-JsonFile $coreManifestPath
+$executedCoreManifest = [pscustomobject][ordered]@{
+    schemaVersion = $coreManifest.schemaVersion
+    cases = @($coreManifest.cases | Where-Object {
+        $selectedCaseIdSet.ContainsKey([string]$_.caseId)
+    })
+}
+if (@($executedCoreManifest.cases).Count -ne [int]$manifestRunSummary.selectedCaseCount) {
+    throw 'Executed manifest does not match the native manifest runner selection.'
+}
+$executedCoreManifest | ConvertTo-Json -Depth 20 |
+    Set-Content -LiteralPath $executedCoreManifestPath -Encoding UTF8
+
+Invoke-Checked dotnet @(
+    'run',
+    '--project',
+    $cliProject,
+    '--',
+    'materialize-native-harness-report-set',
+    '--manifest',
+    $executedCoreManifestPath,
+    '--captured-reports-dir',
+    $capturedReportsDir,
+    '--reports-dir',
+    $reportsDir,
+    '--collector-version',
+    'native-manifest-runner-v0.1',
+    '--player-core-version',
+    $PlayerCoreVersion,
+    '--source-revision',
+    $baselineSourceRevision,
+    '--build-configuration',
+    $BuildConfiguration,
+    '--output',
+    $coreMaterializedSummaryPath
+)
 
 $finalManifestInputs = [System.Collections.Generic.List[string]]::new()
 $finalManifestInputs.Add($coreManifestPath)

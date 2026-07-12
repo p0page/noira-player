@@ -2,6 +2,12 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-12 更新：正式 baseline 必须重新绑定 manifest expected
+
+v10 跨 case 审计发现，native manifest runner 直接把 captured report 放入正式 `reports`，没有经过现有 materializer 重新绑定 manifest expected。结果是私有 audio-switch manifest 明明声明 `maxStartupDurationMs=7000`，报告 expected 却只剩 helper 自带的 `requireValidatedConversion=true`；8535ms 启动、3279ms 最大帧间隔和 35 个 seek-preroll drop 因此仍显示 pass。该问题归类为 eval harness bug，v10 不能作为调优裁判。
+
+baseline 编排现在把 runner 原始输出隔离到 `captured-reports`，根据 runner summary 的实际 case 集生成 `executed-core-manifest`，再通过 `materialize-native-harness-report-set` 绑定完整 expected、按当前规则重新评测后写入正式 `reports`。quarantine 仍只存在于 unified manifest，不生成假 skip。测试覆盖 expected 传递、错误 source locator 不被 materializer 修正、以及选中 case 缺报告必须失败。下一步以干净提交生成 v11，并以 v11 的真实 fail/unsupported 结果选择 Core 候选。
+
 ## 2026-07-12 更新：实际媒体身份不再由 URL 冒充，网络恢复进入统一 native 基线
 
 评测器此前把 `openedSourceHash` 实际计算为去掉 `PlaySessionId` 后的 URL 哈希，因此它经常与 `sourceLocatorHash` 等价，不能证明 helper 真正打开了 manifest 声明的媒体。这是评测可信度缺陷，不是播放器优化成果。现在 native-headless 与 App-hosted 都在真实采样完成后，根据实际解析到的 container、duration、视频属性、色彩元数据和全部视频/音频/字幕轨生成 `observed-media-signature-v1`；execution 同时记录 `openedSourceHashKind`。strict validator 与 baseline/candidate comparator 会拒绝类型缺失、旧 URL 语义或类型不一致的报告，旧 baseline 必须重建，不能静默混比。

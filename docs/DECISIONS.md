@@ -1,5 +1,11 @@
 ﻿# 技术决策
 
+## 2026-07-12：captured report 不能绕过 manifest expected 物化
+
+决策：native manifest runner 的输出只作为 captured evidence，不能直接进入正式 baseline。baseline 必须根据 runner summary 生成仅包含实际选中 case 的 executed manifest，再调用统一 materializer，把 manifest expected 绑定到 captured report 并使用当前 evaluator 重新计算 pass/fail。最终 unified manifest 保留 quarantine，但未执行 quarantine 不生成 skip 报告。
+
+原因：strict report-set validator 能验证实际 source metadata 与 manifest 是否匹配，但不会替单报告 evaluator 补回丢失的性能阈值。直接保存 captured report 会让 helper 内置的少量 expected 覆盖 manifest 的完整标准，从而出现明显启动超时、帧间隔和丢帧仍 pass 的假阳性。captured、manifest 和 materialized report 必须是三个显式阶段，不能把“有报告”误当成“按 manifest 评测过”。
+
 ## 2026-07-12：实际打开源身份必须来自观测媒体签名
 
 决策：`sourceLocatorHash` 只关联 manifest 中稳定的测试意图；`openedSourceHash` 必须在真实 native/App 播放采样后，根据实际解析到的媒体和轨道生成，并声明 `openedSourceHashKind=observed-media-signature-v1`。签名覆盖 container、duration、时间线起点、视频编码/尺寸/帧率、HDR/色彩元数据和排序后的音视频字幕轨，不包含 URL、token、item ID 或 media source ID。缺少类型、使用旧 URL 哈希语义或两侧类型不同的报告，strict validation 或 candidate comparison 必须输出无效/证据不足。

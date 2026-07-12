@@ -59,13 +59,13 @@ if ($env:NOIRAPLAYER_BASELINE_TEST_OMIT_REPORT -eq '1') {
 }
 
 $caseId = Get-Value '--case-id'
-$runId = if ($env:NOIRAPLAYER_BASELINE_TEST_MISMATCH_RUN_ID -eq '1') {
-    'baseline/mismatched-run-id'
-} else {
-    $caseId
-}
+$runId = $caseId
 $reportsDir = Get-Value '--reports-dir'
-$locatorHash = Get-Value '--source-locator-hash'
+$locatorHash = if ($env:NOIRAPLAYER_BASELINE_TEST_MISMATCH_RUN_ID -eq '1') {
+    'sha256:' + ('f' * 64)
+} else {
+    Get-Value '--source-locator-hash'
+}
 $scenario = Get-Value '--scenario'
 $reportPath = Join-Path $reportsDir ($caseId.Replace('/', [System.IO.Path]::DirectorySeparatorChar) + '.json')
 New-Item -ItemType Directory -Path (Split-Path -Parent $reportPath) -Force | Out-Null
@@ -159,6 +159,7 @@ exit 1
     $summary = Get-Content -Raw -LiteralPath $summaryPath | ConvertFrom-Json
     $validation = Get-Content -Raw -LiteralPath $validationPath | ConvertFrom-Json
     $runnerSummary = Get-Content -Raw -LiteralPath $runnerSummaryPath | ConvertFrom-Json
+    $materializedReport = Get-Content -Raw -LiteralPath $reportPath | ConvertFrom-Json
     if ($summary.validation.isValid -ne $true -or
         $summary.analysis.totalReportCount -ne 1 -or
         $validation.executionValid -ne $true -or
@@ -167,6 +168,13 @@ exit 1
         $runnerSummary.reportCount -ne 1 -or
         $runnerSummary.missingReportCount -ne 0) {
         throw 'Expected baseline to contain one strict-valid native manifest-runner report.'
+    }
+
+    if ($materializedReport.report.expected.codec -ne 'hevc' -or
+        $materializedReport.report.expected.width -ne 320 -or
+        $materializedReport.report.expected.height -ne 180 -or
+        $materializedReport.report.expected.frameRate -ne 30) {
+        throw 'Final baseline report must bind manifest expected values through native report materialization.'
     }
 
     if (-not ($summary.warnings -contains 'native-headless local generated samples were skipped by -SkipNativeHeadless')) {
