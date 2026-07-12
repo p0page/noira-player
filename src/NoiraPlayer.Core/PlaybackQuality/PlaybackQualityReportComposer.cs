@@ -25,6 +25,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
 
         public PlaybackQualityLifecycle? Lifecycle { get; set; }
 
+        public PlaybackQualityInteractionEvidence? Interaction { get; set; }
+
         public PlaybackQualityEnvironment? Environment { get; set; }
 
         public PlaybackQualityExecutionEvidence? Execution { get; set; }
@@ -152,6 +154,20 @@ namespace NoiraPlayer.Core.PlaybackQuality
             if (request.Lifecycle != null)
             {
                 report.Lifecycle = CloneLifecycle(request.Lifecycle);
+            }
+
+            if (request.Interaction != null)
+            {
+                report.Interaction = new PlaybackQualityInteractionEvidence
+                {
+                    Scenario = request.Interaction.Scenario,
+                    Attempted = request.Interaction.Attempted,
+                    OperationDurationMs = request.Interaction.OperationDurationMs,
+                    RecoveryDurationMs = request.Interaction.RecoveryDurationMs,
+                    PositionDeltaTicks = request.Interaction.PositionDeltaTicks,
+                    SubmittedAudioFrameDelta = request.Interaction.SubmittedAudioFrameDelta,
+                    RenderedVideoFrameDelta = request.Interaction.RenderedVideoFrameDelta
+                };
             }
 
             if (request.Environment != null)

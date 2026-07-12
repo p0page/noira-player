@@ -768,7 +768,11 @@ function New-NativeHeadlessParserFixtureOutput {
         track3Language = 'spa'
         track3IsDefault = '0'
         audioSwitchAttempted = '0'
+        audioSwitchOperationDurationMs = '0'
+        audioSwitchRecoveryDurationMs = '0'
         subtitleSwitch1Attempted = '0'
+        subtitleSwitch1OperationDurationMs = '0'
+        subtitleSwitch1RecoveryDurationMs = '0'
         subtitleSwitch1PausedSwitch = '0'
         subtitleSwitch1SelectedStreamIndex = '-1'
         subtitleSwitch1PausedPositionBeforeTicks = '0'
@@ -776,6 +780,8 @@ function New-NativeHeadlessParserFixtureOutput {
         subtitleSwitch1PositionBeforeResumeTicks = '0'
         subtitleSwitch1PositionAfterResumeTicks = '0'
         subtitleSwitch2Attempted = '0'
+        subtitleSwitch2OperationDurationMs = '0'
+        subtitleSwitch2RecoveryDurationMs = '0'
         subtitleSwitch2PausedSwitch = '0'
         subtitleSwitch2SelectedStreamIndex = '-1'
         subtitleSwitch2PausedPositionBeforeTicks = '0'
@@ -950,6 +956,8 @@ function Assert-NativeHeadlessParserContracts {
         audioSwitchPositionAfterTicks = '2000000'
         audioSwitchSubmittedFramesBefore = '1'
         audioSwitchSubmittedFramesAfter = '2'
+        audioSwitchOperationDurationMs = '310'
+        audioSwitchRecoveryDurationMs = '5009'
         selectedAudioStreamIndex = '2'
     }
     $audioSwitch = Invoke-NativeHeadlessParserFixtureCase `
@@ -960,6 +968,11 @@ function Assert-NativeHeadlessParserContracts {
         -HelperOutput $audioSwitchOutput
     if ($audioSwitch.ExitCode -ne 0 -or
         $audioSwitch.Report.report.tracks.selectedAudioStreamIndex -ne 2 -or
+        $audioSwitch.Report.report.interaction.scenario -ne 'audio-switch' -or
+        $audioSwitch.Report.report.interaction.operationDurationMs -ne 310 -or
+        $audioSwitch.Report.report.interaction.recoveryDurationMs -ne 5009 -or
+        $audioSwitch.Report.report.interaction.positionDeltaTicks -ne 1000000 -or
+        $audioSwitch.Report.report.interaction.submittedAudioFrameDelta -ne 1 -or
         -not ($audioSwitch.Report.report.lifecycle.events | Where-Object {
             $_.operation -eq 'audio-switch' -and $_.status -eq 'completed'
         })) {
@@ -978,6 +991,8 @@ function Assert-NativeHeadlessParserContracts {
         subtitleSwitch1PausedPositionAfterTicks = '1000000'
         subtitleSwitch1PositionBeforeResumeTicks = '1000000'
         subtitleSwitch1PositionAfterResumeTicks = '2000000'
+        subtitleSwitch1OperationDurationMs = '125'
+        subtitleSwitch1RecoveryDurationMs = '875'
     }
     $pausedSubtitle = Invoke-NativeHeadlessParserFixtureCase `
         -FixtureHelper $fixtureHelper `
@@ -990,11 +1005,41 @@ function Assert-NativeHeadlessParserContracts {
     }) | Select-Object -First 1
     if ($pausedSubtitle.ExitCode -ne 0 -or
         $pausedSubtitleEvent.status -ne 'completed' -or
+        $pausedSubtitle.Report.report.interaction.scenario -ne 'subtitle-switch' -or
+        $pausedSubtitle.Report.report.interaction.operationDurationMs -ne 125 -or
+        $pausedSubtitle.Report.report.interaction.recoveryDurationMs -ne 875 -or
+        $pausedSubtitle.Report.report.interaction.positionDeltaTicks -ne 1000000 -or
         $pausedSubtitleEvent.message -notmatch 'paused position 1000000->1000000; resumed position 1000000->2000000') {
         $failures.Add('Completed paused subtitle switch evidence did not preserve pause and resume progress observations.')
     }
 
     $negativeCases = @(
+        [pscustomobject]@{
+            Name = 'missing-audio-switch-recovery-duration'
+            ExpectedField = 'audioSwitchRecoveryDurationMs'
+            Output = New-NativeHeadlessParserFixtureOutput -Overrides @{
+                audioSwitchAttempted = '1'
+                audioSwitchStatus = 'completed'
+                audioSwitchStreamIndex = '2'
+                audioSwitchPositionBeforeTicks = '1000000'
+                audioSwitchPositionAfterTicks = '2000000'
+                audioSwitchSubmittedFramesBefore = '1'
+                audioSwitchSubmittedFramesAfter = '2'
+                selectedAudioStreamIndex = '2'
+            } -Omit @('audioSwitchRecoveryDurationMs')
+        },
+        [pscustomobject]@{
+            Name = 'nan-subtitle-switch-operation-duration'
+            ExpectedField = 'subtitleSwitch1OperationDurationMs'
+            Output = New-NativeHeadlessParserFixtureOutput -Overrides @{
+                subtitleSwitch1Attempted = '1'
+                subtitleSwitch1Status = 'completed'
+                subtitleSwitch1StreamIndex = '4'
+                subtitleSwitch1CueCountBefore = '1'
+                subtitleSwitch1CueCountAfter = '2'
+                subtitleSwitch1OperationDurationMs = 'NaN'
+            }
+        },
         [pscustomobject]@{
             Name = 'missing-audio-position'
             ExpectedField = 'audioSwitchPositionAfterTicks'
