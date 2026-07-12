@@ -26,6 +26,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
         public PlaybackQualitySource Source { get; set; } = new PlaybackQualitySource();
         public PlaybackQualityStartup Startup { get; set; } = new PlaybackQualityStartup();
         public PlaybackQualityLifecycle Lifecycle { get; set; } = new PlaybackQualityLifecycle();
+        public PlaybackQualityInteractionEvidence Interaction { get; set; } =
+            new PlaybackQualityInteractionEvidence();
         public PlaybackQualityPosition Position { get; set; } = new PlaybackQualityPosition();
         public PlaybackQualityTracks Tracks { get; set; } = new PlaybackQualityTracks();
         public PlaybackQualityError Error { get; set; } = new PlaybackQualityError();
@@ -147,6 +149,17 @@ namespace NoiraPlayer.Core.PlaybackQuality
         public string State { get; set; } = "";
         public long? PositionTicks { get; set; }
         public string Message { get; set; } = "";
+    }
+
+    public sealed class PlaybackQualityInteractionEvidence
+    {
+        public string Scenario { get; set; } = "";
+        public bool Attempted { get; set; }
+        public double? OperationDurationMs { get; set; }
+        public double? RecoveryDurationMs { get; set; }
+        public long? PositionDeltaTicks { get; set; }
+        public ulong? SubmittedAudioFrameDelta { get; set; }
+        public ulong? RenderedVideoFrameDelta { get; set; }
     }
 
     public sealed class PlaybackQualityRuntimeMetrics

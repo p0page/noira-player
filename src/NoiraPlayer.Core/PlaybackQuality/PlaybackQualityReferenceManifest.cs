@@ -328,7 +328,11 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 }
             }
 
-            ValidateExpected(validation, caseId, referenceCase.Expected);
+            ValidateExpected(
+                validation,
+                caseId,
+                referenceCase.Expected,
+                referenceCase.ExecutionRequirement?.Scenario ?? "");
         }
 
         private static IReadOnlyList<string> GetActiveExecutionScenarios(
@@ -476,6 +480,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 DxgiInput = source.DxgiInput,
                 DxgiOutput = source.DxgiOutput,
                 MaxStartupDurationMs = source.MaxStartupDurationMs,
+                MaxInteractionRecoveryDurationMs = source.MaxInteractionRecoveryDurationMs,
                 MinRenderedVideoFrames = source.MinRenderedVideoFrames,
                 MaxDroppedFrames = source.MaxDroppedFrames,
                 MaxFrameGapMs = source.MaxFrameGapMs,
@@ -493,7 +498,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
         private static void ValidateExpected(
             PlaybackQualityReferenceManifestValidation validation,
             string caseId,
-            PlaybackQualityExpected expected)
+            PlaybackQualityExpected expected,
+            string scenario)
         {
             if (expected == null)
             {
@@ -529,6 +535,30 @@ namespace NoiraPlayer.Core.PlaybackQuality
             if (string.IsNullOrWhiteSpace(expected.HdrKind))
             {
                 AddExpectedMissing(validation, caseId, "hdrKind");
+            }
+
+            if (expected.MaxInteractionRecoveryDurationMs.HasValue &&
+                (!double.IsFinite(expected.MaxInteractionRecoveryDurationMs.Value) ||
+                    expected.MaxInteractionRecoveryDurationMs.Value <= 0))
+            {
+                AddError(
+                    validation,
+                    "case.expected.maxInteractionRecoveryDurationMs.invalid",
+                    caseId,
+                    "expected.maxInteractionRecoveryDurationMs",
+                    "Playback quality reference expected.maxInteractionRecoveryDurationMs must be finite and positive.");
+            }
+
+            if (expected.MaxInteractionRecoveryDurationMs.HasValue &&
+                scenario != PlaybackQualityExecutionScenario.AudioSwitch &&
+                scenario != PlaybackQualityExecutionScenario.SubtitleSwitch)
+            {
+                AddError(
+                    validation,
+                    "case.expected.maxInteractionRecoveryDurationMs.scenario.invalid",
+                    caseId,
+                    "expected.maxInteractionRecoveryDurationMs",
+                    "Playback quality interaction recovery threshold requires an audio-switch or subtitle-switch scenario.");
             }
         }
 

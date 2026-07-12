@@ -23,6 +23,7 @@
         public string DxgiInput { get; set; } = "";
         public string DxgiOutput { get; set; } = "";
         public double? MaxStartupDurationMs { get; set; }
+        public double? MaxInteractionRecoveryDurationMs { get; set; }
         public long? MinRenderedVideoFrames { get; set; }
         public long? MaxDroppedFrames { get; set; }
         public double? MaxFrameGapMs { get; set; }

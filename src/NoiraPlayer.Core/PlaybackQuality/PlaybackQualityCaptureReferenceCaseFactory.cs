@@ -127,6 +127,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 DxgiInput = source.DxgiInput,
                 DxgiOutput = source.DxgiOutput,
                 MaxStartupDurationMs = source.MaxStartupDurationMs,
+                MaxInteractionRecoveryDurationMs = source.MaxInteractionRecoveryDurationMs,
                 MinRenderedVideoFrames = source.MinRenderedVideoFrames,
                 MaxDroppedFrames = source.MaxDroppedFrames,
                 MaxFrameGapMs = source.MaxFrameGapMs,

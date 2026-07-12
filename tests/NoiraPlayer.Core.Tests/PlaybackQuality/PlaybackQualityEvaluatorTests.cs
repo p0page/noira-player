@@ -1230,6 +1230,74 @@ public sealed class PlaybackQualityEvaluatorTests
         Assert.DoesNotContain(report.Checks, check => check.Signal == "lifecycle.seek");
     }
 
+    [Theory]
+    [InlineData("audio-switch", "tracks")]
+    [InlineData("subtitle-switch", "subtitles")]
+    public void Evaluate_Fails_When_Interaction_Recovery_Exceeds_Expected_Maximum(
+        string scenario,
+        string failureArea)
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = scenario + "-slow-recovery",
+            Expected = new PlaybackQualityExpected
+            {
+                MaxInteractionRecoveryDurationMs = 2000,
+                RequireValidatedConversion = false
+            },
+            Interaction = new PlaybackQualityInteractionEvidence
+            {
+                Scenario = scenario,
+                Attempted = true,
+                OperationDurationMs = 310,
+                RecoveryDurationMs = 5009,
+                PositionDeltaTicks = 710000,
+                SubmittedAudioFrameDelta = scenario == "audio-switch" ? 24UL : null
+            }
+        };
+
+        PlaybackQualityEvaluator.Evaluate(report);
+
+        Assert.Equal("fail", report.Result);
+        Assert.Equal(failureArea, report.Analysis.PrimaryFailureArea);
+        Assert.Contains(report.Checks, check =>
+            check.Name == "InteractionRecoveryDurationMs" &&
+            check.Signal == "interaction.recoveryDurationMs" &&
+            check.Status == "fail" &&
+            check.FailureArea == failureArea &&
+            check.Expected == "2000.000" &&
+            check.Actual == "5009.000");
+    }
+
+    [Fact]
+    public void Evaluate_Fails_When_Expected_Interaction_Recovery_Evidence_Is_Missing()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "audio-switch-missing-recovery",
+            Expected = new PlaybackQualityExpected
+            {
+                MaxInteractionRecoveryDurationMs = 2000,
+                RequireValidatedConversion = false
+            },
+            Interaction = new PlaybackQualityInteractionEvidence
+            {
+                Scenario = "audio-switch",
+                Attempted = true
+            }
+        };
+
+        PlaybackQualityEvaluator.Evaluate(report);
+
+        Assert.Equal("fail", report.Result);
+        Assert.Equal("tracks", report.Analysis.PrimaryFailureArea);
+        Assert.Contains(report.Checks, check =>
+            check.Name == "InteractionRecoveryDurationMs" &&
+            check.Signal == "interaction.recoveryDurationMs" &&
+            check.Status == "fail" &&
+            check.FailureClass == PlaybackQualityFailureClassification.InsufficientInstrumentation);
+    }
+
     [Fact]
     public void Serializer_RoundTrips_Report_With_CamelCase_Names()
     {
@@ -1237,7 +1305,16 @@ public sealed class PlaybackQualityEvaluatorTests
         {
             RunId = "roundtrip",
             Result = "pass",
-            Source = new PlaybackQualitySource { ItemId = "item-1", MediaSourceId = "source-1" }
+            Source = new PlaybackQualitySource { ItemId = "item-1", MediaSourceId = "source-1" },
+            Interaction = new PlaybackQualityInteractionEvidence
+            {
+                Scenario = "audio-switch",
+                Attempted = true,
+                OperationDurationMs = 310,
+                RecoveryDurationMs = 5009,
+                PositionDeltaTicks = 710000,
+                SubmittedAudioFrameDelta = 24
+            }
         };
         report.Checks.Add(new PlaybackQualityCheck
         {
@@ -1258,7 +1335,12 @@ public sealed class PlaybackQualityEvaluatorTests
         Assert.Contains("\"checks\"", json);
         Assert.Contains("\"failureClass\"", json);
         Assert.Contains("\"limitations\"", json);
+        Assert.Contains("\"interaction\"", json);
+        Assert.Contains("\"recoveryDurationMs\": 5009", json);
         Assert.Equal("roundtrip", parsed.RunId);
         Assert.Equal("source-1", parsed.Source.MediaSourceId);
+        Assert.Equal("audio-switch", parsed.Interaction.Scenario);
+        Assert.Equal(5009, parsed.Interaction.RecoveryDurationMs);
+        Assert.Equal(24UL, parsed.Interaction.SubmittedAudioFrameDelta);
     }
 }

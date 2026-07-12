@@ -56,6 +56,83 @@ public sealed class PlaybackQualityReferenceManifestTests
         Assert.Contains("Add reference cases", result.Coverage.SuggestedNextAction);
     }
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(double.NaN)]
+    [InlineData(double.PositiveInfinity)]
+    public void Validate_Rejects_Invalid_Interaction_Recovery_Threshold(double threshold)
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        var referenceCase = CreateCase(
+            "tracks/audio-switch-recovery",
+            tier: 1,
+            purpose: "audio-switch");
+        referenceCase.ExecutionRequirement.Scenario = "audio-switch";
+        referenceCase.Expected.MaxInteractionRecoveryDurationMs = threshold;
+        manifest.Cases.Add(referenceCase);
+
+        var result = PlaybackQualityReferenceManifestValidator.Validate(manifest);
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, error =>
+            error.Code == "case.expected.maxInteractionRecoveryDurationMs.invalid" &&
+            error.CaseId == referenceCase.CaseId &&
+            error.Signal == "expected.maxInteractionRecoveryDurationMs");
+    }
+
+    [Fact]
+    public void Validate_Accepts_Positive_Interaction_Recovery_Threshold_For_Interaction_Case()
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        var referenceCase = CreateCase(
+            "tracks/audio-switch-recovery",
+            tier: 1,
+            purpose: "audio-switch");
+        referenceCase.ExecutionRequirement.Scenario = "audio-switch";
+        referenceCase.Expected.MaxInteractionRecoveryDurationMs = 2000;
+        manifest.Cases.Add(referenceCase);
+
+        var result = PlaybackQualityReferenceManifestValidator.Validate(manifest);
+
+        Assert.True(result.IsValid);
+    }
+
+    [Fact]
+    public void Validate_Rejects_Interaction_Recovery_Threshold_For_Playback_Case()
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        var referenceCase = CreateCase(
+            "playback/not-an-interaction",
+            tier: 1,
+            purpose: "sdr-smoke");
+        referenceCase.ExecutionRequirement.Scenario = "playback";
+        referenceCase.Expected.MaxInteractionRecoveryDurationMs = 2000;
+        manifest.Cases.Add(referenceCase);
+
+        var result = PlaybackQualityReferenceManifestValidator.Validate(manifest);
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, error =>
+            error.Code == "case.expected.maxInteractionRecoveryDurationMs.scenario.invalid" &&
+            error.Signal == "expected.maxInteractionRecoveryDurationMs");
+    }
+
+    [Fact]
+    public void RequiredSignalPolicy_Requires_Interaction_Recovery_When_Threshold_Is_Configured()
+    {
+        var referenceCase = CreateCase(
+            "tracks/audio-switch-recovery",
+            tier: 1,
+            purpose: "audio-switch");
+        referenceCase.ExecutionRequirement.Scenario = "audio-switch";
+        referenceCase.Expected.MaxInteractionRecoveryDurationMs = 2000;
+
+        var requiredSignals = PlaybackQualityRequiredSignalPolicy.CreateRequiredSignals(referenceCase);
+
+        Assert.Contains("interaction.recoveryDurationMs", requiredSignals);
+    }
+
     [Fact]
     public void Validate_Reports_Ready_Corpus_Coverage_When_Core_Risk_Purposes_Are_Present()
     {

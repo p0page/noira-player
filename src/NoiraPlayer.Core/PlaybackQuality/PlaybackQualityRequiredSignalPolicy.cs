@@ -81,6 +81,11 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 AddUnique(requiredSignals, "startup.startupDurationMs");
             }
 
+            if (expected.MaxInteractionRecoveryDurationMs.HasValue)
+            {
+                AddUnique(requiredSignals, "interaction.recoveryDurationMs");
+            }
+
             if (expected.MaxSeekPositionErrorMs.HasValue ||
                 HasPurpose(referenceCase, "timeline") ||
                 HasPurpose(referenceCase, "seek"))
@@ -403,6 +408,11 @@ namespace NoiraPlayer.Core.PlaybackQuality
                     return report.Source.DolbyVisionCompatibilityId.HasValue;
                 case "startup.startupDurationMs":
                     return report.Startup.StartupDurationMs > 0;
+                case "interaction.recoveryDurationMs":
+                    return report.Interaction.Attempted &&
+                        report.Interaction.RecoveryDurationMs.HasValue &&
+                        double.IsFinite(report.Interaction.RecoveryDurationMs.Value) &&
+                        report.Interaction.RecoveryDurationMs.Value >= 0;
                 case "lifecycle.load":
                     return HasLifecycleOperation(report, "load");
                 case "lifecycle.play":

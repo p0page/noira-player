@@ -54,6 +54,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
             }
 
             CheckStartupDuration(report, expected);
+            CheckInteractionRecoveryDuration(report, expected);
             CheckSeekEvidenceCompleteness(report);
             CheckSeekPositionError(report, expected);
             CheckMin(
@@ -252,6 +253,50 @@ namespace NoiraPlayer.Core.PlaybackQuality
             "seek" => "timeline",
             _ => "playback-lifecycle"
         };
+
+        private static void CheckInteractionRecoveryDuration(
+            PlaybackQualityReport report,
+            PlaybackQualityExpected expected)
+        {
+            if (!expected.MaxInteractionRecoveryDurationMs.HasValue)
+            {
+                return;
+            }
+
+            var signal = "interaction.recoveryDurationMs";
+            var failureArea = GetLifecycleFailureArea(report.Interaction.Scenario);
+            if (!report.Interaction.Attempted ||
+                !report.Interaction.RecoveryDurationMs.HasValue ||
+                !double.IsFinite(report.Interaction.RecoveryDurationMs.Value) ||
+                report.Interaction.RecoveryDurationMs.Value < 0)
+            {
+                const string message =
+                    "InteractionRecoveryDurationMs is missing for interaction recovery validation.";
+                report.FailureReasons.Add(message);
+                report.Checks.Add(new PlaybackQualityCheck
+                {
+                    Name = "InteractionRecoveryDurationMs",
+                    Signal = signal,
+                    Status = "fail",
+                    FailureArea = failureArea,
+                    FailureClass = PlaybackQualityFailureClassification.InsufficientInstrumentation,
+                    Expected = Format(expected.MaxInteractionRecoveryDurationMs.Value),
+                    Actual = "",
+                    Message = message
+                });
+                AddRelevantSignal(report, signal);
+                return;
+            }
+
+            CheckMeasuredMax(
+                report,
+                "InteractionRecoveryDurationMs",
+                report.Interaction.RecoveryDurationMs.Value,
+                expected.MaxInteractionRecoveryDurationMs,
+                "MaxInteractionRecoveryDurationMs",
+                signal,
+                failureArea);
+        }
 
         private static void CheckExpectedSourceMetadata(
             PlaybackQualityReport report,
@@ -961,6 +1006,17 @@ namespace NoiraPlayer.Core.PlaybackQuality
             {
                 report.Analysis.PrimaryFailureArea = "color-pipeline";
                 report.Analysis.SuggestedNextAction = "Inspect HDR display switch and DXGI color-space mapping.";
+                return;
+            }
+
+            if (HasReason(report, "InteractionRecoveryDurationMs"))
+            {
+                report.Analysis.PrimaryFailureArea =
+                    GetLifecycleFailureArea(report.Interaction.Scenario);
+                report.Analysis.SuggestedNextAction =
+                    report.Analysis.PrimaryFailureArea == "subtitles"
+                        ? "Inspect subtitle switch operation and post-switch video recovery timing."
+                        : "Inspect audio decoder replacement, renderer continuity, and post-switch recovery timing.";
                 return;
             }
 
