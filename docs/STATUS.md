@@ -1185,3 +1185,13 @@ evaluation version 已升级为 `playback-quality-v0.3`。六个 cache 上下文
 App 默认 seek replay cache 已启用。首次 App-hosted timeline 复核仍使用旧的“当前位置向前 1 秒”探针，正确得到 `target-outside-window` 并回退远端 demux seek，恢复为 `7166.17ms`；该失败证明开关开启不等于缓存必然命中。质量探针随后改为有足够历史时回退 1 秒，否则前进 1 秒，仅改变评测动作，不改变用户 seek 或 fallback 策略。
 
 重新 Publish、注册并启动完整 Modern App 后，App-hosted v0.3 报告实际命中 `459 packets / 23754167 bytes / 83680000 ticks`，operation/recovery 为 `470.63/484.14ms`、落点误差 `37ms`、post-seek 继续推进，并明确记录 `seekDemuxTargetTicks=-1`、`fallback=none`。报告整体仍因冷启动 `18147.94ms > 7000ms` 判 fail。完整 Core 33 阶段门禁已通过，完整 App Build 与 App-hosted Publish 均成功；私有产物凭据扫描 0 命中。当前可以接受会话内短回退 cache 作为 App 默认策略，冷启动/冷 resume 继续作为独立目标。
+
+# 2026-07-13 更新：v0.4 按显示环境选择显式颜色期望
+
+v0.3 全量语料把无 HDR 显示环境下的 Kodi 对齐 SDR fallback 误判成 HDR 输出失败。native 报告实际已保留 `smpte2084/bt2020` 源证据，并执行 G22/P2020 到 G22/P709 与 Hable tone mapping；问题在 evaluator 无条件消费主 HDR 输出期望，而非播放器丢失颜色元数据。
+
+v0.4 为可直接播放的 HDR case 增加 manifest-owned `expected.sdrDisplayFallback`。报告只可根据明确的显示状态或 HDR force-SDR 选择 `primary` / `sdr-display-fallback`，并记录 `colorPipeline.expectationProfile`。fallback 对 DXGI LEFT/TOPLEFT 使用有限精确允许集合，对 `tone-mapped-hable` 使用分号 token 精确匹配；缺少 fallback、错误转换、错误输出或错误 swapchain 位深仍必须 fail。不同 profile 的报告被 comparator 判为 incompatible，不能互相投票为播放器改善。
+
+同一公开、私有 Emby 与 native-generated 语料的 ignored baseline 位于 `docs/qa/private/baselines/playback-evidence-v04-current-corpus-aab724b.local/`，绑定 revision `aab724b`。core runner 为 selected/attempted/reports `13/13/13`、failed/unresolved/missing `0/0/0`；统一 24 份报告 strict validation 为 `24/24 matched`、0 error，结果 `19 pass / 4 fail / 1 unsupported`。11 份报告选择 SDR fallback，12 份选择 primary，unsupported 报告不消费可播放颜色阈值。
+
+v0.3 中所有代表性 HDR/DV fallback 颜色失败在 v0.4 均变为 0 个 color-pipeline mismatch；四个 native-generated HDR10 多帧率 case 也首次真正声明并通过颜色输出期望。剩余四个 fail 全部是原有 startup 门禁：约 `8.56s`、`9.64s`、`13.40s`、`15.31s`，未放宽 7 秒阈值。v0.3/v0.4 是评测规则迁移，且网络启动存在波动，不得把 pass 数变化宣称为播放器 Core 质量提升。
