@@ -199,7 +199,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         m_positionTicks = positionTicks;
         m_positionSnapshotTicks.store(positionTicks, std::memory_order_relaxed);
         m_pendingVideoFrame.reset();
-        ResetRuntimeStats();
+        ResetRuntimeStats(true);
         m_seekPresentationTracker.BeginSeek(m_renderedVideoFrameCount);
         ApplyFramePacingPolicyMetrics();
         m_audioRenderer.Flush();
@@ -914,7 +914,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         }
     }
 
-    void PlaybackGraph::ResetRuntimeStats() noexcept
+    void PlaybackGraph::ResetRuntimeStats(bool preserveOpenTiming) noexcept
     {
         m_renderPassCount = 0;
         m_renderedVideoFrameCount = 0;
@@ -929,7 +929,14 @@ namespace winrt::NoiraPlayer::Native::implementation
         m_videoStarvedPassCount = 0;
         m_audioStarvedPassCount = 0;
         m_seekPrerollDroppedVideoFrameCount = 0;
-        m_qualityMetrics.Reset();
+        if (preserveOpenTiming)
+        {
+            m_qualityMetrics.ResetRuntimeSamplesPreservingOpenTiming();
+        }
+        else
+        {
+            m_qualityMetrics.Reset();
+        }
         m_lastRuntimeStatsLog = {};
         m_renderIntervalTracker.BreakContinuity();
         m_nextRenderLoopWaitReason = RenderLoopWaitReason::Default;

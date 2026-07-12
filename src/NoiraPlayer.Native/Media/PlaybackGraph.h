@@ -101,7 +101,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         bool RenderNextFrame();
         uint32_t DecodeNextAudioFrame();
         void UpdateSubtitleCue();
-        void ResetRuntimeStats() noexcept;
+        void ResetRuntimeStats(bool preserveOpenTiming = false) noexcept;
         void ResetVideoClock() noexcept;
         void ResetAudioAheadWait() noexcept;
         void RecordAudioAheadWaitIfNeeded(int64_t finalDeltaTicks) noexcept;

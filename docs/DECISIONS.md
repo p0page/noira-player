@@ -1,5 +1,13 @@
 ﻿# 技术决策
 
+## 2026-07-12：不采纳 Matroska 跳过 `find_stream_info`，seek 必须保留启动证据
+
+决策：不采纳“Matroska 头参数完整时跳过 `avformat_find_stream_info`”的启动候选，当前播放器继续执行 FFmpeg 完整流探测。启动优化不能只证明轨道数量不变，还必须在同一真实 manifest 下稳定通过 duration、timeline/seek、音轨、字幕、HDR 和持续出帧；任一核心链路退化或证据不足都应撤回候选。
+
+原因：候选可移除约 0.6-1.5 秒流探测，但总启动仍受远端 `open_input` 和 seek/preroll 大幅波动；真实 timeline 两轮未稳定满足 500ms seek 标准，且出现 15 秒仅呈现 3 帧。恢复完整探测后仍观察到远端 seek 问题，说明不能把全部异常归因于候选，但也没有足够证据证明跳过安全或有效。Kodi 和 VLC 默认完整调用 `avformat_find_stream_info`；mpv 的 Matroska 跳过策略依赖其更完整的 demux 体系，不能孤立照搬。
+
+评测决策：seek 可以重置帧节奏、A/V sync 和缓冲等运行期样本，但不得清空本次 open 的归因证据。App-hosted 报告文件必须完成 JSON 解析后才允许停止 App、导出和分析，文件名短暂可见不等于报告已完整写入。被拒绝候选的私有报告继续保留在 ignored 本地产物中，不能进入 accepted baseline。
+
 ## 2026-07-12：启动子阶段作为诊断证据，不单独放宽或新增通过标准
 
 决策：保留 `startup.startupDurationMs` 作为既有启动门禁；`startup.stages` 和 `native.open.components` 用于定位耗时来源，父阶段只计一次，子项单独报告归因合计、缺口和重叠。FFmpeg `open_input`、`find_stream_info`、native 初始化/首帧和 host dispatch 必须来自真实 native metrics，禁止从 manifest expected 或日志文本猜测后冒充结构化证据。

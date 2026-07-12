@@ -144,6 +144,14 @@ int main()
     assert(snapshot.FramePacingSourceFrameRate == 60.0);
     assert(snapshot.LateFrameDropToleranceMs > 41.0);
 
+    metrics.ResetRuntimeSamplesPreservingOpenTiming();
+    snapshot = metrics.Snapshot();
+    assert(snapshot.RenderPasses == 0);
+    assert(snapshot.RenderedVideoFrames == 0);
+    assert(snapshot.NativeGraphOpenDurationMs == 5000.0);
+    assert(snapshot.FfmpegOpenInputDurationMs == 4000.0);
+    assert(snapshot.FfmpegStreamInfoDurationMs == 500.0);
+
     metrics.Reset();
     snapshot = metrics.Snapshot();
     assert(snapshot.RenderPasses == 0);

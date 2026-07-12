@@ -66,6 +66,16 @@ public sealed class ModernPlaybackQualityGateTests
     }
 
     [Fact]
+    public void Modern_Playback_Quality_Gate_Waits_For_A_Complete_Json_Report()
+    {
+        var script = ReadToolScript("Test-NoiraModernPlaybackQuality.ps1");
+
+        Assert.Contains("Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json", script, StringComparison.Ordinal);
+        Assert.Contains("[System.IO.Path]::GetFullPath($Path)", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("return (Resolve-Path -LiteralPath $Path).Path", script, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Unified_Build_Entry_Point_Exposes_Modern_Playback_Check()
     {
         var script = ReadToolScript("Build-Noira.ps1");

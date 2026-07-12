@@ -94,7 +94,13 @@ function Wait-ForFile([string]$Path, [int]$TimeoutSeconds, [string]$ResultPath) 
     $deadline = [DateTimeOffset]::Now.AddSeconds($TimeoutSeconds)
     do {
         if (Test-Path -LiteralPath $Path) {
-            return (Resolve-Path -LiteralPath $Path).Path
+            try {
+                Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json | Out-Null
+                return [System.IO.Path]::GetFullPath($Path)
+            }
+            catch {
+                # The app writes asynchronously; wait until the JSON is complete and readable.
+            }
         }
 
         Start-Sleep -Seconds 2

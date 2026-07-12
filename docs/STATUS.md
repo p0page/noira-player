@@ -2,6 +2,14 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-12 更新：拒绝 Matroska 跳过流探测候选，修复 seek 与导出证据丢失
+
+针对真实 App 启动瓶颈，曾实现一个受限候选：仅在 Matroska 头已包含完整主视频、全部音轨、全部字幕轨和 duration 时跳过 `avformat_find_stream_info`，内嵌封面不作为可播放视频轨。候选在“一战再战”中保留 2 条视频、2 条音频、5 条 PGS 字幕，音轨切换成功，PGS 切换解码 25 个 cue 并完成 128 次合成；但两轮 timeline 的 seek 误差为 624ms、2012ms，后一轮 15 秒仅呈现 3 帧。恢复完整探测后，同一远端 case 仍出现 964ms seek 误差和仅呈现 9 帧，说明远端 seek/preroll 还有独立问题，但候选没有证明稳定收益，最终已撤回，继续采用 Kodi/VLC 一样的完整 FFmpeg 流探测。
+
+本轮同时修复两个独立评测器缺陷。`Seek()` 过去会清空 native open、FFmpeg open 和 stream-info timing，导致执行过 seek 的报告缺少启动分解；现在 seek 只清运行期样本并保留 open timing。App-hosted gate 过去只等待文件名出现，异步 JSON 尚未完整落盘时可能在 `Resolve-Path`/导出阶段失败；现在必须成功读取并解析完整 JSON 才继续。最终 full-probe timeline 报告在真实 seek 后仍记录 `native.open=30465.833ms`、`find_stream_info=1530ms/status=measured`，导出和分析正常完成。
+
+验证：Core 全量 898/898、纯 C++ 指标测试、32 项 playback-core gate、Debug x64 Native AOT/UWP Publish 均通过。“哈姆奈特”HDR manifest 当前发生源漂移：预期 4K DV/HDR10 源实际打开为 1080p HDR10，报告以 source mismatch 拒绝；该结果归类为样本/服务环境问题，不作为 HDR Core 通过证据。下一步应修复 timeline 报告缺失的 demux/post-seek 字段，并把远端 seek 后低呈现率拆成可归因的 demux、preroll、网络等待证据。
+
 ## 2026-07-12 更新：native open 已拆为可归因子阶段
 
 `native.open` 现在保留为只计一次的父阶段，内部结构化记录 FFmpeg `open_input`、`find_stream_info`、native decoder/renderer/首帧初始化和 host dispatch overhead。模型分析会分别输出主导子项、子项合计、未归因和重叠时长；App-hosted 冻结 snapshot 同时补齐此前遗漏的硬解/软解帧计数。三个原生计时值已贯通 FfmpegMediaSource、PlaybackGraph metrics、WinRT IDL/runtimeclass、App provider 和 Core report，不再依赖人工解析日志。

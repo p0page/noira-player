@@ -40,12 +40,14 @@ namespace NoiraPlayer.Core.PlaybackQuality
         private static void Add(
             PlaybackQualityStartupStage stage,
             string name,
-            double durationMs)
+            double durationMs,
+            string status = "measured")
         {
             stage.Components.Add(new PlaybackQualityStartupComponent
             {
                 Name = name,
-                DurationMs = durationMs
+                DurationMs = durationMs,
+                Status = status
             });
         }
     }

@@ -27,9 +27,10 @@ public sealed class PlaybackQualityStartupEvidenceTests
         var stage = Assert.Single(startup.Stages, value => value.Name == "native.open");
         Assert.Collection(
             stage.Components,
-            component => Assert.Equal(("ffmpeg.open-input", 4000), (component.Name, component.DurationMs)),
-            component => Assert.Equal(("ffmpeg.find-stream-info", 500), (component.Name, component.DurationMs)),
+            component => Assert.Equal(("ffmpeg.open-input", 4000, "measured"), (component.Name, component.DurationMs, component.Status)),
+            component => Assert.Equal(("ffmpeg.find-stream-info", 500, "measured"), (component.Name, component.DurationMs, component.Status)),
             component => Assert.Equal(("native.initialize-first-frame", 300), (component.Name, component.DurationMs)),
             component => Assert.Equal(("host.dispatch-overhead", 200), (component.Name, component.DurationMs)));
     }
+
 }

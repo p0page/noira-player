@@ -131,6 +131,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
     {
         public string Name { get; set; } = "";
         public double DurationMs { get; set; }
+        public string Status { get; set; } = "measured";
     }
 
     public sealed class PlaybackQualityLifecycle

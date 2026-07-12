@@ -269,6 +269,17 @@ namespace winrt::NoiraPlayer::Native::implementation
             *this = PlaybackQualityMetrics{};
         }
 
+        void ResetRuntimeSamplesPreservingOpenTiming() noexcept
+        {
+            auto const nativeGraphOpenDurationMs = NativeGraphOpenDurationMs;
+            auto const ffmpegOpenInputDurationMs = FfmpegOpenInputDurationMs;
+            auto const ffmpegStreamInfoDurationMs = FfmpegStreamInfoDurationMs;
+            Reset();
+            NativeGraphOpenDurationMs = nativeGraphOpenDurationMs;
+            FfmpegOpenInputDurationMs = ffmpegOpenInputDurationMs;
+            FfmpegStreamInfoDurationMs = ffmpegStreamInfoDurationMs;
+        }
+
         void RecordRenderIntervalMs(double value) noexcept
         {
             m_renderIntervals.Add(value);
