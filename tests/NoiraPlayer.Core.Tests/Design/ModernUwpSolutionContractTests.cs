@@ -201,7 +201,17 @@ public sealed class ModernUwpSolutionContractTests
         Assert.Contains("ex.HResult.ToString(\"X8\"", mainPageSource, StringComparison.Ordinal);
         Assert.DoesNotContain("ex.Message", playbackHandler, StringComparison.Ordinal);
         Assert.DoesNotContain("ex.StackTrace", playbackHandler, StringComparison.Ordinal);
-        Assert.Contains("ModuleVersionId", mainPageSource, StringComparison.Ordinal);
+        Assert.Contains("PlaybackDiagnosticsLog.WriteBuildMarker(typeof(MainPage))", mainPageSource, StringComparison.Ordinal);
+        Assert.Contains("ModuleVersionId", playbackDiagnosticsSource, StringComparison.Ordinal);
+        var playbackLogClear = playbackPageSource.IndexOf(
+            "await PlaybackDiagnosticsLog.ClearAsync()",
+            StringComparison.Ordinal);
+        var playbackBuildMarker = playbackPageSource.IndexOf(
+            "PlaybackDiagnosticsLog.WriteBuildMarker(typeof(PlaybackPage))",
+            playbackLogClear,
+            StringComparison.Ordinal);
+        Assert.True(playbackLogClear >= 0);
+        Assert.True(playbackBuildMarker > playbackLogClear);
         Assert.Contains("MaxFileBytes", playbackDiagnosticsSource, StringComparison.Ordinal);
         Assert.Contains("GetBasicPropertiesAsync", playbackDiagnosticsSource, StringComparison.Ordinal);
         Assert.Contains("CreationCollisionOption.ReplaceExisting", playbackDiagnosticsSource, StringComparison.Ordinal);

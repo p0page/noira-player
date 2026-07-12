@@ -38,8 +38,7 @@ namespace NoiraPlayer.App
         public MainPage()
         {
             InitializeComponent();
-            PlaybackDiagnosticsLog.WriteLine(
-                "Web shell module=" + typeof(MainPage).Module.ModuleVersionId.ToString("D"));
+            PlaybackDiagnosticsLog.WriteBuildMarker(typeof(MainPage));
             NavigationCacheMode = NavigationCacheMode.Required;
             Loaded += MainPage_OnLoaded;
         }

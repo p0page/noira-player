@@ -17,6 +17,16 @@ namespace NoiraPlayer.App.Services
             _ = WriteLineAsync(message);
         }
 
+        public static void WriteBuildMarker(Type ownerType)
+        {
+            if (ownerType == null)
+            {
+                throw new ArgumentNullException(nameof(ownerType));
+            }
+
+            WriteLine("App module=" + ownerType.Module.ModuleVersionId.ToString("D"));
+        }
+
         public static async Task ClearAsync()
         {
             await Gate.WaitAsync();

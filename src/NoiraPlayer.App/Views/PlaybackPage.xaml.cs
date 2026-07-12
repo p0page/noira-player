@@ -1036,6 +1036,7 @@ namespace NoiraPlayer.App.Views
         private async Task StartPlaybackAsync()
         {
             await PlaybackDiagnosticsLog.ClearAsync();
+            PlaybackDiagnosticsLog.WriteBuildMarker(typeof(PlaybackPage));
             PlaybackDiagnosticsLog.WriteLine("Playback page start requested launch=" + (_launchRequest != null));
             if (_launchRequest != null)
             {
