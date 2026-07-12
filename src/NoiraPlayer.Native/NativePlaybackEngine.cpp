@@ -203,6 +203,8 @@ namespace winrt::NoiraPlayer::Native::implementation
         metrics.NativeGraphOpenDurationMs(snapshot.NativeGraphOpenDurationMs);
         metrics.FfmpegOpenInputDurationMs(snapshot.FfmpegOpenInputDurationMs);
         metrics.FfmpegStreamInfoDurationMs(snapshot.FfmpegStreamInfoDurationMs);
+        metrics.NativeStartupSeekDurationMs(snapshot.NativeStartupSeekDurationMs);
+        metrics.NativeFirstFrameDurationMs(snapshot.NativeFirstFrameDurationMs);
         metrics.ContainerStartTimeTicks(snapshot.ContainerStartTimeTicks);
         metrics.VideoStreamStartTimeTicks(snapshot.VideoStreamStartTimeTicks);
         metrics.SeekDemuxTargetTicks(snapshot.SeekDemuxTargetTicks);

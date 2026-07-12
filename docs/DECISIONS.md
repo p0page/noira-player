@@ -1227,3 +1227,9 @@ FFmpeg HTTP `multiple_requests=1` 在当前私有 Emby/反代链路产生 premat
 音轨选择：App-hosted 场景必须使用 native graph 报告的 `SelectedAudioStreamIndex` 判断当前轨，descriptor 的 nullable preference 只能作为 native metrics 不可用时的回退。真实 App 已证明 null descriptor 不代表没有默认音轨；按它选目标会重复打开当前音轨并制造远端 seek。该规则是通用状态对齐，不是私有 case 补丁。
 
 边界：startup 质量与 interaction 质量独立。PGS App 报告可以同时拥有完整、达标的 interaction evidence 和超限 startup failure；不得为了让 case 总体 pass 而删除 startup 检查或放宽 7 秒阈值。
+
+# 2026-07-12: startup 必须使用 native graph 时钟并显式区分 seek 与首帧预滚
+
+决策：`startupDurationMs` 表示从打开命令到 native graph 可开始播放的耗时，不得使用包含采样和 stop 的 helper 进程总时长。进程 wall clock 只能作为独立 runtime 指标。native 必须直接测量 FFmpeg open-input、find-stream-info、startup seek 和第一次 `RenderNextFrame`；报告以这些观测分解 `native.open`，剩余时间才归入组件初始化。字段缺失、非有限或负数属于 instrumentation failure，禁止根据总时长、manifest expected 或日志文本补值。
+
+准确 resume 继续使用 backward keyframe seek 和目标前帧预滚。Kodi `f0232910490189b97717bc5d309aec2e5751d6d3` 的 `CDVDDemuxFFmpeg::SeekTime` 同样把用户时间转换为 demux 时间并按请求使用 `AVSEEK_FLAG_BACKWARD`，随后由 VideoPlayer accurate flush 处理落点。不得为了缩短数字而改为后一个关键帧、删除 141 帧预滚或放宽 7 秒标准；优化必须分别证明远端 seek 或预滚执行时间下降，并保持 timeline、first-presented landing 和 post-seek advancement 证据。

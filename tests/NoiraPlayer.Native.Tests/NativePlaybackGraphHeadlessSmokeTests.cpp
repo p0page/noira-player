@@ -640,6 +640,11 @@ int wmain(int argc, wchar_t** argv)
             << " postSeekPlaybackPositionTicks=" << seek.PostSeekPlaybackPositionTicks
             << " postSeekAdvanced=" << (seek.ActualPositionTicks.has_value() &&
                 seek.PostSeekPlaybackPositionTicks > seek.ActualPositionTicks.value() ? 1 : 0)
+            << " nativeGraphOpenDurationMs=" << playbackSnapshot.NativeGraphOpenDurationMs
+            << " ffmpegOpenInputDurationMs=" << playbackSnapshot.FfmpegOpenInputDurationMs
+            << " ffmpegStreamInfoDurationMs=" << playbackSnapshot.FfmpegStreamInfoDurationMs
+            << " nativeStartupSeekDurationMs=" << playbackSnapshot.NativeStartupSeekDurationMs
+            << " nativeFirstFrameDurationMs=" << playbackSnapshot.NativeFirstFrameDurationMs
             << " renderIntervalMsP05=" << playbackSnapshot.RenderIntervalMsP05
             << " renderIntervalMsP50=" << playbackSnapshot.RenderIntervalMsP50
             << " renderIntervalMsP95=" << playbackSnapshot.RenderIntervalMsP95

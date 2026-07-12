@@ -76,6 +76,8 @@
         Double NativeGraphOpenDurationMs;
         Double FfmpegOpenInputDurationMs;
         Double FfmpegStreamInfoDurationMs;
+        Double NativeStartupSeekDurationMs;
+        Double NativeFirstFrameDurationMs;
         Int64 ContainerStartTimeTicks;
         Int64 VideoStreamStartTimeTicks;
         Int64 SeekDemuxTargetTicks;

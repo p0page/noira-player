@@ -339,7 +339,14 @@ public sealed class PlaybackQualityRuntimeEvidenceCollectorTests
         Assert.Contains("buffers.videoStarvedPasses", result.ModelAnalysis.EvidenceSignals);
         Assert.Contains("colorPipeline.actualHdrOutput", result.ModelAnalysis.EvidenceSignals);
         var nativeOpen = Assert.Single(result.Report.Startup.Stages, stage => stage.Name == "native.open");
-        Assert.Equal(4, nativeOpen.Components.Count);
+        Assert.Collection(
+            nativeOpen.Components,
+            component => Assert.Equal("ffmpeg.open-input", component.Name),
+            component => Assert.Equal("ffmpeg.find-stream-info", component.Name),
+            component => Assert.Equal("native.initialize-components", component.Name),
+            component => Assert.Equal("native.startup-seek", component.Name),
+            component => Assert.Equal("native.first-frame", component.Name),
+            component => Assert.Equal("host.dispatch-overhead", component.Name));
         Assert.Contains(
             "startup.stage.native.open.component.ffmpeg.open-input.durationMs",
             result.ModelAnalysis.Startup.Signals);
@@ -625,6 +632,8 @@ public sealed class PlaybackQualityRuntimeEvidenceCollectorTests
                 NativeGraphOpenDurationMs = 280,
                 FfmpegOpenInputDurationMs = 200,
                 FfmpegStreamInfoDurationMs = 50,
+                NativeStartupSeekDurationMs = 10,
+                NativeFirstFrameDurationMs = 15,
                 RenderIntervalMsP50 = 41.708,
                 RenderIntervalMsP95 = 42.2,
                 RenderIntervalMsP99 = 48.0,

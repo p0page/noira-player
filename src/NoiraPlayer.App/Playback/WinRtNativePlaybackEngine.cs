@@ -98,6 +98,8 @@ namespace NoiraPlayer.App.Playback
                     NativeGraphOpenDurationMs = nativeMetrics.NativeGraphOpenDurationMs,
                     FfmpegOpenInputDurationMs = nativeMetrics.FfmpegOpenInputDurationMs,
                     FfmpegStreamInfoDurationMs = nativeMetrics.FfmpegStreamInfoDurationMs,
+                    NativeStartupSeekDurationMs = nativeMetrics.NativeStartupSeekDurationMs,
+                    NativeFirstFrameDurationMs = nativeMetrics.NativeFirstFrameDurationMs,
                     ContainerStartTimeTicks = nativeMetrics.ContainerStartTimeTicks,
                     VideoStreamStartTimeTicks = nativeMetrics.VideoStreamStartTimeTicks,
                     SeekDemuxTargetTicks = nativeMetrics.SeekDemuxTargetTicks >= 0 ? nativeMetrics.SeekDemuxTargetTicks : (long?)null,

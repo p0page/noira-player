@@ -1135,3 +1135,11 @@ native demux 现在会为未激活的音轨和字幕轨保留滚动 packet cache
 最终 App-hosted audio-switch 为 pass：operation/recovery `46.01/154.91ms`、cache hit、seek `0ms`、缓存 `216 packets / 221184 bytes / 2.293s`，position/audio/video delta 为 `920000 / 30 / 1`。PGS subtitle-switch 的交互本身通过：operation/recovery/cue `0.42/346.51/346.51ms`、cache hit、seek `0ms`，position/video/cue delta 为 `3400000 / 1 / 1`；报告整体仍因冷启动 `37764.07ms > 7000ms` 为 fail，未放宽阈值。
 
 两份完整 App 报告已用 exact 两 case 私有 manifest 重新 materialize，strict structure/execution validation 为 `2/2 matched`、0 error。完整 Core gate 的 32 个阶段全部通过，包含 `562/562` Core 测试和约 240 秒 native-headless smoke；完整 Modern App Debug x64 build 也已生成最新 `NoiraPlayer.Native.dll` 与 `NoiraPlayer.App.dll`。私有凭据、case ID 和报告只保存在 ignored `docs/qa/private/app-hosted`。冷启动网络/stream-info 延迟应作为下一项独立 startup case 调查。
+
+# 2026-07-12 更新：native 启动耗时已按真实执行阶段拆分
+
+headless 过去把 helper 整个进程耗时写成 `startupDurationMs`，其中混入固定采样时长和 stop；同时 native 已采集的 graph open、FFmpeg open-input 与 stream-info 指标没有跨过 helper/parser 边界。该报告不能用于启动调优。现在 startup 以 `NativeGraphOpenDurationMs` 为准，进程总耗时仅保留在 `runtimeMetrics.processWallClockMs`，并把 `native.open` 分解为 open-input、find-stream-info、组件初始化、startup seek、首帧和 host dispatch。缺少新增字段的 helper 输出会被 parser 拒绝，不能回退到推算值冒充测量。
+
+同一私有 Emby SDR/HEVC 源分别从 0 秒和 60 秒启动，连续三轮真实 native 播放均为 selected/attempted/reports `2/2/2`，每轮 strict report-set validation 都是 `2/2 matched`、0 error。0 秒启动的首帧稳定为 `44.9-47.9ms`、预滚 0 帧；60 秒恢复每轮固定解码 263 帧并丢弃 141 个目标前视频帧，startup seek 为 `3644.1-5092.5ms`，首帧/预滚为 `6328.4-9033.5ms`，其余组件初始化只有 `119.7-129.8ms`。FFmpeg open-input 与 stream-info 另有明显网络波动。
+
+当前结论是两个独立瓶颈：远端 `av_seek_frame`，以及从前一关键帧读取、解码到目标位置的准确预滚。Kodi 固定源码同样以 backward seek 配合 accurate flush 保证 seek 正确性；因此不能通过向后续关键帧跳转、删除预滚或放宽启动阈值制造改善。下一步应在首帧阶段继续区分 demux I/O 与 codec CPU/GPU 等待，再选择单变量 Core 候选。当前改动只增强评测证据，没有宣称启动性能改善。

@@ -106,7 +106,7 @@ internal static class NativeHeadlessHarness
         Directory.CreateDirectory(Path.GetDirectoryName(reportPath) ?? options.ReportsDir);
         var helper = RunHelperProcess(options, reportPath);
         var lateHelperFailure = helper.ExitCode != 0 && helper.HasTelemetry;
-        var playbackStartedAt = DateTimeOffset.UtcNow;
+        var playbackStartedAt = commandReceivedAt.AddMilliseconds(helper.StartupDurationMs);
 
         if (helper.ExitCode != 0 && !helper.HasTelemetry && !helper.IsUnsupported)
         {
@@ -226,12 +226,7 @@ internal static class NativeHeadlessHarness
             descriptor,
             diagnostics,
             provider,
-            new PlaybackQualityStartup
-            {
-                CommandReceivedAt = commandReceivedAt.ToString("O"),
-                PlaybackStartedAt = playbackStartedAt.ToString("O"),
-                StartupDurationMs = helper.StartupDurationMs
-            },
+            CreateStartupEvidence(commandReceivedAt, playbackStartedAt, helper.StartupDurationMs),
             CreateEnvironment(),
             lifecycle,
             new PlaybackQualityPosition
@@ -334,6 +329,27 @@ internal static class NativeHeadlessHarness
 
         File.WriteAllText(reportPath, PlaybackQualityReportSerializer.Serialize(runResult));
         return new NativeHeadlessHarnessResult(reportPath, lateHelperFailure ? 1 : 0);
+    }
+
+    private static PlaybackQualityStartup CreateStartupEvidence(
+        DateTimeOffset commandReceivedAt,
+        DateTimeOffset playbackStartedAt,
+        double nativeOpenDurationMs)
+    {
+        var startup = new PlaybackQualityStartup
+        {
+            CommandReceivedAt = commandReceivedAt.ToString("O"),
+            PlaybackStartedAt = playbackStartedAt.ToString("O"),
+            StartupDurationMs = nativeOpenDurationMs
+        };
+        startup.Stages.Add(new PlaybackQualityStartupStage
+        {
+            Name = "native.open",
+            StartedAt = commandReceivedAt.ToString("O"),
+            CompletedAt = playbackStartedAt.ToString("O"),
+            DurationMs = nativeOpenDurationMs
+        });
+        return startup;
     }
 
     private static PlaybackQualityExecutionEvidence CreateExecutionEvidence(
@@ -966,6 +982,11 @@ internal static class NativeHeadlessHarness
             TrySetRequiredUInt64(values, "audioStarvedPasses", value => metrics.AudioStarvedPasses = value, out error) &&
             TrySetRequiredNonNegativeInt64(values, "audioClockTicks", value => metrics.AudioClockTicks = value, out error) &&
             TrySetRequiredNonNegativeInt64(values, "videoPositionTicks", value => metrics.VideoPositionTicks = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "nativeGraphOpenDurationMs", value => metrics.NativeGraphOpenDurationMs = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "ffmpegOpenInputDurationMs", value => metrics.FfmpegOpenInputDurationMs = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "ffmpegStreamInfoDurationMs", value => metrics.FfmpegStreamInfoDurationMs = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "nativeStartupSeekDurationMs", value => metrics.NativeStartupSeekDurationMs = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "nativeFirstFrameDurationMs", value => metrics.NativeFirstFrameDurationMs = value, out error) &&
             TrySetRequiredNonNegativeDouble(values, "renderIntervalMsP05", value => metrics.RenderIntervalMsP05 = value, out error) &&
             TrySetRequiredNonNegativeDouble(values, "renderIntervalMsP50", value => metrics.RenderIntervalMsP50 = value, out error) &&
             TrySetRequiredNonNegativeDouble(values, "renderIntervalMsP95", value => metrics.RenderIntervalMsP95 = value, out error) &&
@@ -2088,7 +2109,7 @@ internal sealed class NativeHeadlessHelperResult
         NativeHeadlessSourceInfo source,
         NativeHeadlessColorInfo color,
         NativeHeadlessDisplayInfo display,
-        double startupDurationMs,
+        double processWallClockMs,
         double processCpuTimeMs,
         double processCpuUtilizationRatio,
         NativeHeadlessInteractionResults interactions,
@@ -2100,8 +2121,10 @@ internal sealed class NativeHeadlessHelperResult
         Source = source;
         Color = color;
         Display = display;
-        StartupDurationMs = startupDurationMs;
-        ProcessWallClockMs = startupDurationMs;
+        StartupDurationMs = metrics.NativeGraphOpenDurationMs > 0
+            ? metrics.NativeGraphOpenDurationMs
+            : processWallClockMs;
+        ProcessWallClockMs = processWallClockMs;
         ProcessCpuTimeMs = processCpuTimeMs;
         ProcessCpuUtilizationRatio = processCpuUtilizationRatio;
         Interactions = interactions;

@@ -69,6 +69,8 @@ int main()
     metrics.NativeGraphOpenDurationMs = 5000.0;
     metrics.FfmpegOpenInputDurationMs = 4000.0;
     metrics.FfmpegStreamInfoDurationMs = 500.0;
+    metrics.NativeStartupSeekDurationMs = 125.0;
+    metrics.NativeFirstFrameDurationMs = 100.0;
     metrics.ContainerStartTimeTicks = 1'400'000;
     metrics.VideoStreamStartTimeTicks = 1'421'333;
     metrics.SeekDemuxTargetTicks = 24'000'000;
@@ -145,6 +147,8 @@ int main()
     assert(snapshot.NativeGraphOpenDurationMs == 5000.0);
     assert(snapshot.FfmpegOpenInputDurationMs == 4000.0);
     assert(snapshot.FfmpegStreamInfoDurationMs == 500.0);
+    assert(snapshot.NativeStartupSeekDurationMs == 125.0);
+    assert(snapshot.NativeFirstFrameDurationMs == 100.0);
     assert(snapshot.ContainerStartTimeTicks == 1'400'000);
     assert(snapshot.VideoStreamStartTimeTicks == 1'421'333);
     assert(snapshot.SeekDemuxTargetTicks == 24'000'000);
@@ -159,6 +163,8 @@ int main()
     assert(snapshot.NativeGraphOpenDurationMs == 5000.0);
     assert(snapshot.FfmpegOpenInputDurationMs == 4000.0);
     assert(snapshot.FfmpegStreamInfoDurationMs == 500.0);
+    assert(snapshot.NativeStartupSeekDurationMs == 125.0);
+    assert(snapshot.NativeFirstFrameDurationMs == 100.0);
     assert(snapshot.ContainerStartTimeTicks == 1'400'000);
     assert(snapshot.VideoStreamStartTimeTicks == 1'421'333);
     assert(snapshot.SeekDemuxTargetTicks == -1);
@@ -201,6 +207,8 @@ int main()
     assert(snapshot.NativeGraphOpenDurationMs == 0.0);
     assert(snapshot.FfmpegOpenInputDurationMs == 0.0);
     assert(snapshot.FfmpegStreamInfoDurationMs == 0.0);
+    assert(snapshot.NativeStartupSeekDurationMs == 0.0);
+    assert(snapshot.NativeFirstFrameDurationMs == 0.0);
 
     return 0;
 }

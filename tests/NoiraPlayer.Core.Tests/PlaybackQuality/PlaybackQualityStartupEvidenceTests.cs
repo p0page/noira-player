@@ -19,7 +19,9 @@ public sealed class PlaybackQualityStartupEvidenceTests
         {
             NativeGraphOpenDurationMs = 4800,
             FfmpegOpenInputDurationMs = 4000,
-            FfmpegStreamInfoDurationMs = 500
+            FfmpegStreamInfoDurationMs = 500,
+            NativeStartupSeekDurationMs = 125,
+            NativeFirstFrameDurationMs = 100
         };
 
         PlaybackQualityStartupEvidence.EnrichNativeOpenBreakdown(startup, metrics);
@@ -29,7 +31,9 @@ public sealed class PlaybackQualityStartupEvidenceTests
             stage.Components,
             component => Assert.Equal(("ffmpeg.open-input", 4000, "measured"), (component.Name, component.DurationMs, component.Status)),
             component => Assert.Equal(("ffmpeg.find-stream-info", 500, "measured"), (component.Name, component.DurationMs, component.Status)),
-            component => Assert.Equal(("native.initialize-first-frame", 300), (component.Name, component.DurationMs)),
+            component => Assert.Equal(("native.initialize-components", 75), (component.Name, component.DurationMs)),
+            component => Assert.Equal(("native.startup-seek", 125), (component.Name, component.DurationMs)),
+            component => Assert.Equal(("native.first-frame", 100), (component.Name, component.DurationMs)),
             component => Assert.Equal(("host.dispatch-overhead", 200), (component.Name, component.DurationMs)));
     }
 

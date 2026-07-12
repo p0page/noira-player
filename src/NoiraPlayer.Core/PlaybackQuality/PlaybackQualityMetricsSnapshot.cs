@@ -25,6 +25,8 @@
         public double NativeGraphOpenDurationMs { get; set; }
         public double FfmpegOpenInputDurationMs { get; set; }
         public double FfmpegStreamInfoDurationMs { get; set; }
+        public double NativeStartupSeekDurationMs { get; set; }
+        public double NativeFirstFrameDurationMs { get; set; }
         public long? ContainerStartTimeTicks { get; set; }
         public long? VideoStreamStartTimeTicks { get; set; }
         public long? SeekDemuxTargetTicks { get; set; }

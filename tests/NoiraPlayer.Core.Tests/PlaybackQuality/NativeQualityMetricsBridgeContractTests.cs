@@ -82,6 +82,31 @@ public sealed class NativeQualityMetricsBridgeContractTests
         }
     }
 
+    [Fact]
+    public void Native_Headless_Startup_Breakdown_Crosses_Helper_Parser_And_Report()
+    {
+        var root = FindRepositoryRoot();
+        var helper = File.ReadAllText(Path.Combine(
+            root, "tests", "NoiraPlayer.Native.Tests", "NativePlaybackGraphHeadlessSmokeTests.cpp"));
+        var parser = File.ReadAllText(Path.Combine(
+            root, "tools", "NoiraPlayer.PlaybackQuality.Headless", "Program.cs"));
+
+        foreach (var property in NativeOpenTimingProperties)
+        {
+            var key = char.ToLowerInvariant(property[0]) + property[1..];
+            Assert.Contains("\" " + key + "=\"", helper, StringComparison.Ordinal);
+            Assert.Contains("TrySetRequiredNonNegativeDouble(values, \"" + key + "\"", parser, StringComparison.Ordinal);
+            Assert.Contains("value => metrics." + property + " = value", parser, StringComparison.Ordinal);
+        }
+
+        Assert.Contains(
+            "StartupDurationMs = metrics.NativeGraphOpenDurationMs > 0",
+            parser,
+            StringComparison.Ordinal);
+        Assert.Contains("Name = \"native.open\"", parser, StringComparison.Ordinal);
+        Assert.Contains("ProcessWallClockMs = processWallClockMs", parser, StringComparison.Ordinal);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
@@ -121,6 +146,8 @@ public sealed class NativeQualityMetricsBridgeContractTests
         "NativeGraphOpenDurationMs",
         "FfmpegOpenInputDurationMs",
         "FfmpegStreamInfoDurationMs",
+        "NativeStartupSeekDurationMs",
+        "NativeFirstFrameDurationMs",
         "ContainerStartTimeTicks",
         "VideoStreamStartTimeTicks",
         "SeekDemuxTargetTicks",
@@ -211,6 +238,8 @@ public sealed class NativeQualityMetricsBridgeContractTests
         "NativeGraphOpenDurationMs",
         "FfmpegOpenInputDurationMs",
         "FfmpegStreamInfoDurationMs",
+        "NativeStartupSeekDurationMs",
+        "NativeFirstFrameDurationMs",
     };
 
     private static readonly IReadOnlyList<string> NativeInteractionDoubleProperties = new[]

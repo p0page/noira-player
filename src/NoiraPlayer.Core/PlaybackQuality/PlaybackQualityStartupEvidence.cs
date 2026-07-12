@@ -23,9 +23,11 @@ namespace NoiraPlayer.Core.PlaybackQuality
 
             var openInputMs = Math.Max(0, metrics.FfmpegOpenInputDurationMs);
             var streamInfoMs = Math.Max(0, metrics.FfmpegStreamInfoDurationMs);
+            var startupSeekMs = Math.Max(0, metrics.NativeStartupSeekDurationMs);
+            var firstFrameMs = Math.Max(0, metrics.NativeFirstFrameDurationMs);
             var graphOtherMs = Math.Max(
                 0,
-                metrics.NativeGraphOpenDurationMs - openInputMs - streamInfoMs);
+                metrics.NativeGraphOpenDurationMs - openInputMs - streamInfoMs - startupSeekMs - firstFrameMs);
             var hostDispatchMs = Math.Max(
                 0,
                 nativeOpen.DurationMs - metrics.NativeGraphOpenDurationMs);
@@ -33,7 +35,9 @@ namespace NoiraPlayer.Core.PlaybackQuality
             nativeOpen.Components.Clear();
             Add(nativeOpen, "ffmpeg.open-input", openInputMs);
             Add(nativeOpen, "ffmpeg.find-stream-info", streamInfoMs);
-            Add(nativeOpen, "native.initialize-first-frame", graphOtherMs);
+            Add(nativeOpen, "native.initialize-components", graphOtherMs);
+            Add(nativeOpen, "native.startup-seek", startupSeekMs);
+            Add(nativeOpen, "native.first-frame", firstFrameMs);
             Add(nativeOpen, "host.dispatch-overhead", hostDispatchMs);
         }
 

@@ -115,13 +115,17 @@ namespace winrt::NoiraPlayer::Native::implementation
             m_videoRenderer.ClearToBlack();
             AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open ClearToBlack end");
             auto startPositionTicks = (std::max<int64_t>)(0, request.StartPositionTicks);
+            auto startupSeekDurationMs = 0.0;
             if (startPositionTicks > 0)
             {
                 AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open Seek startup begin");
+                auto const startupSeekStartedAt = std::chrono::steady_clock::now();
                 m_videoDecoder.Seek(startPositionTicks);
                 m_audioDecoder.Flush(startPositionTicks);
                 m_subtitleDecoder.Flush();
                 SetVideoPrerollTarget(startPositionTicks);
+                startupSeekDurationMs = std::chrono::duration<double, std::milli>(
+                    std::chrono::steady_clock::now() - startupSeekStartedAt).count();
                 AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open Seek startup end");
             }
 
@@ -141,13 +145,18 @@ namespace winrt::NoiraPlayer::Native::implementation
             auto ffmpegOpenTiming = m_mediaSource.OpenTimingSnapshot();
             m_qualityMetrics.FfmpegOpenInputDurationMs = ffmpegOpenTiming.OpenInputDurationMs;
             m_qualityMetrics.FfmpegStreamInfoDurationMs = ffmpegOpenTiming.StreamInfoDurationMs;
+            m_qualityMetrics.NativeStartupSeekDurationMs = startupSeekDurationMs;
             auto timeline = m_mediaSource.TimelineSnapshot(sourceVideo ? sourceVideo->StreamIndex : -1);
             m_qualityMetrics.ContainerStartTimeTicks = timeline.ContainerStartTimeTicks;
             m_qualityMetrics.VideoStreamStartTimeTicks = timeline.StreamStartTimeTicks;
             m_qualityMetrics.SeekDemuxTargetTicks = timeline.LastSeekDemuxTargetTicks;
             ApplyFramePacingPolicyMetrics();
             AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open RenderNextFrame begin");
+            auto const firstFrameStartedAt = std::chrono::steady_clock::now();
             auto renderedFirstFrame = RenderNextFrame();
+            m_qualityMetrics.NativeFirstFrameDurationMs =
+                std::chrono::duration<double, std::milli>(
+                    std::chrono::steady_clock::now() - firstFrameStartedAt).count();
             AppendNativePlaybackDiagnostic(renderedFirstFrame
                 ? L"PlaybackGraph.Open RenderNextFrame end true"
                 : L"PlaybackGraph.Open RenderNextFrame end false");

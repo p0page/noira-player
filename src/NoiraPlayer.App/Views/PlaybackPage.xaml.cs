@@ -2136,6 +2136,8 @@ namespace NoiraPlayer.App.Views
                     NativeGraphOpenDurationMs = source.NativeGraphOpenDurationMs,
                     FfmpegOpenInputDurationMs = source.FfmpegOpenInputDurationMs,
                     FfmpegStreamInfoDurationMs = source.FfmpegStreamInfoDurationMs,
+                    NativeStartupSeekDurationMs = source.NativeStartupSeekDurationMs,
+                    NativeFirstFrameDurationMs = source.NativeFirstFrameDurationMs,
                     ContainerStartTimeTicks = source.ContainerStartTimeTicks,
                     VideoStreamStartTimeTicks = source.VideoStreamStartTimeTicks,
                     SeekDemuxTargetTicks = source.SeekDemuxTargetTicks,
