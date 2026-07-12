@@ -38,6 +38,7 @@ namespace
         int64_t StartPositionTicks{0};
         std::wstring Scenario{L"playback"};
         bool EnableSwitchPacketCache{true};
+        bool EnableSeekPacketCache{false};
     };
 
     struct AudioSwitchOutcome
@@ -111,6 +112,12 @@ namespace
         int64_t PostSeekPlaybackPositionTicks{0};
         double OperationDurationMs{0.0};
         double RecoveryDurationMs{0.0};
+        bool PacketCacheEnabled{false};
+        bool PacketCacheHit{false};
+        uint64_t PacketCachePacketCount{0};
+        uint64_t PacketCacheBytes{0};
+        int64_t PacketCacheWindowDurationTicks{0};
+        std::string FallbackReason;
     };
 
     Options ParseOptions(int argc, wchar_t** argv)
@@ -161,6 +168,10 @@ namespace
             else if (std::wcscmp(argv[index], L"--disable-switch-packet-cache") == 0)
             {
                 options.EnableSwitchPacketCache = false;
+            }
+            else if (std::wcscmp(argv[index], L"--enable-seek-packet-cache") == 0)
+            {
+                options.EnableSeekPacketCache = true;
             }
         }
 
@@ -244,6 +255,7 @@ int wmain(int argc, wchar_t** argv)
         request.DirectStreamUrl = options.StreamUrl;
         request.StartPositionTicks = options.StartPositionTicks;
         request.EnableSwitchPacketCache = options.EnableSwitchPacketCache;
+        request.EnableSeekPacketCache = options.EnableSeekPacketCache;
 
     try
     {
@@ -515,6 +527,13 @@ int wmain(int argc, wchar_t** argv)
                 seek.ActualPositionTicks = seekPresentation.ActualPositionTicks;
                 seekGeneration = seekPresentation.Generation;
                 seekCallCompleted = seekPresentation.Generation > seekPresentationBefore.Generation;
+                auto seekReplay = graph.LastSeekReplaySnapshot();
+                seek.PacketCacheEnabled = seekReplay.Enabled;
+                seek.PacketCacheHit = seekReplay.Hit;
+                seek.PacketCachePacketCount = seekReplay.PacketCount;
+                seek.PacketCacheBytes = seekReplay.Bytes;
+                seek.PacketCacheWindowDurationTicks = seekReplay.WindowDurationTicks;
+                seek.FallbackReason = seekReplay.FallbackReason;
                 if (seekCallCompleted && seek.ActualPositionTicks.has_value())
                 {
                     seek.RecoveryDurationMs =
@@ -655,6 +674,12 @@ int wmain(int argc, wchar_t** argv)
             << " seekActualPositionTicks=" << seek.ActualPositionTicks.value_or(-1)
             << " seekOperationDurationMs=" << seek.OperationDurationMs
             << " seekRecoveryDurationMs=" << seek.RecoveryDurationMs
+            << " seekPacketCacheEnabled=" << (seek.PacketCacheEnabled ? 1 : 0)
+            << " seekPacketCacheHit=" << (seek.PacketCacheHit ? 1 : 0)
+            << " seekPacketCachePacketCount=" << seek.PacketCachePacketCount
+            << " seekPacketCacheBytes=" << seek.PacketCacheBytes
+            << " seekPacketCacheWindowDurationTicks=" << seek.PacketCacheWindowDurationTicks
+            << " seekFallbackReason=" << (seek.FallbackReason.empty() ? "none" : seek.FallbackReason)
             << " postSeekPlaybackPositionTicks=" << seek.PostSeekPlaybackPositionTicks
             << " postSeekAdvanced=" << (seek.ActualPositionTicks.has_value() &&
                 seek.PostSeekPlaybackPositionTicks > seek.ActualPositionTicks.value() ? 1 : 0)

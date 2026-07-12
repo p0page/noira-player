@@ -57,6 +57,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         std::optional<DecodedVideoFrame> TryReadFrame();
         std::optional<DolbyVisionConfiguration> DolbyVisionConfigurationSnapshot() const noexcept;
         void Seek(int64_t positionTicks);
+        void Flush(int64_t positionTicks);
         void Close() noexcept;
 
     private:

@@ -523,6 +523,9 @@ namespace winrt::NoiraPlayer::Native::implementation
         ClearPacketQueues();
         m_activeStreams.clear();
         m_switchCacheStreams.clear();
+        m_seekReplayCacheEnabled = false;
+        m_seekReplayVideoStreamIndex = -1;
+        m_seekReplayCache.Clear();
 
         if (m_formatContext != nullptr)
         {
@@ -709,11 +712,21 @@ namespace winrt::NoiraPlayer::Native::implementation
         }
 
         m_activeStreams.insert(streamIndex);
+        RefreshSeekReplayCacheConfiguration();
     }
 
     void FfmpegMediaSource::UnregisterStream(int32_t streamIndex) noexcept
     {
         m_activeStreams.erase(streamIndex);
+        try
+        {
+            RefreshSeekReplayCacheConfiguration();
+        }
+        catch (...)
+        {
+            m_seekReplayCacheEnabled = false;
+            m_seekReplayCache.Clear();
+        }
 
         if (m_switchCacheStreams.find(streamIndex) != m_switchCacheStreams.end())
         {
@@ -746,6 +759,49 @@ namespace winrt::NoiraPlayer::Native::implementation
                 m_switchCacheStreams.insert(streamIndex);
             }
         }
+    }
+
+    void FfmpegMediaSource::ConfigureSeekReplayCache(bool enabled, int32_t videoStreamIndex)
+    {
+        m_seekReplayCacheEnabled = enabled;
+        m_seekReplayVideoStreamIndex = videoStreamIndex;
+        RefreshSeekReplayCacheConfiguration();
+    }
+
+    FfmpegSeekReplayAttemptSnapshot FfmpegMediaSource::TryPrepareSeekReplay(
+        int64_t targetPositionTicks,
+        int64_t currentPositionTicks)
+    {
+        auto replay = m_seekReplayCache.TryBuildReplay(
+            targetPositionTicks,
+            currentPositionTicks);
+        FfmpegSeekReplayAttemptSnapshot snapshot
+        {
+            replay.Enabled,
+            replay.Hit,
+            replay.PacketCount,
+            replay.Bytes,
+            replay.WindowDurationTicks,
+            replay.FallbackReason
+        };
+        if (!replay.Hit)
+        {
+            return snapshot;
+        }
+
+        for (auto packet = replay.Packets.rbegin(); packet != replay.Packets.rend(); ++packet)
+        {
+            auto& queue = m_packetQueues[packet->StreamIndex];
+            auto& bytes = m_packetQueueBytes[packet->StreamIndex];
+            auto rawPacket = packet->Packet.get();
+            queue.push_front(rawPacket);
+            packet->Packet.release();
+            if (rawPacket != nullptr && rawPacket->size > 0)
+            {
+                bytes += static_cast<uint64_t>(rawPacket->size);
+            }
+        }
+        return snapshot;
     }
 
     FfmpegSwitchPacketCacheSnapshot FfmpegMediaSource::SwitchPacketCacheSnapshot(
@@ -835,6 +891,11 @@ namespace winrt::NoiraPlayer::Native::implementation
                     m_readTiming.Bytes += static_cast<uint64_t>(scratchPacket->size);
                 }
 
+                if (auto packetPosition = PacketPositionTicks(scratchPacket))
+                {
+                    m_seekReplayCache.ObservePacket(scratchPacket, packetPosition.value());
+                }
+
                 if (scratchPacket->stream_index == streamIndex)
                 {
                     av_packet_move_ref(packet, scratchPacket);
@@ -919,6 +980,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         }
 
         ClearPacketQueues();
+        m_seekReplayCache.Clear();
     }
 
     void FfmpegMediaSource::ClearPacketQueues() noexcept
@@ -1017,6 +1079,17 @@ namespace winrt::NoiraPlayer::Native::implementation
             bytes = bytes > packetBytes ? bytes - packetBytes : 0;
             av_packet_free(&packet);
         }
+    }
+
+    void FfmpegMediaSource::RefreshSeekReplayCacheConfiguration()
+    {
+        auto activeStreams = std::vector<int32_t>(
+            m_activeStreams.begin(),
+            m_activeStreams.end());
+        m_seekReplayCache.Configure(
+            m_seekReplayCacheEnabled,
+            activeStreams,
+            m_seekReplayVideoStreamIndex);
     }
 
     std::optional<int64_t> FfmpegMediaSource::PacketPositionTicks(

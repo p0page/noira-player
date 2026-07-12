@@ -946,9 +946,23 @@ namespace winrt::NoiraPlayer::Native::implementation
         if (m_mediaSource != nullptr && m_codecContext != nullptr && m_videoStreamIndex >= 0)
         {
             m_mediaSource->Seek(m_videoStreamIndex, positionTicks);
-            avcodec_flush_buffers(m_codecContext);
-            m_decoderDraining = false;
+            Flush(positionTicks);
         }
+    }
+
+    void VideoDecoder::Flush(int64_t positionTicks)
+    {
+        if (positionTicks < 0)
+        {
+            throw winrt::hresult_invalid_argument(L"Video decoder position cannot be negative.");
+        }
+
+        m_positionTicks = positionTicks;
+        if (m_codecContext != nullptr)
+        {
+            avcodec_flush_buffers(m_codecContext);
+        }
+        m_decoderDraining = false;
     }
 
     void VideoDecoder::Close() noexcept

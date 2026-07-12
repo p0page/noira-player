@@ -312,6 +312,7 @@ function Build-NativePlaybackGraphHelper {
         'src\NoiraPlayer.Native\Media\HdrToneMappingPass.cpp',
         'src\NoiraPlayer.Native\Media\HttpMediaInput.cpp',
         'src\NoiraPlayer.Native\Media\FfmpegMediaSource.cpp',
+        'src\NoiraPlayer.Native\Media\FfmpegSeekReplayCache.cpp',
         'src\NoiraPlayer.Native\Media\VideoDecoder.cpp',
         'src\NoiraPlayer.Native\Media\AudioDecoder.cpp',
         'src\NoiraPlayer.Native\Media\AudioRenderer.cpp',

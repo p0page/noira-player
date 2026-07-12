@@ -11,6 +11,7 @@
 #include <winrt/Windows.Foundation.h>
 
 #include "MediaTimeline.h"
+#include "FfmpegSeekReplayCache.h"
 
 struct AVFormatContext;
 struct AVPacket;
@@ -80,6 +81,16 @@ namespace winrt::NoiraPlayer::Native::implementation
         int64_t WindowDurationTicks{0};
     };
 
+    struct FfmpegSeekReplayAttemptSnapshot
+    {
+        bool Enabled{false};
+        bool Hit{false};
+        uint64_t PacketCount{0};
+        uint64_t Bytes{0};
+        int64_t WindowDurationTicks{0};
+        std::string FallbackReason;
+    };
+
     class FfmpegMediaSource
     {
     public:
@@ -99,6 +110,10 @@ namespace winrt::NoiraPlayer::Native::implementation
         void RegisterStream(int32_t streamIndex);
         void UnregisterStream(int32_t streamIndex) noexcept;
         void ConfigureSwitchPacketCache(std::vector<int32_t> const& streamIndexes);
+        void ConfigureSeekReplayCache(bool enabled, int32_t videoStreamIndex);
+        FfmpegSeekReplayAttemptSnapshot TryPrepareSeekReplay(
+            int64_t targetPositionTicks,
+            int64_t currentPositionTicks);
         FfmpegSwitchPacketCacheSnapshot SwitchPacketCacheSnapshot(
             int32_t streamIndex,
             int64_t positionTicks,
@@ -115,6 +130,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         bool ShouldQueueStream(int32_t streamIndex) const;
         void QueuePacket(AVPacket* packet);
         void TrimSwitchPacketCache(int32_t streamIndex) noexcept;
+        void RefreshSeekReplayCacheConfiguration();
         std::optional<int64_t> PacketPositionTicks(AVPacket const* packet) const noexcept;
 
         winrt::hstring m_url;
@@ -123,6 +139,9 @@ namespace winrt::NoiraPlayer::Native::implementation
         std::unordered_set<int32_t> m_switchCacheStreams;
         std::unordered_map<int32_t, std::deque<AVPacket*>> m_packetQueues;
         std::unordered_map<int32_t, uint64_t> m_packetQueueBytes;
+        FfmpegSeekReplayCache m_seekReplayCache;
+        int32_t m_seekReplayVideoStreamIndex{-1};
+        bool m_seekReplayCacheEnabled{false};
         uint32_t m_avformatVersion{0};
         std::atomic<bool> m_interruptRequested{false};
         std::atomic<int64_t> m_ioDeadlineNanoseconds{0};

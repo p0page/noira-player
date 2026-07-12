@@ -111,6 +111,12 @@ namespace winrt::NoiraPlayer::Native::implementation
             AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open SubtitleRenderer.Open begin");
             m_subtitleRenderer.Open(subtitleStreamIndex);
             AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open SubtitleRenderer.Open end");
+            m_mediaSource.ConfigureSeekReplayCache(
+                request.EnableSeekPacketCache,
+                m_lastVideoSourceSnapshot
+                    ? m_lastVideoSourceSnapshot->StreamIndex
+                    : -1);
+            m_lastSeekReplaySnapshot = {};
             AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open ClearToBlack begin");
             m_videoRenderer.ClearToBlack();
             AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open ClearToBlack end");
@@ -235,6 +241,10 @@ namespace winrt::NoiraPlayer::Native::implementation
         }
 
         std::lock_guard lock(m_graphMutex);
+        auto const previousPositionTicks = m_positionTicks;
+        m_lastSeekReplaySnapshot = m_mediaSource.TryPrepareSeekReplay(
+            positionTicks,
+            previousPositionTicks);
         m_positionTicks = positionTicks;
         m_positionSnapshotTicks.store(positionTicks, std::memory_order_relaxed);
         m_pendingVideoFrame.reset();
@@ -242,7 +252,14 @@ namespace winrt::NoiraPlayer::Native::implementation
         m_seekPresentationTracker.BeginSeek(m_renderedVideoFrameCount);
         ApplyFramePacingPolicyMetrics();
         m_audioRenderer.Flush();
-        m_videoDecoder.Seek(positionTicks);
+        if (m_lastSeekReplaySnapshot.Hit)
+        {
+            m_videoDecoder.Flush(positionTicks);
+        }
+        else
+        {
+            m_videoDecoder.Seek(positionTicks);
+        }
         auto sourceVideo = m_mediaSource.BestVideoStreamSnapshot();
         auto timeline = m_mediaSource.TimelineSnapshot(sourceVideo ? sourceVideo->StreamIndex : -1);
         m_qualityMetrics.SeekDemuxTargetTicks = timeline.LastSeekDemuxTargetTicks;
@@ -272,6 +289,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         m_positionSnapshotTicks.store(0, std::memory_order_relaxed);
         m_open = false;
         m_switchPacketCacheEnabled = false;
+        m_lastSeekReplaySnapshot = {};
         m_paused = false;
         m_stopRenderLoop = false;
         m_videoPrerollTargetTicks.reset();
@@ -570,6 +588,12 @@ namespace winrt::NoiraPlayer::Native::implementation
         std::lock_guard lock(m_graphMutex);
         auto video = m_mediaSource.BestVideoStreamSnapshot();
         return m_mediaSource.TimelineSnapshot(video ? video->StreamIndex : -1);
+    }
+
+    FfmpegSeekReplayAttemptSnapshot PlaybackGraph::LastSeekReplaySnapshot() const
+    {
+        std::lock_guard lock(m_graphMutex);
+        return m_lastSeekReplaySnapshot;
     }
 
     void PlaybackGraph::StartRenderLoop()

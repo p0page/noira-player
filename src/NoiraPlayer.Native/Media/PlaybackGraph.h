@@ -48,6 +48,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         bool HasSubtitleStreamIndex{false};
         double VideoFrameRate{0.0};
         bool EnableSwitchPacketCache{true};
+        bool EnableSeekPacketCache{false};
     };
 
     struct HdrOutputDecision
@@ -109,6 +110,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         std::optional<FfmpegVideoStreamSnapshot> VideoSourceSnapshot() const;
         std::vector<FfmpegStreamSnapshot> SourceTrackSnapshots() const;
         FfmpegTimelineSnapshot TimelineSnapshot() const;
+        FfmpegSeekReplayAttemptSnapshot LastSeekReplaySnapshot() const;
 
     private:
         void StartRenderLoop();
@@ -150,6 +152,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         bool m_hdrOutputActive{false};
         bool m_open{false};
         bool m_switchPacketCacheEnabled{false};
+        FfmpegSeekReplayAttemptSnapshot m_lastSeekReplaySnapshot;
         bool m_paused{false};
         bool m_stopRenderLoop{false};
         uint64_t m_renderPassCount{0};
