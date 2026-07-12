@@ -2044,10 +2044,11 @@ try {
       "mediaSourceId": "source-hdr10",
       "startPositionTicks": 123,
       "forceSdrOutput": true,
+      "pauseSeconds": 12,
       "tier": 1,
-      "executionRequirement": { "minimumEvidenceLevel": "native-playback", "scenario": "playback" },
+      "executionRequirement": { "minimumEvidenceLevel": "app-hosted", "scenario": "pause-resume" },
       "purpose": [
-        "hdr-output"
+        "pause-resume"
       ],
       "expected": {
         "codec": "hevc",
@@ -2085,8 +2086,10 @@ try {
         $_.devCommand.itemId -eq 'item-007' -and
         $_.devCommand.mediaSourceId -eq 'source-hdr10' -and
         $_.devCommand.runId -eq 'emby/007-hdr10' -and
-        $_.scenario -eq 'playback' -and
-        $_.devCommand.scenario -eq 'playback' -and
+        $_.scenario -eq 'pause-resume' -and
+        $_.pauseSeconds -eq 12 -and
+        $_.devCommand.scenario -eq 'pause-resume' -and
+        $_.devCommand.pauseSeconds -eq 12 -and
         $_.devCommand.durationSeconds -eq 45 -and
         $_.devCommand.startPositionTicks -eq 123 -and
         $_.devCommand.forceSdrOutput -eq $true -and

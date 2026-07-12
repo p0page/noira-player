@@ -166,6 +166,7 @@ public sealed class DevelopmentNavigationCommandTests
           "mediaSourceId": "source-hdr10",
           "startPositionTicks": 123,
           "durationSeconds": 60,
+          "pauseSeconds": 12,
           "forceSdrOutput": true,
           "expected": {
             "frameRate": 23.976,
@@ -195,6 +196,7 @@ public sealed class DevelopmentNavigationCommandTests
         Assert.Equal("source-hdr10", command.MediaSourceId);
         Assert.Equal(123, command.StartPositionTicks);
         Assert.Equal(60, command.DurationSeconds);
+        Assert.Equal(12, command.PauseSeconds);
         Assert.True(command.ForceSdrOutput);
         Assert.NotNull(command.Expected);
         Assert.Equal("Hdr10", command.Expected!.HdrOutput);

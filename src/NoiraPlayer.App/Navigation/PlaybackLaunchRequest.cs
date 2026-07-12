@@ -25,6 +25,7 @@ namespace NoiraPlayer.App.Navigation
                 qualityRunId: command.RunId,
                 qualityScenario: command.Scenario,
                 qualityRunDurationSeconds: command.DurationSeconds,
+                qualityPauseSeconds: command.PauseSeconds,
                 qualityExpected: command.Expected,
                 qualityCommandReceivedAtUtc: commandReceivedAtUtc,
                 streamUrl: command.StreamUrl);
@@ -41,6 +42,7 @@ namespace NoiraPlayer.App.Navigation
             string qualityRunId = "",
             string qualityScenario = PlaybackQualityExecutionScenario.Playback,
             int qualityRunDurationSeconds = 0,
+            int qualityPauseSeconds = 0,
             PlaybackQualityExpected? qualityExpected = null,
             DateTimeOffset? qualityCommandReceivedAtUtc = null,
             string streamUrl = "")
@@ -63,6 +65,7 @@ namespace NoiraPlayer.App.Navigation
                     nameof(qualityScenario));
             }
             QualityRunDurationSeconds = qualityRunDurationSeconds < 10 ? 10 : qualityRunDurationSeconds;
+            QualityPauseSeconds = Math.Max(0, Math.Min(900, qualityPauseSeconds));
             QualityExpected = qualityExpected;
             QualityCommandReceivedAtUtc = qualityCommandReceivedAtUtc ?? DateTimeOffset.UtcNow;
         }
@@ -86,6 +89,8 @@ namespace NoiraPlayer.App.Navigation
         public string QualityScenario { get; }
 
         public int QualityRunDurationSeconds { get; }
+
+        public int QualityPauseSeconds { get; }
 
         public PlaybackQualityExpected? QualityExpected { get; }
 

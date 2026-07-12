@@ -18,6 +18,7 @@ namespace NoiraPlayer.Core.Diagnostics
         public string RunId { get; set; } = "";
         public string Scenario { get; set; } = "";
         public int DurationSeconds { get; set; } = 10;
+        public int PauseSeconds { get; set; }
         public PlaybackQualityExpected? Expected { get; set; }
 
         public static bool TryParseJson(
@@ -70,6 +71,8 @@ namespace NoiraPlayer.Core.Diagnostics
             {
                 parsed.DurationSeconds = 600;
             }
+
+            parsed.PauseSeconds = Math.Max(0, Math.Min(900, parsed.PauseSeconds));
 
             if (!IsSupportedRoute(parsed.Route))
             {

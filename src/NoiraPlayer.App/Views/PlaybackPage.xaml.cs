@@ -1397,7 +1397,10 @@ namespace NoiraPlayer.App.Views
                     TryReadQualityRunInteractionMetrics(
                         out var renderedVideoFramesBefore,
                         out _);
-                    await Task.Delay(shortDelay);
+                    var pauseDuration = request.QualityPauseSeconds > 0
+                        ? TimeSpan.FromSeconds(request.QualityPauseSeconds)
+                        : shortDelay;
+                    await Task.Delay(pauseDuration);
                     var positionDuringPauseTicks = GetCurrentPositionTicks();
                     var positionBeforeResumeTicks = positionDuringPauseTicks;
                     await _orchestrator.ResumeAsync();
@@ -1430,7 +1433,8 @@ namespace NoiraPlayer.App.Views
                         "pause",
                         pauseResumeRecovered ? "success" : "failed",
                         "app-hosted pause-resume paused position=" +
-                        positionBeforePauseTicks + "->" + positionDuringPauseTicks);
+                        positionBeforePauseTicks + "->" + positionDuringPauseTicks +
+                        " requestedPauseSeconds=" + request.QualityPauseSeconds);
                     AddQualityRunLifecycleEvent(
                         lifecycle,
                         "resume",

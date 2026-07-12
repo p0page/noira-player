@@ -2122,6 +2122,7 @@ internal static class Program
                 SourceUri = referenceCase.Uri,
                 Tier = referenceCase.Tier,
                 DurationSeconds = options.DurationSeconds,
+                PauseSeconds = referenceCase.PauseSeconds,
                 CaptureMode = hasEmbyItem ? "emby-item" : "direct-uri",
                 ReportRelativePath = relativePath,
                 ReportPath = string.IsNullOrWhiteSpace(options.ReportsDirectory)
@@ -2219,6 +2220,7 @@ internal static class Program
             RunId = referenceCase.CaseId,
             Scenario = referenceCase.ExecutionRequirement.Scenario,
             DurationSeconds = durationSeconds,
+            PauseSeconds = referenceCase.PauseSeconds,
             Expected = CloneExpected(referenceCase.Expected)
         };
     }
@@ -3994,6 +3996,7 @@ internal static class Program
         public int Tier { get; set; }
         public List<string> Purpose { get; } = new List<string>();
         public int DurationSeconds { get; set; }
+        public int PauseSeconds { get; set; }
         public string CaptureMode { get; set; } = "";
         public string ReportRelativePath { get; set; } = "";
         public string ReportPath { get; set; } = "";
