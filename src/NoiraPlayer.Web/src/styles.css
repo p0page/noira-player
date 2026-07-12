@@ -74,6 +74,17 @@ html {
   background: var(--canvas);
 }
 
+html,
+body {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  display: none;
+}
+
 body {
   margin: 0;
   overflow-x: hidden;
@@ -89,6 +100,12 @@ button,
 input {
   font: inherit;
   letter-spacing: 0;
+}
+
+button,
+[data-focus-key] {
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 button {
@@ -377,18 +394,25 @@ h2 {
 }
 
 .home-page__header {
-  min-height: 56px;
-  margin-bottom: var(--space-sm);
-  padding-right: var(--tv-safe);
+  min-height: 0;
+  margin: 0;
+  padding: 0;
 }
 
-.home-page__header h1 {
-  margin: 0;
+.home-page__title {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .home-page__rows {
   display: grid;
-  gap: var(--space-md);
+  gap: var(--space-sm);
 }
 
 .home-page__empty {
@@ -583,11 +607,15 @@ h2 {
   font-size: 14px;
   font-weight: 600;
   line-height: 18px;
+  transform: scale(1);
+  transform-origin: center;
+  transition: transform 120ms ease, background-color 100ms ease, color 100ms ease;
 }
 
 .details-page__play:focus-visible {
   background: var(--details-decision-tile-focused);
   color: var(--focus);
+  transform: scale(1.03);
 }
 
 .details-page__play:disabled {
@@ -614,7 +642,7 @@ h2 {
   align-items: flex-start;
   gap: var(--space-md);
   min-width: 0;
-  padding: var(--space-sm) var(--tv-safe) 12px var(--space-sm);
+  padding: var(--space-sm) var(--tv-safe) var(--space-sm) var(--space-sm);
   overflow-x: auto;
   overflow-y: hidden;
   scroll-padding-inline: var(--space-sm) var(--tv-safe);
@@ -739,11 +767,11 @@ h2 {
 
 .media-card:focus-visible .media-card__visual {
   background: var(--card-focus-fill);
-  transform: scale(1.025);
+  transform: scale(1.03);
 }
 
 .media-card:focus-visible .media-card__artwork img {
-  filter: brightness(1.07);
+  filter: brightness(1.1);
 }
 
 .legacy-page {

@@ -100,7 +100,7 @@ export function HomePage({
         onFocusCapture={handleContentFocus}
       >
         <header className="home-page__header">
-          <h1>Home</h1>
+          <h1 className="home-page__title">Home</h1>
         </header>
 
         <div className="home-page__rows">

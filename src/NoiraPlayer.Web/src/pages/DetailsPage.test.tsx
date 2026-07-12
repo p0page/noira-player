@@ -1,5 +1,4 @@
 // @vitest-environment jsdom
-
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { FocusProvider } from '../focus/FocusProvider';
@@ -34,6 +33,17 @@ describe('DetailsPage focus and actions', () => {
 
     expect(await screen.findByRole('button', { name: 'Resume' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Play' })).toBeNull();
+  });
+
+  it('keeps Resume in the stable Play focus target', async () => {
+    renderDetails(createItem({ startPositionTicks: 120_000_000 }));
+
+    const resume = await screen.findByRole('button', { name: 'Resume' });
+    expect(resume.classList.contains('details-page__play')).toBe(true);
+    expect(resume.getAttribute('data-focus-key')).toBe(getDetailsPlayFocusKey());
+    expect(resume.closest('[data-focus-scope]')?.getAttribute('data-focus-scope')).toBe(
+      getDetailsActionsScopeKey(),
+    );
   });
 
   it('explicitly restores Play focus for each matching restore request', async () => {

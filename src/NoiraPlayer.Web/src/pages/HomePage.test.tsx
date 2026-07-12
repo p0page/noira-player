@@ -1,5 +1,4 @@
 // @vitest-environment jsdom
-
 import {
   setFocus,
   updateAllLayouts,
@@ -64,6 +63,24 @@ describe('HomePage', () => {
     await waitFor(() => {
       expect(document.activeElement).toBe(firstCard);
     });
+  });
+
+  it('keeps the semantic Home heading while visually receding it above dense rails', () => {
+    render(
+      <FocusProvider>
+        <HomePage
+          rows={[]}
+          onHome={() => undefined}
+          onLogout={() => undefined}
+          onOpenLibrary={() => undefined}
+          onOpenMedia={() => undefined}
+        />
+      </FocusProvider>,
+    );
+
+    const heading = screen.getByRole('heading', { name: 'Home', level: 1 });
+    expect(heading.classList.contains('home-page__title')).toBe(true);
+    expect(homePageSource).toContain('<h1 className="home-page__title">Home</h1>');
   });
 
   it('keeps title and metadata below artwork while resume progress stays inside it', () => {
