@@ -1137,6 +1137,25 @@ public sealed class PlaybackQualityReferenceManifestTests
     }
 
     [Fact]
+    public void ValidateManifest_Rejects_Missing_Execution_Scenario()
+    {
+        Assert.Equal("", new PlaybackQualityExecutionRequirement().Scenario);
+
+        var manifest = new PlaybackQualityReferenceManifest();
+        var referenceCase = CreateCase("manifest/missing-execution-scenario", 1, "sdr-smoke");
+        referenceCase.ExecutionRequirement.Scenario = "";
+        manifest.Cases.Add(referenceCase);
+
+        var validation = PlaybackQualityReferenceManifestValidator.Validate(manifest);
+
+        Assert.False(validation.IsValid);
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "case.execution.scenario.invalid" &&
+            error.CaseId == referenceCase.CaseId &&
+            error.Signal == "executionRequirement.scenario");
+    }
+
+    [Fact]
     public void ValidateManifest_Preserves_Explicit_Execution_Scenario()
     {
         var manifest = new PlaybackQualityReferenceManifest();
@@ -2366,7 +2385,11 @@ public sealed class PlaybackQualityReferenceManifestTests
             new PlaybackQualityReferenceCase
             {
                 CaseId = runId,
-                Uri = "https://example.invalid/" + runId + ".mp4"
+                Uri = "https://example.invalid/" + runId + ".mp4",
+                ExecutionRequirement = new PlaybackQualityExecutionRequirement
+                {
+                    Scenario = PlaybackQualityExecutionScenario.Playback
+                }
             },
             status: "completed",
             sourceOpened: true,

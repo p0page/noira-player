@@ -26,6 +26,7 @@ try {
       "caseId": "public/sdr-smoke",
       "uri": "https://media.example/sdr.mp4",
       "tier": 1,
+      "executionRequirement": { "minimumEvidenceLevel": "native-playback", "scenario": "playback" },
       "purpose": [
         "sdr-smoke",
         "av-sync"
@@ -52,6 +53,7 @@ try {
       "itemId": "placeholder-item",
       "mediaSourceId": "placeholder-source",
       "tier": 2,
+      "executionRequirement": { "minimumEvidenceLevel": "native-playback", "scenario": "playback" },
       "purpose": [
         "hdr-output",
         "cadence-23.976",
@@ -122,6 +124,7 @@ try {
       "caseId": "public/sdr-smoke",
       "uri": "https://media.example/duplicate.mp4",
       "tier": 1,
+      "executionRequirement": { "minimumEvidenceLevel": "native-playback", "scenario": "playback" },
       "purpose": [
         "sdr-smoke"
       ],

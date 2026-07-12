@@ -50,6 +50,16 @@ public sealed class AppHostedQualityCaptureContractTests
         Assert.Contains("PlaybackQualityExecutionScenario.SubtitleSwitch", playbackPage, StringComparison.Ordinal);
         Assert.Contains("_orchestrator.SwitchSubtitleStreamAsync", playbackPage, StringComparison.Ordinal);
         Assert.Contains("SubtitleCueRenderCount", playbackPage, StringComparison.Ordinal);
+        Assert.Contains(
+            "PlaybackQualityInteractionEvidencePolicy.IsPauseResumeRecovered",
+            playbackPage,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "PlaybackQualityInteractionEvidencePolicy.IsAudioSwitchRecovered",
+            playbackPage,
+            StringComparison.Ordinal);
+        Assert.Contains("SubmittedAudioFrames", playbackPage, StringComparison.Ordinal);
+        Assert.Contains("RenderedVideoFrames", playbackPage, StringComparison.Ordinal);
         Assert.Contains("_orchestrator.PauseAsync()", playbackPage, StringComparison.Ordinal);
         Assert.Contains("_orchestrator.ResumeAsync()", playbackPage, StringComparison.Ordinal);
         Assert.Contains("_orchestrator.SeekAsync", playbackPage, StringComparison.Ordinal);

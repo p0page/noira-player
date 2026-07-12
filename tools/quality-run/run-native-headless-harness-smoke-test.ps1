@@ -1303,7 +1303,8 @@ if ($report.report.result -eq 'skip') {
       "stability": "stable",
       "uri": "$sampleUrl",
       "executionRequirement": {
-        "minimumEvidenceLevel": "native-playback"
+        "minimumEvidenceLevel": "native-playback",
+        "scenario": "playback"
       },
       "purpose": [
         "sdr-smoke",
@@ -1818,6 +1819,7 @@ foreach ($hdr10CaseId in $nativeHdr10CaseIds) {
       "severity": "high",
       "stability": "stable",
       "uri": "$nativeSampleUrl",
+      "executionRequirement": { "minimumEvidenceLevel": "native-playback", "scenario": "playback" },
       "purpose": [
         "sdr-smoke",
         "frame-pacing"
@@ -1907,6 +1909,7 @@ foreach ($hdr10CaseId in $nativeHdr10CaseIds) {
       "severity": "high",
       "stability": "stable",
       "uri": "$nativeSdr23976SampleUrl",
+      "executionRequirement": { "minimumEvidenceLevel": "native-playback", "scenario": "playback" },
       "purpose": [
         "sdr-smoke",
         "frame-pacing",
@@ -1935,6 +1938,7 @@ foreach ($hdr10CaseId in $nativeHdr10CaseIds) {
       "severity": "high",
       "stability": "stable",
       "uri": "$nativeSdr24SampleUrl",
+      "executionRequirement": { "minimumEvidenceLevel": "native-playback", "scenario": "playback" },
       "purpose": [
         "sdr-smoke",
         "frame-pacing",
@@ -1963,6 +1967,7 @@ foreach ($hdr10CaseId in $nativeHdr10CaseIds) {
       "severity": "high",
       "stability": "stable",
       "uri": "$nativeSdr60SampleUrl",
+      "executionRequirement": { "minimumEvidenceLevel": "native-playback", "scenario": "playback" },
       "purpose": [
         "sdr-smoke",
         "frame-pacing",
@@ -1991,6 +1996,7 @@ foreach ($hdr10CaseId in $nativeHdr10CaseIds) {
       "severity": "high",
       "stability": "stable",
       "uri": "$nativeHdr1023976SampleUrl",
+      "executionRequirement": { "minimumEvidenceLevel": "native-playback", "scenario": "playback" },
       "purpose": [
         "hdr10",
         "color-pipeline",
@@ -2019,6 +2025,7 @@ foreach ($hdr10CaseId in $nativeHdr10CaseIds) {
       "severity": "high",
       "stability": "stable",
       "uri": "$nativeHdr1024SampleUrl",
+      "executionRequirement": { "minimumEvidenceLevel": "native-playback", "scenario": "playback" },
       "purpose": [
         "hdr10",
         "color-pipeline",
@@ -2047,6 +2054,7 @@ foreach ($hdr10CaseId in $nativeHdr10CaseIds) {
       "severity": "high",
       "stability": "stable",
       "uri": "$nativeHdr1030SampleUrl",
+      "executionRequirement": { "minimumEvidenceLevel": "native-playback", "scenario": "playback" },
       "purpose": [
         "hdr10",
         "color-pipeline",
@@ -2075,6 +2083,7 @@ foreach ($hdr10CaseId in $nativeHdr10CaseIds) {
       "severity": "high",
       "stability": "stable",
       "uri": "$nativeHdr1060SampleUrl",
+      "executionRequirement": { "minimumEvidenceLevel": "native-playback", "scenario": "playback" },
       "purpose": [
         "hdr10",
         "color-pipeline",

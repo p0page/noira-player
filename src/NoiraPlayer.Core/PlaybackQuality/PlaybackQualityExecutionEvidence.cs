@@ -73,7 +73,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
         public string MinimumEvidenceLevel { get; set; } =
             PlaybackQualityEvidenceLevel.NativePlayback;
 
-        public string Scenario { get; set; } = PlaybackQualityExecutionScenario.Playback;
+        public string Scenario { get; set; } = "";
     }
 
     public sealed class PlaybackQualityExecutionEvidence

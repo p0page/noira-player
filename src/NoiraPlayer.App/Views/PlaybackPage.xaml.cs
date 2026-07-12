@@ -1393,18 +1393,52 @@ namespace NoiraPlayer.App.Views
                 case PlaybackQualityExecutionScenario.PauseResume:
                     await Task.Delay(firstDelay);
                     await _orchestrator.PauseAsync();
+                    var positionBeforePauseTicks = GetCurrentPositionTicks();
+                    TryReadQualityRunInteractionMetrics(
+                        out var renderedVideoFramesBefore,
+                        out _);
+                    await Task.Delay(shortDelay);
+                    var positionDuringPauseTicks = GetCurrentPositionTicks();
+                    var positionBeforeResumeTicks = positionDuringPauseTicks;
+                    await _orchestrator.ResumeAsync();
+                    var pauseResumeTimeoutAt = DateTimeOffset.UtcNow.AddSeconds(5);
+                    var positionAfterResumeTicks = GetCurrentPositionTicks();
+                    var renderedVideoFramesAfter = renderedVideoFramesBefore;
+                    var pauseResumeRecovered = false;
+                    while (DateTimeOffset.UtcNow < pauseResumeTimeoutAt)
+                    {
+                        await Task.Delay(TimeSpan.FromMilliseconds(100));
+                        positionAfterResumeTicks = GetCurrentPositionTicks();
+                        TryReadQualityRunInteractionMetrics(
+                            out renderedVideoFramesAfter,
+                            out _);
+                        pauseResumeRecovered =
+                            PlaybackQualityInteractionEvidencePolicy.IsPauseResumeRecovered(
+                                positionBeforePauseTicks,
+                                positionDuringPauseTicks,
+                                positionBeforeResumeTicks,
+                                positionAfterResumeTicks,
+                                renderedVideoFramesBefore,
+                                renderedVideoFramesAfter);
+                        if (pauseResumeRecovered)
+                        {
+                            break;
+                        }
+                    }
                     AddQualityRunLifecycleEvent(
                         lifecycle,
                         "pause",
-                        "success",
-                        "app-hosted pause-resume scenario paused playback");
-                    await Task.Delay(shortDelay);
-                    await _orchestrator.ResumeAsync();
+                        pauseResumeRecovered ? "success" : "failed",
+                        "app-hosted pause-resume paused position=" +
+                        positionBeforePauseTicks + "->" + positionDuringPauseTicks);
                     AddQualityRunLifecycleEvent(
                         lifecycle,
                         "resume",
-                        "success",
-                        "app-hosted pause-resume scenario resumed playback");
+                        pauseResumeRecovered ? "success" : "failed",
+                        "app-hosted pause-resume resumed position=" +
+                        positionBeforeResumeTicks + "->" + positionAfterResumeTicks +
+                        " renderedVideoFrames=" + renderedVideoFramesBefore +
+                        "->" + renderedVideoFramesAfter);
                     break;
 
                 case PlaybackQualityExecutionScenario.Timeline:
@@ -1453,15 +1487,63 @@ namespace NoiraPlayer.App.Views
                 return;
             }
 
+            var positionBeforeTicks = GetCurrentPositionTicks();
+            TryReadQualityRunInteractionMetrics(
+                out _,
+                out var submittedAudioFramesBefore);
             await _orchestrator.SwitchAudioStreamAsync(target.Index);
-            await Task.Delay(GetQualityRunProbeDelay(TimeSpan.FromSeconds(1), 0.10));
-            var selected = _orchestrator.CurrentDescriptor?.AudioStreamIndex;
+            var timeoutAt = DateTimeOffset.UtcNow.AddSeconds(8);
+            var selected = _orchestrator.CurrentDescriptor?.AudioStreamIndex ?? -1;
+            var positionAfterTicks = GetCurrentPositionTicks();
+            var submittedAudioFramesAfter = submittedAudioFramesBefore;
+            var recovered = false;
+            while (DateTimeOffset.UtcNow < timeoutAt)
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(100));
+                selected = _orchestrator.CurrentDescriptor?.AudioStreamIndex ?? -1;
+                positionAfterTicks = GetCurrentPositionTicks();
+                TryReadQualityRunInteractionMetrics(
+                    out _,
+                    out submittedAudioFramesAfter);
+                recovered = PlaybackQualityInteractionEvidencePolicy.IsAudioSwitchRecovered(
+                    target.Index,
+                    selected,
+                    positionBeforeTicks,
+                    positionAfterTicks,
+                    submittedAudioFramesBefore,
+                    submittedAudioFramesAfter);
+                if (recovered)
+                {
+                    break;
+                }
+            }
             AddQualityRunLifecycleEvent(
                 lifecycle,
                 "audio-switch",
-                selected == target.Index ? "success" : "failed",
+                recovered ? "success" : "failed",
                 "app-hosted audio-switch target=" + target.Index +
-                " selected=" + (selected.HasValue ? selected.Value.ToString() : "none"));
+                " selected=" + selected +
+                " position=" + positionBeforeTicks + "->" + positionAfterTicks +
+                " submittedAudioFrames=" + submittedAudioFramesBefore +
+                "->" + submittedAudioFramesAfter);
+        }
+
+        private bool TryReadQualityRunInteractionMetrics(
+            out ulong renderedVideoFrames,
+            out ulong submittedAudioFrames)
+        {
+            renderedVideoFrames = 0;
+            submittedAudioFrames = 0;
+            if (!(_backend is IPlaybackQualityMetricsProvider provider) ||
+                !provider.TryGetQualityMetrics(out var metrics) ||
+                metrics == null)
+            {
+                return false;
+            }
+
+            renderedVideoFrames = metrics.RenderedVideoFrames;
+            submittedAudioFrames = metrics.SubmittedAudioFrames;
+            return true;
         }
 
         private async Task RunQualityRunSubtitleSwitchScenarioAsync(

@@ -771,6 +771,7 @@ try {
       "stability": "variable",
       "uri": "https://example.invalid/netflix/chimera-4k-2398-hdr-pq.mp4",
       "tier": 2,
+      "executionRequirement": { "minimumEvidenceLevel": "native-playback", "scenario": "playback" },
       "purpose": [
         "hdr-output",
         "cadence-23.976"
@@ -789,6 +790,7 @@ try {
       "stability": "stable",
       "uri": "https://example.invalid/jellyfin/dv-profile5-hevc-4k.mp4",
       "tier": 3,
+      "executionRequirement": { "minimumEvidenceLevel": "native-playback", "scenario": "playback" },
       "purpose": [
         "dv-reject"
       ],
@@ -809,6 +811,7 @@ try {
       "itemId": "quality-case-missing-file-error-handling",
       "mediaSourceId": "quality-source-missing-file-error-handling",
       "tier": 1,
+      "executionRequirement": { "minimumEvidenceLevel": "native-playback", "scenario": "playback" },
       "purpose": [
         "error-handling"
       ],
@@ -1336,6 +1339,7 @@ try {
       "stability": "stable",
       "uri": "file:///quality-cases/native-harness-sdr-smoke.mp4",
       "tier": 1,
+      "executionRequirement": { "minimumEvidenceLevel": "native-playback", "scenario": "playback" },
       "purpose": [
         "sdr-smoke",
         "frame-pacing",
@@ -1673,6 +1677,7 @@ try {
       "stability": "stable",
       "uri": "file:///quality-cases/native-raw-cadence-24.mp4",
       "tier": 1,
+      "executionRequirement": { "minimumEvidenceLevel": "native-playback", "scenario": "playback" },
       "purpose": [
         "sdr-smoke",
         "frame-pacing",
@@ -2040,6 +2045,7 @@ try {
       "startPositionTicks": 123,
       "forceSdrOutput": true,
       "tier": 1,
+      "executionRequirement": { "minimumEvidenceLevel": "native-playback", "scenario": "playback" },
       "purpose": [
         "hdr-output"
       ],
@@ -2395,6 +2401,7 @@ try {
       "caseId": "jellyfin/zero-starvation-buffering",
       "uri": "https://example.invalid/jellyfin/zero-starvation-buffering.mp4",
       "tier": 1,
+      "executionRequirement": { "minimumEvidenceLevel": "native-playback", "scenario": "playback" },
       "purpose": [
         "buffering"
       ],
@@ -3339,6 +3346,7 @@ try {
       "caseId": "errors/missing-file",
       "uri": "https://example.invalid/errors/missing-file.mp4",
       "tier": 1,
+      "executionRequirement": { "minimumEvidenceLevel": "native-playback", "scenario": "playback" },
       "purpose": [
         "error-handling"
       ],
@@ -3779,6 +3787,7 @@ try {
       "caseId": "item-1/source-1",
       "uri": "https://example.invalid/item-1/source-1.mp4",
       "tier": 2,
+      "executionRequirement": { "minimumEvidenceLevel": "native-playback", "scenario": "playback" },
       "purpose": [
         "frame-pacing"
       ],

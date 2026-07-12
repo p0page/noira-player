@@ -8,6 +8,7 @@
       "stability": "unknown",
       "uri": "https://media.w3.org/2010/05/sintel/trailer.mp4",
       "tier": 1,
+      "executionRequirement": { "minimumEvidenceLevel": "native-playback", "scenario": "playback" },
       "purpose": [
         "ui-responsiveness",
         "end-of-stream"
@@ -34,6 +35,7 @@
       "stability": "stable",
       "uri": "https://repo.jellyfin.org/test-videos/SDR/HEVC%2010bit/Test%20Jellyfin%201080p%20HEVC%2010bit%203M.mp4",
       "tier": 1,
+      "executionRequirement": { "minimumEvidenceLevel": "native-playback", "scenario": "playback" },
       "purpose": [
         "sdr-smoke",
         "frame-pacing"
@@ -66,6 +68,7 @@
       "stability": "stable",
       "uri": "https://repo.jellyfin.org/test-videos/HDR/HDR10/HEVC/Test%20Jellyfin%201080p%20HEVC%20HDR10%2010M.mp4",
       "tier": 1,
+      "executionRequirement": { "minimumEvidenceLevel": "native-playback", "scenario": "playback" },
       "purpose": [
         "hdr-output"
       ],
@@ -99,6 +102,7 @@
       "uri": "https://repo.jellyfin.org/test-videos/HDR/HDR10/HEVC/Test%20Jellyfin%201080p%20HEVC%20HDR10%2010M.mp4",
       "forceSdrOutput": true,
       "tier": 2,
+      "executionRequirement": { "minimumEvidenceLevel": "native-playback", "scenario": "playback" },
       "purpose": [
         "hdr-force-sdr"
       ],
@@ -131,6 +135,7 @@
       "stability": "variable",
       "uri": "https://repo.jellyfin.org/test-videos/HDR/HDR10/HEVC/Test%20Jellyfin%204K%20HEVC%20HDR10%2050M.mp4",
       "tier": 3,
+      "executionRequirement": { "minimumEvidenceLevel": "native-playback", "scenario": "playback" },
       "purpose": [
         "buffering"
       ],
@@ -163,6 +168,7 @@
       "stability": "stable",
       "uri": "https://repo.jellyfin.org/test-videos/HDR/Dolby%20Vision/Test%20Jellyfin%204K%20DV%20P5.mp4",
       "tier": 3,
+      "executionRequirement": { "minimumEvidenceLevel": "native-playback", "scenario": "playback" },
       "purpose": [
         "dv-reject",
         "unsupported-source"
@@ -193,6 +199,7 @@
       "stability": "stable",
       "uri": "https://repo.jellyfin.org/test-videos/HDR/Dolby%20Vision/Test%20Jellyfin%204K%20DV%20P8.1.mp4",
       "tier": 3,
+      "executionRequirement": { "minimumEvidenceLevel": "native-playback", "scenario": "playback" },
       "purpose": [
         "dv-fallback"
       ],
@@ -233,6 +240,7 @@
       "itemId": "quality-case-chimera-23976-hdr10",
       "mediaSourceId": "quality-source-chimera-23976-hdr10",
       "tier": 2,
+      "executionRequirement": { "minimumEvidenceLevel": "native-playback", "scenario": "playback" },
       "purpose": [
         "cadence-23.976",
         "frame-pacing"
@@ -312,6 +320,7 @@
       "itemId": "quality-case-missing-file-error-handling",
       "mediaSourceId": "quality-source-missing-file-error-handling",
       "tier": 1,
+      "executionRequirement": { "minimumEvidenceLevel": "native-playback", "scenario": "playback" },
       "purpose": [
         "error-handling"
       ],

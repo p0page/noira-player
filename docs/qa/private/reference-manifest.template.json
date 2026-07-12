@@ -10,6 +10,7 @@
       "itemId": "REPLACE_WITH_SDR_ITEM_ID",
       "mediaSourceId": "REPLACE_WITH_SDR_MEDIA_SOURCE_ID",
       "tier": 1,
+      "executionRequirement": { "minimumEvidenceLevel": "native-playback", "scenario": "playback" },
       "purpose": [
         "sdr-smoke",
         "av-sync",
@@ -50,6 +51,7 @@
       "mediaSourceId": "REPLACE_WITH_TIMELINE_MEDIA_SOURCE_ID",
       "startPositionTicks": 600000000,
       "tier": 1,
+      "executionRequirement": { "minimumEvidenceLevel": "native-playback", "scenario": "timeline" },
       "purpose": [
         "timeline"
       ],
@@ -85,6 +87,7 @@
       "itemId": "REPLACE_WITH_HDR10_ITEM_ID",
       "mediaSourceId": "REPLACE_WITH_HDR10_MEDIA_SOURCE_ID",
       "tier": 1,
+      "executionRequirement": { "minimumEvidenceLevel": "native-playback", "scenario": "playback" },
       "purpose": [
         "hdr-output"
       ],
@@ -120,6 +123,7 @@
       "mediaSourceId": "REPLACE_WITH_HDR10_MEDIA_SOURCE_ID",
       "forceSdrOutput": true,
       "tier": 2,
+      "executionRequirement": { "minimumEvidenceLevel": "native-playback", "scenario": "playback" },
       "purpose": [
         "hdr-force-sdr"
       ],
@@ -154,6 +158,7 @@
       "itemId": "REPLACE_WITH_HDR10_23976_ITEM_ID",
       "mediaSourceId": "REPLACE_WITH_HDR10_23976_MEDIA_SOURCE_ID",
       "tier": 2,
+      "executionRequirement": { "minimumEvidenceLevel": "native-playback", "scenario": "playback" },
       "purpose": [
         "cadence-23.976",
         "frame-pacing"
@@ -193,6 +198,7 @@
       "itemId": "REPLACE_WITH_HIGH_BITRATE_ITEM_ID",
       "mediaSourceId": "REPLACE_WITH_HIGH_BITRATE_MEDIA_SOURCE_ID",
       "tier": 3,
+      "executionRequirement": { "minimumEvidenceLevel": "native-playback", "scenario": "playback" },
       "purpose": [
         "buffering"
       ],
@@ -227,6 +233,7 @@
       "itemId": "REPLACE_WITH_DV_PROFILE5_ITEM_ID",
       "mediaSourceId": "REPLACE_WITH_DV_PROFILE5_MEDIA_SOURCE_ID",
       "tier": 3,
+      "executionRequirement": { "minimumEvidenceLevel": "native-playback", "scenario": "playback" },
       "purpose": [
         "dv-reject",
         "unsupported-source"
@@ -259,6 +266,7 @@
       "itemId": "REPLACE_WITH_DV_PROFILE8_ITEM_ID",
       "mediaSourceId": "REPLACE_WITH_DV_PROFILE8_MEDIA_SOURCE_ID",
       "tier": 3,
+      "executionRequirement": { "minimumEvidenceLevel": "native-playback", "scenario": "playback" },
       "purpose": [
         "dv-fallback"
       ],
@@ -299,6 +307,7 @@
       "itemId": "quality-case-missing-file-error-handling",
       "mediaSourceId": "quality-source-missing-file-error-handling",
       "tier": 1,
+      "executionRequirement": { "minimumEvidenceLevel": "native-playback", "scenario": "playback" },
       "purpose": [
         "error-handling"
       ],
