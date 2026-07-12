@@ -72,6 +72,7 @@ public sealed class ModernUwpSolutionContractTests
         var nativeBridgeSource = ReadRepositoryFile("src", "NoiraPlayer.App", "Web", "NoiraWebBridge.cs");
         var nativeBridgeResultSource = ReadRepositoryFile("src", "NoiraPlayer.App", "Web", "NoiraWebBridgeResult.cs");
         var playbackPageSource = ReadRepositoryFile("src", "NoiraPlayer.App", "Views", "PlaybackPage.xaml.cs");
+        var playbackDiagnosticsSource = ReadRepositoryFile("src", "NoiraPlayer.App", "Services", "PlaybackDiagnosticsLog.cs");
         var metadataTransportSource = ReadRepositoryFile("src", "NoiraPlayer.Core", "Emby", "EmbyMetadataTransport.cs");
         var sourceResolver = ReadRepositoryFile("src", "NoiraPlayer.App", "Web", "WebViewSourceResolver.cs");
         var webAppSource = ReadRepositoryFile("src", "NoiraPlayer.Web", "src", "App.tsx");
@@ -196,6 +197,14 @@ public sealed class ModernUwpSolutionContractTests
         Assert.True(callbackEnd > callbackStart);
         Assert.InRange(navigationStart, callbackStart + 1, callbackEnd - 1);
         Assert.True(responseStart > callbackEnd);
+        Assert.Contains("stage=frame.navigate", mainPageSource, StringComparison.Ordinal);
+        Assert.Contains("ex.HResult.ToString(\"X8\"", mainPageSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ex.Message", playbackHandler, StringComparison.Ordinal);
+        Assert.DoesNotContain("ex.StackTrace", playbackHandler, StringComparison.Ordinal);
+        Assert.Contains("ModuleVersionId", mainPageSource, StringComparison.Ordinal);
+        Assert.Contains("MaxFileBytes", playbackDiagnosticsSource, StringComparison.Ordinal);
+        Assert.Contains("GetBasicPropertiesAsync", playbackDiagnosticsSource, StringComparison.Ordinal);
+        Assert.Contains("CreationCollisionOption.ReplaceExisting", playbackDiagnosticsSource, StringComparison.Ordinal);
         Assert.Contains("? result.ResponseJson", mainPageSource, StringComparison.Ordinal);
         Assert.Contains(": result.PlaybackNavigationFailedResponseJson", mainPageSource, StringComparison.Ordinal);
         Assert.Contains("ReadPayloadLong(root, \"startPositionTicks\", 0)", nativeBridgeSource, StringComparison.Ordinal);

@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Threading.Tasks;
 using Microsoft.Web.WebView2.Core;
 using NoiraPlayer.App.Navigation;
@@ -37,6 +38,8 @@ namespace NoiraPlayer.App
         public MainPage()
         {
             InitializeComponent();
+            PlaybackDiagnosticsLog.WriteLine(
+                "Web shell module=" + typeof(MainPage).Module.ModuleVersionId.ToString("D"));
             NavigationCacheMode = NavigationCacheMode.Required;
             Loaded += MainPage_OnLoaded;
         }
@@ -139,7 +142,9 @@ namespace NoiraPlayer.App
             catch (Exception ex)
             {
                 PlaybackDiagnosticsLog.WriteLine(
-                    "Native playback navigation failed " + ex.GetType().FullName + " " + ex.Message);
+                    "Native playback navigation failed stage=frame.navigate type=" +
+                    ex.GetType().FullName +
+                    " hresult=0x" + ex.HResult.ToString("X8", CultureInfo.InvariantCulture));
                 _playbackNavigationPending = false;
             }
             finally
