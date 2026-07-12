@@ -2,7 +2,7 @@
 
 Date: 2026-07-12
 
-Code under test: `a577167` (`codex/webview-tv-browse-ui`)
+Code under test: `16710bc` (`codex/webview-tv-browse-ui`)
 
 ## Scope
 
