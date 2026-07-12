@@ -37,7 +37,8 @@ function Invoke-NativeHeadlessHarnessCase {
         [ValidateSet('playback', 'timeline', 'audio-switch', 'subtitle-switch', 'pause-resume')]
         [string]$Scenario = 'playback',
         [int]$TimeoutSeconds = 60,
-        [bool]$ForceSdrOutput = $false
+        [bool]$ForceSdrOutput = $false,
+        [bool]$EnableSeekPacketCache = $false
     )
 
     $harnessArguments = @(
@@ -53,6 +54,9 @@ function Invoke-NativeHeadlessHarnessCase {
     )
     if ($ForceSdrOutput) {
         $harnessArguments += '--force-sdr-output'
+    }
+    if ($EnableSeekPacketCache) {
+        $harnessArguments += '--enable-seek-packet-cache'
     }
     if ($PauseSeconds -gt 0) {
         $harnessArguments += @('--pause-seconds', ([string]$PauseSeconds))

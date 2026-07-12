@@ -176,7 +176,8 @@ $startPositionTicks = Get-Value '--start-position-ticks'
 $scenario = Get-Value '--scenario'
 $streamUrl = Get-Value '--stream-url'
 $locatorHash = Get-Value '--source-locator-hash'
-Add-Content -LiteralPath $logPath -Value ($caseId + '|pause=' + $pauseSeconds + '|start=' + $startPositionTicks + '|scenario=' + $scenario + '|stream=' + $streamUrl + '|locator=' + $locatorHash) -Encoding UTF8
+$seekPacketCacheEnabled = [Array]::IndexOf($Arguments, '--enable-seek-packet-cache') -ge 0
+Add-Content -LiteralPath $logPath -Value ($caseId + '|pause=' + $pauseSeconds + '|start=' + $startPositionTicks + '|scenario=' + $scenario + '|stream=' + $streamUrl + '|locator=' + $locatorHash + '|seekCache=' + $seekPacketCacheEnabled.ToString().ToLowerInvariant()) -Encoding UTF8
 
 $reportPath = Join-Path $reportsDir ($caseId.Replace('/', [System.IO.Path]::DirectorySeparatorChar) + '.json')
 New-Item -ItemType Directory -Path (Split-Path -Parent $reportPath) -Force | Out-Null
@@ -234,6 +235,7 @@ exit 0
         -HarnessScriptPath $fakeHarness `
         -SourceResolverScriptPath $fakeResolver `
         -RuntimeSourceMapPath $runtimeSourceMapPath `
+        -EnableSeekPacketCache `
         -SummaryPath $summaryPath
     $runnerExitCode = $LASTEXITCODE
 
@@ -252,11 +254,11 @@ exit 0
         $sha256.Dispose()
     }
     if ($invocations.Count -ne 5 -or
-        $invocations[1] -ne ('runner/second-runs|pause=|start=20000000|scenario=timeline|stream=http://127.0.0.1:54321/runtime-media.mp4|locator=' + $secondLocatorHash) -or
-        $invocations[0] -notmatch '^runner/first-fails\|pause=1\|start=0\|scenario=pause-resume\|' -or
-        $invocations[2] -notmatch '^runner/emby-resolved\|pause=\|start=0\|scenario=playback\|' -or
-        $invocations[3] -notmatch '^runner/audio-switch\|pause=\|start=0\|scenario=audio-switch\|' -or
-        $invocations[4] -notmatch '^runner/subtitle-switch\|pause=\|start=600000000\|scenario=subtitle-switch\|') {
+        $invocations[1] -ne ('runner/second-runs|pause=|start=20000000|scenario=timeline|stream=http://127.0.0.1:54321/runtime-media.mp4|locator=' + $secondLocatorHash + '|seekCache=true') -or
+        $invocations[0] -notmatch '^runner/first-fails\|pause=1\|start=0\|scenario=pause-resume\|.*\|seekCache=true$' -or
+        $invocations[2] -notmatch '^runner/emby-resolved\|pause=\|start=0\|scenario=playback\|.*\|seekCache=true$' -or
+        $invocations[3] -notmatch '^runner/audio-switch\|pause=\|start=0\|scenario=audio-switch\|.*\|seekCache=true$' -or
+        $invocations[4] -notmatch '^runner/subtitle-switch\|pause=\|start=600000000\|scenario=subtitle-switch\|.*\|seekCache=true$') {
         throw 'Manifest runner must invoke each selected stable/challenge case exactly once and preserve order.'
     }
 
@@ -295,7 +297,8 @@ exit 0
         $summary.failedAttemptCount -ne 1 -or
         $summary.unresolvedSourceCount -ne 1 -or
         $summary.resolvedSourceCount -ne 1 -or
-        $summary.missingReportCount -ne 0) {
+        $summary.missingReportCount -ne 0 -or
+        $summary.seekPacketCacheEnabled -ne $true) {
         throw 'Manifest runner summary did not preserve selected/attempted/report/failure counts.'
     }
     $resolvedAttempt = @($summary.attempts | Where-Object caseId -eq 'runner/emby-resolved')[0]

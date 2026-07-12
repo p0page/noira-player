@@ -166,7 +166,9 @@ exit 1
         $validation.matchedCaseCount -ne 1 -or
         $runnerSummary.selectedCaseCount -ne 1 -or
         $runnerSummary.reportCount -ne 1 -or
-        $runnerSummary.missingReportCount -ne 0) {
+        $runnerSummary.missingReportCount -ne 0 -or
+        $runnerSummary.seekPacketCacheEnabled -ne $false -or
+        $summary.coreExecution.seekPacketCacheEnabled -ne $false) {
         throw 'Expected baseline to contain one strict-valid native manifest-runner report.'
     }
 

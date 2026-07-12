@@ -11,6 +11,7 @@ param(
     [string]$HarnessScriptPath = '',
     [string[]]$CaseId = @(),
     [string[]]$Category = @('stable', 'challenge'),
+    [switch]$EnableSeekPacketCache,
     [int]$DurationSeconds = 10,
     [int]$AttemptTimeoutSeconds = 60
 )
@@ -211,7 +212,8 @@ foreach ($case in $selectedCases) {
         -PauseSeconds $pauseSeconds `
         -Scenario $scenario `
         -TimeoutSeconds $AttemptTimeoutSeconds `
-        -ForceSdrOutput ([bool]$case.forceSdrOutput)
+        -ForceSdrOutput ([bool]$case.forceSdrOutput) `
+        -EnableSeekPacketCache ([bool]$EnableSeekPacketCache)
     $reportPresent = Test-Path -LiteralPath $reportPath
     $attempts.Add([pscustomobject]@{
         caseId = $currentCaseId
@@ -230,6 +232,7 @@ $missingReportCount = $attempts.Count - $reportCount
 $summary = [ordered]@{
     schemaVersion = 1
     runnerVersion = 'native-manifest-runner-v0.1'
+    seekPacketCacheEnabled = [bool]$EnableSeekPacketCache
     selectedCaseCount = $selectedCases.Count
     attemptedCaseCount = @($attempts | Where-Object { $_.status -ne 'unresolved-source' }).Count
     completedAttemptCount = @($attempts | Where-Object { $_.status -eq 'completed' }).Count

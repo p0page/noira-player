@@ -13,6 +13,7 @@
     [string]$NativeHelperExe = '',
     [string]$ManifestRunnerHarnessScriptPath = '',
     [string]$SourceResolverScriptPath = '',
+    [switch]$EnableSeekPacketCache,
     [int]$DurationSeconds = 10,
     [int]$AttemptTimeoutSeconds = 60
 )
@@ -277,6 +278,9 @@ if (-not [string]::IsNullOrWhiteSpace($SourceResolverScriptPath)) {
         (Resolve-RepoPath $SourceResolverScriptPath)
     )
 }
+if ($EnableSeekPacketCache) {
+    $manifestRunnerArguments += '-EnableSeekPacketCache'
+}
 
 Write-Host ('running=powershell ' + ($manifestRunnerArguments -join ' '))
 & powershell @manifestRunnerArguments
@@ -438,6 +442,7 @@ $summary = [pscustomobject][ordered]@{
     additionalManifestPaths = @($AdditionalManifestPath)
     coreExecution = [pscustomobject][ordered]@{
         runner = 'native-manifest-runner-v0.1'
+        seekPacketCacheEnabled = [bool]$manifestRunSummary.seekPacketCacheEnabled
         summaryPath = $manifestRunSummaryPath
         selectedCaseCount = [int]$manifestRunSummary.selectedCaseCount
         attemptedCaseCount = [int]$manifestRunSummary.attemptedCaseCount
