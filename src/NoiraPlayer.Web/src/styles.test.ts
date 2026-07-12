@@ -88,7 +88,10 @@ async function loadStyles(): Promise<void> {
     resolve(...paths: string[]): string;
   }>('node:path');
   const { cwd } = await vi.importActual<{ cwd(): string }>('node:process');
-  stylesSource = readFileSync(resolve(cwd(), 'src/styles.css'), 'utf8');
+  stylesSource = readFileSync(resolve(cwd(), 'src/styles.css'), 'utf8').replace(
+    /\r\n/g,
+    '\n',
+  );
 }
 
 function readRule(selector: string): string {
