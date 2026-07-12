@@ -7,7 +7,7 @@ namespace NoiraPlayer.Core.Tests.Design;
 public sealed class PlaybackPageInputRoutingSourceTests
 {
     [Fact]
-    public void Playback_Page_Uses_CoreWindow_As_The_Single_Global_Key_Handler()
+    public void Playback_Page_Separates_Desktop_Keyboard_From_App_Level_Gamepad_Input()
     {
         var root = FindRepositoryRoot();
         var pageSource = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.App", "Views", "PlaybackPage.xaml.cs"));
@@ -15,8 +15,23 @@ public sealed class PlaybackPageInputRoutingSourceTests
 
         Assert.Contains("CoreWindow.KeyDown += PlaybackPage_OnCoreWindowKeyDown", pageSource, StringComparison.Ordinal);
         Assert.Contains("CoreWindow.KeyDown -= PlaybackPage_OnCoreWindowKeyDown", pageSource, StringComparison.Ordinal);
+        Assert.Contains("InputContext.NativePlayback", pageSource, StringComparison.Ordinal);
+        Assert.Contains("PlaybackPage_OnGamepadInput", pageSource, StringComparison.Ordinal);
+        Assert.Contains("IsGamepadVirtualKey(args.VirtualKey)", pageSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("Gamepad.Gamepads", pageSource, StringComparison.Ordinal);
         Assert.DoesNotContain("AddHandler(KeyDownEvent", pageSource, StringComparison.Ordinal);
         Assert.DoesNotContain("KeyDown=\"Page_OnKeyDown\"", pageXaml, StringComparison.Ordinal);
+
+        var unloadStart = pageSource.IndexOf("private async void PlaybackPage_OnUnloaded", StringComparison.Ordinal);
+        var unloadEnd = pageSource.IndexOf("private async void SourceBox_OnSelectionChanged", unloadStart, StringComparison.Ordinal);
+        Assert.True(unloadStart >= 0);
+        Assert.True(unloadEnd > unloadStart);
+        var unloadSource = pageSource.Substring(unloadStart, unloadEnd - unloadStart);
+        Assert.Contains("DetachPlaybackInput();", unloadSource, StringComparison.Ordinal);
+        Assert.True(
+            unloadSource.IndexOf("DetachPlaybackInput();", StringComparison.Ordinal) <
+            unloadSource.IndexOf("await ", StringComparison.Ordinal));
+        Assert.Contains("if (_inputRegistration != null)", pageSource, StringComparison.Ordinal);
     }
 
     [Fact]

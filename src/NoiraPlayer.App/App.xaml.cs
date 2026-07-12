@@ -1,5 +1,8 @@
 ﻿using System;
 using System.IO;
+using NoiraPlayer.App.Input;
+using NoiraPlayer.Core.Input;
+using Windows.ApplicationModel;
 using Windows.ApplicationModel.Activation;
 using Windows.Storage;
 using Windows.UI;
@@ -12,6 +15,7 @@ namespace NoiraPlayer.App
 {
     public sealed partial class App : Application
     {
+        private readonly GamepadDeviceRegistry _gamepadDeviceRegistry = new();
 #if DEBUG
         private UiThreadResponsivenessWatchdog? _uiResponsivenessWatchdog;
 #endif
@@ -33,7 +37,18 @@ namespace NoiraPlayer.App
             }
 
             RequiresPointerMode = ApplicationRequiresPointerMode.WhenRequested;
+            InputRouter = new GlobalInputRouter(
+                _gamepadDeviceRegistry.ResetInputState,
+                (context, error) => InputDiagnosticsLog.Write(
+                    "input consumer failed context=" + context +
+                    " type=" + error.GetType().FullName +
+                    " hresult=0x" + error.HResult.ToString("X8")));
+            _gamepadDeviceRegistry.Input += InputRouter.Dispatch;
+            Suspending += App_OnSuspending;
+            Resuming += App_OnResuming;
         }
+
+        internal GlobalInputRouter InputRouter { get; }
 
         private void App_OnUnhandledException(object sender, Windows.UI.Xaml.UnhandledExceptionEventArgs e)
         {
@@ -64,8 +79,13 @@ namespace NoiraPlayer.App
                 {
                     rootFrame.Navigate(typeof(MainPage), e.Arguments);
                 }
+                else if (rootFrame.Content is MainPage mainPage)
+                {
+                    mainPage.NavigateHome();
+                }
 
                 Window.Current.Activate();
+                _gamepadDeviceRegistry.Start();
 #if DEBUG
                 if (_uiResponsivenessWatchdog == null)
                 {
@@ -82,6 +102,16 @@ namespace NoiraPlayer.App
                 WriteStartupDiagnostic("App.OnLaunched exception " + FormatException(ex));
                 throw;
             }
+        }
+
+        private void App_OnSuspending(object sender, SuspendingEventArgs e)
+        {
+            _gamepadDeviceRegistry.Stop();
+        }
+
+        private void App_OnResuming(object? sender, object e)
+        {
+            _gamepadDeviceRegistry.Start();
         }
 
         private static string FormatException(Exception ex)

@@ -70,16 +70,30 @@ public sealed class ModernUwpSolutionContractTests
         var mainPageXaml = ReadRepositoryFile("src", "NoiraPlayer.App", "MainPage.xaml");
         var mainPageSource = ReadRepositoryFile("src", "NoiraPlayer.App", "MainPage.xaml.cs");
         var nativeBridgeSource = ReadRepositoryFile("src", "NoiraPlayer.App", "Web", "NoiraWebBridge.cs");
+        var nativeBridgeResultSource = ReadRepositoryFile("src", "NoiraPlayer.App", "Web", "NoiraWebBridgeResult.cs");
+        var playbackPageSource = ReadRepositoryFile("src", "NoiraPlayer.App", "Views", "PlaybackPage.xaml.cs");
+        var playbackDiagnosticsSource = ReadRepositoryFile("src", "NoiraPlayer.App", "Services", "PlaybackDiagnosticsLog.cs");
         var metadataTransportSource = ReadRepositoryFile("src", "NoiraPlayer.Core", "Emby", "EmbyMetadataTransport.cs");
         var sourceResolver = ReadRepositoryFile("src", "NoiraPlayer.App", "Web", "WebViewSourceResolver.cs");
         var webAppSource = ReadRepositoryFile("src", "NoiraPlayer.Web", "src", "App.tsx");
         var webBridgeSource = ReadRepositoryFile("src", "NoiraPlayer.Web", "src", "bridge.ts");
+        var embyClientSource = ReadRepositoryFile("src", "NoiraPlayer.Web", "src", "emby.ts");
+        var focusProviderSource = ReadRepositoryFile("src", "NoiraPlayer.Web", "src", "focus", "FocusProvider.tsx");
+        var focusScopeSource = ReadRepositoryFile("src", "NoiraPlayer.Web", "src", "focus", "FocusScope.tsx");
+        var focusPolicySource = ReadRepositoryFile("src", "NoiraPlayer.Web", "src", "focus", "focusPolicy.ts");
+        var homeCatalogSource = ReadRepositoryFile("src", "NoiraPlayer.Web", "src", "catalog", "homeCatalog.ts");
+        var browseShellSource = ReadRepositoryFile("src", "NoiraPlayer.Web", "src", "components", "BrowseShell.tsx");
+        var homePageSource = ReadRepositoryFile("src", "NoiraPlayer.Web", "src", "pages", "HomePage.tsx");
+        var libraryPageSource = ReadRepositoryFile("src", "NoiraPlayer.Web", "src", "pages", "LibraryPage.tsx");
+        var detailsPageSource = ReadRepositoryFile("src", "NoiraPlayer.Web", "src", "pages", "DetailsPage.tsx");
+        var mediaCardSource = ReadRepositoryFile("src", "NoiraPlayer.Web", "src", "components", "MediaCard.tsx");
         var webStyles = ReadRepositoryFile("src", "NoiraPlayer.Web", "src", "styles.css");
 
         Assert.Contains("xmlns:muxc=\"using:Microsoft.UI.Xaml.Controls\"", mainPageXaml, StringComparison.Ordinal);
         Assert.Contains("<muxc:WebView2", mainPageXaml, StringComparison.Ordinal);
         Assert.Contains("x:Name=\"ShellWebView\"", mainPageXaml, StringComparison.Ordinal);
         Assert.Contains("EnsureCoreWebView2Async()", mainPageSource, StringComparison.Ordinal);
+        Assert.Contains("NavigationCacheMode = NavigationCacheMode.Required", mainPageSource, StringComparison.Ordinal);
         Assert.Contains("SetVirtualHostNameToFolderMapping(", mainPageSource, StringComparison.Ordinal);
         Assert.Contains("\"app.noira.local\"", mainPageSource, StringComparison.Ordinal);
         Assert.Contains("\"WebCode\"", mainPageSource, StringComparison.Ordinal);
@@ -100,6 +114,19 @@ public sealed class ModernUwpSolutionContractTests
         Assert.Contains("return packagedSource;", sourceResolver, StringComparison.Ordinal);
         Assert.Contains("WebMessageReceived += ShellWebView_OnWebMessageReceived", mainPageSource, StringComparison.Ordinal);
         Assert.Contains("PostWebMessageAsJson", mainPageSource, StringComparison.Ordinal);
+        Assert.Contains("PlaybackReturnedMessage", mainPageSource, StringComparison.Ordinal);
+        Assert.Contains("host.lifecycle", mainPageSource, StringComparison.Ordinal);
+        Assert.Contains("playback-returned", mainPageSource, StringComparison.Ordinal);
+        Assert.Contains("protected override void OnNavigatedTo", mainPageSource, StringComparison.Ordinal);
+        Assert.Contains("PlaybackPage.TeardownCompleted +=", mainPageSource, StringComparison.Ordinal);
+        Assert.Contains("_playbackReturnObserved", mainPageSource, StringComparison.Ordinal);
+        Assert.Contains("_playbackTeardownCompleted", mainPageSource, StringComparison.Ordinal);
+        Assert.Contains("TryPostPlaybackReturned", mainPageSource, StringComparison.Ordinal);
+        Assert.Contains("EnsureCoreWebView2Async", mainPageSource, StringComparison.Ordinal);
+        Assert.Contains("PlaybackReturnNotificationMaxAttempts", mainPageSource, StringComparison.Ordinal);
+        Assert.Contains("await Task.Delay", mainPageSource, StringComparison.Ordinal);
+        Assert.Contains("public static event EventHandler? TeardownCompleted", playbackPageSource, StringComparison.Ordinal);
+        Assert.Contains("TeardownCompleted?.Invoke", playbackPageSource, StringComparison.Ordinal);
         Assert.Contains("new NoiraWebBridge()", mainPageSource, StringComparison.Ordinal);
         Assert.Contains("await _webBridge.HandleAsync", mainPageSource, StringComparison.Ordinal);
         Assert.Contains("args.Source", mainPageSource, StringComparison.Ordinal);
@@ -124,10 +151,8 @@ public sealed class ModernUwpSolutionContractTests
         Assert.Contains("PooledConnectionLifetime", metadataTransportSource, StringComparison.Ordinal);
         Assert.Contains("PooledConnectionIdleTimeout", metadataTransportSource, StringComparison.Ordinal);
         Assert.Contains("HttpCompletionOption.ResponseHeadersRead", metadataTransportSource, StringComparison.Ordinal);
-        Assert.Contains("UriKind.Relative", nativeBridgeSource, StringComparison.Ordinal);
-        Assert.Contains("Users/", nativeBridgeSource, StringComparison.Ordinal);
-        Assert.Contains("/Views", nativeBridgeSource, StringComparison.Ordinal);
-        Assert.Contains("/Items", nativeBridgeSource, StringComparison.Ordinal);
+        Assert.Contains("EmbyWebPathPolicy.IsAllowed(session, path)", nativeBridgeSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("private static bool IsAllowedEmbyPath", nativeBridgeSource, StringComparison.Ordinal);
         Assert.Contains("IsAllowedSource", nativeBridgeSource, StringComparison.Ordinal);
         Assert.Contains("UriComponents.SchemeAndServer", nativeBridgeSource, StringComparison.Ordinal);
         Assert.Contains("var responseId = \"\";", nativeBridgeSource, StringComparison.Ordinal);
@@ -135,6 +160,64 @@ public sealed class ModernUwpSolutionContractTests
         Assert.Contains("Frame.Navigate(", mainPageSource, StringComparison.Ordinal);
         Assert.Contains("typeof(PlaybackPage)", mainPageSource, StringComparison.Ordinal);
         Assert.Contains("new PlaybackLaunchRequest(", nativeBridgeSource, StringComparison.Ordinal);
+        Assert.Contains("playback-navigation-failed", nativeBridgeSource, StringComparison.Ordinal);
+        Assert.Contains("PlaybackNavigationFailedResponseJson", nativeBridgeResultSource, StringComparison.Ordinal);
+        Assert.Contains("if (result.PlaybackRequest == null)", mainPageSource, StringComparison.Ordinal);
+        Assert.Contains("_playbackNavigationPending = Frame.Navigate", mainPageSource, StringComparison.Ordinal);
+        var playbackHandlerStart = mainPageSource.IndexOf(
+            "private async void ShellWebView_OnWebMessageReceived",
+            StringComparison.Ordinal);
+        var playbackHandlerEnd = mainPageSource.IndexOf(
+            "private void PlaybackPage_OnTeardownCompleted",
+            playbackHandlerStart,
+            StringComparison.Ordinal);
+        Assert.True(playbackHandlerStart >= 0);
+        Assert.True(playbackHandlerEnd > playbackHandlerStart);
+        var playbackHandler = mainPageSource[playbackHandlerStart..playbackHandlerEnd];
+        var dispatchStart = playbackHandler.IndexOf(
+            "await Dispatcher.RunAsync(",
+            StringComparison.Ordinal);
+        var callbackStart = playbackHandler.IndexOf(
+            "() =>",
+            dispatchStart,
+            StringComparison.Ordinal);
+        var callbackEnd = playbackHandler.IndexOf(
+            "});",
+            callbackStart,
+            StringComparison.Ordinal);
+        var navigationStart = playbackHandler.IndexOf(
+            "_playbackNavigationPending = Frame.Navigate(",
+            callbackStart,
+            StringComparison.Ordinal);
+        var responseStart = playbackHandler.LastIndexOf(
+            "sender.PostWebMessageAsJson(",
+            StringComparison.Ordinal);
+        Assert.True(dispatchStart >= 0);
+        Assert.Contains("CoreDispatcherPriority.Normal", playbackHandler[dispatchStart..callbackStart], StringComparison.Ordinal);
+        Assert.True(callbackStart > dispatchStart);
+        Assert.True(callbackEnd > callbackStart);
+        Assert.InRange(navigationStart, callbackStart + 1, callbackEnd - 1);
+        Assert.True(responseStart > callbackEnd);
+        Assert.Contains("stage=frame.navigate", mainPageSource, StringComparison.Ordinal);
+        Assert.Contains("ex.HResult.ToString(\"X8\"", mainPageSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ex.Message", playbackHandler, StringComparison.Ordinal);
+        Assert.DoesNotContain("ex.StackTrace", playbackHandler, StringComparison.Ordinal);
+        Assert.Contains("PlaybackDiagnosticsLog.WriteBuildMarker(typeof(MainPage))", mainPageSource, StringComparison.Ordinal);
+        Assert.Contains("ModuleVersionId", playbackDiagnosticsSource, StringComparison.Ordinal);
+        var playbackLogClear = playbackPageSource.IndexOf(
+            "await PlaybackDiagnosticsLog.ClearAsync()",
+            StringComparison.Ordinal);
+        var playbackBuildMarker = playbackPageSource.IndexOf(
+            "PlaybackDiagnosticsLog.WriteBuildMarker(typeof(PlaybackPage))",
+            playbackLogClear,
+            StringComparison.Ordinal);
+        Assert.True(playbackLogClear >= 0);
+        Assert.True(playbackBuildMarker > playbackLogClear);
+        Assert.Contains("MaxFileBytes", playbackDiagnosticsSource, StringComparison.Ordinal);
+        Assert.Contains("GetBasicPropertiesAsync", playbackDiagnosticsSource, StringComparison.Ordinal);
+        Assert.Contains("CreationCollisionOption.ReplaceExisting", playbackDiagnosticsSource, StringComparison.Ordinal);
+        Assert.Contains("? result.ResponseJson", mainPageSource, StringComparison.Ordinal);
+        Assert.Contains(": result.PlaybackNavigationFailedResponseJson", mainPageSource, StringComparison.Ordinal);
         Assert.Contains("ReadPayloadLong(root, \"startPositionTicks\", 0)", nativeBridgeSource, StringComparison.Ordinal);
         Assert.Contains("ReadPayloadString(root, \"mediaSourceId\", \"\")", nativeBridgeSource, StringComparison.Ordinal);
         Assert.Contains("ReadPayloadLong(root, \"runtimeTicks\", 0)", nativeBridgeSource, StringComparison.Ordinal);
@@ -166,9 +249,31 @@ public sealed class ModernUwpSolutionContractTests
         Assert.Contains("createEmbyFetchTransport", webAppSource, StringComparison.Ordinal);
         Assert.Contains("setClient(nextClient)", webAppSource, StringComparison.Ordinal);
         Assert.Contains("'auth.bootstrap'", webAppSource, StringComparison.Ordinal);
-        Assert.Contains("client.getViews()", webAppSource, StringComparison.Ordinal);
-        Assert.Contains("client.getItems(", webAppSource, StringComparison.Ordinal);
+        Assert.Contains("client.getViews()", homeCatalogSource, StringComparison.Ordinal);
+        Assert.Contains("client.getItemsPage(", libraryPageSource, StringComparison.Ordinal);
         Assert.Contains("client.getItem(", webAppSource, StringComparison.Ordinal);
+        Assert.Contains("<DetailsPage", webAppSource, StringComparison.Ordinal);
+        Assert.Contains("getDetailsPlayFocusKey", detailsPageSource, StringComparison.Ordinal);
+        Assert.Contains("@noriginmedia/norigin-spatial-navigation", focusProviderSource, StringComparison.Ordinal);
+        Assert.Contains("subscribeHostLifecycle", focusProviderSource, StringComparison.Ordinal);
+        Assert.Contains("FocusNavigationPolicy", focusPolicySource, StringComparison.Ordinal);
+        Assert.Contains("scopeKey", focusScopeSource, StringComparison.Ordinal);
+        Assert.Contains("<BrowseShell", webAppSource, StringComparison.Ordinal);
+        Assert.Contains("<Guide", browseShellSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("<Guide", homePageSource, StringComparison.Ordinal);
+        Assert.Contains("<MediaRow", homePageSource, StringComparison.Ordinal);
+        Assert.Contains("getItemsPage", libraryPageSource, StringComparison.Ordinal);
+        Assert.Contains("resolveDetailsAtmosphereUrl", detailsPageSource, StringComparison.Ordinal);
+        Assert.Contains("/Items/Resume?", embyClientSource, StringComparison.Ordinal);
+        Assert.Contains("Shows/NextUp?", embyClientSource, StringComparison.Ordinal);
+        Assert.Contains("/Items/Latest?", embyClientSource, StringComparison.Ordinal);
+        Assert.Contains("/Views?", embyClientSource, StringComparison.Ordinal);
+        Assert.Contains("StartIndex", embyClientSource, StringComparison.Ordinal);
+        var mediaCardVisualIndex = mediaCardSource.IndexOf("media-card__visual", StringComparison.Ordinal);
+        var mediaCardCopyIndex = mediaCardSource.IndexOf("media-card__copy", StringComparison.Ordinal);
+        Assert.True(mediaCardVisualIndex >= 0);
+        Assert.True(mediaCardCopyIndex >= 0);
+        Assert.True(mediaCardVisualIndex < mediaCardCopyIndex);
         Assert.DoesNotContain("'session.get'", webAppSource, StringComparison.Ordinal);
         Assert.DoesNotContain("'home.load'", webAppSource, StringComparison.Ordinal);
         Assert.DoesNotContain("'items.list'", webAppSource, StringComparison.Ordinal);
@@ -176,10 +281,14 @@ public sealed class ModernUwpSolutionContractTests
         Assert.DoesNotContain("'home.load'", webBridgeSource, StringComparison.Ordinal);
         Assert.DoesNotContain("'items.list'", webBridgeSource, StringComparison.Ordinal);
         Assert.DoesNotContain("'item.get'", webBridgeSource, StringComparison.Ordinal);
-        Assert.Contains("li button img", webStyles, StringComparison.Ordinal);
-        Assert.Contains("width: 96px;", webStyles, StringComparison.Ordinal);
-        Assert.Contains("height: 96px;", webStyles, StringComparison.Ordinal);
-        Assert.Contains("object-fit: cover;", webStyles, StringComparison.Ordinal);
+        Assert.Contains(".media-card", webStyles, StringComparison.Ordinal);
+        Assert.Contains(".details-page__atmosphere", webStyles, StringComparison.Ordinal);
+        Assert.Contains("aspect-ratio:", webStyles, StringComparison.Ordinal);
+        Assert.Contains("--tv-safe:", webStyles, StringComparison.Ordinal);
+        Assert.Contains(".media-card__copy", webStyles, StringComparison.Ordinal);
+        Assert.Contains("@media (max-height: 600px)", webStyles, StringComparison.Ordinal);
+        Assert.Contains("-webkit-line-clamp: 2", webStyles, StringComparison.Ordinal);
+        Assert.Contains("-webkit-line-clamp: 3", webStyles, StringComparison.Ordinal);
         Assert.DoesNotContain("video {", webStyles, StringComparison.Ordinal);
 
         Assert.Contains("NoiraPlayer.Web", modernProject, StringComparison.Ordinal);
