@@ -118,6 +118,11 @@ public sealed class AppHostedQualityCaptureContractTests
         Assert.True(
             captureEvidenceIndex < stopIndex,
             "quality-run must sample playback metrics before StopAsync resets native runtime metrics.");
+        Assert.Contains("EnrichQualityRunTimelineEvidence(position, evidence.MetricsProvider)", captureMethod, StringComparison.Ordinal);
+        Assert.Contains("SeekDemuxTargetTicks = metrics.SeekDemuxTargetTicks", playbackPage, StringComparison.Ordinal);
+        Assert.Contains("FirstPresentedPositionTicks = metrics.FirstPresentedPositionTicks", playbackPage, StringComparison.Ordinal);
+        Assert.Contains("PostSeekPositionTicks = metrics.VideoPositionTicks", playbackPage, StringComparison.Ordinal);
+        Assert.Contains("PostSeekAdvanced =", playbackPage, StringComparison.Ordinal);
         Assert.Contains("evidence.Diagnostics", captureMethod, StringComparison.Ordinal);
         Assert.Contains("evidence.MetricsProvider", captureMethod, StringComparison.Ordinal);
     }

@@ -4,6 +4,8 @@
 
 ## 2026-07-12 更新：拒绝 Matroska 跳过流探测候选，修复 seek 与导出证据丢失
 
+后续已补齐真实 App timeline 的 6 项 instrumentation。native metrics/WinRT/Core 现在贯通 container start、video stream start、demux seek target 和 seek 后首个实际呈现位置；App 在完整采样窗口结束、Stop 之前记录 post-seek position 与是否继续推进。同一“一战再战” full-probe case 最终得到：seek target 与 demux target 均为 `631000000` ticks，首帧 `633550000` ticks，seek error `255ms`，随后位置 `698610000` ticks，`postSeekAdvanced=true`，137 帧实际呈现。6 个 `SeekTimelineEvidence missing` 已全部消失，唯一失败为远端总启动 `20224.607ms > 7000ms`，timeline 与 startup 现在可以独立归因。
+
 针对真实 App 启动瓶颈，曾实现一个受限候选：仅在 Matroska 头已包含完整主视频、全部音轨、全部字幕轨和 duration 时跳过 `avformat_find_stream_info`，内嵌封面不作为可播放视频轨。候选在“一战再战”中保留 2 条视频、2 条音频、5 条 PGS 字幕，音轨切换成功，PGS 切换解码 25 个 cue 并完成 128 次合成；但两轮 timeline 的 seek 误差为 624ms、2012ms，后一轮 15 秒仅呈现 3 帧。恢复完整探测后，同一远端 case 仍出现 964ms seek 误差和仅呈现 9 帧，说明远端 seek/preroll 还有独立问题，但候选没有证明稳定收益，最终已撤回，继续采用 Kodi/VLC 一样的完整 FFmpeg 流探测。
 
 本轮同时修复两个独立评测器缺陷。`Seek()` 过去会清空 native open、FFmpeg open 和 stream-info timing，导致执行过 seek 的报告缺少启动分解；现在 seek 只清运行期样本并保留 open timing。App-hosted gate 过去只等待文件名出现，异步 JSON 尚未完整落盘时可能在 `Resolve-Path`/导出阶段失败；现在必须成功读取并解析完整 JSON 才继续。最终 full-probe timeline 报告在真实 seek 后仍记录 `native.open=30465.833ms`、`find_stream_info=1530ms/status=measured`，导出和分析正常完成。

@@ -8,6 +8,8 @@
 
 评测决策：seek 可以重置帧节奏、A/V sync 和缓冲等运行期样本，但不得清空本次 open 的归因证据。App-hosted 报告文件必须完成 JSON 解析后才允许停止 App、导出和分析，文件名短暂可见不等于报告已完整写入。被拒绝候选的私有报告继续保留在 ignored 本地产物中，不能进入 accepted baseline。
 
+补充：timeline 的 actual position 必须使用 seek 后首个实际呈现视频帧，而不是固定延迟后读取的播放时钟；post-seek position 应在完整采样窗口末尾读取，并与首帧比较产生 `postSeekAdvanced`。demux target 和源时间线必须来自 native FFmpeg 状态，不得由 App 用 seek target 推算。真实 App 复测已证明这套证据能将 timeline 通过与独立 startup 失败分开。
+
 ## 2026-07-12：启动子阶段作为诊断证据，不单独放宽或新增通过标准
 
 决策：保留 `startup.startupDurationMs` 作为既有启动门禁；`startup.stages` 和 `native.open.components` 用于定位耗时来源，父阶段只计一次，子项单独报告归因合计、缺口和重叠。FFmpeg `open_input`、`find_stream_info`、native 初始化/首帧和 host dispatch 必须来自真实 native metrics，禁止从 manifest expected 或日志文本猜测后冒充结构化证据。

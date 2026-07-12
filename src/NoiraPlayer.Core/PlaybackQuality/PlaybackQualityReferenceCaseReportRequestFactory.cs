@@ -22,7 +22,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 throw new ArgumentNullException(nameof(descriptor));
             }
 
-            return new PlaybackQualityReportRequest
+            var request = new PlaybackQualityReportRequest
             {
                 RunId = referenceCase.CaseId,
                 CaseMetadata = new PlaybackQualityCaseMetadata
@@ -46,6 +46,17 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 ForceSdrOutput = referenceCase.ForceSdrOutput,
                 UseDefaultExpectedWhenMissing = false
             };
+
+            if (metrics != null)
+            {
+                request.SourceTimeline = new PlaybackQualitySourceTimeline
+                {
+                    ContainerStartTimeTicks = metrics.ContainerStartTimeTicks,
+                    VideoStreamStartTimeTicks = metrics.VideoStreamStartTimeTicks
+                };
+            }
+
+            return request;
         }
 
         private static PlaybackQualityExpected CloneExpected(PlaybackQualityExpected source)

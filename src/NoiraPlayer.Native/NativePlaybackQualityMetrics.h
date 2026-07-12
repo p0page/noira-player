@@ -74,6 +74,15 @@ namespace winrt::NoiraPlayer::Native::implementation
         double FfmpegStreamInfoDurationMs() const noexcept { return m_ffmpegStreamInfoDurationMs; }
         void FfmpegStreamInfoDurationMs(double value) noexcept { m_ffmpegStreamInfoDurationMs = value; }
 
+        int64_t ContainerStartTimeTicks() const noexcept { return m_containerStartTimeTicks; }
+        void ContainerStartTimeTicks(int64_t value) noexcept { m_containerStartTimeTicks = value; }
+        int64_t VideoStreamStartTimeTicks() const noexcept { return m_videoStreamStartTimeTicks; }
+        void VideoStreamStartTimeTicks(int64_t value) noexcept { m_videoStreamStartTimeTicks = value; }
+        int64_t SeekDemuxTargetTicks() const noexcept { return m_seekDemuxTargetTicks; }
+        void SeekDemuxTargetTicks(int64_t value) noexcept { m_seekDemuxTargetTicks = value; }
+        int64_t FirstPresentedPositionTicks() const noexcept { return m_firstPresentedPositionTicks; }
+        void FirstPresentedPositionTicks(int64_t value) noexcept { m_firstPresentedPositionTicks = value; }
+
         double RenderIntervalMsP05() const noexcept { return m_renderIntervalMsP05; }
         void RenderIntervalMsP05(double value) noexcept { m_renderIntervalMsP05 = value; }
 
@@ -298,6 +307,10 @@ namespace winrt::NoiraPlayer::Native::implementation
         double m_nativeGraphOpenDurationMs{0.0};
         double m_ffmpegOpenInputDurationMs{0.0};
         double m_ffmpegStreamInfoDurationMs{0.0};
+        int64_t m_containerStartTimeTicks{0};
+        int64_t m_videoStreamStartTimeTicks{0};
+        int64_t m_seekDemuxTargetTicks{-1};
+        int64_t m_firstPresentedPositionTicks{-1};
         double m_renderIntervalMsP05{0.0};
         double m_renderIntervalMsP50{0.0};
         double m_renderIntervalMsP95{0.0};

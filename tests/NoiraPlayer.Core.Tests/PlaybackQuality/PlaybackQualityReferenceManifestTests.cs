@@ -666,6 +666,23 @@ public sealed class PlaybackQualityReferenceManifestTests
     }
 
     [Fact]
+    public void CreateReportRequest_Projects_Native_Source_Timeline()
+    {
+        var request = PlaybackQualityReferenceCaseReportRequestFactory.CreateRequest(
+            CreateCase("timeline/native", tier: 1, purpose: "timeline"),
+            CreateDescriptor("hevc", 1920, 1080, 23.976, HdrPlaybackKind.Sdr),
+            metrics: new PlaybackQualityMetricsSnapshot
+            {
+                ContainerStartTimeTicks = 1_400_000,
+                VideoStreamStartTimeTicks = 1_421_333
+            });
+
+        Assert.NotNull(request.SourceTimeline);
+        Assert.Equal(1_400_000, request.SourceTimeline!.ContainerStartTimeTicks);
+        Assert.Equal(1_421_333, request.SourceTimeline.VideoStreamStartTimeTicks);
+    }
+
+    [Fact]
     public void Validate_Rejects_Pause_Duration_Outside_Native_Helper_Limit()
     {
         var manifest = new PlaybackQualityReferenceManifest();

@@ -127,6 +127,10 @@ namespace winrt::NoiraPlayer::Native::implementation
             auto ffmpegOpenTiming = m_mediaSource.OpenTimingSnapshot();
             m_qualityMetrics.FfmpegOpenInputDurationMs = ffmpegOpenTiming.OpenInputDurationMs;
             m_qualityMetrics.FfmpegStreamInfoDurationMs = ffmpegOpenTiming.StreamInfoDurationMs;
+            auto timeline = m_mediaSource.TimelineSnapshot(sourceVideo ? sourceVideo->StreamIndex : -1);
+            m_qualityMetrics.ContainerStartTimeTicks = timeline.ContainerStartTimeTicks;
+            m_qualityMetrics.VideoStreamStartTimeTicks = timeline.StreamStartTimeTicks;
+            m_qualityMetrics.SeekDemuxTargetTicks = timeline.LastSeekDemuxTargetTicks;
             ApplyFramePacingPolicyMetrics();
             AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open RenderNextFrame begin");
             auto renderedFirstFrame = RenderNextFrame();
@@ -204,6 +208,9 @@ namespace winrt::NoiraPlayer::Native::implementation
         ApplyFramePacingPolicyMetrics();
         m_audioRenderer.Flush();
         m_videoDecoder.Seek(positionTicks);
+        auto sourceVideo = m_mediaSource.BestVideoStreamSnapshot();
+        auto timeline = m_mediaSource.TimelineSnapshot(sourceVideo ? sourceVideo->StreamIndex : -1);
+        m_qualityMetrics.SeekDemuxTargetTicks = timeline.LastSeekDemuxTargetTicks;
         m_audioDecoder.Flush(positionTicks);
         m_subtitleDecoder.Flush();
         m_subtitleRenderer.ClearCue();
@@ -815,6 +822,9 @@ namespace winrt::NoiraPlayer::Native::implementation
                     m_seekPresentationTracker.CurrentGeneration(),
                     m_renderedVideoFrameCount,
                     frame.PositionTicks);
+                auto seekPresentation = m_seekPresentationTracker.Snapshot();
+                m_qualityMetrics.FirstPresentedPositionTicks =
+                    seekPresentation.ActualPositionTicks.value_or(-1);
             }
 
             m_pendingVideoFrame.reset();

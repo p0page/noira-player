@@ -57,6 +57,10 @@ namespace winrt::NoiraPlayer::Native::implementation
         double NativeGraphOpenDurationMs{0.0};
         double FfmpegOpenInputDurationMs{0.0};
         double FfmpegStreamInfoDurationMs{0.0};
+        int64_t ContainerStartTimeTicks{0};
+        int64_t VideoStreamStartTimeTicks{0};
+        int64_t SeekDemuxTargetTicks{-1};
+        int64_t FirstPresentedPositionTicks{-1};
         double RenderIntervalMsP50{0.0};
         double RenderIntervalMsP05{0.0};
         double RenderIntervalMsP95{0.0};
@@ -261,6 +265,10 @@ namespace winrt::NoiraPlayer::Native::implementation
         double NativeGraphOpenDurationMs{0.0};
         double FfmpegOpenInputDurationMs{0.0};
         double FfmpegStreamInfoDurationMs{0.0};
+        int64_t ContainerStartTimeTicks{0};
+        int64_t VideoStreamStartTimeTicks{0};
+        int64_t SeekDemuxTargetTicks{-1};
+        int64_t FirstPresentedPositionTicks{-1};
         double FramePacingSourceFrameRate{0.0};
         double LateFrameDropToleranceMs{0.0};
 
@@ -274,10 +282,14 @@ namespace winrt::NoiraPlayer::Native::implementation
             auto const nativeGraphOpenDurationMs = NativeGraphOpenDurationMs;
             auto const ffmpegOpenInputDurationMs = FfmpegOpenInputDurationMs;
             auto const ffmpegStreamInfoDurationMs = FfmpegStreamInfoDurationMs;
+            auto const containerStartTimeTicks = ContainerStartTimeTicks;
+            auto const videoStreamStartTimeTicks = VideoStreamStartTimeTicks;
             Reset();
             NativeGraphOpenDurationMs = nativeGraphOpenDurationMs;
             FfmpegOpenInputDurationMs = ffmpegOpenInputDurationMs;
             FfmpegStreamInfoDurationMs = ffmpegStreamInfoDurationMs;
+            ContainerStartTimeTicks = containerStartTimeTicks;
+            VideoStreamStartTimeTicks = videoStreamStartTimeTicks;
         }
 
         void RecordRenderIntervalMs(double value) noexcept
@@ -390,6 +402,10 @@ namespace winrt::NoiraPlayer::Native::implementation
             snapshot.NativeGraphOpenDurationMs = NativeGraphOpenDurationMs;
             snapshot.FfmpegOpenInputDurationMs = FfmpegOpenInputDurationMs;
             snapshot.FfmpegStreamInfoDurationMs = FfmpegStreamInfoDurationMs;
+            snapshot.ContainerStartTimeTicks = ContainerStartTimeTicks;
+            snapshot.VideoStreamStartTimeTicks = VideoStreamStartTimeTicks;
+            snapshot.SeekDemuxTargetTicks = SeekDemuxTargetTicks;
+            snapshot.FirstPresentedPositionTicks = FirstPresentedPositionTicks;
             snapshot.RenderIntervalMsP05 = m_renderIntervals.Percentile(5);
             snapshot.RenderIntervalMsP50 = m_renderIntervals.Percentile(50);
             snapshot.RenderIntervalMsP95 = m_renderIntervals.Percentile(95);

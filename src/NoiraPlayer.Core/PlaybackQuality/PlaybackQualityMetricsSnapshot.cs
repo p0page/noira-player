@@ -24,6 +24,10 @@
         public double NativeGraphOpenDurationMs { get; set; }
         public double FfmpegOpenInputDurationMs { get; set; }
         public double FfmpegStreamInfoDurationMs { get; set; }
+        public long? ContainerStartTimeTicks { get; set; }
+        public long? VideoStreamStartTimeTicks { get; set; }
+        public long? SeekDemuxTargetTicks { get; set; }
+        public long? FirstPresentedPositionTicks { get; set; }
         public double RenderIntervalMsP05 { get; set; }
         public double RenderIntervalMsP50 { get; set; }
         public double RenderIntervalMsP95 { get; set; }

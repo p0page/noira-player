@@ -1415,6 +1415,7 @@ namespace NoiraPlayer.App.Views
                     DateTimeOffset.UtcNow);
                 var capturedDescriptor = _orchestrator.CurrentDescriptor ?? descriptor;
                 var evidence = CaptureQualityRunEvidence(_backend, capturedDescriptor);
+                EnrichQualityRunTimelineEvidence(position, evidence.MetricsProvider);
                 await StopQualityRunPlaybackAsync(lifecycle);
 
                 var environment = new PlaybackQualityEnvironment
@@ -1801,6 +1802,33 @@ namespace NoiraPlayer.App.Views
                 "app-hosted quality-run stopped playback");
         }
 
+        private static void EnrichQualityRunTimelineEvidence(
+            PlaybackQualityPosition position,
+            IPlaybackQualityMetricsProvider? metricsProvider)
+        {
+            if (!position.SeekTargetPositionTicks.HasValue ||
+                metricsProvider == null ||
+                !metricsProvider.TryGetQualityMetrics(out var metrics) ||
+                metrics == null)
+            {
+                return;
+            }
+
+            position.SeekDemuxTargetTicks = metrics.SeekDemuxTargetTicks;
+            position.FirstPresentedPositionTicks = metrics.FirstPresentedPositionTicks;
+            if (metrics.FirstPresentedPositionTicks.HasValue)
+            {
+                position.ActualPositionTicks = metrics.FirstPresentedPositionTicks;
+                position.SeekPositionErrorMs = Math.Abs(
+                    metrics.FirstPresentedPositionTicks.Value - position.SeekTargetPositionTicks.Value) / 10000.0;
+            }
+
+            position.PostSeekPositionTicks = metrics.VideoPositionTicks;
+            position.PostSeekAdvanced =
+                metrics.FirstPresentedPositionTicks.HasValue &&
+                metrics.VideoPositionTicks > metrics.FirstPresentedPositionTicks.Value;
+        }
+
         private static TimeSpan GetQualityRunProbeDelay(TimeSpan duration, double ratio)
         {
             var milliseconds = Math.Max(250, Math.Min(1500, duration.TotalMilliseconds * ratio));
@@ -1995,6 +2023,10 @@ namespace NoiraPlayer.App.Views
                     NativeGraphOpenDurationMs = source.NativeGraphOpenDurationMs,
                     FfmpegOpenInputDurationMs = source.FfmpegOpenInputDurationMs,
                     FfmpegStreamInfoDurationMs = source.FfmpegStreamInfoDurationMs,
+                    ContainerStartTimeTicks = source.ContainerStartTimeTicks,
+                    VideoStreamStartTimeTicks = source.VideoStreamStartTimeTicks,
+                    SeekDemuxTargetTicks = source.SeekDemuxTargetTicks,
+                    FirstPresentedPositionTicks = source.FirstPresentedPositionTicks,
                     RenderIntervalMsP05 = source.RenderIntervalMsP05,
                     RenderIntervalMsP50 = source.RenderIntervalMsP50,
                     RenderIntervalMsP95 = source.RenderIntervalMsP95,
