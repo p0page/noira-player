@@ -97,8 +97,9 @@ public sealed class IconAssetContractTests
     {
         var root = FindRepositoryRoot();
         var assetRoot = Path.Combine(root, "src", "NoiraPlayer.App", "Assets");
-        var designColors = ReadDesignColors(Path.Combine(root, "docs", "DESIGN.md"));
-        var expectedSignal = ParseOpaqueRgb(designColors["secondary"]);
+        var iconColors = ReadIconTokenColors(Path.Combine(root, "tools", "Generate-AppIconAssets.ps1"));
+        Assert.Equal(iconColors["PlayCut"], iconColors["Progress"]);
+        var expectedSignal = ParseOpaqueRgb(iconColors["PlayCut"]);
 
         AssertIconSignals(Path.Combine(assetRoot, "Square44x44Logo.png"), 8, 46, expectedSignal);
         AssertIconSignals(Path.Combine(assetRoot, "StoreLogo.png"), 10, 56, expectedSignal);
