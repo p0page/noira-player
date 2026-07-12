@@ -102,13 +102,9 @@ input {
   letter-spacing: 0;
 }
 
-button,
-[data-focus-key] {
+button {
   -webkit-user-select: none;
   user-select: none;
-}
-
-button {
   min-height: 52px;
   border: 0;
   border-radius: var(--radius-md);
