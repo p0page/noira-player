@@ -1,5 +1,7 @@
 # Interaction Recovery Evidence Implementation Plan
 
+**完成状态（2026-07-12）：** Task 1-3 已完成。v13 strict baseline、完整 Core/native 质量门和完整 Debug x64 App 构建均已验证；详细证据见 `docs/STATUS.md`。后续工作转入复用 v13 exact manifest 调优真实音轨与 PGS 字幕恢复时延。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 让音轨和字幕切换报告结构化记录操作耗时与恢复耗时，并由 manifest 显式阈值判定，避免“最终恢复即 completed”掩盖数秒播放中断。

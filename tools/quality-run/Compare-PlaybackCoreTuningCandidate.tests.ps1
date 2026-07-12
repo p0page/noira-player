@@ -103,6 +103,7 @@ $report = [ordered]@{
     source = @{
         codec = 'h264'; hasDirectStreamUrl = $true; directStreamProtocol = 'https'
         container = 'mp4'; bitrate = 1000000; durationTicks = 600000000
+        containerStartTimeTicks = 0; videoStreamStartTimeTicks = 0
         width = 320; height = 180; frameRate = 24.0; hdrKind = 'Sdr'; videoRange = 'SDR'
         colorPrimaries = 'bt709'; colorTransfer = 'bt709'; colorSpace = 'bt709'
         isHdr = $false; isDirectPlayable = $true; isDolbyVision = $false
@@ -126,7 +127,9 @@ $report = [ordered]@{
     }
     position = @{
         requestedStartPositionTicks = 0; seekTargetPositionTicks = 10000000
-        actualPositionTicks = 10000000; seekPositionErrorMs = 0.0
+        seekDemuxTargetTicks = 10000000; actualPositionTicks = 10000000
+        firstPresentedPositionTicks = 10000000; postSeekPositionTicks = 30000000
+        postSeekAdvanced = $true; seekPositionErrorMs = 0.0
     }
     tracks = @{
         videoTrackCount = 1; audioTrackCount = 1; subtitleTrackCount = 1

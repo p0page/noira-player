@@ -1095,3 +1095,15 @@ v11 首次把 manifest 的完整 `expected` 绑定到真实 native captured repo
 commit-bound v12 位于 ignored 路径 `docs/qa/private/baselines/playback-evidence-v12-evaluator-consistent.local/`，绑定 revision `d44826c`。首轮 6 个公开 Jellyfin case 同时遇到 TLS EOF/I/O error，strict validator 因缺失真实源与播放证据正确拒绝报告集；仅重跑相同 6 个 case 后全部产生真实报告。最终 v12 为 24/24 matched、0 validation error、11 pass、12 fail、1 unsupported，且凭据/服务器地址/token 扫描 0 命中。首次失败和重试摘要均保留在 baseline provenance 中，没有静默覆盖环境故障。
 
 v12 同时揭示 interaction 评测缺口：私有 audio-switch 的生命周期虽为 completed，但实际 `maxFrameGapMs=5319.28`，75 帧解码仅 38 帧呈现；现有 typed contract 只要求目标音轨选中、position 和 submitted audio frames 各自增加，没有记录达到这些条件所需时间。实现计划已写入 `docs/superpowers/plans/2026-07-12-interaction-recovery-evidence.md`。下一步先补结构化 operation/recovery duration 和 manifest-owned threshold，再生成新的规则版本 baseline；不得把它与 v12 跨规则比较成播放质量改善。
+
+# 2026-07-12 更新：v13 交互恢复证据基线完成
+
+音轨和字幕切换现已记录独立的结构化交互证据，包括同步切换调用耗时、从操作开始到播放恢复的总耗时、位置推进以及音频提交或视频呈现增量。manifest 以版本化的 `maxInteractionRecoveryDurationMs` 声明产品级恢复上限；当前 audio-switch 与 subtitle-switch 均为 `2000ms`。缺少、非有限或超过阈值的观测必须失败，不能用最终 `completed` 状态掩盖长时间中断。
+
+ignored v13 基线位于 `docs/qa/private/baselines/playback-evidence-v13-interaction-recovery.local/`，绑定 revision `3373418`。私有 runner 为 `selected 13 / attempted 13 / reports 13 / failed 0 / unresolved 0 / missing 0`；合并本地 native-headless 后共 24 份报告，strict structure/execution validation 为 24/24 matched、0 error，结果为 11 pass、12 fail、1 unsupported。凭据、服务器地址和 token 扫描为 0 命中。
+
+本地生成样本的音轨切换 operation/recovery 约为 `27.67/92.60ms`，字幕切换约为 `0.65/170.95ms`，均通过 2000ms 上限。相同契约首次暴露真实私有源的长中断：音轨切换 operation/recovery 约为 `3286.21/3791.06ms`，PGS 字幕切换约为 `592.89/33973.80ms`，分别归因为 `tracks` 与 `subtitles`。这些是播放器 Core/native 的待优化事实，不是评测器失败；下一阶段必须复用 v13 的同一 manifest 做小步 baseline/candidate 对照。
+
+v12 只保留为引入恢复时延契约前的观察集。v12 与 v13 的 expected schema 不同，不得把两者直接比较为播放器质量改善或退化。完整 `run-playback-core-checks.ps1` 已全绿，包括 555 项定向 Core 测试、真实 native-headless、网络恢复、EAGAIN、seek/timeline、帧节奏、音轨字幕、色彩证据与 Native Debug x64 build。统一入口 `tools/Build-Noira.ps1 -Target Build -Configuration Debug -Platform x64` 也已完整编译 Core、Headless、Native 和 Modern App，生成 `NoiraPlayer.Native.dll` 与 `NoiraPlayer.App.dll`。
+
+质量门执行时发现候选对比测试仍生成旧版 timeline 夹具，缺少 source origin、demux target、first-presented、post-seek position 与 advancement，因而被当前 strict gate 正确拒绝。夹具已补齐真实 timeline 字段，评测规则和阈值没有放宽；独立候选对比测试及随后完整质量门均通过。
