@@ -2,6 +2,12 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-12 更新：App 启动已分段归因，暂停不再污染帧节奏
+
+App-hosted 报告新增可扩展的 `startup.stages`，当前覆盖 App/会话准备、Emby PlaybackInfo、源选择、native surface、native open 调度和 native open。模型分析同时输出主导阶段、已归因耗时和未归因耗时。真实私有 Emby 长暂停 case 中，总启动 5393ms 被完整归因，未归因 0ms；主导项为 `native.open=4209ms`，PlaybackInfo 为 658ms。复跑时 `native.open=3332ms`，原生日志进一步显示其中 FFmpeg `avformat_open_input=2843ms`、`avformat_find_stream_info=266ms`，剩余约 223ms 为 decoder、renderer、首帧和线程启动。
+
+同一 case 还暴露出评测器把 10 秒主动暂停计入 `maxFrameGapMs=10054ms`。根因是 `PlaybackGraph` 在 pause/resume 边界保留了上一帧 present 时间。当前实现只断开 presentation interval continuity，不清空既有 histogram，也不改变播放时钟或解码策略。完整 App 前后对比中，暂停恢复、position 前进、渲染帧增长和 A/V drift P95=13ms 均保持成功；render interval 样本量保持 492/488，错误的 10054ms 最大间隔降至 53ms。Core 全量测试 892/892、纯 C++ 连续性测试和 Debug x64 Native AOT/UWP Publish 均通过。
+
 ## 2026-07-11 更新：baseline/candidate 跨执行证据比较已被阻断
 
 `PlaybackQualityRunComparator` 现在先验证执行证据可比性，再计算任何改善或回退。两侧必须具有完整的真实播放 execution、相同 evidence level、相同 runner、相同匿名 source locator；若两侧均成功打开媒体，还必须具有相同 opened source hash。`completed` 的 pass/fail 报告还必须证明 source open、native graph、demux、decoder 和 playback sample 均真实发生。任一条件不满足时，比较固定输出 `insufficient-evidence`，不再让纸面 telemetry 变化产生 improvement/regression。

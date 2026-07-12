@@ -161,6 +161,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         if (m_open)
         {
             m_paused = true;
+            m_renderIntervalTracker.BreakContinuity();
             ResetAudioAheadWait();
             m_audioRenderer.Pause();
             m_stateChanged.notify_all();
@@ -173,6 +174,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         if (m_open)
         {
             m_paused = false;
+            m_renderIntervalTracker.BreakContinuity();
             ResetVideoClock();
             m_audioRenderer.Resume();
             m_stateChanged.notify_all();
@@ -779,18 +781,16 @@ namespace winrt::NoiraPlayer::Native::implementation
 
             if (rendered && presented)
             {
-                if (m_lastRenderedFrameAt.time_since_epoch().count() != 0)
+                if (auto elapsed = m_renderIntervalTracker.Observe(renderedAt))
                 {
-                    auto elapsed = std::chrono::duration<double, std::milli>(
-                        renderedAt - m_lastRenderedFrameAt).count();
-                    m_qualityMetrics.RecordRenderIntervalMs(elapsed);
+                    m_qualityMetrics.RecordRenderIntervalMs(*elapsed);
                     if (m_lastCompletedRenderLoopWaitReason == RenderLoopWaitReason::AudioAhead)
                     {
-                        m_qualityMetrics.RecordRenderIntervalAfterAudioAheadWaitMs(elapsed);
+                        m_qualityMetrics.RecordRenderIntervalAfterAudioAheadWaitMs(*elapsed);
                     }
                     else
                     {
-                        m_qualityMetrics.RecordRenderIntervalAfterNonAudioWaitMs(elapsed);
+                        m_qualityMetrics.RecordRenderIntervalAfterNonAudioWaitMs(*elapsed);
                     }
                 }
 
@@ -802,7 +802,6 @@ namespace winrt::NoiraPlayer::Native::implementation
                     m_lastAudioAheadWaitEndedAt.reset();
                 }
 
-                m_lastRenderedFrameAt = renderedAt;
                 ++m_renderedVideoFrameCount;
                 ++m_qualityMetrics.RenderedVideoFrames;
                 m_seekPresentationTracker.RecordPresentedFrame(
@@ -925,7 +924,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         m_seekPrerollDroppedVideoFrameCount = 0;
         m_qualityMetrics.Reset();
         m_lastRuntimeStatsLog = {};
-        m_lastRenderedFrameAt = {};
+        m_renderIntervalTracker.BreakContinuity();
         m_nextRenderLoopWaitReason = RenderLoopWaitReason::Default;
         m_lastCompletedRenderLoopWaitReason = RenderLoopWaitReason::Default;
         m_lastAudioAheadWaitEndedAt.reset();

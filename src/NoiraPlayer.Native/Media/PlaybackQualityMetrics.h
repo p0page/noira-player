@@ -5,9 +5,37 @@
 #include <cstdint>
 #include <cstddef>
 #include <cmath>
+#include <chrono>
+#include <optional>
 
 namespace winrt::NoiraPlayer::Native::implementation
 {
+    class PlaybackPresentationIntervalTracker
+    {
+    public:
+        std::optional<double> Observe(std::chrono::steady_clock::time_point presentedAt) noexcept
+        {
+            if (!m_lastPresentedAt)
+            {
+                m_lastPresentedAt = presentedAt;
+                return std::nullopt;
+            }
+
+            auto intervalMs = std::chrono::duration<double, std::milli>(
+                presentedAt - *m_lastPresentedAt).count();
+            m_lastPresentedAt = presentedAt;
+            return intervalMs;
+        }
+
+        void BreakContinuity() noexcept
+        {
+            m_lastPresentedAt.reset();
+        }
+
+    private:
+        std::optional<std::chrono::steady_clock::time_point> m_lastPresentedAt;
+    };
+
     struct PlaybackQualityMetricsSnapshot
     {
         uint64_t RenderPasses{0};

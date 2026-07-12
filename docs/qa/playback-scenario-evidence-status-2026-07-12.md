@@ -47,3 +47,9 @@
 - `pauseSeconds` 已贯通 manifest、run plan、dev-command、App launch request 和 PlaybackPage。私有 SDR case 完成 10 秒 App-hosted 暂停，报告明确记录 `requestedPauseSeconds=10`：暂停期 position 保持 18.7 秒，恢复后前进至 19.9 秒，rendered frames 从 46 增长到 49，最终 decoded/rendered frames 为 491/490；未出现 I/O error，该次完整 case 为 `pass`。后续重采已同时携带 build revision 和 manifest locator hash，并通过 strict report-set validation（matched 1、errors 0）；该次因 9426.5105 ms 冷启动超过 7000 ms 阈值而为 `fail`。7093.3592 ms 的前次 startup fail 也继续保留，启动波动不与暂停恢复结果混判。
 - 《哈姆奈特》23.976 的帧间隔仍有可量化的优化空间，不能因 case 当前为 `pass` 而忽略。
 - App 冷启动超过既定阈值，需要单独归因网络、PlaybackInfo、demux probe 与宿主启动耗时，不能混入交互成功判定。
+
+## 启动阶段与暂停连续性复核
+
+App-hosted 报告现在以 `startup.stages` 保存连续、可归因的启动时间线，并在模型分析中输出 `dominantStage`、`attributedDurationMs` 和 `unattributedDurationMs`。真实私有 Emby case 的一次采样为：总启动 5393ms，`app.prepare=505ms`、`emby.playback-info=658ms`、`app.source-selection=11ms`、`app.native-surface=5ms`、`app.open-dispatch=6ms`、`native.open=4209ms`，未归因 0ms。第二次采样总启动 4385ms，其中 `native.open=3332ms`；对应原生日志显示 `avformat_open_input=2843ms`、`avformat_find_stream_info=266ms`，剩余约 223ms。
+
+同一 10 秒暂停场景的旧统计把主动暂停记录为 `maxFrameGapMs=10054ms`。修复后，pause/resume 会断开相邻 present 的统计连续性，但保留暂停前后的已有样本。完整 App 复跑中，render interval 样本量从 492 变为 488，P50/P95/P99 从 41.49/48.21/51.11ms 变为 41.62/47.88/50.90ms，最大间隔降为 53.00ms；暂停期 position 保持不变，恢复后 position 和 rendered frames 继续增长，报告仍为 `pass`。因此该变化修复的是评测证据污染，不是通过删除历史样本美化结果。

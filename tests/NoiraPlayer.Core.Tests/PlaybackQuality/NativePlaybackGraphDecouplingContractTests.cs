@@ -53,6 +53,18 @@ public sealed class NativePlaybackGraphDecouplingContractTests
     }
 
     [Fact]
+    public void PlaybackGraph_Breaks_Render_Interval_Continuity_Across_Pause_And_Resume()
+    {
+        var root = FindRepositoryRoot();
+        var graphSource = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Native", "Media", "PlaybackGraph.cpp"));
+        var pauseSource = ReadMethodBody(graphSource, "void PlaybackGraph::Pause");
+        var resumeSource = ReadMethodBody(graphSource, "void PlaybackGraph::Resume");
+
+        Assert.Contains("m_renderIntervalTracker.BreakContinuity()", pauseSource, StringComparison.Ordinal);
+        Assert.Contains("m_renderIntervalTracker.BreakContinuity()", resumeSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Native_Playback_Commands_Leave_The_Calling_Apartment_Before_Graph_Work()
     {
         var root = FindRepositoryRoot();
@@ -320,8 +332,8 @@ public sealed class NativePlaybackGraphDecouplingContractTests
 
         Assert.Contains("RenderLoopWaitReason m_lastCompletedRenderLoopWaitReason", graphHeader, StringComparison.Ordinal);
         Assert.Contains("m_lastCompletedRenderLoopWaitReason = completedRenderLoopWaitReason;", graphSource, StringComparison.Ordinal);
-        Assert.Contains("m_qualityMetrics.RecordRenderIntervalAfterAudioAheadWaitMs(elapsed);", graphSource, StringComparison.Ordinal);
-        Assert.Contains("m_qualityMetrics.RecordRenderIntervalAfterNonAudioWaitMs(elapsed);", graphSource, StringComparison.Ordinal);
+        Assert.Contains("m_qualityMetrics.RecordRenderIntervalAfterAudioAheadWaitMs(*elapsed);", graphSource, StringComparison.Ordinal);
+        Assert.Contains("m_qualityMetrics.RecordRenderIntervalAfterNonAudioWaitMs(*elapsed);", graphSource, StringComparison.Ordinal);
     }
 
     [Fact]

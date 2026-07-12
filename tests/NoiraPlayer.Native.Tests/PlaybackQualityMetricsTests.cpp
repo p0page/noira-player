@@ -1,12 +1,25 @@
 ﻿#include <cassert>
 
+#include <chrono>
+
 #include "Media/PlaybackQualityMetrics.h"
 
 using winrt::NoiraPlayer::Native::implementation::PlaybackQualityMetrics;
 using winrt::NoiraPlayer::Native::implementation::PlaybackQualityMetricsSnapshot;
+using winrt::NoiraPlayer::Native::implementation::PlaybackPresentationIntervalTracker;
 
 int main()
 {
+    PlaybackPresentationIntervalTracker intervalTracker;
+    const auto firstFrameAt = std::chrono::steady_clock::time_point(std::chrono::milliseconds(100));
+    const auto secondFrameAt = firstFrameAt + std::chrono::milliseconds(42);
+    assert(!intervalTracker.Observe(firstFrameAt).has_value());
+    assert(intervalTracker.Observe(secondFrameAt).value() == 42.0);
+    intervalTracker.BreakContinuity();
+    const auto resumedFirstFrameAt = secondFrameAt + std::chrono::seconds(10);
+    assert(!intervalTracker.Observe(resumedFirstFrameAt).has_value());
+    assert(intervalTracker.Observe(resumedFirstFrameAt + std::chrono::milliseconds(42)).value() == 42.0);
+
     PlaybackQualityMetrics metrics;
     metrics.RecordRenderIntervalMs(10.0);
     metrics.RecordRenderIntervalMs(41.0);

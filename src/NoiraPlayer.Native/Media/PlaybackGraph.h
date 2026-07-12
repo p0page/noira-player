@@ -152,7 +152,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         SeekPresentationTracker m_seekPresentationTracker;
         std::optional<int64_t> m_videoPrerollTargetTicks;
         std::chrono::steady_clock::time_point m_lastRuntimeStatsLog{};
-        std::chrono::steady_clock::time_point m_lastRenderedFrameAt{};
+        PlaybackPresentationIntervalTracker m_renderIntervalTracker;
         std::optional<std::chrono::steady_clock::time_point> m_audioAheadWaitStartedAt;
         std::optional<double> m_audioAheadWaitTargetMs;
         double m_audioAheadWaitOversleepMs{0.0};

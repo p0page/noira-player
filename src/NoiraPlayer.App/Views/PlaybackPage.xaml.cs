@@ -1075,6 +1075,9 @@ namespace NoiraPlayer.App.Views
 
         private async Task StartItemPlaybackAsync(PlaybackLaunchRequest request)
         {
+#if DEBUG
+            var qualityStartup = CreateQualityRunStartup(request);
+#endif
             await PlaybackDiagnosticsLog.WriteLineAsync(
                 "Item playback begin item=" + request.ItemId +
                 " requestedSource=" + request.MediaSourceId +
@@ -1104,6 +1107,14 @@ namespace NoiraPlayer.App.Views
             var playbackInfoItemId = request.ItemId;
             var playbackInfoClient = _embyClient;
             var playbackInfoSession = _session;
+#if DEBUG
+            var playbackInfoStartedAtUtc = DateTimeOffset.UtcNow;
+            AddQualityRunStartupStage(
+                qualityStartup,
+                "app.prepare",
+                request.QualityCommandReceivedAtUtc,
+                playbackInfoStartedAtUtc);
+#endif
             await PlaybackDiagnosticsLog.WriteLineAsync("PlaybackInfo begin item=" + playbackInfoItemId);
             await PlaybackDiagnosticsLog.WriteLineAsync(
                 "PlaybackInfo timeout guard begin timeoutMs=" +
@@ -1122,6 +1133,14 @@ namespace NoiraPlayer.App.Views
                     return playbackInfoSources;
                 },
                 EmbyRequestTimeoutPolicy.InteractiveRequestTimeout);
+#if DEBUG
+            var playbackInfoCompletedAtUtc = DateTimeOffset.UtcNow;
+            AddQualityRunStartupStage(
+                qualityStartup,
+                "emby.playback-info",
+                playbackInfoStartedAtUtc,
+                playbackInfoCompletedAtUtc);
+#endif
             await PlaybackDiagnosticsLog.WriteLineAsync("PlaybackInfo source count=" + sources.Count);
             if (sources.Count == 0)
             {
@@ -1157,8 +1176,24 @@ namespace NoiraPlayer.App.Views
             }
 #endif
 
+#if DEBUG
+            var nativeSurfaceStartedAtUtc = DateTimeOffset.UtcNow;
+            AddQualityRunStartupStage(
+                qualityStartup,
+                "app.source-selection",
+                playbackInfoCompletedAtUtc,
+                nativeSurfaceStartedAtUtc);
+#endif
             await PlaybackDiagnosticsLog.WriteLineAsync("Ensure native surface begin");
             await EnsureNativeSurfaceReadyAsync();
+#if DEBUG
+            var nativeSurfaceCompletedAtUtc = DateTimeOffset.UtcNow;
+            AddQualityRunStartupStage(
+                qualityStartup,
+                "app.native-surface",
+                nativeSurfaceStartedAtUtc,
+                nativeSurfaceCompletedAtUtc);
+#endif
             await PlaybackDiagnosticsLog.WriteLineAsync("Ensure native surface end");
             UpdateStatus(CorePlaybackState.Opening, "Opening video");
             UpdateProgressSlider();
@@ -1166,9 +1201,23 @@ namespace NoiraPlayer.App.Views
             ShowOverlay();
             await Task.Yield();
 
+#if DEBUG
+            var nativeOpenStartedAtUtc = DateTimeOffset.UtcNow;
+            AddQualityRunStartupStage(
+                qualityStartup,
+                "app.open-dispatch",
+                nativeSurfaceCompletedAtUtc,
+                nativeOpenStartedAtUtc);
+#endif
             await _orchestrator.StartAsync(request.ItemId, sources, request.StartPositionTicks, request.MediaSourceId);
 #if DEBUG
             var playbackStartedAtUtc = DateTimeOffset.UtcNow;
+            AddQualityRunStartupStage(
+                qualityStartup,
+                "native.open",
+                nativeOpenStartedAtUtc,
+                playbackStartedAtUtc);
+            CompleteQualityRunStartup(qualityStartup, playbackStartedAtUtc);
 #endif
             await PlaybackDiagnosticsLog.WriteLineAsync(
                 "Orchestrator start completed state=" + _orchestrator.State +
@@ -1180,7 +1229,7 @@ namespace NoiraPlayer.App.Views
             _progressTimer.Start();
             await ReportPlaybackStartedAsync();
 #if DEBUG
-            ScheduleQualityRunCapture(request, playbackStartedAtUtc);
+            ScheduleQualityRunCapture(request, qualityStartup);
 #endif
             UpdateStatus(_orchestrator.State);
             UpdateProgressSlider();
@@ -1194,6 +1243,9 @@ namespace NoiraPlayer.App.Views
 
         private async Task StartDirectStreamQualityRunPlaybackAsync(PlaybackLaunchRequest request)
         {
+#if DEBUG
+            var qualityStartup = CreateQualityRunStartup(request);
+#endif
             await PlaybackDiagnosticsLog.WriteLineAsync(
                 "Direct stream quality-run begin runId=" + request.QualityRunId +
                 " urlLength=" + request.DirectStreamUrl.Length +
@@ -1212,8 +1264,32 @@ namespace NoiraPlayer.App.Views
             ShowOverlay();
             await Task.Yield();
 
+#if DEBUG
+            var nativeSurfaceStartedAtUtc = DateTimeOffset.UtcNow;
+            AddQualityRunStartupStage(
+                qualityStartup,
+                "app.prepare",
+                request.QualityCommandReceivedAtUtc,
+                nativeSurfaceStartedAtUtc);
+#endif
             await EnsureNativeSurfaceReadyAsync();
+#if DEBUG
+            var nativeSurfaceCompletedAtUtc = DateTimeOffset.UtcNow;
+            AddQualityRunStartupStage(
+                qualityStartup,
+                "app.native-surface",
+                nativeSurfaceStartedAtUtc,
+                nativeSurfaceCompletedAtUtc);
+#endif
             var source = CreateDirectStreamQualityRunSource(request);
+#if DEBUG
+            var nativeOpenStartedAtUtc = DateTimeOffset.UtcNow;
+            AddQualityRunStartupStage(
+                qualityStartup,
+                "app.open-dispatch",
+                nativeSurfaceCompletedAtUtc,
+                nativeOpenStartedAtUtc);
+#endif
             await _orchestrator.StartAsync(
                 GetDirectStreamQualityRunItemId(request),
                 new[] { source },
@@ -1221,6 +1297,12 @@ namespace NoiraPlayer.App.Views
                 source.Id);
 #if DEBUG
             var playbackStartedAtUtc = DateTimeOffset.UtcNow;
+            AddQualityRunStartupStage(
+                qualityStartup,
+                "native.open",
+                nativeOpenStartedAtUtc,
+                playbackStartedAtUtc);
+            CompleteQualityRunStartup(qualityStartup, playbackStartedAtUtc);
 #endif
             await PlaybackDiagnosticsLog.WriteLineAsync(
                 "Direct stream quality-run start completed state=" + _orchestrator.State +
@@ -1233,7 +1315,7 @@ namespace NoiraPlayer.App.Views
             _progressTimer.Start();
             await ReportPlaybackStartedAsync();
 #if DEBUG
-            ScheduleQualityRunCapture(request, playbackStartedAtUtc);
+            ScheduleQualityRunCapture(request, qualityStartup);
 #endif
             UpdateStatus(_orchestrator.State);
             UpdateProgressSlider();
@@ -1246,9 +1328,44 @@ namespace NoiraPlayer.App.Views
         }
 
 #if DEBUG
+        private static PlaybackQualityStartup CreateQualityRunStartup(PlaybackLaunchRequest request)
+        {
+            return new PlaybackQualityStartup
+            {
+                CommandReceivedAt = request.QualityCommandReceivedAtUtc.ToString("O")
+            };
+        }
+
+        private static void AddQualityRunStartupStage(
+            PlaybackQualityStartup startup,
+            string name,
+            DateTimeOffset startedAtUtc,
+            DateTimeOffset completedAtUtc)
+        {
+            startup.Stages.Add(new PlaybackQualityStartupStage
+            {
+                Name = name,
+                StartedAt = startedAtUtc.ToString("O"),
+                CompletedAt = completedAtUtc.ToString("O"),
+                DurationMs = Math.Max(0, (completedAtUtc - startedAtUtc).TotalMilliseconds)
+            });
+        }
+
+        private static void CompleteQualityRunStartup(
+            PlaybackQualityStartup startup,
+            DateTimeOffset playbackStartedAtUtc)
+        {
+            startup.PlaybackStartedAt = playbackStartedAtUtc.ToString("O");
+            if (DateTimeOffset.TryParse(startup.CommandReceivedAt, out var commandReceivedAtUtc))
+            {
+                startup.StartupDurationMs =
+                    Math.Max(0, (playbackStartedAtUtc - commandReceivedAtUtc).TotalMilliseconds);
+            }
+        }
+
         private void ScheduleQualityRunCapture(
             PlaybackLaunchRequest request,
-            DateTimeOffset playbackStartedAtUtc)
+            PlaybackQualityStartup startup)
         {
             if (!request.IsQualityRun)
             {
@@ -1264,19 +1381,20 @@ namespace NoiraPlayer.App.Views
                 return;
             }
 
-            _ = CaptureQualityRunAsync(request, descriptor, playbackStartedAtUtc);
+            _ = CaptureQualityRunAsync(request, descriptor, startup);
         }
 
         private async Task CaptureQualityRunAsync(
             PlaybackLaunchRequest request,
             PlaybackDescriptor descriptor,
-            DateTimeOffset playbackStartedAtUtc)
+            PlaybackQualityStartup startup)
         {
             try
             {
                 await PlaybackDiagnosticsLog.WriteLineAsync(
                     "QualityRun capture scheduled runId=" + request.QualityRunId +
-                    " durationSeconds=" + request.QualityRunDurationSeconds);
+                    " durationSeconds=" + request.QualityRunDurationSeconds +
+                    " startupStages=" + startup.Stages.Count);
 
                 var referenceCase = PlaybackQualityCaptureReferenceCaseFactory.Create(
                     request.QualityRunId,
@@ -1299,13 +1417,6 @@ namespace NoiraPlayer.App.Views
                 var evidence = CaptureQualityRunEvidence(_backend, capturedDescriptor);
                 await StopQualityRunPlaybackAsync(lifecycle);
 
-                var startup = new PlaybackQualityStartup
-                {
-                    CommandReceivedAt = request.QualityCommandReceivedAtUtc.ToString("O"),
-                    PlaybackStartedAt = playbackStartedAtUtc.ToString("O"),
-                    StartupDurationMs =
-                        (playbackStartedAtUtc - request.QualityCommandReceivedAtUtc).TotalMilliseconds
-                };
                 var environment = new PlaybackQualityEnvironment
                 {
                     CollectorVersion = "app-hosted-quality-run-v0.1",

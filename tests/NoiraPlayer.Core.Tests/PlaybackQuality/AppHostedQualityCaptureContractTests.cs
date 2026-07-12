@@ -143,6 +143,25 @@ public sealed class AppHostedQualityCaptureContractTests
     }
 
     [Fact]
+    public void Debug_Quality_Run_Captures_Attributable_Startup_Stages()
+    {
+        var root = FindRepositoryRoot();
+        var playbackPage = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.App", "Views", "PlaybackPage.xaml.cs"));
+        var startItemPlaybackMethod = ExtractMethodBody(playbackPage, "private async Task StartItemPlaybackAsync");
+        var startDirectStreamMethod = ExtractMethodBody(playbackPage, "private async Task StartDirectStreamQualityRunPlaybackAsync");
+        var captureMethod = ExtractMethodBody(playbackPage, "CaptureQualityRunAsync");
+
+        Assert.Contains("emby.playback-info", startItemPlaybackMethod, StringComparison.Ordinal);
+        Assert.Contains("app.native-surface", startItemPlaybackMethod, StringComparison.Ordinal);
+        Assert.Contains("app.open-dispatch", startItemPlaybackMethod, StringComparison.Ordinal);
+        Assert.Contains("native.open", startItemPlaybackMethod, StringComparison.Ordinal);
+        Assert.Contains("app.native-surface", startDirectStreamMethod, StringComparison.Ordinal);
+        Assert.Contains("app.open-dispatch", startDirectStreamMethod, StringComparison.Ordinal);
+        Assert.Contains("native.open", startDirectStreamMethod, StringComparison.Ordinal);
+        Assert.Contains("startup.Stages", captureMethod, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Debug_Quality_Run_Direct_Stream_Source_Projects_Expected_Metadata()
     {
         var root = FindRepositoryRoot();

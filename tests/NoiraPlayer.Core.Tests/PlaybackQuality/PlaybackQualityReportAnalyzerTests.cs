@@ -1064,6 +1064,51 @@ public sealed class PlaybackQualityReportAnalyzerTests
     }
 
     [Fact]
+    public void Analyze_Summarizes_Startup_Stages_And_Dominant_Stage_For_Model()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "startup-stage-summary",
+            Result = "pass",
+            Startup = new PlaybackQualityStartup
+            {
+                StartupDurationMs = 1800
+            }
+        };
+        report.Startup.Stages.Add(new PlaybackQualityStartupStage
+        {
+            Name = "emby.playback-info",
+            DurationMs = 300
+        });
+        report.Startup.Stages.Add(new PlaybackQualityStartupStage
+        {
+            Name = "native.open",
+            DurationMs = 1400
+        });
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Equal("native.open", analysis.Startup.DominantStage);
+        Assert.Equal(1400, analysis.Startup.DominantStageDurationMs);
+        Assert.Equal(1700, analysis.Startup.AttributedDurationMs);
+        Assert.Equal(100, analysis.Startup.UnattributedDurationMs);
+        Assert.Collection(
+            analysis.Startup.Stages,
+            stage =>
+            {
+                Assert.Equal("emby.playback-info", stage.Name);
+                Assert.Equal(300, stage.DurationMs);
+            },
+            stage =>
+            {
+                Assert.Equal("native.open", stage.Name);
+                Assert.Equal(1400, stage.DurationMs);
+            });
+        Assert.Contains("startup.stage.emby.playback-info.durationMs", analysis.Startup.Signals);
+        Assert.Contains("startup.stage.native.open.durationMs", analysis.Startup.Signals);
+    }
+
+    [Fact]
     public void Analyze_Marks_Startup_Slow_From_Startup_Checks()
     {
         var report = new PlaybackQualityReport

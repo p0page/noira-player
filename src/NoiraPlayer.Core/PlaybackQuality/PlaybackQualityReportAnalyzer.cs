@@ -47,8 +47,20 @@ namespace NoiraPlayer.Core.PlaybackQuality
         public string CommandReceivedAt { get; set; } = "";
         public string PlaybackStartedAt { get; set; } = "";
         public double StartupDurationMs { get; set; }
+        public string DominantStage { get; set; } = "";
+        public double DominantStageDurationMs { get; set; }
+        public double AttributedDurationMs { get; set; }
+        public double UnattributedDurationMs { get; set; }
+        public List<PlaybackQualityStartupStageAssessment> Stages { get; } =
+            new List<PlaybackQualityStartupStageAssessment>();
         public List<string> Signals { get; } = new List<string>();
         public List<string> FailedSignals { get; } = new List<string>();
+    }
+
+    public sealed class PlaybackQualityStartupStageAssessment
+    {
+        public string Name { get; set; } = "";
+        public double DurationMs { get; set; }
     }
 
     public sealed class PlaybackQualityLifecycleAssessment
@@ -780,6 +792,29 @@ namespace NoiraPlayer.Core.PlaybackQuality
             {
                 AddUnique(startup.Signals, "startup.startupDurationMs");
             }
+
+            foreach (var stage in report.Startup.Stages)
+            {
+                startup.Stages.Add(new PlaybackQualityStartupStageAssessment
+                {
+                    Name = stage.Name,
+                    DurationMs = stage.DurationMs
+                });
+                startup.AttributedDurationMs += Math.Max(0, stage.DurationMs);
+                if (!string.IsNullOrWhiteSpace(stage.Name) && stage.DurationMs >= 0)
+                {
+                    AddUnique(startup.Signals, "startup.stage." + stage.Name + ".durationMs");
+                }
+
+                if (stage.DurationMs > startup.DominantStageDurationMs)
+                {
+                    startup.DominantStage = stage.Name;
+                    startup.DominantStageDurationMs = stage.DurationMs;
+                }
+            }
+            startup.UnattributedDurationMs = Math.Max(
+                0,
+                startup.StartupDurationMs - startup.AttributedDurationMs);
 
             foreach (var check in report.Checks)
             {
