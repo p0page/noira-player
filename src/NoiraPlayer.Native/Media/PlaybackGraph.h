@@ -48,7 +48,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         bool HasSubtitleStreamIndex{false};
         double VideoFrameRate{0.0};
         bool EnableSwitchPacketCache{true};
-        bool EnableSeekPacketCache{false};
+        bool EnableSeekPacketCache{true};
     };
 
     struct HdrOutputDecision

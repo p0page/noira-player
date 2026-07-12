@@ -408,6 +408,15 @@ public sealed class NativePlaybackGraphDecouplingContractTests
     }
 
     [Fact]
+    public void App_Playback_Enables_Bounded_Seek_Replay_By_Default()
+    {
+        var root = FindRepositoryRoot();
+        var graphHeader = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Native", "Media", "PlaybackGraph.h"));
+
+        Assert.Contains("bool EnableSeekPacketCache{true};", graphHeader, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void View_Bound_Display_Lookup_Is_Separated_From_Background_Mode_Changes()
     {
         var root = FindRepositoryRoot();

@@ -1181,3 +1181,7 @@ evaluation version 已升级为 `playback-quality-v0.3`。六个 cache 上下文
 本轮真实 candidate 首次运行暴露一处 harness bug：cache 已命中，但 helper 把启动 seek 的 demux target 当成最后一次会话内 seek 证据，strict parser 正确拒绝报告。修复后 cache hit 明确使用 `-1`，普通 fallback 仍记录真实 demux target；完整 native-headless smoke 已通过。随后 comparator 又暴露两处设计问题：单 case 调优被全量 corpus coverage 门阻塞，以及 timeline 上下文字段的正常变化被重复记为 regression。现在 comparator 显式区分默认 `corpus` 与调用者声明的 `focused` 作用域；focused 不声称全量语料就绪。目标/落点/demux 只比较证据存在性，operation/recovery 才按越低越好比较，并避免与 threshold check 重复计票。
 
 三轮 focused comparison 最终为两次 `keep-candidate`、一次 `split-candidate`。mixed 轮只来自公网启动耗时由 `15660.2ms` 波动到 `17022.0ms`；seek recovery 三轮均通过 `2000ms` 门限并稳定改善。当前结论只支持启用会话内短回退 cache，不支持宣称冷启动改善或全量 Core 就绪。下一步将 App 默认开关作为独立候选启用，完成全量 Core gate、完整 App 编译和代表性 App-hosted 复核。
+
+App 默认 seek replay cache 已启用。首次 App-hosted timeline 复核仍使用旧的“当前位置向前 1 秒”探针，正确得到 `target-outside-window` 并回退远端 demux seek，恢复为 `7166.17ms`；该失败证明开关开启不等于缓存必然命中。质量探针随后改为有足够历史时回退 1 秒，否则前进 1 秒，仅改变评测动作，不改变用户 seek 或 fallback 策略。
+
+重新 Publish、注册并启动完整 Modern App 后，App-hosted v0.3 报告实际命中 `459 packets / 23754167 bytes / 83680000 ticks`，operation/recovery 为 `470.63/484.14ms`、落点误差 `37ms`、post-seek 继续推进，并明确记录 `seekDemuxTargetTicks=-1`、`fallback=none`。报告整体仍因冷启动 `18147.94ms > 7000ms` 判 fail。完整 Core 33 阶段门禁已通过，完整 App Build 与 App-hosted Publish 均成功；私有产物凭据扫描 0 命中。当前可以接受会话内短回退 cache 作为 App 默认策略，冷启动/冷 resume 继续作为独立目标。

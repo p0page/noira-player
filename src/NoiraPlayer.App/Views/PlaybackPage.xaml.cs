@@ -2118,7 +2118,10 @@ namespace NoiraPlayer.App.Views
         private long CalculateQualityRunSeekTargetTicks()
         {
             var currentPositionTicks = GetCurrentPositionTicks();
-            var targetTicks = currentPositionTicks + TimeSpan.FromSeconds(1).Ticks;
+            var seekStepTicks = TimeSpan.FromSeconds(1).Ticks;
+            var targetTicks = currentPositionTicks > seekStepTicks
+                ? currentPositionTicks - seekStepTicks
+                : currentPositionTicks + seekStepTicks;
             if (_durationTicks > TimeSpan.FromSeconds(2).Ticks)
             {
                 targetTicks = Math.Min(targetTicks, _durationTicks - TimeSpan.FromSeconds(1).Ticks);

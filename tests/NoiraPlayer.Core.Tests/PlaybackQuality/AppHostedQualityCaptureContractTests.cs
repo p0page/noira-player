@@ -99,6 +99,7 @@ public sealed class AppHostedQualityCaptureContractTests
         var captureMethod = ExtractMethodBody(playbackPage, "CaptureQualityRunAsync");
         var scenarioMethod = ExtractMethodBody(playbackPage, "RunQualityRunScenarioAsync");
         var seekProbeMethod = ExtractMethodBody(playbackPage, "private async Task RunQualityRunSeekProbeAsync");
+        var seekTargetMethod = ExtractMethodBody(playbackPage, "private long CalculateQualityRunSeekTargetTicks");
 
         var captureEvidenceIndex = captureMethod.IndexOf(
             "CaptureQualityRunEvidence(_backend, capturedDescriptor)",
@@ -117,6 +118,8 @@ public sealed class AppHostedQualityCaptureContractTests
         Assert.Contains("await WaitForQualityRunSeekPresentationAsync", seekProbeMethod, StringComparison.Ordinal);
         Assert.Contains("SeekRecoveryDurationMs = seekStartedAt.Elapsed.TotalMilliseconds", seekProbeMethod, StringComparison.Ordinal);
         Assert.DoesNotContain("await Task.Delay(shortDelay)", seekProbeMethod, StringComparison.Ordinal);
+        Assert.Contains("currentPositionTicks - seekStepTicks", seekTargetMethod, StringComparison.Ordinal);
+        Assert.Contains("currentPositionTicks + seekStepTicks", seekTargetMethod, StringComparison.Ordinal);
         Assert.True(captureEvidenceIndex >= 0, "quality-run capture must sample runtime evidence.");
         Assert.True(scenarioIndex >= 0, "quality-run capture must execute the selected scenario.");
         Assert.True(stopIndex >= 0, "quality-run capture must stop playback after evidence is captured.");

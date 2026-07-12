@@ -20,6 +20,12 @@
 
 版本决策：该 required-signal 与 `seekDemuxTargetTicks=-1` 语义将 evaluation version 从 `playback-quality-v0.2` 升级为 `playback-quality-v0.3`。历史 v0.1/v0.2 报告保持原值，不与 v0.3 baseline/candidate 混比。
 
+## 2026-07-13：App 默认启用有界会话内 seek replay cache
+
+决策：`PlaybackGraphOpenRequest.EnableSeekPacketCache` 默认设为 true。缓存仍受 `48 MiB / 12s / 32768 packets` 上限、关键帧和 active-stream 覆盖约束；任何 miss 或分配失败继续执行原有准确 backward demux seek。headless/manifest runner 保留显式开关，可继续生成关闭控制组。
+
+依据：同一私有 Emby timeline case 的三轮 native baseline/candidate 显示 recovery 均值由 `7216.13ms` 降至 `467.69ms`，落点误差保持 `22ms`；完整 App-hosted 短回退复核为 `484.14ms`、误差 `37ms`、继续播放。向前探针仍如实 miss 并 fallback，证明没有用命中假设替代覆盖检查。该决策只针对会话内已读历史，不声称改善冷启动、冷 resume 或任意向前跳转。
+
 ## 2026-07-12：冷 resume 保留准确 seek，静态直播放不伪用服务端时间偏移
 
 决策：冷 resume 继续使用向后关键帧定位和目标前帧丢弃，不跳到目标后的关键帧，不删除准确预滚，也不放宽启动或 seek 标准。本项目 `static=true` 的 Emby 直播放 URL 不追加 `StartTimeTicks` 作为所谓优化；只有确认服务端实际返回从目标位置重建的转封装/转码流时，才能把服务端时间偏移作为独立候选评测。
