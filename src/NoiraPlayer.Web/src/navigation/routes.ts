@@ -5,6 +5,8 @@ export interface FocusTarget {
 
 export type BrowseRoute =
   | { readonly kind: 'home' }
+  | { readonly kind: 'search'; readonly origin: FocusTarget }
+  | { readonly kind: 'favorites'; readonly origin: FocusTarget }
   | {
       readonly kind: 'library';
       readonly libraryId: string;
@@ -137,6 +139,11 @@ function normalizeBrowseRoute(candidate: unknown): BrowseRoute | null {
     switch (kind) {
       case 'home':
         return { kind };
+      case 'search':
+      case 'favorites': {
+        const origin = normalizeFocusTarget(candidate.origin);
+        return origin ? { kind, origin } : null;
+      }
       case 'library': {
         const libraryId = candidate.libraryId;
         const collectionType = candidate.collectionType;
@@ -193,12 +200,19 @@ function hasSupportedRouteOrder(routeStack: readonly BrowseRoute[]): boolean {
 
   const secondRoute = routeStack[1];
   if (routeStack.length === 2) {
-    return secondRoute.kind === 'library' || secondRoute.kind === 'details';
+    return (
+      secondRoute.kind === 'library' ||
+      secondRoute.kind === 'search' ||
+      secondRoute.kind === 'favorites' ||
+      secondRoute.kind === 'details'
+    );
   }
 
   return (
     routeStack.length === 3 &&
-    secondRoute.kind === 'library' &&
+    (secondRoute.kind === 'library' ||
+      secondRoute.kind === 'search' ||
+      secondRoute.kind === 'favorites') &&
     routeStack[2].kind === 'details'
   );
 }
@@ -211,6 +225,9 @@ function routesEqual(left: BrowseRoute, right: BrowseRoute): boolean {
   switch (left.kind) {
     case 'home':
       return true;
+    case 'search':
+    case 'favorites':
+      return right.kind === left.kind && targetsEqual(left.origin, right.origin);
     case 'library':
       return (
         right.kind === 'library' &&

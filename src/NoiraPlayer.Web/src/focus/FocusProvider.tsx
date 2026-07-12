@@ -9,7 +9,17 @@ import {
 } from '@noriginmedia/norigin-spatial-navigation';
 import { createContext, useContext, useLayoutEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
-import { subscribeHostLifecycle } from '../bridge';
+import type { HostInputEvent } from '../bridge';
+import {
+  postHostReady,
+  subscribeHostInput,
+  subscribeHostLifecycle,
+} from '../bridge';
+import {
+  dispatchHostInput,
+  HostInputKeyDeduper,
+  installHostInputDedupeCapture,
+} from './hostInput';
 import {
   createFocusNavigationPolicy,
   type FocusNavigationPolicy,
@@ -70,6 +80,15 @@ const FocusPolicyContext = createContext<FocusNavigationPolicy | null>(null);
 const FocusRegistryContext = createContext<NoiraFocusRegistry | null>(null);
 const FocusScopeStateContext = createContext<NoiraFocusScopeState | null>(null);
 
+export type GlobalInputHandler = (input: HostInputEvent) => boolean;
+
+interface GlobalInputHandlerRegistry {
+  register(handler: GlobalInputHandler): () => void;
+}
+
+const GlobalInputHandlerContext =
+  createContext<GlobalInputHandlerRegistry | null>(null);
+
 let spatialNavigationInitialized = false;
 
 export function FocusProvider({ children, policy }: FocusProviderProps) {
@@ -84,6 +103,24 @@ export function FocusProvider({ children, policy }: FocusProviderProps) {
     registryRef.current = new NoiraFocusRegistryImpl(focusPolicy);
   }
   registryRef.current.setPolicy(focusPolicy);
+  const inputHandlerRef = useRef<GlobalInputHandler | null>(null);
+  const inputDeduperRef = useRef<HostInputKeyDeduper | null>(null);
+  if (inputDeduperRef.current === null) {
+    inputDeduperRef.current = new HostInputKeyDeduper();
+  }
+  const inputHandlerRegistryRef = useRef<GlobalInputHandlerRegistry | null>(null);
+  if (inputHandlerRegistryRef.current === null) {
+    inputHandlerRegistryRef.current = {
+      register(handler) {
+        inputHandlerRef.current = handler;
+        return () => {
+          if (inputHandlerRef.current === handler) {
+            inputHandlerRef.current = null;
+          }
+        };
+      },
+    };
+  }
 
   useLayoutEffect(
     () => {
@@ -96,14 +133,34 @@ export function FocusProvider({ children, policy }: FocusProviderProps) {
           resumeSpatialNavigation();
         }
       });
+      const unsubscribeDedupeCapture = installHostInputDedupeCapture(
+        inputDeduperRef.current!,
+      );
+      const unsubscribeInput = subscribeHostInput((input) => {
+        if (inputDeduperRef.current?.shouldSuppressHostInput(input)) {
+          return;
+        }
+
+        inputDeduperRef.current?.rememberHostInput(input);
+        if (inputHandlerRef.current?.(input)) {
+          return;
+        }
+
+        dispatchHostInput(input);
+      });
       const unsubscribeLifecycle = subscribeHostLifecycle((event) => {
         if (event.event === 'playback-returned') {
           focusPolicy.resume();
+          postHostReady(true);
         }
       });
+      postHostReady();
 
       return () => {
+        unsubscribeInput();
         unsubscribeLifecycle();
+        unsubscribeDedupeCapture();
+        inputDeduperRef.current?.clear();
         unsubscribePause();
       };
     },
@@ -113,10 +170,23 @@ export function FocusProvider({ children, policy }: FocusProviderProps) {
   return (
     <FocusPolicyContext.Provider value={focusPolicy}>
       <FocusRegistryContext.Provider value={registryRef.current}>
-        {children}
+        <GlobalInputHandlerContext.Provider
+          value={inputHandlerRegistryRef.current}
+        >
+          {children}
+        </GlobalInputHandlerContext.Provider>
       </FocusRegistryContext.Provider>
     </FocusPolicyContext.Provider>
   );
+}
+
+export function useGlobalInputHandler(handler: GlobalInputHandler): void {
+  const registry = useContext(GlobalInputHandlerContext);
+  if (!registry) {
+    throw new Error('Global input handlers must be rendered inside FocusProvider.');
+  }
+
+  useLayoutEffect(() => registry.register(handler), [handler, registry]);
 }
 
 export function useFocusNavigationPolicy(): FocusNavigationPolicy {

@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { FocusEvent, KeyboardEvent } from 'react';
-import { Guide } from '../components/Guide';
+import type { FocusEvent } from 'react';
 import { MediaCard } from '../components/MediaCard';
+import {
+  useBrowseShellContentRestoreRequest,
+  useBrowseShellGuideInteractionVersion,
+} from '../components/BrowseShell';
 import { EmbyRequestError, type EmbyWebClient } from '../emby';
 import { Focusable } from '../focus/Focusable';
 import { FocusScope } from '../focus/FocusScope';
@@ -18,14 +21,9 @@ export interface LibraryPageProps {
   busy?: boolean;
   client: LibraryPageClient;
   library: LibraryView;
-  libraries: readonly LibraryView[];
   onAuthenticationRequired: () => void;
-  onBack: (origin: FocusTarget) => void;
-  onLogout: () => void;
-  onOpenLibrary: (library: LibraryView) => void;
   onOpenMedia: (item: MediaItem, origin: FocusTarget) => void;
   restoreRequest?: FocusRestoreRequest | null;
-  routeOrigin: FocusTarget;
 }
 
 interface LibraryLoadContext {
@@ -35,6 +33,7 @@ interface LibraryLoadContext {
   exhausted: boolean;
   failedStart: number | null;
   identity: string;
+  guideInteractionVersion: number;
   inFlightStart: number | null;
   libraryId: string;
   nextStart: number;
@@ -59,15 +58,14 @@ export function LibraryPage({
   busy = false,
   client,
   library,
-  libraries,
   onAuthenticationRequired,
-  onBack,
-  onLogout,
-  onOpenLibrary,
   onOpenMedia,
   restoreRequest: externalRestoreRequest,
-  routeOrigin,
 }: LibraryPageProps) {
+  const guideInteractionVersion = useBrowseShellGuideInteractionVersion();
+  const shellRestoreRequest = useBrowseShellContentRestoreRequest();
+  const guideInteractionVersionRef = useRef(guideInteractionVersion);
+  guideInteractionVersionRef.current = guideInteractionVersion;
   const identity = createLibraryIdentity(library);
   const [renderedIdentity, setRenderedIdentity] = useState('');
   const [items, setItems] = useState<MediaItem[]>([]);
@@ -89,7 +87,6 @@ export function LibraryPage({
     useState<FocusRestoreRequest | null>(null);
   const contextRef = useRef<LibraryLoadContext | null>(null);
   const itemsRef = useRef<readonly MediaItem[]>([]);
-  const guideInteractionRef = useRef(false);
   const cancelledExternalRestoreRequestIdRef = useRef<string | null>(null);
   const gridRef = useRef<HTMLDivElement | null>(null);
   const visibleItems = renderedIdentity === identity ? items : [];
@@ -115,6 +112,7 @@ export function LibraryPage({
     !externalRestoreIsCancelled;
   const restoreRequest =
     guideRestoreRequest ??
+    shellRestoreRequest ??
     (externalRestoreIsCancelled
       ? initialRestoreRequest
       : defersExternalRestore
@@ -150,6 +148,7 @@ export function LibraryPage({
           collectionType: library.collectionType,
           exhausted: false,
           failedStart: null,
+          guideInteractionVersion,
           identity,
           inFlightStart: null,
           libraryId: library.id,
@@ -163,7 +162,6 @@ export function LibraryPage({
       }
       contextRef.current = context;
       itemsRef.current = [];
-      guideInteractionRef.current = false;
       cancelledExternalRestoreRequestIdRef.current = null;
       setRenderedIdentity(identity);
       setItems([]);
@@ -243,6 +241,17 @@ export function LibraryPage({
       setLoadError('');
 
       const pendingExternalRestoreRequest = externalRestoreRequest;
+      const guideWasUsed =
+        guideInteractionVersionRef.current !== context.guideInteractionVersion;
+      if (guideWasUsed) {
+        if (pendingExternalRestoreRequest) {
+          cancelledExternalRestoreRequestIdRef.current =
+            pendingExternalRestoreRequest.requestId;
+          setCancelledExternalRestoreRequestId(
+            pendingExternalRestoreRequest.requestId,
+          );
+        }
+      }
       const externalTargetFound = pendingExternalRestoreRequest
         ? mergedItems.some(
             ({ id }) =>
@@ -273,7 +282,7 @@ export function LibraryPage({
       if (
         previousItems.length === 0 &&
         mergedItems.length > 0 &&
-        !guideInteractionRef.current &&
+        !guideWasUsed &&
         !externalRestoreTargetsContext(context)
       ) {
         setInitialRestoreRequest(
@@ -424,67 +433,12 @@ export function LibraryPage({
     }
   }
 
-  function handleContentKeyDown(event: KeyboardEvent<HTMLElement>) {
-    if (
-      event.key !== 'Escape' ||
-      !(event.target instanceof HTMLElement) ||
-      !event.target.closest('.media-card[data-focus-key]')
-    ) {
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-    onBack(routeOrigin);
-  }
-
-  function restoreGridFocus(target: FocusTarget) {
-    setGuideRestoreRequest(createFocusRestoreRequest(target));
-  }
-
   return (
-    <div className="tv-shell">
-      <Guide
-        activeRoute={{ kind: 'library', libraryId: library.id }}
-        defaultFocus={entries.length === 0 && !loadError}
-        libraries={libraries}
-        returnTarget={returnTarget}
-        restoreRequest={restoreRequest}
-        onHome={() => onBack(routeOrigin)}
-        onKeyInteraction={() => {
-          guideInteractionRef.current = true;
-          if (
-            externalRestoreRequest?.target.scopeKey === scopeKey &&
-            releasedExternalRestoreRequestId !==
-              externalRestoreRequest.requestId
-          ) {
-            cancelledExternalRestoreRequestIdRef.current =
-              externalRestoreRequest.requestId;
-            setCancelledExternalRestoreRequestId(
-              externalRestoreRequest.requestId,
-            );
-          }
-        }}
-        onLibrary={(destination) => {
-          if (destination.id === library.id) {
-            if (returnTarget) {
-              restoreGridFocus(returnTarget);
-            }
-            return;
-          }
-
-          onOpenLibrary(destination);
-        }}
-        onLogout={onLogout}
-        onRestoreFocus={restoreGridFocus}
-      />
-
-      <main
-        aria-busy={busy || loadStatus === 'loading' || loadingMore || undefined}
-        className="library-page"
-        onFocusCapture={handleContentFocus}
-        onKeyDownCapture={handleContentKeyDown}
-      >
+    <main
+      aria-busy={busy || loadStatus === 'loading' || loadingMore || undefined}
+      className="library-page"
+      onFocusCapture={handleContentFocus}
+    >
         <header className="library-page__header">
           <h1>{library.name}</h1>
         </header>
@@ -566,8 +520,7 @@ export function LibraryPage({
             Loading more...
           </p>
         ) : null}
-      </main>
-    </div>
+    </main>
   );
 }
 

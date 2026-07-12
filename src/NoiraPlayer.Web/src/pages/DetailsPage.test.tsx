@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { BrowseShell } from '../components/BrowseShell';
 import { FocusProvider } from '../focus/FocusProvider';
 import type { MediaItem } from '../types';
 import {
@@ -9,6 +10,7 @@ import {
   getDetailsPlayFocusKey,
   resolveDetailsAtmosphereUrl,
 } from './DetailsPage';
+import detailsPageSource from './DetailsPage.tsx?raw';
 
 afterEach(() => {
   cleanup();
@@ -66,7 +68,7 @@ describe('DetailsPage focus and actions', () => {
     outside.remove();
   });
 
-  it('handles Escape at page level and calls onBack once', async () => {
+  it('delegates Escape to BrowseShell and has no page-level Back handler', async () => {
     const onBack = vi.fn();
     renderDetails(createItem(), { onBack });
     const play = await screen.findByRole('button', { name: 'Play' });
@@ -74,6 +76,8 @@ describe('DetailsPage focus and actions', () => {
     fireEvent.keyDown(play, { key: 'Escape' });
 
     expect(onBack).toHaveBeenCalledTimes(1);
+    expect(detailsPageSource).not.toContain('onKeyDownCapture');
+    expect(detailsPageSource).not.toMatch(/event\.key\s*!==\s*['"]Escape['"]/);
   });
 
   it('passes the original item object to onPlay', async () => {
@@ -162,24 +166,18 @@ function createItem(overrides: Partial<MediaItem> = {}): MediaItem {
 }
 
 function page(item: MediaItem, restoreRequestId?: string) {
+  const restoreRequest = restoreRequestId
+    ? {
+        requestId: restoreRequestId,
+        target: {
+          scopeKey: getDetailsActionsScopeKey(),
+          focusKey: getDetailsPlayFocusKey(),
+        },
+      }
+    : null;
   return (
     <FocusProvider>
-      <DetailsPage
-        item={item}
-        restoreRequest={
-          restoreRequestId
-            ? {
-                requestId: restoreRequestId,
-                target: {
-                  scopeKey: getDetailsActionsScopeKey(),
-                  focusKey: getDetailsPlayFocusKey(),
-                },
-              }
-            : null
-        }
-        onBack={() => undefined}
-        onPlay={() => undefined}
-      />
+      <DetailsShell item={item} restoreRequest={restoreRequest} />
     </FocusProvider>
   );
 }
@@ -193,11 +191,51 @@ function renderDetails(
 ) {
   return render(
     <FocusProvider>
-      <DetailsPage
+      <DetailsShell
         item={item}
         onBack={callbacks.onBack ?? (() => undefined)}
         onPlay={callbacks.onPlay ?? (() => undefined)}
       />
     </FocusProvider>,
+  );
+}
+
+function DetailsShell({
+  item,
+  onBack = () => undefined,
+  onPlay = () => undefined,
+  restoreRequest = null,
+}: {
+  item: MediaItem;
+  onBack?: () => void;
+  onPlay?: (item: MediaItem) => void;
+  restoreRequest?: Parameters<typeof DetailsPage>[0]['restoreRequest'];
+}) {
+  return (
+    <BrowseShell
+      activeRoute={{ kind: 'home' }}
+      guideHidden
+      onFavorites={() => undefined}
+      onHome={() => undefined}
+      onLogout={() => undefined}
+      onNavigateBack={onBack}
+      onNativeBack={() => undefined}
+      onSearch={() => undefined}
+      restoreRequest={restoreRequest}
+      routeStack={[
+        { kind: 'home' },
+        {
+          kind: 'details',
+          itemId: item.id,
+          origin: { scopeKey: 'home-row:test', focusKey: 'home-card:test' },
+        },
+      ]}
+    >
+      <DetailsPage
+        item={item}
+        restoreRequest={restoreRequest}
+        onPlay={onPlay}
+      />
+    </BrowseShell>
   );
 }

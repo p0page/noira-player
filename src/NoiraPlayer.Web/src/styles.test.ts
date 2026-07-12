@@ -36,7 +36,22 @@ describe('TV visual contracts', () => {
       /\.home-page__rows\s*{[^}]*gap:\s*var\(--space-sm\)/s,
     );
     expect(stylesSource).toMatch(
-      /\.home-page\s*{[^}]*margin-left:\s*calc\(var\(--tv-safe\) \+ var\(--guide-collapsed\)\)[^}]*padding:\s*var\(--tv-safe\) 0/s,
+      /\.home-page\s*{[^}]*margin-left:\s*var\(--guide-collapsed\)[^}]*padding:\s*var\(--tv-safe\) 0/s,
+    );
+  });
+
+  it('keeps the collapsed Guide no wider than its icon rail', async () => {
+    await loadStyles();
+    expect(stylesSource).toContain('--guide-collapsed: 56px;');
+    expect(stylesSource).toMatch(
+      /\.guide\s*{[^}]*left:\s*0[^}]*width:\s*var\(--guide-collapsed\)[^}]*background:\s*var\(--shell-rail\)/s,
+    );
+    expect(stylesSource).not.toMatch(/\.guide::before\s*{/s);
+    expect(stylesSource).toMatch(
+      /\.guide--expanded\s*{[^}]*width:\s*var\(--guide-expanded\)[^}]*background:\s*var\(--surface\)/s,
+    );
+    expect(stylesSource).toMatch(
+      /\.library-page\s*{[^}]*margin-left:\s*var\(--guide-collapsed\)/s,
     );
   });
 

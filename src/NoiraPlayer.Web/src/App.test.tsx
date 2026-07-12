@@ -7,6 +7,7 @@ import {
   fireEvent,
   render,
   screen,
+  within,
   waitFor,
 } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -22,6 +23,8 @@ import { createFocusNavigationPolicy } from './focus/focusPolicy';
 import { createEmbyFetchTransport } from './transport';
 import { App } from './App';
 import appSource from './App.tsx?raw';
+import homePageSource from './pages/HomePage.tsx?raw';
+import libraryPageSource from './pages/LibraryPage.tsx?raw';
 
 vi.mock('./bridge', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./bridge')>();
@@ -50,6 +53,7 @@ vi.mock('./transport', async (importOriginal) => {
 
 afterEach(() => {
   cleanup();
+  Reflect.deleteProperty(window, 'chrome');
   vi.resetAllMocks();
 });
 
@@ -164,7 +168,7 @@ describe('App Home orchestration', () => {
       </FocusProvider>,
     );
 
-    await screen.findByRole('button', { name: 'Library anonymous' });
+    await screen.findByRole('button', { name: 'Open Library anonymous' });
     fireEvent.click(screen.getByRole('button', { name: 'Home' }));
     await screen.findByRole('button', { name: 'Open Fresh item anonymous' });
 
@@ -318,9 +322,7 @@ describe('App Home orchestration', () => {
     expect(screen.getByText('Old A anonymous')).toBeTruthy();
     expect(screen.queryByText('Old B anonymous')).toBeNull();
     expect(screen.queryByText('Old C anonymous')).toBeNull();
-    expect(screen.getByRole('alert').textContent).toContain(
-      'Some Home rows could not be loaded.',
-    );
+    expect(screen.queryByRole('alert')).toBeNull();
     expect(
       Array.from(document.querySelectorAll<HTMLElement>('[data-row-key^="latest:"]')).map(
         (row) => row.dataset.rowKey,
@@ -544,6 +546,61 @@ describe('App Home orchestration', () => {
 });
 
 describe('App browse route integration', () => {
+  it('keeps one persistent BrowseShell Guide across browse route changes', async () => {
+    vi.mocked(requestBridge).mockResolvedValue({
+      session: {
+        serverUrl: 'https://anonymous.invalid',
+        userId: 'anonymous-user',
+        userName: 'Anonymous User',
+        accessToken: 'anonymous-token',
+        authorization: 'Anonymous authorization',
+      },
+    });
+    vi.mocked(loadHomeCatalog).mockResolvedValue({
+      rows: [
+        {
+          key: 'latest',
+          title: 'Persistent shell row anonymous',
+          kind: 'latest',
+          items: [
+            {
+              id: 'persistent-shell-item-anonymous',
+              name: 'Persistent shell item anonymous',
+              type: 'Movie',
+              artwork: {},
+            },
+          ],
+        },
+      ],
+      failedKinds: [],
+    });
+    vi.mocked(loadLibraryLatestCatalog).mockResolvedValue({
+      rows: [],
+      failedRowKeys: [],
+    });
+
+    render(
+      <FocusProvider>
+        <App />
+      </FocusProvider>,
+    );
+
+    await screen.findByRole('button', {
+      name: 'Open Persistent shell item anonymous',
+    });
+    const guide = screen.getByRole('navigation', { name: 'Guide' });
+    fireEvent.click(screen.getByRole('button', { name: 'Search' }));
+    await screen.findByRole('heading', { name: 'Search' });
+
+    expect(screen.getAllByRole('navigation', { name: 'Guide' })).toHaveLength(1);
+    expect(screen.getByRole('navigation', { name: 'Guide' })).toBe(guide);
+    expect(appSource).toContain('<BrowseShell');
+    expect(appSource).not.toContain('<Guide');
+    expect(appSource).not.toContain("guideHidden={currentRoute.kind === 'details'}");
+    expect(homePageSource).not.toMatch(/from ['"]\.\.\/components\/Guide['"]/);
+    expect(libraryPageSource).not.toMatch(/from ['"]\.\.\/components\/Guide['"]/);
+  });
+
   it('uses the shared route graph and policy Back decision without a parallel details origin', () => {
     expect(appSource).toMatch(/\bpushRoute\b/);
     expect(appSource).toMatch(/\breplaceRoute\b/);
@@ -776,10 +833,12 @@ describe('App browse route integration', () => {
     const gridItem = await screen.findByRole('button', {
       name: 'Open Route library item anonymous',
     });
+    expect(screen.getByRole('heading', { name: 'Route library anonymous' })).toBeTruthy();
     expect(
-      screen.getByRole('button', { name: 'Route library anonymous' })
-        .getAttribute('aria-current'),
-    ).toBe('page');
+      within(screen.getByRole('navigation', { name: 'Guide' }))
+        .getAllByRole('button')
+        .some((button) => button.hasAttribute('aria-current')),
+    ).toBe(false);
     fireEvent.click(gridItem);
 
     await screen.findByRole('heading', {
@@ -819,6 +878,21 @@ describe('App browse route integration', () => {
   });
 
   it('backs direct Home details to the exact originating row card', async () => {
+    let messageHandler: ((event: { data: unknown }) => void) | undefined;
+    Object.defineProperty(window, 'chrome', {
+      configurable: true,
+      value: {
+        webview: {
+          addEventListener: vi.fn(
+            (_type: 'message', handler: (event: { data: unknown }) => void) => {
+              messageHandler = handler;
+            },
+          ),
+          removeEventListener: vi.fn(),
+          postMessage: vi.fn(),
+        },
+      },
+    });
     vi.mocked(requestBridge).mockResolvedValue({
       session: {
         serverUrl: 'https://anonymous.invalid',
@@ -882,6 +956,43 @@ describe('App browse route integration', () => {
     });
     fireEvent.click(source);
     await screen.findByRole('heading', { name: 'Direct details result anonymous' });
+    const guide = document.querySelector<HTMLElement>('[aria-label="Guide"]');
+    expect(guide).not.toBeNull();
+    expect(guide).toHaveProperty('hidden', true);
+    act(() => {
+      messageHandler?.({
+        data: {
+          type: 'host.input',
+          version: 1,
+          sequence: 1,
+          command: 'menu',
+          phase: 'pressed',
+          source: 'gamepad',
+          timestamp: 1,
+        },
+      });
+    });
+    await waitFor(() => {
+      expect(guide).toHaveProperty('hidden', false);
+      expect(guide?.getAttribute('aria-expanded')).toBe('true');
+    });
+    act(() => {
+      messageHandler?.({
+        data: {
+          type: 'host.input',
+          version: 1,
+          sequence: 2,
+          command: 'menu',
+          phase: 'pressed',
+          source: 'gamepad',
+          timestamp: 2,
+        },
+      });
+    });
+    await waitFor(() => {
+      expect(guide).toHaveProperty('hidden', true);
+      expect(guide?.getAttribute('aria-expanded')).toBe('false');
+    });
     fireEvent.keyDown(screen.getByRole('button', { name: 'Play' }), {
       key: 'Escape',
     });

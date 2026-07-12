@@ -79,6 +79,7 @@ export class EmbyRequestError extends Error {
   constructor(
     public readonly status: number,
     message: string,
+    public readonly serverError = '',
   ) {
     super(message);
     this.name = 'EmbyRequestError';
@@ -143,7 +144,16 @@ export class EmbyWebClient {
       Limit: String(normalizeLimit(limit, 20)),
     });
     this.addImageQueryParameters(query);
-    const response = await this.getJson<EmbyItemsResponse>(`Shows/NextUp?${query}`);
+    let response: EmbyItemsResponse;
+    try {
+      response = await this.getJson<EmbyItemsResponse>(`Shows/NextUp?${query}`);
+    } catch (cause) {
+      if (isUnsupportedGlobalNextUp(cause)) {
+        return [];
+      }
+
+      throw cause;
+    }
 
     return this.mapItems(response.Items);
   }
@@ -173,7 +183,6 @@ export class EmbyWebClient {
     const normalizedStartIndex = normalizeStartIndex(startIndex);
     const strategy = getLibraryItemsQueryStrategy(options);
     const query = new URLSearchParams({
-      ParentId: parentId,
       IncludeItemTypes: strategy.includeItemTypes,
       Recursive: 'true',
       SortBy: 'SortName',
@@ -182,6 +191,15 @@ export class EmbyWebClient {
       Limit: String(normalizeLimit(limit, 50)),
       Fields: itemFields,
     });
+    if (parentId.trim()) {
+      query.set('ParentId', parentId.trim());
+    }
+    if (options.searchTerm?.trim()) {
+      query.set('SearchTerm', options.searchTerm.trim());
+    }
+    if (options.filters?.trim()) {
+      query.set('Filters', options.filters.trim());
+    }
     if (strategy.mediaTypes) {
       query.set('MediaTypes', strategy.mediaTypes);
     }
@@ -205,6 +223,24 @@ export class EmbyWebClient {
       startIndex: pageStartIndex,
       totalRecordCount,
     };
+  }
+
+  async searchItems(query: string): Promise<MediaItem[]> {
+    return (
+      await this.getItemsPage('', 0, maxCatalogLimit, {
+        includeItemTypes: fallbackLibraryItemTypes,
+        searchTerm: query,
+      })
+    ).items;
+  }
+
+  async getFavoriteItems(): Promise<MediaItem[]> {
+    return (
+      await this.getItemsPage('', 0, maxCatalogLimit, {
+        filters: 'IsFavorite',
+        includeItemTypes: fallbackLibraryItemTypes,
+      })
+    ).items;
   }
 
   // Temporary compatibility for the pre-Task 8 App.tsx call site.
@@ -254,9 +290,11 @@ export class EmbyWebClient {
 
     if (!response.ok) {
       const statusText = response.statusText ? ` ${response.statusText}` : '';
+      const serverError = await readEmbyServerError(response);
       throw new EmbyRequestError(
         response.status,
         `Emby request failed: ${response.status}${statusText}`,
+        serverError,
       );
     }
 
@@ -333,6 +371,31 @@ export class EmbyWebClient {
   private createUrl(path: string): string {
     return `${this.serverUrl}/${path.replace(/^\/+/, '')}`;
   }
+}
+
+function isUnsupportedGlobalNextUp(cause: unknown): boolean {
+  return (
+    cause instanceof EmbyRequestError &&
+    cause.status === 400 &&
+    cause.serverError.trim().toLowerCase() === 'seriesid is required'
+  );
+}
+
+async function readEmbyServerError(response: Response): Promise<string> {
+  try {
+    const body = (await response.json()) as unknown;
+    if (
+      typeof body === 'object' &&
+      body !== null &&
+      !Array.isArray(body) &&
+      typeof (body as Record<string, unknown>).error === 'string'
+    ) {
+      return (body as Record<string, string>).error.slice(0, 256);
+    }
+  } catch {
+  }
+
+  return '';
 }
 
 function getLibraryItemsQueryStrategy(options: LibraryItemsOptions): LibraryItemsQueryStrategy {

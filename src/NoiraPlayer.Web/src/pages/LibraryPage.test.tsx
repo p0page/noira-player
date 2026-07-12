@@ -14,6 +14,8 @@ import {
   within,
 } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { ComponentProps } from 'react';
+import { BrowseShell } from '../components/BrowseShell';
 import type { EmbyWebClient } from '../emby';
 import { FocusProvider } from '../focus/FocusProvider';
 import { createFocusNavigationPolicy } from '../focus/focusPolicy';
@@ -21,9 +23,53 @@ import type { ItemPage } from '../types';
 import {
   getLibraryGridFocusKey,
   getLibraryGridScopeKey,
-  LibraryPage,
+  LibraryPage as LibraryPageContent,
 } from './LibraryPage';
 import libraryPageSource from './LibraryPage.tsx?raw';
+
+type LibraryPageTestProps = ComponentProps<typeof LibraryPageContent> & {
+  libraries: readonly { id: string; name: string; collectionType: string }[];
+  onBack: (origin: { scopeKey: string; focusKey: string }) => void;
+  onFavorites?: () => void;
+  onLogout: () => void;
+  onOpenLibrary: (library: { id: string; name: string; collectionType: string }) => void;
+  onSearch?: () => void;
+  routeOrigin: { scopeKey: string; focusKey: string };
+};
+
+function LibraryPage({
+  libraries: _libraries,
+  onBack,
+  onFavorites = () => undefined,
+  onLogout,
+  onOpenLibrary: _onOpenLibrary,
+  onSearch = () => undefined,
+  routeOrigin,
+  ...contentProps
+}: LibraryPageTestProps) {
+  const route = {
+    kind: 'library' as const,
+    libraryId: contentProps.library.id,
+    collectionType: contentProps.library.collectionType,
+    origin: routeOrigin,
+  };
+  return (
+    <BrowseShell
+      activeRoute={{ kind: 'library', libraryId: contentProps.library.id }}
+      defaultGuideFocus
+      onFavorites={onFavorites}
+      onHome={() => onBack(routeOrigin)}
+      onLogout={onLogout}
+      onNavigateBack={() => onBack(routeOrigin)}
+      onNativeBack={() => undefined}
+      onSearch={onSearch}
+      restoreRequest={contentProps.restoreRequest}
+      routeStack={[{ kind: 'home' }, route]}
+    >
+      <LibraryPageContent {...contentProps} />
+    </BrowseShell>
+  );
+}
 
 afterEach(() => {
   cleanup();
@@ -85,12 +131,11 @@ describe('LibraryPage paging', () => {
       50,
       { collectionType: 'movies' },
     );
-    expect(
-      within(screen.getByRole('navigation', { name: 'Guide' })).getByRole(
-        'button',
-        { name: 'Page zero library anonymous' },
-      ).getAttribute('aria-current'),
-    ).toBe('page');
+    const guideButtons = within(
+      screen.getByRole('navigation', { name: 'Guide' }),
+    ).getAllByRole('button');
+    expect(guideButtons).toHaveLength(4);
+    expect(guideButtons.some((button) => button.hasAttribute('aria-current'))).toBe(false);
   });
 
   it('appends by API position, rejects blank and duplicate IDs, and preserves existing DOM focus', async () => {
@@ -750,9 +795,7 @@ describe('LibraryPage focus and Back behavior', () => {
     const cards = await screen.findAllByRole('button', { name: /Open Grid/ });
     const guide = screen.getByRole('navigation', { name: 'Guide' });
     const home = screen.getByRole('button', { name: 'Home' });
-    const activeLibrary = screen.getByRole('button', {
-      name: 'Geometry library anonymous',
-    });
+    const favorites = screen.getByRole('button', { name: 'Favorites' });
     const logout = screen.getByRole('button', { name: 'Log out' });
     const guideScope = getScopeElement('home-guide');
     const gridScope = document.querySelector<HTMLElement>(
@@ -763,22 +806,22 @@ describe('LibraryPage focus and Back behavior', () => {
     }
 
     mockRectResolver(guideScope, () =>
-      createRect(56, 0, guide.getAttribute('aria-expanded') === 'true' ? 248 : 72, 980),
+      createRect(0, 0, guide.getAttribute('aria-expanded') === 'true' ? 248 : 56, 980),
     );
     mockRectResolver(home, () =>
-      createRect(64, 96, guide.getAttribute('aria-expanded') === 'true' ? 232 : 56, 52),
+      createRect(guide.getAttribute('aria-expanded') === 'true' ? 8 : 4, 96, guide.getAttribute('aria-expanded') === 'true' ? 232 : 48, 52),
     );
-    mockRectResolver(activeLibrary, () =>
-      createRect(64, 396, guide.getAttribute('aria-expanded') === 'true' ? 232 : 56, 52),
+    mockRectResolver(favorites, () =>
+      createRect(guide.getAttribute('aria-expanded') === 'true' ? 8 : 4, 396, guide.getAttribute('aria-expanded') === 'true' ? 232 : 48, 52),
     );
     mockRectResolver(logout, () =>
-      createRect(64, 696, guide.getAttribute('aria-expanded') === 'true' ? 232 : 56, 52),
+      createRect(guide.getAttribute('aria-expanded') === 'true' ? 8 : 4, 696, guide.getAttribute('aria-expanded') === 'true' ? 232 : 48, 52),
     );
-    mockRect(gridScope, 128, 80, 560, 900);
+    mockRect(gridScope, 56, 80, 560, 900);
     cards.forEach((card, index) => {
       mockRect(
         card,
-        136 + (index % 3) * 184,
+        64 + (index % 3) * 184,
         96 + Math.floor(index / 3) * 300,
         168,
         272,
@@ -822,7 +865,7 @@ describe('LibraryPage focus and Back behavior', () => {
     await waitFor(() => expect(document.activeElement).toBe(cards[4]));
   });
 
-  it('reports the exact Home route origin when a grid card handles Escape', async () => {
+  it('routes grid Escape through BrowseShell with the exact Home origin', async () => {
     const onBack = vi.fn();
     const getItemsPage = vi
       .fn<EmbyWebClient['getItemsPage']>()
@@ -1141,7 +1184,7 @@ describe('LibraryPage focus and Back behavior', () => {
     const guide = screen.getByRole('navigation', { name: 'Guide' });
     const home = within(guide).getByRole('button', { name: 'Home' });
     const libraryDestination = within(guide).getByRole('button', {
-      name: 'Deep guide library anonymous',
+      name: 'Favorites',
     });
     const logout = within(guide).getByRole('button', { name: 'Log out' });
     mockRect(getScopeElement('home-guide'), 0, 0, 128, 320);
@@ -1297,7 +1340,7 @@ describe('LibraryPage focus and Back behavior', () => {
     const guide = screen.getByRole('navigation', { name: 'Guide' });
     const home = within(guide).getByRole('button', { name: 'Home' });
     const libraryDestination = within(guide).getByRole('button', {
-      name: 'Pending guide library anonymous',
+      name: 'Favorites',
     });
     const logout = within(guide).getByRole('button', { name: 'Log out' });
     await waitFor(() => expect(document.activeElement).toBe(home));

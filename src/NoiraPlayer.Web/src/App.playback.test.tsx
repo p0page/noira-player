@@ -98,6 +98,33 @@ afterEach(() => {
 });
 
 describe('App native playback handoff', () => {
+  it('returns an already-running Details route to Home when the host is launched again', async () => {
+    vi.mocked(requestBridge).mockResolvedValueOnce(bootstrapResult());
+
+    render(
+      <FocusProvider>
+        <App />
+      </FocusProvider>,
+    );
+    const card = await screen.findByRole('button', {
+      name: 'Open Playback details item anonymous',
+    });
+    fireEvent.click(card);
+    await screen.findByRole('button', { name: 'Resume' });
+
+    act(() => {
+      for (const listener of [...lifecycleListeners]) {
+        listener({ type: 'host.lifecycle', event: 'activated-home' });
+      }
+    });
+
+    expect(screen.queryByRole('button', { name: 'Resume' })).toBeNull();
+    const restoredCard = screen.getByRole('button', {
+      name: 'Open Playback details item anonymous',
+    });
+    await waitFor(() => expect(document.activeElement).toBe(restoredCard));
+  });
+
   it('pauses before sending the exact payload and resumes Details from a host event', async () => {
     let resolvePlayback!: (value: unknown) => void;
     const playback = new Promise((resolve) => {

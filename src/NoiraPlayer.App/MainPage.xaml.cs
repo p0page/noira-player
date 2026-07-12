@@ -2,11 +2,13 @@ using System;
 using System.Globalization;
 using System.Threading.Tasks;
 using Microsoft.Web.WebView2.Core;
+using NoiraPlayer.App.Input;
 using NoiraPlayer.App.Navigation;
 using NoiraPlayer.App.Services;
 using NoiraPlayer.App.Web;
 using NoiraPlayer.App.Views;
 using NoiraPlayer.Core.Diagnostics;
+using NoiraPlayer.Core.Input;
 using Windows.Storage;
 using Windows.UI.Core;
 using Windows.UI.Xaml;
@@ -25,8 +27,11 @@ namespace NoiraPlayer.App
         private const string PackagedWebAppUrl = "https://app.noira.local/index.html";
         private const string PlaybackReturnedMessage =
             "{\"type\":\"host.lifecycle\",\"event\":\"playback-returned\"}";
+        private const string ActivatedHomeMessage =
+            "{\"type\":\"host.lifecycle\",\"event\":\"activated-home\"}";
         private const int PlaybackReturnNotificationMaxAttempts = 5;
         private readonly NoiraWebBridge _webBridge = new NoiraWebBridge();
+        private IDisposable? _browseInputRegistration;
         private Uri _webAppSource = new Uri(PackagedWebAppUrl);
         private bool _playbackLaunchInFlight;
         private bool _playbackNavigationPending;
@@ -34,6 +39,8 @@ namespace NoiraPlayer.App
         private bool _playbackReturnObserved;
         private bool _playbackTeardownCompleted;
         private bool _webViewInitialized;
+        private bool _webInputReady;
+        private bool _homeNavigationRequested;
 
         public MainPage()
         {
@@ -41,6 +48,7 @@ namespace NoiraPlayer.App
             PlaybackDiagnosticsLog.WriteBuildMarker(typeof(MainPage));
             NavigationCacheMode = NavigationCacheMode.Required;
             Loaded += MainPage_OnLoaded;
+            Unloaded += MainPage_OnUnloaded;
         }
 
         protected override void OnNavigatedTo(NavigationEventArgs e)
@@ -57,13 +65,24 @@ namespace NoiraPlayer.App
 
         public void NavigateHome()
         {
-            // Kept only so legacy native pages still compile while the spike entry point is WebView-only.
+            _homeNavigationRequested = true;
+            TryPostHomeNavigationRequested();
         }
 
         private async void MainPage_OnLoaded(object sender, RoutedEventArgs e)
         {
+            EnsureBrowseInputRegistration();
             await InitializeWebViewAsync();
+            TryPostHomeNavigationRequested();
             TryPostPlaybackReturned();
+        }
+
+        private void MainPage_OnUnloaded(object sender, RoutedEventArgs e)
+        {
+            MarkWebInputNotReady();
+            _browseInputRegistration?.Dispose();
+            _browseInputRegistration = null;
+            InputDiagnosticsLog.Write("input context left BrowseWeb");
         }
 
         private async Task InitializeWebViewAsync()
@@ -90,6 +109,7 @@ namespace NoiraPlayer.App
                 PackagedWebAppFolderName,
                 CoreWebView2HostResourceAccessKind.Deny);
             core.WebMessageReceived += ShellWebView_OnWebMessageReceived;
+            core.NavigationStarting += ShellWebView_OnNavigationStarting;
 
 #if DEBUG
             if (await TryRunDevelopmentPlaybackCommandAsync())
@@ -103,10 +123,81 @@ namespace NoiraPlayer.App
             ShellWebView.Focus(FocusState.Programmatic);
         }
 
+        private void EnsureBrowseInputRegistration()
+        {
+            if (_browseInputRegistration != null)
+            {
+                return;
+            }
+
+            _browseInputRegistration = ((App)Application.Current).InputRouter.Register(
+                InputContext.BrowseWeb,
+                PostBrowseInput);
+            InputDiagnosticsLog.Write("input context entered BrowseWeb");
+        }
+
+        private void PostBrowseInput(InputEnvelope input)
+        {
+            var core = ShellWebView.CoreWebView2;
+            if (!_webInputReady || core == null)
+            {
+                return;
+            }
+
+            try
+            {
+                core.PostWebMessageAsJson(WebHostInputMessageSerializer.Serialize(input));
+            }
+            catch (Exception error)
+            {
+                MarkWebInputNotReady();
+                InputDiagnosticsLog.Write(
+                    "web input transport failed type=" + error.GetType().FullName +
+                    " hresult=0x" + error.HResult.ToString("X8"));
+            }
+        }
+
+        private void ShellWebView_OnNavigationStarting(
+            CoreWebView2 sender,
+            CoreWebView2NavigationStartingEventArgs args)
+        {
+            MarkWebInputNotReady();
+            InputDiagnosticsLog.Write("web input transport not-ready");
+        }
+
+        private void MarkWebInputNotReady()
+        {
+            _webInputReady = false;
+            ((App)Application.Current).InputRouter.ResetInputState();
+        }
+
+        private void TryPostHomeNavigationRequested()
+        {
+            if (!_homeNavigationRequested)
+            {
+                return;
+            }
+
+            var core = ShellWebView.CoreWebView2;
+            if (core == null)
+            {
+                return;
+            }
+
+            core.PostWebMessageAsJson(ActivatedHomeMessage);
+            _homeNavigationRequested = false;
+            ShellWebView.Focus(FocusState.Programmatic);
+        }
+
         private async void ShellWebView_OnWebMessageReceived(
             CoreWebView2 sender,
             CoreWebView2WebMessageReceivedEventArgs args)
         {
+            if (TryHandleHostControlMessage(args.Source, args.WebMessageAsJson))
+            {
+                return;
+            }
+
             var result = await _webBridge.HandleAsync(
                 args.Source,
                 _webAppSource,
@@ -160,6 +251,48 @@ namespace NoiraPlayer.App
                 _playbackNavigationPending
                     ? result.ResponseJson
                     : result.PlaybackNavigationFailedResponseJson);
+        }
+
+        private bool TryHandleHostControlMessage(string source, string messageJson)
+        {
+            if (!WebHostControlMessage.TryParse(messageJson, out var message))
+            {
+                return false;
+            }
+
+            if (!NoiraWebBridge.IsAllowedSource(source, _webAppSource))
+            {
+                return true;
+            }
+
+            if (message.Command == WebHostControlCommand.Ready)
+            {
+                if (message.InputVersion != 1)
+                {
+                    InputDiagnosticsLog.Write("web input transport rejected version");
+                    return true;
+                }
+
+                ((App)Application.Current).InputRouter.ResetInputState();
+                _webInputReady = true;
+                InputDiagnosticsLog.Write("web input transport ready");
+                return true;
+            }
+
+            if (message.Command == WebHostControlCommand.NativeBack)
+            {
+                if (Frame.CanGoBack)
+                {
+                    Frame.GoBack();
+                }
+                else
+                {
+                    InputDiagnosticsLog.Write("native back reached root");
+                }
+                return true;
+            }
+
+            return false;
         }
 
         private void PlaybackPage_OnTeardownCompleted(object? sender, EventArgs e)

@@ -35,7 +35,7 @@ interface CoreRowLoad {
 
 interface LibraryRowLoad {
   library: LibrarySnapshot;
-  request: Promise<MediaItem[]>;
+  request: () => Promise<MediaItem[]>;
 }
 
 interface LibrarySnapshot {
@@ -45,6 +45,7 @@ interface LibrarySnapshot {
 }
 
 const rowLimit = 24;
+const supplementalConcurrency = 4;
 
 export async function loadHomeCatalog(client: HomeCatalogClient): Promise<HomeCatalog> {
   const loads: CoreRowLoad[] = [
@@ -126,7 +127,7 @@ export async function loadLibraryLatestCatalog(
 
     loads.push({
       library,
-      request: startRequest(() =>
+      request: () => startRequest(() =>
         client.getLatestItems({
           parentId: library.id,
           includeItemTypes,
@@ -136,7 +137,7 @@ export async function loadLibraryLatestCatalog(
     });
   }
 
-  const results = await Promise.allSettled(loads.map((load) => load.request));
+  const results = await settleWithConcurrency(loads, supplementalConcurrency);
   const rows: HomeRow[] = [];
   const failedRowKeys: string[] = [];
   for (let index = 0; index < loads.length; index += 1) {
@@ -159,6 +160,31 @@ export async function loadLibraryLatestCatalog(
   }
 
   return { rows, failedRowKeys };
+}
+
+async function settleWithConcurrency(
+  loads: readonly LibraryRowLoad[],
+  concurrency: number,
+): Promise<PromiseSettledResult<MediaItem[]>[]> {
+  const results = new Array<PromiseSettledResult<MediaItem[]>>(loads.length);
+  let nextIndex = 0;
+
+  async function runWorker(): Promise<void> {
+    while (nextIndex < loads.length) {
+      const index = nextIndex;
+      nextIndex += 1;
+      try {
+        results[index] = { status: 'fulfilled', value: await loads[index].request() };
+      } catch (reason) {
+        results[index] = { status: 'rejected', reason };
+      }
+    }
+  }
+
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, loads.length) }, () => runWorker()),
+  );
+  return results;
 }
 
 function getLatestItemTypes(collectionType: string): string | undefined {

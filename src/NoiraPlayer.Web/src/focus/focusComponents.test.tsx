@@ -17,6 +17,7 @@ import { Focusable } from './Focusable';
 import {
   FocusProvider,
   NoiraFocusScopeContext,
+  useGlobalInputHandler,
   useNoiraFocusScope,
 } from './FocusProvider';
 import type { NoiraFocusScopeState } from './FocusProvider';
@@ -51,8 +52,66 @@ afterEach(() => {
 });
 
 describe('FocusProvider', () => {
+  it('owns one semantic host listener and one ready signal through StrictMode replay', () => {
+    let messageHandler: ((event: { data: unknown }) => void) | undefined;
+    const addEventListener = vi.fn(
+      (_type: 'message', handler: (event: { data: unknown }) => void) => {
+        messageHandler = handler;
+      },
+    );
+    const postMessage = vi.fn();
+    Object.defineProperty(window, 'chrome', {
+      configurable: true,
+      value: {
+        webview: {
+          addEventListener,
+          removeEventListener: vi.fn(),
+          postMessage,
+        },
+      },
+    });
+    const onInput = vi.fn(() => true);
+
+    function InputBoundary() {
+      useGlobalInputHandler(onInput);
+      return <p>Semantic input boundary</p>;
+    }
+
+    render(
+      <StrictMode>
+        <FocusProvider>
+          <InputBoundary />
+        </FocusProvider>
+      </StrictMode>,
+    );
+
+    expect(addEventListener).toHaveBeenCalledOnce();
+    expect(postMessage).toHaveBeenCalledOnce();
+    expect(postMessage).toHaveBeenCalledWith({
+      type: 'host.ready',
+      inputVersion: 1,
+    });
+
+    act(() => {
+      messageHandler?.({
+        data: {
+          type: 'host.input',
+          version: 1,
+          sequence: 1,
+          command: 'menu',
+          phase: 'pressed',
+          source: 'gamepad',
+          timestamp: 1,
+        },
+      });
+    });
+
+    expect(onInput).toHaveBeenCalledOnce();
+  });
+
   it('initializes once and keeps descendant registrations unique through StrictMode replay', async () => {
     const addEventListener = vi.spyOn(window, 'addEventListener');
+    const removeEventListener = vi.spyOn(window, 'removeEventListener');
 
     render(
       <StrictMode>
@@ -78,12 +137,24 @@ describe('FocusProvider', () => {
       ]);
     });
 
+    const keydownCaptureRegistrations = addEventListener.mock.calls.filter(
+      ([eventName, , options]) => eventName === 'keydown' && options === true,
+    );
+    const keyupCaptureRegistrations = addEventListener.mock.calls.filter(
+      ([eventName, , options]) => eventName === 'keyup' && options === true,
+    );
+    const keydownCaptureRemovals = removeEventListener.mock.calls.filter(
+      ([eventName, , options]) => eventName === 'keydown' && options === true,
+    );
+    const keyupCaptureRemovals = removeEventListener.mock.calls.filter(
+      ([eventName, , options]) => eventName === 'keyup' && options === true,
+    );
     expect(
-      addEventListener.mock.calls.filter(([eventName]) => eventName === 'keydown'),
-    ).toHaveLength(1);
+      keydownCaptureRegistrations.length - keydownCaptureRemovals.length,
+    ).toBe(1);
     expect(
-      addEventListener.mock.calls.filter(([eventName]) => eventName === 'keyup'),
-    ).toHaveLength(1);
+      keyupCaptureRegistrations.length - keyupCaptureRemovals.length,
+    ).toBe(1);
     expect(spatialNavigation.enabled).toBe(true);
     expect(SpatialNavigation.options.shouldFocusDOMNode).toBe(true);
     expect(spatialNavigation.layoutAdapter).toBeInstanceOf(GetBoundingClientRectAdapter);
@@ -100,29 +171,38 @@ describe('FocusProvider', () => {
 
   it('resumes the global policy from a typed native playback return event', async () => {
     let messageHandler: ((event: { data: unknown }) => void) | undefined;
+    const addEventListener = vi.fn(
+      (_type: 'message', handler: (event: { data: unknown }) => void) => {
+        messageHandler = handler;
+      },
+    );
+    const postMessage = vi.fn();
     Object.defineProperty(window, 'chrome', {
       configurable: true,
       value: {
         webview: {
-          addEventListener: vi.fn(
-            (_type: 'message', handler: (event: { data: unknown }) => void) => {
-              messageHandler = handler;
-            },
-          ),
+          addEventListener,
           removeEventListener: vi.fn(),
-          postMessage: vi.fn(),
+          postMessage,
         },
       },
     });
     const policy = createFocusNavigationPolicy();
+    const onInput = vi.fn(() => true);
+
+    function InputBoundary() {
+      useGlobalInputHandler(onInput);
+      return <p>Lifecycle child anonymous</p>;
+    }
 
     render(
       <FocusProvider policy={policy}>
-        <p>Lifecycle child anonymous</p>
+        <InputBoundary />
       </FocusProvider>,
     );
     policy.pause();
     expect(policy.isPaused()).toBe(true);
+    expect(postMessage).toHaveBeenCalledTimes(1);
 
     act(() => {
       messageHandler?.({
@@ -131,6 +211,27 @@ describe('FocusProvider', () => {
     });
 
     expect(policy.isPaused()).toBe(false);
+    expect(addEventListener).toHaveBeenCalledOnce();
+    expect(postMessage).toHaveBeenCalledTimes(2);
+    expect(postMessage).toHaveBeenLastCalledWith({
+      type: 'host.ready',
+      inputVersion: 1,
+    });
+
+    act(() => {
+      messageHandler?.({
+        data: {
+          type: 'host.input',
+          version: 1,
+          sequence: 1,
+          command: 'menu',
+          phase: 'pressed',
+          source: 'gamepad',
+          timestamp: 1,
+        },
+      });
+    });
+    expect(onInput).toHaveBeenCalledOnce();
   });
 
   it('preserves a later pending default through StrictMode registration replay', async () => {

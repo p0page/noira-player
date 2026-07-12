@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
-import { requestBridge, subscribeHostLifecycle } from './bridge';
+import {
+  postNativeBack,
+  requestBridge,
+  subscribeHostLifecycle,
+} from './bridge';
 import {
   loadHomeCatalog,
   loadLibraryLatestCatalog,
@@ -10,6 +14,8 @@ import {
   type LibraryLatestCatalog,
 } from './catalog/homeCatalog';
 import { EmbyRequestError, EmbyWebClient } from './emby';
+import { BrowseShell, type BrowseShellProps } from './components/BrowseShell';
+import { guideScopeKey } from './components/Guide';
 import { useFocusNavigationPolicy } from './focus/FocusProvider';
 import {
   createFocusRestoreRequest,
@@ -29,6 +35,8 @@ import {
   getDetailsPlayFocusKey,
 } from './pages/DetailsPage';
 import { LibraryPage } from './pages/LibraryPage';
+import { FavoritesPage } from './pages/FavoritesPage';
+import { SearchPage } from './pages/SearchPage';
 import { createEmbyFetchTransport } from './transport';
 import type {
   BootstrapResult,
@@ -69,7 +77,7 @@ export function App() {
   const currentRoute: BrowseRoute = routeStack[routeStack.length - 1] ?? {
     kind: 'home',
   };
-  const libraries = extractLibraries(homeRows);
+  const guideActiveRoute = resolveGuideActiveRoute(routeStack);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -85,6 +93,24 @@ export function App() {
 
   useEffect(() => {
     return subscribeHostLifecycle((event) => {
+      if (event.event === 'activated-home') {
+        const activationRestoreTarget =
+          currentRoute.kind === 'home' ? null : currentRoute.origin;
+        beginOperation();
+        playbackLaunchInFlightRef.current = false;
+        focusPolicy.resume();
+        setBusy(false);
+        setRouteStack([{ kind: 'home' }]);
+        setActiveLibrary(null);
+        setSelectedItem(null);
+        setRestoreRequest(
+          activationRestoreTarget
+            ? createFocusRestoreRequest(activationRestoreTarget)
+            : null,
+        );
+        return;
+      }
+
       if (event.event !== 'playback-returned') {
         return;
       }
@@ -207,7 +233,7 @@ export function App() {
     );
     replaceHomeRows(mergeRows(coreRows, supplementalRows));
     setError(
-      describeCatalogFailures(catalog, supplementalCatalog.failedRowKeys.length),
+      describeCatalogFailures(catalog),
     );
   }
 
@@ -277,6 +303,25 @@ export function App() {
     setRouteStack(nextStack);
   }
 
+  function openShellDestination(kind: 'search' | 'favorites') {
+    if (logoutPendingRef.current || !client) {
+      return;
+    }
+
+    const origin: FocusTarget = {
+      scopeKey: guideScopeKey,
+      focusKey: kind === 'search' ? 'guide:search' : 'guide:favorites',
+    };
+    const nextStack = pushRoute([{ kind: 'home' }], { kind, origin });
+    beginOperation();
+    setBusy(false);
+    setError('');
+    setActiveLibrary(null);
+    setSelectedItem(null);
+    setRestoreRequest(null);
+    setRouteStack(nextStack);
+  }
+
   async function loadDetails(itemId: string, origin: FocusTarget) {
     if (logoutPendingRef.current) {
       return;
@@ -319,7 +364,7 @@ export function App() {
     }
   }
 
-  function browseBack() {
+  function browseBack(restoreTarget?: FocusTarget) {
     const decision = focusPolicy.decideBack(routeStack);
     if (decision.kind !== 'navigate') {
       return;
@@ -333,7 +378,9 @@ export function App() {
     beginOperation();
     setBusy(false);
     setError('');
-    setRestoreRequest(createFocusRestoreRequest(decision.restoreTarget));
+    setRestoreRequest(
+      createFocusRestoreRequest(restoreTarget ?? decision.restoreTarget),
+    );
     setRouteStack(nextStack);
     setSelectedItem(null);
     if (decision.route.kind === 'home') {
@@ -500,45 +547,74 @@ export function App() {
         </main>
       ) : null}
 
-      {authState === 'browse' && currentRoute.kind === 'home' ? (
-        <HomePage
-          busy={busy}
-          restoreRequest={restoreRequest}
-          rows={homeRows}
+      {authState === 'browse' ? (
+        <BrowseShell
+          activeRoute={guideActiveRoute}
+          defaultGuideFocus={
+            currentRoute.kind === 'home' && !hasFocusableHomeContent(homeRows)
+          }
+          guideOverlayOnly={currentRoute.kind === 'details'}
+          onFavorites={() => {
+            if (currentRoute.kind !== 'favorites') {
+              openShellDestination('favorites');
+            }
+          }}
           onHome={() => void reloadHome()}
           onLogout={() => void logout()}
-          onOpenLibrary={openLibrary}
-          onOpenMedia={(item, origin) => void loadDetails(item.id, origin)}
-        />
-      ) : null}
-
-      {authState === 'browse' &&
-      currentRoute.kind === 'library' &&
-      client &&
-      activeLibrary ? (
-        <LibraryPage
-          busy={busy}
-          client={client}
-          library={activeLibrary}
-          libraries={libraries}
-          onAuthenticationRequired={requireAuthentication}
+          onNavigateBack={(target) => browseBack(target)}
+          onNativeBack={() => void postNativeBack()}
+          onSearch={() => {
+            if (currentRoute.kind !== 'search') {
+              openShellDestination('search');
+            }
+          }}
           restoreRequest={restoreRequest}
-          routeOrigin={currentRoute.origin}
-          onBack={() => browseBack()}
-          onLogout={() => void logout()}
-          onOpenLibrary={(library) => openLibrary(library, currentRoute.origin)}
-          onOpenMedia={(item, origin) => void loadDetails(item.id, origin)}
-        />
-      ) : null}
+          routeStack={routeStack}
+        >
+          {currentRoute.kind === 'home' ? (
+            <HomePage
+              busy={busy}
+              restoreRequest={restoreRequest}
+              rows={homeRows}
+              onOpenLibrary={openLibrary}
+              onOpenMedia={(item, origin) => void loadDetails(item.id, origin)}
+            />
+          ) : null}
 
-      {authState === 'browse' && currentRoute.kind === 'details' && selectedItem ? (
-        <DetailsPage
-          busy={busy}
-          item={selectedItem}
-          restoreRequest={restoreRequest}
-          onBack={browseBack}
-          onPlay={(item) => void playNatively(item)}
-        />
+          {currentRoute.kind === 'library' && client && activeLibrary ? (
+            <LibraryPage
+              busy={busy}
+              client={client}
+              library={activeLibrary}
+              onAuthenticationRequired={requireAuthentication}
+              restoreRequest={restoreRequest}
+              onOpenMedia={(item, origin) => void loadDetails(item.id, origin)}
+            />
+          ) : null}
+
+          {currentRoute.kind === 'search' && client ? (
+          <SearchPage
+            client={client}
+            onOpenMedia={(item, origin) => void loadDetails(item.id, origin)}
+          />
+          ) : null}
+
+          {currentRoute.kind === 'favorites' && client ? (
+          <FavoritesPage
+            client={client}
+            onOpenMedia={(item, origin) => void loadDetails(item.id, origin)}
+          />
+          ) : null}
+
+          {currentRoute.kind === 'details' && selectedItem ? (
+            <DetailsPage
+              busy={busy}
+              item={selectedItem}
+              restoreRequest={restoreRequest}
+              onPlay={(item) => void playNatively(item)}
+            />
+          ) : null}
+        </BrowseShell>
       ) : null}
     </div>
   );
@@ -546,6 +622,30 @@ export function App() {
 
 function createClient(session: SessionBootstrap): EmbyWebClient {
   return new EmbyWebClient(session, createEmbyFetchTransport(session));
+}
+
+function resolveGuideActiveRoute(
+  routeStack: readonly BrowseRoute[],
+): BrowseShellProps['activeRoute'] {
+  for (let index = routeStack.length - 1; index >= 0; index -= 1) {
+    const route = routeStack[index];
+    if (route.kind === 'search' || route.kind === 'favorites') {
+      return { kind: route.kind };
+    }
+    if (route.kind === 'library') {
+      return { kind: 'library', libraryId: route.libraryId };
+    }
+    if (route.kind === 'home') {
+      return { kind: 'home' };
+    }
+  }
+  return { kind: 'home' };
+}
+
+function hasFocusableHomeContent(rows: readonly HomeRow[]): boolean {
+  return rows.some((row) =>
+    row.items.some((item) => typeof item.id === 'string' && item.id.trim().length > 0),
+  );
 }
 
 function resolveCoreRows(
@@ -657,11 +757,8 @@ function resolveSupplementalRows(
   return result;
 }
 
-function describeCatalogFailures(
-  catalog: HomeCatalog,
-  supplementalFailureCount = 0,
-): string {
-  if (catalog.failedKinds.length === 0 && supplementalFailureCount === 0) {
+function describeCatalogFailures(catalog: HomeCatalog): string {
+  if (catalog.failedKinds.length === 0) {
     return '';
   }
 

@@ -82,6 +82,7 @@ public sealed class ModernUwpSolutionContractTests
         var focusScopeSource = ReadRepositoryFile("src", "NoiraPlayer.Web", "src", "focus", "FocusScope.tsx");
         var focusPolicySource = ReadRepositoryFile("src", "NoiraPlayer.Web", "src", "focus", "focusPolicy.ts");
         var homeCatalogSource = ReadRepositoryFile("src", "NoiraPlayer.Web", "src", "catalog", "homeCatalog.ts");
+        var browseShellSource = ReadRepositoryFile("src", "NoiraPlayer.Web", "src", "components", "BrowseShell.tsx");
         var homePageSource = ReadRepositoryFile("src", "NoiraPlayer.Web", "src", "pages", "HomePage.tsx");
         var libraryPageSource = ReadRepositoryFile("src", "NoiraPlayer.Web", "src", "pages", "LibraryPage.tsx");
         var detailsPageSource = ReadRepositoryFile("src", "NoiraPlayer.Web", "src", "pages", "DetailsPage.tsx");
@@ -257,7 +258,9 @@ public sealed class ModernUwpSolutionContractTests
         Assert.Contains("subscribeHostLifecycle", focusProviderSource, StringComparison.Ordinal);
         Assert.Contains("FocusNavigationPolicy", focusPolicySource, StringComparison.Ordinal);
         Assert.Contains("scopeKey", focusScopeSource, StringComparison.Ordinal);
-        Assert.Contains("<Guide", homePageSource, StringComparison.Ordinal);
+        Assert.Contains("<BrowseShell", webAppSource, StringComparison.Ordinal);
+        Assert.Contains("<Guide", browseShellSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("<Guide", homePageSource, StringComparison.Ordinal);
         Assert.Contains("<MediaRow", homePageSource, StringComparison.Ordinal);
         Assert.Contains("getItemsPage", libraryPageSource, StringComparison.Ordinal);
         Assert.Contains("resolveDetailsAtmosphereUrl", detailsPageSource, StringComparison.Ordinal);

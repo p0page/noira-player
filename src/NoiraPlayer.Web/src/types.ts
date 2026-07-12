@@ -49,7 +49,9 @@ export interface ItemPage {
 
 export interface LibraryItemsOptions {
   collectionType?: string;
+  filters?: string;
   includeItemTypes?: string;
+  searchTerm?: string;
 }
 
 export interface LatestItemsOptions {

@@ -31,7 +31,49 @@ export interface HostPlaybackReturnedEvent {
   event: 'playback-returned';
 }
 
-export type HostLifecycleEvent = HostPlaybackReturnedEvent;
+export interface HostActivatedHomeEvent {
+  type: 'host.lifecycle';
+  event: 'activated-home';
+}
+
+export type HostLifecycleEvent =
+  | HostActivatedHomeEvent
+  | HostPlaybackReturnedEvent;
+
+export const hostInputVersion = 1 as const;
+
+export type HostInputCommand =
+  | 'accept'
+  | 'back'
+  | 'menu'
+  | 'moveDown'
+  | 'moveLeft'
+  | 'moveRight'
+  | 'moveUp'
+  | 'view';
+
+export type HostInputPhase = 'pressed' | 'released' | 'repeated';
+
+export type HostInputSource = 'gamepad' | 'keyboard' | 'remote';
+
+export interface HostInputEvent {
+  type: 'host.input';
+  version: typeof hostInputVersion;
+  sequence: number;
+  command: HostInputCommand;
+  phase: HostInputPhase;
+  source: HostInputSource;
+  timestamp: number;
+}
+
+export interface HostReadyRequest {
+  type: 'host.ready';
+  inputVersion: typeof hostInputVersion;
+}
+
+export interface HostNativeBackRequest {
+  type: 'host.nativeBack';
+}
 
 interface WebViewMessageEvent {
   data: unknown;
@@ -54,11 +96,14 @@ interface PendingBridgeRequest {
 }
 
 interface BridgeState {
+  inputListeners: Set<(event: HostInputEvent) => void>;
+  lastInputSequence: number | null;
   lifecycleListeners: Set<(event: HostLifecycleEvent) => void>;
   pending: Map<string, PendingBridgeRequest>;
 }
 
 const bridgeStates = new WeakMap<WebViewHost, BridgeState>();
+const readyHosts = new WeakSet<WebViewHost>();
 
 declare global {
   interface Window {
@@ -146,6 +191,65 @@ export function subscribeHostLifecycle(
   };
 }
 
+export function subscribeHostInput(
+  listener: (event: HostInputEvent) => void,
+): () => void {
+  const webview = typeof window !== 'undefined' ? window.chrome?.webview : undefined;
+  if (
+    !webview ||
+    typeof webview.postMessage !== 'function' ||
+    !webview.addEventListener ||
+    !webview.removeEventListener
+  ) {
+    return () => undefined;
+  }
+
+  const state = getBridgeState(webview);
+  state.inputListeners.add(listener);
+  return () => {
+    state.inputListeners.delete(listener);
+  };
+}
+
+export function postHostReady(force = false): boolean {
+  const webview = typeof window !== 'undefined' ? window.chrome?.webview : undefined;
+  if (!webview || typeof webview.postMessage !== 'function') {
+    return false;
+  }
+  if (!force && readyHosts.has(webview)) {
+    return true;
+  }
+
+  const request: HostReadyRequest = {
+    type: 'host.ready',
+    inputVersion: hostInputVersion,
+  };
+  try {
+    webview.postMessage(request);
+    readyHosts.add(webview);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function postNativeBack(): boolean {
+  const webview = typeof window !== 'undefined' ? window.chrome?.webview : undefined;
+  if (!webview || typeof webview.postMessage !== 'function') {
+    return false;
+  }
+
+  const request: HostNativeBackRequest = {
+    type: 'host.nativeBack',
+  };
+  try {
+    webview.postMessage(request);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function getBridgeState(webview: WebViewHost): BridgeState {
   const existing = bridgeStates.get(webview);
   if (existing) {
@@ -153,12 +257,29 @@ function getBridgeState(webview: WebViewHost): BridgeState {
   }
 
   const state: BridgeState = {
+    inputListeners: new Set(),
+    lastInputSequence: null,
     lifecycleListeners: new Set(),
     pending: new Map(),
   };
   webview.addEventListener?.('message', (event) => {
     if (isHostLifecycleEvent(event.data)) {
       for (const listener of [...state.lifecycleListeners]) {
+        listener(event.data);
+      }
+      return;
+    }
+
+    if (isHostInputEvent(event.data)) {
+      if (
+        state.lastInputSequence !== null &&
+        event.data.sequence <= state.lastInputSequence
+      ) {
+        return;
+      }
+
+      state.lastInputSequence = event.data.sequence;
+      for (const listener of [...state.inputListeners]) {
         listener(event.data);
       }
       return;
@@ -190,8 +311,44 @@ function isHostLifecycleEvent(value: unknown): value is HostLifecycleEvent {
   return (
     isRecord(value) &&
     value.type === 'host.lifecycle' &&
-    value.event === 'playback-returned'
+    (value.event === 'activated-home' || value.event === 'playback-returned')
   );
+}
+
+function isHostInputEvent(value: unknown): value is HostInputEvent {
+  return (
+    isRecord(value) &&
+    value.type === 'host.input' &&
+    value.version === hostInputVersion &&
+    Number.isSafeInteger(value.sequence) &&
+    (value.sequence as number) >= 0 &&
+    isHostInputCommand(value.command) &&
+    isHostInputPhase(value.phase) &&
+    isHostInputSource(value.source) &&
+    Number.isSafeInteger(value.timestamp) &&
+    (value.timestamp as number) >= 0
+  );
+}
+
+function isHostInputCommand(value: unknown): value is HostInputCommand {
+  return (
+    value === 'accept' ||
+    value === 'back' ||
+    value === 'menu' ||
+    value === 'moveDown' ||
+    value === 'moveLeft' ||
+    value === 'moveRight' ||
+    value === 'moveUp' ||
+    value === 'view'
+  );
+}
+
+function isHostInputPhase(value: unknown): value is HostInputPhase {
+  return value === 'pressed' || value === 'released' || value === 'repeated';
+}
+
+function isHostInputSource(value: unknown): value is HostInputSource {
+  return value === 'gamepad' || value === 'keyboard' || value === 'remote';
 }
 
 function isBridgeResponse(value: unknown): value is BridgeResponse {
@@ -211,7 +368,7 @@ function isBridgeResponse(value: unknown): value is BridgeResponse {
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function createRequestId(): string {

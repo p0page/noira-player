@@ -10,6 +10,7 @@ using NoiraPlayer.App.Services;
 using NoiraPlayer.App.Storage;
 using NoiraPlayer.Core.Diagnostics;
 using NoiraPlayer.Core.Emby;
+using NoiraPlayer.Core.Input;
 using NoiraPlayer.Core.Playback;
 using NoiraPlayer.Core.PlaybackQuality;
 using Windows.Media.Protection;
@@ -64,6 +65,7 @@ namespace NoiraPlayer.App.Views
         private bool _overlayVisible;
         private bool _moreVisible;
         private bool _keyHandlerAttached;
+        private IDisposable? _inputRegistration;
         private bool _playbackCommandInFlight;
         private PlaybackMoreDrawerFocusTarget? _moreDrawerFocusTarget;
         private PlaybackTransportFocusTarget? _transportFocusTarget;
@@ -128,6 +130,7 @@ namespace NoiraPlayer.App.Views
             _manualDirectStreamPageLoaded = true;
             PlaybackDiagnosticsLog.WriteLine(
                 "Playback page loaded surface=" + NativeSurface.ActualWidth + "x" + NativeSurface.ActualHeight);
+            AttachPlaybackInput();
             AttachPlaybackKeyHandler();
             TrySignalNativeSurfaceReady();
             AttachNativeSurface();
@@ -149,6 +152,25 @@ namespace NoiraPlayer.App.Views
 
             Window.Current.CoreWindow.KeyDown += PlaybackPage_OnCoreWindowKeyDown;
             _keyHandlerAttached = true;
+        }
+
+        private void AttachPlaybackInput()
+        {
+            if (_inputRegistration != null)
+            {
+                return;
+            }
+
+            _inputRegistration = ((App)Application.Current).InputRouter.Register(
+                InputContext.NativePlayback,
+                PlaybackPage_OnGamepadInput);
+        }
+
+        private void DetachPlaybackInput()
+        {
+            var registration = _inputRegistration;
+            _inputRegistration = null;
+            registration?.Dispose();
         }
 
         private void DetachPlaybackKeyHandler()
@@ -390,6 +412,12 @@ namespace NoiraPlayer.App.Views
 
         private async void PlaybackPage_OnCoreWindowKeyDown(CoreWindow sender, Windows.UI.Core.KeyEventArgs args)
         {
+            if (IsGamepadVirtualKey(args.VirtualKey))
+            {
+                args.Handled = true;
+                return;
+            }
+
             if (ShouldIgnoreMoreDrawerComboBoxDirectionalReplay(args.VirtualKey))
             {
                 args.Handled = true;
@@ -402,6 +430,100 @@ namespace NoiraPlayer.App.Views
             }
 
             args.Handled = await HandlePlaybackKeyAsync(args.VirtualKey, IsPreviewModifierDown(sender)) || args.Handled;
+        }
+
+        private void PlaybackPage_OnGamepadInput(InputEnvelope input)
+        {
+            if (input.Phase == InputPhase.Released)
+            {
+                return;
+            }
+
+            var key = TryMapGamepadInput(input);
+            if (!key.HasValue)
+            {
+                return;
+            }
+
+            _ = HandleGamepadInputAsync(key.Value);
+        }
+
+        private async Task HandleGamepadInputAsync(VirtualKey key)
+        {
+            try
+            {
+                await HandlePlaybackKeyAsync(key, false);
+            }
+            catch (Exception error)
+            {
+                PlaybackDiagnosticsLog.WriteLine(
+                    "Playback input consumer exception " + error.GetType().FullName);
+            }
+        }
+
+        private static VirtualKey? TryMapGamepadInput(InputEnvelope input)
+        {
+            switch (input.Command)
+            {
+                case InputCommand.Accept:
+                    return VirtualKey.GamepadA;
+                case InputCommand.Back:
+                    return VirtualKey.GamepadB;
+                case InputCommand.Menu:
+                    return VirtualKey.GamepadMenu;
+                case InputCommand.MoveLeft:
+                    return input.ControlKind == InputControlKind.LeftThumbstick
+                        ? VirtualKey.GamepadLeftThumbstickLeft
+                        : VirtualKey.GamepadDPadLeft;
+                case InputCommand.MoveRight:
+                    return input.ControlKind == InputControlKind.LeftThumbstick
+                        ? VirtualKey.GamepadLeftThumbstickRight
+                        : VirtualKey.GamepadDPadRight;
+                case InputCommand.MoveUp:
+                    return input.ControlKind == InputControlKind.LeftThumbstick
+                        ? VirtualKey.GamepadLeftThumbstickUp
+                        : VirtualKey.GamepadDPadUp;
+                case InputCommand.MoveDown:
+                    return input.ControlKind == InputControlKind.LeftThumbstick
+                        ? VirtualKey.GamepadLeftThumbstickDown
+                        : VirtualKey.GamepadDPadDown;
+                default:
+                    return null;
+            }
+        }
+
+        private static bool IsGamepadVirtualKey(VirtualKey key)
+        {
+            switch (key)
+            {
+                case VirtualKey.GamepadA:
+                case VirtualKey.GamepadB:
+                case VirtualKey.GamepadX:
+                case VirtualKey.GamepadY:
+                case VirtualKey.GamepadRightShoulder:
+                case VirtualKey.GamepadLeftShoulder:
+                case VirtualKey.GamepadLeftTrigger:
+                case VirtualKey.GamepadRightTrigger:
+                case VirtualKey.GamepadDPadUp:
+                case VirtualKey.GamepadDPadDown:
+                case VirtualKey.GamepadDPadLeft:
+                case VirtualKey.GamepadDPadRight:
+                case VirtualKey.GamepadMenu:
+                case VirtualKey.GamepadView:
+                case VirtualKey.GamepadLeftThumbstickButton:
+                case VirtualKey.GamepadRightThumbstickButton:
+                case VirtualKey.GamepadLeftThumbstickUp:
+                case VirtualKey.GamepadLeftThumbstickDown:
+                case VirtualKey.GamepadLeftThumbstickRight:
+                case VirtualKey.GamepadLeftThumbstickLeft:
+                case VirtualKey.GamepadRightThumbstickUp:
+                case VirtualKey.GamepadRightThumbstickDown:
+                case VirtualKey.GamepadRightThumbstickRight:
+                case VirtualKey.GamepadRightThumbstickLeft:
+                    return true;
+                default:
+                    return false;
+            }
         }
 
         private async Task<bool> HandlePlaybackKeyAsync(VirtualKey key, bool previewModifierDown)
@@ -933,6 +1055,8 @@ namespace NoiraPlayer.App.Views
 
         private async void PlaybackPage_OnUnloaded(object sender, RoutedEventArgs e)
         {
+            DetachPlaybackInput();
+            DetachPlaybackKeyHandler();
             await PlaybackDiagnosticsLog.WriteLineAsync("Playback page unloaded begin");
             _orchestrator.StateChanged -= Orchestrator_OnStateChanged;
             _progressTimer.Stop();
@@ -941,7 +1065,6 @@ namespace NoiraPlayer.App.Views
             _overlayTimer.Tick -= OverlayTimer_OnTick;
             _seekPreviewTimer.Stop();
             _seekPreviewTimer.Tick -= SeekPreviewTimer_OnTick;
-            DetachPlaybackKeyHandler();
             var stoppedRequest = CreateStoppedSessionRequest();
             try
             {

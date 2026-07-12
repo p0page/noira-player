@@ -49,7 +49,7 @@
   --space-xl: 32px;
   --space-xxl: 48px;
   --tv-safe: 56px;
-  --guide-collapsed: 72px;
+  --guide-collapsed: 56px;
   --guide-expanded: 248px;
   --library-grid-card-width: 168px;
   --library-grid-column-gap: 16px;
@@ -259,23 +259,11 @@ h2 {
   z-index: 30;
   top: 0;
   bottom: 0;
-  left: var(--tv-safe);
+  left: 0;
   width: var(--guide-collapsed);
   overflow: visible;
-  border-inline-end: 1px solid var(--hairline);
   background: var(--shell-rail);
   transition: width 160ms ease, background-color 120ms ease;
-}
-
-.guide::before {
-  position: absolute;
-  top: 0;
-  right: 100%;
-  bottom: 0;
-  width: var(--tv-safe);
-  background: inherit;
-  content: "";
-  pointer-events: none;
 }
 
 .guide--expanded {
@@ -288,8 +276,12 @@ h2 {
   flex-direction: column;
   width: 100%;
   height: 100%;
-  padding: var(--tv-safe) var(--space-sm);
+  padding: var(--tv-safe) var(--space-xs);
   overflow: hidden;
+}
+
+.guide--expanded .guide__scope {
+  padding-inline: var(--space-sm);
 }
 
 .guide__destinations {
@@ -312,10 +304,10 @@ h2 {
   grid-template-columns: 40px minmax(0, 1fr);
   align-items: center;
   flex: 0 0 52px;
-  width: 56px;
+  width: 48px;
   height: 52px;
   min-height: 52px;
-  padding: 0 var(--space-sm);
+  padding: 0 var(--space-xs);
   overflow: hidden;
   border: 0;
   border-radius: var(--radius-md);
@@ -327,6 +319,7 @@ h2 {
 
 .guide--expanded .guide__button {
   width: 232px;
+  padding-inline: var(--space-sm);
 }
 
 .guide__button > svg {
@@ -383,7 +376,7 @@ h2 {
 
 .home-page {
   min-height: 100vh;
-  margin-left: calc(var(--tv-safe) + var(--guide-collapsed));
+  margin-left: var(--guide-collapsed);
   padding: var(--tv-safe) 0;
   overflow-x: hidden;
   background: var(--canvas);
@@ -418,7 +411,7 @@ h2 {
 
 .library-page {
   min-height: 100vh;
-  margin-left: calc(var(--tv-safe) + var(--guide-collapsed));
+  margin-left: var(--guide-collapsed);
   padding: var(--tv-safe) var(--tv-safe) var(--tv-safe) 0;
   overflow-x: hidden;
   background: var(--canvas);
@@ -435,6 +428,46 @@ h2 {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.search-page__header {
+  display: grid;
+  min-height: 0;
+  gap: var(--space-md);
+}
+
+.search-page__input-scope,
+.search-page__input-wrap {
+  width: min(560px, 100%);
+}
+
+.search-page__input-wrap {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  align-items: center;
+  min-height: 52px;
+  padding: 0 var(--space-md);
+  gap: var(--space-sm);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text-muted);
+}
+
+.search-page__input-wrap:focus-within {
+  background: var(--surface-raised);
+  color: var(--focus);
+}
+
+.search-page__input {
+  width: 100%;
+  min-width: 0;
+  min-height: 50px;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
 }
 
 .library-page__grid-shell {

@@ -1,81 +1,73 @@
-import { Home as HomeIcon, Library, LogOut } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { Heart, Home as HomeIcon, LogOut, Search } from 'lucide-react';
 import type { FocusEvent, KeyboardEvent } from 'react';
 import { Focusable } from '../focus/Focusable';
 import { FocusScope } from '../focus/FocusScope';
 import type { FocusRestoreRequest } from '../navigation/focusRequests';
 import type { FocusTarget } from '../navigation/routes';
-import type { LibraryView } from '../types';
 
 export type GuideActiveRoute =
   | { kind: 'home' }
+  | { kind: 'search' }
+  | { kind: 'favorites' }
   | { kind: 'library'; libraryId: string };
 
 export interface GuideProps {
   activeRoute: GuideActiveRoute;
   defaultFocus?: boolean;
   disabled?: boolean;
-  libraries: readonly LibraryView[];
+  expanded: boolean;
+  hidden?: boolean;
+  onFavorites: () => void;
   onHome: () => void;
-  onKeyInteraction?: () => void;
-  onLibrary: (library: LibraryView) => void;
   onLogout: () => void;
-  onRestoreFocus: (target: FocusTarget) => void;
+  onExpandedChange: (expanded: boolean) => void;
+  onExitToContent: () => void;
+  onKeyInteraction?: () => void;
+  onSearch: () => void;
   restoreRequest?: FocusRestoreRequest | null;
-  returnTarget: FocusTarget | null;
 }
 
 export const guideScopeKey = 'home-guide';
 
 const homeFocusKey = 'guide:home';
+const searchFocusKey = 'guide:search';
+const favoritesFocusKey = 'guide:favorites';
 const logoutFocusKey = 'guide:logout';
 
 export function Guide({
   activeRoute,
   defaultFocus = false,
   disabled,
-  libraries,
+  expanded,
+  hidden,
+  onFavorites,
   onHome,
-  onKeyInteraction,
-  onLibrary,
   onLogout,
-  onRestoreFocus,
+  onExpandedChange,
+  onExitToContent,
+  onKeyInteraction,
+  onSearch,
   restoreRequest,
-  returnTarget,
 }: GuideProps) {
-  const [expanded, setExpanded] = useState(false);
-  const visibleLibraries = useMemo(() => deduplicateLibraries(libraries), [libraries]);
-  const libraryEntries = visibleLibraries.map((library) => ({
-    focusKey: getGuideLibraryFocusTarget(library.id).focusKey,
-    library,
-  }));
-  const orderedKeys = [
-    homeFocusKey,
-    ...libraryEntries.map(({ focusKey }) => focusKey),
-    logoutFocusKey,
-  ];
+  const orderedKeys = [searchFocusKey, homeFocusKey, favoritesFocusKey, logoutFocusKey];
 
   function handleBlur(event: FocusEvent<HTMLElement>) {
     const nextTarget = event.relatedTarget;
     if (!(nextTarget instanceof Node) || !event.currentTarget.contains(nextTarget)) {
-      setExpanded(false);
+      onExpandedChange(false);
     }
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLElement>) {
     onKeyInteraction?.();
-    const exitsToContent =
-      event.key === 'Escape' || (event.key === 'ArrowRight' && returnTarget !== null);
+    const exitsToContent = event.key === 'Escape' || event.key === 'ArrowRight';
     if (!expanded || !exitsToContent) {
       return;
     }
 
     event.preventDefault();
     event.stopPropagation();
-    setExpanded(false);
-    if (returnTarget) {
-      onRestoreFocus(returnTarget);
-    }
+    onExitToContent();
   }
 
   return (
@@ -83,12 +75,14 @@ export function Guide({
       aria-expanded={expanded}
       aria-label="Guide"
       className={`guide${expanded ? ' guide--expanded' : ''}`}
+      hidden={hidden}
       role="navigation"
       onBlurCapture={handleBlur}
-      onFocusCapture={() => setExpanded(true)}
+      onFocusCapture={() => onExpandedChange(true)}
       onKeyDownCapture={handleKeyDown}
     >
       <FocusScope
+        boundaryDirections={['right']}
         className="guide__scope"
         defaultFocusKey={defaultFocus ? homeFocusKey : undefined}
         orderedKeys={orderedKeys}
@@ -106,6 +100,19 @@ export function Guide({
       >
         <div className="guide__destinations">
           <Focusable
+            aria-current={activeRoute.kind === 'search' ? 'page' : undefined}
+            aria-label="Search"
+            className="guide__button"
+            disabled={disabled}
+            focusKey={searchFocusKey}
+            title="Search"
+            onSelect={onSearch}
+          >
+            <Search aria-hidden="true" size={24} strokeWidth={1.8} />
+            <span>Search</span>
+          </Focusable>
+
+          <Focusable
             aria-current={activeRoute.kind === 'home' ? 'page' : undefined}
             aria-label="Home"
             className="guide__button"
@@ -118,25 +125,18 @@ export function Guide({
             <span>Home</span>
           </Focusable>
 
-          {libraryEntries.map(({ focusKey, library }) => (
-            <Focusable
-              key={focusKey}
-              aria-current={
-                activeRoute.kind === 'library' && activeRoute.libraryId === library.id
-                  ? 'page'
-                  : undefined
-              }
-              aria-label={library.name}
-              className="guide__button"
-              disabled={disabled}
-              focusKey={focusKey}
-              title={library.name}
-              onSelect={() => onLibrary(library)}
-            >
-              <Library aria-hidden="true" size={24} strokeWidth={1.8} />
-              <span>{library.name}</span>
-            </Focusable>
-          ))}
+          <Focusable
+            aria-current={activeRoute.kind === 'favorites' ? 'page' : undefined}
+            aria-label="Favorites"
+            className="guide__button"
+            disabled={disabled}
+            focusKey={favoritesFocusKey}
+            title="Favorites"
+            onSelect={onFavorites}
+          >
+            <Heart aria-hidden="true" size={24} strokeWidth={1.8} />
+            <span>Favorites</span>
+          </Focusable>
         </div>
 
         <Focusable
@@ -155,26 +155,12 @@ export function Guide({
   );
 }
 
-export function getGuideLibraryFocusTarget(libraryId: string): FocusTarget {
-  return {
-    scopeKey: guideScopeKey,
-    focusKey: `guide:library:${encodeURIComponent(libraryId.trim())}`,
-  };
-}
-
-function deduplicateLibraries(libraries: readonly LibraryView[]): LibraryView[] {
-  const seenIds = new Set<string>();
-  const result: LibraryView[] = [];
-
-  for (const library of libraries) {
-    const id = library.id.trim();
-    if (!id || seenIds.has(id)) {
-      continue;
-    }
-
-    seenIds.add(id);
-    result.push({ ...library, id });
-  }
-
-  return result;
+export function getGuideFocusTarget(activeRoute: GuideActiveRoute): FocusTarget {
+  const focusKey =
+    activeRoute.kind === 'search'
+      ? searchFocusKey
+      : activeRoute.kind === 'favorites'
+        ? favoritesFocusKey
+        : homeFocusKey;
+  return { scopeKey: guideScopeKey, focusKey };
 }

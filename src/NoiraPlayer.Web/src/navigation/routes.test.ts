@@ -36,6 +36,28 @@ const homeDetailsRoute: BrowseRoute = {
 };
 
 describe('browse route history', () => {
+  it('supports Search and Favorites as shell destinations with Details children', () => {
+    const search: BrowseRoute = {
+      kind: 'search',
+      origin: { scopeKey: 'home-guide', focusKey: 'guide:search' },
+    };
+    const favorites: BrowseRoute = {
+      kind: 'favorites',
+      origin: { scopeKey: 'home-guide', focusKey: 'guide:favorites' },
+    };
+    const searchStack = pushRoute([homeRoute], search);
+    const favoritesStack = replaceRoute(searchStack, favorites);
+    const detailsStack = pushRoute(favoritesStack, {
+      kind: 'details',
+      itemId: 'favorite-anonymous',
+      origin: { scopeKey: 'favorites-results', focusKey: 'favorite-card:anonymous' },
+    });
+
+    expect(searchStack).toEqual([homeRoute, search]);
+    expect(favoritesStack).toEqual([homeRoute, favorites]);
+    expect(detailsStack).toHaveLength(3);
+    expect(backRoute(detailsStack)).toEqual(favoritesStack);
+  });
   it('pushes Home to library to details without mutating prior stacks', () => {
     const homeStack = Object.freeze([homeRoute] as BrowseRoute[]);
 

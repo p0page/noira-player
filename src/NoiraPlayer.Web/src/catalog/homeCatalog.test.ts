@@ -493,6 +493,39 @@ describe('loadLibraryLatestRows', () => {
       },
     ]);
   });
+
+  it('limits supplemental latest requests to four concurrent bridge calls', async () => {
+    let active = 0;
+    let peak = 0;
+    const pending: Array<() => void> = [];
+    const getLatestItems = vi.fn(async () => {
+      active += 1;
+      peak = Math.max(peak, active);
+      await new Promise<void>((resolve) => pending.push(resolve));
+      active -= 1;
+      return [];
+    });
+    const client: HomeCatalogClient = {
+      getResumeItems: async () => [],
+      getNextUpItems: async () => [],
+      getViews: async () => [],
+      getLatestItems,
+    };
+    const libraries = Array.from({ length: 7 }, (_, index) =>
+      anonymousLibrary(`anonymous-library-${index}`, `Anonymous ${index}`, 'movies'),
+    );
+
+    const catalogPromise = loadLibraryLatestCatalog(client, libraries);
+    await vi.waitFor(() => expect(getLatestItems).toHaveBeenCalledTimes(4));
+    expect(peak).toBe(4);
+
+    pending.splice(0, 4).forEach((resolve) => resolve());
+    await vi.waitFor(() => expect(getLatestItems).toHaveBeenCalledTimes(7));
+    pending.splice(0).forEach((resolve) => resolve());
+
+    await expect(catalogPromise).resolves.toEqual({ rows: [], failedRowKeys: [] });
+    expect(peak).toBe(4);
+  });
 });
 
 function anonymousItem(id: string): MediaItem {

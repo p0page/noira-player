@@ -108,6 +108,26 @@ const invalidTotalRecordCountResponses = [
 ];
 
 describe('EmbyWebClient', () => {
+  it('queries real search and favorite catalogs without a synthetic parent library', async () => {
+    const requestedUrls: URL[] = [];
+    const fetcher = vi.fn(async (input: RequestInfo | URL) => {
+      requestedUrls.push(new URL(String(input)));
+      return new Response(JSON.stringify({ Items: [], TotalRecordCount: 0 }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    });
+    const client = new EmbyWebClient(session, fetcher);
+
+    await client.searchItems('  anonymous query  ');
+    await client.getFavoriteItems();
+
+    expect(requestedUrls[0].searchParams.get('SearchTerm')).toBe('anonymous query');
+    expect(requestedUrls[0].searchParams.has('ParentId')).toBe(false);
+    expect(requestedUrls[0].searchParams.get('Recursive')).toBe('true');
+    expect(requestedUrls[1].searchParams.get('Filters')).toBe('IsFavorite');
+    expect(requestedUrls[1].searchParams.has('ParentId')).toBe(false);
+  });
   it('does not rebind the browser fetch function to the client instance', async () => {
     let receiver: unknown;
     const fetcher = vi.fn(function (
@@ -259,6 +279,40 @@ describe('EmbyWebClient', () => {
     expect(url.searchParams.get('Fields')).toBe(mappedItemFields.join(','));
     expect(url.searchParams.get('Limit')).toBe('24');
     expectImageQuery(url);
+  });
+
+  it('treats a server that requires SeriesId for global NextUp as unsupported', async () => {
+    const client = new EmbyWebClient(
+      session,
+      vi.fn(async () =>
+        new Response(JSON.stringify({ error: 'SeriesId is required' }), {
+          status: 400,
+          statusText: 'Bad Request',
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      ),
+    );
+
+    await expect(client.getNextUpItems(24)).resolves.toEqual([]);
+  });
+
+  it('does not hide unrelated NextUp bad requests', async () => {
+    const client = new EmbyWebClient(
+      session,
+      vi.fn(async () =>
+        new Response(JSON.stringify({ error: 'Different validation failure' }), {
+          status: 400,
+          statusText: 'Bad Request',
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      ),
+    );
+
+    await expect(client.getNextUpItems(24)).rejects.toMatchObject({
+      name: 'EmbyRequestError',
+      status: 400,
+      serverError: 'Different validation failure',
+    });
   });
 
   it('loads latest items from a top-level array with library options', async () => {

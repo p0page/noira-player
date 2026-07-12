@@ -1,5 +1,5 @@
 import { Play } from 'lucide-react';
-import type { CSSProperties, KeyboardEvent } from 'react';
+import type { CSSProperties } from 'react';
 import { Focusable } from '../focus/Focusable';
 import { FocusScope } from '../focus/FocusScope';
 import type { FocusRestoreRequest } from '../navigation/focusRequests';
@@ -9,7 +9,6 @@ export interface DetailsPageProps {
   item: MediaItem;
   busy?: boolean;
   restoreRequest?: FocusRestoreRequest | null;
-  onBack: () => void;
   onPlay: (item: MediaItem) => void;
 }
 
@@ -36,7 +35,6 @@ export function DetailsPage({
   item,
   busy = false,
   restoreRequest = null,
-  onBack,
   onPlay,
 }: DetailsPageProps) {
   const atmosphereUrl = resolveDetailsAtmosphereUrl(item.artwork);
@@ -45,26 +43,12 @@ export function DetailsPage({
   const restoreMatchesActions =
     restoreRequest?.target.scopeKey === detailsActionsScopeKey;
 
-  function handleKeyDown(event: KeyboardEvent<HTMLElement>) {
-    if (event.key !== 'Escape') {
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-    onBack();
-  }
-
   const atmosphereStyle: CSSProperties | undefined = atmosphereUrl
     ? { backgroundImage: `url(${JSON.stringify(atmosphereUrl)})` }
     : undefined;
 
   return (
-    <main
-      aria-busy={busy || undefined}
-      className="details-page"
-      onKeyDownCapture={handleKeyDown}
-    >
+    <main aria-busy={busy || undefined} className="details-page">
       <div
         aria-hidden="true"
         className="details-page__atmosphere"

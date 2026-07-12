@@ -1,27 +1,18 @@
 import { useMemo, useState } from 'react';
 import type { FocusEvent } from 'react';
 import type { HomeRow } from '../catalog/homeCatalog';
-import {
-  getGuideLibraryFocusTarget,
-  Guide,
-} from '../components/Guide';
-import { isLibraryView } from '../components/MediaCard';
+import { useBrowseShellContentRestoreRequest } from '../components/BrowseShell';
 import {
   getHomeRowScopeKey,
   MediaRow,
   normalizeHomeRow,
 } from '../components/MediaRow';
-import {
-  createFocusRestoreRequest,
-  type FocusRestoreRequest,
-} from '../navigation/focusRequests';
+import type { FocusRestoreRequest } from '../navigation/focusRequests';
 import type { FocusTarget } from '../navigation/routes';
 import type { LibraryView, MediaItem } from '../types';
 
 export interface HomePageProps {
   busy?: boolean;
-  onHome: () => void;
-  onLogout: () => void;
   onOpenLibrary: (library: LibraryView, origin: FocusTarget) => void;
   onOpenMedia: (item: MediaItem, origin: FocusTarget) => void;
   restoreRequest?: FocusRestoreRequest | null;
@@ -30,22 +21,17 @@ export interface HomePageProps {
 
 export function HomePage({
   busy = false,
-  onHome,
-  onLogout,
   onOpenLibrary,
   onOpenMedia,
-  restoreRequest: externalRestoreRequest,
+  restoreRequest,
   rows,
 }: HomePageProps) {
+  const shellRestoreRequest = useBrowseShellContentRestoreRequest();
+  const effectiveRestoreRequest = shellRestoreRequest ?? restoreRequest;
   const visibleRows = useMemo(() => getVisibleRows(rows), [rows]);
-  const libraries = useMemo(() => getLibraries(rows), [rows]);
-  const [returnTarget, setReturnTarget] = useState<FocusTarget | null>(null);
   const [preferredRowTargets, setPreferredRowTargets] = useState<
     Readonly<Record<string, string>>
   >({});
-  const [guideRestoreRequest, setGuideRestoreRequest] =
-    useState<FocusRestoreRequest | null>(null);
-  const restoreRequest = guideRestoreRequest ?? externalRestoreRequest ?? null;
 
   function handleContentFocus(event: FocusEvent<HTMLElement>) {
     if (!(event.target instanceof HTMLElement)) {
@@ -59,46 +45,18 @@ export function HomePage({
       return;
     }
 
-    const nextTarget = { focusKey, scopeKey };
     const card = event.target.closest<HTMLElement>('.media-card[data-focus-key]');
     if (card) {
       setPreferredRowTargets(resolveNearestRowTargets(card));
     }
-    setReturnTarget((current) =>
-      current?.focusKey === focusKey && current.scopeKey === scopeKey
-        ? current
-        : nextTarget,
-    );
-  }
-
-  function restoreContentFocus(target: FocusTarget) {
-    setGuideRestoreRequest(createFocusRestoreRequest(target));
   }
 
   return (
-    <div className="tv-shell">
-      <Guide
-        activeRoute={{ kind: 'home' }}
-        defaultFocus={visibleRows.length === 0}
-        libraries={libraries}
-        returnTarget={returnTarget}
-        onHome={onHome}
-        onLibrary={(library) =>
-          onOpenLibrary(
-            library,
-            returnTarget ?? getGuideLibraryFocusTarget(library.id),
-          )
-        }
-        onLogout={onLogout}
-        onRestoreFocus={restoreContentFocus}
-        restoreRequest={restoreRequest}
-      />
-
-      <main
-        aria-busy={busy || undefined}
-        className="home-page"
-        onFocusCapture={handleContentFocus}
-      >
+    <main
+      aria-busy={busy || undefined}
+      className="home-page"
+      onFocusCapture={handleContentFocus}
+    >
         <header className="home-page__header">
           <h1 className="home-page__title">Home</h1>
         </header>
@@ -114,13 +72,13 @@ export function HomePage({
                 onOpenMedia={onOpenMedia}
                 preferredFocusKey={preferredRowTargets[scopeKey]}
                 restoreFocusKey={
-                  restoreRequest?.target.scopeKey === scopeKey
-                    ? restoreRequest.target.focusKey
+                  effectiveRestoreRequest?.target.scopeKey === scopeKey
+                    ? effectiveRestoreRequest.target.focusKey
                     : undefined
                 }
                 restoreRequestId={
-                  restoreRequest?.target.scopeKey === scopeKey
-                    ? restoreRequest.requestId
+                  effectiveRestoreRequest?.target.scopeKey === scopeKey
+                    ? effectiveRestoreRequest.requestId
                     : undefined
                 }
                 row={row}
@@ -134,8 +92,7 @@ export function HomePage({
             No media available.
           </p>
         ) : null}
-      </main>
-    </div>
+    </main>
   );
 }
 
@@ -198,24 +155,4 @@ function getVisibleRows(rows: readonly HomeRow[]): HomeRow[] {
   }
 
   return visibleRows;
-}
-
-function getLibraries(rows: readonly HomeRow[]): LibraryView[] {
-  const libraries: LibraryView[] = [];
-
-  for (const row of rows) {
-    if (row.kind !== 'libraries') {
-      continue;
-    }
-
-    for (const item of row.items) {
-      if (!isLibraryView(item)) {
-        continue;
-      }
-
-      libraries.push(item);
-    }
-  }
-
-  return libraries;
 }

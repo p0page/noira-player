@@ -13,9 +13,47 @@ import {
   within,
 } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { ComponentProps } from 'react';
+import { BrowseShell } from '../components/BrowseShell';
 import { FocusProvider } from '../focus/FocusProvider';
-import { HomePage } from './HomePage';
+import { HomePage as HomePageContent } from './HomePage';
 import homePageSource from './HomePage.tsx?raw';
+
+type HomePageTestProps = ComponentProps<typeof HomePageContent> & {
+  contentKey?: string;
+  onFavorites?: () => void;
+  onHome: () => void;
+  onLogout: () => void;
+  onSearch?: () => void;
+};
+
+function HomePage({
+  contentKey,
+  onFavorites = () => undefined,
+  onHome,
+  onLogout,
+  onSearch = () => undefined,
+  rows,
+  ...contentProps
+}: HomePageTestProps) {
+  const hasContent = rows.some((row) => row.items.some((item) => item.id.trim()));
+  return (
+    <BrowseShell
+      activeRoute={{ kind: 'home' }}
+      defaultGuideFocus={!hasContent}
+      onFavorites={onFavorites}
+      onHome={onHome}
+      onLogout={onLogout}
+      onNavigateBack={() => undefined}
+      onNativeBack={() => undefined}
+      onSearch={onSearch}
+      restoreRequest={contentProps.restoreRequest}
+      routeStack={[{ kind: 'home' }]}
+    >
+      <HomePageContent key={contentKey} {...contentProps} rows={rows} />
+    </BrowseShell>
+  );
+}
 
 afterEach(() => {
   cleanup();
@@ -303,9 +341,11 @@ describe('HomePage', () => {
       name: 'Open Original library anonymous',
     });
     const guide = screen.getByRole('navigation', { name: 'Guide' });
-    const guideLibrary = within(guide).getByRole('button', {
+    expect(within(guide).getAllByRole('button').map((button) => button.getAttribute('aria-label')))
+      .toEqual(['Search', 'Home', 'Favorites', 'Log out']);
+    expect(within(guide).queryByRole('button', {
       name: 'Original library anonymous',
-    });
+    })).toBeNull();
 
     expect(screen.queryByText('Duplicate media anonymous')).toBeNull();
     expect(screen.queryByText('Blank media anonymous')).toBeNull();
@@ -318,7 +358,7 @@ describe('HomePage', () => {
     );
 
     fireEvent.click(mediaCard);
-    fireEvent.click(guideLibrary);
+    fireEvent.click(libraryCard);
 
     expect(onOpenMedia).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'shared-anonymous-id' }),
@@ -331,8 +371,9 @@ describe('HomePage', () => {
     expect(onOpenLibrary).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'shared-anonymous-id' }),
       {
-        scopeKey: 'home-guide',
-        focusKey: 'guide:library:shared-anonymous-id',
+        scopeKey: 'home-row:normalized-library-row-anonymous',
+        focusKey:
+          'home-card:normalized-library-row-anonymous:library:shared-anonymous-id',
       },
     );
   });
@@ -511,23 +552,23 @@ describe('HomePage', () => {
     );
 
     const card = screen.getByRole('button', { name: 'Open Geometry item anonymous' });
-    const home = screen.getByRole('button', { name: 'Home' });
+    const search = screen.getByRole('button', { name: 'Search' });
     const logout = screen.getByRole('button', { name: 'Log out' });
     const guide = screen.getByRole('navigation', { name: 'Guide' });
     const guideScope = getScopeElement('home-guide');
     const rowScope = getScopeElement('home-row:geometry-row-anonymous');
 
     mockRectResolver(guideScope, () =>
-      createRect(56, 0, guide.getAttribute('aria-expanded') === 'true' ? 248 : 72, 420),
+      createRect(0, 0, guide.getAttribute('aria-expanded') === 'true' ? 248 : 56, 420),
     );
-    mockRectResolver(home, () =>
-      createRect(64, 0, guide.getAttribute('aria-expanded') === 'true' ? 232 : 56, 52),
+    mockRectResolver(search, () =>
+      createRect(guide.getAttribute('aria-expanded') === 'true' ? 8 : 4, 0, guide.getAttribute('aria-expanded') === 'true' ? 232 : 48, 52),
     );
     mockRectResolver(logout, () =>
-      createRect(64, 320, guide.getAttribute('aria-expanded') === 'true' ? 232 : 56, 52),
+      createRect(guide.getAttribute('aria-expanded') === 'true' ? 8 : 4, 320, guide.getAttribute('aria-expanded') === 'true' ? 232 : 48, 52),
     );
-    mockRect(rowScope, 128, 0, 600, 240);
-    mockRect(card, 136, 0, 240, 135);
+    mockRect(rowScope, 56, 0, 600, 240);
+    mockRect(card, 64, 0, 240, 135);
 
     await updateLayoutsAndFocus(card.getAttribute('data-focus-key') as string);
     expect(document.activeElement).toBe(card);
@@ -535,15 +576,15 @@ describe('HomePage', () => {
     await waitForThrottleWindow();
     dispatchKey(window, 'ArrowLeft', 37);
     await waitFor(() => {
-      expect(document.activeElement).toBe(home);
+      expect(document.activeElement).toBe(search);
       expect(guide.getAttribute('aria-expanded')).toBe('true');
     });
-    expect(guideScope.getBoundingClientRect()).toMatchObject({ left: 56, width: 248 });
-    expect(home.getBoundingClientRect().left).toBeGreaterThanOrEqual(64);
-    expect(rowScope.getBoundingClientRect().left).toBe(128);
+    expect(guideScope.getBoundingClientRect()).toMatchObject({ left: 0, width: 248 });
+    expect(search.getBoundingClientRect().left).toBeGreaterThanOrEqual(8);
+    expect(rowScope.getBoundingClientRect().left).toBe(56);
 
     await waitForThrottleWindow();
-    dispatchKey(home, 'ArrowRight', 39);
+    dispatchKey(search, 'ArrowRight', 39);
     await waitFor(() => {
       expect(document.activeElement).toBe(card);
       expect(guide.getAttribute('aria-expanded')).toBe('false');
@@ -552,10 +593,10 @@ describe('HomePage', () => {
     await waitForThrottleWindow();
     dispatchKey(window, 'ArrowLeft', 37);
     await waitFor(() => {
-      expect(document.activeElement).toBe(home);
+      expect(document.activeElement).toBe(search);
     });
 
-    dispatchKey(home, 'Escape', 27);
+    dispatchKey(search, 'Escape', 27);
     await waitFor(() => {
       expect(document.activeElement).toBe(card);
       expect(guide.getAttribute('aria-expanded')).toBe('false');
@@ -564,10 +605,10 @@ describe('HomePage', () => {
     await waitForThrottleWindow();
     dispatchKey(window, 'ArrowLeft', 37);
     await waitFor(() => {
-      expect(document.activeElement).toBe(home);
+      expect(document.activeElement).toBe(search);
     });
 
-    dispatchKey(home, 'Escape', 27);
+    dispatchKey(search, 'Escape', 27);
     await waitFor(() => {
       expect(document.activeElement).toBe(card);
       expect(guide.getAttribute('aria-expanded')).toBe('false');
@@ -578,7 +619,7 @@ describe('HomePage', () => {
     const view = render(
       <FocusProvider>
         <HomePage
-          key="first-home-mount-anonymous"
+          contentKey="first-home-mount-anonymous"
           rows={[
             {
               key: 'remount-row-anonymous',
@@ -603,44 +644,44 @@ describe('HomePage', () => {
     );
 
     const firstCard = screen.getByRole('button', { name: 'Open Remount item anonymous' });
-    const firstHome = screen.getByRole('button', { name: 'Home' });
+    const firstSearch = screen.getByRole('button', { name: 'Search' });
     const firstLogout = screen.getByRole('button', { name: 'Log out' });
     const firstGuide = screen.getByRole('navigation', { name: 'Guide' });
     mockRectResolver(getScopeElement('home-guide'), () =>
       createRect(
-        56,
         0,
-        firstGuide.getAttribute('aria-expanded') === 'true' ? 248 : 72,
+        0,
+        firstGuide.getAttribute('aria-expanded') === 'true' ? 248 : 56,
         420,
       ),
     );
-    mockRectResolver(firstHome, () =>
+    mockRectResolver(firstSearch, () =>
       createRect(
-        64,
+        firstGuide.getAttribute('aria-expanded') === 'true' ? 8 : 4,
         0,
-        firstGuide.getAttribute('aria-expanded') === 'true' ? 232 : 56,
+        firstGuide.getAttribute('aria-expanded') === 'true' ? 232 : 48,
         52,
       ),
     );
     mockRectResolver(firstLogout, () =>
       createRect(
-        64,
+        firstGuide.getAttribute('aria-expanded') === 'true' ? 8 : 4,
         320,
-        firstGuide.getAttribute('aria-expanded') === 'true' ? 232 : 56,
+        firstGuide.getAttribute('aria-expanded') === 'true' ? 232 : 48,
         52,
       ),
     );
-    mockRect(getScopeElement('home-row:remount-row-anonymous'), 128, 0, 600, 240);
-    mockRect(firstCard, 136, 0, 240, 135);
+    mockRect(getScopeElement('home-row:remount-row-anonymous'), 56, 0, 600, 240);
+    mockRect(firstCard, 64, 0, 240, 135);
 
     await updateLayoutsAndFocus(firstCard.getAttribute('data-focus-key') as string);
     await waitForThrottleWindow();
     dispatchKey(window, 'ArrowLeft', 37);
     await waitFor(() => {
-      expect(document.activeElement).toBe(firstHome);
+      expect(document.activeElement).toBe(firstSearch);
     });
 
-    dispatchKey(firstHome, 'Escape', 27);
+    dispatchKey(firstSearch, 'Escape', 27);
     await waitFor(() => {
       expect(document.activeElement).toBe(firstCard);
     });
@@ -648,7 +689,7 @@ describe('HomePage', () => {
     view.rerender(
       <FocusProvider>
         <HomePage
-          key="second-home-mount-anonymous"
+          contentKey="second-home-mount-anonymous"
           rows={[
             {
               key: 'remount-row-anonymous',
@@ -675,45 +716,45 @@ describe('HomePage', () => {
     const remountedCard = screen.getByRole('button', {
       name: 'Open Remount item anonymous',
     });
-    const remountedHome = screen.getByRole('button', { name: 'Home' });
+    const remountedSearch = screen.getByRole('button', { name: 'Search' });
     const remountedLogout = screen.getByRole('button', { name: 'Log out' });
     const remountedGuide = screen.getByRole('navigation', { name: 'Guide' });
     expect(remountedCard).not.toBe(firstCard);
     mockRectResolver(getScopeElement('home-guide'), () =>
       createRect(
-        56,
         0,
-        remountedGuide.getAttribute('aria-expanded') === 'true' ? 248 : 72,
+        0,
+        remountedGuide.getAttribute('aria-expanded') === 'true' ? 248 : 56,
         420,
       ),
     );
-    mockRectResolver(remountedHome, () =>
+    mockRectResolver(remountedSearch, () =>
       createRect(
-        64,
+        remountedGuide.getAttribute('aria-expanded') === 'true' ? 8 : 4,
         0,
-        remountedGuide.getAttribute('aria-expanded') === 'true' ? 232 : 56,
+        remountedGuide.getAttribute('aria-expanded') === 'true' ? 232 : 48,
         52,
       ),
     );
     mockRectResolver(remountedLogout, () =>
       createRect(
-        64,
+        remountedGuide.getAttribute('aria-expanded') === 'true' ? 8 : 4,
         320,
-        remountedGuide.getAttribute('aria-expanded') === 'true' ? 232 : 56,
+        remountedGuide.getAttribute('aria-expanded') === 'true' ? 232 : 48,
         52,
       ),
     );
-    mockRect(getScopeElement('home-row:remount-row-anonymous'), 128, 0, 600, 240);
-    mockRect(remountedCard, 136, 0, 240, 135);
+    mockRect(getScopeElement('home-row:remount-row-anonymous'), 56, 0, 600, 240);
+    mockRect(remountedCard, 64, 0, 240, 135);
 
     await updateLayoutsAndFocus(remountedCard.getAttribute('data-focus-key') as string);
     await waitForThrottleWindow();
     dispatchKey(window, 'ArrowLeft', 37);
     await waitFor(() => {
-      expect(document.activeElement).toBe(remountedHome);
+      expect(document.activeElement).toBe(remountedSearch);
     });
 
-    dispatchKey(remountedHome, 'Escape', 27);
+    dispatchKey(remountedSearch, 'Escape', 27);
     await waitFor(() => {
       expect(document.activeElement).toBe(remountedCard);
     });
@@ -723,7 +764,7 @@ describe('HomePage', () => {
     const view = render(
       <FocusProvider>
         <HomePage
-          key="external-home-card-anonymous"
+          contentKey="external-home-card-anonymous"
           restoreRequest={{
             requestId: 'external-home-card-event-anonymous',
             target: {
@@ -781,12 +822,12 @@ describe('HomePage', () => {
     view.rerender(
       <FocusProvider>
         <HomePage
-          key="external-guide-anonymous"
+          contentKey="external-guide-anonymous"
           restoreRequest={{
             requestId: 'external-guide-event-anonymous',
             target: {
               scopeKey: 'home-guide',
-              focusKey: 'guide:library:external-library-anonymous',
+              focusKey: 'guide:favorites',
             },
           }}
           rows={[
@@ -824,17 +865,17 @@ describe('HomePage', () => {
       </FocusProvider>,
     );
 
-    const guideLibrary = screen.getByRole('button', {
-      name: 'External library anonymous',
-    });
-    await waitFor(() => expect(document.activeElement).toBe(guideLibrary));
+    const favorites = screen.getByRole('button', { name: 'Favorites' });
+    await waitFor(() => expect(document.activeElement).toBe(favorites));
   });
 
   it('wires Home, real library, media, and logout selections to callbacks', () => {
     const onHome = vi.fn();
+    const onFavorites = vi.fn();
     const onLogout = vi.fn();
     const onOpenLibrary = vi.fn();
     const onOpenMedia = vi.fn();
+    const onSearch = vi.fn();
 
     render(
       <FocusProvider>
@@ -867,9 +908,11 @@ describe('HomePage', () => {
             },
           ]}
           onHome={onHome}
+          onFavorites={onFavorites}
           onLogout={onLogout}
           onOpenLibrary={onOpenLibrary}
           onOpenMedia={onOpenMedia}
+          onSearch={onSearch}
         />
       </FocusProvider>,
     );
@@ -879,19 +922,23 @@ describe('HomePage', () => {
 
     expect(home.getAttribute('aria-current')).toBe('page');
     expect(document.activeElement).not.toBe(home);
-    expect(within(guide).getAllByRole('button')).toHaveLength(3);
+    expect(within(guide).getAllByRole('button')).toHaveLength(4);
 
     fireEvent.click(home);
-    fireEvent.click(screen.getByRole('button', { name: 'Library item anonymous' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Search' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Favorites' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Open Library item anonymous' }));
     fireEvent.click(screen.getByRole('button', { name: 'Open Media item anonymous' }));
     fireEvent.click(screen.getByRole('button', { name: 'Log out' }));
 
     expect(onHome).toHaveBeenCalledTimes(1);
+    expect(onSearch).toHaveBeenCalledTimes(1);
+    expect(onFavorites).toHaveBeenCalledTimes(1);
     expect(onOpenLibrary).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'library-item-anonymous' }),
       {
-        scopeKey: 'home-guide',
-        focusKey: 'guide:library:library-item-anonymous',
+        scopeKey: 'home-row:library-row-anonymous',
+        focusKey: 'home-card:library-row-anonymous:library:library-item-anonymous',
       },
     );
     expect(onOpenMedia).toHaveBeenCalledWith(
@@ -904,7 +951,7 @@ describe('HomePage', () => {
     expect(onLogout).toHaveBeenCalledTimes(1);
   });
 
-  it('uses the pre-Guide content target when a Guide library is selected', async () => {
+  it('uses the selected content library as the library navigation origin', async () => {
     const onOpenLibrary = vi.fn();
 
     render(
@@ -945,22 +992,16 @@ describe('HomePage', () => {
       </FocusProvider>,
     );
 
-    const media = screen.getByRole('button', {
-      name: 'Open Guide origin media anonymous',
-    });
-    await act(async () => {
-      media.focus();
-    });
     fireEvent.click(
-      screen.getByRole('button', { name: 'Guide origin library anonymous' }),
+      screen.getByRole('button', { name: 'Open Guide origin library anonymous' }),
     );
 
     expect(onOpenLibrary).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'guide-origin-library-anonymous' }),
       {
-        scopeKey: 'home-row:guide-origin-media-row-anonymous',
+        scopeKey: 'home-row:guide-origin-library-row-anonymous',
         focusKey:
-          'home-card:guide-origin-media-row-anonymous:media:guide-origin-media-anonymous',
+          'home-card:guide-origin-library-row-anonymous:library:guide-origin-library-anonymous',
       },
     );
   });
@@ -992,13 +1033,11 @@ describe('HomePage', () => {
       /\.media-card\s*{[^}]*scroll-margin-block:\s*var\(--tv-safe\)/s,
     );
     expect(stylesSource).toMatch(
-      /\.guide\s*{[^}]*left:\s*var\(--tv-safe\)[^}]*width:\s*var\(--guide-collapsed\)/s,
+      /\.guide\s*{[^}]*left:\s*0[^}]*width:\s*var\(--guide-collapsed\)/s,
     );
+    expect(stylesSource).not.toMatch(/\.guide::before\s*{/s);
     expect(stylesSource).toMatch(
-      /\.guide::before\s*{[^}]*right:\s*100%[^}]*width:\s*var\(--tv-safe\)[^}]*pointer-events:\s*none/s,
-    );
-    expect(stylesSource).toMatch(
-      /\.home-page\s*{[^}]*margin-left:\s*calc\(var\(--tv-safe\) \+ var\(--guide-collapsed\)\)/s,
+      /\.home-page\s*{[^}]*margin-left:\s*var\(--guide-collapsed\)/s,
     );
   });
 });
