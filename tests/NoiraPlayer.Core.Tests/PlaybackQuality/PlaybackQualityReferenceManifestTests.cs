@@ -18,7 +18,6 @@ public sealed class PlaybackQualityReferenceManifestTests
         {
             HdrOutput = "Sdr",
             DxgiOutput = "RGB_FULL_G22_NONE_P709",
-            IsTenBitSwapChain = false,
             RequiredConversionStatus = "tone-mapped-hable"
         };
         referenceCase.Expected.SdrDisplayFallback.DxgiInputAnyOf.Add("YCBCR_STUDIO_G22_LEFT_P2020");
@@ -28,6 +27,7 @@ public sealed class PlaybackQualityReferenceManifestTests
         var result = PlaybackQualityReferenceManifestValidator.Validate(manifest);
 
         Assert.True(result.IsValid);
+        Assert.Null(result.Cases[0].Expected.SdrDisplayFallback!.IsTenBitSwapChain);
         Assert.Equal(2, result.Cases[0].Expected.SdrDisplayFallback!.DxgiInputAnyOf.Count);
     }
 

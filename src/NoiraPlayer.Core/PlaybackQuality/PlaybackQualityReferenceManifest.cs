@@ -607,16 +607,6 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 "requiredConversionStatus",
                 fallback.RequiredConversionStatus);
 
-            if (!fallback.IsTenBitSwapChain.HasValue)
-            {
-                AddError(
-                    validation,
-                    "case.expected.sdrDisplayFallback.isTenBitSwapChain.missing",
-                    caseId,
-                    "expected.sdrDisplayFallback.isTenBitSwapChain",
-                    "Playback quality SDR display fallback requires isTenBitSwapChain.");
-            }
-
             if (fallback.DxgiInputAnyOf.Count == 0)
             {
                 AddError(

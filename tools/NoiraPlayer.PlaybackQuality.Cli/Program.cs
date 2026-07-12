@@ -2271,6 +2271,7 @@ internal static class Program
             HdrOutput = source.HdrOutput,
             DxgiInput = source.DxgiInput,
             DxgiOutput = source.DxgiOutput,
+            SdrDisplayFallback = CloneColorExpected(source.SdrDisplayFallback),
             MaxStartupDurationMs = source.MaxStartupDurationMs,
             MaxInteractionRecoveryDurationMs = source.MaxInteractionRecoveryDurationMs,
             MinRenderedVideoFrames = source.MinRenderedVideoFrames,
@@ -2286,6 +2287,26 @@ internal static class Program
             RequireValidatedConversion = source.RequireValidatedConversion,
             RequireMatchedDisplayRefreshRate = source.RequireMatchedDisplayRefreshRate
         };
+    }
+
+    private static PlaybackQualityColorExpected? CloneColorExpected(
+        PlaybackQualityColorExpected? source)
+    {
+        if (source == null)
+        {
+            return null;
+        }
+
+        var clone = new PlaybackQualityColorExpected
+        {
+            HdrOutput = source.HdrOutput,
+            DxgiOutput = source.DxgiOutput,
+            IsTenBitSwapChain = source.IsTenBitSwapChain,
+            RequireValidatedConversion = source.RequireValidatedConversion,
+            RequiredConversionStatus = source.RequiredConversionStatus
+        };
+        clone.DxgiInputAnyOf.AddRange(source.DxgiInputAnyOf);
+        return clone;
     }
 
     private static CandidateEvaluationGate CreateManifestGate(

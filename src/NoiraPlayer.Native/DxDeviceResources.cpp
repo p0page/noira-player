@@ -387,12 +387,6 @@ float4 PSMain(VertexOutput input) : SV_TARGET
             return false;
         }
 
-        m_lastVideoProcessorConversionValidated = false;
-        SetVideoProcessorConversionStatus(
-            DXGI_COLOR_SPACE_CUSTOM,
-            DXGI_COLOR_SPACE_CUSTOM,
-            L"pending");
-
         Microsoft::WRL::ComPtr<ID3D11Texture2D> backBuffer;
         if (FAILED(m_swapChain->GetBuffer(0, IID_PPV_ARGS(&backBuffer))))
         {
@@ -486,21 +480,6 @@ float4 PSMain(VertexOutput input) : SV_TARGET
             }
 
             useDxgiColorSpace = true;
-            m_lastVideoProcessorConversionValidated = true;
-            auto validatedStatus = L"validated";
-            if (mapping.RequiresToneMapping)
-            {
-                validatedStatus = L"validated;requires-tone-mapping";
-            }
-            else if (postProcessKind == DxgiPostProcessKind::HlgToPq)
-            {
-                validatedStatus = L"validated;requires-hlg-to-pq";
-            }
-
-            SetVideoProcessorConversionStatus(
-                selectedInputColorSpace,
-                mapping.OutputColorSpace,
-                validatedStatus);
         }
         else
         {
@@ -614,6 +593,14 @@ float4 PSMain(VertexOutput input) : SV_TARGET
         if (FAILED(videoContext->VideoProcessorBlt(processor.Get(), outputView.Get(), 0, 1, &stream)))
         {
             return false;
+        }
+
+        if (!requiresPostProcess)
+        {
+            SetVideoProcessorConversionStatus(
+                selectedInputColorSpace,
+                mapping.OutputColorSpace,
+                L"validated");
         }
 
         if (requiresPostProcess)
@@ -1404,6 +1391,10 @@ float4 PSMain(VertexOutput input) : SV_TARGET
         DXGI_COLOR_SPACE_TYPE outputColorSpace,
         std::wstring status)
     {
+        m_lastVideoProcessorConversionValidated =
+            status.rfind(L"validated", 0) == 0 &&
+            status.find(L"requires-") == std::wstring::npos &&
+            status.find(L"failed") == std::wstring::npos;
         m_lastVideoProcessorInputColorSpace = inputColorSpace;
         m_lastVideoProcessorOutputColorSpace = outputColorSpace;
         m_lastVideoProcessorConversionStatus = std::move(status);

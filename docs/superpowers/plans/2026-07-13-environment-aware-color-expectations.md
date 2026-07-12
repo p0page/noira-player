@@ -29,7 +29,7 @@
 - Test: `tests/NoiraPlayer.Core.Tests/PlaybackQuality/PlaybackQualityReportComposerTests.cs`
 
 - [ ] 先添加失败测试：合法 fallback 可反序列化/克隆；空对象、嵌套 fallback、缺少关键颜色字段、空 conversion token、重复 DXGI allowed values 均被拒绝。
-- [ ] 新增专用 `PlaybackQualityColorExpected`，包含 `hdrOutput`、`dxgiInputAnyOf`、`dxgiOutput`、`isTenBitSwapChain`、`requireValidatedConversion`、`requiredConversionStatus`。
+- [ ] 新增专用 `PlaybackQualityColorExpected`，包含 `hdrOutput`、`dxgiInputAnyOf`、`dxgiOutput`、可选 `isTenBitSwapChain`、`requireValidatedConversion`、`requiredConversionStatus`。
 - [ ] 在 `PlaybackQualityExpected` 增加可选 `SdrDisplayFallback`，并补齐所有深拷贝路径。
 - [ ] 将 evaluation version 升级为 `playback-quality-v0.4`，同步版本契约测试。
 - [ ] 运行定向 Core 测试，确认先红后绿。

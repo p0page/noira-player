@@ -5201,7 +5201,10 @@ try {
         ($_.requiredSignals -contains 'colorPipeline.swapChainFormat') -and
         ($_.requiredSignals -contains 'colorPipeline.swapChainColorSpace') -and
         ($_.requiredSignals -contains 'colorPipeline.isTenBitSwapChain') -and
-        ($_.requiredSignals -contains 'colorPipeline.dxgiInput')
+        ($_.requiredSignals -contains 'colorPipeline.dxgiInput') -and
+        $_.devCommand.expected.sdrDisplayFallback.hdrOutput -eq 'Sdr' -and
+        ($_.devCommand.expected.sdrDisplayFallback.dxgiInputAnyOf -contains 'YCBCR_STUDIO_G22_LEFT_P2020') -and
+        $_.devCommand.expected.sdrDisplayFallback.requiredConversionStatus -eq 'tone-mapped-hable'
     })) {
         throw 'Expected example reference run plan to schedule public Jellyfin direct-uri through a quality-run dev command.'
     }

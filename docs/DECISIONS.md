@@ -1278,7 +1278,7 @@ FFmpeg HTTP `multiple_requests=1` 在当前私有 Emby/反代链路产生 premat
 
 决策：可直接播放的 HDR case 保留 HDR-capable `expected`，并用可选 `expected.sdrDisplayFallback` 明示无 HDR 显示或 HDR force-SDR 时的颜色期望。Evaluator 不得隐藏推导 SDR 输出，也不得跳过 HDR 源的软件颜色链路。只在主期望要求 HDR 且报告有明确显示/force 证据时选择 fallback；普通 SDR case 即使带 force-SDR 开关仍使用 primary。
 
-fallback 只拥有 `hdrOutput`、有限的 `dxgiInputAnyOf`、`dxgiOutput`、`isTenBitSwapChain`、conversion validation 和精确 status token。codec、源色彩元数据、startup、timing、sync、buffering、track、subtitle 与 timeline 阈值始终来自主 expected。Kodi 对齐的 DXVA bypass 允许设备在 G22/P2020 LEFT/TOPLEFT 间选择受支持项，但 manifest 必须逐项列出，不能使用包含匹配或任意 P2020 放行。
+fallback 只拥有 `hdrOutput`、有限的 `dxgiInputAnyOf`、`dxgiOutput`、可选 `isTenBitSwapChain`、conversion validation 和精确 status token。App 的 10-bit HDR-to-SDR shader target 与 headless 的 8-bit SDR surface 都是合法实现，未显式声明位深时只记录证据而不据此判失败。codec、源色彩元数据、startup、timing、sync、buffering、track、subtitle 与 timeline 阈值始终来自主 expected。Kodi 对齐的 DXVA bypass 允许设备在 G22/P2020 LEFT/TOPLEFT 间选择受支持项，但 manifest 必须逐项列出，不能使用包含匹配或任意 P2020 放行。
 
 证据与版本边界：每份可播放颜色报告必须输出 `colorPipeline.expectationProfile`。primary 与 fallback 报告不具备同质颜色环境，comparator 必须标记 incompatible。该规则升级 evaluation version 为 `playback-quality-v0.4`；v0.3 与 v0.4 只用于审计裁判变化，不能作为播放器 baseline/candidate 质量对比。
 

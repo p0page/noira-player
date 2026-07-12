@@ -33,7 +33,6 @@
       "YCBCR_STUDIO_G22_TOPLEFT_P2020"
     ],
     "dxgiOutput": "RGB_FULL_G22_NONE_P709",
-    "isTenBitSwapChain": false,
     "requireValidatedConversion": true,
     "requiredConversionStatus": "tone-mapped-hable"
   }
@@ -46,6 +45,8 @@
 2. `display.isHdrDisplayAvailable=false` 且主期望要求 HDR10 输出。
 
 fallback 对象不允许再嵌套 fallback，也不承载 codec、尺寸、帧率、生命周期或性能阈值；这些仍由主 expected 统一所有环境。
+
+`isTenBitSwapChain` 在 fallback 中是可选门禁。App 可以为 HDR-to-SDR shader 保留 10-bit 中间/目标精度，而 offscreen headless 可以使用 8-bit SDR surface；两者都不决定 SDR 输出是否正确。无显式位深期望时仍必须记录 swapchain format 和位深作为环境证据，但不得据此单独判失败。
 
 `dxgiInputAnyOf` 是 manifest 明示的有限允许集合，不是模糊字符串匹配。Kodi 对齐的 native 路径会根据设备对 video-processor color space 的支持，在语义等价的 LEFT/TOPLEFT 色度定位中选择可用项；评测器只能接受集合中逐项精确匹配的值。
 

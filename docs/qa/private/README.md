@@ -75,7 +75,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools\Write-AppUiSampleComma
 - `executionRequirement.scenario`：唯一执行场景，取 `playback`、`timeline`、`audio-switch`、`subtitle-switch` 或 `pause-resume`。
 - `expected.codec`、`expected.width`、`expected.height`、`expected.frameRate`、`expected.hdrKind`。
 
-可直接播放的 HDR case 必须保留主 HDR 颜色期望，并声明 `expected.sdrDisplayFallback`。fallback 只描述无 HDR 显示或 force-SDR 时的颜色输出，至少包含 `hdrOutput`、`dxgiInputAnyOf`、`dxgiOutput`、`isTenBitSwapChain` 和精确的 `requiredConversionStatus` token。不要把主期望直接改成 SDR，也不要用文件名推断该对象。
+可直接播放的 HDR case 必须保留主 HDR 颜色期望，并声明 `expected.sdrDisplayFallback`。fallback 只描述无 HDR 显示或 force-SDR 时的颜色输出，至少包含 `hdrOutput`、`dxgiInputAnyOf`、`dxgiOutput` 和精确的 `requiredConversionStatus` token；只有环境确实要求固定位深时才填写可选 `isTenBitSwapChain`。不要把主期望直接改成 SDR，也不要用文件名推断该对象。
 
 `itemId` 和 `mediaSourceId` 只能出现在 ignored 的本地 manifest 中。不要把真实 Emby ID 写进可提交文件。
 

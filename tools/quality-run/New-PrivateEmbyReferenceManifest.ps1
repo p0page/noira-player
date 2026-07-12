@@ -353,7 +353,6 @@ function New-Expected(
                 'YCBCR_STUDIO_G22_TOPLEFT_P2020'
             )
             dxgiOutput = 'RGB_FULL_G22_NONE_P709'
-            isTenBitSwapChain = $false
             requireValidatedConversion = $true
             requiredConversionStatus = 'tone-mapped-hable'
         }
