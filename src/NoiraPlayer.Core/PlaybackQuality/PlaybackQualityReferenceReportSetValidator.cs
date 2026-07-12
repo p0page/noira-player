@@ -857,7 +857,9 @@ namespace NoiraPlayer.Core.PlaybackQuality
             PlaybackQualityReferenceCase referenceCase,
             PlaybackQualityReferenceReportSetEntry entry)
         {
-            foreach (var signal in PlaybackQualityRequiredSignalPolicy.CreateRequiredSignals(referenceCase))
+            foreach (var signal in PlaybackQualityRequiredSignalPolicy.CreateRequiredSignals(
+                referenceCase,
+                entry.Report.Result))
             {
                 if (PlaybackQualityRequiredSignalPolicy.RequiresNativePlaybackEvidence(signal) &&
                     !PlaybackQualityEvidenceLevel.MeetsMinimum(

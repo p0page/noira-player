@@ -298,17 +298,7 @@ internal static class NativeHeadlessHarness
         var runResult = lateHelperFailure
             ? PlaybackQualityRuntimeEvidenceCollector.ComposeErrorRunResult(
                 referenceCase,
-                new PlaybackQualityError
-                {
-                    Code = "native-headless.helper-failed",
-                    Message = helper.ErrorMessage,
-                    Operation = "native-headless-playback",
-                    ExceptionType = "native-helper-exit",
-                    FailureClass = PlaybackQualityFailureClassification.PlayerCoreBug,
-                    FailureArea = "playback-runtime",
-                    IsTerminal = true,
-                    IsRetriable = true
-                },
+                CreateLateHelperError(options, helper),
                 request)
             : PlaybackQualityReportComposer.Compose(request);
 
@@ -335,6 +325,37 @@ internal static class NativeHeadlessHarness
 
         File.WriteAllText(reportPath, PlaybackQualityReportSerializer.Serialize(runResult));
         return new NativeHeadlessHarnessResult(reportPath, lateHelperFailure ? 1 : 0);
+    }
+
+    private static PlaybackQualityError CreateLateHelperError(
+        NativeHeadlessHarnessOptions options,
+        NativeHeadlessHelperResult helper)
+    {
+        var isHttpSource = Uri.TryCreate(options.StreamUrl, UriKind.Absolute, out var sourceUri) &&
+            (sourceUri.Scheme == Uri.UriSchemeHttp || sourceUri.Scheme == Uri.UriSchemeHttps);
+        var message = helper.ErrorMessage ?? "";
+        var isNetworkFailure = isHttpSource &&
+            (message.Contains("Error reading HTTP response", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("Will reconnect at", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("I/O error", StringComparison.OrdinalIgnoreCase));
+
+        return new PlaybackQualityError
+        {
+            Code = isNetworkFailure
+                ? "native-headless.network-io-failed"
+                : "native-headless.helper-failed",
+            Message = message,
+            Operation = isNetworkFailure && options.Scenario == PlaybackQualityExecutionScenario.Timeline
+                ? "seek"
+                : "native-headless-playback",
+            ExceptionType = "native-helper-exit",
+            FailureClass = isNetworkFailure
+                ? PlaybackQualityFailureClassification.ExternalServiceOrProtocolIssue
+                : PlaybackQualityFailureClassification.PlayerCoreBug,
+            FailureArea = isNetworkFailure ? "error-handling" : "playback-lifecycle",
+            IsTerminal = true,
+            IsRetriable = true
+        };
     }
 
     private static PlaybackQualityStartup CreateStartupEvidence(

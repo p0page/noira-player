@@ -6,7 +6,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
     public static class PlaybackQualityRequiredSignalPolicy
     {
         public static IReadOnlyList<string> CreateRequiredSignals(
-            PlaybackQualityReferenceCase referenceCase)
+            PlaybackQualityReferenceCase referenceCase,
+            string reportResult = "")
         {
             var requiredSignals = new List<string>();
             if (referenceCase == null)
@@ -15,7 +16,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
             }
 
             var expected = referenceCase.Expected ?? new PlaybackQualityExpected();
-            if (HasPurpose(referenceCase, "error-handling"))
+            if (string.Equals(reportResult, PlaybackQualityReportResult.Error, StringComparison.Ordinal) ||
+                HasPurpose(referenceCase, "error-handling"))
             {
                 AddUnique(requiredSignals, "error.code");
                 AddUnique(requiredSignals, "error.message");

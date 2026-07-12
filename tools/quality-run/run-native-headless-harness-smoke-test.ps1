@@ -866,7 +866,8 @@ function Invoke-NativeHeadlessParserFixtureCase {
         [string]$Name,
         [string]$HelperOutput,
         [string]$HelperError = '',
-        [int]$HelperExitCode = 0
+        [int]$HelperExitCode = 0,
+        [string]$StreamUrl = ''
     )
 
     Set-Content -LiteralPath $FixtureHelper.OutputPath -Value $HelperOutput -Encoding UTF8
@@ -874,7 +875,11 @@ function Invoke-NativeHeadlessParserFixtureCase {
     Set-Content -LiteralPath $FixtureHelper.ExitCodePath -Value ([string]$HelperExitCode) -Encoding ASCII
     $reportsDirectory = Join-Path $Root 'reports'
     $caseId = 'local/native-headless-parser-' + $Name
-    $fixtureStreamUrl = ([System.Uri](Join-Path $Root 'fixture.mp4')).AbsoluteUri
+    $fixtureStreamUrl = if ([string]::IsNullOrWhiteSpace($StreamUrl)) {
+        ([System.Uri](Join-Path $Root 'fixture.mp4')).AbsoluteUri
+    } else {
+        $StreamUrl
+    }
     & dotnet $HeadlessDll `
         --case-id $caseId `
         --stream-url $fixtureStreamUrl `
@@ -949,6 +954,30 @@ function Assert-NativeHeadlessParserContracts {
         -not $lateFailure.Report.report.execution.demuxStarted -or
         -not $lateFailure.Report.report.execution.playbackSampleObserved) {
         $failures.Add('A non-zero helper exit after valid telemetry did not preserve decoded/rendered native playback evidence in the error report.')
+    }
+
+    $networkFailure = Invoke-NativeHeadlessParserFixtureCase `
+        -FixtureHelper $fixtureHelper `
+        -HeadlessDll $headlessDll `
+        -Root $Root `
+        -Name 'late-http-seek-failure' `
+        -StreamUrl 'https://example.invalid/media.mkv' `
+        -HelperOutput (New-NativeHeadlessParserFixtureOutput -Overrides @{
+            seekAttempted = '1'
+            seekStatus = 'failed'
+            seekActualPositionTicks = '-1'
+            postSeekPlaybackPositionTicks = '10000000'
+            postSeekAdvanced = '0'
+            seekOperationDurationMs = '40000'
+            seekRecoveryDurationMs = '0'
+        }) `
+        -HelperError "Error reading HTTP response: End of file`nWill reconnect at 94461602" `
+        -HelperExitCode 9
+    if ($networkFailure.ExitCode -ne 1 -or
+        $networkFailure.Report.report.error.code -ne 'native-headless.network-io-failed' -or
+        $networkFailure.Report.report.error.failureClass -ne 'external service/protocol issue' -or
+        $networkFailure.Report.report.error.failureArea -ne 'error-handling') {
+        $failures.Add('A late HTTP seek failure was not classified as an external service/protocol error.')
     }
 
     $openFailureMessage = 'avformat_open_input failed: I/O error'

@@ -1213,6 +1213,50 @@ public sealed class PlaybackQualityReferenceManifestTests
     }
 
     [Fact]
+    public void ValidateReportSet_Accepts_Structured_Timeline_Error_Without_Success_Only_Seek_Evidence()
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        var referenceCase = CreateCase("timeline/network-error", 1, "timeline");
+        referenceCase.ExecutionRequirement.Scenario = PlaybackQualityExecutionScenario.Timeline;
+        referenceCase.Expected.MaxSeekPositionErrorMs = 500;
+        referenceCase.Expected.MaxSeekRecoveryDurationMs = 2000;
+        manifest.Cases.Add(referenceCase);
+
+        var report = CreateReport(referenceCase.CaseId, "hevc", 3840, 2160, 23.976, "Hdr10");
+        report.Result = PlaybackQualityReportResult.Error;
+        report.Error = new PlaybackQualityError
+        {
+            Code = "native-headless.network-io-failed",
+            Message = "HTTP response ended while seeking.",
+            Operation = "seek",
+            ExceptionType = "native-helper-exit",
+            FailureClass = PlaybackQualityFailureClassification.ExternalServiceOrProtocolIssue,
+            FailureArea = "error-handling"
+        };
+        report.Lifecycle.Events.Add(new PlaybackQualityLifecycleEvent
+        {
+            Operation = "error",
+            Status = "error",
+            Message = report.Error.Message
+        });
+        AddCapturedRuntimeMetrics(report);
+        AddNativeExecutionEvidence(
+            report,
+            referenceCase,
+            PlaybackQualityExecutionStatus.Failed,
+            sourceOpened: true,
+            decoderOpened: true,
+            playbackSampleObserved: true);
+
+        var validation = PlaybackQualityReferenceReportSetValidator.Validate(manifest, new[] { report });
+
+        Assert.True(validation.StructureValid);
+        Assert.True(validation.ExecutionValid);
+        Assert.True(validation.IsValid);
+        Assert.DoesNotContain(validation.Errors, error => error.Code == "report.requiredSignal.missing");
+    }
+
+    [Fact]
     public void ValidateReportSet_Rejects_Stable_Skip_Even_When_A_Runner_Claims_Native_Evidence()
     {
         var manifest = new PlaybackQualityReferenceManifest();

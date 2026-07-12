@@ -18,6 +18,8 @@
 
 版本决策：该 required-signal 与阈值变化将 evaluation version 从 `playback-quality-v0.1` 升级为 `playback-quality-v0.2`。历史 v0.1 报告和文档保持原值；当前 manifest validation、report-set validation、run plan、analysis、comparison 与 candidate evaluation 必须统一输出 v0.2，禁止跨版本比较。
 
+错误结果边界：当 stable/challenge case 已真实进入 native 链路并以结构化 `result=error` 结束时，report-set validator 改为要求 `error.*`、`lifecycle.error` 与 execution 证据，而不再要求只有成功后才可能存在的首帧、落点或持续播放信号。结构有效只表示失败被完整记录，不把 error 改成 pass。HTTP/HTTPS helper 日志明确出现 HTTP response error、FFmpeg reconnect 或 I/O error 时，错误分类为 `external service/protocol issue + error-handling`；其他 late native failure 保持 `player-core bug + playback-lifecycle`。未注册的 `playback-runtime` failure area 不再产生。
+
 ## 2026-07-12：captured report 不能绕过 manifest expected 物化
 
 决策：native manifest runner 的输出只作为 captured evidence，不能直接进入正式 baseline。baseline 必须根据 runner summary 生成仅包含实际选中 case 的 executed manifest，再调用统一 materializer，把 manifest expected 绑定到 captured report 并使用当前 evaluator 重新计算 pass/fail。最终 unified manifest 保留 quarantine，但未执行 quarantine 不生成 skip 报告。
