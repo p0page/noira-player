@@ -27,6 +27,10 @@
         public double FfmpegStreamInfoDurationMs { get; set; }
         public double NativeStartupSeekDurationMs { get; set; }
         public double NativeFirstFrameDurationMs { get; set; }
+        public double NativeFirstFrameDemuxReadDurationMs { get; set; }
+        public double NativeFirstFramePresentDurationMs { get; set; }
+        public ulong NativeFirstFrameDemuxPacketCount { get; set; }
+        public ulong NativeFirstFrameDemuxBytes { get; set; }
         public long? ContainerStartTimeTicks { get; set; }
         public long? VideoStreamStartTimeTicks { get; set; }
         public long? SeekDemuxTargetTicks { get; set; }

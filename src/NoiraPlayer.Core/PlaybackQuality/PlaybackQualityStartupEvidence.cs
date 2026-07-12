@@ -25,6 +25,15 @@ namespace NoiraPlayer.Core.PlaybackQuality
             var streamInfoMs = Math.Max(0, metrics.FfmpegStreamInfoDurationMs);
             var startupSeekMs = Math.Max(0, metrics.NativeStartupSeekDurationMs);
             var firstFrameMs = Math.Max(0, metrics.NativeFirstFrameDurationMs);
+            var firstFrameDemuxMs = Math.Min(
+                firstFrameMs,
+                Math.Max(0, metrics.NativeFirstFrameDemuxReadDurationMs));
+            var firstFramePresentMs = Math.Min(
+                Math.Max(0, firstFrameMs - firstFrameDemuxMs),
+                Math.Max(0, metrics.NativeFirstFramePresentDurationMs));
+            var firstFrameDecodeControlMs = Math.Max(
+                0,
+                firstFrameMs - firstFrameDemuxMs - firstFramePresentMs);
             var graphOtherMs = Math.Max(
                 0,
                 metrics.NativeGraphOpenDurationMs - openInputMs - streamInfoMs - startupSeekMs - firstFrameMs);
@@ -37,7 +46,14 @@ namespace NoiraPlayer.Core.PlaybackQuality
             Add(nativeOpen, "ffmpeg.find-stream-info", streamInfoMs);
             Add(nativeOpen, "native.initialize-components", graphOtherMs);
             Add(nativeOpen, "native.startup-seek", startupSeekMs);
-            Add(nativeOpen, "native.first-frame", firstFrameMs);
+            Add(
+                nativeOpen,
+                "native.first-frame.demux-read",
+                firstFrameDemuxMs,
+                packetCount: metrics.NativeFirstFrameDemuxPacketCount,
+                bytes: metrics.NativeFirstFrameDemuxBytes);
+            Add(nativeOpen, "native.first-frame.decode-control", firstFrameDecodeControlMs);
+            Add(nativeOpen, "native.first-frame.present", firstFramePresentMs);
             Add(nativeOpen, "host.dispatch-overhead", hostDispatchMs);
         }
 
@@ -45,13 +61,17 @@ namespace NoiraPlayer.Core.PlaybackQuality
             PlaybackQualityStartupStage stage,
             string name,
             double durationMs,
-            string status = "measured")
+            string status = "measured",
+            ulong packetCount = 0,
+            ulong bytes = 0)
         {
             stage.Components.Add(new PlaybackQualityStartupComponent
             {
                 Name = name,
                 DurationMs = durationMs,
-                Status = status
+                Status = status,
+                PacketCount = packetCount,
+                Bytes = bytes
             });
         }
     }

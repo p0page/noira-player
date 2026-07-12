@@ -65,6 +65,13 @@ namespace winrt::NoiraPlayer::Native::implementation
         double StreamInfoDurationMs{0.0};
     };
 
+    struct FfmpegReadTimingSnapshot
+    {
+        double ReadFrameDurationMs{0.0};
+        uint64_t PacketCount{0};
+        uint64_t Bytes{0};
+    };
+
     struct FfmpegSwitchPacketCacheSnapshot
     {
         bool HasCoverage{false};
@@ -87,6 +94,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         std::vector<FfmpegStreamSnapshot> StreamSnapshots() const;
         FfmpegTimelineSnapshot TimelineSnapshot(int32_t streamIndex) const;
         FfmpegOpenTimingSnapshot OpenTimingSnapshot() const noexcept;
+        FfmpegReadTimingSnapshot ReadTimingSnapshot() const noexcept;
         int64_t NormalizeTimestampTicks(int64_t demuxTicks) const noexcept;
         void RegisterStream(int32_t streamIndex);
         void UnregisterStream(int32_t streamIndex) noexcept;
@@ -121,6 +129,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         MediaTimeline m_timeline;
         int64_t m_lastSeekDemuxTargetTicks{-1};
         FfmpegOpenTimingSnapshot m_openTiming;
+        FfmpegReadTimingSnapshot m_readTiming;
         bool m_open{false};
     };
 }

@@ -369,6 +369,7 @@ namespace winrt::NoiraPlayer::Native::implementation
 
         Close();
         m_openTiming = {};
+        m_readTiming = {};
         m_interruptRequested.store(false, std::memory_order_release);
 
         auto networkResult = avformat_network_init();
@@ -511,6 +512,11 @@ namespace winrt::NoiraPlayer::Native::implementation
         return m_openTiming;
     }
 
+    FfmpegReadTimingSnapshot FfmpegMediaSource::ReadTimingSnapshot() const noexcept
+    {
+        return m_readTiming;
+    }
+
     void FfmpegMediaSource::Close() noexcept
     {
         Interrupt();
@@ -528,6 +534,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         m_ioDeadlineNanoseconds.store(0, std::memory_order_release);
         m_timeline.Reset();
         m_lastSeekDemuxTargetTicks = -1;
+        m_readTiming = {};
         m_open = false;
     }
 
@@ -812,10 +819,20 @@ namespace winrt::NoiraPlayer::Native::implementation
             while (true)
             {
                 BeginBlockingIo(ReadTimeoutMilliseconds);
+                auto const readStartedAt = SteadyClock::now();
                 readResult = av_read_frame(m_formatContext, scratchPacket);
+                m_readTiming.ReadFrameDurationMs +=
+                    std::chrono::duration<double, std::milli>(
+                        SteadyClock::now() - readStartedAt).count();
                 if (readResult < 0)
                 {
                     break;
+                }
+
+                ++m_readTiming.PacketCount;
+                if (scratchPacket->size > 0)
+                {
+                    m_readTiming.Bytes += static_cast<uint64_t>(scratchPacket->size);
                 }
 
                 if (scratchPacket->stream_index == streamIndex)

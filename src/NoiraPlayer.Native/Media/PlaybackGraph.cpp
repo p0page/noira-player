@@ -152,11 +152,23 @@ namespace winrt::NoiraPlayer::Native::implementation
             m_qualityMetrics.SeekDemuxTargetTicks = timeline.LastSeekDemuxTargetTicks;
             ApplyFramePacingPolicyMetrics();
             AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open RenderNextFrame begin");
+            auto const readTimingBeforeFirstFrame = m_mediaSource.ReadTimingSnapshot();
             auto const firstFrameStartedAt = std::chrono::steady_clock::now();
             auto renderedFirstFrame = RenderNextFrame();
             m_qualityMetrics.NativeFirstFrameDurationMs =
                 std::chrono::duration<double, std::milli>(
                     std::chrono::steady_clock::now() - firstFrameStartedAt).count();
+            auto const readTimingAfterFirstFrame = m_mediaSource.ReadTimingSnapshot();
+            m_qualityMetrics.NativeFirstFrameDemuxReadDurationMs = (std::max)(
+                0.0,
+                readTimingAfterFirstFrame.ReadFrameDurationMs -
+                    readTimingBeforeFirstFrame.ReadFrameDurationMs);
+            m_qualityMetrics.NativeFirstFrameDemuxPacketCount =
+                readTimingAfterFirstFrame.PacketCount - readTimingBeforeFirstFrame.PacketCount;
+            m_qualityMetrics.NativeFirstFrameDemuxBytes =
+                readTimingAfterFirstFrame.Bytes - readTimingBeforeFirstFrame.Bytes;
+            m_qualityMetrics.NativeFirstFramePresentDurationMs =
+                m_qualityMetrics.Snapshot().PresentDurationMsMax;
             AppendNativePlaybackDiagnostic(renderedFirstFrame
                 ? L"PlaybackGraph.Open RenderNextFrame end true"
                 : L"PlaybackGraph.Open RenderNextFrame end false");

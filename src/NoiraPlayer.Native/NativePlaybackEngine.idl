@@ -78,6 +78,10 @@
         Double FfmpegStreamInfoDurationMs;
         Double NativeStartupSeekDurationMs;
         Double NativeFirstFrameDurationMs;
+        Double NativeFirstFrameDemuxReadDurationMs;
+        Double NativeFirstFramePresentDurationMs;
+        UInt64 NativeFirstFrameDemuxPacketCount;
+        UInt64 NativeFirstFrameDemuxBytes;
         Int64 ContainerStartTimeTicks;
         Int64 VideoStreamStartTimeTicks;
         Int64 SeekDemuxTargetTicks;

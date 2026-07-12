@@ -71,6 +71,10 @@ int main()
     metrics.FfmpegStreamInfoDurationMs = 500.0;
     metrics.NativeStartupSeekDurationMs = 125.0;
     metrics.NativeFirstFrameDurationMs = 100.0;
+    metrics.NativeFirstFrameDemuxReadDurationMs = 60.0;
+    metrics.NativeFirstFramePresentDurationMs = 5.0;
+    metrics.NativeFirstFrameDemuxPacketCount = 200;
+    metrics.NativeFirstFrameDemuxBytes = 1'000'000;
     metrics.ContainerStartTimeTicks = 1'400'000;
     metrics.VideoStreamStartTimeTicks = 1'421'333;
     metrics.SeekDemuxTargetTicks = 24'000'000;
@@ -149,6 +153,10 @@ int main()
     assert(snapshot.FfmpegStreamInfoDurationMs == 500.0);
     assert(snapshot.NativeStartupSeekDurationMs == 125.0);
     assert(snapshot.NativeFirstFrameDurationMs == 100.0);
+    assert(snapshot.NativeFirstFrameDemuxReadDurationMs == 60.0);
+    assert(snapshot.NativeFirstFramePresentDurationMs == 5.0);
+    assert(snapshot.NativeFirstFrameDemuxPacketCount == 200);
+    assert(snapshot.NativeFirstFrameDemuxBytes == 1'000'000);
     assert(snapshot.ContainerStartTimeTicks == 1'400'000);
     assert(snapshot.VideoStreamStartTimeTicks == 1'421'333);
     assert(snapshot.SeekDemuxTargetTicks == 24'000'000);
@@ -165,6 +173,10 @@ int main()
     assert(snapshot.FfmpegStreamInfoDurationMs == 500.0);
     assert(snapshot.NativeStartupSeekDurationMs == 125.0);
     assert(snapshot.NativeFirstFrameDurationMs == 100.0);
+    assert(snapshot.NativeFirstFrameDemuxReadDurationMs == 60.0);
+    assert(snapshot.NativeFirstFramePresentDurationMs == 5.0);
+    assert(snapshot.NativeFirstFrameDemuxPacketCount == 200);
+    assert(snapshot.NativeFirstFrameDemuxBytes == 1'000'000);
     assert(snapshot.ContainerStartTimeTicks == 1'400'000);
     assert(snapshot.VideoStreamStartTimeTicks == 1'421'333);
     assert(snapshot.SeekDemuxTargetTicks == -1);
@@ -209,6 +221,10 @@ int main()
     assert(snapshot.FfmpegStreamInfoDurationMs == 0.0);
     assert(snapshot.NativeStartupSeekDurationMs == 0.0);
     assert(snapshot.NativeFirstFrameDurationMs == 0.0);
+    assert(snapshot.NativeFirstFrameDemuxReadDurationMs == 0.0);
+    assert(snapshot.NativeFirstFramePresentDurationMs == 0.0);
+    assert(snapshot.NativeFirstFrameDemuxPacketCount == 0);
+    assert(snapshot.NativeFirstFrameDemuxBytes == 0);
 
     return 0;
 }

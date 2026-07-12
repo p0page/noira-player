@@ -83,6 +83,18 @@ namespace winrt::NoiraPlayer::Native::implementation
         double NativeFirstFrameDurationMs() const noexcept { return m_nativeFirstFrameDurationMs; }
         void NativeFirstFrameDurationMs(double value) noexcept { m_nativeFirstFrameDurationMs = value; }
 
+        double NativeFirstFrameDemuxReadDurationMs() const noexcept { return m_nativeFirstFrameDemuxReadDurationMs; }
+        void NativeFirstFrameDemuxReadDurationMs(double value) noexcept { m_nativeFirstFrameDemuxReadDurationMs = value; }
+
+        double NativeFirstFramePresentDurationMs() const noexcept { return m_nativeFirstFramePresentDurationMs; }
+        void NativeFirstFramePresentDurationMs(double value) noexcept { m_nativeFirstFramePresentDurationMs = value; }
+
+        uint64_t NativeFirstFrameDemuxPacketCount() const noexcept { return m_nativeFirstFrameDemuxPacketCount; }
+        void NativeFirstFrameDemuxPacketCount(uint64_t value) noexcept { m_nativeFirstFrameDemuxPacketCount = value; }
+
+        uint64_t NativeFirstFrameDemuxBytes() const noexcept { return m_nativeFirstFrameDemuxBytes; }
+        void NativeFirstFrameDemuxBytes(uint64_t value) noexcept { m_nativeFirstFrameDemuxBytes = value; }
+
         int64_t ContainerStartTimeTicks() const noexcept { return m_containerStartTimeTicks; }
         void ContainerStartTimeTicks(int64_t value) noexcept { m_containerStartTimeTicks = value; }
         int64_t VideoStreamStartTimeTicks() const noexcept { return m_videoStreamStartTimeTicks; }
@@ -346,6 +358,10 @@ namespace winrt::NoiraPlayer::Native::implementation
         double m_ffmpegStreamInfoDurationMs{0.0};
         double m_nativeStartupSeekDurationMs{0.0};
         double m_nativeFirstFrameDurationMs{0.0};
+        double m_nativeFirstFrameDemuxReadDurationMs{0.0};
+        double m_nativeFirstFramePresentDurationMs{0.0};
+        uint64_t m_nativeFirstFrameDemuxPacketCount{0};
+        uint64_t m_nativeFirstFrameDemuxBytes{0};
         int64_t m_containerStartTimeTicks{0};
         int64_t m_videoStreamStartTimeTicks{0};
         int64_t m_seekDemuxTargetTicks{-1};

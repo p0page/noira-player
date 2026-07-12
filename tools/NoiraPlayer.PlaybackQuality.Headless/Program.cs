@@ -987,6 +987,10 @@ internal static class NativeHeadlessHarness
             TrySetRequiredNonNegativeDouble(values, "ffmpegStreamInfoDurationMs", value => metrics.FfmpegStreamInfoDurationMs = value, out error) &&
             TrySetRequiredNonNegativeDouble(values, "nativeStartupSeekDurationMs", value => metrics.NativeStartupSeekDurationMs = value, out error) &&
             TrySetRequiredNonNegativeDouble(values, "nativeFirstFrameDurationMs", value => metrics.NativeFirstFrameDurationMs = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "nativeFirstFrameDemuxReadDurationMs", value => metrics.NativeFirstFrameDemuxReadDurationMs = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "nativeFirstFramePresentDurationMs", value => metrics.NativeFirstFramePresentDurationMs = value, out error) &&
+            TrySetRequiredUInt64(values, "nativeFirstFrameDemuxPacketCount", value => metrics.NativeFirstFrameDemuxPacketCount = value, out error) &&
+            TrySetRequiredUInt64(values, "nativeFirstFrameDemuxBytes", value => metrics.NativeFirstFrameDemuxBytes = value, out error) &&
             TrySetRequiredNonNegativeDouble(values, "renderIntervalMsP05", value => metrics.RenderIntervalMsP05 = value, out error) &&
             TrySetRequiredNonNegativeDouble(values, "renderIntervalMsP50", value => metrics.RenderIntervalMsP50 = value, out error) &&
             TrySetRequiredNonNegativeDouble(values, "renderIntervalMsP95", value => metrics.RenderIntervalMsP95 = value, out error) &&

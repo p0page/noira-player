@@ -21,7 +21,11 @@ public sealed class PlaybackQualityStartupEvidenceTests
             FfmpegOpenInputDurationMs = 4000,
             FfmpegStreamInfoDurationMs = 500,
             NativeStartupSeekDurationMs = 125,
-            NativeFirstFrameDurationMs = 100
+            NativeFirstFrameDurationMs = 100,
+            NativeFirstFrameDemuxReadDurationMs = 60,
+            NativeFirstFramePresentDurationMs = 5,
+            NativeFirstFrameDemuxPacketCount = 200,
+            NativeFirstFrameDemuxBytes = 1_000_000
         };
 
         PlaybackQualityStartupEvidence.EnrichNativeOpenBreakdown(startup, metrics);
@@ -33,7 +37,9 @@ public sealed class PlaybackQualityStartupEvidenceTests
             component => Assert.Equal(("ffmpeg.find-stream-info", 500, "measured"), (component.Name, component.DurationMs, component.Status)),
             component => Assert.Equal(("native.initialize-components", 75), (component.Name, component.DurationMs)),
             component => Assert.Equal(("native.startup-seek", 125), (component.Name, component.DurationMs)),
-            component => Assert.Equal(("native.first-frame", 100), (component.Name, component.DurationMs)),
+            component => Assert.Equal(("native.first-frame.demux-read", 60, 200UL, 1_000_000UL), (component.Name, component.DurationMs, component.PacketCount, component.Bytes)),
+            component => Assert.Equal(("native.first-frame.decode-control", 35), (component.Name, component.DurationMs)),
+            component => Assert.Equal(("native.first-frame.present", 5), (component.Name, component.DurationMs)),
             component => Assert.Equal(("host.dispatch-overhead", 200), (component.Name, component.DurationMs)));
     }
 

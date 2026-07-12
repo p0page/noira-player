@@ -148,6 +148,10 @@ public sealed class NativeQualityMetricsBridgeContractTests
         "FfmpegStreamInfoDurationMs",
         "NativeStartupSeekDurationMs",
         "NativeFirstFrameDurationMs",
+        "NativeFirstFrameDemuxReadDurationMs",
+        "NativeFirstFramePresentDurationMs",
+        "NativeFirstFrameDemuxPacketCount",
+        "NativeFirstFrameDemuxBytes",
         "ContainerStartTimeTicks",
         "VideoStreamStartTimeTicks",
         "SeekDemuxTargetTicks",
@@ -240,6 +244,8 @@ public sealed class NativeQualityMetricsBridgeContractTests
         "FfmpegStreamInfoDurationMs",
         "NativeStartupSeekDurationMs",
         "NativeFirstFrameDurationMs",
+        "NativeFirstFrameDemuxReadDurationMs",
+        "NativeFirstFramePresentDurationMs",
     };
 
     private static readonly IReadOnlyList<string> NativeInteractionDoubleProperties = new[]

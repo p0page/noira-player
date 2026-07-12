@@ -59,6 +59,10 @@ namespace winrt::NoiraPlayer::Native::implementation
         double FfmpegStreamInfoDurationMs{0.0};
         double NativeStartupSeekDurationMs{0.0};
         double NativeFirstFrameDurationMs{0.0};
+        double NativeFirstFrameDemuxReadDurationMs{0.0};
+        double NativeFirstFramePresentDurationMs{0.0};
+        uint64_t NativeFirstFrameDemuxPacketCount{0};
+        uint64_t NativeFirstFrameDemuxBytes{0};
         int64_t ContainerStartTimeTicks{0};
         int64_t VideoStreamStartTimeTicks{0};
         int64_t SeekDemuxTargetTicks{-1};
@@ -269,6 +273,10 @@ namespace winrt::NoiraPlayer::Native::implementation
         double FfmpegStreamInfoDurationMs{0.0};
         double NativeStartupSeekDurationMs{0.0};
         double NativeFirstFrameDurationMs{0.0};
+        double NativeFirstFrameDemuxReadDurationMs{0.0};
+        double NativeFirstFramePresentDurationMs{0.0};
+        uint64_t NativeFirstFrameDemuxPacketCount{0};
+        uint64_t NativeFirstFrameDemuxBytes{0};
         int64_t ContainerStartTimeTicks{0};
         int64_t VideoStreamStartTimeTicks{0};
         int64_t SeekDemuxTargetTicks{-1};
@@ -288,6 +296,10 @@ namespace winrt::NoiraPlayer::Native::implementation
             auto const ffmpegStreamInfoDurationMs = FfmpegStreamInfoDurationMs;
             auto const nativeStartupSeekDurationMs = NativeStartupSeekDurationMs;
             auto const nativeFirstFrameDurationMs = NativeFirstFrameDurationMs;
+            auto const nativeFirstFrameDemuxReadDurationMs = NativeFirstFrameDemuxReadDurationMs;
+            auto const nativeFirstFramePresentDurationMs = NativeFirstFramePresentDurationMs;
+            auto const nativeFirstFrameDemuxPacketCount = NativeFirstFrameDemuxPacketCount;
+            auto const nativeFirstFrameDemuxBytes = NativeFirstFrameDemuxBytes;
             auto const containerStartTimeTicks = ContainerStartTimeTicks;
             auto const videoStreamStartTimeTicks = VideoStreamStartTimeTicks;
             Reset();
@@ -296,6 +308,10 @@ namespace winrt::NoiraPlayer::Native::implementation
             FfmpegStreamInfoDurationMs = ffmpegStreamInfoDurationMs;
             NativeStartupSeekDurationMs = nativeStartupSeekDurationMs;
             NativeFirstFrameDurationMs = nativeFirstFrameDurationMs;
+            NativeFirstFrameDemuxReadDurationMs = nativeFirstFrameDemuxReadDurationMs;
+            NativeFirstFramePresentDurationMs = nativeFirstFramePresentDurationMs;
+            NativeFirstFrameDemuxPacketCount = nativeFirstFrameDemuxPacketCount;
+            NativeFirstFrameDemuxBytes = nativeFirstFrameDemuxBytes;
             ContainerStartTimeTicks = containerStartTimeTicks;
             VideoStreamStartTimeTicks = videoStreamStartTimeTicks;
         }
@@ -412,6 +428,10 @@ namespace winrt::NoiraPlayer::Native::implementation
             snapshot.FfmpegStreamInfoDurationMs = FfmpegStreamInfoDurationMs;
             snapshot.NativeStartupSeekDurationMs = NativeStartupSeekDurationMs;
             snapshot.NativeFirstFrameDurationMs = NativeFirstFrameDurationMs;
+            snapshot.NativeFirstFrameDemuxReadDurationMs = NativeFirstFrameDemuxReadDurationMs;
+            snapshot.NativeFirstFramePresentDurationMs = NativeFirstFramePresentDurationMs;
+            snapshot.NativeFirstFrameDemuxPacketCount = NativeFirstFrameDemuxPacketCount;
+            snapshot.NativeFirstFrameDemuxBytes = NativeFirstFrameDemuxBytes;
             snapshot.ContainerStartTimeTicks = ContainerStartTimeTicks;
             snapshot.VideoStreamStartTimeTicks = VideoStreamStartTimeTicks;
             snapshot.SeekDemuxTargetTicks = SeekDemuxTargetTicks;

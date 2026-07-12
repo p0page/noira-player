@@ -345,7 +345,9 @@ public sealed class PlaybackQualityRuntimeEvidenceCollectorTests
             component => Assert.Equal("ffmpeg.find-stream-info", component.Name),
             component => Assert.Equal("native.initialize-components", component.Name),
             component => Assert.Equal("native.startup-seek", component.Name),
-            component => Assert.Equal("native.first-frame", component.Name),
+            component => Assert.Equal("native.first-frame.demux-read", component.Name),
+            component => Assert.Equal("native.first-frame.decode-control", component.Name),
+            component => Assert.Equal("native.first-frame.present", component.Name),
             component => Assert.Equal("host.dispatch-overhead", component.Name));
         Assert.Contains(
             "startup.stage.native.open.component.ffmpeg.open-input.durationMs",
@@ -634,6 +636,10 @@ public sealed class PlaybackQualityRuntimeEvidenceCollectorTests
                 FfmpegStreamInfoDurationMs = 50,
                 NativeStartupSeekDurationMs = 10,
                 NativeFirstFrameDurationMs = 15,
+                NativeFirstFrameDemuxReadDurationMs = 8,
+                NativeFirstFramePresentDurationMs = 1,
+                NativeFirstFrameDemuxPacketCount = 12,
+                NativeFirstFrameDemuxBytes = 65_536,
                 RenderIntervalMsP50 = 41.708,
                 RenderIntervalMsP95 = 42.2,
                 RenderIntervalMsP99 = 48.0,
