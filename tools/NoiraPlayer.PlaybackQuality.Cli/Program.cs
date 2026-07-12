@@ -296,6 +296,7 @@ internal static class Program
         var candidateReportAnalysis = CreateReportAnalysisSummary(candidateEnvelopes);
         var evaluation = new CandidateEvaluationOutput
         {
+            EvaluationScope = options.EvaluationScope,
             ManifestValidation = PlaybackQualityReferenceManifestValidator.Validate(manifest),
             BaselineReportSetValidation = PlaybackQualityReferenceReportSetValidator.Validate(
                 manifest,
@@ -313,7 +314,8 @@ internal static class Program
         }
 
         var manifestCoverageGate = CreateManifestCoverageGate(
-            evaluation.ManifestValidation.Coverage);
+            evaluation.ManifestValidation.Coverage,
+            options.EvaluationScope);
         if (manifestCoverageGate.Status == "blocked")
         {
             AddUnique(evaluation.Blockers, "manifest-coverage.incomplete");
@@ -702,7 +704,6 @@ internal static class Program
         {
             throw new ArgumentException("Missing required option --manifest.");
         }
-
         if (options.DurationSeconds < 10 || options.DurationSeconds > 600)
         {
             throw new ArgumentException("--duration must be between 10 and 600 seconds.");
@@ -748,6 +749,9 @@ internal static class Program
                         ReadValue(args, ref index, arg),
                         System.Globalization.CultureInfo.InvariantCulture);
                     break;
+                case "--evaluation-scope":
+                    options.EvaluationScope = ReadValue(args, ref index, arg).Trim().ToLowerInvariant();
+                    break;
                 case "--output":
                     options.OutputPath = ReadValue(args, ref index, arg);
                     break;
@@ -760,6 +764,10 @@ internal static class Program
         if (string.IsNullOrWhiteSpace(options.ManifestPath))
         {
             throw new ArgumentException("Missing required option --manifest.");
+        }
+        if (options.EvaluationScope != "corpus" && options.EvaluationScope != "focused")
+        {
+            throw new ArgumentException("--evaluation-scope must be corpus or focused.");
         }
 
         return options;
@@ -2311,27 +2319,40 @@ internal static class Program
     }
 
     private static CandidateEvaluationGate CreateManifestCoverageGate(
-        PlaybackQualityReferenceManifestCoverage coverage)
+        PlaybackQualityReferenceManifestCoverage coverage,
+        string evaluationScope)
     {
         if (coverage == null)
         {
             coverage = new PlaybackQualityReferenceManifestCoverage();
         }
 
+        var isFocused = string.Equals(evaluationScope, "focused", StringComparison.Ordinal);
         var isReady = coverage.Status == "ready" && coverage.IsCoreEvaluationReady;
         var gate = new CandidateEvaluationGate
         {
             Name = "manifest-coverage",
-            Status = isReady ? "pass" : "blocked",
-            Action = isReady ? "continue" : "collect-comparable-evidence",
+            Status = isReady || isFocused ? "pass" : "blocked",
+            Action = isReady || isFocused ? "continue" : "collect-comparable-evidence",
             Summary = isReady
                 ? "reference corpus covers playback Core evaluation purposes"
+                : isFocused
+                    ? "focused evaluation covers only the supplied manifest and does not claim corpus readiness"
                 : "reference corpus is missing playback Core evaluation purposes"
         };
 
         if (isReady)
         {
             CopyValues(coverage.CoveredPurposes, gate.Signals);
+            return gate;
+        }
+
+        if (isFocused)
+        {
+            CopyValues(coverage.CoveredPurposes, gate.Signals);
+            AddUnique(
+                gate.SuggestedNextActions,
+                "Use corpus scope before making broad playback Core readiness claims.");
             return gate;
         }
 
@@ -3654,6 +3675,7 @@ internal static class Program
     private sealed class EvaluateCandidateOptions : CompareSuiteOptions
     {
         public string ManifestPath { get; set; } = "";
+        public string EvaluationScope { get; set; } = "corpus";
 
         public EvaluateCandidateOptions()
         {
@@ -3759,6 +3781,7 @@ internal static class Program
         public int SchemaVersion { get; set; } = 1;
         public string EvaluationVersion { get; set; } =
             PlaybackQualityRunResult.CurrentEvaluationVersion;
+        public string EvaluationScope { get; set; } = "corpus";
         public string Action { get; set; } = "collect-comparable-evidence";
         public string Decision { get; set; } = "collect-comparable-evidence";
         public string Risk { get; set; } = "high";

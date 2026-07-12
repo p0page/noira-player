@@ -28,9 +28,7 @@ try {
       "uri": "https://media.invalid/native-source-equivalence.mp4",
       "executionRequirement": { "minimumEvidenceLevel": "native-playback", "scenario": "timeline" },
       "purpose": [
-        "sdr-smoke", "hdr-output", "hdr-force-sdr", "dv-reject", "dv-fallback",
-        "cadence-23.976", "frame-pacing", "av-sync", "buffering", "timeline",
-        "tracks", "subtitles", "end-of-stream", "error-handling", "cadence-24"
+        "frame-pacing", "timeline"
       ],
       "expected": {
         "codec": "h264",
@@ -216,6 +214,7 @@ exit 0
 
     powershell -NoProfile -ExecutionPolicy Bypass -File $comparisonScriptPath `
         -BaselineRoot $baselineRoot -CandidateRoot $candidateRoot -OutputRoot $comparisonRoot `
+        -EvaluationScope focused `
         -CandidateCadenceStabilityPath $candidateCadenceStabilityPath
     $comparisonExitCode = $LASTEXITCODE
     if ($comparisonExitCode -ne 2) {
@@ -226,6 +225,11 @@ exit 0
     $evaluation = Get-Content -Raw -LiteralPath (Join-Path $comparisonRoot 'summaries\candidate-evaluation.local.json') | ConvertFrom-Json
     if ($summary.baselineValidation.isValid -ne $true -or $summary.candidateValidation.isValid -ne $true) {
         throw 'Expected both native fixture report sets to remain strict-valid before comparison.'
+    }
+    if ($summary.evaluationScope -ne 'focused' -or
+        $evaluation.evaluationScope -ne 'focused' -or
+        -not ($evaluation.evidenceGates | Where-Object { $_.name -eq 'manifest-coverage' -and $_.status -eq 'pass' })) {
+        throw 'Focused comparison must preserve its scope and must not claim broad corpus coverage.'
     }
     if ($evaluation.suite.totalComparisonCount -ne 1 -or
         $evaluation.suite.insufficientEvidenceCount -ne 1 -or

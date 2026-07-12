@@ -6,6 +6,8 @@
     [string]$OutputRoot = '',
     [ValidateSet('relative-path', 'run-id')]
     [string]$MatchBy = 'run-id',
+    [ValidateSet('corpus', 'focused')]
+    [string]$EvaluationScope = 'corpus',
     [string]$PreviousComparisonsDir = '',
     [string]$BaselineCadenceStabilityPath = '',
     [string]$CandidateCadenceStabilityPath = '',
@@ -371,6 +373,8 @@ $evaluateArgs = @(
     $candidateReportsDir,
     '--match-by',
     $MatchBy,
+    '--evaluation-scope',
+    $EvaluationScope,
     '--comparisons-dir',
     $comparisonsDir,
     '--stall-threshold',
@@ -406,6 +410,7 @@ $summary = [pscustomobject][ordered]@{
     baselineReportsDir = $baselineReportsDir
     candidateReportsDir = $candidateReportsDir
     matchBy = $MatchBy
+    evaluationScope = $EvaluationScope
     evaluationExitCode = $evaluationExitCode
     manifestComparison = $manifestComparison
     baselineValidation = [pscustomobject][ordered]@{

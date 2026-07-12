@@ -853,6 +853,8 @@ public sealed class PlaybackQualityRunComparatorTests
             Check("SeekRecoveryDurationMs", "fail", "timeline", "position.seekRecoveryDurationMs", "2000", "5000"));
         baseline.Position.SeekOperationDurationMs = 4800;
         baseline.Position.SeekRecoveryDurationMs = 5000;
+        baseline.Position.SeekDemuxTargetTicks = 10_000_000;
+        baseline.Position.PostSeekPositionTicks = 30_000_000;
         baseline.Position.SeekPacketCacheEnabled = false;
         baseline.Position.SeekPacketCacheHit = false;
         baseline.Position.SeekPacketCachePacketCount = 0;
@@ -865,6 +867,8 @@ public sealed class PlaybackQualityRunComparatorTests
             Check("SeekRecoveryDurationMs", "pass", "timeline", "position.seekRecoveryDurationMs", "2000", "900"));
         candidate.Position.SeekOperationDurationMs = 800;
         candidate.Position.SeekRecoveryDurationMs = 900;
+        candidate.Position.SeekDemuxTargetTicks = -1;
+        candidate.Position.PostSeekPositionTicks = 31_000_000;
         candidate.Position.SeekPacketCacheEnabled = true;
         candidate.Position.SeekPacketCacheHit = true;
         candidate.Position.SeekPacketCachePacketCount = 128;
@@ -886,6 +890,11 @@ public sealed class PlaybackQualityRunComparatorTests
             delta.Signal == "position.seekRecoveryDurationMs" &&
             delta.FailureArea == "timeline" &&
             delta.Direction == "resolved");
+        Assert.Contains(comparison.Improvements, delta =>
+            delta.Signal == "position.seekOperationDurationMs" &&
+            delta.Direction == "decreased");
+        Assert.Empty(comparison.Regressions);
+        Assert.Equal("improved", comparison.Result);
     }
 
     [Fact]

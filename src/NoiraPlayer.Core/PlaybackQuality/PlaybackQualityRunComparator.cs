@@ -1421,37 +1421,37 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 "source.durationTicks",
                 baseline.Source.DurationTicks > 0 ? baseline.Source.DurationTicks : null,
                 candidate.Source.DurationTicks > 0 ? candidate.Source.DurationTicks : null);
-            CompareOptionalTimelineEvidence(
+            CompareOptionalTimelineContext(
                 comparison,
                 "position.seekTargetPositionTicks",
-                baseline.Position.SeekTargetPositionTicks,
-                candidate.Position.SeekTargetPositionTicks);
-            CompareOptionalTimelineEvidence(
+                baseline.Position.SeekTargetPositionTicks.HasValue,
+                candidate.Position.SeekTargetPositionTicks.HasValue);
+            CompareOptionalTimelineContext(
                 comparison,
                 "position.seekDemuxTargetTicks",
-                baseline.Position.SeekDemuxTargetTicks,
-                candidate.Position.SeekDemuxTargetTicks);
-            CompareOptionalTimelineEvidence(
+                baseline.Position.SeekDemuxTargetTicks.HasValue,
+                candidate.Position.SeekDemuxTargetTicks.HasValue);
+            CompareOptionalTimelineContext(
                 comparison,
                 "position.firstPresentedPositionTicks",
-                baseline.Position.FirstPresentedPositionTicks,
-                candidate.Position.FirstPresentedPositionTicks);
-            CompareOptionalTimelineEvidence(
+                baseline.Position.FirstPresentedPositionTicks.HasValue,
+                candidate.Position.FirstPresentedPositionTicks.HasValue);
+            CompareOptionalTimelineContext(
                 comparison,
                 "position.postSeekPositionTicks",
-                baseline.Position.PostSeekPositionTicks,
-                candidate.Position.PostSeekPositionTicks);
-            CompareOptionalTimelineEvidence(
+                baseline.Position.PostSeekPositionTicks.HasValue,
+                candidate.Position.PostSeekPositionTicks.HasValue);
+            CompareOptionalTimelineContext(
                 comparison,
                 "position.postSeekAdvanced",
-                baseline.Position.PostSeekAdvanced,
-                candidate.Position.PostSeekAdvanced);
-            CompareOptionalTimelineEvidence(
+                baseline.Position.PostSeekAdvanced.HasValue,
+                candidate.Position.PostSeekAdvanced.HasValue);
+            CompareLowerIsBetterTimelineMetric(
                 comparison,
                 "position.seekOperationDurationMs",
                 baseline.Position.SeekOperationDurationMs,
                 candidate.Position.SeekOperationDurationMs);
-            CompareOptionalTimelineEvidence(
+            CompareLowerIsBetterTimelineMetric(
                 comparison,
                 "position.seekRecoveryDurationMs",
                 baseline.Position.SeekRecoveryDurationMs,
@@ -1555,6 +1555,53 @@ namespace NoiraPlayer.Core.PlaybackQuality
             else if (hasCandidate)
             {
                 AddUnique(comparison.Coverage.UnmatchedCandidateSignals, signal);
+            }
+        }
+
+        private static void CompareLowerIsBetterTimelineMetric(
+            PlaybackQualityRunComparison comparison,
+            string signal,
+            double? baseline,
+            double? candidate)
+        {
+            CompareOptionalTimelineContext(
+                comparison,
+                signal,
+                baseline.HasValue,
+                candidate.HasValue);
+            if (!baseline.HasValue || !candidate.HasValue ||
+                comparison.Improvements.Any(delta => delta.Signal == signal) ||
+                comparison.Regressions.Any(delta => delta.Signal == signal) ||
+                comparison.PolicyChanges.Any(delta => delta.Signal == signal))
+            {
+                return;
+            }
+
+            var delta = candidate.Value - baseline.Value;
+            if (Math.Abs(delta) <= DerivedSignalEpsilon)
+            {
+                return;
+            }
+
+            var baselineCheck = CreateTimelineCheck(signal, baseline.Value);
+            var candidateCheck = CreateTimelineCheck(signal, candidate.Value);
+            if (delta < 0)
+            {
+                comparison.Improvements.Add(CreateDelta(
+                    baselineCheck,
+                    candidateCheck,
+                    "decreased",
+                    delta));
+                AddUnique(comparison.Optimization.FailureAreas, "timeline");
+            }
+            else
+            {
+                comparison.Regressions.Add(CreateDelta(
+                    baselineCheck,
+                    candidateCheck,
+                    "increased",
+                    delta));
+                AddUnique(comparison.NewFailureAreas, "timeline");
             }
         }
 

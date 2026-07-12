@@ -1,5 +1,17 @@
 ﻿# 技术决策
 
+## 2026-07-13：候选评测显式区分 corpus 与 focused 作用域
+
+决策：`evaluate-candidate` 和 `Compare-PlaybackCoreTuningCandidate.ps1` 默认继续使用 `corpus`，要求 manifest 覆盖完整 Core 评测目的；单 case 或小集合调优必须显式选择 `focused`。focused 仍要求 manifest、baseline/candidate report-set、native 播放证据、源身份和每个 case 的阈值全部有效，但不因缺少无关评测目的阻止当前 case 比较，也不得据此声称全量语料或播放器整体就绪。输出必须记录 evaluation scope。
+
+原因：完整语料覆盖是发布级判断的合理门禁，但把它用于单变量定向实验会使真实同 case 对照永远无法产生 comparison。显式作用域既保留默认严格性，也避免通过复制无关 expected 或伪造报告满足 coverage。
+
+## 2026-07-13：timeline 上下文变化不自动等于回归
+
+决策：seek target、demux target、first-presented、post-seek position 和 advancement 等字段用于证明执行语义与证据完整性，只比较 presence；seek operation/recovery duration 按越低越好比较，且已有 threshold check delta 时不重复计票。seek position error 继续独立按绝对误差判断。
+
+原因：cache hit 合法地把 demux target 从实际时间戳变为 `-1`，不同采样时刻的 post-seek position 也会自然变化。把任何 observed 值变化都记为 regression 会让同一 seek recovery 同时出现在 improvements 和 regressions，误导模型拆分已经被证据支持的候选。
+
 ## 2026-07-13：会话内 seek cache 采用显式上下文证据并升级为 v0.3
 
 决策：timeline case 必须同时记录 `position.seekPacketCacheEnabled`、`position.seekPacketCacheHit`、`position.seekPacketCachePacketCount`、`position.seekPacketCacheBytes`、`position.seekPacketCacheWindowDurationTicks` 和 `position.seekFallbackReason`。cache hit 时没有发生 demux seek，`position.seekDemuxTargetTicks` 必须显式记录为 `-1`；cache miss 时仍须记录真实 demux target 和稳定 fallback reason。缺少任一字段不得通过当前 strict validation。
