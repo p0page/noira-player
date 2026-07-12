@@ -671,7 +671,8 @@ int wmain(int argc, wchar_t** argv)
             << " seekAttempted=" << (seek.Attempted ? 1 : 0)
             << " seekStatus=" << seek.Status
             << " seekTargetPositionTicks=" << seek.TargetPositionTicks
-            << " seekDemuxTargetTicks=" << timeline.LastSeekDemuxTargetTicks
+            << " seekDemuxTargetTicks=" <<
+                (seek.PacketCacheHit ? -1 : timeline.LastSeekDemuxTargetTicks)
             << " seekActualPositionTicks=" << seek.ActualPositionTicks.value_or(-1)
             << " seekOperationDurationMs=" << seek.OperationDurationMs
             << " seekRecoveryDurationMs=" << seek.RecoveryDurationMs

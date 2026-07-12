@@ -390,6 +390,24 @@ public sealed class NativePlaybackGraphDecouplingContractTests
     }
 
     [Fact]
+    public void Seek_Replay_Hit_Does_Not_Claim_A_Demux_Seek()
+    {
+        var root = FindRepositoryRoot();
+        var graphSource = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Native", "Media", "PlaybackGraph.cpp"));
+        var helperSource = File.ReadAllText(Path.Combine(root, "tests", "NoiraPlayer.Native.Tests", "NativePlaybackGraphHeadlessSmokeTests.cpp"));
+        var seekBody = ReadMethodBody(graphSource, "PlaybackGraph::Seek");
+
+        Assert.Contains(
+            "m_lastSeekReplaySnapshot.Hit ? -1 : timeline.LastSeekDemuxTargetTicks",
+            seekBody,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "seek.PacketCacheHit ? -1 : timeline.LastSeekDemuxTargetTicks",
+            helperSource,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void View_Bound_Display_Lookup_Is_Separated_From_Background_Mode_Changes()
     {
         var root = FindRepositoryRoot();

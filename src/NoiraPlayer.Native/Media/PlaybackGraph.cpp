@@ -262,7 +262,8 @@ namespace winrt::NoiraPlayer::Native::implementation
         }
         auto sourceVideo = m_mediaSource.BestVideoStreamSnapshot();
         auto timeline = m_mediaSource.TimelineSnapshot(sourceVideo ? sourceVideo->StreamIndex : -1);
-        m_qualityMetrics.SeekDemuxTargetTicks = timeline.LastSeekDemuxTargetTicks;
+        m_qualityMetrics.SeekDemuxTargetTicks =
+            m_lastSeekReplaySnapshot.Hit ? -1 : timeline.LastSeekDemuxTargetTicks;
         m_audioDecoder.Flush(positionTicks);
         m_subtitleDecoder.Flush();
         m_subtitleRenderer.ClearCue();
