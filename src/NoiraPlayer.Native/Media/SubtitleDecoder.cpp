@@ -370,6 +370,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         }
 
         m_cues.clear();
+        m_decodedCueCount = 0;
         m_open = true;
     }
 
@@ -415,6 +416,7 @@ namespace winrt::NoiraPlayer::Native::implementation
                         m_codecContext))
                     {
                         m_cues.push_back(std::move(*cue));
+                        ++m_decodedCueCount;
                     }
                 }
                 catch (...)
@@ -490,6 +492,11 @@ namespace winrt::NoiraPlayer::Native::implementation
     bool SubtitleDecoder::IsOpen() const noexcept
     {
         return m_open;
+    }
+
+    uint64_t SubtitleDecoder::DecodedCueCount() const noexcept
+    {
+        return m_decodedCueCount;
     }
 
     std::optional<int32_t> SubtitleDecoder::SelectedStreamIndex() const noexcept

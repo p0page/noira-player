@@ -109,8 +109,7 @@ namespace NoiraPlayer.App
                 var json = await FileIO.ReadTextAsync(file);
                 if (!DevelopmentNavigationCommand.TryParseJson(json, out var command, out _) ||
                     command == null ||
-                    command.Route != "quality-run" ||
-                    string.IsNullOrWhiteSpace(command.StreamUrl))
+                    command.Route != "quality-run")
                 {
                     return false;
                 }

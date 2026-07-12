@@ -85,6 +85,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         void SwitchSubtitleStream(std::optional<int32_t> subtitleStreamIndex);
         int64_t CurrentPositionTicks() const noexcept;
         uint64_t SubtitleCueRenderCount() const noexcept;
+        uint64_t SubtitleDecodedCueCount() const noexcept;
         std::optional<int32_t> SelectedAudioStreamIndex() const noexcept;
         std::optional<int32_t> SelectedSubtitleStreamIndex() const noexcept;
         SeekPresentationSnapshot SeekPresentationSnapshot() const noexcept;
@@ -139,6 +140,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         uint64_t m_decodedVideoFrameCount{0};
         uint64_t m_submittedAudioFrameCount{0};
         uint64_t m_subtitleCueRenderCount{0};
+        uint64_t m_lastLoggedSubtitleDecodedCueCount{0};
         uint64_t m_droppedVideoFrameCount{0};
         uint64_t m_seekPrerollDroppedVideoFrameCount{0};
         uint64_t m_videoAheadWaitCount{0};

@@ -20,7 +20,7 @@ public sealed class PlaybackPageInputRoutingSourceTests
     }
 
     [Fact]
-    public void Hybrid_Shell_Debug_Command_Can_Only_Bypass_Web_Ui_For_Direct_Quality_Runs()
+    public void Hybrid_Shell_Debug_Command_Bypasses_Web_Ui_For_All_Quality_Run_Sources()
     {
         var root = FindRepositoryRoot();
         var mainPageSource = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.App", "MainPage.xaml.cs"));
@@ -33,7 +33,10 @@ public sealed class PlaybackPageInputRoutingSourceTests
 
         Assert.Contains("TryRunDevelopmentPlaybackCommandAsync", mainPageSource, StringComparison.Ordinal);
         Assert.Contains("command.Route != \"quality-run\"", mainPageSource, StringComparison.Ordinal);
-        Assert.Contains("string.IsNullOrWhiteSpace(command.StreamUrl)", mainPageSource, StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "command.Route != \"quality-run\" ||\r\n                    string.IsNullOrWhiteSpace(command.StreamUrl)",
+            mainPageSource,
+            StringComparison.Ordinal);
         Assert.Contains("await file.DeleteAsync(StorageDeleteOption.PermanentDelete);", mainPageSource, StringComparison.Ordinal);
         Assert.Contains("PlaybackLaunchRequest.FromDevelopmentQualityRun", mainPageSource, StringComparison.Ordinal);
         Assert.Contains("FromDevelopmentQualityRun", launchRequestSource, StringComparison.Ordinal);

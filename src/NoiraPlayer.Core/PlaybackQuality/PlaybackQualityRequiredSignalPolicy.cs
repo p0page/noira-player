@@ -127,12 +127,15 @@ namespace NoiraPlayer.Core.PlaybackQuality
 
             if (HasPurpose(referenceCase, "audio-switch"))
             {
+                AddUnique(requiredSignals, "lifecycle.audio-switch");
                 AddUnique(requiredSignals, "tracks.selectedAudioStreamIndex");
             }
 
             if (HasPurpose(referenceCase, "subtitle-switch"))
             {
+                AddUnique(requiredSignals, "lifecycle.subtitle-switch");
                 AddUnique(requiredSignals, "tracks.selectedSubtitleStreamIndex");
+                AddUnique(requiredSignals, "tracks.subtitleCueRenderCount");
             }
 
             if (expected.MinRenderedVideoFrames.HasValue ||
@@ -418,6 +421,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
                     return HasLifecycleOperation(report, "audio-switch");
                 case "lifecycle.subtitle-switch":
                     return HasLifecycleOperation(report, "subtitle-switch");
+                case "tracks.subtitleCueRenderCount":
+                    return report.Tracks.SubtitleCueRenderCount > 0;
                 case "lifecycle.subtitle-off":
                     return HasLifecycleOperation(report, "subtitle-off");
                 case "lifecycle.error":

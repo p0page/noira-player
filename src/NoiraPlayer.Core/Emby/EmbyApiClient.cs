@@ -913,6 +913,7 @@ namespace NoiraPlayer.Core.Emby
             };
 
             var streams = source.MediaStreams ?? new List<MediaStreamDto>();
+            var primaryVideoStream = SelectPrimaryVideoStream(streams);
             foreach (var stream in streams)
             {
                 EmbyStreamKind kind;
@@ -942,7 +943,7 @@ namespace NoiraPlayer.Core.Emby
                 };
                 result.Streams.Add(mediaStream);
 
-                if (kind == EmbyStreamKind.Video)
+                if (ReferenceEquals(stream, primaryVideoStream))
                 {
                     result.Width = stream.Width;
                     result.Height = stream.Height;
@@ -973,6 +974,30 @@ namespace NoiraPlayer.Core.Emby
             }
 
             return result;
+        }
+
+        private static MediaStreamDto? SelectPrimaryVideoStream(
+            IEnumerable<MediaStreamDto> streams)
+        {
+            return streams
+                .Where(stream => string.Equals(
+                    stream.Type,
+                    "Video",
+                    StringComparison.OrdinalIgnoreCase))
+                .OrderBy(stream => IsStillImageCodec(stream.Codec) ? 1 : 0)
+                .ThenByDescending(stream => stream.IsDefault == true)
+                .ThenByDescending(stream =>
+                    stream.RealFrameRate > 0 || stream.AverageFrameRate > 0)
+                .ThenByDescending(stream => (long)stream.Width * stream.Height)
+                .ThenBy(stream => stream.Index)
+                .FirstOrDefault();
+        }
+
+        private static bool IsStillImageCodec(string codec)
+        {
+            return string.Equals(codec, "mjpeg", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(codec, "jpeg", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(codec, "png", StringComparison.OrdinalIgnoreCase);
         }
 
         private static double SelectVideoFrameRate(EmbyMediaStream stream)

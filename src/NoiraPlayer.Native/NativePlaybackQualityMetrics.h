@@ -26,6 +26,15 @@ namespace winrt::NoiraPlayer::Native::implementation
         uint64_t SubmittedAudioFrames() const noexcept { return m_submittedAudioFrames; }
         void SubmittedAudioFrames(uint64_t value) noexcept { m_submittedAudioFrames = value; }
 
+        uint64_t SubtitleDecodedCueCount() const noexcept { return m_subtitleDecodedCueCount; }
+        void SubtitleDecodedCueCount(uint64_t value) noexcept { m_subtitleDecodedCueCount = value; }
+
+        uint64_t SubtitleCueRenderCount() const noexcept { return m_subtitleCueRenderCount; }
+        void SubtitleCueRenderCount(uint64_t value) noexcept { m_subtitleCueRenderCount = value; }
+
+        int32_t SelectedSubtitleStreamIndex() const noexcept { return m_selectedSubtitleStreamIndex; }
+        void SelectedSubtitleStreamIndex(int32_t value) noexcept { m_selectedSubtitleStreamIndex = value; }
+
         uint64_t DroppedVideoFrames() const noexcept { return m_droppedVideoFrames; }
         void DroppedVideoFrames(uint64_t value) noexcept { m_droppedVideoFrames = value; }
 
@@ -264,6 +273,9 @@ namespace winrt::NoiraPlayer::Native::implementation
         uint64_t m_softwareDecodedVideoFrames{0};
         uint64_t m_renderedVideoFrames{0};
         uint64_t m_submittedAudioFrames{0};
+        uint64_t m_subtitleDecodedCueCount{0};
+        uint64_t m_subtitleCueRenderCount{0};
+        int32_t m_selectedSubtitleStreamIndex{-1};
         uint64_t m_droppedVideoFrames{0};
         uint64_t m_seekPrerollDroppedFrames{0};
         uint64_t m_videoAheadWaitCount{0};

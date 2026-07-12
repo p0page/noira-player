@@ -343,6 +343,12 @@ namespace winrt::NoiraPlayer::Native::implementation
         return m_subtitleCueRenderCount;
     }
 
+    uint64_t PlaybackGraph::SubtitleDecodedCueCount() const noexcept
+    {
+        std::lock_guard lock(m_graphMutex);
+        return m_subtitleDecoder.DecodedCueCount();
+    }
+
     std::optional<int32_t> PlaybackGraph::SelectedAudioStreamIndex() const noexcept
     {
         std::lock_guard lock(m_graphMutex);
@@ -877,6 +883,16 @@ namespace winrt::NoiraPlayer::Native::implementation
     void PlaybackGraph::UpdateSubtitleCue()
     {
         m_subtitleDecoder.PumpQueuedPackets();
+        auto decodedCueCount = m_subtitleDecoder.DecodedCueCount();
+        if (decodedCueCount > m_lastLoggedSubtitleDecodedCueCount)
+        {
+            AppendNativePlaybackDiagnostic(
+                L"PlaybackGraph.Subtitle decodedCueCount=" +
+                std::to_wstring(decodedCueCount) +
+                L" positionTicks=" +
+                std::to_wstring(m_positionTicks));
+            m_lastLoggedSubtitleDecodedCueCount = decodedCueCount;
+        }
         if (auto cue = m_subtitleDecoder.TryGetCueAt(m_positionTicks))
         {
             m_subtitleRenderer.SetCue(*cue);
@@ -899,6 +915,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         m_decodedVideoFrameCount = 0;
         m_submittedAudioFrameCount = 0;
         m_subtitleCueRenderCount = 0;
+        m_lastLoggedSubtitleDecodedCueCount = 0;
         m_droppedVideoFrameCount = 0;
         m_videoAheadWaitCount = 0;
         m_audioAheadWaitCount = 0;

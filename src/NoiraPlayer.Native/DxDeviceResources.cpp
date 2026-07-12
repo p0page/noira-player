@@ -1,10 +1,13 @@
 ﻿#include "pch.h"
 #include "DxDeviceResources.h"
+#include "NativePlaybackDiagnostics.h"
 
 #include <algorithm>
 #include <cmath>
 #include <d2d1_1.h>
+#include <d3dcompiler.h>
 #include <dwrite.h>
+#include <cstring>
 #include <utility>
 #include <windows.ui.xaml.media.dxinterop.h>
 
@@ -14,6 +17,97 @@ namespace winrt::NoiraPlayer::Native::implementation
     {
         constexpr uint32_t DefaultSwapChainWidth = 1280;
         constexpr uint32_t DefaultSwapChainHeight = 720;
+        constexpr float SubtitleSdrWhiteNits = 203.0f;
+
+        char const SubtitleOverlayShader[] = R"(
+Texture2D SubtitleTexture : register(t0);
+SamplerState LinearSampler : register(s0);
+
+cbuffer SubtitleConstants : register(b0)
+{
+    uint g_hdrPqOutput;
+    float g_sdrWhiteNits;
+    float2 g_padding;
+};
+
+struct VertexOutput
+{
+    float4 Position : SV_Position;
+    float2 TexCoord : TEXCOORD0;
+};
+
+VertexOutput VSMain(uint vertexId : SV_VertexID)
+{
+    float2 positions[3] =
+    {
+        float2(-1.0f, -1.0f),
+        float2(-1.0f,  3.0f),
+        float2( 3.0f, -1.0f)
+    };
+
+    VertexOutput output;
+    float2 position = positions[vertexId];
+    output.Position = float4(position, 0.0f, 1.0f);
+    output.TexCoord = float2(
+        (position.x + 1.0f) * 0.5f,
+        1.0f - ((position.y + 1.0f) * 0.5f));
+    return output;
+}
+
+float3 TransferPQ(float3 nits)
+{
+    static const float m1 = 2610.0f / (4096.0f * 4.0f);
+    static const float m2 = (2523.0f / 4096.0f) * 128.0f;
+    static const float c1 = 3424.0f / 4096.0f;
+    static const float c2 = (2413.0f / 4096.0f) * 32.0f;
+    static const float c3 = (2392.0f / 4096.0f) * 32.0f;
+    float3 value = pow(max(nits, 0.0f) / 10000.0f, m1);
+    return pow((c1 + c2 * value) / (1.0f + c3 * value), m2);
+}
+
+float4 PSMain(VertexOutput input) : SV_TARGET
+{
+    float4 color = SubtitleTexture.Sample(LinearSampler, input.TexCoord);
+    if (g_hdrPqOutput != 0 && color.a > 0.0001f)
+    {
+        float3 straight = saturate(color.rgb / color.a);
+        float3 linearNits = pow(straight, 2.2f) * g_sdrWhiteNits;
+        color.rgb = TransferPQ(linearNits) * color.a;
+    }
+    return color;
+}
+)";
+
+        struct SubtitleOverlayConstants
+        {
+            uint32_t HdrPqOutput;
+            float SdrWhiteNits;
+            float Padding[2];
+        };
+
+        uint64_t HashSubtitleBitmap(SubtitleBitmapRegion const& region) noexcept
+        {
+            constexpr uint64_t offset = 1469598103934665603ull;
+            constexpr uint64_t prime = 1099511628211ull;
+            auto hash = offset;
+            auto append = [&](uint8_t value)
+            {
+                hash ^= value;
+                hash *= prime;
+            };
+            for (auto value : region.BgraPixels)
+            {
+                append(value);
+            }
+            for (auto value : {region.Width, region.Height, region.Stride})
+            {
+                append(static_cast<uint8_t>(value));
+                append(static_cast<uint8_t>(value >> 8));
+                append(static_cast<uint8_t>(value >> 16));
+                append(static_cast<uint8_t>(value >> 24));
+            }
+            return hash;
+        }
 
         RECT CalculateContainRect(
             uint32_t targetWidth,
@@ -774,6 +868,290 @@ namespace winrt::NoiraPlayer::Native::implementation
         return SUCCEEDED(d2dContext->EndDraw());
     }
 
+    bool DxDeviceResources::EnsureSubtitleOverlayResources()
+    {
+        if (m_subtitleVertexShader &&
+            m_subtitlePixelShader &&
+            m_subtitleSampler &&
+            m_subtitleBlendState &&
+            m_subtitleConstants)
+        {
+            return true;
+        }
+
+        if (!m_device)
+        {
+            return false;
+        }
+
+        Microsoft::WRL::ComPtr<ID3DBlob> vertexBlob;
+        Microsoft::WRL::ComPtr<ID3DBlob> pixelBlob;
+        Microsoft::WRL::ComPtr<ID3DBlob> errors;
+        auto compile = [&](char const* entry, char const* profile, ID3DBlob** output)
+        {
+            errors.Reset();
+            auto result = D3DCompile(
+                SubtitleOverlayShader,
+                std::strlen(SubtitleOverlayShader),
+                "SubtitleOverlayShader",
+                nullptr,
+                nullptr,
+                entry,
+                profile,
+                D3DCOMPILE_ENABLE_STRICTNESS,
+                0,
+                output,
+                errors.ReleaseAndGetAddressOf());
+            if (FAILED(result))
+            {
+                AppendNativePlaybackDiagnostic(
+                    L"DxDeviceResources subtitle shader compile failed hr=" +
+                    std::to_wstring(static_cast<unsigned long>(result)));
+            }
+            return SUCCEEDED(result);
+        };
+
+        if (!compile("VSMain", "vs_4_0", vertexBlob.ReleaseAndGetAddressOf()) ||
+            !compile("PSMain", "ps_4_0", pixelBlob.ReleaseAndGetAddressOf()))
+        {
+            return false;
+        }
+
+        auto result = m_device->CreateVertexShader(
+            vertexBlob->GetBufferPointer(),
+            vertexBlob->GetBufferSize(),
+            nullptr,
+            m_subtitleVertexShader.ReleaseAndGetAddressOf());
+        if (FAILED(result))
+        {
+            return false;
+        }
+
+        result = m_device->CreatePixelShader(
+            pixelBlob->GetBufferPointer(),
+            pixelBlob->GetBufferSize(),
+            nullptr,
+            m_subtitlePixelShader.ReleaseAndGetAddressOf());
+        if (FAILED(result))
+        {
+            return false;
+        }
+
+        D3D11_SAMPLER_DESC samplerDescription{};
+        samplerDescription.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+        samplerDescription.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+        samplerDescription.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+        samplerDescription.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+        samplerDescription.MaxLOD = D3D11_FLOAT32_MAX;
+        result = m_device->CreateSamplerState(
+            &samplerDescription,
+            m_subtitleSampler.ReleaseAndGetAddressOf());
+        if (FAILED(result))
+        {
+            return false;
+        }
+
+        D3D11_BLEND_DESC blendDescription{};
+        blendDescription.RenderTarget[0].BlendEnable = true;
+        blendDescription.RenderTarget[0].SrcBlend = D3D11_BLEND_ONE;
+        blendDescription.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+        blendDescription.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+        blendDescription.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
+        blendDescription.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_INV_SRC_ALPHA;
+        blendDescription.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+        blendDescription.RenderTarget[0].RenderTargetWriteMask =
+            D3D11_COLOR_WRITE_ENABLE_ALL;
+        result = m_device->CreateBlendState(
+            &blendDescription,
+            m_subtitleBlendState.ReleaseAndGetAddressOf());
+        if (FAILED(result))
+        {
+            return false;
+        }
+
+        D3D11_BUFFER_DESC constantsDescription{};
+        constantsDescription.ByteWidth = sizeof(SubtitleOverlayConstants);
+        constantsDescription.Usage = D3D11_USAGE_DEFAULT;
+        constantsDescription.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+        return SUCCEEDED(m_device->CreateBuffer(
+            &constantsDescription,
+            nullptr,
+            m_subtitleConstants.ReleaseAndGetAddressOf()));
+    }
+
+    bool DxDeviceResources::DrawSubtitleBitmapOverlayD3d11(
+        SubtitleBitmapRegion const& region)
+    {
+        if (!EnsureSubtitleOverlayResources() || !m_context || !m_swapChain)
+        {
+            return false;
+        }
+
+        Microsoft::WRL::ComPtr<ID3D11Texture2D> backBuffer;
+        if (FAILED(m_swapChain->GetBuffer(0, IID_PPV_ARGS(&backBuffer))))
+        {
+            return false;
+        }
+
+        auto subtitleHash = HashSubtitleBitmap(region);
+        if (!m_cachedSubtitleView ||
+            subtitleHash != m_cachedSubtitleHash ||
+            region.Width != m_cachedSubtitleWidth ||
+            region.Height != m_cachedSubtitleHeight ||
+            region.Stride != m_cachedSubtitleStride)
+        {
+            D3D11_TEXTURE2D_DESC textureDescription{};
+            textureDescription.Width = region.Width;
+            textureDescription.Height = region.Height;
+            textureDescription.MipLevels = 1;
+            textureDescription.ArraySize = 1;
+            textureDescription.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+            textureDescription.SampleDesc.Count = 1;
+            textureDescription.Usage = D3D11_USAGE_IMMUTABLE;
+            textureDescription.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+            D3D11_SUBRESOURCE_DATA textureData{};
+            textureData.pSysMem = region.BgraPixels.data();
+            textureData.SysMemPitch = region.Stride;
+
+            Microsoft::WRL::ComPtr<ID3D11Texture2D> subtitleTexture;
+            if (FAILED(m_device->CreateTexture2D(
+                &textureDescription,
+                &textureData,
+                subtitleTexture.ReleaseAndGetAddressOf())))
+            {
+                return false;
+            }
+
+            m_cachedSubtitleView.Reset();
+            if (FAILED(m_device->CreateShaderResourceView(
+                subtitleTexture.Get(),
+                nullptr,
+                m_cachedSubtitleView.ReleaseAndGetAddressOf())))
+            {
+                return false;
+            }
+            m_cachedSubtitleHash = subtitleHash;
+            m_cachedSubtitleWidth = region.Width;
+            m_cachedSubtitleHeight = region.Height;
+            m_cachedSubtitleStride = region.Stride;
+        }
+
+        Microsoft::WRL::ComPtr<ID3D11RenderTargetView> targetView;
+        if (FAILED(m_device->CreateRenderTargetView(
+                backBuffer.Get(),
+                nullptr,
+                targetView.ReleaseAndGetAddressOf())))
+        {
+            return false;
+        }
+
+        DXGI_SWAP_CHAIN_DESC1 swapChainDescription{};
+        if (FAILED(m_swapChain->GetDesc1(&swapChainDescription)))
+        {
+            return false;
+        }
+
+        auto destination = MapSubtitleRegionToContainedVideo(
+            region,
+            swapChainDescription.Width,
+            swapChainDescription.Height);
+        D3D11_VIEWPORT viewport{};
+        viewport.TopLeftX = destination.Left;
+        viewport.TopLeftY = destination.Top;
+        viewport.Width = (std::max)(1.0f, destination.Right - destination.Left);
+        viewport.Height = (std::max)(1.0f, destination.Bottom - destination.Top);
+        viewport.MinDepth = 0.0f;
+        viewport.MaxDepth = 1.0f;
+
+        auto hdrPqOutput =
+            m_swapChainColorSpace == DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020;
+        SubtitleOverlayConstants constants{};
+        constants.HdrPqOutput = hdrPqOutput ? 1u : 0u;
+        constants.SdrWhiteNits = SubtitleSdrWhiteNits;
+        m_context->UpdateSubresource(
+            m_subtitleConstants.Get(),
+            0,
+            nullptr,
+            &constants,
+            0,
+            0);
+
+        Microsoft::WRL::ComPtr<ID3D11RenderTargetView> previousTarget;
+        Microsoft::WRL::ComPtr<ID3D11DepthStencilView> previousDepth;
+        m_context->OMGetRenderTargets(
+            1,
+            previousTarget.ReleaseAndGetAddressOf(),
+            previousDepth.ReleaseAndGetAddressOf());
+        Microsoft::WRL::ComPtr<ID3D11BlendState> previousBlend;
+        float previousBlendFactor[4]{};
+        UINT previousSampleMask = 0;
+        m_context->OMGetBlendState(
+            previousBlend.ReleaseAndGetAddressOf(),
+            previousBlendFactor,
+            &previousSampleMask);
+        D3D11_VIEWPORT previousViewports[D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE]{};
+        UINT previousViewportCount = ARRAYSIZE(previousViewports);
+        m_context->RSGetViewports(&previousViewportCount, previousViewports);
+        Microsoft::WRL::ComPtr<ID3D11VertexShader> previousVertexShader;
+        Microsoft::WRL::ComPtr<ID3D11PixelShader> previousPixelShader;
+        Microsoft::WRL::ComPtr<ID3D11InputLayout> previousInputLayout;
+        Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> previousSourceView;
+        Microsoft::WRL::ComPtr<ID3D11SamplerState> previousSampler;
+        Microsoft::WRL::ComPtr<ID3D11Buffer> previousConstantBuffer;
+        m_context->VSGetShader(previousVertexShader.ReleaseAndGetAddressOf(), nullptr, nullptr);
+        m_context->PSGetShader(previousPixelShader.ReleaseAndGetAddressOf(), nullptr, nullptr);
+        m_context->IAGetInputLayout(previousInputLayout.ReleaseAndGetAddressOf());
+        m_context->PSGetShaderResources(0, 1, previousSourceView.ReleaseAndGetAddressOf());
+        m_context->PSGetSamplers(0, 1, previousSampler.ReleaseAndGetAddressOf());
+        m_context->PSGetConstantBuffers(0, 1, previousConstantBuffer.ReleaseAndGetAddressOf());
+        D3D11_PRIMITIVE_TOPOLOGY previousTopology{};
+        m_context->IAGetPrimitiveTopology(&previousTopology);
+
+        ID3D11RenderTargetView* target = targetView.Get();
+        ID3D11ShaderResourceView* source = m_cachedSubtitleView.Get();
+        ID3D11SamplerState* sampler = m_subtitleSampler.Get();
+        ID3D11Buffer* constantBuffer = m_subtitleConstants.Get();
+        float blendFactor[4]{};
+        m_context->OMSetRenderTargets(1, &target, nullptr);
+        m_context->OMSetBlendState(
+            m_subtitleBlendState.Get(),
+            blendFactor,
+            0xffffffff);
+        m_context->RSSetViewports(1, &viewport);
+        m_context->IASetInputLayout(nullptr);
+        m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+        m_context->VSSetShader(m_subtitleVertexShader.Get(), nullptr, 0);
+        m_context->PSSetShader(m_subtitlePixelShader.Get(), nullptr, 0);
+        m_context->PSSetShaderResources(0, 1, &source);
+        m_context->PSSetSamplers(0, 1, &sampler);
+        m_context->PSSetConstantBuffers(0, 1, &constantBuffer);
+        m_context->Draw(3, 0);
+
+        ID3D11ShaderResourceView* nullView = nullptr;
+        m_context->PSSetShaderResources(0, 1, &nullView);
+        ID3D11RenderTargetView* oldTarget = previousTarget.Get();
+        m_context->OMSetRenderTargets(1, &oldTarget, previousDepth.Get());
+        m_context->OMSetBlendState(
+            previousBlend.Get(),
+            previousBlendFactor,
+            previousSampleMask);
+        if (previousViewportCount > 0)
+        {
+            m_context->RSSetViewports(previousViewportCount, previousViewports);
+        }
+        m_context->VSSetShader(previousVertexShader.Get(), nullptr, 0);
+        m_context->PSSetShader(previousPixelShader.Get(), nullptr, 0);
+        ID3D11ShaderResourceView* oldSourceView = previousSourceView.Get();
+        ID3D11SamplerState* oldSampler = previousSampler.Get();
+        ID3D11Buffer* oldConstantBuffer = previousConstantBuffer.Get();
+        m_context->PSSetShaderResources(0, 1, &oldSourceView);
+        m_context->PSSetSamplers(0, 1, &oldSampler);
+        m_context->PSSetConstantBuffers(0, 1, &oldConstantBuffer);
+        m_context->IASetInputLayout(previousInputLayout.Get());
+        m_context->IASetPrimitiveTopology(previousTopology);
+        return true;
+    }
+
     bool DxDeviceResources::DrawSubtitleBitmapOverlay(SubtitleBitmapRegion const& region)
     {
         if (region.BgraPixels.empty() ||
@@ -784,6 +1162,11 @@ namespace winrt::NoiraPlayer::Native::implementation
             !m_device)
         {
             return false;
+        }
+
+        if (m_isTenBitSwapChain)
+        {
+            return DrawSubtitleBitmapOverlayD3d11(region);
         }
 
         DXGI_SWAP_CHAIN_DESC1 swapChainDescription{};
@@ -839,11 +1222,17 @@ namespace winrt::NoiraPlayer::Native::implementation
             D2D1_BITMAP_OPTIONS_CANNOT_DRAW;
 
         Microsoft::WRL::ComPtr<ID2D1Bitmap1> targetBitmap;
-        if (FAILED(d2dContext->CreateBitmapFromDxgiSurface(
+        auto targetResult = d2dContext->CreateBitmapFromDxgiSurface(
             surface.Get(),
             &targetProperties,
-            targetBitmap.ReleaseAndGetAddressOf())))
+            targetBitmap.ReleaseAndGetAddressOf());
+        if (FAILED(targetResult))
         {
+            AppendNativePlaybackDiagnostic(
+                L"DxDeviceResources.DrawSubtitleBitmapOverlay target creation failed format=" +
+                std::to_wstring(static_cast<int>(swapChainDescription.Format)) +
+                L" hr=" +
+                std::to_wstring(static_cast<unsigned long>(targetResult)));
             return false;
         }
 
@@ -855,13 +1244,17 @@ namespace winrt::NoiraPlayer::Native::implementation
         sourceProperties.dpiY = 96.0f;
 
         Microsoft::WRL::ComPtr<ID2D1Bitmap1> sourceBitmap;
-        if (FAILED(d2dContext->CreateBitmap(
+        auto sourceResult = d2dContext->CreateBitmap(
             D2D1::SizeU(region.Width, region.Height),
             region.BgraPixels.data(),
             region.Stride,
             &sourceProperties,
-            sourceBitmap.ReleaseAndGetAddressOf())))
+            sourceBitmap.ReleaseAndGetAddressOf());
+        if (FAILED(sourceResult))
         {
+            AppendNativePlaybackDiagnostic(
+                L"DxDeviceResources.DrawSubtitleBitmapOverlay source creation failed hr=" +
+                std::to_wstring(static_cast<unsigned long>(sourceResult)));
             return false;
         }
 
@@ -876,7 +1269,14 @@ namespace winrt::NoiraPlayer::Native::implementation
             D2D1::RectF(destination.Left, destination.Top, destination.Right, destination.Bottom),
             1.0f,
             D2D1_BITMAP_INTERPOLATION_MODE_LINEAR);
-        return SUCCEEDED(d2dContext->EndDraw());
+        auto drawResult = d2dContext->EndDraw();
+        if (FAILED(drawResult))
+        {
+            AppendNativePlaybackDiagnostic(
+                L"DxDeviceResources.DrawSubtitleBitmapOverlay draw failed hr=" +
+                std::to_wstring(static_cast<unsigned long>(drawResult)));
+        }
+        return SUCCEEDED(drawResult);
     }
 
     bool DxDeviceResources::ClearToBlack()

@@ -1281,19 +1281,21 @@ namespace NoiraPlayer.App.Views
                 var referenceCase = PlaybackQualityCaptureReferenceCaseFactory.Create(
                     request.QualityRunId,
                     descriptor,
-                    request.QualityExpected);
+                    request.QualityExpected,
+                    request.QualityScenario);
                 var lifecycle = CreateQualityRunLifecycle(
                     request.StartPositionTicks,
                     GetCurrentPositionTicks(),
                     _orchestrator.State.ToString());
                 var position = CreateQualityRunPosition(request.StartPositionTicks);
-                await RunQualityRunLifecycleProbeAsync(
+                await RunQualityRunScenarioAsync(
                     request,
+                    descriptor,
                     lifecycle,
                     position,
                     DateTimeOffset.UtcNow);
-                var evidence = CaptureQualityRunEvidence(_backend, descriptor);
-                await RunQualityRunSeekProbeAsync(position, lifecycle);
+                var capturedDescriptor = _orchestrator.CurrentDescriptor ?? descriptor;
+                var evidence = CaptureQualityRunEvidence(_backend, capturedDescriptor);
                 await StopQualityRunPlaybackAsync(lifecycle);
 
                 var startup = new PlaybackQualityStartup
@@ -1318,7 +1320,7 @@ namespace NoiraPlayer.App.Views
 
                 var result = PlaybackQualityRuntimeEvidenceCollector.ComposeRunResult(
                     referenceCase,
-                    descriptor,
+                    capturedDescriptor,
                     evidence.Diagnostics,
                     evidence.MetricsProvider,
                     startup,
@@ -1375,8 +1377,9 @@ namespace NoiraPlayer.App.Views
             };
         }
 
-        private async Task RunQualityRunLifecycleProbeAsync(
+        private async Task RunQualityRunScenarioAsync(
             PlaybackLaunchRequest request,
+            PlaybackDescriptor descriptor,
             PlaybackQualityLifecycle lifecycle,
             PlaybackQualityPosition position,
             DateTimeOffset probeStartedAtUtc)
@@ -1385,23 +1388,176 @@ namespace NoiraPlayer.App.Views
             var firstDelay = GetQualityRunProbeDelay(duration, 0.20);
             var shortDelay = GetQualityRunProbeDelay(duration, 0.05);
 
-            await Task.Delay(firstDelay);
+            switch (request.QualityScenario)
+            {
+                case PlaybackQualityExecutionScenario.PauseResume:
+                    await Task.Delay(firstDelay);
+                    await _orchestrator.PauseAsync();
+                    AddQualityRunLifecycleEvent(
+                        lifecycle,
+                        "pause",
+                        "success",
+                        "app-hosted pause-resume scenario paused playback");
+                    await Task.Delay(shortDelay);
+                    await _orchestrator.ResumeAsync();
+                    AddQualityRunLifecycleEvent(
+                        lifecycle,
+                        "resume",
+                        "success",
+                        "app-hosted pause-resume scenario resumed playback");
+                    break;
 
-            await _orchestrator.PauseAsync();
-            AddQualityRunLifecycleEvent(lifecycle, "pause", "success", "app-hosted quality-run paused playback");
+                case PlaybackQualityExecutionScenario.Timeline:
+                    await Task.Delay(firstDelay);
+                    await RunQualityRunSeekProbeAsync(position, lifecycle);
+                    break;
 
-            await Task.Delay(shortDelay);
+                case PlaybackQualityExecutionScenario.AudioSwitch:
+                    await Task.Delay(firstDelay);
+                    await RunQualityRunAudioSwitchScenarioAsync(descriptor, lifecycle);
+                    break;
 
-            await _orchestrator.ResumeAsync();
-            AddQualityRunLifecycleEvent(lifecycle, "resume", "success", "app-hosted quality-run resumed playback");
+                case PlaybackQualityExecutionScenario.SubtitleSwitch:
+                    await Task.Delay(firstDelay);
+                    await RunQualityRunSubtitleSwitchScenarioAsync(descriptor, lifecycle);
+                    break;
 
-            await Task.Delay(shortDelay);
+                case PlaybackQualityExecutionScenario.Playback:
+                    break;
+
+                default:
+                    throw new InvalidOperationException(
+                        "Unknown playback quality scenario: " + request.QualityScenario);
+            }
 
             var elapsed = DateTimeOffset.UtcNow - probeStartedAtUtc;
             if (elapsed < duration)
             {
                 await Task.Delay(duration - elapsed);
             }
+        }
+
+        private async Task RunQualityRunAudioSwitchScenarioAsync(
+            PlaybackDescriptor descriptor,
+            PlaybackQualityLifecycle lifecycle)
+        {
+            var target = descriptor.MediaSource.AudioStreams.FirstOrDefault(
+                stream => stream.Index != descriptor.AudioStreamIndex);
+            if (target == null)
+            {
+                AddQualityRunLifecycleEvent(
+                    lifecycle,
+                    "audio-switch",
+                    "failed",
+                    "app-hosted audio-switch scenario has no alternative audio stream");
+                return;
+            }
+
+            await _orchestrator.SwitchAudioStreamAsync(target.Index);
+            await Task.Delay(GetQualityRunProbeDelay(TimeSpan.FromSeconds(1), 0.10));
+            var selected = _orchestrator.CurrentDescriptor?.AudioStreamIndex;
+            AddQualityRunLifecycleEvent(
+                lifecycle,
+                "audio-switch",
+                selected == target.Index ? "success" : "failed",
+                "app-hosted audio-switch target=" + target.Index +
+                " selected=" + (selected.HasValue ? selected.Value.ToString() : "none"));
+        }
+
+        private async Task RunQualityRunSubtitleSwitchScenarioAsync(
+            PlaybackDescriptor descriptor,
+            PlaybackQualityLifecycle lifecycle)
+        {
+            var target = descriptor.MediaSource.SubtitleStreams.FirstOrDefault(
+                stream => stream.Index != descriptor.SubtitleStreamIndex);
+            if (target == null)
+            {
+                AddQualityRunLifecycleEvent(
+                    lifecycle,
+                    "subtitle-switch",
+                    "failed",
+                    "app-hosted subtitle-switch scenario has no selectable subtitle stream");
+                return;
+            }
+
+            var baselineCueCount = ReadQualityRunSubtitleCueCount();
+            var baselineDecodedCueCount = ReadQualityRunSubtitleDecodedCueCount();
+            await _orchestrator.PauseAsync();
+            AddQualityRunLifecycleEvent(
+                lifecycle,
+                "pause",
+                "success",
+                "app-hosted subtitle-switch scenario paused playback");
+            await _orchestrator.SwitchSubtitleStreamAsync(target.Index);
+            await _orchestrator.ResumeAsync();
+            AddQualityRunLifecycleEvent(
+                lifecycle,
+                "resume",
+                "success",
+                "app-hosted subtitle-switch scenario resumed playback");
+
+            var timeoutAt = DateTimeOffset.UtcNow.AddSeconds(8);
+            var selectedIndex = -1;
+            var decodedCueCount = baselineDecodedCueCount;
+            var cueCount = baselineCueCount;
+            while (DateTimeOffset.UtcNow < timeoutAt)
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(100));
+                if (TryReadQualityRunSubtitleState(
+                        out selectedIndex,
+                        out decodedCueCount,
+                        out cueCount) &&
+                    selectedIndex == target.Index &&
+                    cueCount > baselineCueCount)
+                {
+                    break;
+                }
+            }
+
+            var succeeded = selectedIndex == target.Index && cueCount > baselineCueCount;
+            AddQualityRunLifecycleEvent(
+                lifecycle,
+                "subtitle-switch",
+                succeeded ? "success" : "failed",
+                "app-hosted subtitle-switch target=" + target.Index +
+                " selected=" + selectedIndex +
+                " decodedCueCount=" + baselineDecodedCueCount + "->" + decodedCueCount +
+                " cueRenderCount=" + baselineCueCount + "->" + cueCount);
+        }
+
+        private ulong ReadQualityRunSubtitleCueCount()
+        {
+            return TryReadQualityRunSubtitleState(out _, out _, out var cueCount)
+                ? cueCount
+                : 0;
+        }
+
+        private ulong ReadQualityRunSubtitleDecodedCueCount()
+        {
+            return TryReadQualityRunSubtitleState(out _, out var decodedCueCount, out _)
+                ? decodedCueCount
+                : 0;
+        }
+
+        private bool TryReadQualityRunSubtitleState(
+            out int selectedSubtitleStreamIndex,
+            out ulong subtitleDecodedCueCount,
+            out ulong subtitleCueRenderCount)
+        {
+            selectedSubtitleStreamIndex = -1;
+            subtitleDecodedCueCount = 0;
+            subtitleCueRenderCount = 0;
+            if (!(_backend is IPlaybackQualityMetricsProvider provider) ||
+                !provider.TryGetQualityMetrics(out var metrics) ||
+                metrics == null)
+            {
+                return false;
+            }
+
+            selectedSubtitleStreamIndex = metrics.SelectedSubtitleStreamIndex;
+            subtitleDecodedCueCount = metrics.SubtitleDecodedCueCount;
+            subtitleCueRenderCount = metrics.SubtitleCueRenderCount;
+            return true;
         }
 
         private async Task RunQualityRunSeekProbeAsync(
@@ -1622,6 +1778,9 @@ namespace NoiraPlayer.App.Views
                     DecodedVideoFrames = source.DecodedVideoFrames,
                     RenderedVideoFrames = source.RenderedVideoFrames,
                     SubmittedAudioFrames = source.SubmittedAudioFrames,
+                    SubtitleDecodedCueCount = source.SubtitleDecodedCueCount,
+                    SubtitleCueRenderCount = source.SubtitleCueRenderCount,
+                    SelectedSubtitleStreamIndex = source.SelectedSubtitleStreamIndex,
                     DroppedVideoFrames = source.DroppedVideoFrames,
                     SeekPrerollDroppedFrames = source.SeekPrerollDroppedFrames,
                     VideoAheadWaitCount = source.VideoAheadWaitCount,
@@ -1741,6 +1900,7 @@ namespace NoiraPlayer.App.Views
                     request.StartPositionTicks,
                     request.ForceSdrOutput,
                     request.QualityExpected,
+                    request.QualityScenario,
                     uri: request.DirectStreamUrl);
                 var result = PlaybackQualityRuntimeEvidenceCollector.ComposeErrorRunResult(
                     referenceCase,

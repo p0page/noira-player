@@ -2118,6 +2118,7 @@ internal static class Program
                 Severity = referenceCase.Severity,
                 Stability = referenceCase.Stability,
                 RunId = referenceCase.CaseId,
+                Scenario = referenceCase.ExecutionRequirement.Scenario,
                 SourceUri = referenceCase.Uri,
                 Tier = referenceCase.Tier,
                 DurationSeconds = options.DurationSeconds,
@@ -2216,6 +2217,7 @@ internal static class Program
             StartPositionTicks = Math.Max(0, referenceCase.StartPositionTicks),
             ForceSdrOutput = referenceCase.ForceSdrOutput,
             RunId = referenceCase.CaseId,
+            Scenario = referenceCase.ExecutionRequirement.Scenario,
             DurationSeconds = durationSeconds,
             Expected = CloneExpected(referenceCase.Expected)
         };
@@ -3987,6 +3989,7 @@ internal static class Program
         public string Severity { get; set; } = "medium";
         public string Stability { get; set; } = "stable";
         public string RunId { get; set; } = "";
+        public string Scenario { get; set; } = "";
         public string SourceUri { get; set; } = "";
         public int Tier { get; set; }
         public List<string> Purpose { get; } = new List<string>();

@@ -16,7 +16,10 @@ public sealed class ModernPlaybackQualityGateTests
         Assert.Contains("NoiraPlayer.PlaybackQuality.Cli.csproj", script, StringComparison.Ordinal);
         Assert.Contains("plan-runs", script, StringComparison.Ordinal);
         Assert.Contains("Write-AppQualityRunCommand.ps1", script, StringComparison.Ordinal);
-        Assert.Contains("Start-Process \"shell:AppsFolder\\$appUserModelId\"", script, StringComparison.Ordinal);
+        Assert.Contains(
+            "Start-Process explorer.exe -ArgumentList \"shell:AppsFolder\\$appUserModelId\"",
+            script,
+            StringComparison.Ordinal);
         Assert.Contains("Export-AppQualityRunReports.ps1", script, StringComparison.Ordinal);
         Assert.Contains("analyze-report-set", script, StringComparison.Ordinal);
         Assert.Contains("modelAnalysis", script, StringComparison.Ordinal);

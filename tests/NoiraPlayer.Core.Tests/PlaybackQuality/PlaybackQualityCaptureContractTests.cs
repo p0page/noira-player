@@ -54,6 +54,7 @@ public sealed class PlaybackQualityCaptureContractTests
             "local/hdr10-smoke",
             descriptor,
             expected,
+            scenario: PlaybackQualityExecutionScenario.SubtitleSwitch,
             category: "challenge",
             severity: "high",
             stability: "stable");
@@ -62,6 +63,7 @@ public sealed class PlaybackQualityCaptureContractTests
         Assert.Equal("challenge", referenceCase.Category);
         Assert.Equal("high", referenceCase.Severity);
         Assert.Equal("stable", referenceCase.Stability);
+        Assert.Equal(PlaybackQualityExecutionScenario.SubtitleSwitch, referenceCase.ExecutionRequirement.Scenario);
         Assert.Equal("https://example.invalid/hdr10.mp4", referenceCase.Uri);
         Assert.Equal("item-1", referenceCase.ItemId);
         Assert.Equal("source-1", referenceCase.MediaSourceId);
@@ -89,6 +91,7 @@ public sealed class PlaybackQualityCaptureContractTests
                 HdrKind = "Hdr10",
                 HdrOutput = "Hdr10"
             },
+            scenario: PlaybackQualityExecutionScenario.PauseResume,
             category: "stable",
             severity: "high",
             stability: "quarantine");
@@ -101,6 +104,7 @@ public sealed class PlaybackQualityCaptureContractTests
         Assert.Equal("stable", referenceCase.Category);
         Assert.Equal("high", referenceCase.Severity);
         Assert.Equal("quarantine", referenceCase.Stability);
+        Assert.Equal(PlaybackQualityExecutionScenario.PauseResume, referenceCase.ExecutionRequirement.Scenario);
         Assert.Equal("hevc", referenceCase.Expected.Codec);
         Assert.Equal("Hdr10", referenceCase.Expected.HdrOutput);
     }

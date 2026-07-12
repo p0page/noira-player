@@ -160,6 +160,7 @@ public sealed class DevelopmentNavigationCommandTests
         {
           "route": "quality-run",
           "runId": "hdr10-007-start0",
+          "scenario": "subtitle-switch",
           "itemId": "677521",
           "itemName": "007",
           "mediaSourceId": "source-hdr10",
@@ -189,6 +190,7 @@ public sealed class DevelopmentNavigationCommandTests
         Assert.NotNull(command);
         Assert.Equal("quality-run", command!.Route);
         Assert.Equal("hdr10-007-start0", command.RunId);
+        Assert.Equal(NoiraPlayer.Core.PlaybackQuality.PlaybackQualityExecutionScenario.SubtitleSwitch, command.Scenario);
         Assert.Equal("677521", command.ItemId);
         Assert.Equal("source-hdr10", command.MediaSourceId);
         Assert.Equal(123, command.StartPositionTicks);
@@ -199,6 +201,27 @@ public sealed class DevelopmentNavigationCommandTests
         Assert.Equal(23.976, command.Expected.FrameRate);
     }
 
+    [Theory]
+    [InlineData("")]
+    [InlineData("do-everything")]
+    public void TryParseJson_Rejects_QualityRun_Without_Known_Scenario(string scenario)
+    {
+        var json = $$"""
+        {
+          "route": "quality-run",
+          "runId": "missing-scenario",
+          "itemId": "item-1",
+          "scenario": "{{scenario}}"
+        }
+        """;
+
+        var ok = DevelopmentNavigationCommand.TryParseJson(json, out var command, out var error);
+
+        Assert.False(ok);
+        Assert.Null(command);
+        Assert.Equal("dev-command.json quality-run requires a known scenario.", error);
+    }
+
     [Fact]
     public void TryParseJson_Rejects_QualityRun_Without_ItemId()
     {
@@ -206,6 +229,7 @@ public sealed class DevelopmentNavigationCommandTests
         {
           "route": "quality-run",
           "runId": "missing-item",
+          "scenario": "playback",
           "mediaSourceId": "source",
           "durationSeconds": 5
         }
@@ -228,6 +252,7 @@ public sealed class DevelopmentNavigationCommandTests
         {
           "route": "quality-run",
           "runId": "jellyfin/hdr10-direct",
+          "scenario": "playback",
           "streamUrl": " https://repo.jellyfin.org/test-videos/HDR/HDR10/HEVC/sample.mp4 ",
           "durationSeconds": 30,
           "expected": {
@@ -266,6 +291,7 @@ public sealed class DevelopmentNavigationCommandTests
         {
           "route": "quality-run",
           "runId": "short",
+          "scenario": "playback",
           "itemId": "item",
           "durationSeconds": 0
         }

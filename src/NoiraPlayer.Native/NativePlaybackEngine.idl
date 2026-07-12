@@ -59,6 +59,9 @@
         UInt64 SoftwareDecodedVideoFrames;
         UInt64 RenderedVideoFrames;
         UInt64 SubmittedAudioFrames;
+        UInt64 SubtitleDecodedCueCount;
+        UInt64 SubtitleCueRenderCount;
+        Int32 SelectedSubtitleStreamIndex;
         UInt64 DroppedVideoFrames;
         UInt64 SeekPrerollDroppedFrames;
         UInt64 VideoAheadWaitCount;

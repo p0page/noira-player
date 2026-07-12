@@ -8,6 +8,9 @@
         public ulong SoftwareDecodedVideoFrames { get; set; }
         public ulong RenderedVideoFrames { get; set; }
         public ulong SubmittedAudioFrames { get; set; }
+        public ulong SubtitleDecodedCueCount { get; set; }
+        public ulong SubtitleCueRenderCount { get; set; }
+        public int SelectedSubtitleStreamIndex { get; set; } = -1;
         public ulong DroppedVideoFrames { get; set; }
         public ulong SeekPrerollDroppedFrames { get; set; }
         public ulong VideoAheadWaitCount { get; set; }

@@ -276,6 +276,25 @@ public sealed class PlaybackQualityReportMapperTests
     }
 
     [Fact]
+    public void ApplyMetrics_Maps_Native_Subtitle_Render_Evidence()
+    {
+        var report = new PlaybackQualityReport();
+        var metrics = new PlaybackQualityMetricsSnapshot
+        {
+            SubtitleDecodedCueCount = 5,
+            SubtitleCueRenderCount = 4,
+            SelectedSubtitleStreamIndex = 7
+        };
+
+        PlaybackQualityReportMapper.ApplyMetrics(report, metrics);
+
+        Assert.Equal(5UL, report.Tracks.SubtitleDecodedCueCount);
+        Assert.Equal(4UL, report.Tracks.SubtitleCueRenderCount);
+        Assert.Equal(7, report.Tracks.SelectedSubtitleStreamIndex);
+        Assert.False(report.Tracks.IsSubtitleDisabled);
+    }
+
+    [Fact]
     public void ApplySource_Copies_Playback_Source_Metadata()
     {
         var report = new PlaybackQualityReport();

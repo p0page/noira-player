@@ -124,6 +124,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 new PlaybackQualityReportSignalDescriptor("tracks.selectedVideoStreamIndex", "tracks", "selectedVideoStreamIndex"),
                 new PlaybackQualityReportSignalDescriptor("tracks.selectedAudioStreamIndex", "tracks", "selectedAudioStreamIndex"),
                 new PlaybackQualityReportSignalDescriptor("tracks.selectedSubtitleStreamIndex", "tracks", "selectedSubtitleStreamIndex"),
+                new PlaybackQualityReportSignalDescriptor("tracks.subtitleDecodedCueCount", "tracks", "subtitleDecodedCueCount"),
+                new PlaybackQualityReportSignalDescriptor("tracks.subtitleCueRenderCount", "tracks", "subtitleCueRenderCount"),
                 new PlaybackQualityReportSignalDescriptor("tracks.isSubtitleDisabled", "tracks", "isSubtitleDisabled"),
                 new PlaybackQualityReportSignalDescriptor("tracks.video.index", "tracks.video", "index"),
                 new PlaybackQualityReportSignalDescriptor("tracks.video.codec", "tracks.video", "codec"),

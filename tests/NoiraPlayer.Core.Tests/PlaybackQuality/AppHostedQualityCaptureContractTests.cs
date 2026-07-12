@@ -28,23 +28,28 @@ public sealed class AppHostedQualityCaptureContractTests
         Assert.Contains("ReadPayloadLong(root, \"runtimeTicks\", 0)", webBridge, StringComparison.Ordinal);
         Assert.DoesNotContain("playback.getDirectStream", webBridge, StringComparison.Ordinal);
         Assert.DoesNotContain("<video", File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Web", "src", "App.tsx")), StringComparison.Ordinal);
-        Assert.DoesNotContain("case \"quality-run\":", mainPage, StringComparison.Ordinal);
-        Assert.DoesNotContain("qualityRunId: command.RunId", mainPage, StringComparison.Ordinal);
-        Assert.DoesNotContain("qualityExpected: command.Expected", mainPage, StringComparison.Ordinal);
-        Assert.DoesNotContain("qualityRunDurationSeconds: command.DurationSeconds", mainPage, StringComparison.Ordinal);
-        Assert.DoesNotContain("streamUrl: command.StreamUrl", mainPage, StringComparison.Ordinal);
+        Assert.Contains("command.Route != \"quality-run\"", mainPage, StringComparison.Ordinal);
+        Assert.Contains("PlaybackLaunchRequest.FromDevelopmentQualityRun", mainPage, StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "command.Route != \"quality-run\" ||\r\n                    string.IsNullOrWhiteSpace(command.StreamUrl)",
+            mainPage,
+            StringComparison.Ordinal);
 
         Assert.Contains("public string QualityRunId { get; }", launchRequest, StringComparison.Ordinal);
         Assert.Contains("public string DirectStreamUrl { get; }", launchRequest, StringComparison.Ordinal);
         Assert.Contains("public bool HasDirectStreamUrl", launchRequest, StringComparison.Ordinal);
         Assert.Contains("public bool IsQualityRun", launchRequest, StringComparison.Ordinal);
+        Assert.Contains("public string QualityScenario { get; }", launchRequest, StringComparison.Ordinal);
         Assert.Contains("PlaybackQualityExpected?", launchRequest, StringComparison.Ordinal);
 
         Assert.Contains("StartLaunchRequestPlaybackAsync", playbackPage, StringComparison.Ordinal);
         Assert.Contains("StartDirectStreamQualityRunPlaybackAsync", playbackPage, StringComparison.Ordinal);
         Assert.Contains("CreateDirectStreamQualityRunSource", playbackPage, StringComparison.Ordinal);
         Assert.Contains("ScheduleQualityRunCapture", playbackPage, StringComparison.Ordinal);
-        Assert.Contains("RunQualityRunLifecycleProbeAsync", playbackPage, StringComparison.Ordinal);
+        Assert.Contains("RunQualityRunScenarioAsync", playbackPage, StringComparison.Ordinal);
+        Assert.Contains("PlaybackQualityExecutionScenario.SubtitleSwitch", playbackPage, StringComparison.Ordinal);
+        Assert.Contains("_orchestrator.SwitchSubtitleStreamAsync", playbackPage, StringComparison.Ordinal);
+        Assert.Contains("SubtitleCueRenderCount", playbackPage, StringComparison.Ordinal);
         Assert.Contains("_orchestrator.PauseAsync()", playbackPage, StringComparison.Ordinal);
         Assert.Contains("_orchestrator.ResumeAsync()", playbackPage, StringComparison.Ordinal);
         Assert.Contains("_orchestrator.SeekAsync", playbackPage, StringComparison.Ordinal);
@@ -71,28 +76,27 @@ public sealed class AppHostedQualityCaptureContractTests
         var root = FindRepositoryRoot();
         var playbackPage = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.App", "Views", "PlaybackPage.xaml.cs"));
         var captureMethod = ExtractMethodBody(playbackPage, "CaptureQualityRunAsync");
-        var lifecycleProbeMethod = ExtractMethodBody(playbackPage, "RunQualityRunLifecycleProbeAsync");
+        var scenarioMethod = ExtractMethodBody(playbackPage, "RunQualityRunScenarioAsync");
         var seekProbeMethod = ExtractMethodBody(playbackPage, "private async Task RunQualityRunSeekProbeAsync");
 
         var captureEvidenceIndex = captureMethod.IndexOf(
-            "CaptureQualityRunEvidence(_backend, descriptor)",
+            "CaptureQualityRunEvidence(_backend, capturedDescriptor)",
             StringComparison.Ordinal);
-        var seekProbeIndex = captureMethod.IndexOf(
-            "await RunQualityRunSeekProbeAsync",
+        var scenarioIndex = captureMethod.IndexOf(
+            "await RunQualityRunScenarioAsync",
             StringComparison.Ordinal);
         var stopIndex = captureMethod.IndexOf(
             "await StopQualityRunPlaybackAsync",
             StringComparison.Ordinal);
 
-        Assert.DoesNotContain("_orchestrator.StopAsync()", lifecycleProbeMethod, StringComparison.Ordinal);
-        Assert.DoesNotContain("_orchestrator.SeekAsync", lifecycleProbeMethod, StringComparison.Ordinal);
+        Assert.DoesNotContain("_orchestrator.StopAsync()", scenarioMethod, StringComparison.Ordinal);
         Assert.Contains("_orchestrator.SeekAsync", seekProbeMethod, StringComparison.Ordinal);
         Assert.True(captureEvidenceIndex >= 0, "quality-run capture must sample runtime evidence.");
-        Assert.True(seekProbeIndex >= 0, "quality-run capture must run seek probe after evidence is captured.");
+        Assert.True(scenarioIndex >= 0, "quality-run capture must execute the selected scenario.");
         Assert.True(stopIndex >= 0, "quality-run capture must stop playback after evidence is captured.");
         Assert.True(
-            captureEvidenceIndex < seekProbeIndex,
-            "quality-run must sample playback metrics before the seek probe mutates native runtime counters.");
+            scenarioIndex < captureEvidenceIndex,
+            "quality-run must capture evidence after the selected scenario has executed.");
         Assert.True(
             captureEvidenceIndex < stopIndex,
             "quality-run must sample playback metrics before StopAsync resets native runtime metrics.");

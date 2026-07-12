@@ -146,6 +146,11 @@ internal static class NativeHeadlessHarness
             helper.SelectedAudioStreamIndex,
             helper.SelectedSubtitleStreamIndex,
             options.StartPositionTicks);
+        helper.Metrics.SubtitleCueRenderCount = Math.Max(
+            helper.SubtitleSwitch1.CueCountAfter,
+            helper.SubtitleSwitch2.CueCountAfter);
+        helper.Metrics.SelectedSubtitleStreamIndex =
+            helper.SelectedSubtitleStreamIndex ?? -1;
         var diagnostics = new NativeHeadlessDiagnostics(helper.Color, helper.Display);
         var provider = new NativeHeadlessMetricsProvider(helper.Metrics);
         var lifecycle = new PlaybackQualityLifecycle();

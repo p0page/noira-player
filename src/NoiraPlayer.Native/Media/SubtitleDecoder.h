@@ -30,6 +30,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         void Flush();
         void Close() noexcept;
         bool IsOpen() const noexcept;
+        uint64_t DecodedCueCount() const noexcept;
         std::optional<int32_t> SelectedStreamIndex() const noexcept;
 
     private:
@@ -37,6 +38,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         AVCodecContext* m_codecContext{nullptr};
         std::deque<DecodedSubtitleCue> m_cues;
         int32_t m_subtitleStreamIndex{-1};
+        uint64_t m_decodedCueCount{0};
         bool m_open{false};
     };
 }

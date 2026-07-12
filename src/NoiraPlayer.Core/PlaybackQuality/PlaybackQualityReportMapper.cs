@@ -119,6 +119,13 @@ namespace NoiraPlayer.Core.PlaybackQuality
             report.Buffers.QueuedAudioBuffers = metrics.QueuedAudioBuffers;
             report.Buffers.VideoStarvedPasses = metrics.VideoStarvedPasses;
             report.Buffers.AudioStarvedPasses = metrics.AudioStarvedPasses;
+            report.Tracks.SubtitleDecodedCueCount = metrics.SubtitleDecodedCueCount;
+            report.Tracks.SubtitleCueRenderCount = metrics.SubtitleCueRenderCount;
+            if (metrics.SelectedSubtitleStreamIndex >= 0)
+            {
+                report.Tracks.SelectedSubtitleStreamIndex = metrics.SelectedSubtitleStreamIndex;
+                report.Tracks.IsSubtitleDisabled = false;
+            }
         }
 
         public static void ApplySource(

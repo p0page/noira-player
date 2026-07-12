@@ -59,6 +59,8 @@ namespace winrt::NoiraPlayer::Native::implementation
     private:
         bool ClearBackBufferToBlack(bool present);
         bool ClearTextureToBlack(ID3D11Texture2D* texture);
+        bool EnsureSubtitleOverlayResources();
+        bool DrawSubtitleBitmapOverlayD3d11(SubtitleBitmapRegion const& region);
         void SetVideoProcessorConversionStatus(
             DXGI_COLOR_SPACE_TYPE inputColorSpace,
             DXGI_COLOR_SPACE_TYPE outputColorSpace,
@@ -76,5 +78,15 @@ namespace winrt::NoiraPlayer::Native::implementation
         DXGI_COLOR_SPACE_TYPE m_lastVideoProcessorOutputColorSpace{DXGI_COLOR_SPACE_CUSTOM};
         std::wstring m_lastVideoProcessorConversionStatus{L"not-run"};
         HdrToneMappingPass m_hdrToneMappingPass;
+        Microsoft::WRL::ComPtr<ID3D11VertexShader> m_subtitleVertexShader;
+        Microsoft::WRL::ComPtr<ID3D11PixelShader> m_subtitlePixelShader;
+        Microsoft::WRL::ComPtr<ID3D11SamplerState> m_subtitleSampler;
+        Microsoft::WRL::ComPtr<ID3D11BlendState> m_subtitleBlendState;
+        Microsoft::WRL::ComPtr<ID3D11Buffer> m_subtitleConstants;
+        Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_cachedSubtitleView;
+        uint64_t m_cachedSubtitleHash{0};
+        uint32_t m_cachedSubtitleWidth{0};
+        uint32_t m_cachedSubtitleHeight{0};
+        uint32_t m_cachedSubtitleStride{0};
     };
 }

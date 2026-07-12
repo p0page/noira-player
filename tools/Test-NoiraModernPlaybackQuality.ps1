@@ -278,7 +278,7 @@ Remove-DirectoryInsideRoot $capturedRoot $localState
 $localReportPath = Join-Path $capturedRoot ($reportRelativePath -replace '/', [System.IO.Path]::DirectorySeparatorChar)
 
 Stop-NoiraAppProcess
-Start-Process "shell:AppsFolder\$appUserModelId"
+Start-Process explorer.exe -ArgumentList "shell:AppsFolder\$appUserModelId"
 $process = Wait-ForNoiraProcess 20
 $capturedReportPath = Wait-ForFile $localReportPath $WaitSeconds $devCommandResultPath
 

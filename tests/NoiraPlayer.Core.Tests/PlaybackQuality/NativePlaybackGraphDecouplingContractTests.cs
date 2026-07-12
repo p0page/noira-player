@@ -170,6 +170,64 @@ public sealed class NativePlaybackGraphDecouplingContractTests
     }
 
     [Fact]
+    public void AppHosted_Metrics_Expose_Native_Subtitle_Selection_And_Cue_Render_Count()
+    {
+        var root = FindRepositoryRoot();
+        var idl = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NoiraPlayer.Native",
+            "NativePlaybackEngine.idl"));
+        var nativeEngine = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NoiraPlayer.Native",
+            "NativePlaybackEngine.cpp"));
+        var appEngine = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NoiraPlayer.App",
+            "Playback",
+            "WinRtNativePlaybackEngine.cs"));
+
+        Assert.Contains("UInt64 SubtitleCueRenderCount;", idl, StringComparison.Ordinal);
+        Assert.Contains("UInt64 SubtitleDecodedCueCount;", idl, StringComparison.Ordinal);
+        Assert.Contains("Int32 SelectedSubtitleStreamIndex;", idl, StringComparison.Ordinal);
+        Assert.Contains("m_graph->SubtitleCueRenderCount()", nativeEngine, StringComparison.Ordinal);
+        Assert.Contains("m_graph->SubtitleDecodedCueCount()", nativeEngine, StringComparison.Ordinal);
+        Assert.Contains("m_graph->SelectedSubtitleStreamIndex()", nativeEngine, StringComparison.Ordinal);
+        Assert.Contains(
+            "SubtitleCueRenderCount = nativeMetrics.SubtitleCueRenderCount",
+            appEngine,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "SubtitleDecodedCueCount = nativeMetrics.SubtitleDecodedCueCount",
+            appEngine,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "SelectedSubtitleStreamIndex = nativeMetrics.SelectedSubtitleStreamIndex",
+            appEngine,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TenBit_Subtitle_Overlay_Uses_D3d_Texture_Composition()
+    {
+        var root = FindRepositoryRoot();
+        var resources = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NoiraPlayer.Native",
+            "DxDeviceResources.cpp"));
+
+        Assert.Contains("if (m_isTenBitSwapChain)", resources, StringComparison.Ordinal);
+        Assert.Contains("DrawSubtitleBitmapOverlayD3d11(region)", resources, StringComparison.Ordinal);
+        Assert.Contains("D3D11_BLEND_INV_SRC_ALPHA", resources, StringComparison.Ordinal);
+        Assert.Contains("SubtitleOverlayShader", resources, StringComparison.Ordinal);
+        Assert.Contains("TransferPQ", resources, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Native_Headless_Report_Does_Not_Invent_Pause_Resume_Lifecycle()
     {
         var root = FindRepositoryRoot();

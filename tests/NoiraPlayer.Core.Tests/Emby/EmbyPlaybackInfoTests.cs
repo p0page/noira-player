@@ -11,6 +11,51 @@ namespace NoiraPlayer.Core.Tests.Emby;
 public sealed class EmbyPlaybackInfoTests
 {
     [Fact]
+    public async Task GetPlaybackInfoAsync_Does_Not_Let_Mjpeg_Attachment_Replace_Primary_Video()
+    {
+        var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(
+            HttpStatusCode.OK,
+            """
+            {
+              "MediaSources": [{
+                "Id": "source-main-with-cover",
+                "MediaStreams": [
+                  {
+                    "Index": 0,
+                    "Type": "Video",
+                    "Codec": "hevc",
+                    "Width": 1920,
+                    "Height": 1080,
+                    "RealFrameRate": 23.976,
+                    "IsDefault": true,
+                    "VideoRange": "SDR"
+                  },
+                  {
+                    "Index": 8,
+                    "Type": "Video",
+                    "Codec": "mjpeg",
+                    "Width": 1080,
+                    "Height": 1599,
+                    "RealFrameRate": 0,
+                    "IsDefault": false
+                  }
+                ]
+              }]
+            }
+            """));
+        using var http = new HttpClient(handler);
+        var client = CreateClient(http);
+
+        var source = Assert.Single(
+            await client.GetPlaybackInfoAsync(Session(), "movie-with-cover"));
+
+        Assert.Equal(1920, source.Width);
+        Assert.Equal(1080, source.Height);
+        Assert.Equal(23.976, source.VideoFrameRate);
+        Assert.Equal("hevc", source.HdrProfile.Codec);
+    }
+
+    [Fact]
     public async Task GetPlaybackInfoAsync_Parses_MediaVersions_Audio_And_Subtitles()
     {
         var handler = new TestHttpMessageHandler(_ => TestHttpMessageHandler.Json(

@@ -185,6 +185,10 @@ namespace winrt::NoiraPlayer::Native::implementation
         metrics.SoftwareDecodedVideoFrames(snapshot.SoftwareDecodedVideoFrames);
         metrics.RenderedVideoFrames(snapshot.RenderedVideoFrames);
         metrics.SubmittedAudioFrames(snapshot.SubmittedAudioFrames);
+        metrics.SubtitleDecodedCueCount(m_graph->SubtitleDecodedCueCount());
+        metrics.SubtitleCueRenderCount(m_graph->SubtitleCueRenderCount());
+        metrics.SelectedSubtitleStreamIndex(
+            m_graph->SelectedSubtitleStreamIndex().value_or(-1));
         metrics.DroppedVideoFrames(snapshot.DroppedVideoFrames);
         metrics.SeekPrerollDroppedFrames(snapshot.SeekPrerollDroppedFrames);
         metrics.VideoAheadWaitCount(snapshot.VideoAheadWaitCount);

@@ -16,6 +16,7 @@ namespace NoiraPlayer.Core.Diagnostics
         public string StreamUrl { get; set; } = "";
         public bool AutoStart { get; set; }
         public string RunId { get; set; } = "";
+        public string Scenario { get; set; } = "";
         public int DurationSeconds { get; set; } = 10;
         public PlaybackQualityExpected? Expected { get; set; }
 
@@ -52,6 +53,7 @@ namespace NoiraPlayer.Core.Diagnostics
             parsed.MediaSourceId = Normalize(parsed.MediaSourceId);
             parsed.StreamUrl = Normalize(parsed.StreamUrl);
             parsed.RunId = Normalize(parsed.RunId);
+            parsed.Scenario = Normalize(parsed.Scenario).ToLowerInvariant();
             parsed.StartPositionTicks = Math.Max(0, parsed.StartPositionTicks);
 
             if (string.IsNullOrWhiteSpace(parsed.RunId))
@@ -77,6 +79,12 @@ namespace NoiraPlayer.Core.Diagnostics
 
             if (parsed.Route == "quality-run")
             {
+                if (!PlaybackQualityExecutionScenario.IsKnown(parsed.Scenario))
+                {
+                    error = "dev-command.json quality-run requires a known scenario.";
+                    return false;
+                }
+
                 if (string.IsNullOrWhiteSpace(parsed.ItemId) &&
                     string.IsNullOrWhiteSpace(parsed.StreamUrl))
                 {

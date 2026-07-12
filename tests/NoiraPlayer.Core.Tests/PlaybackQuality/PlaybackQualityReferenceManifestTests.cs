@@ -166,6 +166,47 @@ public sealed class PlaybackQualityReferenceManifestTests
     }
 
     [Fact]
+    public void RequiredSignals_For_SubtitleSwitch_Require_Operation_And_Rendered_Cue()
+    {
+        var referenceCase = CreateCase(
+            "subtitles/pgs-switch",
+            tier: 1,
+            purpose: "subtitle-switch");
+        referenceCase.ExecutionRequirement.Scenario =
+            PlaybackQualityExecutionScenario.SubtitleSwitch;
+
+        var requiredSignals =
+            PlaybackQualityRequiredSignalPolicy.CreateRequiredSignals(referenceCase);
+
+        Assert.Contains("lifecycle.subtitle-switch", requiredSignals);
+        Assert.Contains("tracks.selectedSubtitleStreamIndex", requiredSignals);
+        Assert.Contains("tracks.subtitleCueRenderCount", requiredSignals);
+
+        var report = CreateReport(
+            referenceCase.CaseId,
+            "hevc",
+            3840,
+            2160,
+            23.976,
+            "Sdr");
+        report.Lifecycle.Events.Add(new PlaybackQualityLifecycleEvent
+        {
+            Operation = "subtitle-switch",
+            Status = "success"
+        });
+        report.Tracks.SelectedSubtitleStreamIndex = 3;
+
+        Assert.False(PlaybackQualityRequiredSignalPolicy.HasReportSignal(
+            report,
+            "tracks.subtitleCueRenderCount"));
+
+        report.Tracks.SubtitleCueRenderCount = 1;
+        Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(
+            report,
+            "tracks.subtitleCueRenderCount"));
+    }
+
+    [Fact]
     public void SignalCatalog_Includes_Source_Color_Metadata_Evidence()
     {
         var reportSignals = new HashSet<string>(

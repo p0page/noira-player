@@ -252,7 +252,7 @@ $report.packageFamilyName = $package.PackageFamilyName
 $report.appUserModelId = $appUserModelId
 
 if ($Launch) {
-    Start-Process "shell:AppsFolder\$appUserModelId"
+    Start-Process explorer.exe -ArgumentList "shell:AppsFolder\$appUserModelId"
     $report.launched = $true
 }
 

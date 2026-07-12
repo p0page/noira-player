@@ -23,6 +23,7 @@ namespace NoiraPlayer.App.Navigation
                 command.MediaSourceId,
                 forceSdrOutput: command.ForceSdrOutput,
                 qualityRunId: command.RunId,
+                qualityScenario: command.Scenario,
                 qualityRunDurationSeconds: command.DurationSeconds,
                 qualityExpected: command.Expected,
                 qualityCommandReceivedAtUtc: commandReceivedAtUtc,
@@ -38,6 +39,7 @@ namespace NoiraPlayer.App.Navigation
             long runtimeTicks = 0,
             bool forceSdrOutput = false,
             string qualityRunId = "",
+            string qualityScenario = PlaybackQualityExecutionScenario.Playback,
             int qualityRunDurationSeconds = 0,
             PlaybackQualityExpected? qualityExpected = null,
             DateTimeOffset? qualityCommandReceivedAtUtc = null,
@@ -51,6 +53,15 @@ namespace NoiraPlayer.App.Navigation
             ForceSdrOutput = forceSdrOutput;
             DirectStreamUrl = string.IsNullOrWhiteSpace(streamUrl) ? "" : streamUrl.Trim();
             QualityRunId = string.IsNullOrWhiteSpace(qualityRunId) ? "" : qualityRunId.Trim();
+            QualityScenario = string.IsNullOrWhiteSpace(qualityScenario)
+                ? PlaybackQualityExecutionScenario.Playback
+                : qualityScenario.Trim().ToLowerInvariant();
+            if (!PlaybackQualityExecutionScenario.IsKnown(QualityScenario))
+            {
+                throw new ArgumentException(
+                    "Playback quality scenario is unknown.",
+                    nameof(qualityScenario));
+            }
             QualityRunDurationSeconds = qualityRunDurationSeconds < 10 ? 10 : qualityRunDurationSeconds;
             QualityExpected = qualityExpected;
             QualityCommandReceivedAtUtc = qualityCommandReceivedAtUtc ?? DateTimeOffset.UtcNow;
@@ -71,6 +82,8 @@ namespace NoiraPlayer.App.Navigation
         public string DirectStreamUrl { get; }
 
         public string QualityRunId { get; }
+
+        public string QualityScenario { get; }
 
         public int QualityRunDurationSeconds { get; }
 

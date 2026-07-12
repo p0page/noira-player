@@ -208,6 +208,14 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 return "timeline";
             }
 
+            if (string.Equals(
+                    signal,
+                    "tracks.subtitleCueRenderCount",
+                    System.StringComparison.Ordinal))
+            {
+                return "subtitles";
+            }
+
             if (StartsWithSignal(signal, "timing.") ||
                 string.Equals(signal, "display.refreshRateHz", System.StringComparison.Ordinal))
             {

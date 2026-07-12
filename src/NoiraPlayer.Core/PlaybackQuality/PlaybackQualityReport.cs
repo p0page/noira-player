@@ -168,6 +168,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
         public int? SelectedVideoStreamIndex { get; set; }
         public int? SelectedAudioStreamIndex { get; set; }
         public int? SelectedSubtitleStreamIndex { get; set; }
+        public ulong SubtitleDecodedCueCount { get; set; }
+        public ulong SubtitleCueRenderCount { get; set; }
         public bool IsSubtitleDisabled { get; set; } = true;
         public List<PlaybackQualityTrack> Video { get; } = new List<PlaybackQualityTrack>();
         public List<PlaybackQualityTrack> Audio { get; } = new List<PlaybackQualityTrack>();

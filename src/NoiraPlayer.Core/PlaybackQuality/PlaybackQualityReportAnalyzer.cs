@@ -114,6 +114,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
         public int? SelectedVideoStreamIndex { get; set; }
         public int? SelectedAudioStreamIndex { get; set; }
         public int? SelectedSubtitleStreamIndex { get; set; }
+        public ulong SubtitleDecodedCueCount { get; set; }
+        public ulong SubtitleCueRenderCount { get; set; }
         public bool IsSubtitleDisabled { get; set; }
         public List<string> Signals { get; } = new List<string>();
         public List<string> MissingSignals { get; } = new List<string>();
@@ -459,6 +461,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 SelectedVideoStreamIndex = report.Tracks.SelectedVideoStreamIndex,
                 SelectedAudioStreamIndex = report.Tracks.SelectedAudioStreamIndex,
                 SelectedSubtitleStreamIndex = report.Tracks.SelectedSubtitleStreamIndex,
+                SubtitleDecodedCueCount = report.Tracks.SubtitleDecodedCueCount,
+                SubtitleCueRenderCount = report.Tracks.SubtitleCueRenderCount,
                 IsSubtitleDisabled = report.Tracks.IsSubtitleDisabled
             };
 
@@ -468,7 +472,9 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 tracks.SubtitleTrackCount > 0 ||
                 tracks.SelectedVideoStreamIndex.HasValue ||
                 tracks.SelectedAudioStreamIndex.HasValue ||
-                tracks.SelectedSubtitleStreamIndex.HasValue;
+                tracks.SelectedSubtitleStreamIndex.HasValue ||
+                tracks.SubtitleDecodedCueCount > 0 ||
+                tracks.SubtitleCueRenderCount > 0;
 
             if (!hasTrackEvidence)
             {
@@ -497,6 +503,16 @@ namespace NoiraPlayer.Core.PlaybackQuality
             if (tracks.SelectedSubtitleStreamIndex.HasValue)
             {
                 AddUnique(tracks.Signals, "tracks.selectedSubtitleStreamIndex");
+            }
+
+            if (tracks.SubtitleCueRenderCount > 0)
+            {
+                AddUnique(tracks.Signals, "tracks.subtitleCueRenderCount");
+            }
+
+            if (tracks.SubtitleDecodedCueCount > 0)
+            {
+                AddUnique(tracks.Signals, "tracks.subtitleDecodedCueCount");
             }
 
             AddUnique(tracks.Signals, "tracks.isSubtitleDisabled");

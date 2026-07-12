@@ -9,6 +9,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
             string runId,
             PlaybackDescriptor descriptor,
             PlaybackQualityExpected? expected,
+            string scenario = PlaybackQualityExecutionScenario.Playback,
             string category = "stable",
             string severity = "medium",
             string stability = "stable")
@@ -19,7 +20,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
             }
 
             var source = descriptor.MediaSource;
-            return new PlaybackQualityReferenceCase
+            var referenceCase = new PlaybackQualityReferenceCase
             {
                 CaseId = Normalize(runId, nameof(runId)),
                 Category = NormalizeOrDefault(category, "stable"),
@@ -31,6 +32,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 StartPositionTicks = descriptor.StartPositionTicks,
                 Expected = CloneExpected(expected)
             };
+            referenceCase.ExecutionRequirement.Scenario = NormalizeScenario(scenario);
+            return referenceCase;
         }
 
         public static PlaybackQualityReferenceCase Create(
@@ -40,12 +43,13 @@ namespace NoiraPlayer.Core.PlaybackQuality
             long startPositionTicks,
             bool forceSdrOutput,
             PlaybackQualityExpected? expected,
+            string scenario = PlaybackQualityExecutionScenario.Playback,
             string uri = "",
             string category = "stable",
             string severity = "medium",
             string stability = "stable")
         {
-            return new PlaybackQualityReferenceCase
+            var referenceCase = new PlaybackQualityReferenceCase
             {
                 CaseId = Normalize(runId, nameof(runId)),
                 Category = NormalizeOrDefault(category, "stable"),
@@ -58,6 +62,23 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 ForceSdrOutput = forceSdrOutput,
                 Expected = CloneExpected(expected)
             };
+            referenceCase.ExecutionRequirement.Scenario = NormalizeScenario(scenario);
+            return referenceCase;
+        }
+
+        private static string NormalizeScenario(string scenario)
+        {
+            var normalized = string.IsNullOrWhiteSpace(scenario)
+                ? ""
+                : scenario.Trim().ToLowerInvariant();
+            if (!PlaybackQualityExecutionScenario.IsKnown(normalized))
+            {
+                throw new ArgumentException(
+                    "Playback quality capture scenario is unknown.",
+                    nameof(scenario));
+            }
+
+            return normalized;
         }
 
         private static string Normalize(string value, string parameterName)
