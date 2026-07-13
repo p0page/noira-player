@@ -952,6 +952,14 @@ int wmain(int argc, wchar_t** argv)
             << " presentDurationMsP95=" << playbackSnapshot.PresentDurationMsP95
             << " presentDurationMsP99=" << playbackSnapshot.PresentDurationMsP99
             << " presentDurationMsMax=" << playbackSnapshot.PresentDurationMsMax
+            << " videoDecodeDurationMsP50=" << playbackSnapshot.VideoDecodeDurationMsP50
+            << " videoDecodeDurationMsP95=" << playbackSnapshot.VideoDecodeDurationMsP95
+            << " videoDecodeDurationMsP99=" << playbackSnapshot.VideoDecodeDurationMsP99
+            << " videoDecodeDurationMsMax=" << playbackSnapshot.VideoDecodeDurationMsMax
+            << " videoRenderDurationMsP50=" << playbackSnapshot.VideoRenderDurationMsP50
+            << " videoRenderDurationMsP95=" << playbackSnapshot.VideoRenderDurationMsP95
+            << " videoRenderDurationMsP99=" << playbackSnapshot.VideoRenderDurationMsP99
+            << " videoRenderDurationMsMax=" << playbackSnapshot.VideoRenderDurationMsMax
             << " audioAheadWaitDurationMsP50=" << playbackSnapshot.AudioAheadWaitDurationMsP50
             << " audioAheadWaitDurationMsP95=" << playbackSnapshot.AudioAheadWaitDurationMsP95
             << " audioAheadWaitDurationMsP99=" << playbackSnapshot.AudioAheadWaitDurationMsP99
@@ -1055,6 +1063,8 @@ int wmain(int argc, wchar_t** argv)
 
         assert(playbackSnapshot.DecodedVideoFrames > 1);
         assert(playbackSnapshot.RenderedVideoFrames > 1);
+        assert(playbackSnapshot.VideoDecodeDurationMsP50 > 0.0);
+        assert(playbackSnapshot.VideoRenderDurationMsP50 > 0.0);
         return playbackFailed.load(std::memory_order_relaxed) ||
             !pauseResumeRecovered ||
             (endOfStreamAttempted && !endOfStreamObserved) ? 2 : 0;

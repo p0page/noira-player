@@ -70,6 +70,14 @@ namespace NoiraPlayer.Core.PlaybackQuality
             report.Timing.PresentDurationMsP95 = metrics.PresentDurationMsP95;
             report.Timing.PresentDurationMsP99 = metrics.PresentDurationMsP99;
             report.Timing.PresentDurationMsMax = metrics.PresentDurationMsMax;
+            report.Timing.VideoDecodeDurationMsP50 = metrics.VideoDecodeDurationMsP50;
+            report.Timing.VideoDecodeDurationMsP95 = metrics.VideoDecodeDurationMsP95;
+            report.Timing.VideoDecodeDurationMsP99 = metrics.VideoDecodeDurationMsP99;
+            report.Timing.VideoDecodeDurationMsMax = metrics.VideoDecodeDurationMsMax;
+            report.Timing.VideoRenderDurationMsP50 = metrics.VideoRenderDurationMsP50;
+            report.Timing.VideoRenderDurationMsP95 = metrics.VideoRenderDurationMsP95;
+            report.Timing.VideoRenderDurationMsP99 = metrics.VideoRenderDurationMsP99;
+            report.Timing.VideoRenderDurationMsMax = metrics.VideoRenderDurationMsMax;
             report.Timing.AudioAheadWaitDurationMsP50 = metrics.AudioAheadWaitDurationMsP50;
             report.Timing.AudioAheadWaitDurationMsP95 = metrics.AudioAheadWaitDurationMsP95;
             report.Timing.AudioAheadWaitDurationMsP99 = metrics.AudioAheadWaitDurationMsP99;

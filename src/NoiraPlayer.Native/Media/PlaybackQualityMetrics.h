@@ -141,6 +141,14 @@ namespace winrt::NoiraPlayer::Native::implementation
         double PresentDurationMsP95{0.0};
         double PresentDurationMsP99{0.0};
         double PresentDurationMsMax{0.0};
+        double VideoDecodeDurationMsP50{0.0};
+        double VideoDecodeDurationMsP95{0.0};
+        double VideoDecodeDurationMsP99{0.0};
+        double VideoDecodeDurationMsMax{0.0};
+        double VideoRenderDurationMsP50{0.0};
+        double VideoRenderDurationMsP95{0.0};
+        double VideoRenderDurationMsP99{0.0};
+        double VideoRenderDurationMsMax{0.0};
         double AudioAheadWaitDurationMsP50{0.0};
         double AudioAheadWaitDurationMsP95{0.0};
         double AudioAheadWaitDurationMsP99{0.0};
@@ -424,6 +432,16 @@ namespace winrt::NoiraPlayer::Native::implementation
             m_presentDurations.Add(value);
         }
 
+        void RecordVideoDecodeDurationMs(double value) noexcept
+        {
+            m_videoDecodeDurations.Add(value);
+        }
+
+        void RecordVideoRenderDurationMs(double value) noexcept
+        {
+            m_videoRenderDurations.Add(value);
+        }
+
         void RecordAudioAheadWaitDurationMs(double value) noexcept
         {
             RecordAudioAheadWaitMs(value, 0.0, value, 0.0, 1);
@@ -585,6 +603,14 @@ namespace winrt::NoiraPlayer::Native::implementation
             snapshot.PresentDurationMsP95 = m_presentDurations.Percentile(95);
             snapshot.PresentDurationMsP99 = m_presentDurations.Percentile(99);
             snapshot.PresentDurationMsMax = m_presentDurations.Max();
+            snapshot.VideoDecodeDurationMsP50 = m_videoDecodeDurations.Percentile(50);
+            snapshot.VideoDecodeDurationMsP95 = m_videoDecodeDurations.Percentile(95);
+            snapshot.VideoDecodeDurationMsP99 = m_videoDecodeDurations.Percentile(99);
+            snapshot.VideoDecodeDurationMsMax = m_videoDecodeDurations.Max();
+            snapshot.VideoRenderDurationMsP50 = m_videoRenderDurations.Percentile(50);
+            snapshot.VideoRenderDurationMsP95 = m_videoRenderDurations.Percentile(95);
+            snapshot.VideoRenderDurationMsP99 = m_videoRenderDurations.Percentile(99);
+            snapshot.VideoRenderDurationMsMax = m_videoRenderDurations.Max();
             snapshot.AudioAheadWaitDurationMsP50 = m_audioAheadWaitDurations.Percentile(50);
             snapshot.AudioAheadWaitDurationMsP95 = m_audioAheadWaitDurations.Percentile(95);
             snapshot.AudioAheadWaitDurationMsP99 = m_audioAheadWaitDurations.Percentile(99);
@@ -633,6 +659,8 @@ namespace winrt::NoiraPlayer::Native::implementation
         PlaybackQualityHistogram m_audioAheadWaitEndToPresent;
         PlaybackQualityHistogram m_renderIntervalsAfterNonAudioWait;
         PlaybackQualityHistogram m_presentDurations;
+        PlaybackQualityHistogram m_videoDecodeDurations;
+        PlaybackQualityHistogram m_videoRenderDurations;
         PlaybackQualityHistogram m_audioAheadWaitDurations;
         PlaybackQualityHistogram m_audioAheadWaitTargets;
         PlaybackQualityHistogram m_audioAheadWaitOversleeps;

@@ -1303,6 +1303,14 @@ internal static class NativeHeadlessHarness
             TrySetRequiredNonNegativeDouble(values, "presentDurationMsP95", value => metrics.PresentDurationMsP95 = value, out error) &&
             TrySetRequiredNonNegativeDouble(values, "presentDurationMsP99", value => metrics.PresentDurationMsP99 = value, out error) &&
             TrySetRequiredNonNegativeDouble(values, "presentDurationMsMax", value => metrics.PresentDurationMsMax = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "videoDecodeDurationMsP50", value => metrics.VideoDecodeDurationMsP50 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "videoDecodeDurationMsP95", value => metrics.VideoDecodeDurationMsP95 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "videoDecodeDurationMsP99", value => metrics.VideoDecodeDurationMsP99 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "videoDecodeDurationMsMax", value => metrics.VideoDecodeDurationMsMax = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "videoRenderDurationMsP50", value => metrics.VideoRenderDurationMsP50 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "videoRenderDurationMsP95", value => metrics.VideoRenderDurationMsP95 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "videoRenderDurationMsP99", value => metrics.VideoRenderDurationMsP99 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "videoRenderDurationMsMax", value => metrics.VideoRenderDurationMsMax = value, out error) &&
             TrySetRequiredNonNegativeDouble(values, "audioAheadWaitDurationMsP50", value => metrics.AudioAheadWaitDurationMsP50 = value, out error) &&
             TrySetRequiredNonNegativeDouble(values, "audioAheadWaitDurationMsP95", value => metrics.AudioAheadWaitDurationMsP95 = value, out error) &&
             TrySetRequiredNonNegativeDouble(values, "audioAheadWaitDurationMsP99", value => metrics.AudioAheadWaitDurationMsP99 = value, out error) &&

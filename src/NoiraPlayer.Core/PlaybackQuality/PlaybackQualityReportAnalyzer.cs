@@ -2931,6 +2931,46 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 AddUnique(analysis.EvidenceSignals, "timing.presentDurationMsMax");
             }
 
+            if (report.Timing.VideoDecodeDurationMsP50 > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.videoDecodeDurationMsP50");
+            }
+
+            if (report.Timing.VideoDecodeDurationMsP95 > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.videoDecodeDurationMsP95");
+            }
+
+            if (report.Timing.VideoDecodeDurationMsP99 > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.videoDecodeDurationMsP99");
+            }
+
+            if (report.Timing.VideoDecodeDurationMsMax > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.videoDecodeDurationMsMax");
+            }
+
+            if (report.Timing.VideoRenderDurationMsP50 > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.videoRenderDurationMsP50");
+            }
+
+            if (report.Timing.VideoRenderDurationMsP95 > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.videoRenderDurationMsP95");
+            }
+
+            if (report.Timing.VideoRenderDurationMsP99 > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.videoRenderDurationMsP99");
+            }
+
+            if (report.Timing.VideoRenderDurationMsMax > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.videoRenderDurationMsMax");
+            }
+
             if (report.Timing.AudioAheadWaitDurationMsP50 > 0)
             {
                 AddUnique(analysis.EvidenceSignals, "timing.audioAheadWaitDurationMsP50");

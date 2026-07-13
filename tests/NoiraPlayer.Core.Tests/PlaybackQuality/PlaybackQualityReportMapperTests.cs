@@ -133,6 +133,14 @@ public sealed class PlaybackQualityReportMapperTests
             PresentDurationMsP95 = 16.7,
             PresentDurationMsP99 = 33.4,
             PresentDurationMsMax = 50.1,
+            VideoDecodeDurationMsP50 = 4.0,
+            VideoDecodeDurationMsP95 = 12.0,
+            VideoDecodeDurationMsP99 = 18.0,
+            VideoDecodeDurationMsMax = 24.0,
+            VideoRenderDurationMsP50 = 2.0,
+            VideoRenderDurationMsP95 = 8.0,
+            VideoRenderDurationMsP99 = 14.0,
+            VideoRenderDurationMsMax = 20.0,
             AudioAheadWaitDurationMsP50 = 5.1,
             AudioAheadWaitDurationMsP95 = 15.2,
             AudioAheadWaitDurationMsP99 = 20.3,
@@ -212,6 +220,14 @@ public sealed class PlaybackQualityReportMapperTests
         Assert.Equal(16.7, report.Timing.PresentDurationMsP95);
         Assert.Equal(33.4, report.Timing.PresentDurationMsP99);
         Assert.Equal(50.1, report.Timing.PresentDurationMsMax);
+        Assert.Equal(4.0, report.Timing.VideoDecodeDurationMsP50);
+        Assert.Equal(12.0, report.Timing.VideoDecodeDurationMsP95);
+        Assert.Equal(18.0, report.Timing.VideoDecodeDurationMsP99);
+        Assert.Equal(24.0, report.Timing.VideoDecodeDurationMsMax);
+        Assert.Equal(2.0, report.Timing.VideoRenderDurationMsP50);
+        Assert.Equal(8.0, report.Timing.VideoRenderDurationMsP95);
+        Assert.Equal(14.0, report.Timing.VideoRenderDurationMsP99);
+        Assert.Equal(20.0, report.Timing.VideoRenderDurationMsMax);
         Assert.Equal(5.1, report.Timing.AudioAheadWaitDurationMsP50);
         Assert.Equal(15.2, report.Timing.AudioAheadWaitDurationMsP95);
         Assert.Equal(20.3, report.Timing.AudioAheadWaitDurationMsP99);

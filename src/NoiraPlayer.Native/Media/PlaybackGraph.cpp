@@ -892,7 +892,9 @@ namespace winrt::NoiraPlayer::Native::implementation
         {
             if (!m_pendingVideoFrame)
             {
+                auto decodeStartedAt = std::chrono::steady_clock::now();
                 auto frame = m_videoDecoder.TryReadFrame();
+                auto decodeEndedAt = std::chrono::steady_clock::now();
                 if (!frame)
                 {
                     auto hasQueuedAudio = m_audioRenderer.QueuedBufferCount() > 0;
@@ -910,6 +912,9 @@ namespace winrt::NoiraPlayer::Native::implementation
                     LogRuntimeStatsIfDue();
                     return hasQueuedAudio;
                 }
+
+                m_qualityMetrics.RecordVideoDecodeDurationMs(
+                    std::chrono::duration<double, std::milli>(decodeEndedAt - decodeStartedAt).count());
 
                 m_pendingVideoFrame = std::move(*frame);
                 ++m_decodedVideoFrameCount;
@@ -1017,7 +1022,11 @@ namespace winrt::NoiraPlayer::Native::implementation
             }
 
             EnsureHdrOutputForFrame(frame);
+            auto renderStartedAt = std::chrono::steady_clock::now();
             auto rendered = m_videoRenderer.Render(frame, m_hdrOutputActive);
+            auto renderEndedAt = std::chrono::steady_clock::now();
+            m_qualityMetrics.RecordVideoRenderDurationMs(
+                std::chrono::duration<double, std::milli>(renderEndedAt - renderStartedAt).count());
             m_positionTicks = frame.PositionTicks;
             if (!audioPosition)
             {

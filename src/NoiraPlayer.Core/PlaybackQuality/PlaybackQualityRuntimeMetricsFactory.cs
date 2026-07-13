@@ -79,6 +79,14 @@
                 metrics.PresentDurationMsP95 > 0 ||
                 metrics.PresentDurationMsP99 > 0 ||
                 metrics.PresentDurationMsMax > 0 ||
+                metrics.VideoDecodeDurationMsP50 > 0 ||
+                metrics.VideoDecodeDurationMsP95 > 0 ||
+                metrics.VideoDecodeDurationMsP99 > 0 ||
+                metrics.VideoDecodeDurationMsMax > 0 ||
+                metrics.VideoRenderDurationMsP50 > 0 ||
+                metrics.VideoRenderDurationMsP95 > 0 ||
+                metrics.VideoRenderDurationMsP99 > 0 ||
+                metrics.VideoRenderDurationMsMax > 0 ||
                 metrics.AudioAheadWaitDurationMsP50 > 0 ||
                 metrics.AudioAheadWaitDurationMsP95 > 0 ||
                 metrics.AudioAheadWaitDurationMsP99 > 0 ||

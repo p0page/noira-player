@@ -314,6 +314,30 @@ namespace winrt::NoiraPlayer::Native::implementation
         double PresentDurationMsMax() const noexcept { return m_presentDurationMsMax; }
         void PresentDurationMsMax(double value) noexcept { m_presentDurationMsMax = value; }
 
+        double VideoDecodeDurationMsP50() const noexcept { return m_videoDecodeDurationMsP50; }
+        void VideoDecodeDurationMsP50(double value) noexcept { m_videoDecodeDurationMsP50 = value; }
+
+        double VideoDecodeDurationMsP95() const noexcept { return m_videoDecodeDurationMsP95; }
+        void VideoDecodeDurationMsP95(double value) noexcept { m_videoDecodeDurationMsP95 = value; }
+
+        double VideoDecodeDurationMsP99() const noexcept { return m_videoDecodeDurationMsP99; }
+        void VideoDecodeDurationMsP99(double value) noexcept { m_videoDecodeDurationMsP99 = value; }
+
+        double VideoDecodeDurationMsMax() const noexcept { return m_videoDecodeDurationMsMax; }
+        void VideoDecodeDurationMsMax(double value) noexcept { m_videoDecodeDurationMsMax = value; }
+
+        double VideoRenderDurationMsP50() const noexcept { return m_videoRenderDurationMsP50; }
+        void VideoRenderDurationMsP50(double value) noexcept { m_videoRenderDurationMsP50 = value; }
+
+        double VideoRenderDurationMsP95() const noexcept { return m_videoRenderDurationMsP95; }
+        void VideoRenderDurationMsP95(double value) noexcept { m_videoRenderDurationMsP95 = value; }
+
+        double VideoRenderDurationMsP99() const noexcept { return m_videoRenderDurationMsP99; }
+        void VideoRenderDurationMsP99(double value) noexcept { m_videoRenderDurationMsP99 = value; }
+
+        double VideoRenderDurationMsMax() const noexcept { return m_videoRenderDurationMsMax; }
+        void VideoRenderDurationMsMax(double value) noexcept { m_videoRenderDurationMsMax = value; }
+
         double AudioAheadWaitDurationMsP50() const noexcept { return m_audioAheadWaitDurationMsP50; }
         void AudioAheadWaitDurationMsP50(double value) noexcept { m_audioAheadWaitDurationMsP50 = value; }
 
@@ -577,6 +601,14 @@ namespace winrt::NoiraPlayer::Native::implementation
         double m_presentDurationMsP95{0.0};
         double m_presentDurationMsP99{0.0};
         double m_presentDurationMsMax{0.0};
+        double m_videoDecodeDurationMsP50{0.0};
+        double m_videoDecodeDurationMsP95{0.0};
+        double m_videoDecodeDurationMsP99{0.0};
+        double m_videoDecodeDurationMsMax{0.0};
+        double m_videoRenderDurationMsP50{0.0};
+        double m_videoRenderDurationMsP95{0.0};
+        double m_videoRenderDurationMsP99{0.0};
+        double m_videoRenderDurationMsMax{0.0};
         double m_audioAheadWaitDurationMsP50{0.0};
         double m_audioAheadWaitDurationMsP95{0.0};
         double m_audioAheadWaitDurationMsP99{0.0};

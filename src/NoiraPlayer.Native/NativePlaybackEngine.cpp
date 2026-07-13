@@ -300,6 +300,14 @@ namespace winrt::NoiraPlayer::Native::implementation
         metrics.PresentDurationMsP95(snapshot.PresentDurationMsP95);
         metrics.PresentDurationMsP99(snapshot.PresentDurationMsP99);
         metrics.PresentDurationMsMax(snapshot.PresentDurationMsMax);
+        metrics.VideoDecodeDurationMsP50(snapshot.VideoDecodeDurationMsP50);
+        metrics.VideoDecodeDurationMsP95(snapshot.VideoDecodeDurationMsP95);
+        metrics.VideoDecodeDurationMsP99(snapshot.VideoDecodeDurationMsP99);
+        metrics.VideoDecodeDurationMsMax(snapshot.VideoDecodeDurationMsMax);
+        metrics.VideoRenderDurationMsP50(snapshot.VideoRenderDurationMsP50);
+        metrics.VideoRenderDurationMsP95(snapshot.VideoRenderDurationMsP95);
+        metrics.VideoRenderDurationMsP99(snapshot.VideoRenderDurationMsP99);
+        metrics.VideoRenderDurationMsMax(snapshot.VideoRenderDurationMsMax);
         metrics.AudioAheadWaitDurationMsP50(snapshot.AudioAheadWaitDurationMsP50);
         metrics.AudioAheadWaitDurationMsP95(snapshot.AudioAheadWaitDurationMsP95);
         metrics.AudioAheadWaitDurationMsP99(snapshot.AudioAheadWaitDurationMsP99);

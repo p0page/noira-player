@@ -1579,6 +1579,21 @@ public sealed class PlaybackQualityReportAnalyzerTests
     }
 
     [Fact]
+    public void Runtime_Metrics_Factory_Treats_Video_Pipeline_Stage_Timing_As_Playback_Evidence()
+    {
+        var runtimeMetrics = PlaybackQualityRuntimeMetricsFactory.FromSnapshot(
+            new PlaybackQualityMetricsSnapshot
+            {
+                VideoDecodeDurationMsP95 = 12.0,
+                VideoRenderDurationMsP95 = 8.0
+            },
+            "returned-snapshot");
+
+        Assert.Equal("captured", runtimeMetrics.Status);
+        Assert.True(runtimeMetrics.HasPlaybackSample);
+    }
+
+    [Fact]
     public void Analyze_Targets_Highest_Priority_Failure_Area_When_Frame_Pacing_Also_Fails()
     {
         var report = CreateOptimizationReadyFailure();
@@ -1695,6 +1710,31 @@ public sealed class PlaybackQualityReportAnalyzerTests
         Assert.Contains("timing.presentDurationMsP95", analysis.EvidenceSignals);
         Assert.Contains("timing.presentDurationMsP99", analysis.EvidenceSignals);
         Assert.Contains("timing.presentDurationMsMax", analysis.EvidenceSignals);
+    }
+
+    [Fact]
+    public void Analyze_Reports_Video_Pipeline_Stage_Timing_Evidence()
+    {
+        var report = CreateOptimizationReadyFailure();
+        report.Timing.VideoDecodeDurationMsP50 = 4.0;
+        report.Timing.VideoDecodeDurationMsP95 = 12.0;
+        report.Timing.VideoDecodeDurationMsP99 = 18.0;
+        report.Timing.VideoDecodeDurationMsMax = 24.0;
+        report.Timing.VideoRenderDurationMsP50 = 2.0;
+        report.Timing.VideoRenderDurationMsP95 = 8.0;
+        report.Timing.VideoRenderDurationMsP99 = 14.0;
+        report.Timing.VideoRenderDurationMsMax = 20.0;
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Contains("timing.videoDecodeDurationMsP50", analysis.EvidenceSignals);
+        Assert.Contains("timing.videoDecodeDurationMsP95", analysis.EvidenceSignals);
+        Assert.Contains("timing.videoDecodeDurationMsP99", analysis.EvidenceSignals);
+        Assert.Contains("timing.videoDecodeDurationMsMax", analysis.EvidenceSignals);
+        Assert.Contains("timing.videoRenderDurationMsP50", analysis.EvidenceSignals);
+        Assert.Contains("timing.videoRenderDurationMsP95", analysis.EvidenceSignals);
+        Assert.Contains("timing.videoRenderDurationMsP99", analysis.EvidenceSignals);
+        Assert.Contains("timing.videoRenderDurationMsMax", analysis.EvidenceSignals);
     }
 
     [Fact]

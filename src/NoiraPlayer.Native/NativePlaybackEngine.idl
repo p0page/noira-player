@@ -171,6 +171,14 @@
         Double PresentDurationMsP95;
         Double PresentDurationMsP99;
         Double PresentDurationMsMax;
+        Double VideoDecodeDurationMsP50;
+        Double VideoDecodeDurationMsP95;
+        Double VideoDecodeDurationMsP99;
+        Double VideoDecodeDurationMsMax;
+        Double VideoRenderDurationMsP50;
+        Double VideoRenderDurationMsP95;
+        Double VideoRenderDurationMsP99;
+        Double VideoRenderDurationMsMax;
         Double AudioAheadWaitDurationMsP50;
         Double AudioAheadWaitDurationMsP95;
         Double AudioAheadWaitDurationMsP99;

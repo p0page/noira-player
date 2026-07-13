@@ -948,6 +948,14 @@ function New-NativeHeadlessParserFixtureOutput {
         presentDurationMsP95 = '0.2'
         presentDurationMsP99 = '0.3'
         presentDurationMsMax = '0.4'
+        videoDecodeDurationMsP50 = '1.1'
+        videoDecodeDurationMsP95 = '2.2'
+        videoDecodeDurationMsP99 = '3.3'
+        videoDecodeDurationMsMax = '4.4'
+        videoRenderDurationMsP50 = '0.5'
+        videoRenderDurationMsP95 = '1.5'
+        videoRenderDurationMsP99 = '2.5'
+        videoRenderDurationMsMax = '3.5'
         audioAheadWaitDurationMsP50 = '0'
         audioAheadWaitDurationMsP95 = '0'
         audioAheadWaitDurationMsP99 = '0'
@@ -1778,6 +1786,18 @@ function Assert-NativeHeadlessParserContracts {
             ExpectedField = 'presentDurationMsP95'
             Output = New-NativeHeadlessParserFixtureOutput -Overrides @{
                 presentDurationMsP95 = 'Infinity'
+            }
+        },
+        [pscustomobject]@{
+            Name = 'missing-video-decode-percentile'
+            ExpectedField = 'videoDecodeDurationMsP95'
+            Output = New-NativeHeadlessParserFixtureOutput -Omit @('videoDecodeDurationMsP95')
+        },
+        [pscustomobject]@{
+            Name = 'infinite-video-render-percentile'
+            ExpectedField = 'videoRenderDurationMsP95'
+            Output = New-NativeHeadlessParserFixtureOutput -Overrides @{
+                videoRenderDurationMsP95 = 'Infinity'
             }
         },
         [pscustomobject]@{

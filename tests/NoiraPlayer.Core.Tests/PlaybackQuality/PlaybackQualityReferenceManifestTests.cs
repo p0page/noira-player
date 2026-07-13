@@ -428,6 +428,22 @@ public sealed class PlaybackQualityReferenceManifestTests
     }
 
     [Fact]
+    public void SignalCatalog_Includes_Video_Pipeline_Stage_Timing_Evidence()
+    {
+        var reportSignals = new HashSet<string>(
+            PlaybackQualitySignalCatalog.ReportSignals.Select(signal => signal.Signal));
+
+        Assert.Contains("timing.videoDecodeDurationMsP50", reportSignals);
+        Assert.Contains("timing.videoDecodeDurationMsP95", reportSignals);
+        Assert.Contains("timing.videoDecodeDurationMsP99", reportSignals);
+        Assert.Contains("timing.videoDecodeDurationMsMax", reportSignals);
+        Assert.Contains("timing.videoRenderDurationMsP50", reportSignals);
+        Assert.Contains("timing.videoRenderDurationMsP95", reportSignals);
+        Assert.Contains("timing.videoRenderDurationMsP99", reportSignals);
+        Assert.Contains("timing.videoRenderDurationMsMax", reportSignals);
+    }
+
+    [Fact]
     public void SignalCatalog_Includes_Audio_Ahead_Wait_Duration_Timing_Evidence()
     {
         var reportSignals = new HashSet<string>(

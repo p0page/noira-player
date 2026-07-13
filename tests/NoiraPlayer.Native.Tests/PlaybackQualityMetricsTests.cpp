@@ -35,6 +35,12 @@ int main()
     metrics.RecordPresentDurationMs(2.0);
     metrics.RecordPresentDurationMs(17.0);
     metrics.RecordPresentDurationMs(34.0);
+    metrics.RecordVideoDecodeDurationMs(3.0);
+    metrics.RecordVideoDecodeDurationMs(11.0);
+    metrics.RecordVideoDecodeDurationMs(23.0);
+    metrics.RecordVideoRenderDurationMs(1.0);
+    metrics.RecordVideoRenderDurationMs(7.0);
+    metrics.RecordVideoRenderDurationMs(19.0);
     metrics.RecordAudioAheadWaitMs(4.0, 1.0, 3.0, 100.0, 1);
     metrics.RecordAudioAheadWaitMs(12.0, 3.0, 9.0, 80.0, 2);
     metrics.RecordAudioAheadWaitMs(24.0, 8.0, 16.0, 50.0, 3);
@@ -152,6 +158,12 @@ int main()
     assert(snapshot.PresentDurationMsP50 >= 2.0);
     assert(snapshot.PresentDurationMsP95 >= 34.0);
     assert(snapshot.PresentDurationMsMax == 34.0);
+    assert(snapshot.VideoDecodeDurationMsP50 >= 3.0);
+    assert(snapshot.VideoDecodeDurationMsP95 >= 23.0);
+    assert(snapshot.VideoDecodeDurationMsMax == 23.0);
+    assert(snapshot.VideoRenderDurationMsP50 >= 1.0);
+    assert(snapshot.VideoRenderDurationMsP95 >= 19.0);
+    assert(snapshot.VideoRenderDurationMsMax == 19.0);
     assert(snapshot.AudioAheadWaitDurationMsP50 >= 4.0);
     assert(snapshot.AudioAheadWaitDurationMsP95 >= 24.0);
     assert(snapshot.AudioAheadWaitDurationMsMax == 24.0);
