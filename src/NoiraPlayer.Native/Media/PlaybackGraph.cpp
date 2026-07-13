@@ -1036,6 +1036,9 @@ namespace winrt::NoiraPlayer::Native::implementation
 
             if (rendered && presented)
             {
+                m_nextRenderLoopWait = PlaybackFramePacing::RenderLoopWait(true);
+                m_nextRenderLoopWaitUseTimer =
+                    PlaybackFramePacing::ShouldUseRenderLoopTimer(m_nextRenderLoopWait);
                 if (auto elapsed = m_renderIntervalTracker.Observe(renderedAt))
                 {
                     m_qualityMetrics.RecordRenderIntervalMs(*elapsed);

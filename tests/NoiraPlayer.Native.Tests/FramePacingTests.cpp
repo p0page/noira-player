@@ -6,8 +6,10 @@ using winrt::NoiraPlayer::Native::implementation::PlaybackFramePacing;
 
 int main()
 {
-    assert(PlaybackFramePacing::RenderLoopWait().count() <= 5);
-    assert(PlaybackFramePacing::ShouldUseRenderLoopTimer(PlaybackFramePacing::RenderLoopWait()));
+    assert(PlaybackFramePacing::RenderLoopWait(false).count() == 5);
+    assert(PlaybackFramePacing::ShouldUseRenderLoopTimer(PlaybackFramePacing::RenderLoopWait(false)));
+    assert(PlaybackFramePacing::RenderLoopWait(true).count() == 0);
+    assert(!PlaybackFramePacing::ShouldUseRenderLoopTimer(PlaybackFramePacing::RenderLoopWait(true)));
 
     assert(PlaybackFramePacing::ShouldWaitForAudio(1'500'000, 1'000'000, true));
     assert(!PlaybackFramePacing::ShouldWaitForAudio(1'050'000, 1'000'000, true));
