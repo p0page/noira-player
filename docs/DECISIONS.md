@@ -1,5 +1,15 @@
 ﻿# 技术决策
 
+## 2026-07-13：自然 EOF 必须由独立 native 场景证明，评测升级到 v0.7
+
+决策：`end-of-stream` 是独立 `executionRequirement.scenario`，不能与 playback、timeline、audio-switch、subtitle-switch 或 pause-resume 共享同一次 attempt。只有 native `PlaybackGraph` 自然报告 `Stopped / Playback ended.`，且 helper 的 attempted、observed、completed 和 position 四项结构化证据一致时，collector 才写入 `lifecycle.endOfStream`。资源清理用的 `graph.Stop()` 不算自然 EOF。
+
+禁止规则：不得根据 duration、最终播放位置、manifest expected、固定 sleep、进程退出码或 helper 输出是否结束来推断 EOS。字段缺失、非法、互相矛盾、等待超时或 graph failure 必须输出失败/证据不足，不能回退为 pass。该规则与 Kodi 等成熟播放器的 drain 后结束语义一致：demux EOF 后仍需排空 decoder 和输出队列，只有播放图真实结束才向上层报告完成。
+
+版本决策：manifest 合法性、执行场景和可比性语义发生变化，因此 evaluation version 从 `playback-quality-v0.6` 升级为 `playback-quality-v0.7`。旧 v0.6 报告可以保留用于历史审计，但不能与 v0.7 EOS baseline/candidate 混比。公开样本和私有 Emby 生成器都必须生成独立 EOS case；为了满足 coverage 而把 EOS purpose 塞进其他场景属于 harness bug。私有长片必须依据 Emby 实际 `RunTimeTicks` 从片尾前 5 秒开始；没有可靠时长就不生成 EOS case，不能让默认 10 秒 runner 从影片开头等待或用名称猜时长。
+
+证据：本地 5 秒生成视频实际自然结束于 `49,666,667 ticks`，12-case native report-set 全部完成并通过 strict validation。四个 helper 字段的缺失 fixture 和 completed/observed 矛盾 fixture 均被拒绝；完整 34 阶段 Core gate、593 项 Core 测试、Native Debug x64 build 和 Modern UWP Debug x64 Native AOT Publish 均通过。
+
 ## 2026-07-13：候选评测显式区分 corpus 与 focused 作用域
 
 决策：`evaluate-candidate` 和 `Compare-PlaybackCoreTuningCandidate.ps1` 默认继续使用 `corpus`，要求 manifest 覆盖完整 Core 评测目的；单 case 或小集合调优必须显式选择 `focused`。focused 仍要求 manifest、baseline/candidate report-set、native 播放证据、源身份和每个 case 的阈值全部有效，但不因缺少无关评测目的阻止当前 case 比较，也不得据此声称全量语料或播放器整体就绪。输出必须记录 evaluation scope。

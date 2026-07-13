@@ -26,6 +26,7 @@ try {
           "Id": "sdr-source",
           "Name": "1080p SDR",
           "Bitrate": 3000000,
+          "RunTimeTicks": 6000000000,
           "MediaStreams": [
             {
               "Type": "Video",
@@ -384,6 +385,7 @@ try {
         $_.severity -eq 'high' -and
         $_.stability -eq 'stable' -and
         $_.executionRequirement.scenario -eq 'end-of-stream' -and
+        $_.startPositionTicks -eq 5950000000 -and
         ($_.purpose -contains 'end-of-stream') -and
         $_.purpose.Count -eq 1
     })) {

@@ -73,6 +73,24 @@ function Get-NullableInt([object]$Value) {
     return $null
 }
 
+function Get-NullableLong([object]$Value) {
+    if ($null -eq $Value) {
+        return $null
+    }
+
+    $text = Normalize-String $Value
+    if ([string]::IsNullOrWhiteSpace($text)) {
+        return $null
+    }
+
+    $parsed = [long]0
+    if ([long]::TryParse($text, [ref]$parsed)) {
+        return $parsed
+    }
+
+    return $null
+}
+
 function Get-DolbyVisionProfile([string]$Combined) {
     $profileMatch = [regex]::Match(
         $Combined,
@@ -517,10 +535,20 @@ function ConvertTo-Candidates([object[]]$Items) {
                 $hdrProfile = New-UnknownHdrProfileFromNameHint
             }
 
+            $runTimeTicks = Get-NullableLong $source.RunTimeTicks
+            if ($null -eq $runTimeTicks -or $runTimeTicks -le 0) {
+                $runTimeTicks = Get-NullableLong $item.RunTimeTicks
+            }
+
             $candidates += [pscustomobject]@{
                 ItemId = $itemId
                 MediaSourceId = $sourceId
                 Bitrate = [long]$source.Bitrate
+                RunTimeTicks = if ($null -ne $runTimeTicks -and $runTimeTicks -gt 0) {
+                    [long]$runTimeTicks
+                } else {
+                    [long]0
+                }
                 VideoStream = $video
                 FrameRate = $frameRate
                 HdrProfile = $hdrProfile
@@ -622,7 +650,14 @@ function New-ReferenceManifest([object[]]$Items) {
     $sdr = Select-FirstCandidate $candidates { $_.HdrProfile.kind -eq 'Sdr' } { $_.Bitrate }
     if ($null -ne $sdr) {
         $cases += New-ReferenceCase $sdr 'sdr-smoke' @('sdr-smoke', 'av-sync', 'tracks', 'subtitles') 1 $false $false
-        $cases += New-ReferenceCase $sdr 'end-of-stream' @('end-of-stream') 1 $false $false
+        if ($sdr.RunTimeTicks -gt 0) {
+            $endOfStreamWindowTicks = [long]50000000
+            $endOfStreamStartTicks = [math]::Max(
+                [long]0,
+                [long]$sdr.RunTimeTicks - $endOfStreamWindowTicks)
+            $cases += New-ReferenceCase $sdr 'end-of-stream' @('end-of-stream') 1 $false $false `
+                -StartPositionTicks $endOfStreamStartTicks
+        }
         $cases += New-ReferenceCase $sdr 'timeline' @('timeline') 1 $false $false -StartPositionTicks 600000000 -MaxSeekPositionErrorMs 500.0
         $cases += New-ReferenceCase $sdr 'audio-switch' @('tracks', 'audio-switch') 1 $false $false
         $cases += New-ReferenceCase $sdr 'subtitle-switch' @('subtitles', 'subtitle-switch') 1 $false $false

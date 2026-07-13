@@ -2,6 +2,18 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-13 更新：自然播放结束已成为真实 native stable case
+
+评测契约已升级为 `playback-quality-v0.7`。manifest 现在把 `end-of-stream` 视为独立主动场景，不能再作为普通标签混入 `playback`、`timeline`、切轨或暂停恢复 case。公开 example manifest、candidate-evaluation smoke 和私有 Emby manifest 生成器均已按单 case 单主动意图拆分；私有生成器现在生成 12 个 case，其中 EOS 是独立 stable case。私有长片 EOS case 使用 Emby `RunTimeTicks` 从片尾前 5 秒开始；时长未知时不生成该 case，避免从 0 开始等待整部电影或伪造结束。
+
+native helper 只在 `PlaybackGraph` 自然发出 `Stopped / Playback ended.` 后记录 EOS。结构化字段为 `endOfStreamAttempted`、`endOfStreamObserved`、`endOfStreamStatus` 和 `endOfStreamPositionTicks`；collector 对四字段逐项必填并校验一致性，缺失、矛盾、超时或 graph failure 都不得生成 `lifecycle.endOfStream`。duration、最终 position、expected、固定等待和 helper 正常退出均不能替代该状态证据。
+
+真实 native smoke 使用本地生成的 5 秒 H.264 视频完整播放到自然结束，记录 EOS 位置 `49,666,667 ticks`，materialized report 为 pass，包含唯一 `lifecycle.endOfStream`。统一 native 集合从 11 个增为 12 个 case，strict validation 为 completed 12、rendered 12，analysis 消费 12 份真实报告。parser fixture 还覆盖四字段分别缺失及 completed/observed 矛盾，均明确拒绝。
+
+最终验证：`run-playback-core-checks.ps1 -AppDiffBase main` 的 34 个阶段全部通过，Core 测试 593/593，真实 native-headless smoke、manifest runner、私有 manifest 生成、candidate comparison、全部纯 native 测试和 Native Debug x64 build 均通过；Modern UWP Debug x64 Native AOT Publish 成功且无 AOT/trimming blocker。该结论证明软件 EOS 链路和完整 App 编译集成，不声称已做 App-hosted UI 自动返回或 Xbox/HDMI 验证。
+
+当前分支已包含 `main` 的 `d58104c docs: adopt soft-violet visual accent`；`docs/DESIGN.md` 的常规信号色为柔和紫 `#8B7CF6`。该 UI 决策与本轮 Core EOS 证据相互独立。下一项优先缺口是把长暂停从当前 1 秒确定性网络恢复扩展为独立 challenge 证据，并为 source-open/读流错误建立结构化 native error case。
+
 ## 2026-07-12 更新：正式 baseline 必须重新绑定 manifest expected
 
 v10 跨 case 审计发现，native manifest runner 直接把 captured report 放入正式 `reports`，没有经过现有 materializer 重新绑定 manifest expected。结果是私有 audio-switch manifest 明明声明 `maxStartupDurationMs=7000`，报告 expected 却只剩 helper 自带的 `requireValidatedConversion=true`；8535ms 启动、3279ms 最大帧间隔和 35 个 seek-preroll drop 因此仍显示 pass。该问题归类为 eval harness bug，v10 不能作为调优裁判。
