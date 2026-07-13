@@ -185,13 +185,19 @@ public sealed class PlaybackQualityReportComposerTests
             {
                 RequestedStartPositionTicks = 100_000_000,
                 SeekTargetPositionTicks = 300_000_000,
-                ActualPositionTicks = 301_000_000
+                ActualPositionTicks = 301_000_000,
+                SeekResetRuntimeMetrics = true,
+                PreSeekRenderedVideoFrames = 45,
+                PreSeekDroppedVideoFrames = 1
             }
         });
 
         Assert.Equal(100_000_000, result.Report.Position.RequestedStartPositionTicks);
         Assert.Equal(300_000_000, result.Report.Position.SeekTargetPositionTicks);
         Assert.Equal(301_000_000, result.Report.Position.ActualPositionTicks);
+        Assert.True(result.Report.Position.SeekResetRuntimeMetrics);
+        Assert.Equal((ulong)45, result.Report.Position.PreSeekRenderedVideoFrames);
+        Assert.Equal((ulong)1, result.Report.Position.PreSeekDroppedVideoFrames);
         Assert.Equal(100, result.Report.Position.SeekPositionErrorMs);
         Assert.Contains(result.Report.Checks, check =>
             check.Name == "SeekPositionErrorMs" &&

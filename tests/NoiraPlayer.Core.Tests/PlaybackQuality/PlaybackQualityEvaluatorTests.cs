@@ -110,6 +110,26 @@ public sealed class PlaybackQualityEvaluatorTests
     }
 
     [Fact]
+    public void Evaluate_Passes_Timeline_Window_When_Seek_Reset_Phases_Cover_Request()
+    {
+        var report = CreateSampleWindowReport(renderedVideoFrames: 90);
+        report.Execution!.Scenario = PlaybackQualityExecutionScenario.Timeline;
+        report.Execution.RequestedSampleDurationMs = 3000;
+        report.Execution.ObservedSampleWallClockDurationMs = 3000;
+        report.Position.SeekResetRuntimeMetrics = true;
+        report.Position.PreSeekRenderedVideoFrames = 90;
+        report.Position.PreSeekDroppedVideoFrames = 0;
+
+        PlaybackQualityEvaluator.Evaluate(report);
+
+        Assert.Equal(PlaybackQualityReportResult.Pass, report.Result);
+        Assert.Contains(report.Checks, check =>
+            check.Name == "SampleWindowCoverage" &&
+            check.Status == "pass" &&
+            check.Actual == "3000.000");
+    }
+
+    [Fact]
     public void Evaluate_Fails_Incomplete_Sample_As_Environment_Issue_When_Transport_Wait_Dominates()
     {
         var report = CreateSampleWindowReport(renderedVideoFrames: 60);

@@ -121,17 +121,7 @@ internal static class NativeHeadlessHarness
         {
             var errorResult = PlaybackQualityRuntimeEvidenceCollector.ComposeErrorRunResult(
                 referenceCase,
-                new PlaybackQualityError
-                {
-                    Code = "native-headless.helper-failed",
-                    Message = helper.ErrorMessage,
-                    Operation = "native-headless-open",
-                    ExceptionType = "native-helper-exit",
-                    FailureClass = PlaybackQualityFailureClassification.InsufficientInstrumentation,
-                    FailureArea = "evidence-collection",
-                    IsTerminal = true,
-                    IsRetriable = true
-                },
+                CreateEarlyHelperError(options, helper),
                 CreateEnvironment(),
                 CreateExecutionEvidence(
                     options,
@@ -273,6 +263,15 @@ internal static class NativeHeadlessHarness
                 PostSeekAdvanced = helper.Seek.Attempted
                     ? helper.Seek.PostSeekAdvanced
                     : null,
+                SeekResetRuntimeMetrics = helper.Seek.Attempted
+                    ? helper.Seek.ResetRuntimeMetrics
+                    : null,
+                PreSeekRenderedVideoFrames = helper.Seek.Attempted
+                    ? helper.Seek.PreSeekRenderedVideoFrames
+                    : null,
+                PreSeekDroppedVideoFrames = helper.Seek.Attempted
+                    ? helper.Seek.PreSeekDroppedVideoFrames
+                    : null,
                 SeekPositionErrorMs = helper.Seek.Attempted && helper.Seek.ActualPositionTicks.HasValue
                     ? Math.Abs(helper.Seek.ActualPositionTicks.Value - helper.Seek.TargetPositionTicks) / 10000.0
                     : null,
@@ -368,6 +367,34 @@ internal static class NativeHeadlessHarness
 
         File.WriteAllText(reportPath, PlaybackQualityReportSerializer.Serialize(runResult));
         return new NativeHeadlessHarnessResult(reportPath, lateHelperFailure ? 1 : 0);
+    }
+
+    private static PlaybackQualityError CreateEarlyHelperError(
+        NativeHeadlessHarnessOptions options,
+        NativeHeadlessHelperResult helper)
+    {
+        var message = helper.ErrorMessage ?? "";
+        var isLocalFile = Uri.TryCreate(options.StreamUrl, UriKind.Absolute, out var sourceUri) &&
+            sourceUri.IsFile;
+        var isMissingFile = isLocalFile &&
+            (message.Contains("No such file or directory", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("file not found", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("cannot find the file", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("cannot find the path", StringComparison.OrdinalIgnoreCase));
+
+        return new PlaybackQualityError
+        {
+            Code = isMissingFile ? "source.open.missing-file" : "native-headless.helper-failed",
+            Message = message,
+            Operation = isMissingFile ? "open" : "native-headless-open",
+            ExceptionType = "native-helper-exit",
+            FailureClass = isMissingFile
+                ? PlaybackQualityFailureClassification.SampleIssue
+                : PlaybackQualityFailureClassification.InsufficientInstrumentation,
+            FailureArea = isMissingFile ? "error-handling" : "evidence-collection",
+            IsTerminal = true,
+            IsRetriable = !isMissingFile
+        };
     }
 
     private static PlaybackQualityError CreateLateHelperError(
@@ -1554,6 +1581,9 @@ internal static class NativeHeadlessHarness
             !TryGetRequiredNullableNonNegativeInt64(values, "seekActualPositionTicks", out var actualPosition, out error) ||
             !TryGetRequiredNonNegativeInt64(values, "postSeekPlaybackPositionTicks", out var postSeekPosition, out error) ||
             !TryGetAttempted(values, "postSeekAdvanced", out var postSeekAdvanced, out error) ||
+            !TryGetAttempted(values, "seekResetRuntimeMetrics", out var resetRuntimeMetrics, out error) ||
+            !TryGetRequiredUInt64(values, "preSeekRenderedVideoFrames", out var preSeekRenderedVideoFrames, out error) ||
+            !TryGetRequiredUInt64(values, "preSeekDroppedVideoFrames", out var preSeekDroppedVideoFrames, out error) ||
             !TryGetRequiredNonNegativeDouble(values, "seekOperationDurationMs", out var operationDurationMs, out error) ||
             !TryGetRequiredNonNegativeDouble(values, "seekRecoveryDurationMs", out var recoveryDurationMs, out error) ||
             !TryGetAttempted(values, "seekPacketCacheEnabled", out var packetCacheEnabled, out error) ||
@@ -1596,6 +1626,9 @@ internal static class NativeHeadlessHarness
         outcome.ActualPositionTicks = actualPosition;
         outcome.PostSeekPlaybackPositionTicks = postSeekPosition;
         outcome.PostSeekAdvanced = postSeekAdvanced;
+        outcome.ResetRuntimeMetrics = resetRuntimeMetrics;
+        outcome.PreSeekRenderedVideoFrames = preSeekRenderedVideoFrames;
+        outcome.PreSeekDroppedVideoFrames = preSeekDroppedVideoFrames;
         outcome.OperationDurationMs = operationDurationMs;
         outcome.RecoveryDurationMs = recoveryDurationMs;
         outcome.PacketCacheEnabled = packetCacheEnabled;
@@ -2894,6 +2927,12 @@ internal sealed class NativeHeadlessSeekOutcome
     public long PostSeekPlaybackPositionTicks { get; set; }
 
     public bool PostSeekAdvanced { get; set; }
+
+    public bool ResetRuntimeMetrics { get; set; }
+
+    public ulong PreSeekRenderedVideoFrames { get; set; }
+
+    public ulong PreSeekDroppedVideoFrames { get; set; }
 
     public double OperationDurationMs { get; set; }
 

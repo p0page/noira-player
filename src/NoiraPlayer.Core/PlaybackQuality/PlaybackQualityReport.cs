@@ -207,6 +207,9 @@ namespace NoiraPlayer.Core.PlaybackQuality
         public long? FirstPresentedPositionTicks { get; set; }
         public long? PostSeekPositionTicks { get; set; }
         public bool? PostSeekAdvanced { get; set; }
+        public bool? SeekResetRuntimeMetrics { get; set; }
+        public ulong? PreSeekRenderedVideoFrames { get; set; }
+        public ulong? PreSeekDroppedVideoFrames { get; set; }
         public double? SeekPositionErrorMs { get; set; }
         public double? SeekOperationDurationMs { get; set; }
         public double? SeekRecoveryDurationMs { get; set; }

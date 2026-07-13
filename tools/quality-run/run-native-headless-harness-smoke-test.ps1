@@ -23,6 +23,7 @@ $summaryPath = Join-Path $smokeRoot 'materialized-summary.json'
 $nativeSummaryPath = Join-Path $smokeRoot 'native-materialized-summary.json'
 $validationPath = Join-Path $smokeRoot 'validation.json'
 $nativeValidationPath = Join-Path $smokeRoot 'native-validation.json'
+$nativeManifestValidationPath = Join-Path $smokeRoot 'native-manifest-validation.json'
 $analysisPath = Join-Path $smokeRoot 'analysis.json'
 $nativeAnalysisPath = Join-Path $smokeRoot 'native-analysis.json'
 $reportPath = Join-Path $capturedDir 'jellyfin\sdr-hevc-main10-1080p60-3m.json'
@@ -38,6 +39,9 @@ $nativeSubtitleMaterializedReportPath = Join-Path $nativeMaterializedDir 'local\
 $nativeNetworkMaterializedReportPath = Join-Path $nativeMaterializedDir 'local\network-reconnect-pause-resume.json'
 $nativeLongPauseNetworkMaterializedReportPath = Join-Path $nativeMaterializedDir 'local\long-pause-network-recovery.json'
 $nativeDemuxReadRecoveryMaterializedReportPath = Join-Path $nativeMaterializedDir 'local\demux-read-error-recovery-after-pause.json'
+$nativeNonZeroTimelineMaterializedReportPath = Join-Path $nativeMaterializedDir 'local\native-headless-nonzero-start-timeline.json'
+$nativeResumeSeekTimelineMaterializedReportPath = Join-Path $nativeMaterializedDir 'local\native-headless-resume-seek-timeline.json'
+$nativeMissingFileMaterializedReportPath = Join-Path $nativeMaterializedDir 'local\native-headless-missing-file-error.json'
 $sampleUrl = 'https://repo.jellyfin.org/test-videos/SDR/HEVC%2010bit/Test%20Jellyfin%201080p%20HEVC%2010bit%203M.mp4'
 $nativeCaseId = 'local/native-headless-sdr-smoke'
 $nativeEndOfStreamCaseId = 'local/native-headless-end-of-stream'
@@ -45,6 +49,7 @@ $nativeAvCaseId = 'local/native-headless-av-smoke'
 $nativeSubtitleCaseId = 'local/native-headless-subtitle-switch'
 $nativeNonZeroTimelineCaseId = 'local/native-headless-nonzero-start-timeline'
 $nativeResumeSeekTimelineCaseId = 'local/native-headless-resume-seek-timeline'
+$nativeMissingFileCaseId = 'local/native-headless-missing-file-error'
 $nativeSdr23976CaseId = 'local/native-headless-sdr-23976'
 $nativeSdr24CaseId = 'local/native-headless-sdr-24'
 $nativeSdr60CaseId = 'local/native-headless-sdr-60'
@@ -724,7 +729,8 @@ function Invoke-NativeHeadlessHelperCase {
         [int]$DurationSeconds = $script:nativeCadenceDurationSeconds,
         [long]$StartPositionTicks = 0,
         [ValidateSet('playback', 'timeline', 'audio-switch', 'subtitle-switch', 'end-of-stream')]
-        [string]$Scenario = 'playback'
+        [string]$Scenario = 'playback',
+        [switch]$ExpectError
     )
 
     dotnet run --project (Join-Path $repoRoot 'tools\NoiraPlayer.PlaybackQuality.Headless\NoiraPlayer.PlaybackQuality.Headless.csproj') -- `
@@ -737,8 +743,9 @@ function Invoke-NativeHeadlessHelperCase {
         --native-helper-exe $NativeHelperExe
     $exitCode = $LASTEXITCODE
 
-    if ($exitCode -ne 0) {
-        throw "Expected native-headless harness to run the App-free native helper for $CaseId."
+    $expectedExitCode = if ($ExpectError) { 1 } else { 0 }
+    if ($exitCode -ne $expectedExitCode) {
+        throw "Expected native-headless harness exit code $expectedExitCode for $CaseId, got $exitCode."
     }
 
     $reportPath = Get-QualityReportPath -Root $ReportsDir -CaseId $CaseId
@@ -1090,6 +1097,9 @@ function New-NativeHeadlessParserFixtureOutput {
         seekPacketCacheWindowDurationTicks = '0'
         seekFallbackReason = 'disabled'
         postSeekAdvanced = '1'
+        seekResetRuntimeMetrics = '1'
+        preSeekRenderedVideoFrames = '45'
+        preSeekDroppedVideoFrames = '0'
         selectedAudioStreamIndex = '1'
         selectedSubtitleStreamIndex = '-1'
         endOfStreamAttempted = '0'
@@ -1386,7 +1396,7 @@ function Assert-NativeHeadlessParserContracts {
         $failures.Add('A late HTTP seek failure was not classified as an external service/protocol error.')
     }
 
-    $openFailureMessage = 'avformat_open_input failed: I/O error'
+    $openFailureMessage = 'avformat_open_input failed: No such file or directory'
     $openFailure = Invoke-NativeHeadlessParserFixtureCase `
         -FixtureHelper $fixtureHelper `
         -HeadlessDll $headlessDll `
@@ -1397,9 +1407,14 @@ function Assert-NativeHeadlessParserContracts {
         -HelperExitCode 2
     if ($openFailure.ExitCode -ne 1 -or
         $openFailure.Report.report.result -ne 'error' -or
+        $openFailure.Report.report.error.code -ne 'source.open.missing-file' -or
+        $openFailure.Report.report.error.operation -ne 'open' -or
+        $openFailure.Report.report.error.failureClass -ne 'sample issue' -or
+        $openFailure.Report.report.error.failureArea -ne 'error-handling' -or
+        $openFailure.Report.report.error.isRetriable -ne $false -or
         $openFailure.Report.report.error.message -notmatch [regex]::Escape($openFailureMessage) -or
         $openFailure.Report.report.error.message -match 'decodedVideoFrames') {
-        $failures.Add('A helper source-open failure did not preserve stderr and was misreported as a telemetry parser error.')
+        $failures.Add('A missing local media source was not preserved as a non-retriable sample error from the native open boundary.')
     }
 
     $unsupported = Invoke-NativeHeadlessParserFixtureCase `
@@ -2198,6 +2213,7 @@ function New-NativePlaybackNonZeroStartSample {
         -i 'testsrc2=size=320x180:rate=30:duration=6' `
         -f lavfi `
         -i 'sine=frequency=1000:sample_rate=48000:duration=6' `
+        -vf 'setparams=range=tv:color_primaries=bt709:color_trc=bt709:colorspace=bt709' `
         -pix_fmt yuv420p `
         -c:v libx264 `
         -g 1 `
@@ -2260,6 +2276,10 @@ $nativeHelperExe = Build-NativePlaybackGraphHelper -OutputDirectory $nativeHelpe
 $nativeSampleUrl = New-NativePlaybackSample
 $nativeAvSampleUrl = New-NativePlaybackAvSample
 $nativeNonZeroTimelineSampleUrl = New-NativePlaybackNonZeroStartSample
+$nativeMissingFileUrl = ([System.Uri](Join-Path $smokeRoot 'samples\intentionally-missing-media.mp4')).AbsoluteUri
+if (Test-Path -LiteralPath ([System.Uri]$nativeMissingFileUrl).LocalPath) {
+    throw 'The native missing-file case source must not exist.'
+}
 Assert-NativePlaybackAvSample -SampleUrl $nativeAvSampleUrl
 Assert-NativeNetworkReconnectRecovery -NativeHelperExe $nativeHelperExe -SampleUrl $nativeAvSampleUrl
 Assert-NativeLongPauseNetworkRecovery -NativeHelperExe $nativeHelperExe -SampleUrl $nativeAvSampleUrl
@@ -2305,6 +2325,24 @@ if ($resumePauseCount -ne 0 -or
     $nativeResumeSeekTimelineReport.report.position.seekPositionErrorMs -gt 100.0 -or
     $nativeResumeSeekTimelineReport.report.position.postSeekAdvanced -ne $true) {
     throw 'Resume plus seek did not preserve the requested public timeline through native open, demux seek, presentation, and advancement.'
+}
+$nativeMissingFileReport = Invoke-NativeHeadlessHelperCase `
+    -CaseId $nativeMissingFileCaseId `
+    -StreamUrl $nativeMissingFileUrl `
+    -ReportsDir $nativeCapturedDir `
+    -NativeHelperExe $nativeHelperExe `
+    -DurationSeconds 1 `
+    -ExpectError
+if ($nativeMissingFileReport.report.result -ne 'error' -or
+    $nativeMissingFileReport.report.execution.evidenceLevel -ne 'native-playback' -or
+    $nativeMissingFileReport.report.execution.sourceOpenAttempted -ne $true -or
+    $nativeMissingFileReport.report.execution.sourceOpened -ne $false -or
+    $nativeMissingFileReport.report.error.code -ne 'source.open.missing-file' -or
+    $nativeMissingFileReport.report.error.operation -ne 'open' -or
+    $nativeMissingFileReport.report.error.failureClass -ne 'sample issue' -or
+    $nativeMissingFileReport.report.error.failureArea -ne 'error-handling' -or
+    $nativeMissingFileReport.report.error.isRetriable -ne $false) {
+    throw 'Missing local media did not produce a real, classified native open-boundary error report.'
 }
 $nativeSdr23976SampleUrl = New-NativePlaybackSdrSample -Name 'native-headless-sdr-23976' -Rate '24000/1001'
 $nativeSdr24SampleUrl = New-NativePlaybackSdrSample -Name 'native-headless-sdr-24' -Rate '24'
@@ -3037,9 +3075,108 @@ foreach ($nativeHdrCase in @($nativeManifest.cases | Where-Object { $_.expected.
 $nativeManifest.cases = @($nativeManifest.cases) + @(
     $script:networkReconnectManifestCase,
     $script:longPauseNetworkManifestCase,
-    $script:demuxReadRecoveryManifestCase)
+    $script:demuxReadRecoveryManifestCase,
+    [pscustomobject]@{
+        caseId = $nativeNonZeroTimelineCaseId
+        category = 'stable'
+        severity = 'high'
+        stability = 'stable'
+        uri = $nativeNonZeroTimelineSampleUrl
+        executionRequirement = [pscustomobject]@{
+            minimumEvidenceLevel = 'native-playback'
+            scenario = 'timeline'
+        }
+        purpose = @('timeline', 'seek')
+        expected = [pscustomobject]@{
+            codec = 'h264'
+            width = 320
+            height = 180
+            frameRate = 30.0
+            videoRange = 'SDR'
+            colorPrimaries = 'bt709'
+            colorTransfer = 'bt709'
+            colorSpace = 'bt709'
+            hdrKind = 'Sdr'
+            dxgiInput = 'YCBCR_STUDIO_G22_LEFT_P709'
+            dxgiOutput = 'RGB_FULL_G22_NONE_P709'
+            isDirectPlayable = $true
+            minRenderedVideoFrames = 1
+            maxSeekPositionErrorMs = 100.0
+            maxSeekRecoveryDurationMs = 2000.0
+        }
+    },
+    [pscustomobject]@{
+        caseId = $nativeResumeSeekTimelineCaseId
+        category = 'stable'
+        severity = 'critical'
+        stability = 'stable'
+        uri = $nativeNonZeroTimelineSampleUrl
+        startPositionTicks = 20000000
+        executionRequirement = [pscustomobject]@{
+            minimumEvidenceLevel = 'native-playback'
+            scenario = 'timeline'
+        }
+        purpose = @('timeline', 'resume', 'seek')
+        expected = [pscustomobject]@{
+            codec = 'h264'
+            width = 320
+            height = 180
+            frameRate = 30.0
+            videoRange = 'SDR'
+            colorPrimaries = 'bt709'
+            colorTransfer = 'bt709'
+            colorSpace = 'bt709'
+            hdrKind = 'Sdr'
+            dxgiInput = 'YCBCR_STUDIO_G22_LEFT_P709'
+            dxgiOutput = 'RGB_FULL_G22_NONE_P709'
+            isDirectPlayable = $true
+            minRenderedVideoFrames = 1
+            maxSeekPositionErrorMs = 100.0
+            maxSeekRecoveryDurationMs = 2000.0
+        }
+    },
+    [pscustomobject]@{
+        caseId = $nativeMissingFileCaseId
+        category = 'stable'
+        severity = 'medium'
+        stability = 'stable'
+        uri = $nativeMissingFileUrl
+        executionRequirement = [pscustomobject]@{
+            minimumEvidenceLevel = 'native-playback'
+            scenario = 'playback'
+        }
+        purpose = @('error-handling', 'source-open')
+        expected = [pscustomobject]@{
+            codec = 'h264'
+            width = 320
+            height = 180
+            frameRate = 30.0
+            videoRange = 'SDR'
+            colorPrimaries = 'bt709'
+            colorTransfer = 'bt709'
+            colorSpace = 'bt709'
+            hdrKind = 'Sdr'
+            dxgiInput = 'YCBCR_STUDIO_G22_LEFT_P709'
+            dxgiOutput = 'RGB_FULL_G22_NONE_P709'
+            isDirectPlayable = $true
+            requireValidatedConversion = $false
+        }
+    })
 $nativeManifest | ConvertTo-Json -Depth 12 |
     Set-Content -LiteralPath $nativeManifestPath -Encoding UTF8
+
+dotnet run --project (Join-Path $repoRoot 'tools\NoiraPlayer.PlaybackQuality.Cli\NoiraPlayer.PlaybackQuality.Cli.csproj') -- `
+    validate-manifest `
+    --manifest $nativeManifestPath `
+    --output $nativeManifestValidationPath
+if ($LASTEXITCODE -ne 0) {
+    throw 'Expected formal native manifest to pass structural validation.'
+}
+$nativeManifestValidation = Get-Content -LiteralPath $nativeManifestValidationPath -Raw | ConvertFrom-Json
+if ($nativeManifestValidation.coverage.missingPurposes -contains 'timeline' -or
+    $nativeManifestValidation.coverage.missingPurposes -contains 'error-handling') {
+    throw 'Formal native manifest must cover timeline and error-handling with real native cases.'
+}
 $nativeNetworkCapturedReportPath = Get-QualityReportPath `
     -Root $nativeCapturedDir `
     -CaseId $script:networkReconnectManifestCase.caseId
@@ -3115,6 +3252,38 @@ if (-not (Test-Path $nativeLongPauseNetworkMaterializedReportPath)) {
 
 if (-not (Test-Path $nativeDemuxReadRecoveryMaterializedReportPath)) {
     throw "Expected materialized native demux read recovery report at $nativeDemuxReadRecoveryMaterializedReportPath."
+}
+
+foreach ($requiredReportPath in @(
+    $nativeNonZeroTimelineMaterializedReportPath,
+    $nativeResumeSeekTimelineMaterializedReportPath,
+    $nativeMissingFileMaterializedReportPath)) {
+    if (-not (Test-Path -LiteralPath $requiredReportPath)) {
+        throw "Expected materialized native timeline/error report at $requiredReportPath."
+    }
+}
+
+$nativeMissingFileMaterializedReport = Get-Content -LiteralPath $nativeMissingFileMaterializedReportPath -Raw | ConvertFrom-Json
+if ($nativeMissingFileMaterializedReport.report.result -ne 'error' -or
+    $nativeMissingFileMaterializedReport.report.error.code -ne 'source.open.missing-file' -or
+    $nativeMissingFileMaterializedReport.report.error.failureClass -ne 'sample issue' -or
+    $nativeMissingFileMaterializedReport.report.error.failureArea -ne 'error-handling' -or
+    $nativeMissingFileMaterializedReport.report.execution.sourceOpenAttempted -ne $true -or
+    $nativeMissingFileMaterializedReport.report.execution.sourceOpened -ne $false) {
+    throw 'Materialized missing-file report did not preserve the real native open-boundary failure.'
+}
+
+foreach ($timelineReportPath in @(
+    $nativeNonZeroTimelineMaterializedReportPath,
+    $nativeResumeSeekTimelineMaterializedReportPath)) {
+    $timelineReport = Get-Content -LiteralPath $timelineReportPath -Raw | ConvertFrom-Json
+    if ($timelineReport.report.result -ne 'pass' -or
+        $timelineReport.report.execution.evidenceLevel -ne 'native-playback' -or
+        $timelineReport.report.position.seekPositionErrorMs -gt 100.0 -or
+        $timelineReport.report.position.seekRecoveryDurationMs -gt 2000.0 -or
+        $timelineReport.report.position.postSeekAdvanced -ne $true) {
+        throw "Materialized timeline report did not preserve completed seek evidence at $timelineReportPath."
+    }
 }
 
 $nativeMaterializedReport = Get-Content -LiteralPath $nativeMaterializedReportPath -Raw | ConvertFrom-Json
@@ -3299,8 +3468,8 @@ if ($nativeAnalysis.playbackEvidence.canEvaluateNativePlayback -ne $true) {
     throw 'Expected native helper report to be treated as App-free native software playback evidence.'
 }
 
-if ($nativeAnalysis.totalReportCount -ne 14) {
-    throw 'Expected native helper report-set to include 14 reports: SDR 23.976/24/30/60, HDR10 23.976/24/30/60, A/V, subtitle-switch, end-of-stream, short network-recovery, long-pause network-recovery, and demux read recovery.'
+if ($nativeAnalysis.totalReportCount -ne 17) {
+    throw 'Expected native helper report-set to include 17 reports: cadence/color matrix, A/V, subtitles, end-of-stream, network recovery, two timeline cases, and real missing-file handling.'
 }
 
 $nativeAvSyncCoverage = $nativeAnalysis.capabilityCoverage | Where-Object { $_.capability -eq 'av-sync' } | Select-Object -First 1

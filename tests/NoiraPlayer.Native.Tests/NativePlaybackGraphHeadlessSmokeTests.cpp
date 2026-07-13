@@ -165,6 +165,9 @@ namespace
         int64_t TargetPositionTicks{SeekTargetPositionTicks};
         std::optional<int64_t> ActualPositionTicks;
         int64_t PostSeekPlaybackPositionTicks{0};
+        bool ResetRuntimeMetrics{false};
+        uint64_t PreSeekRenderedVideoFrames{0};
+        uint64_t PreSeekDroppedVideoFrames{0};
         double OperationDurationMs{0.0};
         double RecoveryDurationMs{0.0};
         bool PacketCacheEnabled{false};
@@ -644,6 +647,9 @@ int wmain(int argc, wchar_t** argv)
         {
             ReportStage("seek-started");
             seek.Attempted = true;
+            seek.ResetRuntimeMetrics = true;
+            seek.PreSeekRenderedVideoFrames = playbackSnapshot.RenderedVideoFrames;
+            seek.PreSeekDroppedVideoFrames = playbackSnapshot.DroppedVideoFrames;
             auto const seekStartedAt = std::chrono::steady_clock::now();
             try
             {
@@ -836,6 +842,9 @@ int wmain(int argc, wchar_t** argv)
             << " postSeekPlaybackPositionTicks=" << seek.PostSeekPlaybackPositionTicks
             << " postSeekAdvanced=" << (seek.ActualPositionTicks.has_value() &&
                 seek.PostSeekPlaybackPositionTicks > seek.ActualPositionTicks.value() ? 1 : 0)
+            << " seekResetRuntimeMetrics=" << (seek.ResetRuntimeMetrics ? 1 : 0)
+            << " preSeekRenderedVideoFrames=" << seek.PreSeekRenderedVideoFrames
+            << " preSeekDroppedVideoFrames=" << seek.PreSeekDroppedVideoFrames
             << " nativeGraphOpenDurationMs=" << playbackSnapshot.NativeGraphOpenDurationMs
             << " ffmpegOpenInputDurationMs=" << playbackSnapshot.FfmpegOpenInputDurationMs
             << " ffmpegStreamInfoDurationMs=" << playbackSnapshot.FfmpegStreamInfoDurationMs

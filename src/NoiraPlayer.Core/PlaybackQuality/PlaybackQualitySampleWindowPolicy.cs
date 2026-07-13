@@ -14,6 +14,17 @@ namespace NoiraPlayer.Core.PlaybackQuality
 
             var observedFrames =
                 (double)report.Timing.RenderedVideoFrames + report.Timing.DroppedVideoFrames;
+            if (report.Execution != null &&
+                string.Equals(
+                    report.Execution.Scenario,
+                    PlaybackQualityExecutionScenario.Timeline,
+                    StringComparison.Ordinal) &&
+                report.Position.SeekResetRuntimeMetrics == true)
+            {
+                observedFrames +=
+                    report.Position.PreSeekRenderedVideoFrames.GetValueOrDefault() +
+                    report.Position.PreSeekDroppedVideoFrames.GetValueOrDefault();
+            }
             return observedFrames * 1000.0 / report.Source.FrameRate;
         }
 
