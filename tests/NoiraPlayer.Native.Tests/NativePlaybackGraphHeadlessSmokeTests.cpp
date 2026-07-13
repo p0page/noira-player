@@ -160,7 +160,8 @@ namespace
                     scenario == L"timeline" ||
                     scenario == L"audio-switch" ||
                     scenario == L"subtitle-switch" ||
-                    scenario == L"pause-resume")
+                    scenario == L"pause-resume" ||
+                    scenario == L"end-of-stream")
                 {
                     options.Scenario = std::move(scenario);
                 }
@@ -242,13 +243,19 @@ int wmain(int argc, wchar_t** argv)
     assert(resources.HasRenderTarget());
 
     std::atomic<bool> playbackFailed{false};
+    std::atomic<bool> playbackEnded{false};
     PlaybackGraph graph(
         resources,
-        [&playbackFailed](auto state, winrt::hstring const&)
+        [&playbackFailed, &playbackEnded](auto state, winrt::hstring const& message)
         {
             if (state == winrt::NoiraPlayer::Native::implementation::PlaybackGraphState::Failed)
             {
                 playbackFailed.store(true, std::memory_order_relaxed);
+            }
+            else if (state == winrt::NoiraPlayer::Native::implementation::PlaybackGraphState::Stopped &&
+                message == L"Playback ended.")
+            {
+                playbackEnded.store(true, std::memory_order_relaxed);
             }
         });
     PlaybackGraphOpenRequest request{};
@@ -274,7 +281,31 @@ int wmain(int argc, wchar_t** argv)
             halfWindow = 1500ms;
         }
 
-        std::this_thread::sleep_for(halfWindow);
+        auto const endOfStreamAttempted = options.Scenario == L"end-of-stream";
+        auto endOfStreamObserved = false;
+        auto endOfStreamStatus = std::string{"not-attempted"};
+        auto endOfStreamPositionTicks = int64_t{-1};
+        if (endOfStreamAttempted)
+        {
+            auto const deadline = std::chrono::steady_clock::now() + sampleWindow;
+            while (!playbackEnded.load(std::memory_order_relaxed) &&
+                !playbackFailed.load(std::memory_order_relaxed) &&
+                std::chrono::steady_clock::now() < deadline)
+            {
+                std::this_thread::sleep_for(InteractionEvidencePollInterval);
+            }
+            endOfStreamObserved = playbackEnded.load(std::memory_order_relaxed);
+            endOfStreamStatus = endOfStreamObserved ? "completed" : "failed";
+            if (endOfStreamObserved)
+            {
+                endOfStreamPositionTicks = graph.CurrentPositionTicks();
+            }
+            ReportStage(endOfStreamObserved ? "end-of-stream-observed" : "end-of-stream-failed");
+        }
+        else
+        {
+            std::this_thread::sleep_for(halfWindow);
+        }
         auto playbackSnapshot = graph.QualityMetricsSnapshot();
         auto source = graph.VideoSourceSnapshot();
         auto tracks = graph.SourceTrackSnapshots();
@@ -812,6 +843,10 @@ int wmain(int argc, wchar_t** argv)
             << " displayRefreshPolicy=software-only-cadence-policy"
             << " sourceTrackCount=" << tracks.size()
             << " playbackFailed=" << (playbackFailed.load(std::memory_order_relaxed) ? 1 : 0)
+            << " endOfStreamAttempted=" << (endOfStreamAttempted ? 1 : 0)
+            << " endOfStreamObserved=" << (endOfStreamObserved ? 1 : 0)
+            << " endOfStreamStatus=" << endOfStreamStatus
+            << " endOfStreamPositionTicks=" << endOfStreamPositionTicks
             << " pauseDurationSeconds=" << options.PauseSeconds
             << " positionBeforePauseTicks=" << positionBeforePauseTicks
             << " positionAfterResumeTicks=" << positionAfterResumeTicks
@@ -842,7 +877,9 @@ int wmain(int argc, wchar_t** argv)
 
         assert(playbackSnapshot.DecodedVideoFrames > 1);
         assert(playbackSnapshot.RenderedVideoFrames > 1);
-        return playbackFailed.load(std::memory_order_relaxed) || !pauseResumeRecovered ? 2 : 0;
+        return playbackFailed.load(std::memory_order_relaxed) ||
+            !pauseResumeRecovered ||
+            (endOfStreamAttempted && !endOfStreamObserved) ? 2 : 0;
     }
     catch (winrt::hresult_error const& error)
     {

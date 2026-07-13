@@ -182,6 +182,33 @@ public sealed class NativePlaybackGraphDecouplingContractTests
     }
 
     [Fact]
+    public void Native_Headless_End_Of_Stream_Uses_Natural_Graph_State_Evidence()
+    {
+        var root = FindRepositoryRoot();
+        var helperSource = File.ReadAllText(Path.Combine(
+            root,
+            "tests",
+            "NoiraPlayer.Native.Tests",
+            "NativePlaybackGraphHeadlessSmokeTests.cpp"));
+        var harnessModule = File.ReadAllText(Path.Combine(
+            root,
+            "tools",
+            "quality-run",
+            "NativeHeadlessHarness.psm1"));
+
+        Assert.Contains("scenario == L\"end-of-stream\"", helperSource, StringComparison.Ordinal);
+        Assert.Contains("PlaybackGraphState::Stopped", helperSource, StringComparison.Ordinal);
+        Assert.Contains("message == L\"Playback ended.\"", helperSource, StringComparison.Ordinal);
+        Assert.Contains("endOfStreamAttempted=", helperSource, StringComparison.Ordinal);
+        Assert.Contains("endOfStreamObserved=", helperSource, StringComparison.Ordinal);
+        Assert.Contains("endOfStreamStatus=", helperSource, StringComparison.Ordinal);
+        Assert.Contains("endOfStreamPositionTicks=", helperSource, StringComparison.Ordinal);
+        Assert.Contains("'end-of-stream'", harnessModule, StringComparison.Ordinal);
+        Assert.DoesNotContain("endOfStreamObserved = timeline", helperSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("endOfStreamObserved = graph.CurrentPositionTicks", helperSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void AppHosted_Metrics_Expose_Native_Subtitle_Selection_And_Cue_Render_Count()
     {
         var root = FindRepositoryRoot();

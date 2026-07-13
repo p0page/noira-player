@@ -34,7 +34,7 @@ function Invoke-NativeHeadlessHarnessCase {
         [int]$DurationSeconds = 10,
         [long]$StartPositionTicks = 0,
         [int]$PauseSeconds = 0,
-        [ValidateSet('playback', 'timeline', 'audio-switch', 'subtitle-switch', 'pause-resume')]
+        [ValidateSet('playback', 'timeline', 'audio-switch', 'subtitle-switch', 'pause-resume', 'end-of-stream')]
         [string]$Scenario = 'playback',
         [int]$TimeoutSeconds = 60,
         [bool]$ForceSdrOutput = $false,
@@ -163,7 +163,7 @@ function Write-PlaybackQualitySourceResolutionError {
         [Parameter(Mandatory = $true)][string]$SourceLocator,
         [Parameter(Mandatory = $true)][string]$ReportsDir,
         [Parameter(Mandatory = $true)][string]$ErrorCode,
-        [ValidateSet('playback', 'timeline', 'audio-switch', 'subtitle-switch', 'pause-resume')]
+        [ValidateSet('playback', 'timeline', 'audio-switch', 'subtitle-switch', 'pause-resume', 'end-of-stream')]
         [string]$Scenario = 'playback',
         [Parameter(Mandatory = $true)][string]$ResolverProjectPath
     )
