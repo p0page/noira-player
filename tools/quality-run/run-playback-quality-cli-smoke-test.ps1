@@ -11,7 +11,7 @@ function Set-SmokeNativeExecutionEvidence {
         [Parameter(Mandatory = $true)][string]$Locator,
         [Parameter(Mandatory = $true)][string]$AttemptId,
         [Parameter(Mandatory = $true)][string]$Status,
-        [ValidateSet('playback', 'timeline', 'audio-switch', 'subtitle-switch', 'pause-resume')]
+        [ValidateSet('playback', 'timeline', 'audio-switch', 'subtitle-switch', 'pause-resume', 'end-of-stream')]
         [string]$Scenario = 'playback',
         [bool]$SourceOpened,
         [bool]$PlaybackSampleObserved
@@ -1343,6 +1343,10 @@ try {
         @('sdr-smoke', 'cadence-23.976', 'frame-pacing', 'av-sync', 'buffering', 'tracks', 'subtitles', 'end-of-stream') |
             Select-Object -Unique
     )
+    $archivedCoreProbeManifest.cases[0].executionRequirement = [pscustomobject]@{
+        minimumEvidenceLevel = 'native-playback'
+        scenario = 'end-of-stream'
+    }
     $archivedTimelineCase = @($archivedCoreProbeManifest.cases | Where-Object {
         @($_.purpose) -contains 'timeline'
     })[0]
@@ -3408,6 +3412,54 @@ try {
         -SourceOpened $false `
         -PlaybackSampleObserved $false
 
+    $endOfStreamRunId = 'item-1/source-1-end-of-stream'
+    $endOfStreamLocator = 'https://example.invalid/item-1/source-1-end-of-stream.mp4'
+    $endOfStreamBaselinePath = Join-Path $runIdBaselineDir 'end-of-stream-baseline.json'
+    $endOfStreamCandidatePath = Join-Path $runIdCandidateDir 'end-of-stream-candidate.json'
+    Copy-Item -LiteralPath (Join-Path $runIdBaselineDir 'baseline-a.json') `
+        -Destination $endOfStreamBaselinePath
+    Copy-Item -LiteralPath (Join-Path $runIdBaselineDir 'baseline-a.json') `
+        -Destination $endOfStreamCandidatePath
+    foreach ($endOfStreamReportSpec in @(
+        [pscustomobject]@{
+            Path = $endOfStreamBaselinePath
+            PlayerCoreVersion = 'core-baseline'
+            SourceRevision = 'baseline-revision'
+            AttemptId = 'candidate-eval-eos-baseline'
+        },
+        [pscustomobject]@{
+            Path = $endOfStreamCandidatePath
+            PlayerCoreVersion = 'core-candidate'
+            SourceRevision = 'candidate-revision'
+            AttemptId = 'candidate-eval-eos-candidate'
+        }
+    )) {
+        $endOfStreamReport = Get-Content -LiteralPath $endOfStreamReportSpec.Path -Raw |
+            ConvertFrom-Json
+        $endOfStreamReport.runId = $endOfStreamRunId
+        $endOfStreamReport.environment.playerCoreVersion = $endOfStreamReportSpec.PlayerCoreVersion
+        $endOfStreamReport.environment.sourceRevision = $endOfStreamReportSpec.SourceRevision
+        $endOfStreamReport.lifecycle.events = @($endOfStreamReport.lifecycle.events) + @(
+            [pscustomobject]@{
+                operation = 'endOfStream'
+                status = 'completed'
+                state = 'Stopped'
+                positionTicks = 600000000
+                message = 'native PlaybackGraph reported Playback ended.'
+            }
+        )
+        $endOfStreamReport | ConvertTo-Json -Depth 100 |
+            Set-Content -LiteralPath $endOfStreamReportSpec.Path -Encoding UTF8
+        Set-SmokeNativeExecutionEvidence `
+            -Path $endOfStreamReportSpec.Path `
+            -Locator $endOfStreamLocator `
+            -AttemptId $endOfStreamReportSpec.AttemptId `
+            -Status 'completed' `
+            -Scenario 'end-of-stream' `
+            -SourceOpened $true `
+            -PlaybackSampleObserved $true
+    }
+
     Push-Location $repoRoot
     try {
         dotnet $cliDll `
@@ -3467,6 +3519,25 @@ try {
         "timeline",
         "tracks",
         "subtitles",
+        "subtitles"
+      ],
+      "expected": {
+        "codec": "hevc",
+        "width": 3840,
+        "height": 2160,
+        "frameRate": 23.976,
+        "hdrKind": "Sdr"
+      }
+    },
+    {
+      "caseId": "item-1/source-1-end-of-stream",
+      "uri": "https://example.invalid/item-1/source-1-end-of-stream.mp4",
+      "tier": 1,
+      "executionRequirement": {
+        "minimumEvidenceLevel": "native-playback",
+        "scenario": "end-of-stream"
+      },
+      "purpose": [
         "end-of-stream"
       ],
       "expected": {
@@ -3558,14 +3629,14 @@ try {
 
     if ($null -eq $candidateEvaluation.activeGate.confidence -or
         $candidateEvaluation.activeGate.confidence.level -ne 'strong' -or
-        $candidateEvaluation.activeGate.confidence.strongCount -ne 2) {
+        $candidateEvaluation.activeGate.confidence.strongCount -ne 3) {
         throw 'Expected evaluate-candidate active gate to expose strong suite confidence.'
     }
 
     if ($null -eq $candidateEvaluation.activeGate.resultCounts -or
-        $candidateEvaluation.activeGate.resultCounts.totalCount -ne 2 -or
+        $candidateEvaluation.activeGate.resultCounts.totalCount -ne 3 -or
         $candidateEvaluation.activeGate.resultCounts.improvedCount -ne 1 -or
-        $candidateEvaluation.activeGate.resultCounts.unchangedCount -ne 1) {
+        $candidateEvaluation.activeGate.resultCounts.unchangedCount -ne 2) {
         throw 'Expected evaluate-candidate active gate to expose improved suite result counts.'
     }
 
@@ -3589,17 +3660,17 @@ try {
     }
 
     if ($null -eq $candidateEvaluation.baselineReportAnalysis -or
-        $candidateEvaluation.baselineReportAnalysis.totalReportCount -ne 2 -or
+        $candidateEvaluation.baselineReportAnalysis.totalReportCount -ne 3 -or
         $candidateEvaluation.baselineReportAnalysis.analyzedReportCount -ne 0 -or
-        $candidateEvaluation.baselineReportAnalysis.unavailableReportCount -ne 2 -or
+        $candidateEvaluation.baselineReportAnalysis.unavailableReportCount -ne 3 -or
         $candidateEvaluation.baselineReportAnalysis.blockedReportCount -ne 0) {
         throw 'Expected evaluate-candidate to summarize unavailable baseline report analysis for raw reports.'
     }
 
     if ($null -eq $candidateEvaluation.candidateReportAnalysis -or
-        $candidateEvaluation.candidateReportAnalysis.totalReportCount -ne 2 -or
+        $candidateEvaluation.candidateReportAnalysis.totalReportCount -ne 3 -or
         $candidateEvaluation.candidateReportAnalysis.analyzedReportCount -ne 0 -or
-        $candidateEvaluation.candidateReportAnalysis.unavailableReportCount -ne 2 -or
+        $candidateEvaluation.candidateReportAnalysis.unavailableReportCount -ne 3 -or
         $candidateEvaluation.candidateReportAnalysis.blockedReportCount -ne 0) {
         throw 'Expected evaluate-candidate to summarize unavailable candidate report analysis for raw reports.'
     }
@@ -3659,6 +3730,8 @@ try {
     $candidateWithoutEnvironment | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath (Join-Path $candidateEvaluationMissingEnvironmentCandidateDir 'candidate-a.json') -Encoding UTF8
     Copy-Item -LiteralPath (Join-Path $runIdBaselineDir 'error-baseline.json') -Destination (Join-Path $candidateEvaluationMissingEnvironmentBaselineDir 'error-baseline.json')
     Copy-Item -LiteralPath (Join-Path $runIdCandidateDir 'error-candidate.json') -Destination (Join-Path $candidateEvaluationMissingEnvironmentCandidateDir 'error-candidate.json')
+    Copy-Item -LiteralPath $endOfStreamBaselinePath -Destination (Join-Path $candidateEvaluationMissingEnvironmentBaselineDir 'end-of-stream-baseline.json')
+    Copy-Item -LiteralPath $endOfStreamCandidatePath -Destination (Join-Path $candidateEvaluationMissingEnvironmentCandidateDir 'end-of-stream-candidate.json')
 
     Push-Location $repoRoot
     try {
@@ -3767,6 +3840,8 @@ try {
     $partialEnvironmentCandidate | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath (Join-Path $candidateEvaluationPartialEnvironmentCandidateDir 'candidate-a.json') -Encoding UTF8
     Copy-Item -LiteralPath (Join-Path $runIdBaselineDir 'error-baseline.json') -Destination (Join-Path $candidateEvaluationPartialEnvironmentBaselineDir 'error-baseline.json')
     Copy-Item -LiteralPath (Join-Path $runIdCandidateDir 'error-candidate.json') -Destination (Join-Path $candidateEvaluationPartialEnvironmentCandidateDir 'error-candidate.json')
+    Copy-Item -LiteralPath $endOfStreamBaselinePath -Destination (Join-Path $candidateEvaluationPartialEnvironmentBaselineDir 'end-of-stream-baseline.json')
+    Copy-Item -LiteralPath $endOfStreamCandidatePath -Destination (Join-Path $candidateEvaluationPartialEnvironmentCandidateDir 'end-of-stream-candidate.json')
 
     Push-Location $repoRoot
     try {
@@ -3857,6 +3932,8 @@ try {
     $sameBuildCandidate | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath (Join-Path $candidateEvaluationSameBuildCandidateDir 'candidate-a.json') -Encoding UTF8
     Copy-Item -LiteralPath (Join-Path $runIdBaselineDir 'error-baseline.json') -Destination (Join-Path $candidateEvaluationSameBuildBaselineDir 'error-baseline.json')
     Copy-Item -LiteralPath (Join-Path $runIdCandidateDir 'error-candidate.json') -Destination (Join-Path $candidateEvaluationSameBuildCandidateDir 'error-candidate.json')
+    Copy-Item -LiteralPath $endOfStreamBaselinePath -Destination (Join-Path $candidateEvaluationSameBuildBaselineDir 'end-of-stream-baseline.json')
+    Copy-Item -LiteralPath $endOfStreamBaselinePath -Destination (Join-Path $candidateEvaluationSameBuildCandidateDir 'end-of-stream-candidate.json')
 
     Push-Location $repoRoot
     try {
@@ -3888,7 +3965,7 @@ try {
     }
 
     if ($null -eq $sameBuildEvaluation.activeGate.environment -or
-        $sameBuildEvaluation.activeGate.environment.sameBuildCount -ne 1) {
+        $sameBuildEvaluation.activeGate.environment.sameBuildCount -ne 2) {
         throw 'Expected same-build active gate to expose environment same-build count.'
     }
 
@@ -4272,6 +4349,8 @@ try {
         -PlaybackSampleObserved $true
     Copy-Item -LiteralPath (Join-Path $runIdBaselineDir 'error-baseline.json') -Destination (Join-Path $candidateEvaluationEmptyAnalysisBaselineDir 'error-baseline.json')
     Copy-Item -LiteralPath (Join-Path $runIdCandidateDir 'error-candidate.json') -Destination (Join-Path $candidateEvaluationEmptyAnalysisCandidateDir 'error-candidate.json')
+    Copy-Item -LiteralPath $endOfStreamBaselinePath -Destination (Join-Path $candidateEvaluationEmptyAnalysisBaselineDir 'end-of-stream-baseline.json')
+    Copy-Item -LiteralPath $endOfStreamCandidatePath -Destination (Join-Path $candidateEvaluationEmptyAnalysisCandidateDir 'end-of-stream-candidate.json')
 
     Push-Location $repoRoot
     try {
@@ -4400,6 +4479,8 @@ try {
   ]
 }
 '@ | Set-Content -LiteralPath (Join-Path $candidateEvaluationInvalidCandidateDir 'candidate-wrong-source.json') -Encoding UTF8
+    Copy-Item -LiteralPath (Join-Path $runIdCandidateDir 'error-candidate.json') -Destination (Join-Path $candidateEvaluationInvalidCandidateDir 'error-candidate.json')
+    Copy-Item -LiteralPath $endOfStreamCandidatePath -Destination (Join-Path $candidateEvaluationInvalidCandidateDir 'end-of-stream-candidate.json')
 
     Push-Location $repoRoot
     try {
@@ -4640,6 +4721,7 @@ try {
         -SourceOpened $true `
         -PlaybackSampleObserved $true
     Copy-Item -LiteralPath (Join-Path $runIdBaselineDir 'error-baseline.json') -Destination (Join-Path $baselineEvaluationBlockedAnalysisBaselineDir 'error-baseline.json')
+    Copy-Item -LiteralPath $endOfStreamBaselinePath -Destination (Join-Path $baselineEvaluationBlockedAnalysisBaselineDir 'end-of-stream-baseline.json')
 
     Push-Location $repoRoot
     try {
@@ -4675,9 +4757,9 @@ try {
     }
 
     if ($null -eq $blockedBaselineAnalysisEvaluation.baselineReportAnalysis -or
-        $blockedBaselineAnalysisEvaluation.baselineReportAnalysis.totalReportCount -ne 2 -or
+        $blockedBaselineAnalysisEvaluation.baselineReportAnalysis.totalReportCount -ne 3 -or
         $blockedBaselineAnalysisEvaluation.baselineReportAnalysis.analyzedReportCount -ne 1 -or
-        $blockedBaselineAnalysisEvaluation.baselineReportAnalysis.unavailableReportCount -ne 1 -or
+        $blockedBaselineAnalysisEvaluation.baselineReportAnalysis.unavailableReportCount -ne 2 -or
         $blockedBaselineAnalysisEvaluation.baselineReportAnalysis.blockedReportCount -ne 1) {
         throw 'Expected blocked baseline report-analysis output to summarize analyzed blocked baseline report.'
     }
@@ -4868,6 +4950,7 @@ try {
         -SourceOpened $true `
         -PlaybackSampleObserved $true
     Copy-Item -LiteralPath (Join-Path $runIdCandidateDir 'error-candidate.json') -Destination (Join-Path $candidateEvaluationBlockedAnalysisCandidateDir 'error-candidate.json')
+    Copy-Item -LiteralPath $endOfStreamCandidatePath -Destination (Join-Path $candidateEvaluationBlockedAnalysisCandidateDir 'end-of-stream-candidate.json')
 
     Push-Location $repoRoot
     try {
@@ -4919,9 +5002,9 @@ try {
     }
 
     if ($null -eq $blockedAnalysisEvaluation.candidateReportAnalysis -or
-        $blockedAnalysisEvaluation.candidateReportAnalysis.totalReportCount -ne 2 -or
+        $blockedAnalysisEvaluation.candidateReportAnalysis.totalReportCount -ne 3 -or
         $blockedAnalysisEvaluation.candidateReportAnalysis.analyzedReportCount -ne 1 -or
-        $blockedAnalysisEvaluation.candidateReportAnalysis.unavailableReportCount -ne 1 -or
+        $blockedAnalysisEvaluation.candidateReportAnalysis.unavailableReportCount -ne 2 -or
         $blockedAnalysisEvaluation.candidateReportAnalysis.blockedReportCount -ne 1) {
         throw 'Expected blocked report-analysis evaluate-candidate output to summarize analyzed blocked candidate report.'
     }
@@ -4991,6 +5074,8 @@ try {
     Copy-Item -LiteralPath (Join-Path $runIdBaselineDir 'baseline-a.json') -Destination (Join-Path $candidateEvaluationStallCandidateDir 'candidate-a.json')
     Copy-Item -LiteralPath (Join-Path $runIdBaselineDir 'error-baseline.json') -Destination (Join-Path $candidateEvaluationStallBaselineDir 'error-baseline.json')
     Copy-Item -LiteralPath (Join-Path $runIdCandidateDir 'error-candidate.json') -Destination (Join-Path $candidateEvaluationStallCandidateDir 'error-candidate.json')
+    Copy-Item -LiteralPath $endOfStreamBaselinePath -Destination (Join-Path $candidateEvaluationStallBaselineDir 'end-of-stream-baseline.json')
+    Copy-Item -LiteralPath $endOfStreamBaselinePath -Destination (Join-Path $candidateEvaluationStallCandidateDir 'end-of-stream-candidate.json')
     $candidateEvaluationStallPreviousComparisonPath = Join-Path $candidateEvaluationStallPreviousComparisonsDir 'item-1\source-1.json'
     New-Item -ItemType Directory -Path (Split-Path -Parent $candidateEvaluationStallPreviousComparisonPath) | Out-Null
 

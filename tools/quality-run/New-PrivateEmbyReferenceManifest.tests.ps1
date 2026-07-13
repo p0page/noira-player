@@ -366,16 +366,28 @@ try {
         $_.caseId -eq 'private-emby/sdr-movie/sdr-source/sdr-smoke' -and
         $_.category -eq 'stable' -and
         $_.severity -eq 'high' -and
-        $_.stability -eq 'stable' -and
+            $_.stability -eq 'stable' -and
             ($_.purpose -contains 'tracks') -and
             ($_.purpose -contains 'subtitles') -and
-            ($_.purpose -contains 'end-of-stream') -and
+            -not ($_.purpose -contains 'end-of-stream') -and
             $_.expected.videoRange -eq 'SDR' -and
             $_.expected.colorPrimaries -eq 'bt709' -and
             $_.expected.colorTransfer -eq 'bt709' -and
             $_.expected.colorSpace -eq 'bt709'
     })) {
-        throw 'Generated manifest should include stable track, subtitle, and end-of-stream purposes on the SDR smoke case.'
+        throw 'Generated manifest should keep stable track and subtitle coverage on the SDR smoke playback case.'
+    }
+
+    if (-not ($manifest.cases | Where-Object {
+        $_.caseId -eq 'private-emby/sdr-movie/sdr-source/end-of-stream' -and
+        $_.category -eq 'stable' -and
+        $_.severity -eq 'high' -and
+        $_.stability -eq 'stable' -and
+        $_.executionRequirement.scenario -eq 'end-of-stream' -and
+        ($_.purpose -contains 'end-of-stream') -and
+        $_.purpose.Count -eq 1
+    })) {
+        throw 'Generated manifest should include a dedicated stable end-of-stream execution case.'
     }
 
     if (-not ($manifest.cases | Where-Object {

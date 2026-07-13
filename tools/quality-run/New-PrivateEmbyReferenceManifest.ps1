@@ -384,7 +384,8 @@ function New-ReferenceCase(
         ($Purpose -contains 'hdr-force-sdr') -or
         ($Purpose -contains 'dv-fallback') -or
         ($Purpose -contains 'cadence-23.976') -or
-        ($Purpose -contains 'timeline')) {
+        ($Purpose -contains 'timeline') -or
+        ($Purpose -contains 'end-of-stream')) {
         'high'
     }
     else {
@@ -424,6 +425,9 @@ function New-ReferenceCase(
     }
     elseif ($Purpose -contains 'subtitle-switch') {
         'subtitle-switch'
+    }
+    elseif ($Purpose -contains 'end-of-stream') {
+        'end-of-stream'
     }
     else {
         'playback'
@@ -617,7 +621,8 @@ function New-ReferenceManifest([object[]]$Items) {
 
     $sdr = Select-FirstCandidate $candidates { $_.HdrProfile.kind -eq 'Sdr' } { $_.Bitrate }
     if ($null -ne $sdr) {
-        $cases += New-ReferenceCase $sdr 'sdr-smoke' @('sdr-smoke', 'av-sync', 'tracks', 'subtitles', 'end-of-stream') 1 $false $false
+        $cases += New-ReferenceCase $sdr 'sdr-smoke' @('sdr-smoke', 'av-sync', 'tracks', 'subtitles') 1 $false $false
+        $cases += New-ReferenceCase $sdr 'end-of-stream' @('end-of-stream') 1 $false $false
         $cases += New-ReferenceCase $sdr 'timeline' @('timeline') 1 $false $false -StartPositionTicks 600000000 -MaxSeekPositionErrorMs 500.0
         $cases += New-ReferenceCase $sdr 'audio-switch' @('tracks', 'audio-switch') 1 $false $false
         $cases += New-ReferenceCase $sdr 'subtitle-switch' @('subtitles', 'subtitle-switch') 1 $false $false
