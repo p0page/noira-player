@@ -1295,3 +1295,5 @@ fallback 只拥有 `hdrOutput`、有限的 `dxgiInputAnyOf`、`dxgiOutput`、可
 原因：真实私有 timeline 证明 startup seek 约 `687KB/10.31s`，而首帧约 `18.44MB transport / 18.97MB payload / 5.19s`。若只看耗时或 payload，模型无法区分 Range 请求延迟、网络吞吐、FFmpeg 内部缓冲和解码预滚。v0.5 的 strict parser 对四个 transport 字段逐项必填，旧 v0.4 报告不与 v0.5 baseline/candidate 比较。
 
 候选边界：Kodi、mpv、VLC 当前参考实现都保留 `av_seek_frame` backward 语义；不得以 `AVSEEK_FLAG_ANY`、后关键帧、删除准确预滚或放宽 startup SLO 制造改善。全局 probe 缩减只在单次本机 ffprobe 中最多显示约亚秒级差异，且有丢失轨道/字幕风险，不进入候选。下一轮如研究连接复用、custom AVIO/cache 或服务端 seekable remux，必须一次只改变一个变量，并以 `8e19ae2` 保存的 exact manifest 生成同版本 baseline/candidate。
+
+App-hosted 完成门禁必须使用完整 Native AOT Publish 产物。普通 Debug Build 成功只能证明工程可编译，不能证明 `AppxLayouts/.../NativeAot` 已刷新；若报告 evaluation version、provider status 或 expected bridge 字段与当前 Core 不一致，应先比较注册 InstallLocation、AOT executable 时间戳和报告版本，禁止把陈旧 layout 归因成 native metrics 回归。一次只执行一个 dev-command 时，导出/分析数量必须与 selected case 数比较，同时保留 plan 总数供审计。
