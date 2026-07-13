@@ -312,7 +312,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
                     "case.execution.scenario.invalid",
                     caseId,
                     "executionRequirement.scenario",
-                    "Playback quality reference execution scenario must be playback, timeline, audio-switch, subtitle-switch, or pause-resume.");
+                    "Playback quality reference execution scenario must be playback, timeline, audio-switch, subtitle-switch, pause-resume, or end-of-stream.");
             }
             else
             {
@@ -355,6 +355,10 @@ namespace NoiraPlayer.Core.PlaybackQuality
             {
                 scenarios.Add(PlaybackQualityExecutionScenario.SubtitleSwitch);
             }
+            if (referenceCase.Purpose.Contains("end-of-stream"))
+            {
+                scenarios.Add(PlaybackQualityExecutionScenario.EndOfStream);
+            }
             return scenarios;
         }
 
@@ -375,6 +379,10 @@ namespace NoiraPlayer.Core.PlaybackQuality
             if (referenceCase.Purpose.Contains("subtitle-switch"))
             {
                 return PlaybackQualityExecutionScenario.SubtitleSwitch;
+            }
+            if (referenceCase.Purpose.Contains("end-of-stream"))
+            {
+                return PlaybackQualityExecutionScenario.EndOfStream;
             }
             return PlaybackQualityExecutionScenario.Playback;
         }

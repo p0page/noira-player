@@ -57,6 +57,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
         public const string AudioSwitch = "audio-switch";
         public const string SubtitleSwitch = "subtitle-switch";
         public const string PauseResume = "pause-resume";
+        public const string EndOfStream = "end-of-stream";
 
         public static bool IsKnown(string value)
         {
@@ -64,7 +65,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 value == Timeline ||
                 value == AudioSwitch ||
                 value == SubtitleSwitch ||
-                value == PauseResume;
+                value == PauseResume ||
+                value == EndOfStream;
         }
     }
 

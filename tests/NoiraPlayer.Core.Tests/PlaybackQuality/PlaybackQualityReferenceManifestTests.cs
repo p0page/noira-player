@@ -1448,11 +1448,28 @@ public sealed class PlaybackQualityReferenceManifestTests
         Assert.Equal("subtitle-switch", Assert.Single(validation.Cases).ExecutionRequirement.Scenario);
     }
 
+    [Fact]
+    public void ValidateManifest_Accepts_End_Of_Stream_Execution_Scenario()
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        var referenceCase = CreateCase("manifest/end-of-stream", 1, "end-of-stream");
+        referenceCase.ExecutionRequirement.Scenario = PlaybackQualityExecutionScenario.EndOfStream;
+        manifest.Cases.Add(referenceCase);
+
+        var validation = PlaybackQualityReferenceManifestValidator.Validate(manifest);
+
+        Assert.True(validation.IsValid);
+        Assert.Equal(
+            PlaybackQualityExecutionScenario.EndOfStream,
+            Assert.Single(validation.Cases).ExecutionRequirement.Scenario);
+    }
+
     [Theory]
     [InlineData("timeline", "playback", 0)]
     [InlineData("audio-switch", "playback", 0)]
     [InlineData("subtitle-switch", "playback", 0)]
     [InlineData("pause-resume", "playback", 30)]
+    [InlineData("end-of-stream", "playback", 0)]
     [InlineData("sdr-smoke", "pause-resume", 0)]
     public void ValidateManifest_Rejects_Execution_Scenario_That_Does_Not_Match_Case_Intent(
         string purpose,
@@ -2687,6 +2704,7 @@ public sealed class PlaybackQualityReferenceManifestTests
                 "audio-switch" => PlaybackQualityExecutionScenario.AudioSwitch,
                 "subtitle-switch" => PlaybackQualityExecutionScenario.SubtitleSwitch,
                 "pause-resume" => PlaybackQualityExecutionScenario.PauseResume,
+                "end-of-stream" => PlaybackQualityExecutionScenario.EndOfStream,
                 _ => PlaybackQualityExecutionScenario.Playback
             };
         }
