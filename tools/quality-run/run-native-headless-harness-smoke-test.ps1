@@ -34,6 +34,7 @@ $nativeEndOfStreamMaterializedReportPath = Join-Path $nativeMaterializedDir 'loc
 $nativeAvMaterializedReportPath = Join-Path $nativeMaterializedDir 'local\native-headless-av-smoke.json'
 $nativeSubtitleMaterializedReportPath = Join-Path $nativeMaterializedDir 'local\native-headless-subtitle-switch.json'
 $nativeNetworkMaterializedReportPath = Join-Path $nativeMaterializedDir 'local\network-reconnect-pause-resume.json'
+$nativeLongPauseNetworkMaterializedReportPath = Join-Path $nativeMaterializedDir 'local\long-pause-network-recovery.json'
 $sampleUrl = 'https://repo.jellyfin.org/test-videos/SDR/HEVC%2010bit/Test%20Jellyfin%201080p%20HEVC%2010bit%203M.mp4'
 $nativeCaseId = 'local/native-headless-sdr-smoke'
 $nativeEndOfStreamCaseId = 'local/native-headless-end-of-stream'
@@ -346,12 +347,31 @@ function Build-NativePlaybackGraphHelper {
 function Assert-NativeNetworkReconnectRecovery {
     param(
         [string]$NativeHelperExe,
-        [string]$SampleUrl
+        [string]$SampleUrl,
+        [switch]$LongPause
     )
 
     $samplePath = ([System.Uri]$SampleUrl).LocalPath
     $sample = Get-Item -LiteralPath $samplePath
-    $cutAfterBytes = [Math]::Max(65536, [int64]($sample.Length / 3))
+    $pauseSeconds = if ($LongPause) { 30 } else { 1 }
+    $artifactName = if ($LongPause) { 'long-pause-network-recovery' } else { 'network-reconnect' }
+    $networkCaseId = if ($LongPause) {
+        'local/long-pause-network-recovery'
+    } else {
+        'local/network-reconnect-pause-resume'
+    }
+    $networkLocator = if ($LongPause) {
+        'local-fault://long-pause-network-recovery'
+    } else {
+        'local-fault://network-reconnect-pause-resume'
+    }
+    $cutAfterBytes = [Math]::Max(
+        65536,
+        [int64]($sample.Length * $(if ($LongPause) { 2.0 / 3.0 } else { 1.0 / 3.0 })))
+    $networkRoot = Join-Path $smokeRoot ($artifactName + '-formal')
+    $pauseMarkerPath = Join-Path $networkRoot 'native-pause.marker'
+    New-Item -ItemType Directory -Path $networkRoot -Force | Out-Null
+    Remove-Item -LiteralPath $pauseMarkerPath -Force -ErrorAction SilentlyContinue
     $portProbe = [System.Net.Sockets.TcpListener]::new(
         [System.Net.IPAddress]::Loopback,
         0)
@@ -360,24 +380,32 @@ function Assert-NativeNetworkReconnectRecovery {
     $portProbe.Stop()
 
     $serverScript = Join-Path $PSScriptRoot 'Start-FaultingRangeMediaServer.ps1'
-    $serverStdout = Join-Path $smokeRoot 'network-reconnect-server.out.log'
-    $serverStderr = Join-Path $smokeRoot 'network-reconnect-server.err.log'
+    $serverStdout = Join-Path $smokeRoot ($artifactName + '-server.out.log')
+    $serverStderr = Join-Path $smokeRoot ($artifactName + '-server.err.log')
     Remove-Item -LiteralPath $serverStdout, $serverStderr -Force -ErrorAction SilentlyContinue
+    $serverArguments = @(
+        '-NoProfile',
+        '-ExecutionPolicy',
+        'Bypass',
+        '-File',
+        ('"' + $serverScript + '"'),
+        '-FilePath',
+        ('"' + $samplePath + '"'),
+        '-Port',
+        $port,
+        '-CutAfterBytes',
+        $cutAfterBytes,
+        '-DelayPerChunkMilliseconds',
+        20)
+    if ($LongPause) {
+        $serverArguments += @(
+            '-WaitForPauseMarkerPath',
+            ('"' + $pauseMarkerPath + '"'),
+            '-PauseMarkerTimeoutSeconds',
+            90)
+    }
     $server = Start-Process powershell `
-        -ArgumentList @(
-            '-NoProfile',
-            '-ExecutionPolicy',
-            'Bypass',
-            '-File',
-            ('"' + $serverScript + '"'),
-            '-FilePath',
-            ('"' + $samplePath + '"'),
-            '-Port',
-            $port,
-            '-CutAfterBytes',
-            $cutAfterBytes,
-            '-DelayPerChunkMilliseconds',
-            20) `
+        -ArgumentList $serverArguments `
         -WindowStyle Hidden `
         -PassThru `
         -RedirectStandardOutput $serverStdout `
@@ -409,7 +437,6 @@ function Assert-NativeNetworkReconnectRecovery {
             throw 'Deterministic network reconnect server did not become ready.'
         }
 
-        $networkRoot = Join-Path $smokeRoot 'network-reconnect-formal'
         $networkManifestPath = Join-Path $networkRoot 'manifest.json'
         $networkReportsDir = Join-Path $networkRoot 'reports'
         $networkMaterializedDir = Join-Path $networkRoot 'materialized'
@@ -417,25 +444,26 @@ function Assert-NativeNetworkReconnectRecovery {
         $networkMaterializedSummaryPath = Join-Path $networkRoot 'materialized-summary.json'
         $networkValidationPath = Join-Path $networkRoot 'validation.json'
         $networkRuntimeSourceMapPath = Join-Path $networkRoot 'runtime-source-map.json'
-        $networkCaseId = 'local/network-reconnect-pause-resume'
         $networkUrl = "http://127.0.0.1:{0}/media.mp4" -f $port
-        $networkLocator = 'local-fault://network-reconnect-pause-resume'
-        New-Item -ItemType Directory -Path $networkRoot -Force | Out-Null
         [ordered]@{
             schemaVersion = 1
             cases = @(
                 [ordered]@{
                     caseId = $networkCaseId
-                    category = 'stable'
+                    category = if ($LongPause) { 'challenge' } else { 'stable' }
                     severity = 'critical'
                     stability = 'stable'
                     uri = $networkLocator
-                    pauseSeconds = 1
+                    pauseSeconds = $pauseSeconds
                     executionRequirement = [ordered]@{
                         minimumEvidenceLevel = 'native-playback'
                         scenario = 'pause-resume'
                     }
-                    purpose = @('buffering', 'pause-resume', 'network-recovery')
+                    purpose = if ($LongPause) {
+                        @('pause-resume', 'network-recovery', 'long-pause')
+                    } else {
+                        @('buffering', 'pause-resume', 'network-recovery')
+                    }
                     expected = [ordered]@{
                         codec = 'h264'
                         width = 320
@@ -451,14 +479,30 @@ function Assert-NativeNetworkReconnectRecovery {
         @{ $networkCaseId = $networkUrl } |
             ConvertTo-Json | Set-Content -LiteralPath $networkRuntimeSourceMapPath -Encoding UTF8
 
-        & powershell -NoProfile -ExecutionPolicy Bypass `
-            -File (Join-Path $PSScriptRoot 'Invoke-PlaybackQualityManifest.ps1') `
-            -ManifestPath $networkManifestPath `
-            -ReportsDir $networkReportsDir `
-            -NativeHelperExe $NativeHelperExe `
-            -RuntimeSourceMapPath $networkRuntimeSourceMapPath `
-            -SummaryPath $networkSummaryPath `
-            -DurationSeconds 3
+        $pauseMarkerEnvironmentName = 'NOIRAPLAYER_NATIVE_PAUSE_MARKER_PATH'
+        $previousPauseMarkerPath = [Environment]::GetEnvironmentVariable($pauseMarkerEnvironmentName, 'Process')
+        try {
+            if ($LongPause) {
+                [Environment]::SetEnvironmentVariable(
+                    $pauseMarkerEnvironmentName,
+                    $pauseMarkerPath,
+                    'Process')
+            }
+            & powershell -NoProfile -ExecutionPolicy Bypass `
+                -File (Join-Path $PSScriptRoot 'Invoke-PlaybackQualityManifest.ps1') `
+                -ManifestPath $networkManifestPath `
+                -ReportsDir $networkReportsDir `
+                -NativeHelperExe $NativeHelperExe `
+                -RuntimeSourceMapPath $networkRuntimeSourceMapPath `
+                -SummaryPath $networkSummaryPath `
+                -DurationSeconds 3
+        }
+        finally {
+            [Environment]::SetEnvironmentVariable(
+                $pauseMarkerEnvironmentName,
+                $previousPauseMarkerPath,
+                'Process')
+        }
         if ($LASTEXITCODE -ne 0) {
             throw 'Expected formal network reconnect manifest runner to complete.'
         }
@@ -517,17 +561,44 @@ function Assert-NativeNetworkReconnectRecovery {
             throw "Expected forced disconnect recovery to issue a ranged second request.`n$serverOutput"
         }
 
-        $script:networkReconnectManifestCase =
-            (Get-Content -LiteralPath $networkManifestPath -Raw | ConvertFrom-Json).cases[0]
-        $script:networkReconnectCapturedReportPath = $networkReportPath
+        if ($LongPause) {
+            $pauseMarkerIndex = $serverOutput.IndexOf('pauseMarkerObserved=1', [StringComparison]::Ordinal)
+            $forcedResetIndex = $serverOutput.IndexOf('forcedReset=True', [StringComparison]::Ordinal)
+            $secondRequestIndex = $serverOutput.IndexOf('request=2 ', [StringComparison]::Ordinal)
+            if ($pauseMarkerIndex -lt 0 -or
+                $forcedResetIndex -le $pauseMarkerIndex -or
+                $secondRequestIndex -le $forcedResetIndex) {
+                throw "Long pause fault order was not pause marker -> forced reset -> second range request.`n$serverOutput"
+            }
+            $script:longPauseNetworkManifestCase =
+                (Get-Content -LiteralPath $networkManifestPath -Raw | ConvertFrom-Json).cases[0]
+            $script:longPauseNetworkCapturedReportPath = $networkReportPath
+        }
+        else {
+            $script:networkReconnectManifestCase =
+                (Get-Content -LiteralPath $networkManifestPath -Raw | ConvertFrom-Json).cases[0]
+            $script:networkReconnectCapturedReportPath = $networkReportPath
+        }
 
-        Write-Output 'native network reconnect formal case passed: strict=true request=2'
+        Write-Output ("native {0} formal case passed: pauseSeconds={1} strict=true request=2" -f $artifactName, $pauseSeconds)
     }
     finally {
         if (-not $server.HasExited) {
             Stop-Process -Id $server.Id -Force
         }
     }
+}
+
+function Assert-NativeLongPauseNetworkRecovery {
+    param(
+        [string]$NativeHelperExe,
+        [string]$SampleUrl
+    )
+
+    Assert-NativeNetworkReconnectRecovery `
+        -NativeHelperExe $NativeHelperExe `
+        -SampleUrl $SampleUrl `
+        -LongPause
 }
 
 function Invoke-NativeHeadlessHelperCase {
@@ -625,6 +696,7 @@ if (File.Exists(errorPath))
 {
     Console.Error.Write(File.ReadAllText(errorPath));
 }
+
 var exitCodePath = Path.Combine(AppContext.BaseDirectory, "fixture-exit-code.txt");
 return File.Exists(exitCodePath) && int.TryParse(File.ReadAllText(exitCodePath), out var exitCode)
     ? exitCode
@@ -908,7 +980,8 @@ function Invoke-NativeHeadlessParserFixtureCase {
         [string]$HelperError = '',
         [int]$HelperExitCode = 0,
         [string]$StreamUrl = '',
-        [string]$Scenario = 'playback'
+        [string]$Scenario = 'playback',
+        [int]$PauseSeconds = 0
     )
 
     Set-Content -LiteralPath $FixtureHelper.OutputPath -Value $HelperOutput -Encoding UTF8
@@ -921,13 +994,18 @@ function Invoke-NativeHeadlessParserFixtureCase {
     } else {
         $StreamUrl
     }
-    & dotnet $HeadlessDll `
-        --case-id $caseId `
-        --stream-url $fixtureStreamUrl `
-        --duration-seconds 1 `
-        --scenario $Scenario `
-        --reports-dir $reportsDirectory `
-        --native-helper-exe $FixtureHelper.ExePath | ForEach-Object { Write-Host $_ }
+    $arguments = @(
+        $HeadlessDll,
+        '--case-id', $caseId,
+        '--stream-url', $fixtureStreamUrl,
+        '--duration-seconds', '1',
+        '--scenario', $Scenario,
+        '--reports-dir', $reportsDirectory,
+        '--native-helper-exe', $FixtureHelper.ExePath)
+    if ($PauseSeconds -gt 0) {
+        $arguments += @('--pause-seconds', [string]$PauseSeconds)
+    }
+    & dotnet @arguments | ForEach-Object { Write-Host $_ }
     $exitCode = $LASTEXITCODE
     $reportPath = Get-QualityReportPath -Root $reportsDirectory -CaseId $caseId
     $report = if (Test-Path -LiteralPath $reportPath) {
@@ -1000,6 +1078,130 @@ function Assert-NativeHeadlessParserContracts {
         $endOfStreamEvents[0].status -ne 'completed' -or
         $endOfStreamEvents[0].positionTicks -ne 60000000) {
         $failures.Add('Completed native end-of-stream evidence did not produce exactly one lifecycle.endOfStream event.')
+    }
+
+    $pauseResumeOutput = New-NativeHeadlessParserFixtureOutput -Overrides @{
+        pauseDurationSeconds = '30'
+        positionBeforePauseTicks = '10000000'
+        positionAfterResumeTicks = '12000000'
+        decodedVideoFramesBeforePause = '90'
+        renderedVideoFramesBeforePause = '88'
+        postResumeDecodedVideoFrames = '96'
+        postResumeRenderedVideoFrames = '94'
+        actualPauseDurationMs = '30001.5'
+        resumeRecoveryDurationMs = '325.25'
+        pauseResumeStatus = 'completed'
+        playbackFailed = '0'
+    }
+    $pauseResume = Invoke-NativeHeadlessParserFixtureCase `
+        -FixtureHelper $fixtureHelper `
+        -HeadlessDll $headlessDll `
+        -Root $Root `
+        -Name 'long-pause-resume-completed' `
+        -Scenario 'pause-resume' `
+        -PauseSeconds 30 `
+        -HelperOutput $pauseResumeOutput
+    $pauseEvent = @($pauseResume.Report.report.lifecycle.events | Where-Object operation -eq 'pause') | Select-Object -First 1
+    $resumeEvent = @($pauseResume.Report.report.lifecycle.events | Where-Object operation -eq 'resume') | Select-Object -First 1
+    if ($pauseResume.ExitCode -ne 0 -or
+        $pauseEvent.status -ne 'completed' -or
+        $resumeEvent.status -ne 'completed' -or
+        $resumeEvent.message -notmatch 'decoded 90->96' -or
+        $resumeEvent.message -notmatch 'rendered 88->94' -or
+        $resumeEvent.message -notmatch 'actual pause 30001.500 ms' -or
+        $resumeEvent.message -notmatch 'recovery 325.250 ms') {
+        $failures.Add('Completed long pause/resume evidence did not preserve actual hold time, frame deltas, and recovery latency.')
+    }
+
+    $pauseNetworkFailure = Invoke-NativeHeadlessParserFixtureCase `
+        -FixtureHelper $fixtureHelper `
+        -HeadlessDll $headlessDll `
+        -Root $Root `
+        -Name 'long-pause-resume-network-failure' `
+        -Scenario 'pause-resume' `
+        -PauseSeconds 30 `
+        -StreamUrl 'https://example.invalid/media.mkv' `
+        -HelperOutput (New-NativeHeadlessParserFixtureOutput -Overrides @{
+            pauseDurationSeconds = '30'
+            positionBeforePauseTicks = '10000000'
+            positionAfterResumeTicks = '10000000'
+            decodedVideoFramesBeforePause = '90'
+            renderedVideoFramesBeforePause = '88'
+            postResumeDecodedVideoFrames = '90'
+            postResumeRenderedVideoFrames = '88'
+            actualPauseDurationMs = '30002'
+            resumeRecoveryDurationMs = '5000'
+            pauseResumeStatus = 'failed'
+            playbackFailed = '1'
+        }) `
+        -HelperError 'av_read_frame failed: I/O error' `
+        -HelperExitCode 2
+    if ($pauseNetworkFailure.ExitCode -ne 1 -or
+        $pauseNetworkFailure.Report.report.error.code -ne 'native-headless.network-io-failed' -or
+        $pauseNetworkFailure.Report.report.error.operation -ne 'resume') {
+        $failures.Add('A pause/resume HTTP I/O failure was not attributed to the resume operation.')
+    }
+
+    foreach ($field in @(
+        'decodedVideoFramesBeforePause',
+        'renderedVideoFramesBeforePause',
+        'actualPauseDurationMs',
+        'resumeRecoveryDurationMs'
+    )) {
+        $missingPauseEvidence = Invoke-NativeHeadlessParserFixtureCase `
+            -FixtureHelper $fixtureHelper `
+            -HeadlessDll $headlessDll `
+            -Root $Root `
+            -Name ('long-pause-missing-' + $field) `
+            -Scenario 'pause-resume' `
+            -PauseSeconds 30 `
+            -HelperOutput (New-NativeHeadlessParserFixtureOutput -Overrides @{
+                pauseDurationSeconds = '30'
+                positionBeforePauseTicks = '10000000'
+                positionAfterResumeTicks = '12000000'
+                decodedVideoFramesBeforePause = '90'
+                renderedVideoFramesBeforePause = '88'
+                postResumeDecodedVideoFrames = '96'
+                postResumeRenderedVideoFrames = '94'
+                actualPauseDurationMs = '30001'
+                resumeRecoveryDurationMs = '325'
+                pauseResumeStatus = 'completed'
+                playbackFailed = '0'
+            } -Omit @($field))
+        if ($missingPauseEvidence.ExitCode -ne 1 -or
+            $missingPauseEvidence.Report.report.error.message -notmatch [regex]::Escape($field)) {
+            $failures.Add("Missing long pause field '$field' was not rejected explicitly.")
+        }
+    }
+
+    foreach ($invalidPause in @(
+        [pscustomobject]@{ Name = 'no-rendered-progress'; ActualPauseMs = '30001'; RenderedAfter = '88' },
+        [pscustomobject]@{ Name = 'short-hold'; ActualPauseMs = '1000'; RenderedAfter = '94' }
+    )) {
+        $invalidPauseEvidence = Invoke-NativeHeadlessParserFixtureCase `
+            -FixtureHelper $fixtureHelper `
+            -HeadlessDll $headlessDll `
+            -Root $Root `
+            -Name ('long-pause-' + $invalidPause.Name) `
+            -Scenario 'pause-resume' `
+            -PauseSeconds 30 `
+            -HelperOutput (New-NativeHeadlessParserFixtureOutput -Overrides @{
+                pauseDurationSeconds = '30'
+                positionBeforePauseTicks = '10000000'
+                positionAfterResumeTicks = '12000000'
+                decodedVideoFramesBeforePause = '90'
+                renderedVideoFramesBeforePause = '88'
+                postResumeDecodedVideoFrames = '96'
+                postResumeRenderedVideoFrames = $invalidPause.RenderedAfter
+                actualPauseDurationMs = $invalidPause.ActualPauseMs
+                resumeRecoveryDurationMs = '325'
+                pauseResumeStatus = 'completed'
+                playbackFailed = '0'
+            })
+        if ($invalidPauseEvidence.ExitCode -ne 1 -or
+            $invalidPauseEvidence.Report.report.error.message -notmatch 'hold the requested pause') {
+            $failures.Add("Invalid long pause fixture '$($invalidPause.Name)' was accepted as completed.")
+        }
     }
 
     $lateFailure = Invoke-NativeHeadlessParserFixtureCase `
@@ -1841,6 +2043,7 @@ $nativeAvSampleUrl = New-NativePlaybackAvSample
 $nativeNonZeroTimelineSampleUrl = New-NativePlaybackNonZeroStartSample
 Assert-NativePlaybackAvSample -SampleUrl $nativeAvSampleUrl
 Assert-NativeNetworkReconnectRecovery -NativeHelperExe $nativeHelperExe -SampleUrl $nativeAvSampleUrl
+Assert-NativeLongPauseNetworkRecovery -NativeHelperExe $nativeHelperExe -SampleUrl $nativeAvSampleUrl
 $nativeNonZeroTimelineReport = Invoke-NativeHeadlessHelperCase `
     -CaseId $nativeNonZeroTimelineCaseId `
     -StreamUrl $nativeNonZeroTimelineSampleUrl `
@@ -2611,7 +2814,9 @@ foreach ($nativeHdrCase in @($nativeManifest.cases | Where-Object { $_.expected.
             requiredConversionStatus = 'tone-mapped-hable'
         }) -Force
 }
-$nativeManifest.cases = @($nativeManifest.cases) + @($script:networkReconnectManifestCase)
+$nativeManifest.cases = @($nativeManifest.cases) + @(
+    $script:networkReconnectManifestCase,
+    $script:longPauseNetworkManifestCase)
 $nativeManifest | ConvertTo-Json -Depth 12 |
     Set-Content -LiteralPath $nativeManifestPath -Encoding UTF8
 $nativeNetworkCapturedReportPath = Get-QualityReportPath `
@@ -2622,6 +2827,15 @@ New-Item -ItemType Directory -Path (Split-Path -Parent $nativeNetworkCapturedRep
 Copy-Item `
     -LiteralPath $script:networkReconnectCapturedReportPath `
     -Destination $nativeNetworkCapturedReportPath `
+    -Force
+$nativeLongPauseNetworkCapturedReportPath = Get-QualityReportPath `
+    -Root $nativeCapturedDir `
+    -CaseId $script:longPauseNetworkManifestCase.caseId
+New-Item -ItemType Directory -Path (Split-Path -Parent $nativeLongPauseNetworkCapturedReportPath) -Force |
+    Out-Null
+Copy-Item `
+    -LiteralPath $script:longPauseNetworkCapturedReportPath `
+    -Destination $nativeLongPauseNetworkCapturedReportPath `
     -Force
 
 dotnet run --project (Join-Path $repoRoot 'tools\NoiraPlayer.PlaybackQuality.Cli\NoiraPlayer.PlaybackQuality.Cli.csproj') -- `
@@ -2665,6 +2879,10 @@ if (-not (Test-Path $nativeNetworkMaterializedReportPath)) {
     throw "Expected materialized native network reconnect report at $nativeNetworkMaterializedReportPath."
 }
 
+if (-not (Test-Path $nativeLongPauseNetworkMaterializedReportPath)) {
+    throw "Expected materialized native long pause network report at $nativeLongPauseNetworkMaterializedReportPath."
+}
+
 $nativeMaterializedReport = Get-Content -LiteralPath $nativeMaterializedReportPath -Raw | ConvertFrom-Json
 if ($nativeMaterializedReport.report.environment.playerCoreVersion -ne $PlayerCoreVersion -or
     $nativeMaterializedReport.report.environment.sourceRevision -ne $SourceRevision -or
@@ -2687,12 +2905,30 @@ if ($nativeMaterializedReport.modelAnalysis.missingEvidence -contains 'display.r
 $nativeAvMaterializedReport = Get-Content -LiteralPath $nativeAvMaterializedReportPath -Raw | ConvertFrom-Json
 $nativeSubtitleMaterializedReport = Get-Content -LiteralPath $nativeSubtitleMaterializedReportPath -Raw | ConvertFrom-Json
 $nativeNetworkMaterializedReport = Get-Content -LiteralPath $nativeNetworkMaterializedReportPath -Raw | ConvertFrom-Json
+$nativeLongPauseNetworkMaterializedReport = Get-Content -LiteralPath $nativeLongPauseNetworkMaterializedReportPath -Raw | ConvertFrom-Json
 if ($nativeNetworkMaterializedReport.report.execution.openedSourceHashKind -ne 'observed-media-signature-v1' -or
     $nativeNetworkMaterializedReport.report.execution.openedSourceHash -eq
         $nativeNetworkMaterializedReport.report.execution.sourceLocatorHash -or
     $nativeNetworkMaterializedReport.report.execution.status -ne 'completed' -or
     $nativeNetworkMaterializedReport.report.timing.renderedVideoFrames -le 0) {
     throw 'Expected unified network reconnect report to preserve observed media identity and completed native playback evidence.'
+}
+if ($nativeLongPauseNetworkMaterializedReport.caseMetadata.category -ne 'challenge' -or
+    $nativeLongPauseNetworkMaterializedReport.report.execution.status -ne 'completed' -or
+    $nativeLongPauseNetworkMaterializedReport.report.timing.renderedVideoFrames -le 0) {
+    throw 'Expected unified long pause network report to preserve challenge classification and completed native playback evidence.'
+}
+$longPauseEvent = @($nativeLongPauseNetworkMaterializedReport.report.lifecycle.events |
+    Where-Object operation -eq 'pause') | Select-Object -First 1
+$longResumeEvent = @($nativeLongPauseNetworkMaterializedReport.report.lifecycle.events |
+    Where-Object operation -eq 'resume') | Select-Object -First 1
+if ($longPauseEvent.message -notmatch 'duration 30 seconds' -or
+    $longResumeEvent.status -ne 'completed' -or
+    $longResumeEvent.message -notmatch 'decoded [0-9]+->[0-9]+' -or
+    $longResumeEvent.message -notmatch 'rendered [0-9]+->[0-9]+' -or
+    $longResumeEvent.message -notmatch 'actual pause 3[0-9]{4}\.[0-9]{3} ms' -or
+    $longResumeEvent.message -notmatch 'recovery [0-9]+\.[0-9]{3} ms') {
+    throw 'Expected long pause lifecycle evidence to preserve requested duration, frame deltas, and recovery latency.'
 }
 if ($nativeAvMaterializedReport.report.tracks.audioTrackCount -ne 2 -or
     $nativeAvMaterializedReport.modelAnalysis.avSync.status -ne 'synced') {
@@ -2819,8 +3055,8 @@ if ($nativeAnalysis.playbackEvidence.canEvaluateNativePlayback -ne $true) {
     throw 'Expected native helper report to be treated as App-free native software playback evidence.'
 }
 
-if ($nativeAnalysis.totalReportCount -ne 12) {
-    throw 'Expected native helper report-set to include 12 reports: SDR 23.976/24/30/60, HDR10 23.976/24/30/60, A/V, subtitle-switch, end-of-stream, and network-recovery.'
+if ($nativeAnalysis.totalReportCount -ne 13) {
+    throw 'Expected native helper report-set to include 13 reports: SDR 23.976/24/30/60, HDR10 23.976/24/30/60, A/V, subtitle-switch, end-of-stream, short network-recovery, and long-pause network-recovery.'
 }
 
 $nativeAvSyncCoverage = $nativeAnalysis.capabilityCoverage | Where-Object { $_.capability -eq 'av-sync' } | Select-Object -First 1

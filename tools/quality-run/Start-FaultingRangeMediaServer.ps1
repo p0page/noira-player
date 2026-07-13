@@ -5,6 +5,8 @@ param(
     [int]$Port,
     [int64]$CutAfterBytes = 2097152,
     [int]$DelayPerChunkMilliseconds = 20,
+    [string]$WaitForPauseMarkerPath = '',
+    [int]$PauseMarkerTimeoutSeconds = 120,
     [int]$MaxRequests = 8
 )
 
@@ -88,6 +90,19 @@ try {
                     if ($forceReset) {
                         $readLength = [int][Math]::Min($readLength, $CutAfterBytes - $sent)
                         if ($readLength -le 0) {
+                            if (-not [string]::IsNullOrWhiteSpace($WaitForPauseMarkerPath)) {
+                                $markerDeadline = [DateTimeOffset]::UtcNow.AddSeconds($PauseMarkerTimeoutSeconds)
+                                while (-not (Test-Path -LiteralPath $WaitForPauseMarkerPath) -and
+                                    [DateTimeOffset]::UtcNow -lt $markerDeadline) {
+                                    Start-Sleep -Milliseconds 50
+                                }
+
+                                if (-not (Test-Path -LiteralPath $WaitForPauseMarkerPath)) {
+                                    throw "Timed out waiting for native pause marker: $WaitForPauseMarkerPath"
+                                }
+
+                                Write-Output ("request={0} pauseMarkerObserved=1 bytesSent={1}" -f $requestNumber, $sent)
+                            }
                             break
                         }
                     }

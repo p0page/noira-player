@@ -12,6 +12,8 @@ try {
     $itemsWithoutSourcesPath = Join-Path $tempRoot 'items-without-sources.json'
     $playbackInfoDir = Join-Path $tempRoot 'playback-info'
     $expandedOutputPath = Join-Path $tempRoot 'expanded-manifest.local.json'
+    $hdrOnlyItemsPath = Join-Path $tempRoot 'hdr-only-items.json'
+    $hdrOnlyOutputPath = Join-Path $tempRoot 'hdr-only-manifest.local.json'
     New-Item -ItemType Directory -Path $playbackInfoDir | Out-Null
 
     @'
@@ -287,6 +289,21 @@ try {
     }
 
     $manifest = $manifestText | ConvertFrom-Json
+
+    $hdrOnlyItems = Get-Content -Raw -LiteralPath $itemsPath | ConvertFrom-Json
+    $hdrOnlyItems.Items = @($hdrOnlyItems.Items | Where-Object Id -ne 'sdr-movie')
+    $hdrOnlyItems | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $hdrOnlyItemsPath -Encoding UTF8
+    & $scriptPath -ItemsJsonPath $hdrOnlyItemsPath -OutputPath $hdrOnlyOutputPath
+    $hdrOnlyManifest = Get-Content -Raw -LiteralPath $hdrOnlyOutputPath | ConvertFrom-Json
+    if (-not ($hdrOnlyManifest.cases | Where-Object {
+        $_.caseId -eq 'private-emby/buffering-movie/buffering-source/long-pause-resume' -and
+        $_.expected.hdrKind -eq 'Hdr10' -and
+        $_.expected.isDirectPlayable -eq $true -and
+        $_.pauseSeconds -eq 30
+    })) {
+        throw 'Long pause generation should fall back to the highest-bitrate direct-playable HDR source when no SDR source exists.'
+    }
+
     $audioSwitchCase = @($manifest.cases | Where-Object {
         $_.executionRequirement.scenario -eq 'audio-switch'
     }) | Select-Object -First 1
@@ -390,6 +407,19 @@ try {
         $_.purpose.Count -eq 1
     })) {
         throw 'Generated manifest should include a dedicated stable end-of-stream execution case.'
+    }
+
+    if (-not ($manifest.cases | Where-Object {
+        $_.caseId -eq 'private-emby/sdr-movie/sdr-source/long-pause-resume' -and
+        $_.category -eq 'challenge' -and
+        $_.severity -eq 'high' -and
+        $_.stability -eq 'stable' -and
+        $_.executionRequirement.scenario -eq 'pause-resume' -and
+        $_.pauseSeconds -eq 30 -and
+        ($_.purpose -contains 'pause-resume') -and
+        ($_.purpose -contains 'network-recovery')
+    })) {
+        throw 'Generated manifest should include a dedicated 30 second private Emby pause/resume challenge case.'
     }
 
     if (-not ($manifest.cases | Where-Object {

@@ -3,6 +3,8 @@
 #include <chrono>
 #include <cstdlib>
 #include <cwchar>
+#include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <limits>
 #include <optional>
@@ -29,6 +31,44 @@ namespace
     constexpr auto InteractionEvidencePollInterval = 50ms;
     constexpr wchar_t const* DefaultStreamUrl =
         L"https://repo.jellyfin.org/test-videos/SDR/HEVC%2010bit/Test%20Jellyfin%201080p%20HEVC%2010bit%203M.mp4";
+
+    void WritePauseMarkerIfRequested()
+    {
+        wchar_t* rawPath = nullptr;
+        size_t length = 0;
+        if (_wdupenv_s(&rawPath, &length, L"NOIRAPLAYER_NATIVE_PAUSE_MARKER_PATH") != 0 ||
+            rawPath == nullptr)
+        {
+            return;
+        }
+
+        auto const markerPath = std::filesystem::path{rawPath};
+        std::free(rawPath);
+        if (markerPath.empty())
+        {
+            return;
+        }
+
+        auto temporaryPath = markerPath;
+        temporaryPath += L".tmp";
+        {
+            std::ofstream marker{temporaryPath, std::ios::binary | std::ios::trunc};
+            if (!marker)
+            {
+                throw std::runtime_error("Could not create native pause marker.");
+            }
+            marker << "paused\n";
+        }
+
+        std::error_code error;
+        std::filesystem::remove(markerPath, error);
+        error.clear();
+        std::filesystem::rename(temporaryPath, markerPath, error);
+        if (error)
+        {
+            throw std::runtime_error("Could not publish native pause marker.");
+        }
+    }
 
     struct Options
     {
@@ -251,6 +291,7 @@ int wmain(int argc, wchar_t** argv)
             if (state == winrt::NoiraPlayer::Native::implementation::PlaybackGraphState::Failed)
             {
                 playbackFailed.store(true, std::memory_order_relaxed);
+                std::wcerr << L"native playback graph failed: " << message.c_str() << std::endl;
             }
             else if (state == winrt::NoiraPlayer::Native::implementation::PlaybackGraphState::Stopped &&
                 message == L"Playback ended.")
@@ -338,28 +379,59 @@ int wmain(int argc, wchar_t** argv)
 
         auto positionBeforePauseTicks = graph.CurrentPositionTicks();
         auto decodedVideoFramesBeforePause = playbackSnapshot.DecodedVideoFrames;
+        auto renderedVideoFramesBeforePause = playbackSnapshot.RenderedVideoFrames;
         auto positionAfterResumeTicks = positionBeforePauseTicks;
         auto postResumeDecodedVideoFrames = decodedVideoFramesBeforePause;
-        auto postResumeRenderedVideoFrames = playbackSnapshot.RenderedVideoFrames;
-        auto pauseResumeStatus = std::string{"completed"};
+        auto postResumeRenderedVideoFrames = renderedVideoFramesBeforePause;
+        auto actualPauseDurationMs = 0.0;
+        auto resumeRecoveryDurationMs = 0.0;
+        auto pauseResumeStatus = std::string{"not-attempted"};
         auto pauseResumeRecovered = true;
         if (options.Scenario == L"pause-resume")
         {
             graph.Pause();
             ReportStage("pause-started");
+            auto const pauseStartedAt = std::chrono::steady_clock::now();
+            WritePauseMarkerIfRequested();
             std::this_thread::sleep_for(std::chrono::milliseconds(options.PauseSeconds * 1000));
+            actualPauseDurationMs = std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - pauseStartedAt).count();
             graph.Resume();
             ReportStage("resume-completed");
-            std::this_thread::sleep_for(sampleWindow);
-            playbackSnapshot = graph.QualityMetricsSnapshot();
-            positionAfterResumeTicks = graph.CurrentPositionTicks();
-            postResumeDecodedVideoFrames = playbackSnapshot.DecodedVideoFrames;
-            postResumeRenderedVideoFrames = playbackSnapshot.RenderedVideoFrames;
-            auto failed = playbackFailed.load(std::memory_order_relaxed);
-            pauseResumeRecovered = !failed &&
-                positionAfterResumeTicks > positionBeforePauseTicks &&
-                playbackSnapshot.DecodedVideoFrames > decodedVideoFramesBeforePause &&
-                playbackSnapshot.RenderedVideoFrames > 0;
+            auto const resumeStartedAt = std::chrono::steady_clock::now();
+            auto const resumeDeadline = resumeStartedAt + InteractionEvidenceTimeout;
+            do
+            {
+                playbackSnapshot = graph.QualityMetricsSnapshot();
+                positionAfterResumeTicks = graph.CurrentPositionTicks();
+                postResumeDecodedVideoFrames = playbackSnapshot.DecodedVideoFrames;
+                postResumeRenderedVideoFrames = playbackSnapshot.RenderedVideoFrames;
+                pauseResumeRecovered =
+                    !playbackFailed.load(std::memory_order_relaxed) &&
+                    positionAfterResumeTicks > positionBeforePauseTicks &&
+                    postResumeDecodedVideoFrames > decodedVideoFramesBeforePause &&
+                    postResumeRenderedVideoFrames > renderedVideoFramesBeforePause;
+                if (pauseResumeRecovered || playbackFailed.load(std::memory_order_relaxed))
+                {
+                    break;
+                }
+                std::this_thread::sleep_for(InteractionEvidencePollInterval);
+            } while (std::chrono::steady_clock::now() < resumeDeadline);
+            resumeRecoveryDurationMs = std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - resumeStartedAt).count();
+            if (pauseResumeRecovered)
+            {
+                std::this_thread::sleep_for(sampleWindow);
+                playbackSnapshot = graph.QualityMetricsSnapshot();
+                positionAfterResumeTicks = graph.CurrentPositionTicks();
+                postResumeDecodedVideoFrames = playbackSnapshot.DecodedVideoFrames;
+                postResumeRenderedVideoFrames = playbackSnapshot.RenderedVideoFrames;
+                pauseResumeRecovered =
+                    !playbackFailed.load(std::memory_order_relaxed) &&
+                    positionAfterResumeTicks > positionBeforePauseTicks &&
+                    postResumeDecodedVideoFrames > decodedVideoFramesBeforePause &&
+                    postResumeRenderedVideoFrames > renderedVideoFramesBeforePause;
+            }
             pauseResumeStatus = pauseResumeRecovered ? "completed" : "failed";
         }
 
@@ -850,8 +922,12 @@ int wmain(int argc, wchar_t** argv)
             << " pauseDurationSeconds=" << options.PauseSeconds
             << " positionBeforePauseTicks=" << positionBeforePauseTicks
             << " positionAfterResumeTicks=" << positionAfterResumeTicks
+            << " decodedVideoFramesBeforePause=" << decodedVideoFramesBeforePause
+            << " renderedVideoFramesBeforePause=" << renderedVideoFramesBeforePause
             << " postResumeDecodedVideoFrames=" << postResumeDecodedVideoFrames
             << " postResumeRenderedVideoFrames=" << postResumeRenderedVideoFrames
+            << " actualPauseDurationMs=" << actualPauseDurationMs
+            << " resumeRecoveryDurationMs=" << resumeRecoveryDurationMs
             << " pauseResumeStatus=" << pauseResumeStatus
             << " subtitleCueRenderCount=" << subtitleCueRenderCount
             << " selectedAudioStreamIndex=" << selectedAudioStreamIndex.value_or(-1)

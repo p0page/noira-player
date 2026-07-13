@@ -2,6 +2,16 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-13 更新：长暂停网络恢复成为真实 native challenge，评测升级到 v0.8
+
+评测契约已升级为 `playback-quality-v0.8`。旧 pause-resume 只证明累计帧数非零，无法排除“暂停前已经有帧、恢复后实际停住”的假通过；新 helper/collector 强制记录并校验暂停前后的 decoded/rendered frame 计数、实际暂停毫秒数、恢复首个有效进展耗时、位置和 graph failure。完成态必须满足实际暂停达到请求值，且 resume 后位置、解码帧和呈现帧全部增加。字段缺失、暂停不足、只增加累计值或恢复后无呈现都会作为证据错误失败。
+
+新增独立 `challenge` case `local/long-pause-network-recovery`。本地故障服务器先发送有限数据，等待 native helper 在实际 `graph.Pause()` 后原子写入 marker，再重置连接；日志必须严格满足 `pauseMarkerObserved -> forcedReset -> request=2 non-zero Range`。真实 30 秒运行结果为 pass：实际暂停约 `30008 ms`，恢复首个有效进展约 `68 ms`，位置、decoded 和 rendered 均继续前进。统一 native corpus 从 12 增至 13 份报告，materialize、strict validation 和 model analysis 全部消费该 challenge。
+
+私有 Emby manifest 现在生成独立 30 秒 `long-pause-resume` case，优先 SDR；无 SDR 时退到最高码率的 direct-playable source，DV Profile 5 无兼容层等不支持源不会被冒充。两次临时私有运行分别覆盖 SDR 和 `DolbyVisionWithHdr10Fallback`，均在 30 秒暂停后约 `68-74 ms` 恢复，decoded/rendered 持续增长，未出现 I/O error。地址、token、runtime source map 和报告均只存在于临时本地目录，未进入仓库。
+
+最终验证：`run-playback-core-checks.ps1 -AppDiffBase main` 的 34 个阶段全部通过，目标范围 Core 测试 594/594，13-case 真实 native corpus、私有 manifest 生成、全部 native 单测和 Native Debug x64 build 均通过；Modern UWP Debug x64 Native AOT Publish 成功。该结果证明 v0.8 能可靠执行和诊断长暂停恢复，不等于已修复此前 App 中偶发的 `av_read_frame I/O error`：本轮未修改产品 Core/FFmpeg 恢复策略，现有确定性与两条私有样本都没有复现该错误。下一步应做同一私有 case 的多轮重复和更长暂停/服务端超时故障注入，只有复现后才进入小步 Core 调优。
+
 ## 2026-07-13 更新：自然播放结束已成为真实 native stable case
 
 评测契约已升级为 `playback-quality-v0.7`。manifest 现在把 `end-of-stream` 视为独立主动场景，不能再作为普通标签混入 `playback`、`timeline`、切轨或暂停恢复 case。公开 example manifest、candidate-evaluation smoke 和私有 Emby manifest 生成器均已按单 case 单主动意图拆分；私有生成器现在生成 12 个 case，其中 EOS 是独立 stable case。私有长片 EOS case 使用 Emby `RunTimeTicks` 从片尾前 5 秒开始；时长未知时不生成该 case，避免从 0 开始等待整部电影或伪造结束。

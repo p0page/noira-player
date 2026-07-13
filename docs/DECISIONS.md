@@ -1,5 +1,13 @@
 ﻿# 技术决策
 
+## 2026-07-13：长暂停恢复必须证明 resume 后的新进展，评测升级到 v0.8
+
+决策：pause-resume 完成态不能再用总 decoded/rendered frame 非零证明。native helper 必须记录暂停前后的 decoded/rendered 计数、实际暂停时长、恢复首个有效进展耗时、位置和 graph failure；collector 只有在实际暂停达到请求值且 resume 后位置、解码和呈现都增加时才写 completed。HTTP I/O failure 在 pause-resume 场景中归因到 `resume`，native state callback 的原始错误文本必须保留，不能降格为无上下文的 helper exit。
+
+故障注入决策：长暂停是独立 challenge，不与 1 秒短重连 stable case混为同一结论。测试 helper 在真实 `graph.Pause()` 后写 marker，故障服务器观察 marker 后才重置首连接；第二次非零 Range 请求必须发生在 marker 和 reset 之后。marker 只属于测试 helper，不进入产品接口。私有 Emby generator 优先选择 SDR，否则选择最高码率的 direct-playable source；网络恢复能力不得与颜色类型绑定。
+
+版本决策：上述 pause-resume 可比证据和 native corpus 发生变化，evaluation version 从 `playback-quality-v0.7` 升级为 `playback-quality-v0.8`，旧报告不得与 v0.8 baseline/candidate 混比。当前本地确定性 case 和两条临时私有 Emby case 均通过 30 秒暂停恢复，但这只证明当前样本没有复现错误；由于产品 Core 策略未变，不能声称此前偶发 `av_read_frame I/O error` 已修复。
+
 ## 2026-07-13：自然 EOF 必须由独立 native 场景证明，评测升级到 v0.7
 
 决策：`end-of-stream` 是独立 `executionRequirement.scenario`，不能与 playback、timeline、audio-switch、subtitle-switch 或 pause-resume 共享同一次 attempt。只有 native `PlaybackGraph` 自然报告 `Stopped / Playback ended.`，且 helper 的 attempted、observed、completed 和 position 四项结构化证据一致时，collector 才写入 `lifecycle.endOfStream`。资源清理用的 `graph.Stop()` 不算自然 EOF。

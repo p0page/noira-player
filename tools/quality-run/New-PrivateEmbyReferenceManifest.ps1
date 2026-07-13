@@ -394,7 +394,8 @@ function New-ReferenceCase(
     [bool]$ForceSdrOutput,
     [bool]$RequireMatchedDisplayRefreshRate,
     [long]$StartPositionTicks = 0,
-    [double]$MaxSeekPositionErrorMs = 0
+    [double]$MaxSeekPositionErrorMs = 0,
+    [int]$PauseSeconds = 0
 ) {
     $category = if ($Tier -le 1) { 'stable' } else { 'challenge' }
     $severity = if (($Purpose -contains 'sdr-smoke') -or
@@ -403,7 +404,8 @@ function New-ReferenceCase(
         ($Purpose -contains 'dv-fallback') -or
         ($Purpose -contains 'cadence-23.976') -or
         ($Purpose -contains 'timeline') -or
-        ($Purpose -contains 'end-of-stream')) {
+        ($Purpose -contains 'end-of-stream') -or
+        ($Purpose -contains 'pause-resume')) {
         'high'
     }
     else {
@@ -447,6 +449,9 @@ function New-ReferenceCase(
     elseif ($Purpose -contains 'end-of-stream') {
         'end-of-stream'
     }
+    elseif ($Purpose -contains 'pause-resume') {
+        'pause-resume'
+    }
     else {
         'playback'
     }
@@ -471,6 +476,9 @@ function New-ReferenceCase(
 
     if ($StartPositionTicks -gt 0) {
         $case.startPositionTicks = $StartPositionTicks
+    }
+    if ($PauseSeconds -gt 0) {
+        $case.pauseSeconds = $PauseSeconds
     }
 
     [pscustomobject]$case
@@ -661,6 +669,17 @@ function New-ReferenceManifest([object[]]$Items) {
         $cases += New-ReferenceCase $sdr 'timeline' @('timeline') 1 $false $false -StartPositionTicks 600000000 -MaxSeekPositionErrorMs 500.0
         $cases += New-ReferenceCase $sdr 'audio-switch' @('tracks', 'audio-switch') 1 $false $false
         $cases += New-ReferenceCase $sdr 'subtitle-switch' @('subtitles', 'subtitle-switch') 1 $false $false
+    }
+
+    $longPause = $sdr
+    if ($null -eq $longPause) {
+        $longPause = Select-FirstCandidate $candidates {
+            $_.HdrProfile.isDirectPlayable -eq $true
+        } { $_.Bitrate }
+    }
+    if ($null -ne $longPause) {
+        $cases += New-ReferenceCase $longPause 'long-pause-resume' @('pause-resume', 'network-recovery') 2 $false $false `
+            -PauseSeconds 30
     }
 
     $hdr10 = Select-FirstCandidate $candidates { $_.HdrProfile.kind -eq 'Hdr10' -and [int]$_.VideoStream.Width -le 1920 } { $_.Bitrate }

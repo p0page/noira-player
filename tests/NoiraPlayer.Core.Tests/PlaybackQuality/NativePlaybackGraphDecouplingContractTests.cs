@@ -175,8 +175,14 @@ public sealed class NativePlaybackGraphDecouplingContractTests
         Assert.Contains("pauseResumeStatus=", helperSource, StringComparison.Ordinal);
         Assert.Contains("positionBeforePauseTicks=", helperSource, StringComparison.Ordinal);
         Assert.Contains("positionAfterResumeTicks=", helperSource, StringComparison.Ordinal);
+        Assert.Contains("decodedVideoFramesBeforePause=", helperSource, StringComparison.Ordinal);
+        Assert.Contains("renderedVideoFramesBeforePause=", helperSource, StringComparison.Ordinal);
         Assert.Contains("postResumeDecodedVideoFrames=", helperSource, StringComparison.Ordinal);
         Assert.Contains("postResumeRenderedVideoFrames=", helperSource, StringComparison.Ordinal);
+        Assert.Contains("actualPauseDurationMs=", helperSource, StringComparison.Ordinal);
+        Assert.Contains("resumeRecoveryDurationMs=", helperSource, StringComparison.Ordinal);
+        Assert.Contains("NOIRAPLAYER_NATIVE_PAUSE_MARKER_PATH", helperSource, StringComparison.Ordinal);
+        Assert.Contains("native playback graph failed:", helperSource, StringComparison.Ordinal);
         Assert.Contains("renderedVideoFrames=", helperSource, StringComparison.Ordinal);
         Assert.Contains("sourceCodec=", helperSource, StringComparison.Ordinal);
     }
@@ -346,7 +352,7 @@ public sealed class NativePlaybackGraphDecouplingContractTests
         Assert.Contains("Assert-NativeNetworkReconnectRecovery", gateSource, StringComparison.Ordinal);
         Assert.Contains("Start-FaultingRangeMediaServer.ps1", gateSource, StringComparison.Ordinal);
         Assert.Contains("Invoke-PlaybackQualityManifest.ps1", gateSource, StringComparison.Ordinal);
-        Assert.Contains("pauseSeconds = 1", gateSource, StringComparison.Ordinal);
+        Assert.Contains("$pauseSeconds = if ($LongPause) { 30 } else { 1 }", gateSource, StringComparison.Ordinal);
         Assert.Contains("executionValid", gateSource, StringComparison.Ordinal);
         Assert.Contains("strict validation", gateSource, StringComparison.Ordinal);
         Assert.Contains("request=2", gateSource, StringComparison.Ordinal);
@@ -355,6 +361,40 @@ public sealed class NativePlaybackGraphDecouplingContractTests
         Assert.Contains("networkReconnectManifestCase", gateSource, StringComparison.Ordinal);
         Assert.Contains("networkReconnectCapturedReportPath", gateSource, StringComparison.Ordinal);
         Assert.Contains("nativeMaterializedDir", gateSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Native_Headless_Gate_Runs_A_Long_Pause_Disconnect_Challenge_After_The_Pause_Marker()
+    {
+        var root = FindRepositoryRoot();
+        var gateSource = File.ReadAllText(Path.Combine(
+            root,
+            "tools",
+            "quality-run",
+            "run-native-headless-harness-smoke-test.ps1"));
+        var serverSource = File.ReadAllText(Path.Combine(
+            root,
+            "tools",
+            "quality-run",
+            "Start-FaultingRangeMediaServer.ps1"));
+        var harnessSource = File.ReadAllText(Path.Combine(
+            root,
+            "tools",
+            "NoiraPlayer.PlaybackQuality.Headless",
+            "Program.cs"));
+
+        Assert.Contains("Assert-NativeLongPauseNetworkRecovery", gateSource, StringComparison.Ordinal);
+        Assert.Contains("$pauseSeconds = if ($LongPause) { 30 } else { 1 }", gateSource, StringComparison.Ordinal);
+        Assert.Contains("category = if ($LongPause) { 'challenge' } else { 'stable' }", gateSource, StringComparison.Ordinal);
+        Assert.Contains("NOIRAPLAYER_NATIVE_PAUSE_MARKER_PATH", gateSource, StringComparison.Ordinal);
+        Assert.Contains("pauseMarkerObserved", serverSource, StringComparison.Ordinal);
+        Assert.Contains("WaitForPauseMarkerPath", serverSource, StringComparison.Ordinal);
+        Assert.Contains("decodedVideoFramesBeforePause", harnessSource, StringComparison.Ordinal);
+        Assert.Contains("renderedVideoFramesBeforePause", harnessSource, StringComparison.Ordinal);
+        Assert.Contains("actualPauseDurationMs", harnessSource, StringComparison.Ordinal);
+        Assert.Contains("resumeRecoveryDurationMs", harnessSource, StringComparison.Ordinal);
+        Assert.Contains("options.Scenario == PlaybackQualityExecutionScenario.PauseResume", harnessSource, StringComparison.Ordinal);
+        Assert.Contains("? \"resume\"", harnessSource, StringComparison.Ordinal);
     }
 
     [Fact]

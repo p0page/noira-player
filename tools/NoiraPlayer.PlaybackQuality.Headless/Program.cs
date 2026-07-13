@@ -178,8 +178,10 @@ internal static class NativeHeadlessHarness
                 helper.PauseResume.Status,
                 helper.PauseResume.PositionAfterResumeTicks,
                 $"position {helper.PauseResume.PositionBeforePauseTicks}->{helper.PauseResume.PositionAfterResumeTicks}; " +
-                    $"decoded {helper.PauseResume.PostResumeDecodedVideoFrames}; " +
-                    $"rendered {helper.PauseResume.PostResumeRenderedVideoFrames}; " +
+                    $"decoded {helper.PauseResume.DecodedVideoFramesBeforePause}->{helper.PauseResume.PostResumeDecodedVideoFrames}; " +
+                    $"rendered {helper.PauseResume.RenderedVideoFramesBeforePause}->{helper.PauseResume.PostResumeRenderedVideoFrames}; " +
+                    $"actual pause {helper.PauseResume.ActualPauseDurationMs:F3} ms; " +
+                    $"recovery {helper.PauseResume.ResumeRecoveryDurationMs:F3} ms; " +
                     $"playback failed {helper.PauseResume.PlaybackFailed}");
         }
         if (helper.AudioSwitch.Attempted)
@@ -382,7 +384,9 @@ internal static class NativeHeadlessHarness
             Message = message,
             Operation = isNetworkFailure && options.Scenario == PlaybackQualityExecutionScenario.Timeline
                 ? "seek"
-                : "native-headless-playback",
+                : isNetworkFailure && options.Scenario == PlaybackQualityExecutionScenario.PauseResume
+                    ? "resume"
+                    : "native-headless-playback",
             ExceptionType = "native-helper-exit",
             FailureClass = isNetworkFailure
                 ? PlaybackQualityFailureClassification.ExternalServiceOrProtocolIssue
@@ -964,17 +968,35 @@ internal static class NativeHeadlessHarness
             return true;
         }
 
+        if (!TryGetRequiredNonNegativeDouble(
+                values,
+                "actualPauseDurationMs",
+                out var actualPauseDurationMs,
+                out error) ||
+            !TryGetRequiredNonNegativeDouble(
+                values,
+                "resumeRecoveryDurationMs",
+                out var resumeRecoveryDurationMs,
+                out error))
+        {
+            return false;
+        }
+
         if (!TryGetInt64(values, "positionBeforePauseTicks", out var positionBeforePauseTicks) ||
             positionBeforePauseTicks < 0 ||
             !TryGetInt64(values, "positionAfterResumeTicks", out var positionAfterResumeTicks) ||
             positionAfterResumeTicks < 0 ||
+            !TryGetUInt64(values, "decodedVideoFramesBeforePause", out var decodedVideoFramesBeforePause) ||
+            !TryGetUInt64(values, "renderedVideoFramesBeforePause", out var renderedVideoFramesBeforePause) ||
             !TryGetUInt64(values, "postResumeDecodedVideoFrames", out var decodedVideoFrames) ||
             !TryGetUInt64(values, "postResumeRenderedVideoFrames", out var renderedVideoFrames) ||
             !values.TryGetValue("playbackFailed", out var rawPlaybackFailed) ||
             !int.TryParse(rawPlaybackFailed, out var playbackFailed) ||
             (playbackFailed != 0 && playbackFailed != 1))
         {
-            error = "Native helper pause/resume evidence is incomplete or invalid.";
+            error = "Native helper pause/resume evidence requires valid positionBeforePauseTicks, positionAfterResumeTicks, " +
+                "decodedVideoFramesBeforePause, renderedVideoFramesBeforePause, postResumeDecodedVideoFrames, " +
+                "postResumeRenderedVideoFrames, actualPauseDurationMs, resumeRecoveryDurationMs, and playbackFailed.";
             return false;
         }
 
@@ -987,11 +1009,12 @@ internal static class NativeHeadlessHarness
 
         if (status == "completed" &&
             (positionAfterResumeTicks <= positionBeforePauseTicks ||
-                decodedVideoFrames == 0 ||
-                renderedVideoFrames == 0 ||
+                decodedVideoFrames <= decodedVideoFramesBeforePause ||
+                renderedVideoFrames <= renderedVideoFramesBeforePause ||
+                actualPauseDurationMs + 1.0 < durationSeconds * 1000.0 ||
                 playbackFailed != 0))
         {
-            error = "Completed native pause/resume evidence must advance position and preserve decoded/rendered playback.";
+            error = "Completed native pause/resume evidence must hold the requested pause and advance position, decoded frames, and rendered frames after resume.";
             return false;
         }
 
@@ -1002,8 +1025,12 @@ internal static class NativeHeadlessHarness
             Status = status,
             PositionBeforePauseTicks = positionBeforePauseTicks,
             PositionAfterResumeTicks = positionAfterResumeTicks,
+            DecodedVideoFramesBeforePause = decodedVideoFramesBeforePause,
+            RenderedVideoFramesBeforePause = renderedVideoFramesBeforePause,
             PostResumeDecodedVideoFrames = decodedVideoFrames,
             PostResumeRenderedVideoFrames = renderedVideoFrames,
+            ActualPauseDurationMs = actualPauseDurationMs,
+            ResumeRecoveryDurationMs = resumeRecoveryDurationMs,
             PlaybackFailed = playbackFailed != 0
         };
         return true;
@@ -2553,8 +2580,12 @@ internal sealed class NativeHeadlessPauseResumeOutcome
     public string Status { get; set; } = "";
     public long PositionBeforePauseTicks { get; set; }
     public long PositionAfterResumeTicks { get; set; }
+    public ulong DecodedVideoFramesBeforePause { get; set; }
+    public ulong RenderedVideoFramesBeforePause { get; set; }
     public ulong PostResumeDecodedVideoFrames { get; set; }
     public ulong PostResumeRenderedVideoFrames { get; set; }
+    public double ActualPauseDurationMs { get; set; }
+    public double ResumeRecoveryDurationMs { get; set; }
     public bool PlaybackFailed { get; set; }
 }
 
