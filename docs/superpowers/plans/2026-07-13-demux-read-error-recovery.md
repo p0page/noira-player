@@ -25,8 +25,6 @@
 **Files:**
 - Create: `src/NoiraPlayer.Native/Media/FfmpegReadRecovery.h`
 - Create: `tests/NoiraPlayer.Native.Tests/FfmpegReadRecoveryTests.cpp`
-- Modify: `tests/NoiraPlayer.Native.Tests/NoiraPlayer.Native.Tests.vcxproj`
-- Modify: `tests/NoiraPlayer.Native.Tests/NoiraPlayer.Native.Tests.vcxproj.filters`
 - Modify: `tools/quality-run/run-playback-core-checks.ps1`
 
 **Interfaces:**
@@ -40,21 +38,21 @@
 ```cpp
 FfmpegReadRecoveryState state;
 for (int retry = 0; retry < 10; ++retry)
-  assert(state.ObserveError(-5, false, false, true, false) == FfmpegReadDisposition::Retry);
-assert(state.ObserveError(-5, false, false, true, false) == FfmpegReadDisposition::Fatal);
+  assert(state.ObserveError(-5, false, false, true, false, true) == FfmpegReadDisposition::Retry);
+assert(state.ObserveError(-5, false, false, true, false, true) == FfmpegReadDisposition::Fatal);
 assert(state.Snapshot().FatalReadErrorCode == -5);
 ```
 
 - [ ] **Step 2: 运行测试并确认 RED**
 
-Run: `powershell -NoProfile -ExecutionPolicy Bypass -File tools/quality-run/run-playback-core-checks.ps1 -TargetFilter FfmpegReadRecoveryTests`
+Run: standalone MSVC `cl` compile of `tests\NoiraPlayer.Native.Tests\FfmpegReadRecoveryTests.cpp` with `/I src\NoiraPlayer.Native`.
 
 Expected: FAIL，因为 `FfmpegReadRecovery.h` 尚不存在或测试 target 尚未注册。
 
 - [ ] **Step 3: 实现最小纯状态策略**
 
 ```cpp
-enum class FfmpegReadDisposition { Retry, EndOfStream, Fatal };
+enum class FfmpegReadDisposition { Retry, EndOfStream, Interrupted, Fatal };
 
 class FfmpegReadRecoveryState
 {
@@ -70,14 +68,14 @@ public:
 
 - [ ] **Step 4: 运行新增 native 测试并确认 GREEN**
 
-Run: `powershell -NoProfile -ExecutionPolicy Bypass -File tools/quality-run/run-playback-core-checks.ps1 -TargetFilter FfmpegReadRecoveryTests`
+Run: the same standalone MSVC compile followed by `C:\tmp\FfmpegReadRecoveryTests.exe`.
 
 Expected: PASS，且永久 EIO 在第 11 个连续错误转为 `Fatal`。
 
 - [ ] **Step 5: 提交**
 
 ```powershell
-git add src/NoiraPlayer.Native/Media/FfmpegReadRecovery.h tests/NoiraPlayer.Native.Tests/FfmpegReadRecoveryTests.cpp tests/NoiraPlayer.Native.Tests/NoiraPlayer.Native.Tests.vcxproj tests/NoiraPlayer.Native.Tests/NoiraPlayer.Native.Tests.vcxproj.filters tools/quality-run/run-playback-core-checks.ps1
+git add src/NoiraPlayer.Native/Media/FfmpegReadRecovery.h tests/NoiraPlayer.Native.Tests/FfmpegReadRecoveryTests.cpp tools/quality-run/run-playback-core-checks.ps1 docs/superpowers/plans/2026-07-13-demux-read-error-recovery.md
 git commit -m "test: define bounded demux read recovery policy"
 ```
 
@@ -105,7 +103,7 @@ auto snapshot = metrics.Snapshot();
 assert(snapshot.ReadRecoveryCount == 1);
 ```
 
-Run: `powershell -NoProfile -ExecutionPolicy Bypass -File tools/quality-run/run-playback-core-checks.ps1 -TargetFilter PlaybackQualityMetricsTests`
+Run: standalone MSVC `cl` compile and run of `tests\NoiraPlayer.Native.Tests\PlaybackQualityMetricsTests.cpp`.
 
 Expected: FAIL，字段尚不存在。
 
@@ -132,7 +130,7 @@ HTTP Core retry 由 `NOIRAPLAYER_QA_DISABLE_DEMUX_READ_RECOVERY` 精确关闭；
 
 - [ ] **Step 4: 运行 native 测试**
 
-Run: `powershell -NoProfile -ExecutionPolicy Bypass -File tools/quality-run/run-playback-core-checks.ps1 -TargetFilter PlaybackQualityMetricsTests`
+Run: the same standalone MSVC compile and run of `PlaybackQualityMetricsTests.cpp`.
 
 Expected: PASS。
 
