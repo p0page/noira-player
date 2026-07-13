@@ -1323,3 +1323,20 @@ App-hosted 完成门禁必须使用完整 Native AOT Publish 产物。普通 Deb
 门禁：JSON 字段存在性必须按 `native.open` stage 与精确 component name 收集。另一个组件存在同名属性不能满足当前组件；provider/status 不匹配、measured 缺数值、unavailable 携带数值或组件间 provider 不一致都属于无效证据。helper parser 严格并不替代 report-set validator，直接导入 JSON 也必须执行同一合同。
 
 候选结论：当前实现用外层 `avio_alloc_context` 转发到 FFmpeg 内层 `avio_open2`，保留原协议选项、完整 stream-info 和准确 backward seek，只用于测量。它在同一 18-case manifest 的 13 个 stable/challenge case 上产生 4 improved、4 regressed、4 mixed，focused 裁决为 `reject-candidate`；因此环境开关默认关闭，不进入 App 默认策略，也不据此宣称连接复用。下一轮若继续优化远端启动，应实现真正拥有 HTTP 会话与 Range 请求调度的输入层，仍须保持 probe、轨道发现、seek 精度、字幕与颜色证据，并重新生成同版本 baseline/candidate。
+# 2026-07-13: demux 恢复使用稳定外层 AVIO 与可替换内层 HTTP transport
+
+决策：HTTP(S) demux 由稳定外层 custom AVIO 连接 FFmpeg demuxer，发生可恢复 I/O error 时只在当前 byte offset 重开内层 HTTP AVIO。重开后必须重置外层 buffer/error/EOF 并执行 `avformat_flush`。已知长度之前的 EOF 视为 transport truncation；正常 EOF、主动 interrupt 和预算耗尽不得继续重试。
+
+原因：FFmpeg 内建 reconnect 耗尽后，同一 protocol context 上重复 `av_read_frame` 无法恢复；直接重建整个 format context 又会丢失 demux、轨道和 timeline 状态。该边界保留单 demuxer 所有权，并把连接替换限制在 transport 层。本决策取代 2026-07-13 v0.6 中“instrumented custom AVIO 默认关闭且不作为播放策略”的结论；v0.9 的实现已经过 14-case native gate 和确定性故障恢复验证。
+
+# 2026-07-13: manifest expected 必须在执行时绑定，summary 分离执行与判定
+
+决策：manifest runner 必须把完整且不含凭据的 reference case 传给每次 native-headless 执行。raw report 自身必须包含 manifest expected 和 case 元数据，并立即按当前 evaluator 规则判定；materialize 只允许规范化和复核，不能成为补回裁判规则的唯一阶段。runner summary 必须分别统计 harness execution status 和 report result。
+
+原因：此前直接 runner 会把 URI 真实送进 native，但 headless 内部使用空 expected，导致实际 DV8+HDR10 fallback 与 manifest HDR10 不一致时仍显示 pass。修复后同一报告先正确 fail，修正本地样本预期后才 pass。任何 missing/invalid reference binding 都属于 harness/evidence failure，不得退回无 expected 的默认通过路径。
+
+# 2026-07-13: App-hosted 启动失败必须导出原始 error evidence
+
+决策：native backend 在 `StartAsync` 内通过状态事件进入 Failed、但方法本身正常返回时，PlaybackPage 保存失败消息；quality-run 没有 descriptor 时用该消息生成 `app-hosted-quality-run.playback-command-failed` report。禁止输出 `capture-skipped` 作为播放失败结论。
+
+原因：一次真实 Emby 打开在 `avio_open2` 30 秒超时，App 已获得会话、PlaybackInfo 和目标源，但旧 harness 最终只写“no current playback descriptor”，覆盖了真正断点。失败归因必须停在最接近根因的组件边界。

@@ -35,9 +35,15 @@ namespace winrt::NoiraPlayer::Native::implementation
             AVDictionary** options,
             AVIOInterruptCB const& interruptCallback);
         void Attach(AVFormatContext* formatContext);
+        bool ReopenAt(
+            int64_t byteOffset,
+            AVDictionary** options,
+            AVIOInterruptCB const& interruptCallback,
+            int& errorCode) noexcept;
         void Close() noexcept;
 
         bool IsOpen() const noexcept;
+        int PendingReadError() const noexcept;
         HttpMediaInputSnapshot Snapshot() const noexcept;
 
     private:
@@ -46,7 +52,10 @@ namespace winrt::NoiraPlayer::Native::implementation
 
         AVIOContext* m_innerContext{nullptr};
         AVIOContext* m_outerContext{nullptr};
+        std::string m_source;
         HttpMediaInputSnapshot m_snapshot;
+        int64_t m_expectedSize{-1};
+        int m_pendingReadError{0};
         bool m_open{false};
     };
 }

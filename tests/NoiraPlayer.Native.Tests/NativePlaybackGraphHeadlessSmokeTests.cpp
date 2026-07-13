@@ -9,6 +9,7 @@
 #include <limits>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <thread>
 #include <vector>
 
@@ -68,6 +69,20 @@ namespace
         {
             throw std::runtime_error("Could not publish native pause marker.");
         }
+    }
+
+    bool IsReadRecoveryEvidenceRequired() noexcept
+    {
+        wchar_t* rawValue = nullptr;
+        size_t length = 0;
+        if (_wdupenv_s(&rawValue, &length, L"NOIRAPLAYER_NATIVE_REQUIRE_DEMUX_READ_RECOVERY") != 0)
+        {
+            return false;
+        }
+
+        auto const required = rawValue != nullptr && std::wstring_view(rawValue) == L"1";
+        std::free(rawValue);
+        return required;
     }
 
     struct Options
@@ -389,6 +404,7 @@ int wmain(int argc, wchar_t** argv)
         auto pauseResumeRecovered = true;
         if (options.Scenario == L"pause-resume")
         {
+            auto const requireReadRecoveryEvidence = IsReadRecoveryEvidenceRequired();
             graph.Pause();
             ReportStage("pause-started");
             auto const pauseStartedAt = std::chrono::steady_clock::now();
@@ -399,7 +415,8 @@ int wmain(int argc, wchar_t** argv)
             graph.Resume();
             ReportStage("resume-completed");
             auto const resumeStartedAt = std::chrono::steady_clock::now();
-            auto const resumeDeadline = resumeStartedAt + InteractionEvidenceTimeout;
+            auto const resumeDeadline = resumeStartedAt +
+                (requireReadRecoveryEvidence ? 15s : InteractionEvidenceTimeout);
             do
             {
                 playbackSnapshot = graph.QualityMetricsSnapshot();
@@ -410,7 +427,8 @@ int wmain(int argc, wchar_t** argv)
                     !playbackFailed.load(std::memory_order_relaxed) &&
                     positionAfterResumeTicks > positionBeforePauseTicks &&
                     postResumeDecodedVideoFrames > decodedVideoFramesBeforePause &&
-                    postResumeRenderedVideoFrames > renderedVideoFramesBeforePause;
+                    postResumeRenderedVideoFrames > renderedVideoFramesBeforePause &&
+                    (!requireReadRecoveryEvidence || playbackSnapshot.ReadRecoveryCount > 0);
                 if (pauseResumeRecovered || playbackFailed.load(std::memory_order_relaxed))
                 {
                     break;
@@ -430,7 +448,8 @@ int wmain(int argc, wchar_t** argv)
                     !playbackFailed.load(std::memory_order_relaxed) &&
                     positionAfterResumeTicks > positionBeforePauseTicks &&
                     postResumeDecodedVideoFrames > decodedVideoFramesBeforePause &&
-                    postResumeRenderedVideoFrames > renderedVideoFramesBeforePause;
+                    postResumeRenderedVideoFrames > renderedVideoFramesBeforePause &&
+                    (!requireReadRecoveryEvidence || playbackSnapshot.ReadRecoveryCount > 0);
             }
             pauseResumeStatus = pauseResumeRecovered ? "completed" : "failed";
         }
@@ -674,6 +693,7 @@ int wmain(int argc, wchar_t** argv)
         auto subtitleCueRenderCount = graph.SubtitleCueRenderCount();
         auto selectedSubtitleStreamIndex = graph.SelectedSubtitleStreamIndex();
         auto timeline = graph.TimelineSnapshot();
+        playbackSnapshot = graph.QualityMetricsSnapshot();
         ReportStage("graph-stop-started");
         graph.Stop();
         ReportStage("graph-stop-completed");
@@ -694,6 +714,13 @@ int wmain(int argc, wchar_t** argv)
             << " audioStarvedPasses=" << playbackSnapshot.AudioStarvedPasses
             << " audioClockTicks=" << playbackSnapshot.AudioClockTicks
             << " videoPositionTicks=" << playbackSnapshot.VideoPositionTicks
+            << " readErrorCount=" << playbackSnapshot.ReadErrorCount
+            << " readRetryCount=" << playbackSnapshot.ReadRetryCount
+            << " readRecoveryCount=" << playbackSnapshot.ReadRecoveryCount
+            << " maxConsecutiveReadErrors=" << playbackSnapshot.MaxConsecutiveReadErrors
+            << " lastReadErrorCode=" << playbackSnapshot.LastReadErrorCode
+            << " fatalReadErrorCode=" << playbackSnapshot.FatalReadErrorCode
+            << " lastReadRecoveryDurationMs=" << playbackSnapshot.LastReadRecoveryDurationMs
             << " audioSwitchAttempted=" << (audioSwitch.Attempted ? 1 : 0)
             << " audioSwitchStatus=" << audioSwitch.Status
             << " audioSwitchStreamIndex=" << audioSwitch.StreamIndex

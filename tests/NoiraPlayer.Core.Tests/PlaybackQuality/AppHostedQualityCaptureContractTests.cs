@@ -92,6 +92,20 @@ public sealed class AppHostedQualityCaptureContractTests
     }
 
     [Fact]
+    public void Debug_Quality_Run_Native_Open_Failure_Is_Exported_As_Error_Evidence()
+    {
+        var root = FindRepositoryRoot();
+        var playbackPage = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.App", "Views", "PlaybackPage.xaml.cs"));
+        var scheduleMethod = ExtractMethodBody(playbackPage, "private void ScheduleQualityRunCapture");
+        var stateChangedMethod = ExtractMethodBody(playbackPage, "private async void Orchestrator_OnStateChanged");
+
+        Assert.Contains("_lastPlaybackFailureMessage = args.Message", stateChangedMethod, StringComparison.Ordinal);
+        Assert.Contains("WriteQualityRunErrorReportAsync", scheduleMethod, StringComparison.Ordinal);
+        Assert.Contains("_lastPlaybackFailureMessage", scheduleMethod, StringComparison.Ordinal);
+        Assert.DoesNotContain("capture-skipped", scheduleMethod, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Debug_Quality_Run_Captures_Runtime_Evidence_Before_Stopping_Playback()
     {
         var root = FindRepositoryRoot();

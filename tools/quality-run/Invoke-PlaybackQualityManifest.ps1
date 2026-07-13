@@ -23,6 +23,24 @@ $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 $modulePath = Join-Path $PSScriptRoot 'NativeHeadlessHarness.psm1'
 Import-Module $modulePath -Force
 
+function Get-PlaybackQualityReportResult([string]$Path) {
+    if (-not (Test-Path -LiteralPath $Path)) {
+        return 'missing'
+    }
+
+    try {
+        $value = [string](Get-Content -LiteralPath $Path -Raw -Encoding UTF8 | ConvertFrom-Json).report.result
+        $normalized = $value.Trim().ToLowerInvariant()
+        if ($normalized -in @('pass', 'fail', 'error', 'skip', 'unsupported')) {
+            return $normalized
+        }
+    }
+    catch {
+    }
+
+    return 'unknown'
+}
+
 if ([string]::IsNullOrWhiteSpace($HeadlessProjectPath)) {
     $HeadlessProjectPath = Join-Path $repoRoot `
         'tools\NoiraPlayer.PlaybackQuality.Headless\NoiraPlayer.PlaybackQuality.Headless.csproj'
@@ -170,6 +188,7 @@ foreach ($case in $selectedCases) {
                 status = 'unresolved-source'
                 exitCode = $errorReportExitCode
                 reportPresent = (Test-Path -LiteralPath $reportPath)
+                reportResult = Get-PlaybackQualityReportResult $reportPath
                 durationMs = 0
                 errorCode = $resolvedSource.ErrorCode
                 sourceResolutionAttemptCount = $sourceResolutionAttemptCount
@@ -184,6 +203,7 @@ foreach ($case in $selectedCases) {
             status = 'unresolved-source'
             exitCode = $null
             reportPresent = (Test-Path -LiteralPath $reportPath)
+            reportResult = Get-PlaybackQualityReportResult $reportPath
             durationMs = 0
             sourceResolutionAttemptCount = $sourceResolutionAttemptCount
         })
@@ -199,6 +219,9 @@ foreach ($case in $selectedCases) {
     if ($startPositionTicks -lt 0) {
         throw ('startPositionTicks must be non-negative for case ' + $currentCaseId)
     }
+    $referenceCaseJson = $case | ConvertTo-Json -Depth 20 -Compress
+    $referenceCaseBase64 = [Convert]::ToBase64String(
+        [Text.Encoding]::UTF8.GetBytes($referenceCaseJson))
     $exitCode = Invoke-NativeHeadlessHarnessCase `
         -CaseId $currentCaseId `
         -StreamUrl $streamUrl `
@@ -206,6 +229,7 @@ foreach ($case in $selectedCases) {
         -ReportsDir $ReportsDir `
         -NativeHelperExe $NativeHelperExe `
         -HeadlessProjectPath $HeadlessProjectPath `
+        -ReferenceCaseBase64 $referenceCaseBase64 `
         -HarnessScriptPath $HarnessScriptPath `
         -DurationSeconds $DurationSeconds `
         -StartPositionTicks $startPositionTicks `
@@ -220,6 +244,7 @@ foreach ($case in $selectedCases) {
         status = $(if ($exitCode -eq 0) { 'completed' } else { 'failed' })
         exitCode = $exitCode
         reportPresent = $reportPresent
+        reportResult = Get-PlaybackQualityReportResult $reportPath
         durationMs = [Math]::Max(0, ([DateTimeOffset]::UtcNow - $startedAt).TotalMilliseconds)
         sourceResolutionAttemptCount = $sourceResolutionAttemptCount
     })
@@ -229,6 +254,12 @@ $failedAttemptCount = @($attempts | Where-Object { $_.status -eq 'failed' }).Cou
 $unresolvedSourceCount = @($attempts | Where-Object { $_.status -eq 'unresolved-source' }).Count
 $reportCount = @($attempts | Where-Object { $_.reportPresent }).Count
 $missingReportCount = $attempts.Count - $reportCount
+$passReportCount = @($attempts | Where-Object reportResult -eq 'pass').Count
+$failReportCount = @($attempts | Where-Object reportResult -eq 'fail').Count
+$errorReportCount = @($attempts | Where-Object reportResult -eq 'error').Count
+$skipReportCount = @($attempts | Where-Object reportResult -eq 'skip').Count
+$unsupportedReportCount = @($attempts | Where-Object reportResult -eq 'unsupported').Count
+$unknownReportCount = @($attempts | Where-Object reportResult -eq 'unknown').Count
 $summary = [ordered]@{
     schemaVersion = 1
     runnerVersion = 'native-manifest-runner-v0.1'
@@ -241,6 +272,13 @@ $summary = [ordered]@{
     resolvedSourceCount = $resolvedSourceCount
     reportCount = $reportCount
     missingReportCount = $missingReportCount
+    passReportCount = $passReportCount
+    failReportCount = $failReportCount
+    errorReportCount = $errorReportCount
+    skipReportCount = $skipReportCount
+    unsupportedReportCount = $unsupportedReportCount
+    unknownReportCount = $unknownReportCount
+    nonPassReportCount = $reportCount - $passReportCount
     attempts = @($attempts)
 }
 

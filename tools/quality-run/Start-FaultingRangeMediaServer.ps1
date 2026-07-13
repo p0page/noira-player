@@ -7,10 +7,17 @@ param(
     [int]$DelayPerChunkMilliseconds = 20,
     [string]$WaitForPauseMarkerPath = '',
     [int]$PauseMarkerTimeoutSeconds = 120,
+    [int]$ResetRequestCount = 1,
+    [int]$ImmediateResetFromRequest = 2,
     [int]$MaxRequests = 8
 )
 
 $ErrorActionPreference = 'Stop'
+if ($ResetRequestCount -lt 0 -or
+    $ImmediateResetFromRequest -lt 1 -or
+    $ResetRequestCount -ge $MaxRequests) {
+    throw 'ResetRequestCount must be non-negative and below MaxRequests; ImmediateResetFromRequest must be positive.'
+}
 $file = Get-Item -LiteralPath $FilePath
 $listener = [System.Net.Sockets.TcpListener]::new(
     [System.Net.IPAddress]::Loopback,
@@ -79,7 +86,14 @@ try {
             $responseBytes = [System.Text.Encoding]::ASCII.GetBytes($response)
             $stream.Write($responseBytes, 0, $responseBytes.Length)
 
-            $forceReset = $requestNumber -eq 1
+            $forceReset = $requestNumber -le $ResetRequestCount
+            $immediateReset = $forceReset -and $requestNumber -ge $ImmediateResetFromRequest
+            if ($immediateReset) {
+                Write-Output ("request={0} bytesSent=0 forcedReset=True immediateReset=True" -f $requestNumber)
+                $client.Client.LingerState = [System.Net.Sockets.LingerOption]::new($true, 0)
+                continue
+            }
+
             $sent = [int64]0
             $buffer = New-Object byte[] 32768
             $input = [System.IO.File]::OpenRead($file.FullName)

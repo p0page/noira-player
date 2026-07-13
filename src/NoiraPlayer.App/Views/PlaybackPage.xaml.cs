@@ -74,6 +74,7 @@ namespace NoiraPlayer.App.Views
         private double _nativeSurfaceAttachedWidth;
         private double _nativeSurfaceAttachedHeight;
         private PlaybackSessionRequest? _lastPlaybackSessionRequest;
+        private string _lastPlaybackFailureMessage = "";
         private ManualDirectStreamInitialFocusTarget? _pendingManualDirectStreamFocusTarget;
         private int _pendingManualDirectStreamFocusAttempts;
         private bool _manualDirectStreamPageLoaded;
@@ -1031,12 +1032,17 @@ namespace NoiraPlayer.App.Views
                     _progressTimer.Stop();
                 }
 
+                if (args.State == CorePlaybackState.Failed)
+                {
+                    _lastPlaybackFailureMessage = args.Message ?? "";
+                }
+
                 var shouldReportStopped = args.State == CorePlaybackState.Stopped;
                 _hasPlaybackContext = args.State != CorePlaybackState.Failed &&
                     args.State != CorePlaybackState.Stopped &&
                     (_hasPlaybackContext || args.State == CorePlaybackState.Opening);
 
-                UpdateStatus(args.State, args.Message);
+                UpdateStatus(args.State, args.Message ?? "");
                 UpdateProgressSlider();
                 UpdateControlStates();
                 UpdateStreamControlStates();
@@ -1211,6 +1217,7 @@ namespace NoiraPlayer.App.Views
 #if DEBUG
             var qualityStartup = CreateQualityRunStartup(request);
 #endif
+            _lastPlaybackFailureMessage = "";
             await PlaybackDiagnosticsLog.WriteLineAsync(
                 "Item playback begin item=" + request.ItemId +
                 " requestedSource=" + request.MediaSourceId +
@@ -1379,6 +1386,7 @@ namespace NoiraPlayer.App.Views
 #if DEBUG
             var qualityStartup = CreateQualityRunStartup(request);
 #endif
+            _lastPlaybackFailureMessage = "";
             await PlaybackDiagnosticsLog.WriteLineAsync(
                 "Direct stream quality-run begin runId=" + request.QualityRunId +
                 " urlLength=" + request.DirectStreamUrl.Length +
@@ -1508,9 +1516,10 @@ namespace NoiraPlayer.App.Views
             var descriptor = _orchestrator.CurrentDescriptor;
             if (descriptor == null)
             {
-                _ = WriteQualityRunCommandResultAsync(
-                    "capture-skipped",
-                    "quality-run has no current playback descriptor");
+                var message = string.IsNullOrWhiteSpace(_lastPlaybackFailureMessage)
+                    ? "Quality-run playback did not create a playback descriptor; state=" + _orchestrator.State + "."
+                    : _lastPlaybackFailureMessage;
+                _ = WriteQualityRunErrorReportAsync(new InvalidOperationException(message));
                 return;
             }
 

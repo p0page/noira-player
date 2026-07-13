@@ -389,7 +389,7 @@ namespace
             return false;
         }
 
-        auto enabled = value != nullptr && std::string_view(value) == "1";
+        auto enabled = value == nullptr || std::string_view(value) != "0";
         std::free(value);
         return enabled;
     }
@@ -718,6 +718,97 @@ namespace winrt::NoiraPlayer::Native::implementation
             std::memory_order_release);
     }
 
+    bool FfmpegMediaSource::TryReopenHttpTransport(int& errorCode)
+    {
+        errorCode = AVERROR(EIO);
+        if (!m_isHttpSource ||
+            m_formatContext == nullptr ||
+            m_formatContext->pb == nullptr ||
+            m_interruptRequested.load(std::memory_order_acquire))
+        {
+            return false;
+        }
+
+        auto const bytePosition = avio_tell(m_formatContext->pb);
+        if (bytePosition < 0)
+        {
+            errorCode = static_cast<int>(bytePosition);
+            return false;
+        }
+
+        AVDictionary* options = nullptr;
+        SetFfmpegOption(&options, "reconnect", "1");
+        SetFfmpegOption(&options, "reconnect_on_network_error", "1");
+        SetFfmpegOption(&options, "reconnect_max_retries", "3");
+        SetFfmpegOption(&options, "reconnect_delay_max", "2");
+        SetFfmpegOption(&options, "reconnect_delay_total_max", "6");
+        auto const byteOffset = std::to_string(bytePosition);
+        SetFfmpegOption(&options, "offset", byteOffset.c_str());
+
+        if (m_httpMediaInput != nullptr)
+        {
+            BeginBlockingIo(OpenTimeoutMilliseconds);
+            auto const reopened = m_httpMediaInput->ReopenAt(
+                bytePosition,
+                &options,
+                m_formatContext->interrupt_callback,
+                errorCode);
+            av_dict_free(&options);
+            if (!reopened)
+            {
+                AppendNativePlaybackDiagnostic(
+                    L"FfmpegMediaSource.Read instrumented transport reopen failed error=" +
+                    std::to_wstring(errorCode) +
+                    L" bytePosition=" +
+                    std::to_wstring(bytePosition));
+                return false;
+            }
+
+            avformat_flush(m_formatContext);
+            AppendNativePlaybackDiagnostic(
+                L"FfmpegMediaSource.Read instrumented transport reopened bytePosition=" +
+                std::to_wstring(bytePosition));
+            return true;
+        }
+
+        auto source = ConvertFileUriToLocalPath(winrt::to_string(m_url));
+        auto oldContext = m_formatContext->pb;
+        m_formatContext->pb = nullptr;
+        avio_closep(&oldContext);
+
+        AVIOContext* replacement = nullptr;
+        BeginBlockingIo(OpenTimeoutMilliseconds);
+        auto result = avio_open2(
+            &replacement,
+            source.c_str(),
+            AVIO_FLAG_READ,
+            &m_formatContext->interrupt_callback,
+            &options);
+        av_dict_free(&options);
+        if (result < 0)
+        {
+            if (replacement != nullptr)
+            {
+                avio_closep(&replacement);
+            }
+            errorCode = result;
+            AppendNativePlaybackDiagnostic(
+                L"FfmpegMediaSource.Read transport reopen failed error=" +
+                std::to_wstring(result) +
+                L" bytePosition=" +
+                std::to_wstring(bytePosition));
+            return false;
+        }
+
+        m_formatContext->pb = replacement;
+        avformat_flush(m_formatContext);
+        errorCode = 0;
+        AppendNativePlaybackDiagnostic(
+            L"FfmpegMediaSource.Read transport reopened bytePosition=" +
+            std::to_wstring(bytePosition));
+        return true;
+    }
+
     std::optional<int32_t> FfmpegMediaSource::TryFindStream(
         int mediaType,
         int32_t selectedStreamIndex) const
@@ -1028,16 +1119,28 @@ namespace winrt::NoiraPlayer::Native::implementation
                         SteadyClock::now() - readStartedAt).count();
                 if (readResult < 0)
                 {
+                    auto effectiveReadResult = readResult;
+                    if (readResult == AVERROR_EOF && m_httpMediaInput != nullptr)
+                    {
+                        auto const transportError = m_httpMediaInput->PendingReadError();
+                        if (transportError < 0)
+                        {
+                            effectiveReadResult = transportError;
+                        }
+                    }
+
                     auto const recoveryBefore = m_readRecovery.Snapshot();
                     if (recoveryBefore.ConsecutiveReadErrors == 0)
                     {
                         m_readRecoveryStartedNanoseconds = SteadyClockNanoseconds();
                     }
 
+                    auto const transientReadError =
+                        effectiveReadResult == AVERROR(EAGAIN) || effectiveReadResult == AVERROR(EINTR);
                     auto const disposition = m_readRecovery.ObserveError(
-                        readResult,
-                        readResult == AVERROR_EOF,
-                        readResult == AVERROR(EAGAIN) || readResult == AVERROR(EINTR),
+                        effectiveReadResult,
+                        effectiveReadResult == AVERROR_EOF,
+                        transientReadError,
                         m_isHttpSource,
                         m_interruptRequested.load(std::memory_order_acquire),
                         m_readRecoveryEnabled);
@@ -1046,12 +1149,29 @@ namespace winrt::NoiraPlayer::Native::implementation
                     {
                         AppendNativePlaybackDiagnostic(
                             L"FfmpegMediaSource.Read retry error=" +
-                            std::to_wstring(readResult) +
+                            std::to_wstring(effectiveReadResult) +
                             L" consecutive=" +
                             std::to_wstring(m_readTiming.Recovery.ConsecutiveReadErrors) +
                             L" maxRetries=" +
                             std::to_wstring(FfmpegReadRecoveryState::MaxConsecutiveRetries));
                         av_packet_unref(scratchPacket);
+                        if (m_isHttpSource && !transientReadError)
+                        {
+                            auto transportError = 0;
+                            if (!TryReopenHttpTransport(transportError))
+                            {
+                                readResult = transportError < 0 ? transportError : effectiveReadResult;
+                                m_readRecovery.ObserveError(
+                                    readResult,
+                                    false,
+                                    false,
+                                    true,
+                                    m_interruptRequested.load(std::memory_order_acquire),
+                                    false);
+                                m_readTiming.Recovery = m_readRecovery.Snapshot();
+                                break;
+                            }
+                        }
                         continue;
                     }
 

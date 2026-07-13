@@ -89,6 +89,8 @@ namespace winrt::NoiraPlayer::Native::implementation
             throw winrt::hresult_error(E_FAIL, L"avio_open2 failed for instrumented media input.");
         }
 
+        m_expectedSize = avio_size(m_innerContext);
+
         auto buffer = static_cast<uint8_t*>(av_malloc(OuterBufferSize));
         if (buffer == nullptr)
         {
@@ -113,6 +115,8 @@ namespace winrt::NoiraPlayer::Native::implementation
 
         m_outerContext->seekable = m_innerContext->seekable;
         m_outerContext->max_packet_size = m_innerContext->max_packet_size;
+        m_source = source;
+        m_pendingReadError = 0;
         m_snapshot.EvidenceAvailable = true;
         m_open = true;
     }
@@ -126,6 +130,50 @@ namespace winrt::NoiraPlayer::Native::implementation
 
         formatContext->pb = m_outerContext;
         formatContext->flags |= AVFMT_FLAG_CUSTOM_IO;
+    }
+
+    bool HttpMediaInput::ReopenAt(
+        int64_t byteOffset,
+        AVDictionary** options,
+        AVIOInterruptCB const& interruptCallback,
+        int& errorCode) noexcept
+    {
+        errorCode = AVERROR(EIO);
+        if (byteOffset < 0 || m_source.empty() || m_outerContext == nullptr)
+        {
+            return false;
+        }
+
+        if (m_innerContext != nullptr)
+        {
+            avio_closep(&m_innerContext);
+        }
+
+        auto result = avio_open2(
+            &m_innerContext,
+            m_source.c_str(),
+            AVIO_FLAG_READ,
+            &interruptCallback,
+            options);
+        if (result < 0)
+        {
+            m_snapshot.LastError = result;
+            m_open = false;
+            errorCode = result;
+            return false;
+        }
+
+        m_outerContext->buf_ptr = m_outerContext->buffer;
+        m_outerContext->buf_end = m_outerContext->buffer;
+        m_outerContext->pos = byteOffset;
+        m_outerContext->error = 0;
+        m_outerContext->eof_reached = 0;
+        m_outerContext->seekable = m_innerContext->seekable;
+        m_outerContext->max_packet_size = m_innerContext->max_packet_size;
+        m_pendingReadError = 0;
+        m_open = true;
+        errorCode = 0;
+        return true;
     }
 
     int HttpMediaInput::ReadCallback(void* opaque, uint8_t* buffer, int bufferLength) noexcept
@@ -143,10 +191,22 @@ namespace winrt::NoiraPlayer::Native::implementation
         if (result > 0)
         {
             self->m_snapshot.BytesRead += static_cast<uint64_t>(result);
+            self->m_pendingReadError = 0;
         }
-        else if (result != AVERROR_EOF)
+        else if (result == AVERROR_EOF)
+        {
+            auto const position = avio_tell(self->m_innerContext);
+            if (self->m_expectedSize > 0 && position >= 0 && position < self->m_expectedSize)
+            {
+                result = AVERROR(EIO);
+                self->m_snapshot.LastError = result;
+                self->m_pendingReadError = result;
+            }
+        }
+        else
         {
             self->m_snapshot.LastError = result;
+            self->m_pendingReadError = result;
         }
 
         return result;
@@ -192,12 +252,20 @@ namespace winrt::NoiraPlayer::Native::implementation
             avio_closep(&m_innerContext);
         }
 
+        m_source.clear();
+        m_expectedSize = -1;
+        m_pendingReadError = 0;
         m_open = false;
     }
 
     bool HttpMediaInput::IsOpen() const noexcept
     {
         return m_open;
+    }
+
+    int HttpMediaInput::PendingReadError() const noexcept
+    {
+        return m_pendingReadError;
     }
 
     HttpMediaInputSnapshot HttpMediaInput::Snapshot() const noexcept

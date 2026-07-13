@@ -6,6 +6,75 @@ namespace NoiraPlayer.Core.Tests.PlaybackQuality;
 public sealed class PlaybackQualityRunComparatorTests
 {
     [Fact]
+    public void Compare_Reports_Improved_When_Native_Execution_Recovers_From_Error_To_Pass()
+    {
+        var baseline = CreateReport(
+            "baseline",
+            Check("SourceCodec", "observed", "media-load", "source.codec", "h264", "h264"));
+        baseline.Result = PlaybackQualityReportResult.Error;
+        baseline.Execution.Status = PlaybackQualityExecutionStatus.Failed;
+        baseline.Execution.PlaybackSampleObserved = false;
+        baseline.Error.Code = "native-headless.helper-failed";
+
+        var candidate = CreateReport(
+            "candidate",
+            Check("SourceCodec", "observed", "media-load", "source.codec", "h264", "h264"));
+
+        var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
+
+        Assert.Equal("improved", comparison.Result);
+        Assert.Equal("keep-candidate", comparison.Decision);
+        Assert.Contains(comparison.Improvements, delta =>
+            delta.Signal == "execution.outcome" &&
+            delta.BaselineActual == "error/failed" &&
+            delta.CandidateActual == "pass/completed");
+    }
+
+    [Fact]
+    public void Compare_Reports_Regressed_When_Native_Execution_Falls_From_Pass_To_Error()
+    {
+        var baseline = CreateReport(
+            "baseline",
+            Check("SourceCodec", "observed", "media-load", "source.codec", "h264", "h264"));
+        var candidate = CreateReport(
+            "candidate",
+            Check("SourceCodec", "observed", "media-load", "source.codec", "h264", "h264"));
+        candidate.Result = PlaybackQualityReportResult.Error;
+        candidate.Execution.Status = PlaybackQualityExecutionStatus.Failed;
+        candidate.Execution.PlaybackSampleObserved = false;
+        candidate.Error.Code = "native-headless.helper-failed";
+
+        var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
+
+        Assert.Equal("regressed", comparison.Result);
+        Assert.Equal("reject-candidate", comparison.Decision);
+        Assert.Contains(comparison.Regressions, delta =>
+            delta.Signal == "execution.outcome" &&
+            delta.BaselineActual == "pass/completed" &&
+            delta.CandidateActual == "error/failed");
+    }
+
+    [Fact]
+    public void Compare_Reports_Does_Not_Rank_Unsupported_Against_Fail()
+    {
+        var baseline = CreateReport(
+            "baseline",
+            Check("SourceCodec", "observed", "media-load", "source.codec", "hevc", "hevc"));
+        baseline.Result = PlaybackQualityReportResult.Unsupported;
+        baseline.Execution.Status = PlaybackQualityExecutionStatus.Unsupported;
+
+        var candidate = CreateReport(
+            "candidate",
+            Check("SourceCodec", "observed", "media-load", "source.codec", "hevc", "hevc"));
+        candidate.Result = PlaybackQualityReportResult.Fail;
+
+        var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
+
+        Assert.DoesNotContain(comparison.Improvements, delta => delta.Signal == "execution.outcome");
+        Assert.DoesNotContain(comparison.Regressions, delta => delta.Signal == "execution.outcome");
+    }
+
+    [Fact]
     public void Compare_Rejects_Different_Color_Expectation_Profiles()
     {
         var baseline = CreateReport("baseline", Check(

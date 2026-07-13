@@ -188,6 +188,23 @@ public sealed class NativePlaybackGraphDecouplingContractTests
     }
 
     [Fact]
+    public void Native_Headless_Reference_Case_Must_Match_Execution_Arguments()
+    {
+        var root = FindRepositoryRoot();
+        var harnessSource = File.ReadAllText(Path.Combine(
+            root,
+            "tools",
+            "NoiraPlayer.PlaybackQuality.Headless",
+            "Program.cs"));
+
+        Assert.Contains("options.ReferenceCase.StartPositionTicks != options.StartPositionTicks", harnessSource, StringComparison.Ordinal);
+        Assert.Contains("options.ReferenceCase.ForceSdrOutput != options.ForceSdrOutput", harnessSource, StringComparison.Ordinal);
+        Assert.Contains("options.ReferenceCase.PauseSeconds != options.PauseSeconds", harnessSource, StringComparison.Ordinal);
+        Assert.Contains("options.ReferenceCase.ExecutionRequirement.Scenario", harnessSource, StringComparison.Ordinal);
+        Assert.Contains("must match the corresponding execution arguments", harnessSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Native_Headless_End_Of_Stream_Uses_Natural_Graph_State_Evidence()
     {
         var root = FindRepositoryRoot();
@@ -385,7 +402,7 @@ public sealed class NativePlaybackGraphDecouplingContractTests
 
         Assert.Contains("Assert-NativeLongPauseNetworkRecovery", gateSource, StringComparison.Ordinal);
         Assert.Contains("$pauseSeconds = if ($LongPause) { 30 } else { 1 }", gateSource, StringComparison.Ordinal);
-        Assert.Contains("category = if ($LongPause) { 'challenge' } else { 'stable' }", gateSource, StringComparison.Ordinal);
+        Assert.Contains("category = if ($LongPause -or $DemuxReadRecovery) { 'challenge' } else { 'stable' }", gateSource, StringComparison.Ordinal);
         Assert.Contains("NOIRAPLAYER_NATIVE_PAUSE_MARKER_PATH", gateSource, StringComparison.Ordinal);
         Assert.Contains("pauseMarkerObserved", serverSource, StringComparison.Ordinal);
         Assert.Contains("WaitForPauseMarkerPath", serverSource, StringComparison.Ordinal);
@@ -395,6 +412,103 @@ public sealed class NativePlaybackGraphDecouplingContractTests
         Assert.Contains("resumeRecoveryDurationMs", harnessSource, StringComparison.Ordinal);
         Assert.Contains("options.Scenario == PlaybackQualityExecutionScenario.PauseResume", harnessSource, StringComparison.Ordinal);
         Assert.Contains("? \"resume\"", harnessSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Native_Headless_Demux_Read_Recovery_Challenge_Is_Strict_And_Deterministic()
+    {
+        var root = FindRepositoryRoot();
+        var gateSource = File.ReadAllText(Path.Combine(
+            root,
+            "tools",
+            "quality-run",
+            "run-native-headless-harness-smoke-test.ps1"));
+        var serverSource = File.ReadAllText(Path.Combine(
+            root,
+            "tools",
+            "quality-run",
+            "Start-FaultingRangeMediaServer.ps1"));
+        var helperSource = File.ReadAllText(Path.Combine(
+            root,
+            "tests",
+            "NoiraPlayer.Native.Tests",
+            "NativePlaybackGraphHeadlessSmokeTests.cpp"));
+        var parserSource = File.ReadAllText(Path.Combine(
+            root,
+            "tools",
+            "NoiraPlayer.PlaybackQuality.Headless",
+            "Program.cs"));
+        var mediaSourceHeader = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NoiraPlayer.Native",
+            "Media",
+            "FfmpegMediaSource.h"));
+        var mediaSource = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NoiraPlayer.Native",
+            "Media",
+            "FfmpegMediaSource.cpp"));
+        var httpInputHeader = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NoiraPlayer.Native",
+            "Media",
+            "HttpMediaInput.h"));
+        var httpInput = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NoiraPlayer.Native",
+            "Media",
+            "HttpMediaInput.cpp"));
+
+        foreach (var field in new[]
+        {
+            "readErrorCount",
+            "readRetryCount",
+            "readRecoveryCount",
+            "maxConsecutiveReadErrors",
+            "lastReadErrorCode",
+            "fatalReadErrorCode",
+            "lastReadRecoveryDurationMs"
+        })
+        {
+            Assert.Contains(field, helperSource, StringComparison.Ordinal);
+            Assert.Contains(field, parserSource, StringComparison.Ordinal);
+            Assert.Contains(field, gateSource, StringComparison.Ordinal);
+        }
+
+        Assert.Contains("TrySetRequiredNonPositiveInt32", parserSource, StringComparison.Ordinal);
+        Assert.Contains("ResetRequestCount", serverSource, StringComparison.Ordinal);
+        Assert.Contains("ImmediateResetFromRequest", serverSource, StringComparison.Ordinal);
+        Assert.Contains("local/demux-read-error-recovery-after-pause", gateSource, StringComparison.Ordinal);
+        Assert.Contains("$networkExpected = [ordered]@{", gateSource, StringComparison.Ordinal);
+        Assert.Contains("expected = $networkExpected", gateSource, StringComparison.Ordinal);
+        Assert.Contains("$networkExpected['readRecovery'] = [ordered]@{", gateSource, StringComparison.Ordinal);
+        Assert.Contains("DemuxReadRecoveryOnly", gateSource, StringComparison.Ordinal);
+        Assert.Contains("ExpectDemuxReadRecoveryFailure", gateSource, StringComparison.Ordinal);
+        Assert.Contains("demux-read-recovery-v0.9", gateSource, StringComparison.Ordinal);
+        Assert.Contains("run-metadata.json", gateSource, StringComparison.Ordinal);
+        Assert.Contains("demux-read-error-recovery-server.out.log", gateSource, StringComparison.Ordinal);
+        Assert.Contains("Expected disabled demux read recovery baseline report materialization", gateSource, StringComparison.Ordinal);
+        Assert.Contains("TryReopenHttpTransport", mediaSourceHeader, StringComparison.Ordinal);
+        Assert.Contains("avio_tell", mediaSource, StringComparison.Ordinal);
+        Assert.Contains("avio_closep", mediaSource, StringComparison.Ordinal);
+        Assert.Contains("avio_open2", mediaSource, StringComparison.Ordinal);
+        Assert.Contains("SetFfmpegOption(&options, \"offset\"", mediaSource, StringComparison.Ordinal);
+        Assert.Contains("avformat_flush(m_formatContext)", mediaSource, StringComparison.Ordinal);
+        Assert.Contains("ReopenAt", httpInputHeader, StringComparison.Ordinal);
+        Assert.Contains("PendingReadError", httpInputHeader, StringComparison.Ordinal);
+        Assert.Contains("m_outerContext->error = 0", httpInput, StringComparison.Ordinal);
+        Assert.Contains("m_outerContext->eof_reached = 0", httpInput, StringComparison.Ordinal);
+        Assert.Contains("position < self->m_expectedSize", httpInput, StringComparison.Ordinal);
+        Assert.Contains("readResult == AVERROR_EOF && m_httpMediaInput != nullptr", mediaSource, StringComparison.Ordinal);
+        Assert.Contains("NOIRAPLAYER_NATIVE_INSTRUMENTED_AVIO", mediaSource, StringComparison.Ordinal);
+        Assert.Contains("auto enabled = value == nullptr || std::string_view(value) != \"0\"", mediaSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("avformat_close_input(&m_formatContext)", mediaSource[
+            mediaSource.IndexOf("TryReopenHttpTransport", StringComparison.Ordinal)..
+            mediaSource.IndexOf("TryReadPacket", StringComparison.Ordinal)], StringComparison.Ordinal);
     }
 
     [Fact]

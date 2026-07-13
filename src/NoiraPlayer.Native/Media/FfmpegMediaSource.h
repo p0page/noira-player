@@ -150,6 +150,7 @@ namespace winrt::NoiraPlayer::Native::implementation
     private:
         static int InterruptCallback(void* opaque) noexcept;
         void BeginBlockingIo(int64_t timeoutMilliseconds) noexcept;
+        bool TryReopenHttpTransport(int& errorCode);
         void ClearPacketQueues() noexcept;
         bool TryTakeQueuedPacket(int32_t streamIndex, AVPacket* packet);
         bool ShouldQueueStream(int32_t streamIndex) const;

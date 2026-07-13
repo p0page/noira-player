@@ -28,7 +28,7 @@ internal static class NativeHeadlessHarness
     {
         var executionStartedAt = DateTimeOffset.UtcNow;
         var attemptId = Guid.NewGuid().ToString("N");
-        var referenceCase = PlaybackQualityCaptureReferenceCaseFactory.Create(
+        var referenceCase = options.ReferenceCase ?? PlaybackQualityCaptureReferenceCaseFactory.Create(
             options.CaseId,
             itemId: "",
             mediaSourceId: "",
@@ -39,13 +39,17 @@ internal static class NativeHeadlessHarness
             category: "stable",
             severity: "high",
             stability: "stable");
-        referenceCase.Purpose.Add("sdr-smoke");
-        referenceCase.Purpose.Add("frame-pacing");
-        if (options.Scenario == PlaybackQualityExecutionScenario.EndOfStream)
+        if (options.ReferenceCase == null)
         {
-            referenceCase.Purpose.Add("end-of-stream");
+            referenceCase.Purpose.Add("sdr-smoke");
+            referenceCase.Purpose.Add("frame-pacing");
+            if (options.Scenario == PlaybackQualityExecutionScenario.EndOfStream)
+            {
+                referenceCase.Purpose.Add("end-of-stream");
+            }
+
+            referenceCase.ExecutionRequirement.Scenario = options.Scenario;
         }
-        referenceCase.ExecutionRequirement.Scenario = options.Scenario;
 
         if (!string.IsNullOrWhiteSpace(options.NativeHelperExe))
         {
@@ -1156,6 +1160,13 @@ internal static class NativeHeadlessHarness
             TrySetRequiredUInt64(values, "audioStarvedPasses", value => metrics.AudioStarvedPasses = value, out error) &&
             TrySetRequiredNonNegativeInt64(values, "audioClockTicks", value => metrics.AudioClockTicks = value, out error) &&
             TrySetRequiredNonNegativeInt64(values, "videoPositionTicks", value => metrics.VideoPositionTicks = value, out error) &&
+            TrySetRequiredUInt64(values, "readErrorCount", value => metrics.ReadErrorCount = value, out error) &&
+            TrySetRequiredUInt64(values, "readRetryCount", value => metrics.ReadRetryCount = value, out error) &&
+            TrySetRequiredUInt64(values, "readRecoveryCount", value => metrics.ReadRecoveryCount = value, out error) &&
+            TrySetRequiredUInt32(values, "maxConsecutiveReadErrors", value => metrics.MaxConsecutiveReadErrors = value, out error) &&
+            TrySetRequiredNonPositiveInt32(values, "lastReadErrorCode", value => metrics.LastReadErrorCode = value, out error) &&
+            TrySetRequiredNonPositiveInt32(values, "fatalReadErrorCode", value => metrics.FatalReadErrorCode = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "lastReadRecoveryDurationMs", value => metrics.LastReadRecoveryDurationMs = value, out error) &&
             TrySetRequiredNonNegativeDouble(values, "nativeGraphOpenDurationMs", value => metrics.NativeGraphOpenDurationMs = value, out error) &&
             TrySetRequiredNonNegativeDouble(values, "ffmpegOpenInputDurationMs", value => metrics.FfmpegOpenInputDurationMs = value, out error) &&
             TrySetRequiredNonNegativeDouble(values, "ffmpegStreamInfoDurationMs", value => metrics.FfmpegStreamInfoDurationMs = value, out error) &&
@@ -1747,6 +1758,45 @@ internal static class NativeHeadlessHarness
         return true;
     }
 
+    private static bool TrySetRequiredUInt32(
+        Dictionary<string, string> values,
+        string key,
+        Action<uint> setValue,
+        out string error)
+    {
+        if (!TryGetRequiredUInt64(values, key, out var value, out error) || value > uint.MaxValue)
+        {
+            error = "Native helper field '" + key + "' must be an unsigned 32-bit integer.";
+            return false;
+        }
+
+        setValue((uint)value);
+        return true;
+    }
+
+    private static bool TrySetRequiredNonPositiveInt32(
+        Dictionary<string, string> values,
+        string key,
+        Action<int> setValue,
+        out string error)
+    {
+        if (!values.TryGetValue(key, out var text) ||
+            !int.TryParse(
+                text,
+                System.Globalization.NumberStyles.Integer,
+                System.Globalization.CultureInfo.InvariantCulture,
+                out var value) ||
+            value > 0)
+        {
+            error = "Native helper field '" + key + "' must be a non-positive 32-bit integer.";
+            return false;
+        }
+
+        setValue(value);
+        error = "";
+        return true;
+    }
+
     private static bool TryGetRequiredNonNegativeDouble(
         Dictionary<string, string> values,
         string key,
@@ -2196,6 +2246,7 @@ internal sealed class NativeHeadlessHarnessOptions
     public string CaseId { get; private set; } = "";
     public string StreamUrl { get; private set; } = "";
     public string SourceLocatorHash { get; private set; } = "";
+    public PlaybackQualityReferenceCase? ReferenceCase { get; private set; }
     public int DurationSeconds { get; private set; } = 5;
     public long StartPositionTicks { get; private set; }
     public string ReportsDir { get; private set; } = "";
@@ -2252,6 +2303,27 @@ internal sealed class NativeHeadlessHarnessOptions
                     break;
                 case "--source-locator-hash":
                     options.SourceLocatorHash = value.Trim();
+                    break;
+                case "--reference-case-base64":
+                    try
+                    {
+                        var json = System.Text.Encoding.UTF8.GetString(
+                            Convert.FromBase64String(value.Trim()));
+                        options.ReferenceCase = System.Text.Json.JsonSerializer.Deserialize<PlaybackQualityReferenceCase>(
+                            json,
+                            new System.Text.Json.JsonSerializerOptions
+                            {
+                                PropertyNameCaseInsensitive = true
+                            });
+                    }
+                    catch (Exception exception) when (
+                        exception is FormatException ||
+                        exception is System.Text.Json.JsonException ||
+                        exception is System.Text.DecoderFallbackException)
+                    {
+                        error = "--reference-case-base64 must contain a UTF-8 JSON playback reference case.";
+                        return false;
+                    }
                     break;
                 case "--duration-seconds":
                     if (!int.TryParse(value, out var durationSeconds) || durationSeconds <= 0)
@@ -2318,6 +2390,27 @@ internal sealed class NativeHeadlessHarnessOptions
         if (string.IsNullOrWhiteSpace(options.CaseId))
         {
             error = "--case-id is required.";
+            return false;
+        }
+
+        if (options.ReferenceCase != null &&
+            !string.Equals(options.ReferenceCase.CaseId, options.CaseId, StringComparison.Ordinal))
+        {
+            error = "--reference-case-base64 caseId must match --case-id.";
+            return false;
+        }
+
+        if (options.ReferenceCase != null &&
+            (options.ReferenceCase.StartPositionTicks != options.StartPositionTicks ||
+             options.ReferenceCase.ForceSdrOutput != options.ForceSdrOutput ||
+             options.ReferenceCase.PauseSeconds != options.PauseSeconds ||
+             options.ReferenceCase.ExecutionRequirement == null ||
+             !string.Equals(
+                 options.ReferenceCase.ExecutionRequirement.Scenario,
+                 options.Scenario,
+                 StringComparison.Ordinal)))
+        {
+            error = "--reference-case-base64 fields must match the corresponding execution arguments.";
             return false;
         }
 

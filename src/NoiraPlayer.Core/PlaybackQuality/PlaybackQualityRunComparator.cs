@@ -270,6 +270,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
             AddAudioAheadWaitOversleepDeltas(comparison, baseline, candidate);
             AddTrackAndSubtitleEvidenceDeltas(comparison, baseline, candidate);
             AddInteractionScenarioOutcomeDelta(comparison, baseline, candidate);
+            AddExecutionOutcomeDelta(comparison, baseline, candidate);
 
             if (comparison.Improvements.Count > 0 && comparison.Regressions.Count > 0)
             {
@@ -285,6 +286,56 @@ namespace NoiraPlayer.Core.PlaybackQuality
             }
 
             return FinalizeComparison(comparison, context);
+        }
+
+        private static void AddExecutionOutcomeDelta(
+            PlaybackQualityRunComparison comparison,
+            PlaybackQualityReport baseline,
+            PlaybackQualityReport candidate)
+        {
+            var baselineRank = GetExecutionOutcomeRank(baseline.Result);
+            var candidateRank = GetExecutionOutcomeRank(candidate.Result);
+            if (!baselineRank.HasValue ||
+                !candidateRank.HasValue ||
+                baselineRank.Value == candidateRank.Value)
+            {
+                return;
+            }
+
+            var improved = candidateRank.Value > baselineRank.Value;
+            var delta = new PlaybackQualitySignalDelta
+            {
+                Signal = "execution.outcome",
+                FailureArea = "playback-lifecycle",
+                Direction = improved ? "improved" : "regressed",
+                BaselineStatus = baseline.Result,
+                CandidateStatus = candidate.Result,
+                BaselineActual = baseline.Result + "/" + baseline.Execution.Status,
+                CandidateActual = candidate.Result + "/" + candidate.Execution.Status,
+                NumericDelta = candidateRank.Value - baselineRank.Value
+            };
+
+            if (improved)
+            {
+                comparison.Improvements.Add(delta);
+                AddUnique(comparison.ResolvedFailureAreas, delta.FailureArea);
+            }
+            else
+            {
+                comparison.Regressions.Add(delta);
+                AddUnique(comparison.NewFailureAreas, delta.FailureArea);
+            }
+        }
+
+        private static int? GetExecutionOutcomeRank(string result)
+        {
+            return result switch
+            {
+                PlaybackQualityReportResult.Error => 0,
+                PlaybackQualityReportResult.Fail => 1,
+                PlaybackQualityReportResult.Pass => 2,
+                _ => null
+            };
         }
 
         private static PlaybackQualityComparisonEnvironment AssessEnvironment(

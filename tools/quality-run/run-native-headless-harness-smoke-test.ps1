@@ -3,7 +3,9 @@
     [string]$SourceRevision = 'smoke-native-headless-real-revision',
     [string]$ImportSourceRevision = 'smoke-native-headless-import-revision',
     [string]$BuildConfiguration = 'Debug',
-    [switch]$ParserContractOnly
+    [switch]$ParserContractOnly,
+    [switch]$DemuxReadRecoveryOnly,
+    [switch]$ExpectDemuxReadRecoveryFailure
 )
 
 $ErrorActionPreference = 'Stop'
@@ -35,6 +37,7 @@ $nativeAvMaterializedReportPath = Join-Path $nativeMaterializedDir 'local\native
 $nativeSubtitleMaterializedReportPath = Join-Path $nativeMaterializedDir 'local\native-headless-subtitle-switch.json'
 $nativeNetworkMaterializedReportPath = Join-Path $nativeMaterializedDir 'local\network-reconnect-pause-resume.json'
 $nativeLongPauseNetworkMaterializedReportPath = Join-Path $nativeMaterializedDir 'local\long-pause-network-recovery.json'
+$nativeDemuxReadRecoveryMaterializedReportPath = Join-Path $nativeMaterializedDir 'local\demux-read-error-recovery-after-pause.json'
 $sampleUrl = 'https://repo.jellyfin.org/test-videos/SDR/HEVC%2010bit/Test%20Jellyfin%201080p%20HEVC%2010bit%203M.mp4'
 $nativeCaseId = 'local/native-headless-sdr-smoke'
 $nativeEndOfStreamCaseId = 'local/native-headless-end-of-stream'
@@ -348,19 +351,35 @@ function Assert-NativeNetworkReconnectRecovery {
     param(
         [string]$NativeHelperExe,
         [string]$SampleUrl,
-        [switch]$LongPause
+        [switch]$LongPause,
+        [switch]$DemuxReadRecovery,
+        [switch]$ExpectFailure
     )
+
+    if ($LongPause -and $DemuxReadRecovery) {
+        throw 'LongPause and DemuxReadRecovery are separate deterministic scenarios.'
+    }
 
     $samplePath = ([System.Uri]$SampleUrl).LocalPath
     $sample = Get-Item -LiteralPath $samplePath
     $pauseSeconds = if ($LongPause) { 30 } else { 1 }
-    $artifactName = if ($LongPause) { 'long-pause-network-recovery' } else { 'network-reconnect' }
-    $networkCaseId = if ($LongPause) {
+    $artifactName = if ($DemuxReadRecovery) {
+        'demux-read-error-recovery'
+    } elseif ($LongPause) {
+        'long-pause-network-recovery'
+    } else {
+        'network-reconnect'
+    }
+    $networkCaseId = if ($DemuxReadRecovery) {
+        'local/demux-read-error-recovery-after-pause'
+    } elseif ($LongPause) {
         'local/long-pause-network-recovery'
     } else {
         'local/network-reconnect-pause-resume'
     }
-    $networkLocator = if ($LongPause) {
+    $networkLocator = if ($DemuxReadRecovery) {
+        'local-fault://demux-read-error-recovery-after-pause'
+    } elseif ($LongPause) {
         'local-fault://long-pause-network-recovery'
     } else {
         'local-fault://network-reconnect-pause-resume'
@@ -397,12 +416,21 @@ function Assert-NativeNetworkReconnectRecovery {
         $cutAfterBytes,
         '-DelayPerChunkMilliseconds',
         20)
-    if ($LongPause) {
+    if ($LongPause -or $DemuxReadRecovery) {
         $serverArguments += @(
             '-WaitForPauseMarkerPath',
             ('"' + $pauseMarkerPath + '"'),
             '-PauseMarkerTimeoutSeconds',
             90)
+    }
+    if ($DemuxReadRecovery) {
+        $serverArguments += @(
+            '-ResetRequestCount',
+            3,
+            '-ImmediateResetFromRequest',
+            2,
+            '-MaxRequests',
+            16)
     }
     $server = Start-Process powershell `
         -ArgumentList $serverArguments `
@@ -445,12 +473,29 @@ function Assert-NativeNetworkReconnectRecovery {
         $networkValidationPath = Join-Path $networkRoot 'validation.json'
         $networkRuntimeSourceMapPath = Join-Path $networkRoot 'runtime-source-map.json'
         $networkUrl = "http://127.0.0.1:{0}/media.mp4" -f $port
+        $networkExpected = [ordered]@{
+            codec = 'h264'
+            width = 320
+            height = 180
+            frameRate = 30
+            hdrKind = 'Sdr'
+            isDirectPlayable = $true
+            minRenderedVideoFrames = 10
+        }
+        if ($DemuxReadRecovery) {
+            $networkExpected['readRecovery'] = [ordered]@{
+                required = $true
+                minReadErrors = 1
+                minRecoveries = 1
+                maxRetries = 10
+            }
+        }
         [ordered]@{
             schemaVersion = 1
             cases = @(
                 [ordered]@{
                     caseId = $networkCaseId
-                    category = if ($LongPause) { 'challenge' } else { 'stable' }
+                    category = if ($LongPause -or $DemuxReadRecovery) { 'challenge' } else { 'stable' }
                     severity = 'critical'
                     stability = 'stable'
                     uri = $networkLocator
@@ -459,20 +504,14 @@ function Assert-NativeNetworkReconnectRecovery {
                         minimumEvidenceLevel = 'native-playback'
                         scenario = 'pause-resume'
                     }
-                    purpose = if ($LongPause) {
+                    purpose = if ($DemuxReadRecovery) {
+                        @('pause-resume', 'network-recovery', 'demux-read-error-recovery')
+                    } elseif ($LongPause) {
                         @('pause-resume', 'network-recovery', 'long-pause')
                     } else {
                         @('buffering', 'pause-resume', 'network-recovery')
                     }
-                    expected = [ordered]@{
-                        codec = 'h264'
-                        width = 320
-                        height = 180
-                        frameRate = 30
-                        hdrKind = 'Sdr'
-                        isDirectPlayable = $true
-                        minRenderedVideoFrames = 10
-                    }
+                    expected = $networkExpected
                 }
             )
         } | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $networkManifestPath -Encoding UTF8
@@ -480,12 +519,22 @@ function Assert-NativeNetworkReconnectRecovery {
             ConvertTo-Json | Set-Content -LiteralPath $networkRuntimeSourceMapPath -Encoding UTF8
 
         $pauseMarkerEnvironmentName = 'NOIRAPLAYER_NATIVE_PAUSE_MARKER_PATH'
+        $requireReadRecoveryEnvironmentName = 'NOIRAPLAYER_NATIVE_REQUIRE_DEMUX_READ_RECOVERY'
         $previousPauseMarkerPath = [Environment]::GetEnvironmentVariable($pauseMarkerEnvironmentName, 'Process')
+        $previousRequireReadRecovery = [Environment]::GetEnvironmentVariable(
+            $requireReadRecoveryEnvironmentName,
+            'Process')
         try {
-            if ($LongPause) {
+            if ($LongPause -or $DemuxReadRecovery) {
                 [Environment]::SetEnvironmentVariable(
                     $pauseMarkerEnvironmentName,
                     $pauseMarkerPath,
+                    'Process')
+            }
+            if ($DemuxReadRecovery) {
+                [Environment]::SetEnvironmentVariable(
+                    $requireReadRecoveryEnvironmentName,
+                    '1',
                     'Process')
             }
             & powershell -NoProfile -ExecutionPolicy Bypass `
@@ -502,8 +551,18 @@ function Assert-NativeNetworkReconnectRecovery {
                 $pauseMarkerEnvironmentName,
                 $previousPauseMarkerPath,
                 'Process')
+            [Environment]::SetEnvironmentVariable(
+                $requireReadRecoveryEnvironmentName,
+                $previousRequireReadRecovery,
+                'Process')
         }
-        if ($LASTEXITCODE -ne 0) {
+        $networkRunnerExitCode = $LASTEXITCODE
+        if ($ExpectFailure) {
+            if ($networkRunnerExitCode -eq 0) {
+                throw 'Expected disabled demux read recovery baseline to fail native playback.'
+            }
+        }
+        elseif ($networkRunnerExitCode -ne 0) {
             throw 'Expected formal network reconnect manifest runner to complete.'
         }
 
@@ -511,6 +570,36 @@ function Assert-NativeNetworkReconnectRecovery {
         $networkReport = Get-Content -LiteralPath $networkReportPath -Raw | ConvertFrom-Json
         $pauseEvent = @($networkReport.report.lifecycle.events | Where-Object operation -eq 'pause') | Select-Object -First 1
         $resumeEvent = @($networkReport.report.lifecycle.events | Where-Object operation -eq 'resume') | Select-Object -First 1
+        if ($ExpectFailure) {
+            if ($networkReport.report.result -notin @('error', 'fail') -or
+                $networkReport.report.execution.status -ne 'failed' -or
+                $networkReport.report.readRecovery.readErrorCount -lt 1 -or
+                $networkReport.report.readRecovery.fatalReadErrorCode -ge 0 -or
+                $networkReport.report.error.message -notmatch 'av_read_frame|I/O error') {
+                throw 'Disabled demux read recovery baseline did not preserve a real fatal native read report.'
+            }
+
+            dotnet run --project (Join-Path $repoRoot 'tools\NoiraPlayer.PlaybackQuality.Cli\NoiraPlayer.PlaybackQuality.Cli.csproj') -- `
+                materialize-native-harness-report-set `
+                --manifest $networkManifestPath `
+                --captured-reports-dir $networkReportsDir `
+                --reports-dir $networkMaterializedDir `
+                --collector-version native-headless-harness-v0.1 `
+                --player-core-version NoiraPlayer.Core `
+                --source-revision $SourceRevision `
+                --build-configuration Debug `
+                --output $networkMaterializedSummaryPath
+            if ($LASTEXITCODE -ne 0) {
+                throw 'Expected disabled demux read recovery baseline report materialization to complete.'
+            }
+
+            $script:demuxReadRecoveryManifestCase =
+                (Get-Content -LiteralPath $networkManifestPath -Raw | ConvertFrom-Json).cases[0]
+            $script:demuxReadRecoveryCapturedReportPath = $networkReportPath
+            Write-Output 'native demux read recovery disabled baseline captured a real fatal read report'
+            return
+        }
+
         if ($networkReport.report.result -ne 'pass' -or
             $networkReport.report.execution.status -ne 'completed' -or
             $networkReport.report.execution.evidenceLevel -ne 'native-playback' -or
@@ -530,7 +619,7 @@ function Assert-NativeNetworkReconnectRecovery {
             --reports-dir $networkMaterializedDir `
             --collector-version native-headless-harness-v0.1 `
             --player-core-version NoiraPlayer.Core `
-            --source-revision network-reconnect-smoke `
+            --source-revision $(if ($DemuxReadRecovery) { $SourceRevision } else { 'network-reconnect-smoke' }) `
             --build-configuration Debug `
             --output $networkMaterializedSummaryPath
         if ($LASTEXITCODE -ne 0) {
@@ -574,6 +663,17 @@ function Assert-NativeNetworkReconnectRecovery {
                 (Get-Content -LiteralPath $networkManifestPath -Raw | ConvertFrom-Json).cases[0]
             $script:longPauseNetworkCapturedReportPath = $networkReportPath
         }
+        elseif ($DemuxReadRecovery) {
+            if ($networkReport.report.readRecovery.readErrorCount -lt 1 -or
+                $networkReport.report.readRecovery.readRetryCount -lt 1 -or
+                $networkReport.report.readRecovery.readRecoveryCount -lt 1 -or
+                $networkReport.report.readRecovery.fatalReadErrorCode -ne 0) {
+                throw 'Demux read recovery challenge did not preserve successful bounded recovery evidence.'
+            }
+            $script:demuxReadRecoveryManifestCase =
+                (Get-Content -LiteralPath $networkManifestPath -Raw | ConvertFrom-Json).cases[0]
+            $script:demuxReadRecoveryCapturedReportPath = $networkReportPath
+        }
         else {
             $script:networkReconnectManifestCase =
                 (Get-Content -LiteralPath $networkManifestPath -Raw | ConvertFrom-Json).cases[0]
@@ -599,6 +699,20 @@ function Assert-NativeLongPauseNetworkRecovery {
         -NativeHelperExe $NativeHelperExe `
         -SampleUrl $SampleUrl `
         -LongPause
+}
+
+function Assert-NativeDemuxReadRecovery {
+    param(
+        [string]$NativeHelperExe,
+        [string]$SampleUrl,
+        [switch]$ExpectFailure
+    )
+
+    Assert-NativeNetworkReconnectRecovery `
+        -NativeHelperExe $NativeHelperExe `
+        -SampleUrl $SampleUrl `
+        -DemuxReadRecovery `
+        -ExpectFailure:$ExpectFailure
 }
 
 function Invoke-NativeHeadlessHelperCase {
@@ -739,6 +853,13 @@ function New-NativeHeadlessParserFixtureOutput {
         audioStarvedPasses = '0'
         audioClockTicks = '4900000'
         videoPositionTicks = '5000000'
+        readErrorCount = '0'
+        readRetryCount = '0'
+        readRecoveryCount = '0'
+        maxConsecutiveReadErrors = '0'
+        lastReadErrorCode = '0'
+        fatalReadErrorCode = '0'
+        lastReadRecoveryDurationMs = '0'
         nativeGraphOpenDurationMs = '350'
         ffmpegOpenInputDurationMs = '200'
         ffmpegStreamInfoDurationMs = '100'
@@ -1751,6 +1872,28 @@ function Assert-NativeHeadlessParserContracts {
             Output = New-NativeHeadlessParserFixtureOutput -Omit @($field)
         }
     }
+    foreach ($field in @('lastReadErrorCode', 'fatalReadErrorCode')) {
+        $negativeCases += [pscustomobject]@{
+            Name = 'positive-' + ($field -creplace '([a-z0-9])([A-Z])', '$1-$2').ToLowerInvariant()
+            ExpectedField = $field
+            Output = New-NativeHeadlessParserFixtureOutput -Overrides @{ $field = '1' }
+        }
+    }
+    foreach ($field in @(
+        'readErrorCount',
+        'readRetryCount',
+        'readRecoveryCount',
+        'maxConsecutiveReadErrors',
+        'lastReadErrorCode',
+        'fatalReadErrorCode',
+        'lastReadRecoveryDurationMs'
+    )) {
+        $negativeCases += [pscustomobject]@{
+            Name = 'missing-' + ($field -creplace '([a-z0-9])([A-Z])', '$1-$2').ToLowerInvariant()
+            ExpectedField = $field
+            Output = New-NativeHeadlessParserFixtureOutput -Omit @($field)
+        }
+    }
     $negativeCases += [pscustomobject]@{
         Name = 'builtin-provider-with-measured-call-evidence'
         ExpectedField = 'startupTransportCallEvidenceAvailable'
@@ -1833,6 +1976,44 @@ New-Item -ItemType Directory -Path $smokeRoot | Out-Null
 Assert-NativeHeadlessParserContracts -Root (Join-Path $smokeRoot 'parser-fixtures')
 if ($ParserContractOnly) {
     Write-Host 'native-headless-parser contract smoke ok'
+    exit 0
+}
+
+if ($DemuxReadRecoveryOnly) {
+    $nativeHelperExe = Build-NativePlaybackGraphHelper -OutputDirectory $nativeHelperRoot
+    $nativeAvSampleUrl = New-NativePlaybackAvSample
+    Assert-NativePlaybackAvSample -SampleUrl $nativeAvSampleUrl
+    Assert-NativeDemuxReadRecovery `
+        -NativeHelperExe $nativeHelperExe `
+        -SampleUrl $nativeAvSampleUrl `
+        -ExpectFailure:$ExpectDemuxReadRecoveryFailure
+    $archiveName = $SourceRevision -replace '[^A-Za-z0-9._-]', '_'
+    $archiveRoot = Join-Path $repoRoot (Join-Path 'artifacts\quality-run\demux-read-recovery-v0.9' $archiveName)
+    if (Test-Path -LiteralPath $archiveRoot) {
+        Remove-Item -LiteralPath $archiveRoot -Recurse -Force
+    }
+    New-Item -ItemType Directory -Path $archiveRoot | Out-Null
+    Copy-Item `
+        -LiteralPath (Join-Path $smokeRoot 'demux-read-error-recovery-formal') `
+        -Destination $archiveRoot `
+        -Recurse
+    foreach ($logName in @(
+        'demux-read-error-recovery-server.out.log',
+        'demux-read-error-recovery-server.err.log')) {
+        $logPath = Join-Path $smokeRoot $logName
+        if (Test-Path -LiteralPath $logPath) {
+            Copy-Item -LiteralPath $logPath -Destination $archiveRoot
+        }
+    }
+    [ordered]@{
+        sourceRevision = $SourceRevision
+        expectFailure = [bool]$ExpectDemuxReadRecoveryFailure
+        recoveryDisabled = [Environment]::GetEnvironmentVariable(
+            'NOIRAPLAYER_QA_DISABLE_DEMUX_READ_RECOVERY',
+            'Process') -eq '1'
+    } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $archiveRoot 'run-metadata.json') -Encoding UTF8
+    Write-Host "native demux read recovery evidence archived: $archiveRoot"
+    Write-Host 'native demux read recovery focused smoke ok'
     exit 0
 }
 
@@ -2044,6 +2225,7 @@ $nativeNonZeroTimelineSampleUrl = New-NativePlaybackNonZeroStartSample
 Assert-NativePlaybackAvSample -SampleUrl $nativeAvSampleUrl
 Assert-NativeNetworkReconnectRecovery -NativeHelperExe $nativeHelperExe -SampleUrl $nativeAvSampleUrl
 Assert-NativeLongPauseNetworkRecovery -NativeHelperExe $nativeHelperExe -SampleUrl $nativeAvSampleUrl
+Assert-NativeDemuxReadRecovery -NativeHelperExe $nativeHelperExe -SampleUrl $nativeAvSampleUrl
 $nativeNonZeroTimelineReport = Invoke-NativeHeadlessHelperCase `
     -CaseId $nativeNonZeroTimelineCaseId `
     -StreamUrl $nativeNonZeroTimelineSampleUrl `
@@ -2816,7 +2998,8 @@ foreach ($nativeHdrCase in @($nativeManifest.cases | Where-Object { $_.expected.
 }
 $nativeManifest.cases = @($nativeManifest.cases) + @(
     $script:networkReconnectManifestCase,
-    $script:longPauseNetworkManifestCase)
+    $script:longPauseNetworkManifestCase,
+    $script:demuxReadRecoveryManifestCase)
 $nativeManifest | ConvertTo-Json -Depth 12 |
     Set-Content -LiteralPath $nativeManifestPath -Encoding UTF8
 $nativeNetworkCapturedReportPath = Get-QualityReportPath `
@@ -2836,6 +3019,15 @@ New-Item -ItemType Directory -Path (Split-Path -Parent $nativeLongPauseNetworkCa
 Copy-Item `
     -LiteralPath $script:longPauseNetworkCapturedReportPath `
     -Destination $nativeLongPauseNetworkCapturedReportPath `
+    -Force
+$nativeDemuxReadRecoveryCapturedReportPath = Get-QualityReportPath `
+    -Root $nativeCapturedDir `
+    -CaseId $script:demuxReadRecoveryManifestCase.caseId
+New-Item -ItemType Directory -Path (Split-Path -Parent $nativeDemuxReadRecoveryCapturedReportPath) -Force |
+    Out-Null
+Copy-Item `
+    -LiteralPath $script:demuxReadRecoveryCapturedReportPath `
+    -Destination $nativeDemuxReadRecoveryCapturedReportPath `
     -Force
 
 dotnet run --project (Join-Path $repoRoot 'tools\NoiraPlayer.PlaybackQuality.Cli\NoiraPlayer.PlaybackQuality.Cli.csproj') -- `
@@ -2883,6 +3075,10 @@ if (-not (Test-Path $nativeLongPauseNetworkMaterializedReportPath)) {
     throw "Expected materialized native long pause network report at $nativeLongPauseNetworkMaterializedReportPath."
 }
 
+if (-not (Test-Path $nativeDemuxReadRecoveryMaterializedReportPath)) {
+    throw "Expected materialized native demux read recovery report at $nativeDemuxReadRecoveryMaterializedReportPath."
+}
+
 $nativeMaterializedReport = Get-Content -LiteralPath $nativeMaterializedReportPath -Raw | ConvertFrom-Json
 if ($nativeMaterializedReport.report.environment.playerCoreVersion -ne $PlayerCoreVersion -or
     $nativeMaterializedReport.report.environment.sourceRevision -ne $SourceRevision -or
@@ -2906,6 +3102,7 @@ $nativeAvMaterializedReport = Get-Content -LiteralPath $nativeAvMaterializedRepo
 $nativeSubtitleMaterializedReport = Get-Content -LiteralPath $nativeSubtitleMaterializedReportPath -Raw | ConvertFrom-Json
 $nativeNetworkMaterializedReport = Get-Content -LiteralPath $nativeNetworkMaterializedReportPath -Raw | ConvertFrom-Json
 $nativeLongPauseNetworkMaterializedReport = Get-Content -LiteralPath $nativeLongPauseNetworkMaterializedReportPath -Raw | ConvertFrom-Json
+$nativeDemuxReadRecoveryMaterializedReport = Get-Content -LiteralPath $nativeDemuxReadRecoveryMaterializedReportPath -Raw | ConvertFrom-Json
 if ($nativeNetworkMaterializedReport.report.execution.openedSourceHashKind -ne 'observed-media-signature-v1' -or
     $nativeNetworkMaterializedReport.report.execution.openedSourceHash -eq
         $nativeNetworkMaterializedReport.report.execution.sourceLocatorHash -or
@@ -2917,6 +3114,15 @@ if ($nativeLongPauseNetworkMaterializedReport.caseMetadata.category -ne 'challen
     $nativeLongPauseNetworkMaterializedReport.report.execution.status -ne 'completed' -or
     $nativeLongPauseNetworkMaterializedReport.report.timing.renderedVideoFrames -le 0) {
     throw 'Expected unified long pause network report to preserve challenge classification and completed native playback evidence.'
+}
+if ($nativeDemuxReadRecoveryMaterializedReport.caseMetadata.category -ne 'challenge' -or
+    $nativeDemuxReadRecoveryMaterializedReport.report.result -ne 'pass' -or
+    $nativeDemuxReadRecoveryMaterializedReport.report.execution.status -ne 'completed' -or
+    $nativeDemuxReadRecoveryMaterializedReport.report.readRecovery.readErrorCount -lt 1 -or
+    $nativeDemuxReadRecoveryMaterializedReport.report.readRecovery.readRetryCount -lt 1 -or
+    $nativeDemuxReadRecoveryMaterializedReport.report.readRecovery.readRecoveryCount -lt 1 -or
+    $nativeDemuxReadRecoveryMaterializedReport.report.readRecovery.fatalReadErrorCode -ne 0) {
+    throw 'Expected unified demux read recovery challenge to preserve real bounded recovery evidence.'
 }
 $longPauseEvent = @($nativeLongPauseNetworkMaterializedReport.report.lifecycle.events |
     Where-Object operation -eq 'pause') | Select-Object -First 1
@@ -3055,8 +3261,8 @@ if ($nativeAnalysis.playbackEvidence.canEvaluateNativePlayback -ne $true) {
     throw 'Expected native helper report to be treated as App-free native software playback evidence.'
 }
 
-if ($nativeAnalysis.totalReportCount -ne 13) {
-    throw 'Expected native helper report-set to include 13 reports: SDR 23.976/24/30/60, HDR10 23.976/24/30/60, A/V, subtitle-switch, end-of-stream, short network-recovery, and long-pause network-recovery.'
+if ($nativeAnalysis.totalReportCount -ne 14) {
+    throw 'Expected native helper report-set to include 14 reports: SDR 23.976/24/30/60, HDR10 23.976/24/30/60, A/V, subtitle-switch, end-of-stream, short network-recovery, long-pause network-recovery, and demux read recovery.'
 }
 
 $nativeAvSyncCoverage = $nativeAnalysis.capabilityCoverage | Where-Object { $_.capability -eq 'av-sync' } | Select-Object -First 1
