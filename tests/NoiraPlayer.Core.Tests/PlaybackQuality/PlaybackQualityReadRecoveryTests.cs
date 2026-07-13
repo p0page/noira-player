@@ -230,7 +230,7 @@ public sealed class PlaybackQualityReadRecoveryTests
         var json = PlaybackQualityReportSerializer.Serialize(report);
         var parsed = PlaybackQualityReportSerializer.Deserialize(json);
 
-        Assert.Equal("playback-quality-v0.10", PlaybackQualityRunResult.CurrentEvaluationVersion);
+        Assert.Equal("playback-quality-v0.11", PlaybackQualityRunResult.CurrentEvaluationVersion);
         Assert.Contains("\"readRecovery\"", json);
         Assert.Contains("\"minReadErrors\": 1", json);
         Assert.Contains("\"readRecoveryCount\": 1", json);
@@ -261,6 +261,7 @@ public sealed class PlaybackQualityReadRecoveryTests
                 OpenedSourceHashKind = PlaybackQualitySourceFingerprint.OpenedMediaSignatureKind,
                 StartedAtUtc = "2026-07-13T00:00:00.0000000+00:00",
                 DurationMs = 30000,
+                RequestedSampleDurationMs = 5000,
                 SourceOpenAttempted = true,
                 SourceOpened = true,
                 NativeGraphOpened = true,

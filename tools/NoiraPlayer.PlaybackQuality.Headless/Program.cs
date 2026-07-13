@@ -446,6 +446,7 @@ internal static class NativeHeadlessHarness
             OpenedSourceHash = "",
             StartedAtUtc = startedAt.ToString("O"),
             DurationMs = Math.Max(0, (DateTimeOffset.UtcNow - startedAt).TotalMilliseconds),
+            RequestedSampleDurationMs = options.DurationSeconds * 1000.0,
             SourceOpenAttempted = sourceOpenAttempted,
             SourceOpened = sourceOpened,
             NativeGraphOpened = nativeGraphOpened,

@@ -1302,3 +1302,13 @@ commit `0d3496f` 上使用公开样本、本地 native-generated 样本和两条
 最终结果为 `20 pass / 1 fail / 1 unsupported`。DV Profile 5 继续诚实报告 unsupported；唯一 fail 是“一战再战”启动 `10029.3ms` 略超私有 `10000ms` 门限。该 case 的 open-input 为 `8797ms`，其中 3 次 data seek 等待合计 `6276.84ms`、逻辑 seek distance 约 `37.3GB`；stream-info 为 `1155ms`，解码 122 帧、渲染 121 帧并完成播放。该结果只建立现状，不构成 Core 性能改善。
 
 下一候选必须保持 demux open 前的稳定外层 AVIO 所有权，并针对 Matroska 元数据前跳/回跳对应的 HTTP Range 成本设计有界、可诊断的 transport 缓存或延迟重开策略。不得重新采用 post-open `pb` 替换、跳过 Matroska 元数据、伪装不可 seek 或放宽启动门限；candidate 必须与本 v0.10 baseline 使用同一 manifest 比较。
+
+# 2026-07-13 更新：v0.11 强制证明实际观察窗口
+
+审计 v0.10 私有基线时发现，runner 虽接收 `durationSeconds`，但 report、run summary 和 baseline summary 没有完整保存该值，candidate comparator 也不核对基线与候选的观察窗口。更严重的是，native headless 冒烟把 5 秒请求只执行约 2.5 秒，却仍能进入有效报告。这意味着故障若从第 6 秒开始，旧裁判可能完全看不到；v0.10 及更早报告只能保留为历史诊断，不能与 v0.11 candidate 直接比较。
+
+v0.11 现将 `execution.requestedSampleDurationMs` 作为正式 report signal。所有 pass/fail 播放报告必须记录有限且大于零的请求窗口；baseline/candidate 的时长和 attempt timeout 必须一致，否则比较结果固定为 `insufficient-evidence`，并输出 `comparison.incompatible-run-configuration`。manifest runner summary 与 baseline summary 同时保存 `durationSeconds` 和 `attemptTimeoutSeconds`，避免命令参数在归档时丢失。
+
+严格校验以 `renderedVideoFrames + droppedVideoFrames` 估算已覆盖的源媒体时间，防止合法丢帧被误判为“没有观察”，同时仍能识别长时间冻结或只有少量帧的假完整样本。采集边界只允许 `max(1 帧, 100ms)` 固定容差；自然 `end-of-stream` 且有 completed 生命周期证据时，所需窗口可缩短到剩余片长。pause/resume case 的请求窗口必须在恢复成功后继续完整观察，暂停和恢复等待不能抵扣播放样本。
+
+当前验证：Core 全量测试 `1057/1057` 通过；脚本级 baseline/candidate、CLI smoke 和 manifest runner 测试通过；现有 14 份 native helper 报告已按 v0.11 重新 strict validation 为有效；Modern App Debug x64 已完整编译并生成 `NoiraPlayer.App.dll`。下一步是在提交 v0.11 后，以相同私有 Emby manifest 和更长窗口重建 baseline，再继续单变量 Core/native 调优。

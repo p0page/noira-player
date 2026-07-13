@@ -407,6 +407,7 @@ public sealed class PlaybackQualityComparisonSuiteTests
             OpenedSourceHashKind = PlaybackQualitySourceFingerprint.OpenedMediaSignatureKind,
             StartedAtUtc = "2026-07-11T00:00:00.0000000+00:00",
             DurationMs = 1000,
+            RequestedSampleDurationMs = 5000,
             SourceOpenAttempted = true,
             SourceOpened = true,
             NativeGraphOpened = true,

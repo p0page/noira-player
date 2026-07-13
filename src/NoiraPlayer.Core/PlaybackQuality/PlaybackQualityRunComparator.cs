@@ -523,6 +523,13 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 AddIncompatibility(assessment, "execution.scenario");
             }
 
+            if (Math.Abs(
+                    baselineExecution.RequestedSampleDurationMs -
+                    candidateExecution.RequestedSampleDurationMs) > 0.001)
+            {
+                AddIncompatibility(assessment, "execution.requestedSampleDurationMs");
+            }
+
             if (!string.Equals(
                     baselineExecution.SourceLocatorHash,
                     candidateExecution.SourceLocatorHash,
@@ -638,6 +645,14 @@ namespace NoiraPlayer.Core.PlaybackQuality
             if (!double.IsFinite(execution.DurationMs) || execution.DurationMs < 0)
             {
                 AddIncompatibility(assessment, "execution.durationMs");
+            }
+
+            if ((report.Result == PlaybackQualityReportResult.Pass ||
+                 report.Result == PlaybackQualityReportResult.Fail) &&
+                (!double.IsFinite(execution.RequestedSampleDurationMs) ||
+                 execution.RequestedSampleDurationMs <= 0))
+            {
+                AddIncompatibility(assessment, "execution.requestedSampleDurationMs");
             }
 
             if (!execution.SourceOpenAttempted)

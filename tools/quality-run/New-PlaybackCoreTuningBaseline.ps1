@@ -289,6 +289,10 @@ if (-not (Test-Path -LiteralPath $manifestRunSummaryPath)) {
     throw 'Native manifest runner did not write its execution summary.'
 }
 $manifestRunSummary = Read-JsonFile $manifestRunSummaryPath
+if ([int]$manifestRunSummary.durationSeconds -ne $DurationSeconds -or
+    [int]$manifestRunSummary.attemptTimeoutSeconds -ne $AttemptTimeoutSeconds) {
+    throw 'Native manifest runner summary does not match the requested observation window and timeout.'
+}
 if ([int]$manifestRunSummary.selectedCaseCount -le 0) {
     throw 'Native manifest runner selected no stable/challenge playback cases.'
 }
@@ -442,6 +446,8 @@ $summary = [pscustomobject][ordered]@{
     additionalManifestPaths = @($AdditionalManifestPath)
     coreExecution = [pscustomobject][ordered]@{
         runner = 'native-manifest-runner-v0.1'
+        durationSeconds = [int]$manifestRunSummary.durationSeconds
+        attemptTimeoutSeconds = [int]$manifestRunSummary.attemptTimeoutSeconds
         seekPacketCacheEnabled = [bool]$manifestRunSummary.seekPacketCacheEnabled
         summaryPath = $manifestRunSummaryPath
         selectedCaseCount = [int]$manifestRunSummary.selectedCaseCount

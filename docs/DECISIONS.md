@@ -1368,3 +1368,11 @@ AVIO callback 证据继续保留原 read/seek 总指标，同时把 `AVSEEK_SIZE
 原因：FFmpeg demux 的不同阶段可能由不同 I/O 所有者执行。要求 provider 全局一致会把真实混合链路误判为无效，或诱使采集端用 open-input 的值覆盖后续阶段，从而制造虚假证据。允许混合 provider 不等于放宽测量标准：`ffmpeg-builtin` 仍只能对应 `unavailable` 和 null callback 指标，`instrumented-ffmpeg-avio` 仍只能对应 `measured` 和完整非负指标。
 
 版本边界：本决策取代 v0.6 的“组件间 provider 必须一致”约束，并将 evaluation version 从 `playback-quality-v0.9` 升级为 `playback-quality-v0.10`。历史 v0.9 报告不得与 v0.10 baseline/candidate 混比。
+
+# 2026-07-13: 观察窗口是可比较性契约，不是 runner 的临时参数
+
+决策：evaluation version 升级为 `playback-quality-v0.11`。`execution.requestedSampleDurationMs` 必须从运行命令贯通到原始报告、模型分析、manifest run summary、baseline summary、strict validator 和 baseline/candidate comparator。pass/fail 报告缺少该字段、值无效或没有覆盖窗口时必须拒绝；基线与候选的 duration/timeout 不一致时不得输出 keep/reject 类质量结论。
+
+媒体覆盖以 `rendered + dropped` 帧和实际源帧率计算，而不是只数 rendered 帧，也不使用整个进程耗时冒充播放时间。采集边界容差固定为 `max(1 帧, 100ms)`；只有 native `end-of-stream` scenario 同时具有 completed EOF 生命周期证据时，才允许按剩余片长缩短要求。该容差和 EOF 规则属于显式版本化规则，后续修改必须升级契约或记录规则变化，不得为某个 candidate 静默调整。
+
+pause/resume 的 requested window 表示恢复后的有效播放观察。显式暂停时长、网络恢复轮询和控制调用不能被计为恢复后播放证据；恢复成功后仍需运行完整采样窗口。原因是“调用返回或时间经过”不能证明解码、呈现和时间线持续推进。

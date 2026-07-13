@@ -43,6 +43,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 new PlaybackQualityReportSignalDescriptor("environment.playerCoreVersion", "environment", "playerCoreVersion"),
                 new PlaybackQualityReportSignalDescriptor("environment.sourceRevision", "environment", "sourceRevision"),
                 new PlaybackQualityReportSignalDescriptor("environment.buildConfiguration", "environment", "buildConfiguration"),
+                new PlaybackQualityReportSignalDescriptor("execution.requestedSampleDurationMs", "execution", "requestedSampleDurationMs"),
                 new PlaybackQualityReportSignalDescriptor("error.code", "error", "code"),
                 new PlaybackQualityReportSignalDescriptor("error.message", "error", "message"),
                 new PlaybackQualityReportSignalDescriptor("error.operation", "error", "operation"),

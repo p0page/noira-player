@@ -90,6 +90,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
         public string OpenedSourceHashKind { get; set; } = "";
         public string StartedAtUtc { get; set; } = "";
         public double DurationMs { get; set; }
+        public double RequestedSampleDurationMs { get; set; }
         public bool SourceOpenAttempted { get; set; }
         public bool SourceOpened { get; set; }
         public bool NativeGraphOpened { get; set; }
@@ -120,6 +121,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 OpenedSourceHashKind = source.OpenedSourceHashKind,
                 StartedAtUtc = source.StartedAtUtc,
                 DurationMs = source.DurationMs,
+                RequestedSampleDurationMs = source.RequestedSampleDurationMs,
                 SourceOpenAttempted = source.SourceOpenAttempted,
                 SourceOpened = source.SourceOpened,
                 NativeGraphOpened = source.NativeGraphOpened,

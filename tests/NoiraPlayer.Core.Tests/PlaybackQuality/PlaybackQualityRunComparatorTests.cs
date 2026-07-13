@@ -1052,6 +1052,26 @@ public sealed class PlaybackQualityRunComparatorTests
     }
 
     [Fact]
+    public void Compare_Reports_Insufficient_When_Requested_Sample_Durations_Differ()
+    {
+        var baseline = CreateReport(
+            "baseline",
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "180.000"));
+        baseline.Execution.RequestedSampleDurationMs = 30000;
+        var candidate = CreateReport(
+            "candidate",
+            Check("MaxFrameGapMs", "pass", "frame-pacing", "timing.maxFrameGapMs", "105.000", "80.000"));
+        candidate.Execution.RequestedSampleDurationMs = 5000;
+
+        var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
+
+        Assert.Equal("insufficient-evidence", comparison.Result);
+        Assert.Empty(comparison.Improvements);
+        Assert.Empty(comparison.Regressions);
+        Assert.Contains("execution.requestedSampleDurationMs", comparison.Comparability.Signals);
+    }
+
+    [Fact]
     public void Compare_SubtitleSwitch_Uses_Scenario_Outcome_And_Ignores_Frame_Pacing_Noise()
     {
         var baseline = CreateReport(
@@ -1246,6 +1266,7 @@ public sealed class PlaybackQualityRunComparatorTests
             OpenedSourceHashKind = PlaybackQualitySourceFingerprint.OpenedMediaSignatureKind,
             StartedAtUtc = "2026-07-11T00:00:00.0000000+00:00",
             DurationMs = 1000,
+            RequestedSampleDurationMs = 5000,
             SourceOpenAttempted = true,
             SourceOpened = true,
             NativeGraphOpened = true,

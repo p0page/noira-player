@@ -91,6 +91,7 @@ $report = [ordered]@{
         openedSourceHashKind = 'observed-media-signature-v1'
         startedAtUtc = '2026-07-11T00:00:00.0000000+00:00'
         durationMs = 3000.0
+        requestedSampleDurationMs = [double](Get-Value '--duration-seconds') * 1000.0
         sourceOpenAttempted = $true
         sourceOpened = $true
         nativeGraphOpened = $true
@@ -191,7 +192,7 @@ $report = [ordered]@{
 
 @{
     schemaVersion = 1
-    evaluationVersion = 'playback-quality-v0.10'
+    evaluationVersion = 'playback-quality-v0.11'
     caseMetadata = @{ caseId = $caseId; category = 'stable'; severity = 'high'; stability = 'stable' }
     report = $report
 } | ConvertTo-Json -Depth 30 | Set-Content -LiteralPath $reportPath -Encoding UTF8
@@ -208,13 +209,19 @@ exit 0
         -OutputRoot $baselineRoot -SourceRevision 'baseline-test-revision'
     if ($LASTEXITCODE -ne 0) { throw 'Failed to build strict-valid native baseline fixture.' }
 
+    $baselineSummary = Get-Content -Raw -LiteralPath (Join-Path $baselineRoot 'baseline-summary.local.json') | ConvertFrom-Json
+    if ($baselineSummary.coreExecution.durationSeconds -ne 1 -or
+        $baselineSummary.coreExecution.attemptTimeoutSeconds -ne 5) {
+        throw 'Baseline summary must preserve the native execution observation window and timeout.'
+    }
+
     $env:NOIRAPLAYER_COMPARISON_TEST_OPENED_HASH = 'sha256:' + ('b' * 64)
     $env:NOIRAPLAYER_COMPARISON_TEST_REVISION = 'candidate-test-revision'
     $env:NOIRAPLAYER_COMPARISON_TEST_MAX_FRAME_GAP = '120'
     powershell -NoProfile -ExecutionPolicy Bypass -File $baselineScriptPath `
         -PublicManifestPath $manifestPath -NoPrivateManifest -SkipNativeHeadless `
         -NativeHelperExe $fakeHelper -ManifestRunnerHarnessScriptPath $fakeHarness `
-        -DurationSeconds 1 -AttemptTimeoutSeconds 5 `
+        -DurationSeconds 2 -AttemptTimeoutSeconds 5 `
         -OutputRoot $candidateRoot -SourceRevision 'candidate-test-revision'
     if ($LASTEXITCODE -ne 0) { throw 'Failed to build strict-valid native candidate fixture.' }
 
@@ -244,6 +251,13 @@ exit 0
     $evaluation = Get-Content -Raw -LiteralPath (Join-Path $comparisonRoot 'summaries\candidate-evaluation.local.json') | ConvertFrom-Json
     if ($summary.baselineValidation.isValid -ne $true -or $summary.candidateValidation.isValid -ne $true) {
         throw 'Expected both native fixture report sets to remain strict-valid before comparison.'
+    }
+    if ($summary.runConfiguration.compatible -ne $false -or
+        $summary.runConfiguration.baselineDurationSeconds -ne 1 -or
+        $summary.runConfiguration.candidateDurationSeconds -ne 2 -or
+        -not ($summary.runConfiguration.signals -contains 'execution.requestedSampleDurationMs') -or
+        -not ($summary.evaluation.blockers -contains 'comparison.incompatible-run-configuration')) {
+        throw 'Mismatched observation windows must make baseline/candidate execution configuration incompatible.'
     }
     if ($summary.evaluationScope -ne 'focused' -or
         $evaluation.evaluationScope -ne 'focused' -or

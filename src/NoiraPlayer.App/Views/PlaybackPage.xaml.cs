@@ -1572,6 +1572,7 @@ namespace NoiraPlayer.App.Views
                     request.QualityCommandReceivedAtUtc,
                     PlaybackQualityExecutionStatus.Completed,
                     sourceOpened: true,
+                    request.QualityRunDurationSeconds * 1000.0,
                     evidence.MetricsProvider);
 
                 var result = PlaybackQualityRuntimeEvidenceCollector.ComposeRunResult(
@@ -1651,12 +1652,14 @@ namespace NoiraPlayer.App.Views
             var duration = TimeSpan.FromSeconds(request.QualityRunDurationSeconds);
             var firstDelay = GetQualityRunProbeDelay(duration, 0.20);
             var shortDelay = GetQualityRunProbeDelay(duration, 0.05);
+            var excludedDuration = TimeSpan.Zero;
             PlaybackQualityInteractionEvidence? interaction = null;
 
             switch (request.QualityScenario)
             {
                 case PlaybackQualityExecutionScenario.PauseResume:
                     await Task.Delay(firstDelay);
+                    var pausedAtUtc = DateTimeOffset.UtcNow;
                     await _orchestrator.PauseAsync();
                     var positionBeforePauseTicks = GetCurrentPositionTicks();
                     TryReadQualityRunInteractionMetrics(
@@ -1669,6 +1672,7 @@ namespace NoiraPlayer.App.Views
                     var positionDuringPauseTicks = GetCurrentPositionTicks();
                     var positionBeforeResumeTicks = positionDuringPauseTicks;
                     await _orchestrator.ResumeAsync();
+                    excludedDuration += DateTimeOffset.UtcNow - pausedAtUtc;
                     var pauseResumeTimeoutAt = DateTimeOffset.UtcNow.AddSeconds(5);
                     var positionAfterResumeTicks = GetCurrentPositionTicks();
                     var renderedVideoFramesAfter = renderedVideoFramesBefore;
@@ -1733,10 +1737,10 @@ namespace NoiraPlayer.App.Views
                         "Unknown playback quality scenario: " + request.QualityScenario);
             }
 
-            var elapsed = DateTimeOffset.UtcNow - probeStartedAtUtc;
-            if (elapsed < duration)
+            var activeElapsed = DateTimeOffset.UtcNow - probeStartedAtUtc - excludedDuration;
+            if (activeElapsed < duration)
             {
-                await Task.Delay(duration - elapsed);
+                await Task.Delay(duration - activeElapsed);
             }
 
             return interaction;
@@ -2534,6 +2538,7 @@ namespace NoiraPlayer.App.Views
                         request.QualityCommandReceivedAtUtc,
                         PlaybackQualityExecutionStatus.Failed,
                         _orchestrator.CurrentDescriptor != null,
+                        request.QualityRunDurationSeconds * 1000.0,
                         metricsProvider: null));
                 var relativePath = await WriteQualityRunReportAsync(request.QualityRunId, result);
                 await WriteQualityRunCommandResultAsync("capture-error", relativePath);
@@ -2553,6 +2558,7 @@ namespace NoiraPlayer.App.Views
             DateTimeOffset startedAt,
             string status,
             bool sourceOpened,
+            double requestedSampleDurationMs,
             IPlaybackQualityMetricsProvider? metricsProvider)
         {
             var decodedVideoFrames = 0UL;
@@ -2582,6 +2588,7 @@ namespace NoiraPlayer.App.Views
                 OpenedSourceHash = "",
                 StartedAtUtc = startedAt.ToString("O"),
                 DurationMs = Math.Max(0, (DateTimeOffset.UtcNow - startedAt).TotalMilliseconds),
+                RequestedSampleDurationMs = requestedSampleDurationMs,
                 SourceOpenAttempted = sourceOpenAttempted,
                 SourceOpened = sourceOpened,
                 NativeGraphOpened = sourceOpened,

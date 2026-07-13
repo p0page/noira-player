@@ -14,7 +14,8 @@ function Set-SmokeNativeExecutionEvidence {
         [ValidateSet('playback', 'timeline', 'audio-switch', 'subtitle-switch', 'pause-resume', 'end-of-stream')]
         [string]$Scenario = 'playback',
         [bool]$SourceOpened,
-        [bool]$PlaybackSampleObserved
+        [bool]$PlaybackSampleObserved,
+        [double]$RequestedSampleDurationMs = 1.0
     )
 
     $report = Get-Content -Raw -LiteralPath $Path | ConvertFrom-Json
@@ -46,6 +47,7 @@ function Set-SmokeNativeExecutionEvidence {
         openedSourceHashKind = $(if ($SourceOpened) { 'observed-media-signature-v1' } else { '' })
         startedAtUtc = '2026-07-08T00:00:00.0000000+00:00'
         durationMs = 1000.0
+        requestedSampleDurationMs = $RequestedSampleDurationMs
         sourceOpenAttempted = $true
         sourceOpened = $SourceOpened
         nativeGraphOpened = $SourceOpened
@@ -637,8 +639,8 @@ try {
         throw 'Expected analyze-report-set output schemaVersion 1.'
     }
 
-    if ($analysisSet.evaluationVersion -ne 'playback-quality-v0.10') {
-        throw 'Expected analyze-report-set output evaluationVersion playback-quality-v0.10.'
+    if ($analysisSet.evaluationVersion -ne 'playback-quality-v0.11') {
+        throw 'Expected analyze-report-set output evaluationVersion playback-quality-v0.11.'
     }
 
     if ($analysisSet.action -ne 'fix-report-analysis') {
@@ -943,8 +945,8 @@ try {
         throw 'Expected playback quality CLI plan-runs output schemaVersion 1.'
     }
 
-    if ($runPlan.evaluationVersion -ne 'playback-quality-v0.10') {
-        throw 'Expected playback quality CLI plan-runs output evaluationVersion playback-quality-v0.10.'
+    if ($runPlan.evaluationVersion -ne 'playback-quality-v0.11') {
+        throw 'Expected playback quality CLI plan-runs output evaluationVersion playback-quality-v0.11.'
     }
 
     if ($runPlan.caseCount -ne 3) {
@@ -994,7 +996,7 @@ try {
 
     $materializedBaselineSummary = Get-Content -Raw -LiteralPath $materializedBaselineSummaryPath | ConvertFrom-Json
     if ($materializedBaselineSummary.schemaVersion -ne 1 -or
-        $materializedBaselineSummary.evaluationVersion -ne 'playback-quality-v0.10' -or
+        $materializedBaselineSummary.evaluationVersion -ne 'playback-quality-v0.11' -or
         $materializedBaselineSummary.caseCount -ne 3 -or
         $materializedBaselineSummary.reportsDirectory -ne $materializedBaselineDir) {
         throw 'Expected materialize-baseline-report-set summary to describe generated reports.'
@@ -1530,6 +1532,7 @@ try {
     "openedSourceHashKind": "observed-media-signature-v1",
     "startedAtUtc": "2026-07-08T00:00:00.0000000+00:00",
     "durationMs": 12000.0,
+    "requestedSampleDurationMs": 1000.0,
     "sourceOpenAttempted": true,
     "sourceOpened": true,
     "nativeGraphOpened": true,
@@ -1798,6 +1801,7 @@ try {
     "openedSourceHashKind": "observed-media-signature-v1",
     "startedAtUtc": "2026-07-08T00:00:00.0000000+00:00",
     "durationMs": 3000.0,
+    "requestedSampleDurationMs": 1000.0,
     "sourceOpenAttempted": true,
     "sourceOpened": true,
     "nativeGraphOpened": true,
@@ -1907,6 +1911,7 @@ try {
     "openedSourceHashKind": "observed-media-signature-v1",
     "startedAtUtc": "2026-07-08T00:00:00.0000000+00:00",
     "durationMs": 1500.0,
+    "requestedSampleDurationMs": 1000.0,
     "sourceOpenAttempted": true,
     "sourceOpened": true,
     "nativeGraphOpened": true,
@@ -2196,6 +2201,7 @@ try {
     "openedSourceHashKind": "observed-media-signature-v1",
     "startedAtUtc": "2026-07-08T00:00:00.0000000+00:00",
     "durationMs": 60000.0,
+    "requestedSampleDurationMs": 60000.0,
     "sourceOpenAttempted": true,
     "sourceOpened": true,
     "nativeGraphOpened": true,
@@ -3591,8 +3597,8 @@ try {
         throw 'Expected playback quality CLI evaluate-candidate output schemaVersion 1.'
     }
 
-    if ($candidateEvaluation.evaluationVersion -ne 'playback-quality-v0.10') {
-        throw 'Expected playback quality CLI evaluate-candidate output evaluationVersion playback-quality-v0.10.'
+    if ($candidateEvaluation.evaluationVersion -ne 'playback-quality-v0.11') {
+        throw 'Expected playback quality CLI evaluate-candidate output evaluationVersion playback-quality-v0.11.'
     }
 
     if ($candidateEvaluation.action -ne 'accept-candidate') {

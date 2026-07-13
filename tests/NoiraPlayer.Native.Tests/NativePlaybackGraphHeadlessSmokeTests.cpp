@@ -325,6 +325,8 @@ int wmain(int argc, wchar_t** argv)
         ReportStage("graph-open-started");
         graph.Open(request);
         ReportStage("graph-open-completed");
+        auto const sampleStartedAt = std::chrono::steady_clock::now();
+        auto excludedSampleDuration = std::chrono::steady_clock::duration::zero();
         auto sampleWindow = std::chrono::milliseconds(options.DurationSeconds * 1000);
         auto halfWindow = sampleWindow / 2;
         if (halfWindow < 500ms)
@@ -405,11 +407,12 @@ int wmain(int argc, wchar_t** argv)
         if (options.Scenario == L"pause-resume")
         {
             auto const requireReadRecoveryEvidence = IsReadRecoveryEvidenceRequired();
+            auto const pauseStartedAt = std::chrono::steady_clock::now();
             graph.Pause();
             ReportStage("pause-started");
-            auto const pauseStartedAt = std::chrono::steady_clock::now();
             WritePauseMarkerIfRequested();
             std::this_thread::sleep_for(std::chrono::milliseconds(options.PauseSeconds * 1000));
+            excludedSampleDuration += std::chrono::steady_clock::now() - pauseStartedAt;
             actualPauseDurationMs = std::chrono::duration<double, std::milli>(
                 std::chrono::steady_clock::now() - pauseStartedAt).count();
             graph.Resume();
@@ -527,7 +530,7 @@ int wmain(int argc, wchar_t** argv)
             }
         }
 
-        auto runSubtitleSwitch = [&graph, &waitForEvidence](int32_t streamIndex, bool pauseBeforeSwitch)
+        auto runSubtitleSwitch = [&graph, &waitForEvidence, &excludedSampleDuration](int32_t streamIndex, bool pauseBeforeSwitch)
         {
             SubtitleSwitchOutcome outcome;
             outcome.Attempted = true;
@@ -537,10 +540,12 @@ int wmain(int argc, wchar_t** argv)
             outcome.RenderedFramesBefore = graph.QualityMetricsSnapshot().RenderedVideoFrames;
             auto const interactionStartedAt = std::chrono::steady_clock::now();
             auto resumeAfterFailure = false;
+            auto pausedAt = std::chrono::steady_clock::time_point{};
             try
             {
                 if (pauseBeforeSwitch)
                 {
+                    pausedAt = std::chrono::steady_clock::now();
                     graph.Pause();
                     resumeAfterFailure = true;
                 }
@@ -568,6 +573,7 @@ int wmain(int argc, wchar_t** argv)
                     outcome.PausedPositionAfterTicks = graph.CurrentPositionTicks();
                     outcome.PositionBeforeResumeTicks = outcome.PausedPositionAfterTicks;
                     graph.Resume();
+                    excludedSampleDuration += std::chrono::steady_clock::now() - pausedAt;
                     resumeAfterFailure = false;
                 }
                 else
@@ -613,6 +619,7 @@ int wmain(int argc, wchar_t** argv)
                 if (resumeAfterFailure)
                 {
                     graph.Resume();
+                    excludedSampleDuration += std::chrono::steady_clock::now() - pausedAt;
                 }
             }
 
@@ -686,6 +693,16 @@ int wmain(int argc, wchar_t** argv)
                     ? "completed"
                     : "failed";
             ReportStage("seek-completed");
+        }
+
+        if (!endOfStreamAttempted)
+        {
+            auto const elapsed =
+                std::chrono::steady_clock::now() - sampleStartedAt - excludedSampleDuration;
+            if (elapsed < sampleWindow)
+            {
+                std::this_thread::sleep_for(sampleWindow - elapsed);
+            }
         }
         auto displayRefreshRateHz = source
             ? HdrDisplayRefreshRatePolicy::SelectSoftwareOnlyRefreshRateSnapshot(source->FrameRate)

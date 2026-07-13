@@ -476,6 +476,15 @@ public sealed class PlaybackQualityReferenceManifestTests
     }
 
     [Fact]
+    public void SignalCatalog_Includes_Requested_Sample_Duration_Evidence()
+    {
+        var reportSignals = new HashSet<string>(
+            PlaybackQualitySignalCatalog.ReportSignals.Select(signal => signal.Signal));
+
+        Assert.Contains("execution.requestedSampleDurationMs", reportSignals);
+    }
+
+    [Fact]
     public void RequiredSignals_Include_Source_Color_Metadata_When_Expected()
     {
         var referenceCase = CreateCase(
@@ -1088,6 +1097,97 @@ public sealed class PlaybackQualityReferenceManifestTests
             error.Code == "report.execution.decoder-opened.missing" &&
             error.CaseId == referenceCase.CaseId &&
             error.Signal == "execution.decoderOpened");
+    }
+
+    [Fact]
+    public void ValidateReportSet_Rejects_Completed_Playback_Without_Requested_Sample_Duration()
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        var referenceCase = CreateCase(
+            "jellyfin/native-without-requested-sample-duration",
+            tier: 1,
+            purpose: "sdr-smoke");
+        manifest.Cases.Add(referenceCase);
+        var report = CreateReport(
+            referenceCase.CaseId,
+            codec: "hevc",
+            width: 3840,
+            height: 2160,
+            frameRate: 23.976,
+            hdrKind: "Hdr10");
+        report.Execution.RequestedSampleDurationMs = 0;
+
+        var validation = PlaybackQualityReferenceReportSetValidator.Validate(
+            manifest,
+            new[] { report });
+
+        Assert.False(validation.IsValid);
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.execution.requested-sample-duration.invalid" &&
+            error.CaseId == referenceCase.CaseId &&
+            error.Signal == "execution.requestedSampleDurationMs");
+    }
+
+    [Fact]
+    public void ValidateReportSet_Counts_Dropped_Frames_Toward_Requested_Observation_Coverage()
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        var referenceCase = CreateCase(
+            "local/requested-window-with-drops",
+            tier: 1,
+            purpose: "frame-pacing");
+        manifest.Cases.Add(referenceCase);
+        var report = CreateReport(
+            referenceCase.CaseId,
+            codec: "hevc",
+            width: 1920,
+            height: 1080,
+            frameRate: 24,
+            hdrKind: "Sdr");
+        report.Timing.RenderedVideoFrames = 96;
+        report.Timing.DroppedVideoFrames = 24;
+
+        var validation = PlaybackQualityReferenceReportSetValidator.Validate(
+            manifest,
+            new[] { report });
+
+        Assert.DoesNotContain(validation.Errors, error =>
+            error.Code == "report.execution.sample-window.incomplete");
+    }
+
+    [Fact]
+    public void ValidateReportSet_Allows_Natural_End_Of_Stream_Before_Requested_Window()
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        var referenceCase = CreateCase(
+            "local/end-of-stream-shorter-than-window",
+            tier: 1,
+            purpose: "end-of-stream");
+        referenceCase.ExecutionRequirement.Scenario = PlaybackQualityExecutionScenario.EndOfStream;
+        manifest.Cases.Add(referenceCase);
+        var report = CreateReport(
+            referenceCase.CaseId,
+            codec: "hevc",
+            width: 1920,
+            height: 1080,
+            frameRate: 24,
+            hdrKind: "Sdr");
+        report.Execution.Scenario = PlaybackQualityExecutionScenario.EndOfStream;
+        report.Execution.RequestedSampleDurationMs = 12000;
+        report.Source.DurationTicks = 50000000;
+        report.Timing.RenderedVideoFrames = 120;
+        report.Lifecycle.Events.Add(new PlaybackQualityLifecycleEvent
+        {
+            Operation = "endOfStream",
+            Status = "completed"
+        });
+
+        var validation = PlaybackQualityReferenceReportSetValidator.Validate(
+            manifest,
+            new[] { report });
+
+        Assert.DoesNotContain(validation.Errors, error =>
+            error.Code == "report.execution.sample-window.incomplete");
     }
 
     [Fact]
@@ -2873,6 +2973,7 @@ public sealed class PlaybackQualityReferenceManifestTests
                 : "",
             StartedAtUtc = "2026-07-11T00:00:00Z",
             DurationMs = 5000,
+            RequestedSampleDurationMs = 5000,
             SourceOpenAttempted = true,
             SourceOpened = sourceOpened,
             NativeGraphOpened = sourceOpened,

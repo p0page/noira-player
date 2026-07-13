@@ -276,8 +276,12 @@ if ((Test-Path -LiteralPath $resolvedOutputRoot) -and $Clean) {
 
 $baselineReportsDir = Join-Path $resolvedBaselineRoot 'reports'
 $candidateReportsDir = Join-Path $resolvedCandidateRoot 'reports'
+$baselineRunSummaryPath = Join-Path $resolvedBaselineRoot 'baseline-summary.local.json'
+$candidateRunSummaryPath = Join-Path $resolvedCandidateRoot 'baseline-summary.local.json'
 Assert-PathExists $baselineReportsDir 'Baseline reports directory'
 Assert-PathExists $candidateReportsDir 'Candidate reports directory'
+Assert-PathExists $baselineRunSummaryPath 'Baseline execution summary'
+Assert-PathExists $candidateRunSummaryPath 'Candidate execution summary'
 
 if ([string]::IsNullOrWhiteSpace($ManifestPath)) {
     $ManifestPath = Join-Path $resolvedBaselineRoot 'manifests\unified-reference-manifest.local.json'
@@ -394,6 +398,34 @@ $candidateValidation = Read-JsonFile $candidateValidationPath
 $baselineAnalysis = Read-JsonFile $baselineAnalysisPath
 $candidateAnalysis = Read-JsonFile $candidateAnalysisPath
 $evaluation = Read-JsonFile $evaluationPath
+$baselineRunSummary = Read-JsonFile $baselineRunSummaryPath
+$candidateRunSummary = Read-JsonFile $candidateRunSummaryPath
+$baselineDurationSeconds = [int]$baselineRunSummary.coreExecution.durationSeconds
+$candidateDurationSeconds = [int]$candidateRunSummary.coreExecution.durationSeconds
+$baselineAttemptTimeoutSeconds = [int]$baselineRunSummary.coreExecution.attemptTimeoutSeconds
+$candidateAttemptTimeoutSeconds = [int]$candidateRunSummary.coreExecution.attemptTimeoutSeconds
+$runConfigurationSignals = [System.Collections.Generic.List[string]]::new()
+if ($baselineDurationSeconds -le 0 -or
+    $candidateDurationSeconds -le 0 -or
+    $baselineDurationSeconds -ne $candidateDurationSeconds) {
+    $runConfigurationSignals.Add('execution.requestedSampleDurationMs')
+}
+if ($baselineAttemptTimeoutSeconds -le 0 -or
+    $candidateAttemptTimeoutSeconds -le 0 -or
+    $baselineAttemptTimeoutSeconds -ne $candidateAttemptTimeoutSeconds) {
+    $runConfigurationSignals.Add('execution.attemptTimeoutSeconds')
+}
+$runConfigurationCompatible = $runConfigurationSignals.Count -eq 0
+$effectiveEvaluationBlockers = [System.Collections.Generic.List[string]]::new()
+foreach ($blocker in @($evaluation.blockers)) {
+    if (-not [string]::IsNullOrWhiteSpace([string]$blocker) -and
+        -not $effectiveEvaluationBlockers.Contains([string]$blocker)) {
+        $effectiveEvaluationBlockers.Add([string]$blocker)
+    }
+}
+if (-not $runConfigurationCompatible) {
+    $effectiveEvaluationBlockers.Add('comparison.incompatible-run-configuration')
+}
 
 $suite = $evaluation.suite
 $cadenceStabilityAttribution = New-CadenceStabilityAttribution `
@@ -413,6 +445,14 @@ $summary = [pscustomobject][ordered]@{
     evaluationScope = $EvaluationScope
     evaluationExitCode = $evaluationExitCode
     manifestComparison = $manifestComparison
+    runConfiguration = [pscustomobject][ordered]@{
+        compatible = $runConfigurationCompatible
+        baselineDurationSeconds = $baselineDurationSeconds
+        candidateDurationSeconds = $candidateDurationSeconds
+        baselineAttemptTimeoutSeconds = $baselineAttemptTimeoutSeconds
+        candidateAttemptTimeoutSeconds = $candidateAttemptTimeoutSeconds
+        signals = @($runConfigurationSignals)
+    }
     baselineValidation = [pscustomobject][ordered]@{
         isValid = [bool]$baselineValidation.isValid
         matchedCaseCount = [int]$baselineValidation.matchedCaseCount
@@ -444,10 +484,10 @@ $summary = [pscustomobject][ordered]@{
         canEvaluateNativePlayback = [bool]$candidateAnalysis.playbackEvidence.canEvaluateNativePlayback
     }
     evaluation = [pscustomobject][ordered]@{
-        action = Normalize-String $evaluation.action
-        decision = Normalize-String $evaluation.decision
-        risk = Normalize-String $evaluation.risk
-        blockerCount = @($evaluation.blockers).Count
+        action = if ($runConfigurationCompatible) { Normalize-String $evaluation.action } else { 'collect-comparable-evidence' }
+        decision = if ($runConfigurationCompatible) { Normalize-String $evaluation.decision } else { 'insufficient-evidence' }
+        risk = if ($runConfigurationCompatible) { Normalize-String $evaluation.risk } else { 'high' }
+        blockerCount = $effectiveEvaluationBlockers.Count
         activeGateName = Normalize-String $evaluation.activeGate.name
         activeGateStatus = Normalize-String $evaluation.activeGate.status
         activeGateAction = Normalize-String $evaluation.activeGate.action
@@ -462,7 +502,7 @@ $summary = [pscustomobject][ordered]@{
         strongConfidenceCount = [int]$suite.strongConfidenceCount
         targetFailureAreas = @($suite.targetFailureAreas)
         targetCaseIds = @($suite.targetCaseIds)
-        blockers = @($evaluation.blockers)
+        blockers = @($effectiveEvaluationBlockers)
     }
     cadenceStability = [pscustomobject][ordered]@{
         baseline = $baselineCadenceStability
@@ -490,4 +530,8 @@ Write-Output ('manifest.sameCaseIds: ' + $summary.manifestComparison.sameCaseIds
 
 if ($evaluationExitCode -ne 0) {
     exit $evaluationExitCode
+}
+
+if (-not $runConfigurationCompatible) {
+    exit 2
 }

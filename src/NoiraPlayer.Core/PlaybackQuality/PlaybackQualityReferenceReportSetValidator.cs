@@ -408,6 +408,43 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 AddExecutionError(validation, status, "report.execution.duration.invalid", "execution.durationMs", "finite value greater than or equal to zero", execution.DurationMs.ToString(System.Globalization.CultureInfo.InvariantCulture), "Playback quality execution duration is invalid.");
             }
 
+            if (RequiresCompletedPlaybackSample(report.Result) &&
+                (!double.IsFinite(execution.RequestedSampleDurationMs) ||
+                 execution.RequestedSampleDurationMs <= 0))
+            {
+                AddExecutionError(
+                    validation,
+                    status,
+                    "report.execution.requested-sample-duration.invalid",
+                    "execution.requestedSampleDurationMs",
+                    "finite value greater than zero",
+                    execution.RequestedSampleDurationMs.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    "Completed playback evidence must record the requested observation window.");
+            }
+
+            if (RequiresCompletedPlaybackSample(report.Result) &&
+                execution.RequestedSampleDurationMs > 0 &&
+                report.Source.FrameRate > 0)
+            {
+                var observedDurationMs =
+                    PlaybackQualitySampleWindowPolicy.GetObservedMediaDurationMs(report);
+                var requiredDurationMs =
+                    PlaybackQualitySampleWindowPolicy.GetRequiredMediaDurationMs(report);
+                var boundaryToleranceMs =
+                    PlaybackQualitySampleWindowPolicy.GetCaptureBoundaryToleranceMs(report);
+                if (observedDurationMs + boundaryToleranceMs < requiredDurationMs)
+                {
+                    AddExecutionError(
+                        validation,
+                        status,
+                        "report.execution.sample-window.incomplete",
+                        "execution.requestedSampleDurationMs",
+                        requiredDurationMs.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                        observedDurationMs.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                        "Rendered playback evidence did not cover the requested observation window.");
+                }
+            }
+
             var expectedLocatorHash = PlaybackQualitySourceFingerprint.Compute(referenceCase.Uri);
             if (!string.Equals(execution.SourceLocatorHash, expectedLocatorHash, StringComparison.Ordinal))
             {

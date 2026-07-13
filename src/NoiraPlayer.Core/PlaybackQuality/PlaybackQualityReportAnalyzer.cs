@@ -238,6 +238,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
         public long? MinRenderedVideoFrames { get; set; }
         public long AdditionalRenderedFramesRequired { get; set; }
         public double ObservedSampleDurationMs { get; set; }
+        public double RequestedSampleDurationMs { get; set; }
         public double MinimumSampleDurationMs { get; set; }
         public string Reason { get; set; } = "";
     }
@@ -2232,17 +2233,23 @@ namespace NoiraPlayer.Core.PlaybackQuality
             var sample = new PlaybackQualitySampleAssessment
             {
                 RenderedVideoFrames = report.Timing.RenderedVideoFrames,
-                MinRenderedVideoFrames = report.Expected?.MinRenderedVideoFrames
+                MinRenderedVideoFrames = report.Expected?.MinRenderedVideoFrames,
+                RequestedSampleDurationMs = report.Execution?.RequestedSampleDurationMs ?? 0
             };
             var sampleFrameRate = GetSampleFrameRate(report);
             if (sampleFrameRate > 0)
             {
-                sample.ObservedSampleDurationMs = report.Timing.RenderedVideoFrames * 1000.0 / sampleFrameRate;
+                sample.ObservedSampleDurationMs =
+                    PlaybackQualitySampleWindowPolicy.GetObservedMediaDurationMs(report);
                 if (report.Expected != null && report.Expected.MinRenderedVideoFrames.HasValue)
                 {
                     sample.MinimumSampleDurationMs =
                         report.Expected.MinRenderedVideoFrames.Value * 1000.0 / sampleFrameRate;
                 }
+
+                sample.MinimumSampleDurationMs = Math.Max(
+                    sample.MinimumSampleDurationMs,
+                    PlaybackQualitySampleWindowPolicy.GetRequiredMediaDurationMs(report));
             }
 
             if (report.Expected != null && report.Expected.MinRenderedVideoFrames.HasValue)
@@ -2265,6 +2272,24 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 sample.Status = "insufficient";
                 sample.Reason = "Rendered frame sample is below the expected minimum; do not tune frame pacing from this run alone.";
                 return sample;
+            }
+
+            if (sampleFrameRate > 0 && sample.RequestedSampleDurationMs > 0)
+            {
+                var requiredDurationMs =
+                    PlaybackQualitySampleWindowPolicy.GetRequiredMediaDurationMs(report);
+                var boundaryToleranceMs =
+                    PlaybackQualitySampleWindowPolicy.GetCaptureBoundaryToleranceMs(report);
+                if (sample.ObservedSampleDurationMs + boundaryToleranceMs < requiredDurationMs)
+                {
+                    var remainingDurationMs = requiredDurationMs - sample.ObservedSampleDurationMs;
+                    sample.AdditionalRenderedFramesRequired = Math.Max(
+                        sample.AdditionalRenderedFramesRequired,
+                        (long)Math.Ceiling(remainingDurationMs * sampleFrameRate / 1000.0));
+                    sample.Status = "insufficient";
+                    sample.Reason = "Rendered playback sample did not cover the requested observation window; do not compare this run as complete evidence.";
+                    return sample;
+                }
             }
 
             sample.Status = "sufficient";

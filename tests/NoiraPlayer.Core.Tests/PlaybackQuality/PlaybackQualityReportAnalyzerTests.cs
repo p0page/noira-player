@@ -642,6 +642,92 @@ public sealed class PlaybackQualityReportAnalyzerTests
     }
 
     [Fact]
+    public void Analyze_Marks_Sample_Insufficient_When_Requested_Observation_Window_Was_Not_Reached()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "short-requested-window",
+            Result = "pass",
+            Execution = new PlaybackQualityExecutionEvidence
+            {
+                RequestedSampleDurationMs = 5000
+            },
+            Timing = new PlaybackQualityTiming
+            {
+                RenderedVideoFrames = 24
+            },
+            Source = new PlaybackQualitySource
+            {
+                FrameRate = 24
+            }
+        };
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Equal("insufficient", analysis.Sample.Status);
+        Assert.Equal(1000, analysis.Sample.ObservedSampleDurationMs, 3);
+        Assert.Equal(5000, analysis.Sample.MinimumSampleDurationMs, 3);
+        Assert.Equal(
+            "Rendered playback sample did not cover the requested observation window; do not compare this run as complete evidence.",
+            analysis.Sample.Reason);
+    }
+
+    [Fact]
+    public void Analyze_Counts_Dropped_Frames_Toward_Requested_Observation_Coverage()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "requested-window-with-drops",
+            Result = "fail",
+            Execution = new PlaybackQualityExecutionEvidence
+            {
+                RequestedSampleDurationMs = 5000
+            },
+            Timing = new PlaybackQualityTiming
+            {
+                RenderedVideoFrames = 96,
+                DroppedVideoFrames = 24
+            },
+            Source = new PlaybackQualitySource
+            {
+                FrameRate = 24
+            }
+        };
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Equal("sufficient", analysis.Sample.Status);
+        Assert.Equal(5000, analysis.Sample.ObservedSampleDurationMs, 3);
+    }
+
+    [Fact]
+    public void Analyze_Allows_Bounded_First_Frame_Capture_Boundary_Tolerance()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "requested-window-with-capture-boundary",
+            Result = "pass",
+            Execution = new PlaybackQualityExecutionEvidence
+            {
+                RequestedSampleDurationMs = 5000
+            },
+            Timing = new PlaybackQualityTiming
+            {
+                RenderedVideoFrames = 297
+            },
+            Source = new PlaybackQualitySource
+            {
+                FrameRate = 60
+            }
+        };
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Equal("sufficient", analysis.Sample.Status);
+        Assert.Equal(4950, analysis.Sample.ObservedSampleDurationMs, 3);
+    }
+
+    [Fact]
     public void Analyze_Summarizes_Hdr_Source_Strategy_For_Model()
     {
         var report = new PlaybackQualityReport

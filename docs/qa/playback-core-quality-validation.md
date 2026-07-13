@@ -6,6 +6,20 @@ Use this path when another worktree is actively changing Xbox UI or App interact
 
 Reference media sources and suggested case tiers are tracked in [playback-quality-reference-corpus.md](playback-quality-reference-corpus.md).
 
+## v0.11 观察窗口契约
+
+`--duration-seconds` 不是仅供 runner 使用的提示。每份 pass/fail 播放报告必须把它写入 `report.execution.requestedSampleDurationMs`，manifest run summary 和 `baseline-summary.local.json` 也必须保存 duration 与 attempt timeout。baseline/candidate 任一配置不同，`Compare-PlaybackCoreTuningCandidate.ps1` 必须以退出码 2 和 `comparison.incompatible-run-configuration` 阻止质量结论。
+
+strict report-set 校验按以下规则判断样本是否真正覆盖窗口：
+
+- 普通播放：`(renderedVideoFrames + droppedVideoFrames) / source.frameRate` 必须达到请求窗口；
+- 边界容差：只允许 `max(1 帧, 100ms)`，用于 graph open 到首帧之间的采集边界；
+- 自然结束：仅当 execution scenario 为 `end-of-stream` 且 lifecycle 有 completed EOF 时，要求可缩短到 `source.durationTicks - requestedStartPositionTicks`；
+- 暂停恢复：暂停时间和恢复轮询不抵扣样本，恢复成功后继续完整观察；
+- 缺少可用帧率时不得伪造覆盖时间，应保留其他缺证据或 unsupported 结论。
+
+模型读取报告时应同时查看 `execution.requestedSampleDurationMs`、`modelAnalysis.sample.observedSampleDurationMs`、rendered/dropped 帧、buffer starvation、时间线推进和 cadence 指标。观察窗口完整只说明“裁判看够了”，不等于播放器通过；窗口内冻结、慢速播放、掉帧、A/V drift 或 seek 失败仍由各自门禁判定。
+
 ## Command
 
 ```powershell

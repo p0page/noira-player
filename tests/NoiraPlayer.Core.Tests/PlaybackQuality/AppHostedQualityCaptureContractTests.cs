@@ -111,7 +111,9 @@ public sealed class AppHostedQualityCaptureContractTests
         var root = FindRepositoryRoot();
         var playbackPage = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.App", "Views", "PlaybackPage.xaml.cs"));
         var captureMethod = ExtractMethodBody(playbackPage, "CaptureQualityRunAsync");
-        var scenarioMethod = ExtractMethodBody(playbackPage, "RunQualityRunScenarioAsync");
+        var scenarioMethod = ExtractMethodBody(
+            playbackPage,
+            "private async Task<PlaybackQualityInteractionEvidence?> RunQualityRunScenarioAsync");
         var seekProbeMethod = ExtractMethodBody(playbackPage, "private async Task RunQualityRunSeekProbeAsync");
         var seekTargetMethod = ExtractMethodBody(playbackPage, "private long CalculateQualityRunSeekTargetTicks");
 
@@ -126,6 +128,10 @@ public sealed class AppHostedQualityCaptureContractTests
             StringComparison.Ordinal);
 
         Assert.DoesNotContain("_orchestrator.StopAsync()", scenarioMethod, StringComparison.Ordinal);
+        Assert.Contains(
+            "activeElapsed = DateTimeOffset.UtcNow - probeStartedAtUtc - excludedDuration",
+            scenarioMethod,
+            StringComparison.Ordinal);
         Assert.Contains("_orchestrator.SeekAsync", seekProbeMethod, StringComparison.Ordinal);
         Assert.Contains("Stopwatch.StartNew()", seekProbeMethod, StringComparison.Ordinal);
         Assert.Contains("SeekOperationDurationMs = seekStartedAt.Elapsed.TotalMilliseconds", seekProbeMethod, StringComparison.Ordinal);
