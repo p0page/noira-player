@@ -25,15 +25,18 @@ $analysisPath = Join-Path $smokeRoot 'analysis.json'
 $nativeAnalysisPath = Join-Path $smokeRoot 'native-analysis.json'
 $reportPath = Join-Path $capturedDir 'jellyfin\sdr-hevc-main10-1080p60-3m.json'
 $nativeReportPath = Join-Path $nativeCapturedDir 'local\native-headless-sdr-smoke.json'
+$nativeEndOfStreamReportPath = Join-Path $nativeCapturedDir 'local\native-headless-end-of-stream.json'
 $nativeAvReportPath = Join-Path $nativeCapturedDir 'local\native-headless-av-smoke.json'
 $nativeSubtitleReportPath = Join-Path $nativeCapturedDir 'local\native-headless-subtitle-switch.json'
 $materializedReportPath = Join-Path $materializedDir 'jellyfin\sdr-hevc-main10-1080p60-3m.json'
 $nativeMaterializedReportPath = Join-Path $nativeMaterializedDir 'local\native-headless-sdr-smoke.json'
+$nativeEndOfStreamMaterializedReportPath = Join-Path $nativeMaterializedDir 'local\native-headless-end-of-stream.json'
 $nativeAvMaterializedReportPath = Join-Path $nativeMaterializedDir 'local\native-headless-av-smoke.json'
 $nativeSubtitleMaterializedReportPath = Join-Path $nativeMaterializedDir 'local\native-headless-subtitle-switch.json'
 $nativeNetworkMaterializedReportPath = Join-Path $nativeMaterializedDir 'local\network-reconnect-pause-resume.json'
 $sampleUrl = 'https://repo.jellyfin.org/test-videos/SDR/HEVC%2010bit/Test%20Jellyfin%201080p%20HEVC%2010bit%203M.mp4'
 $nativeCaseId = 'local/native-headless-sdr-smoke'
+$nativeEndOfStreamCaseId = 'local/native-headless-end-of-stream'
 $nativeAvCaseId = 'local/native-headless-av-smoke'
 $nativeSubtitleCaseId = 'local/native-headless-subtitle-switch'
 $nativeNonZeroTimelineCaseId = 'local/native-headless-nonzero-start-timeline'
@@ -535,7 +538,7 @@ function Invoke-NativeHeadlessHelperCase {
         [string]$NativeHelperExe,
         [int]$DurationSeconds = $script:nativeCadenceDurationSeconds,
         [long]$StartPositionTicks = 0,
-        [ValidateSet('playback', 'timeline', 'audio-switch', 'subtitle-switch')]
+        [ValidateSet('playback', 'timeline', 'audio-switch', 'subtitle-switch', 'end-of-stream')]
         [string]$Scenario = 'playback'
     )
 
@@ -1969,6 +1972,27 @@ if (-not ($nativeReport.report.limitations -contains 'native-headless: display r
     throw 'Expected native helper report to disclose that display refresh is software policy evidence, not HDMI output verification.'
 }
 
+$nativeEndOfStreamReport = Invoke-NativeHeadlessHelperCase `
+    -CaseId $nativeEndOfStreamCaseId `
+    -StreamUrl $nativeSampleUrl `
+    -ReportsDir $nativeCapturedDir `
+    -NativeHelperExe $nativeHelperExe `
+    -DurationSeconds 12 `
+    -Scenario end-of-stream
+$nativeEndOfStreamEvents = @($nativeEndOfStreamReport.report.lifecycle.events |
+    Where-Object operation -eq 'endOfStream')
+if ($nativeEndOfStreamReport.report.execution.scenario -ne 'end-of-stream' -or
+    $nativeEndOfStreamReport.report.execution.status -ne 'completed' -or
+    $nativeEndOfStreamEvents.Count -ne 1 -or
+    $nativeEndOfStreamEvents[0].status -ne 'completed' -or
+    $nativeEndOfStreamEvents[0].positionTicks -lt 0) {
+    throw 'Expected the stable native end-of-stream case to preserve one natural PlaybackGraph completion event.'
+}
+if (-not (Select-String -LiteralPath ($nativeEndOfStreamReportPath + '.helper.stderr.log') `
+    -SimpleMatch 'helperStage=end-of-stream-observed' -Quiet)) {
+    throw 'Expected native helper stderr to prove that PlaybackGraph natural end-of-stream was observed.'
+}
+
 dotnet run --project (Join-Path $repoRoot 'tools\NoiraPlayer.PlaybackQuality.Headless\NoiraPlayer.PlaybackQuality.Headless.csproj') -- `
     --case-id $nativeAvCaseId `
     --stream-url $nativeAvSampleUrl `
@@ -2252,6 +2276,32 @@ foreach ($hdr10CaseId in $nativeHdr10CaseIds) {
       "purpose": [
         "sdr-smoke",
         "frame-pacing"
+      ],
+      "expected": {
+        "codec": "h264",
+        "width": 320,
+        "height": 180,
+        "frameRate": 30.0,
+        "videoRange": "SDR",
+        "colorPrimaries": "bt709",
+        "colorTransfer": "bt709",
+        "colorSpace": "bt709",
+        "hdrKind": "Sdr",
+        "dxgiInput": "YCBCR_STUDIO_G22_LEFT_P709",
+        "dxgiOutput": "RGB_FULL_G22_NONE_P709",
+        "isDirectPlayable": true,
+        "minRenderedVideoFrames": 1
+      }
+    },
+    {
+      "caseId": "$nativeEndOfStreamCaseId",
+      "category": "stable",
+      "severity": "high",
+      "stability": "stable",
+      "uri": "$nativeSampleUrl",
+      "executionRequirement": { "minimumEvidenceLevel": "native-playback", "scenario": "end-of-stream" },
+      "purpose": [
+        "end-of-stream"
       ],
       "expected": {
         "codec": "h264",
@@ -2592,6 +2642,17 @@ if (-not (Test-Path $nativeMaterializedReportPath)) {
     throw "Expected materialized native helper report at $nativeMaterializedReportPath."
 }
 
+if (-not (Test-Path $nativeEndOfStreamMaterializedReportPath)) {
+    throw "Expected materialized native end-of-stream report at $nativeEndOfStreamMaterializedReportPath."
+}
+
+$nativeEndOfStreamMaterializedReport = Get-Content `
+    -LiteralPath $nativeEndOfStreamMaterializedReportPath `
+    -Raw | ConvertFrom-Json
+if (-not ($nativeEndOfStreamMaterializedReport.modelAnalysis.evidenceSignals -contains 'lifecycle.endOfStream')) {
+    throw 'Expected materialized native end-of-stream report to expose lifecycle.endOfStream evidence.'
+}
+
 if (-not (Test-Path $nativeAvMaterializedReportPath)) {
     throw "Expected materialized native helper A/V report at $nativeAvMaterializedReportPath."
 }
@@ -2758,8 +2819,8 @@ if ($nativeAnalysis.playbackEvidence.canEvaluateNativePlayback -ne $true) {
     throw 'Expected native helper report to be treated as App-free native software playback evidence.'
 }
 
-if ($nativeAnalysis.totalReportCount -ne 11) {
-    throw 'Expected native helper report-set to include 11 reports: SDR 23.976/24/30/60, HDR10 23.976/24/30/60, A/V, subtitle-switch, and network-recovery.'
+if ($nativeAnalysis.totalReportCount -ne 12) {
+    throw 'Expected native helper report-set to include 12 reports: SDR 23.976/24/30/60, HDR10 23.976/24/30/60, A/V, subtitle-switch, end-of-stream, and network-recovery.'
 }
 
 $nativeAvSyncCoverage = $nativeAnalysis.capabilityCoverage | Where-Object { $_.capability -eq 'av-sync' } | Select-Object -First 1
