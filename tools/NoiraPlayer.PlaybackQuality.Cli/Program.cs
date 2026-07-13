@@ -2909,14 +2909,6 @@ internal static class Program
             return true;
         }
 
-        foreach (var signal in item.Signals)
-        {
-            if (MatchesAnySignal(signal, definition.Signals))
-            {
-                return true;
-            }
-        }
-
         foreach (var signal in item.MissingSignals)
         {
             if (MatchesAnySignal(signal, definition.Signals))

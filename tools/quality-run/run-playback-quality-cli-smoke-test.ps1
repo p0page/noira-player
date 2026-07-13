@@ -711,6 +711,15 @@ try {
     }
 
     if (-not ($analysisSet.capabilityCoverage | Where-Object {
+        $_.capability -eq 'metadata-duration' -and
+        $_.status -eq 'evidence-present' -and
+        $_.blockedCaseCount -eq 0 -and
+        ($_.evidenceSignals -contains 'source.hasChapterMetadata')
+    })) {
+        throw 'A frame-pacing blocker must not contaminate unrelated metadata-duration evidence.'
+    }
+
+    if (-not ($analysisSet.capabilityCoverage | Where-Object {
         $_.capability -eq 'runtime-metrics' -and
         $_.status -eq 'missing-evidence' -and
         ($_.missingSignals -contains 'runtimeMetrics.status') -and
