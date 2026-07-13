@@ -54,10 +54,26 @@ int main()
     assert(snapshot.Provider == "instrumented-ffmpeg-avio");
     assert(snapshot.ReadCalls >= 2);
     assert(snapshot.SeekCalls >= 2);
+    assert(snapshot.SizeQueryCalls >= 1);
+    assert(snapshot.DataSeekCalls >= 1);
+    assert(snapshot.SeekCalls == snapshot.SizeQueryCalls + snapshot.DataSeekCalls);
     assert(snapshot.BytesRead >= buffer.size() * 2);
-    assert(snapshot.SeekDistanceBytes >= 192 * 1024);
+    assert(snapshot.SeekDistanceBytes > 0);
+    assert(snapshot.DataSeekDistanceBytes == snapshot.SeekDistanceBytes);
     assert(snapshot.ReadWaitMs >= 0.0);
     assert(snapshot.SeekWaitMs >= 0.0);
+    assert(snapshot.SizeQueryWaitMs >= 0.0);
+    assert(snapshot.DataSeekWaitMs >= 0.0);
+    assert(snapshot.ForwardDataSeekCalls == 1);
+    assert(snapshot.BackwardDataSeekCalls == 0);
+    assert(snapshot.NoOpDataSeekCalls == 0);
+    assert(snapshot.DataSeekCalls == snapshot.ForwardDataSeekCalls +
+        snapshot.BackwardDataSeekCalls + snapshot.NoOpDataSeekCalls);
+    assert(snapshot.ForwardDataSeekWaitMs >= 0.0);
+    assert(snapshot.BackwardDataSeekWaitMs == 0.0);
+    assert(snapshot.NoOpDataSeekWaitMs == 0.0);
+    assert(snapshot.ForwardDataSeekDistanceBytes == snapshot.DataSeekDistanceBytes);
+    assert(snapshot.BackwardDataSeekDistanceBytes == 0);
     assert(snapshot.LastError == 0);
 
     avformat_free_context(formatContext);

@@ -222,14 +222,46 @@ namespace winrt::NoiraPlayer::Native::implementation
 
         auto startedAt = std::chrono::steady_clock::now();
         auto before = avio_tell(self->m_innerContext);
-        auto result = (whence & AVSEEK_SIZE) != 0
+        auto const isSizeQuery = (whence & AVSEEK_SIZE) != 0;
+        auto result = isSizeQuery
             ? avio_size(self->m_innerContext)
             : avio_seek(self->m_innerContext, offset, whence);
-        self->m_snapshot.SeekWaitMs += ElapsedMilliseconds(startedAt);
+        auto const waitMs = ElapsedMilliseconds(startedAt);
+        self->m_snapshot.SeekWaitMs += waitMs;
         ++self->m_snapshot.SeekCalls;
-        if (result >= 0 && (whence & AVSEEK_SIZE) == 0)
+        if (isSizeQuery)
         {
-            self->m_snapshot.SeekDistanceBytes += AbsoluteDistance(before, result);
+            ++self->m_snapshot.SizeQueryCalls;
+            self->m_snapshot.SizeQueryWaitMs += waitMs;
+        }
+        else
+        {
+            ++self->m_snapshot.DataSeekCalls;
+            self->m_snapshot.DataSeekWaitMs += waitMs;
+        }
+
+        if (result >= 0 && !isSizeQuery)
+        {
+            auto const distance = AbsoluteDistance(before, result);
+            self->m_snapshot.SeekDistanceBytes += distance;
+            self->m_snapshot.DataSeekDistanceBytes += distance;
+            if (result > before)
+            {
+                ++self->m_snapshot.ForwardDataSeekCalls;
+                self->m_snapshot.ForwardDataSeekWaitMs += waitMs;
+                self->m_snapshot.ForwardDataSeekDistanceBytes += distance;
+            }
+            else if (result < before)
+            {
+                ++self->m_snapshot.BackwardDataSeekCalls;
+                self->m_snapshot.BackwardDataSeekWaitMs += waitMs;
+                self->m_snapshot.BackwardDataSeekDistanceBytes += distance;
+            }
+            else
+            {
+                ++self->m_snapshot.NoOpDataSeekCalls;
+                self->m_snapshot.NoOpDataSeekWaitMs += waitMs;
+            }
         }
         else if (result < 0)
         {

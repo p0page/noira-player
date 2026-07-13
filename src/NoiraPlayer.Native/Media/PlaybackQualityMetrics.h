@@ -18,6 +18,19 @@ namespace winrt::NoiraPlayer::Native::implementation
         double ReadWaitMs{0.0};
         double SeekWaitMs{0.0};
         uint64_t SeekDistanceBytes{0};
+        uint64_t SizeQueryCalls{0};
+        uint64_t DataSeekCalls{0};
+        uint64_t ForwardDataSeekCalls{0};
+        uint64_t BackwardDataSeekCalls{0};
+        uint64_t NoOpDataSeekCalls{0};
+        double SizeQueryWaitMs{0.0};
+        double DataSeekWaitMs{0.0};
+        double ForwardDataSeekWaitMs{0.0};
+        double BackwardDataSeekWaitMs{0.0};
+        double NoOpDataSeekWaitMs{0.0};
+        uint64_t DataSeekDistanceBytes{0};
+        uint64_t ForwardDataSeekDistanceBytes{0};
+        uint64_t BackwardDataSeekDistanceBytes{0};
     };
 
     class PlaybackPresentationIntervalTracker

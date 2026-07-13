@@ -440,6 +440,45 @@ namespace winrt::NoiraPlayer::Native::implementation
         result.SeekDistanceBytes = after.SeekDistanceBytes >= before.SeekDistanceBytes
             ? after.SeekDistanceBytes - before.SeekDistanceBytes
             : 0;
+        result.SizeQueryCalls = after.SizeQueryCalls >= before.SizeQueryCalls
+            ? after.SizeQueryCalls - before.SizeQueryCalls
+            : 0;
+        result.DataSeekCalls = after.DataSeekCalls >= before.DataSeekCalls
+            ? after.DataSeekCalls - before.DataSeekCalls
+            : 0;
+        result.ForwardDataSeekCalls = after.ForwardDataSeekCalls >= before.ForwardDataSeekCalls
+            ? after.ForwardDataSeekCalls - before.ForwardDataSeekCalls
+            : 0;
+        result.BackwardDataSeekCalls = after.BackwardDataSeekCalls >= before.BackwardDataSeekCalls
+            ? after.BackwardDataSeekCalls - before.BackwardDataSeekCalls
+            : 0;
+        result.NoOpDataSeekCalls = after.NoOpDataSeekCalls >= before.NoOpDataSeekCalls
+            ? after.NoOpDataSeekCalls - before.NoOpDataSeekCalls
+            : 0;
+        result.SizeQueryWaitMs = after.SizeQueryWaitMs >= before.SizeQueryWaitMs
+            ? after.SizeQueryWaitMs - before.SizeQueryWaitMs
+            : 0.0;
+        result.DataSeekWaitMs = after.DataSeekWaitMs >= before.DataSeekWaitMs
+            ? after.DataSeekWaitMs - before.DataSeekWaitMs
+            : 0.0;
+        result.ForwardDataSeekWaitMs = after.ForwardDataSeekWaitMs >= before.ForwardDataSeekWaitMs
+            ? after.ForwardDataSeekWaitMs - before.ForwardDataSeekWaitMs
+            : 0.0;
+        result.BackwardDataSeekWaitMs = after.BackwardDataSeekWaitMs >= before.BackwardDataSeekWaitMs
+            ? after.BackwardDataSeekWaitMs - before.BackwardDataSeekWaitMs
+            : 0.0;
+        result.NoOpDataSeekWaitMs = after.NoOpDataSeekWaitMs >= before.NoOpDataSeekWaitMs
+            ? after.NoOpDataSeekWaitMs - before.NoOpDataSeekWaitMs
+            : 0.0;
+        result.DataSeekDistanceBytes = after.DataSeekDistanceBytes >= before.DataSeekDistanceBytes
+            ? after.DataSeekDistanceBytes - before.DataSeekDistanceBytes
+            : 0;
+        result.ForwardDataSeekDistanceBytes = after.ForwardDataSeekDistanceBytes >= before.ForwardDataSeekDistanceBytes
+            ? after.ForwardDataSeekDistanceBytes - before.ForwardDataSeekDistanceBytes
+            : 0;
+        result.BackwardDataSeekDistanceBytes = after.BackwardDataSeekDistanceBytes >= before.BackwardDataSeekDistanceBytes
+            ? after.BackwardDataSeekDistanceBytes - before.BackwardDataSeekDistanceBytes
+            : 0;
         return result;
     }
 
@@ -650,6 +689,19 @@ namespace winrt::NoiraPlayer::Native::implementation
         result.ReadWaitMs = snapshot.ReadWaitMs;
         result.SeekWaitMs = snapshot.SeekWaitMs;
         result.SeekDistanceBytes = snapshot.SeekDistanceBytes;
+        result.SizeQueryCalls = snapshot.SizeQueryCalls;
+        result.DataSeekCalls = snapshot.DataSeekCalls;
+        result.ForwardDataSeekCalls = snapshot.ForwardDataSeekCalls;
+        result.BackwardDataSeekCalls = snapshot.BackwardDataSeekCalls;
+        result.NoOpDataSeekCalls = snapshot.NoOpDataSeekCalls;
+        result.SizeQueryWaitMs = snapshot.SizeQueryWaitMs;
+        result.DataSeekWaitMs = snapshot.DataSeekWaitMs;
+        result.ForwardDataSeekWaitMs = snapshot.ForwardDataSeekWaitMs;
+        result.BackwardDataSeekWaitMs = snapshot.BackwardDataSeekWaitMs;
+        result.NoOpDataSeekWaitMs = snapshot.NoOpDataSeekWaitMs;
+        result.DataSeekDistanceBytes = snapshot.DataSeekDistanceBytes;
+        result.ForwardDataSeekDistanceBytes = snapshot.ForwardDataSeekDistanceBytes;
+        result.BackwardDataSeekDistanceBytes = snapshot.BackwardDataSeekDistanceBytes;
         return result;
     }
 

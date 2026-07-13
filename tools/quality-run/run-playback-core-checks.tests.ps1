@@ -25,6 +25,18 @@ foreach ($requiredNativeRegression in @(
     }
 }
 
+$httpMediaInputTest = $plan.commands |
+    Where-Object name -eq 'native-http-media-input-test' |
+    Select-Object -First 1
+$serializedHttpMediaInputTest = $httpMediaInputTest | ConvertTo-Json -Depth 6
+if ($serializedHttpMediaInputTest -notmatch 'run-http-media-input-test\.ps1') {
+    throw 'Native HTTP media input validation must use its dedicated compile-and-run script.'
+}
+
+if ($serializedHttpMediaInputTest -match 'if not exist') {
+    throw 'Native HTTP media input validation must not conditionally skip compilation or execution when its output directory already exists.'
+}
+
 if ($plan.scope -ne 'playback-core') {
     throw 'Expected playback-core validation scope.'
 }

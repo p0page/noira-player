@@ -1346,3 +1346,11 @@ App-hosted 完成门禁必须使用完整 Native AOT Publish 产物。普通 Deb
 决策：会改变失败结局的 deterministic network/recovery candidate，采纳前至少在同一 source revision、同一 manifest 哈希和同一 opened-source identity 下执行三轮 baseline 与三轮 candidate。每轮必须保留原始 helper/server 日志、执行状态和正式报告；candidate 必须证明故障确实发生并被恢复，不能用未触发故障的 pass 计入重复成功。
 
 本轮 demux 读取恢复满足该门禁：baseline 3/3 为 fatal `-5`，candidate 3/3 均记录 errors/retries/recoveries `1/1/1`、fatal 0，并在 `294.384-328.065ms` 内恢复。重复门禁证明特定故障注入的可复现性，不把三次本地成功外推为所有远端网络条件都已解决；不同容器、服务端和超时形态仍需独立 case。
+
+# 2026-07-13: native 单测必须证明执行，AVIO seek 必须按语义分账
+
+决策：涉及 FFmpeg UWP DLL 的独立 native 单测必须由专用 runner 无条件完成“编译 + 加载依赖 + 执行”，并对非零进程退出码失败。不得把输出目录存在与否作为后续编译或执行的条件，也不得只用编译成功冒充测试通过。`vcruntime140_app.dll` 和 FFmpeg 包路径必须显式解析，缺失时给出结构化失败。
+
+AVIO callback 证据继续保留原 read/seek 总指标，同时把 `AVSEEK_SIZE`、data seek、前向、回向和 no-op seek 分开累计。原因是一次真实私有源证明 size query 近乎零耗时，而 Matroska SeekHead 的大跨度前跳和回跳占据数秒；聚合成单一 `seekWaitMs` 会诱导模型修改错误路径。分账只改变诊断，不改变 seek、网络或恢复行为。
+
+候选边界：不删除 size query，不把 HTTP 标记为不可 seek，不跳过 Matroska 元数据。下一候选只测试 open-input 后接管 FFmpeg 已打开 AVIO 的时机变化；在同 manifest 的启动、恢复、timeline、轨道字幕和颜色证据通过前，不进入默认策略。
