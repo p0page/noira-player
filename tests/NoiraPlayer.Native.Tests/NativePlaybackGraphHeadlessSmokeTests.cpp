@@ -692,6 +692,7 @@ int wmain(int argc, wchar_t** argv)
             << " ffmpegOpenInputBytesRead=" << playbackSnapshot.FfmpegOpenInputBytesRead
             << " ffmpegStreamInfoBytesRead=" << playbackSnapshot.FfmpegStreamInfoBytesRead
             << " nativeStartupSeekBytesRead=" << playbackSnapshot.NativeStartupSeekBytesRead
+            << " nativeFirstFrameTransportBytesRead=" << playbackSnapshot.NativeFirstFrameTransportBytesRead
             << " nativeFirstFrameDurationMs=" << playbackSnapshot.NativeFirstFrameDurationMs
             << " nativeFirstFrameDemuxReadDurationMs=" << playbackSnapshot.NativeFirstFrameDemuxReadDurationMs
             << " nativeFirstFramePresentDurationMs=" << playbackSnapshot.NativeFirstFramePresentDurationMs

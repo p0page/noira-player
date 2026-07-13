@@ -28,7 +28,8 @@ public sealed class PlaybackQualityStartupEvidenceTests
             NativeFirstFrameDemuxReadDurationMs = 60,
             NativeFirstFramePresentDurationMs = 5,
             NativeFirstFrameDemuxPacketCount = 200,
-            NativeFirstFrameDemuxBytes = 1_000_000
+            NativeFirstFrameDemuxBytes = 1_000_000,
+            NativeFirstFrameTransportBytesRead = 1_250_000
         };
 
         PlaybackQualityStartupEvidence.EnrichNativeOpenBreakdown(startup, metrics);
@@ -36,11 +37,11 @@ public sealed class PlaybackQualityStartupEvidenceTests
         var stage = Assert.Single(startup.Stages, value => value.Name == "native.open");
         Assert.Collection(
             stage.Components,
-            component => Assert.Equal(("ffmpeg.open-input", 4000, "measured", 65_536UL, "avio-transport"), (component.Name, component.DurationMs, component.Status, component.Bytes, component.ByteKind)),
-            component => Assert.Equal(("ffmpeg.find-stream-info", 500, "measured", 1_048_576UL, "avio-transport"), (component.Name, component.DurationMs, component.Status, component.Bytes, component.ByteKind)),
+            component => Assert.Equal(("ffmpeg.open-input", 4000, "measured", 65_536UL), (component.Name, component.DurationMs, component.Status, component.TransportBytes)),
+            component => Assert.Equal(("ffmpeg.find-stream-info", 500, "measured", 1_048_576UL), (component.Name, component.DurationMs, component.Status, component.TransportBytes)),
             component => Assert.Equal(("native.initialize-components", 75), (component.Name, component.DurationMs)),
-            component => Assert.Equal(("native.startup-seek", 125, 16_777_216UL, "avio-transport"), (component.Name, component.DurationMs, component.Bytes, component.ByteKind)),
-            component => Assert.Equal(("native.first-frame.demux-read", 60, 200UL, 1_000_000UL, "demux-packet-payload"), (component.Name, component.DurationMs, component.PacketCount, component.Bytes, component.ByteKind)),
+            component => Assert.Equal(("native.startup-seek", 125, 16_777_216UL), (component.Name, component.DurationMs, component.TransportBytes)),
+            component => Assert.Equal(("native.first-frame.demux-read", 60, 200UL, 1_250_000UL, 1_000_000UL), (component.Name, component.DurationMs, component.PacketCount, component.TransportBytes, component.PacketPayloadBytes)),
             component => Assert.Equal(("native.first-frame.decode-control", 35), (component.Name, component.DurationMs)),
             component => Assert.Equal(("native.first-frame.present", 5), (component.Name, component.DurationMs)),
             component => Assert.Equal(("host.dispatch-overhead", 200), (component.Name, component.DurationMs)));

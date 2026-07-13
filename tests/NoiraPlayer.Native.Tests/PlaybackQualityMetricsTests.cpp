@@ -73,6 +73,7 @@ int main()
     metrics.FfmpegOpenInputBytesRead = 65'536;
     metrics.FfmpegStreamInfoBytesRead = 1'048'576;
     metrics.NativeStartupSeekBytesRead = 16'777'216;
+    metrics.NativeFirstFrameTransportBytesRead = 20'000'000;
     metrics.NativeFirstFrameDurationMs = 100.0;
     metrics.NativeFirstFrameDemuxReadDurationMs = 60.0;
     metrics.NativeFirstFramePresentDurationMs = 5.0;
@@ -158,6 +159,7 @@ int main()
     assert(snapshot.FfmpegOpenInputBytesRead == 65'536);
     assert(snapshot.FfmpegStreamInfoBytesRead == 1'048'576);
     assert(snapshot.NativeStartupSeekBytesRead == 16'777'216);
+    assert(snapshot.NativeFirstFrameTransportBytesRead == 20'000'000);
     assert(snapshot.NativeFirstFrameDurationMs == 100.0);
     assert(snapshot.NativeFirstFrameDemuxReadDurationMs == 60.0);
     assert(snapshot.NativeFirstFramePresentDurationMs == 5.0);
@@ -181,6 +183,7 @@ int main()
     assert(snapshot.FfmpegOpenInputBytesRead == 65'536);
     assert(snapshot.FfmpegStreamInfoBytesRead == 1'048'576);
     assert(snapshot.NativeStartupSeekBytesRead == 16'777'216);
+    assert(snapshot.NativeFirstFrameTransportBytesRead == 20'000'000);
     assert(snapshot.NativeFirstFrameDurationMs == 100.0);
     assert(snapshot.NativeFirstFrameDemuxReadDurationMs == 60.0);
     assert(snapshot.NativeFirstFramePresentDurationMs == 5.0);

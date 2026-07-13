@@ -102,6 +102,7 @@ namespace NoiraPlayer.App.Playback
                     FfmpegOpenInputBytesRead = nativeMetrics.FfmpegOpenInputBytesRead,
                     FfmpegStreamInfoBytesRead = nativeMetrics.FfmpegStreamInfoBytesRead,
                     NativeStartupSeekBytesRead = nativeMetrics.NativeStartupSeekBytesRead,
+                    NativeFirstFrameTransportBytesRead = nativeMetrics.NativeFirstFrameTransportBytesRead,
                     NativeFirstFrameDurationMs = nativeMetrics.NativeFirstFrameDurationMs,
                     NativeFirstFrameDemuxReadDurationMs = nativeMetrics.NativeFirstFrameDemuxReadDurationMs,
                     NativeFirstFramePresentDurationMs = nativeMetrics.NativeFirstFramePresentDurationMs,

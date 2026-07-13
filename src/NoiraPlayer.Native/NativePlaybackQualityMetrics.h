@@ -89,6 +89,9 @@ namespace winrt::NoiraPlayer::Native::implementation
         uint64_t NativeStartupSeekBytesRead() const noexcept { return m_nativeStartupSeekBytesRead; }
         void NativeStartupSeekBytesRead(uint64_t value) noexcept { m_nativeStartupSeekBytesRead = value; }
 
+        uint64_t NativeFirstFrameTransportBytesRead() const noexcept { return m_nativeFirstFrameTransportBytesRead; }
+        void NativeFirstFrameTransportBytesRead(uint64_t value) noexcept { m_nativeFirstFrameTransportBytesRead = value; }
+
         double NativeFirstFrameDurationMs() const noexcept { return m_nativeFirstFrameDurationMs; }
         void NativeFirstFrameDurationMs(double value) noexcept { m_nativeFirstFrameDurationMs = value; }
 
@@ -381,6 +384,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         uint64_t m_ffmpegOpenInputBytesRead{0};
         uint64_t m_ffmpegStreamInfoBytesRead{0};
         uint64_t m_nativeStartupSeekBytesRead{0};
+        uint64_t m_nativeFirstFrameTransportBytesRead{0};
         double m_nativeFirstFrameDurationMs{0.0};
         double m_nativeFirstFrameDemuxReadDurationMs{0.0};
         double m_nativeFirstFramePresentDurationMs{0.0};

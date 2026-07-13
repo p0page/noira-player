@@ -69,7 +69,7 @@
 - Test parser/evaluator suites adjacent to the modified code.
 
 **Interfaces:**
-- Produce: `PlaybackQualityStartupComponent.ByteKind` with exact values `avio-transport` or `demux-packet-payload`.
+- Produce: `PlaybackQualityStartupComponent.TransportBytes` and `PacketPayloadBytes`, including both values on first-frame demux.
 - Produce: evaluation version `playback-quality-v0.5` and required native startup transport fields.
 
 - [ ] Add failing tests asserting the three transport components and the first-frame component carry exact byte values and kinds.

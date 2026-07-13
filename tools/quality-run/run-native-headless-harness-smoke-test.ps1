@@ -671,6 +671,7 @@ function New-NativeHeadlessParserFixtureOutput {
         ffmpegOpenInputBytesRead = '65536'
         ffmpegStreamInfoBytesRead = '1048576'
         nativeStartupSeekBytesRead = '16777216'
+        nativeFirstFrameTransportBytesRead = '20000000'
         nativeFirstFrameDurationMs = '15'
         nativeFirstFrameDemuxReadDurationMs = '8'
         nativeFirstFramePresentDurationMs = '1'
@@ -1323,6 +1324,11 @@ function Assert-NativeHeadlessParserContracts {
             Name = 'missing-native-startup-seek-bytes'
             ExpectedField = 'nativeStartupSeekBytesRead'
             Output = New-NativeHeadlessParserFixtureOutput -Omit @('nativeStartupSeekBytesRead')
+        },
+        [pscustomobject]@{
+            Name = 'missing-native-first-frame-transport-bytes'
+            ExpectedField = 'nativeFirstFrameTransportBytesRead'
+            Output = New-NativeHeadlessParserFixtureOutput -Omit @('nativeFirstFrameTransportBytesRead')
         },
         [pscustomobject]@{
             Name = 'missing-audio-ahead-end-to-present-count'

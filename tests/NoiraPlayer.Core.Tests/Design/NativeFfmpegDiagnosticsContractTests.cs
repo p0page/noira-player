@@ -47,6 +47,8 @@ public sealed class NativeFfmpegDiagnosticsContractTests
         Assert.Contains("TransportByteDelta", source, StringComparison.Ordinal);
         Assert.Contains("transportBytesBeforeStartupSeek", graph, StringComparison.Ordinal);
         Assert.Contains("NativeStartupSeekBytesRead", graph, StringComparison.Ordinal);
+        Assert.Contains("transportBytesBeforeFirstFrame", graph, StringComparison.Ordinal);
+        Assert.Contains("NativeFirstFrameTransportBytesRead", graph, StringComparison.Ordinal);
     }
 
     [Fact]

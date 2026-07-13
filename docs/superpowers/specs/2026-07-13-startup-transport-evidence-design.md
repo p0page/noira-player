@@ -17,11 +17,9 @@ Add phase-local AVIO byte deltas for:
 - `ffmpeg.open-input`
 - `ffmpeg.find-stream-info`
 - `native.startup-seek`
+- `native.first-frame.demux-read`
 
-Keep `native.first-frame.demux-read` as demux packet payload bytes. Every startup component carrying bytes must declare `byteKind`:
-
-- `avio-transport` for `AVIOContext::bytes_read` deltas;
-- `demux-packet-payload` for accumulated `AVPacket::size`.
+Startup components expose separate `transportBytes` and `packetPayloadBytes` fields. The first three phases populate transport bytes only. `native.first-frame.demux-read` populates both the `AVIOContext::bytes_read` delta and accumulated `AVPacket::size`, so network/cache reads cannot be confused with compressed packet payload.
 
 Zero is valid when FFmpeg exposes no AVIO context or the phase performs no transport read. Counter regression is not silently subtracted: the delta is zero and the native diagnostic log records the regression. Reports without the new fields are rejected by the updated native helper parser rather than reconstructed from timing, expected values, or probe metadata.
 

@@ -61,6 +61,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         uint64_t FfmpegOpenInputBytesRead{0};
         uint64_t FfmpegStreamInfoBytesRead{0};
         uint64_t NativeStartupSeekBytesRead{0};
+        uint64_t NativeFirstFrameTransportBytesRead{0};
         double NativeFirstFrameDurationMs{0.0};
         double NativeFirstFrameDemuxReadDurationMs{0.0};
         double NativeFirstFramePresentDurationMs{0.0};
@@ -278,6 +279,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         uint64_t FfmpegOpenInputBytesRead{0};
         uint64_t FfmpegStreamInfoBytesRead{0};
         uint64_t NativeStartupSeekBytesRead{0};
+        uint64_t NativeFirstFrameTransportBytesRead{0};
         double NativeFirstFrameDurationMs{0.0};
         double NativeFirstFrameDemuxReadDurationMs{0.0};
         double NativeFirstFramePresentDurationMs{0.0};
@@ -304,6 +306,7 @@ namespace winrt::NoiraPlayer::Native::implementation
             auto const ffmpegOpenInputBytesRead = FfmpegOpenInputBytesRead;
             auto const ffmpegStreamInfoBytesRead = FfmpegStreamInfoBytesRead;
             auto const nativeStartupSeekBytesRead = NativeStartupSeekBytesRead;
+            auto const nativeFirstFrameTransportBytesRead = NativeFirstFrameTransportBytesRead;
             auto const nativeFirstFrameDurationMs = NativeFirstFrameDurationMs;
             auto const nativeFirstFrameDemuxReadDurationMs = NativeFirstFrameDemuxReadDurationMs;
             auto const nativeFirstFramePresentDurationMs = NativeFirstFramePresentDurationMs;
@@ -319,6 +322,7 @@ namespace winrt::NoiraPlayer::Native::implementation
             FfmpegOpenInputBytesRead = ffmpegOpenInputBytesRead;
             FfmpegStreamInfoBytesRead = ffmpegStreamInfoBytesRead;
             NativeStartupSeekBytesRead = nativeStartupSeekBytesRead;
+            NativeFirstFrameTransportBytesRead = nativeFirstFrameTransportBytesRead;
             NativeFirstFrameDurationMs = nativeFirstFrameDurationMs;
             NativeFirstFrameDemuxReadDurationMs = nativeFirstFrameDemuxReadDurationMs;
             NativeFirstFramePresentDurationMs = nativeFirstFramePresentDurationMs;
@@ -442,6 +446,7 @@ namespace winrt::NoiraPlayer::Native::implementation
             snapshot.FfmpegOpenInputBytesRead = FfmpegOpenInputBytesRead;
             snapshot.FfmpegStreamInfoBytesRead = FfmpegStreamInfoBytesRead;
             snapshot.NativeStartupSeekBytesRead = NativeStartupSeekBytesRead;
+            snapshot.NativeFirstFrameTransportBytesRead = NativeFirstFrameTransportBytesRead;
             snapshot.NativeFirstFrameDurationMs = NativeFirstFrameDurationMs;
             snapshot.NativeFirstFrameDemuxReadDurationMs = NativeFirstFrameDemuxReadDurationMs;
             snapshot.NativeFirstFramePresentDurationMs = NativeFirstFramePresentDurationMs;

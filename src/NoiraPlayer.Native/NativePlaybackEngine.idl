@@ -80,6 +80,7 @@
         UInt64 FfmpegOpenInputBytesRead;
         UInt64 FfmpegStreamInfoBytesRead;
         UInt64 NativeStartupSeekBytesRead;
+        UInt64 NativeFirstFrameTransportBytesRead;
         Double NativeFirstFrameDurationMs;
         Double NativeFirstFrameDemuxReadDurationMs;
         Double NativeFirstFramePresentDurationMs;

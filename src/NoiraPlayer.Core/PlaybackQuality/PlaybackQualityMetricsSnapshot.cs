@@ -29,6 +29,7 @@
         public ulong FfmpegOpenInputBytesRead { get; set; }
         public ulong FfmpegStreamInfoBytesRead { get; set; }
         public ulong NativeStartupSeekBytesRead { get; set; }
+        public ulong NativeFirstFrameTransportBytesRead { get; set; }
         public double NativeFirstFrameDurationMs { get; set; }
         public double NativeFirstFrameDemuxReadDurationMs { get; set; }
         public double NativeFirstFramePresentDurationMs { get; set; }

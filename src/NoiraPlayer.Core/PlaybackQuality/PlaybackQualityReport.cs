@@ -135,8 +135,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
         public double DurationMs { get; set; }
         public string Status { get; set; } = "measured";
         public ulong PacketCount { get; set; }
-        public ulong Bytes { get; set; }
-        public string ByteKind { get; set; } = "";
+        public ulong TransportBytes { get; set; }
+        public ulong PacketPayloadBytes { get; set; }
     }
 
     public sealed class PlaybackQualityLifecycle

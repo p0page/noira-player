@@ -225,6 +225,10 @@ public sealed class AppHostedQualityCaptureContractTests
             playbackPage,
             StringComparison.Ordinal);
         Assert.Contains(
+            "NativeFirstFrameTransportBytesRead = source.NativeFirstFrameTransportBytesRead",
+            playbackPage,
+            StringComparison.Ordinal);
+        Assert.Contains(
             "HardwareDecodedVideoFrames = source.HardwareDecodedVideoFrames",
             playbackPage,
             StringComparison.Ordinal);
