@@ -956,6 +956,14 @@ int wmain(int argc, wchar_t** argv)
             << " videoDecodeDurationMsP95=" << playbackSnapshot.VideoDecodeDurationMsP95
             << " videoDecodeDurationMsP99=" << playbackSnapshot.VideoDecodeDurationMsP99
             << " videoDecodeDurationMsMax=" << playbackSnapshot.VideoDecodeDurationMsMax
+            << " videoDecodePacketReadDurationMsP50=" << playbackSnapshot.VideoDecodePacketReadDurationMsP50
+            << " videoDecodePacketReadDurationMsP95=" << playbackSnapshot.VideoDecodePacketReadDurationMsP95
+            << " videoDecodeSendPacketDurationMsP50=" << playbackSnapshot.VideoDecodeSendPacketDurationMsP50
+            << " videoDecodeSendPacketDurationMsP95=" << playbackSnapshot.VideoDecodeSendPacketDurationMsP95
+            << " videoDecodeReceiveFrameDurationMsP50=" << playbackSnapshot.VideoDecodeReceiveFrameDurationMsP50
+            << " videoDecodeReceiveFrameDurationMsP95=" << playbackSnapshot.VideoDecodeReceiveFrameDurationMsP95
+            << " videoDecodeFrameMaterializeDurationMsP50=" << playbackSnapshot.VideoDecodeFrameMaterializeDurationMsP50
+            << " videoDecodeFrameMaterializeDurationMsP95=" << playbackSnapshot.VideoDecodeFrameMaterializeDurationMsP95
             << " videoRenderDurationMsP50=" << playbackSnapshot.VideoRenderDurationMsP50
             << " videoRenderDurationMsP95=" << playbackSnapshot.VideoRenderDurationMsP95
             << " videoRenderDurationMsP99=" << playbackSnapshot.VideoRenderDurationMsP99

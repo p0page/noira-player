@@ -2951,6 +2951,46 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 AddUnique(analysis.EvidenceSignals, "timing.videoDecodeDurationMsMax");
             }
 
+            if (report.Timing.VideoDecodePacketReadDurationMsP50 > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.videoDecodePacketReadDurationMsP50");
+            }
+
+            if (report.Timing.VideoDecodePacketReadDurationMsP95 > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.videoDecodePacketReadDurationMsP95");
+            }
+
+            if (report.Timing.VideoDecodeSendPacketDurationMsP50 > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.videoDecodeSendPacketDurationMsP50");
+            }
+
+            if (report.Timing.VideoDecodeSendPacketDurationMsP95 > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.videoDecodeSendPacketDurationMsP95");
+            }
+
+            if (report.Timing.VideoDecodeReceiveFrameDurationMsP50 > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.videoDecodeReceiveFrameDurationMsP50");
+            }
+
+            if (report.Timing.VideoDecodeReceiveFrameDurationMsP95 > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.videoDecodeReceiveFrameDurationMsP95");
+            }
+
+            if (report.Timing.VideoDecodeFrameMaterializeDurationMsP50 > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.videoDecodeFrameMaterializeDurationMsP50");
+            }
+
+            if (report.Timing.VideoDecodeFrameMaterializeDurationMsP95 > 0)
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.videoDecodeFrameMaterializeDurationMsP95");
+            }
+
             if (report.Timing.VideoRenderDurationMsP50 > 0)
             {
                 AddUnique(analysis.EvidenceSignals, "timing.videoRenderDurationMsP50");

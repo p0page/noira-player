@@ -1307,6 +1307,14 @@ internal static class NativeHeadlessHarness
             TrySetRequiredNonNegativeDouble(values, "videoDecodeDurationMsP95", value => metrics.VideoDecodeDurationMsP95 = value, out error) &&
             TrySetRequiredNonNegativeDouble(values, "videoDecodeDurationMsP99", value => metrics.VideoDecodeDurationMsP99 = value, out error) &&
             TrySetRequiredNonNegativeDouble(values, "videoDecodeDurationMsMax", value => metrics.VideoDecodeDurationMsMax = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "videoDecodePacketReadDurationMsP50", value => metrics.VideoDecodePacketReadDurationMsP50 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "videoDecodePacketReadDurationMsP95", value => metrics.VideoDecodePacketReadDurationMsP95 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "videoDecodeSendPacketDurationMsP50", value => metrics.VideoDecodeSendPacketDurationMsP50 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "videoDecodeSendPacketDurationMsP95", value => metrics.VideoDecodeSendPacketDurationMsP95 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "videoDecodeReceiveFrameDurationMsP50", value => metrics.VideoDecodeReceiveFrameDurationMsP50 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "videoDecodeReceiveFrameDurationMsP95", value => metrics.VideoDecodeReceiveFrameDurationMsP95 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "videoDecodeFrameMaterializeDurationMsP50", value => metrics.VideoDecodeFrameMaterializeDurationMsP50 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "videoDecodeFrameMaterializeDurationMsP95", value => metrics.VideoDecodeFrameMaterializeDurationMsP95 = value, out error) &&
             TrySetRequiredNonNegativeDouble(values, "videoRenderDurationMsP50", value => metrics.VideoRenderDurationMsP50 = value, out error) &&
             TrySetRequiredNonNegativeDouble(values, "videoRenderDurationMsP95", value => metrics.VideoRenderDurationMsP95 = value, out error) &&
             TrySetRequiredNonNegativeDouble(values, "videoRenderDurationMsP99", value => metrics.VideoRenderDurationMsP99 = value, out error) &&

@@ -915,6 +915,10 @@ namespace winrt::NoiraPlayer::Native::implementation
 
                 m_qualityMetrics.RecordVideoDecodeDurationMs(
                     std::chrono::duration<double, std::milli>(decodeEndedAt - decodeStartedAt).count());
+                m_qualityMetrics.RecordVideoDecodePacketReadDurationMs(frame->DecodePacketReadDurationMs);
+                m_qualityMetrics.RecordVideoDecodeSendPacketDurationMs(frame->DecodeSendPacketDurationMs);
+                m_qualityMetrics.RecordVideoDecodeReceiveFrameDurationMs(frame->DecodeReceiveFrameDurationMs);
+                m_qualityMetrics.RecordVideoDecodeFrameMaterializeDurationMs(frame->DecodeFrameMaterializeDurationMs);
 
                 m_pendingVideoFrame = std::move(*frame);
                 ++m_decodedVideoFrameCount;

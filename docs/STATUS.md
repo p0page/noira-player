@@ -2,6 +2,14 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-13 更新：v0.13 将视频解码总耗时拆成四段真实 native 证据
+
+评测契约升级为 `playback-quality-v0.13`。`VideoDecoder::TryReadFrame()` 现在逐帧累计 packet read、`avcodec_send_packet`、`avcodec_receive_frame` 和 decoded-frame materialize 四段耗时，并以 P50/P95 贯通 native snapshot、WinRT、Core report、模型信号目录和 App-hosted 导出。native helper 输出和 headless parser 将八个字段设为必填非负证据；parser smoke 新增四个缺阶段字段的负向 case，任一层漏接都会失败，不能用总 decode duration 或 manifest expected 代替真实阶段执行。
+
+同一公开 1080p60 三样本、30 秒窗口的 v0.13 诊断运行全部诚实触发 `SampleWindowCoverage` fail。SDR、HDR10、HDR10 强制 SDR 分别渲染 `1647/1576/1575` 帧，对应约 `27.45/26.27/26.25` 秒媒体推进。瓶颈已收窄到 `avcodec_send_packet`：P50/P95 分别为 `12.28/14.76ms`、`13.06/18.79ms`、`13.26/15.88ms`；packet read P95 仅 `0.38-0.40ms`，receive-frame 与 materialize P95 均低于 `0.01ms`，render P95 约 `0.23-0.26ms`。因此下一步不再改网络、tone mapping 或 Present，而是针对 FFmpeg/D3D11VA 提交与 surface 管线做单变量候选。
+
+验证：新增 native 指标单测、Core mapper/analyzer/signal/WinRT bridge 契约通过；完整 Modern App Debug x64 编译成功；native parser contract 和完整真实 native-headless smoke 均通过。当前仅增加可观测性并升级评测版本，没有声称播放器性能改善。Kodi 对照显示其 Xbox DXVA 路径会按 codec/reference/display 需求预留并限制 decoder surfaces，且在共享 decoder device 时使用 shared surface/fence；下一步先验证较小的 surface 余量候选，失败后再评估独立 decoder device 与共享 surface，而不是直接搬入整套 Kodi RenderManager。
+
 ## 2026-07-13 更新：隔离环境噪声，并拒绝不稳定的 0ms render-wait 候选
 
 v0.12 候选评测现在不会再被少量外部环境 case 整体短路。只有真实进入 native 播放链路、报告和源身份完整、且仍有可执行 Core 目标时，report-analysis gate 才允许隔离非 Core blocker 后继续比较。普通 `playback` case 若任一侧 transport read wait 占请求观察窗口至少 25%，该 case 保持 `insufficient-evidence`，并保留 `environment.playbackTransportWait`、per-case blocker 和目标 case ID；它不会被伪装成 pass，也不会覆盖其他可比 case 的结论。`pause-resume` 的预期恢复等待不套用普通播放吞吐规则。视频轨明确存在且音轨数为 0 时，不再生成或比较虚假的 audio starvation 失败；native 也只在音频 decoder 已打开时累计该指标。

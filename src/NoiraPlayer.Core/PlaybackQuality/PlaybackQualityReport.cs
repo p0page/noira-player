@@ -327,6 +327,14 @@ namespace NoiraPlayer.Core.PlaybackQuality
         public double VideoDecodeDurationMsP95 { get; set; }
         public double VideoDecodeDurationMsP99 { get; set; }
         public double VideoDecodeDurationMsMax { get; set; }
+        public double VideoDecodePacketReadDurationMsP50 { get; set; }
+        public double VideoDecodePacketReadDurationMsP95 { get; set; }
+        public double VideoDecodeSendPacketDurationMsP50 { get; set; }
+        public double VideoDecodeSendPacketDurationMsP95 { get; set; }
+        public double VideoDecodeReceiveFrameDurationMsP50 { get; set; }
+        public double VideoDecodeReceiveFrameDurationMsP95 { get; set; }
+        public double VideoDecodeFrameMaterializeDurationMsP50 { get; set; }
+        public double VideoDecodeFrameMaterializeDurationMsP95 { get; set; }
         public double VideoRenderDurationMsP50 { get; set; }
         public double VideoRenderDurationMsP95 { get; set; }
         public double VideoRenderDurationMsP99 { get; set; }

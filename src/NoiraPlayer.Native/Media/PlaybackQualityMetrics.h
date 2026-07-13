@@ -145,6 +145,14 @@ namespace winrt::NoiraPlayer::Native::implementation
         double VideoDecodeDurationMsP95{0.0};
         double VideoDecodeDurationMsP99{0.0};
         double VideoDecodeDurationMsMax{0.0};
+        double VideoDecodePacketReadDurationMsP50{0.0};
+        double VideoDecodePacketReadDurationMsP95{0.0};
+        double VideoDecodeSendPacketDurationMsP50{0.0};
+        double VideoDecodeSendPacketDurationMsP95{0.0};
+        double VideoDecodeReceiveFrameDurationMsP50{0.0};
+        double VideoDecodeReceiveFrameDurationMsP95{0.0};
+        double VideoDecodeFrameMaterializeDurationMsP50{0.0};
+        double VideoDecodeFrameMaterializeDurationMsP95{0.0};
         double VideoRenderDurationMsP50{0.0};
         double VideoRenderDurationMsP95{0.0};
         double VideoRenderDurationMsP99{0.0};
@@ -437,6 +445,26 @@ namespace winrt::NoiraPlayer::Native::implementation
             m_videoDecodeDurations.Add(value);
         }
 
+        void RecordVideoDecodePacketReadDurationMs(double value) noexcept
+        {
+            m_videoDecodePacketReadDurations.Add(value);
+        }
+
+        void RecordVideoDecodeSendPacketDurationMs(double value) noexcept
+        {
+            m_videoDecodeSendPacketDurations.Add(value);
+        }
+
+        void RecordVideoDecodeReceiveFrameDurationMs(double value) noexcept
+        {
+            m_videoDecodeReceiveFrameDurations.Add(value);
+        }
+
+        void RecordVideoDecodeFrameMaterializeDurationMs(double value) noexcept
+        {
+            m_videoDecodeFrameMaterializeDurations.Add(value);
+        }
+
         void RecordVideoRenderDurationMs(double value) noexcept
         {
             m_videoRenderDurations.Add(value);
@@ -607,6 +635,14 @@ namespace winrt::NoiraPlayer::Native::implementation
             snapshot.VideoDecodeDurationMsP95 = m_videoDecodeDurations.Percentile(95);
             snapshot.VideoDecodeDurationMsP99 = m_videoDecodeDurations.Percentile(99);
             snapshot.VideoDecodeDurationMsMax = m_videoDecodeDurations.Max();
+            snapshot.VideoDecodePacketReadDurationMsP50 = m_videoDecodePacketReadDurations.Percentile(50);
+            snapshot.VideoDecodePacketReadDurationMsP95 = m_videoDecodePacketReadDurations.Percentile(95);
+            snapshot.VideoDecodeSendPacketDurationMsP50 = m_videoDecodeSendPacketDurations.Percentile(50);
+            snapshot.VideoDecodeSendPacketDurationMsP95 = m_videoDecodeSendPacketDurations.Percentile(95);
+            snapshot.VideoDecodeReceiveFrameDurationMsP50 = m_videoDecodeReceiveFrameDurations.Percentile(50);
+            snapshot.VideoDecodeReceiveFrameDurationMsP95 = m_videoDecodeReceiveFrameDurations.Percentile(95);
+            snapshot.VideoDecodeFrameMaterializeDurationMsP50 = m_videoDecodeFrameMaterializeDurations.Percentile(50);
+            snapshot.VideoDecodeFrameMaterializeDurationMsP95 = m_videoDecodeFrameMaterializeDurations.Percentile(95);
             snapshot.VideoRenderDurationMsP50 = m_videoRenderDurations.Percentile(50);
             snapshot.VideoRenderDurationMsP95 = m_videoRenderDurations.Percentile(95);
             snapshot.VideoRenderDurationMsP99 = m_videoRenderDurations.Percentile(99);
@@ -660,6 +696,10 @@ namespace winrt::NoiraPlayer::Native::implementation
         PlaybackQualityHistogram m_renderIntervalsAfterNonAudioWait;
         PlaybackQualityHistogram m_presentDurations;
         PlaybackQualityHistogram m_videoDecodeDurations;
+        PlaybackQualityHistogram m_videoDecodePacketReadDurations;
+        PlaybackQualityHistogram m_videoDecodeSendPacketDurations;
+        PlaybackQualityHistogram m_videoDecodeReceiveFrameDurations;
+        PlaybackQualityHistogram m_videoDecodeFrameMaterializeDurations;
         PlaybackQualityHistogram m_videoRenderDurations;
         PlaybackQualityHistogram m_audioAheadWaitDurations;
         PlaybackQualityHistogram m_audioAheadWaitTargets;

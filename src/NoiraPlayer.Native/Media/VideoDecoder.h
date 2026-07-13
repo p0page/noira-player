@@ -42,6 +42,10 @@ namespace winrt::NoiraPlayer::Native::implementation
         bool IsFullRange{false};
         std::optional<DXGI_HDR_METADATA_HDR10> Hdr10Metadata;
         int64_t PositionTicks{0};
+        double DecodePacketReadDurationMs{0.0};
+        double DecodeSendPacketDurationMs{0.0};
+        double DecodeReceiveFrameDurationMs{0.0};
+        double DecodeFrameMaterializeDurationMs{0.0};
         std::vector<uint8_t> BgraPixels;
         uint32_t BgraStride{0};
     };

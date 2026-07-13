@@ -952,6 +952,14 @@ function New-NativeHeadlessParserFixtureOutput {
         videoDecodeDurationMsP95 = '2.2'
         videoDecodeDurationMsP99 = '3.3'
         videoDecodeDurationMsMax = '4.4'
+        videoDecodePacketReadDurationMsP50 = '0.1'
+        videoDecodePacketReadDurationMsP95 = '0.2'
+        videoDecodeSendPacketDurationMsP50 = '0.1'
+        videoDecodeSendPacketDurationMsP95 = '0.2'
+        videoDecodeReceiveFrameDurationMsP50 = '0.5'
+        videoDecodeReceiveFrameDurationMsP95 = '1.5'
+        videoDecodeFrameMaterializeDurationMsP50 = '0.2'
+        videoDecodeFrameMaterializeDurationMsP95 = '0.8'
         videoRenderDurationMsP50 = '0.5'
         videoRenderDurationMsP95 = '1.5'
         videoRenderDurationMsP99 = '2.5'
@@ -1582,6 +1590,26 @@ function Assert-NativeHeadlessParserContracts {
     }
 
     $negativeCases = @(
+        [pscustomobject]@{
+            Name = 'missing-video-decode-packet-read-stage'
+            ExpectedField = 'videoDecodePacketReadDurationMsP95'
+            Output = New-NativeHeadlessParserFixtureOutput -Omit @('videoDecodePacketReadDurationMsP95')
+        },
+        [pscustomobject]@{
+            Name = 'missing-video-decode-send-packet-stage'
+            ExpectedField = 'videoDecodeSendPacketDurationMsP95'
+            Output = New-NativeHeadlessParserFixtureOutput -Omit @('videoDecodeSendPacketDurationMsP95')
+        },
+        [pscustomobject]@{
+            Name = 'missing-video-decode-receive-frame-stage'
+            ExpectedField = 'videoDecodeReceiveFrameDurationMsP95'
+            Output = New-NativeHeadlessParserFixtureOutput -Omit @('videoDecodeReceiveFrameDurationMsP95')
+        },
+        [pscustomobject]@{
+            Name = 'missing-video-decode-frame-materialize-stage'
+            ExpectedField = 'videoDecodeFrameMaterializeDurationMsP95'
+            Output = New-NativeHeadlessParserFixtureOutput -Omit @('videoDecodeFrameMaterializeDurationMsP95')
+        },
         [pscustomobject]@{
             Name = 'missing-audio-switch-recovery-duration'
             ExpectedField = 'audioSwitchRecoveryDurationMs'

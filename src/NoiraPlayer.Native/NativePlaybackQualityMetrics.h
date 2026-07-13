@@ -326,6 +326,23 @@ namespace winrt::NoiraPlayer::Native::implementation
         double VideoDecodeDurationMsMax() const noexcept { return m_videoDecodeDurationMsMax; }
         void VideoDecodeDurationMsMax(double value) noexcept { m_videoDecodeDurationMsMax = value; }
 
+        double VideoDecodePacketReadDurationMsP50() const noexcept { return m_videoDecodePacketReadDurationMsP50; }
+        void VideoDecodePacketReadDurationMsP50(double value) noexcept { m_videoDecodePacketReadDurationMsP50 = value; }
+        double VideoDecodePacketReadDurationMsP95() const noexcept { return m_videoDecodePacketReadDurationMsP95; }
+        void VideoDecodePacketReadDurationMsP95(double value) noexcept { m_videoDecodePacketReadDurationMsP95 = value; }
+        double VideoDecodeSendPacketDurationMsP50() const noexcept { return m_videoDecodeSendPacketDurationMsP50; }
+        void VideoDecodeSendPacketDurationMsP50(double value) noexcept { m_videoDecodeSendPacketDurationMsP50 = value; }
+        double VideoDecodeSendPacketDurationMsP95() const noexcept { return m_videoDecodeSendPacketDurationMsP95; }
+        void VideoDecodeSendPacketDurationMsP95(double value) noexcept { m_videoDecodeSendPacketDurationMsP95 = value; }
+        double VideoDecodeReceiveFrameDurationMsP50() const noexcept { return m_videoDecodeReceiveFrameDurationMsP50; }
+        void VideoDecodeReceiveFrameDurationMsP50(double value) noexcept { m_videoDecodeReceiveFrameDurationMsP50 = value; }
+        double VideoDecodeReceiveFrameDurationMsP95() const noexcept { return m_videoDecodeReceiveFrameDurationMsP95; }
+        void VideoDecodeReceiveFrameDurationMsP95(double value) noexcept { m_videoDecodeReceiveFrameDurationMsP95 = value; }
+        double VideoDecodeFrameMaterializeDurationMsP50() const noexcept { return m_videoDecodeFrameMaterializeDurationMsP50; }
+        void VideoDecodeFrameMaterializeDurationMsP50(double value) noexcept { m_videoDecodeFrameMaterializeDurationMsP50 = value; }
+        double VideoDecodeFrameMaterializeDurationMsP95() const noexcept { return m_videoDecodeFrameMaterializeDurationMsP95; }
+        void VideoDecodeFrameMaterializeDurationMsP95(double value) noexcept { m_videoDecodeFrameMaterializeDurationMsP95 = value; }
+
         double VideoRenderDurationMsP50() const noexcept { return m_videoRenderDurationMsP50; }
         void VideoRenderDurationMsP50(double value) noexcept { m_videoRenderDurationMsP50 = value; }
 
@@ -605,6 +622,14 @@ namespace winrt::NoiraPlayer::Native::implementation
         double m_videoDecodeDurationMsP95{0.0};
         double m_videoDecodeDurationMsP99{0.0};
         double m_videoDecodeDurationMsMax{0.0};
+        double m_videoDecodePacketReadDurationMsP50{0.0};
+        double m_videoDecodePacketReadDurationMsP95{0.0};
+        double m_videoDecodeSendPacketDurationMsP50{0.0};
+        double m_videoDecodeSendPacketDurationMsP95{0.0};
+        double m_videoDecodeReceiveFrameDurationMsP50{0.0};
+        double m_videoDecodeReceiveFrameDurationMsP95{0.0};
+        double m_videoDecodeFrameMaterializeDurationMsP50{0.0};
+        double m_videoDecodeFrameMaterializeDurationMsP95{0.0};
         double m_videoRenderDurationMsP50{0.0};
         double m_videoRenderDurationMsP95{0.0};
         double m_videoRenderDurationMsP99{0.0};

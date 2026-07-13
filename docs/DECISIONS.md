@@ -1,5 +1,13 @@
 ﻿# 技术决策
 
+## 2026-07-13：解码阶段证据成为强制契约，评测升级到 v0.13
+
+决策：`videoDecodeDurationMs*` 只保留为端到端总量，不能再独自支持解码策略归因。每个真实 decoded frame 必须携带 packet read、send packet、receive frame 和 frame materialize 的累计耗时；native metrics、WinRT/App bridge、Core report、信号目录和 headless parser 必须完整贯通 P50/P95。helper 缺任一阶段字段、字段非数值或负值时报告无效，不得回退到总量、probe 或 manifest expected。由于报告必填契约发生变化，evaluation version 从 `playback-quality-v0.12` 升级为 `playback-quality-v0.13`，两版结果不可直接比较成质量变化。
+
+归因决策：当前三个公开 1080p60 HEVC 30 秒 case 的 `avcodec_send_packet` P50/P95 已解释绝大多数总 decode duration，而 packet read、receive、materialize、render、present 和总 demux 均不是主导项。后续候选必须直接作用于 FFmpeg/D3D11VA 提交或其 surface/并发边界；继续调整网络读取、色彩转换、render wait 或报告阈值都没有当前证据支持。
+
+实现边界：参考 Kodi Xbox DXVA 的 surface 数量、共享 surface 和 fence 原则，但先做可回退的小步候选。第一候选只增加 FFmpeg hardware frame pool 余量，并用同一 v0.13 manifest 比较 send-packet P50/P95、媒体推进和 cadence；只有它无效时才进入独立 decoder device、共享 texture/fence 与异步 worker 的组合设计。任何候选若没有缩短 send-packet、提高媒体推进且不引入 cadence/seek/HDR/暂停恢复回归，必须撤回。
+
 ## 2026-07-13：环境不可比 case 必须隔离但不得消失，max-gap 只能有界降噪
 
 决策：普通 `playback` 报告的 transport read wait 达到请求观察窗口 25% 时，baseline/candidate comparison 标记为 `insufficient-evidence`，信号为 `environment.playbackTransportWait`。该 blocker 保留在 per-case comparison、case summary 和 target case IDs 中，但在其余可比 case 仍有明确 Core 改善时，不再自动提升为全局 suite blocker。只有所有不足证据都严格属于这一种已知环境信号、且 suite 没有 regression 或 mixed 时，才允许 `accept-candidate / keep-candidate`；风险必须为 `medium`，不能伪装成全语料低风险通过。缺字段、源不一致、same-build、未知环境原因或其他 comparison blocker 继续阻断。

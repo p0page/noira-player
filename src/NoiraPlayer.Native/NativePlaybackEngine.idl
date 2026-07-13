@@ -175,6 +175,14 @@
         Double VideoDecodeDurationMsP95;
         Double VideoDecodeDurationMsP99;
         Double VideoDecodeDurationMsMax;
+        Double VideoDecodePacketReadDurationMsP50;
+        Double VideoDecodePacketReadDurationMsP95;
+        Double VideoDecodeSendPacketDurationMsP50;
+        Double VideoDecodeSendPacketDurationMsP95;
+        Double VideoDecodeReceiveFrameDurationMsP50;
+        Double VideoDecodeReceiveFrameDurationMsP95;
+        Double VideoDecodeFrameMaterializeDurationMsP50;
+        Double VideoDecodeFrameMaterializeDurationMsP95;
         Double VideoRenderDurationMsP50;
         Double VideoRenderDurationMsP95;
         Double VideoRenderDurationMsP99;

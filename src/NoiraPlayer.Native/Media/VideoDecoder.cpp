@@ -6,6 +6,7 @@
 #include "../NativePlaybackDiagnostics.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <limits>
 #include <utility>
@@ -33,6 +34,14 @@ extern "C"
 
 namespace
 {
+    struct VideoDecodeStageDurations
+    {
+        double PacketReadMs{0.0};
+        double SendPacketMs{0.0};
+        double ReceiveFrameMs{0.0};
+        double FrameMaterializeMs{0.0};
+    };
+
     constexpr AVRational HundredNanosecondTimeBase{1, 10000000};
 
     struct AvFrameDeleter
@@ -561,9 +570,13 @@ namespace
         AVFrame* frame,
         AVStream const* stream,
         std::optional<winrt::NoiraPlayer::Native::implementation::DolbyVisionConfiguration> const& doviConfiguration,
+        VideoDecodeStageDurations& stageDurations,
         int* receiveResultOut = nullptr)
     {
+        auto receiveStartedAt = std::chrono::steady_clock::now();
         auto receiveResult = avcodec_receive_frame(codecContext, frame);
+        stageDurations.ReceiveFrameMs += std::chrono::duration<double, std::milli>(
+            std::chrono::steady_clock::now() - receiveStartedAt).count();
         if (receiveResultOut != nullptr)
         {
             *receiveResultOut = receiveResult;
@@ -571,7 +584,10 @@ namespace
 
         if (receiveResult == 0)
         {
+            auto materializeStartedAt = std::chrono::steady_clock::now();
             auto decodedFrame = CreateDecodedVideoFrame(frame, stream, doviConfiguration);
+            stageDurations.FrameMaterializeMs += std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - materializeStartedAt).count();
             av_frame_unref(frame);
             return decodedFrame;
         }
@@ -726,7 +742,8 @@ namespace winrt::NoiraPlayer::Native::implementation
         }
 
         auto videoStream = m_mediaSource->Stream(m_videoStreamIndex);
-        auto publishFrame = [this](std::optional<DecodedVideoFrame> decodedFrame)
+        VideoDecodeStageDurations stageDurations;
+        auto publishFrame = [this, &stageDurations](std::optional<DecodedVideoFrame> decodedFrame)
             -> std::optional<DecodedVideoFrame>
         {
             if (decodedFrame)
@@ -734,6 +751,10 @@ namespace winrt::NoiraPlayer::Native::implementation
                 decodedFrame->PositionTicks = m_mediaSource->NormalizeTimestampTicks(
                     decodedFrame->PositionTicks);
                 m_positionTicks = decodedFrame->PositionTicks;
+                decodedFrame->DecodePacketReadDurationMs = stageDurations.PacketReadMs;
+                decodedFrame->DecodeSendPacketDurationMs = stageDurations.SendPacketMs;
+                decodedFrame->DecodeReceiveFrameDurationMs = stageDurations.ReceiveFrameMs;
+                decodedFrame->DecodeFrameMaterializeDurationMs = stageDurations.FrameMaterializeMs;
             }
 
             return decodedFrame;
@@ -745,18 +766,31 @@ namespace winrt::NoiraPlayer::Native::implementation
                 m_codecContext,
                 frame.get(),
                 videoStream,
-                m_dolbyVisionConfiguration));
+                m_dolbyVisionConfiguration,
+                stageDurations));
         }
 
-        while (m_mediaSource->TryReadPacket(m_videoStreamIndex, packet.get()))
+        while (true)
         {
+            auto packetReadStartedAt = std::chrono::steady_clock::now();
+            auto hasPacket = m_mediaSource->TryReadPacket(m_videoStreamIndex, packet.get());
+            stageDurations.PacketReadMs += std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - packetReadStartedAt).count();
+            if (!hasPacket)
+            {
+                break;
+            }
+
             InspectDolbyVisionPacketSideData(packet.get());
 
             std::optional<DecodedVideoFrame> pendingFrame;
             DecoderEagainRecovery doubleEagainRecovery;
             while (true)
             {
+                auto sendStartedAt = std::chrono::steady_clock::now();
                 auto sendResult = avcodec_send_packet(m_codecContext, packet.get());
+                stageDurations.SendPacketMs += std::chrono::duration<double, std::milli>(
+                    std::chrono::steady_clock::now() - sendStartedAt).count();
                 if (sendResult == 0)
                 {
                     doubleEagainRecovery.RecordProgress();
@@ -772,6 +806,7 @@ namespace winrt::NoiraPlayer::Native::implementation
                         frame.get(),
                         videoStream,
                         m_dolbyVisionConfiguration,
+                        stageDurations,
                         &receiveResult);
                     if (!drainedFrame)
                     {
@@ -834,14 +869,18 @@ namespace winrt::NoiraPlayer::Native::implementation
                 m_codecContext,
                 frame.get(),
                 videoStream,
-                m_dolbyVisionConfiguration);
+                m_dolbyVisionConfiguration,
+                stageDurations);
             if (decodedFrame)
             {
                 return publishFrame(decodedFrame);
             }
         }
 
+        auto flushStartedAt = std::chrono::steady_clock::now();
         auto flushResult = avcodec_send_packet(m_codecContext, nullptr);
+        stageDurations.SendPacketMs += std::chrono::duration<double, std::milli>(
+            std::chrono::steady_clock::now() - flushStartedAt).count();
         if (flushResult < 0 && flushResult != AVERROR_EOF)
         {
             throw CreateFfmpegError("avcodec_send_packet", flushResult);
@@ -852,7 +891,8 @@ namespace winrt::NoiraPlayer::Native::implementation
             m_codecContext,
             frame.get(),
             videoStream,
-            m_dolbyVisionConfiguration));
+            m_dolbyVisionConfiguration,
+            stageDurations));
     }
 
     void VideoDecoder::ApplyDolbyVisionConfigurationSideData(

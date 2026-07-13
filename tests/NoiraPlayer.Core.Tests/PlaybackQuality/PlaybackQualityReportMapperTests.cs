@@ -137,6 +137,14 @@ public sealed class PlaybackQualityReportMapperTests
             VideoDecodeDurationMsP95 = 12.0,
             VideoDecodeDurationMsP99 = 18.0,
             VideoDecodeDurationMsMax = 24.0,
+            VideoDecodePacketReadDurationMsP50 = 0.5,
+            VideoDecodePacketReadDurationMsP95 = 2.5,
+            VideoDecodeSendPacketDurationMsP50 = 0.25,
+            VideoDecodeSendPacketDurationMsP95 = 1.25,
+            VideoDecodeReceiveFrameDurationMsP50 = 2.0,
+            VideoDecodeReceiveFrameDurationMsP95 = 18.0,
+            VideoDecodeFrameMaterializeDurationMsP50 = 1.0,
+            VideoDecodeFrameMaterializeDurationMsP95 = 9.0,
             VideoRenderDurationMsP50 = 2.0,
             VideoRenderDurationMsP95 = 8.0,
             VideoRenderDurationMsP99 = 14.0,
@@ -224,6 +232,14 @@ public sealed class PlaybackQualityReportMapperTests
         Assert.Equal(12.0, report.Timing.VideoDecodeDurationMsP95);
         Assert.Equal(18.0, report.Timing.VideoDecodeDurationMsP99);
         Assert.Equal(24.0, report.Timing.VideoDecodeDurationMsMax);
+        Assert.Equal(0.5, report.Timing.VideoDecodePacketReadDurationMsP50);
+        Assert.Equal(2.5, report.Timing.VideoDecodePacketReadDurationMsP95);
+        Assert.Equal(0.25, report.Timing.VideoDecodeSendPacketDurationMsP50);
+        Assert.Equal(1.25, report.Timing.VideoDecodeSendPacketDurationMsP95);
+        Assert.Equal(2.0, report.Timing.VideoDecodeReceiveFrameDurationMsP50);
+        Assert.Equal(18.0, report.Timing.VideoDecodeReceiveFrameDurationMsP95);
+        Assert.Equal(1.0, report.Timing.VideoDecodeFrameMaterializeDurationMsP50);
+        Assert.Equal(9.0, report.Timing.VideoDecodeFrameMaterializeDurationMsP95);
         Assert.Equal(2.0, report.Timing.VideoRenderDurationMsP50);
         Assert.Equal(8.0, report.Timing.VideoRenderDurationMsP95);
         Assert.Equal(14.0, report.Timing.VideoRenderDurationMsP99);
