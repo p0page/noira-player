@@ -126,6 +126,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 "MaxAudioStarvedPasses",
                 "buffers.audioStarvedPasses",
                 "buffering");
+            CheckReadRecovery(report, expected.ReadRecovery);
             var fallbackRequired = RequiresSdrDisplayFallback(report, expected);
             var fallback = fallbackRequired ? expected.SdrDisplayFallback : null;
             report.ColorPipeline.ExpectationProfile = fallbackRequired
@@ -1054,6 +1055,177 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 Message = matched ? name + " matched an allowed expected value." : message
             });
             if (!matched)
+            {
+                report.FailureReasons.Add(message);
+                AddRelevantSignal(report, signal);
+            }
+        }
+
+        private static void CheckReadRecovery(
+            PlaybackQualityReport report,
+            PlaybackQualityReadRecoveryExpected? expected)
+        {
+            if (expected == null || !expected.Required)
+            {
+                return;
+            }
+
+            var actual = report.ReadRecovery;
+            if (actual == null)
+            {
+                const string message = "Demux read recovery evidence object is missing.";
+                report.FailureReasons.Add(message);
+                report.Checks.Add(new PlaybackQualityCheck
+                {
+                    Name = "ReadRecoveryEvidence",
+                    Signal = "readRecovery",
+                    Status = "fail",
+                    FailureArea = "evidence-collection",
+                    FailureClass = PlaybackQualityFailureClassification.InsufficientInstrumentation,
+                    Expected = "structured read recovery evidence",
+                    Actual = "missing",
+                    Message = message
+                });
+                AddRelevantSignal(report, "readRecovery");
+                return;
+            }
+
+            CheckMinUnsigned(
+                report,
+                "ReadErrorCount",
+                actual.ReadErrorCount,
+                expected.MinReadErrors,
+                "MinReadErrors",
+                "readRecovery.readErrorCount",
+                "buffering");
+            CheckMinUnsigned(
+                report,
+                "ReadRecoveryCount",
+                actual.ReadRecoveryCount,
+                expected.MinRecoveries,
+                "MinRecoveries",
+                "readRecovery.readRecoveryCount",
+                "buffering");
+            CheckMaxUnsigned(
+                report,
+                "ReadRetryCount",
+                actual.ReadRetryCount,
+                expected.MaxRetries,
+                "MaxRetries",
+                "readRecovery.readRetryCount",
+                "buffering");
+            CheckReadRecoveryInvariant(
+                report,
+                "MaxConsecutiveReadErrors",
+                actual.MaxConsecutiveReadErrors > 0,
+                "> 0",
+                actual.MaxConsecutiveReadErrors.ToString(CultureInfo.InvariantCulture),
+                "readRecovery.maxConsecutiveReadErrors");
+            CheckReadRecoveryInvariant(
+                report,
+                "LastReadErrorCode",
+                actual.LastReadErrorCode < 0,
+                "negative FFmpeg error code",
+                actual.LastReadErrorCode.ToString(CultureInfo.InvariantCulture),
+                "readRecovery.lastReadErrorCode");
+            CheckReadRecoveryInvariant(
+                report,
+                "FatalReadErrorCode",
+                actual.FatalReadErrorCode == 0,
+                "0",
+                actual.FatalReadErrorCode.ToString(CultureInfo.InvariantCulture),
+                "readRecovery.fatalReadErrorCode");
+            CheckReadRecoveryInvariant(
+                report,
+                "LastReadRecoveryDurationMs",
+                double.IsFinite(actual.LastReadRecoveryDurationMs) &&
+                    actual.LastReadRecoveryDurationMs >= 0,
+                "finite and >= 0",
+                Format(actual.LastReadRecoveryDurationMs),
+                "readRecovery.lastReadRecoveryDurationMs");
+        }
+
+        private static void CheckReadRecoveryInvariant(
+            PlaybackQualityReport report,
+            string name,
+            bool passed,
+            string expected,
+            string actual,
+            string signal)
+        {
+            var message = passed
+                ? name + " satisfied demux read recovery validation."
+                : name + " " + actual + " did not satisfy expected " + expected + ".";
+            report.Checks.Add(new PlaybackQualityCheck
+            {
+                Name = name,
+                Signal = signal,
+                Status = passed ? "pass" : "fail",
+                FailureArea = "buffering",
+                Expected = expected,
+                Actual = actual,
+                Message = message
+            });
+
+            if (!passed)
+            {
+                report.FailureReasons.Add(message);
+                AddRelevantSignal(report, signal);
+            }
+        }
+
+        private static void CheckMinUnsigned(
+            PlaybackQualityReport report,
+            string metricName,
+            ulong actual,
+            ulong min,
+            string thresholdName,
+            string signal,
+            string failureArea)
+        {
+            var failed = actual < min;
+            var message = metricName + " " + actual + " was below " + thresholdName + " " + min + ".";
+            report.Checks.Add(new PlaybackQualityCheck
+            {
+                Name = metricName,
+                Signal = signal,
+                Status = failed ? "fail" : "pass",
+                FailureArea = failureArea,
+                Expected = min.ToString(CultureInfo.InvariantCulture),
+                Actual = actual.ToString(CultureInfo.InvariantCulture),
+                Message = failed ? message : metricName + " met " + thresholdName + "."
+            });
+
+            if (failed)
+            {
+                report.FailureReasons.Add(message);
+                AddRelevantSignal(report, signal);
+            }
+        }
+
+        private static void CheckMaxUnsigned(
+            PlaybackQualityReport report,
+            string metricName,
+            ulong actual,
+            ulong max,
+            string thresholdName,
+            string signal,
+            string failureArea)
+        {
+            var failed = actual > max;
+            var message = metricName + " " + actual + " exceeded " + thresholdName + " " + max + ".";
+            report.Checks.Add(new PlaybackQualityCheck
+            {
+                Name = metricName,
+                Signal = signal,
+                Status = failed ? "fail" : "pass",
+                FailureArea = failureArea,
+                Expected = max.ToString(CultureInfo.InvariantCulture),
+                Actual = actual.ToString(CultureInfo.InvariantCulture),
+                Message = failed ? message : metricName + " is within " + thresholdName + "."
+            });
+
+            if (failed)
             {
                 report.FailureReasons.Add(message);
                 AddRelevantSignal(report, signal);

@@ -432,6 +432,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 MaxSeekRecoveryDurationMs = source.MaxSeekRecoveryDurationMs,
                 MaxVideoStarvedPasses = source.MaxVideoStarvedPasses,
                 MaxAudioStarvedPasses = source.MaxAudioStarvedPasses,
+                ReadRecovery = PlaybackQualityReadRecoveryExpected.Clone(source.ReadRecovery),
                 RequireValidatedConversion = source.RequireValidatedConversion,
                 RequireMatchedDisplayRefreshRate = source.RequireMatchedDisplayRefreshRate
             };

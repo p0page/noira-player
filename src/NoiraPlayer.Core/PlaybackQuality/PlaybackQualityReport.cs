@@ -36,6 +36,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
         public PlaybackQualityTiming Timing { get; set; } = new PlaybackQualityTiming();
         public PlaybackQualitySync Sync { get; set; } = new PlaybackQualitySync();
         public PlaybackQualityBuffers Buffers { get; set; } = new PlaybackQualityBuffers();
+        public PlaybackQualityReadRecovery ReadRecovery { get; set; } = new PlaybackQualityReadRecovery();
         public PlaybackQualityColorPipeline ColorPipeline { get; set; } = new PlaybackQualityColorPipeline();
         public PlaybackQualityDisplay Display { get; set; } = new PlaybackQualityDisplay();
     }
@@ -374,6 +375,17 @@ namespace NoiraPlayer.Core.PlaybackQuality
         public ulong QueuedAudioBuffers { get; set; }
         public ulong VideoStarvedPasses { get; set; }
         public ulong AudioStarvedPasses { get; set; }
+    }
+
+    public sealed class PlaybackQualityReadRecovery
+    {
+        public ulong ReadErrorCount { get; set; }
+        public ulong ReadRetryCount { get; set; }
+        public ulong ReadRecoveryCount { get; set; }
+        public uint MaxConsecutiveReadErrors { get; set; }
+        public int LastReadErrorCode { get; set; }
+        public int FatalReadErrorCode { get; set; }
+        public double LastReadRecoveryDurationMs { get; set; }
     }
 
     public sealed class PlaybackQualityColorPipeline

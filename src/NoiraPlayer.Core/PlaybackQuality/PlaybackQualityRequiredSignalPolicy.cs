@@ -246,6 +246,17 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 AddUnique(requiredSignals, "buffers.audioStarvedPasses");
             }
 
+            if (expected.ReadRecovery?.Required == true)
+            {
+                AddUnique(requiredSignals, "readRecovery.readErrorCount");
+                AddUnique(requiredSignals, "readRecovery.readRetryCount");
+                AddUnique(requiredSignals, "readRecovery.readRecoveryCount");
+                AddUnique(requiredSignals, "readRecovery.maxConsecutiveReadErrors");
+                AddUnique(requiredSignals, "readRecovery.lastReadErrorCode");
+                AddUnique(requiredSignals, "readRecovery.fatalReadErrorCode");
+                AddUnique(requiredSignals, "readRecovery.lastReadRecoveryDurationMs");
+            }
+
             if (!string.IsNullOrWhiteSpace(expected.HdrOutput))
             {
                 if (!IsExpectedUnsupportedSource(expected))
@@ -313,6 +324,12 @@ namespace NoiraPlayer.Core.PlaybackQuality
 
         public static bool RequiresNativePlaybackEvidence(string signal)
         {
+            if (!string.IsNullOrWhiteSpace(signal) &&
+                signal.StartsWith("readRecovery.", StringComparison.Ordinal))
+            {
+                return true;
+            }
+
             switch (signal)
             {
                 case "source.durationTicks":
@@ -748,6 +765,14 @@ namespace NoiraPlayer.Core.PlaybackQuality
                     }
 
                     return HasBufferEvidence(report);
+                case "readRecovery.readErrorCount":
+                case "readRecovery.readRetryCount":
+                case "readRecovery.readRecoveryCount":
+                case "readRecovery.maxConsecutiveReadErrors":
+                case "readRecovery.lastReadErrorCode":
+                case "readRecovery.fatalReadErrorCode":
+                case "readRecovery.lastReadRecoveryDurationMs":
+                    return report.ReadRecovery != null;
                 case "colorPipeline.expectationProfile":
                     return !string.IsNullOrWhiteSpace(report.ColorPipeline.ExpectationProfile);
                 case "colorPipeline.actualHdrOutput":

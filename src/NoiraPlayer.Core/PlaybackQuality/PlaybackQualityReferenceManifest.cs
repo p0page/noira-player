@@ -500,6 +500,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 MaxSeekRecoveryDurationMs = source.MaxSeekRecoveryDurationMs,
                 MaxVideoStarvedPasses = source.MaxVideoStarvedPasses,
                 MaxAudioStarvedPasses = source.MaxAudioStarvedPasses,
+                ReadRecovery = PlaybackQualityReadRecoveryExpected.Clone(source.ReadRecovery),
                 RequireValidatedConversion = source.RequireValidatedConversion,
                 RequireMatchedDisplayRefreshRate = source.RequireMatchedDisplayRefreshRate
             };
@@ -548,6 +549,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
             }
 
             ValidateSdrDisplayFallback(validation, caseId, expected.SdrDisplayFallback);
+            ValidateReadRecovery(validation, caseId, expected.ReadRecovery);
 
             if (expected.MaxInteractionRecoveryDurationMs.HasValue &&
                 (!double.IsFinite(expected.MaxInteractionRecoveryDurationMs.Value) ||
@@ -594,6 +596,48 @@ namespace NoiraPlayer.Core.PlaybackQuality
                     caseId,
                     "expected.maxSeekRecoveryDurationMs",
                     "Playback quality seek recovery threshold requires a timeline scenario.");
+            }
+        }
+
+        private static void ValidateReadRecovery(
+            PlaybackQualityReferenceManifestValidation validation,
+            string caseId,
+            PlaybackQualityReadRecoveryExpected? expected)
+        {
+            const ulong coreRetryBudget = 10;
+            if (expected == null || !expected.Required)
+            {
+                return;
+            }
+
+            if (expected.MinReadErrors == 0)
+            {
+                AddError(
+                    validation,
+                    "case.expected.readRecovery.minReadErrors.invalid",
+                    caseId,
+                    "expected.readRecovery.minReadErrors",
+                    "Required demux read recovery evidence must expect at least one read error.");
+            }
+
+            if (expected.MinRecoveries == 0 || expected.MinRecoveries > expected.MinReadErrors)
+            {
+                AddError(
+                    validation,
+                    "case.expected.readRecovery.minRecoveries.invalid",
+                    caseId,
+                    "expected.readRecovery.minRecoveries",
+                    "Required demux read recovery evidence must expect one or more recoveries, not more than expected read errors.");
+            }
+
+            if (expected.MaxRetries == 0 || expected.MaxRetries > coreRetryBudget)
+            {
+                AddError(
+                    validation,
+                    "case.expected.readRecovery.maxRetries.invalid",
+                    caseId,
+                    "expected.readRecovery.maxRetries",
+                    "Required demux read recovery maxRetries must be between 1 and the Core retry budget of 10.");
             }
         }
 

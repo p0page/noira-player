@@ -1734,6 +1734,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
             return signal.StartsWith("timing.", StringComparison.Ordinal) ||
                 signal.StartsWith("sync.", StringComparison.Ordinal) ||
                 signal.StartsWith("buffers.", StringComparison.Ordinal) ||
+                signal.StartsWith("readRecovery.", StringComparison.Ordinal) ||
                 signal.StartsWith("runtimeMetrics.", StringComparison.Ordinal);
         }
 

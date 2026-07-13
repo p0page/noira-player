@@ -185,6 +185,13 @@ namespace NoiraPlayer.Core.PlaybackQuality
         public ulong QueuedAudioBuffers { get; set; }
         public ulong VideoStarvedPasses { get; set; }
         public ulong AudioStarvedPasses { get; set; }
+        public ulong ReadErrorCount { get; set; }
+        public ulong ReadRetryCount { get; set; }
+        public ulong ReadRecoveryCount { get; set; }
+        public uint MaxConsecutiveReadErrors { get; set; }
+        public int LastReadErrorCode { get; set; }
+        public int FatalReadErrorCode { get; set; }
+        public double LastReadRecoveryDurationMs { get; set; }
         public List<string> Signals { get; } = new List<string>();
         public List<string> FailedSignals { get; } = new List<string>();
     }
@@ -1023,12 +1030,20 @@ namespace NoiraPlayer.Core.PlaybackQuality
             PlaybackQualityReport report,
             PlaybackQualitySignalPresence signalPresence)
         {
+            var readRecovery = report.ReadRecovery ?? new PlaybackQualityReadRecovery();
             var buffering = new PlaybackQualityBufferingAssessment
             {
                 SubmittedAudioFrames = report.Buffers.SubmittedAudioFrames,
                 QueuedAudioBuffers = report.Buffers.QueuedAudioBuffers,
                 VideoStarvedPasses = report.Buffers.VideoStarvedPasses,
-                AudioStarvedPasses = report.Buffers.AudioStarvedPasses
+                AudioStarvedPasses = report.Buffers.AudioStarvedPasses,
+                ReadErrorCount = readRecovery.ReadErrorCount,
+                ReadRetryCount = readRecovery.ReadRetryCount,
+                ReadRecoveryCount = readRecovery.ReadRecoveryCount,
+                MaxConsecutiveReadErrors = readRecovery.MaxConsecutiveReadErrors,
+                LastReadErrorCode = readRecovery.LastReadErrorCode,
+                FatalReadErrorCode = readRecovery.FatalReadErrorCode,
+                LastReadRecoveryDurationMs = readRecovery.LastReadRecoveryDurationMs
             };
 
             var hasBufferEvidence =
@@ -1039,13 +1054,22 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 signalPresence.Has("buffers.submittedAudioFrames") ||
                 signalPresence.Has("buffers.queuedAudioBuffers") ||
                 signalPresence.Has("buffers.videoStarvedPasses") ||
-                signalPresence.Has("buffers.audioStarvedPasses");
+                signalPresence.Has("buffers.audioStarvedPasses") ||
+                buffering.ReadErrorCount > 0 ||
+                signalPresence.Has("readRecovery.readErrorCount");
             if (hasBufferEvidence)
             {
                 AddBufferSignalIfPresent(buffering, signalPresence, "buffers.submittedAudioFrames");
                 AddBufferSignalIfPresent(buffering, signalPresence, "buffers.queuedAudioBuffers");
                 AddBufferSignalIfPresent(buffering, signalPresence, "buffers.videoStarvedPasses");
                 AddBufferSignalIfPresent(buffering, signalPresence, "buffers.audioStarvedPasses");
+                AddBufferSignalIfPresent(buffering, signalPresence, "readRecovery.readErrorCount");
+                AddBufferSignalIfPresent(buffering, signalPresence, "readRecovery.readRetryCount");
+                AddBufferSignalIfPresent(buffering, signalPresence, "readRecovery.readRecoveryCount");
+                AddBufferSignalIfPresent(buffering, signalPresence, "readRecovery.maxConsecutiveReadErrors");
+                AddBufferSignalIfPresent(buffering, signalPresence, "readRecovery.lastReadErrorCode");
+                AddBufferSignalIfPresent(buffering, signalPresence, "readRecovery.fatalReadErrorCode");
+                AddBufferSignalIfPresent(buffering, signalPresence, "readRecovery.lastReadRecoveryDurationMs");
             }
 
             foreach (var check in report.Checks)
@@ -1061,8 +1085,13 @@ namespace NoiraPlayer.Core.PlaybackQuality
 
             if (buffering.FailedSignals.Count > 0)
             {
-                buffering.Status = "starved";
-                buffering.Reason = "Playback supply starvation failed expected buffering thresholds.";
+                buffering.Status = buffering.FailedSignals.Exists(signal =>
+                    signal.StartsWith("readRecovery.", StringComparison.Ordinal))
+                    ? "read-recovery-failed"
+                    : "starved";
+                buffering.Reason = buffering.Status == "read-recovery-failed"
+                    ? "Demux read recovery failed expected retry or recovery evidence."
+                    : "Playback supply starvation failed expected buffering thresholds.";
                 return buffering;
             }
 

@@ -1298,6 +1298,14 @@ namespace NoiraPlayer.Core.PlaybackQuality
                     PlaybackQualityCodeTargetCatalog.GetForFailureArea("buffering"));
             }
 
+            if (StartsWithSignal(signal, "readRecovery."))
+            {
+                return NewTriage(
+                    "buffering",
+                    "Inspect FFmpeg read errors, bounded retry decisions, and recovery budget exhaustion.",
+                    PlaybackQualityCodeTargetCatalog.GetForFailureArea("buffering"));
+            }
+
             if (StartsWithSignal(signal, "colorPipeline.") ||
                 string.Equals(signal, "display.hdrStatus", StringComparison.Ordinal))
             {

@@ -191,7 +191,7 @@ $report = [ordered]@{
 
 @{
     schemaVersion = 1
-    evaluationVersion = 'playback-quality-v0.8'
+    evaluationVersion = 'playback-quality-v0.9'
     caseMetadata = @{ caseId = $caseId; category = 'stable'; severity = 'high'; stability = 'stable' }
     report = $report
 } | ConvertTo-Json -Depth 30 | Set-Content -LiteralPath $reportPath -Encoding UTF8

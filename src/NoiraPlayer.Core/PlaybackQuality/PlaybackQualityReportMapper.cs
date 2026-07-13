@@ -119,6 +119,13 @@ namespace NoiraPlayer.Core.PlaybackQuality
             report.Buffers.QueuedAudioBuffers = metrics.QueuedAudioBuffers;
             report.Buffers.VideoStarvedPasses = metrics.VideoStarvedPasses;
             report.Buffers.AudioStarvedPasses = metrics.AudioStarvedPasses;
+            report.ReadRecovery.ReadErrorCount = metrics.ReadErrorCount;
+            report.ReadRecovery.ReadRetryCount = metrics.ReadRetryCount;
+            report.ReadRecovery.ReadRecoveryCount = metrics.ReadRecoveryCount;
+            report.ReadRecovery.MaxConsecutiveReadErrors = metrics.MaxConsecutiveReadErrors;
+            report.ReadRecovery.LastReadErrorCode = metrics.LastReadErrorCode;
+            report.ReadRecovery.FatalReadErrorCode = metrics.FatalReadErrorCode;
+            report.ReadRecovery.LastReadRecoveryDurationMs = metrics.LastReadRecoveryDurationMs;
             report.Tracks.SubtitleDecodedCueCount = metrics.SubtitleDecodedCueCount;
             report.Tracks.SubtitleCueRenderCount = metrics.SubtitleCueRenderCount;
             if (metrics.SelectedSubtitleStreamIndex >= 0)

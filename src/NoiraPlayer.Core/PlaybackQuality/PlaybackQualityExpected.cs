@@ -72,7 +72,30 @@ namespace NoiraPlayer.Core.PlaybackQuality
         public double? MaxSeekRecoveryDurationMs { get; set; }
         public long? MaxVideoStarvedPasses { get; set; }
         public long? MaxAudioStarvedPasses { get; set; }
+        public PlaybackQualityReadRecoveryExpected? ReadRecovery { get; set; }
         public bool RequireValidatedConversion { get; set; } = true;
         public bool RequireMatchedDisplayRefreshRate { get; set; }
+    }
+
+    public sealed class PlaybackQualityReadRecoveryExpected
+    {
+        public bool Required { get; set; }
+        public ulong MinReadErrors { get; set; }
+        public ulong MinRecoveries { get; set; }
+        public ulong MaxRetries { get; set; } = 10;
+
+        internal static PlaybackQualityReadRecoveryExpected? Clone(
+            PlaybackQualityReadRecoveryExpected? source)
+        {
+            return source == null
+                ? null
+                : new PlaybackQualityReadRecoveryExpected
+                {
+                    Required = source.Required,
+                    MinReadErrors = source.MinReadErrors,
+                    MinRecoveries = source.MinRecoveries,
+                    MaxRetries = source.MaxRetries
+                };
+        }
     }
 }
