@@ -2459,6 +2459,38 @@ public sealed class PlaybackQualityReferenceManifestTests
     }
 
     [Fact]
+    public void ValidateReportSet_Accepts_Mixed_Startup_Transport_Providers_When_Each_Component_Is_Consistent()
+    {
+        var referenceCase = CreateCase(
+            "startup/mixed-native-transport-providers",
+            tier: 2,
+            purpose: "hdr-output");
+        referenceCase.Category = "challenge";
+        var manifest = new PlaybackQualityReferenceManifest();
+        manifest.Cases.Add(referenceCase);
+        var report = CreateReport(referenceCase.CaseId, "hevc", 3840, 2160, 23.976, "Hdr10");
+        AddCapturedRuntimeMetrics(report);
+        report.ColorPipeline.ConversionStatus = "validated";
+
+        var streamInfo = PlaybackQualityStartupTransportCallEvidence.FindComponent(
+            report,
+            "ffmpeg.find-stream-info");
+        Assert.NotNull(streamInfo);
+        streamInfo.TransportProvider = PlaybackQualityStartupTransportCallEvidence.InstrumentedProvider;
+        streamInfo.TransportCallEvidenceStatus = PlaybackQualityStartupTransportCallEvidence.MeasuredStatus;
+        streamInfo.TransportReadCalls = 2;
+        streamInfo.TransportSeekCalls = 1;
+        streamInfo.TransportReadWaitMs = 5;
+        streamInfo.TransportSeekWaitMs = 3;
+        streamInfo.TransportSeekDistanceBytes = 1024;
+
+        var validation = PlaybackQualityReferenceReportSetValidator.Validate(manifest, new[] { report });
+
+        Assert.True(validation.IsValid);
+        Assert.Empty(validation.Errors);
+    }
+
+    [Fact]
     public void ValidateReportSet_Rejects_Playable_Report_Missing_Runtime_Metrics_State()
     {
         var referenceCase = CreateCase(

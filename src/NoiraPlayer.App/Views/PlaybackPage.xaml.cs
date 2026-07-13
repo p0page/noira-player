@@ -2324,6 +2324,8 @@ namespace NoiraPlayer.App.Views
                     StartupTransportCallEvidenceAvailable = source.StartupTransportCallEvidenceAvailable,
                     FfmpegOpenInputTransportCalls = new PlaybackQualityTransportCallSnapshot
                     {
+                        Provider = source.FfmpegOpenInputTransportCalls.Provider,
+                        EvidenceAvailable = source.FfmpegOpenInputTransportCalls.EvidenceAvailable,
                         ReadCalls = source.FfmpegOpenInputTransportCalls.ReadCalls,
                         SeekCalls = source.FfmpegOpenInputTransportCalls.SeekCalls,
                         ReadWaitMs = source.FfmpegOpenInputTransportCalls.ReadWaitMs,
@@ -2332,6 +2334,8 @@ namespace NoiraPlayer.App.Views
                     },
                     FfmpegStreamInfoTransportCalls = new PlaybackQualityTransportCallSnapshot
                     {
+                        Provider = source.FfmpegStreamInfoTransportCalls.Provider,
+                        EvidenceAvailable = source.FfmpegStreamInfoTransportCalls.EvidenceAvailable,
                         ReadCalls = source.FfmpegStreamInfoTransportCalls.ReadCalls,
                         SeekCalls = source.FfmpegStreamInfoTransportCalls.SeekCalls,
                         ReadWaitMs = source.FfmpegStreamInfoTransportCalls.ReadWaitMs,
@@ -2340,6 +2344,8 @@ namespace NoiraPlayer.App.Views
                     },
                     NativeStartupSeekTransportCalls = new PlaybackQualityTransportCallSnapshot
                     {
+                        Provider = source.NativeStartupSeekTransportCalls.Provider,
+                        EvidenceAvailable = source.NativeStartupSeekTransportCalls.EvidenceAvailable,
                         ReadCalls = source.NativeStartupSeekTransportCalls.ReadCalls,
                         SeekCalls = source.NativeStartupSeekTransportCalls.SeekCalls,
                         ReadWaitMs = source.NativeStartupSeekTransportCalls.ReadWaitMs,
@@ -2348,6 +2354,8 @@ namespace NoiraPlayer.App.Views
                     },
                     NativeFirstFrameTransportCalls = new PlaybackQualityTransportCallSnapshot
                     {
+                        Provider = source.NativeFirstFrameTransportCalls.Provider,
+                        EvidenceAvailable = source.NativeFirstFrameTransportCalls.EvidenceAvailable,
                         ReadCalls = source.NativeFirstFrameTransportCalls.ReadCalls,
                         SeekCalls = source.NativeFirstFrameTransportCalls.SeekCalls,
                         ReadWaitMs = source.NativeFirstFrameTransportCalls.ReadWaitMs,

@@ -38,7 +38,9 @@ namespace winrt::NoiraPlayer::Native::implementation
             snapshot.NoOpDataSeekWaitMs,
             snapshot.DataSeekDistanceBytes,
             snapshot.ForwardDataSeekDistanceBytes,
-            snapshot.BackwardDataSeekDistanceBytes};
+            snapshot.BackwardDataSeekDistanceBytes,
+            snapshot.Provider,
+            snapshot.EvidenceAvailable};
     }
 
     PlaybackGraph::PlaybackGraph(

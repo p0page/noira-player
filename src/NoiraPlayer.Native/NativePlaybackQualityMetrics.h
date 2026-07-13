@@ -97,6 +97,10 @@ namespace winrt::NoiraPlayer::Native::implementation
         bool StartupTransportCallEvidenceAvailable() const noexcept { return m_startupTransportCallEvidenceAvailable; }
         void StartupTransportCallEvidenceAvailable(bool value) noexcept { m_startupTransportCallEvidenceAvailable = value; }
 
+        winrt::hstring FfmpegOpenInputTransportProvider() const { return m_ffmpegOpenInputTransportProvider; }
+        void FfmpegOpenInputTransportProvider(winrt::hstring const& value) { m_ffmpegOpenInputTransportProvider = value; }
+        bool FfmpegOpenInputTransportCallEvidenceAvailable() const noexcept { return m_ffmpegOpenInputTransportCallEvidenceAvailable; }
+        void FfmpegOpenInputTransportCallEvidenceAvailable(bool value) noexcept { m_ffmpegOpenInputTransportCallEvidenceAvailable = value; }
         uint64_t FfmpegOpenInputTransportReadCalls() const noexcept { return m_ffmpegOpenInputTransportReadCalls; }
         void FfmpegOpenInputTransportReadCalls(uint64_t value) noexcept { m_ffmpegOpenInputTransportReadCalls = value; }
         uint64_t FfmpegOpenInputTransportSeekCalls() const noexcept { return m_ffmpegOpenInputTransportSeekCalls; }
@@ -108,6 +112,10 @@ namespace winrt::NoiraPlayer::Native::implementation
         uint64_t FfmpegOpenInputTransportSeekDistanceBytes() const noexcept { return m_ffmpegOpenInputTransportSeekDistanceBytes; }
         void FfmpegOpenInputTransportSeekDistanceBytes(uint64_t value) noexcept { m_ffmpegOpenInputTransportSeekDistanceBytes = value; }
 
+        winrt::hstring FfmpegStreamInfoTransportProvider() const { return m_ffmpegStreamInfoTransportProvider; }
+        void FfmpegStreamInfoTransportProvider(winrt::hstring const& value) { m_ffmpegStreamInfoTransportProvider = value; }
+        bool FfmpegStreamInfoTransportCallEvidenceAvailable() const noexcept { return m_ffmpegStreamInfoTransportCallEvidenceAvailable; }
+        void FfmpegStreamInfoTransportCallEvidenceAvailable(bool value) noexcept { m_ffmpegStreamInfoTransportCallEvidenceAvailable = value; }
         uint64_t FfmpegStreamInfoTransportReadCalls() const noexcept { return m_ffmpegStreamInfoTransportReadCalls; }
         void FfmpegStreamInfoTransportReadCalls(uint64_t value) noexcept { m_ffmpegStreamInfoTransportReadCalls = value; }
         uint64_t FfmpegStreamInfoTransportSeekCalls() const noexcept { return m_ffmpegStreamInfoTransportSeekCalls; }
@@ -119,6 +127,10 @@ namespace winrt::NoiraPlayer::Native::implementation
         uint64_t FfmpegStreamInfoTransportSeekDistanceBytes() const noexcept { return m_ffmpegStreamInfoTransportSeekDistanceBytes; }
         void FfmpegStreamInfoTransportSeekDistanceBytes(uint64_t value) noexcept { m_ffmpegStreamInfoTransportSeekDistanceBytes = value; }
 
+        winrt::hstring NativeStartupSeekTransportProvider() const { return m_nativeStartupSeekTransportProvider; }
+        void NativeStartupSeekTransportProvider(winrt::hstring const& value) { m_nativeStartupSeekTransportProvider = value; }
+        bool NativeStartupSeekTransportCallEvidenceAvailable() const noexcept { return m_nativeStartupSeekTransportCallEvidenceAvailable; }
+        void NativeStartupSeekTransportCallEvidenceAvailable(bool value) noexcept { m_nativeStartupSeekTransportCallEvidenceAvailable = value; }
         uint64_t NativeStartupSeekTransportReadCalls() const noexcept { return m_nativeStartupSeekTransportReadCalls; }
         void NativeStartupSeekTransportReadCalls(uint64_t value) noexcept { m_nativeStartupSeekTransportReadCalls = value; }
         uint64_t NativeStartupSeekTransportSeekCalls() const noexcept { return m_nativeStartupSeekTransportSeekCalls; }
@@ -130,6 +142,10 @@ namespace winrt::NoiraPlayer::Native::implementation
         uint64_t NativeStartupSeekTransportSeekDistanceBytes() const noexcept { return m_nativeStartupSeekTransportSeekDistanceBytes; }
         void NativeStartupSeekTransportSeekDistanceBytes(uint64_t value) noexcept { m_nativeStartupSeekTransportSeekDistanceBytes = value; }
 
+        winrt::hstring NativeFirstFrameTransportProvider() const { return m_nativeFirstFrameTransportProvider; }
+        void NativeFirstFrameTransportProvider(winrt::hstring const& value) { m_nativeFirstFrameTransportProvider = value; }
+        bool NativeFirstFrameTransportCallEvidenceAvailable() const noexcept { return m_nativeFirstFrameTransportCallEvidenceAvailable; }
+        void NativeFirstFrameTransportCallEvidenceAvailable(bool value) noexcept { m_nativeFirstFrameTransportCallEvidenceAvailable = value; }
         uint64_t NativeFirstFrameTransportReadCalls() const noexcept { return m_nativeFirstFrameTransportReadCalls; }
         void NativeFirstFrameTransportReadCalls(uint64_t value) noexcept { m_nativeFirstFrameTransportReadCalls = value; }
         uint64_t NativeFirstFrameTransportSeekCalls() const noexcept { return m_nativeFirstFrameTransportSeekCalls; }
@@ -452,21 +468,29 @@ namespace winrt::NoiraPlayer::Native::implementation
         uint64_t m_nativeFirstFrameTransportBytesRead{0};
         winrt::hstring m_startupTransportProvider{L"ffmpeg-builtin"};
         bool m_startupTransportCallEvidenceAvailable{false};
+        winrt::hstring m_ffmpegOpenInputTransportProvider{L"ffmpeg-builtin"};
+        bool m_ffmpegOpenInputTransportCallEvidenceAvailable{false};
         uint64_t m_ffmpegOpenInputTransportReadCalls{0};
         uint64_t m_ffmpegOpenInputTransportSeekCalls{0};
         double m_ffmpegOpenInputTransportReadWaitMs{0.0};
         double m_ffmpegOpenInputTransportSeekWaitMs{0.0};
         uint64_t m_ffmpegOpenInputTransportSeekDistanceBytes{0};
+        winrt::hstring m_ffmpegStreamInfoTransportProvider{L"ffmpeg-builtin"};
+        bool m_ffmpegStreamInfoTransportCallEvidenceAvailable{false};
         uint64_t m_ffmpegStreamInfoTransportReadCalls{0};
         uint64_t m_ffmpegStreamInfoTransportSeekCalls{0};
         double m_ffmpegStreamInfoTransportReadWaitMs{0.0};
         double m_ffmpegStreamInfoTransportSeekWaitMs{0.0};
         uint64_t m_ffmpegStreamInfoTransportSeekDistanceBytes{0};
+        winrt::hstring m_nativeStartupSeekTransportProvider{L"ffmpeg-builtin"};
+        bool m_nativeStartupSeekTransportCallEvidenceAvailable{false};
         uint64_t m_nativeStartupSeekTransportReadCalls{0};
         uint64_t m_nativeStartupSeekTransportSeekCalls{0};
         double m_nativeStartupSeekTransportReadWaitMs{0.0};
         double m_nativeStartupSeekTransportSeekWaitMs{0.0};
         uint64_t m_nativeStartupSeekTransportSeekDistanceBytes{0};
+        winrt::hstring m_nativeFirstFrameTransportProvider{L"ffmpeg-builtin"};
+        bool m_nativeFirstFrameTransportCallEvidenceAvailable{false};
         uint64_t m_nativeFirstFrameTransportReadCalls{0};
         uint64_t m_nativeFirstFrameTransportSeekCalls{0};
         double m_nativeFirstFrameTransportReadWaitMs{0.0};

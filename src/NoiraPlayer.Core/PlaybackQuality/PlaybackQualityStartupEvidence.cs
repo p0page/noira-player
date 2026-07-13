@@ -47,16 +47,16 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 "ffmpeg.open-input",
                 openInputMs,
                 transportBytes: metrics.FfmpegOpenInputBytesRead,
-                transportProvider: metrics.StartupTransportProvider,
-                transportCallEvidenceAvailable: metrics.StartupTransportCallEvidenceAvailable,
+                transportProvider: Provider(metrics.FfmpegOpenInputTransportCalls, metrics),
+                transportCallEvidenceAvailable: EvidenceAvailable(metrics.FfmpegOpenInputTransportCalls, metrics),
                 transportCalls: metrics.FfmpegOpenInputTransportCalls);
             Add(
                 nativeOpen,
                 "ffmpeg.find-stream-info",
                 streamInfoMs,
                 transportBytes: metrics.FfmpegStreamInfoBytesRead,
-                transportProvider: metrics.StartupTransportProvider,
-                transportCallEvidenceAvailable: metrics.StartupTransportCallEvidenceAvailable,
+                transportProvider: Provider(metrics.FfmpegStreamInfoTransportCalls, metrics),
+                transportCallEvidenceAvailable: EvidenceAvailable(metrics.FfmpegStreamInfoTransportCalls, metrics),
                 transportCalls: metrics.FfmpegStreamInfoTransportCalls);
             Add(nativeOpen, "native.initialize-components", graphOtherMs);
             Add(
@@ -64,8 +64,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 "native.startup-seek",
                 startupSeekMs,
                 transportBytes: metrics.NativeStartupSeekBytesRead,
-                transportProvider: metrics.StartupTransportProvider,
-                transportCallEvidenceAvailable: metrics.StartupTransportCallEvidenceAvailable,
+                transportProvider: Provider(metrics.NativeStartupSeekTransportCalls, metrics),
+                transportCallEvidenceAvailable: EvidenceAvailable(metrics.NativeStartupSeekTransportCalls, metrics),
                 transportCalls: metrics.NativeStartupSeekTransportCalls);
             Add(
                 nativeOpen,
@@ -74,13 +74,27 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 packetCount: metrics.NativeFirstFrameDemuxPacketCount,
                 transportBytes: metrics.NativeFirstFrameTransportBytesRead,
                 packetPayloadBytes: metrics.NativeFirstFrameDemuxBytes,
-                transportProvider: metrics.StartupTransportProvider,
-                transportCallEvidenceAvailable: metrics.StartupTransportCallEvidenceAvailable,
+                transportProvider: Provider(metrics.NativeFirstFrameTransportCalls, metrics),
+                transportCallEvidenceAvailable: EvidenceAvailable(metrics.NativeFirstFrameTransportCalls, metrics),
                 transportCalls: metrics.NativeFirstFrameTransportCalls);
             Add(nativeOpen, "native.first-frame.decode-control", firstFrameDecodeControlMs);
             Add(nativeOpen, "native.first-frame.present", firstFramePresentMs);
             Add(nativeOpen, "host.dispatch-overhead", hostDispatchMs);
         }
+
+        private static string Provider(
+            PlaybackQualityTransportCallSnapshot calls,
+            PlaybackQualityMetricsSnapshot metrics) =>
+            string.IsNullOrWhiteSpace(calls.Provider)
+                ? metrics.StartupTransportProvider
+                : calls.Provider;
+
+        private static bool EvidenceAvailable(
+            PlaybackQualityTransportCallSnapshot calls,
+            PlaybackQualityMetricsSnapshot metrics) =>
+            string.IsNullOrWhiteSpace(calls.Provider)
+                ? metrics.StartupTransportCallEvidenceAvailable
+                : calls.EvidenceAvailable;
 
         private static void Add(
             PlaybackQualityStartupStage stage,

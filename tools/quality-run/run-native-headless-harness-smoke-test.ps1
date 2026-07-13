@@ -870,21 +870,29 @@ function New-NativeHeadlessParserFixtureOutput {
         nativeFirstFrameTransportBytesRead = '20000000'
         startupTransportProvider = 'ffmpeg-builtin'
         startupTransportCallEvidenceAvailable = '0'
+        ffmpegOpenInputTransportProvider = 'ffmpeg-builtin'
+        ffmpegOpenInputTransportCallEvidenceAvailable = '0'
         ffmpegOpenInputTransportReadCalls = '0'
         ffmpegOpenInputTransportSeekCalls = '0'
         ffmpegOpenInputTransportReadWaitMs = '0'
         ffmpegOpenInputTransportSeekWaitMs = '0'
         ffmpegOpenInputTransportSeekDistanceBytes = '0'
+        ffmpegStreamInfoTransportProvider = 'ffmpeg-builtin'
+        ffmpegStreamInfoTransportCallEvidenceAvailable = '0'
         ffmpegStreamInfoTransportReadCalls = '0'
         ffmpegStreamInfoTransportSeekCalls = '0'
         ffmpegStreamInfoTransportReadWaitMs = '0'
         ffmpegStreamInfoTransportSeekWaitMs = '0'
         ffmpegStreamInfoTransportSeekDistanceBytes = '0'
+        nativeStartupSeekTransportProvider = 'ffmpeg-builtin'
+        nativeStartupSeekTransportCallEvidenceAvailable = '0'
         nativeStartupSeekTransportReadCalls = '0'
         nativeStartupSeekTransportSeekCalls = '0'
         nativeStartupSeekTransportReadWaitMs = '0'
         nativeStartupSeekTransportSeekWaitMs = '0'
         nativeStartupSeekTransportSeekDistanceBytes = '0'
+        nativeFirstFrameTransportProvider = 'ffmpeg-builtin'
+        nativeFirstFrameTransportCallEvidenceAvailable = '0'
         nativeFirstFrameTransportReadCalls = '0'
         nativeFirstFrameTransportSeekCalls = '0'
         nativeFirstFrameTransportReadWaitMs = '0'
@@ -1844,21 +1852,29 @@ function Assert-NativeHeadlessParserContracts {
     $requiredTransportCallFields = @(
         'startupTransportProvider',
         'startupTransportCallEvidenceAvailable',
+        'ffmpegOpenInputTransportProvider',
+        'ffmpegOpenInputTransportCallEvidenceAvailable',
         'ffmpegOpenInputTransportReadCalls',
         'ffmpegOpenInputTransportSeekCalls',
         'ffmpegOpenInputTransportReadWaitMs',
         'ffmpegOpenInputTransportSeekWaitMs',
         'ffmpegOpenInputTransportSeekDistanceBytes',
+        'ffmpegStreamInfoTransportProvider',
+        'ffmpegStreamInfoTransportCallEvidenceAvailable',
         'ffmpegStreamInfoTransportReadCalls',
         'ffmpegStreamInfoTransportSeekCalls',
         'ffmpegStreamInfoTransportReadWaitMs',
         'ffmpegStreamInfoTransportSeekWaitMs',
         'ffmpegStreamInfoTransportSeekDistanceBytes',
+        'nativeStartupSeekTransportProvider',
+        'nativeStartupSeekTransportCallEvidenceAvailable',
         'nativeStartupSeekTransportReadCalls',
         'nativeStartupSeekTransportSeekCalls',
         'nativeStartupSeekTransportReadWaitMs',
         'nativeStartupSeekTransportSeekWaitMs',
         'nativeStartupSeekTransportSeekDistanceBytes',
+        'nativeFirstFrameTransportProvider',
+        'nativeFirstFrameTransportCallEvidenceAvailable',
         'nativeFirstFrameTransportReadCalls',
         'nativeFirstFrameTransportSeekCalls',
         'nativeFirstFrameTransportReadWaitMs',

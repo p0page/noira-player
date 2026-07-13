@@ -637,8 +637,8 @@ try {
         throw 'Expected analyze-report-set output schemaVersion 1.'
     }
 
-    if ($analysisSet.evaluationVersion -ne 'playback-quality-v0.9') {
-        throw 'Expected analyze-report-set output evaluationVersion playback-quality-v0.9.'
+    if ($analysisSet.evaluationVersion -ne 'playback-quality-v0.10') {
+        throw 'Expected analyze-report-set output evaluationVersion playback-quality-v0.10.'
     }
 
     if ($analysisSet.action -ne 'fix-report-analysis') {
@@ -943,8 +943,8 @@ try {
         throw 'Expected playback quality CLI plan-runs output schemaVersion 1.'
     }
 
-    if ($runPlan.evaluationVersion -ne 'playback-quality-v0.9') {
-        throw 'Expected playback quality CLI plan-runs output evaluationVersion playback-quality-v0.9.'
+    if ($runPlan.evaluationVersion -ne 'playback-quality-v0.10') {
+        throw 'Expected playback quality CLI plan-runs output evaluationVersion playback-quality-v0.10.'
     }
 
     if ($runPlan.caseCount -ne 3) {
@@ -994,7 +994,7 @@ try {
 
     $materializedBaselineSummary = Get-Content -Raw -LiteralPath $materializedBaselineSummaryPath | ConvertFrom-Json
     if ($materializedBaselineSummary.schemaVersion -ne 1 -or
-        $materializedBaselineSummary.evaluationVersion -ne 'playback-quality-v0.9' -or
+        $materializedBaselineSummary.evaluationVersion -ne 'playback-quality-v0.10' -or
         $materializedBaselineSummary.caseCount -ne 3 -or
         $materializedBaselineSummary.reportsDirectory -ne $materializedBaselineDir) {
         throw 'Expected materialize-baseline-report-set summary to describe generated reports.'
@@ -3591,8 +3591,8 @@ try {
         throw 'Expected playback quality CLI evaluate-candidate output schemaVersion 1.'
     }
 
-    if ($candidateEvaluation.evaluationVersion -ne 'playback-quality-v0.9') {
-        throw 'Expected playback quality CLI evaluate-candidate output evaluationVersion playback-quality-v0.9.'
+    if ($candidateEvaluation.evaluationVersion -ne 'playback-quality-v0.10') {
+        throw 'Expected playback quality CLI evaluate-candidate output evaluationVersion playback-quality-v0.10.'
     }
 
     if ($candidateEvaluation.action -ne 'accept-candidate') {

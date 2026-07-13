@@ -1143,6 +1143,30 @@ internal static class NativeHeadlessHarness
             return false;
         }
 
+        if (!TrySetRequiredTransportContract(
+                values,
+                "ffmpegOpenInputTransport",
+                metrics.FfmpegOpenInputTransportCalls,
+                out error) ||
+            !TrySetRequiredTransportContract(
+                values,
+                "ffmpegStreamInfoTransport",
+                metrics.FfmpegStreamInfoTransportCalls,
+                out error) ||
+            !TrySetRequiredTransportContract(
+                values,
+                "nativeStartupSeekTransport",
+                metrics.NativeStartupSeekTransportCalls,
+                out error) ||
+            !TrySetRequiredTransportContract(
+                values,
+                "nativeFirstFrameTransport",
+                metrics.NativeFirstFrameTransportCalls,
+                out error))
+        {
+            return false;
+        }
+
         return
             TrySetRequiredUInt64(values, "decodedVideoFrames", value => metrics.DecodedVideoFrames = value, out error) &&
             TrySetRequiredUInt64(values, "hardwareDecodedVideoFrames", value => metrics.HardwareDecodedVideoFrames = value, out error) &&
@@ -1705,6 +1729,41 @@ internal static class NativeHeadlessHarness
         if (!TryGetUInt64(values, key, out value))
         {
             error = "Native helper field '" + key + "' must be an unsigned integer.";
+            return false;
+        }
+
+        error = "";
+        return true;
+    }
+
+    private static bool TrySetRequiredTransportContract(
+        Dictionary<string, string> values,
+        string prefix,
+        PlaybackQualityTransportCallSnapshot snapshot,
+        out string error)
+    {
+        var providerField = prefix + "Provider";
+        if (!values.TryGetValue(providerField, out var provider) ||
+            (provider != "ffmpeg-builtin" && provider != "instrumented-ffmpeg-avio"))
+        {
+            error = $"Missing or invalid required native metric {providerField}.";
+            return false;
+        }
+
+        var evidenceField = prefix + "CallEvidenceAvailable";
+        if (!values.TryGetValue(evidenceField, out var evidenceText) ||
+            (evidenceText != "0" && evidenceText != "1"))
+        {
+            error = $"Missing or invalid required native metric {evidenceField}.";
+            return false;
+        }
+
+        snapshot.Provider = provider;
+        snapshot.EvidenceAvailable = evidenceText == "1";
+        if ((provider == "ffmpeg-builtin" && snapshot.EvidenceAvailable) ||
+            (provider == "instrumented-ffmpeg-avio" && !snapshot.EvidenceAvailable))
+        {
+            error = $"Native metric {evidenceField} contradicts {providerField}.";
             return false;
         }
 

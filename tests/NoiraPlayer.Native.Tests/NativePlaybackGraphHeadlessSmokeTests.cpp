@@ -825,6 +825,8 @@ int wmain(int argc, wchar_t** argv)
             << " nativeFirstFrameTransportBytesRead=" << playbackSnapshot.NativeFirstFrameTransportBytesRead
             << " startupTransportProvider=" << playbackSnapshot.StartupTransportProvider
             << " startupTransportCallEvidenceAvailable=" << (playbackSnapshot.StartupTransportCallEvidenceAvailable ? 1 : 0)
+            << " ffmpegOpenInputTransportProvider=" << playbackSnapshot.FfmpegOpenInputTransportCalls.Provider
+            << " ffmpegOpenInputTransportCallEvidenceAvailable=" << (playbackSnapshot.FfmpegOpenInputTransportCalls.EvidenceAvailable ? 1 : 0)
             << " ffmpegOpenInputTransportReadCalls=" << playbackSnapshot.FfmpegOpenInputTransportCalls.ReadCalls
             << " ffmpegOpenInputTransportSeekCalls=" << playbackSnapshot.FfmpegOpenInputTransportCalls.SeekCalls
             << " ffmpegOpenInputTransportReadWaitMs=" << playbackSnapshot.FfmpegOpenInputTransportCalls.ReadWaitMs
@@ -843,6 +845,8 @@ int wmain(int argc, wchar_t** argv)
             << " ffmpegOpenInputTransportDataSeekDistanceBytes=" << playbackSnapshot.FfmpegOpenInputTransportCalls.DataSeekDistanceBytes
             << " ffmpegOpenInputTransportForwardDataSeekDistanceBytes=" << playbackSnapshot.FfmpegOpenInputTransportCalls.ForwardDataSeekDistanceBytes
             << " ffmpegOpenInputTransportBackwardDataSeekDistanceBytes=" << playbackSnapshot.FfmpegOpenInputTransportCalls.BackwardDataSeekDistanceBytes
+            << " ffmpegStreamInfoTransportProvider=" << playbackSnapshot.FfmpegStreamInfoTransportCalls.Provider
+            << " ffmpegStreamInfoTransportCallEvidenceAvailable=" << (playbackSnapshot.FfmpegStreamInfoTransportCalls.EvidenceAvailable ? 1 : 0)
             << " ffmpegStreamInfoTransportReadCalls=" << playbackSnapshot.FfmpegStreamInfoTransportCalls.ReadCalls
             << " ffmpegStreamInfoTransportSeekCalls=" << playbackSnapshot.FfmpegStreamInfoTransportCalls.SeekCalls
             << " ffmpegStreamInfoTransportReadWaitMs=" << playbackSnapshot.FfmpegStreamInfoTransportCalls.ReadWaitMs
@@ -861,11 +865,15 @@ int wmain(int argc, wchar_t** argv)
             << " ffmpegStreamInfoTransportDataSeekDistanceBytes=" << playbackSnapshot.FfmpegStreamInfoTransportCalls.DataSeekDistanceBytes
             << " ffmpegStreamInfoTransportForwardDataSeekDistanceBytes=" << playbackSnapshot.FfmpegStreamInfoTransportCalls.ForwardDataSeekDistanceBytes
             << " ffmpegStreamInfoTransportBackwardDataSeekDistanceBytes=" << playbackSnapshot.FfmpegStreamInfoTransportCalls.BackwardDataSeekDistanceBytes
+            << " nativeStartupSeekTransportProvider=" << playbackSnapshot.NativeStartupSeekTransportCalls.Provider
+            << " nativeStartupSeekTransportCallEvidenceAvailable=" << (playbackSnapshot.NativeStartupSeekTransportCalls.EvidenceAvailable ? 1 : 0)
             << " nativeStartupSeekTransportReadCalls=" << playbackSnapshot.NativeStartupSeekTransportCalls.ReadCalls
             << " nativeStartupSeekTransportSeekCalls=" << playbackSnapshot.NativeStartupSeekTransportCalls.SeekCalls
             << " nativeStartupSeekTransportReadWaitMs=" << playbackSnapshot.NativeStartupSeekTransportCalls.ReadWaitMs
             << " nativeStartupSeekTransportSeekWaitMs=" << playbackSnapshot.NativeStartupSeekTransportCalls.SeekWaitMs
             << " nativeStartupSeekTransportSeekDistanceBytes=" << playbackSnapshot.NativeStartupSeekTransportCalls.SeekDistanceBytes
+            << " nativeFirstFrameTransportProvider=" << playbackSnapshot.NativeFirstFrameTransportCalls.Provider
+            << " nativeFirstFrameTransportCallEvidenceAvailable=" << (playbackSnapshot.NativeFirstFrameTransportCalls.EvidenceAvailable ? 1 : 0)
             << " nativeFirstFrameTransportReadCalls=" << playbackSnapshot.NativeFirstFrameTransportCalls.ReadCalls
             << " nativeFirstFrameTransportSeekCalls=" << playbackSnapshot.NativeFirstFrameTransportCalls.SeekCalls
             << " nativeFirstFrameTransportReadWaitMs=" << playbackSnapshot.NativeFirstFrameTransportCalls.ReadWaitMs

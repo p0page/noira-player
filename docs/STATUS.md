@@ -1276,3 +1276,21 @@ ignored 原始证据位于 `artifacts/quality-run/demux-read-recovery-repeat-787
 AVIO 证据现把 size query、data seek，以及前向、回向、no-op data seek 分账。真实私有“一战再战”case 推翻了“eager `avio_size` 导致启动慢”的假设：open-input 的 size query 仅 1 次、约 `0.0008ms`；两次 data seek 合计约 `4.14s`，其中前跳约 `18.65GB / 1.39s`，回跳约 `18.65GB / 2.75s`。FFmpeg 8.1.2 Matroska demuxer会按 SeekHead 读取非 Cues 元数据再恢复原位置，不能通过删除 seek 或伪装不可 seek 来制造启动改善。
 
 当前只增强证据和修复门禁，没有改变默认播放策略。下一候选设计记录在 `docs/superpowers/specs/2026-07-13-post-open-avio-adoption-design.md`：让 FFmpeg 内建 AVIO 完成 open-input，再事务性接管已打开的 `pb`，保留后续稳定外层恢复。候选必须保持同 manifest 对照、确定性断流三轮恢复、timeline/track/subtitle/color 无回归，并最终通过完整 App 复核。
+
+# 2026-07-13 更新：post-open AVIO adoption 候选已拒绝
+
+候选按设计完成了最小原型和红绿测试：FFmpeg 内建 AVIO 先完成 `avformat_open_input`，随后外层 custom AVIO 继承 logical position 并接管 `formatContext->pb`。文件级测试证明接管后的读取连续、所有权和重复关闭正确，但这不足以代表真实 demuxer。
+
+确定性 MP4 断流 case 真实进入 native 播放后稳定失败：故障服务器完成三次预定连接重置，FFmpeg 输出 premature stream/partial file，但 Core 的 read error/recovery 仍为 `0/0`，且服务器没有出现预期的第四次 Core transport reopen。raw helper 只在 post-open 外层观察到 stream-info 的 3 次 size query、0 次 read；播放期 HTTP 错误没有进入外层 read callback。证据表明，至少 MP4 demuxer 在 `read_header` 后仍持有原始 AVIO 引用，单独替换 `formatContext->pb` 不能通用地接管后续 packet read。
+
+因此 post-open adoption 原型已完整撤回，默认 v0.9 稳定外层 AVIO 路径保持不变；没有把失败候选或临时 stderr trace 留入产品代码。该实验同时暴露报告合同的下一处缺口：当前单一 `StartupTransportProvider` 会把 open-input 的 builtin provider 错套到后续阶段，即使 raw helper 已得到 phase-local instrumented 计数。下一步先把 provider/evidence 改成逐组件字段，再研究不会绕过 demuxer 已绑定 I/O 的启动优化。
+
+# 2026-07-13 更新：启动传输证据已改为逐阶段归属
+
+`ffmpeg.open-input`、`ffmpeg.find-stream-info`、`native.startup-seek` 和 `native.first-frame.demux-read` 现在各自携带 provider 与 evidence availability，并完整贯通 native metrics、WinRT、App、headless helper、Core report 和严格 parser。旧的全局字段仅作为未提供逐阶段字段时的兼容回退，不能覆盖明确的阶段值。
+
+report-set validator 不再要求四个阶段使用同一个 provider；真实链路允许 open-input 为 `ffmpeg-builtin / unavailable`，后续阶段为 `instrumented-ffmpeg-avio / measured`。每个阶段内部的 provider、status 和 callback 指标仍必须严格一致。新增测试已先在旧规则下复现失败，再验证混合 provider 合法且矛盾证据继续被拒绝。
+
+由于 report-set 有效性语义发生变化，evaluation version 已从 `playback-quality-v0.9` 升级为 `playback-quality-v0.10`。旧 v0.9 报告继续保留用于历史审计，但不得与 v0.10 baseline/candidate 直接比较。
+
+最终验证中，Core 全量 `1049/1049`、统一门禁定向 Core `616/616` 均通过；门禁还包含真实 native headless、网络/长暂停/demux 恢复、timeline/seek、音轨字幕、帧节奏、显示刷新、DX offscreen 与 Native Debug x64 build。Modern App Debug x64 也已在逐阶段 IDL/bridge 改动后完整构建。本轮只修正证据归属和校验规则，没有宣称播放性能改善。

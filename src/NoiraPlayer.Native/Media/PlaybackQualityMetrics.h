@@ -31,6 +31,8 @@ namespace winrt::NoiraPlayer::Native::implementation
         uint64_t DataSeekDistanceBytes{0};
         uint64_t ForwardDataSeekDistanceBytes{0};
         uint64_t BackwardDataSeekDistanceBytes{0};
+        std::string Provider{"ffmpeg-builtin"};
+        bool EvidenceAvailable{false};
     };
 
     class PlaybackPresentationIntervalTracker

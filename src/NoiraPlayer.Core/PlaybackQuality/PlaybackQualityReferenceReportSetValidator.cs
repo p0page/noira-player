@@ -1156,7 +1156,6 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 return;
             }
 
-            string? commonProvider = null;
             foreach (var componentName in PlaybackQualityStartupTransportCallEvidence.ComponentNames)
             {
                 var component = PlaybackQualityStartupTransportCallEvidence.FindComponent(
@@ -1183,27 +1182,6 @@ namespace NoiraPlayer.Core.PlaybackQuality
                         component.TransportProvider + "/" + component.TransportCallEvidenceStatus,
                         "Native startup transport-call evidence is contradictory or invalid.");
                     continue;
-                }
-
-                if (commonProvider == null)
-                {
-                    commonProvider = component.TransportProvider;
-                }
-                else if (!string.Equals(
-                    commonProvider,
-                    component.TransportProvider,
-                    StringComparison.Ordinal))
-                {
-                    AddUnique(status.Signals, signal);
-                    AddError(
-                        validation,
-                        "report.startup.transport-call.provider-mismatch",
-                        status.CaseId,
-                        status.ReportRunId,
-                        signal,
-                        commonProvider,
-                        component.TransportProvider,
-                        "Native startup components disagree about the transport provider.");
                 }
             }
         }

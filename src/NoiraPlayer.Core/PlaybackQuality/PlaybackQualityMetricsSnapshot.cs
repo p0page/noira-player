@@ -2,6 +2,8 @@
 {
     public sealed class PlaybackQualityTransportCallSnapshot
     {
+        public string Provider { get; set; } = "";
+        public bool EvidenceAvailable { get; set; }
         public ulong ReadCalls { get; set; }
         public ulong SeekCalls { get; set; }
         public double ReadWaitMs { get; set; }

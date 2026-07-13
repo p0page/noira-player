@@ -87,6 +87,37 @@ public sealed class PlaybackQualityStartupEvidenceTests
         Assert.Null(component.TransportSeekDistanceBytes);
     }
 
+    [Fact]
+    public void EnrichNativeOpenBreakdown_Attributes_Transport_Evidence_Per_Component()
+    {
+        var startup = new PlaybackQualityStartup();
+        startup.Stages.Add(new PlaybackQualityStartupStage { Name = "native.open", DurationMs = 100 });
+        var metrics = new PlaybackQualityMetricsSnapshot
+        {
+            NativeGraphOpenDurationMs = 100,
+            StartupTransportProvider = "ffmpeg-builtin",
+            StartupTransportCallEvidenceAvailable = false,
+            FfmpegOpenInputTransportCalls = Calls(0, 0, 0, 0, 0),
+            FfmpegStreamInfoTransportCalls = Calls(4, 2, 8, 3, 4096)
+        };
+        metrics.FfmpegOpenInputTransportCalls.Provider = "ffmpeg-builtin";
+        metrics.FfmpegOpenInputTransportCalls.EvidenceAvailable = false;
+        metrics.FfmpegStreamInfoTransportCalls.Provider = "instrumented-ffmpeg-avio";
+        metrics.FfmpegStreamInfoTransportCalls.EvidenceAvailable = true;
+
+        PlaybackQualityStartupEvidence.EnrichNativeOpenBreakdown(startup, metrics);
+
+        var openInput = Assert.Single(startup.Stages[0].Components, value => value.Name == "ffmpeg.open-input");
+        Assert.Equal("ffmpeg-builtin", openInput.TransportProvider);
+        Assert.Equal("unavailable", openInput.TransportCallEvidenceStatus);
+        Assert.Null(openInput.TransportReadCalls);
+
+        var streamInfo = Assert.Single(startup.Stages[0].Components, value => value.Name == "ffmpeg.find-stream-info");
+        Assert.Equal("instrumented-ffmpeg-avio", streamInfo.TransportProvider);
+        Assert.Equal("measured", streamInfo.TransportCallEvidenceStatus);
+        Assert.Equal(4UL, streamInfo.TransportReadCalls);
+    }
+
     private static PlaybackQualityTransportCallSnapshot Calls(
         ulong reads,
         ulong seeks,

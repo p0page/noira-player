@@ -107,6 +107,8 @@ namespace NoiraPlayer.App.Playback
                     StartupTransportCallEvidenceAvailable = nativeMetrics.StartupTransportCallEvidenceAvailable,
                     FfmpegOpenInputTransportCalls = new PlaybackQualityTransportCallSnapshot
                     {
+                        Provider = nativeMetrics.FfmpegOpenInputTransportProvider,
+                        EvidenceAvailable = nativeMetrics.FfmpegOpenInputTransportCallEvidenceAvailable,
                         ReadCalls = nativeMetrics.FfmpegOpenInputTransportReadCalls,
                         SeekCalls = nativeMetrics.FfmpegOpenInputTransportSeekCalls,
                         ReadWaitMs = nativeMetrics.FfmpegOpenInputTransportReadWaitMs,
@@ -115,6 +117,8 @@ namespace NoiraPlayer.App.Playback
                     },
                     FfmpegStreamInfoTransportCalls = new PlaybackQualityTransportCallSnapshot
                     {
+                        Provider = nativeMetrics.FfmpegStreamInfoTransportProvider,
+                        EvidenceAvailable = nativeMetrics.FfmpegStreamInfoTransportCallEvidenceAvailable,
                         ReadCalls = nativeMetrics.FfmpegStreamInfoTransportReadCalls,
                         SeekCalls = nativeMetrics.FfmpegStreamInfoTransportSeekCalls,
                         ReadWaitMs = nativeMetrics.FfmpegStreamInfoTransportReadWaitMs,
@@ -123,6 +127,8 @@ namespace NoiraPlayer.App.Playback
                     },
                     NativeStartupSeekTransportCalls = new PlaybackQualityTransportCallSnapshot
                     {
+                        Provider = nativeMetrics.NativeStartupSeekTransportProvider,
+                        EvidenceAvailable = nativeMetrics.NativeStartupSeekTransportCallEvidenceAvailable,
                         ReadCalls = nativeMetrics.NativeStartupSeekTransportReadCalls,
                         SeekCalls = nativeMetrics.NativeStartupSeekTransportSeekCalls,
                         ReadWaitMs = nativeMetrics.NativeStartupSeekTransportReadWaitMs,
@@ -131,6 +137,8 @@ namespace NoiraPlayer.App.Playback
                     },
                     NativeFirstFrameTransportCalls = new PlaybackQualityTransportCallSnapshot
                     {
+                        Provider = nativeMetrics.NativeFirstFrameTransportProvider,
+                        EvidenceAvailable = nativeMetrics.NativeFirstFrameTransportCallEvidenceAvailable,
                         ReadCalls = nativeMetrics.NativeFirstFrameTransportReadCalls,
                         SeekCalls = nativeMetrics.NativeFirstFrameTransportSeekCalls,
                         ReadWaitMs = nativeMetrics.NativeFirstFrameTransportReadWaitMs,

@@ -77,6 +77,8 @@ int main()
     metrics.StartupTransportProvider = "instrumented-ffmpeg-avio";
     metrics.StartupTransportCallEvidenceAvailable = true;
     metrics.FfmpegOpenInputTransportCalls = {2, 1, 1200.0, 300.0, 4096};
+    metrics.FfmpegOpenInputTransportCalls.Provider = "ffmpeg-builtin";
+    metrics.FfmpegOpenInputTransportCalls.EvidenceAvailable = false;
     metrics.FfmpegOpenInputTransportCalls.SizeQueryCalls = 1;
     metrics.FfmpegOpenInputTransportCalls.SizeQueryWaitMs = 75.0;
     metrics.FfmpegOpenInputTransportCalls.DataSeekCalls = 0;
@@ -90,6 +92,8 @@ int main()
     metrics.FfmpegOpenInputTransportCalls.ForwardDataSeekDistanceBytes = 3072;
     metrics.FfmpegOpenInputTransportCalls.BackwardDataSeekDistanceBytes = 1024;
     metrics.FfmpegStreamInfoTransportCalls = {4, 2, 800.0, 200.0, 8192};
+    metrics.FfmpegStreamInfoTransportCalls.Provider = "instrumented-ffmpeg-avio";
+    metrics.FfmpegStreamInfoTransportCalls.EvidenceAvailable = true;
     metrics.NativeStartupSeekTransportCalls = {1, 1, 400.0, 100.0, 16384};
     metrics.NativeFirstFrameTransportCalls = {8, 0, 600.0, 0.0, 0};
     metrics.NativeFirstFrameDurationMs = 100.0;
@@ -188,6 +192,8 @@ int main()
     assert(snapshot.StartupTransportProvider == "instrumented-ffmpeg-avio");
     assert(snapshot.StartupTransportCallEvidenceAvailable);
     assert(snapshot.FfmpegOpenInputTransportCalls.ReadCalls == 2);
+    assert(snapshot.FfmpegOpenInputTransportCalls.Provider == "ffmpeg-builtin");
+    assert(!snapshot.FfmpegOpenInputTransportCalls.EvidenceAvailable);
     assert(snapshot.FfmpegOpenInputTransportCalls.SizeQueryCalls == 1);
     assert(snapshot.FfmpegOpenInputTransportCalls.SizeQueryWaitMs == 75.0);
     assert(snapshot.FfmpegOpenInputTransportCalls.DataSeekWaitMs == 225.0);
@@ -200,6 +206,8 @@ int main()
     assert(snapshot.FfmpegOpenInputTransportCalls.ForwardDataSeekDistanceBytes == 3072);
     assert(snapshot.FfmpegOpenInputTransportCalls.BackwardDataSeekDistanceBytes == 1024);
     assert(snapshot.FfmpegStreamInfoTransportCalls.SeekCalls == 2);
+    assert(snapshot.FfmpegStreamInfoTransportCalls.Provider == "instrumented-ffmpeg-avio");
+    assert(snapshot.FfmpegStreamInfoTransportCalls.EvidenceAvailable);
     assert(snapshot.NativeStartupSeekTransportCalls.SeekDistanceBytes == 16384);
     assert(snapshot.NativeFirstFrameTransportCalls.ReadWaitMs == 600.0);
     assert(snapshot.NativeFirstFrameDurationMs == 100.0);

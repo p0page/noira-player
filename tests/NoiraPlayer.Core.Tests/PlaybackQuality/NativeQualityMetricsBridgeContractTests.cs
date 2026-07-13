@@ -196,6 +196,17 @@ public sealed class NativeQualityMetricsBridgeContractTests
         foreach (var phase in new[] { "FfmpegOpenInput", "FfmpegStreamInfo", "NativeStartupSeek", "NativeFirstFrame" })
         {
             Assert.Contains("PlaybackTransportCallMetrics " + phase + "TransportCalls", nativeMetrics, StringComparison.Ordinal);
+            Assert.Contains("String " + phase + "TransportProvider;", idl, StringComparison.Ordinal);
+            Assert.Contains("Boolean " + phase + "TransportCallEvidenceAvailable;", idl, StringComparison.Ordinal);
+            Assert.Contains("metrics." + phase + "TransportProvider(winrt::to_hstring(snapshot." + phase + "TransportCalls.Provider));", nativeEngine, StringComparison.Ordinal);
+            Assert.Contains("metrics." + phase + "TransportCallEvidenceAvailable(snapshot." + phase + "TransportCalls.EvidenceAvailable);", nativeEngine, StringComparison.Ordinal);
+            Assert.Contains("winrt::hstring " + phase + "TransportProvider() const", runtimeMetrics, StringComparison.Ordinal);
+            Assert.Contains("bool " + phase + "TransportCallEvidenceAvailable() const noexcept", runtimeMetrics, StringComparison.Ordinal);
+            Assert.Contains("Provider = nativeMetrics." + phase + "TransportProvider", appBridge, StringComparison.Ordinal);
+            Assert.Contains("EvidenceAvailable = nativeMetrics." + phase + "TransportCallEvidenceAvailable", appBridge, StringComparison.Ordinal);
+            var key = char.ToLowerInvariant(phase[0]) + phase[1..] + "Transport";
+            Assert.Contains("\" " + key + "Provider=\"", helper, StringComparison.Ordinal);
+            Assert.Contains("\" " + key + "CallEvidenceAvailable=\"", helper, StringComparison.Ordinal);
         }
 
         foreach (var property in NativeTransportCallUInt64Properties)

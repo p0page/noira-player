@@ -1354,3 +1354,17 @@ App-hosted 完成门禁必须使用完整 Native AOT Publish 产物。普通 Deb
 AVIO callback 证据继续保留原 read/seek 总指标，同时把 `AVSEEK_SIZE`、data seek、前向、回向和 no-op seek 分开累计。原因是一次真实私有源证明 size query 近乎零耗时，而 Matroska SeekHead 的大跨度前跳和回跳占据数秒；聚合成单一 `seekWaitMs` 会诱导模型修改错误路径。分账只改变诊断，不改变 seek、网络或恢复行为。
 
 候选边界：不删除 size query，不把 HTTP 标记为不可 seek，不跳过 Matroska 元数据。下一候选只测试 open-input 后接管 FFmpeg 已打开 AVIO 的时机变化；在同 manifest 的启动、恢复、timeline、轨道字幕和颜色证据通过前，不进入默认策略。
+
+# 2026-07-13: 拒绝 open-input 后替换 `formatContext->pb` 的通用接管方案
+
+决策：不采用 post-open AVIO adoption。文件级 AVIO 连续性测试不能证明容器 demuxer 会在 `read_header` 后重新读取 `formatContext->pb`；确定性 MP4 断流 case 显示，后续 packet read 和 FFmpeg 内建 reconnect 没有经过新外层 callback，Core 因此无法观察并恢复错误。不得通过修改 demuxer 私有状态、按容器打补丁或放宽恢复门禁来挽救该候选。
+
+后续约束：默认继续使用在 demux open 前绑定的稳定外层 AVIO。若优化启动，候选必须从一开始就处于 demuxer 的 I/O 所有权路径中，或采用 FFmpeg 公开支持的协议/cache 机制；不能假设运行中替换公开 `pb` 会更新 demuxer 已缓存的引用。评测报告还必须把 transport provider 和 evidence availability 按启动组件独立保存，禁止用 open-input provider 代表 stream-info、startup seek 或 first-frame。
+
+# 2026-07-13: transport provider 按启动阶段归属，不要求跨阶段相等
+
+决策：四个启动传输组件分别记录 provider、evidence availability 与 callback 指标。校验器只检查单个组件内部是否自洽，不再把组件间 provider 不同判为无效。全局 startup provider 字段暂时保留为旧调用方兼容层，但新 native/App/headless 路径必须提供逐阶段值。
+
+原因：FFmpeg demux 的不同阶段可能由不同 I/O 所有者执行。要求 provider 全局一致会把真实混合链路误判为无效，或诱使采集端用 open-input 的值覆盖后续阶段，从而制造虚假证据。允许混合 provider 不等于放宽测量标准：`ffmpeg-builtin` 仍只能对应 `unavailable` 和 null callback 指标，`instrumented-ffmpeg-avio` 仍只能对应 `measured` 和完整非负指标。
+
+版本边界：本决策取代 v0.6 的“组件间 provider 必须一致”约束，并将 evaluation version 从 `playback-quality-v0.9` 升级为 `playback-quality-v0.10`。历史 v0.9 报告不得与 v0.10 baseline/candidate 混比。
