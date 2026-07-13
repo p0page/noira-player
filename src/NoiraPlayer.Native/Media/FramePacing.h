@@ -18,11 +18,9 @@ namespace winrt::NoiraPlayer::Native::implementation
             return std::chrono::milliseconds(10);
         }
 
-        static constexpr std::chrono::milliseconds RenderLoopWait(bool presentedFrame = false) noexcept
+        static constexpr std::chrono::milliseconds RenderLoopWait() noexcept
         {
-            return presentedFrame
-                ? std::chrono::milliseconds(0)
-                : std::chrono::milliseconds(5);
+            return std::chrono::milliseconds(5);
         }
 
         static constexpr bool ShouldUseRenderLoopTimer(std::chrono::steady_clock::duration delay) noexcept

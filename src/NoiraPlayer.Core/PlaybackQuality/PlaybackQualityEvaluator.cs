@@ -119,14 +119,17 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 "MaxVideoStarvedPasses",
                 "buffers.videoStarvedPasses",
                 "buffering");
-            CheckMax(
-                report,
-                "AudioStarvedPasses",
-                (long)report.Buffers.AudioStarvedPasses,
-                expected.MaxAudioStarvedPasses,
-                "MaxAudioStarvedPasses",
-                "buffers.audioStarvedPasses",
-                "buffering");
+            if (!HasKnownVideoOnlyTrackLayout(report))
+            {
+                CheckMax(
+                    report,
+                    "AudioStarvedPasses",
+                    (long)report.Buffers.AudioStarvedPasses,
+                    expected.MaxAudioStarvedPasses,
+                    "MaxAudioStarvedPasses",
+                    "buffers.audioStarvedPasses",
+                    "buffering");
+            }
             CheckReadRecovery(report, expected.ReadRecovery);
             var fallbackRequired = RequiresSdrDisplayFallback(report, expected);
             var fallback = fallbackRequired ? expected.SdrDisplayFallback : null;

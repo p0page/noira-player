@@ -219,6 +219,11 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 AddUnique(matchedKeys, key);
                 comparison.Coverage.MatchedCheckCount++;
                 AddUnique(comparison.Coverage.MatchedSignals, key);
+                if (ShouldIgnoreComparisonCheck(baseline, candidate, key))
+                {
+                    continue;
+                }
+
                 CompareCheck(comparison, baselineCheck, candidateByKey[key]);
                 TrackFailureArea(comparison, baselineCheck, candidateByKey[key]);
             }
@@ -293,8 +298,10 @@ namespace NoiraPlayer.Core.PlaybackQuality
             PlaybackQualityReport baseline,
             PlaybackQualityReport candidate)
         {
-            var baselineRank = GetExecutionOutcomeRank(baseline.Result);
-            var candidateRank = GetExecutionOutcomeRank(candidate.Result);
+            var baselineResult = GetComparableExecutionOutcome(baseline);
+            var candidateResult = GetComparableExecutionOutcome(candidate);
+            var baselineRank = GetExecutionOutcomeRank(baselineResult);
+            var candidateRank = GetExecutionOutcomeRank(candidateResult);
             if (!baselineRank.HasValue ||
                 !candidateRank.HasValue ||
                 baselineRank.Value == candidateRank.Value)
@@ -308,10 +315,10 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 Signal = "execution.outcome",
                 FailureArea = "playback-lifecycle",
                 Direction = improved ? "improved" : "regressed",
-                BaselineStatus = baseline.Result,
-                CandidateStatus = candidate.Result,
-                BaselineActual = baseline.Result + "/" + baseline.Execution.Status,
-                CandidateActual = candidate.Result + "/" + candidate.Execution.Status,
+                BaselineStatus = baselineResult,
+                CandidateStatus = candidateResult,
+                BaselineActual = baselineResult + "/" + baseline.Execution.Status,
+                CandidateActual = candidateResult + "/" + candidate.Execution.Status,
                 NumericDelta = candidateRank.Value - baselineRank.Value
             };
 
@@ -325,6 +332,28 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 comparison.Regressions.Add(delta);
                 AddUnique(comparison.NewFailureAreas, delta.FailureArea);
             }
+        }
+
+        private static string GetComparableExecutionOutcome(PlaybackQualityReport report)
+        {
+            if (!string.Equals(report.Result, PlaybackQualityReportResult.Fail, StringComparison.Ordinal) ||
+                !HasKnownVideoOnlyTrackLayout(report))
+            {
+                return report.Result;
+            }
+
+            var failedChecks = report.Checks.FindAll(check =>
+                string.Equals(check.Status, "fail", StringComparison.Ordinal));
+            if (failedChecks.Count > 0 && failedChecks.TrueForAll(check =>
+                string.Equals(
+                    GetCheckKey(check),
+                    "buffers.audioStarvedPasses",
+                    StringComparison.Ordinal)))
+            {
+                return PlaybackQualityReportResult.Pass;
+            }
+
+            return report.Result;
         }
 
         private static int? GetExecutionOutcomeRank(string result)
@@ -591,7 +620,45 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 AddIncompatibility(assessment, "source.frameRate");
             }
 
+            if (IsTransportWaitDominant(baseline) || IsTransportWaitDominant(candidate))
+            {
+                AddIncompatibility(assessment, "environment.playbackTransportWait");
+            }
+
             return assessment;
+        }
+
+        private static bool IsTransportWaitDominant(PlaybackQualityReport report)
+        {
+            if (!string.Equals(
+                report.Execution?.Scenario,
+                PlaybackQualityExecutionScenario.Playback,
+                StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            return string.Equals(
+                PlaybackQualityThroughputAttributionPolicy.Assess(
+                    report,
+                    sampleIncomplete: false).Attribution,
+                "transport-wait-dominant",
+                StringComparison.Ordinal);
+        }
+
+        private static bool ShouldIgnoreComparisonCheck(
+            PlaybackQualityReport baseline,
+            PlaybackQualityReport candidate,
+            string signal)
+        {
+            return string.Equals(signal, "buffers.audioStarvedPasses", StringComparison.Ordinal) &&
+                HasKnownVideoOnlyTrackLayout(baseline) &&
+                HasKnownVideoOnlyTrackLayout(candidate);
+        }
+
+        private static bool HasKnownVideoOnlyTrackLayout(PlaybackQualityReport report)
+        {
+            return report.Tracks.VideoTrackCount > 0 && report.Tracks.AudioTrackCount == 0;
         }
 
         private static void ValidateExecutionEvidence(
@@ -2169,6 +2236,18 @@ namespace NoiraPlayer.Core.PlaybackQuality
 
             var baselineAnalysis = PlaybackQualityReportAnalyzer.Analyze(baseline);
             var candidateAnalysis = PlaybackQualityReportAnalyzer.Analyze(candidate);
+            var suppressIsolatedMaxGapRegression =
+                baseline.Timing.DroppedVideoFrames == 0 &&
+                candidate.Timing.DroppedVideoFrames == 0 &&
+                baseline.Timing.RenderIntervalMsP95 > 0 &&
+                candidate.Timing.RenderIntervalMsP95 > 0 &&
+                baseline.Timing.RenderIntervalMsP99 > 0 &&
+                candidate.Timing.RenderIntervalMsP99 > 0 &&
+                candidate.Timing.LateFrameDropToleranceMs > 0 &&
+                candidate.Timing.MaxFrameGapMs > baseline.Timing.MaxFrameGapMs &&
+                candidate.Timing.MaxFrameGapMs <= candidate.Timing.LateFrameDropToleranceMs &&
+                candidate.Timing.RenderIntervalMsP95 <= baseline.Timing.RenderIntervalMsP95 &&
+                candidate.Timing.RenderIntervalMsP99 <= baseline.Timing.RenderIntervalMsP99;
 
             if (HasComparableDerivedInputs(
                 comparison,
@@ -2206,7 +2285,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
                     requirePositive: true);
             }
 
-            if (HasComparableDerivedInputs(
+            if (!suppressIsolatedMaxGapRegression &&
+                HasComparableDerivedInputs(
                 comparison,
                 "framePacing.maxFrameGapFrameRatio",
                 baselineSignals,
@@ -2262,7 +2342,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
                     candidate.Timing.ExpectedFrameDurationMs);
             }
 
-            if (HasComparableDerivedInputs(
+            if (!suppressIsolatedMaxGapRegression &&
+                HasComparableDerivedInputs(
                 comparison,
                 "framePacing.maxFrameGapExpectedErrorMs",
                 baselineSignals,

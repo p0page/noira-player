@@ -6,6 +6,15 @@ Use this path when another worktree is actively changing Xbox UI or App interact
 
 Reference media sources and suggested case tiers are tracked in [playback-quality-reference-corpus.md](playback-quality-reference-corpus.md).
 
+## v0.12 候选比较的环境隔离与离群值边界
+
+- stable/challenge case 仍必须真实进入 native/App 播放链路；probe、manifest expected 或合成报告不能替代播放证据。
+- 仅普通 `playback` case 使用持续播放吞吐不可比规则。任一侧 transport read wait 占请求窗口至少 25% 时，该 case 输出 `insufficient-evidence` 和 `environment.playbackTransportWait`；`pause-resume`、seek、音轨或字幕切换按各自操作证据判断。
+- transport-dominated case 的 per-case blocker、原始报告和 target case ID 必须保留。若 suite 其余真实可比 case 有改善且没有 regression/mixed，并且所有不足证据都只有这一种环境原因，suite 可以 `accept-candidate`，但风险必须是 `medium`；任何其他弱证据仍阻断。
+- video-only 报告不得因不存在的音频 decoder 产生 audio starvation 失败。只有视频轨数大于 0 且音轨数明确为 0 时才应用该规则；轨道证据未知时不能猜。
+- P95/P99 改善且无丢帧时，只允许忽略不超过 candidate `lateFrameDropToleranceMs` 的轻微 max-gap 增量。超过 tolerance 的大卡顿继续进入 regression/mixed，不能用平均值或百分位掩盖。
+- 远端 cadence 候选应使用同一 manifest、相同窗口、baseline/candidate 交错重复采样，并生成 cadence stability summary。单次远端改善不足以证明 Core 策略有效。
+
 ## v0.12 真实观察与播放期吞吐契约
 
 一个 case 只有满足以下链路，才可以作为 Core 调优证据：

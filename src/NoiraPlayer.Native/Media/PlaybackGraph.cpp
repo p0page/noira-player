@@ -901,7 +901,7 @@ namespace winrt::NoiraPlayer::Native::implementation
                         ++m_videoStarvedPassCount;
                         ++m_qualityMetrics.VideoStarvedPasses;
                     }
-                    else
+                    else if (m_audioDecoder.IsOpen())
                     {
                         ++m_audioStarvedPassCount;
                         ++m_qualityMetrics.AudioStarvedPasses;
@@ -1036,9 +1036,6 @@ namespace winrt::NoiraPlayer::Native::implementation
 
             if (rendered && presented)
             {
-                m_nextRenderLoopWait = PlaybackFramePacing::RenderLoopWait(true);
-                m_nextRenderLoopWaitUseTimer =
-                    PlaybackFramePacing::ShouldUseRenderLoopTimer(m_nextRenderLoopWait);
                 if (auto elapsed = m_renderIntervalTracker.Observe(renderedAt))
                 {
                     m_qualityMetrics.RecordRenderIntervalMs(*elapsed);

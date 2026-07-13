@@ -2516,6 +2516,23 @@ internal static class Program
             Summary = label + " has no optimization blockers"
         };
 
+        var hasActionableCoreTarget = HasActionableCoreTarget(summary);
+        var hasOnlyIsolatedNonCoreBlockers = HasOnlyIsolatedNonCoreBlockers(summary);
+        if (summary.BlockedReportCount > 0 &&
+            PlaybackQualityCandidateEvidenceGatePolicy.CanContinueReportAnalysis(
+                summary.BlockedReportCount,
+                hasActionableCoreTarget,
+                hasOnlyIsolatedNonCoreBlockers))
+        {
+            gate.Summary = label + " has isolated non-Core blockers and actionable playback Core targets";
+            CopyValues(summary.Signals, gate.Signals);
+            CopyValues(summary.TargetFailureAreas, gate.TargetFailureAreas);
+            CopyValues(summary.TargetCaseIds, gate.TargetCaseIds);
+            CopyValues(summary.CodeTargets, gate.CodeTargets);
+            CopyValues(summary.SuggestedNextActions, gate.SuggestedNextActions);
+            return gate;
+        }
+
         foreach (var item in summary.Cases)
         {
             if (!item.IsBlocked)

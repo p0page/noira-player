@@ -1246,6 +1246,135 @@ public sealed class PlaybackQualityRunComparatorTests
         Assert.Equal("timing.maxFrameGapMs", report.Checks[0].Signal);
     }
 
+    [Fact]
+    public void Compare_Ignores_Audio_Starvation_Check_For_Known_VideoOnly_Source()
+    {
+        var baseline = CreateReport(
+            "baseline",
+            Check("AudioStarvedPasses", "pass", "buffering", "buffers.audioStarvedPasses", "0", "0"),
+            Check("VideoStarvedPasses", "pass", "buffering", "buffers.videoStarvedPasses", "0", "0"));
+        var candidate = CreateReport(
+            "candidate",
+            Check("AudioStarvedPasses", "fail", "buffering", "buffers.audioStarvedPasses", "0", "1"),
+            Check("VideoStarvedPasses", "pass", "buffering", "buffers.videoStarvedPasses", "0", "0"));
+        baseline.Tracks.VideoTrackCount = 1;
+        candidate.Tracks.VideoTrackCount = 1;
+
+        var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
+
+        Assert.Equal("unchanged", comparison.Result);
+        Assert.DoesNotContain(comparison.Regressions, delta =>
+            delta.Signal == "buffers.audioStarvedPasses");
+    }
+
+    [Fact]
+    public void Compare_Rejects_Core_Comparison_When_Transport_Wait_Dominates_A_Run()
+    {
+        var baseline = CreateReport(
+            "baseline",
+            Check("VideoStarvedPasses", "pass", "buffering", "buffers.videoStarvedPasses", "0", "0"));
+        var candidate = CreateReport(
+            "candidate",
+            Check("VideoStarvedPasses", "pass", "buffering", "buffers.videoStarvedPasses", "0", "0"));
+        baseline.Execution.RequestedSampleDurationMs = 30000;
+        candidate.Execution.RequestedSampleDurationMs = 30000;
+        baseline.Buffers.PlaybackTransportCallEvidenceStatus = "available";
+        baseline.Buffers.PlaybackTransportReadWaitMs = 100;
+        candidate.Buffers.PlaybackTransportCallEvidenceStatus = "available";
+        candidate.Buffers.PlaybackTransportReadWaitMs = 7500;
+
+        var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
+
+        Assert.Equal("insufficient-evidence", comparison.Result);
+        Assert.Contains("environment.playbackTransportWait", comparison.Comparability.Signals);
+    }
+
+    [Fact]
+    public void Compare_Does_Not_Reject_PauseResume_Recovery_For_Expected_Transport_Wait()
+    {
+        var baseline = CreateReport(
+            "baseline",
+            Check("ResumeRecovered", "pass", "lifecycle", "interaction.resumeRecovered", "true", "true"));
+        var candidate = CreateReport(
+            "candidate",
+            Check("ResumeRecovered", "pass", "lifecycle", "interaction.resumeRecovered", "true", "true"));
+        baseline.Execution.Scenario = PlaybackQualityExecutionScenario.PauseResume;
+        candidate.Execution.Scenario = PlaybackQualityExecutionScenario.PauseResume;
+        baseline.Execution.RequestedSampleDurationMs = 3000;
+        candidate.Execution.RequestedSampleDurationMs = 3000;
+        baseline.Buffers.PlaybackTransportCallEvidenceStatus = "available";
+        baseline.Buffers.PlaybackTransportReadWaitMs = 100;
+        candidate.Buffers.PlaybackTransportCallEvidenceStatus = "available";
+        candidate.Buffers.PlaybackTransportReadWaitMs = 1400;
+
+        var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
+
+        Assert.Equal("unchanged", comparison.Result);
+        Assert.DoesNotContain("environment.playbackTransportWait", comparison.Comparability.Signals);
+    }
+
+    [Fact]
+    public void Compare_Does_Not_Treat_Isolated_Max_Gap_As_Regression_When_Sustained_Cadence_Improves()
+    {
+        var baseline = CreateReport(
+            "baseline",
+            Check("SampleWindowCoverage", "fail", "frame-pacing", "execution.requestedSampleDurationMs", "30000", "28183.333"));
+        baseline.Timing.ExpectedFrameDurationMs = 1000.0 / 60.0;
+        baseline.Timing.LateFrameDropToleranceMs = 1000.0 / 24.0;
+        baseline.Timing.RenderIntervalMsP95 = 20.92;
+        baseline.Timing.RenderIntervalMsP99 = 24.04;
+        baseline.Timing.MaxFrameGapMs = 25.30;
+        baseline.Timing.RenderedVideoFrames = 1691;
+
+        var candidate = CreateReport(
+            "candidate",
+            Check("SampleWindowCoverage", "pass", "frame-pacing", "execution.requestedSampleDurationMs", "30000", "29950"));
+        candidate.Timing.ExpectedFrameDurationMs = 1000.0 / 60.0;
+        candidate.Timing.LateFrameDropToleranceMs = 1000.0 / 24.0;
+        candidate.Timing.RenderIntervalMsP95 = 18.06;
+        candidate.Timing.RenderIntervalMsP99 = 20.46;
+        candidate.Timing.MaxFrameGapMs = 28.88;
+        candidate.Timing.RenderedVideoFrames = 1797;
+
+        var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
+
+        Assert.Equal("improved", comparison.Result);
+        Assert.DoesNotContain(comparison.Regressions, delta =>
+            delta.Signal == "framePacing.maxFrameGapFrameRatio" ||
+            delta.Signal == "framePacing.maxFrameGapExpectedErrorMs");
+    }
+
+    [Fact]
+    public void Compare_Preserves_Large_Max_Gap_Regression_When_Sustained_Cadence_Improves()
+    {
+        var baseline = CreateReport(
+            "baseline",
+            Check("SampleWindowCoverage", "fail", "frame-pacing", "execution.requestedSampleDurationMs", "30000", "26733.333"));
+        baseline.Timing.ExpectedFrameDurationMs = 1000.0 / 60.0;
+        baseline.Timing.LateFrameDropToleranceMs = 1000.0 / 24.0;
+        baseline.Timing.RenderIntervalMsP95 = 21.59;
+        baseline.Timing.RenderIntervalMsP99 = 22.27;
+        baseline.Timing.MaxFrameGapMs = 35.74;
+        baseline.Timing.RenderedVideoFrames = 1604;
+
+        var candidate = CreateReport(
+            "candidate",
+            Check("SampleWindowCoverage", "pass", "frame-pacing", "execution.requestedSampleDurationMs", "30000", "29950"));
+        candidate.Timing.ExpectedFrameDurationMs = 1000.0 / 60.0;
+        candidate.Timing.LateFrameDropToleranceMs = 1000.0 / 24.0;
+        candidate.Timing.RenderIntervalMsP95 = 18.65;
+        candidate.Timing.RenderIntervalMsP99 = 21.37;
+        candidate.Timing.MaxFrameGapMs = 1024.95;
+        candidate.Timing.RenderedVideoFrames = 1797;
+
+        var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
+
+        Assert.Equal("mixed", comparison.Result);
+        Assert.Contains(comparison.Regressions, delta =>
+            delta.Signal == "framePacing.maxFrameGapFrameRatio" ||
+            delta.Signal == "framePacing.maxFrameGapExpectedErrorMs");
+    }
+
     private static PlaybackQualityReport CreateReport(
         string runId,
         params PlaybackQualityCheck[] checks)

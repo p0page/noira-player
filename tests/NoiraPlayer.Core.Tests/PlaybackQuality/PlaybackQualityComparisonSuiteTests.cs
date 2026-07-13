@@ -162,6 +162,42 @@ public sealed class PlaybackQualityComparisonSuiteTests
     }
 
     [Fact]
+    public void Summarize_AcceptsCandidate_With_Medium_Risk_When_Only_TransportDominated_Cases_Are_Isolated()
+    {
+        var improved = Compare(
+            Check("MaxFrameGapMs", "fail", "frame-pacing", "timing.maxFrameGapMs", "105.000", "180.000"),
+            Check("MaxFrameGapMs", "pass", "frame-pacing", "timing.maxFrameGapMs", "105.000", "90.000"));
+        var transportBaseline = Report(
+            "transport-baseline",
+            Check("VideoStarvedPasses", "pass", "buffering", "buffers.videoStarvedPasses", "0", "0"));
+        var transportCandidate = Report(
+            "transport-candidate",
+            Check("VideoStarvedPasses", "pass", "buffering", "buffers.videoStarvedPasses", "0", "0"));
+        transportBaseline.Execution.RequestedSampleDurationMs = 30000;
+        transportCandidate.Execution.RequestedSampleDurationMs = 30000;
+        transportBaseline.Buffers.PlaybackTransportCallEvidenceStatus = "available";
+        transportBaseline.Buffers.PlaybackTransportReadWaitMs = 100;
+        transportCandidate.Buffers.PlaybackTransportCallEvidenceStatus = "available";
+        transportCandidate.Buffers.PlaybackTransportReadWaitMs = 7500;
+        var isolated = PlaybackQualityRunComparator.Compare(transportBaseline, transportCandidate);
+        isolated.CaseId = "remote/transport-dominated";
+
+        var suite = PlaybackQualityComparisonSuiteAggregator.Summarize(new[] { improved, isolated });
+
+        Assert.Equal(1, suite.ImprovedCount);
+        Assert.Equal(1, suite.InsufficientEvidenceCount);
+        Assert.Equal("accept-candidate", suite.Action);
+        Assert.Equal("keep-candidate", suite.Decision);
+        Assert.Equal("medium", suite.Risk);
+        Assert.Contains("environment.playbackTransportWait", suite.Signals);
+        Assert.Empty(suite.Blockers);
+        Assert.Contains("remote/transport-dominated", suite.TargetCaseIds);
+        var isolatedCase = Assert.Single(suite.Cases, item =>
+            item.CaseId == "remote/transport-dominated");
+        Assert.Contains("comparison.incompatible-inputs", isolatedCase.Blockers);
+    }
+
+    [Fact]
     public void Summarize_CollectsEvidence_When_Build_Identity_Is_Missing()
     {
         var baseline = Report(

@@ -1,5 +1,15 @@
 ﻿# 技术决策
 
+## 2026-07-13：环境不可比 case 必须隔离但不得消失，max-gap 只能有界降噪
+
+决策：普通 `playback` 报告的 transport read wait 达到请求观察窗口 25% 时，baseline/candidate comparison 标记为 `insufficient-evidence`，信号为 `environment.playbackTransportWait`。该 blocker 保留在 per-case comparison、case summary 和 target case IDs 中，但在其余可比 case 仍有明确 Core 改善时，不再自动提升为全局 suite blocker。只有所有不足证据都严格属于这一种已知环境信号、且 suite 没有 regression 或 mixed 时，才允许 `accept-candidate / keep-candidate`；风险必须为 `medium`，不能伪装成全语料低风险通过。缺字段、源不一致、same-build、未知环境原因或其他 comparison blocker 继续阻断。
+
+场景边界：上述 25% 吞吐不可比规则只用于普通持续播放。`pause-resume`、切轨、seek 等主动操作必须按各自恢复证据和门限判断，不能把预期等待误判成整段播放环境阻塞。明确 video-only 的报告不检查 audio starvation；native 只有在 audio decoder 已打开时才累计 audio starvation。
+
+离群值边界：P95/P99 改善和零丢帧不能无条件掩盖 max-gap。只有 candidate max-gap 比 baseline 略高、同时不超过 candidate 实际记录的 native late-frame tolerance 时，才可将其视为轻微离群波动；超过 tolerance 的 max-gap 必须进入 regression/mixed。该规则不改变 manifest expected，不降低 stable case 标准，也不删除原始指标。
+
+候选决策：拒绝 `fbb5504` 的“成功 present 后把默认 render-loop wait 从 5ms 变为 0ms”。正式同 manifest 比较在可信 max-gap 规则下为 `split-candidate`；三次 HDR 候选采样被稳定性工具判为 unstable，而旧 5ms 策略在相同当前网络条件下的两次重复稳定。当前产品 Core 恢复 5ms 调度让步，候选报告作为负向证据保留在 ignored artifacts，不得被后续模型解释为已接受优化。后续远端 cadence 调优必须至少使用交错重复采样，并同时读取 transport wait 与稳定性摘要。
+
 ## 2026-07-13：请求时长、观察时长和媒体推进必须是三份独立证据
 
 决策：evaluation version 升级为 `playback-quality-v0.12`。`requestedSampleDurationMs` 只表示 runner 的采样意图；collector 必须用独立单调时钟记录 `observedSampleWallClockDurationMs`；媒体推进继续由实际 rendered+dropped 帧与源帧率计算。三者禁止互相复制或替代。完成态若实际观察不足，strict validator 以 `report.execution.sample-wall-clock.incomplete` 拒绝报告；实际观察完整但媒体推进不足时，evaluator 必须生成带失败类别的 `SampleWindowCoverage` fail，validator 只接受与重新计算结果一致的失败，不允许短样本 pass。

@@ -2,6 +2,16 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-13 更新：隔离环境噪声，并拒绝不稳定的 0ms render-wait 候选
+
+v0.12 候选评测现在不会再被少量外部环境 case 整体短路。只有真实进入 native 播放链路、报告和源身份完整、且仍有可执行 Core 目标时，report-analysis gate 才允许隔离非 Core blocker 后继续比较。普通 `playback` case 若任一侧 transport read wait 占请求观察窗口至少 25%，该 case 保持 `insufficient-evidence`，并保留 `environment.playbackTransportWait`、per-case blocker 和目标 case ID；它不会被伪装成 pass，也不会覆盖其他可比 case 的结论。`pause-resume` 的预期恢复等待不套用普通播放吞吐规则。视频轨明确存在且音轨数为 0 时，不再生成或比较虚假的 audio starvation 失败；native 也只在音频 decoder 已打开时累计该指标。
+
+max-gap 比较同样收紧。P95/P99 改善且无丢帧时，只允许忽略仍落在 native late-frame tolerance 内的轻微 max 波动；超过容差的单次大卡顿继续作为 regression/mixed 证据。套件只有在所有不足证据都单独归因于 transport wait、其余可比 case 有改善且没有 regression/mixed 时，才可输出 `accept-candidate`，风险固定为 `medium`，隔离 case 仍必须可追踪。其他弱证据、源不匹配、缺字段或未知 blocker 继续阻断候选。
+
+首个 Core 候选 `fbb5504` 曾在每次成功 present 后取消默认 5ms render-loop wait。按同一 v0.12 manifest 的正式比较，收紧 max-gap 规则后结果为 22 个 comparison：2 improved、1 mixed、15 unchanged、4 个 transport-dominated insufficient，suite 决策为 `split-candidate`。HDR 1080p60 候选虽推进满 29.95 秒，但出现约 1025ms max gap。候选三次同源采样的 P95 为约 18.65/39.63/16.98ms，max 为约 1025/149/66ms，稳定性工具明确标记为 unstable；旧策略 helper 在相同当前网络条件下两次均推进满 29.95 秒，P95 约 17.22/17.08ms，max 约 19.54/21.53ms。证据不能支持移除调度让步，因此候选已撤回，产品 Core 恢复默认 5ms wait；本轮不声称播放性能改善。
+
+最终状态验证：Core 全量 `1080/1080` 通过；`run-playback-core-checks.ps1 -AppDiffBase main` 全阶段通过，包含真实 native headless 播放、长暂停与 demux 读错恢复、EAGAIN、seek、音轨字幕、HDR/display refresh、CLI/manifest/report-set 和 Native Debug x64 build；完整 Modern App Debug x64 重新编译成功。当前分支已包含 `main` 的 `d58104c`，`docs/DESIGN.md` 的柔和紫信号色 `#8B7CF6` 已合入。下一步应采用交错、重复的 baseline/candidate 采样，先消除公共网络时序偏差，再选择新的单变量 Core 候选。
+
 ## 2026-07-13 更新：v0.12 阻止短样本假通过，并补齐播放期传输归因
 
 评测契约升级为 `playback-quality-v0.12`。此前 runner 虽然把公开和私有 URI 送入了真实 native 播放链路，但请求 30 秒不等于实际观察 30 秒；报告只按已呈现帧计算媒体进度，短样本仍可能被物化为 pass。现在 execution 独立记录 `requestedSampleDurationMs` 与 `observedSampleWallClockDurationMs`，strict validator 会先确认 collector 的真实观察时长，再检查 rendered+dropped 对应的媒体推进。观察不足归为证据采集错误；观察完整但媒体推进不足必须作为明确 fail，不能再伪装成 pass。

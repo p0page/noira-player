@@ -37,6 +37,20 @@ namespace NoiraPlayer.Core.PlaybackQuality
             result.TransportReadWaitRatio =
                 report.Buffers.PlaybackTransportReadWaitMs.GetValueOrDefault() /
                 requestedDurationMs;
+            var hasTransportEvidence = string.Equals(
+                    report.Buffers.PlaybackTransportCallEvidenceStatus,
+                    "available",
+                    StringComparison.Ordinal) &&
+                report.Buffers.PlaybackTransportReadWaitMs.HasValue;
+            if (hasTransportEvidence &&
+                result.TransportReadWaitRatio >= DominantObservationRatio)
+            {
+                result.Attribution = "transport-wait-dominant";
+                result.Reason =
+                    "Transport read wait consumed at least 25% of the requested observation window.";
+                return result;
+            }
+
             if (!sampleIncomplete)
             {
                 result.Attribution = "sample-complete";
@@ -44,23 +58,11 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 return result;
             }
 
-            if (!string.Equals(
-                    report.Buffers.PlaybackTransportCallEvidenceStatus,
-                    "available",
-                    StringComparison.Ordinal) ||
-                !report.Buffers.PlaybackTransportReadWaitMs.HasValue)
+            if (!hasTransportEvidence)
             {
                 result.Attribution = "transport-evidence-unavailable";
                 result.Reason =
                     "Transport call timing is unavailable, so the incomplete sample cannot be attributed to network wait.";
-                return result;
-            }
-
-            if (result.TransportReadWaitRatio >= DominantObservationRatio)
-            {
-                result.Attribution = "transport-wait-dominant";
-                result.Reason =
-                    "Transport read wait consumed at least 25% of the requested observation window.";
                 return result;
             }
 

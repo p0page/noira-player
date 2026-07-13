@@ -347,6 +347,12 @@ namespace NoiraPlayer.Core.PlaybackQuality
             {
                 if (blocker.StartsWith("comparison.", StringComparison.Ordinal))
                 {
+                    if (blocker == "comparison.incompatible-inputs" &&
+                        IsIsolatedTransportEvidenceGap(comparison))
+                    {
+                        continue;
+                    }
+
                     AddUnique(suite.Blockers, blocker);
                 }
             }
@@ -563,6 +569,21 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 return;
             }
 
+            if (suite.ImprovedCount > 0 &&
+                suite.RegressedCount == 0 &&
+                suite.MixedCount == 0 &&
+                HasOnlyIsolatedTransportEvidenceGaps(suite))
+            {
+                suite.Action = "accept-candidate";
+                suite.Risk = "medium";
+                AddUnique(
+                    suite.Reasons,
+                    "suite has measured improvement while transport-dominated comparisons remain isolated");
+                AddUnique(suite.Signals, "environment.playbackTransportWait");
+                AddImprovementSignals(suite);
+                return;
+            }
+
             if (suite.WeakConfidenceCount > 0 || suite.InsufficientEvidenceCount > 0)
             {
                 suite.Action = "collect-comparable-evidence";
@@ -605,6 +626,65 @@ namespace NoiraPlayer.Core.PlaybackQuality
             suite.Action = "continue-next-triage-step";
             suite.Risk = "low";
             AddUnique(suite.Reasons, "suite contains no blocking comparisons and no measured improvement");
+        }
+
+        private static bool HasOnlyIsolatedTransportEvidenceGaps(
+            PlaybackQualityComparisonSuite suite)
+        {
+            var foundInsufficientComparison = false;
+            foreach (var comparison in suite.Comparisons)
+            {
+                if (comparison.Result != "insufficient-evidence")
+                {
+                    continue;
+                }
+
+                foundInsufficientComparison = true;
+                if (!IsIsolatedTransportEvidenceGap(comparison))
+                {
+                    return false;
+                }
+            }
+
+            return foundInsufficientComparison;
+        }
+
+        private static bool IsIsolatedTransportEvidenceGap(
+            PlaybackQualityRunComparison comparison)
+        {
+            if (comparison.Result != "insufficient-evidence" ||
+                comparison.Comparability.Signals.Count == 0)
+            {
+                return false;
+            }
+
+            foreach (var signal in comparison.Comparability.Signals)
+            {
+                if (!string.Equals(
+                    signal,
+                    "environment.playbackTransportWait",
+                    StringComparison.Ordinal))
+                {
+                    return false;
+                }
+            }
+
+            foreach (var blocker in comparison.Optimization.Blockers)
+            {
+                if (!string.Equals(
+                        blocker,
+                        "comparison.incompatible-inputs",
+                        StringComparison.Ordinal) &&
+                    !string.Equals(
+                        blocker,
+                        "comparison inputs are incompatible",
+                        StringComparison.Ordinal))
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         private static bool HasOptimizationAction(
@@ -659,6 +739,11 @@ namespace NoiraPlayer.Core.PlaybackQuality
         {
             if (suite.Action == "accept-candidate")
             {
+                if (suite.InsufficientEvidenceCount > 0)
+                {
+                    AddEvidenceTargetCaseIds(suite);
+                }
+
                 return;
             }
 
