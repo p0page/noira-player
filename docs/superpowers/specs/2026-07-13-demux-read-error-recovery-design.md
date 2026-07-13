@@ -35,6 +35,7 @@
 4. 最大连续重试数固定为 10，与本地 mpv 参考一致。有效 packet 到达后，连续错误计数清零并记一次 recovery。
 5. 预算耗尽时抛出最后一次原始 FFmpeg 错误，不能改写成 EOF、卡住或伪造恢复。
 6. 重试只解决 demux read 返回错误，不执行 close/reopen/seek，不改变 timeline、轨道、颜色或 decoder 状态。
+7. `NOIRAPLAYER_QA_DISABLE_DEMUX_READ_RECOVERY=1` 仅供评测在同一 revision 下关闭 Core retry；它不改变 FFmpeg protocol reconnect、manifest expected 或报告字段，产品默认不设置该变量。
 
 ## 结构化证据
 
@@ -60,6 +61,8 @@ native、WinRT、Core snapshot、headless parser、App-hosted mapper 和正式 r
 - manifest、runtime source map、实际执行与 report 的 case identity 一致。
 
 永久故障由 policy 单元测试和 helper 负向测试证明预算耗尽并保留原始错误；它不混入要求全绿的正式 corpus，也不冒充成功播放报告。
+
+同一 v0.9 manifest 先在 QA disable 开关下生成失败 baseline，再在默认策略下生成成功 candidate。baseline 必须包含真实 native error report，candidate 必须包含真实恢复 report；不同评测版本、不同 fault 参数或只靠服务器日志的结果不得进入比较。
 
 ## 验证门禁
 
