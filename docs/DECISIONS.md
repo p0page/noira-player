@@ -1340,3 +1340,9 @@ App-hosted 完成门禁必须使用完整 Native AOT Publish 产物。普通 Deb
 决策：native backend 在 `StartAsync` 内通过状态事件进入 Failed、但方法本身正常返回时，PlaybackPage 保存失败消息；quality-run 没有 descriptor 时用该消息生成 `app-hosted-quality-run.playback-command-failed` report。禁止输出 `capture-skipped` 作为播放失败结论。
 
 原因：一次真实 Emby 打开在 `avio_open2` 30 秒超时，App 已获得会话、PlaybackInfo 和目标源，但旧 harness 最终只写“no current playback descriptor”，覆盖了真正断点。失败归因必须停在最接近根因的组件边界。
+
+# 2026-07-13: 确定性故障修复至少需要同 revision 三轮重复
+
+决策：会改变失败结局的 deterministic network/recovery candidate，采纳前至少在同一 source revision、同一 manifest 哈希和同一 opened-source identity 下执行三轮 baseline 与三轮 candidate。每轮必须保留原始 helper/server 日志、执行状态和正式报告；candidate 必须证明故障确实发生并被恢复，不能用未触发故障的 pass 计入重复成功。
+
+本轮 demux 读取恢复满足该门禁：baseline 3/3 为 fatal `-5`，candidate 3/3 均记录 errors/retries/recoveries `1/1/1`、fatal 0，并在 `294.384-328.065ms` 内恢复。重复门禁证明特定故障注入的可复现性，不把三次本地成功外推为所有远端网络条件都已解决；不同容器、服务端和超时形态仍需独立 case。
