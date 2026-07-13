@@ -30,7 +30,7 @@ Kodi、mpv 和 VLC 均在 FFmpeg demux 前保有自己的输入/stream 层，并
 
 ## 架构与数据流
 
-新增一个聚焦于所有权和计数的 native 单元，负责：
+扩展仓库中现有但目前只负责 URL 校验的 `HttpMediaInput`，使它成为聚焦于所有权和计数的 native 单元，负责：
 
 1. 持有内层 `AVIOContext`、外层 `AVIOContext` 和 callback state；
 2. 使用现有 HTTP options 打开内层输入；
