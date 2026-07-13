@@ -6,7 +6,7 @@
 
 归因决策：当前三个公开 1080p60 HEVC 30 秒 case 的 `avcodec_send_packet` P50/P95 已解释绝大多数总 decode duration，而 packet read、receive、materialize、render、present 和总 demux 均不是主导项。后续候选必须直接作用于 FFmpeg/D3D11VA 提交或其 surface/并发边界；继续调整网络读取、色彩转换、render wait 或报告阈值都没有当前证据支持。
 
-实现边界：参考 Kodi Xbox DXVA 的 surface 数量、共享 surface 和 fence 原则，但先做可回退的小步候选。第一候选只增加 FFmpeg hardware frame pool 余量，并用同一 v0.13 manifest 比较 send-packet P50/P95、媒体推进和 cadence；只有它无效时才进入独立 decoder device、共享 texture/fence 与异步 worker 的组合设计。任何候选若没有缩短 send-packet、提高媒体推进且不引入 cadence/seek/HDR/暂停恢复回归，必须撤回。
+实现边界：参考 Kodi Xbox DXVA 的 surface 数量、共享 surface 和 fence 原则，但所有实验必须可回退。`extra_hw_frames = 4` 单变量候选未稳定缩短 send-packet，也未让三个 30 秒 case 覆盖请求窗口，且 HDR 强制 SDR 媒体推进轻微下降，因此已撤回。这个结果说明单纯增加同一同步 D3D11VA device 的 surface 余量不能解决当前提交阻塞。下一步若继续，必须把独立 decoder device、共享 texture/fence 与异步 worker 作为一个有明确 ownership/lifecycle 的最小组合设计；任何候选若没有缩短 send-packet、提高媒体推进且不引入 cadence/seek/HDR/暂停恢复回归，必须撤回。
 
 ## 2026-07-13：环境不可比 case 必须隔离但不得消失，max-gap 只能有界降噪
 

@@ -8,7 +8,7 @@
 
 同一公开 1080p60 三样本、30 秒窗口的 v0.13 诊断运行全部诚实触发 `SampleWindowCoverage` fail。SDR、HDR10、HDR10 强制 SDR 分别渲染 `1647/1576/1575` 帧，对应约 `27.45/26.27/26.25` 秒媒体推进。瓶颈已收窄到 `avcodec_send_packet`：P50/P95 分别为 `12.28/14.76ms`、`13.06/18.79ms`、`13.26/15.88ms`；packet read P95 仅 `0.38-0.40ms`，receive-frame 与 materialize P95 均低于 `0.01ms`，render P95 约 `0.23-0.26ms`。因此下一步不再改网络、tone mapping 或 Present，而是针对 FFmpeg/D3D11VA 提交与 surface 管线做单变量候选。
 
-验证：新增 native 指标单测、Core mapper/analyzer/signal/WinRT bridge 契约通过；完整 Modern App Debug x64 编译成功；native parser contract 和完整真实 native-headless smoke 均通过。当前仅增加可观测性并升级评测版本，没有声称播放器性能改善。Kodi 对照显示其 Xbox DXVA 路径会按 codec/reference/display 需求预留并限制 decoder surfaces，且在共享 decoder device 时使用 shared surface/fence；下一步先验证较小的 surface 余量候选，失败后再评估独立 decoder device 与共享 surface，而不是直接搬入整套 Kodi RenderManager。
+验证：新增 native 指标单测、Core mapper/analyzer/signal/WinRT bridge 契约通过；完整 Modern App Debug x64 编译成功；native parser contract 和完整真实 native-headless smoke 均通过。当前仅增加可观测性并升级评测版本，没有声称播放器性能改善。Kodi 对照显示其 Xbox DXVA 路径会按 codec/reference/display 需求预留并限制 decoder surfaces，且在共享 decoder device 时使用 shared surface/fence。已验证 FFmpeg `extra_hw_frames = 4` 单变量候选：三项媒体推进约为 baseline→candidate `27.45→27.70s`、`26.27→26.37s`、`26.25→26.18s`，send-packet P50 基本不变且三项仍全部 fail，候选已撤回。下一步应设计独立 decoder device、共享 surface/fence 与 worker 的最小组合，而不是继续增加同一同步设备的 surface 数量或直接搬入整套 Kodi RenderManager。
 
 ## 2026-07-13 更新：隔离环境噪声，并拒绝不稳定的 0ms render-wait 候选
 
