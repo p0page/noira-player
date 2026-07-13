@@ -1297,3 +1297,11 @@ fallback 只拥有 `hdrOutput`、有限的 `dxgiInputAnyOf`、`dxgiOutput`、可
 候选边界：Kodi、mpv、VLC 当前参考实现都保留 `av_seek_frame` backward 语义；不得以 `AVSEEK_FLAG_ANY`、后关键帧、删除准确预滚或放宽 startup SLO 制造改善。全局 probe 缩减只在单次本机 ffprobe 中最多显示约亚秒级差异，且有丢失轨道/字幕风险，不进入候选。下一轮如研究连接复用、custom AVIO/cache 或服务端 seekable remux，必须一次只改变一个变量，并以 `8e19ae2` 保存的 exact manifest 生成同版本 baseline/candidate。
 
 App-hosted 完成门禁必须使用完整 Native AOT Publish 产物。普通 Debug Build 成功只能证明工程可编译，不能证明 `AppxLayouts/.../NativeAot` 已刷新；若报告 evaluation version、provider status 或 expected bridge 字段与当前 Core 不一致，应先比较注册 InstallLocation、AOT executable 时间戳和报告版本，禁止把陈旧 layout 归因成 native metrics 回归。一次只执行一个 dev-command 时，导出/分析数量必须与 selected case 数比较，同时保留 plan 总数供审计。
+
+# 2026-07-13: AVIO 回调证据必须可验证，当前双层 custom AVIO 不作为播放策略
+
+决策：evaluation version 升级为 `playback-quality-v0.6`。`ffmpeg.open-input`、`ffmpeg.find-stream-info`、`native.startup-seek` 和 `native.first-frame.demux-read` 必须分别报告 transport provider、call evidence status、read/seek callback 次数、read/seek wait 和 seek distance。默认 FFmpeg protocol 无法提供 callback 级观测时必须写 `ffmpeg-builtin / unavailable` 和显式 null；只有 instrumented custom AVIO 实际执行回调时才允许写 `instrumented-ffmpeg-avio / measured` 与非负数值。0、null 和字段缺失含义不同，不得互换。
+
+门禁：JSON 字段存在性必须按 `native.open` stage 与精确 component name 收集。另一个组件存在同名属性不能满足当前组件；provider/status 不匹配、measured 缺数值、unavailable 携带数值或组件间 provider 不一致都属于无效证据。helper parser 严格并不替代 report-set validator，直接导入 JSON 也必须执行同一合同。
+
+候选结论：当前实现用外层 `avio_alloc_context` 转发到 FFmpeg 内层 `avio_open2`，保留原协议选项、完整 stream-info 和准确 backward seek，只用于测量。它在同一 18-case manifest 的 13 个 stable/challenge case 上产生 4 improved、4 regressed、4 mixed，focused 裁决为 `reject-candidate`；因此环境开关默认关闭，不进入 App 默认策略，也不据此宣称连接复用。下一轮若继续优化远端启动，应实现真正拥有 HTTP 会话与 Range 请求调度的输入层，仍须保持 probe、轨道发现、seek 精度、字幕与颜色证据，并重新生成同版本 baseline/candidate。
