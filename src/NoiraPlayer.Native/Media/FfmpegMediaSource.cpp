@@ -6,7 +6,9 @@
 #include <algorithm>
 #include <cctype>
 #include <chrono>
+#include <cstdlib>
 #include <string>
+#include <string_view>
 
 #pragma warning(push)
 #pragma warning(disable : 4244 4819)
@@ -378,6 +380,20 @@ namespace
         return hasPrefix("http://") || hasPrefix("https://");
     }
 
+    bool IsInstrumentedAvioEnabled() noexcept
+    {
+        char* value = nullptr;
+        size_t valueLength = 0;
+        if (_dupenv_s(&value, &valueLength, "NOIRAPLAYER_NATIVE_INSTRUMENTED_AVIO") != 0)
+        {
+            return false;
+        }
+
+        auto enabled = value != nullptr && std::string_view(value) == "1";
+        std::free(value);
+        return enabled;
+    }
+
     void SetFfmpegOption(AVDictionary** options, char const* name, char const* value)
     {
         auto result = av_dict_set(options, name, value, 0);
@@ -392,8 +408,7 @@ namespace winrt::NoiraPlayer::Native::implementation
 {
     void FfmpegMediaSource::Open(winrt::hstring const& url)
     {
-        HttpMediaInput input;
-        input.Open(url);
+        HttpMediaInput::ValidateUrl(url);
 
         Close();
         m_openTiming = {};
@@ -434,7 +449,18 @@ namespace winrt::NoiraPlayer::Native::implementation
                 L"FfmpegMediaSource.Open avformat_open_input begin sourceLength=" +
                 std::to_wstring(source.size()));
             BeginBlockingIo(OpenTimeoutMilliseconds);
-            auto result = avformat_open_input(&formatContext, source.c_str(), nullptr, &openOptions);
+            auto result = 0;
+            if (IsHttpSource(source) && IsInstrumentedAvioEnabled())
+            {
+                m_httpMediaInput = std::make_unique<HttpMediaInput>();
+                m_httpMediaInput->Open(source, &openOptions, formatContext->interrupt_callback);
+                m_httpMediaInput->Attach(formatContext);
+                result = avformat_open_input(&formatContext, source.c_str(), nullptr, &openOptions);
+            }
+            else
+            {
+                result = avformat_open_input(&formatContext, source.c_str(), nullptr, &openOptions);
+            }
             av_dict_free(&openOptions);
             if (result < 0)
             {
@@ -574,6 +600,12 @@ namespace winrt::NoiraPlayer::Native::implementation
         if (m_formatContext != nullptr)
         {
             avformat_close_input(&m_formatContext);
+        }
+
+        if (m_httpMediaInput != nullptr)
+        {
+            m_httpMediaInput->Close();
+            m_httpMediaInput.reset();
         }
 
         m_url.clear();

@@ -40,6 +40,8 @@ Kodi、mpv 和 VLC 均在 FFmpeg demux 前保有自己的输入/stream 层，并
 
 `FfmpegMediaSource` 保留现有默认 `avformat_open_input` 路径。只有 `NOIRAPLAYER_NATIVE_INSTRUMENTED_AVIO=1` 且输入为 HTTP/HTTPS 时启用实验路径；本地文件和默认 App 行为不变。实验路径若无法打开或执行，不允许静默回退到默认路径，因为回退会使 report 无法判断实际执行了哪条输入链路。
 
+这些计数表示 FFmpeg demux 对外层 custom AVIO 发起的 callback 调用，以及 callback 在内层 AVIO 中等待的总时间；它们不等价于底层 HTTP request/Range 次数。没有自持 HTTP backend 或协议级 hook 时，报告不得把 `transportReadCalls` 命名或解释为 HTTP 请求数。
+
 打开 format 后，现有 `avformat_find_stream_info`、准确 startup seek、解码和渲染逻辑完全复用。每个 startup component 记录 phase-local 的：
 
 - `transportProvider`：`ffmpeg-builtin` 或 `instrumented-ffmpeg-avio`；

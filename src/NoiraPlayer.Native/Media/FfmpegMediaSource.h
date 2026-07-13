@@ -3,6 +3,7 @@
 #include <atomic>
 #include <cstdint>
 #include <deque>
+#include <memory>
 #include <optional>
 #include <string>
 #include <unordered_map>
@@ -12,6 +13,7 @@
 
 #include "MediaTimeline.h"
 #include "FfmpegSeekReplayCache.h"
+#include "HttpMediaInput.h"
 
 struct AVFormatContext;
 struct AVPacket;
@@ -138,6 +140,7 @@ namespace winrt::NoiraPlayer::Native::implementation
 
         winrt::hstring m_url;
         AVFormatContext* m_formatContext{nullptr};
+        std::unique_ptr<HttpMediaInput> m_httpMediaInput;
         std::unordered_set<int32_t> m_activeStreams;
         std::unordered_set<int32_t> m_switchCacheStreams;
         std::unordered_map<int32_t, std::deque<AVPacket*>> m_packetQueues;

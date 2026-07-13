@@ -18,6 +18,7 @@ foreach ($requiredNativeRegression in @(
     'native-audio-frame-preroll-test',
     'native-audio-frame-timeline-test',
     'native-audio-buffer-accumulator-test',
+    'native-http-media-input-test',
     'native-decoder-eagain-recovery-test')) {
     if (-not ($plan.commands | Where-Object name -eq $requiredNativeRegression)) {
         throw ('Expected playback-core plan to include ' + $requiredNativeRegression + '.')

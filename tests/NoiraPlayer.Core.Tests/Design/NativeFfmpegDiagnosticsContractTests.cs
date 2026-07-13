@@ -106,6 +106,29 @@ public sealed class NativeFfmpegDiagnosticsContractTests
         Assert.Contains("av_dict_free(&openOptions);", source, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Native_Http_Input_Exposes_An_OptIn_Instrumented_Custom_Avio_Path_Without_Fallback()
+    {
+        var header = ReadNativeSource("Media", "HttpMediaInput.h");
+        var inputSource = ReadNativeSource("Media", "HttpMediaInput.cpp");
+        var mediaHeader = ReadNativeSource("Media", "FfmpegMediaSource.h");
+        var mediaSource = ReadNativeSource("Media", "FfmpegMediaSource.cpp");
+
+        Assert.Contains("struct HttpMediaInputSnapshot", header, StringComparison.Ordinal);
+        Assert.Contains("ReadCalls", header, StringComparison.Ordinal);
+        Assert.Contains("SeekCalls", header, StringComparison.Ordinal);
+        Assert.Contains("ReadWaitMs", header, StringComparison.Ordinal);
+        Assert.Contains("SeekWaitMs", header, StringComparison.Ordinal);
+        Assert.Contains("SeekDistanceBytes", header, StringComparison.Ordinal);
+        Assert.Contains("avio_open2", inputSource, StringComparison.Ordinal);
+        Assert.Contains("avio_alloc_context", inputSource, StringComparison.Ordinal);
+        Assert.Contains("AVSEEK_SIZE", inputSource, StringComparison.Ordinal);
+        Assert.Contains("NOIRAPLAYER_NATIVE_INSTRUMENTED_AVIO", mediaSource, StringComparison.Ordinal);
+        Assert.Contains("AVFMT_FLAG_CUSTOM_IO", inputSource, StringComparison.Ordinal);
+        Assert.Contains("std::unique_ptr<HttpMediaInput>", mediaHeader, StringComparison.Ordinal);
+        Assert.DoesNotContain("instrumented avio fallback", mediaSource, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static string ReadNativeSource(params string[] segments)
     {
         var parts = new string[segments.Length + 3];

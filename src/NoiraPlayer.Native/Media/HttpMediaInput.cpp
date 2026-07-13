@@ -1,11 +1,50 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "HttpMediaInput.h"
+
+#include <chrono>
+
+#pragma warning(push)
+#pragma warning(disable : 4244 4819)
+extern "C"
+{
+#include <libavformat/avformat.h>
+#include <libavutil/error.h>
+#include <libavutil/mem.h>
+}
+#pragma warning(pop)
 
 namespace winrt::NoiraPlayer::Native::implementation
 {
     using winrt::Windows::Foundation::Uri;
 
-    void HttpMediaInput::Open(winrt::hstring const& url)
+    namespace
+    {
+        constexpr int OuterBufferSize = 32 * 1024;
+
+        double ElapsedMilliseconds(std::chrono::steady_clock::time_point startedAt) noexcept
+        {
+            return std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - startedAt).count();
+        }
+
+        uint64_t AbsoluteDistance(int64_t left, int64_t right) noexcept
+        {
+            if (left < 0 || right < 0)
+            {
+                return 0;
+            }
+
+            auto distance = left > right ? left - right : right - left;
+            return static_cast<uint64_t>(distance);
+        }
+    }
+
+    HttpMediaInput::~HttpMediaInput()
+    {
+        Close();
+    }
+
+    void HttpMediaInput::ValidateUrl(winrt::hstring const& url)
     {
         if (url.empty())
         {
@@ -23,29 +62,136 @@ namespace winrt::NoiraPlayer::Native::implementation
         {
             throw winrt::hresult_invalid_argument(L"Direct stream URL must include a host.");
         }
+    }
 
-        m_url = url;
+    void HttpMediaInput::Open(
+        std::string const& source,
+        AVDictionary** options,
+        AVIOInterruptCB const& interruptCallback)
+    {
+        if (source.empty())
+        {
+            throw winrt::hresult_invalid_argument(L"Media input source is required.");
+        }
+
+        Close();
+        m_snapshot = {};
+
+        auto result = avio_open2(
+            &m_innerContext,
+            source.c_str(),
+            AVIO_FLAG_READ,
+            &interruptCallback,
+            options);
+        if (result < 0)
+        {
+            m_snapshot.LastError = result;
+            throw winrt::hresult_error(E_FAIL, L"avio_open2 failed for instrumented media input.");
+        }
+
+        auto buffer = static_cast<uint8_t*>(av_malloc(OuterBufferSize));
+        if (buffer == nullptr)
+        {
+            Close();
+            throw winrt::hresult_error(E_OUTOFMEMORY, L"Could not allocate instrumented AVIO buffer.");
+        }
+
+        m_outerContext = avio_alloc_context(
+            buffer,
+            OuterBufferSize,
+            0,
+            this,
+            &HttpMediaInput::ReadCallback,
+            nullptr,
+            &HttpMediaInput::SeekCallback);
+        if (m_outerContext == nullptr)
+        {
+            av_free(buffer);
+            Close();
+            throw winrt::hresult_error(E_OUTOFMEMORY, L"Could not allocate instrumented AVIO context.");
+        }
+
+        m_outerContext->seekable = m_innerContext->seekable;
+        m_outerContext->max_packet_size = m_innerContext->max_packet_size;
+        m_snapshot.EvidenceAvailable = true;
         m_open = true;
     }
 
-    uint32_t HttpMediaInput::Read(uint8_t* buffer, uint32_t bufferLength)
+    void HttpMediaInput::Attach(AVFormatContext* formatContext)
     {
-        if (!m_open)
+        if (!m_open || m_outerContext == nullptr || formatContext == nullptr)
         {
-            throw winrt::hresult_invalid_argument(L"HTTP media input is not open.");
+            throw winrt::hresult_invalid_argument(L"Instrumented media input must be open before attach.");
         }
 
-        if (bufferLength > 0 && buffer == nullptr)
+        formatContext->pb = m_outerContext;
+        formatContext->flags |= AVFMT_FLAG_CUSTOM_IO;
+    }
+
+    int HttpMediaInput::ReadCallback(void* opaque, uint8_t* buffer, int bufferLength) noexcept
+    {
+        auto self = static_cast<HttpMediaInput*>(opaque);
+        if (self == nullptr || self->m_innerContext == nullptr || buffer == nullptr || bufferLength <= 0)
         {
-            throw winrt::hresult_invalid_argument(L"Read buffer is required.");
+            return AVERROR(EINVAL);
         }
 
-        return 0;
+        auto startedAt = std::chrono::steady_clock::now();
+        auto result = avio_read(self->m_innerContext, buffer, bufferLength);
+        self->m_snapshot.ReadWaitMs += ElapsedMilliseconds(startedAt);
+        ++self->m_snapshot.ReadCalls;
+        if (result > 0)
+        {
+            self->m_snapshot.BytesRead += static_cast<uint64_t>(result);
+        }
+        else if (result != AVERROR_EOF)
+        {
+            self->m_snapshot.LastError = result;
+        }
+
+        return result;
+    }
+
+    int64_t HttpMediaInput::SeekCallback(void* opaque, int64_t offset, int whence) noexcept
+    {
+        auto self = static_cast<HttpMediaInput*>(opaque);
+        if (self == nullptr || self->m_innerContext == nullptr)
+        {
+            return AVERROR(EINVAL);
+        }
+
+        auto startedAt = std::chrono::steady_clock::now();
+        auto before = avio_tell(self->m_innerContext);
+        auto result = (whence & AVSEEK_SIZE) != 0
+            ? avio_size(self->m_innerContext)
+            : avio_seek(self->m_innerContext, offset, whence);
+        self->m_snapshot.SeekWaitMs += ElapsedMilliseconds(startedAt);
+        ++self->m_snapshot.SeekCalls;
+        if (result >= 0 && (whence & AVSEEK_SIZE) == 0)
+        {
+            self->m_snapshot.SeekDistanceBytes += AbsoluteDistance(before, result);
+        }
+        else if (result < 0)
+        {
+            self->m_snapshot.LastError = static_cast<int32_t>(result);
+        }
+
+        return result;
     }
 
     void HttpMediaInput::Close() noexcept
     {
-        m_url.clear();
+        if (m_outerContext != nullptr)
+        {
+            av_freep(&m_outerContext->buffer);
+            avio_context_free(&m_outerContext);
+        }
+
+        if (m_innerContext != nullptr)
+        {
+            avio_closep(&m_innerContext);
+        }
+
         m_open = false;
     }
 
@@ -54,8 +200,8 @@ namespace winrt::NoiraPlayer::Native::implementation
         return m_open;
     }
 
-    winrt::hstring HttpMediaInput::Url() const noexcept
+    HttpMediaInputSnapshot HttpMediaInput::Snapshot() const noexcept
     {
-        return m_url;
+        return m_snapshot;
     }
 }
