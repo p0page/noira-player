@@ -88,6 +88,7 @@ $vcvars = 'C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\
 $nativeHelperCommand = '"' + $vcvars + '" >nul && cl /nologo /std:c++20 /EHsc /I src\NoiraPlayer.Native /Fo:C:\tmp\PlaybackQualityMetricsTests.obj tests\NoiraPlayer.Native.Tests\PlaybackQualityMetricsTests.cpp /Fe:C:\tmp\PlaybackQualityMetricsTests.exe && C:\tmp\PlaybackQualityMetricsTests.exe'
 $nativeFramePacingCommand = '"' + $vcvars + '" >nul && cl /nologo /std:c++20 /EHsc /I src\NoiraPlayer.Native /Fo:C:\tmp\FramePacingTests.obj tests\NoiraPlayer.Native.Tests\FramePacingTests.cpp /Fe:C:\tmp\FramePacingTests.exe && C:\tmp\FramePacingTests.exe'
 $nativeVideoFrameQueueCommand = '"' + $vcvars + '" >nul && cl /nologo /std:c++20 /EHsc /I src\NoiraPlayer.Native /Fo:C:\tmp\VideoFrameQueueTests.obj tests\NoiraPlayer.Native.Tests\VideoFrameQueueTests.cpp /Fe:C:\tmp\VideoFrameQueueTests.exe && C:\tmp\VideoFrameQueueTests.exe'
+$nativeVideoDecodeWorkerCommand = '"' + $vcvars + '" >nul && if not exist C:\tmp\noiraplayer-video-worker mkdir C:\tmp\noiraplayer-video-worker && cl /nologo /std:c++20 /EHsc /I src\NoiraPlayer.Native /Fo:C:\tmp\noiraplayer-video-worker\ tests\NoiraPlayer.Native.Tests\VideoDecodeWorkerTests.cpp src\NoiraPlayer.Native\Media\VideoDecodeWorker.cpp /Fe:C:\tmp\VideoDecodeWorkerTests.exe && C:\tmp\VideoDecodeWorkerTests.exe'
 $nativeRenderLoopWaiterCommand = '"' + $vcvars + '" >nul && cl /nologo /std:c++20 /EHsc /I src\NoiraPlayer.Native /Fo:C:\tmp\RenderLoopWaiterTests.obj tests\NoiraPlayer.Native.Tests\RenderLoopWaiterTests.cpp /Fe:C:\tmp\RenderLoopWaiterTests.exe && C:\tmp\RenderLoopWaiterTests.exe'
 $nativeSeekPresentationCommand = '"' + $vcvars + '" >nul && cl /nologo /std:c++20 /EHsc /I src\NoiraPlayer.Native /Fo:C:\tmp\SeekPresentationTrackerTests.obj tests\NoiraPlayer.Native.Tests\SeekPresentationTrackerTests.cpp /Fe:C:\tmp\SeekPresentationTrackerTests.exe && C:\tmp\SeekPresentationTrackerTests.exe'
 $nativeMediaTimelineCommand = '"' + $vcvars + '" >nul && cl /nologo /std:c++20 /EHsc /I src\NoiraPlayer.Native /Fo:C:\tmp\MediaTimelineTests.obj tests\NoiraPlayer.Native.Tests\MediaTimelineTests.cpp /Fe:C:\tmp\MediaTimelineTests.exe && C:\tmp\MediaTimelineTests.exe'
@@ -200,6 +201,11 @@ $commands = @(
         -Description 'Compile and run the bounded generation-aware native video frame queue test.' `
         -Command 'cmd' `
         -Arguments @('/c', $nativeVideoFrameQueueCommand)
+    New-CommandPlan `
+        -Name 'native-video-decode-worker-test' `
+        -Description 'Compile and run the bounded native video decode worker thread test.' `
+        -Command 'cmd' `
+        -Arguments @('/c', $nativeVideoDecodeWorkerCommand)
     New-CommandPlan `
         -Name 'native-render-loop-waiter-test' `
         -Description 'Compile and run the standalone native render loop wait helper test.' `
