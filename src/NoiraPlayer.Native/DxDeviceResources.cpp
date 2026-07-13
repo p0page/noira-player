@@ -231,6 +231,10 @@ float4 PSMain(VertexOutput input) : SV_TARGET
             m_device.ReleaseAndGetAddressOf(),
             &selectedFeatureLevel,
             m_context.ReleaseAndGetAddressOf()));
+
+        Microsoft::WRL::ComPtr<ID3D11Multithread> multithread;
+        winrt::check_hresult(m_context.As(&multithread));
+        multithread->SetMultithreadProtected(TRUE);
     }
 
     void DxDeviceResources::CreateSwapChain(uint32_t width, uint32_t height, bool useTenBit)

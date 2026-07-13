@@ -677,11 +677,13 @@ namespace winrt::NoiraPlayer::Native::implementation
 
     FfmpegReadTimingSnapshot FfmpegMediaSource::ReadTimingSnapshot() const noexcept
     {
+        std::lock_guard lock(m_demuxMutex);
         return m_readTiming;
     }
 
     uint64_t FfmpegMediaSource::TransportBytesRead() const noexcept
     {
+        std::lock_guard lock(m_demuxMutex);
         if (m_formatContext == nullptr || m_formatContext->pb == nullptr || m_formatContext->pb->bytes_read <= 0)
         {
             return 0;
@@ -1159,6 +1161,7 @@ namespace winrt::NoiraPlayer::Native::implementation
 
     bool FfmpegMediaSource::TryReadPacket(int32_t streamIndex, AVPacket* packet)
     {
+        std::lock_guard lock(m_demuxMutex);
         if (!m_open || m_formatContext == nullptr || packet == nullptr)
         {
             return false;
@@ -1309,6 +1312,7 @@ namespace winrt::NoiraPlayer::Native::implementation
 
     bool FfmpegMediaSource::TryReadQueuedPacket(int32_t streamIndex, AVPacket* packet)
     {
+        std::lock_guard lock(m_demuxMutex);
         if (!m_open || m_formatContext == nullptr || packet == nullptr)
         {
             return false;
@@ -1336,6 +1340,7 @@ namespace winrt::NoiraPlayer::Native::implementation
 
     void FfmpegMediaSource::Seek(int32_t streamIndex, int64_t positionTicks)
     {
+        std::lock_guard lock(m_demuxMutex);
         if (!m_open || m_formatContext == nullptr)
         {
             return;

@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <deque>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <string>
 #include <unordered_map>
@@ -189,6 +190,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         uint32_t m_avformatVersion{0};
         std::atomic<bool> m_interruptRequested{false};
         std::atomic<int64_t> m_ioDeadlineNanoseconds{0};
+        mutable std::mutex m_demuxMutex;
         MediaTimeline m_timeline;
         int64_t m_lastSeekDemuxTargetTicks{-1};
         FfmpegOpenTimingSnapshot m_openTiming;

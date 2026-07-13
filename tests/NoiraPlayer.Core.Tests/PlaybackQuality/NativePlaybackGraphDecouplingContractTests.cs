@@ -573,6 +573,41 @@ public sealed class NativePlaybackGraphDecouplingContractTests
     }
 
     [Fact]
+    public void MediaSource_Serializes_Shared_Demux_Queue_And_Seek_Entrypoints()
+    {
+        var root = FindRepositoryRoot();
+        var header = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Native", "Media", "FfmpegMediaSource.h"));
+        var source = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Native", "Media", "FfmpegMediaSource.cpp"));
+
+        Assert.Contains("mutable std::mutex m_demuxMutex", header, StringComparison.Ordinal);
+        foreach (var method in new[]
+        {
+            "FfmpegMediaSource::TryReadPacket",
+            "FfmpegMediaSource::TryReadQueuedPacket",
+            "FfmpegMediaSource::ReadTimingSnapshot",
+            "FfmpegMediaSource::TransportBytesRead",
+            "FfmpegMediaSource::Seek"
+        })
+        {
+            Assert.Contains(
+                "std::lock_guard lock(m_demuxMutex);",
+                ReadMethodBody(source, method),
+                StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
+    public void D3d_Immediate_Context_Is_Protected_For_Decode_And_Render_Threads()
+    {
+        var root = FindRepositoryRoot();
+        var source = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Native", "DxDeviceResources.cpp"));
+        var createDevice = ReadMethodBody(source, "DxDeviceResources::CreateDevice");
+
+        Assert.Contains("ID3D11Multithread", createDevice, StringComparison.Ordinal);
+        Assert.Contains("SetMultithreadProtected(TRUE)", createDevice, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Seek_Replay_Hit_Does_Not_Claim_A_Demux_Seek()
     {
         var root = FindRepositoryRoot();
