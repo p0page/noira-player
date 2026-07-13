@@ -41,6 +41,11 @@ internal static class NativeHeadlessHarness
             stability: "stable");
         referenceCase.Purpose.Add("sdr-smoke");
         referenceCase.Purpose.Add("frame-pacing");
+        if (options.Scenario == PlaybackQualityExecutionScenario.EndOfStream)
+        {
+            referenceCase.Purpose.Add("end-of-stream");
+        }
+        referenceCase.ExecutionRequirement.Scenario = options.Scenario;
 
         if (!string.IsNullOrWhiteSpace(options.NativeHelperExe))
         {
@@ -211,6 +216,18 @@ internal static class NativeHeadlessHarness
                 helper.Seek.ActualPositionTicks,
                 $"target {helper.Seek.TargetPositionTicks}; first presented {helper.Seek.ActualPositionTicks?.ToString() ?? "unavailable"}; " +
                     $"post-seek {helper.Seek.PostSeekPlaybackPositionTicks}");
+        }
+
+        if (helper.EndOfStream.Attempted &&
+            helper.EndOfStream.Observed &&
+            helper.EndOfStream.Status == "completed")
+        {
+            AddLifecycleEvent(
+                lifecycle,
+                "endOfStream",
+                "completed",
+                helper.EndOfStream.PositionTicks,
+                "native PlaybackGraph reported Playback ended.");
         }
 
         AddLifecycleEvent(
@@ -621,6 +638,14 @@ internal static class NativeHeadlessHarness
                 "Native helper did not return completed pause/resume evidence for the requested duration.");
         }
 
+        var endOfStreamRequested =
+            options.Scenario == PlaybackQualityExecutionScenario.EndOfStream;
+        if (interactions.EndOfStream.Attempted != endOfStreamRequested)
+        {
+            return NativeHeadlessHelperResult.Failed(
+                "Native helper field 'endOfStreamAttempted' must match the requested execution scenario.");
+        }
+
         var expectedSeekTarget = options.StartPositionTicks >= long.MaxValue - NativeHelperSeekOffsetTicks
             ? long.MaxValue
             : options.StartPositionTicks + NativeHelperSeekOffsetTicks;
@@ -812,6 +837,7 @@ internal static class NativeHeadlessHarness
     {
         interactions = new NativeHeadlessInteractionResults();
         if (!TryParsePauseResumeOutcome(values, out var pauseResume, out error) ||
+            !TryParseEndOfStreamOutcome(values, out var endOfStream, out error) ||
             !TryParseAudioSwitchOutcome(values, out var audioSwitch, out error) ||
             !TryParseSubtitleSwitchOutcome(values, "subtitleSwitch1", out var subtitleSwitch1, out error) ||
             !TryParseSubtitleSwitchOutcome(values, "subtitleSwitch2", out var subtitleSwitch2, out error) ||
@@ -853,6 +879,7 @@ internal static class NativeHeadlessHarness
         interactions = new NativeHeadlessInteractionResults
         {
             PauseResume = pauseResume,
+            EndOfStream = endOfStream,
             AudioSwitch = audioSwitch,
             SubtitleSwitch1 = subtitleSwitch1,
             SubtitleSwitch2 = subtitleSwitch2,
@@ -861,6 +888,55 @@ internal static class NativeHeadlessHarness
             SelectedAudioStreamIndex = selectedAudio,
             SelectedSubtitleStreamIndex = selectedSubtitle
         };
+        return true;
+    }
+
+    private static bool TryParseEndOfStreamOutcome(
+        Dictionary<string, string> values,
+        out NativeHeadlessEndOfStreamOutcome outcome,
+        out string error)
+    {
+        outcome = new NativeHeadlessEndOfStreamOutcome();
+        if (!TryGetAttempted(values, "endOfStreamAttempted", out var attempted, out error) ||
+            !TryGetAttempted(values, "endOfStreamObserved", out var observed, out error) ||
+            !values.TryGetValue("endOfStreamStatus", out var status) ||
+            !TryGetRequiredInt64(values, "endOfStreamPositionTicks", out var positionTicks, out error))
+        {
+            if (string.IsNullOrWhiteSpace(error))
+            {
+                error = "Native helper field 'endOfStreamStatus' must be present.";
+            }
+            return false;
+        }
+
+        var notAttemptedIsConsistent = !attempted &&
+            !observed &&
+            status == "not-attempted" &&
+            positionTicks == -1;
+        var completedIsConsistent = attempted &&
+            observed &&
+            status == "completed" &&
+            positionTicks >= 0;
+        var failedIsConsistent = attempted &&
+            !observed &&
+            status == "failed" &&
+            positionTicks == -1;
+        if (!notAttemptedIsConsistent && !completedIsConsistent && !failedIsConsistent)
+        {
+            error = observed
+                ? "Native helper field 'endOfStreamStatus' is inconsistent with endOfStreamObserved and endOfStreamPositionTicks."
+                : "Native helper field 'endOfStreamObserved' is inconsistent with endOfStreamAttempted, endOfStreamStatus, or endOfStreamPositionTicks.";
+            return false;
+        }
+
+        outcome = new NativeHeadlessEndOfStreamOutcome
+        {
+            Attempted = attempted,
+            Observed = observed,
+            Status = status,
+            PositionTicks = positionTicks
+        };
+        error = "";
         return true;
     }
 
@@ -2182,9 +2258,10 @@ internal sealed class NativeHeadlessHarnessOptions
                         value != "timeline" &&
                         value != "audio-switch" &&
                         value != "subtitle-switch" &&
-                        value != "pause-resume")
+                        value != "pause-resume" &&
+                        value != "end-of-stream")
                     {
-                        error = "--scenario must be playback, timeline, audio-switch, subtitle-switch, or pause-resume.";
+                        error = "--scenario must be playback, timeline, audio-switch, subtitle-switch, pause-resume, or end-of-stream.";
                         return false;
                     }
 
@@ -2326,6 +2403,8 @@ internal sealed class NativeHeadlessHelperResult
 
     public NativeHeadlessPauseResumeOutcome PauseResume => Interactions.PauseResume;
 
+    public NativeHeadlessEndOfStreamOutcome EndOfStream => Interactions.EndOfStream;
+
     public NativeHeadlessSubtitleSwitchOutcome SubtitleSwitch1 => Interactions.SubtitleSwitch1;
 
     public NativeHeadlessSubtitleSwitchOutcome SubtitleSwitch2 => Interactions.SubtitleSwitch2;
@@ -2436,6 +2515,9 @@ internal sealed class NativeHeadlessInteractionResults
     public NativeHeadlessPauseResumeOutcome PauseResume { get; set; } =
         new NativeHeadlessPauseResumeOutcome();
 
+    public NativeHeadlessEndOfStreamOutcome EndOfStream { get; set; } =
+        new NativeHeadlessEndOfStreamOutcome();
+
     public NativeHeadlessAudioSwitchOutcome AudioSwitch { get; set; } =
         new NativeHeadlessAudioSwitchOutcome();
 
@@ -2454,6 +2536,14 @@ internal sealed class NativeHeadlessInteractionResults
     public int? SelectedAudioStreamIndex { get; set; }
 
     public int? SelectedSubtitleStreamIndex { get; set; }
+}
+
+internal sealed class NativeHeadlessEndOfStreamOutcome
+{
+    public bool Attempted { get; set; }
+    public bool Observed { get; set; }
+    public string Status { get; set; } = "";
+    public long PositionTicks { get; set; } = -1;
 }
 
 internal sealed class NativeHeadlessPauseResumeOutcome

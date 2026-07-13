@@ -878,6 +878,10 @@ function New-NativeHeadlessParserFixtureOutput {
         postSeekAdvanced = '1'
         selectedAudioStreamIndex = '1'
         selectedSubtitleStreamIndex = '-1'
+        endOfStreamAttempted = '0'
+        endOfStreamObserved = '0'
+        endOfStreamStatus = 'not-attempted'
+        endOfStreamPositionTicks = '-1'
     }
 
     foreach ($key in $Overrides.Keys) {
@@ -900,7 +904,8 @@ function Invoke-NativeHeadlessParserFixtureCase {
         [string]$HelperOutput,
         [string]$HelperError = '',
         [int]$HelperExitCode = 0,
-        [string]$StreamUrl = ''
+        [string]$StreamUrl = '',
+        [string]$Scenario = 'playback'
     )
 
     Set-Content -LiteralPath $FixtureHelper.OutputPath -Value $HelperOutput -Encoding UTF8
@@ -917,6 +922,7 @@ function Invoke-NativeHeadlessParserFixtureCase {
         --case-id $caseId `
         --stream-url $fixtureStreamUrl `
         --duration-seconds 1 `
+        --scenario $Scenario `
         --reports-dir $reportsDirectory `
         --native-helper-exe $FixtureHelper.ExePath | ForEach-Object { Write-Host $_ }
     $exitCode = $LASTEXITCODE
@@ -969,6 +975,28 @@ function Assert-NativeHeadlessParserContracts {
         $_.operation -in @('audio-switch', 'subtitle-switch', 'seek')
     }).Count -ne 0) {
         $failures.Add('attempted=false fixture operations unexpectedly produced lifecycle events.')
+    }
+
+    $endOfStream = Invoke-NativeHeadlessParserFixtureCase `
+        -FixtureHelper $fixtureHelper `
+        -HeadlessDll $headlessDll `
+        -Root $Root `
+        -Name 'end-of-stream-completed' `
+        -Scenario 'end-of-stream' `
+        -HelperOutput (New-NativeHeadlessParserFixtureOutput -Overrides @{
+            endOfStreamAttempted = '1'
+            endOfStreamObserved = '1'
+            endOfStreamStatus = 'completed'
+            endOfStreamPositionTicks = '60000000'
+        })
+    $endOfStreamEvents = @($endOfStream.Report.report.lifecycle.events | Where-Object {
+        $_.operation -eq 'endOfStream'
+    })
+    if ($endOfStream.ExitCode -ne 0 -or
+        $endOfStreamEvents.Count -ne 1 -or
+        $endOfStreamEvents[0].status -ne 'completed' -or
+        $endOfStreamEvents[0].positionTicks -ne 60000000) {
+        $failures.Add('Completed native end-of-stream evidence did not produce exactly one lifecycle.endOfStream event.')
     }
 
     $lateFailure = Invoke-NativeHeadlessParserFixtureCase `
@@ -1534,6 +1562,28 @@ function Assert-NativeHeadlessParserContracts {
             startupTransportCallEvidenceAvailable = '0'
         }
     }
+    foreach ($field in @(
+        'endOfStreamAttempted',
+        'endOfStreamObserved',
+        'endOfStreamStatus',
+        'endOfStreamPositionTicks'
+    )) {
+        $negativeCases += [pscustomobject]@{
+            Name = 'missing-' + ($field -creplace '([a-z0-9])([A-Z])', '$1-$2').ToLowerInvariant()
+            ExpectedField = $field
+            Output = New-NativeHeadlessParserFixtureOutput -Omit @($field)
+        }
+    }
+    $negativeCases += [pscustomobject]@{
+        Name = 'end-of-stream-completed-without-observation'
+        ExpectedField = 'endOfStreamObserved'
+        Output = New-NativeHeadlessParserFixtureOutput -Overrides @{
+            endOfStreamAttempted = '1'
+            endOfStreamObserved = '0'
+            endOfStreamStatus = 'completed'
+            endOfStreamPositionTicks = '60000000'
+        }
+    }
 
     foreach ($negativeCase in $negativeCases) {
         $result = Invoke-NativeHeadlessParserFixtureCase `
@@ -1547,7 +1597,7 @@ function Assert-NativeHeadlessParserContracts {
             $result.Report.report.error.failureArea -ne 'evidence-collection' -or
             $result.Report.report.error.message -notmatch [regex]::Escape($negativeCase.ExpectedField) -or
             @($result.Report.report.lifecycle.events | Where-Object {
-                $_.operation -in @('audio-switch', 'subtitle-switch', 'subtitle-off', 'seek')
+                $_.operation -in @('audio-switch', 'subtitle-switch', 'subtitle-off', 'seek', 'endOfStream')
             }).Count -ne 0 -or
             @($result.Report.report.lifecycle.events | Where-Object {
                 $_.status -eq 'completed'
