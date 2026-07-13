@@ -109,6 +109,10 @@ namespace winrt::NoiraPlayer::Native::implementation
         FfmpegReadRecoverySnapshot Recovery;
     };
 
+    FfmpegReadTimingSnapshot SubtractReadTimingSnapshots(
+        FfmpegReadTimingSnapshot const& before,
+        FfmpegReadTimingSnapshot const& after) noexcept;
+
     struct FfmpegSwitchPacketCacheSnapshot
     {
         bool HasCoverage{false};

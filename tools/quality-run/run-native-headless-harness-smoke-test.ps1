@@ -903,6 +903,16 @@ function New-NativeHeadlessParserFixtureOutput {
         nativeFirstFramePresentDurationMs = '1'
         nativeFirstFrameDemuxPacketCount = '12'
         nativeFirstFrameDemuxBytes = '65536'
+        playbackDemuxReadDurationMs = '250'
+        playbackDemuxPacketCount = '120'
+        playbackDemuxBytes = '1048576'
+        playbackTransportProvider = 'ffmpeg-builtin'
+        playbackTransportCallEvidenceAvailable = '0'
+        playbackTransportReadCalls = '0'
+        playbackTransportSeekCalls = '0'
+        playbackTransportReadWaitMs = '0'
+        playbackTransportSeekWaitMs = '0'
+        playbackTransportSeekDistanceBytes = '0'
         renderIntervalMsP05 = '30'
         renderIntervalMsP50 = '33'
         renderIntervalMsP95 = '34'
@@ -1086,6 +1096,7 @@ function New-NativeHeadlessParserFixtureOutput {
         endOfStreamObserved = '0'
         endOfStreamStatus = 'not-attempted'
         endOfStreamPositionTicks = '-1'
+        observedSampleWallClockDurationMs = '1000'
     }
 
     foreach ($key in $Overrides.Keys) {
@@ -1879,7 +1890,14 @@ function Assert-NativeHeadlessParserContracts {
         'nativeFirstFrameTransportSeekCalls',
         'nativeFirstFrameTransportReadWaitMs',
         'nativeFirstFrameTransportSeekWaitMs',
-        'nativeFirstFrameTransportSeekDistanceBytes'
+        'nativeFirstFrameTransportSeekDistanceBytes',
+        'playbackTransportProvider',
+        'playbackTransportCallEvidenceAvailable',
+        'playbackTransportReadCalls',
+        'playbackTransportSeekCalls',
+        'playbackTransportReadWaitMs',
+        'playbackTransportSeekWaitMs',
+        'playbackTransportSeekDistanceBytes'
     )
     foreach ($field in $requiredTransportCallFields) {
         $negativeCases += [pscustomobject]@{
@@ -1896,6 +1914,10 @@ function Assert-NativeHeadlessParserContracts {
         }
     }
     foreach ($field in @(
+        'observedSampleWallClockDurationMs',
+        'playbackDemuxReadDurationMs',
+        'playbackDemuxPacketCount',
+        'playbackDemuxBytes',
         'readErrorCount',
         'readRetryCount',
         'readRecoveryCount',

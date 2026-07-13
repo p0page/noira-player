@@ -91,6 +91,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
         public string StartedAtUtc { get; set; } = "";
         public double DurationMs { get; set; }
         public double RequestedSampleDurationMs { get; set; }
+        public double ObservedSampleWallClockDurationMs { get; set; }
         public bool SourceOpenAttempted { get; set; }
         public bool SourceOpened { get; set; }
         public bool NativeGraphOpened { get; set; }
@@ -122,6 +123,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 StartedAtUtc = source.StartedAtUtc,
                 DurationMs = source.DurationMs,
                 RequestedSampleDurationMs = source.RequestedSampleDurationMs,
+                ObservedSampleWallClockDurationMs = source.ObservedSampleWallClockDurationMs,
                 SourceOpenAttempted = source.SourceOpenAttempted,
                 SourceOpened = source.SourceOpened,
                 NativeGraphOpened = source.NativeGraphOpened,

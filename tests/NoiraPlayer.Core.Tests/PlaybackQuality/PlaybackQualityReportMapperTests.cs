@@ -93,6 +93,19 @@ public sealed class PlaybackQualityReportMapperTests
             VideoStarvedPasses = 4,
             AudioStarvedPasses = 1,
             QueuedAudioBuffers = 12,
+            PlaybackDemuxReadDurationMs = 4321.5,
+            PlaybackDemuxPacketCount = 345,
+            PlaybackDemuxBytes = 6_543_210,
+            PlaybackTransportCalls = new PlaybackQualityTransportCallSnapshot
+            {
+                Provider = "instrumented-ffmpeg-avio",
+                EvidenceAvailable = true,
+                ReadCalls = 44,
+                SeekCalls = 2,
+                ReadWaitMs = 3210.5,
+                SeekWaitMs = 18.25,
+                SeekDistanceBytes = 8192
+            },
             AudioClockTicks = 123456,
             VideoPositionTicks = 120000,
             RenderIntervalMsP05 = 25.0,
@@ -245,6 +258,16 @@ public sealed class PlaybackQualityReportMapperTests
         Assert.Equal(12UL, report.Buffers.QueuedAudioBuffers);
         Assert.Equal(4UL, report.Buffers.VideoStarvedPasses);
         Assert.Equal(1UL, report.Buffers.AudioStarvedPasses);
+        Assert.Equal(4321.5, report.Buffers.PlaybackDemuxReadDurationMs);
+        Assert.Equal(345UL, report.Buffers.PlaybackDemuxPacketCount);
+        Assert.Equal(6_543_210UL, report.Buffers.PlaybackDemuxBytes);
+        Assert.Equal("instrumented-ffmpeg-avio", report.Buffers.PlaybackTransportProvider);
+        Assert.Equal("available", report.Buffers.PlaybackTransportCallEvidenceStatus);
+        Assert.Equal(44UL, report.Buffers.PlaybackTransportReadCalls);
+        Assert.Equal(2UL, report.Buffers.PlaybackTransportSeekCalls);
+        Assert.Equal(3210.5, report.Buffers.PlaybackTransportReadWaitMs);
+        Assert.Equal(18.25, report.Buffers.PlaybackTransportSeekWaitMs);
+        Assert.Equal(8192UL, report.Buffers.PlaybackTransportSeekDistanceBytes);
     }
 
     [Fact]

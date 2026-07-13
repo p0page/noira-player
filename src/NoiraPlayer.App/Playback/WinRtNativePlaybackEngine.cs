@@ -150,6 +150,19 @@ namespace NoiraPlayer.App.Playback
                     NativeFirstFramePresentDurationMs = nativeMetrics.NativeFirstFramePresentDurationMs,
                     NativeFirstFrameDemuxPacketCount = nativeMetrics.NativeFirstFrameDemuxPacketCount,
                     NativeFirstFrameDemuxBytes = nativeMetrics.NativeFirstFrameDemuxBytes,
+                    PlaybackDemuxReadDurationMs = nativeMetrics.PlaybackDemuxReadDurationMs,
+                    PlaybackDemuxPacketCount = nativeMetrics.PlaybackDemuxPacketCount,
+                    PlaybackDemuxBytes = nativeMetrics.PlaybackDemuxBytes,
+                    PlaybackTransportCalls = new PlaybackQualityTransportCallSnapshot
+                    {
+                        Provider = nativeMetrics.PlaybackTransportProvider,
+                        EvidenceAvailable = nativeMetrics.PlaybackTransportCallEvidenceAvailable,
+                        ReadCalls = nativeMetrics.PlaybackTransportReadCalls,
+                        SeekCalls = nativeMetrics.PlaybackTransportSeekCalls,
+                        ReadWaitMs = nativeMetrics.PlaybackTransportReadWaitMs,
+                        SeekWaitMs = nativeMetrics.PlaybackTransportSeekWaitMs,
+                        SeekDistanceBytes = nativeMetrics.PlaybackTransportSeekDistanceBytes
+                    },
                     ReadErrorCount = nativeMetrics.ReadErrorCount,
                     ReadRetryCount = nativeMetrics.ReadRetryCount,
                     ReadRecoveryCount = nativeMetrics.ReadRecoveryCount,

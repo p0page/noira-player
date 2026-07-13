@@ -92,6 +92,7 @@ $report = [ordered]@{
         startedAtUtc = '2026-07-11T00:00:00.0000000+00:00'
         durationMs = 3000.0
         requestedSampleDurationMs = [double](Get-Value '--duration-seconds') * 1000.0
+        observedSampleWallClockDurationMs = [double](Get-Value '--duration-seconds') * 1000.0
         sourceOpenAttempted = $true
         sourceOpened = $true
         nativeGraphOpened = $true
@@ -192,7 +193,7 @@ $report = [ordered]@{
 
 @{
     schemaVersion = 1
-    evaluationVersion = 'playback-quality-v0.11'
+    evaluationVersion = 'playback-quality-v0.12'
     caseMetadata = @{ caseId = $caseId; category = 'stable'; severity = 'high'; stability = 'stable' }
     report = $report
 } | ConvertTo-Json -Depth 30 | Set-Content -LiteralPath $reportPath -Encoding UTF8

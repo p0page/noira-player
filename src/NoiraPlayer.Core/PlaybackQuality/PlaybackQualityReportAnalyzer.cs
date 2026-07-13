@@ -181,10 +181,24 @@ namespace NoiraPlayer.Core.PlaybackQuality
     {
         public string Status { get; set; } = "unknown";
         public string Reason { get; set; } = "";
+        public string ThroughputAttribution { get; set; } = "not-evaluated";
+        public string ThroughputReason { get; set; } = "";
         public ulong SubmittedAudioFrames { get; set; }
         public ulong QueuedAudioBuffers { get; set; }
         public ulong VideoStarvedPasses { get; set; }
         public ulong AudioStarvedPasses { get; set; }
+        public double PlaybackDemuxReadDurationMs { get; set; }
+        public ulong PlaybackDemuxPacketCount { get; set; }
+        public ulong PlaybackDemuxBytes { get; set; }
+        public string PlaybackTransportProvider { get; set; } = "";
+        public string PlaybackTransportCallEvidenceStatus { get; set; } = "unavailable";
+        public ulong? PlaybackTransportReadCalls { get; set; }
+        public ulong? PlaybackTransportSeekCalls { get; set; }
+        public double? PlaybackTransportReadWaitMs { get; set; }
+        public double? PlaybackTransportSeekWaitMs { get; set; }
+        public ulong? PlaybackTransportSeekDistanceBytes { get; set; }
+        public double PlaybackDemuxReadRatio { get; set; }
+        public double PlaybackTransportReadWaitRatio { get; set; }
         public ulong ReadErrorCount { get; set; }
         public ulong ReadRetryCount { get; set; }
         public ulong ReadRecoveryCount { get; set; }
@@ -239,6 +253,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
         public long AdditionalRenderedFramesRequired { get; set; }
         public double ObservedSampleDurationMs { get; set; }
         public double RequestedSampleDurationMs { get; set; }
+        public double ObservedSampleWallClockDurationMs { get; set; }
         public double MinimumSampleDurationMs { get; set; }
         public string Reason { get; set; } = "";
     }
@@ -360,17 +375,17 @@ namespace NoiraPlayer.Core.PlaybackQuality
             analysis.Skip = AssessSkip(analysis, report);
             analysis.RuntimeMetrics = AssessRuntimeMetrics(report);
             analysis.ColorPipeline = AssessColorPipeline(report);
-            analysis.Buffering = AssessBuffering(report, signalPresence);
+            analysis.Buffering = AssessBuffering(report, analysis.Sample, signalPresence);
             analysis.AvSync = AssessAvSync(report);
             analysis.Cadence = AssessCadence(report);
             AddDerivedEvidence(analysis, report);
             RemoveAbsentCapturedReportSignals(analysis, signalPresence);
             AddMissingEvidence(analysis, report, signalPresence);
+            analysis.PrimaryFailureClass = GetPrimaryFailureClass(analysis);
             analysis.OptimizationGate = AssessOptimizationGate(analysis);
             analysis.FramePacing = ClassifyFramePacing(analysis, report);
             AddInvestigationHints(analysis);
             AddTriageSteps(analysis);
-            analysis.PrimaryFailureClass = GetPrimaryFailureClass(analysis);
 
             if (string.IsNullOrWhiteSpace(analysis.SuggestedNextAction))
             {
@@ -1029,6 +1044,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
 
         private static PlaybackQualityBufferingAssessment AssessBuffering(
             PlaybackQualityReport report,
+            PlaybackQualitySampleAssessment sample,
             PlaybackQualitySignalPresence signalPresence)
         {
             var readRecovery = report.ReadRecovery ?? new PlaybackQualityReadRecovery();
@@ -1038,6 +1054,16 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 QueuedAudioBuffers = report.Buffers.QueuedAudioBuffers,
                 VideoStarvedPasses = report.Buffers.VideoStarvedPasses,
                 AudioStarvedPasses = report.Buffers.AudioStarvedPasses,
+                PlaybackDemuxReadDurationMs = report.Buffers.PlaybackDemuxReadDurationMs,
+                PlaybackDemuxPacketCount = report.Buffers.PlaybackDemuxPacketCount,
+                PlaybackDemuxBytes = report.Buffers.PlaybackDemuxBytes,
+                PlaybackTransportProvider = report.Buffers.PlaybackTransportProvider,
+                PlaybackTransportCallEvidenceStatus = report.Buffers.PlaybackTransportCallEvidenceStatus,
+                PlaybackTransportReadCalls = report.Buffers.PlaybackTransportReadCalls,
+                PlaybackTransportSeekCalls = report.Buffers.PlaybackTransportSeekCalls,
+                PlaybackTransportReadWaitMs = report.Buffers.PlaybackTransportReadWaitMs,
+                PlaybackTransportSeekWaitMs = report.Buffers.PlaybackTransportSeekWaitMs,
+                PlaybackTransportSeekDistanceBytes = report.Buffers.PlaybackTransportSeekDistanceBytes,
                 ReadErrorCount = readRecovery.ReadErrorCount,
                 ReadRetryCount = readRecovery.ReadRetryCount,
                 ReadRecoveryCount = readRecovery.ReadRecoveryCount,
@@ -1056,6 +1082,11 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 signalPresence.Has("buffers.queuedAudioBuffers") ||
                 signalPresence.Has("buffers.videoStarvedPasses") ||
                 signalPresence.Has("buffers.audioStarvedPasses") ||
+                buffering.PlaybackDemuxPacketCount > 0 ||
+                signalPresence.Has("buffers.playbackDemuxReadDurationMs") ||
+                signalPresence.Has("buffers.playbackDemuxPacketCount") ||
+                signalPresence.Has("buffers.playbackDemuxBytes") ||
+                signalPresence.Has("buffers.playbackTransportCallEvidenceStatus") ||
                 buffering.ReadErrorCount > 0 ||
                 signalPresence.Has("readRecovery.readErrorCount");
             if (hasBufferEvidence)
@@ -1064,6 +1095,16 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 AddBufferSignalIfPresent(buffering, signalPresence, "buffers.queuedAudioBuffers");
                 AddBufferSignalIfPresent(buffering, signalPresence, "buffers.videoStarvedPasses");
                 AddBufferSignalIfPresent(buffering, signalPresence, "buffers.audioStarvedPasses");
+                AddBufferSignalIfPresent(buffering, signalPresence, "buffers.playbackDemuxReadDurationMs");
+                AddBufferSignalIfPresent(buffering, signalPresence, "buffers.playbackDemuxPacketCount");
+                AddBufferSignalIfPresent(buffering, signalPresence, "buffers.playbackDemuxBytes");
+                AddBufferSignalIfPresent(buffering, signalPresence, "buffers.playbackTransportProvider");
+                AddBufferSignalIfPresent(buffering, signalPresence, "buffers.playbackTransportCallEvidenceStatus");
+                AddBufferSignalIfPresent(buffering, signalPresence, "buffers.playbackTransportReadCalls");
+                AddBufferSignalIfPresent(buffering, signalPresence, "buffers.playbackTransportSeekCalls");
+                AddBufferSignalIfPresent(buffering, signalPresence, "buffers.playbackTransportReadWaitMs");
+                AddBufferSignalIfPresent(buffering, signalPresence, "buffers.playbackTransportSeekWaitMs");
+                AddBufferSignalIfPresent(buffering, signalPresence, "buffers.playbackTransportSeekDistanceBytes");
                 AddBufferSignalIfPresent(buffering, signalPresence, "readRecovery.readErrorCount");
                 AddBufferSignalIfPresent(buffering, signalPresence, "readRecovery.readRetryCount");
                 AddBufferSignalIfPresent(buffering, signalPresence, "readRecovery.readRecoveryCount");
@@ -1072,6 +1113,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 AddBufferSignalIfPresent(buffering, signalPresence, "readRecovery.fatalReadErrorCode");
                 AddBufferSignalIfPresent(buffering, signalPresence, "readRecovery.lastReadRecoveryDurationMs");
             }
+
+            ApplyThroughputAttribution(report, sample, buffering);
 
             foreach (var check in report.Checks)
             {
@@ -1113,6 +1156,20 @@ namespace NoiraPlayer.Core.PlaybackQuality
             buffering.Status = "stable";
             buffering.Reason = "Buffering telemetry is available and no starvation failures were reported.";
             return buffering;
+        }
+
+        private static void ApplyThroughputAttribution(
+            PlaybackQualityReport report,
+            PlaybackQualitySampleAssessment sample,
+            PlaybackQualityBufferingAssessment buffering)
+        {
+            var attribution = PlaybackQualityThroughputAttributionPolicy.Assess(
+                report,
+                sample.Status == "insufficient");
+            buffering.ThroughputAttribution = attribution.Attribution;
+            buffering.ThroughputReason = attribution.Reason;
+            buffering.PlaybackDemuxReadRatio = attribution.DemuxReadRatio;
+            buffering.PlaybackTransportReadWaitRatio = attribution.TransportReadWaitRatio;
         }
 
         private static void AddBufferSignalIfPresent(
@@ -1751,6 +1808,21 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 return classification;
             }
 
+            var sampleWindowFailure = FindFailedCheck(analysis, "SampleWindowCoverage");
+            if (sampleWindowFailure != null &&
+                sampleWindowFailure.FailureClass ==
+                    PlaybackQualityFailureClassification.PlayerCoreBug)
+            {
+                classification.Pattern = "media-progress-shortfall";
+                AddUnique(classification.Signals, "execution.requestedSampleDurationMs");
+                AddUnique(classification.Signals, "timing.renderedVideoFrames");
+                AddUnique(classification.Signals, "timing.droppedVideoFrames");
+                AddUnique(
+                    classification.Reasons,
+                    "The completed observation window produced less media progress than requested without dominant transport or demux wait.");
+                return classification;
+            }
+
             if (HasFailedSignal(analysis, "timing.renderedVideoFrames") ||
                 analysis.Sample.Status == "insufficient")
             {
@@ -1889,10 +1961,31 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 return gate;
             }
 
-            if (analysis.Sample.Status != "sufficient")
+            var sampleWindowFailure = FindFailedCheck(analysis, "SampleWindowCoverage");
+            var hasClassifiedSampleWindowFailure = sampleWindowFailure != null &&
+                PlaybackQualityFailureClassification.IsKnown(
+                    sampleWindowFailure.FailureClass);
+            if (analysis.Sample.Status != "sufficient" &&
+                !hasClassifiedSampleWindowFailure)
             {
                 AddUnique(gate.Blockers, "sample.insufficient");
                 AddUnique(gate.BlockerSignals, "sample.status");
+            }
+
+            if (!string.Equals(
+                    analysis.PrimaryFailureClass,
+                    PlaybackQualityFailureClassification.PlayerCoreBug,
+                    StringComparison.Ordinal))
+            {
+                var failureClass = string.IsNullOrWhiteSpace(analysis.PrimaryFailureClass)
+                    ? PlaybackQualityFailureClassification.NeedsHumanConfirmation
+                    : analysis.PrimaryFailureClass;
+                AddUnique(gate.Blockers, "failureClass." + failureClass);
+                if (sampleWindowFailure != null &&
+                    !string.IsNullOrWhiteSpace(sampleWindowFailure.Signal))
+                {
+                    AddUnique(gate.BlockerSignals, sampleWindowFailure.Signal);
+                }
             }
 
             if (analysis.MissingEvidence.Count > 0)
@@ -1950,6 +2043,21 @@ namespace NoiraPlayer.Core.PlaybackQuality
             }
 
             return gate;
+        }
+
+        private static PlaybackQualityCheck? FindFailedCheck(
+            PlaybackQualityModelAnalysis analysis,
+            string name)
+        {
+            foreach (var check in analysis.FailedChecks)
+            {
+                if (check.Status == "fail" && check.Name == name)
+                {
+                    return check;
+                }
+            }
+
+            return null;
         }
 
         private static string GetHighestPriorityFailureArea(
@@ -2234,7 +2342,9 @@ namespace NoiraPlayer.Core.PlaybackQuality
             {
                 RenderedVideoFrames = report.Timing.RenderedVideoFrames,
                 MinRenderedVideoFrames = report.Expected?.MinRenderedVideoFrames,
-                RequestedSampleDurationMs = report.Execution?.RequestedSampleDurationMs ?? 0
+                RequestedSampleDurationMs = report.Execution?.RequestedSampleDurationMs ?? 0,
+                ObservedSampleWallClockDurationMs =
+                    report.Execution?.ObservedSampleWallClockDurationMs ?? 0
             };
             var sampleFrameRate = GetSampleFrameRate(report);
             if (sampleFrameRate > 0)

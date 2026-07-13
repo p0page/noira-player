@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 
 namespace NoiraPlayer.Core.PlaybackQuality
 {
@@ -66,6 +67,49 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 {
                     return true;
                 }
+            }
+
+            return false;
+        }
+
+        public static bool HasMatchingIncompleteSampleFailure(
+            PlaybackQualityReport report,
+            double requiredDurationMs,
+            double observedDurationMs)
+        {
+            if (report == null ||
+                !string.Equals(
+                    report.Result,
+                    PlaybackQualityReportResult.Fail,
+                    StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            foreach (var check in report.Checks)
+            {
+                if (check == null ||
+                    !string.Equals(check.Name, "SampleWindowCoverage", StringComparison.Ordinal) ||
+                    !string.Equals(check.Signal, "execution.requestedSampleDurationMs", StringComparison.Ordinal) ||
+                    !string.Equals(check.Status, "fail", StringComparison.Ordinal) ||
+                    string.IsNullOrWhiteSpace(check.FailureArea) ||
+                    !PlaybackQualityFailureClassification.IsKnown(check.FailureClass) ||
+                    !double.TryParse(
+                        check.Expected,
+                        NumberStyles.Float,
+                        CultureInfo.InvariantCulture,
+                        out var checkedRequiredDurationMs) ||
+                    !double.TryParse(
+                        check.Actual,
+                        NumberStyles.Float,
+                        CultureInfo.InvariantCulture,
+                        out var checkedObservedDurationMs))
+                {
+                    continue;
+                }
+
+                return Math.Abs(checkedRequiredDurationMs - requiredDurationMs) <= 0.001 &&
+                    Math.Abs(checkedObservedDurationMs - observedDurationMs) <= 0.001;
             }
 
             return false;

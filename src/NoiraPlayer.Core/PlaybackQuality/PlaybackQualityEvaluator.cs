@@ -53,6 +53,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 return;
             }
 
+            CheckSampleWindowCoverage(report);
             CheckStartupDuration(report, expected);
             CheckInteractionRecoveryDuration(report, expected);
             CheckSeekEvidenceCompleteness(report);
@@ -361,6 +362,106 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 "MaxInteractionRecoveryDurationMs",
                 signal,
                 failureArea);
+        }
+
+        private static void CheckSampleWindowCoverage(PlaybackQualityReport report)
+        {
+            if (report.Execution == null ||
+                report.Execution.Status != PlaybackQualityExecutionStatus.Completed ||
+                report.Execution.RequestedSampleDurationMs <= 0 ||
+                report.Source.FrameRate <= 0)
+            {
+                return;
+            }
+
+            var observedDurationMs =
+                PlaybackQualitySampleWindowPolicy.GetObservedMediaDurationMs(report);
+            var requiredDurationMs =
+                PlaybackQualitySampleWindowPolicy.GetRequiredMediaDurationMs(report);
+            var toleranceMs =
+                PlaybackQualitySampleWindowPolicy.GetCaptureBoundaryToleranceMs(report);
+            if (report.Execution.ObservedSampleWallClockDurationMs + toleranceMs <
+                requiredDurationMs)
+            {
+                var expectedWallClockText = Format(requiredDurationMs);
+                var actualWallClockText = Format(
+                    report.Execution.ObservedSampleWallClockDurationMs);
+                var wallClockMessage =
+                    "SampleWallClockCoverage " + actualWallClockText +
+                    "ms was below requested observation window " +
+                    expectedWallClockText + "ms.";
+                report.Checks.Add(new PlaybackQualityCheck
+                {
+                    Name = "SampleWallClockCoverage",
+                    Signal = "execution.observedSampleWallClockDurationMs",
+                    Status = "fail",
+                    FailureArea = "evidence-collection",
+                    FailureClass =
+                        PlaybackQualityFailureClassification.InsufficientInstrumentation,
+                    Expected = expectedWallClockText,
+                    Actual = actualWallClockText,
+                    Message = wallClockMessage
+                });
+                report.FailureReasons.Add(wallClockMessage);
+                AddRelevantSignal(
+                    report,
+                    "execution.observedSampleWallClockDurationMs");
+                return;
+            }
+
+            var failed = observedDurationMs + toleranceMs < requiredDurationMs;
+            var attribution = PlaybackQualityThroughputAttributionPolicy.Assess(report, failed);
+            var failureArea = "frame-pacing";
+            var failureClass = PlaybackQualityFailureClassification.PlayerCoreBug;
+            var attributionSignal = "timing.renderedVideoFrames";
+            switch (attribution.Attribution)
+            {
+                case "transport-wait-dominant":
+                    failureArea = "buffering";
+                    failureClass = PlaybackQualityFailureClassification.EnvironmentIssue;
+                    attributionSignal = "buffers.playbackTransportReadWaitMs";
+                    break;
+                case "demux-processing-dominant":
+                    failureArea = "buffering";
+                    attributionSignal = "buffers.playbackDemuxReadDurationMs";
+                    break;
+                case "transport-evidence-unavailable":
+                case "insufficient-evidence":
+                    failureArea = "evidence-collection";
+                    failureClass = PlaybackQualityFailureClassification.InsufficientInstrumentation;
+                    attributionSignal = "buffers.playbackTransportCallEvidenceStatus";
+                    break;
+            }
+
+            var expectedText = Format(requiredDurationMs);
+            var actualText = Format(observedDurationMs);
+            var message = failed
+                ? "SampleWindowCoverage " + actualText +
+                    "ms was below requested media window " + expectedText +
+                    "ms; attribution=" + attribution.Attribution + "."
+                : "SampleWindowCoverage covered the requested media window.";
+            report.Checks.Add(new PlaybackQualityCheck
+            {
+                Name = "SampleWindowCoverage",
+                Signal = "execution.requestedSampleDurationMs",
+                Status = failed ? "fail" : "pass",
+                FailureArea = failureArea,
+                FailureClass = failed ? failureClass : "",
+                Expected = expectedText,
+                Actual = actualText,
+                Message = message
+            });
+
+            if (!failed)
+            {
+                return;
+            }
+
+            report.FailureReasons.Add(message);
+            AddRelevantSignal(report, "execution.requestedSampleDurationMs");
+            AddRelevantSignal(report, "timing.renderedVideoFrames");
+            AddRelevantSignal(report, "timing.droppedVideoFrames");
+            AddRelevantSignal(report, attributionSignal);
         }
 
         private static void CheckExpectedSourceMetadata(
@@ -1329,6 +1430,29 @@ namespace NoiraPlayer.Core.PlaybackQuality
             {
                 report.Analysis.PrimaryFailureArea = "buffering";
                 report.Analysis.SuggestedNextAction = "Inspect demux/network stalls before changing render pacing.";
+                return;
+            }
+
+            foreach (var check in report.Checks)
+            {
+                if (check.Status != "fail" ||
+                    check.Name != "SampleWindowCoverage")
+                {
+                    continue;
+                }
+
+                report.Analysis.PrimaryFailureArea = check.FailureArea;
+                report.Analysis.SuggestedNextAction = check.FailureArea switch
+                {
+                    "buffering" when check.FailureClass == PlaybackQualityFailureClassification.EnvironmentIssue =>
+                        "Verify source/network throughput before changing Core playback policy.",
+                    "buffering" =>
+                        "Inspect demux processing and packet delivery before changing frame pacing.",
+                    "frame-pacing" =>
+                        "Inspect decode, render, clock, and scheduling throughput.",
+                    _ =>
+                        "Collect playback transport timing before attributing incomplete media progress."
+                };
                 return;
             }
 

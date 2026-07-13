@@ -1,5 +1,13 @@
 ﻿# 技术决策
 
+## 2026-07-13：请求时长、观察时长和媒体推进必须是三份独立证据
+
+决策：evaluation version 升级为 `playback-quality-v0.12`。`requestedSampleDurationMs` 只表示 runner 的采样意图；collector 必须用独立单调时钟记录 `observedSampleWallClockDurationMs`；媒体推进继续由实际 rendered+dropped 帧与源帧率计算。三者禁止互相复制或替代。完成态若实际观察不足，strict validator 以 `report.execution.sample-wall-clock.incomplete` 拒绝报告；实际观察完整但媒体推进不足时，evaluator 必须生成带失败类别的 `SampleWindowCoverage` fail，validator 只接受与重新计算结果一致的失败，不允许短样本 pass。
+
+归因决策：播放期证据从首帧后取增量，避免把 source open 和 stream-info 探测混进稳定播放。native/Core 报告必须尽量记录 demux duration/packet/bytes 与 transport read/seek call/wait/distance。`PlaybackQualityThroughputAttributionPolicy` 是 evaluator 与 analyzer 共用的建议性分类器：transport wait/window >= 25% 为 `transport-wait-dominant`，demux/window >= 25% 为 `demux-processing-dominant`，否则为 `downstream-or-scheduling`；没有 transport 调用证据时不得把远端短样本归咎于 Core。25% 不是 pass 标准，也不用于掩盖失败，未来若调整必须升级规则并记录前后变化。
+
+模型决策：report-set 同时包含可调 Core fail 与环境阻塞 case 时，可以输出 `continue-next-triage-step`，但只能把 `player-core bug` case 放入优化目标；环境、外部服务、样本和证据采集问题继续保留在报告中。旧 v0.11 及更早报告缺少独立 wall-clock/播放期传输契约，不得与 v0.12 直接比较成质量改善。
+
 ## 2026-07-13：长暂停恢复必须证明 resume 后的新进展，评测升级到 v0.8
 
 决策：pause-resume 完成态不能再用总 decoded/rendered frame 非零证明。native helper 必须记录暂停前后的 decoded/rendered 计数、实际暂停时长、恢复首个有效进展耗时、位置和 graph failure；collector 只有在实际暂停达到请求值且 resume 后位置、解码和呈现都增加时才写 completed。HTTP I/O failure 在 pause-resume 场景中归因到 `resume`，native state callback 的原始错误文本必须保留，不能降格为无上下文的 helper exit。

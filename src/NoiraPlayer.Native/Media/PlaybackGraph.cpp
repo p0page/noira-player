@@ -224,10 +224,11 @@ namespace winrt::NoiraPlayer::Native::implementation
                     std::chrono::steady_clock::now() - firstFrameStartedAt).count();
             auto const readTimingAfterFirstFrame = m_mediaSource.ReadTimingSnapshot();
             auto const transportBytesAfterFirstFrame = m_mediaSource.TransportBytesRead();
+            auto const transportCallsAfterFirstFrame = m_mediaSource.TransportCallSnapshot();
             m_qualityMetrics.NativeFirstFrameTransportCalls = ToPlaybackTransportCallMetrics(
                 SubtractTransportCallSnapshots(
                     transportCallsBeforeFirstFrame,
-                    m_mediaSource.TransportCallSnapshot()));
+                    transportCallsAfterFirstFrame));
             if (transportBytesAfterFirstFrame >= transportBytesBeforeFirstFrame)
             {
                 m_qualityMetrics.NativeFirstFrameTransportBytesRead =
@@ -248,6 +249,9 @@ namespace winrt::NoiraPlayer::Native::implementation
                 readTimingAfterFirstFrame.PacketCount - readTimingBeforeFirstFrame.PacketCount;
             m_qualityMetrics.NativeFirstFrameDemuxBytes =
                 readTimingAfterFirstFrame.Bytes - readTimingBeforeFirstFrame.Bytes;
+            m_playbackReadTimingBaseline = readTimingAfterFirstFrame;
+            m_playbackTransportCallBaseline = transportCallsAfterFirstFrame;
+            m_hasPlaybackReadBaseline = true;
             m_qualityMetrics.NativeFirstFramePresentDurationMs =
                 m_qualityMetrics.Snapshot().PresentDurationMsMax;
             AppendNativePlaybackDiagnostic(renderedFirstFrame
@@ -605,6 +609,19 @@ namespace winrt::NoiraPlayer::Native::implementation
         snapshot.VideoPositionTicks = m_positionTicks;
         snapshot.QueuedAudioBuffers = m_audioRenderer.QueuedBufferCount();
         auto const readTiming = m_mediaSource.ReadTimingSnapshot();
+        if (m_hasPlaybackReadBaseline)
+        {
+            auto const playbackReadTiming = SubtractReadTimingSnapshots(
+                m_playbackReadTimingBaseline,
+                readTiming);
+            snapshot.PlaybackDemuxReadDurationMs = playbackReadTiming.ReadFrameDurationMs;
+            snapshot.PlaybackDemuxPacketCount = playbackReadTiming.PacketCount;
+            snapshot.PlaybackDemuxBytes = playbackReadTiming.Bytes;
+            snapshot.PlaybackTransportCalls = ToPlaybackTransportCallMetrics(
+                SubtractTransportCallSnapshots(
+                    m_playbackTransportCallBaseline,
+                    m_mediaSource.TransportCallSnapshot()));
+        }
         snapshot.ReadErrorCount = readTiming.Recovery.ReadErrorCount;
         snapshot.ReadRetryCount = readTiming.Recovery.ReadRetryCount;
         snapshot.ReadRecoveryCount = readTiming.Recovery.ReadRecoveryCount;
@@ -1170,6 +1187,9 @@ namespace winrt::NoiraPlayer::Native::implementation
         else
         {
             m_qualityMetrics.Reset();
+            m_playbackReadTimingBaseline = {};
+            m_playbackTransportCallBaseline = {};
+            m_hasPlaybackReadBaseline = false;
         }
         m_lastRuntimeStatsLog = {};
         m_renderIntervalTracker.BreakContinuity();

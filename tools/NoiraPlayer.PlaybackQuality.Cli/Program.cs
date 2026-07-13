@@ -3235,6 +3235,22 @@ internal static class Program
 
         if (summary.BlockedReportCount > 0)
         {
+            if (HasActionableCoreTarget(summary) &&
+                HasOnlyIsolatedNonCoreBlockers(summary))
+            {
+                summary.Action = "continue-next-triage-step";
+                summary.Decision = "no-change";
+                summary.Risk = "medium";
+                summary.Confidence.Level = "partial";
+                summary.Confidence.StrongCount =
+                    summary.AnalyzedReportCount - summary.BlockedReportCount;
+                summary.Confidence.PartialCount = summary.BlockedReportCount;
+                AddUnique(
+                    summary.Confidence.Reasons,
+                    "actionable player-core targets remain after isolating environment or external-service failures");
+                return;
+            }
+
             summary.Action = "fix-report-analysis";
             summary.Decision = "fix-report-analysis";
             summary.Risk = "high";
@@ -3290,6 +3306,46 @@ internal static class Program
         AddUnique(
             summary.Confidence.Reasons,
             "report analysis has no optimization blockers");
+    }
+
+    private static bool HasActionableCoreTarget(ReportAnalysisSummary summary)
+    {
+        foreach (var item in summary.Cases)
+        {
+            if (item.CanOptimizePlaybackCore && item.TargetFailureAreas.Count > 0)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool HasOnlyIsolatedNonCoreBlockers(ReportAnalysisSummary summary)
+    {
+        var foundBlockedCase = false;
+        foreach (var item in summary.Cases)
+        {
+            if (!item.IsBlocked)
+            {
+                continue;
+            }
+
+            foundBlockedCase = true;
+            if (!string.Equals(
+                    item.PrimaryFailureClass,
+                    PlaybackQualityFailureClassification.EnvironmentIssue,
+                    StringComparison.Ordinal) &&
+                !string.Equals(
+                    item.PrimaryFailureClass,
+                    PlaybackQualityFailureClassification.ExternalServiceOrProtocolIssue,
+                    StringComparison.Ordinal))
+            {
+                return false;
+            }
+        }
+
+        return foundBlockedCase;
     }
 
     private static void AddReportAnalysisNextAction(ReportAnalysisSummary summary)

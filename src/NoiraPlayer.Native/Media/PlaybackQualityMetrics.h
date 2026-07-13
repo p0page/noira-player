@@ -98,6 +98,10 @@ namespace winrt::NoiraPlayer::Native::implementation
         double NativeFirstFramePresentDurationMs{0.0};
         uint64_t NativeFirstFrameDemuxPacketCount{0};
         uint64_t NativeFirstFrameDemuxBytes{0};
+        double PlaybackDemuxReadDurationMs{0.0};
+        uint64_t PlaybackDemuxPacketCount{0};
+        uint64_t PlaybackDemuxBytes{0};
+        PlaybackTransportCallMetrics PlaybackTransportCalls;
         uint64_t ReadErrorCount{0};
         uint64_t ReadRetryCount{0};
         uint64_t ReadRecoveryCount{0};

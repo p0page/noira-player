@@ -375,6 +375,16 @@ namespace NoiraPlayer.Core.PlaybackQuality
         public ulong QueuedAudioBuffers { get; set; }
         public ulong VideoStarvedPasses { get; set; }
         public ulong AudioStarvedPasses { get; set; }
+        public double PlaybackDemuxReadDurationMs { get; set; }
+        public ulong PlaybackDemuxPacketCount { get; set; }
+        public ulong PlaybackDemuxBytes { get; set; }
+        public string PlaybackTransportProvider { get; set; } = "";
+        public string PlaybackTransportCallEvidenceStatus { get; set; } = "unavailable";
+        public ulong? PlaybackTransportReadCalls { get; set; }
+        public ulong? PlaybackTransportSeekCalls { get; set; }
+        public double? PlaybackTransportReadWaitMs { get; set; }
+        public double? PlaybackTransportSeekWaitMs { get; set; }
+        public ulong? PlaybackTransportSeekDistanceBytes { get; set; }
     }
 
     public sealed class PlaybackQualityReadRecovery

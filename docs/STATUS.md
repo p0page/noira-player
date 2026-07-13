@@ -2,6 +2,16 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-13 更新：v0.12 阻止短样本假通过，并补齐播放期传输归因
+
+评测契约升级为 `playback-quality-v0.12`。此前 runner 虽然把公开和私有 URI 送入了真实 native 播放链路，但请求 30 秒不等于实际观察 30 秒；报告只按已呈现帧计算媒体进度，短样本仍可能被物化为 pass。现在 execution 独立记录 `requestedSampleDurationMs` 与 `observedSampleWallClockDurationMs`，strict validator 会先确认 collector 的真实观察时长，再检查 rendered+dropped 对应的媒体推进。观察不足归为证据采集错误；观察完整但媒体推进不足必须作为明确 fail，不能再伪装成 pass。
+
+native 现在从首帧后开始累计播放期 demux 时长、包数、字节数，以及可用时的 transport read/seek 调用、等待时长和 seek 距离。共享归因策略只在完整 wall-clock 窗口内工作：transport 等待占播放窗口至少 25% 时归为环境/源吞吐问题；demux 总耗时达到 25% 但 transport 等待不主导时归为 demux/Core；两者都不主导时才把媒体推进不足定位到 decode/render/clock/scheduling。缺少 transport 调用证据时输出 insufficient instrumentation，不猜测 Core。
+
+同一 8-case 远端诊断集重新物化后，报告集从 invalid/5 个假 pass 变为 valid 且诚实分类：三个公开 1080p60 case 在完整观察内只有约 26.5-28.2 秒媒体推进，归为 player-core/frame-pacing；两个公开 4K60 case 只有约 5.6 秒和 13.5 秒推进，但 27.1 秒与 11.1 秒由 transport 等待主导，归为 environment/buffering；公开 DV Profile 5 为 unsupported；两条匿名私有代表源完成约 30 秒媒体推进并 pass。模型摘要只把三个 Core case列为下一步调优目标，环境 case 不再阻塞 Core 分析，也不被当作 Core 回归。
+
+验证：Core 全量 `1069/1069` 通过；`run-playback-core-checks.ps1 -AppDiffBase main` 的 35 个阶段全部通过，其中真实 native-headless corpus 运行约 350 秒，CLI、manifest runner、baseline/candidate 编排、网络恢复、EAGAIN、seek/timeline、音轨字幕、色彩/DXGI 和 Native Debug x64 build 均通过。完整 Modern App Debug x64 也重新编译成功，包含更新后的 WinRT IDL、native DLL、Core 与 Native AOT App；App-hosted 有效观察时长使用可暂停的 `Stopwatch`，不会把 pause-resume 或暂停切字幕的等待时间算入样本。本轮只修正评测证据和归因，不声称播放器 Core 性能已经改善。下一步应以提交后的同一 manifest 生成 v0.12 baseline，再从三个 1080p60 Core case 中选择单一策略候选。
+
 ## 2026-07-13 更新：长暂停网络恢复成为真实 native challenge，评测升级到 v0.8
 
 评测契约已升级为 `playback-quality-v0.8`。旧 pause-resume 只证明累计帧数非零，无法排除“暂停前已经有帧、恢复后实际停住”的假通过；新 helper/collector 强制记录并校验暂停前后的 decoded/rendered frame 计数、实际暂停毫秒数、恢复首个有效进展耗时、位置和 graph failure。完成态必须满足实际暂停达到请求值，且 resume 后位置、解码帧和呈现帧全部增加。字段缺失、暂停不足、只增加累计值或恢复后无呈现都会作为证据错误失败。

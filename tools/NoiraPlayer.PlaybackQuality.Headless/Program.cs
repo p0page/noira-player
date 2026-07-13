@@ -317,7 +317,9 @@ internal static class NativeHeadlessHarness
                 demuxStarted: true,
                 decoderOpened: !helper.IsUnsupported && helper.Metrics.DecodedVideoFrames > 0,
                 playbackSampleObserved: helper.Metrics.DecodedVideoFrames > 0 &&
-                    helper.Metrics.RenderedVideoFrames > 0));
+                    helper.Metrics.RenderedVideoFrames > 0,
+                observedSampleWallClockDurationMs:
+                    helper.ObservedSampleWallClockDurationMs));
         if (helper.IsUnsupported && HasNoSourceClassificationExpectation(request.Expected))
         {
             request.Expected = PlaybackQualityExpectedFactory.CreateDefault(descriptor);
@@ -433,7 +435,8 @@ internal static class NativeHeadlessHarness
         bool nativeGraphOpened,
         bool demuxStarted,
         bool decoderOpened,
-        bool playbackSampleObserved)
+        bool playbackSampleObserved,
+        double observedSampleWallClockDurationMs = 0)
     {
         return new PlaybackQualityExecutionEvidence
         {
@@ -447,6 +450,7 @@ internal static class NativeHeadlessHarness
             StartedAtUtc = startedAt.ToString("O"),
             DurationMs = Math.Max(0, (DateTimeOffset.UtcNow - startedAt).TotalMilliseconds),
             RequestedSampleDurationMs = options.DurationSeconds * 1000.0,
+            ObservedSampleWallClockDurationMs = observedSampleWallClockDurationMs,
             SourceOpenAttempted = sourceOpenAttempted,
             SourceOpened = sourceOpened,
             NativeGraphOpened = nativeGraphOpened,
@@ -845,7 +849,12 @@ internal static class NativeHeadlessHarness
         out string error)
     {
         interactions = new NativeHeadlessInteractionResults();
-        if (!TryParsePauseResumeOutcome(values, out var pauseResume, out error) ||
+        if (!TryGetRequiredNonNegativeDouble(
+                values,
+                "observedSampleWallClockDurationMs",
+                out var observedSampleWallClockDurationMs,
+                out error) ||
+            !TryParsePauseResumeOutcome(values, out var pauseResume, out error) ||
             !TryParseEndOfStreamOutcome(values, out var endOfStream, out error) ||
             !TryParseAudioSwitchOutcome(values, out var audioSwitch, out error) ||
             !TryParseSubtitleSwitchOutcome(values, "subtitleSwitch1", out var subtitleSwitch1, out error) ||
@@ -894,6 +903,7 @@ internal static class NativeHeadlessHarness
             SubtitleSwitch2 = subtitleSwitch2,
             SubtitleOff = subtitleOff,
             Seek = seek,
+            ObservedSampleWallClockDurationMs = observedSampleWallClockDurationMs,
             SelectedAudioStreamIndex = selectedAudio,
             SelectedSubtitleStreamIndex = selectedSubtitle
         };
@@ -1163,6 +1173,11 @@ internal static class NativeHeadlessHarness
                 values,
                 "nativeFirstFrameTransport",
                 metrics.NativeFirstFrameTransportCalls,
+                out error) ||
+            !TrySetRequiredTransportContract(
+                values,
+                "playbackTransport",
+                metrics.PlaybackTransportCalls,
                 out error))
         {
             return false;
@@ -1220,11 +1235,19 @@ internal static class NativeHeadlessHarness
             TrySetRequiredNonNegativeDouble(values, "nativeFirstFrameTransportReadWaitMs", value => metrics.NativeFirstFrameTransportCalls.ReadWaitMs = value, out error) &&
             TrySetRequiredNonNegativeDouble(values, "nativeFirstFrameTransportSeekWaitMs", value => metrics.NativeFirstFrameTransportCalls.SeekWaitMs = value, out error) &&
             TrySetRequiredUInt64(values, "nativeFirstFrameTransportSeekDistanceBytes", value => metrics.NativeFirstFrameTransportCalls.SeekDistanceBytes = value, out error) &&
+            TrySetRequiredUInt64(values, "playbackTransportReadCalls", value => metrics.PlaybackTransportCalls.ReadCalls = value, out error) &&
+            TrySetRequiredUInt64(values, "playbackTransportSeekCalls", value => metrics.PlaybackTransportCalls.SeekCalls = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "playbackTransportReadWaitMs", value => metrics.PlaybackTransportCalls.ReadWaitMs = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "playbackTransportSeekWaitMs", value => metrics.PlaybackTransportCalls.SeekWaitMs = value, out error) &&
+            TrySetRequiredUInt64(values, "playbackTransportSeekDistanceBytes", value => metrics.PlaybackTransportCalls.SeekDistanceBytes = value, out error) &&
             TrySetRequiredNonNegativeDouble(values, "nativeFirstFrameDurationMs", value => metrics.NativeFirstFrameDurationMs = value, out error) &&
             TrySetRequiredNonNegativeDouble(values, "nativeFirstFrameDemuxReadDurationMs", value => metrics.NativeFirstFrameDemuxReadDurationMs = value, out error) &&
             TrySetRequiredNonNegativeDouble(values, "nativeFirstFramePresentDurationMs", value => metrics.NativeFirstFramePresentDurationMs = value, out error) &&
             TrySetRequiredUInt64(values, "nativeFirstFrameDemuxPacketCount", value => metrics.NativeFirstFrameDemuxPacketCount = value, out error) &&
             TrySetRequiredUInt64(values, "nativeFirstFrameDemuxBytes", value => metrics.NativeFirstFrameDemuxBytes = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "playbackDemuxReadDurationMs", value => metrics.PlaybackDemuxReadDurationMs = value, out error) &&
+            TrySetRequiredUInt64(values, "playbackDemuxPacketCount", value => metrics.PlaybackDemuxPacketCount = value, out error) &&
+            TrySetRequiredUInt64(values, "playbackDemuxBytes", value => metrics.PlaybackDemuxBytes = value, out error) &&
             TrySetRequiredNonNegativeDouble(values, "renderIntervalMsP05", value => metrics.RenderIntervalMsP05 = value, out error) &&
             TrySetRequiredNonNegativeDouble(values, "renderIntervalMsP50", value => metrics.RenderIntervalMsP50 = value, out error) &&
             TrySetRequiredNonNegativeDouble(values, "renderIntervalMsP95", value => metrics.RenderIntervalMsP95 = value, out error) &&
@@ -2593,6 +2616,9 @@ internal sealed class NativeHeadlessHelperResult
 
     public NativeHeadlessSeekOutcome Seek => Interactions.Seek;
 
+    public double ObservedSampleWallClockDurationMs =>
+        Interactions.ObservedSampleWallClockDurationMs;
+
     public int? SelectedAudioStreamIndex => Interactions.SelectedAudioStreamIndex;
 
     public int? SelectedSubtitleStreamIndex => Interactions.SelectedSubtitleStreamIndex;
@@ -2692,6 +2718,8 @@ internal sealed class NativeHeadlessHelperResult
 
 internal sealed class NativeHeadlessInteractionResults
 {
+    public double ObservedSampleWallClockDurationMs { get; set; }
+
     public NativeHeadlessPauseResumeOutcome PauseResume { get; set; } =
         new NativeHeadlessPauseResumeOutcome();
 

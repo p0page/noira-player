@@ -937,6 +937,83 @@ public sealed class PlaybackQualityReportAnalyzerTests
     }
 
     [Fact]
+    public void Analyze_Attributes_Incomplete_Sample_To_Dominant_Transport_Wait()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "transport-wait-dominant",
+            Result = "pass",
+            Execution = new PlaybackQualityExecutionEvidence
+            {
+                RequestedSampleDurationMs = 30_000
+            },
+            Source = new PlaybackQualitySource
+            {
+                FrameRate = 60
+            },
+            Timing = new PlaybackQualityTiming
+            {
+                RenderedVideoFrames = 900
+            },
+            Buffers = new PlaybackQualityBuffers
+            {
+                SubmittedAudioFrames = 900,
+                PlaybackDemuxReadDurationMs = 14_000,
+                PlaybackDemuxPacketCount = 1_800,
+                PlaybackDemuxBytes = 20_000_000,
+                PlaybackTransportProvider = "instrumented-ffmpeg-avio",
+                PlaybackTransportCallEvidenceStatus = "available",
+                PlaybackTransportReadCalls = 400,
+                PlaybackTransportReadWaitMs = 12_000
+            }
+        };
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Equal("insufficient", analysis.Sample.Status);
+        Assert.Equal("transport-wait-dominant", analysis.Buffering.ThroughputAttribution);
+        Assert.Equal(0.4, analysis.Buffering.PlaybackTransportReadWaitRatio, 3);
+        Assert.Equal(0.4667, analysis.Buffering.PlaybackDemuxReadRatio, 3);
+        Assert.Contains("buffers.playbackTransportReadWaitMs", analysis.Buffering.Signals);
+        Assert.Contains("buffers.playbackDemuxReadDurationMs", analysis.Buffering.Signals);
+    }
+
+    [Fact]
+    public void Analyze_Does_Not_Guess_Transport_Cause_When_Incomplete_Sample_Lacks_Call_Evidence()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "transport-evidence-unavailable",
+            Result = "pass",
+            Execution = new PlaybackQualityExecutionEvidence
+            {
+                RequestedSampleDurationMs = 30_000
+            },
+            Source = new PlaybackQualitySource
+            {
+                FrameRate = 60
+            },
+            Timing = new PlaybackQualityTiming
+            {
+                RenderedVideoFrames = 900
+            },
+            Buffers = new PlaybackQualityBuffers
+            {
+                SubmittedAudioFrames = 900,
+                PlaybackDemuxReadDurationMs = 14_000,
+                PlaybackTransportProvider = "ffmpeg-builtin",
+                PlaybackTransportCallEvidenceStatus = "unavailable"
+            }
+        };
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Equal("transport-evidence-unavailable", analysis.Buffering.ThroughputAttribution);
+        Assert.Equal(0, analysis.Buffering.PlaybackTransportReadWaitRatio);
+        Assert.Contains("Transport call timing is unavailable", analysis.Buffering.ThroughputReason);
+    }
+
+    [Fact]
     public void Analyze_Treats_Explicit_Zero_Starvation_Counters_As_Buffering_Evidence_When_Signal_Presence_Is_Captured()
     {
         var report = new PlaybackQualityReport
@@ -1306,6 +1383,78 @@ public sealed class PlaybackQualityReportAnalyzerTests
         Assert.False(analysis.OptimizationGate.CanOptimizePlaybackCore);
         Assert.Equal("blocked", analysis.OptimizationGate.Status);
         Assert.Contains("sample.insufficient", analysis.OptimizationGate.Blockers);
+        Assert.DoesNotContain("frame-pacing", analysis.OptimizationGate.TargetFailureAreas);
+    }
+
+    [Fact]
+    public void Analyze_Allows_Core_Optimization_When_Incomplete_Progress_Is_The_Classified_Core_Failure()
+    {
+        var report = CreateOptimizationReadyFailure();
+        report.Checks.Clear();
+        report.Expected = new PlaybackQualityExpected
+        {
+            RequireValidatedConversion = false
+        };
+        report.Execution = new PlaybackQualityExecutionEvidence
+        {
+            Status = PlaybackQualityExecutionStatus.Completed,
+            Scenario = PlaybackQualityExecutionScenario.Playback,
+            RequestedSampleDurationMs = 5000,
+            ObservedSampleWallClockDurationMs = 5000,
+            PlaybackSampleObserved = true
+        };
+        report.Source.FrameRate = 60;
+        report.Timing.RenderedVideoFrames = 60;
+        report.Buffers.PlaybackTransportProvider = "instrumented-ffmpeg-avio";
+        report.Buffers.PlaybackTransportCallEvidenceStatus = "available";
+        report.Buffers.PlaybackTransportReadWaitMs = 50;
+        report.Buffers.PlaybackDemuxReadDurationMs = 75;
+        PlaybackQualityEvaluator.Evaluate(report);
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Equal("insufficient", analysis.Sample.Status);
+        Assert.Equal("downstream-or-scheduling", analysis.Buffering.ThroughputAttribution);
+        Assert.Equal("media-progress-shortfall", analysis.FramePacing.Pattern);
+        Assert.True(analysis.OptimizationGate.CanOptimizePlaybackCore);
+        Assert.Equal("ready", analysis.OptimizationGate.Status);
+        Assert.DoesNotContain("sample.insufficient", analysis.OptimizationGate.Blockers);
+        Assert.Contains("frame-pacing", analysis.OptimizationGate.TargetFailureAreas);
+    }
+
+    [Fact]
+    public void Analyze_Blocks_Core_Optimization_When_Incomplete_Progress_Is_Transport_Dominated()
+    {
+        var report = CreateOptimizationReadyFailure();
+        report.Checks.Clear();
+        report.Expected = new PlaybackQualityExpected
+        {
+            RequireValidatedConversion = false
+        };
+        report.Execution = new PlaybackQualityExecutionEvidence
+        {
+            Status = PlaybackQualityExecutionStatus.Completed,
+            Scenario = PlaybackQualityExecutionScenario.Playback,
+            RequestedSampleDurationMs = 5000,
+            ObservedSampleWallClockDurationMs = 5000,
+            PlaybackSampleObserved = true
+        };
+        report.Source.FrameRate = 60;
+        report.Timing.RenderedVideoFrames = 60;
+        report.Buffers.PlaybackTransportProvider = "instrumented-ffmpeg-avio";
+        report.Buffers.PlaybackTransportCallEvidenceStatus = "available";
+        report.Buffers.PlaybackTransportReadWaitMs = 4000;
+        report.Buffers.PlaybackDemuxReadDurationMs = 4100;
+        PlaybackQualityEvaluator.Evaluate(report);
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Equal("transport-wait-dominant", analysis.Buffering.ThroughputAttribution);
+        Assert.False(analysis.OptimizationGate.CanOptimizePlaybackCore);
+        Assert.Equal("blocked", analysis.OptimizationGate.Status);
+        Assert.Contains(
+            "failureClass.environment issue",
+            analysis.OptimizationGate.Blockers);
         Assert.DoesNotContain("frame-pacing", analysis.OptimizationGate.TargetFailureAreas);
     }
 

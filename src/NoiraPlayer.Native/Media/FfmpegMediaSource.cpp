@@ -482,6 +482,23 @@ namespace winrt::NoiraPlayer::Native::implementation
         return result;
     }
 
+    FfmpegReadTimingSnapshot SubtractReadTimingSnapshots(
+        FfmpegReadTimingSnapshot const& before,
+        FfmpegReadTimingSnapshot const& after) noexcept
+    {
+        FfmpegReadTimingSnapshot result;
+        result.ReadFrameDurationMs = after.ReadFrameDurationMs >= before.ReadFrameDurationMs
+            ? after.ReadFrameDurationMs - before.ReadFrameDurationMs
+            : 0.0;
+        result.PacketCount = after.PacketCount >= before.PacketCount
+            ? after.PacketCount - before.PacketCount
+            : 0;
+        result.Bytes = after.Bytes >= before.Bytes
+            ? after.Bytes - before.Bytes
+            : 0;
+        return result;
+    }
+
     void FfmpegMediaSource::Open(winrt::hstring const& url)
     {
         HttpMediaInput::ValidateUrl(url);

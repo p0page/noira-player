@@ -1549,12 +1549,13 @@ namespace NoiraPlayer.App.Views
                     GetCurrentPositionTicks(),
                     _orchestrator.State.ToString());
                 var position = CreateQualityRunPosition(request.StartPositionTicks);
+                var sampleObservationClock = Stopwatch.StartNew();
                 var interaction = await RunQualityRunScenarioAsync(
                     request,
                     descriptor,
                     lifecycle,
                     position,
-                    DateTimeOffset.UtcNow);
+                    sampleObservationClock);
                 var capturedDescriptor = _orchestrator.CurrentDescriptor ?? descriptor;
                 var evidence = CaptureQualityRunEvidence(_backend, capturedDescriptor);
                 EnrichQualityRunTimelineEvidence(position, evidence.MetricsProvider);
@@ -1573,6 +1574,7 @@ namespace NoiraPlayer.App.Views
                     PlaybackQualityExecutionStatus.Completed,
                     sourceOpened: true,
                     request.QualityRunDurationSeconds * 1000.0,
+                    sampleObservationClock.Elapsed.TotalMilliseconds,
                     evidence.MetricsProvider);
 
                 var result = PlaybackQualityRuntimeEvidenceCollector.ComposeRunResult(
@@ -1647,19 +1649,18 @@ namespace NoiraPlayer.App.Views
             PlaybackDescriptor descriptor,
             PlaybackQualityLifecycle lifecycle,
             PlaybackQualityPosition position,
-            DateTimeOffset probeStartedAtUtc)
+            Stopwatch sampleObservationClock)
         {
             var duration = TimeSpan.FromSeconds(request.QualityRunDurationSeconds);
             var firstDelay = GetQualityRunProbeDelay(duration, 0.20);
             var shortDelay = GetQualityRunProbeDelay(duration, 0.05);
-            var excludedDuration = TimeSpan.Zero;
             PlaybackQualityInteractionEvidence? interaction = null;
 
             switch (request.QualityScenario)
             {
                 case PlaybackQualityExecutionScenario.PauseResume:
                     await Task.Delay(firstDelay);
-                    var pausedAtUtc = DateTimeOffset.UtcNow;
+                    sampleObservationClock.Stop();
                     await _orchestrator.PauseAsync();
                     var positionBeforePauseTicks = GetCurrentPositionTicks();
                     TryReadQualityRunInteractionMetrics(
@@ -1672,7 +1673,7 @@ namespace NoiraPlayer.App.Views
                     var positionDuringPauseTicks = GetCurrentPositionTicks();
                     var positionBeforeResumeTicks = positionDuringPauseTicks;
                     await _orchestrator.ResumeAsync();
-                    excludedDuration += DateTimeOffset.UtcNow - pausedAtUtc;
+                    sampleObservationClock.Start();
                     var pauseResumeTimeoutAt = DateTimeOffset.UtcNow.AddSeconds(5);
                     var positionAfterResumeTicks = GetCurrentPositionTicks();
                     var renderedVideoFramesAfter = renderedVideoFramesBefore;
@@ -1726,7 +1727,10 @@ namespace NoiraPlayer.App.Views
 
                 case PlaybackQualityExecutionScenario.SubtitleSwitch:
                     await Task.Delay(firstDelay);
-                    interaction = await RunQualityRunSubtitleSwitchScenarioAsync(descriptor, lifecycle);
+                    interaction = await RunQualityRunSubtitleSwitchScenarioAsync(
+                        descriptor,
+                        lifecycle,
+                        sampleObservationClock);
                     break;
 
                 case PlaybackQualityExecutionScenario.Playback:
@@ -1737,11 +1741,11 @@ namespace NoiraPlayer.App.Views
                         "Unknown playback quality scenario: " + request.QualityScenario);
             }
 
-            var activeElapsed = DateTimeOffset.UtcNow - probeStartedAtUtc - excludedDuration;
-            if (activeElapsed < duration)
+            if (sampleObservationClock.Elapsed < duration)
             {
-                await Task.Delay(duration - activeElapsed);
+                await Task.Delay(duration - sampleObservationClock.Elapsed);
             }
+            sampleObservationClock.Stop();
 
             return interaction;
         }
@@ -1850,7 +1854,8 @@ namespace NoiraPlayer.App.Views
 
         private async Task<PlaybackQualityInteractionEvidence?> RunQualityRunSubtitleSwitchScenarioAsync(
             PlaybackDescriptor descriptor,
-            PlaybackQualityLifecycle lifecycle)
+            PlaybackQualityLifecycle lifecycle,
+            Stopwatch sampleObservationClock)
         {
             var target = descriptor.MediaSource.SubtitleStreams.FirstOrDefault(
                 stream => stream.Index != descriptor.SubtitleStreamIndex);
@@ -1866,6 +1871,7 @@ namespace NoiraPlayer.App.Views
 
             var baselineCueCount = ReadQualityRunSubtitleCueCount();
             var baselineDecodedCueCount = ReadQualityRunSubtitleDecodedCueCount();
+            sampleObservationClock.Stop();
             await _orchestrator.PauseAsync();
             AddQualityRunLifecycleEvent(
                 lifecycle,
@@ -1879,6 +1885,7 @@ namespace NoiraPlayer.App.Views
             await _orchestrator.SwitchSubtitleStreamAsync(target.Index);
             var operationDurationMs = stopwatch.Elapsed.TotalMilliseconds;
             await _orchestrator.ResumeAsync();
+            sampleObservationClock.Start();
             AddQualityRunLifecycleEvent(
                 lifecycle,
                 "resume",
@@ -2372,6 +2379,19 @@ namespace NoiraPlayer.App.Views
                     NativeFirstFramePresentDurationMs = source.NativeFirstFramePresentDurationMs,
                     NativeFirstFrameDemuxPacketCount = source.NativeFirstFrameDemuxPacketCount,
                     NativeFirstFrameDemuxBytes = source.NativeFirstFrameDemuxBytes,
+                    PlaybackDemuxReadDurationMs = source.PlaybackDemuxReadDurationMs,
+                    PlaybackDemuxPacketCount = source.PlaybackDemuxPacketCount,
+                    PlaybackDemuxBytes = source.PlaybackDemuxBytes,
+                    PlaybackTransportCalls = new PlaybackQualityTransportCallSnapshot
+                    {
+                        Provider = source.PlaybackTransportCalls.Provider,
+                        EvidenceAvailable = source.PlaybackTransportCalls.EvidenceAvailable,
+                        ReadCalls = source.PlaybackTransportCalls.ReadCalls,
+                        SeekCalls = source.PlaybackTransportCalls.SeekCalls,
+                        ReadWaitMs = source.PlaybackTransportCalls.ReadWaitMs,
+                        SeekWaitMs = source.PlaybackTransportCalls.SeekWaitMs,
+                        SeekDistanceBytes = source.PlaybackTransportCalls.SeekDistanceBytes
+                    },
                     ReadErrorCount = source.ReadErrorCount,
                     ReadRetryCount = source.ReadRetryCount,
                     ReadRecoveryCount = source.ReadRecoveryCount,
@@ -2539,6 +2559,7 @@ namespace NoiraPlayer.App.Views
                         PlaybackQualityExecutionStatus.Failed,
                         _orchestrator.CurrentDescriptor != null,
                         request.QualityRunDurationSeconds * 1000.0,
+                        observedSampleWallClockDurationMs: 0,
                         metricsProvider: null));
                 var relativePath = await WriteQualityRunReportAsync(request.QualityRunId, result);
                 await WriteQualityRunCommandResultAsync("capture-error", relativePath);
@@ -2559,6 +2580,7 @@ namespace NoiraPlayer.App.Views
             string status,
             bool sourceOpened,
             double requestedSampleDurationMs,
+            double observedSampleWallClockDurationMs,
             IPlaybackQualityMetricsProvider? metricsProvider)
         {
             var decodedVideoFrames = 0UL;
@@ -2589,6 +2611,7 @@ namespace NoiraPlayer.App.Views
                 StartedAtUtc = startedAt.ToString("O"),
                 DurationMs = Math.Max(0, (DateTimeOffset.UtcNow - startedAt).TotalMilliseconds),
                 RequestedSampleDurationMs = requestedSampleDurationMs,
+                ObservedSampleWallClockDurationMs = observedSampleWallClockDurationMs,
                 SourceOpenAttempted = sourceOpenAttempted,
                 SourceOpened = sourceOpened,
                 NativeGraphOpened = sourceOpened,

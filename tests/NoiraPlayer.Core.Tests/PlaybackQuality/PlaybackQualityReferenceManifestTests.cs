@@ -482,6 +482,7 @@ public sealed class PlaybackQualityReferenceManifestTests
             PlaybackQualitySignalCatalog.ReportSignals.Select(signal => signal.Signal));
 
         Assert.Contains("execution.requestedSampleDurationMs", reportSignals);
+        Assert.Contains("execution.observedSampleWallClockDurationMs", reportSignals);
     }
 
     [Fact]
@@ -1146,6 +1147,95 @@ public sealed class PlaybackQualityReferenceManifestTests
             hdrKind: "Sdr");
         report.Timing.RenderedVideoFrames = 96;
         report.Timing.DroppedVideoFrames = 24;
+
+        var validation = PlaybackQualityReferenceReportSetValidator.Validate(
+            manifest,
+            new[] { report });
+
+        Assert.DoesNotContain(validation.Errors, error =>
+            error.Code == "report.execution.sample-window.incomplete");
+    }
+
+    [Fact]
+    public void ValidateReportSet_Rejects_Incomplete_Sample_That_Is_Still_Marked_Pass()
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        var referenceCase = CreateCase(
+            "local/unreported-incomplete-window",
+            tier: 1,
+            purpose: "frame-pacing");
+        manifest.Cases.Add(referenceCase);
+        var report = CreateReport(
+            referenceCase.CaseId,
+            codec: "hevc",
+            width: 1920,
+            height: 1080,
+            frameRate: 60,
+            hdrKind: "Sdr");
+        report.Timing.RenderedVideoFrames = 60;
+
+        var validation = PlaybackQualityReferenceReportSetValidator.Validate(
+            manifest,
+            new[] { report });
+
+        Assert.False(validation.IsValid);
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.execution.sample-window.incomplete");
+    }
+
+    [Fact]
+    public void ValidateReportSet_Rejects_Completed_Playback_When_Wall_Clock_Observation_Is_Short()
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        var referenceCase = CreateCase(
+            "local/short-wall-clock-observation",
+            tier: 1,
+            purpose: "frame-pacing");
+        manifest.Cases.Add(referenceCase);
+        var report = CreateReport(
+            referenceCase.CaseId,
+            codec: "hevc",
+            width: 1920,
+            height: 1080,
+            frameRate: 60,
+            hdrKind: "Sdr");
+        report.Execution.ObservedSampleWallClockDurationMs = 1000;
+
+        var validation = PlaybackQualityReferenceReportSetValidator.Validate(
+            manifest,
+            new[] { report });
+
+        Assert.False(validation.IsValid);
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.execution.sample-wall-clock.incomplete" &&
+            error.Signal == "execution.observedSampleWallClockDurationMs");
+    }
+
+    [Fact]
+    public void ValidateReportSet_Accepts_Incomplete_Sample_When_Evaluator_Reports_The_Playback_Failure()
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        var referenceCase = CreateCase(
+            "local/reported-incomplete-window",
+            tier: 1,
+            purpose: "frame-pacing");
+        manifest.Cases.Add(referenceCase);
+        var report = CreateReport(
+            referenceCase.CaseId,
+            codec: "hevc",
+            width: 1920,
+            height: 1080,
+            frameRate: 60,
+            hdrKind: "Sdr");
+        report.Expected = new PlaybackQualityExpected
+        {
+            RequireValidatedConversion = false
+        };
+        report.Timing.RenderedVideoFrames = 60;
+        report.Buffers.PlaybackTransportProvider = "instrumented-ffmpeg-avio";
+        report.Buffers.PlaybackTransportCallEvidenceStatus = "available";
+        report.Buffers.PlaybackTransportReadWaitMs = 50;
+        PlaybackQualityEvaluator.Evaluate(report);
 
         var validation = PlaybackQualityReferenceReportSetValidator.Validate(
             manifest,
@@ -2974,6 +3064,7 @@ public sealed class PlaybackQualityReferenceManifestTests
             StartedAtUtc = "2026-07-11T00:00:00Z",
             DurationMs = 5000,
             RequestedSampleDurationMs = 5000,
+            ObservedSampleWallClockDurationMs = 5000,
             SourceOpenAttempted = true,
             SourceOpened = sourceOpened,
             NativeGraphOpened = sourceOpened,

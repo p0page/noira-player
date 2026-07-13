@@ -432,16 +432,54 @@ namespace NoiraPlayer.Core.PlaybackQuality
                     PlaybackQualitySampleWindowPolicy.GetRequiredMediaDurationMs(report);
                 var boundaryToleranceMs =
                     PlaybackQualitySampleWindowPolicy.GetCaptureBoundaryToleranceMs(report);
-                if (observedDurationMs + boundaryToleranceMs < requiredDurationMs)
+                var hasCompleteWallClockObservation = true;
+                if (!double.IsFinite(execution.ObservedSampleWallClockDurationMs) ||
+                    execution.ObservedSampleWallClockDurationMs <= 0)
                 {
+                    hasCompleteWallClockObservation = false;
                     AddExecutionError(
                         validation,
                         status,
-                        "report.execution.sample-window.incomplete",
-                        "execution.requestedSampleDurationMs",
-                        requiredDurationMs.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                        observedDurationMs.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                        "Rendered playback evidence did not cover the requested observation window.");
+                        "report.execution.sample-wall-clock.invalid",
+                        "execution.observedSampleWallClockDurationMs",
+                        "finite value greater than zero",
+                        execution.ObservedSampleWallClockDurationMs.ToString(
+                            System.Globalization.CultureInfo.InvariantCulture),
+                        "Completed playback evidence must record the observed wall-clock sample duration.");
+                }
+                else if (execution.ObservedSampleWallClockDurationMs +
+                    boundaryToleranceMs < requiredDurationMs)
+                {
+                    hasCompleteWallClockObservation = false;
+                    AddExecutionError(
+                        validation,
+                        status,
+                        "report.execution.sample-wall-clock.incomplete",
+                        "execution.observedSampleWallClockDurationMs",
+                        requiredDurationMs.ToString(
+                            System.Globalization.CultureInfo.InvariantCulture),
+                        execution.ObservedSampleWallClockDurationMs.ToString(
+                            System.Globalization.CultureInfo.InvariantCulture),
+                        "The collector did not observe playback for the requested wall-clock window.");
+                }
+
+                if (hasCompleteWallClockObservation &&
+                    observedDurationMs + boundaryToleranceMs < requiredDurationMs)
+                {
+                    if (!PlaybackQualitySampleWindowPolicy.HasMatchingIncompleteSampleFailure(
+                            report,
+                            requiredDurationMs,
+                            observedDurationMs))
+                    {
+                        AddExecutionError(
+                            validation,
+                            status,
+                            "report.execution.sample-window.incomplete",
+                            "execution.requestedSampleDurationMs",
+                            requiredDurationMs.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                            observedDurationMs.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                            "Rendered playback evidence did not cover the requested observation window and the report did not classify the playback failure.");
+                    }
                 }
             }
 

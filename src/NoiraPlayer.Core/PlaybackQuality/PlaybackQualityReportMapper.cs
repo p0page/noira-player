@@ -119,6 +119,20 @@ namespace NoiraPlayer.Core.PlaybackQuality
             report.Buffers.QueuedAudioBuffers = metrics.QueuedAudioBuffers;
             report.Buffers.VideoStarvedPasses = metrics.VideoStarvedPasses;
             report.Buffers.AudioStarvedPasses = metrics.AudioStarvedPasses;
+            report.Buffers.PlaybackDemuxReadDurationMs = metrics.PlaybackDemuxReadDurationMs;
+            report.Buffers.PlaybackDemuxPacketCount = metrics.PlaybackDemuxPacketCount;
+            report.Buffers.PlaybackDemuxBytes = metrics.PlaybackDemuxBytes;
+            report.Buffers.PlaybackTransportProvider = metrics.PlaybackTransportCalls.Provider;
+            report.Buffers.PlaybackTransportCallEvidenceStatus =
+                metrics.PlaybackTransportCalls.EvidenceAvailable ? "available" : "unavailable";
+            if (metrics.PlaybackTransportCalls.EvidenceAvailable)
+            {
+                report.Buffers.PlaybackTransportReadCalls = metrics.PlaybackTransportCalls.ReadCalls;
+                report.Buffers.PlaybackTransportSeekCalls = metrics.PlaybackTransportCalls.SeekCalls;
+                report.Buffers.PlaybackTransportReadWaitMs = metrics.PlaybackTransportCalls.ReadWaitMs;
+                report.Buffers.PlaybackTransportSeekWaitMs = metrics.PlaybackTransportCalls.SeekWaitMs;
+                report.Buffers.PlaybackTransportSeekDistanceBytes = metrics.PlaybackTransportCalls.SeekDistanceBytes;
+            }
             report.ReadRecovery.ReadErrorCount = metrics.ReadErrorCount;
             report.ReadRecovery.ReadRetryCount = metrics.ReadRetryCount;
             report.ReadRecovery.ReadRecoveryCount = metrics.ReadRecoveryCount;

@@ -48,6 +48,7 @@ function Set-SmokeNativeExecutionEvidence {
         startedAtUtc = '2026-07-08T00:00:00.0000000+00:00'
         durationMs = 1000.0
         requestedSampleDurationMs = $RequestedSampleDurationMs
+        observedSampleWallClockDurationMs = $RequestedSampleDurationMs
         sourceOpenAttempted = $true
         sourceOpened = $SourceOpened
         nativeGraphOpened = $SourceOpened
@@ -639,8 +640,8 @@ try {
         throw 'Expected analyze-report-set output schemaVersion 1.'
     }
 
-    if ($analysisSet.evaluationVersion -ne 'playback-quality-v0.11') {
-        throw 'Expected analyze-report-set output evaluationVersion playback-quality-v0.11.'
+    if ($analysisSet.evaluationVersion -ne 'playback-quality-v0.12') {
+        throw 'Expected analyze-report-set output evaluationVersion playback-quality-v0.12.'
     }
 
     if ($analysisSet.action -ne 'fix-report-analysis') {
@@ -945,8 +946,8 @@ try {
         throw 'Expected playback quality CLI plan-runs output schemaVersion 1.'
     }
 
-    if ($runPlan.evaluationVersion -ne 'playback-quality-v0.11') {
-        throw 'Expected playback quality CLI plan-runs output evaluationVersion playback-quality-v0.11.'
+    if ($runPlan.evaluationVersion -ne 'playback-quality-v0.12') {
+        throw 'Expected playback quality CLI plan-runs output evaluationVersion playback-quality-v0.12.'
     }
 
     if ($runPlan.caseCount -ne 3) {
@@ -996,7 +997,7 @@ try {
 
     $materializedBaselineSummary = Get-Content -Raw -LiteralPath $materializedBaselineSummaryPath | ConvertFrom-Json
     if ($materializedBaselineSummary.schemaVersion -ne 1 -or
-        $materializedBaselineSummary.evaluationVersion -ne 'playback-quality-v0.11' -or
+        $materializedBaselineSummary.evaluationVersion -ne 'playback-quality-v0.12' -or
         $materializedBaselineSummary.caseCount -ne 3 -or
         $materializedBaselineSummary.reportsDirectory -ne $materializedBaselineDir) {
         throw 'Expected materialize-baseline-report-set summary to describe generated reports.'
@@ -1533,6 +1534,7 @@ try {
     "startedAtUtc": "2026-07-08T00:00:00.0000000+00:00",
     "durationMs": 12000.0,
     "requestedSampleDurationMs": 1000.0,
+    "observedSampleWallClockDurationMs": 1000.0,
     "sourceOpenAttempted": true,
     "sourceOpened": true,
     "nativeGraphOpened": true,
@@ -1802,6 +1804,7 @@ try {
     "startedAtUtc": "2026-07-08T00:00:00.0000000+00:00",
     "durationMs": 3000.0,
     "requestedSampleDurationMs": 1000.0,
+    "observedSampleWallClockDurationMs": 1000.0,
     "sourceOpenAttempted": true,
     "sourceOpened": true,
     "nativeGraphOpened": true,
@@ -1912,6 +1915,7 @@ try {
     "startedAtUtc": "2026-07-08T00:00:00.0000000+00:00",
     "durationMs": 1500.0,
     "requestedSampleDurationMs": 1000.0,
+    "observedSampleWallClockDurationMs": 1000.0,
     "sourceOpenAttempted": true,
     "sourceOpened": true,
     "nativeGraphOpened": true,
@@ -2202,6 +2206,7 @@ try {
     "startedAtUtc": "2026-07-08T00:00:00.0000000+00:00",
     "durationMs": 60000.0,
     "requestedSampleDurationMs": 60000.0,
+    "observedSampleWallClockDurationMs": 60000.0,
     "sourceOpenAttempted": true,
     "sourceOpened": true,
     "nativeGraphOpened": true,
@@ -3597,8 +3602,8 @@ try {
         throw 'Expected playback quality CLI evaluate-candidate output schemaVersion 1.'
     }
 
-    if ($candidateEvaluation.evaluationVersion -ne 'playback-quality-v0.11') {
-        throw 'Expected playback quality CLI evaluate-candidate output evaluationVersion playback-quality-v0.11.'
+    if ($candidateEvaluation.evaluationVersion -ne 'playback-quality-v0.12') {
+        throw 'Expected playback quality CLI evaluate-candidate output evaluationVersion playback-quality-v0.12.'
     }
 
     if ($candidateEvaluation.action -ne 'accept-candidate') {

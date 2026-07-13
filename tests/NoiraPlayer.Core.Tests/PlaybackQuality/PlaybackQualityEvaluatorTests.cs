@@ -96,6 +96,78 @@ public sealed class PlaybackQualityEvaluatorTests
     }
 
     [Fact]
+    public void Evaluate_Passes_When_Requested_Sample_Window_Is_Covered()
+    {
+        var report = CreateSampleWindowReport(renderedVideoFrames: 300);
+
+        PlaybackQualityEvaluator.Evaluate(report);
+
+        Assert.Equal(PlaybackQualityReportResult.Pass, report.Result);
+        Assert.Contains(report.Checks, check =>
+            check.Name == "SampleWindowCoverage" &&
+            check.Status == "pass" &&
+            check.Signal == "execution.requestedSampleDurationMs");
+    }
+
+    [Fact]
+    public void Evaluate_Fails_Incomplete_Sample_As_Environment_Issue_When_Transport_Wait_Dominates()
+    {
+        var report = CreateSampleWindowReport(renderedVideoFrames: 60);
+        report.Buffers.PlaybackTransportProvider = "instrumented-ffmpeg-avio";
+        report.Buffers.PlaybackTransportCallEvidenceStatus = "available";
+        report.Buffers.PlaybackTransportReadWaitMs = 4000;
+        report.Buffers.PlaybackDemuxReadDurationMs = 4100;
+
+        PlaybackQualityEvaluator.Evaluate(report);
+
+        Assert.Equal(PlaybackQualityReportResult.Fail, report.Result);
+        Assert.Equal("buffering", report.Analysis.PrimaryFailureArea);
+        Assert.Contains(report.Checks, check =>
+            check.Name == "SampleWindowCoverage" &&
+            check.Status == "fail" &&
+            check.FailureArea == "buffering" &&
+            check.FailureClass == PlaybackQualityFailureClassification.EnvironmentIssue);
+        Assert.Contains("buffers.playbackTransportReadWaitMs", report.Analysis.RelevantSignals);
+    }
+
+    [Fact]
+    public void Evaluate_Fails_Incomplete_Sample_As_Core_Bug_When_Downstream_Progress_Is_Slow()
+    {
+        var report = CreateSampleWindowReport(renderedVideoFrames: 60);
+        report.Buffers.PlaybackTransportProvider = "instrumented-ffmpeg-avio";
+        report.Buffers.PlaybackTransportCallEvidenceStatus = "available";
+        report.Buffers.PlaybackTransportReadWaitMs = 50;
+        report.Buffers.PlaybackDemuxReadDurationMs = 75;
+
+        PlaybackQualityEvaluator.Evaluate(report);
+
+        Assert.Equal(PlaybackQualityReportResult.Fail, report.Result);
+        Assert.Equal("frame-pacing", report.Analysis.PrimaryFailureArea);
+        Assert.Contains(report.Checks, check =>
+            check.Name == "SampleWindowCoverage" &&
+            check.Status == "fail" &&
+            check.FailureArea == "frame-pacing" &&
+            check.FailureClass == PlaybackQualityFailureClassification.PlayerCoreBug);
+        Assert.Contains("timing.renderedVideoFrames", report.Analysis.RelevantSignals);
+    }
+
+    [Fact]
+    public void Evaluate_Fails_Incomplete_Sample_As_Instrumentation_Gap_When_Transport_Evidence_Is_Missing()
+    {
+        var report = CreateSampleWindowReport(renderedVideoFrames: 60);
+
+        PlaybackQualityEvaluator.Evaluate(report);
+
+        Assert.Equal(PlaybackQualityReportResult.Fail, report.Result);
+        Assert.Equal("evidence-collection", report.Analysis.PrimaryFailureArea);
+        Assert.Contains(report.Checks, check =>
+            check.Name == "SampleWindowCoverage" &&
+            check.Status == "fail" &&
+            check.FailureArea == "evidence-collection" &&
+            check.FailureClass == PlaybackQualityFailureClassification.InsufficientInstrumentation);
+    }
+
+    [Fact]
     public void Evaluate_Fails_When_Hdr10_Output_Uses_Non_Ten_Bit_SwapChain()
     {
         var report = new PlaybackQualityReport
@@ -1544,5 +1616,33 @@ public sealed class PlaybackQualityEvaluatorTests
         Assert.Equal(5009, parsed.Interaction.CueRenderDurationMs);
         Assert.Equal(24UL, parsed.Interaction.RenderedVideoFrameDelta);
         Assert.Equal(1UL, parsed.Interaction.SubtitleCueRenderCountDelta);
+    }
+
+    private static PlaybackQualityReport CreateSampleWindowReport(ulong renderedVideoFrames)
+    {
+        return new PlaybackQualityReport
+        {
+            RunId = "sample-window",
+            Expected = new PlaybackQualityExpected
+            {
+                RequireValidatedConversion = false
+            },
+            Execution = new PlaybackQualityExecutionEvidence
+            {
+                Scenario = PlaybackQualityExecutionScenario.Playback,
+                Status = PlaybackQualityExecutionStatus.Completed,
+                RequestedSampleDurationMs = 5000,
+                ObservedSampleWallClockDurationMs = 5000,
+                PlaybackSampleObserved = true
+            },
+            Source = new PlaybackQualitySource
+            {
+                FrameRate = 60
+            },
+            Timing = new PlaybackQualityTiming
+            {
+                RenderedVideoFrames = renderedVideoFrames
+            }
+        };
     }
 }

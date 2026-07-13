@@ -173,6 +173,27 @@ namespace winrt::NoiraPlayer::Native::implementation
         uint64_t NativeFirstFrameDemuxBytes() const noexcept { return m_nativeFirstFrameDemuxBytes; }
         void NativeFirstFrameDemuxBytes(uint64_t value) noexcept { m_nativeFirstFrameDemuxBytes = value; }
 
+        double PlaybackDemuxReadDurationMs() const noexcept { return m_playbackDemuxReadDurationMs; }
+        void PlaybackDemuxReadDurationMs(double value) noexcept { m_playbackDemuxReadDurationMs = value; }
+        uint64_t PlaybackDemuxPacketCount() const noexcept { return m_playbackDemuxPacketCount; }
+        void PlaybackDemuxPacketCount(uint64_t value) noexcept { m_playbackDemuxPacketCount = value; }
+        uint64_t PlaybackDemuxBytes() const noexcept { return m_playbackDemuxBytes; }
+        void PlaybackDemuxBytes(uint64_t value) noexcept { m_playbackDemuxBytes = value; }
+        winrt::hstring PlaybackTransportProvider() const { return m_playbackTransportProvider; }
+        void PlaybackTransportProvider(winrt::hstring const& value) { m_playbackTransportProvider = value; }
+        bool PlaybackTransportCallEvidenceAvailable() const noexcept { return m_playbackTransportCallEvidenceAvailable; }
+        void PlaybackTransportCallEvidenceAvailable(bool value) noexcept { m_playbackTransportCallEvidenceAvailable = value; }
+        uint64_t PlaybackTransportReadCalls() const noexcept { return m_playbackTransportReadCalls; }
+        void PlaybackTransportReadCalls(uint64_t value) noexcept { m_playbackTransportReadCalls = value; }
+        uint64_t PlaybackTransportSeekCalls() const noexcept { return m_playbackTransportSeekCalls; }
+        void PlaybackTransportSeekCalls(uint64_t value) noexcept { m_playbackTransportSeekCalls = value; }
+        double PlaybackTransportReadWaitMs() const noexcept { return m_playbackTransportReadWaitMs; }
+        void PlaybackTransportReadWaitMs(double value) noexcept { m_playbackTransportReadWaitMs = value; }
+        double PlaybackTransportSeekWaitMs() const noexcept { return m_playbackTransportSeekWaitMs; }
+        void PlaybackTransportSeekWaitMs(double value) noexcept { m_playbackTransportSeekWaitMs = value; }
+        uint64_t PlaybackTransportSeekDistanceBytes() const noexcept { return m_playbackTransportSeekDistanceBytes; }
+        void PlaybackTransportSeekDistanceBytes(uint64_t value) noexcept { m_playbackTransportSeekDistanceBytes = value; }
+
         uint64_t ReadErrorCount() const noexcept { return m_readErrorCount; }
         void ReadErrorCount(uint64_t value) noexcept { m_readErrorCount = value; }
         uint64_t ReadRetryCount() const noexcept { return m_readRetryCount; }
@@ -501,6 +522,16 @@ namespace winrt::NoiraPlayer::Native::implementation
         double m_nativeFirstFramePresentDurationMs{0.0};
         uint64_t m_nativeFirstFrameDemuxPacketCount{0};
         uint64_t m_nativeFirstFrameDemuxBytes{0};
+        double m_playbackDemuxReadDurationMs{0.0};
+        uint64_t m_playbackDemuxPacketCount{0};
+        uint64_t m_playbackDemuxBytes{0};
+        winrt::hstring m_playbackTransportProvider{L"ffmpeg-builtin"};
+        bool m_playbackTransportCallEvidenceAvailable{false};
+        uint64_t m_playbackTransportReadCalls{0};
+        uint64_t m_playbackTransportSeekCalls{0};
+        double m_playbackTransportReadWaitMs{0.0};
+        double m_playbackTransportSeekWaitMs{0.0};
+        uint64_t m_playbackTransportSeekDistanceBytes{0};
         uint64_t m_readErrorCount{0};
         uint64_t m_readRetryCount{0};
         uint64_t m_readRecoveryCount{0};

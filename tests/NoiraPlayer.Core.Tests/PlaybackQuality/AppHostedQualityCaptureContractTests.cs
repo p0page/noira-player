@@ -128,10 +128,16 @@ public sealed class AppHostedQualityCaptureContractTests
             StringComparison.Ordinal);
 
         Assert.DoesNotContain("_orchestrator.StopAsync()", scenarioMethod, StringComparison.Ordinal);
+        Assert.Contains("Stopwatch.StartNew()", captureMethod, StringComparison.Ordinal);
+        Assert.Contains("sampleObservationClock.Elapsed", scenarioMethod, StringComparison.Ordinal);
+        Assert.Contains("sampleObservationClock.Stop()", scenarioMethod, StringComparison.Ordinal);
+        Assert.Contains("sampleObservationClock.Start()", scenarioMethod, StringComparison.Ordinal);
         Assert.Contains(
-            "activeElapsed = DateTimeOffset.UtcNow - probeStartedAtUtc - excludedDuration",
-            scenarioMethod,
+            "sampleObservationClock.Elapsed.TotalMilliseconds",
+            captureMethod,
             StringComparison.Ordinal);
+        Assert.DoesNotContain("sampleObservedAtUtc - sampleStartedAtUtc", captureMethod, StringComparison.Ordinal);
+        Assert.Contains("ObservedSampleWallClockDurationMs", playbackPage, StringComparison.Ordinal);
         Assert.Contains("_orchestrator.SeekAsync", seekProbeMethod, StringComparison.Ordinal);
         Assert.Contains("Stopwatch.StartNew()", seekProbeMethod, StringComparison.Ordinal);
         Assert.Contains("SeekOperationDurationMs = seekStartedAt.Elapsed.TotalMilliseconds", seekProbeMethod, StringComparison.Ordinal);

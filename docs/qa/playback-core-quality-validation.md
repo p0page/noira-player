@@ -6,6 +6,27 @@ Use this path when another worktree is actively changing Xbox UI or App interact
 
 Reference media sources and suggested case tiers are tracked in [playback-quality-reference-corpus.md](playback-quality-reference-corpus.md).
 
+## v0.12 真实观察与播放期吞吐契约
+
+一个 case 只有满足以下链路，才可以作为 Core 调优证据：
+
+1. manifest 选中的 URI 实际进入 native helper/App-hosted PlaybackGraph；
+2. `execution.observedSampleWallClockDurationMs` 由 collector 的单调时钟测得，不能等于命令参数的机械回填；
+3. rendered+dropped 帧按实际源帧率计算的媒体推进覆盖请求窗口，或报告包含可由 validator 重新计算验证的失败；
+4. 远端短样本必须结合首帧后的 demux 与 transport 等待证据分类，不能仅凭帧数把网络问题算成 Core bug；
+5. validator、evaluator 和 analyzer 对窗口完整性及失败类别保持一致，缺失证据输出 error/insufficient instrumentation。
+
+关键字段：
+
+- `execution.requestedSampleDurationMs`：请求的观察窗口；
+- `execution.observedSampleWallClockDurationMs`：collector 实际观察的墙钟时间；
+- `modelAnalysis.sample.observedSampleDurationMs`：由实际 rendered+dropped 帧推导的媒体推进；
+- `buffers.playbackDemuxReadDurationMs/PacketCount/Bytes`：首帧后的 demux 工作量；
+- `buffers.playbackTransport*`：首帧后的传输调用与等待增量；
+- `modelAnalysis.buffering.throughputAttribution`：`transport-wait-dominant`、`demux-processing-dominant`、`downstream-or-scheduling` 或证据不足。
+
+`SampleWallClockCoverage` 失败属于评测采集问题；`SampleWindowCoverage` 失败才描述完整观察期间的媒体推进不足。环境归因仍是 fail，而不是 pass；它只用于阻止模型错误修改 Core。v0.12 之前缺少上述契约的报告不得进入同版本 baseline/candidate 比较。
+
 ## v0.11 观察窗口契约
 
 `--duration-seconds` 不是仅供 runner 使用的提示。每份 pass/fail 播放报告必须把它写入 `report.execution.requestedSampleDurationMs`，manifest run summary 和 `baseline-summary.local.json` 也必须保存 duration 与 attempt timeout。baseline/candidate 任一配置不同，`Compare-PlaybackCoreTuningCandidate.ps1` 必须以退出码 2 和 `comparison.incompatible-run-configuration` 阻止质量结论。

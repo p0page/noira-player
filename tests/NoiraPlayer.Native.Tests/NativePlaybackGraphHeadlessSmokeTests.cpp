@@ -704,6 +704,10 @@ int wmain(int argc, wchar_t** argv)
                 std::this_thread::sleep_for(sampleWindow - elapsed);
             }
         }
+        auto const observedSampleWallClockDurationMs =
+            std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - sampleStartedAt -
+                excludedSampleDuration).count();
         auto displayRefreshRateHz = source
             ? HdrDisplayRefreshRatePolicy::SelectSoftwareOnlyRefreshRateSnapshot(source->FrameRate)
             : 0.0;
@@ -901,6 +905,16 @@ int wmain(int argc, wchar_t** argv)
             << " nativeFirstFramePresentDurationMs=" << playbackSnapshot.NativeFirstFramePresentDurationMs
             << " nativeFirstFrameDemuxPacketCount=" << playbackSnapshot.NativeFirstFrameDemuxPacketCount
             << " nativeFirstFrameDemuxBytes=" << playbackSnapshot.NativeFirstFrameDemuxBytes
+            << " playbackDemuxReadDurationMs=" << playbackSnapshot.PlaybackDemuxReadDurationMs
+            << " playbackDemuxPacketCount=" << playbackSnapshot.PlaybackDemuxPacketCount
+            << " playbackDemuxBytes=" << playbackSnapshot.PlaybackDemuxBytes
+            << " playbackTransportProvider=" << playbackSnapshot.PlaybackTransportCalls.Provider
+            << " playbackTransportCallEvidenceAvailable=" << (playbackSnapshot.PlaybackTransportCalls.EvidenceAvailable ? 1 : 0)
+            << " playbackTransportReadCalls=" << playbackSnapshot.PlaybackTransportCalls.ReadCalls
+            << " playbackTransportSeekCalls=" << playbackSnapshot.PlaybackTransportCalls.SeekCalls
+            << " playbackTransportReadWaitMs=" << playbackSnapshot.PlaybackTransportCalls.ReadWaitMs
+            << " playbackTransportSeekWaitMs=" << playbackSnapshot.PlaybackTransportCalls.SeekWaitMs
+            << " playbackTransportSeekDistanceBytes=" << playbackSnapshot.PlaybackTransportCalls.SeekDistanceBytes
             << " renderIntervalMsP05=" << playbackSnapshot.RenderIntervalMsP05
             << " renderIntervalMsP50=" << playbackSnapshot.RenderIntervalMsP50
             << " renderIntervalMsP95=" << playbackSnapshot.RenderIntervalMsP95
@@ -998,6 +1012,7 @@ int wmain(int argc, wchar_t** argv)
             << " endOfStreamStatus=" << endOfStreamStatus
             << " endOfStreamPositionTicks=" << endOfStreamPositionTicks
             << " pauseDurationSeconds=" << options.PauseSeconds
+            << " observedSampleWallClockDurationMs=" << observedSampleWallClockDurationMs
             << " positionBeforePauseTicks=" << positionBeforePauseTicks
             << " positionAfterResumeTicks=" << positionAfterResumeTicks
             << " decodedVideoFramesBeforePause=" << decodedVideoFramesBeforePause

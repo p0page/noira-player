@@ -243,6 +243,16 @@ namespace winrt::NoiraPlayer::Native::implementation
         metrics.NativeFirstFramePresentDurationMs(snapshot.NativeFirstFramePresentDurationMs);
         metrics.NativeFirstFrameDemuxPacketCount(snapshot.NativeFirstFrameDemuxPacketCount);
         metrics.NativeFirstFrameDemuxBytes(snapshot.NativeFirstFrameDemuxBytes);
+        metrics.PlaybackDemuxReadDurationMs(snapshot.PlaybackDemuxReadDurationMs);
+        metrics.PlaybackDemuxPacketCount(snapshot.PlaybackDemuxPacketCount);
+        metrics.PlaybackDemuxBytes(snapshot.PlaybackDemuxBytes);
+        metrics.PlaybackTransportProvider(winrt::to_hstring(snapshot.PlaybackTransportCalls.Provider));
+        metrics.PlaybackTransportCallEvidenceAvailable(snapshot.PlaybackTransportCalls.EvidenceAvailable);
+        metrics.PlaybackTransportReadCalls(snapshot.PlaybackTransportCalls.ReadCalls);
+        metrics.PlaybackTransportSeekCalls(snapshot.PlaybackTransportCalls.SeekCalls);
+        metrics.PlaybackTransportReadWaitMs(snapshot.PlaybackTransportCalls.ReadWaitMs);
+        metrics.PlaybackTransportSeekWaitMs(snapshot.PlaybackTransportCalls.SeekWaitMs);
+        metrics.PlaybackTransportSeekDistanceBytes(snapshot.PlaybackTransportCalls.SeekDistanceBytes);
         metrics.ReadErrorCount(snapshot.ReadErrorCount);
         metrics.ReadRetryCount(snapshot.ReadRetryCount);
         metrics.ReadRecoveryCount(snapshot.ReadRecoveryCount);

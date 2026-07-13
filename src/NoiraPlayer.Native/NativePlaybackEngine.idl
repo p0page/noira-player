@@ -116,6 +116,16 @@
         Double NativeFirstFramePresentDurationMs;
         UInt64 NativeFirstFrameDemuxPacketCount;
         UInt64 NativeFirstFrameDemuxBytes;
+        Double PlaybackDemuxReadDurationMs;
+        UInt64 PlaybackDemuxPacketCount;
+        UInt64 PlaybackDemuxBytes;
+        String PlaybackTransportProvider;
+        Boolean PlaybackTransportCallEvidenceAvailable;
+        UInt64 PlaybackTransportReadCalls;
+        UInt64 PlaybackTransportSeekCalls;
+        Double PlaybackTransportReadWaitMs;
+        Double PlaybackTransportSeekWaitMs;
+        UInt64 PlaybackTransportSeekDistanceBytes;
         UInt64 ReadErrorCount;
         UInt64 ReadRetryCount;
         UInt64 ReadRecoveryCount;

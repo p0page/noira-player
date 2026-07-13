@@ -52,6 +52,10 @@
         public double NativeFirstFramePresentDurationMs { get; set; }
         public ulong NativeFirstFrameDemuxPacketCount { get; set; }
         public ulong NativeFirstFrameDemuxBytes { get; set; }
+        public double PlaybackDemuxReadDurationMs { get; set; }
+        public ulong PlaybackDemuxPacketCount { get; set; }
+        public ulong PlaybackDemuxBytes { get; set; }
+        public PlaybackQualityTransportCallSnapshot PlaybackTransportCalls { get; set; } = new PlaybackQualityTransportCallSnapshot();
         public ulong ReadErrorCount { get; set; }
         public ulong ReadRetryCount { get; set; }
         public ulong ReadRecoveryCount { get; set; }

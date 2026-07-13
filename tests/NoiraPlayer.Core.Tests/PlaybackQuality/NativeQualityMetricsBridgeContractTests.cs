@@ -143,6 +143,70 @@ public sealed class NativeQualityMetricsBridgeContractTests
     }
 
     [Fact]
+    public void Playback_Demux_And_Transport_Metrics_Cross_All_Collector_Boundaries()
+    {
+        var root = FindRepositoryRoot();
+        var nativeMetrics = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Native", "Media", "PlaybackQualityMetrics.h"));
+        var graph = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Native", "Media", "PlaybackGraph.cpp"));
+        var runtimeMetrics = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Native", "NativePlaybackQualityMetrics.h"));
+        var idl = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Native", "NativePlaybackEngine.idl"));
+        var nativeEngine = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Native", "NativePlaybackEngine.cpp"));
+        var coreSnapshot = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Core", "PlaybackQuality", "PlaybackQualityMetricsSnapshot.cs"));
+        var appBridge = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.App", "Playback", "WinRtNativePlaybackEngine.cs"));
+        var appCapture = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.App", "Views", "PlaybackPage.xaml.cs"));
+        var helper = File.ReadAllText(Path.Combine(root, "tests", "NoiraPlayer.Native.Tests", "NativePlaybackGraphHeadlessSmokeTests.cpp"));
+        var parser = File.ReadAllText(Path.Combine(root, "tools", "NoiraPlayer.PlaybackQuality.Headless", "Program.cs"));
+
+        Assert.Contains("PlaybackDemuxReadDurationMs", nativeMetrics, StringComparison.Ordinal);
+        Assert.Contains("PlaybackDemuxPacketCount", nativeMetrics, StringComparison.Ordinal);
+        Assert.Contains("PlaybackDemuxBytes", nativeMetrics, StringComparison.Ordinal);
+        Assert.Contains("PlaybackTransportCalls", nativeMetrics, StringComparison.Ordinal);
+        Assert.Contains("SubtractReadTimingSnapshots", graph, StringComparison.Ordinal);
+        Assert.Contains("SubtractTransportCallSnapshots", graph, StringComparison.Ordinal);
+
+        foreach (var property in new[] { "PlaybackDemuxReadDurationMs", "PlaybackDemuxPacketCount", "PlaybackDemuxBytes" })
+        {
+            Assert.Contains(property, idl, StringComparison.Ordinal);
+            Assert.Contains("metrics." + property + "(snapshot." + property + ");", nativeEngine, StringComparison.Ordinal);
+            Assert.Contains(property + " = nativeMetrics." + property, appBridge, StringComparison.Ordinal);
+            Assert.Contains(property + " = source." + property, appCapture, StringComparison.Ordinal);
+            Assert.Contains("public ", coreSnapshot, StringComparison.Ordinal);
+            var key = char.ToLowerInvariant(property[0]) + property[1..];
+            Assert.Contains("\" " + key + "=\"", helper, StringComparison.Ordinal);
+            Assert.Contains("values, \"" + key + "\"", parser, StringComparison.Ordinal);
+        }
+
+        foreach (var property in new[]
+        {
+            "PlaybackTransportProvider",
+            "PlaybackTransportCallEvidenceAvailable",
+            "PlaybackTransportReadCalls",
+            "PlaybackTransportSeekCalls",
+            "PlaybackTransportReadWaitMs",
+            "PlaybackTransportSeekWaitMs",
+            "PlaybackTransportSeekDistanceBytes"
+        })
+        {
+            Assert.Contains(property, idl, StringComparison.Ordinal);
+            Assert.Contains(property, runtimeMetrics, StringComparison.Ordinal);
+            Assert.Contains(property, nativeEngine, StringComparison.Ordinal);
+            var key = char.ToLowerInvariant(property[0]) + property[1..];
+            Assert.Contains("\" " + key + "=\"", helper, StringComparison.Ordinal);
+        }
+
+        Assert.Contains("\"playbackTransport\"", parser, StringComparison.Ordinal);
+        Assert.Contains("metrics.PlaybackTransportCalls", parser, StringComparison.Ordinal);
+        Assert.Contains("PlaybackTransportCalls = new PlaybackQualityTransportCallSnapshot", appBridge, StringComparison.Ordinal);
+        Assert.Contains("Provider = nativeMetrics.PlaybackTransportProvider", appBridge, StringComparison.Ordinal);
+        Assert.Contains("EvidenceAvailable = nativeMetrics.PlaybackTransportCallEvidenceAvailable", appBridge, StringComparison.Ordinal);
+        Assert.Contains("ReadWaitMs = nativeMetrics.PlaybackTransportReadWaitMs", appBridge, StringComparison.Ordinal);
+        Assert.Contains("PlaybackTransportCalls = new PlaybackQualityTransportCallSnapshot", appCapture, StringComparison.Ordinal);
+        Assert.Contains("Provider = source.PlaybackTransportCalls.Provider", appCapture, StringComparison.Ordinal);
+        Assert.Contains("EvidenceAvailable = source.PlaybackTransportCalls.EvidenceAvailable", appCapture, StringComparison.Ordinal);
+        Assert.Contains("ReadWaitMs = source.PlaybackTransportCalls.ReadWaitMs", appCapture, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Native_Headless_Startup_Breakdown_Crosses_Helper_Parser_And_Report()
     {
         var root = FindRepositoryRoot();
@@ -283,6 +347,9 @@ public sealed class NativeQualityMetricsBridgeContractTests
         "FfmpegStreamInfoBytesRead",
         "NativeStartupSeekBytesRead",
         "NativeFirstFrameTransportBytesRead",
+        "PlaybackDemuxReadDurationMs",
+        "PlaybackDemuxPacketCount",
+        "PlaybackDemuxBytes",
         "NativeFirstFrameDurationMs",
         "NativeFirstFrameDemuxReadDurationMs",
         "NativeFirstFramePresentDurationMs",

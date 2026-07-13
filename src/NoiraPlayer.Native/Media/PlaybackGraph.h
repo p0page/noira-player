@@ -169,6 +169,9 @@ namespace winrt::NoiraPlayer::Native::implementation
         uint64_t m_videoStarvedPassCount{0};
         uint64_t m_audioStarvedPassCount{0};
         PlaybackQualityMetrics m_qualityMetrics;
+        FfmpegReadTimingSnapshot m_playbackReadTimingBaseline;
+        FfmpegTransportCallSnapshot m_playbackTransportCallBaseline;
+        bool m_hasPlaybackReadBaseline{false};
         SeekPresentationTracker m_seekPresentationTracker;
         std::optional<int64_t> m_videoPrerollTargetTicks;
         std::chrono::steady_clock::time_point m_lastRuntimeStatsLog{};

@@ -184,6 +184,7 @@ public sealed class NativePlaybackGraphDecouplingContractTests
         Assert.Contains("NOIRAPLAYER_NATIVE_PAUSE_MARKER_PATH", helperSource, StringComparison.Ordinal);
         Assert.Contains("native playback graph failed:", helperSource, StringComparison.Ordinal);
         Assert.Contains("renderedVideoFrames=", helperSource, StringComparison.Ordinal);
+        Assert.Contains("observedSampleWallClockDurationMs=", helperSource, StringComparison.Ordinal);
         Assert.Contains("sourceCodec=", helperSource, StringComparison.Ordinal);
     }
 
