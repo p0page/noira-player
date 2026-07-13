@@ -31,9 +31,12 @@ public sealed class ModernPlaybackQualityGateTests
         Assert.Contains("result", script, StringComparison.Ordinal);
         Assert.Contains("Remove-DirectoryInsideRoot $capturedRoot $localState", script, StringComparison.Ordinal);
         Assert.Contains("plannedCaseCount", script, StringComparison.Ordinal);
+        Assert.Contains("selectedCaseCount", script, StringComparison.Ordinal);
         Assert.Contains("exportedReportCount", script, StringComparison.Ordinal);
-        Assert.Contains("$exportSummary.exportedReportCount -ne $cases.Count", script, StringComparison.Ordinal);
-        Assert.Contains("$analysisSummary.totalReportCount -ne $cases.Count", script, StringComparison.Ordinal);
+        Assert.Contains("$expectedReportCount = 1", script, StringComparison.Ordinal);
+        Assert.Contains("$exportSummary.exportedReportCount -ne $expectedReportCount", script, StringComparison.Ordinal);
+        Assert.Contains("$analysisSummary.totalReportCount -ne $expectedReportCount", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("$exportSummary.exportedReportCount -ne $cases.Count", script, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -1287,3 +1287,11 @@ fallback 只拥有 `hdrOutput`、有限的 `dxgiInputAnyOf`、`dxgiOutput`、可
 决策：`startupDurationMs` 表示从打开命令到 native graph 可开始播放的耗时，不得使用包含采样和 stop 的 helper 进程总时长。进程 wall clock 只能作为独立 runtime 指标。native 必须直接测量 FFmpeg open-input、find-stream-info、startup seek 和第一次 `RenderNextFrame`；报告以这些观测分解 `native.open`，剩余时间才归入组件初始化。字段缺失、非有限或负数属于 instrumentation failure，禁止根据总时长、manifest expected 或日志文本补值。
 
 准确 resume 继续使用 backward keyframe seek 和目标前帧预滚。Kodi `f0232910490189b97717bc5d309aec2e5751d6d3` 的 `CDVDDemuxFFmpeg::SeekTime` 同样把用户时间转换为 demux 时间并按请求使用 `AVSEEK_FLAG_BACKWARD`，随后由 VideoPlayer accurate flush 处理落点。不得为了缩短数字而改为后一个关键帧、删除 141 帧预滚或放宽 7 秒标准；优化必须分别证明远端 seek 或预滚执行时间下降，并保持 timeline、first-presented landing 和 post-seek advancement 证据。
+
+# 2026-07-13: 启动阶段必须分别报告 AVIO transport 与 packet payload
+
+决策：evaluation version 升级为 `playback-quality-v0.5`。`ffmpeg.open-input`、`ffmpeg.find-stream-info`、`native.startup-seek` 和 `native.first-frame.demux-read` 必须从 FFmpeg `AVIOContext::bytes_read` 形成阶段局部、饱和的 transport delta；首帧 demux 另行记录 `AVPacket::size` 累积 payload。报告使用独立 `transportBytes` / `packetPayloadBytes`，不得从文件大小、bitrate、probe、expected 或另一类字节推算。计数器回退记录 native diagnostic 并输出 0，不能发生无符号下溢。
+
+原因：真实私有 timeline 证明 startup seek 约 `687KB/10.31s`，而首帧约 `18.44MB transport / 18.97MB payload / 5.19s`。若只看耗时或 payload，模型无法区分 Range 请求延迟、网络吞吐、FFmpeg 内部缓冲和解码预滚。v0.5 的 strict parser 对四个 transport 字段逐项必填，旧 v0.4 报告不与 v0.5 baseline/candidate 比较。
+
+候选边界：Kodi、mpv、VLC 当前参考实现都保留 `av_seek_frame` backward 语义；不得以 `AVSEEK_FLAG_ANY`、后关键帧、删除准确预滚或放宽 startup SLO 制造改善。全局 probe 缩减只在单次本机 ffprobe 中最多显示约亚秒级差异，且有丢失轨道/字幕风险，不进入候选。下一轮如研究连接复用、custom AVIO/cache 或服务端 seekable remux，必须一次只改变一个变量，并以 `8e19ae2` 保存的 exact manifest 生成同版本 baseline/candidate。

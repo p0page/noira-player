@@ -258,6 +258,7 @@ else {
 if ($null -eq $selectedCase) {
     throw 'Playback-quality run plan did not contain a runnable selected case.'
 }
+$expectedReportCount = 1
 
 $writeCommandArguments = @(
     '-NoProfile',
@@ -319,8 +320,8 @@ Invoke-CheckedProcess 'powershell' @(
 )
 
 $exportSummary = Get-Content -LiteralPath $ExportSummaryPath -Raw | ConvertFrom-Json
-if ($exportSummary.exportedReportCount -ne $cases.Count) {
-    throw "Playback-quality export count mismatch. Planned $($cases.Count), exported $($exportSummary.exportedReportCount)."
+if ($exportSummary.exportedReportCount -ne $expectedReportCount) {
+    throw "Playback-quality export count mismatch. Selected $expectedReportCount, exported $($exportSummary.exportedReportCount)."
 }
 
 Invoke-CheckedProcess 'dotnet' @(
@@ -338,8 +339,8 @@ Invoke-CheckedProcess 'dotnet' @(
 )
 
 $analysisSummary = Get-Content -LiteralPath $AnalysisSummaryPath -Raw | ConvertFrom-Json
-if ($analysisSummary.totalReportCount -ne $cases.Count) {
-    throw "Playback-quality analysis count mismatch. Planned $($cases.Count), analyzed $($analysisSummary.totalReportCount)."
+if ($analysisSummary.totalReportCount -ne $expectedReportCount) {
+    throw "Playback-quality analysis count mismatch. Selected $expectedReportCount, analyzed $($analysisSummary.totalReportCount)."
 }
 
 $exportedReportPath = Join-Path $ReportsDirectory ($reportRelativePath -replace '/', [System.IO.Path]::DirectorySeparatorChar)
@@ -394,6 +395,7 @@ $report = [ordered]@{
     primaryFailureClass = $modelAnalysis.primaryFailureClass
     failedChecks = $failedChecks
     plannedCaseCount = $cases.Count
+    selectedCaseCount = $expectedReportCount
     exportedReportCount = $exportSummary.exportedReportCount
     analyzedReportCount = $analysisSummary.totalReportCount
     reportRelativePath = $reportRelativePath

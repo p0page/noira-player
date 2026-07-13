@@ -1199,3 +1199,15 @@ v0.3 中所有代表性 HDR/DV fallback 颜色失败在 v0.4 均变为 0 个 col
 完整 App Publish、注册与公开 HDR10 App-hosted strict 复核已绑定 revision `71fe3a4`。当前桌面显示状态为 HDR `Unsupported`，报告选择 `sdr-display-fallback`，实际输出为 `Sdr`、`YCBCR_STUDIO_G22_LEFT_P2020 -> RGB_FULL_G22_NONE_P709`、`validated;tone-mapped-hable`；App 保留 `R10G10B10A2_UNORM` 10-bit shader target，368 帧、startup `3085.74ms`，最终 result pass。fallback DXGI 集合的 CLI clone、App JSON 反序列化和 native 完成态 conversion status 均在实播中被验证；旧 Publish 产物和瞬态 `requires-tone-mapping` 不再冒充最终证据。
 
 最终 `run-playback-core-checks.ps1 -AppDiffBase main` 33 阶段门禁通过，包含 585 项定向 Core tests、CLI/runner、真实 native-headless、EAGAIN、网络恢复、seek、音轨字幕、DX offscreen 和 Native Debug x64 build；完整 App Native AOT Publish 同样通过。当前没有 HDR-capable 显示输出证据，因此 `primary` 的真实 HDR/HDMI 输出门禁仍明确待硬件阶段验证，本轮只完成软件可闭环范围。
+
+# 2026-07-13 更新：v0.5 启动传输证据完成真实语料闭环
+
+v0.4 已能把远程启动拆为 open-input、stream-info、startup seek 和首帧预滚，但前三段没有真实传输量，首帧又只记录压缩包 payload。仅凭耗时无法区分连接/Range 延迟、实际网络读取和 demux 包处理。v0.5 直接读取 FFmpeg `AVIOContext::bytes_read`，分别记录 open-input、find-stream-info、startup seek 和 first-frame demux 的阶段增量；首帧组件同时保留 `transportBytes` 与 `packetPayloadBytes`，不再使用一个带类型标签的歧义 bytes 字段。helper/parser 对四个 transport 字段均为严格必填，缺失字段各有独立负向夹具，0 只在明确观测到 0 时合法。
+
+最终 ignored baseline 位于 `docs/qa/private/baselines/playback-evidence-v05-startup-transport-8e19ae2.local/`，绑定完整 revision `8e19ae2093edc33431e388929a3b819b1c248419`。core runner 为 selected/attempted/reports `13/13/13`、failed/unresolved/missing `0/0/0`；统一 24 份报告 strict validation 为 `24/24 matched`、0 error，execution attempted/opened `24/24`、decoded/rendered/completed `23/23`，另有 1 个明确 unsupported。结果为 `17 pass / 6 fail / 1 unsupported`；pass 数变化来自远程启动波动，不是播放器策略变化。
+
+私有 HDR 源的 open-input 只读约 `97KB`，却稳定耗时约 `4.79-4.83s`；stream-info 读取约 `2.69MB`，耗时 `2.00-4.50s`。私有 SDR 源 open-input 读取约 `215KB`，耗时 `4.85-5.19s`；stream-info 读取约 `2.40-2.41MB`，耗时 `1.41-5.36s`。这证明 open 主要是请求/服务端延迟，stream-info 同时受有限探测量与网络波动影响，不能用全局降低 `probesize/analyzeduration` 解释全部问题。
+
+60 秒 timeline case 的准确 backward seek 读取约 `687KB`，单独耗时 `10.31s`；随后首帧预滚读取 `18.44MB` AVIO transport、产生 `18.97MB` packet payload，耗时 `5.19s`，丢弃 141 个目标前视频帧，最终落点误差仍为 `22ms`。PGS case 的对应首帧 transport/payload 规模相同。Kodi、mpv 与 VLC 在 FFmpeg demux 层同样使用 `av_seek_frame(..., AVSEEK_FLAG_BACKWARD)`；本轮不改成任意帧/后关键帧 seek，不删除预滚，不放宽 7 秒门限，也不采纳已在当前反代上产生 premature EOF 的 `multiple_requests=1`。当前没有证据支持一个安全的 Core-only 启动策略候选；下一步应单独设计连接复用/缓存或服务端可 seek 流路线，并保持同 manifest 对照。
+
+最终 revision 的 `run-playback-core-checks.ps1 -AppDiffBase main` 33 阶段门禁再次全绿，覆盖 585 项 Core 定向测试、严格 parser、真实 native-headless、网络恢复、EAGAIN、seek/timeline、音轨字幕、色彩、DX offscreen 和 Native Debug x64 build。完整 Modern App Debug x64 build 同样成功。该阶段只提升裁判的归因能力，没有宣称 startup 或播放器 Core 性能已改善。
