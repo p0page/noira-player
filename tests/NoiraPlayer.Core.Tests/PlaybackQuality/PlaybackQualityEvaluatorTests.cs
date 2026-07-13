@@ -110,6 +110,43 @@ public sealed class PlaybackQualityEvaluatorTests
     }
 
     [Fact]
+    public void Evaluate_Fails_When_Playback_Media_Progress_Is_Slower_Than_Wall_Clock()
+    {
+        var report = CreateSampleWindowReport(renderedVideoFrames: 300);
+        report.Execution!.ObservedSampleWallClockDurationMs = 6000;
+        report.Buffers.PlaybackTransportProvider = "instrumented-ffmpeg-avio";
+        report.Buffers.PlaybackTransportCallEvidenceStatus = "available";
+        report.Buffers.PlaybackTransportReadWaitMs = 20;
+        report.Buffers.PlaybackDemuxReadDurationMs = 30;
+
+        PlaybackQualityEvaluator.Evaluate(report);
+
+        Assert.Equal(PlaybackQualityReportResult.Fail, report.Result);
+        Assert.Contains(report.Checks, check =>
+            check.Name == "SamplePlaybackRate" &&
+            check.Status == "fail" &&
+            check.Signal == "execution.observedSampleWallClockDurationMs" &&
+            check.FailureArea == "frame-pacing" &&
+            check.FailureClass == PlaybackQualityFailureClassification.PlayerCoreBug &&
+            check.Expected == "6000.000" &&
+            check.Actual == "5000.000");
+    }
+
+    [Fact]
+    public void Evaluate_Allows_Independent_Media_And_Wall_Clock_Capture_Boundaries()
+    {
+        var report = CreateSampleWindowReport(renderedVideoFrames: 294);
+        report.Execution!.ObservedSampleWallClockDurationMs = 5005;
+        report.Buffers.PlaybackTransportProvider = "instrumented-ffmpeg-avio";
+        report.Buffers.PlaybackTransportCallEvidenceStatus = "available";
+
+        PlaybackQualityEvaluator.Evaluate(report);
+
+        Assert.DoesNotContain(report.Checks, check =>
+            check.Name == "SamplePlaybackRate" && check.Status == "fail");
+    }
+
+    [Fact]
     public void Evaluate_Passes_Timeline_Window_When_Seek_Reset_Phases_Cover_Request()
     {
         var report = CreateSampleWindowReport(renderedVideoFrames: 90);

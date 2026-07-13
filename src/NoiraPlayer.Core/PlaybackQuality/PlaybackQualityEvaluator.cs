@@ -1,5 +1,7 @@
 ﻿using System.Globalization;
 
+using System;
+
 namespace NoiraPlayer.Core.PlaybackQuality
 {
     public static class PlaybackQualityEvaluator
@@ -54,6 +56,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
             }
 
             CheckSampleWindowCoverage(report);
+            CheckSamplePlaybackRate(report);
             CheckStartupDuration(report, expected);
             CheckInteractionRecoveryDuration(report, expected);
             CheckSeekEvidenceCompleteness(report);
@@ -462,6 +465,82 @@ namespace NoiraPlayer.Core.PlaybackQuality
 
             report.FailureReasons.Add(message);
             AddRelevantSignal(report, "execution.requestedSampleDurationMs");
+            AddRelevantSignal(report, "timing.renderedVideoFrames");
+            AddRelevantSignal(report, "timing.droppedVideoFrames");
+            AddRelevantSignal(report, attributionSignal);
+        }
+
+        private static void CheckSamplePlaybackRate(PlaybackQualityReport report)
+        {
+            if (report.Execution == null ||
+                report.Execution.Status != PlaybackQualityExecutionStatus.Completed ||
+                !string.Equals(
+                    report.Execution.Scenario,
+                    PlaybackQualityExecutionScenario.Playback,
+                    StringComparison.Ordinal) ||
+                report.Execution.ObservedSampleWallClockDurationMs <= 0 ||
+                report.Source.FrameRate <= 0)
+            {
+                return;
+            }
+
+            var observedMediaDurationMs =
+                PlaybackQualitySampleWindowPolicy.GetObservedMediaDurationMs(report);
+            var observedWallClockDurationMs =
+                report.Execution.ObservedSampleWallClockDurationMs;
+            var toleranceMs =
+                PlaybackQualitySampleWindowPolicy.GetCaptureBoundaryToleranceMs(report);
+            var failed = observedMediaDurationMs + (2 * toleranceMs) <
+                observedWallClockDurationMs;
+            var attribution = PlaybackQualityThroughputAttributionPolicy.Assess(report, failed);
+            var failureArea = "frame-pacing";
+            var failureClass = PlaybackQualityFailureClassification.PlayerCoreBug;
+            var attributionSignal = "timing.renderedVideoFrames";
+            switch (attribution.Attribution)
+            {
+                case "transport-wait-dominant":
+                    failureArea = "buffering";
+                    failureClass = PlaybackQualityFailureClassification.EnvironmentIssue;
+                    attributionSignal = "buffers.playbackTransportReadWaitMs";
+                    break;
+                case "demux-processing-dominant":
+                    failureArea = "buffering";
+                    attributionSignal = "buffers.playbackDemuxReadDurationMs";
+                    break;
+                case "transport-evidence-unavailable":
+                case "insufficient-evidence":
+                    failureArea = "evidence-collection";
+                    failureClass = PlaybackQualityFailureClassification.InsufficientInstrumentation;
+                    attributionSignal = "buffers.playbackTransportCallEvidenceStatus";
+                    break;
+            }
+
+            var expectedText = Format(observedWallClockDurationMs);
+            var actualText = Format(observedMediaDurationMs);
+            var message = failed
+                ? "SamplePlaybackRate media progress " + actualText +
+                    "ms was below observed wall clock " + expectedText +
+                    "ms; attribution=" + attribution.Attribution + "."
+                : "SamplePlaybackRate kept media progress aligned with observed wall clock.";
+            report.Checks.Add(new PlaybackQualityCheck
+            {
+                Name = "SamplePlaybackRate",
+                Signal = "execution.observedSampleWallClockDurationMs",
+                Status = failed ? "fail" : "pass",
+                FailureArea = failureArea,
+                FailureClass = failed ? failureClass : "",
+                Expected = expectedText,
+                Actual = actualText,
+                Message = message
+            });
+
+            if (!failed)
+            {
+                return;
+            }
+
+            report.FailureReasons.Add(message);
+            AddRelevantSignal(report, "execution.observedSampleWallClockDurationMs");
             AddRelevantSignal(report, "timing.renderedVideoFrames");
             AddRelevantSignal(report, "timing.droppedVideoFrames");
             AddRelevantSignal(report, attributionSignal);
