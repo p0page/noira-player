@@ -93,6 +93,56 @@ public sealed class NativeQualityMetricsBridgeContractTests
     }
 
     [Fact]
+    public void Demux_Read_Recovery_Metrics_Cross_Native_WinRt_Core_And_App_Capture_Boundaries()
+    {
+        var root = FindRepositoryRoot();
+        var runtimeMetrics = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Native", "NativePlaybackQualityMetrics.h"));
+        var idl = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Native", "NativePlaybackEngine.idl"));
+        var nativeEngine = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Native", "NativePlaybackEngine.cpp"));
+        var coreSnapshot = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Core", "PlaybackQuality", "PlaybackQualityMetricsSnapshot.cs"));
+        var appBridge = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.App", "Playback", "WinRtNativePlaybackEngine.cs"));
+        var appCapture = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.App", "Views", "PlaybackPage.xaml.cs"));
+
+        foreach (var property in new[] { "ReadErrorCount", "ReadRetryCount", "ReadRecoveryCount" })
+        {
+            Assert.Contains("UInt64 " + property + ";", idl, StringComparison.Ordinal);
+            Assert.Contains("uint64_t " + property + "() const noexcept", runtimeMetrics, StringComparison.Ordinal);
+            Assert.Contains("metrics." + property + "(snapshot." + property + ");", nativeEngine, StringComparison.Ordinal);
+            Assert.Contains("public ulong " + property + " { get; set; }", coreSnapshot, StringComparison.Ordinal);
+            Assert.Contains(property + " = nativeMetrics." + property, appBridge, StringComparison.Ordinal);
+            Assert.Contains(property + " = source." + property, appCapture, StringComparison.Ordinal);
+        }
+
+        Assert.Contains("UInt32 MaxConsecutiveReadErrors;", idl, StringComparison.Ordinal);
+        Assert.Contains("uint32_t MaxConsecutiveReadErrors() const noexcept", runtimeMetrics, StringComparison.Ordinal);
+        Assert.Contains("public uint MaxConsecutiveReadErrors { get; set; }", coreSnapshot, StringComparison.Ordinal);
+
+        foreach (var property in new[] { "LastReadErrorCode", "FatalReadErrorCode" })
+        {
+            Assert.Contains("Int32 " + property + ";", idl, StringComparison.Ordinal);
+            Assert.Contains("int32_t " + property + "() const noexcept", runtimeMetrics, StringComparison.Ordinal);
+            Assert.Contains("public int " + property + " { get; set; }", coreSnapshot, StringComparison.Ordinal);
+        }
+
+        Assert.Contains("Double LastReadRecoveryDurationMs;", idl, StringComparison.Ordinal);
+        Assert.Contains("double LastReadRecoveryDurationMs() const noexcept", runtimeMetrics, StringComparison.Ordinal);
+        Assert.Contains("public double LastReadRecoveryDurationMs { get; set; }", coreSnapshot, StringComparison.Ordinal);
+
+        foreach (var property in new[]
+        {
+            "MaxConsecutiveReadErrors",
+            "LastReadErrorCode",
+            "FatalReadErrorCode",
+            "LastReadRecoveryDurationMs"
+        })
+        {
+            Assert.Contains("metrics." + property + "(snapshot." + property + ");", nativeEngine, StringComparison.Ordinal);
+            Assert.Contains(property + " = nativeMetrics." + property, appBridge, StringComparison.Ordinal);
+            Assert.Contains(property + " = source." + property, appCapture, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
     public void Native_Headless_Startup_Breakdown_Crosses_Helper_Parser_And_Report()
     {
         var root = FindRepositoryRoot();

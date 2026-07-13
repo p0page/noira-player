@@ -157,6 +157,21 @@ namespace winrt::NoiraPlayer::Native::implementation
         uint64_t NativeFirstFrameDemuxBytes() const noexcept { return m_nativeFirstFrameDemuxBytes; }
         void NativeFirstFrameDemuxBytes(uint64_t value) noexcept { m_nativeFirstFrameDemuxBytes = value; }
 
+        uint64_t ReadErrorCount() const noexcept { return m_readErrorCount; }
+        void ReadErrorCount(uint64_t value) noexcept { m_readErrorCount = value; }
+        uint64_t ReadRetryCount() const noexcept { return m_readRetryCount; }
+        void ReadRetryCount(uint64_t value) noexcept { m_readRetryCount = value; }
+        uint64_t ReadRecoveryCount() const noexcept { return m_readRecoveryCount; }
+        void ReadRecoveryCount(uint64_t value) noexcept { m_readRecoveryCount = value; }
+        uint32_t MaxConsecutiveReadErrors() const noexcept { return m_maxConsecutiveReadErrors; }
+        void MaxConsecutiveReadErrors(uint32_t value) noexcept { m_maxConsecutiveReadErrors = value; }
+        int32_t LastReadErrorCode() const noexcept { return m_lastReadErrorCode; }
+        void LastReadErrorCode(int32_t value) noexcept { m_lastReadErrorCode = value; }
+        int32_t FatalReadErrorCode() const noexcept { return m_fatalReadErrorCode; }
+        void FatalReadErrorCode(int32_t value) noexcept { m_fatalReadErrorCode = value; }
+        double LastReadRecoveryDurationMs() const noexcept { return m_lastReadRecoveryDurationMs; }
+        void LastReadRecoveryDurationMs(double value) noexcept { m_lastReadRecoveryDurationMs = value; }
+
         int64_t ContainerStartTimeTicks() const noexcept { return m_containerStartTimeTicks; }
         void ContainerStartTimeTicks(int64_t value) noexcept { m_containerStartTimeTicks = value; }
         int64_t VideoStreamStartTimeTicks() const noexcept { return m_videoStreamStartTimeTicks; }
@@ -462,6 +477,13 @@ namespace winrt::NoiraPlayer::Native::implementation
         double m_nativeFirstFramePresentDurationMs{0.0};
         uint64_t m_nativeFirstFrameDemuxPacketCount{0};
         uint64_t m_nativeFirstFrameDemuxBytes{0};
+        uint64_t m_readErrorCount{0};
+        uint64_t m_readRetryCount{0};
+        uint64_t m_readRecoveryCount{0};
+        uint32_t m_maxConsecutiveReadErrors{0};
+        int32_t m_lastReadErrorCode{0};
+        int32_t m_fatalReadErrorCode{0};
+        double m_lastReadRecoveryDurationMs{0.0};
         int64_t m_containerStartTimeTicks{0};
         int64_t m_videoStreamStartTimeTicks{0};
         int64_t m_seekDemuxTargetTicks{-1};

@@ -108,6 +108,13 @@
         Double NativeFirstFramePresentDurationMs;
         UInt64 NativeFirstFrameDemuxPacketCount;
         UInt64 NativeFirstFrameDemuxBytes;
+        UInt64 ReadErrorCount;
+        UInt64 ReadRetryCount;
+        UInt64 ReadRecoveryCount;
+        UInt32 MaxConsecutiveReadErrors;
+        Int32 LastReadErrorCode;
+        Int32 FatalReadErrorCode;
+        Double LastReadRecoveryDurationMs;
         Int64 ContainerStartTimeTicks;
         Int64 VideoStreamStartTimeTicks;
         Int64 SeekDemuxTargetTicks;

@@ -50,6 +50,13 @@
         public double NativeFirstFramePresentDurationMs { get; set; }
         public ulong NativeFirstFrameDemuxPacketCount { get; set; }
         public ulong NativeFirstFrameDemuxBytes { get; set; }
+        public ulong ReadErrorCount { get; set; }
+        public ulong ReadRetryCount { get; set; }
+        public ulong ReadRecoveryCount { get; set; }
+        public uint MaxConsecutiveReadErrors { get; set; }
+        public int LastReadErrorCode { get; set; }
+        public int FatalReadErrorCode { get; set; }
+        public double LastReadRecoveryDurationMs { get; set; }
         public long? ContainerStartTimeTicks { get; set; }
         public long? VideoStreamStartTimeTicks { get; set; }
         public long? SeekDemuxTargetTicks { get; set; }
