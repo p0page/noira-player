@@ -122,11 +122,25 @@ namespace winrt::NoiraPlayer::Native::implementation
             AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open ClearToBlack end");
             auto startPositionTicks = (std::max<int64_t>)(0, request.StartPositionTicks);
             auto startupSeekDurationMs = 0.0;
+            auto startupSeekBytesRead = uint64_t{0};
             if (startPositionTicks > 0)
             {
                 AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open Seek startup begin");
                 auto const startupSeekStartedAt = std::chrono::steady_clock::now();
+                auto const transportBytesBeforeStartupSeek = m_mediaSource.TransportBytesRead();
                 m_videoDecoder.Seek(startPositionTicks);
+                auto const transportBytesAfterStartupSeek = m_mediaSource.TransportBytesRead();
+                if (transportBytesAfterStartupSeek >= transportBytesBeforeStartupSeek)
+                {
+                    startupSeekBytesRead = transportBytesAfterStartupSeek - transportBytesBeforeStartupSeek;
+                }
+                else
+                {
+                    AppendNativePlaybackDiagnostic(
+                        L"PlaybackGraph.Open startup seek transport byte counter regressed before=" +
+                        std::to_wstring(transportBytesBeforeStartupSeek) +
+                        L" after=" + std::to_wstring(transportBytesAfterStartupSeek));
+                }
                 m_audioDecoder.Flush(startPositionTicks);
                 m_subtitleDecoder.Flush();
                 SetVideoPrerollTarget(startPositionTicks);
@@ -152,6 +166,9 @@ namespace winrt::NoiraPlayer::Native::implementation
             m_qualityMetrics.FfmpegOpenInputDurationMs = ffmpegOpenTiming.OpenInputDurationMs;
             m_qualityMetrics.FfmpegStreamInfoDurationMs = ffmpegOpenTiming.StreamInfoDurationMs;
             m_qualityMetrics.NativeStartupSeekDurationMs = startupSeekDurationMs;
+            m_qualityMetrics.FfmpegOpenInputBytesRead = ffmpegOpenTiming.OpenInputBytesRead;
+            m_qualityMetrics.FfmpegStreamInfoBytesRead = ffmpegOpenTiming.StreamInfoBytesRead;
+            m_qualityMetrics.NativeStartupSeekBytesRead = startupSeekBytesRead;
             auto timeline = m_mediaSource.TimelineSnapshot(sourceVideo ? sourceVideo->StreamIndex : -1);
             m_qualityMetrics.ContainerStartTimeTicks = timeline.ContainerStartTimeTicks;
             m_qualityMetrics.VideoStreamStartTimeTicks = timeline.StreamStartTimeTicks;

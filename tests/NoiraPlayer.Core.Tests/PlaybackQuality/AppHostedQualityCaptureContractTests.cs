@@ -213,6 +213,18 @@ public sealed class AppHostedQualityCaptureContractTests
             playbackPage,
             StringComparison.Ordinal);
         Assert.Contains(
+            "FfmpegOpenInputBytesRead = source.FfmpegOpenInputBytesRead",
+            playbackPage,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "FfmpegStreamInfoBytesRead = source.FfmpegStreamInfoBytesRead",
+            playbackPage,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "NativeStartupSeekBytesRead = source.NativeStartupSeekBytesRead",
+            playbackPage,
+            StringComparison.Ordinal);
+        Assert.Contains(
             "HardwareDecodedVideoFrames = source.HardwareDecodedVideoFrames",
             playbackPage,
             StringComparison.Ordinal);

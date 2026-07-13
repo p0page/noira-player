@@ -42,16 +42,32 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 nativeOpen.DurationMs - metrics.NativeGraphOpenDurationMs);
 
             nativeOpen.Components.Clear();
-            Add(nativeOpen, "ffmpeg.open-input", openInputMs);
-            Add(nativeOpen, "ffmpeg.find-stream-info", streamInfoMs);
+            Add(
+                nativeOpen,
+                "ffmpeg.open-input",
+                openInputMs,
+                bytes: metrics.FfmpegOpenInputBytesRead,
+                byteKind: "avio-transport");
+            Add(
+                nativeOpen,
+                "ffmpeg.find-stream-info",
+                streamInfoMs,
+                bytes: metrics.FfmpegStreamInfoBytesRead,
+                byteKind: "avio-transport");
             Add(nativeOpen, "native.initialize-components", graphOtherMs);
-            Add(nativeOpen, "native.startup-seek", startupSeekMs);
+            Add(
+                nativeOpen,
+                "native.startup-seek",
+                startupSeekMs,
+                bytes: metrics.NativeStartupSeekBytesRead,
+                byteKind: "avio-transport");
             Add(
                 nativeOpen,
                 "native.first-frame.demux-read",
                 firstFrameDemuxMs,
                 packetCount: metrics.NativeFirstFrameDemuxPacketCount,
-                bytes: metrics.NativeFirstFrameDemuxBytes);
+                bytes: metrics.NativeFirstFrameDemuxBytes,
+                byteKind: "demux-packet-payload");
             Add(nativeOpen, "native.first-frame.decode-control", firstFrameDecodeControlMs);
             Add(nativeOpen, "native.first-frame.present", firstFramePresentMs);
             Add(nativeOpen, "host.dispatch-overhead", hostDispatchMs);
@@ -63,7 +79,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
             double durationMs,
             string status = "measured",
             ulong packetCount = 0,
-            ulong bytes = 0)
+            ulong bytes = 0,
+            string byteKind = "")
         {
             stage.Components.Add(new PlaybackQualityStartupComponent
             {
@@ -71,7 +88,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 DurationMs = durationMs,
                 Status = status,
                 PacketCount = packetCount,
-                Bytes = bytes
+                Bytes = bytes,
+                ByteKind = byteKind
             });
         }
     }

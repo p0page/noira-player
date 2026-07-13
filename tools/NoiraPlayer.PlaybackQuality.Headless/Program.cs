@@ -1034,6 +1034,9 @@ internal static class NativeHeadlessHarness
             TrySetRequiredNonNegativeDouble(values, "ffmpegOpenInputDurationMs", value => metrics.FfmpegOpenInputDurationMs = value, out error) &&
             TrySetRequiredNonNegativeDouble(values, "ffmpegStreamInfoDurationMs", value => metrics.FfmpegStreamInfoDurationMs = value, out error) &&
             TrySetRequiredNonNegativeDouble(values, "nativeStartupSeekDurationMs", value => metrics.NativeStartupSeekDurationMs = value, out error) &&
+            TrySetRequiredUInt64(values, "ffmpegOpenInputBytesRead", value => metrics.FfmpegOpenInputBytesRead = value, out error) &&
+            TrySetRequiredUInt64(values, "ffmpegStreamInfoBytesRead", value => metrics.FfmpegStreamInfoBytesRead = value, out error) &&
+            TrySetRequiredUInt64(values, "nativeStartupSeekBytesRead", value => metrics.NativeStartupSeekBytesRead = value, out error) &&
             TrySetRequiredNonNegativeDouble(values, "nativeFirstFrameDurationMs", value => metrics.NativeFirstFrameDurationMs = value, out error) &&
             TrySetRequiredNonNegativeDouble(values, "nativeFirstFrameDemuxReadDurationMs", value => metrics.NativeFirstFrameDemuxReadDurationMs = value, out error) &&
             TrySetRequiredNonNegativeDouble(values, "nativeFirstFramePresentDurationMs", value => metrics.NativeFirstFramePresentDurationMs = value, out error) &&

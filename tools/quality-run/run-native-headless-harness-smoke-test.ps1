@@ -668,6 +668,9 @@ function New-NativeHeadlessParserFixtureOutput {
         ffmpegOpenInputDurationMs = '200'
         ffmpegStreamInfoDurationMs = '100'
         nativeStartupSeekDurationMs = '25'
+        ffmpegOpenInputBytesRead = '65536'
+        ffmpegStreamInfoBytesRead = '1048576'
+        nativeStartupSeekBytesRead = '16777216'
         nativeFirstFrameDurationMs = '15'
         nativeFirstFrameDemuxReadDurationMs = '8'
         nativeFirstFramePresentDurationMs = '1'
@@ -1305,6 +1308,21 @@ function Assert-NativeHeadlessParserContracts {
             Name = 'missing-dropped-video-frames'
             ExpectedField = 'droppedVideoFrames'
             Output = New-NativeHeadlessParserFixtureOutput -Omit @('droppedVideoFrames')
+        },
+        [pscustomobject]@{
+            Name = 'missing-ffmpeg-open-input-bytes'
+            ExpectedField = 'ffmpegOpenInputBytesRead'
+            Output = New-NativeHeadlessParserFixtureOutput -Omit @('ffmpegOpenInputBytesRead')
+        },
+        [pscustomobject]@{
+            Name = 'missing-ffmpeg-stream-info-bytes'
+            ExpectedField = 'ffmpegStreamInfoBytesRead'
+            Output = New-NativeHeadlessParserFixtureOutput -Omit @('ffmpegStreamInfoBytesRead')
+        },
+        [pscustomobject]@{
+            Name = 'missing-native-startup-seek-bytes'
+            ExpectedField = 'nativeStartupSeekBytesRead'
+            Output = New-NativeHeadlessParserFixtureOutput -Omit @('nativeStartupSeekBytesRead')
         },
         [pscustomobject]@{
             Name = 'missing-audio-ahead-end-to-present-count'

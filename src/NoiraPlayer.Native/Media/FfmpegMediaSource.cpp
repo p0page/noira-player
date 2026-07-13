@@ -90,6 +90,34 @@ namespace
         return ToFrameRate(stream->r_frame_rate);
     }
 
+    uint64_t ReadAvioTransportBytes(AVFormatContext const* formatContext) noexcept
+    {
+        if (formatContext == nullptr || formatContext->pb == nullptr || formatContext->pb->bytes_read <= 0)
+        {
+            return 0;
+        }
+
+        return static_cast<uint64_t>(formatContext->pb->bytes_read);
+    }
+
+    uint64_t TransportByteDelta(
+        uint64_t before,
+        uint64_t after,
+        wchar_t const* phase) noexcept
+    {
+        if (after >= before)
+        {
+            return after - before;
+        }
+
+        winrt::NoiraPlayer::Native::implementation::AppendNativePlaybackDiagnostic(
+            std::wstring(L"FfmpegMediaSource transport byte counter regressed phase=") +
+            phase +
+            L" before=" + std::to_wstring(before) +
+            L" after=" + std::to_wstring(after));
+        return 0;
+    }
+
     int64_t RescaleToTicks(int64_t value, AVRational timeBase) noexcept
     {
         return value == AV_NOPTS_VALUE || !IsValidRational(timeBase)
@@ -419,10 +447,12 @@ namespace winrt::NoiraPlayer::Native::implementation
             }
 
             m_openTiming.OpenInputDurationMs = static_cast<double>(ElapsedMilliseconds(openInputStartedAt));
+            m_openTiming.OpenInputBytesRead = ReadAvioTransportBytes(formatContext);
             AppendNativePlaybackDiagnostic(
                 L"FfmpegMediaSource.Open avformat_open_input end result=0 durationMs=" +
                 std::to_wstring(m_openTiming.OpenInputDurationMs));
 
+            auto const transportBytesBeforeStreamInfo = ReadAvioTransportBytes(formatContext);
             auto streamInfoStartedAt = SteadyClock::now();
             AppendNativePlaybackDiagnostic(
                 L"FfmpegMediaSource.Open avformat_find_stream_info begin streamCountBefore=" +
@@ -442,6 +472,10 @@ namespace winrt::NoiraPlayer::Native::implementation
             }
 
             m_openTiming.StreamInfoDurationMs = static_cast<double>(ElapsedMilliseconds(streamInfoStartedAt));
+            m_openTiming.StreamInfoBytesRead = TransportByteDelta(
+                transportBytesBeforeStreamInfo,
+                ReadAvioTransportBytes(formatContext),
+                L"find-stream-info");
             AppendNativePlaybackDiagnostic(
                 L"FfmpegMediaSource.Open avformat_find_stream_info end result=0 durationMs=" +
                 std::to_wstring(m_openTiming.StreamInfoDurationMs) +
@@ -515,6 +549,16 @@ namespace winrt::NoiraPlayer::Native::implementation
     FfmpegReadTimingSnapshot FfmpegMediaSource::ReadTimingSnapshot() const noexcept
     {
         return m_readTiming;
+    }
+
+    uint64_t FfmpegMediaSource::TransportBytesRead() const noexcept
+    {
+        if (m_formatContext == nullptr || m_formatContext->pb == nullptr || m_formatContext->pb->bytes_read <= 0)
+        {
+            return 0;
+        }
+
+        return static_cast<uint64_t>(m_formatContext->pb->bytes_read);
     }
 
     void FfmpegMediaSource::Close() noexcept

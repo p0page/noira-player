@@ -64,6 +64,8 @@ namespace winrt::NoiraPlayer::Native::implementation
     {
         double OpenInputDurationMs{0.0};
         double StreamInfoDurationMs{0.0};
+        uint64_t OpenInputBytesRead{0};
+        uint64_t StreamInfoBytesRead{0};
     };
 
     struct FfmpegReadTimingSnapshot
@@ -106,6 +108,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         FfmpegTimelineSnapshot TimelineSnapshot(int32_t streamIndex) const;
         FfmpegOpenTimingSnapshot OpenTimingSnapshot() const noexcept;
         FfmpegReadTimingSnapshot ReadTimingSnapshot() const noexcept;
+        uint64_t TransportBytesRead() const noexcept;
         int64_t NormalizeTimestampTicks(int64_t demuxTicks) const noexcept;
         void RegisterStream(int32_t streamIndex);
         void UnregisterStream(int32_t streamIndex) noexcept;

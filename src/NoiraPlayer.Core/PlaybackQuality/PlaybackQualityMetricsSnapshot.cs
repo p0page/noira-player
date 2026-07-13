@@ -26,6 +26,9 @@
         public double FfmpegOpenInputDurationMs { get; set; }
         public double FfmpegStreamInfoDurationMs { get; set; }
         public double NativeStartupSeekDurationMs { get; set; }
+        public ulong FfmpegOpenInputBytesRead { get; set; }
+        public ulong FfmpegStreamInfoBytesRead { get; set; }
+        public ulong NativeStartupSeekBytesRead { get; set; }
         public double NativeFirstFrameDurationMs { get; set; }
         public double NativeFirstFrameDemuxReadDurationMs { get; set; }
         public double NativeFirstFramePresentDurationMs { get; set; }

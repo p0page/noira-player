@@ -32,6 +32,24 @@ public sealed class NativeFfmpegDiagnosticsContractTests
     }
 
     [Fact]
+    public void Native_Ffmpeg_Startup_Attributes_Avio_Transport_Bytes_To_Each_Blocking_Phase()
+    {
+        var header = ReadNativeSource("Media", "FfmpegMediaSource.h");
+        var source = ReadNativeSource("Media", "FfmpegMediaSource.cpp");
+        var graph = ReadNativeSource("Media", "PlaybackGraph.cpp");
+
+        Assert.Contains("uint64_t OpenInputBytesRead", header, StringComparison.Ordinal);
+        Assert.Contains("uint64_t StreamInfoBytesRead", header, StringComparison.Ordinal);
+        Assert.Contains("uint64_t TransportBytesRead() const noexcept;", header, StringComparison.Ordinal);
+        Assert.Contains("m_formatContext->pb->bytes_read", source, StringComparison.Ordinal);
+        Assert.Contains("m_openTiming.OpenInputBytesRead", source, StringComparison.Ordinal);
+        Assert.Contains("m_openTiming.StreamInfoBytesRead", source, StringComparison.Ordinal);
+        Assert.Contains("TransportByteDelta", source, StringComparison.Ordinal);
+        Assert.Contains("transportBytesBeforeStartupSeek", graph, StringComparison.Ordinal);
+        Assert.Contains("NativeStartupSeekBytesRead", graph, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Native_Video_Decoder_Logs_Packet_Context_During_Bounded_Eagain_Recovery()
     {
         var source = ReadNativeSource("Media", "VideoDecoder.cpp");

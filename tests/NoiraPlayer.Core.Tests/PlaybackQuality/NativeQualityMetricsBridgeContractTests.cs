@@ -47,6 +47,15 @@ public sealed class NativeQualityMetricsBridgeContractTests
             Assert.Contains("double " + property + "() const noexcept", runtimeMetrics, StringComparison.Ordinal);
             Assert.Contains("void " + property + "(double value) noexcept", runtimeMetrics, StringComparison.Ordinal);
         }
+
+        foreach (var property in NativeOpenTransportProperties)
+        {
+            Assert.Contains("uint64_t " + property + "{0};", nativeMetrics, StringComparison.Ordinal);
+            Assert.Contains("UInt64 " + property + ";", idl, StringComparison.Ordinal);
+            Assert.Contains("metrics." + property + "(snapshot." + property + ");", nativeEngine, StringComparison.Ordinal);
+            Assert.Contains("uint64_t " + property + "() const noexcept", runtimeMetrics, StringComparison.Ordinal);
+            Assert.Contains("void " + property + "(uint64_t value) noexcept", runtimeMetrics, StringComparison.Ordinal);
+        }
     }
 
     [Fact]
@@ -100,6 +109,15 @@ public sealed class NativeQualityMetricsBridgeContractTests
             Assert.Contains("value => metrics." + property + " = value", parser, StringComparison.Ordinal);
         }
 
+
+        foreach (var property in NativeOpenTransportProperties)
+        {
+            var key = char.ToLowerInvariant(property[0]) + property[1..];
+            Assert.Contains("\" " + key + "=\"", helper, StringComparison.Ordinal);
+            Assert.Contains("TrySetRequiredUInt64(values, \"" + key + "\"", parser, StringComparison.Ordinal);
+            Assert.Contains("value => metrics." + property + " = value", parser, StringComparison.Ordinal);
+        }
+
         Assert.Contains(
             "StartupDurationMs = metrics.NativeGraphOpenDurationMs > 0",
             parser,
@@ -148,6 +166,9 @@ public sealed class NativeQualityMetricsBridgeContractTests
         "FfmpegOpenInputDurationMs",
         "FfmpegStreamInfoDurationMs",
         "NativeStartupSeekDurationMs",
+        "FfmpegOpenInputBytesRead",
+        "FfmpegStreamInfoBytesRead",
+        "NativeStartupSeekBytesRead",
         "NativeFirstFrameDurationMs",
         "NativeFirstFrameDemuxReadDurationMs",
         "NativeFirstFramePresentDurationMs",
@@ -252,6 +273,13 @@ public sealed class NativeQualityMetricsBridgeContractTests
         "NativeFirstFrameDurationMs",
         "NativeFirstFrameDemuxReadDurationMs",
         "NativeFirstFramePresentDurationMs",
+    };
+
+    private static readonly IReadOnlyList<string> NativeOpenTransportProperties = new[]
+    {
+        "FfmpegOpenInputBytesRead",
+        "FfmpegStreamInfoBytesRead",
+        "NativeStartupSeekBytesRead",
     };
 
     private static readonly IReadOnlyList<string> NativeInteractionDoubleProperties = new[]

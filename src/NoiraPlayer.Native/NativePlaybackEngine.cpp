@@ -204,6 +204,9 @@ namespace winrt::NoiraPlayer::Native::implementation
         metrics.FfmpegOpenInputDurationMs(snapshot.FfmpegOpenInputDurationMs);
         metrics.FfmpegStreamInfoDurationMs(snapshot.FfmpegStreamInfoDurationMs);
         metrics.NativeStartupSeekDurationMs(snapshot.NativeStartupSeekDurationMs);
+        metrics.FfmpegOpenInputBytesRead(snapshot.FfmpegOpenInputBytesRead);
+        metrics.FfmpegStreamInfoBytesRead(snapshot.FfmpegStreamInfoBytesRead);
+        metrics.NativeStartupSeekBytesRead(snapshot.NativeStartupSeekBytesRead);
         metrics.NativeFirstFrameDurationMs(snapshot.NativeFirstFrameDurationMs);
         metrics.NativeFirstFrameDemuxReadDurationMs(snapshot.NativeFirstFrameDemuxReadDurationMs);
         metrics.NativeFirstFramePresentDurationMs(snapshot.NativeFirstFramePresentDurationMs);
