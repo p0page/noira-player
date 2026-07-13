@@ -2200,6 +2200,16 @@ public sealed class PlaybackQualityReferenceManifestTests
         entry.PresentSignals.Add("colorPipeline.conversionStatus");
         entry.PresentSignals.Add("buffers.videoStarvedPasses");
         entry.PresentSignals.Add("buffers.audioStarvedPasses");
+        foreach (var componentName in PlaybackQualityStartupTransportCallEvidence.ComponentNames)
+        {
+            foreach (var fieldName in PlaybackQualityStartupTransportCallEvidence.FieldNames)
+            {
+                entry.PresentSignals.Add(
+                    PlaybackQualityStartupTransportCallEvidence.CreateSignal(
+                        componentName,
+                        fieldName));
+            }
+        }
 
         var validation = PlaybackQualityReferenceReportSetValidator.Validate(
             manifest,
@@ -2349,6 +2359,86 @@ public sealed class PlaybackQualityReferenceManifestTests
         Assert.Contains("runtimeMetrics.providerStatus", requiredSignals);
         Assert.Contains("runtimeMetrics.hasSnapshot", requiredSignals);
         Assert.Contains("runtimeMetrics.hasPlaybackSample", requiredSignals);
+    }
+
+    [Fact]
+    public void RequiredSignalPolicy_Requires_Native_Startup_Transport_Call_Evidence()
+    {
+        var referenceCase = CreateCase(
+            "startup/native-transport-calls",
+            tier: 1,
+            purpose: "sdr-smoke");
+
+        var requiredSignals = PlaybackQualityRequiredSignalPolicy.CreateRequiredSignals(referenceCase);
+
+        Assert.Contains(
+            "startup.stage.native.open.component.ffmpeg.open-input.transportProvider",
+            requiredSignals);
+        Assert.Contains(
+            "startup.stage.native.open.component.ffmpeg.find-stream-info.transportReadCalls",
+            requiredSignals);
+        Assert.Contains(
+            "startup.stage.native.open.component.native.startup-seek.transportSeekWaitMs",
+            requiredSignals);
+        Assert.Contains(
+            "startup.stage.native.open.component.native.first-frame.demux-read.transportSeekDistanceBytes",
+            requiredSignals);
+    }
+
+    [Fact]
+    public void ValidateReportSet_Rejects_Missing_Native_Startup_Transport_Call_Json_Field()
+    {
+        var referenceCase = CreateCase(
+            "startup/missing-native-transport-field",
+            tier: 1,
+            purpose: "sdr-smoke");
+        var manifest = new PlaybackQualityReferenceManifest();
+        manifest.Cases.Add(referenceCase);
+        var report = CreateReport(referenceCase.CaseId, "hevc", 3840, 2160, 23.976, "Hdr10");
+        AddCapturedRuntimeMetrics(report);
+        AddStartupTransportCallEvidence(report, "instrumented-ffmpeg-avio", "measured");
+        var entry = new PlaybackQualityReferenceReportSetEntry(report)
+        {
+            HasSignalPresenceEvidence = true
+        };
+        foreach (var signal in PlaybackQualityRequiredSignalPolicy.CreateRequiredSignals(referenceCase))
+        {
+            entry.PresentSignals.Add(signal);
+        }
+
+        const string missingSignal =
+            "startup.stage.native.open.component.native.startup-seek.transportSeekWaitMs";
+        entry.PresentSignals.Remove(missingSignal);
+
+        var validation = PlaybackQualityReferenceReportSetValidator.Validate(manifest, new[] { entry });
+
+        Assert.False(validation.IsValid);
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.requiredSignal.missing" &&
+            error.Signal == missingSignal);
+    }
+
+    [Fact]
+    public void ValidateReportSet_Rejects_Contradictory_Native_Startup_Transport_Call_Status()
+    {
+        var referenceCase = CreateCase(
+            "startup/contradictory-native-transport-status",
+            tier: 1,
+            purpose: "sdr-smoke");
+        var manifest = new PlaybackQualityReferenceManifest();
+        manifest.Cases.Add(referenceCase);
+        var report = CreateReport(referenceCase.CaseId, "hevc", 3840, 2160, 23.976, "Hdr10");
+        AddCapturedRuntimeMetrics(report);
+        AddStartupTransportCallEvidence(report, "instrumented-ffmpeg-avio", "unavailable");
+
+        var validation = PlaybackQualityReferenceReportSetValidator.Validate(manifest, new[] { report });
+
+        Assert.False(validation.IsValid);
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.startup.transport-call.contract.invalid" &&
+            error.Signal.EndsWith(
+                ".transportCallEvidenceStatus",
+                System.StringComparison.Ordinal));
     }
 
     [Fact]
@@ -2682,6 +2772,10 @@ public sealed class PlaybackQualityReferenceManifestTests
             sourceOpened: true,
             decoderOpened: true,
             playbackSampleObserved: true);
+        AddStartupTransportCallEvidence(
+            report,
+            PlaybackQualityStartupTransportCallEvidence.BuiltinProvider,
+            PlaybackQualityStartupTransportCallEvidence.UnavailableStatus);
         return report;
     }
 
@@ -2768,6 +2862,54 @@ public sealed class PlaybackQualityReferenceManifestTests
         report.RuntimeMetrics.ProcessWallClockMs = 5123.4;
         report.RuntimeMetrics.ProcessCpuTimeMs = 245.6;
         report.RuntimeMetrics.ProcessCpuUtilizationRatio = 0.048;
+    }
+
+    private static void AddStartupTransportCallEvidence(
+        PlaybackQualityReport report,
+        string provider,
+        string status)
+    {
+        report.Startup.Stages.RemoveAll(stage =>
+            string.Equals(
+                stage.Name,
+                PlaybackQualityStartupTransportCallEvidence.StageName,
+                System.StringComparison.Ordinal));
+        var stage = new PlaybackQualityStartupStage
+        {
+            Name = PlaybackQualityStartupTransportCallEvidence.StageName,
+            DurationMs = 100
+        };
+        foreach (var componentName in new[]
+        {
+            "ffmpeg.open-input",
+            "ffmpeg.find-stream-info",
+            "native.startup-seek",
+            "native.first-frame.demux-read"
+        })
+        {
+            var component = new PlaybackQualityStartupComponent
+            {
+                Name = componentName,
+                DurationMs = 25,
+                TransportProvider = provider,
+                TransportCallEvidenceStatus = status
+            };
+            if (string.Equals(
+                status,
+                PlaybackQualityStartupTransportCallEvidence.MeasuredStatus,
+                System.StringComparison.Ordinal))
+            {
+                component.TransportReadCalls = 2;
+                component.TransportSeekCalls = 1;
+                component.TransportReadWaitMs = 5;
+                component.TransportSeekWaitMs = 3;
+                component.TransportSeekDistanceBytes = 1024;
+            }
+
+            stage.Components.Add(component);
+        }
+
+        report.Startup.Stages.Add(stage);
     }
 
     private static void AddObservedLifecycleEvent(

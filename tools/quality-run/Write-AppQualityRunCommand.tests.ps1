@@ -15,7 +15,7 @@ New-Item -ItemType Directory -Path (Join-Path $packageRoot 'LocalState') -Force 
 @'
 {
   "schemaVersion": 1,
-  "evaluationVersion": "playback-quality-v0.5",
+  "evaluationVersion": "playback-quality-v0.6",
   "cases": [
     {
       "caseId": "jellyfin/direct-uri-no-command",

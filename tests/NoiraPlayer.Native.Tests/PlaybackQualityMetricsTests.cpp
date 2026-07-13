@@ -74,6 +74,12 @@ int main()
     metrics.FfmpegStreamInfoBytesRead = 1'048'576;
     metrics.NativeStartupSeekBytesRead = 16'777'216;
     metrics.NativeFirstFrameTransportBytesRead = 20'000'000;
+    metrics.StartupTransportProvider = "instrumented-ffmpeg-avio";
+    metrics.StartupTransportCallEvidenceAvailable = true;
+    metrics.FfmpegOpenInputTransportCalls = {2, 1, 1200.0, 300.0, 4096};
+    metrics.FfmpegStreamInfoTransportCalls = {4, 2, 800.0, 200.0, 8192};
+    metrics.NativeStartupSeekTransportCalls = {1, 1, 400.0, 100.0, 16384};
+    metrics.NativeFirstFrameTransportCalls = {8, 0, 600.0, 0.0, 0};
     metrics.NativeFirstFrameDurationMs = 100.0;
     metrics.NativeFirstFrameDemuxReadDurationMs = 60.0;
     metrics.NativeFirstFramePresentDurationMs = 5.0;
@@ -160,6 +166,12 @@ int main()
     assert(snapshot.FfmpegStreamInfoBytesRead == 1'048'576);
     assert(snapshot.NativeStartupSeekBytesRead == 16'777'216);
     assert(snapshot.NativeFirstFrameTransportBytesRead == 20'000'000);
+    assert(snapshot.StartupTransportProvider == "instrumented-ffmpeg-avio");
+    assert(snapshot.StartupTransportCallEvidenceAvailable);
+    assert(snapshot.FfmpegOpenInputTransportCalls.ReadCalls == 2);
+    assert(snapshot.FfmpegStreamInfoTransportCalls.SeekCalls == 2);
+    assert(snapshot.NativeStartupSeekTransportCalls.SeekDistanceBytes == 16384);
+    assert(snapshot.NativeFirstFrameTransportCalls.ReadWaitMs == 600.0);
     assert(snapshot.NativeFirstFrameDurationMs == 100.0);
     assert(snapshot.NativeFirstFrameDemuxReadDurationMs == 60.0);
     assert(snapshot.NativeFirstFramePresentDurationMs == 5.0);
@@ -184,6 +196,10 @@ int main()
     assert(snapshot.FfmpegStreamInfoBytesRead == 1'048'576);
     assert(snapshot.NativeStartupSeekBytesRead == 16'777'216);
     assert(snapshot.NativeFirstFrameTransportBytesRead == 20'000'000);
+    assert(snapshot.StartupTransportProvider == "instrumented-ffmpeg-avio");
+    assert(snapshot.StartupTransportCallEvidenceAvailable);
+    assert(snapshot.FfmpegOpenInputTransportCalls.ReadCalls == 2);
+    assert(snapshot.NativeFirstFrameTransportCalls.ReadCalls == 8);
     assert(snapshot.NativeFirstFrameDurationMs == 100.0);
     assert(snapshot.NativeFirstFrameDemuxReadDurationMs == 60.0);
     assert(snapshot.NativeFirstFramePresentDurationMs == 5.0);
@@ -228,6 +244,9 @@ int main()
     assert(snapshot.AudioVideoDriftMsMax == 0.0);
     assert(snapshot.FramePacingSourceFrameRate == 0.0);
     assert(snapshot.LateFrameDropToleranceMs == 0.0);
+    assert(snapshot.StartupTransportProvider == "ffmpeg-builtin");
+    assert(!snapshot.StartupTransportCallEvidenceAvailable);
+    assert(snapshot.FfmpegOpenInputTransportCalls.ReadCalls == 0);
     assert(snapshot.NativeGraphOpenDurationMs == 0.0);
     assert(snapshot.FfmpegOpenInputDurationMs == 0.0);
     assert(snapshot.FfmpegStreamInfoDurationMs == 0.0);

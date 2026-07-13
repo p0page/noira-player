@@ -62,12 +62,29 @@ namespace winrt::NoiraPlayer::Native::implementation
         int64_t LastSeekDemuxTargetTicks{-1};
     };
 
+    struct FfmpegTransportCallSnapshot
+    {
+        std::string Provider{"ffmpeg-builtin"};
+        bool EvidenceAvailable{false};
+        uint64_t ReadCalls{0};
+        uint64_t SeekCalls{0};
+        double ReadWaitMs{0.0};
+        double SeekWaitMs{0.0};
+        uint64_t SeekDistanceBytes{0};
+    };
+
+    FfmpegTransportCallSnapshot SubtractTransportCallSnapshots(
+        FfmpegTransportCallSnapshot const& before,
+        FfmpegTransportCallSnapshot const& after) noexcept;
+
     struct FfmpegOpenTimingSnapshot
     {
         double OpenInputDurationMs{0.0};
         double StreamInfoDurationMs{0.0};
         uint64_t OpenInputBytesRead{0};
         uint64_t StreamInfoBytesRead{0};
+        FfmpegTransportCallSnapshot OpenInputTransportCalls;
+        FfmpegTransportCallSnapshot StreamInfoTransportCalls;
     };
 
     struct FfmpegReadTimingSnapshot
@@ -111,6 +128,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         FfmpegOpenTimingSnapshot OpenTimingSnapshot() const noexcept;
         FfmpegReadTimingSnapshot ReadTimingSnapshot() const noexcept;
         uint64_t TransportBytesRead() const noexcept;
+        FfmpegTransportCallSnapshot TransportCallSnapshot() const noexcept;
         int64_t NormalizeTimestampTicks(int64_t demuxTicks) const noexcept;
         void RegisterStream(int32_t streamIndex);
         void UnregisterStream(int32_t streamIndex) noexcept;

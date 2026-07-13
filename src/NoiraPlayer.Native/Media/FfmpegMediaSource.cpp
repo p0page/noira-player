@@ -406,6 +406,29 @@ namespace
 
 namespace winrt::NoiraPlayer::Native::implementation
 {
+    FfmpegTransportCallSnapshot SubtractTransportCallSnapshots(
+        FfmpegTransportCallSnapshot const& before,
+        FfmpegTransportCallSnapshot const& after) noexcept
+    {
+        FfmpegTransportCallSnapshot result;
+        result.Provider = after.Provider;
+        result.EvidenceAvailable = before.EvidenceAvailable && after.EvidenceAvailable &&
+            before.Provider == after.Provider;
+        if (!result.EvidenceAvailable)
+        {
+            return result;
+        }
+
+        result.ReadCalls = after.ReadCalls >= before.ReadCalls ? after.ReadCalls - before.ReadCalls : 0;
+        result.SeekCalls = after.SeekCalls >= before.SeekCalls ? after.SeekCalls - before.SeekCalls : 0;
+        result.ReadWaitMs = after.ReadWaitMs >= before.ReadWaitMs ? after.ReadWaitMs - before.ReadWaitMs : 0.0;
+        result.SeekWaitMs = after.SeekWaitMs >= before.SeekWaitMs ? after.SeekWaitMs - before.SeekWaitMs : 0.0;
+        result.SeekDistanceBytes = after.SeekDistanceBytes >= before.SeekDistanceBytes
+            ? after.SeekDistanceBytes - before.SeekDistanceBytes
+            : 0;
+        return result;
+    }
+
     void FfmpegMediaSource::Open(winrt::hstring const& url)
     {
         HttpMediaInput::ValidateUrl(url);
@@ -474,11 +497,13 @@ namespace winrt::NoiraPlayer::Native::implementation
 
             m_openTiming.OpenInputDurationMs = static_cast<double>(ElapsedMilliseconds(openInputStartedAt));
             m_openTiming.OpenInputBytesRead = ReadAvioTransportBytes(formatContext);
+            m_openTiming.OpenInputTransportCalls = TransportCallSnapshot();
             AppendNativePlaybackDiagnostic(
                 L"FfmpegMediaSource.Open avformat_open_input end result=0 durationMs=" +
                 std::to_wstring(m_openTiming.OpenInputDurationMs));
 
             auto const transportBytesBeforeStreamInfo = ReadAvioTransportBytes(formatContext);
+            auto const transportCallsBeforeStreamInfo = TransportCallSnapshot();
             auto streamInfoStartedAt = SteadyClock::now();
             AppendNativePlaybackDiagnostic(
                 L"FfmpegMediaSource.Open avformat_find_stream_info begin streamCountBefore=" +
@@ -502,6 +527,9 @@ namespace winrt::NoiraPlayer::Native::implementation
                 transportBytesBeforeStreamInfo,
                 ReadAvioTransportBytes(formatContext),
                 L"find-stream-info");
+            m_openTiming.StreamInfoTransportCalls = SubtractTransportCallSnapshots(
+                transportCallsBeforeStreamInfo,
+                TransportCallSnapshot());
             AppendNativePlaybackDiagnostic(
                 L"FfmpegMediaSource.Open avformat_find_stream_info end result=0 durationMs=" +
                 std::to_wstring(m_openTiming.StreamInfoDurationMs) +
@@ -585,6 +613,25 @@ namespace winrt::NoiraPlayer::Native::implementation
         }
 
         return static_cast<uint64_t>(m_formatContext->pb->bytes_read);
+    }
+
+    FfmpegTransportCallSnapshot FfmpegMediaSource::TransportCallSnapshot() const noexcept
+    {
+        FfmpegTransportCallSnapshot result;
+        if (m_httpMediaInput == nullptr)
+        {
+            return result;
+        }
+
+        auto snapshot = m_httpMediaInput->Snapshot();
+        result.Provider = snapshot.Provider;
+        result.EvidenceAvailable = snapshot.EvidenceAvailable;
+        result.ReadCalls = snapshot.ReadCalls;
+        result.SeekCalls = snapshot.SeekCalls;
+        result.ReadWaitMs = snapshot.ReadWaitMs;
+        result.SeekWaitMs = snapshot.SeekWaitMs;
+        result.SeekDistanceBytes = snapshot.SeekDistanceBytes;
+        return result;
     }
 
     void FfmpegMediaSource::Close() noexcept

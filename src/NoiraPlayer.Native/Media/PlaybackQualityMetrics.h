@@ -7,9 +7,19 @@
 #include <cmath>
 #include <chrono>
 #include <optional>
+#include <string>
 
 namespace winrt::NoiraPlayer::Native::implementation
 {
+    struct PlaybackTransportCallMetrics
+    {
+        uint64_t ReadCalls{0};
+        uint64_t SeekCalls{0};
+        double ReadWaitMs{0.0};
+        double SeekWaitMs{0.0};
+        uint64_t SeekDistanceBytes{0};
+    };
+
     class PlaybackPresentationIntervalTracker
     {
     public:
@@ -62,6 +72,12 @@ namespace winrt::NoiraPlayer::Native::implementation
         uint64_t FfmpegStreamInfoBytesRead{0};
         uint64_t NativeStartupSeekBytesRead{0};
         uint64_t NativeFirstFrameTransportBytesRead{0};
+        std::string StartupTransportProvider{"ffmpeg-builtin"};
+        bool StartupTransportCallEvidenceAvailable{false};
+        PlaybackTransportCallMetrics FfmpegOpenInputTransportCalls;
+        PlaybackTransportCallMetrics FfmpegStreamInfoTransportCalls;
+        PlaybackTransportCallMetrics NativeStartupSeekTransportCalls;
+        PlaybackTransportCallMetrics NativeFirstFrameTransportCalls;
         double NativeFirstFrameDurationMs{0.0};
         double NativeFirstFrameDemuxReadDurationMs{0.0};
         double NativeFirstFramePresentDurationMs{0.0};
@@ -280,6 +296,12 @@ namespace winrt::NoiraPlayer::Native::implementation
         uint64_t FfmpegStreamInfoBytesRead{0};
         uint64_t NativeStartupSeekBytesRead{0};
         uint64_t NativeFirstFrameTransportBytesRead{0};
+        std::string StartupTransportProvider{"ffmpeg-builtin"};
+        bool StartupTransportCallEvidenceAvailable{false};
+        PlaybackTransportCallMetrics FfmpegOpenInputTransportCalls;
+        PlaybackTransportCallMetrics FfmpegStreamInfoTransportCalls;
+        PlaybackTransportCallMetrics NativeStartupSeekTransportCalls;
+        PlaybackTransportCallMetrics NativeFirstFrameTransportCalls;
         double NativeFirstFrameDurationMs{0.0};
         double NativeFirstFrameDemuxReadDurationMs{0.0};
         double NativeFirstFramePresentDurationMs{0.0};
@@ -307,6 +329,12 @@ namespace winrt::NoiraPlayer::Native::implementation
             auto const ffmpegStreamInfoBytesRead = FfmpegStreamInfoBytesRead;
             auto const nativeStartupSeekBytesRead = NativeStartupSeekBytesRead;
             auto const nativeFirstFrameTransportBytesRead = NativeFirstFrameTransportBytesRead;
+            auto const startupTransportProvider = StartupTransportProvider;
+            auto const startupTransportCallEvidenceAvailable = StartupTransportCallEvidenceAvailable;
+            auto const ffmpegOpenInputTransportCalls = FfmpegOpenInputTransportCalls;
+            auto const ffmpegStreamInfoTransportCalls = FfmpegStreamInfoTransportCalls;
+            auto const nativeStartupSeekTransportCalls = NativeStartupSeekTransportCalls;
+            auto const nativeFirstFrameTransportCalls = NativeFirstFrameTransportCalls;
             auto const nativeFirstFrameDurationMs = NativeFirstFrameDurationMs;
             auto const nativeFirstFrameDemuxReadDurationMs = NativeFirstFrameDemuxReadDurationMs;
             auto const nativeFirstFramePresentDurationMs = NativeFirstFramePresentDurationMs;
@@ -323,6 +351,12 @@ namespace winrt::NoiraPlayer::Native::implementation
             FfmpegStreamInfoBytesRead = ffmpegStreamInfoBytesRead;
             NativeStartupSeekBytesRead = nativeStartupSeekBytesRead;
             NativeFirstFrameTransportBytesRead = nativeFirstFrameTransportBytesRead;
+            StartupTransportProvider = startupTransportProvider;
+            StartupTransportCallEvidenceAvailable = startupTransportCallEvidenceAvailable;
+            FfmpegOpenInputTransportCalls = ffmpegOpenInputTransportCalls;
+            FfmpegStreamInfoTransportCalls = ffmpegStreamInfoTransportCalls;
+            NativeStartupSeekTransportCalls = nativeStartupSeekTransportCalls;
+            NativeFirstFrameTransportCalls = nativeFirstFrameTransportCalls;
             NativeFirstFrameDurationMs = nativeFirstFrameDurationMs;
             NativeFirstFrameDemuxReadDurationMs = nativeFirstFrameDemuxReadDurationMs;
             NativeFirstFramePresentDurationMs = nativeFirstFramePresentDurationMs;
@@ -447,6 +481,12 @@ namespace winrt::NoiraPlayer::Native::implementation
             snapshot.FfmpegStreamInfoBytesRead = FfmpegStreamInfoBytesRead;
             snapshot.NativeStartupSeekBytesRead = NativeStartupSeekBytesRead;
             snapshot.NativeFirstFrameTransportBytesRead = NativeFirstFrameTransportBytesRead;
+            snapshot.StartupTransportProvider = StartupTransportProvider;
+            snapshot.StartupTransportCallEvidenceAvailable = StartupTransportCallEvidenceAvailable;
+            snapshot.FfmpegOpenInputTransportCalls = FfmpegOpenInputTransportCalls;
+            snapshot.FfmpegStreamInfoTransportCalls = FfmpegStreamInfoTransportCalls;
+            snapshot.NativeStartupSeekTransportCalls = NativeStartupSeekTransportCalls;
+            snapshot.NativeFirstFrameTransportCalls = NativeFirstFrameTransportCalls;
             snapshot.NativeFirstFrameDurationMs = NativeFirstFrameDurationMs;
             snapshot.NativeFirstFrameDemuxReadDurationMs = NativeFirstFrameDemuxReadDurationMs;
             snapshot.NativeFirstFramePresentDurationMs = NativeFirstFramePresentDurationMs;

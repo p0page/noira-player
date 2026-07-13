@@ -17,6 +17,17 @@ namespace winrt::NoiraPlayer::Native::implementation
     constexpr uint32_t MaxDroppedVideoFramesPerPass = 4;
     constexpr uint32_t MaxSeekPrerollDroppedVideoFramesPerPass = 300;
 
+    PlaybackTransportCallMetrics ToPlaybackTransportCallMetrics(
+        FfmpegTransportCallSnapshot const& snapshot) noexcept
+    {
+        return PlaybackTransportCallMetrics{
+            snapshot.ReadCalls,
+            snapshot.SeekCalls,
+            snapshot.ReadWaitMs,
+            snapshot.SeekWaitMs,
+            snapshot.SeekDistanceBytes};
+    }
+
     PlaybackGraph::PlaybackGraph(
         DxDeviceResources& deviceResources,
         PlaybackGraphStateChangedHandler stateChanged,
@@ -123,6 +134,7 @@ namespace winrt::NoiraPlayer::Native::implementation
             auto startPositionTicks = (std::max<int64_t>)(0, request.StartPositionTicks);
             auto startupSeekDurationMs = 0.0;
             auto startupSeekBytesRead = uint64_t{0};
+            auto const transportCallsBeforeStartupSeek = m_mediaSource.TransportCallSnapshot();
             if (startPositionTicks > 0)
             {
                 AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open Seek startup begin");
@@ -148,6 +160,9 @@ namespace winrt::NoiraPlayer::Native::implementation
                     std::chrono::steady_clock::now() - startupSeekStartedAt).count();
                 AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open Seek startup end");
             }
+            auto const startupSeekTransportCalls = SubtractTransportCallSnapshots(
+                transportCallsBeforeStartupSeek,
+                m_mediaSource.TransportCallSnapshot());
 
             m_url = request.DirectStreamUrl;
             m_positionTicks = startPositionTicks;
@@ -169,6 +184,15 @@ namespace winrt::NoiraPlayer::Native::implementation
             m_qualityMetrics.FfmpegOpenInputBytesRead = ffmpegOpenTiming.OpenInputBytesRead;
             m_qualityMetrics.FfmpegStreamInfoBytesRead = ffmpegOpenTiming.StreamInfoBytesRead;
             m_qualityMetrics.NativeStartupSeekBytesRead = startupSeekBytesRead;
+            m_qualityMetrics.StartupTransportProvider = ffmpegOpenTiming.OpenInputTransportCalls.Provider;
+            m_qualityMetrics.StartupTransportCallEvidenceAvailable =
+                ffmpegOpenTiming.OpenInputTransportCalls.EvidenceAvailable;
+            m_qualityMetrics.FfmpegOpenInputTransportCalls =
+                ToPlaybackTransportCallMetrics(ffmpegOpenTiming.OpenInputTransportCalls);
+            m_qualityMetrics.FfmpegStreamInfoTransportCalls =
+                ToPlaybackTransportCallMetrics(ffmpegOpenTiming.StreamInfoTransportCalls);
+            m_qualityMetrics.NativeStartupSeekTransportCalls =
+                ToPlaybackTransportCallMetrics(startupSeekTransportCalls);
             auto timeline = m_mediaSource.TimelineSnapshot(sourceVideo ? sourceVideo->StreamIndex : -1);
             m_qualityMetrics.ContainerStartTimeTicks = timeline.ContainerStartTimeTicks;
             m_qualityMetrics.VideoStreamStartTimeTicks = timeline.StreamStartTimeTicks;
@@ -177,6 +201,7 @@ namespace winrt::NoiraPlayer::Native::implementation
             AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open RenderNextFrame begin");
             auto const readTimingBeforeFirstFrame = m_mediaSource.ReadTimingSnapshot();
             auto const transportBytesBeforeFirstFrame = m_mediaSource.TransportBytesRead();
+            auto const transportCallsBeforeFirstFrame = m_mediaSource.TransportCallSnapshot();
             auto const firstFrameStartedAt = std::chrono::steady_clock::now();
             auto renderedFirstFrame = RenderNextFrame();
             m_qualityMetrics.NativeFirstFrameDurationMs =
@@ -184,6 +209,10 @@ namespace winrt::NoiraPlayer::Native::implementation
                     std::chrono::steady_clock::now() - firstFrameStartedAt).count();
             auto const readTimingAfterFirstFrame = m_mediaSource.ReadTimingSnapshot();
             auto const transportBytesAfterFirstFrame = m_mediaSource.TransportBytesRead();
+            m_qualityMetrics.NativeFirstFrameTransportCalls = ToPlaybackTransportCallMetrics(
+                SubtractTransportCallSnapshots(
+                    transportCallsBeforeFirstFrame,
+                    m_mediaSource.TransportCallSnapshot()));
             if (transportBytesAfterFirstFrame >= transportBytesBeforeFirstFrame)
             {
                 m_qualityMetrics.NativeFirstFrameTransportBytesRead =

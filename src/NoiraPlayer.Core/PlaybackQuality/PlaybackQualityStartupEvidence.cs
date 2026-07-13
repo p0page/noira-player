@@ -46,25 +46,37 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 nativeOpen,
                 "ffmpeg.open-input",
                 openInputMs,
-                transportBytes: metrics.FfmpegOpenInputBytesRead);
+                transportBytes: metrics.FfmpegOpenInputBytesRead,
+                transportProvider: metrics.StartupTransportProvider,
+                transportCallEvidenceAvailable: metrics.StartupTransportCallEvidenceAvailable,
+                transportCalls: metrics.FfmpegOpenInputTransportCalls);
             Add(
                 nativeOpen,
                 "ffmpeg.find-stream-info",
                 streamInfoMs,
-                transportBytes: metrics.FfmpegStreamInfoBytesRead);
+                transportBytes: metrics.FfmpegStreamInfoBytesRead,
+                transportProvider: metrics.StartupTransportProvider,
+                transportCallEvidenceAvailable: metrics.StartupTransportCallEvidenceAvailable,
+                transportCalls: metrics.FfmpegStreamInfoTransportCalls);
             Add(nativeOpen, "native.initialize-components", graphOtherMs);
             Add(
                 nativeOpen,
                 "native.startup-seek",
                 startupSeekMs,
-                transportBytes: metrics.NativeStartupSeekBytesRead);
+                transportBytes: metrics.NativeStartupSeekBytesRead,
+                transportProvider: metrics.StartupTransportProvider,
+                transportCallEvidenceAvailable: metrics.StartupTransportCallEvidenceAvailable,
+                transportCalls: metrics.NativeStartupSeekTransportCalls);
             Add(
                 nativeOpen,
                 "native.first-frame.demux-read",
                 firstFrameDemuxMs,
                 packetCount: metrics.NativeFirstFrameDemuxPacketCount,
                 transportBytes: metrics.NativeFirstFrameTransportBytesRead,
-                packetPayloadBytes: metrics.NativeFirstFrameDemuxBytes);
+                packetPayloadBytes: metrics.NativeFirstFrameDemuxBytes,
+                transportProvider: metrics.StartupTransportProvider,
+                transportCallEvidenceAvailable: metrics.StartupTransportCallEvidenceAvailable,
+                transportCalls: metrics.NativeFirstFrameTransportCalls);
             Add(nativeOpen, "native.first-frame.decode-control", firstFrameDecodeControlMs);
             Add(nativeOpen, "native.first-frame.present", firstFramePresentMs);
             Add(nativeOpen, "host.dispatch-overhead", hostDispatchMs);
@@ -77,8 +89,12 @@ namespace NoiraPlayer.Core.PlaybackQuality
             string status = "measured",
             ulong packetCount = 0,
             ulong transportBytes = 0,
-            ulong packetPayloadBytes = 0)
+            ulong packetPayloadBytes = 0,
+            string transportProvider = "",
+            bool transportCallEvidenceAvailable = false,
+            PlaybackQualityTransportCallSnapshot? transportCalls = null)
         {
+            var hasTransportCallContract = transportCalls != null;
             stage.Components.Add(new PlaybackQualityStartupComponent
             {
                 Name = name,
@@ -86,7 +102,16 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 Status = status,
                 PacketCount = packetCount,
                 TransportBytes = transportBytes,
-                PacketPayloadBytes = packetPayloadBytes
+                PacketPayloadBytes = packetPayloadBytes,
+                TransportProvider = hasTransportCallContract ? transportProvider : "",
+                TransportCallEvidenceStatus = !hasTransportCallContract
+                    ? "not-applicable"
+                    : transportCallEvidenceAvailable ? "measured" : "unavailable",
+                TransportReadCalls = transportCallEvidenceAvailable ? transportCalls?.ReadCalls : null,
+                TransportSeekCalls = transportCallEvidenceAvailable ? transportCalls?.SeekCalls : null,
+                TransportReadWaitMs = transportCallEvidenceAvailable ? transportCalls?.ReadWaitMs : null,
+                TransportSeekWaitMs = transportCallEvidenceAvailable ? transportCalls?.SeekWaitMs : null,
+                TransportSeekDistanceBytes = transportCallEvidenceAvailable ? transportCalls?.SeekDistanceBytes : null
             });
         }
     }

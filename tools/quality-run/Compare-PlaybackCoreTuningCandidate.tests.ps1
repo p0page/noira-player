@@ -111,6 +111,25 @@ $report = [ordered]@{
         commandReceivedAt = '2026-07-11T00:00:00.0000000+00:00'
         playbackStartedAt = '2026-07-11T00:00:00.3000000+00:00'
         startupDurationMs = 300.0
+        stages = @(@{
+            name = 'native.open'; durationMs = 300.0
+            components = @(
+                'ffmpeg.open-input',
+                'ffmpeg.find-stream-info',
+                'native.startup-seek',
+                'native.first-frame.demux-read'
+            ) | ForEach-Object {
+                @{
+                    name = $_; durationMs = 75.0; status = 'measured'
+                    packetCount = 0; transportBytes = 0; packetPayloadBytes = 0
+                    transportProvider = 'ffmpeg-builtin'
+                    transportCallEvidenceStatus = 'unavailable'
+                    transportReadCalls = $null; transportSeekCalls = $null
+                    transportReadWaitMs = $null; transportSeekWaitMs = $null
+                    transportSeekDistanceBytes = $null
+                }
+            }
+        })
     }
     lifecycle = @{
         events = @(
@@ -172,7 +191,7 @@ $report = [ordered]@{
 
 @{
     schemaVersion = 1
-    evaluationVersion = 'playback-quality-v0.5'
+    evaluationVersion = 'playback-quality-v0.6'
     caseMetadata = @{ caseId = $caseId; category = 'stable'; severity = 'high'; stability = 'stable' }
     report = $report
 } | ConvertTo-Json -Depth 30 | Set-Content -LiteralPath $reportPath -Encoding UTF8

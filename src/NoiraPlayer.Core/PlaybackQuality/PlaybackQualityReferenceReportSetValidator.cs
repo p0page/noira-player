@@ -274,6 +274,11 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 else
                 {
                     ValidateRequiredSignals(validation, status, referenceCase, entry);
+                    ValidateStartupTransportCallEvidence(
+                        validation,
+                        status,
+                        referenceCase,
+                        report);
                 }
 
                 ValidateReportResult(validation, status, report);
@@ -1121,6 +1126,85 @@ namespace NoiraPlayer.Core.PlaybackQuality
             else
             {
                 validation.StructureValid = false;
+            }
+        }
+
+        private static void ValidateStartupTransportCallEvidence(
+            PlaybackQualityReferenceReportSetValidation validation,
+            PlaybackQualityReferenceReportCaseStatus status,
+            PlaybackQualityReferenceCase referenceCase,
+            PlaybackQualityReport report)
+        {
+            var requiredSignals = PlaybackQualityRequiredSignalPolicy.CreateRequiredSignals(
+                referenceCase,
+                report.Result);
+            var contractRequired = false;
+            foreach (var signal in requiredSignals)
+            {
+                if (PlaybackQualityStartupTransportCallEvidence.TryParseSignal(
+                    signal,
+                    out _,
+                    out _))
+                {
+                    contractRequired = true;
+                    break;
+                }
+            }
+
+            if (!contractRequired)
+            {
+                return;
+            }
+
+            string? commonProvider = null;
+            foreach (var componentName in PlaybackQualityStartupTransportCallEvidence.ComponentNames)
+            {
+                var component = PlaybackQualityStartupTransportCallEvidence.FindComponent(
+                    report,
+                    componentName);
+                if (component == null)
+                {
+                    continue;
+                }
+
+                var signal = PlaybackQualityStartupTransportCallEvidence.CreateSignal(
+                    componentName,
+                    "transportCallEvidenceStatus");
+                if (!PlaybackQualityStartupTransportCallEvidence.HasConsistentContract(component))
+                {
+                    AddUnique(status.Signals, signal);
+                    AddError(
+                        validation,
+                        "report.startup.transport-call.contract.invalid",
+                        status.CaseId,
+                        status.ReportRunId,
+                        signal,
+                        "provider, status, and callback metrics must be internally consistent",
+                        component.TransportProvider + "/" + component.TransportCallEvidenceStatus,
+                        "Native startup transport-call evidence is contradictory or invalid.");
+                    continue;
+                }
+
+                if (commonProvider == null)
+                {
+                    commonProvider = component.TransportProvider;
+                }
+                else if (!string.Equals(
+                    commonProvider,
+                    component.TransportProvider,
+                    StringComparison.Ordinal))
+                {
+                    AddUnique(status.Signals, signal);
+                    AddError(
+                        validation,
+                        "report.startup.transport-call.provider-mismatch",
+                        status.CaseId,
+                        status.ReportRunId,
+                        signal,
+                        commonProvider,
+                        component.TransportProvider,
+                        "Native startup components disagree about the transport provider.");
+                }
             }
         }
 

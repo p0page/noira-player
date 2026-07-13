@@ -1013,6 +1013,29 @@ internal static class NativeHeadlessHarness
         PlaybackQualityMetricsSnapshot metrics,
         out string error)
     {
+        if (!values.TryGetValue("startupTransportProvider", out var provider) ||
+            (provider != "ffmpeg-builtin" && provider != "instrumented-ffmpeg-avio"))
+        {
+            error = "Missing or invalid required native metric startupTransportProvider.";
+            return false;
+        }
+
+        if (!values.TryGetValue("startupTransportCallEvidenceAvailable", out var evidenceAvailableText) ||
+            (evidenceAvailableText != "0" && evidenceAvailableText != "1"))
+        {
+            error = "Missing or invalid required native metric startupTransportCallEvidenceAvailable.";
+            return false;
+        }
+
+        metrics.StartupTransportProvider = provider;
+        metrics.StartupTransportCallEvidenceAvailable = evidenceAvailableText == "1";
+        if ((provider == "ffmpeg-builtin" && metrics.StartupTransportCallEvidenceAvailable) ||
+            (provider == "instrumented-ffmpeg-avio" && !metrics.StartupTransportCallEvidenceAvailable))
+        {
+            error = "Native metrics startupTransportCallEvidenceAvailable contradicts startupTransportProvider.";
+            return false;
+        }
+
         return
             TrySetRequiredUInt64(values, "decodedVideoFrames", value => metrics.DecodedVideoFrames = value, out error) &&
             TrySetRequiredUInt64(values, "hardwareDecodedVideoFrames", value => metrics.HardwareDecodedVideoFrames = value, out error) &&
@@ -1038,6 +1061,26 @@ internal static class NativeHeadlessHarness
             TrySetRequiredUInt64(values, "ffmpegStreamInfoBytesRead", value => metrics.FfmpegStreamInfoBytesRead = value, out error) &&
             TrySetRequiredUInt64(values, "nativeStartupSeekBytesRead", value => metrics.NativeStartupSeekBytesRead = value, out error) &&
             TrySetRequiredUInt64(values, "nativeFirstFrameTransportBytesRead", value => metrics.NativeFirstFrameTransportBytesRead = value, out error) &&
+            TrySetRequiredUInt64(values, "ffmpegOpenInputTransportReadCalls", value => metrics.FfmpegOpenInputTransportCalls.ReadCalls = value, out error) &&
+            TrySetRequiredUInt64(values, "ffmpegOpenInputTransportSeekCalls", value => metrics.FfmpegOpenInputTransportCalls.SeekCalls = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "ffmpegOpenInputTransportReadWaitMs", value => metrics.FfmpegOpenInputTransportCalls.ReadWaitMs = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "ffmpegOpenInputTransportSeekWaitMs", value => metrics.FfmpegOpenInputTransportCalls.SeekWaitMs = value, out error) &&
+            TrySetRequiredUInt64(values, "ffmpegOpenInputTransportSeekDistanceBytes", value => metrics.FfmpegOpenInputTransportCalls.SeekDistanceBytes = value, out error) &&
+            TrySetRequiredUInt64(values, "ffmpegStreamInfoTransportReadCalls", value => metrics.FfmpegStreamInfoTransportCalls.ReadCalls = value, out error) &&
+            TrySetRequiredUInt64(values, "ffmpegStreamInfoTransportSeekCalls", value => metrics.FfmpegStreamInfoTransportCalls.SeekCalls = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "ffmpegStreamInfoTransportReadWaitMs", value => metrics.FfmpegStreamInfoTransportCalls.ReadWaitMs = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "ffmpegStreamInfoTransportSeekWaitMs", value => metrics.FfmpegStreamInfoTransportCalls.SeekWaitMs = value, out error) &&
+            TrySetRequiredUInt64(values, "ffmpegStreamInfoTransportSeekDistanceBytes", value => metrics.FfmpegStreamInfoTransportCalls.SeekDistanceBytes = value, out error) &&
+            TrySetRequiredUInt64(values, "nativeStartupSeekTransportReadCalls", value => metrics.NativeStartupSeekTransportCalls.ReadCalls = value, out error) &&
+            TrySetRequiredUInt64(values, "nativeStartupSeekTransportSeekCalls", value => metrics.NativeStartupSeekTransportCalls.SeekCalls = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "nativeStartupSeekTransportReadWaitMs", value => metrics.NativeStartupSeekTransportCalls.ReadWaitMs = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "nativeStartupSeekTransportSeekWaitMs", value => metrics.NativeStartupSeekTransportCalls.SeekWaitMs = value, out error) &&
+            TrySetRequiredUInt64(values, "nativeStartupSeekTransportSeekDistanceBytes", value => metrics.NativeStartupSeekTransportCalls.SeekDistanceBytes = value, out error) &&
+            TrySetRequiredUInt64(values, "nativeFirstFrameTransportReadCalls", value => metrics.NativeFirstFrameTransportCalls.ReadCalls = value, out error) &&
+            TrySetRequiredUInt64(values, "nativeFirstFrameTransportSeekCalls", value => metrics.NativeFirstFrameTransportCalls.SeekCalls = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "nativeFirstFrameTransportReadWaitMs", value => metrics.NativeFirstFrameTransportCalls.ReadWaitMs = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "nativeFirstFrameTransportSeekWaitMs", value => metrics.NativeFirstFrameTransportCalls.SeekWaitMs = value, out error) &&
+            TrySetRequiredUInt64(values, "nativeFirstFrameTransportSeekDistanceBytes", value => metrics.NativeFirstFrameTransportCalls.SeekDistanceBytes = value, out error) &&
             TrySetRequiredNonNegativeDouble(values, "nativeFirstFrameDurationMs", value => metrics.NativeFirstFrameDurationMs = value, out error) &&
             TrySetRequiredNonNegativeDouble(values, "nativeFirstFrameDemuxReadDurationMs", value => metrics.NativeFirstFrameDemuxReadDurationMs = value, out error) &&
             TrySetRequiredNonNegativeDouble(values, "nativeFirstFramePresentDurationMs", value => metrics.NativeFirstFramePresentDurationMs = value, out error) &&

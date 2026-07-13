@@ -1,5 +1,14 @@
 ﻿namespace NoiraPlayer.Core.PlaybackQuality
 {
+    public sealed class PlaybackQualityTransportCallSnapshot
+    {
+        public ulong ReadCalls { get; set; }
+        public ulong SeekCalls { get; set; }
+        public double ReadWaitMs { get; set; }
+        public double SeekWaitMs { get; set; }
+        public ulong SeekDistanceBytes { get; set; }
+    }
+
     public sealed class PlaybackQualityMetricsSnapshot
     {
         public ulong RenderPasses { get; set; }
@@ -30,6 +39,12 @@
         public ulong FfmpegStreamInfoBytesRead { get; set; }
         public ulong NativeStartupSeekBytesRead { get; set; }
         public ulong NativeFirstFrameTransportBytesRead { get; set; }
+        public string StartupTransportProvider { get; set; } = "ffmpeg-builtin";
+        public bool StartupTransportCallEvidenceAvailable { get; set; }
+        public PlaybackQualityTransportCallSnapshot FfmpegOpenInputTransportCalls { get; set; } = new PlaybackQualityTransportCallSnapshot();
+        public PlaybackQualityTransportCallSnapshot FfmpegStreamInfoTransportCalls { get; set; } = new PlaybackQualityTransportCallSnapshot();
+        public PlaybackQualityTransportCallSnapshot NativeStartupSeekTransportCalls { get; set; } = new PlaybackQualityTransportCallSnapshot();
+        public PlaybackQualityTransportCallSnapshot NativeFirstFrameTransportCalls { get; set; } = new PlaybackQualityTransportCallSnapshot();
         public double NativeFirstFrameDurationMs { get; set; }
         public double NativeFirstFrameDemuxReadDurationMs { get; set; }
         public double NativeFirstFramePresentDurationMs { get; set; }

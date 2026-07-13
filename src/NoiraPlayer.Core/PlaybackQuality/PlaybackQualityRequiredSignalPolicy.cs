@@ -63,6 +63,18 @@ namespace NoiraPlayer.Core.PlaybackQuality
             AddUnique(requiredSignals, "runtimeMetrics.hasSnapshot");
             AddUnique(requiredSignals, "runtimeMetrics.hasPlaybackSample");
 
+            foreach (var componentName in PlaybackQualityStartupTransportCallEvidence.ComponentNames)
+            {
+                foreach (var fieldName in PlaybackQualityStartupTransportCallEvidence.FieldNames)
+                {
+                    AddUnique(
+                        requiredSignals,
+                        PlaybackQualityStartupTransportCallEvidence.CreateSignal(
+                            componentName,
+                            fieldName));
+                }
+            }
+
             AddUnique(requiredSignals, "lifecycle.load");
             AddUnique(requiredSignals, "lifecycle.play");
             AddUnique(requiredSignals, "lifecycle.stop");
@@ -336,6 +348,16 @@ namespace NoiraPlayer.Core.PlaybackQuality
             if (presentSignals != null && !ContainsSignal(presentSignals, signal))
             {
                 return false;
+            }
+
+            if (PlaybackQualityStartupTransportCallEvidence.TryParseSignal(
+                signal,
+                out _,
+                out _))
+            {
+                return PlaybackQualityStartupTransportCallEvidence.HasValidSignalValue(
+                    report,
+                    signal);
             }
 
             switch (signal)

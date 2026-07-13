@@ -1331,6 +1331,14 @@ internal static class Program
         var signals = new List<string>();
         foreach (var descriptor in PlaybackQualitySignalCatalog.ReportSignals)
         {
+            if (PlaybackQualityStartupTransportCallEvidence.TryParseSignal(
+                descriptor.Signal,
+                out _,
+                out _))
+            {
+                continue;
+            }
+
             AddNestedPresentSignal(
                 signals,
                 reportElement,
@@ -1341,8 +1349,69 @@ internal static class Program
 
         AddLifecyclePresentSignals(signals, reportElement);
         AddTrackPresentSignals(signals, reportElement);
+        AddStartupTransportCallPresentSignals(signals, reportElement);
         AddCheckOnlyPresentSignals(signals, reportElement);
         return signals;
+    }
+
+    private static void AddStartupTransportCallPresentSignals(
+        List<string> signals,
+        JsonElement reportElement)
+    {
+        if (reportElement.ValueKind != JsonValueKind.Object ||
+            !TryGetPropertyIgnoreCase(reportElement, "startup", out var startup) ||
+            startup.ValueKind != JsonValueKind.Object ||
+            !TryGetPropertyIgnoreCase(startup, "stages", out var stages) ||
+            stages.ValueKind != JsonValueKind.Array)
+        {
+            return;
+        }
+
+        foreach (var stage in stages.EnumerateArray())
+        {
+            if (stage.ValueKind != JsonValueKind.Object ||
+                !TryGetPropertyIgnoreCase(stage, "name", out var stageName) ||
+                stageName.ValueKind != JsonValueKind.String ||
+                !string.Equals(
+                    stageName.GetString(),
+                    PlaybackQualityStartupTransportCallEvidence.StageName,
+                    StringComparison.Ordinal) ||
+                !TryGetPropertyIgnoreCase(stage, "components", out var components) ||
+                components.ValueKind != JsonValueKind.Array)
+            {
+                continue;
+            }
+
+            foreach (var component in components.EnumerateArray())
+            {
+                if (component.ValueKind != JsonValueKind.Object ||
+                    !TryGetPropertyIgnoreCase(component, "name", out var componentNameElement) ||
+                    componentNameElement.ValueKind != JsonValueKind.String)
+                {
+                    continue;
+                }
+
+                var componentName = componentNameElement.GetString() ?? "";
+                if (!PlaybackQualityStartupTransportCallEvidence.ComponentNames.Contains(
+                    componentName,
+                    StringComparer.Ordinal))
+                {
+                    continue;
+                }
+
+                foreach (var fieldName in PlaybackQualityStartupTransportCallEvidence.FieldNames)
+                {
+                    if (TryGetPropertyIgnoreCase(component, fieldName, out _))
+                    {
+                        AddUnique(
+                            signals,
+                            PlaybackQualityStartupTransportCallEvidence.CreateSignal(
+                                componentName,
+                                fieldName));
+                    }
+                }
+            }
+        }
     }
 
     private static void AddCheckOnlyPresentSignals(

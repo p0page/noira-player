@@ -103,6 +103,40 @@ namespace NoiraPlayer.App.Playback
                     FfmpegStreamInfoBytesRead = nativeMetrics.FfmpegStreamInfoBytesRead,
                     NativeStartupSeekBytesRead = nativeMetrics.NativeStartupSeekBytesRead,
                     NativeFirstFrameTransportBytesRead = nativeMetrics.NativeFirstFrameTransportBytesRead,
+                    StartupTransportProvider = nativeMetrics.StartupTransportProvider,
+                    StartupTransportCallEvidenceAvailable = nativeMetrics.StartupTransportCallEvidenceAvailable,
+                    FfmpegOpenInputTransportCalls = new PlaybackQualityTransportCallSnapshot
+                    {
+                        ReadCalls = nativeMetrics.FfmpegOpenInputTransportReadCalls,
+                        SeekCalls = nativeMetrics.FfmpegOpenInputTransportSeekCalls,
+                        ReadWaitMs = nativeMetrics.FfmpegOpenInputTransportReadWaitMs,
+                        SeekWaitMs = nativeMetrics.FfmpegOpenInputTransportSeekWaitMs,
+                        SeekDistanceBytes = nativeMetrics.FfmpegOpenInputTransportSeekDistanceBytes
+                    },
+                    FfmpegStreamInfoTransportCalls = new PlaybackQualityTransportCallSnapshot
+                    {
+                        ReadCalls = nativeMetrics.FfmpegStreamInfoTransportReadCalls,
+                        SeekCalls = nativeMetrics.FfmpegStreamInfoTransportSeekCalls,
+                        ReadWaitMs = nativeMetrics.FfmpegStreamInfoTransportReadWaitMs,
+                        SeekWaitMs = nativeMetrics.FfmpegStreamInfoTransportSeekWaitMs,
+                        SeekDistanceBytes = nativeMetrics.FfmpegStreamInfoTransportSeekDistanceBytes
+                    },
+                    NativeStartupSeekTransportCalls = new PlaybackQualityTransportCallSnapshot
+                    {
+                        ReadCalls = nativeMetrics.NativeStartupSeekTransportReadCalls,
+                        SeekCalls = nativeMetrics.NativeStartupSeekTransportSeekCalls,
+                        ReadWaitMs = nativeMetrics.NativeStartupSeekTransportReadWaitMs,
+                        SeekWaitMs = nativeMetrics.NativeStartupSeekTransportSeekWaitMs,
+                        SeekDistanceBytes = nativeMetrics.NativeStartupSeekTransportSeekDistanceBytes
+                    },
+                    NativeFirstFrameTransportCalls = new PlaybackQualityTransportCallSnapshot
+                    {
+                        ReadCalls = nativeMetrics.NativeFirstFrameTransportReadCalls,
+                        SeekCalls = nativeMetrics.NativeFirstFrameTransportSeekCalls,
+                        ReadWaitMs = nativeMetrics.NativeFirstFrameTransportReadWaitMs,
+                        SeekWaitMs = nativeMetrics.NativeFirstFrameTransportSeekWaitMs,
+                        SeekDistanceBytes = nativeMetrics.NativeFirstFrameTransportSeekDistanceBytes
+                    },
                     NativeFirstFrameDurationMs = nativeMetrics.NativeFirstFrameDurationMs,
                     NativeFirstFrameDemuxReadDurationMs = nativeMetrics.NativeFirstFrameDemuxReadDurationMs,
                     NativeFirstFramePresentDurationMs = nativeMetrics.NativeFirstFramePresentDurationMs,

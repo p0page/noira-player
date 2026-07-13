@@ -60,6 +60,45 @@ function Set-SmokeNativeExecutionEvidence {
         $payload.timing | Add-Member -NotePropertyName decodedVideoFrames -NotePropertyValue $decodedFrames
     }
 
+    if ($PlaybackSampleObserved) {
+        $transportComponents = @(
+            'ffmpeg.open-input',
+            'ffmpeg.find-stream-info',
+            'native.startup-seek',
+            'native.first-frame.demux-read'
+        ) | ForEach-Object {
+            [pscustomobject]@{
+                name = $_
+                durationMs = 0.0
+                status = 'measured'
+                packetCount = [uint64]0
+                transportBytes = [uint64]0
+                packetPayloadBytes = [uint64]0
+                transportProvider = 'ffmpeg-builtin'
+                transportCallEvidenceStatus = 'unavailable'
+                transportReadCalls = $null
+                transportSeekCalls = $null
+                transportReadWaitMs = $null
+                transportSeekWaitMs = $null
+                transportSeekDistanceBytes = $null
+            }
+        }
+        $payload | Add-Member -NotePropertyName startup -NotePropertyValue ([pscustomobject]@{
+            commandReceivedAt = '2026-07-08T00:00:00.0000000+00:00'
+            playbackStartedAt = '2026-07-08T00:00:01.0000000+00:00'
+            startupDurationMs = 1000.0
+            stages = @(
+                [pscustomobject]@{
+                    name = 'native.open'
+                    startedAt = '2026-07-08T00:00:00.0000000+00:00'
+                    completedAt = '2026-07-08T00:00:01.0000000+00:00'
+                    durationMs = 1000.0
+                    components = $transportComponents
+                }
+            )
+        }) -Force
+    }
+
     if ($PlaybackSampleObserved -and
         $null -ne $payload.position -and
         $null -ne $payload.position.seekTargetPositionTicks) {
@@ -207,6 +246,8 @@ try {
     $reportSetValidationPath = Join-Path $tempRoot 'reference-report-set-validation.json'
     $missingSignalReportSetDir = Join-Path $tempRoot 'reference-report-set-missing-signals'
     $missingSignalReportSetValidationPath = Join-Path $tempRoot 'reference-report-set-missing-signals-validation.json'
+    $missingStartupTransportReportSetDir = Join-Path $tempRoot 'reference-report-set-missing-startup-transport'
+    $missingStartupTransportValidationPath = Join-Path $tempRoot 'reference-report-set-missing-startup-transport-validation.json'
     $zeroCounterManifestPath = Join-Path $tempRoot 'zero-counter-reference-manifest.json'
     $zeroCounterReportSetDir = Join-Path $tempRoot 'zero-counter-reference-report-set'
     $zeroCounterReportSetValidationPath = Join-Path $tempRoot 'zero-counter-reference-report-set-validation.json'
@@ -596,8 +637,8 @@ try {
         throw 'Expected analyze-report-set output schemaVersion 1.'
     }
 
-    if ($analysisSet.evaluationVersion -ne 'playback-quality-v0.5') {
-        throw 'Expected analyze-report-set output evaluationVersion playback-quality-v0.5.'
+    if ($analysisSet.evaluationVersion -ne 'playback-quality-v0.6') {
+        throw 'Expected analyze-report-set output evaluationVersion playback-quality-v0.6.'
     }
 
     if ($analysisSet.action -ne 'fix-report-analysis') {
@@ -902,8 +943,8 @@ try {
         throw 'Expected playback quality CLI plan-runs output schemaVersion 1.'
     }
 
-    if ($runPlan.evaluationVersion -ne 'playback-quality-v0.5') {
-        throw 'Expected playback quality CLI plan-runs output evaluationVersion playback-quality-v0.5.'
+    if ($runPlan.evaluationVersion -ne 'playback-quality-v0.6') {
+        throw 'Expected playback quality CLI plan-runs output evaluationVersion playback-quality-v0.6.'
     }
 
     if ($runPlan.caseCount -ne 3) {
@@ -953,7 +994,7 @@ try {
 
     $materializedBaselineSummary = Get-Content -Raw -LiteralPath $materializedBaselineSummaryPath | ConvertFrom-Json
     if ($materializedBaselineSummary.schemaVersion -ne 1 -or
-        $materializedBaselineSummary.evaluationVersion -ne 'playback-quality-v0.5' -or
+        $materializedBaselineSummary.evaluationVersion -ne 'playback-quality-v0.6' -or
         $materializedBaselineSummary.caseCount -ne 3 -or
         $materializedBaselineSummary.reportsDirectory -ne $materializedBaselineDir) {
         throw 'Expected materialize-baseline-report-set summary to describe generated reports.'
@@ -1574,6 +1615,14 @@ try {
   ]
 }
 '@ | Set-Content -LiteralPath (Join-Path $nativeHarnessCapturedReportDir 'native-harness-sdr-smoke.json') -Encoding UTF8
+
+    Set-SmokeNativeExecutionEvidence `
+        -Path (Join-Path $nativeHarnessCapturedReportDir 'native-harness-sdr-smoke.json') `
+        -Locator 'file:///quality-cases/native-harness-sdr-smoke.mp4' `
+        -AttemptId 'smoke-native-captured-attempt' `
+        -Status 'completed' `
+        -SourceOpened $true `
+        -PlaybackSampleObserved $true
 
     Push-Location $repoRoot
     try {
@@ -2287,6 +2336,14 @@ try {
 }
 '@ | Set-Content -LiteralPath (Join-Path $reportSetDir 'case-error.json') -Encoding UTF8
 
+    Set-SmokeNativeExecutionEvidence `
+        -Path (Join-Path $reportSetDir 'case-a.json') `
+        -Locator 'https://example.invalid/netflix/chimera-4k-2398-hdr-pq.mp4' `
+        -AttemptId 'report-set-hdr-attempt' `
+        -Status 'completed' `
+        -SourceOpened $true `
+        -PlaybackSampleObserved $true
+
     Push-Location $repoRoot
     try {
         dotnet $cliDll `
@@ -2313,6 +2370,43 @@ try {
 
     if ($reportSetValidation.matchedCaseCount -ne 3) {
         throw 'Expected playback quality CLI validate-report-set output to include three matched cases.'
+    }
+
+    Copy-Item -LiteralPath $reportSetDir -Destination $missingStartupTransportReportSetDir -Recurse
+    $missingStartupTransportReportPath = Join-Path $missingStartupTransportReportSetDir 'case-a.json'
+    $missingStartupTransportReport =
+        Get-Content -Raw -LiteralPath $missingStartupTransportReportPath | ConvertFrom-Json
+    $startupSeekComponent = $missingStartupTransportReport.startup.stages[0].components |
+        Where-Object { $_.name -eq 'native.startup-seek' } |
+        Select-Object -First 1
+    $startupSeekComponent.PSObject.Properties.Remove('transportSeekWaitMs')
+    $missingStartupTransportReport |
+        ConvertTo-Json -Depth 100 |
+        Set-Content -LiteralPath $missingStartupTransportReportPath -Encoding UTF8
+
+    Push-Location $repoRoot
+    try {
+        dotnet $cliDll `
+            validate-report-set `
+            --manifest $manifestPath `
+            --reports-dir $missingStartupTransportReportSetDir `
+            --output $missingStartupTransportValidationPath
+        if ($LASTEXITCODE -ne 2) {
+            throw 'Expected validate-report-set to reject a missing startup transport-call JSON field.'
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    $missingStartupTransportValidation =
+        Get-Content -Raw -LiteralPath $missingStartupTransportValidationPath | ConvertFrom-Json
+    if (-not ($missingStartupTransportValidation.errors | Where-Object {
+        $_.code -eq 'report.requiredSignal.missing' -and
+        $_.caseId -eq 'netflix/chimera-4k-2398-hdr-pq' -and
+        $_.signal -eq 'startup.stage.native.open.component.native.startup-seek.transportSeekWaitMs'
+    })) {
+        throw 'Expected direct JSON validation to report the deleted startup transport-call field.'
     }
 
     New-Item -ItemType Directory -Path $missingSignalReportSetDir | Out-Null
@@ -2517,6 +2611,14 @@ try {
   }
 }
 '@ | Set-Content -LiteralPath (Join-Path $zeroCounterReportSetDir 'zero-counter.json') -Encoding UTF8
+
+    Set-SmokeNativeExecutionEvidence `
+        -Path (Join-Path $zeroCounterReportSetDir 'zero-counter.json') `
+        -Locator 'https://example.invalid/jellyfin/zero-starvation-buffering.mp4' `
+        -AttemptId 'zero-counter-native-attempt' `
+        -Status 'completed' `
+        -SourceOpened $true `
+        -PlaybackSampleObserved $true
 
     Push-Location $repoRoot
     try {
@@ -3418,8 +3520,8 @@ try {
         throw 'Expected playback quality CLI evaluate-candidate output schemaVersion 1.'
     }
 
-    if ($candidateEvaluation.evaluationVersion -ne 'playback-quality-v0.5') {
-        throw 'Expected playback quality CLI evaluate-candidate output evaluationVersion playback-quality-v0.5.'
+    if ($candidateEvaluation.evaluationVersion -ne 'playback-quality-v0.6') {
+        throw 'Expected playback quality CLI evaluate-candidate output evaluationVersion playback-quality-v0.6.'
     }
 
     if ($candidateEvaluation.action -ne 'accept-candidate') {

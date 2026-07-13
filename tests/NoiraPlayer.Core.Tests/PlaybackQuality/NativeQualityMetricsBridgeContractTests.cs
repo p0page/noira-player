@@ -126,6 +126,58 @@ public sealed class NativeQualityMetricsBridgeContractTests
         Assert.Contains("ProcessWallClockMs = processWallClockMs", parser, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Instrumented_Avio_Call_Evidence_Crosses_Native_WinRt_App_And_Headless_Boundaries()
+    {
+        var root = FindRepositoryRoot();
+        var nativeMetrics = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Native", "Media", "PlaybackQualityMetrics.h"));
+        var runtimeMetrics = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Native", "NativePlaybackQualityMetrics.h"));
+        var idl = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Native", "NativePlaybackEngine.idl"));
+        var nativeEngine = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Native", "NativePlaybackEngine.cpp"));
+        var appBridge = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.App", "Playback", "WinRtNativePlaybackEngine.cs"));
+        var helper = File.ReadAllText(Path.Combine(root, "tests", "NoiraPlayer.Native.Tests", "NativePlaybackGraphHeadlessSmokeTests.cpp"));
+        var parser = File.ReadAllText(Path.Combine(root, "tools", "NoiraPlayer.PlaybackQuality.Headless", "Program.cs"));
+
+        Assert.Contains("String StartupTransportProvider;", idl, StringComparison.Ordinal);
+        Assert.Contains("Boolean StartupTransportCallEvidenceAvailable;", idl, StringComparison.Ordinal);
+        Assert.Contains("StartupTransportProvider = nativeMetrics.StartupTransportProvider", appBridge, StringComparison.Ordinal);
+        Assert.Contains("StartupTransportCallEvidenceAvailable = nativeMetrics.StartupTransportCallEvidenceAvailable", appBridge, StringComparison.Ordinal);
+        Assert.Contains("struct PlaybackTransportCallMetrics", nativeMetrics, StringComparison.Ordinal);
+        foreach (var phase in new[] { "FfmpegOpenInput", "FfmpegStreamInfo", "NativeStartupSeek", "NativeFirstFrame" })
+        {
+            Assert.Contains("PlaybackTransportCallMetrics " + phase + "TransportCalls", nativeMetrics, StringComparison.Ordinal);
+        }
+
+        foreach (var property in NativeTransportCallUInt64Properties)
+        {
+            Assert.Contains("UInt64 " + property + ";", idl, StringComparison.Ordinal);
+            Assert.Contains("metrics." + property + "(" + NativeTransportSnapshotExpression(property) + ");", nativeEngine, StringComparison.Ordinal);
+            Assert.Contains("uint64_t " + property + "() const noexcept", runtimeMetrics, StringComparison.Ordinal);
+            var key = char.ToLowerInvariant(property[0]) + property[1..];
+            Assert.Contains("\" " + key + "=\"", helper, StringComparison.Ordinal);
+            Assert.Contains("TrySetRequiredUInt64(values, \"" + key + "\"", parser, StringComparison.Ordinal);
+        }
+
+        foreach (var property in NativeTransportCallDoubleProperties)
+        {
+            Assert.Contains("Double " + property + ";", idl, StringComparison.Ordinal);
+            Assert.Contains("metrics." + property + "(" + NativeTransportSnapshotExpression(property) + ");", nativeEngine, StringComparison.Ordinal);
+            Assert.Contains("double " + property + "() const noexcept", runtimeMetrics, StringComparison.Ordinal);
+            var key = char.ToLowerInvariant(property[0]) + property[1..];
+            Assert.Contains("\" " + key + "=\"", helper, StringComparison.Ordinal);
+            Assert.Contains("TrySetRequiredNonNegativeDouble(values, \"" + key + "\"", parser, StringComparison.Ordinal);
+        }
+    }
+
+    private static string NativeTransportSnapshotExpression(string property)
+    {
+        var marker = "Transport";
+        var markerIndex = property.IndexOf(marker, StringComparison.Ordinal);
+        var phase = property[..markerIndex];
+        var field = property[(markerIndex + marker.Length)..];
+        return "snapshot." + phase + "TransportCalls." + field;
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
@@ -282,6 +334,34 @@ public sealed class NativeQualityMetricsBridgeContractTests
         "FfmpegStreamInfoBytesRead",
         "NativeStartupSeekBytesRead",
         "NativeFirstFrameTransportBytesRead",
+    };
+
+    private static readonly IReadOnlyList<string> NativeTransportCallUInt64Properties = new[]
+    {
+        "FfmpegOpenInputTransportReadCalls",
+        "FfmpegOpenInputTransportSeekCalls",
+        "FfmpegOpenInputTransportSeekDistanceBytes",
+        "FfmpegStreamInfoTransportReadCalls",
+        "FfmpegStreamInfoTransportSeekCalls",
+        "FfmpegStreamInfoTransportSeekDistanceBytes",
+        "NativeStartupSeekTransportReadCalls",
+        "NativeStartupSeekTransportSeekCalls",
+        "NativeStartupSeekTransportSeekDistanceBytes",
+        "NativeFirstFrameTransportReadCalls",
+        "NativeFirstFrameTransportSeekCalls",
+        "NativeFirstFrameTransportSeekDistanceBytes",
+    };
+
+    private static readonly IReadOnlyList<string> NativeTransportCallDoubleProperties = new[]
+    {
+        "FfmpegOpenInputTransportReadWaitMs",
+        "FfmpegOpenInputTransportSeekWaitMs",
+        "FfmpegStreamInfoTransportReadWaitMs",
+        "FfmpegStreamInfoTransportSeekWaitMs",
+        "NativeStartupSeekTransportReadWaitMs",
+        "NativeStartupSeekTransportSeekWaitMs",
+        "NativeFirstFrameTransportReadWaitMs",
+        "NativeFirstFrameTransportSeekWaitMs",
     };
 
     private static readonly IReadOnlyList<string> NativeInteractionDoubleProperties = new[]

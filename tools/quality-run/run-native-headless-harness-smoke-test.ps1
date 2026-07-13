@@ -672,6 +672,28 @@ function New-NativeHeadlessParserFixtureOutput {
         ffmpegStreamInfoBytesRead = '1048576'
         nativeStartupSeekBytesRead = '16777216'
         nativeFirstFrameTransportBytesRead = '20000000'
+        startupTransportProvider = 'ffmpeg-builtin'
+        startupTransportCallEvidenceAvailable = '0'
+        ffmpegOpenInputTransportReadCalls = '0'
+        ffmpegOpenInputTransportSeekCalls = '0'
+        ffmpegOpenInputTransportReadWaitMs = '0'
+        ffmpegOpenInputTransportSeekWaitMs = '0'
+        ffmpegOpenInputTransportSeekDistanceBytes = '0'
+        ffmpegStreamInfoTransportReadCalls = '0'
+        ffmpegStreamInfoTransportSeekCalls = '0'
+        ffmpegStreamInfoTransportReadWaitMs = '0'
+        ffmpegStreamInfoTransportSeekWaitMs = '0'
+        ffmpegStreamInfoTransportSeekDistanceBytes = '0'
+        nativeStartupSeekTransportReadCalls = '0'
+        nativeStartupSeekTransportSeekCalls = '0'
+        nativeStartupSeekTransportReadWaitMs = '0'
+        nativeStartupSeekTransportSeekWaitMs = '0'
+        nativeStartupSeekTransportSeekDistanceBytes = '0'
+        nativeFirstFrameTransportReadCalls = '0'
+        nativeFirstFrameTransportSeekCalls = '0'
+        nativeFirstFrameTransportReadWaitMs = '0'
+        nativeFirstFrameTransportSeekWaitMs = '0'
+        nativeFirstFrameTransportSeekDistanceBytes = '0'
         nativeFirstFrameDurationMs = '15'
         nativeFirstFrameDemuxReadDurationMs = '8'
         nativeFirstFramePresentDurationMs = '1'
@@ -1464,6 +1486,54 @@ function Assert-NativeHeadlessParserContracts {
             }
         }
     )
+
+    $requiredTransportCallFields = @(
+        'startupTransportProvider',
+        'startupTransportCallEvidenceAvailable',
+        'ffmpegOpenInputTransportReadCalls',
+        'ffmpegOpenInputTransportSeekCalls',
+        'ffmpegOpenInputTransportReadWaitMs',
+        'ffmpegOpenInputTransportSeekWaitMs',
+        'ffmpegOpenInputTransportSeekDistanceBytes',
+        'ffmpegStreamInfoTransportReadCalls',
+        'ffmpegStreamInfoTransportSeekCalls',
+        'ffmpegStreamInfoTransportReadWaitMs',
+        'ffmpegStreamInfoTransportSeekWaitMs',
+        'ffmpegStreamInfoTransportSeekDistanceBytes',
+        'nativeStartupSeekTransportReadCalls',
+        'nativeStartupSeekTransportSeekCalls',
+        'nativeStartupSeekTransportReadWaitMs',
+        'nativeStartupSeekTransportSeekWaitMs',
+        'nativeStartupSeekTransportSeekDistanceBytes',
+        'nativeFirstFrameTransportReadCalls',
+        'nativeFirstFrameTransportSeekCalls',
+        'nativeFirstFrameTransportReadWaitMs',
+        'nativeFirstFrameTransportSeekWaitMs',
+        'nativeFirstFrameTransportSeekDistanceBytes'
+    )
+    foreach ($field in $requiredTransportCallFields) {
+        $negativeCases += [pscustomobject]@{
+            Name = 'missing-' + ($field -creplace '([a-z0-9])([A-Z])', '$1-$2').ToLowerInvariant()
+            ExpectedField = $field
+            Output = New-NativeHeadlessParserFixtureOutput -Omit @($field)
+        }
+    }
+    $negativeCases += [pscustomobject]@{
+        Name = 'builtin-provider-with-measured-call-evidence'
+        ExpectedField = 'startupTransportCallEvidenceAvailable'
+        Output = New-NativeHeadlessParserFixtureOutput -Overrides @{
+            startupTransportProvider = 'ffmpeg-builtin'
+            startupTransportCallEvidenceAvailable = '1'
+        }
+    }
+    $negativeCases += [pscustomobject]@{
+        Name = 'instrumented-provider-with-unavailable-call-evidence'
+        ExpectedField = 'startupTransportCallEvidenceAvailable'
+        Output = New-NativeHeadlessParserFixtureOutput -Overrides @{
+            startupTransportProvider = 'instrumented-ffmpeg-avio'
+            startupTransportCallEvidenceAvailable = '0'
+        }
+    }
 
     foreach ($negativeCase in $negativeCases) {
         $result = Invoke-NativeHeadlessParserFixtureCase `
