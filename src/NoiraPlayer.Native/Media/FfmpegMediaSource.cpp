@@ -394,6 +394,20 @@ namespace
         return enabled;
     }
 
+    bool IsDemuxReadRecoveryEnabled() noexcept
+    {
+        char* value = nullptr;
+        size_t valueLength = 0;
+        if (_dupenv_s(&value, &valueLength, "NOIRAPLAYER_QA_DISABLE_DEMUX_READ_RECOVERY") != 0)
+        {
+            return true;
+        }
+
+        auto disabled = value != nullptr && std::string_view(value) == "1";
+        std::free(value);
+        return !disabled;
+    }
+
     void SetFfmpegOption(AVDictionary** options, char const* name, char const* value)
     {
         auto result = av_dict_set(options, name, value, 0);
@@ -436,6 +450,10 @@ namespace winrt::NoiraPlayer::Native::implementation
         Close();
         m_openTiming = {};
         m_readTiming = {};
+        m_readRecovery = {};
+        m_readRecoveryStartedNanoseconds = 0;
+        m_isHttpSource = false;
+        m_readRecoveryEnabled = IsDemuxReadRecoveryEnabled();
         m_interruptRequested.store(false, std::memory_order_release);
 
         auto networkResult = avformat_network_init();
@@ -456,7 +474,8 @@ namespace winrt::NoiraPlayer::Native::implementation
         try
         {
             auto source = ConvertFileUriToLocalPath(winrt::to_string(url));
-            if (IsHttpSource(source))
+            m_isHttpSource = IsHttpSource(source);
+            if (m_isHttpSource)
             {
                 SetFfmpegOption(&openOptions, "reconnect", "1");
                 SetFfmpegOption(&openOptions, "reconnect_on_network_error", "1");
@@ -661,6 +680,10 @@ namespace winrt::NoiraPlayer::Native::implementation
         m_timeline.Reset();
         m_lastSeekDemuxTargetTicks = -1;
         m_readTiming = {};
+        m_readRecovery = {};
+        m_readRecoveryStartedNanoseconds = 0;
+        m_isHttpSource = false;
+        m_readRecoveryEnabled = true;
         m_open = false;
     }
 
@@ -1005,7 +1028,57 @@ namespace winrt::NoiraPlayer::Native::implementation
                         SteadyClock::now() - readStartedAt).count();
                 if (readResult < 0)
                 {
+                    auto const recoveryBefore = m_readRecovery.Snapshot();
+                    if (recoveryBefore.ConsecutiveReadErrors == 0)
+                    {
+                        m_readRecoveryStartedNanoseconds = SteadyClockNanoseconds();
+                    }
+
+                    auto const disposition = m_readRecovery.ObserveError(
+                        readResult,
+                        readResult == AVERROR_EOF,
+                        readResult == AVERROR(EAGAIN) || readResult == AVERROR(EINTR),
+                        m_isHttpSource,
+                        m_interruptRequested.load(std::memory_order_acquire),
+                        m_readRecoveryEnabled);
+                    m_readTiming.Recovery = m_readRecovery.Snapshot();
+                    if (disposition == FfmpegReadDisposition::Retry)
+                    {
+                        AppendNativePlaybackDiagnostic(
+                            L"FfmpegMediaSource.Read retry error=" +
+                            std::to_wstring(readResult) +
+                            L" consecutive=" +
+                            std::to_wstring(m_readTiming.Recovery.ConsecutiveReadErrors) +
+                            L" maxRetries=" +
+                            std::to_wstring(FfmpegReadRecoveryState::MaxConsecutiveRetries));
+                        av_packet_unref(scratchPacket);
+                        continue;
+                    }
+
+                    if (disposition == FfmpegReadDisposition::EndOfStream ||
+                        disposition == FfmpegReadDisposition::Interrupted)
+                    {
+                        av_packet_free(&scratchPacket);
+                        return false;
+                    }
+
                     break;
+                }
+
+                auto const recoveryBeforePacket = m_readRecovery.Snapshot();
+                if (recoveryBeforePacket.ConsecutiveReadErrors > 0)
+                {
+                    auto const recoveryDurationMs = static_cast<double>((std::max<int64_t>)(
+                        0,
+                        SteadyClockNanoseconds() - m_readRecoveryStartedNanoseconds)) / 1'000'000.0;
+                    m_readRecovery.RecordPacketRecovered(recoveryDurationMs);
+                    m_readTiming.Recovery = m_readRecovery.Snapshot();
+                    m_readRecoveryStartedNanoseconds = 0;
+                    AppendNativePlaybackDiagnostic(
+                        L"FfmpegMediaSource.Read recovered durationMs=" +
+                        std::to_wstring(recoveryDurationMs) +
+                        L" recoveryCount=" +
+                        std::to_wstring(m_readTiming.Recovery.ReadRecoveryCount));
                 }
 
                 ++m_readTiming.PacketCount;
@@ -1035,11 +1108,6 @@ namespace winrt::NoiraPlayer::Native::implementation
             }
 
             av_packet_free(&scratchPacket);
-
-            if (readResult == AVERROR_EOF)
-            {
-                return false;
-            }
 
             throw CreateFfmpegError("av_read_frame", readResult);
         }

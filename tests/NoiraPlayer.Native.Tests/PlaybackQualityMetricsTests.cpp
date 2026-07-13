@@ -85,6 +85,13 @@ int main()
     metrics.NativeFirstFramePresentDurationMs = 5.0;
     metrics.NativeFirstFrameDemuxPacketCount = 200;
     metrics.NativeFirstFrameDemuxBytes = 1'000'000;
+    metrics.ReadErrorCount = 3;
+    metrics.ReadRetryCount = 3;
+    metrics.ReadRecoveryCount = 2;
+    metrics.MaxConsecutiveReadErrors = 2;
+    metrics.LastReadErrorCode = -5;
+    metrics.FatalReadErrorCode = 0;
+    metrics.LastReadRecoveryDurationMs = 37.5;
     metrics.ContainerStartTimeTicks = 1'400'000;
     metrics.VideoStreamStartTimeTicks = 1'421'333;
     metrics.SeekDemuxTargetTicks = 24'000'000;
@@ -177,6 +184,13 @@ int main()
     assert(snapshot.NativeFirstFramePresentDurationMs == 5.0);
     assert(snapshot.NativeFirstFrameDemuxPacketCount == 200);
     assert(snapshot.NativeFirstFrameDemuxBytes == 1'000'000);
+    assert(snapshot.ReadErrorCount == 3);
+    assert(snapshot.ReadRetryCount == 3);
+    assert(snapshot.ReadRecoveryCount == 2);
+    assert(snapshot.MaxConsecutiveReadErrors == 2);
+    assert(snapshot.LastReadErrorCode == -5);
+    assert(snapshot.FatalReadErrorCode == 0);
+    assert(snapshot.LastReadRecoveryDurationMs == 37.5);
     assert(snapshot.ContainerStartTimeTicks == 1'400'000);
     assert(snapshot.VideoStreamStartTimeTicks == 1'421'333);
     assert(snapshot.SeekDemuxTargetTicks == 24'000'000);
@@ -205,6 +219,10 @@ int main()
     assert(snapshot.NativeFirstFramePresentDurationMs == 5.0);
     assert(snapshot.NativeFirstFrameDemuxPacketCount == 200);
     assert(snapshot.NativeFirstFrameDemuxBytes == 1'000'000);
+    assert(snapshot.ReadErrorCount == 0);
+    assert(snapshot.ReadRetryCount == 0);
+    assert(snapshot.ReadRecoveryCount == 0);
+    assert(snapshot.FatalReadErrorCode == 0);
     assert(snapshot.ContainerStartTimeTicks == 1'400'000);
     assert(snapshot.VideoStreamStartTimeTicks == 1'421'333);
     assert(snapshot.SeekDemuxTargetTicks == -1);
@@ -256,6 +274,13 @@ int main()
     assert(snapshot.NativeFirstFramePresentDurationMs == 0.0);
     assert(snapshot.NativeFirstFrameDemuxPacketCount == 0);
     assert(snapshot.NativeFirstFrameDemuxBytes == 0);
+    assert(snapshot.ReadErrorCount == 0);
+    assert(snapshot.ReadRetryCount == 0);
+    assert(snapshot.ReadRecoveryCount == 0);
+    assert(snapshot.MaxConsecutiveReadErrors == 0);
+    assert(snapshot.LastReadErrorCode == 0);
+    assert(snapshot.FatalReadErrorCode == 0);
+    assert(snapshot.LastReadRecoveryDurationMs == 0.0);
 
     return 0;
 }

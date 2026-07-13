@@ -589,6 +589,14 @@ namespace winrt::NoiraPlayer::Native::implementation
 
         snapshot.VideoPositionTicks = m_positionTicks;
         snapshot.QueuedAudioBuffers = m_audioRenderer.QueuedBufferCount();
+        auto const readTiming = m_mediaSource.ReadTimingSnapshot();
+        snapshot.ReadErrorCount = readTiming.Recovery.ReadErrorCount;
+        snapshot.ReadRetryCount = readTiming.Recovery.ReadRetryCount;
+        snapshot.ReadRecoveryCount = readTiming.Recovery.ReadRecoveryCount;
+        snapshot.MaxConsecutiveReadErrors = readTiming.Recovery.MaxConsecutiveReadErrors;
+        snapshot.LastReadErrorCode = readTiming.Recovery.LastReadErrorCode;
+        snapshot.FatalReadErrorCode = readTiming.Recovery.FatalReadErrorCode;
+        snapshot.LastReadRecoveryDurationMs = readTiming.Recovery.LastReadRecoveryDurationMs;
         return snapshot;
     }
 

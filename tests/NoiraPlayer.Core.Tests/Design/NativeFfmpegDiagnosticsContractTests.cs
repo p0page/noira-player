@@ -107,6 +107,23 @@ public sealed class NativeFfmpegDiagnosticsContractTests
     }
 
     [Fact]
+    public void Native_Demux_Read_Uses_Bounded_Core_Recovery_With_A_Qa_Only_Disable_Switch()
+    {
+        var header = ReadNativeSource("Media", "FfmpegMediaSource.h");
+        var source = ReadNativeSource("Media", "FfmpegMediaSource.cpp");
+        var graph = ReadNativeSource("Media", "PlaybackGraph.cpp");
+
+        Assert.Contains("FfmpegReadRecovery.h", header, StringComparison.Ordinal);
+        Assert.Contains("FfmpegReadRecoveryState m_readRecovery", header, StringComparison.Ordinal);
+        Assert.Contains("NOIRAPLAYER_QA_DISABLE_DEMUX_READ_RECOVERY", source, StringComparison.Ordinal);
+        Assert.Contains("m_readRecovery.ObserveError", source, StringComparison.Ordinal);
+        Assert.Contains("FfmpegMediaSource.Read retry", source, StringComparison.Ordinal);
+        Assert.Contains("RecordPacketRecovered", source, StringComparison.Ordinal);
+        Assert.Contains("readTiming.Recovery", graph, StringComparison.Ordinal);
+        Assert.Contains("snapshot.ReadRecoveryCount", graph, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Native_Http_Input_Exposes_An_OptIn_Instrumented_Custom_Avio_Path_Without_Fallback()
     {
         var header = ReadNativeSource("Media", "HttpMediaInput.h");

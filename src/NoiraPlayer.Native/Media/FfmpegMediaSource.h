@@ -13,6 +13,7 @@
 
 #include "MediaTimeline.h"
 #include "FfmpegSeekReplayCache.h"
+#include "FfmpegReadRecovery.h"
 #include "HttpMediaInput.h"
 
 struct AVFormatContext;
@@ -92,6 +93,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         double ReadFrameDurationMs{0.0};
         uint64_t PacketCount{0};
         uint64_t Bytes{0};
+        FfmpegReadRecoverySnapshot Recovery;
     };
 
     struct FfmpegSwitchPacketCacheSnapshot
@@ -173,6 +175,10 @@ namespace winrt::NoiraPlayer::Native::implementation
         int64_t m_lastSeekDemuxTargetTicks{-1};
         FfmpegOpenTimingSnapshot m_openTiming;
         FfmpegReadTimingSnapshot m_readTiming;
+        FfmpegReadRecoveryState m_readRecovery;
+        int64_t m_readRecoveryStartedNanoseconds{0};
+        bool m_isHttpSource{false};
+        bool m_readRecoveryEnabled{true};
         bool m_open{false};
     };
 }
