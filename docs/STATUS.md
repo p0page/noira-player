@@ -1340,3 +1340,13 @@ v0.11 现将 `execution.requestedSampleDurationMs` 作为正式 report signal。
 严格校验以 `renderedVideoFrames + droppedVideoFrames` 估算已覆盖的源媒体时间，防止合法丢帧被误判为“没有观察”，同时仍能识别长时间冻结或只有少量帧的假完整样本。采集边界只允许 `max(1 帧, 100ms)` 固定容差；自然 `end-of-stream` 且有 completed 生命周期证据时，所需窗口可缩短到剩余片长。pause/resume case 的请求窗口必须在恢复成功后继续完整观察，暂停和恢复等待不能抵扣播放样本。
 
 当前验证：Core 全量测试 `1057/1057` 通过；脚本级 baseline/candidate、CLI smoke 和 manifest runner 测试通过；现有 14 份 native helper 报告已按 v0.11 重新 strict validation 为有效；Modern App Debug x64 已完整编译并生成 `NoiraPlayer.App.dll`。下一步是在提交 v0.11 后，以相同私有 Emby manifest 和更长窗口重建 baseline，再继续单变量 Core/native 调优。
+
+# 2026-07-14 更新：独立 D3D11 解码 worker 通过 v0.14 对照评测
+
+当前播放图已将硬件视频解码从 render device 和 render thread 中解耦：FFmpeg 使用独立 D3D11 device，解码帧通过 shared texture 与 shared fence 交给渲染侧；有界 worker queue 保留 `AVFrame` 生命周期，并在 worker 启动失败时回退原同步路径。v0.14 报告新增 device mode、同步模式、worker 状态、queue capacity/max depth 和 producer wait count，避免只凭最终帧率猜测实际走了哪条链路。
+
+同一 v0.14 manifest、同一批三个公开 1080p60 HEVC 样本、同一 30 秒窗口下，render-device 同步 control 与 commit `fff4e42` candidate 的正式比较为 `3 improved / 0 regressed / 0 mixed / 0 insufficient`，裁决 `keep-candidate`、风险 `low`。三个 case 的媒体覆盖分别由 `26350/26100/27783.333ms` 提升到 `28683.333/28550/29166.667ms`；render interval P95 分别由 `21.9895/23.657/20.1934ms` 降至 `20.3917/20.3656/18.2288ms`。candidate 均明确报告 `independent-d3d11 + shared-fence + worker active`，queue max depth 为 3，`videoStarvedPasses=0`。
+
+本轮同时修复两处裁判语义：不完整样本中，实测 transport read wait 足以解释媒体缺口时，比较必须标记为 transport-dominant/insufficient，而不能归咎 Core；fail-to-fail 数值比较按距 expected 的归一化误差判断，不能机械地认为数值升高或降低就是改善。worker 暂时尚未产出下一帧但没有排队音频时，不再计为视频 starvation；等待语义仍保留，因此没有隐藏真实的 A/V starvation。
+
+最新验证为 Core `1094/1094` 通过，完整 native-headless smoke 通过，并真实覆盖重编译 helper、30 秒暂停恢复、网络重连、demux read error recovery、A/V、字幕和 seek/timeline；Modern App Debug x64 也已从当前源码完整编译，生成新的 Core、Native 与 App 产物。最新正式报告位于 ignored 目录 `artifacts/quality-run/independent-d3d11-worker-5ms-candidate-v014-fff4e42.local/`，比较摘要为 `artifacts/quality-run/independent-worker-vs-sync-control-v014-fff4e42-suite.local.json`。这些证据只证明软件播放链路改善；HDMI 输出、真实显示刷新和面板颜色仍不在软件闭环内。

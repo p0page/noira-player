@@ -1402,3 +1402,17 @@ AVIO callback 证据继续保留原 read/seek 总指标，同时把 `AVSEEK_SIZE
 媒体覆盖以 `rendered + dropped` 帧和实际源帧率计算，而不是只数 rendered 帧，也不使用整个进程耗时冒充播放时间。采集边界容差固定为 `max(1 帧, 100ms)`；只有 native `end-of-stream` scenario 同时具有 completed EOF 生命周期证据时，才允许按剩余片长缩短要求。该容差和 EOF 规则属于显式版本化规则，后续修改必须升级契约或记录规则变化，不得为某个 candidate 静默调整。
 
 pause/resume 的 requested window 表示恢复后的有效播放观察。显式暂停时长、网络恢复轮询和控制调用不能被计为恢复后播放证据；恢复成功后仍需运行完整采样窗口。原因是“调用返回或时间经过”不能证明解码、呈现和时间线持续推进。
+
+# 2026-07-14: 硬件视频解码使用独立 D3D11 device 与有界 worker
+
+决策：默认视频硬解码使用独立 D3D11 device；解码侧通过 shared texture 和 shared fence 向 render device 交付帧。压缩包读取、`send_packet`、`receive_frame` 和 frame materialization 在有界 worker 中执行，渲染线程只消费已完成帧。队列容量必须固定且可观测，不能以无界缓存换取表面流畅；worker 启动失败必须回退同步解码并报告真实模式。
+
+原因：render-device 同步解码把约 15-18ms 的 HEVC packet/decode 工作放在每次渲染 pass 内，60fps 时直接侵占帧预算。独立 device 避免跨线程争用同一个 immediate context，shared fence 明确资源完成边界；这与 Kodi、FFmpeg/D3D11VA 一类成熟实现的“解码上下文与呈现调度分离”原则一致，但保留本项目现有 PlaybackGraph 所有权边界。
+
+采纳门禁：v0.14 同 manifest 三个公开 60fps HEVC case 全部为 strong improvement，0 regression，且 worker/device/fence/queue 证据完整。0ms 和 1ms render-loop wait 候选未提供更可靠结果，继续保留 5ms 默认等待。此结论不等于真实 Xbox HDMI、HDR 或 display refresh 已验证；完整 App 编译和必要的 App-hosted/设备复核仍是发布门禁。
+
+# 2026-07-14: transport 缺口与 starvation 必须按可观测因果归类
+
+决策：样本未覆盖请求窗口时，若实测 playback transport read wait 加固定采集容差足以解释媒体缺口，则比较标记 `transport-wait-dominant` 并阻止 Core 优劣裁决。fail-to-fail 数值信号按距各自 expected 的误差比较；0ms seek recovery 是有效观测值，不得当作缺失证据。
+
+`videoStarvedPasses` 只在视频帧缺失且仍有音频排队时增加。独立 worker 正在准备下一帧、同时没有音频可用于证明 A/V 饥饿时，只保留“本 pass 仍需等待”的控制流语义，不写入 starvation 指标。该规则避免把正常 producer/consumer 交接误报为回归，同时不会放过有音频时视频断供的真实问题。所有规则均由回归测试锁定，不得为单个候选静默调整。
