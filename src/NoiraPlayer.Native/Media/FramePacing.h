@@ -23,11 +23,6 @@ namespace winrt::NoiraPlayer::Native::implementation
             return std::chrono::milliseconds(5);
         }
 
-        static constexpr std::chrono::milliseconds PostPresentLoopWait(bool hasAudioClock) noexcept
-        {
-            return hasAudioClock ? RenderLoopWait() : std::chrono::milliseconds(0);
-        }
-
         static constexpr bool ShouldUseRenderLoopTimer(std::chrono::steady_clock::duration delay) noexcept
         {
             return delay > std::chrono::steady_clock::duration::zero();
