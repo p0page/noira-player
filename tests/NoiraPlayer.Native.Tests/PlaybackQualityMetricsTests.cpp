@@ -7,6 +7,8 @@
 using winrt::NoiraPlayer::Native::implementation::PlaybackQualityMetrics;
 using winrt::NoiraPlayer::Native::implementation::PlaybackQualityMetricsSnapshot;
 using winrt::NoiraPlayer::Native::implementation::PlaybackPresentationIntervalTracker;
+using winrt::NoiraPlayer::Native::implementation::VideoRenderPath;
+using winrt::NoiraPlayer::Native::implementation::VideoRenderPhaseSample;
 
 int main()
 {
@@ -53,6 +55,25 @@ int main()
     metrics.RecordVideoRenderDurationMs(1.0);
     metrics.RecordVideoRenderDurationMs(7.0);
     metrics.RecordVideoRenderDurationMs(19.0);
+    metrics.RecordVideoRenderPhaseSample({VideoRenderPath::DirectCopy});
+    metrics.RecordVideoRenderPhaseSample({VideoRenderPath::Bgra});
+    metrics.RecordVideoRenderPhaseSample({
+        VideoRenderPath::VideoProcessor,
+        false,
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        0.0});
+    metrics.RecordVideoRenderPhaseSample({
+        VideoRenderPath::VideoProcessor,
+        true,
+        5.0,
+        6.0,
+        7.0,
+        8.0,
+        9.0});
+    metrics.RecordVideoRenderPhaseSample({VideoRenderPath::None});
     metrics.RecordAudioAheadWaitMs(4.0, 1.0, 3.0, 100.0, 1);
     metrics.RecordAudioAheadWaitMs(12.0, 3.0, 9.0, 80.0, 2);
     metrics.RecordAudioAheadWaitMs(24.0, 8.0, 16.0, 50.0, 3);
@@ -184,6 +205,35 @@ int main()
     assert(snapshot.VideoRenderDurationMsP50 >= 1.0);
     assert(snapshot.VideoRenderDurationMsP95 >= 19.0);
     assert(snapshot.VideoRenderDurationMsMax == 19.0);
+    assert(snapshot.VideoRenderDirectCopyFrameCount == 1);
+    assert(snapshot.VideoRenderVideoProcessorFrameCount == 2);
+    assert(snapshot.VideoRenderBgraFrameCount == 1);
+    assert(snapshot.VideoRenderPostProcessFrameCount == 1);
+    assert(snapshot.VideoProcessorSetupCpuSampleCount == 2);
+    assert(snapshot.VideoProcessorSetupCpuDurationMsP50 == 1.0);
+    assert(snapshot.VideoProcessorSetupCpuDurationMsP95 == 5.0);
+    assert(snapshot.VideoProcessorSetupCpuDurationMsP99 == 5.0);
+    assert(snapshot.VideoProcessorSetupCpuDurationMsMax == 5.0);
+    assert(snapshot.VideoProcessorViewTargetCpuSampleCount == 2);
+    assert(snapshot.VideoProcessorViewTargetCpuDurationMsP50 == 2.0);
+    assert(snapshot.VideoProcessorViewTargetCpuDurationMsP95 == 6.0);
+    assert(snapshot.VideoProcessorViewTargetCpuDurationMsP99 == 6.0);
+    assert(snapshot.VideoProcessorViewTargetCpuDurationMsMax == 6.0);
+    assert(snapshot.VideoProcessorClearCpuSampleCount == 2);
+    assert(snapshot.VideoProcessorClearCpuDurationMsP50 == 3.0);
+    assert(snapshot.VideoProcessorClearCpuDurationMsP95 == 7.0);
+    assert(snapshot.VideoProcessorClearCpuDurationMsP99 == 7.0);
+    assert(snapshot.VideoProcessorClearCpuDurationMsMax == 7.0);
+    assert(snapshot.VideoProcessorBltCpuSampleCount == 2);
+    assert(snapshot.VideoProcessorBltCpuDurationMsP50 == 4.0);
+    assert(snapshot.VideoProcessorBltCpuDurationMsP95 == 8.0);
+    assert(snapshot.VideoProcessorBltCpuDurationMsP99 == 8.0);
+    assert(snapshot.VideoProcessorBltCpuDurationMsMax == 8.0);
+    assert(snapshot.VideoProcessorPostProcessCpuSampleCount == 1);
+    assert(snapshot.VideoProcessorPostProcessCpuDurationMsP50 == 9.0);
+    assert(snapshot.VideoProcessorPostProcessCpuDurationMsP95 == 9.0);
+    assert(snapshot.VideoProcessorPostProcessCpuDurationMsP99 == 9.0);
+    assert(snapshot.VideoProcessorPostProcessCpuDurationMsMax == 9.0);
     assert(snapshot.AudioAheadWaitDurationMsP50 >= 4.0);
     assert(snapshot.AudioAheadWaitDurationMsP95 >= 24.0);
     assert(snapshot.AudioAheadWaitDurationMsMax == 24.0);
@@ -313,6 +363,20 @@ int main()
     assert(snapshot.RenderIntervalAfterNonAudioWaitSampleCount == 0);
     assert(snapshot.RenderIntervalAfterNonAudioWaitMsMax == 0.0);
     assert(snapshot.PresentDurationMsMax == 0.0);
+    assert(snapshot.VideoRenderDirectCopyFrameCount == 0);
+    assert(snapshot.VideoRenderVideoProcessorFrameCount == 0);
+    assert(snapshot.VideoRenderBgraFrameCount == 0);
+    assert(snapshot.VideoRenderPostProcessFrameCount == 0);
+    assert(snapshot.VideoProcessorSetupCpuSampleCount == 0);
+    assert(snapshot.VideoProcessorSetupCpuDurationMsMax == 0.0);
+    assert(snapshot.VideoProcessorViewTargetCpuSampleCount == 0);
+    assert(snapshot.VideoProcessorViewTargetCpuDurationMsMax == 0.0);
+    assert(snapshot.VideoProcessorClearCpuSampleCount == 0);
+    assert(snapshot.VideoProcessorClearCpuDurationMsMax == 0.0);
+    assert(snapshot.VideoProcessorBltCpuSampleCount == 0);
+    assert(snapshot.VideoProcessorBltCpuDurationMsMax == 0.0);
+    assert(snapshot.VideoProcessorPostProcessCpuSampleCount == 0);
+    assert(snapshot.VideoProcessorPostProcessCpuDurationMsMax == 0.0);
     assert(snapshot.AudioAheadWaitDurationMsMax == 0.0);
     assert(snapshot.AudioAheadWaitTargetMsMax == 0.0);
     assert(snapshot.AudioAheadWaitOversleepMsMax == 0.0);

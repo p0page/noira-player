@@ -1197,10 +1197,15 @@ namespace winrt::NoiraPlayer::Native::implementation
 
             EnsureHdrOutputForFrame(frame);
             auto renderStartedAt = std::chrono::steady_clock::now();
-            auto rendered = m_videoRenderer.Render(frame, m_hdrOutputActive);
+            auto const renderSample = m_videoRenderer.Render(frame, m_hdrOutputActive);
+            auto const rendered = renderSample.Path != VideoRenderPath::None;
             auto renderEndedAt = std::chrono::steady_clock::now();
             m_qualityMetrics.RecordVideoRenderDurationMs(
                 std::chrono::duration<double, std::milli>(renderEndedAt - renderStartedAt).count());
+            if (rendered)
+            {
+                m_qualityMetrics.RecordVideoRenderPhaseSample(renderSample);
+            }
             m_positionTicks = frame.PositionTicks;
             if (!audioPosition)
             {

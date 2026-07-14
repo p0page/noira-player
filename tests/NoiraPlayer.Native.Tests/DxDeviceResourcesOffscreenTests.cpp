@@ -5,6 +5,9 @@
 
 using winrt::NoiraPlayer::Native::implementation::DxDeviceResources;
 using winrt::NoiraPlayer::Native::implementation::SubtitleBitmapRegion;
+using winrt::NoiraPlayer::Native::implementation::VideoColorMetadata;
+using winrt::NoiraPlayer::Native::implementation::VideoRenderPath;
+using winrt::NoiraPlayer::Native::implementation::VideoRenderPhaseSample;
 
 int main()
 {
@@ -15,6 +18,20 @@ int main()
 
     assert(resources.HasRenderTarget());
     assert(resources.ClearToBlack());
+    VideoRenderPhaseSample failedSample{};
+    failedSample.Path = VideoRenderPath::DirectCopy;
+    assert(!resources.TryProcessVideoFrameToBackBuffer(
+        nullptr,
+        0,
+        16,
+        16,
+        16,
+        16,
+        VideoColorMetadata{},
+        false,
+        nullptr,
+        &failedSample));
+    assert(failedSample.Path == VideoRenderPath::None);
     SubtitleBitmapRegion subtitle;
     subtitle.X = 4;
     subtitle.Y = 4;

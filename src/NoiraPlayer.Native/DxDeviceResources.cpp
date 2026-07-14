@@ -3,6 +3,7 @@
 #include "NativePlaybackDiagnostics.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <d2d1_1.h>
 #include <d3dcompiler.h>
@@ -384,8 +385,14 @@ float4 PSMain(VertexOutput input) : SV_TARGET
             uint32_t displayHeight,
             VideoColorMetadata const& colorMetadata,
             bool outputHdr10,
-            DXGI_HDR_METADATA_HDR10 const* hdr10Metadata)
+            DXGI_HDR_METADATA_HDR10 const* hdr10Metadata,
+            VideoRenderPhaseSample* phaseSample)
     {
+        if (phaseSample != nullptr)
+        {
+            *phaseSample = {};
+        }
+
         if (!m_swapChain || !m_device || !m_context || texture == nullptr)
         {
             return false;
@@ -401,6 +408,10 @@ float4 PSMain(VertexOutput input) : SV_TARGET
         D3D11_TEXTURE2D_DESC targetDescription{};
         texture->GetDesc(&sourceDescription);
         backBuffer->GetDesc(&targetDescription);
+
+        VideoRenderPhaseSample completedSample{};
+        completedSample.Path = VideoRenderPath::VideoProcessor;
+        auto const setupStartedAt = std::chrono::steady_clock::now();
 
         Microsoft::WRL::ComPtr<ID3D11VideoDevice> videoDevice;
         Microsoft::WRL::ComPtr<ID3D11VideoContext> videoContext;
@@ -531,6 +542,10 @@ float4 PSMain(VertexOutput input) : SV_TARGET
             videoContext->VideoProcessorSetOutputColorSpace(processor.Get(), &mapping.LegacyOutputColorSpace);
         }
 
+        completedSample.ProcessorSetupCpuMs = std::chrono::duration<double, std::milli>(
+            std::chrono::steady_clock::now() - setupStartedAt).count();
+        auto const viewTargetStartedAt = std::chrono::steady_clock::now();
+
         D3D11_VIDEO_PROCESSOR_INPUT_VIEW_DESC inputDescription{};
         inputDescription.ViewDimension = D3D11_VPIV_DIMENSION_TEXTURE2D;
         inputDescription.Texture2D.MipSlice = 0;
@@ -585,16 +600,32 @@ float4 PSMain(VertexOutput input) : SV_TARGET
             return false;
         }
 
+        completedSample.ViewTargetCpuMs = std::chrono::duration<double, std::milli>(
+            std::chrono::steady_clock::now() - viewTargetStartedAt).count();
+
         D3D11_VIDEO_PROCESSOR_STREAM stream{};
         stream.Enable = TRUE;
         stream.pInputSurface = inputView.Get();
 
-        if (!ClearTextureToBlack(videoProcessorTarget.Get()))
+        auto const clearStartedAt = std::chrono::steady_clock::now();
+        auto const cleared = ClearTextureToBlack(videoProcessorTarget.Get());
+        completedSample.ClearCpuMs = std::chrono::duration<double, std::milli>(
+            std::chrono::steady_clock::now() - clearStartedAt).count();
+        if (!cleared)
         {
             return false;
         }
 
-        if (FAILED(videoContext->VideoProcessorBlt(processor.Get(), outputView.Get(), 0, 1, &stream)))
+        auto const bltStartedAt = std::chrono::steady_clock::now();
+        auto const bltResult = videoContext->VideoProcessorBlt(
+            processor.Get(),
+            outputView.Get(),
+            0,
+            1,
+            &stream);
+        completedSample.BltCpuMs = std::chrono::duration<double, std::milli>(
+            std::chrono::steady_clock::now() - bltStartedAt).count();
+        if (FAILED(bltResult))
         {
             return false;
         }
@@ -613,13 +644,17 @@ float4 PSMain(VertexOutput input) : SV_TARGET
             auto mode = postProcessKind == DxgiPostProcessKind::HlgToPq
                 ? HdrToneMappingMode::HlgToPq
                 : HdrToneMappingMode::PqToSdrHable;
-            if (!m_hdrToneMappingPass.Render(
+            auto const postProcessStartedAt = std::chrono::steady_clock::now();
+            auto const postProcessed = m_hdrToneMappingPass.Render(
                     m_device.Get(),
                     m_context.Get(),
                     videoProcessorTarget.Get(),
                     backBuffer.Get(),
                     luminance,
-                    mode))
+                    mode);
+            completedSample.PostProcessCpuMs = std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - postProcessStartedAt).count();
+            if (!postProcessed)
             {
                 SetVideoProcessorConversionStatus(
                     selectedInputColorSpace,
@@ -636,6 +671,12 @@ float4 PSMain(VertexOutput input) : SV_TARGET
                 postProcessKind == DxgiPostProcessKind::HlgToPq
                     ? L"validated;hlg-to-pq"
                     : L"validated;tone-mapped-hable");
+            completedSample.PostProcessed = true;
+        }
+
+        if (phaseSample != nullptr)
+        {
+            *phaseSample = completedSample;
         }
 
         return true;

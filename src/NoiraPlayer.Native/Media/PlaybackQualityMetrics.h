@@ -9,6 +9,8 @@
 #include <optional>
 #include <string>
 
+#include "VideoRenderPhaseSample.h"
+
 namespace winrt::NoiraPlayer::Native::implementation
 {
     struct PlaybackTransportCallMetrics
@@ -163,6 +165,35 @@ namespace winrt::NoiraPlayer::Native::implementation
         double VideoRenderDurationMsP95{0.0};
         double VideoRenderDurationMsP99{0.0};
         double VideoRenderDurationMsMax{0.0};
+        uint64_t VideoRenderDirectCopyFrameCount{0};
+        uint64_t VideoRenderVideoProcessorFrameCount{0};
+        uint64_t VideoRenderBgraFrameCount{0};
+        uint64_t VideoRenderPostProcessFrameCount{0};
+        uint64_t VideoProcessorSetupCpuSampleCount{0};
+        double VideoProcessorSetupCpuDurationMsP50{0.0};
+        double VideoProcessorSetupCpuDurationMsP95{0.0};
+        double VideoProcessorSetupCpuDurationMsP99{0.0};
+        double VideoProcessorSetupCpuDurationMsMax{0.0};
+        uint64_t VideoProcessorViewTargetCpuSampleCount{0};
+        double VideoProcessorViewTargetCpuDurationMsP50{0.0};
+        double VideoProcessorViewTargetCpuDurationMsP95{0.0};
+        double VideoProcessorViewTargetCpuDurationMsP99{0.0};
+        double VideoProcessorViewTargetCpuDurationMsMax{0.0};
+        uint64_t VideoProcessorClearCpuSampleCount{0};
+        double VideoProcessorClearCpuDurationMsP50{0.0};
+        double VideoProcessorClearCpuDurationMsP95{0.0};
+        double VideoProcessorClearCpuDurationMsP99{0.0};
+        double VideoProcessorClearCpuDurationMsMax{0.0};
+        uint64_t VideoProcessorBltCpuSampleCount{0};
+        double VideoProcessorBltCpuDurationMsP50{0.0};
+        double VideoProcessorBltCpuDurationMsP95{0.0};
+        double VideoProcessorBltCpuDurationMsP99{0.0};
+        double VideoProcessorBltCpuDurationMsMax{0.0};
+        uint64_t VideoProcessorPostProcessCpuSampleCount{0};
+        double VideoProcessorPostProcessCpuDurationMsP50{0.0};
+        double VideoProcessorPostProcessCpuDurationMsP95{0.0};
+        double VideoProcessorPostProcessCpuDurationMsP99{0.0};
+        double VideoProcessorPostProcessCpuDurationMsMax{0.0};
         double AudioAheadWaitDurationMsP50{0.0};
         double AudioAheadWaitDurationMsP95{0.0};
         double AudioAheadWaitDurationMsP99{0.0};
@@ -476,6 +507,35 @@ namespace winrt::NoiraPlayer::Native::implementation
             m_videoRenderDurations.Add(value);
         }
 
+        void RecordVideoRenderPhaseSample(VideoRenderPhaseSample const& sample) noexcept
+        {
+            switch (sample.Path)
+            {
+                case VideoRenderPath::DirectCopy:
+                    ++m_videoRenderDirectCopyFrameCount;
+                    return;
+                case VideoRenderPath::Bgra:
+                    ++m_videoRenderBgraFrameCount;
+                    return;
+                case VideoRenderPath::VideoProcessor:
+                    ++m_videoRenderVideoProcessorFrameCount;
+                    break;
+                case VideoRenderPath::None:
+                default:
+                    return;
+            }
+
+            m_videoProcessorSetupCpuDurations.Add(sample.ProcessorSetupCpuMs);
+            m_videoProcessorViewTargetCpuDurations.Add(sample.ViewTargetCpuMs);
+            m_videoProcessorClearCpuDurations.Add(sample.ClearCpuMs);
+            m_videoProcessorBltCpuDurations.Add(sample.BltCpuMs);
+            if (sample.PostProcessed)
+            {
+                ++m_videoRenderPostProcessFrameCount;
+                m_videoProcessorPostProcessCpuDurations.Add(sample.PostProcessCpuMs);
+            }
+        }
+
         void RecordAudioAheadWaitDurationMs(double value) noexcept
         {
             RecordAudioAheadWaitMs(value, 0.0, value, 0.0, 1);
@@ -653,6 +713,60 @@ namespace winrt::NoiraPlayer::Native::implementation
             snapshot.VideoRenderDurationMsP95 = m_videoRenderDurations.Percentile(95);
             snapshot.VideoRenderDurationMsP99 = m_videoRenderDurations.Percentile(99);
             snapshot.VideoRenderDurationMsMax = m_videoRenderDurations.Max();
+            snapshot.VideoRenderDirectCopyFrameCount = m_videoRenderDirectCopyFrameCount;
+            snapshot.VideoRenderVideoProcessorFrameCount = m_videoRenderVideoProcessorFrameCount;
+            snapshot.VideoRenderBgraFrameCount = m_videoRenderBgraFrameCount;
+            snapshot.VideoRenderPostProcessFrameCount = m_videoRenderPostProcessFrameCount;
+            snapshot.VideoProcessorSetupCpuSampleCount =
+                static_cast<uint64_t>(m_videoProcessorSetupCpuDurations.Count());
+            snapshot.VideoProcessorSetupCpuDurationMsP50 =
+                m_videoProcessorSetupCpuDurations.Percentile(50);
+            snapshot.VideoProcessorSetupCpuDurationMsP95 =
+                m_videoProcessorSetupCpuDurations.Percentile(95);
+            snapshot.VideoProcessorSetupCpuDurationMsP99 =
+                m_videoProcessorSetupCpuDurations.Percentile(99);
+            snapshot.VideoProcessorSetupCpuDurationMsMax =
+                m_videoProcessorSetupCpuDurations.Max();
+            snapshot.VideoProcessorViewTargetCpuSampleCount =
+                static_cast<uint64_t>(m_videoProcessorViewTargetCpuDurations.Count());
+            snapshot.VideoProcessorViewTargetCpuDurationMsP50 =
+                m_videoProcessorViewTargetCpuDurations.Percentile(50);
+            snapshot.VideoProcessorViewTargetCpuDurationMsP95 =
+                m_videoProcessorViewTargetCpuDurations.Percentile(95);
+            snapshot.VideoProcessorViewTargetCpuDurationMsP99 =
+                m_videoProcessorViewTargetCpuDurations.Percentile(99);
+            snapshot.VideoProcessorViewTargetCpuDurationMsMax =
+                m_videoProcessorViewTargetCpuDurations.Max();
+            snapshot.VideoProcessorClearCpuSampleCount =
+                static_cast<uint64_t>(m_videoProcessorClearCpuDurations.Count());
+            snapshot.VideoProcessorClearCpuDurationMsP50 =
+                m_videoProcessorClearCpuDurations.Percentile(50);
+            snapshot.VideoProcessorClearCpuDurationMsP95 =
+                m_videoProcessorClearCpuDurations.Percentile(95);
+            snapshot.VideoProcessorClearCpuDurationMsP99 =
+                m_videoProcessorClearCpuDurations.Percentile(99);
+            snapshot.VideoProcessorClearCpuDurationMsMax =
+                m_videoProcessorClearCpuDurations.Max();
+            snapshot.VideoProcessorBltCpuSampleCount =
+                static_cast<uint64_t>(m_videoProcessorBltCpuDurations.Count());
+            snapshot.VideoProcessorBltCpuDurationMsP50 =
+                m_videoProcessorBltCpuDurations.Percentile(50);
+            snapshot.VideoProcessorBltCpuDurationMsP95 =
+                m_videoProcessorBltCpuDurations.Percentile(95);
+            snapshot.VideoProcessorBltCpuDurationMsP99 =
+                m_videoProcessorBltCpuDurations.Percentile(99);
+            snapshot.VideoProcessorBltCpuDurationMsMax =
+                m_videoProcessorBltCpuDurations.Max();
+            snapshot.VideoProcessorPostProcessCpuSampleCount =
+                static_cast<uint64_t>(m_videoProcessorPostProcessCpuDurations.Count());
+            snapshot.VideoProcessorPostProcessCpuDurationMsP50 =
+                m_videoProcessorPostProcessCpuDurations.Percentile(50);
+            snapshot.VideoProcessorPostProcessCpuDurationMsP95 =
+                m_videoProcessorPostProcessCpuDurations.Percentile(95);
+            snapshot.VideoProcessorPostProcessCpuDurationMsP99 =
+                m_videoProcessorPostProcessCpuDurations.Percentile(99);
+            snapshot.VideoProcessorPostProcessCpuDurationMsMax =
+                m_videoProcessorPostProcessCpuDurations.Max();
             snapshot.AudioAheadWaitDurationMsP50 = m_audioAheadWaitDurations.Percentile(50);
             snapshot.AudioAheadWaitDurationMsP95 = m_audioAheadWaitDurations.Percentile(95);
             snapshot.AudioAheadWaitDurationMsP99 = m_audioAheadWaitDurations.Percentile(99);
@@ -707,6 +821,15 @@ namespace winrt::NoiraPlayer::Native::implementation
         PlaybackQualityHistogram m_videoDecodeReceiveFrameDurations;
         PlaybackQualityHistogram m_videoDecodeFrameMaterializeDurations;
         PlaybackQualityHistogram m_videoRenderDurations;
+        uint64_t m_videoRenderDirectCopyFrameCount{0};
+        uint64_t m_videoRenderVideoProcessorFrameCount{0};
+        uint64_t m_videoRenderBgraFrameCount{0};
+        uint64_t m_videoRenderPostProcessFrameCount{0};
+        PlaybackQualityHistogram m_videoProcessorSetupCpuDurations;
+        PlaybackQualityHistogram m_videoProcessorViewTargetCpuDurations;
+        PlaybackQualityHistogram m_videoProcessorClearCpuDurations;
+        PlaybackQualityHistogram m_videoProcessorBltCpuDurations;
+        PlaybackQualityHistogram m_videoProcessorPostProcessCpuDurations;
         PlaybackQualityHistogram m_audioAheadWaitDurations;
         PlaybackQualityHistogram m_audioAheadWaitTargets;
         PlaybackQualityHistogram m_audioAheadWaitOversleeps;

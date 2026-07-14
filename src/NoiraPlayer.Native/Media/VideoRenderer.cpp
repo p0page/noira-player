@@ -8,7 +8,9 @@ namespace winrt::NoiraPlayer::Native::implementation
     {
     }
 
-    bool VideoRenderer::Render(DecodedVideoFrame const& frame, bool hdrDisplayActive)
+    VideoRenderPhaseSample VideoRenderer::Render(
+        DecodedVideoFrame const& frame,
+        bool hdrDisplayActive)
     {
         auto outputHdr10 = hdrDisplayActive &&
             ShouldOutputHdr10ForFrame(frame.HdrKind, m_deviceResources.IsTenBitSwapChain());
@@ -34,13 +36,16 @@ namespace winrt::NoiraPlayer::Native::implementation
         m_currentHdrKind = outputHdr10 ? VideoHdrKind::Hdr10 : VideoHdrKind::None;
         m_deviceResources.ObserveVideoColorMapping(frame.ColorMetadata, outputHdr10);
 
-        auto rendered = false;
+        VideoRenderPhaseSample sample{};
         if (frame.Texture)
         {
-            rendered = m_deviceResources.TryCopyToBackBuffer(frame.Texture.Get());
-            if (!rendered)
+            if (m_deviceResources.TryCopyToBackBuffer(frame.Texture.Get()))
             {
-                rendered = m_deviceResources.TryProcessVideoFrameToBackBuffer(
+                sample.Path = VideoRenderPath::DirectCopy;
+            }
+            else
+            {
+                m_deviceResources.TryProcessVideoFrameToBackBuffer(
                     frame.Texture.Get(),
                     frame.TextureArrayIndex,
                     frame.Width,
@@ -49,22 +54,26 @@ namespace winrt::NoiraPlayer::Native::implementation
                     frame.DisplayHeight,
                     frame.ColorMetadata,
                     outputHdr10,
-                    frame.Hdr10Metadata.has_value() ? &frame.Hdr10Metadata.value() : nullptr);
+                    frame.Hdr10Metadata.has_value() ? &frame.Hdr10Metadata.value() : nullptr,
+                    &sample);
             }
         }
 
-        if (!rendered && !frame.BgraPixels.empty())
+        if (sample.Path == VideoRenderPath::None && !frame.BgraPixels.empty())
         {
-            rendered = m_deviceResources.DrawBgraFrameToBackBuffer(
+            if (m_deviceResources.DrawBgraFrameToBackBuffer(
                 frame.BgraPixels.data(),
                 frame.Width,
                 frame.Height,
                 frame.DisplayWidth,
                 frame.DisplayHeight,
-                frame.BgraStride);
+                frame.BgraStride))
+            {
+                sample.Path = VideoRenderPath::Bgra;
+            }
         }
 
-        return rendered;
+        return sample;
     }
 
     void VideoRenderer::ClearToBlack()

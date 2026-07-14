@@ -32,7 +32,7 @@ namespace winrt::NoiraPlayer::Native::implementation
     public:
         explicit VideoRenderer(DxDeviceResources& deviceResources);
 
-        bool Render(DecodedVideoFrame const& frame, bool hdrDisplayActive);
+        VideoRenderPhaseSample Render(DecodedVideoFrame const& frame, bool hdrDisplayActive);
         void ClearToBlack();
 
     private:

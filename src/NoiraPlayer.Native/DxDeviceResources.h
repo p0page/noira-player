@@ -10,6 +10,7 @@
 #include "Media/DxgiColorSpaceMapper.h"
 #include "Media/HdrToneMappingPass.h"
 #include "Media/SubtitleBitmap.h"
+#include "Media/VideoRenderPhaseSample.h"
 
 namespace winrt::NoiraPlayer::Native::implementation
 {
@@ -32,7 +33,8 @@ namespace winrt::NoiraPlayer::Native::implementation
             uint32_t displayHeight,
             VideoColorMetadata const& colorMetadata,
             bool outputHdr10,
-            DXGI_HDR_METADATA_HDR10 const* hdr10Metadata);
+            DXGI_HDR_METADATA_HDR10 const* hdr10Metadata,
+            VideoRenderPhaseSample* phaseSample);
         bool DrawBgraFrameToBackBuffer(
             uint8_t const* pixels,
             uint32_t width,
