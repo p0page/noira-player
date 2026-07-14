@@ -297,6 +297,51 @@ public sealed class NativeQualityMetricsBridgeContractTests
     }
 
     [Fact]
+    public void Video_Render_Phase_Evidence_Crosses_All_Collector_Boundaries()
+    {
+        var root = FindRepositoryRoot();
+        var nativeMetrics = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Native", "Media", "PlaybackQualityMetrics.h"));
+        var runtimeMetrics = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Native", "NativePlaybackQualityMetrics.h"));
+        var idl = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Native", "NativePlaybackEngine.idl"));
+        var nativeEngine = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Native", "NativePlaybackEngine.cpp"));
+        var coreSnapshot = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Core", "PlaybackQuality", "PlaybackQualityMetricsSnapshot.cs"));
+        var appBridge = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.App", "Playback", "WinRtNativePlaybackEngine.cs"));
+        var appCapture = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.App", "Views", "PlaybackPage.xaml.cs"));
+        var helper = File.ReadAllText(Path.Combine(root, "tests", "NoiraPlayer.Native.Tests", "NativePlaybackGraphHeadlessSmokeTests.cpp"));
+        var parser = File.ReadAllText(Path.Combine(root, "tools", "NoiraPlayer.PlaybackQuality.Headless", "Program.cs"));
+
+        foreach (var property in VideoRenderPhaseCountProperties)
+        {
+            var key = char.ToLowerInvariant(property[0]) + property[1..];
+            Assert.Contains("uint64_t " + property + "{0};", nativeMetrics, StringComparison.Ordinal);
+            Assert.Contains("UInt64 " + property + ";", idl, StringComparison.Ordinal);
+            Assert.Contains("uint64_t " + property + "() const noexcept", runtimeMetrics, StringComparison.Ordinal);
+            Assert.Contains("void " + property + "(uint64_t value) noexcept", runtimeMetrics, StringComparison.Ordinal);
+            Assert.Contains("metrics." + property + "(snapshot." + property + ");", nativeEngine, StringComparison.Ordinal);
+            Assert.Contains("public ulong " + property + " { get; set; }", coreSnapshot, StringComparison.Ordinal);
+            Assert.Contains(property + " = nativeMetrics." + property, appBridge, StringComparison.Ordinal);
+            Assert.Contains(property + " = source." + property, appCapture, StringComparison.Ordinal);
+            Assert.Contains("\" " + key + "=\"", helper, StringComparison.Ordinal);
+            Assert.Contains("TrySetRequiredUInt64(values, \"" + key + "\"", parser, StringComparison.Ordinal);
+        }
+
+        foreach (var property in VideoRenderPhaseDurationProperties)
+        {
+            var key = char.ToLowerInvariant(property[0]) + property[1..];
+            Assert.Contains("double " + property + "{0.0};", nativeMetrics, StringComparison.Ordinal);
+            Assert.Contains("Double " + property + ";", idl, StringComparison.Ordinal);
+            Assert.Contains("double " + property + "() const noexcept", runtimeMetrics, StringComparison.Ordinal);
+            Assert.Contains("void " + property + "(double value) noexcept", runtimeMetrics, StringComparison.Ordinal);
+            Assert.Contains("metrics." + property + "(snapshot." + property + ");", nativeEngine, StringComparison.Ordinal);
+            Assert.Contains("public double " + property + " { get; set; }", coreSnapshot, StringComparison.Ordinal);
+            Assert.Contains(property + " = nativeMetrics." + property, appBridge, StringComparison.Ordinal);
+            Assert.Contains(property + " = source." + property, appCapture, StringComparison.Ordinal);
+            Assert.Contains("\" " + key + "=\"", helper, StringComparison.Ordinal);
+            Assert.Contains("TrySetRequiredNonNegativeDouble(values, \"" + key + "\"", parser, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
     public void Instrumented_Avio_Call_Evidence_Crosses_Native_WinRt_App_And_Headless_Boundaries()
     {
         var root = FindRepositoryRoot();
@@ -462,6 +507,35 @@ public sealed class NativeQualityMetricsBridgeContractTests
         "VideoRenderDurationMsP95",
         "VideoRenderDurationMsP99",
         "VideoRenderDurationMsMax",
+        "VideoRenderDirectCopyFrameCount",
+        "VideoRenderVideoProcessorFrameCount",
+        "VideoRenderBgraFrameCount",
+        "VideoRenderPostProcessFrameCount",
+        "VideoProcessorSetupCpuSampleCount",
+        "VideoProcessorSetupCpuDurationMsP50",
+        "VideoProcessorSetupCpuDurationMsP95",
+        "VideoProcessorSetupCpuDurationMsP99",
+        "VideoProcessorSetupCpuDurationMsMax",
+        "VideoProcessorViewTargetCpuSampleCount",
+        "VideoProcessorViewTargetCpuDurationMsP50",
+        "VideoProcessorViewTargetCpuDurationMsP95",
+        "VideoProcessorViewTargetCpuDurationMsP99",
+        "VideoProcessorViewTargetCpuDurationMsMax",
+        "VideoProcessorClearCpuSampleCount",
+        "VideoProcessorClearCpuDurationMsP50",
+        "VideoProcessorClearCpuDurationMsP95",
+        "VideoProcessorClearCpuDurationMsP99",
+        "VideoProcessorClearCpuDurationMsMax",
+        "VideoProcessorBltCpuSampleCount",
+        "VideoProcessorBltCpuDurationMsP50",
+        "VideoProcessorBltCpuDurationMsP95",
+        "VideoProcessorBltCpuDurationMsP99",
+        "VideoProcessorBltCpuDurationMsMax",
+        "VideoProcessorPostProcessCpuSampleCount",
+        "VideoProcessorPostProcessCpuDurationMsP50",
+        "VideoProcessorPostProcessCpuDurationMsP95",
+        "VideoProcessorPostProcessCpuDurationMsP99",
+        "VideoProcessorPostProcessCpuDurationMsMax",
         "AudioAheadWaitDurationMsP50",
         "AudioAheadWaitDurationMsP95",
         "AudioAheadWaitDurationMsP99",
@@ -513,6 +587,43 @@ public sealed class NativeQualityMetricsBridgeContractTests
         "LastInteractionPacketCachePacketCount",
         "LastInteractionPacketCacheBytes",
         "LastInteractionPacketCacheWindowDurationTicks",
+    };
+
+    private static readonly IReadOnlyList<string> VideoRenderPhaseCountProperties = new[]
+    {
+        "VideoRenderDirectCopyFrameCount",
+        "VideoRenderVideoProcessorFrameCount",
+        "VideoRenderBgraFrameCount",
+        "VideoRenderPostProcessFrameCount",
+        "VideoProcessorSetupCpuSampleCount",
+        "VideoProcessorViewTargetCpuSampleCount",
+        "VideoProcessorClearCpuSampleCount",
+        "VideoProcessorBltCpuSampleCount",
+        "VideoProcessorPostProcessCpuSampleCount"
+    };
+
+    private static readonly IReadOnlyList<string> VideoRenderPhaseDurationProperties = new[]
+    {
+        "VideoProcessorSetupCpuDurationMsP50",
+        "VideoProcessorSetupCpuDurationMsP95",
+        "VideoProcessorSetupCpuDurationMsP99",
+        "VideoProcessorSetupCpuDurationMsMax",
+        "VideoProcessorViewTargetCpuDurationMsP50",
+        "VideoProcessorViewTargetCpuDurationMsP95",
+        "VideoProcessorViewTargetCpuDurationMsP99",
+        "VideoProcessorViewTargetCpuDurationMsMax",
+        "VideoProcessorClearCpuDurationMsP50",
+        "VideoProcessorClearCpuDurationMsP95",
+        "VideoProcessorClearCpuDurationMsP99",
+        "VideoProcessorClearCpuDurationMsMax",
+        "VideoProcessorBltCpuDurationMsP50",
+        "VideoProcessorBltCpuDurationMsP95",
+        "VideoProcessorBltCpuDurationMsP99",
+        "VideoProcessorBltCpuDurationMsMax",
+        "VideoProcessorPostProcessCpuDurationMsP50",
+        "VideoProcessorPostProcessCpuDurationMsP95",
+        "VideoProcessorPostProcessCpuDurationMsP99",
+        "VideoProcessorPostProcessCpuDurationMsMax"
     };
 
     private static readonly IReadOnlyList<string> NativeOpenTimingProperties = new[]

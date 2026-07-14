@@ -45,9 +45,11 @@ public sealed class NativePlaybackGraphDecouplingContractTests
         var rendererSource = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Native", "Media", "VideoRenderer.cpp"));
         var graphSource = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Native", "Media", "PlaybackGraph.cpp"));
 
-        Assert.Contains("bool Render(DecodedVideoFrame const& frame, bool hdrDisplayActive);", rendererHeader, StringComparison.Ordinal);
-        Assert.Contains("return rendered;", rendererSource, StringComparison.Ordinal);
-        Assert.Contains("auto rendered = m_videoRenderer.Render(frame, m_hdrOutputActive);", graphSource, StringComparison.Ordinal);
+        Assert.Contains("VideoRenderPhaseSample Render(DecodedVideoFrame const& frame, bool hdrDisplayActive);", rendererHeader, StringComparison.Ordinal);
+        Assert.Contains("return sample;", rendererSource, StringComparison.Ordinal);
+        Assert.Contains("auto const renderSample = m_videoRenderer.Render(frame, m_hdrOutputActive);", graphSource, StringComparison.Ordinal);
+        Assert.Contains("auto const rendered = renderSample.Path != VideoRenderPath::None;", graphSource, StringComparison.Ordinal);
+        Assert.Contains("m_qualityMetrics.RecordVideoRenderPhaseSample(renderSample);", graphSource, StringComparison.Ordinal);
         Assert.Contains("auto presented = m_deviceResources.Present();", graphSource, StringComparison.Ordinal);
         Assert.Contains("if (rendered && presented)", graphSource, StringComparison.Ordinal);
     }

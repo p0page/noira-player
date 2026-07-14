@@ -399,6 +399,65 @@ namespace winrt::NoiraPlayer::Native::implementation
         double VideoRenderDurationMsMax() const noexcept { return m_videoRenderDurationMsMax; }
         void VideoRenderDurationMsMax(double value) noexcept { m_videoRenderDurationMsMax = value; }
 
+        uint64_t VideoRenderDirectCopyFrameCount() const noexcept { return m_videoRenderDirectCopyFrameCount; }
+        void VideoRenderDirectCopyFrameCount(uint64_t value) noexcept { m_videoRenderDirectCopyFrameCount = value; }
+        uint64_t VideoRenderVideoProcessorFrameCount() const noexcept { return m_videoRenderVideoProcessorFrameCount; }
+        void VideoRenderVideoProcessorFrameCount(uint64_t value) noexcept { m_videoRenderVideoProcessorFrameCount = value; }
+        uint64_t VideoRenderBgraFrameCount() const noexcept { return m_videoRenderBgraFrameCount; }
+        void VideoRenderBgraFrameCount(uint64_t value) noexcept { m_videoRenderBgraFrameCount = value; }
+        uint64_t VideoRenderPostProcessFrameCount() const noexcept { return m_videoRenderPostProcessFrameCount; }
+        void VideoRenderPostProcessFrameCount(uint64_t value) noexcept { m_videoRenderPostProcessFrameCount = value; }
+        uint64_t VideoProcessorSetupCpuSampleCount() const noexcept { return m_videoProcessorSetupCpuSampleCount; }
+        void VideoProcessorSetupCpuSampleCount(uint64_t value) noexcept { m_videoProcessorSetupCpuSampleCount = value; }
+        double VideoProcessorSetupCpuDurationMsP50() const noexcept { return m_videoProcessorSetupCpuDurationMsP50; }
+        void VideoProcessorSetupCpuDurationMsP50(double value) noexcept { m_videoProcessorSetupCpuDurationMsP50 = value; }
+        double VideoProcessorSetupCpuDurationMsP95() const noexcept { return m_videoProcessorSetupCpuDurationMsP95; }
+        void VideoProcessorSetupCpuDurationMsP95(double value) noexcept { m_videoProcessorSetupCpuDurationMsP95 = value; }
+        double VideoProcessorSetupCpuDurationMsP99() const noexcept { return m_videoProcessorSetupCpuDurationMsP99; }
+        void VideoProcessorSetupCpuDurationMsP99(double value) noexcept { m_videoProcessorSetupCpuDurationMsP99 = value; }
+        double VideoProcessorSetupCpuDurationMsMax() const noexcept { return m_videoProcessorSetupCpuDurationMsMax; }
+        void VideoProcessorSetupCpuDurationMsMax(double value) noexcept { m_videoProcessorSetupCpuDurationMsMax = value; }
+        uint64_t VideoProcessorViewTargetCpuSampleCount() const noexcept { return m_videoProcessorViewTargetCpuSampleCount; }
+        void VideoProcessorViewTargetCpuSampleCount(uint64_t value) noexcept { m_videoProcessorViewTargetCpuSampleCount = value; }
+        double VideoProcessorViewTargetCpuDurationMsP50() const noexcept { return m_videoProcessorViewTargetCpuDurationMsP50; }
+        void VideoProcessorViewTargetCpuDurationMsP50(double value) noexcept { m_videoProcessorViewTargetCpuDurationMsP50 = value; }
+        double VideoProcessorViewTargetCpuDurationMsP95() const noexcept { return m_videoProcessorViewTargetCpuDurationMsP95; }
+        void VideoProcessorViewTargetCpuDurationMsP95(double value) noexcept { m_videoProcessorViewTargetCpuDurationMsP95 = value; }
+        double VideoProcessorViewTargetCpuDurationMsP99() const noexcept { return m_videoProcessorViewTargetCpuDurationMsP99; }
+        void VideoProcessorViewTargetCpuDurationMsP99(double value) noexcept { m_videoProcessorViewTargetCpuDurationMsP99 = value; }
+        double VideoProcessorViewTargetCpuDurationMsMax() const noexcept { return m_videoProcessorViewTargetCpuDurationMsMax; }
+        void VideoProcessorViewTargetCpuDurationMsMax(double value) noexcept { m_videoProcessorViewTargetCpuDurationMsMax = value; }
+        uint64_t VideoProcessorClearCpuSampleCount() const noexcept { return m_videoProcessorClearCpuSampleCount; }
+        void VideoProcessorClearCpuSampleCount(uint64_t value) noexcept { m_videoProcessorClearCpuSampleCount = value; }
+        double VideoProcessorClearCpuDurationMsP50() const noexcept { return m_videoProcessorClearCpuDurationMsP50; }
+        void VideoProcessorClearCpuDurationMsP50(double value) noexcept { m_videoProcessorClearCpuDurationMsP50 = value; }
+        double VideoProcessorClearCpuDurationMsP95() const noexcept { return m_videoProcessorClearCpuDurationMsP95; }
+        void VideoProcessorClearCpuDurationMsP95(double value) noexcept { m_videoProcessorClearCpuDurationMsP95 = value; }
+        double VideoProcessorClearCpuDurationMsP99() const noexcept { return m_videoProcessorClearCpuDurationMsP99; }
+        void VideoProcessorClearCpuDurationMsP99(double value) noexcept { m_videoProcessorClearCpuDurationMsP99 = value; }
+        double VideoProcessorClearCpuDurationMsMax() const noexcept { return m_videoProcessorClearCpuDurationMsMax; }
+        void VideoProcessorClearCpuDurationMsMax(double value) noexcept { m_videoProcessorClearCpuDurationMsMax = value; }
+        uint64_t VideoProcessorBltCpuSampleCount() const noexcept { return m_videoProcessorBltCpuSampleCount; }
+        void VideoProcessorBltCpuSampleCount(uint64_t value) noexcept { m_videoProcessorBltCpuSampleCount = value; }
+        double VideoProcessorBltCpuDurationMsP50() const noexcept { return m_videoProcessorBltCpuDurationMsP50; }
+        void VideoProcessorBltCpuDurationMsP50(double value) noexcept { m_videoProcessorBltCpuDurationMsP50 = value; }
+        double VideoProcessorBltCpuDurationMsP95() const noexcept { return m_videoProcessorBltCpuDurationMsP95; }
+        void VideoProcessorBltCpuDurationMsP95(double value) noexcept { m_videoProcessorBltCpuDurationMsP95 = value; }
+        double VideoProcessorBltCpuDurationMsP99() const noexcept { return m_videoProcessorBltCpuDurationMsP99; }
+        void VideoProcessorBltCpuDurationMsP99(double value) noexcept { m_videoProcessorBltCpuDurationMsP99 = value; }
+        double VideoProcessorBltCpuDurationMsMax() const noexcept { return m_videoProcessorBltCpuDurationMsMax; }
+        void VideoProcessorBltCpuDurationMsMax(double value) noexcept { m_videoProcessorBltCpuDurationMsMax = value; }
+        uint64_t VideoProcessorPostProcessCpuSampleCount() const noexcept { return m_videoProcessorPostProcessCpuSampleCount; }
+        void VideoProcessorPostProcessCpuSampleCount(uint64_t value) noexcept { m_videoProcessorPostProcessCpuSampleCount = value; }
+        double VideoProcessorPostProcessCpuDurationMsP50() const noexcept { return m_videoProcessorPostProcessCpuDurationMsP50; }
+        void VideoProcessorPostProcessCpuDurationMsP50(double value) noexcept { m_videoProcessorPostProcessCpuDurationMsP50 = value; }
+        double VideoProcessorPostProcessCpuDurationMsP95() const noexcept { return m_videoProcessorPostProcessCpuDurationMsP95; }
+        void VideoProcessorPostProcessCpuDurationMsP95(double value) noexcept { m_videoProcessorPostProcessCpuDurationMsP95 = value; }
+        double VideoProcessorPostProcessCpuDurationMsP99() const noexcept { return m_videoProcessorPostProcessCpuDurationMsP99; }
+        void VideoProcessorPostProcessCpuDurationMsP99(double value) noexcept { m_videoProcessorPostProcessCpuDurationMsP99 = value; }
+        double VideoProcessorPostProcessCpuDurationMsMax() const noexcept { return m_videoProcessorPostProcessCpuDurationMsMax; }
+        void VideoProcessorPostProcessCpuDurationMsMax(double value) noexcept { m_videoProcessorPostProcessCpuDurationMsMax = value; }
+
         double AudioAheadWaitDurationMsP50() const noexcept { return m_audioAheadWaitDurationMsP50; }
         void AudioAheadWaitDurationMsP50(double value) noexcept { m_audioAheadWaitDurationMsP50 = value; }
 
@@ -699,6 +758,35 @@ namespace winrt::NoiraPlayer::Native::implementation
         double m_videoRenderDurationMsP95{0.0};
         double m_videoRenderDurationMsP99{0.0};
         double m_videoRenderDurationMsMax{0.0};
+        uint64_t m_videoRenderDirectCopyFrameCount{0};
+        uint64_t m_videoRenderVideoProcessorFrameCount{0};
+        uint64_t m_videoRenderBgraFrameCount{0};
+        uint64_t m_videoRenderPostProcessFrameCount{0};
+        uint64_t m_videoProcessorSetupCpuSampleCount{0};
+        double m_videoProcessorSetupCpuDurationMsP50{0.0};
+        double m_videoProcessorSetupCpuDurationMsP95{0.0};
+        double m_videoProcessorSetupCpuDurationMsP99{0.0};
+        double m_videoProcessorSetupCpuDurationMsMax{0.0};
+        uint64_t m_videoProcessorViewTargetCpuSampleCount{0};
+        double m_videoProcessorViewTargetCpuDurationMsP50{0.0};
+        double m_videoProcessorViewTargetCpuDurationMsP95{0.0};
+        double m_videoProcessorViewTargetCpuDurationMsP99{0.0};
+        double m_videoProcessorViewTargetCpuDurationMsMax{0.0};
+        uint64_t m_videoProcessorClearCpuSampleCount{0};
+        double m_videoProcessorClearCpuDurationMsP50{0.0};
+        double m_videoProcessorClearCpuDurationMsP95{0.0};
+        double m_videoProcessorClearCpuDurationMsP99{0.0};
+        double m_videoProcessorClearCpuDurationMsMax{0.0};
+        uint64_t m_videoProcessorBltCpuSampleCount{0};
+        double m_videoProcessorBltCpuDurationMsP50{0.0};
+        double m_videoProcessorBltCpuDurationMsP95{0.0};
+        double m_videoProcessorBltCpuDurationMsP99{0.0};
+        double m_videoProcessorBltCpuDurationMsMax{0.0};
+        uint64_t m_videoProcessorPostProcessCpuSampleCount{0};
+        double m_videoProcessorPostProcessCpuDurationMsP50{0.0};
+        double m_videoProcessorPostProcessCpuDurationMsP95{0.0};
+        double m_videoProcessorPostProcessCpuDurationMsP99{0.0};
+        double m_videoProcessorPostProcessCpuDurationMsMax{0.0};
         double m_audioAheadWaitDurationMsP50{0.0};
         double m_audioAheadWaitDurationMsP95{0.0};
         double m_audioAheadWaitDurationMsP99{0.0};

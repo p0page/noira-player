@@ -1228,8 +1228,7 @@ internal static class NativeHeadlessHarness
         metrics.VideoDecodeSynchronizationMode = decodeSynchronizationMode;
         metrics.VideoDecodeWorkerActive = decodeWorkerActive;
 
-        return
-            TrySetRequiredUInt64(values, "decodedVideoFrames", value => metrics.DecodedVideoFrames = value, out error) &&
+        if (!(TrySetRequiredUInt64(values, "decodedVideoFrames", value => metrics.DecodedVideoFrames = value, out error) &&
             TrySetRequiredUInt64(values, "hardwareDecodedVideoFrames", value => metrics.HardwareDecodedVideoFrames = value, out error) &&
             TrySetRequiredUInt64(values, "softwareDecodedVideoFrames", value => metrics.SoftwareDecodedVideoFrames = value, out error) &&
             TrySetRequiredUInt64(values, "renderedVideoFrames", value => metrics.RenderedVideoFrames = value, out error) &&
@@ -1340,6 +1339,35 @@ internal static class NativeHeadlessHarness
             TrySetRequiredNonNegativeDouble(values, "videoRenderDurationMsP95", value => metrics.VideoRenderDurationMsP95 = value, out error) &&
             TrySetRequiredNonNegativeDouble(values, "videoRenderDurationMsP99", value => metrics.VideoRenderDurationMsP99 = value, out error) &&
             TrySetRequiredNonNegativeDouble(values, "videoRenderDurationMsMax", value => metrics.VideoRenderDurationMsMax = value, out error) &&
+            TrySetRequiredUInt64(values, "videoRenderDirectCopyFrameCount", value => metrics.VideoRenderDirectCopyFrameCount = value, out error) &&
+            TrySetRequiredUInt64(values, "videoRenderVideoProcessorFrameCount", value => metrics.VideoRenderVideoProcessorFrameCount = value, out error) &&
+            TrySetRequiredUInt64(values, "videoRenderBgraFrameCount", value => metrics.VideoRenderBgraFrameCount = value, out error) &&
+            TrySetRequiredUInt64(values, "videoRenderPostProcessFrameCount", value => metrics.VideoRenderPostProcessFrameCount = value, out error) &&
+            TrySetRequiredUInt64(values, "videoProcessorSetupCpuSampleCount", value => metrics.VideoProcessorSetupCpuSampleCount = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "videoProcessorSetupCpuDurationMsP50", value => metrics.VideoProcessorSetupCpuDurationMsP50 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "videoProcessorSetupCpuDurationMsP95", value => metrics.VideoProcessorSetupCpuDurationMsP95 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "videoProcessorSetupCpuDurationMsP99", value => metrics.VideoProcessorSetupCpuDurationMsP99 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "videoProcessorSetupCpuDurationMsMax", value => metrics.VideoProcessorSetupCpuDurationMsMax = value, out error) &&
+            TrySetRequiredUInt64(values, "videoProcessorViewTargetCpuSampleCount", value => metrics.VideoProcessorViewTargetCpuSampleCount = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "videoProcessorViewTargetCpuDurationMsP50", value => metrics.VideoProcessorViewTargetCpuDurationMsP50 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "videoProcessorViewTargetCpuDurationMsP95", value => metrics.VideoProcessorViewTargetCpuDurationMsP95 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "videoProcessorViewTargetCpuDurationMsP99", value => metrics.VideoProcessorViewTargetCpuDurationMsP99 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "videoProcessorViewTargetCpuDurationMsMax", value => metrics.VideoProcessorViewTargetCpuDurationMsMax = value, out error) &&
+            TrySetRequiredUInt64(values, "videoProcessorClearCpuSampleCount", value => metrics.VideoProcessorClearCpuSampleCount = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "videoProcessorClearCpuDurationMsP50", value => metrics.VideoProcessorClearCpuDurationMsP50 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "videoProcessorClearCpuDurationMsP95", value => metrics.VideoProcessorClearCpuDurationMsP95 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "videoProcessorClearCpuDurationMsP99", value => metrics.VideoProcessorClearCpuDurationMsP99 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "videoProcessorClearCpuDurationMsMax", value => metrics.VideoProcessorClearCpuDurationMsMax = value, out error) &&
+            TrySetRequiredUInt64(values, "videoProcessorBltCpuSampleCount", value => metrics.VideoProcessorBltCpuSampleCount = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "videoProcessorBltCpuDurationMsP50", value => metrics.VideoProcessorBltCpuDurationMsP50 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "videoProcessorBltCpuDurationMsP95", value => metrics.VideoProcessorBltCpuDurationMsP95 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "videoProcessorBltCpuDurationMsP99", value => metrics.VideoProcessorBltCpuDurationMsP99 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "videoProcessorBltCpuDurationMsMax", value => metrics.VideoProcessorBltCpuDurationMsMax = value, out error) &&
+            TrySetRequiredUInt64(values, "videoProcessorPostProcessCpuSampleCount", value => metrics.VideoProcessorPostProcessCpuSampleCount = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "videoProcessorPostProcessCpuDurationMsP50", value => metrics.VideoProcessorPostProcessCpuDurationMsP50 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "videoProcessorPostProcessCpuDurationMsP95", value => metrics.VideoProcessorPostProcessCpuDurationMsP95 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "videoProcessorPostProcessCpuDurationMsP99", value => metrics.VideoProcessorPostProcessCpuDurationMsP99 = value, out error) &&
+            TrySetRequiredNonNegativeDouble(values, "videoProcessorPostProcessCpuDurationMsMax", value => metrics.VideoProcessorPostProcessCpuDurationMsMax = value, out error) &&
             TrySetRequiredNonNegativeDouble(values, "audioAheadWaitDurationMsP50", value => metrics.AudioAheadWaitDurationMsP50 = value, out error) &&
             TrySetRequiredNonNegativeDouble(values, "audioAheadWaitDurationMsP95", value => metrics.AudioAheadWaitDurationMsP95 = value, out error) &&
             TrySetRequiredNonNegativeDouble(values, "audioAheadWaitDurationMsP99", value => metrics.AudioAheadWaitDurationMsP99 = value, out error) &&
@@ -1378,7 +1406,116 @@ internal static class NativeHeadlessHarness
             TrySetRequiredFiniteDouble(values, "audioVideoDriftMsP50", value => metrics.AudioVideoDriftMsP50 = value, out error) &&
             TrySetRequiredFiniteDouble(values, "audioVideoDriftMsP95", value => metrics.AudioVideoDriftMsP95 = value, out error) &&
             TrySetRequiredFiniteDouble(values, "audioVideoDriftMsP99", value => metrics.AudioVideoDriftMsP99 = value, out error) &&
-            TrySetRequiredFiniteDouble(values, "audioVideoDriftMsMax", value => metrics.AudioVideoDriftMsMax = value, out error);
+            TrySetRequiredFiniteDouble(values, "audioVideoDriftMsMax", value => metrics.AudioVideoDriftMsMax = value, out error)))
+        {
+            return false;
+        }
+
+        return ValidateVideoRenderPhaseMetrics(metrics, out error);
+    }
+
+    private static bool ValidateVideoRenderPhaseMetrics(
+        PlaybackQualityMetricsSnapshot metrics,
+        out string error)
+    {
+        var processorFrames = metrics.VideoRenderVideoProcessorFrameCount;
+        if (metrics.VideoProcessorSetupCpuSampleCount != processorFrames ||
+            metrics.VideoProcessorViewTargetCpuSampleCount != processorFrames ||
+            metrics.VideoProcessorClearCpuSampleCount != processorFrames ||
+            metrics.VideoProcessorBltCpuSampleCount != processorFrames)
+        {
+            error = "Native metric videoProcessorSetupCpuSampleCount contradicts videoRenderVideoProcessorFrameCount.";
+            return false;
+        }
+
+        if (metrics.VideoRenderPostProcessFrameCount > processorFrames ||
+            metrics.VideoProcessorPostProcessCpuSampleCount != metrics.VideoRenderPostProcessFrameCount)
+        {
+            error = "Native metric videoProcessorPostProcessCpuSampleCount contradicts videoRenderPostProcessFrameCount.";
+            return false;
+        }
+
+        var renderedPathCount =
+            (decimal)metrics.VideoRenderDirectCopyFrameCount +
+            metrics.VideoRenderVideoProcessorFrameCount +
+            metrics.VideoRenderBgraFrameCount;
+        if (renderedPathCount < metrics.RenderedVideoFrames)
+        {
+            error = "Native metric videoRenderVideoProcessorFrameCount leaves fewer successful render paths than renderedVideoFrames.";
+            return false;
+        }
+
+        return ValidateHistogram(
+                "videoProcessorSetupCpu",
+                metrics.VideoProcessorSetupCpuSampleCount,
+                metrics.VideoProcessorSetupCpuDurationMsP50,
+                metrics.VideoProcessorSetupCpuDurationMsP95,
+                metrics.VideoProcessorSetupCpuDurationMsP99,
+                metrics.VideoProcessorSetupCpuDurationMsMax,
+                out error) &&
+            ValidateHistogram(
+                "videoProcessorViewTargetCpu",
+                metrics.VideoProcessorViewTargetCpuSampleCount,
+                metrics.VideoProcessorViewTargetCpuDurationMsP50,
+                metrics.VideoProcessorViewTargetCpuDurationMsP95,
+                metrics.VideoProcessorViewTargetCpuDurationMsP99,
+                metrics.VideoProcessorViewTargetCpuDurationMsMax,
+                out error) &&
+            ValidateHistogram(
+                "videoProcessorClearCpu",
+                metrics.VideoProcessorClearCpuSampleCount,
+                metrics.VideoProcessorClearCpuDurationMsP50,
+                metrics.VideoProcessorClearCpuDurationMsP95,
+                metrics.VideoProcessorClearCpuDurationMsP99,
+                metrics.VideoProcessorClearCpuDurationMsMax,
+                out error) &&
+            ValidateHistogram(
+                "videoProcessorBltCpu",
+                metrics.VideoProcessorBltCpuSampleCount,
+                metrics.VideoProcessorBltCpuDurationMsP50,
+                metrics.VideoProcessorBltCpuDurationMsP95,
+                metrics.VideoProcessorBltCpuDurationMsP99,
+                metrics.VideoProcessorBltCpuDurationMsMax,
+                out error) &&
+            ValidateHistogram(
+                "videoProcessorPostProcessCpu",
+                metrics.VideoProcessorPostProcessCpuSampleCount,
+                metrics.VideoProcessorPostProcessCpuDurationMsP50,
+                metrics.VideoProcessorPostProcessCpuDurationMsP95,
+                metrics.VideoProcessorPostProcessCpuDurationMsP99,
+                metrics.VideoProcessorPostProcessCpuDurationMsMax,
+                out error);
+    }
+
+    private static bool ValidateHistogram(
+        string name,
+        ulong sampleCount,
+        double p50,
+        double p95,
+        double p99,
+        double max,
+        out string error)
+    {
+        if (sampleCount == 0)
+        {
+            if (p50 == 0 && p95 == 0 && p99 == 0 && max == 0)
+            {
+                error = "";
+                return true;
+            }
+
+            error = "Native metric " + name + "SampleCount is zero but its duration histogram is nonzero.";
+            return false;
+        }
+
+        if (p50 <= p95 && p95 <= p99 && p99 <= max)
+        {
+            error = "";
+            return true;
+        }
+
+        error = "Native metric " + name + "DurationMsP50/P95/P99/Max ordering is invalid.";
+        return false;
     }
 
     private static bool TryParseAudioSwitchOutcome(

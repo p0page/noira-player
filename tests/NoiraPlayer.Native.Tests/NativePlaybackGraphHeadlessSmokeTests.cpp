@@ -973,6 +973,35 @@ int wmain(int argc, wchar_t** argv)
             << " videoRenderDurationMsP95=" << playbackSnapshot.VideoRenderDurationMsP95
             << " videoRenderDurationMsP99=" << playbackSnapshot.VideoRenderDurationMsP99
             << " videoRenderDurationMsMax=" << playbackSnapshot.VideoRenderDurationMsMax
+            << " videoRenderDirectCopyFrameCount=" << playbackSnapshot.VideoRenderDirectCopyFrameCount
+            << " videoRenderVideoProcessorFrameCount=" << playbackSnapshot.VideoRenderVideoProcessorFrameCount
+            << " videoRenderBgraFrameCount=" << playbackSnapshot.VideoRenderBgraFrameCount
+            << " videoRenderPostProcessFrameCount=" << playbackSnapshot.VideoRenderPostProcessFrameCount
+            << " videoProcessorSetupCpuSampleCount=" << playbackSnapshot.VideoProcessorSetupCpuSampleCount
+            << " videoProcessorSetupCpuDurationMsP50=" << playbackSnapshot.VideoProcessorSetupCpuDurationMsP50
+            << " videoProcessorSetupCpuDurationMsP95=" << playbackSnapshot.VideoProcessorSetupCpuDurationMsP95
+            << " videoProcessorSetupCpuDurationMsP99=" << playbackSnapshot.VideoProcessorSetupCpuDurationMsP99
+            << " videoProcessorSetupCpuDurationMsMax=" << playbackSnapshot.VideoProcessorSetupCpuDurationMsMax
+            << " videoProcessorViewTargetCpuSampleCount=" << playbackSnapshot.VideoProcessorViewTargetCpuSampleCount
+            << " videoProcessorViewTargetCpuDurationMsP50=" << playbackSnapshot.VideoProcessorViewTargetCpuDurationMsP50
+            << " videoProcessorViewTargetCpuDurationMsP95=" << playbackSnapshot.VideoProcessorViewTargetCpuDurationMsP95
+            << " videoProcessorViewTargetCpuDurationMsP99=" << playbackSnapshot.VideoProcessorViewTargetCpuDurationMsP99
+            << " videoProcessorViewTargetCpuDurationMsMax=" << playbackSnapshot.VideoProcessorViewTargetCpuDurationMsMax
+            << " videoProcessorClearCpuSampleCount=" << playbackSnapshot.VideoProcessorClearCpuSampleCount
+            << " videoProcessorClearCpuDurationMsP50=" << playbackSnapshot.VideoProcessorClearCpuDurationMsP50
+            << " videoProcessorClearCpuDurationMsP95=" << playbackSnapshot.VideoProcessorClearCpuDurationMsP95
+            << " videoProcessorClearCpuDurationMsP99=" << playbackSnapshot.VideoProcessorClearCpuDurationMsP99
+            << " videoProcessorClearCpuDurationMsMax=" << playbackSnapshot.VideoProcessorClearCpuDurationMsMax
+            << " videoProcessorBltCpuSampleCount=" << playbackSnapshot.VideoProcessorBltCpuSampleCount
+            << " videoProcessorBltCpuDurationMsP50=" << playbackSnapshot.VideoProcessorBltCpuDurationMsP50
+            << " videoProcessorBltCpuDurationMsP95=" << playbackSnapshot.VideoProcessorBltCpuDurationMsP95
+            << " videoProcessorBltCpuDurationMsP99=" << playbackSnapshot.VideoProcessorBltCpuDurationMsP99
+            << " videoProcessorBltCpuDurationMsMax=" << playbackSnapshot.VideoProcessorBltCpuDurationMsMax
+            << " videoProcessorPostProcessCpuSampleCount=" << playbackSnapshot.VideoProcessorPostProcessCpuSampleCount
+            << " videoProcessorPostProcessCpuDurationMsP50=" << playbackSnapshot.VideoProcessorPostProcessCpuDurationMsP50
+            << " videoProcessorPostProcessCpuDurationMsP95=" << playbackSnapshot.VideoProcessorPostProcessCpuDurationMsP95
+            << " videoProcessorPostProcessCpuDurationMsP99=" << playbackSnapshot.VideoProcessorPostProcessCpuDurationMsP99
+            << " videoProcessorPostProcessCpuDurationMsMax=" << playbackSnapshot.VideoProcessorPostProcessCpuDurationMsMax
             << " audioAheadWaitDurationMsP50=" << playbackSnapshot.AudioAheadWaitDurationMsP50
             << " audioAheadWaitDurationMsP95=" << playbackSnapshot.AudioAheadWaitDurationMsP95
             << " audioAheadWaitDurationMsP99=" << playbackSnapshot.AudioAheadWaitDurationMsP99
@@ -1078,6 +1107,26 @@ int wmain(int argc, wchar_t** argv)
         assert(playbackSnapshot.RenderedVideoFrames > 1);
         assert(playbackSnapshot.VideoDecodeDurationMsP50 > 0.0);
         assert(playbackSnapshot.VideoRenderDurationMsP50 > 0.0);
+        assert(
+            playbackSnapshot.VideoRenderDirectCopyFrameCount +
+            playbackSnapshot.VideoRenderVideoProcessorFrameCount +
+            playbackSnapshot.VideoRenderBgraFrameCount >=
+            playbackSnapshot.RenderedVideoFrames);
+        assert(
+            playbackSnapshot.VideoProcessorSetupCpuSampleCount ==
+            playbackSnapshot.VideoRenderVideoProcessorFrameCount);
+        assert(
+            playbackSnapshot.VideoProcessorViewTargetCpuSampleCount ==
+            playbackSnapshot.VideoRenderVideoProcessorFrameCount);
+        assert(
+            playbackSnapshot.VideoProcessorClearCpuSampleCount ==
+            playbackSnapshot.VideoRenderVideoProcessorFrameCount);
+        assert(
+            playbackSnapshot.VideoProcessorBltCpuSampleCount ==
+            playbackSnapshot.VideoRenderVideoProcessorFrameCount);
+        assert(
+            playbackSnapshot.VideoProcessorPostProcessCpuSampleCount ==
+            playbackSnapshot.VideoRenderPostProcessFrameCount);
         return playbackFailed.load(std::memory_order_relaxed) ||
             !pauseResumeRecovered ||
             (endOfStreamAttempted && !endOfStreamObserved) ? 2 : 0;

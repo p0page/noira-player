@@ -972,6 +972,35 @@ function New-NativeHeadlessParserFixtureOutput {
         videoRenderDurationMsP95 = '1.5'
         videoRenderDurationMsP99 = '2.5'
         videoRenderDurationMsMax = '3.5'
+        videoRenderDirectCopyFrameCount = '0'
+        videoRenderVideoProcessorFrameCount = '2'
+        videoRenderBgraFrameCount = '0'
+        videoRenderPostProcessFrameCount = '1'
+        videoProcessorSetupCpuSampleCount = '2'
+        videoProcessorSetupCpuDurationMsP50 = '0.1'
+        videoProcessorSetupCpuDurationMsP95 = '0.2'
+        videoProcessorSetupCpuDurationMsP99 = '0.3'
+        videoProcessorSetupCpuDurationMsMax = '0.4'
+        videoProcessorViewTargetCpuSampleCount = '2'
+        videoProcessorViewTargetCpuDurationMsP50 = '0.2'
+        videoProcessorViewTargetCpuDurationMsP95 = '0.3'
+        videoProcessorViewTargetCpuDurationMsP99 = '0.4'
+        videoProcessorViewTargetCpuDurationMsMax = '0.5'
+        videoProcessorClearCpuSampleCount = '2'
+        videoProcessorClearCpuDurationMsP50 = '0.01'
+        videoProcessorClearCpuDurationMsP95 = '0.02'
+        videoProcessorClearCpuDurationMsP99 = '0.03'
+        videoProcessorClearCpuDurationMsMax = '0.04'
+        videoProcessorBltCpuSampleCount = '2'
+        videoProcessorBltCpuDurationMsP50 = '0.3'
+        videoProcessorBltCpuDurationMsP95 = '0.4'
+        videoProcessorBltCpuDurationMsP99 = '0.5'
+        videoProcessorBltCpuDurationMsMax = '0.6'
+        videoProcessorPostProcessCpuSampleCount = '1'
+        videoProcessorPostProcessCpuDurationMsP50 = '0.5'
+        videoProcessorPostProcessCpuDurationMsP95 = '0.5'
+        videoProcessorPostProcessCpuDurationMsP99 = '0.5'
+        videoProcessorPostProcessCpuDurationMsMax = '0.5'
         audioAheadWaitDurationMsP50 = '0'
         audioAheadWaitDurationMsP95 = '0'
         audioAheadWaitDurationMsP99 = '0'
@@ -1834,6 +1863,49 @@ function Assert-NativeHeadlessParserContracts {
             ExpectedField = 'videoRenderDurationMsP95'
             Output = New-NativeHeadlessParserFixtureOutput -Overrides @{
                 videoRenderDurationMsP95 = 'Infinity'
+            }
+        },
+        [pscustomobject]@{
+            Name = 'missing-video-processor-setup-percentile'
+            ExpectedField = 'videoProcessorSetupCpuDurationMsP95'
+            Output = New-NativeHeadlessParserFixtureOutput -Omit @('videoProcessorSetupCpuDurationMsP95')
+        },
+        [pscustomobject]@{
+            Name = 'video-processor-setup-count-mismatch'
+            ExpectedField = 'videoProcessorSetupCpuSampleCount'
+            Output = New-NativeHeadlessParserFixtureOutput -Overrides @{
+                videoProcessorSetupCpuSampleCount = '1'
+            }
+        },
+        [pscustomobject]@{
+            Name = 'video-render-path-count-less-than-rendered'
+            ExpectedField = 'videoRenderVideoProcessorFrameCount'
+            Output = New-NativeHeadlessParserFixtureOutput -Overrides @{
+                videoRenderVideoProcessorFrameCount = '1'
+                videoProcessorSetupCpuSampleCount = '1'
+                videoProcessorViewTargetCpuSampleCount = '1'
+                videoProcessorClearCpuSampleCount = '1'
+                videoProcessorBltCpuSampleCount = '1'
+                videoRenderPostProcessFrameCount = '0'
+                videoProcessorPostProcessCpuSampleCount = '0'
+                videoProcessorPostProcessCpuDurationMsP50 = '0'
+                videoProcessorPostProcessCpuDurationMsP95 = '0'
+                videoProcessorPostProcessCpuDurationMsP99 = '0'
+                videoProcessorPostProcessCpuDurationMsMax = '0'
+            }
+        },
+        [pscustomobject]@{
+            Name = 'video-post-process-count-mismatch'
+            ExpectedField = 'videoProcessorPostProcessCpuSampleCount'
+            Output = New-NativeHeadlessParserFixtureOutput -Overrides @{
+                videoProcessorPostProcessCpuSampleCount = '0'
+            }
+        },
+        [pscustomobject]@{
+            Name = 'video-processor-histogram-order-invalid'
+            ExpectedField = 'videoProcessorSetupCpuDurationMsP50'
+            Output = New-NativeHeadlessParserFixtureOutput -Overrides @{
+                videoProcessorSetupCpuDurationMsP50 = '0.5'
             }
         },
         [pscustomobject]@{
