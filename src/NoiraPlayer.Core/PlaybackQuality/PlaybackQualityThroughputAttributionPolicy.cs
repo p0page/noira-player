@@ -51,6 +51,28 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 return result;
             }
 
+            if (hasTransportEvidence && sampleIncomplete)
+            {
+                var requiredMediaDurationMs =
+                    PlaybackQualitySampleWindowPolicy.GetRequiredMediaDurationMs(report);
+                var observedMediaDurationMs =
+                    PlaybackQualitySampleWindowPolicy.GetObservedMediaDurationMs(report);
+                var mediaShortfallMs = Math.Max(
+                    0,
+                    requiredMediaDurationMs - observedMediaDurationMs);
+                var captureToleranceMs =
+                    PlaybackQualitySampleWindowPolicy.GetCaptureBoundaryToleranceMs(report);
+                if (mediaShortfallMs > captureToleranceMs &&
+                    report.Buffers.PlaybackTransportReadWaitMs.GetValueOrDefault() +
+                        captureToleranceMs >= mediaShortfallMs)
+                {
+                    result.Attribution = "transport-wait-dominant";
+                    result.Reason =
+                        "Measured transport read wait was sufficient to explain the incomplete media shortfall.";
+                    return result;
+                }
+            }
+
             if (!sampleIncomplete)
             {
                 result.Attribution = "sample-complete";

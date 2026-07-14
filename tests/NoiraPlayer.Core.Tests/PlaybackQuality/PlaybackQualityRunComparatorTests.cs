@@ -1290,6 +1290,32 @@ public sealed class PlaybackQualityRunComparatorTests
     }
 
     [Fact]
+    public void Compare_Rejects_Core_Comparison_When_Transport_Wait_Can_Explain_Incomplete_Media()
+    {
+        var baseline = CreateReport(
+            "baseline",
+            Check("SampleWindowCoverage", "fail", "frame-pacing", "execution.requestedSampleDurationMs", "30000", "26100"));
+        var candidate = CreateReport(
+            "candidate",
+            Check("SampleWindowCoverage", "fail", "frame-pacing", "execution.requestedSampleDurationMs", "30000", "27366.667"));
+        baseline.Execution.RequestedSampleDurationMs = 30000;
+        candidate.Execution.RequestedSampleDurationMs = 30000;
+        baseline.Source.FrameRate = 60;
+        candidate.Source.FrameRate = 60;
+        baseline.Timing.RenderedVideoFrames = 1566;
+        candidate.Timing.RenderedVideoFrames = 1642;
+        baseline.Buffers.PlaybackTransportCallEvidenceStatus = "available";
+        baseline.Buffers.PlaybackTransportReadWaitMs = 388;
+        candidate.Buffers.PlaybackTransportCallEvidenceStatus = "available";
+        candidate.Buffers.PlaybackTransportReadWaitMs = 4765;
+
+        var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
+
+        Assert.Equal("insufficient-evidence", comparison.Result);
+        Assert.Contains("environment.playbackTransportWait", comparison.Comparability.Signals);
+    }
+
+    [Fact]
     public void Compare_Does_Not_Reject_PauseResume_Recovery_For_Expected_Transport_Wait()
     {
         var baseline = CreateReport(

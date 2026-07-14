@@ -406,6 +406,29 @@ public sealed class NativePlaybackGraphDecouplingContractTests
     }
 
     [Fact]
+    public void Native_Worker_Queue_Empty_Does_Not_Count_As_Video_Starvation_Without_Audio()
+    {
+        var root = FindRepositoryRoot();
+        var graphSource = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NoiraPlayer.Native",
+            "Media",
+            "PlaybackGraph.cpp"));
+        var renderNextFrame = ReadMethodBody(graphSource, "bool PlaybackGraph::RenderNextFrame");
+
+        Assert.Contains("if (hasQueuedAudio)", renderNextFrame, StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "if (workerWaitingForFrame || hasQueuedAudio)",
+            renderNextFrame,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "return workerWaitingForFrame || hasQueuedAudio;",
+            renderNextFrame,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Native_Headless_Opened_Source_Hash_Uses_Observed_Media_Signature()
     {
         var root = FindRepositoryRoot();

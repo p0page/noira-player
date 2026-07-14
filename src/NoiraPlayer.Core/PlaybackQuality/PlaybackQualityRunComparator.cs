@@ -638,10 +638,19 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 return false;
             }
 
+            var requiredMediaDurationMs =
+                PlaybackQualitySampleWindowPolicy.GetRequiredMediaDurationMs(report);
+            var observedMediaDurationMs =
+                PlaybackQualitySampleWindowPolicy.GetObservedMediaDurationMs(report);
+            var captureToleranceMs =
+                PlaybackQualitySampleWindowPolicy.GetCaptureBoundaryToleranceMs(report);
+            var sampleIncomplete = requiredMediaDurationMs > 0 &&
+                observedMediaDurationMs + captureToleranceMs < requiredMediaDurationMs;
+
             return string.Equals(
                 PlaybackQualityThroughputAttributionPolicy.Assess(
                     report,
-                    sampleIncomplete: false).Attribution,
+                    sampleIncomplete).Attribution,
                 "transport-wait-dominant",
                 StringComparison.Ordinal);
         }

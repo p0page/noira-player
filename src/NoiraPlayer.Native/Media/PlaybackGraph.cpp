@@ -1062,7 +1062,7 @@ namespace winrt::NoiraPlayer::Native::implementation
                 if (!frame)
                 {
                     auto hasQueuedAudio = m_audioRenderer.QueuedBufferCount() > 0;
-                    if (workerWaitingForFrame || hasQueuedAudio)
+                    if (hasQueuedAudio)
                     {
                         ++m_videoStarvedPassCount;
                         ++m_qualityMetrics.VideoStarvedPasses;
