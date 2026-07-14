@@ -895,6 +895,8 @@ public sealed class PlaybackQualityRunComparatorTests
         candidate.Source.MediaSourceId = "source-b";
         candidate.Source.FrameRate = 23.976;
         candidate.Source.HdrKind = "Hdr10";
+        RefreshOpenedSourceHash(baseline);
+        RefreshOpenedSourceHash(candidate);
 
         var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
 
@@ -933,6 +935,8 @@ public sealed class PlaybackQualityRunComparatorTests
         candidate.Source.MediaSourceId = "source-a";
         candidate.Source.FrameRate = 23.976;
         candidate.Source.HdrKind = "Hdr10";
+        RefreshOpenedSourceHash(baseline);
+        RefreshOpenedSourceHash(candidate);
 
         var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
 
@@ -1169,6 +1173,37 @@ public sealed class PlaybackQualityRunComparatorTests
     }
 
     [Fact]
+    public void Compare_Reports_Insufficient_When_Opened_Source_Hash_Does_Not_Match_Report_Content()
+    {
+        var baseline = CreateReport("baseline");
+        var candidate = CreateReport("candidate");
+        var forgedHash = "sha256:" + new string('d', 64);
+        baseline.Execution.OpenedSourceHash = forgedHash;
+        candidate.Execution.OpenedSourceHash = forgedHash;
+
+        var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
+
+        Assert.Equal("insufficient-evidence", comparison.Result);
+        Assert.Contains("execution.openedSourceHash", comparison.Comparability.Signals);
+    }
+
+    [Fact]
+    public void Compare_Reports_Insufficient_When_Completed_Source_Metadata_Is_Not_Observed()
+    {
+        var baseline = CreateReport("baseline");
+        var candidate = CreateReport("candidate");
+        candidate.Source.VideoMetadataProvider = "descriptor";
+        candidate.Source.VideoMetadataStatus = "declared";
+        RefreshOpenedSourceHash(candidate);
+
+        var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
+
+        Assert.Equal("insufficient-evidence", comparison.Result);
+        Assert.Contains("source.videoMetadataProvider", comparison.Comparability.Signals);
+        Assert.Contains("source.videoMetadataStatus", comparison.Comparability.Signals);
+    }
+
+    [Fact]
     public void Compare_Reports_Insufficient_When_Opened_Source_Hash_Kind_Is_Missing()
     {
         var baseline = CreateReport("baseline");
@@ -1302,6 +1337,8 @@ public sealed class PlaybackQualityRunComparatorTests
         candidate.Execution.RequestedSampleDurationMs = 30000;
         baseline.Source.FrameRate = 60;
         candidate.Source.FrameRate = 60;
+        RefreshOpenedSourceHash(baseline);
+        RefreshOpenedSourceHash(candidate);
         baseline.Timing.RenderedVideoFrames = 1566;
         candidate.Timing.RenderedVideoFrames = 1642;
         baseline.Buffers.PlaybackTransportCallEvidenceStatus = "available";
@@ -1426,6 +1463,8 @@ public sealed class PlaybackQualityRunComparatorTests
         params PlaybackQualityCheck[] checks)
     {
         var report = new PlaybackQualityReport { RunId = runId };
+        report.Source.VideoMetadataProvider = "native-playback";
+        report.Source.VideoMetadataStatus = "observed";
         report.Environment.PlayerCoreVersion = "core-" + runId;
         report.Environment.SourceRevision = "revision-" + runId;
         report.Environment.BuildConfiguration = "Debug";
@@ -1455,6 +1494,7 @@ public sealed class PlaybackQualityRunComparatorTests
         }
 
         report.Result = HasFailedCheck(report) ? "fail" : "pass";
+        RefreshOpenedSourceHash(report);
         return report;
     }
 
@@ -1496,6 +1536,13 @@ public sealed class PlaybackQualityRunComparatorTests
             IsDefault = false,
             IsForced = false
         });
+        RefreshOpenedSourceHash(report);
+    }
+
+    private static void RefreshOpenedSourceHash(PlaybackQualityReport report)
+    {
+        report.Execution.OpenedSourceHash =
+            PlaybackQualitySourceFingerprint.ComputeOpenedMediaSignature(report);
     }
 
     private static void AddRuntimePlaybackEvidence(PlaybackQualityReport report)

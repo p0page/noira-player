@@ -75,6 +75,21 @@ namespace NoiraPlayer.App.Playback
 
                 metrics = new PlaybackQualityMetricsSnapshot
                 {
+                    ObservedVideoSourceAvailable = nativeMetrics.ObservedVideoSourceAvailable,
+                    ObservedVideoCodec = nativeMetrics.ObservedVideoCodec,
+                    ObservedVideoWidth = nativeMetrics.ObservedVideoWidth,
+                    ObservedVideoHeight = nativeMetrics.ObservedVideoHeight,
+                    ObservedVideoFrameRate = nativeMetrics.ObservedVideoFrameRate,
+                    ObservedVideoRange = nativeMetrics.ObservedVideoRange,
+                    ObservedColorPrimaries = nativeMetrics.ObservedColorPrimaries,
+                    ObservedColorTransfer = nativeMetrics.ObservedColorTransfer,
+                    ObservedColorSpace = nativeMetrics.ObservedColorSpace,
+                    ObservedHdrKind = nativeMetrics.ObservedHdrKind,
+                    ObservedIsDolbyVision = nativeMetrics.ObservedIsDolbyVision,
+                    ObservedDolbyVisionProfile = nativeMetrics.ObservedDolbyVisionProfile,
+                    ObservedDolbyVisionCompatibilityId = nativeMetrics.ObservedDolbyVisionCompatibilityId,
+                    ObservedHasHdr10BaseLayer = nativeMetrics.ObservedHasHdr10BaseLayer,
+                    ObservedHasHlgBaseLayer = nativeMetrics.ObservedHasHlgBaseLayer,
                     RenderPasses = nativeMetrics.RenderPasses,
                     DecodedVideoFrames = nativeMetrics.DecodedVideoFrames,
                     HardwareDecodedVideoFrames = nativeMetrics.HardwareDecodedVideoFrames,

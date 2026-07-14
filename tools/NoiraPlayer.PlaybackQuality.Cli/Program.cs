@@ -42,6 +42,11 @@ internal static class Program
                 return RunMaterializeRunResult(args);
             }
 
+            if (string.Equals(args[0], "compute-opened-source-signature", StringComparison.OrdinalIgnoreCase))
+            {
+                return RunComputeOpenedSourceSignature(args);
+            }
+
             if (string.Equals(args[0], "materialize-baseline-report-set", StringComparison.OrdinalIgnoreCase))
             {
                 return RunMaterializeBaselineReportSet(args);
@@ -149,6 +154,22 @@ internal static class Program
             AnalyzeReport(envelope),
             envelope.CaseMetadata);
         WriteJson(result, options.OutputPath);
+        return 0;
+    }
+
+    private static int RunComputeOpenedSourceSignature(string[] args)
+    {
+        var options = ParseReportInputOutputOptions(args, "compute-opened-source-signature");
+        var envelope = ReadPlaybackQualityReportEnvelope(
+            options.ReportPath,
+            Path.GetFileName(options.ReportPath));
+        WriteJson(
+            new OpenedSourceSignatureOutput
+            {
+                Kind = PlaybackQualitySourceFingerprint.OpenedMediaSignatureKind,
+                Hash = PlaybackQualitySourceFingerprint.ComputeOpenedMediaSignature(envelope.Report)
+            },
+            options.OutputPath);
         return 0;
     }
 
@@ -3758,6 +3779,7 @@ internal static class Program
         writer.WriteLine("Usage:");
         writer.WriteLine("  playback-quality analyze-report --report <report.json> [--output <analysis.json>]");
         writer.WriteLine("  playback-quality materialize-run-result --report <report.json> [--output <run-result.json>]");
+        writer.WriteLine("  playback-quality compute-opened-source-signature --report <report.json> [--output <signature.json>]");
         writer.WriteLine("  playback-quality materialize-baseline-report-set --manifest <reference-manifest.json> --reports-dir <reports-dir> [--collector-version <version>] [--player-core-version <version>] [--source-revision <revision>] [--build-configuration <config>] [--output <summary.json>]");
         writer.WriteLine("  playback-quality materialize-evaluator-self-test-report-set --manifest <reference-manifest.json> --reports-dir <reports-dir> [--collector-version <version>] [--player-core-version <version>] [--source-revision <revision>] [--build-configuration <config>] [--output <summary.json>]");
         writer.WriteLine("  playback-quality materialize-native-harness-report-set --manifest <reference-manifest.json> [--captured-reports-dir <captured-reports-dir>] --reports-dir <reports-dir> [--collector-version <version>] [--player-core-version <version>] [--source-revision <revision>] [--build-configuration <config>] [--output <summary.json>]");
@@ -3790,6 +3812,13 @@ internal static class Program
     {
         public string ReportPath { get; set; } = "";
         public string OutputPath { get; set; } = "";
+    }
+
+    private sealed class OpenedSourceSignatureOutput
+    {
+        public int SchemaVersion { get; set; } = 1;
+        public string Kind { get; set; } = "";
+        public string Hash { get; set; } = "";
     }
 
     private sealed class AnalyzeReportSetOptions

@@ -145,6 +145,7 @@ internal static class NativeHeadlessHarness
             helper.SelectedAudioStreamIndex,
             helper.SelectedSubtitleStreamIndex,
             options.StartPositionTicks);
+        PopulateObservedVideoSourceMetrics(helper.Metrics, helper.Source);
         helper.Metrics.SubtitleCueRenderCount = Math.Max(
             helper.SubtitleSwitch1.CueCountAfter,
             helper.SubtitleSwitch2.CueCountAfter);
@@ -2238,6 +2239,28 @@ internal static class NativeHeadlessHarness
             startPositionTicks: startPositionTicks,
             audioStreamIndex: selectedAudioStreamIndex,
             subtitleStreamIndex: selectedSubtitleStreamIndex);
+    }
+
+    private static void PopulateObservedVideoSourceMetrics(
+        PlaybackQualityMetricsSnapshot metrics,
+        NativeHeadlessSourceInfo source)
+    {
+        metrics.ObservedVideoSourceAvailable = true;
+        metrics.ObservedVideoCodec = source.Codec;
+        metrics.ObservedVideoWidth = checked((uint)Math.Max(0, source.Width));
+        metrics.ObservedVideoHeight = checked((uint)Math.Max(0, source.Height));
+        metrics.ObservedVideoFrameRate = source.FrameRate;
+        metrics.ObservedVideoRange = source.VideoRange;
+        metrics.ObservedColorPrimaries = source.ColorPrimaries;
+        metrics.ObservedColorTransfer = source.ColorTransfer;
+        metrics.ObservedColorSpace = source.ColorSpace;
+        metrics.ObservedHdrKind = source.HdrKind;
+        metrics.ObservedIsDolbyVision = source.IsDolbyVision;
+        metrics.ObservedDolbyVisionProfile = checked((uint)Math.Max(0, source.DolbyVisionProfile));
+        metrics.ObservedDolbyVisionCompatibilityId =
+            checked((uint)Math.Max(0, source.DolbyVisionCompatibilityId));
+        metrics.ObservedHasHdr10BaseLayer = source.HasHdr10BaseLayer;
+        metrics.ObservedHasHlgBaseLayer = source.HasHlgBaseLayer;
     }
 
     private static EmbyStreamKind? MapStreamKind(string kind)

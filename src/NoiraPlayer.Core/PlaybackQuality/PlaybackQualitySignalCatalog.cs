@@ -85,6 +85,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 new PlaybackQualityReportSignalDescriptor("source.durationTicks", "source", "durationTicks"),
                 new PlaybackQualityReportSignalDescriptor("source.containerStartTimeTicks", "source", "containerStartTimeTicks"),
                 new PlaybackQualityReportSignalDescriptor("source.videoStreamStartTimeTicks", "source", "videoStreamStartTimeTicks"),
+                new PlaybackQualityReportSignalDescriptor("source.videoMetadataProvider", "source", "videoMetadataProvider"),
+                new PlaybackQualityReportSignalDescriptor("source.videoMetadataStatus", "source", "videoMetadataStatus"),
                 new PlaybackQualityReportSignalDescriptor("source.codec", "source", "codec"),
                 new PlaybackQualityReportSignalDescriptor("source.width", "source", "width"),
                 new PlaybackQualityReportSignalDescriptor("source.height", "source", "height"),

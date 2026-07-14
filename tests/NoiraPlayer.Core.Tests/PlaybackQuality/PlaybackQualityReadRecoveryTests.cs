@@ -230,7 +230,7 @@ public sealed class PlaybackQualityReadRecoveryTests
         var json = PlaybackQualityReportSerializer.Serialize(report);
         var parsed = PlaybackQualityReportSerializer.Deserialize(json);
 
-        Assert.Equal("playback-quality-v0.14", PlaybackQualityRunResult.CurrentEvaluationVersion);
+        Assert.Equal("playback-quality-v0.15", PlaybackQualityRunResult.CurrentEvaluationVersion);
         Assert.Contains("\"readRecovery\"", json);
         Assert.Contains("\"minReadErrors\": 1", json);
         Assert.Contains("\"readRecoveryCount\": 1", json);
@@ -280,6 +280,11 @@ public sealed class PlaybackQualityReadRecoveryTests
                     MaxRetries = 10
                 }
             },
+            Source = new PlaybackQualitySource
+            {
+                VideoMetadataProvider = "native-playback",
+                VideoMetadataStatus = "observed"
+            },
             ReadRecovery = new PlaybackQualityReadRecovery
             {
                 ReadErrorCount = 1,
@@ -291,6 +296,9 @@ public sealed class PlaybackQualityReadRecoveryTests
                 LastReadRecoveryDurationMs = 37.5
             }
         };
+
+        report.Execution.OpenedSourceHash =
+            PlaybackQualitySourceFingerprint.ComputeOpenedMediaSignature(report);
 
         return report;
     }

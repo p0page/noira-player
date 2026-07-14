@@ -8,6 +8,37 @@ namespace winrt::NoiraPlayer::Native::implementation
     {
         NativePlaybackQualityMetrics() = default;
 
+        bool ObservedVideoSourceAvailable() const noexcept { return m_observedVideoSourceAvailable; }
+        void ObservedVideoSourceAvailable(bool value) noexcept { m_observedVideoSourceAvailable = value; }
+        winrt::hstring ObservedVideoCodec() const { return m_observedVideoCodec; }
+        void ObservedVideoCodec(winrt::hstring const& value) { m_observedVideoCodec = value; }
+        uint32_t ObservedVideoWidth() const noexcept { return m_observedVideoWidth; }
+        void ObservedVideoWidth(uint32_t value) noexcept { m_observedVideoWidth = value; }
+        uint32_t ObservedVideoHeight() const noexcept { return m_observedVideoHeight; }
+        void ObservedVideoHeight(uint32_t value) noexcept { m_observedVideoHeight = value; }
+        double ObservedVideoFrameRate() const noexcept { return m_observedVideoFrameRate; }
+        void ObservedVideoFrameRate(double value) noexcept { m_observedVideoFrameRate = value; }
+        winrt::hstring ObservedVideoRange() const { return m_observedVideoRange; }
+        void ObservedVideoRange(winrt::hstring const& value) { m_observedVideoRange = value; }
+        winrt::hstring ObservedColorPrimaries() const { return m_observedColorPrimaries; }
+        void ObservedColorPrimaries(winrt::hstring const& value) { m_observedColorPrimaries = value; }
+        winrt::hstring ObservedColorTransfer() const { return m_observedColorTransfer; }
+        void ObservedColorTransfer(winrt::hstring const& value) { m_observedColorTransfer = value; }
+        winrt::hstring ObservedColorSpace() const { return m_observedColorSpace; }
+        void ObservedColorSpace(winrt::hstring const& value) { m_observedColorSpace = value; }
+        winrt::hstring ObservedHdrKind() const { return m_observedHdrKind; }
+        void ObservedHdrKind(winrt::hstring const& value) { m_observedHdrKind = value; }
+        bool ObservedIsDolbyVision() const noexcept { return m_observedIsDolbyVision; }
+        void ObservedIsDolbyVision(bool value) noexcept { m_observedIsDolbyVision = value; }
+        uint32_t ObservedDolbyVisionProfile() const noexcept { return m_observedDolbyVisionProfile; }
+        void ObservedDolbyVisionProfile(uint32_t value) noexcept { m_observedDolbyVisionProfile = value; }
+        uint32_t ObservedDolbyVisionCompatibilityId() const noexcept { return m_observedDolbyVisionCompatibilityId; }
+        void ObservedDolbyVisionCompatibilityId(uint32_t value) noexcept { m_observedDolbyVisionCompatibilityId = value; }
+        bool ObservedHasHdr10BaseLayer() const noexcept { return m_observedHasHdr10BaseLayer; }
+        void ObservedHasHdr10BaseLayer(bool value) noexcept { m_observedHasHdr10BaseLayer = value; }
+        bool ObservedHasHlgBaseLayer() const noexcept { return m_observedHasHlgBaseLayer; }
+        void ObservedHasHlgBaseLayer(bool value) noexcept { m_observedHasHlgBaseLayer = value; }
+
         uint64_t RenderPasses() const noexcept { return m_renderPasses; }
         void RenderPasses(uint64_t value) noexcept { m_renderPasses = value; }
 
@@ -513,6 +544,21 @@ namespace winrt::NoiraPlayer::Native::implementation
         void LastInteractionPacketCacheWindowDurationTicks(int64_t value) noexcept { m_lastInteractionPacketCacheWindowDurationTicks = value; }
 
     private:
+        bool m_observedVideoSourceAvailable{false};
+        winrt::hstring m_observedVideoCodec;
+        uint32_t m_observedVideoWidth{0};
+        uint32_t m_observedVideoHeight{0};
+        double m_observedVideoFrameRate{0.0};
+        winrt::hstring m_observedVideoRange;
+        winrt::hstring m_observedColorPrimaries;
+        winrt::hstring m_observedColorTransfer;
+        winrt::hstring m_observedColorSpace;
+        winrt::hstring m_observedHdrKind;
+        bool m_observedIsDolbyVision{false};
+        uint32_t m_observedDolbyVisionProfile{0};
+        uint32_t m_observedDolbyVisionCompatibilityId{0};
+        bool m_observedHasHdr10BaseLayer{false};
+        bool m_observedHasHlgBaseLayer{false};
         uint64_t m_renderPasses{0};
         uint64_t m_decodedVideoFrames{0};
         uint64_t m_hardwareDecodedVideoFrames{0};

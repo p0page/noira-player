@@ -429,6 +429,8 @@ public sealed class PlaybackQualityComparisonSuiteTests
         report.Environment.BuildConfiguration = "Debug";
         report.Source.ItemId = "item-1";
         report.Source.MediaSourceId = "source-1";
+        report.Source.VideoMetadataProvider = "native-playback";
+        report.Source.VideoMetadataStatus = "observed";
         report.Source.FrameRate = 23.976;
         report.Source.HdrKind = "Sdr";
         report.Execution = new PlaybackQualityExecutionEvidence
@@ -457,6 +459,8 @@ public sealed class PlaybackQualityComparisonSuiteTests
         }
 
         report.Result = checks.Any(check => check.Status == "fail") ? "fail" : "pass";
+        report.Execution.OpenedSourceHash =
+            PlaybackQualitySourceFingerprint.ComputeOpenedMediaSignature(report);
 
         return report;
     }

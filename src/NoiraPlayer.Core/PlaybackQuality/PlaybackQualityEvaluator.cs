@@ -16,6 +16,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
             report.Checks.Clear();
             report.Analysis = new PlaybackQualityAnalysis();
             CheckFailedLifecycleOperations(report);
+            CheckObservedSourceMetadata(report);
 
             if (report.Expected == null)
             {
@@ -368,6 +369,78 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 "MaxInteractionRecoveryDurationMs",
                 signal,
                 failureArea);
+        }
+
+        private static void CheckObservedSourceMetadata(PlaybackQualityReport report)
+        {
+            var execution = report.Execution;
+            if (execution == null ||
+                !PlaybackQualityEvidenceLevel.MeetsMinimum(
+                    execution.EvidenceLevel,
+                    PlaybackQualityEvidenceLevel.NativePlayback) ||
+                !string.Equals(
+                    execution.Status,
+                    PlaybackQualityExecutionStatus.Completed,
+                    StringComparison.Ordinal) ||
+                !execution.SourceOpened ||
+                !execution.NativeGraphOpened ||
+                !execution.DemuxStarted ||
+                !execution.DecoderOpened ||
+                !execution.PlaybackSampleObserved)
+            {
+                return;
+            }
+
+            CheckObservedSourceMetadataValue(
+                report,
+                "VideoMetadataProvider",
+                "source.videoMetadataProvider",
+                report.Source.VideoMetadataProvider,
+                "native-playback");
+            CheckObservedSourceMetadataValue(
+                report,
+                "VideoMetadataStatus",
+                "source.videoMetadataStatus",
+                report.Source.VideoMetadataStatus,
+                "observed");
+        }
+
+        private static void CheckObservedSourceMetadataValue(
+            PlaybackQualityReport report,
+            string name,
+            string signal,
+            string actual,
+            string expected)
+        {
+            if (string.Equals(actual, expected, StringComparison.Ordinal))
+            {
+                report.Checks.Add(new PlaybackQualityCheck
+                {
+                    Name = name,
+                    Signal = signal,
+                    Status = "pass",
+                    FailureArea = "evidence-collection",
+                    Expected = expected,
+                    Actual = actual,
+                    Message = "Video metadata provenance is native-observed."
+                });
+                return;
+            }
+
+            var message = name + " must be " + expected +
+                " for completed native playback; descriptor or manifest video metadata is not native-observed evidence.";
+            report.FailureReasons.Add(message);
+            report.Checks.Add(new PlaybackQualityCheck
+            {
+                Name = name,
+                Signal = signal,
+                Status = "fail",
+                FailureArea = "evidence-collection",
+                Expected = expected,
+                Actual = actual ?? "",
+                Message = message
+            });
+            AddRelevantSignal(report, signal);
         }
 
         private static void CheckSampleWindowCoverage(PlaybackQualityReport report)

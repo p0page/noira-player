@@ -32,6 +32,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
             PlaybackQualityReport report,
             PlaybackQualityMetricsSnapshot metrics)
         {
+            ApplyObservedVideoSource(report, metrics);
             report.Timing.RenderPasses = metrics.RenderPasses;
             report.Timing.DecodedVideoFrames = metrics.DecodedVideoFrames;
             report.Timing.HardwareDecodedVideoFrames = metrics.HardwareDecodedVideoFrames;
@@ -182,6 +183,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
             var audio = selectedAudio ?? source.AudioStreams.FirstOrDefault();
             var video = source.VideoStreams.FirstOrDefault();
 
+            report.Source.VideoMetadataProvider = "descriptor";
+            report.Source.VideoMetadataStatus = "declared";
             report.Source.ItemId = descriptor.ItemId;
             report.Source.MediaSourceId = source.Id;
             report.Source.HasDirectStreamUrl = !string.IsNullOrWhiteSpace(source.DirectStreamUrl);
@@ -229,6 +232,81 @@ namespace NoiraPlayer.Core.PlaybackQuality
             report.Source.HasHlgBaseLayer = source.HdrProfile.HasHlgBaseLayer;
             report.Source.AudioCodec = audio?.Codec ?? "";
             ApplyTracks(report, descriptor, video);
+        }
+
+        private static void ApplyObservedVideoSource(
+            PlaybackQualityReport report,
+            PlaybackQualityMetricsSnapshot metrics)
+        {
+            if (!metrics.ObservedVideoSourceAvailable)
+            {
+                return;
+            }
+
+            report.Source.VideoMetadataProvider = "native-playback";
+            report.Source.VideoMetadataStatus = "observed";
+            report.Source.Codec = metrics.ObservedVideoCodec;
+            report.Source.Width = checked((int)metrics.ObservedVideoWidth);
+            report.Source.Height = checked((int)metrics.ObservedVideoHeight);
+            report.Source.FrameRate = metrics.ObservedVideoFrameRate;
+            report.Source.VideoRange = NormalizeObservedVideoRange(metrics.ObservedVideoRange);
+            report.Source.ColorPrimaries = metrics.ObservedColorPrimaries;
+            report.Source.ColorTransfer = metrics.ObservedColorTransfer;
+            report.Source.ColorSpace = metrics.ObservedColorSpace;
+            report.Source.HdrKind = metrics.ObservedHdrKind;
+            report.Source.HdrPlaybackStrategy = MapObservedHdrPlaybackStrategy(metrics.ObservedHdrKind);
+            report.Source.IsHdr = IsObservedHdr(metrics.ObservedHdrKind);
+            report.Source.IsDolbyVision = metrics.ObservedIsDolbyVision;
+            report.Source.DolbyVisionProfile = metrics.ObservedIsDolbyVision
+                ? checked((int)metrics.ObservedDolbyVisionProfile)
+                : (int?)null;
+            report.Source.DolbyVisionCompatibilityId = metrics.ObservedIsDolbyVision
+                ? checked((int)metrics.ObservedDolbyVisionCompatibilityId)
+                : (int?)null;
+            report.Source.HasHdr10BaseLayer = metrics.ObservedHasHdr10BaseLayer;
+            report.Source.HasHlgBaseLayer = metrics.ObservedHasHlgBaseLayer;
+        }
+
+        private static string NormalizeObservedVideoRange(string value)
+        {
+            return (value ?? "").Replace('_', ' ').Trim();
+        }
+
+        private static bool IsObservedHdr(string hdrKind)
+        {
+            return !string.IsNullOrWhiteSpace(hdrKind) &&
+                !string.Equals(hdrKind, "Sdr", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(hdrKind, "None", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string MapObservedHdrPlaybackStrategy(string hdrKind)
+        {
+            if (string.Equals(hdrKind, "DolbyVisionWithHdr10Fallback", StringComparison.Ordinal))
+            {
+                return "HDR10 fallback from Dolby Vision";
+            }
+
+            if (string.Equals(hdrKind, "DolbyVisionWithHlgFallback", StringComparison.Ordinal))
+            {
+                return "HLG fallback from Dolby Vision";
+            }
+
+            if (string.Equals(hdrKind, "DolbyVisionUnsupported", StringComparison.Ordinal))
+            {
+                return "Dolby Vision unsupported";
+            }
+
+            if (string.Equals(hdrKind, "Hdr10", StringComparison.OrdinalIgnoreCase))
+            {
+                return "HDR10";
+            }
+
+            if (string.Equals(hdrKind, "Hlg", StringComparison.OrdinalIgnoreCase))
+            {
+                return "HLG";
+            }
+
+            return "SDR";
         }
 
         private static void ApplyTracks(

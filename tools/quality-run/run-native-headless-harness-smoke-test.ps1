@@ -1,4 +1,4 @@
-﻿param(
+param(
     [string]$PlayerCoreVersion = 'smoke-core',
     [string]$SourceRevision = 'smoke-native-headless-real-revision',
     [string]$ImportSourceRevision = 'smoke-native-headless-import-revision',
@@ -3372,7 +3372,7 @@ $nativeSubtitleMaterializedReport = Get-Content -LiteralPath $nativeSubtitleMate
 $nativeNetworkMaterializedReport = Get-Content -LiteralPath $nativeNetworkMaterializedReportPath -Raw | ConvertFrom-Json
 $nativeLongPauseNetworkMaterializedReport = Get-Content -LiteralPath $nativeLongPauseNetworkMaterializedReportPath -Raw | ConvertFrom-Json
 $nativeDemuxReadRecoveryMaterializedReport = Get-Content -LiteralPath $nativeDemuxReadRecoveryMaterializedReportPath -Raw | ConvertFrom-Json
-if ($nativeNetworkMaterializedReport.report.execution.openedSourceHashKind -ne 'observed-media-signature-v1' -or
+if ($nativeNetworkMaterializedReport.report.execution.openedSourceHashKind -ne 'observed-media-signature-v2' -or
     $nativeNetworkMaterializedReport.report.execution.openedSourceHash -eq
         $nativeNetworkMaterializedReport.report.execution.sourceLocatorHash -or
     $nativeNetworkMaterializedReport.report.execution.status -ne 'completed' -or

@@ -742,6 +742,16 @@ namespace NoiraPlayer.Core.PlaybackQuality
             }
 
             if (execution.SourceOpened &&
+                IsSha256Fingerprint(execution.OpenedSourceHash) &&
+                !string.Equals(
+                    execution.OpenedSourceHash,
+                    PlaybackQualitySourceFingerprint.ComputeOpenedMediaSignature(report),
+                    StringComparison.Ordinal))
+            {
+                AddIncompatibility(assessment, "execution.openedSourceHash");
+            }
+
+            if (execution.SourceOpened &&
                 !string.Equals(
                     execution.OpenedSourceHashKind,
                     PlaybackQualitySourceFingerprint.OpenedMediaSignatureKind,
@@ -754,6 +764,22 @@ namespace NoiraPlayer.Core.PlaybackQuality
             if (report.Result == PlaybackQualityReportResult.Pass ||
                 report.Result == PlaybackQualityReportResult.Fail)
             {
+                if (!string.Equals(
+                        report.Source.VideoMetadataProvider,
+                        "native-playback",
+                        StringComparison.Ordinal))
+                {
+                    AddIncompatibility(assessment, "source.videoMetadataProvider");
+                }
+
+                if (!string.Equals(
+                        report.Source.VideoMetadataStatus,
+                        "observed",
+                        StringComparison.Ordinal))
+                {
+                    AddIncompatibility(assessment, "source.videoMetadataStatus");
+                }
+
                 RequireExecutionStage(assessment, execution.SourceOpened, "execution.sourceOpened");
                 RequireExecutionStage(assessment, execution.NativeGraphOpened, "execution.nativeGraphOpened");
                 RequireExecutionStage(assessment, execution.DemuxStarted, "execution.demuxStarted");

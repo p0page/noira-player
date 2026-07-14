@@ -98,6 +98,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
     {
         public string Status { get; set; } = "unknown";
         public string Reason { get; set; } = "";
+        public string VideoMetadataProvider { get; set; } = "";
+        public string VideoMetadataStatus { get; set; } = "";
         public bool HasDirectStreamUrl { get; set; }
         public string DirectStreamProtocol { get; set; } = "";
         public string Container { get; set; } = "";
@@ -1405,6 +1407,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
         {
             var source = new PlaybackQualitySourceAssessment
             {
+                VideoMetadataProvider = report.Source.VideoMetadataProvider,
+                VideoMetadataStatus = report.Source.VideoMetadataStatus,
                 HasDirectStreamUrl = report.Source.HasDirectStreamUrl,
                 DirectStreamProtocol = report.Source.DirectStreamProtocol,
                 Container = report.Source.Container,
@@ -1452,6 +1456,16 @@ namespace NoiraPlayer.Core.PlaybackQuality
                     AddUnique(source.MismatchedSignals, check.Signal);
                     AddUnique(source.Signals, check.Signal);
                 }
+            }
+
+            if (RequiresObservedSourceMetadata(report) &&
+                (!string.Equals(source.VideoMetadataProvider, "native-playback", StringComparison.Ordinal) ||
+                    !string.Equals(source.VideoMetadataStatus, "observed", StringComparison.Ordinal)))
+            {
+                source.Status = "unverified";
+                source.Reason =
+                    "Completed native playback source metadata was not captured from the native playback graph.";
+                return source;
             }
 
             if (source.MismatchedSignals.Count > 0)
@@ -1563,6 +1577,16 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 source.Chapters.Count > 0 ||
                 !string.IsNullOrWhiteSpace(source.HdrKind) ||
                 !string.IsNullOrWhiteSpace(source.HdrPlaybackStrategy);
+
+            if (!string.IsNullOrWhiteSpace(source.VideoMetadataProvider))
+            {
+                AddUnique(source.Signals, "source.videoMetadataProvider");
+            }
+
+            if (!string.IsNullOrWhiteSpace(source.VideoMetadataStatus))
+            {
+                AddUnique(source.Signals, "source.videoMetadataStatus");
+            }
 
             if (!string.IsNullOrWhiteSpace(source.Codec))
             {
@@ -2124,6 +2148,25 @@ namespace NoiraPlayer.Core.PlaybackQuality
             foreach (var operation in analysis.Lifecycle.MissingOperations)
             {
                 AddUnique(analysis.MissingEvidence, "lifecycle." + operation);
+            }
+
+            if (RequiresObservedSourceMetadata(report))
+            {
+                if (!string.Equals(
+                        report.Source.VideoMetadataProvider,
+                        "native-playback",
+                        StringComparison.Ordinal))
+                {
+                    AddUnique(analysis.MissingEvidence, "source.videoMetadataProvider");
+                }
+
+                if (!string.Equals(
+                        report.Source.VideoMetadataStatus,
+                        "observed",
+                        StringComparison.Ordinal))
+                {
+                    AddUnique(analysis.MissingEvidence, "source.videoMetadataStatus");
+                }
             }
 
             if (string.IsNullOrWhiteSpace(report.Source.Codec))
@@ -3301,6 +3344,22 @@ namespace NoiraPlayer.Core.PlaybackQuality
             {
                 AddUnique(analysis.MissingEvidence, signal);
             }
+        }
+
+        private static bool RequiresObservedSourceMetadata(PlaybackQualityReport report)
+        {
+            var execution = report.Execution;
+            return execution != null &&
+                PlaybackQualityEvidenceLevel.MeetsMinimum(
+                    execution.EvidenceLevel,
+                    PlaybackQualityEvidenceLevel.NativePlayback) &&
+                string.Equals(
+                    execution.Status,
+                    PlaybackQualityExecutionStatus.Completed,
+                    StringComparison.Ordinal) &&
+                execution.SourceOpened &&
+                execution.NativeGraphOpened &&
+                execution.PlaybackSampleObserved;
         }
 
         private static void AddUnique(List<string> values, string value)

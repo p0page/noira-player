@@ -358,6 +358,8 @@ public sealed class PlaybackQualityReferenceManifestTests
 
         var requiredSignals = PlaybackQualityRequiredSignalPolicy.CreateRequiredSignals(referenceCase);
 
+        Assert.Contains("source.videoMetadataProvider", requiredSignals);
+        Assert.Contains("source.videoMetadataStatus", requiredSignals);
         Assert.Contains("source.hasDirectStreamUrl", requiredSignals);
         Assert.Contains("source.directStreamProtocol", requiredSignals);
     }
@@ -2417,6 +2419,8 @@ public sealed class PlaybackQualityReferenceManifestTests
         {
             HasSignalPresenceEvidence = true
         };
+        entry.PresentSignals.Add("source.videoMetadataProvider");
+        entry.PresentSignals.Add("source.videoMetadataStatus");
         entry.PresentSignals.Add("source.codec");
         entry.PresentSignals.Add("source.hasDirectStreamUrl");
         entry.PresentSignals.Add("source.directStreamProtocol");
@@ -2832,6 +2836,8 @@ public sealed class PlaybackQualityReferenceManifestTests
         {
             Source = new PlaybackQualitySource
             {
+                VideoMetadataProvider = "native-playback",
+                VideoMetadataStatus = "observed",
                 Container = "mkv",
                 Bitrate = 76_000_000,
                 DurationTicks = 70_200_000_000,
@@ -2890,6 +2896,8 @@ public sealed class PlaybackQualityReferenceManifestTests
             ImageTag = "chapter-0"
         });
 
+        Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "source.videoMetadataProvider"));
+        Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "source.videoMetadataStatus"));
         Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "source.container"));
         Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "source.bitrate"));
         Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(report, "source.durationTicks"));
@@ -3077,6 +3085,12 @@ public sealed class PlaybackQualityReferenceManifestTests
         bool decoderOpened,
         bool playbackSampleObserved)
     {
+        if (sourceOpened)
+        {
+            report.Source.VideoMetadataProvider = "native-playback";
+            report.Source.VideoMetadataStatus = "observed";
+        }
+
         report.Execution = new PlaybackQualityExecutionEvidence
         {
             AttemptId = "attempt-" + referenceCase.CaseId.Replace('/', '-'),
@@ -3085,9 +3099,7 @@ public sealed class PlaybackQualityReferenceManifestTests
             EvidenceLevel = PlaybackQualityEvidenceLevel.NativePlayback,
             Status = status,
             SourceLocatorHash = PlaybackQualitySourceFingerprint.Compute(referenceCase.Uri),
-            OpenedSourceHash = sourceOpened
-                ? "sha256:" + new string('b', 64)
-                : "",
+            OpenedSourceHash = "",
             OpenedSourceHashKind = sourceOpened
                 ? PlaybackQualitySourceFingerprint.OpenedMediaSignatureKind
                 : "",
@@ -3102,6 +3114,11 @@ public sealed class PlaybackQualityReferenceManifestTests
             DecoderOpened = decoderOpened,
             PlaybackSampleObserved = playbackSampleObserved
         };
+        if (sourceOpened)
+        {
+            report.Execution.OpenedSourceHash =
+                PlaybackQualitySourceFingerprint.ComputeOpenedMediaSignature(report);
+        }
     }
 
     private static void AddObservedLifecycle(PlaybackQualityReport report)

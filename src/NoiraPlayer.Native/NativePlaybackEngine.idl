@@ -53,6 +53,21 @@
     runtimeclass NativePlaybackQualityMetrics
     {
         NativePlaybackQualityMetrics();
+        Boolean ObservedVideoSourceAvailable;
+        String ObservedVideoCodec;
+        UInt32 ObservedVideoWidth;
+        UInt32 ObservedVideoHeight;
+        Double ObservedVideoFrameRate;
+        String ObservedVideoRange;
+        String ObservedColorPrimaries;
+        String ObservedColorTransfer;
+        String ObservedColorSpace;
+        String ObservedHdrKind;
+        Boolean ObservedIsDolbyVision;
+        UInt32 ObservedDolbyVisionProfile;
+        UInt32 ObservedDolbyVisionCompatibilityId;
+        Boolean ObservedHasHdr10BaseLayer;
+        Boolean ObservedHasHlgBaseLayer;
         UInt64 RenderPasses;
         UInt64 DecodedVideoFrames;
         UInt64 HardwareDecodedVideoFrames;

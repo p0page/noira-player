@@ -36,6 +36,10 @@ function Set-SmokeNativeExecutionEvidence {
     } else {
         $report
     }
+    if ($SourceOpened) {
+        $payload.source | Add-Member -NotePropertyName videoMetadataProvider -NotePropertyValue 'native-playback' -Force
+        $payload.source | Add-Member -NotePropertyName videoMetadataStatus -NotePropertyValue 'observed' -Force
+    }
     $payload | Add-Member -NotePropertyName execution -NotePropertyValue ([pscustomobject]@{
         attemptId = $AttemptId
         runner = 'native-headless'
@@ -44,7 +48,7 @@ function Set-SmokeNativeExecutionEvidence {
         status = $Status
         sourceLocatorHash = $fingerprint
         openedSourceHash = $(if ($SourceOpened) { $openedFingerprint } else { '' })
-        openedSourceHashKind = $(if ($SourceOpened) { 'observed-media-signature-v1' } else { '' })
+        openedSourceHashKind = $(if ($SourceOpened) { 'observed-media-signature-v2' } else { '' })
         startedAtUtc = '2026-07-08T00:00:00.0000000+00:00'
         durationMs = 1000.0
         requestedSampleDurationMs = $RequestedSampleDurationMs
@@ -129,6 +133,31 @@ function Set-SmokeNativeExecutionEvidence {
     }
 
     $report | ConvertTo-Json -Depth 100 | Set-Content -LiteralPath $Path -Encoding UTF8
+    if ($SourceOpened) {
+        $signaturePath = $Path + '.opened-source-signature.json'
+        try {
+            dotnet $cliDll compute-opened-source-signature --report $Path --output $signaturePath
+            if ($LASTEXITCODE -ne 0) {
+                throw 'compute-opened-source-signature returned a non-zero exit code.'
+            }
+
+            $signature = Get-Content -Raw -LiteralPath $signaturePath | ConvertFrom-Json
+            $report = Get-Content -Raw -LiteralPath $Path | ConvertFrom-Json
+            $payload = if ($null -ne $report.PSObject.Properties['report']) {
+                $report.report
+            } else {
+                $report
+            }
+            $payload.execution.openedSourceHashKind = $signature.kind
+            $payload.execution.openedSourceHash = $signature.hash
+            $report | ConvertTo-Json -Depth 100 | Set-Content -LiteralPath $Path -Encoding UTF8
+        }
+        finally {
+            if (Test-Path -LiteralPath $signaturePath) {
+                Remove-Item -LiteralPath $signaturePath -Force
+            }
+        }
+    }
 }
 
 try {
@@ -640,8 +669,8 @@ try {
         throw 'Expected analyze-report-set output schemaVersion 1.'
     }
 
-    if ($analysisSet.evaluationVersion -ne 'playback-quality-v0.14') {
-        throw 'Expected analyze-report-set output evaluationVersion playback-quality-v0.14.'
+    if ($analysisSet.evaluationVersion -ne 'playback-quality-v0.15') {
+        throw 'Expected analyze-report-set output evaluationVersion playback-quality-v0.15.'
     }
 
     if ($analysisSet.action -ne 'fix-report-analysis') {
@@ -955,8 +984,8 @@ try {
         throw 'Expected playback quality CLI plan-runs output schemaVersion 1.'
     }
 
-    if ($runPlan.evaluationVersion -ne 'playback-quality-v0.14') {
-        throw 'Expected playback quality CLI plan-runs output evaluationVersion playback-quality-v0.14.'
+    if ($runPlan.evaluationVersion -ne 'playback-quality-v0.15') {
+        throw 'Expected playback quality CLI plan-runs output evaluationVersion playback-quality-v0.15.'
     }
 
     if ($runPlan.caseCount -ne 3) {
@@ -1006,7 +1035,7 @@ try {
 
     $materializedBaselineSummary = Get-Content -Raw -LiteralPath $materializedBaselineSummaryPath | ConvertFrom-Json
     if ($materializedBaselineSummary.schemaVersion -ne 1 -or
-        $materializedBaselineSummary.evaluationVersion -ne 'playback-quality-v0.14' -or
+        $materializedBaselineSummary.evaluationVersion -ne 'playback-quality-v0.15' -or
         $materializedBaselineSummary.caseCount -ne 3 -or
         $materializedBaselineSummary.reportsDirectory -ne $materializedBaselineDir) {
         throw 'Expected materialize-baseline-report-set summary to describe generated reports.'
@@ -1539,7 +1568,7 @@ try {
     "status": "completed",
     "sourceLocatorHash": "sha256:5073a766f7c829219a03780802afc5037a5b56f172f64ff87b162fc01ffdec69",
     "openedSourceHash": "sha256:6073a766f7c829219a03780802afc5037a5b56f172f64ff87b162fc01ffdec69",
-    "openedSourceHashKind": "observed-media-signature-v1",
+    "openedSourceHashKind": "observed-media-signature-v2",
     "startedAtUtc": "2026-07-08T00:00:00.0000000+00:00",
     "durationMs": 12000.0,
     "requestedSampleDurationMs": 1000.0,
@@ -1809,7 +1838,7 @@ try {
     "status": "completed",
     "sourceLocatorHash": "sha256:a583a300e4b10ff6e8942470c73eca9cd9407eaed9e2deea38754cfeba8962e6",
     "openedSourceHash": "sha256:b583a300e4b10ff6e8942470c73eca9cd9407eaed9e2deea38754cfeba8962e6",
-    "openedSourceHashKind": "observed-media-signature-v1",
+    "openedSourceHashKind": "observed-media-signature-v2",
     "startedAtUtc": "2026-07-08T00:00:00.0000000+00:00",
     "durationMs": 3000.0,
     "requestedSampleDurationMs": 1000.0,
@@ -1920,7 +1949,7 @@ try {
     "status": "completed",
     "sourceLocatorHash": "sha256:a583a300e4b10ff6e8942470c73eca9cd9407eaed9e2deea38754cfeba8962e6",
     "openedSourceHash": "sha256:b583a300e4b10ff6e8942470c73eca9cd9407eaed9e2deea38754cfeba8962e6",
-    "openedSourceHashKind": "observed-media-signature-v1",
+    "openedSourceHashKind": "observed-media-signature-v2",
     "startedAtUtc": "2026-07-08T00:00:00.0000000+00:00",
     "durationMs": 1500.0,
     "requestedSampleDurationMs": 1000.0,
@@ -2007,6 +2036,24 @@ try {
   "checks": []
 }
 '@ | Set-Content -LiteralPath (Join-Path $rawCadenceCandidateDir 'local\native-raw-cadence-24.json') -Encoding UTF8
+
+    $rawCadenceLocator = 'file:///quality-cases/native-raw-cadence-24.mp4'
+    Set-SmokeNativeExecutionEvidence `
+        -Path (Join-Path $rawCadenceBaselineDir 'local\native-raw-cadence-24.json') `
+        -Locator $rawCadenceLocator `
+        -AttemptId 'raw-cadence-baseline-attempt' `
+        -Status 'completed' `
+        -SourceOpened $true `
+        -PlaybackSampleObserved $true `
+        -RequestedSampleDurationMs 1000.0
+    Set-SmokeNativeExecutionEvidence `
+        -Path (Join-Path $rawCadenceCandidateDir 'local\native-raw-cadence-24.json') `
+        -Locator $rawCadenceLocator `
+        -AttemptId 'raw-cadence-candidate-attempt' `
+        -Status 'completed' `
+        -SourceOpened $true `
+        -PlaybackSampleObserved $true `
+        -RequestedSampleDurationMs 1000.0
 
     Push-Location $repoRoot
     try {
@@ -2211,7 +2258,7 @@ try {
     "status": "completed",
     "sourceLocatorHash": "sha256:6d6dcdf267881094dc407e3b909ee6f37e3da9a9606c4e112c244ed053d978f3",
     "openedSourceHash": "sha256:7d6dcdf267881094dc407e3b909ee6f37e3da9a9606c4e112c244ed053d978f3",
-    "openedSourceHashKind": "observed-media-signature-v1",
+    "openedSourceHashKind": "observed-media-signature-v2",
     "startedAtUtc": "2026-07-08T00:00:00.0000000+00:00",
     "durationMs": 60000.0,
     "requestedSampleDurationMs": 60000.0,
@@ -2282,7 +2329,7 @@ try {
     "status": "unsupported",
     "sourceLocatorHash": "sha256:6ff500115e21a7d612e1d98387f7a2eab7777ef97cfa0ab39cd96ac3ffce69a1",
     "openedSourceHash": "sha256:7ff500115e21a7d612e1d98387f7a2eab7777ef97cfa0ab39cd96ac3ffce69a1",
-    "openedSourceHashKind": "observed-media-signature-v1",
+    "openedSourceHashKind": "observed-media-signature-v2",
     "startedAtUtc": "2026-07-08T00:00:00.0000000+00:00",
     "durationMs": 500.0,
     "sourceOpenAttempted": true,
@@ -2367,6 +2414,14 @@ try {
         -Status 'completed' `
         -SourceOpened $true `
         -PlaybackSampleObserved $true
+
+    Set-SmokeNativeExecutionEvidence `
+        -Path (Join-Path $reportSetDir 'case-b.json') `
+        -Locator 'https://example.invalid/jellyfin/dv-profile5-hevc-4k.mp4' `
+        -AttemptId 'report-set-dv-attempt' `
+        -Status 'unsupported' `
+        -SourceOpened $true `
+        -PlaybackSampleObserved $false
 
     Push-Location $repoRoot
     try {
@@ -2582,7 +2637,7 @@ try {
     "status": "completed",
     "sourceLocatorHash": "sha256:42369d6a58bde4131352982fddaefd4a639b1e9487e8db91eefc5f314782de13",
     "openedSourceHash": "sha256:52369d6a58bde4131352982fddaefd4a639b1e9487e8db91eefc5f314782de13",
-    "openedSourceHashKind": "observed-media-signature-v1",
+    "openedSourceHashKind": "observed-media-signature-v2",
     "startedAtUtc": "2026-07-08T00:00:00.0000000+00:00",
     "durationMs": 1000.0,
     "sourceOpenAttempted": true,
@@ -3611,8 +3666,8 @@ try {
         throw 'Expected playback quality CLI evaluate-candidate output schemaVersion 1.'
     }
 
-    if ($candidateEvaluation.evaluationVersion -ne 'playback-quality-v0.14') {
-        throw 'Expected playback quality CLI evaluate-candidate output evaluationVersion playback-quality-v0.14.'
+    if ($candidateEvaluation.evaluationVersion -ne 'playback-quality-v0.15') {
+        throw 'Expected playback quality CLI evaluate-candidate output evaluationVersion playback-quality-v0.15.'
     }
 
     if ($candidateEvaluation.action -ne 'accept-candidate') {

@@ -13,6 +13,21 @@
 
     public sealed class PlaybackQualityMetricsSnapshot
     {
+        public bool ObservedVideoSourceAvailable { get; set; }
+        public string ObservedVideoCodec { get; set; } = "";
+        public uint ObservedVideoWidth { get; set; }
+        public uint ObservedVideoHeight { get; set; }
+        public double ObservedVideoFrameRate { get; set; }
+        public string ObservedVideoRange { get; set; } = "";
+        public string ObservedColorPrimaries { get; set; } = "";
+        public string ObservedColorTransfer { get; set; } = "";
+        public string ObservedColorSpace { get; set; } = "";
+        public string ObservedHdrKind { get; set; } = "";
+        public bool ObservedIsDolbyVision { get; set; }
+        public uint ObservedDolbyVisionProfile { get; set; }
+        public uint ObservedDolbyVisionCompatibilityId { get; set; }
+        public bool ObservedHasHdr10BaseLayer { get; set; }
+        public bool ObservedHasHlgBaseLayer { get; set; }
         public ulong RenderPasses { get; set; }
         public ulong DecodedVideoFrames { get; set; }
         public ulong HardwareDecodedVideoFrames { get; set; }

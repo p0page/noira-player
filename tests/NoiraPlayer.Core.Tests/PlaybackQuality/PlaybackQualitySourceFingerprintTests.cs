@@ -6,18 +6,38 @@ namespace NoiraPlayer.Core.Tests.PlaybackQuality;
 public sealed class PlaybackQualitySourceFingerprintTests
 {
     [Fact]
-    public void ComputeOpenedMediaSignature_Uses_Observed_Source_And_Tracks_Not_Locator()
+    public void ComputeOpenedMediaSignature_Uses_Observed_Video_Not_Locator_Or_Declared_Tracks()
     {
         var first = CreateObservedReport("item-a", "session-one", "eac3");
         var sameMedia = CreateObservedReport("item-b", "session-two", "eac3");
-        var differentAudio = CreateObservedReport("item-c", "session-three", "truehd");
+        var differentDeclaredAudio = CreateObservedReport("item-c", "session-three", "truehd");
+        var differentObservedVideo = CreateObservedReport("item-d", "session-four", "eac3");
+        differentObservedVideo.Source.Codec = "av1";
 
         Assert.Equal(
             PlaybackQualitySourceFingerprint.ComputeOpenedMediaSignature(first),
             PlaybackQualitySourceFingerprint.ComputeOpenedMediaSignature(sameMedia));
+        Assert.Equal(
+            PlaybackQualitySourceFingerprint.ComputeOpenedMediaSignature(first),
+            PlaybackQualitySourceFingerprint.ComputeOpenedMediaSignature(differentDeclaredAudio));
         Assert.NotEqual(
             PlaybackQualitySourceFingerprint.ComputeOpenedMediaSignature(first),
-            PlaybackQualitySourceFingerprint.ComputeOpenedMediaSignature(differentAudio));
+            PlaybackQualitySourceFingerprint.ComputeOpenedMediaSignature(differentObservedVideo));
+    }
+
+    [Fact]
+    public void ComputeOpenedMediaSignature_Includes_Source_Metadata_Provenance()
+    {
+        var observed = CreateObservedReport("item-a", "session-one", "eac3");
+        var declared = CreateObservedReport("item-a", "session-one", "eac3");
+        observed.Source.VideoMetadataProvider = "native-playback";
+        observed.Source.VideoMetadataStatus = "observed";
+        declared.Source.VideoMetadataProvider = "descriptor";
+        declared.Source.VideoMetadataStatus = "declared";
+
+        Assert.NotEqual(
+            PlaybackQualitySourceFingerprint.ComputeOpenedMediaSignature(observed),
+            PlaybackQualitySourceFingerprint.ComputeOpenedMediaSignature(declared));
     }
 
     [Fact]
@@ -66,6 +86,8 @@ public sealed class PlaybackQualitySourceFingerprintTests
                 DurationTicks = 60_000_000,
                 ContainerStartTimeTicks = 0,
                 VideoStreamStartTimeTicks = 0,
+                VideoMetadataProvider = "native-playback",
+                VideoMetadataStatus = "observed",
                 Codec = "hevc",
                 Width = 3840,
                 Height = 2160,

@@ -59,9 +59,10 @@ $caseId = Get-Value '--case-id'
 $reportsDir = Get-Value '--reports-dir'
 $locatorHash = Get-Value '--source-locator-hash'
 $scenario = Get-Value '--scenario'
-$openedHash = $env:NOIRAPLAYER_COMPARISON_TEST_OPENED_HASH
 $sourceRevision = $env:NOIRAPLAYER_COMPARISON_TEST_REVISION
 $maxFrameGap = [double]$env:NOIRAPLAYER_COMPARISON_TEST_MAX_FRAME_GAP
+$audioCodec = $env:NOIRAPLAYER_COMPARISON_TEST_AUDIO_CODEC
+$colorSpace = $env:NOIRAPLAYER_COMPARISON_TEST_COLOR_SPACE
 $reportPath = Join-Path $reportsDir ($caseId.Replace('/', [System.IO.Path]::DirectorySeparatorChar) + '.json')
 New-Item -ItemType Directory -Path (Split-Path -Parent $reportPath) -Force | Out-Null
 
@@ -87,8 +88,8 @@ $report = [ordered]@{
         evidenceLevel = 'native-playback'
         status = 'completed'
         sourceLocatorHash = $locatorHash
-        openedSourceHash = $openedHash
-        openedSourceHashKind = 'observed-media-signature-v1'
+        openedSourceHash = ''
+        openedSourceHashKind = 'observed-media-signature-v2'
         startedAtUtc = '2026-07-11T00:00:00.0000000+00:00'
         durationMs = 3000.0
         requestedSampleDurationMs = [double](Get-Value '--duration-seconds') * 1000.0
@@ -101,11 +102,12 @@ $report = [ordered]@{
         playbackSampleObserved = $true
     }
     source = @{
+        videoMetadataProvider = 'native-playback'; videoMetadataStatus = 'observed'
         codec = 'h264'; hasDirectStreamUrl = $true; directStreamProtocol = 'https'
         container = 'mp4'; bitrate = 1000000; durationTicks = 600000000
         containerStartTimeTicks = 0; videoStreamStartTimeTicks = 0
         width = 320; height = 180; frameRate = 24.0; hdrKind = 'Sdr'; videoRange = 'SDR'
-        colorPrimaries = 'bt709'; colorTransfer = 'bt709'; colorSpace = 'bt709'
+        colorPrimaries = 'bt709'; colorTransfer = 'bt709'; colorSpace = $colorSpace
         isHdr = $false; isDirectPlayable = $true; isDolbyVision = $false
         hasHdr10BaseLayer = $false; hasHlgBaseLayer = $false
     }
@@ -159,7 +161,7 @@ $report = [ordered]@{
         selectedVideoStreamIndex = 0; selectedAudioStreamIndex = 1
         selectedSubtitleStreamIndex = -1; isSubtitleDisabled = $true
         video = @(@{ index = 0; kind = 'Video'; codec = 'h264'; language = 'und'; isExternal = $false; isDefault = $true; isForced = $false })
-        audio = @(@{ index = 1; kind = 'Audio'; codec = 'aac'; language = 'eng'; channels = 2; isExternal = $false; isDefault = $true; isForced = $false })
+        audio = @(@{ index = 1; kind = 'Audio'; codec = $audioCodec; language = 'eng'; channels = 2; isExternal = $false; isDefault = $true; isForced = $false })
         subtitles = @(@{ index = 2; kind = 'Subtitle'; codec = 'srt'; language = 'eng'; isExternal = $false; isDefault = $false; isForced = $false })
     }
     runtimeMetrics = @{
@@ -191,16 +193,27 @@ $report = [ordered]@{
     })
 }
 
-@{
+$envelope = @{
     schemaVersion = 1
-    evaluationVersion = 'playback-quality-v0.14'
+    evaluationVersion = 'playback-quality-v0.15'
     caseMetadata = @{ caseId = $caseId; category = 'stable'; severity = 'high'; stability = 'stable' }
     report = $report
-} | ConvertTo-Json -Depth 30 | Set-Content -LiteralPath $reportPath -Encoding UTF8
+}
+$envelope | ConvertTo-Json -Depth 30 | Set-Content -LiteralPath $reportPath -Encoding UTF8
+$signaturePath = $reportPath + '.signature.json'
+dotnet $env:NOIRAPLAYER_COMPARISON_TEST_CLI_DLL compute-opened-source-signature --report $reportPath --output $signaturePath
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+$signature = Get-Content -Raw -LiteralPath $signaturePath | ConvertFrom-Json
+$envelope.report.execution.openedSourceHashKind = $signature.kind
+$envelope.report.execution.openedSourceHash = $signature.hash
+$envelope | ConvertTo-Json -Depth 30 | Set-Content -LiteralPath $reportPath -Encoding UTF8
+Remove-Item -LiteralPath $signaturePath -Force
 exit 0
 '@ | Set-Content -LiteralPath $fakeHarness -Encoding UTF8
 
-    $env:NOIRAPLAYER_COMPARISON_TEST_OPENED_HASH = 'sha256:' + ('a' * 64)
+    $env:NOIRAPLAYER_COMPARISON_TEST_CLI_DLL = Join-Path $repoRoot 'tools\NoiraPlayer.PlaybackQuality.Cli\bin\Debug\net10.0\NoiraPlayer.PlaybackQuality.Cli.dll'
+    $env:NOIRAPLAYER_COMPARISON_TEST_AUDIO_CODEC = 'aac'
+    $env:NOIRAPLAYER_COMPARISON_TEST_COLOR_SPACE = 'bt709'
     $env:NOIRAPLAYER_COMPARISON_TEST_REVISION = 'baseline-test-revision'
     $env:NOIRAPLAYER_COMPARISON_TEST_MAX_FRAME_GAP = '180'
     powershell -NoProfile -ExecutionPolicy Bypass -File $baselineScriptPath `
@@ -216,7 +229,7 @@ exit 0
         throw 'Baseline summary must preserve the native execution observation window and timeout.'
     }
 
-    $env:NOIRAPLAYER_COMPARISON_TEST_OPENED_HASH = 'sha256:' + ('b' * 64)
+    $env:NOIRAPLAYER_COMPARISON_TEST_COLOR_SPACE = 'bt470bg'
     $env:NOIRAPLAYER_COMPARISON_TEST_REVISION = 'candidate-test-revision'
     $env:NOIRAPLAYER_COMPARISON_TEST_MAX_FRAME_GAP = '120'
     powershell -NoProfile -ExecutionPolicy Bypass -File $baselineScriptPath `
@@ -280,7 +293,9 @@ exit 0
     Write-Output 'playback-core-tuning-candidate-comparison tests ok'
 }
 finally {
-    Remove-Item Env:NOIRAPLAYER_COMPARISON_TEST_OPENED_HASH -ErrorAction SilentlyContinue
+    Remove-Item Env:NOIRAPLAYER_COMPARISON_TEST_CLI_DLL -ErrorAction SilentlyContinue
+    Remove-Item Env:NOIRAPLAYER_COMPARISON_TEST_AUDIO_CODEC -ErrorAction SilentlyContinue
+    Remove-Item Env:NOIRAPLAYER_COMPARISON_TEST_COLOR_SPACE -ErrorAction SilentlyContinue
     Remove-Item Env:NOIRAPLAYER_COMPARISON_TEST_REVISION -ErrorAction SilentlyContinue
     Remove-Item Env:NOIRAPLAYER_COMPARISON_TEST_MAX_FRAME_GAP -ErrorAction SilentlyContinue
     if (Test-Path -LiteralPath $tempRoot) {

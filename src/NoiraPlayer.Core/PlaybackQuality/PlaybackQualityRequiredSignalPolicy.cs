@@ -27,6 +27,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 return requiredSignals;
             }
 
+            AddUnique(requiredSignals, "source.videoMetadataProvider");
+            AddUnique(requiredSignals, "source.videoMetadataStatus");
             AddUnique(requiredSignals, "source.codec");
             AddUnique(requiredSignals, "source.hasDirectStreamUrl");
             AddUnique(requiredSignals, "source.directStreamProtocol");
@@ -332,6 +334,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
 
             switch (signal)
             {
+                case "source.videoMetadataProvider":
+                case "source.videoMetadataStatus":
                 case "source.durationTicks":
                 case "source.containerStartTimeTicks":
                 case "source.videoStreamStartTimeTicks":
@@ -427,6 +431,10 @@ namespace NoiraPlayer.Core.PlaybackQuality
                     return report.RuntimeMetrics.ProcessCpuUtilizationRatio > 0;
                 case "source.codec":
                     return !string.IsNullOrWhiteSpace(report.Source.Codec);
+                case "source.videoMetadataProvider":
+                    return !string.IsNullOrWhiteSpace(report.Source.VideoMetadataProvider);
+                case "source.videoMetadataStatus":
+                    return !string.IsNullOrWhiteSpace(report.Source.VideoMetadataStatus);
                 case "source.hasDirectStreamUrl":
                     return report.Source.HasDirectStreamUrl;
                 case "source.directStreamProtocol":

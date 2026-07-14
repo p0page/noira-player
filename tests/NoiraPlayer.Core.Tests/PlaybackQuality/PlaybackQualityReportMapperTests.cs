@@ -362,6 +362,85 @@ public sealed class PlaybackQualityReportMapperTests
     }
 
     [Fact]
+    public void ApplyMetrics_Uses_Observed_Native_Video_Source_Over_Stale_Descriptor_Metadata()
+    {
+        var report = new PlaybackQualityReport();
+        report.Source.Codec = "hevc";
+        report.Source.Width = 1920;
+        report.Source.Height = 1080;
+        report.Source.FrameRate = 25;
+        report.Source.VideoRange = "SDR";
+        report.Source.HdrKind = "Hdr10";
+        report.Source.HdrPlaybackStrategy = "HDR10";
+        report.Source.IsHdr = true;
+        report.Source.VideoMetadataProvider = "descriptor";
+        report.Source.VideoMetadataStatus = "declared";
+
+        var metrics = new PlaybackQualityMetricsSnapshot
+        {
+            ObservedVideoSourceAvailable = true,
+            ObservedVideoCodec = "hevc",
+            ObservedVideoWidth = 3840,
+            ObservedVideoHeight = 2160,
+            ObservedVideoFrameRate = 23.976,
+            ObservedVideoRange = "HDR10_Dolby_Vision",
+            ObservedColorPrimaries = "bt2020",
+            ObservedColorTransfer = "smpte2084",
+            ObservedColorSpace = "bt2020nc",
+            ObservedHdrKind = "DolbyVisionWithHdr10Fallback",
+            ObservedIsDolbyVision = true,
+            ObservedDolbyVisionProfile = 8,
+            ObservedDolbyVisionCompatibilityId = 1,
+            ObservedHasHdr10BaseLayer = true,
+            ObservedHasHlgBaseLayer = false
+        };
+
+        PlaybackQualityReportMapper.ApplyMetrics(report, metrics);
+
+        Assert.Equal("native-playback", report.Source.VideoMetadataProvider);
+        Assert.Equal("observed", report.Source.VideoMetadataStatus);
+        Assert.Equal("hevc", report.Source.Codec);
+        Assert.Equal(3840, report.Source.Width);
+        Assert.Equal(2160, report.Source.Height);
+        Assert.Equal(23.976, report.Source.FrameRate);
+        Assert.Equal("HDR10 Dolby Vision", report.Source.VideoRange);
+        Assert.Equal("bt2020", report.Source.ColorPrimaries);
+        Assert.Equal("smpte2084", report.Source.ColorTransfer);
+        Assert.Equal("bt2020nc", report.Source.ColorSpace);
+        Assert.Equal("DolbyVisionWithHdr10Fallback", report.Source.HdrKind);
+        Assert.Equal("HDR10 fallback from Dolby Vision", report.Source.HdrPlaybackStrategy);
+        Assert.True(report.Source.IsHdr);
+        Assert.True(report.Source.IsDolbyVision);
+        Assert.Equal(8, report.Source.DolbyVisionProfile);
+        Assert.Equal(1, report.Source.DolbyVisionCompatibilityId);
+        Assert.True(report.Source.HasHdr10BaseLayer);
+        Assert.False(report.Source.HasHlgBaseLayer);
+    }
+
+    [Fact]
+    public void ApplyMetrics_Does_Not_Replace_Descriptor_Source_Without_Native_Observation()
+    {
+        var report = new PlaybackQualityReport();
+        report.Source.HdrKind = "Hdr10";
+        report.Source.VideoRange = "HDR10";
+        report.Source.VideoMetadataProvider = "descriptor";
+        report.Source.VideoMetadataStatus = "declared";
+
+        PlaybackQualityReportMapper.ApplyMetrics(
+            report,
+            new PlaybackQualityMetricsSnapshot
+            {
+                ObservedVideoSourceAvailable = false,
+                ObservedHdrKind = "DolbyVisionWithHdr10Fallback"
+            });
+
+        Assert.Equal("descriptor", report.Source.VideoMetadataProvider);
+        Assert.Equal("declared", report.Source.VideoMetadataStatus);
+        Assert.Equal("Hdr10", report.Source.HdrKind);
+        Assert.Equal("HDR10", report.Source.VideoRange);
+    }
+
+    [Fact]
     public void ApplySource_Copies_Playback_Source_Metadata()
     {
         var report = new PlaybackQualityReport();

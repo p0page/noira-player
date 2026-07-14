@@ -178,7 +178,26 @@ namespace winrt::NoiraPlayer::Native::implementation
     NoiraPlayer::Native::NativePlaybackQualityMetrics NativePlaybackEngine::QualityMetrics() const
     {
         auto snapshot = m_graph->QualityMetricsSnapshot();
+        auto const observedSource = m_graph->VideoSourceSnapshot();
         auto metrics = winrt::make<NativePlaybackQualityMetrics>();
+        metrics.ObservedVideoSourceAvailable(observedSource.has_value());
+        if (observedSource)
+        {
+            metrics.ObservedVideoCodec(winrt::to_hstring(observedSource->Codec));
+            metrics.ObservedVideoWidth(observedSource->Width);
+            metrics.ObservedVideoHeight(observedSource->Height);
+            metrics.ObservedVideoFrameRate(observedSource->FrameRate);
+            metrics.ObservedVideoRange(winrt::to_hstring(observedSource->VideoRange));
+            metrics.ObservedColorPrimaries(winrt::to_hstring(observedSource->ColorPrimaries));
+            metrics.ObservedColorTransfer(winrt::to_hstring(observedSource->ColorTransfer));
+            metrics.ObservedColorSpace(winrt::to_hstring(observedSource->ColorSpace));
+            metrics.ObservedHdrKind(winrt::to_hstring(observedSource->HdrKind));
+            metrics.ObservedIsDolbyVision(observedSource->IsDolbyVision);
+            metrics.ObservedDolbyVisionProfile(observedSource->DolbyVisionProfile);
+            metrics.ObservedDolbyVisionCompatibilityId(observedSource->DolbyVisionCompatibilityId);
+            metrics.ObservedHasHdr10BaseLayer(observedSource->HasHdr10BaseLayer);
+            metrics.ObservedHasHlgBaseLayer(observedSource->HasHlgBaseLayer);
+        }
         metrics.RenderPasses(snapshot.RenderPasses);
         metrics.DecodedVideoFrames(snapshot.DecodedVideoFrames);
         metrics.HardwareDecodedVideoFrames(snapshot.HardwareDecodedVideoFrames);

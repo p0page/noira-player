@@ -71,6 +71,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
 
     public sealed class PlaybackQualitySource
     {
+        public string VideoMetadataProvider { get; set; } = "";
+        public string VideoMetadataStatus { get; set; } = "";
         public string ItemId { get; set; } = "";
         public string MediaSourceId { get; set; } = "";
         public bool HasDirectStreamUrl { get; set; }

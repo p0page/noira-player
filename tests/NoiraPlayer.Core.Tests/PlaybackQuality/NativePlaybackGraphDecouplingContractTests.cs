@@ -449,6 +449,30 @@ public sealed class NativePlaybackGraphDecouplingContractTests
     }
 
     [Fact]
+    public void Native_Headless_Maps_Parsed_Source_Into_Observed_Metrics_Before_Composition()
+    {
+        var root = FindRepositoryRoot();
+        var harnessSource = File.ReadAllText(Path.Combine(
+            root,
+            "tools",
+            "NoiraPlayer.PlaybackQuality.Headless",
+            "Program.cs"));
+
+        Assert.Contains(
+            "PopulateObservedVideoSourceMetrics(helper.Metrics, helper.Source);",
+            harnessSource,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "metrics.ObservedVideoSourceAvailable = true;",
+            harnessSource,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "metrics.ObservedHdrKind = source.HdrKind;",
+            harnessSource,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Native_Headless_Gate_Runs_A_Deterministic_Network_Reconnect_Case()
     {
         var root = FindRepositoryRoot();

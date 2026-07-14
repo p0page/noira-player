@@ -9,7 +9,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
 {
     public static class PlaybackQualitySourceFingerprint
     {
-        public const string OpenedMediaSignatureKind = "observed-media-signature-v1";
+        public const string OpenedMediaSignatureKind = "observed-media-signature-v2";
 
         public static string Compute(string locator)
         {
@@ -56,8 +56,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 var source = report.Source ?? new PlaybackQualitySource();
                 writer.WriteStartObject();
                 writer.WriteString("version", OpenedMediaSignatureKind);
-                writer.WriteString("container", source.Container ?? "");
-                writer.WriteNumber("durationTicks", source.DurationTicks);
+                writer.WriteString("videoMetadataProvider", source.VideoMetadataProvider ?? "");
+                writer.WriteString("videoMetadataStatus", source.VideoMetadataStatus ?? "");
                 WriteNullableInt64(writer, "containerStartTimeTicks", source.ContainerStartTimeTicks);
                 WriteNullableInt64(writer, "videoStreamStartTimeTicks", source.VideoStreamStartTimeTicks);
                 writer.WriteString("codec", source.Codec ?? "");
@@ -69,9 +69,11 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 writer.WriteString("colorPrimaries", source.ColorPrimaries ?? "");
                 writer.WriteString("colorTransfer", source.ColorTransfer ?? "");
                 writer.WriteString("colorSpace", source.ColorSpace ?? "");
-                WriteTracks(writer, "video", report.Tracks?.Video);
-                WriteTracks(writer, "audio", report.Tracks?.Audio);
-                WriteTracks(writer, "subtitles", report.Tracks?.Subtitles);
+                writer.WriteBoolean("isDolbyVision", source.IsDolbyVision);
+                WriteNullableInt32(writer, "dolbyVisionProfile", source.DolbyVisionProfile);
+                WriteNullableInt32(writer, "dolbyVisionCompatibilityId", source.DolbyVisionCompatibilityId);
+                writer.WriteBoolean("hasHdr10BaseLayer", source.HasHdr10BaseLayer);
+                writer.WriteBoolean("hasHlgBaseLayer", source.HasHlgBaseLayer);
                 writer.WriteEndObject();
             }
 
@@ -90,29 +92,16 @@ namespace NoiraPlayer.Core.PlaybackQuality
             }
         }
 
-        private static void WriteTracks(
-            Utf8JsonWriter writer,
-            string name,
-            System.Collections.Generic.IEnumerable<PlaybackQualityTrack>? tracks)
+        private static void WriteNullableInt32(Utf8JsonWriter writer, string name, int? value)
         {
-            writer.WriteStartArray(name);
-            foreach (var track in (tracks ?? Array.Empty<PlaybackQualityTrack>()).OrderBy(value => value.Index))
+            if (value.HasValue)
             {
-                writer.WriteStartObject();
-                writer.WriteNumber("index", track.Index);
-                writer.WriteString("kind", track.Kind ?? "");
-                writer.WriteString("codec", track.Codec ?? "");
-                writer.WriteString("language", track.Language ?? "");
-                writer.WriteString("channelLayout", track.ChannelLayout ?? "");
-                writer.WriteNumber("channels", track.Channels);
-                writer.WriteBoolean("isExternal", track.IsExternal);
-                if (track.IsDefault.HasValue) writer.WriteBoolean("isDefault", track.IsDefault.Value); else writer.WriteNull("isDefault");
-                if (track.IsForced.HasValue) writer.WriteBoolean("isForced", track.IsForced.Value); else writer.WriteNull("isForced");
-                writer.WriteNumber("realFrameRate", track.RealFrameRate);
-                writer.WriteNumber("averageFrameRate", track.AverageFrameRate);
-                writer.WriteEndObject();
+                writer.WriteNumber(name, value.Value);
             }
-            writer.WriteEndArray();
+            else
+            {
+                writer.WriteNull(name);
+            }
         }
     }
 }

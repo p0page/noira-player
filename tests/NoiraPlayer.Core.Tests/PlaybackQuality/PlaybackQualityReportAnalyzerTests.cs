@@ -781,6 +781,43 @@ public sealed class PlaybackQualityReportAnalyzerTests
     }
 
     [Fact]
+    public void Analyze_Marks_Completed_Native_Source_As_Unverified_When_Metadata_Is_Declared()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "declared-native-source",
+            Result = "fail",
+            Execution = new PlaybackQualityExecutionEvidence
+            {
+                EvidenceLevel = PlaybackQualityEvidenceLevel.NativePlayback,
+                Status = PlaybackQualityExecutionStatus.Completed,
+                SourceOpened = true,
+                NativeGraphOpened = true,
+                PlaybackSampleObserved = true
+            },
+            Source = new PlaybackQualitySource
+            {
+                VideoMetadataProvider = "descriptor",
+                VideoMetadataStatus = "declared",
+                Codec = "hevc",
+                Width = 3840,
+                Height = 2160,
+                FrameRate = 23.976,
+                HdrKind = "Hdr10"
+            }
+        };
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Equal("unverified", analysis.Source.Status);
+        Assert.Equal("descriptor", analysis.Source.VideoMetadataProvider);
+        Assert.Equal("declared", analysis.Source.VideoMetadataStatus);
+        Assert.Contains("source.videoMetadataProvider", analysis.Source.Signals);
+        Assert.Contains("source.videoMetadataStatus", analysis.Source.Signals);
+        Assert.Contains("source.videoMetadataStatus", analysis.MissingEvidence);
+    }
+
+    [Fact]
     public void Analyze_Marks_Source_Mismatch_From_Unsupported_Source_Checks()
     {
         var report = new PlaybackQualityReport

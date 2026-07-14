@@ -532,9 +532,61 @@ namespace NoiraPlayer.Core.PlaybackQuality
                     "Opened media identity must declare the observed signature algorithm used by the native playback evidence.");
             }
 
+            if (execution.SourceOpened &&
+                !string.IsNullOrWhiteSpace(execution.OpenedSourceHash) &&
+                !string.Equals(
+                    execution.OpenedSourceHash,
+                    PlaybackQualitySourceFingerprint.ComputeOpenedMediaSignature(report),
+                    StringComparison.Ordinal))
+            {
+                AddExecutionError(
+                    validation,
+                    status,
+                    "report.execution.opened-source-hash.content-mismatch",
+                    "execution.openedSourceHash",
+                    "signature of the report's native-observed video source fields",
+                    execution.OpenedSourceHash,
+                    "Opened media identity does not match the native-observed video source evidence stored in the report.");
+            }
+
             if (!RequiresCompletedPlaybackSample(report.Result))
             {
                 return;
+            }
+
+
+            if (!string.Equals(
+                    report.Source.VideoMetadataProvider,
+                    "native-playback",
+                    StringComparison.Ordinal))
+            {
+                AddExecutionError(
+                    validation,
+                    status,
+                    "report.source.video-metadata-provider.not-observed",
+                    "source.videoMetadataProvider",
+                    "native-playback",
+                    string.IsNullOrWhiteSpace(report.Source.VideoMetadataProvider)
+                        ? "missing"
+                        : report.Source.VideoMetadataProvider,
+                    "Completed native playback must use video metadata observed by the native playback graph.");
+            }
+
+            if (!string.Equals(
+                    report.Source.VideoMetadataStatus,
+                    "observed",
+                    StringComparison.Ordinal))
+            {
+                AddExecutionError(
+                    validation,
+                    status,
+                    "report.source.video-metadata-status.not-observed",
+                    "source.videoMetadataStatus",
+                    "observed",
+                    string.IsNullOrWhiteSpace(report.Source.VideoMetadataStatus)
+                        ? "missing"
+                        : report.Source.VideoMetadataStatus,
+                    "Completed native playback cannot use descriptor or manifest video metadata as playback evidence.");
             }
 
             RequireExecutionStage(validation, status, execution.SourceOpened, "report.execution.source-opened.missing", "execution.sourceOpened", "Completed playback result did not open the media source.");

@@ -59,6 +59,62 @@ public sealed class NativeQualityMetricsBridgeContractTests
     }
 
     [Fact]
+    public void Observed_Video_Source_Metadata_Crosses_Native_WinRt_And_Core_Boundaries()
+    {
+        var root = FindRepositoryRoot();
+        var idl = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Native", "NativePlaybackEngine.idl"));
+        var runtimeMetrics = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Native", "NativePlaybackQualityMetrics.h"));
+        var nativeEngine = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.Native", "NativePlaybackEngine.cpp"));
+        var appBridge = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.App", "Playback", "WinRtNativePlaybackEngine.cs"));
+
+        Assert.Contains("auto const observedSource = m_graph->VideoSourceSnapshot();", nativeEngine, StringComparison.Ordinal);
+        Assert.Contains("Boolean ObservedVideoSourceAvailable;", idl, StringComparison.Ordinal);
+        Assert.Contains("metrics.ObservedVideoSourceAvailable(observedSource.has_value());", nativeEngine, StringComparison.Ordinal);
+
+        foreach (var property in new[]
+        {
+            "ObservedVideoCodec",
+            "ObservedVideoRange",
+            "ObservedColorPrimaries",
+            "ObservedColorTransfer",
+            "ObservedColorSpace",
+            "ObservedHdrKind"
+        })
+        {
+            Assert.Contains("String " + property + ";", idl, StringComparison.Ordinal);
+            Assert.Contains("winrt::hstring " + property + "() const", runtimeMetrics, StringComparison.Ordinal);
+            Assert.Contains(property + " = nativeMetrics." + property, appBridge, StringComparison.Ordinal);
+        }
+
+        foreach (var property in new[]
+        {
+            "ObservedVideoWidth",
+            "ObservedVideoHeight",
+            "ObservedDolbyVisionProfile",
+            "ObservedDolbyVisionCompatibilityId"
+        })
+        {
+            Assert.Contains("UInt32 " + property + ";", idl, StringComparison.Ordinal);
+            Assert.Contains("uint32_t " + property + "() const noexcept", runtimeMetrics, StringComparison.Ordinal);
+            Assert.Contains(property + " = nativeMetrics." + property, appBridge, StringComparison.Ordinal);
+        }
+
+        Assert.Contains("Double ObservedVideoFrameRate;", idl, StringComparison.Ordinal);
+        foreach (var property in new[]
+        {
+            "ObservedVideoSourceAvailable",
+            "ObservedIsDolbyVision",
+            "ObservedHasHdr10BaseLayer",
+            "ObservedHasHlgBaseLayer"
+        })
+        {
+            Assert.Contains("Boolean " + property + ";", idl, StringComparison.Ordinal);
+            Assert.Contains("bool " + property + "() const noexcept", runtimeMetrics, StringComparison.Ordinal);
+            Assert.Contains(property + " = nativeMetrics." + property, appBridge, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
     public void Native_Interaction_Timing_Metrics_Cross_The_Graph_WinRt_And_Core_Boundaries()
     {
         var root = FindRepositoryRoot();

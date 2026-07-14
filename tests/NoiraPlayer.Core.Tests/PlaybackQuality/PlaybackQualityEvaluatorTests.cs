@@ -23,6 +23,39 @@ public sealed class PlaybackQualityEvaluatorTests
     }
 
     [Fact]
+    public void Evaluate_Fails_Completed_Native_Playback_When_Source_Metadata_Is_Only_Declared()
+    {
+        var report = CreateCompletedNativePlaybackReport(
+            videoMetadataProvider: "descriptor",
+            videoMetadataStatus: "declared");
+
+        PlaybackQualityEvaluator.Evaluate(report);
+
+        Assert.Equal("fail", report.Result);
+        Assert.Contains(
+            report.Checks,
+            check => check.Signal == "source.videoMetadataStatus" && check.Status == "fail");
+        Assert.Contains(
+            report.FailureReasons,
+            reason => reason.Contains("native-observed", System.StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Evaluate_Accepts_Completed_Native_Playback_With_Observed_Source_Metadata()
+    {
+        var report = CreateCompletedNativePlaybackReport(
+            videoMetadataProvider: "native-playback",
+            videoMetadataStatus: "observed");
+
+        PlaybackQualityEvaluator.Evaluate(report);
+
+        Assert.Equal("observed", report.Result);
+        Assert.DoesNotContain(
+            report.Checks,
+            check => check.Signal == "source.videoMetadataStatus" && check.Status == "fail");
+    }
+
+    [Fact]
     public void Evaluate_Fails_When_No_Expected_Thresholds_And_Lifecycle_Operation_Fails()
     {
         const string message = "audio switch failed before threshold evaluation";
@@ -1726,6 +1759,41 @@ public sealed class PlaybackQualityEvaluatorTests
             Timing = new PlaybackQualityTiming
             {
                 RenderedVideoFrames = renderedVideoFrames
+            }
+        };
+    }
+
+    private static PlaybackQualityReport CreateCompletedNativePlaybackReport(
+        string videoMetadataProvider,
+        string videoMetadataStatus)
+    {
+        return new PlaybackQualityReport
+        {
+            RunId = "native-source-provenance",
+            Execution = new PlaybackQualityExecutionEvidence
+            {
+                EvidenceLevel = PlaybackQualityEvidenceLevel.NativePlayback,
+                Status = PlaybackQualityExecutionStatus.Completed,
+                SourceOpened = true,
+                NativeGraphOpened = true,
+                DemuxStarted = true,
+                DecoderOpened = true,
+                PlaybackSampleObserved = true
+            },
+            Source = new PlaybackQualitySource
+            {
+                VideoMetadataProvider = videoMetadataProvider,
+                VideoMetadataStatus = videoMetadataStatus,
+                Codec = "hevc",
+                Width = 3840,
+                Height = 2160,
+                FrameRate = 23.976,
+                HdrKind = "Hdr10"
+            },
+            Timing = new PlaybackQualityTiming
+            {
+                DecodedVideoFrames = 120,
+                RenderedVideoFrames = 120
             }
         };
     }
