@@ -1,4 +1,5 @@
 #include <cassert>
+#include <initializer_list>
 
 #include <d3d11.h>
 #include <wrl/client.h>

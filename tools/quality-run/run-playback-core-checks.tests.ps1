@@ -37,6 +37,18 @@ if ($serializedHttpMediaInputTest -match 'if not exist') {
     throw 'Native HTTP media input validation must not conditionally skip compilation or execution when its output directory already exists.'
 }
 
+$seekReplayCacheTest = $plan.commands |
+    Where-Object name -eq 'native-seek-replay-cache-test' |
+    Select-Object -First 1
+$serializedSeekReplayCacheTest = $seekReplayCacheTest | ConvertTo-Json -Depth 6
+if ($serializedSeekReplayCacheTest -notmatch 'run-ffmpeg-seek-replay-cache-test\.ps1') {
+    throw 'Native FFmpeg seek replay cache validation must use a dedicated compile-and-run script that supplies UWP runtime dependencies.'
+}
+
+if ($serializedSeekReplayCacheTest -match 'if not exist|\bcl\b') {
+    throw 'Native FFmpeg seek replay cache validation must not use an inline compile command.'
+}
+
 if ($plan.scope -ne 'playback-core') {
     throw 'Expected playback-core validation scope.'
 }
@@ -228,6 +240,13 @@ if (-not ($plan.commands | Where-Object { $_.name -eq 'native-display-refresh-sn
 
 if (-not ($plan.commands | Where-Object { $_.name -eq 'native-dx-offscreen-test' })) {
     throw 'Expected native-dx-offscreen-test command in playback-core validation plan.'
+}
+
+foreach ($plannedCommand in $plan.commands) {
+    $plannedCommandLine = @($plannedCommand.arguments) -join ' '
+    if ($plannedCommand.name -match '^native-.+-test$' -and $plannedCommandLine -match 'if not exist') {
+        throw ('Native test setup must not use a conditional directory command that can swallow compilation: ' + $plannedCommand.name)
+    }
 }
 
 if (-not ($plan.commands | Where-Object { $_.name -eq 'native-restore' })) {
