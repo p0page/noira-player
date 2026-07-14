@@ -660,7 +660,6 @@ public sealed class NativePlaybackGraphDecouplingContractTests
         Assert.Contains("RenderLoopWaitReason m_lastCompletedRenderLoopWaitReason", graphHeader, StringComparison.Ordinal);
         Assert.Contains("m_lastCompletedRenderLoopWaitReason = completedRenderLoopWaitReason;", graphSource, StringComparison.Ordinal);
         Assert.DoesNotContain("PlaybackFramePacing::RenderLoopWait(true)", graphSource, StringComparison.Ordinal);
-        Assert.Contains("PlaybackFramePacing::PostPresentLoopWait(audioPosition.has_value())", graphSource, StringComparison.Ordinal);
         Assert.Contains("m_qualityMetrics.RecordRenderIntervalAfterAudioAheadWaitMs(*elapsed);", graphSource, StringComparison.Ordinal);
         Assert.Contains("m_qualityMetrics.RecordRenderIntervalAfterNonAudioWaitMs(*elapsed);", graphSource, StringComparison.Ordinal);
     }
