@@ -1210,6 +1210,23 @@ internal static class NativeHeadlessHarness
             return false;
         }
 
+        if (!TryGetRequiredNonEmptyString(values, "videoDecodeDeviceMode", out var decodeDeviceMode, out error) ||
+            (decodeDeviceMode != "independent-d3d11" && decodeDeviceMode != "render-device-d3d11" && decodeDeviceMode != "software") ||
+            !TryGetRequiredNonEmptyString(values, "videoDecodeSynchronizationMode", out var decodeSynchronizationMode, out error) ||
+            (decodeSynchronizationMode != "shared-fence" && decodeSynchronizationMode != "none") ||
+            !TryGetAttempted(values, "videoDecodeWorkerActive", out var decodeWorkerActive, out error))
+        {
+            if (string.IsNullOrWhiteSpace(error))
+            {
+                error = "Missing or invalid native video decode pipeline identity metrics.";
+            }
+            return false;
+        }
+
+        metrics.VideoDecodeDeviceMode = decodeDeviceMode;
+        metrics.VideoDecodeSynchronizationMode = decodeSynchronizationMode;
+        metrics.VideoDecodeWorkerActive = decodeWorkerActive;
+
         return
             TrySetRequiredUInt64(values, "decodedVideoFrames", value => metrics.DecodedVideoFrames = value, out error) &&
             TrySetRequiredUInt64(values, "hardwareDecodedVideoFrames", value => metrics.HardwareDecodedVideoFrames = value, out error) &&
@@ -1307,6 +1324,9 @@ internal static class NativeHeadlessHarness
             TrySetRequiredNonNegativeDouble(values, "videoDecodeDurationMsP95", value => metrics.VideoDecodeDurationMsP95 = value, out error) &&
             TrySetRequiredNonNegativeDouble(values, "videoDecodeDurationMsP99", value => metrics.VideoDecodeDurationMsP99 = value, out error) &&
             TrySetRequiredNonNegativeDouble(values, "videoDecodeDurationMsMax", value => metrics.VideoDecodeDurationMsMax = value, out error) &&
+            TrySetRequiredUInt64(values, "videoDecodeQueueCapacity", value => metrics.VideoDecodeQueueCapacity = value, out error) &&
+            TrySetRequiredUInt64(values, "videoDecodeQueueMaxDepth", value => metrics.VideoDecodeQueueMaxDepth = value, out error) &&
+            TrySetRequiredUInt64(values, "videoDecodeQueueProducerWaitCount", value => metrics.VideoDecodeQueueProducerWaitCount = value, out error) &&
             TrySetRequiredNonNegativeDouble(values, "videoDecodePacketReadDurationMsP50", value => metrics.VideoDecodePacketReadDurationMsP50 = value, out error) &&
             TrySetRequiredNonNegativeDouble(values, "videoDecodePacketReadDurationMsP95", value => metrics.VideoDecodePacketReadDurationMsP95 = value, out error) &&
             TrySetRequiredNonNegativeDouble(values, "videoDecodeSendPacketDurationMsP50", value => metrics.VideoDecodeSendPacketDurationMsP50 = value, out error) &&

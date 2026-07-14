@@ -153,6 +153,10 @@ public sealed class NativePlaybackGraphDecouplingContractTests
         Assert.DoesNotContain("options.Scenario == L\"interactions\"", helperSource, StringComparison.Ordinal);
         Assert.DoesNotContain("subtitleOff.Attempted = true;", helperSource, StringComparison.Ordinal);
         Assert.Contains("ReportStage(\"interaction-sample-captured\")", helperSource, StringComparison.Ordinal);
+        Assert.Contains(
+            "excludedSampleDuration += std::chrono::steady_clock::now() - interactionStartedAt;",
+            helperSource,
+            StringComparison.Ordinal);
         Assert.Contains("PausedPositionBeforeTicks", helperSource, StringComparison.Ordinal);
         Assert.Contains("PausedPositionAfterTicks", helperSource, StringComparison.Ordinal);
         Assert.Contains("PositionBeforeResumeTicks", helperSource, StringComparison.Ordinal);
@@ -330,6 +334,75 @@ public sealed class NativePlaybackGraphDecouplingContractTests
         Assert.Contains("sourceDolbyVisionProfile=", helperSource, StringComparison.Ordinal);
         Assert.Contains("TryParseUnsupportedSource", harnessSource, StringComparison.Ordinal);
         Assert.Contains("PlaybackQualityExecutionStatus.Unsupported", harnessSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Native_D3d11va_Decoder_Uses_The_Independent_Device_And_Exports_Shared_Frames()
+    {
+        var root = FindRepositoryRoot();
+        var decoderHeader = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NoiraPlayer.Native",
+            "Media",
+            "VideoDecoder.h"));
+        var decoderSource = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NoiraPlayer.Native",
+            "Media",
+            "VideoDecoder.cpp"));
+
+        Assert.Contains("D3D11SharedDecodeBridge m_sharedDecodeBridge", decoderHeader, StringComparison.Ordinal);
+        Assert.Contains("m_sharedDecodeBridge.Initialize(d3dDevice, d3dContext)", decoderSource, StringComparison.Ordinal);
+        Assert.Contains("m_sharedDecodeBridge.DecoderDevice()", decoderSource, StringComparison.Ordinal);
+        Assert.Contains("m_sharedDecodeBridge.DecoderTextureMiscFlags()", decoderSource, StringComparison.Ordinal);
+        Assert.Contains("m_sharedDecodeBridge.ExportFrame(", decoderSource, StringComparison.Ordinal);
+        Assert.Contains("m_sharedDecodeBridge.WaitForFrame(", decoderSource, StringComparison.Ordinal);
+        Assert.Contains("av_frame_clone(frame)", decoderSource, StringComparison.Ordinal);
+        Assert.Contains("DecoderFrameLifetime", decoderHeader, StringComparison.Ordinal);
+
+        var graphSource = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NoiraPlayer.Native",
+            "Media",
+            "PlaybackGraph.cpp"));
+        var helperSource = File.ReadAllText(Path.Combine(
+            root,
+            "tests",
+            "NoiraPlayer.Native.Tests",
+            "NativePlaybackGraphHeadlessSmokeTests.cpp"));
+        Assert.Contains("snapshot.VideoDecodeDeviceMode", graphSource, StringComparison.Ordinal);
+        Assert.Contains("snapshot.VideoDecodeSynchronizationMode", graphSource, StringComparison.Ordinal);
+        Assert.Contains("snapshot.VideoDecodeWorkerActive", graphSource, StringComparison.Ordinal);
+        Assert.Contains("snapshot.VideoDecodeQueueCapacity", graphSource, StringComparison.Ordinal);
+        Assert.Contains("snapshot.VideoDecodeQueueMaxDepth", graphSource, StringComparison.Ordinal);
+        Assert.Contains("snapshot.VideoDecodeQueueProducerWaitCount", graphSource, StringComparison.Ordinal);
+        Assert.Contains("videoDecodeDeviceMode=", helperSource, StringComparison.Ordinal);
+        Assert.Contains("videoDecodeSynchronizationMode=", helperSource, StringComparison.Ordinal);
+        Assert.Contains("videoDecodeWorkerActive=", helperSource, StringComparison.Ordinal);
+        Assert.Contains("videoDecodeQueueCapacity=", helperSource, StringComparison.Ordinal);
+        Assert.Contains("videoDecodeQueueMaxDepth=", helperSource, StringComparison.Ordinal);
+        Assert.Contains("videoDecodeQueueProducerWaitCount=", helperSource, StringComparison.Ordinal);
+
+        var graphHeader = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NoiraPlayer.Native",
+            "Media",
+            "PlaybackGraph.h"));
+        Assert.Contains("std::unique_ptr<VideoDecodeWorker> m_videoDecodeWorker", graphHeader, StringComparison.Ordinal);
+        Assert.Contains("m_videoDecoder.UsesIndependentDecodeDevice()", graphSource, StringComparison.Ordinal);
+        Assert.Contains("m_videoDecodeWorker->Start()", graphSource, StringComparison.Ordinal);
+        Assert.Contains("void StartVideoDecodeWorkerOrFallback() noexcept", graphHeader, StringComparison.Ordinal);
+        Assert.Contains("StartVideoDecodeWorkerOrFallback();", graphSource, StringComparison.Ordinal);
+        Assert.Contains(
+            "could not start the independent video decode worker; falling back to synchronous decode",
+            graphSource,
+            StringComparison.Ordinal);
+        Assert.Contains("StopVideoDecodeWorkerForMutation", graphSource, StringComparison.Ordinal);
+        Assert.Contains("m_videoDecodeWorker.reset();", graphSource, StringComparison.Ordinal);
     }
 
     [Fact]

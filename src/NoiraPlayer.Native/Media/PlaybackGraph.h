@@ -10,12 +10,14 @@
 #include "SubtitleDecoder.h"
 #include "SubtitleRenderer.h"
 #include "VideoDecoder.h"
+#include "VideoDecodeWorker.h"
 #include "VideoRenderer.h"
 
 #include <chrono>
 #include <atomic>
 #include <condition_variable>
 #include <functional>
+#include <memory>
 #include <mutex>
 #include <optional>
 #include <thread>
@@ -115,6 +117,10 @@ namespace winrt::NoiraPlayer::Native::implementation
     private:
         void StartRenderLoop();
         void StopRenderLoop() noexcept;
+        void StartVideoDecodeWorker();
+        void StartVideoDecodeWorkerOrFallback() noexcept;
+        bool StopVideoDecodeWorkerForMutation() noexcept;
+        void RestartVideoDecodeWorkerAfterMutation(bool restart) noexcept;
         void RenderLoop() noexcept;
         bool RenderNextFrame();
         uint32_t DecodeNextAudioFrame();
@@ -137,6 +143,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         FfmpegMediaSource m_mediaSource;
         std::optional<FfmpegVideoStreamSnapshot> m_lastVideoSourceSnapshot;
         VideoDecoder m_videoDecoder;
+        std::unique_ptr<VideoDecodeWorker> m_videoDecodeWorker;
         AudioDecoder m_audioDecoder;
         VideoRenderer m_videoRenderer;
         AudioRenderer m_audioRenderer;

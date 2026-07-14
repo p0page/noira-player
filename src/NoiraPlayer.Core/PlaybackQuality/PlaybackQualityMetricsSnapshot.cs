@@ -105,6 +105,12 @@
         public double VideoDecodeDurationMsP95 { get; set; }
         public double VideoDecodeDurationMsP99 { get; set; }
         public double VideoDecodeDurationMsMax { get; set; }
+        public string VideoDecodeDeviceMode { get; set; } = "unknown";
+        public string VideoDecodeSynchronizationMode { get; set; } = "none";
+        public bool VideoDecodeWorkerActive { get; set; }
+        public ulong VideoDecodeQueueCapacity { get; set; }
+        public ulong VideoDecodeQueueMaxDepth { get; set; }
+        public ulong VideoDecodeQueueProducerWaitCount { get; set; }
         public double VideoDecodePacketReadDurationMsP50 { get; set; }
         public double VideoDecodePacketReadDurationMsP95 { get; set; }
         public double VideoDecodeSendPacketDurationMsP50 { get; set; }

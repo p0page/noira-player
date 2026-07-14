@@ -326,6 +326,19 @@ namespace winrt::NoiraPlayer::Native::implementation
         double VideoDecodeDurationMsMax() const noexcept { return m_videoDecodeDurationMsMax; }
         void VideoDecodeDurationMsMax(double value) noexcept { m_videoDecodeDurationMsMax = value; }
 
+        winrt::hstring VideoDecodeDeviceMode() const { return m_videoDecodeDeviceMode; }
+        void VideoDecodeDeviceMode(winrt::hstring const& value) { m_videoDecodeDeviceMode = value; }
+        winrt::hstring VideoDecodeSynchronizationMode() const { return m_videoDecodeSynchronizationMode; }
+        void VideoDecodeSynchronizationMode(winrt::hstring const& value) { m_videoDecodeSynchronizationMode = value; }
+        bool VideoDecodeWorkerActive() const noexcept { return m_videoDecodeWorkerActive; }
+        void VideoDecodeWorkerActive(bool value) noexcept { m_videoDecodeWorkerActive = value; }
+        uint64_t VideoDecodeQueueCapacity() const noexcept { return m_videoDecodeQueueCapacity; }
+        void VideoDecodeQueueCapacity(uint64_t value) noexcept { m_videoDecodeQueueCapacity = value; }
+        uint64_t VideoDecodeQueueMaxDepth() const noexcept { return m_videoDecodeQueueMaxDepth; }
+        void VideoDecodeQueueMaxDepth(uint64_t value) noexcept { m_videoDecodeQueueMaxDepth = value; }
+        uint64_t VideoDecodeQueueProducerWaitCount() const noexcept { return m_videoDecodeQueueProducerWaitCount; }
+        void VideoDecodeQueueProducerWaitCount(uint64_t value) noexcept { m_videoDecodeQueueProducerWaitCount = value; }
+
         double VideoDecodePacketReadDurationMsP50() const noexcept { return m_videoDecodePacketReadDurationMsP50; }
         void VideoDecodePacketReadDurationMsP50(double value) noexcept { m_videoDecodePacketReadDurationMsP50 = value; }
         double VideoDecodePacketReadDurationMsP95() const noexcept { return m_videoDecodePacketReadDurationMsP95; }
@@ -622,6 +635,12 @@ namespace winrt::NoiraPlayer::Native::implementation
         double m_videoDecodeDurationMsP95{0.0};
         double m_videoDecodeDurationMsP99{0.0};
         double m_videoDecodeDurationMsMax{0.0};
+        winrt::hstring m_videoDecodeDeviceMode{L"unknown"};
+        winrt::hstring m_videoDecodeSynchronizationMode{L"none"};
+        bool m_videoDecodeWorkerActive{false};
+        uint64_t m_videoDecodeQueueCapacity{0};
+        uint64_t m_videoDecodeQueueMaxDepth{0};
+        uint64_t m_videoDecodeQueueProducerWaitCount{0};
         double m_videoDecodePacketReadDurationMsP50{0.0};
         double m_videoDecodePacketReadDurationMsP95{0.0};
         double m_videoDecodeSendPacketDurationMsP50{0.0};

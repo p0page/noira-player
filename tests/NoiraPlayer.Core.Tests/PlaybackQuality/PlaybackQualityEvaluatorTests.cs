@@ -1036,6 +1036,33 @@ public sealed class PlaybackQualityEvaluatorTests
     }
 
     [Fact]
+    public void Evaluate_Accepts_Zero_Seek_Recovery_As_Measured()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "seek-frame-already-ready",
+            Expected = new PlaybackQualityExpected
+            {
+                MaxSeekRecoveryDurationMs = 2000,
+                RequireValidatedConversion = false
+            },
+            Position = new PlaybackQualityPosition
+            {
+                SeekRecoveryDurationMs = 0
+            }
+        };
+
+        PlaybackQualityEvaluator.Evaluate(report);
+
+        Assert.Equal("pass", report.Result);
+        Assert.Contains(report.Checks, check =>
+            check.Name == "SeekRecoveryDurationMs" &&
+            check.Signal == "position.seekRecoveryDurationMs" &&
+            check.Status == "pass" &&
+            check.Actual == "0.000");
+    }
+
+    [Fact]
     public void Evaluate_Fails_When_Native_Seek_Evidence_Is_Incomplete()
     {
         var report = new PlaybackQualityReport

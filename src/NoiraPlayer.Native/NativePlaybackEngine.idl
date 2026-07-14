@@ -175,6 +175,12 @@
         Double VideoDecodeDurationMsP95;
         Double VideoDecodeDurationMsP99;
         Double VideoDecodeDurationMsMax;
+        String VideoDecodeDeviceMode;
+        String VideoDecodeSynchronizationMode;
+        Boolean VideoDecodeWorkerActive;
+        UInt64 VideoDecodeQueueCapacity;
+        UInt64 VideoDecodeQueueMaxDepth;
+        UInt64 VideoDecodeQueueProducerWaitCount;
         Double VideoDecodePacketReadDurationMsP50;
         Double VideoDecodePacketReadDurationMsP95;
         Double VideoDecodeSendPacketDurationMsP50;

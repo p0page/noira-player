@@ -17,6 +17,25 @@ namespace winrt::NoiraPlayer::Native::implementation
     constexpr uint32_t MaxDroppedVideoFramesPerPass = 4;
     constexpr uint32_t MaxSeekPrerollDroppedVideoFramesPerPass = 300;
 
+    class ScopeExit final
+    {
+    public:
+        explicit ScopeExit(std::function<void()> action) : m_action(std::move(action)) {}
+        ~ScopeExit() noexcept
+        {
+            if (m_action)
+            {
+                m_action();
+            }
+        }
+
+        ScopeExit(ScopeExit const&) = delete;
+        ScopeExit& operator=(ScopeExit const&) = delete;
+
+    private:
+        std::function<void()> m_action;
+    };
+
     PlaybackTransportCallMetrics ToPlaybackTransportCallMetrics(
         FfmpegTransportCallSnapshot const& snapshot) noexcept
     {
@@ -257,6 +276,7 @@ namespace winrt::NoiraPlayer::Native::implementation
             AppendNativePlaybackDiagnostic(renderedFirstFrame
                 ? L"PlaybackGraph.Open RenderNextFrame end true"
                 : L"PlaybackGraph.Open RenderNextFrame end false");
+            StartVideoDecodeWorkerOrFallback();
             AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open StartRenderLoop begin");
             StartRenderLoop();
             AppendNativePlaybackDiagnostic(L"PlaybackGraph.Open StartRenderLoop end");
@@ -320,6 +340,11 @@ namespace winrt::NoiraPlayer::Native::implementation
         }
 
         std::lock_guard lock(m_graphMutex);
+        auto restartVideoDecodeWorker = StopVideoDecodeWorkerForMutation();
+        ScopeExit restartVideoDecodeWorkerOnExit([this, restartVideoDecodeWorker]()
+        {
+            RestartVideoDecodeWorkerAfterMutation(restartVideoDecodeWorker);
+        });
         auto const previousPositionTicks = m_positionTicks;
         m_lastSeekReplaySnapshot = m_mediaSource.TryPrepareSeekReplay(
             positionTicks,
@@ -356,6 +381,11 @@ namespace winrt::NoiraPlayer::Native::implementation
         StopRenderLoop();
 
         std::lock_guard lock(m_graphMutex);
+        if (m_videoDecodeWorker)
+        {
+            m_videoDecodeWorker->Stop();
+            m_videoDecodeWorker.reset();
+        }
         m_audioRenderer.Stop();
         m_subtitleRenderer.Disable();
         m_subtitleDecoder.Close();
@@ -390,6 +420,12 @@ namespace winrt::NoiraPlayer::Native::implementation
         {
             throw winrt::hresult_error(E_FAIL, L"Playback is not open.");
         }
+
+        auto restartVideoDecodeWorker = StopVideoDecodeWorkerForMutation();
+        ScopeExit restartVideoDecodeWorkerOnExit([this, restartVideoDecodeWorker]()
+        {
+            RestartVideoDecodeWorkerAfterMutation(restartVideoDecodeWorker);
+        });
 
         auto shouldResumeAudio = !m_paused;
         m_audioRenderer.Stop();
@@ -459,6 +495,12 @@ namespace winrt::NoiraPlayer::Native::implementation
         {
             throw winrt::hresult_error(E_FAIL, L"Playback is not open.");
         }
+
+        auto restartVideoDecodeWorker = StopVideoDecodeWorkerForMutation();
+        ScopeExit restartVideoDecodeWorkerOnExit([this, restartVideoDecodeWorker]()
+        {
+            RestartVideoDecodeWorkerAfterMutation(restartVideoDecodeWorker);
+        });
 
         auto previousSelection = m_subtitleRenderer.SelectedStreamIndex();
         auto resumePositionTicks = m_positionTicks;
@@ -608,6 +650,20 @@ namespace winrt::NoiraPlayer::Native::implementation
 
         snapshot.VideoPositionTicks = m_positionTicks;
         snapshot.QueuedAudioBuffers = m_audioRenderer.QueuedBufferCount();
+        snapshot.VideoDecodeDeviceMode = m_videoDecoder.UsesIndependentDecodeDevice()
+            ? "independent-d3d11"
+            : (m_videoDecoder.UsesHardwareDecode() ? "render-device-d3d11" : "software");
+        snapshot.VideoDecodeSynchronizationMode = m_videoDecoder.UsesIndependentDecodeDevice()
+            ? "shared-fence"
+            : "none";
+        if (m_videoDecodeWorker)
+        {
+            auto const queue = m_videoDecodeWorker->Snapshot();
+            snapshot.VideoDecodeWorkerActive = !queue.Stopped;
+            snapshot.VideoDecodeQueueCapacity = queue.Capacity;
+            snapshot.VideoDecodeQueueMaxDepth = queue.MaxDepth;
+            snapshot.VideoDecodeQueueProducerWaitCount = queue.ProducerWaitCount;
+        }
         auto const readTiming = m_mediaSource.ReadTimingSnapshot();
         if (m_hasPlaybackReadBaseline)
         {
@@ -695,6 +751,86 @@ namespace winrt::NoiraPlayer::Native::implementation
     {
         std::lock_guard lock(m_graphMutex);
         return m_lastSeekReplaySnapshot;
+    }
+
+    void PlaybackGraph::StartVideoDecodeWorker()
+    {
+        if (!m_videoDecoder.UsesIndependentDecodeDevice())
+        {
+            return;
+        }
+
+        if (!m_videoDecodeWorker)
+        {
+            m_videoDecodeWorker = std::make_unique<VideoDecodeWorker>([this]()
+            {
+                return m_videoDecoder.TryReadFrame();
+            });
+        }
+
+        m_videoDecodeWorker->Start();
+        auto const readyDeadline = std::chrono::steady_clock::now() + 5s;
+        while (std::chrono::steady_clock::now() < readyDeadline)
+        {
+            auto snapshot = m_videoDecodeWorker->Snapshot();
+            if (snapshot.Depth > 0 || snapshot.EndOfStream || snapshot.Failed)
+            {
+                return;
+            }
+
+            std::this_thread::sleep_for(1ms);
+        }
+
+        AppendNativePlaybackDiagnostic(
+            L"PlaybackGraph independent video decode worker did not become ready within 5 seconds");
+    }
+
+    void PlaybackGraph::StartVideoDecodeWorkerOrFallback() noexcept
+    {
+        try
+        {
+            StartVideoDecodeWorker();
+        }
+        catch (...)
+        {
+            AppendNativePlaybackDiagnostic(
+                L"PlaybackGraph could not start the independent video decode worker; falling back to synchronous decode");
+            if (m_videoDecodeWorker)
+            {
+                m_videoDecodeWorker->Stop();
+                m_videoDecodeWorker.reset();
+            }
+        }
+    }
+
+    bool PlaybackGraph::StopVideoDecodeWorkerForMutation() noexcept
+    {
+        if (!m_videoDecodeWorker)
+        {
+            return false;
+        }
+
+        m_videoDecodeWorker->Stop();
+        return true;
+    }
+
+    void PlaybackGraph::RestartVideoDecodeWorkerAfterMutation(bool restart) noexcept
+    {
+        if (!restart)
+        {
+            return;
+        }
+
+        try
+        {
+            StartVideoDecodeWorker();
+        }
+        catch (...)
+        {
+            AppendNativePlaybackDiagnostic(
+                L"PlaybackGraph could not restart the independent video decode worker; falling back to synchronous decode");
+            m_videoDecodeWorker.reset();
+        }
     }
 
     void PlaybackGraph::StartRenderLoop()
@@ -892,13 +1028,41 @@ namespace winrt::NoiraPlayer::Native::implementation
         {
             if (!m_pendingVideoFrame)
             {
-                auto decodeStartedAt = std::chrono::steady_clock::now();
-                auto frame = m_videoDecoder.TryReadFrame();
-                auto decodeEndedAt = std::chrono::steady_clock::now();
+                std::optional<DecodedVideoFrame> frame;
+                auto decodeDurationMs = 0.0;
+                auto workerWaitingForFrame = false;
+                if (m_videoDecodeWorker)
+                {
+                    auto queuedFrame = m_videoDecodeWorker->TryPop();
+                    switch (queuedFrame.Status)
+                    {
+                    case VideoFrameQueuePopStatus::Item:
+                        frame = std::move(queuedFrame.Value->Frame);
+                        decodeDurationMs = queuedFrame.Value->DecodeDurationMs;
+                        break;
+                    case VideoFrameQueuePopStatus::Failed:
+                        std::rethrow_exception(queuedFrame.Error);
+                    case VideoFrameQueuePopStatus::Empty:
+                    case VideoFrameQueuePopStatus::Stopped:
+                    case VideoFrameQueuePopStatus::StaleGeneration:
+                        workerWaitingForFrame = true;
+                        break;
+                    case VideoFrameQueuePopStatus::EndOfStream:
+                        break;
+                    }
+                }
+                else
+                {
+                    auto decodeStartedAt = std::chrono::steady_clock::now();
+                    frame = m_videoDecoder.TryReadFrame();
+                    decodeDurationMs = std::chrono::duration<double, std::milli>(
+                        std::chrono::steady_clock::now() - decodeStartedAt).count();
+                }
+
                 if (!frame)
                 {
                     auto hasQueuedAudio = m_audioRenderer.QueuedBufferCount() > 0;
-                    if (hasQueuedAudio)
+                    if (workerWaitingForFrame || hasQueuedAudio)
                     {
                         ++m_videoStarvedPassCount;
                         ++m_qualityMetrics.VideoStarvedPasses;
@@ -910,11 +1074,10 @@ namespace winrt::NoiraPlayer::Native::implementation
                     }
 
                     LogRuntimeStatsIfDue();
-                    return hasQueuedAudio;
+                    return workerWaitingForFrame || hasQueuedAudio;
                 }
 
-                m_qualityMetrics.RecordVideoDecodeDurationMs(
-                    std::chrono::duration<double, std::milli>(decodeEndedAt - decodeStartedAt).count());
+                m_qualityMetrics.RecordVideoDecodeDurationMs(decodeDurationMs);
                 m_qualityMetrics.RecordVideoDecodePacketReadDurationMs(frame->DecodePacketReadDurationMs);
                 m_qualityMetrics.RecordVideoDecodeSendPacketDurationMs(frame->DecodeSendPacketDurationMs);
                 m_qualityMetrics.RecordVideoDecodeReceiveFrameDurationMs(frame->DecodeReceiveFrameDurationMs);
@@ -1023,6 +1186,13 @@ namespace winrt::NoiraPlayer::Native::implementation
                     LogRuntimeStatsIfDue();
                     return true;
                 }
+            }
+
+            if (!m_videoDecoder.WaitForFrame(frame))
+            {
+                throw winrt::hresult_error(
+                    E_FAIL,
+                    L"Synchronization of an independent D3D11VA frame failed.");
             }
 
             EnsureHdrOutputForFrame(frame);

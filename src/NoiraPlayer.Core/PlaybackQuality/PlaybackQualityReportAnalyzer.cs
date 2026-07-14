@@ -2951,6 +2951,17 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 AddUnique(analysis.EvidenceSignals, "timing.videoDecodeDurationMsMax");
             }
 
+            if (!string.IsNullOrWhiteSpace(report.Timing.VideoDecodeDeviceMode) &&
+                report.Timing.VideoDecodeDeviceMode != "unknown")
+            {
+                AddUnique(analysis.EvidenceSignals, "timing.videoDecodeDeviceMode");
+                AddUnique(analysis.EvidenceSignals, "timing.videoDecodeSynchronizationMode");
+                AddUnique(analysis.EvidenceSignals, "timing.videoDecodeWorkerActive");
+                AddUnique(analysis.EvidenceSignals, "timing.videoDecodeQueueCapacity");
+                AddUnique(analysis.EvidenceSignals, "timing.videoDecodeQueueMaxDepth");
+                AddUnique(analysis.EvidenceSignals, "timing.videoDecodeQueueProducerWaitCount");
+            }
+
             if (report.Timing.VideoDecodePacketReadDurationMsP50 > 0)
             {
                 AddUnique(analysis.EvidenceSignals, "timing.videoDecodePacketReadDurationMsP50");

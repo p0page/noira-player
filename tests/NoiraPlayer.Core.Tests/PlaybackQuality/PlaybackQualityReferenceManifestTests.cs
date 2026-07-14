@@ -437,6 +437,12 @@ public sealed class PlaybackQualityReferenceManifestTests
         Assert.Contains("timing.videoDecodeDurationMsP95", reportSignals);
         Assert.Contains("timing.videoDecodeDurationMsP99", reportSignals);
         Assert.Contains("timing.videoDecodeDurationMsMax", reportSignals);
+        Assert.Contains("timing.videoDecodeDeviceMode", reportSignals);
+        Assert.Contains("timing.videoDecodeSynchronizationMode", reportSignals);
+        Assert.Contains("timing.videoDecodeWorkerActive", reportSignals);
+        Assert.Contains("timing.videoDecodeQueueCapacity", reportSignals);
+        Assert.Contains("timing.videoDecodeQueueMaxDepth", reportSignals);
+        Assert.Contains("timing.videoDecodeQueueProducerWaitCount", reportSignals);
         Assert.Contains("timing.videoDecodePacketReadDurationMsP50", reportSignals);
         Assert.Contains("timing.videoDecodePacketReadDurationMsP95", reportSignals);
         Assert.Contains("timing.videoDecodeSendPacketDurationMsP50", reportSignals);

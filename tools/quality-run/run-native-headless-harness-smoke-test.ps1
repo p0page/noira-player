@@ -325,7 +325,9 @@ function Build-NativePlaybackGraphHelper {
         'src\NoiraPlayer.Native\Media\HttpMediaInput.cpp',
         'src\NoiraPlayer.Native\Media\FfmpegMediaSource.cpp',
         'src\NoiraPlayer.Native\Media\FfmpegSeekReplayCache.cpp',
+        'src\NoiraPlayer.Native\Media\D3D11SharedDecodeBridge.cpp',
         'src\NoiraPlayer.Native\Media\VideoDecoder.cpp',
+        'src\NoiraPlayer.Native\Media\VideoDecodeWorker.cpp',
         'src\NoiraPlayer.Native\Media\AudioDecoder.cpp',
         'src\NoiraPlayer.Native\Media\AudioRenderer.cpp',
         'src\NoiraPlayer.Native\Media\VideoRenderer.cpp',
@@ -952,6 +954,12 @@ function New-NativeHeadlessParserFixtureOutput {
         videoDecodeDurationMsP95 = '2.2'
         videoDecodeDurationMsP99 = '3.3'
         videoDecodeDurationMsMax = '4.4'
+        videoDecodeDeviceMode = 'independent-d3d11'
+        videoDecodeSynchronizationMode = 'shared-fence'
+        videoDecodeWorkerActive = '1'
+        videoDecodeQueueCapacity = '3'
+        videoDecodeQueueMaxDepth = '3'
+        videoDecodeQueueProducerWaitCount = '10'
         videoDecodePacketReadDurationMsP50 = '0.1'
         videoDecodePacketReadDurationMsP95 = '0.2'
         videoDecodeSendPacketDurationMsP50 = '0.1'
@@ -1978,6 +1986,12 @@ function Assert-NativeHeadlessParserContracts {
     }
     foreach ($field in @(
         'observedSampleWallClockDurationMs',
+        'videoDecodeDeviceMode',
+        'videoDecodeSynchronizationMode',
+        'videoDecodeWorkerActive',
+        'videoDecodeQueueCapacity',
+        'videoDecodeQueueMaxDepth',
+        'videoDecodeQueueProducerWaitCount',
         'playbackDemuxReadDurationMs',
         'playbackDemuxPacketCount',
         'playbackDemuxBytes',

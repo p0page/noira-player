@@ -530,6 +530,7 @@ int wmain(int argc, wchar_t** argv)
                     audioSwitch.SubmittedFramesAfter = graph.QualityMetricsSnapshot().SubmittedAudioFrames;
                     audioSwitch.Status = "failed";
                 }
+                excludedSampleDuration += std::chrono::steady_clock::now() - interactionStartedAt;
             }
         }
 
@@ -543,12 +544,10 @@ int wmain(int argc, wchar_t** argv)
             outcome.RenderedFramesBefore = graph.QualityMetricsSnapshot().RenderedVideoFrames;
             auto const interactionStartedAt = std::chrono::steady_clock::now();
             auto resumeAfterFailure = false;
-            auto pausedAt = std::chrono::steady_clock::time_point{};
             try
             {
                 if (pauseBeforeSwitch)
                 {
-                    pausedAt = std::chrono::steady_clock::now();
                     graph.Pause();
                     resumeAfterFailure = true;
                 }
@@ -576,7 +575,6 @@ int wmain(int argc, wchar_t** argv)
                     outcome.PausedPositionAfterTicks = graph.CurrentPositionTicks();
                     outcome.PositionBeforeResumeTicks = outcome.PausedPositionAfterTicks;
                     graph.Resume();
-                    excludedSampleDuration += std::chrono::steady_clock::now() - pausedAt;
                     resumeAfterFailure = false;
                 }
                 else
@@ -622,9 +620,10 @@ int wmain(int argc, wchar_t** argv)
                 if (resumeAfterFailure)
                 {
                     graph.Resume();
-                    excludedSampleDuration += std::chrono::steady_clock::now() - pausedAt;
                 }
             }
+
+            excludedSampleDuration += std::chrono::steady_clock::now() - interactionStartedAt;
 
             return outcome;
         };
@@ -956,6 +955,12 @@ int wmain(int argc, wchar_t** argv)
             << " videoDecodeDurationMsP95=" << playbackSnapshot.VideoDecodeDurationMsP95
             << " videoDecodeDurationMsP99=" << playbackSnapshot.VideoDecodeDurationMsP99
             << " videoDecodeDurationMsMax=" << playbackSnapshot.VideoDecodeDurationMsMax
+            << " videoDecodeDeviceMode=" << playbackSnapshot.VideoDecodeDeviceMode
+            << " videoDecodeSynchronizationMode=" << playbackSnapshot.VideoDecodeSynchronizationMode
+            << " videoDecodeWorkerActive=" << (playbackSnapshot.VideoDecodeWorkerActive ? 1 : 0)
+            << " videoDecodeQueueCapacity=" << playbackSnapshot.VideoDecodeQueueCapacity
+            << " videoDecodeQueueMaxDepth=" << playbackSnapshot.VideoDecodeQueueMaxDepth
+            << " videoDecodeQueueProducerWaitCount=" << playbackSnapshot.VideoDecodeQueueProducerWaitCount
             << " videoDecodePacketReadDurationMsP50=" << playbackSnapshot.VideoDecodePacketReadDurationMsP50
             << " videoDecodePacketReadDurationMsP95=" << playbackSnapshot.VideoDecodePacketReadDurationMsP95
             << " videoDecodeSendPacketDurationMsP50=" << playbackSnapshot.VideoDecodeSendPacketDurationMsP50

@@ -9,6 +9,7 @@
 #include <wrl/client.h>
 
 #include "DolbyVisionConfiguration.h"
+#include "D3D11SharedDecodeBridge.h"
 #include "DxgiColorSpaceMapper.h"
 
 struct AVCodecContext;
@@ -30,6 +31,7 @@ namespace winrt::NoiraPlayer::Native::implementation
     struct DecodedVideoFrame
     {
         Microsoft::WRL::ComPtr<ID3D11Texture2D> Texture;
+        std::shared_ptr<void> DecoderFrameLifetime;
         uint32_t TextureArrayIndex{0};
         uint32_t Width{0};
         uint32_t Height{0};
@@ -46,6 +48,8 @@ namespace winrt::NoiraPlayer::Native::implementation
         double DecodeSendPacketDurationMs{0.0};
         double DecodeReceiveFrameDurationMs{0.0};
         double DecodeFrameMaterializeDurationMs{0.0};
+        uint64_t SharedDecodeFenceValue{0};
+        bool UsesIndependentDecodeDevice{false};
         std::vector<uint8_t> BgraPixels;
         uint32_t BgraStride{0};
     };
@@ -60,6 +64,9 @@ namespace winrt::NoiraPlayer::Native::implementation
             ID3D11DeviceContext* d3dContext);
         std::optional<DecodedVideoFrame> TryReadFrame();
         std::optional<DolbyVisionConfiguration> DolbyVisionConfigurationSnapshot() const noexcept;
+        bool UsesHardwareDecode() const noexcept { return m_hardwareDeviceContext != nullptr; }
+        bool UsesIndependentDecodeDevice() const noexcept { return m_usesIndependentDecodeDevice; }
+        bool WaitForFrame(DecodedVideoFrame const& frame) noexcept;
         void Seek(int64_t positionTicks);
         void Flush(int64_t positionTicks);
         void Close() noexcept;
@@ -74,6 +81,8 @@ namespace winrt::NoiraPlayer::Native::implementation
         uint32_t m_height{0};
         int64_t m_positionTicks{0};
         std::optional<DolbyVisionConfiguration> m_dolbyVisionConfiguration;
+        D3D11SharedDecodeBridge m_sharedDecodeBridge;
+        bool m_usesIndependentDecodeDevice{false};
         bool m_decoderDraining{false};
         bool m_open{false};
 

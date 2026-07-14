@@ -137,6 +137,12 @@ public sealed class PlaybackQualityReportMapperTests
             VideoDecodeDurationMsP95 = 12.0,
             VideoDecodeDurationMsP99 = 18.0,
             VideoDecodeDurationMsMax = 24.0,
+            VideoDecodeDeviceMode = "independent-d3d11",
+            VideoDecodeSynchronizationMode = "shared-fence",
+            VideoDecodeWorkerActive = true,
+            VideoDecodeQueueCapacity = 3,
+            VideoDecodeQueueMaxDepth = 3,
+            VideoDecodeQueueProducerWaitCount = 40,
             VideoDecodePacketReadDurationMsP50 = 0.5,
             VideoDecodePacketReadDurationMsP95 = 2.5,
             VideoDecodeSendPacketDurationMsP50 = 0.25,
@@ -232,6 +238,12 @@ public sealed class PlaybackQualityReportMapperTests
         Assert.Equal(12.0, report.Timing.VideoDecodeDurationMsP95);
         Assert.Equal(18.0, report.Timing.VideoDecodeDurationMsP99);
         Assert.Equal(24.0, report.Timing.VideoDecodeDurationMsMax);
+        Assert.Equal("independent-d3d11", report.Timing.VideoDecodeDeviceMode);
+        Assert.Equal("shared-fence", report.Timing.VideoDecodeSynchronizationMode);
+        Assert.True(report.Timing.VideoDecodeWorkerActive);
+        Assert.Equal(3UL, report.Timing.VideoDecodeQueueCapacity);
+        Assert.Equal(3UL, report.Timing.VideoDecodeQueueMaxDepth);
+        Assert.Equal(40UL, report.Timing.VideoDecodeQueueProducerWaitCount);
         Assert.Equal(0.5, report.Timing.VideoDecodePacketReadDurationMsP50);
         Assert.Equal(2.5, report.Timing.VideoDecodePacketReadDurationMsP95);
         Assert.Equal(0.25, report.Timing.VideoDecodeSendPacketDurationMsP50);

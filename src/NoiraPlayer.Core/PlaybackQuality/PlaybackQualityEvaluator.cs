@@ -1755,10 +1755,24 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 return;
             }
 
-            CheckMeasuredMax(
+            if (!report.Position.SeekRecoveryDurationMs.HasValue ||
+                report.Position.SeekRecoveryDurationMs.Value < 0)
+            {
+                CheckMeasuredMax(
+                    report,
+                    "SeekRecoveryDurationMs",
+                    0,
+                    expected.MaxSeekRecoveryDurationMs,
+                    "MaxSeekRecoveryDurationMs",
+                    "position.seekRecoveryDurationMs",
+                    "timeline");
+                return;
+            }
+
+            CheckMax(
                 report,
                 "SeekRecoveryDurationMs",
-                report.Position.SeekRecoveryDurationMs.GetValueOrDefault(),
+                report.Position.SeekRecoveryDurationMs.Value,
                 expected.MaxSeekRecoveryDurationMs,
                 "MaxSeekRecoveryDurationMs",
                 "position.seekRecoveryDurationMs",

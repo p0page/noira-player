@@ -1447,6 +1447,34 @@ namespace NoiraPlayer.Core.PlaybackQuality
             }
 
             var numericDelta = candidateActual - baselineActual;
+            if (TryParseDouble(baseline.Expected, out var baselineExpected) &&
+                TryParseDouble(candidate.Expected, out var candidateExpected))
+            {
+                var baselineError = NormalizedExpectedError(baselineActual, baselineExpected);
+                var candidateError = NormalizedExpectedError(candidateActual, candidateExpected);
+                var errorDelta = candidateError - baselineError;
+                if (Math.Abs(errorDelta) <= DerivedSignalEpsilon)
+                {
+                    return;
+                }
+
+                var delta = CreateDelta(
+                    baseline,
+                    candidate,
+                    numericDelta < 0 ? "decreased" : "increased",
+                    numericDelta);
+                if (errorDelta < 0)
+                {
+                    comparison.Improvements.Add(delta);
+                }
+                else
+                {
+                    comparison.Regressions.Add(delta);
+                }
+
+                return;
+            }
+
             var higherIsBetter = IsHigherBetterSignal(GetCheckKey(candidate));
             if ((!higherIsBetter && numericDelta < 0) ||
                 (higherIsBetter && numericDelta > 0))
@@ -1466,6 +1494,11 @@ namespace NoiraPlayer.Core.PlaybackQuality
                     numericDelta < 0 ? "decreased" : "increased",
                     numericDelta));
             }
+        }
+
+        private static double NormalizedExpectedError(double actual, double expected)
+        {
+            return Math.Abs(actual - expected) / Math.Max(Math.Abs(expected), 1.0);
         }
 
         private static void AddTrackAndSubtitleEvidenceDeltas(

@@ -145,6 +145,12 @@ namespace winrt::NoiraPlayer::Native::implementation
         double VideoDecodeDurationMsP95{0.0};
         double VideoDecodeDurationMsP99{0.0};
         double VideoDecodeDurationMsMax{0.0};
+        std::string VideoDecodeDeviceMode{"unknown"};
+        std::string VideoDecodeSynchronizationMode{"none"};
+        bool VideoDecodeWorkerActive{false};
+        uint64_t VideoDecodeQueueCapacity{0};
+        uint64_t VideoDecodeQueueMaxDepth{0};
+        uint64_t VideoDecodeQueueProducerWaitCount{0};
         double VideoDecodePacketReadDurationMsP50{0.0};
         double VideoDecodePacketReadDurationMsP95{0.0};
         double VideoDecodeSendPacketDurationMsP50{0.0};

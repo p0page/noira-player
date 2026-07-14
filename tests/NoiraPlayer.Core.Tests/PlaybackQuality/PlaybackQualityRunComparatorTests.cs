@@ -1345,6 +1345,26 @@ public sealed class PlaybackQualityRunComparatorTests
     }
 
     [Fact]
+    public void Compare_Treats_Failing_Sample_Coverage_Closer_To_Expected_As_Improvement()
+    {
+        var baseline = CreateReport(
+            "baseline",
+            Check("SampleWindowCoverage", "fail", "frame-pacing", "execution.requestedSampleDurationMs", "30000", "27766.667"));
+        var candidate = CreateReport(
+            "candidate",
+            Check("SampleWindowCoverage", "fail", "frame-pacing", "execution.requestedSampleDurationMs", "30000", "29266.667"));
+
+        var comparison = PlaybackQualityRunComparator.Compare(baseline, candidate);
+
+        Assert.Contains(comparison.Improvements, delta =>
+            delta.Signal == "execution.requestedSampleDurationMs" &&
+            delta.Direction == "increased" &&
+            delta.NumericDelta == 1500);
+        Assert.DoesNotContain(comparison.Regressions, delta =>
+            delta.Signal == "execution.requestedSampleDurationMs");
+    }
+
+    [Fact]
     public void Compare_Preserves_Large_Max_Gap_Regression_When_Sustained_Cadence_Improves()
     {
         var baseline = CreateReport(

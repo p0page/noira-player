@@ -135,7 +135,10 @@ namespace
         }
     }
 
-    AVBufferRef* TryCreateD3D11HardwareDevice(ID3D11Device* device, ID3D11DeviceContext* context)
+    AVBufferRef* TryCreateD3D11HardwareDevice(
+        ID3D11Device* device,
+        ID3D11DeviceContext* context,
+        UINT textureMiscFlags = 0)
     {
         if (device == nullptr)
         {
@@ -159,6 +162,8 @@ namespace
             d3d11Context->device_context = context;
             d3d11Context->device_context->AddRef();
         }
+
+        d3d11Context->MiscFlags = textureMiscFlags;
 
         auto result = av_hwdevice_ctx_init(hardwareDevice.get());
         if (result < 0)
@@ -281,6 +286,21 @@ namespace
         }
 
         auto texture = reinterpret_cast<ID3D11Texture2D*>(frame->data[0]);
+        auto retainedFrame = av_frame_clone(frame);
+        if (retainedFrame == nullptr)
+        {
+            throw winrt::hresult_error(
+                E_OUTOFMEMORY,
+                L"Could not retain the FFmpeg D3D11VA frame for presentation.");
+        }
+
+        decodedFrame.DecoderFrameLifetime = std::shared_ptr<void>(
+            retainedFrame,
+            [](void* value)
+            {
+                auto retained = static_cast<AVFrame*>(value);
+                av_frame_free(&retained);
+            });
         texture->AddRef();
         decodedFrame.Texture.Attach(texture);
         decodedFrame.TextureArrayIndex = static_cast<uint32_t>(reinterpret_cast<intptr_t>(frame->data[1]));
@@ -654,9 +674,32 @@ namespace winrt::NoiraPlayer::Native::implementation
             auto hardwarePixelFormat = FindD3D11HardwarePixelFormat(decoder);
             if (hardwarePixelFormat != AV_PIX_FMT_NONE)
             {
-                hardwareDeviceContext = TryCreateD3D11HardwareDevice(d3dDevice, d3dContext);
+                auto independentDecodeDeviceAvailable =
+                    m_sharedDecodeBridge.Initialize(d3dDevice, d3dContext);
+                auto hardwareDevice = independentDecodeDeviceAvailable
+                    ? m_sharedDecodeBridge.DecoderDevice()
+                    : d3dDevice;
+                auto hardwareContext = independentDecodeDeviceAvailable
+                    ? m_sharedDecodeBridge.DecoderContext()
+                    : d3dContext;
+                auto textureMiscFlags = independentDecodeDeviceAvailable
+                    ? m_sharedDecodeBridge.DecoderTextureMiscFlags()
+                    : 0;
+                hardwareDeviceContext = TryCreateD3D11HardwareDevice(
+                    hardwareDevice,
+                    hardwareContext,
+                    textureMiscFlags);
+                if (hardwareDeviceContext == nullptr && independentDecodeDeviceAvailable)
+                {
+                    AppendNativePlaybackDiagnostic(
+                        L"VideoDecoder.Open independent D3D11 device rejected by FFmpeg; using render device");
+                    m_sharedDecodeBridge.Close();
+                    hardwareDeviceContext = TryCreateD3D11HardwareDevice(d3dDevice, d3dContext);
+                    independentDecodeDeviceAvailable = false;
+                }
                 if (hardwareDeviceContext != nullptr)
                 {
+                    m_usesIndependentDecodeDevice = independentDecodeDeviceAvailable;
                     m_hardwarePixelFormat = hardwarePixelFormat;
                     codecContext->opaque = &m_hardwarePixelFormat;
                     codecContext->get_format = SelectHardwarePixelFormat;
@@ -687,7 +730,8 @@ namespace winrt::NoiraPlayer::Native::implementation
                 L" height=" + std::to_wstring(codecContext->height) +
                 L" pixFmt=" + std::to_wstring(static_cast<int>(codecContext->pix_fmt)) +
                 L" hwPixFmt=" + std::to_wstring(m_hardwarePixelFormat) +
-                L" hwDevice=" + std::to_wstring(codecContext->hw_device_ctx != nullptr ? 1 : 0));
+                L" hwDevice=" + std::to_wstring(codecContext->hw_device_ctx != nullptr ? 1 : 0) +
+                L" independentDevice=" + std::to_wstring(m_usesIndependentDecodeDevice ? 1 : 0));
 
             mediaSource.RegisterStream(videoStreamIndex);
             m_mediaSource = &mediaSource;
@@ -727,6 +771,12 @@ namespace winrt::NoiraPlayer::Native::implementation
         return m_dolbyVisionConfiguration;
     }
 
+    bool VideoDecoder::WaitForFrame(DecodedVideoFrame const& frame) noexcept
+    {
+        return !frame.UsesIndependentDecodeDevice ||
+            m_sharedDecodeBridge.WaitForFrame(frame.SharedDecodeFenceValue);
+    }
+
     std::optional<DecodedVideoFrame> VideoDecoder::TryReadFrame()
     {
         if (!m_open || m_mediaSource == nullptr || m_codecContext == nullptr || m_videoStreamIndex < 0)
@@ -748,6 +798,25 @@ namespace winrt::NoiraPlayer::Native::implementation
         {
             if (decodedFrame)
             {
+                if (decodedFrame->Texture && m_usesIndependentDecodeDevice)
+                {
+                    Microsoft::WRL::ComPtr<ID3D11Texture2D> renderTexture;
+                    uint64_t fenceValue = 0;
+                    if (!m_sharedDecodeBridge.ExportFrame(
+                        decodedFrame->Texture.Get(),
+                        renderTexture,
+                        fenceValue))
+                    {
+                        throw winrt::hresult_error(
+                            E_FAIL,
+                            L"Could not export an independent D3D11VA frame to the render device.");
+                    }
+
+                    decodedFrame->Texture = std::move(renderTexture);
+                    decodedFrame->SharedDecodeFenceValue = fenceValue;
+                    decodedFrame->UsesIndependentDecodeDevice = true;
+                }
+
                 decodedFrame->PositionTicks = m_mediaSource->NormalizeTimestampTicks(
                     decodedFrame->PositionTicks);
                 m_positionTicks = decodedFrame->PositionTicks;
@@ -1022,6 +1091,8 @@ namespace winrt::NoiraPlayer::Native::implementation
             av_buffer_unref(&m_hardwareDeviceContext);
         }
 
+        m_sharedDecodeBridge.Close();
+
         m_mediaSource = nullptr;
         m_hardwarePixelFormat = -1;
         m_videoStreamIndex = -1;
@@ -1029,6 +1100,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         m_height = 0;
         m_positionTicks = 0;
         m_dolbyVisionConfiguration.reset();
+        m_usesIndependentDecodeDevice = false;
         m_decoderDraining = false;
         m_open = false;
     }
