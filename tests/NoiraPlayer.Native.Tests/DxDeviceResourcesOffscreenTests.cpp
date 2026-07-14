@@ -13,6 +13,9 @@ int main()
 {
     DxDeviceResources resources;
     assert(!resources.HasRenderTarget());
+    assert(!resources.HasCachedVideoProcessor());
+    assert(resources.VideoProcessorCacheHitCount() == 0);
+    assert(resources.VideoProcessorCacheMissCount() == 0);
 
     resources.CreateSwapChain(16, 16, false);
 
@@ -32,6 +35,76 @@ int main()
         nullptr,
         &failedSample));
     assert(failedSample.Path == VideoRenderPath::None);
+    assert(!resources.HasCachedVideoProcessor());
+
+    D3D11_TEXTURE2D_DESC videoDescription{};
+    videoDescription.Width = 16;
+    videoDescription.Height = 16;
+    videoDescription.MipLevels = 1;
+    videoDescription.ArraySize = 1;
+    videoDescription.Format = DXGI_FORMAT_NV12;
+    videoDescription.SampleDesc.Count = 1;
+    videoDescription.Usage = D3D11_USAGE_DEFAULT;
+    videoDescription.BindFlags = D3D11_BIND_DECODER;
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> videoTexture;
+    assert(SUCCEEDED(resources.Device()->CreateTexture2D(
+        &videoDescription,
+        nullptr,
+        videoTexture.ReleaseAndGetAddressOf())));
+
+    VideoRenderPhaseSample firstVideoSample{};
+    assert(resources.TryProcessVideoFrameToBackBuffer(
+        videoTexture.Get(),
+        0,
+        16,
+        16,
+        16,
+        16,
+        VideoColorMetadata{},
+        false,
+        nullptr,
+        &firstVideoSample));
+    assert(firstVideoSample.Path == VideoRenderPath::VideoProcessor);
+    assert(resources.HasCachedVideoProcessor());
+    assert(resources.VideoProcessorCacheHitCount() == 0);
+    assert(resources.VideoProcessorCacheMissCount() == 1);
+
+    VideoRenderPhaseSample secondVideoSample{};
+    assert(resources.TryProcessVideoFrameToBackBuffer(
+        videoTexture.Get(),
+        0,
+        16,
+        16,
+        16,
+        16,
+        VideoColorMetadata{},
+        false,
+        nullptr,
+        &secondVideoSample));
+    assert(secondVideoSample.Path == VideoRenderPath::VideoProcessor);
+    assert(resources.VideoProcessorCacheHitCount() == 1);
+    assert(resources.VideoProcessorCacheMissCount() == 1);
+
+    resources.CreateSwapChain(32, 16, false);
+    assert(!resources.HasCachedVideoProcessor());
+
+    VideoRenderPhaseSample recreatedVideoSample{};
+    assert(resources.TryProcessVideoFrameToBackBuffer(
+        videoTexture.Get(),
+        0,
+        16,
+        16,
+        16,
+        16,
+        VideoColorMetadata{},
+        false,
+        nullptr,
+        &recreatedVideoSample));
+    assert(recreatedVideoSample.Path == VideoRenderPath::VideoProcessor);
+    assert(resources.HasCachedVideoProcessor());
+    assert(resources.VideoProcessorCacheHitCount() == 1);
+    assert(resources.VideoProcessorCacheMissCount() == 2);
+
     SubtitleBitmapRegion subtitle;
     subtitle.X = 4;
     subtitle.Y = 4;

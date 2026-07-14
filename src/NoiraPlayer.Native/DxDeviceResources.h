@@ -57,12 +57,47 @@ namespace winrt::NoiraPlayer::Native::implementation
         DXGI_COLOR_SPACE_TYPE LastVideoProcessorInputColorSpace() const noexcept;
         DXGI_COLOR_SPACE_TYPE LastVideoProcessorOutputColorSpace() const noexcept;
         std::wstring LastVideoProcessorConversionStatus() const;
+        bool HasCachedVideoProcessor() const noexcept;
+        uint64_t VideoProcessorCacheHitCount() const noexcept;
+        uint64_t VideoProcessorCacheMissCount() const noexcept;
 
     private:
+        struct VideoProcessorCacheKey
+        {
+            uint32_t InputWidth{0};
+            uint32_t InputHeight{0};
+            uint32_t OutputWidth{0};
+            uint32_t OutputHeight{0};
+            DXGI_FORMAT InputFormat{DXGI_FORMAT_UNKNOWN};
+            DXGI_FORMAT OutputFormat{DXGI_FORMAT_UNKNOWN};
+            D3D11_VIDEO_FRAME_FORMAT FrameFormat{D3D11_VIDEO_FRAME_FORMAT_PROGRESSIVE};
+            D3D11_VIDEO_USAGE Usage{D3D11_VIDEO_USAGE_PLAYBACK_NORMAL};
+
+            bool operator==(VideoProcessorCacheKey const& other) const noexcept
+            {
+                return InputWidth == other.InputWidth &&
+                    InputHeight == other.InputHeight &&
+                    OutputWidth == other.OutputWidth &&
+                    OutputHeight == other.OutputHeight &&
+                    InputFormat == other.InputFormat &&
+                    OutputFormat == other.OutputFormat &&
+                    FrameFormat == other.FrameFormat &&
+                    Usage == other.Usage;
+            }
+        };
+
         bool ClearBackBufferToBlack(bool present);
         bool ClearTextureToBlack(ID3D11Texture2D* texture);
         bool EnsureSubtitleOverlayResources();
         bool DrawSubtitleBitmapOverlayD3d11(SubtitleBitmapRegion const& region);
+        bool TryGetOrCreateVideoProcessor(
+            ID3D11VideoDevice* videoDevice,
+            D3D11_VIDEO_PROCESSOR_CONTENT_DESC const& contentDescription,
+            DXGI_FORMAT inputFormat,
+            DXGI_FORMAT outputFormat,
+            Microsoft::WRL::ComPtr<ID3D11VideoProcessorEnumerator>& enumerator,
+            Microsoft::WRL::ComPtr<ID3D11VideoProcessor>& processor);
+        void ResetVideoProcessorCache() noexcept;
         void SetVideoProcessorConversionStatus(
             DXGI_COLOR_SPACE_TYPE inputColorSpace,
             DXGI_COLOR_SPACE_TYPE outputColorSpace,
@@ -79,6 +114,12 @@ namespace winrt::NoiraPlayer::Native::implementation
         DXGI_COLOR_SPACE_TYPE m_lastVideoProcessorInputColorSpace{DXGI_COLOR_SPACE_CUSTOM};
         DXGI_COLOR_SPACE_TYPE m_lastVideoProcessorOutputColorSpace{DXGI_COLOR_SPACE_CUSTOM};
         std::wstring m_lastVideoProcessorConversionStatus{L"not-run"};
+        bool m_hasVideoProcessorCacheKey{false};
+        VideoProcessorCacheKey m_videoProcessorCacheKey{};
+        Microsoft::WRL::ComPtr<ID3D11VideoProcessorEnumerator> m_cachedVideoProcessorEnumerator;
+        Microsoft::WRL::ComPtr<ID3D11VideoProcessor> m_cachedVideoProcessor;
+        uint64_t m_videoProcessorCacheHitCount{0};
+        uint64_t m_videoProcessorCacheMissCount{0};
         HdrToneMappingPass m_hdrToneMappingPass;
         Microsoft::WRL::ComPtr<ID3D11VertexShader> m_subtitleVertexShader;
         Microsoft::WRL::ComPtr<ID3D11PixelShader> m_subtitlePixelShader;

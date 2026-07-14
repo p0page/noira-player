@@ -214,6 +214,8 @@ float4 PSMain(VertexOutput input) : SV_TARGET
             return;
         }
 
+        ResetVideoProcessorCache();
+
         D3D_FEATURE_LEVEL featureLevels[] =
         {
             D3D_FEATURE_LEVEL_11_1,
@@ -292,6 +294,7 @@ float4 PSMain(VertexOutput input) : SV_TARGET
         }
 
         winrt::check_hresult(hr);
+        ResetVideoProcessorCache();
         m_swapChain = swapChain;
         m_swapChainFormat = actualFormat;
         m_isTenBitSwapChain = actualFormat == DXGI_FORMAT_R10G10B10A2_UNORM;
@@ -429,15 +432,14 @@ float4 PSMain(VertexOutput input) : SV_TARGET
         contentDescription.Usage = D3D11_VIDEO_USAGE_PLAYBACK_NORMAL;
 
         Microsoft::WRL::ComPtr<ID3D11VideoProcessorEnumerator> enumerator;
-        if (FAILED(videoDevice->CreateVideoProcessorEnumerator(
-            &contentDescription,
-            enumerator.ReleaseAndGetAddressOf())))
-        {
-            return false;
-        }
-
         Microsoft::WRL::ComPtr<ID3D11VideoProcessor> processor;
-        if (FAILED(videoDevice->CreateVideoProcessor(enumerator.Get(), 0, processor.ReleaseAndGetAddressOf())))
+        if (!TryGetOrCreateVideoProcessor(
+                videoDevice.Get(),
+                contentDescription,
+                sourceDescription.Format,
+                targetDescription.Format,
+                enumerator,
+                processor))
         {
             return false;
         }
@@ -1429,6 +1431,89 @@ float4 PSMain(VertexOutput input) : SV_TARGET
     std::wstring DxDeviceResources::LastVideoProcessorConversionStatus() const
     {
         return m_lastVideoProcessorConversionStatus;
+    }
+
+    bool DxDeviceResources::HasCachedVideoProcessor() const noexcept
+    {
+        return m_hasVideoProcessorCacheKey &&
+            m_cachedVideoProcessorEnumerator &&
+            m_cachedVideoProcessor;
+    }
+
+    uint64_t DxDeviceResources::VideoProcessorCacheHitCount() const noexcept
+    {
+        return m_videoProcessorCacheHitCount;
+    }
+
+    uint64_t DxDeviceResources::VideoProcessorCacheMissCount() const noexcept
+    {
+        return m_videoProcessorCacheMissCount;
+    }
+
+    bool DxDeviceResources::TryGetOrCreateVideoProcessor(
+        ID3D11VideoDevice* videoDevice,
+        D3D11_VIDEO_PROCESSOR_CONTENT_DESC const& contentDescription,
+        DXGI_FORMAT inputFormat,
+        DXGI_FORMAT outputFormat,
+        Microsoft::WRL::ComPtr<ID3D11VideoProcessorEnumerator>& enumerator,
+        Microsoft::WRL::ComPtr<ID3D11VideoProcessor>& processor)
+    {
+        if (videoDevice == nullptr)
+        {
+            return false;
+        }
+
+        VideoProcessorCacheKey const key{
+            contentDescription.InputWidth,
+            contentDescription.InputHeight,
+            contentDescription.OutputWidth,
+            contentDescription.OutputHeight,
+            inputFormat,
+            outputFormat,
+            contentDescription.InputFrameFormat,
+            contentDescription.Usage};
+
+        if (HasCachedVideoProcessor() && m_videoProcessorCacheKey == key)
+        {
+            enumerator = m_cachedVideoProcessorEnumerator;
+            processor = m_cachedVideoProcessor;
+            ++m_videoProcessorCacheHitCount;
+            return true;
+        }
+
+        ++m_videoProcessorCacheMissCount;
+        Microsoft::WRL::ComPtr<ID3D11VideoProcessorEnumerator> createdEnumerator;
+        if (FAILED(videoDevice->CreateVideoProcessorEnumerator(
+                &contentDescription,
+                createdEnumerator.ReleaseAndGetAddressOf())))
+        {
+            return false;
+        }
+
+        Microsoft::WRL::ComPtr<ID3D11VideoProcessor> createdProcessor;
+        if (FAILED(videoDevice->CreateVideoProcessor(
+                createdEnumerator.Get(),
+                0,
+                createdProcessor.ReleaseAndGetAddressOf())))
+        {
+            return false;
+        }
+
+        m_videoProcessorCacheKey = key;
+        m_hasVideoProcessorCacheKey = true;
+        m_cachedVideoProcessorEnumerator = createdEnumerator;
+        m_cachedVideoProcessor = createdProcessor;
+        enumerator = createdEnumerator;
+        processor = createdProcessor;
+        return true;
+    }
+
+    void DxDeviceResources::ResetVideoProcessorCache() noexcept
+    {
+        m_cachedVideoProcessor.Reset();
+        m_cachedVideoProcessorEnumerator.Reset();
+        m_videoProcessorCacheKey = {};
+        m_hasVideoProcessorCacheKey = false;
     }
 
     void DxDeviceResources::SetVideoProcessorConversionStatus(
