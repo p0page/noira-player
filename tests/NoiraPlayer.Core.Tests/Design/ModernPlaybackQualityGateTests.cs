@@ -21,6 +21,14 @@ public sealed class ModernPlaybackQualityGateTests
             script,
             StringComparison.Ordinal);
         Assert.Contains("Export-AppQualityRunReports.ps1", script, StringComparison.Ordinal);
+        Assert.Contains("executed-app-manifest.local.json", script, StringComparison.Ordinal);
+        Assert.Contains("validate-report-set", script, StringComparison.Ordinal);
+        Assert.Contains("$selectedManifest.cases", script, StringComparison.Ordinal);
+        Assert.Contains("$validationSummary.expectedCaseCount -ne $expectedReportCount", script, StringComparison.Ordinal);
+        Assert.Contains("$validationSummary.reportCount -ne $expectedReportCount", script, StringComparison.Ordinal);
+        Assert.Contains("$validationSummary.matchedCaseCount -ne $expectedReportCount", script, StringComparison.Ordinal);
+        Assert.Contains("$validationSummary.structureValid -ne $true", script, StringComparison.Ordinal);
+        Assert.Contains("$validationSummary.executionValid -ne $true", script, StringComparison.Ordinal);
         Assert.Contains("analyze-report-set", script, StringComparison.Ordinal);
         Assert.Contains("modelAnalysis", script, StringComparison.Ordinal);
         Assert.Contains("runtimeMetrics", script, StringComparison.Ordinal);
@@ -33,6 +41,8 @@ public sealed class ModernPlaybackQualityGateTests
         Assert.Contains("plannedCaseCount", script, StringComparison.Ordinal);
         Assert.Contains("selectedCaseCount", script, StringComparison.Ordinal);
         Assert.Contains("exportedReportCount", script, StringComparison.Ordinal);
+        Assert.Contains("validatedReportCount", script, StringComparison.Ordinal);
+        Assert.Contains("matchedReportCount", script, StringComparison.Ordinal);
         Assert.Contains("$expectedReportCount = 1", script, StringComparison.Ordinal);
         Assert.Contains("$exportSummary.exportedReportCount -ne $expectedReportCount", script, StringComparison.Ordinal);
         Assert.Contains("$analysisSummary.totalReportCount -ne $expectedReportCount", script, StringComparison.Ordinal);

@@ -13,9 +13,11 @@ param(
     [int]$WaitSeconds = 90,
     [string]$MsBuildPath = '',
     [string]$RunPlanPath = '',
+    [string]$ExecutedManifestPath = '',
     [string]$ReportsDirectory = '',
     [string]$CommandSummaryPath = '',
     [string]$ExportSummaryPath = '',
+    [string]$ValidationSummaryPath = '',
     [string]$AnalysisSummaryPath = '',
     [string]$OutputPath = '',
     [switch]$SkipBuild,
@@ -124,14 +126,23 @@ if ($WaitSeconds -le $DurationSeconds) {
 
 $ManifestPath = Resolve-RepositoryPath $ManifestPath 'docs\qa\playback-quality-reference-manifest.example.json'
 $RunPlanPath = Resolve-RepositoryPath $RunPlanPath 'docs\qa\private\modern-aot-playback-check-run-plan.local.json'
+$ExecutedManifestPath = Resolve-RepositoryPath $ExecutedManifestPath 'docs\qa\private\executed-app-manifest.local.json'
 $ReportsDirectory = Resolve-RepositoryPath $ReportsDirectory 'docs\qa\private\modern-aot-playback-check-captured.local'
 $CommandSummaryPath = Resolve-RepositoryPath $CommandSummaryPath 'docs\qa\private\modern-aot-playback-check-command-summary.local.json'
 $ExportSummaryPath = Resolve-RepositoryPath $ExportSummaryPath 'docs\qa\private\modern-aot-playback-check-export-summary.local.json'
+$ValidationSummaryPath = Resolve-RepositoryPath $ValidationSummaryPath 'docs\qa\private\modern-aot-playback-check-validation.local.json'
 $AnalysisSummaryPath = Resolve-RepositoryPath $AnalysisSummaryPath 'docs\qa\private\modern-aot-playback-check-analysis.local.json'
 $OutputPath = Resolve-RepositoryPath $OutputPath 'docs\qa\private\modern-aot-playback-check.local.json'
 
 Remove-DirectoryInsideRoot $ReportsDirectory $repoRoot
-foreach ($outputFile in @($RunPlanPath, $CommandSummaryPath, $ExportSummaryPath, $AnalysisSummaryPath, $OutputPath)) {
+foreach ($outputFile in @(
+    $RunPlanPath,
+    $ExecutedManifestPath,
+    $CommandSummaryPath,
+    $ExportSummaryPath,
+    $ValidationSummaryPath,
+    $AnalysisSummaryPath,
+    $OutputPath)) {
     $directory = Split-Path -Parent $outputFile
     if (-not [string]::IsNullOrWhiteSpace($directory)) {
         New-Item -ItemType Directory -Force -Path $directory | Out-Null
@@ -260,6 +271,23 @@ if ($null -eq $selectedCase) {
 }
 $expectedReportCount = 1
 
+$sourceManifest = Get-Content -LiteralPath $ManifestPath -Raw | ConvertFrom-Json
+$selectedReferenceCases = @($sourceManifest.cases | Where-Object {
+    $_.caseId -eq $selectedCase.caseId
+})
+if ($selectedReferenceCases.Count -ne $expectedReportCount) {
+    throw 'Playback-quality selected case did not map to exactly one reference manifest case.'
+}
+$selectedManifest = [pscustomobject][ordered]@{
+    schemaVersion = $sourceManifest.schemaVersion
+    cases = @($selectedReferenceCases)
+}
+if (@($selectedManifest.cases).Count -ne $expectedReportCount) {
+    throw 'Playback-quality executed manifest did not preserve the single selected case.'
+}
+$selectedManifest | ConvertTo-Json -Depth 20 |
+    Set-Content -LiteralPath $ExecutedManifestPath -Encoding UTF8
+
 $writeCommandArguments = @(
     '-NoProfile',
     '-ExecutionPolicy',
@@ -322,6 +350,32 @@ Invoke-CheckedProcess 'powershell' @(
 $exportSummary = Get-Content -LiteralPath $ExportSummaryPath -Raw | ConvertFrom-Json
 if ($exportSummary.exportedReportCount -ne $expectedReportCount) {
     throw "Playback-quality export count mismatch. Selected $expectedReportCount, exported $($exportSummary.exportedReportCount)."
+}
+
+Invoke-CheckedProcess 'dotnet' @(
+    'run',
+    '--project',
+    $playbackQualityCliProjectPath,
+    '--framework',
+    'net10.0',
+    '--',
+    'validate-report-set',
+    '--manifest',
+    $ExecutedManifestPath,
+    '--reports-dir',
+    $ReportsDirectory,
+    '--output',
+    $ValidationSummaryPath
+)
+
+$validationSummary = Get-Content -LiteralPath $ValidationSummaryPath -Raw | ConvertFrom-Json
+if ($validationSummary.expectedCaseCount -ne $expectedReportCount -or
+    $validationSummary.reportCount -ne $expectedReportCount -or
+    $validationSummary.matchedCaseCount -ne $expectedReportCount -or
+    $validationSummary.structureValid -ne $true -or
+    $validationSummary.executionValid -ne $true -or
+    $validationSummary.isValid -ne $true) {
+    throw 'Playback-quality App-hosted report set did not strictly match the executed manifest.'
 }
 
 Invoke-CheckedProcess 'dotnet' @(
@@ -397,13 +451,17 @@ $report = [ordered]@{
     plannedCaseCount = $cases.Count
     selectedCaseCount = $expectedReportCount
     exportedReportCount = $exportSummary.exportedReportCount
+    validatedReportCount = $validationSummary.reportCount
+    matchedReportCount = $validationSummary.matchedCaseCount
     analyzedReportCount = $analysisSummary.totalReportCount
     reportRelativePath = $reportRelativePath
     capturedReportPath = $capturedReportPath
     exportedReportPath = (Resolve-Path -LiteralPath $exportedReportPath).Path
     runPlanPath = (Resolve-Path -LiteralPath $RunPlanPath).Path
+    executedManifestPath = (Resolve-Path -LiteralPath $ExecutedManifestPath).Path
     commandSummaryPath = (Resolve-Path -LiteralPath $CommandSummaryPath).Path
     exportSummaryPath = (Resolve-Path -LiteralPath $ExportSummaryPath).Path
+    validationSummaryPath = (Resolve-Path -LiteralPath $ValidationSummaryPath).Path
     analysisSummaryPath = (Resolve-Path -LiteralPath $AnalysisSummaryPath).Path
 }
 

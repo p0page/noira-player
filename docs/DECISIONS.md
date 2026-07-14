@@ -1,5 +1,13 @@
 ﻿# 技术决策
 
+## 2026-07-15：App-hosted 筛选执行必须绑定精确 executed manifest
+
+决策：App-hosted gate 从完整 manifest 筛选一个或多个 case 时，必须先写出只包含实际所选 case 的 ignored 本地 executed manifest。导出报告后、进入分析前，必须使用该 executed manifest 运行 `validate-report-set`，并要求 expected、report、matched 数量都与实际选择数完全一致，且 structure、execution 和整体 validation 全部有效。只检查计划、导出数量或分析数量不能替代严格校验。
+
+原因：完整 manifest 描述可用语料，不代表本轮全部执行。若单 case 运行沿用完整 manifest，会产生无关 missing case；若完全跳过 validator，则可能把错误 case、重复 report、scenario 不一致或缺失执行证据带入分析。精确执行清单使 manifest、真实 App/native 执行和 report 保持一一对应，并且不会把 quality fail 改成 pass。
+
+边界：executed manifest、私有 locator 和运行报告只保存在 ignored/private 路径。该变化修复评测器，不改变播放器 Core、样本预期或质量阈值；受其他播放负载污染的性能结果仍不得进入 baseline/candidate 裁决。
+
 ## 2026-07-15：timeline 使用显式绝对目标，评测升级到 v0.19
 
 决策：每个 `timeline` case 必须在 manifest 中声明 `seekTargetPositionTicks`。它表示播放器逻辑时间轴上的绝对目标，不由 runner、App 或 native helper 根据当前进度、文件名、百分比或固定偏移重新计算。目标必须非负、与 `startPositionTicks` 不同，并从 manifest 原样传到 native/App 执行和 report；report-set 必须验证实际目标与 manifest 完全相等。非 timeline case 不得携带该字段。

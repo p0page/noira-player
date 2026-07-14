@@ -12,6 +12,8 @@ timeline case 必须携带显式绝对 `seekTargetPositionTicks`，并在 manife
 
 v0.18 与 v0.19 的 timeline case 不可直接比较。另一个播放进程会使网络、CPU、GPU 和解码器资源不可控，因此受干扰运行不能支持性能候选；它仍可用于确认目标传递、demux 定位、首帧落点和时间轴推进，所有性能失败保持原样。
 
+App-hosted 运行若只选择完整 manifest 的子集，必须保存本次精确 executed manifest。`Test-NoiraModernPlaybackQuality.ps1` 默认只运行一个 case，因此必须得到一个 case 的 executed manifest，并在分析前使用它执行 `validate-report-set`；计划、选择、导出、校验、匹配和分析数量都必须为 1。不要用完整 manifest 的 coverage 代替本轮执行覆盖，也不要只运行 analyzer 跳过 structure/execution 校验。quality report 即使为 fail，只要执行证据完整且与 manifest 一一对应，仍是有效诊断证据；validator 无效则属于采集闭环失败，不能进入 Core 调优。
+
 ## v0.12 候选比较的环境隔离与离群值边界
 
 - stable/challenge case 仍必须真实进入 native/App 播放链路；probe、manifest expected 或合成报告不能替代播放证据。

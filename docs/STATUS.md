@@ -8,6 +8,8 @@
 
 私有“一战再战”代表源完成一次真实远距离验证：从 60 秒跳到 4860 秒，native demux 目标为 4860 秒，首个呈现帧为 4860.064 秒，落点误差 64ms，随后推进到 4862.149 秒。该轮还发现 harness 曾在 seek 调用返回后、首帧尚未出现时把恢复耗时留成 0；修复后同一 case 的 `seekRecoveryDurationMs` 为 2415.8ms。该问题归类为评测器缺陷，不是 Core 改善。
 
+完整 App-hosted Native AOT 复核又发现一个评测器缺口：脚本从多 case manifest 中只选一个 case 执行，却没有保存本次精确执行子集，也没有在分析前运行严格 report-set 校验。现在脚本会生成仅含所选 case 的 ignored 本地 executed manifest，并要求计划、选择、导出、校验、匹配、分析全部为 `1/1/1/1/1/1`，同时要求 `structureValid`、`executionValid`、`isValid` 全为 true；任一不一致都会中止。真实 App-hosted timeline 复核满足上述严格链路，目标 4860 秒、demux 目标 4860 秒、首帧 4860.189 秒、后续位置 4860.272 秒，落点误差 189ms。报告仍因恢复约 8.67 秒、媒体窗口不足、启动慢和饥饿而 fail；并行负载使这些性能值不可进入调优比较，但不会影响这次 1:1 执行和 seek 语义证据。该修复只提升裁判可信度，不声称 Core 性能改善。
+
 这次私有运行因启动约 9.0 秒和 21 次视频饥饿仍为 fail。运行期间存在其他播放负载，因此这些性能值只用于暴露环境争用，不进入 baseline/candidate 性能裁决；seek 目标、demux 目标、首帧落点和后续推进等功能证据仍有效。并行播放不会把 fail 改成 pass，也不能成为放宽阈值的理由。Core 全量 `1145/1145` 通过；`run-playback-core-checks.ps1 -AppDiffBase main` 的 38 个阶段全部通过，其中真实 native corpus 约运行 370 秒；CLI、baseline、candidate、dev-command、EAGAIN、网络恢复、timeline、轨道字幕、颜色/display 和 Native x64 build 均通过。完整 App Debug x64 也已生成 `NoiraPlayer.App.dll`。
 
 ## 2026-07-15 更新：接受 video processor 资源复用候选，并补上三处会造成假绿或集成漏检的缺口
