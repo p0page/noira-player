@@ -1492,3 +1492,11 @@ baseline 必须在 materialize 前检查 runner summary 的版本、缺失报告
 原因：v0.17 的真实公开样本中，启动超时主要由数秒 HTTP read/seek wait 构成，但旧裁判仍建议修改 Core，可能把网络波动优化进播放策略。新规则只阻止这种误归因，并不证明 Core 的 Range、seek 或缓存策略已经最优；如果同一源在重复运行中持续出现相同 provider、阶段、调用次数、等待和 seek distance，仍可据此设计独立的 I/O 候选，并用同 manifest 的 baseline/candidate 验证。
 
 模型报告必须保留逐组件 provider、evidence status、read/seek call、wait 和 seek distance，不得只保留归因标签。`playback-quality-v0.17` 与 v0.18 的失败语义不同，不能直接比较。算法和消费边界见 `docs/qa/startup-transport-attribution.md`。
+
+# 2026-07-15: 不默认启用 FFmpeg `async:` 输入包装
+
+决策：当前 HTTP 直播放继续使用同步的 instrumented FFmpeg AVIO，不把 `async:` 包装加入默认 Core，也不进入正式 candidate。运行时枚举已证明 FFmpeg UWP 8.1.2 包含该协议；[FFmpeg 官方文档](https://ffmpeg.org/ffmpeg-protocols.html#async)与 [8.1.2 源码](https://github.com/FFmpeg/FFmpeg/blob/n8.1.2/libavformat/async.c)显示它用后台线程和 4 MiB 前向/回读环形缓冲解耦 I/O 与 demux，并只在缓存范围及 256 KiB 短前跳范围内快速 seek，大跨度 seek 仍交给底层输入。
+
+依据：使用当前 `HttpMediaInput + 32 KiB custom AVIO + 完整 avformat_find_stream_info` 做未进入仓库的 A/B。公开 HDR10 样本 plain 总打开约 `1.82-2.12s`、async 约 `1.83-1.86s`，无稳定收益且一轮 async 出现 premature EOF 后重连。私有 Matroska 样本 plain 为 `2.01-2.25s`，async 为 `2.19s` 和一次 `4.41s` 退化；两侧均读取 `2,669,471` bytes、70 次 outer read、2 次 data seek、约 `37.3GB` 逻辑 seek distance。async 没有减少 FFmpeg 的探测或大跨度 seek 工作，只增加后台预读与抖动风险。
+
+后续不以调大 AVIO buffer、跳过 stream-info 或默认 async 包装制造启动改善。Kodi、mpv 的稳定网络体验依赖更完整的缓存/预读体系；本项目在没有明确、可维护且同 manifest 重复获益的设计前，不自建复杂缓存。下一优先级转向私有源的 timeline/resume/seek 覆盖，以捕获用户已观察到的进度和拖动失效。
