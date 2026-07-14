@@ -314,6 +314,7 @@ public sealed class ModernUwpSolutionContractTests
         Assert.Contains("<LanguageStandard>stdcpp20</LanguageStandard>", nativeProject, StringComparison.Ordinal);
         Assert.Contains("<CompileAsWinRT>false</CompileAsWinRT>", nativeProject, StringComparison.Ordinal);
         Assert.Contains("<CppWinRTEnableLegacyCoroutines>false</CppWinRTEnableLegacyCoroutines>", nativeProject, StringComparison.Ordinal);
+        Assert.Contains("<OutDir>$(MSBuildProjectDirectory)\\$(Platform)\\$(Configuration)\\$(ProjectName)\\</OutDir>", nativeProject, StringComparison.Ordinal);
         Assert.Contains("/utf-8", nativeProject, StringComparison.Ordinal);
         Assert.DoesNotContain("<PlatformToolset>v143</PlatformToolset>", nativeProject, StringComparison.Ordinal);
         Assert.DoesNotContain("<MinimumVisualStudioVersion>17.0</MinimumVisualStudioVersion>", nativeProject, StringComparison.Ordinal);
