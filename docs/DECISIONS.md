@@ -1,5 +1,13 @@
 ﻿# 技术决策
 
+## 2026-07-14：渲染资源复用只能由 v0.16 阶段证据触发
+
+决策：evaluation version 升级为 `playback-quality-v0.16`。成功渲染路径必须独立报告 direct copy、video processor、BGRA 与 post-process 计数；video processor 必须报告 setup、view/target、clear、blit、post-process 的总样本数和 P50/P95/P99/Max。阶段区间不得重叠，失败的 processor 尝试不得冒充成功路径，parser 必须拒绝缺字段、非法数值、histogram 顺序错误以及路径/阶段计数矛盾。`SampleCount` 表示总观测次数；固定 512 项只用于有界保存百分位样本，两者不得混用。
+
+候选依据：默认 5ms、无资源缓存的同一 exact manifest 已完成一轮完整 25-case baseline 和两轮五目标 case 重复，三轮均真实进入 native 播放链路并通过 strict report-set validation。公开 SDR、公开 HDR 强制 SDR 和本地 HDR10 60fps 的 setup P95 持续解释绝大部分 render P95，而 view/target、clear、blit 和 shader post-process 明显更小。因此允许实现一个单变量候选：仅按输入/输出尺寸、格式、frame format 和 usage 复用 `ID3D11VideoProcessorEnumerator` 与 `ID3D11VideoProcessor`，并在 device、swapchain 或 key 变化时失效。
+
+边界：候选不得缓存 input/output view、back buffer、intermediate texture，不改变颜色映射、`CheckVideoProcessorFormatConversion`、shader、clear、auto-processing、Present 或默认 5ms 调度策略。必须先有 cache key、hit/miss、失效和失败回退测试，再用上述 exact manifest 生成 candidate 与重复采样。任何 timeline、track/subtitle、color/DXGI、暂停恢复或 cadence 回归都要求撤回；单次帧数增加、阈值放宽或跨评测版本结果不得支持采纳。
+
 ## 2026-07-13：解码阶段证据成为强制契约，评测升级到 v0.13
 
 决策：`videoDecodeDurationMs*` 只保留为端到端总量，不能再独自支持解码策略归因。每个真实 decoded frame 必须携带 packet read、send packet、receive frame 和 frame materialize 的累计耗时；native metrics、WinRT/App bridge、Core report、信号目录和 headless parser 必须完整贯通 P50/P95。helper 缺任一阶段字段、字段非数值或负值时报告无效，不得回退到总量、probe 或 manifest expected。由于报告必填契约发生变化，evaluation version 从 `playback-quality-v0.12` 升级为 `playback-quality-v0.13`，两版结果不可直接比较成质量变化。

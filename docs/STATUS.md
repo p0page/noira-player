@@ -2,6 +2,14 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-14 更新：v0.16 渲染阶段证据完成，默认 5ms 基线支持受限资源复用候选
+
+评测契约升级为 `playback-quality-v0.16`。每个成功视频渲染现在记录 direct copy、D3D11 video processor、BGRA fallback 与 shader post-process 路径计数，并把 video processor 拆为 setup、input/output view 与目标资源、clear、blit、post-process 五段非重叠 CPU API 提交耗时。29 个新增字段已贯通 native snapshot、WinRT、App capture、Core report、模型信号目录、native helper 和 strict parser；缺字段、负数、非法 histogram 顺序、阶段计数与路径计数矛盾都必须失败。该证据只描述 CPU 侧 API 提交，不冒充 GPU 完成时间或 Xbox/HDMI 观测。
+
+首轮完整 baseline 暴露并修复了一个评测器缺陷：`PlaybackQualityHistogram` 只保留最近 512 个值计算百分位，旧实现却把保留数写成阶段总 `SampleCount`，导致 10 秒 60fps case 在第 513 帧后自相矛盾。新增 600 帧回归测试先稳定复现 `512 != 600`，随后以独立 `TotalCount` 修复；滚动百分位容量和播放器行为均未改变。修复后的 `734511b` baseline 为 25 份真实报告，公开与私有 manifest `8/8` 尝试、0 helper failure、0 unresolved，统一 report-set `25/25` strict valid。报告中的 fail/unsupported 保持原样，没有为通过测试调整 expected 或阈值。
+
+基于同一 exact manifest 选出公开 SDR 1080p60、公开 HDR10 强制 SDR、本地 SDR 60、本地 HDR10 60 和私有 DV8 fallback 五个目标 case，并完成另外两轮独立播放与 strict validation。三轮 setup P95 分别稳定在：公开 SDR `12.78-12.99ms`、公开 HDR->SDR `14.89-15.41ms`、本地 SDR `0.228-0.232ms`、本地 HDR10 `12.39-15.17ms`、私有 DV8 `0.311-0.339ms`。前三个高耗时组合中 setup 解释了绝大部分 render P95；本地 HDR10 还呈现明显长尾。该证据允许进入只复用 `ID3D11VideoProcessorEnumerator` 与 `ID3D11VideoProcessor` 的单变量候选，但尚未证明候选改善，也未改变默认 5ms 策略。
+
 ## 2026-07-13 更新：v0.13 将视频解码总耗时拆成四段真实 native 证据
 
 评测契约升级为 `playback-quality-v0.13`。`VideoDecoder::TryReadFrame()` 现在逐帧累计 packet read、`avcodec_send_packet`、`avcodec_receive_frame` 和 decoded-frame materialize 四段耗时，并以 P50/P95 贯通 native snapshot、WinRT、Core report、模型信号目录和 App-hosted 导出。native helper 输出和 headless parser 将八个字段设为必填非负证据；parser smoke 新增四个缺阶段字段的负向 case，任一层漏接都会失败，不能用总 decode duration 或 manifest expected 代替真实阶段执行。
