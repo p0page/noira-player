@@ -257,6 +257,12 @@ foreach ($case in $selectedCases) {
     $locatorHash = Get-PlaybackQualitySourceFingerprint -Locator $sourceLocator
     $pauseSeconds = if ($null -eq $case.pauseSeconds) { 0 } else { [int]$case.pauseSeconds }
     $startPositionTicks = if ($null -eq $case.startPositionTicks) { 0 } else { [long]$case.startPositionTicks }
+    $seekTargetPositionTicks = if ($null -eq $case.seekTargetPositionTicks) {
+        $null
+    }
+    else {
+        [long]$case.seekTargetPositionTicks
+    }
     if ($pauseSeconds -lt 0 -or $pauseSeconds -gt 900) {
         throw ('pauseSeconds must be between 0 and 900 for case ' + $currentCaseId)
     }
@@ -279,6 +285,7 @@ foreach ($case in $selectedCases) {
         -HarnessScriptPath $HarnessScriptPath `
         -DurationSeconds $DurationSeconds `
         -StartPositionTicks $startPositionTicks `
+        -SeekTargetPositionTicks $seekTargetPositionTicks `
         -PauseSeconds $pauseSeconds `
         -Scenario $scenario `
         -TimeoutSeconds $AttemptTimeoutSeconds `

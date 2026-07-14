@@ -35,6 +35,7 @@ function Invoke-NativeHeadlessHarnessCase {
         [string]$HarnessScriptPath = '',
         [int]$DurationSeconds = 10,
         [long]$StartPositionTicks = 0,
+        [AllowNull()][object]$SeekTargetPositionTicks = $null,
         [int]$PauseSeconds = 0,
         [ValidateSet('playback', 'timeline', 'audio-switch', 'subtitle-switch', 'pause-resume', 'end-of-stream')]
         [string]$Scenario = 'playback',
@@ -55,6 +56,11 @@ function Invoke-NativeHeadlessHarnessCase {
         '--reports-dir', $ReportsDir,
         '--native-helper-exe', $NativeHelperExe
     )
+    if ($null -ne $SeekTargetPositionTicks) {
+        $harnessArguments += @(
+            '--seek-target-position-ticks',
+            ([string][long]$SeekTargetPositionTicks))
+    }
     if (-not [string]::IsNullOrWhiteSpace($AttemptId)) {
         $harnessArguments += @('--attempt-id', $AttemptId)
     }

@@ -1,5 +1,13 @@
 ﻿# 技术决策
 
+## 2026-07-15：timeline 使用显式绝对目标，评测升级到 v0.19
+
+决策：每个 `timeline` case 必须在 manifest 中声明 `seekTargetPositionTicks`。它表示播放器逻辑时间轴上的绝对目标，不由 runner、App 或 native helper 根据当前进度、文件名、百分比或固定偏移重新计算。目标必须非负、与 `startPositionTicks` 不同，并从 manifest 原样传到 native/App 执行和 report；report-set 必须验证实际目标与 manifest 完全相等。非 timeline case 不得携带该字段。
+
+原因：固定前后 1 秒的旧场景即使真实执行，也无法代表用户拖动进度条或恢复到远距离位置，容易让严重的 timeline bug 漏过。Kodi 的播放器消息、VLC 的 demux time seek 和 mpv 的 high-resolution seek 都以绝对媒体时间为核心；底层仍可向前一个关键帧做 backward demux seek，再解码预滚并丢弃目标前视频帧，但对外报告必须保留用户请求的逻辑目标和首个实际呈现位置。
+
+版本边界：该变化修改了 case 与 report 的可比身份，evaluation version 升级为 `playback-quality-v0.19`。v0.18 的隐式目标报告不得与 v0.19 直接生成质量结论。其他播放进程会污染启动、吞吐、饥饿、帧节奏和恢复耗时，因此受干扰运行不得作为性能 baseline/candidate；目标传递、demux 定位、落点和时间轴推进仍可用于功能诊断，原始性能失败必须保留。
+
 ## 2026-07-15：接受受限 video processor 缓存，但只声明 CPU 提交阶段改善
 
 决策：接受 `78fda3b` 的单变量候选。`DxDeviceResources` 只缓存由输入/输出尺寸、DXGI 格式、frame format 和 usage 标识的 `ID3D11VideoProcessorEnumerator` 与 `ID3D11VideoProcessor`；device、swapchain 重建或 key 变化必须失效。input/output view、back buffer、中间纹理、颜色映射、format conversion validation、rect/color state、clear、blit、post-process 和 Present 不得跨帧复用或跳过。只有 enumerator 与 processor 都创建成功后才能提交 cache，失败继续走原有诊断和回退路径。

@@ -15,6 +15,7 @@ public sealed class AppHostedQualityCaptureContractTests
         var webBridge = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.App", "Web", "NoiraWebBridge.cs"));
         var launchRequest = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.App", "Navigation", "PlaybackLaunchRequest.cs"));
         var playbackPage = File.ReadAllText(Path.Combine(root, "src", "NoiraPlayer.App", "Views", "PlaybackPage.xaml.cs"));
+        var qualityCli = File.ReadAllText(Path.Combine(root, "tools", "NoiraPlayer.PlaybackQuality.Cli", "Program.cs"));
 
         Assert.Contains("PostWebMessageAsJson", mainPage, StringComparison.Ordinal);
         Assert.Contains("case \"playback.nativePlayItem\":", webBridge, StringComparison.Ordinal);
@@ -40,6 +41,12 @@ public sealed class AppHostedQualityCaptureContractTests
         Assert.Contains("public bool HasDirectStreamUrl", launchRequest, StringComparison.Ordinal);
         Assert.Contains("public bool IsQualityRun", launchRequest, StringComparison.Ordinal);
         Assert.Contains("public string QualityScenario { get; }", launchRequest, StringComparison.Ordinal);
+        Assert.Contains("public long? QualitySeekTargetPositionTicks { get; }", launchRequest, StringComparison.Ordinal);
+        Assert.Contains("command.SeekTargetPositionTicks", launchRequest, StringComparison.Ordinal);
+        Assert.Contains(
+            "SeekTargetPositionTicks = referenceCase.SeekTargetPositionTicks",
+            qualityCli,
+            StringComparison.Ordinal);
         Assert.Contains("public int QualityPauseSeconds { get; }", launchRequest, StringComparison.Ordinal);
         Assert.Contains("command.PauseSeconds", launchRequest, StringComparison.Ordinal);
         Assert.Contains("command.SourceLocator", launchRequest, StringComparison.Ordinal);
@@ -115,7 +122,6 @@ public sealed class AppHostedQualityCaptureContractTests
             playbackPage,
             "private async Task<PlaybackQualityInteractionEvidence?> RunQualityRunScenarioAsync");
         var seekProbeMethod = ExtractMethodBody(playbackPage, "private async Task RunQualityRunSeekProbeAsync");
-        var seekTargetMethod = ExtractMethodBody(playbackPage, "private long CalculateQualityRunSeekTargetTicks");
 
         var captureEvidenceIndex = captureMethod.IndexOf(
             "CaptureQualityRunEvidence(_backend, capturedDescriptor)",
@@ -144,8 +150,8 @@ public sealed class AppHostedQualityCaptureContractTests
         Assert.Contains("await WaitForQualityRunSeekPresentationAsync", seekProbeMethod, StringComparison.Ordinal);
         Assert.Contains("SeekRecoveryDurationMs = seekStartedAt.Elapsed.TotalMilliseconds", seekProbeMethod, StringComparison.Ordinal);
         Assert.DoesNotContain("await Task.Delay(shortDelay)", seekProbeMethod, StringComparison.Ordinal);
-        Assert.Contains("currentPositionTicks - seekStepTicks", seekTargetMethod, StringComparison.Ordinal);
-        Assert.Contains("currentPositionTicks + seekStepTicks", seekTargetMethod, StringComparison.Ordinal);
+        Assert.Contains("request.QualitySeekTargetPositionTicks", seekProbeMethod, StringComparison.Ordinal);
+        Assert.DoesNotContain("CalculateQualityRunSeekTargetTicks", playbackPage, StringComparison.Ordinal);
         Assert.True(captureEvidenceIndex >= 0, "quality-run capture must sample runtime evidence.");
         Assert.True(scenarioIndex >= 0, "quality-run capture must execute the selected scenario.");
         Assert.True(stopIndex >= 0, "quality-run capture must stop playback after evidence is captured.");

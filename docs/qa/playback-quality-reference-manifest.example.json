@@ -330,6 +330,7 @@
       "itemId": "quality-case-sdr-resume-seek-timeline",
       "mediaSourceId": "quality-source-sdr-resume-seek-timeline",
       "startPositionTicks": 600000000,
+      "seekTargetPositionTicks": 900000000,
       "tier": 2,
       "executionRequirement": {
         "minimumEvidenceLevel": "native-playback",

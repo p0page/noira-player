@@ -18,7 +18,6 @@ return result.ExitCode;
 internal static class NativeHeadlessHarness
 {
     private const string CollectorVersion = "native-headless-harness-v0.1";
-    private const long NativeHelperSeekOffsetTicks = 10_000_000;
     private const string NativeWinRtLinkageLimitation =
         "native-headless: current NoiraPlayer.Native build is a Windows Store C++/WinRT component with public playback entrypoints bound to UWP projection";
     private const string NativeGraphHostLimitation =
@@ -51,6 +50,7 @@ internal static class NativeHeadlessHarness
             }
 
             referenceCase.ExecutionRequirement.Scenario = options.Scenario;
+            referenceCase.SeekTargetPositionTicks = options.SeekTargetPositionTicks;
         }
 
         if (!string.IsNullOrWhiteSpace(options.NativeHelperExe))
@@ -574,6 +574,9 @@ internal static class NativeHeadlessHarness
             Arguments = "--stream-url " + QuoteArgument(options.StreamUrl) +
                 " --duration-seconds " + options.DurationSeconds.ToString() +
                 " --start-position-ticks " + options.StartPositionTicks.ToString() +
+                (options.SeekTargetPositionTicks.HasValue
+                    ? " --seek-target-position-ticks " + options.SeekTargetPositionTicks.Value.ToString()
+                    : "") +
                 " --scenario " + options.Scenario +
                 (options.PauseSeconds > 0
                     ? " --pause-seconds " + options.PauseSeconds.ToString()
@@ -691,13 +694,11 @@ internal static class NativeHeadlessHarness
                 "Native helper field 'endOfStreamAttempted' must match the requested execution scenario.");
         }
 
-        var expectedSeekTarget = options.StartPositionTicks >= long.MaxValue - NativeHelperSeekOffsetTicks
-            ? long.MaxValue
-            : options.StartPositionTicks + NativeHelperSeekOffsetTicks;
-        if (interactions.Seek.Attempted && interactions.Seek.TargetPositionTicks != expectedSeekTarget)
+        if (interactions.Seek.Attempted &&
+            interactions.Seek.TargetPositionTicks != options.SeekTargetPositionTicks)
         {
             return NativeHeadlessHelperResult.Failed(
-                "Native helper seek target did not equal requested start position plus the interaction seek offset.");
+                "Native helper seek target did not equal the explicit timeline seek target.");
         }
 
         return NativeHeadlessHelperResult.Succeeded(
@@ -2570,6 +2571,7 @@ internal sealed class NativeHeadlessHarnessOptions
     public PlaybackQualityReferenceCase? ReferenceCase { get; private set; }
     public int DurationSeconds { get; private set; } = 5;
     public long StartPositionTicks { get; private set; }
+    public long? SeekTargetPositionTicks { get; private set; }
     public string ReportsDir { get; private set; } = "";
     public string NativeHelperExe { get; private set; } = "";
     public bool ForceSdrOutput { get; private set; }
@@ -2667,6 +2669,15 @@ internal sealed class NativeHeadlessHarnessOptions
 
                     options.StartPositionTicks = startPositionTicks;
                     break;
+                case "--seek-target-position-ticks":
+                    if (!long.TryParse(value, out var seekTargetPositionTicks) || seekTargetPositionTicks < 0)
+                    {
+                        error = "--seek-target-position-ticks must be a non-negative integer.";
+                        return false;
+                    }
+
+                    options.SeekTargetPositionTicks = seekTargetPositionTicks;
+                    break;
                 case "--pause-seconds":
                     if (!int.TryParse(value, out var pauseSeconds) || pauseSeconds <= 0 || pauseSeconds > 900)
                     {
@@ -2736,6 +2747,7 @@ internal sealed class NativeHeadlessHarnessOptions
 
         if (options.ReferenceCase != null &&
             (options.ReferenceCase.StartPositionTicks != options.StartPositionTicks ||
+             options.ReferenceCase.SeekTargetPositionTicks != options.SeekTargetPositionTicks ||
              options.ReferenceCase.ForceSdrOutput != options.ForceSdrOutput ||
              options.ReferenceCase.PauseSeconds != options.PauseSeconds ||
              options.ReferenceCase.ExecutionRequirement == null ||
@@ -2770,6 +2782,19 @@ internal sealed class NativeHeadlessHarnessOptions
         if ((options.Scenario == "pause-resume") != (options.PauseSeconds > 0))
         {
             error = "--scenario pause-resume requires --pause-seconds, and pause-seconds requires the pause-resume scenario.";
+            return false;
+        }
+
+        if ((options.Scenario == PlaybackQualityExecutionScenario.Timeline) !=
+            options.SeekTargetPositionTicks.HasValue)
+        {
+            error = "--scenario timeline requires --seek-target-position-ticks, and seek-target-position-ticks requires the timeline scenario.";
+            return false;
+        }
+
+        if (options.SeekTargetPositionTicks == options.StartPositionTicks)
+        {
+            error = "--seek-target-position-ticks must differ from --start-position-ticks.";
             return false;
         }
 

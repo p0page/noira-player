@@ -1543,12 +1543,15 @@ namespace NoiraPlayer.App.Views
                     descriptor,
                     request.QualityExpected,
                     request.QualityScenario,
+                    seekTargetPositionTicks: request.QualitySeekTargetPositionTicks,
                     uri: request.QualitySourceLocator);
                 var lifecycle = CreateQualityRunLifecycle(
                     request.StartPositionTicks,
                     GetCurrentPositionTicks(),
                     _orchestrator.State.ToString());
-                var position = CreateQualityRunPosition(request.StartPositionTicks);
+                var position = CreateQualityRunPosition(
+                    request.StartPositionTicks,
+                    request.QualitySeekTargetPositionTicks);
                 var sampleObservationClock = Stopwatch.StartNew();
                 var interaction = await RunQualityRunScenarioAsync(
                     request,
@@ -1636,11 +1639,14 @@ namespace NoiraPlayer.App.Views
             return lifecycle;
         }
 
-        private static PlaybackQualityPosition CreateQualityRunPosition(long requestedStartPositionTicks)
+        private static PlaybackQualityPosition CreateQualityRunPosition(
+            long requestedStartPositionTicks,
+            long? seekTargetPositionTicks)
         {
             return new PlaybackQualityPosition
             {
-                RequestedStartPositionTicks = Math.Max(0, requestedStartPositionTicks)
+                RequestedStartPositionTicks = Math.Max(0, requestedStartPositionTicks),
+                SeekTargetPositionTicks = seekTargetPositionTicks
             };
         }
 
@@ -1717,7 +1723,7 @@ namespace NoiraPlayer.App.Views
 
                 case PlaybackQualityExecutionScenario.Timeline:
                     await Task.Delay(firstDelay);
-                    await RunQualityRunSeekProbeAsync(position, lifecycle);
+                    await RunQualityRunSeekProbeAsync(request, position, lifecycle);
                     break;
 
                 case PlaybackQualityExecutionScenario.AudioSwitch:
@@ -2026,13 +2032,16 @@ namespace NoiraPlayer.App.Views
         }
 
         private async Task RunQualityRunSeekProbeAsync(
+            PlaybackLaunchRequest request,
             PlaybackQualityPosition position,
             PlaybackQualityLifecycle lifecycle)
         {
             var shortDelay = GetQualityRunProbeDelay(TimeSpan.FromSeconds(1), 0.10);
             if (IsPlaybackSeekable())
             {
-                var seekTargetTicks = CalculateQualityRunSeekTargetTicks();
+                var seekTargetTicks = request.QualitySeekTargetPositionTicks ??
+                    throw new InvalidOperationException(
+                        "Timeline quality-run requires an explicit seek target.");
                 position.SeekTargetPositionTicks = seekTargetTicks;
                 var seekStartedAt = Stopwatch.StartNew();
                 await _orchestrator.SeekAsync(seekTargetTicks);
@@ -2133,21 +2142,6 @@ namespace NoiraPlayer.App.Views
         {
             var milliseconds = Math.Max(250, Math.Min(1500, duration.TotalMilliseconds * ratio));
             return TimeSpan.FromMilliseconds(milliseconds);
-        }
-
-        private long CalculateQualityRunSeekTargetTicks()
-        {
-            var currentPositionTicks = GetCurrentPositionTicks();
-            var seekStepTicks = TimeSpan.FromSeconds(1).Ticks;
-            var targetTicks = currentPositionTicks > seekStepTicks
-                ? currentPositionTicks - seekStepTicks
-                : currentPositionTicks + seekStepTicks;
-            if (_durationTicks > TimeSpan.FromSeconds(2).Ticks)
-            {
-                targetTicks = Math.Min(targetTicks, _durationTicks - TimeSpan.FromSeconds(1).Ticks);
-            }
-
-            return ClampToDuration(Math.Max(0, targetTicks));
         }
 
         private void AddQualityRunLifecycleEvent(
@@ -2598,6 +2592,7 @@ namespace NoiraPlayer.App.Views
                     request.ForceSdrOutput,
                     request.QualityExpected,
                     request.QualityScenario,
+                    seekTargetPositionTicks: request.QualitySeekTargetPositionTicks,
                     uri: request.QualitySourceLocator);
                 var result = PlaybackQualityRuntimeEvidenceCollector.ComposeErrorRunResult(
                     referenceCase,

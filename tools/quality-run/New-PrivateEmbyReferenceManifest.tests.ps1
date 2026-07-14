@@ -375,9 +375,12 @@ try {
         ($_.purpose -contains 'timeline') -and
         $_.executionRequirement.scenario -eq 'timeline' -and
         $_.startPositionTicks -eq 600000000 -and
+        $_.seekTargetPositionTicks -eq 3000000000 -and
+        ($_.seekTargetPositionTicks - $_.startPositionTicks) -ge 300000000 -and
+        $_.seekTargetPositionTicks -le 5700000000 -and
         $_.expected.maxSeekPositionErrorMs -eq 500
     })) {
-        throw 'Generated manifest should include a seek/resume timeline case with position threshold metadata.'
+        throw 'Generated manifest should include a duration-derived long-distance timeline case with position threshold metadata.'
     }
 
     if (-not ($manifest.cases | Where-Object {

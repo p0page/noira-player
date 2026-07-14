@@ -89,6 +89,22 @@ public sealed class PlaybackQualityCaptureContractTests
     }
 
     [Fact]
+    public void CreateReferenceCase_Preserves_Explicit_Timeline_Seek_Target()
+    {
+        var referenceCase = PlaybackQualityCaptureReferenceCaseFactory.Create(
+            "local/timeline",
+            CreateDescriptor(),
+            expected: null,
+            scenario: PlaybackQualityExecutionScenario.Timeline,
+            seekTargetPositionTicks: 3_000_000_000);
+
+        Assert.Equal(3_000_000_000, referenceCase.SeekTargetPositionTicks);
+        Assert.Equal(
+            PlaybackQualityExecutionScenario.Timeline,
+            referenceCase.ExecutionRequirement.Scenario);
+    }
+
+    [Fact]
     public void CreateReferenceCase_For_Failed_Launch_Preserves_Command_Evidence()
     {
         var referenceCase = PlaybackQualityCaptureReferenceCaseFactory.Create(

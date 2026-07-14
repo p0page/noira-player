@@ -6,6 +6,12 @@ Use this path when another worktree is actively changing Xbox UI or App interact
 
 Reference media sources and suggested case tiers are tracked in [playback-quality-reference-corpus.md](playback-quality-reference-corpus.md).
 
+## v0.19 timeline 执行契约
+
+timeline case 必须携带显式绝对 `seekTargetPositionTicks`，并在 manifest runner、native-headless、App dev-command、`PlaybackLaunchRequest` 和 report 中保持相同。固定前后 1 秒、按当前进度临时计算或只记录调用成功都不构成有效 seek 证据。有效报告至少需要目标、demux 目标、首个呈现位置、后续推进、落点误差、seek 调用耗时和首帧恢复耗时；首帧尚未出现时不得把恢复耗时写成 0。
+
+v0.18 与 v0.19 的 timeline case 不可直接比较。另一个播放进程会使网络、CPU、GPU 和解码器资源不可控，因此受干扰运行不能支持性能候选；它仍可用于确认目标传递、demux 定位、首帧落点和时间轴推进，所有性能失败保持原样。
+
 ## v0.12 候选比较的环境隔离与离群值边界
 
 - stable/challenge case 仍必须真实进入 native/App 播放链路；probe、manifest expected 或合成报告不能替代播放证据。

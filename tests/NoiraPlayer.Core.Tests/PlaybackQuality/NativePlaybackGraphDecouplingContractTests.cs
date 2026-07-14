@@ -205,10 +205,61 @@ public sealed class NativePlaybackGraphDecouplingContractTests
             "Program.cs"));
 
         Assert.Contains("options.ReferenceCase.StartPositionTicks != options.StartPositionTicks", harnessSource, StringComparison.Ordinal);
+        Assert.Contains("options.ReferenceCase.SeekTargetPositionTicks != options.SeekTargetPositionTicks", harnessSource, StringComparison.Ordinal);
         Assert.Contains("options.ReferenceCase.ForceSdrOutput != options.ForceSdrOutput", harnessSource, StringComparison.Ordinal);
         Assert.Contains("options.ReferenceCase.PauseSeconds != options.PauseSeconds", harnessSource, StringComparison.Ordinal);
         Assert.Contains("options.ReferenceCase.ExecutionRequirement.Scenario", harnessSource, StringComparison.Ordinal);
         Assert.Contains("must match the corresponding execution arguments", harnessSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Native_Headless_Timeline_Uses_The_Explicit_Manifest_Seek_Target()
+    {
+        var root = FindRepositoryRoot();
+        var harnessSource = File.ReadAllText(Path.Combine(
+            root,
+            "tools",
+            "NoiraPlayer.PlaybackQuality.Headless",
+            "Program.cs"));
+        var helperSource = File.ReadAllText(Path.Combine(
+            root,
+            "tests",
+            "NoiraPlayer.Native.Tests",
+            "NativePlaybackGraphHeadlessSmokeTests.cpp"));
+
+        Assert.Contains("--seek-target-position-ticks", harnessSource, StringComparison.Ordinal);
+        Assert.Contains("options.SeekTargetPositionTicks", harnessSource, StringComparison.Ordinal);
+        Assert.Contains("--seek-target-position-ticks", helperSource, StringComparison.Ordinal);
+        Assert.Contains("seek.TargetPositionTicks = options.SeekTargetPositionTicks", helperSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("constexpr int64_t SeekTargetPositionTicks", helperSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Native_Headless_Timeline_Waits_For_The_First_Post_Seek_Presentation()
+    {
+        var root = FindRepositoryRoot();
+        var helperSource = File.ReadAllText(Path.Combine(
+            root,
+            "tests",
+            "NoiraPlayer.Native.Tests",
+            "NativePlaybackGraphHeadlessSmokeTests.cpp"));
+        var timelineStart = helperSource.IndexOf(
+            "if (options.Scenario == L\"timeline\")",
+            StringComparison.Ordinal);
+        var timelineEnd = helperSource.IndexOf(
+            "auto displayRefreshRateHz",
+            timelineStart,
+            StringComparison.Ordinal);
+
+        Assert.True(timelineStart >= 0 && timelineEnd > timelineStart);
+        var timelineSource = helperSource[timelineStart..timelineEnd];
+        var waitIndex = timelineSource.IndexOf("waitForEvidence([&]()", StringComparison.Ordinal);
+        var recoveryIndex = timelineSource.IndexOf(
+            "seek.RecoveryDurationMs =",
+            StringComparison.Ordinal);
+
+        Assert.True(waitIndex >= 0, "Timeline seek must wait for the first presented frame when graph.Seek returns before presentation.");
+        Assert.True(recoveryIndex > waitIndex, "Seek recovery duration must include the wait until first presentation.");
     }
 
     [Fact]

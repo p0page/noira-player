@@ -27,7 +27,6 @@ using winrt::NoiraPlayer::Native::implementation::PlaybackGraphOpenRequest;
 
 namespace
 {
-    constexpr int64_t SeekTargetPositionTicks = 10'000'000;
     constexpr auto InteractionEvidenceTimeout = 5s;
     constexpr auto InteractionEvidencePollInterval = 50ms;
     constexpr wchar_t const* DefaultStreamUrl =
@@ -91,6 +90,7 @@ namespace
         int DurationSeconds{3};
         int PauseSeconds{0};
         int64_t StartPositionTicks{0};
+        std::optional<int64_t> SeekTargetPositionTicks;
         std::wstring Scenario{L"playback"};
         bool EnableSwitchPacketCache{true};
         bool EnableSeekPacketCache{false};
@@ -162,7 +162,7 @@ namespace
     {
         bool Attempted{false};
         std::string Status{"not-attempted"};
-        int64_t TargetPositionTicks{SeekTargetPositionTicks};
+        int64_t TargetPositionTicks{0};
         std::optional<int64_t> ActualPositionTicks;
         int64_t PostSeekPlaybackPositionTicks{0};
         bool ResetRuntimeMetrics{false};
@@ -209,6 +209,14 @@ namespace
                 if (parsed >= 0)
                 {
                     options.StartPositionTicks = parsed;
+                }
+            }
+            else if (std::wcscmp(argv[index], L"--seek-target-position-ticks") == 0 && index + 1 < argc)
+            {
+                auto parsed = std::wcstoll(argv[++index], nullptr, 10);
+                if (parsed >= 0)
+                {
+                    options.SeekTargetPositionTicks = parsed;
                 }
             }
             else if (std::wcscmp(argv[index], L"--scenario") == 0 && index + 1 < argc)
@@ -293,6 +301,17 @@ namespace
 int wmain(int argc, wchar_t** argv)
 {
     auto options = ParseOptions(argc, argv);
+    if ((options.Scenario == L"timeline") != options.SeekTargetPositionTicks.has_value())
+    {
+        std::wcerr << L"timeline scenario requires an explicit seek target" << std::endl;
+        return 2;
+    }
+    if (options.SeekTargetPositionTicks &&
+        *options.SeekTargetPositionTicks == options.StartPositionTicks)
+    {
+        std::wcerr << L"timeline seek target must differ from the start position" << std::endl;
+        return 2;
+    }
     ReportStage("started");
     winrt::init_apartment(winrt::apartment_type::multi_threaded);
 
@@ -392,10 +411,7 @@ int wmain(int argc, wchar_t** argv)
         SubtitleSwitchOutcome subtitleSwitch2;
         SubtitleOffOutcome subtitleOff;
         SeekOutcome seek;
-        seek.TargetPositionTicks = options.StartPositionTicks >=
-            (std::numeric_limits<int64_t>::max)() - SeekTargetPositionTicks
-            ? (std::numeric_limits<int64_t>::max)()
-            : options.StartPositionTicks + SeekTargetPositionTicks;
+        seek.TargetPositionTicks = options.SeekTargetPositionTicks.value_or(0);
 
         auto positionBeforePauseTicks = graph.CurrentPositionTicks();
         auto decodedVideoFramesBeforePause = playbackSnapshot.DecodedVideoFrames;
@@ -661,11 +677,25 @@ int wmain(int argc, wchar_t** argv)
                 seek.ActualPositionTicks = seekPresentation.ActualPositionTicks;
                 seekGeneration = seekPresentation.Generation;
                 seekCallCompleted = seekPresentation.Generation > seekPresentationBefore.Generation;
-                if (seekCallCompleted && seek.ActualPositionTicks.has_value())
+                if (seekCallCompleted)
                 {
-                    seek.RecoveryDurationMs =
-                        std::chrono::duration<double, std::milli>(
-                            std::chrono::steady_clock::now() - seekStartedAt).count();
+                    auto const firstFramePresented = waitForEvidence([&]()
+                    {
+                        auto currentPresentation = graph.SeekPresentationSnapshot();
+                        if (currentPresentation.Generation != seekGeneration)
+                        {
+                            return false;
+                        }
+
+                        seek.ActualPositionTicks = currentPresentation.ActualPositionTicks;
+                        return seek.ActualPositionTicks.has_value();
+                    });
+                    if (firstFramePresented)
+                    {
+                        seek.RecoveryDurationMs =
+                            std::chrono::duration<double, std::milli>(
+                                std::chrono::steady_clock::now() - seekStartedAt).count();
+                    }
                 }
             }
             catch (...)

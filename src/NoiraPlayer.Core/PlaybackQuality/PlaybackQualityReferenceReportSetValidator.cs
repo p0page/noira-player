@@ -386,6 +386,19 @@ namespace NoiraPlayer.Core.PlaybackQuality
                     "Playback quality report execution scenario does not match the reference case.");
             }
 
+            if (requiredScenario == PlaybackQualityExecutionScenario.Timeline &&
+                report.Position.SeekTargetPositionTicks != referenceCase.SeekTargetPositionTicks)
+            {
+                AddExecutionError(
+                    validation,
+                    status,
+                    "report.position.seek-target.mismatch",
+                    "position.seekTargetPositionTicks",
+                    referenceCase.SeekTargetPositionTicks?.ToString() ?? "missing",
+                    report.Position.SeekTargetPositionTicks?.ToString() ?? "missing",
+                    "Playback quality report seek target does not match the explicit timeline reference target.");
+            }
+
             if (!PlaybackQualityExecutionStatus.IsKnown(execution.Status))
             {
                 AddExecutionError(validation, status, "report.execution.status.invalid", "execution.status", "known execution status", string.IsNullOrWhiteSpace(execution.Status) ? "missing" : execution.Status, "Playback quality report contains an unknown execution status.");

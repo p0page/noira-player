@@ -2,6 +2,14 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-15 更新：v0.19 以显式远距离目标覆盖真实 timeline seek
+
+评测契约升级为 `playback-quality-v0.19`。旧 timeline case 只从起播位置固定移动 1 秒，虽然真实调用了 native seek，却不足以发现进度条映射错误、拖动无效或远距离定位失败。现在 timeline manifest 必须声明绝对逻辑时间 `seekTargetPositionTicks`，且不能与 `startPositionTicks` 相同；该值必须原样贯穿 manifest runner、native-headless、CLI run plan、App dev-command、`PlaybackLaunchRequest`、`PlaybackPage` 和 report。report-set 会逐 case 校验实际目标与 manifest 完全一致，缺失、被改写或 scenario 不匹配都失败。App-hosted 已删除运行时自行前后移动 1 秒的逻辑。
+
+私有“一战再战”代表源完成一次真实远距离验证：从 60 秒跳到 4860 秒，native demux 目标为 4860 秒，首个呈现帧为 4860.064 秒，落点误差 64ms，随后推进到 4862.149 秒。该轮还发现 harness 曾在 seek 调用返回后、首帧尚未出现时把恢复耗时留成 0；修复后同一 case 的 `seekRecoveryDurationMs` 为 2415.8ms。该问题归类为评测器缺陷，不是 Core 改善。
+
+这次私有运行因启动约 9.0 秒和 21 次视频饥饿仍为 fail。运行期间存在其他播放负载，因此这些性能值只用于暴露环境争用，不进入 baseline/candidate 性能裁决；seek 目标、demux 目标、首帧落点和后续推进等功能证据仍有效。并行播放不会把 fail 改成 pass，也不能成为放宽阈值的理由。Core 全量 `1145/1145` 通过；`run-playback-core-checks.ps1 -AppDiffBase main` 的 38 个阶段全部通过，其中真实 native corpus 约运行 370 秒；CLI、baseline、candidate、dev-command、EAGAIN、网络恢复、timeline、轨道字幕、颜色/display 和 Native x64 build 均通过。完整 App Debug x64 也已生成 `NoiraPlayer.App.dll`。
+
 ## 2026-07-15 更新：接受 video processor 资源复用候选，并补上三处会造成假绿或集成漏检的缺口
 
 在 `734511b` 的 v0.16 baseline 上，仅复用 `ID3D11VideoProcessorEnumerator` 与 `ID3D11VideoProcessor`，cache key 包含输入/输出尺寸、DXGI 格式、frame format 和 usage；device、swapchain 或 key 变化会失效。input/output view、back buffer、中间纹理、颜色映射、format conversion validation、clear、blit、post-process 与 Present 仍逐帧执行。真实 NV12 offscreen 测试覆盖首次 miss、同源 hit、swapchain 重建失效和再次 miss。

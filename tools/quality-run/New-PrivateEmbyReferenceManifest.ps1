@@ -394,6 +394,7 @@ function New-ReferenceCase(
     [bool]$ForceSdrOutput,
     [bool]$RequireMatchedDisplayRefreshRate,
     [long]$StartPositionTicks = 0,
+    [AllowNull()][object]$SeekTargetPositionTicks = $null,
     [double]$MaxSeekPositionErrorMs = 0,
     [int]$PauseSeconds = 0
 ) {
@@ -477,11 +478,43 @@ function New-ReferenceCase(
     if ($StartPositionTicks -gt 0) {
         $case.startPositionTicks = $StartPositionTicks
     }
+    if ($null -ne $SeekTargetPositionTicks) {
+        $case.seekTargetPositionTicks = [long]$SeekTargetPositionTicks
+    }
     if ($PauseSeconds -gt 0) {
         $case.pauseSeconds = $PauseSeconds
     }
 
     [pscustomobject]$case
+}
+
+function Get-TimelinePositions([long]$RunTimeTicks) {
+    $ticksPerSecond = 10000000L
+    $minimumDurationTicks = 120L * $ticksPerSecond
+    if ($RunTimeTicks -lt $minimumDurationTicks) {
+        return $null
+    }
+
+    $edgeMarginTicks = 30L * $ticksPerSecond
+    $startPositionTicks = [Math]::Min(
+        60L * $ticksPerSecond,
+        [long][Math]::Floor($RunTimeTicks / 10.0))
+    $seekTargetPositionTicks = [long][Math]::Floor($RunTimeTicks / 2.0)
+    $seekTargetPositionTicks = [Math]::Max(
+        $startPositionTicks + $edgeMarginTicks,
+        $seekTargetPositionTicks)
+    $seekTargetPositionTicks = [Math]::Min(
+        $RunTimeTicks - $edgeMarginTicks,
+        $seekTargetPositionTicks)
+
+    if ($seekTargetPositionTicks -le $startPositionTicks) {
+        return $null
+    }
+
+    [pscustomobject]@{
+        StartPositionTicks = [long]$startPositionTicks
+        SeekTargetPositionTicks = [long]$seekTargetPositionTicks
+    }
 }
 
 function New-ErrorHandlingReferenceCase {
@@ -666,7 +699,13 @@ function New-ReferenceManifest([object[]]$Items) {
             $cases += New-ReferenceCase $sdr 'end-of-stream' @('end-of-stream') 1 $false $false `
                 -StartPositionTicks $endOfStreamStartTicks
         }
-        $cases += New-ReferenceCase $sdr 'timeline' @('timeline') 1 $false $false -StartPositionTicks 600000000 -MaxSeekPositionErrorMs 500.0
+        $timeline = Get-TimelinePositions ([long]$sdr.RunTimeTicks)
+        if ($null -ne $timeline) {
+            $cases += New-ReferenceCase $sdr 'timeline' @('timeline') 1 $false $false `
+                -StartPositionTicks $timeline.StartPositionTicks `
+                -SeekTargetPositionTicks $timeline.SeekTargetPositionTicks `
+                -MaxSeekPositionErrorMs 500.0
+        }
         $cases += New-ReferenceCase $sdr 'audio-switch' @('tracks', 'audio-switch') 1 $false $false
         $cases += New-ReferenceCase $sdr 'subtitle-switch' @('subtitles', 'subtitle-switch') 1 $false $false
     }

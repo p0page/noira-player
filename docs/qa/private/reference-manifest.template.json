@@ -50,6 +50,7 @@
       "itemId": "REPLACE_WITH_TIMELINE_ITEM_ID",
       "mediaSourceId": "REPLACE_WITH_TIMELINE_MEDIA_SOURCE_ID",
       "startPositionTicks": 600000000,
+      "seekTargetPositionTicks": 3000000000,
       "tier": 1,
       "executionRequirement": { "minimumEvidenceLevel": "native-playback", "scenario": "timeline" },
       "purpose": [

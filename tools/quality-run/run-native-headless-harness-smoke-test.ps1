@@ -754,19 +754,24 @@ function Invoke-NativeHeadlessHelperCase {
         [string]$NativeHelperExe,
         [int]$DurationSeconds = $script:nativeCadenceDurationSeconds,
         [long]$StartPositionTicks = 0,
+        [AllowNull()][object]$SeekTargetPositionTicks = $null,
         [ValidateSet('playback', 'timeline', 'audio-switch', 'subtitle-switch', 'end-of-stream')]
         [string]$Scenario = 'playback',
         [switch]$ExpectError
     )
 
-    dotnet run --project (Join-Path $repoRoot 'tools\NoiraPlayer.PlaybackQuality.Headless\NoiraPlayer.PlaybackQuality.Headless.csproj') -- `
-        --case-id $CaseId `
-        --stream-url $StreamUrl `
-        --duration-seconds $DurationSeconds `
-        --start-position-ticks $StartPositionTicks `
-        --scenario $Scenario `
-        --reports-dir $ReportsDir `
-        --native-helper-exe $NativeHelperExe
+    $arguments = @(
+        '--case-id', $CaseId,
+        '--stream-url', $StreamUrl,
+        '--duration-seconds', ([string]$DurationSeconds),
+        '--start-position-ticks', ([string]$StartPositionTicks),
+        '--scenario', $Scenario,
+        '--reports-dir', $ReportsDir,
+        '--native-helper-exe', $NativeHelperExe)
+    if ($null -ne $SeekTargetPositionTicks) {
+        $arguments += @('--seek-target-position-ticks', ([string][long]$SeekTargetPositionTicks))
+    }
+    dotnet run --project (Join-Path $repoRoot 'tools\NoiraPlayer.PlaybackQuality.Headless\NoiraPlayer.PlaybackQuality.Headless.csproj') -- @arguments
     $exitCode = $LASTEXITCODE
 
     $expectedExitCode = if ($ExpectError) { 1 } else { 0 }
@@ -1212,6 +1217,7 @@ function Invoke-NativeHeadlessParserFixtureCase {
         [int]$HelperExitCode = 0,
         [string]$StreamUrl = '',
         [string]$Scenario = 'playback',
+        [AllowNull()][object]$SeekTargetPositionTicks = $null,
         [int]$PauseSeconds = 0
     )
 
@@ -1233,6 +1239,9 @@ function Invoke-NativeHeadlessParserFixtureCase {
         '--scenario', $Scenario,
         '--reports-dir', $reportsDirectory,
         '--native-helper-exe', $FixtureHelper.ExePath)
+    if ($null -ne $SeekTargetPositionTicks) {
+        $arguments += @('--seek-target-position-ticks', ([string][long]$SeekTargetPositionTicks))
+    }
     if ($PauseSeconds -gt 0) {
         $arguments += @('--pause-seconds', [string]$PauseSeconds)
     }
@@ -1580,7 +1589,9 @@ function Assert-NativeHeadlessParserContracts {
         -HeadlessDll $headlessDll `
         -Root $Root `
         -Name 'completed-seek-latency' `
-        -HelperOutput $seekOutput
+        -HelperOutput $seekOutput `
+        -Scenario timeline `
+        -SeekTargetPositionTicks 10000000
     if ($seek.ExitCode -ne 0 -or
         $seek.Report.report.position.seekOperationDurationMs -ne 4800.5 -or
         $seek.Report.report.position.seekRecoveryDurationMs -ne 5100.25 -or
@@ -2153,12 +2164,20 @@ function Assert-NativeHeadlessParserContracts {
     }
 
     foreach ($negativeCase in $negativeCases) {
+        $negativeScenario = if ($negativeCase.Output -match 'seekAttempted=1') {
+            'timeline'
+        } else {
+            'playback'
+        }
+        $negativeSeekTarget = if ($negativeScenario -eq 'timeline') { 10000000L } else { $null }
         $result = Invoke-NativeHeadlessParserFixtureCase `
             -FixtureHelper $fixtureHelper `
             -HeadlessDll $headlessDll `
             -Root $Root `
             -Name $negativeCase.Name `
-            -HelperOutput $negativeCase.Output
+            -HelperOutput $negativeCase.Output `
+            -Scenario $negativeScenario `
+            -SeekTargetPositionTicks $negativeSeekTarget
         if ($result.ExitCode -ne 1 -or
             $result.Report.report.error.code -ne 'native-headless.helper-failed' -or
             $result.Report.report.error.failureArea -ne 'evidence-collection' -or
@@ -2456,6 +2475,7 @@ $nativeNonZeroTimelineReport = Invoke-NativeHeadlessHelperCase `
     -ReportsDir $nativeCapturedDir `
     -NativeHelperExe $nativeHelperExe `
     -DurationSeconds 3 `
+    -SeekTargetPositionTicks 30000000 `
     -Scenario timeline
 $timelinePauseCount = @($nativeNonZeroTimelineReport.report.lifecycle.events |
     Where-Object operation -eq 'pause').Count
@@ -2481,13 +2501,14 @@ $nativeResumeSeekTimelineReport = Invoke-NativeHeadlessHelperCase `
     -NativeHelperExe $nativeHelperExe `
     -DurationSeconds 3 `
     -StartPositionTicks 20000000 `
+    -SeekTargetPositionTicks 40000000 `
     -Scenario timeline
 $resumePauseCount = @($nativeResumeSeekTimelineReport.report.lifecycle.events |
     Where-Object operation -eq 'pause').Count
 if ($resumePauseCount -ne 0 -or
     $nativeResumeSeekTimelineReport.report.position.requestedStartPositionTicks -ne 20000000 -or
-    $nativeResumeSeekTimelineReport.report.position.seekTargetPositionTicks -ne 30000000 -or
-    $nativeResumeSeekTimelineReport.report.position.seekDemuxTargetTicks -ne 44000000 -or
+    $nativeResumeSeekTimelineReport.report.position.seekTargetPositionTicks -ne 40000000 -or
+    $nativeResumeSeekTimelineReport.report.position.seekDemuxTargetTicks -ne 54000000 -or
     $nativeResumeSeekTimelineReport.report.position.seekPositionErrorMs -gt 100.0 -or
     $nativeResumeSeekTimelineReport.report.position.postSeekAdvanced -ne $true) {
     throw 'Resume plus seek did not preserve the requested public timeline through native open, demux seek, presentation, and advancement.'
@@ -3248,6 +3269,7 @@ $nativeManifest.cases = @($nativeManifest.cases) + @(
         severity = 'high'
         stability = 'stable'
         uri = $nativeNonZeroTimelineSampleUrl
+        seekTargetPositionTicks = 30000000
         executionRequirement = [pscustomobject]@{
             minimumEvidenceLevel = 'native-playback'
             scenario = 'timeline'
@@ -3278,6 +3300,7 @@ $nativeManifest.cases = @($nativeManifest.cases) + @(
         stability = 'stable'
         uri = $nativeNonZeroTimelineSampleUrl
         startPositionTicks = 20000000
+        seekTargetPositionTicks = 40000000
         executionRequirement = [pscustomobject]@{
             minimumEvidenceLevel = 'native-playback'
             scenario = 'timeline'

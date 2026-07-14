@@ -2586,6 +2586,7 @@ internal static class Program
             MediaSourceId = referenceCase.MediaSourceId,
             StreamUrl = string.IsNullOrWhiteSpace(referenceCase.ItemId) ? referenceCase.Uri : "",
             StartPositionTicks = Math.Max(0, referenceCase.StartPositionTicks),
+            SeekTargetPositionTicks = referenceCase.SeekTargetPositionTicks,
             ForceSdrOutput = referenceCase.ForceSdrOutput,
             RunId = referenceCase.CaseId,
             Scenario = referenceCase.ExecutionRequirement.Scenario,

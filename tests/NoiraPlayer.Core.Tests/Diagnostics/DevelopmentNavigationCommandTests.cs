@@ -325,6 +325,52 @@ public sealed class DevelopmentNavigationCommandTests
     }
 
     [Fact]
+    public void TryParseJson_Requires_Explicit_Seek_Target_For_Timeline_Quality_Run()
+    {
+        const string json = """
+        {
+          "route": "quality-run",
+          "runId": "timeline",
+          "scenario": "timeline",
+          "itemId": "item",
+          "startPositionTicks": 600000000
+        }
+        """;
+
+        var ok = DevelopmentNavigationCommand.TryParseJson(
+            json,
+            out var command,
+            out var error);
+
+        Assert.False(ok);
+        Assert.Null(command);
+        Assert.Contains("seekTargetPositionTicks", error);
+    }
+
+    [Fact]
+    public void TryParseJson_Preserves_Explicit_Seek_Target_For_Timeline_Quality_Run()
+    {
+        const string json = """
+        {
+          "route": "quality-run",
+          "runId": "timeline",
+          "scenario": "timeline",
+          "itemId": "item",
+          "startPositionTicks": 600000000,
+          "seekTargetPositionTicks": 3000000000
+        }
+        """;
+
+        var ok = DevelopmentNavigationCommand.TryParseJson(
+            json,
+            out var command,
+            out var error);
+
+        Assert.True(ok, error);
+        Assert.Equal(3_000_000_000, command!.SeekTargetPositionTicks);
+    }
+
+    [Fact]
     public void TryParseJson_Accepts_Photo_Route()
     {
         var parsed = DevelopmentNavigationCommand.TryParseJson(

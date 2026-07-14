@@ -722,8 +722,8 @@ try {
         throw 'Expected analyze-report-set output schemaVersion 1.'
     }
 
-    if ($analysisSet.evaluationVersion -ne 'playback-quality-v0.18') {
-        throw 'Expected analyze-report-set output evaluationVersion playback-quality-v0.18.'
+    if ($analysisSet.evaluationVersion -ne 'playback-quality-v0.19') {
+        throw 'Expected analyze-report-set output evaluationVersion playback-quality-v0.19.'
     }
 
     if ($analysisSet.action -ne 'fix-report-analysis') {
@@ -1037,8 +1037,8 @@ try {
         throw 'Expected playback quality CLI plan-runs output schemaVersion 1.'
     }
 
-    if ($runPlan.evaluationVersion -ne 'playback-quality-v0.18') {
-        throw 'Expected playback quality CLI plan-runs output evaluationVersion playback-quality-v0.18.'
+    if ($runPlan.evaluationVersion -ne 'playback-quality-v0.19') {
+        throw 'Expected playback quality CLI plan-runs output evaluationVersion playback-quality-v0.19.'
     }
 
     if ($runPlan.caseCount -ne 3) {
@@ -1088,7 +1088,7 @@ try {
 
     $materializedBaselineSummary = Get-Content -Raw -LiteralPath $materializedBaselineSummaryPath | ConvertFrom-Json
     if ($materializedBaselineSummary.schemaVersion -ne 1 -or
-        $materializedBaselineSummary.evaluationVersion -ne 'playback-quality-v0.18' -or
+        $materializedBaselineSummary.evaluationVersion -ne 'playback-quality-v0.19' -or
         $materializedBaselineSummary.caseCount -ne 3 -or
         $materializedBaselineSummary.reportsDirectory -ne $materializedBaselineDir) {
         throw 'Expected materialize-baseline-report-set summary to describe generated reports.'
@@ -1226,6 +1226,7 @@ try {
       "itemId": "quality-case-core-probe",
       "mediaSourceId": "quality-source-core-probe",
       "startPositionTicks": 600000000,
+      "seekTargetPositionTicks": 900000000,
       "tier": 1,
       "executionRequirement": {
         "minimumEvidenceLevel": "native-playback",
@@ -3663,6 +3664,7 @@ try {
     {
       "caseId": "item-1/source-1",
       "uri": "https://example.invalid/item-1/source-1.mp4",
+      "seekTargetPositionTicks": 600000000,
       "tier": 2,
       "executionRequirement": {
         "minimumEvidenceLevel": "native-playback",
@@ -3753,8 +3755,8 @@ try {
         throw 'Expected playback quality CLI evaluate-candidate output schemaVersion 1.'
     }
 
-    if ($candidateEvaluation.evaluationVersion -ne 'playback-quality-v0.18') {
-        throw 'Expected playback quality CLI evaluate-candidate output evaluationVersion playback-quality-v0.18.'
+    if ($candidateEvaluation.evaluationVersion -ne 'playback-quality-v0.19') {
+        throw 'Expected playback quality CLI evaluate-candidate output evaluationVersion playback-quality-v0.19.'
     }
 
     if ($candidateEvaluation.action -ne 'accept-candidate') {

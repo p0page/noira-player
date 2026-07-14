@@ -51,6 +51,7 @@ try {
       "stability": "variable",
       "uri": "https://media.invalid/second.mp4",
       "startPositionTicks": 20000000,
+      "seekTargetPositionTicks": 900000000,
       "executionRequirement": { "minimumEvidenceLevel": "native-playback", "scenario": "timeline" },
       "purpose": [ "timeline" ],
       "expected": {
@@ -225,6 +226,7 @@ $reportsDir = Get-Value '--reports-dir'
 $logPath = $env:NOIRAPLAYER_MANIFEST_RUNNER_TEST_LOG
 $pauseSeconds = Get-Value '--pause-seconds'
 $startPositionTicks = Get-Value '--start-position-ticks'
+$seekTargetPositionTicks = Get-Value '--seek-target-position-ticks'
 $scenario = Get-Value '--scenario'
 $streamUrl = Get-Value '--stream-url'
 $locatorHash = Get-Value '--source-locator-hash'
@@ -241,7 +243,7 @@ $referenceEvidence = if ($null -eq $referenceCase) {
 } else {
     'reference=' + $referenceCase.caseId + ',' + $referenceCase.category + ',' + $referenceCase.severity + ',' + $referenceCase.stability + ',' + $referenceCase.expected.hdrKind
 }
-Add-Content -LiteralPath $logPath -Value ($caseId + '|pause=' + $pauseSeconds + '|start=' + $startPositionTicks + '|scenario=' + $scenario + '|stream=' + $streamUrl + '|locator=' + $locatorHash + '|seekCache=' + $seekPacketCacheEnabled.ToString().ToLowerInvariant() + '|' + $referenceEvidence) -Encoding UTF8
+Add-Content -LiteralPath $logPath -Value ($caseId + '|pause=' + $pauseSeconds + '|start=' + $startPositionTicks + '|seek=' + $seekTargetPositionTicks + '|scenario=' + $scenario + '|stream=' + $streamUrl + '|locator=' + $locatorHash + '|seekCache=' + $seekPacketCacheEnabled.ToString().ToLowerInvariant() + '|' + $referenceEvidence) -Encoding UTF8
 
 $reportPath = Join-Path $reportsDir ($caseId.Replace('/', [System.IO.Path]::DirectorySeparatorChar) + '.json')
 if ($caseId -like '*stale-pass-must-not-survive') {
@@ -342,13 +344,13 @@ exit 0
         $sha256.Dispose()
     }
     if ($invocations.Count -ne 7 -or
-        $invocations[1] -ne ('runner/second-runs|pause=|start=20000000|scenario=timeline|stream=http://127.0.0.1:54321/runtime-media.mp4|locator=' + $secondLocatorHash + '|seekCache=true|reference=runner/second-runs,challenge,medium,variable,Hdr10') -or
-        $invocations[0] -notmatch '^runner/first-fails\|pause=1\|start=0\|scenario=pause-resume\|.*\|seekCache=true\|reference=runner/first-fails,stable,high,stable,Sdr$' -or
-        $invocations[2] -notmatch '^runner/emby-resolved\|pause=\|start=0\|scenario=playback\|.*\|seekCache=true\|reference=runner/emby-resolved,stable,high,stable,Sdr$' -or
-        $invocations[3] -notmatch '^runner/audio-switch\|pause=\|start=0\|scenario=audio-switch\|.*\|seekCache=true\|reference=runner/audio-switch,stable,high,stable,Sdr$' -or
-        $invocations[4] -notmatch '^runner/subtitle-switch\|pause=\|start=600000000\|scenario=subtitle-switch\|.*\|seekCache=true\|reference=runner/subtitle-switch,stable,high,stable,Sdr$' -or
-        $invocations[5] -notmatch '^runner/stale-pass-must-not-survive\|pause=\|start=0\|scenario=playback\|.*\|seekCache=true\|reference=runner/stale-pass-must-not-survive,stable,critical,stable,Sdr$' -or
-        $invocations[6] -notmatch '^runner/mismatched-attempt-must-not-pass\|pause=\|start=0\|scenario=playback\|.*\|seekCache=true\|reference=runner/mismatched-attempt-must-not-pass,stable,critical,stable,Sdr$') {
+        $invocations[1] -ne ('runner/second-runs|pause=|start=20000000|seek=900000000|scenario=timeline|stream=http://127.0.0.1:54321/runtime-media.mp4|locator=' + $secondLocatorHash + '|seekCache=true|reference=runner/second-runs,challenge,medium,variable,Hdr10') -or
+        $invocations[0] -notmatch '^runner/first-fails\|pause=1\|start=0\|seek=\|scenario=pause-resume\|.*\|seekCache=true\|reference=runner/first-fails,stable,high,stable,Sdr$' -or
+        $invocations[2] -notmatch '^runner/emby-resolved\|pause=\|start=0\|seek=\|scenario=playback\|.*\|seekCache=true\|reference=runner/emby-resolved,stable,high,stable,Sdr$' -or
+        $invocations[3] -notmatch '^runner/audio-switch\|pause=\|start=0\|seek=\|scenario=audio-switch\|.*\|seekCache=true\|reference=runner/audio-switch,stable,high,stable,Sdr$' -or
+        $invocations[4] -notmatch '^runner/subtitle-switch\|pause=\|start=600000000\|seek=\|scenario=subtitle-switch\|.*\|seekCache=true\|reference=runner/subtitle-switch,stable,high,stable,Sdr$' -or
+        $invocations[5] -notmatch '^runner/stale-pass-must-not-survive\|pause=\|start=0\|seek=\|scenario=playback\|.*\|seekCache=true\|reference=runner/stale-pass-must-not-survive,stable,critical,stable,Sdr$' -or
+        $invocations[6] -notmatch '^runner/mismatched-attempt-must-not-pass\|pause=\|start=0\|seek=\|scenario=playback\|.*\|seekCache=true\|reference=runner/mismatched-attempt-must-not-pass,stable,critical,stable,Sdr$') {
         throw 'Manifest runner must invoke each selected stable/challenge case exactly once and preserve order.'
     }
 

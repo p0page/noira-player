@@ -26,6 +26,7 @@ try {
       "severity": "high",
       "stability": "stable",
       "uri": "https://media.invalid/native-source-equivalence.mp4",
+      "seekTargetPositionTicks": 10000000,
       "executionRequirement": { "minimumEvidenceLevel": "native-playback", "scenario": "timeline" },
       "purpose": [
         "frame-pacing", "timeline"
@@ -196,7 +197,7 @@ $report = [ordered]@{
 
 $envelope = @{
     schemaVersion = 1
-    evaluationVersion = 'playback-quality-v0.18'
+    evaluationVersion = 'playback-quality-v0.19'
     caseMetadata = @{ caseId = $caseId; category = 'stable'; severity = 'high'; stability = 'stable' }
     report = $report
 }

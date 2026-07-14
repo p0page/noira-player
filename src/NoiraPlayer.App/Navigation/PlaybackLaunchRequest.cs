@@ -21,6 +21,7 @@ namespace NoiraPlayer.App.Navigation
                 command.ItemName,
                 command.StartPositionTicks,
                 command.MediaSourceId,
+                qualitySeekTargetPositionTicks: command.SeekTargetPositionTicks,
                 forceSdrOutput: command.ForceSdrOutput,
                 qualityRunId: command.RunId,
                 qualityScenario: command.Scenario,
@@ -45,6 +46,7 @@ namespace NoiraPlayer.App.Navigation
             string qualityScenario = PlaybackQualityExecutionScenario.Playback,
             int qualityRunDurationSeconds = 0,
             int qualityPauseSeconds = 0,
+            long? qualitySeekTargetPositionTicks = null,
             string qualitySourceLocator = "",
             string qualitySourceRevision = "",
             PlaybackQualityExpected? qualityExpected = null,
@@ -70,6 +72,7 @@ namespace NoiraPlayer.App.Navigation
             }
             QualityRunDurationSeconds = qualityRunDurationSeconds < 10 ? 10 : qualityRunDurationSeconds;
             QualityPauseSeconds = Math.Max(0, Math.Min(900, qualityPauseSeconds));
+            QualitySeekTargetPositionTicks = qualitySeekTargetPositionTicks;
             QualitySourceLocator = string.IsNullOrWhiteSpace(qualitySourceLocator)
                 ? ""
                 : qualitySourceLocator.Trim();
@@ -101,6 +104,8 @@ namespace NoiraPlayer.App.Navigation
         public int QualityRunDurationSeconds { get; }
 
         public int QualityPauseSeconds { get; }
+
+        public long? QualitySeekTargetPositionTicks { get; }
 
         public string QualitySourceLocator { get; }
 

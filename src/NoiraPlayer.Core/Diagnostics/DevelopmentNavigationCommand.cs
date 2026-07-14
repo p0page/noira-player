@@ -11,6 +11,7 @@ namespace NoiraPlayer.Core.Diagnostics
         public string ItemId { get; set; } = "";
         public string ItemName { get; set; } = "";
         public long StartPositionTicks { get; set; }
+        public long? SeekTargetPositionTicks { get; set; }
         public string MediaSourceId { get; set; } = "";
         public bool ForceSdrOutput { get; set; }
         public string StreamUrl { get; set; } = "";
@@ -96,6 +97,30 @@ namespace NoiraPlayer.Core.Diagnostics
                     string.IsNullOrWhiteSpace(parsed.StreamUrl))
                 {
                     error = "dev-command.json route requires itemId or streamUrl.";
+                    return false;
+                }
+
+                if (string.Equals(
+                        parsed.Scenario,
+                        PlaybackQualityExecutionScenario.Timeline,
+                        StringComparison.Ordinal))
+                {
+                    if (!parsed.SeekTargetPositionTicks.HasValue)
+                    {
+                        error = "dev-command.json timeline quality-run requires seekTargetPositionTicks.";
+                        return false;
+                    }
+
+                    if (parsed.SeekTargetPositionTicks.Value < 0 ||
+                        parsed.SeekTargetPositionTicks.Value == parsed.StartPositionTicks)
+                    {
+                        error = "dev-command.json timeline seekTargetPositionTicks must be non-negative and differ from startPositionTicks.";
+                        return false;
+                    }
+                }
+                else if (parsed.SeekTargetPositionTicks.HasValue)
+                {
+                    error = "dev-command.json seekTargetPositionTicks is valid only for the timeline scenario.";
                     return false;
                 }
             }

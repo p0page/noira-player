@@ -15,7 +15,7 @@ New-Item -ItemType Directory -Path (Join-Path $packageRoot 'LocalState') -Force 
 @'
 {
   "schemaVersion": 1,
-  "evaluationVersion": "playback-quality-v0.18",
+  "evaluationVersion": "playback-quality-v0.19",
   "cases": [
     {
       "caseId": "jellyfin/direct-uri-no-command",
@@ -32,7 +32,9 @@ New-Item -ItemType Directory -Path (Join-Path $packageRoot 'LocalState') -Force 
         "mediaSourceId": "public-placeholder-source",
         "runId": "local/sdr-resume-seek-timeline",
         "durationSeconds": 30,
-        "startPositionTicks": 120000000
+        "startPositionTicks": 120000000,
+        "seekTargetPositionTicks": 600000000,
+        "scenario": "timeline"
       }
     }
   ]

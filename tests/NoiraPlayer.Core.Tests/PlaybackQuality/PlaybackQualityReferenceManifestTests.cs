@@ -1668,6 +1668,7 @@ public sealed class PlaybackQualityReferenceManifestTests
             Status = "error",
             Message = report.Error.Message
         });
+        report.Position.SeekTargetPositionTicks = referenceCase.SeekTargetPositionTicks;
         AddCapturedRuntimeMetrics(report);
         AddNativeExecutionEvidence(
             report,
@@ -1894,6 +1895,27 @@ public sealed class PlaybackQualityReferenceManifestTests
             error.CaseId == referenceCase.CaseId &&
             error.Expected == PlaybackQualityExecutionScenario.SubtitleSwitch &&
             error.Actual == PlaybackQualityExecutionScenario.Playback);
+    }
+
+    [Fact]
+    public void ValidateReportSet_Rejects_Timeline_Report_That_Executed_A_Different_Seek_Target()
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        var referenceCase = CreateCase("timeline/target-mismatch", 1, "timeline");
+        referenceCase.SeekTargetPositionTicks = 900_000_000;
+        manifest.Cases.Add(referenceCase);
+        var report = CreateReport(referenceCase.CaseId, "hevc", 3840, 2160, 23.976, "Hdr10");
+        AddCapturedRuntimeMetrics(report);
+        report.Execution.Scenario = PlaybackQualityExecutionScenario.Timeline;
+        report.Position.SeekTargetPositionTicks = 600_000_000;
+
+        var validation = PlaybackQualityReferenceReportSetValidator.Validate(manifest, new[] { report });
+
+        Assert.False(validation.IsValid);
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.position.seek-target.mismatch" &&
+            error.CaseId == referenceCase.CaseId &&
+            error.Signal == "position.seekTargetPositionTicks");
     }
 
     [Fact]

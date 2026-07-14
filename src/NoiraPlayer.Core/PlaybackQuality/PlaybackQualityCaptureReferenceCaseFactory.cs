@@ -10,6 +10,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
             PlaybackDescriptor descriptor,
             PlaybackQualityExpected? expected,
             string scenario = PlaybackQualityExecutionScenario.Playback,
+            long? seekTargetPositionTicks = null,
             string category = "stable",
             string severity = "medium",
             string stability = "stable",
@@ -31,6 +32,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 ItemId = descriptor.ItemId,
                 MediaSourceId = source.Id ?? "",
                 StartPositionTicks = descriptor.StartPositionTicks,
+                SeekTargetPositionTicks = seekTargetPositionTicks,
                 Expected = CloneExpected(expected)
             };
             referenceCase.ExecutionRequirement.Scenario = NormalizeScenario(scenario);
@@ -45,6 +47,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
             bool forceSdrOutput,
             PlaybackQualityExpected? expected,
             string scenario = PlaybackQualityExecutionScenario.Playback,
+            long? seekTargetPositionTicks = null,
             string uri = "",
             string category = "stable",
             string severity = "medium",
@@ -60,6 +63,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 ItemId = itemId ?? "",
                 MediaSourceId = mediaSourceId ?? "",
                 StartPositionTicks = startPositionTicks < 0 ? 0 : startPositionTicks,
+                SeekTargetPositionTicks = seekTargetPositionTicks,
                 ForceSdrOutput = forceSdrOutput,
                 Expected = CloneExpected(expected)
             };

@@ -31,6 +31,18 @@ docs/qa/private/
 
 仓库只保存模板和规范。真实本地 manifest 与报告保持 ignored。
 
+## Timeline 样本规则
+
+`timeline` case 必须同时声明：
+
+- `startPositionTicks`：起播位置，单位为 100ns tick。
+- `seekTargetPositionTicks`：本次操作的绝对逻辑目标，必须非负且与起播位置不同。
+- `expected.maxSeekPositionErrorMs`：允许的首帧落点误差。
+
+私有 Emby 生成器根据服务端返回的真实 `RunTimeTicks` 选择确定性目标：长片通常从前段起播并跳到约 50% 位置，同时与起点、片尾保留安全距离。运行时不得根据文件名、当前进度或固定 1 秒偏移改写目标。manifest、run plan、native/App 命令和 report 中的目标必须完全一致；旧的隐式目标报告不能进入 v0.19 baseline。
+
+如果运行期间还有其他视频占用网络、CPU、GPU 或硬件解码器，本轮必须标记为性能环境受干扰。seek 是否调用、目标是否一致、首帧落点和后续推进仍可用于功能诊断；启动、buffering、starvation、cadence、A/V sync 和恢复耗时不得用于接受性能候选。
+
 ## UI 真实样本 Manifest
 
 UI 开发数据源的权威规则见 `docs/qa/ui-development-data-sources.md`。当前规则是：不再使用 `*-fixture` 或 `details-real-*` route。需要打开真实 Emby 条目时，在 ignored 的 `ui-real-samples.local.json` 中维护样本列表，然后写入 app 的 `dev-command.json`。
