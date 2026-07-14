@@ -64,6 +64,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
             AddUnique(requiredSignals, "runtimeMetrics.providerStatus");
             AddUnique(requiredSignals, "runtimeMetrics.hasSnapshot");
             AddUnique(requiredSignals, "runtimeMetrics.hasPlaybackSample");
+            AddVideoRenderPhaseSignals(requiredSignals);
 
             foreach (var componentName in PlaybackQualityStartupTransportCallEvidence.ComponentNames)
             {
@@ -326,6 +327,13 @@ namespace NoiraPlayer.Core.PlaybackQuality
 
         public static bool RequiresNativePlaybackEvidence(string signal)
         {
+            if (!string.IsNullOrWhiteSpace(signal) &&
+                (signal.StartsWith("timing.videoRender", StringComparison.Ordinal) ||
+                    signal.StartsWith("timing.videoProcessor", StringComparison.Ordinal)))
+            {
+                return true;
+            }
+
             if (!string.IsNullOrWhiteSpace(signal) &&
                 signal.StartsWith("readRecovery.", StringComparison.Ordinal))
             {
@@ -694,6 +702,37 @@ namespace NoiraPlayer.Core.PlaybackQuality
                     return report.Timing.RenderIntervalMsP95 > 0;
                 case "timing.renderIntervalMsP99":
                     return report.Timing.RenderIntervalMsP99 > 0;
+                case "timing.videoRenderDirectCopyFrameCount":
+                case "timing.videoRenderVideoProcessorFrameCount":
+                case "timing.videoRenderBgraFrameCount":
+                case "timing.videoRenderPostProcessFrameCount":
+                case "timing.videoProcessorSetupCpuSampleCount":
+                case "timing.videoProcessorSetupCpuDurationMsP50":
+                case "timing.videoProcessorSetupCpuDurationMsP95":
+                case "timing.videoProcessorSetupCpuDurationMsP99":
+                case "timing.videoProcessorSetupCpuDurationMsMax":
+                case "timing.videoProcessorViewTargetCpuSampleCount":
+                case "timing.videoProcessorViewTargetCpuDurationMsP50":
+                case "timing.videoProcessorViewTargetCpuDurationMsP95":
+                case "timing.videoProcessorViewTargetCpuDurationMsP99":
+                case "timing.videoProcessorViewTargetCpuDurationMsMax":
+                case "timing.videoProcessorClearCpuSampleCount":
+                case "timing.videoProcessorClearCpuDurationMsP50":
+                case "timing.videoProcessorClearCpuDurationMsP95":
+                case "timing.videoProcessorClearCpuDurationMsP99":
+                case "timing.videoProcessorClearCpuDurationMsMax":
+                case "timing.videoProcessorBltCpuSampleCount":
+                case "timing.videoProcessorBltCpuDurationMsP50":
+                case "timing.videoProcessorBltCpuDurationMsP95":
+                case "timing.videoProcessorBltCpuDurationMsP99":
+                case "timing.videoProcessorBltCpuDurationMsMax":
+                case "timing.videoProcessorPostProcessCpuSampleCount":
+                case "timing.videoProcessorPostProcessCpuDurationMsP50":
+                case "timing.videoProcessorPostProcessCpuDurationMsP95":
+                case "timing.videoProcessorPostProcessCpuDurationMsP99":
+                case "timing.videoProcessorPostProcessCpuDurationMsMax":
+                    return presentSignals != null ||
+                        PlaybackQualityVideoRenderPhaseEvidence.HasPathSample(report.Timing);
                 case "timing.audioAheadWaitFinalDeltaAbsMsP50":
                     return presentSignals != null || report.Timing.AudioAheadWaitFinalDeltaAbsMsP50 > 0;
                 case "timing.audioAheadWaitFinalDeltaAbsMsP95":
@@ -985,6 +1024,14 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 report.Buffers.QueuedAudioBuffers > 0 ||
                 report.Buffers.VideoStarvedPasses > 0 ||
                 report.Buffers.AudioStarvedPasses > 0;
+        }
+
+        private static void AddVideoRenderPhaseSignals(List<string> requiredSignals)
+        {
+            foreach (var signal in PlaybackQualityVideoRenderPhaseEvidence.Signals)
+            {
+                AddUnique(requiredSignals, signal);
+            }
         }
 
         private static bool HasFiniteNonNegative(double? value)

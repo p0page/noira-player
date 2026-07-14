@@ -51,7 +51,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
 
     public sealed class PlaybackQualityRunResult
     {
-        public const string CurrentEvaluationVersion = "playback-quality-v0.15";
+        public const string CurrentEvaluationVersion = "playback-quality-v0.16";
 
         public PlaybackQualityRunResult(
             PlaybackQualityReport report,

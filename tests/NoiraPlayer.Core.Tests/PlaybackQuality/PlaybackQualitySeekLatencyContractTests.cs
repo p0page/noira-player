@@ -22,7 +22,7 @@ public sealed class PlaybackQualitySeekLatencyContractTests
     [Fact]
     public void Current_Evaluation_Version_Includes_Long_Pause_Recovery_Evidence_Contract()
     {
-        Assert.Equal("playback-quality-v0.15", PlaybackQualityRunResult.CurrentEvaluationVersion);
+        Assert.Equal("playback-quality-v0.16", PlaybackQualityRunResult.CurrentEvaluationVersion);
         Assert.NotNull(typeof(PlaybackQualityExecutionEvidence).GetProperty("RequestedSampleDurationMs"));
         Assert.NotNull(typeof(PlaybackQualityExecutionEvidence).GetProperty("ObservedSampleWallClockDurationMs"));
     }

@@ -87,6 +87,15 @@
                 metrics.VideoRenderDurationMsP95 > 0 ||
                 metrics.VideoRenderDurationMsP99 > 0 ||
                 metrics.VideoRenderDurationMsMax > 0 ||
+                metrics.VideoRenderDirectCopyFrameCount > 0 ||
+                metrics.VideoRenderVideoProcessorFrameCount > 0 ||
+                metrics.VideoRenderBgraFrameCount > 0 ||
+                metrics.VideoRenderPostProcessFrameCount > 0 ||
+                metrics.VideoProcessorSetupCpuSampleCount > 0 ||
+                metrics.VideoProcessorViewTargetCpuSampleCount > 0 ||
+                metrics.VideoProcessorClearCpuSampleCount > 0 ||
+                metrics.VideoProcessorBltCpuSampleCount > 0 ||
+                metrics.VideoProcessorPostProcessCpuSampleCount > 0 ||
                 metrics.AudioAheadWaitDurationMsP50 > 0 ||
                 metrics.AudioAheadWaitDurationMsP95 > 0 ||
                 metrics.AudioAheadWaitDurationMsP99 > 0 ||

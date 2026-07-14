@@ -155,6 +155,35 @@ public sealed class PlaybackQualityReportMapperTests
             VideoRenderDurationMsP95 = 8.0,
             VideoRenderDurationMsP99 = 14.0,
             VideoRenderDurationMsMax = 20.0,
+            VideoRenderDirectCopyFrameCount = 1,
+            VideoRenderVideoProcessorFrameCount = 2,
+            VideoRenderBgraFrameCount = 3,
+            VideoRenderPostProcessFrameCount = 4,
+            VideoProcessorSetupCpuSampleCount = 5,
+            VideoProcessorSetupCpuDurationMsP50 = 0.1,
+            VideoProcessorSetupCpuDurationMsP95 = 0.2,
+            VideoProcessorSetupCpuDurationMsP99 = 0.3,
+            VideoProcessorSetupCpuDurationMsMax = 0.4,
+            VideoProcessorViewTargetCpuSampleCount = 6,
+            VideoProcessorViewTargetCpuDurationMsP50 = 0.5,
+            VideoProcessorViewTargetCpuDurationMsP95 = 0.6,
+            VideoProcessorViewTargetCpuDurationMsP99 = 0.7,
+            VideoProcessorViewTargetCpuDurationMsMax = 0.8,
+            VideoProcessorClearCpuSampleCount = 7,
+            VideoProcessorClearCpuDurationMsP50 = 0.9,
+            VideoProcessorClearCpuDurationMsP95 = 1.0,
+            VideoProcessorClearCpuDurationMsP99 = 1.1,
+            VideoProcessorClearCpuDurationMsMax = 1.2,
+            VideoProcessorBltCpuSampleCount = 8,
+            VideoProcessorBltCpuDurationMsP50 = 1.3,
+            VideoProcessorBltCpuDurationMsP95 = 1.4,
+            VideoProcessorBltCpuDurationMsP99 = 1.5,
+            VideoProcessorBltCpuDurationMsMax = 1.6,
+            VideoProcessorPostProcessCpuSampleCount = 9,
+            VideoProcessorPostProcessCpuDurationMsP50 = 1.7,
+            VideoProcessorPostProcessCpuDurationMsP95 = 1.8,
+            VideoProcessorPostProcessCpuDurationMsP99 = 1.9,
+            VideoProcessorPostProcessCpuDurationMsMax = 2.0,
             AudioAheadWaitDurationMsP50 = 5.1,
             AudioAheadWaitDurationMsP95 = 15.2,
             AudioAheadWaitDurationMsP99 = 20.3,
@@ -256,6 +285,35 @@ public sealed class PlaybackQualityReportMapperTests
         Assert.Equal(8.0, report.Timing.VideoRenderDurationMsP95);
         Assert.Equal(14.0, report.Timing.VideoRenderDurationMsP99);
         Assert.Equal(20.0, report.Timing.VideoRenderDurationMsMax);
+        Assert.Equal((ulong)1, report.Timing.VideoRenderDirectCopyFrameCount);
+        Assert.Equal((ulong)2, report.Timing.VideoRenderVideoProcessorFrameCount);
+        Assert.Equal((ulong)3, report.Timing.VideoRenderBgraFrameCount);
+        Assert.Equal((ulong)4, report.Timing.VideoRenderPostProcessFrameCount);
+        Assert.Equal((ulong)5, report.Timing.VideoProcessorSetupCpuSampleCount);
+        Assert.Equal(0.1, report.Timing.VideoProcessorSetupCpuDurationMsP50);
+        Assert.Equal(0.2, report.Timing.VideoProcessorSetupCpuDurationMsP95);
+        Assert.Equal(0.3, report.Timing.VideoProcessorSetupCpuDurationMsP99);
+        Assert.Equal(0.4, report.Timing.VideoProcessorSetupCpuDurationMsMax);
+        Assert.Equal((ulong)6, report.Timing.VideoProcessorViewTargetCpuSampleCount);
+        Assert.Equal(0.5, report.Timing.VideoProcessorViewTargetCpuDurationMsP50);
+        Assert.Equal(0.6, report.Timing.VideoProcessorViewTargetCpuDurationMsP95);
+        Assert.Equal(0.7, report.Timing.VideoProcessorViewTargetCpuDurationMsP99);
+        Assert.Equal(0.8, report.Timing.VideoProcessorViewTargetCpuDurationMsMax);
+        Assert.Equal((ulong)7, report.Timing.VideoProcessorClearCpuSampleCount);
+        Assert.Equal(0.9, report.Timing.VideoProcessorClearCpuDurationMsP50);
+        Assert.Equal(1.0, report.Timing.VideoProcessorClearCpuDurationMsP95);
+        Assert.Equal(1.1, report.Timing.VideoProcessorClearCpuDurationMsP99);
+        Assert.Equal(1.2, report.Timing.VideoProcessorClearCpuDurationMsMax);
+        Assert.Equal((ulong)8, report.Timing.VideoProcessorBltCpuSampleCount);
+        Assert.Equal(1.3, report.Timing.VideoProcessorBltCpuDurationMsP50);
+        Assert.Equal(1.4, report.Timing.VideoProcessorBltCpuDurationMsP95);
+        Assert.Equal(1.5, report.Timing.VideoProcessorBltCpuDurationMsP99);
+        Assert.Equal(1.6, report.Timing.VideoProcessorBltCpuDurationMsMax);
+        Assert.Equal((ulong)9, report.Timing.VideoProcessorPostProcessCpuSampleCount);
+        Assert.Equal(1.7, report.Timing.VideoProcessorPostProcessCpuDurationMsP50);
+        Assert.Equal(1.8, report.Timing.VideoProcessorPostProcessCpuDurationMsP95);
+        Assert.Equal(1.9, report.Timing.VideoProcessorPostProcessCpuDurationMsP99);
+        Assert.Equal(2.0, report.Timing.VideoProcessorPostProcessCpuDurationMsMax);
         Assert.Equal(5.1, report.Timing.AudioAheadWaitDurationMsP50);
         Assert.Equal(15.2, report.Timing.AudioAheadWaitDurationMsP95);
         Assert.Equal(20.3, report.Timing.AudioAheadWaitDurationMsP99);

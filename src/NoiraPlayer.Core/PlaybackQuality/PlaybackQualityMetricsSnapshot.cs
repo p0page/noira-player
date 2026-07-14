@@ -138,6 +138,35 @@
         public double VideoRenderDurationMsP95 { get; set; }
         public double VideoRenderDurationMsP99 { get; set; }
         public double VideoRenderDurationMsMax { get; set; }
+        public ulong VideoRenderDirectCopyFrameCount { get; set; }
+        public ulong VideoRenderVideoProcessorFrameCount { get; set; }
+        public ulong VideoRenderBgraFrameCount { get; set; }
+        public ulong VideoRenderPostProcessFrameCount { get; set; }
+        public ulong VideoProcessorSetupCpuSampleCount { get; set; }
+        public double VideoProcessorSetupCpuDurationMsP50 { get; set; }
+        public double VideoProcessorSetupCpuDurationMsP95 { get; set; }
+        public double VideoProcessorSetupCpuDurationMsP99 { get; set; }
+        public double VideoProcessorSetupCpuDurationMsMax { get; set; }
+        public ulong VideoProcessorViewTargetCpuSampleCount { get; set; }
+        public double VideoProcessorViewTargetCpuDurationMsP50 { get; set; }
+        public double VideoProcessorViewTargetCpuDurationMsP95 { get; set; }
+        public double VideoProcessorViewTargetCpuDurationMsP99 { get; set; }
+        public double VideoProcessorViewTargetCpuDurationMsMax { get; set; }
+        public ulong VideoProcessorClearCpuSampleCount { get; set; }
+        public double VideoProcessorClearCpuDurationMsP50 { get; set; }
+        public double VideoProcessorClearCpuDurationMsP95 { get; set; }
+        public double VideoProcessorClearCpuDurationMsP99 { get; set; }
+        public double VideoProcessorClearCpuDurationMsMax { get; set; }
+        public ulong VideoProcessorBltCpuSampleCount { get; set; }
+        public double VideoProcessorBltCpuDurationMsP50 { get; set; }
+        public double VideoProcessorBltCpuDurationMsP95 { get; set; }
+        public double VideoProcessorBltCpuDurationMsP99 { get; set; }
+        public double VideoProcessorBltCpuDurationMsMax { get; set; }
+        public ulong VideoProcessorPostProcessCpuSampleCount { get; set; }
+        public double VideoProcessorPostProcessCpuDurationMsP50 { get; set; }
+        public double VideoProcessorPostProcessCpuDurationMsP95 { get; set; }
+        public double VideoProcessorPostProcessCpuDurationMsP99 { get; set; }
+        public double VideoProcessorPostProcessCpuDurationMsMax { get; set; }
         public double AudioAheadWaitDurationMsP50 { get; set; }
         public double AudioAheadWaitDurationMsP95 { get; set; }
         public double AudioAheadWaitDurationMsP99 { get; set; }

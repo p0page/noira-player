@@ -3065,6 +3065,14 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 AddUnique(analysis.EvidenceSignals, "timing.videoRenderDurationMsMax");
             }
 
+            if (PlaybackQualityVideoRenderPhaseEvidence.HasPathSample(report.Timing))
+            {
+                foreach (var signal in PlaybackQualityVideoRenderPhaseEvidence.Signals)
+                {
+                    AddUnique(analysis.EvidenceSignals, signal);
+                }
+            }
+
             if (report.Timing.AudioAheadWaitDurationMsP50 > 0)
             {
                 AddUnique(analysis.EvidenceSignals, "timing.audioAheadWaitDurationMsP50");

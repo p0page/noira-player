@@ -1631,6 +1631,20 @@ public sealed class PlaybackQualityReportAnalyzerTests
     }
 
     [Fact]
+    public void Runtime_Metrics_Factory_Treats_Video_Render_Path_Count_As_Playback_Evidence()
+    {
+        var runtimeMetrics = PlaybackQualityRuntimeMetricsFactory.FromSnapshot(
+            new PlaybackQualityMetricsSnapshot
+            {
+                VideoRenderVideoProcessorFrameCount = 1
+            },
+            "returned-snapshot");
+
+        Assert.Equal("captured", runtimeMetrics.Status);
+        Assert.True(runtimeMetrics.HasPlaybackSample);
+    }
+
+    [Fact]
     public void Analyze_Targets_Highest_Priority_Failure_Area_When_Frame_Pacing_Also_Fails()
     {
         var report = CreateOptimizationReadyFailure();
@@ -1769,6 +1783,7 @@ public sealed class PlaybackQualityReportAnalyzerTests
         report.Timing.VideoRenderDurationMsP95 = 8.0;
         report.Timing.VideoRenderDurationMsP99 = 14.0;
         report.Timing.VideoRenderDurationMsMax = 20.0;
+        report.Timing.VideoRenderVideoProcessorFrameCount = 120;
 
         var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
 
@@ -1788,6 +1803,9 @@ public sealed class PlaybackQualityReportAnalyzerTests
         Assert.Contains("timing.videoRenderDurationMsP95", analysis.EvidenceSignals);
         Assert.Contains("timing.videoRenderDurationMsP99", analysis.EvidenceSignals);
         Assert.Contains("timing.videoRenderDurationMsMax", analysis.EvidenceSignals);
+        Assert.All(
+            PlaybackQualityVideoRenderPhaseEvidence.Signals,
+            signal => Assert.Contains(signal, analysis.EvidenceSignals));
     }
 
     [Fact]

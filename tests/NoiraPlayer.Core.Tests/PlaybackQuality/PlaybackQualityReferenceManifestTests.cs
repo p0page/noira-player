@@ -457,6 +457,78 @@ public sealed class PlaybackQualityReferenceManifestTests
         Assert.Contains("timing.videoRenderDurationMsP95", reportSignals);
         Assert.Contains("timing.videoRenderDurationMsP99", reportSignals);
         Assert.Contains("timing.videoRenderDurationMsMax", reportSignals);
+        Assert.Contains("timing.videoRenderDirectCopyFrameCount", reportSignals);
+        Assert.Contains("timing.videoRenderVideoProcessorFrameCount", reportSignals);
+        Assert.Contains("timing.videoRenderBgraFrameCount", reportSignals);
+        Assert.Contains("timing.videoRenderPostProcessFrameCount", reportSignals);
+        Assert.Contains("timing.videoProcessorSetupCpuSampleCount", reportSignals);
+        Assert.Contains("timing.videoProcessorSetupCpuDurationMsP50", reportSignals);
+        Assert.Contains("timing.videoProcessorSetupCpuDurationMsP95", reportSignals);
+        Assert.Contains("timing.videoProcessorSetupCpuDurationMsP99", reportSignals);
+        Assert.Contains("timing.videoProcessorSetupCpuDurationMsMax", reportSignals);
+        Assert.Contains("timing.videoProcessorViewTargetCpuSampleCount", reportSignals);
+        Assert.Contains("timing.videoProcessorViewTargetCpuDurationMsP50", reportSignals);
+        Assert.Contains("timing.videoProcessorViewTargetCpuDurationMsP95", reportSignals);
+        Assert.Contains("timing.videoProcessorViewTargetCpuDurationMsP99", reportSignals);
+        Assert.Contains("timing.videoProcessorViewTargetCpuDurationMsMax", reportSignals);
+        Assert.Contains("timing.videoProcessorClearCpuSampleCount", reportSignals);
+        Assert.Contains("timing.videoProcessorClearCpuDurationMsP50", reportSignals);
+        Assert.Contains("timing.videoProcessorClearCpuDurationMsP95", reportSignals);
+        Assert.Contains("timing.videoProcessorClearCpuDurationMsP99", reportSignals);
+        Assert.Contains("timing.videoProcessorClearCpuDurationMsMax", reportSignals);
+        Assert.Contains("timing.videoProcessorBltCpuSampleCount", reportSignals);
+        Assert.Contains("timing.videoProcessorBltCpuDurationMsP50", reportSignals);
+        Assert.Contains("timing.videoProcessorBltCpuDurationMsP95", reportSignals);
+        Assert.Contains("timing.videoProcessorBltCpuDurationMsP99", reportSignals);
+        Assert.Contains("timing.videoProcessorBltCpuDurationMsMax", reportSignals);
+        Assert.Contains("timing.videoProcessorPostProcessCpuSampleCount", reportSignals);
+        Assert.Contains("timing.videoProcessorPostProcessCpuDurationMsP50", reportSignals);
+        Assert.Contains("timing.videoProcessorPostProcessCpuDurationMsP95", reportSignals);
+        Assert.Contains("timing.videoProcessorPostProcessCpuDurationMsP99", reportSignals);
+        Assert.Contains("timing.videoProcessorPostProcessCpuDurationMsMax", reportSignals);
+    }
+
+    [Fact]
+    public void RequiredSignals_For_Native_Playback_Include_Complete_Video_Render_Phase_Evidence()
+    {
+        var referenceCase = CreateCase("render/phases", 1, "frame-pacing");
+
+        var requiredSignals = PlaybackQualityRequiredSignalPolicy.CreateRequiredSignals(referenceCase);
+
+        var expectedSignals = new[]
+        {
+            "timing.videoRenderDirectCopyFrameCount",
+            "timing.videoRenderVideoProcessorFrameCount",
+            "timing.videoRenderBgraFrameCount",
+            "timing.videoRenderPostProcessFrameCount",
+            "timing.videoProcessorSetupCpuSampleCount",
+            "timing.videoProcessorSetupCpuDurationMsP50",
+            "timing.videoProcessorSetupCpuDurationMsP95",
+            "timing.videoProcessorSetupCpuDurationMsP99",
+            "timing.videoProcessorSetupCpuDurationMsMax",
+            "timing.videoProcessorViewTargetCpuSampleCount",
+            "timing.videoProcessorViewTargetCpuDurationMsP50",
+            "timing.videoProcessorViewTargetCpuDurationMsP95",
+            "timing.videoProcessorViewTargetCpuDurationMsP99",
+            "timing.videoProcessorViewTargetCpuDurationMsMax",
+            "timing.videoProcessorClearCpuSampleCount",
+            "timing.videoProcessorClearCpuDurationMsP50",
+            "timing.videoProcessorClearCpuDurationMsP95",
+            "timing.videoProcessorClearCpuDurationMsP99",
+            "timing.videoProcessorClearCpuDurationMsMax",
+            "timing.videoProcessorBltCpuSampleCount",
+            "timing.videoProcessorBltCpuDurationMsP50",
+            "timing.videoProcessorBltCpuDurationMsP95",
+            "timing.videoProcessorBltCpuDurationMsP99",
+            "timing.videoProcessorBltCpuDurationMsMax",
+            "timing.videoProcessorPostProcessCpuSampleCount",
+            "timing.videoProcessorPostProcessCpuDurationMsP50",
+            "timing.videoProcessorPostProcessCpuDurationMsP95",
+            "timing.videoProcessorPostProcessCpuDurationMsP99",
+            "timing.videoProcessorPostProcessCpuDurationMsMax"
+        };
+
+        Assert.All(expectedSignals, signal => Assert.Contains(signal, requiredSignals));
     }
 
     [Fact]
@@ -2441,6 +2513,10 @@ public sealed class PlaybackQualityReferenceManifestTests
         entry.PresentSignals.Add("colorPipeline.conversionStatus");
         entry.PresentSignals.Add("buffers.videoStarvedPasses");
         entry.PresentSignals.Add("buffers.audioStarvedPasses");
+        foreach (var signal in PlaybackQualityVideoRenderPhaseEvidence.Signals)
+        {
+            entry.PresentSignals.Add(signal);
+        }
         foreach (var componentName in PlaybackQualityStartupTransportCallEvidence.ComponentNames)
         {
             foreach (var fieldName in PlaybackQualityStartupTransportCallEvidence.FieldNames)
@@ -2649,6 +2725,37 @@ public sealed class PlaybackQualityReferenceManifestTests
 
         const string missingSignal =
             "startup.stage.native.open.component.native.startup-seek.transportSeekWaitMs";
+        entry.PresentSignals.Remove(missingSignal);
+
+        var validation = PlaybackQualityReferenceReportSetValidator.Validate(manifest, new[] { entry });
+
+        Assert.False(validation.IsValid);
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.requiredSignal.missing" &&
+            error.Signal == missingSignal);
+    }
+
+    [Fact]
+    public void ValidateReportSet_Rejects_Missing_Video_Render_Phase_Json_Field()
+    {
+        var referenceCase = CreateCase(
+            "render/missing-phase-field",
+            tier: 1,
+            purpose: "frame-pacing");
+        var manifest = new PlaybackQualityReferenceManifest();
+        manifest.Cases.Add(referenceCase);
+        var report = CreateReport(referenceCase.CaseId, "hevc", 1920, 1080, 60, "Sdr");
+        AddCapturedRuntimeMetrics(report);
+        var entry = new PlaybackQualityReferenceReportSetEntry(report)
+        {
+            HasSignalPresenceEvidence = true
+        };
+        foreach (var signal in PlaybackQualityRequiredSignalPolicy.CreateRequiredSignals(referenceCase))
+        {
+            entry.PresentSignals.Add(signal);
+        }
+
+        const string missingSignal = "timing.videoProcessorSetupCpuDurationMsP95";
         entry.PresentSignals.Remove(missingSignal);
 
         var validation = PlaybackQualityReferenceReportSetValidator.Validate(manifest, new[] { entry });
@@ -3143,11 +3250,13 @@ public sealed class PlaybackQualityReferenceManifestTests
             new PlaybackQualityMetricsSnapshot
             {
                 DecodedVideoFrames = 240,
-                RenderedVideoFrames = 240
+                RenderedVideoFrames = 240,
+                VideoRenderVideoProcessorFrameCount = 240
             },
             "test-provider:returned-snapshot");
         report.Timing.DecodedVideoFrames = 240;
         report.Timing.RenderedVideoFrames = 240;
+        report.Timing.VideoRenderVideoProcessorFrameCount = 240;
         report.RuntimeMetrics.ProcessWallClockMs = 5123.4;
         report.RuntimeMetrics.ProcessCpuTimeMs = 245.6;
         report.RuntimeMetrics.ProcessCpuUtilizationRatio = 0.048;
