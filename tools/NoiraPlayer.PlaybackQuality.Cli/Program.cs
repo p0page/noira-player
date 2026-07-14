@@ -338,6 +338,11 @@ internal static class Program
             output.ComparablePairCount == output.ExpectedPairCount
                 ? "complete"
                 : "insufficient-evidence";
+        output.CaseSummaries.AddRange(
+            PlaybackQualityRenderPhaseSummaryAggregator.Summarize(
+                output.Comparisons,
+                manifest.Cases.Select(referenceCase => referenceCase.CaseId),
+                output.RepeatCount));
         WriteJson(output, options.OutputPath);
         return output.Status == "complete" ? 0 : 2;
     }
@@ -4088,6 +4093,8 @@ internal static class Program
             new List<RenderPhaseDiagnosticRepeat>();
         public List<PlaybackQualityRenderPhaseComparison> Comparisons { get; } =
             new List<PlaybackQualityRenderPhaseComparison>();
+        public List<PlaybackQualityRenderPhaseCaseSummary> CaseSummaries { get; } =
+            new List<PlaybackQualityRenderPhaseCaseSummary>();
         public List<string> Blockers { get; } = new List<string>();
         public List<string> Limitations { get; } = new List<string>
         {

@@ -42,8 +42,10 @@ dotnet run --project tools\NoiraPlayer.PlaybackQuality.Cli\NoiraPlayer.PlaybackQ
 - total render、setup、view/target、clear、blit、post-process 的 P50、P95、P99、Max；
 - 每个指标的原值、绝对差、候选/基线比值、百分比和 `lower` / `higher` / `unchanged` 方向。
 
+顶层 `caseSummaries` 按 manifest 顺序保留全部 case，并对每个 signal 汇总预期/可比重复数、lower/higher/unchanged 次数，以及 baseline、candidate、absolute delta 的 min、median、max。只有预期轮次全部可比且方向完全一致时，才会输出 `consistent-lower`、`consistent-higher` 或 `consistent-unchanged`；方向不一致为 `mixed`，缺少任一轮为 `insufficient-evidence`。汇总不删除逐轮 comparison，也不计算分数。
+
 诊断器不设置“足够小就忽略”的性能阈值，也不计算总分。一个阶段降低、另一个阶段升高时结果应为 `mixed`。transport wait 只作为解释上下文，不阻断阶段 CPU 计时；整体播放是否可接受仍必须由同版本的完整 report analysis、candidate evaluation 和必要的 App-hosted 复核决定。
 
 ## 当前证据
 
-首次正式回放使用同一精确 manifest 的 3 轮、每轮 5 个真实 native case，得到 `15/15 comparable`、0 blocker。新命令读取的 setup P95 与旧手工分析表 `15/15` 逐值一致；候选 setup P95 在 15 对中全部降低，但各 comparison 因其他阶段的细微上下浮动保留为 `mixed`。该结果支持“setup 缓存确实改变了 CPU 阶段耗时”，不支持“整体播放质量已通过”或“Xbox/GPU/HDR 输出已验证”。
+首次正式回放使用同一精确 manifest 的 3 轮、每轮 5 个真实 native case，得到 `15/15 comparable`、0 blocker。新命令读取的 setup P95 与旧手工分析表 `15/15` 逐值一致；5 个 case 的 setup P95 汇总均为 `3/3 consistent-lower`，但各 comparison 因其他阶段的细微上下浮动保留为 `mixed`。该结果支持“setup 缓存确实改变了 CPU 阶段耗时”，不支持“整体播放质量已通过”或“Xbox/GPU/HDR 输出已验证”。

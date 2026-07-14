@@ -15,6 +15,7 @@ public sealed class PlaybackQualityRenderPhaseCliContractTests
         Assert.Contains("SelectManifestReportSetEntries", command, StringComparison.Ordinal);
         Assert.Contains("PlaybackQualityReferenceReportSetValidator.Validate", command, StringComparison.Ordinal);
         Assert.Contains("PlaybackQualityRenderPhaseComparator.Compare", command, StringComparison.Ordinal);
+        Assert.Contains("PlaybackQualityRenderPhaseSummaryAggregator.Summarize", command, StringComparison.Ordinal);
         Assert.Contains("baseline-report-set.invalid", command, StringComparison.Ordinal);
         Assert.Contains("candidate-report-set.invalid", command, StringComparison.Ordinal);
         Assert.DoesNotContain("PlaybackQualityRunComparator.Compare", command, StringComparison.Ordinal);
