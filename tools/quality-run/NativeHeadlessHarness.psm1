@@ -31,6 +31,7 @@ function Invoke-NativeHeadlessHarnessCase {
         [Parameter(Mandatory = $true)][string]$NativeHelperExe,
         [Parameter(Mandatory = $true)][string]$HeadlessProjectPath,
         [Parameter(Mandatory = $true)][string]$ReferenceCaseBase64,
+        [string]$AttemptId = '',
         [string]$HarnessScriptPath = '',
         [int]$DurationSeconds = 10,
         [long]$StartPositionTicks = 0,
@@ -54,6 +55,9 @@ function Invoke-NativeHeadlessHarnessCase {
         '--reports-dir', $ReportsDir,
         '--native-helper-exe', $NativeHelperExe
     )
+    if (-not [string]::IsNullOrWhiteSpace($AttemptId)) {
+        $harnessArguments += @('--attempt-id', $AttemptId)
+    }
     if ($ForceSdrOutput) {
         $harnessArguments += '--force-sdr-output'
     }

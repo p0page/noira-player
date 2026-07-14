@@ -41,6 +41,21 @@ function Get-PlaybackQualityReportResult([string]$Path) {
     return 'unknown'
 }
 
+function Get-PlaybackQualityReportAttemptId([string]$Path) {
+    if (-not (Test-Path -LiteralPath $Path)) {
+        return ''
+    }
+
+    try {
+        return ([string](
+            Get-Content -LiteralPath $Path -Raw -Encoding UTF8 |
+                ConvertFrom-Json).report.execution.attemptId).Trim()
+    }
+    catch {
+        return ''
+    }
+}
+
 if ([string]::IsNullOrWhiteSpace($HeadlessProjectPath)) {
     $HeadlessProjectPath = Join-Path $repoRoot `
         'tools\NoiraPlayer.PlaybackQuality.Headless\NoiraPlayer.PlaybackQuality.Headless.csproj'
@@ -149,6 +164,12 @@ foreach ($case in $selectedCases) {
         $scenario = 'playback'
     }
     $reportPath = Get-PlaybackQualityReportPath -ReportsDir $ReportsDir -CaseId $currentCaseId
+    foreach ($staleArtifactPath in @(
+        $reportPath,
+        ($reportPath + '.helper.stdout.log'),
+        ($reportPath + '.helper.stderr.log'))) {
+        Remove-Item -LiteralPath $staleArtifactPath -Force -ErrorAction SilentlyContinue
+    }
     $startedAt = [DateTimeOffset]::UtcNow
     $sourceResolutionAttemptCount = 0
 
@@ -245,6 +266,7 @@ foreach ($case in $selectedCases) {
     $referenceCaseJson = $case | ConvertTo-Json -Depth 20 -Compress
     $referenceCaseBase64 = [Convert]::ToBase64String(
         [Text.Encoding]::UTF8.GetBytes($referenceCaseJson))
+    $runnerAttemptId = [Guid]::NewGuid().ToString('N')
     $exitCode = Invoke-NativeHeadlessHarnessCase `
         -CaseId $currentCaseId `
         -StreamUrl $streamUrl `
@@ -253,6 +275,7 @@ foreach ($case in $selectedCases) {
         -NativeHelperExe $NativeHelperExe `
         -HeadlessProjectPath $HeadlessProjectPath `
         -ReferenceCaseBase64 $referenceCaseBase64 `
+        -AttemptId $runnerAttemptId `
         -HarnessScriptPath $HarnessScriptPath `
         -DurationSeconds $DurationSeconds `
         -StartPositionTicks $startPositionTicks `
@@ -262,20 +285,41 @@ foreach ($case in $selectedCases) {
         -ForceSdrOutput ([bool]$case.forceSdrOutput) `
         -EnableSeekPacketCache ([bool]$EnableSeekPacketCache)
     $reportPresent = Test-Path -LiteralPath $reportPath
+    $reportAttemptId = Get-PlaybackQualityReportAttemptId $reportPath
+    $reportAttemptMatched = $reportPresent -and
+        [string]::Equals(
+            $runnerAttemptId,
+            $reportAttemptId,
+            [StringComparison]::Ordinal)
     $attempts.Add([pscustomobject]@{
         caseId = $currentCaseId
-        status = $(if ($exitCode -eq 0) { 'completed' } else { 'failed' })
+        status = $(
+            if ($reportPresent -and -not $reportAttemptMatched) { 'invalid-report' }
+            elseif ($exitCode -ne 0) { 'failed' }
+            else { 'completed' })
         exitCode = $exitCode
         reportPresent = $reportPresent
-        reportResult = Get-PlaybackQualityReportResult $reportPath
+        reportResult = $(
+            if ($reportAttemptMatched) { Get-PlaybackQualityReportResult $reportPath }
+            elseif (-not $reportPresent) { 'missing' }
+            else { 'unknown' })
+        runnerAttemptId = $runnerAttemptId
+        reportAttemptId = $reportAttemptId
+        reportAttemptMatched = $reportAttemptMatched
         durationMs = [Math]::Max(0, ([DateTimeOffset]::UtcNow - $startedAt).TotalMilliseconds)
         sourceResolutionAttemptCount = $sourceResolutionAttemptCount
     })
 }
 
-$failedAttemptCount = @($attempts | Where-Object { $_.status -eq 'failed' }).Count
+$failedAttemptCount = @($attempts | Where-Object {
+    $_.status -in @('failed', 'invalid-report')
+}).Count
+$invalidReportCount = @($attempts | Where-Object { $_.status -eq 'invalid-report' }).Count
 $unresolvedSourceCount = @($attempts | Where-Object { $_.status -eq 'unresolved-source' }).Count
 $reportCount = @($attempts | Where-Object { $_.reportPresent }).Count
+$unattributedReportCount = @($attempts | Where-Object {
+    $_.reportPresent -and $_.reportAttemptMatched -eq $false
+}).Count
 $missingReportCount = $attempts.Count - $reportCount
 $passReportCount = @($attempts | Where-Object reportResult -eq 'pass').Count
 $failReportCount = @($attempts | Where-Object reportResult -eq 'fail').Count
@@ -285,7 +329,7 @@ $unsupportedReportCount = @($attempts | Where-Object reportResult -eq 'unsupport
 $unknownReportCount = @($attempts | Where-Object reportResult -eq 'unknown').Count
 $summary = [ordered]@{
     schemaVersion = 1
-    runnerVersion = 'native-manifest-runner-v0.1'
+    runnerVersion = 'native-manifest-runner-v0.2'
     durationSeconds = $DurationSeconds
     attemptTimeoutSeconds = $AttemptTimeoutSeconds
     seekPacketCacheEnabled = [bool]$EnableSeekPacketCache
@@ -293,9 +337,11 @@ $summary = [ordered]@{
     attemptedCaseCount = @($attempts | Where-Object { $_.status -ne 'unresolved-source' }).Count
     completedAttemptCount = @($attempts | Where-Object { $_.status -eq 'completed' }).Count
     failedAttemptCount = $failedAttemptCount
+    invalidReportCount = $invalidReportCount
     unresolvedSourceCount = $unresolvedSourceCount
     resolvedSourceCount = $resolvedSourceCount
     reportCount = $reportCount
+    unattributedReportCount = $unattributedReportCount
     missingReportCount = $missingReportCount
     passReportCount = $passReportCount
     failReportCount = $failReportCount

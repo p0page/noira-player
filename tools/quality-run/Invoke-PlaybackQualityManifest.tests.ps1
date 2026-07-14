@@ -117,6 +117,40 @@ try {
       }
     },
     {
+      "caseId": "runner/stale-pass-must-not-survive",
+      "category": "stable",
+      "severity": "critical",
+      "stability": "stable",
+      "uri": "https://media.invalid/stale.mp4",
+      "executionRequirement": { "minimumEvidenceLevel": "native-playback", "scenario": "playback" },
+      "purpose": [ "error-handling" ],
+      "expected": {
+        "codec": "h264",
+        "width": 320,
+        "height": 180,
+        "frameRate": 30,
+        "hdrKind": "Sdr",
+        "isDirectPlayable": true
+      }
+    },
+    {
+      "caseId": "runner/mismatched-attempt-must-not-pass",
+      "category": "stable",
+      "severity": "critical",
+      "stability": "stable",
+      "uri": "https://media.invalid/mismatched-attempt.mp4",
+      "executionRequirement": { "minimumEvidenceLevel": "native-playback", "scenario": "playback" },
+      "purpose": [ "error-handling" ],
+      "expected": {
+        "codec": "h264",
+        "width": 320,
+        "height": 180,
+        "frameRate": 30,
+        "hdrKind": "Sdr",
+        "isDirectPlayable": true
+      }
+    },
+    {
       "caseId": "runner/emby-unresolved",
       "category": "stable",
       "severity": "high",
@@ -194,6 +228,7 @@ $startPositionTicks = Get-Value '--start-position-ticks'
 $scenario = Get-Value '--scenario'
 $streamUrl = Get-Value '--stream-url'
 $locatorHash = Get-Value '--source-locator-hash'
+$attemptId = Get-Value '--attempt-id'
 $referenceCaseBase64 = Get-Value '--reference-case-base64'
 $referenceCase = if ([string]::IsNullOrWhiteSpace($referenceCaseBase64)) {
     $null
@@ -209,11 +244,23 @@ $referenceEvidence = if ($null -eq $referenceCase) {
 Add-Content -LiteralPath $logPath -Value ($caseId + '|pause=' + $pauseSeconds + '|start=' + $startPositionTicks + '|scenario=' + $scenario + '|stream=' + $streamUrl + '|locator=' + $locatorHash + '|seekCache=' + $seekPacketCacheEnabled.ToString().ToLowerInvariant() + '|' + $referenceEvidence) -Encoding UTF8
 
 $reportPath = Join-Path $reportsDir ($caseId.Replace('/', [System.IO.Path]::DirectorySeparatorChar) + '.json')
+if ($caseId -like '*stale-pass-must-not-survive') {
+    exit 9
+}
 New-Item -ItemType Directory -Path (Split-Path -Parent $reportPath) -Force | Out-Null
+$reportedAttemptId = if ($caseId -like '*mismatched-attempt-must-not-pass') {
+    '00000000000000000000000000000000'
+} else {
+    $attemptId
+}
 @{
     schemaVersion = 1
     caseMetadata = @{ caseId = $caseId }
-    report = @{ runId = $caseId; result = $(if ($caseId -like '*first-fails') { 'error' } else { 'pass' }) }
+    report = @{
+        runId = $caseId
+        result = $(if ($caseId -like '*first-fails') { 'error' } else { 'pass' })
+        execution = @{ attemptId = $reportedAttemptId }
+    }
 } | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $reportPath -Encoding UTF8
 Write-Output ('report=' + $reportPath)
 
@@ -257,6 +304,18 @@ exit 0
 
     $env:NOIRAPLAYER_MANIFEST_RUNNER_TEST_LOG = $invocationLog
     $env:NOIRAPLAYER_MANIFEST_RESOLVER_TEST_STATE = $resolverState
+    $staleReportPath = Join-Path $reportsDir 'runner\stale-pass-must-not-survive.json'
+    New-Item -ItemType Directory -Path (Split-Path -Parent $staleReportPath) -Force | Out-Null
+    @{
+        schemaVersion = 1
+        caseMetadata = @{ caseId = 'runner/stale-pass-must-not-survive' }
+        report = @{ runId = 'runner/stale-pass-must-not-survive'; result = 'pass' }
+    } | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $staleReportPath -Encoding UTF8
+    $staleStdoutPath = $staleReportPath + '.helper.stdout.log'
+    $staleStderrPath = $staleReportPath + '.helper.stderr.log'
+    Set-Content -LiteralPath $staleStdoutPath -Value 'stale stdout' -Encoding UTF8
+    Set-Content -LiteralPath $staleStderrPath -Value 'stale stderr' -Encoding UTF8
+
     & powershell -NoProfile -ExecutionPolicy Bypass -File $runner `
         -ManifestPath $manifestPath `
         -ReportsDir $reportsDir `
@@ -282,13 +341,22 @@ exit 0
     finally {
         $sha256.Dispose()
     }
-    if ($invocations.Count -ne 5 -or
+    if ($invocations.Count -ne 7 -or
         $invocations[1] -ne ('runner/second-runs|pause=|start=20000000|scenario=timeline|stream=http://127.0.0.1:54321/runtime-media.mp4|locator=' + $secondLocatorHash + '|seekCache=true|reference=runner/second-runs,challenge,medium,variable,Hdr10') -or
         $invocations[0] -notmatch '^runner/first-fails\|pause=1\|start=0\|scenario=pause-resume\|.*\|seekCache=true\|reference=runner/first-fails,stable,high,stable,Sdr$' -or
         $invocations[2] -notmatch '^runner/emby-resolved\|pause=\|start=0\|scenario=playback\|.*\|seekCache=true\|reference=runner/emby-resolved,stable,high,stable,Sdr$' -or
         $invocations[3] -notmatch '^runner/audio-switch\|pause=\|start=0\|scenario=audio-switch\|.*\|seekCache=true\|reference=runner/audio-switch,stable,high,stable,Sdr$' -or
-        $invocations[4] -notmatch '^runner/subtitle-switch\|pause=\|start=600000000\|scenario=subtitle-switch\|.*\|seekCache=true\|reference=runner/subtitle-switch,stable,high,stable,Sdr$') {
+        $invocations[4] -notmatch '^runner/subtitle-switch\|pause=\|start=600000000\|scenario=subtitle-switch\|.*\|seekCache=true\|reference=runner/subtitle-switch,stable,high,stable,Sdr$' -or
+        $invocations[5] -notmatch '^runner/stale-pass-must-not-survive\|pause=\|start=0\|scenario=playback\|.*\|seekCache=true\|reference=runner/stale-pass-must-not-survive,stable,critical,stable,Sdr$' -or
+        $invocations[6] -notmatch '^runner/mismatched-attempt-must-not-pass\|pause=\|start=0\|scenario=playback\|.*\|seekCache=true\|reference=runner/mismatched-attempt-must-not-pass,stable,critical,stable,Sdr$') {
         throw 'Manifest runner must invoke each selected stable/challenge case exactly once and preserve order.'
+    }
+
+    $remainingStaleArtifacts = @($staleReportPath, $staleStdoutPath, $staleStderrPath) |
+        Where-Object { Test-Path -LiteralPath $_ }
+    if ($remainingStaleArtifacts.Count -gt 0) {
+        throw ('A report or helper transcript left by an older run must not survive a failed current native attempt: ' +
+            ($remainingStaleArtifacts -join ', '))
     }
 
     foreach ($caseId in @(
@@ -297,6 +365,7 @@ exit 0
         'runner/emby-resolved',
         'runner/audio-switch',
         'runner/subtitle-switch',
+        'runner/mismatched-attempt-must-not-pass',
         'runner/emby-unresolved',
         'runner/runtime-source-required')) {
         $reportPath = Join-Path $reportsDir ($caseId.Replace('/', [System.IO.Path]::DirectorySeparatorChar) + '.json')
@@ -334,25 +403,40 @@ exit 0
     }
 
     $summary = Get-Content -LiteralPath $summaryPath -Raw -Encoding UTF8 | ConvertFrom-Json
-    if ($summary.selectedCaseCount -ne 7 -or
-        $summary.attemptedCaseCount -ne 5 -or
-        $summary.reportCount -ne 7 -or
-        $summary.failedAttemptCount -ne 1 -or
+    if ($summary.runnerVersion -ne 'native-manifest-runner-v0.2' -or
+        $summary.selectedCaseCount -ne 9 -or
+        $summary.attemptedCaseCount -ne 7 -or
+        $summary.reportCount -ne 8 -or
+        $summary.failedAttemptCount -ne 3 -or
         $summary.passReportCount -ne 4 -or
         $summary.errorReportCount -ne 3 -or
-        $summary.nonPassReportCount -ne 3 -or
-        $summary.unknownReportCount -ne 0 -or
+        $summary.nonPassReportCount -ne 4 -or
+        $summary.unknownReportCount -ne 1 -or
         $summary.unresolvedSourceCount -ne 2 -or
         $summary.resolvedSourceCount -ne 1 -or
-        $summary.missingReportCount -ne 0 -or
+        $summary.unattributedReportCount -ne 1 -or
+        $summary.missingReportCount -ne 1 -or
         $summary.seekPacketCacheEnabled -ne $true) {
-        throw 'Manifest runner summary did not preserve selected/attempted/report/failure counts.'
+        throw ('Manifest runner summary did not preserve selected/attempted/report/failure counts: ' +
+            ($summary | ConvertTo-Json -Depth 8 -Compress))
     }
     $resolvedAttempt = @($summary.attempts | Where-Object caseId -eq 'runner/emby-resolved')[0]
     $unresolvedAttempt = @($summary.attempts | Where-Object caseId -eq 'runner/emby-unresolved')[0]
+    $secondAttempt = @($summary.attempts | Where-Object caseId -eq 'runner/second-runs')[0]
+    $mismatchedAttempt = @($summary.attempts | Where-Object caseId -eq 'runner/mismatched-attempt-must-not-pass')[0]
     if ($resolvedAttempt.sourceResolutionAttemptCount -ne 2 -or
         $unresolvedAttempt.sourceResolutionAttemptCount -ne 3) {
         throw 'Manifest runner must preserve bounded source-resolution retry evidence.'
+    }
+    if ($secondAttempt.runnerAttemptId -notmatch '^[0-9a-f]{32}$' -or
+        $secondAttempt.reportAttemptId -ne $secondAttempt.runnerAttemptId -or
+        $secondAttempt.reportAttemptMatched -ne $true -or
+        $mismatchedAttempt.runnerAttemptId -notmatch '^[0-9a-f]{32}$' -or
+        $mismatchedAttempt.reportAttemptId -ne '00000000000000000000000000000000' -or
+        $mismatchedAttempt.reportAttemptMatched -ne $false -or
+        $mismatchedAttempt.status -ne 'invalid-report' -or
+        $mismatchedAttempt.reportResult -ne 'unknown') {
+        throw 'Manifest runner must bind each native invocation to the exact attempt identity returned by its report.'
     }
 
     $summaryText = Get-Content -LiteralPath $summaryPath -Raw -Encoding UTF8

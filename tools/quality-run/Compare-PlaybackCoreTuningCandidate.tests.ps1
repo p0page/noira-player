@@ -59,6 +59,7 @@ $caseId = Get-Value '--case-id'
 $reportsDir = Get-Value '--reports-dir'
 $locatorHash = Get-Value '--source-locator-hash'
 $scenario = Get-Value '--scenario'
+$attemptId = Get-Value '--attempt-id'
 $sourceRevision = $env:NOIRAPLAYER_COMPARISON_TEST_REVISION
 $maxFrameGap = [double]$env:NOIRAPLAYER_COMPARISON_TEST_MAX_FRAME_GAP
 $audioCodec = $env:NOIRAPLAYER_COMPARISON_TEST_AUDIO_CODEC
@@ -82,7 +83,7 @@ $report = [ordered]@{
         buildConfiguration = 'Debug'
     }
     execution = @{
-        attemptId = 'attempt-' + $sourceRevision
+        attemptId = $attemptId
         runner = 'native-headless'
         scenario = $scenario
         evidenceLevel = 'native-playback'

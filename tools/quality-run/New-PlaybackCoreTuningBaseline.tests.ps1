@@ -67,6 +67,7 @@ $locatorHash = if ($env:NOIRAPLAYER_BASELINE_TEST_MISMATCH_RUN_ID -eq '1') {
     Get-Value '--source-locator-hash'
 }
 $scenario = Get-Value '--scenario'
+$attemptId = Get-Value '--attempt-id'
 $reportPath = Join-Path $reportsDir ($caseId.Replace('/', [System.IO.Path]::DirectorySeparatorChar) + '.json')
 New-Item -ItemType Directory -Path (Split-Path -Parent $reportPath) -Force | Out-Null
 @{
@@ -89,7 +90,11 @@ New-Item -ItemType Directory -Path (Split-Path -Parent $reportPath) -Force | Out
             buildConfiguration = 'Debug'
         }
         execution = @{
-            attemptId = 'baseline-test-attempt'
+            attemptId = $(if ($env:NOIRAPLAYER_BASELINE_TEST_MISMATCH_ATTEMPT -eq '1') {
+                '00000000000000000000000000000000'
+            } else {
+                $attemptId
+            })
             runner = 'native-headless'
             scenario = $scenario
             evidenceLevel = 'native-playback'
@@ -166,8 +171,12 @@ exit 1
         $validation.matchedCaseCount -ne 1 -or
         $runnerSummary.selectedCaseCount -ne 1 -or
         $runnerSummary.reportCount -ne 1 -or
+        $runnerSummary.runnerVersion -ne 'native-manifest-runner-v0.2' -or
+        $runnerSummary.unattributedReportCount -ne 0 -or
+        $runnerSummary.invalidReportCount -ne 0 -or
         $runnerSummary.missingReportCount -ne 0 -or
         $runnerSummary.seekPacketCacheEnabled -ne $false -or
+        $summary.coreExecution.runner -ne 'native-manifest-runner-v0.2' -or
         $summary.coreExecution.seekPacketCacheEnabled -ne $false) {
         throw 'Expected baseline to contain one strict-valid native manifest-runner report.'
     }
@@ -182,6 +191,36 @@ exit 1
     if (-not ($summary.warnings -contains 'native-headless local generated samples were skipped by -SkipNativeHeadless')) {
         throw 'Expected summary to record only the skipped local generated native-headless samples.'
     }
+
+    $env:NOIRAPLAYER_BASELINE_TEST_MISMATCH_ATTEMPT = '1'
+    $mismatchedAttemptOutputRoot = Join-Path $tempRoot 'mismatched-attempt-output'
+    $previousErrorActionPreference = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    powershell -NoProfile -ExecutionPolicy Bypass -File $scriptPath `
+        -PublicManifestPath $manifestPath `
+        -NoPrivateManifest `
+        -SkipNativeHeadless `
+        -NativeHelperExe $fakeHelper `
+        -ManifestRunnerHarnessScriptPath $fakeHarness `
+        -DurationSeconds 1 `
+        -AttemptTimeoutSeconds 5 `
+        -OutputRoot $mismatchedAttemptOutputRoot 2>$null
+    $mismatchedAttemptExitCode = $LASTEXITCODE
+    $ErrorActionPreference = $previousErrorActionPreference
+    if ($mismatchedAttemptExitCode -eq 0) {
+        throw 'Baseline must reject a physical report whose attempt identity does not match the runner invocation.'
+    }
+    $mismatchedRunnerSummaryPath = Join-Path $mismatchedAttemptOutputRoot 'summaries\manifest-run-summary.local.json'
+    if (-not (Test-Path -LiteralPath $mismatchedRunnerSummaryPath)) {
+        throw 'Attempt attribution failure must preserve the native runner summary.'
+    }
+    $mismatchedRunnerSummary = Get-Content -Raw -LiteralPath $mismatchedRunnerSummaryPath | ConvertFrom-Json
+    if ($mismatchedRunnerSummary.unattributedReportCount -ne 1 -or
+        $mismatchedRunnerSummary.invalidReportCount -ne 1 -or
+        $mismatchedRunnerSummary.attempts[0].status -ne 'invalid-report') {
+        throw 'Attempt attribution failure must remain explicit in baseline runner diagnostics.'
+    }
+    Remove-Item Env:NOIRAPLAYER_BASELINE_TEST_MISMATCH_ATTEMPT -ErrorAction SilentlyContinue
 
     $env:NOIRAPLAYER_BASELINE_TEST_MISMATCH_RUN_ID = '1'
     $invalidOutputRoot = Join-Path $tempRoot 'invalid-report-set-output'
@@ -237,6 +276,7 @@ exit 1
 }
 finally {
     Remove-Item Env:NOIRAPLAYER_BASELINE_TEST_OMIT_REPORT -ErrorAction SilentlyContinue
+    Remove-Item Env:NOIRAPLAYER_BASELINE_TEST_MISMATCH_ATTEMPT -ErrorAction SilentlyContinue
     Remove-Item Env:NOIRAPLAYER_BASELINE_TEST_MISMATCH_RUN_ID -ErrorAction SilentlyContinue
     if (Test-Path -LiteralPath $tempRoot) {
         Remove-Item -LiteralPath $tempRoot -Recurse -Force

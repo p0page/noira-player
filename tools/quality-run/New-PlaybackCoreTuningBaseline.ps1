@@ -289,6 +289,10 @@ if (-not (Test-Path -LiteralPath $manifestRunSummaryPath)) {
     throw 'Native manifest runner did not write its execution summary.'
 }
 $manifestRunSummary = Read-JsonFile $manifestRunSummaryPath
+$manifestRunnerVersion = ([string]$manifestRunSummary.runnerVersion).Trim()
+if ($manifestRunnerVersion -ne 'native-manifest-runner-v0.2') {
+    throw ('Unsupported native manifest runner summary version: ' + $manifestRunnerVersion)
+}
 if ([int]$manifestRunSummary.durationSeconds -ne $DurationSeconds -or
     [int]$manifestRunSummary.attemptTimeoutSeconds -ne $AttemptTimeoutSeconds) {
     throw 'Native manifest runner summary does not match the requested observation window and timeout.'
@@ -301,6 +305,12 @@ if ([int]$manifestRunSummary.missingReportCount -ne 0 -or
     throw ('Native manifest runner did not produce one report per selected case. selected=' +
         $manifestRunSummary.selectedCaseCount + '; reports=' + $manifestRunSummary.reportCount +
         '; missing=' + $manifestRunSummary.missingReportCount)
+}
+if ([int]$manifestRunSummary.unattributedReportCount -ne 0 -or
+    [int]$manifestRunSummary.invalidReportCount -ne 0) {
+    throw ('Native manifest runner produced reports that cannot be attributed to the current attempts. unattributed=' +
+        $manifestRunSummary.unattributedReportCount + '; invalid=' +
+        $manifestRunSummary.invalidReportCount)
 }
 if ($manifestRunnerExitCode -ne 0) {
     $warnings.Add('manifest runner captured non-success playback outcomes; strict report validation remains authoritative')
@@ -337,7 +347,7 @@ Invoke-Checked dotnet @(
     '--reports-dir',
     $reportsDir,
     '--collector-version',
-    'native-manifest-runner-v0.1',
+    $manifestRunnerVersion,
     '--player-core-version',
     $PlayerCoreVersion,
     '--source-revision',
@@ -445,7 +455,7 @@ $summary = [pscustomobject][ordered]@{
     })
     additionalManifestPaths = @($AdditionalManifestPath)
     coreExecution = [pscustomobject][ordered]@{
-        runner = 'native-manifest-runner-v0.1'
+        runner = $manifestRunnerVersion
         durationSeconds = [int]$manifestRunSummary.durationSeconds
         attemptTimeoutSeconds = [int]$manifestRunSummary.attemptTimeoutSeconds
         seekPacketCacheEnabled = [bool]$manifestRunSummary.seekPacketCacheEnabled
@@ -454,6 +464,8 @@ $summary = [pscustomobject][ordered]@{
         attemptedCaseCount = [int]$manifestRunSummary.attemptedCaseCount
         reportCount = [int]$manifestRunSummary.reportCount
         failedAttemptCount = [int]$manifestRunSummary.failedAttemptCount
+        invalidReportCount = [int]$manifestRunSummary.invalidReportCount
+        unattributedReportCount = [int]$manifestRunSummary.unattributedReportCount
         unresolvedSourceCount = [int]$manifestRunSummary.unresolvedSourceCount
         missingReportCount = [int]$manifestRunSummary.missingReportCount
     }

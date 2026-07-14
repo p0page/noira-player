@@ -27,7 +27,9 @@ internal static class NativeHeadlessHarness
     public static NativeHeadlessHarnessResult Run(NativeHeadlessHarnessOptions options)
     {
         var executionStartedAt = DateTimeOffset.UtcNow;
-        var attemptId = Guid.NewGuid().ToString("N");
+        var attemptId = string.IsNullOrWhiteSpace(options.AttemptId)
+            ? Guid.NewGuid().ToString("N")
+            : options.AttemptId;
         var referenceCase = options.ReferenceCase ?? PlaybackQualityCaptureReferenceCaseFactory.Create(
             options.CaseId,
             itemId: "",
@@ -110,7 +112,9 @@ internal static class NativeHeadlessHarness
         PlaybackQualityReferenceCase referenceCase)
     {
         var commandReceivedAt = DateTimeOffset.UtcNow;
-        var attemptId = Guid.NewGuid().ToString("N");
+        var attemptId = string.IsNullOrWhiteSpace(options.AttemptId)
+            ? Guid.NewGuid().ToString("N")
+            : options.AttemptId;
         var reportPath = GetReportPath(options.ReportsDir, options.CaseId);
         Directory.CreateDirectory(Path.GetDirectoryName(reportPath) ?? options.ReportsDir);
         var helper = RunHelperProcess(options, reportPath);
@@ -2560,6 +2564,7 @@ internal static class NativeHeadlessHarness
 internal sealed class NativeHeadlessHarnessOptions
 {
     public string CaseId { get; private set; } = "";
+    public string AttemptId { get; private set; } = "";
     public string StreamUrl { get; private set; } = "";
     public string SourceLocatorHash { get; private set; } = "";
     public PlaybackQualityReferenceCase? ReferenceCase { get; private set; }
@@ -2613,6 +2618,9 @@ internal sealed class NativeHeadlessHarnessOptions
             {
                 case "--case-id":
                     options.CaseId = value.Trim();
+                    break;
+                case "--attempt-id":
+                    options.AttemptId = value.Trim();
                     break;
                 case "--stream-url":
                     options.StreamUrl = value.Trim();
@@ -2706,6 +2714,16 @@ internal sealed class NativeHeadlessHarnessOptions
         if (string.IsNullOrWhiteSpace(options.CaseId))
         {
             error = "--case-id is required.";
+            return false;
+        }
+
+        if (!string.IsNullOrWhiteSpace(options.AttemptId) &&
+            !System.Text.RegularExpressions.Regex.IsMatch(
+                options.AttemptId,
+                "^[0-9a-f]{32}$",
+                System.Text.RegularExpressions.RegexOptions.CultureInvariant))
+        {
+            error = "--attempt-id must be a lowercase 32-character hexadecimal identity.";
             return false;
         }
 
