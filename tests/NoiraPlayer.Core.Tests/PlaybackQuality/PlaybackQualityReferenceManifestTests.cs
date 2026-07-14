@@ -198,6 +198,73 @@ public sealed class PlaybackQualityReferenceManifestTests
     }
 
     [Fact]
+    public void Validate_Rejects_Timeline_Case_Without_Explicit_Seek_Target()
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        var referenceCase = CreateCase("timeline/missing-target", tier: 1, purpose: "timeline");
+        referenceCase.SeekTargetPositionTicks = null;
+        manifest.Cases.Add(referenceCase);
+
+        var result = PlaybackQualityReferenceManifestValidator.Validate(manifest);
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, error =>
+            error.Code == "case.seek-target.missing" &&
+            error.CaseId == referenceCase.CaseId &&
+            error.Signal == "seekTargetPositionTicks");
+    }
+
+    [Fact]
+    public void Validate_Rejects_Timeline_Seek_Target_Equal_To_Start_Position()
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        var referenceCase = CreateCase("timeline/no-op-target", tier: 1, purpose: "timeline");
+        referenceCase.StartPositionTicks = 600_000_000;
+        referenceCase.SeekTargetPositionTicks = 600_000_000;
+        manifest.Cases.Add(referenceCase);
+
+        var result = PlaybackQualityReferenceManifestValidator.Validate(manifest);
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, error =>
+            error.Code == "case.seek-target.no-op" &&
+            error.CaseId == referenceCase.CaseId &&
+            error.Signal == "seekTargetPositionTicks");
+    }
+
+    [Fact]
+    public void Validate_Accepts_Backward_Seek_To_Zero_And_Preserves_Target()
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        var referenceCase = CreateCase("timeline/backward-to-zero", tier: 1, purpose: "timeline");
+        referenceCase.StartPositionTicks = 600_000_000;
+        referenceCase.SeekTargetPositionTicks = 0;
+        manifest.Cases.Add(referenceCase);
+
+        var result = PlaybackQualityReferenceManifestValidator.Validate(manifest);
+
+        Assert.True(result.IsValid);
+        Assert.Equal(0, Assert.Single(result.Cases).SeekTargetPositionTicks);
+    }
+
+    [Fact]
+    public void Validate_Rejects_Seek_Target_Outside_Timeline_Scenario()
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        var referenceCase = CreateCase("playback/unused-seek-target", tier: 1, purpose: "sdr-smoke");
+        referenceCase.SeekTargetPositionTicks = 900_000_000;
+        manifest.Cases.Add(referenceCase);
+
+        var result = PlaybackQualityReferenceManifestValidator.Validate(manifest);
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, error =>
+            error.Code == "case.seek-target.scenario.invalid" &&
+            error.CaseId == referenceCase.CaseId &&
+            error.Signal == "seekTargetPositionTicks");
+    }
+
+    [Fact]
     public void Validate_Rejects_Interaction_Recovery_Threshold_For_Playback_Case()
     {
         var manifest = new PlaybackQualityReferenceManifest();
@@ -623,6 +690,10 @@ public sealed class PlaybackQualityReferenceManifestTests
         referenceCase.ItemId = "item-007";
         referenceCase.MediaSourceId = "source-hdr10";
         referenceCase.StartPositionTicks = 123;
+        referenceCase.SeekTargetPositionTicks = 456;
+        referenceCase.Purpose.Clear();
+        referenceCase.Purpose.Add("timeline");
+        referenceCase.ExecutionRequirement.Scenario = PlaybackQualityExecutionScenario.Timeline;
         referenceCase.ForceSdrOutput = true;
         manifest.Cases.Add(referenceCase);
 
@@ -634,6 +705,7 @@ public sealed class PlaybackQualityReferenceManifestTests
             item.ItemId == "item-007" &&
             item.MediaSourceId == "source-hdr10" &&
             item.StartPositionTicks == 123 &&
+            item.SeekTargetPositionTicks == 456 &&
             item.ForceSdrOutput);
     }
 
@@ -3083,6 +3155,10 @@ public sealed class PlaybackQualityReferenceManifestTests
                 "end-of-stream" => PlaybackQualityExecutionScenario.EndOfStream,
                 _ => PlaybackQualityExecutionScenario.Playback
             };
+            if (purpose == "timeline")
+            {
+                referenceCase.SeekTargetPositionTicks = 600_000_000;
+            }
         }
 
         return referenceCase;

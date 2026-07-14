@@ -28,6 +28,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
 
         public long StartPositionTicks { get; set; }
 
+        public long? SeekTargetPositionTicks { get; set; }
+
         public bool ForceSdrOutput { get; set; }
 
         public int PauseSeconds { get; set; }
@@ -328,11 +330,65 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 }
             }
 
+            ValidateSeekTarget(validation, referenceCase, scenario);
+
             ValidateExpected(
                 validation,
                 caseId,
                 referenceCase.Expected,
                 referenceCase.ExecutionRequirement?.Scenario ?? "");
+        }
+
+        private static void ValidateSeekTarget(
+            PlaybackQualityReferenceManifestValidation validation,
+            PlaybackQualityReferenceCase referenceCase,
+            string scenario)
+        {
+            var caseId = referenceCase.CaseId ?? "";
+            if (scenario == PlaybackQualityExecutionScenario.Timeline)
+            {
+                if (!referenceCase.SeekTargetPositionTicks.HasValue)
+                {
+                    AddError(
+                        validation,
+                        "case.seek-target.missing",
+                        caseId,
+                        "seekTargetPositionTicks",
+                        "Timeline playback quality cases require an explicit seekTargetPositionTicks value.");
+                    return;
+                }
+
+                if (referenceCase.SeekTargetPositionTicks.Value < 0)
+                {
+                    AddError(
+                        validation,
+                        "case.seek-target.invalid",
+                        caseId,
+                        "seekTargetPositionTicks",
+                        "Timeline seekTargetPositionTicks must be non-negative.");
+                }
+                else if (referenceCase.SeekTargetPositionTicks.Value == referenceCase.StartPositionTicks)
+                {
+                    AddError(
+                        validation,
+                        "case.seek-target.no-op",
+                        caseId,
+                        "seekTargetPositionTicks",
+                        "Timeline seekTargetPositionTicks must differ from startPositionTicks.");
+                }
+
+                return;
+            }
+
+            if (referenceCase.SeekTargetPositionTicks.HasValue)
+            {
+                AddError(
+                    validation,
+                    "case.seek-target.scenario.invalid",
+                    caseId,
+                    "seekTargetPositionTicks",
+                    "seekTargetPositionTicks is valid only for the timeline execution scenario.");
+            }
         }
 
         private static IReadOnlyList<string> GetActiveExecutionScenarios(
@@ -400,6 +456,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 ItemId = source.ItemId,
                 MediaSourceId = source.MediaSourceId,
                 StartPositionTicks = source.StartPositionTicks,
+                SeekTargetPositionTicks = source.SeekTargetPositionTicks,
                 ForceSdrOutput = source.ForceSdrOutput,
                 PauseSeconds = source.PauseSeconds,
                 Tier = source.Tier,
